@@ -68,6 +68,7 @@ defmodule Ecto.Query.Builder.Join do
 
   def escape({:assoc, _, [{var, _, context}, field]}, vars, _env)
       when is_atom(var) and is_atom(context) do
+    ensure_field!(field)
     var   = Builder.find_var!(var, vars)
     field = Builder.quoted_field!(field)
     {:_, nil, {var, field}, %{}}
@@ -190,4 +191,9 @@ defmodule Ecto.Query.Builder.Join do
       "invalid join qualifier `#{inspect qual}`, accepted qualifiers are: " <>
       Enum.map_join(@qualifiers, ", ", &"`#{inspect &1}`")
   end
+
+  defp ensure_field!({var, _, _}) when var != :^ do
+    Builder.error! "you passed the variable `#{var}` to `assoc/2`. Did you mean to pass the atom `:#{var}?`"
+  end
+  defp ensure_field!(_), do: true
 end
