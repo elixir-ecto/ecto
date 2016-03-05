@@ -513,9 +513,9 @@ defmodule Ecto.Migration do
   `string` is converted to varchar, `datetime` to the underlying
   datetime or timestamp type, `binary` to bits or blob, and so on.
 
-  However, the column type is not always the same as the type in your
-  model. For example, a model that has a `string` field, can be
-  supported by columns of types `char`, `varchar`, `text` and others.
+  However, the column type is not always the same as the type used in your
+  schema. For example, a schema that has a `string` field,
+  can be supported by columns of types `char`, `varchar`, `text` and others.
   For this reason, this function also accepts `text` and other columns,
   which are sent as is to the underlying database.
 
