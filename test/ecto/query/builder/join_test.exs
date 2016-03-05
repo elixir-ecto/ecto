@@ -36,4 +36,15 @@ defmodule Ecto.Query.Builder.JoinTest do
     assert %{joins: [%{source: {"user_comments", Comment}}]} =
             join("posts", qual, [p], c in ^source, true)
   end
+
+  test "invalid assoc/2 field" do
+    assert_raise Ecto.Query.CompileError,
+    ~r/you passed the variable \`field_var\` to \`assoc\/2\`/, fn ->
+      escape({:assoc, nil, [{:join_var, nil, nil}, {:field_var, nil, nil}]}, nil, nil)
+    end
+  end
+
+  test "interpolated values are ok for assoc/2 field" do
+    escape({:assoc, nil, [{:join_var, nil, :context}, {:^, nil, [:interpolated_value]}]}, [join_var: true], nil)
+  end
 end
