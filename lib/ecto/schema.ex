@@ -137,6 +137,13 @@ defmodule Ecto.Schema do
   **Note:** For the `:array` type, replace `inner_type` with one of
   the valid types, such as `:string`.
 
+  ### Database types
+
+  In migrations the Ecto primitive types shown above are mapped to the
+  appropriate database type by the various database adapters.
+  However, Ecto allows for the use of any type supported by your
+  database. See the documentation for `Ecto.Migration`.
+
   ### Custom types
 
   Besides providing primitive types, Ecto allows custom types to be
