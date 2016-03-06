@@ -64,6 +64,18 @@ defmodule Ecto.Migration do
   Notice not all commands are reversible though. Trying to rollback
   a non-reversible command will raise an `Ecto.MigrationError`.
 
+  ## Field Types
+
+  The Ecto primitive types are mapped to the appropriate database
+  type by the various database adapters. For example, `:string` is converted to
+  `:varchar`, `:datetime` to the underlying `:datetime` or `:timestamp` type,
+  `:binary` to `:bits` or `:blob`, and so on.
+
+  Similarly, you can pass any field type supported by your database
+  as long as it maps to an Ecto type. For instance, you can use `:text`,
+  `:varchar` or `:char` in your migrations as `add :field_name, :text`.
+  In your Ecto schema, they will all map to the same `:string` type.
+
   ## Prefixes
 
   Migrations support specifying a table prefix or index prefix which will target either a schema
@@ -510,18 +522,18 @@ defmodule Ecto.Migration do
 
   This function also accepts Ecto primitive types as column types
   and they are normalized by the database adapter. For example,
-  `string` is converted to varchar, `datetime` to the underlying
-  datetime or timestamp type, `binary` to bits or blob, and so on.
+  `:string` is converted to `:varchar`, `:datetime` to the underlying
+  `:datetime` or `:timestamp` type, `:binary` to `:bits` or `:blob`, and so on.
 
   However, the column type is not always the same as the type used in your
-  schema. For example, a schema that has a `string` field,
-  can be supported by columns of types `char`, `varchar`, `text` and others.
-  For this reason, this function also accepts `text` and other columns,
+  schema. For example, a schema that has a `:string` field,
+  can be supported by columns of types `:char`, `:varchar`, `:text` and others.
+  For this reason, this function also accepts `:text` and other columns,
   which are sent as is to the underlying database.
 
   To sum up, the column type may be either an Ecto primitive type,
   which is normalized in cases the database does not understand it,
-  like `string` or `binary`, or a database type which is passed as is.
+  like `:string` or `:binary`, or a database type which is passed as is.
   Custom Ecto types, like `Ecto.Datetime`, are not supported because
   they are application level concern and may not always map to the
   database.
