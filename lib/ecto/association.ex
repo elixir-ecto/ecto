@@ -1,4 +1,4 @@
-import Ecto.Query, only: [from: 2, join: 4, distinct: 3, select: 3]
+import Ecto.Query, only: [from: 2, join: 4, distinct: 3]
 
 defmodule Ecto.Association.NotLoaded do
   @moduledoc """
