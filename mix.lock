@@ -5,7 +5,7 @@
   "earmark": {:hex, :earmark, "0.2.1"},
   "ex_doc": {:hex, :ex_doc, "0.11.4"},
   "inch_ex": {:hex, :inch_ex, "0.2.4"},
-  "mariaex": {:git, "https://github.com/xerions/mariaex.git", "9227cdca8e9de3685808e2f9fa9954ef5706a140", [branch: "db_connection"]},
+  "mariaex": {:git, "https://github.com/xerions/mariaex.git", "f75db3f7b9a9449c08e6ae40815e081bad90f556", []},
   "poison": {:hex, :poison, "1.5.2"},
   "poolboy": {:hex, :poolboy, "1.5.1"},
   "postgrex": {:hex, :postgrex, "0.11.1"},

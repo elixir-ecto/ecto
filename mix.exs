@@ -39,7 +39,7 @@ defmodule Ecto.Mixfile do
      {:decimal, "~> 1.0"},
 
      # Drivers
-     {:mariaex, github: "xerions/mariaex", branch: "db_connection", optional: true},
+     {:mariaex, github: "xerions/mariaex", optional: true},
      {:postgrex, "~> 0.11.1", optional: true},
 
      # Optional
