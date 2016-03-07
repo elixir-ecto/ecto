@@ -8,9 +8,12 @@ if Code.ensure_loaded?(Mariaex) do
 
     ## Connection
 
-    def connection(opts) do
-      opts = Keyword.update(opts, :port, @default_port, &normalize_port/1)
-      {Mariaex.Protocol, opts}
+    def child_spec(opts) do
+      opts =
+        opts
+        |> Keyword.update(:port, @default_port, &normalize_port/1)
+
+      Mariaex.child_spec(opts)
     end
 
     defp normalize_port(port) when is_binary(port), do: String.to_integer(port)
