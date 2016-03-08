@@ -3,31 +3,33 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   A pool for concurrent transactional tests.
 
   The sandbox pool is implemented on top of an ownership mechanism.
-  When started, the pool is in automatic mode, which means using
-  the repository will automatically check connections out as with
-  any other pool. The only difference is that connections are not
-  checked back in automatically but by explicitly calling `checkin/2`.
+  When started, the pool is in automatic mode, which means the
+  repository will automatically check connections out as with any
+  other pool.
 
   The `mode/2` function can be used to change the pool mode to
   manual or shared. In both modes, the connection must be explicitly
-  checked out before use. When explicit checkouts are made, the sandbox
-  will wrap the connection in a transaction by default. This means developers
-  have a safe mechanism for running concurrent tests against the database.
+  checked out before use. When explicit checkouts are made, the
+  sandbox will wrap the connection in a transaction by default and
+  control who has access to it. This means developers have a safe
+  mechanism for running concurrent tests against the database.
+
+  ## Database support
+
+  While both PostgreSQL and MySQL support SQL Sandbox, only PostgreSQL
+  support concurrent tests while running the SQL Sandbox. Therefore, do
+  not run concurrent tests with MySQL as may run into deadlocks due to
+  its transaction implementation.
 
   ## Example
 
   The first step is to configure your database to use the
   `Ecto.Adapters.SQL.Sandbox` pool. You set those options in your
-  `config/config.exs`:
+  `config/config.exs` (or preferrably `config/test.exs`) if you
+  haven't yet:
 
       config :my_app, Repo,
         pool: Ecto.Adapters.SQL.Sandbox
-
-  Since you don't want those options in your production database, we
-  typically recommend to create a `config/test.exs` and add the
-  following to the bottom of your `config/config.exs` file:
-
-      import_config "config/#{Mix.env}.exs"
 
   Now with the test database properly configured, you can write
   transactional tests:

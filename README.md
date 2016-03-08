@@ -61,7 +61,7 @@ You need to add both Ecto and the database adapter as a dependency to your `mix.
 Database   | Ecto Adapter           | Dependency                   | Ecto 2.0 compatible?
 :----------| :--------------------- | :----------------------------| :-------------------
 PostgreSQL | Ecto.Adapters.Postgres | [postgrex][postgrex]         | Yes
-MySQL      | Ecto.Adapters.MySQL    | [mariaex][mariaex]           | No
+MySQL      | Ecto.Adapters.MySQL    | [mariaex][mariaex]           | Yes
 MSSQL      | Tds.Ecto               | [tds_ecto][tds_ecto]         | No
 SQLite3    | Sqlite.Ecto            | [sqlite_ecto][sqlite_ecto]   | No
 MongoDB    | Mongo.Ecto             | [mongodb_ecto][mongodb_ecto] | No
