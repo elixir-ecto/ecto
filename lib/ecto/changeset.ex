@@ -94,7 +94,7 @@ defmodule Ecto.Changeset do
   Using changesets you can work with associations as well as with embedded
   structs. Sometimes related data may be replaced by incoming data and by
   default Ecto won't allow such. Such behaviour can be changed when defining
-  the relation according to the values below:
+  the relation by setting `:on_replace` option according to the values below:
 
     * `:raise` (default) - do not allow removing association or embedded
       data via parent changesets,
