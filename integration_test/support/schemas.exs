@@ -46,6 +46,7 @@ defmodule Ecto.Integration.Post do
     many_to_many :users, Ecto.Integration.User,
       join_through: "posts_users", on_delete: :delete_all, on_replace: :delete
     has_many :users_comments, through: [:users, :comments]
+    has_many :comments_authors_permalinks, through: [:comments_authors, :permalink]
     timestamps
   end
 

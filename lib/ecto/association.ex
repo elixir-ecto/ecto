@@ -552,9 +552,18 @@ defmodule Ecto.Association.HasThrough do
   end
 
   @doc false
-  def assoc_query(%{owner: owner, through: [h|t]}, query, values) do
+  def assoc_query(refl, query, values) do
+    assoc_query(refl, [], query, values)
+  end
+
+  defp assoc_query(%__MODULE__{owner: owner, through: [h|t], field: field}, extra, query, values) do
+    refl = owner.__schema__(:association, h) ||
+            raise "unknown association `#{h}` for `#{inspect owner}` (used by through association `#{field}`)"
+    assoc_query refl, t ++ extra, query, values
+  end
+
+  defp assoc_query(refl, t, query, values) do
     query = query || %Ecto.Query{from: {"join expression", nil}}
-    refl  = owner.__schema__(:association, h)
 
     # Find the position for upcoming joins
     position = length(query.joins) + 1
