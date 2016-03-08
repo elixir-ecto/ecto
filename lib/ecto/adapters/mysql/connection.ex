@@ -1,4 +1,4 @@
-if Code.ensure_loaded?(Mariaex.Connection) do
+if Code.ensure_loaded?(Mariaex) do
 
   defmodule Ecto.Adapters.MySQL.Connection do
     @moduledoc false
@@ -8,34 +8,44 @@ if Code.ensure_loaded?(Mariaex.Connection) do
 
     ## Connection
 
-    def connect(opts) do
-      opts = Keyword.update(opts, :port, @default_port, &normalize_port/1)
-      Mariaex.Connection.start_link(opts)
-    end
+    def child_spec(opts) do
+      opts =
+        opts
+        |> Keyword.update(:port, @default_port, &normalize_port/1)
 
-    def query(conn, sql, params, opts \\ []) do
-      params = Enum.map params, fn
-        %Ecto.Query.Tagged{value: value} -> value
-        %{__struct__: _} = value -> value
-        %{} = value -> json_library.encode!(value)
-        value -> value
-      end
-
-      Mariaex.Connection.query(conn, sql, params, [decode: :manual] ++ opts)
-    end
-
-    def decode({:ok, res}, mapper) do
-      {:ok, Mariaex.Connection.decode(res, mapper) |> Map.from_struct}
-    end
-    def decode({:error, _} = err, _mapper) do
-      err
+      Mariaex.child_spec(opts)
     end
 
     defp normalize_port(port) when is_binary(port), do: String.to_integer(port)
     defp normalize_port(port) when is_integer(port), do: port
 
+    ## Query
+
+    def prepare_execute(conn, name, sql, params, opts) do
+      query = %Mariaex.Query{name: name, statement: sql}
+      DBConnection.prepare_execute(conn, query, map_params(params), opts)
+    end
+
+    def execute(conn, sql, params, opts) when is_binary(sql) do
+      query = %Mariaex.Query{name: "", statement: sql}
+      DBConnection.query(conn, query, map_params(params), opts)
+    end
+
+    def execute(conn, %{} = query, params, opts) do
+      DBConnection.execute(conn, query, map_params(params), opts)
+    end
+
+    defp map_params(params) do
+      Enum.map params, fn
+        %Ecto.Query.Tagged{value: value} -> value
+        %{__struct__: _} = value -> value
+        %{} = value -> json_library.encode!(value)
+        value -> value
+      end
+    end
+
     defp json_library do
-      Application.get_env(:ecto, :json_library)
+      Application.fetch_env!(:ecto, :json_library)
     end
 
     def to_constraints(%Mariaex.Error{mariadb: %{code: 1062, message: message}}) do
@@ -58,28 +68,6 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       size = byte_size(quoted) - 2
       <<_, unquoted::binary-size(size), _>> = quoted
       unquoted
-    end
-
-    ## Transaction
-
-    def begin_transaction do
-      "BEGIN"
-    end
-
-    def rollback do
-      "ROLLBACK"
-    end
-
-    def commit do
-      "COMMIT"
-    end
-
-    def savepoint(savepoint) do
-      "SAVEPOINT " <> savepoint
-    end
-
-    def rollback_to_savepoint(savepoint) do
-      "ROLLBACK TO SAVEPOINT " <> savepoint
     end
 
     ## Query
@@ -548,13 +536,8 @@ if Code.ensure_loaded?(Mariaex.Connection) do
       "RENAME TABLE #{quote_table(current_table.prefix, current_table.name)} TO #{quote_table(new_table.prefix, new_table.name)}"
     end
 
-    def execute_ddl({:rename, %Table{}=table, current_column, new_column}) do
-      [
-        "SELECT @column_type := COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = '#{table.name}' AND COLUMN_NAME = '#{current_column}' LIMIT 1",
-        "SET @rename_stmt = concat('ALTER TABLE #{quote_table(table.prefix, table.name)} CHANGE COLUMN `#{current_column}` `#{new_column}` ', @column_type)",
-        "PREPARE rename_stmt FROM @rename_stmt",
-        "EXECUTE rename_stmt"
-      ]
+    def execute_ddl({:rename, _table, _current_column, _new_column}) do
+      error!(nil, "MySQL adapter does not support renaming columns")
     end
 
     def execute_ddl(string) when is_binary(string), do: string

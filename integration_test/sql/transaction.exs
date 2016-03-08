@@ -59,7 +59,7 @@ defmodule Ecto.Integration.TransactionTest do
       assert [] = TestRepo.all(Trans)
     end)
 
-    assert [%Trans{text: "1"}] = TestRepo.all(Trans)
+    assert [%Trans{text: "1"}] = PoolRepo.all(Trans)
   end
 
   test "transaction rolls back" do

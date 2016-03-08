@@ -115,12 +115,8 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def execute_ddl(repo, definition, opts) do
-        sqls = @conn.execute_ddl(definition)
-
-        for sql <- List.wrap(sqls) do
-          Ecto.Adapters.SQL.query!(repo, sql, [], opts)
-        end
-
+        sql = @conn.execute_ddl(definition)
+        Ecto.Adapters.SQL.query!(repo, sql, [], opts)
         :ok
       end
 

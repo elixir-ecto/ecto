@@ -96,6 +96,8 @@ defmodule Ecto.Adapters.MySQL do
     do: [&json_decode/1, &Ecto.Adapters.SQL.load_embed(type, &1)]
   def loaders(_primitive, type), do: [type]
 
+  defp bool_decode(<<0>>), do: {:ok, false}
+  defp bool_decode(<<1>>), do: {:ok, true}
   defp bool_decode(0), do: {:ok, false}
   defp bool_decode(1), do: {:ok, true}
   defp bool_decode(x), do: {:ok, x}
@@ -160,7 +162,7 @@ defmodule Ecto.Adapters.MySQL do
 
   @doc false
   def supports_ddl_transaction? do
-    false
+    true
   end
 
   @doc false
