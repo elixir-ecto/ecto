@@ -1755,9 +1755,9 @@ defmodule Ecto.Changeset do
         {msg, opts} -> String.replace(msg, "%{count}", to_string(opts[:count]))
         msg -> msg
       end)
-      %{title: "should be at least 3 characters"}
+      %{title: ["should be at least 3 characters"]}
   """
-  @spec traverse_errors(t, (error_message -> String.t)) :: %{atom => String.t}
+  @spec traverse_errors(t, (error_message -> String.t)) :: %{atom => [String.t]}
   def traverse_errors(%Changeset{errors: errors, changes: changes, types: types}, msg_func) do
     errors
     |> Enum.reverse()
