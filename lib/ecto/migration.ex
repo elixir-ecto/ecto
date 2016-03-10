@@ -81,7 +81,8 @@ defmodule Ecto.Migration do
   Migrations support specifying a table prefix or index prefix which will target either a schema
   if using Postgres, or a different database if using MySQL. If no prefix is
   provided, the default schema or database is used.
-  Any reference declated in table migration refer by default table with same prefix declared for table.
+  Any reference declared in the table migration refers by default to the table with
+  the same declared prefix.
   The prefix is specified in the table options:
 
       def up do
