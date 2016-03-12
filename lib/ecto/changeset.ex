@@ -162,11 +162,11 @@ defmodule Ecto.Changeset do
                         field: atom, message: error_message}
 
   @number_validators %{
-    less_than:                {&</2,  "must be less than %{count}"},
-    greater_than:             {&>/2,  "must be greater than %{count}"},
-    less_than_or_equal_to:    {&<=/2, "must be less than or equal to %{count}"},
-    greater_than_or_equal_to: {&>=/2, "must be greater than or equal to %{count}"},
-    equal_to:                 {&==/2, "must be equal to %{count}"},
+    less_than:                {&</2,  "must be less than %{number}"},
+    greater_than:             {&>/2,  "must be greater than %{number}"},
+    less_than_or_equal_to:    {&<=/2, "must be less than or equal to %{number}"},
+    greater_than_or_equal_to: {&>=/2, "must be greater than or equal to %{number}"},
+    equal_to:                 {&==/2, "must be equal to %{number}"},
   }
 
   @relations [:embed, :assoc]
@@ -1262,14 +1262,14 @@ defmodule Ecto.Changeset do
     result = Decimal.compare(value, target_value)
     case decimal_compare(result, spec_key) do
       true  -> nil
-      false -> [{field, {message, count: target_value}}]
+      false -> [{field, {message, number: target_value}}]
     end
   end
 
   defp validate_number(field, value, message, _spec_key, spec_function, target_value) do
     case apply(spec_function, [value, target_value]) do
       true  -> nil
-      false -> [{field, {message, count: target_value}}]
+      false -> [{field, {message, number: target_value}}]
     end
   end
 
