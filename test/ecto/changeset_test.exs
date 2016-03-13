@@ -563,14 +563,14 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{}) |> validate_required(:title)
     refute changeset.valid?
     assert changeset.required == [:title]
-    assert changeset.errors == [title: "can't be blank"]
+    assert changeset.errors == [title: {"can't be blank", []}]
 
     changeset =
       changeset(%{title: nil, body: "\n"})
       |> validate_required([:title, :body], message: "is blank")
     refute changeset.valid?
     assert changeset.required == [:title, :body]
-    assert changeset.errors == [title: "is blank", body: "is blank"]
+    assert changeset.errors == [title: {"is blank", []}, body: {"is blank", []}]
 
     changeset =
       changeset(%{"title" => "hello", "body" => "something"})
@@ -591,13 +591,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "foobar"})
       |> validate_format(:title, ~r/@/)
     refute changeset.valid?
-    assert changeset.errors == [title: "has invalid format"]
+    assert changeset.errors == [title: {"has invalid format", []}]
     assert changeset.validations == [title: {:format, ~r/@/}]
 
     changeset =
       changeset(%{"title" => "foobar"})
       |> validate_format(:title, ~r/@/, message: "yada")
-    assert changeset.errors == [title: "yada"]
+    assert changeset.errors == [title: {"yada", []}]
   end
 
   test "validate_inclusion/3" do
@@ -612,13 +612,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(world))
     refute changeset.valid?
-    assert changeset.errors == [title: "is invalid"]
+    assert changeset.errors == [title: {"is invalid", []}]
     assert changeset.validations == [title: {:inclusion, ~w(world)}]
 
     changeset =
       changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(world), message: "yada")
-    assert changeset.errors == [title: "yada"]
+    assert changeset.errors == [title: {"yada", []}]
   end
 
   test "validate_subset/3" do
@@ -633,13 +633,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"topics" => ["cat", "laptop"]})
       |> validate_subset(:topics, ~w(cat dog))
     refute changeset.valid?
-    assert changeset.errors == [topics: "has an invalid entry"]
+    assert changeset.errors == [topics: {"has an invalid entry", []}]
     assert changeset.validations == [topics: {:subset, ~w(cat dog)}]
 
     changeset =
       changeset(%{"topics" => ["laptop"]})
       |> validate_subset(:topics, ~w(cat dog), message: "yada")
-    assert changeset.errors == [topics: "yada"]
+    assert changeset.errors == [topics: {"yada", []}]
   end
 
   test "validate_exclusion/3" do
@@ -654,13 +654,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "world"})
       |> validate_exclusion(:title, ~w(world))
     refute changeset.valid?
-    assert changeset.errors == [title: "is reserved"]
+    assert changeset.errors == [title: {"is reserved", []}]
     assert changeset.validations == [title: {:exclusion, ~w(world)}]
 
     changeset =
       changeset(%{"title" => "world"})
       |> validate_exclusion(:title, ~w(world), message: "yada")
-    assert changeset.errors == [title: "yada"]
+    assert changeset.errors == [title: {"yada", []}]
   end
 
   test "validate_length/3 with string" do
@@ -730,7 +730,7 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"upvotes" => -1})
                 |> validate_number(:upvotes, greater_than: 0)
     refute changeset.valid?
-    assert changeset.errors == [upvotes: {"must be greater than %{count}", count: 0}]
+    assert changeset.errors == [upvotes: {"must be greater than %{number}", number: 0}]
     assert changeset.validations == [upvotes: {:number, [greater_than: 0]}]
 
     # Multiple validations
@@ -744,12 +744,12 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 100, less_than: 0)
     refute changeset.valid?
-    assert changeset.errors == [upvotes: {"must be greater than %{count}", count: 100}]
+    assert changeset.errors == [upvotes: {"must be greater than %{number}", number: 100}]
 
     # Multiple validations with custom message errors
     changeset = changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 100, less_than: 0, message: "yada")
-    assert changeset.errors == [upvotes: {"yada", count: 100}]
+    assert changeset.errors == [upvotes: {"yada", number: 100}]
   end
 
   test "validate_number/3 with decimal" do
@@ -795,17 +795,17 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"title" => "title", "title_confirmation" => nil})
                 |> validate_confirmation(:title)
     refute changeset.valid?
-    assert changeset.errors == [title_confirmation: "does not match confirmation"]
+    assert changeset.errors == [title_confirmation: {"does not match confirmation", []}]
 
     changeset = changeset(%{"title" => "title", "title_confirmation" => "not title"})
                 |> validate_confirmation(:title)
     refute changeset.valid?
-    assert changeset.errors == [title_confirmation: "does not match confirmation"]
+    assert changeset.errors == [title_confirmation: {"does not match confirmation", []}]
 
     changeset = changeset(%{"title" => "title", "title_confirmation" => "not title"})
                 |> validate_confirmation(:title, message: "doesn't match field below")
     refute changeset.valid?
-    assert changeset.errors == [title_confirmation: "doesn't match field below"]
+    assert changeset.errors == [title_confirmation: {"doesn't match field below", []}]
 
     # Skip when no parameter
     changeset = changeset(%{"title" => "title"})

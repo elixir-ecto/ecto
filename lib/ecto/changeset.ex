@@ -162,11 +162,11 @@ defmodule Ecto.Changeset do
                         field: atom, message: error_message}
 
   @number_validators %{
-    less_than:                {&</2,  "must be less than %{count}"},
-    greater_than:             {&>/2,  "must be greater than %{count}"},
-    less_than_or_equal_to:    {&<=/2, "must be less than or equal to %{count}"},
-    greater_than_or_equal_to: {&>=/2, "must be greater than or equal to %{count}"},
-    equal_to:                 {&==/2, "must be equal to %{count}"},
+    less_than:                {&</2,  "must be less than %{number}"},
+    greater_than:             {&>/2,  "must be greater than %{number}"},
+    less_than_or_equal_to:    {&<=/2, "must be less than or equal to %{number}"},
+    greater_than_or_equal_to: {&>=/2, "must be greater than or equal to %{number}"},
+    equal_to:                 {&==/2, "must be equal to %{number}"},
   }
 
   @relations [:embed, :assoc]
@@ -1050,7 +1050,7 @@ defmodule Ecto.Changeset do
     new_errors =
       for field <- fields,
           missing?(changeset, field),
-          do: {field, message}
+          do: {field, {message, []}}
 
     case new_errors do
       [] -> %{changeset | required: fields ++ required}
@@ -1086,7 +1086,7 @@ defmodule Ecto.Changeset do
   @spec validate_format(t, atom, Regex.t, Keyword.t) :: t
   def validate_format(changeset, field, format, opts \\ []) do
     validate_change changeset, field, {:format, format}, fn _, value ->
-      if value =~ format, do: [], else: [{field, message(opts, "has invalid format")}]
+      if value =~ format, do: [], else: [{field, {message(opts, "has invalid format"), []}}]
     end
   end
 
@@ -1106,7 +1106,7 @@ defmodule Ecto.Changeset do
   @spec validate_inclusion(t, atom, Enum.t, Keyword.t) :: t
   def validate_inclusion(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:inclusion, data}, fn _, value ->
-      if value in data, do: [], else: [{field, message(opts, "is invalid")}]
+      if value in data, do: [], else: [{field, {message(opts, "is invalid"), []}}]
     end
   end
 
@@ -1128,7 +1128,7 @@ defmodule Ecto.Changeset do
   def validate_subset(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:subset, data}, fn _, value ->
       case Enum.any?(value, fn(x) -> not x in data end) do
-        true -> [{field, message(opts, "has an invalid entry")}]
+        true -> [{field, {message(opts, "has an invalid entry"), []}}]
         false -> []
       end
     end
@@ -1149,7 +1149,7 @@ defmodule Ecto.Changeset do
   @spec validate_exclusion(t, atom, Enum.t, Keyword.t) :: t
   def validate_exclusion(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:exclusion, data}, fn _, value ->
-      if value in data, do: [{field, message(opts, "is reserved")}], else: []
+      if value in data, do: [{field, {message(opts, "is reserved"), []}}], else: []
     end
   end
 
@@ -1262,14 +1262,14 @@ defmodule Ecto.Changeset do
     result = Decimal.compare(value, target_value)
     case decimal_compare(result, spec_key) do
       true  -> nil
-      false -> [{field, {message, count: target_value}}]
+      false -> [{field, {message, number: target_value}}]
     end
   end
 
   defp validate_number(field, value, message, _spec_key, spec_function, target_value) do
     case apply(spec_function, [value, target_value]) do
       true  -> nil
-      false -> [{field, {message, count: target_value}}]
+      false -> [{field, {message, number: target_value}}]
     end
   end
 
@@ -1328,7 +1328,7 @@ defmodule Ecto.Changeset do
 
       case Map.fetch(changeset.params, error_param) do
         {:ok, ^value} -> []
-        {:ok, _}      -> [{error_field, message(opts, "does not match confirmation")}]
+        {:ok, _}      -> [{error_field, {message(opts, "does not match confirmation"), []}}]
         :error        -> []
       end
     end
