@@ -376,21 +376,24 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp constraints_to_errors(%{constraints: user_constraints} = changeset, action, constraints) do
-    Enum.reduce constraints, changeset, fn {type, constraint}, acc ->
-      user_constraint =
-        Enum.find(user_constraints, fn c ->
-          c.type == type and c.constraint == constraint
-        end)
+  defp constraints_to_errors(%{constraints: user_constraints, errors: errors} = changeset, action, constraints) do
+    constraint_errors =
+      Enum.map constraints, fn {type, constraint} ->
+        user_constraint =
+          Enum.find(user_constraints, fn c ->
+            c.type == type and c.constraint == constraint
+          end)
 
-      case user_constraint do
-        %{field: field, message: message} ->
-          Ecto.Changeset.add_error(acc, field, message)
-        nil ->
-          raise Ecto.ConstraintError, action: action, type: type,
-                                      constraint: constraint, changeset: changeset
+        case user_constraint do
+          %{field: field, error: error} ->
+            {field, error}
+          nil ->
+            raise Ecto.ConstraintError, action: action, type: type,
+                                        constraint: constraint, changeset: changeset
+        end
       end
-    end
+
+    %{changeset | errors: constraint_errors ++ errors, valid?: false}
   end
 
   defp surface_changes(%{changes: changes} = changeset, struct, types, fields) do

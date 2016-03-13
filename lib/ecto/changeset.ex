@@ -56,7 +56,7 @@ defmodule Ecto.Changeset do
 
       changeset = User.changeset(%User{}, %{age: 0, email: "mary@example.com"})
       {:error, changeset} = Repo.insert(changeset)
-      changeset.errors #=> [age: "is invalid"]
+      changeset.errors #=> [age: {"is invalid", []}]
 
   In this case, we haven't checked the unique constraint in the
   e-mail field because the data did not validate. Let's fix the
@@ -65,7 +65,7 @@ defmodule Ecto.Changeset do
 
       changeset = User.changeset(%User{}, %{age: 42, email: "mary@example.com"})
       {:error, changeset} = Repo.insert(changeset)
-      changeset.errors #=> [email: "has already been taken"]
+      changeset.errors #=> [email: {"has already been taken", []}]
 
   Validations and constraints define an explicit boundary when the check
   happens. By moving constraints to the database, we also provide a safe,
@@ -148,18 +148,17 @@ defmodule Ecto.Changeset do
                         changes: %{atom => term},
                         required: [atom],
                         prepare: [(t -> t)],
-                        errors: [error],
+                        errors: [{atom, error}],
                         constraints: [constraint],
                         validations: Keyword.t,
                         filters: %{atom => term},
                         action: action,
                         types: nil | %{atom => Ecto.Type.t}}
 
-  @type error :: {atom, error_message}
-  @type error_message :: String.t | {String.t, Keyword.t}
+  @type error :: {String.t, Keyword.t}
   @type action :: nil | :insert | :update | :delete | :replace
   @type constraint :: %{type: :unique, constraint: String.t,
-                        field: atom, message: error_message}
+                        field: atom, message: error}
 
   @number_validators %{
     less_than:                {&</2,  "must be less than %{number}"},
@@ -947,19 +946,14 @@ defmodule Ecto.Changeset do
       iex> changeset = change(%Post{}, %{title: ""})
       iex> changeset = add_error(changeset, :title, "empty")
       iex> changeset.errors
-      [title: "empty"]
+      [title: {"empty", []}]
       iex> changeset.valid?
       false
 
   """
-  @spec add_error(t, atom, error_message) :: t
-  def add_error(%{errors: errors} = changeset, key, message) when is_binary(message) do
-    %{changeset | errors: [{key, message}|errors], valid?: false}
-  end
-
-  def add_error(%{errors: errors} = changeset, key, {message, opts} = error)
-      when is_binary(message) and is_list(opts) do
-    %{changeset | errors: [{key, error}|errors], valid?: false}
+  @spec add_error(t, atom, String.t, Keyword.t) :: t
+  def add_error(%{errors: errors} = changeset, key, message, keys \\ []) when is_binary(message) do
+    %{changeset | errors: [{key, {message, keys}}|errors], valid?: false}
   end
 
   @doc """
@@ -1458,14 +1452,14 @@ defmodule Ecto.Changeset do
   ## Options
 
     * `:message` - the message in case the constraint check fails.
-      Defaults to something like "violates check 'products_price_check'"
+      Defaults to "is invalid"
     * `:name` - the name of the constraint. Required.
 
   """
   def check_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || raise ArgumentError, "must supply the name of the constraint"
-    message    = opts[:message] || "violates check '#{constraint}'"
-    add_constraint(changeset, :check, to_string(constraint), field, message)
+    message    = opts[:message] || "is invalid"
+    add_constraint(changeset, :check, to_string(constraint), field, {message, []})
   end
 
   @doc """
@@ -1545,7 +1539,7 @@ defmodule Ecto.Changeset do
   def unique_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_index"
     message    = opts[:message] || "has already been taken"
-    add_constraint(changeset, :unique, to_string(constraint), field, message)
+    add_constraint(changeset, :unique, to_string(constraint), field, {message, []})
   end
 
   @doc """
@@ -1592,7 +1586,7 @@ defmodule Ecto.Changeset do
   def foreign_key_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_fkey"
     message    = opts[:message] || "does not exist"
-    add_constraint(changeset, :foreign_key, to_string(constraint), field, message)
+    add_constraint(changeset, :foreign_key, to_string(constraint), field, {message, []})
   end
 
   @doc """
@@ -1631,16 +1625,16 @@ defmodule Ecto.Changeset do
   @spec assoc_constraint(t, atom, Keyword.t) :: t | no_return
   def assoc_constraint(changeset, assoc, opts \\ []) do
     constraint = opts[:name] ||
-      (case get_assoc(changeset, assoc) do
+      case get_assoc(changeset, assoc) do
         %Ecto.Association.BelongsTo{owner_key: owner_key} ->
           "#{get_source(changeset)}_#{owner_key}_fkey"
         other ->
           raise ArgumentError,
             "assoc_constraint can only be added to belongs to associations, got: #{inspect other}"
-      end)
+      end
 
     message = opts[:message] || "does not exist"
-    add_constraint(changeset, :foreign_key, to_string(constraint), assoc, message)
+    add_constraint(changeset, :foreign_key, to_string(constraint), assoc, {message, []})
   end
 
   @doc """
@@ -1680,7 +1674,7 @@ defmodule Ecto.Changeset do
   @spec no_assoc_constraint(t, atom, Keyword.t) :: t | no_return
   def no_assoc_constraint(changeset, assoc, opts \\ []) do
     {constraint, message} =
-      (case get_assoc(changeset, assoc) do
+      case get_assoc(changeset, assoc) do
         %Ecto.Association.Has{cardinality: cardinality,
                               related_key: related_key, related: related} ->
           {opts[:name] || "#{related.__schema__(:source)}_#{related_key}_fkey",
@@ -1688,9 +1682,9 @@ defmodule Ecto.Changeset do
         other ->
           raise ArgumentError,
             "no_assoc_constraint can only be added to has one/many associations, got: #{inspect other}"
-      end)
+      end
 
-    add_constraint(changeset, :foreign_key, to_string(constraint), assoc, message)
+    add_constraint(changeset, :foreign_key, to_string(constraint), assoc, {message, []})
   end
 
   @doc """
@@ -1712,16 +1706,16 @@ defmodule Ecto.Changeset do
   def exclude_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_exclusion"
     message    = opts[:message] || "violates an exclusion constraint"
-    add_constraint(changeset, :exclude, to_string(constraint), field, message)
+    add_constraint(changeset, :exclude, to_string(constraint), field, {message, []})
   end
 
   defp no_assoc_message(:one), do: "is still associated to this entry"
   defp no_assoc_message(:many), do: "are still associated to this entry"
 
-  defp add_constraint(changeset, type, constraint, field, message)
-       when is_binary(constraint) and is_atom(field) and is_binary(message) do
+  defp add_constraint(changeset, type, constraint, field, error)
+       when is_binary(constraint) and is_atom(field) and is_tuple(error) do
     update_in changeset.constraints, &[%{type: type, constraint: constraint,
-                                         field: field, message: message}|&1]
+                                         field: field, error: error}|&1]
   end
 
   defp get_source(%{data: %{__meta__: %{source: {_prefix, source}}}}) when is_binary(source),
@@ -1734,7 +1728,7 @@ defmodule Ecto.Changeset do
       raise(ArgumentError, "cannot add constraint to changeset because association `#{assoc}` does not exist")
   end
 
-  @doc """
+  @doc ~S"""
   Traverses changeset errors and applies function to error messages.
 
   This function is particularly useful when associations and embeds
@@ -1751,13 +1745,14 @@ defmodule Ecto.Changeset do
 
   ## Examples
 
-      iex> traverse_errors(changeset, fn
-        {msg, opts} -> String.replace(msg, "%{count}", to_string(opts[:count]))
-        msg -> msg
-      end)
+      iex> traverse_errors(changeset, fn {msg, opts} ->
+      ...>   Enum.reduce(opts, msg, fn {key, value}, acc ->
+      ...>     String.replace(msg, "%{#{key}}", to_string(value))
+      ...>   end)
+      ...> end)
       %{title: ["should be at least 3 characters"]}
   """
-  @spec traverse_errors(t, (error_message -> String.t)) :: %{atom => [String.t]}
+  @spec traverse_errors(t, (error -> String.t)) :: %{atom => [String.t]}
   def traverse_errors(%Changeset{errors: errors, changes: changes, types: types}, msg_func) do
     errors
     |> Enum.reverse()
