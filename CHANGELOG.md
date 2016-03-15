@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.5
+
+### Bug fixes
+
+* Fix Mariaex requirement for 0.5.x and 0.6.x
+
 ## v1.1.4
 
 ### Enhancements
