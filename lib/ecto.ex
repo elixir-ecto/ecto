@@ -68,7 +68,7 @@ defmodule Ecto do
 
   ## Schema
 
-  Schema provide a set of functionalities around structuring your data,
+  Schema provides a set of functionalities around structuring your data,
   defining relationships and applying changes to repositories.
 
   Let's see an example:
