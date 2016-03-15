@@ -68,4 +68,3 @@ defmodule Seeds do
 end
 
 Seeds.import_data(data)
-

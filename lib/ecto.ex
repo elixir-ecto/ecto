@@ -68,7 +68,7 @@ defmodule Ecto do
 
   ## Schema
 
-  Schema provide a set of functionalities around structuring your data,
+  Schema provides a set of functionalities around structuring your data,
   defining relationships and applying changes to repositories.
 
   Let's see an example:
@@ -452,7 +452,7 @@ defmodule Ecto do
       iex> build_assoc(post, :comments)
       %Comment{id: nil, post_id: 13}
 
-  Note though it doesn't happen with belongs to cases, as the
+  Note though it doesn't happen with `belongs_to` cases, as the
   key is often the primary key and such is usually generated
   dynamically:
 
