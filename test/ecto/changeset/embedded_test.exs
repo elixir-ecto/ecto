@@ -102,13 +102,13 @@ defmodule Ecto.Changeset.EmbeddedTest do
   test "cast embeds_one with invalid params" do
     changeset = cast(%Author{}, %{"profile" => %{}}, :profile)
     assert changeset.changes.profile.changes == %{}
-    assert changeset.changes.profile.errors  == [name: "can't be blank"]
+    assert changeset.changes.profile.errors  == [name: {"can't be blank", []}]
     assert changeset.changes.profile.action  == :insert
     refute changeset.changes.profile.valid?
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"profile" => "value"}, :profile, required: true)
-    assert changeset.errors == [profile: "is invalid"]
+    assert changeset.errors == [profile: {"is invalid", []}]
     refute changeset.valid?
   end
 
@@ -176,7 +176,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     changeset = cast(%Author{profile: nil}, %{}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: "can't be blank"]
+    assert changeset.errors == [profile: {"can't be blank", []}]
 
     changeset = cast(%Author{profile: %Profile{}}, %{}, :profile, required: true)
     assert changeset.required == [:profile]
@@ -186,12 +186,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
     changeset = cast(%Author{profile: nil}, %{"profile" => nil}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: "can't be blank"]
+    assert changeset.errors == [profile: {"can't be blank", []}]
 
     changeset = cast(%Author{profile: %Profile{}}, %{"profile" => nil}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{profile: nil}
-    assert changeset.errors == [profile: "can't be blank"]
+    assert changeset.errors == [profile: {"can't be blank", []}]
   end
 
   test "cast embeds_one with optional" do
@@ -257,12 +257,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = cast(model, %{"invalid_profile" => nil}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: "is invalid"]
+    assert changeset.errors == [invalid_profile: {"is invalid", []}]
     refute changeset.valid?
 
     changeset = cast(model, %{"invalid_profile" => %{"id" => 2}}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: "is invalid"]
+    assert changeset.errors == [invalid_profile: {"is invalid", []}]
     refute changeset.valid?
   end
 
@@ -321,7 +321,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert new.valid?
 
     assert second.data.id == 2
-    assert second.errors == [title: "can't be blank"]
+    assert second.errors == [title: {"can't be blank", []}]
     assert second.action == :update
     refute second.valid?
 
@@ -340,19 +340,19 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
   test "cast embeds_many with invalid params" do
     changeset = cast(%Author{}, %{"posts" => "value"}, :posts)
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [posts: {"is invalid", []}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => ["value"]}, :posts)
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [posts: {"is invalid", []}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => nil}, :posts)
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [posts: {"is invalid", []}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => %{"id" => "invalid"}}, :posts)
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [posts: {"is invalid", []}]
     refute changeset.valid?
   end
 
@@ -367,11 +367,11 @@ defmodule Ecto.Changeset.EmbeddedTest do
     changeset = cast(%Author{posts: []}, %{}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: "can't be blank"]
+    assert changeset.errors == [posts: {"can't be blank", []}]
 
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [posts: {"is invalid", []}]
   end
 
   test "cast embeds_many with empty parameters" do
@@ -398,12 +398,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = cast(model, %{"invalid_posts" => []}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: {"is invalid", []}]
     refute changeset.valid?
 
     changeset = cast(model, %{"invalid_posts" => [%{"id" => 2}]}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: {"is invalid", []}]
     refute changeset.valid?
   end
 
@@ -528,12 +528,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = Changeset.put_embed(base_changeset, :invalid_profile, nil)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: "is invalid"]
+    assert changeset.errors == [invalid_profile: {"is invalid", []}]
     refute changeset.valid?
 
     changeset = Changeset.put_embed(base_changeset, :invalid_profile, %Profile{id: 2})
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: "is invalid"]
+    assert changeset.errors == [invalid_profile: {"is invalid", []}]
     refute changeset.valid?
   end
 
@@ -624,12 +624,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = Changeset.put_embed(base_changeset, :invalid_posts, [])
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: {"is invalid", []}]
     refute changeset.valid?
 
     changeset = Changeset.put_embed(base_changeset, :invalid_posts, [%Post{id: 2}])
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: {"is invalid", []}]
     refute changeset.valid?
   end
 

@@ -92,7 +92,7 @@ defmodule Ecto.Changeset.ManyToManyTest do
     assert new.valid?
 
     assert second.data.id == 2
-    assert second.errors == [title: "can't be blank"]
+    assert second.errors == [title: {"can't be blank", []}]
     assert second.action == :update
     refute second.valid?
 
@@ -112,19 +112,19 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
   test "cast many_to_many with invalid params" do
     changeset = cast(%Author{}, %{"posts" => "value"}, :posts)
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [posts: {"is invalid", []}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => ["value"]}, :posts)
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [posts: {"is invalid", []}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => nil}, :posts)
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [posts: {"is invalid", []}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => %{"id" => "invalid"}}, :posts)
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [posts: {"is invalid", []}]
     refute changeset.valid?
   end
 
@@ -144,12 +144,12 @@ defmodule Ecto.Changeset.ManyToManyTest do
     changeset = cast(%Author{posts: []}, %{}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: "can't be blank"]
+    assert changeset.errors == [posts: {"can't be blank", []}]
 
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: "is invalid"]
+    assert changeset.errors == [posts: {"is invalid", []}]
   end
 
   test "cast many_to_many with empty parameters" do
@@ -179,12 +179,12 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
     changeset = cast(model, %{"invalid_posts" => []}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: {"is invalid", []}]
     refute changeset.valid?
 
     changeset = cast(model, %{"invalid_posts" => [%{"id" => 2}]}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: {"is invalid", []}]
     refute changeset.valid?
   end
 
@@ -293,22 +293,22 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
     changeset = Changeset.put_assoc(base_changeset, :invalid_posts, [])
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: {"is invalid", []}]
     refute changeset.valid?
 
     changeset = Changeset.put_assoc(base_changeset, :invalid_posts, [%Post{id: 2}])
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: {"is invalid", []}]
     refute changeset.valid?
 
     changeset = Changeset.put_assoc(base_changeset, :invalid_posts, [])
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: {"is invalid", []}]
     refute changeset.valid?
 
     changeset = Changeset.put_assoc(base_changeset, :invalid_posts, [%Post{id: 2}])
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: "is invalid"]
+    assert changeset.errors == [invalid_posts: {"is invalid", []}]
     refute changeset.valid?
   end
 

@@ -370,7 +370,7 @@ defmodule Ecto.Changeset do
          {errors, valid?} = error_on_nil(kind, key, Map.get(changes, key, current), errors, valid?)
          {changes, errors, valid?}
        :invalid ->
-         {changes, [{key, "is invalid"}|errors], false}
+         {changes, [{key, {"is invalid", []}} | errors], false}
      end}
   end
 
@@ -420,7 +420,7 @@ defmodule Ecto.Changeset do
   end
 
   defp error_on_nil(:required, key, nil, errors, _valid?),
-    do: {[{key, "can't be blank"}|errors], false}
+    do: {[{key, {"can't be blank", []}} | errors], false}
   defp error_on_nil(_kind, _key, _value, errors, valid?),
     do: {errors, valid?}
 
@@ -500,7 +500,7 @@ defmodule Ecto.Changeset do
             {:ok, _, _, _} ->
               missing_relation(changeset, key, current, required?, relation)
             :error ->
-              %{changeset | errors: [{key, "is invalid"} | changeset.errors], valid?: false}
+              %{changeset | errors: [{key, {"is invalid", []}} | changeset.errors], valid?: false}
           end
         :error ->
           missing_relation(changeset, key, current, required?, relation)
@@ -514,7 +514,7 @@ defmodule Ecto.Changeset do
   defp missing_relation(%{changes: changes, errors: errors} = changeset, name, current, required?, relation) do
     current_changes = Map.get(changes, name, current)
     if required? and Relation.empty?(relation, current_changes) do
-      %{changeset | errors: [{name, "can't be blank"} | errors], valid?: false}
+      %{changeset | errors: [{name, {"can't be blank", []}} | errors], valid?: false}
     else
       changeset
     end
@@ -853,7 +853,7 @@ defmodule Ecto.Changeset do
         %{changeset | changes: Map.put(changes, name, change),
                       valid?: changeset.valid? && relation_valid?}
       :error ->
-        %{changeset | errors: [{name, "is invalid"} | changeset.errors], valid?: false}
+        %{changeset | errors: [{name, {"is invalid", []}} | changeset.errors], valid?: false}
     end
   end
 
