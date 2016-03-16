@@ -70,7 +70,5 @@ defmodule Mix.Tasks.Ecto.Migrate do
       pid && repo.stop(pid)
       restart_app_if_migrated(repo, migrated)
     end
-
-    Mix.Task.reenable "ecto.migrate"
   end
 end

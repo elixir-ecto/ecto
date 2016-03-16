@@ -71,7 +71,5 @@ defmodule Mix.Tasks.Ecto.Rollback do
       pid && repo.stop(pid)
       restart_app_if_migrated(repo, migrated)
     end
-
-    Mix.Task.reenable "ecto.rollback"
   end
 end

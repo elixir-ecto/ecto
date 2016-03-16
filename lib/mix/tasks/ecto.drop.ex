@@ -34,8 +34,6 @@ defmodule Mix.Tasks.Ecto.Drop do
         drop_database(repo, opts)
       end
     end
-
-    Mix.Task.reenable "ecto.drop"
   end
 
   defp skip_safety_warnings? do
