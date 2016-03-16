@@ -115,7 +115,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.params == params
     assert changeset.data  == struct
     assert changeset.changes == %{body: "world"}
-    assert changeset.errors == [title: "can't be blank"]
+    assert changeset.errors == [title: {"can't be blank", []}]
     refute changeset.valid?
   end
 
@@ -125,7 +125,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(body), ~w())
     assert changeset.changes == %{}
-    assert changeset.errors == [body: "is invalid"]
+    assert changeset.errors == [body: {"is invalid", []}]
     refute changeset.valid?
   end
 
@@ -135,23 +135,23 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(), ~w(body))
     assert changeset.changes == %{}
-    assert changeset.errors == [body: "is invalid"]
+    assert changeset.errors == [body: {"is invalid", []}]
     refute changeset.valid?
   end
 
   test "cast/4: required errors" do
     changeset = cast(%Post{}, %{"title" => nil}, ~w(title), ~w())
-    assert changeset.errors == [title: "can't be blank"]
+    assert changeset.errors == [title: {"can't be blank", []}]
     assert changeset.changes == %{}
     refute changeset.valid?
 
     changeset = cast(%Post{title: nil}, %{}, ~w(title), ~w())
-    assert changeset.errors == [title: "can't be blank"]
+    assert changeset.errors == [title: {"can't be blank", []}]
     assert changeset.changes == %{}
     refute changeset.valid?
 
     changeset = cast(%Post{title: "valid"}, %{"title" => nil}, ~w(title), ~w())
-    assert changeset.errors == [title: "can't be blank"]
+    assert changeset.errors == [title: {"can't be blank", []}]
     assert changeset.changes == %{}
     refute changeset.valid?
   end
@@ -254,7 +254,7 @@ defmodule Ecto.ChangesetTest do
     changeset = merge(cs1, cs2)
     refute changeset.valid?
     assert changeset.errors ==
-           [title: "can't be blank", body: "can't be blank"]
+           [title: {"can't be blank", []}, body: {"can't be blank", []}]
   end
 
   test "merge/2: merges validations" do
