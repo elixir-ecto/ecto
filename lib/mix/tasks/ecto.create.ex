@@ -16,7 +16,7 @@ defmodule Mix.Tasks.Ecto.Create do
 
     * `-r`, `--repo` - the repo to create (defaults to `YourApp.Repo`)
     * `--no-compile` - do not compile before creating
-    * `--quiet` - do no log output
+    * `--quiet` - do not log output
 
   """
 

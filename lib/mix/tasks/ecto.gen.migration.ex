@@ -17,7 +17,7 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
 
   By default, the migration will be generated to the
   "priv/YOUR_REPO/migrations" directory of the current application
-  but it can be configured by specify the `:priv` key under
+  but it can be configured by specifying the `:priv` key under
   the repository configuration.
 
   This generator will automatically open the generated file if
