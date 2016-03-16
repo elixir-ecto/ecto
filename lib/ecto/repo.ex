@@ -88,6 +88,7 @@ defmodule Ecto.Repo do
         @adapter.transaction(__MODULE__, opts, fun)
       end
 
+      @spec rollback(term) :: no_return
       def rollback(value) do
         @adapter.rollback(__MODULE__, value)
       end
