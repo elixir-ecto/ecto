@@ -9,7 +9,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
 
   By default, migrations are expected at "priv/YOUR_REPO/migrations"
   directory of the current application but it can be configured
-  by specify the `:priv` key under the repository configuration.
+  by specifying the `:priv` key under the repository configuration.
 
   Runs the latest applied migration by default. To roll back to
   to a version number, supply `--to version_number`.
