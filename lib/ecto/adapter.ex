@@ -73,7 +73,7 @@ defmodule Ecto.Adapter do
             [(term -> {:ok, term} | :error) | Ecto.Type.t]
 
   @doc """
-  Returns the dumprs for a given type.
+  Returns the dumpers for a given type.
 
   It receives the primitive type and the Ecto type (which may be
   primitive as well). It returns a list of dumpers with the given
