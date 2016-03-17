@@ -960,9 +960,9 @@ defmodule Ecto.ChangesetTest do
       |> add_error(:title, "is taken")
 
     errors = traverse_errors(changeset, fn {err, opts} ->
-        err
-        |> String.replace("%{count}", to_string(opts[:count]))
-        |> String.upcase()
+      err
+      |> String.replace("%{count}", to_string(opts[:count]))
+      |> String.upcase()
     end)
 
     assert errors == %{

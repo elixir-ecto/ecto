@@ -1737,11 +1737,9 @@ defmodule Ecto.Changeset do
 
   A changeset is supplied along with a function to apply to each
   error message as the changeset is traversed. The error message
-  function receives a single argument matching either:
+  function receives an error tuple `{msg, opts}`, for example:
 
-    * `{message, opts}` - The string error message and options,
-      for example `{"should be at least %{count} characters", [count: 3]}`
-    * `message` - The string error message
+      {"should be at least %{count} characters", [count: 3]}
 
   ## Examples
 
