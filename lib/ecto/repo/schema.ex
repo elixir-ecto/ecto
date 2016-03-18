@@ -18,6 +18,10 @@ defmodule Ecto.Repo.Schema do
     do_insert_all(repo, adapter, nil, {nil, table}, rows, opts)
   end
 
+  def insert_all(repo, adapter, {_prefix, _source} = table, rows, opts) do
+    do_insert_all(repo, adapter, nil, table, rows, opts)
+  end
+
   defp do_insert_all(_repo, _adapter, _schema, _source, [], opts) do
     if opts[:returning] do
       {0, []}

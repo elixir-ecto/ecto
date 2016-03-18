@@ -482,13 +482,17 @@ defmodule Ecto.Integration.RepoTest do
 
   test "insert all" do
     assert {2, nil} = TestRepo.insert_all("comments", [[text: "1"], %{text: "2", lock_version: 2}])
+    assert {2, nil} = TestRepo.insert_all({nil, "comments"}, [[text: "3"], %{text: "4", lock_version: 2}])
     assert [%Comment{text: "1", lock_version: 1},
-            %Comment{text: "2", lock_version: 2}] = TestRepo.all(Comment)
+            %Comment{text: "2", lock_version: 2},
+            %Comment{text: "3", lock_version: 1},
+            %Comment{text: "4", lock_version: 2}] = TestRepo.all(Comment)
 
     assert {2, nil} = TestRepo.insert_all(Post, [[], []])
     assert [%Post{}, %Post{}] = TestRepo.all(Post)
 
     assert {0, nil} = TestRepo.insert_all("posts", [])
+    assert {0, nil} = TestRepo.insert_all({nil, "posts"}, [])
   end
 
   @tag :returning
