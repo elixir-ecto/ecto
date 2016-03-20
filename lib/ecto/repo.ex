@@ -278,6 +278,11 @@ defmodule Ecto.Repo do
   ## Options
 
   See the "Shared options" section at the module documentation.
+
+  ## Example
+
+      MyRepo.get(Post, 42)
+
   """
   @callback get(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
@@ -287,6 +292,11 @@ defmodule Ecto.Repo do
   ## Options
 
   See the "Shared options" section at the module documentation.
+
+  ## Example
+
+      MyRepo.get!(Post, 42)
+
   """
   @callback get!(Ecto.Queryable.t, term, Keyword.t) :: Ecto.Schema.t | nil | no_return
 
