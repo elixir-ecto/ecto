@@ -806,7 +806,7 @@ defmodule Ecto.Changeset do
   The given value may either be the association struct, a
   changeset for the given association or a map or keyword
   list of changes to be applied to the current association.
-  If a map or keyword list are given are there is no
+  If a map or keyword list are given and there is no
   association, one will be created.
 
   If the association has no changes, it will be skipped.
