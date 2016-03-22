@@ -26,7 +26,7 @@ defmodule Ecto.Migration.Runner do
     {time1, _} = :timer.tc(module, operation, [])
     {time2, _} = :timer.tc(&flush/0, [])
     time = time1 + time2
-    log(level, "== Migrated in #{inspect(div(time, 10000) / 10)}s")
+    log(level, "== Migrated in #{inspect(div(time, 100_000) / 10)}s")
 
     stop()
   end
