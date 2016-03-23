@@ -20,9 +20,9 @@ defmodule Ecto.Multi do
   ## Changesets
 
   If Multi contains operations that accept changesets (like `insert/4`,
-  `update/4` or `delete/4`) they will be checked before starting transaction
-  if any of them isn't invalid. In case any has errors, the transaction won't
-  even be started and the error will be immediately returned.
+  `update/4` or `delete/4`) they will be checked before starting the transaction.
+  If any changeset has errors, the transaction won't even be started and the error
+  will be immediately returned.
 
   ## Run
 
@@ -35,7 +35,7 @@ defmodule Ecto.Multi do
   ## Example
 
   Let's look at an example definition and usage. The use case we'll be
-  looking into is resetting password. We need to update the account
+  looking into is resetting a password. We need to update the account
   with proper information, log the request and remove all current sessions.
   We define a function creating the Multi structure probably in some sort of
   service layer:
@@ -65,9 +65,10 @@ defmodule Ecto.Multi do
           # under keys we used for naming the operations.
         {:error, failed_operation, failed_value, changes_so_far} ->
           # One of the operations failed. We can access the operation's failure
-          # value (like changeset for operations on changesets) to prepare
-          # proper response. We also get access to results of any operations
-          # that succeeded before the indicated operation failed.
+          # value (like changeset for operations on changesets) to prepare a
+          # proper response. We also get access to the results of any operations
+          # that succeeded before the indicated operation failed. However, any
+          # successful operations would have been rolled back.
       end
 
   We can also easily unit test our transaction without actually running it.
@@ -305,6 +306,10 @@ defmodule Ecto.Multi do
     end
   end
 
+  @doc """
+  Transforms the `Ecto.Multi` into a list of operations to be performed. Inspecting
+  the `Ecto.Multi` struct internals directly is discouraged.
+  """
   def to_list(%Multi{operations: operations}) do
     operations
     |> Enum.reverse
