@@ -324,6 +324,8 @@ defmodule Ecto.Association.Has do
           ref
         primary_key = Module.get_attribute(module, :primary_key) ->
           elem(primary_key, 0)
+        [primary_key | _rest] = Module.get_attribute(module, :ecto_primary_keys) ->
+          primary_key
         true ->
           raise ArgumentError, "need to set :references option for " <>
             "association #{inspect name} when schema has no primary key"

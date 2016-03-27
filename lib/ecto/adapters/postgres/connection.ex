@@ -384,9 +384,9 @@ if Code.ensure_loaded?(Postgrex) do
       "$#{ix+1}"
     end
 
-    defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, _query) when is_atom(field) do
-      {_, name, _} = elem(sources, idx)
-      "#{name}.#{quote_name(field)}"
+    defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, query) when is_atom(field) do
+      {_table, name, schema} = elem(sources, idx)
+      field_or_alias(field, name, sources, schema, query)
     end
 
     defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
@@ -397,9 +397,13 @@ if Code.ensure_loaded?(Postgrex) do
           "Please specify a schema or specify exactly which fields from " <>
           "#{inspect name} you desire")
       end
-      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
+      Enum.map_join(fields, ", ", &field_or_alias(&1, name, sources, schema, query))
     end
 
+    defp expr({:{}, [], fragment}, sources, query) do
+      expr(List.to_tuple(fragment), sources, query)
+    end
+    
     defp expr({:in, _, [_left, []]}, _sources, _query) do
       "false"
     end
@@ -893,18 +897,22 @@ if Code.ensure_loaded?(Postgrex) do
         error!(nil, "bad field name #{inspect name}")
       end
       <<?", name::binary, ?">>
-    end
+    end   
 
     defp quote_table(nil, name),    do: quote_table(name)
     defp quote_table(prefix, name), do: quote_table(prefix) <> "." <> quote_table(name)
 
     defp quote_table(name) when is_atom(name),
-      do: quote_table(Atom.to_string(name))
+      do: quote_table(Atom.to_string(name))    
     defp quote_table(name) do
-      if String.contains?(name, "\"") do
-        error!(nil, "bad table name #{inspect name}")
+      cond do
+        String.contains?(name, "\"") ->
+          error!(nil, "bad table name #{inspect name}")
+        String.contains?(name, ".") ->
+          quote_table(String.split(name, '.'))
+        true ->
+          <<?", name::binary, ?">>
       end
-      <<?", name::binary, ?">>
     end
     
     # Quote a table name for use in metadata look ups where the table name 
@@ -933,6 +941,26 @@ if Code.ensure_loaded?(Postgrex) do
       [table_name | options] = name
       prefix = Keyword.get(options, :prefix, nil)
       single_quote(prefix, table_name)
+    end
+    
+    defp field_or_alias(field, name, _sources, nil, _query) do
+      "#{name}.#{quote_name(field)}"
+    end
+    defp field_or_alias(field, name, sources, schema, query) do
+      alias Ecto.Query.Builder.Select, as: Builder
+      
+      if alias = schema.__schema__(:aliases)[field] do
+        {expr, {params, take}} = Builder.escape(alias, [], __ENV__)
+        if Enum.any?(params), do: raise ArgumentError, 
+            "Parameters in a schema column alias are not supported. " <>
+            "Field alias for #{field} found #{inspect params}"
+            
+        alias = expr(expr, sources, query)
+        column = "#{alias} AS #{quote_name(field)}"
+        String.replace(column, "%{table}", name)
+      else
+        "#{name}.#{quote_name(field)}"
+      end
     end
 
     defp assemble(list) do
