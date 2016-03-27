@@ -71,7 +71,7 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
-  defmodule AlterForeignKeyMigration do
+  defmodule AlterForeignKeyOnDeleteMigration do
     use Ecto.Migration
 
     def up do
@@ -88,6 +88,31 @@ defmodule Ecto.Integration.MigrationTest do
       execute "INSERT INTO alter_fk_users (id) VALUES ('1')"
       execute "INSERT INTO alter_fk_posts (id, alter_fk_user_id) VALUES ('1', '1')"
       execute "DELETE FROM alter_fk_users"
+    end
+
+    def down do
+      drop table(:alter_fk_posts)
+      drop table(:alter_fk_users)
+    end
+  end
+
+  defmodule AlterForeignKeyOnUpdateMigration do
+    use Ecto.Migration
+
+    def up do
+      create table(:alter_fk_users)
+
+      create table(:alter_fk_posts) do
+        add :alter_fk_user_id, :id
+      end
+
+      alter table(:alter_fk_posts) do
+        modify :alter_fk_user_id, references(:alter_fk_users, on_update: :update_all)
+      end
+
+      execute "INSERT INTO alter_fk_users (id) VALUES ('1')"
+      execute "INSERT INTO alter_fk_posts (id, alter_fk_user_id) VALUES ('1', '1')"
+      execute "UPDATE alter_fk_users SET id = '2'"
     end
 
     def down do
@@ -342,11 +367,18 @@ defmodule Ecto.Integration.MigrationTest do
     :ok = down(PoolRepo, 20080906120000, AlterColumnMigration, log: false)
   end
 
-  @tag :modify_foreign_key
-  test "modify foreign key" do
-    assert :ok == up(PoolRepo, 20130802170000, AlterForeignKeyMigration, log: false)
+  @tag :modify_foreign_key_on_delete
+  test "modify foreign key's on_delete constraint" do
+    assert :ok == up(PoolRepo, 20130802170000, AlterForeignKeyOnDeleteMigration, log: false)
     assert [nil] == PoolRepo.all from p in "alter_fk_posts", select: p.alter_fk_user_id
-    :ok = down(PoolRepo, 20130802170000, AlterForeignKeyMigration, log: false)
+    :ok = down(PoolRepo, 20130802170000, AlterForeignKeyOnDeleteMigration, log: false)
+  end
+
+  @tag :modify_foreign_key_on_update
+  test "modify foreign key's on_update constraint" do
+    assert :ok == up(PoolRepo, 20130802170000, AlterForeignKeyOnUpdateMigration, log: false)
+    assert [2] == PoolRepo.all from p in "alter_fk_posts", select: p.alter_fk_user_id
+    :ok = down(PoolRepo, 20130802170000, AlterForeignKeyOnUpdateMigration, log: false)
   end
 
   @tag :remove_column
