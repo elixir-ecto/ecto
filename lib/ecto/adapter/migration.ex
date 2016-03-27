@@ -37,6 +37,11 @@ defmodule Ecto.Adapter.Migration  do
   Checks if the adapter supports ddl transaction.
   """
   @callback supports_ddl_transaction? :: boolean
+  
+  @doc """
+  Checks if the adapter supports inherited tables
+  """
+  @callback supports_inherited_tables? :: boolean
 
   @doc """
   Executes migration commands.
