@@ -4,6 +4,7 @@ defmodule Ecto.Adapters.SQLTest do
   defmodule Adapter do
     use Ecto.Adapters.SQL
     def supports_ddl_transaction?, do: false
+    def supports_inherited_tables?, do: false
   end
 
   Application.put_env(:ecto, __MODULE__.Repo, adapter: Adapter)

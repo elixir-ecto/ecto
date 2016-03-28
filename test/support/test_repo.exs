@@ -78,7 +78,16 @@ defmodule Ecto.TestAdapter do
 
   def delete(_repo, _model_meta, _filter, _opts),
     do: send(self, :delete) && {:ok, []}
+    
+  def primary_keys_from(table),
+    do: Ecto.Adapters.Postgres.Connection.primary_keys_from(table)
+    
+  def index_definitions_from(table),
+    do: Ecto.Adapters.Postgres.Connection.index_definitions_from(table)   
 
+  def trigger_definitions_from(table),
+    do: Ecto.Adapters.Postgres.Connection.trigger_definitions_from(table) 
+      
   ## Transactions
 
   def transaction(_repo, _opts, fun) do
@@ -96,6 +105,25 @@ defmodule Ecto.TestAdapter do
     send self, {:rollback, value}
     throw {:ecto_rollback, value}
   end
+  
+  ## Inheritance Queries
+  @trigger """
+    CREATE TRIGGER tsvector_update
+    BEFORE INSERT OR UPDATE OF name, description, tags, search_language
+    ON things
+    FOR EACH ROW EXECUTE PROCEDURE things_search_trigger()
+  """
+  @index "CREATE UNIQUE INDEX things_index ON things USING btree (id)"
+  def query(_repo, sql, _params, _opts) do
+    cond do
+      sql =~ "SELECT a.attname::varchar" ->
+        {:ok, %{rows: [[:id]]}}
+      sql =~ "pg_get_indexdef" ->
+        {:ok, %{rows: [[@index]]}}
+      sql =~ "pg_get_triggerdef" ->
+        {:ok, %{rows: [[@trigger |> remove_newlines]]}}
+    end
+  end
 
   ## Migrations
 
@@ -103,6 +131,10 @@ defmodule Ecto.TestAdapter do
     Process.get(:supports_ddl_transaction?) || false
   end
 
+  def supports_inherited_tables? do
+    Process.get(:supports_inherited_tables?) || false
+  end
+  
   def execute_ddl(_repo, command, _) do
     Process.put(:last_command, command)
     :ok
@@ -111,12 +143,17 @@ defmodule Ecto.TestAdapter do
   defp migrated_versions do
     Process.get(:migrated_versions) || []
   end
+  
+  defp remove_newlines(string) do
+    string |> String.strip |> String.replace("\n", " ") |> String.replace(~r" +"," ")
+  end
 end
 
 Application.put_env(:ecto, Ecto.TestRepo, [user: "invalid"])
 
 defmodule Ecto.TestRepo do
   use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
+  
 end
 
 Ecto.TestRepo.start_link(url: "ecto://user:pass@local/hello")

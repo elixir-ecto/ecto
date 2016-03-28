@@ -105,6 +105,52 @@ defmodule Ecto.Migration do
   For both MySQL and Postgres with a prefixed table, you must use the same prefix for the index field to ensure
   you index the prefix qualified table.
 
+  ## Table inheritance
+
+  Postgres supports inherited tables which can be useful for data sharding or other
+  uses.  If in inhertance is defined and a migration executed in a Repo that doesn't support
+  inheritance then an exception will be raised at migration time,
+
+  Define the inheritance in the table options:
+
+      def up do
+        create table(:contacts) do
+          add :name, :string
+          add :address, :string
+          add :phone_number, :string
+
+          timestamps
+        end
+
+        create table(:people, inherits: :contacts) do
+          add :date_of_birth, :date
+        end
+        
+        create table(:organizations, inherits: :contacts) do
+          add :business_registration, :string
+        end
+      end
+
+  This will create a `people` table that includes all the columns of the the `contacts` 
+  table as well as any additional columns defined in the `people` schema.
+  
+  By default, the inherited tables primary key definitions, indexes and triggers will also be
+  copied from the inherited table to the new table.  This is not part of the standard
+  Postgres inheritance functionality but it is executed during the migration process.
+  
+  To change this behaviour, options can be set for the inheritance. For example:
+  
+      create table(:people, inherits: [:contacts, prefix: :global, indexes: false]) do
+        add :date_of_birth, :date
+      end
+      
+  The options that can be set are:
+  
+    * `prefix` - defines the prefix of the inherited table. If not defined, the table level :prefix is used
+    * `primary_keys` - defines if the inherited tables primary key definitions are inherited.  Default: `true`
+    * `indexes` - defines if the non-primary-key indexes are inherited,  Default: `true`
+    * `triggers` - defines if triggers are inherites.  Default: `true`
+    
   ## Transactions
 
   By default, Ecto runs all migrations inside a transaction. That's not always
@@ -168,9 +214,10 @@ defmodule Ecto.Migration do
     @moduledoc """
     Defines a table struct used in migrations.
     """
-    defstruct name: nil, prefix: nil, primary_key: true, engine: nil, options: nil
+    defstruct name: nil, prefix: nil, primary_key: true, engine: nil, 
+      inherits: nil, inherited_primary_keys: [], options: nil
     @type t :: %__MODULE__{name: atom, prefix: atom | nil, primary_key: boolean,
-                           engine: atom, options: String.t}
+                           engine: atom, inherits: atom | [], inherited_primary_keys: [], options: String.t}
   end
 
   defmodule Reference do
@@ -212,18 +259,33 @@ defmodule Ecto.Migration do
   @doc """
   Creates a table.
 
-  By default, the table will also include a primary_key of name `:id`
-  and type `:serial`. Check `table/2` docs for more information.
+  By default, the table will also include a primary_key of name `:id` 
+  and type `:serial` unless the table inherits from another table.
+  Check `table/2` docs for more information.
 
   ## Examples
 
+      # creates table posts and includes an :id column
       create table(:posts) do
         add :title, :string, default: "Untitled"
         add :body,  :text
 
         timestamps
       end
-
+      
+      # creates table :posts which inherits from table
+      # :things and does not create an :id column since
+      # it will inherit the primary key(s) of the parent
+      create table(:posts, inherits: :things) do
+        add :title, :string, default: "Untitled"
+        add :body,  :text
+      end
+      
+      # Options can also be provided to the inherited table.
+      create table(:posts, inherits: [:things, primary_keys: true, indexes: true, triggers: false]) do
+        add :title, :string, default: "Untitled"
+        add :body,  :text
+      end
   """
   defmacro create(object, do: block) do
     do_create(object, :create, block)
@@ -242,14 +304,24 @@ defmodule Ecto.Migration do
   defp do_create(object, command, block) do
     quote do
       table = %Table{} = unquote(object)
+      table = Map.put(table, :inherited_primary_keys, primary_keys_from(table.inherits))
       Runner.start_command({unquote(command), Ecto.Migration.__prefix__(table)})
 
-      if table.primary_key do
+      if table.primary_key and !table.inherits do
         add(:id, :serial, primary_key: true)
       end
 
       unquote(block)
       Runner.end_command
+      
+      if repo.__adapter__.supports_inherited_tables? do
+        cascade_indexes(table, table.inherits) 
+        |> Enum.each(fn(i) -> if direction == :up, do: Runner.execute(i) end)
+        
+        cascade_triggers(table, table.inherits) 
+        |> Enum.each(fn(i) -> if direction == :up, do: Runner.execute(i) end)
+      end      
+      
       table
     end
   end
@@ -327,7 +399,7 @@ defmodule Ecto.Migration do
 
   defp do_create(table, command) do
     columns =
-      if table.primary_key do
+      if table.primary_key and !table.inherits do
         [{:add, :id, :serial, primary_key: true}]
       else
         []
@@ -387,6 +459,12 @@ defmodule Ecto.Migration do
         add :name, :string
         add :price, :decimal
       end
+      
+      create table(:products, inherits: :things) do
+        add :name, :string
+        add :price, :decimal
+      end
+      
 
   ## Options
 
@@ -394,10 +472,21 @@ defmodule Ecto.Migration do
     * `:engine` - customizes the table storage for supported databases. For MySQL,
       the default is InnoDB
     * `:options` - provide custom options that will be appended after generated
-      statement, for example "WITH", "INHERITS" or "ON COMMIT" clauses
-
+      statement, for example "WITH" or "ON COMMIT" clauses
+    * `:inherits` - inherits from another table; supported in Postgres only
+      The default primary key field is not added. `:inherits` can 
+      be an atom or a list with options, for example `inherits: [:things, prefix: :others]`.  
+      The :inherits options are:
+      `:prefix` - The prefix of the inherited table. Default is nil thereby defaulting to the table prefix
+      `:primary_keys` - Boolean indicating whether to inherit the primary key(s).  Default is true
+      `:indexes` - Boolean indicating whether to inherit the non-primary keys of the inherited table.  Default is true
+      `:triggers` - Boolean indicating whether to inherit the triggers of the inherited table.  Default is true
   """
   def table(name, opts \\ []) when is_atom(name) do
+    if Keyword.has_key?(opts, :inherits) && !adapter.supports_inherited_tables?,
+      do: raise Ecto.MigrationError,
+          message: "Adapter #{inspect repo.__adapter__} does not support inherited tables.  Opts: #{inspect opts}"
+          
     struct(%Table{name: name}, opts)
   end
 
@@ -510,6 +599,20 @@ defmodule Ecto.Migration do
     Runner.execute command
   end
 
+  @doc """
+  Gets the migration repo
+  """
+  def repo do
+    Runner.repo
+  end
+  
+  @doc """
+  Gets the migration adapter
+  """
+  def adapter do
+    repo.__adapter__
+  end
+  
   @doc """
   Gets the migrator direction.
   """
@@ -745,5 +848,101 @@ defmodule Ecto.Migration do
         raise Ecto.MigrationError,  message:
           "the :prefix option `#{inspect prefix}` does match the migrator prefix `#{inspect runner_prefix}`"
     end
+  end
+  
+  @doc """
+  Copy the non-primary indexes from the inherited table
+  """
+  def cascade_indexes(%Table{}, nil),
+    do: []
+    
+  def cascade_indexes(%Table{}=table, inherits) when is_atom(inherits) do
+    index_definitions_from(inherits)
+    |> Enum.map(fn(i) -> String.replace(i, ~r"INDEX.*ON"u, "INDEX ON") end)
+    |> Enum.map(fn(i) -> String.replace(i, ~r"ON.*USING"u, "ON #{table.name} USING") end)
+  end
+  
+  def cascade_indexes(%Table{}=table, inherits) when is_list(inherits) do
+    [inherited_table | options] = inherits
+    case Keyword.get(options, :indexes, true) do
+      true ->
+        prefix = Keyword.get(options, :prefix, nil)
+        index_definitions_from(prefix, inherited_table)
+        |> Enum.map(fn(i) -> String.replace(i, ~r"INDEX.*ON"u, "INDEX ON") end)
+        |> Enum.map(fn(i) -> String.replace(i, ~r"ON.*USING"u, "ON #{table.name} USING") end)
+      _ ->
+        []
+    end
+  end
+  
+  @doc """
+  Copy the triggers from the inherited table
+  """
+  def cascade_triggers(%Table{}, nil),
+    do: []
+    
+  def cascade_triggers(%Table{}=table, inherits) when is_atom(inherits) do
+    trigger_definitions_from(inherits)
+    |> Enum.map(fn(i) -> String.replace(i, ~r"ON .* FOR"u, "ON #{table.name} FOR") end)
+  end
+  
+  def cascade_triggers(%Table{}=table, inherits) when is_list(inherits) do
+    [inherited_table | options] = inherits
+    case Keyword.get(options, :triggers, true) do
+      true ->
+        prefix = Keyword.get(options, :prefix, nil)
+        trigger_definitions_from(prefix, inherited_table)
+        |> Enum.map(fn(i) -> String.replace(i, ~r"ON .* FOR"u, "ON #{table.name} FOR") end)
+      _ ->
+        []
+    end
+  end
+  
+  @doc """
+  Get the primary key names of a table
+  
+  Used to supported cascading primary keys on inherited tables
+  """
+  def primary_keys_from(nil), do: []
+  def primary_keys_from(table_name) do
+    primary_key_query = adapter.primary_keys_from(table_name)
+    {:ok, primary_key_columns} = adapter.query(repo, primary_key_query, [], log: false)
+    primary_key_columns.rows |> List.flatten
+  end
+  
+  @doc """
+  Get the non-primary key index definitions of a table
+  """
+  def index_definitions_from(inherits) when is_atom(inherits) do
+    index_query = adapter.index_definitions_from(inherits)
+    {:ok, index_definitions} = adapter.query(repo, index_query, [], log: false)
+    index_definitions.rows |> List.flatten
+  end
+  
+  def index_definitions_from(nil, inherits),
+    do: index_definitions_from(inherits)
+    
+  def index_definitions_from(prefix, inherits) do
+    index_query = adapter.index_definitions_from(prefix, inherits)
+    {:ok, index_definitions} = adapter.query(repo, index_query, [], log: false)
+    index_definitions.rows |> List.flatten
+  end
+  
+  @doc """
+  Get the trigger definitions of a table
+  """
+  def trigger_definitions_from(inherits) when is_atom(inherits) do
+    trigger_query = adapter.trigger_definitions_from(inherits)
+    {:ok, trigger_definitions} = adapter.query(repo, trigger_query, [], log: false)
+    trigger_definitions.rows |> List.flatten
+  end
+  
+  def trigger_definitions_from(nil, inherits),
+    do: trigger_definitions_from(inherits)
+    
+  def trigger_definitions_from(prefix, inherits) do
+    trigger_query = adapter.trigger_definitions_from(prefix, inherits)
+    {:ok, trigger_definitions} = adapter.query(repo, trigger_query, [], log: false)
+    trigger_definitions.rows |> List.flatten
   end
 end
