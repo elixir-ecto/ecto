@@ -702,13 +702,10 @@ defmodule Ecto.Changeset.EmbeddedTest do
       |> Changeset.cast_embed(:profile)
       |> Changeset.add_error(:name, "is invalid")
 
-    errors = Changeset.traverse_errors(changeset, fn
-      {err, opts} ->
-        err
-        |> String.replace("%{count}", to_string(opts[:count]))
-        |> String.upcase()
-      err ->
-        String.upcase(err)
+    errors = Changeset.traverse_errors(changeset, fn {msg, opts} ->
+      msg
+      |> String.replace("%{count}", to_string(opts[:count]))
+      |> String.upcase()
     end)
 
     assert errors == %{
@@ -726,13 +723,10 @@ defmodule Ecto.Changeset.EmbeddedTest do
       |> Changeset.cast_embed(:posts)
       |> Changeset.add_error(:name, "is invalid")
 
-    errors = Changeset.traverse_errors(changeset, fn
-      {err, opts} ->
-        err
-        |> String.replace("%{count}", to_string(opts[:count]))
-        |> String.upcase()
-      err ->
-        String.upcase(err)
+    errors = Changeset.traverse_errors(changeset, fn {msg, opts} ->
+      msg
+      |> String.replace("%{count}", to_string(opts[:count]))
+      |> String.upcase()
     end)
 
     assert errors == %{
