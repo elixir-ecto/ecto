@@ -108,7 +108,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"profile" => "value"}, :profile, required: true)
-    assert changeset.errors == [profile: {"is invalid", []}]
+    assert changeset.errors == [profile: {"is invalid", [type: :map]}]
     refute changeset.valid?
   end
 
@@ -262,17 +262,17 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = cast(model, %{"invalid_profile" => nil}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"is invalid", []}]
+    assert changeset.errors == [invalid_profile: {"is invalid", [type: :map]}]
     refute changeset.valid?
 
     changeset = cast(model, %{"invalid_profile" => %{"id" => 2}}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"is invalid", []}]
+    assert changeset.errors == [invalid_profile: {"is invalid", [type: :map]}]
     refute changeset.valid?
 
     changeset = cast(model, %{"invalid_profile" => nil}, :invalid_profile, invalid_message: "a custom message")
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"a custom message", []}]
+    assert changeset.errors == [invalid_profile: {"a custom message", [type: :map]}]
     refute changeset.valid?
   end
 
@@ -350,19 +350,19 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
   test "cast embeds_many with invalid params" do
     changeset = cast(%Author{}, %{"posts" => "value"}, :posts)
-    assert changeset.errors == [posts: {"is invalid", []}]
+    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => ["value"]}, :posts)
-    assert changeset.errors == [posts: {"is invalid", []}]
+    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => nil}, :posts)
-    assert changeset.errors == [posts: {"is invalid", []}]
+    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => %{"id" => "invalid"}}, :posts)
-    assert changeset.errors == [posts: {"is invalid", []}]
+    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
     refute changeset.valid?
   end
 
@@ -381,7 +381,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: {"is invalid", []}]
+    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
   end
 
   test "cast embeds_many with empty parameters" do
@@ -408,12 +408,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = cast(model, %{"invalid_posts" => []}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"is invalid", []}]
+    assert changeset.errors == [invalid_posts: {"is invalid", [type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(model, %{"invalid_posts" => [%{"id" => 2}]}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"is invalid", []}]
+    assert changeset.errors == [invalid_posts: {"is invalid", [type: {:array, :map}]}]
     refute changeset.valid?
   end
 
@@ -538,12 +538,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = Changeset.put_embed(base_changeset, :invalid_profile, nil)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"is invalid", []}]
+    assert changeset.errors == [invalid_profile: {"is invalid", [type: :map]}]
     refute changeset.valid?
 
     changeset = Changeset.put_embed(base_changeset, :invalid_profile, %Profile{id: 2})
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"is invalid", []}]
+    assert changeset.errors == [invalid_profile: {"is invalid", [type: :map]}]
     refute changeset.valid?
   end
 
@@ -634,12 +634,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = Changeset.put_embed(base_changeset, :invalid_posts, [])
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"is invalid", []}]
+    assert changeset.errors == [invalid_posts: {"is invalid", [type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = Changeset.put_embed(base_changeset, :invalid_posts, [%Post{id: 2}])
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"is invalid", []}]
+    assert changeset.errors == [invalid_posts: {"is invalid", [type: {:array, :map}]}]
     refute changeset.valid?
   end
 

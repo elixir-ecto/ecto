@@ -370,7 +370,7 @@ defmodule Ecto.Changeset do
          {errors, valid?} = error_on_nil(kind, key, Map.get(changes, key, current), errors, valid?)
          {changes, errors, valid?}
        :invalid ->
-         {changes, [{key, {"is invalid", []}} | errors], false}
+         {changes, [{key, {"is invalid", [type: type]}} | errors], false}
      end}
   end
 
@@ -504,7 +504,7 @@ defmodule Ecto.Changeset do
             {:ok, _, _, _} ->
               missing_relation(changeset, key, current, required?, relation, opts)
             :error ->
-              %{changeset | errors: [{key, {message(opts, :invalid_message, "is invalid"), []}} | changeset.errors], valid?: false}
+              %{changeset | errors: [{key, {message(opts, :invalid_message, "is invalid"), [type: expected_relation_type(relation)]}} | changeset.errors], valid?: false}
           end
         :error ->
           missing_relation(changeset, key, current, required?, relation, opts)
@@ -514,6 +514,9 @@ defmodule Ecto.Changeset do
       {type, %{relation | on_cast: on_cast}}
     end
   end
+
+  defp expected_relation_type(%{cardinality: :one}), do: :map
+  defp expected_relation_type(%{cardinality: :many}), do: {:array, :map}
 
   defp missing_relation(%{changes: changes, errors: errors} = changeset, name, current, required?, relation, opts) do
     current_changes = Map.get(changes, name, current)
@@ -857,7 +860,7 @@ defmodule Ecto.Changeset do
         %{changeset | changes: Map.put(changes, name, change),
                       valid?: changeset.valid? && relation_valid?}
       :error ->
-        %{changeset | errors: [{name, {"is invalid", []}} | changeset.errors], valid?: false}
+        %{changeset | errors: [{name, {"is invalid", [type: expected_relation_type(relation)]}} | changeset.errors], valid?: false}
     end
   end
 

@@ -68,7 +68,7 @@ defmodule Ecto.Changeset.BelongsToTest do
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"profile" => "value"}, :profile)
-    assert changeset.errors == [profile: {"is invalid", []}]
+    assert changeset.errors == [profile: {"is invalid", [type: :map]}]
     refute changeset.valid?
   end
 
@@ -231,17 +231,17 @@ defmodule Ecto.Changeset.BelongsToTest do
 
     changeset = cast(model, %{"invalid_profile" => nil}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"is invalid", []}]
+    assert changeset.errors == [invalid_profile: {"is invalid", [type: :map]}]
     refute changeset.valid?
 
     changeset = cast(model, %{"invalid_profile" => %{"id" => 2}}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"is invalid", []}]
+    assert changeset.errors == [invalid_profile: {"is invalid", [type: :map]}]
     refute changeset.valid?
 
     changeset = cast(model, %{"invalid_profile" => nil}, :invalid_profile, invalid_message: "a custom message")
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"a custom message", []}]
+    assert changeset.errors == [invalid_profile: {"a custom message", [type: :map]}]
     refute changeset.valid?
   end
 
@@ -381,7 +381,7 @@ defmodule Ecto.Changeset.BelongsToTest do
 
     changeset = Changeset.put_assoc(base_changeset, :invalid_profile, nil)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"is invalid", []}]
+    assert changeset.errors == [invalid_profile: {"is invalid", [type: :map]}]
     refute changeset.valid?
   end
 
