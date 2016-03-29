@@ -146,6 +146,11 @@ defmodule Ecto.Changeset.ManyToManyTest do
     assert changeset.changes == %{}
     assert changeset.errors == [posts: {"can't be blank", []}]
 
+    changeset = cast(%Author{posts: []}, %{}, :posts, required: true, required_message: "a custom message")
+    assert changeset.required == [:posts]
+    assert changeset.changes == %{}
+    assert changeset.errors == [posts: {"a custom message", []}]
+
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
@@ -185,6 +190,11 @@ defmodule Ecto.Changeset.ManyToManyTest do
     changeset = cast(model, %{"invalid_posts" => [%{"id" => 2}]}, :invalid_posts)
     assert changeset.changes == %{}
     assert changeset.errors == [invalid_posts: {"is invalid", []}]
+    refute changeset.valid?
+
+    changeset = cast(model, %{"invalid_posts" => [%{"id" => 2}]}, :invalid_posts, invalid_message: "a custom message")
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_posts: {"a custom message", []}]
     refute changeset.valid?
   end
 

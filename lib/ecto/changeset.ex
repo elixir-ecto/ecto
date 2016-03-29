@@ -442,6 +442,8 @@ defmodule Ecto.Changeset do
     * `:with` - the function to build the changeset from params.
       Defaults to the changeset/2 function in the association module
     * `:required` - if the association is a required field
+    * `:required_message` - the message on failure, defaults to "can't be blank"
+    * `:invalid_message` - the message on failure, defaults to "is invalid"
   """
   def cast_assoc(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:assoc, changeset, name, opts)
@@ -463,6 +465,8 @@ defmodule Ecto.Changeset do
     * `:with` - the function to build the changeset from params.
       Defaults to the changeset/2 function in the embed module
     * `:required` - if the embed is a required field
+    * `:required_message` - the message on failure, defaults to "can't be blank"
+    * `:invalid_message` - the message on failure, defaults to "is invalid"
   """
   def cast_embed(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:embed, changeset, name, opts)
@@ -496,14 +500,14 @@ defmodule Ecto.Changeset do
           case Relation.cast(relation, value, current, on_cast) do
             {:ok, change, relation_valid?, false} when change != current ->
               missing_relation(%{changeset | changes: Map.put(changes, key, change),
-                                 valid?: changeset.valid? && relation_valid?}, key, current, required?, relation)
+                                 valid?: changeset.valid? && relation_valid?}, key, current, required?, relation, opts)
             {:ok, _, _, _} ->
-              missing_relation(changeset, key, current, required?, relation)
+              missing_relation(changeset, key, current, required?, relation, opts)
             :error ->
-              %{changeset | errors: [{key, {"is invalid", []}} | changeset.errors], valid?: false}
+              %{changeset | errors: [{key, {message(opts, :invalid_message, "is invalid"), []}} | changeset.errors], valid?: false}
           end
         :error ->
-          missing_relation(changeset, key, current, required?, relation)
+          missing_relation(changeset, key, current, required?, relation, opts)
       end
 
     update_in changeset.types[key], fn {type, relation} ->
@@ -511,10 +515,10 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp missing_relation(%{changes: changes, errors: errors} = changeset, name, current, required?, relation) do
+  defp missing_relation(%{changes: changes, errors: errors} = changeset, name, current, required?, relation, opts) do
     current_changes = Map.get(changes, name, current)
     if required? and Relation.empty?(relation, current_changes) do
-      %{changeset | errors: [{name, {"can't be blank", []}} | errors], valid?: false}
+      %{changeset | errors: [{name, {message(opts, :required_message, "can't be blank"), []}} | errors], valid?: false}
     else
       changeset
     end
@@ -1328,8 +1332,8 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp message(opts, default) do
-    Keyword.get(opts, :message, default)
+  defp message(opts, key \\ :message, default) do
+    Keyword.get(opts, key, default)
   end
 
   ## Optimistic lock
@@ -1458,7 +1462,7 @@ defmodule Ecto.Changeset do
   """
   def check_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || raise ArgumentError, "must supply the name of the constraint"
-    message    = opts[:message] || "is invalid"
+    message    = message(opts, "is invalid")
     add_constraint(changeset, :check, to_string(constraint), field, {message, []})
   end
 
@@ -1538,7 +1542,7 @@ defmodule Ecto.Changeset do
   @spec unique_constraint(t, atom, Keyword.t) :: t
   def unique_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_index"
-    message    = opts[:message] || "has already been taken"
+    message    = message(opts, "has already been taken")
     add_constraint(changeset, :unique, to_string(constraint), field, {message, []})
   end
 
@@ -1585,7 +1589,7 @@ defmodule Ecto.Changeset do
   @spec foreign_key_constraint(t, atom, Keyword.t) :: t
   def foreign_key_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_fkey"
-    message    = opts[:message] || "does not exist"
+    message    = message(opts, "does not exist")
     add_constraint(changeset, :foreign_key, to_string(constraint), field, {message, []})
   end
 
@@ -1633,7 +1637,7 @@ defmodule Ecto.Changeset do
             "assoc_constraint can only be added to belongs to associations, got: #{inspect other}"
       end
 
-    message = opts[:message] || "does not exist"
+    message = message(opts, "does not exist")
     add_constraint(changeset, :foreign_key, to_string(constraint), assoc, {message, []})
   end
 
@@ -1678,7 +1682,7 @@ defmodule Ecto.Changeset do
         %Ecto.Association.Has{cardinality: cardinality,
                               related_key: related_key, related: related} ->
           {opts[:name] || "#{related.__schema__(:source)}_#{related_key}_fkey",
-           opts[:message] || no_assoc_message(cardinality)}
+           message(opts, no_assoc_message(cardinality))}
         other ->
           raise ArgumentError,
             "no_assoc_constraint can only be added to has one/many associations, got: #{inspect other}"
@@ -1705,7 +1709,7 @@ defmodule Ecto.Changeset do
   """
   def exclude_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_exclusion"
-    message    = opts[:message] || "violates an exclusion constraint"
+    message    = message(opts, "violates an exclusion constraint")
     add_constraint(changeset, :exclude, to_string(constraint), field, {message, []})
   end
 

@@ -176,6 +176,11 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert changeset.changes == %{}
     assert changeset.errors == [profile: {"can't be blank", []}]
 
+    changeset = cast(%Author{}, %{}, :profile, required: true, required_message: "a custom message")
+    assert changeset.required == [:profile]
+    assert changeset.changes == %{}
+    assert changeset.errors == [profile: {"a custom message", []}]
+
     changeset = cast(%Author{profile: nil}, %{}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
@@ -269,6 +274,11 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = cast(model, %{"invalid_profile" => %{"id" => 2}}, :invalid_profile)
     assert changeset.changes == %{}
     assert changeset.errors == [invalid_profile: {"is invalid", []}]
+    refute changeset.valid?
+
+    changeset = cast(model, %{"invalid_profile" => nil}, :invalid_profile, invalid_message: "a custom message")
+    assert changeset.changes == %{}
+    assert changeset.errors == [invalid_profile: {"a custom message", []}]
     refute changeset.valid?
   end
 
