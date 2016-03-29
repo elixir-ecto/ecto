@@ -254,6 +254,8 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def __pool__, do: {unquote(name), unquote(Macro.escape(config))}
+
+      defoverridable [__pool__: 0]
     end
   end
 
