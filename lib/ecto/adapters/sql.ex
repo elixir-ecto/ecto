@@ -232,15 +232,6 @@ defmodule Ecto.Adapters.SQL do
   def __before_compile__(conn, env) do
     config = Module.get_attribute(env.module, :config)
     pool   = Keyword.get(config, :pool, DBConnection.Poolboy)
-    name   = Keyword.get(config, :pool_name, default_pool_name(env.module, config))
-
-    config =
-      config
-      |> Keyword.delete(:name)
-      |> Keyword.put(:pool, normalize_pool(pool))
-      |> Keyword.put_new(:timeout, @timeout)
-      |> Keyword.put_new(:pool_timeout, @pool_timeout)
-
     if pool == Ecto.Adapters.SQL.Sandbox and config[:pool_size] == 1 do
       IO.puts :stderr, "warning: setting the :pool_size to 1 for #{inspect env.module} " <>
                        "when using the Ecto.Adapters.SQL.Sandbox pool is deprecated and " <>
@@ -248,21 +239,35 @@ defmodule Ecto.Adapters.SQL do
                        "or set it to a reasonable number like 10"
     end
 
+    pool_name = pool_name(env.module, config)
+    norm_config = normalize_config(config)
     quote do
       @doc false
       def __sql__, do: unquote(conn)
 
       @doc false
-      def __pool__, do: {unquote(name), unquote(Macro.escape(config))}
+      def __pool__, do: {unquote(pool_name), unquote(Macro.escape(norm_config))}
 
       defoverridable [__pool__: 0]
     end
+  end
+
+  defp normalize_config(config) do
+    config
+    |> Keyword.delete(:name)
+    |> Keyword.update(:pool, DBConnection.Poolboy, &normalize_pool/1)
+    |> Keyword.put_new(:timeout, @timeout)
+    |> Keyword.put_new(:pool_timeout, @pool_timeout)
   end
 
   defp normalize_pool(Ecto.Adapters.SQL.Sandbox),
     do: DBConnection.Ownership
   defp normalize_pool(pool),
     do: pool
+
+  defp pool_name(module, config) do
+    Keyword.get(config, :pool_name, default_pool_name(module, config))
+  end
 
   defp default_pool_name(repo, config) do
     Module.concat(Keyword.get(config, :name, repo), Pool)
@@ -284,7 +289,13 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    {pool_name, pool_opts} = repo.__pool__
+    # Check if the pool options should overriden
+    {pool_name, pool_opts} = case Keyword.fetch(opts, :pool) do
+      {:ok, pool} when pool != Ecto.Adapters.SQL.Sandbox ->
+        {pool_name(repo, opts), opts}
+      _ ->
+        repo.__pool__
+    end
     opts = [name: pool_name] ++ Keyword.delete(opts, :pool) ++ pool_opts
 
     opts =
