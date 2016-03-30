@@ -7,6 +7,17 @@ defmodule Ecto.Adapters.PostgresTest do
 
   alias Ecto.Queryable
   alias Ecto.Adapters.Postgres.Connection, as: SQL
+  alias Ecto.Migration.Runner
+
+  # Inherited tables needs to check whether the adapter supports
+  # table inheritance.  Which means the Migration needs access to
+  # the repo to get the adapater, which is set in the runner ...
+  setup meta do
+    {:ok, runner} =
+      Runner.start_link(self(), Ecto.TestRepo, meta[:direction] || :forward, :up, false)
+    Process.put(:ecto_migration, %{runner: runner, prefix: meta[:prefix]})
+    {:ok, runner: runner}
+  end
 
   defmodule Model do
     use Ecto.Schema
@@ -644,7 +655,57 @@ defmodule Ecto.Adapters.PostgresTest do
     CREATE TABLE "posts" ("a" integer, "b" integer, "name" varchar(255), PRIMARY KEY ("a", "b"))
     """ |> remove_newlines
   end
+  
+  @tag :inheritance
+  test "create inherited table" do
+    adapter_supports_inherited_tables!
+    create = {:create, table(:posts, inherits: :things),
+               [{:add, :a, :integer, [primary_key: true]},
+                {:add, :b, :integer, [primary_key: true]},
+                {:add, :name, :string, []}]}
 
+    assert SQL.execute_ddl(create) == """
+    CREATE TABLE "posts" ("a" integer, "b" integer, "name" varchar(255), PRIMARY KEY ("a", "b")) INHERITS ("things")
+    """ |> remove_newlines
+  end
+  
+  @tag :inheritance
+  test "create inherited table that has an inherited table prefix" do
+    adapter_supports_inherited_tables!
+    create = {:create, table(:posts, inherits: [:things, prefix: :test]),
+               [{:add, :a, :integer, [primary_key: true]},
+                {:add, :b, :integer, [primary_key: true]},
+                {:add, :name, :string, []}]}
+
+    assert SQL.execute_ddl(create) == """
+    CREATE TABLE "posts" ("a" integer, "b" integer, "name" varchar(255), PRIMARY KEY ("a", "b")) INHERITS ("test"."things")
+    """ |> remove_newlines
+  end
+  
+  @tag :inheritance
+  test "create inherited table that has a prefix" do
+    adapter_supports_inherited_tables!
+    create = {:create, table(:posts, prefix: :test, inherits: :things),
+               [{:add, :a, :integer, [primary_key: true]},
+                {:add, :b, :integer, [primary_key: true]},
+                {:add, :name, :string, []}]}
+
+    assert SQL.execute_ddl(create) == """
+    CREATE TABLE "test"."posts" ("a" integer, "b" integer, "name" varchar(255), PRIMARY KEY ("a", "b")) INHERITS ("test"."things")
+    """ |> remove_newlines
+  end
+
+  @tag :inheritance
+  test "create inherited table when adapter doesn't support table inheritance" do
+    adapter_doesnt_support_inherited_tables!
+    assert_raise Ecto.MigrationError, fn ->
+      {:create, table(:posts, prefix: :test, inherits: :things),
+        [{:add, :a, :integer, [primary_key: true]},
+        {:add, :b, :integer, [primary_key: true]},
+        {:add, :name, :string, []}]}
+    end
+  end
+    
   test "drop table" do
     drop = {:drop, table(:posts)}
     assert SQL.execute_ddl(drop) == ~s|DROP TABLE "posts"|
@@ -811,5 +872,13 @@ defmodule Ecto.Adapters.PostgresTest do
 
   defp remove_newlines(string) do
     string |> String.strip |> String.replace("\n", " ")
+  end
+  
+  defp adapter_supports_inherited_tables! do
+    Process.put(:supports_inherited_tables?, true)
+  end
+  
+  defp adapter_doesnt_support_inherited_tables! do
+    Process.put(:supports_inherited_tables?, false)
   end
 end

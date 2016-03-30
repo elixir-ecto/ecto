@@ -585,4 +585,68 @@ defmodule Ecto.SchemaTest do
       end
     end
   end
+  
+  ## Include, Inherit, Inheritable
+  
+  defmodule InheritableModel do
+    use Ecto.Schema
+    
+    schema "things" do
+      inheritable
+      field :name, :string
+      field :pk, :id
+    end
+  end
+  
+  defmodule InheritedModel do
+    use Ecto.Schema
+    
+    @primary_key false
+    schema "others" do
+      inherit InheritableModel
+      field :description, :string
+    end
+  end
+  
+  defmodule InheritAssocModel do
+    use Ecto.Schema
+    
+    @primary_key false
+    schema "stuff" do
+      include AssocModel
+    end
+  end
+  
+  @tag :inheritance
+  test "ensure inheritable model has _type field" do
+    assert :_type in InheritableModel.__schema__(:fields)
+    assert InheritableModel.__schema__(:types)[:_type] == :string
+    assert Keyword.has_key?(InheritableModel.__schema__(:aliases), :_type)
+    assert {:fragment, [line: _line], ["%{table}.\"tableoid\"::regclass::text"]} = 
+      InheritableModel.__schema__(:aliases)[:_type]
+  end
+  
+  @tag :inheritance
+  test "ensure fields are inherited" do
+    assert :_type in InheritedModel.__schema__(:fields)
+    assert :name in InheritedModel.__schema__(:fields)
+    assert :pk in InheritedModel.__schema__(:fields)
+    assert :id in InheritedModel.__schema__(:primary_key)
+    assert {:id, _} = InheritedModel.__schema__(:autogenerate_id)
+  end
+  
+  @tag :inheritance
+  test "confirm associations are copied" do
+    assert InheritAssocModel.__schema__(:associations) == AssocModel.__schema__(:associations)
+  end
+  
+  @tag :inheritance
+  test "confirm association options are equal" do
+    Enum.each InheritAssocModel.__schema__(:associations), fn
+      (assoc) ->
+        orig = Map.delete(AssocModel.__schema__(:association, assoc), :owner)
+        inherit = Map.delete(InheritAssocModel.__schema__(:association, assoc), :owner)
+        assert orig == inherit
+    end
+  end
 end

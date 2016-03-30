@@ -61,6 +61,14 @@ defmodule Ecto.Migration.Runner do
   def migrator_direction do
     Agent.get(runner(), & &1.migrator_direction)
   end
+  
+  @doc """
+  Returns the repo the migrator is using
+  
+  """
+  def repo do
+    Agent.get(runner(), & &1.repo)
+  end
 
   @doc """
   Gets the prefix for this migration

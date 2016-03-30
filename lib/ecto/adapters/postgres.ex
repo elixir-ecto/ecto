@@ -140,4 +140,9 @@ defmodule Ecto.Adapters.Postgres do
   def supports_ddl_transaction? do
     true
   end
+  
+  @doc false
+  def supports_inherited_tables? do
+    true
+  end
 end

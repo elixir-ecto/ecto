@@ -162,6 +162,11 @@ defmodule Ecto.Adapters.MySQL do
   def supports_ddl_transaction? do
     true
   end
+  
+  @doc false
+  def supports_inherited_tables? do
+    false
+  end
 
   @doc false
   def insert(repo, %{source: {prefix, source}, autogenerate_id: {key, :id}}, params, [key], opts) do

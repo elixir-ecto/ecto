@@ -228,6 +228,111 @@ defmodule Ecto.Schema do
   `virtual: true` option. These fields are not persisted to the database
   and can optionally not be type checked by declaring type `:any`.
 
+  ## Inclusion
+  
+  Any schema module may copy the fields and associations from another module
+  by `include`-ing it in another schema.  Since this is a copy of the 
+  definitions it will include any primary keys set on the included module
+  and hence it is likely you will want to set `@primary_key false` for the
+  including module to prevent errors.
+  
+  For example:
+
+      # Defines a schema with the default primary key
+      # definition
+      defmodule Contact do
+        use Ecto.Schema
+
+        schema "contacts" do
+          field :name, :string
+          has_many :comments, Comment
+        end
+      end
+      
+      # Defines a schema that will copy the fields
+      # and associations from Contact into Person.
+      # Note we set @primary_key to false since the
+      # `id` field will be copied from the Contact
+      # module.
+      @primary_key false
+      defmodule Person do
+        use Ecto.Schema
+
+        schema "people" do
+          include Contact
+          field :age, :integer, default: 0
+        end
+      end
+      
+      # Also copies the field and association definitions
+      # from Contact.
+      @primary_key false
+      defmodule Organization do
+        use Ecto.Schema
+
+        schema "organizations" do
+          include Contact
+          field :revenue, :integer
+        end
+      end
+      
+  ## Inheritance
+  
+  Schema inheritance has two elements that, together, support inherited
+  tables on supported adapters (currently only Postgres). 
+  
+  First we declare a schema to be `inheritable`.  This macro creates a
+  field called `_type` which is used at runtime to discriminate a row retrieved
+  in a query and to determine which table it is derived from and therefore which
+  schema should be populated for that row.  This is a form of polymorphism but 
+  limited to the case of inherited tables.
+  
+  Secondly, we `inherit` a schema from an `inheritable` one (or from another schema
+  that itself inherits from an `inheritable` one).
+  
+  For example:
+  
+    # Defines a schema to be inheritable. This creates a field
+    # called _type that is used at runtime to discriminate amongst
+    # rows retrieved from different inherited tables.
+    defmodule Contact do
+      use Ecto.Schema
+
+      schema "contacts" do
+        inheritable
+        field :name, :string
+        has_many :comments, Comment
+      end
+    end
+  
+    # Defines a schema that inherits from Contact.
+    # Note that inherit is exactly the same as include
+    # but names to better express intent.  The key is 
+    # that it inherits (or includes) from a schema
+    # marked as inheritable.
+    @primary_key false
+    defmodule Person do
+      use Ecto.Schema
+
+      schema "people" do
+        inherit Contact
+        field :age, :integer, default: 0
+      end
+    end
+  
+    # include is the same as inherit and will therefore
+    # also demonstrate the same behaviour at runtime since
+    # the Contact schema is marked as inheritable.
+    @primary_key false
+    defmodule Organization do
+      use Ecto.Schema
+
+      schema "organizations" do
+        include Contact
+        field :revenue, :integer
+      end
+    end
+  
   ## Reflection
 
   Any schema module will generate the `__schema__` function that can be
@@ -253,6 +358,8 @@ defmodule Ecto.Schema do
     from the database after every write (insert or update);
 
   * `__schema__(:autogenerate_id)` - Primary key that is auto generated on insert;
+  
+  * `__schema__(:aliases)` - A mapping of a field to its column alias (if any);
 
   Furthermore, both `__struct__` and `__changeset__` functions are
   defined so structs and changeset functionalities are available.
@@ -300,9 +407,11 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_embeds, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_aliases, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autogenerate_insert, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autogenerate_update, accumulate: true)
       Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
+      
     end
   end
 
@@ -370,6 +479,7 @@ defmodule Ecto.Schema do
         Ecto.Schema.__types__(fields),
         Ecto.Schema.__assocs__(assocs),
         Ecto.Schema.__embeds__(embeds),
+        Ecto.Schema.__aliases__(@ecto_aliases),
         Ecto.Schema.__read_after_writes__(@ecto_raw),
         Ecto.Schema.__autogenerate__(@ecto_autogenerate_id,
                                      @ecto_autogenerate_insert,
@@ -403,14 +513,84 @@ defmodule Ecto.Schema do
     * `:virtual` - When true, the field is not persisted to the database.
       Notice virtual fields do not support `:autogenerate` nor
       `:read_after_writes`.
-
+      
+    * `:alias_for` - Defines a fragment used in select lists that is then
+      aliased to the field name.
+      
+      For example, the _type field created to support table inheritance is 
+      defined as follows:
+      
+      `field :_type, :string, 
+        alias_for: fragment("%{table}.\"tableoid\"::regclass::text")`
+      
+      Note the use of the single supported interpolation `%{table}` which will, 
+      during query execution, be substituted for the table alias generated for the
+      query.
+      
+      The `alias_for` definition can be anything that query `select()` 
+      supports however parameters are not suported in fragments.
+      
+      The field definition for `:_type` above will generate a select column 
+      for a database query like the following:
+      
+      iex> query = from t in Thing
+      iex> Repo.all query
+      
+      `SELECT t0.tableoid::regclass::text as _type, .... FROM ....`
   """
   defmacro field(name, type \\ :string, opts \\ []) do
+    if alias_for = Keyword.get(opts, :alias_for) do
+      opts = Keyword.put(opts, :alias_for, Macro.escape(alias_for))
+    end
+    
     quote do
       Ecto.Schema.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
     end
   end
-
+  
+  @doc """
+  Includes the field and association definitions from another ecto-based module.
+  
+  `include` will copy the field and association definitions from the specified
+  module into this schema. 
+  
+  Since this is literally a copy of the definitions, it will include copying of
+  primary key definitions and therefore will error if `@primary_key` is not set to `false`
+  and there is already a primary key set on the included module.
+  """
+  defmacro include(module) do
+    quote do
+      Ecto.Schema.__include__(unquote(module), __MODULE__)
+    end
+  end
+  
+  @doc """
+  Inherits the field and association definitions from another ecto-based module.
+  
+  `inherit` is the same as `include` but is named to more correctly express intent.
+  """
+  defmacro inherit(module) do
+    quote do
+      Ecto.Schema.__include__(unquote(module), __MODULE__)
+    end
+  end
+  
+  @doc """
+  Mark this schema as having inherited tables
+  
+  This macro will generate a field called `_type` that is then aliased to
+  Postgres' `tableoid` which represents the source table of a row, cast to
+  a string.
+  
+  This macro should be invoked in the schema that represents a table that 
+  is inherited by other tables.
+  """
+  defmacro inheritable do
+    quote do
+      field :"_type", :string, alias_for: fragment("%{table}.\"tableoid\"::regclass::text")
+    end
+  end
+  
   @doc """
   Generates `:inserted_at` and `:updated_at` timestamp fields.
 
@@ -1110,6 +1290,10 @@ defmodule Ecto.Schema do
         store_autogenerate!(mod, name, type, pk?)
       end
 
+      if alias_for = opts[:alias_for] do
+        Module.put_attribute(mod, :ecto_aliases, {name, alias_for})
+      end
+
       if raw && gen do
         raise ArgumentError, "cannot mark the same field as autogenerate and read_after_writes"
       end
@@ -1298,6 +1482,72 @@ defmodule Ecto.Schema do
   end
 
   @doc false
+  # Copy the field and association definitions from a module
+  def __include__(from_module, to_module) do
+    __include__(:fields, from_module, to_module)
+    __include__(:associations, from_module, to_module)
+  end
+  
+  def __include__(:fields, from_module, to_module) do
+    Enum.each(from_module.__schema__(:fields), fn(field) ->
+      type = from_module.__schema__(:type, field)
+      Ecto.Schema.__field__(to_module, field, type, field_options_for(from_module, field))
+      if auto = List.keyfind(from_module.__schema__(:autogenerate, :insert), field, 0) do
+        {_,_,autogen} = auto
+        Module.put_attribute(to_module, :ecto_autogenerate_insert, {field, type, autogen})
+      end
+      if auto = List.keyfind(from_module.__schema__(:autogenerate, :update), field, 0) do
+        {_,_,autogen} = auto
+        Module.put_attribute(to_module, :ecto_autogenerate_update, {field, type, autogen})
+      end
+    end)
+  end
+  
+  def __include__(:associations, from_module, to_module) do
+    Enum.each(from_module.__schema__(:associations), fn(association) ->
+      case assoc = from_module.__schema__(:association, association) do
+        %Ecto.Association.BelongsTo{} ->
+          opts = assoc_opts_from(assoc)
+          if Keyword.has_key?(Module.get_attribute(to_module, :ecto_fields), opts[:foreign_key]),
+            do: opts = opts ++ [define_field: false] 
+          __belongs_to__(to_module, assoc.field, assoc.queryable, opts)
+        %Ecto.Association.HasThrough{cardinality: :many} ->
+          __has_many__(to_module, assoc.field, assoc_opts_from(assoc), [])
+        %Ecto.Association.HasThrough{cardinality: :one} ->
+          __has_one__(to_module, assoc.field, assoc_opts_from(assoc), [])          
+        %Ecto.Association.Has{cardinality: :many} ->
+          __has_many__(to_module, assoc.field, assoc.queryable, assoc_opts_from(assoc))
+        %Ecto.Association.Has{cardinality: :one} ->
+          __has_one__(to_module, assoc.field, assoc.queryable, assoc_opts_from(assoc))
+        %Ecto.Association.ManyToMany{} ->
+          __many_to_many__(to_module, assoc.field, assoc.queryable, assoc_opts_from(assoc))
+        _ ->
+          raise ArgumentError, "Including unknown association type: #{inspect assoc}"
+      end
+    end)
+  end
+
+  # Mapping for all :belongs_to association
+  @opts_map %{owner_key: :foreign_key, related_key: :references}
+  defp assoc_opts_from(%Ecto.Association.BelongsTo{} = assoc) do
+    assoc_opts_from(assoc, @opts_map)
+  end
+  
+  # Mapping for all other association types
+  @opts_map %{owner_key: :references, related_key: :foreign_key}
+  defp assoc_opts_from(assoc) do
+    assoc_opts_from(assoc, @opts_map)
+  end
+  
+  @opts_reject [:cardinality, :field, :queryable, :relationship, :__struct__, :owner, :related]
+  def assoc_opts_from(assoc, map) do  
+    Map.keys(assoc) 
+    |> Enum.reject(fn(key) -> key in @opts_reject end)
+    |> Enum.map(fn(key) -> {Map.get(map, key, key), Map.get(assoc, key)} end)
+    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+  end
+  
+  @doc false
   def __autogenerate__(id, insert, update) do
     quote do
       def __schema__(:autogenerate_id), do: unquote(id)
@@ -1306,6 +1556,12 @@ defmodule Ecto.Schema do
     end
   end
 
+  def __aliases__(aliases) do
+    quote do
+      def __schema__(:aliases), do: unquote(Macro.escape(aliases))
+    end
+  end
+  
   ## Private
 
   defp association(mod, cardinality, name, association, opts) do
@@ -1435,5 +1691,30 @@ defmodule Ecto.Schema do
 
   defp default_for_type(_, opts) do
     Keyword.get(opts, :default)
+  end
+  
+  defp field_options_for(module, field) do
+    options = []
+    {:ok, default} = Map.fetch(module.__struct__, field) 
+    if default,                                      
+      do: options = options ++ [default: default]
+    if includes?(module.__schema__(:primary_key), field),       
+      do: options = options ++ [primary_key: true]
+    if includes?(module.__schema__(:autogenerate_id), field),   
+      do: options = options ++ [autogenerate: true]
+    if includes?(module.__schema__(:read_after_writes), field), 
+      do: options = options ++ [read_after_writes: true]
+    if alias_for = module.__schema__(:aliases)[field] do
+      options = options ++ [alias_for: alias_for]
+    end
+    options
+  end
+  
+  defp includes?(list, item) when is_tuple(list) do
+    {key, _} = list
+    key == item
+  end
+  defp includes?(list, item) do
+    item in list
   end
 end

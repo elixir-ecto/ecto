@@ -384,9 +384,9 @@ if Code.ensure_loaded?(Postgrex) do
       "$#{ix+1}"
     end
 
-    defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, _query) when is_atom(field) do
-      {_, name, _} = elem(sources, idx)
-      "#{name}.#{quote_name(field)}"
+    defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, query) when is_atom(field) do
+      {_table, name, schema} = elem(sources, idx)
+      field_or_alias(field, name, sources, schema, query)
     end
 
     defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
@@ -397,9 +397,13 @@ if Code.ensure_loaded?(Postgrex) do
           "Please specify a schema or specify exactly which fields from " <>
           "#{inspect name} you desire")
       end
-      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
+      Enum.map_join(fields, ", ", &field_or_alias(&1, name, sources, schema, query))
     end
 
+    defp expr({:{}, [], fragment}, sources, query) do
+      expr(List.to_tuple(fragment), sources, query)
+    end
+    
     defp expr({:in, _, [_left, []]}, _sources, _query) do
       "false"
     end
@@ -567,11 +571,13 @@ if Code.ensure_loaded?(Postgrex) do
     def execute_ddl({command, %Table{}=table, columns}) when command in [:create, :create_if_not_exists] do
       options       = options_expr(table.options)
       if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
-      pk_definition = pk_definition(columns)
+      pk_definition = pk_definition(table, columns)
+      inherits      = if table.inherits, do: " INHERITS (#{inherits(table.prefix, table.inherits)})", else: ""
 
       "CREATE TABLE" <> if_not_exists <>
         " #{quote_table(table.prefix, table.name)}" <>
-        " (#{column_definitions(table, columns)}#{pk_definition})" <> options
+        " (#{column_definitions(table, columns)}#{prepend_comma_if_columns(pk_definition, columns)})" <>
+        "#{inherits}" <> options
     end
 
     def execute_ddl({command, %Table{}=table}) when command in @drops do
@@ -636,7 +642,25 @@ if Code.ensure_loaded?(Postgrex) do
 
     def execute_ddl(keyword) when is_list(keyword),
       do: error!(nil, "PostgreSQL adapter does not support keyword lists in execute")
-
+      
+    # Primary key definitions.  If the table is inherited the defailt is to
+    # define the primary key as the same columns as the inherited table.
+    defp pk_definition(%Table{}=table, columns),
+      do: pk_definition(table, table.inherits, columns)
+    
+    defp pk_definition(%Table{}=table, inherits, columns) when is_atom(inherits),
+      do: pk_definition(inherited_primary_keys(table) ++ columns)
+    
+    defp pk_definition(%Table{}=table, inherits, columns) when is_list(inherits) do
+      [_inherited_table | options] = inherits
+      case Keyword.get(options, :primary_keys, true) do
+        true ->
+          pk_definition(inherited_primary_keys(table) ++ columns)
+        false ->
+          pk_definition(columns)
+      end
+    end
+    
     defp pk_definition(columns) do
       pks =
         for {_, name, _, opts} <- columns,
@@ -645,10 +669,18 @@ if Code.ensure_loaded?(Postgrex) do
 
       case pks do
         [] -> ""
-        _  -> ", PRIMARY KEY (" <> Enum.map_join(pks, ", ", &quote_name/1) <> ")"
+        _  -> "PRIMARY KEY (" <> Enum.map_join(pks, ", ", &quote_name/1) <> ")"
       end
     end
-
+    
+    defp prepend_comma_if_columns(pk_def, []), do: pk_def
+    defp prepend_comma_if_columns("" = pk_def, _columns), do: pk_def
+    defp prepend_comma_if_columns(pk_def, _columns), do: ", " <> pk_def
+    
+    defp inherited_primary_keys(%Table{}=table) do
+      Enum.map(table.inherited_primary_keys, fn (y) -> {:add, y, nil, [primary_key: true]} end)
+    end
+    
     defp column_definitions(table, columns) do
       Enum.map_join(columns, ", ", &column_definition(table, &1))
     end
@@ -792,7 +824,64 @@ if Code.ensure_loaded?(Postgrex) do
     defp reference_on_delete(:nilify_all), do: " ON DELETE SET NULL"
     defp reference_on_delete(:delete_all), do: " ON DELETE CASCADE"
     defp reference_on_delete(_), do: ""
+    
+    ## Metadata
+    
+    def primary_keys_from(table_name) do
+      """
+        SELECT a.attname::varchar
+        FROM   pg_index i
+        JOIN   pg_attribute a ON a.attrelid = i.indrelid
+                              AND a.attnum = ANY(i.indkey)
+        WHERE  i.indrelid = #{single_quote(table_name)}::regclass
+        AND    i.indisprimary;
+      """
+    end
+    def primary_keys_from(nil, table_name),
+      do: primary_keys_from(table_name)
+    def primary_keys_from(prefix, table_name),
+      do: primary_keys_from(prefix <> "." <> table_name)
 
+    def index_definitions_from(table_name) do
+      """
+        SELECT                  
+          pg_get_indexdef(idx.indexrelid) AS index_definition
+        FROM pg_index AS idx
+          JOIN pg_class AS i
+            ON i.oid = idx.indexrelid
+          JOIN pg_am AS am
+            ON i.relam = am.oid
+          JOIN pg_namespace AS NS ON i.relnamespace = NS.OID
+          JOIN pg_user AS U ON i.relowner = U.usesysid
+        WHERE idx.indisprimary = 'f' 
+          AND idx.indrelid = #{single_quote(table_name)}::regclass
+      """
+    end
+    def index_definitions_from(nil, table_name),
+      do: index_definitions_from(table_name)
+    def index_definitions_from(prefix, table_name),
+      do: index_definitions_from(table_name) <> " AND ns.nspname = #{single_quote(prefix)}"
+      
+    def trigger_definitions_from(table_name) do
+      """
+        SELECT pg_get_triggerdef(oid) 
+        FROM pg_trigger 
+        WHERE tgrelid = #{single_quote(table_name)}::regclass
+      """
+    end
+    def trigger_definitions_from(nil, table_name),
+      do: trigger_definitions_from(table_name)
+    def trigger_definitions_from(prefix, table_name),
+      do: trigger_definitions_from(prefix <> "." <> table_name)
+      
+    def inherits(table_prefix, table_name) when is_atom(table_name),
+      do: quote_table(table_prefix, table_name)
+    def inherits(table_prefix, inherit) when is_list(inherit) do
+      [table_name | options] = inherit
+      prefix = Keyword.get(options, :prefix, table_prefix)
+      quote_table(prefix, table_name)
+    end
+    
     ## Helpers
 
     defp get_source(query, sources, ix, source) do
@@ -808,18 +897,70 @@ if Code.ensure_loaded?(Postgrex) do
         error!(nil, "bad field name #{inspect name}")
       end
       <<?", name::binary, ?">>
-    end
+    end   
 
     defp quote_table(nil, name),    do: quote_table(name)
     defp quote_table(prefix, name), do: quote_table(prefix) <> "." <> quote_table(name)
 
     defp quote_table(name) when is_atom(name),
-      do: quote_table(Atom.to_string(name))
+      do: quote_table(Atom.to_string(name))    
     defp quote_table(name) do
-      if String.contains?(name, "\"") do
-        error!(nil, "bad table name #{inspect name}")
+      cond do
+        String.contains?(name, "\"") ->
+          error!(nil, "bad table name #{inspect name}")
+        String.contains?(name, ".") ->
+          quote_table(String.split(name, '.'))
+        true ->
+          <<?", name::binary, ?">>
       end
-      <<?", name::binary, ?">>
+    end
+    
+    # Quote a table name for use in metadata look ups where the table name 
+    # is part of a predicate
+    defp single_quote(nil, name) do
+      single_quote(name)
+    end
+    defp single_quote(prefix, name) when is_atom(prefix) and is_atom(name) do
+      single_quote(Atom.to_string(prefix), Atom.to_string(name))
+    end
+    defp single_quote(prefix, name) do
+      single_quote(prefix <> "." <> name)
+    end
+    defp single_quote(name) when is_atom(name) do
+      single_quote(Atom.to_string(name))
+    end
+    defp single_quote(name) when is_binary(name) do
+      cond do
+        String.contains?(name, "\"") ->
+          error!(nil, "bad table name #{inspect name}")
+        true ->
+          <<?', name::binary, ?'>>
+      end
+    end
+    defp single_quote(name) when is_list(name) do
+      [table_name | options] = name
+      prefix = Keyword.get(options, :prefix, nil)
+      single_quote(prefix, table_name)
+    end
+    
+    defp field_or_alias(field, name, _sources, nil, _query) do
+      "#{name}.#{quote_name(field)}"
+    end
+    defp field_or_alias(field, name, sources, schema, query) do
+      alias Ecto.Query.Builder.Select, as: Builder
+      
+      if alias = schema.__schema__(:aliases)[field] do
+        {expr, {params, take}} = Builder.escape(alias, [], __ENV__)
+        if Enum.any?(params), do: raise ArgumentError, 
+            "Parameters in a schema column alias are not supported. " <>
+            "Field alias for #{field} found #{inspect params}"
+            
+        alias = expr(expr, sources, query)
+        column = "#{alias} AS #{quote_name(field)}"
+        String.replace(column, "%{table}", name)
+      else
+        "#{name}.#{quote_name(field)}"
+      end
     end
 
     defp assemble(list) do
