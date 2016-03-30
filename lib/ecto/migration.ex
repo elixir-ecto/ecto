@@ -177,8 +177,8 @@ defmodule Ecto.Migration do
     @moduledoc """
     Defines a reference struct used in migrations.
     """
-    defstruct name: nil, table: nil, column: :id, type: :serial, on_delete: :nothing
-    @type t :: %__MODULE__{table: atom, column: atom, type: atom, on_delete: atom}
+    defstruct name: nil, table: nil, column: :id, type: :serial, on_delete: :nothing, on_update: :nothing
+    @type t :: %__MODULE__{table: atom, column: atom, type: atom, on_delete: atom, on_update: atom}
   end
 
   defmodule Constraint do
@@ -670,8 +670,11 @@ defmodule Ecto.Migration do
     * `:column` - The foreign key column, default is `:id`
     * `:type`   - The foreign key type, default is `:serial`
     * `:on_delete` - What to perform if the entry is deleted.
-      May be `:nothing`, `:delete_all` or `:nilify_all`.
-      Defaults to `:nothing`.
+         May be `:nothing`, `:delete_all` or `:nilify_all`.
+         Defaults to `:nothing`.
+    * `:on_update` - What to perform if the entry is updated.
+         May be `:nothing`, `:update_all` or `:nilify_all`.
+         Defaults to `:nothing`.
 
   """
   def references(table, opts \\ []) when is_atom(table) do
@@ -679,6 +682,10 @@ defmodule Ecto.Migration do
 
     unless reference.on_delete in [:nothing, :delete_all, :nilify_all] do
       raise ArgumentError, "unknown :on_delete value: #{inspect reference.on_delete}"
+    end
+
+    unless reference.on_update in [:nothing, :update_all, :nilify_all] do
+      raise ArgumentError, "unknown :on_update value: #{inspect reference.on_update}"
     end
 
     reference

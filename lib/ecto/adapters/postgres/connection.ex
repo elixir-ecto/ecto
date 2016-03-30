@@ -772,13 +772,13 @@ if Code.ensure_loaded?(Postgrex) do
     defp reference_expr(%Reference{} = ref, table, name),
       do: "CONSTRAINT #{reference_name(ref, table, name)} REFERENCES " <>
           "#{quote_table(table.prefix, ref.table)}(#{quote_name(ref.column)})" <>
-          reference_on_delete(ref.on_delete)
+          reference_on_delete(ref.on_delete) <> reference_on_update(ref.on_update)
 
     defp constraint_expr(%Reference{} = ref, table, name),
       do: ", ADD CONSTRAINT #{reference_name(ref, table, name)} " <>
           "FOREIGN KEY (#{quote_name(name)}) " <>
           "REFERENCES #{quote_table(table.prefix, ref.table)}(#{quote_name(ref.column)})" <>
-          reference_on_delete(ref.on_delete)
+          reference_on_delete(ref.on_delete) <> reference_on_update(ref.on_update)
 
     # A reference pointing to a serial column becomes integer in postgres
     defp reference_name(%Reference{name: nil}, table, column),
@@ -792,6 +792,10 @@ if Code.ensure_loaded?(Postgrex) do
     defp reference_on_delete(:nilify_all), do: " ON DELETE SET NULL"
     defp reference_on_delete(:delete_all), do: " ON DELETE CASCADE"
     defp reference_on_delete(_), do: ""
+
+    defp reference_on_update(:nilify_all), do: " ON UPDATE SET NULL"
+    defp reference_on_update(:update_all), do: " ON UPDATE CASCADE"
+    defp reference_on_update(_), do: ""
 
     ## Helpers
 

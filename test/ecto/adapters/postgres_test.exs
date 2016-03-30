@@ -613,7 +613,11 @@ defmodule Ecto.Adapters.PostgresTest do
                 {:add, :category_1, references(:categories, name: :foo_bar), []},
                 {:add, :category_2, references(:categories, on_delete: :nothing), []},
                 {:add, :category_3, references(:categories, on_delete: :delete_all), [null: false]},
-                {:add, :category_4, references(:categories, on_delete: :nilify_all), []}]}
+                {:add, :category_4, references(:categories, on_delete: :nilify_all), []},
+                {:add, :category_5, references(:categories, on_update: :nothing), []},
+                {:add, :category_6, references(:categories, on_update: :update_all), [null: false]},
+                {:add, :category_7, references(:categories, on_update: :nilify_all), []},
+                {:add, :category_8, references(:categories, on_delete: :nilify_all, on_update: :update_all), [null: false]}]}
 
     assert SQL.execute_ddl(create) == """
     CREATE TABLE "posts" ("id" serial,
@@ -622,6 +626,10 @@ defmodule Ecto.Adapters.PostgresTest do
     "category_2" integer CONSTRAINT "posts_category_2_fkey" REFERENCES "categories"("id"),
     "category_3" integer NOT NULL CONSTRAINT "posts_category_3_fkey" REFERENCES "categories"("id") ON DELETE CASCADE,
     "category_4" integer CONSTRAINT "posts_category_4_fkey" REFERENCES "categories"("id") ON DELETE SET NULL,
+    "category_5" integer CONSTRAINT "posts_category_5_fkey" REFERENCES "categories"("id"),
+    "category_6" integer NOT NULL CONSTRAINT "posts_category_6_fkey" REFERENCES "categories"("id") ON UPDATE CASCADE,
+    "category_7" integer CONSTRAINT "posts_category_7_fkey" REFERENCES "categories"("id") ON UPDATE SET NULL,
+    "category_8" integer NOT NULL CONSTRAINT "posts_category_8_fkey" REFERENCES "categories"("id") ON DELETE SET NULL ON UPDATE CASCADE,
     PRIMARY KEY ("id"))
     """ |> remove_newlines
   end
