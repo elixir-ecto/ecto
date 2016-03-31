@@ -7,7 +7,8 @@ defmodule Ecto.Repo.Supervisor do
   """
   def start_link(repo, otp_app, adapter, opts) do
     opts = config(repo, otp_app, opts)
-    Supervisor.start_link(__MODULE__, {repo, otp_app, adapter, opts}, [name: repo])
+    name = opts[:name] || Application.get_env(otp_app, repo)[:name] || repo
+    Supervisor.start_link(__MODULE__, {repo, otp_app, adapter, opts}, [name: name])
   end
 
   @doc """
@@ -90,7 +91,9 @@ defmodule Ecto.Repo.Supervisor do
 
   def init({repo, _otp_app, adapter, opts}) do
     children = [adapter.child_spec(repo, opts)]
-    :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
+    if Keyword.get(opts, :query_cache_owner, true) do
+      :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
+    end
     supervise(children, strategy: :one_for_one)
   end
 end

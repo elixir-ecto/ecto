@@ -45,7 +45,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp query_with_cache(query, operation, repo, adapter, key, params) do
-    case query_lookup(query, operation, repo, adapter, repo, key) do
+    case query_lookup(query, operation, repo, adapter, key) do
       {:nocache, select, prepared} ->
         {build_meta(query, select), {:nocache, prepared}, params}
       {_, :cached, select, cached} ->
@@ -56,7 +56,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp query_lookup(query, operation, repo, adapter, repo, key) do
+  defp query_lookup(query, operation, repo, adapter, key) do
     try do
       :ets.lookup(repo, key)
     rescue
