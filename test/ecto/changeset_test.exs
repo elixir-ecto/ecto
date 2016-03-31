@@ -125,7 +125,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(body), ~w())
     assert changeset.changes == %{}
-    assert changeset.errors == [body: {"is invalid", []}]
+    assert changeset.errors == [body: {"is invalid", [type: :string]}]
     refute changeset.valid?
   end
 
@@ -135,7 +135,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(), ~w(body))
     assert changeset.changes == %{}
-    assert changeset.errors == [body: {"is invalid", []}]
+    assert changeset.errors == [body: {"is invalid", [type: :string]}]
     refute changeset.valid?
   end
 
@@ -954,20 +954,24 @@ defmodule Ecto.ChangesetTest do
 
   test "traverses changeset errors" do
     changeset =
-      changeset(%{"title" => "title", "body" => "hi"})
+      changeset(%{"title" => "title", "body" => "hi", "upvotes" => :bad})
       |> validate_length(:body, min: 3)
       |> validate_format(:body, ~r/888/)
       |> add_error(:title, "is taken")
 
-    errors = traverse_errors(changeset, fn {msg, opts} ->
-      msg
-      |> String.replace("%{count}", to_string(opts[:count]))
-      |> String.upcase()
+    errors = traverse_errors(changeset, fn
+      {"is invalid", [type: type]} ->
+        "expected to be #{inspect(type)}"
+      {msg, opts} ->
+        msg
+        |> String.replace("%{count}", to_string(opts[:count]))
+        |> String.upcase()
     end)
 
     assert errors == %{
       body: ["HAS INVALID FORMAT", "SHOULD BE AT LEAST 3 CHARACTER(S)"],
-      title: ["IS TAKEN"]
+      title: ["IS TAKEN"],
+      upvotes: ["expected to be :integer"],
     }
   end
 
