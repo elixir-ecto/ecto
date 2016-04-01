@@ -610,11 +610,22 @@ defmodule Ecto.Migration do
   Those columns are of `:datetime` type and by default cannot
   be null. `opts` can be given to customize the generated
   fields.
+
+  ## Options
+
+    * `:inserted_at` -  the name of the column for insertion times
+    * `:updated_at` - the name of the column for update times
   """
   def timestamps(opts \\ []) do
     opts = Keyword.put_new(opts, :null, false)
-    add(:inserted_at, :datetime, opts)
-    add(:updated_at, :datetime, opts)
+
+    inserted_at = opts[:inserted_at] || :inserted_at
+    updated_at = opts[:updated_at] || :updated_at
+
+    opts = Keyword.drop opts, [:inserted_at, :updated_at]
+
+    add(inserted_at, :datetime, opts)
+    add(updated_at, :datetime, opts)
   end
 
   @doc """
