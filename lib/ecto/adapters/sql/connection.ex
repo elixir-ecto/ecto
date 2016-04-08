@@ -3,14 +3,14 @@ defmodule Ecto.Adapters.SQL.Connection do
   Specifies the behaviour to be implemented by all SQL connections.
   """
 
-  @typedoc "The prepared query which is SQL command"
+  @typedoc "The prepared query which is an SQL command"
   @type prepared :: String.t
 
   @typedoc "The cache query which is a DBConnection Query"
   @type cached :: map
 
   @doc """
-  Receives options and returns `DBConnection` supervisor child 
+  Receives options and returns `DBConnection` supervisor child
   specification.
   """
   @callback child_spec(Keyword.t) :: {module, Keyword.t}

@@ -6,8 +6,8 @@ defmodule Ecto.Multi do
   Ecto.Multi makes it possible to pack operations that should be performed
   together (in a single database transaction) and gives a way to introspect
   the queued operations without actually performing them.
-  Each operation is given a name that is unique and will identify it's result
-  or will help to identify place of failure in case it occurs.
+  Each operation is given a name that is unique and will identify its result
+  or will help to identify the place of failure in case it occurs.
 
   All operations will be executed in the order they were added.
 
@@ -286,7 +286,7 @@ defmodule Ecto.Multi do
   end
 
   @doc """
-  Adds an delete_all operation to the multi.
+  Adds a delete_all operation to the multi.
 
   Accepts the same arguments and options as `Ecto.Repo.delete_all/4` does.
   """

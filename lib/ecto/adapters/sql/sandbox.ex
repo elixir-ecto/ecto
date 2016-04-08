@@ -17,8 +17,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   ## Database support
 
   While both PostgreSQL and MySQL support SQL Sandbox, only PostgreSQL
-  support concurrent tests while running the SQL Sandbox. Therefore, do
-  not run concurrent tests with MySQL as may run into deadlocks due to
+  supports concurrent tests while running the SQL Sandbox. Therefore, do
+  not run concurrent tests with MySQL as you may run into deadlocks due to
   its transaction implementation.
 
   ## Example
@@ -109,8 +109,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   the parent's connection (i.e. the test process' connection) to
   the task.
 
-  Because allowances uses an explicit mechanism, their advantage
-  is that you can still runs your tests in async mode. The downside
+  Because allowances use an explicit mechanism, their advantage
+  is that you can still run your tests in async mode. The downside
   is that you need to explicitly control and allow every single
   process. This is not always possible. In such cases, you will
   want to use shared mode.

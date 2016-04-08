@@ -182,7 +182,7 @@ defmodule Ecto.Changeset do
     * directly changing a struct without performing castings nor validations
     * directly bulk-adding changes to a changeset
 
-  Since no validation nor casting is performed, `change/2` expects the keys in
+  Since neither validation nor casting is performed, `change/2` expects the keys in
   `changes` to be atoms. `changes` can be a map as well as a keyword list.
 
   When a changeset is passed as the first argument, the changes passed as the

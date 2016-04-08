@@ -437,7 +437,7 @@ defmodule Ecto.Repo do
   Inserts all entries into the repository.
 
   It expects a schema (`MyApp.User`) or a source (`"users"` or
-  `{"prefix", "users"}`) as first argument. The second argument
+  `{"prefix", "users"}`) as the first argument. The second argument
   is a list of entries to be inserted, either as keyword lists
   or as maps.
 

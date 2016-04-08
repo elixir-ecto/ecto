@@ -199,7 +199,7 @@ defmodule Ecto.Query do
 
   ## Fragments
 
-  If you need a escape hatch, Ecto provides fragments
+  If you need an escape hatch, Ecto provides fragments
   (see `Ecto.Query.API.fragment/1`) to inject SQL (and non-SQL)
   fragments into queries.
 
@@ -416,7 +416,7 @@ defmodule Ecto.Query do
   @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
 
   defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
-    # If all bindings are integer indexes keep AST Macro.expand'able to %Query{},
+    # If all bindings are integer indexes keep AST Macro expandable to %Query{},
     # otherwise ensure that quoted code is evaluated before macro call
     quoted =
       if Enum.all?(binds, fn {_, value} -> is_integer(value) end) do
@@ -518,7 +518,7 @@ defmodule Ecto.Query do
       Comment
       |> join(:inner, [c], p in fragment("SOME COMPLEX QUERY", c.id, ^some_param))
 
-  This style discouraged due to its complexity.
+  This style is discouraged due to its complexity.
   """
   defmacro join(query, qual, binding \\ [], expr, on \\ nil) do
     Join.build(query, qual, binding, expr, on, nil, __CALLER__)
@@ -539,7 +539,7 @@ defmodule Ecto.Query do
   is omitted, the query will by default select the full schema.
 
   `select` also accepts a list of atoms where each atom refers to a field in
-  source to be selected.
+  the source to be selected.
 
   ## Keywords examples
 
