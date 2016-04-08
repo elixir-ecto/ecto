@@ -775,7 +775,7 @@ defmodule Ecto.Association.ManyToMany do
     * `relationship` - The relationship to the specified schema, default `:child`
     * `join_keys` - The keyword list with many to many join keys
     * `join_through` - Atom (representing a schema) or a string (representing a table)
-      for many to many association
+      for many to many associations
   """
 
   @behaviour Ecto.Association
