@@ -4,7 +4,7 @@ defmodule Ecto.Integration.ConstraintsTest do
   use ExUnit.Case, async: true
 
   alias Ecto.Integration.PoolRepo
-  import Ecto.Migrator, only: [up: 4, down: 4]
+  import Ecto.Migrator, only: [up: 4]
 
   defmodule ConstraintMigration do
     use Ecto.Migration

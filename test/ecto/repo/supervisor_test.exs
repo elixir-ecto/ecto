@@ -57,8 +57,8 @@ defmodule Ecto.Repo.SupervisorTest do
 
   test "parse_urls empty username/password" do
     url = parse_url("ecto://host:12345/mydb")
-    assert !Dict.has_key?(url, :username)
-    assert !Dict.has_key?(url, :password)
+    assert !Keyword.has_key?(url, :username)
+    assert !Keyword.has_key?(url, :password)
   end
 
   test "fail on invalid urls" do
