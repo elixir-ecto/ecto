@@ -276,6 +276,13 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       """
     end
 
+    # If the mode is set to anything but shared, let's
+    # automatically checkin the current connection to
+    # force it to act according to the chosen mode.
+    if mode in [:auto, :manual] do
+      checkin(repo, [])
+    end
+
     DBConnection.Ownership.ownership_mode(name, mode, opts)
   end
 
