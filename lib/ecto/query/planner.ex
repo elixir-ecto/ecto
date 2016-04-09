@@ -368,8 +368,8 @@ defmodule Ecto.Query.Planner do
 
   defp cast_and_merge_params(kind, query, expr, params, adapter) do
     Enum.reduce expr.params, {params, true}, fn
-      {v, {:in_spread, type}}, {acc, _cacheable?} ->
-        {unfold_in(cast_param(kind, query, expr, v, {:array, type}, adapter), acc), false}
+      {v, {:spread, _} = type}, {acc, _cacheable?} ->
+        {unfold_in(cast_param(kind, query, expr, v, type, adapter), acc), false}
       {v, type}, {acc, cacheable?} ->
         {[cast_param(kind, query, expr, v, type, adapter)|acc], cacheable?}
     end
@@ -815,6 +815,9 @@ defmodule Ecto.Query.Planner do
     type
   end
 
+  defp normalize_param(_kind, {:spread, type}, _value) do
+    {:ok, {:array, type}}
+  end
   defp normalize_param(_kind, {:in_array, {:array, type}}, _value) do
     {:ok, type}
   end

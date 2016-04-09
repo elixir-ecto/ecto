@@ -873,11 +873,13 @@ defmodule Ecto.Association.ManyToMany do
 
   @doc false
   def assoc_query(%{join_through: join_through, join_keys: join_keys,
-                    queryable: queryable}, query, values) do
-    [{join_owner_key, _}, {join_related_key, related_key}] = join_keys
+                    queryable: queryable, owner: owner}, query, values) do
+    [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
+    owner_type = {:spread, owner.__schema__(:type, owner_key)}
+
     from q in (query || queryable),
       join: j in ^join_through, on: field(j, ^join_related_key) == field(q, ^related_key),
-      where: field(j, ^join_owner_key) in ^values
+      where: field(j, ^join_owner_key) in type(^values, ^owner_type)
   end
 
   @doc false
@@ -902,10 +904,14 @@ defmodule Ecto.Association.ManyToMany do
                      %{repo: repo, data: owner}, %{action: :delete, data: related}, opts) do
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
 
+    adapter = repo.__adapter__()
+    owner_value = dump! :delete, join_through, owner, owner_key, adapter
+    related_value = dump! :delete, join_through, related, related_key, adapter
+
     query =
       from j in join_through,
-        where: field(j, ^join_owner_key) == ^field!(:delete, owner, owner_key) and
-               field(j, ^join_related_key) == ^field!(:delete, related, related_key)
+        where: field(j, ^join_owner_key) == ^owner_value and
+               field(j, ^join_related_key) == ^related_value
 
     repo.delete_all query, opts
     {:ok, nil}
@@ -915,14 +921,17 @@ defmodule Ecto.Association.ManyToMany do
                      %{repo: repo, data: owner} = parent_changeset,
                      %{action: action} = changeset, opts) do
     case apply(repo, action, [changeset, opts]) do
-      {:ok, child} ->
+      {:ok, related} ->
         [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
         if insert_join?(parent_changeset, changeset, field, related_key) do
-          data = [{join_owner_key, field!(:insert, owner, owner_key)},
-                  {join_related_key, field!(:insert, child, related_key)}]
+          adapter = repo.__adapter__()
+          owner_value = dump! :insert, join_through, owner, owner_key, adapter
+          related_value = dump! :insert, join_through, related, related_key, adapter
+
+          data = [{join_owner_key, owner_value}, {join_related_key, related_value}]
           insert_join(repo, join_through, data, opts)
         end
-        {:ok, child}
+        {:ok, related}
       {:error, changeset} ->
         {:error, changeset}
     end
@@ -949,6 +958,23 @@ defmodule Ecto.Association.ManyToMany do
     Map.get(struct, field) || raise "could not #{op} join entry because `#{field}` is nil in #{inspect struct}"
   end
 
+  defp dump!(action, join_through, struct, field, adapter) when is_binary(join_through) do
+    value = field!(action, struct, field)
+    type  = struct.__struct__.__schema__(:type, field)
+    case Ecto.Type.adapter_dump(adapter, type, value) do
+      {:ok, value} ->
+        value
+      :error ->
+        raise Ecto.ChangeError,
+          message: "value `#{inspect value}` for `#{inspect struct.__struct__}.#{field}` " <>
+                   "in `#{action}` does not match type #{inspect type}"
+    end
+  end
+
+  defp dump!(action, join_through, struct, field, _) when is_atom(join_through) do
+    field!(action, struct, field)
+  end
+
   ## Relation callbacks
   @behaviour Ecto.Changeset.Relation
 
@@ -962,10 +988,11 @@ defmodule Ecto.Association.ManyToMany do
   ## On delete callbacks
 
   @doc false
-  def delete_all(%{join_through: join_through, join_keys: join_keys}, parent, repo, opts) do
+  def delete_all(%{join_through: join_through, join_keys: join_keys, owner: owner}, parent, repo, opts) do
     [{join_owner_key, owner_key}, {_, _}] = join_keys
     if value = Map.get(parent, owner_key) do
-      query = from j in join_through, where: field(j, ^join_owner_key) == ^value
+      owner_type = owner.__schema__(:type, owner_key)
+      query = from j in join_through, where: field(j, ^join_owner_key) == type(^value, ^owner_type)
       repo.delete_all query, opts
     end
   end

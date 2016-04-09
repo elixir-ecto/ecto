@@ -190,27 +190,22 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:in, [], [left, right]]}, params}
   end
 
-  def escape({:in, _, [left, {:^, _, _} = right]} = expr, type, params, vars, env) do
-    assert_type!(expr, type, :boolean)
-
-    # The rtype in will be unwrapped in the query planner
-    ltype = :any
-    rtype = {:in_spread, quoted_type(left, vars)}
-
-    {left,  params} = escape(left, ltype, params, vars, env)
-    {right, params} = escape(right, rtype, params, vars, env)
-    {{:{}, [], [:in, [], [left, right]]}, params}
-  end
-
   def escape({:in, _, [left, right]} = expr, type, params, vars, env) do
     assert_type!(expr, type, :boolean)
 
-    ltype = quoted_type(right, vars)
-    rtype = {:array, quoted_type(left, vars)}
+    ltype = {:in_array, quoted_type(right, vars)}
+    rtype = {:spread, quoted_type(left, vars)}
 
-    # The ltype in will be unwrapped in the query planner
-    {left,  params} = escape(left, {:in_array, ltype}, params, vars, env)
+    {left,  params} = escape(left, ltype, params, vars, env)
     {right, params} = escape(right, rtype, params, vars, env)
+
+    # Remove any type wrapper from the right side
+    right =
+      case right do
+        {:{}, [], [:type, [], [right, _]]} -> right
+        _ -> right
+      end
+
     {{:{}, [], [:in, [], [left, right]]}, params}
   end
 
@@ -323,11 +318,17 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  defp validate_type!({:array, {:__aliases__, _, _}} = type, _vars), do: {type, type}
-  defp validate_type!({:array, atom} = type, _vars) when is_atom(atom), do: {type, type}
-  defp validate_type!({:__aliases__, _, _} = type, _vars), do: {type, type}
-  defp validate_type!(type, _vars) when is_atom(type), do: {type, type}
+  defp validate_type!({composite, type}, vars) do
+    {type, escaped} = validate_type!(type, vars)
+    {{composite, type}, {composite, escaped}}
+  end
 
+  defp validate_type!({:^, _, [type]}, _vars),
+    do: {type, type}
+  defp validate_type!({:__aliases__, _, _} = type, _vars),
+    do: {type, type}
+  defp validate_type!(type, _vars) when is_atom(type),
+    do: {type, type}
   defp validate_type!({{:., _, [{var, _, context}, field]}, _, []}, vars)
     when is_atom(var) and is_atom(context) and is_atom(field),
     do: {{find_var!(var, vars), field}, escape_field(var, field, vars)}
@@ -336,7 +337,7 @@ defmodule Ecto.Query.Builder do
     do: {{find_var!(var, vars), field}, escape_field(var, field, vars)}
 
   defp validate_type!(type, _vars) do
-    error! "type/2 expects an alias, atom or source.field as second argument, got: `#{Macro.to_string(type)}"
+    error! "type/2 expects an alias, atom or source.field as second argument, got: `#{Macro.to_string(type)}`"
   end
 
   @always_tagged [:binary]

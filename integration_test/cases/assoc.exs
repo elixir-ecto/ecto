@@ -6,6 +6,7 @@ defmodule Ecto.Integration.AssocTest do
   alias Ecto.Integration.TestRepo
   import Ecto.Query
 
+  alias Ecto.Integration.Custom
   alias Ecto.Integration.Post
   alias Ecto.Integration.User
   alias Ecto.Integration.PostUser
@@ -374,6 +375,17 @@ defmodule Ecto.Integration.AssocTest do
     assert up1.user_id == user.id
     assert up1.inserted_at
     assert up1.updated_at
+  end
+
+  test "many_to_many changeset assoc with binary_id and uuid" do
+    custom = TestRepo.insert!(%Custom{bid: Ecto.UUID.generate})
+    post   = TestRepo.insert!(%Post{uuid: Ecto.UUID.generate(), customs: [custom]})
+
+    post
+    |> TestRepo.preload(:customs)
+    |> Ecto.Changeset.change(%{})
+    |> Ecto.Changeset.put_assoc(:customs, [])
+    |> TestRepo.update!
   end
 
   @tag :unique_constraint

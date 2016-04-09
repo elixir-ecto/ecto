@@ -204,12 +204,12 @@ defmodule Ecto.AssociationTest do
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [])) ==
            inspect(from a in Author,
                     join: m in "authors_permalinks", on: m.author_id == a.id,
-                    where: m.permalink_id in ^[])
+                    where: m.permalink_id in type(^[], {:spread, :id}))
 
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from a in Author,
                     join: m in "authors_permalinks", on: m.author_id == a.id,
-                    where: m.permalink_id in ^[1, 2, 3])
+                    where: m.permalink_id in type(^[1, 2, 3], {:spread, :id}))
   end
 
   test "many to many with specified source" do
@@ -223,12 +223,12 @@ defmodule Ecto.AssociationTest do
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [])) ==
            inspect(from p in {"custom_permalinks", Permalink},
                     join: m in "authors_permalinks", on: m.permalink_id == p.id,
-                    where: m.author_id in ^[])
+                    where: m.author_id in type(^[], {:spread, :id}))
 
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from p in {"custom_permalinks", Permalink},
                     join: m in "authors_permalinks", on: m.permalink_id == p.id,
-                    where: m.author_id in ^[1, 2, 3])
+                    where: m.author_id in type(^[1, 2, 3], {:spread, :id}))
   end
 
   test "many to many custom assoc query" do
@@ -237,7 +237,7 @@ defmodule Ecto.AssociationTest do
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, query, [1, 2, 3])) ==
            inspect(from a in Author,
                     join: m in "authors_permalinks", on: m.author_id == a.id,
-                    where: m.permalink_id in ^[1, 2, 3], limit: 5)
+                    where: m.permalink_id in type(^[1, 2, 3], {:spread, :id}), limit: 5)
   end
 
   test "has many through many to many" do
