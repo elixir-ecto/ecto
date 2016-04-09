@@ -298,7 +298,7 @@ defmodule Ecto.Changeset do
   """
   # TODO: Effectively deprecate cast/4
   @spec cast(Ecto.Schema.t | t,
-             %{binary => term} | %{atom => term},
+             %{binary => term} | %{atom => term} | :invalid,
              [String.t | atom],
              [String.t | atom]) :: t | no_return
   def cast(data, params, required, optional)
@@ -316,10 +316,14 @@ defmodule Ecto.Changeset do
     cast(data, %{}, params, required, optional)
   end
 
-  defp cast(%{__struct__: module} = data, %{} = changes, atom, required, optional)
-      when atom in [:empty, :invalid] and is_list(required) and is_list(optional) do
-    IO.puts :stderr, "warning: passing :#{atom} to Ecto.Changeset.cast/3 is deprecated, " <>
-                     "please pass an empty map instead\n" <> Exception.format_stacktrace
+  defp cast(%{__struct__: _} = data, %{} = changes, :empty, required, optional) do
+    IO.puts :stderr, "warning: passing :empty to Ecto.Changeset.cast/3 is deprecated, " <>
+                     "please pass an empty map or :invalid instead\n" <> Exception.format_stacktrace
+    cast(data, changes, :invalid, required, optional)
+  end
+
+  defp cast(%{__struct__: module} = data, %{} = changes, :invalid, required, optional)
+      when is_list(required) and is_list(optional) do
     types = module.__changeset__
 
     _ = Enum.map(optional, &process_empty_fields(&1, types))

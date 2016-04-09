@@ -119,6 +119,29 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
+  test "cast/4: struct with :invalid parameters" do
+    changeset = cast(%Post{}, :invalid, ~w(title), ~w(body)a)
+    assert changeset.data == %Post{}
+    assert changeset.params == nil
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+    assert changeset.validations == []
+    assert changeset.required == [:title]
+    refute changeset.valid?
+  end
+
+  test "cast/4: changeset with :invalid parameters" do
+    changeset = cast(%Post{}, %{"title" => "sample"}, ~w(title)a, ~w())
+    changeset = cast(changeset, :invalid, ~w(), ~w(body)a)
+    assert changeset.data == %Post{}
+    assert changeset.params == %{"title" => "sample"}
+    assert changeset.changes == %{title: "sample"}
+    assert changeset.errors == []
+    assert changeset.validations == []
+    assert changeset.required == [:title]
+    refute changeset.valid?
+  end
+
   test "cast/4: required field is marked as invalid" do
     params = %{"body" => :world}
     struct = %Post{}

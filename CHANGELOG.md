@@ -12,7 +12,7 @@ Due to feedback, we have made three important changes to changesets:
 
   1. `changeset.model` has been renamed to `changeset.data` (we no longer have "models" in Ecto)
   2. Passing required and optional fields to `cast/4` is deprecated in favor of `cast/3` and `validate_required/3`
-  3. The `:empty` atom in `cast(source, :empty, required, optional)` has been removed. An empty map can now be used
+  3. The `:empty` atom in `cast(source, :empty, required, optional)` has been deprecated, please use an empty map or `:invalid` instead
 
 To summarize those changes, instead of:
 
