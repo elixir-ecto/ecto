@@ -119,6 +119,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
 
   * [Changeset] `changeset.model` has been renamed to `changeset.data`
   * [Changeset] `changeset.optional` has been removed
+  * [Changeset] `changeset.errors` now always returns tuple `{String.t, Keyword.t}` in its values
   * [Repo] `Ecto.StaleModelError` has been renamed to `Ecto.StaleEntryError`
   * [Repo] Poolboy now expects `:pool_overflow` option instead of `:max_overflow`
   * [Repo] `Repo.insert/2` will now send only non-nil fields from the struct to the storage (in previous versions, all fields from the struct were sent to the database)
@@ -141,6 +142,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [DateTime] Ensure the given date and datetimes are valid
   * [Migration] Add support for partial indexes by specifying the `:where` option when on `Ecto.Migration.index/2`
   * [Migration] Allow the migration table name to be configured in the repository via `:migration_source`
+  * [Migration] Support `:on_update` for `Ecto.Migrate.references`
   * [Migration] Use pool of 1 connection for `mix ecto.migrate/rollback`
   * [Mix] Automatically reenable migration and repository management tasks after execution
   * [Postgres] Add migration and changeset support for PostgreSQL exclusion constraints. Example: `create constraint(:sizes, :cannot_overlap, exclude: ~s|gist (int4range("min", "max", '[]') WITH &&)|)` and `exclusion_constraint(changeset, :sizes, name: :cannot_overlap, message: "must not overlap")`
