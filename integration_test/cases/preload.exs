@@ -326,10 +326,14 @@ defmodule Ecto.Integration.PreloadTest do
 
     u1 = TestRepo.insert!(%User{name: "foo"})
     u2 = TestRepo.insert!(%User{name: "bar"})
+    u3 = TestRepo.insert!(%User{name: "baz"})
+    u4 = TestRepo.insert!(%User{name: "norf"})
 
     %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: u1.id})
     %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: u1.id})
     %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: u2.id})
+    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: u3.id})
+    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: u4.id})
 
     np1 = TestRepo.preload(p1, comments_authors: from(u in User, where: u.name == "foo"))
     assert np1.comments_authors == [u1]
@@ -339,7 +343,10 @@ defmodule Ecto.Integration.PreloadTest do
     end
 
     np1 = TestRepo.preload(p1, comments_authors: from(u in User, order_by: u.name, select: %{id: u.id}))
-    assert np1.comments_authors == [%{id: u1.id}, %{id: u2.id}]
+    assert np1.comments_authors == [%{id: u2.id}, %{id: u3.id}, %{id: u1.id}, %{id: u4.id}]
+
+    np1 = TestRepo.preload(p1, comments_authors: from(u in User, order_by: [desc: u.name], select: %{id: u.id}))
+    assert np1.comments_authors == [%{id: u4.id}, %{id: u1.id}, %{id: u3.id}, %{id: u2.id}]
   end
 
   ## With take
