@@ -46,6 +46,35 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
+  test "cast/3: anything other than Map for params is invalid" do
+    struct = %Post{}
+
+    changeset = cast(struct, [], ~w(title body)a)
+    assert changeset.params == nil
+    assert changeset.data == struct
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+    assert changeset.validations == []
+    assert changeset.required == []
+    refute changeset.valid?
+  end
+
+  test "cast/3: works when casting a changeset" do
+    params = %{title: "hello"}
+    base_changeset = cast(%Post{title: "valid"}, params, ~w(title))
+                     |> validate_length(:title, min: 3)
+                     |> unique_constraint(:title)
+
+    changeset = cast(base_changeset, [], ~w(title))
+    assert changeset.params == %{"title" => "hello"}
+    assert changeset.changes == params
+    assert changeset.errors == []
+    assert changeset.required == []
+    refute changeset.valid?
+    assert length(changeset.validations) == 1
+    assert length(changeset.constraints) == 1
+  end
+
   ## cast/4
 
   test "cast/4: with valid string keys" do

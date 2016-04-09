@@ -286,6 +286,10 @@ defmodule Ecto.Changeset do
   @spec cast(Ecto.Schema.t | t,
              %{binary => term} | %{atom => term},
              [String.t | atom]) :: t | no_return
+  def cast(data, params, allowed) when not is_map(params) do
+    cast(data, :empty, [], allowed)
+  end
+
   def cast(data, params, allowed) do
     cast(data, params, [], allowed)
   end
