@@ -33,6 +33,16 @@ defmodule Ecto.Adapters.MySQL do
     * `:ssl_opts` - A list of ssl options, see ssl docs
     * `:connect_timeout` - The timeout in miliseconds for establishing new connections (default: 5000)
     * `:after_connect` - A `{mod, fun, args}` to be invoked after a connection is established
+    * `:socket_options` - Specifies socket configuration
+
+  The `:socket_options` are particularly useful when configuring the size
+  of both send and receive buffers. For example, when Ecto starts with a
+  pool of 20 connections, the memory usage may quickly grow from 20MB to
+  50MB based on the operating system default values for TCP buffers. It is
+  advised to stick with the operating system defaults but they can be
+  tweaked if desired:
+
+      socket_options: [recbuf: 8192, sndbuf: 8192]
 
   ### Storage options
 
