@@ -384,6 +384,13 @@ defmodule Ecto.AssociationTest do
     assert build_assoc(%Post{id: 1}, :author, title: "Hello!") ==
            %Author{title: "Hello!"}
 
+    # 2 belongs to
+    with author_post = build_assoc(%Author{id: 1}, :posts),
+         author_and_summary_post = build_assoc(%Summary{id: 2}, :posts, author_post) do
+      assert author_and_summary_post.author_id == 1
+      assert author_and_summary_post.summary_id == 2
+    end
+
     # many to many
     assert build_assoc(%Permalink{id: 1}, :authors, title: "Hello!") ==
            %Author{title: "Hello!"}

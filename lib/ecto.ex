@@ -474,6 +474,9 @@ defmodule Ecto do
       iex> build_assoc(post, :comments, post_id: 1)
       %Comment{id: nil, post_id: 13}
   """
+  def build_assoc(%{__struct__: _} = struct, assoc, %{__struct__: _, __meta__: _} = attributes) do
+    build_assoc(struct, assoc, Map.from_struct(attributes))
+  end
   def build_assoc(%{__struct__: schema} = struct, assoc, attributes \\ %{}) do
     assoc = Ecto.Association.association_from_schema!(schema, assoc)
     assoc.__struct__.build(assoc, struct, Dict.delete(attributes, :__meta__))
