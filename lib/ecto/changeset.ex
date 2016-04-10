@@ -1435,7 +1435,7 @@ defmodule Ecto.Changeset do
   @spec optimistic_lock(Ecto.Schema.t | t, atom, (integer -> integer)) :: t | no_return
   def optimistic_lock(data_or_changeset, field, incrementer \\ &(&1 + 1)) do
     changeset = change(data_or_changeset, %{})
-    current = Map.fetch!(changeset.data, field)
+    current = get_field(changeset, field)
     changeset.filters[field]
     |> put_in(current)
     |> force_change(field, incrementer.(current))
