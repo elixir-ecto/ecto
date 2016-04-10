@@ -9,15 +9,13 @@ defmodule Ecto.Query.CastError do
   @moduledoc """
   Raised at runtime when a value cannot be cast.
   """
-  defexception [:schema, :field, :type, :value, :message]
+  defexception [:type, :value, :message]
 
   def exception(opts) do
-    schema = Keyword.get(opts, :schema)
-    field  = Keyword.get(opts, :field)
-    value  = Keyword.fetch!(opts, :value)
-    type   = Keyword.fetch!(opts, :type)
-    msg    = Keyword.fetch!(opts, :message)
-    %__MODULE__{schema: schema, field: field, value: value, type: type, message: msg}
+    value = Keyword.fetch!(opts, :value)
+    type  = Keyword.fetch!(opts, :type)
+    msg   = Keyword.fetch!(opts, :message)
+    %__MODULE__{value: value, type: type, message: msg}
   end
 end
 
