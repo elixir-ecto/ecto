@@ -820,9 +820,13 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{}) |> optimistic_lock(:upvotes)
     assert changeset.filters == %{upvotes: 0}
     assert changeset.changes == %{upvotes: 1}
+
+    changeset = changeset(%Post{upvotes: 2}, %{upvotes: 1}) |> optimistic_lock(:upvotes)
+    assert changeset.filters == %{upvotes: 1}
+    assert changeset.changes == %{upvotes: 2}
   end
 
-  test "optimistic_lock/3 with model" do
+  test "optimistic_lock/3 with struct" do
     changeset = %Post{} |> optimistic_lock(:upvotes)
     assert changeset.filters == %{upvotes: 0}
     assert changeset.changes == %{upvotes: 1}
