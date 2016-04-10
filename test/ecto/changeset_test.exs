@@ -204,16 +204,20 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "cast/4: fails on bad arguments" do
-    assert_raise ArgumentError, ~r"expected params to be a map, got struct", fn ->
+    assert_raise Ecto.CastError, ~r"expected params to be a map, got:", fn ->
       cast(%Post{}, %Post{}, ~w(), ~w(unknown))
     end
 
-    assert_raise ArgumentError, ~r"mixed keys", fn ->
-      cast(%Post{}, %{"title" => "foo", title: "foo"}, ~w(), ~w(unknown))
+    assert_raise Ecto.CastError, ~r"expected params to be a map, got:", fn ->
+      cast(%Post{}, "foo", ~w(), ~w(unknown))
+    end
+
+    assert_raise Ecto.CastError, ~r"mixed keys", fn ->
+      cast(%Post{}, %{"title" => "foo", title: "foo"}, ~w())
     end
 
     assert_raise FunctionClauseError, fn ->
-      cast(%Post{}, [], ~w(), ~w(unknown))
+      cast(%Post{}, %{}, %{})
     end
   end
 

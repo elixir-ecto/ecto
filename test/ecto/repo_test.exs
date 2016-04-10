@@ -81,7 +81,7 @@ defmodule Ecto.RepoTest do
     end
 
     message = ~r"value `:atom` in `where` cannot be cast to type :id in query"
-    assert_raise Ecto.CastError, message, fn ->
+    assert_raise Ecto.Query.CastError, message, fn ->
       TestRepo.get(MyModel, :atom)
     end
 
@@ -96,7 +96,7 @@ defmodule Ecto.RepoTest do
     TestRepo.get_by(MyModel, %{id: 123})
 
     message = ~r"value `:atom` in `where` cannot be cast to type :id in query"
-    assert_raise Ecto.CastError, message, fn ->
+    assert_raise Ecto.Query.CastError, message, fn ->
       TestRepo.get_by(MyModel, id: :atom)
     end
   end

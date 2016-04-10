@@ -80,14 +80,14 @@ defmodule Ecto.Query.PlannerTest do
     {_query, params, _key} = prepare(Post |> where([p], p.id == ^"1"))
     assert params == [1]
 
-    exception = assert_raise Ecto.CastError, fn ->
+    exception = assert_raise Ecto.Query.CastError, fn ->
       prepare(Post |> where([p], p.title == ^nil))
     end
 
     assert Exception.message(exception) =~ "value `nil` in `where` cannot be cast to type :string"
     assert Exception.message(exception) =~ "where: p.title == ^nil"
 
-    exception = assert_raise Ecto.CastError, fn ->
+    exception = assert_raise Ecto.Query.CastError, fn ->
       prepare(Post |> where([p], p.title == ^1))
     end
 
@@ -117,7 +117,7 @@ defmodule Ecto.Query.PlannerTest do
     assert params == [%Ecto.Query.Tagged{type: :uuid,
                         value: <<0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>>}]
 
-    assert_raise Ecto.CastError,
+    assert_raise Ecto.Query.CastError,
                  ~r/cannot dump value `"00010203-0405-0607-0809"` to type :binary_id/, fn ->
       uuid = "00010203-0405-0607-0809"
       prepare(Comment |> where([c], c.uuid == ^uuid))
@@ -130,7 +130,7 @@ defmodule Ecto.Query.PlannerTest do
     assert params == [1]
 
     message = ~r"value `\"1-hello-world\"` in `where` expected to be part of an array but matched type is :string"
-    assert_raise Ecto.CastError, message, fn ->
+    assert_raise Ecto.Query.CastError, message, fn ->
       prepare(Post |> where([p], ^permalink in p.text))
     end
   end
@@ -338,7 +338,7 @@ defmodule Ecto.Query.PlannerTest do
     {_query, params, _key} = prepare(query |> where([p], p.id == ^permalink))
     assert params == [1]
 
-    assert_raise Ecto.CastError, ~r/value `1` in `where` cannot be cast to type :string in query/, fn ->
+    assert_raise Ecto.Query.CastError, ~r/value `1` in `where` cannot be cast to type :string in query/, fn ->
       prepare(query |> where([p], p.title == ^1))
     end
 
@@ -353,7 +353,7 @@ defmodule Ecto.Query.PlannerTest do
       prepare(from(subquery(query), []))
     end
 
-    assert %Ecto.CastError{} = exception.exception
+    assert %Ecto.Query.CastError{} = exception.exception
     assert Exception.message(exception) =~ "the following exception happened when compiling a subquery."
     assert Exception.message(exception) =~ "value `nil` in `where` cannot be cast to type :string"
     assert Exception.message(exception) =~ "where: p.title == ^nil"
@@ -379,7 +379,7 @@ defmodule Ecto.Query.PlannerTest do
            %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: :integer}
     assert params == [1]
 
-    assert_raise Ecto.CastError, ~r/value `"1"` in `select` cannot be cast to type Ecto.DateTime/, fn ->
+    assert_raise Ecto.Query.CastError, ~r/value `"1"` in `select` cannot be cast to type Ecto.DateTime/, fn ->
       from(Post, []) |> select([p], type(^"1", Ecto.DateTime)) |> normalize
     end
   end

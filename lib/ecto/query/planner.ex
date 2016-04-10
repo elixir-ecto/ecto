@@ -424,7 +424,7 @@ defmodule Ecto.Query.Planner do
       end
     catch
       :error, %Ecto.QueryError{} = e ->
-        raise Ecto.CastError, value: v, type: type, message: Exception.message(e)
+        raise Ecto.Query.CastError, value: v, type: type, message: Exception.message(e)
     end
   end
 

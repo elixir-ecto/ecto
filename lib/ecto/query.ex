@@ -81,7 +81,7 @@ defmodule Ecto.Query do
   The example above works because `u.age` is tagged as an `:integer`
   in the `User` schema and therefore Ecto will attempt to cast the
   interpolated `^age` to integer. When a value cannot be cast,
-  `Ecto.CastError` is raised.
+  `Ecto.Query.CastError` is raised.
 
   ## Composition
 

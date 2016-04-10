@@ -304,7 +304,7 @@ defmodule Ecto.Changeset do
   def cast(data, params, required, optional)
 
   def cast(_data, %{__struct__: _} = params, _required, _optional) do
-    raise ArgumentError, "expected params to be a map, got struct `#{inspect params}`"
+    raise Ecto.CastError, "expected params to be a map, got: `#{inspect params}`"
   end
 
   def cast(%Changeset{changes: changes, data: data} = changeset, params, required, optional) do
@@ -349,6 +349,11 @@ defmodule Ecto.Changeset do
     %Changeset{params: params, data: data, valid?: valid?,
                errors: Enum.reverse(errors), changes: changes, required: required,
                types: types}
+  end
+
+  defp cast(%{__struct__: _}, %{}, params, required, optional)
+      when is_list(required) and is_list(optional) do
+    raise Ecto.CastError, "expected params to be a map, got: `#{inspect params}`"
   end
 
   defp process_empty_fields(key, _types) when is_binary(key) do
@@ -414,8 +419,8 @@ defmodule Ecto.Changeset do
         nil
 
       {key, _value}, _ when is_binary(key) ->
-        raise ArgumentError, "expected params to be a map with atoms or string keys, " <>
-                             "got a map with mixed keys: #{inspect params}"
+        raise Ecto.CastError, "expected params to be a map with atoms or string keys, " <>
+                              "got a map with mixed keys: #{inspect params}"
 
       {key, value}, acc when is_atom(key) ->
         Map.put(acc || %{}, Atom.to_string(key), value)

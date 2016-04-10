@@ -5,6 +5,22 @@ defmodule Ecto.Query.CompileError do
   defexception [:message]
 end
 
+defmodule Ecto.Query.CastError do
+  @moduledoc """
+  Raised at runtime when a value cannot be cast.
+  """
+  defexception [:schema, :field, :type, :value, :message]
+
+  def exception(opts) do
+    schema = Keyword.get(opts, :schema)
+    field  = Keyword.get(opts, :field)
+    value  = Keyword.fetch!(opts, :value)
+    type   = Keyword.fetch!(opts, :type)
+    msg    = Keyword.fetch!(opts, :message)
+    %__MODULE__{schema: schema, field: field, value: value, type: type, message: msg}
+  end
+end
+
 defmodule Ecto.QueryError do
   @moduledoc """
   Raised at runtime when the query is invalid.
@@ -87,18 +103,9 @@ end
 
 defmodule Ecto.CastError do
   @moduledoc """
-  Raised at runtime when a value cannot be cast.
+  Raised when a changeset can't cast a value.
   """
-  defexception [:schema, :field, :type, :value, :message]
-
-  def exception(opts) do
-    schema = Keyword.get(opts, :schema)
-    field  = Keyword.get(opts, :field)
-    value  = Keyword.fetch!(opts, :value)
-    type   = Keyword.fetch!(opts, :type)
-    msg    = Keyword.fetch!(opts, :message)
-    %__MODULE__{schema: schema, field: field, value: value, type: type, message: msg}
-  end
+  defexception [:message]
 end
 
 defmodule Ecto.InvalidURLError do
