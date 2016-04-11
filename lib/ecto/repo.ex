@@ -37,7 +37,7 @@ defmodule Ecto.Repo do
   ## URLs
 
   Repositories by default support URLs. For example, the configuration
-  above could be rewriten to:
+  above could be rewritten to:
 
       config :my_app, Repo,
         url: "ecto://postgres:postgres@localhost/ecto_simple"
@@ -503,7 +503,7 @@ defmodule Ecto.Repo do
 
   ## Example
 
-      [post] = MyRepo.all(from(p in Post, where: p.id == 42))
+      post = MyRepo.get!(Post, 42)
       case MyRepo.delete post do
         {:ok, model}        -> # Deleted with success
         {:error, changeset} -> # Something went wrong
