@@ -1424,7 +1424,7 @@ defmodule Ecto.Changeset do
       iex> changeset = Ecto.Changeset.optimistic_lock(post, :lock_version)
       iex> Repo.delete(changeset)
 
-  Finally, keep in `optimistic_lock/3` by default assumes the field
+  `optimistic_lock/3` by default assumes the field
   being used as a lock is an integer. If you want to use another type,
   you need to pass the third argument customizing how the next value
   is generated:
