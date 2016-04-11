@@ -4,14 +4,16 @@ defmodule Ecto.LogEntry do
 
   It is composed of the following fields:
 
-    * query - the query as string or a function that when invoked
-      resolves to string;
+    * query - the query as string or a function that when invoked resolves to string;
     * params - the query parameters;
     * result - the query result as an `:ok` or `:error` tuple;
-    * query_time - the time spent executing the query in microseconds;
-    * decode_time - the time spent decoding the result in microseconds (it may be nil);
-    * queue_time - the time spent to check the connection out in microseconds (it may be nil);
-    * connection_pid - the connection process that executed the query
+    * query_time - the time spent executing the query in native units;
+    * decode_time - the time spent decoding the result in native units (it may be nil);
+    * queue_time - the time spent to check the connection out in native units (it may be nil);
+    * connection_pid - the connection process that executed the query;
+
+  Notice all times are stored in native unit. You must convert them to
+  the proper unit by using `System.convert_time_unit/3` before logging.
   """
 
   alias Ecto.LogEntry
@@ -79,6 +81,7 @@ defmodule Ecto.LogEntry do
 
   defp time(_label, nil, _force), do: []
   defp time(label, time, force) do
+    us = System.convert_time_unit(time, :native, :micro_seconds)
     ms = div(time, 100) / 10
     if force or ms > 0 do
       [?\s, label, ?=, :io_lib_format.fwrite_g(ms), ?m, ?s]

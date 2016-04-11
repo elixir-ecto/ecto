@@ -90,7 +90,9 @@ defmodule Ecto.Repo do
       @before_compile adapter
 
       loggers =
-        Enum.reduce(config[:loggers] || [{Ecto.LogEntry, :log, []}], quote(do: entry), fn
+        Enum.reduce(config[:loggers] || [Ecto.LogEntry], quote(do: entry), fn
+          mod, acc when is_atom(mod) ->
+            quote do: unquote(mod).log(unquote(acc))
           {mod, fun, args}, acc ->
             quote do: unquote(mod).unquote(fun)(unquote(acc), unquote_splicing(args))
         end)
