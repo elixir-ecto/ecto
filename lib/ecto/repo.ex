@@ -648,7 +648,7 @@ defmodule Ecto.Repo do
 
   ## Example
 
-      [post] = MyRepo.all(from(p in Post, where: p.id == 42))
+      post = MyRepo.get!(Post, 42)
       case MyRepo.delete post do
         {:ok, struct}       -> # Deleted with success
         {:error, changeset} -> # Something went wrong
