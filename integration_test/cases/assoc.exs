@@ -92,6 +92,19 @@ defmodule Ecto.Integration.AssocTest do
     assert [^pl2, ^pl1] = TestRepo.all(query)
   end
 
+  test "yet another has_many through-through assoc" do
+    p1 = TestRepo.insert!(%Post{})
+
+    u1 = TestRepo.insert!(%User{})
+
+    pl1 = TestRepo.insert!(%Permalink{user_id: u1.id})
+
+    %Comment{} = TestRepo.insert!(%Comment{post_id: p1.id, author_id: u1.id})
+
+    query = Ecto.assoc([pl1], :post_comments_authors)
+    assert [^u1] = TestRepo.all(query)
+  end
+
   test "many_to_many assoc" do
     p1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
     p2 = TestRepo.insert!(%Post{title: "2", text: "ola"})
