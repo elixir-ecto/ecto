@@ -243,9 +243,9 @@ defmodule Ecto.Time do
 
   It supports:
 
-    * a binary in the "HH:MM:DD" format
+    * a binary in the "HH:MM:SS" format
       (may be followed by "Z", as in `12:00:00Z`)
-    * a binary in the "HH:MM:DD.USEC" format
+    * a binary in the "HH:MM:SS.USEC" format
       (may be followed by "Z", as in `12:00:00.005Z`)
     * a map with `"hour"`, `"min"` keys with `"sec"` and `"usec"`
       as optional keys and values are integers or binaries
