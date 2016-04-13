@@ -23,13 +23,16 @@ defmodule Ecto.LogEntryTest do
     entry = %{entry | params: [1, 2, 3], query_time: 0, queue_time: 0}
     assert to_binary(entry) == "done [1, 2, 3] OK query=0.0ms"
 
-    entry = %{entry | params: [1, 2, 3], query_time: 2100, queue_time: 100}
+    diff = :erlang.convert_time_unit(1, :micro_seconds, :native)
+    entry = %{entry | params: [1, 2, 3], query_time: 2100 * diff, queue_time: 100 * diff}
     assert to_binary(entry) == "done [1, 2, 3] OK query=2.1ms queue=0.1ms"
 
-    entry = %{entry | params: [1, 2, 3], query_time: 2100, queue_time: 100, result: {:error, :error}}
+    entry = %{entry | params: [1, 2, 3], query_time: 2100 * diff, queue_time: 100 * diff,
+                                         result: {:error, :error}}
     assert to_binary(entry) == "done [1, 2, 3] ERROR query=2.1ms queue=0.1ms"
 
-    entry = %{entry | params: [1, 2, 3], query_time: 2100, decode_time: 500, queue_time: 100, result: {:error, :error}}
+    entry = %{entry | params: [1, 2, 3], query_time: 2100 * diff, decode_time: 500 * diff,
+                                         queue_time: 100 * diff, result: {:error, :error}}
     assert to_binary(entry) == "done [1, 2, 3] ERROR query=2.1ms decode=0.5ms queue=0.1ms"
   end
 
