@@ -93,6 +93,8 @@ defmodule Ecto.Adapters.MySQL do
     do: super(type, json_library.decode!(binary))
   def load(:map, binary) when is_binary(binary),
     do: super(:map, json_library.decode!(binary))
+  def load(:boolean, <<0>>), do: {:ok, false}
+  def load(:boolean, <<1>>), do: {:ok, true}
   def load(:boolean, 0), do: {:ok, false}
   def load(:boolean, 1), do: {:ok, true}
   def load(type, value), do: super(type, value)
