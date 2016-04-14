@@ -21,19 +21,29 @@ defmodule Mix.Ecto do
   end
 
   defp parse_repo([], []) do
-    if app = Keyword.get(Mix.Project.config, :app) do
-      case Application.get_env(app, :app_repo) do
-        nil ->
-          case Application.get_env(app, :app_namespace, app) do
-            ^app -> app |> to_string |> Mix.Utils.camelize
-            mod  -> mod |> inspect
-          end |> Module.concat(Repo)
-        repo ->
-          repo
-      end |> List.wrap
-    else
-      Mix.raise "No repository available (project #{inspect Mix.Project.get} has no :app configured). " <>
-                "Please pass a repo with the -r option."
+    app = Mix.Project.config[:app]
+
+    cond do
+      repos = Application.get_env(app, :ecto_repos) ->
+        repos
+
+      # TODO: Remove function exported check once we depend on 1.3 only
+      not function_exported?(Mix.Project, :deps_paths, 0) or
+          Map.has_key?(Mix.Project.deps_paths, :ecto) ->
+        Mix.shell.error """
+        warning: could not find repositories for application #{inspect app}.
+
+        You can avoid this warning by passing the -r flag or by setting the
+        repositories managed by this application in your config files:
+
+            config #{inspect app}, ecto_repos: [...]
+
+        The configuration may be an empty list if it does not define any repo.
+        """
+
+      true ->
+        []
+
     end
   end
 
@@ -57,12 +67,12 @@ defmodule Mix.Ecto do
         if function_exported?(repo, :__adapter__, 0) do
           repo
         else
-          Mix.raise "Module #{inspect repo} is not a Ecto.Repo. " <>
-                    "Please pass a repo with the -r option."
+          Mix.raise "Module #{inspect repo} is not an Ecto.Repo. " <>
+                    "Please configure your app accordingly or pass a repo with the -r option."
         end
       {:error, error} ->
         Mix.raise "Could not load #{inspect repo}, error: #{inspect error}. " <>
-                  "Please pass a repo with the -r option."
+                  "Please configure your app accordingly or pass a repo with the -r option."
     end
   end
 
@@ -76,8 +86,10 @@ defmodule Mix.Ecto do
 
     pool_size = Keyword.get(opts, :pool_size, 1)
     case repo.start_link(pool_size: pool_size) do
-      {:ok, pid} -> {:ok, pid}
-      {:error, {:already_started, _pid}} -> {:ok, nil}
+      {:ok, pid} ->
+        {:ok, pid}
+      {:error, {:already_started, _pid}} ->
+        {:ok, nil}
       {:error, error} ->
         Mix.raise "Could not start repo #{inspect repo}, error: #{inspect error}"
     end

@@ -3,6 +3,7 @@ defmodule Mix.Tasks.Ecto.Drop do
   import Mix.Ecto
 
   @shortdoc "Drop the storage for the repo"
+  @recursive true
 
   @moduledoc """
   Drop the storage for the repository.

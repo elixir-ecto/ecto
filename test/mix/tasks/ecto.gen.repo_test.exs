@@ -61,11 +61,4 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
       assert_file "lib/my/app_repo.ex", "defmodule My.AppRepo do"
     end
   end
-
-  test "generates default repo" do
-    in_tmp fn _ ->
-      run []
-      assert_file "lib/ecto/repo.ex", "defmodule Ecto.Repo do"
-    end
-  end
 end

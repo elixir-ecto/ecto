@@ -5,16 +5,14 @@ defmodule Mix.EctoTest do
   test "parse repo" do
     assert parse_repo(["-r", "Repo"]) == [Repo]
     assert parse_repo(["--repo", Repo]) == [Repo]
-    assert parse_repo([]) == [Ecto.Repo]
-
     assert parse_repo(["-r", "Repo", "-r", "Repo2"]) == [Repo, Repo2]
     assert parse_repo(["-r", "Repo", "--quiet"]) == [Repo]
     assert parse_repo(["-r", "Repo", "-r", "Repo2", "--quiet"]), [Repo, Repo2]
 
-    Application.put_env(:ecto, :app_namespace, Foo)
+    Application.put_env(:ecto, :ecto_repos, [Foo.Repo])
     assert parse_repo([]) == [Foo.Repo]
   after
-    Application.delete_env(:ecto, :app_namespace)
+    Application.delete_env(:ecto, :ecto_repos)
   end
 
   defmodule Repo do
