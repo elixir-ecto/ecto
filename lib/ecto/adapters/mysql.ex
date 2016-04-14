@@ -28,11 +28,10 @@ defmodule Ecto.Adapters.MySQL do
     * `:port` - Server port (default: 3306)
     * `:username` - Username
     * `:password` - User password
-    * `:parameters` - Keyword list of connection parameters
     * `:ssl` - Set to true if ssl should be used (default: false)
-    * `:ssl_opts` - A list of ssl options, see ssl docs
-    * `:connect_timeout` - The timeout in miliseconds for establishing new connections (default: 5000)
-    * `:after_connect` - A `{mod, fun, args}` to be invoked after a connection is established
+    * `:ssl_opts` - A list of ssl options, see Erlang's `ssl` docs
+    * `:parameters` - Keyword list of connection parameters
+    * `:connect_timeout` - The timeout for establishing new connections (default: 5000)
     * `:socket_options` - Specifies socket configuration
 
   The `:socket_options` are particularly useful when configuring the size
@@ -43,6 +42,10 @@ defmodule Ecto.Adapters.MySQL do
   tweaked if desired:
 
       socket_options: [recbuf: 8192, sndbuf: 8192]
+
+  We also recommend developers to consult the
+  [Mariaex documentation](https://hexdocs.pm/mariaex/Mariaex.html#start_link/1)
+  for a complete listing of all supported options.
 
   ### Storage options
 

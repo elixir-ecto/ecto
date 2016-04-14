@@ -36,12 +36,10 @@ defmodule Ecto.Adapters.Postgres do
     * `:port` - Server port (default: 5432)
     * `:username` - Username
     * `:password` - User password
-    * `:parameters` - Keyword list of connection parameters
     * `:ssl` - Set to true if ssl should be used (default: false)
     * `:ssl_opts` - A list of ssl options, see Erlang's `ssl` docs
+    * `:parameters` - Keyword list of connection parameters
     * `:connect_timeout` - The timeout for establishing new connections (default: 5000)
-    * `:extensions` - Specify extensions to the postgres adapter
-    * `:after_connect` - A `{mod, fun, args}` to be invoked after a connection is established
     * `:socket_options` - Specifies socket configuration
 
   The `:socket_options` are particularly useful when configuring the size
@@ -52,6 +50,10 @@ defmodule Ecto.Adapters.Postgres do
   tweaked if desired:
 
       socket_options: [recbuf: 8192, sndbuf: 8192]
+
+  We also recommend developers to consult the
+  [Postgrex documentation](https://hexdocs.pm/postgrex/Postgrex.html#start_link/1)
+  for a complete listing of all supported options.
 
   ### Storage options
 
