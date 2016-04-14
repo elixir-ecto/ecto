@@ -2,9 +2,9 @@ defmodule Ecto.Schema do
   @moduledoc ~S"""
   Defines a schema.
 
-  A schema is a struct with associated metadata that is persisted to a
-  repository. Every schema defines a struct, which is ultimately how
-  data is manipulated.
+  An Ecto schema is used to map any data source into an Elixir struct.
+  One of such use cases is to map data coming from a repository,
+  usually a table, into Elixir structs.
 
   ## Example
 
@@ -136,13 +136,6 @@ defmodule Ecto.Schema do
 
   **Note:** For the `:array` type, replace `inner_type` with one of
   the valid types, such as `:string`.
-
-  ### Database types
-
-  In migrations the Ecto primitive types shown above are mapped to the
-  appropriate database type by the various database adapters.
-  However, Ecto allows for the use of any type supported by your
-  database. See the documentation for `Ecto.Migration`.
 
   ### Custom types
 
@@ -289,10 +282,9 @@ defmodule Ecto.Schema do
     quote do
       import Ecto.Schema, only: [schema: 2, embedded_schema: 1]
 
-      @primary_key {:id, :id, autogenerate: true}
+      @primary_key nil
       @timestamps_opts []
       @foreign_key_type :id
-      @ecto_embedded false
       @schema_prefix nil
 
       Module.register_attribute(__MODULE__, :ecto_primary_keys, accumulate: true)
@@ -309,35 +301,45 @@ defmodule Ecto.Schema do
   @doc """
   Defines an embedded schema.
 
-  This function is literally a shortcut for:
+  An embedded schema does not require a source name
+  and it does not include a metadata field.
 
-        @primary_key {:id, :binary_id, autogenerate: true}
-        schema "embedded Model" do
+  Embedded schemas by default set the primary key type
+  to `:binary_id` but such can be configured with the
+  `@primary_key` attribute.
   """
-  defmacro embedded_schema(opts) do
-    quote do
-      @primary_key {:id, :binary_id, autogenerate: true}
-      @ecto_embedded true
-      schema "embedded #{inspect __MODULE__}", unquote(opts)
-    end
+  defmacro embedded_schema([do: block]) do
+    schema(nil, false, :binary_id, block)
   end
 
   @doc """
   Defines a schema with a source name and field definitions.
   """
   defmacro schema(source, [do: block]) do
+    schema(source, true, :id, block)
+  end
+
+  defp schema(source, meta?, type, block) do
     quote do
-      prefix = Module.get_attribute(__MODULE__, :schema_prefix)
-      source = unquote(source)
-
-      unless is_binary(source) do
-        raise ArgumentError, "schema source must be a string, got: #{inspect source}"
-      end
-
       Module.register_attribute(__MODULE__, :changeset_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
-      Module.put_attribute(__MODULE__, :struct_fields,
-                           {:__meta__, %Metadata{state: :built, source: {prefix, source}}})
+
+      meta?  = unquote(meta?)
+      source = unquote(source)
+      prefix = Module.get_attribute(__MODULE__, :schema_prefix)
+
+      if meta? do
+        unless is_binary(source) do
+          raise ArgumentError, "schema source must be a string, got: #{inspect source}"
+        end
+
+        Module.put_attribute(__MODULE__, :struct_fields,
+                             {:__meta__, %Metadata{state: :built, source: {prefix, source}}})
+      end
+
+      if @primary_key == nil do
+        @primary_key {:id, unquote(type), autogenerate: true}
+      end
 
       primary_key_fields =
         case @primary_key do
@@ -1009,11 +1011,6 @@ defmodule Ecto.Schema do
       defmodule Item do
         use Ecto.Schema
 
-        # embedded_schema is a shorcut for:
-        #
-        #   @primary_key {:id, :binary_id, autogenerate: true}
-        #   schema "embedded Item" do
-        #
         embedded_schema do
           field :name
         end
@@ -1048,13 +1045,17 @@ defmodule Ecto.Schema do
 
   @doc false
   def __load__(schema, prefix, source, context, data, loader) do
-    source = source || schema.__schema__(:source)
     struct = schema.__struct__()
     fields = schema.__schema__(:types)
 
-    struct
-    |> do_load(fields, data, loader)
-    |> Map.put(:__meta__, %Metadata{state: :loaded, source: {prefix, source}, context: context})
+    case do_load(struct, fields, data, loader) do
+      %{__meta__: %Metadata{} = metadata} = struct ->
+        source = source || schema.__schema__(:source)
+        metadata = %{metadata | state: :loaded, source: {prefix, source}, context: context}
+        Map.put(struct, :__meta__, metadata)
+      struct ->
+        struct
+    end
   end
 
   defp do_load(struct, fields, map, loader) when is_map(map) do
@@ -1309,10 +1310,6 @@ defmodule Ecto.Schema do
   ## Private
 
   defp association(mod, cardinality, name, association, opts) do
-    if Module.get_attribute(mod, :ecto_embedded) do
-      raise "association can't be defined in embedded_schema for #{inspect mod}"
-    end
-
     not_loaded  = %Ecto.Association.NotLoaded{__owner__: mod,
                     __field__: name, __cardinality__: cardinality}
     put_struct_field(mod, name, not_loaded)

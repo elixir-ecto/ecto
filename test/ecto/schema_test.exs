@@ -5,10 +5,10 @@ defmodule Ecto.SchemaTest do
 
   import ExUnit.CaptureIO
 
-  defmodule Model do
+  defmodule Schema do
     use Ecto.Schema
 
-    schema "mymodel" do
+    schema "my schema" do
       field :name,  :string, default: "eric"
       field :email, :string, uniq: true, read_after_writes: true
       field :temp,  :any, default: "temp", virtual: true
@@ -21,69 +21,69 @@ defmodule Ecto.SchemaTest do
   end
 
   test "schema metadata" do
-    assert Model.__schema__(:source)             == "mymodel"
-    assert Model.__schema__(:prefix)             == nil
-    assert Model.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :comment_id]
-    assert Model.__schema__(:read_after_writes)  == [:email, :count]
-    assert Model.__schema__(:primary_key)        == [:id]
-    assert Model.__schema__(:autogenerate_id)    == {:id, :id}
+    assert Schema.__schema__(:source)             == "my schema"
+    assert Schema.__schema__(:prefix)             == nil
+    assert Schema.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :comment_id]
+    assert Schema.__schema__(:read_after_writes)  == [:email, :count]
+    assert Schema.__schema__(:primary_key)        == [:id]
+    assert Schema.__schema__(:autogenerate_id)    == {:id, :id}
   end
 
   test "types metadata" do
-    assert Model.__schema__(:types) ==
+    assert Schema.__schema__(:types) ==
            [id: :id, name: :string, email: :string, count: :decimal,
             array: {:array, :string}, uuid: Ecto.UUID, comment_id: :id]
-    assert Model.__schema__(:type, :id)         == :id
-    assert Model.__schema__(:type, :name)       == :string
-    assert Model.__schema__(:type, :email)      == :string
-    assert Model.__schema__(:type, :array)      == {:array, :string}
-    assert Model.__schema__(:type, :comment_id) == :id
+    assert Schema.__schema__(:type, :id)         == :id
+    assert Schema.__schema__(:type, :name)       == :string
+    assert Schema.__schema__(:type, :email)      == :string
+    assert Schema.__schema__(:type, :array)      == {:array, :string}
+    assert Schema.__schema__(:type, :comment_id) == :id
   end
 
   test "changeset metadata" do
-    assert Model.__changeset__ |> Map.drop([:comment, :permalink]) ==
+    assert Schema.__changeset__ |> Map.drop([:comment, :permalink]) ==
            %{name: :string, email: :string, count: :decimal, array: {:array, :string},
              comment_id: :id, temp: :any, id: :id, uuid: Ecto.UUID}
   end
 
   test "skip field with define_field false" do
-    refute Model.__schema__(:type, :permalink_id)
+    refute Schema.__schema__(:type, :permalink_id)
   end
 
   test "primary key" do
-    assert Ecto.primary_key(%Model{}) == [id: nil]
-    assert Ecto.primary_key(%Model{id: "hello"}) == [id: "hello"]
+    assert Ecto.primary_key(%Schema{}) == [id: nil]
+    assert Ecto.primary_key(%Schema{id: "hello"}) == [id: "hello"]
   end
 
   test "reads and writes meta" do
-    model = %Model{}
-    assert model.__meta__.source == {nil, "mymodel"}
-    model = Ecto.put_meta(model, source: "new_model")
-    assert model.__meta__.source == {nil, "new_model"}
-    model = Ecto.put_meta(model, prefix: "prefix")
-    assert model.__meta__.source == {"prefix", "new_model"}
-    model = Ecto.put_meta(model, source: "mymodel")
-    assert model.__meta__.source == {"prefix", "mymodel"}
-    assert Ecto.get_meta(model, :prefix) == "prefix"
-    assert Ecto.get_meta(model, :source) == "mymodel"
+    schema = %Schema{}
+    assert schema.__meta__.source == {nil, "my schema"}
+    schema = Ecto.put_meta(schema, source: "new schema")
+    assert schema.__meta__.source == {nil, "new schema"}
+    schema = Ecto.put_meta(schema, prefix: "prefix")
+    assert schema.__meta__.source == {"prefix", "new schema"}
+    schema = Ecto.put_meta(schema, source: "my schema")
+    assert schema.__meta__.source == {"prefix", "my schema"}
+    assert Ecto.get_meta(schema, :prefix) == "prefix"
+    assert Ecto.get_meta(schema, :source) == "my schema"
 
-    model = Ecto.put_meta(model, context: "foobar", state: :loaded)
-    assert model.__meta__.state == :loaded
-    assert model.__meta__.context == "foobar"
-    assert Ecto.get_meta(model, :state) == :loaded
-    assert Ecto.get_meta(model, :context) == "foobar"
+    schema = Ecto.put_meta(schema, context: "foobar", state: :loaded)
+    assert schema.__meta__.state == :loaded
+    assert schema.__meta__.context == "foobar"
+    assert Ecto.get_meta(schema, :state) == :loaded
+    assert Ecto.get_meta(schema, :context) == "foobar"
   end
 
   test "inspects metadata" do
-    model = %Model{}
-    assert inspect(model.__meta__) == "#Ecto.Schema.Metadata<:built>"
+    schema = %Schema{}
+    assert inspect(schema.__meta__) == "#Ecto.Schema.Metadata<:built>"
   end
 
   test "default of array field is not []" do
-     assert %Model{}.array == nil
+     assert %Schema{}.array == nil
   end
 
-  defmodule SchemaModel do
+  defmodule CustomSchema do
     use Ecto.Schema
 
     @primary_key {:perm, Custom.Permalink, autogenerate: true}
@@ -97,21 +97,51 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  test "uses schema attributes" do
-    assert %SchemaModel{perm: "abc"}.perm == "abc"
-    assert SchemaModel.__schema__(:autogenerate_id) == {:perm, :id}
-    assert SchemaModel.__schema__(:type, :comment_id) == :string
+  test "custom schema attributes" do
+    assert %CustomSchema{perm: "abc"}.perm == "abc"
+    assert CustomSchema.__schema__(:autogenerate_id) == {:perm, :id}
+    assert CustomSchema.__schema__(:type, :comment_id) == :string
   end
 
   test "custom primary key" do
-    assert Ecto.primary_key(%SchemaModel{}) == [perm: nil]
-    assert Ecto.primary_key(%SchemaModel{perm: "hello"}) == [perm: "hello"]
+    assert Ecto.primary_key(%CustomSchema{}) == [perm: nil]
+    assert Ecto.primary_key(%CustomSchema{perm: "hello"}) == [perm: "hello"]
   end
 
-  test "has __meta__ field" do
-    assert %SchemaModel{}.__meta__.state == :built
-    assert %SchemaModel{}.__meta__.source == {nil, "users"}
-    assert SchemaModel.__schema__(:type, :__meta__) == nil
+  defmodule EmbeddedSchema do
+    use Ecto.Schema
+
+    embedded_schema do
+      field :name,  :string, default: "eric"
+    end
+  end
+
+  test "embedded schema" do
+    assert EmbeddedSchema.__schema__(:source)             == nil
+    assert EmbeddedSchema.__schema__(:prefix)             == nil
+    assert EmbeddedSchema.__schema__(:fields)             == [:id, :name]
+    assert EmbeddedSchema.__schema__(:primary_key)        == [:id]
+    assert EmbeddedSchema.__schema__(:autogenerate_id)    == {:id, :binary_id}
+  end
+
+  test "embeded schema does not have metadata" do
+    refute match?(%{__meta__: _}, %EmbeddedSchema{})
+  end
+
+  defmodule CustomEmbeddedSchema do
+    use Ecto.Schema
+
+    @primary_key false
+    embedded_schema do
+      field :name, :string
+    end
+  end
+
+  test "custom embedded schema" do
+    assert CustomEmbeddedSchema.__schema__(:source)      == nil
+    assert CustomEmbeddedSchema.__schema__(:prefix)      == nil
+    assert CustomEmbeddedSchema.__schema__(:fields)      == [:name]
+    assert CustomEmbeddedSchema.__schema__(:primary_key) == []
   end
 
   ## Schema prefix
@@ -150,14 +180,14 @@ defmodule Ecto.SchemaTest do
   end
 
   test "updates meta prefix with put_meta" do
-    model = %SchemaWithPrefix{}
-    assert model.__meta__.source == {"tenant", "company"}
-    model = Ecto.put_meta(model, source: "new_company")
-    assert model.__meta__.source == {"tenant", "new_company"}
-    model = Ecto.put_meta(model, prefix: "prefix")
-    assert model.__meta__.source == {"prefix", "new_company"}
-    model = Ecto.put_meta(model, prefix: nil)
-    assert model.__meta__.source == {nil, "new_company"}
+    schema = %SchemaWithPrefix{}
+    assert schema.__meta__.source == {"tenant", "company"}
+    schema = Ecto.put_meta(schema, source: "new_company")
+    assert schema.__meta__.source == {"tenant", "new_company"}
+    schema = Ecto.put_meta(schema, prefix: "prefix")
+    assert schema.__meta__.source == {"prefix", "new_company"}
+    schema = Ecto.put_meta(schema, prefix: nil)
+    assert schema.__meta__.source == {nil, "new_company"}
   end
 
   ## Composite primary keys
@@ -356,7 +386,7 @@ defmodule Ecto.SchemaTest do
 
   ## Associations
 
-  defmodule AssocModel do
+  defmodule AssocSchema do
     use Ecto.Schema
 
     schema "assocs" do
@@ -372,119 +402,119 @@ defmodule Ecto.SchemaTest do
   end
 
   test "associations" do
-    assert AssocModel.__schema__(:association, :not_a_field) == nil
-    assert AssocModel.__schema__(:fields) == [:id, :comment_id, :summary_id]
+    assert AssocSchema.__schema__(:association, :not_a_field) == nil
+    assert AssocSchema.__schema__(:fields) == [:id, :comment_id, :summary_id]
   end
 
   test "has_many association" do
     struct =
-      %Ecto.Association.Has{field: :posts, owner: AssocModel, cardinality: :many, on_delete: :nothing,
-                            related: Post, owner_key: :id, related_key: :assoc_model_id, queryable: Post,
+      %Ecto.Association.Has{field: :posts, owner: AssocSchema, cardinality: :many, on_delete: :nothing,
+                            related: Post, owner_key: :id, related_key: :assoc_schema_id, queryable: Post,
                             on_replace: :raise}
 
-    assert AssocModel.__schema__(:association, :posts) == struct
-    assert AssocModel.__changeset__.posts == {:assoc, struct}
+    assert AssocSchema.__schema__(:association, :posts) == struct
+    assert AssocSchema.__changeset__.posts == {:assoc, struct}
 
-    posts = (%AssocModel{}).posts
+    posts = (%AssocSchema{}).posts
     assert %Ecto.Association.NotLoaded{} = posts
     assert inspect(posts) == "#Ecto.Association.NotLoaded<association :posts is not loaded>"
   end
 
-  test "has_many association via {source model}" do
+  test "has_many association via {source schema}" do
     struct =
-      %Ecto.Association.Has{field: :emails, owner: AssocModel, cardinality: :many, on_delete: :nothing,
-                            related: Email, owner_key: :id, related_key: :assoc_model_id,
+      %Ecto.Association.Has{field: :emails, owner: AssocSchema, cardinality: :many, on_delete: :nothing,
+                            related: Email, owner_key: :id, related_key: :assoc_schema_id,
                             queryable: {"users_emails", Email}, on_replace: :delete}
 
-    assert AssocModel.__schema__(:association, :emails) == struct
-    assert AssocModel.__changeset__.emails == {:assoc, struct}
+    assert AssocSchema.__schema__(:association, :emails) == struct
+    assert AssocSchema.__changeset__.emails == {:assoc, struct}
 
-    posts = (%AssocModel{}).posts
+    posts = (%AssocSchema{}).posts
     assert %Ecto.Association.NotLoaded{__cardinality__: :many} = posts
     assert inspect(posts) == "#Ecto.Association.NotLoaded<association :posts is not loaded>"
   end
 
   test "has_many through association" do
-    assert AssocModel.__schema__(:association, :comment_authors) ==
-           %Ecto.Association.HasThrough{field: :comment_authors, owner: AssocModel, cardinality: :many,
+    assert AssocSchema.__schema__(:association, :comment_authors) ==
+           %Ecto.Association.HasThrough{field: :comment_authors, owner: AssocSchema, cardinality: :many,
                                          through: [:comment, :authors], owner_key: :comment_id}
 
-    refute Map.has_key?(AssocModel.__changeset__, :comment_authors)
+    refute Map.has_key?(AssocSchema.__changeset__, :comment_authors)
 
-    authors = (%AssocModel{}).comment_authors
+    authors = (%AssocSchema{}).comment_authors
     assert %Ecto.Association.NotLoaded{} = authors
     assert inspect(authors) == "#Ecto.Association.NotLoaded<association :comment_authors is not loaded>"
   end
 
   test "has_one association" do
     struct =
-      %Ecto.Association.Has{field: :author, owner: AssocModel, cardinality: :one, on_delete: :nothing,
-                            related: User, owner_key: :id, related_key: :assoc_model_id, queryable: User,
+      %Ecto.Association.Has{field: :author, owner: AssocSchema, cardinality: :one, on_delete: :nothing,
+                            related: User, owner_key: :id, related_key: :assoc_schema_id, queryable: User,
                             on_replace: :raise}
 
-    assert AssocModel.__schema__(:association, :author) == struct
-    assert AssocModel.__changeset__.author == {:assoc, struct}
+    assert AssocSchema.__schema__(:association, :author) == struct
+    assert AssocSchema.__changeset__.author == {:assoc, struct}
 
-    author = (%AssocModel{}).author
+    author = (%AssocSchema{}).author
     assert %Ecto.Association.NotLoaded{} = author
     assert inspect(author) == "#Ecto.Association.NotLoaded<association :author is not loaded>"
   end
 
-  test "has_one association via {source, model}" do
+  test "has_one association via {source, schema}" do
     struct =
-      %Ecto.Association.Has{field: :profile, owner: AssocModel, cardinality: :one, on_delete: :nothing,
-                            related: Profile, owner_key: :id, related_key: :assoc_model_id,
+      %Ecto.Association.Has{field: :profile, owner: AssocSchema, cardinality: :one, on_delete: :nothing,
+                            related: Profile, owner_key: :id, related_key: :assoc_schema_id,
                             queryable: {"users_profiles", Profile}, on_replace: :raise}
 
-    assert AssocModel.__schema__(:association, :profile) == struct
-    assert AssocModel.__changeset__.profile == {:assoc, struct}
+    assert AssocSchema.__schema__(:association, :profile) == struct
+    assert AssocSchema.__changeset__.profile == {:assoc, struct}
 
-    author = (%AssocModel{}).author
+    author = (%AssocSchema{}).author
     assert %Ecto.Association.NotLoaded{__cardinality__: :one} = author
     assert inspect(author) == "#Ecto.Association.NotLoaded<association :author is not loaded>"
   end
 
   test "has_one through association" do
-    assert AssocModel.__schema__(:association, :comment_main_author) ==
-           %Ecto.Association.HasThrough{field: :comment_main_author, owner: AssocModel, cardinality: :one,
+    assert AssocSchema.__schema__(:association, :comment_main_author) ==
+           %Ecto.Association.HasThrough{field: :comment_main_author, owner: AssocSchema, cardinality: :one,
                                          through: [:comment, :main_author], owner_key: :comment_id}
 
-    refute Map.has_key?(AssocModel.__changeset__, :comment_main_author)
+    refute Map.has_key?(AssocSchema.__changeset__, :comment_main_author)
 
-    author = (%AssocModel{}).comment_main_author
+    author = (%AssocSchema{}).comment_main_author
     assert %Ecto.Association.NotLoaded{} = author
     assert inspect(author) == "#Ecto.Association.NotLoaded<association :comment_main_author is not loaded>"
   end
 
   test "belongs_to association" do
     struct =
-      %Ecto.Association.BelongsTo{field: :comment, owner: AssocModel, cardinality: :one,
+      %Ecto.Association.BelongsTo{field: :comment, owner: AssocSchema, cardinality: :one,
        related: Comment, owner_key: :comment_id, related_key: :id, queryable: Comment,
        on_replace: :raise, defaults: []}
 
-    assert AssocModel.__schema__(:association, :comment) == struct
-    assert AssocModel.__changeset__.comment == {:assoc, struct}
+    assert AssocSchema.__schema__(:association, :comment) == struct
+    assert AssocSchema.__changeset__.comment == {:assoc, struct}
 
-    comment = (%AssocModel{}).comment
+    comment = (%AssocSchema{}).comment
     assert %Ecto.Association.NotLoaded{} = comment
     assert inspect(comment) == "#Ecto.Association.NotLoaded<association :comment is not loaded>"
   end
 
-  test "belongs_to association via {source, model}" do
+  test "belongs_to association via {source, schema}" do
     struct =
-      %Ecto.Association.BelongsTo{field: :summary, owner: AssocModel, cardinality: :one,
+      %Ecto.Association.BelongsTo{field: :summary, owner: AssocSchema, cardinality: :one,
        related: Summary, owner_key: :summary_id, related_key: :id,
        queryable: {"post_summary", Summary}, on_replace: :raise, defaults: []}
 
-    assert AssocModel.__schema__(:association, :summary) == struct
-    assert AssocModel.__changeset__.summary == {:assoc, struct}
+    assert AssocSchema.__schema__(:association, :summary) == struct
+    assert AssocSchema.__changeset__.summary == {:assoc, struct}
 
-    comment = (%AssocModel{}).comment
+    comment = (%AssocSchema{}).comment
     assert %Ecto.Association.NotLoaded{} = comment
     assert inspect(comment) == "#Ecto.Association.NotLoaded<association :comment is not loaded>"
   end
 
-  defmodule ModelAssocOpts do
+  defmodule CustomAssocSchema do
     use Ecto.Schema
 
     @primary_key {:pk, :integer, []}
@@ -498,28 +528,28 @@ defmodule Ecto.SchemaTest do
   end
 
   test "has_many options" do
-    refl = ModelAssocOpts.__schema__(:association, :posts)
+    refl = CustomAssocSchema.__schema__(:association, :posts)
     assert :pk == refl.owner_key
     assert :fk == refl.related_key
   end
 
   test "has_one options" do
-    refl = ModelAssocOpts.__schema__(:association, :author)
+    refl = CustomAssocSchema.__schema__(:association, :author)
     assert :pk == refl.owner_key
     assert :fk == refl.related_key
   end
 
   test "belongs_to options" do
-    refl = ModelAssocOpts.__schema__(:association, :permalink1)
+    refl = CustomAssocSchema.__schema__(:association, :permalink1)
     assert :fk == refl.owner_key
     assert :pk == refl.related_key
 
-    refl = ModelAssocOpts.__schema__(:association, :permalink2)
+    refl = CustomAssocSchema.__schema__(:association, :permalink2)
     assert :permalink2_id == refl.owner_key
     assert :pk == refl.related_key
 
-    assert ModelAssocOpts.__schema__(:type, :fk) == :string
-    assert ModelAssocOpts.__schema__(:type, :permalink2_id) == :string
+    assert CustomAssocSchema.__schema__(:type, :fk) == :string
+    assert CustomAssocSchema.__schema__(:type, :permalink2_id) == :string
   end
 
   test "has_* validates option" do
@@ -537,7 +567,7 @@ defmodule Ecto.SchemaTest do
   test "has_* references option has to match a field on schema" do
     message = ~r"schema does not have the field :pk used by association :posts"
     assert_raise ArgumentError, message, fn ->
-      defmodule ModelPkAssocMisMatch do
+      defmodule PkAssocMisMatch do
         use Ecto.Schema
 
         schema "assoc" do
@@ -563,7 +593,7 @@ defmodule Ecto.SchemaTest do
   test "has_* through has to match an association on schema" do
     message = ~r"schema does not have the association :whatever used by association :posts"
     assert_raise ArgumentError, message, fn ->
-      defmodule ModelPkAssocMisMatch do
+      defmodule PkAssocMisMatch do
         use Ecto.Schema
 
         schema "assoc" do
@@ -576,7 +606,7 @@ defmodule Ecto.SchemaTest do
   test "has_* through with schema" do
     message = ~r"When using the :through option, the schema should not be passed as second argument"
     assert_raise ArgumentError, message, fn ->
-      defmodule ModelThroughMatch do
+      defmodule ThroughMatch do
         use Ecto.Schema
 
         schema "assoc" do

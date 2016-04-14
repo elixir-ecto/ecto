@@ -109,8 +109,7 @@ defmodule Ecto.Embedded do
   end
 
   defp apply_embeds(changes, struct) do
-    struct = struct(struct, changes)
-    put_in(struct.__meta__.state, :loaded)
+    struct(struct, changes)
   end
 
   defp check_action!(:replace, action, %{on_replace: :delete} = embed),

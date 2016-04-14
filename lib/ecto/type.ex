@@ -362,8 +362,7 @@ defmodule Ecto.Type do
     :error
   end
 
-  defp dump_embed(_field, schema, %{__meta__: %{state: :loaded}, __struct__: schema} = struct,
-                  types, dumper) do
+  defp dump_embed(_field, schema, %{__struct__: schema} = struct, types, dumper) do
     Enum.reduce(types, %{}, fn {field, type}, acc ->
       value = Map.get(struct, field)
 
@@ -372,12 +371,6 @@ defmodule Ecto.Type do
         :error       -> raise ArgumentError, "cannot dump `#{inspect value}` as type #{inspect type}"
       end
     end)
-  end
-
-  defp dump_embed(field, schema, %{__meta__: %{state: state}, __struct__: schema},
-                  _types, _dumper) do
-    raise ArgumentError, "cannot dump embed `#{field}` because its state is `#{state}`. " <>
-                         "Ecto can only dump loaded structs, otherwise using Repo.insert/update/delete is required"
   end
 
   defp dump_embed(field, _model, value, _types, _fun) do

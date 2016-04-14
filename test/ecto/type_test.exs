@@ -122,11 +122,7 @@ defmodule Ecto.TypeTest do
     assert :error == adapter_load(Ecto.TestAdapter, type, 1)
 
     assert {:ok, %{a: 1, c: 0, id: @uuid_tagged}} ==
-           adapter_dump(Ecto.TestAdapter, type, %Model{id: @uuid_string, a: 1}
-                                                |> Ecto.put_meta(state: :loaded))
-    assert_raise ArgumentError, ~r"Ecto can only dump loaded structs", fn ->
-      adapter_dump(Ecto.TestAdapter, type, %Model{id: @uuid_string, a: 1})
-    end
+           adapter_dump(Ecto.TestAdapter, type, %Model{id: @uuid_string, a: 1})
 
     assert :error == cast(type, %{"a" => 1})
     assert cast(type, %Model{}) == {:ok, %Model{}}
@@ -144,11 +140,7 @@ defmodule Ecto.TypeTest do
     assert :error == adapter_load(Ecto.TestAdapter, type, 1)
 
     assert {:ok, [%{a: 1, id: @uuid_tagged, c: 0}]} ==
-           adapter_dump(Ecto.TestAdapter, type, [%Model{id: @uuid_string, a: 1}
-                                                 |> Ecto.put_meta(state: :loaded)])
-    assert_raise ArgumentError, ~r"Ecto can only dump loaded structs", fn ->
-      adapter_dump(Ecto.TestAdapter, type, [%Model{id: @uuid_string, a: 1}])
-    end
+           adapter_dump(Ecto.TestAdapter, type, [%Model{id: @uuid_string, a: 1}])
 
     assert cast(type, [%{"a" => 1}]) == :error
     assert cast(type, [%Model{}]) == {:ok, [%Model{}]}

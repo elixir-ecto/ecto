@@ -206,7 +206,7 @@ defmodule Ecto.Integration.Item do
     * Embedding
 
   """
-  use Ecto.Integration.Schema
+  use Ecto.Schema
 
   embedded_schema do
     field :price, :integer

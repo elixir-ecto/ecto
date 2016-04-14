@@ -75,18 +75,6 @@ defmodule Ecto.Changeset.EmbeddedTest do
     |> Changeset.cast_embed(embed, opts)
   end
 
-  test "raises when an association is defined in embedded_schema" do
-    assert_raise RuntimeError, ~r/association can't be defined in embedded_schema/, fn ->
-      defmodule EmbeddedProfile do
-        use Ecto.Schema
-
-        embedded_schema do
-          belongs_to :author, Author
-        end
-      end
-    end
-  end
-
   ## Cast embeds one
 
   test "cast embeds_one with valid params" do
@@ -456,18 +444,6 @@ defmodule Ecto.Changeset.EmbeddedTest do
       Relation.change(assoc, %{name: "michal"}, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
-
-    profile = %Profile{name: "other"} |> Ecto.put_meta(state: :loaded)
-
-    assert {:ok, changeset, true, false} =
-      Relation.change(assoc, %{name: "michal"}, profile)
-    assert changeset.action == :update
-    assert changeset.changes == %{name: "michal"}
-
-    assert {:ok, changeset, true, false} =
-      Relation.change(assoc, [name: "michal"], profile)
-    assert changeset.action == :update
-    assert changeset.changes == %{name: "michal"}
   end
 
   test "change embeds_one with structs" do
@@ -477,14 +453,6 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert {:ok, changeset, true, false} =
       Relation.change(embed, profile, nil)
     assert changeset.action == :insert
-
-    assert {:ok, changeset, true, false} =
-      Relation.change(embed, Ecto.put_meta(profile, state: :loaded), nil)
-    assert changeset.action == :update
-
-    assert {:ok, changeset, true, false} =
-      Relation.change(embed, Ecto.put_meta(profile, state: :deleted), nil)
-    assert changeset.action == :delete
   end
 
   test "change embeds_one keeps appropriate action from changeset" do

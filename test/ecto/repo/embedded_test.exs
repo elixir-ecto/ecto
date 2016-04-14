@@ -34,12 +34,6 @@ defmodule Ecto.Repo.EmbeddedTest do
 
   @uuid "30313233-3435-3637-3839-616263646566"
 
-  test "cannot change embeds on update_all" do
-    changeset = Ecto.Changeset.change(%MyEmbed{})
-    assert catch_error(TestRepo.update_all MyModel, set: [embed: %MyEmbed{}])
-    assert catch_error(TestRepo.update_all MyModel, set: [embed: changeset])
-  end
-
   ## insert
 
   test "adds embeds to changeset as empty on insert" do
@@ -87,17 +81,6 @@ defmodule Ecto.Repo.EmbeddedTest do
   test "handles invalid embeds from struct on insert" do
     {:error, changeset} = TestRepo.insert(%MyModel{embed: 1})
     assert changeset.errors == [embed: "is invalid"]
-  end
-
-  test "raises on action mismatch on insert" do
-    changeset =
-      %MyModel{}
-      |> Ecto.Changeset.change()
-      |> Ecto.Changeset.put_embed(:embed, %MyEmbed{x: "xyz"})
-    changeset = put_in(changeset.changes.embed.action, :update)
-    assert_raise ArgumentError, ~r"got action :update in changeset for embedded .* while inserting", fn ->
-      TestRepo.insert!(changeset)
-    end
   end
 
   test "returns untouched changeset on constraint mismatch on insert" do

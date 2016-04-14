@@ -178,6 +178,9 @@ defmodule Ecto.Changeset.Relation do
       :deleted -> :delete
     end
   end
+  defp action_from_changeset(_) do
+    :insert # We don't care if it is insert/update for embeds (no meta)
+  end
 
   @doc """
   Handles the changeset or struct when being replaced.
