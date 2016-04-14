@@ -73,7 +73,7 @@ defmodule Ecto.Integration.AssocTest do
     assert [^u2, ^u1] = TestRepo.all(query)
   end
 
-  test "has_many through-through assoc" do
+  test "has_many through-through assoc leading" do
     p1 = TestRepo.insert!(%Post{})
     p2 = TestRepo.insert!(%Post{})
 
@@ -92,12 +92,10 @@ defmodule Ecto.Integration.AssocTest do
     assert [^pl2, ^pl1] = TestRepo.all(query)
   end
 
-  test "yet another has_many through-through assoc" do
-    p1 = TestRepo.insert!(%Post{})
-
-    u1 = TestRepo.insert!(%User{})
-
-    pl1 = TestRepo.insert!(%Permalink{user_id: u1.id})
+  test "has_many through-through assoc trailing" do
+    p1  = TestRepo.insert!(%Post{})
+    u1  = TestRepo.insert!(%User{})
+    pl1 = TestRepo.insert!(%Permalink{user_id: u1.id, post_id: p1.id})
 
     %Comment{} = TestRepo.insert!(%Comment{post_id: p1.id, author_id: u1.id})
 

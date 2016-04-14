@@ -589,28 +589,38 @@ defmodule Ecto.Association.HasThrough do
 
     # Update the mapping and start rewriting expressions
     # to make the last join point to the new from source.
-    mapping  = Map.put(%{}, length(joins) + 1, 0)
-    assoc_on = rewrite_expr(assoc.on, mapping)
+    rewrite_ix = assoc.ix
+    [assoc|joins] = Enum.map([assoc|joins], &rewrite_join(&1, rewrite_ix))
 
-    %{query | wheres: [assoc_on|query.wheres], joins: joins,
+    %{query | wheres: [assoc.on|query.wheres], joins: joins,
               from: merge_from(query.from, assoc.source), sources: nil}
     |> distinct([x], true)
   end
 
   defp assoc_to_join(%{from: from, wheres: [on], order_bys: [], joins: []}, position) do
     %JoinExpr{ix: position, qual: :inner, source: from,
-              on: rewrite_expr(on, %{0 => position}),
+              on: rewrite_expr(on, fn 0 -> position; ix -> ix end),
               file: on.file, line: on.line}
   end
 
   defp merge_from({"join expression", _}, assoc_source), do: assoc_source
   defp merge_from(from, _assoc_source), do: from
 
+  # Rewrite all later joins
+  defp rewrite_join(%{on: on, ix: ix} = join, mapping) when ix >= mapping do
+    %{join | on: rewrite_expr(on, &rewrite_ix(mapping, &1)), ix: rewrite_ix(mapping, ix)}
+  end
+
+  # Previous joins are kept intact
+  defp rewrite_join(join, _mapping) do
+    join
+  end
+
   defp rewrite_expr(%{expr: expr, params: params} = part, mapping) do
     expr =
       Macro.prewalk expr, fn
         {:&, meta, [ix]} ->
-          {:&, meta, [Map.get(mapping, ix, ix)]}
+          {:&, meta, [mapping.(ix)]}
         other ->
           other
       end
@@ -618,15 +628,19 @@ defmodule Ecto.Association.HasThrough do
     params =
       Enum.map params, fn
         {val, {composite, {ix, field}}} when is_integer(ix) ->
-          {val, {composite, {Map.get(mapping, ix, ix), field}}}
+          {val, {composite, {mapping.(ix), field}}}
         {val, {ix, field}} when is_integer(ix) ->
-          {val, {Map.get(mapping, ix, ix), field}}
+          {val, {mapping.(ix), field}}
         val ->
           val
       end
 
     %{part | expr: expr, params: params}
   end
+
+  defp rewrite_ix(mapping, ix) when ix > mapping, do: ix - 1
+  defp rewrite_ix(ix, ix), do: 0
+  defp rewrite_ix(_mapping, ix), do: ix
 end
 
 defmodule Ecto.Association.BelongsTo do
