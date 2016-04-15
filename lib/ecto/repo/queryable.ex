@@ -223,6 +223,15 @@ defmodule Ecto.Repo.Queryable do
     {{left, right}, values}
   end
 
+  defp transform_row({:%{}, _, [{:|, _, [data, pairs]}]}, from, values) do
+    {data, values} = transform_row(data, from, values)
+    Enum.reduce pairs, {data, values}, fn {k, v}, {data, acc} ->
+      {k, acc} = transform_row(k, from, acc)
+      {v, acc} = transform_row(v, from, acc)
+      {:maps.update(k, v, data), acc}
+    end
+  end
+
   defp transform_row({:%{}, _, pairs}, from, values) do
     Enum.reduce pairs, {%{}, values}, fn {k, v}, {map, acc} ->
       {k, acc} = transform_row(k, from, acc)

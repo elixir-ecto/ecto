@@ -724,6 +724,45 @@ defmodule Ecto.Integration.RepoTest do
 
   ## Query syntax
 
+  test "query select expressions" do
+    %Post{} = TestRepo.insert!(%Post{title: "1", text: "hai"})
+
+    assert [{"1", "hai"}] ==
+           TestRepo.all(from p in Post, select: {p.title, p.text})
+
+    assert [["1", "hai"]] ==
+           TestRepo.all(from p in Post, select: [p.title, p.text])
+
+    assert [%{:title => "1", 3 => "hai", "text" => "hai"}] ==
+           TestRepo.all(from p in Post, select: %{
+             :title => p.title,
+             "text" => p.text,
+             3 => p.text
+           })
+
+    assert [%{:title => "1", "1" => "hai", "text" => "hai"}] ==
+           TestRepo.all(from p in Post, select: %{
+             :title  => p.title,
+             p.title => p.text,
+             "text"  => p.text
+           })
+  end
+
+  test "query select map update" do
+    %Post{} = TestRepo.insert!(%Post{title: "1", text: "hai"})
+
+    assert [%Post{:title => "new title", text: "hai"}] =
+           TestRepo.all(from p in Post, select: %{p | title: "new title"})
+
+    assert_raise KeyError, fn ->
+      TestRepo.all(from p in Post, select: %{p | unknown: "new title"})
+    end
+
+    assert_raise BadMapError, fn ->
+      TestRepo.all(from p in Post, select: %{p.title | title: "new title"})
+    end
+  end
+
   test "query select take" do
     %{id: pid1} = TestRepo.insert!(%Post{title: "1"})
     %{id: pid2} = TestRepo.insert!(%Post{title: "1"})

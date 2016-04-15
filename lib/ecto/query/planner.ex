@@ -712,12 +712,14 @@ defmodule Ecto.Query.Planner do
   end
 
   defp collect_fields({left, right}, query, take, from) do
-    {left, from}  = collect_fields(left, query, take, from)
+    {left, from} = collect_fields(left, query, take, from)
     {right, from} = collect_fields(right, query, take, from)
     {left ++ right, from}
   end
   defp collect_fields({:{}, _, elems}, query, take, from),
     do: collect_fields(elems, query, take, from)
+  defp collect_fields({:%{}, _, [{:|, _, [data, pairs]}]}, query, take, from),
+    do: collect_fields([data|pairs], query, take, from)
   defp collect_fields({:%{}, _, pairs}, query, take, from),
     do: collect_fields(pairs, query, take, from)
   defp collect_fields(list, query, take, from) when is_list(list),

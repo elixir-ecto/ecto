@@ -48,15 +48,15 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   # Map
-  defp escape({:%{}, _, pairs}, params_take, vars, env) do
-    {pairs, params_take} = Enum.map_reduce pairs, params_take, fn({k, v}, acc) ->
-      {k, acc} = escape_key(k, acc, vars, env)
-      {v, acc} = escape(v, acc, vars, env)
-      {{k, v}, acc}
-    end
+  defp escape({:%{}, _, [{:|, _, [data, pairs]}]}, params_take, vars, env) do
+    {data, params_take} = escape(data, params_take, vars, env)
+    {pairs, params_take} = escape_pairs(pairs, params_take, vars, env)
+    {{:{}, [], [:%{}, [], [{:{}, [], [:|, [], [data, pairs]]}]]}, params_take}
+  end
 
-    expr = {:{}, [], [:%{}, [], pairs]}
-    {expr, params_take}
+  defp escape({:%{}, _, pairs}, params_take, vars, env) do
+    {pairs, params_take} = escape_pairs(pairs, params_take, vars, env)
+    {{:{}, [], [:%{}, [], pairs]}, params_take}
   end
 
   # List
@@ -66,7 +66,7 @@ defmodule Ecto.Query.Builder.Select do
 
   # take(var, [:foo, :bar])
   defp escape({:take, _, [{var, _, context}, fields]}, {params, take}, vars, _env)
-      when is_atom(var) and is_atom(context) do
+       when is_atom(var) and is_atom(context) do
     taken =
       case fields do
         {:^, _, [interpolated]} ->
@@ -93,6 +93,14 @@ defmodule Ecto.Query.Builder.Select do
   defp escape(other, {params, take}, vars, env) do
     {other, params} = Builder.escape(other, :any, params, vars, env)
     {other, {params, take}}
+  end
+
+  defp escape_pairs(pairs, params_take, vars, env) do
+    Enum.map_reduce pairs, params_take, fn({k, v}, acc) ->
+      {k, acc} = escape_key(k, acc, vars, env)
+      {v, acc} = escape(v, acc, vars, env)
+      {{k, v}, acc}
+    end
   end
 
   defp escape_key(k, params_take, _vars, _env) when is_atom(k) do

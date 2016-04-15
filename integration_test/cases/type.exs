@@ -90,30 +90,6 @@ defmodule Ecto.Integration.TypeTest do
     assert [^bid] = TestRepo.all(from c in Custom, select: type(^bid, :binary_id))
   end
 
-  test "composite types in select" do
-    assert %Post{} = TestRepo.insert!(%Post{title: "1", text: "hai"})
-
-    assert [{"1", "hai"}] ==
-           TestRepo.all(from p in Post, select: {p.title, p.text})
-
-    assert [["1", "hai"]] ==
-           TestRepo.all(from p in Post, select: [p.title, p.text])
-
-    assert [%{:title => "1", 3 => "hai", "text" => "hai"}] ==
-           TestRepo.all(from p in Post, select: %{
-             :title => p.title,
-             "text" => p.text,
-             3 => p.text
-           })
-
-    assert [%{:title => "1", "1" => "hai", "text" => "hai"}] ==
-           TestRepo.all(from p in Post, select: %{
-             :title  => p.title,
-             p.title => p.text,
-             "text"  => p.text
-           })
-  end
-
   @tag :array_type
   test "array type" do
     ints = [1, 2, 3]
