@@ -12,6 +12,7 @@ defmodule Ecto.AssociationTest do
   alias __MODULE__.Summary
   alias __MODULE__.Email
   alias __MODULE__.Profile
+  alias __MODULE__.AuthorPermalink
 
   defmodule Post do
     use Ecto.Schema
@@ -45,7 +46,7 @@ defmodule Ecto.AssociationTest do
 
     schema "permalinks" do
       field :url, :string
-      many_to_many :authors, Author, join_through: "authors_permalinks", defaults: [title: "m2m!"]
+      many_to_many :authors, Author, join_through: AuthorPermalink, defaults: [title: "m2m!"]
       has_many :author_emails, through: [:authors, :emails]
     end
   end
@@ -63,6 +64,15 @@ defmodule Ecto.AssociationTest do
         defaults: [name: "default"], on_replace: :delete
       many_to_many :permalinks, {"custom_permalinks", Permalink},
         join_through: "authors_permalinks"
+    end
+  end
+
+  defmodule AuthorPermalink do
+    use Ecto.Schema
+
+    schema "authors_permalinks" do
+      field :author_id
+      field :permalink_id
     end
   end
 
@@ -199,18 +209,18 @@ defmodule Ecto.AssociationTest do
 
     assert inspect(Ecto.Association.ManyToMany.joins_query(assoc)) ==
            inspect(from p in Permalink,
-                    join: m in "authors_permalinks", on: m.permalink_id == p.id,
+                    join: m in AuthorPermalink, on: m.permalink_id == p.id,
                     join: a in Author, on: m.author_id == a.id)
 
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [])) ==
            inspect(from a in Author,
-                    join: m in "authors_permalinks", on: m.author_id == a.id,
-                    where: m.permalink_id in type(^[], {:spread, :id}))
+                    join: m in AuthorPermalink, on: m.permalink_id in type(^[], {:spread, :id}),
+                    where: m.author_id == a.id)
 
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from a in Author,
-                    join: m in "authors_permalinks", on: m.author_id == a.id,
-                    where: m.permalink_id in type(^[1, 2, 3], {:spread, :id}))
+                    join: m in AuthorPermalink, on: m.permalink_id in type(^[1, 2, 3], {:spread, :id}),
+                    where: m.author_id == a.id)
   end
 
   test "many to many with specified source" do
@@ -223,13 +233,13 @@ defmodule Ecto.AssociationTest do
 
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [])) ==
            inspect(from p in {"custom_permalinks", Permalink},
-                    join: m in "authors_permalinks", on: m.permalink_id == p.id,
-                    where: m.author_id in type(^[], {:spread, :id}))
+                    join: m in "authors_permalinks", on: m.author_id in type(^[], {:spread, :id}),
+                    where: m.permalink_id == p.id)
 
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from p in {"custom_permalinks", Permalink},
-                    join: m in "authors_permalinks", on: m.permalink_id == p.id,
-                    where: m.author_id in type(^[1, 2, 3], {:spread, :id}))
+                    join: m in "authors_permalinks", on: m.author_id in type(^[1, 2, 3], {:spread, :id}),
+                    where: m.permalink_id == p.id)
   end
 
   test "many to many custom assoc query" do
@@ -237,14 +247,8 @@ defmodule Ecto.AssociationTest do
     query = from a in Author, limit: 5
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, query, [1, 2, 3])) ==
            inspect(from a in Author,
-                    join: m in "authors_permalinks", on: m.author_id == a.id,
-                    where: m.permalink_id in type(^[1, 2, 3], {:spread, :id}), limit: 5)
-  end
-
-  test "has many through many to many and has many" do
-    assoc = Permalink.__schema__(:association, :author_emails)
-    query = from p in Permalink, limit: 2
-    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, query, []))
+                    join: m in AuthorPermalink, on: m.permalink_id in type(^[1, 2, 3], {:spread, :id}),
+                    where: m.author_id == a.id, limit: 5)
   end
 
   test "has many through many to many" do
@@ -335,6 +339,15 @@ defmodule Ecto.AssociationTest do
                         join: p1 in Post, on: p1.author_id in ^[1, 2, 3],
                         where: c.post_id == p1.id,
                         distinct: true, limit: 5)
+  end
+
+  test "has many through many to many and has many" do
+    assoc = Permalink.__schema__(:association, :author_emails)
+    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, nil, [1, 2, 3])) ==
+           inspect(from e in {"users_emails", Email},
+                        join: ap in AuthorPermalink, on: ap.permalink_id in ^[1, 2, 3],
+                        join: a in Author, on: ap.author_id == a.id,
+                        where: e.author_id == a.id, distinct: true)
   end
 
   ## Integration tests through Ecto

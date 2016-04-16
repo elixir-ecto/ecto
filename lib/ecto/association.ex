@@ -547,7 +547,8 @@ defmodule Ecto.Association.HasThrough do
 
   defp joins_query(query, through, counter) do
     Enum.reduce(through, {query, counter}, fn current, {acc, counter} ->
-      {join(acc, :inner, [x: counter], assoc(x, ^current)), counter + 1}
+      query = join(acc, :inner, [x: counter], assoc(x, ^current))
+      {query, counter + 1}
     end) |> elem(0)
   end
 
@@ -574,13 +575,13 @@ defmodule Ecto.Association.HasThrough do
     #
     # Note we are being restrictive on the format
     # expected from assoc_query.
-    join = assoc_to_join(refl.__struct__.assoc_query(refl, nil, values), position)
+    joins = assoc_to_join(refl.__struct__.assoc_query(refl, nil, values), position)
 
     # Add the new join to the query and traverse the remaining
     # joins that will start counting from the added join position.
     query =
-      %{query | joins: query.joins ++ [join]}
-      |> joins_query(t, position)
+      %{query | joins: query.joins ++ joins}
+      |> joins_query(t, position + length(joins) - 1)
       |> Ecto.Query.Planner.prepare_sources(:adapter_wont_be_needed)
 
     # Our source is going to be the last join after
@@ -597,10 +598,19 @@ defmodule Ecto.Association.HasThrough do
     |> distinct([x], true)
   end
 
-  defp assoc_to_join(%{from: from, wheres: [on], order_bys: [], joins: []}, position) do
-    %JoinExpr{ix: position, qual: :inner, source: from,
-              on: rewrite_expr(on, fn 0 -> position; ix -> ix end),
-              file: on.file, line: on.line}
+  defp assoc_to_join(%{from: from, wheres: [on], order_bys: [], joins: joins}, position) do
+    last = length(joins) + position
+    join = %JoinExpr{qual: :inner, source: from,
+                     on: on, file: on.file, line: on.line}
+
+    mapping = fn
+      0  -> last
+      ix -> ix + position - 1
+    end
+
+    for {%{on: on} = join, ix} <- Enum.with_index(joins ++ [join]) do
+      %{join | on: rewrite_expr(on, mapping), ix: ix + position}
+    end
   end
 
   defp merge_from({"join expression", _}, assoc_source), do: assoc_source
@@ -892,8 +902,8 @@ defmodule Ecto.Association.ManyToMany do
     owner_type = {:spread, owner.__schema__(:type, owner_key)}
 
     from q in (query || queryable),
-      join: j in ^join_through, on: field(j, ^join_related_key) == field(q, ^related_key),
-      where: field(j, ^join_owner_key) in type(^values, ^owner_type)
+      join: j in ^join_through, on: field(j, ^join_owner_key) in type(^values, ^owner_type),
+      where: field(j, ^join_related_key) == field(q, ^related_key)
   end
 
   @doc false
