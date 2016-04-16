@@ -120,12 +120,13 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Changeset] `changeset.model` has been renamed to `changeset.data`
   * [Changeset] `changeset.optional` has been removed
   * [Changeset] `changeset.errors` now always returns tuple `{String.t, Keyword.t}` in its values
+  * [LogEntry] Overhaul log entry and store times in :native units
   * [Repo] `Ecto.StaleModelError` has been renamed to `Ecto.StaleEntryError`
   * [Repo] Poolboy now expects `:pool_overflow` option instead of `:max_overflow`
   * [Repo] `Repo.insert/2` will now send only non-nil fields from the struct to the storage (in previous versions, all fields from the struct were sent to the database)
   * [Repo] `Ecto.Pools.Poolboy` and `Ecto.Pools.SojournBroker` have been removed in favor of `DBConnection.Poolboy` and `DBConnection.Sojourn`
   * [Repo] `:timeout` in `Repo.transaction` now affects the whole transaction block and not only the particular transaction queries
-  * [Repo] Overriding `Repo.log/1` is no longer supported. Instead, provide custom loggers configuration via `:loggers`. The default is: `[Ecto.LogEntry]`
+  * [Repo] Overriding `Repo.log/1` is no longer supported. Instead provide custom loggers configuration via `:loggers`. The default is: `[Ecto.LogEntry]`
   * [Schema] Array fields no longer default to an empty list `[]`. Previous behaviour can be achieved by passing `default: []` to the field definition
   * [SQL] `Ecto.Adapters.SQL.begin_test_transaction`, `Ecto.Adapters.SQL.restart_test_transaction` and `Ecto.Adapters.SQL.rollback_test_transaction` have been removed in favor of the new ownership-based `Ecto.Adapters.SQL.Sandbox`
 
@@ -149,6 +150,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Postgres] Add migration and changeset support for PostgreSQL check constraints. Example: `create constraint(@table.name, "positive_price", check: "price > 0")` and `check_constraint(changeset, :description, name: :positive_price, message: "must be greater than zero")`
   * [Query] Allow the `:on` field to be specified with association joins
   * [Query] Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`
+  * [Query] Support map update syntax. Example: `from p in Post, select: %{p | title: "fixed"}`
   * [Query] Allow struct fields to be selected with `take/2`, including support for dynamic fields
   * [Query] Add `first/2` and `last/2`
   * [Repo] Add `Repo.aggregate/4` for easy aggregations
