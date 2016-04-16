@@ -100,7 +100,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute changeset.valid?
   end
 
-  test "cast embeds_one with existing model updating" do
+  test "cast embeds_one with existing struct updating" do
     changeset = cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
                      %{"profile" => %{"name" => "new", "id" => "michal"}}, :profile)
 
@@ -112,7 +112,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert changeset.valid?
   end
 
-  test "cast embeds_one with existing model updating from atom params" do
+  test "cast embeds_one with existing struct updating from atom params" do
     # Emulate atom params from nested associations
     changeset = Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}}, %{}, ~w(), ~w())
     changeset = put_in changeset.params, %{"profile" => %{name: "new", id: "michal"}}
@@ -126,7 +126,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert changeset.valid?
   end
 
-  test "cast embeds_one with existing model replacing" do
+  test "cast embeds_one with existing struct replacing" do
     changeset = cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
                      %{"profile" => %{"name" => "new"}}, :profile)
 
@@ -412,7 +412,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     assert {:ok, nil, true, false} =
       Relation.change(embed, nil, %Profile{})
-    assert {:ok, nil, true, true} =
+    assert {:ok, nil, true, false} =
       Relation.change(embed, nil, nil)
 
     embed_model = %Profile{}

@@ -72,7 +72,7 @@ defmodule Ecto.Changeset.BelongsToTest do
     refute changeset.valid?
   end
 
-  test "cast belongs_to with existing model updating" do
+  test "cast belongs_to with existing struct updating" do
     changeset = cast(%Author{profile: %Profile{name: "michal", id: 1}},
                      %{"profile" => %{"name" => "new", "id" => 1}}, :profile)
 
@@ -84,8 +84,9 @@ defmodule Ecto.Changeset.BelongsToTest do
     assert changeset.valid?
   end
 
-  test "cast belongs_to without loading" do
-    assert cast(%Author{}, %{"profile" => nil}, :profile).changes == %{}
+  test "cast belongs_to with nil" do
+    assert cast(%Author{}, %{"profile" => nil}, :profile).changes == %{profile: nil}
+    assert cast(%Author{profile: nil}, %{"profile" => nil}, :profile).changes == %{}
 
     loaded = put_in %Author{}.__meta__.state, :loaded
     assert_raise RuntimeError, ~r"attempting to cast or change association `profile` .* that was not loaded", fn ->
@@ -93,7 +94,7 @@ defmodule Ecto.Changeset.BelongsToTest do
     end
   end
 
-  test "cast belongs_to with existing model replacing" do
+  test "cast belongs_to with existing struct replacing" do
     changeset = cast(%Author{profile: %Profile{name: "michal", id: 1}},
                      %{"profile" => %{"name" => "new"}}, :profile)
 
@@ -267,7 +268,7 @@ defmodule Ecto.Changeset.BelongsToTest do
     assoc = Author.__schema__(:association, :profile)
     assert {:ok, nil, true, false} =
       Relation.change(assoc, nil, %Profile{})
-    assert {:ok, nil, true, true} =
+    assert {:ok, nil, true, false} =
       Relation.change(assoc, nil, nil)
 
     assoc_model = %Profile{}

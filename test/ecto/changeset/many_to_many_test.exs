@@ -62,7 +62,8 @@ defmodule Ecto.Changeset.ManyToManyTest do
   end
 
   test "cast many_to_many without loading" do
-    assert cast(%Author{}, %{"posts" => []}, :posts).changes == %{}
+    assert cast(%Author{}, %{"posts" => []}, :posts).changes == %{posts: []}
+    assert cast(%Author{posts: []}, %{"posts" => []}, :posts).changes == %{}
 
     loaded = put_in %Author{}.__meta__.state, :loaded
     assert_raise RuntimeError, ~r"attempting to cast or change association `posts` .* that was not loaded", fn ->

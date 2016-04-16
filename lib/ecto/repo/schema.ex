@@ -414,10 +414,14 @@ defmodule Ecto.Repo.Schema do
             # in Ecto.Changeset but we need to do it in a way where we have
             # control over the current value.
             value = Relation.load!(struct, Map.get(struct, field))
-            case Relation.change(embed_or_assoc, value, nil) do
-              {:ok, _, _, true}       -> {changes, errors}
-              {:ok, change, _, false} -> {Map.put(changes, field, change), errors}
-              :error                  -> {changes, [{field, "is invalid"}]}
+            empty = Relation.empty(embed_or_assoc)
+            case Relation.change(embed_or_assoc, value, empty) do
+              {:ok, change, _, false} when change != empty ->
+                {Map.put(changes, field, change), errors}
+              {:ok, _, _, _} ->
+                {changes, errors}
+              :error ->
+                {changes, [{field, "is invalid"}]}
             end
 
           # Struct has a non nil value

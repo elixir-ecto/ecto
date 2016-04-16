@@ -470,7 +470,7 @@ defmodule Ecto.Integration.AssocTest do
     assert perma.post_id == nil
   end
 
-  test "inserting with associations in structs" do
+  test "inserting struct with associations" do
     tree = %Permalink{
       url: "root",
       post: %Post{
@@ -493,6 +493,30 @@ defmodule Ecto.Integration.AssocTest do
     assert tree.post.id
     assert length(tree.post.comments) == 2
     assert Enum.all?(tree.post.comments, & &1.id)
+  end
+
+  test "inserting struct with empty associations" do
+    permalink = TestRepo.insert!(%Permalink{url: "root", post: nil})
+    assert permalink.post == nil
+
+    post = TestRepo.insert!(%Post{title: "empty", comments: []})
+    assert post.comments == []
+  end
+
+  test "inserting changeset with empty associations" do
+    changeset =
+      %Permalink{}
+      |> Ecto.Changeset.cast(%{url: "root", post: nil}, [:url])
+      |> Ecto.Changeset.cast_assoc(:post)
+    permalink = TestRepo.insert!(changeset)
+    assert permalink.post == nil
+
+    changeset =
+      %Post{}
+      |> Ecto.Changeset.cast(%{title: "root", comments: []}, [:title])
+      |> Ecto.Changeset.cast_assoc(:comments)
+    post = TestRepo.insert!(changeset)
+    assert post.comments == []
   end
 
   ## Dependent

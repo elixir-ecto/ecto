@@ -96,7 +96,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     refute changeset.valid?
   end
 
-  test "cast has_one with existing model updating" do
+  test "cast has_one with existing struct updating" do
     changeset = cast(%Author{profile: %Profile{name: "michal", id: 1}},
                      %{"profile" => %{"name" => "new", "id" => 1}}, :profile)
 
@@ -108,8 +108,9 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert changeset.valid?
   end
 
-  test "cast has_one without loading" do
-    assert cast(%Author{}, %{"profile" => nil}, :profile).changes == %{}
+  test "cast has_one with nil" do
+    assert cast(%Author{}, %{"profile" => nil}, :profile).changes == %{profile: nil}
+    assert cast(%Author{profile: nil}, %{"profile" => nil}, :profile).changes == %{}
 
     loaded = put_in %Author{}.__meta__.state, :loaded
     assert_raise RuntimeError, ~r"attempting to cast or change association `profile` .* that was not loaded", fn ->
@@ -117,7 +118,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     end
   end
 
-  test "cast has_one with existing model replacing" do
+  test "cast has_one with existing struct replacing" do
     changeset = cast(%Author{profile: %Profile{name: "michal", id: 1}},
                      %{"profile" => %{"name" => "new"}}, :profile)
 
@@ -144,7 +145,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     end
   end
 
-  test "cast has_one with existing model updating from atom params" do
+  test "cast has_one with existing struct updating from atom params" do
     # Emulate atom params from nested associations
     changeset = Changeset.cast(%Author{profile: %Profile{name: "michal", id: 3}}, %{}, ~w(), ~w())
     changeset = put_in changeset.params, %{"profile" => %{name: "new", id: 3}}
@@ -320,8 +321,9 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert changeset.valid?
   end
 
-  test "cast has_many without loading" do
-    assert cast(%Author{}, %{"posts" => []}, :posts).changes == %{}
+  test "cast has_many with empty posts" do
+    assert cast(%Author{}, %{"posts" => []}, :posts).changes == %{posts: []}
+    assert cast(%Author{posts: []}, %{"posts" => []}, :posts).changes == %{}
 
     loaded = put_in %Author{}.__meta__.state, :loaded
     assert_raise RuntimeError, ~r"attempting to cast or change association `posts` .* that was not loaded", fn ->
@@ -471,7 +473,7 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     assert {:ok, nil, true, false} =
       Relation.change(assoc, nil, %Profile{})
-    assert {:ok, nil, true, true} =
+    assert {:ok, nil, true, false} =
       Relation.change(assoc, nil, nil)
 
     assoc_model = %Profile{}

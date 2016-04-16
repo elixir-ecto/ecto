@@ -500,14 +500,15 @@ defmodule Ecto.Changeset do
         {changeset, false}
       end
 
-    on_cast = opts[:with] || &related.changeset(&1, &2)
-    current = Relation.load!(data, Map.get(data, key))
+    on_cast  = opts[:with] || &related.changeset(&1, &2)
+    original = Map.get(data, key)
+    current  = Relation.load!(data, original)
 
     changeset =
       case Map.fetch(params, param_key) do
         {:ok, value} ->
           case Relation.cast(relation, value, current, on_cast) do
-            {:ok, change, relation_valid?, false} when change != current ->
+            {:ok, change, relation_valid?, false} when change != original ->
               missing_relation(%{changeset | changes: Map.put(changes, key, change),
                                  valid?: changeset.valid? && relation_valid?}, key, current, required?, relation, opts)
             {:ok, _, _, _} ->
@@ -527,10 +528,12 @@ defmodule Ecto.Changeset do
   defp expected_relation_type(%{cardinality: :one}), do: :map
   defp expected_relation_type(%{cardinality: :many}), do: {:array, :map}
 
-  defp missing_relation(%{changes: changes, errors: errors} = changeset, name, current, required?, relation, opts) do
+  defp missing_relation(%{changes: changes, errors: errors} = changeset,
+                        name, current, required?, relation, opts) do
     current_changes = Map.get(changes, name, current)
     if required? and Relation.empty?(relation, current_changes) do
-      %{changeset | errors: [{name, {message(opts, :required_message, "can't be blank"), []}} | errors], valid?: false}
+      errors = [{name, {message(opts, :required_message, "can't be blank"), []}} | errors]
+      %{changeset | errors: errors, valid?: false}
     else
       changeset
     end

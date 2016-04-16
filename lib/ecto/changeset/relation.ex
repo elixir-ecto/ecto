@@ -75,7 +75,7 @@ defmodule Ecto.Changeset.Relation do
   def cast(%{cardinality: :one} = relation, nil, current, _on_cast) do
     case current && on_replace(relation, current) do
       :error -> :error
-      _ -> {:ok, nil, true, is_nil(current)}
+      _ -> {:ok, nil, true, false}
     end
   end
 
@@ -117,7 +117,7 @@ defmodule Ecto.Changeset.Relation do
   def change(%{cardinality: :one} = relation, nil, current) do
     case current && on_replace(relation, current) do
       :error -> :error
-      _ -> {:ok, nil, true, is_nil(current)}
+      _ -> {:ok, nil, true, false}
     end
   end
 
@@ -215,6 +215,10 @@ defmodule Ecto.Changeset.Relation do
   defp cast_or_change(%{cardinality: :one} = relation, value, current, current_pks,
                       new_pks, fun) when is_map(value) or is_list(value) or is_nil(value) do
     single_change(relation, value, current_pks, new_pks, fun, current)
+  end
+
+  defp cast_or_change(%{cardinality: :many}, [], [], _current_pks, _new_pks, _fun) do
+    {:ok, [], true, false}
   end
 
   defp cast_or_change(%{cardinality: :many}, value, current, current_pks,
