@@ -46,6 +46,7 @@ defmodule Ecto.AssociationTest do
     schema "permalinks" do
       field :url, :string
       many_to_many :authors, Author, join_through: "authors_permalinks", defaults: [title: "m2m!"]
+      has_many :author_emails, through: [:authors, :emails]
     end
   end
 
@@ -238,6 +239,12 @@ defmodule Ecto.AssociationTest do
            inspect(from a in Author,
                     join: m in "authors_permalinks", on: m.author_id == a.id,
                     where: m.permalink_id in type(^[1, 2, 3], {:spread, :id}), limit: 5)
+  end
+
+  test "has many through many to many and has many" do
+    assoc = Permalink.__schema__(:association, :author_emails)
+    query = from p in Permalink, limit: 2
+    assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, query, []))
   end
 
   test "has many through many to many" do
