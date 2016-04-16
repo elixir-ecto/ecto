@@ -20,7 +20,7 @@ defmodule Ecto.Migration.Runner do
     args  = [self, repo, direction, migrator_direction, level]
 
     {:ok, runner} = Supervisor.start_child(Ecto.Migration.Supervisor, args)
-    Process.put(:ecto_migration, %{runner: runner, prefix: opts[:prefix]})
+    metadata(runner, opts)
 
     log(level, "== Running #{inspect module}.#{operation}/0 #{direction}")
     {time1, _} = :timer.tc(module, operation, [])
@@ -30,6 +30,17 @@ defmodule Ecto.Migration.Runner do
 
     stop()
   end
+
+  @doc """
+  Stores the runner metadata.
+  """
+  def metadata(runner, opts) do
+    Process.put(:ecto_migration, %{runner: runner, prefix: to_atom(opts[:prefix])})
+  end
+
+  defp to_atom(nil), do: nil
+  defp to_atom(atom) when is_atom(atom), do: atom
+  defp to_atom(string) when is_binary(string), do: String.to_atom(string)
 
   @doc """
   Starts the runner for the specified repo.

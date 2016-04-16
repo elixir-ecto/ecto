@@ -13,7 +13,7 @@ defmodule Ecto.MigrationTest do
   setup meta do
     {:ok, runner} =
       Runner.start_link(self(), TestRepo, meta[:direction] || :forward, :up, false)
-    Process.put(:ecto_migration, %{runner: runner, prefix: meta[:prefix]})
+    Runner.metadata(runner, meta)
     {:ok, runner: runner}
   end
 
@@ -225,7 +225,16 @@ defmodule Ecto.MigrationTest do
   end
 
   @tag prefix: :foo
-  test "forward: creates a table with prefix from manager matching prefix from migration" do
+  test "forward: creates a table with prefix from manager matching atom prefix from migration" do
+    create(table(:posts, prefix: :foo))
+    flush
+
+    {_, table, _} = last_command()
+    assert table.prefix == :foo
+  end
+
+  @tag prefix: "foo"
+  test "forward: creates a table with prefix from manager matching string prefix from migration" do
     create(table(:posts, prefix: :foo))
     flush
 
