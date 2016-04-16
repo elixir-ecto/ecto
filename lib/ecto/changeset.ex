@@ -105,8 +105,8 @@ defmodule Ecto.Changeset do
       associations),
     * `:delete` - removes the association or related data from the database.
       This option has to be used carefully. You should consider adding a
-      separate boolean virtual field to the changeset function that will alow
-      to manually mark it deletion, as in the example below:
+      separate boolean virtual field to the changeset function that will allow you
+      to manually mark it for deletion, as in the example below:
 
           defmodule Comment do
             use Ecto.Schema
