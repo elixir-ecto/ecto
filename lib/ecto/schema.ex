@@ -155,6 +155,10 @@ defmodule Ecto.Schema do
   Read the `Ecto.Type` documentation for more information on implementing
   your own types.
 
+  Finally, schemas can also have virtual fields by passing the
+  `virtual: true` option. These fields are not persisted to the database
+  and can optionally not be type checked by declaring type `:any`.
+
   ### The map type
 
   The map type allows developers to store an Elixir map directly
@@ -211,15 +215,12 @@ defmodule Ecto.Schema do
   recommended to use `Ecto.Changeset`'s that are able to filter
   and properly cast external data:
 
-      changeset = Ecto.Changeset.cast(%User{}, %{"age" => "0"}, [:age], [])
+      changeset = Ecto.Changeset.cast(%User{}, %{"age" => "0"}, [:age])
       user = Repo.insert!(changeset)
 
-  In fact, `Ecto.Changeset` and custom types provide a powerful
-  combination to extend Ecto types and queries.
-
-  Finally, schemas can also have virtual fields by passing the
-  `virtual: true` option. These fields are not persisted to the database
-  and can optionally not be type checked by declaring type `:any`.
+  **You can use Ecto schemas and changesets to cast and valid any kind
+  of data, regardless if the data will be persisted to an Ecto repository
+  or not**.
 
   ## Reflection
 

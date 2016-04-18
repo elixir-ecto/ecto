@@ -9,30 +9,34 @@ defmodule Ecto.Query do
   @moduledoc ~S"""
   Provides the Query DSL.
 
-  Queries are used to retrieve and manipulate data in a repository
-  (see `Ecto.Repo`). Although this module provides a complete API,
-  supporting expressions like `where/3`, `select/3` and so forth,
-  most of the time developers need to import only the `from/2`
-  macro.
+  Queries are used to retrieve and manipulate data from a repository
+  (see `Ecto.Repo`). Ecto queries comes in two flavors: keyword-based
+  and macro-based. Most examples will use the keyword-based syntax,
+  the macro one will be explored in later sections.
+
+  Let's see a sample query:
 
       # Imports only from/2 of Ecto.Query
       import Ecto.Query, only: [from: 2]
 
       # Create a query
-      query = from w in Weather,
-                where: w.prcp > 0,
-                select: w.city
+      query = from u in "users",
+                where: u.age > 18,
+                select: u.name
 
       # Send the query to the repository
       Repo.all(query)
 
+  In the example above, we are directely querying the "users" table
+  from the database.
+
   ## Query expressions
 
   Ecto allows a limited set of expressions inside queries. In the
-  query below, for example, we use `w.prcp` to access a field, the
+  query below, for example, we use `u.age` to access a field, the
   `>` comparison operator and the literal `0`:
 
-      query = from w in Weather, where: w.prcp > 0
+      query = from u in "users", where: u.age > 0, select: u.name
 
   You can find the full list of operations in `Ecto.Query.API`.
   Besides the operations listed there, the following literals are
@@ -48,40 +52,48 @@ defmodule Ecto.Query do
   All other types and dynamic values must be passed as a parameter using
   interpolation as explained below.
 
-  ## Interpolation
+  ## Interpolation and casting
 
   External values and Elixir expressions can be injected into a query
   expression with `^`:
 
       def with_minimum(age, height_ft) do
-        from u in User,
-          where: u.age > ^age and u.height > ^(height_ft * 3.28)
+        from u in "users",
+          where: u.age > ^age and u.height > ^(height_ft * 3.28),
+          select: u.name
       end
 
       with_minimum(18, 5.0)
 
-  Interpolation can also be used with the `field/2` function which allows
-  developers to dynamically choose a field to query:
+  When interpolating values, you may want to explicitly tell Ecto
+  what is the expected type of the value being interpolated:
 
-      def has_four(doors_or_tires) do
-        from c in Car,
-          where: field(c, ^doors_or_tires) == 4
-      end
+      age = "18"
+      Repo.all(from u in "users",
+                where: u.age > type(^age, :integer),
+                select: u.name)
 
-  In the example above, both `has_four(:doors)` and `has_four(:tires)`
-  would be valid calls as the field is dynamically inserted.
+  In the example above, Ecto will cast the age to type integer. When
+  a value cannot be cast, `Ecto.Query.CastError` is raised.
 
-  ## Casting
+  To avoid the repitition of always specifying the types, you may define
+  an `Ecto.Schema`. In such cases, Ecto will analyze your queries and
+  automatically cast the interpolated "age" when compared to the `u.age`
+  field, as long as the age field is defined with type `:integer` in
+  your schema:
 
-  Ecto is able to cast interpolated values in queries:
+      age = "18"
+      Repo.all(from u in User, where: u.age > ^age, select: u.name)
 
-      age = "1"
+  Another advantage of using schemas is that we no longer need to specify
+  the select option in queries, as by default Ecto will retrieve all
+  fields specified in the schema:
+
+      age = "18"
       Repo.all(from u in User, where: u.age > ^age)
 
-  The example above works because `u.age` is tagged as an `:integer`
-  in the `User` schema and therefore Ecto will attempt to cast the
-  interpolated `^age` to integer. When a value cannot be cast,
-  `Ecto.Query.CastError` is raised.
+  For this reason, we will use schemas on the remaining examples but
+  remember Ecto does not require them in order to write queries.
 
   ## Composition
 
@@ -89,31 +101,18 @@ defmodule Ecto.Query do
   actually be defined in two parts:
 
       # Create a query
-      query = from w in Weather, where: w.prcp > 0
+      query = from w in User, where: u.age > 18
 
       # Extend the query
-      query = from w in query, select: w.city
+      query = from u in query, select: u.name
 
   Composing queries uses the same syntax as creating a query.
   The difference is that, instead of passing a schema like `Weather`
   on the right side of `in`, we passed the query itself.
 
   Any value can be used on the right-side of `in` as long as it implements
-  the `Ecto.Queryable` protocol. For example, the queryable protocol
-  is also implemented for strings, which allows a query to run directly
-  against a table, without defining an Ecto.Schema:
-
-      from w in "weather", where: w.prcp > 0, select: w.city
-
-  When writing queries directly against a table, without a schema,
-  you need to consider two limitations:
-
-    1. You must always specify the `select` clause as Ecto requires
-       fields to be explicitly listed for schemaless queries. When
-       you have a schema, the fields are retrieved from the schema
-
-    2. Because there isn't a schema, Ecto can't automatically cast
-       interpolated values nor the values returned by the database
+  the `Ecto.Queryable` protocol. For now, we know such protocols is
+  implemented for both atoms (like `User`) and strings (like "users").
 
   In any case, regardless if a schema has been given or not, Ecto
   queries are always composable thanks to its binding system.
@@ -121,27 +120,27 @@ defmodule Ecto.Query do
   ### Query bindings
 
   On the left side of `in` we specify the query bindings.  This is
-  done inside from and join clauses.  In the query below `w` is a
-  binding and `w.prcp` is a field access using this binding.
+  done inside from and join clauses.  In the query below `u` is a
+  binding and `u.age` is a field access using this binding.
 
-      query = from w in Weather, where: w.prcp > 0
+      query = from u in User, where: u.age > 18
 
   Bindings are not exposed from the query.  When composing queries you
   must specify bindings again for each refinement query.  For example
   to further narrow-down above query we again need to tell Ecto what
   bindings to expect:
 
-      query = from w in query, select: w.city
+      query = from u in query, select: u.city
 
   Bindings in Ecto are positional, and the names do not have to be
-  consistent between input and refinement queries.  For example, the
+  consistent between input and refinement queries. For example, the
   query above could also be written as:
 
       query = from q in query, select: q.city
 
   It would make no difference to Ecto. This is important because
   it allows developers to compose queries without caring about
-  the bindings use in the initial query.
+  the bindings used in the initial query.
 
   When using joins, the bindings should be matched in the order they
   are specified:
@@ -160,8 +159,8 @@ defmodule Ecto.Query do
 
       query = from q in query, order_by: q.inserted_at
 
-  The example above will work if the input query has 1 or 10 bindings.
-  As bindings are position based, we will always sort by the
+  The example above will work if the input query has 1 or 10
+  bindings. In the example above, we will always sort by the
   `inserted_at` column from the `from` source.
 
   ### Bindingless operations
@@ -221,22 +220,26 @@ defmodule Ecto.Query do
   create a query:
 
       import Ecto.Query
-      from w in Weather, where: w.prcp > 0, select: w.city
-
-  Remember that keywords is a syntax sugar in Elixir for passing a list
-  of two-item tuples where the first element is an atom. The code above
-  is equivalent to:
-
-      from(w in Weather, [{:where, w.prcp > 0}, {:select, w.city}])
+      from u in "users", where: u.age > 18, select: u.name
 
   Due to the prevalence of the pipe operator in Elixir, Ecto also supports
   a pipe-based syntax:
 
-      from(w in Weather)
-      |> where([w], w.prcp > 0)
-      |> select([w], w.city)
+      "users"
+      |> where([u], u.age > 18)
+      |> select([u], u.name)
 
-  The keyword-based and pipe-based examples are equivalent.
+  The keyword-based and pipe-based examples are equivalent. The downside
+  of using macros is that the binding must be specified for every operation.
+  However, since keyword-based and pipe-based examples are equivalent, the
+  bindingless syntax also works for macros:
+
+      "users"
+      |> where([u], u.age > 18)
+      |> select([:name])
+
+  Such allows developers to write queries using bindings only in more
+  complex query expressions.
 
   This module documents each of those macros, providing examples in
   both the keywords query and pipe expression formats.
