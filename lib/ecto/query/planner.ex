@@ -460,7 +460,7 @@ defmodule Ecto.Query.Planner do
   defp prepare_assocs(_query, _ix, []), do: :ok
   defp prepare_assocs(query, ix, assocs) do
     # We validate the schema exists when preparing joins above
-    {_, parent_schema} = elem(query.sources, ix)
+    {_, parent_schema} = get_source!(:preload, query, ix)
 
     Enum.each assocs, fn {assoc, {child_ix, child_assocs}} ->
       refl = parent_schema.__schema__(:association, assoc)
@@ -688,14 +688,14 @@ defmodule Ecto.Query.Planner do
   end
 
   defp collect_fields({:&, _, [0]}, query, take, :error) do
-    fields = take!(query, take, 0, 0)
+    fields = take!(:select, query, take, 0, 0)
     {[], {:ok, fields}}
   end
   defp collect_fields({:&, _, [0]}, _query, _take, from) do
     {[], from}
   end
   defp collect_fields({:&, _, [ix]}, query, take, from) do
-    fields = take!(query, take, ix, ix)
+    fields = take!(:select, query, take, ix, ix)
     {[select_source(ix, fields)], from}
   end
 
@@ -730,7 +730,7 @@ defmodule Ecto.Query.Planner do
     do: {[expr], from}
 
   defp collect_assocs(query, take, [{assoc, {ix, children}}|tail]) do
-    fields = take!(query, take, assoc, ix)
+    fields = take!(:preload, query, take, assoc, ix)
     [select_source(ix, fields)] ++
       collect_assocs(query, fields, children) ++
       collect_assocs(query, take, tail)
@@ -745,8 +745,8 @@ defmodule Ecto.Query.Planner do
     {:&, [], [ix, fields, length(fields)]}
   end
 
-  defp take!(%{sources: sources} = query, take, field, ix) do
-    source = elem(sources, ix)
+  defp take!(kind, query, take, field, ix) do
+    source = get_source!(kind, query, ix)
     case Access.fetch(take, field) do
       {:ok, _} when not is_tuple(source) ->
         error! query, "cannot take multiple fields on fragment or subquery sources"
@@ -761,6 +761,22 @@ defmodule Ecto.Query.Planner do
           {_, schema} -> schema.__schema__(:fields)
         end
     end
+  end
+
+  defp get_source!(where, %{sources: sources}, ix) do
+    elem(sources, ix)
+  rescue
+    ArgumentError ->
+      raise ArgumentError, """
+      cannot prepare query because it has specified more bindings than
+      bindings available in #{where}. This may happen in situations like
+      below:
+
+          Post |> preload([p, c], comments: c) |> Repo.all
+
+      Since the binding `c` was never specified via a join, Ecto is
+      unable to construct or even pretty print the query.
+      """
   end
 
   ## Helpers
@@ -786,7 +802,7 @@ defmodule Ecto.Query.Planner do
 
   defp source_type!(_kind, _query, _expr, nil, _field), do: :any
   defp source_type!(kind, query, expr, ix, field) when is_integer(ix) do
-    case elem(query.sources, ix) do
+    case get_source!(kind, query, ix) do
       {_, schema} ->
         source_type!(kind, query, expr, schema, field)
       {:fragment, _, _} ->
