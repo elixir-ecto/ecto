@@ -768,7 +768,7 @@ defmodule Ecto.Integration.RepoTest do
     %{id: pid2} = TestRepo.insert!(%Post{title: "1"})
     %{id: pid3} = TestRepo.insert!(%Post{title: "2"})
 
-    [p1, p2, p3] = Post |> select([p], take(p, [:title])) |> TestRepo.all
+    [p1, p2, p3] = Post |> select([p], struct(p, [:title])) |> TestRepo.all
     refute p1.id
     assert p1.title
     refute p2.id

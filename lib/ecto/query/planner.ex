@@ -502,7 +502,7 @@ defmodule Ecto.Query.Planner do
     raise ArgumentError, ":returning expects at least one field to be given, got an empty list"
   end
   def returning(%{select: nil} = query, fields) when is_list(fields) do
-    %{query | select: %SelectExpr{expr: {:&, [], [0]}, take: %{0 => fields},
+    %{query | select: %SelectExpr{expr: {:&, [], [0]}, take: %{0 => {:any, fields}},
                                   line: __ENV__.line, file: __ENV__.file}}
   end
   def returning(%{select: nil} = query, true) do
@@ -662,7 +662,7 @@ defmodule Ecto.Query.Planner do
 
   defp normalize_fields(%{assocs: [], preloads: []} = query,
                         %{take: take, expr: expr} = select) do
-    {fields, from} = collect_fields(expr, query, take, :error)
+    {fields, from} = collect_fields(expr, query, &Access.fetch(take, &1), :error)
 
     fields =
       case from do
@@ -675,11 +675,12 @@ defmodule Ecto.Query.Planner do
 
   defp normalize_fields(%{assocs: assocs} = query,
                         %{take: take, expr: expr} = select) do
-    {fields, from} = collect_fields(expr, query, take, :error)
+    {fields, from} = collect_fields(expr, query, &Access.fetch(take, &1), :error)
 
     case from do
       {:ok, from} ->
-        assocs = collect_assocs(query, Map.get(take, 0), assocs)
+        {tag, take} = Map.get(take, 0, {:any, %{}})
+        assocs = collect_assocs(query, tag, take, assocs)
         fields = [select_source(0, from)|assocs] ++ fields
         %{select | fields: fields}
       :error ->
@@ -687,55 +688,62 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp collect_fields({:&, _, [0]}, query, take, :error) do
-    fields = take!(:select, query, take, 0, 0)
+  defp collect_fields({:&, _, [0]}, query, fetcher, :error) do
+    fields = take!(:select, query, 0, 0, fetcher)
     {[], {:ok, fields}}
   end
-  defp collect_fields({:&, _, [0]}, _query, _take, from) do
+  defp collect_fields({:&, _, [0]}, _query, _fetcher, from) do
     {[], from}
   end
-  defp collect_fields({:&, _, [ix]}, query, take, from) do
-    fields = take!(:select, query, take, ix, ix)
+  defp collect_fields({:&, _, [ix]}, query, fetcher, from) do
+    fields = take!(:select, query, ix, ix, fetcher)
     {[select_source(ix, fields)], from}
   end
 
   defp collect_fields({agg, meta, [{{:., _, [{:&, _, [ix]}, field]}, _, []}] = args},
-                      %{select: select} = query, _take, from) when agg in ~w(avg min max sum)a do
+                      %{select: select} = query, _fetcher, from) when agg in ~w(avg min max sum)a do
     type = source_type!(:select, query, select, ix, field)
     {[{agg, [ecto_type: type] ++ meta, args}], from}
   end
 
   defp collect_fields({{:., _, [{:&, _, [ix]}, field]} = dot, meta, []},
-                      %{select: select} = query, _take, from) do
+                      %{select: select} = query, _fetcher, from) do
     type = source_type!(:select, query, select, ix, field)
     {[{dot, [ecto_type: type] ++ meta, []}], from}
   end
 
-  defp collect_fields({left, right}, query, take, from) do
-    {left, from} = collect_fields(left, query, take, from)
-    {right, from} = collect_fields(right, query, take, from)
+  defp collect_fields({left, right}, query, fetcher, from) do
+    {left, from} = collect_fields(left, query, fetcher, from)
+    {right, from} = collect_fields(right, query, fetcher, from)
     {left ++ right, from}
   end
-  defp collect_fields({:{}, _, elems}, query, take, from),
-    do: collect_fields(elems, query, take, from)
-  defp collect_fields({:%{}, _, [{:|, _, [data, pairs]}]}, query, take, from),
-    do: collect_fields([data|pairs], query, take, from)
-  defp collect_fields({:%{}, _, pairs}, query, take, from),
-    do: collect_fields(pairs, query, take, from)
-  defp collect_fields(list, query, take, from) when is_list(list),
-    do: Enum.flat_map_reduce(list, from, &collect_fields(&1, query, take, &2))
-  defp collect_fields(expr, _query, _take, from) when is_atom(expr) or is_binary(expr) or is_number(expr),
+  defp collect_fields({:{}, _, elems}, query, fetcher, from),
+    do: collect_fields(elems, query, fetcher, from)
+  defp collect_fields({:%{}, _, [{:|, _, [data, pairs]}]}, query, fetcher, from),
+    do: collect_fields([data|pairs], query, fetcher, from)
+  defp collect_fields({:%{}, _, pairs}, query, fetcher, from),
+    do: collect_fields(pairs, query, fetcher, from)
+  defp collect_fields(list, query, fetcher, from) when is_list(list),
+    do: Enum.flat_map_reduce(list, from, &collect_fields(&1, query, fetcher, &2))
+  defp collect_fields(expr, _query, _fetcher, from) when is_atom(expr) or is_binary(expr) or is_number(expr),
     do: {[], from}
-  defp collect_fields(expr, _query, _take, from),
+  defp collect_fields(expr, _query, _fetcher, from),
     do: {[expr], from}
 
-  defp collect_assocs(query, take, [{assoc, {ix, children}}|tail]) do
-    fields = take!(:preload, query, take, assoc, ix)
-    [select_source(ix, fields)] ++
-      collect_assocs(query, fields, children) ++
-      collect_assocs(query, take, tail)
+  defp fetch_assoc(tag, take, field) do
+    case Access.fetch(take, field) do
+      {:ok, value} -> {:ok, {tag, value}}
+      :error -> :error
+    end
   end
-  defp collect_assocs(_query, _take, []) do
+
+  defp collect_assocs(query, tag, take, [{assoc, {ix, children}}|tail]) do
+    fields = take!(:preload, query, assoc, ix, &fetch_assoc(tag, take, &1))
+    [select_source(ix, fields)] ++
+      collect_assocs(query, tag, fields, children) ++
+      collect_assocs(query, tag, take, tail)
+  end
+  defp collect_assocs(_query, _tag, _take, []) do
     []
   end
 
@@ -745,14 +753,16 @@ defmodule Ecto.Query.Planner do
     {:&, [], [ix, fields, length(fields)]}
   end
 
-  defp take!(kind, query, take, field, ix) do
+  defp take!(kind, query, field, ix, fetcher) do
     source = get_source!(kind, query, ix)
-    case Access.fetch(take, field) do
-      {:ok, _} when not is_tuple(source) ->
-        error! query, "cannot take multiple fields on fragment or subquery sources"
-      {:ok, []} ->
-        error! query, "take expects at least one field to be taken, got an empty list"
-      {:ok, fields} ->
+    case fetcher.(field) do
+      {:ok, {_, _}} when not is_tuple(source) ->
+        error! query, "fragment or subquery sources require a literal (map, tuple, etc) to be returned from select"
+      {:ok, {_, []}} ->
+        error! query, "#{kind} expects at least one field to be selected, got an empty list"
+      {:ok, {:struct, _}} when elem(source, 1) == nil ->
+        error! query, "struct/2 expects a schema to be given as source"
+      {:ok, {_, fields}} ->
         List.wrap(fields)
       :error ->
         case source do

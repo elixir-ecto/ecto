@@ -9,14 +9,14 @@ defmodule Ecto.Repo.Preloader do
   Transforms a result set based on query preloads, loading
   the associations onto their parent model.
   """
-  @spec query([list], Ecto.Repo.t, list, list, fun, Keyword.t) :: [list]
-  def query([], _repo, _preloads, _assocs, _fun, _opts), do: []
-  def query(rows, _repo, [], _assocs, fun, _opts), do: Enum.map(rows, fun)
+  @spec query([list], Ecto.Repo.t, list, list, Access.t, fun, Keyword.t) :: [list]
+  def query([], _repo, _preloads, _assocs, _take, _fun, _opts), do: []
+  def query(rows, _repo, [], _assocs, _take, fun, _opts), do: Enum.map(rows, fun)
 
-  def query(rows, repo, preloads, assocs, fun, opts) do
+  def query(rows, repo, preloads, assocs, take, fun, opts) do
     rows
     |> extract
-    |> do_preload(repo, preloads, assocs, opts)
+    |> do_preload(repo, preloads, assocs, take, opts)
     |> unextract(rows, fun)
   end
 
@@ -34,15 +34,15 @@ defmodule Ecto.Repo.Preloader do
   @spec preload(structs, atom, atom | list, Keyword.t) ::
                 structs when structs: [Ecto.Schema.t] | Ecto.Schema.t
   def preload(structs, repo, preloads, opts) when is_list(structs) do
-    do_preload(structs, repo, preloads, nil, opts)
+    do_preload(structs, repo, preloads, nil, opts[:take], opts)
   end
 
   def preload(struct, repo, preloads, opts) when is_map(struct) do
-    do_preload([struct], repo, preloads, nil, opts) |> hd()
+    do_preload([struct], repo, preloads, nil, opts[:take], opts) |> hd()
   end
 
-  defp do_preload(structs, repo, preloads, assocs, opts) do
-    preloads = normalize(preloads, assocs, opts[:take], preloads)
+  defp do_preload(structs, repo, preloads, assocs, take, opts) do
+    preloads = normalize(preloads, assocs, take, preloads)
     preload_each(structs, repo, preloads, opts)
   rescue
     e ->

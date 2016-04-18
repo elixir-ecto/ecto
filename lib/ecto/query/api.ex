@@ -276,15 +276,15 @@ defmodule Ecto.Query.API do
   fields by using `take/2`:
 
       from p in Post,
-        select: take(p, [:title, :body])
+        select: struct(p, [:title, :body])
 
-  `take/2` can also be used to dynamically select fields:
+  `struct/2` can also be used to dynamically select fields:
 
       fields = [:title, :body]
-      from p in Post, select: take(p, ^fields)
+      from p in Post, select: struct(p, ^fields)
 
   As a convenience, `select` allows developers to take fields
-  without an explicit call to `take/2`:
+  without an explicit call to `struct/2`:
 
       from p in Post, select: [:title, :body]
 
@@ -293,19 +293,19 @@ defmodule Ecto.Query.API do
       fields = [:title, :body]
       from p in Post, select: ^fields
 
-  However, `take/2` is still useful when you want to limit
+  However, `struct/2` is still useful when you want to limit
   the fields of different structs:
 
       from(city in City, join: country in assoc(city, :country),
-           select: {take(city, [:name]), take(country, [:population])}
+           select: {struct(city, [:name]), struct(country, [:population])}
 
   For preloads, the taken fields may be specified from the parent:
 
       from(city in City, preload: :country,
-           select: take(city, [:name, country: :population]))
+           select: struct(city, [:name, country: :population]))
 
   """
-  def take(source, fields), do: doc! [source, fields]
+  def struct(source, fields), do: doc! [source, fields]
 
   @doc """
   Casts the given value to the given type.

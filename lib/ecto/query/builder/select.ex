@@ -24,12 +24,12 @@ defmodule Ecto.Query.Builder.Select do
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {%{}, %{}}}
   def escape({:^, _, [interpolated]}, _vars, _env) do
     fields = quote(do: Ecto.Query.Builder.Select.fields!(unquote(interpolated)))
-    {{:{}, [], [:&, [], [0]]}, {%{}, %{0 => fields}}}
+    {{:{}, [], [:&, [], [0]]}, {%{}, %{0 => {:any, fields}}}}
   end
 
   def escape(other, vars, env) do
     if take?(other) do
-      {{:{}, [], [:&, [], [0]]}, {%{}, %{0 => other}}}
+      {{:{}, [], [:&, [], [0]]}, {%{}, %{0 => {:any, other}}}}
     else
       escape(other, {%{}, %{}}, vars, env)
     end
@@ -64,8 +64,14 @@ defmodule Ecto.Query.Builder.Select do
     Enum.map_reduce(list, params_take, &escape(&1, &2, vars, env))
   end
 
-  # take(var, [:foo, :bar])
-  defp escape({:take, _, [{var, _, context}, fields]}, {params, take}, vars, _env)
+  defp escape({:take, meta, args}, {params, take}, vars, env) do
+    IO.puts :stderr, "warning: using take/2 in queries is deprecated, use struct/2 instead\n" <>
+                     Exception.format_stacktrace(Macro.Env.stacktrace(env))
+    escape({:struct, meta, args}, {params, take}, vars, env)
+  end
+
+  # struct(var, [:foo, :bar])
+  defp escape({:struct, _, [{var, _, context}, fields]}, {params, take}, vars, _env)
        when is_atom(var) and is_atom(context) do
     taken =
       case fields do
@@ -79,7 +85,7 @@ defmodule Ecto.Query.Builder.Select do
       end
 
     expr = Builder.escape_var(var, vars)
-    take = Map.put(take, Builder.find_var!(var, vars), taken)
+    take = Map.put(take, Builder.find_var!(var, vars), {:struct, taken})
     {expr, {params, take}}
   end
 

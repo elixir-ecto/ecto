@@ -471,12 +471,16 @@ defmodule Ecto.Query.PlannerTest do
             {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
   end
 
-  test "normalize: select with take" do
-    query = Post |> select([p], take(p, [:id, :title])) |> normalize()
+  test "normalize: select with struct/2" do
+    assert_raise Ecto.QueryError, ~r"struct/2 expects a schema to be given as source", fn ->
+      "posts" |> select([p], struct(p, [:id, :title])) |> normalize()
+    end
+
+    query = Post |> select([p], struct(p, [:id, :title])) |> normalize()
     assert query.select.expr == {:&, [], [0]}
     assert query.select.fields == [{:&, [], [0, [:id, :title], 2]}]
 
-    query = Post |> select([p], {take(p, [:id, :title]), p.title}) |> normalize()
+    query = Post |> select([p], {struct(p, [:id, :title]), p.title}) |> normalize()
     assert query.select.fields ==
            [{:&, [], [0, [:id, :title], 2]},
             {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
@@ -484,18 +488,18 @@ defmodule Ecto.Query.PlannerTest do
     query =
       Post
       |> join(:inner, [_], c in Comment)
-      |> select([p, c], {p, take(c, [:id, :text])})
+      |> select([p, c], {p, struct(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
            [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
             {:&, [], [1, [:id, :text], 2]}]
   end
 
-  test "normalize: select with take on assoc" do
+  test "normalize: select with struct/2 on assoc" do
     query =
       Post
       |> join(:inner, [_], c in Comment)
-      |> select([p, c], take(p, [:id, :title, comments: [:id, :text]]))
+      |> select([p, c], struct(p, [:id, :title, comments: [:id, :text]]))
       |> preload([p, c], comments: c)
       |> normalize()
     assert query.select.expr == {:&, [], [0]}
@@ -506,7 +510,7 @@ defmodule Ecto.Query.PlannerTest do
     query =
       Post
       |> join(:inner, [_], c in Comment)
-      |> select([p, c], take(p, [:id, :title, comments: [:id, :text, post: :id], extra_comments: :id]))
+      |> select([p, c], struct(p, [:id, :title, comments: [:id, :text, post: :id], extra_comments: :id]))
       |> preload([p, c], comments: {c, post: p}, extra_comments: c)
       |> normalize()
     assert query.select.expr == {:&, [], [0]}
@@ -648,7 +652,7 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.fields == [{{:., [], [{:&, [], [1]}, :title]}, [ecto_type: :string], []}]
 
     query = from p in Post, select: {p.id, p.title}
-    assert_raise Ecto.QueryError, ~r/cannot take multiple fields on fragment or subquery sources in query/, fn ->
+    assert_raise Ecto.QueryError, ~r/fragment or subquery sources require a literal/, fn ->
       normalize(from(p in subquery(query), select: [:title]))
     end
   end

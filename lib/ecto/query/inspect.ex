@@ -128,8 +128,12 @@ defimpl Inspect, for: Ecto.Query do
   # Convert variables to proper names
   defp expr_to_string({:&, _, [ix]}, _, names, %{take: take}) do
     case take do
-      %{^ix => fields} -> "take(" <> elem(names, ix) <> ", " <> Kernel.inspect(fields) <> ")"
-      _ -> elem(names, ix)
+      %{^ix => {:any, fields}} when ix == 0 ->
+        Kernel.inspect(fields)
+      %{^ix => {tag, fields}} ->
+        "#{tag}(" <> elem(names, ix) <> ", " <> Kernel.inspect(fields) <> ")"
+      _ ->
+        elem(names, ix)
     end
   end
 

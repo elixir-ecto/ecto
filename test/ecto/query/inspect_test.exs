@@ -184,7 +184,10 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p in Inspect.Post, select: p}
 
     assert i(from(p in Post, select: [:foo])) ==
-           ~s{from p in Inspect.Post, select: take(p, [:foo])}
+           ~s{from p in Inspect.Post, select: [:foo]}
+
+    assert i(from(p in Post, select: struct(p, [:foo]))) ==
+           ~s{from p in Inspect.Post, select: struct(p, [:foo])}
   end
 
   test "select after planner" do
@@ -192,7 +195,7 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p in Inspect.Post, select: p}
 
     assert i(plan from(p in Post, select: [:foo])) ==
-           ~s{from p in Inspect.Post, select: take(p, [:foo])}
+           ~s{from p in Inspect.Post, select: [:foo]}
   end
 
   test "params" do

@@ -182,7 +182,7 @@ defmodule Ecto.Query do
       from p in Post,
         where: p.category == "fresh and new",
         order_by: [desc: p.published_at],
-        select: take(p, [:id, :title, :body])
+        select: struct(p, [:id, :title, :body])
 
   One advantage of bindingless queries is that they are data-driven
   and therefore useful for dynamically building queries. For example,
@@ -559,7 +559,7 @@ defmodule Ecto.Query do
 
   The syntax above is equivalent to:
 
-      from(city in City, select: take(city, [:name]))
+      from(city in City, select: struct(city, [:name]))
 
   For more information, read the docs for `Ecto.Query.API.take/2`.
 

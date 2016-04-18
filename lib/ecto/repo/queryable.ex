@@ -125,11 +125,11 @@ defmodule Ecto.Repo.Queryable do
         sources: sources, assocs: assocs, preloads: preloads} ->
         preprocess = preprocess(prefix, sources, adapter)
         {count, rows} = adapter.execute(repo, meta, prepared, params, preprocess, opts)
+        {_, take} = Map.get(take, 0, {:any, %{}})
         {count,
           rows
           |> Ecto.Repo.Assoc.query(assocs, sources)
-          |> Ecto.Repo.Preloader.query(repo, preloads, assocs, postprocess(select, fields),
-                                       [take: Map.get(take, 0)] ++ opts)}
+          |> Ecto.Repo.Preloader.query(repo, preloads, assocs, take, postprocess(select, fields), opts)}
     end
   end
 
