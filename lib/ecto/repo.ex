@@ -355,7 +355,7 @@ defmodule Ecto.Repo do
 
       # Returns the average number of visits for the top 10
       query = from Post, limit: 10
-      Repo.aggregate(Post, :avg, :visits)
+      Repo.aggregate(query, :avg, :visits)
   """
   @callback aggregate(Ecto.Queryable.t, aggregate :: :avg | :count | :max | :min | :sum,
                       field :: atom, Keyword.t) :: term | nil
