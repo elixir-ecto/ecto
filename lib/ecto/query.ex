@@ -929,7 +929,7 @@ defmodule Ecto.Query do
   ## Expressions examples
 
       Post |> preload(:comments) |> select([p], p)
-      Post |> preload([p, c], [:user, comments: c]) |> select([p], p)
+      Post |> join(:left, [p], c in assoc(p, :comments)) |> preload([p, c], [:user, comments: c]) |> select([p], p)
 
   """
   defmacro preload(query, bindings \\ [], expr) do
