@@ -34,12 +34,13 @@ defmodule Mix.Ecto do
         warning: could not find repositories for application #{inspect app}.
 
         You can avoid this warning by passing the -r flag or by setting the
-        repositories managed by this application in your config files:
+        repositories managed by this application in your config/config.exs:
 
             config #{inspect app}, ecto_repos: [...]
 
         The configuration may be an empty list if it does not define any repo.
         """
+        []
 
       true ->
         []

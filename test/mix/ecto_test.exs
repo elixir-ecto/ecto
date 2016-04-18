@@ -9,6 +9,10 @@ defmodule Mix.EctoTest do
     assert parse_repo(["-r", "Repo", "--quiet"]) == [Repo]
     assert parse_repo(["-r", "Repo", "-r", "Repo2", "--quiet"]), [Repo, Repo2]
 
+    # Warning
+    assert parse_repo([]) == []
+
+    # No warning
     Application.put_env(:ecto, :ecto_repos, [Foo.Repo])
     assert parse_repo([]) == [Foo.Repo]
   after
