@@ -521,6 +521,52 @@ defmodule Ecto.Query.PlannerTest do
             {:&, [], [0, [:id], 1]}]
   end
 
+  test "normalize: select with map/2" do
+    query = Post |> select([p], map(p, [:id, :title])) |> normalize()
+    assert query.select.expr == {:&, [], [0]}
+    assert query.select.fields == [{:&, [], [0, [:id, :title], 2]}]
+
+    query = Post |> select([p], {map(p, [:id, :title]), p.title}) |> normalize()
+    assert query.select.fields ==
+           [{:&, [], [0, [:id, :title], 2]},
+            {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
+
+    query =
+      Post
+      |> join(:inner, [_], c in Comment)
+      |> select([p, c], {p, map(c, [:id, :text])})
+      |> normalize()
+    assert query.select.fields ==
+           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
+            {:&, [], [1, [:id, :text], 2]}]
+  end
+
+  test "normalize: select with map/2 on assoc" do
+    query =
+      Post
+      |> join(:inner, [_], c in Comment)
+      |> select([p, c], map(p, [:id, :title, comments: [:id, :text]]))
+      |> preload([p, c], comments: c)
+      |> normalize()
+    assert query.select.expr == {:&, [], [0]}
+    assert query.select.fields ==
+           [{:&, [], [0, [:id, :title], 2]},
+            {:&, [], [1, [:id, :text], 2]}]
+
+    query =
+      Post
+      |> join(:inner, [_], c in Comment)
+      |> select([p, c], map(p, [:id, :title, comments: [:id, :text, post: :id], extra_comments: :id]))
+      |> preload([p, c], comments: {c, post: p}, extra_comments: c)
+      |> normalize()
+    assert query.select.expr == {:&, [], [0]}
+    assert query.select.fields ==
+           [{:&, [], [0, [:id, :title], 2]},
+            {:&, [], [1, [:id], 1]},
+            {:&, [], [1, [:id, :text], 2]},
+            {:&, [], [0, [:id], 1]}]
+  end
+
   test "normalize: preload" do
     message = ~r"the binding used in `from` must be selected in `select` when using `preload`"
     assert_raise Ecto.QueryError, message, fn ->

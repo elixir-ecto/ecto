@@ -763,23 +763,60 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
-  test "query select take" do
+  test "query select take with structs" do
     %{id: pid1} = TestRepo.insert!(%Post{title: "1"})
-    %{id: pid2} = TestRepo.insert!(%Post{title: "1"})
-    %{id: pid3} = TestRepo.insert!(%Post{title: "2"})
+    %{id: pid2} = TestRepo.insert!(%Post{title: "2"})
+    %{id: pid3} = TestRepo.insert!(%Post{title: "3"})
 
     [p1, p2, p3] = Post |> select([p], struct(p, [:title])) |> TestRepo.all
     refute p1.id
-    assert p1.title
+    assert p1.title == "1"
+    assert match?(%Post{}, p1)
     refute p2.id
-    assert p2.title
+    assert p2.title == "2"
+    assert match?(%Post{}, p2)
     refute p3.id
-    assert p3.title
+    assert p3.title == "3"
+    assert match?(%Post{}, p3)
+
+    [p1, p2, p3] = Post |> select([:id]) |> order_by([:id]) |> TestRepo.all
+    assert %Post{id: ^pid1} = p1
+    assert %Post{id: ^pid2} = p2
+    assert %Post{id: ^pid3} = p3
+  end
+
+  test "query select take with maps" do
+    %{id: pid1} = TestRepo.insert!(%Post{title: "1"})
+    %{id: pid2} = TestRepo.insert!(%Post{title: "2"})
+    %{id: pid3} = TestRepo.insert!(%Post{title: "3"})
+
+    [p1, p2, p3] = "posts" |> select([p], map(p, [:title])) |> TestRepo.all
+    assert p1 == %{title: "1"}
+    assert p2 == %{title: "2"}
+    assert p3 == %{title: "3"}
 
     [p1, p2, p3] = "posts" |> select([:id]) |> order_by([:id]) |> TestRepo.all
     assert p1 == %{id: pid1}
     assert p2 == %{id: pid2}
     assert p3 == %{id: pid3}
+  end
+
+  test "query select take with assocs" do
+    %{id: pid} = TestRepo.insert!(%Post{title: "post"})
+    TestRepo.insert!(%Comment{post_id: pid, text: "comment"})
+
+    fields = [:id, :title, comments: [:text, :post_id]]
+
+    [p] = Post |> preload(:comments) |> select([p], ^fields) |> TestRepo.all
+    assert match?(%Post{title: "post"}, p)
+    assert match?([%Comment{text: "comment"}], p.comments)
+
+    [p] = Post |> preload(:comments) |> select([p], struct(p, ^fields)) |> TestRepo.all
+    assert match?(%Post{title: "post"}, p)
+    assert match?([%Comment{text: "comment"}], p.comments)
+
+    [p] = Post |> preload(:comments) |> select([p], map(p, ^fields)) |> TestRepo.all
+    assert p == %{id: pid, title: "post", comments: [%{text: "comment", post_id: pid}]}
   end
 
   test "query count distinct" do

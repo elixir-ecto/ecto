@@ -9,7 +9,8 @@ defmodule Ecto.Query.API do
     * Null check functions: `is_nil/1`
     * Aggregates: `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
     * Date/time intervals: `datetime_add/3`, `date_add/3`, `from_now/2`, `ago/2`
-    * General: `fragment/1`, `field/2`, `type/2` and `take/2`
+    * Inside select: `struct/2`, `map/2` and literals (map, tuples, lists, etc)
+    * General: `fragment/1`, `field/2` and `type/2`
 
   Note the functions in this module exist for documentation
   purposes and one should never need to invoke them directly.
@@ -269,11 +270,11 @@ defmodule Ecto.Query.API do
   def field(source, field), do: doc! [source, field]
 
   @doc """
-  Used in `select` to specify which fields should be returned.
+  Used in `select` to specify which struct fields should be returned.
 
   For example, if you don't need all fields to be returned
   as part of a struct, you can filter it to include only certain
-  fields by using `take/2`:
+  fields by using `struct/2`:
 
       from p in Post,
         select: struct(p, [:title, :body])
@@ -297,15 +298,49 @@ defmodule Ecto.Query.API do
   the fields of different structs:
 
       from(city in City, join: country in assoc(city, :country),
-           select: {struct(city, [:name]), struct(country, [:population])}
+           select: {struct(city, [:country_id, :name]), struct(country, [:id, :population])}
 
-  For preloads, the taken fields may be specified from the parent:
+  For preloads, the selected fields may be specified from the parent:
 
       from(city in City, preload: :country,
-           select: struct(city, [:name, country: :population]))
+           select: struct(city, [:country_id, :name, country: [:id, :population]]))
 
+  **IMPORTANT**: When filtering fields for associations, you
+  MUST include the foreign keys used in the relationship,
+  otherwise Ecto will be unable to find associated records.
   """
   def struct(source, fields), do: doc! [source, fields]
+
+  @doc """
+  Used in `select` to specify which fields should be returned as a map.
+
+  For example, if you don't need all fields to be returned or
+  neither need a struct, you can use `map/2` to achieve both:
+
+      from p in Post,
+        select: map(p, [:title, :body])
+
+  `map/2` can also be used to dynamically select fields:
+
+      fields = [:title, :body]
+      from p in Post, select: map(p, ^fields)
+
+  `map/2` is also useful when you want to limit the fields
+  of different structs:
+
+      from(city in City, join: country in assoc(city, :country),
+           select: {map(city, [:country_id, :name]), map(country, [:id, :population])}
+
+  For preloads, the selected fields may be specified from the parent:
+
+      from(city in City, preload: :country,
+           select: map(city, [:country_id, :name, country: [:id, :population]]))
+
+  **IMPORTANT**: When filtering fields for associations, you
+  MUST include the foreign keys used in the relationship,
+  otherwise Ecto will be unable to find associated records.
+  """
+  def map(source, fields), do: doc! [source, fields]
 
   @doc """
   Casts the given value to the given type.

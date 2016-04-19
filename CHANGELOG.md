@@ -151,7 +151,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Query] Allow the `:on` field to be specified with association joins
   * [Query] Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`
   * [Query] Support map update syntax. Example: `from p in Post, select: %{p | title: "fixed"}`
-  * [Query] Allow struct fields to be selected with `take/2`, including support for dynamic fields
+  * [Query] Allow struct fields to be selected with `struct/2` and map fields with `map/2`, including support for dynamic fields
   * [Query] Add `first/2` and `last/2`
   * [Repo] Add `Repo.aggregate/4` for easy aggregations
   * [Repo] Allow custom `select` field in preload queries

@@ -2,7 +2,7 @@ defmodule Ecto.SubQuery do
   @doc """
   Stores subquery information.
   """
-  defstruct [:query, :params, :types, :fields, :sources, :select, :cache]
+  defstruct [:query, :params, :types, :fields, :sources, :select, :cache, :take]
 end
 
 defmodule Ecto.Query do
@@ -561,7 +561,13 @@ defmodule Ecto.Query do
 
       from(city in City, select: struct(city, [:name]))
 
-  For more information, read the docs for `Ecto.Query.API.take/2`.
+  You can also write:
+
+      from(city in City, select: map(city, [:name]))
+
+  If you want a map with only the selected fields to be returned.
+  For more information, read the docs for `Ecto.Query.API.struct/2`
+  and `Ecto.Query.API.map/2`.
 
   ## Expressions examples
 

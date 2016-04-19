@@ -152,9 +152,10 @@ defmodule Ecto.Query.Planner do
       # won't need to be modified again when normalized later on.
       inner_query = inner_query |> returning(true) |> normalize_select()
 
-      %{select: %{fields: fields, expr: select}, sources: sources} = inner_query
-      %{subquery | query: inner_query, params: params, select: select, fields: fields,
-                   sources: sources, types: subquery_types(inner_query), cache: key}
+      %{select: %{fields: fields, expr: select, take: take}, sources: sources} = inner_query
+      %{subquery | query: inner_query, params: params, select: select,
+                   fields: fields, types: subquery_types(inner_query),
+                   cache: key, take: take, sources: sources}
     rescue
       e -> raise Ecto.SubQueryError, query: query, exception: e
     end

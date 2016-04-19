@@ -18,6 +18,9 @@ defmodule Ecto.Query.Builder.SelectTest do
     assert {Macro.escape(quote do &0 end), {%{}, %{0 => {:struct, [:foo, :bar, baz: :bat]}}}} ==
            escape(quote do struct(x, [:foo, :bar, baz: :bat]) end, [x: 0], __ENV__)
 
+    assert {Macro.escape(quote do &0 end), {%{}, %{0 => {:map, [:foo, :bar, baz: :bat]}}}} ==
+           escape(quote do map(x, [:foo, :bar, baz: :bat]) end, [x: 0], __ENV__)
+
     assert {{:{}, [], [:{}, [], [0, 1, 2]]}, {%{}, %{}}} ==
            escape(quote do {0, 1, 2} end, [], __ENV__)
 
@@ -45,6 +48,7 @@ defmodule Ecto.Query.Builder.SelectTest do
   test "select interpolation" do
     fields = [:foo, :bar, :baz]
     assert select("q", ^fields).select.take == %{0 => {:any, fields}}
+    assert select("q", [q], map(q, ^fields)).select.take == %{0 => {:map, fields}}
     assert select("q", [q], struct(q, ^fields)).select.take == %{0 => {:struct, fields}}
   end
 end

@@ -23,7 +23,7 @@ defmodule Ecto.Query.Builder.Select do
   """
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {%{}, %{}}}
   def escape({:^, _, [interpolated]}, _vars, _env) do
-    fields = quote(do: Ecto.Query.Builder.Select.fields!(unquote(interpolated)))
+    fields = quote(do: Ecto.Query.Builder.Select.fields!(:select, unquote(interpolated)))
     {{:{}, [], [:&, [], [0]]}, {%{}, %{0 => {:any, fields}}}}
   end
 
@@ -70,22 +70,22 @@ defmodule Ecto.Query.Builder.Select do
     escape({:struct, meta, args}, {params, take}, vars, env)
   end
 
-  # struct(var, [:foo, :bar])
-  defp escape({:struct, _, [{var, _, context}, fields]}, {params, take}, vars, _env)
-       when is_atom(var) and is_atom(context) do
+  # map/struct(var, [:foo, :bar])
+  defp escape({tag, _, [{var, _, context}, fields]}, {params, take}, vars, _env)
+       when tag in [:map, :struct] and is_atom(var) and is_atom(context) do
     taken =
       case fields do
         {:^, _, [interpolated]} ->
-          quote(do: Ecto.Query.Builder.Select.fields!(unquote(interpolated)))
+          quote(do: Ecto.Query.Builder.Select.fields!(unquote(tag), unquote(interpolated)))
         _ when is_list(fields) ->
           fields
         true ->
-          Builder.error! "`take/2` in `select` expects either a literal or "
+          Builder.error! "`#{tag}/2` in `select` expects either a literal or "
                          "an interpolated list of atom fields"
       end
 
     expr = Builder.escape_var(var, vars)
-    take = Map.put(take, Builder.find_var!(var, vars), {:struct, taken})
+    take = Map.put(take, Builder.find_var!(var, vars), {tag, taken})
     {expr, {params, take}}
   end
 
@@ -119,12 +119,12 @@ defmodule Ecto.Query.Builder.Select do
   @doc """
   Called at runtime to verify a field.
   """
-  def fields!(fields) do
+  def fields!(tag, fields) do
     if take?(fields) do
       fields
     else
       raise ArgumentError,
-        "expected a list of fields in `take/2` inside `select`, got: `#{inspect fields}`"
+        "expected a list of fields in `#{tag}/2` inside `select`, got: `#{inspect fields}`"
     end
   end
 

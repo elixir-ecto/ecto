@@ -123,13 +123,14 @@ defmodule Ecto.Repo.Queryable do
         adapter.execute(repo, meta, prepared, params, nil, opts)
       %{select: select, fields: fields, prefix: prefix, take: take,
         sources: sources, assocs: assocs, preloads: preloads} ->
-        preprocess = preprocess(prefix, sources, adapter)
+        preprocess    = preprocess(prefix, sources, adapter)
         {count, rows} = adapter.execute(repo, meta, prepared, params, preprocess, opts)
-        {_, take} = Map.get(take, 0, {:any, %{}})
+        postprocess   = postprocess(select, fields, take)
+        {_, take_0}   = Map.get(take, 0, {:any, %{}})
         {count,
           rows
           |> Ecto.Repo.Assoc.query(assocs, sources)
-          |> Ecto.Repo.Preloader.query(repo, preloads, assocs, take, postprocess(select, fields), opts)}
+          |> Ecto.Repo.Preloader.query(repo, preloads, assocs, take_0, postprocess, opts)}
     end
   end
 
@@ -146,8 +147,9 @@ defmodule Ecto.Repo.Queryable do
       {source, schema} ->
         Ecto.Schema.__load__(schema, prefix, source, context, {fields, value},
                              &Ecto.Type.adapter_load(adapter, &1, &2))
-      %Ecto.SubQuery{sources: sources, fields: fields, select: select} ->
-        postprocess(select, fields).(load_subquery(fields, value, prefix, context, sources, adapter))
+      %Ecto.SubQuery{sources: sources, fields: fields, select: select, take: take} ->
+        loaded = load_subquery(fields, value, prefix, context, sources, adapter)
+        postprocess(select, fields, take).(loaded)
     end
   end
 
@@ -195,62 +197,87 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  defp postprocess(select, fields) do
+  defp postprocess(select, fields, take) do
     # The planner always put the from as the first
     # entry in the query, avoiding fetching it multiple
     # times even if it appears multiple times in the query.
     # So we always need to handle it specially.
     from? = match?([{:&, _, [0, _, _]}|_], fields)
-    &postprocess(&1, select, from?)
+    &postprocess(&1, select, take, from?)
   end
 
-  defp postprocess(row, expr, true),
-    do: transform_row(expr, hd(row), tl(row)) |> elem(0)
-  defp postprocess(row, expr, false),
-    do: transform_row(expr, nil, row) |> elem(0)
+  defp postprocess(row, expr, take, true),
+    do: transform_row(expr, take, hd(row), tl(row)) |> elem(0)
+  defp postprocess(row, expr, take, false),
+    do: transform_row(expr, take, nil, row) |> elem(0)
 
-  defp transform_row({:&, _, [0]}, from, values) do
-    {from, values}
+  defp transform_row({:&, _, [0]}, take, from, values) do
+    {convert_to_tag(from, take[0]), values}
   end
 
-  defp transform_row({:{}, _, list}, from, values) do
-    {result, values} = transform_row(list, from, values)
+  defp transform_row({:&, _, [ix]}, take, _from, [value|values]) do
+    {convert_to_tag(value, take[ix]), values}
+  end
+
+  defp transform_row({:{}, _, list}, take, from, values) do
+    {result, values} = transform_row(list, take, from, values)
     {List.to_tuple(result), values}
   end
 
-  defp transform_row({left, right}, from, values) do
-    {[left, right], values} = transform_row([left, right], from, values)
+  defp transform_row({left, right}, take, from, values) do
+    {[left, right], values} = transform_row([left, right], take, from, values)
     {{left, right}, values}
   end
 
-  defp transform_row({:%{}, _, [{:|, _, [data, pairs]}]}, from, values) do
-    {data, values} = transform_row(data, from, values)
+  defp transform_row({:%{}, _, [{:|, _, [data, pairs]}]}, take, from, values) do
+    {data, values} = transform_row(data, take, from, values)
     Enum.reduce pairs, {data, values}, fn {k, v}, {data, acc} ->
-      {k, acc} = transform_row(k, from, acc)
-      {v, acc} = transform_row(v, from, acc)
+      {k, acc} = transform_row(k, take, from, acc)
+      {v, acc} = transform_row(v, take, from, acc)
       {:maps.update(k, v, data), acc}
     end
   end
 
-  defp transform_row({:%{}, _, pairs}, from, values) do
+  defp transform_row({:%{}, _, pairs}, take, from, values) do
     Enum.reduce pairs, {%{}, values}, fn {k, v}, {map, acc} ->
-      {k, acc} = transform_row(k, from, acc)
-      {v, acc} = transform_row(v, from, acc)
+      {k, acc} = transform_row(k, take, from, acc)
+      {v, acc} = transform_row(v, take, from, acc)
       {Map.put(map, k, v), acc}
     end
   end
 
-  defp transform_row(list, from, values) when is_list(list) do
-    Enum.map_reduce(list, values, &transform_row(&1, from, &2))
+  defp transform_row(list, take, from, values) when is_list(list) do
+    Enum.map_reduce(list, values, &transform_row(&1, take, from, &2))
   end
 
-  defp transform_row(expr, _from, values) when is_atom(expr) or is_binary(expr) or is_number(expr) do
+  defp transform_row(expr, _take, _from, values)
+       when is_atom(expr) or is_binary(expr) or is_number(expr) do
     {expr, values}
   end
 
-  defp transform_row(_, _from, values) do
-    [value|values] = values
+  defp transform_row(_, _take, _from, [value|values]) do
     {value, values}
+  end
+
+  # We only need to worry about the struct -> map scenario.
+  # map -> struct is denied during compilation time.
+  # map -> map, struct -> struct and map/struct -> any are noop.
+  defp convert_to_tag(%{__struct__: _} = value, {:map, fields}),
+    do: to_map(value, fields)
+  defp convert_to_tag(value, _),
+    do: value
+
+  defp to_map(value, fields) when is_list(value) do
+    Enum.map(value, &to_map(&1, fields))
+  end
+
+  defp to_map(value, fields) do
+    for field <- fields, into: %{} do
+      case field do
+        {k, v} -> {k, to_map(Map.fetch!(value, k), List.wrap(v))}
+        k -> {k, Map.fetch!(value, k)}
+      end
+    end
   end
 
   defp query_for_get(repo, _queryable, nil) do
