@@ -164,8 +164,8 @@ defmodule Ecto.Adapters.MySQL do
     if pk == nil and rest == [] and model.__schema__(:type, raw) == :id do
       insert(repo, model_meta, params, {raw, :id, nil}, [], opts)
     else
-      raise ArgumentError, "MySQL does not support :read_after_writes in models. " <>
-                           "The following fields in #{inspect model} are tagged as such: #{inspect returning}"
+      raise ArgumentError, "MySQL supports read_after_writes for a single auto increment field only. " <>
+                           "The following fields in #{inspect model} are requested for read_after_writes: #{inspect returning}"
     end
   end
 
