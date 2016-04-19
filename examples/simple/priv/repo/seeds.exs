@@ -10,7 +10,7 @@
 # We recommend using the bang functions (`insert!`, `update!`
 # and so on) as they will fail if something goes wrong.
 
-data = [ 
+data = [
   {"United States",[
     {"San Francisco", [
         {"2015-09-12", 59, 73, 0.05},
@@ -39,30 +39,30 @@ data = [
 defmodule Seeds do
   # Start import
   def import_data(data) do
-    import_countries data 
+    import_countries data
   end
 
   # Import countries
   defp import_countries([]), do: nil
-  defp import_countries([{country_name, cities}=h|t]) do
-    country = Simple.Repo.insert!(%Country{name: country_name})
+  defp import_countries([{country_name, cities}|t]) do
+    country = Simple.Repo.insert!(%Country{name: country_name}, log: false)
     import_cities country, cities
     import_countries t
   end
 
   # Import cities
   defp import_cities(_,[]), do: nil
-  defp import_cities(country, [{city_name,weather}=h|t]) do
-    city = Simple.Repo.insert!(%City{name: city_name, country_id: country.id})
+  defp import_cities(country, [{city_name,weather}|t]) do
+    city = Simple.Repo.insert!(%City{name: city_name, country_id: country.id}, log: false)
     import_weather city, weather
     import_cities country, t
   end
 
   # Import weather
   defp import_weather(_,[]), do: nil
-  defp import_weather(city, [{wdate,temp_lo,temp_hi,prcp}=h|t]) do
+  defp import_weather(city, [{wdate,temp_lo,temp_hi,prcp}|t]) do
     {:ok, ecto_date} = Ecto.Date.cast(wdate)
-    Simple.Repo.insert!(%Weather{wdate: ecto_date, temp_lo: temp_lo, temp_hi: temp_hi, prcp: prcp, city_id: city.id})
+    Simple.Repo.insert!(%Weather{wdate: ecto_date, temp_lo: temp_lo, temp_hi: temp_hi, prcp: prcp, city_id: city.id}, log: false)
     import_weather city, t
   end
 end

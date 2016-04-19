@@ -18,13 +18,13 @@ Inside IEx, run:
 Print results inside IEx:
 
 ```elixir
-iex(1)> Simple.no_prcp_query |> Enum.each (fn(w) -> IO.puts "weather id=#{w.id}, city_id=#{w.city_id}, wdate=#{w.wdate}" end)
+iex(1)> Simple.no_prcp_query |> Enum.each(fn(w) -> IO.puts "weather id=#{w.id}, city_id=#{w.city_id}, wdate=#{w.wdate}" end)
 weather id=5, city_id=1, wdate=2015-09-16
 weather id=8, city_id=2, wdate=2015-09-12
 weather id=11, city_id=3, wdate=2015-09-12
 :ok
 
-iex(2)> Simple.countries_with_weather_query |> Enum.each (fn(c) -> IO.puts c.name end)
+iex(2)> Simple.countries_with_weather_query |> Enum.each(fn(c) -> IO.puts c.name end)
 United States
 United Kingdom
 :ok
