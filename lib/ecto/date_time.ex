@@ -573,7 +573,7 @@ defmodule Ecto.DateTime do
                    hour: hour, min: min, sec: sec}
   end
 
-  # Callback invoked by autogenerate in schema.
+  # Callback invoked by autogenerate fields.
   @doc false
   def autogenerate(precision \\ :sec)
 

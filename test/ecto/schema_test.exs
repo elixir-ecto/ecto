@@ -349,18 +349,6 @@ defmodule Ecto.SchemaTest do
     end
 
     assert_raise ArgumentError,
-                 "field :x does not support :autogenerate because " <>
-                 "it uses a custom type Ecto.DateTime that does not define generate/0", fn ->
-      defmodule AutogenerateFail do
-        use Ecto.Schema
-
-        schema "hello" do
-          field :x, Ecto.DateTime, autogenerate: true
-        end
-      end
-    end
-
-    assert_raise ArgumentError,
                  "only primary keys allow :autogenerate for type :id, " <>
                  "field :x is not a primary key", fn ->
       defmodule AutogenerateFail do

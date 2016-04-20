@@ -98,7 +98,7 @@ defmodule Ecto.UUID do
     <<u0::48, 4::4, u1::12, 2::2, u2::62>>
   end
 
-  # Callback invoked by autogenerate in schema.
+  # Callback invoked by autogenerate fields.
   @doc false
   def autogenerate do
     %Ecto.Query.Tagged{type: :uuid, value: bingenerate()}

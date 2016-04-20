@@ -144,13 +144,17 @@ defmodule Ecto.Embedded do
   end
 
   defp autogenerate(changes, action, schema, types, adapter) do
-    Enum.reduce schema.__schema__(:autogenerate, action), changes, fn {k, mod, args}, acc ->
-      case Map.fetch(acc, k) do
-        {:ok, _} -> acc
-        :error   -> Map.put(acc, k, load!(types, k, apply(mod, :autogenerate, args), adapter))
-      end
+    Enum.reduce schema.__schema__(action_to_auto(action)), changes, fn
+      {k, {mod, fun, args}}, acc ->
+        case Map.fetch(acc, k) do
+          {:ok, _} -> acc
+          :error   -> Map.put(acc, k, load!(types, k, apply(mod, fun, args), adapter))
+        end
     end
   end
+
+  defp action_to_auto(:insert), do: :autogenerate
+  defp action_to_auto(:update), do: :autoupdate
 
   defp load!(types, k, v, adapter) do
     type = Map.fetch!(types, k)

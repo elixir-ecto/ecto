@@ -554,15 +554,18 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp autogenerate_changes(schema, action, changes, extra) do
-    Enum.reduce schema.__schema__(:autogenerate, action), {changes, extra},
-      fn {k, mod, args}, {acc_changes, acc_autogen} ->
+    Enum.reduce schema.__schema__(action_to_auto(action)), {changes, extra},
+      fn {k, {mod, fun, args}}, {acc_changes, acc_autogen} ->
         if Map.has_key?(acc_changes, k) do
           {acc_changes, acc_autogen}
         else
-          {acc_changes, [{k, apply(mod, :autogenerate, args)}|acc_autogen]}
+          {acc_changes, [{k, apply(mod, fun, args)}|acc_autogen]}
         end
       end
   end
+
+  defp action_to_auto(:insert), do: :autogenerate
+  defp action_to_auto(:update), do: :autoupdate
 
   defp add_pk_filter!(filters, struct) do
     Enum.reduce Ecto.primary_key!(struct), filters, fn
