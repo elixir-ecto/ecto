@@ -146,7 +146,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Migration] Support `:on_update` for `Ecto.Migrate.references`
   * [Migration] Use pool of 1 connection for `mix ecto.migrate/rollback`
   * [Mix] Automatically reenable migration and repository management tasks after execution
-  * [Postgres] Add migration and changeset support for PostgreSQL exclusion constraints. Example: `create constraint(:sizes, :cannot_overlap, exclude: ~s|gist (int4range("min", "max", '[]') WITH &&)|)` and `exclude_constraint(changeset, :sizes, name: :cannot_overlap, message: "must not overlap")`
+  * [Postgres] Add migration and changeset support for PostgreSQL exclusion constraints. Example: `create constraint(:sizes, :cannot_overlap, exclude: ~s|gist (int4range("min", "max", '[]') WITH &&)|)` and `exclusion_constraint(changeset, :sizes, name: :cannot_overlap, message: "must not overlap")`
   * [Postgres] Add migration and changeset support for PostgreSQL check constraints. Example: `create constraint(:products, "positive_price", check: "price > 0")` and `check_constraint(changeset, :price, name: :positive_price, message: "must be greater than zero")`
   * [Query] Allow the `:on` field to be specified with association joins
   * [Query] Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`

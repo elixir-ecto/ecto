@@ -652,7 +652,7 @@ defmodule Ecto.Adapters.MySQLTest do
       assert SQL.execute_ddl(create)
     end
 
-    assert_raise ArgumentError, "MySQL adapter does not support exclude constraints", fn ->
+    assert_raise ArgumentError, "MySQL adapter does not support exclusion constraints", fn ->
       create = {:create, constraint(:products, "bar", exclude: "price")}
       assert SQL.execute_ddl(create)
     end
