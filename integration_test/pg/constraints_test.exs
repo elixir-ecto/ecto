@@ -36,7 +36,7 @@ defmodule Ecto.Integration.ConstraintsTest do
     up(PoolRepo, 20040906120000, ConstraintMigration, log: false)
   end
 
-  test "creating, using, and dropping an exclude constraint" do
+  test "creating, using, and dropping an exclusion constraint" do
     changeset = Ecto.Changeset.change(%Constraint{}, from: 0, to: 10)
     {:ok, _} = PoolRepo.insert(changeset)
 
@@ -56,14 +56,14 @@ defmodule Ecto.Integration.ConstraintsTest do
     exception =
       assert_raise Ecto.ConstraintError, message, fn ->
         overlapping_changeset
-        |> Ecto.Changeset.exclude_constraint(:from)
+        |> Ecto.Changeset.exclusion_constraint(:from)
         |> PoolRepo.insert()
       end
     assert exception.message =~ "exclude: cannot_overlap"
 
     {:error, changeset} =
       overlapping_changeset
-      |> Ecto.Changeset.exclude_constraint(:from, name: :cannot_overlap)
+      |> Ecto.Changeset.exclusion_constraint(:from, name: :cannot_overlap)
       |> PoolRepo.insert()
     assert changeset.errors == [from: {"violates an exclusion constraint", []}]
     assert changeset.data.__meta__.state == :built

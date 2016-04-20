@@ -1706,10 +1706,10 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Checks for a exclude constraint in the given field.
+  Checks for a exclusion constraint in the given field.
 
-  The exclude constraint works by relying on the database to check
-  if the exclude constraint has been violated or not and, if so,
+  The exclusion constraint works by relying on the database to check
+  if the exclusion constraint has been violated or not and, if so,
   Ecto converts it into a changeset error.
 
   ## Options
@@ -1721,7 +1721,7 @@ defmodule Ecto.Changeset do
       explicitly for complex cases
 
   """
-  def exclude_constraint(changeset, field, opts \\ []) do
+  def exclusion_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_exclusion"
     message    = message(opts, "violates an exclusion constraint")
     add_constraint(changeset, :exclude, to_string(constraint), field, {message, []})

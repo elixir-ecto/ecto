@@ -520,7 +520,7 @@ if Code.ensure_loaded?(Mariaex) do
     def execute_ddl({:create, %Constraint{check: check}}) when is_binary(check),
       do: error!(nil, "MySQL adapter does not support check constraints")
     def execute_ddl({:create, %Constraint{exclude: exclude}}) when is_binary(exclude),
-      do: error!(nil, "MySQL adapter does not support exclude constraints")
+      do: error!(nil, "MySQL adapter does not support exclusion constraints")
 
     def execute_ddl({:drop, %Index{}=index}) do
       assemble(["DROP INDEX",

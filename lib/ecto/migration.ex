@@ -703,7 +703,7 @@ defmodule Ecto.Migration do
   end
 
   @doc ~S"""
-  Defines a constraint (either a check constraint or an exclude constraint) to be evaluated by the database when a row is inserted or updated.
+  Defines a constraint (either a check constraint or an exclusion constraint) to be evaluated by the database when a row is inserted or updated.
 
   ## Examples
 

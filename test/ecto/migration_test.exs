@@ -167,7 +167,7 @@ defmodule Ecto.MigrationTest do
     assert {:create, %Constraint{}} = last_command()
   end
 
-  test "forward: creates an exclude constraint" do
+  test "forward: creates an exclusion constraint" do
     create constraint(:posts, :price, exclude: "price")
     flush
     assert {:create, %Constraint{}} = last_command()
