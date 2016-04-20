@@ -3,7 +3,7 @@ defmodule Ecto.Changeset do
   Changesets allow filtering, casting, validation and
   definition of constraints when manipulating structs.
 
-  There is an example of working with changesets in the
+  There is an example of working with changesets in thea
   introductory documentation in the `Ecto` module. The
   functions `change/2` and `cast/3` are the usual entry
   points for creating changesets, while the remaining
@@ -928,9 +928,8 @@ defmodule Ecto.Changeset do
   @doc """
   Applies the changeset changes to the changeset data.
 
-  Note this operation is automatically performed on `Ecto.Repo.insert!/2` and
-  `Ecto.Repo.update!/2`, however this function is provided for
-  debugging and testing purposes.
+  This operation will return the underlying data with changes
+  regardless if the changeset is valid or not.
 
   ## Examples
 
