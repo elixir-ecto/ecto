@@ -143,6 +143,11 @@ defmodule Ecto.Repo.Preloader do
     {[], []}
   end
 
+  defp fetch_query(ids, _assoc, _repo, query, _prefix, {_, key}, _take, _opts) when is_function(query, 1) do
+    data = ids |> Enum.uniq |> query.() |> Enum.map(&{Map.fetch!(&1, key), &1}) |> Enum.sort
+    unzip_ids data, [], []
+  end
+
   defp fetch_query(ids, %{cardinality: card} = assoc, repo, query, prefix, related_key, take, opts) do
     query = assoc.__struct__.assoc_query(assoc, query, Enum.uniq(ids))
     field = related_key_to_field(query, related_key)
@@ -275,15 +280,17 @@ defmodule Ecto.Repo.Preloader do
     normalize_each(wrap(preload, original), [], assocs, take, original)
   end
 
-  defp normalize_each({atom, {%Ecto.Query{} = query, list}}, acc, assocs, take, original) when is_atom(atom) do
+  defp normalize_each({atom, {query, list}}, acc, assocs, take, original)
+       when is_atom(atom) and (is_map(query) or is_function(query, 1)) do
     no_assoc!(assocs, atom)
     fields = take(take, atom)
-    [{atom, {fields, query, normalize_each(wrap(list, original), [], nil, fields, original)}}|acc]
+    [{atom, {fields, query!(query), normalize_each(wrap(list, original), [], nil, fields, original)}}|acc]
   end
 
-  defp normalize_each({atom, %Ecto.Query{} = query}, acc, assocs, take, _original) when is_atom(atom) do
+  defp normalize_each({atom, query}, acc, assocs, take, _original)
+       when is_atom(atom) and (is_map(query) or is_function(query, 1)) do
     no_assoc!(assocs, atom)
-    [{atom, {take(take, atom), query, []}}|acc]
+    [{atom, {take(take, atom), query!(query), []}}|acc]
   end
 
   defp normalize_each({atom, list}, acc, assocs, take, original) when is_atom(atom) do
@@ -300,6 +307,9 @@ defmodule Ecto.Repo.Preloader do
   defp normalize_each(other, acc, assocs, take, original) do
     Enum.reduce(wrap(other, original), acc, &normalize_each(&1, &2, assocs, take, original))
   end
+
+  defp query!(query) when is_function(query, 1), do: query
+  defp query!(%Ecto.Query{} = query), do: query
 
   defp take(take, field) do
     case Access.fetch(take, field) do

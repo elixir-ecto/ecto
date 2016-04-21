@@ -927,6 +927,17 @@ defmodule Ecto.Query do
   won't bring the top of comments per post. Rather, it will only bring
   the 5 top comments across all posts.
 
+  ## Preload functions
+
+  Preload also allows functions to be given. In such cases, the function
+  receive the IDs to be fetched and it must return the associated data.
+  This data will then be mapped and sorted:
+
+      Repo.all from p in Post, preload: [comments: fn _ -> previously_loaded_comments end]
+
+  This is useful when the whole dataset was already loaded or must be
+  explicitly fetched from elsewhere.
+
   ## Keywords example
 
       # Returns all posts, their associated comments, and the associated

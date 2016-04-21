@@ -38,5 +38,10 @@ defmodule Ecto.Query.Builder.PreloadTest do
     assert preload("posts", [users: ^query]).preloads == [users: query]
     assert preload("posts", [{^:users, ^query}]).preloads == [users: query]
     assert preload("posts", [users: ^{query, :comments}]).preloads == [users: {query, :comments}]
+
+    fun = fn _ -> [] end
+    assert preload("posts", [users: ^fun]).preloads == [users: fun]
+    assert preload("posts", [{^:users, ^fun}]).preloads == [users: fun]
+    assert preload("posts", [users: ^{fun, :comments}]).preloads == [users: {fun, :comments}]
   end
 end

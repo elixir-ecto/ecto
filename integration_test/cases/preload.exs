@@ -274,6 +274,24 @@ defmodule Ecto.Integration.PreloadTest do
 
   ## With queries
 
+  test "preload with function" do
+    p1 = TestRepo.insert!(%Post{title: "1"})
+    p2 = TestRepo.insert!(%Post{title: "2"})
+    p3 = TestRepo.insert!(%Post{title: "3"})
+
+    # We use the same text to expose bugs in preload sorting
+    %Comment{id: cid1} = TestRepo.insert!(%Comment{text: "1", post_id: p1.id})
+    %Comment{id: cid3} = TestRepo.insert!(%Comment{text: "2", post_id: p2.id})
+    %Comment{id: cid2} = TestRepo.insert!(%Comment{text: "2", post_id: p1.id})
+    %Comment{id: cid4} = TestRepo.insert!(%Comment{text: "3", post_id: p2.id})
+
+    assert [pe3, pe1, pe2] = TestRepo.preload([p3, p1, p2],
+                                              comments: fn _ -> TestRepo.all(Comment) end)
+    assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = pe1.comments
+    assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = pe2.comments
+    assert [] = pe3.comments
+  end
+
   test "preload with query" do
     p1 = TestRepo.insert!(%Post{title: "1"})
     p2 = TestRepo.insert!(%Post{title: "2"})
