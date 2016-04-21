@@ -678,26 +678,7 @@ defmodule Ecto.Association.BelongsTo do
 
   @doc false
   def struct(module, name, opts) do
-    ref =
-      cond do
-        ref = opts[:references] ->
-          ref
-        primary_key = Module.get_attribute(module, :primary_key) ->
-          case elem(primary_key, 0) do
-            :id -> :id
-            key ->
-              IO.puts :stderr,
-                "warning: #{inspect module} has a custom primary key and " <>
-                "invoked belongs_to(#{inspect name}). To avoid ambiguity, " <>
-                "please also specify the :references option in belongs_to " <>
-                "with the primary key name of the associated schema, currently " <>
-                "it defaults to #{inspect key}\n#{Exception.format_stacktrace}"
-              key
-          end
-        true ->
-          :id
-      end
-
+    ref       = if ref = opts[:references], do: ref, else: :id
     queryable = Keyword.fetch!(opts, :queryable)
     related   = Ecto.Association.related_from_query(queryable)
 
