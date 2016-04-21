@@ -368,11 +368,13 @@ defmodule Ecto.Query.Planner do
   end
 
   defp cast_and_merge_params(kind, query, expr, params, adapter) do
-    Enum.reduce expr.params, {params, true}, fn
-      {v, {:spread, _} = type}, {acc, _cacheable?} ->
-        {unfold_in(cast_param(kind, query, expr, v, type, adapter), acc), false}
-      {v, type}, {acc, cacheable?} ->
-        {[cast_param(kind, query, expr, v, type, adapter)|acc], cacheable?}
+    Enum.reduce expr.params, {params, true}, fn {v, type}, {acc, cacheable?} ->
+      case cast_param(kind, query, expr, v, type, adapter) do
+        {:in, v} ->
+          {unfold_in(v, acc), false}
+        v ->
+          {[v|acc], cacheable?}
+      end
     end
   end
 
@@ -635,10 +637,6 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  # Exceptionally allow decimal casting for support on interval operations.
-  defp dump_param(kind, :decimal, v, adapter) do
-    cast_param(kind, :decimal, v, adapter)
-  end
   defp dump_param(kind, type, v, adapter) do
     with {:ok, type} <- normalize_param(kind, type, v),
          do: dump_param(adapter, type, v)
@@ -647,11 +645,7 @@ defmodule Ecto.Query.Planner do
   defp validate_in(meta, expr, param, acc) do
     {v, _t} = Enum.fetch!(expr.params, param)
     length  = length(v)
-
-    case length do
-      0 -> {[], acc}
-      _ -> {{:^, meta, [acc, length]}, acc + length}
-    end
+    {{:^, meta, [acc, length]}, acc + 1}
   end
 
   defp normalize_select(%{select: %{fields: nil} = select} = query) do
@@ -844,16 +838,13 @@ defmodule Ecto.Query.Planner do
     type
   end
 
-  defp normalize_param(_kind, {:spread, type}, _value) do
-    {:ok, {:array, type}}
-  end
-  defp normalize_param(_kind, {:in_array, {:array, type}}, _value) do
+  defp normalize_param(_kind, {:out, {:array, type}}, _value) do
     {:ok, type}
   end
-  defp normalize_param(_kind, {:in_array, :any}, _value) do
+  defp normalize_param(_kind, {:out, :any}, _value) do
     {:ok, :any}
   end
-  defp normalize_param(kind, {:in_array, other}, value) do
+  defp normalize_param(kind, {:out, other}, value) do
     {:error, "value `#{inspect value}` in `#{kind}` expected to be part of an array " <>
              "but matched type is #{inspect other}"}
   end

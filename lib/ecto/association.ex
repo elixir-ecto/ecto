@@ -880,7 +880,7 @@ defmodule Ecto.Association.ManyToMany do
   def assoc_query(%{join_through: join_through, join_keys: join_keys,
                     queryable: queryable, owner: owner}, query, values) do
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
-    owner_type = {:spread, owner.__schema__(:type, owner_key)}
+    owner_type = {:in, owner.__schema__(:type, owner_key)}
 
     from q in (query || queryable),
       join: j in ^join_through, on: field(j, ^join_owner_key) in type(^values, ^owner_type),

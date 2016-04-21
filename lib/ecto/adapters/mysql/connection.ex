@@ -332,8 +332,12 @@ if Code.ensure_loaded?(Mariaex) do
       expr(left, sources, query) <> " IN (" <> args <> ")"
     end
 
-    defp expr({:in, _, [left, {:^, _, [ix, length]}]}, sources, query) do
-      args = Enum.map_join(ix+1..ix+length, ",", fn (_) -> "?" end)
+    defp expr({:in, _, [_, {:^, _, [_, 0]}]}, _sources, _query) do
+      "false"
+    end
+
+    defp expr({:in, _, [left, {:^, _, [_, length]}]}, sources, query) do
+      args = Enum.join List.duplicate("?", length), ","
       expr(left, sources, query) <> " IN (" <> args <> ")"
     end
 

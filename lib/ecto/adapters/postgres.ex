@@ -70,6 +70,12 @@ defmodule Ecto.Adapters.Postgres do
   # And provide a custom storage implementation
   @behaviour Ecto.Adapter.Storage
 
+  ## Support arrays in place of IN
+  def dumpers({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
+  def dumpers(:binary_id, type), do: [type, Ecto.UUID]
+  def dumpers({:in, sub}, {:in, sub}), do: [{:array, sub}]
+  def dumpers(_, type), do: [type]
+
   ## Storage API
 
   @doc false

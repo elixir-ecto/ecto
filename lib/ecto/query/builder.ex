@@ -193,8 +193,8 @@ defmodule Ecto.Query.Builder do
   def escape({:in, _, [left, right]} = expr, type, params, vars, env) do
     assert_type!(expr, type, :boolean)
 
-    ltype = {:in_array, quoted_type(right, vars)}
-    rtype = {:spread, quoted_type(left, vars)}
+    ltype = {:out, quoted_type(right, vars)}
+    rtype = {:in, quoted_type(left, vars)}
 
     {left,  params} = escape(left, ltype, params, vars, env)
     {right, params} = escape(right, rtype, params, vars, env)

@@ -168,7 +168,9 @@ defmodule Ecto.Query.Builder.Update do
     Builder.error! "unknown key `#{inspect(key)}` in update"
   end
 
-  defp type_for_key(:push, type), do: {:in_array, type}
-  defp type_for_key(:pull, type), do: {:in_array, type}
+  # Out means the given type must be taken out of an array
+  # It is the opposite of "left in right" in the query API.
+  defp type_for_key(:push, type), do: {:out, type}
+  defp type_for_key(:pull, type), do: {:out, type}
   defp type_for_key(_, type),     do: type
 end

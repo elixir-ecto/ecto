@@ -409,9 +409,8 @@ if Code.ensure_loaded?(Postgrex) do
       expr(left, sources, query) <> " IN (" <> args <> ")"
     end
 
-    defp expr({:in, _, [left, {:^, _, [ix, length]}]}, sources, query) do
-      args = Enum.map_join ix+1..ix+length, ",", &"$#{&1}"
-      expr(left, sources, query) <> " IN (" <> args <> ")"
+    defp expr({:in, _, [left, {:^, _, [ix, _]}]}, sources, query) do
+      expr(left, sources, query) <> " = ANY($#{ix+1})"
     end
 
     defp expr({:in, _, [left, right]}, sources, query) do

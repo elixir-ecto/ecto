@@ -101,10 +101,10 @@ defmodule Ecto.Type do
   @typep base      :: :integer | :float | :boolean | :string | :map |
                       :binary | :decimal | :id | :binary_id |
                       :datetime | :date | :time | :any
-  @typep composite :: {:array, base} | {:embed, Ecto.Embedded.t}
+  @typep composite :: {:array, base} | {:embed, Ecto.Embedded.t} | {:in, base}
 
   @base      ~w(integer float boolean string binary decimal datetime date time id binary_id map any)a
-  @composite ~w(array embed)a
+  @composite ~w(array in embed)a
 
   @doc """
   Returns the underlying schema type for the custom type.
@@ -310,6 +310,19 @@ defmodule Ecto.Type do
     else
       :error
     end
+  end
+
+  def dump({:in, type}, value, dumper) do
+    case dump({:array, type}, value, dumper) do
+      {:ok, v} -> {:ok, {:in, v}}
+      :error -> :error
+    end
+  end
+
+  def dump(:decimal, term, _dumper) when is_number(term) do
+    {:ok, Decimal.new(term)} # TODO: Add Decimal.parse/1
+  rescue
+    Decimal.Error -> :error
   end
 
   def dump(type, value, _dumper) do
@@ -528,6 +541,10 @@ defmodule Ecto.Type do
   def cast(_type, nil), do: {:ok, nil}
 
   def cast({:array, type}, term) when is_list(term) do
+    array(term, &cast(type, &1), [])
+  end
+
+  def cast({:in, type}, term) when is_list(term) do
     array(term, &cast(type, &1), [])
   end
 

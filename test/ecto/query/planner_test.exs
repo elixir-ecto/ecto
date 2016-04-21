@@ -242,7 +242,7 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  test "prepare: generates a cache key if appropriate" do
+  test "prepare: generates a cache key" do
     {_query, _params, key} = prepare(from(Post, []))
     assert key == [:all, {"posts", Post, 112914533}]
 
@@ -256,10 +256,16 @@ defmodule Ecto.Query.PlannerTest do
                    {:join, [{:inner, {"comments", Ecto.Query.PlannerTest.Comment, 53730846}, true}]},
                    {"posts", Ecto.Query.PlannerTest.Post, 112914533},
                    {:select, 1}]
+  end
 
+  test "prepare: generates a cache key for in based on the adapter" do
     query = from(p in Post, where: p.id in ^[1, 2, 3])
-    {_query, _params, key} = prepare(query)
+
+    {_query, _params, key} = Planner.prepare(query, :all, Ecto.TestAdapter)
     assert key == :nocache
+
+    {_query, _params, key} = Planner.prepare(query, :all, Ecto.Adapters.Postgres)
+    assert key != :nocache
   end
 
   test "prepare: subqueries" do
@@ -419,7 +425,7 @@ defmodule Ecto.Query.PlannerTest do
     assert params == [1, 3]
 
     {query, params} = where(Post, [p], p.id in ^[]) |> normalize_with_params()
-    assert Macro.to_string(hd(query.wheres).expr) == "&0.id() in []"
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.id() in ^(0, 0)"
     assert params == []
 
     {query, params} = where(Post, [p], p.id in ^[1, 2, 3]) |> normalize_with_params()
@@ -429,7 +435,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, params} = where(Post, [p], p.title == ^"foo" and p.id in ^[1, 2, 3] and
                                        p.title == ^"bar") |> normalize_with_params()
     assert Macro.to_string(hd(query.wheres).expr) ==
-           "&0.title() == ^0 and &0.id() in ^(1, 3) and &0.title() == ^4"
+           "&0.title() == ^0 and &0.id() in ^(1, 3) and &0.title() == ^2"
     assert params == ["foo", 1, 2, 3, "bar"]
   end
 

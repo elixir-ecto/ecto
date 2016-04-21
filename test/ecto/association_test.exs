@@ -214,12 +214,12 @@ defmodule Ecto.AssociationTest do
 
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [])) ==
            inspect(from a in Author,
-                    join: m in AuthorPermalink, on: m.permalink_id in type(^[], {:spread, :id}),
+                    join: m in AuthorPermalink, on: m.permalink_id in type(^[], {:in, :id}),
                     where: m.author_id == a.id)
 
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from a in Author,
-                    join: m in AuthorPermalink, on: m.permalink_id in type(^[1, 2, 3], {:spread, :id}),
+                    join: m in AuthorPermalink, on: m.permalink_id in type(^[1, 2, 3], {:in, :id}),
                     where: m.author_id == a.id)
   end
 
@@ -233,12 +233,12 @@ defmodule Ecto.AssociationTest do
 
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [])) ==
            inspect(from p in {"custom_permalinks", Permalink},
-                    join: m in "authors_permalinks", on: m.author_id in type(^[], {:spread, :id}),
+                    join: m in "authors_permalinks", on: m.author_id in type(^[], {:in, :id}),
                     where: m.permalink_id == p.id)
 
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from p in {"custom_permalinks", Permalink},
-                    join: m in "authors_permalinks", on: m.author_id in type(^[1, 2, 3], {:spread, :id}),
+                    join: m in "authors_permalinks", on: m.author_id in type(^[1, 2, 3], {:in, :id}),
                     where: m.permalink_id == p.id)
   end
 
@@ -247,7 +247,7 @@ defmodule Ecto.AssociationTest do
     query = from a in Author, limit: 5
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, query, [1, 2, 3])) ==
            inspect(from a in Author,
-                    join: m in AuthorPermalink, on: m.permalink_id in type(^[1, 2, 3], {:spread, :id}),
+                    join: m in AuthorPermalink, on: m.permalink_id in type(^[1, 2, 3], {:in, :id}),
                     where: m.author_id == a.id, limit: 5)
   end
 
