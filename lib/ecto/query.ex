@@ -101,7 +101,7 @@ defmodule Ecto.Query do
   actually be defined in two parts:
 
       # Create a query
-      query = from w in User, where: u.age > 18
+      query = from u in User, where: u.age > 18
 
       # Extend the query
       query = from u in query, select: u.name
