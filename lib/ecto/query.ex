@@ -574,6 +574,9 @@ defmodule Ecto.Query do
       City |> select([c], c)
       City |> select([c], {c.name, c.country})
       City |> select([c], %{"name" => c.name})
+      City |> select([:name])
+      City |> select([c], struct(c, [:name]))
+      City |> select([c], map(c, [:name]))
 
   """
   defmacro select(query, binding \\ [], expr) do
