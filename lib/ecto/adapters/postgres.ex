@@ -156,16 +156,6 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
-  defp run_with_psql(sql_command, opts) do
-    args = ["--quiet",
-            "--set", "ON_ERROR_STOP=1",
-            "--set", "VERBOSITY=verbose",
-            "--no-psqlrc",
-            "--dbname", "template1",
-            "--command", sql_command]
-    run_with_cmd("psql", database, args)
-  end
-
   defp run_with_cmd(cmd, opts, opt_args) do
     unless System.find_executable(cmd) do
       raise "could not find executable `#{cmd}` in path, " <>
