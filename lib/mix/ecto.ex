@@ -52,6 +52,33 @@ defmodule Mix.Ecto do
     Enum.reverse(acc)
   end
 
+
+  @doc """
+  Parses the file option from the given list.
+
+  If no file option is given we assume `{priv_dir(repo)}/structure.sql`
+  """
+  def parse_file(args, repo) do
+    parse_file(args, [], repo)
+  end
+
+  defp parse_file([key, path | t], _acc, _repo) when key in ~w(--file -f) do
+    path
+  end
+
+  defp parse_file([_|t], acc, repo) do
+    parse_file t, acc, repo
+  end
+
+  defp parse_file([], [], repo) do
+    Path.relative_to(repo_priv(repo), Mix.Project.app_path)
+    |> Path.join("structure.sql")
+  end
+
+  defp parse_file([], acc, _repo) do
+    Enum.reverse(acc)
+  end
+
   @doc """
   Ensures the given module is a repository.
   """
@@ -128,6 +155,27 @@ defmodule Mix.Ecto do
   @spec migrations_path(Ecto.Repo.t) :: String.t
   def migrations_path(repo) do
     Path.join(repo_priv(repo), "migrations")
+  end
+
+  @doc """
+  Dumps the database structure
+
+  Will dump the structure of the database via the given repo's adapter
+  """
+  @spec structure_dump(Ecto.Repo.t) :: no_return
+  def structure_dump(repo) do
+    {dump, 0} = repo.__adapter__.structure_dump(repo.config)
+    dump
+  end
+
+  @doc """
+  Loads the database structure
+
+  Will load the structure into a database via the given repo's adapter
+  """
+  @spec structure_load(Ecto.Repo.t, String) :: no_return
+  def structure_load(repo, path) do
+    {_, 0} = repo.__adapter__.structure_load(repo.config, path)
   end
 
   @doc """

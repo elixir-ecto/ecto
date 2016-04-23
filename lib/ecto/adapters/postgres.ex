@@ -154,8 +154,59 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
+  defp run_with_psql(sql_command, opts) do
+    args = ["--quiet",
+            "--set", "ON_ERROR_STOP=1",
+            "--set", "VERBOSITY=verbose",
+            "--no-psqlrc",
+            "--dbname", "template1",
+            "--command", sql_command]
+    run_with_cmd("psql", database, args)
+  end
+
+  defp run_with_cmd(cmd, opts, opt_args) do
+    unless System.find_executable(cmd) do
+      raise "could not find executable `#{cmd}` in path, " <>
+            "please guarantee it is available before running ecto commands"
+    end
+
+    env =
+      if password = opts[:password] do
+        [{"PGPASSWORD", password}]
+      else
+        []
+      end
+    env = [{"PGCONNECT_TIMEOUT", "10"} | env]
+
+    args = []
+
+    if username = opts[:username] do
+      args = ["-U", username|args]
+    end
+
+    if port = opts[:port] do
+      args = ["-p", to_string(port)|args]
+    end
+
+    host = opts[:hostname] || System.get_env("PGHOST") || "localhost"
+    args = ["--host", host|args]
+
+    args = args ++ opt_args
+    System.cmd(cmd, args, env: env, stderr_to_stdout: true)
+  end
+
   @doc false
   def supports_ddl_transaction? do
     true
+  end
+
+  @doc false
+  def structure_dump(config) do
+    run_with_cmd("pg_dump", config, ["--schema-only", "--no-acl", "--no-owner", config[:database]])
+  end
+
+  @doc false
+  def structure_load(config, path) do
+    run_with_cmd("psql", config, ["--quiet", "--file", path, config[:database]])
   end
 end
