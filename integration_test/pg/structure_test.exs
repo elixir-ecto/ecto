@@ -36,24 +36,29 @@ defmodule Ecto.Integration.StructureTest do
     :ok
   end
 
-  test "can dump and load the databse structure" do
-    {_, 0} = create_database()
+  test "can dump and load structure" do
+    create_database()
 
-    {dump, 0} = Postgres.structure_dump(params())
+    # Default path
+    :ok = Postgres.structure_dump(tmp_path, params())
+    dump = File.read!(Path.join(tmp_path, "structure.sql"))
 
-    {_, 0} = drop_database()
+    drop_database()
+    create_empty_database()
 
-    path = Path.join(tmp_path, "structure.sql")
-    File.write!(path, dump)
+    # Load custom
+    dump_path = Path.join(tmp_path, "custom.sql")
+    File.rm(dump_path)
+    {:error, _} = Postgres.structure_load(tmp_path, [dump_path: dump_path] ++ params())
 
-    {_, 0} = create_empty_database()
+    # Dump custom
+    :ok = Postgres.structure_dump(tmp_path, [dump_path: dump_path] ++ params())
+    assert dump != File.read!(dump_path)
 
-    {new_dump, 0} = Postgres.structure_dump(params())
-    assert dump != new_dump
+    # Load original
+    :ok = Postgres.structure_load(tmp_path, params())
 
-    {_, 0} = Postgres.structure_load(params(), path)
-
-    {new_dump, 0} = Postgres.structure_dump(params())
-    assert dump == new_dump
+    :ok = Postgres.structure_dump(tmp_path, [dump_path: dump_path] ++ params())
+    assert dump == File.read!(dump_path)
   end
 end

@@ -1,8 +1,7 @@
 defmodule Mix.Tasks.Ecto.CreateDropTest do
   use ExUnit.Case, async: true
 
-  alias Mix.Tasks.Ecto.Create
-  alias Mix.Tasks.Ecto.Drop
+  alias Mix.Tasks.Ecto.{Create, Drop}
 
   # Mocked adapters
 

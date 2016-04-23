@@ -68,8 +68,8 @@ end
 {:ok, _} = Application.ensure_all_started(:postgrex)
 
 # Load up the repository, start it, and run migrations
-_   = Ecto.Storage.down(TestRepo)
-:ok = Ecto.Storage.up(TestRepo)
+_   = Ecto.Adapters.Postgres.storage_down(TestRepo.config)
+:ok = Ecto.Adapters.Postgres.storage_up(TestRepo.config)
 
 {:ok, _pid} = TestRepo.start_link
 {:ok, _pid} = PoolRepo.start_link

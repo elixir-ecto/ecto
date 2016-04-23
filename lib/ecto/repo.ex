@@ -162,30 +162,6 @@ defmodule Ecto.Repo do
         Ecto.Repo.Queryable.aggregate(__MODULE__, @adapter, queryable, aggregate, field, opts)
       end
 
-      def first(queryable, opts \\ []) do
-        IO.puts :stderr, "warning: #{inspect __MODULE__}.first/2 is deprecated, " <>
-                         "please use Repo.one/2 or Ecto.Query.first/2 |> Repo.one/2 accordingly\n" <> Exception.format_stacktrace
-        one(Ecto.Query.first(queryable), opts)
-      end
-
-      def first!(queryable, opts \\ []) do
-        IO.puts :stderr, "warning: #{inspect __MODULE__}.first!/2 is deprecated, " <>
-                         "please use Repo.one!/2 or Ecto.Query.first/2 |> Repo.one!/2 accordingly\n" <> Exception.format_stacktrace
-        one!(Ecto.Query.first(queryable), opts)
-      end
-
-      def last(queryable, opts \\ []) do
-        IO.puts :stderr, "warning: #{inspect __MODULE__}.last/2 is deprecated, " <>
-                         "please use Repo.one/2 or Ecto.Query.last/2 |> Repo.one/2 accordingly\n" <> Exception.format_stacktrace
-        one(Ecto.Query.last(queryable), opts)
-      end
-
-      def last!(queryable, opts \\ []) do
-        IO.puts :stderr, "warning: #{inspect __MODULE__}.last!/2 is deprecated, " <>
-                         "please use Repo.one!/2 or Ecto.Query.last/2 |> Repo.one!/2 accordingly\n" <> Exception.format_stacktrace
-        one!(Ecto.Query.last(queryable), opts)
-      end
-
       def insert_all(schema_or_source, entries, opts \\ []) do
         Ecto.Repo.Schema.insert_all(__MODULE__, @adapter, schema_or_source, entries, opts)
       end

@@ -2,7 +2,7 @@ defmodule Mix.Tasks.Ecto.Create do
   use Mix.Task
   import Mix.Ecto
 
-  @shortdoc "Create the storage for the repo"
+  @shortdoc "Creates the repository storage"
   @recursive true
 
   @moduledoc """
@@ -30,7 +30,7 @@ defmodule Mix.Tasks.Ecto.Create do
       ensure_repo(repo, args)
       ensure_implements(repo.__adapter__, Ecto.Adapter.Storage,
                                           "to create storage for #{inspect repo}")
-      case Ecto.Storage.up(repo) do
+      case repo.__adapter__.storage_up(repo.config) do
         :ok ->
           unless opts[:quiet] do
             Mix.shell.info "The database for #{inspect repo} has been created."
@@ -40,9 +40,9 @@ defmodule Mix.Tasks.Ecto.Create do
             Mix.shell.info "The database for #{inspect repo} has already been created."
           end
         {:error, term} when is_binary(term) ->
-          Mix.raise "The database for #{inspect repo} couldn't be created, reason given: #{term}."
+          Mix.raise "The database for #{inspect repo} couldn't be created: #{term}."
         {:error, term} ->
-          Mix.raise "The database for #{inspect repo} couldn't be created, reason given: #{inspect term}."
+          Mix.raise "The database for #{inspect repo} couldn't be created: #{inspect term}."
       end
     end
   end

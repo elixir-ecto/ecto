@@ -61,6 +61,7 @@ defmodule Ecto.Adapters.Postgres do
     * `:template` - the template to create the database from
     * `:lc_collate` - the collation order
     * `:lc_ctype` - the character classification
+    * `:dump_path` - where to place dumped structures
 
   """
 
@@ -69,6 +70,7 @@ defmodule Ecto.Adapters.Postgres do
 
   # And provide a custom storage implementation
   @behaviour Ecto.Adapter.Storage
+  @behaviour Ecto.Adapter.Structure
 
   ## Support arrays in place of IN
   def dumpers({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
@@ -171,28 +173,29 @@ defmodule Ecto.Adapters.Postgres do
     end
 
     env =
+      [{"PGCONNECT_TIMEOUT", "10"}]
+    env =
       if password = opts[:password] do
-        [{"PGPASSWORD", password}]
+        [{"PGPASSWORD", password}|env]
       else
-        []
+        env
       end
-    env = [{"PGCONNECT_TIMEOUT", "10"} | env]
 
-    args = []
-
-    if username = opts[:username] do
-      args = ["-U", username|args]
-    end
-
-    if port = opts[:port] do
-      args = ["-p", to_string(port)|args]
-    end
+    args =
+      []
+    args =
+      if username = opts[:username], do: ["-U", username|args], else: args
+    args =
+      if port = opts[:port], do: ["-p", to_string(port)|args], else: args
 
     host = opts[:hostname] || System.get_env("PGHOST") || "localhost"
     args = ["--host", host|args]
-
     args = args ++ opt_args
-    System.cmd(cmd, args, env: env, stderr_to_stdout: true)
+
+    case System.cmd(cmd, args, env: env, stderr_to_stdout: true) do
+      {_output, 0} -> :ok
+      {output, _}  -> {:error, output}
+    end
   end
 
   @doc false
@@ -201,12 +204,15 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   @doc false
-  def structure_dump(config) do
-    run_with_cmd("pg_dump", config, ["--schema-only", "--no-acl", "--no-owner", config[:database]])
+  def structure_dump(default, config) do
+    path = config[:dump_path] || Path.join(default, "structure.sql")
+    run_with_cmd("pg_dump", config, ["--file", path, "--schema-only", "--no-acl",
+                                     "--no-owner", config[:database]])
   end
 
   @doc false
-  def structure_load(config, path) do
+  def structure_load(default, config) do
+    path = config[:dump_path] || Path.join(default, "structure.sql")
     run_with_cmd("psql", config, ["--quiet", "--file", path, config[:database]])
   end
 end

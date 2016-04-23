@@ -51,6 +51,7 @@ defmodule Ecto.Adapters.MySQL do
 
     * `:charset` - the database encoding (default: "utf8")
     * `:collation` - the collation order
+    * `:dump_path` - where to place dumped structures
 
   ## Limitations
 
@@ -99,6 +100,7 @@ defmodule Ecto.Adapters.MySQL do
 
   # And provide a custom storage implementation
   @behaviour Ecto.Adapter.Storage
+  @behaviour Ecto.Adapter.Structure
 
   ## Custom MySQL types
 
@@ -208,16 +210,31 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def structure_dump(config) do
-    run_with_cmd("mysqldump", config, ["--no-data", "--routines", config[:database]])
+  def structure_dump(default, config) do
+    path = config[:dump_path] || Path.join(default, "structure.sql")
+
+    case run_with_cmd("mysqldump", config, ["--no-data", "--routines", config[:database]]) do
+      {output, 0} ->
+        File.mkdir_p!(Path.dirname(path))
+        File.write!(path, output)
+        :ok
+      {output, _} ->
+        {:error, output}
+    end
   end
 
   @doc false
-  def structure_load(config, path) do
+  def structure_load(default, config) do
+    path = config[:dump_path] || Path.join(default, "structure.sql")
+
     args = [
       "--execute", "SET FOREIGN_KEY_CHECKS = 0; SOURCE #{path}; SET FOREIGN_KEY_CHECKS = 1",
       "--database", config[:database]
     ]
-    run_with_cmd("mysql", config, args)
+
+    case run_with_cmd("mysql", config, args) do
+      {_output, 0} -> :ok
+      {output, _}  -> {:error, output}
+    end
   end
 end

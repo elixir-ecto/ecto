@@ -1,9 +1,9 @@
 defmodule Mix.Tasks.Ecto.Dump do
   use Mix.Task
   import Mix.Ecto
-  import Mix.Generator
 
-  @shortdoc "Dumps the current environment's database structure into a structure file"
+  @recursive true
+  @shortdoc "Dumps database structure"
 
   @moduledoc """
   Dumps the current environment's database structure into a structure file
@@ -14,19 +14,30 @@ defmodule Mix.Tasks.Ecto.Dump do
 
   ## Command line options
 
-    * `-r`, `--repo` - the repo to load the structure info into.
-    * `-f`, `--file` - the path of the file to dump into. Will default to `{priv_dir(repo)}/structure.sql`
+    * `-r`, `--repo` - the repo to load the structure info into
+    * `-d`, `--dump-path` - the path of the dump file to load from`
   """
 
-  def run(args \\ []) do
-    no_umbrella!("ecto.dump")
+  def run(args) do
+    {opts, _, _} =
+      OptionParser.parse args, switches: [dump_path: :string, quiet: :boolean], aliases: [d: :dump_path]
 
-    [repo] = parse_repo(args)
-    ensure_repo(repo, args)
+    Enum.each parse_repo(args), fn repo ->
+      ensure_repo(repo, args)
+      ensure_implements(repo.__adapter__, Ecto.Adapter.Structure,
+                                          "to dump structure for #{inspect repo}")
+      config = Keyword.merge(repo.config, opts)
 
-    path = parse_file(args, repo)
-
-    create_directory Path.dirname(path)
-    create_file path, structure_dump(repo), force: true
+      case repo.__adapter__.structure_dump(repo_priv(repo), config) do
+        :ok ->
+          unless opts[:quiet] do
+            Mix.shell.info "The structure for #{inspect repo} has been dumped."
+          end
+        {:error, term} when is_binary(term) ->
+          Mix.raise "The structure for #{inspect repo} couldn't be dumped: #{term}."
+        {:error, term} ->
+          Mix.raise "The structure for #{inspect repo} couldn't be dumped: #{inspect term}."
+      end
+    end
   end
 end

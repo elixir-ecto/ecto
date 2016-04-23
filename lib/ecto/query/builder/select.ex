@@ -64,12 +64,6 @@ defmodule Ecto.Query.Builder.Select do
     Enum.map_reduce(list, params_take, &escape(&1, &2, vars, env))
   end
 
-  defp escape({:take, meta, args}, {params, take}, vars, env) do
-    IO.puts :stderr, "warning: using take/2 in queries is deprecated, use struct/2 instead\n" <>
-                     Exception.format_stacktrace(Macro.Env.stacktrace(env))
-    escape({:struct, meta, args}, {params, take}, vars, env)
-  end
-
   # map/struct(var, [:foo, :bar])
   defp escape({tag, _, [{var, _, context}, fields]}, {params, take}, vars, _env)
        when tag in [:map, :struct] and is_atom(var) and is_atom(context) do

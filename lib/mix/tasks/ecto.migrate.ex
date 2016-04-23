@@ -2,7 +2,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
   use Mix.Task
   import Mix.Ecto
 
-  @shortdoc "Run migrations up on a repo"
+  @shortdoc "Runs the repository migrations"
   @recursive true
 
   @moduledoc """
