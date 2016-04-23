@@ -14,8 +14,8 @@ defmodule Mix.Tasks.Ecto.Dump do
 
   ## Command line options
 
-    * `-r`, `--repo` - the repo to load the structure info into
-    * `-d`, `--dump-path` - the path of the dump file to load from`
+    * `-r`, `--repo` - the repo to load the structure info from
+    * `-d`, `--dump-path` - the path of the dump file to create
   """
 
   def run(args) do
