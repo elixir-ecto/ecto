@@ -140,6 +140,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
 
   * [Adapter] Ensure adapters work on native types, guaranteeing adapters compose better with custom types
   * [Adapter] Support prepared queries in adapters
+  * [Adapter] Add support for loading and dumping structures
   * [DateTime] Ensure the given date and datetimes are valid
   * [Migration] Add support for partial indexes by specifying the `:where` option when on `Ecto.Migration.index/2`
   * [Migration] Allow the migration table name to be configured in the repository via `:migration_source`

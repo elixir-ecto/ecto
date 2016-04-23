@@ -37,7 +37,7 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
   test "runs the adapter storage_up" do
     Process.put(:storage_up, :ok)
     Create.run ["-r", to_string(Repo)]
-    assert_received {:mix_shell, :info, ["The database for Mix.Tasks.Ecto.CreateDropTest.Repo has been created."]}
+    assert_received {:mix_shell, :info, ["The database for Mix.Tasks.Ecto.CreateDropTest.Repo has been created"]}
   end
 
   test "runs the adapter storage_up with --quiet" do
@@ -49,7 +49,7 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
   test "informs the user when the repo is already up" do
     Process.put(:storage_up, {:error, :already_up})
     Create.run ["-r", to_string(Repo)]
-    assert_received {:mix_shell, :info, ["The database for Mix.Tasks.Ecto.CreateDropTest.Repo has already been created."]}
+    assert_received {:mix_shell, :info, ["The database for Mix.Tasks.Ecto.CreateDropTest.Repo has already been created"]}
   end
 
   test "raises an error when storage_up gives an unknown feedback" do
@@ -70,7 +70,7 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
   test "runs the adapter storage_down" do
     Process.put(:storage_down, :ok)
     Drop.run ["-r", to_string(Repo)]
-    assert_received {:mix_shell, :info, ["The database for Mix.Tasks.Ecto.CreateDropTest.Repo has been dropped."]}
+    assert_received {:mix_shell, :info, ["The database for Mix.Tasks.Ecto.CreateDropTest.Repo has been dropped"]}
   end
 
   test "runs the adapter storage_down with --quiet" do
@@ -82,7 +82,7 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
   test "informs the user when the repo is already down" do
     Process.put(:storage_down, {:error, :already_down})
     Drop.run ["-r", to_string(Repo)]
-    assert_received {:mix_shell, :info, ["The database for Mix.Tasks.Ecto.CreateDropTest.Repo has already been dropped."]}
+    assert_received {:mix_shell, :info, ["The database for Mix.Tasks.Ecto.CreateDropTest.Repo has already been dropped"]}
   end
 
   test "raises an error when storage_down gives an unknown feedback" do

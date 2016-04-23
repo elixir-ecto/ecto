@@ -31,12 +31,12 @@ defmodule Mix.Tasks.Ecto.Dump do
       case repo.__adapter__.structure_dump(repo_priv(repo), config) do
         :ok ->
           unless opts[:quiet] do
-            Mix.shell.info "The structure for #{inspect repo} has been dumped."
+            Mix.shell.info "The structure for #{inspect repo} has been dumped"
           end
         {:error, term} when is_binary(term) ->
-          Mix.raise "The structure for #{inspect repo} couldn't be dumped: #{term}."
+          Mix.raise "The structure for #{inspect repo} couldn't be dumped: #{term}"
         {:error, term} ->
-          Mix.raise "The structure for #{inspect repo} couldn't be dumped: #{inspect term}."
+          Mix.raise "The structure for #{inspect repo} couldn't be dumped: #{inspect term}"
       end
     end
   end

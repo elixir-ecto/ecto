@@ -45,16 +45,16 @@ defmodule Mix.Tasks.Ecto.Drop do
     case repo.__adapter__.storage_down(repo.config) do
       :ok ->
         unless opts[:quiet] do
-          Mix.shell.info "The database for #{inspect repo} has been dropped."
+          Mix.shell.info "The database for #{inspect repo} has been dropped"
         end
       {:error, :already_down} ->
         unless opts[:quiet] do
-          Mix.shell.info "The database for #{inspect repo} has already been dropped."
+          Mix.shell.info "The database for #{inspect repo} has already been dropped"
         end
       {:error, term} when is_binary(term) ->
-        Mix.raise "The database for #{inspect repo} couldn't be dropped: #{term}."
+        Mix.raise "The database for #{inspect repo} couldn't be dropped: #{term}"
       {:error, term} ->
-        Mix.raise "The database for #{inspect repo} couldn't be dropped: #{inspect term}."
+        Mix.raise "The database for #{inspect repo} couldn't be dropped: #{inspect term}"
     end
   end
 end
