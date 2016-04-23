@@ -360,11 +360,10 @@ defmodule Ecto.Integration.PreloadTest do
       TestRepo.preload(p1, comments_authors: from(u in User, order_by: u.name, select: u.id))
     end
 
+    # The subpreload order does not matter because the result is dictated by comments
     np1 = TestRepo.preload(p1, comments_authors: from(u in User, order_by: u.name, select: %{id: u.id}))
-    assert np1.comments_authors == [%{id: u2.id}, %{id: u3.id}, %{id: u1.id}, %{id: u4.id}]
-
-    np1 = TestRepo.preload(p1, comments_authors: from(u in User, order_by: [desc: u.name], select: %{id: u.id}))
-    assert np1.comments_authors == [%{id: u4.id}, %{id: u1.id}, %{id: u3.id}, %{id: u2.id}]
+    assert np1.comments_authors ==
+           [%{id: u1.id}, %{id: u2.id}, %{id: u3.id}, %{id: u4.id}]
   end
 
   ## With take

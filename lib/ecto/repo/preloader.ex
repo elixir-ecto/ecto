@@ -110,8 +110,6 @@ defmodule Ecto.Repo.Preloader do
     {fetch_ids, fetch_structs} =
       fetch_query(fetch_ids, assoc, repo, query, prefix, related_key, take, opts)
 
-    fetch_ids = fetch_ids |> Enum.sort() |> Enum.reverse()
-
     all = preload_each(loaded_structs ++ fetch_structs, repo, preloads, opts)
     {:assoc, assoc, assoc_map(card, loaded_ids ++ fetch_ids, all)}
   end
