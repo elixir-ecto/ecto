@@ -64,7 +64,7 @@ defmodule Ecto.Integration.StructureTest do
 
   defp strip_timestamp(dump) do
     dump
-    |> String.split
+    |> String.split("\n")
     |> Enum.reject(&String.contains?(&1, "completed on"))
     |> Enum.join("\n")
   end
