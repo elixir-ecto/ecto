@@ -49,7 +49,7 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def dumpers({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
-      def dumpers(:binary_id, type), do: [type, Ecto.UUID]
+      def dumpers(:binary_id, type), do: [type, Ecto.UUID, &Ecto.Adapters.SQL.tag(&1, :uuid)]
       def dumpers(_, type), do: [type]
 
       ## Query
@@ -327,6 +327,11 @@ defmodule Ecto.Adapters.SQL do
       {:embed, _} = type, value -> dump_embed(type, value)
       _type, value -> {:ok, value}
     end)
+  end
+
+  @doc false
+  def tag(value, tag) do
+    {:ok, %Ecto.Query.Tagged{type: tag, value: value}}
   end
 
   ## Query

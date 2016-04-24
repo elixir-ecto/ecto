@@ -37,7 +37,7 @@ defmodule Ecto.UUID do
       :error -> :error
     else
       binary ->
-        {:ok, %Ecto.Query.Tagged{type: :uuid, value: binary}}
+        {:ok, binary}
     end
   end
   def dump(_), do: :error
@@ -100,9 +100,7 @@ defmodule Ecto.UUID do
 
   # Callback invoked by autogenerate fields.
   @doc false
-  def autogenerate do
-    %Ecto.Query.Tagged{type: :uuid, value: bingenerate()}
-  end
+  def autogenerate, do: bingenerate
 
   defp encode(<<u0::32, u1::16, u2::16, u3::16, u4::48>>) do
     hex_pad(u0, 8) <> "-" <>

@@ -110,7 +110,6 @@ defmodule Ecto.TypeTest do
 
   @uuid_string "bfe0888c-5c59-4bb3-adfd-71f0b85d3db7"
   @uuid_binary <<191, 224, 136, 140, 92, 89, 75, 179, 173, 253, 113, 240, 184, 93, 61, 183>>
-  @uuid_tagged %Ecto.Query.Tagged{value: @uuid_binary, type: :uuid}
 
   test "embeds_one" do
     embed = %Ecto.Embedded{field: :embed, cardinality: :one,
@@ -121,7 +120,7 @@ defmodule Ecto.TypeTest do
     assert {:ok, nil} == adapter_load(Ecto.TestAdapter,type, nil)
     assert :error == adapter_load(Ecto.TestAdapter, type, 1)
 
-    assert {:ok, %{a: 1, c: 0, id: @uuid_tagged}} ==
+    assert {:ok, %{a: 1, c: 0, id: @uuid_binary}} ==
            adapter_dump(Ecto.TestAdapter, type, %Model{id: @uuid_string, a: 1})
 
     assert :error == cast(type, %{"a" => 1})
@@ -139,7 +138,7 @@ defmodule Ecto.TypeTest do
     assert {:ok, []} == adapter_load(Ecto.TestAdapter, type, nil)
     assert :error == adapter_load(Ecto.TestAdapter, type, 1)
 
-    assert {:ok, [%{a: 1, id: @uuid_tagged, c: 0}]} ==
+    assert {:ok, [%{a: 1, id: @uuid_binary, c: 0}]} ==
            adapter_dump(Ecto.TestAdapter, type, [%Model{id: @uuid_string, a: 1}])
 
     assert cast(type, [%{"a" => 1}]) == :error
