@@ -44,15 +44,16 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def loaders({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.load_embed(type, &1)]
-      def loaders(:binary_id, type), do: [Ecto.UUID, type]
-      def loaders(_, type), do: [type]
+      def loaders(:binary_id, type),      do: [Ecto.UUID, type]
+      def loaders(_, type),               do: [type]
 
       @doc false
       def dumpers({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
-      def dumpers(:binary,    type), do: [type, &Ecto.Adapters.SQL.tag(&1, :binary)]
+      def dumpers(:binary, type),         do: [type, &Ecto.Adapters.SQL.tag(&1, :binary)]
       def dumpers({:array, inner}, type), do: [type, &Ecto.Adapters.SQL.tag(&1, {:array, inner})]
-      def dumpers(:binary_id, type), do: [type, Ecto.UUID, &Ecto.Adapters.SQL.tag(&1, :uuid)]
-      def dumpers(_, type), do: [type]
+      def dumpers(:binary_id, type),      do: [type, Ecto.UUID, &Ecto.Adapters.SQL.tag(&1, :uuid)]
+      def dumpers(:uuid, type),           do: [type, &Ecto.Adapters.SQL.tag(&1, :uuid)]
+      def dumpers(_, type),               do: [type]
 
       ## Query
 
@@ -314,7 +315,6 @@ defmodule Ecto.Adapters.SQL do
   end
 
   ## Types
-
   @doc false
   def load_embed(type, value) do
     Ecto.Type.load(type, value, fn

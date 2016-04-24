@@ -306,7 +306,7 @@ defmodule Ecto.Type do
 
   def dump({:array, type}, value, dumper) do
     if is_list(value) do
-      dump_array(type, value, dumper, [])
+      array(value, &dumper.(type, &1), [])
     else
       :error
     end
@@ -334,19 +334,6 @@ defmodule Ecto.Type do
       true ->
         :error
     end
-  end
-
-  defp dump_array(type, [h|t], dumper, acc) do
-    case dumper.(type, h) do
-      {:ok, h} ->
-        dump_array(type, t, dumper, [h|acc])
-      :error ->
-        :error
-    end
-  end
-
-  defp dump_array(_type, [], _dumper, acc) do
-    {:ok, Enum.reverse(acc)}
   end
 
   defp dump_embed(%{cardinality: :one, related: schema, field: field},
