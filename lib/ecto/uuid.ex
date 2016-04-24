@@ -100,7 +100,7 @@ defmodule Ecto.UUID do
 
   # Callback invoked by autogenerate fields.
   @doc false
-  def autogenerate, do: bingenerate
+  def autogenerate, do: generate()
 
   defp encode(<<u0::32, u1::16, u2::16, u3::16, u4::48>>) do
     hex_pad(u0, 8) <> "-" <>

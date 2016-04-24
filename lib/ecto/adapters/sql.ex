@@ -38,9 +38,9 @@ defmodule Ecto.Adapters.SQL do
       ## Types
 
       @doc false
-      def autogenerate(:id), do: nil
-      def autogenerate(:embed_id), do: Ecto.UUID.autogenerate()
-      def autogenerate(:binary_id), do: Ecto.UUID.autogenerate()
+      def autogenerate(:id),        do: nil
+      def autogenerate(:embed_id),  do: Ecto.UUID.generate()
+      def autogenerate(:binary_id), do: Ecto.UUID.bingenerate()
 
       @doc false
       def loaders({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.load_embed(type, &1)]

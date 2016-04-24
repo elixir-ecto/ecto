@@ -548,18 +548,20 @@ defmodule Ecto.Repo.Schema do
 
   defp dump_changes!(action, changes, schema, fields, extra, types, adapter) do
     changes = Map.take(changes, fields)
-    {leftover, autogen} = autogenerate_changes(schema, action, changes, extra)
+    {leftover, autogen} = autogenerate_changes(schema, action, changes, extra, adapter)
     dumped = dump_fields!(action, schema, leftover, types, adapter)
     {autogen ++ dumped, autogen}
   end
 
-  defp autogenerate_changes(schema, action, changes, extra) do
+  defp autogenerate_changes(schema, action, changes, extra, adapter) do
     Enum.reduce schema.__schema__(action_to_auto(action)), {changes, extra},
       fn {k, {mod, fun, args}}, {acc_changes, acc_autogen} ->
         if Map.has_key?(acc_changes, k) do
           {acc_changes, acc_autogen}
         else
-          {acc_changes, [{k, apply(mod, fun, args)}|acc_autogen]}
+          value = apply(mod, fun, args)
+          dumped = dump_field!(action, schema, k, mod, value, adapter)
+          {acc_changes, [dumped | acc_autogen]}
         end
       end
   end
