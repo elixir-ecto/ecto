@@ -152,10 +152,10 @@ defmodule Ecto.Query.PlannerTest do
     assert params == [1]
 
     {_query, params, _key} = prepare(Post |> where([p], p.code in [^"abcd"]))
-    assert params == [%Ecto.Query.Tagged{tag: nil, type: :binary, value: "abcd"}]
+    assert params == ["abcd"]
 
     {_query, params, _key} = prepare(Post |> where([p], p.code in ^["abcd"]))
-    assert params == [%Ecto.Query.Tagged{tag: nil, type: :binary, value: "abcd"}]
+    assert params == ["abcd"]
   end
 
   test "prepare: casts values on update_all" do
@@ -163,7 +163,7 @@ defmodule Ecto.Query.PlannerTest do
     assert params == [1]
 
     {_query, params, _key} = prepare(Post |> update([p], set: [title: ^nil]), :update_all)
-    assert params == [%Ecto.Query.Tagged{type: :string, value: nil}]
+    assert params == [nil]
 
     {_query, params, _key} = prepare(Post |> update([p], set: [title: nil]), :update_all)
     assert params == []

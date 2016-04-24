@@ -49,6 +49,8 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def dumpers({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
+      def dumpers(:binary,    type), do: [type, &Ecto.Adapters.SQL.tag(&1, :binary)]
+      def dumpers({:array, inner}, type), do: [type, &Ecto.Adapters.SQL.tag(&1, {:array, inner})]
       def dumpers(:binary_id, type), do: [type, Ecto.UUID, &Ecto.Adapters.SQL.tag(&1, :uuid)]
       def dumpers(_, type), do: [type]
 
@@ -330,9 +332,20 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
+  def tag(value, {:array, inner}) do
+    case Enum.map_reduce(value, false, &unwrap_tag/2) do
+      {value, false} ->
+        {:ok, value}
+      {value, true} ->
+        {:ok, %Ecto.Query.Tagged{type: {:array, inner}, value: value}}
+    end
+  end
   def tag(value, tag) do
     {:ok, %Ecto.Query.Tagged{type: tag, value: value}}
   end
+
+  defp unwrap_tag(%Ecto.Query.Tagged{value: value}, _tag?), do: {value, true}
+  defp unwrap_tag(value, tag?),                             do: {value, tag?}
 
   ## Query
 

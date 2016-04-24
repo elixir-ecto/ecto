@@ -67,7 +67,7 @@ defmodule Ecto.TypeTest do
     assert cast(Custom, "foo") == {:ok, :cast}
 
     assert load(Custom, nil) == {:ok, nil}
-    assert dump(Custom, nil) == {:ok, %Ecto.Query.Tagged{type: :custom, value: nil}}
+    assert dump(Custom, nil) == {:ok, nil}
     assert cast(Custom, nil) == {:ok, nil}
 
     assert match?(Custom, :any)
@@ -90,11 +90,11 @@ defmodule Ecto.TypeTest do
     assert cast({:array, Custom}, ["foo"]) == {:ok, [:cast]}
 
     assert load({:array, Custom}, [nil]) == {:ok, [nil]}
-    assert dump({:array, Custom}, [nil]) == {:ok, %Ecto.Query.Tagged{type: {:array, :custom}, value: [nil]}}
+    assert dump({:array, Custom}, [nil]) == {:ok, [nil]}
     assert cast({:array, Custom}, [nil]) == {:ok, [nil]}
 
     assert load({:array, Custom}, nil) == {:ok, nil}
-    assert dump({:array, Custom}, nil) == {:ok, %Ecto.Query.Tagged{type: {:array, :custom}, value: nil}}
+    assert dump({:array, Custom}, nil) == {:ok, nil}
     assert cast({:array, Custom}, nil) == {:ok, nil}
 
     assert load({:array, Custom}, 1) == :error
