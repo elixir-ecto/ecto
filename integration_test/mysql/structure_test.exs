@@ -53,12 +53,19 @@ defmodule Ecto.Integration.StructureTest do
 
     # Dump custom
     :ok = MySQL.structure_dump(tmp_path, [dump_path: dump_path] ++ params())
-    assert dump != File.read!(dump_path)
+    assert strip_timestamp(dump) != strip_timestamp(File.read!(dump_path))
 
     # Load original
     :ok = MySQL.structure_load(tmp_path, params())
 
     :ok = MySQL.structure_dump(tmp_path, [dump_path: dump_path] ++ params())
-    assert dump == File.read!(dump_path)
+    assert strip_timestamp(dump) == strip_timestamp(File.read!(dump_path))
+  end
+
+  defp strip_timestamp(dump) do
+    dump
+    |> String.split
+    |> Enum.reject(&String.contains?(&1, "completed on"))
+    |> Enum.join("\n")
   end
 end
