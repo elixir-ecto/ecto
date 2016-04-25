@@ -371,7 +371,7 @@ defmodule Ecto.Query.Planner do
     Enum.reduce expr.params, {params, true}, fn {v, type}, {acc, cacheable?} ->
       case cast_param(kind, query, expr, v, type, adapter) do
         {:in, v} ->
-          {unfold_in(v, acc), false}
+          {Enum.reverse(v, acc), false}
         v ->
           {[v|acc], cacheable?}
       end
@@ -441,16 +441,6 @@ defmodule Ecto.Query.Planner do
          {:ok, v} <- cast_param(kind, type, v),
          do: dump_param(adapter, type, v)
   end
-
-  defp unfold_in(%Ecto.Query.Tagged{value: value, type: {:array, type}}, acc),
-    do: unfold_in(value, type, acc)
-  defp unfold_in(value, acc) when is_list(value),
-    do: Enum.reverse(value, acc)
-
-  defp unfold_in([h|t], type, acc),
-    do: unfold_in(t, type, [%Ecto.Query.Tagged{value: h, type: type}|acc])
-  defp unfold_in([], _type, acc),
-    do: acc
 
   @doc """
   Prepare association fields found in the query.
@@ -616,8 +606,12 @@ defmodule Ecto.Query.Planner do
         {%Ecto.Query.Tagged{value: {:^, meta, [acc]}, tag: type,
                             type: Ecto.Type.type(type)}, acc + 1}
 
-      %Ecto.Query.Tagged{value: v, type: type}, acc ->
-        {dump_param(kind, query, expr, v, type, adapter), acc}
+      %Ecto.Query.Tagged{value: v, type: type} = tagged, acc ->
+        if Ecto.Type.base?(type) do
+          {tagged, acc}
+        else
+          {dump_param(kind, query, expr, v, type, adapter), acc}
+        end
 
       other, acc ->
         {other, acc}
