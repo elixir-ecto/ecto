@@ -6,12 +6,13 @@ defmodule Ecto do
       Via the repository, we can create, update, destroy and query existing entries.
       A repository needs an adapter and credentials to communicate to the database
 
-    * `Ecto.Schema` - schemas allow developers to define data structures
-      that map to the underlying storage
+    * `Ecto.Schema` - schemas are used to map any data source into an Elixir
+      struct. We will often use them to map tables into Elixir data but that's
+      one of their use cases and not a requirement for using Ecto
 
     * `Ecto.Changeset` - changesets provide a way for developers to filter
       and cast external parameters, as well as a mechanism to track and
-      validate changes before they are sent to the repository
+      validate changes before they are applied to your data
 
     * `Ecto.Query` - written in Elixir syntax, queries are used to retrieve
       information from a given repository. Queries in Ecto are secure, avoiding
@@ -68,9 +69,7 @@ defmodule Ecto do
 
   ## Schema
 
-  Schema provides a set of functionalities around structuring your data,
-  defining relationships and applying changes to repositories.
-
+  Schemas allows developers to define the shape of their data.
   Let's see an example:
 
       defmodule Weather do
@@ -124,18 +123,19 @@ defmodule Ecto do
       by large, complex objects, with entwined state transactions, which makes
       serialization, maintenance and understanding hard;
 
-    * By making the storage explicit with repositories, we don't pollute the
-      repository with unnecessary overhead, providing straight-forward and
-      performant access to storage;
+    * You do not need to define schemas in order to interact with repositories,
+      operations like `all`, `insert_all` and so on allow developers to directly
+      access and modify the data, keeping the database at your fingertips when
+      necessary;
 
   ## Changesets
 
   Although in the example above we have directly inserted and deleted the
-  struct in the repository, update operations must be done through changesets
-  so Ecto can efficiently track changes.
+  struct in the repository, operations on top of schemas are done through
+  changesets so Ecto can efficiently track changes.
 
-  Further than that, changesets allow developers to filter, cast, and validate
-  changes before we apply them to the data. Imagine the given schema:
+  Changesets allow developers to filter, cast, and validate changes before
+  we apply them to the data. Imagine the given schema:
 
       defmodule User do
         use Ecto.Schema
@@ -173,43 +173,22 @@ defmodule Ecto do
   For example, if the params map contain only the "name" and "email" keys,
   the "age" validation won't run.
 
-  As an example, let's see how we could use the changeset above in
-  a web application that needs to update users:
-
-      def update(id, params) do
-        changeset = User.changeset Repo.get!(User, id), params["user"]
-
-        case Repo.update(changeset) do
-          {:ok, user} ->
-            send_resp conn, 200, "Ok"
-          {:error, changeset} ->
-            send_resp conn, 400, "Bad request"
-        end
-      end
-
-  The `changeset/2` function receives the user and its parameters
-  and returns a changeset. If the changeset is valid, we persist the
-  changes to the database, otherwise, we handle the error by emitting
-  a bad request code.
-
-  Another example to create users:
-
-      def create(id, params) do
-        changeset = User.changeset %User{}, params["user"]
-
-        case Repo.insert(changeset) do
-          {:ok, user} ->
-            send_resp conn, 200, "Ok"
-          {:error, changeset} ->
-            send_resp conn, 400, "Bad request"
-        end
+  Once a changeset is build, it can be given to functions like `insert` and
+  `update` in the repository that will return an `:ok` or `:error` tuple:
+  
+      case Repo.update(changeset) do
+        {:ok, user} ->
+          # user updated
+        {:error, changeset} ->
+          # an error occurred
       end
 
   The benefit of having explicit changesets is that we can easily provide
   different changesets for different use cases. For example, one
-  could easily provide specific changesets for create and update:
+  could easily provide specific changesets for registering and updating
+  users:
 
-      def create_changeset(user, params) do
+      def registration_changeset(user, params) do
         # Changeset on create
       end
 
@@ -231,11 +210,22 @@ defmodule Ecto do
 
       import Ecto.Query, only: [from: 2]
 
-      query = from w in Weather,
-                where: w.prcp > 0 or is_nil(w.prcp),
-                select: w
+      query = from u in User,
+                where: u.age > 18 or is_nil(u.email),
+                select: u
 
-      # Returns %Weather{} structs matching the query
+      # Returns %User{} structs matching the query
+      Repo.all(query)
+
+  In the example above we relied on our schema but queries can also be
+  made directly against a table by giving the table name as a string. In
+  such cases, the data to be fetched must be explicitly outlined:
+
+      query = from u in "users",
+                where: u.age > 18 or is_nil(u.email),
+                select: %{name: u.name, age: u.age}
+
+      # Returns maps as defined in select
       Repo.all(query)
 
   Queries are defined and extended with the `from` macro. The supported
@@ -261,12 +251,12 @@ defmodule Ecto do
   access params values or invoke Elixir functions, you need to use the `^`
   operator, which is overloaded by Ecto:
 
-      def min_prcp(min) do
-        from w in Weather, where: w.prcp > ^min or is_nil(w.prcp)
+      def min_age(min) do
+        from u in User, where: u.age > ^min
       end
 
   Besides `Repo.all/1` which returns all entries, repositories also
-  provide `Repo.first/1` which returns one entry or nil, `Repo.first!/1`
+  provide `Repo.one/1` which returns one entry or nil, `Repo.one!/1`
   which returns one entry or raises, `Repo.get/2` which fetches
   entries for a particular ID and more.
 
@@ -393,25 +383,18 @@ defmodule Ecto do
 
   #### Repo resolution
 
-  Out of the box, Ecto tasks assume that the location of your Repo lives within
-  your application's root namespace; for example, in the previous examples, Ecto
-  will assume your Repo is located at MyApp.Repo.
+  Ecto requires developers to specify the key `:ecto_repos` in their application
+  configure before using tasks like `ecto.create` and `ecto.migrate`. For example:
 
-  For more complex use-cases, this might not be sufficient and Ecto allows you
-  to provide an alternative namespace or Repo location using the `app_namespace`
-  or the `app_repo` configuration variables as follows:
+      config :my_app, :ecto_repos, [MyApp.Repo]
 
-      config :my_app, :app_repo, My.App.Repo
-      config :my_app, My.App.Repo,
+      config :my_app, MyApp.Repo,
         adapter: Ecto.Adapters.Postgres,
         database: "ecto_simple",
         username: "postgres",
         password: "postgres",
         hostname: "localhost"
 
-  In this example the configuration `:app_repo` is used to explicitly provide
-  the default Repo to use. Alternatively, the `:app_namespace` config could
-  have been set to `My.App` to achieve the same result.
   """
 
   @doc """
