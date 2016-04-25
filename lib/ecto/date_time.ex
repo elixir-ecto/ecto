@@ -555,7 +555,7 @@ defmodule Ecto.DateTime do
   `precision` can be `:sec` or `:usec`.
   """
   def utc(precision \\ :sec) do
-    erl_load(autogenerate(precision))
+    autogenerate(precision)
   end
 
   @doc """
@@ -579,13 +579,13 @@ defmodule Ecto.DateTime do
 
   def autogenerate(:sec) do
     {date, {h, m, s}} = :erlang.universaltime
-    {date, {h, m, s, 0}}
+    erl_load({date, {h, m, s, 0}})
   end
 
   def autogenerate(:usec) do
     timestamp = {_, _, usec} = :os.timestamp
     {date, {h, m, s}} =:calendar.now_to_datetime(timestamp)
-    {date, {h, m, s, usec}}
+    erl_load({date, {h, m, s, usec}})
   end
 
   defp erl_load({{year, month, day}, {hour, min, sec, usec}}) do

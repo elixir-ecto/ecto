@@ -98,13 +98,12 @@ defmodule Ecto.Embedded do
     nil
   end
 
-  defp to_struct(%Changeset{types: types} = changeset, action,
-                    %{related: schema}, adapter) do
+  defp to_struct(%Changeset{} = changeset, action, %{related: schema}, adapter) do
     %{data: struct, changes: changes} = prepare(changeset, adapter, action)
 
     changes
     |> autogenerate_id(struct, action, schema, adapter)
-    |> autogenerate(action, schema, types, adapter)
+    |> autogenerate(action, schema)
     |> apply_embeds(struct)
   end
 
@@ -127,8 +126,7 @@ defmodule Ecto.Embedded do
           {:ok, _} ->
             changes
           :error ->
-            {:ok, value} = Ecto.Type.adapter_load(adapter, :binary_id, adapter.autogenerate(:embed_id))
-            Map.put(changes, key, value)
+            Map.put(changes, key, adapter.autogenerate(:embed_id))
         end
       other ->
         raise ArgumentError, "embedded schema `#{inspect schema}` must have " <>
@@ -143,26 +141,18 @@ defmodule Ecto.Embedded do
     changes
   end
 
-  defp autogenerate(changes, action, schema, types, adapter) do
+  defp autogenerate(changes, action, schema) do
     Enum.reduce schema.__schema__(action_to_auto(action)), changes, fn
       {k, {mod, fun, args}}, acc ->
         case Map.fetch(acc, k) do
           {:ok, _} -> acc
-          :error   -> Map.put(acc, k, load!(types, k, apply(mod, fun, args), adapter))
+          :error   -> Map.put(acc, k, apply(mod, fun, args))
         end
     end
   end
 
   defp action_to_auto(:insert), do: :autogenerate
   defp action_to_auto(:update), do: :autoupdate
-
-  defp load!(types, k, v, adapter) do
-    type = Map.fetch!(types, k)
-    case Ecto.Type.adapter_load(adapter, type, v) do
-      {:ok, v} -> v
-      :error   -> raise ArgumentError, "cannot load `#{inspect v}` as type #{inspect type}"
-    end
-  end
 
   @doc """
   Callback invoked to build relations.

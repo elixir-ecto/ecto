@@ -270,7 +270,7 @@ defmodule Ecto.Type do
   underlying data store.
 
       iex> dump(:string, nil)
-      {:ok, %Ecto.Query.Tagged{value: nil, type: :string}}
+      {:ok, nil}
       iex> dump(:string, "foo")
       {:ok, "foo"}
 
@@ -280,7 +280,7 @@ defmodule Ecto.Type do
       :error
 
       iex> dump(:binary, "foo")
-      {:ok, %Ecto.Query.Tagged{value: "foo", type: :binary}}
+      {:ok, "foo"}
       iex> dump(:binary, 1)
       :error
 
@@ -289,15 +289,15 @@ defmodule Ecto.Type do
       iex> dump({:array, :integer}, [1, "2", 3])
       :error
       iex> dump({:array, :binary}, ["1", "2", "3"])
-      {:ok, %Ecto.Query.Tagged{value: ["1", "2", "3"], type: {:array, :binary}}}
+      {:ok, ["1", "2", "3"]}
 
   A `dumper` function may be given for handling recursive types.
   """
   @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
   def dump(type, value, dumper \\ &dump/2)
 
-  def dump(type, nil, _dumper) do
-    {:ok, %Ecto.Query.Tagged{value: nil, type: type(type)}}
+  def dump(_type, nil, _dumper) do
+    {:ok, nil}
   end
 
   def dump({:embed, embed}, value, dumper) do
@@ -306,7 +306,7 @@ defmodule Ecto.Type do
 
   def dump({:array, type}, value, dumper) do
     if is_list(value) do
-      dump_array(type, value, dumper, [], false)
+      array(value, &dumper.(type, &1), [])
     else
       :error
     end
@@ -330,34 +330,10 @@ defmodule Ecto.Type do
       not primitive?(type) ->
         type.dump(value)
       of_base_type?(type, value) ->
-        {:ok, tag(type, value)}
+        {:ok, value}
       true ->
         :error
     end
-  end
-
-  defp tag(:binary, value),
-    do: %Ecto.Query.Tagged{type: :binary, value: value}
-  defp tag(_type, value),
-    do: value
-
-  defp dump_array(type, [h|t], dumper, acc, tagged) do
-    case dumper.(type, h) do
-      {:ok, %Ecto.Query.Tagged{value: h}} ->
-        dump_array(type, t, dumper, [h|acc], true)
-      {:ok, h} ->
-        dump_array(type, t, dumper, [h|acc], tagged)
-      :error ->
-        :error
-    end
-  end
-
-  defp dump_array(type, [], _dumper, acc, true) do
-    {:ok, %Ecto.Query.Tagged{value: Enum.reverse(acc), type: type({:array, type})}}
-  end
-
-  defp dump_array(_type, [], _dumper, acc, false) do
-    {:ok, Enum.reverse(acc)}
   end
 
   defp dump_embed(%{cardinality: :one, related: schema, field: field},

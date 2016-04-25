@@ -20,7 +20,7 @@ defmodule Ecto.UUIDTest do
   end
 
   test "dump" do
-    assert Ecto.UUID.dump(@test_uuid) == {:ok, %Ecto.Query.Tagged{value: @test_uuid_binary, type: :uuid}}
+    assert Ecto.UUID.dump(@test_uuid) == {:ok, @test_uuid_binary}
     assert Ecto.UUID.dump(@test_uuid_binary) == :error
   end
 
