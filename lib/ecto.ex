@@ -173,7 +173,7 @@ defmodule Ecto do
   For example, if the params map contain only the "name" and "email" keys,
   the "age" validation won't run.
 
-  Once a changeset is build, it can be given to functions like `insert` and
+  Once a changeset is built, it can be given to functions like `insert` and
   `update` in the repository that will return an `:ok` or `:error` tuple:
   
       case Repo.update(changeset) do
