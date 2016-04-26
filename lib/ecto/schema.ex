@@ -1066,8 +1066,8 @@ defmodule Ecto.Schema do
     end
   end
 
-  defp do_load(struct, fields, map, loader) when is_map(map) do
-    Enum.reduce(fields, struct, fn
+  defp do_load(struct, types, map, loader) when is_map(map) do
+    Enum.reduce(types, struct, fn
       {field, type}, acc ->
         case Map.fetch(map, Atom.to_string(field)) do
           {:ok, value} -> Map.put(acc, field, load!(struct, type, value, loader))
@@ -1081,11 +1081,11 @@ defmodule Ecto.Schema do
   end
 
   defp do_load([field|fields], [value|values], struct, types, loader) do
-    case :lists.keyfind(field, 1, types) do
-      {^field, type} ->
+    case Map.fetch(types, field) do
+      {:ok, type} ->
         value = load!(struct, type, value, loader)
         do_load(fields, values, Map.put(struct, field, value), types, loader)
-      false ->
+      :error ->
         raise ArgumentError, "unknown field `#{field}` for struct #{inspect struct.__struct__}"
     end
   end
@@ -1250,7 +1250,7 @@ defmodule Ecto.Schema do
         end
       end)
 
-    types = Macro.escape(fields)
+    types = Macro.escape(Map.new(fields))
 
     quote do
       def __schema__(:types), do: unquote(types)
