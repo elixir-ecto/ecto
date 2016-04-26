@@ -3,7 +3,7 @@ defmodule Ecto.Changeset do
   Changesets allow filtering, casting, validation and
   definition of constraints when manipulating structs.
 
-  There is an example of working with changesets in thea
+  There is an example of working with changesets in the
   introductory documentation in the `Ecto` module. The
   functions `change/2` and `cast/3` are the usual entry
   points for creating changesets, while the remaining
@@ -17,7 +17,7 @@ defmodule Ecto.Changeset do
 
   The difference between them is that validations can be executed
   without a need to interact with the database and, therefore, are
-  always executed before attemping to insert or update the entry
+  always executed before attempting to insert or update the entry
   in the database.
 
   However, constraints can only be checked in a safe way when performing
