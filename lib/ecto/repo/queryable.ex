@@ -144,8 +144,11 @@ defmodule Ecto.Repo.Queryable do
         value
       {_source, nil} when is_list(value) ->
         load_schemaless(fields, value, %{})
-      {source, schema} ->
+      {source, schema} when is_list(value) ->
         Ecto.Schema.__load__(schema, prefix, source, context, {fields, value},
+                             &Ecto.Type.adapter_load(adapter, &1, &2))
+      {source, schema} when is_map(value) ->
+        Ecto.Schema.__load__(schema, prefix, source, context, value,
                              &Ecto.Type.adapter_load(adapter, &1, &2))
       %Ecto.SubQuery{sources: sources, fields: fields, select: select, take: take} ->
         loaded = load_subquery(fields, value, prefix, context, sources, adapter)
