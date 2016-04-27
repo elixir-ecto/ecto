@@ -1787,7 +1787,7 @@ defmodule Ecto.Changeset do
     Enum.reduce types, map, fn
       {field, {tag, %{cardinality: :many}}}, acc when tag in @relations ->
         if changesets = Map.get(changes, field) do
-          Map.put(acc, field, Enum.map(changesets, &traverse_errors(&1, msg_func)))
+          Map.put_new_lazy(acc, field, fn -> Enum.map(changesets, &traverse_errors(&1, msg_func)) end)
         else
           acc
         end

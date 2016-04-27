@@ -712,4 +712,22 @@ defmodule Ecto.Changeset.EmbeddedTest do
       name: ["IS INVALID"]
     }
   end
+
+  test "traverses changeset errors with embeds_many when required" do
+    changeset = cast(%Author{posts: []}, %{}, :posts, required: true)
+    assert changeset.errors == [posts: {"can't be blank", []}]
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"can't be blank", []}]}
+
+    changeset = cast(%Author{}, %{"posts" => []}, :posts, required: true)
+    assert changeset.errors == [posts: {"can't be blank", []}]
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"can't be blank", []}]}
+
+    changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
+    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"is invalid", [type: {:array, :map}]}]}
+
+    changeset = cast(%Author{posts: []}, %{"posts" => [%{title: nil}]}, :posts, required: true)
+    assert changeset.errors == []
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [%{title: [{"can't be blank", []}]}]}
+  end
 end

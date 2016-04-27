@@ -402,6 +402,11 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert changeset.required == [:posts]
     assert changeset.errors == []
 
+    changeset = cast(%Author{}, %{posts: []}, :posts, required: true)
+    assert changeset.required == [:posts]
+    assert changeset.changes == %{posts: []}
+    assert changeset.errors == [posts: {"can't be blank", []}]
+
     changeset = cast(%Author{posts: []}, %{}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
@@ -789,5 +794,47 @@ defmodule Ecto.Changeset.HasAssocTest do
     assoc = Author.__schema__(:association, :posts)
     [model] = Relation.apply_changes(assoc, [changeset1, changeset2])
     assert model == %Post{title: "hello"}
+  end
+
+  ## traverse_errors
+
+  test "traverses changeset errors with has_one when required" do
+    changeset = cast(%Author{}, %{}, :profile, required: true)
+    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{profile: [{"can't be blank", []}]}
+
+    changeset = cast(%Author{}, %{"profile" => nil}, :profile, required: true)
+    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{profile: [{"can't be blank", []}]}
+
+    changeset = cast(%Author{}, %{}, :profile, required: true, required_message: "a custom message")
+    assert changeset.errors == [profile: {"a custom message", []}]
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{profile: [{"a custom message", []}]}
+
+    changeset = cast(%Author{}, %{"profile" => %{name: nil}}, :profile, required: true)
+    assert changeset.errors == []
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{profile: %{name: [{"can't be blank", []}]}}
+  end
+
+  test "traverses changeset errors with has_many when required" do
+    changeset = cast(%Author{}, %{posts: [%{title: "hello"}]}, :posts, required: true)
+    assert changeset.errors == []
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [%{}]}
+
+    changeset = cast(%Author{}, %{posts: [%{title: nil}]}, :posts, required: true)
+    assert changeset.errors == []
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [%{title: [{"can't be blank", []}]}]}
+
+    changeset = cast(%Author{posts: []}, %{}, :posts, required: true)
+    assert changeset.errors == [posts: {"can't be blank", []}]
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"can't be blank", []}]}
+
+    changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
+    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"is invalid", [type: {:array, :map}]}]}
+
+    changeset = cast(%Author{}, %{posts: []}, :posts, required: true)
+    assert changeset.errors == [posts: {"can't be blank", []}]
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"can't be blank", []}]}
   end
 end
