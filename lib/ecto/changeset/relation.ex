@@ -55,7 +55,7 @@ defmodule Ecto.Changeset.Relation do
   @doc """
   Loads the relation with the given struct.
 
-  Loading will fail if the asociation is not loaded but the struct is.
+  Loading will fail if the association is not loaded but the struct is.
   """
   def load!(%{__meta__: %{state: :built}}, %NotLoaded{__cardinality__: cardinality}) do
     do_empty(cardinality)
