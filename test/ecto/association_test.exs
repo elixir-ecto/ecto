@@ -431,7 +431,7 @@ defmodule Ecto.AssociationTest do
 
   test "assoc/2" do
     assert inspect(assoc(%Post{id: 1}, :comments)) ==
-           inspect(from c in Comment, where: c.post_id in ^[1])
+           inspect(from c in Comment, where: c.post_id == ^1)
 
     assert inspect(assoc([%Post{id: 1}, %Post{id: 2}], :comments)) ==
            inspect(from c in Comment, where: c.post_id in ^[1, 2])
