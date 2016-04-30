@@ -182,11 +182,7 @@ defmodule Ecto.Adapters.Postgres do
     host = opts[:hostname] || System.get_env("PGHOST") || "localhost"
     args = ["--host", host|args]
     args = args ++ opt_args
-
-    case System.cmd(cmd, args, env: env, stderr_to_stdout: true) do
-      {_output, 0} -> :ok
-      {output, _}  -> {:error, output}
-    end
+    System.cmd(cmd, args, env: env, stderr_to_stdout: true)
   end
 
   @doc false
@@ -197,13 +193,20 @@ defmodule Ecto.Adapters.Postgres do
   @doc false
   def structure_dump(default, config) do
     path = config[:dump_path] || Path.join(default, "structure.sql")
-    run_with_cmd("pg_dump", config, ["--file", path, "--schema-only", "--no-acl",
-                                     "--no-owner", config[:database]])
+    File.mkdir_p!(Path.dirname(path))
+    case run_with_cmd("pg_dump", config, ["--file", path, "--schema-only", "--no-acl",
+                                          "--no-owner", config[:database]]) do
+      {_output, 0} -> {:ok, path}
+      {output, _}  -> {:error, output}
+    end
   end
 
   @doc false
   def structure_load(default, config) do
     path = config[:dump_path] || Path.join(default, "structure.sql")
-    run_with_cmd("psql", config, ["--quiet", "--file", path, config[:database]])
+    case run_with_cmd("psql", config, ["--quiet", "--file", path, config[:database]]) do
+      {_output, 0} -> {:ok, path}
+      {output, _}  -> {:error, output}
+    end
   end
 end

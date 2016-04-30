@@ -127,17 +127,21 @@ defmodule Mix.Ecto do
   """
   @spec migrations_path(Ecto.Repo.t) :: String.t
   def migrations_path(repo) do
-    Path.join(repo_priv(repo), "migrations")
+    Path.join(build_repo_priv(repo), "migrations")
   end
 
   @doc """
-  Returns the private repository path.
+  Returns the private repository path relative to the source.
   """
-  def repo_priv(repo) do
-    config = repo.config()
+  def source_repo_priv(repo) do
+    repo.config()[:priv] || "priv/#{repo |> Module.split |> List.last |> Macro.underscore}"
+  end
 
-    Application.app_dir(Keyword.fetch!(config, :otp_app),
-      config[:priv] || "priv/#{repo |> Module.split |> List.last |> Macro.underscore}")
+  @doc """
+  Returns the private repository path inside build.
+  """
+  def build_repo_priv(repo) do
+    Application.app_dir(Keyword.fetch!(repo.config(), :otp_app), source_repo_priv(repo))
   end
 
   @doc """

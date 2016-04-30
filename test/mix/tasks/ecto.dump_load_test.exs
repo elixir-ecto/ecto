@@ -34,13 +34,13 @@ defmodule Mix.Tasks.Ecto.DumpLoadTest do
   ## Dump
 
   test "runs the adapter structure_dump" do
-    Process.put(:structure_dump, :ok)
+    Process.put(:structure_dump, {:ok, "foo"})
     Dump.run ["-r", to_string(Repo)]
-    assert_received {:mix_shell, :info, ["The structure for Mix.Tasks.Ecto.DumpLoadTest.Repo has been dumped"]}
+    assert_received {:mix_shell, :info, ["The structure for Mix.Tasks.Ecto.DumpLoadTest.Repo has been dumped to foo"]}
   end
 
   test "runs the adapter structure_dump with --quiet" do
-    Process.put(:structure_dump, :ok)
+    Process.put(:structure_dump, {:ok, "foo"})
     Dump.run ["-r", to_string(Repo), "--quiet"]
     refute_received {:mix_shell, :info, [_]}
   end
@@ -61,13 +61,13 @@ defmodule Mix.Tasks.Ecto.DumpLoadTest do
   ## Load
 
   test "runs the adapter structure_load" do
-    Process.put(:structure_load, :ok)
+    Process.put(:structure_load, {:ok, "foo"})
     Load.run ["-r", to_string(Repo)]
-    assert_received {:mix_shell, :info, ["The structure for Mix.Tasks.Ecto.DumpLoadTest.Repo has been loaded"]}
+    assert_received {:mix_shell, :info, ["The structure for Mix.Tasks.Ecto.DumpLoadTest.Repo has been loaded from foo"]}
   end
 
   test "runs the adapter structure_load with --quiet" do
-    Process.put(:structure_load, :ok)
+    Process.put(:structure_load, {:ok, "foo"})
     Load.run ["-r", to_string(Repo), "--quiet"]
     refute_received {:mix_shell, :info, [_]}
   end

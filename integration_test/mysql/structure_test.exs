@@ -40,7 +40,7 @@ defmodule Ecto.Integration.StructureTest do
     create_database()
 
     # Default path
-    :ok = MySQL.structure_dump(tmp_path, params())
+    {:ok, _} = MySQL.structure_dump(tmp_path, params())
     dump = File.read!(Path.join(tmp_path, "structure.sql"))
 
     drop_database()
@@ -52,13 +52,13 @@ defmodule Ecto.Integration.StructureTest do
     {:error, _} = MySQL.structure_load(tmp_path, [dump_path: dump_path] ++ params())
 
     # Dump custom
-    :ok = MySQL.structure_dump(tmp_path, [dump_path: dump_path] ++ params())
+    {:ok, _} = MySQL.structure_dump(tmp_path, [dump_path: dump_path] ++ params())
     assert strip_timestamp(dump) != strip_timestamp(File.read!(dump_path))
 
     # Load original
-    :ok = MySQL.structure_load(tmp_path, params())
+    {:ok, _} = MySQL.structure_load(tmp_path, params())
 
-    :ok = MySQL.structure_dump(tmp_path, [dump_path: dump_path] ++ params())
+    {:ok, _} = MySQL.structure_dump(tmp_path, [dump_path: dump_path] ++ params())
     assert strip_timestamp(dump) == strip_timestamp(File.read!(dump_path))
   end
 

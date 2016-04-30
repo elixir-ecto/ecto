@@ -212,12 +212,12 @@ defmodule Ecto.Adapters.MySQL do
   @doc false
   def structure_dump(default, config) do
     path = config[:dump_path] || Path.join(default, "structure.sql")
-
+    File.mkdir_p!(Path.dirname(path))
     case run_with_cmd("mysqldump", config, ["--no-data", "--routines", config[:database]]) do
       {output, 0} ->
         File.mkdir_p!(Path.dirname(path))
         File.write!(path, output)
-        :ok
+        {:ok, path}
       {output, _} ->
         {:error, output}
     end
@@ -233,7 +233,7 @@ defmodule Ecto.Adapters.MySQL do
     ]
 
     case run_with_cmd("mysql", config, args) do
-      {_output, 0} -> :ok
+      {_output, 0} -> {:ok, path}
       {output, _}  -> {:error, output}
     end
   end

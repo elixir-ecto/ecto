@@ -18,7 +18,8 @@ defmodule Ecto.Adapter.Structure  do
                                   hostname: "localhost")
 
   """
-  @callback structure_dump(default :: String.t, config :: Keyword.t) :: :ok | {:error, term}
+  @callback structure_dump(default :: String.t, config :: Keyword.t) ::
+            {:ok, String.t} | {:error, term}
 
   @doc """
   Loads the given structure.
@@ -35,5 +36,6 @@ defmodule Ecto.Adapter.Structure  do
                                   hostname: "localhost")
 
   """
-  @callback structure_load(default :: String.t, config :: Keyword.t) :: :ok | {:error, term}
+  @callback structure_load(default :: String.t, config :: Keyword.t) ::
+            {:ok, String.t} | {:error, term}
 end
