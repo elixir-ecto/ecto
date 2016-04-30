@@ -225,8 +225,11 @@ defmodule Ecto.Adapters.SQL do
 
   defp map_params(params) do
     Enum.map params, fn
-      %{__struct__: _} = data_type ->
-        {:ok, value} = Ecto.DataType.dump(data_type)
+      %{__struct__: _} = value ->
+        {:ok, value} = Ecto.DataType.dump(value)
+        value
+      [_|_] = value ->
+        {:ok, value} = Ecto.DataType.dump(value)
         value
       value ->
         value

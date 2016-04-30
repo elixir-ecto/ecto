@@ -63,6 +63,21 @@ defimpl Ecto.DataType, for: Any do
   end
 end
 
+defimpl Ecto.DataType, for: List do
+  def dump(list), do: dump(list, [])
+  def cast(_, _), do: :error
+
+  defp dump([h|t], acc) do
+    case Ecto.DataType.dump(h) do
+      {:ok, h} -> dump(t, [h|acc])
+      :error -> :error
+    end
+  end
+  defp dump([], acc) do
+    {:ok, Enum.reverse(acc)}
+  end
+end
+
 defimpl Ecto.DataType, for: Ecto.DateTime do
   def dump(value), do: cast(value, :datetime)
 
