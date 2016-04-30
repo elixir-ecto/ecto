@@ -167,7 +167,7 @@ defmodule Ecto.Adapters.SQL do
   @spec query!(Ecto.Repo.t, String.t, [term], Keyword.t) ::
                %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
   def query!(repo, sql, params, opts \\ []) do
-    query!(repo, sql, params, fn x -> x end, opts)
+    query!(repo, sql, map_params(params), fn x -> x end, opts)
   end
 
   defp query!(repo, sql, params, mapper, opts) do
@@ -208,7 +208,7 @@ defmodule Ecto.Adapters.SQL do
   @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
               {:ok, %{rows: nil | [tuple], num_rows: non_neg_integer}} | {:error, Exception.t}
   def query(repo, sql, params, opts \\ []) do
-    query(repo, sql, params, fn x -> x end, opts)
+    query(repo, sql, map_params(params), fn x -> x end, opts)
   end
 
   defp query(repo, sql, params, mapper, opts) do
@@ -221,6 +221,16 @@ defmodule Ecto.Adapters.SQL do
     opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
     args = args ++ [params, opts]
     apply(repo.__sql__, callback, [conn | args])
+  end
+
+  defp map_params(params) do
+    Enum.map params, fn
+      %{__struct__: _} = data_type ->
+        {:ok, value} = Ecto.DataType.dump(data_type)
+        value
+      value ->
+        value
+    end
   end
 
   ## Worker

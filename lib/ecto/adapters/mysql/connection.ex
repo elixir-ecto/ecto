@@ -37,8 +37,7 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp map_params(params) do
       Enum.map params, fn
-        %{__struct__: _} = data_type ->
-          {:ok, value} = Ecto.DataType.dump(data_type)
+        %{__struct__: _} = value ->
           value
         %{} = value ->
           json_library.encode!(value)

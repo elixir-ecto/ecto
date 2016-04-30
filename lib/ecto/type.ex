@@ -300,6 +300,10 @@ defmodule Ecto.Type do
     {:ok, nil}
   end
 
+  def dump(:any, value, _dumper) do
+    Ecto.DataType.dump(value)
+  end
+
   def dump({:embed, embed}, value, dumper) do
     dump_embed(embed, value, dumper)
   end
@@ -442,8 +446,7 @@ defmodule Ecto.Type do
   to cast outside values to specific types.
 
   Note that nil can be cast to all primitive types as data
-  stores allow nil to be set on any column. Custom data types
-  may want to handle nil specially though.
+  stores allow nil to be set on any column.
 
       iex> cast(:any, "whatever")
       {:ok, "whatever"}

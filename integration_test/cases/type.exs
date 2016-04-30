@@ -213,4 +213,19 @@ defmodule Ecto.Integration.TypeTest do
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == 1.0, select: p.cost)
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == 1, select: p.cost)
   end
+
+  test "schemaless types" do
+    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16,
+                              hour: 20, min: 26, sec: 51, usec: 0}
+    assert {1, _} =
+           TestRepo.insert_all("posts", [[inserted_at: datetime]])
+    assert {1, _} =
+           TestRepo.update_all("posts", set: [inserted_at: datetime])
+    assert [_] =
+           TestRepo.all(from p in "posts", where: p.inserted_at >= ^datetime, select: p.inserted_at)
+    assert [_] =
+           TestRepo.all(from p in "posts", where: p.inserted_at in [^datetime], select: p.inserted_at)
+    assert [_] =
+           TestRepo.all(from p in "posts", where: p.inserted_at in ^[datetime], select: p.inserted_at)
+  end
 end

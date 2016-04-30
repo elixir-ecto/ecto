@@ -44,6 +44,7 @@ defprotocol Ecto.DataType do
   @doc """
   Invoked when attempting to cast this data structure to another type.
   """
+  # TODO: Deprecate this casting function when we migrate to Elixir v1.3.
   @spec cast(term, Ecto.Type.t) :: {:ok, term} | :error
   def cast(value, type)
 end
@@ -60,11 +61,6 @@ defimpl Ecto.DataType, for: Any do
   def dump(value) do
     {:ok, value}
   end
-end
-
-defimpl Ecto.DataType, for: Ecto.Query.Tagged do
-  def dump(%{value: value}), do: {:ok, value}
-  def cast(%{}, _type),      do: :error
 end
 
 defimpl Ecto.DataType, for: Ecto.DateTime do
@@ -91,7 +87,6 @@ defimpl Ecto.DataType, for: Ecto.Date do
     :error
   end
 end
-
 
 defimpl Ecto.DataType, for: Ecto.Time do
   def dump(value), do: cast(value, :time)

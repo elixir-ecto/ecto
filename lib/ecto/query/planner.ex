@@ -857,8 +857,12 @@ defmodule Ecto.Query.Planner do
 
   defp dump_param(adapter, type, v) do
     case Ecto.Type.adapter_dump(adapter, type, v) do
-      {:ok, v} -> {:ok, v}
-      :error   -> {:error, "cannot dump value `#{inspect v}` to type #{inspect type}"}
+      {:ok, v} ->
+        {:ok, v}
+      :error when type == :any ->
+        {:error, "value `#{inspect v}` cannot be dumped with Ecto.DataType"}
+      :error ->
+        {:error, "value `#{inspect v}` cannot be dumped to type #{inspect type}"}
     end
   end
 

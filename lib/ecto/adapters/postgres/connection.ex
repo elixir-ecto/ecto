@@ -73,26 +73,16 @@ if Code.ensure_loaded?(Postgrex) do
 
     def prepare_execute(conn, name, sql, params, opts) do
       query = %Postgrex.Query{name: name, statement: sql}
-      DBConnection.prepare_execute(conn, query, map_params(params), opts)
+      DBConnection.prepare_execute(conn, query, params, opts)
     end
 
     def execute(conn, sql, params, opts) when is_binary(sql) do
       query = %Postgrex.Query{name: "", statement: sql}
-      DBConnection.query(conn, query, map_params(params), opts)
+      DBConnection.query(conn, query, params, opts)
     end
 
     def execute(conn, %{} = query, params, opts) do
-      DBConnection.execute(conn, query, map_params(params), opts)
-    end
-
-    defp map_params(params) do
-      Enum.map params, fn
-        %{__struct__: _} = data_type ->
-          {:ok, value} = Ecto.DataType.dump(data_type)
-          value
-        value ->
-          value
-      end
+      DBConnection.execute(conn, query, params, opts)
     end
 
     alias Ecto.Query
