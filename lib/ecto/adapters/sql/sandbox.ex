@@ -223,13 +223,15 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     end
 
     def checkout(pool, opts) do
-      case DBConnection.Poolboy.checkout(pool, opts) do
+      pool_mod = opts[:sandbox_pool]
+
+      case pool_mod.checkout(pool, opts) do
         {:ok, pool_ref, conn_mod, conn_state} ->
           case conn_mod.handle_begin([mode: :transaction]++opts, conn_state) do
             {:ok, _, conn_state} ->
               {:ok, pool_ref, Connection, {conn_mod, conn_state}}
             {_error_or_disconnect, err, conn_state} ->
-              DBConnection.Poolboy.disconnect(pool_ref, err, conn_state, opts)
+              pool_mod.disconnect(pool_ref, err, conn_state, opts)
           end
         error ->
           error
@@ -237,20 +239,21 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     end
 
     def checkin(pool_ref, {conn_mod, conn_state}, opts) do
+      pool_mod = opts[:sandbox_pool]
       case conn_mod.handle_rollback([mode: :transaction]++opts, conn_state) do
         {:ok, _, conn_state} ->
-          DBConnection.Poolboy.checkin(pool_ref, conn_state, opts)
+          pool_mod.checkin(pool_ref, conn_state, opts)
         {_error_or_disconnect, err, conn_state} ->
-          DBConnection.Poolboy.disconnect(pool_ref, err, conn_state, opts)
+          pool_mod.disconnect(pool_ref, err, conn_state, opts)
       end
     end
 
     def disconnect(owner, exception, {_conn_mod, conn_state}, opts) do
-      DBConnection.Poolboy.disconnect(owner, exception, conn_state, opts)
+      opts[:sandbox_pool].disconnect(owner, exception, conn_state, opts)
     end
 
     def stop(owner, reason, {_conn_mod, conn_state}, opts) do
-      DBConnection.Poolboy.stop(owner, reason, conn_state, opts)
+      opts[:sandbox_pool].stop(owner, reason, conn_state, opts)
     end
  end
 
@@ -325,6 +328,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   defp proxy_pool(repo) do
     {name, opts} = repo.__pool__
-    {name, [repo: repo, ownership_pool: Pool] ++ opts}
+    {pool, opts} = Keyword.pop(opts, :ownership_pool, DBConnection.Poolboy)
+    {name, [repo: repo, sandbox_pool: pool, ownership_pool: Pool] ++ opts}
   end
 end
