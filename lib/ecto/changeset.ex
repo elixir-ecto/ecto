@@ -159,6 +159,8 @@ defmodule Ecto.Changeset do
   @type action :: nil | :insert | :update | :delete | :replace
   @type constraint :: %{type: :unique, constraint: String.t,
                         field: atom, message: error}
+  @type data :: map()
+  @type types :: Keyword.t | map()
 
   @number_validators %{
     less_than:                {&</2,  "must be less than %{number}"},
@@ -190,6 +192,9 @@ defmodule Ecto.Changeset do
   differ from the values in the struct. If `changes` is an empty map, this
   function is a no-op.
 
+  When a `{data, types}` is passed as the first argument, a changeset is
+  created with the given data and types and marked as valid.
+
   See `cast/3` if you'd prefer to cast and validate external parameters.
 
   ## Examples
@@ -216,8 +221,12 @@ defmodule Ecto.Changeset do
       "body"
 
   """
-  @spec change(Ecto.Schema.t | t, %{atom => term} | Keyword.t) :: t | no_return
+  @spec change(Ecto.Schema.t | t | {data, types}, %{atom => term} | Keyword.t) :: t | no_return
   def change(data, changes \\ %{})
+
+  def change({data, types}, changes) when is_map(data) do
+    change(%Changeset{data: data, types: Enum.into(types, %{}), valid?: true}, changes)
+  end
 
   def change(%Changeset{types: nil}, _changes) do
     raise ArgumentError, "changeset does not have types information"
@@ -250,12 +259,12 @@ defmodule Ecto.Changeset do
   Applies the given `params` as changes for the given `data` according to
   the given set of keys. Returns a changeset.
 
-  The given `data` may be either a changeset or a struct. The second argument
-  is a map of `params` that are cast according to the schema information
-  from `data`. `params` is a map with string keys or a map with atom keys
-  containing potentially unsafe data.
+  The given `data` may be either a changeset, a struct or a `{data, types}`
+  tuple. The second argument is a map of `params` that are cast according
+  to the type information from `data`. `params` is a map with string keys
+  or a map with atom keys containing potentially unsafe data.
 
-  During casting, all valid parameters will have their key name converted
+  During casting, all `allowed` parameters will have their key name converted
   to an atom and stored as a change in the `:changes` field of the changeset.
   All parameters that are not explicitly allowed are ignored.
 
@@ -275,6 +284,14 @@ defmodule Ecto.Changeset do
       iex> new_changeset.params
       %{title: "Foo", body: "Bar"}
 
+  Or creating a changeset from a simple map with types:
+
+      iex> data = %{title: "hello"}
+      iex> types = %{title: :string}
+      iex> changeset = cast({data, types}, %{title: "world"}, ~w(title))
+      iex> apply_changes(changeset)
+      %{title: "world"}
+
   ## Composing casts
 
   `cast/3` also accepts a changeset as its first argument. In such cases, all
@@ -283,7 +300,7 @@ defmodule Ecto.Changeset do
   Parameters are merged (**not deep-merged**) and the ones passed to `cast/3`
   take precedence over the ones already in the changeset.
   """
-  @spec cast(Ecto.Schema.t | t,
+  @spec cast(Ecto.Schema.t | t | {data, types},
              %{binary => term} | %{atom => term},
              [String.t | atom]) :: t | no_return
   def cast(data, params, allowed) do
@@ -296,36 +313,39 @@ defmodule Ecto.Changeset do
   Converts the given `params` into a changeset for `data`
   keeping only the set of `required` and `optional` keys.
   """
-  # TODO: Effectively deprecate cast/4
-  @spec cast(Ecto.Schema.t | t,
-             %{binary => term} | %{atom => term} | :invalid,
-             [String.t | atom],
-             [String.t | atom]) :: t | no_return
+  # TODO: Deprecate this function so it finally emit warnings.
   def cast(data, params, required, optional)
 
   def cast(_data, %{__struct__: _} = params, _required, _optional) do
     raise Ecto.CastError, "expected params to be a map, got: `#{inspect params}`"
   end
 
-  def cast(%Changeset{changes: changes, data: data} = changeset, params, required, optional) do
-    new_changeset = cast(data, changes, params, required, optional)
+  def cast({data, types}, params, required, optional) when is_map(data) do
+    cast(data, types, %{}, params, required, optional)
+  end
+
+  def cast(%Changeset{types: nil}, _params, _required, _optional) do
+    raise ArgumentError, "changeset does not have types information"
+  end
+
+  def cast(%Changeset{changes: changes, data: data, types: types} = changeset,
+           params, required, optional) do
+    new_changeset = cast(data, types, changes, params, required, optional)
     cast_merge(changeset, new_changeset)
   end
 
-  def cast(%{__struct__: _} = data, params, required, optional) do
-    cast(data, %{}, params, required, optional)
+  def cast(%{__struct__: module} = data, params, required, optional) do
+    cast(data, module.__changeset__, %{}, params, required, optional)
   end
 
-  defp cast(%{__struct__: _} = data, %{} = changes, :empty, required, optional) do
+  defp cast(data, types, changes, :empty, required, optional) do
     IO.puts :stderr, "warning: passing :empty to Ecto.Changeset.cast/3 is deprecated, " <>
                      "please pass an empty map or :invalid instead\n" <> Exception.format_stacktrace
-    cast(data, changes, :invalid, required, optional)
+    cast(data, types, changes, :invalid, required, optional)
   end
 
-  defp cast(%{__struct__: module} = data, %{} = changes, :invalid, required, optional)
-      when is_list(required) and is_list(optional) do
-    types = module.__changeset__
-
+  defp cast(%{} = data, %{} = types, %{} = changes, :invalid, required, optional)
+       when is_list(required) and is_list(optional) do
     _ = Enum.map(optional, &process_empty_fields(&1, types))
     required = Enum.map(required, &process_empty_fields(&1, types))
 
@@ -333,10 +353,9 @@ defmodule Ecto.Changeset do
                changes: changes, required: required, types: types}
   end
 
-  defp cast(%{__struct__: module} = data, %{} = changes, %{} = params, required, optional)
-      when is_list(required) and is_list(optional) do
+  defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, required, optional)
+       when is_list(required) and is_list(optional) do
     params = convert_params(params)
-    types  = module.__changeset__
 
     {_, {changes, errors, valid?}} =
       Enum.map_reduce(optional, {changes, [], true},
@@ -351,17 +370,15 @@ defmodule Ecto.Changeset do
                types: types}
   end
 
-  defp cast(%{__struct__: _}, %{}, params, required, optional)
-      when is_list(required) and is_list(optional) do
+  defp cast(%{}, %{}, %{}, params, required, optional)
+       when is_list(required) and is_list(optional) do
     raise Ecto.CastError, "expected params to be a map, got: `#{inspect params}`"
   end
 
-  defp process_empty_fields(key, _types) when is_binary(key) do
-    String.to_existing_atom(key)
-  end
-  defp process_empty_fields(key, _types) when is_atom(key) do
-    key
-  end
+  defp process_empty_fields(key, _types) when is_binary(key),
+    do: String.to_existing_atom(key)
+  defp process_empty_fields(key, _types) when is_atom(key),
+    do: key
 
   defp process_param(key, kind, params, types, data, {changes, errors, valid?}) do
     {key, param_key} = cast_key(key)
@@ -1814,12 +1831,12 @@ defimpl Inspect, for: Ecto.Changeset do
     surround_many("#Ecto.Changeset<", list, ">", opts, fn
       {:action, action}, opts   -> concat("action: ", to_doc(action, opts))
       {:changes, changes}, opts -> concat("changes: ", to_doc(changes, opts))
-      {:data, data}, _opts      -> concat("data: ", to_struct(data))
+      {:data, data}, _opts      -> concat("data: ", to_struct(data, opts))
       {:errors, errors}, opts   -> concat("errors: ", to_doc(errors, opts))
       {:valid?, valid?}, opts   -> concat("valid?: ", to_doc(valid?, opts))
     end)
   end
 
-  defp to_struct(nil), do: "nil"
-  defp to_struct(%{__struct__: struct}), do: "#" <> Kernel.inspect(struct) <> "<>"
+  defp to_struct(%{__struct__: struct}, _opts), do: "#" <> Kernel.inspect(struct) <> "<>"
+  defp to_struct(other, opts), do: to_doc(other, opts)
 end

@@ -95,16 +95,17 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
-  test "cast/4: no optionals passed is valid" do
-    params = %{"title" => "hello"}
-    struct = %Post{}
+  test "cast/4: with data and types" do
+    data   = {%{title: "hello"}, %{title: :string, upvotes: :integer}}
+    params = %{"title" => "world", "upvotes" => "0"}
 
-    changeset = cast(struct, params, ~w(title), [])
+    changeset = cast(data, params, ~w(title upvotes))
     assert changeset.params == params
-    assert changeset.data  == struct
-    assert changeset.changes == %{title: "hello"}
+    assert changeset.data  == %{title: "hello"}
+    assert changeset.changes == %{title: "world", upvotes: 0}
     assert changeset.errors == []
     assert changeset.valid?
+    assert apply_changes(changeset) == %{title: "world", upvotes: 0}
   end
 
   test "cast/4: missing required is invalid" do
@@ -152,7 +153,7 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/4: can't cast optional field is marked as invalid" do
+  test "cast/4: optional field is marked as invalid" do
     params = %{"body" => :world}
     struct = %Post{}
 
@@ -366,7 +367,7 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-  test "change/2 with a model" do
+  test "change/2 with a struct" do
     changeset = change(%Post{})
     assert changeset.valid?
     assert changeset.data == %Post{}
@@ -391,6 +392,26 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
     assert changeset.data == %Post{}
     assert changeset.changes == %{body: "bar"}
+  end
+
+  test "change/2 with data and types" do
+    datatypes = {%{title: "hello"}, %{title: :string}}
+    changeset = change(datatypes)
+    assert changeset.valid?
+    assert changeset.data == %{title: "hello"}
+    assert changeset.changes == %{}
+
+    changeset = change(datatypes, title: "world")
+    assert changeset.valid?
+    assert changeset.data == %{title: "hello"}
+    assert changeset.changes == %{title: "world"}
+    assert apply_changes(changeset) == %{title: "world"}
+
+    changeset = change(datatypes, title: "hello")
+    assert changeset.valid?
+    assert changeset.data == %{title: "hello"}
+    assert changeset.changes == %{}
+    assert apply_changes(changeset) == %{title: "hello"}
   end
 
   test "change/2 with a changeset" do
