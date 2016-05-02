@@ -24,6 +24,12 @@ defmodule Ecto.Multi do
   If any changeset has errors, the transaction won't even be started and the error
   will be immediately returned.
 
+  `insert/4`, `update/4` and `delete/4` also accept a function which receives
+  the changes so far and returns a changeset. This allows introspection and use
+  of database generated values, such as ids, from previous steps. However when
+  using changesets wrapped in functions the changeset can not be validated prior
+  to starting the transaction.
+
   ## Run
 
   Multi allows you to run arbitrary functions as part of your transaction via
@@ -99,8 +105,10 @@ defmodule Ecto.Multi do
   defstruct operations: [], names: MapSet.new
 
   @type run :: (t -> {:ok | :error, any}) | {module, atom, [any]}
+  @type changeset_fun :: (map -> Changeset.t)
   @typep schema_or_source :: binary | {binary | nil, binary} | Ecto.Schema.t
   @typep operation :: {:changeset, Changeset.t, Keyword.t} |
+                      {:changeset_fun, atom, changeset_fun, Keyword.t} |
                       {:run, run} |
                       {:update_all, Ecto.Query.t, Keyword.t} |
                       {:delete_all, Ecto.Query.t, Keyword.t} |
@@ -183,11 +191,15 @@ defmodule Ecto.Multi do
 
   Accepts the same arguments and options as `Ecto.Repo.insert/3` does.
   """
-  @spec insert(t, name, Changeset.t | Ecto.Schema.t, Keyword.t) :: t
+  @spec insert(t, name, Changeset.t | Ecto.Schema.t | changeset_fun, Keyword.t) :: t
   def insert(multi, name, changeset_or_struct, opts \\ [])
 
   def insert(multi, name, %Changeset{} = changeset, opts) do
     add_changeset(multi, :insert, name, changeset, opts)
+  end
+
+  def insert(multi, name, run, opts) when is_function(run, 1) do
+    add_operation(multi, name, {:changeset_fun, :insert, run, opts})
   end
 
   def insert(multi, name, struct, opts) do
@@ -199,9 +211,15 @@ defmodule Ecto.Multi do
 
   Accepts the same arguments and options as `Ecto.Repo.update/3` does.
   """
-  @spec update(t, name, Changeset.t, Keyword.t) :: t
-  def update(multi, name, %Changeset{} = changeset, opts \\ []) do
+  @spec update(t, name, Changeset.t | changeset_fun, Keyword.t) :: t
+  def update(multi, name, changeset_or_fun, opts \\ [])
+
+  def update(multi, name, %Changeset{} = changeset, opts) do
     add_changeset(multi, :update, name, changeset, opts)
+  end
+
+  def update(multi, name, run, opts) when is_function(run, 1) do
+    add_operation(multi, name, {:changeset_fun, :update, run, opts})
   end
 
   @doc """
@@ -209,11 +227,15 @@ defmodule Ecto.Multi do
 
   Accepts the same arguments and options as `Ecto.Repo.delete/3` does.
   """
-  @spec delete(t, name, Changeset.t | Ecto.Schema.t, Keyword.t) :: t
+  @spec delete(t, name, Changeset.t | Ecto.Schema.t | changeset_fun, Keyword.t) :: t
   def delete(multi, name, changeset_or_struct, opts \\ [])
 
   def delete(multi, name, %Changeset{} = changeset, opts) do
     add_changeset(multi, :delete, name, changeset, opts)
+  end
+
+  def delete(multi, name, run, opts) when is_function(run, 1) do
+    add_operation(multi, name, {:changeset_fun, :delete, run, opts})
   end
 
   def delete(multi, name, struct, opts) do
@@ -363,6 +385,8 @@ defmodule Ecto.Multi do
     do: apply(mod, fun, [acc | args])
   defp apply_operation({:run, run}, acc, _repo),
     do: apply(run, [acc])
+  defp apply_operation({:changeset_fun, action, run, opts}, acc, repo),
+    do: apply_operation({:changeset, put_action(run.(acc), action), opts}, acc, repo)
   defp apply_operation({:insert_all, source, entries, opts}, _acc, repo),
     do: {:ok, repo.insert_all(source, entries, opts)}
   defp apply_operation({:update_all, query, updates, opts}, _acc, repo),
