@@ -1469,6 +1469,25 @@ defmodule Ecto.Changeset do
 
   The given function is guaranteed to run inside the same transaction
   as the changeset operation for databases that do support transactions.
+
+  ## Example
+
+  A common use case is updating a counter cache, in this case updating a post's
+  comment count when a comment is created:
+
+      def create_comment(comment, attrs) do
+        comment
+        |> cast(attrs, [:body, :post_id])
+        |> prepare_changes((changeset) ->
+          assoc(changeset.data, :post)
+          |> changeset.repo.update_all(inc: [comment_count: 1])
+          changeset
+        end)
+      end
+
+  We retrieve the repo and from the comment changeset it self, and use 
+  update_all to update the counter cache in one query. Finally the original
+  changeset must be returned.
   """
   @spec prepare_changes(t, (t -> t)) :: t
   def prepare_changes(changeset, function) when is_function(function, 1) do
