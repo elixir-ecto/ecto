@@ -1056,7 +1056,8 @@ defmodule Ecto.Changeset do
   Validates that one or more fields are present in the changeset.
 
   If the value of a field is `nil` or a string made only of whitespace,
-  the changeset is marked as invalid and an error is added.
+  the changeset is marked as invalid and an error is added. Note the
+  error won't be added though if the field already has an error.
 
   You can pass a single field name or a list of field names that
   are required.
@@ -1079,6 +1080,7 @@ defmodule Ecto.Changeset do
     new_errors =
       for field <- fields,
           missing?(changeset, field),
+          is_nil(errors[field]),
           do: {field, {message, []}}
 
     case new_errors do
@@ -1090,7 +1092,7 @@ defmodule Ecto.Changeset do
   defp missing?(changeset, field) when is_atom(field) do
     case get_field(changeset, field) do
       value when is_binary(value) -> String.lstrip(value) == ""
-      value -> value == nil && changeset.errors[field] == nil
+      value -> value == nil
     end
   end
 
