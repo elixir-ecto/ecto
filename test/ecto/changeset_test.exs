@@ -46,6 +46,28 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
+  test "cast/3: optional field of wrong type is marked as invalid" do
+    params = %{"body" => :world}
+    struct = %Post{}
+
+    changeset = cast(struct, params, ~w(body))
+    assert changeset.changes == %{}
+    assert changeset.errors == [body: {"is invalid", [type: :string]}]
+    refute changeset.valid?
+  end
+
+  test "cast/3: required field (via validate_required/2) of wrong type is marked as invalid" do
+    params = %{"body" => :world}
+    struct = %Post{}
+
+    changeset = cast(struct, params, [:body])
+                |> validate_required([:body])
+
+    assert changeset.changes == %{}
+    assert changeset.errors == [body: {"is invalid", [type: :string]}]
+    refute changeset.valid?
+  end
+
   ## cast/4
 
   test "cast/4: with valid string keys" do

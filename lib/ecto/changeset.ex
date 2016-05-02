@@ -1090,7 +1090,7 @@ defmodule Ecto.Changeset do
   defp missing?(changeset, field) when is_atom(field) do
     case get_field(changeset, field) do
       value when is_binary(value) -> String.lstrip(value) == ""
-      value -> value == nil
+      value -> value == nil && changeset.errors[field] == nil
     end
   end
 
@@ -1485,7 +1485,7 @@ defmodule Ecto.Changeset do
         end)
       end
 
-  We retrieve the repo and from the comment changeset it self, and use 
+  We retrieve the repo and from the comment changeset it self, and use
   update_all to update the counter cache in one query. Finally the original
   changeset must be returned.
   """
