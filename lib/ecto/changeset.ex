@@ -1475,10 +1475,10 @@ defmodule Ecto.Changeset do
   A common use case is updating a counter cache, in this case updating a post's
   comment count when a comment is created:
 
-      def create_comment(comment, attrs) do
+      def create_comment(comment, params) do
         comment
-        |> cast(attrs, [:body, :post_id])
-        |> prepare_changes((changeset) ->
+        |> cast(params, ~w(body post_id))
+        |> prepare_changes(fn changeset ->
           assoc(changeset.data, :post)
           |> changeset.repo.update_all(inc: [comment_count: 1])
           changeset
