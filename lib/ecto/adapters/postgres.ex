@@ -85,6 +85,7 @@ defmodule Ecto.Adapters.Postgres do
   def storage_up(opts) do
     database = Keyword.fetch!(opts, :database)
     encoding = opts[:encoding] || "UTF8"
+    opts     = Keyword.put(opts, :database, "template1")
 
     command =
       ~s(CREATE DATABASE "#{database}" ENCODING '#{encoding}')
@@ -92,8 +93,8 @@ defmodule Ecto.Adapters.Postgres do
       |> concat_if(opts[:lc_ctype], &"LC_CTYPE='#{&1}'")
       |> concat_if(opts[:lc_collate], &"LC_COLLATE='#{&1}'")
 
-    case run_query(opts, command) do
-      :ok ->
+    case run_query(command, opts) do
+      {:ok, _} ->
         :ok
       {:error, %{postgres: %{code: :duplicate_database}}} ->
         {:error, :already_up}
@@ -108,10 +109,11 @@ defmodule Ecto.Adapters.Postgres do
   @doc false
   def storage_down(opts) do
     database = Keyword.fetch!(opts, :database)
-    command = "DROP DATABASE \"#{database}\""
+    command  = "DROP DATABASE \"#{database}\""
+    opts     = Keyword.put(opts, :database, "template1")
 
-    case run_query(opts, command) do
-      :ok ->
+    case run_query(command, opts) do
+      {:ok, _} ->
         :ok
       {:error, %{postgres: %{code: :invalid_catalog_name}}} ->
         {:error, :already_down}
@@ -120,13 +122,74 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
-  defp run_query(opts, sql) do
+  @doc false
+  def supports_ddl_transaction? do
+    true
+  end
+
+  @doc false
+  def structure_dump(default, config) do
+    table = config[:migration_source] || "schema_migrations"
+
+    with {:ok, versions} <- select_versions(table, config),
+         {:ok, path} <- pg_dump(default, config),
+         do: append_versions(table, versions, path)
+  end
+
+  defp select_versions(table, config) do
+    case run_query(~s[SELECT version FROM "#{table}" ORDER BY version], config) do
+      {:ok, %{rows: rows}} -> {:ok, Enum.map(rows, &hd/1)}
+      {:error, %{postgres: %{code: :undefined_table}}} -> {:ok, []}
+      {:error, _} = error -> error
+    end
+  end
+
+  defp pg_dump(default, config) do
+    path = config[:dump_path] || Path.join(default, "structure.sql")
+    File.mkdir_p!(Path.dirname(path))
+
+    case run_with_cmd("pg_dump", config, ["--file", path, "--schema-only", "--no-acl",
+                                          "--no-owner", config[:database]]) do
+      {_output, 0} ->
+        {:ok, path}
+      {output, _} ->
+        {:error, output}
+    end
+  end
+
+  defp append_versions(_table, [], path) do
+    {:ok, path}
+  end
+  defp append_versions(table, versions, path) do
+    sql =
+      ~s[INSERT INTO "#{table}" (version) VALUES ] <>
+      Enum.map_join(versions, ", ", &"(#{&1})") <>
+      ~s[;\n\n]
+
+    File.open!(path, [:append], fn file ->
+      IO.write(file, sql)
+    end)
+
+    {:ok, path}
+  end
+
+  @doc false
+  def structure_load(default, config) do
+    path = config[:dump_path] || Path.join(default, "structure.sql")
+    case run_with_cmd("psql", config, ["--quiet", "--file", path, config[:database]]) do
+      {_output, 0} -> {:ok, path}
+      {output, _}  -> {:error, output}
+    end
+  end
+
+  ## Helpers
+
+  defp run_query(sql, opts) do
     {:ok, _} = Application.ensure_all_started(:postgrex)
 
     opts =
       opts
       |> Keyword.delete(:name)
-      |> Keyword.put(:database, "template1")
       |> Keyword.put(:pool, DBConnection.Connection)
       |> Keyword.put(:backoff_type, :stop)
 
@@ -143,8 +206,8 @@ defmodule Ecto.Adapters.Postgres do
     timeout = Keyword.get(opts, :timeout, 15_000)
 
     case Task.yield(task, timeout) || Task.shutdown(task) do
-      {:ok, {:ok, _}} ->
-        :ok
+      {:ok, {:ok, result}} ->
+        {:ok, result}
       {:ok, {:error, error}} ->
         {:error, error}
       {:exit, {%{__struct__: struct} = error, _}}
@@ -183,30 +246,5 @@ defmodule Ecto.Adapters.Postgres do
     args = ["--host", host|args]
     args = args ++ opt_args
     System.cmd(cmd, args, env: env, stderr_to_stdout: true)
-  end
-
-  @doc false
-  def supports_ddl_transaction? do
-    true
-  end
-
-  @doc false
-  def structure_dump(default, config) do
-    path = config[:dump_path] || Path.join(default, "structure.sql")
-    File.mkdir_p!(Path.dirname(path))
-    case run_with_cmd("pg_dump", config, ["--file", path, "--schema-only", "--no-acl",
-                                          "--no-owner", config[:database]]) do
-      {_output, 0} -> {:ok, path}
-      {output, _}  -> {:error, output}
-    end
-  end
-
-  @doc false
-  def structure_load(default, config) do
-    path = config[:dump_path] || Path.join(default, "structure.sql")
-    case run_with_cmd("psql", config, ["--quiet", "--file", path, config[:database]]) do
-      {_output, 0} -> {:ok, path}
-      {output, _}  -> {:error, output}
-    end
   end
 end

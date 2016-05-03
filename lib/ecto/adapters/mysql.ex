@@ -161,24 +161,6 @@ defmodule Ecto.Adapters.MySQL do
     run_with_cmd("mysql", opts, args)
   end
 
-  defp run_with_cmd(cmd, opts, opt_args) do
-    unless System.find_executable(cmd) do
-      raise "could not find executable `#{cmd}` in path, " <>
-            "please guarantee it is available before running ecto commands"
-    end
-
-    env =
-      if password = opts[:password] do
-        [{"MYSQL_PWD", password}]
-      else
-        []
-      end
-
-    host = opts[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
-    port = opts[:port] || System.get_env("MYSQL_TCP_PORT") || "3306"
-    args = ["--user", opts[:username], "--host", host, "--port", to_string(port)] ++ opt_args
-    System.cmd(cmd, args, env: env, stderr_to_stdout: true)
-  end
 
   @doc false
   def supports_ddl_transaction? do
@@ -211,16 +193,42 @@ defmodule Ecto.Adapters.MySQL do
 
   @doc false
   def structure_dump(default, config) do
-    path = config[:dump_path] || Path.join(default, "structure.sql")
-    File.mkdir_p!(Path.dirname(path))
-    case run_with_cmd("mysqldump", config, ["--no-data", "--routines", config[:database]]) do
-      {output, 0} ->
-        File.mkdir_p!(Path.dirname(path))
-        File.write!(path, output)
-        {:ok, path}
-      {output, _} ->
-        {:error, output}
+    table = config[:migration_source] || "schema_migrations"
+    path  = config[:dump_path] || Path.join(default, "structure.sql")
+
+    with {:ok, versions} <- select_versions(table, config),
+         {:ok, contents} <- mysql_dump(config),
+         {:ok, contents} <- append_versions(table, versions, contents) do
+      File.mkdir_p!(Path.dirname(path))
+      File.write!(path, contents)
+      {:ok, path}
     end
+  end
+
+  defp select_versions(table, config) do
+    case run_query(~s[SELECT version FROM `#{table}` ORDER BY version], config) do
+      {:ok, %{rows: rows}} -> {:ok, Enum.map(rows, &hd/1)}
+      {:error, %{mariadb: %{code: 1146}}} -> {:ok, []}
+      {:error, _} = error -> error
+    end
+  end
+
+  defp mysql_dump(config) do
+    case run_with_cmd("mysqldump", config, ["--no-data", "--routines", config[:database]]) do
+      {output, 0} -> {:ok, output}
+      {output, _} -> {:error, output}
+    end
+  end
+
+  defp append_versions(_table, [], contents) do
+    {:ok, contents}
+  end
+  defp append_versions(table, versions, contents) do
+    {:ok,
+      contents <>
+      ~s[INSERT INTO `#{table}` (version) VALUES ] <>
+      Enum.map_join(versions, ", ", &"(#{&1})") <>
+      ~s[;\n\n]}
   end
 
   @doc false
@@ -236,5 +244,60 @@ defmodule Ecto.Adapters.MySQL do
       {_output, 0} -> {:ok, path}
       {output, _}  -> {:error, output}
     end
+  end
+
+  defp run_query(sql, opts) do
+    {:ok, _} = Application.ensure_all_started(:mariaex)
+
+    opts =
+      opts
+      |> Keyword.delete(:name)
+      |> Keyword.put(:pool, DBConnection.Connection)
+      |> Keyword.put(:backoff_type, :stop)
+
+    {:ok, pid} = Task.Supervisor.start_link
+
+    task = Task.Supervisor.async_nolink(pid, fn ->
+      {:ok, conn} = Mariaex.start_link(opts)
+
+      value = Ecto.Adapters.MySQL.Connection.execute(conn, sql, [], opts)
+      GenServer.stop(conn)
+      value
+    end)
+
+    timeout = Keyword.get(opts, :timeout, 15_000)
+
+    case Task.yield(task, timeout) || Task.shutdown(task) do
+      {:ok, {:ok, result}} ->
+        {:ok, result}
+      {:ok, {:error, error}} ->
+        {:error, error}
+      {:exit, {%{__struct__: struct} = error, _}}
+          when struct in [Mariaex.Error, DBConnection.Error] ->
+        {:error, error}
+      {:exit, reason}  ->
+        {:error, RuntimeError.exception(Exception.format_exit(reason))}
+      nil ->
+        {:error, RuntimeError.exception("command timed out")}
+    end
+  end
+
+  defp run_with_cmd(cmd, opts, opt_args) do
+    unless System.find_executable(cmd) do
+      raise "could not find executable `#{cmd}` in path, " <>
+            "please guarantee it is available before running ecto commands"
+    end
+
+    env =
+      if password = opts[:password] do
+        [{"MYSQL_PWD", password}]
+      else
+        []
+      end
+
+    host = opts[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
+    port = opts[:port] || System.get_env("MYSQL_TCP_PORT") || "3306"
+    args = ["--user", opts[:username], "--host", host, "--port", to_string(port)] ++ opt_args
+    System.cmd(cmd, args, env: env, stderr_to_stdout: true)
   end
 end
