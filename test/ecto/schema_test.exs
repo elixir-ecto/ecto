@@ -9,7 +9,7 @@ defmodule Ecto.SchemaTest do
     use Ecto.Schema
 
     schema "my schema" do
-      field :name,  :string, default: "eric"
+      field :name,  :string, default: "eric", autogenerate: {String, :upcase, ["eric"]}
       field :email, :string, uniq: true, read_after_writes: true
       field :temp,  :any, default: "temp", virtual: true
       field :count, :decimal, read_after_writes: true
@@ -46,16 +46,22 @@ defmodule Ecto.SchemaTest do
              comment_id: :id, temp: :any, id: :id, uuid: Ecto.UUID}
   end
 
+  test "autogenerate metadata (private)" do
+    assert Schema.__schema__(:autogenerate) ==
+           [uuid: {Ecto.UUID, :autogenerate, []}, name: {String, :upcase, ["eric"]}]
+    assert Schema.__schema__(:autoupdate) == []
+  end
+
   test "skip field with define_field false" do
     refute Schema.__schema__(:type, :permalink_id)
   end
 
-  test "primary key" do
+  test "primary key operations" do
     assert Ecto.primary_key(%Schema{}) == [id: nil]
     assert Ecto.primary_key(%Schema{id: "hello"}) == [id: "hello"]
   end
 
-  test "reads and writes meta" do
+  test "reads and writes metadata" do
     schema = %Schema{}
     assert schema.__meta__.source == {nil, "my schema"}
     schema = Ecto.put_meta(schema, source: "new schema")
@@ -79,8 +85,9 @@ defmodule Ecto.SchemaTest do
     assert inspect(schema.__meta__) == "#Ecto.Schema.Metadata<:built>"
   end
 
-  test "default of array field is not []" do
-     assert %Schema{}.array == nil
+  test "defaults" do
+    assert %Schema{}.name == "eric"
+    assert %Schema{}.array == nil
   end
 
   defmodule CustomSchema do
@@ -142,6 +149,21 @@ defmodule Ecto.SchemaTest do
     assert CustomEmbeddedSchema.__schema__(:prefix)      == nil
     assert CustomEmbeddedSchema.__schema__(:fields)      == [:name]
     assert CustomEmbeddedSchema.__schema__(:primary_key) == []
+  end
+
+  defmodule Timestamps do
+    use Ecto.Schema
+
+    schema "timestamps" do
+      timestamps autogenerate: {:m, :f, [:a]}
+    end
+  end
+
+  test "timestamps autogenerate metadata (private)" do
+    assert Timestamps.__schema__(:autogenerate) ==
+           [updated_at: {:m, :f, [:a]}, inserted_at: {:m, :f, [:a]}]
+    assert Timestamps.__schema__(:autoupdate) ==
+           [updated_at: {:m, :f, [:a]}]
   end
 
   ## Schema prefix
