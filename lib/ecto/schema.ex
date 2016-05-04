@@ -428,8 +428,8 @@ defmodule Ecto.Schema do
       Microseconds will be 0 if false. Defaults to false.
     * `:inserted_at` - the name of the column for insertion times or `false`
     * `:updated_at` - the name of the column for update times or `false`
-    * `:autogenerate` - a module-function-arity tuple used for generating
-      both `insert_at` and `update_at` timestamps
+    * `:autogenerate` - a module-function-args tuple used for generating
+      both `inserted_at` and `updated_at` timestamps
 
   All options can be pre-configured by setting `@timestamps_opts`.
   """
