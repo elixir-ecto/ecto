@@ -512,6 +512,10 @@ defmodule Ecto.Query do
       Post
         |> join(:left, [p], c in assoc(p, :comments))
         |> select([p, c], {p, c})
+        
+      Post
+        |> join(:left, [p], c in Comment, c.post_id == p.id and c.is_visible == true)
+        |> select([p, c], {p, c})
 
   ## Joining with fragments
 
