@@ -234,7 +234,7 @@ defmodule Ecto.Schema do
 
   * `__schema__(:fields)` - Returns a list of all non-virtual field names;
   * `__schema__(:type, field)` - Returns the type of the given non-virtual field;
-  * `__schema__(:types)` - Returns a keyword list of all non-virtual
+  * `__schema__(:types)` - Returns a map of all non-virtual
     field names and their type;
 
   * `__schema__(:associations)` - Returns a list of all association field names;
