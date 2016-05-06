@@ -128,6 +128,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Repo] `:timeout` in `Repo.transaction` now affects the whole transaction block and not only the particular transaction queries
   * [Repo] Overriding `Repo.log/1` is no longer supported. Instead provide custom loggers configuration via `:loggers`. The default is: `[Ecto.LogEntry]`
   * [Schema] Array fields no longer default to an empty list `[]`. Previous behaviour can be achieved by passing `default: []` to the field definition
+  * [Schema] `__schema__(:types)` now returns map
   * [SQL] `Ecto.Adapters.SQL.begin_test_transaction`, `Ecto.Adapters.SQL.restart_test_transaction` and `Ecto.Adapters.SQL.rollback_test_transaction` have been removed in favor of the new ownership-based `Ecto.Adapters.SQL.Sandbox`
 
 ## Deprecations
