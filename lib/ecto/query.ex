@@ -377,7 +377,7 @@ defmodule Ecto.Query do
 
   ## Keywords example
 
-      from(City, select: c)
+      from(c in City, select: c)
 
   ## Expressions example
 
