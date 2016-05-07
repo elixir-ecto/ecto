@@ -360,12 +360,19 @@ defmodule Ecto.Query do
   @doc """
   Creates a query.
 
-  It can either be a keyword query or a query expression. If it is a
-  keyword query the first argument should be an `in` expression and
-  the second argument a keyword query where the keys are expression
-  types and the values are expressions.
+  It can either be a keyword query or a query expression.
 
-  If it is a query expression the first argument is the original query
+  If it is a keyword query the first argument must be
+  either an `in` expression, or a value that implements
+  the `Ecto.Queryable` protocol. If the query needs a
+  reference to the data source in any other part of the
+  expression, then an `in` must be used to create a reference
+  variable. The second argument should be a keyword query
+  where the keys are expression types and the values are
+  expressions.
+
+  If it is a query expression the first argument must be
+  a value that implements the `Ecto.Queryable` protocol
   and the second argument the expression.
 
   ## Keywords example
@@ -385,15 +392,16 @@ defmodule Ecto.Query do
       end
 
   The example above does not use `in` because `limit` and `offset`
-  do not require such. However, extending a query with a where expression would
-  require the use of `in`:
+  do not require a reference to the data source. However, extending
+  the query with a where expression would require the use of `in`:
 
       def published(query) do
         from p in query, where: not(is_nil(p.published_a))
       end
 
-  Notice we have created a `p` variable to represent each item in the query.
-  When the given query has more than one `from` expression, a variable
+  Notice we have created a `p` variable to reference the query's
+  original data source. This assumes that the original query
+  only had one source. When the given query has more than one source, a variable
   must be given for each in the order they were bound:
 
       def published_multi(query) do
