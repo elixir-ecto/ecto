@@ -753,7 +753,6 @@ if Code.ensure_loaded?(Postgrex) do
       cond do
         size            -> "#{type_name}(#{size})"
         precision       -> "#{type_name}(#{precision},#{scale || 0})"
-        type == :string -> "#{type_name}(255)"
         true            -> "#{type_name}"
       end
     end
