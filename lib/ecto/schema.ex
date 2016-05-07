@@ -1105,8 +1105,6 @@ defmodule Ecto.Schema do
     pk? = opts[:primary_key] || false
 
     default = default_for_type(type, opts)
-    check_default!(name, type, default)
-
     Module.put_attribute(mod, :changeset_fields, {name, type})
     put_struct_field(mod, name, default)
 
@@ -1393,18 +1391,6 @@ defmodule Ecto.Schema do
     do: ". Maybe you meant to use Ecto.UUID?"
   defp raise_type_error_hint(_),
     do: ""
-
-  # Skip embed check because embedded schema may not yet be compiled
-  defp check_default!(_name, {:embed, _}, _default), do: :ok
-  defp check_default!(name, type, default) do
-    case Ecto.Type.dump(type, default) do
-      {:ok, _} ->
-        :ok
-      :error ->
-        raise ArgumentError, "invalid default argument `#{inspect default}` for " <>
-                             "field #{inspect name} of type #{inspect type}"
-    end
-  end
 
   defp store_mfa_autogenerate!(mod, name, type, mfa) do
     cond do

@@ -346,18 +346,6 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  test "fail invalid default" do
-    assert_raise ArgumentError, "invalid default argument `13` for field :x of type :string", fn ->
-      defmodule DefaultFail do
-        use Ecto.Schema
-
-        schema "hello" do
-          field :x, :string, default: 13
-        end
-      end
-    end
-  end
-
   test "fail invalid autogenerate" do
     assert_raise ArgumentError,
                  "field :x does not support :autogenerate because it uses a primitive type :string", fn ->
