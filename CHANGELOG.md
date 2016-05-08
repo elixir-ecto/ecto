@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.1.6
+
+### Enhancements
+
+* Also support Poison ~> 2.0
+
+### Bug fixes
+
+* Ensure optimistic_lock reads data from changes
+* Ensure BIT(1) type can be loaded as type :boolean for MYSQL
+
 ## v1.1.5
 
 ### Bug fixes
