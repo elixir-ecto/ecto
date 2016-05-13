@@ -107,6 +107,9 @@ defmodule Ecto.Integration.TypeTest do
     assert TestRepo.all(from t in Tag, where: t.ints == ^[], select: t.ints) == []
     assert TestRepo.all(from t in Tag, where: t.ints == ^[1, 2, 3], select: t.ints) == [ints]
 
+    # Both sides interpolation
+    assert TestRepo.all(from t in Tag, where: ^"b" in ^["a", "b", "c"], select: t.ints) == [ints]
+
     # Querying
     assert TestRepo.all(from t in Tag, where: t.ints == [1, 2, 3], select: t.ints) == [ints]
     assert TestRepo.all(from t in Tag, where: 0 in t.ints, select: t.ints) == []
