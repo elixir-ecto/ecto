@@ -148,6 +148,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Migration] Support `:on_update` for `Ecto.Migrate.references`
   * [Migration] Use pool of 1 connection for `mix ecto.migrate/rollback`
   * [Mix] Automatically reenable migration and repository management tasks after execution
+  * [Preloader] Support mixing preloads and assocs
   * [Postgres] Add migration and changeset support for PostgreSQL exclusion constraints. Example: `create constraint(:sizes, :cannot_overlap, exclude: ~s|gist (int4range("min", "max", '[]') WITH &&)|)` and `exclusion_constraint(changeset, :sizes, name: :cannot_overlap, message: "must not overlap")`
   * [Postgres] Add migration and changeset support for PostgreSQL check constraints. Example: `create constraint(:products, "positive_price", check: "price > 0")` and `check_constraint(changeset, :price, name: :positive_price, message: "must be greater than zero")`
   * [Query] Allow the `:on` field to be specified with association joins
@@ -162,6 +163,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Repo] Add `Repo.in_transaction?` to know if the current process is in a transaction
   * [Repo] Support `:returning` option in `insert_all`, `update_all` and `delete_all`
   * [Schema] Allow `@schema_prefix` to be configured per schema. It is used for new structs as well as queries where the given schema is used as `from`
+  * [Schema] Support MFA on autogenerate
   * [Schema] Support composite primary keys
 
 ## Bug fixes
