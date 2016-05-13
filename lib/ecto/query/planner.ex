@@ -607,11 +607,9 @@ defmodule Ecto.Query.Planner do
                         type: Ecto.Type.type(type)}, acc + 1}
   end
 
-  defp prewalk(%Ecto.Query.Tagged{value: v, type: type}, kind, query, expr, acc, adapter) do
-    {v, acc} = prewalk(v, kind, query, expr, acc, adapter)
-
+  defp prewalk(%Ecto.Query.Tagged{value: v, type: type} = tagged, kind, query, expr, acc, adapter) do
     if Ecto.Type.base?(type) do
-      {%Ecto.Query.Tagged{value: v, type: type}, acc}
+      {tagged, acc}
     else
       {dump_param(kind, query, expr, v, type, adapter), acc}
     end
