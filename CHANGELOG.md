@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.7
+
+### Bug fixes
+
+* Fix bug where `^left in ^right` in queries would emit parameters in the wrong order
+
 ## v1.1.6
 
 ### Enhancements
