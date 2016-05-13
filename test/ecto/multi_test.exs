@@ -291,6 +291,16 @@ defmodule Ecto.MultiTest do
     refute Map.has_key?(changes, :update)
   end
 
+  test "Repo.transaction rejects invalid changeset_fun" do
+    multi =
+      Multi.new
+      |> Multi.insert(:log, fn _ -> :invalid end)
+
+    assert_raise ArgumentError, "expected an Ecto.Changeset, got :invalid", fn ->
+      TestRepo.transaction(multi)
+    end
+  end
+
   test "checks invalid changesets before starting transaction" do
     changeset = %{Changeset.change(%Comment{}) | valid?: false}
     multi = Multi.new |> Multi.insert(:invalid, changeset)

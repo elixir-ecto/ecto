@@ -246,17 +246,21 @@ defmodule Ecto.Multi do
     add_operation(multi, name, {:changeset, put_action(changeset, action), opts})
   end
 
-  defp put_action(%{action: nil} = changeset, action) do
+  defp put_action(%Changeset{action: nil} = changeset, action) do
     %{changeset | action: action}
   end
 
-  defp put_action(%{action: action} = changeset, action) do
+  defp put_action(%Changeset{action: action} = changeset, action) do
     changeset
   end
 
-  defp put_action(%{action: original}, action) do
+  defp put_action(%Changeset{action: original}, action) do
     raise ArgumentError, "you provided a changeset with an action already set " <>
       "to #{inspect original} when trying to #{action} it"
+  end
+
+  defp put_action(changeset, _action) do
+    raise ArgumentError, "expected an Ecto.Changeset, got #{inspect changeset}"
   end
 
   @doc """
