@@ -33,7 +33,7 @@ defmodule Ecto.Query.Builder.Preload do
       {[], [foo: {1, []}, bar: {2, []}]}
 
       iex> escape([foo: {{:c, [], nil}, :bar}], [c: 1])
-      ** (Ecto.Query.CompileError) cannot preload `:bar` inside join association preload
+      {[foo: [:bar]], [foo: {1, []}]}
 
       iex> escape([foo: [bar: {:c, [], nil}]], [c: 1])
       ** (Ecto.Query.CompileError) cannot preload join association `:bar` with binding `c` because parent preload is not a join association
@@ -45,8 +45,7 @@ defmodule Ecto.Query.Builder.Preload do
     {Enum.reverse(preloads), Enum.reverse(assocs)}
   end
 
-  defp escape(atom, mode, preloads, assocs, _vars) when is_atom(atom) do
-    assert_preload!(mode, atom)
+  defp escape(atom, _mode, preloads, assocs, _vars) when is_atom(atom) do
     {[atom|preloads], assocs}
   end
 
@@ -56,8 +55,7 @@ defmodule Ecto.Query.Builder.Preload do
     end
   end
 
-  defp escape({:^, _, [inner]} = expr, mode, preloads, assocs, _vars) do
-    assert_preload!(mode, expr)
+  defp escape({:^, _, [inner]}, _mode, preloads, assocs, _vars) do
     {[inner|preloads], assocs}
   end
 
@@ -68,8 +66,7 @@ defmodule Ecto.Query.Builder.Preload do
                    "Use ^ if you want to interpolate a value"
   end
 
-  defp escape_each({key, {:^, _, [inner]}} = expr, mode, {preloads, assocs}, _vars) do
-    assert_preload!(mode, expr)
+  defp escape_each({key, {:^, _, [inner]}}, _mode, {preloads, assocs}, _vars) do
     key = escape_key(key)
     {[{key, inner}|preloads], assocs}
   end
@@ -85,13 +82,15 @@ defmodule Ecto.Query.Builder.Preload do
     assert_assoc!(mode, key, var)
     key = escape_key(key)
     idx = Builder.find_var!(var, vars)
-    {[], inner_assocs} = escape(list, :assoc, [], [], vars)
-    {preloads,
-     [{key, {idx, Enum.reverse(inner_assocs)}}|assocs]}
+    {inner_preloads, inner_assocs} = escape(list, :assoc, [], [], vars)
+    assocs = [{key, {idx, Enum.reverse(inner_assocs)}}|assocs]
+    case inner_preloads do
+      [] -> {preloads, assocs}
+      _  -> {[{key, Enum.reverse(inner_preloads)}|preloads], assocs}
+    end
   end
 
-  defp escape_each({key, list}, mode, {preloads, assocs}, vars) do
-    assert_preload!(mode, {key, list})
+  defp escape_each({key, list}, _mode, {preloads, assocs}, vars) do
     key = escape_key(key)
     {inner_preloads, []} = escape(list, :preload, [], [], vars)
     {[{key, Enum.reverse(inner_preloads)}|preloads], assocs}
@@ -117,11 +116,6 @@ defmodule Ecto.Query.Builder.Preload do
   defp assert_assoc!(_mode, atom, var) do
     Builder.error! "cannot preload join association `#{Macro.to_string atom}` with binding `#{var}` " <>
                    "because parent preload is not a join association"
-  end
-
-  defp assert_preload!(mode, _term) when mode in [:both, :preload], do: :ok
-  defp assert_preload!(_mode, term) do
-    Builder.error! "cannot preload `#{Macro.to_string(term)}` inside join association preload"
   end
 
   @doc """

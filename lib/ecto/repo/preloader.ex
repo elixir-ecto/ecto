@@ -9,14 +9,14 @@ defmodule Ecto.Repo.Preloader do
   Transforms a result set based on query preloads, loading
   the associations onto their parent model.
   """
-  @spec query([list], Ecto.Repo.t, list, list, Access.t, fun, Keyword.t) :: [list]
-  def query([], _repo, _preloads, _assocs, _take, _fun, _opts), do: []
-  def query(rows, _repo, [], _assocs, _take, fun, _opts), do: Enum.map(rows, fun)
+  @spec query([list], Ecto.Repo.t, list, Access.t, fun, Keyword.t) :: [list]
+  def query([], _repo, _preloads, _take, _fun, _opts), do: []
+  def query(rows, _repo, [], _take, fun, _opts), do: Enum.map(rows, fun)
 
-  def query(rows, repo, preloads, assocs, take, fun, opts) do
+  def query(rows, repo, preloads, take, fun, opts) do
     rows
     |> extract
-    |> do_preload(repo, preloads, assocs, take, opts)
+    |> do_preload(repo, preloads, take, opts)
     |> unextract(rows, fun)
   end
 
@@ -34,15 +34,15 @@ defmodule Ecto.Repo.Preloader do
   @spec preload(structs, atom, atom | list, Keyword.t) ::
                 structs when structs: [Ecto.Schema.t] | Ecto.Schema.t
   def preload(structs, repo, preloads, opts) when is_list(structs) do
-    do_preload(structs, repo, preloads, nil, opts[:take], opts)
+    do_preload(structs, repo, preloads, opts[:take], opts)
   end
 
   def preload(struct, repo, preloads, opts) when is_map(struct) do
-    do_preload([struct], repo, preloads, nil, opts[:take], opts) |> hd()
+    do_preload([struct], repo, preloads, opts[:take], opts) |> hd()
   end
 
-  defp do_preload(structs, repo, preloads, assocs, take, opts) do
-    preloads = normalize(preloads, assocs, take, preloads)
+  defp do_preload(structs, repo, preloads, take, opts) do
+    preloads = normalize(preloads, take, preloads)
     preload_each(structs, repo, preloads, opts)
   rescue
     e ->
@@ -110,8 +110,8 @@ defmodule Ecto.Repo.Preloader do
     {fetch_ids, fetch_structs} =
       fetch_query(fetch_ids, assoc, repo, query, prefix, related_key, take, opts)
 
-    all = preload_each(loaded_structs ++ fetch_structs, repo, preloads, opts)
-    {:assoc, assoc, assoc_map(card, loaded_ids ++ fetch_ids, all)}
+    all = preload_each(Enum.reverse(loaded_structs, fetch_structs), repo, preloads, opts)
+    {:assoc, assoc, assoc_map(card, Enum.reverse(loaded_ids, fetch_ids), all)}
   end
 
   defp fetch_ids(structs, module, assoc, opts) do
@@ -274,36 +274,32 @@ defmodule Ecto.Repo.Preloader do
 
   ## Normalizer
 
-  def normalize(preload, assocs, take, original) do
-    normalize_each(wrap(preload, original), [], assocs, take, original)
+  def normalize(preload, take, original) do
+    normalize_each(wrap(preload, original), [], take, original)
   end
 
-  defp normalize_each({atom, {query, list}}, acc, assocs, take, original)
+  defp normalize_each({atom, {query, list}}, acc, take, original)
        when is_atom(atom) and (is_map(query) or is_function(query, 1)) do
-    no_assoc!(assocs, atom)
     fields = take(take, atom)
-    [{atom, {fields, query!(query), normalize_each(wrap(list, original), [], nil, fields, original)}}|acc]
+    [{atom, {fields, query!(query), normalize_each(wrap(list, original), [], fields, original)}}|acc]
   end
 
-  defp normalize_each({atom, query}, acc, assocs, take, _original)
+  defp normalize_each({atom, query}, acc, take, _original)
        when is_atom(atom) and (is_map(query) or is_function(query, 1)) do
-    no_assoc!(assocs, atom)
     [{atom, {take(take, atom), query!(query), []}}|acc]
   end
 
-  defp normalize_each({atom, list}, acc, assocs, take, original) when is_atom(atom) do
-    no_assoc!(assocs, atom)
+  defp normalize_each({atom, list}, acc, take, original) when is_atom(atom) do
     fields = take(take, atom)
-    [{atom, {fields, nil, normalize_each(wrap(list, original), [], nil, fields, original)}}|acc]
+    [{atom, {fields, nil, normalize_each(wrap(list, original), [], fields, original)}}|acc]
   end
 
-  defp normalize_each(atom, acc, assocs, take, _original) when is_atom(atom) do
-    no_assoc!(assocs, atom)
+  defp normalize_each(atom, acc, take, _original) when is_atom(atom) do
     [{atom, {take(take, atom), nil, []}}|acc]
   end
 
-  defp normalize_each(other, acc, assocs, take, original) do
-    Enum.reduce(wrap(other, original), acc, &normalize_each(&1, &2, assocs, take, original))
+  defp normalize_each(other, acc, take, original) do
+    Enum.reduce(wrap(other, original), acc, &normalize_each(&1, &2, take, original))
   end
 
   defp query!(query) when is_function(query, 1), do: query
@@ -323,14 +319,6 @@ defmodule Ecto.Repo.Preloader do
   defp wrap(other, original) do
     raise ArgumentError, "invalid preload `#{inspect other}` in `#{inspect original}`. " <>
                          "preload expects an atom, a (nested) keyword or a (nested) list of atoms"
-  end
-
-  defp no_assoc!(nil, _atom), do: nil
-  defp no_assoc!(assocs, atom) do
-    if assocs[atom] do
-      raise ArgumentError, "cannot preload association `#{inspect atom}` because " <>
-                           "it has already been loaded with join association"
-    end
   end
 
   ## Expand

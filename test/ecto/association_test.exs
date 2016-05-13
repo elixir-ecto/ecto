@@ -465,11 +465,11 @@ defmodule Ecto.AssociationTest do
   alias Ecto.Repo.Preloader
 
   test "preload: normalizer" do
-    assert Preloader.normalize(:foo, [], nil, []) ==
+    assert Preloader.normalize(:foo, nil, []) ==
            [foo: {nil, nil, []}]
-    assert Preloader.normalize([foo: :bar], [], nil, []) ==
+    assert Preloader.normalize([foo: :bar], nil, []) ==
            [foo: {nil, nil, [bar: {nil, nil, []}]}]
-    assert Preloader.normalize([foo: [:bar, baz: :bat], this: :that], [], nil, []) ==
+    assert Preloader.normalize([foo: [:bar, baz: :bat], this: :that], nil, []) ==
            [this: {nil, nil, [that: {nil, nil, []}]},
             foo: {nil, nil, [baz: {nil, nil, [bat: {nil, nil, []}]},
                              bar: {nil, nil, []}]}]
@@ -477,43 +477,37 @@ defmodule Ecto.AssociationTest do
 
   test "preload: normalize with query" do
     query = from(p in Post, limit: 1)
-    assert Preloader.normalize([foo: query], [], nil, []) ==
+    assert Preloader.normalize([foo: query], nil, []) ==
            [foo: {nil, query, []}]
-    assert Preloader.normalize([foo: {query, :bar}], [], nil, []) ==
+    assert Preloader.normalize([foo: {query, :bar}], nil, []) ==
            [foo: {nil, query, [bar: {nil, nil, []}]}]
-    assert Preloader.normalize([foo: {query, bar: :baz}], [], nil, []) ==
+    assert Preloader.normalize([foo: {query, bar: :baz}], nil, []) ==
            [foo: {nil, query, [bar: {nil, nil, [baz: {nil, nil, []}]}]}]
   end
 
   test "preload: normalize with take" do
-    assert Preloader.normalize([:foo], [], [foo: :id], []) ==
+    assert Preloader.normalize([:foo], [foo: :id], []) ==
            [foo: {[:id], nil, []}]
-    assert Preloader.normalize([foo: :bar], [], [foo: :id], []) ==
+    assert Preloader.normalize([foo: :bar], [foo: :id], []) ==
            [foo: {[:id], nil, [bar: {nil, nil, []}]}]
-    assert Preloader.normalize([foo: :bar], [], [foo: [:id, bar: :id]], []) ==
+    assert Preloader.normalize([foo: :bar], [foo: [:id, bar: :id]], []) ==
            [foo: {[:id, bar: :id], nil, [bar: {[:id], nil, []}]}]
-    assert Preloader.normalize([foo: [bar: :baz]], [], [foo: [:id, bar: :id]], []) ==
+    assert Preloader.normalize([foo: [bar: :baz]], [foo: [:id, bar: :id]], []) ==
            [foo: {[:id, bar: :id], nil, [bar: {[:id], nil, [baz: {nil, nil, []}]}]}]
-  end
-
-  test "preload: raises on assoc conflict" do
-    assert_raise ArgumentError, ~r"cannot preload association `:foo`", fn ->
-      Preloader.normalize(:foo, [foo: []], nil, [])
-    end
   end
 
   test "preload: raises on invalid preload" do
     assert_raise ArgumentError, ~r"invalid preload `123` in `123`", fn ->
-      Preloader.normalize(123, [], nil, 123)
+      Preloader.normalize(123, nil, 123)
     end
 
     assert_raise ArgumentError, ~r"invalid preload `{:bar, :baz}` in", fn ->
-      Preloader.normalize([foo: {:bar, :baz}], [], nil, []) == [foo: [bar: []]]
+      Preloader.normalize([foo: {:bar, :baz}], nil, []) == [foo: [bar: []]]
     end
   end
 
   defp expand(model, preloads, take \\ nil) do
-    Preloader.expand(model, Preloader.normalize(preloads, [], take, preloads), {%{}, %{}})
+    Preloader.expand(model, Preloader.normalize(preloads, take, preloads), {%{}, %{}})
   end
 
   test "preload: expand" do

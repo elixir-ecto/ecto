@@ -363,7 +363,39 @@ defmodule Ecto.Integration.JoinsTest do
     assert c3.author.id == uid2
   end
 
-  test "nested assoc with preload" do
+  test "nested assoc with child preload" do
+    %Post{id: pid1} = TestRepo.insert!(%Post{title: "1"})
+    %Post{id: pid2} = TestRepo.insert!(%Post{title: "2"})
+
+    %User{id: uid1} = TestRepo.insert!(%User{name: "1"})
+    %User{id: uid2} = TestRepo.insert!(%User{name: "2"})
+
+    %Comment{id: cid1} = TestRepo.insert!(%Comment{text: "1", post_id: pid1, author_id: uid1})
+    %Comment{id: cid2} = TestRepo.insert!(%Comment{text: "2", post_id: pid1, author_id: uid2})
+    %Comment{id: cid3} = TestRepo.insert!(%Comment{text: "3", post_id: pid2, author_id: uid2})
+
+    query = from p in Post,
+      left_join: c in assoc(p, :comments),
+      order_by: [p.id, c.id],
+      preload: [comments: {c, :author}],
+      select: p
+
+    assert [p1, p2] = TestRepo.all(query)
+    assert p1.id == pid1
+    assert p2.id == pid2
+
+    assert [c1, c2] = p1.comments
+    assert [c3] = p2.comments
+    assert c1.id == cid1
+    assert c2.id == cid2
+    assert c3.id == cid3
+
+    assert c1.author.id == uid1
+    assert c2.author.id == uid2
+    assert c3.author.id == uid2
+  end
+
+  test "nested assoc with sibling preload" do
     %Post{id: pid1} = TestRepo.insert!(%Post{title: "1"})
     %Post{id: pid2} = TestRepo.insert!(%Post{title: "2"})
 
