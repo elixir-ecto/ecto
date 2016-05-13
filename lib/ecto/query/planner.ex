@@ -543,13 +543,13 @@ defmodule Ecto.Query.Planner do
     error! query, "`#{kind}` does not allow subqueries in `from`"
   end
   defp validate_and_increment(:from, query, expr, counter, _kind, adapter) do
-    validate_and_increment_each(:from, query, expr, expr, counter, adapter)
+    prewalk(expr, :from, query, expr, counter, adapter)
   end
 
   defp validate_and_increment(kind, query, expr, counter, _operation, adapter)
       when kind in ~w(select distinct limit offset)a do
     if expr do
-      validate_and_increment_each(kind, query, expr, counter, adapter)
+      prewalk(kind, query, expr, counter, adapter)
     else
       {nil, counter}
     end
@@ -562,7 +562,7 @@ defmodule Ecto.Query.Planner do
         %{expr: []}, {list, acc} ->
           {list, acc}
         expr, {list, acc} ->
-          {expr, acc} = validate_and_increment_each(kind, query, expr, acc, adapter)
+          {expr, acc} = prewalk(kind, query, expr, acc, adapter)
           {[expr|list], acc}
       end)
     {Enum.reverse(exprs), counter}
@@ -570,19 +570,18 @@ defmodule Ecto.Query.Planner do
 
   defp validate_and_increment(:join, query, exprs, counter, _operation, adapter) do
     Enum.map_reduce exprs, counter, fn join, acc ->
-      {source, acc} = validate_and_increment_each(:join, query, join, join.source, acc, adapter)
-      {on, acc} = validate_and_increment_each(:join, query, join.on, acc, adapter)
+      {source, acc} = prewalk(join.source, :join, query, join, acc, adapter)
+      {on, acc} = prewalk(:join, query, join.on, acc, adapter)
       {%{join | on: on, source: source, params: nil}, acc}
     end
   end
 
-  defp validate_and_increment_each(kind, query, expr, counter, adapter) do
-    {inner, acc} = validate_and_increment_each(kind, query, expr, expr.expr, counter, adapter)
+  defp prewalk(kind, query, expr, counter, adapter) do
+    {inner, acc} = prewalk(expr.expr, kind, query, expr, counter, adapter)
     {%{expr | expr: inner, params: nil}, acc}
   end
 
-  defp validate_and_increment_each(_kind, query, _expr,
-                                   %Ecto.SubQuery{query: inner_query} = subquery, counter, adapter) do
+  defp prewalk(%Ecto.SubQuery{query: inner_query} = subquery, _kind, query, _expr, counter, adapter) do
     try do
       {inner_query, counter} = normalize(inner_query, :all, adapter, counter)
       {%{subquery | query: inner_query, params: nil}, counter}
@@ -591,31 +590,51 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp validate_and_increment_each(kind, query, expr, ast, counter, adapter) do
-    Macro.prewalk ast, counter, fn
-      {:in, in_meta, [left, {:^, meta, [param]}]}, acc ->
-        {right, acc} = validate_in(meta, expr, param, acc)
-        {{:in, in_meta, [left, right]}, acc}
+  defp prewalk({:in, in_meta, [left, {:^, meta, [param]}]}, kind, query, expr, acc, adapter) do
+    {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
+    {right, acc} = validate_in(meta, expr, param, acc)
+    {{:in, in_meta, [left, right]}, acc}
+  end
 
-      {:^, meta, [ix]}, acc when is_integer(ix) ->
-        {{:^, meta, [acc]}, acc + 1}
+  defp prewalk({:^, meta, [ix]}, _kind, _query, _expr, acc, _adapter) when is_integer(ix) do
+    {{:^, meta, [acc]}, acc + 1}
+  end
 
-      {:type, _, [{:^, meta, [ix]}, _expr]}, acc when is_integer(ix) ->
-        {_, t} = Enum.fetch!(expr.params, ix)
-        type   = type!(kind, query, expr, t)
-        {%Ecto.Query.Tagged{value: {:^, meta, [acc]}, tag: type,
-                            type: Ecto.Type.type(type)}, acc + 1}
+  defp prewalk({:type, _, [{:^, meta, [ix]}, _expr]}, kind, query, expr, acc, _adapter) when is_integer(ix) do
+    {_, t} = Enum.fetch!(expr.params, ix)
+    type   = type!(kind, query, expr, t)
+    {%Ecto.Query.Tagged{value: {:^, meta, [acc]}, tag: type,
+                        type: Ecto.Type.type(type)}, acc + 1}
+  end
 
-      %Ecto.Query.Tagged{value: v, type: type} = tagged, acc ->
-        if Ecto.Type.base?(type) do
-          {tagged, acc}
-        else
-          {dump_param(kind, query, expr, v, type, adapter), acc}
-        end
+  defp prewalk(%Ecto.Query.Tagged{value: v, type: type}, kind, query, expr, acc, adapter) do
+    {v, acc} = prewalk(v, kind, query, expr, acc, adapter)
 
-      other, acc ->
-        {other, acc}
+    if Ecto.Type.base?(type) do
+      {%Ecto.Query.Tagged{value: v, type: type}, acc}
+    else
+      {dump_param(kind, query, expr, v, type, adapter), acc}
     end
+  end
+
+  defp prewalk({left, right}, kind, query, expr, acc, adapter) do
+    {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
+    {right, acc} = prewalk(right, kind, query, expr, acc, adapter)
+    {{left, right}, acc}
+  end
+
+  defp prewalk({left, meta, args}, kind, query, expr, acc, adapter) do
+    {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
+    {args, acc} = prewalk(args, kind, query, expr, acc, adapter)
+    {{left, meta, args}, acc}
+  end
+
+  defp prewalk(list, kind, query, expr, acc, adapter) when is_list(list) do
+    Enum.map_reduce(list, acc, &prewalk(&1, kind, query, expr, &2, adapter))
+  end
+
+  defp prewalk(other, _kind, _query, _expr, acc, _adapter) do
+    {other, acc}
   end
 
   defp dump_param(kind, query, expr, v, type, adapter) do
