@@ -39,7 +39,7 @@ defmodule Ecto.Changeset do
 
         def changeset(user, params \\ %{}) do
           user
-          |> cast(params, ~w(name email age))
+          |> cast(params, [:name, :email, :age])
           |> validate_required([:name, :email])
           |> validate_format(:email, ~r/@/)
           |> validate_inclusion(:age, 18..100)
@@ -272,15 +272,15 @@ defmodule Ecto.Changeset do
 
   ## Examples
 
-      iex> changeset = cast(post, params, ~w(title))
+      iex> changeset = cast(post, params, [:title])
       iex> if changeset.valid? do
       ...>   Repo.update!(changeset)
       ...> end
 
   Passing a changeset as the first argument:
 
-      iex> changeset = cast(post, %{title: "Hello"}, ~w(title))
-      iex> new_changeset = cast(changeset, %{title: "Foo", body: "Bar"}, ~w(body))
+      iex> changeset = cast(post, %{title: "Hello"}, [:title])
+      iex> new_changeset = cast(changeset, %{title: "Foo", body: "Bar"}, [:body])
       iex> new_changeset.params
       %{title: "Foo", body: "Bar"}
 
@@ -288,7 +288,7 @@ defmodule Ecto.Changeset do
 
       iex> data = %{title: "hello"}
       iex> types = %{title: :string}
-      iex> changeset = cast({data, types}, %{title: "world"}, ~w(title))
+      iex> changeset = cast({data, types}, %{title: "world"}, [:title])
       iex> apply_changes(changeset)
       %{title: "world"}
 
@@ -593,16 +593,16 @@ defmodule Ecto.Changeset do
 
   ## Examples
 
-      iex> changeset1 = cast(%{title: "Title"}, %Post{}, ~w(title), ~w(body))
-      iex> changeset2 = cast(%{title: "New title", body: "Body"}, %Post{}, ~w(title body), ~w())
+      iex> changeset1 = cast(%{title: "Title"}, %Post{}, [:title], [:body])
+      iex> changeset2 = cast(%{title: "New title", body: "Body"}, %Post{}, [:title, :body]), [])
       iex> changeset = merge(changeset1, changeset2)
       iex> changeset.changes
       %{body: "Body", title: "New title"}
       iex> changeset.required
       [:title, :body]
 
-      iex> changeset1 = cast(%{title: "Title"}, %Post{body: "Body"}, ~w(title), ~w(body))
-      iex> changeset2 = cast(%{title: "New title"}, %Post{}, ~w(title), ~w())
+      iex> changeset1 = cast(%{title: "Title"}, %Post{body: "Body"}, [:title], [:body])
+      iex> changeset2 = cast(%{title: "New title"}, %Post{}, [:title], [])
       iex> merge(changeset1, changeset2)
       ** (ArgumentError) different :data when merging changesets
 
@@ -1345,7 +1345,7 @@ defmodule Ecto.Changeset do
       validate_confirmation(changeset, :email)
       validate_confirmation(changeset, :password, message: "does not match password")
 
-      cast(data, params, ~w(password), ~w())
+      cast(data, params, [:password], [])
       |> validate_confirmation(:password, message: "does not match password")
 
   """
@@ -1417,7 +1417,7 @@ defmodule Ecto.Changeset do
 
         def changeset(:update, struct, params \\ %{}) do
           struct
-          |> Ecto.Changeset.cast(struct, params, ~w(:title))
+          |> Ecto.Changeset.cast(struct, params, [:title])
           |> Ecto.Changeset.optimistic_lock(:lock_version)
         end
       end
@@ -1479,7 +1479,7 @@ defmodule Ecto.Changeset do
 
       def create_comment(comment, params) do
         comment
-        |> cast(params, ~w(body post_id))
+        |> cast(params, [:body, :post_id])
         |> prepare_changes(fn changeset ->
           assoc(changeset.data, :post)
           |> changeset.repo.update_all(inc: [comment_count: 1])
@@ -1534,7 +1534,7 @@ defmodule Ecto.Changeset do
   annotate the changeset with unique constraint so Ecto knows
   how to convert it into an error message:
 
-      cast(user, params, ~w(email), ~w())
+      cast(user, params, [:email], [])
       |> unique_constraint(:email)
 
   Now, when invoking `Repo.insert/2` or `Repo.update/2`, if the
@@ -1563,7 +1563,7 @@ defmodule Ecto.Changeset do
   Because such indexes have usually more complex names, we need
   to explicitly tell the changeset which constraint name to use:
 
-      cast(user, params, ~w(email), ~w())
+      cast(user, params, [:email], [])
       |> unique_constraint(:email, name: :posts_email_company_id_index)
 
   Alternatively, you can give both `unique_index` and `unique_constraint`
@@ -1573,7 +1573,7 @@ defmodule Ecto.Changeset do
       create unique_index(:users, [:email, :company_id], name: :posts_special_email_index)
 
       # In the changeset function
-      cast(user, params, ~w(email), ~w())
+      cast(user, params, [:email], [])
       |> unique_constraint(:email, name: :posts_email_company_id_index)
 
   ## Case sensitivity
@@ -1586,7 +1586,7 @@ defmodule Ecto.Changeset do
   If for some reason your database does not support case insensitive columns,
   you can explicitly downcase values before inserting/updating them:
 
-      cast(data, params, ~w(email), ~w())
+      cast(data, params, [:email], [])
       |> update_change(:email, &String.downcase/1)
       |> unique_constraint(:email)
 
@@ -1622,7 +1622,7 @@ defmodule Ecto.Changeset do
   annotate the changeset with foreign key constraint so Ecto knows
   how to convert it into an error message:
 
-      cast(comment, params, ~w(post_id), ~w())
+      cast(comment, params, [:post_id], [])
       |> foreign_key_constraint(:post_id)
 
   Now, when invoking `Repo.insert/2` or `Repo.update/2`, if the
@@ -1666,7 +1666,7 @@ defmodule Ecto.Changeset do
   comment to be added if the associated post does not exist:
 
       comment
-      |> Ecto.Changeset.cast(params, ~w(post_id))
+      |> Ecto.Changeset.cast(params, [:post_id])
       |> Ecto.Changeset.assoc_constraint(:post)
       |> Repo.insert
 
