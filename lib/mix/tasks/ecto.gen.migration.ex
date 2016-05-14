@@ -48,7 +48,7 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
                      change: opts[:change]]
           create_file file, migration_template(assigns)
 
-          if open?(file) && Mix.shell.yes?("Do you want to run this migration?") do
+          if open?(file) and Mix.shell.yes?("Do you want to run this migration?") do
             Mix.Task.run "ecto.migrate", [repo]
           end
         {_, _, _} ->

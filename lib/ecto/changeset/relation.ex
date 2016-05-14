@@ -284,7 +284,7 @@ defmodule Ecto.Changeset.Relation do
     case fun.(changes, struct, allowed_actions) do
       {:ok, changeset} ->
         map_changes(rest, new_pks, fun, current, [changeset | acc],
-                    valid? && changeset.valid?, (struct != nil) and skip? and skip?(changeset))
+                    valid? and changeset.valid?, (struct != nil) and skip? and skip?(changeset))
       :error ->
         :error
     end
@@ -302,7 +302,7 @@ defmodule Ecto.Changeset.Relation do
     case fun.(nil, struct, [:update, :delete]) do
       {:ok, changeset} ->
         reduce_delete_changesets(rest, fun, [changeset | acc],
-                                 valid? && changeset.valid?, false)
+                                 valid? and changeset.valid?, false)
       :error ->
         :error
     end
