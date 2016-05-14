@@ -29,7 +29,8 @@ defmodule Ecto.Repo do
   all adapters, they are:
 
     * `:priv` - the directory where to keep repository data, like
-      migrations, schema and more. Defaults to "priv/YOUR_REPO"
+      migrations, schema and more. Defaults to "priv/YOUR_REPO".
+      It must always point to a subdirectory inside the priv directory.
 
     * `:url` - an URL that specifies storage information. Read below
       for more information
