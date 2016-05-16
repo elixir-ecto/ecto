@@ -30,11 +30,11 @@ defmodule Ecto.Repo.AutogenerateTest do
     model = TestRepo.insert!(%Default{})
     assert byte_size(model.z) == 36
 
-    changeset = Ecto.Changeset.cast(%Default{}, %{}, [], [])
+    changeset = Ecto.Changeset.cast(%Default{}, %{}, [])
     model = TestRepo.insert!(changeset)
     assert byte_size(model.z) == 36
 
-    changeset = Ecto.Changeset.cast(%Default{}, %{z: nil}, [], [])
+    changeset = Ecto.Changeset.cast(%Default{}, %{z: nil}, [])
     model = TestRepo.insert!(changeset)
     assert byte_size(model.z) == 36
 
@@ -42,7 +42,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     model = TestRepo.insert!(changeset)
     assert model.z == nil
 
-    changeset = Ecto.Changeset.cast(%Default{}, %{z: @uuid}, [:z], [])
+    changeset = Ecto.Changeset.cast(%Default{}, %{z: @uuid}, [:z])
     model = TestRepo.insert!(changeset)
     assert model.z == @uuid
   end
