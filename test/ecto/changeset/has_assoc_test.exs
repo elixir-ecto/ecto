@@ -799,6 +799,10 @@ defmodule Ecto.Changeset.HasAssocTest do
   ## traverse_errors
 
   test "traverses changeset errors with has_one when required" do
+    changeset = cast(%Author{}, %{profile: %{}}, :profile, required: true)
+    assert changeset.errors == []
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{}
+
     changeset = cast(%Author{}, %{}, :profile, required: true)
     assert changeset.errors == [profile: {"can't be blank", []}]
     assert Changeset.traverse_errors(changeset, &(&1)) == %{profile: [{"can't be blank", []}]}
@@ -819,7 +823,7 @@ defmodule Ecto.Changeset.HasAssocTest do
   test "traverses changeset errors with has_many when required" do
     changeset = cast(%Author{}, %{posts: [%{title: "hello"}]}, :posts, required: true)
     assert changeset.errors == []
-    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [%{}]}
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{}
 
     changeset = cast(%Author{}, %{posts: [%{title: nil}]}, :posts, required: true)
     assert changeset.errors == []

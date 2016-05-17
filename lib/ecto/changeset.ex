@@ -1062,6 +1062,9 @@ defmodule Ecto.Changeset do
   You can pass a single field name or a list of field names that
   are required.
 
+  Do not use this function to validate associations are required,
+  instead pass the `:required` option to `cast_assoc/3`.
+
   ## Options
 
     * `:message` - the message on failure, defaults to "can't be blank"
@@ -1091,8 +1094,10 @@ defmodule Ecto.Changeset do
 
   defp missing?(changeset, field) when is_atom(field) do
     case get_field(changeset, field) do
-      value when is_binary(value) -> String.lstrip(value) == ""
-      value -> value == nil
+      value when is_binary(value) -> String.lstrip(value) ==
+        ""
+      value ->
+        value == nil
     end
   end
 
@@ -1825,13 +1830,25 @@ defmodule Ecto.Changeset do
     Enum.reduce types, map, fn
       {field, {tag, %{cardinality: :many}}}, acc when tag in @relations ->
         if changesets = Map.get(changes, field) do
-          Map.put_new_lazy(acc, field, fn -> Enum.map(changesets, &traverse_errors(&1, msg_func)) end)
+          {errors, all_empty?} =
+            Enum.map_reduce(changesets, true, fn changeset, all_empty? ->
+              errors = traverse_errors(changeset, msg_func)
+              {errors, all_empty? and errors == %{}}
+            end)
+
+          case all_empty? do
+            true  -> acc
+            false -> Map.put(acc, field, errors)
+          end
         else
           acc
         end
       {field, {tag, %{cardinality: :one}}}, acc when tag in @relations ->
         if changeset = Map.get(changes, field) do
-          Map.put(acc, field, traverse_errors(changeset, msg_func))
+          case traverse_errors(changeset, msg_func) do
+            errors when errors == %{} -> acc
+            errors -> Map.put(acc, field, errors)
+          end
         else
           acc
         end
