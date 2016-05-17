@@ -151,9 +151,9 @@ defmodule Ecto.Integration.TypeTest do
     post1 = TestRepo.insert!(%Post{links: %{"foo" => "http://foo.com", "bar" => "http://bar.com"}})
     post2 = TestRepo.insert!(%Post{links: %{foo: "http://foo.com", bar: "http://bar.com"}})
 
-    assert TestRepo.all(from p in Post, where: p.id == ^post1.id, select: p.meta) ==
+    assert TestRepo.all(from p in Post, where: p.id == ^post1.id, select: p.links) ==
            [%{"foo" => "http://foo.com", "bar" => "http://bar.com"}]
-    assert TestRepo.all(from p in Post, where: p.id == ^post2.id, select: p.meta) ==
+    assert TestRepo.all(from p in Post, where: p.id == ^post2.id, select: p.links) ==
            [%{"foo" => "http://foo.com", "bar" => "http://bar.com"}]
   end
 

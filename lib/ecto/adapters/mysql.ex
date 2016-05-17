@@ -106,6 +106,7 @@ defmodule Ecto.Adapters.MySQL do
 
   @doc false
   def loaders(:map, type),            do: [&json_decode/1, type]
+  def loaders({:map, type}, _),       do: [&json_decode/1, type]
   def loaders(:boolean, type),        do: [&bool_decode/1, type]
   def loaders(:binary_id, type),      do: [Ecto.UUID, type]
   def loaders({:embed, _} = type, _), do: [&json_decode/1, &Ecto.Adapters.SQL.load_embed(type, &1)]

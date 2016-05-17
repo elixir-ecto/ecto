@@ -97,10 +97,6 @@ defmodule Ecto.TypeTest do
     assert dump({:map, :integer}, %{"a" => ""}) == :error
     assert cast({:map, :integer}, %{"a" => ""}) == :error
 
-    assert load({:map, :integer}, %{a: "1", b: "2"}) == :error
-    assert dump({:map, :integer}, %{a: "1", b: "2"}) == :error
-    assert cast({:map, :integer}, %{a: "1", b: "2"}) == :error
-
     assert load({:map, :integer}, 1) == :error
     assert dump({:map, :integer}, 1) == :error
     assert cast({:map, :integer}, 1) == :error

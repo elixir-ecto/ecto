@@ -101,7 +101,7 @@ defmodule Ecto.Type do
   @typep base      :: :integer | :float | :boolean | :string | :map |
                       :binary | :decimal | :id | :binary_id |
                       :datetime | :date | :time | :any
-  @typep composite :: {:array, base} | {:map, base} | {:embed, Ecto.Embedded.t} | {:in, base}
+  @typep composite :: {:array, t} | {:map, t} | {:embed, Ecto.Embedded.t} | {:in, t}
 
   @base      ~w(integer float boolean string binary decimal datetime date time id binary_id map any)a
   @composite ~w(array map in embed)a
@@ -209,11 +209,16 @@ defmodule Ecto.Type do
       iex> type({:array, Ecto.DateTime})
       {:array, :datetime}
 
+      iex> type({:map, Ecto.DateTime})
+      {:map, :datetime}
+
   """
   @spec type(t) :: t
   def type(type)
 
   def type({:array, type}), do: {:array, type(type)}
+
+  def type({:map, type}), do: {:map, type(type)}
 
   def type(type) do
     if primitive?(type) do
@@ -675,7 +680,7 @@ defmodule Ecto.Type do
     {:ok, Enum.reverse(acc)}
   end
 
-  defp map([{key, value} | t], fun, acc) when is_binary(key) do
+  defp map([{key, value} | t], fun, acc) do
     case fun.(value) do
       {:ok, value} -> map(t, fun, Map.put(acc, key, value))
       :error -> :error
