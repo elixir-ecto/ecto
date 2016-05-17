@@ -308,12 +308,8 @@ defmodule Ecto.Type do
     dump_embed(embed, value, dumper)
   end
 
-  def dump({:array, type}, value, dumper) do
-    if is_list(value) do
-      array(value, &dumper.(type, &1), [])
-    else
-      :error
-    end
+  def dump({:array, type}, value, dumper) when is_list(value) do
+    array(value, &dumper.(type, &1), [])
   end
 
   def dump({:in, type}, value, dumper) do
@@ -394,12 +390,8 @@ defmodule Ecto.Type do
 
   def load(_type, nil, _loader), do: {:ok, nil}
 
-  def load({:array, type}, value, loader) do
-    if is_list(value) do
-      array(value, &loader.(type, &1), [])
-    else
-      :error
-    end
+  def load({:array, type}, value, loader) when is_list(value) do
+    array(value, &loader.(type, &1), [])
   end
 
   def load(type, value, _loader) do
