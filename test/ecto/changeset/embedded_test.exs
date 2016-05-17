@@ -32,16 +32,17 @@ defmodule Ecto.Changeset.EmbeddedTest do
     end
 
     def changeset(model, params) do
-      Changeset.cast(model, params, ~w(title), [])
+      Changeset.cast(model, params, ~w(title))
+      |> validate_required(:title)
       |> validate_length(:title, min: 3)
     end
 
     def optional_changeset(model, params) do
-      Changeset.cast(model, params, ~w(), ~w(title))
+      Changeset.cast(model, params, ~w(title))
     end
 
     def set_action(model, params) do
-      Changeset.cast(model, params, ~w(title), [])
+      changeset(model, params)
       |> Map.put(:action, :update)
     end
   end
@@ -55,23 +56,24 @@ defmodule Ecto.Changeset.EmbeddedTest do
     end
 
     def changeset(model, params) do
-      Changeset.cast(model, params, ~w(name), ~w(id))
+      Changeset.cast(model, params, ~w(name id))
+      |> validate_required(:name)
       |> validate_length(:name, min: 3)
     end
 
     def optional_changeset(model, params) do
-      Changeset.cast(model, params, ~w(), ~w(name))
+      Changeset.cast(model, params, ~w(name))
     end
 
     def set_action(model, params) do
-      Changeset.cast(model, params, ~w(name), ~w(id))
+      changeset(model, params)
       |> Map.put(:action, :update)
     end
   end
 
   defp cast(model, params, embed, opts \\ []) do
     model
-    |> Changeset.cast(params, ~w(), ~w())
+    |> Changeset.cast(params, ~w())
     |> Changeset.cast_embed(embed, opts)
   end
 
@@ -114,7 +116,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
   test "cast embeds_one with existing struct updating from atom params" do
     # Emulate atom params from nested associations
-    changeset = Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}}, %{}, ~w(), ~w())
+    changeset = Changeset.cast(%Author{profile: %Profile{name: "michal", id: "michal"}}, %{}, ~w())
     changeset = put_in changeset.params, %{"profile" => %{name: "new", id: "michal"}}
 
     changeset = Changeset.cast_embed(changeset, :profile, [])
@@ -676,7 +678,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     params = %{"name" => "hi", "profile" => %{"name" => "hi"}}
     changeset =
       %Author{}
-      |> Changeset.cast(params, ~w(), ~w(name))
+      |> Changeset.cast(params, ~w(name))
       |> Changeset.cast_embed(:profile)
       |> Changeset.add_error(:name, "is invalid")
 
@@ -697,7 +699,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
                                            %{"title" => "valid"}]}
     changeset =
       %Author{}
-      |> Changeset.cast(params, ~w(), ~w(name))
+      |> Changeset.cast(params, ~w(name))
       |> Changeset.cast_embed(:posts)
       |> Changeset.add_error(:name, "is invalid")
 

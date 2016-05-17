@@ -15,11 +15,12 @@ defmodule Ecto.Changeset.ManyToManyTest do
     end
 
     def changeset(model, params) do
-      Changeset.cast(model, params, ~w(title), ~w())
+      Changeset.cast(model, params, ~w(title))
+      |> Changeset.validate_required(:title)
     end
 
     def set_action(model, params) do
-      Changeset.cast(model, params, ~w(title), [])
+      changeset(model, params)
       |> Map.put(:action, :update)
     end
   end
@@ -37,7 +38,7 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
   defp cast(model, params, assoc, opts \\ []) do
     model
-    |> Changeset.cast(params, ~w(), ~w())
+    |> Changeset.cast(params, ~w())
     |> Changeset.cast_assoc(assoc, opts)
   end
 

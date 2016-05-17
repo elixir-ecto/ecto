@@ -54,8 +54,8 @@ defmodule Ecto.Integration.Post do
   end
 
   def changeset(model, params) do
-    cast(model, params, [], ~w(counter title text temp public cost visits
-                               intensity bid uuid meta posted))
+    cast(model, params, ~w(counter title text temp public cost visits
+                           intensity bid uuid meta posted))
   end
 end
 

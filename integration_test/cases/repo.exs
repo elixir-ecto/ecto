@@ -72,7 +72,7 @@ defmodule Ecto.Integration.RepoTest do
     assert CompositePk |> first |> TestRepo.one == c1
     assert CompositePk |> last |> TestRepo.one == c2
 
-    changeset = Ecto.Changeset.cast(c1, %{name: "first change"}, ~w(name), ~w())
+    changeset = Ecto.Changeset.cast(c1, %{name: "first change"}, ~w(name))
     c1 = TestRepo.update!(changeset)
     assert TestRepo.get_by!(CompositePk, %{a: 1, b: 2}) == c1
 
@@ -101,7 +101,7 @@ defmodule Ecto.Integration.RepoTest do
   test "insert and update with changeset" do
     # On insert we merge the fields and changes
     changeset = Ecto.Changeset.cast(%Post{text: "x", title: "wrong"},
-                                    %{"title" => "hello", "temp" => "unknown"}, ~w(title temp), ~w())
+                                    %{"title" => "hello", "temp" => "unknown"}, ~w(title temp))
 
     post = TestRepo.insert!(changeset)
     assert %Post{text: "x", title: "hello", temp: "unknown"} = post
@@ -109,7 +109,7 @@ defmodule Ecto.Integration.RepoTest do
 
     # On update we merge only fields, direct model changes are discarded
     changeset = Ecto.Changeset.cast(%{post | text: "y"},
-                                    %{"title" => "world", "temp" => "unknown"}, ~w(title temp), ~w())
+                                    %{"title" => "world", "temp" => "unknown"}, ~w(title temp))
 
     assert %Post{text: "y", title: "world", temp: "unknown"} = TestRepo.update!(changeset)
     assert %Post{text: "x", title: "world", temp: "temp"} = TestRepo.get!(Post, post.id)
@@ -117,12 +117,12 @@ defmodule Ecto.Integration.RepoTest do
 
   test "insert and update with empty changeset" do
     # On insert we merge the fields and changes
-    changeset = Ecto.Changeset.cast(%Permalink{}, %{}, ~w(), ~w())
+    changeset = Ecto.Changeset.cast(%Permalink{}, %{}, ~w())
     assert %Permalink{} = permalink = TestRepo.insert!(changeset)
 
     # Assert we can update the same value twice,
     # without changes, without triggering stale errors.
-    changeset = Ecto.Changeset.cast(permalink, %{}, ~w(), ~w())
+    changeset = Ecto.Changeset.cast(permalink, %{}, ~w())
     assert TestRepo.update!(changeset) == permalink
     assert TestRepo.update!(changeset) == permalink
   end
@@ -143,7 +143,7 @@ defmodule Ecto.Integration.RepoTest do
       end
     end
 
-    changeset = Ecto.Changeset.cast(struct(RAW, %{}), %{}, ~w(), ~w())
+    changeset = Ecto.Changeset.cast(struct(RAW, %{}), %{}, ~w())
 
     # If the field is nil, we will not send it
     # and read the value back from the database.
@@ -153,7 +153,7 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.update_all from(u in RAW, where: u.id == ^cid), set: [lock_version: 11]
 
     # We will read back on update too
-    changeset = Ecto.Changeset.cast(raw, %{"text" => "0"}, ~w(text), ~w())
+    changeset = Ecto.Changeset.cast(raw, %{"text" => "0"}, ~w(text))
     assert %{id: ^cid, lock_version: 11, text: "0"} = TestRepo.update!(changeset)
   end
 
@@ -187,10 +187,10 @@ defmodule Ecto.Integration.RepoTest do
   @tag :id_type
   @tag :assigns_id_type
   test "insert and update with user-assigned primary key in changeset" do
-    changeset = Ecto.Changeset.cast(%Post{id: 11}, %{"id" => "13"}, ~w(id), ~w())
+    changeset = Ecto.Changeset.cast(%Post{id: 11}, %{"id" => "13"}, ~w(id))
     assert %Post{id: 13} = post = TestRepo.insert!(changeset)
 
-    changeset = Ecto.Changeset.cast(post, %{"id" => "15"}, ~w(id), ~w())
+    changeset = Ecto.Changeset.cast(post, %{"id" => "15"}, ~w(id))
     assert %Post{id: 15} = TestRepo.update!(changeset)
   end
 
@@ -201,12 +201,12 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "optimistic locking in update/delete operations" do
-    import Ecto.Changeset, only: [cast: 4, optimistic_lock: 2]
+    import Ecto.Changeset, only: [cast: 3, optimistic_lock: 2]
     base_post = TestRepo.insert!(%Comment{})
 
     cs_ok =
       base_post
-      |> cast(%{"text" => "foo.bar"}, ~w(text), ~w())
+      |> cast(%{"text" => "foo.bar"}, ~w(text))
       |> optimistic_lock(:lock_version)
     TestRepo.update!(cs_ok)
 

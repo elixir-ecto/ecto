@@ -28,22 +28,23 @@ defmodule Ecto.Changeset.BelongsToTest do
     end
 
     def changeset(model, params) do
-      Changeset.cast(model, params, ~w(name), ~w(id))
+      Changeset.cast(model, params, ~w(name id))
+      |> Changeset.validate_required(:name)
     end
 
     def optional_changeset(model, params) do
-      Changeset.cast(model, params, ~w(), ~w(name))
+      Changeset.cast(model, params, ~w(name))
     end
 
     def set_action(model, params) do
-      Changeset.cast(model, params, ~w(name), ~w(id))
+      changeset(model, params)
       |> Map.put(:action, :update)
     end
   end
 
   defp cast(model, params, assoc, opts \\ []) do
     model
-    |> Changeset.cast(params, ~w(), ~w())
+    |> Changeset.cast(params, ~w())
     |> Changeset.cast_assoc(assoc, opts)
   end
 
@@ -61,7 +62,7 @@ defmodule Ecto.Changeset.BelongsToTest do
 
   test "cast belongs_to with invalid params" do
     changeset = cast(%Author{}, %{"profile" => %{name: nil}}, :profile)
-    assert changeset.changes.profile.changes == %{}
+    assert changeset.changes.profile.changes == %{name: nil}
     assert changeset.changes.profile.errors  == [name: {"can't be blank", []}]
     assert changeset.changes.profile.action  == :insert
     refute changeset.changes.profile.valid?
