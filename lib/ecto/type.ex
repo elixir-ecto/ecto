@@ -101,10 +101,10 @@ defmodule Ecto.Type do
   @typep base      :: :integer | :float | :boolean | :string | :map |
                       :binary | :decimal | :id | :binary_id |
                       :datetime | :date | :time | :any
-  @typep composite :: {:array, base} | {:embed, Ecto.Embedded.t} | {:in, base}
+  @typep composite :: {:array, base} | {:map, base} | {:embed, Ecto.Embedded.t} | {:in, base}
 
   @base      ~w(integer float boolean string binary decimal datetime date time id binary_id map any)a
-  @composite ~w(array in embed)a
+  @composite ~w(array map in embed)a
 
   @doc """
   Returns the underlying schema type for the custom type.
@@ -312,6 +312,10 @@ defmodule Ecto.Type do
     array(value, &dumper.(type, &1), [])
   end
 
+  def dump({:map, type}, value, dumper) when is_map(value) do
+    map(Map.to_list(value), &dumper.(type, &1), %{})
+  end
+
   def dump({:in, type}, value, dumper) do
     case dump({:array, type}, value, dumper) do
       {:ok, v} -> {:ok, {:in, v}}
@@ -392,6 +396,10 @@ defmodule Ecto.Type do
 
   def load({:array, type}, value, loader) when is_list(value) do
     array(value, &loader.(type, &1), [])
+  end
+
+  def load({:map, type}, value, loader) when is_map(value) do
+    map(Map.to_list(value), &loader.(type, &1), %{})
   end
 
   def load(type, value, _loader) do
@@ -515,6 +523,10 @@ defmodule Ecto.Type do
     array(term, &cast(type, &1), [])
   end
 
+  def cast({:map, type}, term) when is_map(term) do
+    map(Map.to_list(term), &cast(type, &1), %{})
+  end
+
   def cast({:in, type}, term) when is_list(term) do
     array(term, &cast(type, &1), [])
   end
@@ -626,6 +638,7 @@ defmodule Ecto.Type do
   defp of_base_type?(:binary, term),     do: is_binary(term)
   defp of_base_type?(:string, term),     do: is_binary(term)
   defp of_base_type?(:map, term),        do: is_map(term) and not Map.has_key?(term, :__struct__)
+  defp of_base_type?({:map, _}, _),      do: false # Always handled explicitly.
   defp of_base_type?(:decimal, value),   do: Kernel.match?(%{__struct__: Decimal}, value)
 
   defp of_base_type?(:date, value) do
@@ -661,4 +674,17 @@ defmodule Ecto.Type do
   defp array([], _fun, acc) do
     {:ok, Enum.reverse(acc)}
   end
+
+  defp map([{key, value} | t], fun, acc) when is_binary(key) do
+    case fun.(value) do
+      {:ok, value} -> map(t, fun, Map.put(acc, key, value))
+      :error -> :error
+    end
+  end
+
+  defp map([], _fun, acc) do
+    {:ok, acc}
+  end
+
+  defp map(_, _, _), do: :error
 end
