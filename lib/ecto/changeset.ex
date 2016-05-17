@@ -316,8 +316,9 @@ defmodule Ecto.Changeset do
   def cast(data, params, required, optional)
 
   def cast(data, params, required, optional) do
-    IO.puts :stderr, "warning: `Ecto.Changeset.cast/4` is deprecated, " <>
-                     "please use `cast/3` + `validate_required/3` instead\n" <> Exception.format_stacktrace
+    # TODO: Deprecate in 2.1
+    # IO.puts :stderr, "warning: `Ecto.Changeset.cast/4` is deprecated, " <>
+    #                  "please use `cast/3` + `validate_required/3` instead\n" <> Exception.format_stacktrace
     do_cast(data, params, required, optional)
   end
 
