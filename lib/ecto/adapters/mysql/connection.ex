@@ -16,6 +16,7 @@ if Code.ensure_loaded?(Mariaex) do
       Mariaex.child_spec(opts)
     end
 
+    # TODO: Remove this on 2.1 (normalization should happen on the adapter)
     defp normalize_port(port) when is_binary(port), do: String.to_integer(port)
     defp normalize_port(port) when is_integer(port), do: port
 
@@ -122,7 +123,7 @@ if Code.ensure_loaded?(Mariaex) do
       assemble([delete, from, join, where])
     end
     def delete_all(_query),
-      do: error!(nil, "RETURNING is not supported in update_all by MySQL")
+      do: error!(nil, "RETURNING is not supported in delete_all by MySQL")
 
     def insert(prefix, table, header, rows, []) do
       fields = Enum.map_join(header, ",", &quote_name/1)
@@ -167,8 +168,7 @@ if Code.ensure_loaded?(Mariaex) do
 
     binary_ops =
       [==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
-       and: "AND", or: "OR",
-       ilike: "ILIKE", like: "LIKE"]
+       and: "AND", or: "OR", like: "LIKE"]
 
     @binary_ops Keyword.keys(binary_ops)
 
@@ -375,6 +375,10 @@ if Code.ensure_loaded?(Mariaex) do
     defp expr({:date_add, _, [date, count, interval]}, sources, query) do
       "CAST(date_add(" <> expr(date, sources, query) <> ", "
                        <> interval(count, interval, sources, query) <> ") AS date)"
+    end
+
+    defp expr({:ilike, _, [_, _]}, _sources, query) do
+      error!(query, "ilike is not supported by MySQL")
     end
 
     defp expr({fun, _, args}, sources, query) when is_atom(fun) and is_list(args) do

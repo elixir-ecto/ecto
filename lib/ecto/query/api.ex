@@ -78,18 +78,23 @@ defmodule Ecto.Query.API do
   @doc """
   Searches for `search` in `string`.
 
-  Translates to the underlying SQL LIKE query.
-
       from p in Post, where: like(p.body, "Chapter%")
+
+  Translates to the underlying SQL LIKE query, therefore
+  its behaviour is dependent on the database. In particular,
+  PostgreSQL will do a case-sensitive operation, while the
+  majority of other databases will be case-insensitive. For
+  performing a case-insensitive `like` in PostgreSQL, see `ilike/2`.
   """
   def like(string, search), do: doc! [string, search]
 
   @doc """
   Searches for `search` in `string` in a case insensitive fashion.
 
-  Translates to the underlying SQL ILIKE query.
-
       from p in Post, where: ilike(p.body, "Chapter%")
+
+  Translates to the underlying SQL ILIKE query. This operation is
+  only available on PostgreSQL.
   """
   def ilike(string, search), do: doc! [string, search]
 

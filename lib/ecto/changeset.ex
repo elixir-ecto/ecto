@@ -301,7 +301,7 @@ defmodule Ecto.Changeset do
   take precedence over the ones already in the changeset.
   """
   @spec cast(Ecto.Schema.t | t | {data, types},
-             %{binary => term} | %{atom => term},
+             %{binary => term} | %{atom => term} | :invalid,
              [String.t | atom]) :: t | no_return
   def cast(data, params, allowed) do
     do_cast(data, params, [], allowed)

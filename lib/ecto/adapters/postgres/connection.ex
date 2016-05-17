@@ -22,6 +22,7 @@ if Code.ensure_loaded?(Postgrex) do
       Postgrex.child_spec(opts)
     end
 
+    # TODO: Remove this on 2.1 (normalization should happen on the adapter)
     defp normalize_port(port) when is_binary(port), do: String.to_integer(port)
     defp normalize_port(port) when is_integer(port), do: port
 
@@ -182,8 +183,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     binary_ops =
       [==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
-       and: "AND", or: "OR",
-       ilike: "ILIKE", like: "LIKE"]
+       and: "AND", or: "OR", ilike: "ILIKE", like: "LIKE"]
 
     @binary_ops Keyword.keys(binary_ops)
 
