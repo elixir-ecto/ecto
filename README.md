@@ -7,6 +7,8 @@ Ecto is a domain specific language for writing queries and interacting with data
 
 ```elixir
 # In your config/config.exs file
+config :my_app, ecto_repos: [Sample.Repo]
+
 config :my_app, Sample.Repo,
   adapter: Ecto.Adapters.Postgres,
   database: "ecto_simple",
