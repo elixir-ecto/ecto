@@ -131,10 +131,13 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Schema] `__schema__(:types)` now returns map
   * [SQL] `Ecto.Adapters.SQL.begin_test_transaction`, `Ecto.Adapters.SQL.restart_test_transaction` and `Ecto.Adapters.SQL.rollback_test_transaction` have been removed in favor of the new ownership-based `Ecto.Adapters.SQL.Sandbox`
 
+## Soft deprecations (no warnings emitted)
+
+  * [Changeset] Deprecate `Ecto.Changeset.cast/4` in favor of `Ecto.Changeset.cast/3` + `Ecto.Changeset.validate_required/3`
+
 ## Deprecations
 
   * [Changeset] Deprecate `:empty` in `Ecto.Changeset.cast`
-  * [Changeset] Deprecate `Ecto.Changeset.cast/4` in favor of `Ecto.Changeset.cast/3`
   * [Repo] `Repo.after_connect/1` is deprecated, please pass the `:after_connect` repository option instead
 
 ## Enhancements
@@ -142,6 +145,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Adapter] Ensure adapters work on native types, guaranteeing adapters compose better with custom types
   * [Adapter] Support prepared queries in adapters
   * [Adapter] Add support for loading and dumping structures
+  * [Changeset] Include the type that failed to cast in changeset errors. Example: `[profile: {"is invalid", [type: :map]}]`
   * [DateTime] Ensure the given date and datetimes are valid
   * [Migration] Add support for partial indexes by specifying the `:where` option when on `Ecto.Migration.index/2`
   * [Migration] Allow the migration table name to be configured in the repository via `:migration_source`
@@ -165,6 +169,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Schema] Allow `@schema_prefix` to be configured per schema. It is used for new structs as well as queries where the given schema is used as `from`
   * [Schema] Support MFA on autogenerate
   * [Schema] Support composite primary keys
+  * [Type] Add type `{:map, inner_type}`
 
 ## Bug fixes
 
