@@ -133,8 +133,9 @@ defmodule Ecto.Schema do
   `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
   `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal) |
   `:map`                  | `map` |
+  `{:map, inner_type}`    | `map` |
 
-  **Note:** For the `:array` type, replace `inner_type` with one of
+  **Note:** For the `{:array, inner_type}` and `{:map, inner_type}` type, replace `inner_type` with one of
   the valid types, such as `:string`.
 
   ### Custom types

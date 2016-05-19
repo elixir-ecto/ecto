@@ -76,12 +76,30 @@ defmodule Ecto.TypeTest do
     assert match?(CustomAny, :boolean)
   end
 
-  test "map types" do
+  test "untyped maps" do
     assert load(:map, %{"a" => 1}) == {:ok, %{"a" => 1}}
     assert load(:map, 1) == :error
 
     assert dump(:map, %{a: 1}) == {:ok, %{a: 1}}
     assert dump(:map, 1) == :error
+  end
+
+  test "typed maps" do
+    assert load({:map, :integer}, %{"a" => 1, "b" => 2}) == {:ok, %{"a" => 1, "b" => 2}}
+    assert dump({:map, :integer}, %{"a" => 1, "b" => 2}) == {:ok, %{"a" => 1, "b" => 2}}
+    assert cast({:map, :integer}, %{"a" => "1", "b" => "2"}) == {:ok, %{"a" => 1, "b" => 2}}
+
+    assert load({:map, {:array, :integer}}, %{"a" => [0, 0], "b" => [1, 1]}) == {:ok, %{"a" => [0, 0], "b" => [1, 1]}}
+    assert dump({:map, {:array, :integer}}, %{"a" => [0, 0], "b" => [1, 1]}) == {:ok, %{"a" => [0, 0], "b" => [1, 1]}}
+    assert cast({:map, {:array, :integer}}, %{"a" => [0, 0], "b" => [1, 1]}) == {:ok, %{"a" => [0, 0], "b" => [1, 1]}}
+
+    assert load({:map, :integer}, %{"a" => ""}) == :error
+    assert dump({:map, :integer}, %{"a" => ""}) == :error
+    assert cast({:map, :integer}, %{"a" => ""}) == :error
+
+    assert load({:map, :integer}, 1) == :error
+    assert dump({:map, :integer}, 1) == :error
+    assert cast({:map, :integer}, 1) == :error
   end
 
   test "custom types with array" do
