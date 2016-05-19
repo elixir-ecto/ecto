@@ -645,7 +645,11 @@ if Code.ensure_loaded?(Mariaex) do
       size      = Keyword.get(opts, :size)
       precision = Keyword.get(opts, :precision)
       scale     = Keyword.get(opts, :scale)
-      type_name = ecto_to_db(type)
+      type_name =
+        case type do
+          :string -> "varchar"
+          _ -> ecto_to_db(type)
+        end
 
       cond do
         size            -> "#{type_name}(#{size})"
