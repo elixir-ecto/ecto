@@ -420,7 +420,7 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query) do
-      "CAST(#{expr(other, sources, query)} AS " <> ecto_to_db(type, query) <> ")"
+      "CAST(#{expr(other, sources, query)} AS " <> ecto_cast_to_db(type, query) <> ")"
     end
 
     defp expr(nil, _sources, _query),   do: "NULL"
@@ -645,11 +645,7 @@ if Code.ensure_loaded?(Mariaex) do
       size      = Keyword.get(opts, :size)
       precision = Keyword.get(opts, :precision)
       scale     = Keyword.get(opts, :scale)
-      type_name =
-        case type do
-          :string -> "varchar"
-          _ -> ecto_to_db(type)
-        end
+      type_name = ecto_to_db(type)
 
       cond do
         size            -> "#{type_name}(#{size})"
@@ -733,12 +729,15 @@ if Code.ensure_loaded?(Mariaex) do
       |> :binary.replace("\\", "\\\\", [:global])
     end
 
+    defp ecto_cast_to_db(:string, _query), do: "char"
+    defp ecto_cast_to_db(type, query), do: ecto_to_db(type, query)
+
     defp ecto_to_db(type, query \\ nil)
     defp ecto_to_db({:array, _}, query),
       do: error!(query, "Array type is not supported by MySQL")
     defp ecto_to_db(:id, _query),        do: "integer"
     defp ecto_to_db(:binary_id, _query), do: "binary(16)"
-    defp ecto_to_db(:string, _query),    do: "char"
+    defp ecto_to_db(:string, _query),    do: "varchar"
     defp ecto_to_db(:float, _query),     do: "double"
     defp ecto_to_db(:binary, _query),    do: "blob"
     defp ecto_to_db(:uuid, _query),      do: "binary(16)" # MySQL does not support uuid
