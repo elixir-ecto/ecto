@@ -734,7 +734,7 @@ if Code.ensure_loaded?(Mariaex) do
       do: error!(query, "Array type is not supported by MySQL")
     defp ecto_to_db(:id, _query),        do: "integer"
     defp ecto_to_db(:binary_id, _query), do: "binary(16)"
-    defp ecto_to_db(:string, _query),    do: "varchar"
+    defp ecto_to_db(:string, _query),    do: "char"
     defp ecto_to_db(:float, _query),     do: "double"
     defp ecto_to_db(:binary, _query),    do: "blob"
     defp ecto_to_db(:uuid, _query),      do: "binary(16)" # MySQL does not support uuid
