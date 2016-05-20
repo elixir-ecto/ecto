@@ -215,6 +215,13 @@ defmodule Ecto.Query.Builder do
     {expr, params}
   end
 
+  def escape({op, _, _}, _type, _params, _vars, _env) when op in ~w(|| && !)a do
+    error! """
+          Short-form operators are not supported: `#{op}`
+          Instead use the full name as found in SQL: `and`, `or`, and `not`.
+          """
+  end
+
   # Other functions - no type casting
   def escape({name, _, args} = expr, type, params, vars, env) when is_atom(name) and is_list(args) do
     case call_type(name, length(args)) do
