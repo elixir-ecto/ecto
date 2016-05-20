@@ -1100,8 +1100,13 @@ defmodule Ecto.Changeset do
 
   defp missing?(changeset, field) when is_atom(field) do
     case get_field(changeset, field) do
-      value when is_binary(value) -> String.lstrip(value) ==
-        ""
+      %{__struct__: Ecto.Association.NotLoaded} ->
+        raise ArgumentError, "attempting to validate association `#{field}` " <>
+                             "that was not loaded. Please preload your associations " <>
+                             "before calling validate_required/3 or pass the :required " <>
+                             "option to Ecto.Changeset.cast_assoc/3"
+      value when is_binary(value) ->
+        String.lstrip(value) == ""
       value ->
         value == nil
     end
