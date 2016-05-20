@@ -27,7 +27,7 @@ defmodule Ecto.Query do
       # Send the query to the repository
       Repo.all(query)
 
-  In the example above, we are directely querying the "users" table
+  In the example above, we are directly querying the "users" table
   from the database.
 
   ## Query expressions
@@ -76,7 +76,7 @@ defmodule Ecto.Query do
   In the example above, Ecto will cast the age to type integer. When
   a value cannot be cast, `Ecto.Query.CastError` is raised.
 
-  To avoid the repitition of always specifying the types, you may define
+  To avoid the repetition of always specifying the types, you may define
   an `Ecto.Schema`. In such cases, Ecto will analyze your queries and
   automatically cast the interpolated "age" when compared to the `u.age`
   field, as long as the age field is defined with type `:integer` in
