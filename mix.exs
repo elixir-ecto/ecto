@@ -12,6 +12,9 @@ defmodule Ecto.Mixfile do
      build_per_environment: false,
      consolidate_protocols: false,
      test_paths: test_paths(Mix.env),
+     xref: [exclude: [Mariaex, Ecto.Adapters.MySQL.Connection,
+                      Postgrex, Ecto.Adapters.Postgres.Connection,
+                      DBConnection, DBConnection.Ownership]],
 
      # Custom testing
      aliases: ["test.all": ["test", "test.adapters"],
