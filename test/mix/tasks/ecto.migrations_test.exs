@@ -51,7 +51,7 @@ defmodule Mix.Tasks.Ecto.MigrationsTest do
 
     expected_output = """
 
-      Repo: Elixir.Mix.Tasks.Ecto.MigrationsTest.Repo
+      Repo: Mix.Tasks.Ecto.MigrationsTest.Repo
 
         Status    Migration ID    Migration Name
       --------------------------------------------------
@@ -74,7 +74,7 @@ defmodule Mix.Tasks.Ecto.MigrationsTest do
 
     expected_output = """
 
-      Repo: Elixir.Mix.Tasks.Ecto.MigrationsTest.Repo
+      Repo: Mix.Tasks.Ecto.MigrationsTest.Repo
 
         Status    Migration ID    Migration Name
       --------------------------------------------------

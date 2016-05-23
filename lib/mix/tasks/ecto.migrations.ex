@@ -42,7 +42,7 @@ defmodule Mix.Tasks.Ecto.Migrations do
 
       """
 
-      Repo: #{repo}
+      Repo: #{inspect repo}
 
         Status    Migration ID    Migration Name
       --------------------------------------------------
