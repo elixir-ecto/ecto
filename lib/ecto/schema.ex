@@ -274,7 +274,12 @@ defmodule Ecto.Schema do
       import Inspect.Algebra
 
       def inspect(metadata, opts) do
-        concat ["#Ecto.Schema.Metadata<", to_doc(metadata.state, opts), ">"]
+        %{source: {prefix, source}, state: state, context: context} = metadata
+        entries =
+          for entry <- [state, prefix, source, context],
+              entry != nil,
+              do: to_doc(entry, opts)
+        concat ["#Ecto.Schema.Metadata<", Enum.join(entries, ", "), ">"]
       end
     end
   end

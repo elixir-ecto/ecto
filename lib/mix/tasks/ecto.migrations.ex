@@ -48,9 +48,11 @@ defmodule Mix.Tasks.Ecto.Migrations do
       --------------------------------------------------
       """ <>
       Enum.map_join(repo_status, "\n", fn({status, number, description}) ->
-        if status == :up do
-          status = "up  "
-        end
+        status =
+          case status do
+            :up   -> "up  "
+            :down -> "down"
+          end
 
         "  #{status}      #{number}  #{description}"
       end) <> "\n"

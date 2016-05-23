@@ -82,7 +82,7 @@ defmodule Ecto.SchemaTest do
 
   test "inspects metadata" do
     schema = %Schema{}
-    assert inspect(schema.__meta__) == "#Ecto.Schema.Metadata<:built>"
+    assert inspect(schema.__meta__) == "#Ecto.Schema.Metadata<:built, \"my schema\">"
   end
 
   test "defaults" do
