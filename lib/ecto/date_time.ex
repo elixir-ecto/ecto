@@ -271,6 +271,10 @@ defmodule Ecto.Time do
   end
   def cast(%Ecto.Time{} = t),
     do: {:ok, t}
+  def cast(%{"hour" => hour, "minute" => min} = map),
+    do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, "second", 0)), to_i(Map.get(map, "microsecond", 0)))
+  def cast(%{hour: hour, minute: min} = map),
+    do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, :second, 0)), to_i(Map.get(map, :microsecond, 0)))
   def cast(%{"hour" => hour, "min" => min} = map),
     do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)), to_i(Map.get(map, "usec", 0)))
   def cast(%{hour: hour, min: min} = map),
@@ -438,6 +442,18 @@ defmodule Ecto.DateTime do
 
   def cast(%Ecto.DateTime{} = dt) do
     {:ok, dt}
+  end
+
+  def cast(%{"year" => year, "month" => month, "day" => day, "hour" => hour, "minute" => min} = map) do
+    from_parts(to_i(year), to_i(month), to_i(day),
+               to_i(hour), to_i(min), to_i(Map.get(map, "second", 0)),
+               to_i(Map.get(map, "microsecond", 0)))
+  end
+
+  def cast(%{year: year, month: month, day: day, hour: hour, minute: min} = map) do
+    from_parts(to_i(year), to_i(month), to_i(day),
+               to_i(hour), to_i(min), to_i(Map.get(map, :second, 0)),
+               to_i(Map.get(map, :microsecond, 0)))
   end
 
   def cast(%{"year" => year, "month" => month, "day" => day, "hour" => hour, "min" => min} = map) do
