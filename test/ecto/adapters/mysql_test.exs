@@ -213,6 +213,11 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.all(query) == ~s{SELECT CAST(? AS binary(16)) FROM `model` AS m0}
   end
 
+  test "string type" do
+    query = Model |> select([], type(^"test", :string)) |> normalize
+    assert SQL.all(query) == ~s{SELECT CAST(? AS char) FROM `model` AS m0}
+  end
+
   test "nested expressions" do
     z = 123
     query = from(r in Model, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> normalize

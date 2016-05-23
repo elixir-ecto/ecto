@@ -420,7 +420,7 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query) do
-      "CAST(#{expr(other, sources, query)} AS " <> ecto_to_db(type, query) <> ")"
+      "CAST(#{expr(other, sources, query)} AS " <> ecto_cast_to_db(type, query) <> ")"
     end
 
     defp expr(nil, _sources, _query),   do: "NULL"
@@ -728,6 +728,9 @@ if Code.ensure_loaded?(Mariaex) do
       |> :binary.replace("'", "''", [:global])
       |> :binary.replace("\\", "\\\\", [:global])
     end
+
+    defp ecto_cast_to_db(:string, _query), do: "char"
+    defp ecto_cast_to_db(type, query), do: ecto_to_db(type, query)
 
     defp ecto_to_db(type, query \\ nil)
     defp ecto_to_db({:array, _}, query),
