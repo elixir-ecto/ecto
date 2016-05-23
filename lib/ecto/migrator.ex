@@ -153,6 +153,23 @@ defmodule Ecto.Migrator do
     end
   end
 
+  @doc """
+  Returns an array of tuples as the migration status of the given repo,
+  without actually running any migrations.
+
+  """
+  def migrations(repo, directory) do
+    versions = migrated_versions(repo)
+
+    Enum.map(pending_in_direction(versions, directory, :down) |> Enum.reverse, fn {a, b, _}
+     -> {:up, a, b}
+    end)
+    ++
+    Enum.map(pending_in_direction(versions, directory, :up), fn {a, b, _} ->
+      {:down, a, b}
+    end)
+  end
+
   defp run_to(repo, versions, directory, direction, target, opts) do
     within_target_version? = fn
       {version, _, _}, target, :up ->
