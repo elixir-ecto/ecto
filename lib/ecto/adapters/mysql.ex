@@ -108,11 +108,12 @@ defmodule Ecto.Adapters.MySQL do
     database  = Keyword.fetch!(opts, :database)
     charset   = Keyword.get(opts, :charset, "utf8")
 
-    extra = ""
-
-    if collation = Keyword.get(opts, :collation) do
-      extra =  extra <> " DEFAULT COLLATE = #{collation}"
-    end
+    extra =
+      if collation = Keyword.get(opts, :collation) do
+        " DEFAULT COLLATE = #{collation}"
+      else
+        ""
+      end
 
     {output, status} =
       run_with_mysql opts, "CREATE DATABASE `" <> database <>
@@ -142,11 +143,12 @@ defmodule Ecto.Adapters.MySQL do
             "please guarantee it is available before running ecto commands"
     end
 
-    env = []
-
-    if password = database[:password] do
-      env = [{"MYSQL_PWD", password}|env]
-    end
+    env =
+      if password = database[:password] do
+        [{"MYSQL_PWD", password}]
+      else
+        []
+      end
 
     host = database[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
     port = database[:port] || System.get_env("MYSQL_TCP_PORT") || "3306"

@@ -63,9 +63,11 @@ defmodule Ecto.Repo.Assoc do
         else
           HashDict.update(dict, parent_key, [item], &[item|&1])
         end
-    end
 
-    {{keys, dict, sub_dicts}, sub_structs}
+      {{keys, dict, sub_dicts}, sub_structs}
+    else
+      {{keys, dict, sub_dicts}, sub_structs}
+    end
   end
 
   defp load_assocs({child_key, struct}, sub_dicts, refls) do
@@ -77,9 +79,11 @@ defmodule Ecto.Repo.Assoc do
           |> Enum.reverse()
           |> Enum.map(&load_assocs(&1, sub_dicts, refls))
 
-        if refl.cardinality == :one do
-          loaded = List.first(loaded)
-        end
+        loaded =
+          case refl.cardinality do
+            :one -> List.first(loaded)
+            :many -> loaded
+          end
 
         Map.put(acc, refl.field, loaded)
     end

@@ -66,18 +66,9 @@ defmodule Ecto.Adapters.Postgres do
     encoding = Keyword.get(opts, :encoding, "UTF8")
 
     extra = ""
-
-    if template = Keyword.get(opts, :template) do
-      extra = extra <> " TEMPLATE=#{template}"
-    end
-
-    if lc_collate = Keyword.get(opts, :lc_collate) do
-      extra = extra <> " LC_COLLATE='#{lc_collate}'"
-    end
-
-    if lc_ctype = Keyword.get(opts, :lc_ctype) do
-      extra = extra <> " LC_CTYPE='#{lc_ctype}'"
-    end
+    extra = if template = Keyword.get(opts, :template), do: extra <> " TEMPLATE=#{template}", else: extra
+    extra = if lc_collate = Keyword.get(opts, :lc_collate), do: extra <> " LC_COLLATE='#{lc_collate}'", else: extra
+    extra = if lc_ctype = Keyword.get(opts, :lc_ctype), do: extra <> " LC_CTYPE='#{lc_ctype}'", else: extra
 
     {output, status} =
       run_with_psql opts, "CREATE DATABASE \"" <> database <>
@@ -116,14 +107,8 @@ defmodule Ecto.Adapters.Postgres do
     env = [{"PGCONNECT_TIMEOUT", "10"} | env]
 
     args = []
-
-    if username = database[:username] do
-      args = ["-U", username|args]
-    end
-
-    if port = database[:port] do
-      args = ["-p", to_string(port)|args]
-    end
+    args = if username = database[:username], do: ["-U", username|args], else: args
+    args = if port = database[:port], do: ["-p", to_string(port)|args], else: args
 
     host = database[:hostname] || System.get_env("PGHOST") || "localhost"
     args = args ++ ["--quiet",

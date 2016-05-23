@@ -98,13 +98,17 @@ defmodule Ecto.Repo.Preloader do
   end
 
   defp preload_assoc(repo, query, prefix, %{cardinality: card} = assoc, related_key, preloads) do
-    if card == :many do
-      # Generate the expression by hand so we prepend it instead of appending it
-      query = update_in query.order_bys, fn order_bys ->
-        [%Ecto.Query.QueryExpr{expr: [asc: {{:., [], [{:&, [], [0]}, related_key]}, [], []}],
-                               file: __ENV__.file, line: __ENV__.line, params: []}|order_bys]
+    query =
+      case card do
+        :one ->
+          query
+        :many ->
+          # Generate the expression by hand so we prepend it instead of appending it
+          update_in query.order_bys, fn order_bys ->
+            [%Ecto.Query.QueryExpr{expr: [asc: {{:., [], [{:&, [], [0]}, related_key]}, [], []}],
+                                   file: __ENV__.file, line: __ENV__.line, params: []}|order_bys]
+          end
       end
-    end
     loaded = preload_each(repo.all(%{query | prefix: prefix}), repo, preloads)
     {:assoc, assoc, assoc_dict(card, related_key, loaded)}
   end
@@ -175,9 +179,11 @@ defmodule Ecto.Repo.Preloader do
     initial = struct |> Map.fetch!(h) |> List.wrap
     loaded  = Enum.reduce(t, initial, &recur_through/2)
 
-    if assoc.cardinality == :one do
-      loaded = List.first(loaded)
-    end
+    loaded =
+      case assoc.cardinality do
+        :one  -> List.first(loaded)
+        :many -> loaded
+      end
 
     Map.put(struct, assoc.field, loaded)
   end

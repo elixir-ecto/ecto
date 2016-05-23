@@ -104,15 +104,18 @@ defmodule Ecto.Query.Builder.Join do
     join_params = Builder.escape_params(join_params)
 
     qual = validate_qual(qual)
-    count_setter = nil
     validate_bind(join_bind, binding)
 
-    if join_bind != :_ and !count_bind do
-      # If count_bind is not an integer, make it a variable.
-      # The variable is the getter/setter storage.
-      count_bind = quote(do: count_bind)
-      count_setter = quote(do: unquote(count_bind) = Builder.count_binds(query))
-    end
+    {count_bind, count_setter} =
+      if join_bind != :_ and !count_bind do
+        # If count_bind is not an integer, make it a variable.
+        # The variable is the getter/setter storage.
+        quoted = quote(do: count_bind)
+        {quoted,
+         quote(do: unquote(quoted) = Builder.count_binds(query))}
+      else
+        {count_bind, nil}
+      end
 
     if on && join_assoc do
       Builder.error! "cannot specify `on` on `#{qual}_join` when using association join, " <>

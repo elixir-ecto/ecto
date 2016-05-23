@@ -983,7 +983,7 @@ defmodule Ecto.Changeset do
           IO.write :stderr, "warning: changing #{tag}s with force_change/3 is deprecated, " <>
                             "please use put_#{tag}/4 instead\n" <> Exception.format_stacktrace()
           {:ok, changes, _, _} =
-            Relation.change(relation, model, value, Map.get(model, key))
+            Relation.change(relation, value, Map.get(model, key))
           changes
         _ ->
           value

@@ -24,8 +24,8 @@ defmodule Ecto.Pools.SojournBroker.Timeout do
     timeout = Keyword.get(opts, :queue_timeout, 5_000)
     drop    = Keyword.get(opts, :queue_drop, :drop)
     size    = Keyword.get(opts, :queue_size, 128)
+    timeout = if timeout != :infinity, do: timeout * 1_000, else: timeout
 
-    if timeout != :infinity, do: timeout = timeout * 1_000
     client_queue = {:sbroker_timeout_queue, {out, timeout, drop, size}}
     worker_queue = {:sbroker_drop_queue, {:out_r, :drop, :infinity}}
 

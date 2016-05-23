@@ -191,17 +191,14 @@ defmodule Ecto.Query.Planner do
   end
 
   defp finalize_cache(query, operation, cache) do
-    if (assocs = query.assocs) && assocs != [] do
-      cache = [assocs: assocs] ++ cache
-    end
+    cache =
+      if (assocs = query.assocs) && assocs != [], do: [assocs: assocs] ++ cache, else: cache
 
-    if prefix = query.prefix do
-      cache = [prefix: prefix] ++ cache
-    end
+    cache =
+      if prefix = query.prefix, do: [prefix: prefix] ++ cache, else: cache
 
-    if lock = query.lock do
-      cache = [lock: lock] ++ cache
-    end
+    cache =
+      if lock = query.lock, do: [lock: lock] ++ cache, else: cache
 
     [operation, source_cache(query.from)|cache]
   end
@@ -449,16 +446,16 @@ defmodule Ecto.Query.Planner do
     {{:in, in_meta, [left, right]}, acc}
   end
 
-  defp prewalk({:^, meta, [ix]}, kind, query, expr, acc, adapter) when is_integer(ix) do
+  defp prewalk({:^, meta, [ix]}, _kind, _query, _expr, acc, _adapter) when is_integer(ix) do
     {{:^, meta, [acc]}, acc + 1}
   end
 
-  defp prewalk({{:., _, [{:&, _, [source]}, field]} = dot, meta, []}, kind, query, expr, acc, adapter) do
+  defp prewalk({{:., _, [{:&, _, [source]}, field]} = dot, meta, []}, kind, query, expr, acc, _adapter) do
     type = type!(kind, query, expr, source, field)
     {{dot, [ecto_type: type] ++ meta, []}, acc}
   end
 
-  defp prewalk({:type, _, [{:^, meta, [ix]}, _expr]}, kind, query, expr, acc, adapter) when is_integer(ix) do
+  defp prewalk({:type, _, [{:^, meta, [ix]}, _expr]}, kind, query, expr, acc, _adapter) when is_integer(ix) do
     {_, t} = Enum.fetch!(expr.params, ix)
     {_, _, type} = type_for_param!(kind, query, expr, t)
     {%Ecto.Query.Tagged{value: {:^, meta, [acc]}, tag: type,
@@ -605,12 +602,14 @@ defmodule Ecto.Query.Planner do
   # Traverse all query components with expressions.
   # Therefore from, preload, assocs and lock are not traversed.
   defp traverse_exprs(original, operation, acc, fun) do
-    query = original
-
-    if operation == :update_all do
-      {updates, acc} = fun.(:update, original, original.updates, acc)
-      query = %{query | updates: updates}
-    end
+    {query, acc} =
+      case operation do
+        :update_all ->
+          {updates, acc} = fun.(:update, original, original.updates, acc)
+          {%{original | updates: updates}, acc}
+        _ ->
+          {original, acc}
+      end
 
     {select, acc} = fun.(:select, original, original.select, acc)
     query = %{query | select: select}
