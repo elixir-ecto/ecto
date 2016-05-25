@@ -94,7 +94,7 @@ defmodule Ecto.Repo.Preloader do
       # We pass caller: self() so pools like the ownership
       # pool knows where to fetch the connection from and
       # set the proper timeouts.
-      opts = [caller: self()] ++ opts
+      opts = Keyword.put_new(opts, :caller, self())
       assocs
       |> Enum.map(&Task.async(:erlang, :apply, [fun, [&1, opts]]))
       |> Enum.map(&Task.await(&1, :infinity))

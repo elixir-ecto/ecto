@@ -305,11 +305,12 @@ defmodule Ecto.Integration.JoinsTest do
     %Comment{id: cid2} = TestRepo.insert!(%Comment{text: "2", post_id: pid1, author_id: uid2})
     %Comment{id: cid3} = TestRepo.insert!(%Comment{text: "3", post_id: pid2, author_id: uid2})
 
+    # use multiple associations to force parallel preloader
     query = from p in Post,
       left_join: c in assoc(p, :comments),
       left_join: u in assoc(c, :author),
       order_by: [p.id, c.id, u.id],
-      preload: [comments: {c, author: u}],
+      preload: [:permalink, comments: {c, author: {u, [:comments, :custom]}}],
       select: {0, [p], 1, 2}
 
     posts = TestRepo.all(query)
