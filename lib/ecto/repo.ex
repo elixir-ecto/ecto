@@ -233,12 +233,16 @@ defmodule Ecto.Repo do
 
   @doc """
   Starts any connection pooling or supervision and return `{:ok, pid}`
-  or just `:ok` if nothing needs to be done.
+  or just `:ok` if nothing needs to be done. 
 
   Returns `{:error, {:already_started, pid}}` if the repo is already
   started or `{:error, term}` in case anything else goes wrong.
+
+  ## Options
+  See the configuration in the moduledoc for options shared between adapters,
+  for adapter-specific configuration see the adapter's documentation.
   """
-  @callback start_link() :: {:ok, pid} |
+  @callback start_link(Keyword.t) :: {:ok, pid} |
                             {:error, {:already_started, pid}} |
                             {:error, term}
 
