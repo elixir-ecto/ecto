@@ -106,8 +106,8 @@ defmodule Ecto.Association do
   @doc """
   Performs the repository change on the association.
 
-  Receives the parent changeset, the currente changesets
-  and the repository action optoins. Must returns the
+  Receives the parent changeset, the current changesets
+  and the repository action options. Must return the
   persisted struct (or nil) or the changeset error.
   """
   @callback on_repo_change(t, parent :: Ecto.Changeset.t, changeset :: Ecto.Changeset.t, Keyword.t) ::
