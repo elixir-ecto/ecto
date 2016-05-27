@@ -172,7 +172,7 @@ defmodule Ecto.Integration.Barebone do
   @moduledoc """
   This module is used to test:
 
-    * A model wthout primary keys
+    * A model without primary keys
 
   """
   use Ecto.Integration.Schema
