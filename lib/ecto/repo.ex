@@ -143,11 +143,11 @@ defmodule Ecto.Repo do
       end
 
       def get_by(queryable, clauses, opts \\ []) do
-        Ecto.Repo.Queryable.get_by(__MODULE__, unquote(adapter), queryable, clauses, opts)
+        Ecto.Repo.Queryable.get_by(__MODULE__, @adapter, queryable, clauses, opts)
       end
 
       def get_by!(queryable, clauses, opts \\ []) do
-        Ecto.Repo.Queryable.get_by!(__MODULE__, unquote(adapter), queryable, clauses, opts)
+        Ecto.Repo.Queryable.get_by!(__MODULE__, @adapter, queryable, clauses, opts)
       end
 
       def one(queryable, opts \\ []) do
