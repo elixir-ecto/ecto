@@ -11,6 +11,7 @@ defmodule Ecto.DateTime.Utils do
 
   @doc "Converts to integer if possible"
   def to_i(nil), do: nil
+  def to_i({int, _}) when is_integer(int), do: int
   def to_i(int) when is_integer(int), do: int
   def to_i(bin) when is_binary(bin) do
     case Integer.parse(bin) do

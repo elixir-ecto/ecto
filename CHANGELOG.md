@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.1.8
+
+### Enhancements
+
+* Support Elixir v1.3 calendar types
+* Remove warnings on Elixir v1.3
+
 ## v1.1.7
 
 ### Bug fixes
