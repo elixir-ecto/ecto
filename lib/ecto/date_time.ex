@@ -12,6 +12,7 @@ defmodule Ecto.DateTime.Utils do
 
   @doc "Converts to integer if possible"
   def to_i(nil), do: nil
+  def to_i({int, _}) when is_integer(int), do: int
   def to_i(int) when is_integer(int), do: int
   def to_i(bin) when is_binary(bin) do
     case Integer.parse(bin) do
@@ -441,6 +442,18 @@ defmodule Ecto.DateTime do
     from_parts(to_i(year), to_i(month), to_i(day),
                to_i(hour), to_i(min), to_i(Map.get(map, :sec, 0)),
                to_i(Map.get(map, :usec, 0)))
+  end
+
+  defp do_cast(%{"year" => year, "month" => month, "day" => day, "hour" => hour, "minute" => min} = map) do
+    from_parts(to_i(year), to_i(month), to_i(day),
+               to_i(hour), to_i(min), to_i(Map.get(map, "second", 0)),
+               to_i(Map.get(map, "microsecond", 0)))
+  end
+
+  defp do_cast(%{year: year, month: month, day: day, hour: hour, minute: min} = map) do
+    from_parts(to_i(year), to_i(month), to_i(day),
+               to_i(hour), to_i(min), to_i(Map.get(map, :second, 0)),
+               to_i(Map.get(map, :microsecond, 0)))
   end
 
   defp do_cast({{year, month, day}, {hour, min, sec}}) do
