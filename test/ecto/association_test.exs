@@ -214,12 +214,14 @@ defmodule Ecto.AssociationTest do
 
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [])) ==
            inspect(from a in Author,
-                    join: m in AuthorPermalink, on: m.permalink_id in type(^[], {:in, :id}),
+                    join: p in Permalink, on: p.id in ^[],
+                    join: m in AuthorPermalink, on: m.permalink_id == p.id,
                     where: m.author_id == a.id)
 
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from a in Author,
-                    join: m in AuthorPermalink, on: m.permalink_id in type(^[1, 2, 3], {:in, :id}),
+                    join: p in Permalink, on: p.id in ^[1, 2, 3],
+                    join: m in AuthorPermalink, on: m.permalink_id == p.id,
                     where: m.author_id == a.id)
   end
 
@@ -233,12 +235,14 @@ defmodule Ecto.AssociationTest do
 
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [])) ==
            inspect(from p in {"custom_permalinks", Permalink},
-                    join: m in "authors_permalinks", on: m.author_id in type(^[], {:in, :id}),
+                    join: a in Author, on: a.id in ^[],
+                    join: m in "authors_permalinks", on: m.author_id == a.id,
                     where: m.permalink_id == p.id)
 
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from p in {"custom_permalinks", Permalink},
-                    join: m in "authors_permalinks", on: m.author_id in type(^[1, 2, 3], {:in, :id}),
+                    join: a in Author, on: a.id in ^[1, 2, 3],
+                    join: m in "authors_permalinks", on: m.author_id == a.id,
                     where: m.permalink_id == p.id)
   end
 
@@ -247,7 +251,8 @@ defmodule Ecto.AssociationTest do
     query = from a in Author, limit: 5
     assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, query, [1, 2, 3])) ==
            inspect(from a in Author,
-                    join: m in AuthorPermalink, on: m.permalink_id in type(^[1, 2, 3], {:in, :id}),
+                    join: p in Permalink, on: p.id in ^[1, 2, 3],
+                    join: m in AuthorPermalink, on: m.permalink_id == p.id,
                     where: m.author_id == a.id, limit: 5)
   end
 
@@ -345,7 +350,8 @@ defmodule Ecto.AssociationTest do
     assoc = Permalink.__schema__(:association, :author_emails)
     assert inspect(Ecto.Association.HasThrough.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from e in {"users_emails", Email},
-                        join: ap in AuthorPermalink, on: ap.permalink_id in ^[1, 2, 3],
+                        join: p in Permalink, on: p.id in ^[1, 2, 3],
+                        join: ap in AuthorPermalink, on: ap.permalink_id == p.id,
                         join: a in Author, on: ap.author_id == a.id,
                         where: e.author_id == a.id, distinct: true)
   end

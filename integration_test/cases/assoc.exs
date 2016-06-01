@@ -388,15 +388,23 @@ defmodule Ecto.Integration.AssocTest do
     assert up1.updated_at
   end
 
+
   test "many_to_many changeset assoc with binary_id and uuid" do
-    custom = TestRepo.insert!(%Custom{bid: Ecto.UUID.generate})
+    custom = TestRepo.insert!(%Custom{})
     post   = TestRepo.insert!(%Post{uuid: Ecto.UUID.generate(), customs: [custom]})
 
-    post
-    |> TestRepo.preload(:customs)
-    |> Ecto.Changeset.change(%{})
-    |> Ecto.Changeset.put_assoc(:customs, [])
-    |> TestRepo.update!
+    post = Post |> TestRepo.get!(post.id) |> TestRepo.preload(:customs)
+    assert [_] = post.customs
+
+    post =
+      post
+      |> Ecto.Changeset.change(%{})
+      |> Ecto.Changeset.put_assoc(:customs, [])
+      |> TestRepo.update!
+    assert [] = post.customs
+
+    post = Post |> TestRepo.get!(post.id) |> TestRepo.preload(:customs)
+    assert [] = post.customs
   end
 
   @tag :unique_constraint

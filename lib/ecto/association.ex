@@ -880,10 +880,13 @@ defmodule Ecto.Association.ManyToMany do
   def assoc_query(%{join_through: join_through, join_keys: join_keys,
                     queryable: queryable, owner: owner}, query, values) do
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
-    owner_type = {:in, owner.__schema__(:type, owner_key)}
 
+    # We need to go all the way using owner and query so
+    # Ecto has all the information necessary to cast fields.
+    # This also helps validate the associated schema exists all the way.
     from q in (query || queryable),
-      join: j in ^join_through, on: field(j, ^join_owner_key) in type(^values, ^owner_type),
+      join: o in ^owner, on: field(o, ^owner_key) in ^values,
+      join: j in ^join_through, on: field(j, ^join_owner_key) == field(o, ^owner_key),
       where: field(j, ^join_related_key) == field(q, ^related_key)
   end
 
@@ -895,8 +898,8 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   @doc false
-  def preload_info(%{join_keys: [{join_owner_key, _}, {_, _}]} = refl) do
-    {:assoc, refl, {-1, join_owner_key}}
+  def preload_info(%{join_keys: [{_, owner_key}, {_, _}]} = refl) do
+    {:assoc, refl, {-2, owner_key}}
   end
 
   @doc false
