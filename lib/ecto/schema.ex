@@ -279,7 +279,7 @@ defmodule Ecto.Schema do
           for entry <- [state, prefix, source, context],
               entry != nil,
               do: to_doc(entry, opts)
-        concat ["#Ecto.Schema.Metadata<", Enum.join(entries, ", "), ">"]
+        concat ["#Ecto.Schema.Metadata<"] ++ Enum.intersperse(entries, ", ") ++ [">"]
       end
     end
   end
