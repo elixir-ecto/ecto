@@ -18,6 +18,7 @@ Application.put_env(:ecto, :mysql_test_url,
 Code.require_file "../support/repo.exs", __DIR__
 Code.require_file "../support/models.exs", __DIR__
 Code.require_file "../support/migration.exs", __DIR__
+Code.require_file "./support/migration.exs", __DIR__
 
 pool =
   case System.get_env("ECTO_POOL") || "poolboy" do
@@ -81,4 +82,5 @@ _   = Ecto.Storage.down(TestRepo)
 {:ok, _pid} = PoolRepo.start_link
 
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)
+:ok = Ecto.Migrator.up(TestRepo, 1, Ecto.Integration.MySQL.Migration, log: false)
 Process.flag(:trap_exit, true)
