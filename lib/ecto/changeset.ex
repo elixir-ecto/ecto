@@ -1348,13 +1348,16 @@ defmodule Ecto.Changeset do
   validation will check if both "email" and "email_confirmation"
   in the parameter map matches.
 
-  Note that this does not add a validation error if the confirmation
-  field is nil. Note "email_confirmation" does not need to be added
-  as a virtual field in your schema.
+  Note that if the confirmation field is nil or missing, by default this does
+  not add a validation error. You can specify that the confirmation field is
+  required in the options (see below). Note "email_confirmation" does not need
+  to be added as a virtual field in your schema.
 
   ## Options
 
     * `:message` - the message on failure, defaults to "does not match"
+    * `:required` - boolean, sets whether existence of confirmation parameter
+      is required for addition of error. Defaults to false
 
   ## Examples
 
@@ -1372,13 +1375,17 @@ defmodule Ecto.Changeset do
       error_param = "#{param}_confirmation"
       error_field = String.to_atom(error_param)
       value = Map.get(changeset.params, param)
-
       case Map.fetch(changeset.params, error_param) do
         {:ok, ^value} -> []
         {:ok, _}      -> [{error_field, {message(opts, "does not match confirmation"), []}}]
-        :error        -> []
+        :error        -> confirmation_missing(opts, error_field)
       end
     end
+  end
+
+  defp confirmation_missing(opts, error_field) do
+    required = Keyword.get(opts, :required, false)
+    if required, do: [{error_field, {message(opts, "can't be blank"), []}}], else: []    
   end
 
   defp message(opts, key \\ :message, default) do

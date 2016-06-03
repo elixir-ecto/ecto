@@ -852,6 +852,21 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
     assert changeset.errors == []
 
+    changeset = changeset(%{"title" => "title"})
+                |> validate_confirmation(:title)
+    assert changeset.valid?
+    assert changeset.errors == []
+
+    changeset = changeset(%{"title" => "title"})
+                |> validate_confirmation(:title, required: false)
+    assert changeset.valid?
+    assert changeset.errors == []
+
+    changeset = changeset(%{"title" => "title"})
+                |> validate_confirmation(:title, required: true)
+    refute changeset.valid?
+    assert changeset.errors == [title_confirmation: {"can't be blank", []}]
+
     changeset = changeset(%{"title" => "title", "title_confirmation" => nil})
                 |> validate_confirmation(:title)
     refute changeset.valid?
