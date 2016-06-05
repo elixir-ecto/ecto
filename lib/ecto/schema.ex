@@ -966,7 +966,7 @@ defmodule Ecto.Schema do
       changeset = Ecto.Changeset.change(order)
 
       # Change, put a new one or remove an item
-      changeset = Ecto.Changeset.put_change(order, :item, nil)
+      changeset = Ecto.Changeset.put_change(changeset, :item, nil)
 
       # Update the order
       changeset = Repo.update!(changeset)
@@ -1043,7 +1043,7 @@ defmodule Ecto.Schema do
       changeset = Ecto.Changeset.change(order)
 
       # Change, put a new one or remove all items
-      changeset = Ecto.Changeset.put_change(order, :items, [])
+      changeset = Ecto.Changeset.put_change(changeset, :items, [])
 
       # Update the order
       changeset = Repo.update!(changeset)
