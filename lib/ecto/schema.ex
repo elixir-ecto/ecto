@@ -1178,6 +1178,10 @@ defmodule Ecto.Schema do
     opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
     foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)
 
+    if name == Keyword.get(opts, :foreign_key) do
+      raise ArgumentError, "foreign_key #{inspect name} must be distinct from corresponding association name"
+    end
+
     if Keyword.get(opts, :define_field, true) do
       __field__(mod, opts[:foreign_key], foreign_key_type, opts)
     end

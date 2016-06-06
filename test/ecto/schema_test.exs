@@ -616,4 +616,18 @@ defmodule Ecto.SchemaTest do
       end
     end
   end
+
+  test "belongs_to raises helpful error with redundant foreign key name" do
+    name = :author
+    message = ~r"foreign_key :#{name} must be distinct from corresponding association name"
+    assert_raise ArgumentError, message, fn ->
+      defmodule SchemaBadForeignKey do
+        use Ecto.Schema
+
+        schema "fk_assoc_name_clash" do
+          belongs_to name, User, foreign_key: name
+        end
+      end
+    end
+  end
 end
