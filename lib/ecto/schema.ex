@@ -219,7 +219,7 @@ defmodule Ecto.Schema do
       changeset = Ecto.Changeset.cast(%User{}, %{"age" => "0"}, [:age])
       user = Repo.insert!(changeset)
 
-  **You can use Ecto schemas and changesets to cast and valid any kind
+  **You can use Ecto schemas and changesets to cast and validate any kind
   of data, regardless if the data will be persisted to an Ecto repository
   or not**.
 
