@@ -120,6 +120,7 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
   * [Changeset] `changeset.model` has been renamed to `changeset.data`
   * [Changeset] `changeset.optional` has been removed
   * [Changeset] `changeset.errors` now always returns tuple `{String.t, Keyword.t}` in its values
+  * [DateTime] The "Z" (UTC) at the end of an ISO 8601 time has been removed as UTC should not be assumed.
   * [LogEntry] Overhaul log entry and store times in :native units
   * [Repo] `Ecto.StaleModelError` has been renamed to `Ecto.StaleEntryError`
   * [Repo] Poolboy now expects `:pool_overflow` option instead of `:max_overflow`
