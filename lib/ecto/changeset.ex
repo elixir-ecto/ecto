@@ -1014,7 +1014,7 @@ defmodule Ecto.Changeset do
       iex> changeset = change(%Post{}, %{title: "foo"})
       iex> changeset = validate_change changeset, :title, fn
       ...>   # Value must not be "foo"!
-      ...>   :title, "foo" -> [title: "is foo"]
+      ...>   :title, "foo" -> [{:title, {"is foo", []}]
       ...>   :title, _     -> []
       ...> end
       iex> changeset.errors
@@ -1385,7 +1385,7 @@ defmodule Ecto.Changeset do
 
   defp confirmation_missing(opts, error_field) do
     required = Keyword.get(opts, :required, false)
-    if required, do: [{error_field, {message(opts, "can't be blank"), []}}], else: []    
+    if required, do: [{error_field, {message(opts, "can't be blank"), []}}], else: []
   end
 
   defp message(opts, key \\ :message, default) do
