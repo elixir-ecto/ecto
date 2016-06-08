@@ -866,7 +866,7 @@ defmodule Ecto.Changeset do
   The given value may either be the embed struct, a
   changeset for the given embed or a map or keyword
   list of changes to be applied to the current embed.
-  If a map or keyword list are given are there is no
+  If a map or keyword list are given and there is no
   embed, one will be created.
 
   If the embed has no changes, it will be skipped.
