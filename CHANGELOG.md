@@ -114,6 +114,14 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
     |> Ecto.Changeset.change
     |> Ecto.Changeset.put_assoc(:post, existing_post)
     |> Repo.update!
+    
+### Application Repo Configuration
+
+Ecto now requires you to explicitly configure your repo's in your top level config. You can avoid this warning by passing the -r flag or by setting the repositories managed by this application in your config/config.exs:
+
+    config :mux, ecto_repos: [...]
+
+The configuration may be an empty list if it does not define any repo.
 
 ## Backwards incompatible changes
 
