@@ -1027,6 +1027,13 @@ defmodule Ecto.Changeset do
 
     value = Map.get(changes, field)
     new   = if is_nil(value), do: [], else: validator.(field, value)
+    new   =
+      Enum.map(new, fn
+        {key, val} when is_atom(key) and is_binary(val) ->
+          {key, {val, []}}
+        {key, {val, opts}} when is_atom(key) and is_binary(val) and is_list(opts) ->
+          {key, {val, opts}}
+      end)
 
     case new do
       []    -> changeset

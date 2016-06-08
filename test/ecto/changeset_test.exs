@@ -576,13 +576,21 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
     assert changeset.errors == []
 
-    # When invalid
+    # When invalid with binary
     changeset =
       changeset(%{"title" => "hello"})
       |> validate_change(:title, fn :title, "hello" -> [title: "oops"] end)
 
     refute changeset.valid?
-    assert changeset.errors == [title: "oops"]
+    assert changeset.errors == [title: {"oops", []}]
+
+    # When invalid with tuple
+    changeset =
+      changeset(%{"title" => "hello"})
+      |> validate_change(:title, fn :title, "hello" -> [title: {"oops", type: "bar"}] end)
+
+    refute changeset.valid?
+    assert changeset.errors == [title: {"oops", type: "bar"}]
 
     # When missing
     changeset =
@@ -607,7 +615,7 @@ defmodule Ecto.ChangesetTest do
       |> validate_change(:title, :oops, fn :title, "hello" -> [title: "oops"] end)
 
     refute changeset.valid?
-    assert changeset.errors == [title: "oops"]
+    assert changeset.errors == [title: {"oops", []}]
     assert changeset.validations == [title: :oops]
 
     changeset =
