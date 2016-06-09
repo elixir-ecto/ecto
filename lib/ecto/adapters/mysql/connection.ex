@@ -29,7 +29,10 @@ if Code.ensure_loaded?(Mariaex) do
 
     def execute(conn, sql, params, opts) when is_binary(sql) do
       query = %Mariaex.Query{name: "", statement: sql}
-      DBConnection.query(conn, query, map_params(params), opts)
+      case DBConnection.prepare_execute(conn, query, map_params(params), opts) do
+        {:ok, _, query} -> {:ok, query}
+        {:error, _} = err -> err
+      end
     end
 
     def execute(conn, %{} = query, params, opts) do

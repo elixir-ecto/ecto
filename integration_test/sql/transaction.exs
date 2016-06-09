@@ -106,7 +106,7 @@ defmodule Ecto.Integration.TransactionTest do
         UniqueError -> :ok
       end
 
-      assert_raise DBConnection.Error, "transaction rolling back",
+      assert_raise DBConnection.ConnectionError, "transaction rolling back",
         fn() -> PoolRepo.insert!(%Trans{text: "5"}) end
     end) == {:error, :rollback}
 
@@ -131,7 +131,7 @@ defmodule Ecto.Integration.TransactionTest do
       assert {:error, :oops} = PoolRepo.transaction(fn ->
         PoolRepo.rollback(:oops)
       end)
-      assert_raise DBConnection.Error, "transaction rolling back",
+      assert_raise DBConnection.ConnectionError, "transaction rolling back",
         fn() -> PoolRepo.insert!(%Trans{text: "5"}) end
     end) == {:error, :rollback}
 
