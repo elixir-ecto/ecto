@@ -74,6 +74,27 @@ defmodule Ecto.Integration.SandboxTest do
     Sandbox.checkin(TestRepo)
   end
 
+  test "runs inside a sandbox with failed transaction" do
+    changeset = Ecto.Changeset.change(%Post{}, uuid: Ecto.UUID.generate())
+    Sandbox.checkout(TestRepo)
+
+    TestRepo.transaction fn ->
+      {:ok, _} =
+        changeset
+        |> Ecto.Changeset.unique_constraint(:uuid)
+        |> TestRepo.insert()
+    end
+
+    TestRepo.transaction fn ->
+      {:error, _} =
+        changeset
+        |> Ecto.Changeset.unique_constraint(:uuid)
+        |> TestRepo.insert()
+    end
+
+    Sandbox.checkin(TestRepo)
+  end
+
   test "works when preloading associations from another process" do
     Sandbox.checkout(TestRepo)
     assert TestRepo.insert(%Post{})

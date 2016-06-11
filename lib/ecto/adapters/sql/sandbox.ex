@@ -328,7 +328,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
       case pool_mod.checkout(pool, opts) do
         {:ok, pool_ref, conn_mod, conn_state} ->
-          case conn_mod.handle_begin([mode: :transaction]++opts, conn_state) do
+          case conn_mod.handle_begin([mode: :transaction] ++ opts, conn_state) do
             {:ok, _, conn_state} ->
               {:ok, pool_ref, Connection, {conn_mod, conn_state}}
             {_error_or_disconnect, err, conn_state} ->
@@ -341,7 +341,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
     def checkin(pool_ref, {conn_mod, conn_state}, opts) do
       pool_mod = opts[:sandbox_pool]
-      case conn_mod.handle_rollback([mode: :transaction]++opts, conn_state) do
+      case conn_mod.handle_rollback([mode: :transaction] ++ opts, conn_state) do
         {:ok, _, conn_state} ->
           pool_mod.checkin(pool_ref, conn_state, opts)
         {_error_or_disconnect, err, conn_state} ->
