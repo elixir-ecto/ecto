@@ -36,7 +36,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
       # At the end of your test_helper.exs
       # Set the pool mode to manual for explicitly checkouts
-      Ecto.Adapters.SQL.Sandbox.mode(TestRepo, :manual)
+      Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
 
       defmodule PostTest do
         # Once the model is manual, tests can also be async
@@ -44,12 +44,12 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
         setup do
           # Explicitly get a connection before each test
-          :ok = Ecto.Adapters.SQL.Sandbox.checkout(TestRepo)
+          :ok = Ecto.Adapters.SQL.Sandbox.checkout(Repo)
         end
 
         test "create post" do
           # Use the repository as usual
-          assert %Post{} = TestRepo.insert!(%Post{})
+          assert %Post{} = Repo.insert!(%Post{})
         end
       end
 
@@ -67,14 +67,14 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
       setup do
         # Explicitly get a connection before each test
-        :ok = Ecto.Adapters.SQL.Sandbox.checkout(TestRepo)
+        :ok = Ecto.Adapters.SQL.Sandbox.checkout(Repo)
       end
 
       test "create two posts, one sync, another async" do
         task = Task.async(fn ->
-          TestRepo.insert!(%Post{title: "async"})
+          Repo.insert!(%Post{title: "async"})
         end)
-        assert %Post{} = TestRepo.insert!(%Post{title: "sync"})
+        assert %Post{} = Repo.insert!(%Post{title: "sync"})
         assert %Post{} = Task.await(task)
       end
 
@@ -98,10 +98,10 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       test "create two posts, one sync, another async" do
         parent = self()
         task = Task.async(fn ->
-          Ecto.Adapters.SQL.Sandbox.allow(TestRepo, parent, self())
-          TestRepo.insert!(%Post{title: "async"})
+          Ecto.Adapters.SQL.Sandbox.allow(Repo, parent, self())
+          Repo.insert!(%Post{title: "async"})
         end)
-        assert %Post{} = TestRepo.insert!(%Post{title: "sync"})
+        assert %Post{} = Repo.insert!(%Post{title: "sync"})
         assert %Post{} = Task.await(task)
       end
 
@@ -123,16 +123,16 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
       setup do
         # Explicitly get a connection before each test
-        :ok = Ecto.Adapters.SQL.Sandbox.checkout(TestRepo)
+        :ok = Ecto.Adapters.SQL.Sandbox.checkout(Repo)
         # Setting the shared mode must be done only after checkout
-        Ecto.Adapters.SQL.Sandbox.mode(TestRepo, {:shared, self()})
+        Ecto.Adapters.SQL.Sandbox.mode(Repo, {:shared, self()})
       end
 
       test "create two posts, one sync, another async" do
         task = Task.async(fn ->
-          TestRepo.insert!(%Post{title: "async"})
+          Repo.insert!(%Post{title: "async"})
         end)
-        assert %Post{} = TestRepo.insert!(%Post{title: "sync"})
+        assert %Post{} = Repo.insert!(%Post{title: "sync"})
         assert %Post{} = Task.await(task)
       end
 
@@ -158,6 +158,107 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     * Using shared mode - does not require explicit allowances.
       Tests cannot run concurrently.
 
+  ## FAQ
+
+  When running the sandbox mode concurrently, developers may run into
+  issues we explore in the upcoming sections.
+
+  ### "owner down" messages
+
+  In some situations, you may see error reports similar to the one below:
+
+      21:57:43.910 [error] Postgrex.Protocol (#PID<0.284.0>) disconnected:
+          ** (DBConnection.Error) owner down
+
+  Such errors are usually followed by another error report from another
+  process that failed while executing a database query.
+
+  To understand the failure, we need to answer the question: who is the
+  owner process? The owner process is the one that checks out the connection,
+  which, in the majority of cases, is the test process, the one running
+  your tests. In other words, the error happens because the test process
+  has finished, either because the test succeeded or because it failed,
+  while another process was trying to get information from the database.
+  Since the owner process, the one that owns the connection, no longer
+  exists, Ecto will check the connection back in and notify the process
+  using the connection that the connection owner is no longer available.
+
+  This can happen in different situations. For example, imagine you query
+  a GenServer in your test that is using a database connection:
+
+      test "gets results from GenServer" do
+        {:ok, pid} = MyAppServer.start_link()
+        Ecto.Adapters.SQL.Sandbox.allow(Repo, self(), pid)
+        assert MyAppServer.get_my_data_fast(timeout: 1000) == [...]
+      end
+
+  In the test above, we spawn the server and allow it to perform database
+  queries using the connection owned by the test process. Since we gave
+  a timeout of 1 second, in case the database takes longer than one second
+  to reply, the test process will fail, due to the timeout, making the
+  "owner down" message to be printed because the server process is still
+  waiting on a connection reply.
+
+  In some situations, such failures may be intermittent. Imagine that you
+  allow a process that queries the database every half second:
+
+      test "queries periodically" do
+        {:ok, pid} = PeriodicServer.start_link()
+        Ecto.Adapters.SQL.Sandbox.allow(Repo, self(), pid)
+        # more tests
+      end
+
+  Because the server is querying the database from time to time, there is
+  a chance that, when the test exists, the periodic process may be querying
+  the database, regardless of test success or failure.
+
+  ### Database deadlocks
+
+  Since the sandbox relies on concurrent transactional tests, there is
+  a chance your tests may trigger deadlocks in your database. This is
+  specially true with MySQL, where the solutions presented here are not
+  enough to avoid deadlocks and thefore making the use of concurrent tests
+  with MySQL prohibited.
+
+  However, even on databases like PostgreSQL, deadlocks can still occur.
+  For example, consider this scenario:
+
+      Transaction 1:                Transaction 2:
+      begin
+                                    begin
+      update posts where id = 1
+                                    update posts where id = 2
+                                    update posts where id = 1
+      update posts where id = 2
+                            **deadlock**
+
+  There are different ways to avoid this problem. One of them is
+  to make sure your tests work on distinct data. Regardless of
+  your choice between using fixtures or factories for test data,
+  make sure you get a new set of data per test. This is specially
+  important for data that is meant to be unique like user emails.
+
+  For example, instead of:
+
+      def insert_user do
+        Repo.insert! %User{email: "sample@example.com"}
+      end
+
+  prefer:
+
+      def insert_user do
+        Repo.insert! %User{email: "sample-#{counter()}@example.com"}
+      end
+
+      defp counter do
+        System.unique_integer [:positive]
+      end
+
+  Deadlocks may happen in other circumstances. If you believe you
+  are hitting a scenario that has not been described here, please
+  report an issue so we can improve our examples. As a last resort,
+  you can always disable the test triggering the deadlock from
+  running asynchronously by setting  "async: false".
   """
 
   defmodule Connection do
