@@ -220,7 +220,13 @@ defmodule Ecto.Adapters.SQL do
     conn = get_conn(pool) || pool
     opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
     args = args ++ [params, opts]
-    apply(repo.__sql__, callback, [conn | args])
+    try do
+      apply(repo.__sql__, callback, [conn | args])
+    rescue
+      err in DBConnection.OwnershipError ->
+        message = err.message <> "\nSee Ecto.Adapters.SQL.Sandbox docs for more information."
+        reraise %{err | message: message}, System.stacktrace
+    end
   end
 
   defp map_params(params) do
@@ -398,8 +404,8 @@ defmodule Ecto.Adapters.SQL do
 
   defp sql_call!(repo, callback, args, params, mapper, opts) do
     case sql_call(repo, callback, args, params, mapper, opts) do
-      {:ok, res}        -> res
-      {:error, err}     -> raise err
+      {:ok, res}    -> res
+      {:error, err} -> raise err
     end
   end
 

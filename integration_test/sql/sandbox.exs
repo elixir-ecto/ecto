@@ -5,6 +5,13 @@ defmodule Ecto.Integration.SandboxTest do
   alias Ecto.Integration.TestRepo
   alias Ecto.Integration.Post
 
+  test "include link to SQL sandbox on ownership errors" do
+    assert_raise DBConnection.OwnershipError,
+             ~r"See Ecto.Adapters.SQL.Sandbox docs for more information.", fn ->
+      TestRepo.all(Post)
+    end
+  end
+
   test "can use the repository when checked out" do
     assert_raise DBConnection.OwnershipError, ~r"cannot find ownership process", fn ->
       TestRepo.all(Post)
