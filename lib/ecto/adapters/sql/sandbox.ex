@@ -163,25 +163,26 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   When running the sandbox mode concurrently, developers may run into
   issues we explore in the upcoming sections.
 
-  ### "owner down" messages
+  ### "owner exited while client is still running"
 
   In some situations, you may see error reports similar to the one below:
 
       21:57:43.910 [error] Postgrex.Protocol (#PID<0.284.0>) disconnected:
-          ** (DBConnection.Error) owner down
+          ** (DBConnection.Error) owner #PID<> exited while client #PID<> is still running
 
   Such errors are usually followed by another error report from another
   process that failed while executing a database query.
 
-  To understand the failure, we need to answer the question: who is the
-  owner process? The owner process is the one that checks out the connection,
-  which, in the majority of cases, is the test process, the one running
-  your tests. In other words, the error happens because the test process
-  has finished, either because the test succeeded or because it failed,
-  while another process was trying to get information from the database.
-  Since the owner process, the one that owns the connection, no longer
-  exists, Ecto will check the connection back in and notify the process
-  using the connection that the connection owner is no longer available.
+  To understand the failure, we need to answer the question: who are the
+  owner and client processes? The owner process is the one that checks
+  out the connection, which, in the majority of cases, is the test process,
+  the one running your tests. In other words, the error happens because
+  the test process has finished, either because the test succeeded or
+  because it failed, while the client process was trying to get information
+  from the database. Since the owner process, the one that owns the
+  connection, no longer exists, Ecto will check the connection back in
+  and notify the client process using the connection that the connection
+  owner is no longer available.
 
   This can happen in different situations. For example, imagine you query
   a GenServer in your test that is using a database connection:
