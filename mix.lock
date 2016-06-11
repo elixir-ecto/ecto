@@ -8,5 +8,5 @@
   "mariaex": {:git, "https://github.com/xerions/mariaex.git", "1659ce5dc8515d505b4c5bf18ee48a4fb9ece422", []},
   "poison": {:hex, :poison, "1.5.2", "560bdfb7449e3ddd23a096929fb9fc2122f709bcc758b2d5d5a5c7d0ea848910", [:mix], []},
   "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], []},
-  "postgrex": {:git, "https://github.com/ericmj/postgrex.git", "93bfef47b418162b9804c5ad952606214ec4b00e", []},
+  "postgrex": {:git, "https://github.com/ericmj/postgrex.git", "869d7ca52603f6bb1ea2c7357e3dc3614d2ce37a", []},
   "sbroker": {:git, "https://github.com/fishcakez/sbroker.git", "41966044a5ff52807e4e6b4f4273d06adbf28cec", []}}
