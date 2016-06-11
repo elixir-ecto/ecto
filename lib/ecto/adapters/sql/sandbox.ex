@@ -282,7 +282,13 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
     def handle_begin(opts, {conn_mod, state, false}) do
       opts = [mode: :savepoint] ++ opts
-      proxy(:handle_begin, {conn_mod, state, true}, [opts])
+
+      case conn_mod.handle_begin(opts, state) do
+        {:ok, value, state} ->
+          {:ok, value, {conn_mod, state, true}}
+        {kind, err, state} ->
+          {kind, err, {conn_mod, state, false}}
+      end
     end
     def handle_commit(opts, {conn_mod, state, true}) do
       opts = [mode: :savepoint] ++ opts
