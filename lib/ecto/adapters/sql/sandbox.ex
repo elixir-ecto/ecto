@@ -267,12 +267,12 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
     def connect({conn_mod, state}) do
       case conn_mod.init(state) do
-        {:ok, state} -> {:ok, {conn_mod, state}}
+        {:ok, state} -> {:ok, {conn_mod, state, false}}
         {:error, _} = err -> err
       end
     end
 
-    def disconnect(err, {conn_mod, state}) do
+    def disconnect(err, {conn_mod, state, _in_transaction?}) do
       conn_mod.disconnect(err, state)
     end
 
@@ -280,34 +280,37 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     def checkin(state), do: proxy(:checkin, state, [])
     def ping(state), do: proxy(:ping, state, [])
 
-    def handle_begin(opts, state) do
+    def handle_begin(opts, {conn_mod, state, false}) do
       opts = [mode: :savepoint] ++ opts
-      proxy(:handle_begin, state, [opts])
+      proxy(:handle_begin, {conn_mod, state, true}, [opts])
     end
-    def handle_commit(opts, state) do
+    def handle_commit(opts, {conn_mod, state, true}) do
       opts = [mode: :savepoint] ++ opts
-      proxy(:handle_commit, state, [opts])
+      proxy(:handle_commit, {conn_mod, state, false}, [opts])
     end
-    def handle_rollback(opts, state) do
+    def handle_rollback(opts, {conn_mod, state, true}) do
       opts = [mode: :savepoint] ++ opts
-      proxy(:handle_rollback, state, [opts])
+      proxy(:handle_rollback, {conn_mod, state, false}, [opts])
     end
 
     def handle_prepare(query, opts, state),
-      do: proxy(:handle_prepare, state, [query, opts])
+      do: proxy(:handle_prepare, state, [query, maybe_savepoint(opts, state)])
     def handle_execute(query, params, opts, state),
-      do: proxy(:handle_execute, state, [query, params, opts])
+      do: proxy(:handle_execute, state, [query, params, maybe_savepoint(opts, state)])
     def handle_execute_close(query, params, opts, state),
-      do: proxy(:handle_execute_close, state, [query, params, opts])
+      do: proxy(:handle_execute_close, state, [query, params, maybe_savepoint(opts, state)])
     def handle_close(query, opts, state),
-      do: proxy(:handle_close, state, [query, opts])
+      do: proxy(:handle_close, state, [query, maybe_savepoint(opts, state)])
     def handle_info(msg, state),
       do: proxy(:handle_info, state, [msg])
 
-    defp proxy(fun, {conn_mod, state}, args) do
+    defp maybe_savepoint(opts, {_, _, true}),  do: opts
+    defp maybe_savepoint(opts, {_, _, false}), do: [mode: :savepoint] ++ opts
+
+    defp proxy(fun, {conn_mod, state, in_transaction?}, args) do
       result = apply(conn_mod, fun, args ++ [state])
       pos = :erlang.tuple_size(result)
-      :erlang.setelement(pos, result, {conn_mod, :erlang.element(pos, result)})
+      :erlang.setelement(pos, result, {conn_mod, :erlang.element(pos, result), in_transaction?})
     end
   end
 
@@ -330,7 +333,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
         {:ok, pool_ref, conn_mod, conn_state} ->
           case conn_mod.handle_begin([mode: :transaction] ++ opts, conn_state) do
             {:ok, _, conn_state} ->
-              {:ok, pool_ref, Connection, {conn_mod, conn_state}}
+              {:ok, pool_ref, Connection, {conn_mod, conn_state, false}}
             {_error_or_disconnect, err, conn_state} ->
               pool_mod.disconnect(pool_ref, err, conn_state, opts)
           end
@@ -339,7 +342,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       end
     end
 
-    def checkin(pool_ref, {conn_mod, conn_state}, opts) do
+    def checkin(pool_ref, {conn_mod, conn_state, _in_transaction?}, opts) do
       pool_mod = opts[:sandbox_pool]
       case conn_mod.handle_rollback([mode: :transaction] ++ opts, conn_state) do
         {:ok, _, conn_state} ->

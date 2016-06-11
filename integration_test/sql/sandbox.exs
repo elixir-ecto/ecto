@@ -74,53 +74,13 @@ defmodule Ecto.Integration.SandboxTest do
     Sandbox.checkin(TestRepo)
   end
 
-  test "runs inside a sandbox with failed transactions" do
-    changeset = Ecto.Changeset.change(%Post{}, uuid: Ecto.UUID.generate())
-    Sandbox.checkout(TestRepo)
-
-    TestRepo.transaction fn ->
-      {:ok, _} =
-        changeset
-        |> Ecto.Changeset.unique_constraint(:uuid)
-        |> TestRepo.insert()
-    end
-
-    TestRepo.transaction fn ->
-      # This will taint the whole inner transaction
-      {:error, _} =
-        changeset
-        |> Ecto.Changeset.unique_constraint(:uuid)
-        |> TestRepo.insert()
-
-      assert_raise DBConnection.ConnectionError, ~r/transaction rolling back/, fn ->
-        Ecto.Changeset.change(%Post{}, uuid: Ecto.UUID.generate())
-        |> Ecto.Changeset.unique_constraint(:uuid)
-        |> TestRepo.insert()
-      end
-    end
-
-    Sandbox.checkin(TestRepo)
-  end
-
   test "runs inside a sandbox even with failed queries" do
-    changeset = Ecto.Changeset.change(%Post{}, uuid: Ecto.UUID.generate())
     Sandbox.checkout(TestRepo)
 
-    {:ok, _} =
-      changeset
-      |> Ecto.Changeset.unique_constraint(:uuid)
-      |> TestRepo.insert()
-
+    {:ok, _}    = TestRepo.insert(%Post{}, skip_transaction: true)
     # This is a failed query but it should not taint the sandbox transaction
-    {:error, _} =
-      changeset
-      |> Ecto.Changeset.unique_constraint(:uuid)
-      |> TestRepo.insert()
-
-    {:ok, _} =
-      Ecto.Changeset.change(%Post{}, uuid: Ecto.UUID.generate())
-      |> Ecto.Changeset.unique_constraint(:uuid)
-      |> TestRepo.insert()
+    {:error, _} = Ecto.Adapters.SQL.query(TestRepo, "INVALID", [])
+    {:ok, _}    = TestRepo.insert(%Post{}, skip_transaction: true)
 
     Sandbox.checkin(TestRepo)
   end
