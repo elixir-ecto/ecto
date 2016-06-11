@@ -3,10 +3,14 @@ defmodule Mix.Tasks.Ecto.Dump do
   import Mix.Ecto
 
   @recursive true
-  @shortdoc "Dumps database structure"
+  @shortdoc "Dumps the repository database structure"
 
   @moduledoc """
-  Dumps the current environment's database structure into a structure file
+  Dumps the current environment's database structure for the
+  given repositoruu into a structure file.
+
+  The repository must be set under `:ecto_repos` in the
+  current app configuration or given via the `-r` option.
 
   ## Example
 

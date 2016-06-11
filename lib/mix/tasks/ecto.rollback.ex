@@ -2,11 +2,14 @@ defmodule Mix.Tasks.Ecto.Rollback do
   use Mix.Task
   import Mix.Ecto
 
-  @shortdoc "Rolls back migrations"
+  @shortdoc "Rolls back the repository migrations"
   @recursive true
 
   @moduledoc """
   Reverts applied migrations in the given repository.
+
+  The repository must be set under `:ecto_repos` in the
+  current app configuration or given via the `-r` option.
 
   By default, migrations are expected at "priv/YOUR_REPO/migrations"
   directory of the current application but it can be configured
@@ -34,7 +37,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
 
   ## Command line options
 
-    * `-r`, `--repo` - the repo to rollback (defaults to `YourApp.Repo`)
+    * `-r`, `--repo` - the repo to rollback
     * `--all` - revert all applied migrations
     * `--step` / `-n` - rever n number of applied migrations
     * `--to` / `-v` - revert all migrations down to and including version

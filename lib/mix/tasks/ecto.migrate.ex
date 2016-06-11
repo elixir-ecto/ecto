@@ -8,6 +8,9 @@ defmodule Mix.Tasks.Ecto.Migrate do
   @moduledoc """
   Runs the pending migrations for the given repository.
 
+  The repository must be set under `:ecto_repos` in the
+  current app configuration or given via the `-r` option.
+
   By default, migrations are expected at "priv/YOUR_REPO/migrations"
   directory of the current application but it can be configured
   by specifying the `:priv` key under the repository configuration.
@@ -33,7 +36,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
 
   ## Command line options
 
-    * `-r`, `--repo` - the repo to migrate (defaults to `YourApp.Repo`)
+    * `-r`, `--repo` - the repo to migrate
     * `--all` - run all pending migrations
     * `--step` / `-n` - run n number of pending migrations
     * `--to` / `-v` - run all migrations up to and including version

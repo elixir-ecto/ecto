@@ -5,10 +5,13 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   import Mix.Generator
   import Mix.Ecto
 
-  @shortdoc "Generate a new migration for the repo"
+  @shortdoc "Generates a new migration for the repo"
 
   @moduledoc """
   Generates a migration.
+
+  The repository must be set under `:ecto_repos` in the
+  current app configuration or given via the `-r` option.
 
   ## Examples
 
@@ -25,7 +28,7 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
 
   ## Command line options
 
-    * `-r`, `--repo` - the repo to generate migration for (defaults to `YourApp.Repo`)
+    * `-r`, `--repo` - the repo to generate migration for
 
   """
 

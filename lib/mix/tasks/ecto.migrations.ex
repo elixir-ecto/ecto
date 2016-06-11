@@ -2,11 +2,14 @@ defmodule Mix.Tasks.Ecto.Migrations do
   use Mix.Task
   import Mix.Ecto
 
-  @shortdoc "Displays the up / down migration status for the given repository."
+  @shortdoc "Displays the repository migration status"
   @recursive true
 
   @moduledoc """
   Displays the up / down migration status for the given repository.
+
+  The repository must be set under `:ecto_repos` in the
+  current app configuration or given via the `-r` option.
 
   By default, migrations are expected at "priv/YOUR_REPO/migrations"
   directory of the current application but it can be configured
@@ -23,7 +26,7 @@ defmodule Mix.Tasks.Ecto.Migrations do
 
   ## Command line options
 
-    * `-r`, `--repo` - the repo to obtain the status for (defaults to `YourApp.Repo`)
+    * `-r`, `--repo` - the repo to obtain the status for
 
   """
 

@@ -6,7 +6,10 @@ defmodule Mix.Tasks.Ecto.Drop do
   @recursive true
 
   @moduledoc """
-  Drop the storage for the repository.
+  Drop the storage for the given repository.
+
+  The repository must be set under `:ecto_repos` in the
+  current app configuration or given via the `-r` option.
 
   ## Examples
 
@@ -15,7 +18,7 @@ defmodule Mix.Tasks.Ecto.Drop do
 
   ## Command line options
 
-    * `-r`, `--repo` - the repo to drop (defaults to `YourApp.Repo`)
+    * `-r`, `--repo` - the repo to drop
     * `--no-compile` - do not compile before stopping
 
   """
