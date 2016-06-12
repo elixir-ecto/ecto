@@ -24,12 +24,6 @@ defmodule Ecto.Multi do
   If any changeset has errors, the transaction won't even be started and the error
   will be immediately returned.
 
-  `insert/4`, `update/4` and `delete/4` also accept a function which receives
-  the changes so far and returns a changeset. This allows introspection and use
-  of database generated values, such as ids, from previous steps. However when
-  using changesets wrapped in functions the changeset can not be validated prior
-  to starting the transaction.
-
   ## Run
 
   Multi allows you to run arbitrary functions as part of your transaction via
@@ -108,7 +102,6 @@ defmodule Ecto.Multi do
   @type merge :: (map -> t) | {module, atom, [any]}
   @typep schema_or_source :: binary | {binary | nil, binary} | Ecto.Schema.t
   @typep operation :: {:changeset, Changeset.t, Keyword.t} |
-                      {:changeset_fun, atom, changeset_fun, Keyword.t} |
                       {:run, run} |
                       {:merge, merge} |
                       {:update_all, Ecto.Query.t, Keyword.t} |
@@ -211,7 +204,8 @@ defmodule Ecto.Multi do
   """
   @spec merge(t, module, function, args) :: t
     when function: atom, args: [any]
-  def merge(multi, mod, fun, args) do
+  def merge(%Multi{} = multi, mod, fun, args)
+      when is_atom(mod) and is_atom(fun) and is_list(args) do
     Map.update!(multi, :operations, &[{:merge, {:merge, {mod, fun, args}}} | &1])
   end
 
@@ -220,15 +214,11 @@ defmodule Ecto.Multi do
 
   Accepts the same arguments and options as `Ecto.Repo.insert/3` does.
   """
-  @spec insert(t, name, Changeset.t | Ecto.Schema.t | changeset_fun, Keyword.t) :: t
+  @spec insert(t, name, Changeset.t | Ecto.Schema.t, Keyword.t) :: t
   def insert(multi, name, changeset_or_struct, opts \\ [])
 
   def insert(multi, name, %Changeset{} = changeset, opts) do
     add_changeset(multi, :insert, name, changeset, opts)
-  end
-
-  def insert(multi, name, fun, opts) when is_function(fun, 1) do
-    add_operation(multi, name, {:changeset_fun, :insert, fun, opts})
   end
 
   def insert(multi, name, struct, opts) do
@@ -245,24 +235,16 @@ defmodule Ecto.Multi do
     add_changeset(multi, :update, name, changeset, opts)
   end
 
-  def update(multi, name, fun, opts) when is_function(fun, 1) do
-    add_operation(multi, name, {:changeset_fun, :update, fun, opts})
-  end
-
   @doc """
   Adds a delete operation to the multi.
 
   Accepts the same arguments and options as `Ecto.Repo.delete/3` does.
   """
-  @spec delete(t, name, Changeset.t | Ecto.Schema.t | changeset_fun, Keyword.t) :: t
+  @spec delete(t, name, Changeset.t | Ecto.Schema.t, Keyword.t) :: t
   def delete(multi, name, changeset_or_struct, opts \\ [])
 
   def delete(multi, name, %Changeset{} = changeset, opts) do
     add_changeset(multi, :delete, name, changeset, opts)
-  end
-
-  def delete(multi, name, fun, opts) when is_function(fun, 1) do
-    add_operation(multi, name, {:changeset_fun, :delete, fun, opts})
   end
 
   def delete(multi, name, struct, opts) do
@@ -273,21 +255,17 @@ defmodule Ecto.Multi do
     add_operation(multi, name, {:changeset, put_action(changeset, action), opts})
   end
 
-  defp put_action(%Changeset{action: nil} = changeset, action) do
+  defp put_action(%{action: nil} = changeset, action) do
     %{changeset | action: action}
   end
 
-  defp put_action(%Changeset{action: action} = changeset, action) do
+  defp put_action(%{action: action} = changeset, action) do
     changeset
   end
 
-  defp put_action(%Changeset{action: original}, action) do
+  defp put_action(%{action: original}, action) do
     raise ArgumentError, "you provided a changeset with an action already set " <>
       "to #{inspect original} when trying to #{action} it"
-  end
-
-  defp put_action(changeset, _action) do
-    raise ArgumentError, "expected an Ecto.Changeset, got #{inspect changeset}"
   end
 
   @doc """
@@ -311,7 +289,8 @@ defmodule Ecto.Multi do
   """
   @spec run(t, name, module, function, args) :: t
     when function: atom, args: [any]
-  def run(multi, name, mod, fun, args) do
+  def run(multi, name, mod, fun, args)
+      when is_atom(mod) and is_atom(fun) and is_list(args) do
     add_operation(multi, name, {:run, {mod, fun, args}})
   end
 
