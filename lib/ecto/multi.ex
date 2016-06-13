@@ -24,12 +24,6 @@ defmodule Ecto.Multi do
   If any changeset has errors, the transaction won't even be started and the error
   will be immediately returned.
 
-  `insert/4`, `update/4` and `delete/4` also accept a function which receives
-  the changes so far and returns a changeset. This allows introspection and use
-  of database generated values, such as ids, from previous steps. However when
-  using changesets wrapped in functions the changeset can not be validated prior
-  to starting the transaction.
-
   ## Run
 
   Multi allows you to run arbitrary functions as part of your transaction via
@@ -105,11 +99,11 @@ defmodule Ecto.Multi do
   defstruct operations: [], names: MapSet.new
 
   @type run :: (t -> {:ok | :error, any}) | {module, atom, [any]}
-  @type changeset_fun :: (map -> Changeset.t)
+  @type merge :: (map -> t) | {module, atom, [any]}
   @typep schema_or_source :: binary | {binary | nil, binary} | Ecto.Schema.t
   @typep operation :: {:changeset, Changeset.t, Keyword.t} |
-                      {:changeset_fun, atom, changeset_fun, Keyword.t} |
                       {:run, run} |
+                      {:merge, merge} |
                       {:update_all, Ecto.Query.t, Keyword.t} |
                       {:delete_all, Ecto.Query.t, Keyword.t} |
                       {:insert_all, schema_or_source, [map | Keyword.t], Keyword.t}
@@ -145,7 +139,7 @@ defmodule Ecto.Multi do
   """
   @spec append(t, t) :: t
   def append(lhs, rhs) do
-    merge(lhs, rhs, &(&2 ++ &1))
+    do_merge(lhs, rhs, &(&2 ++ &1))
   end
 
   @doc """
@@ -163,27 +157,56 @@ defmodule Ecto.Multi do
   """
   @spec prepend(t, t) :: t
   def prepend(lhs, rhs) do
-    merge(lhs, rhs, &(&1 ++ &2))
+    do_merge(lhs, rhs, &(&1 ++ &2))
   end
 
-  defp merge(%Multi{} = lhs, %Multi{} = rhs, joiner) do
+  defp do_merge(%Multi{} = lhs, %Multi{} = rhs, joiner) do
     %{names: lhs_names, operations: lhs_ops} = lhs
     %{names: rhs_names, operations: rhs_ops} = rhs
-    if MapSet.disjoint?(lhs_names, rhs_names) do
-      %Multi{names: MapSet.union(lhs_names, rhs_names),
-             operations: joiner.(lhs_ops, rhs_ops)}
-    else
-      common = MapSet.intersection(lhs_names, rhs_names) |> MapSet.to_list
-      raise ArgumentError, """
-      error when merging the following Ecto.Multi structs:
+    case MapSet.intersection(lhs_names, rhs_names) |> MapSet.to_list do
+      [] ->
+        %Multi{names: MapSet.union(lhs_names, rhs_names),
+               operations: joiner.(lhs_ops, rhs_ops)}
+      common ->
+        raise ArgumentError, """
+        error when merging the following Ecto.Multi structs:
 
-      #{inspect lhs}
+        #{inspect lhs}
 
-      #{inspect rhs}
+        #{inspect rhs}
 
-      both declared operations: #{inspect common}
-      """
+        both declared operations: #{inspect common}
+        """
     end
+  end
+
+  @doc """
+  Merges a dynamically created multi
+
+  The function should return an Ecto.Multi, and receives changes so far
+  as an argument.
+
+  Duplicated operations are not allowed.
+  """
+  @spec merge(t, merge) :: t
+  def merge(%Multi{} = multi, merge) when is_function(merge, 1) do
+    Map.update!(multi, :operations, &[{:merge, {:merge, merge}} | &1])
+  end
+
+  @doc """
+  Merges a dynamically created multi
+
+  Similar to `merge/2`, but allows to pass module name, function and arguments.
+  The function should return an Ecto.Multi, and receives changes so far
+  as the first argument (prepened to those passed in the call to the function).
+
+  Duplicated operations are not allowed.
+  """
+  @spec merge(t, module, function, args) :: t
+    when function: atom, args: [any]
+  def merge(%Multi{} = multi, mod, fun, args)
+      when is_atom(mod) and is_atom(fun) and is_list(args) do
+    Map.update!(multi, :operations, &[{:merge, {:merge, {mod, fun, args}}} | &1])
   end
 
   @doc """
@@ -191,15 +214,11 @@ defmodule Ecto.Multi do
 
   Accepts the same arguments and options as `Ecto.Repo.insert/3` does.
   """
-  @spec insert(t, name, Changeset.t | Ecto.Schema.t | changeset_fun, Keyword.t) :: t
+  @spec insert(t, name, Changeset.t | Ecto.Schema.t, Keyword.t) :: t
   def insert(multi, name, changeset_or_struct, opts \\ [])
 
   def insert(multi, name, %Changeset{} = changeset, opts) do
     add_changeset(multi, :insert, name, changeset, opts)
-  end
-
-  def insert(multi, name, run, opts) when is_function(run, 1) do
-    add_operation(multi, name, {:changeset_fun, :insert, run, opts})
   end
 
   def insert(multi, name, struct, opts) do
@@ -211,15 +230,9 @@ defmodule Ecto.Multi do
 
   Accepts the same arguments and options as `Ecto.Repo.update/3` does.
   """
-  @spec update(t, name, Changeset.t | changeset_fun, Keyword.t) :: t
-  def update(multi, name, changeset_or_fun, opts \\ [])
-
-  def update(multi, name, %Changeset{} = changeset, opts) do
+  @spec update(t, name, Changeset.t, Keyword.t) :: t
+  def update(multi, name, %Changeset{} = changeset, opts \\ []) do
     add_changeset(multi, :update, name, changeset, opts)
-  end
-
-  def update(multi, name, run, opts) when is_function(run, 1) do
-    add_operation(multi, name, {:changeset_fun, :update, run, opts})
   end
 
   @doc """
@@ -227,15 +240,11 @@ defmodule Ecto.Multi do
 
   Accepts the same arguments and options as `Ecto.Repo.delete/3` does.
   """
-  @spec delete(t, name, Changeset.t | Ecto.Schema.t | changeset_fun, Keyword.t) :: t
+  @spec delete(t, name, Changeset.t | Ecto.Schema.t, Keyword.t) :: t
   def delete(multi, name, changeset_or_struct, opts \\ [])
 
   def delete(multi, name, %Changeset{} = changeset, opts) do
     add_changeset(multi, :delete, name, changeset, opts)
-  end
-
-  def delete(multi, name, run, opts) when is_function(run, 1) do
-    add_operation(multi, name, {:changeset_fun, :delete, run, opts})
   end
 
   def delete(multi, name, struct, opts) do
@@ -246,21 +255,17 @@ defmodule Ecto.Multi do
     add_operation(multi, name, {:changeset, put_action(changeset, action), opts})
   end
 
-  defp put_action(%Changeset{action: nil} = changeset, action) do
+  defp put_action(%{action: nil} = changeset, action) do
     %{changeset | action: action}
   end
 
-  defp put_action(%Changeset{action: action} = changeset, action) do
+  defp put_action(%{action: action} = changeset, action) do
     changeset
   end
 
-  defp put_action(%Changeset{action: original}, action) do
+  defp put_action(%{action: original}, action) do
     raise ArgumentError, "you provided a changeset with an action already set " <>
       "to #{inspect original} when trying to #{action} it"
-  end
-
-  defp put_action(changeset, _action) do
-    raise ArgumentError, "expected an Ecto.Changeset, got #{inspect changeset}"
   end
 
   @doc """
@@ -284,7 +289,8 @@ defmodule Ecto.Multi do
   """
   @spec run(t, name, module, function, args) :: t
     when function: atom, args: [any]
-  def run(multi, name, mod, fun, args) do
+  def run(multi, name, mod, fun, args)
+      when is_atom(mod) and is_atom(fun) and is_list(args) do
     add_operation(multi, name, {:run, {mod, fun, args}})
   end
 
@@ -352,7 +358,7 @@ defmodule Ecto.Multi do
     multi.operations
     |> Enum.reverse
     |> check_operations_valid
-    |> apply_operations(repo, wrap, return)
+    |> apply_operations(multi.names, repo, wrap, return)
   end
 
   defp check_operations_valid(operations) do
@@ -364,37 +370,56 @@ defmodule Ecto.Multi do
   defp invalid_operation(_operation),
     do: nil
 
-  defp apply_operations({:ok, operations}, repo, wrap, return) do
+  defp apply_operations({:ok, operations}, names, repo, wrap, return) do
     wrap.(fn ->
-      Enum.reduce(operations, %{}, &apply_operation(&1, repo, return, &2))
+      operations
+      |> Enum.reduce({%{}, names}, &apply_operation(&1, repo, wrap, return, &2))
+      |> elem(0)
     end)
   end
 
-  defp apply_operations({:error, error}, _repo, _wrap, _return) do
+  defp apply_operations({:error, error}, _names, _repo, _wrap, _return) do
     {:error, error}
   end
 
-  defp apply_operation({name, operation}, repo, return, acc) do
-    case apply_operation(operation, acc, repo) do
+  defp apply_operation({name, operation}, repo, wrap, return, {acc, names}) do
+    case apply_operation(operation, acc, {wrap, return}, repo) do
+      {:merge, {:ok, value}} ->
+        merge_results(acc, value, names)
+      {:merge, {:error, {name, value, nested_acc}}} ->
+        {acc, _names} = merge_results(acc, nested_acc, names)
+        return.({name, value, acc})
       {:ok, value} ->
-        Map.put(acc, name, value)
+        {Map.put(acc, name, value), names}
       {:error, value} ->
         return.({name, value, acc})
     end
   end
 
-  defp apply_operation({:changeset, changeset, opts}, _acc, repo),
+  defp apply_operation({:changeset, changeset, opts}, _acc, _apply_args, repo),
     do: apply(repo, changeset.action, [changeset, opts])
-  defp apply_operation({:run, {mod, fun, args}}, acc, _repo),
-    do: apply(mod, fun, [acc | args])
-  defp apply_operation({:run, run}, acc, _repo),
-    do: apply(run, [acc])
-  defp apply_operation({:changeset_fun, action, run, opts}, acc, repo),
-    do: apply_operation({:changeset, put_action(run.(acc), action), opts}, acc, repo)
-  defp apply_operation({:insert_all, source, entries, opts}, _acc, repo),
+  defp apply_operation({:run, run}, acc, _apply_args, _repo),
+    do: apply_fun(run, acc)
+  defp apply_operation({:insert_all, source, entries, opts}, _acc, _apply_args, repo),
     do: {:ok, repo.insert_all(source, entries, opts)}
-  defp apply_operation({:update_all, query, updates, opts}, _acc, repo),
+  defp apply_operation({:update_all, query, updates, opts}, _acc, _apply_args, repo),
     do: {:ok, repo.update_all(query, updates, opts)}
-  defp apply_operation({:delete_all, query, opts}, _acc, repo),
+  defp apply_operation({:delete_all, query, opts}, _acc, _apply_args, repo),
     do: {:ok, repo.delete_all(query, opts)}
+  defp apply_operation({:merge, merge}, acc, {wrap, return}, repo),
+    do: {:merge, __apply__(apply_fun(merge, acc), repo, wrap, return)}
+
+  defp apply_fun({mod, fun, args}, acc), do: apply(mod, fun, [acc | args])
+  defp apply_fun(fun, acc),              do: apply(fun, [acc])
+
+  defp merge_results(changes, new_changes, names) do
+    new_names = new_changes |> Map.keys |> MapSet.new
+    case MapSet.intersection(names, new_names) |> MapSet.to_list do
+      [] ->
+        {Map.merge(changes, new_changes), MapSet.union(names, new_names)}
+      common ->
+        raise "cannot merge multi, the following operations were found in " <>
+          "both Ecto.Multi: #{inspect common}"
+    end
+  end
 end
