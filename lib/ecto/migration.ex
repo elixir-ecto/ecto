@@ -519,6 +519,13 @@ defmodule Ecto.Migration do
   end
 
   @doc """
+  Gets the migrator prefix.
+  """
+  def prefix do
+    Runner.prefix
+  end
+
+  @doc """
   Adds a column when creating or altering a table.
 
   This function also accepts Ecto primitive types as column types

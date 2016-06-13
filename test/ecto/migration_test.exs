@@ -25,6 +25,11 @@ defmodule Ecto.MigrationTest do
     assert direction() == :up
   end
 
+  @tag prefix: :foo
+  test "allows prefix to be retrieved" do
+    assert prefix() == :foo
+  end
+
   test "creates a table" do
     assert table(:posts) == %Table{name: :posts, primary_key: true}
     assert table(:posts, primary_key: false) == %Table{name: :posts, primary_key: false}
