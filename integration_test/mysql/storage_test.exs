@@ -20,19 +20,19 @@ defmodule Ecto.Integration.StorageTest do
   end
 
   def drop_database do
-    run_mysql("DROP DATABASE #{params[:database]};")
+    run_mysql("DROP DATABASE #{params()[:database]};")
   end
 
   def create_database do
-    run_mysql("CREATE DATABASE #{params[:database]};")
+    run_mysql("CREATE DATABASE #{params()[:database]};")
   end
 
   def create_posts do
-    run_mysql("CREATE TABLE posts (title varchar(20));", ["-D", params[:database]])
+    run_mysql("CREATE TABLE posts (title varchar(20));", ["-D", params()[:database]])
   end
 
   def run_mysql(sql, args \\ []) do
-    args = ["-u", params[:username], "-e", sql | args]
+    args = ["-u", params()[:username], "-e", sql | args]
     System.cmd "mysql", args
   end
 
@@ -87,7 +87,7 @@ defmodule Ecto.Integration.StorageTest do
   end
 
   test "structure dump and load with migrations table" do
-    {:ok, path} = MySQL.structure_dump(tmp_path, TestRepo.config())
+    {:ok, path} = MySQL.structure_dump(tmp_path(), TestRepo.config())
     contents = File.read!(path)
     assert contents =~ "INSERT INTO `schema_migrations` (version) VALUES (0)"
   end

@@ -566,7 +566,7 @@ defmodule Ecto.Query.Builder do
   Raises a query building error.
   """
   def error!(message) when is_binary(message) do
-    {:current_stacktrace, [_|t]} = Process.info(self, :current_stacktrace)
+    {:current_stacktrace, [_|t]} = Process.info(self(), :current_stacktrace)
 
     t = Enum.drop_while t, fn
       {mod, _, _, _} ->

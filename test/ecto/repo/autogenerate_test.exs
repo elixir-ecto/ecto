@@ -18,7 +18,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     schema "default" do
       field :z, Ecto.UUID, autogenerate: true
       has_one :config, Config
-      timestamps
+      timestamps()
     end
   end
 

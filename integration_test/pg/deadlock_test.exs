@@ -39,7 +39,7 @@ defmodule Ecto.Integration.DeadlockTest do
         Logger.debug "#{inspect self()} got killed by deadlock detection"
         assert %Postgrex.Error{postgres: %{code: :deadlock_detected}} = err
 
-        assert_tx_aborted
+        assert_tx_aborted()
 
         # Trapping a transaction should still be fine.
         try do

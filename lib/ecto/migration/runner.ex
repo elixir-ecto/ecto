@@ -17,7 +17,7 @@ defmodule Ecto.Migration.Runner do
   """
   def run(repo, module, direction, operation, migrator_direction, opts) do
     level = Keyword.get(opts, :log, :info)
-    args  = [self, repo, direction, migrator_direction, level]
+    args  = [self(), repo, direction, migrator_direction, level]
 
     {:ok, runner} = Supervisor.start_child(Ecto.Migration.Supervisor, args)
     metadata(runner, opts)
@@ -79,7 +79,7 @@ defmodule Ecto.Migration.Runner do
   def prefix do
     case Process.get(:ecto_migration) do
       %{prefix: prefix} -> prefix
-      _ -> raise "could not find migration runner process for #{inspect self}"
+      _ -> raise "could not find migration runner process for #{inspect self()}"
     end
   end
 
@@ -207,7 +207,7 @@ defmodule Ecto.Migration.Runner do
   defp runner do
     case Process.get(:ecto_migration) do
       %{runner: runner} -> runner
-      _ -> raise "could not find migration runner process for #{inspect self}"
+      _ -> raise "could not find migration runner process for #{inspect self()}"
     end
   end
 

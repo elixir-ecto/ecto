@@ -8,7 +8,7 @@ defmodule Ecto.Mixfile do
     [app: :ecto,
      version: @version,
      elixir: "~> 1.2",
-     deps: deps,
+     deps: deps(),
      build_per_environment: false,
      consolidate_protocols: false,
      test_paths: test_paths(Mix.env),
@@ -22,8 +22,8 @@ defmodule Ecto.Mixfile do
      preferred_cli_env: ["test.all": :test],
 
      # Hex
-     description: description,
-     package: package,
+     description: description(),
+     package: package(),
 
      # Docs
      name: "Ecto",

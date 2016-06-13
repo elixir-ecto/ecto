@@ -139,7 +139,7 @@ defmodule Ecto.Integration.TransactionTest do
   end
 
   test "transactions are not shared in repo" do
-    pid = self
+    pid = self()
 
     new_pid = spawn_link fn ->
       PoolRepo.transaction(fn ->

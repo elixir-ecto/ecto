@@ -19,7 +19,7 @@ defmodule Ecto.Repo.EmbeddedTest do
     schema "" do
       field :x, :string
       embeds_one :sub_embed, SubEmbed, on_replace: :delete
-      timestamps
+      timestamps()
     end
   end
 

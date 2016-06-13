@@ -20,7 +20,7 @@ defmodule Ecto.Repo.BelongsToTest do
       field :x, :string
       belongs_to :sub_assoc, SubAssoc
       has_one :my_model, MyModel
-      timestamps
+      timestamps()
     end
   end
 

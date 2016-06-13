@@ -5,7 +5,7 @@ defmodule Ecto.Integration.Migration do
     create table(:users) do
       add :name, :text
       add :custom_id, :uuid
-      timestamps
+      timestamps()
     end
 
     create table(:posts) do
@@ -33,7 +33,7 @@ defmodule Ecto.Integration.Migration do
     create table(:posts_users_pk) do
       add :post_id, references(:posts)
       add :user_id, references(:users)
-      timestamps
+      timestamps()
     end
 
     # Add a unique index on uuid. We use this
@@ -99,7 +99,7 @@ defmodule Ecto.Integration.Migration do
     create table(:posts_users_composite_pk) do
       add :post_id, references(:posts), primary_key: true
       add :user_id, references(:users), primary_key: true
-      timestamps
+      timestamps()
     end
   end
 end

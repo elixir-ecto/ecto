@@ -44,7 +44,7 @@ if Code.ensure_loaded?(Mariaex) do
         %{__struct__: _} = value ->
           value
         %{} = value ->
-          json_library.encode!(value)
+          json_library().encode!(value)
         value ->
           value
       end

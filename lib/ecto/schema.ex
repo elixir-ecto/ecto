@@ -440,7 +440,7 @@ defmodule Ecto.Schema do
   All options can be pre-configured by setting `@timestamps_opts`.
   """
   defmacro timestamps(opts \\ []) do
-    quote bind_quoted: binding do
+    quote bind_quoted: binding() do
       timestamps =
         [inserted_at: :inserted_at, updated_at: :updated_at,
          type: Ecto.DateTime, usec: false]

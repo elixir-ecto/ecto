@@ -48,7 +48,7 @@ defmodule Ecto.TestAdapter do
   end
 
   def execute(_repo, _meta, {:nocache, {op, %{from: {source, _}}}}, _params, _preprocess, _opts) do
-    send self, {op, source}
+    send self(), {op, source}
     {1, nil}
   end
 
@@ -66,24 +66,24 @@ defmodule Ecto.TestAdapter do
   end
 
   def insert(_repo, %{context: nil}, _fields, return, _opts),
-    do: send(self, :insert) && {:ok, Enum.zip(return, 1..length(return))}
+    do: send(self(), :insert) && {:ok, Enum.zip(return, 1..length(return))}
   def insert(_repo, %{context: {:invalid, _}=res}, _fields, _return, _opts),
     do: res
 
   # Notice the list of changes is never empty.
   def update(_repo, %{context: nil}, [_|_], _filters, return, _opts),
-    do: send(self, :update) && {:ok, Enum.zip(return, 1..length(return))}
+    do: send(self(), :update) && {:ok, Enum.zip(return, 1..length(return))}
   def update(_repo, %{context: {:invalid, _}=res}, [_|_], _filters, _return, _opts),
     do: res
 
   def delete(_repo, _model_meta, _filter, _opts),
-    do: send(self, :delete) && {:ok, []}
+    do: send(self(), :delete) && {:ok, []}
 
   ## Transactions
 
   def transaction(_repo, _opts, fun) do
     # Makes transactions "trackable" in tests
-    send self, {:transaction, fun}
+    send self(), {:transaction, fun}
     try do
       {:ok, fun.()}
     catch
@@ -93,7 +93,7 @@ defmodule Ecto.TestAdapter do
   end
 
   def rollback(_repo, value) do
-    send self, {:rollback, value}
+    send self(), {:rollback, value}
     throw {:ecto_rollback, value}
   end
 

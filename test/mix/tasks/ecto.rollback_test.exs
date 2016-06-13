@@ -4,7 +4,7 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
   import Mix.Tasks.Ecto.Rollback, only: [run: 2]
   import Support.FileHelpers
 
-  migrations_path = Path.join([tmp_path, inspect(Ecto.Migrate), "migrations"])
+  migrations_path = Path.join([tmp_path(), inspect(Ecto.Migrate), "migrations"])
 
   setup do
     File.mkdir_p!(unquote(migrations_path))

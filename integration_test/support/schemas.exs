@@ -51,7 +51,7 @@ defmodule Ecto.Integration.Post do
       on_delete: :delete_all, on_replace: :delete
     has_many :users_comments, through: [:users, :comments]
     has_many :comments_authors_permalinks, through: [:comments_authors, :permalink]
-    timestamps
+    timestamps()
   end
 
   def changeset(model, params) do
@@ -125,7 +125,7 @@ defmodule Ecto.Integration.PostUser do
   schema "posts_users_pk" do
     belongs_to :user, Ecto.Integration.User
     belongs_to :post, Ecto.Integration.Post
-    timestamps
+    timestamps()
   end
 end
 
@@ -147,7 +147,7 @@ defmodule Ecto.Integration.User do
     has_many :posts, Ecto.Integration.Post, foreign_key: :author_id, on_delete: :nothing, on_replace: :delete
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
     many_to_many :schema_posts, Ecto.Integration.Post, join_through: Ecto.Integration.PostUser
-    timestamps
+    timestamps()
   end
 end
 
@@ -259,6 +259,6 @@ defmodule Ecto.Integration.PostUserCompositePk do
   schema "posts_users_composite_pk" do
     belongs_to :user, Ecto.Integration.User, primary_key: true
     belongs_to :post, Ecto.Integration.Post, primary_key: true
-    timestamps
+    timestamps()
   end
 end

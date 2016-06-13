@@ -44,7 +44,7 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
         {opts, [name], _} ->
           ensure_repo(repo, args)
           path = Path.relative_to(migrations_path(repo), Mix.Project.app_path)
-          file = Path.join(path, "#{timestamp}_#{underscore(name)}.exs")
+          file = Path.join(path, "#{timestamp()}_#{underscore(name)}.exs")
           create_directory path
 
           assigns = [mod: Module.concat([repo, Migrations, camelize(name)]),

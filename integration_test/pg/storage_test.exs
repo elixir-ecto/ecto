@@ -22,19 +22,19 @@ defmodule Ecto.Integration.StorageTest do
   end
 
   def drop_database do
-    run_psql("DROP DATABASE #{params[:database]};")
+    run_psql("DROP DATABASE #{params()[:database]};")
   end
 
   def create_database do
-    run_psql("CREATE DATABASE #{params[:database]};")
+    run_psql("CREATE DATABASE #{params()[:database]};")
   end
 
   def create_posts do
-    run_psql("CREATE TABLE posts (title varchar(20));", [params[:database]])
+    run_psql("CREATE TABLE posts (title varchar(20));", [params()[:database]])
   end
 
   def run_psql(sql, args \\ []) do
-    args = ["-U", params[:username], "-c", sql | args]
+    args = ["-U", params()[:username], "-c", sql | args]
     System.cmd "psql", args
   end
 
@@ -71,7 +71,7 @@ defmodule Ecto.Integration.StorageTest do
     create_database()
 
     # Load custom
-    dump_path = Path.join(tmp_path, "custom.sql")
+    dump_path = Path.join(tmp_path(), "custom.sql")
     File.rm(dump_path)
     {:error, _} = Postgres.structure_load(tmp_path(), [dump_path: dump_path] ++ params())
 
@@ -89,7 +89,7 @@ defmodule Ecto.Integration.StorageTest do
   end
 
   test "structure dump and load with migrations table" do
-    {:ok, path} = Postgres.structure_dump(tmp_path, TestRepo.config())
+    {:ok, path} = Postgres.structure_dump(tmp_path(), TestRepo.config())
     contents = File.read!(path)
     assert contents =~ ~s[INSERT INTO "schema_migrations" (version) VALUES (0)]
   end

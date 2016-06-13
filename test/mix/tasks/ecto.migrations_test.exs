@@ -4,7 +4,7 @@ defmodule Mix.Tasks.Ecto.MigrationsTest do
   import Mix.Tasks.Ecto.Migrations, only: [run: 3]
   import Support.FileHelpers
 
-  migrations_path = Path.join([tmp_path, inspect(Ecto.Migrations), "migrations"])
+  migrations_path = Path.join([tmp_path(), inspect(Ecto.Migrations), "migrations"])
 
   setup do
     File.mkdir_p!(unquote(migrations_path))

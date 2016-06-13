@@ -19,7 +19,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     schema "my_assoc" do
       field :x, :string
       has_one :sub_assoc, SubAssoc
-      timestamps
+      timestamps()
     end
   end
 
@@ -29,7 +29,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     schema "models_assocs" do
       belongs_to :my_model, MyModel
       belongs_to :my_assoc, MyAssoc
-      timestamps
+      timestamps()
     end
   end
 

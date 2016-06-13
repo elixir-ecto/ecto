@@ -237,7 +237,7 @@ defmodule Ecto.MultiTest do
 
     assert {:ok, changes} = TestRepo.transaction(multi)
     assert_received {:transaction, _}
-    assert {:messages, actions} = Process.info(self, :messages)
+    assert {:messages, actions} = Process.info(self(), :messages)
     assert actions == [:insert, :insert, :update, :delete, {:insert_all, "comments", [[x: 1]]},
                        {:update_all, "comments"}, {:delete_all, "comments"}]
     assert %Comment{} = changes.insert
@@ -263,7 +263,7 @@ defmodule Ecto.MultiTest do
     assert {:error, :run, "error from run", changes} = TestRepo.transaction(multi)
     assert_received {:transaction, _}
     assert_received {:rollback, _}
-    assert {:messages, [:insert]} == Process.info(self, :messages)
+    assert {:messages, [:insert]} == Process.info(self(), :messages)
     assert %Comment{} = changes.insert
     refute Map.has_key?(changes, :run)
     refute Map.has_key?(changes, :update)
@@ -284,7 +284,7 @@ defmodule Ecto.MultiTest do
     assert {:error, :update, error, changes} = TestRepo.transaction(multi)
     assert_received {:transaction, _}
     assert_received {:rollback, _}
-    assert {:messages, [:insert]} == Process.info(self, :messages)
+    assert {:messages, [:insert]} == Process.info(self(), :messages)
     assert %Comment{} = changes.insert
     assert "ok" == changes.run
     assert error.errors == [x: {"has already been taken", []}]
