@@ -367,7 +367,8 @@ defmodule Ecto.Schema do
       end
 
       primary_key_fields = @ecto_primary_keys |> Enum.reverse
-
+      autogenerate = @ecto_autogenerate |> Enum.reverse
+      autoupdate = @ecto_autoupdate |> Enum.reverse
       fields = @ecto_fields |> Enum.reverse
       assocs = @ecto_assocs |> Enum.reverse
       embeds = @ecto_embeds |> Enum.reverse
@@ -380,9 +381,7 @@ defmodule Ecto.Schema do
         Ecto.Schema.__assocs__(assocs),
         Ecto.Schema.__embeds__(embeds),
         Ecto.Schema.__read_after_writes__(@ecto_raw),
-        Ecto.Schema.__autogenerate__(@ecto_autogenerate_id,
-                                     @ecto_autogenerate,
-                                     @ecto_autoupdate)]
+        Ecto.Schema.__autogenerate__(@ecto_autogenerate_id, autogenerate, autoupdate)]
     end
   end
 

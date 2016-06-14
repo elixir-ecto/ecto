@@ -48,7 +48,7 @@ defmodule Ecto.SchemaTest do
 
   test "autogenerate metadata (private)" do
     assert Schema.__schema__(:autogenerate) ==
-           [uuid: {Ecto.UUID, :autogenerate, []}, name: {String, :upcase, ["eric"]}]
+           [name: {String, :upcase, ["eric"]}, uuid: {Ecto.UUID, :autogenerate, []}]
     assert Schema.__schema__(:autoupdate) == []
   end
 
@@ -164,7 +164,7 @@ defmodule Ecto.SchemaTest do
 
   test "timestamps autogenerate metadata (private)" do
     assert Timestamps.__schema__(:autogenerate) ==
-           [updated_at: {:m, :f, [:a]}, inserted_at: {:m, :f, [:a]}]
+           [inserted_at: {:m, :f, [:a]}, updated_at: {:m, :f, [:a]}]
     assert Timestamps.__schema__(:autoupdate) ==
            [updated_at: {:m, :f, [:a]}]
   end
