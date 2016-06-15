@@ -3,10 +3,10 @@
   "db_connection": {:git, "https://github.com/fishcakez/db_connection.git", "940a20ab1a34da13f778636aa2dc8baeba64c0f9", []},
   "decimal": {:hex, :decimal, "1.1.2", "79a769d4657b2d537b51ef3c02d29ab7141d2b486b516c109642d453ee08e00c", [:mix], []},
   "earmark": {:hex, :earmark, "0.2.1", "ba6d26ceb16106d069b289df66751734802777a3cbb6787026dd800ffeb850f3", [:mix], []},
-  "ex_doc": {:hex, :ex_doc, "0.11.4", "a064bdb720594c3745b94709b17ffb834fd858b4e0c1f48f37c0d92700759e02", [:mix], [{:earmark, "~> 0.1.17 or ~> 0.2", [hex: :earmark, optional: true]}]},
-  "inch_ex": {:hex, :inch_ex, "0.2.4", "617dd08d9c3cbeaad6f2ccee1379a2a88690f1a579950173a25a7a1e816f4f29", [:mix], [{:poison, "~> 1.2", [hex: :poison, optional: false]}]},
+  "ex_doc": {:hex, :ex_doc, "0.11.5", "0dc51cb84f8312162a2313d6c71573a9afa332333d8a332bb12540861b9834db", [:mix], [{:earmark, "~> 0.1.17 or ~> 0.2", [hex: :earmark, optional: true]}]},
+  "inch_ex": {:hex, :inch_ex, "0.5.3", "39f11e96181ab7edc9c508a836b33b5d9a8ec0859f56886852db3d5708889ae7", [:mix], [{:poison, "~> 1.5 or ~> 2.0", [hex: :poison, optional: false]}]},
   "mariaex": {:git, "https://github.com/xerions/mariaex.git", "1659ce5dc8515d505b4c5bf18ee48a4fb9ece422", []},
-  "poison": {:hex, :poison, "1.5.2", "560bdfb7449e3ddd23a096929fb9fc2122f709bcc758b2d5d5a5c7d0ea848910", [:mix], []},
+  "poison": {:hex, :poison, "2.1.0", "f583218ced822675e484648fa26c933d621373f01c6c76bd00005d7bd4b82e27", [:mix], []},
   "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], []},
   "postgrex": {:git, "https://github.com/ericmj/postgrex.git", "869d7ca52603f6bb1ea2c7357e3dc3614d2ce37a", []},
   "sbroker": {:git, "https://github.com/fishcakez/sbroker.git", "41966044a5ff52807e4e6b4f4273d06adbf28cec", []}}
