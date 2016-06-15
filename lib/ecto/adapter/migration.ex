@@ -49,5 +49,5 @@ defmodule Ecto.Adapter.Migration  do
       to finish, `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log begin/commit/rollback queries
   """
-  @callback execute_ddl(Ecto.Repo.t, command, Keyword.t) :: :ok | no_return
+  @callback execute_ddl(repo :: Ecto.Repo.t, command, options :: Keyword.t) :: :ok | no_return
 end

@@ -12,12 +12,12 @@ defmodule Ecto.Adapter.Transaction  do
 
   See `Ecto.Repo.transaction/1`.
   """
-  @callback transaction(Ecto.Repo.t, Keyword.t, fun) :: {:ok, any} | {:error, any}
+  @callback transaction(repo :: Ecto.Repo.t, options :: Keyword.t, function :: fun) :: {:ok, any} | {:error, any}
 
   @doc """
   Returns true if the given process is inside a transaction.
   """
-  @callback in_transaction?(Ecto.Repo.t) :: boolean
+  @callback in_transaction?(repo :: Ecto.Repo.t) :: boolean
 
   @doc """
   Rolls back the current transaction.
@@ -26,5 +26,5 @@ defmodule Ecto.Adapter.Transaction  do
 
   See `Ecto.Repo.rollback/1`.
   """
-  @callback rollback(Ecto.Repo.t, any) :: no_return
+  @callback rollback(repo :: Ecto.Repo.t, value :: any) :: no_return
 end
