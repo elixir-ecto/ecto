@@ -18,7 +18,7 @@ install:
 script:
   - mix test
   - ECTO_POOL=poolboy mix test.adapters
-  - ECTO_POOL=sojourn_broker mix test.adapters
+  - ECTO_POOL=sbroker mix test.adapters
   - (cd examples/simple; mix test)
 after_script:
   - mix deps.get --only docs

@@ -15,10 +15,12 @@ Code.require_file "../support/repo.exs", __DIR__
 Code.require_file "../support/schemas.exs", __DIR__
 Code.require_file "../support/migration.exs", __DIR__
 
+pool_app = String.to_atom System.get_env("ECTO_POOL") || "poolboy"
+Application.ensure_all_started(pool_app)
 pool =
-  case System.get_env("ECTO_POOL") || "poolboy" do
-    "poolboy"        -> DBConnection.Poolboy
-    "sojourn_broker" -> DBConnection.Sojourn
+  case pool_app do
+    :poolboy -> DBConnection.Poolboy
+    :sbroker -> DBConnection.Sojourn
   end
 
 # Pool repo for async, safe tests
