@@ -13,7 +13,8 @@ defmodule Mix.Tasks.Ecto.Migrate do
 
   By default, migrations are expected at "priv/YOUR_REPO/migrations"
   directory of the current application but it can be configured
-  by specifying the `:priv` key under the repository configuration.
+  to be any subdirectory of `priv` by specifying the `:priv` key
+  under the repository configuration.
 
   Runs all pending migrations by default. To migrate up
   to a version number, supply `--to version_number`.
