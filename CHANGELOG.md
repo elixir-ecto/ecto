@@ -187,6 +187,7 @@ The configuration may be an empty list if it does not define any repo.
   * [Postgres] Switch pg storage management away from `psql` and use direct database connections, solving many issues like locale and database connection
   * [Repo] Ensure nested preload works even if intermediate associations were already loaded
   * [Repo] Do not attempt to execute insert/update/delete statement for associations if a previous operation failed due to a constraint error
+  * [Schema] Ensure `inserted_at` autogeneration runs before `updated_at` autogeneration
 
 ## Previous versions
 

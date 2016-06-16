@@ -1,12 +1,12 @@
 %{"backoff": {:hex, :backoff, "1.1.1"},
   "connection": {:hex, :connection, "1.0.2", "f4a06dd3ecae4141aa66f94ce92ea4c4b8753069472814932f1cadbc3078ab80", [:mix], []},
-  "db_connection": {:git, "https://github.com/fishcakez/db_connection.git", "940a20ab1a34da13f778636aa2dc8baeba64c0f9", []},
+  "db_connection": {:hex, :db_connection, "1.0.0-rc.0", "debd4f4c126bf4cb3b984c82096cee15b18c18ecf339631e1105122dc4b59111", [:mix], [{:sbroker, "~> 1.0.0-beta.2", [hex: :sbroker, optional: true]}, {:poolboy, "~> 1.5", [hex: :poolboy, optional: true]}, {:connection, "~> 1.0.2", [hex: :connection, optional: false]}]},
   "decimal": {:hex, :decimal, "1.1.2", "79a769d4657b2d537b51ef3c02d29ab7141d2b486b516c109642d453ee08e00c", [:mix], []},
   "earmark": {:hex, :earmark, "0.2.1", "ba6d26ceb16106d069b289df66751734802777a3cbb6787026dd800ffeb850f3", [:mix], []},
   "ex_doc": {:hex, :ex_doc, "0.11.5", "0dc51cb84f8312162a2313d6c71573a9afa332333d8a332bb12540861b9834db", [:mix], [{:earmark, "~> 0.1.17 or ~> 0.2", [hex: :earmark, optional: true]}]},
   "inch_ex": {:hex, :inch_ex, "0.5.3", "39f11e96181ab7edc9c508a836b33b5d9a8ec0859f56886852db3d5708889ae7", [:mix], [{:poison, "~> 1.5 or ~> 2.0", [hex: :poison, optional: false]}]},
-  "mariaex": {:git, "https://github.com/xerions/mariaex.git", "1659ce5dc8515d505b4c5bf18ee48a4fb9ece422", []},
+  "mariaex": {:hex, :mariaex, "0.7.6", "59029f0063f6706892c73c9eb13f60eb901e15f632521f9ad3361923800354e1", [:mix], [{:db_connection, "~> 1.0.0-rc", [hex: :db_connection, optional: false]}, {:decimal, "~> 1.0", [hex: :decimal, optional: false]}]},
   "poison": {:hex, :poison, "2.1.0", "f583218ced822675e484648fa26c933d621373f01c6c76bd00005d7bd4b82e27", [:mix], []},
   "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], []},
-  "postgrex": {:git, "https://github.com/ericmj/postgrex.git", "869d7ca52603f6bb1ea2c7357e3dc3614d2ce37a", []},
-  "sbroker": {:git, "https://github.com/fishcakez/sbroker.git", "41966044a5ff52807e4e6b4f4273d06adbf28cec", []}}
+  "postgrex": {:hex, :postgrex, "0.11.2", "139755c1359d3c5c6d6e8b1ea72556d39e2746f61c6ddfb442813c91f53487e8", [:mix], [{:connection, "~> 1.0", [hex: :connection, optional: false]}, {:db_connection, "~> 1.0-rc", [hex: :db_connection, optional: false]}, {:decimal, "~> 1.0", [hex: :decimal, optional: false]}]},
+  "sbroker": {:hex, :sbroker, "1.0.0-beta.2", "4682fdeb0b3d2c4e7eef8f220472ba7edbae667f019f7588624e38efaba2be4b", [:rebar3], []}}
