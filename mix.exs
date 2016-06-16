@@ -29,7 +29,7 @@ defmodule Ecto.Mixfile do
      name: "Ecto",
      docs: [source_ref: "v#{@version}", main: "Ecto",
             canonical: "http://hexdocs.pm/ecto",
-            source_url: "https://github.com/elixir-lang/ecto"]]
+            source_url: "https://github.com/elixir-ecto/ecto"]]
   end
 
   def application do
@@ -66,7 +66,7 @@ defmodule Ecto.Mixfile do
   defp package do
     [maintainers: ["Eric Meadows-Jönsson", "José Valim", "James Fish", "Michał Muskała"],
      licenses: ["Apache 2.0"],
-     links: %{"GitHub" => "https://github.com/elixir-lang/ecto"},
+     links: %{"GitHub" => "https://github.com/elixir-ecto/ecto"},
      files: ~w(mix.exs README.md CHANGELOG.md lib) ++
             ~w(integration_test/cases integration_test/sql integration_test/support)]
   end

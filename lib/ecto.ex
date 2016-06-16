@@ -24,7 +24,7 @@ defmodule Ecto do
   documentation for more specific examples, options and configuration.
 
   If you want to quickly check a sample application using Ecto, please check
-  https://github.com/elixir-lang/ecto/tree/master/examples/simple.
+  https://github.com/elixir-ecto/ecto/tree/master/examples/simple.
 
   ## Repositories
 

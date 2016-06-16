@@ -1,7 +1,7 @@
 # Ecto
 
-[![Build Status](https://travis-ci.org/elixir-lang/ecto.svg?branch=master)](https://travis-ci.org/elixir-lang/ecto)
-[![Inline docs](http://inch-ci.org/github/elixir-lang/ecto.svg?branch=master&style=flat)](http://inch-ci.org/github/elixir-lang/ecto)
+[![Build Status](https://travis-ci.org/elixir-ecto/ecto.svg?branch=master)](https://travis-ci.org/elixir-ecto/ecto)
+[![Inline docs](http://inch-ci.org/github/elixir-ecto/ecto.svg?branch=master&style=flat)](http://inch-ci.org/github/elixir-ecto/ecto)
 
 Ecto is a domain specific language for writing queries and interacting with databases in Elixir. Here is an example:
 
@@ -54,7 +54,7 @@ defmodule Sample.App do
 end
 ```
 
-See the [online documentation](http://hexdocs.pm/ecto) or [run the sample application](https://github.com/elixir-lang/ecto/tree/master/examples/simple) for more information.
+See the [online documentation](http://hexdocs.pm/ecto) or [run the sample application](https://github.com/elixir-ecto/ecto/tree/master/examples/simple) for more information.
 
 ## Usage
 
@@ -107,7 +107,7 @@ We are currently looking for contributions to add support for other SQL database
 
   * [Documentation](http://hexdocs.pm/ecto)
   * [Mailing list](https://groups.google.com/forum/#!forum/elixir-ecto)
-  * [Examples](https://github.com/elixir-lang/ecto/tree/master/examples)
+  * [Examples](https://github.com/elixir-ecto/ecto/tree/master/examples)
 
 ## Contributing
 
@@ -123,7 +123,7 @@ Contributions are welcome! In particular, remember to:
 Clone the repo and fetch its dependencies:
 
 ```
-$ git clone https://github.com/elixir-lang/ecto.git
+$ git clone https://github.com/elixir-ecto/ecto.git
 $ cd ecto
 $ mix deps.get
 $ mix test
