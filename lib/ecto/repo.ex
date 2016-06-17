@@ -410,6 +410,9 @@ defmodule Ecto.Repo do
 
       from(p in Post, where: p.id < 10, update: [set: [title: "New title"]])
       |> MyRepo.update_all([])
+
+      from(p in Post, where: p.id < 10, update: [set: [title: fragment("?", new_title)]])
+      |> MyRepo.update_all([])
   """
   defcallback update_all(Macro.t, Keyword.t, Keyword.t) :: {integer, nil} | no_return
 
