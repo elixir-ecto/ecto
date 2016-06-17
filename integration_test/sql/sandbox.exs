@@ -74,6 +74,19 @@ defmodule Ecto.Integration.SandboxTest do
     Sandbox.checkin(TestRepo)
   end
 
+  @tag :transaction_isolation
+  test "runs inside a sandbox with custom isolation level" do
+    Sandbox.checkout(TestRepo, isolation: "READ UNCOMMITTED")
+
+    # Setting it to the same level later on works
+    Ecto.Adapters.SQL.query!(TestRepo, "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED", [])
+
+    # Even inside a transaction
+    TestRepo.transaction fn ->
+      Ecto.Adapters.SQL.query!(TestRepo, "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED", [])
+    end
+  end
+
   test "runs inside a sandbox even with failed queries" do
     Sandbox.checkout(TestRepo)
 

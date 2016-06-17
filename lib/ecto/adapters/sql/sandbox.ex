@@ -312,7 +312,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       do: proxy(:handle_info, state, [msg])
 
     defp maybe_savepoint(opts, {_, _, true}),  do: opts
-    defp maybe_savepoint(opts, {_, _, false}), do: [mode: :savepoint] ++ opts
+    defp maybe_savepoint(opts, {_, _, false}), do: Keyword.put_new(opts, :mode, :savepoint)
 
     defp proxy(fun, {conn_mod, state, in_transaction?}, args) do
       result = apply(conn_mod, fun, args ++ [state])
@@ -409,16 +409,26 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     * `:sandbox` - when true the connection is wrapped in
       a transaction. Defaults to true.
 
+    * `:isolation` - set the query to the given isolation level
   """
   def checkout(repo, opts \\ []) do
-    {name, opts} =
+    {name, pool_opts} =
       if Keyword.get(opts, :sandbox, true) do
         proxy_pool(repo)
       else
         repo.__pool__
       end
 
-    DBConnection.Ownership.ownership_checkout(name, opts)
+    case DBConnection.Ownership.ownership_checkout(name, pool_opts) do
+      :ok ->
+        if isolation = opts[:isolation] do
+          query = "SET TRANSACTION ISOLATION LEVEL #{isolation}"
+          Ecto.Adapters.SQL.query!(repo, query, [], mode: :transaction)
+        end
+        :ok
+      other ->
+        other
+    end
   end
 
   @doc """
