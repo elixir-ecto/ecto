@@ -127,8 +127,8 @@ defmodule Ecto.Adapters.MySQL do
 
   @doc false
   def storage_up(opts) do
-    database  = Keyword.fetch!(opts, :database)
-    charset   = opts[:charset] || "utf8"
+    database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
+    charset  = opts[:charset] || "utf8"
 
     command =
       ~s(CREATE DATABASE `#{database}` DEFAULT CHARACTER SET = #{charset})
@@ -148,7 +148,8 @@ defmodule Ecto.Adapters.MySQL do
 
   @doc false
   def storage_down(opts) do
-    {output, status} = run_with_mysql("DROP DATABASE `#{opts[:database]}`", opts)
+    database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
+    {output, status} = run_with_mysql("DROP DATABASE `#{database}`", opts)
 
     cond do
       status == 0                               -> :ok

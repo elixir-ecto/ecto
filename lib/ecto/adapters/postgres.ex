@@ -83,7 +83,7 @@ defmodule Ecto.Adapters.Postgres do
 
   @doc false
   def storage_up(opts) do
-    database = Keyword.fetch!(opts, :database)
+    database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
     encoding = opts[:encoding] || "UTF8"
     opts     = Keyword.put(opts, :database, "template1")
 
@@ -108,7 +108,7 @@ defmodule Ecto.Adapters.Postgres do
 
   @doc false
   def storage_down(opts) do
-    database = Keyword.fetch!(opts, :database)
+    database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
     command  = "DROP DATABASE \"#{database}\""
     opts     = Keyword.put(opts, :database, "template1")
 
