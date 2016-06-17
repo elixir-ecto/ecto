@@ -311,8 +311,13 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     def handle_info(msg, state),
       do: proxy(:handle_info, state, [msg])
 
-    defp maybe_savepoint(opts, {_, _, true}),  do: opts
-    defp maybe_savepoint(opts, {_, _, false}), do: Keyword.put_new(opts, :mode, :savepoint)
+    defp maybe_savepoint(opts, {_, _, in_transaction?}) do
+      if not in_transaction? and Keyword.get(opts, :sandbox_subtransaction, true) do
+        [mode: :savepoint] ++ opts
+      else
+        opts
+      end
+    end
 
     defp proxy(fun, {conn_mod, state, in_transaction?}, args) do
       result = apply(conn_mod, fun, args ++ [state])
@@ -423,7 +428,13 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       :ok ->
         if isolation = opts[:isolation] do
           query = "SET TRANSACTION ISOLATION LEVEL #{isolation}"
-          Ecto.Adapters.SQL.query!(repo, query, [], mode: :transaction)
+          case Ecto.Adapters.SQL.query(repo, query, [], sandbox_subtransaction: false) do
+            {:ok, _} ->
+              :ok
+            {:error, error} ->
+              checkin(repo, opts)
+              raise error
+          end
         end
         :ok
       other ->
