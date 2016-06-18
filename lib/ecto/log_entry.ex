@@ -1,5 +1,5 @@
 defmodule Ecto.LogEntry do
-  @doc """
+  @moduledoc """
   Struct used for logging entries.
 
   It is composed of the following fields:
