@@ -768,7 +768,7 @@ defmodule Ecto.Integration.RepoTest do
     %{id: pid2} = TestRepo.insert!(%Post{title: "2"})
     %{id: pid3} = TestRepo.insert!(%Post{title: "3"})
 
-    [p1, p2, p3] = Post |> select([p], struct(p, [:title])) |> TestRepo.all
+    [p1, p2, p3] = Post |> select([p], struct(p, [:title])) |> order_by([:title]) |> TestRepo.all
     refute p1.id
     assert p1.title == "1"
     assert match?(%Post{}, p1)
@@ -790,7 +790,7 @@ defmodule Ecto.Integration.RepoTest do
     %{id: pid2} = TestRepo.insert!(%Post{title: "2"})
     %{id: pid3} = TestRepo.insert!(%Post{title: "3"})
 
-    [p1, p2, p3] = "posts" |> select([p], map(p, [:title])) |> TestRepo.all
+    [p1, p2, p3] = "posts" |> select([p], map(p, [:title])) |> order_by([:title]) |> TestRepo.all
     assert p1 == %{title: "1"}
     assert p2 == %{title: "2"}
     assert p3 == %{title: "3"}
