@@ -696,6 +696,16 @@ defmodule Ecto.Adapters.MySQLTest do
 
   # Unsupported types and clauses
 
+  test "lateral join with fragment" do
+    assert_raise Ecto.QueryError, ~r"join `:inner_lateral` not supported by MySQL", fn ->
+      Model
+      |> join(:inner_lateral, [p], q in fragment("SELECT * FROM model2 AS m2 WHERE m2.id = ? AND m2.field = ?", p.x, ^10))
+      |> select([p, q], {p.id, q.z})
+      |> normalize
+      |> SQL.all
+    end
+  end
+
   test "arrays" do
     assert_raise Ecto.QueryError, ~r"Array type is not supported by MySQL", fn ->
       query = Model |> select([], fragment("?", [1, 2, 3])) |> normalize

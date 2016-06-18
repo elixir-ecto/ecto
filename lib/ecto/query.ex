@@ -498,7 +498,7 @@ defmodule Ecto.Query do
   `:inner_join`, `:left_join`, `:right_join` or `:full_join`.
 
   It is also possible to use the atoms `:inner_lateral` and `:left_lateral`
-  using the Postgres adapter.
+  using the Postgres adapter. See "Joining with fragments" below.
 
   Currently it is possible to join on an Ecto.Schema (a module), an
   existing source (a binary representing a table), an association or a
@@ -519,16 +519,16 @@ defmodule Ecto.Query do
   ## Expressions examples
 
       Comment
-        |> join(:inner, [c], p in Post, c.post_id == p.id)
-        |> select([c, p], {p.title, c.text})
+      |> join(:inner, [c], p in Post, c.post_id == p.id)
+      |> select([c, p], {p.title, c.text})
 
       Post
-        |> join(:left, [p], c in assoc(p, :comments))
-        |> select([p, c], {p, c})
+      |> join(:left, [p], c in assoc(p, :comments))
+      |> select([p, c], {p, c})
 
       Post
-        |> join(:left, [p], c in Comment, c.post_id == p.id and c.is_visible == true)
-        |> select([p, c], {p, c})
+      |> join(:left, [p], c in Comment, c.post_id == p.id and c.is_visible == true)
+      |> select([p, c], {p, c})
 
   ## Joining with fragments
 
@@ -538,7 +538,14 @@ defmodule Ecto.Query do
       Comment
       |> join(:inner, [c], p in fragment("SOME COMPLEX QUERY", c.id, ^some_param))
 
-  This style is discouraged due to its complexity.
+  Although using fragments in joins is discouraged in favor of Ecto
+  Query syntax, they are necessary when writing lateral joins as
+  lateral joins require a subquery that refer to previous bindings:
+
+      Game
+      |> join(:inner_lateral, [g], gs in fragment("SELECT * FROM games_sold AS gs WHERE gs.game_id = ? ORDER BY gs.sold_on LIMIT 2", g.id))
+      |> select([g, gs], {g.name, gs.sold_on})
+
   """
   defmacro join(query, qual, binding \\ [], expr, on \\ nil) do
     Join.build(query, qual, binding, expr, on, nil, __CALLER__)

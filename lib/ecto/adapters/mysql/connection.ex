@@ -230,15 +230,16 @@ if Code.ensure_loaded?(Mariaex) do
       Enum.map_join(joins, " ", fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
           {join, name} = get_source(query, sources, ix, source)
-          qual = join_qual(qual)
+          qual = join_qual(qual, query)
           "#{qual} " <> join <> " AS #{name} ON " <> expr(expr, sources, query)
       end)
     end
 
-    defp join_qual(:inner), do: "INNER JOIN"
-    defp join_qual(:left),  do: "LEFT OUTER JOIN"
-    defp join_qual(:right), do: "RIGHT OUTER JOIN"
-    defp join_qual(:full),  do: "FULL OUTER JOIN"
+    defp join_qual(:inner, _), do: "INNER JOIN"
+    defp join_qual(:left, _),  do: "LEFT OUTER JOIN"
+    defp join_qual(:right, _), do: "RIGHT OUTER JOIN"
+    defp join_qual(:full, _),  do: "FULL OUTER JOIN"
+    defp join_qual(mode, q),   do: error!(q, "join `#{inspect mode}` not supported by MySQL")
 
     defp where(%Query{wheres: wheres} = query, sources) do
       boolean("WHERE", wheres, sources, query)
