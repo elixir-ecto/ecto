@@ -507,6 +507,18 @@ defmodule Ecto.Adapters.PostgresTest do
            ~s{(SELECT * FROM model2) AS f1 ON f1."id" = m0."id"}
   end
 
+  test "lateral join with fragment" do
+    query = Model
+            |> join(:inner_lateral, [p], q in fragment("SELECT * FROM model2 AS m2 WHERE m2.id = ? AND m2.field = ?", p.x, ^10))
+            |> select([p, q], {p.id, q.z})
+            |> where([p], p.id > 0 and p.id < ^100)
+            |> normalize
+    assert SQL.all(query) ==
+           ~s{SELECT m0."id", f1."z" FROM "model" AS m0 INNER JOIN LATERAL } <>
+           ~s{(SELECT * FROM model2 AS m2 WHERE m2.id = m0."x" AND m2.field = $1) AS f1 ON TRUE } <>
+           ~s{WHERE ((m0."id" > 0) AND (m0."id" < $2))}
+  end
+
   ## Associations
 
   test "association join belongs_to" do

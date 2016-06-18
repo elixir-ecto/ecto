@@ -497,9 +497,14 @@ defmodule Ecto.Query do
   `:full`. For a keyword query the `:join` keyword can be changed to:
   `:inner_join`, `:left_join`, `:right_join` or `:full_join`.
 
+  It is also possible to use the atoms `:inner_lateral` and `:left_lateral`
+  using the Postgres adapter.
+
   Currently it is possible to join on an Ecto.Schema (a module), an
   existing source (a binary representing a table), an association or a
-  fragment. See the examples below.
+  fragment. For a lateral join it is only possible to join on a fragment
+  since the join query must be able to access columns from the left side
+  of the join. See the examples below:
 
   ## Keywords examples
 
@@ -520,7 +525,7 @@ defmodule Ecto.Query do
       Post
         |> join(:left, [p], c in assoc(p, :comments))
         |> select([p, c], {p, c})
-        
+
       Post
         |> join(:left, [p], c in Comment, c.post_id == p.id and c.is_visible == true)
         |> select([p, c], {p, c})

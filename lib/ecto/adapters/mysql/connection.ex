@@ -231,14 +231,14 @@ if Code.ensure_loaded?(Mariaex) do
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
           {join, name} = get_source(query, sources, ix, source)
           qual = join_qual(qual)
-          "#{qual} JOIN " <> join <> " AS #{name} ON " <> expr(expr, sources, query)
+          "#{qual} " <> join <> " AS #{name} ON " <> expr(expr, sources, query)
       end)
     end
 
-    defp join_qual(:inner), do: "INNER"
-    defp join_qual(:left),  do: "LEFT OUTER"
-    defp join_qual(:right), do: "RIGHT OUTER"
-    defp join_qual(:full),  do: "FULL OUTER"
+    defp join_qual(:inner), do: "INNER JOIN"
+    defp join_qual(:left),  do: "LEFT OUTER JOIN"
+    defp join_qual(:right), do: "RIGHT OUTER JOIN"
+    defp join_qual(:full),  do: "FULL OUTER JOIN"
 
     defp where(%Query{wheres: wheres} = query, sources) do
       boolean("WHERE", wheres, sources, query)

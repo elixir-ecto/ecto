@@ -180,7 +180,7 @@ defmodule Ecto.Query.Builder.Join do
     end
   end
 
-  @qualifiers [:inner, :left, :right, :full]
+  @qualifiers [:inner, :inner_lateral, :left, :left_lateral, :right, :full]
 
   @doc """
   Called at runtime to check dynamic qualifier.

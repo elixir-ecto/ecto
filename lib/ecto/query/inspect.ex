@@ -185,10 +185,12 @@ defimpl Inspect, for: Ecto.Query do
     Enum.join [inspect(frag <> s)|Enum.reverse(args)], ", "
   end
 
-  defp join_qual(:inner), do: :join
-  defp join_qual(:left),  do: :left_join
-  defp join_qual(:right), do: :right_join
-  defp join_qual(:full),  do: :full_join
+  defp join_qual(:inner),         do: :join
+  defp join_qual(:inner_lateral), do: :join_lateral
+  defp join_qual(:left),          do: :left_join
+  defp join_qual(:left_lateral),  do: :left_join_lateral
+  defp join_qual(:right),         do: :right_join
+  defp join_qual(:full),          do: :full_join
 
   defp collect_sources(query) do
     [from_sources(query.from) | join_sources(query.joins)]
