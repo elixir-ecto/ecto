@@ -35,9 +35,15 @@ defmodule Ecto.Integration.JoinsTest do
     TestRepo.insert!(%Comment{text: "bar", author_id: user.id})
 
     query = from(c in Comment, join: u in User, on: u.id == c.author_id,
-                               where: c.post_id in ^[post.id])
+                               where: is_nil(c.post_id))
+    assert {1, nil} = TestRepo.delete_all(query)
+    assert [%Comment{}, %Comment{}] = TestRepo.all(Comment)
+
+    query = from(c in Comment, join: u in assoc(c, :author),
+                               join: p in assoc(c, :post),
+                               where: p.id in ^[post.id])
     assert {2, nil} = TestRepo.delete_all(query)
-    assert [%Comment{}] = TestRepo.all(Comment)
+    assert [] = TestRepo.all(Comment)
   end
 
   test "joins" do

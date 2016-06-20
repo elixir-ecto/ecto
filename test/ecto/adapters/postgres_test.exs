@@ -422,11 +422,15 @@ defmodule Ecto.Adapters.PostgresTest do
 
     query = Model |> join(:inner, [p], q in Model2, p.x == q.z) |> normalize
     assert SQL.delete_all(query) ==
-           ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z"}
+           ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE (m0."x" = m1."z")}
 
     query = from(e in Model, where: e.x == 123, join: q in Model2, on: e.x == q.z) |> normalize
     assert SQL.delete_all(query) ==
-           ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE m0."x" = m1."z" AND (m0."x" = 123)}
+           ~s{DELETE FROM "model" AS m0 USING "model2" AS m1 WHERE (m0."x" = m1."z") AND (m0."x" = 123)}
+
+    query = from(e in Model, where: e.x == 123, join: assoc(e, :comments), join: assoc(e, :permalink)) |> normalize
+    assert SQL.delete_all(query) ==
+           ~s{DELETE FROM "model" AS m0 USING "model2" AS m1, "model3" AS m2 WHERE (m1."z" = m0."x") AND (m2."id" = m0."y") AND (m0."x" = 123)}
   end
 
   test "delete all with returning" do
