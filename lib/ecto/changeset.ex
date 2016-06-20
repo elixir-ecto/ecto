@@ -1012,13 +1012,16 @@ defmodule Ecto.Changeset do
   ## Examples
 
       iex> changeset = change(%Post{}, %{title: "foo"})
-      iex> changeset = validate_change changeset, :title, fn
+      iex> changeset = validate_change changeset, :title, fn :title, title  ->
       ...>   # Value must not be "foo"!
-      ...>   :title, "foo" -> [title: "is foo"]
-      ...>   :title, _     -> []
+      ...>   if title == "foo" do
+      ...>     [title: "cannot be foo"]
+      ...>   else
+      ...>     []
+      ...>   end
       ...> end
       iex> changeset.errors
-      [title: "is_foo"]
+      [title: "cannot be foo"]
 
   """
   @spec validate_change(t, atom, (atom, term -> [error])) :: t
