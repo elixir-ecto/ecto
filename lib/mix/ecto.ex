@@ -80,17 +80,17 @@ defmodule Mix.Ecto do
   @doc """
   Ensures the given repository is started and running.
   """
-  @spec ensure_started(Ecto.Repo.t, Keyword.t) :: Ecto.Repo.t | no_return
+  @spec ensure_started(Ecto.Repo.t, Keyword.t) :: {:ok, pid, [atom]} | no_return
   def ensure_started(repo, opts) do
     {:ok, _} = Application.ensure_all_started(:ecto)
-    {:ok, _} = Application.ensure_all_started(repo.__adapter__.application)
+    {:ok, apps} = repo.__adapter__.ensure_all_started(repo, :temporary)
 
     pool_size = Keyword.get(opts, :pool_size, 1)
     case repo.start_link(pool_size: pool_size) do
       {:ok, pid} ->
-        {:ok, pid}
+        {:ok, pid, apps}
       {:error, {:already_started, _pid}} ->
-        {:ok, nil}
+        {:ok, nil, apps}
       {:error, error} ->
         Mix.raise "Could not start repo #{inspect repo}, error: #{inspect error}"
     end
@@ -111,13 +111,18 @@ defmodule Mix.Ecto do
   @doc """
   Restarts the app if there was any migration command.
   """
-  def restart_app_if_migrated(_repo, []), do: :ok
-  def restart_app_if_migrated(repo, [_|_]) do
+  @spec restart_apps_if_migrated([atom], list()) :: :ok
+  def restart_apps_if_migrated(_apps, []), do: :ok
+  def restart_apps_if_migrated(apps, [_|_]) do
     # Silence the logger to avoid application down messages.
     Logger.remove_backend(:console)
-    app = repo.__adapter__.application
-    Application.stop(app)
-    Application.ensure_all_started(app)
+    for app <- Enum.reverse(apps) do
+      Application.stop(app)
+    end
+    for app <- apps do
+      Application.ensure_all_started(app)
+    end
+    :ok
   after
     Logger.add_backend(:console, flush: true)
   end

@@ -15,12 +15,10 @@ Code.require_file "../support/repo.exs", __DIR__
 Code.require_file "../support/schemas.exs", __DIR__
 Code.require_file "../support/migration.exs", __DIR__
 
-pool_app = String.to_atom System.get_env("ECTO_POOL") || "poolboy"
-Application.ensure_all_started(pool_app)
 pool =
-  case pool_app do
-    :poolboy -> DBConnection.Poolboy
-    :sbroker -> DBConnection.Sojourn
+  case System.get_env("ECTO_POOL") || "poolboy" do
+    "poolboy" -> DBConnection.Poolboy
+    "sbroker" -> DBConnection.Sojourn
   end
 
 # Pool repo for async, safe tests
@@ -67,7 +65,7 @@ defmodule Ecto.Integration.Case do
   end
 end
 
-{:ok, _} = Application.ensure_all_started(:postgrex)
+{:ok, _} = Ecto.Adapters.Postgres.ensure_all_started(TestRepo, :temporary)
 
 # Load up the repository, start it, and run migrations
 _   = Ecto.Adapters.Postgres.storage_down(TestRepo.config)

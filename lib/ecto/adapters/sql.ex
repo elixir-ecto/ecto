@@ -26,8 +26,11 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def application do
-        @adapter
+      def ensure_all_started(repo, type) do
+        {_, opts} = repo.__pool__
+        with {:ok, pool} <- DBConnection.ensure_all_started(opts, type),
+             {:ok, adapter} <- Application.ensure_all_started(@adapter, type),
+             do: {:ok, pool ++ adapter}
       end
 
       @doc false

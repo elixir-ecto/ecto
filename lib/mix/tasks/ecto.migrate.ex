@@ -69,11 +69,11 @@ defmodule Mix.Tasks.Ecto.Migrate do
     Enum.each repos, fn repo ->
       ensure_repo(repo, args)
       ensure_migrations_path(repo)
-      {:ok, pid} = ensure_started(repo, opts)
+      {:ok, pid, apps} = ensure_started(repo, opts)
 
       migrated = migrator.(repo, migrations_path(repo), :up, opts)
       pid && repo.stop(pid)
-      restart_app_if_migrated(repo, migrated)
+      restart_apps_if_migrated(apps, migrated)
     end
   end
 end

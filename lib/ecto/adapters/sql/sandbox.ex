@@ -330,6 +330,10 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     @moduledoc false
     @behaviour DBConnection.Pool
 
+    def ensure_all_started(_opts, _type) do
+      raise "should never be invoked"
+    end
+
     def start_link(_module, _opts) do
       raise "should never be invoked"
     end

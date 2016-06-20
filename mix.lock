@@ -1,6 +1,6 @@
 %{"backoff": {:hex, :backoff, "1.1.1"},
-  "connection": {:hex, :connection, "1.0.2", "f4a06dd3ecae4141aa66f94ce92ea4c4b8753069472814932f1cadbc3078ab80", [:mix], []},
-  "db_connection": {:hex, :db_connection, "1.0.0-rc.1", "4d9ac0db8a6edf401103b85ad29b40188b70adc649ba2a028df6ff2207cfb250", [:mix], [{:sbroker, "~> 1.0.0-beta.2", [hex: :sbroker, optional: true]}, {:poolboy, "~> 1.5", [hex: :poolboy, optional: true]}, {:connection, "~> 1.0.2", [hex: :connection, optional: false]}]},
+  "connection": {:hex, :connection, "1.0.3", "3145f7416be3df248a4935f24e3221dc467c1e3a158d62015b35bd54da365786", [:mix], []},
+  "db_connection": {:hex, :db_connection, "1.0.0-rc.2", "c5b2329651ef046d85e47ec2c947cb0e3d10a69eb49fdb71e365e72d6758e4c5", [:mix], [{:sbroker, "~> 1.0.0-beta.2", [hex: :sbroker, optional: true]}, {:poolboy, "~> 1.5", [hex: :poolboy, optional: true]}, {:connection, "~> 1.0.2", [hex: :connection, optional: false]}]},
   "decimal": {:hex, :decimal, "1.1.2", "79a769d4657b2d537b51ef3c02d29ab7141d2b486b516c109642d453ee08e00c", [:mix], []},
   "earmark": {:hex, :earmark, "0.2.1", "ba6d26ceb16106d069b289df66751734802777a3cbb6787026dd800ffeb850f3", [:mix], []},
   "ex_doc": {:hex, :ex_doc, "0.12.0", "b774aabfede4af31c0301aece12371cbd25995a21bb3d71d66f5c2fe074c603f", [:mix], [{:earmark, "~> 0.2", [hex: :earmark, optional: false]}]},

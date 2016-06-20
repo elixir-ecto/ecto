@@ -32,9 +32,10 @@ defmodule Ecto.Adapter do
   @macrocallback __before_compile__(env :: Macro.Env.t) :: Macro.t
 
   @doc """
-  Defines the application that powers the adapter.
+  Ensure all applications necessary to run the adapter are started.
   """
-  @callback application :: atom
+  @callback ensure_all_started(repo, type :: :application.restart_type) ::
+    {:ok, [atom]} | {:error, atom}
 
   @doc """
   Returns the childspec that starts the adapter process.
