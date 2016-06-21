@@ -79,7 +79,7 @@ For example, if you want to use PostgreSQL, add to your `mix.exs` file:
 ```elixir
 defp deps do
   [{:postgrex, ">= 0.0.0"},
-   {:ecto, "~> 2.0.0-beta"}]
+   {:ecto, "~> 2.0.0"}]
 end
 ```
 
@@ -135,7 +135,7 @@ Besides the unit tests above, it is recommended to run the adapter integration t
 # Run only PostgreSQL tests (version of PostgreSQL must be >= 9.4 to support jsonb)
 MIX_ENV=pg mix test
 
-# Run all tests (unit and all adapters/pools)
+# Run all tests (unit and all adapters)
 mix test.all
 ```
 

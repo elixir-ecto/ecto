@@ -114,12 +114,12 @@ Finally, Ecto now allows putting existing records in changesets, and the proper 
     |> Ecto.Changeset.change
     |> Ecto.Changeset.put_assoc(:post, existing_post)
     |> Repo.update!
-    
+
 ### Application Repo Configuration
 
 Ecto now requires you to explicitly configure your repo's in your top level config. You can avoid this warning by passing the -r flag or by setting the repositories managed by this application in your config/config.exs:
 
-    config :mux, ecto_repos: [...]
+    config :my_app, ecto_repos: [...]
 
 The configuration may be an empty list if it does not define any repo.
 
@@ -128,10 +128,10 @@ The configuration may be an empty list if it does not define any repo.
   * [Changeset] `changeset.model` has been renamed to `changeset.data`
   * [Changeset] `changeset.optional` has been removed
   * [Changeset] `changeset.errors` now always returns tuple `{String.t, Keyword.t}` in its values
-  * [DateTime] The "Z" (UTC) at the end of an ISO 8601 time has been removed as UTC should not be assumed.
+  * [DateTime] The "Z" (UTC) at the end of an ISO 8601 time has been removed as UTC should not be assumed
   * [LogEntry] Overhaul log entry and store times in :native units
   * [Repo] `Ecto.StaleModelError` has been renamed to `Ecto.StaleEntryError`
-  * [Repo] Poolboy now expects `:pool_overflow` option instead of `:max_overflow`
+  * [Repo] Poolboy now expects `:pool_overflow` option instead of `:max_overflow` (keep in mind though using such option is discourage altogether as it establishes short-lived connections to the database, likely being worse to performance in both short- and long-term)
   * [Repo] `Repo.insert/2` will now send only non-nil fields from the struct to the storage (in previous versions, all fields from the struct were sent to the database)
   * [Repo] `Ecto.Pools.Poolboy` and `Ecto.Pools.SojournBroker` have been removed in favor of `DBConnection.Poolboy` and `DBConnection.Sojourn`
   * [Repo] `:timeout` in `Repo.transaction` now affects the whole transaction block and not only the particular transaction queries
@@ -163,6 +163,7 @@ The configuration may be an empty list if it does not define any repo.
   * [Mix] Automatically reenable migration and repository management tasks after execution
   * [Preloader] Support mixing preloads and assocs
   * [Postgres] Add migration and changeset support for PostgreSQL exclusion constraints. Example: `create constraint(:sizes, :cannot_overlap, exclude: ~s|gist (int4range("min", "max", '[]') WITH &&)|)` and `exclusion_constraint(changeset, :sizes, name: :cannot_overlap, message: "must not overlap")`
+  * [Postgres] Support lateral joins (via fragments)
   * [Postgres] Add migration and changeset support for PostgreSQL check constraints. Example: `create constraint(:products, "positive_price", check: "price > 0")` and `check_constraint(changeset, :price, name: :positive_price, message: "must be greater than zero")`
   * [Query] Allow the `:on` field to be specified with association joins
   * [Query] Support expressions in map keys in `select` in queries. Example: `from p in Post, select: %{p.title => p.visitors}`
