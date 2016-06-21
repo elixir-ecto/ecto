@@ -736,18 +736,24 @@ defmodule Ecto.Query.Planner do
   defp collect_fields(expr, _query, _fetcher, from),
     do: {[expr], from}
 
-  defp fetch_assoc(tag, take, field) do
-    case Access.fetch(take, field) do
+  defp fetch_assoc(tag, take, assoc) do
+    case Access.fetch(take, assoc) do
       {:ok, value} -> {:ok, {tag, value}}
       :error -> :error
     end
   end
 
   defp collect_assocs(query, tag, take, [{assoc, {ix, children}}|tail]) do
-    fields = take!(:preload, query, assoc, ix, &fetch_assoc(tag, take, &1))
-    [select_source(ix, fields)] ++
-      collect_assocs(query, tag, fields, children) ++
-      collect_assocs(query, tag, take, tail)
+    case get_source!(:preload, query, ix) do
+      {_, schema} = source when schema != nil ->
+        fields = take!(source, query, fetch_assoc(tag, take, assoc), assoc)
+        [select_source(ix, fields)] ++
+          collect_assocs(query, tag, fields, children) ++
+          collect_assocs(query, tag, take, tail)
+      _ ->
+        error! query, "can only preload sources with a schema " <>
+                      "(fragments, binary and subqueries are not supported)"
+    end
   end
   defp collect_assocs(_query, _tag, _take, []) do
     []
@@ -761,21 +767,32 @@ defmodule Ecto.Query.Planner do
 
   defp take!(kind, query, field, ix, fetcher) do
     source = get_source!(kind, query, ix)
-    case fetcher.(field) do
-      {:ok, {_, _}} when not is_tuple(source) ->
-        error! query, "fragment or subquery sources require a literal (map, tuple, etc) to be returned from select"
-      {:ok, {_, []}} ->
-        error! query, "#{kind} expects at least one field to be selected, got an empty list"
-      {:ok, {:struct, _}} when elem(source, 1) == nil ->
-        error! query, "struct/2 expects a schema to be given as source"
-      {:ok, {_, fields}} ->
+    take!(source, query, fetcher.(field), field)
+  end
+
+  defp take!(source, query, fetched, field) do
+    case {fetched, source} do
+      {{:ok, {:struct, _}}, {_, nil}} ->
+        error! query, "struct/2 in select expects a source with a schema"
+      {{:ok, {_, []}}, {_, _}} ->
+        error! query, "at least one field must be selected for binding `#{field}`, got an empty list"
+      {{:ok, {_, fields}}, {_, _}} ->
         List.wrap(fields)
-      :error ->
-        case source do
-          %Ecto.SubQuery{types: types} -> Keyword.keys(types)
-          {_, nil} -> nil
-          {_, schema} -> schema.__schema__(:fields)
-        end
+      {{:ok, {_, _}}, {:fragment, _, _}} ->
+        error! query, "it is not possible to return a map/struct subset of a fragment, " <>
+                      "you must explicitly return the desired individial fields"
+      {{:ok, {_, _}}, %Ecto.SubQuery{}} ->
+        error! query, "it is not possible to return a map/struct subset of a subquery, " <>
+                      "you must explicitly select the whole subquery or individial fields only"
+
+      {:error, {_, nil}} ->
+        nil # Checked by the adapter
+      {:error, {_, schema}} when schema != nil ->
+        schema.__schema__(:fields)
+      {:error, {:fragment, _, _}} ->
+        nil # Checked by the adapter
+      {:error, %Ecto.SubQuery{types: types}} ->
+        Keyword.keys(types)
     end
   end
 

@@ -316,10 +316,10 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
-      {table, name, schema} = elem(sources, idx)
+      {_, name, schema} = elem(sources, idx)
       if is_nil(schema) and is_nil(fields) do
         error!(query, "MySQL requires a schema module when using selector " <>
-          "#{inspect name} but only the table #{table} was given. " <>
+          "#{inspect name} but none was given. " <>
           "Please specify a schema or specify exactly which fields from " <>
           "#{inspect name} you desire")
       end

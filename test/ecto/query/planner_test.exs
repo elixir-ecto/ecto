@@ -477,7 +477,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: select with struct/2" do
-    assert_raise Ecto.QueryError, ~r"struct/2 expects a schema to be given as source", fn ->
+    assert_raise Ecto.QueryError, ~r"struct/2 in select expects a source with a schema", fn ->
       "posts" |> select([p], struct(p, [:id, :title])) |> normalize()
     end
 
@@ -601,6 +601,13 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "normalize: fragments do not support preloads" do
+    query = from p in Post, join: c in fragment("..."), preload: [comments: c]
+    assert_raise Ecto.QueryError, ~r/can only preload sources with a schema/, fn ->
+      normalize(query)
+    end
+  end
+
   test "normalize: all does not allow updates" do
     message = ~r"`all` does not allow `update` expressions"
     assert_raise Ecto.QueryError, message, fn ->
@@ -703,7 +710,7 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.fields == [{{:., [], [{:&, [], [1]}, :title]}, [ecto_type: :string], []}]
 
     query = from p in Post, select: {p.id, p.title}
-    assert_raise Ecto.QueryError, ~r/fragment or subquery sources require a literal/, fn ->
+    assert_raise Ecto.QueryError, ~r/it is not possible to return a map\/struct subset of a subquery/, fn ->
       normalize(from(p in subquery(query), select: [:title]))
     end
   end
