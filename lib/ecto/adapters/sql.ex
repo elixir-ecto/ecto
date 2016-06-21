@@ -125,7 +125,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       defoverridable [prepare: 2, execute: 6, insert: 5, update: 6, delete: 4, insert_all: 6,
-                      execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1]
+                      execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1, ensure_all_started: 2]
     end
   end
 
