@@ -30,7 +30,8 @@ defmodule Ecto.Adapters.SQL do
         {_, opts} = repo.__pool__
         with {:ok, pool} <- DBConnection.ensure_all_started(opts, type),
              {:ok, adapter} <- Application.ensure_all_started(@adapter, type),
-             do: {:ok, pool ++ adapter}
+             # We always return the adapter to force it to be restarted if necessary
+             do: {:ok, pool ++ List.delete(adapter, @adapter) ++ [@adapter]}
       end
 
       @doc false
