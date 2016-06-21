@@ -60,7 +60,7 @@ defmodule Ecto.Mixfile do
 
   defp description do
     """
-    Ecto is a domain specific language for writing queries and interacting with databases in Elixir.
+    A database wrapper and language integrated query for Elixir.
     """
   end
 
