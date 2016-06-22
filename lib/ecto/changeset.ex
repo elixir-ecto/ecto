@@ -1021,7 +1021,7 @@ defmodule Ecto.Changeset do
       ...>   end
       ...> end
       iex> changeset.errors
-      [title: "cannot be foo"]
+      [title: {"cannot be foo", []}]
 
   """
   @spec validate_change(t, atom, (atom, term -> [error])) :: t
