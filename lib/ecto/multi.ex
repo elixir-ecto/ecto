@@ -328,6 +328,10 @@ defmodule Ecto.Multi do
     add_operation(multi, name, {:delete_all, query, opts})
   end
 
+  defp add_operation(multi, {prefix, number} = name, operation) when is_tuple(name) do
+    add_operation(multi, :"#{prefix}_#{number}", operation)
+  end
+
   defp add_operation(%Multi{} = multi, name, operation) when is_atom(name) do
     %{operations: operations, names: names} = multi
     if MapSet.member?(names, name) do
