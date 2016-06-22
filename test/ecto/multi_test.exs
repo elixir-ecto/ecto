@@ -84,6 +84,26 @@ defmodule Ecto.MultiTest do
     assert multi.operations == [{:fun, {:run, fun}}]
   end
 
+  test "run named with tuple" do
+    fun = fn changes -> {:ok, changes} end
+    multi =
+      Multi.new
+      |> Multi.run({:fun, 3}, fun)
+
+    assert multi.names      == MapSet.new([{:fun, 3}])
+    assert multi.operations == [{{:fun, 3}, {:run, fun}}]
+  end
+
+  test "run named with char_list" do
+    fun = fn changes -> {:ok, changes} end
+    multi =
+      Multi.new
+      |> Multi.run('myFunction', fun)
+
+    assert multi.names      == MapSet.new(['myFunction'])
+    assert multi.operations == [{'myFunction', {:run, fun}}]
+  end
+
   test "run with mfa" do
     multi =
       Multi.new
