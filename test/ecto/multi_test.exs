@@ -282,6 +282,13 @@ defmodule Ecto.MultiTest do
     end
   end
 
+  test "bad operation name formatting" do
+    fun = fn _ -> {:ok, :ok} end
+    assert_raise ArgumentError, ~r"{:run, \"3\"} should be in format {:atom, :integer}", fn ->
+      Multi.new |> Multi.run({:run, "3"}, fun) |> Multi.run(:run, fun)
+    end    
+  end
+
   test "merge with fun" do
     changeset = Changeset.change(%Comment{})
     multi =

@@ -330,7 +330,7 @@ defmodule Ecto.Multi do
 
   defp add_operation(multi, {prefix, number} = name, operation) when is_tuple(name) do
     unless (is_atom(prefix) && is_integer(number)) do
-      raise "To name an Ecto.Multi with a tuple please use format: {:atom, :integer}"
+      raise ArgumentError, "#{inspect name} should be in format {:atom, :integer}"
     end
     add_operation(multi, :"#{prefix}_#{number}", operation)
   end
