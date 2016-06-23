@@ -147,6 +147,7 @@ The configuration may be an empty list if it does not define any repo.
   * [Schema] Array fields no longer default to an empty list `[]`. Previous behaviour can be achieved by passing `default: []` to the field definition
   * [Schema] `__schema__(:types)` now returns map
   * [SQL] `Ecto.Adapters.SQL.begin_test_transaction`, `Ecto.Adapters.SQL.restart_test_transaction` and `Ecto.Adapters.SQL.rollback_test_transaction` have been removed in favor of the new ownership-based `Ecto.Adapters.SQL.Sandbox`
+  * [UUID] `Ecto.UUID.dump/1` now returns `{:ok, binary}`
 
 ### Soft deprecations (no warnings emitted)
 
