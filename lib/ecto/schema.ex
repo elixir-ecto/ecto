@@ -485,10 +485,11 @@ defmodule Ecto.Schema do
       associations. Read below for more information
 
     * `:on_delete` - The action taken on associations when parent record
-      is deleted. May be `:nothing` (default), `:nilify_all` and `:delete_all`.
+      is deleted. May be `:nothing` (default), `:nilify_all`, `:delete_all`
+      or `restrict`.
       Notice `:on_delete` may also be set in migrations when creating a
       reference. If supported, relying on the database via migrations
-      is preferred
+      is preferred.
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
@@ -619,10 +620,11 @@ defmodule Ecto.Schema do
       associations. Read the section in `has_many/3` for more information
 
     * `:on_delete` - The action taken on associations when parent record
-      is deleted. May be `:nothing` (default), `:nilify_all` and `:delete_all`.
+      is deleted. May be `:nothing` (default), `:nilify_all`, `:delete_all`
+      or `restrict`.
       Notice `:on_delete` may also be set in migrations when creating a
       reference. If supported, relying on the database via migrations
-      is preferred
+      is preferred.
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
