@@ -84,6 +84,16 @@ defmodule Ecto.MultiTest do
     assert multi.operations == [{:fun, {:run, fun}}]
   end
 
+  test "run with tuple for name" do
+    fun = fn changes -> {:ok, changes} end
+    multi =
+      Multi.new
+      |> Multi.run({:fun, 3}, fun)
+
+    assert multi.names      == MapSet.new([:fun_3])
+    assert multi.operations == [{:fun_3, {:run, fun}}]    
+  end
+
   test "run with mfa" do
     multi =
       Multi.new
@@ -270,6 +280,13 @@ defmodule Ecto.MultiTest do
     assert_raise RuntimeError, ~r":run is already a member", fn ->
       Multi.new |> Multi.run(:run, fun) |> Multi.run(:run, fun)
     end
+  end
+
+  test "bad operation name formatting" do
+    fun = fn _ -> {:ok, :ok} end
+    assert_raise ArgumentError, ~r"{:run, \"3\"} should be in format {:atom, :integer}", fn ->
+      Multi.new |> Multi.run({:run, "3"}, fun) |> Multi.run(:run, fun)
+    end    
   end
 
   test "merge with fun" do
