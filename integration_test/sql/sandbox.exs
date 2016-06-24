@@ -5,6 +5,8 @@ defmodule Ecto.Integration.SandboxTest do
   alias Ecto.Integration.TestRepo
   alias Ecto.Integration.Post
 
+  import ExUnit.CaptureLog
+
   test "include link to SQL sandbox on ownership errors" do
     assert_raise DBConnection.OwnershipError,
              ~r"See Ecto.Adapters.SQL.Sandbox docs for more information.", fn ->
@@ -85,6 +87,20 @@ defmodule Ecto.Integration.SandboxTest do
     TestRepo.transaction fn ->
       Ecto.Adapters.SQL.query!(TestRepo, "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED", [])
     end
+  end
+
+  test "disconnects sandbox on transaction timeouts" do
+    Sandbox.checkout(TestRepo)
+
+    assert capture_log(fn ->
+      catch_error(
+        TestRepo.transaction fn ->
+          :timer.sleep(1000)
+        end, timeout: 0
+      )
+    end) =~ "timed out"
+
+    Sandbox.checkin(TestRepo)
   end
 
   test "runs inside a sandbox even with failed queries" do
