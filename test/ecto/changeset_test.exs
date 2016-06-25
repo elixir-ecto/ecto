@@ -26,8 +26,8 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-  defp changeset(model \\ %Post{}, params) do
-    cast(model, params, ~w(title body upvotes topics decimal))
+  defp changeset(schema \\ %Post{}, params) do
+    cast(schema, params, ~w(title body upvotes topics decimal))
   end
 
   ## cast/3
@@ -192,7 +192,7 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/4: does not mark as required if model contains field" do
+  test "cast/4: does not mark as required if schema contains field" do
     changeset = cast(%Post{title: "valid"}, %{}, ~w(title), ~w())
     assert changeset.errors == []
     assert changeset.valid?
@@ -362,7 +362,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.action == :update
   end
 
-  test "merge/2: fails when the :model, :repo or :action field are not equal" do
+  test "merge/2: fails when the :data, :repo or :action field are not equal" do
     cs1 = cast(%Post{title: "foo"}, %{}, ~w(title))
     cs2 = cast(%Post{title: "bar"}, %{}, ~w(title))
 

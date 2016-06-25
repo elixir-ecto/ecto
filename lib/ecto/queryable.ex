@@ -41,6 +41,6 @@ defimpl Ecto.Queryable, for: Atom do
 end
 
 defimpl Ecto.Queryable, for: Tuple do
-  def to_query(from = {source, model}) when is_binary(source) and is_atom(model),
-    do: %Ecto.Query{from: from, prefix: model.__schema__(:prefix)}
+  def to_query(from = {source, schema}) when is_binary(source) and is_atom(schema),
+    do: %Ecto.Query{from: from, prefix: schema.__schema__(:prefix)}
 end

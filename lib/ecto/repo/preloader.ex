@@ -7,7 +7,7 @@ defmodule Ecto.Repo.Preloader do
 
   @doc """
   Transforms a result set based on query preloads, loading
-  the associations onto their parent model.
+  the associations onto their parent schema.
   """
   @spec query([list], Ecto.Repo.t, list, Access.t, fun, Keyword.t) :: [list]
   def query([], _repo, _preloads, _take, _fun, _opts), do: []

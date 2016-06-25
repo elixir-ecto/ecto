@@ -410,8 +410,8 @@ defmodule Ecto.Query.Planner do
 
   defp source_cache({_, nil} = source, params),
     do: {source, params}
-  defp source_cache({bin, model}, params),
-    do: {{bin, model, model.__schema__(:hash)}, params}
+  defp source_cache({bin, schema}, params),
+    do: {{bin, schema, schema.__schema__(:hash)}, params}
   defp source_cache({:fragment, _, _} = source, params),
     do: {source, params}
   defp source_cache(%Ecto.SubQuery{params: inner, cache: key}, params),

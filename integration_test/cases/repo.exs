@@ -107,7 +107,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{text: "x", title: "hello", temp: "unknown"} = post
     assert %Post{text: "x", title: "hello", temp: "temp"} = TestRepo.get!(Post, post.id)
 
-    # On update we merge only fields, direct model changes are discarded
+    # On update we merge only fields, direct schema changes are discarded
     changeset = Ecto.Changeset.cast(%{post | text: "y"},
                                     %{"title" => "world", "temp" => "unknown"}, ~w(title temp))
 
@@ -195,7 +195,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :uses_usec
-  test "insert and fetch a model with timestamps with usec" do
+  test "insert and fetch a schema with timestamps with usec" do
     p1 = TestRepo.insert!(%PostUsecTimestamps{title: "hello"})
     assert [p1] == TestRepo.all(PostUsecTimestamps)
   end

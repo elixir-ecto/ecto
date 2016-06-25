@@ -5,7 +5,7 @@ defmodule Ecto.Repo.Assoc do
 
   @doc """
   Transforms a result set based on query assocs, loading
-  the associations onto their parent model.
+  the associations onto their parent schema.
   """
   @spec query([Ecto.Schema.t], list, tuple) :: [Ecto.Schema.t]
   def query(rows, assocs, sources)
@@ -89,8 +89,8 @@ defmodule Ecto.Repo.Assoc do
 
   defp create_refls(idx, fields, sources) do
     Enum.map(fields, fn {field, {child_idx, child_fields}} ->
-      {_source, model} = elem(sources, idx)
-      {model.__schema__(:association, field),
+      {_source, schema} = elem(sources, idx)
+      {schema.__schema__(:association, field),
        create_refls(child_idx, child_fields, sources)}
     end)
   end

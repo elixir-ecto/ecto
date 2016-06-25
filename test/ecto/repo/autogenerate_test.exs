@@ -27,24 +27,24 @@ defmodule Ecto.Repo.AutogenerateTest do
   @uuid "30313233-3435-3637-3839-616263646566"
 
   test "autogenerates values" do
-    model = TestRepo.insert!(%Default{})
-    assert byte_size(model.z) == 36
+    schema = TestRepo.insert!(%Default{})
+    assert byte_size(schema.z) == 36
 
     changeset = Ecto.Changeset.cast(%Default{}, %{}, [])
-    model = TestRepo.insert!(changeset)
-    assert byte_size(model.z) == 36
+    schema = TestRepo.insert!(changeset)
+    assert byte_size(schema.z) == 36
 
     changeset = Ecto.Changeset.cast(%Default{}, %{z: nil}, [])
-    model = TestRepo.insert!(changeset)
-    assert byte_size(model.z) == 36
+    schema = TestRepo.insert!(changeset)
+    assert byte_size(schema.z) == 36
 
     changeset = Ecto.Changeset.force_change(changeset, :z, nil)
-    model = TestRepo.insert!(changeset)
-    assert model.z == nil
+    schema = TestRepo.insert!(changeset)
+    assert schema.z == nil
 
     changeset = Ecto.Changeset.cast(%Default{}, %{z: @uuid}, [:z])
-    model = TestRepo.insert!(changeset)
-    assert model.z == @uuid
+    schema = TestRepo.insert!(changeset)
+    assert schema.z == @uuid
   end
 
   ## Timestamps

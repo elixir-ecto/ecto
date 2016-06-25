@@ -89,9 +89,9 @@ defmodule Ecto.Embedded do
                          "got: #{inspect actual}"
   end
 
-  defp to_struct(%Changeset{changes: changes, data: model}, :update,
+  defp to_struct(%Changeset{changes: changes, data: schema}, :update,
                  _embed, _adapter) when changes == %{} do
-    model
+    schema
   end
 
   defp to_struct(%Changeset{}, :delete, _embed, _adapter) do
