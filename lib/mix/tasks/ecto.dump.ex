@@ -7,7 +7,7 @@ defmodule Mix.Tasks.Ecto.Dump do
 
   @moduledoc """
   Dumps the current environment's database structure for the
-  given repositoruu into a structure file.
+  given repository into a structure file.
 
   The repository must be set under `:ecto_repos` in the
   current app configuration or given via the `-r` option.
