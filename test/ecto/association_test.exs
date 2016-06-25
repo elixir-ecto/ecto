@@ -512,8 +512,8 @@ defmodule Ecto.AssociationTest do
     end
   end
 
-  defp expand(model, preloads, take \\ nil) do
-    Preloader.expand(model, Preloader.normalize(preloads, take, preloads), {%{}, %{}})
+  defp expand(schema, preloads, take \\ nil) do
+    Preloader.expand(schema, Preloader.normalize(preloads, take, preloads), {%{}, %{}})
   end
 
   test "preload: expand" do

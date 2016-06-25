@@ -54,8 +54,8 @@ defmodule Ecto.Integration.Post do
     timestamps()
   end
 
-  def changeset(model, params) do
-    cast(model, params, ~w(counter title text temp public cost visits
+  def changeset(schema, params) do
+    cast(schema, params, ~w(counter title text temp public cost visits
                            intensity bid uuid meta posted))
   end
 end
@@ -156,7 +156,7 @@ defmodule Ecto.Integration.Custom do
   This module is used to test:
 
     * binary_id primary key
-    * Tying another schemas to an existing model
+    * Tying another schemas to an existing schema
 
   Due to the second item, it must be a subset of posts.
   """
@@ -172,7 +172,7 @@ defmodule Ecto.Integration.Barebone do
   @moduledoc """
   This module is used to test:
 
-    * A model without primary keys
+    * A schema without primary keys
 
   """
   use Ecto.Integration.Schema
@@ -188,7 +188,7 @@ defmodule Ecto.Integration.Tag do
   This module is used to test:
 
     * The array type
-    * Embedding many models (uses array)
+    * Embedding many schemas (uses array)
 
   """
   use Ecto.Integration.Schema
@@ -219,7 +219,7 @@ defmodule Ecto.Integration.Order do
   @moduledoc """
   This module is used to test:
 
-    * Embedding one model
+    * Embedding one schema
 
   """
   use Ecto.Integration.Schema

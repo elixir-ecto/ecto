@@ -78,7 +78,7 @@ defmodule Ecto.TestAdapter do
   def update(_repo, %{context: {:invalid, _}=res}, [_|_], _filters, _return, _opts),
     do: res
 
-  def delete(_repo, _model_meta, _filter, _opts),
+  def delete(_repo, _schema_meta, _filter, _opts),
     do: send(self(), :delete) && {:ok, []}
 
   ## Transactions

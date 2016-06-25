@@ -5,84 +5,84 @@ defmodule Ecto.RepoTest do
   import Ecto, only: [put_meta: 2]
   require Ecto.TestRepo, as: TestRepo
 
-  defmodule MyModel do
+  defmodule MySchema do
     use Ecto.Schema
 
-    schema "my_model" do
+    schema "my_schema" do
       field :x, :string
       field :y, :binary
     end
   end
 
-  defmodule MyModelNoPK do
+  defmodule MySchemaNoPK do
     use Ecto.Schema
 
     @primary_key false
-    schema "my_model" do
+    schema "my_schema" do
       field :x, :string
     end
   end
 
-  test "needs model with primary key field" do
-    model = %MyModelNoPK{x: "abc"}
+  test "needs schema with primary key field" do
+    schema = %MySchemaNoPK{x: "abc"}
 
     assert_raise Ecto.NoPrimaryKeyFieldError, fn ->
-      TestRepo.update!(model |> Ecto.Changeset.change, force: true)
+      TestRepo.update!(schema |> Ecto.Changeset.change, force: true)
     end
 
     assert_raise Ecto.NoPrimaryKeyFieldError, fn ->
-      TestRepo.delete!(model)
+      TestRepo.delete!(schema)
     end
   end
 
   test "works with primary key value" do
-    model = %MyModel{id: 1, x: "abc"}
-    TestRepo.get(MyModel, 123)
-    TestRepo.get_by(MyModel, x: "abc")
-    TestRepo.update!(model |> Ecto.Changeset.change, force: true)
-    TestRepo.delete!(model)
+    schema = %MySchema{id: 1, x: "abc"}
+    TestRepo.get(MySchema, 123)
+    TestRepo.get_by(MySchema, x: "abc")
+    TestRepo.update!(schema |> Ecto.Changeset.change, force: true)
+    TestRepo.delete!(schema)
   end
 
-  test "works with custom source model" do
-    model = %MyModel{id: 1, x: "abc"} |> put_meta(source: "custom_model")
-    TestRepo.update!(model |> Ecto.Changeset.change, force: true)
-    TestRepo.delete!(model)
+  test "works with custom source schema" do
+    schema = %MySchema{id: 1, x: "abc"} |> put_meta(source: "custom_schema")
+    TestRepo.update!(schema |> Ecto.Changeset.change, force: true)
+    TestRepo.delete!(schema)
 
-    to_insert = %MyModel{x: "abc"} |> put_meta(source: "custom_model")
+    to_insert = %MySchema{x: "abc"} |> put_meta(source: "custom_schema")
     TestRepo.insert!(to_insert)
   end
 
   test "fails without primary key value" do
-    model = %MyModel{x: "abc"}
+    schema = %MySchema{x: "abc"}
 
     assert_raise Ecto.NoPrimaryKeyValueError, fn ->
-      TestRepo.update!(model |> Ecto.Changeset.change, force: true)
+      TestRepo.update!(schema |> Ecto.Changeset.change, force: true)
     end
 
     assert_raise Ecto.NoPrimaryKeyValueError, fn ->
-      TestRepo.delete!(model)
+      TestRepo.delete!(schema)
     end
   end
 
-  test "validates model types" do
-    model = %MyModel{x: 123}
+  test "validates schema types" do
+    schema = %MySchema{x: 123}
 
     assert_raise Ecto.ChangeError, fn ->
-      TestRepo.insert!(model)
+      TestRepo.insert!(schema)
     end
   end
 
   test "validates get" do
-    TestRepo.get(MyModel, 123)
+    TestRepo.get(MySchema, 123)
 
     message = "cannot perform Ecto.TestRepo.get/2 because the given value is nil"
     assert_raise ArgumentError, message, fn ->
-      TestRepo.get(MyModel, nil)
+      TestRepo.get(MySchema, nil)
     end
 
     message = ~r"value `:atom` in `where` cannot be cast to type :id in query"
     assert_raise Ecto.Query.CastError, message, fn ->
-      TestRepo.get(MyModel, :atom)
+      TestRepo.get(MySchema, :atom)
     end
 
     message = ~r"expected a from expression with a schema in query"
@@ -92,69 +92,69 @@ defmodule Ecto.RepoTest do
   end
 
   test "validates get_by" do
-    TestRepo.get_by(MyModel, id: 123)
-    TestRepo.get_by(MyModel, %{id: 123})
+    TestRepo.get_by(MySchema, id: 123)
+    TestRepo.get_by(MySchema, %{id: 123})
 
     message = ~r"value `:atom` in `where` cannot be cast to type :id in query"
     assert_raise Ecto.Query.CastError, message, fn ->
-      TestRepo.get_by(MyModel, id: :atom)
+      TestRepo.get_by(MySchema, id: :atom)
     end
   end
 
   test "validates update_all" do
     # Success
-    TestRepo.update_all(MyModel, set: [x: "321"])
+    TestRepo.update_all(MySchema, set: [x: "321"])
 
-    query = from(e in MyModel, where: e.x == "123", update: [set: [x: "321"]])
+    query = from(e in MySchema, where: e.x == "123", update: [set: [x: "321"]])
     TestRepo.update_all(query, [])
 
     # Failures
     assert_raise ArgumentError, ~r/:returning expects at least one field to be given/, fn ->
-      TestRepo.update_all MyModel, [set: [x: "321"]], returning: []
+      TestRepo.update_all MySchema, [set: [x: "321"]], returning: []
     end
 
     assert_raise Ecto.QueryError, fn ->
-      TestRepo.update_all from(e in MyModel, select: e), set: [x: "321"]
+      TestRepo.update_all from(e in MySchema, select: e), set: [x: "321"]
     end
 
     assert_raise Ecto.QueryError, fn ->
-      TestRepo.update_all from(e in MyModel, order_by: e.x), set: [x: "321"]
+      TestRepo.update_all from(e in MySchema, order_by: e.x), set: [x: "321"]
     end
   end
 
   test "validates delete_all" do
     # Success
-    TestRepo.delete_all(MyModel)
+    TestRepo.delete_all(MySchema)
 
-    query = from(e in MyModel, where: e.x == "123")
+    query = from(e in MySchema, where: e.x == "123")
     TestRepo.delete_all(query)
 
     # Failures
     assert_raise ArgumentError, ~r/:returning expects at least one field to be given/, fn ->
-      TestRepo.delete_all MyModel, returning: []
+      TestRepo.delete_all MySchema, returning: []
     end
 
     assert_raise Ecto.QueryError, fn ->
-      TestRepo.delete_all from(e in MyModel, select: e)
+      TestRepo.delete_all from(e in MySchema, select: e)
     end
 
     assert_raise Ecto.QueryError, fn ->
-      TestRepo.delete_all from(e in MyModel, order_by: e.x)
+      TestRepo.delete_all from(e in MySchema, order_by: e.x)
     end
   end
 
   ## Changesets
 
   test "insert, update, insert_or_update and delete accepts changesets" do
-    valid = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [])
-    assert {:ok, %MyModel{}} = TestRepo.insert(valid)
-    assert {:ok, %MyModel{}} = TestRepo.update(valid)
-    assert {:ok, %MyModel{}} = TestRepo.insert_or_update(valid)
-    assert {:ok, %MyModel{}} = TestRepo.delete(valid)
+    valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{}, [])
+    assert {:ok, %MySchema{}} = TestRepo.insert(valid)
+    assert {:ok, %MySchema{}} = TestRepo.update(valid)
+    assert {:ok, %MySchema{}} = TestRepo.insert_or_update(valid)
+    assert {:ok, %MySchema{}} = TestRepo.delete(valid)
   end
 
   test "insert, update, insert_or_update and delete errors on invalid changeset" do
-    invalid = %Ecto.Changeset{valid?: false, data: %MyModel{}}
+    invalid = %Ecto.Changeset{valid?: false, data: %MySchema{}}
 
     insert = %{invalid | action: :insert, repo: TestRepo}
     assert {:error, ^insert} = TestRepo.insert(invalid)
@@ -170,15 +170,15 @@ defmodule Ecto.RepoTest do
   end
 
   test "insert!, update! and delete! accepts changesets" do
-    valid = Ecto.Changeset.cast(%MyModel{id: 1}, %{}, [])
-    assert %MyModel{} = TestRepo.insert!(valid)
-    assert %MyModel{} = TestRepo.update!(valid)
-    assert %MyModel{} = TestRepo.insert_or_update!(valid)
-    assert %MyModel{} = TestRepo.delete!(valid)
+    valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{}, [])
+    assert %MySchema{} = TestRepo.insert!(valid)
+    assert %MySchema{} = TestRepo.update!(valid)
+    assert %MySchema{} = TestRepo.insert_or_update!(valid)
+    assert %MySchema{} = TestRepo.delete!(valid)
   end
 
   test "insert!, update!, insert_or_update! and delete! fail on invalid changeset" do
-    invalid = %Ecto.Changeset{valid?: false, data: %MyModel{}}
+    invalid = %Ecto.Changeset{valid?: false, data: %MySchema{}}
 
     assert_raise Ecto.InvalidChangesetError,
                  ~r"could not perform insert because changeset is invalid", fn ->
@@ -218,7 +218,7 @@ defmodule Ecto.RepoTest do
   end
 
   test "insert!, update!, insert_or_update! and delete! fail on changeset with wrong action" do
-    invalid = %Ecto.Changeset{valid?: true, data: %MyModel{}, action: :other}
+    invalid = %Ecto.Changeset{valid?: true, data: %MySchema{}, action: :other}
 
     assert_raise ArgumentError, "a changeset with action :other was given to Ecto.TestRepo.insert/2", fn ->
       TestRepo.insert!(invalid)
@@ -238,9 +238,9 @@ defmodule Ecto.RepoTest do
   end
 
   test "insert_or_update uses the correct action" do
-    built  = Ecto.Changeset.cast(%MyModel{y: "built"}, %{}, [])
+    built  = Ecto.Changeset.cast(%MySchema{y: "built"}, %{}, [])
     loaded =
-      %MyModel{y: "loaded"}
+      %MySchema{y: "loaded"}
       |> TestRepo.insert!
       |> Ecto.Changeset.cast(%{y: "updated"}, [:y])
     assert_received :insert
@@ -254,7 +254,7 @@ defmodule Ecto.RepoTest do
 
   test "insert_or_update fails on invalid states" do
     deleted =
-      %MyModel{y: "deleted"}
+      %MySchema{y: "deleted"}
       |> TestRepo.insert!
       |> TestRepo.delete!
       |> Ecto.Changeset.cast(%{y: "updated"}, [:y])
@@ -266,12 +266,12 @@ defmodule Ecto.RepoTest do
 
   test "insert_or_update fails when being passed a struct" do
     assert_raise ArgumentError, ~r/giving a struct to .* is not supported/, fn ->
-      TestRepo.insert_or_update %MyModel{}
+      TestRepo.insert_or_update %MySchema{}
     end
   end
 
   defp prepare_changeset() do
-    %MyModel{id: 1}
+    %MySchema{id: 1}
     |> Ecto.Changeset.cast(%{x: "one"}, [:x])
     |> Ecto.Changeset.prepare_changes(fn %{repo: repo} = changeset ->
           Process.put(:ecto_repo, repo)

@@ -34,7 +34,7 @@ defmodule Ecto.QueryTest do
     end
 
     assert_raise UndefinedFunctionError, fn ->
-      from(p in NotAModel, []) |> select([p], p.title)
+      from(p in NotASchema, []) |> select([p], p.title)
     end
   end
 
