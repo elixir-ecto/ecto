@@ -41,7 +41,7 @@ defmodule Ecto.Type do
 
         # When loading data from the database, we are guaranteed to
         # receive an integer (as databases are strict) and we will
-        # just return it to be stored in the model struct.
+        # just return it to be stored in the schema struct.
         def load(integer) when is_integer(integer), do: {:ok, integer}
 
         # When dumping data to the database, we *expect* an integer
@@ -51,7 +51,7 @@ defmodule Ecto.Type do
         def dump(_), do: :error
       end
 
-  Now we can use our new field above as our primary key type in models:
+  Now we can use our new field above as our primary key type in schemas:
 
       defmodule Post do
         use Ecto.Schema
@@ -371,7 +371,7 @@ defmodule Ecto.Type do
     end)
   end
 
-  defp dump_embed(field, _model, value, _types, _fun) do
+  defp dump_embed(field, _schema, value, _types, _fun) do
     raise ArgumentError, "cannot dump embed `#{field}`, invalid value: #{inspect value}"
   end
 
@@ -420,27 +420,27 @@ defmodule Ecto.Type do
 
   defp load_embed(%{cardinality: :one}, nil, _fun), do: {:ok, nil}
 
-  defp load_embed(%{cardinality: :one, related: model, field: field},
+  defp load_embed(%{cardinality: :one, related: schema, field: field},
                   value, fun) when is_map(value) do
-    {:ok, load_embed(field, model, value, fun)}
+    {:ok, load_embed(field, schema, value, fun)}
   end
 
   defp load_embed(%{cardinality: :many}, nil, _fun), do: {:ok, []}
 
-  defp load_embed(%{cardinality: :many, related: model, field: field},
+  defp load_embed(%{cardinality: :many, related: schema, field: field},
                   value, fun) when is_list(value) do
-    {:ok, Enum.map(value, &load_embed(field, model, &1, fun))}
+    {:ok, Enum.map(value, &load_embed(field, schema, &1, fun))}
   end
 
   defp load_embed(_embed, _value, _fun) do
     :error
   end
 
-  defp load_embed(_field, model, value, loader) when is_map(value) do
-    Ecto.Schema.__load__(model, nil, nil, nil, value, loader)
+  defp load_embed(_field, schema, value, loader) when is_map(value) do
+    Ecto.Schema.__load__(schema, nil, nil, nil, value, loader)
   end
 
-  defp load_embed(field, _model, value, _fun) do
+  defp load_embed(field, _schema, value, _fun) do
     raise ArgumentError, "cannot load embed `#{field}`, invalid value: #{inspect value}"
   end
 

@@ -146,11 +146,11 @@ defmodule Ecto.Association do
 
   ## Examples
 
-      iex> Ecto.Association.related_from_query({"custom_source", Model})
-      Model
+      iex> Ecto.Association.related_from_query({"custom_source", Schema})
+      Schema
 
-      iex> Ecto.Association.related_from_query(Model)
-      Model
+      iex> Ecto.Association.related_from_query(Schema)
+      Schema
 
       iex> Ecto.Association.related_from_query("wrong")
       ** (ArgumentError) association queryable must be a schema or {source, schema}, got: "wrong"

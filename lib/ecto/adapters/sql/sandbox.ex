@@ -39,7 +39,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
 
       defmodule PostTest do
-        # Once the model is manual, tests can also be async
+        # Once the mode is manual, tests can also be async
         use ExUnit.Case, async: true
 
         setup do
