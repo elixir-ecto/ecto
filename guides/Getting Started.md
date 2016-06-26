@@ -8,9 +8,9 @@ fashion. If one application uses MySQL and another uses PostgreSQL but both
 use Ecto, then the database querying for both of those applications will be
 almost identical.
 
-**If you want to see the code from this guide, you can view it [at radar/guides/ecto/friends on GitHub](https://github.com/radar/guides/tree/master/ecto/friends).
+**If you want to see the code from this guide, you can view it [at ecto/examples/friends on GitHub](https://github.com/elixir-lang/ecto/tree/master/ecto/friends).**
 
-If you've come from the Ruby language, the equivalent there would be Active
+If you've come from the Ruby language, the "equivalent" there would be Active
 Record, Data Mapper, or Sequel. Java has Hibernate, and so on.
 
 In this guide, we're going to learn some basics about Ecto, such as creating,
@@ -34,7 +34,7 @@ To add Ecto to this application, there are a few steps that we need to take. The
 defp deps do
   [
     {:ecto, "2.0.1"},
-    {:postgrex, "0.11.1"}
+    {:postgrex, "0.11.2"}
   ]
 end
 ```
@@ -65,30 +65,36 @@ dependencies of our application. We now need to setup some configuration for
 Ecto so that we can perform actions on a database from within the
 application's code.
 
-The first bit of configuration is going to be in `config/config.exs`. On a new line in this file, put this content
+We can set up this configuration by running this command:
+
+```
+mix ecto.gen.repo -r Friends.Repo
+```
+
+This command will generate the configuration required to connect to a database. The first bit of configuration is in `config/config.exs`:
 
 ```elixir
 config :friends, Friends.Repo,
   adapter: Ecto.Adapters.Postgres,
-  database: "friends",
-  username: "postgres",
-  password: "postgres"
+  database: "friends_repo",
+  username: "user",
+  password: "pass",
+  hostname: "localhost"
 ```
 
-**NOTE**: Your PostgreSQL database may be setup to not require a username and password. If the above configuration doesn't work, try removing the username and password fields.
+**NOTE**: Your PostgreSQL database may be setup to not require a username and password. If the above configuration doesn't work, try removing the username and password fields, or setting them both to "postgres".
 
 This piece of configuration configures how Ecto will connect to our database, called "friends". Specifically, it configures a "repo". More information about [Ecto.Repo can be found in its documentation](https://hexdocs.pm/ecto/Ecto.Repo.html).
 
-The next thing we'll need to do is to setup the repo itself, which goes into `lib/friends/repo.ex`:
+The `Friends.Repo` module is defined in `lib/friends/repo.ex` by our `mix ecto.gen.repo` command:
 
 ```elixir
 defmodule Friends.Repo do
-  use Ecto.Repo,
-    otp_app: :friends
+  use Ecto.Repo, otp_app: :friends
 end
 ```
 
-This module is what we'll be using to query our database shortly. It uses the `Ecto.Repo` module, and the `otp_app` tells Ecto which Elixir application it can look for database configuration in. In this case, we've told it's the `:friends` application where Ecto can find that configuration and so Ecto will use the configuration that we set up in `config/config.exs`.
+This module is what we'll be using to query our database shortly. It uses the `Ecto.Repo` module, and the `otp_app` tells Ecto which Elixir application it can look for database configuration in. In this case, we've told it's the `:friends` application where Ecto can find that configuration and so Ecto will use the configuration that was set up in `config/config.exs`.
 
 The final piece of configuration is to setup the `Friends.Repo` as a worker within the application's supervision tree, which we can do in `lib/friends.ex`, inside the `start/2` function:
 
@@ -104,6 +110,14 @@ def start(_type, _args) do
 ```
 
 This piece of configuration will start the Ecto process which receives and executes our application's queries. Without it, we wouldn't be able to query the database at all!
+
+There's one final bit of configuration that we'll need to add ourselves, since the generator does not add it. Underneath the configuration in `config/config.exs`, add this line:
+
+```elixir
+config :friends, ecto_repos: [Friends.Repo]
+```
+
+This tells our application about the repo, which will allow us to run commands such as `mix ecto.create` very soon.
 
 We've now configured our application so that it's able to make queries to our database. Let's now create our database, add a table to it, and then perform some queries.
 
@@ -161,9 +175,9 @@ end
 
 This new code will tell Ecto to create a new table called people, and add three new fields: `first_name`, `last_name` and `age` to that table. The types of these fields are `string` and `integer`. (The different types that Ecto supports are covered in the [Ecto.Schema](https://hexdocs.pm/ecto/Ecto.Schema.html) documentation.)
 
-**The naming convention for tables in Ecto databases is to use a pluralized name.**
+**NOTE: The naming convention for tables in Ecto databases is to use a pluralized name.**
 
-To run this migration and create the `people` table, we will run this command:
+To run this migration and create the `people` table in our database, we will run this command:
 
 ```
 mix ecto.migrate
@@ -213,7 +227,13 @@ Or with syntax like this:
 %{person | age: 28}
 ```
 
-The model struct returned here is essentially a glorified Map. Let's take a look at how we can insert data into the database.
+We can retrieve values using this syntax:
+
+```elixir
+person.age # => 28
+```
+
+Let's take a look at how we can insert data into the database.
 
 ## Inserting data
 
@@ -224,7 +244,7 @@ person = %Friends.Person{}
 Friends.Repo.insert person
 ```
 
-To insert the data into our database, we call `insert` on `Friends.Repo`, which is the module that uses Ecto to talk to our database. The `person` struct here represents the data that we want to insert into the database.
+To insert the data into our database, we call `insert` on `Friends.Repo`, which is the module that uses Ecto to talk to our database. This function tells Ecto that we want to insert a new `Friends.Person` record into the database corresponding with `Friends.Repo`. The `person` struct here represents the data that we want to insert into the database.
 
 A successful insert will return a tuple, like so:
 
@@ -251,12 +271,12 @@ Let's add a changeset to our `Friends.Person` module inside `lib/friends/person.
 ```elixir
 def changeset(person, params \\ %{}) do
   person
-  |> cast(params, ~w(first_name last_name age))
-  |> validate_required([:first_name, :last_name])
+  |> Ecto.Changeset.cast(params, ~w(first_name last_name age))
+  |> Ecto.Changeset.validate_required([:first_name, :last_name])
 end
 ```
 
-This changeset first casts the `first_name` and `last_name` keys from the parameters passed in to the changeset. Casting tells the changeset what parameters are allowed to be passed through in this changeset, and anything not in the list will be ignored.
+This changeset takes a `person` and a set of params, which are to be the changes to apply to this person. The `changeset` function first casts the `first_name` and `last_name` keys from the parameters passed in to the changeset. Casting tells the changeset what parameters are allowed to be passed through in this changeset, and anything not in the list will be ignored.
 
 On the next line, we call `validate_required` which says that, for this changeset, we expect `first_name` and `last_name` to have values specified. Let's use this changeset to attempt to create a new record without a `first_name` and `last_name`:
 
@@ -323,6 +343,8 @@ true
 The changeset does not have errors, and is valid. Therefore if we try to insert this changeset it will work:
 
 ```elixir
+Repo.insert changeset
+
 {:ok,
  %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: nil,
   first_name: "Ryan", id: 3, last_name: "Bigg"}}
@@ -340,7 +362,7 @@ case Friends.Repo.insert(changeset) do
 end
 ```
 
-**NOTE:** `changeset.valid?` will not check constraints (such as `uniqueness_constraint`). For that, you will need to attempt to do an insert and check for errors. It's for this reason it's best practice to try inserting data and validation the returned tuple from `Friends.Repo.insert` to get the correct errors.
+**NOTE:** `changeset.valid?` will not check constraints (such as `uniqueness_constraint`). For that, you will need to attempt to do an insert and check for errors. It's for this reason it's best practice to try inserting data and validation the returned tuple from `Friends.Repo.insert` to get the correct errors, rather than relying on the changeset itself.
 
 If the insertion of the changeset succeeds, then you can do whatever you wish with the `person` returned in that result. If it fails, then you have access to the changeset and its errors. In the failure case, you may wish to present these errors to the end user.
 
@@ -535,7 +557,7 @@ We can also use this query syntax to fetch these same records:
 Ecto.Query.from(p in Friends.Person, where: p.last_name == "Smith") |> Friends.Repo.all
 ```
 
-One important thing to note with both query syntaxes is that they require variables to be interpolated with the pin operator (`^`). Otherwise, this happens:
+One important thing to note with both query syntaxes is that they require variables to be pinned, using the pin operator (`^`). Otherwise, this happens:
 
 ```elixir
 last_name = "Smith"
@@ -663,7 +685,7 @@ We've now covered creating (`insert`), reading (`get`, `get_by`, `where`) and up
 Similar to updating, we must first fetch a record from the database and then call `Friends.Repo.delete` to delete that record:
 
 ```elixir
-person = Friends.Repo(Friends.Person, 1)
+person = Friends.Repo.get(Friends.Person, 1)
 Friends.Repo.delete(person)
 {:ok,
  %Friends.Person{__meta__: #Ecto.Schema.Metadata<:deleted>, age: 29,
@@ -671,9 +693,4 @@ Friends.Repo.delete(person)
 ```
 
 Similar to `insert` and `update`, `delete` returns a tuple. If the deletion succeeds, then the first element in the tuple will be `:ok`, but if it fails then it will be an `:error`.
-
-## Conclusion
-
-In this guide we've covered creating, reading, updating and deleting records using Ecto. I hope that you've learned something valuable from it.
-
 
