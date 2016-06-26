@@ -30,7 +30,7 @@ defmodule Ecto.Mixfile do
      docs: [source_ref: "v#{@version}", main: "Ecto",
             canonical: "http://hexdocs.pm/ecto",
             source_url: "https://github.com/elixir-ecto/ecto",
-            extras: ["lib/ecto/pages/Getting Started.md"]]]
+            extras: ["pages/Getting Started.md"]]]
   end
 
   def application do
