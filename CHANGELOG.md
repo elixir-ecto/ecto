@@ -123,6 +123,13 @@ Ecto now requires you to explicitly configure your repo's in your top level conf
 
 The configuration may be an empty list if it does not define any repo.
 
+## v2.0.2 (2016-06-27)
+
+### Bug fixes
+
+  * [Ecto.Time] Add minute, second and microsecond handling to Ecto.Time
+  * [Ecto.Adapters.SQL.Sandbox] Fix disconnections inside the sandbox
+
 ## v2.0.1 (2016-06-21)
 
 ### Bug fixes
