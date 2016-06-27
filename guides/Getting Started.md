@@ -189,7 +189,7 @@ We now have a table created in our database. The next step that we'll need to do
 
 ## Creating the schema
 
-The schema is an Elixir representation of data from our database. Each schema doesn't necessarily need to be tied to a table; they can be tied to database views too.
+The schema is an Elixir representation of data from our database. Schemas are commonly associated with a database table, however they can be associated with a database view as well.
 
 Let's create the schema within our application at `lib/friends/person.ex`:
 
