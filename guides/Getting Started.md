@@ -205,11 +205,11 @@ defmodule Friends.Person do
 end
 ```
 
-This model defines the schema from the database that this model maps to. In this case, we're telling Ecto that the `Friends.Person` model maps to the `people` table in the database, and the `first_name`, `last_name` and `age` fields in that table. The second argument passed to `field` tells Ecto how we want the information from the database to be represented in our model.
+This schema defines the schema from the database that this schema maps to. In this case, we're telling Ecto that the `Friends.Person` schema maps to the `people` table in the database, and the `first_name`, `last_name` and `age` fields in that table. The second argument passed to `field` tells Ecto how we want the information from the database to be represented in our schema.
 
-**We've called this model `Person` because the naming convention in Ecto for models is a singularized name.**
+**We've called this schema `Person` because the naming convention in Ecto for schemas is a singularized name.**
 
-We can play around with this model in an IEx session by starting one up with `iex -S mix` and then running this code in it:
+We can play around with this schema in an IEx session by starting one up with `iex -S mix` and then running this code in it:
 
 ```elixir
 person = %Friends.Person{}
