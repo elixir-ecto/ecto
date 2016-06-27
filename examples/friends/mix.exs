@@ -29,7 +29,7 @@ defmodule Friends.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:ecto, "2.0.1"},
+      {:ecto, path: "../.."}]
       {:postgrex, "0.11.2"}
     ]
   end
