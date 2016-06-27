@@ -1597,13 +1597,13 @@ defmodule Ecto.Changeset do
   to explicitly tell the changeset which constraint name to use:
 
       cast(user, params, [:email], [])
-      |> unique_constraint(:email, name: :posts_email_company_id_index)
+      |> unique_constraint(:email, name: :posts_special_email_index)
 
   Alternatively, you can give both `unique_index` and `unique_constraint`
-  a name:
+  the same name:
 
       # In the migration
-      create unique_index(:users, [:email, :company_id], name: :posts_special_email_index)
+      create unique_index(:users, [:email, :company_id], name: :posts_email_company_id_index)
 
       # In the changeset function
       cast(user, params, [:email], [])
