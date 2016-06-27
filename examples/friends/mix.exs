@@ -29,7 +29,12 @@ defmodule Friends.Mixfile do
   # Type "mix help deps" for more examples and options
   defp deps do
     [
-      {:ecto, path: "../.."}]
+      # Normally you would specify a version of Ecto, like this:
+      #
+      # {:ecto, "~> 2.0"}
+      #
+      # It is not done in this instance because we want to refer to the local Ecto.
+      {:ecto, path: "../.."}
       {:postgrex, "0.11.2"}
     ]
   end
