@@ -22,9 +22,9 @@ defmodule Ecto.DateTime.Utils do
   end
 
   @doc "A guard to check for dates"
-  defmacro is_date(_year, month, day) do
+  defmacro is_date(year, month, day) do
     quote do
-      unquote(month) in 1..12 and unquote(day) in 1..31
+      is_integer(unquote(year)) and unquote(month) in 1..12 and unquote(day) in 1..31
     end
   end
 

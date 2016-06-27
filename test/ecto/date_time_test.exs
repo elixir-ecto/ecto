@@ -39,6 +39,10 @@ defmodule Ecto.DateTest do
            :error
     assert Ecto.Date.cast(%{"year" => "2015", "month" => nil}) ==
            :error
+    assert Ecto.Date.cast(%{"year" => "", "month" => "01", "day" => "30"}) ==
+           :error
+    assert Ecto.Date.cast(%{"year" => nil, "month" => "01", "day" => "30"}) ==
+           :error
   end
 
   test "cast erl date" do
