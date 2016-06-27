@@ -248,9 +248,9 @@ defmodule Ecto.Time do
       (may be followed by "Z", as in `12:00:00Z`)
     * a binary in the "HH:MM:SS.USEC" format
       (may be followed by "Z", as in `12:00:00.005Z`)
-    * a map with `"hour"`, `"min"` keys with `"sec"` and `"usec"`
+    * a map with `"hour"`, `"minute"` keys with `"second"` and `"microsecond"`
       as optional keys and values are integers or binaries
-    * a map with `:hour`, `:min` keys with `:sec` and `:usec`
+    * a map with `:hour`, `:minute` keys with `:second` and `:microsecond`
       as optional keys and values are integers or binaries
     * a tuple with `{hour, min, sec}` as integers or binaries
     * a tuple with `{hour, min, sec, usec}` as integers or binaries
@@ -266,6 +266,10 @@ defmodule Ecto.Time do
   end
   def cast(%Ecto.Time{} = t),
     do: {:ok, t}
+  def cast(%{"hour" => hour, "minute" => minute} = map),
+    do: from_parts(to_i(hour), to_i(minute), to_i(Map.get(map, "second", 0)), to_i(Map.get(map, "microsecond", 0)))
+  def cast(%{hour: hour, minute: minute} = map),
+    do: from_parts(to_i(hour), to_i(minute), to_i(Map.get(map, :second, 0)), to_i(Map.get(map, :microsecond, 0)))
   def cast(%{"hour" => hour, "min" => min} = map),
     do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)), to_i(Map.get(map, "usec", 0)))
   def cast(%{hour: hour, min: min} = map),
@@ -397,10 +401,10 @@ defmodule Ecto.DateTime do
       (may be separated by T and/or followed by "Z", as in `2014-04-17T14:00:00Z`)
     * a binary in the "YYYY-MM-DD HH:MM:SS.USEC" format
       (may be separated by T and/or followed by "Z", as in `2014-04-17T14:00:00.030Z`)
-    * a map with `"year"`, `"month"`,`"day"`, `"hour"`, `"min"` keys
-      with `"sec"` and `"usec"` as optional keys and values are integers or binaries
-    * a map with `:year`, `:month`,`:day`, `:hour`, `:min` keys
-      with `:sec` and `:usec` as optional keys and values are integers or binaries
+    * a map with `"year"`, `"month"`,`"day"`, `"hour"`, `"minute"` keys
+      with `"second"` and `"microsecond"` as optional keys and values are integers or binaries
+    * a map with `:year`, `:month`,`:day`, `:hour`, `:minute` keys
+      with `:second` and `:microsecond` as optional keys and values are integers or binaries
     * a tuple with `{{year, month, day}, {hour, min, sec}}` as integers or binaries
     * a tuple with `{{year, month, day}, {hour, min, sec, usec}}` as integers or binaries
     * an `Ecto.DateTime` struct itself
