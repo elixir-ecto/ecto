@@ -241,7 +241,7 @@ We can insert a new record into our `people` table with this code:
 
 ```elixir
 person = %Friends.Person{}
-Friends.Repo.insert person
+Friends.Repo.insert(person)
 ```
 
 To insert the data into our database, we call `insert` on `Friends.Repo`, which is the module that uses Ecto to talk to our database. This function tells Ecto that we want to insert a new `Friends.Person` record into the database corresponding with `Friends.Repo`. The `person` struct here represents the data that we want to insert into the database.
@@ -283,7 +283,7 @@ On the next line, we call `validate_required` which says that, for this changese
 ```elixir
 person = %Friends.Person{}
 changeset = Friends.Person.changeset(person, %{})
-Friends.Repo.insert changeset
+Friends.Repo.insert(changeset)
 ```
 
 On the first line here, we get a struct from the `Friends.Person` module. We know what that does, because we saw it not too long ago. On the second line we do something brand new: we define a changeset. This changeset says that on the specified `person` object, we're looking to make some changes. In this case, we're not looking to change anything at all. 
@@ -300,7 +300,7 @@ On the final line, rather than inserting the `person`, we insert the `changeset`
 Just like the last time we did an insert, this returns a tuple. This time however, the first element in the tuple is `:error`, which indicates something bad happened. The specifics of what happend are included in the changeset which is returned. We can access these by doing some pattern matching:
 
 ```elixir
-{ :error, changeset } = Friends.Repo.insert changeset
+{ :error, changeset } = Friends.Repo.insert(changeset)
 ```
 
 Then we can get to the errors by doing `changeset.errors`:
@@ -343,7 +343,7 @@ true
 The changeset does not have errors, and is valid. Therefore if we try to insert this changeset it will work:
 
 ```elixir
-Repo.insert changeset
+Repo.insert(changeset)
 
 {:ok,
  %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: nil,
