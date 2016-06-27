@@ -28,7 +28,7 @@ mix new friends --sup
 
 The `--sup` option ensures that this application has [a supervision tree](http://elixir-lang.org/getting-started/mix-otp/supervisor-and-application.html), which we'll need for Ecto a little later on.
 
-To add Ecto to this application, there are a few steps that we need to take. The first step will be adding Ecto and an adapter called Postgrex to our `mix.exs` file, which we'll do by changing the `deps` definition in that file to this:
+To add Ecto to this application, there are a few steps that we need to take. The first step will be adding Ecto and a driver called Postgrex to our `mix.exs` file, which we'll do by changing the `deps` definition in that file to this:
 
 ```elixir
 defp deps do
@@ -39,7 +39,7 @@ defp deps do
 end
 ```
 
-Ecto provides the common querying API, but we need the Postgrex adapter installed too, as that is what Ecto uses to speak in terms a PostgreSQL database can understand.
+Ecto provides the common querying API, but we need the Postgrex driver installed too, as that is what Ecto uses to speak in terms a PostgreSQL database can understand. Ecto talks to its own `Ecto.Adapters.Postgres` module, which then in turn talks to the `postgrex` package to talk to PostgreSQL.
 
 To install these dependencies, we will run this command:
 
