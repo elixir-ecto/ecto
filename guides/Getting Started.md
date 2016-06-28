@@ -644,6 +644,8 @@ last_name = "Smith"
 Ecto.Query.from(p in Friends.Person, where: p.last_name == ^last_name) |> Friends.Repo.all
 ```
 
+The pin operator instructs the query builder to use parameterised SQL queries protecting against SQL injection.
+
 ### Composing Ecto queries
 
 Ecto queries don't have to be built in one spot. They can be built up by calling `Ecto.Query` functions on existing queries. For instance, if we want to find all people with the last name "Smith", we can do:
