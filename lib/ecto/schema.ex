@@ -20,8 +20,7 @@ defmodule Ecto.Schema do
 
   By default, a schema will generate a primary key, named `id` and
   of type `:integer`, and `belongs_to` associations in the schema will generate
-  foreign keys of type `:integer`. These setting can be configured
-  below.
+  foreign keys of type `:integer`. These settings can be seen below.
 
   ## Schema attributes
 
@@ -993,7 +992,7 @@ defmodule Ecto.Schema do
   Indicates an embedding of many schemas.
 
   The current schema has zero or more records of the other schema embedded
-  inside of it. Embeds have all the things regular schema can.
+  inside of it. Embeds have all the things regular schemas have.
 
   It is recommended to declare your `embeds_many/3` field with type
   `{:array, :map}` and default value of `[]` at the database level.
