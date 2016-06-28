@@ -364,7 +364,45 @@ end
 
 **NOTE:** `changeset.valid?` will not check constraints (such as `uniqueness_constraint`). For that, you will need to attempt to do an insert and check for errors. It's for this reason it's best practice to try inserting data and validation the returned tuple from `Friends.Repo.insert` to get the correct errors, rather than relying on the changeset itself.
 
-If the insertion of the changeset succeeds, then you can do whatever you wish with the `person` returned in that result. If it fails, then you have access to the changeset and its errors. In the failure case, you may wish to present these errors to the end user.
+If the insertion of the changeset succeeds, then you can do whatever you wish with the `person` returned in that result. If it fails, then you have access to the changeset and its errors. In the failure case, you may wish to present these errors to the end user. The errors in the changeset are a keyword list that looks like this:
+
+
+```elixir
+[
+  first_name: {"can't be blank", []},
+  last_name: {"can't be blank", []}
+]
+```
+
+The first element of the tuple is the validation message, and the second element is a keyword list of options for the validation message. The `validate_required/3` validations don't return any options, but other methods such as `validate_length/3` do. Imagine that we had a field called `bio` that we were validating, and that field has to be longer than 15 characters. This is what would be returned:
+
+
+```elixir
+[
+  first_name: {"can't be blank", []},
+  last_name: {"can't be blank", []},
+  bio: {"should be at least %{count} characters", [count: 15]}
+]
+```
+
+To display these error messages in a human friendly way, we can use `Ecto.Changeset.traverse_errors/2`:
+
+```elixir
+traverse_errors(changeset, fn {msg, opts} ->
+  Enum.reduce(opts, msg, fn {key, value}, acc ->
+    String.replace(msg, "%{#{key}}", to_string(value))
+  end)
+end)
+```
+
+This will return the following for the errors shown above:
+
+```elixir
+%{
+  first_name: ["can't be blank"],
+  last_name: ["can't be blank"],
+   bio: ["should be at least 15 characters"],
+}
 
 One more final thing to mention here: you can trigger an exception to be thrown by using `Friends.Repo.insert!/2`. If a changeset is invalid, you will see an `Ecto.InvalidChangesetError` exception. Here's a quick example of that:
 
