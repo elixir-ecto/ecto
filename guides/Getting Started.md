@@ -477,7 +477,7 @@ require Ecto.Query
 Ecto.Query.from p in Friends.Person, order_by: [asc: p.id], limit: 1
 ```
 
-We need to `require Ecto.Query` here so that the module is available for us to use. Then it's a matter of calling the `from` function from `Ecto.Query` and passing in the code from between the angle brackets. As we can see here, `Ecto.Query.first` saves us from having to specify the `order` and `limit` for the query.
+We need to `require Ecto.Query` here to enable the macros from that module. Then it's a matter of calling the `from` function from `Ecto.Query` and passing in the code from between the angle brackets. As we can see here, `Ecto.Query.first` saves us from having to specify the `order` and `limit` for the query.
 
 To execute the query that we've just constructed, we can call `Friends.Repo.one`:
 
