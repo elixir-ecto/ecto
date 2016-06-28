@@ -34,7 +34,7 @@ defmodule Friends.Mixfile do
       # {:ecto, "~> 2.0"}
       #
       # It is not done in this instance because we want to refer to the local Ecto.
-      {:ecto, path: "../.."}
+      {:ecto, path: "../.."},
       {:postgrex, "0.11.2"}
     ]
   end
