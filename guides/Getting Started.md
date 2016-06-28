@@ -529,6 +529,8 @@ This happens because Ecto doesn't know what one record out of all the records
 returned that we want. Ecto will only return a result if we are explicit in
 our querying about which result we want.
 
+If there is no record which matches the query, `one` will return `nil`.
+
 ### Fetching all records
 
 To fetch all records from the schema, Ecto provides the `all` function:
