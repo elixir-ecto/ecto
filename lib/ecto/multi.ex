@@ -107,7 +107,7 @@ defmodule Ecto.Multi do
                       {:update_all, Ecto.Query.t, Keyword.t} |
                       {:delete_all, Ecto.Query.t, Keyword.t} |
                       {:insert_all, schema_or_source, [map | Keyword.t], Keyword.t}
-  @type name :: atom
+  @type name :: any
   @opaque t :: %__MODULE__{operations: [{name, operation}], names: MapSet.t}
 
   @doc """
@@ -328,7 +328,7 @@ defmodule Ecto.Multi do
     add_operation(multi, name, {:delete_all, query, opts})
   end
 
-  defp add_operation(%Multi{} = multi, name, operation) when is_atom(name) do
+  defp add_operation(%Multi{} = multi, name, operation) do
     %{operations: operations, names: names} = multi
     if MapSet.member?(names, name) do
       raise "#{inspect name} is already a member of the Ecto.Multi: \n#{inspect multi}"
