@@ -720,6 +720,29 @@ case Friends.Repo.update(changeset) do
 end
 ```
 
+Similar to `insert!`, there is also `update!` which will raise an exception if the changeset is invalid:
+
+```
+changeset = Friends.Person.changeset(person, %{first_name: ""})
+Friends.Repo.update! changeset
+
+** (Ecto.InvalidChangesetError) could not perform update because changeset is invalid.
+
+* Changeset changes
+
+%{first_name: ""}
+
+* Changeset params
+
+%{"first_name" => ""}
+
+* Changeset errors
+
+[first_name: {"can't be blank", []}]
+
+    lib/ecto/repo/schema.ex:132: Ecto.Repo.Schema.update!/4
+```
+
 ## Deleting records
 
 We've now covered creating (`insert`), reading (`get`, `get_by`, `where`) and updating records. The last thing that we'll cover in this guide is how to delete a record using Ecto.
