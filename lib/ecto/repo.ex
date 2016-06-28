@@ -297,7 +297,7 @@ defmodule Ecto.Repo do
       MyRepo.get_by(Post, title: "My post")
 
   """
-  @callback get_by(queryable :: Ecto.Queryable.t, clauses :: Keyword.t | Map.t, opts :: Keyword.t) :: Ecto.Schema.t | nil | no_return
+  @callback get_by(queryable :: Ecto.Queryable.t, clauses :: Keyword.t | map, opts :: Keyword.t) :: Ecto.Schema.t | nil | no_return
 
   @doc """
   Similar to `get_by/3` but raises `Ecto.NoResultsError` if no record was found.
@@ -311,7 +311,7 @@ defmodule Ecto.Repo do
       MyRepo.get_by!(Post, title: "My post")
 
   """
-  @callback get_by!(queryable :: Ecto.Queryable.t, clauses :: Keyword.t | Map.t, opts :: Keyword.t) :: Ecto.Schema.t | nil | no_return
+  @callback get_by!(queryable :: Ecto.Queryable.t, clauses :: Keyword.t | map, opts :: Keyword.t) :: Ecto.Schema.t | nil | no_return
 
   @doc """
   Calculate the given `aggregate` over the given `field`.

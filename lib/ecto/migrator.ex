@@ -53,7 +53,7 @@ defmodule Ecto.Migrator do
       Can be any of `Logger.level/0` values or `false`.
     * `:prefix` - the prefix to run the migrations on
   """
-  @spec up(Ecto.Repo.t, integer, Module.t, Keyword.t) :: :ok | :already_up | no_return
+  @spec up(Ecto.Repo.t, integer, module, Keyword.t) :: :ok | :already_up | no_return
   def up(repo, version, module, opts \\ []) do
     versions = migrated_versions(repo, opts)
 
@@ -83,7 +83,7 @@ defmodule Ecto.Migrator do
       Can be any of `Logger.level/0` values or `false`.
 
   """
-  @spec down(Ecto.Repo.t, integer, Module.t) :: :ok | :already_down | no_return
+  @spec down(Ecto.Repo.t, integer, module) :: :ok | :already_down | no_return
   def down(repo, version, module, opts \\ []) do
     versions = migrated_versions(repo, opts)
 
