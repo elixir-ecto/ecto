@@ -361,7 +361,7 @@ defmodule Ecto.Repo do
 
   See the "Shared options" section at the module documentation.
   """
-  @callback one!(queryable :: Ecto.Queryable.t, queryable :: Keyword.t) :: Ecto.Schema.t | no_return
+  @callback one!(queryable :: Ecto.Queryable.t, opts :: Keyword.t) :: Ecto.Schema.t | no_return
 
   @doc """
   Preloads all associations on the given struct or structs.
