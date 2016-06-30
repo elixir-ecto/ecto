@@ -182,7 +182,7 @@ defmodule Ecto.Query.API do
 
   ## Examples
 
-      from a in Account, where: p.expires_at < from_now(3, "months")
+      from a in Account, where: p.expires_at < from_now(3, "month")
 
   """
   def from_now(count, interval), do: doc! [count, interval]
@@ -195,7 +195,7 @@ defmodule Ecto.Query.API do
 
   ## Examples
 
-      from p in Post, where: p.published_at > ago(3, "months")
+      from p in Post, where: p.published_at > ago(3, "month")
   """
   def ago(count, interval), do: doc! [count, interval]
 
