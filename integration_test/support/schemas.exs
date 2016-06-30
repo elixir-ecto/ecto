@@ -262,3 +262,50 @@ defmodule Ecto.Integration.PostUserCompositePk do
     timestamps()
   end
 end
+
+
+defmodule Ecto.Integration.Worker do
+  @moduledoc """
+  This module is used to test:
+
+    * Many-to-many relationships are respecting unique constraint messages
+
+  """
+  use Ecto.Integration.Schema
+
+  schema "workers" do
+    field :name, :string
+    many_to_many :tasks, Ecto.Integration.Task, join_through: Ecto.Integration.WorkersTasks    
+  end
+end
+
+defmodule Ecto.Integration.Task do
+  @moduledoc """
+  This module is used to test:
+
+    * Many-to-many relationships are respecting unique constraint messages
+
+  """
+  use Ecto.Integration.Schema
+
+  schema "tasks" do
+    field :name, :string
+    many_to_many :workers, Ecto.Integration.Worker, join_through: Ecto.Integration.WorkersTasks    
+  end
+end
+
+defmodule Ecto.Integration.WorkersTasks do
+  @moduledoc """
+  This module is used to test:
+
+    * Unique constraints for has many relationships
+
+  """
+  use Ecto.Integration.Schema
+
+  @primary_key false
+  schema "workers_tasks" do
+    belongs_to :worker, Ecto.Integration.Worker
+    belongs_to :task, Ecto.Integration.Task
+  end
+end

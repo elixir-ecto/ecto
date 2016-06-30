@@ -926,7 +926,7 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   def on_repo_change(%{field: field, join_through: join_through, join_keys: join_keys},
-                     %{repo: repo, data: owner} = parent_changeset,
+                     %{repo: repo, data: owner, constraints: constraints} = parent_changeset,
                      %{action: action} = changeset, opts) do
     case apply(repo, action, [changeset, opts]) do
       {:ok, related} ->
@@ -937,9 +937,14 @@ defmodule Ecto.Association.ManyToMany do
           related_value = dump! :insert, join_through, related, related_key, adapter
 
           data = [{join_owner_key, owner_value}, {join_related_key, related_value}]
-          insert_join(repo, join_through, data, opts)
+
+          case insert_join(repo, join_through, data, opts, constraints) do
+            {:error, changeset} -> {:error, changeset}
+            _                   -> {:ok, related}
+          end
+        else
+          {:ok, related} 
         end
-        {:ok, related}
       {:error, changeset} ->
         {:error, changeset}
     end
@@ -954,12 +959,17 @@ defmodule Ecto.Association.ManyToMany do
     end
   end
 
-  defp insert_join(repo, join_through, data, opts) when is_binary(join_through) do
+  defp insert_join(repo, join_through, data, opts, _constraints) when is_binary(join_through) do
     repo.insert_all join_through, [data], opts
   end
 
-  defp insert_join(repo, join_through, data, opts) when is_atom(join_through) do
-    repo.insert! struct(join_through, data), opts
+  defp insert_join(repo, join_through, data, opts, constraints) when is_atom(join_through) do
+    changeset = struct(join_through, data) 
+    |> Ecto.Changeset.change
+    
+    changeset = %{changeset | constraints: constraints}
+
+    repo.insert changeset, opts
   end
 
   defp field!(op, struct, field) do

@@ -101,5 +101,19 @@ defmodule Ecto.Integration.Migration do
       add :user_id, references(:users), primary_key: true
       timestamps()
     end
+
+    create table(:workers) do
+      add :name, :string
+    end
+
+    create table(:tasks) do
+      add :name, :string
+    end
+    
+    create table(:workers_tasks) do
+      add :worker_id, references(:workers)
+      add :task_id, references(:tasks)
+    end
+    create unique_index(:workers_tasks, [:worker_id, :task_id])
   end
 end
