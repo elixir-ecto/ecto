@@ -233,6 +233,13 @@ defmodule Ecto.Association do
               {[changeset|changesets], structs, halt, valid?}
             {:ok, struct} ->
               {[changeset|changesets], [struct | structs], halt, valid?}
+            {:error, {error_changeset, :insert_join}} ->
+              # Roll the errors originating from a join into the parent_changeset
+              [last_changeset | changesets] = changesets
+              errors = last_changeset.errors ++ error_changeset.errors
+              merged_changeset = %{last_changeset | errors: errors, valid?: error_changeset.valid?}
+
+              {[merged_changeset|changesets], structs, halted?(halt, changeset, error_changeset), false}
             {:error, error_changeset} ->
               {[error_changeset|changesets], structs, halted?(halt, changeset, error_changeset), false}
           end
@@ -939,7 +946,7 @@ defmodule Ecto.Association.ManyToMany do
           data = [{join_owner_key, owner_value}, {join_related_key, related_value}]
 
           case insert_join(repo, join_through, data, opts, constraints) do
-            {:error, changeset} -> {:error, changeset}
+            {:error, changeset} -> {:error, {changeset, :insert_join}}
             _                   -> {:ok, related}
           end
         else

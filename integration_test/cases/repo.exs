@@ -295,12 +295,8 @@ defmodule Ecto.Integration.RepoTest do
         message: "has already been assigned")
       |> TestRepo.update
 
-    # The errors are nested insided changeset[:workers][%WorkersTasks<>].errors
-    # change = Enum.at(changeset.changes[:tasks], 1)
-    # assert change.errors == [task: {"has already been assigned", []}]
-
     errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-    assert errors == %{tasks: [%{}, %{task: ["has already been assigned"]}]}
+    assert errors == %{tasks: [%{task: ["has already been assigned"]}]}
 
     refute changeset.valid?
   end
