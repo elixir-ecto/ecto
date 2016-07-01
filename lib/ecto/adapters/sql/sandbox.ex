@@ -226,12 +226,11 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   `:ownership_timeout` options for your repo config:
 
       config :my_app, Repo,
-            ownership_timeout: NEW_TIMEOUT_IN_MILLSECONDS
+        ownership_timeout: NEW_TIMEOUT_IN_MILLISECONDS
 
   The `:ownership_timeout` option is part of
-  [`DBConnection.Ownership`](https://hexdocs.pm/db_connection/DBConnection.Ownership.html).
-  The default 15000ms is defined by
-  [`DBConnection.Ownership.Proxy`'s `@ownership_timeout`](https://github.com/elixir-ecto/db_connection/blob/47c3a2240bfd69d81efc49bd532b96368b67e024/lib/db_connection/ownership/proxy.ex#L6-L14)
+  [`DBConnection.Ownership`](https://hexdocs.pm/db_connection/DBConnection.Ownership.html)
+  and defaults to 15000ms.
 
   ### Database deadlocks
 
