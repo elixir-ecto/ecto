@@ -213,6 +213,26 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   a chance that, when the test exists, the periodic process may be querying
   the database, regardless of test success or failure.
 
+  ### "owner timed out because it owned the connection for longer than Nms"
+
+  In some situations, you may see error reports similar to the one below:
+
+      09:56:43.081 [error] Postgrex.Protocol (#PID<>) disconnected:
+          ** (DBConnection.ConnectionError) owner #PID<> timed out
+          because it owned the connection for longer than 15000ms
+
+  If you have a long running test, the timeout for the connection ownership may
+  be too short.  You can increase the timeout by setting the
+  `:ownership_timeout` options for your repo config:
+
+      config :my_app, Repo,
+            ownership_timeout: NEW_TIMEOUT_IN_MILLSECONDS
+
+  The `:ownership_timeout` option is part of
+  [`DBConnection.Ownership`](https://hexdocs.pm/db_connection/DBConnection.Ownership.html).
+  The default 15000ms is defined by
+  [`DBConnection.Ownership.Proxy`'s `@ownership_timeout`](https://github.com/elixir-ecto/db_connection/blob/47c3a2240bfd69d81efc49bd532b96368b67e024/lib/db_connection/ownership/proxy.ex#L6-L14)
+
   ### Database deadlocks
 
   Since the sandbox relies on concurrent transactional tests, there is
