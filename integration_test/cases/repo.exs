@@ -15,8 +15,6 @@ defmodule Ecto.Integration.RepoTest do
   alias Ecto.Integration.Barebone
   alias Ecto.Integration.CompositePk
   alias Ecto.Integration.PostUserCompositePk
-  alias Ecto.Integration.Worker
-  alias Ecto.Integration.Task
 
   test "returns already started for started repos" do
     assert {:error, {:already_started, _}} = TestRepo.start_link
@@ -281,22 +279,22 @@ defmodule Ecto.Integration.RepoTest do
   
   @tag :unique_constraint
   test "unique constraint error message with join table" do
-    worker = TestRepo.insert!(%Worker{name: "some worker"})
-      |> TestRepo.preload(:tasks)
+    post = TestRepo.insert!(%Post{title: "some post"})
+      |> TestRepo.preload(:unique_users)
 
-    task = TestRepo.insert!(%Task{name: "some task"})
-    
+    user = TestRepo.insert!(%User{name: "some user"})
+
     # Violate the unique composite private key
-    {:error, changeset} = worker
+    {:error, changeset} = post
       |> Ecto.Changeset.change
-      |> Ecto.Changeset.put_assoc(:tasks, [task, task])
-      |> Ecto.Changeset.unique_constraint(:task, 
-        name: :workers_tasks_worker_id_task_id_index,
+      |> Ecto.Changeset.put_assoc(:unique_users, [user, user])
+      |> Ecto.Changeset.unique_constraint(:user,
+        name: :posts_users_composite_pk_post_id_user_id_index,
         message: "has already been assigned")
       |> TestRepo.update
 
     errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
-    assert errors == %{tasks: [%{task: ["has already been assigned"]}]}
+    assert errors == %{unique_users: [%{user: ["has already been assigned"]}]}
 
     refute changeset.valid?
   end

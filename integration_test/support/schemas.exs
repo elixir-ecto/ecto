@@ -49,6 +49,8 @@ defmodule Ecto.Integration.Post do
     many_to_many :customs, Ecto.Integration.Custom,
       join_through: "posts_customs", join_keys: [post_id: :uuid, custom_id: :bid],
       on_delete: :delete_all, on_replace: :delete
+    many_to_many :unique_users, Ecto.Integration.User,
+      join_through: Ecto.Integration.PostUserCompositePk
     has_many :users_comments, through: [:users, :comments]
     has_many :comments_authors_permalinks, through: [:comments_authors, :permalink]
     timestamps()
@@ -147,6 +149,7 @@ defmodule Ecto.Integration.User do
     has_many :posts, Ecto.Integration.Post, foreign_key: :author_id, on_delete: :nothing, on_replace: :delete
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
     many_to_many :schema_posts, Ecto.Integration.Post, join_through: Ecto.Integration.PostUser
+    many_to_many :unique_posts, Ecto.Integration.Post, join_through: Ecto.Integration.PostUserCompositePk
     timestamps()
   end
 end
@@ -260,52 +263,5 @@ defmodule Ecto.Integration.PostUserCompositePk do
     belongs_to :user, Ecto.Integration.User, primary_key: true
     belongs_to :post, Ecto.Integration.Post, primary_key: true
     timestamps()
-  end
-end
-
-
-defmodule Ecto.Integration.Worker do
-  @moduledoc """
-  This module is used to test:
-
-    * Many-to-many relationships are respecting unique constraint messages
-
-  """
-  use Ecto.Integration.Schema
-
-  schema "workers" do
-    field :name, :string
-    many_to_many :tasks, Ecto.Integration.Task, join_through: Ecto.Integration.WorkersTasks    
-  end
-end
-
-defmodule Ecto.Integration.Task do
-  @moduledoc """
-  This module is used to test:
-
-    * Many-to-many relationships are respecting unique constraint messages
-
-  """
-  use Ecto.Integration.Schema
-
-  schema "tasks" do
-    field :name, :string
-    many_to_many :workers, Ecto.Integration.Worker, join_through: Ecto.Integration.WorkersTasks    
-  end
-end
-
-defmodule Ecto.Integration.WorkersTasks do
-  @moduledoc """
-  This module is used to test:
-
-    * Unique constraints for has many relationships
-
-  """
-  use Ecto.Integration.Schema
-
-  @primary_key false
-  schema "workers_tasks" do
-    belongs_to :worker, Ecto.Integration.Worker
-    belongs_to :task, Ecto.Integration.Task
   end
 end
