@@ -711,11 +711,11 @@ changeset = Friends.Person.changeset(person, %{first_name: ""})
 
 This means that you can also use a `case` statement to do different things depending on the outcome of the `update` function:
 
-```elixir
+```
 case Friends.Repo.update(changeset) do
   {:ok, person} ->
     # do something with person
-  {:error, changeset}
+  {:error, changeset} ->
     # do something with changeset
 end
 ```
