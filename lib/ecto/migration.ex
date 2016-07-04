@@ -638,6 +638,9 @@ defmodule Ecto.Migration do
   @doc """
   Modifies the type of column when altering a table.
 
+  This command is not reversible as Ecto does not know what
+  is the current type to revert it back to.
+
   See `add/3` for more information on supported types.
 
   ## Examples
@@ -660,6 +663,9 @@ defmodule Ecto.Migration do
 
   @doc """
   Removes a column when altering a table.
+
+  This command is not reversible as Ecto does not know what
+  is the current type to add the column back as.
 
   ## Examples
 
