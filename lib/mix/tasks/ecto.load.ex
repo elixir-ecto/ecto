@@ -7,7 +7,7 @@ defmodule Mix.Tasks.Ecto.Load do
 
   @moduledoc """
   Loads the current environment's database structure for the
-  given repositoru from a previously dumped structure file.
+  given repository from a previously dumped structure file.
 
   The repository must be set under `:ecto_repos` in the
   current app configuration or given via the `-r` option.
