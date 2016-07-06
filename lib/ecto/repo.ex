@@ -617,6 +617,43 @@ defmodule Ecto.Repo do
             {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
+  Inserts a struct or changeset. If the insert violates a unique
+  constraint, updates the conflicting row instead.
+
+  In case a struct is given, the primary key is used as the unique
+  constraint.
+
+  In case a changeset is given, the primary key is used as the unique
+  constraint if provided. If the primary key is not provided, the
+  first unique constraint with a given value is used.
+
+  On update, all fields that were specified and were not part of the
+  unique constraint are updated. `autogenerate` fields are not
+  updated on conflict but `autoupdate` fields are.
+
+  It returns `{:ok, struct}` if the struct has been successfully
+  inserted or updated, or `{:error, changeset}` if there was a
+  validation or a known constraint error.
+
+  ## Options
+
+    * `:conflict_target` - specify which columns to use when checking
+      for the unique constraint. This option is not supported by all
+      databases.
+    * `:update` - specify which fields to update when there is a conflict.
+
+  See the "Shared options" section at the module documentation for
+  remaining options.
+
+  ## Example
+
+      {:ok, inserted} = MyRepo.upsert(%Post{title: "inserted"})
+      {:ok, updated} = MyRepo.upsert(%Post{id: inserted.id, title: "updated"})
+  """
+  @callback upsert(struct :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
+              {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
+
+  @doc """
   Inserts or updates a changeset depending on whether the struct is persisted
   or not.
 
