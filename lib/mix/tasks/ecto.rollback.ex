@@ -71,7 +71,22 @@ defmodule Mix.Tasks.Ecto.Rollback do
       ensure_migrations_path(repo)
       {:ok, pid, apps} = ensure_started(repo, opts)
 
-      migrated = migrator.(repo, migrations_path(repo), :down, opts)
+      sandbox? = repo.config[:pool] == Ecto.Adapters.SQL.Sandbox
+
+      # If the pool is Ecto.Adapters.SQL.Sandbox,
+      # let's make sure we get a connection outside of a sandbox.
+      if sandbox? do
+        Ecto.Adapters.SQL.Sandbox.checkin(repo)
+        Ecto.Adapters.SQL.Sandbox.checkout(repo, sandbox: false)
+      end
+
+      migrated =
+        try do
+          migrator.(repo, migrations_path(repo), :up, opts)
+        after
+          sandbox? && Ecto.Adapters.SQL.Sandbox.checkin(repo)
+        end
+
       pid && repo.stop(pid)
       restart_apps_if_migrated(apps, migrated)
     end
