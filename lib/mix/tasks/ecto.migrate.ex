@@ -70,8 +70,22 @@ defmodule Mix.Tasks.Ecto.Migrate do
       ensure_repo(repo, args)
       ensure_migrations_path(repo)
       {:ok, pid, apps} = ensure_started(repo, opts)
+      sandbox? = repo.config[:pool] == Ecto.Adapters.SQL.Sandbox
 
-      migrated = migrator.(repo, migrations_path(repo), :up, opts)
+      # If the pool is Ecto.Adapters.SQL.Sandbox,
+      # let's make sure we get a connection outside of a sandbox.
+      if sandbox? do
+        Ecto.Adapters.SQL.Sandbox.checkin(repo)
+        Ecto.Adapters.SQL.Sandbox.checkout(repo, sandbox: false)
+      end
+
+      migrated =
+        try do
+          migrator.(repo, migrations_path(repo), :up, opts)
+        after
+          sandbox? && Ecto.Adapters.SQL.Sandbox.checkin(repo)
+        end
+
       pid && repo.stop(pid)
       restart_apps_if_migrated(apps, migrated)
     end
