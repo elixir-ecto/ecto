@@ -730,7 +730,7 @@ defmodule Ecto.Repo do
 
       # With Ecto.Multi
       Ecto.Multi.new
-      |> Ecto.Multi.insert(%Post{})
+      |> Ecto.Multi.insert(:post, %Post{})
       |> MyRepo.transaction
 
   """
