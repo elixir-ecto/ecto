@@ -82,7 +82,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
 
       migrated =
         try do
-          migrator.(repo, migrations_path(repo), :up, opts)
+          migrator.(repo, migrations_path(repo), :down, opts)
         after
           sandbox? && Ecto.Adapters.SQL.Sandbox.checkin(repo)
         end
