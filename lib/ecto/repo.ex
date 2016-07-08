@@ -210,6 +210,14 @@ defmodule Ecto.Repo do
       def preload(struct_or_structs, preloads, opts \\ []) do
         Ecto.Repo.Preloader.preload(struct_or_structs, __MODULE__, preloads, opts)
       end
+
+      def query(sql, params, opts \\ []) do
+        Ecto.Repo.Queryable.query(__MODULE__, @adapter, sql, params, opts)
+      end
+
+      def query!(sql, params, opts \\ []) do
+        Ecto.Repo.Queryable.query!(__MODULE__, @adapter, sql, params, opts)
+      end
     end
   end
 
