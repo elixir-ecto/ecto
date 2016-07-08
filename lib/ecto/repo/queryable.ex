@@ -3,8 +3,6 @@ defmodule Ecto.Repo.Queryable do
   # for query related functionality.
   @moduledoc false
 
-  @sql_adapters [Ecto.Adapters.Postgres, Ecto.Adapters.MySQL]
-
   alias Ecto.Query
   alias Ecto.Queryable
   alias Ecto.Query.Planner
@@ -103,14 +101,6 @@ defmodule Ecto.Repo.Queryable do
       |> assert_no_select!(:delete_all)
       |> Ecto.Query.Planner.returning(opts[:returning] || false)
     execute(:delete_all, repo, adapter, query, opts)
-  end
-
-  def query(repo, adapter, sql, params, opts) when adapter in @sql_adapters do
-    Ecto.Adapters.SQL.query(repo, sql, params, opts)
-  end
-
-  def query!(repo, adapter, sql, params, opts) when adapter in @sql_adapters do
-    Ecto.Adapters.SQL.query!(repo, sql, params, opts)
   end
 
   ## Helpers
