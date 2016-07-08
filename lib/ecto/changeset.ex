@@ -1400,6 +1400,30 @@ defmodule Ecto.Changeset do
     Keyword.get(opts, key, default)
   end
 
+  @doc """
+  Validates that a checkbox was checked.
+
+  ## Options
+
+    * `:message` - the message on failure, defaults to "must be accepted"
+
+  ## Examples
+
+      validate_acceptance(changeset, :terms_of_service)
+      validate_acceptance(changeset, :rules, message: "please accept rules")
+
+  """
+  @spec validate_acceptance(t, atom, Keyword.t) :: t
+  def validate_acceptance(%{params: params} = changeset, field, opts \\ []) do
+    param = Atom.to_string(field)
+    value = Map.get(params, param)
+
+    case Ecto.Type.cast(:boolean, value) do
+      {:ok, true} -> changeset
+      _ -> add_error(changeset, field, message(opts, "must be accepted"))
+    end
+  end
+
   ## Optimistic lock
 
   @doc ~S"""

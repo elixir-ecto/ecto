@@ -903,6 +903,28 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == []
   end
 
+  test "validate_acceptance/3" do
+    changeset = changeset(%{"terms_of_service" => "true"})
+                |> validate_acceptance(:terms_of_service)
+    assert changeset.valid?
+    assert changeset.errors == []
+
+    changeset = changeset(%{"terms_of_service" => "1"})
+                |> validate_acceptance(:terms_of_service, message: "must be abided")
+    assert changeset.valid?
+    assert changeset.errors == []
+
+    changeset = changeset(%{"terms_of_service" => "false"})
+                |> validate_acceptance(:terms_of_service)
+    refute changeset.valid?
+    assert changeset.errors == [terms_of_service: {"must be accepted", []}]
+
+    changeset = changeset(%{})
+                  |> validate_acceptance(:terms_of_service, message: "must be abided")
+    refute changeset.valid?
+    assert changeset.errors == [terms_of_service: {"must be abided", []}]
+  end
+
   ## Locks
 
   test "optimistic_lock/3 with changeset" do
