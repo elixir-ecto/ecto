@@ -307,7 +307,7 @@ defmodule Ecto.Integration.MigrationTest do
     parent2 = PoolRepo.insert! Ecto.put_meta(%Parent{}, source: "parent2")
 
     writer = "INSERT INTO ref_migration (parent1, parent2) VALUES (#{parent1.id}, #{parent2.id})"
-    Ecto.Adapters.SQL.query! PoolRepo, writer, []
+    PoolRepo.query!(writer)
 
     reader = from r in "ref_migration", select: {r.parent1, r.parent2}
     assert PoolRepo.all(reader) == [{parent1.id, parent2.id}]
@@ -362,7 +362,7 @@ defmodule Ecto.Integration.MigrationTest do
            PoolRepo.all from p in "alter_col_migration", select: p.from_no_default_to_default
 
     query = "INSERT INTO alter_col_migration (from_not_null_to_null) VALUES ('foo')"
-    assert catch_error(Ecto.Adapters.SQL.query!(PoolRepo, query, []))
+    assert catch_error(PoolRepo.query!(query))
 
     :ok = down(PoolRepo, 20080906120000, AlterColumnMigration, log: false)
   end
