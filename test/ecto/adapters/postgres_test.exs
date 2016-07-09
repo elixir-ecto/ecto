@@ -628,6 +628,20 @@ defmodule Ecto.Adapters.PostgresTest do
     """ |> remove_newlines
   end
 
+  test "create table with comment on columns and table" do
+    create = {:create, table(:posts, comment: "comment"),
+               [
+                 {:add, :category_0, references(:categories), [comment: "column comment"]},
+                 {:add, :created_at, :datetime, []},
+                 {:add, :updated_at, :datetime, [comment: "column comment 2"]}
+               ]}
+    assert SQL.execute_ddl(create) == """
+    CREATE TABLE "posts"
+    ("category_0" integer CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"), "created_at" timestamp, "updated_at" timestamp);
+    COMMENT ON TABLE "posts" IS 'comment'; COMMENT ON COLUMN "posts"."category_0" IS 'column comment'; COMMENT ON COLUMN "posts"."updated_at" IS 'column comment 2'
+    """ |> remove_newlines
+  end
+
   test "create table with references" do
     create = {:create, table(:posts),
                [{:add, :id, :serial, [primary_key: true]},
@@ -707,6 +721,27 @@ defmodule Ecto.Adapters.PostgresTest do
     ADD CONSTRAINT "posts_permalink_id_fkey" FOREIGN KEY ("permalink_id") REFERENCES "permalinks"("id") ,
     ALTER COLUMN "permalink_id" SET NOT NULL,
     DROP COLUMN "summary"
+    """ |> remove_newlines
+  end
+
+  test "alter table with comments on table and columns" do
+    alter = {:alter, table(:posts, comment: "table comment"),
+               [{:add, :title, :string, [default: "Untitled", size: 100, null: false, comment: "column comment"]},
+                {:modify, :price, :numeric, [precision: 8, scale: 2, null: true]},
+                {:modify, :permalink_id, references(:permalinks), [null: false, comment: "column comment"]},
+                {:remove, :summary}]}
+
+    assert SQL.execute_ddl(alter) == """
+    ALTER TABLE "posts"
+    ADD COLUMN "title" varchar(100) DEFAULT 'Untitled' NOT NULL,
+    ALTER COLUMN "price" TYPE numeric(8,2) ,
+    ALTER COLUMN "price" DROP NOT NULL,
+    ALTER COLUMN "permalink_id" TYPE integer ,
+    ADD CONSTRAINT "posts_permalink_id_fkey" FOREIGN KEY ("permalink_id") REFERENCES "permalinks"("id") ,
+    ALTER COLUMN "permalink_id" SET NOT NULL,
+    DROP COLUMN "summary"; COMMENT ON TABLE \"posts\" IS 'table comment';
+    COMMENT ON COLUMN \"posts\".\"title\" IS 'column comment';
+    COMMENT ON COLUMN \"posts\".\"permalink_id\" IS 'column comment'
     """ |> remove_newlines
   end
 

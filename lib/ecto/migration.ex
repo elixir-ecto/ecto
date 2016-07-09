@@ -130,6 +130,18 @@ defmodule Ecto.Migration do
   See the `index/3` function for more information on creating/dropping indexes
   concurrently.
 
+  ## Comments
+
+  Migrations where you create or alter a table support specifying table and column comments if using Postgres,
+  for now there is no support for adding comments on MySQL.
+
+      def up do
+        create table(:weather, prefix: :north_america, comment: "Table Comment") do
+          add :city, :string, size: 40, comment: "Column Comment"
+          timestamps
+        end
+      end
+
   ## Schema Migrations table
 
   Version numbers of migrations will be saved in `schema_migrations` table.
@@ -168,7 +180,7 @@ defmodule Ecto.Migration do
     @moduledoc """
     Defines a table struct used in migrations.
     """
-    defstruct name: nil, prefix: nil, primary_key: true, engine: nil, options: nil
+    defstruct name: nil, prefix: nil, comment: nil, primary_key: true, engine: nil, options: nil
     @type t :: %__MODULE__{name: atom, prefix: atom | nil, primary_key: boolean,
                            engine: atom, options: String.t}
   end

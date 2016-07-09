@@ -542,13 +542,16 @@ if Code.ensure_loaded?(Postgrex) do
     @drops [:drop, :drop_if_exists]
 
     def execute_ddl({command, %Table{}=table, columns}) when command in [:create, :create_if_not_exists] do
-      options       = options_expr(table.options)
-      if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
-      pk_definition = pk_definition(columns)
+      options            = options_expr(table.options)
+      if_not_exists      = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
+      pk_definition      = pk_definition(columns)
+      comment_on_table   = comment_on(:table, table.name, table.comment)
+      comment_on_columns = comments_for_columns(table, columns)
 
       "CREATE TABLE" <> if_not_exists <>
         " #{quote_table(table.prefix, table.name)}" <>
-        " (#{column_definitions(table, columns)}#{pk_definition})" <> options
+        " (#{column_definitions(table, columns)}#{pk_definition})" <> options <>
+        comment_on_table <> comment_on_columns
     end
 
     def execute_ddl({command, %Table{}=table}) when command in @drops do
@@ -558,7 +561,11 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     def execute_ddl({:alter, %Table{}=table, changes}) do
-      "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}"
+      comment_on_table   = comment_on(:table, table.name, table.comment)
+      comment_on_columns = comments_for_columns(table, changes)
+
+      "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}" <>
+      comment_on_table <> comment_on_columns
     end
 
     def execute_ddl({:create, %Index{}=index}) do
@@ -624,6 +631,25 @@ if Code.ensure_loaded?(Postgrex) do
         [] -> ""
         _  -> ", PRIMARY KEY (" <> Enum.map_join(pks, ", ", &quote_name/1) <> ")"
       end
+    end
+
+    defp comment_on(_database_object, _name, nil), do:  ""
+    defp comment_on(:column, {table_name, column_name}, comment) do
+      column_name = quote_table(table_name, column_name)
+      "; COMMENT ON COLUMN #{column_name} IS #{single_quote(comment)}"
+    end
+
+    defp comment_on(database_object, name, comment) do
+      formatted_db_object = database_object |> Atom.to_string |> String.upcase
+      "; COMMENT ON #{formatted_db_object} #{quote_name(name)} IS #{single_quote(comment)}"
+    end
+
+    defp comments_for_columns(table, columns) do
+      Enum.map_join(columns, "", fn
+        {_operation, column_name, _column_type, opts} ->
+          comment_on(:column, {table.name, column_name}, opts[:comment])
+        _ -> ""
+      end)
     end
 
     defp column_definitions(table, columns) do
@@ -802,6 +828,8 @@ if Code.ensure_loaded?(Postgrex) do
       end
       <<?", name::binary, ?">>
     end
+
+    defp single_quote(value), do: "'#{value}'"
 
     defp assemble(list) do
       list
