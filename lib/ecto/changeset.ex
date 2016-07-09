@@ -47,16 +47,17 @@ defmodule Ecto.Changeset do
         end
       end
 
-  In the `changeset/2` function above, we define two validations -
-  one for checking the e-mail format and another to check the age -
-  as well as a unique constraint in the email field.
+  In the `changeset/2` function above, we define three validations -
+  one after another they check that `name` and `email` fields are present in the 
+  changeset, the e-mail is of the specified format, and the age is between 18 
+  and 100 - as well as a unique constraint in the email field.
 
   Let's suppose the e-mail is given but the age is invalid.  The
   changeset would have the following errors:
 
       changeset = User.changeset(%User{}, %{age: 0, email: "mary@example.com"})
       {:error, changeset} = Repo.insert(changeset)
-      changeset.errors #=> [age: {"is invalid", []}]
+      changeset.errors #=> [age: {"is invalid", []}, name: {"can't be blank", []}]
 
   In this case, we haven't checked the unique constraint in the
   e-mail field because the data did not validate. Let's fix the
