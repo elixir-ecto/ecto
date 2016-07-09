@@ -170,7 +170,7 @@ defmodule Ecto.Adapters.SQL do
   """
   @spec query!(Ecto.Repo.t, String.t, [term], Keyword.t) ::
                %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
-  def query!(repo, sql, params, opts \\ []) do
+  def query!(repo, sql, params \\ [], opts \\ []) do
     query!(repo, sql, map_params(params), fn x -> x end, opts)
   end
 
@@ -211,7 +211,7 @@ defmodule Ecto.Adapters.SQL do
   """
   @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
               {:ok, %{rows: nil | [tuple], num_rows: non_neg_integer}} | {:error, Exception.t}
-  def query(repo, sql, params, opts \\ []) do
+  def query(repo, sql, params \\ [], opts \\ []) do
     query(repo, sql, map_params(params), fn x -> x end, opts)
   end
 
