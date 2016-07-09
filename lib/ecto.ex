@@ -378,8 +378,8 @@ defmodule Ecto do
 
       $ mix ecto.gen.migration create_posts
 
-  This will create a new file inside `priv/repo/migrations` with the `up` and
-  `down` functions. Check `Ecto.Migration` for more information.
+  This will create a new file inside `priv/repo/migrations` with the `change`
+  function. Check `Ecto.Migration` for more information.
 
   #### Repo resolution
 
