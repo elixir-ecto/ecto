@@ -56,7 +56,7 @@ defmodule Ecto.Changeset do
 
       changeset = User.changeset(%User{}, %{age: 0, email: "mary@example.com"})
       {:error, changeset} = Repo.insert(changeset)
-      changeset.errors #=> [age: {"is invalid", []}]
+      changeset.errors #=> [age: {"is invalid", []}, name: {"can't be blank", []}]
 
   In this case, we haven't checked the unique constraint in the
   e-mail field because the data did not validate. Let's fix the
