@@ -384,7 +384,7 @@ defmodule Ecto do
   #### Repo resolution
 
   Ecto requires developers to specify the key `:ecto_repos` in their application
-  configure before using tasks like `ecto.create` and `ecto.migrate`. For example:
+  configuration before using tasks like `ecto.create` and `ecto.migrate`. For example:
 
       config :my_app, :ecto_repos, [MyApp.Repo]
 
