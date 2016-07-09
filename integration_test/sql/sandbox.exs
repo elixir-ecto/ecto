@@ -81,11 +81,11 @@ defmodule Ecto.Integration.SandboxTest do
     Sandbox.checkout(TestRepo, isolation: "READ UNCOMMITTED")
 
     # Setting it to the same level later on works
-    Ecto.Adapters.SQL.query!(TestRepo, "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED", [])
+    TestRepo.query!("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
 
     # Even inside a transaction
     TestRepo.transaction fn ->
-      Ecto.Adapters.SQL.query!(TestRepo, "SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED", [])
+      TestRepo.query!("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED")
     end
   end
 
@@ -108,7 +108,7 @@ defmodule Ecto.Integration.SandboxTest do
 
     {:ok, _}    = TestRepo.insert(%Post{}, skip_transaction: true)
     # This is a failed query but it should not taint the sandbox transaction
-    {:error, _} = Ecto.Adapters.SQL.query(TestRepo, "INVALID", [])
+    {:error, _} = TestRepo.query("INVALID")
     {:ok, _}    = TestRepo.insert(%Post{}, skip_transaction: true)
 
     Sandbox.checkin(TestRepo)

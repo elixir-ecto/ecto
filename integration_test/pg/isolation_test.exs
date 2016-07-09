@@ -7,12 +7,12 @@ defmodule Ecto.Integration.IsolationTest do
 
   test "aborts on corrupted transactions" do
     PoolRepo.transaction fn ->
-      {:error, _} = Ecto.Adapters.SQL.query(PoolRepo, "INVALID", [])
+      {:error, _} = PoolRepo.query("INVALID")
     end
 
     PoolRepo.transaction fn ->
       # This will taint the whole inner transaction
-      {:error, _} = Ecto.Adapters.SQL.query(PoolRepo, "INVALID", [])
+      {:error, _} = PoolRepo.query("INVALID")
 
       assert_raise Postgrex.Error, ~r/current transaction is aborted/, fn ->
         PoolRepo.insert(%Post{}, skip_transaction: true)
@@ -22,12 +22,12 @@ defmodule Ecto.Integration.IsolationTest do
 
   test "aborts on corrupted transactions even inside sandboxes" do
     TestRepo.transaction fn ->
-      {:error, _} = Ecto.Adapters.SQL.query(TestRepo, "INVALID", [])
+      {:error, _} = TestRepo.query("INVALID")
     end
 
     TestRepo.transaction fn ->
       # This will taint the whole inner transaction
-      {:error, _} = Ecto.Adapters.SQL.query(TestRepo, "INVALID", [])
+      {:error, _} = TestRepo.query("INVALID")
 
       assert_raise Postgrex.Error, ~r/current transaction is aborted/, fn ->
         TestRepo.insert(%Post{}, skip_transaction: true)

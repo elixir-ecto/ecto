@@ -18,12 +18,12 @@ defmodule Ecto.Integration.SQLTest do
   test "fragment array types" do
     datetime1 = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 0, min: 0, sec: 0, usec: 0}
     datetime2 = %Ecto.DateTime{year: 2014, month: 2, day: 16, hour: 0, min: 0, sec: 0, usec: 0}
-    result = Ecto.Adapters.SQL.query!(TestRepo, "SELECT $1::timestamp[]", [[datetime1, datetime2]])
+    result = TestRepo.query!("SELECT $1::timestamp[]", [[datetime1, datetime2]])
     assert [[[{{2014, 1, 16}, _}, {{2014, 2, 16}, _}]]] = result.rows
   end
 
   test "query!/4" do
-    result = Ecto.Adapters.SQL.query!(TestRepo, "SELECT 1", [])
+    result = TestRepo.query!("SELECT 1")
     assert result.rows == [[1]]
   end
 
