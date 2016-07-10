@@ -1656,7 +1656,7 @@ defmodule Ecto.Changeset do
   annotate the changeset with foreign key constraint so Ecto knows
   how to convert it into an error message:
 
-      cast(comment, params, [:post_id], [])
+      cast(comment, params, [:post_id])
       |> foreign_key_constraint(:post_id)
 
   Now, when invoking `Repo.insert/2` or `Repo.update/2`, if the
