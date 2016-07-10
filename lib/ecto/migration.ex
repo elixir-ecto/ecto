@@ -197,9 +197,9 @@ defmodule Ecto.Migration do
     @moduledoc """
     Defines a Constraint struct used in migrations.
     """
-    defstruct name: nil, table: nil, check: nil, exclude: nil, prefix: nil
+    defstruct name: nil, table: nil, check: nil, exclude: nil, prefix: nil, comment: nil
     @type t :: %__MODULE__{name: atom, table: atom, prefix: atom | nil,
-                           check: String.t | nil, exclude: String.t | nil}
+                           check: String.t | nil, exclude: String.t | nil, comment: String.t | nil}
   end
 
   alias Ecto.Migration.Runner

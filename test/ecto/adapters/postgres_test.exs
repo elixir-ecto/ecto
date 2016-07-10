@@ -844,6 +844,14 @@ defmodule Ecto.Adapters.PostgresTest do
            ~s|ALTER TABLE "products" ADD CONSTRAINT "price_must_be_positive" EXCLUDE USING gist (int4range("from", "to", '[]') WITH &&)|
   end
 
+  test "create constraint with comment" do
+    create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0", prefix: "foo", comment: "comment")}
+    assert SQL.execute_ddl(create) == """
+    ALTER TABLE "foo"."products" ADD CONSTRAINT "price_must_be_positive" CHECK (price > 0);
+    COMMENT ON CONSTRAINT "price_must_be_positive" IS 'comment'
+    """ |> remove_newlines
+  end
+
   test "drop constraint" do
     drop = {:drop, constraint(:products, "price_must_be_positive")}
     assert SQL.execute_ddl(drop) ==

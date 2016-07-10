@@ -604,7 +604,8 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     def execute_ddl({:create, %Constraint{}=constraint}) do
-      "ALTER TABLE #{quote_table(constraint.prefix, constraint.table)} ADD #{new_constraint_expr(constraint)}"
+      "ALTER TABLE #{quote_table(constraint.prefix, constraint.table)} ADD #{new_constraint_expr(constraint)}" <>
+      comment_on(:constraint, constraint.name, constraint.comment)
     end
 
     def execute_ddl({:drop, %Constraint{}=constraint}) do
@@ -636,6 +637,10 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp comment_on(:table, name, comment) do
       "; COMMENT ON TABLE #{quote_name(name)} IS #{single_quote(comment)}"
+    end
+
+    defp comment_on(:constraint, name, comment) do
+      "; COMMENT ON CONSTRAINT #{quote_name(name)} IS #{single_quote(comment)}"
     end
 
     defp comments_for_columns(table, columns) do
