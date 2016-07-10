@@ -1372,7 +1372,7 @@ defmodule Ecto.Changeset do
       validate_confirmation(changeset, :email)
       validate_confirmation(changeset, :password, message: "does not match password")
 
-      cast(data, params, [:password], [])
+      cast(data, params, [:password])
       |> validate_confirmation(:password, message: "does not match password")
 
   """
@@ -1565,7 +1565,7 @@ defmodule Ecto.Changeset do
   annotate the changeset with unique constraint so Ecto knows
   how to convert it into an error message:
 
-      cast(user, params, [:email], [])
+      cast(user, params, [:email])
       |> unique_constraint(:email)
 
   Now, when invoking `Repo.insert/2` or `Repo.update/2`, if the
@@ -1594,7 +1594,7 @@ defmodule Ecto.Changeset do
   Because such indexes have usually more complex names, we need
   to explicitly tell the changeset which constraint name to use:
 
-      cast(user, params, [:email], [])
+      cast(user, params, [:email])
       |> unique_constraint(:email, name: :posts_special_email_index)
 
   Alternatively, you can give both `unique_index` and `unique_constraint`
@@ -1604,7 +1604,7 @@ defmodule Ecto.Changeset do
       create unique_index(:users, [:email, :company_id], name: :posts_email_company_id_index)
 
       # In the changeset function
-      cast(user, params, [:email], [])
+      cast(user, params, [:email])
       |> unique_constraint(:email, name: :posts_email_company_id_index)
 
   ## Case sensitivity
@@ -1617,7 +1617,7 @@ defmodule Ecto.Changeset do
   If for some reason your database does not support case insensitive columns,
   you can explicitly downcase values before inserting/updating them:
 
-      cast(data, params, [:email], [])
+      cast(data, params, [:email])
       |> update_change(:email, &String.downcase/1)
       |> unique_constraint(:email)
 
