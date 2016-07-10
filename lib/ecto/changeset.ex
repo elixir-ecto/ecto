@@ -600,16 +600,14 @@ defmodule Ecto.Changeset do
 
   ## Examples
 
-      iex> changeset1 = cast(%{title: "Title"}, %Post{}, [:title], [:body])
-      iex> changeset2 = cast(%{title: "New title", body: "Body"}, %Post{}, [:title, :body]), [])
+      iex> changeset1 = cast(%Post{}, %{title: "Title"}, [:title])
+      iex> changeset2 = cast(%Post{}, %{title: "New title", body: "Body"}, [:title, :body])
       iex> changeset = merge(changeset1, changeset2)
       iex> changeset.changes
       %{body: "Body", title: "New title"}
-      iex> changeset.required
-      [:title, :body]
 
-      iex> changeset1 = cast(%{title: "Title"}, %Post{body: "Body"}, [:title], [:body])
-      iex> changeset2 = cast(%{title: "New title"}, %Post{}, [:title], [])
+      iex> changeset1 = cast(%Post{body: "Body"}, %{title: "Title"}, [:title])
+      iex> changeset2 = cast(%Post{}, %{title: "New title"}, [:title])
       iex> merge(changeset1, changeset2)
       ** (ArgumentError) different :data when merging changesets
 
