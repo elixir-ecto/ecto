@@ -639,9 +639,8 @@ if Code.ensure_loaded?(Postgrex) do
       "; COMMENT ON COLUMN #{column_name} IS #{single_quote(comment)}"
     end
 
-    defp comment_on(database_object, name, comment) do
-      formatted_db_object = database_object |> Atom.to_string |> String.upcase
-      "; COMMENT ON #{formatted_db_object} #{quote_name(name)} IS #{single_quote(comment)}"
+    defp comment_on(:table, name, comment) do
+      "; COMMENT ON TABLE #{quote_name(name)} IS #{single_quote(comment)}"
     end
 
     defp comments_for_columns(table, columns) do
