@@ -283,7 +283,7 @@ defmodule Ecto.Changeset do
       iex> changeset = cast(post, %{title: "Hello"}, [:title])
       iex> new_changeset = cast(changeset, %{title: "Foo", body: "Bar"}, [:body])
       iex> new_changeset.params
-      %{title: "Foo", body: "Bar"}
+      %{"title" => "Foo", "body" => "Bar"}
 
   Or creating a changeset from a simple map with types:
 
