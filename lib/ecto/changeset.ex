@@ -1451,7 +1451,7 @@ defmodule Ecto.Changeset do
 
         def changeset(:update, struct, params \\ %{}) do
           struct
-          |> Ecto.Changeset.cast(struct, params, [:title])
+          |> Ecto.Changeset.cast(params, [:title])
           |> Ecto.Changeset.optimistic_lock(:lock_version)
         end
       end
