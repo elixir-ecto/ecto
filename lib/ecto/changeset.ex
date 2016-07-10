@@ -593,10 +593,9 @@ defmodule Ecto.Changeset do
   * `changes` - changes are merged giving precedence to the `changeset2`
     changes.
   * `errors` and `validations` - they are simply concatenated.
-  * `required` and `optional` - they are merged; all the fields that appear
-    in the optional list of either changesets and also in the required list of
-    the other changeset are moved to the required list of the resulting
-    changeset.
+  * `required` - required fields are merged; all the fields that appear
+    in the required list of both changesets are moved to the required 
+    list of the resulting changeset.
 
   ## Examples
 
