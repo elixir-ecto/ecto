@@ -779,6 +779,14 @@ defmodule Ecto.Adapters.PostgresTest do
            ~s|CREATE INDEX "posts$main" ON "foo"."posts" (lower(permalink))|
   end
 
+  test "create index with comment" do
+    create = {:create, index(:posts, [:category_id, :permalink], prefix: :foo, comment: "comment")}
+    assert SQL.execute_ddl(create) == """
+    CREATE INDEX "posts_category_id_permalink_index" ON "foo"."posts" ("category_id", "permalink")
+    ; COMMENT ON INDEX "posts_category_id_permalink_index" IS 'comment'
+    """ |> remove_newlines
+  end
+
   test "create unique index" do
     create = {:create, index(:posts, [:permalink], unique: true)}
     assert SQL.execute_ddl(create) ==

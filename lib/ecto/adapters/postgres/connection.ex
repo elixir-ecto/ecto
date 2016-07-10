@@ -575,7 +575,8 @@ if Code.ensure_loaded?(Postgrex) do
                 quote_table(index.prefix, index.table),
                 if_do(index.using, "USING #{index.using}"),
                 "(#{fields})",
-                if_do(index.where, "WHERE #{index.where}")])
+                if_do(index.where, "WHERE #{index.where}"),
+                if_do(index.comment, comment_on(:index, index.name, index.comment))])
     end
 
     def execute_ddl({:create_if_not_exists, %Index{}=index}) do
@@ -641,6 +642,10 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp comment_on(:constraint, name, comment) do
       "; COMMENT ON CONSTRAINT #{quote_name(name)} IS #{single_quote(comment)}"
+    end
+
+    defp comment_on(:index, name, comment) do
+      "; COMMENT ON INDEX #{quote_name(name)} IS #{single_quote(comment)}"
     end
 
     defp comments_for_columns(table, columns) do
