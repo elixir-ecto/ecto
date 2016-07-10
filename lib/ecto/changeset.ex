@@ -1375,7 +1375,7 @@ defmodule Ecto.Changeset do
       validate_confirmation(changeset, :email)
       validate_confirmation(changeset, :password, message: "does not match password")
 
-      cast(data, params, [:password], [])
+      cast(data, params, [:password])
       |> validate_confirmation(:password, message: "does not match password")
 
   """
