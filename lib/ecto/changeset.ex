@@ -593,23 +593,20 @@ defmodule Ecto.Changeset do
   * `changes` - changes are merged giving precedence to the `changeset2`
     changes.
   * `errors` and `validations` - they are simply concatenated.
-  * `required` and `optional` - they are merged; all the fields that appear
-    in the optional list of either changesets and also in the required list of
-    the other changeset are moved to the required list of the resulting
-    changeset.
+  * `required` - required fields are merged; all the fields that appear
+    in the required list of both changesets are moved to the required 
+    list of the resulting changeset.
 
   ## Examples
 
-      iex> changeset1 = cast(%{title: "Title"}, %Post{}, [:title], [:body])
-      iex> changeset2 = cast(%{title: "New title", body: "Body"}, %Post{}, [:title, :body]), [])
+      iex> changeset1 = cast(%Post{}, %{title: "Title"}, [:title])
+      iex> changeset2 = cast(%Post{}, %{title: "New title", body: "Body"}, [:title, :body])
       iex> changeset = merge(changeset1, changeset2)
       iex> changeset.changes
       %{body: "Body", title: "New title"}
-      iex> changeset.required
-      [:title, :body]
 
-      iex> changeset1 = cast(%{title: "Title"}, %Post{body: "Body"}, [:title], [:body])
-      iex> changeset2 = cast(%{title: "New title"}, %Post{}, [:title], [])
+      iex> changeset1 = cast(%Post{body: "Body"}, %{title: "Title"}, [:title])
+      iex> changeset2 = cast(%Post{}, %{title: "New title"}, [:title])
       iex> merge(changeset1, changeset2)
       ** (ArgumentError) different :data when merging changesets
 
