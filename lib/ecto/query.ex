@@ -10,7 +10,7 @@ defmodule Ecto.Query do
   Provides the Query DSL.
 
   Queries are used to retrieve and manipulate data from a repository
-  (see `Ecto.Repo`). Ecto queries comes in two flavors: keyword-based
+  (see `Ecto.Repo`). Ecto queries come in two flavors: keyword-based
   and macro-based. Most examples will use the keyword-based syntax,
   the macro one will be explored in later sections.
 
