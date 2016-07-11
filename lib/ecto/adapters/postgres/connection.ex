@@ -833,7 +833,7 @@ if Code.ensure_loaded?(Postgrex) do
       <<?", name::binary, ?">>
     end
 
-    defp single_quote(value), do: "\'#{value}\'"
+    defp single_quote(value), do: "\'#{escape_string(value)}\'"
 
     defp assemble(list) do
       list
