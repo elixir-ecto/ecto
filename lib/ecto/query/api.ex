@@ -209,21 +209,21 @@ defmodule Ecto.Query.API do
       def unpublished_by_title(title) do
         from p in Post,
           where: is_nil(p.published_at) and
-                 fragment("downcase(?)", p.title) == ^title
+                 fragment("lower(?)", p.title) == ^title
       end
 
-  In the example above, we are using the downcase procedure in the
+  In the example above, we are using the lower procedure in the
   database to downcase the title column.
 
   It is very important to keep in mind that Ecto is unable to do any
   type casting described above when fragments are used. You can
   however use the `type/2` function to give Ecto some hints:
 
-      fragment("downcase(?)", p.title) == type(^title, :string)
+      fragment("lower(?)", p.title) == type(^title, :string)
 
   Or even say the right side is of the same type as `p.title`:
 
-      fragment("downcase(?)", p.title) == type(^title, p.title)
+      fragment("lower(?)", p.title) == type(^title, p.title)
 
   It is possible to make use of PostgreSQL's JSON/JSONB data type
   with fragments, as well:
