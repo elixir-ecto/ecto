@@ -52,7 +52,7 @@ defmodule Ecto.Repo do
   above could be rewritten to:
 
       config :my_app, Repo,
-        url: "ecto://postgres:postgres@localhost/ecto_simple"
+        url: "postgres://postgres:postgres@localhost/ecto_simple"
 
   The schema can be of any value. The path represents the database name
   while options are simply merged in.
