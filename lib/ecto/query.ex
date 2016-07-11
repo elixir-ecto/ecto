@@ -396,7 +396,7 @@ defmodule Ecto.Query do
   the query with a where expression would require the use of `in`:
 
       def published(query) do
-        from p in query, where: not(is_nil(p.published_a))
+        from p in query, where: not(is_nil(p.published_at))
       end
 
   Notice we have created a `p` variable to reference the query's
