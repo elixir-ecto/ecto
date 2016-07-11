@@ -957,7 +957,7 @@ defmodule Ecto.Query do
   ## Preload functions
 
   Preload also allows functions to be given. In such cases, the function
-  receive the IDs to be fetched and it must return the associated data.
+  receives the IDs to be fetched and it must return the associated data.
   This data will then be mapped and sorted:
 
       Repo.all from p in Post, preload: [comments: fn _ -> previously_loaded_comments end]
