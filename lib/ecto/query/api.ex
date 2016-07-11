@@ -355,11 +355,11 @@ defmodule Ecto.Query.API do
   though, in particular when using fragments with `fragment/1`,
   you may want to tell Ecto you are expecting a particular type:
 
-      fragment("downcase(?)", p.title) == type(^title, :string)
+      fragment("lower(?)", p.title) == type(^title, :string)
 
   It is also possible to say the type must match the same of a column:
 
-      fragment("downcase(?)", p.title) == type(^title, p.title)
+      fragment("lower(?)", p.title) == type(^title, p.title)
   """
   def type(interpolated_value, type), do: doc! [interpolated_value, type]
 
