@@ -202,13 +202,13 @@ defmodule Ecto.Query do
   (see `Ecto.Query.API.fragment/1`) to inject SQL (and non-SQL)
   fragments into queries.
 
-  For example, to get all posts while running the "downcase(?)"
+  For example, to get all posts while running the "lower(?)"
   function in the database where `p.title` is interpolated
   in place of `?`, one can write:
 
       from p in Post,
         where: is_nil(p.published_at) and
-               fragment("downcase(?)", p.title) == ^title
+               fragment("lower(?)", p.title) == ^title
 
   Also, most adapters provide direct APIs for queries, like
   `Ecto.Adapters.SQL.query/4`, allowing developers to
