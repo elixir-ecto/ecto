@@ -559,7 +559,7 @@ defmodule Ecto.Repo do
   @doc """
   Updates a changeset using its primary key.
 
-  A changeset is required as it is the only for mechanism for
+  A changeset is required as it is the only mechanism for
   tracking dirty changes.
 
   If the struct has no primary key, `Ecto.NoPrimaryKeyFieldError`
