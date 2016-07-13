@@ -201,6 +201,9 @@ defmodule Ecto.Query.InspectTest do
   test "params" do
     assert i(from(x in Post, where: ^123 > ^(1 * 3))) ==
            ~s{from p in Inspect.Post, where: ^123 > ^3}
+
+    assert i(from(x in Post, where: x.id in ^[97])) ==
+           ~s{from p in Inspect.Post, where: p.id in ^[97]}
   end
 
   test "params after planner" do
