@@ -150,12 +150,10 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp expr_to_string({:^, _, [ix]}, _, _, %{params: params}) do
-    escaped =
-      case Enum.at(params || [], ix) do
-        {value, _type} -> Macro.escape(value)
-        _              -> {:..., [], nil}
-      end
-    Macro.to_string {:^, [], [escaped]}
+    case Enum.at(params || [], ix) do
+      {value, _type} -> "^" <> Kernel.inspect(value, char_lists: :as_lists)
+      _              -> "^..."
+    end
   end
 
   # Strip trailing ()
