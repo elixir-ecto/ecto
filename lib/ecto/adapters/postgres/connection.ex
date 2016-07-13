@@ -542,9 +542,9 @@ if Code.ensure_loaded?(Postgrex) do
     @drops [:drop, :drop_if_exists]
 
     def execute_ddl({command, %Table{}=table, columns}) when command in [:create, :create_if_not_exists] do
-      options            = options_expr(table.options)
-      if_not_exists      = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
-      pk_definition      = pk_definition(columns)
+      options       = options_expr(table.options)
+      if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
+      pk_definition = pk_definition(columns)
 
       "CREATE TABLE" <> if_not_exists <>
         " #{quote_table(table.prefix, table.name)}" <>

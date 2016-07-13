@@ -132,10 +132,13 @@ defmodule Ecto.Migration do
 
   ## Comments
 
-  Migrations where you create or alter a table support specifying table and column comments if using Postgres,
-  for now there is no support for adding comments on MySQL.
+  Migrations where you create or alter a table support specifying table
+  and column comments, the same can be done when creating constraints
+  and indexes. At the moment there is support only for Postgres.
 
       def up do
+        create index(:posts, [:name], comment: "Index Comment")
+        create constraint(:products, "price_must_be_positive", check: "price > 0", comment: "Index Comment")
         create table(:weather, prefix: :north_america, comment: "Table Comment") do
           add :city, :string, size: 40, comment: "Column Comment"
           timestamps
