@@ -5,7 +5,7 @@ defmodule Ecto.Changeset do
 
   There is an example of working with changesets in the
   introductory documentation in the `Ecto` module. The
-  functions `change/2` and `cast/3` are the usual entry
+  functions `change/2` and `cast/3` are the usual entryva
   points for creating changesets, while the remaining
   functions are useful for manipulating them.
 
@@ -1410,7 +1410,11 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Validates that a checkbox was checked.
+  Validates the given parameter was given as true.
+
+  This validation is used to check for one specific parameter being true
+  and as such does not require the field to effectively exist in the schema
+  or the data being validated.
 
   ## Options
 
