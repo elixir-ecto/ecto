@@ -64,7 +64,7 @@ defmodule Ecto.Changeset.Relation do
   def load!(struct, %NotLoaded{__field__: field}) do
     raise "attempting to cast or change association `#{field}` " <>
           "from `#{inspect struct.__struct__}` that was not loaded. Please preload your " <>
-          "associations before casting or changing the struct"
+          "associations before manipulating them through changesets"
   end
 
   def load!(_struct, loaded), do: loaded
