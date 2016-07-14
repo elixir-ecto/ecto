@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.1.9
+
+### Bug fixes
+
+  * Don't automatically reconnect postgrex connection. This fixes a bug where we wouldn't trigger `after_connect` for some connections
+  * Allow read after writes on non primary key fields for MySQL (although still autoincrementing on the database)
+
 ## v1.1.8
 
 ### Enhancements
