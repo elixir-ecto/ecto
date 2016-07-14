@@ -628,6 +628,20 @@ defmodule Ecto.Adapters.PostgresTest do
     """ |> remove_newlines
   end
 
+  test "create table with comment on columns and table" do
+    create = {:create, table(:posts, comment: "comment"),
+               [
+                 {:add, :category_0, references(:categories), [comment: "column comment"]},
+                 {:add, :created_at, :datetime, []},
+                 {:add, :updated_at, :datetime, [comment: "column comment 2"]}
+               ]}
+    assert SQL.execute_ddl(create) == """
+    CREATE TABLE "posts"
+    ("category_0" integer CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"), "created_at" timestamp, "updated_at" timestamp);
+    COMMENT ON TABLE "posts" IS 'comment'; COMMENT ON COLUMN "posts"."category_0" IS 'column comment'; COMMENT ON COLUMN "posts"."updated_at" IS 'column comment 2'
+    """ |> remove_newlines
+  end
+
   test "create table with references" do
     create = {:create, table(:posts),
                [{:add, :id, :serial, [primary_key: true]},
@@ -710,6 +724,27 @@ defmodule Ecto.Adapters.PostgresTest do
     """ |> remove_newlines
   end
 
+  test "alter table with comments on table and columns" do
+    alter = {:alter, table(:posts, comment: "table comment"),
+               [{:add, :title, :string, [default: "Untitled", size: 100, null: false, comment: "column comment"]},
+                {:modify, :price, :numeric, [precision: 8, scale: 2, null: true]},
+                {:modify, :permalink_id, references(:permalinks), [null: false, comment: "column comment"]},
+                {:remove, :summary}]}
+
+    assert SQL.execute_ddl(alter) == """
+    ALTER TABLE "posts"
+    ADD COLUMN "title" varchar(100) DEFAULT 'Untitled' NOT NULL,
+    ALTER COLUMN "price" TYPE numeric(8,2) ,
+    ALTER COLUMN "price" DROP NOT NULL,
+    ALTER COLUMN "permalink_id" TYPE integer ,
+    ADD CONSTRAINT "posts_permalink_id_fkey" FOREIGN KEY ("permalink_id") REFERENCES "permalinks"("id") ,
+    ALTER COLUMN "permalink_id" SET NOT NULL,
+    DROP COLUMN "summary"; COMMENT ON TABLE \"posts\" IS 'table comment';
+    COMMENT ON COLUMN \"posts\".\"title\" IS 'column comment';
+    COMMENT ON COLUMN \"posts\".\"permalink_id\" IS 'column comment'
+    """ |> remove_newlines
+  end
+
   test "alter table with prefix" do
     alter = {:alter, table(:posts, prefix: :foo),
                [{:add, :author_id, references(:author, prefix: :foo), []},
@@ -742,6 +777,14 @@ defmodule Ecto.Adapters.PostgresTest do
     create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main", prefix: :foo)}
     assert SQL.execute_ddl(create) ==
            ~s|CREATE INDEX "posts$main" ON "foo"."posts" (lower(permalink))|
+  end
+
+  test "create index with comment" do
+    create = {:create, index(:posts, [:category_id, :permalink], prefix: :foo, comment: "comment")}
+    assert SQL.execute_ddl(create) == """
+    CREATE INDEX "posts_category_id_permalink_index" ON "foo"."posts" ("category_id", "permalink")
+    ; COMMENT ON INDEX "posts_category_id_permalink_index" IS 'comment'
+    """ |> remove_newlines
   end
 
   test "create unique index" do
@@ -807,6 +850,14 @@ defmodule Ecto.Adapters.PostgresTest do
     create = {:create, constraint(:products, "price_must_be_positive", exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|)}
     assert SQL.execute_ddl(create) ==
            ~s|ALTER TABLE "products" ADD CONSTRAINT "price_must_be_positive" EXCLUDE USING gist (int4range("from", "to", '[]') WITH &&)|
+  end
+
+  test "create constraint with comment" do
+    create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0", prefix: "foo", comment: "comment")}
+    assert SQL.execute_ddl(create) == """
+    ALTER TABLE "foo"."products" ADD CONSTRAINT "price_must_be_positive" CHECK (price > 0);
+    COMMENT ON CONSTRAINT "price_must_be_positive" IS 'comment'
+    """ |> remove_newlines
   end
 
   test "drop constraint" do
