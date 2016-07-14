@@ -128,12 +128,12 @@ defmodule Ecto.Date do
   def cast(d), do: d |> do_cast |> valid_date?
 
   @doc """
-  Same as `cast/1` but raises on invalid dates.
+  Same as `cast/1` but raises `Ecto.CastError` on invalid dates.
   """
   def cast!(value) do
     case cast(value) do
       {:ok, date} -> date
-      :error -> raise ArgumentError, "cannot cast #{inspect value} to date"
+      :error -> raise Ecto.CastError, "cannot cast #{inspect value} to date"
     end
   end
 
@@ -282,12 +282,12 @@ defmodule Ecto.Time do
     do: :error
 
   @doc """
-  Same as `cast/1` but raises on invalid times.
+  Same as `cast/1` but raises `Ecto.CastError` on invalid times.
   """
   def cast!(value) do
     case cast(value) do
       {:ok, time} -> time
-      :error -> raise ArgumentError, "cannot cast #{inspect value} to time"
+      :error -> raise Ecto.CastError, "cannot cast #{inspect value} to time"
     end
   end
 
@@ -413,12 +413,12 @@ defmodule Ecto.DateTime do
   def cast(dt), do: dt |> do_cast |> valid_date?
 
   @doc """
-  Same as `cast/1` but raises on invalid datetimes.
+  Same as `cast/1` but raises `Ecto.CastError` on invalid datetimes.
   """
   def cast!(value) do
     case cast(value) do
       {:ok, datetime} -> datetime
-      :error -> raise ArgumentError, "cannot cast #{inspect value} to datetime"
+      :error -> raise Ecto.CastError, "cannot cast #{inspect value} to datetime"
     end
   end
 
