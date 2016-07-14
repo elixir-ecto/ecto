@@ -754,6 +754,19 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = Changeset.change(%Author{profile: profile})
     assert Changeset.get_field(changeset, :profile) == profile
     assert Changeset.fetch_field(changeset, :profile) == {:data, profile}
+
+    changeset = Changeset.change(%Author{})
+    assert Changeset.get_field(changeset, :profile) == nil
+    assert Changeset.fetch_field(changeset, :profile) == {:data, nil}
+
+    schema = put_in(%Author{}.__meta__.state, :loaded)
+    changeset = Changeset.change(schema)
+    assert_raise RuntimeError, ~r"Please preload", fn ->
+      Changeset.get_field(changeset, :profile)
+    end
+    assert_raise RuntimeError, ~r"Please preload", fn ->
+      Changeset.fetch_field(changeset, :profile)
+    end
   end
 
   test "get_field/3, fetch_field/2 with has many" do
@@ -780,6 +793,19 @@ defmodule Ecto.Changeset.HasAssocTest do
       |> Changeset.put_assoc(:posts, [post_changeset])
     assert Changeset.get_field(changeset, :posts) == []
     assert Changeset.fetch_field(changeset, :posts) == {:changes, []}
+
+    changeset = Changeset.change(%Author{})
+    assert Changeset.get_field(changeset, :posts) == []
+    assert Changeset.fetch_field(changeset, :posts) == {:data, []}
+
+    schema = put_in(%Author{}.__meta__.state, :loaded)
+    changeset = Changeset.change(schema)
+    assert_raise RuntimeError, ~r"Please preload", fn ->
+      Changeset.get_field(changeset, :posts)
+    end
+    assert_raise RuntimeError, ~r"Please preload", fn ->
+      Changeset.fetch_field(changeset, :posts)
+    end
   end
 
   test "apply_changes" do

@@ -681,7 +681,7 @@ defmodule Ecto.Changeset do
         {:changes, change_as_field(types, key, value)}
       :error ->
         case Map.fetch(data, key) do
-          {:ok, value} -> {:data, value}
+          {:ok, value} -> {:data, data_as_field(data, types, key, value)}
           :error       -> :error
         end
     end
@@ -713,7 +713,7 @@ defmodule Ecto.Changeset do
         change_as_field(types, key, value)
       :error ->
         case Map.fetch(data, key) do
-          {:ok, value} -> value
+          {:ok, value} -> data_as_field(data, types, key, value)
           :error       -> default
         end
     end
@@ -723,6 +723,15 @@ defmodule Ecto.Changeset do
     case Map.get(types, key) do
       {tag, relation} when tag in @relations ->
          Relation.apply_changes(relation, value)
+      _other ->
+        value
+    end
+  end
+
+  defp data_as_field(data, types, key, value) do
+    case Map.get(types, key) do
+      {tag, _relation} when tag in @relations ->
+        Relation.load!(data, value)
       _other ->
         value
     end
