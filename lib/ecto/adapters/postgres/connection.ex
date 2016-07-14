@@ -18,6 +18,7 @@ if Code.ensure_loaded?(Postgrex) do
         opts
         |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
         |> Keyword.update(:port, @default_port, &normalize_port/1)
+        |> Keyword.put(:backoff_type, :stop)
 
       Postgrex.start_link(opts)
     end
