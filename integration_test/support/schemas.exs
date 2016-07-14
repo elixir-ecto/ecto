@@ -52,6 +52,7 @@ defmodule Ecto.Integration.Post do
     has_many :users_comments, through: [:users, :comments]
     has_many :comments_authors_permalinks, through: [:comments_authors, :permalink]
     timestamps()
+    has_one :post_user_composite_pk, Ecto.Integration.PostUserCompositePk
   end
 
   def changeset(schema, params) do
