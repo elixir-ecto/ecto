@@ -900,11 +900,11 @@ defmodule Ecto.Schema do
         end
       end
 
-      # Get all comments for a given post
+      # Get all tags for a given post
       post = Repo.get(Post, 42)
       tags = Repo.all assoc(post, :tags)
 
-      # The comments can come preloaded on the post struct
+      # The tags can come preloaded on the post struct
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :tags))
       post.tags #=> [%Tag{...}, ...]
 
