@@ -1124,8 +1124,8 @@ defmodule Ecto.Changeset do
                              "option to Ecto.Changeset.cast_assoc/3"
       value when is_binary(value) ->
         String.lstrip(value) == ""
-      value ->
-        value == nil
+      nil -> true
+      _ -> false
     end
   end
 
