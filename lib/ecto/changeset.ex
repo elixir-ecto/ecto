@@ -424,7 +424,7 @@ defmodule Ecto.Changeset do
       {String.to_existing_atom(key), key}
     rescue
       ArgumentError ->
-        raise "could not convert the parameter #{key} into an atom, #{key} is not in schema"
+        raise "could not convert the parameter #{key} into an atom, #{key} is not in the schema."
     end
   end
   defp cast_key(key) when is_atom(key),
@@ -600,7 +600,7 @@ defmodule Ecto.Changeset do
     changes.
   * `errors` and `validations` - they are simply concatenated.
   * `required` - required fields are merged; all the fields that appear
-    in the required list of both changesets are moved to the required 
+    in the required list of both changesets are moved to the required
     list of the resulting changeset.
 
   ## Examples
