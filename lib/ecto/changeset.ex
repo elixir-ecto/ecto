@@ -48,8 +48,8 @@ defmodule Ecto.Changeset do
       end
 
   In the `changeset/2` function above, we define three validations -
-  one after another they check that `name` and `email` fields are present in the 
-  changeset, the e-mail is of the specified format, and the age is between 18 
+  one after another they check that `name` and `email` fields are present in the
+  changeset, the e-mail is of the specified format, and the age is between 18
   and 100 - as well as a unique constraint in the email field.
 
   Let's suppose the e-mail is given but the age is invalid.  The
@@ -419,8 +419,14 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp cast_key(key) when is_binary(key),
-    do: {String.to_existing_atom(key), key}
+  defp cast_key(key) when is_binary(key) do
+    try do
+      {String.to_existing_atom(key), key}
+    rescue
+      ArgumentError ->
+        raise ArgumentError, "could not convert the parameter `#{key}` into an atom, `#{key}` is not a schema field"
+    end
+  end
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
 
@@ -594,7 +600,7 @@ defmodule Ecto.Changeset do
     changes.
   * `errors` and `validations` - they are simply concatenated.
   * `required` - required fields are merged; all the fields that appear
-    in the required list of both changesets are moved to the required 
+    in the required list of both changesets are moved to the required
     list of the resulting changeset.
 
   ## Examples
@@ -1402,7 +1408,7 @@ defmodule Ecto.Changeset do
 
   defp confirmation_missing(opts, error_field) do
     required = Keyword.get(opts, :required, false)
-    if required, do: [{error_field, {message(opts, "can't be blank"), []}}], else: []    
+    if required, do: [{error_field, {message(opts, "can't be blank"), []}}], else: []
   end
 
   defp message(opts, key \\ :message, default) do
