@@ -424,7 +424,7 @@ defmodule Ecto.Changeset do
       {String.to_existing_atom(key), key}
     rescue
       ArgumentError ->
-        raise "could not convert the parameter #{key} into an atom, #{key} is not in the schema."
+        raise ArgumentError, "could not convert the parameter `#{key}` into an atom, `#{key}` is not a schema field"
     end
   end
   defp cast_key(key) when is_atom(key),
