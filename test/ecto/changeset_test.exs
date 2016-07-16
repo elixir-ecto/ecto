@@ -268,7 +268,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "cast/4: protects against atom injection" do
-    assert_raise RuntimeError, fn ->
+    assert_raise ArgumentError, fn ->
       cast(%Post{}, %{}, ~w(surely_never_saw_this_atom_before), [])
     end
   end
