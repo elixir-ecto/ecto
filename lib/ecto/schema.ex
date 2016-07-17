@@ -657,7 +657,7 @@ defmodule Ecto.Schema do
   end
 
   @doc ~S"""
-  Indicates a one-to-one association with another schema.
+  Indicates a one-to-one or many-to-one association with another schema.
 
   The current schema belongs to zero or one records of the other schema. The other
   schema often has a `has_one` or a `has_many` field with the reverse association.
