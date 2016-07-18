@@ -381,6 +381,44 @@ defmodule Ecto.Integration.RepoTest do
     assert changeset.errors == [permalink: {"is still associated to this entry", []}]
   end
 
+  test "insert with failing child foreign key" do
+    defmodule Order do
+      use Ecto.Integration.Schema
+      import Ecto.Changeset
+
+      schema "orders" do
+        embeds_one :item, Ecto.Integration.Item
+        belongs_to :comment, Ecto.Integration.Comment
+      end
+
+      def changeset(order, params) do
+        order
+        |> cast(params, [:comment_id])
+        |> cast_embed(:item, with: &item_changeset/2)
+        |> cast_assoc(:comment, with: &comment_changeset/2)
+      end
+
+      def item_changeset(item, params) do
+        item
+        |> cast(params, [:price])
+      end
+
+      def comment_changeset(comment, params) do
+        comment
+        |> cast(params, [:post_id, :text])
+        |> cast_assoc(:post)
+        |> assoc_constraint(:post)
+      end
+    end
+
+    changeset = Order.changeset(struct(Order, %{}), %{item: %{price: 10}, comment: %{text: "1", post_id: 0}})
+
+    assert %Ecto.Changeset{} = changeset.changes.item
+
+    {:error, changeset} = TestRepo.insert(changeset)
+    assert %Ecto.Changeset{} = changeset.changes.item
+  end
+
   test "get(!)" do
     post1 = TestRepo.insert!(%Post{title: "1", text: "hai"})
     post2 = TestRepo.insert!(%Post{title: "2", text: "hai"})

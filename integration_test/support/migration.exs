@@ -80,6 +80,7 @@ defmodule Ecto.Integration.Migration do
 
     create table(:orders) do
       add :item, :map
+      add :comment_id, references(:comments)
     end
 
     unless :array_type in ExUnit.configuration[:exclude] do

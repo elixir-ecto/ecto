@@ -173,24 +173,29 @@ defmodule Ecto.Repo.Schema do
       opts = Keyword.put(opts, :skip_transaction, true)
       user_changeset = run_prepare(changeset, prepare)
 
-      changeset = Ecto.Embedded.prepare(user_changeset, adapter, :insert)
-      {changeset, parents, children} = pop_assocs(changeset, assocs)
+      {changeset, parents, children} = pop_assocs(user_changeset, assocs)
       changeset = process_parents(changeset, parents, opts)
 
-      metadata = metadata(struct)
-      {changes, extra, return} = autogenerate_id(metadata, changeset.changes, return, adapter)
-      {changes, autogen} = dump_changes!(:insert, Map.take(changes, fields), schema, extra, types, adapter)
+      if changeset.valid? do
+        changeset = Ecto.Embedded.prepare(changeset, adapter, :insert)
 
-      args = [repo, metadata, changes, return, opts]
-      case apply(changeset, adapter, :insert, args) do
-        {:ok, values} ->
-          changeset
-          |> load_changes(:loaded, values ++ extra, autogen, adapter)
-          |> process_children(children, user_changeset, opts)
-        {:error, _} = error ->
-          error
-        {:invalid, constraints} ->
-          {:error, constraints_to_errors(user_changeset, :insert, constraints)}
+        metadata = metadata(struct)
+        {changes, extra, return} = autogenerate_id(metadata, changeset.changes, return, adapter)
+        {changes, autogen} = dump_changes!(:insert, Map.take(changes, fields), schema, extra, types, adapter)
+
+        args = [repo, metadata, changes, return, opts]
+        case apply(changeset, adapter, :insert, args) do
+          {:ok, values} ->
+            changeset
+            |> load_changes(:loaded, values ++ extra, autogen, adapter)
+            |> process_children(children, user_changeset, opts)
+          {:error, _} = error ->
+            error
+          {:invalid, constraints} ->
+            {:error, constraints_to_errors(user_changeset, :insert, constraints)}
+        end
+      else
+        {:error, changeset}
       end
     end)
   end
