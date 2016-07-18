@@ -21,7 +21,8 @@ defmodule Ecto.UUIDTest do
 
   test "dump" do
     assert Ecto.UUID.dump(@test_uuid) == {:ok, @test_uuid_binary}
-    assert Ecto.UUID.dump(@test_uuid_binary) == :error
+    assert Ecto.UUID.dump(@test_uuid_binary) == {:ok, @test_uuid_binary}
+    assert Ecto.UUID.dump("") == :error
   end
 
   test "generate" do
