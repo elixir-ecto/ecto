@@ -30,9 +30,9 @@ defmodule Ecto.Adapter.Storage  do
 
   ## Examples
 
-    storage_down(username: postgres,
-                 database: 'ecto_test',
-                 hostname: 'localhost')
+      storage_down(username: postgres,
+                   database: 'ecto_test',
+                   hostname: 'localhost')
 
   """
   @callback storage_down(options :: Keyword.t) :: :ok | {:error, :already_down} | {:error, term}
