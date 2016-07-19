@@ -381,7 +381,7 @@ defmodule Ecto.Integration.RepoTest do
     assert changeset.errors == [permalink: {"is still associated to this entry", []}]
   end
 
-  test "insert with failing child foreign key" do
+  test "insert and update with failing child foreign key" do
     defmodule Order do
       use Ecto.Integration.Schema
       import Ecto.Changeset
@@ -416,6 +416,16 @@ defmodule Ecto.Integration.RepoTest do
     assert %Ecto.Changeset{} = changeset.changes.item
 
     {:error, changeset} = TestRepo.insert(changeset)
+    assert %Ecto.Changeset{} = changeset.changes.item
+
+    order = TestRepo.insert!(Order.changeset(struct(Order, %{}), %{}))
+    |> TestRepo.preload([:comment])
+
+    changeset = Order.changeset(order, %{item: %{price: 10}, comment: %{text: "1", post_id: 0}})
+
+    assert %Ecto.Changeset{} = changeset.changes.item
+
+    {:error, changeset} = TestRepo.update(changeset)
     assert %Ecto.Changeset{} = changeset.changes.item
   end
 
