@@ -335,7 +335,7 @@ defmodule Ecto.RepoTest do
       |> Ecto.Changeset.change(x: "foo")
       |> Ecto.Changeset.unique_constraint(:foo, name: "custom_foo_index")
     assert_raise Ecto.ConstraintError, fn ->
-     TestRepo.update(changeset)
+      TestRepo.update(changeset)
     end
   end
 
@@ -346,7 +346,7 @@ defmodule Ecto.RepoTest do
       |> Ecto.Changeset.change(x: "foo")
       |> Ecto.Changeset.unique_constraint(:foo)
     assert_raise Ecto.ConstraintError, fn ->
-     TestRepo.update(changeset)
+      TestRepo.update(changeset)
     end
   end
 end

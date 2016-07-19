@@ -172,6 +172,7 @@ defmodule Ecto.Changeset do
   }
 
   @relations [:embed, :assoc]
+  @match_types [:exact, :suffix]
 
   @doc """
   Wraps the given data in a changeset or adds changes to a changeset.
@@ -1584,12 +1585,17 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails.
       Defaults to "is invalid"
     * `:name` - the name of the constraint. Required.
+    * `:match` - how the changeset constraint name it matched against the
+      repo constraint, may be `:exact` or `:suffix`. Default is `:exact`.
+      `:suffix` matches any repo constraint which `ends_with?` `:name`
+       to this changeset constraint.
 
   """
   def check_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || raise ArgumentError, "must supply the name of the constraint"
     message    = message(opts, "is invalid")
-    add_constraint(changeset, :check, to_string(constraint), field, {message, []})
+    match_type = Keyword.get(opts, :match, :exact)
+    add_constraint(changeset, :check, to_string(constraint), match_type, field, {message, []})
   end
 
   @doc """
@@ -1624,13 +1630,10 @@ defmodule Ecto.Changeset do
     * `:name` - the constraint name. By default, the constraint
       name is inflected from the table + field. May be required
       explicitly for complex cases
-    * `:match` - how the changeset constraint matches against the
-      repo constraint. The default is :exact, which requires an
-      exact match. Also available is :suffix, which causes any repo constraint
-      violation which ends_with this constraint name to be mapped to this
-      constraint. This allows for constraint consolidation, and supports
-      cases wherein the repo generates multiple backend constraints
-      for a single given input constraint. (e.g. table inheritance)
+    * `:match` - how the changeset constraint name it matched against the
+      repo constraint, may be `:exact` or `:suffix`. Default is `:exact`.
+      `:suffix` matches any repo constraint which `ends_with?` `:name`
+       to this changeset constraint.
 
   ## Complex constraints
 
@@ -1676,7 +1679,7 @@ defmodule Ecto.Changeset do
   def unique_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_index"
     message    = message(opts, "has already been taken")
-    match_type = if opts[:match] == :suffix, do: :suffix, else: :exact
+    match_type = Keyword.get(opts, :match, :exact)
     add_constraint(changeset, :unique, to_string(constraint), match_type, field, {message, []})
   end
 
@@ -1724,7 +1727,7 @@ defmodule Ecto.Changeset do
   def foreign_key_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_fkey"
     message    = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, to_string(constraint), field, {message, []})
+    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, field, {message, []})
   end
 
   @doc """
@@ -1772,7 +1775,7 @@ defmodule Ecto.Changeset do
       end
 
     message = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, to_string(constraint), assoc, {message, []})
+    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, {message, []})
   end
 
   @doc """
@@ -1822,7 +1825,7 @@ defmodule Ecto.Changeset do
             "no_assoc_constraint can only be added to has one/many associations, got: #{inspect other}"
       end
 
-    add_constraint(changeset, :foreign_key, to_string(constraint), assoc, {message, []})
+    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, {message, []})
   end
 
   @doc """
@@ -1839,19 +1842,26 @@ defmodule Ecto.Changeset do
     * `:name` - the constraint name. By default, the constraint
       name is inflected from the table + field. May be required
       explicitly for complex cases
+    * `:match` - how the changeset constraint name it matched against the
+      repo constraint, may be `:exact` or `:suffix`. Default is `:exact`.
+      `:suffix` matches any repo constraint which `ends_with?` `:name`
+       to this changeset constraint.
 
   """
   def exclusion_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_exclusion"
     message    = message(opts, "violates an exclusion constraint")
-    add_constraint(changeset, :exclude, to_string(constraint), field, {message, []})
+    match_type = Keyword.get(opts, :match, :exact)
+    add_constraint(changeset, :exclude, to_string(constraint), :exact, field, {message, []})
   end
 
   defp no_assoc_message(:one), do: "is still associated to this entry"
   defp no_assoc_message(:many), do: "are still associated to this entry"
 
-  defp add_constraint(changeset, type, constraint, match \\ :exact, field, error)
+
+  defp add_constraint(changeset, type, constraint, match, field, error)
        when is_binary(constraint) and is_atom(field) and is_tuple(error) and is_atom(match)  do
+    unless match in @match_types, do: raise(ArgumentError, "Invalid match type: #{inspect match}. Allowed match types: #{inspect @match_types}")
     update_in changeset.constraints, &[%{type: type, constraint: constraint, match: match,
                                          field: field, error: error}|&1]
   end
