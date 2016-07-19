@@ -1852,7 +1852,7 @@ defmodule Ecto.Changeset do
     constraint = opts[:name] || "#{get_source(changeset)}_#{field}_exclusion"
     message    = message(opts, "violates an exclusion constraint")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :exclude, to_string(constraint), :exact, field, {message, []})
+    add_constraint(changeset, :exclude, to_string(constraint), match_type, field, {message, []})
   end
 
   defp no_assoc_message(:one), do: "is still associated to this entry"
