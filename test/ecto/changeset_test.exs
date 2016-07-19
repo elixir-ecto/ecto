@@ -961,7 +961,7 @@ defmodule Ecto.ChangesetTest do
            [%{type: :check, field: :title, constraint: "title_must_be_short", match: :exact,
               error: {"cannot be more than 15 characters", []}}]
 
-    assert_raise ArgumentError, ~r/Invalid match type: :invalid/, fn ->
+    assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
       change(%Post{}) |> check_constraint(:title, name: :whatever, match: :invalid, message: "match is invalid")
     end
 
@@ -984,7 +984,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.constraints ==
            [%{type: :unique, field: :title, constraint: "whatever", match: :suffix, error: {"is taken", []}}]
 
-    assert_raise ArgumentError, ~r/Invalid match type: :invalid/, fn ->
+    assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
       change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :invalid, message: "is taken")
     end
   end
@@ -1070,7 +1070,7 @@ defmodule Ecto.ChangesetTest do
            [%{type: :exclude, field: :title, constraint: "whatever", match: :exact,
               error: {"is invalid", []}}]
 
-    assert_raise ArgumentError, ~r/Invalid match type: :invalid/, fn ->
+    assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
       change(%Post{}) |> exclusion_constraint(:title, name: :whatever, match: :invalid, message: "match is invalid")
     end
   end
