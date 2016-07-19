@@ -339,7 +339,7 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "that an unknown constraint violation falls through and raises an exception" do
+  test "unknown constraint violation falls through and raises an exception" do
     my_schema = %MySchema{id: 1}
     changeset =
       put_in(my_schema.__meta__.context, {:invalid, [invalid_constraint_type: "my_schema_foo_index"]})
