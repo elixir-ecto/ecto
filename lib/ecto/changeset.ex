@@ -1861,7 +1861,7 @@ defmodule Ecto.Changeset do
 
   defp add_constraint(changeset, type, constraint, match, field, error)
        when is_binary(constraint) and is_atom(field) and is_tuple(error) and is_atom(match)  do
-    unless match in @match_types, do: raise(ArgumentError, "Invalid match type: #{inspect match}. Allowed match types: #{inspect @match_types}")
+    unless match in @match_types, do: raise(ArgumentError, "invalid match type: #{inspect match}. Allowed match types: #{inspect @match_types}")
     update_in changeset.constraints, &[%{type: type, constraint: constraint, match: match,
                                          field: field, error: error}|&1]
   end
