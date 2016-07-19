@@ -403,7 +403,11 @@ defmodule Ecto.Repo.Schema do
       Enum.map constraints, fn {type, constraint} ->
         user_constraint =
           Enum.find(user_constraints, fn c ->
-            c.type == type and c.constraint == constraint
+            case {c.type, c.constraint,  c.match} do
+              {^type, ^constraint, :exact} -> true
+              {^type, cc, :suffix} -> String.ends_with?(constraint, cc)
+              _ -> false
+            end
           end)
 
         case user_constraint do

@@ -307,4 +307,46 @@ defmodule Ecto.RepoTest do
     assert Process.get(:ecto_repo) == TestRepo
     assert Process.get(:ecto_counter) == 2
   end
+
+  test "insert maps repo constraint violation to changeset constraint" do
+    my_schema = %MySchema{id: 1}
+    changeset =
+      put_in(my_schema.__meta__.context, {:invalid, [unique: "custom_foo_index"]})
+      |> Ecto.Changeset.change(x: "foo")
+      |> Ecto.Changeset.unique_constraint(:foo, name: "custom_foo_index")
+    assert {:error, changeset} = TestRepo.update(changeset)
+    refute changeset.valid?
+  end
+
+  test "insert maps repo constraint violation to changeset constraint using suffix match" do
+    my_schema = %MySchema{id: 1}
+    changeset =
+      put_in(my_schema.__meta__.context, {:invalid, [unique: "foo_table_custom_foo_index"]})
+      |> Ecto.Changeset.change(x: "foo")
+      |> Ecto.Changeset.unique_constraint(:foo, name: "custom_foo_index", match: :suffix)
+    assert {:error, changeset} = TestRepo.update(changeset)
+    refute changeset.valid?
+  end
+
+  test "insert fails to maps repo constraint violation to changeset constraint with non-matching name" do
+    my_schema = %MySchema{id: 1}
+    changeset =
+      put_in(my_schema.__meta__.context, {:invalid, [unique: "foo_table_custom_foo_index"]})
+      |> Ecto.Changeset.change(x: "foo")
+      |> Ecto.Changeset.unique_constraint(:foo, name: "custom_foo_index")
+    assert_raise Ecto.ConstraintError, fn ->
+      TestRepo.update(changeset)
+    end
+  end
+
+  test "unknown constraint violation falls through and raises an exception" do
+    my_schema = %MySchema{id: 1}
+    changeset =
+      put_in(my_schema.__meta__.context, {:invalid, [invalid_constraint_type: "my_schema_foo_index"]})
+      |> Ecto.Changeset.change(x: "foo")
+      |> Ecto.Changeset.unique_constraint(:foo)
+    assert_raise Ecto.ConstraintError, fn ->
+      TestRepo.update(changeset)
+    end
+  end
 end
