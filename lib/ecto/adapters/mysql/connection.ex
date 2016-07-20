@@ -491,7 +491,10 @@ if Code.ensure_loaded?(Mariaex) do
       engine  = engine_expr(table.engine)
       options = options_expr(table.options)
       if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
-      pk_definition = pk_definition(columns)
+      pk_definition = case pk_definition(columns) do
+        nil -> ""
+        pk -> ", #{pk}"
+      end
 
       "CREATE TABLE" <> if_not_exists <>
         " #{quote_table(table.prefix, table.name)}" <>
@@ -505,7 +508,12 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     def execute_ddl({:alter, %Table{}=table, changes}) do
-      "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}"
+      pk_definition = case pk_definition(changes) do
+        nil -> ""
+        pk -> " ADD #{pk}"
+      end
+      "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}" <>
+      "#{pk_definition}"
     end
 
     def execute_ddl({:create, %Index{}=index}) do
@@ -566,8 +574,8 @@ if Code.ensure_loaded?(Mariaex) do
             do: name
 
       case pks do
-        [] -> ""
-        _  -> ", PRIMARY KEY (" <> Enum.map_join(pks, ", ", &quote_name/1) <> ")"
+        [] -> nil
+        _  -> "PRIMARY KEY (" <> Enum.map_join(pks, ", ", &quote_name/1) <> ")"
       end
     end
 
