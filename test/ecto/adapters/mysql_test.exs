@@ -616,6 +616,17 @@ defmodule Ecto.Adapters.MySQLTest do
     """ |> remove_newlines
   end
 
+  test "alter table with primary key" do
+    alter = {:alter, table(:posts),
+               [{:add, :my_pk, :serial, [primary_key: true]}]}
+
+    assert SQL.execute_ddl(alter) == """
+    ALTER TABLE `posts`
+    ADD `my_pk` serial
+    ADD PRIMARY KEY (`my_pk`)
+    """ |> remove_newlines
+  end
+
   test "create index" do
     create = {:create, index(:posts, [:category_id, :permalink])}
     assert SQL.execute_ddl(create) ==
