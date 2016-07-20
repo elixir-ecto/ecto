@@ -622,7 +622,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE `posts`
-    ADD `my_pk` serial
+    ADD `my_pk` serial,
     ADD PRIMARY KEY (`my_pk`)
     """ |> remove_newlines
   end

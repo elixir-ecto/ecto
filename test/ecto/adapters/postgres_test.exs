@@ -765,7 +765,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
     assert SQL.execute_ddl(alter) == """
     ALTER TABLE "posts"
-    ADD COLUMN "my_pk" serial
+    ADD COLUMN "my_pk" serial,
     ADD PRIMARY KEY ("my_pk")
     """ |> remove_newlines
   end

@@ -510,7 +510,7 @@ if Code.ensure_loaded?(Mariaex) do
     def execute_ddl({:alter, %Table{}=table, changes}) do
       pk_definition = case pk_definition(changes) do
         nil -> ""
-        pk -> " ADD #{pk}"
+        pk -> ", ADD #{pk}"
       end
       "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}" <>
       "#{pk_definition}"
