@@ -487,18 +487,26 @@ if Code.ensure_loaded?(Mariaex) do
 
     alias Ecto.Migration.{Table, Index, Reference, Constraint}
 
+    defp wrap_in_parentheses(""), do: ""
+    defp wrap_in_parentheses(str), do: "(#{str})"
+
     def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
       engine  = engine_expr(table.engine)
       options = options_expr(table.options)
-      if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
-      pk_definition = case pk_definition(columns) do
-        nil -> ""
-        pk -> ", #{pk}"
-      end
+      if_not_exists = if command == :create_if_not_exists, do: "IF NOT EXISTS", else: ""
 
-      "CREATE TABLE" <> if_not_exists <>
-        " #{quote_table(table.prefix, table.name)}" <>
-        " (#{column_definitions(table, columns)}#{pk_definition})" <> engine <> options
+      table_structure = [column_definitions(table, columns), pk_definition(columns)]
+      |> assemble(", ")
+      |> wrap_in_parentheses
+
+      assemble([
+        "CREATE TABLE",
+        if_not_exists,
+        quote_table(table.prefix, table.name),
+        table_structure,
+        engine,
+        options
+      ])
     end
 
     def execute_ddl({command, %Table{} = table}) when command in [:drop, :drop_if_exists] do
@@ -509,7 +517,7 @@ if Code.ensure_loaded?(Mariaex) do
 
     def execute_ddl({:alter, %Table{}=table, changes}) do
       pk_definition = case pk_definition(changes) do
-        nil -> ""
+        "" -> ""
         pk -> ", ADD #{pk}"
       end
       "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}" <>
@@ -574,7 +582,7 @@ if Code.ensure_loaded?(Mariaex) do
             do: name
 
       case pks do
-        [] -> nil
+        [] -> ""
         _  -> "PRIMARY KEY (" <> Enum.map_join(pks, ", ", &quote_name/1) <> ")"
       end
     end
@@ -641,17 +649,16 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp index_expr(literal), do: quote_name(literal)
 
-    defp engine_expr(nil),
-      do: " ENGINE = INNODB"
+    defp engine_expr(nil), do: engine_expr("INNODB")
     defp engine_expr(storage_engine),
-      do: String.upcase(" ENGINE = #{storage_engine}")
+      do: String.upcase("ENGINE = #{storage_engine}")
 
     defp options_expr(nil),
       do: ""
     defp options_expr(keyword) when is_list(keyword),
       do: error!(nil, "MySQL adapter does not support keyword lists in :options")
     defp options_expr(options),
-      do: " #{options}"
+      do: "#{options}"
 
     defp column_type(type, opts) do
       size      = Keyword.get(opts, :size)
@@ -725,10 +732,12 @@ if Code.ensure_loaded?(Mariaex) do
       <<?`, name::binary, ?`>>
     end
 
-    defp assemble(list) do
+    defp assemble(list), do: assemble(list, " ")
+    defp assemble(list, joiner) do
       list
       |> List.flatten
-      |> Enum.join(" ")
+      |> Enum.reject(fn(v)-> v == "" end)
+      |> Enum.join(joiner)
     end
 
     defp if_do(condition, value) do

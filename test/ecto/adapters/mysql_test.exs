@@ -504,6 +504,14 @@ defmodule Ecto.Adapters.MySQLTest do
     """ |> remove_newlines
   end
 
+  test "create empty table" do
+    create = {:create, table(:posts), []}
+
+    assert SQL.execute_ddl(create) == """
+    CREATE TABLE `posts` ENGINE = INNODB
+    """ |> remove_newlines
+  end
+
   test "create table with prefix" do
     create = {:create, table(:posts, prefix: :foo),
                [{:add, :category_0, references(:categories, prefix: :foo), []}]}
