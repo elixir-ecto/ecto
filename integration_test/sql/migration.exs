@@ -287,6 +287,19 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule AlterPrimaryKeyMigration do
+    use Ecto.Migration
+
+    def change do
+      create table(:no_pk, primary_key: false) do
+        add :dummy, :string
+      end
+      alter table(:no_pk) do
+        add :id, :serial, primary_key: true
+      end
+    end
+  end
+
   import Ecto.Query, only: [from: 2]
   import Ecto.Migrator, only: [up: 4, down: 4]
 
@@ -405,5 +418,11 @@ defmodule Ecto.Integration.MigrationTest do
   test "prefix" do
     assert :ok == up(PoolRepo, 20151012120000, PrefixMigration, log: false)
     assert :ok == down(PoolRepo, 20151012120000, PrefixMigration, log: false)
+  end
+
+  @tag :alter_primary_key
+  test "alter primary key" do
+    assert :ok == up(PoolRepo, 20151012120000, AlterPrimaryKeyMigration, log: false)
+    assert :ok == down(PoolRepo, 20151012120000, AlterPrimaryKeyMigration, log: false)
   end
 end
