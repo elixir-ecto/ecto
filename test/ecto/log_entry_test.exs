@@ -34,6 +34,9 @@ defmodule Ecto.LogEntryTest do
     entry = %{entry | params: [1, 2, 3], query_time: 2100 * diff, decode_time: 500 * diff,
                                          queue_time: 100 * diff, result: {:error, :error}}
     assert to_binary(entry) == "QUERY ERROR db=2.1ms decode=0.5ms queue=0.1ms\ndone [1, 2, 3]"
+
+    entry = %{entry | source: "test"}
+    assert to_binary(entry) == "QUERY ERROR source=\"test\" db=2.1ms decode=0.5ms queue=0.1ms\ndone [1, 2, 3]"
   end
 
   defp to_binary(entry) do

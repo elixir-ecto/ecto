@@ -5,6 +5,7 @@ defmodule Ecto.LogEntry do
   It is composed of the following fields:
 
     * query - the query as string or a function that when invoked resolves to string;
+    * source - the query data source;
     * params - the query parameters;
     * result - the query result as an `:ok` or `:error` tuple;
     * query_time - the time spent executing the query in native units;
@@ -19,12 +20,17 @@ defmodule Ecto.LogEntry do
 
   alias Ecto.LogEntry
 
-  @type t :: %LogEntry{query: String.t | (t -> String.t), params: [term],
-                       query_time: integer, decode_time: integer | nil,
+  @type t :: %LogEntry{query: String.t | (t -> String.t), source: String.t | Enum.t | nil,
+                       params: [term], query_time: integer, decode_time: integer | nil,
                        queue_time: integer | nil, connection_pid: pid | nil,
                        result: {:ok, term} | {:error, Exception.t}}
+<<<<<<< HEAD
   defstruct query: nil, params: [], query_time: nil, decode_time: nil,
             queue_time: nil, result: nil, connection_pid: nil, ansi_color: nil
+=======
+  defstruct query: nil, source: nil, params: [], query_time: nil, decode_time: nil,
+            queue_time: nil, result: nil, connection_pid: nil
+>>>>>>> 8213395... Add source metadata to log entries
 
   require Logger
 
@@ -63,14 +69,14 @@ defmodule Ecto.LogEntry do
   """
   def to_iodata(entry) do
     %{query_time: query_time, decode_time: decode_time, queue_time: queue_time,
-      params: params, query: query, result: result} = entry
+      params: params, query: query, result: result, source: source} = entry
 
     params = Enum.map params, fn
       %Ecto.Query.Tagged{value: value} -> value
       value -> value
     end
 
-    {entry, ["QUERY", ?\s, ok_error(result), time("db", query_time, true),
+    {entry, ["QUERY", ?\s, ok_error(result), ok_source(source), time("db", query_time, true),
              time("decode", decode_time, false), time("queue", queue_time, false), ?\n,
              query, ?\s, inspect(params, char_lists: false)]}
   end
@@ -79,6 +85,9 @@ defmodule Ecto.LogEntry do
 
   defp ok_error({:ok, _}),    do: "OK"
   defp ok_error({:error, _}), do: "ERROR"
+
+  defp ok_source(nil),    do: ""
+  defp ok_source(source), do: " source=#{inspect(source)}"
 
   defp time(_label, nil, _force), do: []
   defp time(label, time, force) do
