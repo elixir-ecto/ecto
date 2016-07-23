@@ -156,7 +156,9 @@ defmodule Ecto.Migration do
 
   defmodule Index do
     @moduledoc """
-    Defines an index struct used in migrations.
+    Used internally by adapters.
+
+    To define an index in a migration, see `Ecto.Migration.index/3`
     """
     defstruct table: nil,
               prefix: nil,
@@ -183,7 +185,9 @@ defmodule Ecto.Migration do
 
   defmodule Table do
     @moduledoc """
-    Defines a table struct used in migrations.
+    Used internally by adapters.
+
+    To define a table in a migration, see `Ecto.Migration.table/2`
     """
     defstruct name: nil, prefix: nil, comment: nil, primary_key: true, engine: nil, options: nil
     @type t :: %__MODULE__{name: atom, prefix: atom | nil, comment: String.t | nil, primary_key: boolean,
@@ -192,7 +196,9 @@ defmodule Ecto.Migration do
 
   defmodule Reference do
     @moduledoc """
-    Defines a reference struct used in migrations.
+    Used internally by adapters.
+
+    To define a reference in a migration, see `Ecto.Migration.references/2`
     """
     defstruct name: nil, table: nil, column: :id, type: :serial, on_delete: :nothing, on_update: :nothing
     @type t :: %__MODULE__{table: atom, column: atom, type: atom, on_delete: atom, on_update: atom}
@@ -200,7 +206,9 @@ defmodule Ecto.Migration do
 
   defmodule Constraint do
     @moduledoc """
-    Defines a Constraint struct used in migrations.
+    Used internally by adapters.
+
+    To define a constraint in a migration, see `Ecto.Migration.constraint/3`
     """
     defstruct name: nil, table: nil, check: nil, exclude: nil, prefix: nil, comment: nil
     @type t :: %__MODULE__{name: atom, table: atom, prefix: atom | nil,
