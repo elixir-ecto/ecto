@@ -1039,9 +1039,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_change(t, atom, (atom, term -> [error])) :: t
-  def validate_change(changeset, field, validator) when is_atom(field) do
-    %{changes: changes, errors: errors} = changeset
-
+  def validate_change(%{changes: changes, errors: errors} = changeset, field, validator) when is_atom(field) do
     value = Map.get(changes, field)
     new   = if is_nil(value), do: [], else: validator.(field, value)
     new   =
