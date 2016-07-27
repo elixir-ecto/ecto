@@ -8,6 +8,7 @@ defmodule Ecto.Integration.JoinsTest do
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.User
+  alias Ecto.Integration.PostUserCompositePk
 
   @tag :update_with_join
   test "update all with joins" do
@@ -429,5 +430,15 @@ defmodule Ecto.Integration.JoinsTest do
     assert [c2] = p2.comments
     assert c1.id == cid1
     assert c2.id == cid2
+  end
+
+  test "association with composite pk join" do
+    post = TestRepo.insert!(%Post{title: "1", text: "hi"})
+    user = TestRepo.insert!(%User{name: "1"})
+    _a = TestRepo.insert!(%PostUserCompositePk{post_id: post.id, user_id: user.id})
+
+    query = from(p in Post, join: a in assoc(p, :post_user_composite_pk),
+      preload: [post_user_composite_pk: a], select: p )
+     assert [_post] = TestRepo.all(query)
   end
 end

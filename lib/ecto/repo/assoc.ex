@@ -37,9 +37,10 @@ defmodule Ecto.Repo.Assoc do
   defp merge([struct|sub_structs], {keys, dict, sub_dicts}, parent_key) do
     child_key =
       if struct do
-        [{_, key}] = Ecto.primary_key!(struct)
-        key || raise Ecto.NoPrimaryKeyValueError, struct: struct
+        Ecto.primary_key!(struct)
+        |> Enum.map(&elem(&1, 1))
       end
+    if struct && Enum.member?(child_key, nil), do: raise Ecto.NoPrimaryKeyValueError, struct: struct
 
     # Traverse sub_structs adding one by one to the tree.
     # Note we need to traverse even if we don't have a child_key
