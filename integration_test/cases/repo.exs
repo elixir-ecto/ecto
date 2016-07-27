@@ -276,6 +276,55 @@ defmodule Ecto.Integration.RepoTest do
     assert changeset.errors == [uuid: {"has already been taken", []}]
     assert changeset.data.__meta__.state == :built
   end
+  
+  @tag :unique_constraint
+  test "unique constraint violation error message with join table" do
+    post = TestRepo.insert!(%Post{title: "some post"})
+      |> TestRepo.preload(:unique_users)
+
+    user = TestRepo.insert!(%User{name: "some user"})
+
+    # Violate the unique composite index
+    {:error, changeset} = post
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:unique_users, [user, user])
+      |> Ecto.Changeset.unique_constraint(:user,
+        name: :posts_users_composite_pk_post_id_user_id_index,
+        message: "has already been assigned")
+      |> TestRepo.update
+
+    errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
+    assert errors == %{unique_users: [%{user: ["has already been assigned"]}]}
+
+    refute changeset.valid?
+  end
+
+  @tag :unique_constraint
+  test "unique constraint violation error message with join table and separate changesets" do
+    post = TestRepo.insert!(%Post{title: "some post"})
+      |> TestRepo.preload(:unique_users)
+
+    user = TestRepo.insert!(%User{name: "some user"})
+
+    post
+    |> Ecto.Changeset.change
+    |> Ecto.Changeset.put_assoc(:unique_users, [user])
+    |> TestRepo.update
+
+    # Violate the unique composite index
+    {:error, changeset} = post
+    |> Ecto.Changeset.change
+    |> Ecto.Changeset.put_assoc(:unique_users, [user])
+    |> Ecto.Changeset.unique_constraint(:user,
+        name: :posts_users_composite_pk_post_id_user_id_index,
+        message: "has already been assigned")
+    |> TestRepo.update
+
+    errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, _opts} -> msg end)
+    assert errors == %{unique_users: [%{user: ["has already been assigned"]}]}
+
+    refute changeset.valid?
+  end
 
   @tag :foreign_key_constraint
   test "foreign key constraint" do

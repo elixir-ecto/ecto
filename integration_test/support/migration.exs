@@ -102,5 +102,7 @@ defmodule Ecto.Integration.Migration do
       add :user_id, references(:users), primary_key: true
       timestamps()
     end
+    
+    create unique_index(:posts_users_composite_pk, [:post_id, :user_id])
   end
 end
