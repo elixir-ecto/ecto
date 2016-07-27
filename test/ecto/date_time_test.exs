@@ -33,6 +33,10 @@ defmodule Ecto.DateTest do
            {:ok, @date}
     assert Ecto.Date.cast(%{year: 2015, month: 12, day: 31}) ==
            {:ok, @date}
+    assert Ecto.Date.cast(%{"year" => "", "month" => "", "day" => ""}) ==
+           {:ok, nil}
+    assert Ecto.Date.cast(%{year: nil, month: nil, day: nil}) ==
+           {:ok, nil}
     assert Ecto.Date.cast(%{"year" => "2015", "month" => "", "day" => "31"}) ==
            :error
     assert Ecto.Date.cast(%{"year" => "2015", "month" => nil, "day" => "31"}) ==
@@ -119,21 +123,25 @@ defmodule Ecto.TimeTest do
   end
 
   test "cast maps" do
-    assert Ecto.Time.cast(%{"hour" => "23", "min" => "50", "sec" => "07"}) ==
+    assert Ecto.Time.cast(%{"hour" => "23", "minute" => "50", "second" => "07"}) ==
            {:ok, @time}
-    assert Ecto.Time.cast(%{hour: 23, min: 50, sec: 07}) ==
+    assert Ecto.Time.cast(%{hour: 23, minute: 50, second: 07}) ==
            {:ok, @time}
-    assert Ecto.Time.cast(%{"hour" => "23", "min" => "50"}) ==
+    assert Ecto.Time.cast(%{"hour" => "", "minute" => ""}) ==
+           {:ok, nil}
+    assert Ecto.Time.cast(%{hour: nil, minute: nil}) ==
+           {:ok, nil}
+    assert Ecto.Time.cast(%{"hour" => "23", "minute" => "50"}) ==
            {:ok, @time_zero}
-    assert Ecto.Time.cast(%{hour: 23, min: 50}) ==
+    assert Ecto.Time.cast(%{hour: 23, minute: 50}) ==
            {:ok, @time_zero}
-    assert Ecto.Time.cast(%{hour: 12, min: 40, sec: 33, usec: 30_000}) ==
+    assert Ecto.Time.cast(%{hour: 12, minute: 40, second: 33, microsecond: 30_000}) ==
            {:ok, @time_usec}
-    assert Ecto.Time.cast(%{"hour" => 12, "min" => 40, "sec" => 33, "usec" => 30_000}) ==
+    assert Ecto.Time.cast(%{"hour" => 12, "minute" => 40, "second" => 33, "microsecond" => 30_000}) ==
            {:ok, @time_usec}
-    assert Ecto.Time.cast(%{"hour" => "", "min" => "50"}) ==
+    assert Ecto.Time.cast(%{"hour" => "", "minute" => "50"}) ==
            :error
-    assert Ecto.Time.cast(%{hour: 23, min: nil}) ==
+    assert Ecto.Time.cast(%{hour: 23, minute: nil}) ==
            :error
   end
 
@@ -227,33 +235,39 @@ defmodule Ecto.DateTimeTest do
 
   test "cast maps" do
     assert Ecto.DateTime.cast(%{"year" => "2015", "month" => "1", "day" => "23",
-                                "hour" => "23", "min" => "50", "sec" => "07"}) ==
+                                "hour" => "23", "minute" => "50", "second" => "07"}) ==
            {:ok, @datetime}
 
-    assert Ecto.DateTime.cast(%{year: 2015, month: 1, day: 23, hour: 23, min: 50, sec: 07}) ==
+    assert Ecto.DateTime.cast(%{year: 2015, month: 1, day: 23, hour: 23, minute: 50, second: 07}) ==
            {:ok, @datetime}
+
+    assert Ecto.DateTime.cast(%{"year" => "", "month" => "", "day" => "", "hour" => "", "minute" => ""}) ==
+           {:ok, nil}
+
+    assert Ecto.DateTime.cast(%{year: nil, month: nil, day: nil, hour: nil, minute: nil}) ==
+           {:ok, nil}
 
     assert Ecto.DateTime.cast(%{"year" => "2015", "month" => "1", "day" => "23",
-                                "hour" => "23", "min" => "50"}) ==
+                                "hour" => "23", "minute" => "50"}) ==
            {:ok, @datetime_zero}
 
-    assert Ecto.DateTime.cast(%{year: 2015, month: 1, day: 23, hour: 23, min: 50}) ==
+    assert Ecto.DateTime.cast(%{year: 2015, month: 1, day: 23, hour: 23, minute: 50}) ==
            {:ok, @datetime_zero}
 
     assert Ecto.DateTime.cast(%{year: 2015, month: 1, day: 23, hour: 23,
-                                min: 50, sec: 07, usec: 8_000}) ==
+                                minute: 50, second: 07, microsecond: 8_000}) ==
            {:ok, @datetime_usec}
 
     assert Ecto.DateTime.cast(%{"year" => 2015, "month" => 1, "day" => 23,
-                                "hour" => 23, "min" => 50, "sec" => 07,
-                                "usec" => 8_000}) ==
+                                "hour" => 23, "minute" => 50, "second" => 07,
+                                "microsecond" => 8_000}) ==
            {:ok, @datetime_usec}
 
     assert Ecto.DateTime.cast(%{"year" => "2015", "month" => "1", "day" => "23",
-                                "hour" => "", "min" => "50"}) ==
+                                "hour" => "", "minute" => "50"}) ==
            :error
 
-    assert Ecto.DateTime.cast(%{year: 2015, month: 1, day: 23, hour: 23, min: nil}) ==
+    assert Ecto.DateTime.cast(%{year: 2015, month: 1, day: 23, hour: 23, minute: nil}) ==
            :error
   end
 

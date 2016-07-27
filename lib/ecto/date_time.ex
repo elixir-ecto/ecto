@@ -125,7 +125,7 @@ defmodule Ecto.Date do
     * an `Ecto.Date` struct itself
 
   """
-  def cast(d), do: d |> do_cast |> valid_date?
+  def cast(d), do: d |> do_cast() |> validate_cast()
 
   @doc """
   Same as `cast/1` but raises `Ecto.CastError` on invalid dates.
@@ -144,6 +144,10 @@ defmodule Ecto.Date do
     do: from_parts(to_i(year), to_i(month), to_i(day))
   defp do_cast(%Ecto.Date{} = d),
     do: {:ok, d}
+  defp do_cast(%{"year" => empty, "month" => empty, "day" => empty}) when empty in ["", nil],
+    do: {:ok, nil}
+  defp do_cast(%{year: empty, month: empty, day: empty}) when empty in ["", nil],
+    do: {:ok, nil}
   defp do_cast(%{"year" => year, "month" => month, "day" => day}),
     do: from_parts(to_i(year), to_i(month), to_i(day))
   defp do_cast(%{year: year, month: month, day: day}),
@@ -153,8 +157,9 @@ defmodule Ecto.Date do
   defp do_cast(_),
     do: :error
 
-  defp valid_date?(:error), do: :error
-  defp valid_date?({:ok, %{year: y, month: m, day: d} = date}) do
+  defp validate_cast(:error), do: :error
+  defp validate_cast({:ok, nil}), do: {:ok, nil}
+  defp validate_cast({:ok, %{year: y, month: m, day: d} = date}) do
     if :calendar.valid_date(y, m, d), do: {:ok, date}, else: :error
   end
 
@@ -266,14 +271,24 @@ defmodule Ecto.Time do
   end
   def cast(%Ecto.Time{} = t),
     do: {:ok, t}
-  def cast(%{"hour" => hour, "minute" => minute} = map),
-    do: from_parts(to_i(hour), to_i(minute), to_i(Map.get(map, "second", 0)), to_i(Map.get(map, "microsecond", 0)))
-  def cast(%{hour: hour, minute: minute} = map),
-    do: from_parts(to_i(hour), to_i(minute), to_i(Map.get(map, :second, 0)), to_i(Map.get(map, :microsecond, 0)))
+
+  # TODO: Remove old cast
   def cast(%{"hour" => hour, "min" => min} = map),
     do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)), to_i(Map.get(map, "usec", 0)))
   def cast(%{hour: hour, min: min} = map),
     do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, :sec, 0)), to_i(Map.get(map, :usec, 0)))
+
+  def cast(%{"hour" => empty, "minute" => empty}) when empty in ["", nil],
+    do: {:ok, nil}
+  def cast(%{hour: empty, minute: empty}) when empty in ["", nil],
+    do: {:ok, nil}
+
+  # TODO: microseconds should not default to 0
+  def cast(%{"hour" => hour, "minute" => minute} = map),
+    do: from_parts(to_i(hour), to_i(minute), to_i(Map.get(map, "second", 0)), to_i(Map.get(map, "microsecond", 0)))
+  def cast(%{hour: hour, minute: minute} = map),
+    do: from_parts(to_i(hour), to_i(minute), to_i(Map.get(map, :second, 0)), to_i(Map.get(map, :microsecond, 0)))
+
   def cast({hour, min, sec}),
     do: from_parts(to_i(hour), to_i(min), to_i(sec), 0)
   def cast({hour, min, sec, usec}),
@@ -410,7 +425,7 @@ defmodule Ecto.DateTime do
     * an `Ecto.DateTime` struct itself
 
   """
-  def cast(dt), do: dt |> do_cast |> valid_date?
+  def cast(dt), do: dt |> do_cast() |> validate_cast()
 
   @doc """
   Same as `cast/1` but raises `Ecto.CastError` on invalid datetimes.
@@ -436,6 +451,7 @@ defmodule Ecto.DateTime do
     {:ok, dt}
   end
 
+  # TODO: Remove old cast
   defp do_cast(%{"year" => year, "month" => month, "day" => day, "hour" => hour, "min" => min} = map) do
     from_parts(to_i(year), to_i(month), to_i(day),
                to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)),
@@ -448,6 +464,17 @@ defmodule Ecto.DateTime do
                to_i(Map.get(map, :usec, 0)))
   end
 
+  defp do_cast(%{"year" => empty, "month" => empty, "day" => empty,
+                 "hour" => empty, "minute" => empty}) when empty in ["", nil] do
+    {:ok, nil}
+  end
+
+  defp do_cast(%{year: empty, month: empty, day: empty,
+                 hour: empty, minute: empty}) when empty in ["", nil] do
+    {:ok, nil}
+  end
+
+  # TODO: microseconds should not default to 0
   defp do_cast(%{"year" => year, "month" => month, "day" => day, "hour" => hour, "minute" => min} = map) do
     from_parts(to_i(year), to_i(month), to_i(day),
                to_i(hour), to_i(min), to_i(Map.get(map, "second", 0)),
@@ -474,8 +501,9 @@ defmodule Ecto.DateTime do
     :error
   end
 
-  defp valid_date?(:error), do: :error
-  defp valid_date?({:ok, %{year: y, month: m, day: d} = datetime}) do
+  defp validate_cast(:error), do: :error
+  defp validate_cast({:ok, nil}), do: {:ok, nil}
+  defp validate_cast({:ok, %{year: y, month: m, day: d} = datetime}) do
     if :calendar.valid_date(y, m, d), do: {:ok, datetime}, else: :error
   end
 
