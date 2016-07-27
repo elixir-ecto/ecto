@@ -37,14 +37,23 @@ defmodule Ecto.MigrationTest do
   end
 
   test "creates an index" do
+    assert index(:posts, :title) ==
+           %Index{table: :posts, unique: false, name: :posts_title_index, columns: [:title]}
+
     assert index(:posts, [:title]) ==
            %Index{table: :posts, unique: false, name: :posts_title_index, columns: [:title]}
     assert index(:posts, ["lower(title)"]) ==
            %Index{table: :posts, unique: false, name: :posts_lower_title_index, columns: ["lower(title)"]}
     assert index(:posts, [:title], name: :foo, unique: true) ==
            %Index{table: :posts, unique: true, name: :foo, columns: [:title]}
-    assert unique_index(:posts, [:title], name: :foo) ==
-           %Index{table: :posts, unique: true, name: :foo, columns: [:title]}
+
+
+    assert unique_index(:posts, :title, name: :foo1) ==
+           %Index{table: :posts, unique: true, name: :foo1, columns: [:title]}
+
+    assert unique_index(:posts, [:title], name: :foo2) ==
+           %Index{table: :posts, unique: true, name: :foo2, columns: [:title]}
+
   end
 
   test "creates a reference" do

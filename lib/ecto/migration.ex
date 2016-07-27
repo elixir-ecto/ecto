@@ -498,9 +498,14 @@ defmodule Ecto.Migration do
       create index(:products, [:user_id], where: "price = 0", name: :free_products_index)
 
   """
-  def index(table, columns, opts \\ []) when is_atom(table) and is_list(columns) do
-    index = struct(%Index{table: table, columns: columns}, opts)
-    %{index | name: index.name || default_index_name(index)}
+  def index(table, columns, opts \\ []) when is_atom(table) do
+    cond do
+      is_list(columns) ->
+        index = struct(%Index{table: table, columns: columns}, opts)
+        %{index | name: index.name || default_index_name(index)}
+      is_atom(columns) ->
+        index(table, [columns], opts)
+    end
   end
 
   @doc """
@@ -508,8 +513,11 @@ defmodule Ecto.Migration do
 
   See `index/3` for more information.
   """
-  def unique_index(table, columns, opts \\ []) when is_atom(table) and is_list(columns) do
-    index(table, columns, [unique: true] ++ opts)
+  def unique_index(table, columns, opts \\ []) when is_atom(table) do
+    cond do
+      is_list(columns) -> index(table, columns, [unique: true] ++ opts)
+      is_atom(columns) -> unique_index(table, [columns], opts)
+    end
   end
 
   defp default_index_name(index) do
