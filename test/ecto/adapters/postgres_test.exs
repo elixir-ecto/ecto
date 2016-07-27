@@ -614,7 +614,7 @@ defmodule Ecto.Adapters.PostgresTest do
     "price" numeric(8,2) DEFAULT expr,
     "on_hand" integer DEFAULT 0 NULL,
     "is_active" boolean DEFAULT true,
-    "tags" varchar(255)[] DEFAULT ARRAY[]::varchar[])
+    "tags" varchar[] DEFAULT ARRAY[]::varchar[])
     """ |> remove_newlines
   end
 
@@ -685,7 +685,7 @@ defmodule Ecto.Adapters.PostgresTest do
                 {:add, :name, :string, []}]}
 
     assert SQL.execute_ddl(create) == """
-    CREATE TABLE "posts" ("a" integer, "b" integer, "name" varchar(255), PRIMARY KEY ("a", "b"))
+    CREATE TABLE "posts" ("a" integer, "b" integer, "name" varchar, PRIMARY KEY ("a", "b"))
     """ |> remove_newlines
   end
 
