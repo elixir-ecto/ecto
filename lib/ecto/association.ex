@@ -233,18 +233,6 @@ defmodule Ecto.Association do
               {[changeset|changesets], structs, halt, valid?}
             {:ok, struct} ->
               {[changeset|changesets], [struct | structs], halt, valid?}
-            {:error, {error_changeset, :insert_join}} ->
-              # Roll the errors originating from a join into the parent_changeset
-              case changesets do
-                [last_changeset | changesets] ->
-                  errors = last_changeset.errors ++ error_changeset.errors
-                  merged_changeset = %{last_changeset | errors: errors, valid?: error_changeset.valid?}
-
-                  {[merged_changeset|changesets], structs, halted?(halt, changeset, error_changeset), false}
-                [] ->
-                  {[error_changeset|changesets], structs, halted?(halt, changeset, error_changeset), false}
-              end
-              
             {:error, error_changeset} ->
               {[error_changeset|changesets], structs, halted?(halt, changeset, error_changeset), false}
           end
@@ -951,11 +939,14 @@ defmodule Ecto.Association.ManyToMany do
           data = [{join_owner_key, owner_value}, {join_related_key, related_value}]
 
           case insert_join(repo, join_through, data, opts, constraints) do
-            {:error, changeset} -> {:error, {changeset, :insert_join}}
-            _                   -> {:ok, related}
+            {:error, join_changeset} ->
+              {:error, %{changeset | errors: join_changeset.errors ++ changeset.errors,
+                                     valid?: join_changeset.valid? and changeset.valid?}}
+            _ ->
+              {:ok, related}
           end
         else
-          {:ok, related} 
+          {:ok, related}
         end
       {:error, changeset} ->
         {:error, changeset}
@@ -976,12 +967,10 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   defp insert_join(repo, join_through, data, opts, constraints) when is_atom(join_through) do
-    changeset = struct(join_through, data) 
+    struct(join_through, data)
     |> Ecto.Changeset.change
-    
-    changeset = %{changeset | constraints: constraints}
-
-    repo.insert changeset, opts
+    |> Map.put(:constraints, constraints)
+    |> repo.insert(opts)
   end
 
   defp field!(op, struct, field) do
