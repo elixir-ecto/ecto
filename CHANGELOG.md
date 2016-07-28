@@ -123,6 +123,29 @@ Ecto now requires you to explicitly configure your repo's in your top level conf
 
 The configuration may be an empty list if it does not define any repo.
 
+## v2.0.3-dev
+
+### Enhancements
+
+  * [Ecto.Changeset] Support empty fields in Date, Time and DateTime to cast to nil
+  * [Ecto.Adapters.SQL] Allow to alter primary keys on tables
+  * [Ecto.Changeset] Allow unique constraints for join tables in `many_to_many` to propagate to association changeset
+  * [Ecto.Changeset] Provide more flexible constraint matching (for example, suffix based)
+  * [Ecto.Adapters.Postgres] Add support for commenting on PostgreSQL migrations
+  * [Ecto.Changeset] Add acceptance validation
+  * [Ecto.Repo] Export `Ecto.Adapters.SQL.query/query!` directly in Ecto.Repo module for SQL adapters
+  * [Ecto.Multi] Allow multi names to be any type
+
+### Bug fixes
+
+  * [Ecto.Associations] Fix bug when association preloading on a schema with composite primary key
+  * [Ecto.Changeset] Fix changeset having mixed changeset/struct embeds when parent insert/update fails
+  * [Ecto.Changeset] Properly raise when trying to get/fetch a not loaded association
+  * [Ecto.DateTime] Raise `Ecto.CastError` for errors in date/time instead of `ArgumentError`
+  * [Ecto.Query] Keep lists of integers as lists when inspecting queries
+  * [Ecto.Adapters.SQL.Sandbox] Ensure we get a fresh, non-sandboxed checkout when running migrations under ownership
+  * [Ecto.DateTime] Don't crash on casting dates without year
+
 ## v2.0.2 (2016-06-27)
 
 ### Bug fixes
