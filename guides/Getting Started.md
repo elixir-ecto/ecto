@@ -1,20 +1,14 @@
-# Getting Started with Ecto
+# Getting Started
 
 This guide is an introduction to [Ecto](https://github.com/elixir-lang/ecto),
 the database wrapper and query generator for Elixir. Ecto provides a
-standardised API for talking to all the different kinds of databases, so that
-Elixir developers can query whatever database they're using in the same
-fashion. If one application uses MySQL and another uses PostgreSQL but both
-use Ecto, then the database querying for both of those applications will be
-almost identical.
-
-**If you want to see the code from this guide, you can view it [at ecto/examples/friends on GitHub](https://github.com/elixir-lang/ecto/tree/master/ecto/friends).**
-
-If you've come from the Ruby language, the "equivalent" there would be Active
-Record, Data Mapper, or Sequel. Java has Hibernate, and so on.
+standardised API and a set of abstractions for talking to all the different
+kinds of databases, so that Elixir developers can query whatever database
+they're using using similar contructs.
 
 In this guide, we're going to learn some basics about Ecto, such as creating,
-reading, updating and destroying records from a PostgreSQL database. 
+reading, updating and destroying records from a PostgreSQL database. If you want
+to see the code from this guide, you can view it [at ecto/examples/friends on GitHub](https://github.com/elixir-lang/ecto/tree/master/ecto/friends).
 
 **This guide will require you to have setup PostgreSQL beforehand.**
 
@@ -32,10 +26,8 @@ To add Ecto to this application, there are a few steps that we need to take. The
 
 ```elixir
 defp deps do
-  [
-    {:ecto, "2.0.1"},
-    {:postgrex, "0.11.2"}
-  ]
+  [{:ecto, "~> 2.0"},
+   {:postgrex, "0.11.2"}]
 end
 ```
 
@@ -175,7 +167,7 @@ end
 
 This new code will tell Ecto to create a new table called people, and add three new fields: `first_name`, `last_name` and `age` to that table. The types of these fields are `string` and `integer`. (The different types that Ecto supports are covered in the [Ecto.Schema](https://hexdocs.pm/ecto/Ecto.Schema.html) documentation.)
 
-**NOTE: The naming convention for tables in Ecto databases is to use a pluralized name.**
+**NOTE**: The naming convention for tables in Ecto databases is to use a pluralized name.
 
 To run this migration and create the `people` table in our database, we will run this command:
 
@@ -207,7 +199,7 @@ end
 
 This schema defines the schema from the database that this schema maps to. In this case, we're telling Ecto that the `Friends.Person` schema maps to the `people` table in the database, and the `first_name`, `last_name` and `age` fields in that table. The second argument passed to `field` tells Ecto how we want the information from the database to be represented in our schema.
 
-**We've called this schema `Person` because the naming convention in Ecto for schemas is a singularized name.**
+We've called this schema `Person` because the naming convention in Ecto for schemas is a singularized name.
 
 We can play around with this schema in an IEx session by starting one up with `iex -S mix` and then running this code in it:
 
@@ -259,7 +251,7 @@ The `:ok` atom can be used for pattern matching purposes to ensure that the inse
 You may wish to pattern match on the tuple in order to refer to the record inserted into the database:
 
 ```elixir
-{ :ok, person } = Friends.Repo.insert person
+{:ok, person} = Friends.Repo.insert person
 ```
 
 ## Validating changes
@@ -271,7 +263,7 @@ Let's add a changeset to our `Friends.Person` module inside `lib/friends/person.
 ```elixir
 def changeset(person, params \\ %{}) do
   person
-  |> Ecto.Changeset.cast(params, ~w(first_name last_name age))
+  |> Ecto.Changeset.cast(params, [:first_name, :last_name, :age])
   |> Ecto.Changeset.validate_required([:first_name, :last_name])
 end
 ```
@@ -300,7 +292,7 @@ On the final line, rather than inserting the `person`, we insert the `changeset`
 Just like the last time we did an insert, this returns a tuple. This time however, the first element in the tuple is `:error`, which indicates something bad happened. The specifics of what happend are included in the changeset which is returned. We can access these by doing some pattern matching:
 
 ```elixir
-{ :error, changeset } = Friends.Repo.insert(changeset)
+{:error, changeset} = Friends.Repo.insert(changeset)
 ```
 
 Then we can get to the errors by doing `changeset.errors`:
@@ -311,9 +303,9 @@ Then we can get to the errors by doing `changeset.errors`:
 
 And we can ask the changeset itself it is valid, even before doing an insert:
 
-```
+```elixir
 changeset.valid?
-false
+#=> false
 ```
 
 Since this changeset has errors, no new record was inserted into the `people`
@@ -330,24 +322,23 @@ We start out here with a normal `Friends.Person` struct. We then create a change
 
 ```elixir
 changeset.errors
-[]
+#=> []
 ```
 
 And we can ask if it's valid or not:
 
 ```elixir
 changeset.valid?
-true
+#=> true
 ```
 
 The changeset does not have errors, and is valid. Therefore if we try to insert this changeset it will work:
 
 ```elixir
 Repo.insert(changeset)
-
-{:ok,
- %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: nil,
-  first_name: "Ryan", id: 3, last_name: "Bigg"}}
+#=> {:ok,
+     %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: nil,
+      first_name: "Ryan", id: 3, last_name: "Bigg"}}
 ```
 
 
@@ -355,34 +346,30 @@ Due to `Friends.Repo.insert` returning a tuple, we can use a `case` to determine
 
 ```elixir
 case Friends.Repo.insert(changeset) do
-  { :ok, person } ->
+  {:ok, person} ->
     # do something with person
-  { :error, changeset } ->
+  {:error, changeset} ->
     # do something with changeset
 end
 ```
 
-**NOTE:** `changeset.valid?` will not check constraints (such as `uniqueness_constraint`). For that, you will need to attempt to do an insert and check for errors. It's for this reason it's best practice to try inserting data and validation the returned tuple from `Friends.Repo.insert` to get the correct errors, rather than relying on the changeset itself.
+**NOTE:** `changeset.valid?` will not check constraints (such as `uniqueness_constraint`). For that, you will need to attempt to do an insert and check for errors from the database. It's for this reason it's best practice to try inserting data and validation the returned tuple from `Friends.Repo.insert` to get the correct errors, as prior to insert the changeset will only contain validation errors from the application itself.
 
 If the insertion of the changeset succeeds, then you can do whatever you wish with the `person` returned in that result. If it fails, then you have access to the changeset and its errors. In the failure case, you may wish to present these errors to the end user. The errors in the changeset are a keyword list that looks like this:
 
 
 ```elixir
-[
-  first_name: {"can't be blank", []},
-  last_name: {"can't be blank", []}
-]
+[first_name: {"can't be blank", []},
+ last_name: {"can't be blank", []}]
 ```
 
 The first element of the tuple is the validation message, and the second element is a keyword list of options for the validation message. The `validate_required/3` validations don't return any options, but other methods such as `validate_length/3` do. Imagine that we had a field called `bio` that we were validating, and that field has to be longer than 15 characters. This is what would be returned:
 
 
 ```elixir
-[
-  first_name: {"can't be blank", []},
-  last_name: {"can't be blank", []},
-  bio: {"should be at least %{count} characters", [count: 15]}
-]
+[first_name: {"can't be blank", []},
+ last_name: {"can't be blank", []},
+ bio: {"should be at least %{count} characters", [count: 15]}]
 ```
 
 To display these error messages in a human friendly way, we can use `Ecto.Changeset.traverse_errors/2`:
@@ -407,7 +394,7 @@ This will return the following for the errors shown above:
 One more final thing to mention here: you can trigger an exception to be thrown by using `Friends.Repo.insert!/2`. If a changeset is invalid, you will see an `Ecto.InvalidChangesetError` exception. Here's a quick example of that:
 
 ```
-Friends.Repo.insert! Friends.Person.changeset(%Friends.Person{}, %{ first_name: "Ryan" })
+Friends.Repo.insert! Friends.Person.changeset(%Friends.Person{}, %{first_name: "Ryan"})
 
 ** (Ecto.InvalidChangesetError) could not perform insert because changeset is invalid.
 
@@ -496,8 +483,8 @@ Similar to `first`, there is also `last`:
 
 ```elixir
 Friends.Person |> Ecto.Query.last |> Friends.Repo.one
-%Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 26,
- first_name: "Jane", id: 3, last_name: "Smith"}
+#=> %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 26,
+     first_name: "Jane", id: 3, last_name: "Smith"}
  ```
 
 The `Ecto.Repo.one` function will only return a struct if there is one record in the
@@ -703,15 +690,15 @@ If the changeset fails for any reason, the result of `Friends.Repo.update` will 
 
 ```elixir
 changeset = Friends.Person.changeset(person, %{first_name: ""})
-{:error,
- #Ecto.Changeset<action: :update, changes: %{first_name: ""},
-  errors: [first_name: "can't be blank"], data: #Friends.Person<>,
-  valid?: false>}
+#=> {:error,
+     #Ecto.Changeset<action: :update, changes: %{first_name: ""},
+      errors: [first_name: "can't be blank"], data: #Friends.Person<>,
+      valid?: false>}
 ```
 
 This means that you can also use a `case` statement to do different things depending on the outcome of the `update` function:
 
-```
+```elixir
 case Friends.Repo.update(changeset) do
   {:ok, person} ->
     # do something with person

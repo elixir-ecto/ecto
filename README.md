@@ -54,7 +54,7 @@ defmodule Sample.App do
 end
 ```
 
-See the [online documentation](http://hexdocs.pm/ecto) or [run the sample application](https://github.com/elixir-ecto/ecto/tree/master/examples/simple) for more information.
+See the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and the [online documentation](http://hexdocs.pm/ecto).
 
 ## Usage
 

@@ -14,12 +14,12 @@ env:
 install:
   - mix local.hex --force
   - mix deps.get
-  - (cd examples/simple; mix deps.get)
+  - (cd examples/friends; mix deps.get)
 script:
   - mix test
   - ECTO_POOL=poolboy mix test.adapters
   - ECTO_POOL=sbroker mix test.adapters
-  - (cd examples/simple; mix test)
+  - (cd examples/friends; mix test)
 after_script:
   - mix deps.get --only docs
   - MIX_ENV=docs mix inch.report
