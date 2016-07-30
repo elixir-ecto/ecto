@@ -9,6 +9,7 @@ defmodule Ecto.DateTest do
   end
 
   test "cast strings" do
+    assert Ecto.Date.cast("") == {:ok, nil}
     assert Ecto.Date.cast("2015-12-31") == {:ok, @date}
     assert Ecto.Date.cast("2000-02-29") == {:ok, @leap_date}
     assert Ecto.Date.cast("2015-00-23") == :error
@@ -103,6 +104,7 @@ defmodule Ecto.TimeTest do
   end
 
   test "cast strings" do
+    assert Ecto.Time.cast("") == {:ok, nil}
     assert Ecto.Time.cast("23:50:07") == {:ok, @time}
     assert Ecto.Time.cast("23:50:07Z") == {:ok, @time}
 
@@ -221,6 +223,7 @@ defmodule Ecto.DateTimeTest do
   end
 
   test "cast strings" do
+    assert Ecto.DateTime.cast("") == {:ok, nil}
     assert Ecto.DateTime.cast("2015-01-23 23:50:07") == {:ok, @datetime}
     assert Ecto.DateTime.cast("2015-01-23T23:50:07") == {:ok, @datetime}
     assert Ecto.DateTime.cast("2015-01-23T23:50:07Z") == {:ok, @datetime}
