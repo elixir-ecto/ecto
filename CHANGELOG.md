@@ -123,7 +123,7 @@ Ecto now requires you to explicitly configure your repo's in your top level conf
 
 The configuration may be an empty list if it does not define any repo.
 
-## v2.0.3-dev
+## v2.0.3 (2016-07-30)
 
 ### Enhancements
 
