@@ -163,7 +163,7 @@ defmodule Ecto.Adapters.SQL do
     |> Ecto.Query.Planner.returning(kind == :all)
     |> Ecto.Query.Planner.query(kind, repo, adapter)
     |> case do
-      {_meta, {:cached, {_id, cached}}, params} ->
+      {_meta, {:cached, _reset, {_id, cached}}, params} ->
         {String.Chars.to_string(cached), params}
       {_meta, {:cache, _update, {_id, prepared}}, params} ->
         {prepared, params}
@@ -397,16 +397,25 @@ defmodule Ecto.Adapters.SQL do
     execute_and_cache(repo, id, update, prepared, params, mapper, opts)
   end
 
-  def execute(repo, _meta, {_, {_id, prepared_or_cached}}, params, nil, opts) do
+  def execute(repo, _meta, {:cached, reset, {id, cached}}, params, nil, opts) do
+    execute_or_reset(repo, id, reset, cached, params, nil, opts)
+  end
+
+ def execute(repo, %{fields: fields}, {:cached, reset, {id, cached}}, params, process, opts) do
+    mapper = &process_row(&1, process, fields)
+    execute_or_reset(repo, id, reset, cached, params, mapper, opts)
+  end
+
+  def execute(repo, _meta, {:nocache, {_id, prepared}}, params, nil, opts) do
     %{rows: rows, num_rows: num} =
-      sql_call!(repo, :execute, [prepared_or_cached], params, nil, opts)
+      sql_call!(repo, :execute, [prepared], params, nil, opts)
     {num, rows}
   end
 
-  def execute(repo, %{fields: fields}, {_, {_id, prepared_or_cached}}, params, process, opts) do
+  def execute(repo, %{fields: fields}, {:nocache, {_id, prepared}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     %{rows: rows, num_rows: num} =
-      sql_call!(repo, :execute, [prepared_or_cached], params, mapper, opts)
+      sql_call!(repo, :execute, [prepared], params, mapper, opts)
     {num, rows}
   end
 
@@ -414,9 +423,21 @@ defmodule Ecto.Adapters.SQL do
     name = "ecto_" <> Integer.to_string(id)
     case sql_call(repo, :prepare_execute, [name, prepared], params, mapper, opts) do
       {:ok, query, %{num_rows: num, rows: rows}} ->
-        update.({0, query})
+        update.({id, query})
         {num, rows}
       {:error, err} ->
+        raise err
+    end
+  end
+
+  defp execute_or_reset(repo, id, reset, cached, params, mapper, opts) do
+    case sql_call(repo, :execute, [cached], params, mapper, opts) do
+      {:ok, %{num_rows: num, rows: rows}} ->
+        {num, rows}
+      {:error, err} ->
+        raise err
+      {:reset, err} ->
+        reset.({id, String.Chars.to_string(cached)})
         raise err
     end
   end

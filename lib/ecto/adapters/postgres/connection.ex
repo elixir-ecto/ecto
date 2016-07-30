@@ -74,19 +74,44 @@ if Code.ensure_loaded?(Postgrex) do
 
     def prepare_execute(conn, name, sql, params, opts) do
       query = %Postgrex.Query{name: name, statement: sql}
-      DBConnection.prepare_execute(conn, query, params, opts)
+      opts  = [function: :prepare_execute] ++ opts
+      case DBConnection.prepare_execute(conn, query, params, opts) do
+        {:ok, _, _} = ok ->
+          ok
+        {:error, %Postgrex.Error{}} = error ->
+          error
+        {:error, err} ->
+          raise err
+      end
     end
 
     def execute(conn, sql, params, opts) when is_binary(sql) do
       query = %Postgrex.Query{name: "", statement: sql}
+      opts  = [function: :prepare_execute] ++ opts
       case DBConnection.prepare_execute(conn, query, params, opts) do
-        {:ok, _, query} -> {:ok, query}
-        {:error, _} = err -> err
+        {:ok, _, result}  ->
+          {:ok, result}
+        {:error, %Postgrex.Error{}} = error ->
+          error
+        {:error, err} ->
+          raise err
       end
     end
 
     def execute(conn, %{} = query, params, opts) do
-      DBConnection.execute(conn, query, params, opts)
+      opts = [function: :execute] ++ opts
+      case DBConnection.execute(conn, query, params, opts) do
+        {:ok, _} = ok ->
+          ok
+        {:error, %ArgumentError{} = err} ->
+          {:reset, err}
+        {:error, %Postgrex.Error{postgres: %{code: :feature_not_supported}} = err} ->
+          {:reset, err}
+        {:error, %Postgrex.Error{}} = error ->
+          error
+        {:error, err} ->
+          raise err
+      end
     end
 
     alias Ecto.Query

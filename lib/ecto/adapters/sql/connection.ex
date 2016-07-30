@@ -24,8 +24,10 @@ defmodule Ecto.Adapters.SQL.Connection do
   @doc """
   Executes the given prepared query with `DBConnection`.
   """
-  @callback execute(connection :: DBConnection.t, prepared_query :: prepared | cached, params :: [term], options :: Keyword.t) ::
+  @callback execute(connection :: DBConnection.t, prepared_query :: prepared, params :: [term], options :: Keyword.t) ::
             {:ok, term} | {:error, Exception.t}
+  @callback execute(connection :: DBConnection.t, prepared_query :: cached, params :: [term], options :: Keyword.t) ::
+            {:ok, term} | {:error | :reset, Exception.t}
 
   @doc """
   Receives the exception returned by `query/4`.
