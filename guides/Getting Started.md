@@ -390,6 +390,7 @@ This will return the following for the errors shown above:
   last_name: ["can't be blank"],
    bio: ["should be at least 15 characters"],
 }
+```
 
 One more final thing to mention here: you can trigger an exception to be thrown by using `Friends.Repo.insert!/2`. If a changeset is invalid, you will see an `Ecto.InvalidChangesetError` exception. Here's a quick example of that:
 
