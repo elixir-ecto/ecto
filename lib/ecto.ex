@@ -24,8 +24,8 @@ defmodule Ecto do
   documentation for more specific examples, options and configuration.
 
   If you want to quickly check a sample application using Ecto, please check
-  the [getting started guide](/getting-started.html) and the accompanying sample
-  application.
+  the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and
+  the accompanying sample application.
 
   ## Repositories
 
