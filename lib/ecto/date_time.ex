@@ -144,8 +144,6 @@ defmodule Ecto.Date do
     do: from_parts(to_i(year), to_i(month), to_i(day))
   defp do_cast(%Ecto.Date{} = d),
     do: {:ok, d}
-  defp do_cast(empty) when empty in ["", nil],
-    do: {:ok, nil}
   defp do_cast(%{"year" => empty, "month" => empty, "day" => empty}) when empty in ["", nil],
     do: {:ok, nil}
   defp do_cast(%{year: empty, month: empty, day: empty}) when empty in ["", nil],
@@ -280,9 +278,6 @@ defmodule Ecto.Time do
   def cast(%{hour: hour, min: min} = map),
     do: from_parts(to_i(hour), to_i(min), to_i(Map.get(map, :sec, 0)), to_i(Map.get(map, :usec, 0)))
 
-
-  def cast(empty) when empty in ["", nil],
-    do: {:ok, nil}
   def cast(%{"hour" => empty, "minute" => empty}) when empty in ["", nil],
     do: {:ok, nil}
   def cast(%{hour: empty, minute: empty}) when empty in ["", nil],
@@ -468,9 +463,6 @@ defmodule Ecto.DateTime do
                to_i(hour), to_i(min), to_i(Map.get(map, :sec, 0)),
                to_i(Map.get(map, :usec, 0)))
   end
-
-  defp do_cast(empty) when empty in ["", nil],
-    do: {:ok, nil}
 
   defp do_cast(%{"year" => empty, "month" => empty, "day" => empty,
                  "hour" => empty, "minute" => empty}) when empty in ["", nil] do

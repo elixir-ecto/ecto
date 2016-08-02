@@ -72,23 +72,35 @@ defmodule Ecto.Changeset do
   happens. By moving constraints to the database, we also provide a safe,
   correct and data-race free means of checking the user input.
 
+  ## Empty values
+
+  Many times, the data given on cast needs to be further pruned, specially
+  regarding to empty values. For example, if you are gathering data to be
+  cast from the command line or through an HTML form or any other text
+  based format, it is likely those means cannot express nil values. For
+  those reasons, changesets include the concept of empty values, which are
+  values that will be automatically converted to nil on `cast/3`. Those
+  values are stored in the changeset`empty_values` field and defaults to
+  `[""]`.
+
   ## The Ecto.Changeset struct
 
   The fields are:
 
-  * `valid?`      - Stores if the changeset is valid
-  * `data`        - The changeset source data, for example, a struct
-  * `params`      - The parameters as given on changeset creation
-  * `changes`     - The `changes` from parameters that were approved in casting
-  * `errors`      - All errors from validations
-  * `validations` - All validations performed in the changeset
-  * `constraints` - All constraints defined in the changeset
-  * `required`    - All required fields as a list of atoms
-  * `filters`     - Filters (as a map `%{field => value}`) to narrow the scope of update/delete queries
-  * `action`      - The action to be performed with the changeset
-  * `types`       - Cache of the data's field types
-  * `repo`        - The repository applying the changeset (only set after a Repo function is called)
-  * `opts`        - The options given to the repository
+    * `valid?`       - Stores if the changeset is valid
+    * `data`         - The changeset source data, for example, a struct
+    * `params`       - The parameters as given on changeset creation
+    * `changes`      - The `changes` from parameters that were approved in casting
+    * `errors`       - All errors from validations
+    * `validations`  - All validations performed in the changeset
+    * `constraints`  - All constraints defined in the changeset
+    * `required`     - All required fields as a list of atoms
+    * `filters`      - Filters (as a map `%{field => value}`) to narrow the scope of update/delete queries
+    * `action`       - The action to be performed with the changeset
+    * `types`        - Cache of the data's field types
+    * `repo`         - The repository applying the changeset (only set after a Repo function is called)
+    * `opts`         - The options given to the repository
+    * `empty_values` - A list of values to be considered empty
 
   ## On replace
 
@@ -137,10 +149,13 @@ defmodule Ecto.Changeset do
   alias __MODULE__
   alias Ecto.Changeset.Relation
 
+  @empty_values [""]
+
   # If a new field is added here, def merge must be adapted
   defstruct valid?: false, data: nil, params: nil, changes: %{}, repo: nil,
             errors: [], validations: [], required: [], prepare: [],
-            constraints: [], filters: %{}, action: nil, types: nil
+            constraints: [], filters: %{}, action: nil, types: nil,
+            empty_values: @empty_values
 
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
@@ -329,56 +344,56 @@ defmodule Ecto.Changeset do
   end
 
   defp do_cast({data, types}, params, required, optional) when is_map(data) do
-    do_cast(data, types, %{}, params, required, optional)
+    do_cast(data, types, %{}, params, required, optional, @empty_values)
   end
 
   defp do_cast(%Changeset{types: nil}, _params, _required, _optional) do
     raise ArgumentError, "changeset does not have types information"
   end
 
-  defp do_cast(%Changeset{changes: changes, data: data, types: types} = changeset,
-           params, required, optional) do
-    new_changeset = do_cast(data, types, changes, params, required, optional)
+  defp do_cast(%Changeset{changes: changes, data: data, types: types, empty_values: empty_values} = changeset,
+               params, required, optional) do
+    new_changeset = do_cast(data, types, changes, params, required, optional, empty_values)
     cast_merge(changeset, new_changeset)
   end
 
   defp do_cast(%{__struct__: module} = data, params, required, optional) do
-    do_cast(data, module.__changeset__, %{}, params, required, optional)
+    do_cast(data, module.__changeset__, %{}, params, required, optional, @empty_values)
   end
 
-  defp do_cast(data, types, changes, :empty, required, optional) do
+  defp do_cast(data, types, changes, :empty, required, optional, empty_values) do
     IO.puts :stderr, "warning: passing :empty to Ecto.Changeset.cast/3 is deprecated, " <>
                      "please pass an empty map or :invalid instead\n" <> Exception.format_stacktrace
-    do_cast(data, types, changes, :invalid, required, optional)
+    do_cast(data, types, changes, :invalid, required, optional, empty_values)
   end
 
-  defp do_cast(%{} = data, %{} = types, %{} = changes, :invalid, required, optional)
+  defp do_cast(%{} = data, %{} = types, %{} = changes, :invalid, required, optional, empty_values)
        when is_list(required) and is_list(optional) do
     _ = Enum.map(optional, &process_empty_fields(&1, types))
     required = Enum.map(required, &process_empty_fields(&1, types))
 
     %Changeset{params: nil, data: data, valid?: false, errors: [],
-               changes: changes, required: required, types: types}
+               changes: changes, required: required, types: types, empty_values: empty_values}
   end
 
-  defp do_cast(%{} = data, %{} = types, %{} = changes, %{} = params, required, optional)
+  defp do_cast(%{} = data, %{} = types, %{} = changes, %{} = params, required, optional, empty_values)
        when is_list(required) and is_list(optional) do
     params = convert_params(params)
 
     {_, {changes, errors, valid?}} =
       Enum.map_reduce(optional, {changes, [], true},
-                      &process_param(&1, :optional, params, types, data, &2))
+                      &process_param(&1, :optional, params, types, data, empty_values, &2))
 
     {required, {changes, errors, valid?}} =
       Enum.map_reduce(required, {changes, errors, valid?},
-                      &process_param(&1, :required, params, types, data, &2))
+                      &process_param(&1, :required, params, types, data, empty_values, &2))
 
     %Changeset{params: params, data: data, valid?: valid?,
                errors: Enum.reverse(errors), changes: changes, required: required,
-               types: types}
+               types: types, empty_values: empty_values}
   end
 
-  defp do_cast(%{}, %{}, %{}, params, required, optional)
+  defp do_cast(%{}, %{}, %{}, params, required, optional, _empty_values)
        when is_list(required) and is_list(optional) do
     raise Ecto.CastError, "expected params to be a map, got: `#{inspect params}`"
   end
@@ -388,13 +403,13 @@ defmodule Ecto.Changeset do
   defp process_empty_fields(key, _types) when is_atom(key),
     do: key
 
-  defp process_param(key, kind, params, types, data, {changes, errors, valid?}) do
+  defp process_param(key, kind, params, types, data, empty_values, {changes, errors, valid?}) do
     {key, param_key} = cast_key(key)
     type = type!(types, key)
     current = Map.get(data, key)
 
     {key,
-     case cast_field(param_key, type, params, current, data, valid?) do
+     case cast_field(param_key, type, params, current, empty_values, valid?) do
        {:ok, nil, valid?} when kind == :required ->
          {errors, valid?} = error_on_nil(kind, key, Map.get(changes, key), errors, valid?)
          {changes, errors, valid?}
@@ -431,9 +446,10 @@ defmodule Ecto.Changeset do
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
 
-  defp cast_field(param_key, type, params, current, _data, valid?) do
+  defp cast_field(param_key, type, params, current, empty_values, valid?) do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
+        value = if value in empty_values, do: nil, else: value
         case Ecto.Type.cast(type, value) do
           {:ok, ^current} -> {:missing, current}
           {:ok, value} -> {:ok, value, valid?}
@@ -627,10 +643,11 @@ defmodule Ecto.Changeset do
     new_filters     = Map.merge(cs1.filters, cs2.filters)
     new_validations = cs1.validations ++ cs2.validations
     new_constraints = cs1.constraints ++ cs2.constraints
+    new_empty_vals  = Enum.uniq(cs1.empty_values ++ cs2.empty_values)
 
     cast_merge %{cs1 | repo: new_repo, filters: new_filters,
                        action: new_action, validations: new_validations,
-                       constraints: new_constraints}, cs2
+                       constraints: new_constraints, empty_values: new_empty_vals}, cs2
   end
 
   def merge(%Changeset{}, %Changeset{}) do

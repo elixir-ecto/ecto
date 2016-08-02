@@ -46,68 +46,29 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
-  test "cast/3: required field (via validate_required/2) of wrong type is marked as invalid" do
-    params = %{"body" => :world}
-    struct = %Post{}
-
-    changeset = cast(struct, params, [:body])
-                |> validate_required([:body])
-
-    assert changeset.changes == %{}
-    assert changeset.errors == [body: {"is invalid", [type: :string]}]
-    refute changeset.valid?
-  end
-
-  ## cast/4
-
-  test "cast/4: with valid string keys" do
-    params = %{"title" => "hello", "body" => "world"}
-    struct = %Post{}
-
-    changeset = cast(struct, params, ~w(title)a, ~w(body))
-    assert changeset.params == params
-    assert changeset.data  == struct
-    assert changeset.changes == %{title: "hello", body: "world"}
-    assert changeset.errors == []
-    assert changeset.validations == []
-    assert changeset.required == [:title]
-    assert changeset.valid?
-  end
-
-  test "cast/4: with valid atom keys" do
+  test "cast/3: with valid atom keys" do
     params = %{title: "hello", body: "world"}
     struct = %Post{}
 
-    changeset = cast(struct, params, ~w(title)a, ~w(body))
+    changeset = cast(struct, params, ~w(title body)a)
     assert changeset.params == %{"title" => "hello", "body" => "world"}
     assert changeset.data  == struct
     assert changeset.changes == %{title: "hello", body: "world"}
     assert changeset.errors == []
     assert changeset.validations == []
-    assert changeset.required == [:title]
+    assert changeset.required == []
     assert changeset.valid?
   end
 
-  test "cast/4: with binary id" do
-    changeset = cast(%Post{}, %{"uuid" => "hello"}, [:uuid], [])
-    assert changeset.changes == %{uuid: "hello"}
-    assert changeset.errors == []
-    assert changeset.valid?
+  test "cast/3: with empty values" do
+    params = %{"title" => "", "body" => nil}
+    struct = %Post{title: "foo", body: "bar"}
+
+    changeset = cast(struct, params, ~w(title body)a)
+    assert changeset.changes == %{title: nil, body: nil}
   end
 
-  test "cast/4: missing optional is valid" do
-    params = %{"title" => "hello"}
-    struct = %Post{}
-
-    changeset = cast(struct, params, ~w(title), ~w(body))
-    assert changeset.params == params
-    assert changeset.data  == struct
-    assert changeset.changes == %{title: "hello"}
-    assert changeset.errors == []
-    assert changeset.valid?
-  end
-
-  test "cast/4: with data and types" do
+  test "cast/3: with data and types" do
     data   = {%{title: "hello"}, %{title: :string, upvotes: :integer}}
     params = %{"title" => "world", "upvotes" => "0"}
 
@@ -120,109 +81,72 @@ defmodule Ecto.ChangesetTest do
     assert apply_changes(changeset) == %{title: "world", upvotes: 0}
   end
 
-  test "cast/4: missing required is invalid" do
-    params = %{"body" => "world"}
-    struct = %Post{}
+  test "cast/3: with changeset" do
+    base_changeset = cast(%Post{title: "valid"}, %{}, ~w(title))
+                     |> validate_required(:title)
+                     |> validate_length(:title, min: 3)
+                     |> unique_constraint(:title)
 
-    changeset = cast(struct, params, ~w(title upvotes), ~w(body))
-    assert changeset.params == params
-    assert changeset.data  == struct
-    assert changeset.changes == %{body: "world"}
-    assert changeset.errors == [title: {"can't be blank", []}]
-    refute changeset.valid?
+    # No changes
+    changeset = cast(base_changeset, %{}, ~w())
+    assert changeset.valid?
+    assert changeset.changes  == %{}
+    assert changeset.required == [:title]
+    assert length(changeset.validations) == 1
+    assert length(changeset.constraints) == 1
+
+    changeset = cast(base_changeset, %{body: "new body"}, ~w(body))
+    assert changeset.valid?
+    assert changeset.changes  == %{body: "new body"}
+    assert changeset.required == [:title]
+    assert length(changeset.validations) == 1
+    assert length(changeset.constraints) == 1
   end
 
-  test "cast/4: struct with :invalid parameters" do
-    changeset = cast(%Post{}, :invalid, ~w(title), ~w(body)a)
+  test "cast/3: struct with :invalid parameters" do
+    changeset = cast(%Post{}, :invalid, ~w(title body))
     assert changeset.data == %Post{}
     assert changeset.params == nil
     assert changeset.changes == %{}
     assert changeset.errors == []
     assert changeset.validations == []
-    assert changeset.required == [:title]
     refute changeset.valid?
   end
 
-  test "cast/4: changeset with :invalid parameters" do
-    changeset = cast(%Post{}, %{"title" => "sample"}, ~w(title)a, ~w())
-    changeset = cast(changeset, :invalid, ~w(), ~w(body)a)
+  test "cast/3: changeset with :invalid parameters" do
+    changeset = cast(%Post{}, %{"title" => "sample"}, ~w(title)a)
+    changeset = cast(changeset, :invalid, ~w(body)a)
     assert changeset.data == %Post{}
     assert changeset.params == %{"title" => "sample"}
     assert changeset.changes == %{title: "sample"}
     assert changeset.errors == []
     assert changeset.validations == []
-    assert changeset.required == [:title]
     refute changeset.valid?
   end
 
-  test "cast/4: required field is marked as invalid" do
+  test "cast/3: field is marked as invalid" do
     params = %{"body" => :world}
     struct = %Post{}
 
-    changeset = cast(struct, params, ~w(body), ~w())
+    changeset = cast(struct, params, ~w(body))
     assert changeset.changes == %{}
     assert changeset.errors == [body: {"is invalid", [type: :string]}]
     refute changeset.valid?
   end
 
-  test "cast/4: optional field is marked as invalid" do
-    params = %{"body" => :world}
-    struct = %Post{}
-
-    changeset = cast(struct, params, ~w(), ~w(body))
-    assert changeset.changes == %{}
-    assert changeset.errors == [body: {"is invalid", [type: :string]}]
-    refute changeset.valid?
-  end
-
-  test "cast/4: required errors" do
-    changeset = cast(%Post{}, %{"title" => nil}, ~w(title), ~w())
-    assert changeset.errors == [title: {"can't be blank", []}]
-    assert changeset.changes == %{}
-    refute changeset.valid?
-
-    changeset = cast(%Post{title: nil}, %{}, ~w(title), ~w())
-    assert changeset.errors == [title: {"can't be blank", []}]
-    assert changeset.changes == %{}
-    refute changeset.valid?
-
-    changeset = cast(%Post{title: "valid"}, %{"title" => nil}, ~w(title), ~w())
-    assert changeset.errors == [title: {"can't be blank", []}]
-    assert changeset.changes == %{}
-    refute changeset.valid?
-  end
-
-  test "cast/4: does not mark as required if schema contains field" do
-    changeset = cast(%Post{title: "valid"}, %{}, ~w(title), ~w())
-    assert changeset.errors == []
-    assert changeset.valid?
-  end
-
-  test "cast/4: does not mark as required if changes contains field" do
-    changeset = cast(%Post{}, %{title: "valid"}, ~w(title), ~w())
-    changeset = cast(changeset, %{}, ~w(title), ~w())
-    assert changeset.changes == %{title: "valid"}
-    assert changeset.errors == []
-    assert changeset.valid?
-  end
-
-  test "cast/4: fails on invalid field" do
+  test "cast/3: fails on invalid field" do
     assert_raise ArgumentError, ~r"unknown field `unknown`", fn ->
-      cast(%Post{}, %{}, ~w(), ~w(unknown))
-    end
-
-    assert_raise ArgumentError, ~r"unknown field `unknown`", fn ->
-      cast(%Post{}, %{}, ~w(unknown), ~w())
+      cast(%Post{}, %{}, ~w(unknown))
     end
   end
 
-  test "cast/4: fails on bad arguments" do
+  test "cast/3: fails on bad arguments" do
     assert_raise Ecto.CastError, ~r"expected params to be a map, got:", fn ->
-      cast(%Post{}, %Post{}, ~w(), ~w(unknown))
+      cast(%Post{}, %Post{}, ~w(unknown))
     end
 
     assert_raise Ecto.CastError, ~r"expected params to be a map, got:", fn ->
-      cast(%Post{}, "foo", ~w(), ~w(unknown))
+      cast(%Post{}, "foo", ~w(unknown))
     end
 
     assert_raise Ecto.CastError, ~r"mixed keys", fn ->
@@ -234,43 +158,22 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-  test "cast/4: works when casting a changeset" do
-    base_changeset = cast(%Post{title: "valid"}, %{}, ~w(title), ~w())
-                     |> validate_length(:title, min: 3)
-                     |> unique_constraint(:title)
-
-    # No changes
-    changeset = cast(base_changeset, %{}, ~w(), ~w())
-    assert changeset.valid?
-    assert changeset.changes  == %{}
-    assert changeset.required == [:title]
-    assert length(changeset.validations) == 1
-    assert length(changeset.constraints) == 1
-
-    changeset = cast(base_changeset, %{body: "new body"}, ~w(), ~w(body))
-    assert changeset.valid?
-    assert changeset.changes  == %{body: "new body"}
-    assert changeset.required == [:title]
-    assert length(changeset.validations) == 1
-    assert length(changeset.constraints) == 1
+  test "cast/3: protects against atom injection" do
+    assert_raise ArgumentError, fn ->
+      cast(%Post{}, %{}, ~w(surely_never_saw_this_atom_before))
+    end
   end
 
-  test "cast/4: works on casting a datetime field" do
-    date = %Ecto.DateTime{year: 2015, month: 5, day: 1, hour: 10, min: 8, sec: 0}
-    params = %{"published_at" => date}
+  test "cast/3: required field (via validate_required/2) of wrong type is marked as invalid" do
+    params = %{"body" => :world}
     struct = %Post{}
 
-    changeset = cast(struct, params, ~w(published_at), ~w())
-    assert changeset.params == params
-    assert changeset.data  == struct
-    assert changeset.changes == %{published_at: date}
-    assert changeset.valid?
-  end
+    changeset = cast(struct, params, [:body])
+                |> validate_required([:body])
 
-  test "cast/4: protects against atom injection" do
-    assert_raise ArgumentError, fn ->
-      cast(%Post{}, %{}, ~w(surely_never_saw_this_atom_before), [])
-    end
+    assert changeset.changes == %{}
+    assert changeset.errors == [body: {"is invalid", [type: :string]}]
+    refute changeset.valid?
   end
 
   ## Changeset functions
