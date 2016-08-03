@@ -353,7 +353,7 @@ case Friends.Repo.insert(changeset) do
 end
 ```
 
-**NOTE:** `changeset.valid?` will not check constraints (such as `uniqueness_constraint`). For that, you will need to attempt to do an insert and check for errors from the database. It's for this reason it's best practice to try inserting data and validation the returned tuple from `Friends.Repo.insert` to get the correct errors, as prior to insert the changeset will only contain validation errors from the application itself.
+**NOTE:** `changeset.valid?` will not check constraints (such as `uniqueness_constraint`). For that, you will need to attempt to do an insert and check for errors from the database. It's for this reason it's best practice to try inserting data and validate the returned tuple from `Friends.Repo.insert` to get the correct errors, as prior to insert the changeset will only contain validation errors from the application itself.
 
 If the insertion of the changeset succeeds, then you can do whatever you wish with the `person` returned in that result. If it fails, then you have access to the changeset and its errors. In the failure case, you may wish to present these errors to the end user. The errors in the changeset are a keyword list that looks like this:
 
