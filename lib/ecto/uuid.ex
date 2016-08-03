@@ -117,7 +117,7 @@ defmodule Ecto.UUID do
        e(e1), e(e2), e(e3), e(e4), e(e5), e(e6), e(e7), e(e8), e(e9), e(e10), e(e11), e(e12) >>
   end
 
-  @compile {:inline, d: 1}
+  @compile {:inline, e: 1}
 
   defp e(0),  do: ?0
   defp e(1),  do: ?1
@@ -135,5 +135,4 @@ defmodule Ecto.UUID do
   defp e(13), do: ?d
   defp e(14), do: ?e
   defp e(15), do: ?f
-  defp e(_),  do: throw(:error)
 end
