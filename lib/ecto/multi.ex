@@ -228,7 +228,7 @@ defmodule Ecto.Multi do
   @doc """
   Adds an update operation to the multi.
 
-  Accepts the same arguments and options as `Ecto.Repo.update/3` does.
+  Accepts the same arguments and options as `Ecto.Repo.update/2` does.
   """
   @spec update(t, name, Changeset.t, Keyword.t) :: t
   def update(multi, name, %Changeset{} = changeset, opts \\ []) do
