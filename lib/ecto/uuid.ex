@@ -102,23 +102,38 @@ defmodule Ecto.UUID do
   @doc false
   def autogenerate, do: generate()
 
-  defp encode(<<u0::32, u1::16, u2::16, u3::16, u4::48>>) do
-    hex_pad(u0, 8) <> "-" <>
-    hex_pad(u1, 4) <> "-" <>
-    hex_pad(u2, 4) <> "-" <>
-    hex_pad(u3, 4) <> "-" <>
-    hex_pad(u4, 12)
+  defp encode(<< a1::4, a2::4, a3::4, a4::4,
+                 a5::4, a6::4, a7::4, a8::4,
+                 b1::4, b2::4, b3::4, b4::4,
+                 c1::4, c2::4, c3::4, c4::4,
+                 d1::4, d2::4, d3::4, d4::4,
+                 e1::4, e2::4, e3::4, e4::4,
+                 e5::4, e6::4, e7::4, e8::4,
+                 e9::4, e10::4, e11::4, e12::4 >>) do
+    << e(a1), e(a2), e(a3), e(a4), e(a5), e(a6), e(a7), e(a8), ?-,
+       e(b1), e(b2), e(b3), e(b4), ?-,
+       e(c1), e(c2), e(c3), e(c4), ?-,
+       e(d1), e(d2), e(d3), e(d4), ?-,
+       e(e1), e(e2), e(e3), e(e4), e(e5), e(e6), e(e7), e(e8), e(e9), e(e10), e(e11), e(e12) >>
   end
 
-  defp hex_pad(hex, count) do
-    hex = Integer.to_string(hex, 16)
-    lower(hex, :binary.copy("0", count - byte_size(hex)))
-  end
+  @compile {:inline, d: 1}
 
-  defp lower(<<h, t::binary>>, acc) when h in ?A..?F,
-    do: lower(t, acc <> <<h + 32>>)
-  defp lower(<<h, t::binary>>, acc),
-    do: lower(t, acc <> <<h>>)
-  defp lower(<<>>, acc),
-    do: acc
+  defp e(0),  do: ?0
+  defp e(1),  do: ?1
+  defp e(2),  do: ?2
+  defp e(3),  do: ?3
+  defp e(4),  do: ?4
+  defp e(5),  do: ?5
+  defp e(6),  do: ?6
+  defp e(7),  do: ?7
+  defp e(8),  do: ?8
+  defp e(9),  do: ?9
+  defp e(10), do: ?a
+  defp e(11), do: ?b
+  defp e(12), do: ?c
+  defp e(13), do: ?d
+  defp e(14), do: ?e
+  defp e(15), do: ?f
+  defp e(_),  do: throw(:error)
 end
