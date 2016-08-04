@@ -20,6 +20,18 @@ defmodule Ecto.Query.Builder.JoinTest do
     end
   end
 
+  defmacro join_macro(left, right) do
+    quote do
+      fragment("? <> ?", unquote(left), unquote(right))
+    end
+  end
+
+  test "join with macros" do
+    left = "left"
+    right = "right"
+    assert %{joins: [_]} = join("posts", :inner, [p], c in join_macro(^left, ^right), true)
+  end
+
   test "join interpolation" do
     qual = :left
     source = "comments"
