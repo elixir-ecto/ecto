@@ -409,18 +409,27 @@ defmodule Ecto.Changeset do
     current = Map.get(data, key)
 
     {key,
-     case cast_field(param_key, type, params, current, empty_values, valid?) do
-       {:ok, nil, valid?} when kind == :required ->
-         {errors, valid?} = error_on_nil(kind, key, Map.get(changes, key), errors, valid?)
-         {changes, errors, valid?}
-       {:ok, value, valid?} ->
-         {Map.put(changes, key, value), errors, valid?}
-       {:missing, current} ->
-         {errors, valid?} = error_on_nil(kind, key, Map.get(changes, key, current), errors, valid?)
-         {changes, errors, valid?}
-       :invalid ->
-         {changes, [{key, {"is invalid", [type: type]}} | errors], false}
-     end}
+    case Map.fetch(params, param_key) do
+      {:ok, value} ->
+        current_delta = Map.get(changes, key, current)
+        value = if value in empty_values, do: nil, else: value
+        case Ecto.Type.cast(type, value) do
+           {:ok, ^current} when kind == :required and current_delta == nil ->
+             {changes, [{key, {"can't be blank", []}} | errors], false}
+           {:ok, ^current} ->
+             {changes, errors, valid?}
+           {:ok, value} ->
+             {Map.put(changes, key, value), errors, valid?}
+           :error ->
+             {changes, [{key, {"is invalid", [type: type]}} | errors], false}
+        end
+      :error ->
+        if kind == :required do
+          {changes, [{key, {"can't be blank", []}} | errors], false}
+        else
+          {changes, errors, valid?}
+        end
+    end}
   end
 
   defp type!(types, key) do
@@ -446,20 +455,6 @@ defmodule Ecto.Changeset do
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
 
-  defp cast_field(param_key, type, params, current, empty_values, valid?) do
-    case Map.fetch(params, param_key) do
-      {:ok, value} ->
-        value = if value in empty_values, do: nil, else: value
-        case Ecto.Type.cast(type, value) do
-          {:ok, ^current} -> {:missing, current}
-          {:ok, value} -> {:ok, value, valid?}
-          :error -> :invalid
-        end
-      :error ->
-        {:missing, current}
-    end
-  end
-
   defp convert_params(params) do
     Enum.reduce(params, nil, fn
       {key, _value}, nil when is_binary(key) ->
@@ -474,11 +469,6 @@ defmodule Ecto.Changeset do
 
     end) || params
   end
-
-  defp error_on_nil(:required, key, nil, errors, _valid?),
-    do: {[{key, {"can't be blank", []}} | errors], false}
-  defp error_on_nil(_kind, _key, _value, errors, valid?),
-    do: {errors, valid?}
 
   ## Casting related
 
