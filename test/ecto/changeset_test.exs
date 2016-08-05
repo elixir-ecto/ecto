@@ -176,6 +176,27 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
+  test "cast/4: validates required fields" do
+    base_changeset = cast(%Post{title: "valid"}, %{}, ~w(title), ~w())
+                     |> validate_length(:title, min: 3)
+                     |> unique_constraint(:title)
+
+    # No changes
+    changeset = cast(base_changeset, %{}, ~w())
+    assert changeset.valid?
+    assert changeset.changes  == %{}
+    assert changeset.required == [:title]
+    assert length(changeset.validations) == 1
+    assert length(changeset.constraints) == 1
+
+    changeset = cast(base_changeset, %{body: "new body"}, ~w(body), ~w())
+    assert changeset.valid?
+    assert changeset.changes  == %{body: "new body"}
+    assert changeset.required == [:title, :body]
+    assert length(changeset.validations) == 1
+    assert length(changeset.constraints) == 1
+  end
+
   ## Changeset functions
 
   test "merge/2: merges changes" do
