@@ -21,7 +21,7 @@ defmodule Ecto.ChangesetTest do
       field :upvotes, :integer, default: 0
       field :topics, {:array, :string}
       field :published_at, Ecto.DateTime
-      has_many :comments, Ecto.ChangesetTest.Comment
+      has_many :comments, Ecto.ChangesetTest.Comment, on_replace: :delete
       has_one :comment, Ecto.ChangesetTest.Comment
     end
   end
@@ -396,6 +396,13 @@ defmodule Ecto.ChangesetTest do
     assert get_field(changeset, :body, "other") == "bar"
     assert get_field(changeset, :other) == nil
     assert get_field(changeset, :other, "other") == "other"
+  end
+
+  test "get_field/3 with associations" do
+    post = %Post{comments: [%Comment{}]}
+    changeset = change(post) |> put_assoc(:comments, [])
+
+    assert get_field(changeset, :comments) == []
   end
 
   test "fetch_change/2" do

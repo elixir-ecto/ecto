@@ -49,7 +49,8 @@ defmodule Ecto.Changeset.Relation do
       do: struct
   end
 
-  defp apply_changes(%Changeset{action: :delete}), do: nil
+  defp apply_changes(%Changeset{action: :delete}),  do: nil
+  defp apply_changes(%Changeset{action: :replace}), do: nil
   defp apply_changes(changeset), do: Changeset.apply_changes(changeset)
 
   @doc """
