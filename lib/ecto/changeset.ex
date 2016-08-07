@@ -5,7 +5,7 @@ defmodule Ecto.Changeset do
 
   There is an example of working with changesets in the
   introductory documentation in the `Ecto` module. The
-  functions `change/2` and `cast/3` are the usual entryva
+  functions `change/2` and `cast/3` are the usual entry
   points for creating changesets, while the remaining
   functions are useful for manipulating them.
 
