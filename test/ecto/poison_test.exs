@@ -22,7 +22,7 @@ defmodule Ecto.PoisonTest do
 
   test "encodes decimal" do
     decimal = Decimal.new("1.0")
-    assert Poison.encode!(decimal) == ~s("1.0")
+    assert Poison.encode!(decimal) == ~s(1.0)
   end
 
   test "fails on association not loaded" do
