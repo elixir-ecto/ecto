@@ -8,7 +8,7 @@ they're using using similar contructs.
 
 In this guide, we're going to learn some basics about Ecto, such as creating,
 reading, updating and destroying records from a PostgreSQL database. If you want
-to see the code from this guide, you can view it [at ecto/examples/friends on GitHub](https://github.com/elixir-lang/ecto/tree/master/ecto/friends).
+to see the code from this guide, you can view it [at ecto/examples/friends on GitHub](https://github.com/elixir-lang/ecto/tree/master/examples/friends).
 
 **This guide will require you to have setup PostgreSQL beforehand.**
 
