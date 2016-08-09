@@ -123,6 +123,17 @@ Ecto now requires you to explicitly configure your repo's in your top level conf
 
 The configuration may be an empty list if it does not define any repo.
 
+## v2.0.4 (2016-08-09)
+
+### Enhancements
+
+  * [Ecto.Query] Allow macros to be used in joins
+  * [Ecto.Changeset] Introduce the concept of empty values into changesets so empty strings do not pass throgh
+
+### Bug fixes
+
+  * [Ecto.Changeset] Treat `:replace` changesets the same `:delete` in `get_field`
+
 ## v2.0.3 (2016-07-30)
 
 ### Enhancements
