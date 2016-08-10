@@ -1077,7 +1077,7 @@ defmodule Ecto.Schema do
     Enum.reduce(types, struct, fn
       {field, type}, acc ->
         case Map.fetch(map, Atom.to_string(field)) do
-          {:ok, value} -> Map.put(acc, field, load!(struct, type, value, loader))
+          {:ok, value} -> Map.put(acc, field, load!(struct, field, type, value, loader))
           :error -> acc
         end
     end)
@@ -1090,7 +1090,7 @@ defmodule Ecto.Schema do
   defp do_load([field|fields], [value|values], struct, types, loader) do
     case Map.fetch(types, field) do
       {:ok, type} ->
-        value = load!(struct, type, value, loader)
+        value = load!(struct, field, type, value, loader)
         do_load(fields, values, Map.put(struct, field, value), types, loader)
       :error ->
         raise ArgumentError, "unknown field `#{field}` for struct #{inspect struct.__struct__}"
@@ -1099,10 +1099,10 @@ defmodule Ecto.Schema do
 
   defp do_load([], [], struct, _types, _loader), do: struct
 
-  defp load!(struct, type, value, loader) do
+  defp load!(struct, field, type, value, loader) do
     case loader.(type, value) do
       {:ok, value} -> value
-      :error -> raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type} in schema #{inspect struct.__struct__}"
+      :error -> raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type} for #{inspect field} in schema #{inspect struct.__struct__}"
     end
   end
 
