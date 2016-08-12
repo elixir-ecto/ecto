@@ -498,19 +498,23 @@ defmodule Ecto.Migration do
       create index(:products, [:user_id], where: "price = 0", name: :free_products_index)
 
   """
-  def index(table, columns, opts \\ []) when is_atom(table) and is_list(columns) do
+  def index(table, columns, opts \\ [])
+  def index(table, columns, opts) when is_atom(table) and is_list(columns) do
     index = struct(%Index{table: table, columns: columns}, opts)
     %{index | name: index.name || default_index_name(index)}
   end
+  def index(table, column, opts) when is_atom(table) and is_atom(column), do: index(table, [column], opts)
 
   @doc """
   Shortcut for creating a unique index.
 
   See `index/3` for more information.
   """
-  def unique_index(table, columns, opts \\ []) when is_atom(table) and is_list(columns) do
+  def unique_index(table, columns, opts \\ [])
+  def unique_index(table, columns, opts) when is_atom(table) and is_list(columns) do
     index(table, columns, [unique: true] ++ opts)
   end
+  def unique_index(table, column, opts) when is_atom(table) and is_atom(column), do: unique_index(table, [column], opts)
 
   defp default_index_name(index) do
     [index.table, index.columns, "index"]
