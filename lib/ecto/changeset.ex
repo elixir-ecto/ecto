@@ -536,7 +536,8 @@ defmodule Ecto.Changeset do
 
   defp cast_relation(type, %Changeset{} = changeset, key, opts) do
     {key, param_key} = cast_key(key)
-    %{data: data, types: types, params: params, changes: changes} = changeset
+    %{data: data, types: types, params: params, changes: changes,
+      empty_values: empty_values} = changeset
     %{related: related} = relation = relation!(:cast, type, key, Map.get(types, key))
     params = params || %{}
 
@@ -554,6 +555,7 @@ defmodule Ecto.Changeset do
     changeset =
       case Map.fetch(params, param_key) do
         {:ok, value} ->
+          value = if value in empty_values, do: nil, else: value
           case Relation.cast(relation, value, current, on_cast) do
             {:ok, change, relation_valid?, false} when change != original ->
               missing_relation(%{changeset | changes: Map.put(changes, key, change),

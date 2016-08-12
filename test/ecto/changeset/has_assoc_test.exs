@@ -110,13 +110,19 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert changeset.valid?
   end
 
-  test "cast has_one with nil" do
+  test "cast has_one with empty value" do
     assert cast(%Author{}, %{"profile" => nil}, :profile).changes == %{profile: nil}
     assert cast(%Author{profile: nil}, %{"profile" => nil}, :profile).changes == %{}
+
+    assert cast(%Author{}, %{"profile" => ""}, :profile).changes == %{profile: nil}
+    assert cast(%Author{profile: nil}, %{"profile" => ""}, :profile).changes == %{}
 
     loaded = put_in %Author{}.__meta__.state, :loaded
     assert_raise RuntimeError, ~r"attempting to cast or change association `profile` .* that was not loaded", fn ->
       cast(loaded, %{"profile" => nil}, :profile)
+    end
+    assert_raise RuntimeError, ~r"attempting to cast or change association `profile` .* that was not loaded", fn ->
+      cast(loaded, %{"profile" => ""}, :profile)
     end
   end
 
