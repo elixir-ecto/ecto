@@ -332,7 +332,7 @@ defmodule Ecto.Repo do
   ## Examples
 
       # Returns the number of visits per blog post
-      Repo.aggregate(Post, :avg, :visits)
+      Repo.aggregate(Post, :count, :visits)
 
       # Returns the average number of visits for the top 10
       query = from Post, limit: 10
