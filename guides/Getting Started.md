@@ -335,7 +335,7 @@ changeset.valid?
 The changeset does not have errors, and is valid. Therefore if we try to insert this changeset it will work:
 
 ```elixir
-Repo.insert(changeset)
+Friends.Repo.insert(changeset)
 #=> {:ok,
      %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: nil,
       first_name: "Ryan", id: 3, last_name: "Bigg"}}
