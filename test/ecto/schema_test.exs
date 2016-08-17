@@ -630,4 +630,115 @@ defmodule Ecto.SchemaTest do
       end
     end
   end
+
+  ## schema with module prefix
+
+  defmodule ScopedAssocModel do
+    use Ecto.Schema
+
+    schema Scoped, "company" do
+      has_many :posts, Post
+      has_one :author, User
+      belongs_to :comment, Comment
+      has_many :comment_authors, through: [:comment, :authors]
+      has_one :comment_main_author, through: [:comment, :main_author]
+      has_many :emails, {"users_emails", Email}, on_replace: :delete
+      has_one :profile, {"users_profiles", Profile}
+      belongs_to :summary, {"post_summary", Summary}
+    end
+  end
+
+  test "has_one association, scoped" do
+    struct =
+      %Ecto.Association.Has{field: :author, owner: ScopedAssocModel, cardinality: :one, on_delete: :nothing,
+                            related: Scoped.User, owner_key: :id, related_key: :scoped_assoc_model_id, queryable: Scoped.User,
+                            on_replace: :raise}
+
+    assert ScopedAssocModel.__schema__(:association, :author) == struct
+    assert ScopedAssocModel.__changeset__.author == {:assoc, struct}
+
+    author = (%ScopedAssocModel{}).author
+    assert %Ecto.Association.NotLoaded{} = author
+    assert inspect(author) == "#Ecto.Association.NotLoaded<association :author is not loaded>"
+  end
+
+  test "has_one through association, scoped" do
+    assert ScopedAssocModel.__schema__(:association, :comment_main_author) ==
+      %Ecto.Association.HasThrough{field: :comment_main_author, owner: ScopedAssocModel, cardinality: :one,
+                                   through: [:comment, :main_author], owner_key: :comment_id}
+
+    refute Map.has_key?(ScopedAssocModel.__changeset__, :comment_main_author)
+
+    author = (%ScopedAssocModel{}).comment_main_author
+    assert %Ecto.Association.NotLoaded{} = author
+    assert inspect(author) == "#Ecto.Association.NotLoaded<association :comment_main_author is not loaded>"
+  end
+
+  test "belongs_to association, scoped" do
+    struct =
+      %Ecto.Association.BelongsTo{field: :comment, owner: ScopedAssocModel, cardinality: :one,
+       related: Scoped.Comment, owner_key: :comment_id, related_key: :id, queryable: Scoped.Comment,
+       on_replace: :raise, defaults: []}
+
+    assert ScopedAssocModel.__schema__(:association, :comment) == struct
+    assert ScopedAssocModel.__changeset__.comment == {:assoc, struct}
+
+    comment = (%ScopedAssocModel{}).comment
+    assert %Ecto.Association.NotLoaded{} = comment
+    assert inspect(comment) == "#Ecto.Association.NotLoaded<association :comment is not loaded>"
+  end
+
+  test "belongs_to association via {source, model}, scoped" do
+    struct =
+      %Ecto.Association.BelongsTo{field: :summary, owner: ScopedAssocModel, cardinality: :one,
+       related: Scoped.Summary, owner_key: :summary_id, related_key: :id,
+       queryable: {"post_summary", Scoped.Summary}, on_replace: :raise, defaults: []}
+
+    assert ScopedAssocModel.__schema__(:association, :summary) == struct
+    assert ScopedAssocModel.__changeset__.summary == {:assoc, struct}
+
+    comment = (%ScopedAssocModel{}).comment
+    assert %Ecto.Association.NotLoaded{} = comment
+    assert inspect(comment) == "#Ecto.Association.NotLoaded<association :comment is not loaded>"
+  end
+
+  test "has_many association, scoped" do
+    struct =
+      %Ecto.Association.Has{field: :posts, owner: ScopedAssocModel, cardinality: :many, on_delete: :nothing,
+                            related: Scoped.Post, owner_key: :id, related_key: :scoped_assoc_model_id, queryable: Scoped.Post,
+                            on_replace: :raise}
+
+    assert ScopedAssocModel.__schema__(:association, :posts) == struct
+    assert ScopedAssocModel.__changeset__.posts == {:assoc, struct}
+
+    posts = (%ScopedAssocModel{}).posts
+    assert %Ecto.Association.NotLoaded{} = posts
+    assert inspect(posts) == "#Ecto.Association.NotLoaded<association :posts is not loaded>"
+  end
+
+  test "has_many association via {source model}, scoped" do
+    struct =
+      %Ecto.Association.Has{field: :emails, owner: ScopedAssocModel, cardinality: :many, on_delete: :nothing,
+                            related: Scoped.Email, owner_key: :id, related_key: :scoped_assoc_model_id,
+                            queryable: {"users_emails", Scoped.Email}, on_replace: :delete}
+
+    assert ScopedAssocModel.__schema__(:association, :emails) == struct
+    assert ScopedAssocModel.__changeset__.emails == {:assoc, struct}
+
+    posts = (%ScopedAssocModel{}).posts
+    assert %Ecto.Association.NotLoaded{__cardinality__: :many} = posts
+    assert inspect(posts) == "#Ecto.Association.NotLoaded<association :posts is not loaded>"
+  end
+
+  test "has_many through association, scoped" do
+    assert ScopedAssocModel.__schema__(:association, :comment_authors) ==
+           %Ecto.Association.HasThrough{field: :comment_authors, owner: ScopedAssocModel, cardinality: :many,
+                                         through: [:comment, :authors], owner_key: :comment_id}
+
+    refute Map.has_key?(ScopedAssocModel.__changeset__, :comment_authors)
+
+    authors = (%ScopedAssocModel{}).comment_authors
+    assert %Ecto.Association.NotLoaded{} = authors
+    assert inspect(authors) == "#Ecto.Association.NotLoaded<association :comment_authors is not loaded>"
+  end
 end
