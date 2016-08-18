@@ -640,9 +640,9 @@ defmodule Ecto.Adapters.MySQLTest do
     assert SQL.execute_ddl(create) ==
            ~s|CREATE INDEX `posts_category_id_permalink_index` ON `posts` (`category_id`, `permalink`)|
 
-    create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main")}
+    create = {:create, index(:posts, ["permalink(8)"], name: "posts$main")}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE INDEX `posts$main` ON `posts` (`lower(permalink)`)|
+           ~s|CREATE INDEX `posts$main` ON `posts` (permalink(8))|
   end
 
   test "create index with prefix" do
@@ -652,9 +652,9 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   test "create index asserting concurrency" do
-    create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main", concurrently: true)}
+    create = {:create, index(:posts, ["permalink(8)"], name: "posts$main", concurrently: true)}
     assert SQL.execute_ddl(create) ==
-           ~s|CREATE INDEX `posts$main` ON `posts` (`lower(permalink)`) LOCK=NONE|
+           ~s|CREATE INDEX `posts$main` ON `posts` (permalink(8)) LOCK=NONE|
   end
 
   test "create unique index" do

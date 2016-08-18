@@ -647,6 +647,8 @@ if Code.ensure_loaded?(Mariaex) do
     defp default_expr(:error),
       do: []
 
+    defp index_expr(literal) when is_binary(literal),
+      do: literal
     defp index_expr(literal), do: quote_name(literal)
 
     defp engine_expr(nil), do: engine_expr("INNODB")
