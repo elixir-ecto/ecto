@@ -75,12 +75,12 @@ defmodule Ecto.Changeset do
   ## Empty values
 
   Many times, the data given on cast needs to be further pruned, specially
-  regarding to empty values. For example, if you are gathering data to be
-  cast from the command line or through an HTML form or any other text
-  based format, it is likely those means cannot express nil values. For
+  regarding empty values. For example, if you are gathering data to be
+  cast from the command line or through an HTML form or any other text-based
+  format, it is likely those means cannot express nil values. For
   those reasons, changesets include the concept of empty values, which are
   values that will be automatically converted to nil on `cast/3`. Those
-  values are stored in the changeset `empty_values` field and defaults to
+  values are stored in the changeset `empty_values` field and default to
   `[""]`.
 
   ## The Ecto.Changeset struct
@@ -684,7 +684,7 @@ defmodule Ecto.Changeset do
   then falls back on the data, finally returning `:error` if
   no value is available.
 
-  For relations, this functions will return the changeset
+  For relations, these functions will return the changeset
   original data with changes applied. To retrieve raw changesets,
   please use `fetch_change/2`.
 
@@ -721,7 +721,7 @@ defmodule Ecto.Changeset do
   then falls back on the data, finally returning `default` if
   no value is available.
 
-  For relations this functions will return the changeset data
+  For relations, these functions will return the changeset data
   with changes applied. To retrieve raw changesets, please use `get_change/3`.
 
       iex> post = %Post{title: "A title", body: "My body is a cage"}
@@ -876,7 +876,7 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Puts the given association as change in the changeset.
+  Puts the given association as a change in the changeset.
 
   The given value may either be the association struct, a
   changeset for the given association or a map or keyword
@@ -894,7 +894,7 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Puts the given embed as change in the changeset.
+  Puts the given embed as a change in the changeset.
 
   The given value may either be the embed struct, a
   changeset for the given embed or a map or keyword
@@ -1581,8 +1581,8 @@ defmodule Ecto.Changeset do
         end)
       end
 
-  We retrieve the repo and from the comment changeset it self, and use
-  update_all to update the counter cache in one query. Finally the original
+  We retrieve the repo and from the comment changeset itself, and use
+  update_all to update the counter cache in one query. Finally, the original
   changeset must be returned.
   """
   @spec prepare_changes(t, (t -> t)) :: t
@@ -1605,7 +1605,7 @@ defmodule Ecto.Changeset do
       Defaults to "is invalid"
     * `:name` - the name of the constraint. Required.
     * `:match` - how the changeset constraint name it matched against the
-      repo constraint, may be `:exact` or `:suffix`. Default is `:exact`.
+      repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
       `:suffix` matches any repo constraint which `ends_with?` `:name`
        to this changeset constraint.
 
@@ -1624,7 +1624,7 @@ defmodule Ecto.Changeset do
   if the unique constraint has been violated or not and, if so,
   Ecto converts it into a changeset error.
 
-  In order to use the uniqueness constraint the first step is
+  In order to use the uniqueness constraint, the first step is
   to define the unique index in a migration:
 
       create unique_index(:users, [:email])
@@ -1647,10 +1647,10 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails,
       defaults to "has already been taken"
     * `:name` - the constraint name. By default, the constraint
-      name is inflected from the table + field. May be required
+      name is inferred from the table + field. May be required
       explicitly for complex cases
     * `:match` - how the changeset constraint name it matched against the
-      repo constraint, may be `:exact` or `:suffix`. Default is `:exact`.
+      repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
       `:suffix` matches any repo constraint which `ends_with?` `:name`
        to this changeset constraint.
 
@@ -1738,7 +1738,7 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails,
       defaults to "does not exist"
     * `:name` - the constraint name. By default, the constraint
-      name is inflected from the table + field. May be required
+      name is inferred from the table + field. May be required
       explicitly for complex cases
 
   """
@@ -1753,7 +1753,7 @@ defmodule Ecto.Changeset do
   Checks the associated field exists.
 
   This is similar to `foreign_key_constraint/3` except that the
-  field is inflected from the association definition. This is useful
+  field is inferred from the association definition. This is useful
   to guarantee that a child will only be created if the parent exists
   in the database too. Therefore, it only applies to `belongs_to`
   associations.
@@ -1779,7 +1779,7 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails,
       defaults to "does not exist"
     * `:name` - the constraint name. By default, the constraint
-      name is inflected from the table + association field.
+      name is inferred from the table + association field.
       May be required explicitly for complex cases
   """
   @spec assoc_constraint(t, atom, Keyword.t) :: t | no_return
@@ -1801,7 +1801,7 @@ defmodule Ecto.Changeset do
   Checks the associated field does not exist.
 
   This is similar to `foreign_key_constraint/3` except that the
-  field is inflected from the association definition. This is useful
+  field is inferred from the association definition. This is useful
   to guarantee that parent can only be deleted (or have its primary
   key changed) if no child exists in the database. Therefore, it only
   applies to `has_*` associations.
@@ -1828,7 +1828,7 @@ defmodule Ecto.Changeset do
       defaults to "is still associated to this entry" (for has_one)
       and "are still associated to this entry" (for has_many)
     * `:name` - the constraint name. By default, the constraint
-      name is inflected from the association table + association
+      name is inferred from the association table + association
       field. May be required explicitly for complex cases
   """
   @spec no_assoc_constraint(t, atom, Keyword.t) :: t | no_return
@@ -1848,7 +1848,7 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Checks for a exclusion constraint in the given field.
+  Checks for an exclusion constraint in the given field.
 
   The exclusion constraint works by relying on the database to check
   if the exclusion constraint has been violated or not and, if so,
@@ -1859,10 +1859,10 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails,
       defaults to "violates an exclusion constraint"
     * `:name` - the constraint name. By default, the constraint
-      name is inflected from the table + field. May be required
+      name is inferred from the table + field. May be required
       explicitly for complex cases
     * `:match` - how the changeset constraint name it matched against the
-      repo constraint, may be `:exact` or `:suffix`. Default is `:exact`.
+      repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
       `:suffix` matches any repo constraint which `ends_with?` `:name`
        to this changeset constraint.
 
@@ -1896,7 +1896,7 @@ defmodule Ecto.Changeset do
   end
 
   @doc ~S"""
-  Traverses changeset errors and applies function to error messages.
+  Traverses changeset errors and applies the given function to error messages.
 
   This function is particularly useful when associations and embeds
   are cast in the changeset as it will traverse all associations and
