@@ -126,6 +126,7 @@ defmodule Ecto.Repo do
         @adapter.in_transaction?(__MODULE__)
       end
 
+      @spec rollback(term) :: no_return
       def rollback(value) do
         @adapter.rollback(__MODULE__, value)
       end
@@ -553,8 +554,8 @@ defmodule Ecto.Repo do
       end
 
   """
-  @callback insert(struct :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
-              {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
+  @callback insert(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
+            {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
   Updates a changeset using its primary key.
@@ -588,8 +589,8 @@ defmodule Ecto.Repo do
         {:error, changeset} -> # Something went wrong
       end
   """
-  @callback update(struct :: Ecto.Changeset.t, opts :: Keyword.t) ::
-              {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
+  @callback update(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
+            {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
   Inserts or updates a changeset depending on whether the struct is persisted
@@ -625,8 +626,8 @@ defmodule Ecto.Repo do
         {:error, changeset} -> # Something went wrong
       end
   """
-  @callback insert_or_update(changeset :: Ecto.Changeset.t, opts :: Keyword.t) ::
-              {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
+  @callback insert_or_update(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
+            {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
   Deletes a struct using its primary key.
@@ -651,30 +652,33 @@ defmodule Ecto.Repo do
       end
 
   """
-  @callback delete(struct :: Ecto.Schema.t, opts :: Keyword.t) ::
-              {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
+  @callback delete(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
+            {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
   Same as `insert/2` but returns the struct or raises if the changeset is invalid.
   """
-  @callback insert!(struct :: Ecto.Schema.t, opts :: Keyword.t) :: Ecto.Schema.t | no_return
+  @callback insert!(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
+            Ecto.Schema.t | no_return
 
   @doc """
   Same as `update/2` but returns the struct or raises if the changeset is invalid.
   """
-  @callback update!(struct :: Ecto.Schema.t, opts :: Keyword.t) :: Ecto.Schema.t | no_return
+  @callback update!(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
+            Ecto.Schema.t | no_return
 
   @doc """
   Same as `insert_or_update/2` but returns the struct or raises if the changeset
   is invalid.
   """
-  @callback insert_or_update!(changeset :: Ecto.Changeset.t, opts :: Keyword.t) ::
-              Ecto.Schema.t | no_return
+  @callback insert_or_update!(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
+            Ecto.Schema.t | no_return
 
   @doc """
   Same as `delete/2` but returns the struct or raises if the changeset is invalid.
   """
-  @callback delete!(struct :: Ecto.Schema.t, opts :: Keyword.t) :: Ecto.Schema.t | no_return
+  @callback delete!(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
+            Ecto.Schema.t | no_return
 
   @doc """
   Runs the given function or `Ecto.Multi` inside a transaction.

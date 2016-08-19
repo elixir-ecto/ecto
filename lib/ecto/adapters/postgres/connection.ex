@@ -565,7 +565,7 @@ if Code.ensure_loaded?(Postgrex) do
         nil -> ""
         pk -> ", ADD #{pk}"
       end
-      "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)} #{pk_definition}"
+      "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}#{pk_definition}"
     end
 
     def execute_ddl({:create, %Index{}=index}) do
