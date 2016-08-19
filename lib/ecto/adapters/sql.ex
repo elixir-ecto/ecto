@@ -68,6 +68,13 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def execute(repo, meta, query, params, process, opts) do
+        table =
+          case Map.fetch(meta, :sources) do
+            {:ok, {{table, module}}} ->
+              table
+            _ -> nil
+          end
+        opts = Keyword.put(opts, :source, table)
         Ecto.Adapters.SQL.execute(repo, meta, query, params, process, opts)
       end
 
@@ -504,17 +511,18 @@ defmodule Ecto.Adapters.SQL do
 
   defp with_log(repo, params, opts) do
     case Keyword.pop(opts, :log, true) do
-      {true, opts}  -> [log: &log(repo, params, &1)] ++ opts
+      {true, opts}  -> [log: &log(repo, params, &1, opts)] ++ opts
       {false, opts} -> opts
     end
   end
 
-  defp log(repo, params, entry) do
+  defp log(repo, params, entry, opts) do
     %{connection_time: query_time, decode_time: decode_time,
       pool_time: queue_time, result: result, query: query} = entry
+    source = Keyword.get(opts, :source)
     repo.__log__(%Ecto.LogEntry{query_time: query_time, decode_time: decode_time,
                                 queue_time: queue_time, result: log_result(result),
-                                params: params, query: String.Chars.to_string(query)})
+                                params: params, query: String.Chars.to_string(query), source: source})
   end
 
   defp log_result({:ok, _query, res}), do: {:ok, res}
