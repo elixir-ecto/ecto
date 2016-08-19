@@ -23,14 +23,11 @@ defmodule Ecto.LogEntry do
   @type t :: %LogEntry{query: String.t | (t -> String.t), source: String.t | Enum.t | nil,
                        params: [term], query_time: integer, decode_time: integer | nil,
                        queue_time: integer | nil, connection_pid: pid | nil,
-                       result: {:ok, term} | {:error, Exception.t}}
-<<<<<<< HEAD
-  defstruct query: nil, params: [], query_time: nil, decode_time: nil,
-            queue_time: nil, result: nil, connection_pid: nil, ansi_color: nil
-=======
+                       result: {:ok, term} | {:error, Exception.t},
+                       ansi_color: IO.ANSI.ansicode | nil}
+
   defstruct query: nil, source: nil, params: [], query_time: nil, decode_time: nil,
-            queue_time: nil, result: nil, connection_pid: nil
->>>>>>> 8213395... Add source metadata to log entries
+            queue_time: nil, result: nil, connection_pid: nil, ansi_color: nil
 
   require Logger
 
@@ -40,11 +37,11 @@ defmodule Ecto.LogEntry do
   The logger call will be removed at compile time if
   `compile_time_purge_level` is set to higher than debug.
   """
-  def log(entry) do
+  def log(%{connection_pid: connection_pid, ansi_color: ansi_color} = entry) do
     Logger.debug(fn ->
       {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
       iodata
-    end, ecto_conn_pid: entry.connection_pid)
+    end, ecto_conn_pid: connection_pid, ansi_color: ansi_color)
     entry
   end
 

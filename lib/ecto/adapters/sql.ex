@@ -68,13 +68,13 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def execute(repo, meta, query, params, process, opts) do
-        table =
+        opts =
           case Map.fetch(meta, :sources) do
-            {:ok, {{table, module}}} ->
-              table
-            _ -> nil
+            {:ok, tuple} when tuple_size(elem(tuple, 0)) == 2 ->
+              Keyword.put(opts, :source, tuple |> elem(0) |> elem(0))
+            _ ->
+              opts
           end
-        opts = Keyword.put(opts, :source, table)
         Ecto.Adapters.SQL.execute(repo, meta, query, params, process, opts)
       end
 
@@ -555,5 +555,5 @@ defmodule Ecto.Adapters.SQL do
   defp sql_color("DELETE" <> _), do: :red
   defp sql_color("begin" <> _), do: :magenta
   defp sql_color("commit" <> _), do: :magenta
-  defp sql_color(_), do: :blue
+  defp sql_color(_), do: nil
 end
