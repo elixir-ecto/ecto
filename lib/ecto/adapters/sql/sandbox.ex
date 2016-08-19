@@ -25,7 +25,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   The first step is to configure your database to use the
   `Ecto.Adapters.SQL.Sandbox` pool. You set those options in your
-  `config/config.exs` (or preferrably `config/test.exs`) if you
+  `config/config.exs` (or preferably `config/test.exs`) if you
   haven't yet:
 
       config :my_app, Repo,
@@ -221,16 +221,16 @@ defmodule Ecto.Adapters.SQL.Sandbox do
           ** (DBConnection.ConnectionError) owner #PID<> timed out
           because it owned the connection for longer than 15000ms
 
-  If you have a long running test, the timeout for the connection ownership may
+  If you have a long running test (or you're debugging with IEx.pry), the timeout for the connection ownership may
   be too short.  You can increase the timeout by setting the
-  `:ownership_timeout` options for your repo config:
+  `:ownership_timeout` options for your repo config in `config/config.exs` (or preferably in `config/test.exs`):
 
-      config :my_app, Repo,
+      config :my_app, MyApp.Repo,
         ownership_timeout: NEW_TIMEOUT_IN_MILLISECONDS
 
   The `:ownership_timeout` option is part of
   [`DBConnection.Ownership`](https://hexdocs.pm/db_connection/DBConnection.Ownership.html)
-  and defaults to 15000ms.
+  and defaults to 15000ms. Timeouts are given as integers in milliseconds.
 
   ### Database deadlocks
 
