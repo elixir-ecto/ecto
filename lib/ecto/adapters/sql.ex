@@ -514,7 +514,8 @@ defmodule Ecto.Adapters.SQL do
       pool_time: queue_time, result: result, query: query} = entry
     repo.__log__(%Ecto.LogEntry{query_time: query_time, decode_time: decode_time,
                                 queue_time: queue_time, result: log_result(result),
-                                params: params, query: String.Chars.to_string(query)})
+                                params: params, query: String.Chars.to_string(query),
+                                ansi_color: sql_color(query)})
   end
 
   defp log_result({:ok, _query, res}), do: {:ok, res}
@@ -537,4 +538,14 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp key(pool), do: {__MODULE__, pool}
+
+  defp sql_color("SELECT" <> _), do: :cyan
+  defp sql_color("ROLLBACK" <> _), do: :red
+  defp sql_color("LOCK" <> _), do: :white
+  defp sql_color("INSERT" <> _), do: :green
+  defp sql_color("UPDATE" <> _), do: :yellow
+  defp sql_color("DELETE" <> _), do: :red
+  defp sql_color("begin" <> _), do: :magenta
+  defp sql_color("commit" <> _), do: :magenta
+  defp sql_color(_), do: :blue
 end
