@@ -39,11 +39,11 @@ To install these dependencies, we will run this command:
 mix deps.get
 ```
 
-In this same file, we'll need to add `postgrex` to our applications list:
+In this same file, we'll need to add `ecto` and `postgrex` to our applications list:
 
 ```elixir
 def application do
-  [applications: [:logger, :postgrex],
+  [applications: [:logger, :ecto, :postgrex],
    mod: {Friends, []}]
 end
 ```
