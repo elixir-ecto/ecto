@@ -147,6 +147,9 @@ defmodule Ecto.AssociationTest do
     assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [])) ==
            inspect(from c in Permalink, where: c.post_id in ^[])
 
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1])) ==
+           inspect(from c in Permalink, where: c.post_id == ^1)
+
     assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from c in Permalink, where: c.post_id in ^[1, 2, 3])
   end
@@ -180,6 +183,9 @@ defmodule Ecto.AssociationTest do
     assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [])) ==
            inspect(from a in Author, where: a.id in ^[])
 
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1])) ==
+           inspect(from a in Author, where: a.id == ^1)
+
     assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from a in Author, where: a.id in ^[1, 2, 3])
   end
@@ -192,6 +198,9 @@ defmodule Ecto.AssociationTest do
 
     assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [])) ==
            inspect(from a in {"post_authors", Author}, where: a.id in ^[])
+
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1])) ==
+           inspect(from a in {"post_authors", Author}, where: a.id == ^1)
 
     assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from a in {"post_authors", Author}, where: a.id in ^[1, 2, 3])
@@ -437,7 +446,7 @@ defmodule Ecto.AssociationTest do
 
   test "assoc/2" do
     assert inspect(assoc(%Post{id: 1}, :comments)) ==
-           inspect(from c in Comment, where: c.post_id in ^[1])
+           inspect(from c in Comment, where: c.post_id == ^1)
 
     assert inspect(assoc([%Post{id: 1}, %Post{id: 2}], :comments)) ==
            inspect(from c in Comment, where: c.post_id in ^[1, 2])
