@@ -209,6 +209,10 @@ defmodule Ecto.Changeset.Relation do
     """
   end
 
+  def on_replace(%{on_replace: :update}, changeset_or_struct) do
+    {:ok, Changeset.change(changeset_or_struct) |> put_new_action(:update)}
+  end
+
   def on_replace(_relation, changeset_or_struct) do
     {:ok, Changeset.change(changeset_or_struct) |> put_new_action(:replace)}
   end
@@ -244,7 +248,7 @@ defmodule Ecto.Changeset.Relation do
       single_change(new, current, fun, [:update, :delete], true)
     else
       case on_replace(relation, current) do
-        {:ok, _} -> single_change(new, nil, fun, [:insert], false)
+        {:ok, changeset} -> single_change(new, nil, fun, [changeset.action], false)
         :error   -> :error
       end
     end

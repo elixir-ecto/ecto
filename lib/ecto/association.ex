@@ -672,7 +672,7 @@ defmodule Ecto.Association.BelongsTo do
   """
 
   @behaviour Ecto.Association
-  @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
+  @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify, :update]
   defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast,
              :on_replace, defaults: [], cardinality: :one, relationship: :parent]
 
