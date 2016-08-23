@@ -177,39 +177,39 @@ defmodule Ecto.AssociationTest do
   test "belongs to" do
     assoc = Post.__schema__(:association, :author)
 
-    assert inspect(Ecto.Association.Has.joins_query(assoc)) ==
+    assert inspect(Ecto.Association.BelongsTo.joins_query(assoc)) ==
            inspect(from p in Post, join: a in Author, on: a.id == p.author_id)
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [])) ==
+    assert inspect(Ecto.Association.BelongsTo.assoc_query(assoc, nil, [])) ==
            inspect(from a in Author, where: a.id in ^[])
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1])) ==
+    assert inspect(Ecto.Association.BelongsTo.assoc_query(assoc, nil, [1])) ==
            inspect(from a in Author, where: a.id == ^1)
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1, 2, 3])) ==
+    assert inspect(Ecto.Association.BelongsTo.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from a in Author, where: a.id in ^[1, 2, 3])
   end
 
   test "belongs to with specified source" do
     assoc = Email.__schema__(:association, :author)
 
-    assert inspect(Ecto.Association.Has.joins_query(assoc)) ==
+    assert inspect(Ecto.Association.BelongsTo.joins_query(assoc)) ==
            inspect(from e in Email, join: a in {"post_authors", Author}, on: a.id == e.author_id)
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [])) ==
+    assert inspect(Ecto.Association.BelongsTo.assoc_query(assoc, nil, [])) ==
            inspect(from a in {"post_authors", Author}, where: a.id in ^[])
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1])) ==
+    assert inspect(Ecto.Association.BelongsTo.assoc_query(assoc, nil, [1])) ==
            inspect(from a in {"post_authors", Author}, where: a.id == ^1)
 
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1, 2, 3])) ==
+    assert inspect(Ecto.Association.BelongsTo.assoc_query(assoc, nil, [1, 2, 3])) ==
            inspect(from a in {"post_authors", Author}, where: a.id in ^[1, 2, 3])
   end
 
   test "belongs to custom assoc query" do
     assoc = Post.__schema__(:association, :author)
     query = from a in Author, limit: 5
-    assert inspect(Ecto.Association.Has.assoc_query(assoc, query, [1, 2, 3])) ==
+    assert inspect(Ecto.Association.BelongsTo.assoc_query(assoc, query, [1, 2, 3])) ==
            inspect(from a in Author, where: a.id in ^[1, 2, 3], limit: 5)
   end
 
