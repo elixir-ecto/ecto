@@ -900,11 +900,22 @@ defmodule Ecto.Schema do
         end
       end
 
-      # Get all tags for a given post
-      post = Repo.get(Post, 42)
-      tags = Repo.all assoc(post, :tags)
+      # Let's create a post and a tag
+      post = Repo.insert!(%Post{})
+      tag = Repo.insert!(%Tag{name: "introduction"})
 
-      # The tags can come preloaded on the post struct
+      # We can associate at any time post and tags together using changesets
+      post
+      |> Repo.preload(:tags) # Load existing data
+      |> Ecto.Changeset.change() # Build the changeset
+      |> Ecto.Changeset.put_assoc(:tags, [tag]) # Set the association
+      |> Repo.update!
+
+      # In a later moment, we may get all tags for a given post
+      post = Repo.get(Post, 42)
+      tags = Repo.all(assoc(post, :tags))
+
+      # The tags may also be preloaded on the post struct for reading
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :tags))
       post.tags #=> [%Tag{...}, ...]
 
