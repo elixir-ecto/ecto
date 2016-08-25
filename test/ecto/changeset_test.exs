@@ -496,6 +496,11 @@ defmodule Ecto.ChangesetTest do
       changeset(%{})
       |> add_error(:foo, "bar")
     assert changeset.errors == [foo: {"bar", []}]
+
+    changeset =
+      changeset(%{})
+      |> add_error(:foo, "bar", additional: "information")
+    assert changeset.errors == [foo: {"bar", [additional: "information"]}]
   end
 
   test "validate_change/3" do
@@ -1013,20 +1018,22 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "title", "body" => "hi", "upvotes" => :bad})
       |> validate_length(:body, min: 3)
       |> validate_format(:body, ~r/888/)
-      |> add_error(:title, "is taken")
+      |> add_error(:title, "is taken", name: "your title")
 
     errors = traverse_errors(changeset, fn
       {"is invalid", [type: type]} ->
         "expected to be #{inspect(type)}"
-      {msg, opts} ->
+      {"is taken", keys} ->
+        String.upcase("#{keys[:name]} is taken")
+      {msg, keys} ->
         msg
-        |> String.replace("%{count}", to_string(opts[:count]))
+        |> String.replace("%{count}", to_string(keys[:count]))
         |> String.upcase()
     end)
 
     assert errors == %{
       body: ["HAS INVALID FORMAT", "SHOULD BE AT LEAST 3 CHARACTER(S)"],
-      title: ["IS TAKEN"],
+      title: ["YOUR TITLE IS TAKEN"],
       upvotes: ["expected to be :integer"],
     }
   end

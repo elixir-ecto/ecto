@@ -1015,6 +1015,10 @@ defmodule Ecto.Changeset do
   @doc """
   Adds an error to the changeset.
 
+  An additional keyword list `keys` can be passed to provide additional
+  contextual information for the error. This is useful when using
+  `traverse_errors`
+
   ## Examples
 
       iex> changeset = change(%Post{}, %{title: ""})
@@ -1024,6 +1028,12 @@ defmodule Ecto.Changeset do
       iex> changeset.valid?
       false
 
+      iex> changeset = change(%Post{}, %{title: ""})
+      iex> changeset = add_error(changeset, :title, "empty", additional: "info")
+      iex> changeset.errors
+      [title: {"empty", [additional: "info"]}]
+      iex> changeset.valid?
+      false
   """
   @spec add_error(t, atom, String.t, Keyword.t) :: t
   def add_error(%{errors: errors} = changeset, key, message, keys \\ []) when is_binary(message) do
