@@ -311,6 +311,30 @@ defmodule Ecto.Repo.ManyToManyTest do
     refute_received {:insert_all, _, _}
   end
 
+  test "adding extra assocs on update" do
+    sample = %MyAssoc{x: "xyz", id: 13, sub_assoc: nil}
+    sample = put_meta sample, state: :loaded
+    latest = %MyAssoc{x: "abc", id: 11, sub_assoc: nil}
+
+    # Changing the assoc
+    changeset =
+      %MySchema{id: 1, assocs: [sample]}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:assocs, [sample, latest])
+    schema = TestRepo.update!(changeset)
+    [sample, latest] = schema.assocs
+
+    assert sample.id == 13
+    assert sample.x == "xyz"
+    refute sample.inserted_at
+    refute sample.updated_at
+
+    assert latest.id == 11
+    assert latest.x == "abc"
+    assert latest.inserted_at
+    assert latest.updated_at
+  end
+
   test "removing assocs on update raises if there is no id" do
     assoc = %MyAssoc{x: "xyz"} |> Ecto.put_meta(state: :loaded)
 

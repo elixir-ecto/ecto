@@ -857,11 +857,11 @@ defmodule Ecto.Schema do
 
   ## Removing data
 
-  If you attempt to remove associated `many_to_many` data, be it by
-  setting `:on_replace` to `:delete`, `:on_delete` to `:delete_all`
-  or by using `Ecto.Changeset.put_assoc/3` and `Ecto.Changeset.cast_assoc/3`,
-  **Ecto will always remove data from the join schema and never from
-  the target associations**. For example, if a `Post` has a many to many
+  If you attempt to remove associated `many_to_many` data, **Ecto will
+  always remove data from the join schema and never from the target
+  associations** be it by setting `:on_replace` to `:delete`, `:on_delete`
+  to `:delete_all` or by using changeset functions such as
+  `Ecto.Changeset.put_assoc/3`. For example, if a `Post` has a many to many
   relationship with `Tag`, setting `:on_delete` to `:delete_all` will
   only delete entries from the "posts_tags" table in case `Post` is
   deleted.
