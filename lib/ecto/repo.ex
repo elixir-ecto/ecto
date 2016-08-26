@@ -159,7 +159,7 @@ defmodule Ecto.Repo do
         Ecto.Repo.Queryable.one!(__MODULE__, @adapter, queryable, opts)
       end
 
-      def exists?(queryable, clauses, opts \\ []) do
+      def exists?(queryable, clauses \\ [], opts \\ []) do
         Ecto.Repo.Queryable.exists?(__MODULE__, @adapter, queryable, clauses, opts)
       end
 
@@ -367,6 +367,23 @@ defmodule Ecto.Repo do
   See the "Shared options" section at the module documentation.
   """
   @callback one!(queryable :: Ecto.Queryable.t, opts :: Keyword.t) :: Ecto.Schema.t | no_return
+
+  @doc """
+  Checks whether the result exists.
+
+  Returns `true` if the result can be found in the table
+  for the given conditions, or `false` otherwise.
+
+  ## Options
+
+  See the "Shared options" section at the module documentation.
+
+  ## Example
+
+      MyRepo.exists?(User, email: "test@example.com")
+
+  """
+  @callback exists?(queryable :: Ecto.Queryable.t, clauses :: Keyword.t | map, opts :: Keyword.t) :: true | false
 
   @doc """
   Preloads all associations on the given struct or structs.
