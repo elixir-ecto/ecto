@@ -532,6 +532,18 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
+  test "exists?" do
+    post1 = TestRepo.insert!(%Post{title: "1", text: "hai"})
+    post2 = TestRepo.insert!(%Post{title: "2", text: "hello"})
+
+    assert TestRepo.exists?(Post, id: post1.id) == true
+    assert TestRepo.exists?(Post, text: post1.text) == true
+    assert TestRepo.exists?(Post, id: post1.id, text: post1.text) == true
+    assert TestRepo.exists?(Post, id: to_string(post2.id)) == true # With casting
+    assert TestRepo.exists?(Post, text: "hey") == false
+    assert TestRepo.exists?(Post, id: post2.id, text: "hey") == false
+  end
+
   test "first, last and one(!)" do
     post1 = TestRepo.insert!(%Post{title: "1", text: "hai"})
     post2 = TestRepo.insert!(%Post{title: "2", text: "hai"})

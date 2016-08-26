@@ -76,6 +76,13 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
+  def exists?(repo, adapter, queryable, clauses, opts) do
+    case get_by(repo, adapter, queryable, clauses, opts) do
+      nil -> false
+      _ -> true
+    end
+  end
+
   def update_all(repo, adapter, queryable, [], opts) when is_list(opts) do
     update_all(repo, adapter, queryable, opts)
   end

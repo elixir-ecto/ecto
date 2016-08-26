@@ -159,6 +159,10 @@ defmodule Ecto.Repo do
         Ecto.Repo.Queryable.one!(__MODULE__, @adapter, queryable, opts)
       end
 
+      def exists?(queryable, clauses, opts \\ []) do
+        Ecto.Repo.Queryable.exists?(__MODULE__, @adapter, queryable, clauses, opts)
+      end
+
       def aggregate(queryable, aggregate, field, opts \\ [])
           when aggregate in [:count, :avg, :max, :min, :sum] and is_atom(field) do
         Ecto.Repo.Queryable.aggregate(__MODULE__, @adapter, queryable, aggregate, field, opts)
@@ -234,7 +238,7 @@ defmodule Ecto.Repo do
 
   @doc """
   Starts any connection pooling or supervision and return `{:ok, pid}`
-  or just `:ok` if nothing needs to be done. 
+  or just `:ok` if nothing needs to be done.
 
   Returns `{:error, {:already_started, pid}}` if the repo is already
   started or `{:error, term}` in case anything else goes wrong.
