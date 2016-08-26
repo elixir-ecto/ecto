@@ -126,6 +126,38 @@ defmodule Ecto.MigrationTest do
               [{:add, :title, :string, []}]}
   end
 
+  test "forward: creates a table without updated_at timestamp" do
+    create table = table(:posts, primary_key: false) do
+      timestamps(inserted_at: :created_at, updated_at: false)
+    end
+    flush()
+
+    assert last_command() ==
+           {:create, table,
+              [{:add, :created_at, :datetime, [null: false]}]}
+  end
+
+  test "forward: creates a table with timestamps of type date" do
+    create table = table(:posts, primary_key: false) do
+      timestamps(inserted_at: :inserted_on, updated_at: :updated_on, type: :date)
+    end
+    flush()
+
+    assert last_command() ==
+           {:create, table,
+              [{:add, :inserted_on, :date, [null: false]},
+               {:add, :updated_on, :date, [null: false]}]}
+  end
+
+  test "forward: raises on invalid timestamps type" do
+    assert_raise ArgumentError, "unknown :type value: :time", fn ->
+      create table(:posts, primary_key: false) do
+        timestamps(type: :time)
+      end
+      flush()
+    end
+  end
+
   test "forward: creates an empty table" do
     create table = table(:posts)
     flush()
