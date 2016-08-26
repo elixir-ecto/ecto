@@ -13,7 +13,9 @@ config :my_app, Sample.Repo,
   adapter: Ecto.Adapters.Postgres,
   database: "ecto_simple",
   username: "postgres",
-  password: "postgres"
+  password: "postgres",
+  host: "localhost",
+  port: "5432"
 
 # In your application code
 defmodule Sample.Repo do

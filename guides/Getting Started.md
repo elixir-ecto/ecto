@@ -74,7 +74,10 @@ config :friends, Friends.Repo,
   hostname: "localhost"
 ```
 
-**NOTE**: Your PostgreSQL database may be setup to not require a username and password. If the above configuration doesn't work, try removing the username and password fields, or setting them both to "postgres".
+**NOTE**: Your PostgreSQL database may be setup to
+
+ - not require a username and password. If the above configuration doesn't work, try removing the username and password fields, or setting them both to "postgres". 
+ - be running on a non-standard port. The default port is `5432`. You can specify your specific port by adding it to the config: e.g. `port: 15432`.
 
 This piece of configuration configures how Ecto will connect to our database, called "friends". Specifically, it configures a "repo". More information about [Ecto.Repo can be found in its documentation](https://hexdocs.pm/ecto/Ecto.Repo.html).
 
