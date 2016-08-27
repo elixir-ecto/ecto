@@ -626,7 +626,7 @@ defmodule Ecto.Migration do
   @doc """
   Adds `:inserted_at` and `:updated_at` timestamps columns.
 
-  Those columns are of `:datetime` or `:date` type
+  Those columns are of `:datetime` or `:date` type,
   and by default cannot be null.
   `opts` can be given to customize the generated fields.
 
@@ -635,19 +635,19 @@ defmodule Ecto.Migration do
     * `:inserted_at` -  the name of the column for insertion times, providing `false` disables column
     * `:updated_at` - the name of the column for update times, providing `false` disables column
     * `:type` - column type, one of `:datetime` (default) or `:date`
+
   """
   def timestamps(opts \\ []) do
     opts = Keyword.put_new(opts, :null, false)
 
-    inserted_at = opts[:inserted_at]
-    updated_at = opts[:updated_at]
-    type = opts[:type] || :datetime
+    {type, opts} = Keyword.pop(opts, :type, :datetime)
     unless type in [:datetime, :date], do: raise ArgumentError, "unknown :type value: #{inspect type}"
 
-    opts = Keyword.drop opts, [:inserted_at, :updated_at, :type]
+    {inserted_at, opts} = Keyword.pop(opts, :inserted_at, :inserted_at)
+    {updated_at, opts} = Keyword.pop(opts, :updated_at, :updated_at)
 
-    unless inserted_at == false, do: add(inserted_at || :inserted_at, type, opts)
-    unless updated_at == false, do: add(updated_at || :updated_at, type, opts)
+    if inserted_at != false, do: add(inserted_at, type, opts)
+    if updated_at != false, do: add(updated_at, type, opts)
   end
 
   @doc """
