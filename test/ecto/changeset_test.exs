@@ -68,6 +68,14 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{title: nil, body: nil}
   end
 
+  test "cast/3: with matching empty values" do
+    params = %{"title" => "", "body" => nil}
+    struct = %Post{title: "", body: nil}
+
+    changeset = cast(struct, params, ~w(title body)a)
+    assert changeset.changes == %{}
+  end
+
   test "cast/3: with data and types" do
     data   = {%{title: "hello"}, %{title: :string, upvotes: :integer}}
     params = %{"title" => "world", "upvotes" => "0"}

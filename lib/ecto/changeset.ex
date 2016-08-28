@@ -449,11 +449,13 @@ defmodule Ecto.Changeset do
   defp cast_field(param_key, type, params, current, empty_values, valid?) do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
-        value = if value in empty_values, do: nil, else: value
         case Ecto.Type.cast(type, value) do
-          {:ok, ^current} -> {:missing, current}
-          {:ok, value} -> {:ok, value, valid?}
-          :error -> :invalid
+          {:ok, ^current} ->
+            {:missing, current}
+          {:ok, value} ->
+            {:ok, if(value in empty_values, do: nil, else: value), valid?}
+          :error ->
+            :invalid
         end
       :error ->
         {:missing, current}
