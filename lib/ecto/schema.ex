@@ -934,6 +934,7 @@ defmodule Ecto.Schema do
         schema "user_organisation" do
           belongs_to :user, User
           belongs_to :organization, Organization
+          timestamps # Added bonus, a join schema will also allow you to set timestamps
         end
 
         def changeset(struct, params \\ %{}) do
