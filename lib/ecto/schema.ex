@@ -919,6 +919,56 @@ defmodule Ecto.Schema do
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :tags))
       post.tags #=> [%Tag{...}, ...]
 
+  ## Join Schema Example
+
+  You may prefer to use a join schema to handle many_to_many associations. The
+  decoupled nature of Ecto allows us to create a "join" struct which 
+  `belongs_to` both sides of the many to many association.
+
+  In our example, a User has and belongs to many Organizations
+
+      defmodule UserOrganization do
+        use Ecto.Schema
+
+        @primary_key false
+        schema "user_organisation" do
+          belongs_to :user, User
+          belongs_to :organization, Organization
+          timestamps # Added bonus, a join schema will also allow you to set timestamps
+        end
+
+        def changeset(struct, params \\ %{}) do
+          struct
+          |> cast(params, [:user_id, :organization_id])
+          |> validate_required([:user_id, :organization_id])
+          # Maybe do some counter caching here!
+        end
+      end
+
+      defmodule User do
+        use Ecto.Schema
+
+        schema "users" do
+          many_to_many :organizations, join_through: UserOrganization
+        end
+      end
+
+      defmodule Organization do
+        use Ecto.Schema
+
+        schema "organizations" do
+          many_to_many :users, join_through: UserOrganization
+        end
+      end
+
+      # Then to create the association, pass in the ID's of an existing
+      # User and Organization to UserOrganization.changeset
+      changeset = UserOrganization.changeset(%UserOrganization{}, %{user_id: id, organization_id: id})
+
+      case Repo.insert(changeset) do
+        {:ok, assoc} -> # Assoc was created!
+        {:error, changeset} -> # Handle the error
+      end
   """
   defmacro many_to_many(name, queryable, opts \\ []) do
     quote do
