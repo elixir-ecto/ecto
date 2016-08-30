@@ -406,7 +406,11 @@ defmodule Ecto.Changeset do
   defp process_param(key, kind, params, types, data, empty_values, {changes, errors, valid?}) do
     {key, param_key} = cast_key(key)
     type = type!(types, key)
-    current = Map.get(data, key)
+    current =
+      case Map.fetch(changes, key) do
+        {:ok, value} -> value
+        :error -> Map.get(data, key)
+      end
 
     {key,
      case cast_field(param_key, type, params, current, empty_values, valid?) do

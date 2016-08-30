@@ -103,9 +103,18 @@ defmodule Ecto.ChangesetTest do
     assert length(changeset.validations) == 1
     assert length(changeset.constraints) == 1
 
-    changeset = cast(base_changeset, %{body: "new body"}, ~w(body))
+    # Value changes
+    changeset = cast(changeset, %{body: "new body"}, ~w(body))
     assert changeset.valid?
     assert changeset.changes  == %{body: "new body"}
+    assert changeset.required == [:title]
+    assert length(changeset.validations) == 1
+    assert length(changeset.constraints) == 1
+
+    # Nil changes
+    changeset = cast(changeset, %{body: nil}, ~w(body))
+    assert changeset.valid?
+    assert changeset.changes  == %{body: nil}
     assert changeset.required == [:title]
     assert length(changeset.validations) == 1
     assert length(changeset.constraints) == 1
