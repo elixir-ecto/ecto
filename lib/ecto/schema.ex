@@ -725,7 +725,7 @@ defmodule Ecto.Schema do
   the database. You can't use foreign keys and it is very inefficient,
   both in terms of query time and storage.
 
-  In Ecto, we have two ways to solve this issue. The simplest
+  In Ecto, we have three ways to solve this issue. The simplest
   is to define multiple fields in the Comment schema, one for each
   association:
 
@@ -792,12 +792,41 @@ defmodule Ecto.Schema do
       # Fetch all comments associated to the given task
       Repo.all(assoc(task, :comments))
 
-  Finally, if for some reason you wish to query one of comments
-  tables directly, you can also specify the tuple source in
-  the query syntax:
+  Or all comments in a given table:
 
       Repo.all from(c in {"posts_comments", Comment}), ...)
 
+  The third and final option is to use `many_to_many/3` to
+  define the relationships between the resources. In this case,
+  the comments table won't have the foreign key, instead there
+  is a intermediary table responsible for associating the entries:
+  
+      defmodule Comment do
+        use Ecto.Schema
+        schema "comments" do
+          # ...
+        end
+      end
+  
+  In your posts and tasks:
+  
+      defmodule Post do
+        use Ecto.Schema
+
+        schema "posts" do
+          many_to_many :comments, Comment, join_through: "posts_comments"
+        end
+      end
+
+      defmodule Task do
+        use Ecto.Schema
+
+        schema "tasks" do
+          many_to_many :comments, Comment, join_through: "tasks_comments"
+        end
+      end
+
+  See `many_to_many/3` for more information on this particular approach.
   """
   defmacro belongs_to(name, queryable, opts \\ []) do
     quote do
