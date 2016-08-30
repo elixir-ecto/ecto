@@ -420,10 +420,10 @@ defmodule Ecto.Repo do
   @doc """
   Inserts all entries into the repository.
 
-  It expects a schema (`MyApp.User`) or a source (`"users"` or
-  `{"prefix", "users"}`) as the first argument. The second argument
-  is a list of entries to be inserted, either as keyword lists
-  or as maps.
+  It expects a schema (`MyApp.User`) or a source (`"users"`) or
+  both (`{"users", MyApp.User}`) as the first argument. The second
+  argument is a list of entries to be inserted, either as keyword
+  lists or as maps.
 
   It returns a tuple containing the number of entries
   and any returned result as second element. If the database
@@ -454,7 +454,7 @@ defmodule Ecto.Repo do
   See the "Shared options" section at the module documentation for
   remaining options.
   """
-  @callback insert_all(schema_or_source :: binary | {binary | nil, binary} | Ecto.Schema.t,
+  @callback insert_all(schema_or_source :: binary | {binary, Ecto.Schema.t} | Ecto.Schema.t,
                        entries :: [map | Keyword.t], opts :: Keyword.t) :: {integer, nil | [term]} | no_return
 
   @doc """

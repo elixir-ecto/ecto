@@ -18,8 +18,14 @@ defmodule Ecto.Repo.Schema do
     do_insert_all(repo, adapter, nil, {nil, table}, rows, opts)
   end
 
-  def insert_all(repo, adapter, {_prefix, _source} = table, rows, opts) do
+  # TODO: Deprecate me and support the :prefix option
+  def insert_all(repo, adapter, {_prefix, source} = table, rows, opts) when is_binary(source) do
     do_insert_all(repo, adapter, nil, table, rows, opts)
+  end
+
+  def insert_all(repo, adapter, {source, schema}, rows, opts) when is_atom(schema) do
+    do_insert_all(repo, adapter, schema,
+                  {schema.__schema__(:prefix), source}, rows, opts)
   end
 
   defp do_insert_all(_repo, _adapter, _schema, _source, [], opts) do
