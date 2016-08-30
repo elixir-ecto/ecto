@@ -1343,7 +1343,7 @@ defmodule Ecto.Changeset do
   ## Examples
 
       validate_number(changeset, :count, less_than: 3)
-      validate_number(changeset, :pi, greater_than: 3, less_than: 4)
+      validate_number(changeset, :pi, greater_than: Decimal.new(3), less_than: Decimal.new(4))
       validate_number(changeset, :the_answer_to_life_the_universe_and_everything, equal_to: 42)
 
   """
