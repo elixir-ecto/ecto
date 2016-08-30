@@ -66,7 +66,10 @@ defmodule Ecto.Query.Builder.From do
           # When a binary is used, there is no schema
           {1, query(nil, source, nil)}
 
-        {source, schema} when is_binary(source) ->
+        {prefix, source} when is_binary(prefix) and is_binary(source) ->
+          {1, query(prefix, source, nil)}
+
+        {source, schema} when is_binary(source) and is_atom(schema) ->
           prefix = quote do: unquote(schema).__schema__(:prefix)
           {1, query(prefix, source, schema)}
 

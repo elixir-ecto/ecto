@@ -265,6 +265,11 @@ defmodule Ecto.Query do
   prefix, so operations like update and delete will be applied to the
   proper prefix. In case you want to manually set the prefix for new data,
   specially on insert, use `Ecto.put_meta/2`.
+
+  Schemaless queries can use `{"prefix", "source"}` as the query source
+  to directly create a query with the required prefix. This is especially
+  useful when working with `Ecto.Repo.update_all/3` and mirrors the source
+  specification of `Ecto.Repo.insert_all/3`
   """
 
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], wheres: [], select: nil,
