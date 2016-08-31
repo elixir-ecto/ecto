@@ -35,7 +35,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   transactional tests:
 
       # At the end of your test_helper.exs
-      # Set the pool mode to manual for explicitly checkouts
+      # Set the pool mode to manual for explicit checkouts
       Ecto.Adapters.SQL.Sandbox.mode(Repo, :manual)
 
       defmodule PostTest do
