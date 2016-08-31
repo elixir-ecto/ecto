@@ -799,6 +799,13 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"decimal" => Decimal.new(1.5)})
                 |> validate_number(:decimal, greater_than_or_equal_to: Decimal.new(1.5))
     assert changeset.valid?
+
+    changeset = changeset(%{"decimal" => Decimal.new(4.9)})
+                |> validate_number(:decimal, greater_than_or_equal_to: 4.9)
+    assert changeset.valid?
+    changeset = changeset(%{"decimal" => Decimal.new(5)})
+                |> validate_number(:decimal, less_than: 4)
+    refute changeset.valid?
   end
 
   test "validate_number/3 with bad options" do
