@@ -4,7 +4,7 @@ This guide is an introduction to [Ecto](https://github.com/elixir-lang/ecto),
 the database wrapper and query generator for Elixir. Ecto provides a
 standardised API and a set of abstractions for talking to all the different
 kinds of databases, so that Elixir developers can query whatever database
-they're using using similar contructs.
+they're using by employing similar contructs.
 
 In this guide, we're going to learn some basics about Ecto, such as creating,
 reading, updating and destroying records from a PostgreSQL database. If you want
@@ -79,7 +79,7 @@ config :friends, Friends.Repo,
  - not require a username and password. If the above configuration doesn't work, try removing the username and password fields, or setting them both to "postgres". 
  - be running on a non-standard port. The default port is `5432`. You can specify your specific port by adding it to the config: e.g. `port: 15432`.
 
-This piece of configuration configures how Ecto will connect to our database, called "friends". Specifically, it configures a "repo". More information about [Ecto.Repo can be found in its documentation](https://hexdocs.pm/ecto/Ecto.Repo.html).
+This configures how Ecto will connect to our database, called "friends". Specifically, it configures a "repo". More information about [Ecto.Repo can be found in its documentation](https://hexdocs.pm/ecto/Ecto.Repo.html).
 
 The `Friends.Repo` module is defined in `lib/friends/repo.ex` by our `mix ecto.gen.repo` command:
 
@@ -89,7 +89,7 @@ defmodule Friends.Repo do
 end
 ```
 
-This module is what we'll be using to query our database shortly. It uses the `Ecto.Repo` module, and the `otp_app` tells Ecto which Elixir application it can look for database configuration in. In this case, we've told it's the `:friends` application where Ecto can find that configuration and so Ecto will use the configuration that was set up in `config/config.exs`.
+This module is what we'll be using to query our database shortly. It uses the `Ecto.Repo` module, and the `otp_app` tells Ecto which Elixir application it can look for database configuration in. In this case, we've specified that it is the `:friends` application where Ecto can find that configuration and so Ecto will use the configuration that was set up in `config/config.exs`.
 
 The final piece of configuration is to setup the `Friends.Repo` as a worker within the application's supervision tree, which we can do in `lib/friends.ex`, inside the `start/2` function:
 
@@ -168,7 +168,7 @@ defmodule Friends.Repo.Migrations.CreatePeople do
 end
 ```
 
-This new code will tell Ecto to create a new table called people, and add three new fields: `first_name`, `last_name` and `age` to that table. The types of these fields are `string` and `integer`. (The different types that Ecto supports are covered in the [Ecto.Schema](https://hexdocs.pm/ecto/Ecto.Schema.html) documentation.)
+This new code will tell Ecto to create a new table called `people`, and add three new fields: `first_name`, `last_name` and `age` to that table. The types of these fields are `string` and `integer`. (The different types that Ecto supports are covered in the [Ecto.Schema](https://hexdocs.pm/ecto/Ecto.Schema.html) documentation.)
 
 **NOTE**: The naming convention for tables in Ecto databases is to use a pluralized name.
 
@@ -200,7 +200,7 @@ defmodule Friends.Person do
 end
 ```
 
-This schema defines the schema from the database that this schema maps to. In this case, we're telling Ecto that the `Friends.Person` schema maps to the `people` table in the database, and the `first_name`, `last_name` and `age` fields in that table. The second argument passed to `field` tells Ecto how we want the information from the database to be represented in our schema.
+This defines the schema from the database that this schema maps to. In this case, we're telling Ecto that the `Friends.Person` schema maps to the `people` table in the database, and the `first_name`, `last_name` and `age` fields in that table. The second argument passed to `field` tells Ecto how we want the information from the database to be represented in our schema.
 
 We've called this schema `Person` because the naming convention in Ecto for schemas is a singularized name.
 
@@ -259,7 +259,7 @@ You may wish to pattern match on the tuple in order to refer to the record inser
 
 ## Validating changes
 
-In Ecto, you may wish to validate changes before they go to the database. For instance, you may wish that a person has provided both a first name and a last name before a record can be entered into the database. For this, Ecto has [_changesets_](https://hexdocs.pm/ecto/Ecto.Changeset.html).
+In Ecto, you may wish to validate changes before they go to the database. For instance, you may wish that a person has both a first name and a last name before a record can be entered into the database. For this, Ecto has [_changesets_](https://hexdocs.pm/ecto/Ecto.Changeset.html).
 
 Let's add a changeset to our `Friends.Person` module inside `lib/friends/person.ex` now:
 
@@ -423,7 +423,7 @@ Now that we've covered inserting data into the database, let's look at how we ca
 
 ## Our first queries
 
-Querying a database requries two steps in Ecto. First, we must construct the query and then we must execute that query against the database by passing the query to the repository. Before we do this, let's re-create the database for our app and setup some test data. To re-create the database, we'll run these commands:
+Querying a database requires two steps in Ecto. First, we must construct the query and then we must execute that query against the database by passing the query to the repository. Before we do this, let's re-create the database for our app and setup some test data. To re-create the database, we'll run these commands:
 
 ```
 mix ecto.drop
@@ -662,7 +662,7 @@ This can be useful if you want to do something with the first query, and then bu
 
 ## Updating records
 
-Updating records in Ecto requires us to first fetch a record from the database, then create a changeset from that record and the changes we want to make to that record, and then to call the `Ecto.Repo.update` function.
+Updating records in Ecto requires us to first fetch a record from the database. We then create a changeset from that record and the changes we want to make to that record, and then call the `Ecto.Repo.update` function.
 
 Let's fetch the first person from our database and change their age. First, we'll fetch the person:
 
