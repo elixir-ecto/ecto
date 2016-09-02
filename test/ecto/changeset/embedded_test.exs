@@ -17,9 +17,15 @@ defmodule Ecto.Changeset.EmbeddedTest do
       embeds_one :profile, Profile, on_replace: :delete
       embeds_one :raise_profile, Profile, on_replace: :raise
       embeds_one :invalid_profile, Profile, on_replace: :mark_as_invalid
+      embeds_one :inline_profile, Profile do
+        field :name, :string
+      end
       embeds_many :posts, Post, on_replace: :delete
       embeds_many :raise_posts, Post, on_replace: :raise
       embeds_many :invalid_posts, Post, on_replace: :mark_as_invalid
+      embeds_many :inline_posts, Post do
+        field :title, :string
+      end
     end
   end
 
@@ -32,13 +38,13 @@ defmodule Ecto.Changeset.EmbeddedTest do
     end
 
     def changeset(schema, params) do
-      Changeset.cast(schema, params, ~w(title))
+      cast(schema, params, ~w(title))
       |> validate_required(:title)
       |> validate_length(:title, min: 3)
     end
 
     def optional_changeset(schema, params) do
-      Changeset.cast(schema, params, ~w(title))
+      cast(schema, params, ~w(title))
     end
 
     def set_action(schema, params) do
@@ -56,13 +62,13 @@ defmodule Ecto.Changeset.EmbeddedTest do
     end
 
     def changeset(schema, params) do
-      Changeset.cast(schema, params, ~w(name id))
+      cast(schema, params, ~w(name id))
       |> validate_required(:name)
       |> validate_length(:name, min: 3)
     end
 
     def optional_changeset(schema, params) do
-      Changeset.cast(schema, params, ~w(name))
+      cast(schema, params, ~w(name))
     end
 
     def set_action(schema, params) do
@@ -266,6 +272,17 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute changeset.valid?
   end
 
+  test "cast inline embeds_one with valid params" do
+    changeset = cast(%Author{}, %{"inline_profile" => %{"name" => "michal"}},
+                     :inline_profile, with: &Profile.changeset/2)
+    profile = changeset.changes.inline_profile
+    assert profile.changes == %{name: "michal"}
+    assert profile.errors == []
+    assert profile.action  == :insert
+    assert profile.valid?
+    assert changeset.valid?
+  end
+
   ## cast embeds many
 
   test "cast embeds_many with only new schemas" do
@@ -405,6 +422,17 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert changeset.changes == %{}
     assert changeset.errors == [invalid_posts: {"is invalid", [type: {:array, :map}]}]
     refute changeset.valid?
+  end
+
+  test "cast inline embeds_many with valid params" do
+    changeset = cast(%Author{}, %{"inline_posts" => [%{"title" => "hello"}]},
+      :inline_posts, with: &Post.changeset/2)
+    [post] = changeset.changes.inline_posts
+    assert post.changes == %{title: "hello"}
+    assert post.errors == []
+    assert post.action  == :insert
+    assert post.valid?
+    assert changeset.valid?
   end
 
   ## Others

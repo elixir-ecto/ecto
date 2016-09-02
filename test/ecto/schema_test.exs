@@ -154,6 +154,28 @@ defmodule Ecto.SchemaTest do
     assert CustomEmbeddedSchema.__schema__(:primary_key) == []
   end
 
+  defmodule InlineEmbeddedSchema do
+    use Ecto.Schema
+
+    schema "inline_embedded_schema" do
+      embeds_one :one, One do
+        field :x
+      end
+      embeds_many :many, Many do
+        field :y
+      end
+    end
+  end
+
+  test "inline embedded schema" do
+    assert %Ecto.Embedded{related: InlineEmbeddedSchema.One} =
+      InlineEmbeddedSchema.__schema__(:embed, :one)
+    assert %Ecto.Embedded{related: InlineEmbeddedSchema.Many} =
+      InlineEmbeddedSchema.__schema__(:embed, :many)
+    assert InlineEmbeddedSchema.One.__schema__(:fields)  == [:id, :x]
+    assert InlineEmbeddedSchema.Many.__schema__(:fields) == [:id, :y]
+  end
+
   defmodule Timestamps do
     use Ecto.Schema
 
