@@ -1365,7 +1365,7 @@ defmodule Ecto.Changeset do
   end
 
   defp validate_number(field, %Decimal{} = value, message, spec_key, _spec_function, target_value) do
-    result = Decimal.compare(value, Decimal.new(target_value))
+    result = Decimal.cmp(value, Decimal.new(target_value))
     case decimal_compare(result, spec_key) do
       true  -> nil
       false -> [{field, {message, number: target_value}}]
@@ -1379,25 +1379,10 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp decimal_compare(result, :less_than) do
-    Decimal.equal?(result, Decimal.new(-1))
-  end
-
-  defp decimal_compare(result, :greater_than) do
-    Decimal.equal?(result, Decimal.new(1))
-  end
-
-  defp decimal_compare(result, :equal_to) do
-    Decimal.equal?(result, Decimal.new(0))
-  end
-
-  defp decimal_compare(result, :less_than_or_equal_to) do
-    decimal_compare(result, :less_than) or decimal_compare(result, :equal_to)
-  end
-
-  defp decimal_compare(result, :greater_than_or_equal_to) do
-    decimal_compare(result, :greater_than) or decimal_compare(result, :equal_to)
-  end
+  defp decimal_compare(:lt, spec), do: spec in [:less_than, :less_than_or_equal_to]
+  defp decimal_compare(:gt, spec), do: spec in [:greater_than, :greater_than_or_equal_to]
+  defp decimal_compare(:eq, spec), do: spec in [:equal_to, :less_than_or_equal_to, :greater_than_or_equal_to]
+  defp decimal_compare(:qNaN, _spec), do: false
 
   @doc """
   Validates that the given field matches the confirmation
