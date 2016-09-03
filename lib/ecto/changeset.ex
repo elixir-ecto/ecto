@@ -116,11 +116,13 @@ defmodule Ecto.Changeset do
       changeset, and it will be marked as invalid,
     * `:nilify` - sets owner reference column to `nil` (available only for
       associations),
+    * `:update` - updates the association, available only for has_one and belongs_to.
+      This option will update all the fields given to the changeset including the id
+      for the association.
     * `:delete` - removes the association or related data from the database.
       This option has to be used carefully. You should consider adding a
       separate boolean virtual field to the changeset function that will allow you
       to manually mark it for deletion, as in the example below:
-
           defmodule Comment do
             use Ecto.Schema
             import Ecto.Changeset
