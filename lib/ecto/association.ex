@@ -312,7 +312,7 @@ defmodule Ecto.Association.Has do
 
   @behaviour Ecto.Association
   @on_delete_opts [:nothing, :nilify_all, :delete_all]
-  @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
+  @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify, :update]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
              :queryable, :on_delete, :on_replace, defaults: [], relationship: :child]
 
