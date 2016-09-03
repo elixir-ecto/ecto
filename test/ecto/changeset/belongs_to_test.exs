@@ -260,7 +260,7 @@ defmodule Ecto.Changeset.BelongsToTest do
       update_profile: %Profile{id: 1, name: "Enio"}})
 
     changeset = cast(schema, %{"update_profile" => %{id: 2, name: "Jose"}}, :update_profile)
-    assert changeset.changes.update_profile.changes == %{id: 1, name: "Jose"}
+    assert changeset.changes.update_profile.changes == %{name: "Jose", id: 2}
     assert changeset.changes.update_profile.action == :update
     assert changeset.errors == []
     assert changeset.valid?
