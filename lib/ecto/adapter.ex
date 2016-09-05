@@ -136,7 +136,7 @@ defmodule Ecto.Adapter do
   @callback execute(repo, query_meta, query, params :: list(), process | nil, options) :: result when
               result: {integer, [[term]] | nil} | no_return,
               query: {:nocache, prepared} |
-                     {:cached, cached} |
+                     {:cached, (prepared -> :ok), cached} |
                      {:cache, (cached -> :ok), prepared}
 
   @doc """

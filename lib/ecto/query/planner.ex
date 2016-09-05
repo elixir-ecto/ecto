@@ -49,7 +49,8 @@ defmodule Ecto.Query.Planner do
       {:nocache, select, prepared} ->
         {build_meta(query, select), {:nocache, prepared}, params}
       {_, :cached, select, cached} ->
-        {build_meta(query, select), {:cached, cached}, params}
+        reset = &cache_reset(repo, key, &1)
+        {build_meta(query, select), {:cached, reset, cached}, params}
       {_, :cache, select, prepared} ->
         update = &cache_update(repo, key, &1)
         {build_meta(query, select), {:cache, update, prepared}, params}
@@ -91,6 +92,11 @@ defmodule Ecto.Query.Planner do
 
   defp cache_update(repo, key, cached) do
     _ = :ets.update_element(repo, key, [{2, :cached}, {4, cached}])
+    :ok
+  end
+
+  defp cache_reset(repo, key, prepared) do
+    _ = :ets.update_element(repo, key, [{2, :cache}, {4, prepared}])
     :ok
   end
 
