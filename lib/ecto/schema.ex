@@ -595,6 +595,7 @@ defmodule Ecto.Schema do
 
   """
   defmacro has_many(name, queryable, opts \\ []) do
+    queryable = expand_alias(queryable, __CALLER__)
     quote do
       Ecto.Schema.__has_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -651,6 +652,7 @@ defmodule Ecto.Schema do
 
   """
   defmacro has_one(name, queryable, opts \\ []) do
+    queryable = expand_alias(queryable, __CALLER__)
     quote do
       Ecto.Schema.__has_one__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -829,6 +831,7 @@ defmodule Ecto.Schema do
   See `many_to_many/3` for more information on this particular approach.
   """
   defmacro belongs_to(name, queryable, opts \\ []) do
+    queryable = expand_alias(queryable, __CALLER__)
     quote do
       Ecto.Schema.__belongs_to__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -1076,6 +1079,7 @@ defmodule Ecto.Schema do
   Ecto provides this guarantee for all built-in types.
   """
   defmacro embeds_one(name, schema, opts \\ []) do
+    schema = expand_alias(schema, __CALLER__)
     quote do
       Ecto.Schema.__embeds_one__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
     end
@@ -1141,6 +1145,7 @@ defmodule Ecto.Schema do
 
   """
   defmacro embeds_many(name, schema, opts \\ []) do
+    schema = expand_alias(schema, __CALLER__)
     quote do
       Ecto.Schema.__embeds_many__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
     end
@@ -1537,4 +1542,9 @@ defmodule Ecto.Schema do
   defp default_for_type(_, opts) do
     Keyword.get(opts, :default)
   end
+
+  defp expand_alias({:__aliases__, _, _} = ast, env),
+    do: Macro.expand(ast, %{env | lexical_tracker: nil})
+  defp expand_alias(ast, _env),
+    do: ast
 end
