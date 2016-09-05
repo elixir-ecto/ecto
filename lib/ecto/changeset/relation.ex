@@ -220,8 +220,8 @@ defmodule Ecto.Changeset.Relation do
     single_change(new, nil, fun, [:insert], false)
   end
 
-  defp single_change(relation, new, current_pks, new_pks, fun, current) do
-    if new_pks.(new) == current_pks.(current) or relation.on_replace == :update do
+  defp single_change(%{on_replace: on_replace} = relation, new, current_pks, new_pks, fun, current) do
+    if on_replace == :update or new_pks.(new) == current_pks.(current) do
       single_change(new, current, fun, [:update, :delete], true)
     else
       case on_replace(relation, current) do

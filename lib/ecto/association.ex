@@ -336,6 +336,7 @@ defmodule Ecto.Association.Has do
     end
 
     queryable = Keyword.fetch!(opts, :queryable)
+    cardinality = Keyword.fetch!(opts, :cardinality)
     related = Ecto.Association.related_from_query(queryable)
 
     if opts[:through] do
@@ -351,7 +352,6 @@ defmodule Ecto.Association.Has do
     end
 
     on_replace = Keyword.get(opts, :on_replace, :raise)
-    cardinality = Keyword.get(opts, :cardinality, :raise)
     on_replace_opts = if cardinality == :one do
       @on_replace_opts ++ @has_one_on_replace_opts
     else
@@ -366,7 +366,7 @@ defmodule Ecto.Association.Has do
 
     %__MODULE__{
       field: name,
-      cardinality: Keyword.fetch!(opts, :cardinality),
+      cardinality: cardinality,
       owner: module,
       related: related,
       owner_key: ref,
