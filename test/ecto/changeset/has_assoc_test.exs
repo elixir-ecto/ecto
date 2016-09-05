@@ -3,6 +3,7 @@ defmodule Ecto.Changeset.HasAssocTest do
 
   alias Ecto.Changeset
   alias Ecto.Changeset.Relation
+  alias Ecto.TestRepo
 
   alias __MODULE__.Author
   alias __MODULE__.Post
@@ -41,6 +42,7 @@ defmodule Ecto.Changeset.HasAssocTest do
       has_one :raise_profile, Profile, on_replace: :raise
       has_one :nilify_profile, Profile, on_replace: :nilify
       has_one :invalid_profile, Profile, on_replace: :mark_as_invalid
+      has_one :update_profile, Profile, on_replace: :update
     end
   end
 
@@ -289,6 +291,31 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert changeset.changes == %{}
     assert changeset.errors == [invalid_profile: {"a custom message", [type: :map]}]
     refute changeset.valid?
+  end
+
+  test "cast has_one with on_replace: :update" do
+    {:ok, schema} = TestRepo.insert(%Author{title: "Title",
+      update_profile: %Profile{id: 1, name: "Enio"}})
+
+    changeset = cast(schema, %{"update_profile" => %{id: 2, name: "Jose"}}, :update_profile)
+    assert changeset.changes.update_profile.changes == %{name: "Jose", id: 2}
+    assert changeset.changes.update_profile.action == :update
+    assert changeset.errors == []
+    assert changeset.valid?
+  end
+
+  test "raises when :update is used on has_many" do
+    error_message = "invalid `:on_replace` option for :tags. The only valid " <>
+      "options are: `:raise`, `:mark_as_invalid`, `:delete`, `:nilify`"
+    assert_raise ArgumentError, error_message, fn ->
+      defmodule Topic do
+        use Ecto.Schema
+
+        schema "topics" do
+          has_many :tags, Tag, on_replace: :update
+        end
+      end
+    end
   end
 
   test "cast has_one twice" do

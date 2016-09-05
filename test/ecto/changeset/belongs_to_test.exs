@@ -3,6 +3,7 @@ defmodule Ecto.Changeset.BelongsToTest do
 
   alias Ecto.Changeset
   alias Ecto.Changeset.Relation
+  alias Ecto.TestRepo
 
   alias __MODULE__.Author
   alias __MODULE__.Profile
@@ -16,6 +17,7 @@ defmodule Ecto.Changeset.BelongsToTest do
         on_replace: :delete, defaults: [name: "default"]
       belongs_to :raise_profile, Profile, on_replace: :raise
       belongs_to :invalid_profile, Profile, on_replace: :mark_as_invalid
+      belongs_to :update_profile, Profile, on_replace: :update
     end
   end
 
@@ -252,6 +254,18 @@ defmodule Ecto.Changeset.BelongsToTest do
     assert changeset.errors == [invalid_profile: {"a custom message", [type: :map]}]
     refute changeset.valid?
   end
+
+  test "cast belongs_to with on_replace: :update" do
+    {:ok, schema} = TestRepo.insert(%Author{title: "Title",
+      update_profile: %Profile{id: 1, name: "Enio"}})
+
+    changeset = cast(schema, %{"update_profile" => %{id: 2, name: "Jose"}}, :update_profile)
+    assert changeset.changes.update_profile.changes == %{name: "Jose", id: 2}
+    assert changeset.changes.update_profile.action == :update
+    assert changeset.errors == []
+    assert changeset.valid?
+  end
+
 
   test "cast belongs_to twice" do
     schema = %Author{}
