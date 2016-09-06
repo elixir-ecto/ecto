@@ -286,12 +286,13 @@ defmodule Ecto.Schema do
   @doc false
   defmacro __using__(_) do
     quote do
-      import Ecto.Schema, only: [schema: 2, embedded_schema: 1]
+      import Ecto.Schema, only: [schema: 2, schema: 3, embedded_schema: 1]
 
       @primary_key nil
       @timestamps_opts []
       @foreign_key_type :id
       @schema_prefix nil
+      @association_scope nil
 
       Module.register_attribute(__MODULE__, :ecto_primary_keys, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
@@ -316,6 +317,16 @@ defmodule Ecto.Schema do
   """
   defmacro embedded_schema([do: block]) do
     schema(nil, false, :binary_id, block)
+  end
+
+  @doc """
+  TODO
+  """
+  defmacro schema(scope, source, [do: block]) do
+    quote do
+      Module.put_attribute(__MODULE__, :association_scope, unquote(scope))
+      schema(unquote(source), [do: unquote(block)])
+    end
   end
 
   @doc """
@@ -1242,11 +1253,14 @@ defmodule Ecto.Schema do
   def __has_many__(mod, name, queryable, opts) do
     check_options!(opts, @valid_has_options, "has_many/3")
 
-    if is_list(queryable) and Keyword.has_key?(queryable, :through) do
-      association(mod, :many, name, Ecto.Association.HasThrough, queryable)
+    scoped_queryable = Ecto.Schema.__build_assoc_module__(mod, queryable)
+
+    if is_list(scoped_queryable) and Keyword.has_key?(scoped_queryable, :through) do
+      association(mod, :many, name, Ecto.Association.HasThrough, scoped_queryable)
     else
       struct =
-        association(mod, :many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+        association(mod, :many, name, Ecto.Association.Has, [queryable: scoped_queryable] ++ opts)
+
       Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
     end
   end
@@ -1255,11 +1269,13 @@ defmodule Ecto.Schema do
   def __has_one__(mod, name, queryable, opts) do
     check_options!(opts, @valid_has_options, "has_one/3")
 
-    if is_list(queryable) and Keyword.has_key?(queryable, :through) do
-      association(mod, :one, name, Ecto.Association.HasThrough, queryable)
+    scoped_queryable = Ecto.Schema.__build_assoc_module__(mod, queryable)
+
+    if is_list(scoped_queryable) and Keyword.has_key?(scoped_queryable, :through) do
+      association(mod, :one, name, Ecto.Association.HasThrough, scoped_queryable)
     else
       struct =
-        association(mod, :one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+        association(mod, :one, name, Ecto.Association.Has, [queryable: scoped_queryable] ++ opts)
       Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
     end
   end
@@ -1270,6 +1286,8 @@ defmodule Ecto.Schema do
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
     check_options!(opts, @valid_belongs_to_options, "belongs_to/3")
+
+    scoped_queryable = Ecto.Schema.__build_assoc_module__(mod, queryable)
 
     opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
     foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)
@@ -1283,7 +1301,7 @@ defmodule Ecto.Schema do
     end
 
     struct =
-      association(mod, :one, name, Ecto.Association.BelongsTo, [queryable: queryable] ++ opts)
+      association(mod, :one, name, Ecto.Association.BelongsTo, [queryable: scoped_queryable] ++ opts)
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 
@@ -1293,22 +1311,41 @@ defmodule Ecto.Schema do
   def __many_to_many__(mod, name, queryable, opts) do
     check_options!(opts, @valid_many_to_many_options, "many_to_many/3")
 
+    join_through = Keyword.get(opts, :join_through, nil)
+
+    scoped_opts = if join_through && is_atom(join_through) do
+      scoped_join_through =
+        Ecto.Schema.__build_assoc_module__(mod, join_through)
+
+      Keyword.put(opts, :join_through, scoped_join_through)
+    else
+      opts
+    end
+
+    scoped_queryable = Ecto.Schema.__build_assoc_module__(mod, queryable)
+
     struct =
-      association(mod, :many, name, Ecto.Association.ManyToMany, [queryable: queryable] ++ opts)
+      association(mod, :many, name, Ecto.Association.ManyToMany, [queryable: scoped_queryable] ++ scoped_opts)
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 
   @doc false
   def __embeds_one__(mod, name, schema, opts) do
     check_options!(opts, [:strategy, :on_replace], "embeds_one/3")
-    embed(mod, :one, name, schema, opts)
+
+    scoped_schema = Ecto.Schema.__build_assoc_module__(mod, schema)
+
+    embed(mod, :one, name, scoped_schema, opts)
   end
 
   @doc false
   def __embeds_many__(mod, name, schema, opts) do
     check_options!(opts, [:strategy, :on_replace], "embeds_many/3")
+
+    scoped_schema = Ecto.Schema.__build_assoc_module__(mod, schema)
+
     opts = Keyword.put(opts, :default, [])
-    embed(mod, :many, name, schema, opts)
+    embed(mod, :many, name, scoped_schema, opts)
   end
 
   ## Quoted callbacks
@@ -1422,6 +1459,26 @@ defmodule Ecto.Schema do
       def __schema__(:autogenerate), do: unquote(Macro.escape(insert))
       def __schema__(:autoupdate), do: unquote(Macro.escape(update))
     end
+  end
+
+  @doc false
+  def __build_assoc_module__(mod, {table, queryable}) do
+    {table, __build_assoc_module__(mod, queryable)}
+  end
+  def __build_assoc_module__(mod, queryable) when is_list(queryable) do
+    if Keyword.has_key?(queryable, :through) do
+      through_queryable = Keyword.get(queryable, :through)
+      scoped_queryable = __build_assoc_module__(mod, through_queryable)
+
+      Keyword.put(queryable, :through, scoped_queryable)
+    else
+      queryable
+    end
+  end
+  def __build_assoc_module__(mod, queryable) do
+    if (scope = Module.get_attribute(mod, :association_scope)),
+      do: Module.concat([scope, queryable]),
+      else: queryable
   end
 
   ## Private

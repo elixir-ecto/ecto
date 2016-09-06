@@ -25,4 +25,27 @@ defmodule Ecto.EmbeddedTest do
     assert Author.__schema__(:embed, :posts) ==
       %Embedded{field: :posts, cardinality: :many, owner: Author, on_replace: :delete, related: Post}
   end
+
+  defmodule ScopedAuthor do
+    use Ecto.Schema
+
+    schema Scoped, "authors" do
+      field :name, :string
+
+      embeds_one :profile, Profile, on_replace: :delete
+      embeds_one :post, Post
+      embeds_many :posts, Post, on_replace: :delete
+    end
+  end
+
+  test "__schema__, scoped" do
+    assert ScopedAuthor.__schema__(:embeds) ==
+      [:profile, :post, :posts]
+
+    assert ScopedAuthor.__schema__(:embed, :profile) ==
+      %Embedded{field: :profile, cardinality: :one, owner: ScopedAuthor, on_replace: :delete, related: Scoped.Profile}
+
+    assert ScopedAuthor.__schema__(:embed, :posts) ==
+      %Embedded{field: :posts, cardinality: :many, owner: ScopedAuthor, on_replace: :delete, related: Scoped.Post}
+  end
 end

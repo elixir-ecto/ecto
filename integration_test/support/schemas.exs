@@ -26,7 +26,7 @@ defmodule Ecto.Integration.Post do
   use Ecto.Integration.Schema
   import Ecto.Changeset
 
-  schema "posts" do
+  schema Ecto.Integration, "posts" do
     field :counter, :id # Same as integer
     field :title, :string
     field :text, :binary
@@ -40,21 +40,21 @@ defmodule Ecto.Integration.Post do
     field :meta, :map
     field :links, {:map, :string}
     field :posted, Ecto.Date
-    has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
-    has_one :permalink, Ecto.Integration.Permalink, on_delete: :delete_all, on_replace: :delete
+    has_many :comments, Comment, on_delete: :delete_all, on_replace: :delete
+    has_one :permalink, Permalink, on_delete: :delete_all, on_replace: :delete
     has_many :comments_authors, through: [:comments, :author]
-    belongs_to :author, Ecto.Integration.User
-    many_to_many :users, Ecto.Integration.User,
+    belongs_to :author, User
+    many_to_many :users, User,
       join_through: "posts_users", on_delete: :delete_all, on_replace: :delete
-    many_to_many :customs, Ecto.Integration.Custom,
+    many_to_many :customs, Custom,
       join_through: "posts_customs", join_keys: [post_id: :uuid, custom_id: :bid],
       on_delete: :delete_all, on_replace: :delete
-    many_to_many :unique_users, Ecto.Integration.User,
-      join_through: Ecto.Integration.PostUserCompositePk
+    many_to_many :unique_users, User,
+      join_through: PostUserCompositePk
     has_many :users_comments, through: [:users, :comments]
     has_many :comments_authors_permalinks, through: [:comments_authors, :permalink]
     timestamps()
-    has_one :post_user_composite_pk, Ecto.Integration.PostUserCompositePk
+    has_one :post_user_composite_pk, PostUserCompositePk
   end
 
   def changeset(schema, params) do
@@ -89,11 +89,11 @@ defmodule Ecto.Integration.Comment do
   """
   use Ecto.Integration.Schema
 
-  schema "comments" do
+  schema Ecto.Integration, "comments" do
     field :text, :string
     field :lock_version, :integer, default: 1
-    belongs_to :post, Ecto.Integration.Post
-    belongs_to :author, Ecto.Integration.User
+    belongs_to :post, Post
+    belongs_to :author, User
     has_one :post_permalink, through: [:post, :permalink]
   end
 end
@@ -108,10 +108,10 @@ defmodule Ecto.Integration.Permalink do
   """
   use Ecto.Integration.Schema
 
-  schema "permalinks" do
+  schema Ecto.Integration, "permalinks" do
     field :url, :string
-    belongs_to :post, Ecto.Integration.Post, on_replace: :nilify
-    belongs_to :user, Ecto.Integration.User
+    belongs_to :post, Post, on_replace: :nilify
+    belongs_to :user, User
     has_many :post_comments_authors, through: [:post, :comments_authors]
   end
 end
@@ -125,9 +125,9 @@ defmodule Ecto.Integration.PostUser do
   """
   use Ecto.Integration.Schema
 
-  schema "posts_users_pk" do
-    belongs_to :user, Ecto.Integration.User
-    belongs_to :post, Ecto.Integration.Post
+  schema Ecto.Integration, "posts_users_pk" do
+    belongs_to :user, User
+    belongs_to :post, Post
     timestamps()
   end
 end
@@ -143,14 +143,14 @@ defmodule Ecto.Integration.User do
   """
   use Ecto.Integration.Schema
 
-  schema "users" do
+  schema Ecto.Integration, "users" do
     field :name, :string
-    has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id, on_delete: :nilify_all, on_replace: :nilify
-    has_one :permalink, Ecto.Integration.Permalink, on_replace: :nilify
-    has_many :posts, Ecto.Integration.Post, foreign_key: :author_id, on_delete: :nothing, on_replace: :delete
-    belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
-    many_to_many :schema_posts, Ecto.Integration.Post, join_through: Ecto.Integration.PostUser
-    many_to_many :unique_posts, Ecto.Integration.Post, join_through: Ecto.Integration.PostUserCompositePk
+    has_many :comments, Comment, foreign_key: :author_id, on_delete: :nilify_all, on_replace: :nilify
+    has_one :permalink, Permalink, on_replace: :nilify
+    has_many :posts, Post, foreign_key: :author_id, on_delete: :nothing, on_replace: :delete
+    belongs_to :custom, Custom, references: :bid, type: :binary_id
+    many_to_many :schema_posts, Post, join_through: PostUser
+    many_to_many :unique_posts, Post, join_through: PostUserCompositePk
     timestamps()
   end
 end
@@ -197,10 +197,10 @@ defmodule Ecto.Integration.Tag do
   """
   use Ecto.Integration.Schema
 
-  schema "tags" do
+  schema Ecto.Integration, "tags" do
     field :ints, {:array, :integer}
     field :uuids, {:array, Ecto.UUID}
-    embeds_many :items, Ecto.Integration.Item
+    embeds_many :items, Item
   end
 end
 
@@ -228,8 +228,8 @@ defmodule Ecto.Integration.Order do
   """
   use Ecto.Integration.Schema
 
-  schema "orders" do
-    embeds_one :item, Ecto.Integration.Item
+  schema Ecto.Integration, "orders" do
+    embeds_one :item, Item
   end
 end
 
@@ -260,9 +260,9 @@ defmodule Ecto.Integration.PostUserCompositePk do
   use Ecto.Integration.Schema
 
   @primary_key false
-  schema "posts_users_composite_pk" do
-    belongs_to :user, Ecto.Integration.User, primary_key: true
-    belongs_to :post, Ecto.Integration.Post, primary_key: true
+  schema Ecto.Integration, "posts_users_composite_pk" do
+    belongs_to :user, User, primary_key: true
+    belongs_to :post, Post, primary_key: true
     timestamps()
   end
 end
