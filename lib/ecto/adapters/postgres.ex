@@ -17,7 +17,9 @@ defmodule Ecto.Adapters.Postgres do
 
   Postgres options split in different categories described
   below. All options should be given via the repository
-  configuration.
+  configuration. These options are also passed to the module
+  specified in the `:pool` option, so check that module's
+  documentation for more options.
 
   ### Compile time options
 
