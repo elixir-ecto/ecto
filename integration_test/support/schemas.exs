@@ -96,6 +96,10 @@ defmodule Ecto.Integration.Comment do
     belongs_to :author, Ecto.Integration.User
     has_one :post_permalink, through: [:post, :permalink]
   end
+
+  def changeset(schema, params) do
+    Ecto.Changeset.cast(schema, params, [:text])
+  end
 end
 
 defmodule Ecto.Integration.Permalink do

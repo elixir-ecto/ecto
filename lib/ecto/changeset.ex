@@ -561,7 +561,7 @@ defmodule Ecto.Changeset do
         {changeset, false}
       end
 
-    on_cast  = opts[:with] || &related.changeset(&1, &2)
+    on_cast  = Keyword.get_lazy(opts, :with, fn -> on_cast_default(type, related) end)
     original = Map.get(data, key)
     current  = Relation.load!(data, original)
 
@@ -583,6 +583,16 @@ defmodule Ecto.Changeset do
 
     update_in changeset.types[key], fn {type, relation} ->
       {type, %{relation | on_cast: on_cast}}
+    end
+  end
+
+  defp on_cast_default(type, module) do
+    if function_exported?(module, :changeset, 2) do
+      &module.changeset/2
+    else
+      raise "the #{type} module does not define a changeset/2 function, which " <>
+        "is the default used by cast_#{type}/3. You need to either define " <>
+        "that function or provide a different one using the `:with` option"
     end
   end
 

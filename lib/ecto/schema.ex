@@ -1065,6 +1065,41 @@ defmodule Ecto.Schema do
       # Update the order
       changeset = Repo.update!(changeset)
 
+  ## Inline embedded schema
+
+  The schema module can be defined inline in the parent schema in simple
+  cases:
+
+      defmodule Parent do
+        use Ecto.Schema
+
+        schema "parents" do
+          field :name, :string
+
+          embeds_one :child, Child do
+            field :name, :string
+            field :age,  :integer
+          end
+        end
+      end
+
+  Defining embedded schema in such a way will define a `Parent.Child` module
+  with the appropriate struct. In order to properly cast the embedded schema.
+  When casting the inline-defined embedded schemas you need to use the `:with`
+  option of `cast_embed/3` to provide the proper function to do the casting.
+  For example:
+
+      def changeset(schema, params) do
+        schema
+        |> cast(params, [:name])
+        |> cast_embed(:child, with: &child_changeset/2)
+      end
+
+      defp child_changeset(schema, params) do
+        schema
+        |> cast(params, [:name, :age])
+      end
+
   ## Encoding and decoding
 
   Because many databases do not support direct encoding and decoding
@@ -1078,9 +1113,31 @@ defmodule Ecto.Schema do
   make sure all of your types can be JSON encoded/decoded correctly.
   Ecto provides this guarantee for all built-in types.
   """
-  defmacro embeds_one(name, schema, opts \\ []) do
+  defmacro embeds_one(name, schema, opts \\ [])
+
+  defmacro embeds_one(name, schema, do: block) do
+    quote do
+      embeds_one(unquote(name), unquote(schema), [], do: unquote(block))
+    end
+  end
+
+  defmacro embeds_one(name, schema, opts) do
     schema = expand_alias(schema, __CALLER__)
     quote do
+      Ecto.Schema.__embeds_one__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
+    end
+  end
+
+  @doc """
+  Indicates an embedding of a schema.
+
+  For options and examples see documentation of `embeds_one/3`.
+  """
+  defmacro embeds_one(name, schema, opts, do: block) do
+    module = Ecto.Schema.__embed_module__(schema, block)
+    schema = quote(do: __MODULE__.unquote(schema))
+    quote do
+      unquote(module)
       Ecto.Schema.__embeds_one__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
     end
   end
@@ -1143,10 +1200,67 @@ defmodule Ecto.Schema do
       # Update the order
       changeset = Repo.update!(changeset)
 
+  ## Inline embedded schema
+
+  The schema module can be defined inline in the parent schema in simple
+  cases:
+
+      defmodule Parent do
+        use Ecto.Schema
+
+        schema "parents" do
+          field :name, :string
+
+          embeds_one :children, Child do
+            field :name, :string
+            field :age,  :integer
+          end
+        end
+      end
+
+  Defining embedded schema in such a way will define a `Parent.Child` module
+  with the appropriate struct. In order to properly cast the embedded schema.
+  When casting the inline-defined embedded schemas you need to use the `:with`
+  option of `cast_embed/3` to provide the proper function to do the casting.
+  For example:
+
+      def changeset(schema, params) do
+        schema
+        |> cast(params, [:name])
+        |> cast_embed(:children, with: &child_changeset/2)
+      end
+
+      defp child_changeset(schema, params) do
+        schema
+        |> cast(params, [:name, :age])
+      end
+
   """
-  defmacro embeds_many(name, schema, opts \\ []) do
+  defmacro embeds_many(name, schema, opts \\ [])
+
+  defmacro embeds_many(name, schema, do: block) do
+    quote do
+      embeds_many(unquote(name), unquote(schema), [], do: unquote(block))
+    end
+  end
+
+  defmacro embeds_many(name, schema, opts) do
     schema = expand_alias(schema, __CALLER__)
     quote do
+      Ecto.Schema.__embeds_many__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
+    end
+  end
+
+  @doc """
+  Indicates an embedding of many schemas.
+
+  For options and examples see documentation of `embeds_many/3`.
+  """
+  defmacro embeds_many(name, schema, opts, do: block) do
+    module = Ecto.Schema.__embed_module__(schema, block)
+    schema = quote(do: __MODULE__.unquote(schema))
+    quote do
+      unquote(module)
       Ecto.Schema.__embeds_many__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
     end
   end
@@ -1309,6 +1423,20 @@ defmodule Ecto.Schema do
     check_options!(opts, [:strategy, :on_replace], "embeds_many/3")
     opts = Keyword.put(opts, :default, [])
     embed(mod, :many, name, schema, opts)
+  end
+
+  @doc false
+  def __embed_module__(name, block) do
+    quote do
+      defmodule unquote(name) do
+        use Ecto.Schema
+
+        @primary_key {:id, :binary_id, autogenerate: true}
+        embedded_schema do
+          unquote(block)
+        end
+      end
+    end
   end
 
   ## Quoted callbacks
