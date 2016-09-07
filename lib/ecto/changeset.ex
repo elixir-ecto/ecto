@@ -550,8 +550,7 @@ defmodule Ecto.Changeset do
 
   defp cast_relation(type, %Changeset{} = changeset, key, opts) do
     {key, param_key} = cast_key(key)
-    %{data: data, types: types, params: params,
-      changes: changes, empty_values: empty_values} = changeset
+    %{data: data, types: types, params: params, changes: changes} = changeset
     %{related: related} = relation = relation!(:cast, type, key, Map.get(types, key))
     params = params || %{}
 
