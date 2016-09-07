@@ -18,8 +18,10 @@ defmodule Ecto.Repo.Schema do
     do_insert_all(repo, adapter, nil, {nil, table}, rows, opts)
   end
 
-  # TODO: Deprecate me and support the :prefix option
+  # TODO: Support the :prefix option
   def insert_all(repo, adapter, {_prefix, source} = table, rows, opts) when is_binary(source) do
+    IO.puts :stderr, "warning: passing {prefix, source} to insert_all is deprecated, " <>
+                     "please pass the :prefix option instead\n" <> Exception.format_stacktrace
     do_insert_all(repo, adapter, nil, table, rows, opts)
   end
 
