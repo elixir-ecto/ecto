@@ -123,12 +123,30 @@ Ecto now requires you to explicitly configure your repo's in your top level conf
 
 The configuration may be an empty list if it does not define any repo.
 
+## v2.0.5 (2016-09-07)
+
+### Enhancements
+
+  * [Ecto.Associations] Support `on_replace: :update` on `belongs_to` and `has_one`
+  * [Ecto.Changeset] Allow `validate_number` to compare decimal with number
+  * [Ecto.Changeset] Allow structs to be given to `put_assoc` to avoid unecessary casting to changesets
+  * [Ecto.LogEntry] Add `:source` metadata to log entries
+  * [Ecto.LogEntry] Add `:ansi_color` key to log entry. This will be used by the Logger in future Elixir versions to customize logging in the console handler
+  * [Ecto.Migration] Support the options in `Ecto.Schema.timestamp` in `Ecto.Migration.timestamp`
+  * [Ecto.Repo] Support `{source, schema}` notation in `insert_all`
+  * [Ecto.Schema] Disable lexical tracker for association modules. This will prevent the compiler from creating a compile-time dependency on the association module
+
+### Bug fixes
+
+  * [Ecto.Changeset] Ensure changing a changeset does not ignore previous changes
+  * [Ecto.Changeset] Use the default value when an empty value is received on cast
+
 ## v2.0.4 (2016-08-09)
 
 ### Enhancements
 
   * [Ecto.Query] Allow macros to be used in joins
-  * [Ecto.Changeset] Introduce the concept of empty values into changesets so empty strings do not pass throgh
+  * [Ecto.Changeset] Introduce the concept of empty values into changesets so empty strings do not pass through
 
 ### Bug fixes
 
