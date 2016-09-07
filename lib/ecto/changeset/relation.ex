@@ -221,8 +221,9 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp single_change(%{on_replace: on_replace} = relation, new, current_pks, new_pks, fun, current) do
-    if on_replace == :update or new_pks.(new) == current_pks.(current) do
-      single_change(new, current, fun, [:update, :delete], true)
+    pk_values = new_pks.(new)
+    if on_replace == :update or pk_values == current_pks.(current) do
+      single_change(new, current, fun, allowed_actions(pk_values), true)
     else
       case on_replace(relation, current) do
         {:ok, _changeset} -> single_change(new, nil, fun, [:insert], false)
@@ -253,16 +254,8 @@ defmodule Ecto.Changeset.Relation do
 
   defp map_changes([changes | rest], new_pks, fun, current, acc, valid?, skip?)
       when is_map(changes) or is_list(changes) do
-    pk_values = new_pks.(changes)
 
-    {struct, current, allowed_actions} =
-      case Map.fetch(current, pk_values) do
-        {:ok, struct} ->
-          {struct, Map.delete(current, pk_values), [:update, :delete]}
-        :error ->
-          {nil, current, [:insert]}
-      end
-
+    {struct, current, allowed_actions} = pop_current(current, new_pks.(changes))
     case fun.(changes, struct, allowed_actions) do
       {:ok, changeset} ->
         map_changes(rest, new_pks, fun, current, [changeset | acc],
@@ -274,6 +267,23 @@ defmodule Ecto.Changeset.Relation do
 
   defp map_changes(_params, _pks, _fun, _current, _acc, _valid?, _skip?) do
     :error
+  end
+
+  defp pop_current(current, pk_values) do
+    case Map.fetch(current, pk_values) do
+      {:ok, struct} ->
+        {struct, Map.delete(current, pk_values), allowed_actions(pk_values)}
+      :error ->
+        {nil, current, [:insert]}
+    end
+  end
+
+  defp allowed_actions(pk_values) do
+    if Enum.all?(pk_values, &is_nil/1) do
+      [:insert, :update, :delete]
+    else
+      [:update, :delete]
+    end
   end
 
   defp reduce_delete_changesets([], _fun, acc, valid?, skip?) do
