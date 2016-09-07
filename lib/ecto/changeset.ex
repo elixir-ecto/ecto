@@ -587,12 +587,18 @@ defmodule Ecto.Changeset do
   end
 
   defp on_cast_default(type, module) do
-    if function_exported?(module, :changeset, 2) do
+    if Code.ensure_loaded?(module) and function_exported?(module, :changeset, 2) do
       &module.changeset/2
     else
-      raise "the #{type} module does not define a changeset/2 function, which " <>
-        "is the default used by cast_#{type}/3. You need to either define " <>
-        "that function or provide a different one using the `:with` option"
+      raise ArgumentError, """
+      the module #{inspect module} does not define a changeset/2 function, which is used by cast_#{type}/3.
+      You need to either:
+
+        1. implement the #{type}.changeset/2 function
+        2. pass the :with option to cast_#{type}/3 with an anonymous function that expects 2 args
+
+      When using an inline embed, the :with option must be given
+      """
     end
   end
 
