@@ -1921,7 +1921,8 @@ defmodule Ecto.Changeset do
       %{title: ["should be at least 3 characters"]}
   """
   @spec traverse_errors(t, (error -> String.t)) :: %{atom => [String.t]}
-  def traverse_errors(%Changeset{errors: errors, changes: changes, types: types}, msg_func) do
+  def traverse_errors(%Changeset{errors: errors, changes: changes, types: types}, msg_func)
+      when is_function(msg_func, 1) do
     errors
     |> Enum.reverse()
     |> merge_error_keys(msg_func)
