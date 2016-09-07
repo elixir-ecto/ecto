@@ -557,6 +557,18 @@ defmodule Ecto.Changeset.HasAssocTest do
       Relation.change(assoc, [name: "michal"], profile)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
+
+    profile = %Profile{name: "other"}
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, %{name: "michal"}, profile)
+    assert changeset.action == :insert
+    assert changeset.changes == %{name: "michal"}
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, [name: "michal"], profile)
+    assert changeset.action == :insert
+    assert changeset.changes == %{name: "michal"}
   end
 
   test "change has_one with structs" do
@@ -585,7 +597,7 @@ defmodule Ecto.Changeset.HasAssocTest do
 
   test "change has_one keeps appropriate action from changeset" do
     assoc = Author.__schema__(:association, :profile)
-    assoc_schema = %Profile{}
+    assoc_schema = %Profile{id: 1}
 
     # Adding
     changeset = %{Changeset.change(assoc_schema, name: "michal") | action: :insert}
@@ -692,6 +704,18 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert {:ok, [changeset], true, false} =
       Relation.change(assoc, [[title: "hello"]], [post])
     assert changeset.action == :update
+    assert changeset.changes == %{title: "hello"}
+
+    post = %Post{title: "other"}
+
+    assert {:ok, [changeset], true, false} =
+      Relation.change(assoc, [%{title: "hello"}], [post])
+    assert changeset.action == :insert
+    assert changeset.changes == %{title: "hello"}
+
+    assert {:ok, [changeset], true, false} =
+      Relation.change(assoc, [[title: "hello"]], [post])
+    assert changeset.action == :insert
     assert changeset.changes == %{title: "hello"}
   end
 
