@@ -129,6 +129,21 @@ defmodule Ecto.Migration do
   See the `index/3` function for more information on creating/dropping indexes
   concurrently.
 
+  ## Comments
+
+  Migrations where you create or alter a table support specifying table
+  and column comments, the same can be done when creating constraints
+  and indexes. At the moment there is support only for Postgres.
+
+      def up do
+        create index(:posts, [:name], comment: "Index Comment")
+        create constraint(:products, "price_must_be_positive", check: "price > 0", comment: "Index Comment")
+        create table(:weather, prefix: :north_america, comment: "Table Comment") do
+          add :city, :string, size: 40, comment: "Column Comment"
+          timestamps
+        end
+      end
+
   ## Schema Migrations table
 
   Version numbers of migrations will be saved in `schema_migrations` table.
@@ -151,7 +166,8 @@ defmodule Ecto.Migration do
               unique: false,
               concurrently: false,
               using: nil,
-              where: nil
+              where: nil,
+              comment: nil
 
     @type t :: %__MODULE__{
       table: atom,
@@ -161,7 +177,8 @@ defmodule Ecto.Migration do
       unique: boolean,
       concurrently: boolean,
       using: atom | String.t,
-      where: atom | String.t
+      where: atom | String.t,
+      comment: String.t | nil
     }
   end
 
@@ -171,8 +188,8 @@ defmodule Ecto.Migration do
 
     To define a table in a migration, see `Ecto.Migration.table/2`
     """
-    defstruct name: nil, prefix: nil, primary_key: true, engine: nil, options: nil
-    @type t :: %__MODULE__{name: atom, prefix: atom | nil, primary_key: boolean,
+    defstruct name: nil, prefix: nil, comment: nil, primary_key: true, engine: nil, options: nil
+    @type t :: %__MODULE__{name: atom, prefix: atom | nil, comment: String.t | nil, primary_key: boolean,
                            engine: atom, options: String.t}
   end
 
@@ -192,9 +209,9 @@ defmodule Ecto.Migration do
 
     To define a constraint in a migration, see `Ecto.Migration.constraint/3`
     """
-    defstruct name: nil, table: nil, check: nil, exclude: nil, prefix: nil
+    defstruct name: nil, table: nil, check: nil, exclude: nil, prefix: nil, comment: nil
     @type t :: %__MODULE__{name: atom, table: atom, prefix: atom | nil,
-                           check: String.t | nil, exclude: String.t | nil}
+                           check: String.t | nil, exclude: String.t | nil, comment: String.t | nil}
   end
 
   alias Ecto.Migration.Runner

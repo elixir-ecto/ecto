@@ -596,7 +596,8 @@ if Code.ensure_loaded?(Postgrex) do
 
       "CREATE TABLE" <> if_not_exists <>
         " #{quote_table(table.prefix, table.name)}" <>
-        " (#{column_definitions(table, columns)}#{pk_definition})" <> options
+        " (#{column_definitions(table, columns)}#{pk_definition})" <> options <>
+        comment_on(:table, table.name, table.comment) <> comments_for_columns(table, columns)
     end
 
     def execute_ddl({command, %Table{}=table}) when command in @drops do
@@ -610,7 +611,9 @@ if Code.ensure_loaded?(Postgrex) do
         nil -> ""
         pk -> ", ADD #{pk}"
       end
-      "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}#{pk_definition}"
+      "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}" <>
+      "#{pk_definition}" <> comment_on(:table, table.name, table.comment) <>
+      comments_for_columns(table, changes)
     end
 
     def execute_ddl({:create, %Index{}=index}) do
@@ -625,7 +628,8 @@ if Code.ensure_loaded?(Postgrex) do
                 quote_table(index.prefix, index.table),
                 if_do(index.using, "USING #{index.using}"),
                 "(#{fields})",
-                if_do(index.where, "WHERE #{index.where}")])
+                if_do(index.where, "WHERE #{index.where}"),
+                if_do(index.comment, comment_on(:index, index.name, index.comment))])
     end
 
     def execute_ddl({:create_if_not_exists, %Index{}=index}) do
@@ -654,7 +658,8 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     def execute_ddl({:create, %Constraint{}=constraint}) do
-      "ALTER TABLE #{quote_table(constraint.prefix, constraint.table)} ADD #{new_constraint_expr(constraint)}"
+      "ALTER TABLE #{quote_table(constraint.prefix, constraint.table)} ADD #{new_constraint_expr(constraint)}" <>
+      comment_on(:constraint, constraint.name, constraint.comment)
     end
 
     def execute_ddl({:drop, %Constraint{}=constraint}) do
@@ -676,6 +681,32 @@ if Code.ensure_loaded?(Postgrex) do
         [] -> nil
         _  -> "PRIMARY KEY (" <> Enum.map_join(pks, ", ", &quote_name/1) <> ")"
       end
+    end
+
+    defp comment_on(_database_object, _name, nil), do:  ""
+    defp comment_on(:column, {table_name, column_name}, comment) do
+      column_name = quote_table(table_name, column_name)
+      "; COMMENT ON COLUMN #{column_name} IS #{single_quote(comment)}"
+    end
+
+    defp comment_on(:table, name, comment) do
+      "; COMMENT ON TABLE #{quote_name(name)} IS #{single_quote(comment)}"
+    end
+
+    defp comment_on(:constraint, name, comment) do
+      "; COMMENT ON CONSTRAINT #{quote_name(name)} IS #{single_quote(comment)}"
+    end
+
+    defp comment_on(:index, name, comment) do
+      "; COMMENT ON INDEX #{quote_name(name)} IS #{single_quote(comment)}"
+    end
+
+    defp comments_for_columns(table, columns) do
+      Enum.map_join(columns, "", fn
+        {_operation, column_name, _column_type, opts} ->
+          comment_on(:column, {table.name, column_name}, opts[:comment])
+        _ -> ""
+      end)
     end
 
     defp column_definitions(table, columns) do
@@ -854,6 +885,8 @@ if Code.ensure_loaded?(Postgrex) do
       end
       <<?", name::binary, ?">>
     end
+
+    defp single_quote(value), do: "\'#{escape_string(value)}\'"
 
     defp assemble(list) do
       list
