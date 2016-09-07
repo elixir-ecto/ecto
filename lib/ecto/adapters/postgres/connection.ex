@@ -16,15 +16,11 @@ if Code.ensure_loaded?(Postgrex) do
       opts =
         opts
         |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
-        |> Keyword.update(:port, @default_port, &normalize_port/1)
+        |> Keyword.put_new(:port, @default_port)
         |> Keyword.put(:types, true)
 
       Postgrex.child_spec(opts)
     end
-
-    # TODO: Remove this on 2.1 (normalization should happen on the adapter)
-    defp normalize_port(port) when is_binary(port), do: String.to_integer(port)
-    defp normalize_port(port) when is_integer(port), do: port
 
     def to_constraints(%Postgrex.Error{postgres: %{code: :unique_violation, constraint: constraint}}),
       do: [unique: constraint]
