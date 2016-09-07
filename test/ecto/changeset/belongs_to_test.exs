@@ -91,7 +91,7 @@ defmodule Ecto.Changeset.BelongsToTest do
     assert cast(%Author{}, %{"profile" => nil}, :profile).changes == %{profile: nil}
     assert cast(%Author{profile: nil}, %{"profile" => nil}, :profile).changes == %{}
 
-    assert cast(%Author{}, %{"profile" => ""}, :profile).changes == %{profile: nil}
+    assert cast(%Author{}, %{"profile" => ""}, :profile).changes == %{}
     assert cast(%Author{profile: nil}, %{"profile" => ""}, :profile).changes == %{}
 
     loaded = put_in %Author{}.__meta__.state, :loaded

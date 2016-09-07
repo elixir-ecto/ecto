@@ -14,7 +14,7 @@ defmodule Ecto.ChangesetTest do
     use Ecto.Schema
 
     schema "posts" do
-      field :title
+      field :title, :string, default: ""
       field :body
       field :uuid, :binary_id
       field :decimal, :decimal
@@ -65,7 +65,7 @@ defmodule Ecto.ChangesetTest do
     struct = %Post{title: "foo", body: "bar"}
 
     changeset = cast(struct, params, ~w(title body)a)
-    assert changeset.changes == %{title: nil, body: nil}
+    assert changeset.changes == %{title: "", body: nil}
   end
 
   test "cast/3: with matching empty values" do
@@ -381,8 +381,8 @@ defmodule Ecto.ChangesetTest do
     changeset = change(base_changeset, title: "new title")
     assert changeset.changes == %{title: "new title"}
 
-    changeset = change(base_changeset, title: nil)
-    assert changeset.changes == %{}
+    changeset = change(base_changeset, body: nil)
+    assert changeset.changes == %{title: "title"}
 
     changeset = change(base_changeset, %{upvotes: nil})
     assert changeset.changes == %{title: "title", upvotes: nil}
@@ -469,7 +469,7 @@ defmodule Ecto.ChangesetTest do
     changeset = put_change(base_changeset, :title, "bar")
     assert changeset.changes.title == "bar"
 
-    changeset = put_change(base_changeset, :title, nil)
+    changeset = put_change(base_changeset, :body, nil)
     assert changeset.changes == %{}
 
     changeset = put_change(base_changeset, :upvotes, 5)
@@ -497,7 +497,7 @@ defmodule Ecto.ChangesetTest do
 
   test "apply_changes/1" do
     post = %Post{}
-    assert post.title == nil
+    assert post.title == ""
 
     changeset = changeset(post, %{"title" => "foo"})
     changed_post = apply_changes(changeset)

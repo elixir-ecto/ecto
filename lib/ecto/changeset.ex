@@ -382,13 +382,18 @@ defmodule Ecto.Changeset do
        when is_list(required) and is_list(optional) do
     params = convert_params(params)
 
+    defaults = case data do
+      %{__struct__: struct} -> struct.__struct__()
+      %{} -> %{}
+    end
+
     {_, {changes, errors, valid?}} =
       Enum.map_reduce(optional, {changes, [], true},
-                      &process_param(&1, :optional, params, types, data, empty_values, &2))
+                      &process_param(&1, :optional, params, types, data, empty_values, defaults, &2))
 
     {required, {changes, errors, valid?}} =
       Enum.map_reduce(required, {changes, errors, valid?},
-                      &process_param(&1, :required, params, types, data, empty_values, &2))
+                      &process_param(&1, :required, params, types, data, empty_values, defaults, &2))
 
     %Changeset{params: params, data: data, valid?: valid?,
                errors: Enum.reverse(errors), changes: changes, required: required,
@@ -405,7 +410,7 @@ defmodule Ecto.Changeset do
   defp process_empty_fields(key, _types) when is_atom(key),
     do: key
 
-  defp process_param(key, kind, params, types, data, empty_values, {changes, errors, valid?}) do
+  defp process_param(key, kind, params, types, data, empty_values, defaults, {changes, errors, valid?}) do
     {key, param_key} = cast_key(key)
     type = type!(types, key)
     current =
@@ -415,7 +420,7 @@ defmodule Ecto.Changeset do
       end
 
     {key,
-     case cast_field(param_key, type, params, current, empty_values, valid?) do
+     case cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
        {:ok, nil, valid?} when kind == :required ->
          {errors, valid?} = error_on_nil(kind, key, Map.get(changes, key), errors, valid?)
          {changes, errors, valid?}
@@ -452,14 +457,15 @@ defmodule Ecto.Changeset do
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
 
-  defp cast_field(param_key, type, params, current, empty_values, valid?) do
+  defp cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
     case Map.fetch(params, param_key) do
       {:ok, value} ->
+        value = if value in empty_values, do: Map.get(defaults, key), else: value
         case Ecto.Type.cast(type, value) do
           {:ok, ^current} ->
             {:missing, current}
           {:ok, value} ->
-            {:ok, if(value in empty_values, do: nil, else: value), valid?}
+            {:ok, value, valid?}
           :error ->
             :invalid
         end
@@ -544,8 +550,8 @@ defmodule Ecto.Changeset do
 
   defp cast_relation(type, %Changeset{} = changeset, key, opts) do
     {key, param_key} = cast_key(key)
-    %{data: data, types: types, params: params, changes: changes,
-      empty_values: empty_values} = changeset
+    %{data: data, types: types, params: params,
+      changes: changes, empty_values: empty_values} = changeset
     %{related: related} = relation = relation!(:cast, type, key, Map.get(types, key))
     params = params || %{}
 
@@ -563,7 +569,6 @@ defmodule Ecto.Changeset do
     changeset =
       case Map.fetch(params, param_key) do
         {:ok, value} ->
-          value = if value in empty_values, do: nil, else: value
           case Relation.cast(relation, value, current, on_cast) do
             {:ok, change, relation_valid?, false} when change != original ->
               missing_relation(%{changeset | changes: Map.put(changes, key, change),
