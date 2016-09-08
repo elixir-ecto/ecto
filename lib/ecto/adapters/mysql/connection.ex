@@ -71,9 +71,7 @@ if Code.ensure_loaded?(Mariaex) do
     ## Query
 
     alias Ecto.Query
-    alias Ecto.Query.SelectExpr
-    alias Ecto.Query.QueryExpr
-    alias Ecto.Query.JoinExpr
+    alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr}
 
     def all(query) do
       sources = create_names(query)
@@ -173,7 +171,7 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
-    defp select(%Query{select: %SelectExpr{fields: fields}, distinct: distinct} = query,
+    defp select(%Query{select: %{fields: fields}, distinct: distinct} = query,
                 sources) do
       "SELECT " <>
         distinct(distinct, sources, query) <>
@@ -295,12 +293,18 @@ if Code.ensure_loaded?(Mariaex) do
     defp lock(lock_clause), do: lock_clause
 
     defp boolean(_name, [], _sources, _query), do: []
-    defp boolean(name, query_exprs, sources, query) do
+    defp boolean(name, [%{expr: expr} | query_exprs], sources, query) do
       name <> " " <>
-        Enum.map_join(query_exprs, " AND ", fn
-          %QueryExpr{expr: expr} ->
-            "(" <> expr(expr, sources, query) <> ")"
+        Enum.reduce(query_exprs, paren_expr(expr, sources, query), fn
+          %BooleanExpr{expr: expr, op: :and}, acc ->
+            acc <> " AND " <> paren_expr(expr, sources, query)
+          %BooleanExpr{expr: expr, op: :or}, acc ->
+            acc <> " OR " <> paren_expr(expr, sources, query)
         end)
+    end
+
+    defp paren_expr(expr, sources, query) do
+      "(" <> expr(expr, sources, query) <> ")"
     end
 
     defp expr({:^, [], [_ix]}, _sources, _query) do
@@ -452,7 +456,7 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp op_to_binary({op, _, [_, _]} = expr, sources, query) when op in @binary_ops do
-      "(" <> expr(expr, sources, query) <> ")"
+      paren_expr(expr, sources, query)
     end
 
     defp op_to_binary(expr, sources, query) do
@@ -706,7 +710,7 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp get_source(query, sources, ix, source) do
       {expr, name, _schema} = elem(sources, ix)
-      {expr || "(" <> expr(source, sources, query) <> ")", name}
+      {expr || paren_expr(source, sources, query), name}
     end
 
     defp quote_name(name)

@@ -277,6 +277,11 @@ defmodule Ecto.Query do
     defstruct [:expr, :file, :line, params: %{}]
   end
 
+  defmodule BooleanExpr do
+    @moduledoc false
+    defstruct [:op, :expr, :file, :line, params: %{}]
+  end
+
   defmodule SelectExpr do
     @moduledoc false
     defstruct [:expr, :file, :line, :fields, params: %{}, take: %{}]
@@ -650,7 +655,7 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  A where query expression.
+  An AND where query expression.
 
   `where` expressions are used to filter the result set. If there is more
   than one where expression, they are combined with an `and` operator. All
@@ -678,7 +683,36 @@ defmodule Ecto.Query do
 
   """
   defmacro where(query, binding \\ [], expr) do
-    Filter.build(:where, query, binding, expr, __CALLER__)
+    Filter.build(:where, :and, query, binding, expr, __CALLER__)
+  end
+
+  @doc """
+  An OR where query expression.
+
+  Similar to `where` but combines with any previous expression by using
+  an `OR`. All where expressions have to evaluate to a boolean value.
+
+  `where` also accepts a keyword list where the field given as key is going to
+  be compared with the given value. Each key-value pair will be combined using
+  `OR` and will always refer to the source given in `from`.
+
+  ## Keywords example
+
+      from(c in City, where: [state: "Sweden"], or_where: [state: "Brazil"])
+
+  It is also possible to interpolate the whole keyword list, allowing you to
+  dynamically filter the source:
+
+      filters = [state: "Sweden", state: "Brazil"]
+      from(c in City, or_where: ^filters)
+
+  ## Expressions example
+
+      City |> where([c], c.state == "Sweden") |> or_where([c], c.state == "Brazil")
+
+  """
+  defmacro or_where(query, binding \\ [], expr) do
+    Filter.build(:where, :or, query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -863,7 +897,7 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  A having query expression.
+  An AND having query expression.
 
   Like `where`, `having` filters rows from the schema, but after the grouping is
   performed giving it the same semantics as `select` for a grouped query
@@ -887,7 +921,29 @@ defmodule Ecto.Query do
       |> select([p], count(p.id))
   """
   defmacro having(query, binding \\ [], expr) do
-    Filter.build(:having, query, binding, expr, __CALLER__)
+    Filter.build(:having, :and, query, binding, expr, __CALLER__)
+  end
+
+  @doc """
+  An OR having query expression.
+
+  Like `having` but combine previous expressions by using `OR`.
+  `or_having` behaves for `having` the same way `or_where` behaves
+  for `where`.
+
+  ## Keywords example
+
+      # Augment a previous group_by with a having condition.
+      from(p in query, or_having: avg(p.num_comments) > 10)
+
+  ## Expressions example
+
+      # Augment a previous group_by with a having condition.
+      Post |> or_having([p], avg(p.num_comments) > 10)
+
+  """
+  defmacro or_having(query, binding \\ [], expr) do
+    Filter.build(:having, :or, query, binding, expr, __CALLER__)
   end
 
   @doc """

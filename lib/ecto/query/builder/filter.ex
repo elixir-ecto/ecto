@@ -10,12 +10,12 @@ defmodule Ecto.Query.Builder.Filter do
   or a keyword list of field names and values. In a keyword
   list multiple key value pairs will be joined with "and".
   """
-  @spec escape(:where | :having, Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
-  def escape(_kind, [], _vars, _env) do
+  @spec escape(:where | :having, :and | :op, Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
+  def escape(_kind, op, [], _vars, _env) do
     {true, %{}}
   end
 
-  def escape(kind, expr, vars, env) when is_list(expr) do
+  def escape(kind, op, expr, vars, env) when is_list(expr) do
     {parts, params} =
       Enum.map_reduce(expr, %{}, fn
         {field, nil}, _acc ->
@@ -30,11 +30,11 @@ defmodule Ecto.Query.Builder.Filter do
                          "pass a list dynamically, please interpolate the whole list with ^"
       end)
 
-    expr = Enum.reduce parts, &{:{}, [], [:and, [], [&2, &1]]}
+    expr = Enum.reduce parts, &{:{}, [], [op, [], [&2, &1]]}
     {expr, params}
   end
 
-  def escape(_kind, expr, vars, env) do
+  def escape(_kind, _op, expr, vars, env) do
     Builder.escape(expr, :boolean, %{}, vars, env)
   end
 
@@ -45,24 +45,25 @@ defmodule Ecto.Query.Builder.Filter do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(:where | :having, Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
-  def build(kind, query, _binding, {:^, _, [var]}, env) do
+  @spec build(:where | :having, :and | :op, Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
+  def build(kind, op, query, _binding, {:^, _, [var]}, env) do
     expr =
       quote do
-        {expr, params} = Ecto.Query.Builder.Filter.runtime!(unquote(kind), unquote(var))
-        %Ecto.Query.QueryExpr{expr: expr, params: params,
-                              file: unquote(env.file), line: unquote(env.line)}
+        {expr, params} = Ecto.Query.Builder.Filter.runtime!(unquote(kind), unquote(var), unquote(op))
+        %Ecto.Query.BooleanExpr{expr: expr, params: params, op: unquote(op),
+                                file: unquote(env.file), line: unquote(env.line)}
       end
     Builder.apply_query(query, __MODULE__, [kind, expr], env)
   end
 
-  def build(kind, query, binding, expr, env) do
+  def build(kind, op, query, binding, expr, env) do
     binding        = Builder.escape_binding(binding)
-    {expr, params} = escape(kind, expr, binding, env)
+    {expr, params} = escape(kind, op, expr, binding, env)
     params         = Builder.escape_params(params)
 
-    expr = quote do: %Ecto.Query.QueryExpr{
+    expr = quote do: %Ecto.Query.BooleanExpr{
                         expr: unquote(expr),
+                        op: unquote(op),
                         params: unquote(params),
                         file: unquote(env.file),
                         line: unquote(env.line)}
@@ -90,16 +91,16 @@ defmodule Ecto.Query.Builder.Filter do
   @doc """
   Invoked at runtime for interpolated lists.
   """
-  def runtime!(_kind, []) do
+  def runtime!(_kind, [], _op) do
     {true, []}
   end
 
-  def runtime!(kind, kw) when is_list(kw) do
+  def runtime!(kind, kw, op) when is_list(kw) do
     {parts, params} = runtime!(kw, 0, [], [], kind, kw)
-    {Enum.reduce(parts, &{:and, [], [&2, &1]}), params}
+    {Enum.reduce(parts, &{op, [], [&2, &1]}), params}
   end
 
-  def runtime!(kind, other) do
+  def runtime!(kind, other, _op) do
     raise ArgumentError, "expected a keyword list in `#{kind}`, got: `#{inspect other}`"
   end
 

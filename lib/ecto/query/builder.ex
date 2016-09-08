@@ -609,15 +609,15 @@ defmodule Ecto.Query.Builder do
   For this reason, the apply function should be ready to handle
   arguments in both escaped and unescaped form.
 
-  For example, take into account the `Builder.Select`:
+  For example, take into account the `Builder.OrderBy`:
 
       select = %Ecto.Query.QueryExpr{expr: expr, file: env.file, line: env.line}
-      Builder.apply_query(query, __MODULE__, [select], env)
+      Builder.apply_query(query, __MODULE__, [order_by], env)
 
   `expr` is already an escaped expression and we must not escape
   it again. However, it is wrapped in an Ecto.Query.QueryExpr,
   which must be escaped! Furthermore, the `apply/2` function
-  in `Builder.Select` very likely will inject the QueryExpr inside
+  in `Builder.OrderBy` very likely will inject the QueryExpr inside
   Query, which again, is a mixture of escaped and unescaped expressions.
 
   That said, you need to obey the following rules:
@@ -648,7 +648,6 @@ defmodule Ecto.Query.Builder do
   defp unescape_query({:%, _, [Query, {:%{}, _, list}]}) do
     struct(Query, list)
   end
-
   defp unescape_query({:%{}, _, list} = ast) do
     if List.keyfind(list, :__struct__, 0) == {:__struct__, Query} do
       Enum.into(list, %{})
@@ -656,7 +655,6 @@ defmodule Ecto.Query.Builder do
       ast
     end
   end
-
   defp unescape_query(other) do
     other
   end

@@ -501,7 +501,7 @@ defmodule Ecto.Association.HasThrough do
     * `relationship` - The relationship to the specified schema, default `:child`
   """
 
-  alias Ecto.Query.JoinExpr
+  alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr}
 
   @behaviour Ecto.Association
   defstruct [:cardinality, :field, :owner, :owner_key, :through, :on_cast,
@@ -606,15 +606,21 @@ defmodule Ecto.Association.HasThrough do
     rewrite_ix = assoc.ix
     [assoc|joins] = Enum.map([assoc|joins], &rewrite_join(&1, rewrite_ix))
 
-    %{query | wheres: [assoc.on|query.wheres], joins: joins,
+    %{query | wheres: [assoc_to_where(assoc)|query.wheres], joins: joins,
               from: merge_from(query.from, assoc.source), sources: nil}
     |> distinct([x], true)
   end
 
+  defp assoc_to_where(%{on: %QueryExpr{} = on}) do
+    on
+    |> Map.put(:__struct__, BooleanExpr)
+    |> Map.put(:op, :and)
+  end
+
   defp assoc_to_join(%{from: from, wheres: [on], order_bys: [], joins: joins}, position) do
     last = length(joins) + position
-    join = %JoinExpr{qual: :inner, source: from,
-                     on: on, file: on.file, line: on.line}
+    join = %JoinExpr{qual: :inner, source: from, file: on.file, line: on.line,
+                     on: on |> Map.put(:__struct__, QueryExpr) |> Map.delete(:op)}
 
     mapping = fn
       0  -> last

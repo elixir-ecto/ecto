@@ -1,6 +1,7 @@
 defimpl Inspect, for: Ecto.Query do
   import Inspect.Algebra
   import Kernel, except: [to_string: 1]
+
   alias Ecto.Query.JoinExpr
 
   @doc false
@@ -38,9 +39,9 @@ defimpl Inspect, for: Ecto.Query do
     preloads  = preloads(query.preloads)
     assocs    = assocs(query.assocs, names)
 
-    wheres    = kw_exprs(:where, query.wheres, names)
+    wheres    = bool_exprs(%{and: :where, or: :or_where}, query.wheres, names)
     group_bys = kw_exprs(:group_by, query.group_bys, names)
-    havings   = kw_exprs(:having, query.havings, names)
+    havings   = bool_exprs(%{and: :having, or: :or_having}, query.havings, names)
     order_bys = kw_exprs(:order_by, query.order_bys, names)
     updates   = kw_exprs(:update, query.updates, names)
 
@@ -99,6 +100,12 @@ defimpl Inspect, for: Ecto.Query do
         {field, {:&, [], [idx]}}
       {field, {idx, children}} ->
         {field, {{:&, [], [idx]}, assocs(children)}}
+    end
+  end
+
+  defp bool_exprs(keys, exprs, names) do
+    Enum.map exprs, fn %{expr: expr, op: op} = part ->
+      {Map.fetch!(keys, op), expr(expr, names, part)}
     end
   end
 
