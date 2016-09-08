@@ -6,18 +6,23 @@ Ecto 2.1 requires Elixir 1.3+.
 
 ## Highlights
 
-### Improved subqueries
+### Named subquery fields
 
-Ecto 2.0 introduced subqueries and Ecto 2.1 brings many improvements.
+Ecto 2.0 introduced subqueries and Ecto 2.1 brings the ability to use maps to name the expressions selected in a subquery, allowing developers to return tables with conflicting fields or with any other complex expression such as fragments or aggregates:
 
-The first of them is the ability to use maps to name the expressions selected in a subquery, allowing developers to return tables with conflicting fields or with any other complex expression such as fragments or aggregates:
-
-    ```elixir
     posts_with_private = from p in Post, select: %{title: p.title, public: not p.private}
     from p in subquery(posts_with_private), where: ..., select: p
-    ```
 
-Ecto 2.0 has also added support for subqueries in more expressions, such as `x in subquery` and `exists(subquery)`.
+### `or_where` and `or_having`
+
+Ecto 2.1 adds `or_where` and `or_having` that allows developers to add new query filters using `OR` when combining with previous filters.
+
+    from(c in City, where: [state: "Sweden"], or_where: [state: "Brazil"])
+
+It is also possible to interpolate the whole keyword list to dynamically filter the source using OR filters:
+
+    filters = [state: "Sweden", state: "Brazil"]
+    from(c in City, or_where: ^filters)
 
 ## v2.1.0-dev (2016-00-00)
 
