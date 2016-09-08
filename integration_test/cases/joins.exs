@@ -54,6 +54,9 @@ defmodule Ecto.Integration.JoinsTest do
 
     query = from(p in Post, join: c in assoc(p, :permalink), order_by: p.id, select: {p, c})
     assert [{^p2, ^c1}] = TestRepo.all(query)
+
+    query = from(p in Post, join: c in assoc(p, :permalink), on: c.id == ^c1.id, select: {p, c})
+    assert [{^p2, ^c1}] = TestRepo.all(query)
   end
 
   @tag :left_join

@@ -278,13 +278,13 @@ defmodule Ecto.Query.Planner do
   defp attach_on(joins, %{expr: true}) do
     joins
   end
-  defp attach_on([h|t], %{expr: expr}) do
-    h =
-      update_in h.on.expr, fn
-        true    -> expr
-        current -> {:and, [], [current, expr]}
-      end
-    [h|t]
+  defp attach_on([%{on: %{expr: true}} = h|t], on) do
+    [%{h | on: on}|t]
+  end
+  defp attach_on([h|t], %{expr: extra_expr, params: extra_params}) do
+    %{on: %{expr: expr, params: params} = on} = h
+    on = %{on | expr: {:and, [], [expr, extra_expr]}, params: params ++ extra_params}
+    [%{h | on: on}|t]
   end
 
   defp rewrite_join(%{on: on, ix: join_ix} = join, qual, ix, last_ix, source_ix, inc_ix) do
