@@ -150,7 +150,7 @@ defmodule Ecto.Repo.Queryable do
       {source, schema} when is_map(value) ->
         Ecto.Schema.__load__(schema, prefix, source, context, value,
                              &Ecto.Type.adapter_load(adapter, &1, &2))
-      %Ecto.SubQuery{sources: sources, fields: fields, select: select, take: take} ->
+      %Ecto.SubQuery{meta: %{sources: sources, fields: fields, select: select, take: take}} ->
         loaded = load_subquery(fields, value, prefix, context, sources, adapter)
         postprocess(select, fields, take).(loaded)
     end

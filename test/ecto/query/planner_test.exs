@@ -301,39 +301,35 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: subqueries validates select fields" do
     query = prepare(from(subquery(Post), [])) |> elem(0)
-    assert [{:id, 0}, {:title, 0} | _] = query.from.types
+    assert [{:id, {{:., [], [{:&, [], [0]}, :id]}, [], []}},
+            {:title, {{:., [], [{:&, [], [0]}, :title]}, [], []}} | _] = query.from.fields
 
     query = from p in "posts", select: p.code
     query = prepare(from(subquery(query), [])) |> elem(0)
-    assert [code: 0] = query.from.types
+    assert [code: {{:., [], [{:&, [], [0]}, :code]}, [], []}] = query.from.fields
 
     query = from p in Post, select: p.code
     query = prepare(from(subquery(query), [])) |> elem(0)
-    assert [code: 0] = query.from.types
+    assert [code: {{:., [], [{:&, [], [0]}, :code]}, [], []}] = query.from.fields
 
-    query = from p in Post, join: c in assoc(p, :comments), select: {p.code, c}
+    query = from p in Post, join: c in assoc(p, :comments), select: %{c: p.code}
     query = prepare(from(subquery(query), [])) |> elem(0)
-    assert [{:code, 0}, {:id, 1} | _] = query.from.types
-
-    query = from p in Post, select: 1
-    assert_raise Ecto.SubQueryError, ~r/subquery must select at least one source/, fn ->
-      prepare(from(subquery(query), []))
-    end
+    assert [c: {{:., [], [{:&, [], [0]}, :code]}, [], []}] = query.from.fields
 
     query = from p in Post, select: fragment("? + ?", p.id, p.id)
-    assert_raise Ecto.SubQueryError, ~r/subquery can only select sources/, fn ->
+    assert_raise Ecto.SubQueryError, ~r/subquery must select a source \(t\), a field \(t\.field\) or a map/, fn ->
       prepare(from(subquery(query), []))
     end
 
-    query = from p in Post, join: c in assoc(p, :comments), select: {p, c}
-    assert_raise Ecto.SubQueryError, ~r/`id` is selected from two different sources in subquery/, fn ->
+    query = from p in Post, select: %{p.id => p.title}
+    assert_raise Ecto.SubQueryError, ~r/only atom keys are allowed/, fn ->
       prepare(from(subquery(query), []))
     end
   end
 
   test "prepare: allows type casting from subquery types" do
     query = subquery(from p in Post, join: c in assoc(p, :comments),
-                                     select: {p.id, p.title, c.posted})
+                                     select: %{id: p.id, title: p.title, posted: c.posted})
 
     datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
     {_query, params, _key} = prepare(query |> where([c], c.posted == ^datetime))
@@ -693,25 +689,22 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: merges subqueries fields when requested" do
-    query = from p in Post, select: {p.id, p.title}
-    query = normalize(from(subquery(query), []))
+    subquery = from p in Post, select: %{id: p.id, title: p.title}
+    query = normalize(from(subquery(subquery), []))
     assert query.select.fields == [{:&, [], [0, [:id, :title], 2]}]
 
-    query = from p in Post, select: {p.id, p.title}
-    query = normalize(from(p in subquery(query), select: p.title))
+    query = normalize(from(p in subquery(subquery), select: p.title))
     assert query.select.fields == [{{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
 
-    query = from p in Post, select: {p.id, p.title}
-    query = normalize(from(c in Comment, join: p in subquery(query), select: p))
+    query = normalize(from(c in Comment, join: p in subquery(subquery), select: p))
     assert query.select.fields == [{:&, [], [1, [:id, :title], 2]}]
 
-    query = from p in Post, select: {p.id, p.title}
-    query = normalize(from(c in Comment, join: p in subquery(query), select: p.title))
+    query = normalize(from(c in Comment, join: p in subquery(subquery), select: p.title))
     assert query.select.fields == [{{:., [], [{:&, [], [1]}, :title]}, [ecto_type: :string], []}]
 
-    query = from p in Post, select: {p.id, p.title}
+    subquery = from p in Post, select: %{id: p.id, title: p.title}
     assert_raise Ecto.QueryError, ~r/it is not possible to return a map\/struct subset of a subquery/, fn ->
-      normalize(from(p in subquery(query), select: [:title]))
+      normalize(from(p in subquery(subquery), select: [:title]))
     end
   end
 end

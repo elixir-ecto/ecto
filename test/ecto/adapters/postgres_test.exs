@@ -69,11 +69,11 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "from with subquery" do
-    query = subquery("posts" |> select([r], {r.x, r.y})) |> select([r], r.x) |> normalize
-    assert SQL.all(query) == ~s{SELECT s0."x" FROM (SELECT p0."x", p0."y" FROM "posts" AS p0) AS s0}
+    query = subquery("posts" |> select([r], %{x: r.x, y: r.y})) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT s0."x" FROM (SELECT p0."x" AS "x", p0."y" AS "y" FROM "posts" AS p0) AS s0}
 
-    query = subquery("posts" |> select([r], {r.x, r.y})) |> select([r], r) |> normalize
-    assert SQL.all(query) == ~s{SELECT s0."x", s0."y" FROM (SELECT p0."x", p0."y" FROM "posts" AS p0) AS s0}
+    query = subquery("posts" |> select([r], %{x: r.x, z: r.y})) |> select([r], r) |> normalize
+    assert SQL.all(query) == ~s{SELECT s0."x", s0."z" FROM (SELECT p0."x" AS "x", p0."y" AS "z" FROM "posts" AS p0) AS s0}
   end
 
   test "select" do
@@ -470,17 +470,17 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "join with subquery" do
-    posts = subquery("posts" |> where(title: ^"hello") |> select([r], {r.x, r.y}))
-
+    posts = subquery("posts" |> where(title: ^"hello") |> select([r], %{x: r.x, y: r.y}))
     query = "comments" |> join(:inner, [c], p in subquery(posts), true) |> select([_, p], p.x) |> normalize
     assert SQL.all(query) ==
            ~s{SELECT s1."x" FROM "comments" AS c0 } <>
-           ~s{INNER JOIN (SELECT p0."x", p0."y" FROM "posts" AS p0 WHERE (p0."title" = $1)) AS s1 ON TRUE}
+           ~s{INNER JOIN (SELECT p0."x" AS "x", p0."y" AS "y" FROM "posts" AS p0 WHERE (p0."title" = $1)) AS s1 ON TRUE}
 
+    posts = subquery("posts" |> where(title: ^"hello") |> select([r], %{x: r.x, z: r.y}))
     query = "comments" |> join(:inner, [c], p in subquery(posts), true) |> select([_, p], p) |> normalize
     assert SQL.all(query) ==
-           ~s{SELECT s1."x", s1."y" FROM "comments" AS c0 } <>
-           ~s{INNER JOIN (SELECT p0."x", p0."y" FROM "posts" AS p0 WHERE (p0."title" = $1)) AS s1 ON TRUE}
+           ~s{SELECT s1."x", s1."z" FROM "comments" AS c0 } <>
+           ~s{INNER JOIN (SELECT p0."x" AS "x", p0."y" AS "z" FROM "posts" AS p0 WHERE (p0."title" = $1)) AS s1 ON TRUE}
   end
 
   test "join with prefix" do

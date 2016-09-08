@@ -189,8 +189,14 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp select([], _sources, _query),
       do: "TRUE"
-    defp select(fields, sources, query),
-      do: Enum.map_join(fields, ", ", &expr(&1, sources, query))
+    defp select(fields, sources, query) do
+      Enum.map_join(fields, ", ", fn
+        {key, value} ->
+          expr(value, sources, query) <> " AS " <> quote_name(key)
+        value ->
+          expr(value, sources, query)
+      end)
+    end
 
     defp from(%{from: from} = query, sources) do
       {from, name} = get_source(query, sources, 0, from)
@@ -348,8 +354,8 @@ if Code.ensure_loaded?(Mariaex) do
       "NOT (" <> expr(expr, sources, query) <> ")"
     end
 
-    defp expr(%Ecto.SubQuery{query: query}, _sources, _query) do
-      all(query)
+    defp expr(%Ecto.SubQuery{query: query, fields: fields}, _sources, _query) do
+      query.select.fields |> put_in(fields) |> all()
     end
 
     defp expr({:fragment, _, [kw]}, _sources, query) when is_list(kw) or tuple_size(kw) == 3 do

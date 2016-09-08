@@ -226,8 +226,14 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp select_fields([], _sources, _query),
       do: "TRUE"
-    defp select_fields(fields, sources, query),
-      do: Enum.map_join(fields, ", ", &expr(&1, sources, query))
+    defp select_fields(fields, sources, query) do
+      Enum.map_join(fields, ", ", fn
+        {key, value} ->
+          expr(value, sources, query) <> " AS " <> quote_name(key)
+        value ->
+          expr(value, sources, query)
+      end)
+    end
 
     defp distinct_exprs(%Query{distinct: %QueryExpr{expr: exprs}} = query, sources)
         when is_list(exprs) do
@@ -424,8 +430,8 @@ if Code.ensure_loaded?(Postgrex) do
       "NOT (" <> expr(expr, sources, query) <> ")"
     end
 
-    defp expr(%Ecto.SubQuery{query: query}, _sources, _query) do
-      all(query)
+    defp expr(%Ecto.SubQuery{query: query, fields: fields}, _sources, _query) do
+      query.select.fields |> put_in(fields) |> all()
     end
 
     defp expr({:fragment, _, [kw]}, _sources, query) when is_list(kw) or tuple_size(kw) == 3 do

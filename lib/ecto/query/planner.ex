@@ -108,13 +108,26 @@ defmodule Ecto.Query.Planner do
 
   defp build_meta(%{prefix: prefix, sources: sources, assocs: assocs, preloads: preloads},
                   %{expr: select, fields: fields, take: take}) do
-    %{prefix: prefix, sources: sources, fields: fields, take: take,
-      assocs: assocs, preloads: preloads, select: select}
+    %{prefix: prefix, sources: build_sources_meta(sources, 1, tuple_size(sources)),
+      fields: fields, take: take, assocs: assocs, preloads: preloads, select: select}
   end
   defp build_meta(%{prefix: prefix, sources: sources, assocs: assocs, preloads: preloads},
                   nil) do
-    %{prefix: prefix, sources: sources, fields: nil, take: nil,
-      assocs: assocs, preloads: preloads, select: nil}
+    %{prefix: prefix, sources: build_sources_meta(sources, 1, tuple_size(sources)),
+      fields: nil, take: nil, assocs: assocs, preloads: preloads, select: nil}
+  end
+
+  defp build_sources_meta(sources, pos, size) when pos <= size do
+    case :erlang.element(pos, sources) do
+      %Ecto.SubQuery{query: %{select: select} = query} = subquery ->
+        subquery = %{subquery | meta: build_meta(query, select), cache: nil, query: nil, params: nil}
+        build_sources_meta(:erlang.setelement(pos, sources, subquery), pos + 1, size)
+      _ ->
+        build_sources_meta(sources, pos + 1, size)
+    end
+  end
+  defp build_sources_meta(sources, _, _) do
+    sources
   end
 
   @doc """
@@ -152,16 +165,9 @@ defmodule Ecto.Query.Planner do
   defp prepare_source(query, %Ecto.SubQuery{query: inner_query} = subquery, adapter) do
     try do
       {inner_query, params, key} = prepare(inner_query, :all, adapter)
-
-      # The only reason we call normalize_select here is because
-      # subquery_types validates a specific format in a way it
-      # won't need to be modified again when normalized later on.
       inner_query = inner_query |> returning(true) |> normalize_select()
-
-      %{select: %{fields: fields, expr: select, take: take}, sources: sources} = inner_query
-      %{subquery | query: inner_query, params: params, select: select,
-                   fields: fields, types: subquery_types(inner_query),
-                   cache: key, take: take, sources: sources}
+      %{subquery | query: inner_query, params: params, cache: key,
+                   fields: subquery_fields(inner_query, inner_query.select)}
     rescue
       e -> raise Ecto.SubQueryError, query: query, exception: e
     end
@@ -174,33 +180,39 @@ defmodule Ecto.Query.Planner do
   defp prepare_source(_query, {:fragment, _, _} = source, _adapter),
     do: source
 
-  defp subquery_types(%{assocs: assocs, preloads: preloads} = query)
+  defp subquery_fields(%{assocs: assocs, preloads: preloads} = query, _select)
       when assocs != [] or preloads != [] do
     error!(query, "cannot preload associations in subquery")
   end
-  defp subquery_types(%{select: %{fields: []}} = query) do
-    error!(query, "subquery must select at least one source (t) or one field (t.field)")
+  defp subquery_fields(query, %{expr: {:%{}, _, pairs} = expr}) do
+    Enum.map(pairs, fn
+      {key, _} when not is_atom(key) ->
+        error!(query, "only atom keys are allowed when selecting a map in subquery, got: `#{Macro.to_string(expr)}`")
+      {key, expr} ->
+        if valid_subquery_value?(expr) do
+          {key, expr}
+        else
+          error!(query, "containers (maps, lists, tuples) or sources (t) are not allowed when selecting a map in subquery, got: `#{Macro.to_string(expr)}`")
+        end
+    end)
   end
-  defp subquery_types(%{select: %{fields: fields}} = query) do
-    Enum.reduce(fields, [], fn
-      {:&, _, [ix, [_|_] = fields, _]}, acc ->
-        Enum.reduce(fields, acc, &add_subfield(query, &1, ix, &2))
-      {{:., _, [{:&, _, [ix]}, field]}, _, []}, acc ->
-        add_subfield(query, field, ix, acc)
-      other, _acc ->
-        error!(query, "subquery can only select sources (t) or fields (t.field), got: `#{Macro.to_string(other)}`")
-    end) |> Enum.reverse()
+  defp subquery_fields(_query, %{fields: [{:&, _, [ix, [_|_] = fields, _]}]}) do
+    Enum.map(fields, fn field ->
+      {field, {{:., [], [{:&, [], [ix]}, field]}, [], []}}
+    end)
+  end
+  defp subquery_fields(_query, %{fields: [{{:., _, [{:&, _, [ix]}, field]}, _, []}]}) do
+    [{field, {{:., [], [{:&, [], [ix]}, field]}, [], []}}]
+  end
+  defp subquery_fields(query, %{expr: expr}) do
+    error!(query, "subquery must select a source (t), a field (t.field) or a map, got: `#{Macro.to_string(expr)}`")
   end
 
-  defp add_subfield(query, field, ix, fields) do
-    case Keyword.get(fields, field, ix) do
-      ^ix -> [{field, ix}|fields]
-      prev_ix ->
-        sources = query.sources
-        error!(query, "`#{field}` is selected from two different sources in subquery: " <>
-                      "`#{inspect elem(sources, prev_ix)}` and `#{inspect elem(sources, ix)}`")
-    end
-  end
+  defp valid_subquery_value?({_, _}), do: false
+  defp valid_subquery_value?(args) when is_list(args), do: false
+  defp valid_subquery_value?({container, _, args})
+       when container in [:{}, :%{}, :&] and is_list(args), do: false
+  defp valid_subquery_value?(_), do: true
 
   defp prepare_joins(query, sources, offset, adapter) do
     prepare_joins(query.joins, query, [], sources, [], 1, offset, adapter)
@@ -308,7 +320,7 @@ defmodule Ecto.Query.Planner do
                               "because it does not have a schema"
       {_, schema} ->
         schema
-      %Ecto.SubQuery{select: {:&, _, [ix]}, sources: sources} when is_integer(ix) ->
+      %Ecto.SubQuery{query: %{select: %{expr: {:&, _, [ix]}}, sources: sources}} when is_integer(ix) ->
         schema_for_association_join!(query, join, elem(sources, ix))
       %Ecto.SubQuery{} ->
         error! query, join, "can only perform association joins on subqueries " <>
@@ -674,7 +686,7 @@ defmodule Ecto.Query.Planner do
 
   defp normalize_fields(%{assocs: [], preloads: []} = query,
                         %{take: take, expr: expr} = select) do
-    {fields, from} = collect_fields(expr, query, &Access.fetch(take, &1), :error)
+    {fields, from} = collect_fields(expr, query, take, :error)
 
     fields =
       case from do
@@ -687,7 +699,7 @@ defmodule Ecto.Query.Planner do
 
   defp normalize_fields(%{assocs: assocs} = query,
                         %{take: take, expr: expr} = select) do
-    {fields, from} = collect_fields(expr, query, &Access.fetch(take, &1), :error)
+    {fields, from} = collect_fields(expr, query, take, :error)
 
     case from do
       {:ok, from} ->
@@ -700,46 +712,46 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp collect_fields({:&, _, [0]}, query, fetcher, :error) do
-    fields = take!(:select, query, 0, 0, fetcher)
+  defp collect_fields({:&, _, [0]}, query, take, :error) do
+    fields = take!(:select, query, take, 0, 0)
     {[], {:ok, fields}}
   end
-  defp collect_fields({:&, _, [0]}, _query, _fetcher, from) do
+  defp collect_fields({:&, _, [0]}, _query, _take, from) do
     {[], from}
   end
-  defp collect_fields({:&, _, [ix]}, query, fetcher, from) do
-    fields = take!(:select, query, ix, ix, fetcher)
+  defp collect_fields({:&, _, [ix]}, query, take, from) do
+    fields = take!(:select, query, take, ix, ix)
     {[select_source(ix, fields)], from}
   end
 
   defp collect_fields({agg, meta, [{{:., _, [{:&, _, [ix]}, field]}, _, []}] = args},
-                      %{select: select} = query, _fetcher, from) when agg in ~w(avg min max sum)a do
+                      %{select: select} = query, _take, from) when agg in ~w(avg min max sum)a do
     type = source_type!(:select, query, select, ix, field)
     {[{agg, [ecto_type: type] ++ meta, args}], from}
   end
 
   defp collect_fields({{:., _, [{:&, _, [ix]}, field]} = dot, meta, []},
-                      %{select: select} = query, _fetcher, from) do
+                      %{select: select} = query, _take, from) do
     type = source_type!(:select, query, select, ix, field)
     {[{dot, [ecto_type: type] ++ meta, []}], from}
   end
 
-  defp collect_fields({left, right}, query, fetcher, from) do
-    {left, from} = collect_fields(left, query, fetcher, from)
-    {right, from} = collect_fields(right, query, fetcher, from)
+  defp collect_fields({left, right}, query, take, from) do
+    {left, from} = collect_fields(left, query, take, from)
+    {right, from} = collect_fields(right, query, take, from)
     {left ++ right, from}
   end
-  defp collect_fields({:{}, _, elems}, query, fetcher, from),
-    do: collect_fields(elems, query, fetcher, from)
-  defp collect_fields({:%{}, _, [{:|, _, [data, pairs]}]}, query, fetcher, from),
-    do: collect_fields([data|pairs], query, fetcher, from)
-  defp collect_fields({:%{}, _, pairs}, query, fetcher, from),
-    do: collect_fields(pairs, query, fetcher, from)
-  defp collect_fields(list, query, fetcher, from) when is_list(list),
-    do: Enum.flat_map_reduce(list, from, &collect_fields(&1, query, fetcher, &2))
-  defp collect_fields(expr, _query, _fetcher, from) when is_atom(expr) or is_binary(expr) or is_number(expr),
+  defp collect_fields({:{}, _, elems}, query, take, from),
+    do: collect_fields(elems, query, take, from)
+  defp collect_fields({:%{}, _, [{:|, _, [data, pairs]}]}, query, take, from),
+    do: collect_fields([data|pairs], query, take, from)
+  defp collect_fields({:%{}, _, pairs}, query, take, from),
+    do: collect_fields(pairs, query, take, from)
+  defp collect_fields(list, query, take, from) when is_list(list),
+    do: Enum.flat_map_reduce(list, from, &collect_fields(&1, query, take, &2))
+  defp collect_fields(expr, _query, _take, from) when is_atom(expr) or is_binary(expr) or is_number(expr),
     do: {[], from}
-  defp collect_fields(expr, _query, _fetcher, from),
+  defp collect_fields(expr, _query, _take, from),
     do: {[expr], from}
 
   defp fetch_assoc(tag, take, assoc) do
@@ -771,9 +783,9 @@ defmodule Ecto.Query.Planner do
     {:&, [], [ix, fields, length(fields)]}
   end
 
-  defp take!(kind, query, field, ix, fetcher) do
+  defp take!(kind, query, take, field, ix) do
     source = get_source!(kind, query, ix)
-    take!(source, query, fetcher.(field), field)
+    take!(source, query, Access.fetch(take, field), field)
   end
 
   defp take!(source, query, fetched, field) do
@@ -797,8 +809,8 @@ defmodule Ecto.Query.Planner do
         schema.__schema__(:fields)
       {:error, {:fragment, _, _}} ->
         nil # Checked by the adapter
-      {:error, %Ecto.SubQuery{types: types}} ->
-        Keyword.keys(types)
+      {:error, %Ecto.SubQuery{fields: fields}} ->
+        Keyword.keys(fields)
     end
   end
 
@@ -846,10 +858,14 @@ defmodule Ecto.Query.Planner do
         source_type!(kind, query, expr, schema, field)
       {:fragment, _, _} ->
         :any
-      %Ecto.SubQuery{types: types, query: inner_query} ->
-        case Keyword.fetch(types, field) do
-          {:ok, ix} -> source_type!(kind, inner_query, expr, ix, field)
-          :error    -> error!(query, expr, "field `#{field}` does not exist in subquery")
+      %Ecto.SubQuery{fields: fields, query: inner_query} ->
+        case Keyword.fetch(fields, field) do
+          {:ok, {{:., _, [{:&, _, [ix]}, field]}, _, []}} ->
+            source_type!(kind, inner_query, expr, ix, field)
+          {:ok, _} ->
+            :any
+          :error ->
+            error!(query, expr, "field `#{field}` does not exist in subquery")
         end
     end
   end
