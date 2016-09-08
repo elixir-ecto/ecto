@@ -13,6 +13,7 @@ env:
   - ELIXIR_ERL_OPTIONS="+T 9"
 install:
   - mix local.hex --force
+  - mix local.rebar --force
   - mix deps.get
   - (cd examples/friends; mix deps.get)
 script:
