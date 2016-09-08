@@ -10,8 +10,8 @@ defmodule Ecto.Query.Builder.Filter do
   or a keyword list of field names and values. In a keyword
   list multiple key value pairs will be joined with "and".
   """
-  @spec escape(:where | :having, :and | :op, Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
-  def escape(_kind, op, [], _vars, _env) do
+  @spec escape(:where | :having, :and | :or, Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
+  def escape(_kind, _op, [], _vars, _env) do
     {true, %{}}
   end
 
@@ -45,7 +45,7 @@ defmodule Ecto.Query.Builder.Filter do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(:where | :having, :and | :op, Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
+  @spec build(:where | :having, :and | :or, Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(kind, op, query, _binding, {:^, _, [var]}, env) do
     expr =
       quote do
