@@ -1211,7 +1211,7 @@ defmodule Ecto.Schema do
         schema "parents" do
           field :name, :string
 
-          embeds_one :children, Child do
+          embeds_many :children, Child do
             field :name, :string
             field :age,  :integer
           end
