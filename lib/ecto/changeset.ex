@@ -1955,6 +1955,9 @@ defmodule Ecto.Changeset do
     end)
   end
 
+  defp merge_related_keys(_, _, nil, _) do
+    raise ArgumentError, "changeset does not have types information"
+  end
   defp merge_related_keys(map, changes, types, msg_func) do
     Enum.reduce types, map, fn
       {field, {tag, %{cardinality: :many}}}, acc when tag in @relations ->
