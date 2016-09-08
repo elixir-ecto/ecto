@@ -61,9 +61,8 @@ defmodule Ecto.Query.Builder.Preload do
 
   defp escape(other, _mode, _preloads, _assocs, _vars) do
     Builder.error! "`#{Macro.to_string other}` is not a valid preload expression. " <>
-                   "preload expects an atom, a (nested) list of atoms or a (nested) " <>
-                   "keyword list with a binding, atoms or lists as values. " <>
-                   "Use ^ if you want to interpolate a value"
+                   "preload expects an atom, a list of atoms or a keyword list with " <>
+                   "more preloads as values. Use ^ on the outermost preload to interpolate a value"
   end
 
   defp escape_each({key, {:^, _, [inner]}}, _mode, {preloads, assocs}, _vars) do
