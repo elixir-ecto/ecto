@@ -1,13 +1,13 @@
 defmodule Ecto.Mixfile do
   use Mix.Project
 
-  @version "2.0.5"
+  @version "2.1.0-dev"
   @adapters [:pg, :mysql]
 
   def project do
     [app: :ecto,
      version: @version,
-     elixir: "~> 1.2",
+     elixir: "~> 1.3",
      deps: deps(),
      build_per_environment: false,
      consolidate_protocols: false,
