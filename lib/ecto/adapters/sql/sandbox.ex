@@ -232,7 +232,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   [`DBConnection.Ownership`](https://hexdocs.pm/db_connection/DBConnection.Ownership.html)
   and defaults to 15000ms. Timeouts are given as integers in milliseconds.
 
-  ### Database deadlocks
+  ### Database locks and deadlocks
 
   Since the sandbox relies on concurrent transactional tests, there is
   a chance your tests may trigger deadlocks in your database. This is
@@ -240,8 +240,15 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   enough to avoid deadlocks and thefore making the use of concurrent tests
   with MySQL prohibited.
 
-  However, even on databases like PostgreSQL, deadlocks can still occur.
-  For example, consider this scenario:
+  However, even on databases like PostgreSQL, performance degradations or
+  deadlocks may still occur. For example, imagine multiple tests are
+  trying to insert the same user to the database. They will attempt to
+  retrieve the same database lock, causing only one test to succeed and
+  run while all other tests wait for the lock.
+
+  In other situations, two different tests may proceed in a way that
+  each test retrieves locks desired by the other, leading to a situation
+  that cannot be resolved, a deadlock. For instance:
 
       Transaction 1:                Transaction 2:
       begin
@@ -252,7 +259,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       update posts where id = 2
                             **deadlock**
 
-  There are different ways to avoid this problem. One of them is
+  There are different ways to avoid such problems. One of them is
   to make sure your tests work on distinct data. Regardless of
   your choice between using fixtures or factories for test data,
   make sure you get a new set of data per test. This is specially
