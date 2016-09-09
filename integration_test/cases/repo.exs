@@ -98,6 +98,15 @@ defmodule Ecto.Integration.RepoTest do
     assert TestRepo.all(PostUserCompositePk) == []
   end
 
+  @tag :invalid_prefix
+  test "insert, update and delete with invalid prefix" do
+    post = TestRepo.insert!(%Post{})
+    changeset = Ecto.Changeset.change(post, title: "foo")
+    assert catch_error(TestRepo.insert(%Post{}, prefix: "oops"))
+    assert catch_error(TestRepo.update(changeset, prefix: "oops"))
+    assert catch_error(TestRepo.delete(changeset, prefix: "oops"))
+  end
+
   test "insert and update with changeset" do
     # On insert we merge the fields and changes
     changeset = Ecto.Changeset.cast(%Post{text: "x", title: "wrong"},
