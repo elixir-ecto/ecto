@@ -37,6 +37,7 @@ defmodule Ecto.Repo.Queryable do
       queryable
       |> Ecto.Queryable.to_query
       |> Ecto.Query.Planner.returning(true)
+      |> attach_prefix(opts)
     execute(:all, repo, adapter, query, opts) |> elem(1)
   end
 
@@ -91,6 +92,7 @@ defmodule Ecto.Repo.Queryable do
       |> Ecto.Queryable.to_query
       |> assert_no_select!(:update_all)
       |> Ecto.Query.Planner.returning(opts[:returning] || false)
+      |> attach_prefix(opts)
     execute(:update_all, repo, adapter, query, opts)
   end
 
@@ -100,10 +102,18 @@ defmodule Ecto.Repo.Queryable do
       |> Ecto.Queryable.to_query
       |> assert_no_select!(:delete_all)
       |> Ecto.Query.Planner.returning(opts[:returning] || false)
+      |> attach_prefix(opts)
     execute(:delete_all, repo, adapter, query, opts)
   end
 
   ## Helpers
+
+  defp attach_prefix(query, opts) do
+    case Keyword.fetch(opts, :prefix) do
+      {:ok, prefix} -> %{query | prefix: prefix}
+      :error -> query
+    end
+  end
 
   defp assert_no_select!(%{select: nil} = query, _operation) do
     query

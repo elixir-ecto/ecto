@@ -49,6 +49,11 @@ defmodule Ecto.Integration.RepoTest do
       TestRepo.all(from(p in "posts", where: p.title == "title1", select: p.id))
   end
 
+  @tag :invalid_prefix
+  test "fetch with invalid prefix" do
+    assert catch_error(TestRepo.all("posts", prefix: "oops"))
+  end
+
   test "insert, update and delete" do
     post = %Post{title: "insert, update, delete", text: "fetch empty"}
     meta = post.__meta__
@@ -677,6 +682,11 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{title: nil} = TestRepo.get(Post, id3)
   end
 
+  @tag :invalid_prefix
+  test "update all with invalid prefix" do
+    assert catch_error(TestRepo.update_all(Post, [set: [title: "x"]], prefix: "oops"))
+  end
+
   @tag :returning
   test "update all with returning with schema" do
     assert %Post{id: id1} = TestRepo.insert!(%Post{title: "1"})
@@ -781,6 +791,11 @@ defmodule Ecto.Integration.RepoTest do
 
     assert {3, nil} = TestRepo.delete_all(Post, returning: false)
     assert [] = TestRepo.all(Post)
+  end
+
+  @tag :invalid_prefix
+  test "delete all with invalid prefix" do
+    assert catch_error(TestRepo.delete_all(Post, prefix: "oops"))
   end
 
   @tag :returning
