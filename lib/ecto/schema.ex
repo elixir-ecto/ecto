@@ -1088,6 +1088,9 @@ defmodule Ecto.Schema do
         end
       end
 
+  When defining an inline embed, the `:primary_key` option may be given to
+  customize the embed primary key type.
+
   Defining embedded schema in such a way will define a `Parent.Child` module
   with the appropriate struct. In order to properly cast the embedded schema.
   When casting the inline-defined embedded schemas you need to use the `:with`
@@ -1139,11 +1142,9 @@ defmodule Ecto.Schema do
   For options and examples see documentation of `embeds_one/3`.
   """
   defmacro embeds_one(name, schema, opts, do: block) do
-    {module, opts} = Ecto.Schema.__embed_module__(schema, opts, block)
-    schema = quote(do: __MODULE__.unquote(schema))
     quote do
-      unquote(module)
-      Ecto.Schema.__embeds_one__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
+      {schema, opts} = Ecto.Schema.__embeds_module__(__ENV__, unquote(schema), unquote(opts), unquote(Macro.escape(block)))
+      Ecto.Schema.__embeds_many__(__MODULE__, unquote(name), schema, opts)
     end
   end
 
@@ -1229,6 +1230,9 @@ defmodule Ecto.Schema do
         end
       end
 
+  When defining an inline embed, the `:primary_key` option may be given to
+  customize the embed primary key type.
+
   Defining embedded schema in such a way will define a `Parent.Child` module
   with the appropriate struct. In order to properly cast the embedded schema.
   When casting the inline-defined embedded schemas you need to use the `:with`
@@ -1268,11 +1272,9 @@ defmodule Ecto.Schema do
   For options and examples see documentation of `embeds_many/3`.
   """
   defmacro embeds_many(name, schema, opts, do: block) do
-    {module, opts} = Ecto.Schema.__embed_module__(schema, opts, block)
-    schema = quote(do: __MODULE__.unquote(schema))
     quote do
-      unquote(module)
-      Ecto.Schema.__embeds_many__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
+      {schema, opts} = Ecto.Schema.__embeds_module__(__ENV__, unquote(schema), unquote(opts), unquote(Macro.escape(block)))
+      Ecto.Schema.__embeds_many__(__MODULE__, unquote(name), schema, opts)
     end
   end
 
@@ -1437,27 +1439,22 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __embed_module__(name, opts, block) do
-    {pk, opts} =
-      if is_list(opts) and Keyword.has_key?(opts, :primary_key) do
-        Keyword.pop(opts, :primary_key)
-      else
-        {{:{}, [], [:id, :binary_id, [autogenerate: true]]}, opts}
-      end
+  def __embeds_module__(env, name, opts, block) do
+    {pk, opts} = Keyword.pop(opts, :primary_key, {:id, :binary_id, autogenerate: true})
 
     block =
       quote do
-        defmodule unquote(name) do
-          use Ecto.Schema
+        use Ecto.Schema
 
-          @primary_key unquote(pk)
-          embedded_schema do
-            unquote(block)
-          end
+        @primary_key unquote(Macro.escape(pk))
+        embedded_schema do
+          unquote(block)
         end
       end
 
-    {block, opts}
+    module = Module.concat(env.module, name)
+    Module.create(module, block, env)
+    {module, opts}
   end
 
   ## Quoted callbacks
