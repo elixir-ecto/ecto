@@ -492,7 +492,7 @@ defmodule Ecto.Schema do
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
-      `:raise` (default), `:mark_as_invalid`, `:nilify`, or `:delete`.
+      `:raise` (default), `:mark_as_invalid`, `:nilify`, `:update`, or `:delete`.
       See `Ecto.Changeset`'s section on related data for more info.
 
     * `:defaults` - Default values to use when building the association
@@ -688,7 +688,7 @@ defmodule Ecto.Schema do
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
-      `:raise` (default), `:mark_as_invalid`, `:nilify`, or `:delete`.
+      `:raise` (default), `:mark_as_invalid`, `:nilify`, `:update`, or `:delete`.
       See `Ecto.Changeset`'s section on related data for more info.
 
     * `:defaults` - Default values to use when building the association
@@ -802,16 +802,16 @@ defmodule Ecto.Schema do
   define the relationships between the resources. In this case,
   the comments table won't have the foreign key, instead there
   is a intermediary table responsible for associating the entries:
-  
+
       defmodule Comment do
         use Ecto.Schema
         schema "comments" do
           # ...
         end
       end
-  
+
   In your posts and tasks:
-  
+
       defmodule Post do
         use Ecto.Schema
 
@@ -954,7 +954,7 @@ defmodule Ecto.Schema do
   ## Join Schema Example
 
   You may prefer to use a join schema to handle many_to_many associations. The
-  decoupled nature of Ecto allows us to create a "join" struct which 
+  decoupled nature of Ecto allows us to create a "join" struct which
   `belongs_to` both sides of the many to many association.
 
   In our example, a User has and belongs to many Organizations
@@ -1020,11 +1020,16 @@ defmodule Ecto.Schema do
   You must declare your `embeds_one/3` field with type `:map` at the
   database level.
 
+  The embedded may or may not have a primary key. Ecto use the primary keys
+  to detect if an embed is being updated or not. If a primary is not present,
+  `:on_replace` should be set to either `:update` or `:delete` if there is a
+  desire to either update or delete the current embed when a new one is set.
+
   ## Options
 
     * `:on_replace` - The action taken on associations when the embed is
       replaced when casting or manipulating parent changeset. May be
-      `:raise` (default), `:mark_as_invalid`, or `:delete`.
+      `:raise` (default), `:mark_as_invalid`, `:update`, or `:delete`.
       See `Ecto.Changeset`'s section on related data for more info.
 
   ## Examples
@@ -1134,7 +1139,7 @@ defmodule Ecto.Schema do
   For options and examples see documentation of `embeds_one/3`.
   """
   defmacro embeds_one(name, schema, opts, do: block) do
-    module = Ecto.Schema.__embed_module__(schema, block)
+    {module, opts} = Ecto.Schema.__embed_module__(schema, opts, block)
     schema = quote(do: __MODULE__.unquote(schema))
     quote do
       unquote(module)
@@ -1153,6 +1158,12 @@ defmodule Ecto.Schema do
   In fact, Ecto will automatically translate `nil` values from the
   database into empty lists for embeds many (this behaviour is specific
   to `embeds_many/3` fields in order to mimic `has_many/3`).
+
+  The embedded may or may not have a primary key. Ecto use the primary keys
+  to detect if an embed is being updated or not. If a primary is not present
+  and you still want the list of embeds to be updated, `:on_replace` must be
+  set to `:delete`, forcing all current embeds to be deleted and replaced by
+  new ones whenever a new list of embeds is set.
 
   For encoding and decoding of embeds, please read the docs for
   `embeds_one/3`.
@@ -1257,7 +1268,7 @@ defmodule Ecto.Schema do
   For options and examples see documentation of `embeds_many/3`.
   """
   defmacro embeds_many(name, schema, opts, do: block) do
-    module = Ecto.Schema.__embed_module__(schema, block)
+    {module, opts} = Ecto.Schema.__embed_module__(schema, opts, block)
     schema = quote(do: __MODULE__.unquote(schema))
     quote do
       unquote(module)
@@ -1426,17 +1437,27 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __embed_module__(name, block) do
-    quote do
-      defmodule unquote(name) do
-        use Ecto.Schema
+  def __embed_module__(name, opts, block) do
+    {pk, opts} =
+      if is_list(opts) and Keyword.has_key?(opts, :primary_key) do
+        Keyword.pop(opts, :primary_key)
+      else
+        {{:{}, [], [:id, :binary_id, [autogenerate: true]]}, opts}
+      end
 
-        @primary_key {:id, :binary_id, autogenerate: true}
-        embedded_schema do
-          unquote(block)
+    block =
+      quote do
+        defmodule unquote(name) do
+          use Ecto.Schema
+
+          @primary_key unquote(pk)
+          embedded_schema do
+            unquote(block)
+          end
         end
       end
-    end
+
+    {block, opts}
   end
 
   ## Quoted callbacks

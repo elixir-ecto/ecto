@@ -28,6 +28,7 @@ It is also possible to interpolate the whole keyword list to dynamically filter 
 
 ### Enhancements
 
+  * Embeds are no longer required to have a primary key field. Coupled with the new `on_replace: :update` (or `on_replace: :delete`) option, this allows `embeds_one` relationships to be updated (or deleted) even without a primary key. For `embeds_many`, `:on_replace` must be set to `:delete` in case updates are desired, forcing all current embeds to be deleted and replaced by new ones whenever a new list of embeds is set.
 
 ### Bug fixes
 

@@ -158,7 +158,7 @@ defmodule Ecto.SchemaTest do
     use Ecto.Schema
 
     schema "inline_embedded_schema" do
-      embeds_one :one, One do
+      embeds_one :one, One, primary_key: false do
         field :x
       end
       embeds_many :many, Many do
@@ -172,7 +172,7 @@ defmodule Ecto.SchemaTest do
       InlineEmbeddedSchema.__schema__(:embed, :one)
     assert %Ecto.Embedded{related: InlineEmbeddedSchema.Many} =
       InlineEmbeddedSchema.__schema__(:embed, :many)
-    assert InlineEmbeddedSchema.One.__schema__(:fields)  == [:id, :x]
+    assert InlineEmbeddedSchema.One.__schema__(:fields)  == [:x]
     assert InlineEmbeddedSchema.Many.__schema__(:fields) == [:id, :y]
   end
 

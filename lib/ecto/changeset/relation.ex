@@ -89,7 +89,7 @@ defmodule Ecto.Changeset.Relation do
   end
 
   def cast(%{related: mod} = relation, params, current, on_cast) do
-    pks = primary_keys!(mod)
+    pks = mod.__schema__(:primary_key)
     cast_or_change(relation, params, current, struct_pk(mod, pks),
                    param_pk(mod, pks), &do_cast(relation, &1, &2, &3, on_cast))
   end
@@ -123,7 +123,7 @@ defmodule Ecto.Changeset.Relation do
   end
 
   def change(%{related: mod} = relation, value, current) do
-    get_pks = struct_pk(mod, primary_keys!(mod))
+    get_pks = struct_pk(mod, mod.__schema__(:primary_key))
     cast_or_change(relation, value, current, get_pks, get_pks,
                    &do_change(relation, &1, &2, &3))
   end
@@ -184,9 +184,10 @@ defmodule Ecto.Changeset.Relation do
     orphan embed nor associated records, attempting to do so results in
     this error message.
 
-    It is possible to change this behaviour by setting `:on_replace` when
-    defining the relation. See `Ecto.Changeset`'s section on related data
-    for more info.
+    If you don't desire the current behavior or if you are using embeds
+    without a primary key, it is possible to change this behaviour by
+    setting `:on_replace` when defining the relation. See `Ecto.Changeset`'s
+    section on related data for more info.
     """
   end
 
@@ -205,7 +206,7 @@ defmodule Ecto.Changeset.Relation do
 
   defp cast_or_change(%{cardinality: :many}, value, current, current_pks,
                       new_pks, fun) when is_list(value) do
-    map_changes(value, current_pks, new_pks, fun, current)
+    map_changes(value, new_pks, fun, process_current(current, current_pks), [], true, true)
   end
 
   defp cast_or_change(_, _, _, _, _, _), do: :error
@@ -222,12 +223,12 @@ defmodule Ecto.Changeset.Relation do
 
   defp single_change(%{on_replace: on_replace} = relation, new, current_pks, new_pks, fun, current) do
     pk_values = new_pks.(new)
-    if on_replace == :update or pk_values == current_pks.(current) do
+    if on_replace == :update or (pk_values == current_pks.(current) and pk_values != []) do
       single_change(new, current, fun, allowed_actions(pk_values), true)
     else
       case on_replace(relation, current) do
         {:ok, _changeset} -> single_change(new, nil, fun, [:insert], false)
-        :error   -> :error
+        :error -> :error
       end
     end
   end
@@ -243,18 +244,8 @@ defmodule Ecto.Changeset.Relation do
 
   # map changes
 
-  defp map_changes(list, current_pks, new_pks, fun, current) do
-    map_changes(list, new_pks, fun, process_current(current, current_pks), [], true, true)
-  end
-
-  defp map_changes([], _pks, fun, current, acc, valid?, skip?) do
-    current_structs = Enum.map(current, &elem(&1, 1))
-    reduce_delete_changesets(current_structs, fun, Enum.reverse(acc), valid?, skip?)
-  end
-
   defp map_changes([changes | rest], new_pks, fun, current, acc, valid?, skip?)
       when is_map(changes) or is_list(changes) do
-
     {struct, current, allowed_actions} = pop_current(current, new_pks.(changes))
     case fun.(changes, struct, allowed_actions) do
       {:ok, changeset} ->
@@ -265,17 +256,13 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
-  defp map_changes(_params, _pks, _fun, _current, _acc, _valid?, _skip?) do
-    :error
+  defp map_changes([], _pks, fun, current, acc, valid?, skip?) do
+    current_structs = Enum.map(current, &elem(&1, 1))
+    reduce_delete_changesets(current_structs, fun, Enum.reverse(acc), valid?, skip?)
   end
 
-  defp pop_current(current, pk_values) do
-    case Map.fetch(current, pk_values) do
-      {:ok, struct} ->
-        {struct, Map.delete(current, pk_values), allowed_actions(pk_values)}
-      :error ->
-        {nil, current, [:insert]}
-    end
+  defp map_changes(_params, _pks, _fun, _current, _acc, _valid?, _skip?) do
+    :error
   end
 
   defp allowed_actions(pk_values) do
@@ -323,9 +310,21 @@ defmodule Ecto.Changeset.Relation do
   defp process_current(nil, _get_pks),
     do: %{}
   defp process_current(current, get_pks) do
-    Enum.reduce(current, %{}, fn struct, acc ->
-      Map.put(acc, get_pks.(struct), struct)
-    end)
+    Enum.reduce(current, {%{}, 0}, fn struct, {acc, index} ->
+      case get_pks.(struct) do
+        []  -> {Map.put(acc, index, struct), index + 1}
+        pks -> {Map.put(acc, pks, struct), index}
+      end
+    end) |> elem(0)
+  end
+
+  defp pop_current(current, pk_values) do
+    case Map.fetch(current, pk_values) do
+      {:ok, struct} ->
+        {struct, Map.delete(current, pk_values), allowed_actions(pk_values)}
+      :error ->
+        {nil, current, [:insert]}
+    end
   end
 
   defp struct_pk(_mod, pks) do
@@ -346,13 +345,6 @@ defmodule Ecto.Changeset.Relation do
           :error       -> original
         end
       end
-    end
-  end
-
-  defp primary_keys!(schema) do
-    case schema.__schema__(:primary_key) do
-      []  -> raise Ecto.NoPrimaryKeyFieldError, schema: schema
-      pks -> pks
     end
   end
 

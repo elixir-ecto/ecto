@@ -261,8 +261,7 @@ defmodule Ecto.Changeset do
 
   def change(%{__struct__: struct} = data, changes) when is_map(changes) or is_list(changes) do
     types = struct.__changeset__
-    {changes, errors, valid?} =
-      get_changed(data, types, %{}, changes, [], true)
+    {changes, errors, valid?} = get_changed(data, types, %{}, changes, [], true)
     %Changeset{valid?: valid?, data: data, changes: changes,
                errors: errors, types: types}
   end
