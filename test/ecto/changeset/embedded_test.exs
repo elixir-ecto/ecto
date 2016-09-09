@@ -278,7 +278,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     profile = changeset.changes.inline_profile
     assert profile.changes == %{name: "michal"}
     assert profile.errors == []
-    assert profile.action  == :insert
+    assert profile.action == :insert
     assert profile.valid?
     assert changeset.valid?
   end

@@ -99,6 +99,9 @@ defmodule Ecto.Adapters.PostgresTest do
     query = Schema |> distinct([r], r.x) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.all(query) == ~s{SELECT DISTINCT ON (s0."x") s0."x", s0."y" FROM "schema" AS s0}
 
+    query = Schema |> distinct([r], desc: r.x) |> select([r], {r.x, r.y}) |> normalize
+    assert SQL.all(query) == ~s{SELECT DISTINCT ON (s0."x") s0."x", s0."y" FROM "schema" AS s0}
+
     query = Schema |> distinct([r], 2) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT DISTINCT ON (2) s0."x" FROM "schema" AS s0}
 
@@ -116,6 +119,11 @@ defmodule Ecto.Adapters.PostgresTest do
 
     query = Schema |> distinct(false) |> select([r], {r.x, r.y}) |> normalize
     assert SQL.all(query) == ~s{SELECT s0."x", s0."y" FROM "schema" AS s0}
+  end
+
+  test "distinct with order by" do
+    query = Schema |> order_by([r], [r.y]) |> distinct([r], desc: r.x) |> select([r], r.x) |> normalize
+    assert SQL.all(query) == ~s{SELECT DISTINCT ON (s0."x") s0."x" FROM "schema" AS s0 ORDER BY s0."x" DESC, s0."y"}
   end
 
   test "where" do
@@ -137,9 +145,6 @@ defmodule Ecto.Adapters.PostgresTest do
 
     query = Schema |> order_by([r], [asc: r.x, desc: r.y]) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 ORDER BY s0."x", s0."y" DESC}
-
-    query = Schema |> order_by([r], [r.y]) |> distinct([r], r.x) |> select([r], r.x) |> normalize
-    assert SQL.all(query) == ~s{SELECT DISTINCT ON (s0."x") s0."x" FROM "schema" AS s0 ORDER BY s0."x", s0."y"}
 
     query = Schema |> order_by([r], []) |> select([r], r.x) |> normalize
     assert SQL.all(query) == ~s{SELECT s0."x" FROM "schema" AS s0}

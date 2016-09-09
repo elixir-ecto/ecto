@@ -97,7 +97,10 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p in Inspect.Post, distinct: true}
 
     assert i(from(x in Post, distinct: [x.foo])) ==
-           ~s{from p in Inspect.Post, distinct: [p.foo]}
+           ~s{from p in Inspect.Post, distinct: [asc: p.foo]}
+
+    assert i(from(x in Post, distinct: [desc: x.foo])) ==
+           ~s{from p in Inspect.Post, distinct: [desc: p.foo]}
   end
 
   test "lock" do
@@ -132,7 +135,7 @@ defmodule Ecto.Query.InspectTest do
     string = """
     from p in Inspect.Post, join: c in assoc(p, :comments), where: true,
     group_by: [p.id], having: true, order_by: [asc: p.id], limit: 1,
-    offset: 1, lock: "FOO", distinct: [1], update: [set: [id: ^3]], select: 1,
+    offset: 1, lock: "FOO", distinct: [asc: 1], update: [set: [id: ^3]], select: 1,
     preload: [:likes], preload: [comments: c]
     """
     |> String.rstrip
@@ -155,7 +158,7 @@ defmodule Ecto.Query.InspectTest do
       limit: 1,
       offset: 1,
       lock: "FOO",
-      distinct: [1],
+      distinct: [asc: 1],
       update: [set: [id: 3]],
       select: 1,
       preload: [:likes],

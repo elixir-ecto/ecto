@@ -7,14 +7,20 @@ defmodule Ecto.Query.Builder.DistinctTest do
   import Ecto.Query
 
   test "escape" do
-    assert {Macro.escape(quote do [&0.y] end), %{}} ==
+    assert {true, %{}} ==
+           escape(true, [x: 0], __ENV__)
+
+    assert {Macro.escape(quote do [asc: &0.y] end), %{}} ==
            escape(quote do x.y end, [x: 0], __ENV__)
 
-    assert {Macro.escape(quote do [&0.x, &1.y] end), %{}} ==
+    assert {Macro.escape(quote do [asc: &0.x, asc: &1.y] end), %{}} ==
            escape(quote do [x.x, y.y] end, [x: 0, y: 1], __ENV__)
 
+    assert {Macro.escape(quote do [asc: &0.x, desc: &1.y] end), %{}} ==
+           escape(quote do [x.x, desc: y.y] end, [x: 0, y: 1], __ENV__)
+
     import Kernel, except: [>: 2]
-    assert {Macro.escape(quote do [1 > 2] end), %{}} ==
+    assert {Macro.escape(quote do [asc: 1 > 2] end), %{}} ==
            escape(quote do 1 > 2 end, [], __ENV__)
   end
 
@@ -29,7 +35,7 @@ defmodule Ecto.Query.Builder.DistinctTest do
       distinct("posts", [p], [^temp])
     end
 
-    message = "expected a boolean or a list of fields in `distinct`, got: `\"temp\"`"
+    message = "expected a list or keyword list of fields in `distinct`, got: `\"temp\"`"
     assert_raise ArgumentError, message, fn ->
       temp = "temp"
       distinct("posts", [p], ^temp)
@@ -40,6 +46,9 @@ defmodule Ecto.Query.Builder.DistinctTest do
     key = :title
     assert distinct("q", [q], ^key).distinct == distinct("q", [q], [q.title]).distinct
     assert distinct("q", [q], [^key]).distinct == distinct("q", [q], [q.title]).distinct
+
+    kw = [desc: :title]
+    assert distinct("q", [q], ^kw).distinct == distinct("q", [q], [desc: q.title]).distinct
 
     bool = true
     assert distinct("q", [q], ^bool).distinct == distinct("q", [q], true).distinct

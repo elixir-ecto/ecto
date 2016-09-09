@@ -618,16 +618,11 @@ defmodule Ecto.Query do
   When true, only keeps distinct values from the resulting
   select expression.
 
-  If supported by your database, you can also pass query
-  expressions to distinct and it will generate a query
-  with DISTINCT ON. In such cases, the row that is being
-  kept depends on the ordering of the rows. When an `order_by`
-  expression is also added to the query, all fields in the
-  `distinct` expression are automatically referenced `order_by`
-  too.
-
-  `distinct` also accepts a list of atoms where each atom refers to
-  a field in source.
+  If supported by your database, you can also pass query expressions
+  to distinct and it will generate a query with DISTINCT ON. In such
+  cases, `distinct` accepts exactly the same expressions as `order_by`
+  and any `distinct` expression will be automatically prepended to the
+  `order_by` expressions in case there is any `order_by` expression.
 
   ## Keywords examples
 
@@ -638,6 +633,11 @@ defmodule Ecto.Query do
       # you can pass expressions to distinct too
       from(p in Post,
          distinct: p.category,
+         order_by: [p.date])
+
+      # The DISTINCT ON() also supports ordering similar to ORDER BY.
+      from(p in Post,
+         distinct: [desc: p.category],
          order_by: [p.date])
 
       # Using atoms
