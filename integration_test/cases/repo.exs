@@ -597,6 +597,11 @@ defmodule Ecto.Integration.RepoTest do
     assert {0, nil} = TestRepo.insert_all({"posts", Post}, [])
   end
 
+  @tag :invalid_prefix
+  test "insert all with invalid prefix" do
+    assert catch_error(TestRepo.insert_all(Post, [[], []], prefix: "oops"))
+  end
+
   @tag :returning
   test "insert all with returning with schema" do
     assert {0, []} = TestRepo.insert_all(Comment, [], returning: true)

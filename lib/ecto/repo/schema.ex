@@ -10,27 +10,26 @@ defmodule Ecto.Repo.Schema do
   Implementation for `Ecto.Repo.insert!/2`.
   """
   def insert_all(repo, adapter, schema, rows, opts) when is_atom(schema) do
-    do_insert_all(repo, adapter, schema,
-                  {schema.__schema__(:prefix), schema.__schema__(:source)}, rows, opts)
+    do_insert_all(repo, adapter, schema, schema.__schema__(:prefix),
+                  schema.__schema__(:source), rows, opts)
   end
 
   def insert_all(repo, adapter, table, rows, opts) when is_binary(table) do
-    do_insert_all(repo, adapter, nil, {nil, table}, rows, opts)
+    do_insert_all(repo, adapter, nil, nil, table, rows, opts)
   end
 
   # TODO: Support the :prefix option
-  def insert_all(repo, adapter, {_prefix, source} = table, rows, opts) when is_binary(source) do
+  def insert_all(repo, adapter, {prefix, source}, rows, opts) when is_binary(source) do
     IO.puts :stderr, "warning: passing {prefix, source} to insert_all is deprecated, " <>
                      "please pass the :prefix option instead\n" <> Exception.format_stacktrace
-    do_insert_all(repo, adapter, nil, table, rows, opts)
+    do_insert_all(repo, adapter, nil, prefix, source, rows, opts)
   end
 
   def insert_all(repo, adapter, {source, schema}, rows, opts) when is_atom(schema) do
-    do_insert_all(repo, adapter, schema,
-                  {schema.__schema__(:prefix), source}, rows, opts)
+    do_insert_all(repo, adapter, schema, schema.__schema__(:prefix), source, rows, opts)
   end
 
-  defp do_insert_all(_repo, _adapter, _schema, _source, [], opts) do
+  defp do_insert_all(_repo, _adapter, _schema, _prefix, _source, [], opts) do
     if opts[:returning] do
       {0, []}
     else
@@ -38,9 +37,10 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp do_insert_all(repo, adapter, schema, source, rows, opts) when is_list(rows) do
+  defp do_insert_all(repo, adapter, schema, prefix, source, rows, opts) when is_list(rows) do
     returning = opts[:returning] || false
     autogen   = schema && schema.__schema__(:autogenerate_id)
+    source    = {Keyword.get(opts, :prefix, prefix), source}
     fields    = preprocess(returning, schema)
     metadata  = %{source: source, context: nil, schema: schema, autogenerate_id: autogen}
 
