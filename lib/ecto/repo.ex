@@ -406,6 +406,10 @@ defmodule Ecto.Repo do
 
   ## Options
 
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This overrides the prefix set
+      in the query.
+
   See the "Shared options" section at the module documentation.
 
   ## Example
@@ -450,6 +454,8 @@ defmodule Ecto.Repo do
       fields, where a struct is still returned but only with the
       given fields. Or `false`, where nothing is returned (the default).
       This option is not supported by all databases.
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL).
 
   See the "Shared options" section at the module documentation for
   remaining options.
@@ -478,6 +484,9 @@ defmodule Ecto.Repo do
       fields, where a struct is still returned but only with the
       given fields. Or `false`, where nothing is returned (the default).
       This option is not supported by all databases.
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This overrides the prefix set
+      in the query.
 
   See the "Shared options" section at the module documentation for
   remaining options.
@@ -515,6 +524,9 @@ defmodule Ecto.Repo do
       fields, where a struct is still returned but only with the
       given fields. Or `false`, where nothing is returned (the default).
       This option is not supported by all databases.
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This overrides the prefix set
+      in the query.
 
   See the "Shared options" section at the module documentation for
   remaining options.
@@ -543,6 +555,10 @@ defmodule Ecto.Repo do
   or a known constraint error.
 
   ## Options
+
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This overrides the prefix set
+      in the struct.
 
   See the "Shared options" section at the module documentation.
 
@@ -579,6 +595,9 @@ defmodule Ecto.Repo do
       `update!/2` is a no-op. By setting this option to true, update
       callbacks will always be executed, even if there are no changes
       (including timestamps).
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This overrides the prefix set
+      in the struct.
 
   ## Example
 
@@ -608,6 +627,10 @@ defmodule Ecto.Repo do
       # => {:error, "id already exists"}
 
   ## Options
+
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This overrides the prefix set
+      in the struct.
 
   See the "Shared options" section at the module documentation.
 
@@ -640,6 +663,10 @@ defmodule Ecto.Repo do
   or a known constraint error.
 
   ## Options
+
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This overrides the prefix set
+      in the struct.
 
   See the "Shared options" section at the module documentation.
 
