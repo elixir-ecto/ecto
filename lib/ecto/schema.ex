@@ -1144,7 +1144,7 @@ defmodule Ecto.Schema do
   defmacro embeds_one(name, schema, opts, do: block) do
     quote do
       {schema, opts} = Ecto.Schema.__embeds_module__(__ENV__, unquote(schema), unquote(opts), unquote(Macro.escape(block)))
-      Ecto.Schema.__embeds_many__(__MODULE__, unquote(name), schema, opts)
+      Ecto.Schema.__embeds_one__(__MODULE__, unquote(name), schema, opts)
     end
   end
 
