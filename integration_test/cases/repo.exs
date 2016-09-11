@@ -1021,6 +1021,33 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :upsert
+  test "upsert with struct ignored on conflict" do
+    uuid = Ecto.UUID.generate
+
+    {:ok, _} = TestRepo.upsert(%Post{title: "first", uuid: uuid},
+      conflict_target: [:uuid], on_conflict: :ignore)
+    {:ok, _} = TestRepo.upsert(%Post{title: "second", uuid: uuid},
+      conflict_target: [:uuid], on_conflict: :ignore)
+
+    post = TestRepo.one!(Post)
+    assert post.title == "first"
+  end
+
+  @tag :upsert
+  test "upsert with struct increments value on conflict" do
+    uuid = Ecto.UUID.generate
+
+    {:ok, _} = TestRepo.upsert(%Post{title: "first", uuid: uuid, visits: 0},
+      conflict_target: [:uuid], on_conflict: [inc: [visits: 1]])
+    {:ok, _} = TestRepo.upsert(%Post{title: "second", uuid: uuid, visits: 0},
+      conflict_target: [:uuid], on_conflict: [inc: [visits: 1]])
+
+    post = TestRepo.one!(Post)
+    assert post.title == "first"
+    assert post.visits == 1
+  end
+
+  @tag :upsert
   test "upsert with struct using composite primary key" do
     {:ok, _} = TestRepo.upsert(%CompositePk{a: 1, b: 2, name: "first"})
     {:ok, _} = TestRepo.upsert(%CompositePk{a: 1, b: 2, name: "second"})
@@ -1094,7 +1121,7 @@ defmodule Ecto.Integration.RepoTest do
     {:ok, inserted} = TestRepo.upsert(original)
 
     update = %Post{id: inserted.id, title: "new title", text: "do not update!"}
-    {:ok, _} = TestRepo.upsert(update, update: [:title])
+    {:ok, _} = TestRepo.upsert(update, on_conflict: [set: [title: "new title"]]])
 
     post = TestRepo.one(Post)
     assert post.title == "new title"
