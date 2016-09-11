@@ -684,7 +684,7 @@ defmodule Ecto.Schema do
       field, implying the user is defining the field manually elsewhere
 
     * `:type` - Sets the type of automatically defined `:foreign_key`.
-      Defaults to: `:id` and can be set per schema via `@foreign_key_type`
+      Defaults to: `:integer` and can be set per schema via `@foreign_key_type`
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
