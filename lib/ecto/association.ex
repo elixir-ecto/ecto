@@ -431,6 +431,7 @@ defmodule Ecto.Association.Has do
 
     {key, value} = parent_key(assoc, parent)
     changeset = update_parent_key(changeset, action, key, value)
+                |> sync_duplicated_parent_fields(action, parent_changeset, changeset.data.__duplicated_parent_fields__)
 
     case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
@@ -451,6 +452,17 @@ defmodule Ecto.Association.Has do
   end
   defp parent_key(%{owner_key: owner_key, related_key: related_key}, owner) do
     {related_key, Map.get(owner, owner_key)}
+  end
+
+  defp sync_duplicated_parent_fields(changeset, _action, _parent_changeset, nil),
+    do: changeset
+  defp sync_duplicated_parent_fields(changeset, :delete, _parent_changeset, _fields),
+    do: changeset
+  defp sync_duplicated_parent_fields(changeset, _action, _parent_changeset, []),
+    do: changeset
+  defp sync_duplicated_parent_fields(changeset, action, parent_changeset, [f | fields]) do
+    Ecto.Changeset.put_change(changeset, f, Ecto.Changeset.get_field(parent_changeset, f))
+    |> sync_duplicated_parent_fields(action, parent_changeset, fields)
   end
 
   ## Relation callbacks
