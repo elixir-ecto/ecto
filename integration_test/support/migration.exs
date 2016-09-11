@@ -8,6 +8,11 @@ defmodule Ecto.Integration.Migration do
       timestamps()
     end
 
+    create table(:groups) do
+      add :name, :string
+      timestamps()
+    end
+
     create table(:posts) do
       add :title, :string, size: 100
       add :counter, :integer
@@ -22,6 +27,7 @@ defmodule Ecto.Integration.Migration do
       add :intensity, :float
       add :author_id, :integer
       add :posted, :date
+      add :group_id, references(:groups)
       timestamps null: true
     end
 
@@ -52,6 +58,7 @@ defmodule Ecto.Integration.Migration do
       add :lock_version, :integer, default: 1
       add :post_id, references(:posts)
       add :author_id, references(:users)
+      add :group_id, references(:groups)
     end
 
     create table(:customs, primary_key: false) do
@@ -102,7 +109,7 @@ defmodule Ecto.Integration.Migration do
       add :user_id, references(:users), primary_key: true
       timestamps()
     end
-    
+
     create unique_index(:posts_users_composite_pk, [:post_id, :user_id])
   end
 end

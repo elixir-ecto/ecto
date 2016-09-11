@@ -999,4 +999,68 @@ defmodule Ecto.Integration.RepoTest do
     Process.put(:on_log, fn _ -> flunk("logged") end)
     TestRepo.insert!(%Post{title: "1"}, [log: false])
   end
+
+  ## Denormalization
+
+  test "sync duplicated parent fields on insert" do
+    defmodule Comment do
+      use Ecto.Integration.Schema
+      import Ecto.Changeset
+      @duplicated_parent_fields [:group_id]
+
+      schema "comments" do
+        field :text, :string
+        belongs_to :group, Group
+        belongs_to :post, Post
+      end
+
+      def changeset(comment, params) do
+        comment
+        |> cast(params, [:text])
+      end
+    end
+
+    defmodule Post do
+      use Ecto.Integration.Schema
+      import Ecto.Changeset
+
+      schema "posts" do
+        field :text, :string
+        belongs_to :group, Group
+        has_many :comments, Comment
+        timestamps
+      end
+
+      def changeset(order, params \\ %{}) do
+        order
+        |> cast(params, [:text])
+        |> cast_assoc(:comments)
+      end
+    end
+
+    defmodule Group do
+      use Ecto.Integration.Schema
+      import Ecto.Changeset
+
+      schema "groups" do
+        field :name, :string
+        has_many :posts, Post
+        timestamps
+      end
+
+      def changeset(group, params) do
+        group
+        |> cast(params, [:name])
+        |> cast_assoc(:posts)
+      end
+    end
+
+    Group.changeset(struct(Group, %{}), %{name: "My Group", posts: [%{text: "My Post", comments: [%{text: "My Comment"}]}]})
+    |> TestRepo.insert!
+
+    group = TestRepo.one(Group)
+    comment = TestRepo.one(Comment)
+
+    assert comment.group_id == group.id
+  end
 end

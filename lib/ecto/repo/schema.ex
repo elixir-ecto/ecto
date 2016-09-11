@@ -387,7 +387,7 @@ defmodule Ecto.Repo.Schema do
   defp metadata(%{__struct__: schema, __meta__: %{context: context, source: {prefix, source}}}, opts) do
     %{autogenerate_id: schema.__schema__(:autogenerate_id),
       context: context,
-      schema: schema, 
+      schema: schema,
       source: {Keyword.get(opts, :prefix, prefix), source}}
   end
 
