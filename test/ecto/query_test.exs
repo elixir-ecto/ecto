@@ -23,7 +23,7 @@ defmodule Ecto.QueryTest do
 
   test "where does not allow nils in comparison" do
     assert_raise Ecto.Query.CompileError,
-                 ~r"comparison with nil is forbidden as it always evaluates to false", fn ->
+                 ~r"comparison with nil is forbidden as it is unsafe", fn ->
       quote_and_eval from p in "posts", where: p.id == nil
     end
   end
@@ -47,6 +47,12 @@ defmodule Ecto.QueryTest do
 
     assert_raise ArgumentError, fn ->
       quote_and_eval(from("posts", 123))
+    end
+  end
+
+  test "checks for nil on comparisons" do
+    assert_raise ArgumentError, ~r"comparison with nil is forbidden as it is unsafe", fn ->
+      Post |> where([p], p.title == ^nil)
     end
   end
 

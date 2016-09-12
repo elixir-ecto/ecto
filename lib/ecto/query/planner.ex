@@ -449,11 +449,6 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp cast_param(kind, type, nil, _adapter) when kind != :update do
-    {:error, "value `nil` in `#{kind}` cannot be cast to type #{inspect type} " <>
-             "(if you want to check for nils, use is_nil/1 instead)"}
-  end
-
   defp cast_param(kind, type, v, adapter) do
     with {:ok, type} <- normalize_param(kind, type, v),
          {:ok, v} <- cast_param(kind, type, v),

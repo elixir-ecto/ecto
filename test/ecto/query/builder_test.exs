@@ -107,9 +107,6 @@ defmodule Ecto.Query.BuilderTest do
 
     assert {Macro.escape(quote(do: ^0)), %{0 => {quote(do: [] ++ []), :any}}} ==
            escape(quote(do: ^([] ++ [])), [], __ENV__)
-
-    assert {Macro.escape(quote(do: ^0 > ^1)), %{0 => {1, :any}, 1 => {2, :any}}} ==
-           escape(quote(do: ^1 > ^2), [], __ENV__)
   end
 
   defp params(quoted, type, vars \\ []) do
@@ -117,23 +114,23 @@ defmodule Ecto.Query.BuilderTest do
   end
 
   test "infers the type for parameter" do
-    assert params(quote(do: ^1 == 2), :any) ==
-           %{0 => {1, :integer}}
+    assert %{0 => {_, :integer}} =
+           params(quote(do: ^1 == 2), :any)
 
-    assert params(quote(do: 2 == ^1), :any) ==
-           %{0 => {1, :integer}}
+    assert %{0 => {_, :integer}} =
+           params(quote(do: 2 == ^1), :any)
 
-    assert params(quote(do: ^1 == ^2), :any) ==
-           %{0 => {1, :any}, 1 => {2, :any}}
+    assert %{0 => {_, :any}, 1 => {_, :any}} =
+           params(quote(do: ^1 == ^2), :any)
 
-    assert params(quote(do: ^1 == p.title), :any, [p: 0]) ==
-           %{0 => {1, {0, :title}}}
+    assert %{0 => {_, {0, :title}}} =
+           params(quote(do: ^1 == p.title), :any, [p: 0])
 
-    assert params(quote(do: ^1 and true), :any) ==
-           %{0 => {1, :boolean}}
+    assert %{0 => {_, :boolean}} =
+           params(quote(do: ^1 and true), :any)
 
-    assert params(quote(do: ^1), :boolean) ==
-           %{0 => {1, :boolean}}
+    assert %{0 => {_, :boolean}} =
+           params(quote(do: ^1), :boolean)
   end
 
   test "returns the type for quoted query expression" do

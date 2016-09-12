@@ -81,13 +81,6 @@ defmodule Ecto.Query.PlannerTest do
     assert params == [1]
 
     exception = assert_raise Ecto.Query.CastError, fn ->
-      prepare(Post |> where([p], p.title == ^nil))
-    end
-
-    assert Exception.message(exception) =~ "value `nil` in `where` cannot be cast to type :string"
-    assert Exception.message(exception) =~ "where: p.title == ^nil"
-
-    exception = assert_raise Ecto.Query.CastError, fn ->
       prepare(Post |> where([p], p.title == ^1))
     end
 
@@ -350,14 +343,14 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: wraps subquery errors" do
     exception = assert_raise Ecto.SubQueryError, fn ->
-      query = Post |> where([p], p.title == ^nil)
+      query = Post |> where([p], p.title == ^1)
       prepare(from(subquery(query), []))
     end
 
     assert %Ecto.Query.CastError{} = exception.exception
     assert Exception.message(exception) =~ "the following exception happened when compiling a subquery."
-    assert Exception.message(exception) =~ "value `nil` in `where` cannot be cast to type :string"
-    assert Exception.message(exception) =~ "where: p.title == ^nil"
+    assert Exception.message(exception) =~ "value `1` in `where` cannot be cast to type :string"
+    assert Exception.message(exception) =~ "where: p.title == ^1"
     assert Exception.message(exception) =~ "from p in subquery(from p in Ecto.Query.PlannerTest.Post"
   end
 
