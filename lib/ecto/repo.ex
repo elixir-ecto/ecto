@@ -180,6 +180,10 @@ defmodule Ecto.Repo do
         Ecto.Repo.Schema.insert(__MODULE__, @adapter, struct, opts)
       end
 
+      def upsert(struct, opts \\ []) do
+        Ecto.Repo.Schema.upsert(__MODULE__, @adapter, struct, opts)
+      end
+
       def update(struct, opts \\ []) do
         Ecto.Repo.Schema.update(__MODULE__, @adapter, struct, opts)
       end
@@ -610,6 +614,43 @@ defmodule Ecto.Repo do
   """
   @callback update(changeset :: Ecto.Changeset.t, opts :: Keyword.t) ::
             {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
+
+  @doc """
+  Inserts a struct or changeset. If the insert violates a unique
+  constraint, updates the conflicting row instead.
+
+  In case a struct is given, the primary key is used as the unique
+  constraint.
+
+  On update, all fields that were specified and were not part of the
+  unique constraint are updated.
+
+  It returns `{:ok, struct}` if the struct has been successfully
+  inserted or updated, or `{:error, changeset}` if there was a
+  validation or a known constraint error.
+
+  ## Options
+
+    * `:on_conflict` - specify conflict action. Can be one of :update,
+      :nothing. Default choice is :update.
+    * `:conflict_target` - specify which columns to use when checking
+      for the unique constraint. This option is not supported by all
+      databases.
+    * `:update` - specify which fields to update when there is a conflict.
+
+
+  ## Example
+
+      {:ok, inserted} = MyRepo.upsert(%Post{title: "inserted"})
+      {:ok, updated} = MyRepo.upsert(%Post{id: inserted.id, title: "updated"})
+      {:ok, inserted} = MyRepo.upsert(%Post{title: "second",
+        uuid: "16ed2706-8bff-453b-82eb-8c7fada847da"}, on_conflict: :nothing)
+      {:ok, _} = MyRepo.upsert(%Post{title: "Create/update title",
+        uuid: "36fd2706-1baf-433b-82bb-8c7fada847ba"},
+        conflict_target: [:uuid], update: [:title])
+  """
+  @callback upsert(struct :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
+              {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
   Inserts or updates a changeset depending on whether the struct is persisted

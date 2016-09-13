@@ -125,6 +125,29 @@ if Code.ensure_loaded?(Mariaex) do
     def insert(_prefix, _table, _header, _rows, _returning),
       do: error!(nil, "RETURNING is not supported in insert_all by MySQL")
 
+    def upsert(prefix, table, header, rows, on_conflict,
+        _conflict_target, update, _returning) do
+      fields = Enum.map_join(header, ",", &quote_name/1)
+      update_fields = case on_conflict do
+        :update ->
+          Enum.filter(header, fn headr ->
+            Enum.member?(update, headr)
+          end)
+          |> Enum.map(fn field ->
+              "#{quote_name(field)} = ?"
+            end)
+        _ -> # ON DUPLICATE KEY UPDATE pk=pk; or ON DUPLICATE KEY UPDATE unique_key=unique_key
+          Enum.map(update, fn field ->
+            "#{quote_name(field)} = #{quote_name(field)}"
+          end)
+      end
+      |> Enum.join(",")
+      assemble([
+        "INSERT INTO #{quote_table(prefix, table)} (" <> fields <> ") VALUES " <> insert_all(rows),
+        "ON DUPLICATE KEY UPDATE", update_fields
+      ])
+    end
+
     defp insert_all(rows) do
       Enum.map_join(rows, ",", fn row ->
         row = Enum.map_join(row, ",", fn

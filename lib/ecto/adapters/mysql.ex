@@ -196,6 +196,34 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
+  def upsert(repo, %{source: {prefix, source}, autogenerate_id: {key, :id}}, params, on_conflict, conflict_target, update, returning, opts) do
+    {fields, ins_values} = :lists.unzip(params)
+    values = case on_conflict do
+      :update ->
+        checked_update = Enum.filter(update, fn update_key -> Keyword.has_key?(params, update_key) end)
+        update_values = Enum.map(checked_update, fn update_key -> Keyword.get(params, update_key) end)
+        ins_values ++ update_values
+      _ -> ins_values
+    end
+    sql = @conn.upsert(prefix, source, fields, [fields], on_conflict, conflict_target, update, returning)
+    case Ecto.Adapters.SQL.query(repo, sql, values, opts) do
+      {:ok, %{rows: nil, num_rows: 1, last_insert_id: last_insert_id}} ->
+        {:ok, [{key, last_insert_id}]}
+      {:ok, %{rows: nil, num_rows: 2}} ->  # mysql upsert returns num_rows: 2 in case of update
+        {:ok, []}
+      {:error, err} ->
+        case @conn.to_constraints(err) do
+          []          -> raise err
+          constraints -> {:invalid, constraints}
+        end
+    end
+  end
+
+  def upsert(repo, scema_meta, params, on_conflict, conflict_target, update, returning, opts) do
+    super(repo, scema_meta, params, on_conflict, conflict_target, update, returning, opts)
+  end
+
+  @doc false
   def structure_dump(default, config) do
     table = config[:migration_source] || "schema_migrations"
     path  = config[:dump_path] || Path.join(default, "structure.sql")
