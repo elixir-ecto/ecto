@@ -180,6 +180,10 @@ defmodule Ecto.Repo do
         Ecto.Repo.Schema.insert(__MODULE__, @adapter, struct, opts)
       end
 
+      def upsert(struct, opts \\ []) do
+        Ecto.Repo.Schema.upsert(__MODULE__, @adapter, struct, opts)
+      end
+
       def update(struct, opts \\ []) do
         Ecto.Repo.Schema.update(__MODULE__, @adapter, struct, opts)
       end
@@ -623,13 +627,8 @@ defmodule Ecto.Repo do
   In case a struct is given, the primary key is used as the unique
   constraint.
 
-  In case a changeset is given, the primary key is used as the unique
-  constraint if provided. If the primary key is not provided, the
-  first unique constraint with a given value is used.
-
   On update, all fields that were specified and were not part of the
-  unique constraint are updated. `autogenerate` fields are not
-  updated on conflict but `autoupdate` fields are.
+  unique constraint are updated.
 
   It returns `{:ok, struct}` if the struct has been successfully
   inserted or updated, or `{:error, changeset}` if there was a
@@ -637,6 +636,8 @@ defmodule Ecto.Repo do
 
   ## Options
 
+    * `:on_conflict` - specify conflict action. Can be one of :update,
+      :nothing. Default choice is :update.
     * `:conflict_target` - specify which columns to use when checking
       for the unique constraint. This option is not supported by all
       databases.
@@ -649,6 +650,11 @@ defmodule Ecto.Repo do
 
       {:ok, inserted} = MyRepo.upsert(%Post{title: "inserted"})
       {:ok, updated} = MyRepo.upsert(%Post{id: inserted.id, title: "updated"})
+      {:ok, inserted} = MyRepo.upsert(%Post{title: "second",
+        uuid: "16ed2706-8bff-453b-82eb-8c7fada847da"}, on_conflict: :nothing)
+      {:ok, _} = MyRepo.upsert(%Post{title: "Create/update title",
+        uuid: "36fd2706-1baf-433b-82bb-8c7fada847ba"},
+        conflict_target: [:uuid], update: [:title])
   """
   @callback upsert(struct :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
               {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}

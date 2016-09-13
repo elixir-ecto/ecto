@@ -1018,19 +1018,9 @@ defmodule Ecto.Integration.RepoTest do
 
     post = TestRepo.one!(Post)
     assert post.title == "second"
-  end
-
-  @tag :upsert
-  test "upsert with struct ignored on conflict" do
-    uuid = Ecto.UUID.generate
-
-    {:ok, _} = TestRepo.upsert(%Post{title: "first", uuid: uuid},
-      conflict_target: [:uuid], on_conflict: :ignore)
-    {:ok, _} = TestRepo.upsert(%Post{title: "second", uuid: uuid},
-      conflict_target: [:uuid], on_conflict: :ignore)
-
+    {:ok, _} = TestRepo.upsert(%Post{title: "third", uuid: uuid}, conflict_target: :uuid)
     post = TestRepo.one!(Post)
-    assert post.title == "first"
+    assert post.title == "third"
   end
 
   @tag :upsert
@@ -1076,26 +1066,6 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :upsert
-  test "upsert with changeset uses unique constraint if missing primary key" do
-    insert =
-      Ecto.Changeset.cast(%Post{}, %{"title" => "first"}, ~w(title))
-      |> Ecto.Changeset.unique_constraint(:uuid)
-
-    {:ok, inserted} = TestRepo.upsert(insert)
-
-    # Use the UUID constraint when the primary key is not available
-    changes = %{"uuid" => inserted.uuid, "title" => "second"}
-    update =
-      Ecto.Changeset.cast(%Post{}, changes, ~w(uuid title))
-      |> Ecto.Changeset.unique_constraint(:uuid)
-
-    {:ok, _} = TestRepo.upsert(update)
-
-    post = TestRepo.one!(Post)
-    assert post.title == "second"
-  end
-
-  @tag :upsert
   test "upsert with changeset override conflict target columns" do
     insert =
       Ecto.Changeset.cast(%Post{}, %{"title" => "first"}, ~w(title))
@@ -1103,7 +1073,7 @@ defmodule Ecto.Integration.RepoTest do
     {:ok, inserted} = TestRepo.upsert(insert)
 
     # Even though the ID has been explicitly set, use the UUID column
-    changes = %{"id" => insert.id + 1, "uuid" => inserted.uuid, "title" => "second"}
+    changes = %{"id" => inserted.id + 1, "uuid" => inserted.uuid, "title" => "second"}
     update =
       Ecto.Changeset.cast(%Post{}, changes, ~w(id uuid title))
       |> Ecto.Changeset.unique_constraint(:uuid)
@@ -1116,12 +1086,32 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :upsert
+  test "upsert on conflict ignore" do
+    {:ok, inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"},
+      on_conflict: :nothing)
+
+    assert inserted.id > 0
+
+    {:ok, not_inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"},
+      on_conflict: :nothing, update: [:id]) # Update field specified for mysql resulting in ON DUPLICATE KEY `id` = `id`
+    assert not_inserted.id in [0, nil]
+
+    {:ok, inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first", uuid: "1aaaaaaa-ee8a-3ca4-894e-db77e160355e"},
+      on_conflict: :nothing, update: [:uuid])
+    assert inserted.id > 0
+
+    {:ok, not_inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first", uuid: "1aaaaaaa-ee8a-3ca4-894e-db77e160355e"},
+      on_conflict: :nothing, update: [:uuid])
+    assert not_inserted.id in [0, nil]
+  end
+
+  @tag :upsert
   test "upsert restrict changes to subset of columns" do
-    original = %Post{title: "original title", text: "original text"}
+    original = %Ecto.Integration.Post{title: "original title", text: "original text"}
     {:ok, inserted} = TestRepo.upsert(original)
 
-    update = %Post{id: inserted.id, title: "new title", text: "do not update!"}
-    {:ok, _} = TestRepo.upsert(update, on_conflict: [set: [title: "new title"]]])
+    update = %Ecto.Integration.Post{id: inserted.id, title: "new title", text: "do not update!"}
+    {:ok, _} = TestRepo.upsert(update, update: [:title])
 
     post = TestRepo.one(Post)
     assert post.title == "new title"
@@ -1129,8 +1119,16 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :upsert
+  test "upsert conflict_target not specified" do
+    assert_raise ArgumentError, ~r"Please specify conflict_target parameter", fn ->
+      TestRepo.upsert %Ecto.Integration.Barebone{num: 100}
+    end
+  end
+
+  @tag :upsert
   test "upsert with changeset only update changed columns" do
-    {:ok, original} = TestRepo.upsert(%Post{title: "original title", text: "original text"})
+    {:ok, original} = TestRepo.upsert(%Post{title: "original title", text: "original text"},
+      conflict_target: :id, update: [:public, :title, :inserted_at, :updated_at])
 
     # The conflict action should only update the title
     update =
@@ -1138,7 +1136,8 @@ defmodule Ecto.Integration.RepoTest do
         %{"id" => original.id, "title" => "new title"},
         ~w(id title))
 
-    {:ok, _} = TestRepo.upsert(update)
+    {:ok, _} = TestRepo.upsert(update,
+      conflict_target: :id, update: [:public, :title, :inserted_at, :updated_at])
 
     post = TestRepo.one(Post)
     assert post.title == "new title"
