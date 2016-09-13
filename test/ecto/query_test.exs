@@ -127,6 +127,58 @@ defmodule Ecto.QueryTest do
     end
   end
 
+  describe "trailing bindings (...)" do
+    test "match on last bindings" do
+      query = "posts" |> join(:inner, [], "comments") |> join(:inner, [], "votes")
+      assert select(query, [..., v], v).select.expr ==
+             {:&, [], [2]}
+
+      assert select(query, [p, ..., v], {p, v}).select.expr ==
+             {:{}, [], [{:&, [], [0]}, {:&, [], [2]}]}
+
+      assert select(query, [p, c, v, ...], v).select.expr ==
+             {:&, [], [2]}
+
+      assert select(query, [..., c, v], {c, v}).select.expr ==
+             {:{}, [], [{:&, [], [1]}, {:&, [], [2]}]}
+    end
+
+    test "match on last bindings with multiple constructs" do
+      query =
+        "posts"
+        |> join(:inner, [], "comments")
+        |> where([..., c], c.public)
+        |> join(:inner, [], "votes")
+        |> select([..., v], v)
+
+      assert query.select.expr == {:&, [], [2]}
+      assert hd(query.wheres).expr == {{:., [], [{:&, [], [1]}, :public]}, [], []}
+    end
+
+    test "match on last bindings inside joins" do
+      query =
+        "posts"
+        |> join(:inner, [], "comments")
+        |> join(:inner, [..., c], v in "votes", c.id == v.id)
+
+      assert hd(tl(query.joins)).on.expr ==
+             {:==, [], [
+              {{:., [], [{:&, [], [1]}, :id]}, [], []},
+              {{:., [], [{:&, [], [2]}, :id]}, [], []}
+             ]}
+    end
+
+    test "match on last bindings on keyword query" do
+      posts = "posts"
+      query = from [..., p] in posts, join: c in "comments", on: p.id == c.id
+      assert hd(query.joins).on.expr ==
+             {:==, [], [
+              {{:., [], [{:&, [], [0]}, :id]}, [], []},
+              {{:., [], [{:&, [], [1]}, :id]}, [], []}
+             ]}
+    end
+  end
+
   describe "keyword queries" do
     test "are supported through from/2" do
       # queries need to be on the same line or == wont work

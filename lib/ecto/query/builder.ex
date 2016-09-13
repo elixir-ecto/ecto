@@ -405,14 +405,29 @@ defmodule Ecto.Query.Builder do
   def escape_binding(query, binding) when is_list(binding) do
     vars = binding |> Enum.with_index |> Enum.map(&escape_bind(&1))
     assert_no_dup_binding!(vars)
-    {query, vars}
+    case Enum.split_while(vars, & elem(&1, 0) != :...) do
+      {vars, []} ->
+        {query, vars}
+      {vars, [_ | tail]} ->
+        query =
+          quote do
+            query = Ecto.Queryable.to_query(unquote(query))
+            escape_count = Ecto.Query.Builder.count_binds(query)
+            query
+          end
+        tail =
+          tail
+          |> Enum.with_index(-length(tail))
+          |> Enum.map(fn {{k, _}, count} -> {k, quote(do: escape_count + unquote(count))} end)
+        {query, vars ++ tail}
+    end
   end
   def escape_binding(_query, bind) do
     error! "binding should be list of variables, got: #{Macro.to_string(bind)}"
   end
 
   defp assert_no_dup_binding!(vars) do
-    bound_vars = vars |> Keyword.keys |> Enum.filter(&(&1 != :_))
+    bound_vars = vars |> Keyword.keys |> Enum.filter(& &1 != :_)
     case bound_vars -- Enum.uniq(bound_vars) do
       []  -> :ok
       dup -> error! "variable `#{hd dup}` is bound twice"
