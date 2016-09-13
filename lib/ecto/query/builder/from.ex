@@ -12,34 +12,34 @@ defmodule Ecto.Query.Builder.From do
   ## Examples
 
       iex> escape(quote do: MySchema)
-      {[], quote(do: MySchema)}
+      {quote(do: MySchema), []}
 
       iex> escape(quote do: p in posts)
-      {[p: 0], quote(do: posts)}
+      {quote(do: posts), [p: 0]}
 
       iex> escape(quote do: p in {"posts", MySchema})
-      {[p: 0], quote(do: {"posts", MySchema})}
+      {quote(do: {"posts", MySchema}), [p: 0]}
 
       iex> escape(quote do: [p, q] in posts)
-      {[p: 0, q: 1], quote(do: posts)}
+      {quote(do: posts), [p: 0, q: 1]}
 
       iex> escape(quote do: [_, _] in abc)
-      {[_: 0, _: 1], quote(do: abc)}
+      {quote(do: abc), [_: 0, _: 1]}
 
       iex> escape(quote do: other)
-      {[], quote(do: other)}
+      {quote(do: other), []}
 
       iex> escape(quote do: x() in other)
       ** (Ecto.Query.CompileError) binding list should contain only variables, got: x()
 
   """
   @spec escape(Macro.t) :: {Keyword.t, Macro.t}
-  def escape({:in, _, [var, expr]}) do
-    {Builder.escape_binding(List.wrap(var)), expr}
+  def escape({:in, _, [var, query]}) do
+    Builder.escape_binding(query, List.wrap(var))
   end
 
-  def escape(expr) do
-    {[], expr}
+  def escape(query) do
+    {query, []}
   end
 
   @doc """
@@ -50,11 +50,11 @@ defmodule Ecto.Query.Builder.From do
   runtime work.
   """
   @spec build(Macro.t, Macro.Env.t) :: {Macro.t, Keyword.t, non_neg_integer | nil}
-  def build(expr, env) do
-    {binds, expr} = escape(expr)
+  def build(query, env) do
+    {query, binds} = escape(query)
 
     {count_bind, quoted} =
-      case Macro.expand(expr, env) do
+      case Macro.expand(query, env) do
         schema when is_atom(schema) ->
           # Get the source at runtime so no unnecessary compile time
           # dependencies between modules are added

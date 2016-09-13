@@ -57,9 +57,9 @@ defmodule Ecto.Query.Builder.Filter do
   end
 
   def build(kind, op, query, binding, expr, env) do
-    binding        = Builder.escape_binding(binding)
+    {query, binding} = Builder.escape_binding(query, binding)
     {expr, params} = escape(kind, op, expr, binding, env)
-    params         = Builder.escape_params(params)
+    params = Builder.escape_params(params)
 
     expr = quote do: %Ecto.Query.BooleanExpr{
                         expr: unquote(expr),

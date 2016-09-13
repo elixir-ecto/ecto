@@ -388,21 +388,21 @@ defmodule Ecto.Query.Builder do
 
   ## Examples
 
-      iex> escape_binding(quote do: [x, y, z])
-      [x: 0, y: 1, z: 2]
+      iex> escape_binding(%Ecto.Query{}, quote do: [x, y, z])
+      {%Ecto.Query{}, [x: 0, y: 1, z: 2]}
 
-      iex> escape_binding(quote do: [x: 0, z: 2])
-      [x: 0, z: 2]
+      iex> escape_binding(%Ecto.Query{}, quote do: [x: 0, z: 2])
+      {%Ecto.Query{}, [x: 0, z: 2]}
 
-      iex> escape_binding(quote do: [x, y, x])
+      iex> escape_binding(%Ecto.Query{}, quote do: [x, y, x])
       ** (Ecto.Query.CompileError) variable `x` is bound twice
 
-      iex> escape_binding(quote do: [a, b, :foo])
+      iex> escape_binding(%Ecto.Query{}, quote do: [a, b, :foo])
       ** (Ecto.Query.CompileError) binding list should contain only variables, got: :foo
 
   """
-  @spec escape_binding(list) :: Keyword.t
-  def escape_binding(binding) when is_list(binding) do
+  @spec escape_binding(Macro.t | Ecto.Query.t, list) :: {Macro.t | Ecto.Query.t, Keyword.t}
+  def escape_binding(query, binding) when is_list(binding) do
     vars       = binding |> Enum.with_index |> Enum.map(&escape_bind(&1))
     bound_vars = vars |> Keyword.keys |> Enum.filter(&(&1 != :_))
     dup_vars   = bound_vars -- Enum.uniq(bound_vars)
@@ -411,7 +411,7 @@ defmodule Ecto.Query.Builder do
       error! "variable `#{hd dup_vars}` is bound twice"
     end
 
-    vars
+    {query, vars}
   end
 
   def escape_binding(bind) do

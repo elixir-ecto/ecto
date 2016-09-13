@@ -111,7 +111,7 @@ defmodule Ecto.Query.Builder.Join do
   @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, Macro.Env.t) ::
               {Macro.t, Keyword.t, non_neg_integer | nil}
   def build(query, qual, binding, expr, on, count_bind, env) do
-    binding = Builder.escape_binding(binding)
+    {query, binding} = Builder.escape_binding(query, binding)
     {join_bind, join_expr, join_assoc, join_params} = escape(expr, binding, env)
     join_params = Builder.escape_params(join_params)
 
