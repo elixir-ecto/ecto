@@ -1,3 +1,5 @@
+import Kernel, except: [apply: 2]
+
 defmodule Ecto.Query.Builder.Lock do
   @moduledoc false
 
@@ -34,8 +36,10 @@ defmodule Ecto.Query.Builder.Lock do
   The callback applied by `build/4` to build the query.
   """
   @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
-  def apply(query, value) do
-    query = Ecto.Queryable.to_query(query)
+  def apply(%Ecto.Query{} = query, value) do
     %{query | lock: value}
+  end
+  def apply(query, value) do
+    apply(Ecto.Queryable.to_query(query), value)
   end
 end

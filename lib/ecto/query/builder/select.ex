@@ -1,3 +1,5 @@
+import Kernel, except: [apply: 2]
+
 defmodule Ecto.Query.Builder.Select do
   @moduledoc false
 
@@ -157,13 +159,13 @@ defmodule Ecto.Query.Builder.Select do
   The callback applied by `build/4` to build the query.
   """
   @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
-  def apply(query, select) do
-    query = Ecto.Queryable.to_query(query)
-
-    if query.select do
-      Builder.error! "only one select expression is allowed in query"
-    else
-      %{query | select: select}
-    end
+  def apply(%Ecto.Query{select: nil} = query, expr) do
+    %{query | select: expr}
+  end
+  def apply(%Ecto.Query{}, _expr) do
+    Builder.error! "only one select expression is allowed in query"
+  end
+  def apply(query, expr) do
+    apply(Ecto.Queryable.to_query(query), expr)
   end
 end

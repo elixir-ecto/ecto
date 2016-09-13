@@ -1,3 +1,5 @@
+import Kernel, except: [apply: 2]
+
 defmodule Ecto.Query.Builder.Join do
   @moduledoc false
 
@@ -155,9 +157,11 @@ defmodule Ecto.Query.Builder.Join do
     {quoted, binding, count_bind}
   end
 
+  def apply(%Ecto.Query{joins: joins} = query, expr) do
+    %{query | joins: joins ++ [expr]}
+  end
   def apply(query, expr) do
-    query = Ecto.Queryable.to_query(query)
-    %{query | joins: query.joins ++ [expr]}
+    apply(Ecto.Queryable.to_query(query), expr)
   end
 
   defp escape_on(on, binding, env) do

@@ -1,3 +1,5 @@
+import Kernel, except: [apply: 2]
+
 defmodule Ecto.Query.Builder.GroupBy do
   @moduledoc false
 
@@ -86,8 +88,10 @@ defmodule Ecto.Query.Builder.GroupBy do
   The callback applied by `build/4` to build the query.
   """
   @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
+  def apply(%Ecto.Query{group_bys: group_bys} = query, expr) do
+    %{query | group_bys: group_bys ++ [expr]}
+  end
   def apply(query, expr) do
-    query = Ecto.Queryable.to_query(query)
-    %{query | group_bys: query.group_bys ++ [expr]}
+    apply(Ecto.Queryable.to_query(query), expr)
   end
 end

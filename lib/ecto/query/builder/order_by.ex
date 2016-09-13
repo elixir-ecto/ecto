@@ -1,3 +1,5 @@
+import Kernel, except: [apply: 2]
+
 defmodule Ecto.Query.Builder.OrderBy do
   @moduledoc false
 
@@ -126,8 +128,10 @@ defmodule Ecto.Query.Builder.OrderBy do
   The callback applied by `build/4` to build the query.
   """
   @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
+  def apply(%Ecto.Query{order_bys: order_bys} = query, expr) do
+    %{query | order_bys: order_bys ++ [expr]}
+  end
   def apply(query, expr) do
-    query = Ecto.Queryable.to_query(query)
-    %{query | order_bys: query.order_bys ++ [expr]}
+    apply(Ecto.Queryable.to_query(query), expr)
   end
 end

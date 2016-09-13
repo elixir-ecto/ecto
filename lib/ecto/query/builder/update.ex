@@ -1,3 +1,5 @@
+import Kernel, except: [apply: 2]
+
 defmodule Ecto.Query.Builder.Update do
   @moduledoc false
 
@@ -115,9 +117,11 @@ defmodule Ecto.Query.Builder.Update do
   The callback applied by `build/4` to build the query.
   """
   @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
-  def apply(query, updates) do
-    query = Ecto.Queryable.to_query(query)
-    %{query | updates: query.updates ++ [updates]}
+  def apply(%Ecto.Query{updates: updates} = query, expr) do
+    %{query | updates: updates ++ [expr]}
+  end
+  def apply(query, expr) do
+    apply(Ecto.Queryable.to_query(query), expr)
   end
 
   @doc """

@@ -1,3 +1,5 @@
+import Kernel, except: [apply: 3]
+
 defmodule Ecto.Query.Builder.Preload do
   @moduledoc false
   alias Ecto.Query.Builder
@@ -145,8 +147,10 @@ defmodule Ecto.Query.Builder.Preload do
   The callback applied by `build/4` to build the query.
   """
   @spec apply(Ecto.Queryable.t, term, term) :: Ecto.Query.t
+  def apply(%Ecto.Query{preloads: p, assocs: a} = query, preloads, assocs) do
+    %{query | preloads: p ++ preloads, assocs: a ++ assocs}
+  end
   def apply(query, preloads, assocs) do
-    query = Ecto.Queryable.to_query(query)
-    %{query | preloads: query.preloads ++ preloads, assocs: query.assocs ++ assocs}
+    apply(Ecto.Queryable.to_query(query), preloads, assocs)
   end
 end

@@ -1,3 +1,5 @@
+import Kernel, except: [apply: 3]
+
 defmodule Ecto.Query.Builder.Filter do
   @moduledoc false
 
@@ -77,15 +79,14 @@ defmodule Ecto.Query.Builder.Filter do
   def apply(query, _, %{expr: true}) do
     query
   end
-
-  def apply(query, :where, expr) do
-    query = Ecto.Queryable.to_query(query)
-    %{query | wheres: query.wheres ++ [expr]}
+  def apply(%Ecto.Query{wheres: wheres} = query, :where, expr) do
+    %{query | wheres: wheres ++ [expr]}
   end
-
-  def apply(query, :having, expr) do
-    query = Ecto.Queryable.to_query(query)
-    %{query | havings: query.havings ++ [expr]}
+  def apply(%Ecto.Query{havings: havings} = query, :having, expr) do
+    %{query | havings: havings ++ [expr]}
+  end
+  def apply(query, kind, expr) do
+    apply(Ecto.Queryable.to_query(query), kind, expr)
   end
 
   @doc """

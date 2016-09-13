@@ -1,3 +1,5 @@
+import Kernel, except: [apply: 3]
+
 defmodule Ecto.Query.Builder.LimitOffset do
   @moduledoc false
 
@@ -44,13 +46,13 @@ defmodule Ecto.Query.Builder.LimitOffset do
   The callback applied by `build/4` to build the query.
   """
   @spec apply(Ecto.Queryable.t, :limit | :offset, term) :: Ecto.Query.t
-  def apply(query, :limit, expr) do
-    query = Ecto.Queryable.to_query(query)
+  def apply(%Ecto.Query{} = query, :limit, expr) do
     %{query | limit: expr}
   end
-
-  def apply(query, :offset, expr) do
-    query = Ecto.Queryable.to_query(query)
+  def apply(%Ecto.Query{} = query, :offset, expr) do
     %{query | offset: expr}
+  end
+  def apply(query, kind, expr) do
+    apply(Ecto.Queryable.to_query(query), kind, expr)
   end
 end

@@ -1,3 +1,5 @@
+import Kernel, except: [apply: 2]
+
 defmodule Ecto.Query.Builder.Distinct do
   @moduledoc false
 
@@ -63,13 +65,13 @@ defmodule Ecto.Query.Builder.Distinct do
   The callback applied by `build/4` to build the query.
   """
   @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
-  def apply(query, distinct) do
-    query = Ecto.Queryable.to_query(query)
-
-    if query.distinct do
-      Builder.error! "only one distinct expression is allowed in query"
-    else
-      %{query | distinct: distinct}
-    end
+  def apply(%Ecto.Query{distinct: nil} = query, expr) do
+    %{query | distinct: expr}
+  end
+  def apply(%Ecto.Query{}, _expr) do
+    Builder.error! "only one distinct expression is allowed in query"
+  end
+  def apply(query, expr) do
+    apply(Ecto.Queryable.to_query(query), expr)
   end
 end
