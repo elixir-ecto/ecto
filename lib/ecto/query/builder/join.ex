@@ -120,14 +120,19 @@ defmodule Ecto.Query.Builder.Join do
     qual = validate_qual(qual)
     validate_bind(join_bind, binding)
 
-    {count_bind, count_setter} =
+    {count_bind, query} =
       if join_bind != :_ and !count_bind do
-        # If count_bind is not an integer, make it a variable.
-        # The variable is the getter/setter storage.
-        {quote(do: count_bind),
-         quote(do: count_bind = Builder.count_binds(query))}
+        # If count_bind is not available,
+        # we need to compute the amount of binds at runtime
+        query =
+          quote do
+            query = Ecto.Queryable.to_query(unquote(query))
+            join_count = Builder.count_binds(query)
+            query
+          end
+        {quote(do: join_count), query}
       else
-        {count_bind, nil}
+        {count_bind, query}
       end
 
     binding = binding ++ [{join_bind, count_bind}]
@@ -141,20 +146,16 @@ defmodule Ecto.Query.Builder.Join do
                   params: unquote(join_params)}
       end
 
-    {count_bind, quoted} =
+    query = Builder.apply_query(query, __MODULE__, [join], env)
+
+    next_bind =
       if is_integer(count_bind) do
-        {count_bind + 1,
-         Builder.apply_query(query, __MODULE__, [join], env)}
+        count_bind + 1
       else
-        {quote(do: unquote(count_bind) + 1),
-         quote do
-           query = Ecto.Queryable.to_query(unquote(query))
-           unquote(count_setter)
-           %{query | joins: query.joins ++ [unquote(join)]}
-         end}
+        quote(do: unquote(count_bind) + 1)
       end
 
-    {quoted, binding, count_bind}
+    {query, binding, next_bind}
   end
 
   def apply(%Ecto.Query{joins: joins} = query, expr) do

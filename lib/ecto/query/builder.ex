@@ -403,19 +403,20 @@ defmodule Ecto.Query.Builder do
   """
   @spec escape_binding(Macro.t | Ecto.Query.t, list) :: {Macro.t | Ecto.Query.t, Keyword.t}
   def escape_binding(query, binding) when is_list(binding) do
-    vars       = binding |> Enum.with_index |> Enum.map(&escape_bind(&1))
-    bound_vars = vars |> Keyword.keys |> Enum.filter(&(&1 != :_))
-    dup_vars   = bound_vars -- Enum.uniq(bound_vars)
-
-    unless dup_vars == [] do
-      error! "variable `#{hd dup_vars}` is bound twice"
-    end
-
+    vars = binding |> Enum.with_index |> Enum.map(&escape_bind(&1))
+    assert_no_dup_binding!(vars)
     {query, vars}
   end
-
-  def escape_binding(bind) do
+  def escape_binding(_query, bind) do
     error! "binding should be list of variables, got: #{Macro.to_string(bind)}"
+  end
+
+  defp assert_no_dup_binding!(vars) do
+    bound_vars = vars |> Keyword.keys |> Enum.filter(&(&1 != :_))
+    case bound_vars -- Enum.uniq(bound_vars) do
+      []  -> :ok
+      dup -> error! "variable `#{hd dup}` is bound twice"
+    end
   end
 
   defp escape_bind({{var, _} = tuple, _}) when is_atom(var),
@@ -665,7 +666,10 @@ defmodule Ecto.Query.Builder do
       %Query{} = unescaped ->
         apply(module, :apply, [unescaped|args]) |> escape_query
       _ ->
-        quote do: unquote(module).apply(unquote_splicing([query|args]))
+        quote do
+          query = unquote(query) # Unquote the query for any binding variable
+          unquote(module).apply(query, unquote_splicing(args))
+        end
     end
   end
 
