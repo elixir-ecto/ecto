@@ -163,6 +163,27 @@ defmodule Ecto.Query do
   bindings. In the example above, we will always sort by the
   `inserted_at` column from the `from` source.
 
+  Similarly, if you are interested only on the last binding
+  (or the last bindings) in a query, you can use ... to
+  specify "all bindings before" and match on the last one.
+
+  For instance, imagine you wrote:
+
+      posts_with_comments =
+        from p in query, join: c in Comment, where: c.post_id == p.id
+
+  And now we want to make sure to return both the post title
+  and the comment body. Although we may not know how many
+  bindings there are in the query, we are sure posts is the
+  first binding and comments are the last one, so we can write:
+
+      from [p, ..., c] in posts_with_comments, select: {p.title, c.body}
+
+  In other words, `...` will include all the binding between the first and
+  the last, which may be no binding at all, one or many. Using `...` can
+  be handy from time to time but most of its uses can be avoided by relying
+  on the keyword query syntax when writing queries.
+
   ### Bindingless operations
 
   Although bindings are extremely useful when working with joins,
