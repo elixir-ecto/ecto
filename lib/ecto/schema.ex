@@ -971,8 +971,8 @@ defmodule Ecto.Schema do
 
         def changeset(struct, params \\ %{}) do
           struct
-          |> cast(params, [:user_id, :organization_id])
-          |> validate_required([:user_id, :organization_id])
+          |> Ecto.Changeset.cast(params, [:user_id, :organization_id])
+          |> Ecto.Changeset.validate_required([:user_id, :organization_id])
           # Maybe do some counter caching here!
         end
       end
@@ -981,7 +981,7 @@ defmodule Ecto.Schema do
         use Ecto.Schema
 
         schema "users" do
-          many_to_many :organizations, join_through: UserOrganization
+          many_to_many :organizations, Organization, join_through: UserOrganization
         end
       end
 
