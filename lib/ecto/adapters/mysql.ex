@@ -196,7 +196,8 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def upsert(repo, %{source: {prefix, source}, autogenerate_id: {key, :id}}, params, on_conflict, conflict_target, update, returning, opts) do
+  def upsert(repo, %{source: {prefix, source}, autogenerate_id: {key, :id}}, params, on_conflict, 
+    conflict_target, update, returning, opts) do
     {fields, ins_values} = :lists.unzip(params)
     values = case on_conflict do
       :update ->
