@@ -161,7 +161,7 @@ defmodule Ecto.Changeset do
 
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
-                        data: Ecto.Schema.t | nil,
+                        data: Ecto.Schema.t | map | nil,
                         params: %{String.t => term} | nil,
                         changes: %{atom => term},
                         required: [atom],
