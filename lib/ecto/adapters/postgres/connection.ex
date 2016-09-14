@@ -843,14 +843,15 @@ if Code.ensure_loaded?(Postgrex) do
       :binary.replace(value, "'", "''", [:global])
     end
 
-    defp ecto_to_db({:array, t}), do: ecto_to_db(t) <> "[]"
-    defp ecto_to_db(:id),         do: "integer"
-    defp ecto_to_db(:binary_id),  do: "uuid"
-    defp ecto_to_db(:string),     do: "varchar"
-    defp ecto_to_db(:datetime),   do: "timestamp"
-    defp ecto_to_db(:binary),     do: "bytea"
-    defp ecto_to_db(:map),        do: "jsonb"
-    defp ecto_to_db({:map, _}),   do: "jsonb"
+    defp ecto_to_db({:array, t}),     do: ecto_to_db(t) <> "[]"
+    defp ecto_to_db(:id),             do: "integer"
+    defp ecto_to_db(:binary_id),      do: "uuid"
+    defp ecto_to_db(:string),         do: "varchar"
+    defp ecto_to_db(:binary),         do: "bytea"
+    defp ecto_to_db(:map),            do: "jsonb"
+    defp ecto_to_db({:map, _}),       do: "jsonb"
+    defp ecto_to_db(:utc_datetime),   do: "timestamp"
+    defp ecto_to_db(:naive_datetime), do: "timestamp"
     defp ecto_to_db(other),       do: Atom.to_string(other)
 
     defp error!(nil, message) do

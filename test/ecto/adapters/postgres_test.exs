@@ -677,7 +677,7 @@ defmodule Ecto.Adapters.PostgresTest do
   test "create table with options" do
     create = {:create, table(:posts, [options: "WITH FOO=BAR"]),
                [{:add, :id, :serial, [primary_key: true]},
-                {:add, :created_at, :datetime, []}]}
+                {:add, :created_at, :naive_datetime, []}]}
     assert SQL.execute_ddl(create) ==
            ~s|CREATE TABLE "posts" ("id" serial, "created_at" timestamp, PRIMARY KEY ("id")) WITH FOO=BAR|
   end

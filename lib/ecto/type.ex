@@ -64,8 +64,6 @@ defmodule Ecto.Type do
 
   """
 
-  # TODO: Remove all :datetime entries from this module
-
   import Kernel, except: [match?: 2]
 
   @typedoc "An Ecto type, primitive or custom."
@@ -79,7 +77,7 @@ defmodule Ecto.Type do
 
   @typep base      :: :integer | :float | :boolean | :string | :map |
                       :binary | :decimal | :id | :binary_id |
-                      :datetime | :utc_datetime  | :naive_datetime| :date | :time | :any
+                      :utc_datetime  | :naive_datetime | :date | :time | :any
   @typep composite :: {:array, t} | {:map, t} | {:embed, Ecto.Embedded.t} | {:in, t}
 
   @base      ~w(integer float boolean string binary decimal datetime utc_datetime naive_datetime date time id binary_id map any)a
@@ -180,16 +178,16 @@ defmodule Ecto.Type do
 
       iex> type(:string)
       :string
-      iex> type(Ecto.DateTime)
-      :datetime
+      iex> type(Ecto.UUID)
+      :uuid
 
       iex> type({:array, :string})
       {:array, :string}
-      iex> type({:array, Ecto.DateTime})
-      {:array, :datetime}
+      iex> type({:array, Ecto.UUID})
+      {:array, :uuid}
 
-      iex> type({:map, Ecto.DateTime})
-      {:map, :datetime}
+      iex> type({:map, Ecto.UUID})
+      {:map, :uuid}
 
   """
   @spec type(t) :: t
@@ -221,9 +219,9 @@ defmodule Ecto.Type do
       iex> match?({:array, :string}, {:array, :any})
       true
 
-      iex> match?(Ecto.DateTime, :datetime)
+      iex> match?(Ecto.UUID, :binary)
       true
-      iex> match?(Ecto.DateTime, :string)
+      iex> match?(Ecto.UUID, :string)
       false
 
   """
@@ -640,7 +638,7 @@ defmodule Ecto.Type do
     end
   end
 
-  defp of_base_type?(:datetime, value) do
+  defp of_base_type?(:naive_datetime, value) do
     case value do
       {{_, _, _}, {_, _, _, _}} -> true
       {{_, _, _}, {_, _, _}} -> true

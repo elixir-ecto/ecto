@@ -70,17 +70,12 @@ defmodule Ecto.Integration.TypeTest do
     assert [1]   = TestRepo.all(from p in Post, select: type(^"1", p.visits))
     assert [1.0] = TestRepo.all(from p in Post, select: type(^"1", p.intensity))
 
-    # Datetime
-    datetime = {{2014, 04, 17}, {14, 00, 00, 00}}
-    ecto_datetime = %Ecto.DateTime{year: 2014, month: 4, day: 17, hour: 14, min: 0, sec: 0, usec: 0}
-    assert [^ecto_datetime] = TestRepo.all(from Post, select: type(^datetime, Ecto.DateTime))
-
     # Custom wrappers
     assert [1] = TestRepo.all(from Post, select: type(^"1", Elixir.Custom.Permalink))
 
     # Custom types
-    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16, hour: 20, min: 26, sec: 51, usec: 0}
-    assert [^datetime] = TestRepo.all(from Post, select: type(^datetime, Ecto.DateTime))
+    uuid = Ecto.UUID.generate()
+    assert [^uuid] = TestRepo.all(from Post, select: type(^uuid, Ecto.UUID))
   end
 
   test "binary id type" do

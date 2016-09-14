@@ -405,7 +405,7 @@ defmodule Ecto.DateTime do
   @doc """
   The Ecto primitive type.
   """
-  def type, do: :datetime
+  def type, do: :naive_datetime
 
   @doc """
   Casts the given value to datetime.

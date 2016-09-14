@@ -68,8 +68,7 @@ defmodule Ecto.Migration do
 
   The Ecto primitive types are mapped to the appropriate database
   type by the various database adapters. For example, `:string` is converted to
-  `:varchar`, `:datetime` to the underlying `:datetime` or `:timestamp` type,
-  `:binary` to `:bits` or `:blob`, and so on.
+  `:varchar`, `:binary` to `:bits` or `:blob`, and so on.
 
   Similarly, you can pass any field type supported by your database
   as long as it maps to an Ecto type. For instance, you can use `:text`,
@@ -542,8 +541,8 @@ defmodule Ecto.Migration do
 
   This function also accepts Ecto primitive types as column types
   and they are normalized by the database adapter. For example,
-  `:string` is converted to `:varchar`, `:datetime` to the underlying
-  `:datetime` or `:timestamp` type, `:binary` to `:bits` or `:blob`, and so on.
+  `:string` is converted to `:varchar`, `:binary` to `:bits` or `:blob`,
+  and so on.
 
   However, the column type is not always the same as the type used in your
   schema. For example, a schema that has a `:string` field,
@@ -554,7 +553,7 @@ defmodule Ecto.Migration do
   To sum up, the column type may be either an Ecto primitive type,
   which is normalized in cases the database does not understand it,
   like `:string` or `:binary`, or a database type which is passed as is.
-  Custom Ecto types, like `Ecto.Datetime`, are not supported because
+  Custom Ecto types, like `Ecto.UUID`, are not supported because
   they are application level concern and may not always map to the
   database.
 
@@ -616,7 +615,7 @@ defmodule Ecto.Migration do
   ## Examples
 
       create table(:posts) do
-        add :inserted_at, :datetime, default: fragment("now()")
+        add :inserted_at, :naive_datetime, default: fragment("now()")
       end
   """
   def fragment(expr) when is_binary(expr) do
@@ -626,23 +625,21 @@ defmodule Ecto.Migration do
   @doc """
   Adds `:inserted_at` and `:updated_at` timestamps columns.
 
-  Those columns are of `:datetime` or `:date` type,
-  and by default cannot be null.
-  `opts` can be given to customize the generated fields.
+  Those columns are of `:naive_datetime` type, and by default
+  cannot be null. `opts` can be given to customize the generated
+  fields.
 
   ## Options
 
     * `:inserted_at` -  the name of the column for insertion times, providing `false` disables column
     * `:updated_at` - the name of the column for update times, providing `false` disables column
-    * `:type` - column type, one of `:datetime` (default) or `:date`
+    * `:type` - column type, defaults to `:naive_datetime`
 
   """
   def timestamps(opts \\ []) do
     opts = Keyword.put_new(opts, :null, false)
 
-    {type, opts} = Keyword.pop(opts, :type, :datetime)
-    unless type in [:datetime, :date], do: raise ArgumentError, "unknown :type value: #{inspect type}"
-
+    {type, opts} = Keyword.pop(opts, :type, :naive_datetime)
     {inserted_at, opts} = Keyword.pop(opts, :inserted_at, :inserted_at)
     {updated_at, opts} = Keyword.pop(opts, :updated_at, :updated_at)
 
@@ -759,6 +756,11 @@ defmodule Ecto.Migration do
     Runner.flush
   end
 
+  defp validate_type!(:datetime) do
+    IO.warn "the :datetime type in migrations is deprecated, " <>
+            "please use :utc_datetime or :naive_datetime instead"
+    :naive_datetime
+  end
   defp validate_type!(type) when is_atom(type) do
     case Atom.to_string(type) do
       "Elixir." <> _ ->

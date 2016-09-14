@@ -111,8 +111,8 @@ defmodule Ecto.MigrationTest do
                {:add, :title, :string, []},
                {:add, :cost, :decimal, [precision: 3]},
                {:add, :author_id, %Reference{table: :authors}, []},
-               {:add, :inserted_at, :datetime, [null: false]},
-               {:add, :updated_at, :datetime, [null: false]}]}
+               {:add, :inserted_at, :naive_datetime, [null: false]},
+               {:add, :updated_at, :naive_datetime, [null: false]}]}
 
     assert result == table(:posts)
 
@@ -134,7 +134,7 @@ defmodule Ecto.MigrationTest do
 
     assert last_command() ==
            {:create, table,
-              [{:add, :created_at, :datetime, [null: false]}]}
+              [{:add, :created_at, :naive_datetime, [null: false]}]}
   end
 
   test "forward: creates a table with timestamps of type date" do
@@ -147,15 +147,6 @@ defmodule Ecto.MigrationTest do
            {:create, table,
               [{:add, :inserted_on, :date, [null: false]},
                {:add, :updated_on, :date, [null: false]}]}
-  end
-
-  test "forward: raises on invalid timestamps type" do
-    assert_raise ArgumentError, "unknown :type value: :time", fn ->
-      create table(:posts, primary_key: false) do
-        timestamps(type: :time)
-      end
-      flush()
-    end
   end
 
   test "forward: creates an empty table" do

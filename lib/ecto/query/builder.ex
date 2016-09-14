@@ -107,8 +107,8 @@ defmodule Ecto.Query.Builder do
   end
 
   def escape({:datetime_add, _, [datetime, count, interval]} = expr, type, params, vars, env) do
-    assert_type!(expr, type, :datetime)
-    {datetime, params} = escape(datetime, :datetime, params, vars, env)
+    assert_type!(expr, type, :naive_datetime)
+    {datetime, params} = escape(datetime, :naive_datetime, params, vars, env)
     {count, interval, params} = escape_interval(count, interval, params, vars, env)
     {{:{}, [], [:datetime_add, [], [datetime, count, interval]]}, params}
   end
@@ -558,7 +558,7 @@ defmodule Ecto.Query.Builder do
     do: {find_var!(var, vars), code}
 
   # Interval
-  def quoted_type({:datetime_add, _, [_, _, __]}, _vars), do: :datetime
+  def quoted_type({:datetime_add, _, [_, _, __]}, _vars), do: :naive_datetime
   def quoted_type({:date_add, _, [_, _, __]}, _vars), do: :date
 
   # Tagged

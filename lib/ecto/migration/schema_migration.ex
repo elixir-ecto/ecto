@@ -42,6 +42,6 @@ defmodule Ecto.Migration.SchemaMigration do
     adapter.execute_ddl(repo,
       {:create_if_not_exists, table, [
         {:add, :version, :bigint, primary_key: true},
-        {:add, :inserted_at, :datetime, []}]}, @opts)
+        {:add, :inserted_at, :naive_datetime, []}]}, @opts)
   end
 end

@@ -67,10 +67,10 @@ end
 
 # TODO: Remove Ecto.Date|Time types on Ecto v2.2
 defimpl Ecto.DataType, for: Ecto.DateTime do
-  def dump(value), do: cast(value, :datetime)
+  def dump(value), do: cast(value, :naive_datetime)
 
   def cast(%Ecto.DateTime{year: year, month: month, day: day,
-                          hour: hour, min: min, sec: sec, usec: usec}, :datetime) do
+                          hour: hour, min: min, sec: sec, usec: usec}, :naive_datetime) do
     {:ok, {{year, month, day}, {hour, min, sec, usec}}}
   end
 
