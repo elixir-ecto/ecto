@@ -51,8 +51,8 @@ defmodule Ecto.Repo.AutogenerateTest do
 
   test "sets inserted_at and updated_at values" do
     default = TestRepo.insert!(%Default{})
-    assert %Ecto.DateTime{} = default.inserted_at
-    assert %Ecto.DateTime{} = default.updated_at
+    assert %NaiveDateTime{} = default.inserted_at
+    assert %NaiveDateTime{} = default.updated_at
     assert_received :insert
 
     # No change
@@ -74,29 +74,30 @@ defmodule Ecto.Repo.AutogenerateTest do
     changeset = Ecto.Changeset.change(%Default{id: 1})
     default = TestRepo.update!(changeset, force: true)
     refute default.inserted_at
-    assert %Ecto.DateTime{} = default.updated_at
+    assert %NaiveDateTime{} = default.updated_at
     assert_received :update
   end
 
   test "does not set inserted_at and updated_at values if they were previously set" do
-    default = TestRepo.insert!(%Default{inserted_at: %Ecto.DateTime{year: 2000},
-                                        updated_at: %Ecto.DateTime{year: 2000}})
-    assert default.inserted_at == %Ecto.DateTime{year: 2000}
-    assert default.updated_at == %Ecto.DateTime{year: 2000}
+    {:ok, naive_datetime} = NaiveDateTime.new(2000, 1, 1, 0, 0, 0)
+    default = TestRepo.insert!(%Default{inserted_at: naive_datetime,
+                                        updated_at: naive_datetime})
+    assert default.inserted_at == naive_datetime
+    assert default.updated_at == naive_datetime
 
-    changeset = Ecto.Changeset.change(%Default{id: 1}, updated_at: %Ecto.DateTime{year: 2000})
+    changeset = Ecto.Changeset.change(%Default{id: 1}, updated_at: naive_datetime)
     default = TestRepo.update!(changeset)
     refute default.inserted_at
-    assert default.updated_at == %Ecto.DateTime{year: 2000}
+    assert default.updated_at == naive_datetime
   end
 
   test "sets custom inserted_at and updated_at values" do
     default = TestRepo.insert!(%Config{})
-    assert %Ecto.DateTime{} = default.created_on
-    assert %Ecto.DateTime{} = default.updated_on
+    assert %NaiveDateTime{} = default.created_on
+    assert %NaiveDateTime{} = default.updated_on
 
     default = TestRepo.update!(%Config{id: 1} |> Ecto.Changeset.change, force: true)
     refute default.created_on
-    assert %Ecto.DateTime{} = default.updated_on
+    assert %NaiveDateTime{} = default.updated_on
   end
 end

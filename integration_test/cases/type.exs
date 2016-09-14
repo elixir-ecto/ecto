@@ -17,8 +17,7 @@ defmodule Ecto.Integration.TypeTest do
     float    = 0.1
     text     = <<0,1>>
     uuid     = "00010203-0405-0607-0809-0a0b0c0d0e0f"
-    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16,
-                              hour: 20, min: 26, sec: 51, usec: 0}
+    datetime = ~N[2014-01-16 20:26:51.000000]
 
     TestRepo.insert!(%Post{text: text, public: true, visits: integer, uuid: uuid,
                            counter: integer, inserted_at: datetime, intensity: float})
@@ -54,8 +53,7 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   test "aggregated types" do
-    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16,
-                              hour: 20, min: 26, sec: 51, usec: 0}
+    datetime = ~N[2014-01-16 20:26:51.000000]
     TestRepo.insert!(%Post{inserted_at: datetime})
     query = from p in Post, select: max(p.inserted_at)
     assert [^datetime] = TestRepo.all(query)
@@ -225,8 +223,8 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   test "schemaless types" do
-    datetime = %Ecto.DateTime{year: 2014, month: 1, day: 16,
-                              hour: 20, min: 26, sec: 51, usec: 0}
+    datetime = %NaiveDateTime{year: 2014, month: 1, day: 16,
+                              hour: 20, minute: 26, second: 51}
     assert {1, _} =
            TestRepo.insert_all("posts", [[inserted_at: datetime]])
     assert {1, _} =

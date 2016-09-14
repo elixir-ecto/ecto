@@ -14,7 +14,7 @@ defmodule Ecto.Integration.SubQueryTest do
     query = from p in Post, select: p
     assert ["hello"] =
            TestRepo.all(from p in subquery(query), select: p.text)
-    assert [%Post{inserted_at: %Ecto.DateTime{}}] =
+    assert [%Post{inserted_at: %NaiveDateTime{}}] =
            TestRepo.all(from p in subquery(query), select: p)
   end
 
@@ -65,7 +65,7 @@ defmodule Ecto.Integration.SubQueryTest do
     query = from p in Post, select: p
     assert ["hello"] =
            TestRepo.all(from c in Comment, join: p in subquery(query), on: c.post_id == p.id, select: p.text)
-    assert [%Post{inserted_at: %Ecto.DateTime{}}] =
+    assert [%Post{inserted_at: %NaiveDateTime{}}] =
            TestRepo.all(from c in Comment, join: p in subquery(query), on: c.post_id == p.id, select: p)
   end
 

@@ -8,6 +8,7 @@ defmodule Ecto.Integration.Schema do
         raise ":primary_key_type not set in :ecto application"
       @primary_key {:id, type, autogenerate: true}
       @foreign_key_type type
+      @timestamps_opts [usec: false]
     end
   end
 end
@@ -140,7 +141,7 @@ defmodule Ecto.Integration.User do
   @moduledoc """
   This module is used to test:
 
-    * Timestamps
+    * UTC Timestamps
     * Relationships
     * Dependent callbacks
 

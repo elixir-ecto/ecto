@@ -12,7 +12,7 @@ defprotocol Ecto.DataType do
   the Ecto.DataType protocol so it is properly converted
   to a tuple when directly passed to adapters:
 
-      defimpl Ecto.DataType, for: Ecto.Date do
+      defimpl Ecto.DataType, for: Date do
         def dump(%Date{day: day, month: month, year: year}) do
           {:ok, {year, month, day}}
         end
@@ -22,26 +22,14 @@ defprotocol Ecto.DataType do
   @fallback_to_any true
 
   @doc """
-  Invoked when the data structure has not been cast along the
-  way and must fallback to its database representation.
+  Invoked when the data structure has not been dumped along
+  the way and must fallback to its database representation.
   """
   @spec dump(term) :: {:ok, term} | :error
   def dump(value)
-
-  @doc """
-  Invoked when attempting to cast this data structure to another type.
-  """
-  # TODO: Remove this callback on Ecto v2.2
-  @spec cast(term, Ecto.Type.t) :: {:ok, term} | :error
-  def cast(value, type)
 end
 
 defimpl Ecto.DataType, for: Any do
-  # We don't provide any automatic casting rule.
-  def cast(_value, _type) do
-    :error
-  end
-
   # The default representation is itself, which
   # means we are delegating to the database. If
   # the database does not support, it will raise.
@@ -52,7 +40,6 @@ end
 
 defimpl Ecto.DataType, for: List do
   def dump(list), do: dump(list, [])
-  def cast(_, _), do: :error
 
   defp dump([h|t], acc) do
     case Ecto.DataType.dump(h) do
@@ -65,40 +52,28 @@ defimpl Ecto.DataType, for: List do
   end
 end
 
-# TODO: Remove Ecto.Date|Time types on Ecto v2.2
-defimpl Ecto.DataType, for: Ecto.DateTime do
-  def dump(value), do: cast(value, :naive_datetime)
-
-  def cast(%Ecto.DateTime{year: year, month: month, day: day,
-                          hour: hour, min: min, sec: sec, usec: usec}, :naive_datetime) do
-    {:ok, {{year, month, day}, {hour, min, sec, usec}}}
-  end
-
-  def cast(_, _) do
-    :error
+defimpl Ecto.DataType, for: NaiveDateTime do
+  def dump(%NaiveDateTime{year: year, month: month, day: day,
+                          hour: hour, minute: minute, second: second, microsecond: {usec, _}}) do
+    {:ok, {{year, month, day}, {hour, minute, second, usec}}}
   end
 end
 
-defimpl Ecto.DataType, for: Ecto.Date do
-  def dump(value), do: cast(value, :date)
+defimpl Ecto.DataType, for: DateTime do
+  def dump(%DateTime{year: year, month: month, day: day, time_zone: "Etc/UTC",
+                     hour: hour, minute: minute, second: second, microsecond: {usec, _}}) do
+    {:ok, {{year, month, day}, {hour, minute, second, usec}}}
+  end
+end
 
-  def cast(%Ecto.Date{year: year, month: month, day: day}, :date) do
+defimpl Ecto.DataType, for: Date do
+  def dump(%Date{year: year, month: month, day: day}) do
     {:ok, {year, month, day}}
   end
-
-  def cast(_, _) do
-    :error
-  end
 end
 
-defimpl Ecto.DataType, for: Ecto.Time do
-  def dump(value), do: cast(value, :time)
-
-  def cast(%Ecto.Time{hour: hour, min: min, sec: sec, usec: usec}, :time) do
-    {:ok, {hour, min, sec, usec}}
-  end
-
-  def cast(_, _) do
-    :error
+defimpl Ecto.DataType, for: Time do
+  def dump(%Time{hour: hour, minute: minute, second: second, microsecond: {usec, _}}) do
+    {:ok, {hour, minute, second, usec}}
   end
 end

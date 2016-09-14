@@ -83,6 +83,9 @@ defmodule Ecto.Type do
   @base      ~w(integer float boolean string binary decimal datetime utc_datetime naive_datetime date time id binary_id map any)a
   @composite ~w(array map in embed)a
 
+  # Types that we cannot optimize loading
+  @bypass @base -- [:utc_datetime, :naive_datetime, :date, :time]
+
   @doc """
   Returns the underlying schema type for the custom type.
 
@@ -219,7 +222,7 @@ defmodule Ecto.Type do
       iex> match?({:array, :string}, {:array, :any})
       true
 
-      iex> match?(Ecto.UUID, :binary)
+      iex> match?(Ecto.UUID, :uuid)
       true
       iex> match?(Ecto.UUID, :string)
       false
@@ -311,6 +314,22 @@ defmodule Ecto.Type do
     Decimal.Error -> :error
   end
 
+  def dump(:date, term, _dumper) do
+    dump_date(term)
+  end
+
+  def dump(:time, term, _dumper) do
+    dump_time(term)
+  end
+
+  def dump(:naive_datetime, term, _dumper) do
+    dump_naive_datetime(term)
+  end
+
+  # def dump(:utc_datetime, term, _dumper) do
+  #   dump_utc_datetime(term)
+  # end
+
   def dump(type, value, _dumper) do
     cond do
       not primitive?(type) ->
@@ -383,6 +402,22 @@ defmodule Ecto.Type do
   def load({:map, type}, value, loader) when is_map(value) do
     map(Map.to_list(value), &loader.(type, &1), %{})
   end
+
+  def load(:date, term, _loader) do
+    load_date(term)
+  end
+
+  def load(:time, term, _loader) do
+    load_time(term)
+  end
+
+  def load(:naive_datetime, term, _loader) do
+    load_naive_datetime(term)
+  end
+
+  # def load(:utc_datetime, term, _loader) do
+  #   load_utc_datetime(term)
+  # end
 
   def load(type, value, _loader) do
     cond do
@@ -530,6 +565,22 @@ defmodule Ecto.Type do
     Decimal.Error -> :error
   end
 
+  def cast(:date, term) do
+    cast_date(term)
+  end
+
+  def cast(:time, term) do
+    cast_time(term)
+  end
+
+  def cast(:naive_datetime, term) do
+    cast_naive_datetime(term)
+  end
+
+  # def cast(:utc_datetime, term) do
+  #   cast_utc_datetime(term)
+  # end
+
   def cast(type, term) when type in [:id, :integer] and is_binary(term) do
     case Integer.parse(term) do
       {int, ""} -> {:ok, int}
@@ -538,18 +589,11 @@ defmodule Ecto.Type do
   end
 
   def cast(type, term) do
-    case try_cast(type, term) do
-      {:ok, _} = ok -> ok
-      :error -> Ecto.DataType.cast(term, type)
-    end
-  end
-
-  defp try_cast(type, value) do
     cond do
       not primitive?(type) ->
-        type.cast(value)
-      of_base_type?(type, value) ->
-        {:ok, value}
+        type.cast(term)
+      of_base_type?(type, term) ->
+        {:ok, term}
       true ->
         :error
     end
@@ -585,7 +629,7 @@ defmodule Ecto.Type do
     do: :error
   defp do_adapter_load([fun|t], {:ok, value}, adapter) when is_function(fun),
     do: do_adapter_load(t, fun.(value), adapter)
-  defp do_adapter_load([type|t], {:ok, _} = acc, adapter) when type in @base,
+  defp do_adapter_load([type|t], {:ok, _} = acc, adapter) when type in @bypass,
     do: do_adapter_load(t, acc, adapter)
   defp do_adapter_load([type|t], {:ok, value}, adapter),
     do: do_adapter_load(t, load(type, value, &adapter_load(adapter, &1, &2)), adapter)
@@ -607,6 +651,150 @@ defmodule Ecto.Type do
   defp do_adapter_dump([], {:ok, _} = acc, _adapter),
     do: acc
 
+  ## Date
+
+  defp cast_date(binary) when is_binary(binary) do
+    case Date.from_iso8601(binary) do
+      {:ok, _} = ok -> ok
+      {:error, _} -> :error
+    end
+  end
+  defp cast_date(%{__struct__: _} = struct),
+    do: {:ok, struct}
+  defp cast_date(%{"year" => empty, "month" => empty, "day" => empty}) when empty in ["", nil],
+    do: {:ok, nil}
+  defp cast_date(%{year: empty, month: empty, day: empty}) when empty in ["", nil],
+    do: {:ok, nil}
+  defp cast_date(%{"year" => year, "month" => month, "day" => day}),
+    do: cast_date(to_i(year), to_i(month), to_i(day))
+  defp cast_date(%{year: year, month: month, day: day}),
+    do: cast_date(to_i(year), to_i(month), to_i(day))
+  defp cast_date(_),
+    do: :error
+
+  defp cast_date(year, month, day) when is_integer(year) and is_integer(month) and is_integer(day) do
+    case Date.new(year, month, day) do
+      {:ok, _} = ok -> ok
+      {:error, _} -> :error
+    end
+  end
+  defp cast_date(_, _, _),
+    do: :error
+
+  defp dump_date(%Date{year: year, month: month, day: day}),
+    do: {:ok, {year, month, day}}
+  defp dump_date(%{__struct__: _} = struct),
+    do: Ecto.DataType.dump(struct)
+  defp dump_date(_),
+    do: :error
+
+  defp load_date({year, month, day}),
+    do: {:ok, %Date{year: year, month: month, day: day}}
+  defp load_date(_),
+    do: :error
+
+  ## Time
+
+  defp cast_time(binary) when is_binary(binary) do
+    case Time.from_iso8601(binary) do
+      {:ok, _} = ok -> ok
+      {:error, _} -> :error
+    end
+  end
+  defp cast_time(%{__struct__: _} = struct),
+    do: {:ok, struct}
+  defp cast_time(%{"hour" => empty, "minute" => empty}) when empty in ["", nil],
+    do: {:ok, nil}
+  defp cast_time(%{hour: empty, minute: empty}) when empty in ["", nil],
+    do: {:ok, nil}
+  defp cast_time(%{"hour" => hour, "minute" => minute} = map),
+    do: cast_time(to_i(hour), to_i(minute), to_i(map["second"]), to_i(map["microsecond"]))
+  defp cast_time(%{hour: hour, minute: minute} = map),
+    do: cast_time(to_i(hour), to_i(minute), to_i(map[:second]), to_i(map[:microsecond]))
+  defp cast_time(_),
+    do: :error
+
+  defp cast_time(hour, minute, sec, usec)
+       when is_integer(hour) and is_integer(minute) and
+            (is_integer(sec) or is_nil(sec)) and (is_integer(usec) or is_nil(usec)) do
+    case Time.new(hour, minute, sec || 0, usec || {0, 0}) do
+      {:ok, _} = ok -> ok
+      {:error, _} -> :error
+    end
+  end
+  defp cast_time(_, _, _, _) do
+    :error
+  end
+
+  defp dump_time(%Time{hour: hour, minute: minute, second: second, microsecond: {microsecond, _}}),
+    do: {:ok, {hour, minute, second, microsecond}}
+  defp dump_time(%{__struct__: _} = struct),
+    do: Ecto.DataType.dump(struct)
+  defp dump_time(_),
+    do: :error
+
+  defp load_time({hour, minute, second, microsecond}),
+    do: {:ok, %Time{hour: hour, minute: minute, second: second, microsecond: {microsecond, 6}}}
+  defp load_time({hour, minute, second}),
+    do: {:ok, %Time{hour: hour, minute: minute, second: second}}
+  defp load_time(_),
+    do: :error
+
+  ## Naive datetime
+
+  defp cast_naive_datetime(binary) when is_binary(binary) do
+    case NaiveDateTime.from_iso8601(binary) do
+      {:ok, _} = ok -> ok
+      {:error, _} -> :error
+    end
+  end
+  defp cast_naive_datetime(%{__struct__: _} = struct),
+    do: {:ok, struct}
+  defp cast_naive_datetime(%{"year" => empty, "month" => empty, "day" => empty,
+                             "hour" => empty, "minute" => empty}) when empty in ["", nil],
+    do: {:ok, nil}
+  defp cast_naive_datetime(%{year: empty, month: empty, day: empty,
+                             hour: empty, minute: empty}) when empty in ["", nil],
+    do: {:ok, nil}
+  defp cast_naive_datetime(%{"year" => year, "month" => month, "day" => day, "hour" => hour, "minute" => min} = map),
+    do: cast_naive_datetime(to_i(year), to_i(month), to_i(day),
+                            to_i(hour), to_i(min), to_i(map["second"]), to_i(map["microsecond"]))
+  defp cast_naive_datetime(%{year: year, month: month, day: day, hour: hour, minute: min} = map),
+    do: cast_naive_datetime(to_i(year), to_i(month), to_i(day),
+                            to_i(hour), to_i(min), to_i(map[:second]), to_i(map[:microsecond]))
+  defp cast_naive_datetime(_),
+    do: :error
+
+  defp cast_naive_datetime(year, month, day, hour, minute, sec, usec)
+       when is_integer(year) and is_integer(month) and is_integer(day) and
+            is_integer(hour) and is_integer(minute) and
+            (is_integer(sec) or is_nil(sec)) and (is_integer(usec) or is_nil(usec)) do
+    case NaiveDateTime.new(year, month, day, hour, minute, sec || 0, usec || {0, 0}) do
+      {:ok, _} = ok -> ok
+      {:error, _} -> :error
+    end
+  end
+  defp cast_naive_datetime(_, _, _, _, _, _, _) do
+    :error
+  end
+
+  defp dump_naive_datetime(%NaiveDateTime{year: year, month: month, day: day,
+                                          hour: hour, minute: minute, second: second, microsecond: {microsecond, _}}),
+    do: {:ok, {{year, month, day}, {hour, minute, second, microsecond}}}
+  defp dump_naive_datetime(%{__struct__: _} = struct),
+    do: Ecto.DataType.dump(struct)
+  defp dump_naive_datetime(_),
+    do: :error
+
+  defp load_naive_datetime({{year, month, day}, {hour, minute, second, microsecond}}),
+    do: {:ok, %NaiveDateTime{year: year, month: month, day: day,
+                             hour: hour, minute: minute, second: second, microsecond: {microsecond, 6}}}
+  defp load_naive_datetime({{year, month, day}, {hour, minute, second}}),
+    do: {:ok, %NaiveDateTime{year: year, month: month, day: day,
+                             hour: hour, minute: minute, second: second}}
+  defp load_naive_datetime(_),
+    do: :error
+
   ## Helpers
 
   # Checks if a value is of the given primitive type.
@@ -622,29 +810,6 @@ defmodule Ecto.Type do
   defp of_base_type?(:map, term),        do: is_map(term) and not Map.has_key?(term, :__struct__)
   defp of_base_type?({:map, _}, _),      do: false # Always handled explicitly.
   defp of_base_type?(:decimal, value),   do: Kernel.match?(%{__struct__: Decimal}, value)
-
-  defp of_base_type?(:date, value) do
-    case value do
-      {_, _, _} -> true
-      _ -> false
-    end
-  end
-
-  defp of_base_type?(:time, value) do
-    case value do
-      {_, _, _, _} -> true
-      {_, _, _} -> true
-      _ -> false
-    end
-  end
-
-  defp of_base_type?(:naive_datetime, value) do
-    case value do
-      {{_, _, _}, {_, _, _, _}} -> true
-      {{_, _, _}, {_, _, _}} -> true
-      _ -> false
-    end
-  end
 
   defp array([h|t], fun, acc) do
     case fun.(h) do
@@ -669,4 +834,13 @@ defmodule Ecto.Type do
   end
 
   defp map(_, _, _), do: :error
+
+  defp to_i(nil), do: nil
+  defp to_i(int) when is_integer(int), do: int
+  defp to_i(bin) when is_binary(bin) do
+    case Integer.parse(bin) do
+      {int, ""} -> int
+      _ -> nil
+    end
+  end
 end

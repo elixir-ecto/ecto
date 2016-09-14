@@ -8,12 +8,12 @@ defmodule Ecto.Integration.RepoTest do
 
   alias Ecto.Integration.Post
   alias Ecto.Integration.User
-  alias Ecto.Integration.PostUsecTimestamps
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.Custom
   alias Ecto.Integration.Barebone
   alias Ecto.Integration.CompositePk
+  alias Ecto.Integration.PostUsecTimestamps
   alias Ecto.Integration.PostUserCompositePk
 
   test "returns already started for started repos" do
@@ -642,9 +642,9 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "insert all with dumping" do
-    date = Ecto.DateTime.utc
-    assert {2, nil} = TestRepo.insert_all(Post, [%{inserted_at: date}, %{title: "date"}])
-    assert [%Post{inserted_at: ^date, title: nil},
+    datetime = ~N[2014-01-16 20:26:51.000000]
+    assert {2, nil} = TestRepo.insert_all(Post, [%{inserted_at: datetime}, %{title: "date"}])
+    assert [%Post{inserted_at: ^datetime, title: nil},
             %Post{inserted_at: nil, title: "date"}] = TestRepo.all(Post)
   end
 
@@ -777,11 +777,11 @@ defmodule Ecto.Integration.RepoTest do
 
   test "update all with casting and dumping" do
     text = "hai"
-    date = Ecto.DateTime.utc
-    assert %Post{id: id1} = TestRepo.insert!(%Post{})
+    datetime = ~N[2014-01-16 20:26:51.000000]
+    assert %Post{id: id} = TestRepo.insert!(%Post{})
 
-    assert {1, nil} = TestRepo.update_all(Post, set: [text: text, inserted_at: date])
-    assert %Post{text: "hai", inserted_at: ^date} = TestRepo.get(Post, id1)
+    assert {1, nil} = TestRepo.update_all(Post, set: [text: text, inserted_at: datetime])
+    assert %Post{text: "hai", inserted_at: ^datetime} = TestRepo.get(Post, id)
   end
 
   test "delete all" do
