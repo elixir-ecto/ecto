@@ -386,6 +386,8 @@ end
 defmodule Ecto.DateTime do
   import Ecto.DateTime.Utils
 
+  @unix_epoch :calendar.datetime_to_gregorian_seconds {{1970, 1, 1}, {0, 0, 0}}
+
   @doc """
   Compare two datetimes.
 
@@ -613,6 +615,15 @@ defmodule Ecto.DateTime do
   def from_erl({{year, month, day}, {hour, min, sec}}) do
     %Ecto.DateTime{year: year, month: month, day: day,
                    hour: hour, min: min, sec: sec}
+  end
+
+  def from_unix!(integer, unit) do
+    total = System.convert_time_unit(integer, unit, :microseconds)
+    microsecond = rem(total, 1_000_000)
+    {{year, month, day}, {hour, minute, second}} =
+      :calendar.gregorian_seconds_to_datetime(@unix_epoch + div(total, 1_000_000))
+    %Ecto.DateTime{year: year, month: month, day: day,
+                      hour: hour, min: minute, sec: second, usec: microsecond}
   end
 
   # Callback invoked by autogenerate fields.

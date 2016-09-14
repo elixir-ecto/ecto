@@ -324,6 +324,11 @@ defmodule Ecto.DateTimeTest do
     assert inspect(@datetime_large) == "#Ecto.DateTime<10000-01-23 23:50:07>"
   end
 
+  test "from_unix!" do
+    assert Ecto.DateTime.from_unix!(1422057007, :seconds) == @datetime
+    assert Ecto.DateTime.from_unix!(1422057007008000, :microseconds) == @datetime_usec
+  end
+
   test "precision" do
     assert %Ecto.DateTime{usec: 0} = Ecto.DateTime.utc
     assert %Ecto.DateTime{usec: 0} = Ecto.DateTime.utc :sec
