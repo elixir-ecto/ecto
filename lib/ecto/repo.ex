@@ -461,6 +461,7 @@ defmodule Ecto.Repo do
   remaining options.
 
   ## Example
+  
       MyRepo.insert_all(Post, [[title: "My first post"], [title: "My second post"]])
       MyRepo.insert_all(Post, [%{title: "My first post"}, %{title: "My second post"}])
   """
