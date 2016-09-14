@@ -3,14 +3,9 @@ Code.require_file "../support/types.exs", __DIR__
 defmodule Ecto.Integration.TypeTest do
   use Ecto.Integration.Case, async: Application.get_env(:ecto, :async_integration_tests, true)
 
+  alias Ecto.Integration.{Custom, Item, Order, Post, User, Tag}
   alias Ecto.Integration.TestRepo
   import Ecto.Query
-
-  alias Ecto.Integration.Post
-  alias Ecto.Integration.Tag
-  alias Ecto.Integration.Custom
-  alias Ecto.Integration.Order
-  alias Ecto.Integration.Item
 
   test "primitive types" do
     integer  = 1
@@ -48,8 +43,13 @@ defmodule Ecto.Integration.TypeTest do
     # UUID
     assert [^uuid] = TestRepo.all(from p in Post, where: p.uuid == ^uuid, select: p.uuid)
 
-    # Datetime
+    # NaiveDatetime
     assert [^datetime] = TestRepo.all(from p in Post, where: p.inserted_at == ^datetime, select: p.inserted_at)
+
+    # Datetime
+    datetime = DateTime.utc_now
+    TestRepo.insert!(%User{inserted_at: datetime})
+    assert [^datetime] = TestRepo.all(from u in User, where: u.inserted_at == ^datetime, select: u.inserted_at)
   end
 
   test "aggregated types" do
@@ -223,8 +223,7 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   test "schemaless types" do
-    datetime = %NaiveDateTime{year: 2014, month: 1, day: 16,
-                              hour: 20, minute: 26, second: 51}
+    datetime = ~N[2014-01-16 20:26:51]
     assert {1, _} =
            TestRepo.insert_all("posts", [[inserted_at: datetime]])
     assert {1, _} =
@@ -235,5 +234,17 @@ defmodule Ecto.Integration.TypeTest do
            TestRepo.all(from p in "posts", where: p.inserted_at in [^datetime], select: p.inserted_at)
     assert [_] =
            TestRepo.all(from p in "posts", where: p.inserted_at in ^[datetime], select: p.inserted_at)
+
+    datetime = DateTime.utc_now
+    assert {1, _} =
+           TestRepo.insert_all("users", [[inserted_at: datetime, updated_at: datetime]])
+    assert {1, _} =
+           TestRepo.update_all("users", set: [inserted_at: datetime])
+    assert [_] =
+           TestRepo.all(from u in "users", where: u.inserted_at >= ^datetime, select: u.updated_at)
+    assert [_] =
+           TestRepo.all(from u in "users", where: u.inserted_at in [^datetime], select: u.updated_at)
+    assert [_] =
+           TestRepo.all(from u in "users", where: u.inserted_at in ^[datetime], select: u.updated_at)
   end
 end

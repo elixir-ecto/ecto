@@ -852,7 +852,7 @@ if Code.ensure_loaded?(Postgrex) do
     defp ecto_to_db({:map, _}),       do: "jsonb"
     defp ecto_to_db(:utc_datetime),   do: "timestamp"
     defp ecto_to_db(:naive_datetime), do: "timestamp"
-    defp ecto_to_db(other),       do: Atom.to_string(other)
+    defp ecto_to_db(other),           do: Atom.to_string(other)
 
     defp error!(nil, message) do
       raise ArgumentError, message

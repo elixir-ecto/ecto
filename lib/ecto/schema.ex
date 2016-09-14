@@ -130,12 +130,27 @@ defmodule Ecto.Schema do
   `:string`               | UTF-8 encoded `string`  | "hello"
   `:binary`               | `binary`                | `<<int, int, int, ...>>`
   `{:array, inner_type}`  | `list`                  | `[value, value, value, ...]`
-  `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal) |
   `:map`                  | `map` |
   `{:map, inner_type}`    | `map` |
+  `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal) |
 
-  **Note:** For the `{:array, inner_type}` and `{:map, inner_type}` type, replace `inner_type` with one of
-  the valid types, such as `:string`.
+  **Note:** For the `{:array, inner_type}` and `{:map, inner_type}` type,
+  replace `inner_type` with one of the valid types, such as `:string`.
+
+  Since Ecto 2.1, Ecto also supports the Calendar types that are part
+  of Elixir standard library:
+
+  Ecto type               | Elixir type
+  :---------------------- | :----------------------
+  `:date`                 | `Date`
+  `:time`                 | `Time`
+  `:naive_datetime`       | `NaiveDateTime`
+  `:utc_datetime`         | `DateTime`
+
+  Timestamps are typically represented by `:naive_datetime` or
+  `:utc_datetime`. The naive datetime uses Elixir's `NaiveDateTime` which
+  has no timezone information while `:utc_datetime` uses a `DateTime` and
+  expects the time_zone to be set to UTC.
 
   ### Custom types
 
@@ -1283,12 +1298,16 @@ defmodule Ecto.Schema do
     timestamp = {_, _, usec} = :os.timestamp
     NaiveDateTime.from_erl!(:calendar.now_to_datetime(timestamp), usec)
   end
-  def __timestamps__(type, precision) do
-    type_to_module(type).from_unix!(System.system_time(precision), precision)
+  def __timestamps__(type, :seconds) do
+    type_to_module(type).from_unix!(System.system_time(:seconds) * 1000000, :microseconds)
+  end
+  def __timestamps__(type, :microseconds) do
+    type_to_module(type).from_unix!(System.system_time(:microseconds), :microseconds)
   end
 
   defp type_to_module(:naive_datetime), do: NaiveDateTime
   defp type_to_module(:utc_datetime), do: DateTime
+  defp type_to_module(other), do: other
 
   @doc false
   def __load__(schema, prefix, source, context, data, loader) do

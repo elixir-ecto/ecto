@@ -214,6 +214,12 @@ defmodule Ecto.Integration.RepoTest do
     assert [p1] == TestRepo.all(PostUsecTimestamps)
   end
 
+  test "insert and fetch a schema with utc timestamps" do
+    datetime = DateTime.utc_now
+    TestRepo.insert!(%User{inserted_at: datetime})
+    assert [%{inserted_at: ^datetime}] = TestRepo.all(User)
+  end
+
   test "optimistic locking in update/delete operations" do
     import Ecto.Changeset, only: [cast: 3, optimistic_lock: 2]
     base_post = TestRepo.insert!(%Comment{})

@@ -156,7 +156,7 @@ defmodule Ecto.Integration.User do
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
     many_to_many :schema_posts, Ecto.Integration.Post, join_through: Ecto.Integration.PostUser
     many_to_many :unique_posts, Ecto.Integration.Post, join_through: Ecto.Integration.PostUserCompositePk
-    timestamps()
+    timestamps(type: :utc_datetime)
   end
 end
 

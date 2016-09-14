@@ -450,7 +450,6 @@ defmodule Ecto.DateTime do
     {:ok, dt}
   end
 
-  # TODO: Remove old cast
   defp do_cast(%{"year" => year, "month" => month, "day" => day, "hour" => hour, "min" => min} = map) do
     from_parts(to_i(year), to_i(month), to_i(day),
                to_i(hour), to_i(min), to_i(Map.get(map, "sec", 0)),
@@ -473,7 +472,6 @@ defmodule Ecto.DateTime do
     {:ok, nil}
   end
 
-  # TODO: microseconds should not default to 0
   defp do_cast(%{"year" => year, "month" => month, "day" => day, "hour" => hour, "minute" => min} = map) do
     from_parts(to_i(year), to_i(month), to_i(day),
                to_i(hour), to_i(min), to_i(Map.get(map, "second", 0)),

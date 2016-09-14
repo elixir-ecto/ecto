@@ -236,7 +236,7 @@ defmodule Ecto.TypeTest do
     assert Ecto.Type.cast(:naive_datetime, "2015-01-23T23:50:07.008000Z") == {:ok, @datetime_usec}
 
     assert Ecto.Type.cast(:naive_datetime, %{"year" => "2015", "month" => "1", "day" => "23",
-                                "hour" => "23", "minute" => "50", "second" => "07"}) ==
+                                             "hour" => "23", "minute" => "50", "second" => "07"}) ==
            {:ok, @datetime}
 
     assert Ecto.Type.cast(:naive_datetime, %{year: 2015, month: 1, day: 23, hour: 23, minute: 50, second: 07}) ==
@@ -270,6 +270,63 @@ defmodule Ecto.TypeTest do
            :error
 
     assert Ecto.Type.cast(:naive_datetime, %{year: 2015, month: 1, day: 23, hour: 23, minute: nil}) ==
+           :error
+  end
+
+  @datetime DateTime.from_unix!(1422057007, :seconds)
+  @datetime_zero DateTime.from_unix!(1422057000, :seconds)
+  @datetime_usec DateTime.from_unix!(1422057007008000, :microseconds)
+  @datetime_leapyear DateTime.from_unix!(951868207, :seconds)
+
+  test "casting utc datetime" do
+    assert Ecto.Type.cast(:utc_datetime, @datetime) == {:ok, @datetime}
+    assert Ecto.Type.cast(:utc_datetime, @datetime_usec) == {:ok, @datetime_usec}
+    assert Ecto.Type.cast(:utc_datetime, @datetime_leapyear) == {:ok, @datetime_leapyear}
+
+    assert Ecto.Type.cast(:utc_datetime, "2015-01-23 23:50:07") == {:ok, @datetime}
+    assert Ecto.Type.cast(:utc_datetime, "2015-01-23T23:50:07") == {:ok, @datetime}
+    assert Ecto.Type.cast(:utc_datetime, "2015-01-23T23:50:07Z") == {:ok, @datetime}
+    assert Ecto.Type.cast(:utc_datetime, "2000-02-29T23:50:07") == {:ok, @datetime_leapyear}
+    assert Ecto.Type.cast(:utc_datetime, "2015-01-23P23:50:07") == :error
+
+    assert Ecto.Type.cast(:utc_datetime, "2015-01-23T23:50:07.008000") == {:ok, @datetime_usec}
+    assert Ecto.Type.cast(:utc_datetime, "2015-01-23T23:50:07.008000Z") == {:ok, @datetime_usec}
+
+    assert Ecto.Type.cast(:utc_datetime, %{"year" => "2015", "month" => "1", "day" => "23",
+                                           "hour" => "23", "minute" => "50", "second" => "07"}) ==
+           {:ok, @datetime}
+
+    assert Ecto.Type.cast(:utc_datetime, %{year: 2015, month: 1, day: 23, hour: 23, minute: 50, second: 07}) ==
+           {:ok, @datetime}
+
+    assert Ecto.Type.cast(:utc_datetime, %{"year" => "", "month" => "", "day" => "",
+                                           "hour" => "", "minute" => ""}) ==
+           {:ok, nil}
+
+    assert Ecto.Type.cast(:utc_datetime, %{year: nil, month: nil, day: nil, hour: nil, minute: nil}) ==
+           {:ok, nil}
+
+    assert Ecto.Type.cast(:utc_datetime, %{"year" => "2015", "month" => "1", "day" => "23",
+                                           "hour" => "23", "minute" => "50"}) ==
+           {:ok, @datetime_zero}
+
+    assert Ecto.Type.cast(:utc_datetime, %{year: 2015, month: 1, day: 23, hour: 23, minute: 50}) ==
+           {:ok, @datetime_zero}
+
+    assert Ecto.Type.cast(:utc_datetime, %{year: 2015, month: 1, day: 23, hour: 23,
+                                             minute: 50, second: 07, microsecond: 8_000}) ==
+           {:ok, @datetime_usec}
+
+    assert Ecto.Type.cast(:utc_datetime, %{"year" => 2015, "month" => 1, "day" => 23,
+                                           "hour" => 23, "minute" => 50, "second" => 07,
+                                           "microsecond" => 8_000}) ==
+           {:ok, @datetime_usec}
+
+    assert Ecto.Type.cast(:utc_datetime, %{"year" => "2015", "month" => "1", "day" => "23",
+                                           "hour" => "", "minute" => "50"}) ==
+           :error
+
+    assert Ecto.Type.cast(:utc_datetime, %{year: 2015, month: 1, day: 23, hour: 23, minute: nil}) ==
            :error
   end
 end
