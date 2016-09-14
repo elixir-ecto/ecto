@@ -1089,8 +1089,7 @@ defmodule Ecto.Integration.RepoTest do
   test "upsert on conflict ignore" do
     {:ok, inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"},
       on_conflict: :nothing)
-
-    assert inserted.id > 0
+    assert inserted.id
 
     {:ok, not_inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"},
       on_conflict: :nothing, update: [:id]) # Update field specified for mysql resulting in ON DUPLICATE KEY `id` = `id`
@@ -1098,7 +1097,7 @@ defmodule Ecto.Integration.RepoTest do
 
     {:ok, inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first", uuid: "1aaaaaaa-ee8a-3ca4-894e-db77e160355e"},
       on_conflict: :nothing, update: [:uuid])
-    assert inserted.id > 0
+    assert inserted.id
 
     {:ok, not_inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first", uuid: "1aaaaaaa-ee8a-3ca4-894e-db77e160355e"},
       on_conflict: :nothing, update: [:uuid])
