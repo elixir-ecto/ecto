@@ -51,6 +51,7 @@ It is also possible to interpolate the whole keyword list to dynamically filter 
 
   * `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` are deprecated
   * `:datetime` is deprecated as column type in `Ecto.Migration`, use `:naive_datetime` or `:utc_datetime` instead
+  * Deprecate `Ecto.Changeset.cast/4` in favor of `Ecto.Changeset.cast/3` + `Ecto.Changeset.validate_required/3`
 
 ## Previous versions
 
