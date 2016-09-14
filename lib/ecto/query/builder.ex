@@ -89,12 +89,12 @@ defmodule Ecto.Query.Builder do
   # interval
 
   def escape({:from_now, meta, [count, interval]}, type, params, vars, env) do
-    utc = quote do: ^Ecto.DateTime.utc
+    utc = quote do: ^DateTime.utc_now
     escape({:datetime_add, meta, [utc, count, interval]}, type, params, vars, env)
   end
 
   def escape({:ago, meta, [count, interval]}, type, params, vars, env) do
-    utc = quote do: ^Ecto.DateTime.utc
+    utc = quote do: ^DateTime.utc_now
     count =
       case count do
         {:^, meta, [value]} ->

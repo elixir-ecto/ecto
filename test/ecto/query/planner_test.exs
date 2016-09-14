@@ -14,7 +14,7 @@ defmodule Ecto.Query.PlannerTest do
     schema "comments" do
       field :text, :string
       field :temp, :string, virtual: true
-      field :posted, Ecto.DateTime
+      field :posted, :naive_datetime
       field :uuid, :binary_id
       belongs_to :post, Ecto.Query.PlannerTest.Post
       has_many :post_comments, through: [:post, :comments]
@@ -29,7 +29,7 @@ defmodule Ecto.Query.PlannerTest do
       field :title, :string
       field :text, :string
       field :code, :binary
-      field :posted, Ecto.DateTime
+      field :posted, :naive_datetime
       field :visits, :integer
       field :links, {:array, Custom.Permalink}
       has_many :comments, Ecto.Query.PlannerTest.Comment
@@ -89,19 +89,9 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "prepare: casts and dumps custom types" do
-    datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
-    {_query, params, _key} = prepare(Comment |> where([c], c.posted == ^datetime))
-    assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
-
     permalink = "1-hello-world"
     {_query, params, _key} = prepare(Post |> where([p], p.id == ^permalink))
     assert params == [1]
-  end
-
-  test "prepare: casts and dumps custom types to native ones" do
-    datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
-    {_query, params, _key} = prepare(Post |> where([p], p.posted == ^datetime))
-    assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
   end
 
   test "prepare: casts and dumps binary ids" do
@@ -128,7 +118,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "prepare: casts and dumps custom types in right side of in-expressions" do
-    datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
+    datetime = ~N[2015-01-07 21:18:13.0]
     {_query, params, _key} = prepare(Comment |> where([c], c.posted in ^[datetime]))
     assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
 
@@ -136,7 +126,7 @@ defmodule Ecto.Query.PlannerTest do
     {_query, params, _key} = prepare(Post |> where([p], p.id in ^[permalink]))
     assert params == [1]
 
-    datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
+    datetime = ~N[2015-01-07 21:18:13.0]
     {_query, params, _key} = prepare(Comment |> where([c], c.posted in [^datetime]))
     assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
 
@@ -236,7 +226,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: generates a cache key" do
     {_query, _params, key} = prepare(from(Post, []))
-    assert key == [:all, {"posts", Post, 112914533}]
+    assert key == [:all, {"posts", Post, 27727487}]
 
     query = from(p in Post, select: 1, lock: "foo", where: is_nil(nil),
                             join: c in Comment, preload: :comments)
@@ -245,8 +235,8 @@ defmodule Ecto.Query.PlannerTest do
                    {:lock, "foo"},
                    {:prefix, "foo"},
                    {:where, [{:is_nil, [], [nil]}]},
-                   {:join, [{:inner, {"comments", Ecto.Query.PlannerTest.Comment, 53730846}, true}]},
-                   {"posts", Ecto.Query.PlannerTest.Post, 112914533},
+                   {:join, [{:inner, {"comments", Ecto.Query.PlannerTest.Comment, 6996781}, true}]},
+                   {"posts", Ecto.Query.PlannerTest.Post, 27727487},
                    {:select, 1}]
   end
 
@@ -264,7 +254,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, params, key} = prepare(from(subquery(Post), []))
     assert %{query: %Ecto.Query{}, params: []} = query.from
     assert params == []
-    assert key == [:all, [:all, {"posts", Ecto.Query.PlannerTest.Post, 112914533}]]
+    assert key == [:all, [:all, {"posts", Ecto.Query.PlannerTest.Post, 27727487}]]
 
     posts = from(p in Post, where: p.title == ^"hello")
     query = from(c in Comment, join: p in subquery(posts), on: c.post_id == p.id)
@@ -324,7 +314,7 @@ defmodule Ecto.Query.PlannerTest do
     query = subquery(from p in Post, join: c in assoc(p, :comments),
                                      select: %{id: p.id, title: p.title, posted: c.posted})
 
-    datetime = %Ecto.DateTime{year: 2015, month: 1, day: 7, hour: 21, min: 18, sec: 13, usec: 0}
+    datetime = ~N[2015-01-07 21:18:13.0]
     {_query, params, _key} = prepare(query |> where([c], c.posted == ^datetime))
     assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
 
@@ -373,8 +363,8 @@ defmodule Ecto.Query.PlannerTest do
            %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: :integer}
     assert params == [1]
 
-    assert_raise Ecto.Query.CastError, ~r/value `"1"` in `select` cannot be cast to type Ecto.DateTime/, fn ->
-      from(Post, []) |> select([p], type(^"1", Ecto.DateTime)) |> normalize
+    assert_raise Ecto.Query.CastError, ~r/value `"1"` in `select` cannot be cast to type Ecto.UUID/, fn ->
+      from(Post, []) |> select([p], type(^"1", Ecto.UUID)) |> normalize
     end
   end
 

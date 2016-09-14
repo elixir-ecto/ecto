@@ -670,3 +670,9 @@ defimpl Ecto.DataType, for: Ecto.Time do
     {:ok, {hour, min, sec, usec}}
   end
 end
+
+if Code.ensure_loaded?(Poison) do
+  defimpl Poison.Encoder, for: [Ecto.Date, Ecto.Time, Ecto.DateTime] do
+    def encode(dt, _opts), do: <<?", @for.to_iso8601(dt)::binary, ?">>
+  end
+end

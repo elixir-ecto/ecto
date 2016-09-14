@@ -6,7 +6,7 @@
   "ex_doc": {:hex, :ex_doc, "0.13.0", "aa2f8fe4c6136a2f7cfc0a7e06805f82530e91df00e2bff4b4362002b43ada65", [:mix], [{:earmark, "~> 1.0", [hex: :earmark, optional: false]}]},
   "inch_ex": {:hex, :inch_ex, "0.5.3", "39f11e96181ab7edc9c508a836b33b5d9a8ec0859f56886852db3d5708889ae7", [:mix], [{:poison, "~> 1.5 or ~> 2.0", [hex: :poison, optional: false]}]},
   "mariaex": {:hex, :mariaex, "0.7.7", "620a636ec2276c3fa031ac528039fc9d2bf7992e050e37a56b3c796511e94d6d", [:mix], [{:db_connection, "~> 1.0.0-rc", [hex: :db_connection, optional: false]}, {:decimal, "~> 1.0", [hex: :decimal, optional: false]}]},
-  "poison": {:hex, :poison, "2.1.0", "f583218ced822675e484648fa26c933d621373f01c6c76bd00005d7bd4b82e27", [:mix], []},
+  "poison": {:hex, :poison, "2.2.0", "4763b69a8a77bd77d26f477d196428b741261a761257ff1cf92753a0d4d24a63", [:mix], []},
   "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], []},
   "postgrex": {:hex, :postgrex, "0.12.0", "bdeeb4c42768c47c3c92228e66c70357fe9a9384fbc9de06abba774b22dd0635", [:mix], [{:connection, "~> 1.0", [hex: :connection, optional: false]}, {:db_connection, "~> 1.0-rc.4", [hex: :db_connection, optional: false]}, {:decimal, "~> 1.0", [hex: :decimal, optional: false]}]},
   "sbroker": {:hex, :sbroker, "1.0.0-beta.3", "7fd35f29ff9db15887106c6a25afc87d95799a9690c10bd42349cfb670fe9c26", [:rebar3], []}}

@@ -40,7 +40,7 @@ defmodule Ecto.Integration.Post do
     field :uuid, Ecto.UUID, autogenerate: true
     field :meta, :map
     field :links, {:map, :string}
-    field :posted, Ecto.Date
+    field :posted, :date
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
     has_one :permalink, Ecto.Integration.Permalink, on_delete: :delete_all, on_replace: :delete
     has_many :comments_authors, through: [:comments, :author]
@@ -220,7 +220,7 @@ defmodule Ecto.Integration.Item do
 
   embedded_schema do
     field :price, :integer
-    field :valid_at, Ecto.Date
+    field :valid_at, :date
   end
 end
 

@@ -20,7 +20,7 @@ defmodule Ecto.ChangesetTest do
       field :decimal, :decimal
       field :upvotes, :integer, default: 0
       field :topics, {:array, :string}
-      field :published_at, Ecto.DateTime
+      field :published_at, :naive_datetime
       has_many :comments, Ecto.ChangesetTest.Comment, on_replace: :delete
       has_one :comment, Ecto.ChangesetTest.Comment
     end

@@ -165,7 +165,7 @@ defmodule Ecto.Integration.TypeTest do
 
   @tag :map_type
   test "embeds one" do
-    item = %Item{price: 123, valid_at: Ecto.Date.utc}
+    item = %Item{price: 123, valid_at: ~D[2014-01-16]}
     order =
       %Order{}
       |> Ecto.Changeset.change
@@ -188,7 +188,7 @@ defmodule Ecto.Integration.TypeTest do
   @tag :map_type
   @tag :array_type
   test "embeds many" do
-    item = %Item{price: 123, valid_at: Ecto.Date.utc}
+    item = %Item{price: 123, valid_at: ~D[2014-01-16]}
     tag =
       %Tag{}
       |> Ecto.Changeset.change

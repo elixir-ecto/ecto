@@ -5,9 +5,8 @@ defmodule Ecto.Integration.IntervalTest do
   alias Ecto.Integration.TestRepo
   import Ecto.Query
 
-  @posted %Ecto.Date{year: 2014, month: 1, day: 1}
-  @inserted_at %Ecto.DateTime{year: 2014, month: 1, day: 1,
-                              hour: 2, min: 0, sec: 0, usec: 0}
+  @posted ~D[2014-01-01]
+  @inserted_at ~N[2014-01-01 02:00:00.0]
 
   setup do
     TestRepo.insert!(%Post{posted: @posted, inserted_at: @inserted_at})
@@ -251,7 +250,7 @@ defmodule Ecto.Integration.IntervalTest do
   end
 
   test "from_now" do
-    current = Ecto.DateTime.utc.year
+    current = DateTime.utc_now.year
     dec = Decimal.new(5)
     assert [{{y, _, _}, _}] = TestRepo.all(from p in Post, select: from_now(5, "year"))
     assert y > current
@@ -266,7 +265,7 @@ defmodule Ecto.Integration.IntervalTest do
   end
 
   test "ago" do
-    current = Ecto.DateTime.utc.year
+    current = DateTime.utc_now.year
     dec = Decimal.new(5)
     assert [{{y, _, _}, _}] = TestRepo.all(from p in Post, select: ago(5, "year"))
     assert y < current
