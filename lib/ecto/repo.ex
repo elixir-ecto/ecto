@@ -460,8 +460,8 @@ defmodule Ecto.Repo do
   See the "Shared options" section at the module documentation for
   remaining options.
 
-  ## Example
-  
+  ## Examples
+
       MyRepo.insert_all(Post, [[title: "My first post"], [title: "My second post"]])
       MyRepo.insert_all(Post, [%{title: "My first post"}, %{title: "My second post"}])
   """
