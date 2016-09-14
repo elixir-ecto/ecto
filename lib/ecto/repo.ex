@@ -234,7 +234,7 @@ defmodule Ecto.Repo do
 
   @doc """
   Starts any connection pooling or supervision and return `{:ok, pid}`
-  or just `:ok` if nothing needs to be done. 
+  or just `:ok` if nothing needs to be done.
 
   Returns `{:error, {:already_started, pid}}` if the repo is already
   started or `{:error, term}` in case anything else goes wrong.
@@ -459,6 +459,10 @@ defmodule Ecto.Repo do
 
   See the "Shared options" section at the module documentation for
   remaining options.
+
+  ## Example
+      MyRepo.insert_all(Post, [[title: "My first post"], [title: "My second post"]])
+      MyRepo.insert_all(Post, [%{title: "My first post"}, %{title: "My second post"}])
   """
   @callback insert_all(schema_or_source :: binary | {binary, Ecto.Schema.t} | Ecto.Schema.t,
                        entries :: [map | Keyword.t], opts :: Keyword.t) :: {integer, nil | [term]} | no_return
