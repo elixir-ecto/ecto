@@ -179,6 +179,16 @@ defmodule Ecto.Association do
     struct
   end
 
+  @doc false
+  def update_parent_prefix(changeset, parent) do
+    case parent do
+      %{__meta__: %{source: {prefix, _}}} ->
+        update_in changeset.data, &Ecto.put_meta(&1, prefix: prefix)
+      _ ->
+        changeset
+    end
+  end
+
   @doc """
   Performs the repository action in the related changeset,
   returning `{:ok, data}` or `{:error, changes}`.
@@ -412,12 +422,14 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
-  def on_repo_change(%{on_replace: on_replace} = refl, parent_changeset,
+  def on_repo_change(%{on_replace: on_replace} = refl, %{data: parent} = parent_changeset,
                      %{action: :replace} = changeset, opts) do
     changeset = case on_replace do
       :nilify -> %{changeset | action: :update}
       :delete -> %{changeset | action: :delete}
     end
+
+    changeset = Ecto.Association.update_parent_prefix(changeset, parent)
 
     case on_repo_change(refl, %{parent_changeset | data: nil}, changeset, opts) do
       {:ok, _} -> {:ok, nil}
@@ -431,6 +443,7 @@ defmodule Ecto.Association.Has do
 
     {key, value} = parent_key(assoc, parent)
     changeset = update_parent_key(changeset, action, key, value)
+    changeset = Ecto.Association.update_parent_prefix(changeset, parent)
 
     case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
@@ -767,7 +780,9 @@ defmodule Ecto.Association.BelongsTo do
     on_repo_change(refl, parent_changeset, %{changeset | action: :delete}, opts)
   end
 
-  def on_repo_change(_refl, %{repo: repo}, %{action: action} = changeset, opts) do
+  def on_repo_change(_refl, %{data: parent, repo: repo}, %{action: action} = changeset, opts) do
+    changeset = Ecto.Association.update_parent_prefix(changeset, parent)
+
     case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
         if action == :delete, do: {:ok, nil}, else: ok
@@ -946,6 +961,9 @@ defmodule Ecto.Association.ManyToMany do
         where: field(j, ^join_owner_key) == ^owner_value and
                field(j, ^join_related_key) == ^related_value
 
+    {prefix, _} = owner.__meta__.source
+    query = Map.put(query, :prefix, prefix)
+
     repo.delete_all query, opts
     {:ok, nil}
   end
@@ -953,6 +971,8 @@ defmodule Ecto.Association.ManyToMany do
   def on_repo_change(%{field: field, join_through: join_through, join_keys: join_keys},
                      %{repo: repo, data: owner, constraints: constraints} = parent_changeset,
                      %{action: action} = changeset, opts) do
+    changeset = Ecto.Association.update_parent_prefix(changeset, owner)
+
     case apply(repo, action, [changeset, opts]) do
       {:ok, related} ->
         [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys

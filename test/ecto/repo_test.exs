@@ -243,13 +243,13 @@ defmodule Ecto.RepoTest do
       %MySchema{y: "loaded"}
       |> TestRepo.insert!
       |> Ecto.Changeset.cast(%{y: "updated"}, [:y])
-    assert_received :insert
+    assert_received {:insert, _}
 
     TestRepo.insert_or_update built
-    assert_received :insert
+    assert_received {:insert, _}
 
     TestRepo.insert_or_update loaded
-    assert_received :update
+    assert_received {:update, _}
   end
 
   test "insert_or_update fails on invalid states" do
