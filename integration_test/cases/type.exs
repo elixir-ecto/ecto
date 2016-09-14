@@ -47,7 +47,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [^datetime] = TestRepo.all(from p in Post, where: p.inserted_at == ^datetime, select: p.inserted_at)
 
     # Datetime
-    datetime = DateTime.utc_now
+    datetime = System.system_time(:seconds) * 1_000_000 |> DateTime.from_unix!(:microseconds)
     TestRepo.insert!(%User{inserted_at: datetime})
     assert [^datetime] = TestRepo.all(from u in User, where: u.inserted_at == ^datetime, select: u.inserted_at)
   end
@@ -235,7 +235,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [_] =
            TestRepo.all(from p in "posts", where: p.inserted_at in ^[datetime], select: p.inserted_at)
 
-    datetime = DateTime.utc_now
+    datetime = System.system_time(:seconds) * 1_000_000 |> DateTime.from_unix!(:microseconds)
     assert {1, _} =
            TestRepo.insert_all("users", [[inserted_at: datetime, updated_at: datetime]])
     assert {1, _} =
