@@ -10,12 +10,6 @@ defmodule Ecto.Repo.Queryable do
 
   require Ecto.Query
 
-  def transaction(adapter, repo, opts, fun_or_multi) when is_list(opts) do
-    IO.write :stderr, "warning: Ecto.Repo.transaction/2 with opts as first " <>
-                      "argument is deprecated, please switch arguments\n#{Exception.format_stacktrace()}"
-    transaction(adapter, repo, fun_or_multi, opts)
-  end
-
   def transaction(adapter, repo, fun, opts) when is_function(fun, 0) do
     adapter.transaction(repo, opts, fun)
   end

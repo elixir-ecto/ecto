@@ -261,16 +261,9 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def __before_compile__(conn, env) do
     config = Module.get_attribute(env.module, :config)
-    pool   = Keyword.get(config, :pool, DBConnection.Poolboy)
-    if pool == Ecto.Adapters.SQL.Sandbox and config[:pool_size] == 1 do
-      IO.puts :stderr, "warning: setting the :pool_size to 1 for #{inspect env.module} " <>
-                       "when using the Ecto.Adapters.SQL.Sandbox pool is deprecated and " <>
-                       "won't work as expected. Please remove the :pool_size configuration " <>
-                       "or set it to a reasonable number like 10"
-    end
-
     pool_name = pool_name(env.module, config)
     norm_config = normalize_config(config)
+
     quote do
       @doc false
       def __sql__, do: unquote(conn)
@@ -328,24 +321,15 @@ defmodule Ecto.Adapters.SQL do
     end
 
     # Check if the pool options should overriden
-    {pool_name, pool_opts} = case Keyword.fetch(opts, :pool) do
-      {:ok, pool} when pool != Ecto.Adapters.SQL.Sandbox ->
-        {pool_name(repo, opts), opts}
-      _ ->
-        repo.__pool__
-    end
-    opts = [name: pool_name] ++ Keyword.delete(opts, :pool) ++ pool_opts
-
-    opts =
-      if function_exported?(repo, :after_connect, 1) and not Keyword.has_key?(opts, :after_connect) do
-        IO.puts :stderr, "warning: #{inspect repo}.after_connect/1 is deprecated. If you want to " <>
-                         "perform some action after connecting, please set after_connect: {module, fun, args}" <>
-                         "in your repository configuration"
-        Keyword.put(opts, :after_connect, {repo, :after_connect, []})
-      else
-        opts
+    {pool_name, pool_opts} =
+      case Keyword.fetch(opts, :pool) do
+        {:ok, pool} when pool != Ecto.Adapters.SQL.Sandbox ->
+          {pool_name(repo, opts), opts}
+        _ ->
+          repo.__pool__
       end
 
+    opts = [name: pool_name] ++ Keyword.delete(opts, :pool) ++ pool_opts
     connection.child_spec(opts)
   end
 

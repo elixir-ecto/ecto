@@ -27,9 +27,7 @@ defmodule Mix.Ecto do
       repos = Application.get_env(app, :ecto_repos) ->
         repos
 
-      # TODO: Remove function exported check once we depend on 1.3 only
-      not function_exported?(Mix.Project, :deps_paths, 0) or
-          Map.has_key?(Mix.Project.deps_paths, :ecto) ->
+      Map.has_key?(Mix.Project.deps_paths, :ecto) ->
         Mix.shell.error """
         warning: could not find repositories for application #{inspect app}.
 

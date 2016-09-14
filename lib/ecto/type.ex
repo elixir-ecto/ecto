@@ -8,7 +8,7 @@ defmodule Ecto.Type do
   types can be used in Ecto to augment existing types or providing
   your own types.
 
-  ## Augmenting types
+  ## Example
 
   Imagine you want to support your id field to be looked up as a
   permalink. For example, you want the following query to work:
@@ -62,30 +62,9 @@ defmodule Ecto.Type do
         end
       end
 
-  ## New types
-
-  In the previous example, we say we were augmenting an existing type
-  because we were keeping the underlying representation the same, the
-  value stored in the struct and the database was always an integer.
-
-  Ecto types also allow developers to dump and load new types.
-  In order for this to work, callbacks should take care of encoding your
-  custom Ecto type into its DB representation, as well as decoding it
-  from the DB back into the Ecto type. Each callback should behave
-  as follows:
-
-    * `type` should output the name of the DB type
-    * `cast` should receive any type and output your custom Ecto type
-    * `load` should receive the DB type and output your custom Ecto type
-    * `dump` should receive your custom Ecto type and output the DB type
-
-  `Ecto.DateTime` is an example of a custom type. Developers often use
-  `Ecto.DateTime` in their schemas and Ecto takes care of converting
-  between types whenever the schema information is available. Developers
-  may also implement `Ecto.DataType` for `Ecto.DateTime`, allowing
-  `Ecto.DateTime` to behave as the database `:datetime` even in the
-  absence of schema information.
   """
+
+  # TODO: Remove all :datetime entries from this module
 
   import Kernel, except: [match?: 2]
 
@@ -100,17 +79,17 @@ defmodule Ecto.Type do
 
   @typep base      :: :integer | :float | :boolean | :string | :map |
                       :binary | :decimal | :id | :binary_id |
-                      :datetime | :date | :time | :any
+                      :datetime | :utc_datetime  | :naive_datetime| :date | :time | :any
   @typep composite :: {:array, t} | {:map, t} | {:embed, Ecto.Embedded.t} | {:in, t}
 
-  @base      ~w(integer float boolean string binary decimal datetime date time id binary_id map any)a
+  @base      ~w(integer float boolean string binary decimal datetime utc_datetime naive_datetime date time id binary_id map any)a
   @composite ~w(array map in embed)a
 
   @doc """
   Returns the underlying schema type for the custom type.
 
-  For example, if you want to provide your own datetime
-  structures, the type function should return `:datetime`.
+  For example, if you want to provide your own date
+  structures, the type function should return `:date`.
 
   Note this function is not required to return Ecto primitive
   types, the type is only required to be known by the adapter.

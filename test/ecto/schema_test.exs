@@ -310,54 +310,6 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  test "raises helpful error for :datetime" do
-    assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.DateTime\?/, fn ->
-      defmodule SchemaInvalidFieldType do
-        use Ecto.Schema
-
-        schema "invalidtype" do
-          field :published_at, :datetime
-        end
-      end
-    end
-  end
-
-  test "raises helpful error for :date" do
-    assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.Date\?/, fn ->
-      defmodule SchemaInvalidFieldType do
-        use Ecto.Schema
-
-        schema "invalidtype" do
-          field :published_on, :date
-        end
-      end
-    end
-  end
-
-  test "raises helpful error for :time" do
-    assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.Time\?/, fn ->
-      defmodule SchemaInvalidFieldType do
-        use Ecto.Schema
-
-        schema "invalidtype" do
-          field :published_time, :time
-        end
-      end
-    end
-  end
-
-  test "raises helpful error for :uuid" do
-    assert_raise ArgumentError, ~r/Maybe you meant to use Ecto.UUID\?/, fn ->
-      defmodule SchemaInvalidFieldType do
-        use Ecto.Schema
-
-        schema "invalidtype" do
-          field :author_id, :uuid
-        end
-      end
-    end
-  end
-
   test "fail invalid schema" do
     assert_raise ArgumentError, "schema source must be a string, got: :hello", fn ->
       defmodule SchemaFail do

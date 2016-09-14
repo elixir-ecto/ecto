@@ -147,9 +147,6 @@ defmodule Ecto.Schema do
 
   Custom type             | Database type           | Elixir type
   :---------------------- | :---------------------- | :---------------------
-  `Ecto.DateTime`         | `:datetime`             | `%Ecto.DateTime{}`
-  `Ecto.Date`             | `:date`                 | `%Ecto.Date{}`
-  `Ecto.Time`             | `:time`                 | `%Ecto.Time{}`
   `Ecto.UUID`             | `:uuid`                 | `uuid-string`
 
   Read the `Ecto.Type` documentation for more information on implementing
@@ -1612,37 +1609,25 @@ defmodule Ecto.Schema do
 
   defp check_type!(name, type, virtual?) do
     cond do
+      type == :datetime ->
+        raise ArgumentError, "invalid type :datetime for field #{inspect name}. " <>
+                             "You probably meant to choose one between :naive_datetime " <>
+                             "(no timezone information) or :utc_datetime (timezone is set to UTC)"
       type == :any and not virtual? ->
         raise ArgumentError, "only virtual fields can have type :any, " <>
                              "invalid type for field #{inspect name}"
-      Ecto.Type.primitive?(type) and not type in [:date, :time, :datetime] ->
-        true
+      Ecto.Type.primitive?(type) ->
+        type
       is_atom(type) ->
         if Code.ensure_compiled?(type) and function_exported?(type, :type, 0) do
           type
         else
-          raise_type_error(name, type)
+          raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}"
         end
       true ->
         raise ArgumentError, "invalid type #{inspect type} for field #{inspect name}"
     end
   end
-
-  defp raise_type_error(name, type) do
-    raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}" <>
-                         raise_type_error_hint(type)
-  end
-
-  defp raise_type_error_hint(:datetime),
-    do: ". Maybe you meant to use Ecto.DateTime?"
-  defp raise_type_error_hint(:date),
-    do: ". Maybe you meant to use Ecto.Date?"
-  defp raise_type_error_hint(:time),
-    do: ". Maybe you meant to use Ecto.Time?"
-  defp raise_type_error_hint(:uuid),
-    do: ". Maybe you meant to use Ecto.UUID?"
-  defp raise_type_error_hint(_),
-    do: ""
 
   defp store_mfa_autogenerate!(mod, name, type, mfa) do
     cond do

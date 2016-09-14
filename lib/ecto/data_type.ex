@@ -5,29 +5,16 @@ defprotocol Ecto.DataType do
   While `Ecto.Type` allows developers to cast/load/dump
   any value from the storage into the struct based on the
   schema, `Ecto.DataType` allows developers to convert
-  existing data types into existing Ecto types without
+  existing data types into primitive Ecto types without
   the schema information.
 
-  For example, `Ecto.Date` is a custom type, represented
-  by the `%Ecto.Date{}` struct that can be used in place
-  of Ecto's primitive `:date` type. Therefore, we need to
-  tell Ecto how to convert `%Ecto.Date{}` into `:date`,
-  even in the absence of schema information, and such is
-  done with the `Ecto.DataType` protocol:
+  For example, Elixir's native `Date` struct implements
+  the Ecto.DataType protocol so it is properly converted
+  to a tuple when directly passed to adapters:
 
       defimpl Ecto.DataType, for: Ecto.Date do
-        # Dumps to the default representation. In this case, :date.
-        def dump(value) do
-          cast(value, :date)
-        end
-
-        # Implement any other desired casting rule.
-        def cast(%Ecto.Date{day: day, month: month, year: year}, :date) do
+        def dump(%Date{day: day, month: month, year: year}) do
           {:ok, {year, month, day}}
-        end
-
-        def cast(_, _) do
-          :error
         end
       end
 
@@ -44,7 +31,7 @@ defprotocol Ecto.DataType do
   @doc """
   Invoked when attempting to cast this data structure to another type.
   """
-  # TODO: Deprecate this casting function when we migrate to Elixir v1.3.
+  # TODO: Remove this callback on Ecto v2.2
   @spec cast(term, Ecto.Type.t) :: {:ok, term} | :error
   def cast(value, type)
 end
@@ -78,6 +65,7 @@ defimpl Ecto.DataType, for: List do
   end
 end
 
+# TODO: Remove Ecto.Date|Time types on Ecto v2.2
 defimpl Ecto.DataType, for: Ecto.DateTime do
   def dump(value), do: cast(value, :datetime)
 
