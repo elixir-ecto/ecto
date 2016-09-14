@@ -16,7 +16,7 @@ defmodule Ecto.Model do
     end
   end
 
-  @type t :: %{__struct__: atom}
+  @type t :: struct
 
   @doc false
   def primary_key(struct) do

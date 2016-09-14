@@ -252,7 +252,7 @@ defmodule Ecto.Schema do
   defined so structs and changeset functionalities are available.
   """
 
-  @type t :: %{__struct__: atom}
+  @type t :: struct
 
   defmodule Metadata do
     @moduledoc """
