@@ -649,47 +649,6 @@ defmodule Ecto.Repo do
         uuid: "36fd2706-1baf-433b-82bb-8c7fada847ba"},
         conflict_target: [:uuid], update: [:title])
   """
-  @callback upsert(struct :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
-              {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
-
-  @doc """
-  Inserts or updates a changeset depending on whether the struct is persisted
-  or not.
-
-  The distinction whether to insert or update will be made on the
-  `Ecto.Schema.Metadata` field `:state`. The `:state` is automatically set by
-  Ecto when loading or building a schema.
-
-  Please note that for this to work, you will have to load existing structs from
-  the database. So even if the struct exists, this won't work:
-
-      struct = %Post{id: 'existing_id', ...}
-      MyRepo.insert_or_update changeset
-      # => {:error, "id already exists"}
-
-  ## Options
-
-    * `:prefix` - The prefix to run the query on (such as the schema path
-      in Postgres or the database in MySQL). This overrides the prefix set
-      in the struct.
-
-  See the "Shared options" section at the module documentation.
-
-  ## Example
-
-      result =
-        case MyRepo.get(Post, id) do
-          nil  -> %Post{id: id} # Post not found, we build one
-          post -> post          # Post exists, let's use it
-        end
-        |> Post.changeset(changes)
-        |> MyRepo.insert_or_update
-
-      case result do
-        {:ok, struct}       -> # Inserted or updated with success
-        {:error, changeset} -> # Something went wrong
-      end
-  """
   @callback insert_or_update(changeset :: Ecto.Changeset.t, opts :: Keyword.t) ::
             {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 

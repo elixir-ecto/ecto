@@ -588,6 +588,26 @@ defmodule Ecto.Adapters.PostgresTest do
     assert query == ~s{INSERT INTO "prefix"."schema" VALUES (DEFAULT)}
   end
 
+  test "upsert" do
+    # prefix, table, header, rows, on_conflict, conflict_target, update, returning
+    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :update, [:id], [:x, :y], [:id])
+    assert query == ~s{INSERT INTO "schema" ("x","y") VALUES ($1,$2) ON CONFLICT ("id") } <>
+      ~s{DO UPDATE SET "x" = $3,"y" = $4 RETURNING "id"}
+
+    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :update, [:id], [:x], [:id])
+    assert query == ~s{INSERT INTO "schema" ("x","y") VALUES ($1,$2) ON CONFLICT ("id") } <>
+      ~s{DO UPDATE SET "x" = $3 RETURNING "id"}
+
+    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :nothing, [], [], [])
+    assert query == ~s{INSERT INTO "schema" ("x","y") VALUES ($1,$2) ON CONFLICT DO NOTHING}
+
+    query = SQL.upsert("data", "posts", [:id, :title, :inserted_at, :updated_at], [[:id, :title, :inserted_at, :updated_at]],
+      :update, [:id], [:updated_at, :title, :something_wrong], [])
+    assert query == ~s{INSERT INTO "data"."posts" ("id","title","inserted_at","updated_at") VALUES ($1,$2,$3,$4) } <>
+      ~s{ON CONFLICT ("id") DO UPDATE SET "title" = $5,"updated_at" = $6}
+
+  end
+
   test "update" do
     query = SQL.update(nil, "schema", [:x, :y], [:id], [])
     assert query == ~s{UPDATE "schema" SET "x" = $1, "y" = $2 WHERE "id" = $3}

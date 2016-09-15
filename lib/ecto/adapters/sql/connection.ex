@@ -70,8 +70,9 @@ defmodule Ecto.Adapters.SQL.Connection do
   @doc """
   Returns an INSERT ON CONFLICT DO for the given `rows` in `table`.
   """
-  @callback upsert(prefix ::String.t, table :: String.t, on_conflict :: atom,
-    conflit_target :: [atom], update :: [atom], returning :: [atom]) :: String.t
+  @callback upsert(prefix ::String.t, table :: String.t, header :: [atom],
+    rows :: [[atom | nil]], on_conflict :: atom, conflit_target :: [atom],
+    update :: [atom], returning :: [atom]) :: String.t
 
   @doc """
   Returns an UPDATE for the given `fields` in `table` filtered by
