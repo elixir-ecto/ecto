@@ -960,7 +960,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "query where interpolation" do
-    post1 = TestRepo.insert!(%Post{text: "x", title: "hello"  })
+    post1 = TestRepo.insert!(%Post{text: "x", title: "hello"})
     post2 = TestRepo.insert!(%Post{text: "y", title: "goodbye"})
 
     assert [post1, post2] == Post |> where([], []) |> TestRepo.all |> Enum.sort_by(& &1.id)
@@ -1075,34 +1075,22 @@ defmodule Ecto.Integration.RepoTest do
 
   @tag :upsert
   test "upsert on conflict ignore" do
-    {:ok, inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"},
-      on_conflict: :nothing)
+    {:ok, inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first",
+      uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}, on_conflict: :nothing)
     assert inserted.id
 
-    {:ok, not_inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"},
-      on_conflict: :nothing, update: [:id]) # Update field specified for mysql resulting in ON DUPLICATE KEY `id` = `id`
+    {:ok, not_inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first",
+      uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}, on_conflict: :nothing, update: [:id])
+    # Update field specified for mysql resulting in ON DUPLICATE KEY `id` = `id`
     assert not_inserted.id in [0, nil]
 
-    {:ok, inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first", uuid: "1aaaaaaa-ee8a-3ca4-894e-db77e160355e"},
-      on_conflict: :nothing, update: [:uuid])
+    {:ok, inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first",
+      uuid: "1aaaaaaa-ee8a-3ca4-894e-db77e160355e"}, on_conflict: :nothing, update: [:uuid])
     assert inserted.id
 
-    {:ok, not_inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first", uuid: "1aaaaaaa-ee8a-3ca4-894e-db77e160355e"},
-      on_conflict: :nothing, update: [:uuid])
+    {:ok, not_inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first",
+      uuid: "1aaaaaaa-ee8a-3ca4-894e-db77e160355e"}, on_conflict: :nothing, update: [:uuid])
     assert not_inserted.id in [0, nil]
-  end
-
-  @tag :upsert
-  test "upsert restrict changes to subset of columns" do
-    original = %Ecto.Integration.Post{title: "original title", text: "original text"}
-    {:ok, inserted} = TestRepo.upsert(original)
-
-    update = %Ecto.Integration.Post{id: inserted.id, title: "new title", text: "do not update!"}
-    {:ok, _} = TestRepo.upsert(update, update: [:title])
-
-    post = TestRepo.one(Post)
-    assert post.title == "new title"
-    assert post.text == "original text"
   end
 
   @tag :upsert
@@ -1110,25 +1098,5 @@ defmodule Ecto.Integration.RepoTest do
     assert_raise ArgumentError, ~r"Please specify conflict_target parameter", fn ->
       TestRepo.upsert %Ecto.Integration.Barebone{num: 100}
     end
-  end
-
-  @tag :upsert
-  test "upsert with changeset only update changed columns" do
-    {:ok, original} = TestRepo.upsert(%Post{title: "original title", text: "original text"},
-      conflict_target: :id, update: [:public, :title, :inserted_at, :updated_at])
-
-    # The conflict action should only update the title
-    update =
-      Ecto.Changeset.cast(%Post{},
-        %{"id" => original.id, "title" => "new title"},
-        ~w(id title))
-
-    {:ok, _} = TestRepo.upsert(update,
-      conflict_target: :id, update: [:public, :title, :inserted_at, :updated_at])
-
-    post = TestRepo.one(Post)
-    assert post.title == "new title"
-    assert post.text == "original text"
-    assert post.uuid == original.uuid
   end
 end
