@@ -674,8 +674,8 @@ defmodule Ecto.Schema do
   schema often has a `has_one` or a `has_many` field with the reverse association.
 
   You should use `belongs_to` in the table that contains the foreign key. Imagine
-  a company <-> manager relationship. If the company contains the `manager_id` in
-  the underlying database table, we say the company belongs to manager.
+  a company <-> employee relationship. If the employee contains the `company_id` in
+  the underlying database table, we say the employee belongs to company.
 
   In fact, when you invoke this macro, a field with the name of foreign key is
   automatically defined in the schema for you.
