@@ -308,45 +308,68 @@ defmodule Ecto.RepoTest do
     assert Process.get(:ecto_counter) == 2
   end
 
-  test "insert maps repo constraint violation to changeset constraint" do
-    my_schema = %MySchema{id: 1}
-    changeset =
-      put_in(my_schema.__meta__.context, {:invalid, [unique: "custom_foo_index"]})
-      |> Ecto.Changeset.change(x: "foo")
-      |> Ecto.Changeset.unique_constraint(:foo, name: "custom_foo_index")
-    assert {:error, changeset} = TestRepo.update(changeset)
-    refute changeset.valid?
-  end
+  describe "changeset constraints" do
+    test "are mapped to repo constraint violations" do
+      my_schema = %MySchema{id: 1}
+      changeset =
+        put_in(my_schema.__meta__.context, {:invalid, [unique: "custom_foo_index"]})
+        |> Ecto.Changeset.change(x: "foo")
+        |> Ecto.Changeset.unique_constraint(:foo, name: "custom_foo_index")
+      assert {:error, changeset} = TestRepo.insert(changeset)
+      refute changeset.valid?
+    end
 
-  test "insert maps repo constraint violation to changeset constraint using suffix match" do
-    my_schema = %MySchema{id: 1}
-    changeset =
-      put_in(my_schema.__meta__.context, {:invalid, [unique: "foo_table_custom_foo_index"]})
-      |> Ecto.Changeset.change(x: "foo")
-      |> Ecto.Changeset.unique_constraint(:foo, name: "custom_foo_index", match: :suffix)
-    assert {:error, changeset} = TestRepo.update(changeset)
-    refute changeset.valid?
-  end
+    test "are mapped to repo constraint violation using suffix match" do
+      my_schema = %MySchema{id: 1}
+      changeset =
+        put_in(my_schema.__meta__.context, {:invalid, [unique: "foo_table_custom_foo_index"]})
+        |> Ecto.Changeset.change(x: "foo")
+        |> Ecto.Changeset.unique_constraint(:foo, name: "custom_foo_index", match: :suffix)
+      assert {:error, changeset} = TestRepo.insert(changeset)
+      refute changeset.valid?
+    end
 
-  test "insert fails to maps repo constraint violation to changeset constraint with non-matching name" do
-    my_schema = %MySchema{id: 1}
-    changeset =
-      put_in(my_schema.__meta__.context, {:invalid, [unique: "foo_table_custom_foo_index"]})
-      |> Ecto.Changeset.change(x: "foo")
-      |> Ecto.Changeset.unique_constraint(:foo, name: "custom_foo_index")
-    assert_raise Ecto.ConstraintError, fn ->
-      TestRepo.update(changeset)
+    test "may fail to map to repo constraint violation on name" do
+      my_schema = %MySchema{id: 1}
+      changeset =
+        put_in(my_schema.__meta__.context, {:invalid, [unique: "foo_table_custom_foo_index"]})
+        |> Ecto.Changeset.change(x: "foo")
+        |> Ecto.Changeset.unique_constraint(:foo, name: "custom_foo_index")
+      assert_raise Ecto.ConstraintError, fn ->
+        TestRepo.insert(changeset)
+      end
+    end
+
+    test "may fail to map to repo constraint violation on index type" do
+      my_schema = %MySchema{id: 1}
+      changeset =
+        put_in(my_schema.__meta__.context, {:invalid, [invalid_constraint_type: "my_schema_foo_index"]})
+        |> Ecto.Changeset.change(x: "foo")
+        |> Ecto.Changeset.unique_constraint(:foo)
+      assert_raise Ecto.ConstraintError, fn ->
+        TestRepo.insert(changeset)
+      end
     end
   end
 
-  test "unknown constraint violation falls through and raises an exception" do
-    my_schema = %MySchema{id: 1}
-    changeset =
-      put_in(my_schema.__meta__.context, {:invalid, [invalid_constraint_type: "my_schema_foo_index"]})
-      |> Ecto.Changeset.change(x: "foo")
-      |> Ecto.Changeset.unique_constraint(:foo)
-    assert_raise Ecto.ConstraintError, fn ->
-      TestRepo.update(changeset)
+  describe "on conflict" do
+    test "raises on unknown on_conflict value" do
+      assert_raise ArgumentError, "unknown value for :on_conflict, got: :who_knows", fn ->
+        TestRepo.insert(%MySchema{id: 1}, on_conflict: :who_knows)
+      end
+    end
+
+    test "raises on non-empty conflict_target with on_conflict raise" do
+      assert_raise ArgumentError, ":conflict_target option is forbidden when :on_conflict is :raise", fn ->
+        TestRepo.insert(%MySchema{id: 1}, on_conflict: :raise, conflict_target: :oops)
+      end
+    end
+
+    test "raises on query mismatch" do
+      assert_raise ArgumentError, ~r"cannot run on_conflict: query", fn ->
+        query = from p in "posts"
+        TestRepo.insert(%MySchema{id: 1}, on_conflict: query)
+      end
     end
   end
 end

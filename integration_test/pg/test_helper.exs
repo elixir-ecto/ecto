@@ -74,6 +74,14 @@ _   = Ecto.Adapters.Postgres.storage_down(TestRepo.config)
 {:ok, _pid} = TestRepo.start_link
 {:ok, _pid} = PoolRepo.start_link
 
+%{rows: [[version]]} = TestRepo.query!("SHOW server_version", [])
+
+if Version.match?(version, "~> 9.5") do
+  ExUnit.configure(exclude: [:upsert_without_conflict_target])
+else
+  ExUnit.configure(exclude: [:upsert])
+end
+
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)
 Ecto.Adapters.SQL.Sandbox.mode(TestRepo, :manual)
 Process.flag(:trap_exit, true)

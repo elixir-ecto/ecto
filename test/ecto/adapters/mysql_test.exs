@@ -43,9 +43,9 @@ defmodule Ecto.Adapters.MySQLTest do
     end
   end
 
-  defp normalize(query, operation \\ :all) do
-    {query, _params, _key} = Ecto.Query.Planner.prepare(query, operation, Ecto.Adapters.MySQL)
-    Ecto.Query.Planner.normalize(query, operation, Ecto.Adapters.MySQL)
+  defp normalize(query, operation \\ :all, counter \\ 0) do
+    {query, _params, _key} = Ecto.Query.Planner.prepare(query, operation, Ecto.Adapters.MySQL, counter)
+    Ecto.Query.Planner.normalize(query, operation, Ecto.Adapters.MySQL, counter)
   end
 
   test "from" do
@@ -464,37 +464,30 @@ defmodule Ecto.Adapters.MySQLTest do
   # Schema based
 
   test "insert" do
-    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], [])
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {:raise, [], []}, [])
     assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?)}
 
-    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y], [nil, :y]], [])
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y], [nil, :y]], {:raise, [], []}, [])
     assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?),(DEFAULT,?)}
 
-    query = SQL.insert(nil, "schema", [], [[]], [])
+    query = SQL.insert(nil, "schema", [], [[]], {:raise, [], []}, [])
     assert query == ~s{INSERT INTO `schema` () VALUES ()}
 
-    query = SQL.insert("prefix", "schema", [], [[]], [])
+    query = SQL.insert("prefix", "schema", [], [[]], {:raise, [], []}, [])
     assert query == ~s{INSERT INTO `prefix`.`schema` () VALUES ()}
   end
 
-  test "upsert" do
-    # prefix, table, header, rows, on_conflict, conflict_target, update, returning
-    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :update, [:id], [:x, :y], [:id])
-    assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `x` = ?,`y` = ?}
+  test "insert with on duplicate key" do
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {:nothing, [], []}, [])
+    assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `x` = `x`}
 
-    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :update, [:id], [:x], [:id])
-    assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `x` = ?}
+    update = from("schema", update: [set: [z: "foo"]]) |> normalize(:update_all)
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], []}, [])
+    assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `z` = 'foo'}
 
-    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :nothing, [], [:id], [])  # do nothing emulation
-    assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `id` = `id`}
-
-    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :nothing, [], [:x, :y], [])
-    assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `x` = `x`,`y` = `y`}
-
-    query = SQL.upsert("data", "posts", [:id, :title, :inserted_at, :updated_at], [[:id, :title, :inserted_at, :updated_at]],
-      :update, [:id], [:updated_at, :title, :something_wrong], [])
-    assert query == ~s{INSERT INTO `data`.`posts` (`id`,`title`,`inserted_at`,`updated_at`) VALUES (?,?,?,?) } <>
-      ~s{ON DUPLICATE KEY UPDATE `title` = ?,`updated_at` = ?}
+    update = from("schema", update: [set: [z: ^"foo"]]) |> normalize(:update_all, 2)
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], []}, [])
+    assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `z` = ?}
   end
 
   test "update" do

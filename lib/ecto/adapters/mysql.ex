@@ -172,11 +172,17 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def insert(repo, %{source: {prefix, source}, autogenerate_id: {key, :id}}, params, [key], opts) do
+  def insert(repo, %{source: {prefix, source}, autogenerate_id: {key, :id}}, params,
+             {_, query_params, _} = on_conflict, [key], opts) do
+    assert_no_conflict_target!(on_conflict)
     {fields, values} = :lists.unzip(params)
-    sql = @conn.insert(prefix, source, fields, [fields], [])
-    case Ecto.Adapters.SQL.query(repo, sql, values, opts) do
+    sql = @conn.insert(prefix, source, fields, [fields], on_conflict, [])
+    case Ecto.Adapters.SQL.query(repo, sql, values ++ query_params, opts) do
+      {:ok, %{num_rows: 1, last_insert_id: 0}} ->
+        {:ok, []}
       {:ok, %{num_rows: 1, last_insert_id: last_insert_id}} ->
+        {:ok, [{key, last_insert_id}]}
+      {:ok, %{num_rows: 2, last_insert_id: last_insert_id}} ->
         {:ok, [{key, last_insert_id}]}
       {:error, err} ->
         case @conn.to_constraints(err) do
@@ -186,42 +192,21 @@ defmodule Ecto.Adapters.MySQL do
     end
   end
 
-  def insert(repo, schema_meta, params, [], opts) do
-    super(repo, schema_meta, params, [], opts)
+  def insert(repo, schema_meta, params, on_conflict, [], opts) do
+    assert_no_conflict_target!(on_conflict)
+    super(repo, schema_meta, params, on_conflict, [], opts)
   end
 
-  def insert(_repo, %{schema: schema}, _params, returning, _opts) do
+  def insert(_repo, %{schema: schema}, _params, _on_conflict, returning, _opts) do
     raise ArgumentError, "MySQL does not support :read_after_writes in schemas for non-primary keys. " <>
                          "The following fields in #{inspect schema} are tagged as such: #{inspect returning}"
   end
 
-  @doc false
-  def upsert(repo, %{source: {prefix, source}, autogenerate_id: {key, :id}}, params, on_conflict,
-    conflict_target, update, returning, opts) do
-    {fields, ins_values} = :lists.unzip(params)
-    values = case on_conflict do
-      :update ->
-        checked_update = Enum.filter(update, fn update_key -> Keyword.has_key?(params, update_key) end)
-        update_values = Enum.map(checked_update, fn update_key -> Keyword.get(params, update_key) end)
-        ins_values ++ update_values
-      _ -> ins_values
-    end
-    sql = @conn.upsert(prefix, source, fields, [fields], on_conflict, conflict_target, update, returning)
-    case Ecto.Adapters.SQL.query(repo, sql, values, opts) do
-      {:ok, %{rows: nil, num_rows: 1, last_insert_id: last_insert_id}} ->
-        {:ok, [{key, last_insert_id}]}
-      {:ok, %{rows: nil, num_rows: 2}} ->  # mysql upsert returns num_rows: 2 in case of update
-        {:ok, []}
-      {:error, err} ->
-        case @conn.to_constraints(err) do
-          []          -> raise err
-          constraints -> {:invalid, constraints}
-        end
-    end
+  defp assert_no_conflict_target!({_, _, []}) do
+    []
   end
-
-  def upsert(repo, schema_meta, params, on_conflict, conflict_target, update, returning, opts) do
-    super(repo, schema_meta, params, on_conflict, conflict_target, update, returning, opts)
+  defp assert_no_conflict_target!({_, _, _}) do
+    raise ArgumentError, "MySQL does not support the :conflict_target option on insert/insert_all"
   end
 
   @doc false

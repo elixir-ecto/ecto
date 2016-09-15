@@ -5,6 +5,7 @@ defmodule Ecto.Repo.Schema do
 
   alias Ecto.Changeset
   alias Ecto.Changeset.Relation
+  require Ecto.Query
 
   @doc """
   Implementation for `Ecto.Repo.insert!/2`.
@@ -190,7 +191,8 @@ defmodule Ecto.Repo.Schema do
         {changes, extra, return} = autogenerate_id(metadata, changeset.changes, return, adapter)
         {changes, autogen} = dump_changes!(:insert, Map.take(changes, fields), schema, extra, types, adapter)
 
-        args = [repo, metadata, changes, return, opts]
+        on_conflict = on_conflict(metadata, changes, adapter, opts)
+        args = [repo, metadata, changes, on_conflict, return, opts]
         case apply(changeset, adapter, :insert, args) do
           {:ok, values} ->
             changeset
@@ -209,75 +211,6 @@ defmodule Ecto.Repo.Schema do
 
   defp do_insert(repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
     {:error, put_repo_and_action(changeset, :insert, repo)}
-  end
-
-  @doc """
-  Implementation for `Ecto.Repo.upsert/2`.
-  """
-  def upsert(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
-    do_upsert(repo, adapter, changeset, opts)
-  end
-
-  def upsert(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
-    changeset = Ecto.Changeset.change(struct)
-    do_upsert(repo, adapter, changeset, opts)
-  end
-
-  defp do_upsert(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
-    %{prepare: prepare, types: types} = changeset
-    struct = struct_from_changeset!(:upsert, changeset)
-    schema  = struct.__struct__
-    fields = schema.__schema__(:fields)
-    assocs = schema.__schema__(:associations)
-    return = schema.__schema__(:read_after_writes)
-
-    changeset = put_repo_and_action(changeset, :upsert, repo)
-    changeset = surface_changes(changeset, struct, types, fields ++ assocs)
-
-    wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
-      opts = Keyword.put(opts, :skip_transaction, true)
-      user_changeset = run_prepare(changeset, prepare)
-
-      {changeset, parents, children} = pop_assocs(user_changeset, assocs)
-      changeset = process_parents(changeset, parents, opts)
-
-      if changeset.valid? do
-        changeset = Ecto.Embedded.prepare(changeset, adapter, :upsert)
-
-        metadata = metadata(struct, opts)
-
-        {changes, extra, return} = autogenerate_id(metadata, changeset.changes, return, adapter)
-        {changes, autogen} = dump_changes!(:upsert, Map.take(changes, fields), schema, extra, types, adapter)
-        pk_field = Keyword.keys(Ecto.primary_key struct)
-        conflict_target = Keyword.get(opts, :conflict_target, pk_field)
-        conflict_target = case conflict_target do
-          [] -> raise ArgumentError, "Please specify conflict_target parameter"
-          ct when is_atom(ct) -> [ct]
-          _ -> conflict_target
-        end
-
-        update = Keyword.get(opts, :update, Keyword.keys(changes))
-        on_conflict = Keyword.get(opts, :on_conflict, :update)
-
-        args = [repo, metadata, changes, on_conflict, conflict_target, update, return, opts]
-        case apply(changeset, adapter, :upsert, args) do
-          {:ok, values} ->
-            changeset
-            |> load_changes(:loaded, values ++ extra, autogen, adapter)
-            |> process_children(children, user_changeset, opts)
-          {:error, _} = error ->
-            error
-          {:invalid, constraints} ->
-            {:error, constraints_to_errors(user_changeset, :upsert, constraints)}
-        end
-      else
-        {:error, changeset}
-      end
-    end)
-  end
-
-  defp do_upsert(repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
-    {:error, put_repo_and_action(changeset, :upsert, repo)}
   end
 
   @doc """
@@ -455,8 +388,51 @@ defmodule Ecto.Repo.Schema do
   defp metadata(%{__struct__: schema, __meta__: %{context: context, source: {prefix, source}}}, opts) do
     %{autogenerate_id: schema.__schema__(:autogenerate_id),
       context: context,
-      schema: schema, 
+      schema: schema,
       source: {Keyword.get(opts, :prefix, prefix), source}}
+  end
+
+  defp on_conflict(%{source: {prefix, source}, schema: schema}, changes, adapter, opts) do
+    on_conflict({source, schema}, prefix, changes, adapter, opts)
+  end
+
+  defp on_conflict(from, prefix, changes, adapter, opts) do
+    conflict_target = List.wrap Keyword.get(opts, :conflict_target)
+    case Keyword.get(opts, :on_conflict, :raise) do
+      :raise when conflict_target == [] ->
+        {:raise, [], []}
+      :raise ->
+        raise ArgumentError, ":conflict_target option is forbidden when :on_conflict is :raise"
+      :nothing ->
+        {:nothing, [], conflict_target}
+      [_ | _] = on_conflict ->
+        query = Ecto.Query.from from, update: ^on_conflict
+        on_conflict_query(query, from, prefix, changes, adapter, conflict_target)
+      %Ecto.Query{} = query ->
+        on_conflict_query(query, from, prefix, changes, adapter, conflict_target)
+      other ->
+        raise ArgumentError, "unknown value for :on_conflict, got: #{inspect other}"
+    end
+  end
+
+  defp on_conflict_query(query, from, prefix, changes, adapter, conflict_target) do
+    counter = length(changes)
+
+    {query, params, _} =
+      %{query | prefix: prefix}
+      |> Ecto.Query.Planner.assert_no_select!(:update_all)
+      |> Ecto.Query.Planner.returning(false)
+      |> Ecto.Query.Planner.prepare(:update_all, adapter, counter)
+
+    unless query.from == from do
+      raise ArgumentError, "cannot run on_conflict: query because the query " <>
+                           "has a different {source, schema} pair than the " <>
+                           "original struct/changeset/query. Got #{inspect query.from} " <>
+                           "and #{inspect from} respectively"
+    end
+
+    {Ecto.Query.Planner.normalize(query, :update_all, adapter, counter),
+     params, conflict_target}
   end
 
   defp apply(%{valid?: false} = changeset, _adapter, _action, _args) do
@@ -667,7 +643,6 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp action_to_auto(:insert), do: :autogenerate
-  defp action_to_auto(:upsert), do: :autogenerate
   defp action_to_auto(:update), do: :autoupdate
 
   defp add_pk_filter!(filters, struct) do

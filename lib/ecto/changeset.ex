@@ -174,7 +174,7 @@ defmodule Ecto.Changeset do
                         types: nil | %{atom => Ecto.Type.t}}
 
   @type error :: {String.t, Keyword.t}
-  @type action :: nil | :insert | :upsert | :update | :delete | :replace
+  @type action :: nil | :insert | :update | :delete | :replace
   @type constraint :: %{type: :unique, constraint: String.t, match: :exact | :suffix,
                         field: atom, message: error}
   @type data :: map()

@@ -34,18 +34,18 @@ defmodule Ecto.Query.Planner do
   The cache value is the compiled query by the adapter
   along-side the select expression.
   """
-  def query(query, operation, repo, adapter) do
-    {query, params, key} = prepare(query, operation, adapter)
+  def query(query, operation, repo, adapter, counter) do
+    {query, params, key} = prepare(query, operation, adapter, counter)
     if key == :nocache do
-      {_, select, prepared} = query_without_cache(query, operation, adapter)
+      {_, select, prepared} = query_without_cache(query, operation, adapter, counter)
       {build_meta(query, select), {:nocache, prepared}, params}
     else
-      query_with_cache(query, operation, repo, adapter, key, params)
+      query_with_cache(query, operation, repo, adapter, counter, key, params)
     end
   end
 
-  defp query_with_cache(query, operation, repo, adapter, key, params) do
-    case query_lookup(query, operation, repo, adapter, key) do
+  defp query_with_cache(query, operation, repo, adapter, counter, key, params) do
+    case query_lookup(query, operation, repo, adapter, counter, key) do
       {:nocache, select, prepared} ->
         {build_meta(query, select), {:nocache, prepared}, params}
       {_, :cached, select, cached} ->
@@ -57,7 +57,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp query_lookup(query, operation, repo, adapter, key) do
+  defp query_lookup(query, operation, repo, adapter, counter, key) do
     try do
       :ets.lookup(repo, key)
     rescue
@@ -66,12 +66,12 @@ defmodule Ecto.Query.Planner do
           "repo #{inspect repo} is not started, please ensure it is part of your supervision tree"
     else
       [term] -> term
-      [] -> query_prepare(query, operation, adapter, repo, key)
+      [] -> query_prepare(query, operation, adapter, counter, repo, key)
     end
   end
 
-  defp query_prepare(query, operation, adapter, repo, key) do
-    case query_without_cache(query, operation, adapter) do
+  defp query_prepare(query, operation, adapter, counter, repo, key) do
+    case query_without_cache(query, operation, adapter, counter) do
       {:cache, select, prepared} ->
         elem = {key, :cache, select, prepared}
         cache_insert(repo, key, elem)
@@ -100,8 +100,8 @@ defmodule Ecto.Query.Planner do
     :ok
   end
 
-  defp query_without_cache(query, operation, adapter) do
-    %{select: select} = query = normalize(query, operation, adapter)
+  defp query_without_cache(query, operation, adapter, counter) do
+    %{select: select} = query = normalize(query, operation, adapter, counter)
     {cache, prepared} = adapter.prepare(operation, query)
     {cache, select, prepared}
   end
@@ -140,11 +140,11 @@ defmodule Ecto.Query.Planner do
   This function is called by the backend before invoking
   any cache mechanism.
   """
-  def prepare(query, operation, adapter) do
+  def prepare(query, operation, adapter, counter) do
     query
     |> prepare_sources(adapter)
     |> prepare_assocs
-    |> prepare_cache(operation, adapter)
+    |> prepare_cache(operation, adapter, counter)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -164,7 +164,7 @@ defmodule Ecto.Query.Planner do
 
   defp prepare_source(query, %Ecto.SubQuery{query: inner_query} = subquery, adapter) do
     try do
-      {inner_query, params, key} = prepare(inner_query, :all, adapter)
+      {inner_query, params, key} = prepare(inner_query, :all, adapter, 0)
       inner_query = inner_query |> returning(true) |> normalize_select()
       %{subquery | query: inner_query, params: params, cache: key,
                    fields: subquery_fields(inner_query, inner_query.select)}
@@ -333,10 +333,10 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
-  def prepare_cache(query, operation, adapter) do
+  def prepare_cache(query, operation, adapter, counter) do
     {query, {cache, params}} =
       traverse_exprs(query, operation, {[], []}, &{&3, merge_cache(&1, &2, &3, &4, adapter)})
-    {query, Enum.reverse(params), finalize_cache(query, operation, cache)}
+    {query, Enum.reverse(params), finalize_cache(query, operation, cache, counter)}
   end
 
   defp merge_cache(:from, _query, expr, {cache, params}, _adapter) do
@@ -400,12 +400,12 @@ defmodule Ecto.Query.Planner do
   defp merge_cache(_left, :nocache, true), do: :nocache
   defp merge_cache(left, right, true),     do: [left|right]
 
-  defp finalize_cache(_query, _operation, :nocache) do
+  defp finalize_cache(_query, _operation, :nocache, _counter) do
     :nocache
   end
 
   defp finalize_cache(%{assocs: assocs, prefix: prefix, lock: lock, select: select},
-                      operation, cache) do
+                      operation, cache, counter) do
     cache =
       case select do
         %{take: take} when take != %{} ->
@@ -420,7 +420,7 @@ defmodule Ecto.Query.Planner do
       |> prepend_if(prefix != nil, [prefix: prefix])
       |> prepend_if(lock != nil,   [lock: lock])
 
-    [operation|cache]
+    [operation, counter | cache]
   end
 
   defp prepend_if(cache, true, prepend), do: prepend ++ cache
@@ -519,15 +519,28 @@ defmodule Ecto.Query.Planner do
   end
 
   @doc """
+  Asserts there is no select statement in the given query.
+  """
+  def assert_no_select!(%{select: nil} = query, _operation) do
+    query
+  end
+  def assert_no_select!(%{select: _} = query, operation) do
+    raise Ecto.QueryError,
+      query: query,
+      message: "`select` clause is not supported in `#{operation}`, " <>
+               "please pass the :returning option instead"
+  end
+
+  @doc """
   Normalizes the query.
 
   After the query was prepared and there is no cache
   entry, we need to update its interpolations and check
   its fields and associations exist and are valid.
   """
-  def normalize(query, operation, adapter) do
+  def normalize(query, operation, adapter, counter) do
     query
-    |> normalize(operation, adapter, 0)
+    |> normalize_query(operation, adapter, counter)
     |> elem(0)
     |> normalize_select()
   rescue
@@ -536,7 +549,7 @@ defmodule Ecto.Query.Planner do
       reraise e
   end
 
-  defp normalize(query, operation, adapter, counter) do
+  defp normalize_query(query, operation, adapter, counter) do
     case operation do
       :all ->
         assert_no_update!(query, operation)
@@ -596,7 +609,7 @@ defmodule Ecto.Query.Planner do
 
   defp prewalk(%Ecto.SubQuery{query: inner_query} = subquery, _kind, query, _expr, counter, adapter) do
     try do
-      {inner_query, counter} = normalize(inner_query, :all, adapter, counter)
+      {inner_query, counter} = normalize_query(inner_query, :all, adapter, counter)
       {%{subquery | query: inner_query, params: nil}, counter}
     rescue
       e -> raise Ecto.SubQueryError, query: query, exception: e

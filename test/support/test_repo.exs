@@ -61,15 +61,15 @@ defmodule Ecto.TestAdapter do
     {1, nil}
   end
 
-  def insert(_repo, %{source: {nil, "schema_migrations"}}, val, _, _) do
+  def insert(_repo, %{source: {nil, "schema_migrations"}}, val, _, _, _) do
     version = Keyword.fetch!(val, :version)
     Process.put(:migrated_versions, [version|migrated_versions()])
     {:ok, [version: 1]}
   end
 
-  def insert(_repo, %{context: nil, source: source}, _fields, return, _opts),
+  def insert(_repo, %{context: nil, source: source}, _fields, _on_conflict, return, _opts),
     do: send(self(), {:insert, source}) && {:ok, Enum.zip(return, 1..length(return))}
-  def insert(_repo, %{context: {:invalid, _}=res}, _fields, _return, _opts),
+  def insert(_repo, %{context: {:invalid, _}=res}, _fields, _on_conflict, _return, _opts),
     do: res
 
   # Notice the list of changes is never empty.

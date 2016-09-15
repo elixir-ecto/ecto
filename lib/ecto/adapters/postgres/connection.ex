@@ -131,7 +131,7 @@ if Code.ensure_loaded?(Postgrex) do
       assemble([select, from, join, where, group_by, having, order_by, limit, offset, lock])
     end
 
-    def update_all(%{from: from} = query) do
+    def update_all(%{from: from} = query, prefix \\ nil) do
       sources = create_names(query)
       {from, name} = get_source(query, sources, 0, from)
 
@@ -139,7 +139,8 @@ if Code.ensure_loaded?(Postgrex) do
       {join, wheres} = using_join(query, :update_all, "FROM", sources)
       where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
-      assemble(["UPDATE #{from} AS #{name} SET", fields, join, where, returning(query, sources)])
+      assemble([prefix || "UPDATE #{from} AS #{name} SET", fields, join,
+                where, returning(query, sources)])
     end
 
     def delete_all(%{from: from} = query) do
@@ -152,7 +153,7 @@ if Code.ensure_loaded?(Postgrex) do
       assemble(["DELETE FROM #{from} AS #{name}", join, where, returning(query, sources)])
     end
 
-    def insert(prefix, table, header, rows, returning) do
+    def insert(prefix, table, header, rows, on_conflict, returning) do
       values =
         if header == [] do
           "VALUES " <> Enum.map_join(rows, ",", fn _ -> "(DEFAULT)" end)
@@ -161,32 +162,32 @@ if Code.ensure_loaded?(Postgrex) do
           "VALUES " <> insert_all(rows, 1, "")
         end
 
-      assemble(["INSERT INTO #{quote_table(prefix, table)}", values, returning(returning)])
+      assemble(["INSERT INTO #{quote_table(prefix, table)}", insert_as(on_conflict),
+                values, on_conflict(on_conflict), returning(returning)])
     end
 
-    def upsert(prefix, table, header, rows, on_conflict, conflict_target, update, returning) do
-      values =
-        if header == [] do
-          "VALUES " <> Enum.map_join(rows, ",", fn _ -> "(DEFAULT)" end)
-        else
-          "(" <> Enum.map_join(header, ",", &quote_name/1) <> ") " <>
-          "VALUES " <> insert_all(rows, 1, "")
-        end
-      conflict_block = case on_conflict do
-        :update ->
-          update_header = Enum.filter(header, fn headr ->
-            Enum.member?(update, headr)
-          end)
-          {update_fields, _} = Enum.map_reduce update_header, length(header) + 1, fn field, acc ->
-            {"#{quote_name(field)} = $#{acc}", acc + 1}
-          end
-          "(" <> Enum.map_join(conflict_target, ",", &quote_name/1) <> ") " <>
-          "DO UPDATE SET " <> Enum.join(update_fields, ",")
-        :nothing -> "DO NOTHING"
-      end
-      assemble(["INSERT INTO #{quote_table(prefix, table)}", values,
-        "ON CONFLICT", conflict_block, returning(returning)]
-      )
+    defp insert_as({%{from: from} = query, _, _}) do
+      {_, name} = get_source(%{query | joins: []}, create_names(query), 0, from)
+      "AS #{name}"
+    end
+    defp insert_as({_, _, _}) do
+      []
+    end
+
+    defp on_conflict({:raise, _, []}) do
+      []
+    end
+    defp on_conflict({:nothing, _, targets}) do
+      "ON CONFLICT " <> conflict_target(targets) <> "DO NOTHING"
+    end
+    defp on_conflict({query, _, targets}) do
+      "ON CONFLICT " <> conflict_target(targets) <> "DO " <> update_all(query, "UPDATE SET")
+    end
+    defp conflict_target([]) do
+      ""
+    end
+    defp conflict_target(targets) do
+      "(" <> Enum.map_join(targets, ",", &quote_name/1) <> ") "
     end
 
     defp insert_all([row|rows], counter, acc) do

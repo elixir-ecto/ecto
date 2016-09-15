@@ -38,7 +38,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   defp prepare(query, operation \\ :all) do
-    Planner.prepare(query, operation, Ecto.TestAdapter)
+    Planner.prepare(query, operation, Ecto.TestAdapter, 0)
   end
 
   defp normalize(query, operation \\ :all) do
@@ -49,7 +49,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, params, _key} = prepare(query, operation)
     {query
      |> Planner.returning(operation == :all)
-     |> Planner.normalize(operation, Ecto.TestAdapter), params}
+     |> Planner.normalize(operation, Ecto.TestAdapter, 0), params}
   end
 
   test "prepare: merges all parameters" do
@@ -226,12 +226,12 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: generates a cache key" do
     {_query, _params, key} = prepare(from(Post, []))
-    assert key == [:all, {"posts", Post, 27727487}]
+    assert key == [:all, 0, {"posts", Post, 27727487}]
 
     query = from(p in Post, select: 1, lock: "foo", where: is_nil(nil),
                             join: c in Comment, preload: :comments)
     {_query, _params, key} = prepare(%{query | prefix: "foo"})
-    assert key == [:all,
+    assert key == [:all, 0,
                    {:lock, "foo"},
                    {:prefix, "foo"},
                    {:where, [{:is_nil, [], [nil]}]},
@@ -243,10 +243,10 @@ defmodule Ecto.Query.PlannerTest do
   test "prepare: generates a cache key for in based on the adapter" do
     query = from(p in Post, where: p.id in ^[1, 2, 3])
 
-    {_query, _params, key} = Planner.prepare(query, :all, Ecto.TestAdapter)
+    {_query, _params, key} = Planner.prepare(query, :all, Ecto.TestAdapter, 0)
     assert key == :nocache
 
-    {_query, _params, key} = Planner.prepare(query, :all, Ecto.Adapters.Postgres)
+    {_query, _params, key} = Planner.prepare(query, :all, Ecto.Adapters.Postgres, 0)
     assert key != :nocache
   end
 
@@ -254,7 +254,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, params, key} = prepare(from(subquery(Post), []))
     assert %{query: %Ecto.Query{}, params: []} = query.from
     assert params == []
-    assert key == [:all, [:all, {"posts", Ecto.Query.PlannerTest.Post, 27727487}]]
+    assert key == [:all, 0, [:all, 0, {"posts", Ecto.Query.PlannerTest.Post, 27727487}]]
 
     posts = from(p in Post, where: p.title == ^"hello")
     query = from(c in Comment, join: p in subquery(posts), on: c.post_id == p.id)
@@ -262,7 +262,7 @@ defmodule Ecto.Query.PlannerTest do
     assert {"comments", Ecto.Query.PlannerTest.Comment} = query.from
     assert [%{source: %{query: %Ecto.Query{}, params: ["hello"]}}] = query.joins
     assert params == ["hello"]
-    assert [[], {:join, [{:inner, [:all|_], _}]}, {"comments", _, _}] = key
+    assert [[], 0, {:join, [{:inner, [:all|_], _}]}, {"comments", _, _}] = key
   end
 
   test "prepare: subqueries with association joins" do

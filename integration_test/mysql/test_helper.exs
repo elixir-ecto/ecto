@@ -4,7 +4,7 @@ Logger.configure(level: :info)
 # on MySQL 5.6 but that is not yet supported in travis.
 ExUnit.start exclude: [:array_type, :read_after_writes, :uses_usec, :uses_msec, :returning,
                        :strict_savepoint, :create_index_if_not_exists, :modify_column,
-                       :transaction_isolation, :rename_column],
+                       :transaction_isolation, :rename_column, :upsert_with_conflict_target],
              max_cases: 1
 
 # Configure Ecto for support and tests

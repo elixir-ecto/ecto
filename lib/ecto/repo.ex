@@ -180,10 +180,6 @@ defmodule Ecto.Repo do
         Ecto.Repo.Schema.insert(__MODULE__, @adapter, struct, opts)
       end
 
-      def upsert(struct, opts \\ []) do
-        Ecto.Repo.Schema.upsert(__MODULE__, @adapter, struct, opts)
-      end
-
       def update(struct, opts \\ []) do
         Ecto.Repo.Schema.update(__MODULE__, @adapter, struct, opts)
       end
@@ -568,15 +564,52 @@ defmodule Ecto.Repo do
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
       in the struct.
+    * `:on_conflict` - How to react if the entry violates a primary key,
+      unique or exclusion constraint. It may be `:raise` (the default),
+      `:nothing` which will ignore any error, a keyword list of update
+      instructions (such as the one given to `c:update_all/3` or an
+      `Ecto.Query` which will act as an `UPDATE` statement. It maps to
+      "ON CONFLICT" on databases like Postgres and "ON DUPLICATE KEY"
+      on databases such as MySQL.
+    * `:conflict_target` - Which columns to verify for conflicts. If
+      none is specified, the conflict target is left up to the database
+      and is usually made of primary keys and/or unique/exclusion constraints.
 
   See the "Shared options" section at the module documentation.
 
-  ## Example
+  ## Examples
+
+  A typical example is calling `MyRepo.insert/1` with a struct
+  and acting on the return value:
 
       case MyRepo.insert %Post{title: "Ecto is great"} do
         {:ok, struct}       -> # Inserted with success
         {:error, changeset} -> # Something went wrong
       end
+
+  "Upsert" is also supported by passing the `:on_conflict` option:
+
+      # Insert it once
+      {:ok, inserted} = MyRepo.insert(%Post{title: "inserted"})
+
+      # Insert with the same ID but do nothing on conflicts.
+      # Keep in mind that, although this returns :ok, the returned
+      # struct may not necessarily reflect the data in the database.
+      {:ok, upserted} = MyRepo.insert(%Post{id: inserted.id, title: "updated"}, on_conflict: :nothing)
+
+      # Insert with the same ID but use a query to update a column on conflicts.
+      # As before, although this returns :ok, the returned
+      # struct may not necessarily reflect the data in the database.
+      #
+      # In Postgres:
+      on_conflict = [set: [title: "updated"]]
+      {:ok, updated} = MyRepo.insert(%Post{id: inserted.id, title: "updated"},
+                                     on_conflict: on_conflict, conflict_target: :id)
+
+      # In MySQL:
+      on_conflict = [set: [title: "updated"]]
+      {:ok, updated} = MyRepo.insert(%Post{id: inserted.id, title: "updated"},
+                                     on_conflict: on_conflict)
 
   """
   @callback insert(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
@@ -619,45 +652,6 @@ defmodule Ecto.Repo do
   """
   @callback update(changeset :: Ecto.Changeset.t, opts :: Keyword.t) ::
             {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
-
-  @doc """
-  Inserts a struct or changeset. If the insert violates a unique
-  constraint, updates the conflicting row instead.
-
-  In case a struct is given, the primary key is used as the unique
-  constraint.
-
-  On update, all fields that were specified and were not part of the
-  unique constraint are updated.
-
-  It returns `{:ok, struct}` if the struct has been successfully
-  inserted or updated, or `{:error, changeset}` if there was a
-  validation or a known constraint error.
-
-  ## Options
-
-    * `:on_conflict` - specify conflict action. Can be one of :update,
-      :nothing. Default choice is :update.
-    * `:conflict_target` - specify which columns to use when checking
-      for the unique constraint. This option is not supported by all
-      databases.
-    * `:update` - specify which fields to update when there is a conflict.
-
-  See the "Shared options" section at the module documentation for
-  remaining options.
-
-  ## Example
-
-      {:ok, inserted} = MyRepo.upsert(%Post{title: "inserted"})
-      {:ok, updated} = MyRepo.upsert(%Post{id: inserted.id, title: "updated"})
-      {:ok, inserted} = MyRepo.upsert(%Post{title: "second",
-        uuid: "16ed2706-8bff-453b-82eb-8c7fada847da"}, on_conflict: :nothing)
-      {:ok, _} = MyRepo.upsert(%Post{title: "Create/update title",
-        uuid: "36fd2706-1baf-433b-82bb-8c7fada847ba"},
-        conflict_target: [:uuid], update: [:title])
-  """
-  @callback upsert(struct :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
-              {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
   Inserts or updates a changeset depending on whether the struct is persisted

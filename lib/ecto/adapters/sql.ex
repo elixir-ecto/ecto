@@ -84,38 +84,11 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def insert(repo, %{source: {prefix, source}}, params, returning, opts) do
+      def insert(repo, %{source: {prefix, source}}, params,
+                 {kind, conflict_params, _} = on_conflict, returning, opts) do
         {fields, values} = :lists.unzip(params)
-        sql = @conn.insert(prefix, source, fields, [fields], returning)
-        Ecto.Adapters.SQL.struct(repo, @conn, sql, values, returning, opts)
-      end
-
-      @doc false
-      def upsert(repo, %{source: {prefix, source}}, params, on_conflict, conflict_target, update, returning, opts) do
-        {fields, ins_values} = :lists.unzip(params)
-        values = case on_conflict do
-          :update ->
-            checked_update = Enum.filter(update, fn update_key -> Keyword.has_key?(params, update_key) end)
-            update_values = Enum.map(checked_update, fn update_key -> Keyword.get(params, update_key) end)
-            ins_values ++ update_values
-          _ -> ins_values
-        end
-        sql = @conn.upsert(prefix, source, fields, [fields], on_conflict, conflict_target, update, returning)
-        case Ecto.Adapters.SQL.query(repo, sql, values, opts) do
-          {:ok, %{rows: nil, num_rows: 1}} ->
-            {:ok, []}
-          {:ok, %{rows: [values], num_rows: 1}} ->
-            {:ok, Enum.zip(returning, values)}
-          {:ok, %{num_rows: 0}} ->
-            {:ok, []}
-          {:ok, %{rows: nil, num_rows: 2}} ->  # mysql upsert returns num_rows: 2 in case of update
-            {:ok, []}
-          {:error, err} ->
-            case @conn.to_constraints(err) do
-              []          -> raise err
-              constraints -> {:invalid, constraints}
-            end
-        end
+        sql = @conn.insert(prefix, source, fields, [fields], on_conflict, returning)
+        Ecto.Adapters.SQL.struct(repo, @conn, sql, values ++ conflict_params, kind, returning, opts)
       end
 
       @doc false
@@ -123,14 +96,14 @@ defmodule Ecto.Adapters.SQL do
         {fields, values1} = :lists.unzip(fields)
         {filter, values2} = :lists.unzip(filter)
         sql = @conn.update(prefix, source, fields, filter, returning)
-        Ecto.Adapters.SQL.struct(repo, @conn, sql, values1 ++ values2, returning, opts)
+        Ecto.Adapters.SQL.struct(repo, @conn, sql, values1 ++ values2, :raise, returning, opts)
       end
 
       @doc false
       def delete(repo, %{source: {prefix, source}}, filter, opts) do
         {filter, values} = :lists.unzip(filter)
         sql = @conn.delete(prefix, source, filter, [])
-        Ecto.Adapters.SQL.struct(repo, @conn, sql, values, [], opts)
+        Ecto.Adapters.SQL.struct(repo, @conn, sql, values, :raise, [], opts)
       end
 
       ## Transaction
@@ -159,7 +132,7 @@ defmodule Ecto.Adapters.SQL do
         :ok
       end
 
-      defoverridable [prepare: 2, execute: 6, insert: 5, upsert: 8, update: 6, delete: 4, insert_all: 6,
+      defoverridable [prepare: 2, execute: 6, insert: 6, update: 6, delete: 4, insert_all: 6,
                       execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1, ensure_all_started: 2]
     end
   end
@@ -189,7 +162,7 @@ defmodule Ecto.Adapters.SQL do
     queryable
     |> Ecto.Queryable.to_query()
     |> Ecto.Query.Planner.returning(kind == :all)
-    |> Ecto.Query.Planner.query(kind, repo, adapter)
+    |> Ecto.Query.Planner.query(kind, repo, adapter, 0)
     |> case do
       {_meta, {:cached, _reset, {_id, cached}}, params} ->
         {String.Chars.to_string(cached), params}
@@ -383,7 +356,7 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def insert_all(repo, conn, prefix, source, header, rows, returning, opts) do
     {rows, params} = unzip_inserts(header, rows)
-    sql = conn.insert(prefix, source, header, rows, returning)
+    sql = conn.insert(prefix, source, header, rows, {:raise, [], []}, returning)
     %{rows: rows, num_rows: num} = query!(repo, sql, Enum.reverse(params), nil, opts)
     {num, rows}
   end
@@ -462,14 +435,14 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def struct(repo, conn, sql, values, returning, opts) do
+  def struct(repo, conn, sql, values, on_conflict, returning, opts) do
     case query(repo, sql, values, fn x -> x end, opts) do
       {:ok, %{rows: nil, num_rows: 1}} ->
         {:ok, []}
       {:ok, %{rows: [values], num_rows: 1}} ->
         {:ok, Enum.zip(returning, values)}
       {:ok, %{num_rows: 0}} ->
-        {:error, :stale}
+        if on_conflict == :nothing, do: {:ok, []}, else: {:error, :stale}
       {:error, err} ->
         case conn.to_constraints(err) do
           []          -> raise err

@@ -46,9 +46,9 @@ defmodule Ecto.Adapters.PostgresTest do
     end
   end
 
-  defp normalize(query, operation \\ :all) do
-    {query, _params, _key} = Ecto.Query.Planner.prepare(query, operation, Ecto.Adapters.Postgres)
-    Ecto.Query.Planner.normalize(query, operation, Ecto.Adapters.Postgres)
+  defp normalize(query, operation \\ :all, counter \\ 0) do
+    {query, _params, _key} = Ecto.Query.Planner.prepare(query, operation, Ecto.Adapters.Postgres, counter)
+    Ecto.Query.Planner.normalize(query, operation, Ecto.Adapters.Postgres, counter)
   end
 
   test "from" do
@@ -572,40 +572,36 @@ defmodule Ecto.Adapters.PostgresTest do
   # Schema based
 
   test "insert" do
-    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], [:id])
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {:raise, [], []}, [:id])
     assert query == ~s{INSERT INTO "schema" ("x","y") VALUES ($1,$2) RETURNING "id"}
 
-    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y], [nil, :z]], [:id])
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y], [nil, :z]], {:raise, [], []}, [:id])
     assert query == ~s{INSERT INTO "schema" ("x","y") VALUES ($1,$2),(DEFAULT,$3) RETURNING "id"}
 
-    query = SQL.insert(nil, "schema", [], [[]], [:id])
+    query = SQL.insert(nil, "schema", [], [[]], {:raise, [], []}, [:id])
     assert query == ~s{INSERT INTO "schema" VALUES (DEFAULT) RETURNING "id"}
 
-    query = SQL.insert(nil, "schema", [], [[]], [])
+    query = SQL.insert(nil, "schema", [], [[]], {:raise, [], []}, [])
     assert query == ~s{INSERT INTO "schema" VALUES (DEFAULT)}
 
-    query = SQL.insert("prefix", "schema", [], [[]], [])
+    query = SQL.insert("prefix", "schema", [], [[]], {:raise, [], []}, [])
     assert query == ~s{INSERT INTO "prefix"."schema" VALUES (DEFAULT)}
   end
 
-  test "upsert" do
-    # prefix, table, header, rows, on_conflict, conflict_target, update, returning
-    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :update, [:id], [:x, :y], [:id])
-    assert query == ~s{INSERT INTO "schema" ("x","y") VALUES ($1,$2) ON CONFLICT ("id") } <>
-      ~s{DO UPDATE SET "x" = $3,"y" = $4 RETURNING "id"}
-
-    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :update, [:id], [:x], [:id])
-    assert query == ~s{INSERT INTO "schema" ("x","y") VALUES ($1,$2) ON CONFLICT ("id") } <>
-      ~s{DO UPDATE SET "x" = $3 RETURNING "id"}
-
-    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :nothing, [], [], [])
+  test "insert with on conflict" do
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {:nothing, [], []}, [])
     assert query == ~s{INSERT INTO "schema" ("x","y") VALUES ($1,$2) ON CONFLICT DO NOTHING}
 
-    query = SQL.upsert("data", "posts", [:id, :title, :inserted_at, :updated_at], [[:id, :title, :inserted_at, :updated_at]],
-      :update, [:id], [:updated_at, :title, :something_wrong], [])
-    assert query == ~s{INSERT INTO "data"."posts" ("id","title","inserted_at","updated_at") VALUES ($1,$2,$3,$4) } <>
-      ~s{ON CONFLICT ("id") DO UPDATE SET "title" = $5,"updated_at" = $6}
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {:nothing, [], [:x, :y]}, [])
+    assert query == ~s{INSERT INTO "schema" ("x","y") VALUES ($1,$2) ON CONFLICT ("x","y") DO NOTHING}
 
+    update = from("schema", update: [set: [z: "foo"]]) |> normalize(:update_all)
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
+    assert query == ~s{INSERT INTO "schema" AS s0 ("x","y") VALUES ($1,$2) ON CONFLICT ("x","y") DO UPDATE SET "z" = 'foo' RETURNING "z"}
+
+    update = from("schema", update: [set: [z: ^"foo"]], where: [w: true]) |> normalize(:update_all, 2)
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
+    assert query == ~s{INSERT INTO "schema" AS s0 ("x","y") VALUES ($1,$2) ON CONFLICT ("x","y") DO UPDATE SET "z" = $3 WHERE (s0."w" = TRUE) RETURNING "z"}
   end
 
   test "update" do

@@ -65,15 +65,8 @@ defmodule Ecto.Adapters.SQL.Connection do
   the given `returning`.
   """
   @callback insert(prefix ::String.t, table :: String.t,
-                   header :: [atom], rows :: [[atom | nil]], returning :: [atom]) :: String.t
-
-  @doc """
-  Returns an INSERT ON CONFLICT DO for the given `rows` in `table`.
-  """
-  @callback upsert(prefix :: String.t, table :: String.t, header :: [atom],
-                   rows :: [[atom | nil]], on_conflict :: atom,
-                   conflict_target :: [atom], update :: [atom],
-                   returning :: [atom]) :: String.t
+                   header :: [atom], rows :: [[atom | nil]],
+                   on_conflict :: Ecto.Adapter.on_conflict, returning :: [atom]) :: String.t
 
   @doc """
   Returns an UPDATE for the given `fields` in `table` filtered by

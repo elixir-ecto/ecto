@@ -76,7 +76,7 @@ defmodule Ecto.Repo.Queryable do
   end
 
   def update_all(repo, adapter, queryable, updates, opts) when is_list(opts) do
-    query = Query.from q in queryable, update: ^updates
+    query = Query.from queryable, update: ^updates
     update_all(repo, adapter, query, opts)
   end
 
@@ -84,7 +84,7 @@ defmodule Ecto.Repo.Queryable do
     query =
       queryable
       |> Ecto.Queryable.to_query
-      |> assert_no_select!(:update_all)
+      |> Ecto.Query.Planner.assert_no_select!(:update_all)
       |> Ecto.Query.Planner.returning(opts[:returning] || false)
       |> attach_prefix(opts)
     execute(:update_all, repo, adapter, query, opts)
@@ -94,7 +94,7 @@ defmodule Ecto.Repo.Queryable do
     query =
       queryable
       |> Ecto.Queryable.to_query
-      |> assert_no_select!(:delete_all)
+      |> Ecto.Query.Planner.assert_no_select!(:delete_all)
       |> Ecto.Query.Planner.returning(opts[:returning] || false)
       |> attach_prefix(opts)
     execute(:delete_all, repo, adapter, query, opts)
@@ -109,18 +109,8 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  defp assert_no_select!(%{select: nil} = query, _operation) do
-    query
-  end
-  defp assert_no_select!(%{select: _} = query, operation) do
-    raise Ecto.QueryError,
-      query: query,
-      message: "`select` clause is not supported in `#{operation}`, " <>
-               "please pass the :returning option instead"
-  end
-
   defp execute(operation, repo, adapter, query, opts) when is_list(opts) do
-    {meta, prepared, params} = Planner.query(query, operation, repo, adapter)
+    {meta, prepared, params} = Planner.query(query, operation, repo, adapter, 0)
 
     case meta do
       %{fields: nil} ->

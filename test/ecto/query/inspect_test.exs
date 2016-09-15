@@ -230,8 +230,8 @@ defmodule Ecto.Query.InspectTest do
   end
 
   def plan(query) do
-    {query, _params, _key} = Ecto.Query.Planner.prepare(query, :all, Ecto.TestAdapter)
-    Ecto.Query.Planner.normalize(query, :all, Ecto.TestAdapter)
+    {query, _params, _key} = Ecto.Query.Planner.prepare(query, :all, Ecto.TestAdapter, 0)
+    Ecto.Query.Planner.normalize(query, :all, Ecto.TestAdapter, 0)
   end
 
   def i(query) do

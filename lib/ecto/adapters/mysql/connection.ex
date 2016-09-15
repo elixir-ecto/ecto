@@ -90,7 +90,9 @@ if Code.ensure_loaded?(Mariaex) do
       assemble([select, from, join, where, group_by, having, order_by, limit, offset, lock])
     end
 
-    def update_all(%{from: from, select: nil} = query) do
+    def update_all(query, prefix \\ nil)
+
+    def update_all(%{from: from, select: nil} = query, prefix) do
       sources = create_names(query)
       {from, name} = get_source(query, sources, 0, from)
 
@@ -99,10 +101,15 @@ if Code.ensure_loaded?(Mariaex) do
       join   = join(query, sources)
       where  = where(query, sources)
 
-      assemble([update, join, "SET", fields, where])
+      if prefix do
+        assemble([prefix, fields, where])
+      else
+        assemble([update, join, "SET", fields, where])
+      end
     end
-    def update_all(_query),
-      do: error!(nil, "RETURNING is not supported in update_all by MySQL")
+    def update_all(_query, _prefix) do
+      error!(nil, "RETURNING is not supported in update_all by MySQL")
+    end
 
     def delete_all(%{select: nil} = query) do
       sources = create_names(query)
@@ -118,34 +125,24 @@ if Code.ensure_loaded?(Mariaex) do
     def delete_all(_query),
       do: error!(nil, "RETURNING is not supported in delete_all by MySQL")
 
-    def insert(prefix, table, header, rows, []) do
+    def insert(prefix, table, header, rows, on_conflict, []) do
       fields = Enum.map_join(header, ",", &quote_name/1)
-      "INSERT INTO #{quote_table(prefix, table)} (" <> fields <> ") VALUES " <> insert_all(rows)
+      "INSERT INTO #{quote_table(prefix, table)} (" <> fields <> ") VALUES "
+        <> insert_all(rows) <> on_conflict(on_conflict, header)
     end
-    def insert(_prefix, _table, _header, _rows, _returning),
-      do: error!(nil, "RETURNING is not supported in insert_all by MySQL")
+    def insert(_prefix, _table, _header, _rows, _on_conflict, _returning) do
+      error!(nil, "RETURNING is not supported in insert_all by MySQL")
+    end
 
-    def upsert(prefix, table, header, rows, on_conflict,
-        _conflict_target, update, _returning) do
-      fields = Enum.map_join(header, ",", &quote_name/1)
-      update_fields = case on_conflict do
-        :update ->
-          Enum.filter(header, fn headr ->
-            Enum.member?(update, headr)
-          end)
-          |> Enum.map(fn field ->
-              "#{quote_name(field)} = ?"
-            end)
-        _ -> # ON DUPLICATE KEY UPDATE pk=pk; or ON DUPLICATE KEY UPDATE unique_key=unique_key
-          Enum.map(update, fn field ->
-            "#{quote_name(field)} = #{quote_name(field)}"
-          end)
-      end
-      |> Enum.join(",")
-      assemble([
-        "INSERT INTO #{quote_table(prefix, table)} (" <> fields <> ") VALUES " <> insert_all(rows),
-        "ON DUPLICATE KEY UPDATE", update_fields
-      ])
+    defp on_conflict({:raise, _, []}, _header) do
+      ""
+    end
+    defp on_conflict({:nothing, _, []}, [field | _]) do
+      quoted = quote_name(field)
+      " ON DUPLICATE KEY UPDATE " <> quoted <> " = " <> quoted
+    end
+    defp on_conflict({query, _, []}, _header) do
+      " ON DUPLICATE KEY " <> update_all(query, "UPDATE")
     end
 
     defp insert_all(rows) do
