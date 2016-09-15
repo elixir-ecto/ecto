@@ -180,6 +180,10 @@ defmodule Ecto.Repo do
         Ecto.Repo.Schema.insert(__MODULE__, @adapter, struct, opts)
       end
 
+      def upsert(struct, opts \\ []) do
+        Ecto.Repo.Schema.upsert(__MODULE__, @adapter, struct, opts)
+      end
+
       def update(struct, opts \\ []) do
         Ecto.Repo.Schema.update(__MODULE__, @adapter, struct, opts)
       end
@@ -617,42 +621,38 @@ defmodule Ecto.Repo do
             {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
-  Inserts or updates a changeset depending on whether the struct is persisted
-  or not.
+  Inserts a struct or changeset. If the insert violates a unique
+  constraint, updates the conflicting row instead.
 
-  The distinction whether to insert or update will be made on the
-  `Ecto.Schema.Metadata` field `:state`. The `:state` is automatically set by
-  Ecto when loading or building a schema.
+  In case a struct is given, the primary key is used as the unique
+  constraint.
 
-  Please note that for this to work, you will have to load existing structs from
-  the database. So even if the struct exists, this won't work:
+  On update, all fields that were specified and were not part of the
+  unique constraint are updated.
 
-      struct = %Post{id: 'existing_id', ...}
-      MyRepo.insert_or_update changeset
-      # => {:error, "id already exists"}
+  It returns `{:ok, struct}` if the struct has been successfully
+  inserted or updated, or `{:error, changeset}` if there was a
+  validation or a known constraint error.
 
   ## Options
 
-    * `:prefix` - The prefix to run the query on (such as the schema path
-      in Postgres or the database in MySQL). This overrides the prefix set
-      in the struct.
+    * `:on_conflict` - specify conflict action. Can be one of :update,
+      :nothing. Default choice is :update.
+    * `:conflict_target` - specify which columns to use when checking
+      for the unique constraint. This option is not supported by all
+      databases.
+    * `:update` - specify which fields to update when there is a conflict.
 
-  See the "Shared options" section at the module documentation.
 
   ## Example
 
-      result =
-        case MyRepo.get(Post, id) do
-          nil  -> %Post{id: id} # Post not found, we build one
-          post -> post          # Post exists, let's use it
-        end
-        |> Post.changeset(changes)
-        |> MyRepo.insert_or_update
-
-      case result do
-        {:ok, struct}       -> # Inserted or updated with success
-        {:error, changeset} -> # Something went wrong
-      end
+      {:ok, inserted} = MyRepo.upsert(%Post{title: "inserted"})
+      {:ok, updated} = MyRepo.upsert(%Post{id: inserted.id, title: "updated"})
+      {:ok, inserted} = MyRepo.upsert(%Post{title: "second",
+        uuid: "16ed2706-8bff-453b-82eb-8c7fada847da"}, on_conflict: :nothing)
+      {:ok, _} = MyRepo.upsert(%Post{title: "Create/update title",
+        uuid: "36fd2706-1baf-433b-82bb-8c7fada847ba"},
+        conflict_target: [:uuid], update: [:title])
   """
   @callback insert_or_update(changeset :: Ecto.Changeset.t, opts :: Keyword.t) ::
             {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}

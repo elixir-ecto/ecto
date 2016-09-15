@@ -477,6 +477,26 @@ defmodule Ecto.Adapters.MySQLTest do
     assert query == ~s{INSERT INTO `prefix`.`schema` () VALUES ()}
   end
 
+  test "upsert" do
+    # prefix, table, header, rows, on_conflict, conflict_target, update, returning
+    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :update, [:id], [:x, :y], [:id])
+    assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `x` = ?,`y` = ?}
+
+    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :update, [:id], [:x], [:id])
+    assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `x` = ?}
+
+    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :nothing, [], [:id], [])  # do nothing emulation
+    assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `id` = `id`}
+
+    query = SQL.upsert(nil, "schema", [:x, :y], [[:x, :y]], :nothing, [], [:x, :y], [])
+    assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `x` = `x`,`y` = `y`}
+
+    query = SQL.upsert("data", "posts", [:id, :title, :inserted_at, :updated_at], [[:id, :title, :inserted_at, :updated_at]],
+      :update, [:id], [:updated_at, :title, :something_wrong], [])
+    assert query == ~s{INSERT INTO `data`.`posts` (`id`,`title`,`inserted_at`,`updated_at`) VALUES (?,?,?,?) } <>
+      ~s{ON DUPLICATE KEY UPDATE `title` = ?,`updated_at` = ?}
+  end
+
   test "update" do
     query = SQL.update(nil, "schema", [:id], [:x, :y], [])
     assert query == ~s{UPDATE `schema` SET `id` = ? WHERE `x` = ? AND `y` = ?}

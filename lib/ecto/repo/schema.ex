@@ -212,6 +212,75 @@ defmodule Ecto.Repo.Schema do
   end
 
   @doc """
+  Implementation for `Ecto.Repo.upsert/2`.
+  """
+  def upsert(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
+    do_upsert(repo, adapter, changeset, opts)
+  end
+
+  def upsert(repo, adapter, %{__struct__: _} = struct, opts) when is_list(opts) do
+    changeset = Ecto.Changeset.change(struct)
+    do_upsert(repo, adapter, changeset, opts)
+  end
+
+  defp do_upsert(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
+    %{prepare: prepare, types: types} = changeset
+    struct = struct_from_changeset!(:upsert, changeset)
+    schema  = struct.__struct__
+    fields = schema.__schema__(:fields)
+    assocs = schema.__schema__(:associations)
+    return = schema.__schema__(:read_after_writes)
+
+    changeset = put_repo_and_action(changeset, :upsert, repo)
+    changeset = surface_changes(changeset, struct, types, fields ++ assocs)
+
+    wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
+      opts = Keyword.put(opts, :skip_transaction, true)
+      user_changeset = run_prepare(changeset, prepare)
+
+      {changeset, parents, children} = pop_assocs(user_changeset, assocs)
+      changeset = process_parents(changeset, parents, opts)
+
+      if changeset.valid? do
+        changeset = Ecto.Embedded.prepare(changeset, adapter, :upsert)
+
+        metadata = metadata(struct, opts)
+
+        {changes, extra, return} = autogenerate_id(metadata, changeset.changes, return, adapter)
+        {changes, autogen} = dump_changes!(:upsert, Map.take(changes, fields), schema, extra, types, adapter)
+        pk_field = Keyword.keys(Ecto.primary_key struct)
+        conflict_target = Keyword.get(opts, :conflict_target, pk_field)
+        conflict_target = case conflict_target do
+          [] -> raise ArgumentError, "Please specify conflict_target parameter"
+          ct when is_atom(ct) -> [ct]
+          _ -> conflict_target
+        end
+
+        update = Keyword.get(opts, :update, Keyword.keys(changes))
+        on_conflict = Keyword.get(opts, :on_conflict, :update)
+
+        args = [repo, metadata, changes, on_conflict, conflict_target, update, return, opts]
+        case apply(changeset, adapter, :upsert, args) do
+          {:ok, values} ->
+            changeset
+            |> load_changes(:loaded, values ++ extra, autogen, adapter)
+            |> process_children(children, user_changeset, opts)
+          {:error, _} = error ->
+            error
+          {:invalid, constraints} ->
+            {:error, constraints_to_errors(user_changeset, :upsert, constraints)}
+        end
+      else
+        {:error, changeset}
+      end
+    end)
+  end
+
+  defp do_upsert(repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
+    {:error, put_repo_and_action(changeset, :upsert, repo)}
+  end
+
+  @doc """
   Implementation for `Ecto.Repo.update/2`.
   """
   def update(repo, adapter, %Changeset{} = changeset, opts) when is_list(opts) do
@@ -598,6 +667,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp action_to_auto(:insert), do: :autogenerate
+  defp action_to_auto(:upsert), do: :autogenerate
   defp action_to_auto(:update), do: :autoupdate
 
   defp add_pk_filter!(filters, struct) do
