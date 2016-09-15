@@ -966,7 +966,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "query where interpolation" do
-    post1 = TestRepo.insert!(%Post{text: "x", title: "hello"  })
+    post1 = TestRepo.insert!(%Post{text: "x", title: "hello"})
     post2 = TestRepo.insert!(%Post{text: "y", title: "goodbye"})
 
     assert [post1, post2] == Post |> where([], []) |> TestRepo.all |> Enum.sort_by(& &1.id)
@@ -1004,5 +1004,105 @@ defmodule Ecto.Integration.RepoTest do
   test "log entry not logged when log is false" do
     Process.put(:on_log, fn _ -> flunk("logged") end)
     TestRepo.insert!(%Post{title: "1"}, [log: false])
+  end
+
+  ## Upsert
+
+  @tag :upsert
+  test "upsert with struct uses primary key as conflict target" do
+    {:ok, inserted} = TestRepo.upsert(%Post{title: "first"})
+    {:ok, _updated} = TestRepo.upsert(%Post{id: inserted.id, title: "second"})
+
+    post = TestRepo.one!(Post)
+    assert post.title == "second"
+  end
+
+  @tag :upsert
+  test "upsert with struct uses given columns for conflict" do
+    uuid = Ecto.UUID.generate
+
+    {:ok, _} = TestRepo.upsert(%Post{title: "first", uuid: uuid}, conflict_target: [:uuid])
+    {:ok, _} = TestRepo.upsert(%Post{title: "second", uuid: uuid}, conflict_target: [:uuid])
+
+    post = TestRepo.one!(Post)
+    assert post.title == "second"
+    {:ok, _} = TestRepo.upsert(%Post{title: "third", uuid: uuid}, conflict_target: :uuid)
+    post = TestRepo.one!(Post)
+    assert post.title == "third"
+  end
+
+  @tag :upsert
+  test "upsert with struct using composite primary key" do
+    {:ok, _} = TestRepo.upsert(%CompositePk{a: 1, b: 2, name: "first"})
+    {:ok, _} = TestRepo.upsert(%CompositePk{a: 1, b: 2, name: "second"})
+
+    record = TestRepo.one!(CompositePk)
+    assert record.name == "second"
+  end
+
+  @tag :upsert
+  test "upsert with changeset uses primary key if given" do
+    insert =
+      Ecto.Changeset.cast(%Post{}, %{"title" => "first"}, ~w(title))
+      |> Ecto.Changeset.unique_constraint(:uuid)
+
+    {:ok, inserted} = TestRepo.upsert(insert)
+
+    # Ignore the UUID unique constraint when the primary key has been set
+    changes = %{"id" => inserted.id, "title" => "second"}
+    update =
+      Ecto.Changeset.cast(%Post{}, changes, ~w(id title))
+      |> Ecto.Changeset.unique_constraint(:uuid)
+    {:ok, _} = TestRepo.upsert(update)
+
+    post = TestRepo.one!(Post)
+    assert post.title == "second"
+  end
+
+  @tag :upsert
+  test "upsert with changeset override conflict target columns" do
+    insert =
+      Ecto.Changeset.cast(%Post{}, %{"title" => "first"}, ~w(title))
+      |> Ecto.Changeset.unique_constraint(:uuid)
+    {:ok, inserted} = TestRepo.upsert(insert)
+
+    # Even though the ID has been explicitly set, use the UUID column
+    changes = %{"id" => inserted.id + 1, "uuid" => inserted.uuid, "title" => "second"}
+    update =
+      Ecto.Changeset.cast(%Post{}, changes, ~w(id uuid title))
+      |> Ecto.Changeset.unique_constraint(:uuid)
+
+    {:ok, _} = TestRepo.upsert(update, conflict_target: [:uuid])
+
+    post = TestRepo.one!(Post)
+    assert post.id == inserted.id + 1
+    assert post.title == "second"
+  end
+
+  @tag :upsert
+  test "upsert on conflict ignore" do
+    {:ok, inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first",
+      uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}, on_conflict: :nothing)
+    assert inserted.id
+
+    {:ok, not_inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first",
+      uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}, on_conflict: :nothing, update: [:id])
+    # Update field specified for mysql resulting in ON DUPLICATE KEY `id` = `id`
+    assert not_inserted.id in [0, nil]
+
+    {:ok, inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first",
+      uuid: "1aaaaaaa-ee8a-3ca4-894e-db77e160355e"}, on_conflict: :nothing, update: [:uuid])
+    assert inserted.id
+
+    {:ok, not_inserted} = TestRepo.upsert(%Ecto.Integration.Post{title: "first",
+      uuid: "1aaaaaaa-ee8a-3ca4-894e-db77e160355e"}, on_conflict: :nothing, update: [:uuid])
+    assert not_inserted.id in [0, nil]
+  end
+
+  @tag :upsert
+  test "upsert conflict_target not specified" do
+    assert_raise ArgumentError, ~r"Please specify conflict_target parameter", fn ->
+      TestRepo.upsert %Ecto.Integration.Barebone{num: 100}
+    end
   end
 end

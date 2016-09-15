@@ -4,10 +4,14 @@ elixir:
 otp_release:
   - 18.2
 addons:
-  postgresql: "9.4"
-services:
-  - mysql
-sudo: false # to use faster container based build environment
+  postgresql: "9.5"
+  apt:
+    packages:
+      - mysql-server-5.6
+      - mysql-client-core-5.6
+      - mysql-client-5.6
+sudo: required
+dist: trusty # only environment that supports Postgres 9.5 at this time
 env:
   - ELIXIR_ERL_OPTIONS=""
   - ELIXIR_ERL_OPTIONS="+T 9"

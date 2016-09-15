@@ -164,6 +164,31 @@ if Code.ensure_loaded?(Postgrex) do
       assemble(["INSERT INTO #{quote_table(prefix, table)}", values, returning(returning)])
     end
 
+    def upsert(prefix, table, header, rows, on_conflict, conflict_target, update, returning) do
+      values =
+        if header == [] do
+          "VALUES " <> Enum.map_join(rows, ",", fn _ -> "(DEFAULT)" end)
+        else
+          "(" <> Enum.map_join(header, ",", &quote_name/1) <> ") " <>
+          "VALUES " <> insert_all(rows, 1, "")
+        end
+      conflict_block = case on_conflict do
+        :update ->
+          update_header = Enum.filter(header, fn headr ->
+            Enum.member?(update, headr)
+          end)
+          {update_fields, _} = Enum.map_reduce update_header, length(header) + 1, fn field, acc ->
+            {"#{quote_name(field)} = $#{acc}", acc + 1}
+          end
+          "(" <> Enum.map_join(conflict_target, ",", &quote_name/1) <> ") " <>
+          "DO UPDATE SET " <> Enum.join(update_fields, ",")
+        :nothing -> "DO NOTHING"
+      end
+      assemble(["INSERT INTO #{quote_table(prefix, table)}", values,
+        "ON CONFLICT", conflict_block, returning(returning)]
+      )
+    end
+
     defp insert_all([row|rows], counter, acc) do
       {counter, row} = insert_each(row, counter, "")
       insert_all(rows, counter, acc <> ",(" <> row <> ")")
