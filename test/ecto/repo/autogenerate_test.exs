@@ -53,29 +53,29 @@ defmodule Ecto.Repo.AutogenerateTest do
     default = TestRepo.insert!(%Company{})
     assert %NaiveDateTime{} = default.inserted_at
     assert %NaiveDateTime{} = default.updated_at
-    assert_received :insert
+    assert_received {:insert, _}
 
     # No change
     changeset = Ecto.Changeset.change(%Company{id: 1})
     default = TestRepo.update!(changeset)
     refute default.inserted_at
     refute default.updated_at
-    refute_received :update
+    refute_received {:update, _}
 
     # Change in children
     changeset = Ecto.Changeset.change(%Company{id: 1})
     default = TestRepo.update!(Ecto.Changeset.put_assoc(changeset, :manager, %Manager{}))
     refute default.inserted_at
     refute default.updated_at
-    assert_received :insert
-    refute_received :update
+    assert_received {:insert, _}
+    refute_received {:update, _}
 
     # Force change
     changeset = Ecto.Changeset.change(%Company{id: 1})
     default = TestRepo.update!(changeset, force: true)
     refute default.inserted_at
     assert %NaiveDateTime{} = default.updated_at
-    assert_received :update
+    assert_received {:update, _}
   end
 
   test "does not set inserted_at and updated_at values if they were previously set" do
