@@ -79,8 +79,13 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def insert_all(repo, %{source: {prefix, source}}, header, rows, returning, opts) do
-        Ecto.Adapters.SQL.insert_all(repo, @conn, prefix, source, header, rows, returning, opts)
+      def insert_all(repo, %{source: {prefix, source}}, header, rows,
+                     {_, conflict_params, _} = on_conflict, returning, opts) do
+        {rows, params} = Ecto.Adapters.SQL.unzip_inserts(header, rows)
+        sql = @conn.insert(prefix, source, header, rows, on_conflict, returning)
+        %{rows: rows, num_rows: num} =
+          Ecto.Adapters.SQL.query!(repo, sql, Enum.reverse(params) ++ conflict_params, opts)
+        {num, rows}
       end
 
       @doc false
@@ -132,7 +137,7 @@ defmodule Ecto.Adapters.SQL do
         :ok
       end
 
-      defoverridable [prepare: 2, execute: 6, insert: 6, update: 6, delete: 4, insert_all: 6,
+      defoverridable [prepare: 2, execute: 6, insert: 6, update: 6, delete: 4, insert_all: 7,
                       execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1, ensure_all_started: 2]
     end
   end
@@ -354,14 +359,7 @@ defmodule Ecto.Adapters.SQL do
   ## Query
 
   @doc false
-  def insert_all(repo, conn, prefix, source, header, rows, returning, opts) do
-    {rows, params} = unzip_inserts(header, rows)
-    sql = conn.insert(prefix, source, header, rows, {:raise, [], []}, returning)
-    %{rows: rows, num_rows: num} = query!(repo, sql, Enum.reverse(params), nil, opts)
-    {num, rows}
-  end
-
-  defp unzip_inserts(header, rows) do
+  def unzip_inserts(header, rows) do
     Enum.map_reduce rows, [], fn fields, params ->
       Enum.map_reduce header, params, fn key, acc ->
         case :lists.keyfind(key, 1, fields) do

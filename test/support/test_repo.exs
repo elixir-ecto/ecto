@@ -56,7 +56,7 @@ defmodule Ecto.TestAdapter do
 
   ## Schema
 
-  def insert_all(_repo, %{source: source}, _header, rows, _returning, _opts) do
+  def insert_all(_repo, %{source: source}, _header, rows, _on_conflict, _returning, _opts) do
     send self(), {:insert_all, source, rows}
     {1, nil}
   end

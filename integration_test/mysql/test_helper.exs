@@ -4,12 +4,12 @@ Logger.configure(level: :info)
 # on MySQL 5.6 but that is not yet supported in travis.
 ExUnit.start exclude: [:array_type, :read_after_writes, :uses_usec, :uses_msec, :returning,
                        :strict_savepoint, :create_index_if_not_exists, :modify_column,
-                       :transaction_isolation, :rename_column, :upsert_with_conflict_target],
-             max_cases: 1
+                       :transaction_isolation, :rename_column, :upsert_all, :with_conflict_target]
 
 # Configure Ecto for support and tests
 Application.put_env(:ecto, :lock_for_update, "FOR UPDATE")
 Application.put_env(:ecto, :primary_key_type, :id)
+Application.put_env(:ecto, :async_integration_tests, false)
 
 # Configure MySQL connection
 Application.put_env(:ecto, :mysql_test_url,

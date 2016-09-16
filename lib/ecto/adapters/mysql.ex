@@ -165,7 +165,6 @@ defmodule Ecto.Adapters.MySQL do
     run_with_cmd("mysql", opts, args)
   end
 
-
   @doc false
   def supports_ddl_transaction? do
     true
@@ -174,7 +173,6 @@ defmodule Ecto.Adapters.MySQL do
   @doc false
   def insert(repo, %{source: {prefix, source}, autogenerate_id: {key, :id}}, params,
              {_, query_params, _} = on_conflict, [key], opts) do
-    assert_no_conflict_target!(on_conflict)
     {fields, values} = :lists.unzip(params)
     sql = @conn.insert(prefix, source, fields, [fields], on_conflict, [])
     case Ecto.Adapters.SQL.query(repo, sql, values ++ query_params, opts) do
@@ -193,20 +191,12 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   def insert(repo, schema_meta, params, on_conflict, [], opts) do
-    assert_no_conflict_target!(on_conflict)
     super(repo, schema_meta, params, on_conflict, [], opts)
   end
 
   def insert(_repo, %{schema: schema}, _params, _on_conflict, returning, _opts) do
     raise ArgumentError, "MySQL does not support :read_after_writes in schemas for non-primary keys. " <>
                          "The following fields in #{inspect schema} are tagged as such: #{inspect returning}"
-  end
-
-  defp assert_no_conflict_target!({_, _, []}) do
-    []
-  end
-  defp assert_no_conflict_target!({_, _, _}) do
-    raise ArgumentError, "MySQL does not support the :conflict_target option on insert/insert_all"
   end
 
   @doc false

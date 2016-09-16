@@ -131,9 +131,12 @@ if Code.ensure_loaded?(Mariaex) do
         <> insert_all(rows) <> on_conflict(on_conflict, header)
     end
     def insert(_prefix, _table, _header, _rows, _on_conflict, _returning) do
-      error!(nil, "RETURNING is not supported in insert_all by MySQL")
+      error!(nil, "RETURNING is not supported in insert/insert_all by MySQL")
     end
 
+    defp on_conflict({_, _, [_ | _]}, _header) do
+      error!(nil, "The :conflict_target option is not supported in insert/insert_all by MySQL")
+    end
     defp on_conflict({:raise, _, []}, _header) do
       ""
     end

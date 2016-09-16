@@ -42,12 +42,14 @@ defmodule Ecto.Repo.Schema do
     autogen   = schema && schema.__schema__(:autogenerate_id)
     source    = {Keyword.get(opts, :prefix, prefix), source}
     fields    = preprocess(returning, schema)
-    metadata  = %{source: source, context: nil, schema: schema, autogenerate_id: autogen}
 
-    {rows, header} =
-      extract_header_and_fields(rows, schema, autogen, adapter)
+    {rows, header} = extract_header_and_fields(rows, schema, autogen, adapter)
+    counter = fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
+    metadata = %{source: source, context: nil, schema: schema, autogenerate_id: autogen}
+    on_conflict = on_conflict(metadata, counter, adapter, opts)
+
     {count, rows} =
-      adapter.insert_all(repo, metadata, Map.keys(header), rows, fields || [], opts)
+      adapter.insert_all(repo, metadata, Map.keys(header), rows, on_conflict, fields || [], opts)
     {count, postprocess(rows, fields, adapter, schema, source)}
   end
 
@@ -191,7 +193,7 @@ defmodule Ecto.Repo.Schema do
         {changes, extra, return} = autogenerate_id(metadata, changeset.changes, return, adapter)
         {changes, autogen} = dump_changes!(:insert, Map.take(changes, fields), schema, extra, types, adapter)
 
-        on_conflict = on_conflict(metadata, changes, adapter, opts)
+        on_conflict = on_conflict(metadata, fn -> length(changes) end, adapter, opts)
         args = [repo, metadata, changes, on_conflict, return, opts]
         case apply(changeset, adapter, :insert, args) do
           {:ok, values} ->
@@ -393,10 +395,6 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp on_conflict(%{source: {prefix, source}, schema: schema}, changes, adapter, opts) do
-    on_conflict({source, schema}, prefix, changes, adapter, opts)
-  end
-
-  defp on_conflict(from, prefix, changes, adapter, opts) do
     conflict_target = List.wrap Keyword.get(opts, :conflict_target)
     case Keyword.get(opts, :on_conflict, :raise) do
       :raise when conflict_target == [] ->
@@ -406,17 +404,18 @@ defmodule Ecto.Repo.Schema do
       :nothing ->
         {:nothing, [], conflict_target}
       [_ | _] = on_conflict ->
+        from = {source, schema}
         query = Ecto.Query.from from, update: ^on_conflict
         on_conflict_query(query, from, prefix, changes, adapter, conflict_target)
       %Ecto.Query{} = query ->
-        on_conflict_query(query, from, prefix, changes, adapter, conflict_target)
+        on_conflict_query(query, {source, schema}, prefix, changes, adapter, conflict_target)
       other ->
         raise ArgumentError, "unknown value for :on_conflict, got: #{inspect other}"
     end
   end
 
   defp on_conflict_query(query, from, prefix, changes, adapter, conflict_target) do
-    counter = length(changes)
+    counter = changes.()
 
     {query, params, _} =
       %{query | prefix: prefix}

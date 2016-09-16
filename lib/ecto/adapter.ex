@@ -145,7 +145,7 @@ defmodule Ecto.Adapter do
   @doc """
   Inserts multiple entries into the data store.
   """
-  @callback insert_all(repo, schema_meta, header :: [atom], [fields], returning, options) ::
+  @callback insert_all(repo, schema_meta, header :: [atom], [fields], on_conflict, returning, options) ::
               {integer, [[term]] | nil} | no_return
 
   @doc """

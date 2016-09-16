@@ -1006,98 +1006,174 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert!(%Post{title: "1"}, [log: false])
   end
 
-  ## Upsert
+  describe "upsert via insert" do
+    @describetag :upsert
 
-  @tag :upsert
-  test "upsert on conflict raise" do
-    {:ok, inserted} = TestRepo.insert(%Post{title: "first"}, on_conflict: :raise)
-    assert catch_error(TestRepo.insert(%Post{id: inserted.id, title: "second"}, on_conflict: :raise))
+    test "on conflict raise" do
+      {:ok, inserted} = TestRepo.insert(%Post{title: "first"}, on_conflict: :raise)
+      assert catch_error(TestRepo.insert(%Post{id: inserted.id, title: "second"}, on_conflict: :raise))
+    end
+
+    test "on conflict ignore" do
+      post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      {:ok, inserted} = TestRepo.insert(post, on_conflict: :nothing)
+      assert inserted.id
+
+      {:ok, not_inserted} = TestRepo.insert(post, on_conflict: :nothing)
+      assert not_inserted.id == nil
+    end
+
+    @tag :with_conflict_target
+    test "on conflict ignore and conflict target" do
+      post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      {:ok, inserted} = TestRepo.insert(post, on_conflict: :nothing, conflict_target: [:uuid])
+      assert inserted.id
+
+      # Error on non-conflict target
+      assert catch_error(TestRepo.insert(post, on_conflict: :nothing, conflict_target: [:id]))
+
+      # Error on conflict target
+      {:ok, not_inserted} = TestRepo.insert(post, on_conflict: :nothing, conflict_target: [:uuid])
+      assert not_inserted.id == nil
+    end
+
+    @tag :without_conflict_target
+    test "on conflict keyword list" do
+      on_conflict = [set: [title: "second"]]
+      post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict)
+      assert inserted.id
+
+      {:ok, updated} = TestRepo.insert(post, on_conflict: on_conflict)
+      assert updated.id == inserted.id
+      assert updated.title != "second"
+      assert TestRepo.get!(Post, inserted.id).title == "second"
+    end
+
+    @tag :with_conflict_target
+    test "on conflict keyword list and conflict target" do
+      on_conflict = [set: [title: "second"]]
+      post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:uuid])
+      assert inserted.id
+
+      # Error on non-conflict target
+      assert catch_error(TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:id]))
+
+      {:ok, updated} = TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:uuid])
+      assert updated.id == inserted.id
+      assert updated.title != "second"
+      assert TestRepo.get!(Post, inserted.id).title == "second"
+    end
+
+    @tag :without_conflict_target
+    test "on conflict query" do
+      on_conflict = from Post, update: [set: [title: "second"]]
+      post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict)
+      assert inserted.id
+
+      {:ok, updated} = TestRepo.insert(post, on_conflict: on_conflict)
+      assert updated.id == inserted.id
+      assert updated.title != "second"
+      assert TestRepo.get!(Post, inserted.id).title == "second"
+    end
+
+    @tag :with_conflict_target
+    test "on conflict query and conflict target" do
+      on_conflict = from Post, update: [set: [title: "second"]]
+      post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:uuid])
+      assert inserted.id
+
+      # Error on non-conflict target
+      assert catch_error(TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:id]))
+
+      {:ok, updated} = TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:uuid])
+      assert updated.id == inserted.id
+      assert updated.title != "second"
+      assert TestRepo.get!(Post, inserted.id).title == "second"
+    end
   end
 
-  @tag :upsert
-  test "upsert on conflict ignore" do
-    post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
-    {:ok, inserted} = TestRepo.insert(post, on_conflict: :nothing)
-    assert inserted.id
+  describe "upsert via insert_all" do
+    @describetag :upsert_all
 
-    {:ok, not_inserted} = TestRepo.insert(post, on_conflict: :nothing)
-    assert not_inserted.id == nil
-  end
+    test "on conflict raise" do
+      post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
+      {1, nil} = TestRepo.insert_all(Post, [post], on_conflict: :raise)
+      assert catch_error(TestRepo.insert_all(Post, [post], on_conflict: :raise))
+    end
 
-  @tag :upsert
-  @tag :upsert_with_conflict_target
-  test "upsert on conflict ignore and conflict target" do
-    post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
-    {:ok, inserted} = TestRepo.insert(post, on_conflict: :nothing, conflict_target: [:uuid])
-    assert inserted.id
+    test "on conflict ignore" do
+      post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
+      assert TestRepo.insert_all(Post, [post], on_conflict: :nothing) ==
+             {1, nil}
+      assert TestRepo.insert_all(Post, [post], on_conflict: :nothing) ==
+             {0, nil}
+    end
 
-    # Error on non-conflict target
-    assert catch_error(TestRepo.insert(post, on_conflict: :nothing, conflict_target: [:id]))
+    @tag :with_conflict_target
+    test "on conflict ignore and conflict target" do
+      post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
+      assert TestRepo.insert_all(Post, [post], on_conflict: :nothing, conflict_target: [:uuid]) ==
+             {1, nil}
 
-    # Error on conflict target
-    {:ok, not_inserted} = TestRepo.insert(post, on_conflict: :nothing, conflict_target: [:uuid])
-    assert not_inserted.id in [0, nil]
-  end
+      # Error on non-conflict target
+      assert catch_error(TestRepo.insert_all(Post, [post], on_conflict: :nothing, conflict_target: [:id]))
 
-  @tag :upsert
-  @tag :upsert_without_conflict_target
-  test "upsert on conflict keyword list" do
-    on_conflict = [set: [title: "second"]]
-    post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
-    {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict)
-    assert inserted.id
+      # Error on conflict target
+      assert TestRepo.insert_all(Post, [post], on_conflict: :nothing, conflict_target: [:uuid]) ==
+             {0, nil}
+    end
 
-    {:ok, updated} = TestRepo.insert(post, on_conflict: on_conflict)
-    assert updated.id == inserted.id
-    assert updated.title != "second"
-    assert TestRepo.get!(Post, inserted.id).title == "second"
-  end
+    @tag :with_conflict_target
+    test "on conflict keyword list and conflict target" do
+      on_conflict = [set: [title: "second"]]
+      post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
+      {1, nil} = TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:uuid])
 
-  @tag :upsert
-  @tag :upsert_with_conflict_target
-  test "upsert on conflict keyword list and conflict target" do
-    on_conflict = [set: [title: "second"]]
-    post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
-    {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:uuid])
-    assert inserted.id
+      # Error on non-conflict target
+      assert catch_error(TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:id]))
 
-    # Error on non-conflict target
-    assert catch_error(TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:id]))
+      # Error on conflict target
+      assert TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
+             {1, nil}
+      assert TestRepo.all(from p in Post, select: p.title) == ["second"]
+    end
 
-    {:ok, updated} = TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:uuid])
-    assert updated.id == inserted.id
-    assert updated.title != "second"
-    assert TestRepo.get!(Post, inserted.id).title == "second"
-  end
+    @tag :with_conflict_target
+    test "on conflict query and conflict target" do
+      on_conflict = from Post, update: [set: [title: "second"]]
+      post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
+      assert TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
+             {1, nil}
 
-  @tag :upsert
-  @tag :upsert_without_conflict_target
-  test "upsert on conflict query" do
-    on_conflict = from Post, update: [set: [title: "second"]]
-    post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
-    {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict)
-    assert inserted.id
+      # Error on non-conflict target
+      assert catch_error(TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:id]))
 
-    {:ok, updated} = TestRepo.insert(post, on_conflict: on_conflict)
-    assert updated.id == inserted.id
-    assert updated.title != "second"
-    assert TestRepo.get!(Post, inserted.id).title == "second"
-  end
+      # Error on conflict target
+      assert TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
+             {1, nil}
+      assert TestRepo.all(from p in Post, select: p.title) == ["second"]
+    end
 
-  @tag :upsert
-  @tag :upsert_with_conflict_target
-  test "upsert on conflict query and conflict target" do
-    on_conflict = from Post, update: [set: [title: "second"]]
-    post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
-    {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:uuid])
-    assert inserted.id
+    @tag :returning
+    @tag :with_conflict_target
+    test "on conflict query and conflict target and returning" do
+      on_conflict = from Post, update: [set: [title: "second"]]
+      post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
+      {1, [%{id: id}]} = TestRepo.insert_all(Post, [post], on_conflict: on_conflict,
+                                            conflict_target: [:uuid], returning: [:id])
 
-    # Error on non-conflict target
-    assert catch_error(TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:id]))
+      # Error on non-conflict target
+      assert catch_error(TestRepo.insert_all(Post, [post], on_conflict: on_conflict,
+                                             conflict_target: [:id], returning: [:id]))
 
-    {:ok, updated} = TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:uuid])
-    assert updated.id == inserted.id
-    assert updated.title != "second"
-    assert TestRepo.get!(Post, inserted.id).title == "second"
+      # Error on conflict target
+      {1, [%Post{id: ^id, title: "second"}]} =
+        TestRepo.insert_all(Post, [post], on_conflict: on_conflict,
+                            conflict_target: [:uuid], returning: [:id, :title])
+    end
   end
 end

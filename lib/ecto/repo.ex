@@ -456,6 +456,16 @@ defmodule Ecto.Repo do
       This option is not supported by all databases.
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL).
+    * `:on_conflict` - How to react if the entry violates a primary key,
+      unique or exclusion constraint. It may be `:raise` (the default),
+      `:nothing` which will ignore any error, a keyword list of update
+      instructions (such as the one given to `c:update_all/3` or an
+      `Ecto.Query` which will act as an `UPDATE` statement. It maps to
+      "ON CONFLICT" on databases like Postgres and "ON DUPLICATE KEY"
+      on databases such as MySQL.
+    * `:conflict_target` - Which columns to verify for conflicts. If
+      none is specified, the conflict target is left up to the database
+      and is usually made of primary keys and/or unique/exclusion constraints.
 
   See the "Shared options" section at the module documentation for
   remaining options.
@@ -464,6 +474,20 @@ defmodule Ecto.Repo do
 
       MyRepo.insert_all(Post, [[title: "My first post"], [title: "My second post"]])
       MyRepo.insert_all(Post, [%{title: "My first post"}, %{title: "My second post"}])
+
+  ## Return values
+
+  By default, both Postgres and MySQL return the amount of entries
+  inserted on `insert_all`. However, when the `:on_conflict` option
+  is specified, Postgres will only return a row if it was affected
+  while MySQL returns at least the number of entries attempted.
+
+  For example, if `:on_conflict` is set to `:nothing`, Postgres will
+  return 0 if no new entry was added while MySQL will still return
+  the amount of entries attempted to be inserted, even if no entry
+  was added. Even worse, if `:on_conflict` is query, MySQL will return
+  the number of attempted entries plus the number of entries modified
+  by the UPDATE query.
   """
   @callback insert_all(schema_or_source :: binary | {binary, Ecto.Schema.t} | Ecto.Schema.t,
                        entries :: [map | Keyword.t], opts :: Keyword.t) :: {integer, nil | [term]} | no_return
