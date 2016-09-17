@@ -292,11 +292,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     @moduledoc false
     @behaviour DBConnection
 
-    def connect({conn_mod, state}) do
-      case conn_mod.init(state) do
-        {:ok, state} -> {:ok, {conn_mod, state, false}}
-        {:error, _} = err -> err
-      end
+    def connect(_opts) do
+      raise "should never be invoked"
     end
 
     def disconnect(err, {conn_mod, state, _in_transaction?}) do
