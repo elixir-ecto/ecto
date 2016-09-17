@@ -621,10 +621,12 @@ defmodule Ecto.Repo do
       # struct may not necessarily reflect the data in the database.
       {:ok, upserted} = MyRepo.insert(%Post{id: inserted.id, title: "updated"}, on_conflict: :nothing)
 
-      # Insert with the same ID but use a query to update a column on conflicts.
-      # As before, although this returns :ok, the returned
-      # struct may not necessarily reflect the data in the database.
-      #
+      # Now let's insert with the same ID but use a query to update
+      # a column on conflicts.  As before, although this returns :ok,
+      # the returned struct may not necessarily reflect the data in
+      # the database. In fact, any operation done on `:on_conflict`
+      # won't be automatically mapped to the struct.
+
       # In Postgres:
       on_conflict = [set: [title: "updated"]]
       {:ok, updated} = MyRepo.insert(%Post{id: inserted.id, title: "updated"},

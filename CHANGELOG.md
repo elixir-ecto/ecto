@@ -16,6 +16,41 @@ Ecto 2.1 also changed the defaults in `Ecto.Schema.timestamps/0` to use `:naive_
 
 The old Ecto types (`Ecto.Date`, `Ecto.Time` and `Ecto.DateTime`) are now deprecated.
 
+### Upsert
+
+Ecto 2.1 now supports upserts (insert or update instructions) on both `Ecto.Repo.insert/2` and `Ecto.Repo.insert_all/3` via the `:on_conflict` and `:conflict_target` options. 
+
+`:on_conflict` controls how the database behaves when the entry being inserted already matches an existing primary key, unique or exclusion constraint in the database. `:on_conflict` defaults to `:raise` but may be set to `:nothing` or a query that configures how to update the matching entries.
+
+The `:conflict_target` option allows some databases to restrict which fields to check for conflicts, instead of leaving it up for database inference.
+
+Example:
+
+    # Insert it once
+    {:ok, inserted} = MyRepo.insert(%Post{title: "inserted"})
+
+    # Insert with the same ID but do nothing on conflicts.
+    # Keep in mind that, although this returns :ok, the returned
+    # struct may not necessarily reflect the data in the database.
+    {:ok, upserted} = MyRepo.insert(%Post{id: inserted.id, title: "updated"},
+                                    on_conflict: :nothing)
+
+    # Now let's insert with the same ID but use a query to update
+    # a column on conflicts.  As before, although this returns :ok,
+    # the returned struct may not necessarily reflect the data in
+    # the database. In fact, any operation done on `:on_conflict`
+    # won't be automatically mapped to the struct.
+
+    # In Postgres:
+    on_conflict = [set: [title: "updated"]]
+    {:ok, updated} = MyRepo.insert(%Post{id: inserted.id, title: "updated"},
+                                   on_conflict: on_conflict, conflict_target: :id)
+
+    # In MySQL:
+    on_conflict = [set: [title: "updated"]]
+    {:ok, updated} = MyRepo.insert(%Post{id: inserted.id, title: "updated"},
+                                   on_conflict: on_conflict)
+
 ### Named subquery fields
 
 Ecto 2.0 introduced subqueries and Ecto 2.1 brings the ability to use maps to name the expressions selected in a subquery, allowing developers to return tables with conflicting fields or with any other complex expression such as fragments or aggregates:
@@ -43,9 +78,6 @@ It is also possible to interpolate the whole keyword list to dynamically filter 
   * Support `...` to specify all previous bindings up to the next one in the query syntax. For example, `where([p, ..., c], p.status == c.status)` matches `p` to the first binding and `c` to the last one.
   * Only check for `nil` values during comparison. This avoids unecessary restrictions on the query syntax on places `nil` should have been allowed
   * Allow the ordering direction to be set when using expressions with `Ecto.Query.distinct/3`
-
-### Bug fixes
-
 
 ### Deprecations
 
