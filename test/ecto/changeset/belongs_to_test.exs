@@ -266,7 +266,6 @@ defmodule Ecto.Changeset.BelongsToTest do
     assert changeset.valid?
   end
 
-
   test "cast belongs_to twice" do
     schema = %Author{}
     params = %{profile: %{name: "Bruce Wayne", id: 1}}

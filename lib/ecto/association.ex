@@ -446,7 +446,7 @@ defmodule Ecto.Association.Has do
   @behaviour Ecto.Association
   @on_delete_opts [:nothing, :nilify_all, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
-  @has_one_on_replace_opts [:update]
+  @has_one_on_replace_opts @on_replace_opts ++ [:update]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
              :queryable, :on_delete, :on_replace, defaults: [], relationship: :child]
 
@@ -485,11 +485,7 @@ defmodule Ecto.Association.Has do
     end
 
     on_replace = Keyword.get(opts, :on_replace, :raise)
-    on_replace_opts = if cardinality == :one do
-      @on_replace_opts ++ @has_one_on_replace_opts
-    else
-      @on_replace_opts
-    end
+    on_replace_opts = if cardinality == :one, do: @has_one_on_replace_opts, else: @on_replace_opts
 
     unless on_replace in on_replace_opts do
       raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
@@ -636,8 +632,6 @@ defmodule Ecto.Association.HasThrough do
     * `through` - The through associations
     * `relationship` - The relationship to the specified schema, default `:child`
   """
-
-
 
   @behaviour Ecto.Association
   defstruct [:cardinality, :field, :owner, :owner_key, :through, :on_cast,
