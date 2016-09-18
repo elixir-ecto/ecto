@@ -61,9 +61,9 @@ defmodule Ecto.Integration.Migration do
 
     create unique_index(:customs, [:uuid])
 
-    create table(:posts_customs, primary_key: false) do
-      add :post_id, references(:posts, column: :uuid, type: :uuid)
-      add :custom_id, references(:customs, column: :bid, type: :binary_id)
+    create table(:customs_customs, primary_key: false) do
+      add :custom_id1, references(:customs, column: :bid, type: :binary_id)
+      add :custom_id2, references(:customs, column: :bid, type: :binary_id)
     end
 
     create table(:barebones) do

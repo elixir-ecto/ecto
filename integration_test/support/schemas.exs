@@ -47,9 +47,6 @@ defmodule Ecto.Integration.Post do
     belongs_to :author, Ecto.Integration.User
     many_to_many :users, Ecto.Integration.User,
       join_through: "posts_users", on_delete: :delete_all, on_replace: :delete
-    many_to_many :customs, Ecto.Integration.Custom,
-      join_through: "posts_customs", join_keys: [post_id: :uuid, custom_id: :bid],
-      on_delete: :delete_all, on_replace: :delete
     many_to_many :unique_users, Ecto.Integration.User,
       join_through: Ecto.Integration.PostUserCompositePk
     has_many :users_comments, through: [:users, :comments]
@@ -174,6 +171,9 @@ defmodule Ecto.Integration.Custom do
   @primary_key {:bid, :binary_id, autogenerate: true}
   schema "customs" do
     field :uuid, Ecto.UUID
+    many_to_many :customs, Ecto.Integration.Custom,
+      join_through: "customs_customs", join_keys: [custom_id1: :bid, custom_id2: :bid],
+      on_delete: :delete_all, on_replace: :delete
   end
 end
 
