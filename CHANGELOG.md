@@ -16,6 +16,15 @@ Ecto 2.1 also changed the defaults in `Ecto.Schema.timestamps/0` to use `:naive_
 
 The old Ecto types (`Ecto.Date`, `Ecto.Time` and `Ecto.DateTime`) are now deprecated.
 
+### Dynamic through associations
+
+Ecto 2.1 allows developers to dynamically load through associations via the `Ecto.assoc/2` function. For example, to get all authors for all comments for an existing list of posts, one can do:
+
+    posts = Repo.all from p in Post, where: is_nil(p.published_at)
+    Repo.all assoc(posts, [:comments, :author])
+
+In fact, we now recommend developers to prefer dynamically loading through associations as they do not require adding fields to the schema.
+
 ### Upsert
 
 Ecto 2.1 now supports upserts (insert or update instructions) on both `Ecto.Repo.insert/2` and `Ecto.Repo.insert_all/3` via the `:on_conflict` and `:conflict_target` options. 
@@ -69,13 +78,18 @@ It is also possible to interpolate the whole keyword list to dynamically filter 
     filters = [state: "Sweden", state: "Brazil"]
     from(c in City, or_where: ^filters)
 
-## v2.1.0-dev (2016-00-00)
+## v2.1.0-rc.0 (2016-09-18)
 
 ### Enhancements
 
+  * Integrate with Elixir 1.3 calendar types
+  * Dynamically load through associations in `Ecto.assoc/2`
+  * Add the `:on_conflict` and `:conflict_target` options to `insert/2` and `insert_all/3` for upserts
+  * Add `or_where` and `or_having` to `Ecto.Query` for adding further `where` and `having` clauses combined with an `OR` instead of an `AND`
+  * Allow subquery fields to be named, adding support for complex expressions in subqueries as well as the ability to solve conflicts on duplicated fields
   * Support the `:prefix` option through the `Ecto.Repo` API
-  * Embeds are no longer required to have a primary key field. Coupled with the new `on_replace: :update` (or `on_replace: :delete`) option, this allows `embeds_one` relationships to be updated (or deleted) even without a primary key. For `embeds_many`, `:on_replace` must be set to `:delete` in case updates are desired, forcing all current embeds to be deleted and replaced by new ones whenever a new list of embeds is set.
-  * Support `...` to specify all previous bindings up to the next one in the query syntax. For example, `where([p, ..., c], p.status == c.status)` matches `p` to the first binding and `c` to the last one.
+  * Embeds are no longer required to have a primary key field. Coupled with the new `on_replace: :update` (or `on_replace: :delete`) option, this allows `embeds_one` relationships to be updated (or deleted) even without a primary key. For `embeds_many`, `:on_replace` must be set to `:delete` in case updates are desired, forcing all current embeds to be deleted and replaced by new ones whenever a new list of embeds is set
+  * Support `...` to specify all previous bindings up to the next one in the query syntax. For example, `where([p, ..., c], p.status == c.status)` matches `p` to the first binding and `c` to the last one
   * Only check for `nil` values during comparison. This avoids unecessary restrictions on the query syntax on places `nil` should have been allowed
   * Allow the ordering direction to be set when using expressions with `Ecto.Query.distinct/3`
 
