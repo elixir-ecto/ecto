@@ -32,6 +32,8 @@ defmodule Ecto.Association do
                owner_key: atom,
                field: atom}
 
+  alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr}
+
   @doc """
   Builds the association struct.
 
@@ -139,6 +141,127 @@ defmodule Ecto.Association do
   def association_key(module, suffix) do
     prefix = module |> Module.split |> List.last |> Macro.underscore
     :"#{prefix}_#{suffix}"
+  end
+
+  @doc """
+  Build an association query through with starting the given reflection
+  and through the given associations.
+  """
+  def assoc_query(refl, through, query, values)
+
+  def assoc_query(%{owner: owner, through: [h|t], field: field}, extra, query, values) do
+    refl = owner.__schema__(:association, h) ||
+            raise "unknown association `#{h}` for `#{inspect owner}` (used by through association `#{field}`)"
+    assoc_query refl, t ++ extra, query, values
+  end
+
+  def assoc_query(%module{} = refl, [], query, values) do
+    module.assoc_query(refl, query, values)
+  end
+
+  def assoc_query(refl, t, query, values) do
+    query = query || %Ecto.Query{from: {"join expression", nil}}
+
+    # Find the position for upcoming joins
+    position = length(query.joins) + 1
+
+    # The first association must become a join,
+    # so we convert its where (that comes from assoc_query)
+    # to a join expression.
+    #
+    # Note we are being restrictive on the format
+    # expected from assoc_query.
+    joins = assoc_to_join(refl.__struct__.assoc_query(refl, nil, values), position)
+
+    # Add the new join to the query and traverse the remaining
+    # joins that will start counting from the added join position.
+    query =
+      %{query | joins: query.joins ++ joins}
+      |> joins_query(t, position + length(joins) - 1)
+      |> Ecto.Query.Planner.prepare_sources(:adapter_wont_be_needed)
+
+    # Our source is going to be the last join after
+    # traversing them all.
+    {joins, [assoc]} = Enum.split(query.joins, -1)
+
+    # Update the mapping and start rewriting expressions
+    # to make the last join point to the new from source.
+    rewrite_ix = assoc.ix
+    [assoc|joins] = Enum.map([assoc|joins], &rewrite_join(&1, rewrite_ix))
+
+    %{query | wheres: [assoc_to_where(assoc)|query.wheres], joins: joins,
+              from: merge_from(query.from, assoc.source), sources: nil}
+    |> distinct([x], true)
+  end
+
+  defp assoc_to_where(%{on: %QueryExpr{} = on}) do
+    on
+    |> Map.put(:__struct__, BooleanExpr)
+    |> Map.put(:op, :and)
+  end
+
+  defp assoc_to_join(%{from: from, wheres: [on], order_bys: [], joins: joins}, position) do
+    last = length(joins) + position
+    join = %JoinExpr{qual: :inner, source: from, file: on.file, line: on.line,
+                     on: on |> Map.put(:__struct__, QueryExpr) |> Map.delete(:op)}
+
+    mapping = fn
+      0  -> last
+      ix -> ix + position - 1
+    end
+
+    for {%{on: on} = join, ix} <- Enum.with_index(joins ++ [join]) do
+      %{join | on: rewrite_expr(on, mapping), ix: ix + position}
+    end
+  end
+
+  defp merge_from({"join expression", _}, assoc_source), do: assoc_source
+  defp merge_from(from, _assoc_source), do: from
+
+  # Rewrite all later joins
+  defp rewrite_join(%{on: on, ix: ix} = join, mapping) when ix >= mapping do
+    %{join | on: rewrite_expr(on, &rewrite_ix(mapping, &1)), ix: rewrite_ix(mapping, ix)}
+  end
+
+  # Previous joins are kept intact
+  defp rewrite_join(join, _mapping) do
+    join
+  end
+
+  defp rewrite_expr(%{expr: expr, params: params} = part, mapping) do
+    expr =
+      Macro.prewalk expr, fn
+        {:&, meta, [ix]} ->
+          {:&, meta, [mapping.(ix)]}
+        other ->
+          other
+      end
+
+    params =
+      Enum.map params, fn
+        {val, {composite, {ix, field}}} when is_integer(ix) ->
+          {val, {composite, {mapping.(ix), field}}}
+        {val, {ix, field}} when is_integer(ix) ->
+          {val, {mapping.(ix), field}}
+        val ->
+          val
+      end
+
+    %{part | expr: expr, params: params}
+  end
+
+  defp rewrite_ix(mapping, ix) when ix > mapping, do: ix - 1
+  defp rewrite_ix(ix, ix), do: 0
+  defp rewrite_ix(_mapping, ix), do: ix
+
+  @doc """
+  Build a join query with the given `through` associations starting at `counter`.
+  """
+  def joins_query(query, through, counter) do
+    Enum.reduce(through, {query, counter}, fn current, {acc, counter} ->
+      query = join(acc, :inner, [x: counter], assoc(x, ^current))
+      {query, counter + 1}
+    end) |> elem(0)
   end
 
   @doc """
@@ -514,7 +637,7 @@ defmodule Ecto.Association.HasThrough do
     * `relationship` - The relationship to the specified schema, default `:child`
   """
 
-  alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr}
+
 
   @behaviour Ecto.Association
   defstruct [:cardinality, :field, :owner, :owner_key, :through, :on_cast,
@@ -568,121 +691,13 @@ defmodule Ecto.Association.HasThrough do
 
   @doc false
   def joins_query(%{owner: owner, through: through}) do
-    joins_query(owner, through, 0)
-  end
-
-  defp joins_query(query, through, counter) do
-    Enum.reduce(through, {query, counter}, fn current, {acc, counter} ->
-      query = join(acc, :inner, [x: counter], assoc(x, ^current))
-      {query, counter + 1}
-    end) |> elem(0)
+    Ecto.Association.joins_query(owner, through, 0)
   end
 
   @doc false
   def assoc_query(refl, query, values) do
-    assoc_query(refl, [], query, values)
+    Ecto.Association.assoc_query(refl, [], query, values)
   end
-
-  defp assoc_query(%__MODULE__{owner: owner, through: [h|t], field: field}, extra, query, values) do
-    refl = owner.__schema__(:association, h) ||
-            raise "unknown association `#{h}` for `#{inspect owner}` (used by through association `#{field}`)"
-    assoc_query refl, t ++ extra, query, values
-  end
-
-  defp assoc_query(refl, t, query, values) do
-    query = query || %Ecto.Query{from: {"join expression", nil}}
-
-    # Find the position for upcoming joins
-    position = length(query.joins) + 1
-
-    # The first association must become a join,
-    # so we convert its where (that comes from assoc_query)
-    # to a join expression.
-    #
-    # Note we are being restrictive on the format
-    # expected from assoc_query.
-    joins = assoc_to_join(refl.__struct__.assoc_query(refl, nil, values), position)
-
-    # Add the new join to the query and traverse the remaining
-    # joins that will start counting from the added join position.
-    query =
-      %{query | joins: query.joins ++ joins}
-      |> joins_query(t, position + length(joins) - 1)
-      |> Ecto.Query.Planner.prepare_sources(:adapter_wont_be_needed)
-
-    # Our source is going to be the last join after
-    # traversing them all.
-    {joins, [assoc]} = Enum.split(query.joins, -1)
-
-    # Update the mapping and start rewriting expressions
-    # to make the last join point to the new from source.
-    rewrite_ix = assoc.ix
-    [assoc|joins] = Enum.map([assoc|joins], &rewrite_join(&1, rewrite_ix))
-
-    %{query | wheres: [assoc_to_where(assoc)|query.wheres], joins: joins,
-              from: merge_from(query.from, assoc.source), sources: nil}
-    |> distinct([x], true)
-  end
-
-  defp assoc_to_where(%{on: %QueryExpr{} = on}) do
-    on
-    |> Map.put(:__struct__, BooleanExpr)
-    |> Map.put(:op, :and)
-  end
-
-  defp assoc_to_join(%{from: from, wheres: [on], order_bys: [], joins: joins}, position) do
-    last = length(joins) + position
-    join = %JoinExpr{qual: :inner, source: from, file: on.file, line: on.line,
-                     on: on |> Map.put(:__struct__, QueryExpr) |> Map.delete(:op)}
-
-    mapping = fn
-      0  -> last
-      ix -> ix + position - 1
-    end
-
-    for {%{on: on} = join, ix} <- Enum.with_index(joins ++ [join]) do
-      %{join | on: rewrite_expr(on, mapping), ix: ix + position}
-    end
-  end
-
-  defp merge_from({"join expression", _}, assoc_source), do: assoc_source
-  defp merge_from(from, _assoc_source), do: from
-
-  # Rewrite all later joins
-  defp rewrite_join(%{on: on, ix: ix} = join, mapping) when ix >= mapping do
-    %{join | on: rewrite_expr(on, &rewrite_ix(mapping, &1)), ix: rewrite_ix(mapping, ix)}
-  end
-
-  # Previous joins are kept intact
-  defp rewrite_join(join, _mapping) do
-    join
-  end
-
-  defp rewrite_expr(%{expr: expr, params: params} = part, mapping) do
-    expr =
-      Macro.prewalk expr, fn
-        {:&, meta, [ix]} ->
-          {:&, meta, [mapping.(ix)]}
-        other ->
-          other
-      end
-
-    params =
-      Enum.map params, fn
-        {val, {composite, {ix, field}}} when is_integer(ix) ->
-          {val, {composite, {mapping.(ix), field}}}
-        {val, {ix, field}} when is_integer(ix) ->
-          {val, {mapping.(ix), field}}
-        val ->
-          val
-      end
-
-    %{part | expr: expr, params: params}
-  end
-
-  defp rewrite_ix(mapping, ix) when ix > mapping, do: ix - 1
-  defp rewrite_ix(ix, ix), do: 0
-  defp rewrite_ix(_mapping, ix), do: ix
 end
 
 defmodule Ecto.Association.BelongsTo do

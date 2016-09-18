@@ -483,8 +483,15 @@ defmodule Ecto do
       posts = Repo.all from p in Post, where: is_nil(p.published_at)
       Repo.all assoc(posts, :comments)
 
+  `assoc/2` can also be used to dynamically load through many associations.
+  For example, to get all authors for all comments for the given posts, do:
+
+      posts = Repo.all from p in Post, where: is_nil(p.published_at)
+      Repo.all assoc(posts, [:comments, :author])
+
   """
-  def assoc(struct_or_structs, assoc) do
+  def assoc(struct_or_structs, assocs) do
+    [assoc | assocs] = List.wrap(assocs)
     structs = List.wrap(struct_or_structs)
 
     if structs == [] do
@@ -501,7 +508,7 @@ defmodule Ecto do
         key = Map.fetch!(struct, owner_key),
         do: key)
 
-    assoc.__struct__.assoc_query(assoc, nil, values)
+    Ecto.Association.assoc_query(assoc, assocs, nil, values)
   end
 
   @doc """

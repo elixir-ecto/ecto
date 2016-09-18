@@ -71,6 +71,10 @@ defmodule Ecto.Integration.AssocTest do
 
     query = Ecto.assoc([p1, p2], :comments_authors) |> order_by([a], a.name)
     assert [^u2, ^u1] = TestRepo.all(query)
+
+    # Dynamic through
+    Ecto.assoc([p1, p2], [:comments, :author]) |> order_by([a], a.name)
+    assert [^u2, ^u1] = TestRepo.all(query)
   end
 
   test "has_many through-through assoc leading" do
@@ -90,6 +94,10 @@ defmodule Ecto.Integration.AssocTest do
 
     query = Ecto.assoc([p1, p2], :comments_authors_permalinks) |> order_by([p], p.url)
     assert [^pl2, ^pl1] = TestRepo.all(query)
+
+    # Dynamic through
+    query = Ecto.assoc([p1, p2], [:comments, :author, :permalink]) |> order_by([p], p.url)
+    assert [^pl2, ^pl1] = TestRepo.all(query)
   end
 
   test "has_many through-through assoc trailing" do
@@ -100,6 +108,10 @@ defmodule Ecto.Integration.AssocTest do
     %Comment{} = TestRepo.insert!(%Comment{post_id: p1.id, author_id: u1.id})
 
     query = Ecto.assoc([pl1], :post_comments_authors)
+    assert [^u1] = TestRepo.all(query)
+
+    # Dynamic through
+    query = Ecto.assoc([pl1], [:post, :comments, :authors])
     assert [^u1] = TestRepo.all(query)
   end
 

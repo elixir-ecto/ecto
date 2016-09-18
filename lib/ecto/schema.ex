@@ -489,8 +489,8 @@ defmodule Ecto.Schema do
     * `:references` - Sets the key on the current schema to be used for the
       association, defaults to the primary key on the schema
 
-    * `:through` - If this association must be defined in terms of existing
-      associations. Read below for more information
+    * `:through` - Allow this association to be defined in terms of existing
+      associations. Read the section on `:through` associations for more info
 
     * `:on_delete` - The action taken on associations when parent record
       is deleted. May be `:nothing` (default), `:nilify_all` and `:delete_all`.
@@ -572,9 +572,16 @@ defmodule Ecto.Schema do
       post = Repo.get(Post, 42)
       authors = Repo.all assoc(post, :comments_authors)
 
-  `:through` associations are read-only as they are useful for avoiding repetition,
-  allowing the developer to easily retrieve data that is often seen together
-  but stored across different tables.
+  Although we used the `:through` association in the example above, Ecto
+  also allows developers to dynamically build the through associations using
+  the `Ecto.assoc/2` function:
+
+      assoc(post, [:comments, :author])
+
+  In fact, given `:through` associations are read-only, **using the `Ecto.assoc/2`
+  format is the preferred mechanism for working with through associations**. Use
+  the schema-based one only if you need to store the through data alongside of
+  the parent struct, in specific cases such as preloading.
 
   `:through` associations can also be preloaded. In such cases, not only
   the `:through` association is preloaded but all intermediate steps are
@@ -589,11 +596,9 @@ defmodule Ecto.Schema do
       # And the author for each comment too
       hd(post.comments).author #=> %Author{...}
 
-  Finally, `:through` can be used with multiple associations (not only 2)
-  and with associations of any kind, including `belongs_to` and other
-  `:through` associations. When the `:through` association is expected to
-  return one or zero items, `has_one :through` should be used instead, as in
-  the example at the beginning of this section:
+  When the `:through` association is expected to return one or zero items,
+  `has_one :through` should be used instead, as in the example at the beginning
+  of this section:
 
       # How we defined the association above
       has_one :post_permalink, through: [:post, :permalink]
