@@ -669,11 +669,14 @@ defmodule Ecto.Adapters.PostgresTest do
                  {:add, :created_at, :datetime, []},
                  {:add, :updated_at, :datetime, [comment: "column comment 2"]}
                ]}
-    assert SQL.execute_ddl(create) == """
+    assert SQL.execute_ddl(create) == [remove_newlines("""
     CREATE TABLE "posts"
-    ("category_0" integer CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"), "created_at" timestamp, "updated_at" timestamp);
-    COMMENT ON TABLE "posts" IS 'comment'; COMMENT ON COLUMN "posts"."category_0" IS 'column comment'; COMMENT ON COLUMN "posts"."updated_at" IS 'column comment 2'
-    """ |> remove_newlines
+    ("category_0" integer CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"), "created_at" timestamp, "updated_at" timestamp)
+    """),
+    ~s|COMMENT ON TABLE "posts" IS 'comment'|,
+    ~s|COMMENT ON COLUMN "posts"."category_0" IS 'column comment'|,
+    ~s|COMMENT ON COLUMN "posts"."updated_at" IS 'column comment 2'|
+    ]
   end
 
   test "create table with references" do
@@ -765,7 +768,7 @@ defmodule Ecto.Adapters.PostgresTest do
                 {:modify, :permalink_id, references(:permalinks), [null: false, comment: "column comment"]},
                 {:remove, :summary}]}
 
-    assert SQL.execute_ddl(alter) == """
+    assert SQL.execute_ddl(alter) == [remove_newlines("""
     ALTER TABLE "posts"
     ADD COLUMN "title" varchar(100) DEFAULT 'Untitled' NOT NULL,
     ALTER COLUMN "price" TYPE numeric(8,2) ,
@@ -773,10 +776,13 @@ defmodule Ecto.Adapters.PostgresTest do
     ALTER COLUMN "permalink_id" TYPE integer ,
     ADD CONSTRAINT "posts_permalink_id_fkey" FOREIGN KEY ("permalink_id") REFERENCES "permalinks"("id") ,
     ALTER COLUMN "permalink_id" SET NOT NULL,
-    DROP COLUMN "summary"; COMMENT ON TABLE \"posts\" IS 'table comment';
-    COMMENT ON COLUMN \"posts\".\"title\" IS 'column comment';
-    COMMENT ON COLUMN \"posts\".\"permalink_id\" IS 'column comment'
-    """ |> remove_newlines
+    DROP COLUMN "summary"
+    """),
+    ~s|COMMENT ON TABLE \"posts\" IS 'table comment'|,
+    ~s|COMMENT ON COLUMN \"posts\".\"title\" IS 'column comment'|,
+    ~s|COMMENT ON COLUMN \"posts\".\"permalink_id\" IS 'column comment'|
+    ]
+
   end
 
   test "alter table with prefix" do
@@ -826,10 +832,10 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "create index with comment" do
     create = {:create, index(:posts, [:category_id, :permalink], prefix: :foo, comment: "comment")}
-    assert SQL.execute_ddl(create) == """
+    assert SQL.execute_ddl(create) == [remove_newlines("""
     CREATE INDEX "posts_category_id_permalink_index" ON "foo"."posts" ("category_id", "permalink")
-    ; COMMENT ON INDEX "posts_category_id_permalink_index" IS 'comment'
-    """ |> remove_newlines
+    """),
+   ~s|COMMENT ON INDEX "posts_category_id_permalink_index" IS 'comment'|]
   end
 
   test "create unique index" do
@@ -899,10 +905,11 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "create constraint with comment" do
     create = {:create, constraint(:products, "price_must_be_positive", check: "price > 0", prefix: "foo", comment: "comment")}
-    assert SQL.execute_ddl(create) == """
-    ALTER TABLE "foo"."products" ADD CONSTRAINT "price_must_be_positive" CHECK (price > 0);
-    COMMENT ON CONSTRAINT "price_must_be_positive" IS 'comment'
-    """ |> remove_newlines
+    assert SQL.execute_ddl(create) == [remove_newlines("""
+    ALTER TABLE "foo"."products" ADD CONSTRAINT "price_must_be_positive" CHECK (price > 0)
+    """),
+    ~s|COMMENT ON CONSTRAINT "price_must_be_positive" ON "products" IS 'comment'|
+    ]
   end
 
   test "drop constraint" do
