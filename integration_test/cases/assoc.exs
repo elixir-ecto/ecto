@@ -111,7 +111,7 @@ defmodule Ecto.Integration.AssocTest do
     assert [^u1] = TestRepo.all(query)
 
     # Dynamic through
-    query = Ecto.assoc([pl1], [:post, :comments, :authors])
+    query = Ecto.assoc([pl1], [:post, :comments, :author])
     assert [^u1] = TestRepo.all(query)
   end
 
