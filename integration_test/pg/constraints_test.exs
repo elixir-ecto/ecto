@@ -9,16 +9,16 @@ defmodule Ecto.Integration.ConstraintsTest do
   defmodule ConstraintMigration do
     use Ecto.Migration
 
-    @table table(:constraints_test, comment: "table")
+    @table table(:constraints_test)
 
     def change do
       create @table do
-        add :price, :integer, comment: "price"
+        add :price, :integer
         add :from, :integer
         add :to, :integer
       end
       create constraint(@table.name, :cannot_overlap, exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|)
-      create constraint(@table.name, "positive_price", check: "price > 0", comment: "positive_price_constraint")
+      create constraint(@table.name, "positive_price", check: "price > 0")
     end
   end
 

@@ -2,8 +2,8 @@ defmodule Ecto.Integration.Migration do
   use Ecto.Migration
 
   def change do
-    create table(:users) do
-      add :name, :text
+    create table(:users, comment: "users table") do
+      add :name, :text, comment: "name column"
       add :custom_id, :uuid
       timestamps()
     end
@@ -39,7 +39,9 @@ defmodule Ecto.Integration.Migration do
     # Add a unique index on uuid. We use this
     # to verify the behaviour that the index
     # only matters if the UUID column is not NULL.
-    create unique_index(:posts, [:uuid])
+    create unique_index(:posts, [:uuid], comment: "posts index")
+
+    create constraint(:posts, :cost_must_be_positive, check: "cost > 0")
 
     create table(:permalinks) do
       add :url, :string
@@ -102,7 +104,7 @@ defmodule Ecto.Integration.Migration do
       add :user_id, references(:users), primary_key: true
       timestamps()
     end
-    
+
     create unique_index(:posts_users_composite_pk, [:post_id, :user_id])
   end
 end

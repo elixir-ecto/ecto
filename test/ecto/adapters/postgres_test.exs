@@ -666,8 +666,8 @@ defmodule Ecto.Adapters.PostgresTest do
     create = {:create, table(:posts, comment: "comment"),
                [
                  {:add, :category_0, references(:categories), [comment: "column comment"]},
-                 {:add, :created_at, :datetime, []},
-                 {:add, :updated_at, :datetime, [comment: "column comment 2"]}
+                 {:add, :created_at, :timestamp, []},
+                 {:add, :updated_at, :timestamp, [comment: "column comment 2"]}
                ]}
     assert SQL.execute_ddl(create) == [remove_newlines("""
     CREATE TABLE "posts"
