@@ -41,8 +41,6 @@ defmodule Ecto.Integration.Migration do
     # only matters if the UUID column is not NULL.
     create unique_index(:posts, [:uuid], comment: "posts index")
 
-    create constraint(:posts, :cost_must_be_positive, check: "cost > 0")
-
     create table(:permalinks) do
       add :url, :string
       add :post_id, references(:posts)
