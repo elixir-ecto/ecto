@@ -977,7 +977,7 @@ defmodule Ecto.Schema do
         use Ecto.Schema
 
         @primary_key false
-        schema "user_organization" do
+        schema "users_organizations" do
           belongs_to :user, User
           belongs_to :organization, Organization
           timestamps # Added bonus, a join schema will also allow you to set timestamps
