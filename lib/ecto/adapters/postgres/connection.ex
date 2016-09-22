@@ -594,9 +594,13 @@ if Code.ensure_loaded?(Postgrex) do
         pk -> ", #{pk}"
       end
 
-      "CREATE TABLE" <> if_not_exists <>
+      queries = ["CREATE TABLE" <> if_not_exists <>
         " #{quote_table(table.prefix, table.name)}" <>
-        " (#{column_definitions(table, columns)}#{pk_definition})" <> options
+        " (#{column_definitions(table, columns)}#{pk_definition})" <> options]
+
+      queries = add_comment(queries, comment_on(:table, table.name, table.comment))
+
+      add_comments_for_columns(queries, comments_for_columns(table, columns))
     end
 
     def execute_ddl({command, %Table{}=table}) when command in @drops do
@@ -610,13 +614,19 @@ if Code.ensure_loaded?(Postgrex) do
         nil -> ""
         pk -> ", ADD #{pk}"
       end
-      "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}#{pk_definition}"
+
+      queries = ["ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}" <>
+      "#{pk_definition}"]
+
+      queries = add_comment(queries, comment_on(:table, table.name, table.comment))
+
+      add_comments_for_columns(queries, comments_for_columns(table, changes))
     end
 
     def execute_ddl({:create, %Index{}=index}) do
       fields = Enum.map_join(index.columns, ", ", &index_expr/1)
 
-      assemble(["CREATE",
+      queries = [assemble(["CREATE",
                 if_do(index.unique, "UNIQUE"),
                 "INDEX",
                 if_do(index.concurrently, "CONCURRENTLY"),
@@ -625,7 +635,9 @@ if Code.ensure_loaded?(Postgrex) do
                 quote_table(index.prefix, index.table),
                 if_do(index.using, "USING #{index.using}"),
                 "(#{fields})",
-                if_do(index.where, "WHERE #{index.where}")])
+                if_do(index.where, "WHERE #{index.where}")])]
+
+      add_comment(queries, comment_on(:index, index.name, index.comment))
     end
 
     def execute_ddl({:create_if_not_exists, %Index{}=index}) do
@@ -654,7 +666,9 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     def execute_ddl({:create, %Constraint{}=constraint}) do
-      "ALTER TABLE #{quote_table(constraint.prefix, constraint.table)} ADD #{new_constraint_expr(constraint)}"
+      queries = ["ALTER TABLE #{quote_table(constraint.prefix, constraint.table)} ADD #{new_constraint_expr(constraint)}"]
+
+      add_comment(queries, comment_on(:constraint, constraint.name, constraint.comment, constraint.table))
     end
 
     def execute_ddl({:drop, %Constraint{}=constraint}) do
@@ -676,6 +690,41 @@ if Code.ensure_loaded?(Postgrex) do
         [] -> nil
         _  -> "PRIMARY KEY (" <> Enum.map_join(pks, ", ", &quote_name/1) <> ")"
       end
+    end
+
+    defp add_comment([query], ""), do: query
+    defp add_comment(queries, comment), do: queries ++ [comment]
+
+
+    defp comment_on(_database_object, _name, nil), do:  ""
+    defp comment_on(:column, {table_name, column_name}, comment) do
+      column_name = quote_table(table_name, column_name)
+      "COMMENT ON COLUMN #{column_name} IS #{single_quote(comment)}"
+    end
+
+    defp comment_on(:table, name, comment) do
+      "COMMENT ON TABLE #{quote_name(name)} IS #{single_quote(comment)}"
+    end
+
+    defp comment_on(:constraint, _name, nil, _table_name), do:  ""
+    defp comment_on(:constraint, name, comment, table_name) do
+      "COMMENT ON CONSTRAINT #{quote_name(name)} ON #{quote_name(table_name)} IS #{single_quote(comment)}"
+    end
+
+    defp comment_on(:index, name, comment) do
+      "COMMENT ON INDEX #{quote_name(name)} IS #{single_quote(comment)}"
+    end
+
+    defp add_comments_for_columns(queries, []), do: queries
+    defp add_comments_for_columns(queries, comments), do: queries ++ comments
+
+    defp comments_for_columns(table, columns) do
+      Enum.map(columns, fn
+        {_operation, column_name, _column_type, opts} ->
+          comment_on(:column, {table.name, column_name}, opts[:comment])
+        _ -> ""
+      end)
+      |> Enum.filter(fn(value) -> value != "" end)
     end
 
     defp column_definitions(table, columns) do
@@ -854,6 +903,8 @@ if Code.ensure_loaded?(Postgrex) do
       end
       <<?", name::binary, ?">>
     end
+
+    defp single_quote(value), do: "\'#{escape_string(value)}\'"
 
     defp assemble(list) do
       list
