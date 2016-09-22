@@ -705,12 +705,12 @@ defmodule Ecto.Migration do
       defaults to "#{table}_#{column}_fkey"
     * `:column` - The foreign key column, default is `:id`
     * `:type`   - The foreign key type, default is `:serial`
-    * `:on_delete` - What to perform if the entry is deleted.
-         May be `:nothing`, `:delete_all` or `:nilify_all`.
-         Defaults to `:nothing`.
-    * `:on_update` - What to perform if the entry is updated.
-         May be `:nothing`, `:update_all` or `:nilify_all`.
-         Defaults to `:nothing`.
+    * `:on_delete` - What to perform if the referenced entry
+         is deleted. May be `:nothing`, `:delete_all` or
+         `:nilify_all`. Defaults to `:nothing`.
+    * `:on_update` - What to perform if the referenced entry
+         is updated. May be `:nothing`, `:update_all` or
+         `:nilify_all`. Defaults to `:nothing`.
 
   """
   def references(table, opts \\ []) when is_atom(table) do
