@@ -1354,11 +1354,11 @@ defmodule Ecto.Changeset do
     * `:greater_than_or_equal_to`
     * `:equal_to`
     * `:message` - the message on failure, defaults to one of:
-      * "must be less than %{count}"
-      * "must be greater than %{count}"
-      * "must be less than or equal to %{count}"
-      * "must be greater than or equal to %{count}"
-      * "must be equal to %{count}"
+      * "must be less than %{number}"
+      * "must be greater than %{number}"
+      * "must be less than or equal to %{number}"
+      * "must be greater than or equal to %{number}"
+      * "must be equal to %{number}"
 
   ## Examples
 
