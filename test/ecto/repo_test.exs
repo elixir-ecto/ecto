@@ -372,4 +372,10 @@ defmodule Ecto.RepoTest do
       end
     end
   end
+
+  describe "preload" do
+    test "if first argument of preload is nil, it should return nil" do
+      assert TestRepo.preload(nil, []) == nil
+    end
+  end
 end
