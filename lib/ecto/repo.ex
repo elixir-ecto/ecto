@@ -208,7 +208,9 @@ defmodule Ecto.Repo do
         Ecto.Repo.Schema.delete!(__MODULE__, @adapter, struct, opts)
       end
 
-      def preload(struct_or_structs, preloads, opts \\ []) do
+      def preload(struct_or_structs, preloads, opts \\ [])
+      def preload(nil, _, _), do: nil
+      def preload(struct_or_structs, preloads, opts) do
         Ecto.Repo.Preloader.preload(struct_or_structs, __MODULE__, preloads, opts)
       end
     end
