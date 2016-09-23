@@ -7,7 +7,9 @@ defmodule Ecto.Changeset do
   introductory documentation in the `Ecto` module. The
   functions `change/2` and `cast/3` are the usual entry
   points for creating changesets, while the remaining
-  functions are useful for manipulating them.
+  functions are useful for manipulating them. On this
+  module docs, we will cover extra functionality provided
+  by this module.
 
   ## Validations and constraints
 
@@ -82,6 +84,58 @@ defmodule Ecto.Changeset do
   values that will be automatically converted to nil on `cast/3`. Those
   values are stored in the changeset `empty_values` field and default to
   `[""]`.
+
+  ## Schemaless changesets
+
+  In the changeset examples so far, we have always used changesets to
+  validate and cast data backed up by a struct, such as the `%User{}`
+  struct defined by the `User` module.
+
+  However, changesets also run without a changeset, by passing a tuple
+  containing both the data and the supported types as a tuple instead
+  of a struct:
+
+      data  = %{}
+      types = %{first_name: :string, last_name: :string, email: :string}
+
+      changeset =
+        {data, types}
+        |> Ecto.Changeset.cast(params["sign_up"], Map.keys(types))
+        |> validate_required(...)
+        |> validate_length(...)
+
+  Such functionality makes Ecto extremely useful to cast,
+  validate and prune data even if it is not meant to be persisted
+  to the database.
+
+  ### Changeset actions
+
+  Changesets have an action field which is usually set by `Ecto.Repo`
+  whenever one of the operations such as `insert` or `update` is called:
+
+      changeset = User.changeset(%User{}, %{age: 42, email: "mary@example.com"})
+      {:error, changeset} = Repo.insert(changeset)
+      changeset.action
+      #=> :insert
+
+  This means that when working with changesets that are not meant to be
+  persisted to the database, such as schemaless changesets, you may need
+  to explicitly set the action to one specific value. For example,
+  frameworks such as Phoenix uses the value of `changeset.action` to
+  decide if errors should be shown or not on a given form. In such cases,
+  the following construt is recommended:
+
+      changeset = User.changeset(%User{}, %{age: 42, email: "mary@example.com"})
+
+      # Since we don't plan to call Repo.insert/2 or similar, we
+      # need to mimic part of its behaviour, which is to check if
+      # the changeset is valid and set its action accordingly if not.
+      if changeset.valid? do
+        ... success case ...
+      else
+        changeset = %{changeset | action: :insert} # action ca be anything
+        ... failure case ...
+      end
 
   ## The Ecto.Changeset struct
 
