@@ -122,15 +122,13 @@ defmodule Ecto.Embedded do
   defp autogenerate_id(changes, _struct, :insert, schema, adapter) do
     case schema.__schema__(:autogenerate_id) do
       {key, :binary_id} ->
-        case Map.fetch(changes, key) do
-          {:ok, _} ->
-            changes
-          :error ->
-            Map.put(changes, key, adapter.autogenerate(:embed_id))
-        end
-      other ->
-        raise ArgumentError, "embedded schema `#{inspect schema}` must have " <>
-          "`:binary_id` primary key with `autogenerate: true`, got: #{inspect other}"
+        Map.put_new_lazy(changes, key, fn -> adapter.autogenerate(:embed_id) end)
+      {_key, :id} ->
+        raise ArgumentError, "embedded schema `#{inspect schema}` cannot autogenerate `:id` primary keys, " <>
+                             "those are typically used for auto-incrementing constraints. " <>
+                             "Maybe you meant to use `:binary_id` instead?"
+      nil ->
+        changes
     end
   end
 

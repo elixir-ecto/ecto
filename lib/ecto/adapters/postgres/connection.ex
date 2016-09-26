@@ -701,18 +701,16 @@ if Code.ensure_loaded?(Postgrex) do
       column_name = quote_table(table_name, column_name)
       "COMMENT ON COLUMN #{column_name} IS #{single_quote(comment)}"
     end
-
     defp comment_on(:table, name, comment) do
       "COMMENT ON TABLE #{quote_name(name)} IS #{single_quote(comment)}"
+    end
+    defp comment_on(:index, name, comment) do
+      "COMMENT ON INDEX #{quote_name(name)} IS #{single_quote(comment)}"
     end
 
     defp comment_on(:constraint, _name, nil, _table_name), do:  ""
     defp comment_on(:constraint, name, comment, table_name) do
       "COMMENT ON CONSTRAINT #{quote_name(name)} ON #{quote_name(table_name)} IS #{single_quote(comment)}"
-    end
-
-    defp comment_on(:index, name, comment) do
-      "COMMENT ON INDEX #{quote_name(name)} IS #{single_quote(comment)}"
     end
 
     defp add_comments_for_columns(queries, []), do: queries

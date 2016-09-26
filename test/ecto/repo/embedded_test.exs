@@ -6,8 +6,8 @@ defmodule Ecto.Repo.EmbeddedTest do
   defmodule SubEmbed do
     use Ecto.Schema
 
-    @primary_key {:id, :binary_id, autogenerate: true}
-    schema "" do
+    @primary_key false
+    embedded_schema do
       field :y, :string
     end
   end
@@ -15,8 +15,7 @@ defmodule Ecto.Repo.EmbeddedTest do
   defmodule MyEmbed do
     use Ecto.Schema
 
-    @primary_key {:id, :binary_id, autogenerate: true}
-    schema "" do
+    embedded_schema do
       field :x, :string
       embeds_one :sub_embed, SubEmbed, on_replace: :delete
       timestamps()
@@ -107,7 +106,7 @@ defmodule Ecto.Repo.EmbeddedTest do
       |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_embed(:embed, embed)
     schema = TestRepo.insert!(changeset)
-    assert schema.embed.sub_embed.id
+    assert schema.embed.sub_embed.y == "xyz"
   end
 
   ## update
@@ -214,7 +213,7 @@ defmodule Ecto.Repo.EmbeddedTest do
   end
 
   test "empty changeset on update" do
-    embed = %MyEmbed{x: "xyz", id: @uuid} |> Ecto.put_meta(state: :loaded)
+    embed = %MyEmbed{x: "xyz", id: @uuid}
     no_changes = Ecto.Changeset.change(embed)
 
     changeset =
@@ -278,7 +277,7 @@ defmodule Ecto.Repo.EmbeddedTest do
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_embed(:embed, embed_changeset)
     schema = TestRepo.update!(changeset)
-    assert schema.embed.sub_embed.id
+    assert schema.embed.sub_embed.y == "xyz"
   end
 
   ## delete
