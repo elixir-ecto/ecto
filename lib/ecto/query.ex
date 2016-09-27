@@ -447,7 +447,7 @@ defmodule Ecto.Query do
     from(kw, __CALLER__, count_bind, quoted, binds)
   end
 
-  @binds    [:where, :select, :distinct, :order_by, :group_by,
+  @binds    [:where, :or_where, :select, :distinct, :order_by, :group_by,
              :having, :limit, :offset, :preload, :update]
   @no_binds [:lock]
   @joins    [:join, :inner_join, :left_join, :right_join, :full_join]
