@@ -95,10 +95,16 @@ defmodule Ecto.TypeTest do
     assert cast({:array, Custom}, 1) == :error
   end
 
-  test "decimal casting" do
+  test "decimal" do
     assert cast(:decimal, "1.0") == {:ok, Decimal.new("1.0")}
     assert cast(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
     assert cast(:decimal, 1) == {:ok, Decimal.new("1")}
+    assert cast(:decimal, Decimal.new("1")) == {:ok, Decimal.new("1")}
+
+    assert dump(:decimal, "1.0") == :error
+    assert dump(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
+    assert dump(:decimal, 1) == {:ok, Decimal.new("1")}
+    assert dump(:decimal, Decimal.new("1")) == {:ok, Decimal.new("1")}
   end
 
   @uuid_string "bfe0888c-5c59-4bb3-adfd-71f0b85d3db7"
