@@ -309,9 +309,7 @@ defmodule Ecto.Type do
   end
 
   def dump(:decimal, term, _dumper) when is_number(term) do
-    {:ok, Decimal.new(term)} # TODO: Add Decimal.parse/1
-  rescue
-    Decimal.Error -> :error
+    {:ok, Decimal.new(term)}
   end
 
   def dump(:date, term, _dumper) do
@@ -559,10 +557,11 @@ defmodule Ecto.Type do
   def cast(:boolean, term) when term in ~w(true 1),  do: {:ok, true}
   def cast(:boolean, term) when term in ~w(false 0), do: {:ok, false}
 
-  def cast(:decimal, term) when is_binary(term) or is_number(term) do
-    {:ok, Decimal.new(term)} # TODO: Add Decimal.parse/1
-  rescue
-    Decimal.Error -> :error
+  def cast(:decimal, term) when is_binary(term) do
+    Decimal.parse(term)
+  end
+  def cast(:decimal, term) when is_number(term) do
+    {:ok, Decimal.new(term)}
   end
 
   def cast(:date, term) do
