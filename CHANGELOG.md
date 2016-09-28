@@ -78,6 +78,14 @@ It is also possible to interpolate the whole keyword list to dynamically filter 
     filters = [state: "Sweden", state: "Brazil"]
     from(c in City, or_where: ^filters)
 
+## v2.1.0-rc.1 (2016-09-28)
+
+### Bug fixes
+
+  * Do not error when inserting an embed without or with non-default primary key
+  * Ensure `where` and `or_where` statements use different cache keys
+  * Support `or_where` in the query syntax
+
 ## v2.1.0-rc.0 (2016-09-18)
 
 ### Enhancements
