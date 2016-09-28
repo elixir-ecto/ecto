@@ -2,8 +2,7 @@ defmodule Ecto.Query.Planner do
   # Normalizes a query and its parameters.
   @moduledoc false
 
-  alias Ecto.Query.JoinExpr
-  alias Ecto.Query.SelectExpr
+  alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr, SelectExpr}
 
   if map_size(%Ecto.Query{}) != 17 do
     raise "Ecto.Query match out of date in builder"
@@ -348,7 +347,7 @@ defmodule Ecto.Query.Planner do
       when kind in ~w(select distinct limit offset)a do
     if expr do
       {params, cacheable?} = cast_and_merge_params(kind, query, expr, params, adapter)
-      {merge_cache({kind, expr.expr}, cache, cacheable?), params}
+      {merge_cache({kind, expr_to_cache(expr)}, cache, cacheable?), params}
     else
       {cache, params}
     end
@@ -359,7 +358,7 @@ defmodule Ecto.Query.Planner do
     {expr_cache, {params, cacheable?}} =
       Enum.map_reduce exprs, {params, true}, fn expr, {params, cacheable?} ->
         {params, current_cacheable?} = cast_and_merge_params(kind, query, expr, params, adapter)
-        {expr.expr, {params, cacheable? and current_cacheable?}}
+        {expr_to_cache(expr), {params, cacheable? and current_cacheable?}}
       end
 
     case expr_cache do
@@ -384,6 +383,10 @@ defmodule Ecto.Query.Planner do
       _  -> {merge_cache({:join, expr_cache}, cache, cacheable?), params}
     end
   end
+
+  defp expr_to_cache(%BooleanExpr{op: op, expr: expr}), do: {op, expr}
+  defp expr_to_cache(%QueryExpr{expr: expr}), do: expr
+  defp expr_to_cache(%SelectExpr{expr: expr}), do: expr
 
   defp cast_and_merge_params(kind, query, expr, params, adapter) do
     Enum.reduce expr.params, {params, true}, fn {v, type}, {acc, cacheable?} ->

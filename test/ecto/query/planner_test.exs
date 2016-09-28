@@ -228,13 +228,13 @@ defmodule Ecto.Query.PlannerTest do
     {_query, _params, key} = prepare(from(Post, []))
     assert key == [:all, 0, {"posts", Post, 27727487}]
 
-    query = from(p in Post, select: 1, lock: "foo", where: is_nil(nil),
+    query = from(p in Post, select: 1, lock: "foo", where: is_nil(nil), or_where: is_nil(nil),
                             join: c in Comment, preload: :comments)
     {_query, _params, key} = prepare(%{query | prefix: "foo"})
     assert key == [:all, 0,
                    {:lock, "foo"},
                    {:prefix, "foo"},
-                   {:where, [{:is_nil, [], [nil]}]},
+                   {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
                    {:join, [{:inner, {"comments", Ecto.Query.PlannerTest.Comment, 6996781}, true}]},
                    {"posts", Ecto.Query.PlannerTest.Post, 27727487},
                    {:select, 1}]
