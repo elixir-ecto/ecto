@@ -21,7 +21,6 @@ defmodule Ecto.Changeset.EmbeddedNoPkTest do
       embeds_many :posts, Post, on_replace: :delete
       embeds_many :raise_posts, Post, on_replace: :raise
       embeds_many :invalid_posts, Post, on_replace: :mark_as_invalid
-      embeds_many :update_posts, Post, on_replace: :update
     end
   end
 
@@ -228,6 +227,20 @@ defmodule Ecto.Changeset.EmbeddedNoPkTest do
     assert changeset.changes.update_profile.action == :update
     assert changeset.errors == []
     assert changeset.valid?
+  end
+
+  test "raises when :update is used on embeds_many" do
+    error_message = "invalid `:on_replace` option for :tags. The only valid " <>
+      "options are: `:raise`, `:mark_as_invalid`, `:delete`"
+    assert_raise ArgumentError, error_message, fn ->
+      defmodule Topic do
+        use Ecto.Schema
+
+        schema "topics" do
+          embeds_many :tags, Tag, on_replace: :update
+        end
+      end
+    end
   end
 
   ## cast embeds many

@@ -11,7 +11,8 @@ defmodule Ecto.Embedded do
                        related: atom}
 
   @behaviour Ecto.Changeset.Relation
-  @on_replace_opts [:raise, :mark_as_invalid, :delete, :update]
+  @on_replace_opts [:raise, :mark_as_invalid, :delete]
+  @embeds_one_on_replace_opts @on_replace_opts ++ [:update]
   defstruct [:cardinality, :field, :owner, :related, :on_cast, on_replace: :raise]
 
   @doc """
@@ -26,8 +27,10 @@ defmodule Ecto.Embedded do
   """
   def struct(module, name, opts) do
     opts = Keyword.put_new(opts, :on_replace, :raise)
+    cardinality = Keyword.fetch!(opts, :cardinality)
+    on_replace_opts = if cardinality == :one, do: @embeds_one_on_replace_opts, else: @on_replace_opts
 
-    unless opts[:on_replace] in @on_replace_opts do
+    unless opts[:on_replace] in on_replace_opts do
       raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
         "The only valid options are: " <>
         Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
