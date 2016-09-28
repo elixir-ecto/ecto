@@ -3,6 +3,7 @@ defmodule Ecto.Changeset.EmbeddedNoPkTest do
 
   alias Ecto.Changeset
   alias Ecto.Changeset.Relation
+  alias Ecto.TestRepo
 
   alias __MODULE__.Author
   alias __MODULE__.Profile
@@ -16,6 +17,7 @@ defmodule Ecto.Changeset.EmbeddedNoPkTest do
       embeds_one :profile, Profile, on_replace: :delete
       embeds_one :raise_profile, Profile, on_replace: :raise
       embeds_one :invalid_profile, Profile, on_replace: :mark_as_invalid
+      embeds_one :update_profile, Profile, on_replace: :update
       embeds_many :posts, Post, on_replace: :delete
       embeds_many :raise_posts, Post, on_replace: :raise
       embeds_many :invalid_posts, Post, on_replace: :mark_as_invalid
@@ -214,6 +216,31 @@ defmodule Ecto.Changeset.EmbeddedNoPkTest do
     assert changeset.changes == %{}
     assert changeset.errors == [invalid_profile: {"a custom message", [type: :map]}]
     refute changeset.valid?
+  end
+
+  test "cast embeds_one with on_replace: :update" do
+    {:ok, schema} = TestRepo.insert(%Author{name: "Enio",
+      update_profile: %Profile{name: "Enio"}})
+
+    changeset = cast(schema, %{"update_profile" => %{id: 2, name: "Jose"}}, :update_profile)
+    assert changeset.changes.update_profile.changes == %{name: "Jose"}
+    assert changeset.changes.update_profile.action == :update
+    assert changeset.errors == []
+    assert changeset.valid?
+  end
+
+  test "raises when :update is used on embeds_many" do
+    error_message = "invalid `:on_replace` option for :tags. The only valid " <>
+      "options are: `:raise`, `:mark_as_invalid`, `:delete`"
+    assert_raise ArgumentError, error_message, fn ->
+      defmodule Topic do
+        use Ecto.Schema
+
+        schema "topics" do
+          embeds_many :tags, Tag, on_replace: :update
+        end
+      end
+    end
   end
 
   ## cast embeds many
