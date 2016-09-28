@@ -338,17 +338,6 @@ defmodule Ecto.Changeset.EmbeddedNoPkTest do
     refute changeset.valid?
   end
 
-  test "cast embeds_many with on_replace: :update" do
-    {:ok, schema} = TestRepo.insert(%Author{id: 1, name: "Enio",
-                                    update_posts: [%Post{title: "Post"}]})
-
-    changeset = cast(schema, %{"update_posts" => [%{title: "Post 2"}]}, :update_posts)
-    assert changeset.changes.update_posts.changes == [%{title: "Post 2"}]
-    assert changeset.changes.update_posts.action == :update
-    assert changeset.errors == []
-    assert changeset.valid?
-  end
-
   ## Others
 
   test "change embeds_one" do
