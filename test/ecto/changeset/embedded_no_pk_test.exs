@@ -3,6 +3,7 @@ defmodule Ecto.Changeset.EmbeddedNoPkTest do
 
   alias Ecto.Changeset
   alias Ecto.Changeset.Relation
+  alias Ecto.TestRepo
 
   alias __MODULE__.Author
   alias __MODULE__.Profile
@@ -16,9 +17,11 @@ defmodule Ecto.Changeset.EmbeddedNoPkTest do
       embeds_one :profile, Profile, on_replace: :delete
       embeds_one :raise_profile, Profile, on_replace: :raise
       embeds_one :invalid_profile, Profile, on_replace: :mark_as_invalid
+      embeds_one :update_profile, Profile, on_replace: :update
       embeds_many :posts, Post, on_replace: :delete
       embeds_many :raise_posts, Post, on_replace: :raise
       embeds_many :invalid_posts, Post, on_replace: :mark_as_invalid
+      embeds_many :update_posts, Post, on_replace: :update
     end
   end
 
@@ -216,6 +219,17 @@ defmodule Ecto.Changeset.EmbeddedNoPkTest do
     refute changeset.valid?
   end
 
+  test "cast embeds_one with on_replace: :update" do
+    {:ok, schema} = TestRepo.insert(%Author{name: "Enio",
+      update_profile: %Profile{name: "Enio"}})
+
+    changeset = cast(schema, %{"update_profile" => %{id: 2, name: "Jose"}}, :update_profile)
+    assert changeset.changes.update_profile.changes == %{name: "Jose"}
+    assert changeset.changes.update_profile.action == :update
+    assert changeset.errors == []
+    assert changeset.valid?
+  end
+
   ## cast embeds many
 
   test "cast embeds_many with only new schemas" do
@@ -322,6 +336,17 @@ defmodule Ecto.Changeset.EmbeddedNoPkTest do
     assert changeset.changes == %{}
     assert changeset.errors == [invalid_posts: {"is invalid", [type: {:array, :map}]}]
     refute changeset.valid?
+  end
+
+  test "cast embeds_many with on_replace: :update" do
+    {:ok, schema} = TestRepo.insert(%Author{id: 1, name: "Enio",
+                                    update_posts: [%Post{title: "Post"}]})
+
+    changeset = cast(schema, %{"update_posts" => [%{title: "Post 2"}]}, :update_posts)
+    assert changeset.changes.update_posts.changes == [%{title: "Post 2"}]
+    assert changeset.changes.update_posts.action == :update
+    assert changeset.errors == []
+    assert changeset.valid?
   end
 
   ## Others

@@ -11,7 +11,7 @@ defmodule Ecto.Embedded do
                        related: atom}
 
   @behaviour Ecto.Changeset.Relation
-  @on_replace_opts [:raise, :mark_as_invalid, :delete]
+  @on_replace_opts [:raise, :mark_as_invalid, :delete, :update]
   defstruct [:cardinality, :field, :owner, :related, :on_cast, on_replace: :raise]
 
   @doc """
