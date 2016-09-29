@@ -1175,5 +1175,22 @@ defmodule Ecto.Integration.RepoTest do
         TestRepo.insert_all(Post, [post], on_conflict: on_conflict,
                             conflict_target: [:uuid], returning: [:id, :title])
     end
+
+    @tag :with_conflict_target
+    test "source (without an ecto schema) on conflict query and conflict target" do
+      on_conflict = [set: [title: "second"]]
+      {:ok, uuid} = Ecto.UUID.dump("6fa459ea-ee8a-3ca4-894e-db77e160355e")
+      post = [title: "first", uuid: uuid]
+      assert TestRepo.insert_all("posts", [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
+             {1, nil}
+
+      # Error on non-conflict target
+      assert catch_error(TestRepo.insert_all("posts", [post], on_conflict: on_conflict, conflict_target: [:id]))
+
+      # Error on conflict target
+      assert TestRepo.insert_all("posts", [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
+             {1, nil}
+      assert TestRepo.all(from p in Post, select: p.title) == ["second"]
+    end
   end
 end
