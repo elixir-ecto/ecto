@@ -17,6 +17,16 @@ defmodule Ecto.UUID do
   def cast(_), do: :error
 
   @doc """
+  Same as `cast/1` but raises `Ecto.CastError` on invalid arguments.
+  """
+  def cast!(value) do
+    case cast(value) do
+      {:ok, uuid} -> uuid
+      :error -> raise Ecto.CastError, "cannot cast #{inspect value} to UUID"
+    end
+  end
+
+  @doc """
   Converts a string representing a UUID into a binary.
   """
   def dump(<< a1, a2, a3, a4, a5, a6, a7, a8, ?-,
