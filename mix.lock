@@ -9,4 +9,4 @@
   "poison": {:hex, :poison, "2.2.0", "4763b69a8a77bd77d26f477d196428b741261a761257ff1cf92753a0d4d24a63", [:mix], []},
   "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], []},
   "postgrex": {:hex, :postgrex, "0.12.0", "bdeeb4c42768c47c3c92228e66c70357fe9a9384fbc9de06abba774b22dd0635", [:mix], [{:connection, "~> 1.0", [hex: :connection, optional: false]}, {:db_connection, "~> 1.0-rc.4", [hex: :db_connection, optional: false]}, {:decimal, "~> 1.0", [hex: :decimal, optional: false]}]},
-  "sbroker": {:hex, :sbroker, "1.0.0-beta.3", "7fd35f29ff9db15887106c6a25afc87d95799a9690c10bd42349cfb670fe9c26", [:rebar3], []}}
+  "sbroker": {:hex, :sbroker, "1.0.0-beta.5", "6b40b413630ba40659edaccf902174a44c06cf47c4f15e32d281239b3b5bcba6", [:rebar3], []}}
