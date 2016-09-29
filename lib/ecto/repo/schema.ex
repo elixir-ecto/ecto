@@ -404,9 +404,9 @@ defmodule Ecto.Repo.Schema do
       :nothing ->
         {:nothing, [], conflict_target}
       [_ | _] = on_conflict ->
-        from = {source, schema}
+        from = if schema, do: {source, schema}, else: source
         query = Ecto.Query.from from, update: ^on_conflict
-        on_conflict_query(query, from, prefix, changes, adapter, conflict_target)
+        on_conflict_query(query, {source, schema}, prefix, changes, adapter, conflict_target)
       %Ecto.Query{} = query ->
         on_conflict_query(query, {source, schema}, prefix, changes, adapter, conflict_target)
       other ->
