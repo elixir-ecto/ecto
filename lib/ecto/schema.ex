@@ -1712,7 +1712,7 @@ defmodule Ecto.Schema do
   end
 
   defp expand_alias({:__aliases__, _, _} = ast, env),
-    do: Macro.expand(ast, %{env | lexical_tracker: nil})
+    do: Macro.expand(ast, %{env | function: {:__schema__, 2}})
   defp expand_alias(ast, _env),
     do: ast
 end
