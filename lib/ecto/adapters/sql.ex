@@ -15,7 +15,6 @@ defmodule Ecto.Adapters.SQL do
     quote do
       @behaviour Ecto.Adapter
       @behaviour Ecto.Adapter.Migration
-      @behaviour Ecto.Adapter.Transaction
 
       @conn __MODULE__.Connection
       @adapter unquote(adapter)
