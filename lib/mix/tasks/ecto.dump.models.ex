@@ -62,9 +62,10 @@ end
           columns = Enum.map description.rows, fn [column_name, column_type, is_primary] ->
             {column_name, get_type(column_type), is_primary}
           end
+          table = to_camelcase(table)
           content = EEx.eval_string(@template, [
             app: "name",
-            table: to_camelcase(table),
+            table: table,
             columns: columns
           ])
           write_model(repo, table, content)
@@ -85,9 +86,10 @@ end
           _ -> {column_name, get_type(column_type), true}
         end
       end
+      table = to_camelcase(table)
       content = EEx.eval_string(@template, [
         app: "name",
-        table: to_camelcase(table),
+        table: table,
         columns: columns
       ])
       write_model(repo, table, content)
@@ -99,8 +101,7 @@ end
   end
 
   defp write_model(repo, table, content) do
-    table_name = Enum.map_join(String.split(table, "_"), "", fn x -> String.capitalize(x) end)
-    filename = source_repo_priv(repo) <> "/" <> table_name <> ".ex"
+    filename = source_repo_priv(repo) <> "/" <> table <> ".ex"
     File.rm filename
     {:ok, file} = File.open(filename, [:write])
     IO.binwrite file, content
