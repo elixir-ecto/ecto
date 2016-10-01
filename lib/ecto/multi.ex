@@ -284,7 +284,7 @@ defmodule Ecto.Multi do
 
   Similar to `run/3`, but allows to pass module name, function and arguments.
   The function should return either `{:ok, value}` or `{:error, value}`, and
-  will receive changes so far as the first argument (prepened to those passed in
+  will receive changes so far as the first argument (prepended to those passed in
   the call to the function).
   """
   @spec run(t, name, module, function, args) :: t
