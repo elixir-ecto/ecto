@@ -20,6 +20,7 @@ defmodule Ecto.ChangesetTest do
       field :decimal, :decimal
       field :upvotes, :integer, default: 0
       field :topics, {:array, :string}
+      field :virtual, :string, virtual: true
       field :published_at, :naive_datetime
       has_many :comments, Ecto.ChangesetTest.Comment, on_replace: :delete
       has_one :comment, Ecto.ChangesetTest.Comment
@@ -27,7 +28,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defp changeset(schema \\ %Post{}, params) do
-    cast(schema, params, ~w(title body upvotes topics decimal))
+    cast(schema, params, ~w(title body upvotes decimal topics virtual))
   end
 
   ## cast/3
@@ -539,6 +540,20 @@ defmodule Ecto.ChangesetTest do
 
     assert changeset.valid?
     assert changeset.errors == []
+
+    # When virtual
+    changeset =
+      changeset(%{"virtual" => "hello"})
+      |> validate_change(:virtual, fn :virtual, "hello" -> [] end)
+
+    assert changeset.valid?
+    assert changeset.errors == []
+
+    # When unknown field
+    assert_raise ArgumentError, "unknown field :bad", fn  ->
+      changeset(%{"title" => "hello"})
+      |> validate_change(:bad, fn _, _ -> [] end)
+    end
   end
 
   test "validate_change/4" do
@@ -560,11 +575,20 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "validate_required/2" do
+    # When valid
+    changeset =
+      changeset(%{"title" => "hello", "body" => "something"})
+      |> validate_required(:title)
+    assert changeset.valid?
+    assert changeset.errors == []
+
+    # When missing
     changeset = changeset(%{}) |> validate_required(:title)
     refute changeset.valid?
     assert changeset.required == [:title]
     assert changeset.errors == [title: {"can't be blank", []}]
 
+    # When nil
     changeset =
       changeset(%{title: nil, body: "\n"})
       |> validate_required([:title, :body], message: "is blank")
@@ -572,11 +596,11 @@ defmodule Ecto.ChangesetTest do
     assert changeset.required == [:title, :body]
     assert changeset.errors == [title: {"is blank", []}, body: {"is blank", []}]
 
-    changeset =
+    # When unknown field
+    assert_raise ArgumentError, "unknown field :bad", fn  ->
       changeset(%{"title" => "hello", "body" => "something"})
-      |> validate_required(:title)
-    assert changeset.valid?
-    assert changeset.errors == []
+      |> validate_required(:bad)
+    end
   end
 
   test "validate_format/3" do

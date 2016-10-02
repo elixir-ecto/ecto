@@ -1150,6 +1150,7 @@ defmodule Ecto.Changeset do
   @spec validate_change(t, atom, (atom, term -> [error])) :: t
   def validate_change(changeset, field, validator) when is_atom(field) do
     %{changes: changes, errors: errors} = changeset
+    ensure_field_exists!(changeset, field)
 
     value = Map.get(changes, field)
     new   = if is_nil(value), do: [], else: validator.(field, value)
@@ -1221,6 +1222,7 @@ defmodule Ecto.Changeset do
 
     new_errors =
       for field <- fields,
+          ensure_field_exists!(changeset, field),
           missing?(changeset, field),
           is_nil(errors[field]),
           do: {field, {message, []}}
@@ -1229,6 +1231,13 @@ defmodule Ecto.Changeset do
       [] -> %{changeset | required: fields ++ required}
       _  -> %{changeset | required: fields ++ required, errors: new_errors ++ errors, valid?: false}
     end
+  end
+
+  defp ensure_field_exists!(%Changeset{types: types}, field) do
+    unless field in Map.keys(types) do
+      raise ArgumentError, "unknown field #{inspect field}"
+    end
+    true
   end
 
   defp missing?(changeset, field) when is_atom(field) do
