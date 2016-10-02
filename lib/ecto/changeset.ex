@@ -1234,7 +1234,7 @@ defmodule Ecto.Changeset do
   end
 
   defp ensure_field_exists!(%Changeset{types: types}, field) do
-    unless field in Map.keys(types) do
+    unless Map.has_key?(types, field) do
       raise ArgumentError, "unknown field #{inspect field}"
     end
     true
