@@ -596,9 +596,9 @@ defmodule Ecto do
     end
   end
 
-  def load(schema, map) when is_map(map) do
+  def load(schema, data) when is_map(data) do
     map =
-      Enum.into(map, %{}, fn
+      Enum.into(data, %{}, fn
         {key, value} when is_atom(key) -> {Atom.to_string(key), value}
         other -> other
       end)
@@ -606,7 +606,7 @@ defmodule Ecto do
     Ecto.Schema.__load__(schema, nil, nil, nil, map, &Ecto.Type.load(&1, &2))
   end
 
-  def load(schema, keyword) when is_list(keyword) do
-    load(schema, Map.new(keyword))
+  def load(schema, data) when is_list(data) do
+    load(schema, Map.new(data))
   end
 end
