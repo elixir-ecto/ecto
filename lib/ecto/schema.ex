@@ -1345,7 +1345,7 @@ defmodule Ecto.Schema do
     do_load(fields, values, struct, types, loader)
   end
 
-  def do_load([field|fields], [value|values], struct, types, loader) do
+  defp do_load([field|fields], [value|values], struct, types, loader) do
     case Map.fetch(types, field) do
       {:ok, type} ->
         value = load!(struct, field, type, value, loader)
@@ -1355,7 +1355,7 @@ defmodule Ecto.Schema do
     end
   end
 
-  def do_load([], [], struct, _types, _loader), do: struct
+  defp do_load([], [], struct, _types, _loader), do: struct
 
   defp load!(struct, field, type, value, loader) do
     case loader.(type, value) do
