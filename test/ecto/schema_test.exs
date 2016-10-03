@@ -622,9 +622,4 @@ defmodule Ecto.SchemaTest do
       Ecto.load(Schema, %{"name" => 0})
     end
   end
-
-  test "Ecto.load/3" do
-    assert [%Schema{name: "eric"}, %Schema{name: "jose"}] =
-           Ecto.load(Schema, ["name"], [["eric"], ["jose"]])
-  end
 end
