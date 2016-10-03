@@ -1330,7 +1330,8 @@ defmodule Ecto.Schema do
     end
   end
 
-  defp do_load(struct, types, map, loader) when is_map(map) do
+  @doc false
+  def do_load(struct, types, map, loader) when is_map(map) do
     Enum.reduce(types, struct, fn
       {field, type}, acc ->
         case Map.fetch(map, Atom.to_string(field)) do
@@ -1340,11 +1341,11 @@ defmodule Ecto.Schema do
     end)
   end
 
-  defp do_load(struct, types, {fields, values}, loader) when is_list(fields) and is_list(values) do
+  def do_load(struct, types, {fields, values}, loader) when is_list(fields) and is_list(values) do
     do_load(fields, values, struct, types, loader)
   end
 
-  defp do_load([field|fields], [value|values], struct, types, loader) do
+  def do_load([field|fields], [value|values], struct, types, loader) do
     case Map.fetch(types, field) do
       {:ok, type} ->
         value = load!(struct, field, type, value, loader)
@@ -1354,13 +1355,20 @@ defmodule Ecto.Schema do
     end
   end
 
-  defp do_load([], [], struct, _types, _loader), do: struct
+  def do_load([], [], struct, _types, _loader), do: struct
 
   defp load!(struct, field, type, value, loader) do
     case loader.(type, value) do
       {:ok, value} -> value
-      :error -> raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type} for #{inspect field} in schema #{inspect struct.__struct__}"
+      :error -> raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type} for #{inspect field}#{error_data(struct)}"
     end
+  end
+
+  defp error_data(%{__struct__: atom}) do
+    " in schema #{inspect atom}"
+  end
+  defp error_data(other) when is_map(other) do
+    ""
   end
 
   @doc false
