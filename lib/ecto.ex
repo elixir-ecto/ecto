@@ -597,6 +597,12 @@ defmodule Ecto do
   end
 
   def load(schema, map) when is_map(map) do
+    map =
+      Enum.into(map, %{}, fn
+        {key, value} when is_atom(key) -> {Atom.to_string(key), value}
+        other -> other
+      end)
+
     Ecto.Schema.__load__(schema, nil, nil, nil, map, &Ecto.Type.load(&1, &2))
   end
 end

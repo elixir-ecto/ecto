@@ -606,8 +606,13 @@ defmodule Ecto.SchemaTest do
   end
 
   test "Ecto.load/2" do
+    # string keys
     assert %Schema{name: "jose"} =
            Ecto.load(Schema, %{"name" => "jose"})
+
+    # atom keys
+    assert %Schema{name: "jose"} =
+           Ecto.load(Schema, %{name: "jose"})
 
     # default value
     assert %Schema{name: "eric", email: "eric@example.com"} =
