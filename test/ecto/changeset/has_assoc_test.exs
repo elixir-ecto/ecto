@@ -787,14 +787,44 @@ defmodule Ecto.Changeset.HasAssocTest do
   test "put_assoc/4" do
     base_changeset = Changeset.change(%Author{})
 
+    changeset = Changeset.put_assoc(base_changeset, :profile, %{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
+
     changeset = Changeset.put_assoc(base_changeset, :profile, %Profile{name: "michal"})
     assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
 
     base_changeset = Changeset.change(%Author{profile: %Profile{name: "michal"}})
     empty_update_changeset = Changeset.change(%Profile{name: "michal"})
 
     changeset = Changeset.put_assoc(base_changeset, :profile, empty_update_changeset)
     refute Map.has_key?(changeset.changes, :profile)
+  end
+
+  test "put_assoc/4 when replacing" do
+    profile = %Profile{id: 1, name: "michal"} |> Ecto.put_meta(state: :loaded)
+    base_changeset = Changeset.change(%Author{profile: profile})
+
+    changeset = Changeset.put_assoc(base_changeset, :profile, %{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
+    assert changeset.changes.profile.changes == %{name: "michal"}
+
+    changeset = Changeset.put_assoc(base_changeset, :profile, %Profile{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
+    assert changeset.changes.profile.changes == %{}
+
+    changeset = Changeset.put_assoc(base_changeset, :profile, %{id: 1, name: "michal"})
+    refute Map.has_key?(changeset.changes, :profile)
+    changeset = Changeset.put_assoc(base_changeset, :profile, %Profile{id: 1, name: "michal"})
+    refute Map.has_key?(changeset.changes, :profile)
+
+    changeset = Changeset.put_assoc(base_changeset, :profile, %{id: 1, name: "jose"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :update
+    assert changeset.changes.profile.changes == %{name: "jose"}
   end
 
   test "get_field/3, fetch_field/2 with has one" do

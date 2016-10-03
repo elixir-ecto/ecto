@@ -85,6 +85,55 @@ defmodule Ecto.Changeset do
   values are stored in the changeset `empty_values` field and default to
   `[""]`.
 
+  ## Assocs, embeds and on replace
+
+  Using changesets you can work with associations as well as with embedded
+  structs. Sometimes related data may be replaced by incoming data and by
+  default Ecto won't allow such. Such behaviour can be changed when defining
+  the relation by setting `:on_replace` option in your association/embed
+  definition according to the values below:
+
+    * `:raise` (default) - do not allow removing association or embedded
+      data via parent changesets
+    * `:mark_as_invalid` - if attempting to remove the association or
+      embedded data via parent changeset - an error will be added to the parent
+      changeset, and it will be marked as invalid
+    * `:nilify` - sets owner reference column to `nil` (available only for
+      associations)
+    * `:update` - updates the association, available only for has_one and belongs_to.
+      This option will update all the fields given to the changeset including the id
+      for the association
+    * `:delete` - removes the association or related data from the database.
+      This option has to be used carefully
+
+  The `:delete` option in particular must be used carefully as it would allow
+  users to delete any associated data. If you need deletion, it is often preferred
+  to add a separate boolean virtual field to the changeset function that will allow
+  you to manually mark it for deletion, as in the example below:
+
+      defmodule Comment do
+        use Ecto.Schema
+        import Ecto.Changeset
+
+        schema "comments" do
+          field :body, :string
+          field :delete, :boolean, virtual: true
+        end
+
+        def changeset(comment, params) do
+          cast(comment, params, [:body, :delete])
+          |> maybe_mark_for_deletion
+        end
+
+        defp maybe_mark_for_deletion(changeset) do
+          if get_change(changeset, :delete) do
+            %{changeset | action: :delete}
+          else
+            changeset
+          end
+        end
+      end
+
   ## Schemaless changesets
 
   In the changeset examples so far, we have always used changesets to
@@ -155,50 +204,6 @@ defmodule Ecto.Changeset do
     * `repo`         - The repository applying the changeset (only set after a Repo function is called)
     * `opts`         - The options given to the repository
     * `empty_values` - A list of values to be considered empty
-
-  ## On replace
-
-  Using changesets you can work with associations as well as with embedded
-  structs. Sometimes related data may be replaced by incoming data and by
-  default Ecto won't allow such. Such behaviour can be changed when defining
-  the relation by setting `:on_replace` option according to the values below:
-
-    * `:raise` (default) - do not allow removing association or embedded
-      data via parent changesets,
-    * `:mark_as_invalid` - if attempting to remove the association or
-      embedded data via parent changeset - an error will be added to the parent
-      changeset, and it will be marked as invalid,
-    * `:nilify` - sets owner reference column to `nil` (available only for
-      associations),
-    * `:update` - updates the association, available only for has_one and belongs_to.
-      This option will update all the fields given to the changeset including the id
-      for the association.
-    * `:delete` - removes the association or related data from the database.
-      This option has to be used carefully. You should consider adding a
-      separate boolean virtual field to the changeset function that will allow you
-      to manually mark it for deletion, as in the example below:
-          defmodule Comment do
-            use Ecto.Schema
-            import Ecto.Changeset
-
-            schema "comments" do
-              field :body, :string
-              field :delete, :boolean, virtual: true
-            end
-
-            def changeset(comment, params) do
-              cast(comment, params, [:body, :delete])
-              |> maybe_mark_for_deletion
-            end
-
-            defp maybe_mark_for_deletion(changeset) do
-              if get_change(changeset, :delete) do
-                %{changeset | action: :delete}
-              else
-                changeset
-              end
-            end
-          end
 
   """
 
@@ -549,15 +554,71 @@ defmodule Ecto.Changeset do
   ## Casting related
 
   @doc """
-  Casts the given association.
+  Casts the given association with the changeset parameters.
 
   The parameters for the given association will be retrieved
-  from `changeset.params` and the changeset function in the
-  association module will be invoked. The function to be
-  invoked may also be configured by using the `:with` option.
+  from `changeset.params`. Those parameters are expected to be
+  a map with attributes, similar to the ones passed to `cast/3`.
+  Once parameters are retrieved, `cast_assoc/3` will match those
+  parameters with the associations already in the changeset record.
+  For this reason, the association must be preloaded in the
+  changeset before `cast_assoc/3` is called.
 
-  The changeset must have been previously `cast` using
-  `cast/3` before this function is invoked.
+  For example, imagine a user has many addresses relationship where
+  post data is sent as follows
+
+      %{"name" => "john doe", "addresses" => [
+        %{"street" => "somewhere", "country" => "brazil", "id" => 1},
+        %{"street" => "elsewhere", "country" => "poland"},
+      ]}
+
+  and then
+
+      user
+      |> Repo.preload(user, :addresses)
+      |> Ecto.Changeset.cast(params, [:addresses])
+      |> Ecto.Changeset.assoc(:addresses)
+
+  Once `cast_assoc/3` is called, Ecto will compare those parameters
+  with the addresses already associated to the user and act as follows:
+
+    * If the parameter does not contain an ID, the parameter data
+      will be passed to `changeset/2` with a new struct and become
+      an insert operation
+    * If the parameter contains an ID and there is no associated child
+      with such ID, the parameter data will be passed to `changeset/2`
+      with a new struct and become an insert operation
+    * If the parameter contains an ID and there is an associated child
+      with such ID, the parameter data will be passed to `changeset/2`
+      with the existing struct and become an update operation
+    * If there is an associated child with an ID and its ID is not given
+      as parameter, the `:on_replace` callback for that association will
+      be invoked (see the "On replace" section on the module documentation)
+
+  In other words, `cast_assoc/3` is useful when the associated data is
+  manager alongside the parent struct, all at once. If each side of the
+  association is managed separatedly, it is preferrable to use `put_assoc/3`
+  and directly instruct Ecto how the associated should look like.
+
+  For example, imagine you are receiving a set of tags you want to
+  associate to an user. Those tags are meat to exist upfront. Using
+  `cast_assoc/3` won't work as desired because the tags are not managed
+  alongside the user. In such cases, `put_assoc/3` will work as desired.
+  With the given parameters:
+
+      %{"name" => "john doe", "tags" => ["learner"]}
+
+  and then:
+
+      tags = Repo.all(from t in Tag, where: t.name in ^params["tags"])
+
+      user
+      |> Repo.preload(user, :tags)
+      |> Ecto.Changeset.cast(params) # No need to allow :tags as we won't cast them
+      |> Ecto.Changeset.put_assoc(:tags, tags) # Explicitly set the tags
+
+  Note the changeset must have been previously `cast` using `cast/3`
+  before this function is invoked.
 
   ## Options
 
@@ -572,12 +633,15 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Casts the given embed.
+  Casts the given embed with the changeset parameters.
 
   The parameters for the given embed will be retrieved
-  from `changeset.params` and the changeset function in the
-  embed module will be invoked. The function to be
-  invoked may also be configured by using the `:with` option.
+  from `changeset.params`. Those parameters are expected to be
+  a map with attributes, similar to the ones passed to `cast/3`.
+  Once parameters are retrieved, `cast_embed/3` will match those
+  parameters with the embeds already in the changeset record.
+  See `cast_assoc/3` for an example of working with casts and
+  associations which would also apply for embeds.
 
   The changeset must have been previously `cast` using
   `cast/3` before this function is invoked.
@@ -691,16 +755,16 @@ defmodule Ecto.Changeset do
 
   The other fields are merged with the following criteria:
 
-  * `params` - params are merged (not deep-merged) giving precedence to the
-    params of `changeset2` in case of a conflict. If both changesets have their
-    `:params` fields set to `nil`, the resulting changeset will have its params
-    set to `nil` too.
-  * `changes` - changes are merged giving precedence to the `changeset2`
-    changes.
-  * `errors` and `validations` - they are simply concatenated.
-  * `required` - required fields are merged; all the fields that appear
-    in the required list of both changesets are moved to the required
-    list of the resulting changeset.
+    * `params` - params are merged (not deep-merged) giving precedence to the
+      params of `changeset2` in case of a conflict. If both changesets have their
+      `:params` fields set to `nil`, the resulting changeset will have its params
+      set to `nil` too.
+    * `changes` - changes are merged giving precedence to the `changeset2`
+      changes.
+    * `errors` and `validations` - they are simply concatenated.
+    * `required` - required fields are merged; all the fields that appear
+      in the required list of both changesets are moved to the required
+      list of the resulting changeset.
 
   ## Examples
 
@@ -966,8 +1030,11 @@ defmodule Ecto.Changeset do
 
   If the association has no changes, it will be skipped.
   If the association is invalid, the changeset will be marked
-  as invalid. If the given value is not an association, it
-  will raise.
+  as invalid. If the given value is not an association struct
+  or changeset, it will raise.
+
+  Also see `cast_assoc/3` for a discussion of when to use
+  `cast_assoc/3` and `put_assoc/3`.
   """
   def put_assoc(changeset, name, value, opts \\ []) do
     put_relation(:assoc, changeset, name, value, opts)
@@ -984,8 +1051,12 @@ defmodule Ecto.Changeset do
 
   If the embed has no changes, it will be skipped.
   If the embed is invalid, the changeset will be marked
-  as invalid. If the given value is not an embed, it
-  will raise.
+  as invalid. If the given value is not an embed struct
+  or changeset, it will raise.
+
+  Also see `cast_assoc/3` for a discussion of when to use
+  `cast_assoc/3` and `put_assoc/3` which also applies to
+  `put_embed/3`.
   """
   def put_embed(changeset, name, value, opts \\ []) do
     put_relation(:embed, changeset, name, value, opts)
@@ -1008,7 +1079,8 @@ defmodule Ecto.Changeset do
         %{changeset | changes: Map.put(changes, name, change),
                       valid?: changeset.valid? and relation_valid?}
       :error ->
-        %{changeset | errors: [{name, {"is invalid", [type: expected_relation_type(relation)]}} | changeset.errors], valid?: false}
+        error = {name, {"is invalid", [type: expected_relation_type(relation)]}}
+        %{changeset | errors: [error | changeset.errors], valid?: false}
     end
   end
 
