@@ -614,6 +614,10 @@ defmodule Ecto.SchemaTest do
     assert %Schema{name: "jose"} =
            Ecto.load(Schema, %{name: "jose"})
 
+    # keyword
+    assert %Schema{name: "jose"} =
+           Ecto.load(Schema, [name: "jose"])
+
     # default value
     assert %Schema{name: "eric", email: "eric@example.com"} =
            Ecto.load(Schema, %{"email" => "eric@example.com"})

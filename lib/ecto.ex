@@ -605,4 +605,8 @@ defmodule Ecto do
 
     Ecto.Schema.__load__(schema, nil, nil, nil, map, &Ecto.Type.load(&1, &2))
   end
+
+  def load(schema, keyword) when is_list(keyword) do
+    load(schema, Map.new(keyword))
+  end
 end
