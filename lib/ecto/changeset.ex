@@ -577,7 +577,7 @@ defmodule Ecto.Changeset do
       user
       |> Repo.preload(user, :addresses)
       |> Ecto.Changeset.cast(params, [:addresses])
-      |> Ecto.Changeset.assoc(:addresses)
+      |> Ecto.Changeset.cast_assoc(:addresses)
 
   Once `cast_assoc/3` is called, Ecto will compare those parameters
   with the addresses already associated to the user and act as follows:
@@ -614,7 +614,7 @@ defmodule Ecto.Changeset do
 
       user
       |> Repo.preload(user, :tags)
-      |> Ecto.Changeset.cast(params) # No need to allow :tags as we won't cast them
+      |> Ecto.Changeset.cast(params) # No need to allow :tags as we put them directly
       |> Ecto.Changeset.put_assoc(:tags, tags) # Explicitly set the tags
 
   Note the changeset must have been previously `cast` using `cast/3`
