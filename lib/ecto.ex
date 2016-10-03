@@ -595,4 +595,15 @@ defmodule Ecto do
       true
     end
   end
+
+  def load(schema, map) when is_map(map) do
+    Ecto.Schema.__load__(schema, nil, nil, nil, map, &Ecto.Type.load(&1, &2))
+  end
+
+  def load(schema, columns, rows) when is_list(columns) and is_list(rows) do
+    Enum.map(rows, fn row ->
+      map = Map.new(Enum.zip(columns, row))
+      load(schema, map)
+    end)
+  end
 end
