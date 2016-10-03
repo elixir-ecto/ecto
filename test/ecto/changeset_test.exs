@@ -550,7 +550,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == []
 
     # When unknown field
-    assert_raise ArgumentError, "unknown field :bad", fn  ->
+    assert_raise ArgumentError, ~r/unknown field :bad for changeset on/, fn  ->
       changeset(%{"title" => "hello"})
       |> validate_change(:bad, fn _, _ -> [] end)
     end
@@ -597,7 +597,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [title: {"is blank", []}, body: {"is blank", []}]
 
     # When unknown field
-    assert_raise ArgumentError, "unknown field :bad", fn  ->
+    assert_raise ArgumentError, ~r/unknown field :bad for changeset on/, fn  ->
       changeset(%{"title" => "hello", "body" => "something"})
       |> validate_required(:bad)
     end
