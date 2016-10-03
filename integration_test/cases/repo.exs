@@ -1193,12 +1193,4 @@ defmodule Ecto.Integration.RepoTest do
       assert TestRepo.all(from p in Post, select: p.title) == ["second"]
     end
   end
-
-  test "load" do
-    TestRepo.insert!(%Post{title: "post 1"})
-    TestRepo.insert!(%Post{title: "post 2"})
-
-    result = Ecto.Adapters.SQL.query!(TestRepo, "SELECT * from posts", [])
-    assert [%Post{title: "post 1"}, %Post{title: "post 2"}] = Ecto.load(Post, result.columns, result.rows)
-  end
 end
