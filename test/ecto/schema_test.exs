@@ -620,15 +620,15 @@ defmodule Ecto.SchemaTest do
 
     # default value
     assert %Schema{name: "eric", email: "eric@example.com"} =
-           Ecto.load(Schema, %{"email" => "eric@example.com"})
+           Ecto.load(Schema, %{email: "eric@example.com"})
 
     # array
     assert %Schema{array: ["one", "two"]} =
-           Ecto.load(Schema, %{"array" => ["one", "two"]})
+           Ecto.load(Schema, %{array: ["one", "two"]})
     
     # error
     assert_raise ArgumentError, "cannot load `0` as type :string for :name in schema Ecto.SchemaTest.Schema", fn ->
-      Ecto.load(Schema, %{"name" => 0})
+      Ecto.load(Schema, %{name: 0})
     end
   end
 end
