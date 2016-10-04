@@ -642,27 +642,27 @@ defmodule Ecto.SchemaTest do
 
   test "Ecto.load/2 schemaless" do
     # string keys
-    assert %{name: "jose"} =
-           Ecto.load(%{name: :string}, %{"name" => "jose"})
+    assert Ecto.load(%{name: :string}, %{"name" => "jose"}) ==
+           %{name: "jose"}
 
     # atom keys
-    assert %{name: "jose"} =
-           Ecto.load(%{name: :string}, %{name: "jose"})
+    assert Ecto.load(%{name: :string}, %{name: "jose"}) ==
+           %{name: "jose"}
 
     # keyword
-    assert %{name: "jose"} =
-           Ecto.load(%{name: :string}, %{name: "jose"})
+    assert Ecto.load(%{name: :string}, %{name: "jose"}) ==
+           %{name: "jose"}
 
     # array
-    assert %{array: ["one", "two"]} =
-           Ecto.load(%{array: {:array, :string}}, %{array: ["one", "two"]})
+    assert Ecto.load(%{array: {:array, :string}}, %{array: ["one", "two"]}) ==
+           %{array: ["one", "two"]}
 
     # map
-    assert %{map: %{color: "red"}} =
-           Ecto.load(%{map: {:map, :string}}, %{map: %{color: "red"}})
+    assert Ecto.load(%{map: {:map, :string}}, %{map: %{color: "red"}}) ==
+           %{map: %{color: "red"}}
 
-    assert %{map: %{"color" => "red"}} =
-           Ecto.load(%{map: {:map, :string}}, %{map: %{"color" => "red"}})
+    assert Ecto.load(%{map: {:map, :string}}, %{map: %{"color" => "red"}}) ==
+           %{map: %{"color" => "red"}}
 
     # error
     assert_raise ArgumentError, "cannot load `0` as type :string for :name", fn ->
