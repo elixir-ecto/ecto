@@ -633,6 +633,10 @@ defmodule Ecto.SchemaTest do
 
     assert %Schema{map: %{"color" => "red"}} =
            Ecto.load(Schema, %{map: %{"color" => "red"}})
+
+    # nil
+    assert %Schema{name: nil} =
+           Ecto.load(Schema, %{name: nil})
     
     # invalid key is ignored
     assert %Schema{} =
@@ -667,6 +671,9 @@ defmodule Ecto.SchemaTest do
 
     assert Ecto.load(%{map: {:map, :string}}, %{map: %{"color" => "red"}}) ==
            %{map: %{"color" => "red"}}
+
+    # nil
+    assert Ecto.load(%{name: :string}, %{name: nil}) == %{name: nil}
 
     # invalid key is ignored
     assert Ecto.load(%{name: :string}, %{name: "jose", bad: "bad"}) ==
