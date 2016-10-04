@@ -634,7 +634,11 @@ defmodule Ecto.SchemaTest do
     assert %Schema{map: %{"color" => "red"}} =
            Ecto.load(Schema, %{map: %{"color" => "red"}})
     
-    # error
+    # invalid key is ignored
+    assert %Schema{} =
+           Ecto.load(Schema, %{bad: "bad"})
+
+    # invalid value raises error
     assert_raise ArgumentError, "cannot load `0` as type :string for :name in schema Ecto.SchemaTest.Schema", fn ->
       Ecto.load(Schema, %{name: 0})
     end
@@ -664,7 +668,11 @@ defmodule Ecto.SchemaTest do
     assert Ecto.load(%{map: {:map, :string}}, %{map: %{"color" => "red"}}) ==
            %{map: %{"color" => "red"}}
 
-    # error
+    # invalid key is ignored
+    assert Ecto.load(%{name: :string}, %{name: "jose", bad: "bad"}) ==
+           %{name: "jose"}
+
+    # invalid value raises error
     assert_raise ArgumentError, "cannot load `0` as type :string for :name", fn ->
       Ecto.load(%{name: :string}, %{name: 0})
     end
