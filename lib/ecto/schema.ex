@@ -1316,7 +1316,7 @@ defmodule Ecto.Schema do
   defp type_to_module(other), do: other
 
   @doc false
-  def __load__(schema, prefix, source, context, data, loader) do
+  def __load__(schema, prefix, source, context, data, loader) when is_list(data) or is_tuple(data) do
     struct = schema.__struct__()
     fields = schema.__schema__(:types)
 
@@ -1330,13 +1330,17 @@ defmodule Ecto.Schema do
     end
   end
 
+  def __load__(schema, prefix, source, context, data, loader) when is_map(data) do
+    __load__(schema, prefix, source, context, Map.to_list(data), loader)
+  end
+
   @doc false
-  def do_load(struct, types, map, loader) when is_map(map) do
+  def do_load(struct, types, data, loader) when is_list(data) do
     Enum.reduce(types, struct, fn
       {field, type}, acc ->
-        case Map.fetch(map, Atom.to_string(field)) do
-          {:ok, value} -> Map.put(acc, field, load!(struct, field, type, value, loader))
-          :error -> acc
+        case Enum.find(data, fn {key, _value} -> key == field or key == Atom.to_string(field) end) do
+          {_, value} -> Map.put(acc, field, load!(struct, field, type, value, loader))
+          nil -> acc
         end
     end)
   end
