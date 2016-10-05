@@ -1072,7 +1072,7 @@ defmodule Ecto.Changeset do
       apply_changes(changeset)
 
   """
-  @spec apply_changes(t) :: Ecto.Schema.t
+  @spec apply_changes(t) :: Ecto.Schema.t | data
   def apply_changes(%Changeset{changes: changes, data: data}) when changes == %{} do
     data
   end
