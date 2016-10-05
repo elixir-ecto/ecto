@@ -237,7 +237,7 @@ defmodule Ecto.Changeset do
   @type constraint :: %{type: :unique, constraint: String.t, match: :exact | :suffix,
                         field: atom, message: error}
   @type data :: map()
-  @type types :: Keyword.t | map()
+  @type types :: map()
 
   @number_validators %{
     less_than:                {&</2,  "must be less than %{number}"},
