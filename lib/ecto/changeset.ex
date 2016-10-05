@@ -580,7 +580,7 @@ defmodule Ecto.Changeset do
       |> Ecto.Changeset.cast_assoc(:addresses)
 
   Once `cast_assoc/3` is called, Ecto will compare those parameters
-  with the addresses already associated to the user and act as follows:
+  with the addresses already associated with the user and act as follows:
 
     * If the parameter does not contain an ID, the parameter data
       will be passed to `changeset/2` with a new struct and become
@@ -1981,8 +1981,8 @@ defmodule Ecto.Changeset do
   ## Options
 
     * `:message` - the message in case the constraint check fails,
-      defaults to "is still associated to this entry" (for has_one)
-      and "are still associated to this entry" (for has_many)
+      defaults to "is still associated with this entry" (for has_one)
+      and "are still associated with this entry" (for has_many)
     * `:name` - the constraint name. By default, the constraint
       name is inferred from the association table + association
       field. May be required explicitly for complex cases
@@ -2030,8 +2030,8 @@ defmodule Ecto.Changeset do
     add_constraint(changeset, :exclude, to_string(constraint), match_type, field, {message, []})
   end
 
-  defp no_assoc_message(:one), do: "is still associated to this entry"
-  defp no_assoc_message(:many), do: "are still associated to this entry"
+  defp no_assoc_message(:one), do: "is still associated with this entry"
+  defp no_assoc_message(:many), do: "are still associated with this entry"
 
 
   defp add_constraint(changeset, type, constraint, match, field, error)

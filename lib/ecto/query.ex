@@ -976,7 +976,7 @@ defmodule Ecto.Query do
       Repo.all from p in Post, preload: [:comments]
 
   The example above will fetch all posts from the database and then do
-  a separate query returning all comments associated to the given posts.
+  a separate query returning all comments associated with the given posts.
 
   However, often times, you want posts and comments to be selected and
   filtered in the same query. For such cases, you can explicitly tell

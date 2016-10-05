@@ -990,7 +990,7 @@ defmodule Ecto.ChangesetTest do
     changeset = change(%Post{}) |> no_assoc_constraint(:comments)
     assert changeset.constraints ==
            [%{type: :foreign_key, field: :comments, constraint: "comments_post_id_fkey", match: :exact,
-              error: {"are still associated to this entry", []}}]
+              error: {"are still associated with this entry", []}}]
 
     changeset = change(%Post{}) |> no_assoc_constraint(:comments, name: :whatever, message: "exists")
     assert changeset.constraints ==
@@ -1002,7 +1002,7 @@ defmodule Ecto.ChangesetTest do
     changeset = change(%Post{}) |> no_assoc_constraint(:comment)
     assert changeset.constraints ==
            [%{type: :foreign_key, field: :comment, constraint: "comments_post_id_fkey", match: :exact,
-              error: {"is still associated to this entry", []}}]
+              error: {"is still associated with this entry", []}}]
 
     changeset = change(%Post{}) |> no_assoc_constraint(:comment, name: :whatever, message: "exists")
     assert changeset.constraints ==

@@ -297,10 +297,10 @@ defmodule Ecto.Changeset.Relation do
         changeset
       action == :insert ->
         raise "cannot #{action} related #{inspect changeset.data} " <>
-              "because it is already associated to the given struct"
+              "because it is already associated with the given struct"
       true ->
         raise "cannot #{action} related #{inspect changeset.data} because " <>
-              "it already exists and it is not currently associated to the " <>
+              "it already exists and it is not currently associated with the " <>
               "given struct. Ecto forbids casting existing records through " <>
               "the association field for security reasons. Instead, set " <>
               "the foreign key value accordingly"
