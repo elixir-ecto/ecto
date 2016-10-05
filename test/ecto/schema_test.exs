@@ -658,7 +658,7 @@ defmodule Ecto.SchemaTest do
            %{name: "jose"}
 
     # keyword
-    assert Ecto.load(%{name: :string}, %{name: "jose"}) ==
+    assert Ecto.load(%{name: :string}, [name: "jose"]) ==
            %{name: "jose"}
 
     # array
