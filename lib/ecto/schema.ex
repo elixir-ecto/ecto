@@ -1330,6 +1330,10 @@ defmodule Ecto.Schema do
     end
   end
 
+  def __load__(struct, types, {fields, values}, loader) when is_list(fields) and is_list(values) do
+    do_load(fields, values, struct, types, loader)
+  end
+
   @doc false
   def do_load(struct, types, map, loader) when is_map(map) do
     Enum.reduce(types, struct, fn
@@ -1351,7 +1355,7 @@ defmodule Ecto.Schema do
         value = load!(struct, field, type, value, loader)
         do_load(fields, values, Map.put(struct, field, value), types, loader)
       :error ->
-        raise ArgumentError, "unknown field `#{field}` for struct #{inspect struct.__struct__}"
+        raise ArgumentError, "unknown field `#{field}`#{error_data(struct)}"
     end
   end
 

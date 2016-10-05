@@ -596,24 +596,19 @@ defmodule Ecto do
     end
   end
 
-  def load(schema, data) when is_atom(schema) and is_map(data) do
-    map = stringify_map_keys(data)
-    Ecto.Schema.__load__(schema, nil, nil, nil, map, &Ecto.Type.load(&1, &2))
+  def load(schema_or_types, data) when is_map(data) do
+    load(schema_or_types, {Map.keys(data), Map.values(data)})
   end
 
-  def load(schema, data) when is_list(data) do
-    load(schema, Map.new(data))
+  def load(schema_or_types, data) when is_list(data) do
+    load(schema_or_types, {Keyword.keys(data), Keyword.values(data)})
   end
 
-  def load(types, data) when is_map(types) and is_map(data) do
-    map = stringify_map_keys(data)
-    Ecto.Schema.do_load(%{}, types, map, &Ecto.Type.load(&1, &2))
+  def load(schema, {fields, values}) when is_atom(schema) do
+    Ecto.Schema.__load__(schema, nil, nil, nil, {fields, values}, &Ecto.Type.load(&1, &2))
   end
 
-  defp stringify_map_keys(map) do
-    Enum.into(map, %{}, fn
-      {key, value} when is_atom(key) -> {Atom.to_string(key), value}
-      other -> other
-    end)
+  def load(types, {fields, values}) when is_map(types) do
+    Ecto.Schema.__load__(%{}, types, {fields, values}, &Ecto.Type.load(&1, &2))
   end
 end

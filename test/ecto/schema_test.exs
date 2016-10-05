@@ -606,11 +606,7 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  test "Ecto.load/2 with schema" do
-    # string keys
-    assert %Schema{name: "jose"} =
-           Ecto.load(Schema, %{"name" => "jose"})
-
+  test "Ecto.load/2 with schema atom keys" do
     # atom keys
     assert %Schema{name: "jose"} =
            Ecto.load(Schema, %{name: "jose"})
@@ -618,6 +614,10 @@ defmodule Ecto.SchemaTest do
     # keyword
     assert %Schema{name: "jose"} =
            Ecto.load(Schema, [name: "jose"])
+
+    # fields and values
+    assert %Schema{name: "jose"} =
+           Ecto.load(Schema, {[:name], ["jose"]})
 
     # default value
     assert %Schema{name: "eric", email: "eric@example.com"} =
@@ -638,27 +638,28 @@ defmodule Ecto.SchemaTest do
     assert %Schema{name: nil} =
            Ecto.load(Schema, %{name: nil})
     
-    # invalid key is ignored
-    assert %Schema{} =
-           Ecto.load(Schema, %{bad: "bad"})
+    # invalid key
+    assert_raise ArgumentError, "unknown field `bad` in schema Ecto.SchemaTest.Schema", fn ->
+      Ecto.load(Schema, %{bad: "bad"})
+    end
 
-    # invalid value raises error
+    # invalid value
     assert_raise ArgumentError, "cannot load `0` as type :string for :name in schema Ecto.SchemaTest.Schema", fn ->
       Ecto.load(Schema, %{name: 0})
     end
   end
 
   test "Ecto.load/2 schemaless" do
-    # string keys
-    assert Ecto.load(%{name: :string}, %{"name" => "jose"}) ==
-           %{name: "jose"}
-
     # atom keys
     assert Ecto.load(%{name: :string}, %{name: "jose"}) ==
            %{name: "jose"}
 
     # keyword
     assert Ecto.load(%{name: :string}, [name: "jose"]) ==
+           %{name: "jose"}
+
+    # fields and values
+    assert Ecto.load(%{name: :string}, {[:name], ["jose"]}) ==
            %{name: "jose"}
 
     # array
@@ -675,11 +676,12 @@ defmodule Ecto.SchemaTest do
     # nil
     assert Ecto.load(%{name: :string}, %{name: nil}) == %{name: nil}
 
-    # invalid key is ignored
-    assert Ecto.load(%{name: :string}, %{name: "jose", bad: "bad"}) ==
-           %{name: "jose"}
+    # invalid key
+    assert_raise ArgumentError, "unknown field `bad`", fn ->
+      assert Ecto.load(%{name: :string}, %{name: "jose", bad: "bad"})
+    end
 
-    # invalid value raises error
+    # invalid value
     assert_raise ArgumentError, "cannot load `0` as type :string for :name", fn ->
       Ecto.load(%{name: :string}, %{name: 0})
     end
