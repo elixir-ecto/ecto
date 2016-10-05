@@ -471,7 +471,7 @@ defmodule Ecto do
 
   ## Examples
 
-  In the example below, we get all comments associated to the given
+  In the example below, we get all comments associated with the given
   post:
 
       post = Repo.get Post, 1

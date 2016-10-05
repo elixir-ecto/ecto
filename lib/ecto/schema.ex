@@ -805,7 +805,7 @@ defmodule Ecto.Schema do
   to easily retrieve associated comments to a given post or
   task:
 
-      # Fetch all comments associated to the given task
+      # Fetch all comments associated with the given task
       Repo.all(assoc(task, :comments))
 
   Or all comments in a given table:
