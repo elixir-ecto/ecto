@@ -596,6 +596,7 @@ defmodule Ecto do
     end
   end
 
+  @spec load(Ecto.Schema.t | map(), map() | Keyword.t | {list, list}) :: Ecto.Schema.t | map()
   def load(schema_or_types, data) when is_map(data) do
     load(schema_or_types, {Map.keys(data), Map.values(data)})
   end
@@ -608,7 +609,7 @@ defmodule Ecto do
     Ecto.Schema.__load__(schema, nil, nil, nil, {fields, values}, &Ecto.Type.load(&1, &2))
   end
 
-  def load(types, {fields, values}) when is_map(types) do
+  def load(types, {fields, values}) when is_map(types) or is_list(types) do
     Ecto.Schema.__load__(%{}, types, {fields, values}, &Ecto.Type.load(&1, &2))
   end
 end
