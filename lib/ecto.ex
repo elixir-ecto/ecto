@@ -638,7 +638,7 @@ defmodule Ecto do
     Ecto.Schema.__load__(schema, nil, nil, nil, {fields, values}, &Ecto.Type.load(&1, &2))
   end
 
-  def load(types, {fields, values}) when is_map(types) or is_list(types) do
+  def load(types, {fields, values}) when is_map(types) do
     Ecto.Schema.__load__(%{}, types, {fields, values}, &Ecto.Type.load(&1, &2))
   end
 end
