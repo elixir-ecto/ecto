@@ -596,6 +596,34 @@ defmodule Ecto do
     end
   end
 
+  @doc """
+  Loads `data` into a struct or a map.
+
+  The first argument can be a schema, or a map (of types) and determines the return value:
+  a struct or a map, respectively.
+
+  The second argument `data` can be a map, a keyword list, or a `{fields, values}` tuple.
+
+  An error is raised if invalid field or a value of incorrect type is used in `data`.
+
+  ## Examples
+
+      iex> user = Ecto.load(User, %{name: "Alice", age: 25})
+      %User{name: "Alice", age: 25}
+
+      iex> Ecto.load(User, [name: "Alice", age: 25])
+      %User{name: "Alice", age: 25}
+
+  `data` can also take form of `{fields, values}`:
+
+      iex> Ecto.load(User, [:name, :age], ["Alice", 25])
+      %User{name: "Alice", age: 25, ...}
+
+  The first argument can also be a `types` map:
+
+      iex> types = %{name: :string, age: :integer}
+      iex> Ecto.load(types, %{name: "Alice", age: 25})
+  """
   @spec load(Ecto.Schema.t | map(), map() | Keyword.t | {list, list}) :: Ecto.Schema.t | map()
   def load(schema_or_types, data) when is_map(data) do
     load(schema_or_types, {Map.keys(data), Map.values(data)})
