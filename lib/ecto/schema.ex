@@ -1318,9 +1318,9 @@ defmodule Ecto.Schema do
   @doc false
   def __load__(schema, prefix, source, context, data, loader) do
     struct = schema.__struct__()
-    fields = schema.__schema__(:types)
+    types = schema.__schema__(:types)
 
-    case __load__(struct, fields, data, loader) do
+    case __load__(struct, types, data, loader) do
       %{__meta__: %Metadata{} = metadata} = struct ->
         source = source || schema.__schema__(:source)
         metadata = %{metadata | state: :loaded, source: {prefix, source}, context: context}
