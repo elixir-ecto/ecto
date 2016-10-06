@@ -1345,6 +1345,8 @@ defmodule Ecto.Schema do
   end
 
   defp __load__([field|fields], [value|values], struct, types, loader) do
+    field = if is_binary(field), do: String.to_atom(field), else: field
+
     case Map.fetch(types, field) do
       {:ok, type} ->
         value = load!(struct, field, type, value, loader)

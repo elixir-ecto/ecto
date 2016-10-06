@@ -607,6 +607,10 @@ defmodule Ecto.SchemaTest do
   end
 
   test "Ecto.load/2 with schema atom keys" do
+    # string keys
+    assert %Schema{name: "jose"} =
+           Ecto.load(Schema, %{"name" => "jose"})
+
     # atom keys
     assert %Schema{name: "jose"} =
            Ecto.load(Schema, %{name: "jose"})
@@ -615,9 +619,13 @@ defmodule Ecto.SchemaTest do
     assert %Schema{name: "jose"} =
            Ecto.load(Schema, [name: "jose"])
 
-    # fields and values
+    # atom fields and values
     assert %Schema{name: "jose"} =
            Ecto.load(Schema, {[:name], ["jose"]})
+
+    # string fields and values
+    assert %Schema{name: "jose"} =
+           Ecto.load(Schema, {["name"], ["jose"]})
 
     # default value
     assert %Schema{name: "eric", email: "eric@example.com"} =
@@ -650,6 +658,10 @@ defmodule Ecto.SchemaTest do
   end
 
   test "Ecto.load/2 schemaless" do
+    # string keys
+    assert Ecto.load(%{name: :string}, %{"name" => "jose"}) ==
+           %{name: "jose"}
+
     # atom keys
     assert Ecto.load(%{name: :string}, %{name: "jose"}) ==
            %{name: "jose"}
@@ -658,8 +670,12 @@ defmodule Ecto.SchemaTest do
     assert Ecto.load(%{name: :string}, [name: "jose"]) ==
            %{name: "jose"}
 
-    # fields and values
+    # atom fields and values
     assert Ecto.load(%{name: :string}, {[:name], ["jose"]}) ==
+           %{name: "jose"}
+
+    # string fields and values
+    assert Ecto.load(%{name: :string}, {["name"], ["jose"]}) ==
            %{name: "jose"}
 
     # array
