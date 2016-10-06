@@ -606,16 +606,16 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  test "Ecto.load/2 with schema atom keys" do
-    # string keys
+  test "Ecto.load/2" do
+    # string fields
     assert %Schema{name: "jose"} =
            Ecto.load(Schema, %{"name" => "jose"})
 
-    # atom keys
+    # atom fields
     assert %Schema{name: "jose"} =
            Ecto.load(Schema, %{name: "jose"})
 
-    # keyword
+    # keyword list
     assert %Schema{name: "jose"} =
            Ecto.load(Schema, [name: "jose"])
 
@@ -631,22 +631,23 @@ defmodule Ecto.SchemaTest do
     assert %Schema{name: "eric", email: "eric@example.com"} =
            Ecto.load(Schema, %{email: "eric@example.com"})
 
-    # array
+    # array field
     assert %Schema{array: ["one", "two"]} =
            Ecto.load(Schema, %{array: ["one", "two"]})
 
-    # map
+    # map field with atoms
     assert %Schema{map: %{color: "red"}} =
            Ecto.load(Schema, %{map: %{color: "red"}})
 
+    # map field with strings
     assert %Schema{map: %{"color" => "red"}} =
            Ecto.load(Schema, %{map: %{"color" => "red"}})
 
     # nil
     assert %Schema{name: nil} =
            Ecto.load(Schema, %{name: nil})
-    
-    # invalid key
+
+    # invalid field
     assert_raise ArgumentError, "unknown field `bad` in schema Ecto.SchemaTest.Schema", fn ->
       Ecto.load(Schema, %{bad: "bad"})
     end
@@ -658,15 +659,15 @@ defmodule Ecto.SchemaTest do
   end
 
   test "Ecto.load/2 schemaless" do
-    # string keys
+    # string fields
     assert Ecto.load(%{name: :string}, %{"name" => "jose"}) ==
            %{name: "jose"}
 
-    # atom keys
+    # atom fields
     assert Ecto.load(%{name: :string}, %{name: "jose"}) ==
            %{name: "jose"}
 
-    # keyword
+    # keyword list
     assert Ecto.load(%{name: :string}, [name: "jose"]) ==
            %{name: "jose"}
 
@@ -678,21 +679,22 @@ defmodule Ecto.SchemaTest do
     assert Ecto.load(%{name: :string}, {["name"], ["jose"]}) ==
            %{name: "jose"}
 
-    # array
+    # array field
     assert Ecto.load(%{array: {:array, :string}}, %{array: ["one", "two"]}) ==
            %{array: ["one", "two"]}
 
-    # map
+    # map field with atoms
     assert Ecto.load(%{map: {:map, :string}}, %{map: %{color: "red"}}) ==
            %{map: %{color: "red"}}
 
+    # map field with strings
     assert Ecto.load(%{map: {:map, :string}}, %{map: %{"color" => "red"}}) ==
            %{map: %{"color" => "red"}}
 
     # nil
     assert Ecto.load(%{name: :string}, %{name: nil}) == %{name: nil}
 
-    # invalid key
+    # invalid field
     assert_raise ArgumentError, "unknown field `bad`", fn ->
       assert Ecto.load(%{name: :string}, %{name: "jose", bad: "bad"})
     end
