@@ -1333,7 +1333,7 @@ defmodule Ecto.Schema do
   def __load__(struct, types, map, loader) when is_map(map) do
     Enum.reduce(types, struct, fn
       {field, type}, acc ->
-        case Map.fetch(map, Atom.to_string(field)) do
+        case fetch_string_or_atom_field(map, field) do
           {:ok, value} -> Map.put(acc, field, load!(struct, field, type, value, loader))
           :error -> acc
         end
@@ -1345,8 +1345,6 @@ defmodule Ecto.Schema do
   end
 
   defp __load__([field|fields], [value|values], struct, types, loader) do
-    field = if is_binary(field), do: String.to_atom(field), else: field
-
     case Map.fetch(types, field) do
       {:ok, type} ->
         value = load!(struct, field, type, value, loader)
@@ -1357,6 +1355,13 @@ defmodule Ecto.Schema do
   end
 
   defp __load__([], [], struct, _types, _loader), do: struct
+
+  defp fetch_string_or_atom_field(map, field) when is_atom(field) do
+    case Map.fetch(map, Atom.to_string(field)) do
+      {:ok, value} -> {:ok, value}
+      :error -> Map.fetch(map, field)
+    end
+  end
 
   defp load!(struct, field, type, value, loader) do
     case loader.(type, value) do

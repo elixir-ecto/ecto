@@ -604,7 +604,8 @@ defmodule Ecto do
 
   The second argument `data` can be a map, a keyword list, or a `{fields, values}` tuple.
 
-  An error is raised if invalid field or a value of incorrect type is used in `data`.
+  Fields that are not present in the schema or `types` map are ignored. Values with incorrect
+  types raise an error.
 
   ## Examples
 
@@ -626,19 +627,19 @@ defmodule Ecto do
       %{name: "Alice", age: 25}
   """
   @spec load(Ecto.Schema.t | map(), map() | Keyword.t | {list, list}) :: Ecto.Schema.t | map()
-  def load(schema_or_types, data) when is_map(data) do
-    load(schema_or_types, {Map.keys(data), Map.values(data)})
+  def load(schema, data) when is_list(data) do
+    load(schema, Map.new(data))
   end
 
-  def load(schema_or_types, data) when is_list(data) do
-    load(schema_or_types, {Keyword.keys(data), Keyword.values(data)})
+  def load(schema, {fields, values}) when is_list(fields) and is_list(values) do
+    load(schema, Enum.zip(fields, values))
   end
 
-  def load(schema, {fields, values}) when is_atom(schema) do
-    Ecto.Schema.__load__(schema, nil, nil, nil, {fields, values}, &Ecto.Type.load(&1, &2))
+  def load(schema, data) when is_atom(schema) do
+    Ecto.Schema.__load__(schema, nil, nil, nil, data, &Ecto.Type.load(&1, &2))
   end
 
-  def load(types, {fields, values}) when is_map(types) do
-    Ecto.Schema.__load__(%{}, types, {fields, values}, &Ecto.Type.load(&1, &2))
+  def load(types, data) when is_map(types) do
+    Ecto.Schema.__load__(%{}, types, data, &Ecto.Type.load(&1, &2))
   end
 end

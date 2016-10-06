@@ -648,9 +648,8 @@ defmodule Ecto.SchemaTest do
            Ecto.load(Schema, %{name: nil})
 
     # invalid field
-    assert_raise ArgumentError, "unknown field `bad` in schema Ecto.SchemaTest.Schema", fn ->
-      Ecto.load(Schema, %{bad: "bad"})
-    end
+    assert %Schema{} =
+           Ecto.load(Schema, %{bad: "bad"})
 
     # invalid value
     assert_raise ArgumentError, "cannot load `0` as type :string for :name in schema Ecto.SchemaTest.Schema", fn ->
@@ -695,9 +694,7 @@ defmodule Ecto.SchemaTest do
     assert Ecto.load(%{name: :string}, %{name: nil}) == %{name: nil}
 
     # invalid field
-    assert_raise ArgumentError, "unknown field `bad`", fn ->
-      assert Ecto.load(%{name: :string}, %{name: "jose", bad: "bad"})
-    end
+    assert Ecto.load(%{name: :string}, %{name: "jose", bad: "bad"}) == %{name: "jose"}
 
     # invalid value
     assert_raise ArgumentError, "cannot load `0` as type :string for :name", fn ->
