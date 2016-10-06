@@ -204,9 +204,10 @@ defmodule Ecto.Changeset.Relation do
     {:ok, [], true, false}
   end
 
-  defp cast_or_change(%{cardinality: :many}, value, current, current_pks,
+  defp cast_or_change(%{cardinality: :many, related: mod}, value, current, current_pks,
                       new_pks, fun) when is_list(value) do
-    map_changes(value, new_pks, fun, process_current(current, current_pks), [], true, true)
+    pks = mod.__schema__(:primary_key)
+    map_changes(value, new_pks, fun, process_current(current, current_pks), [], true, true, pks, [])
   end
 
   defp cast_or_change(_, _, _, _, _, _), do: :error
@@ -244,25 +245,36 @@ defmodule Ecto.Changeset.Relation do
 
   # map changes
 
-  defp map_changes([changes | rest], new_pks, fun, current, acc, valid?, skip?)
+  defp map_changes([changes | rest], new_pks, fun, current, acc, valid?, skip?, pks, acc_pk_values)
       when is_map(changes) or is_list(changes) do
-    {struct, current, allowed_actions} = pop_current(current, new_pks.(changes))
+    pk_values = new_pks.(changes)
+    {struct, current, allowed_actions} = pop_current(current, pk_values)
     case fun.(changes, struct, allowed_actions) do
       {:ok, changeset} ->
+        changeset = maybe_add_error_on_pk(changeset, pks, pk_values, acc_pk_values)
         map_changes(rest, new_pks, fun, current, [changeset | acc],
-                    valid? and changeset.valid?, (struct != nil) and skip? and skip?(changeset))
+                    valid? and changeset.valid?, (struct != nil) and skip? and skip?(changeset), pks, [pk_values | acc_pk_values])
       :error ->
         :error
     end
   end
 
-  defp map_changes([], _pks, fun, current, acc, valid?, skip?) do
+  defp map_changes([], _new_pks, fun, current, acc, valid?, skip?, _pks, _acc_pk_values) do
     current_structs = Enum.map(current, &elem(&1, 1))
     reduce_delete_changesets(current_structs, fun, Enum.reverse(acc), valid?, skip?)
   end
 
-  defp map_changes(_params, _pks, _fun, _current, _acc, _valid?, _skip?) do
+  defp map_changes(_params, _new_pks, _fun, _current, _acc, _valid?, _skip?, _pks, _acc_pk_values) do
     :error
+  end
+
+  defp maybe_add_error_on_pk(changeset, pks, pk_values, acc_pk_values) do
+    is_embed = is_nil(changeset.data.__struct__.__schema__(:source))
+    if is_embed and pk_values != [] and Enum.all?(pk_values, &(!is_nil(&1))) and pk_values in acc_pk_values do
+      Enum.reduce(pks, changeset, fn(pk, ch) -> Changeset.add_error(ch, pk, "not unique") end)
+    else
+      changeset
+    end
   end
 
   defp allowed_actions(pk_values) do
