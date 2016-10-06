@@ -623,6 +623,7 @@ defmodule Ecto do
 
       iex> types = %{name: :string, age: :integer}
       iex> Ecto.load(types, %{name: "Alice", age: 25})
+      %{name: "Alice", age: 25}
   """
   @spec load(Ecto.Schema.t | map(), map() | Keyword.t | {list, list}) :: Ecto.Schema.t | map()
   def load(schema_or_types, data) when is_map(data) do
