@@ -1320,7 +1320,7 @@ defmodule Ecto.Schema do
     struct = schema.__struct__()
     fields = schema.__schema__(:types)
 
-    case do_load(struct, fields, data, loader) do
+    case __load__(struct, fields, data, loader) do
       %{__meta__: %Metadata{} = metadata} = struct ->
         source = source || schema.__schema__(:source)
         metadata = %{metadata | state: :loaded, source: {prefix, source}, context: context}
@@ -1330,12 +1330,7 @@ defmodule Ecto.Schema do
     end
   end
 
-  def __load__(struct, types, {fields, values}, loader) when is_list(fields) and is_list(values) do
-    do_load(fields, values, struct, types, loader)
-  end
-
-  @doc false
-  def do_load(struct, types, map, loader) when is_map(map) do
+  def __load__(struct, types, map, loader) when is_map(map) do
     Enum.reduce(types, struct, fn
       {field, type}, acc ->
         case Map.fetch(map, Atom.to_string(field)) do
@@ -1345,21 +1340,21 @@ defmodule Ecto.Schema do
     end)
   end
 
-  def do_load(struct, types, {fields, values}, loader) when is_list(fields) and is_list(values) do
-    do_load(fields, values, struct, types, loader)
+  def __load__(struct, types, {fields, values}, loader) when is_list(fields) and is_list(values) do
+    __load__(fields, values, struct, types, loader)
   end
 
-  defp do_load([field|fields], [value|values], struct, types, loader) do
+  def __load__([field|fields], [value|values], struct, types, loader) do
     case Map.fetch(types, field) do
       {:ok, type} ->
         value = load!(struct, field, type, value, loader)
-        do_load(fields, values, Map.put(struct, field, value), types, loader)
+        __load__(fields, values, Map.put(struct, field, value), types, loader)
       :error ->
         raise ArgumentError, "unknown field `#{field}`#{error_data(struct)}"
     end
   end
 
-  defp do_load([], [], struct, _types, _loader), do: struct
+  def __load__([], [], struct, _types, _loader), do: struct
 
   defp load!(struct, field, type, value, loader) do
     case loader.(type, value) do
