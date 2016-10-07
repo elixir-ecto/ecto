@@ -627,6 +627,12 @@ defmodule Ecto do
       iex> types = %{name: :string, age: :integer}
       iex> Ecto.load(types, %{name: "Alice", age: 25})
       %{name: "Alice", age: 25}
+
+  `Ecto.load/2` is especially useful when parsing raw query results:
+
+      iex> result = Ecto.Adapters.SQL.query!(Repo, "SELECT * FROM users", [])
+      iex> Enum.map(result.rows, &Ecto.load(User, {result.columns, &1}))
+      [%User{...}, ...]
   """
   @spec load(Ecto.Schema.t | map(), map() | Keyword.t | {list, list}) :: Ecto.Schema.t | map()
   def load(schema, data) when is_list(data) do
