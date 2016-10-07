@@ -1330,6 +1330,7 @@ defmodule Ecto.Schema do
     end
   end
 
+  @doc false
   def __load__(struct, types, map, loader) when is_map(map) do
     Enum.reduce(types, struct, fn
       {field, type}, acc ->
