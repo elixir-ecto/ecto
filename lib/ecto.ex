@@ -602,9 +602,11 @@ defmodule Ecto do
   The first argument can be a schema, or a map (of types) and determines the return value:
   a struct or a map, respectively.
 
-  The second argument `data` can be a map, a keyword list, or a `{fields, values}` tuple.
+  The second argument `data` specifies fields and values that are to be loaded.
+  It can be a map, a keyword list, or a `{fields, values}` tuple.
+  Fields can be atoms or strings.
 
-  Fields that are not present in the schema or `types` map are ignored. Values with incorrect
+  Fields that are not present in the schema (or `types` map) are ignored. Values with incorrect
   types raise an error.
 
   ## Examples
