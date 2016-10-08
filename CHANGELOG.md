@@ -78,6 +78,18 @@ It is also possible to interpolate the whole keyword list to dynamically filter 
     filters = [state: "Sweden", state: "Brazil"]
     from(c in City, or_where: ^filters)
 
+## v2.1.0-rc.2 (2016-10-08)
+
+### Enhancements
+
+  * Raise error when non-existing field is being validated
+
+### Bug fixes
+
+  * Do not emit warnings when aliases are used in the schema
+  * Correct use of "associated to" to "associated with" in error messages
+  * Ensure preloader recurs through :thorugh associations using the proper key configurations
+
 ## v2.1.0-rc.1 (2016-09-28)
 
 ### Bug fixes
