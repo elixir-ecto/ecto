@@ -8,7 +8,7 @@ defmodule Ecto.Migration do
 
   Here is an example:
 
-      defmodule MyRepo.Migrations.CreatePosts do
+      defmodule MyRepo.Migrations.AddWeatherTable do
         use Ecto.Migration
 
         def up do
@@ -46,7 +46,7 @@ defmodule Ecto.Migration do
   `change/0` instead of `up/0` and `down/0`. For example, the
   migration above can be written as:
 
-      defmodule MyRepo.Migrations.CreatePosts do
+      defmodule MyRepo.Migrations.AddWeatherTable do
         use Ecto.Migration
 
         def change do
