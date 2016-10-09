@@ -127,4 +127,18 @@ defmodule Ecto.Integration.SandboxTest do
 
     assert_receive :success
   end
+
+  test "allows an ownership timeout to be passed for an individual `checkout` call" do
+    log = capture_log fn ->
+      :ok = Sandbox.checkout(TestRepo, ownership_timeout: 20)
+
+      Process.sleep(1000)
+
+      assert_raise DBConnection.OwnershipError, fn ->
+        TestRepo.all(Post)
+      end
+    end
+
+    assert log =~ ~r/timed out.*20ms/
+  end
 end
