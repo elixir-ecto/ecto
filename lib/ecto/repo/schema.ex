@@ -169,7 +169,7 @@ defmodule Ecto.Repo.Schema do
   defp do_insert(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
     %{prepare: prepare, types: types} = changeset
     struct = struct_from_changeset!(:insert, changeset)
-    schema  = struct.__struct__
+    schema = struct.__struct__
     fields = schema.__schema__(:fields)
     assocs = schema.__schema__(:associations)
     return = schema.__schema__(:read_after_writes)
@@ -231,7 +231,7 @@ defmodule Ecto.Repo.Schema do
   defp do_update(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
     %{prepare: prepare, types: types} = changeset
     struct = struct_from_changeset!(:update, changeset)
-    schema  = struct.__struct__
+    schema = struct.__struct__
     fields = schema.__schema__(:fields)
     assocs = schema.__schema__(:associations)
     return = schema.__schema__(:read_after_writes)

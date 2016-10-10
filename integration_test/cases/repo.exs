@@ -381,7 +381,7 @@ defmodule Ecto.Integration.RepoTest do
     assert changeset.errors == [post_id: {"does not exist", []}]
   end
 
- @tag :foreign_key_constraint
+  @tag :foreign_key_constraint
   test "assoc constraint" do
     changeset = Ecto.Changeset.change(%Comment{post_id: 0})
 
