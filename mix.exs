@@ -49,7 +49,7 @@ defmodule Ecto.Mixfile do
 
      # Optional
      {:sbroker, "~> 1.0-beta", optional: true},
-     {:poison, "~> 2.2", optional: true},
+     {:poison, "~> 2.2 or ~> 3.0", optional: true},
 
      # Docs
      {:ex_doc, "~> 0.12", only: :docs},
