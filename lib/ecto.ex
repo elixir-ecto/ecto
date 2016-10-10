@@ -176,7 +176,7 @@ defmodule Ecto do
 
   Once a changeset is built, it can be given to functions like `insert` and
   `update` in the repository that will return an `:ok` or `:error` tuple:
-  
+
       case Repo.update(changeset) do
         {:ok, user} ->
           # user updated

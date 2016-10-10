@@ -166,7 +166,7 @@ defmodule Ecto.Integration.JoinsTest do
     assert p1.comments == [c1, c2]
     assert p2.comments == [c3]
 
-    # Without on
+    # With on
     query = from(p in Post, left_join: c in assoc(p, :comments),
                             on: p.title == c.text, preload: [comments: c])
     [p1, p2] = TestRepo.all(query)
@@ -223,7 +223,7 @@ defmodule Ecto.Integration.JoinsTest do
     assert p2.users == [u2]
     assert p3.users == []
 
-    # Without on
+    # With on
     query = from(p in Post, left_join: u in assoc(p, :users), on: p.title == u.name,
                             preload: [users: u], order_by: p.id)
     [p1, p2, p3] = TestRepo.all(query)
