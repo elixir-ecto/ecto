@@ -232,6 +232,11 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   [`DBConnection.Ownership`](https://hexdocs.pm/db_connection/DBConnection.Ownership.html)
   and defaults to 15000ms. Timeouts are given as integers in milliseconds.
 
+  Alternately, if this is an issue for only a handful of long-running tests,
+  you can pass an `:ownership_timeout` option when calling
+  `Ecto.Adapters.SQL.Sandbox.checkout/2` instead of setting a longer timeout
+  globally in your config.
+
   ### Database locks and deadlocks
 
   Since the sandbox relies on concurrent transactional tests, there is
@@ -442,6 +447,11 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       a transaction. Defaults to true.
 
     * `:isolation` - set the query to the given isolation level
+
+    * `:ownership_timeout` - limits how long the connection can be
+      owned. Defaults to the compiled value from your repo config in
+      `config/config.exs` (or preferably in `config/test.exs`), or
+      15000 ms if not set.
   """
   def checkout(repo, opts \\ []) do
     {name, pool_opts} =
@@ -450,6 +460,9 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       else
         repo.__pool__
       end
+
+    pool_opts_overrides = Keyword.take(opts, [:ownership_timeout])
+    pool_opts = Keyword.merge(pool_opts, pool_opts_overrides)
 
     case DBConnection.Ownership.ownership_checkout(name, pool_opts) do
       :ok ->
