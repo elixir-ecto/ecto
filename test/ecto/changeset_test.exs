@@ -864,6 +864,18 @@ defmodule Ecto.ChangesetTest do
                 |> validate_confirmation(:upvotes)
     assert changeset.valid?
     assert changeset.errors == []
+
+    # With blank change
+    changeset = changeset(%{"password" => "", "password_confirmation" => "password"})
+                |> validate_confirmation(:password)
+    refute changeset.valid?
+    assert changeset.errors == [password_confirmation: {"does not match confirmation", []}]
+
+    # With missing change
+    changeset = changeset(%{"password_confirmation" => "password"})
+                |> validate_confirmation(:password)
+    refute changeset.valid?
+    assert changeset.errors == [password_confirmation: {"does not match confirmation", []}]
   end
 
   test "validate_acceptance/3" do
