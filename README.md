@@ -14,7 +14,7 @@ config :my_app, Sample.Repo,
   database: "ecto_simple",
   username: "postgres",
   password: "postgres",
-  host: "localhost",
+  hostname: "localhost",
   port: "5432"
 
 # In your application code
