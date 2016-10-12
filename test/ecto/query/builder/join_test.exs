@@ -32,18 +32,6 @@ defmodule Ecto.Query.Builder.JoinTest do
     assert %{joins: [_]} = join("posts", :inner, [p], c in join_macro(^left, ^right), true)
   end
 
-  test "join with compile-time keywords" do
-    assert %{joins: [%{on: on}]} = join("posts", :inner, [p], "comments", [id: ^1, published: ^true])
-    assert Macro.to_string(on.expr) == "&1.id() == ^0 and &1.published() == ^1"
-    assert on.params == [{1, {1, :id}}, {true, {1, :published}}]
-  end
-
-  test "join with runtime keywords" do
-    assert %{joins: [%{on: on}]} = join("posts", :inner, [p], "comments", ^[id: 1, published: true])
-    assert Macro.to_string(on.expr) == "&1.id() == ^0 and &1.published() == ^1"
-    assert on.params == [{1, {1, :id}}, {true, {1, :published}}]
-  end
-
   test "join interpolation" do
     qual = :left
     source = "comments"

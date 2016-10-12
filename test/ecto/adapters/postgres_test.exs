@@ -326,8 +326,8 @@ defmodule Ecto.Adapters.PostgresTest do
   test "interpolated values" do
     query = "schema"
             |> select([m], {m.id, ^true})
-            |> join(:inner, [], c in Schema2, c.id == ^1)
-            |> join(:inner, [], c in Schema2, c.id == ^2)
+            |> join(:inner, [], Schema2, ^true)
+            |> join(:inner, [], Schema2, ^false)
             |> where([], fragment("?", ^true))
             |> where([], fragment("?", ^false))
             |> having([], fragment("?", ^true))
@@ -341,8 +341,8 @@ defmodule Ecto.Adapters.PostgresTest do
             |> normalize
 
     result =
-      "SELECT s0.\"id\", $1 FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON s1.\"id\" = $2 " <>
-      "INNER JOIN \"schema2\" AS s2 ON s2.\"id\" = $3 WHERE ($4) AND ($5) " <>
+      "SELECT s0.\"id\", $1 FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON $2 " <>
+      "INNER JOIN \"schema2\" AS s2 ON $3 WHERE ($4) AND ($5) " <>
       "GROUP BY $6, $7 HAVING ($8) AND ($9) " <>
       "ORDER BY $10, s0.\"x\" LIMIT $11 OFFSET $12"
 
