@@ -360,4 +360,14 @@ defmodule Ecto.MultiTest do
       TestRepo.transaction(multi)
     end
   end
+
+  test "empty?/1" do
+    assert Multi.empty?(Multi.new)
+
+    changeset = Changeset.change(%Comment{})
+    multi     =
+      Multi.new
+      |> Multi.insert(:comment, changeset)
+    refute Multi.empty?(multi)
+  end
 end

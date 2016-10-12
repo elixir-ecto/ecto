@@ -353,6 +353,15 @@ defmodule Ecto.Multi do
   defp format_operation(other),
     do: other
 
+  @doc """
+  Determines if the `Ecto.Multi` is empty.
+
+  Returns `true` if `multi` is empty, otherwise `false`.
+  """
+  @spec empty?(t) :: true | false
+  def empty?(%Multi{operations: []}), do: true
+  def empty?(_multi), do: false
+
   @doc false
   def __apply__(%Multi{} = multi, repo, wrap, return) do
     multi.operations
