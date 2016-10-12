@@ -4,6 +4,7 @@ defmodule Ecto.Query.Builder.Join do
   @moduledoc false
 
   alias Ecto.Query.Builder
+  alias Ecto.Query.Builder.Filter
   alias Ecto.Query.JoinExpr
 
   @doc """
@@ -121,7 +122,9 @@ defmodule Ecto.Query.Builder.Join do
     validate_bind(join_bind, binding)
 
     {count_bind, query} =
-      if join_bind != :_ and !count_bind do
+      if count_bind do
+        {count_bind, query}
+      else
         # If count_bind is not available,
         # we need to compute the amount of binds at runtime
         query =
@@ -131,12 +134,10 @@ defmodule Ecto.Query.Builder.Join do
             query
           end
         {quote(do: join_count), query}
-      else
-        {count_bind, query}
       end
 
     binding = binding ++ [{join_bind, count_bind}]
-    join_on = escape_on(on || true, binding, env)
+    join_on = escape_on(count_bind, on || true, binding, env)
 
     join =
       quote do
@@ -165,15 +166,30 @@ defmodule Ecto.Query.Builder.Join do
     apply(Ecto.Queryable.to_query(query), expr)
   end
 
-  defp escape_on(on, binding, env) do
-    {on, params} = Builder.escape(on, :boolean, %{}, binding, env)
-    params       = Builder.escape_params(params)
+  defp escape_on(index, {:^, _, [var]}, _binding, env) do
+    quote do
+      {expr, params} = Ecto.Query.Builder.Filter.runtime!(:on, :and, unquote(index), unquote(var))
+      %Ecto.Query.QueryExpr{
+        expr: expr,
+        params: params,
+        file: unquote(env.file),
+        line: unquote(env.line)
+      }
+    end
+  end
 
-    quote do: %Ecto.Query.QueryExpr{
-                expr: unquote(on),
-                params: unquote(params),
-                line: unquote(env.line),
-                file: unquote(env.file)}
+  defp escape_on(index, on, binding, env) do
+    {on, params} = Filter.escape(:on, :and, index, on, binding, env)
+    params = Builder.escape_params(params)
+
+    quote do
+      %Ecto.Query.QueryExpr{
+        expr: unquote(on),
+        params: unquote(params),
+        line: unquote(env.line),
+        file: unquote(env.file)
+      }
+    end
   end
 
   defp validate_qual(qual) when is_atom(qual) do
