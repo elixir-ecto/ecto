@@ -14,6 +14,8 @@ defmodule Ecto.Repo.Queryable do
     adapter.transaction(repo, opts, fun)
   end
 
+  def transaction(_adapter, _repo, %Ecto.Multi{operations:  []}, _opts),
+    do: {:ok, %{}}
   def transaction(adapter, repo, %Ecto.Multi{} = multi, opts) do
     wrap   = &adapter.transaction(repo, opts, &1)
     return = &adapter.rollback(repo, &1)

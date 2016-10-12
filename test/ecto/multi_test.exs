@@ -222,6 +222,12 @@ defmodule Ecto.MultiTest do
     refute Map.has_key?(changes.run, :update)
   end
 
+  test "Repo.transaction with empty Multi" do
+    assert {:ok, changes} = TestRepo.transaction(Multi.new)
+    refute_received {:transaction, _}
+    assert changes == %{}
+  end
+
   test "Repo.transaction rolling back from run" do
     changeset = Changeset.change(%Comment{id: 1}, x: 1)
     multi =
