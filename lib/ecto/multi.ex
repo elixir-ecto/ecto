@@ -181,10 +181,15 @@ defmodule Ecto.Multi do
   end
 
   @doc """
-  Merges a dynamically created multi
+  Merges a multi returned dynamically an anonymous function.
 
-  The function should return an Ecto.Multi, and receives changes so far
-  as an argument.
+  This function is useful when the multi to be merged requires information
+  from the original multi. Hence the second argument is an anonymous function
+  that receives the multi changes so far. The anonymous function must return
+  another multi.
+
+  If you would prefer to simply merge two multis together, see `append/2` or
+  `prepend/2`.
 
   Duplicated operations are not allowed.
   """
@@ -194,7 +199,7 @@ defmodule Ecto.Multi do
   end
 
   @doc """
-  Merges a dynamically created multi
+  Merges a multi returned dynamically by calling `module` and `function` with `args`.
 
   Similar to `merge/2`, but allows to pass module name, function and arguments.
   The function should return an Ecto.Multi, and receives changes so far
