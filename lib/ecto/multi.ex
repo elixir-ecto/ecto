@@ -181,7 +181,7 @@ defmodule Ecto.Multi do
   end
 
   @doc """
-  Merges a multi returned dynamically an anonymous function.
+  Merges a multi returned dynamically by an anonymous function.
 
   This function is useful when the multi to be merged requires information
   from the original multi. Hence the second argument is an anonymous function
