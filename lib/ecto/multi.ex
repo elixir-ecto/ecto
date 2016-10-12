@@ -375,6 +375,7 @@ defmodule Ecto.Multi do
   defp invalid_operation(_operation),
     do: nil
 
+  defp apply_operations({:ok, []}, _names, _repo, _wrap, _return), do: {:ok, %{}}
   defp apply_operations({:ok, operations}, names, repo, wrap, return) do
     wrap.(fn ->
       operations
