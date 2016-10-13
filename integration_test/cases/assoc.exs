@@ -140,6 +140,25 @@ defmodule Ecto.Integration.AssocTest do
     assert u2.id == uid2
   end
 
+  test "assoc has_many with schema_prefix" do
+    u = TestRepo.insert!(%User{})
+    q = Ecto.assoc(u, :posts_with_prefix)
+    {sql, _} = Ecto.Adapters.SQL.to_sql(:all, TestRepo, q)
+
+    assert sql =~ ~r/ FROM ["`]my_prefix["`]\.["`]posts_with_prefix["`] /
+    assert [] == TestRepo.all(q)
+  end
+
+  test "assoc has_many with schema_prefix through schema with same schema_prefix" do
+    u = TestRepo.insert!(%User{})
+    q = Ecto.assoc(u, :comments_with_prefix)
+    {sql, _} = Ecto.Adapters.SQL.to_sql(:all, TestRepo, q)
+
+    assert sql =~ ~r/ FROM ["`]my_prefix["`]\.["`]comments_with_prefix["`] /
+    assert sql =~ ~r/ JOIN ["`]my_prefix["`]\.["`]posts_with_prefix["`] /
+    assert [] == TestRepo.all(q)
+  end
+
   ## Changesets
 
   test "has_one changeset assoc (on_replace: :delete)" do

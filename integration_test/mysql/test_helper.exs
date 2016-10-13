@@ -57,7 +57,7 @@ defmodule Ecto.Integration.PoolRepo do
   end
 
   def drop_prefix(prefix) do
-    "drop database #{prefix}"
+    "drop database if exists #{prefix}"
   end
 end
 
