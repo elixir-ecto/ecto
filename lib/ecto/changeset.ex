@@ -575,7 +575,7 @@ defmodule Ecto.Changeset do
   and then
 
       user
-      |> Repo.preload(user, :addresses)
+      |> Repo.preload(:addresses)
       |> Ecto.Changeset.cast(params, [:addresses])
       |> Ecto.Changeset.cast_assoc(:addresses)
 
@@ -601,7 +601,7 @@ defmodule Ecto.Changeset do
   and directly instruct Ecto how the associated should look like.
 
   For example, imagine you are receiving a set of tags you want to
-  associate to an user. Those tags are meat to exist upfront. Using
+  associate to an user. Those tags are meant to exist upfront. Using
   `cast_assoc/3` won't work as desired because the tags are not managed
   alongside the user. In such cases, `put_assoc/3` will work as desired.
   With the given parameters:
@@ -613,7 +613,7 @@ defmodule Ecto.Changeset do
       tags = Repo.all(from t in Tag, where: t.name in ^params["tags"])
 
       user
-      |> Repo.preload(user, :tags)
+      |> Repo.preload(:tags)
       |> Ecto.Changeset.cast(params) # No need to allow :tags as we put them directly
       |> Ecto.Changeset.put_assoc(:tags, tags) # Explicitly set the tags
 
