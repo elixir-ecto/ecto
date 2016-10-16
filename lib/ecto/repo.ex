@@ -213,6 +213,11 @@ defmodule Ecto.Repo do
       def preload(struct_or_structs, preloads, opts) do
         Ecto.Repo.Preloader.preload(struct_or_structs, __MODULE__, preloads, opts)
       end
+
+      @spec load(Ecto.Schema.t | map(), map() | Keyword.t | {list, list}) :: Ecto.Schema.t | map()
+      def load(schema_or_types, data) do
+        Ecto.do_load(schema_or_types, data, &Ecto.Type.adapter_load(@adapter, &1, &2))
+      end
     end
   end
 

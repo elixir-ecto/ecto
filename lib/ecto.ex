@@ -628,26 +628,34 @@ defmodule Ecto do
       iex> Ecto.load(types, %{name: "Alice", age: 25})
       %{name: "Alice", age: 25}
 
-  `Ecto.load/2` is especially useful when parsing raw query results:
+  This function is especially useful when parsing raw query results.
+  However, to ensure adapter-specific types are handled correctly,
+  there's a similiar function defined on the Repo:
 
       iex> result = Ecto.Adapters.SQL.query!(Repo, "SELECT * FROM users", [])
-      iex> Enum.map(result.rows, &Ecto.load(User, {result.columns, &1}))
+      iex> Enum.map(result.rows, &Repo.load(User, {result.columns, &1}))
       [%User{...}, ...]
+
   """
   @spec load(Ecto.Schema.t | map(), map() | Keyword.t | {list, list}) :: Ecto.Schema.t | map()
-  def load(schema, data) when is_list(data) do
-    load(schema, Map.new(data))
+  def load(schema_or_types, data) do
+    do_load(schema_or_types, data, &Ecto.Type.load(&1, &2))
   end
 
-  def load(schema, {fields, values}) when is_list(fields) and is_list(values) do
-    load(schema, Enum.zip(fields, values))
+  @doc false
+  def do_load(schema, data, loader) when is_list(data) do
+    do_load(schema, Map.new(data), loader)
   end
 
-  def load(schema, data) when is_atom(schema) do
-    Ecto.Schema.__load__(schema, nil, nil, nil, data, &Ecto.Type.load(&1, &2))
+  def do_load(schema, {fields, values}, loader) when is_list(fields) and is_list(values) do
+    do_load(schema, Enum.zip(fields, values), loader)
   end
 
-  def load(types, data) when is_map(types) do
-    Ecto.Schema.__load__(%{}, types, data, &Ecto.Type.load(&1, &2))
+  def do_load(schema, data, loader) when is_atom(schema) do
+    Ecto.Schema.__load__(schema, nil, nil, nil, data, loader)
+  end
+
+  def do_load(types, data, loader) when is_map(types) do
+    Ecto.Schema.__load__(%{}, types, data, loader)
   end
 end
