@@ -596,7 +596,7 @@ defmodule Ecto.Changeset do
       be invoked (see the "On replace" section on the module documentation)
 
   In other words, `cast_assoc/3` is useful when the associated data is
-  manager alongside the parent struct, all at once. If each side of the
+  managed alongside the parent struct, all at once. If each side of the
   association is managed separatedly, it is preferrable to use `put_assoc/3`
   and directly instruct Ecto how the associated should look like.
 
