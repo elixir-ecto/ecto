@@ -160,7 +160,7 @@ defmodule Ecto.Association do
   end
 
   def assoc_query(refl, t, query, values) do
-    query = query || %Ecto.Query{from: {"join expression", nil}}
+    query = query || %Ecto.Query{from: {"join expression", nil}, prefix: refl.queryable.__schema__(:prefix)}
 
     # Find the position for upcoming joins
     position = length(query.joins) + 1
