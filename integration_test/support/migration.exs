@@ -104,16 +104,5 @@ defmodule Ecto.Integration.Migration do
     end
 
     create unique_index(:posts_users_composite_pk, [:post_id, :user_id])
-
-    execute Ecto.Integration.PoolRepo.drop_prefix(:my_prefix)
-    execute Ecto.Integration.PoolRepo.create_prefix(:my_prefix)
-
-    create table(:posts_with_prefix, prefix: :my_prefix) do
-      add :user_id, :integer
-    end
-
-    create table(:comments_with_prefix, prefix: :my_prefix) do
-      add :post_with_prefix_id, references(:posts_with_prefix)
-    end
   end
 end

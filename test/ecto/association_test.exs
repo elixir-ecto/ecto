@@ -7,8 +7,10 @@ defmodule Ecto.AssociationTest do
 
   alias __MODULE__.Author
   alias __MODULE__.Comment
+  alias __MODULE__.CommentWithPrefix
   alias __MODULE__.Permalink
   alias __MODULE__.Post
+  alias __MODULE__.PostWithPrefix
   alias __MODULE__.Summary
   alias __MODULE__.Email
   alias __MODULE__.Profile
@@ -51,6 +53,25 @@ defmodule Ecto.AssociationTest do
     end
   end
 
+  defmodule PostWithPrefix do
+    use Ecto.Schema
+    @schema_prefix "my_prefix"
+
+    schema "posts" do
+      belongs_to :author, Author
+      has_many :comments_with_prefix, CommentWithPrefix
+    end
+  end
+
+  defmodule CommentWithPrefix do
+    use Ecto.Schema
+    @schema_prefix "my_prefix"
+
+    schema "comments" do
+      belongs_to :posts_with_prefix, Post, foreign_key: :post_with_prefix_id
+    end
+  end
+
   defmodule Author do
     use Ecto.Schema
 
@@ -64,6 +85,8 @@ defmodule Ecto.AssociationTest do
         defaults: [name: "default"], on_replace: :delete
       many_to_many :permalinks, {"custom_permalinks", Permalink},
         join_through: "authors_permalinks"
+      has_many :posts_with_prefix, PostWithPrefix
+      has_many :comments_with_prefix, through: [:posts_with_prefix, :comments_with_prefix]
     end
   end
 
@@ -450,6 +473,12 @@ defmodule Ecto.AssociationTest do
 
     assert inspect(assoc([%Post{id: 1}, %Post{id: 2}], :comments)) ==
            inspect(from c in Comment, where: c.post_id in ^[1, 2])
+  end
+
+  test "assoc/2 with prefixes" do
+    author = %Author{id: 1}
+    assert Ecto.assoc(author, :posts_with_prefix).prefix == "my_prefix"
+    assert Ecto.assoc(author, :comments_with_prefix).prefix == "my_prefix"
   end
 
   test "assoc/2 filters nil ids" do

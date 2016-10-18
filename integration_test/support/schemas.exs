@@ -153,8 +153,6 @@ defmodule Ecto.Integration.User do
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
     many_to_many :schema_posts, Ecto.Integration.Post, join_through: Ecto.Integration.PostUser
     many_to_many :unique_posts, Ecto.Integration.Post, join_through: Ecto.Integration.PostUserCompositePk
-    has_many :posts_with_prefix, Ecto.Integration.PostWithPrefix
-    has_many :comments_with_prefix, through: [:posts_with_prefix, :comments_with_prefix]
     timestamps(type: :utc_datetime)
   end
 end
@@ -271,36 +269,5 @@ defmodule Ecto.Integration.PostUserCompositePk do
     belongs_to :user, Ecto.Integration.User, primary_key: true
     belongs_to :post, Ecto.Integration.Post, primary_key: true
     timestamps()
-  end
-end
-
-defmodule Ecto.Integration.PostWithPrefix do
-  @moduledoc """
-  This module is used to test:
-
-    * Ecto.assoc schema_prefix on through-associations
-
-  """
-  use Ecto.Schema
-  @schema_prefix "my_prefix"
-
-  schema "posts_with_prefix" do
-    belongs_to :user, Ecto.Integration.User
-    has_many :comments_with_prefix, Ecto.Integration.CommentWithPrefix
-  end
-end
-
-defmodule Ecto.Integration.CommentWithPrefix do
-  @moduledoc """
-  This module is used to test:
-
-    * Ecto.assoc schema_prefix on through-associations
-
-  """
-  use Ecto.Schema
-  @schema_prefix "my_prefix"
-
-  schema "comments_with_prefix" do
-    belongs_to :posts_with_prefix, Ecto.Integration.Post, foreign_key: :post_with_prefix_id
   end
 end
