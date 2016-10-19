@@ -90,7 +90,7 @@ defmodule Ecto.Changeset.HasAssocTest do
   test "cast has_one with invalid params" do
     changeset = cast(%Author{}, %{"profile" => %{name: nil}}, :profile)
     assert changeset.changes.profile.changes == %{name: nil}
-    assert changeset.changes.profile.errors  == [name: {"can't be blank", []}]
+    assert changeset.changes.profile.errors  == [name: {"can't be blank", [validation: :required]}]
     assert changeset.changes.profile.action  == :insert
     refute changeset.changes.profile.valid?
     refute changeset.valid?
@@ -185,17 +185,17 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = cast(%Author{}, %{}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
 
     changeset = cast(%Author{}, %{}, :profile, required: true, required_message: "a custom message")
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: {"a custom message", []}]
+    assert changeset.errors == [profile: {"a custom message", [validation: :required]}]
 
     changeset = cast(%Author{profile: nil}, %{}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
 
     changeset = cast(%Author{profile: %Profile{}}, %{}, :profile, required: true)
     assert changeset.required == [:profile]
@@ -205,12 +205,12 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = cast(%Author{profile: nil}, %{"profile" => nil}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
 
     changeset = cast(%Author{profile: %Profile{}}, %{"profile" => nil}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{profile: nil}
-    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
   end
 
   test "cast has_one with optional" do
@@ -388,7 +388,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert new.valid?
 
     assert second.data.id == 2
-    assert second.errors == [title: {"can't be blank", []}]
+    assert second.errors == [title: {"can't be blank", [validation: :required]}]
     assert second.action == :update
     refute second.valid?
 
@@ -440,12 +440,12 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = cast(%Author{}, %{posts: []}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{posts: []}
-    assert changeset.errors == [posts: {"can't be blank", []}]
+    assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]
 
     changeset = cast(%Author{posts: []}, %{}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: {"can't be blank", []}]
+    assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]
 
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
     assert changeset.required == [:posts]
@@ -919,15 +919,15 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert Changeset.traverse_errors(changeset, &(&1)) == %{}
 
     changeset = cast(%Author{}, %{}, :profile, required: true)
-    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
     assert Changeset.traverse_errors(changeset, &(&1)) == %{profile: [{"can't be blank", []}]}
 
     changeset = cast(%Author{}, %{"profile" => nil}, :profile, required: true)
-    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
     assert Changeset.traverse_errors(changeset, &(&1)) == %{profile: [{"can't be blank", []}]}
 
     changeset = cast(%Author{}, %{}, :profile, required: true, required_message: "a custom message")
-    assert changeset.errors == [profile: {"a custom message", []}]
+    assert changeset.errors == [profile: {"a custom message", [validation: :required]}]
     assert Changeset.traverse_errors(changeset, &(&1)) == %{profile: [{"a custom message", []}]}
 
     changeset = cast(%Author{}, %{"profile" => %{name: nil}}, :profile, required: true)
@@ -945,7 +945,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [%{title: [{"can't be blank", []}]}]}
 
     changeset = cast(%Author{posts: []}, %{}, :posts, required: true)
-    assert changeset.errors == [posts: {"can't be blank", []}]
+    assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]
     assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"can't be blank", []}]}
 
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
@@ -953,7 +953,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"is invalid", [type: {:array, :map}]}]}
 
     changeset = cast(%Author{}, %{posts: []}, :posts, required: true)
-    assert changeset.errors == [posts: {"can't be blank", []}]
+    assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]
     assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"can't be blank", []}]}
   end
 end

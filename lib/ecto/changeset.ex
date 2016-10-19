@@ -249,6 +249,7 @@ defmodule Ecto.Changeset do
 
   @relations [:embed, :assoc]
   @match_types [:exact, :suffix]
+  @validation_opts [:validation, :format, :data]
 
   @doc """
   Wraps the given data in a changeset or adds changes to a changeset.
@@ -487,7 +488,7 @@ defmodule Ecto.Changeset do
          {errors, valid?} = error_on_nil(kind, key, Map.get(changes, key, current), errors, valid?)
          {changes, errors, valid?}
        :invalid ->
-         {changes, [{key, {"is invalid", [type: type]}} | errors], false}
+         {changes, [{key, {"is invalid", [type: type, validation: :cast]}} | errors], false}
      end}
   end
 
@@ -725,7 +726,7 @@ defmodule Ecto.Changeset do
                         name, current, required?, relation, opts) do
     current_changes = Map.get(changes, name, current)
     if required? and Relation.empty?(relation, current_changes) do
-      errors = [{name, {message(opts, :required_message, "can't be blank"), []}} | errors]
+      errors = [{name, {message(opts, :required_message, "can't be blank"), [validation: :required]}} | errors]
       %{changeset | errors: errors, valid?: false}
     else
       changeset
@@ -1297,7 +1298,7 @@ defmodule Ecto.Changeset do
           ensure_field_exists!(changeset, field),
           missing?(changeset, field),
           is_nil(errors[field]),
-          do: {field, {message, []}}
+          do: {field, {message, [validation: :required]}}
 
     case new_errors do
       [] -> %{changeset | required: fields ++ required}
@@ -1347,7 +1348,7 @@ defmodule Ecto.Changeset do
   @spec validate_format(t, atom, Regex.t, Keyword.t) :: t
   def validate_format(changeset, field, format, opts \\ []) do
     validate_change changeset, field, {:format, format}, fn _, value ->
-      if value =~ format, do: [], else: [{field, {message(opts, "has invalid format"), []}}]
+      if value =~ format, do: [], else: [{field, {message(opts, "has invalid format"), [validation: :format, format: format]}}]
     end
   end
 
@@ -1367,7 +1368,9 @@ defmodule Ecto.Changeset do
   @spec validate_inclusion(t, atom, Enum.t, Keyword.t) :: t
   def validate_inclusion(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:inclusion, data}, fn _, value ->
-      if value in data, do: [], else: [{field, {message(opts, "is invalid"), []}}]
+      if value in data,
+        do: [],
+        else: [{field, {message(opts, "is invalid"), [validation: :inclusion, data: data]}}]
     end
   end
 
@@ -1389,7 +1392,7 @@ defmodule Ecto.Changeset do
   def validate_subset(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:subset, data}, fn _, value ->
       case Enum.any?(value, fn(x) -> not x in data end) do
-        true -> [{field, {message(opts, "has an invalid entry"), []}}]
+        true -> [{field, {message(opts, "has an invalid entry"), [validation: :subset, data: data]}}]
         false -> []
       end
     end
@@ -1410,7 +1413,8 @@ defmodule Ecto.Changeset do
   @spec validate_exclusion(t, atom, Enum.t, Keyword.t) :: t
   def validate_exclusion(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:exclusion, data}, fn _, value ->
-      if value in data, do: [{field, {message(opts, "is reserved"), []}}], else: []
+      if value in data, do:
+        [{field, {message(opts, "is reserved"), [validation: :exclusion, data: data]}}], else: []
     end
   end
 
@@ -1462,21 +1466,21 @@ defmodule Ecto.Changeset do
 
   defp wrong_length(_type, value, value, _opts), do: nil
   defp wrong_length(:string, _length, value, opts), do:
-    {message(opts, "should be %{count} character(s)"), count: value}
+    {message(opts, "should be %{count} character(s)"), count: value, validation: :length}
   defp wrong_length(:list, _length, value, opts), do:
-    {message(opts, "should have %{count} item(s)"), count: value}
+    {message(opts, "should have %{count} item(s)"), count: value, validation: :length}
 
   defp too_short(_type, length, value, _opts) when length >= value, do: nil
   defp too_short(:string, _length, value, opts), do:
-    {message(opts, "should be at least %{count} character(s)"), count: value}
+    {message(opts, "should be at least %{count} character(s)"), count: value, validation: :length_min}
   defp too_short(:list, _length, value, opts), do:
-    {message(opts, "should have at least %{count} item(s)"), count: value}
+    {message(opts, "should have at least %{count} item(s)"), count: value, validation: :length_min}
 
   defp too_long(_type, length, value, _opts) when length <= value, do: nil
   defp too_long(:string, _length, value, opts), do:
-    {message(opts, "should be at most %{count} character(s)"), count: value}
+    {message(opts, "should be at most %{count} character(s)"), count: value, validation: :length_max}
   defp too_long(:list, _length, value, opts), do:
-    {message(opts, "should have at most %{count} item(s)"), count: value}
+    {message(opts, "should have at most %{count} item(s)"), count: value, validation: :length_max}
 
   @doc """
   Validates the properties of a number.
@@ -1523,14 +1527,14 @@ defmodule Ecto.Changeset do
     result = Decimal.cmp(value, Decimal.new(target_value))
     case decimal_compare(result, spec_key) do
       true  -> nil
-      false -> [{field, {message, number: target_value}}]
+      false -> [{field, {message, validation: :number, number: target_value}}]
     end
   end
 
   defp validate_number(field, value, message, _spec_key, spec_function, target_value) do
     case apply(spec_function, [value, target_value]) do
       true  -> nil
-      false -> [{field, {message, number: target_value}}]
+      false -> [{field, {message, validation: :number, number: target_value}}]
     end
   end
 
@@ -1576,9 +1580,13 @@ defmodule Ecto.Changeset do
 
     errors =
       case Map.fetch(changeset.params, error_param) do
-        {:ok, ^value} -> []
-        {:ok, _}      -> [{error_field, {message(opts, "does not match confirmation"), []}}]
-        :error        -> confirmation_missing(opts, error_field)
+        {:ok, ^value} ->
+          []
+        {:ok, _} ->
+          [{error_field,
+           {message(opts, "does not match confirmation"), [validation: :confirmation_doesnt_match]}}]
+        :error ->
+          confirmation_missing(opts, error_field)
       end
 
     %{changeset | validations: [{:confirmation, opts} | changeset.validations],
@@ -1588,7 +1596,7 @@ defmodule Ecto.Changeset do
 
   defp confirmation_missing(opts, error_field) do
     required = Keyword.get(opts, :required, false)
-    if required, do: [{error_field, {message(opts, "can't be blank"), []}}], else: []
+    if required, do: [{error_field, {message(opts, "can't be blank"), [validation: :confirmation_missing]}}], else: []
   end
 
   defp message(opts, key \\ :message, default) do
@@ -1619,7 +1627,7 @@ defmodule Ecto.Changeset do
 
     case Ecto.Type.cast(:boolean, value) do
       {:ok, true} -> changeset
-      _ -> add_error(changeset, field, message(opts, "must be accepted"))
+      _ -> add_error(changeset, field, message(opts, "must be accepted"), [validation: :acceptance])
     end
   end
 
@@ -2076,33 +2084,36 @@ defmodule Ecto.Changeset do
       ...>   end)
       ...> end)
       %{title: ["should be at least 3 characters"]}
+
+  You can pass `true` to `include_validations?` argument if you want to receive validation rules in `opts`.
   """
-  @spec traverse_errors(t, (error -> String.t)) :: %{atom => [String.t]}
-  def traverse_errors(%Changeset{errors: errors, changes: changes, types: types}, msg_func)
-      when is_function(msg_func, 1) do
+  @spec traverse_errors(t, (error -> String.t), boolean) :: %{atom => [String.t]}
+  def traverse_errors(%Changeset{errors: errors, changes: changes, types: types}, msg_func, include_validations? \\ false)
+      when is_function(msg_func, 1) and is_boolean(include_validations?) do
     errors
     |> Enum.reverse()
-    |> merge_error_keys(msg_func)
-    |> merge_related_keys(changes, types, msg_func)
+    |> merge_error_keys(msg_func, include_validations?)
+    |> merge_related_keys(changes, types, msg_func, include_validations?)
   end
 
-  defp merge_error_keys(errors, msg_func) do
-    Enum.reduce(errors, %{}, fn({key, val}, acc) ->
-      val = msg_func.(val)
+  defp merge_error_keys(errors, msg_func, include_validations?) do
+    Enum.reduce(errors, %{}, fn({key, {msg, opts}}, acc) ->
+      opts = if include_validations?, do: opts, else: Keyword.drop(opts, @validation_opts)
+      val = msg_func.({msg, opts})
       Map.update(acc, key, [val], &[val|&1])
     end)
   end
 
-  defp merge_related_keys(_, _, nil, _) do
+  defp merge_related_keys(_, _, nil, _, _) do
     raise ArgumentError, "changeset does not have types information"
   end
-  defp merge_related_keys(map, changes, types, msg_func) do
+  defp merge_related_keys(map, changes, types, msg_func, include_validations?) do
     Enum.reduce types, map, fn
       {field, {tag, %{cardinality: :many}}}, acc when tag in @relations ->
         if changesets = Map.get(changes, field) do
           {errors, all_empty?} =
             Enum.map_reduce(changesets, true, fn changeset, all_empty? ->
-              errors = traverse_errors(changeset, msg_func)
+              errors = traverse_errors(changeset, msg_func, include_validations?)
               {errors, all_empty? and errors == %{}}
             end)
 
@@ -2115,7 +2126,7 @@ defmodule Ecto.Changeset do
         end
       {field, {tag, %{cardinality: :one}}}, acc when tag in @relations ->
         if changeset = Map.get(changes, field) do
-          case traverse_errors(changeset, msg_func) do
+          case traverse_errors(changeset, msg_func, include_validations?) do
             errors when errors == %{} -> acc
             errors -> Map.put(acc, field, errors)
           end
