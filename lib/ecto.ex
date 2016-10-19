@@ -611,7 +611,7 @@ defmodule Ecto do
 
   ## Examples
 
-      iex> user = Ecto.load(User, %{name: "Alice", age: 25})
+      iex> Ecto.load(User, %{name: "Alice", age: 25})
       %User{name: "Alice", age: 25}
 
       iex> Ecto.load(User, [name: "Alice", age: 25])
@@ -619,7 +619,7 @@ defmodule Ecto do
 
   `data` can also take form of `{fields, values}`:
 
-      iex> Ecto.load(User, [:name, :age], ["Alice", 25])
+      iex> Ecto.load(User, {[:name, :age], ["Alice", 25]})
       %User{name: "Alice", age: 25, ...}
 
   The first argument can also be a `types` map:
