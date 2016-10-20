@@ -2076,6 +2076,7 @@ defmodule Ecto.Changeset do
       {"should be at least %{count} characters", [count: 3, validation: :min_length]}
 
   ## Examples
+
       iex> traverse_errors(changeset, fn {msg, opts} ->
       ...>   Enum.reduce(opts, msg, fn {key, value}, acc ->
       ...>     String.replace(msg, "%{#{key}}", to_string(value))
