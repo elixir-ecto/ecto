@@ -249,7 +249,6 @@ defmodule Ecto.Changeset do
 
   @relations [:embed, :assoc]
   @match_types [:exact, :suffix]
-  @validation_opts [:validation, :format, :data]
 
   @doc """
   Wraps the given data in a changeset or adds changes to a changeset.
