@@ -1,6 +1,6 @@
 if Code.ensure_loaded?(Poison) do
   defimpl Poison.Encoder, for: Decimal do
-    def encode(decimal, _opts), do: <<?", Decimal.to_string(decimal)::binary, ?">>
+    def encode(decimal, _opts), do: <<?", Decimal.to_string(decimal, :normal)::binary, ?">>
   end
 
   defimpl Poison.Encoder, for: Ecto.Association.NotLoaded do
