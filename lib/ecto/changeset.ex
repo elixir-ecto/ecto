@@ -2064,13 +2064,17 @@ defmodule Ecto.Changeset do
 
   @doc ~S"""
   Traverses changeset errors and applies the given function to error messages.
+
   This function is particularly useful when associations and embeds
   are cast in the changeset as it will traverse all associations and
   embeds and place all errors in a series of nested maps.
+
   A changeset is supplied along with a function to apply to each
   error message as the changeset is traversed. The error message
   function receives an error tuple `{msg, opts}`, for example:
+
       {"should be at least %{count} characters", [count: 3, validation: :min_length]}
+
   ## Examples
       iex> traverse_errors(changeset, fn {msg, opts} ->
       ...>   Enum.reduce(opts, msg, fn {key, value}, acc ->
@@ -2083,7 +2087,7 @@ defmodule Ecto.Changeset do
   validation rules applied to it.
   """
   @spec traverse_errors(t, (error -> String.t) | (error, Keyword.t -> String.t)) :: %{atom => [String.t]}
- def traverse_errors(%Changeset{errors: errors, changes: changes, types: types, validations: validations}, msg_func)
+  def traverse_errors(%Changeset{errors: errors, changes: changes, types: types, validations: validations}, msg_func)
       when is_function(msg_func, 1) or is_function(msg_func, 2) do
     errors
     |> Enum.reverse()
