@@ -2071,7 +2071,7 @@ defmodule Ecto.Changeset do
   A changeset is supplied along with a function to apply to each
   error message as the changeset is traversed. The error message
   function receives an error tuple `{msg, opts}`, for example:
-      {"should be at least %{count} characters", [count: 3]}
+      {"should be at least %{count} characters", [count: 3, validation: :min_length]}
   ## Examples
       iex> traverse_errors(changeset, fn {msg, opts} ->
       ...>   Enum.reduce(opts, msg, fn {key, value}, acc ->
@@ -2079,19 +2079,30 @@ defmodule Ecto.Changeset do
       ...>   end)
       ...> end)
       %{title: ["should be at least 3 characters"]}
+
+  Optionally, you can pass function that accepts second argument `field` that will contain all
+  validation rules applied to it.
   """
-  @spec traverse_errors(t, (error -> String.t)) :: %{atom => [String.t]}
-  def traverse_errors(%Changeset{errors: errors, changes: changes, types: types}, msg_func)
-      when is_function(msg_func, 1) do
+  @spec traverse_errors(t, (error -> String.t) | (error, Keyword.t -> String.t)) :: %{atom => [String.t]}
+ def traverse_errors(%Changeset{errors: errors, changes: changes, types: types, validations: validations}, msg_func)
+      when is_function(msg_func, 1) or is_function(msg_func, 2) do
     errors
     |> Enum.reverse()
-    |> merge_error_keys(msg_func)
+    |> merge_error_keys(msg_func, validations)
     |> merge_related_keys(changes, types, msg_func)
   end
 
-  defp merge_error_keys(errors, msg_func) do
+  defp merge_error_keys(errors, msg_func, _) when is_function(msg_func, 1)  do
     Enum.reduce(errors, %{}, fn({key, val}, acc) ->
       val = msg_func.(val)
+      Map.update(acc, key, [val], &[val|&1])
+    end)
+  end
+
+  defp merge_error_keys(errors, msg_func, validations) when is_function(msg_func, 2)  do
+    Enum.reduce(errors, %{}, fn({key, val}, acc) ->
+      field = Keyword.get_values(validations, key)
+      val = msg_func.(val, field)
       Map.update(acc, key, [val], &[val|&1])
     end)
   end

@@ -1078,6 +1078,36 @@ defmodule Ecto.ChangesetTest do
     }
   end
 
+  test "traverses changeset errors with field" do
+    changeset =
+      changeset(%{"title" => "title", "body" => "hi", "upvotes" => :bad})
+      |> validate_length(:body, min: 3)
+      |> validate_format(:body, ~r/888/)
+      |> validate_inclusion(:body, ["hola", "bonjour", "hallo"])
+      |> add_error(:title, "is taken", name: "your title")
+
+    errors = traverse_errors(changeset, fn
+      {_, [type: type, validation: :type]}, _field ->
+        "expected to be #{inspect(type)}"
+      {_, [name: "your title"] = keys}, _field ->
+        String.upcase("#{keys[:name]} is taken")
+      {_, [count: 3, validation: :min_length] = keys}, _field ->
+        "should be at least #{keys[:count]} character(s)"
+        |> String.upcase()
+      {_, [validation: :format]}, field ->
+        "should match format #{inspect field[:format]}"
+      {_, [validation: :inclusion]}, field ->
+        values = Enum.join(field[:inclusion], ", ")
+        "should be in #{values}"
+    end)
+
+    assert errors == %{
+      body: ["should be in hola, bonjour, hallo", "should match format ~r/888/", "SHOULD BE AT LEAST 3 CHARACTER(S)"],
+      title: ["YOUR TITLE IS TAKEN"],
+      upvotes: ["expected to be :integer"],
+    }
+  end
+
   ## inspect
 
   test "inspects relevant data" do
