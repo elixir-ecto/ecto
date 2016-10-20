@@ -417,6 +417,7 @@ defmodule Ecto.Migration do
     * `:primary_key` - when false, does not generate primary key on table creation
     * `:engine` - customizes the table storage for supported databases. For MySQL,
       the default is InnoDB
+    * `:prefix` - the prefix for the table
     * `:options` - provide custom options that will be appended after generated
       statement, for example "WITH", "INHERITS" or "ON COMMIT" clauses
 
