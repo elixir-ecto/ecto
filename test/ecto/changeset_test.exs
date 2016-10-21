@@ -1087,24 +1087,29 @@ defmodule Ecto.ChangesetTest do
       |> add_error(:title, "is taken", name: "your title")
 
     errors = traverse_errors(changeset, fn
-      {_, [type: type, validation: :cast]}, _field ->
-        "expected to be #{inspect(type)}"
-      {_, [name: "your title"] = keys}, _field ->
-        String.upcase("#{keys[:name]} is taken")
-      {_, [count: 3, validation: :length, min: 3] = keys}, _field ->
-        "should be at least #{keys[:count]} character(s)"
+      %Ecto.Changeset{}, field, {_, [type: type, validation: :cast]} ->
+        "expected #{field} to be #{inspect(type)}"
+      %Ecto.Changeset{}, field, {_, [name: "your title"]} ->
+        "value in #{field} is taken"
         |> String.upcase()
-      {_, [validation: :format]}, field ->
-        "should match format #{inspect field[:format]}"
-      {_, [validation: :inclusion]}, field ->
-        values = Enum.join(field[:inclusion], ", ")
-        "should be in #{values}"
+      %Ecto.Changeset{}, field, {_, [count: 3, validation: :length, min: 3] = keys} ->
+        "should be at least #{keys[:min]} character(s) in field #{field}"
+        |> String.upcase()
+      %Ecto.Changeset{validations: validations}, field, {_, [validation: :format]} ->
+        validation = Keyword.get_values(validations, field)
+        "field #{field} should match format #{inspect validation[:format]}"
+      %Ecto.Changeset{validations: validations}, field, {_, [validation: :inclusion]} ->
+        validation = Keyword.get_values(validations, field)
+        values = Enum.join(validation[:inclusion], ", ")
+        "#{field} value should be in #{values}"
     end)
 
     assert errors == %{
-      body: ["should be in hola, bonjour, hallo", "should match format ~r/888/", "SHOULD BE AT LEAST 3 CHARACTER(S)"],
-      title: ["YOUR TITLE IS TAKEN"],
-      upvotes: ["expected to be :integer"],
+      body: ["body value should be in hola, bonjour, hallo",
+             "field body should match format ~r/888/",
+             "SHOULD BE AT LEAST 3 CHARACTER(S) IN FIELD BODY"],
+      title: ["VALUE IN TITLE IS TAKEN"],
+      upvotes: ["expected upvotes to be :integer"],
     }
   end
 

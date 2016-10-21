@@ -2084,15 +2084,16 @@ defmodule Ecto.Changeset do
       ...> end)
       %{title: ["should be at least 3 characters"]}
 
-  Optionally, you can pass function that accepts second argument `field` that will contain all
-  validation rules applied to it.
+  Optionally function can accept three arguments: `changeset`, `field` and `{msg, opts}`.
+  It is useful whenever you want to extract validations rules from `changeset.validations`
+  to build detailed error description.
   """
-  @spec traverse_errors(t, (error -> String.t) | (error, Keyword.t -> String.t)) :: %{atom => [String.t]}
-  def traverse_errors(%Changeset{errors: errors, changes: changes, types: types, validations: validations}, msg_func)
-      when is_function(msg_func, 1) or is_function(msg_func, 2) do
+  @spec traverse_errors(t, (error -> String.t) | (Changeset.t, atom, error -> String.t)) :: %{atom => [String.t]}
+  def traverse_errors(%Changeset{errors: errors, changes: changes, types: types} = changeset, msg_func)
+      when is_function(msg_func, 1) or is_function(msg_func, 3) do
     errors
     |> Enum.reverse()
-    |> merge_error_keys(msg_func, validations)
+    |> merge_error_keys(msg_func, changeset)
     |> merge_related_keys(changes, types, msg_func)
   end
 
@@ -2103,10 +2104,9 @@ defmodule Ecto.Changeset do
     end)
   end
 
-  defp merge_error_keys(errors, msg_func, validations) when is_function(msg_func, 2)  do
+  defp merge_error_keys(errors, msg_func, changeset) when is_function(msg_func, 3)  do
     Enum.reduce(errors, %{}, fn({key, val}, acc) ->
-      field = Keyword.get_values(validations, key)
-      val = msg_func.(val, field)
+      val = msg_func.(changeset, key, val)
       Map.update(acc, key, [val], &[val|&1])
     end)
   end
