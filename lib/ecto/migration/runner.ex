@@ -35,12 +35,9 @@ defmodule Ecto.Migration.Runner do
   Stores the runner metadata.
   """
   def metadata(runner, opts) do
-    Process.put(:ecto_migration, %{runner: runner, prefix: to_atom(opts[:prefix])})
+    prefix = opts[:prefix]
+    Process.put(:ecto_migration, %{runner: runner, prefix: prefix && to_string(prefix)})
   end
-
-  defp to_atom(nil), do: nil
-  defp to_atom(atom) when is_atom(atom), do: atom
-  defp to_atom(string) when is_binary(string), do: String.to_atom(string)
 
   @doc """
   Starts the runner for the specified repo.

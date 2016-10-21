@@ -25,15 +25,15 @@ defmodule Ecto.MigrationTest do
     assert direction() == :up
   end
 
-  @tag prefix: :foo
+  @tag prefix: "foo"
   test "allows prefix to be retrieved" do
-    assert prefix() == :foo
+    assert prefix() == "foo"
   end
 
   test "creates a table" do
     assert table(:posts) == %Table{name: :posts, primary_key: true}
     assert table(:posts, primary_key: false) == %Table{name: :posts, primary_key: false}
-    assert table(:posts, prefix: :foo) == %Table{name: :posts, primary_key: true, prefix: :foo}
+    assert table(:posts, prefix: "foo") == %Table{name: :posts, primary_key: true, prefix: "foo"}
   end
 
   test "creates an index" do
@@ -239,25 +239,24 @@ defmodule Ecto.MigrationTest do
   # prefix
 
   test "forward: creates a table with prefix from migration" do
-    create(table(:posts, prefix: :foo))
+    create(table(:posts, prefix: "foo"))
     flush()
 
     {_, table, _} = last_command()
-
-    assert table.prefix == :foo
+    assert table.prefix == "foo"
   end
 
-  @tag prefix: :foo
+  @tag prefix: "foo"
   test "forward: creates a table with prefix from manager" do
     create(table(:posts))
     flush()
 
     {_, table, _} = last_command()
-    assert table.prefix == :foo
+    assert table.prefix == "foo"
   end
 
   @tag prefix: :foo
-  test "forward: creates a table with prefix from manager matching atom prefix from migration" do
+  test "forward: creates a table with prefix from manager matching atom prefix" do
     create(table(:posts, prefix: :foo))
     flush()
 
@@ -266,85 +265,85 @@ defmodule Ecto.MigrationTest do
   end
 
   @tag prefix: "foo"
-  test "forward: creates a table with prefix from manager matching string prefix from migration" do
-    create(table(:posts, prefix: :foo))
+  test "forward: creates a table with prefix from manager matching string prefix" do
+    create(table(:posts, prefix: "foo"))
     flush()
 
     {_, table, _} = last_command()
-    assert table.prefix == :foo
+    assert table.prefix == "foo"
   end
 
   @tag prefix: :bar
   test "forward: raise error when prefixes don't match" do
     assert_raise Ecto.MigrationError,
-                 "the :prefix option `:foo` does match the migrator prefix `:bar`", fn ->
-      create(table(:posts, prefix: :foo))
+                 "the :prefix option `foo` does match the migrator prefix `bar`", fn ->
+      create(table(:posts, prefix: "foo"))
       flush()
     end
   end
 
   test "forward: drops a table with prefix from migration" do
-    drop(table(:posts, prefix: :foo))
+    drop(table(:posts, prefix: "foo"))
     flush()
     {:drop, table} = last_command()
-    assert table.prefix == :foo
+    assert table.prefix == "foo"
   end
 
-  @tag prefix: :foo
+  @tag prefix: "foo"
   test "forward: drops a table with prefix from manager" do
     drop(table(:posts))
     flush()
     {:drop, table} = last_command()
-    assert table.prefix == :foo
+    assert table.prefix == "foo"
   end
 
   test "forward: rename column on table with index prefixed from migration" do
-    rename(table(:posts, prefix: :foo), :given_name, to: :first_name)
+    rename(table(:posts, prefix: "foo"), :given_name, to: :first_name)
     flush()
 
     {_, table, _, new_name} = last_command()
-    assert table.prefix == :foo
+    assert table.prefix == "foo"
     assert new_name == :first_name
   end
 
-  @tag prefix: :foo
+  @tag prefix: "foo"
   test "forward: rename column on table with index prefixed from manager" do
     rename(table(:posts), :given_name, to: :first_name)
     flush()
 
     {_, table, _, new_name} = last_command()
-    assert table.prefix == :foo
+    assert table.prefix == "foo"
     assert new_name == :first_name
   end
 
   test "forward: creates an index with prefix from migration" do
-    create index(:posts, [:title], prefix: :foo)
+    create index(:posts, [:title], prefix: "foo")
     flush()
     {_, index} = last_command()
-    assert index.prefix == :foo
+    assert index.prefix == "foo"
   end
 
-  @tag prefix: :foo
+  @tag prefix: "foo"
   test "forward: creates an index with prefix from manager" do
     create index(:posts, [:title])
     flush()
     {_, index} = last_command()
-    assert index.prefix == :foo
+    assert index.prefix == "foo"
   end
 
   test "forward: drops an index with a prefix from migration" do
-    drop index(:posts, [:title], prefix: :foo)
+    drop index(:posts, [:title], prefix: "foo")
     flush()
     {_, index} = last_command()
-    assert index.prefix == :foo
+    assert index.prefix == "foo"
   end
 
-  @tag prefix: :foo
+  @tag prefix: "foo"
   test "forward: drops an index with a prefix from manager" do
     drop index(:posts, [:title])
     flush()
     {_, index} = last_command()
-    assert index.prefix == :foo
+    assert index.prefix == "foo"
   end
 
   ## Reverse

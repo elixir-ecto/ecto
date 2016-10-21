@@ -85,7 +85,7 @@ defmodule Ecto.Migration do
   The prefix is specified in the table options:
 
       def up do
-        create table(:weather, prefix: :north_america) do
+        create table(:weather, prefix: "north_america") do
           add :city,    :string, size: 40
           add :temp_lo, :integer
           add :temp_hi, :integer
@@ -95,7 +95,7 @@ defmodule Ecto.Migration do
           timestamps
         end
 
-        create index(:weather, [:city], prefix: :north_america)
+        create index(:weather, [:city], prefix: "north_america")
       end
 
   Note: if using MySQL with a prefixed table, you must use the same prefix for the references since
@@ -138,7 +138,7 @@ defmodule Ecto.Migration do
       def up do
         create index(:posts, [:name], comment: "Index Comment")
         create constraint(:products, "price_must_be_positive", check: "price > 0", comment: "Index Comment")
-        create table(:weather, prefix: :north_america, comment: "Table Comment") do
+        create table(:weather, prefix: "north_america", comment: "Table Comment") do
           add :city, :string, size: 40, comment: "Column Comment"
           timestamps
         end
@@ -805,11 +805,11 @@ defmodule Ecto.Migration do
     cond do
       is_nil(prefix) ->
         %{index_or_table | prefix: runner_prefix}
-      is_nil(runner_prefix) or runner_prefix == prefix ->
+      is_nil(runner_prefix) or runner_prefix == to_string(prefix) ->
         index_or_table
       true ->
         raise Ecto.MigrationError,  message:
-          "the :prefix option `#{inspect prefix}` does match the migrator prefix `#{inspect runner_prefix}`"
+          "the :prefix option `#{prefix}` does match the migrator prefix `#{runner_prefix}`"
     end
   end
 end
