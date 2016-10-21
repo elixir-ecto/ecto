@@ -2073,7 +2073,7 @@ defmodule Ecto.Changeset do
   error message as the changeset is traversed. The error message
   function receives an error tuple `{msg, opts}`, for example:
 
-      {"should be at least %{count} characters", [count: 3, validation: :min_length]}
+      {"should be at least %{count} characters", [count: 3, validation: :length, min: 3]}
 
   ## Examples
 
@@ -2084,7 +2084,7 @@ defmodule Ecto.Changeset do
       ...> end)
       %{title: ["should be at least 3 characters"]}
 
-  Optionally function can accept three arguments: `changeset`, `field` and `{msg, opts}`.
+  Optionally function can accept three arguments: `changeset`, `field` and error tuple `{msg, opts}`.
   It is useful whenever you want to extract validations rules from `changeset.validations`
   to build detailed error description.
   """
