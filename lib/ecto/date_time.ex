@@ -71,9 +71,13 @@ defmodule Ecto.DateTime.Utils do
   Receives two datetimes and compares the `t1`
   against `t2` and returns `:lt`, `:eq` or `:gt`.
   """
-  def compare(%{__struct__: module} = t1, %{__struct__: module} = t2) do
-    {:ok, t1} = module.dump(t1)
-    {:ok, t2} = module.dump(t2)
+  def compare(t1, t2)
+  def compare(%{__struct__: module1} = t1, %{__struct__: module2} = t2)
+      when module1 in [Date, Ecto.Date] and module2 in [Date, Ecto.Date]
+      when module1 in [DateTime, NaiveDateTime, Ecto.DateTime] and module2 in [DateTime, NaiveDateTime, Ecto.DateTime]
+      when module1 in [Time, Ecto.Time] and module2 in [Time, Ecto.Time] do
+    {:ok, t1} = Ecto.DataType.dump(t1)
+    {:ok, t2} = Ecto.DataType.dump(t2)
     cond do
       t1 == t2 -> :eq
       t1 > t2 -> :gt

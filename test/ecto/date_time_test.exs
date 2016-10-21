@@ -88,6 +88,12 @@ defmodule Ecto.DateTest do
   test "inspect protocol" do
     assert inspect(@date) == "#Ecto.Date<2015-12-31>"
   end
+
+  test "compare" do
+    assert Ecto.Date.compare(@date, @leap_date) == :gt
+    assert Ecto.Date.compare(@leap_date, @date) == :lt
+    assert Ecto.Date.compare(@date, @date) == :eq
+  end
 end
 
 defmodule Ecto.TimeTest do
@@ -201,6 +207,14 @@ defmodule Ecto.TimeTest do
   test "precision" do
     assert %Ecto.Time{usec: 0} = Ecto.Time.utc
     assert %Ecto.Time{usec: 0} = Ecto.Time.utc :sec
+  end
+
+  test "compare" do
+    assert Ecto.Time.compare(@time, @time_zero) == :gt
+    assert Ecto.Time.compare(@time_zero, @time) == :lt
+    assert Ecto.Time.compare(@time_usec, @time) == :lt
+    assert Ecto.Time.compare(@time, @time_usec) == :gt
+    assert Ecto.Time.compare(@time, @time) == :eq
   end
 end
 
@@ -332,5 +346,80 @@ defmodule Ecto.DateTimeTest do
   test "precision" do
     assert %Ecto.DateTime{usec: 0} = Ecto.DateTime.utc
     assert %Ecto.DateTime{usec: 0} = Ecto.DateTime.utc :sec
+  end
+
+  test "compare" do
+    assert Ecto.DateTime.compare(@datetime, @datetime_large) == :lt
+    assert Ecto.DateTime.compare(@datetime_large, @datetime) == :gt
+    assert Ecto.DateTime.compare(@datetime, @datetime) == :eq
+  end
+end
+
+defmodule Ecto.DateTime.UtilsTest do
+  use ExUnit.Case, async: true
+
+  @ecto_date       %Ecto.Date{year: 2015, month: 1, day: 31}
+  @ecto_date_small %Ecto.Date{year: 2000, month: 9, day: 30}
+  @date            ~D[2015-01-31]
+  @date_small      ~D[2000-09-30]
+
+  @ecto_datetime       %Ecto.DateTime{year: 2015, month: 1, day: 31, hour: 10, min: 50, sec: 07, usec: 0}
+  @ecto_datetime_small %Ecto.DateTime{year: 2000, month: 9, day: 30, hour: 23, min: 50, sec: 07, usec: 0}
+  @naivedatetime       ~N[2015-01-31 10:50:07]
+  @naivedatetime_small ~N[2000-09-30 23:50:07]
+  @datetime            Ecto.Type.cast(:utc_datetime, @naivedatetime) |> elem(1)
+  @datetime_small      Ecto.Type.cast(:utc_datetime, @naivedatetime_small) |> elem(1)
+
+  @ecto_time       %Ecto.Time{hour: 23, min: 40, sec: 07, usec: 0}
+  @ecto_time_small %Ecto.Time{hour: 10, min: 50, sec: 07, usec: 0}
+  @time            ~T[23:40:07]
+  @time_small      ~T[10:50:07]
+
+  test "compare Date" do
+    assert Ecto.DateTime.Utils.compare(@date, @date_small) == :gt
+    assert Ecto.DateTime.Utils.compare(@date_small, @date) == :lt
+    assert Ecto.DateTime.Utils.compare(@date, @date) == :eq
+  end
+
+  test "compare Date and Ecto.Date" do
+    assert Ecto.DateTime.Utils.compare(@date, @ecto_date_small) == :gt
+    assert Ecto.DateTime.Utils.compare(@ecto_date_small, @date) == :lt
+    assert Ecto.DateTime.Utils.compare(@date, @ecto_date) == :eq
+  end
+
+  test "compare DateTime" do
+    assert Ecto.DateTime.Utils.compare(@datetime, @datetime_small) == :gt
+    assert Ecto.DateTime.Utils.compare(@datetime_small, @datetime) == :lt
+    assert Ecto.DateTime.Utils.compare(@datetime, @datetime) == :eq
+  end
+
+  test "compare DateTime and Ecto.DateTime" do
+    assert Ecto.DateTime.Utils.compare(@datetime, @ecto_datetime_small) == :gt
+    assert Ecto.DateTime.Utils.compare(@ecto_datetime_small, @datetime) == :lt
+    assert Ecto.DateTime.Utils.compare(@datetime, @ecto_datetime) == :eq
+  end
+
+  test "compare NaiveDateTime and Ecto.DateTime" do
+    assert Ecto.DateTime.Utils.compare(@naivedatetime, @ecto_datetime_small) == :gt
+    assert Ecto.DateTime.Utils.compare(@ecto_datetime_small, @naivedatetime) == :lt
+    assert Ecto.DateTime.Utils.compare(@naivedatetime, @ecto_datetime) == :eq
+  end
+
+  test "compare NaiveDateTime and DateTime" do
+    assert Ecto.DateTime.Utils.compare(@datetime, @naivedatetime_small) == :gt
+    assert Ecto.DateTime.Utils.compare(@naivedatetime_small, @datetime) == :lt
+    assert Ecto.DateTime.Utils.compare(@datetime, @naivedatetime) == :eq
+  end
+
+  test "compare Time" do
+    assert Ecto.DateTime.Utils.compare(@time, @time_small) == :gt
+    assert Ecto.DateTime.Utils.compare(@time_small, @time) == :lt
+    assert Ecto.DateTime.Utils.compare(@time, @time) == :eq
+  end
+
+  test "compare Time and Ecto.Time" do
+    assert Ecto.DateTime.Utils.compare(@time, @ecto_time_small) == :gt
+    assert Ecto.DateTime.Utils.compare(@ecto_time_small, @time) == :lt
+    assert Ecto.DateTime.Utils.compare(@time, @ecto_time) == :eq
   end
 end
