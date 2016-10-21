@@ -257,20 +257,20 @@ defmodule Ecto.MigrationTest do
 
   @tag prefix: :foo
   test "forward: creates a table with prefix from manager matching atom prefix" do
-    create(table(:posts, prefix: :foo))
-    flush()
-
-    {_, table, _} = last_command()
-    assert table.prefix == :foo
-  end
-
-  @tag prefix: "foo"
-  test "forward: creates a table with prefix from manager matching string prefix" do
     create(table(:posts, prefix: "foo"))
     flush()
 
     {_, table, _} = last_command()
     assert table.prefix == "foo"
+  end
+
+  @tag prefix: "foo"
+  test "forward: creates a table with prefix from manager matching string prefix" do
+    create(table(:posts, prefix: :foo))
+    flush()
+
+    {_, table, _} = last_command()
+    assert table.prefix == :foo
   end
 
   @tag prefix: :bar
