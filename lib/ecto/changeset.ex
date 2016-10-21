@@ -2079,7 +2079,7 @@ defmodule Ecto.Changeset do
 
       iex> traverse_errors(changeset, fn {msg, opts} ->
       ...>   Enum.reduce(opts, msg, fn {key, value}, acc ->
-      ...>     String.replace(msg, "%{#{key}}", to_string(value))
+      ...>     String.replace(acc, "%{#{key}}", to_string(value))
       ...>   end)
       ...> end)
       %{title: ["should be at least 3 characters"]}
