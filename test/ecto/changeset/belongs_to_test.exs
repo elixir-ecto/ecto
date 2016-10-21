@@ -65,7 +65,7 @@ defmodule Ecto.Changeset.BelongsToTest do
   test "cast belongs_to with invalid params" do
     changeset = cast(%Author{}, %{"profile" => %{name: nil}}, :profile)
     assert changeset.changes.profile.changes == %{name: nil}
-    assert changeset.changes.profile.errors  == [name: {"can't be blank", []}]
+    assert changeset.changes.profile.errors  == [name: {"can't be blank", [validation: :required]}]
     assert changeset.changes.profile.action  == :insert
     refute changeset.changes.profile.valid?
     refute changeset.valid?
@@ -146,17 +146,17 @@ defmodule Ecto.Changeset.BelongsToTest do
     changeset = cast(%Author{}, %{}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
 
     changeset = cast(%Author{}, %{}, :profile, required: true, required_message: "a custom message")
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: {"a custom message", []}]
+    assert changeset.errors == [profile: {"a custom message", [validation: :required]}]
 
     changeset = cast(%Author{profile: nil}, %{}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
 
     changeset = cast(%Author{profile: %Profile{}}, %{}, :profile, required: true)
     assert changeset.required == [:profile]
@@ -166,12 +166,12 @@ defmodule Ecto.Changeset.BelongsToTest do
     changeset = cast(%Author{profile: nil}, %{"profile" => nil}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
 
     changeset = cast(%Author{profile: %Profile{}}, %{"profile" => nil}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{profile: nil}
-    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
   end
 
   test "cast belongs_to with optional" do

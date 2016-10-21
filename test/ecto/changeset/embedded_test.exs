@@ -100,7 +100,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
   test "cast embeds_one with invalid params" do
     changeset = cast(%Author{}, %{"profile" => %{}}, :profile)
     assert changeset.changes.profile.changes == %{}
-    assert changeset.changes.profile.errors  == [name: {"can't be blank", []}]
+    assert changeset.changes.profile.errors  == [name: {"can't be blank", [validation: :required]}]
     assert changeset.changes.profile.action  == :insert
     refute changeset.changes.profile.valid?
     refute changeset.valid?
@@ -174,12 +174,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
     changeset = cast(%Author{profile: nil}, %{}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
 
     changeset = cast(%Author{profile: nil}, %{}, :profile, required: true, required_message: "a custom message")
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: {"a custom message", []}]
+    assert changeset.errors == [profile: {"a custom message", [validation: :required]}]
 
     changeset = cast(%Author{profile: %Profile{}}, %{}, :profile, required: true)
     assert changeset.required == [:profile]
@@ -189,12 +189,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
     changeset = cast(%Author{profile: nil}, %{"profile" => nil}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
-    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
 
     changeset = cast(%Author{profile: %Profile{}}, %{"profile" => nil}, :profile, required: true)
     assert changeset.required == [:profile]
     assert changeset.changes == %{profile: nil}
-    assert changeset.errors == [profile: {"can't be blank", []}]
+    assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
   end
 
   test "cast embeds_one with optional" do
@@ -365,7 +365,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert new.valid?
 
     assert second.data.id == 2
-    assert second.errors == [title: {"can't be blank", []}]
+    assert second.errors == [title: {"can't be blank", [validation: :required]}]
     assert second.action == :update
     refute second.valid?
 
@@ -411,7 +411,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     changeset = cast(%Author{posts: []}, %{}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: {"can't be blank", []}]
+    assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]
 
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
     assert changeset.changes == %{}
@@ -796,12 +796,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
   test "traverses changeset errors with embeds_many when required" do
     changeset = cast(%Author{posts: []}, %{}, :posts, required: true)
-    assert changeset.errors == [posts: {"can't be blank", []}]
-    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"can't be blank", []}]}
+    assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"can't be blank", [validation: :required]}]}
 
     changeset = cast(%Author{}, %{"posts" => []}, :posts, required: true)
-    assert changeset.errors == [posts: {"can't be blank", []}]
-    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"can't be blank", []}]}
+    assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"can't be blank", [validation: :required]}]}
 
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
     assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
@@ -809,6 +809,6 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = cast(%Author{posts: []}, %{"posts" => [%{title: nil}]}, :posts, required: true)
     assert changeset.errors == []
-    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [%{title: [{"can't be blank", []}]}]}
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [%{title: [{"can't be blank", [validation: :required]}]}]}
   end
 end
