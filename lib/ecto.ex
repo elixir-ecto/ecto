@@ -606,8 +606,8 @@ defmodule Ecto do
   It can be a map, a keyword list, or a `{fields, values}` tuple.
   Fields can be atoms or strings.
 
-  Fields that are not present in the schema (or `types` map) are ignored. Values with incorrect
-  types raise an error.
+  Fields that are not present in the schema (or `types` map) are ignored.
+  If any of the values has invalid type, an error is raised.
 
   ## Examples
 
