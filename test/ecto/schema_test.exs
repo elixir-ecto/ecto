@@ -14,7 +14,6 @@ defmodule Ecto.SchemaTest do
       field :temp,  :any, default: "temp", virtual: true
       field :count, :decimal, read_after_writes: true
       field :array, {:array, :string}
-      field :map, {:map, :string}
       field :uuid, Ecto.UUID, autogenerate: true
       belongs_to :comment, Comment
       belongs_to :permalink, Permalink, define_field: false
@@ -24,7 +23,7 @@ defmodule Ecto.SchemaTest do
   test "schema metadata" do
     assert Schema.__schema__(:source)             == "my schema"
     assert Schema.__schema__(:prefix)             == nil
-    assert Schema.__schema__(:fields)             == [:id, :name, :email, :count, :array, :map, :uuid, :comment_id]
+    assert Schema.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :comment_id]
     assert Schema.__schema__(:read_after_writes)  == [:email, :count]
     assert Schema.__schema__(:primary_key)        == [:id]
     assert Schema.__schema__(:autogenerate_id)    == {:id, :id}
@@ -33,7 +32,7 @@ defmodule Ecto.SchemaTest do
   test "types metadata" do
     assert Schema.__schema__(:types) ==
            %{id: :id, name: :string, email: :string, count: :decimal,
-             array: {:array, :string}, map: {:map, :string}, uuid: Ecto.UUID, comment_id: :id}
+             array: {:array, :string}, uuid: Ecto.UUID, comment_id: :id}
     assert Schema.__schema__(:type, :id)         == :id
     assert Schema.__schema__(:type, :name)       == :string
     assert Schema.__schema__(:type, :email)      == :string
@@ -44,7 +43,7 @@ defmodule Ecto.SchemaTest do
   test "changeset metadata" do
     assert Schema.__changeset__ |> Map.drop([:comment, :permalink]) ==
            %{name: :string, email: :string, count: :decimal, array: {:array, :string},
-             map: {:map, :string}, comment_id: :id, temp: :any, id: :id, uuid: Ecto.UUID}
+             comment_id: :id, temp: :any, id: :id, uuid: Ecto.UUID}
   end
 
   test "autogenerate metadata (private)" do
