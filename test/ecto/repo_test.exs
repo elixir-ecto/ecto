@@ -11,6 +11,9 @@ defmodule Ecto.RepoTest do
     schema "my_schema" do
       field :x, :string
       field :y, :binary
+      field :z, :string, default: "z"
+      field :array, {:array, :string}
+      field :map, {:map, :string}
     end
   end
 
@@ -377,5 +380,61 @@ defmodule Ecto.RepoTest do
     test "if first argument of preload is nil, it should return nil" do
       assert TestRepo.preload(nil, []) == nil
     end
+  end
+
+  test "Repo.load/2" do
+    # string fields
+    assert %MySchema{x: "abc"} =
+           TestRepo.load(MySchema, %{"x" => "abc"})
+
+    # atom fields
+    assert %MySchema{x: "abc"} =
+           TestRepo.load(MySchema, %{x: "abc"})
+
+    # keyword list
+    assert %MySchema{x: "abc"} =
+           TestRepo.load(MySchema, [x: "abc"])
+
+    # atom fields and values
+    assert %MySchema{x: "abc"} =
+           TestRepo.load(MySchema, {[:x], ["abc"]})
+
+    # string fields and values
+    assert %MySchema{x: "abc"} =
+           TestRepo.load(MySchema, {["x"], ["abc"]})
+
+    # default value
+    assert %MySchema{x: "abc", z: "z"} =
+           TestRepo.load(MySchema, %{x: "abc"})
+
+    # array field
+    assert %MySchema{array: ["one", "two"]} =
+           TestRepo.load(MySchema, %{array: ["one", "two"]})
+
+    # map field with atoms
+    assert %MySchema{map: %{color: "red"}} =
+           TestRepo.load(MySchema, %{map: %{color: "red"}})
+
+    # map field with strings
+    assert %MySchema{map: %{"color" => "red"}} =
+           TestRepo.load(MySchema, %{map: %{"color" => "red"}})
+
+    # nil
+    assert %MySchema{x: nil} =
+           TestRepo.load(MySchema, %{x: nil})
+
+    # invalid field is ignored
+    assert %MySchema{} =
+           TestRepo.load(MySchema, %{bad: "bad"})
+
+    # FIXME
+    # # invalid value
+    # assert_raise ArgumentError, "cannot load `0` as type :string for :x in schema Ecto.RepoTest.MySchema", fn ->
+    #   TestRepo.load(MySchema, %{x: 0})
+    # end
+
+    # schemaless
+    assert TestRepo.load(%{x: :string}, %{x: "abc", bad: "bad"}) ==
+           %{x: "abc"}
   end
 end

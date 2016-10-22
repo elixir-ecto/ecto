@@ -364,6 +364,19 @@ defmodule Ecto.Repo.Schema do
     {:error, put_repo_and_action(changeset, :delete, repo)}
   end
 
+  def load(adapter, schema_or_types, data) do
+    do_load(schema_or_types, data, &Ecto.Type.adapter_load(adapter, &1, &2))
+  end
+
+  defp do_load(schema, data, loader) when is_list(data),
+    do: do_load(schema, Map.new(data), loader)
+  defp do_load(schema, {fields, values}, loader) when is_list(fields) and is_list(values),
+    do: do_load(schema, Enum.zip(fields, values), loader)
+  defp do_load(schema, data, loader) when is_atom(schema),
+    do: Ecto.Schema.__load__(schema, nil, nil, nil, data, loader)
+  defp do_load(types, data, loader) when is_map(types),
+    do: Ecto.Schema.__load__(%{}, types, data, loader)
+
   ## Helpers
 
   defp struct_from_changeset!(action, %{data: nil}),
