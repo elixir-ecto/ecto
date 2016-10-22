@@ -83,9 +83,6 @@ defmodule Ecto.Type do
   @base      ~w(integer float boolean string binary decimal datetime utc_datetime naive_datetime date time id binary_id map any)a
   @composite ~w(array map in embed)a
 
-  # Types that we cannot optimize loading
-  @bypass @base -- [:utc_datetime, :naive_datetime, :date, :time]
-
   @doc """
   Returns the underlying schema type for the custom type.
 
@@ -285,6 +282,10 @@ defmodule Ecto.Type do
     {:ok, nil}
   end
 
+  def dump(:binary_id, value, _dumper) when is_binary(value) do
+    {:ok, value}
+  end
+
   def dump(:any, value, _dumper) do
     Ecto.DataType.dump(value)
   end
@@ -294,11 +295,11 @@ defmodule Ecto.Type do
   end
 
   def dump({:array, type}, value, dumper) when is_list(value) do
-    array(value, &dumper.(type, &1), [])
+    array(value, type, dumper, [])
   end
 
   def dump({:map, type}, value, dumper) when is_map(value) do
-    map(Map.to_list(value), &dumper.(type, &1), %{})
+    map(Map.to_list(value), type, dumper, %{})
   end
 
   def dump({:in, type}, value, dumper) do
@@ -393,12 +394,16 @@ defmodule Ecto.Type do
 
   def load(_type, nil, _loader), do: {:ok, nil}
 
+  def load(:binary_id, value, _loader) when is_binary(value) do
+    {:ok, value}
+  end
+
   def load({:array, type}, value, loader) when is_list(value) do
-    array(value, &loader.(type, &1), [])
+    array(value, type, loader, [])
   end
 
   def load({:map, type}, value, loader) when is_map(value) do
-    map(Map.to_list(value), &loader.(type, &1), %{})
+    map(Map.to_list(value), type, loader, %{})
   end
 
   def load(:date, term, _loader) do
@@ -534,16 +539,20 @@ defmodule Ecto.Type do
 
   def cast(_type, nil), do: {:ok, nil}
 
+  def cast(:binary_id, value) when is_binary(value) do
+    {:ok, value}
+  end
+
   def cast({:array, type}, term) when is_list(term) do
-    array(term, &cast(type, &1), [])
+    array(term, type, &cast/2, [])
   end
 
   def cast({:map, type}, term) when is_map(term) do
-    map(Map.to_list(term), &cast(type, &1), %{})
+    map(Map.to_list(term), type, &cast/2, %{})
   end
 
   def cast({:in, type}, term) when is_list(term) do
-    array(term, &cast(type, &1), [])
+    array(term, type, &cast/2, [])
   end
 
   def cast(:float, term) when is_binary(term) do
@@ -619,17 +628,21 @@ defmodule Ecto.Type do
   ## Adapter related
 
   @doc false
-  def adapter_load(_adapter, type, nil),
-    do: load(type, nil)
-  def adapter_load(adapter, type, value),
-    do: do_adapter_load(adapter.loaders(type(type), type), {:ok, value}, adapter)
+  def adapter_load(_adapter, type, nil) do
+    load(type, nil)
+  end
+  def adapter_load(adapter, type, value) do
+    if of_base_type?(type, value) do
+      {:ok, value}
+    else
+      do_adapter_load(adapter.loaders(type(type), type), {:ok, value}, adapter)
+    end
+  end
 
   defp do_adapter_load(_, :error, _adapter),
     do: :error
   defp do_adapter_load([fun|t], {:ok, value}, adapter) when is_function(fun),
     do: do_adapter_load(t, fun.(value), adapter)
-  defp do_adapter_load([type|t], {:ok, _} = acc, adapter) when type in @bypass,
-    do: do_adapter_load(t, acc, adapter)
   defp do_adapter_load([type|t], {:ok, value}, adapter),
     do: do_adapter_load(t, load(type, value, &adapter_load(adapter, &1, &2)), adapter)
   defp do_adapter_load([], {:ok, _} = acc, _adapter),
@@ -833,41 +846,39 @@ defmodule Ecto.Type do
 
   # Checks if a value is of the given primitive type.
   defp of_base_type?(:any, _),           do: true
-  defp of_base_type?({:array, _}, _),    do: false # Always handled explicitly.
   defp of_base_type?(:id, term),         do: is_integer(term)
   defp of_base_type?(:float, term),      do: is_float(term)
   defp of_base_type?(:integer, term),    do: is_integer(term)
   defp of_base_type?(:boolean, term),    do: is_boolean(term)
-  defp of_base_type?(:binary_id, value), do: is_binary(value)
   defp of_base_type?(:binary, term),     do: is_binary(term)
   defp of_base_type?(:string, term),     do: is_binary(term)
   defp of_base_type?(:map, term),        do: is_map(term) and not Map.has_key?(term, :__struct__)
-  defp of_base_type?({:map, _}, _),      do: false # Always handled explicitly.
   defp of_base_type?(:decimal, value),   do: Kernel.match?(%{__struct__: Decimal}, value)
+  defp of_base_type?(_, _),              do: false
 
-  defp array([h|t], fun, acc) do
-    case fun.(h) do
-      {:ok, h} -> array(t, fun, [h|acc])
+  defp array([h|t], type, fun, acc) do
+    case fun.(type, h) do
+      {:ok, h} -> array(t, type, fun, [h|acc])
       :error   -> :error
     end
   end
 
-  defp array([], _fun, acc) do
+  defp array([], _type, _fun, acc) do
     {:ok, Enum.reverse(acc)}
   end
 
-  defp map([{key, value} | t], fun, acc) do
-    case fun.(value) do
-      {:ok, value} -> map(t, fun, Map.put(acc, key, value))
+  defp map([{key, value} | t], type, fun, acc) do
+    case fun.(type, value) do
+      {:ok, value} -> map(t, type, fun, Map.put(acc, key, value))
       :error -> :error
     end
   end
 
-  defp map([], _fun, acc) do
+  defp map([], _type, _fun, acc) do
     {:ok, acc}
   end
 
-  defp map(_, _, _), do: :error
+  defp map(_, _, _, _), do: :error
 
   defp to_i(nil), do: nil
   defp to_i(int) when is_integer(int), do: int

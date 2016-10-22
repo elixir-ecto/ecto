@@ -735,9 +735,16 @@ defmodule Ecto.Query.Planner do
     {[select_source(ix, fields)], from}
   end
 
-  defp collect_fields({agg, meta, [{{:., _, [{:&, _, [ix]}, field]}, _, []}] = args},
-                      %{select: select} = query, _take, from) when agg in ~w(avg min max sum)a do
-    type = source_type!(:select, query, select, ix, field)
+  defp collect_fields({agg, meta, [{{:., _, [{:&, _, [ix]}, field]}, _, []} | _] = args},
+                      %{select: select} = query, _take, from) when agg in ~w(count avg min max sum)a do
+    type =
+      case agg do
+        :count -> :integer
+        # TODO: Support the :number type
+        :avg -> :any
+        :sum -> :any
+        _ -> source_type!(:select, query, select, ix, field)
+      end
     {[{agg, [ecto_type: type] ++ meta, args}], from}
   end
 

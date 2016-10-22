@@ -153,7 +153,10 @@ defmodule Ecto.Query.BuilderTest do
     assert quoted_type({:and, [], [1, 2]}, []) == :boolean
     assert quoted_type({:or, [], [1, 2]}, []) == :boolean
     assert quoted_type({:not, [], [1]}, []) == :boolean
-    assert quoted_type({:avg, [], [1]}, []) == :integer
+
+    assert quoted_type({:count, [], [1]}, []) == :integer
+    assert quoted_type({:max, [], [1]}, []) == :integer
+    assert quoted_type({:avg, [], [1]}, []) == :any
 
     assert quoted_type({{:., [], [{:p, [], Elixir}, :title]}, [], []}, [p: 0]) == {0, :title}
     assert quoted_type({:field, [], [{:p, [], Elixir}, :title]}, [p: 0]) == {0, :title}
