@@ -427,11 +427,10 @@ defmodule Ecto.RepoTest do
     assert %MySchema{} =
            TestRepo.load(MySchema, %{bad: "bad"})
 
-    # FIXME
-    # # invalid value
-    # assert_raise ArgumentError, "cannot load `0` as type :string for :x in schema Ecto.RepoTest.MySchema", fn ->
-    #   TestRepo.load(MySchema, %{x: 0})
-    # end
+    # invalid value
+    assert_raise ArgumentError, "cannot load `0` as type :string for :x in schema Ecto.RepoTest.MySchema", fn ->
+      TestRepo.load(MySchema, %{x: 0})
+    end
 
     # schemaless
     assert TestRepo.load(%{x: :string}, %{x: "abc", bad: "bad"}) ==
