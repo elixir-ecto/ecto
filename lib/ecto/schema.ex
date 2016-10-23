@@ -890,8 +890,8 @@ defmodule Ecto.Schema do
       `:delete_all` will only remove data from the join source, never the
       associated records. Notice `:on_delete` may also be set in migrations
       when creating a reference. If supported, relying on the database via
-      migrations is preferred. `:nilify_all` and `:delete_all` will not cascade to child
-      records unless set via database migrations.
+      migrations is preferred. `:nilify_all` and `:delete_all` will not cascade
+      to child records unless set via database migrations.
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
@@ -901,6 +901,12 @@ defmodule Ecto.Schema do
       for more info.
 
     * `:defaults` - Default values to use when building the association
+
+    * `:unique` - When true, checks if the associated entries are unique.
+      This is done by checking the primary key of the associated entries during
+      repository operations. Keep in mind this does not guarantee uniqueness at the
+      database level. For such it is preferred to set a unique index in the database.
+      For example: `create unique_index(:posts_tags, [:post_id, :tag_id])`
 
   ## Removing data
 

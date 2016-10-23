@@ -268,15 +268,18 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp maybe_add_error_on_pk(%{data: %{__struct__: schema}} = changeset, pk_values, acc_pk_values) do
-    invalid? = pk_values == [] or Enum.any?(pk_values, &is_nil/1)
-    case acc_pk_values do
-      %{^pk_values => true} when not invalid? ->
-        Enum.reduce(schema.__schema__(:primary_key), changeset, fn pk, acc ->
-          Changeset.add_error(acc, pk, "has already been taken")
-        end)
-      _ ->
-        changeset
+    if is_map(acc_pk_values) and not missing_pks?(pk_values) and
+       Map.has_key?(acc_pk_values, pk_values) do
+      Enum.reduce(schema.__schema__(:primary_key), changeset, fn pk, acc ->
+        Changeset.add_error(acc, pk, "has already been taken")
+      end)
+    else
+      changeset
     end
+  end
+
+  defp missing_pks?(pk_values) do
+    pk_values == [] or Enum.any?(pk_values, &is_nil/1)
   end
 
   defp allowed_actions(pk_values) do
