@@ -231,6 +231,19 @@ defmodule Ecto.Repo.HasAssocTest do
     refute_received {:rollback, _}
   end
 
+  test "duplicate pk on insert" do
+    assocs = [%MyAssoc{x: "xyz", id: 1} |> Ecto.Changeset.change,
+              %MyAssoc{x: "abc", id: 1} |> Ecto.Changeset.change]
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:assocs, assocs)
+    assert {:error, changeset} = TestRepo.insert(changeset)
+    refute changeset.valid?
+    errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)
+    assert errors == %{assocs: [%{}, %{id: ["has already been taken"]}]}
+  end
+
   test "skips assocs on update when not changing" do
     assoc = %MyAssoc{x: "xyz"}
 

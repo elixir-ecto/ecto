@@ -119,7 +119,7 @@ defmodule Ecto.Repo.EmbeddedTest do
     assert {:error, changeset} = TestRepo.insert(changeset)
     refute changeset.valid?
     errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)
-    assert errors == %{embeds: [%{}, %{id: ["not unique"]}]}
+    assert errors == %{embeds: [%{}, %{id: ["has already been taken"]}]}
   end
 
   ## update
