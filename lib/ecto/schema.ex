@@ -1318,9 +1318,9 @@ defmodule Ecto.Schema do
   @doc false
   def __load__(schema, prefix, source, context, data, loader) do
     struct = schema.__struct__()
-    fields = schema.__schema__(:types)
+    types = schema.__schema__(:types)
 
-    case do_load(struct, fields, data, loader) do
+    case __load__(struct, types, data, loader) do
       %{__meta__: %Metadata{} = metadata} = struct ->
         source = source || schema.__schema__(:source)
         metadata = %{metadata | state: :loaded, source: {prefix, source}, context: context}
@@ -1330,37 +1330,52 @@ defmodule Ecto.Schema do
     end
   end
 
-  defp do_load(struct, types, map, loader) when is_map(map) do
+  @doc false
+  def __load__(struct, types, map, loader) when is_map(map) do
     Enum.reduce(types, struct, fn
       {field, type}, acc ->
-        case Map.fetch(map, Atom.to_string(field)) do
+        case fetch_string_or_atom_field(map, field) do
           {:ok, value} -> Map.put(acc, field, load!(struct, field, type, value, loader))
           :error -> acc
         end
     end)
   end
 
-  defp do_load(struct, types, {fields, values}, loader) when is_list(fields) and is_list(values) do
-    do_load(fields, values, struct, types, loader)
+  def __load__(struct, types, {fields, values}, loader) when is_list(fields) and is_list(values) do
+    __load__(fields, values, struct, types, loader)
   end
 
-  defp do_load([field|fields], [value|values], struct, types, loader) do
+  defp __load__([field|fields], [value|values], struct, types, loader) do
     case Map.fetch(types, field) do
       {:ok, type} ->
         value = load!(struct, field, type, value, loader)
-        do_load(fields, values, Map.put(struct, field, value), types, loader)
+        __load__(fields, values, Map.put(struct, field, value), types, loader)
       :error ->
-        raise ArgumentError, "unknown field `#{field}` for struct #{inspect struct.__struct__}"
+        raise ArgumentError, "unknown field `#{field}`#{error_data(struct)}"
     end
   end
 
-  defp do_load([], [], struct, _types, _loader), do: struct
+  defp __load__([], [], struct, _types, _loader), do: struct
+
+  defp fetch_string_or_atom_field(map, field) when is_atom(field) do
+    case Map.fetch(map, Atom.to_string(field)) do
+      {:ok, value} -> {:ok, value}
+      :error -> Map.fetch(map, field)
+    end
+  end
 
   defp load!(struct, field, type, value, loader) do
     case loader.(type, value) do
       {:ok, value} -> value
-      :error -> raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type} for #{inspect field} in schema #{inspect struct.__struct__}"
+      :error -> raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type} for #{inspect field}#{error_data(struct)}"
     end
+  end
+
+  defp error_data(%{__struct__: atom}) do
+    " in schema #{inspect atom}"
+  end
+  defp error_data(other) when is_map(other) do
+    ""
   end
 
   @doc false

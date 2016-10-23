@@ -213,6 +213,50 @@ defmodule Ecto.Repo do
       def preload(struct_or_structs, preloads, opts) do
         Ecto.Repo.Preloader.preload(struct_or_structs, __MODULE__, preloads, opts)
       end
+
+      @spec load(Ecto.Schema.t | map(), map() | Keyword.t | {list, list}) :: Ecto.Schema.t | map()
+      @doc """
+      Loads `data` into a struct or a map.
+
+      The first argument can be a schema, or a map (of types) and determines the return value:
+      a struct or a map, respectively.
+
+      The second argument `data` specifies fields and values that are to be loaded.
+      It can be a map, a keyword list, or a `{fields, values}` tuple.
+      Fields can be atoms or strings.
+
+      Fields that are not present in the schema (or `types` map) are ignored.
+      If any of the values has invalid type, an error is raised.
+
+      ## Examples
+
+          iex> Repo.load(User, %{name: "Alice", age: 25})
+          %User{name: "Alice", age: 25}
+
+          iex> Repo.load(User, [name: "Alice", age: 25])
+          %User{name: "Alice", age: 25}
+
+      `data` can also take form of `{fields, values}`:
+
+          iex> Repo.load(User, {[:name, :age], ["Alice", 25]})
+          %User{name: "Alice", age: 25, ...}
+
+      The first argument can also be a `types` map:
+
+          iex> types = %{name: :string, age: :integer}
+          iex> Repo.load(types, %{name: "Alice", age: 25})
+          %{name: "Alice", age: 25}
+
+      This function is especially useful when parsing raw query results:
+
+          iex> result = Ecto.Adapters.SQL.query!(Repo, "SELECT * FROM users", [])
+          iex> Enum.map(result.rows, &Repo.load(User, {result.columns, &1}))
+          [%User{...}, ...]
+
+      """
+      def load(schema_or_types, data) do
+        Ecto.Repo.Schema.load(@adapter, schema_or_types, data)
+      end
     end
   end
 
