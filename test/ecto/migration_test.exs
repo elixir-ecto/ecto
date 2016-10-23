@@ -100,6 +100,7 @@ defmodule Ecto.MigrationTest do
     result = create(table = table(:posts)) do
       add :title, :string
       add :cost, :decimal, precision: 3
+      add :likes, :"int UNSIGNED", default: 0
       add :author_id, references(:authors)
       timestamps()
     end
@@ -110,6 +111,7 @@ defmodule Ecto.MigrationTest do
               [{:add, :id, :serial, [primary_key: true]},
                {:add, :title, :string, []},
                {:add, :cost, :decimal, [precision: 3]},
+               {:add, :likes, :"int UNSIGNED", [default: 0]},
                {:add, :author_id, %Reference{table: :authors}, []},
                {:add, :inserted_at, :naive_datetime, [null: false]},
                {:add, :updated_at, :naive_datetime, [null: false]}]}
@@ -147,6 +149,18 @@ defmodule Ecto.MigrationTest do
            {:create, table,
               [{:add, :inserted_on, :date, [null: false]},
                {:add, :updated_on, :date, [null: false]}]}
+  end
+
+  test "forward: creates a table with timestamps of database specific type" do
+    create table = table(:posts, primary_key: false) do
+      timestamps(type: :"datetime(6)")
+    end
+    flush()
+
+    assert last_command() ==
+           {:create, table,
+              [{:add, :inserted_at, :"datetime(6)", [null: false]},
+               {:add, :updated_at, :"datetime(6)", [null: false]}]}
   end
 
   test "forward: creates an empty table" do
