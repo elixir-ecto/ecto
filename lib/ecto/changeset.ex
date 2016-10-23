@@ -1851,7 +1851,14 @@ defmodule Ecto.Changeset do
   Unfortunately, different databases provide different guarantees
   when it comes to case-sensitiveness. For example, in MySQL, comparisons
   are case-insensitive by default. In Postgres, users can define case
-  insensitive column by using the `:citext` type/extension.
+  insensitive column by using the `:citext` type/extension. In your migration:
+
+      execute "CREATE EXTENSION IF NOT EXISTS citext"
+      create table(:users) do
+        ...
+        add :email, :citext
+        ...
+      end
 
   If for some reason your database does not support case insensitive columns,
   you can explicitly downcase values before inserting/updating them:
