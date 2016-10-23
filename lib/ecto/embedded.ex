@@ -8,12 +8,13 @@ defmodule Ecto.Embedded do
                        field: atom,
                        owner: atom,
                        on_cast: nil | fun,
-                       related: atom}
+                       related: atom,
+                       unique: boolean}
 
   @behaviour Ecto.Changeset.Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   @embeds_one_on_replace_opts @on_replace_opts ++ [:update]
-  defstruct [:cardinality, :field, :owner, :related, :on_cast, on_replace: :raise]
+  defstruct [:cardinality, :field, :owner, :related, :on_cast, on_replace: :raise, unique: true]
 
   @doc """
   Builds the embedded struct.

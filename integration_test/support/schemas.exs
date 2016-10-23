@@ -48,6 +48,8 @@ defmodule Ecto.Integration.Post do
     many_to_many :users, Ecto.Integration.User,
       join_through: "posts_users", on_delete: :delete_all, on_replace: :delete
     many_to_many :unique_users, Ecto.Integration.User,
+      join_through: "posts_users", unique: true
+    many_to_many :constraint_users, Ecto.Integration.User,
       join_through: Ecto.Integration.PostUserCompositePk
     has_many :users_comments, through: [:users, :comments]
     has_many :comments_authors_permalinks, through: [:comments_authors, :permalink]

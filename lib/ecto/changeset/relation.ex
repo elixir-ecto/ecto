@@ -204,8 +204,8 @@ defmodule Ecto.Changeset.Relation do
     {:ok, [], true, false}
   end
 
-  defp cast_or_change(%{cardinality: :many}, value, current, current_pks, new_pks, fun) when is_list(value) do
-    map_changes(value, new_pks, fun, process_current(current, current_pks), [], true, true, %{})
+  defp cast_or_change(%{cardinality: :many, unique: unique}, value, current, current_pks, new_pks, fun) when is_list(value) do
+    map_changes(value, new_pks, fun, process_current(current, current_pks), [], true, true, unique && %{})
   end
 
   defp cast_or_change(_, _, _, _, _, _), do: :error
@@ -252,7 +252,7 @@ defmodule Ecto.Changeset.Relation do
         changeset = maybe_add_error_on_pk(changeset, pk_values, acc_pk_values)
         map_changes(rest, new_pks, fun, current, [changeset | acc],
                     valid? and changeset.valid?, (struct != nil) and skip? and skip?(changeset),
-                    Map.put(acc_pk_values, pk_values, true))
+                    acc_pk_values && Map.put(acc_pk_values, pk_values, true))
       :error ->
         :error
     end
@@ -274,7 +274,7 @@ defmodule Ecto.Changeset.Relation do
         Enum.reduce(schema.__schema__(:primary_key), changeset, fn pk, acc ->
           Changeset.add_error(acc, pk, "has already been taken")
         end)
-      %{} ->
+      _ ->
         changeset
     end
   end

@@ -1464,7 +1464,7 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_many_to_many_options [:join_through, :join_keys, :on_delete, :defaults, :on_replace]
+  @valid_many_to_many_options [:join_through, :join_keys, :on_delete, :defaults, :on_replace, :unique]
 
   @doc false
   def __many_to_many__(mod, name, queryable, opts) do

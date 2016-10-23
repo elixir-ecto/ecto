@@ -30,7 +30,8 @@ defmodule Ecto.Association do
                relationship: :parent | :child,
                owner: atom,
                owner_key: atom,
-               field: atom}
+               field: atom,
+               unique: boolean}
 
   alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr}
 
@@ -448,7 +449,7 @@ defmodule Ecto.Association.Has do
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
   @has_one_on_replace_opts @on_replace_opts ++ [:update]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
-             :queryable, :on_delete, :on_replace, defaults: [], relationship: :child]
+             :queryable, :on_delete, :on_replace, unique: true, defaults: [], relationship: :child]
 
   @doc false
   def struct(module, name, opts) do
@@ -635,7 +636,7 @@ defmodule Ecto.Association.HasThrough do
 
   @behaviour Ecto.Association
   defstruct [:cardinality, :field, :owner, :owner_key, :through, :on_cast,
-             relationship: :child]
+             relationship: :child, unique: true]
 
   @doc false
   def struct(module, name, opts) do
@@ -715,7 +716,7 @@ defmodule Ecto.Association.BelongsTo do
   @behaviour Ecto.Association
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify, :update]
   defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast,
-             :on_replace, defaults: [], cardinality: :one, relationship: :parent]
+             :on_replace, defaults: [], cardinality: :one, relationship: :parent, unique: true]
 
   @doc false
   def struct(module, name, opts) do
@@ -837,7 +838,7 @@ defmodule Ecto.Association.ManyToMany do
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
              :on_replace, :join_keys, :join_through, :on_cast,
-             defaults: [], relationship: :child, cardinality: :many]
+             defaults: [], relationship: :child, cardinality: :many, unique: false]
 
   @doc false
   def struct(module, name, opts) do
@@ -902,7 +903,8 @@ defmodule Ecto.Association.ManyToMany do
       queryable: queryable,
       on_delete: on_delete,
       on_replace: on_replace,
-      defaults: opts[:defaults] || []
+      defaults: opts[:defaults] || [],
+      unique: Keyword.get(opts, :unique, false)
     }
   end
 
