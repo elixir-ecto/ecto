@@ -109,6 +109,19 @@ defmodule Ecto.Repo.EmbeddedTest do
     assert schema.embed.sub_embed.y == "xyz"
   end
 
+  test "duplicate pk on insert" do
+    embeds = [%MyEmbed{x: "xyz", id: @uuid} |> Ecto.Changeset.change,
+              %MyEmbed{x: "abc", id: @uuid} |> Ecto.Changeset.change]
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_embed(:embeds, embeds)
+    assert {:error, changeset} = TestRepo.insert(changeset)
+    refute changeset.valid?
+    errors = Ecto.Changeset.traverse_errors(changeset, fn {msg, _} -> msg end)
+    assert errors == %{embeds: [%{}, %{id: ["not unique"]}]}
+  end
+
   ## update
 
   test "skips embeds on update when not changing" do
@@ -223,7 +236,7 @@ defmodule Ecto.Repo.EmbeddedTest do
     schema = TestRepo.update!(changeset)
     refute schema.embed.updated_at
 
-    changes = Ecto.Changeset.change(embed, x: "abc")
+    changes = Ecto.Changeset.change(%MyEmbed{x: "xyz", id: "30313233-3435-3637-3839-616263646567"}, x: "abc")
     changeset =
       %MySchema{id: 1, embeds: [embed]}
       |> Ecto.Changeset.change
