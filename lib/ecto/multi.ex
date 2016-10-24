@@ -274,9 +274,9 @@ defmodule Ecto.Multi do
   The function should return either `{:ok, value}` or `{:error, value}`, and
   receives changes so far as an argument.
   """
-  @spec run(t, name, fun) :: t
-  def run(multi, name, fun) when is_function(fun, 1) do
-    add_operation(multi, name, {:run, fun})
+  @spec run(t, name, run) :: t
+  def run(multi, name, run) when is_function(run, 1) do
+    add_operation(multi, name, {:run, run})
   end
 
   @doc """
