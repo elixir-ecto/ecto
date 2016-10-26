@@ -708,9 +708,6 @@ defmodule Ecto.Schema do
 
     * `:defaults` - Default values to use when building the association
 
-  All other options are forwarded to the underlying foreign key definition
-  and therefore accept the same options as `field/3`.
-
   ## Examples
 
       defmodule Comment do
@@ -724,6 +721,18 @@ defmodule Ecto.Schema do
       # The post can come preloaded on the comment record
       [comment] = Repo.all(from(c in Comment, where: c.id == 42, preload: :post))
       comment.post #=> %Post{...}
+
+  If you need custom options on the underlying field, you can define the
+  field explicitly and then pass `define_field: false` to `belongs_to`:
+
+      defmodule Comment do
+        use Ecto.Schema
+
+        schema "comments" do
+          field :post_id, :integer, ... # custom options
+          belongs_to :post, Post, define_field: false
+        end
+      end
 
   ## Polymorphic associations
 
