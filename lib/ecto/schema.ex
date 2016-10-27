@@ -32,7 +32,8 @@ defmodule Ecto.Schema do
       a tuple `{field_name, type, options}` with the primary key field
       name, type (typically `:id` or `:binary_id`, but can be any type) and
       options. Defaults to `{:id, :id, autogenerate: true}`. When set
-      to `false`, does not define a primary key in the schema;
+      to `false`, does not define a primary key in the schema unless 
+      composite keys are defined using the options of `field`.
 
     * `@schema_prefix` - configures the schema prefix. Defaults to `nil`,
       which generates structs and queries without prefix. When set, the
@@ -111,6 +112,8 @@ defmodule Ecto.Schema do
   Besides `:id` and `:binary_id`, which are often used by primary
   and foreign keys, Ecto provides a huge variety of types to be used
   by any column.
+  
+  Ecto also supports composite primary keys.
 
   ## Types and casting
 
@@ -424,7 +427,10 @@ defmodule Ecto.Schema do
     * `:virtual` - When true, the field is not persisted to the database.
       Notice virtual fields do not support `:autogenerate` nor
       `:read_after_writes`.
-
+      
+    * `:primary_key` - When true, the field is used as part of the 
+      composite primary key
+      
   """
   defmacro field(name, type \\ :string, opts \\ []) do
     quote do
