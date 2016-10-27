@@ -12,7 +12,7 @@ defmodule Ecto.LogEntry do
     * decode_time - the time spent decoding the result in native units (it may be nil);
     * queue_time - the time spent to check the connection out in native units (it may be nil);
     * connection_pid - the connection process that executed the query;
-    * ansi_color - the color that chould be used when logging the entry.
+    * ansi_color - the color that should be used when logging the entry.
 
   Notice all times are stored in native unit. You must convert them to
   the proper unit by using `System.convert_time_unit/3` before logging.
