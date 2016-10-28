@@ -556,13 +556,15 @@ defmodule Ecto.Changeset do
   @doc """
   Casts the given association with the changeset parameters.
 
+  This function requires the association to have been
+  preloaded in the changeset struct. Missing data will
+  invoke the `:on_replace` behaviour defined on the association.
+
   The parameters for the given association will be retrieved
   from `changeset.params`. Those parameters are expected to be
   a map with attributes, similar to the ones passed to `cast/3`.
   Once parameters are retrieved, `cast_assoc/3` will match those
   parameters with the associations already in the changeset record.
-  For this reason, the association must be preloaded in the
-  changeset before `cast_assoc/3` is called.
 
   For example, imagine a user has many addresses relationship where
   post data is sent as follows
@@ -1021,6 +1023,10 @@ defmodule Ecto.Changeset do
 
   @doc """
   Puts the given association as a change in the changeset.
+
+  This function requires the association to have been
+  preloaded in the changeset struct. Missing data will
+  invoke the `:on_replace` behaviour defined on the association.
 
   The given value may either be the association struct, a
   changeset for the given association or a map or keyword
