@@ -3,29 +3,31 @@ defmodule Ecto.Changeset do
   Changesets allow filtering, casting, validation and
   definition of constraints when manipulating structs.
 
-  There is an example of working with changesets in the
-  introductory documentation in the `Ecto` module. The
-  functions `change/2` and `cast/3` are the usual entry
-  points for creating changesets, while the remaining
-  functions are useful for manipulating them. On this
-  module docs, we will cover extra functionality provided
-  by this module.
+  There is an example of working with changesets in the introductory
+  documentation in the `Ecto` module. The functions `cast/3` and
+  `change/2` are the usual entry points for creating changesets.
+  The first one is used to cast and validate external parameters,
+  such as parameters sent through a form, API, command line, etc.
+  The second one is used to change data directly from your application.
+
+  The remaining functions in this module, such as validations,
+  constraints, association handling, are about manipulating
+  changesets. Let's discuss some of this extra functionality.
 
   ## Validations and constraints
 
-  Ecto changesets provide both validations and constraints
-  which are ultimately turned into errors in case something
-  goes wrong.
+  Ecto changesets provide both validations and constraints which
+  are ultimately turned into errors in case something goes wrong.
 
   The difference between them is that validations can be executed
   without a need to interact with the database and, therefore, are
   always executed before attempting to insert or update the entry
   in the database.
 
-  However, constraints can only be checked in a safe way when performing
-  the operation in the database. As a consequence, validations are
-  always checked before constraints. Constraints won't even be
-  checked in case validations failed.
+  However, constraints can only be checked in a safe way when
+  performing the operation in the database. As a consequence,
+  validations are always checked before constraints. Constraints
+  won't even be checked in case validations failed.
 
   Let's see an example:
 
@@ -49,12 +51,13 @@ defmodule Ecto.Changeset do
         end
       end
 
-  In the `changeset/2` function above, we define three validations -
-  one after another they check that `name` and `email` fields are present in the
-  changeset, the e-mail is of the specified format, and the age is between 18
-  and 100 - as well as a unique constraint in the email field.
+  In the `changeset/2` function above, we define three validations.
+  They check that `name` and `email` fields are present in the
+  changeset, the e-mail is of the specified format, and the age is
+  between 18 and 100 - as well as a unique constraint in the email
+  field.
 
-  Let's suppose the e-mail is given but the age is invalid.  The
+  Let's suppose the e-mail is given but the age is invalid. The
   changeset would have the following errors:
 
       changeset = User.changeset(%User{}, %{age: 0, email: "mary@example.com"})
@@ -81,7 +84,7 @@ defmodule Ecto.Changeset do
   cast from the command line or through an HTML form or any other text-based
   format, it is likely those means cannot express nil values. For
   those reasons, changesets include the concept of empty values, which are
-  values that will be automatically converted to nil on `cast/3`. Those
+  values that will be automatically converted to `nil` on `cast/3`. Those
   values are stored in the changeset `empty_values` field and default to
   `[""]`.
 
@@ -182,7 +185,7 @@ defmodule Ecto.Changeset do
       if changeset.valid? do
         ... success case ...
       else
-        changeset = %{changeset | action: :insert} # action ca be anything
+        changeset = %{changeset | action: :insert} # action can be anything
         ... failure case ...
       end
 
