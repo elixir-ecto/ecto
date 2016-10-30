@@ -102,7 +102,7 @@ It is also possible to interpolate the whole keyword list to dynamically filter 
 
   * Do not emit warnings when aliases are used in the schema
   * Correct use of "associated to" to "associated with" in error messages
-  * Ensure preloader recurs through :thorugh associations using the proper key configurations
+  * Ensure preloader recurs through :through associations using the proper key configurations
 
 ## v2.1.0-rc.1 (2016-09-28)
 
@@ -124,7 +124,7 @@ It is also possible to interpolate the whole keyword list to dynamically filter 
   * Support the `:prefix` option through the `Ecto.Repo` API
   * Embeds are no longer required to have a primary key field. Coupled with the new `on_replace: :update` (or `on_replace: :delete`) option, this allows `embeds_one` relationships to be updated (or deleted) even without a primary key. For `embeds_many`, `:on_replace` must be set to `:delete` in case updates are desired, forcing all current embeds to be deleted and replaced by new ones whenever a new list of embeds is set
   * Support `...` to specify all previous bindings up to the next one in the query syntax. For example, `where([p, ..., c], p.status == c.status)` matches `p` to the first binding and `c` to the last one
-  * Only check for `nil` values during comparison. This avoids unecessary restrictions on the query syntax on places `nil` should have been allowed
+  * Only check for `nil` values during comparison. This avoids unnecessary restrictions on the query syntax on places `nil` should have been allowed
   * Allow the ordering direction to be set when using expressions with `Ecto.Query.distinct/3`
 
 ### Deprecations
