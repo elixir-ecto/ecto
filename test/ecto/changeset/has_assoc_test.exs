@@ -126,6 +126,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert_raise RuntimeError, ~r"attempting to cast or change association `profile` .* that was not loaded", fn ->
       cast(loaded, %{"profile" => ""}, :profile)
     end
+    assert cast(loaded, %{}, :profile).changes == %{}
   end
 
   test "cast has_one with existing struct replacing" do
@@ -364,6 +365,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert_raise RuntimeError, ~r"attempting to cast or change association `posts` .* that was not loaded", fn ->
       cast(loaded, %{"posts" => []}, :posts)
     end
+    assert cast(loaded, %{}, :posts).changes == %{}
   end
 
   # Please note the order is important in this test.

@@ -684,11 +684,11 @@ defmodule Ecto.Changeset do
 
     on_cast  = Keyword.get_lazy(opts, :with, fn -> on_cast_default(type, related) end)
     original = Map.get(data, key)
-    current  = Relation.load!(data, original)
 
     changeset =
       case Map.fetch(params, param_key) do
         {:ok, value} ->
+          current  = Relation.load!(data, original)
           case Relation.cast(relation, value, current, on_cast) do
             {:ok, change, relation_valid?, false} when change != original ->
               missing_relation(%{changeset | changes: Map.put(changes, key, change),
@@ -699,7 +699,7 @@ defmodule Ecto.Changeset do
               %{changeset | errors: [{key, {message(opts, :invalid_message, "is invalid"), [type: expected_relation_type(relation)]}} | changeset.errors], valid?: false}
           end
         :error ->
-          missing_relation(changeset, key, current, required?, relation, opts)
+          missing_relation(changeset, key, original, required?, relation, opts)
       end
 
     update_in changeset.types[key], fn {type, relation} ->
