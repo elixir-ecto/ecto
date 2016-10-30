@@ -70,6 +70,7 @@ defmodule Ecto.Changeset.ManyToManyTest do
     assert_raise RuntimeError, ~r"attempting to cast or change association `posts` .* that was not loaded", fn ->
       cast(loaded, %{"posts" => []}, :posts)
     end
+    assert cast(loaded, %{}, :posts).changes == %{}
   end
 
   # Please note the order is important in this test.

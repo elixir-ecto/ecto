@@ -101,6 +101,7 @@ defmodule Ecto.Changeset.BelongsToTest do
     assert_raise RuntimeError, ~r"attempting to cast or change association `profile` .* that was not loaded", fn ->
       cast(loaded, %{"profile" => ""}, :profile)
     end
+    assert cast(loaded, %{}, :profile).changes == %{}
   end
 
   test "cast belongs_to with existing struct replacing" do
