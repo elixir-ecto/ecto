@@ -265,6 +265,23 @@ defmodule Ecto.Changeset.EmbeddedNoPkTest do
     assert changeset.valid?
   end
 
+  test "cast embeds_many with map with numbered string keys" do
+    changeset = cast(%Author{}, %{"posts" => %{"1" => %{"title" => "one"}, "2" => %{"title" => "two"}, "10" => %{"title" => "ten"}}}, :posts)
+    [one, two, ten] = changeset.changes.posts
+    assert one.changes == %{title: "one"}
+    assert two.changes == %{title: "two"}
+    assert ten.changes == %{title: "ten"}
+    assert changeset.valid?
+  end
+
+  test "cast embeds_many with map with non-numbered keys" do
+    changeset = cast(%Author{}, %{"posts" => %{"b" => %{"title" => "two"}, "a" => %{"title" => "one"}}}, :posts)
+    [one, two] = changeset.changes.posts
+    assert one.changes == %{title: "one"}
+    assert two.changes == %{title: "two"}
+    assert changeset.valid?
+  end
+
   test "cast embeds_many with custom changeset" do
     changeset = cast(%Author{}, %{"posts" => [%{"title" => "hello"}]},
                      :posts, with: &Post.optional_changeset/2)
