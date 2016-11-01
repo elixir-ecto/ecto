@@ -83,7 +83,8 @@ defmodule Ecto.Changeset.Relation do
   def cast(%{cardinality: :many} = relation, params, current, on_cast) when is_map(params) do
     params =
       params
-      |> Enum.sort_by(&elem(&1, 0))
+      |> Enum.map(&key_as_int/1)
+      |> Enum.sort
       |> Enum.map(&elem(&1, 1))
     cast(relation, params, current, on_cast)
   end
@@ -323,6 +324,14 @@ defmodule Ecto.Changeset.Relation do
               "the foreign key value accordingly"
     end
   end
+
+  defp key_as_int({key, val}) when is_binary(key) do
+    case Integer.parse(key) do
+      {key, ""} -> {key, val}
+      _ -> {key, val}
+    end
+  end
+  defp key_as_int(key_val), do: key_val
 
   defp process_current(nil, _get_pks),
     do: %{}
