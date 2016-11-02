@@ -172,7 +172,8 @@ defmodule Ecto.Migration do
               concurrently: false,
               using: nil,
               where: nil,
-              comment: nil
+              comment: nil,
+              options: nil
 
     @type t :: %__MODULE__{
       table: atom,
@@ -183,7 +184,8 @@ defmodule Ecto.Migration do
       concurrently: boolean,
       using: atom | String.t,
       where: atom | String.t,
-      comment: String.t | nil
+      comment: String.t | nil,
+      options: String.t
     }
   end
 
