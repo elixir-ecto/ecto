@@ -95,7 +95,7 @@ defmodule Mix.Ecto do
   end
 
   @doc """
-  Ensures the given repository's migrations path exists on the filesystem.
+  Ensures the given repository's migrations path exists on the file system.
   """
   @spec ensure_migrations_path(Ecto.Repo.t) :: Ecto.Repo.t | no_return
   def ensure_migrations_path(repo) do

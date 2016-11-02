@@ -133,7 +133,7 @@ defmodule Ecto.Query.Planner do
   Prepares the query for cache.
 
   This means all the parameters from query expressions are
-  merged into a single value and their entries are prunned
+  merged into a single value and their entries are pruned
   from the query.
 
   This function is called by the backend before invoking

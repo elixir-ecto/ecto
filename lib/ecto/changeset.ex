@@ -175,7 +175,7 @@ defmodule Ecto.Changeset do
   to explicitly set the action to one specific value. For example,
   frameworks such as Phoenix uses the value of `changeset.action` to
   decide if errors should be shown or not on a given form. In such cases,
-  the following construt is recommended:
+  the following construct is recommended:
 
       changeset = User.changeset(%User{}, %{age: 42, email: "mary@example.com"})
 

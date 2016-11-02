@@ -1,5 +1,5 @@
 defmodule Ecto.Repo.Assoc do
-  # The module invoked by repomodules
+  # The module invoked by repo modules
   # for association related functionality.
   @moduledoc false
 
