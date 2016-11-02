@@ -816,10 +816,10 @@ defmodule Ecto.Query.Planner do
         List.wrap(fields)
       {{:ok, {_, _}}, {:fragment, _, _}} ->
         error! query, "it is not possible to return a map/struct subset of a fragment, " <>
-                      "you must explicitly return the desired individial fields"
+                      "you must explicitly return the desired individual fields"
       {{:ok, {_, _}}, %Ecto.SubQuery{}} ->
         error! query, "it is not possible to return a map/struct subset of a subquery, " <>
-                      "you must explicitly select the whole subquery or individial fields only"
+                      "you must explicitly select the whole subquery or individual fields only"
 
       {:error, {_, nil}} ->
         nil # Checked by the adapter
