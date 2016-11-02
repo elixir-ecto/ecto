@@ -498,7 +498,7 @@ defmodule Ecto.Repo.Schema do
 
           # Handle associations specially
           {_, _, %{^field => {tag, embed_or_assoc}}} when tag in [:assoc, :embed] ->
-            # This is partly reimplemeting the logic behind put_relation
+            # This is partly reimplementing the logic behind put_relation
             # in Ecto.Changeset but we need to do it in a way where we have
             # control over the current value.
             value = Relation.load!(struct, Map.get(struct, field))

@@ -329,7 +329,7 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    # Check if the pool options should overriden
+    # Check if the pool options should overridden
     {pool_name, pool_opts} =
       case Keyword.fetch(opts, :pool) do
         {:ok, pool} when pool != Ecto.Adapters.SQL.Sandbox ->

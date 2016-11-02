@@ -203,7 +203,7 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp distinct(nil, _sources, _query), do: ""
     defp distinct(%QueryExpr{expr: true}, _sources, _query),  do: "DISTINCT "
-    defp distinct(%QueryExpr{expr: false}, _sources, _quety), do: ""
+    defp distinct(%QueryExpr{expr: false}, _sources, _query), do: ""
     defp distinct(%QueryExpr{expr: exprs}, _sources, query) when is_list(exprs) do
       error!(query, "DISTINCT with multiple columns is not supported by MySQL")
     end

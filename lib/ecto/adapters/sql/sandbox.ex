@@ -242,7 +242,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   Since the sandbox relies on concurrent transactional tests, there is
   a chance your tests may trigger deadlocks in your database. This is
   specially true with MySQL, where the solutions presented here are not
-  enough to avoid deadlocks and thefore making the use of concurrent tests
+  enough to avoid deadlocks and therefore making the use of concurrent tests
   with MySQL prohibited.
 
   However, even on databases like PostgreSQL, performance degradations or
