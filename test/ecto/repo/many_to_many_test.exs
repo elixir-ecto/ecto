@@ -357,7 +357,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     refute_received {:insert_all, _, _}
   end
 
-  test "adding extra assocs on update" do
+  test "adding struct assocs on update" do
     sample = %MyAssoc{x: "xyz", id: 13, sub_assoc: nil}
     sample = put_meta sample, state: :loaded
     latest = %MyAssoc{x: "abc", id: 11, sub_assoc: nil}
@@ -374,6 +374,31 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert sample.x == "xyz"
     refute sample.inserted_at
     refute sample.updated_at
+
+    assert latest.id == 11
+    assert latest.x == "abc"
+    assert latest.inserted_at
+    assert latest.updated_at
+  end
+
+  test "adding mixed changeset and struct assocs on update" do
+    sample = %MyAssoc{x: "xyz", id: 13, sub_assoc: nil}
+    sample = put_meta sample, state: :loaded
+    sample = Ecto.Changeset.change(sample, x: "XYZ")
+    latest = %MyAssoc{x: "abc", id: 11, sub_assoc: nil}
+
+    # Changing the assoc
+    changeset =
+      %MySchema{id: 1, assocs: [sample]}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:assocs, [sample, latest])
+    schema = TestRepo.update!(changeset)
+    [sample, latest] = schema.assocs
+
+    assert sample.id == 13
+    assert sample.x == "XYZ"
+    refute sample.inserted_at
+    assert sample.updated_at
 
     assert latest.id == 11
     assert latest.x == "abc"

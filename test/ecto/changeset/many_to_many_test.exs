@@ -8,7 +8,7 @@ defmodule Ecto.Changeset.ManyToManyTest do
   alias __MODULE__.Post
 
   defmodule Post do
- use Ecto.Schema
+    use Ecto.Schema
 
     schema "posts" do
       field :title, :string
