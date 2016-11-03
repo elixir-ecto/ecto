@@ -723,7 +723,7 @@ defmodule Ecto.Repo do
         {:error, changeset} -> # Something went wrong
       end
   """
-  @callback insert_or_update(changeset :: Ecto.Changeset.t, opts :: Keyword.t) ::
+  @callback insert_or_update(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
             {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
@@ -772,7 +772,7 @@ defmodule Ecto.Repo do
   Same as `insert_or_update/2` but returns the struct or raises if the changeset
   is invalid.
   """
-  @callback insert_or_update!(changeset :: Ecto.Changeset.t, opts :: Keyword.t) ::
+  @callback insert_or_update!(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
             Ecto.Schema.t | no_return
 
   @doc """
