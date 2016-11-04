@@ -159,14 +159,11 @@ defmodule Ecto do
       end
 
   The `changeset/2` function first invokes `Ecto.Changeset.cast/3` with
-  the struct, the parameters and a list of required and optional fields;
-  this returns a changeset. The parameter is a map with binary keys and
-  a value that will be cast based on the type defined on the schema.
+  the struct, the parameters and a list of allowed fields; this returns a changeset.
+  The parameters is a map with binary keys and values that will be cast based
+  on the type defined on the schema.
 
-  Any parameter that was not explicitly listed in the required or
-  optional fields list will be ignored. Furthermore, if a field is given
-  as required but it is not in the parameter map nor in the struct,
-  it will be marked with an error and the changeset is deemed invalid.
+  Any parameter that was not explicitly listed in the fields list will be ignored.
 
   After casting, the changeset is given to many `Ecto.Changeset.validate_*/2`
   functions that validate only the **changed fields**. In other words:
