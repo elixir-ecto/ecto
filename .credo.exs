@@ -41,7 +41,7 @@
 
       {Credo.Check.Refactor.ABCSize, false},
       {Credo.Check.Refactor.CondStatements},
-      {Credo.Check.Refactor.FunctionArity},
+      {Credo.Check.Refactor.FunctionArity, max_arity: 13}, # Don't do this at home.
       {Credo.Check.Refactor.MatchInCondition},
       {Credo.Check.Refactor.PipeChainStart, false},
       {Credo.Check.Refactor.CyclomaticComplexity},
@@ -56,7 +56,7 @@
       {Credo.Check.Warning.NameRedeclarationByCase, false},
       {Credo.Check.Warning.NameRedeclarationByDef, false},
       {Credo.Check.Warning.NameRedeclarationByFn, false},
-      {Credo.Check.Warning.OperationOnSameValues},
+      {Credo.Check.Warning.OperationOnSameValues, false}, # Disabled because of p.x == p.x in Ecto queries
       {Credo.Check.Warning.BoolOperationOnSameValues},
       {Credo.Check.Warning.UnusedEnumOperation},
       {Credo.Check.Warning.UnusedKeywordOperation},
