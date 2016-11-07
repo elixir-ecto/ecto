@@ -23,6 +23,8 @@
 
       {Credo.Check.Design.AliasUsage, false},
       {Credo.Check.Design.DuplicatedCode, excluded_macros: []},
+
+      # Disabled for now as those are checked by Code Climate
       {Credo.Check.Design.TagTODO},
       {Credo.Check.Design.TagFIXME},
 
