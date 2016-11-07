@@ -61,7 +61,7 @@ defimpl Inspect, for: Ecto.Query do
   defp unbound_from({source, nil}), do: inspect source
   defp unbound_from({nil, schema}),  do: inspect schema
   defp unbound_from(from = {source, schema}) do
-    inspect if(source == schema.__schema__(:source), do: schema, else: from)
+    inspect if source == schema.__schema__(:source), do: schema, else: from
   end
   defp unbound_from(%Ecto.SubQuery{query: query}) do
     "subquery(#{to_string query})"

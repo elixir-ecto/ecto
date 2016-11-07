@@ -637,7 +637,7 @@ defmodule Ecto.DateTime do
 
   def autogenerate(:usec) do
     timestamp = {_, _, usec} = :os.timestamp
-    {date, {h, m, s}} =:calendar.now_to_datetime(timestamp)
+    {date, {h, m, s}} = :calendar.now_to_datetime(timestamp)
     erl_load({date, {h, m, s, usec}})
   end
 

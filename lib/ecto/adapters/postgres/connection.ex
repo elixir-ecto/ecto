@@ -586,7 +586,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     @drops [:drop, :drop_if_exists]
 
-    def execute_ddl({command, %Table{}=table, columns}) when command in [:create, :create_if_not_exists] do
+    def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
       options       = options_expr(table.options)
       if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
       pk_definition = case pk_definition(columns) do
@@ -603,13 +603,13 @@ if Code.ensure_loaded?(Postgrex) do
       add_comments_for_columns(queries, comments_for_columns(table, columns))
     end
 
-    def execute_ddl({command, %Table{}=table}) when command in @drops do
+    def execute_ddl({command, %Table{} = table}) when command in @drops do
       if_exists = if command == :drop_if_exists, do: " IF EXISTS", else: ""
 
       "DROP TABLE" <> if_exists <> " #{quote_table(table.prefix, table.name)}"
     end
 
-    def execute_ddl({:alter, %Table{}=table, changes}) do
+    def execute_ddl({:alter, %Table{} = table, changes}) do
       pk_definition = case pk_definition(changes) do
         nil -> ""
         pk -> ", ADD #{pk}"
@@ -623,7 +623,7 @@ if Code.ensure_loaded?(Postgrex) do
       add_comments_for_columns(queries, comments_for_columns(table, changes))
     end
 
-    def execute_ddl({:create, %Index{}=index}) do
+    def execute_ddl({:create, %Index{} = index}) do
       fields = Enum.map_join(index.columns, ", ", &index_expr/1)
 
       queries = [assemble(["CREATE",
@@ -640,14 +640,14 @@ if Code.ensure_loaded?(Postgrex) do
       add_comment(queries, comment_on(:index, index.name, index.comment))
     end
 
-    def execute_ddl({:create_if_not_exists, %Index{}=index}) do
+    def execute_ddl({:create_if_not_exists, %Index{} = index}) do
       assemble(["DO $$",
                 "BEGIN",
                 execute_ddl({:create, index}) <> ";",
                 "EXCEPTION WHEN duplicate_table THEN END; $$;"])
     end
 
-    def execute_ddl({command, %Index{}=index}) when command in @drops do
+    def execute_ddl({command, %Index{} = index}) when command in @drops do
       if_exists = if command == :drop_if_exists, do: "IF EXISTS", else: []
 
       assemble(["DROP",
@@ -657,21 +657,21 @@ if Code.ensure_loaded?(Postgrex) do
                 quote_table(index.prefix, index.name)])
     end
 
-    def execute_ddl({:rename, %Table{}=current_table, %Table{}=new_table}) do
+    def execute_ddl({:rename, %Table{} = current_table, %Table{} = new_table}) do
       "ALTER TABLE #{quote_table(current_table.prefix, current_table.name)} RENAME TO #{quote_table(new_table.prefix, new_table.name)}"
     end
 
-    def execute_ddl({:rename, %Table{}=table, current_column, new_column}) do
+    def execute_ddl({:rename, %Table{} = table, current_column, new_column}) do
       "ALTER TABLE #{quote_table(table.prefix, table.name)} RENAME #{quote_name(current_column)} TO #{quote_name(new_column)}"
     end
 
-    def execute_ddl({:create, %Constraint{}=constraint}) do
+    def execute_ddl({:create, %Constraint{} = constraint}) do
       queries = ["ALTER TABLE #{quote_table(constraint.prefix, constraint.table)} ADD #{new_constraint_expr(constraint)}"]
 
       add_comment(queries, comment_on(:constraint, constraint.name, constraint.comment, constraint.table))
     end
 
-    def execute_ddl({:drop, %Constraint{}=constraint}) do
+    def execute_ddl({:drop, %Constraint{} = constraint}) do
       "ALTER TABLE #{quote_table(constraint.prefix, constraint.table)} DROP CONSTRAINT #{quote_name(constraint.name)}"
     end
 

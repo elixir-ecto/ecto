@@ -153,7 +153,7 @@ defmodule Ecto.Query.Builder.Update do
     Enum.map_reduce kw, acc, fn
       {k, v}, {params, count} when is_atom(k) ->
         params = [{v, type_for_key(key, {0, k})}|params]
-        {{k, {:^, [], [count]}}, {params, count+1}}
+        {{k, {:^, [], [count]}}, {params, count + 1}}
       _, _acc ->
         raise ArgumentError,
           "malformed #{inspect key} in update `#{inspect(kw)}`, " <>

@@ -69,13 +69,13 @@ defmodule Ecto.TestAdapter do
 
   def insert(_repo, %{context: nil, source: source}, _fields, _on_conflict, return, _opts),
     do: send(self(), {:insert, source}) && {:ok, Enum.zip(return, 1..length(return))}
-  def insert(_repo, %{context: {:invalid, _}=res}, _fields, _on_conflict, _return, _opts),
+  def insert(_repo, %{context: {:invalid, _} = res}, _fields, _on_conflict, _return, _opts),
     do: res
 
   # Notice the list of changes is never empty.
   def update(_repo, %{context: nil, source: source}, [_|_], _filters, return, _opts),
     do: send(self(), {:update, source}) && {:ok, Enum.zip(return, 1..length(return))}
-  def update(_repo, %{context: {:invalid, _}=res}, [_|_], _filters, _return, _opts),
+  def update(_repo, %{context: {:invalid, _} = res}, [_|_], _filters, _return, _opts),
     do: res
 
   def delete(_repo, meta, _filter, _opts),

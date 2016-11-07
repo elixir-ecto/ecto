@@ -767,7 +767,7 @@ defmodule Ecto.Migration do
     * `:name` - The name of the constraint - required.
 
   """
-  def constraint(table, name, opts \\ [] ) do
+  def constraint(table, name, opts \\ []) do
     struct(%Constraint{table: table, name: name}, opts)
   end
 
