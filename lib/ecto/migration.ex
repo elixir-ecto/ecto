@@ -801,6 +801,14 @@ defmodule Ecto.Migration do
     validate_type!(subtype)
   end
 
+  defp validate_type!({type, subtype}) when is_atom(type) and is_list(subtype) do
+    for t <- subtype, do: validate_type!(t)
+  end
+
+  defp validate_type!({type, subtype}) when is_atom(type) and is_tuple(subtype) do
+    validate_type!({type, Tuple.to_list(subtype)})
+  end
+
   defp validate_type!(%Reference{} = reference) do
     reference
   end
