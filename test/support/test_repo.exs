@@ -54,6 +54,13 @@ defmodule Ecto.TestAdapter do
     {1, nil}
   end
 
+  def stream(repo, meta, prepared, params, preprocess, opts) do
+    Stream.map([:execute], fn(:execute) ->
+      send self(), :stream_execute
+      execute(repo, meta, prepared, params, preprocess, opts)
+    end)
+  end
+
   ## Schema
 
   def insert_all(_repo, %{source: source}, _header, rows, _on_conflict, _returning, _opts) do
