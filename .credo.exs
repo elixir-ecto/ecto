@@ -30,7 +30,7 @@
       {Credo.Check.Readability.LargeNumbers, false}, # Because of Ecto migrations
       {Credo.Check.Readability.MaxLineLength, false},
       {Credo.Check.Readability.ModuleAttributeNames},
-      {Credo.Check.Readability.ModuleDoc},
+      {Credo.Check.Readability.ModuleDoc, false}, # Until it is disabled for all .exs files
       {Credo.Check.Readability.ModuleNames},
       {Credo.Check.Readability.ParenthesesInCondition},
       {Credo.Check.Readability.PredicateFunctionNames},
