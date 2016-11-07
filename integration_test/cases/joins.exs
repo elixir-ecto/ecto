@@ -441,7 +441,7 @@ defmodule Ecto.Integration.JoinsTest do
     TestRepo.insert!(%PostUserCompositePk{post_id: post.id, user_id: user.id})
 
     query = from(p in Post, join: a in assoc(p, :post_user_composite_pk),
-                 preload: [post_user_composite_pk: a], select: p )
+                 preload: [post_user_composite_pk: a], select: p)
     assert [post] = TestRepo.all(query)
     assert post.post_user_composite_pk
   end

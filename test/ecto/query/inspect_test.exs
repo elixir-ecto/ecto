@@ -238,7 +238,7 @@ defmodule Ecto.Query.InspectTest do
   def i(query) do
     assert "#Ecto.Query<" <> rest = inspect query
     size = byte_size(rest)
-    assert ">" = :binary.part(rest, size-1, 1)
-    :binary.part(rest, 0, size-1)
+    assert ">" = :binary.part(rest, size - 1, 1)
+    :binary.part(rest, 0, size - 1)
   end
 end

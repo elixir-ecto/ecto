@@ -540,7 +540,7 @@ if Code.ensure_loaded?(Mariaex) do
       "DROP TABLE" <> if_exists <> " #{quote_table(table.prefix, table.name)}"
     end
 
-    def execute_ddl({:alter, %Table{}=table, changes}) do
+    def execute_ddl({:alter, %Table{} = table, changes}) do
       pk_definition = case pk_definition(changes) do
         "" -> ""
         pk -> ", ADD #{pk}"
@@ -549,7 +549,7 @@ if Code.ensure_loaded?(Mariaex) do
       "#{pk_definition}"
     end
 
-    def execute_ddl({:create, %Index{}=index}) do
+    def execute_ddl({:create, %Index{} = index}) do
       create = "CREATE#{if index.unique, do: " UNIQUE"} INDEX"
       using  = if index.using, do: "USING #{index.using}", else: []
 
@@ -574,7 +574,7 @@ if Code.ensure_loaded?(Mariaex) do
     def execute_ddl({:create, %Constraint{exclude: exclude}}) when is_binary(exclude),
       do: error!(nil, "MySQL adapter does not support exclusion constraints")
 
-    def execute_ddl({:drop, %Index{}=index}) do
+    def execute_ddl({:drop, %Index{} = index}) do
       assemble(["DROP INDEX",
                 quote_name(index.name),
                 "ON #{quote_table(index.prefix, index.table)}",
@@ -587,7 +587,7 @@ if Code.ensure_loaded?(Mariaex) do
     def execute_ddl({:drop_if_exists, %Index{}}),
       do: error!(nil, "MySQL adapter does not support drop if exists for index")
 
-    def execute_ddl({:rename, %Table{}=current_table, %Table{}=new_table}) do
+    def execute_ddl({:rename, %Table{} = current_table, %Table{} = new_table}) do
       "RENAME TABLE #{quote_table(current_table.prefix, current_table.name)} TO #{quote_table(new_table.prefix, new_table.name)}"
     end
 

@@ -24,7 +24,7 @@ defmodule Ecto.Repo.Preloader do
   defp extract([[h|_]|t2]),   do: [h|extract(t2)]
   defp extract([]),           do: []
 
-  defp unextract(structs, [[nil|_]=h2|t2], fun),  do: [fun.(h2)|unextract(structs, t2, fun)]
+  defp unextract(structs, [[nil|_] = h2|t2], fun),  do: [fun.(h2)|unextract(structs, t2, fun)]
   defp unextract([h1|structs], [[_|t1]|t2], fun), do: [fun.([h1|t1])|unextract(structs, t2, fun)]
   defp unextract([], [], _fun),                   do: []
 
