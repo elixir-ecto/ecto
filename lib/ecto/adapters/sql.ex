@@ -67,25 +67,11 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def execute(repo, meta, query, params, process, opts) do
-        opts =
-          case Map.fetch(meta, :sources) do
-            {:ok, tuple} when tuple_size(elem(tuple, 0)) == 2 ->
-              Keyword.put(opts, :source, tuple |> elem(0) |> elem(0))
-            _ ->
-              opts
-          end
         Ecto.Adapters.SQL.execute(repo, meta, query, params, process, opts)
       end
 
       @doc false
       def stream(repo, meta, query, params, process, opts) do
-        opts =
-          case Map.fetch(meta, :sources) do
-            {:ok, tuple} when tuple_size(elem(tuple, 0)) == 2 ->
-              Keyword.put(opts, :source, tuple |> elem(0) |> elem(0))
-            _ ->
-              opts
-          end
         Ecto.Adapters.SQL.stream(repo, meta, query, params, process, opts)
       end
 
@@ -261,6 +247,14 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
+  defp put_source(opts, %{sources: sources}) when tuple_size(elem(sources, 0)) == 2 do
+    {source, _} = elem(sources, 0)
+    Keyword.put(opts, :source, source)
+  end
+  defp put_source(opts, _) do
+    opts
+  end
+
   defp map_params(params) do
     Enum.map params, fn
       %{__struct__: _} = value ->
@@ -386,31 +380,35 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def execute(repo, _meta, {:cache, update, {id, prepared}}, params, nil, opts) do
+  def execute(repo, meta, prepared, params, mapper, opts) do
+    do_execute(repo, meta, prepared, params, mapper, put_source(opts, meta))
+  end
+
+  defp do_execute(repo, _meta, {:cache, update, {id, prepared}}, params, nil, opts) do
     execute_and_cache(repo, id, update, prepared, params, nil, opts)
   end
 
-  def execute(repo, %{fields: fields}, {:cache, update, {id, prepared}}, params, process, opts) do
+  defp do_execute(repo, %{fields: fields}, {:cache, update, {id, prepared}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     execute_and_cache(repo, id, update, prepared, params, mapper, opts)
   end
 
-  def execute(repo, _meta, {:cached, reset, {id, cached}}, params, nil, opts) do
+  defp do_execute(repo, _meta, {:cached, reset, {id, cached}}, params, nil, opts) do
     execute_or_reset(repo, id, reset, cached, params, nil, opts)
   end
 
- def execute(repo, %{fields: fields}, {:cached, reset, {id, cached}}, params, process, opts) do
+ defp do_execute(repo, %{fields: fields}, {:cached, reset, {id, cached}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     execute_or_reset(repo, id, reset, cached, params, mapper, opts)
   end
 
-  def execute(repo, _meta, {:nocache, {_id, prepared}}, params, nil, opts) do
+  defp do_execute(repo, _meta, {:nocache, {_id, prepared}}, params, nil, opts) do
     %{rows: rows, num_rows: num} =
       sql_call!(repo, :execute, [prepared], params, nil, opts)
     {num, rows}
   end
 
-  def execute(repo, %{fields: fields}, {:nocache, {_id, prepared}}, params, process, opts) do
+  defp do_execute(repo, %{fields: fields}, {:nocache, {_id, prepared}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     %{rows: rows, num_rows: num} =
       sql_call!(repo, :execute, [prepared], params, mapper, opts)
@@ -485,26 +483,33 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def stream(repo, _meta, {:cache, _, {_, prepared}}, params, nil, opts) do
+  def stream(repo, meta, prepared, params, mapper, opts) do
+    do_stream(repo, meta, prepared, params, mapper, put_source(opts, meta))
+  end
+
+  def do_stream(repo, _meta, {:cache, _, {_, prepared}}, params, nil, opts) do
     prepare_stream(repo, prepared, params, nil, opts)
   end
-  def stream(repo, %{fields: fields}, {:cache, _, {_, prepared}}, params, process, opts) do
+
+  def do_stream(repo, %{fields: fields}, {:cache, _, {_, prepared}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     prepare_stream(repo, prepared, params, mapper, opts)
   end
-  def stream(repo, _, {:cached, _, {_, cached}}, params, nil, opts) do
+
+  def do_stream(repo, _, {:cached, _, {_, cached}}, params, nil, opts) do
     prepare_stream(repo, String.Chars.to_string(cached), params, nil, opts)
   end
-  def stream(repo, %{fields: fields}, {:cached, _, {_, cached}}, params, process, opts) do
+
+  def do_stream(repo, %{fields: fields}, {:cached, _, {_, cached}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     prepare_stream(repo, String.Chars.to_string(cached), params, mapper, opts)
   end
 
-  def stream(repo, _meta, {:nocache, {_id, prepared}}, params, nil, opts) do
+  def do_stream(repo, _meta, {:nocache, {_id, prepared}}, params, nil, opts) do
     prepare_stream(repo, prepared, params, nil, opts)
   end
 
-  def stream(repo, %{fields: fields}, {:nocache, {_id, prepared}}, params, process, opts) do
+  def do_stream(repo, %{fields: fields}, {:nocache, {_id, prepared}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     prepare_stream(repo, prepared, params, mapper, opts)
   end
