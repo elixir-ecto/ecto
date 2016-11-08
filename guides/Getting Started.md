@@ -271,7 +271,7 @@ def changeset(person, params \\ %{}) do
 end
 ```
 
-This changeset takes a `person` and a set of params, which are to be the changes to apply to this person. The `changeset` function first casts the `first_name` and `last_name` keys from the parameters passed in to the changeset. Casting tells the changeset what parameters are allowed to be passed through in this changeset, and anything not in the list will be ignored.
+This changeset takes a `person` and a set of params, which are to be the changes to apply to this person. The `changeset` function first casts the `first_name`, `last_name` and `age` keys from the parameters passed in to the changeset. Casting tells the changeset what parameters are allowed to be passed through in this changeset, and anything not in the list will be ignored.
 
 On the next line, we call `validate_required` which says that, for this changeset, we expect `first_name` and `last_name` to have values specified. Let's use this changeset to attempt to create a new record without a `first_name` and `last_name`:
 
