@@ -45,7 +45,7 @@ defmodule Ecto.Mixfile do
      # Drivers
      {:db_connection, "~> 1.1", optional: true},
      {:postgrex, "~> 0.12.0", github: "elixir-ecto/postgrex", branch: "master", optional: true},
-     {:mariaex, "~> 0.7.7", github: "fishcakez/mariaex", branch: "jf-stream", optional: true},
+     {:mariaex, "~> 0.7.7", github: "xerions/mariaex", branch: "master", optional: true},
 
      # Optional
      {:sbroker, "~> 1.0-beta", optional: true},

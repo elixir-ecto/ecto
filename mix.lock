@@ -5,7 +5,7 @@
   "earmark": {:hex, :earmark, "1.0.2", "a0b0904d74ecc14da8bd2e6e0248e1a409a2bc91aade75fcf428125603de3853", [:mix], []},
   "ex_doc": {:hex, :ex_doc, "0.14.3", "e61cec6cf9731d7d23d254266ab06ac1decbb7651c3d1568402ec535d387b6f7", [:mix], [{:earmark, "~> 1.0", [hex: :earmark, optional: false]}]},
   "inch_ex": {:hex, :inch_ex, "0.5.3", "39f11e96181ab7edc9c508a836b33b5d9a8ec0859f56886852db3d5708889ae7", [:mix], [{:poison, "~> 1.5 or ~> 2.0", [hex: :poison, optional: false]}]},
-  "mariaex": {:git, "https://github.com/fishcakez/mariaex.git", "8dd4718ad11f124e0783f62d74c379aad4b78125", [branch: "jf-stream"]},
+  "mariaex": {:git, "https://github.com/xerions/mariaex.git", "056a72bfb82d04c7e90a08f1040dfe92c47d517b", [branch: "master"]},
   "poison": {:hex, :poison, "2.2.0", "4763b69a8a77bd77d26f477d196428b741261a761257ff1cf92753a0d4d24a63", [:mix], []},
   "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], []},
   "postgrex": {:git, "https://github.com/elixir-ecto/postgrex.git", "a81aa36bce73c5fcfe9ba3998fdcb8897fdec70f", [branch: "master"]},
