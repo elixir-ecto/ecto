@@ -25,6 +25,17 @@ defimpl Collectable, for: Ecto.Adapters.SQL.Stream do
   def into(stream) do
     %Ecto.Adapters.SQL.Stream{repo: repo, statement: statement, params: params,
                               mapper: mapper, opts: opts} = stream
-    Ecto.Adapters.SQL.into(repo, statement, params, mapper, opts)
+    {state, fun} = Ecto.Adapters.SQL.into(repo, statement, params, mapper, opts)
+    {state, make_into(fun, stream)}
+  end
+
+  defp make_into(fun, stream) do
+    fn
+      state, :done ->
+        fun.(state, :done)
+        stream
+      state, acc ->
+        fun.(state, acc)
+    end
   end
 end

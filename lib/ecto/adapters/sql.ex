@@ -460,7 +460,7 @@ defmodule Ecto.Adapters.SQL do
   In case of failure it raises an exception.
 
   If the adapter supports a collectable stream, the stream may also be used as
-  the collectable in `Enum.into/2`. Behaviour depends on the adapter.
+  the collectable in `Enum.into/3`. Behaviour depends on the adapter.
 
   ## Options
 
