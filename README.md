@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/elixir-ecto/ecto.svg?branch=master)](https://travis-ci.org/elixir-ecto/ecto)
 [![Inline docs](http://inch-ci.org/github/elixir-ecto/ecto.svg?branch=master&style=flat)](http://inch-ci.org/github/elixir-ecto/ecto)
+[![Ebert](https://ebertapp.io/github/elixir-ecto/ecto.svg)](https://ebertapp.io/github/elixir-ecto/ecto.svg)
 
 Ecto is a domain specific language for writing queries and interacting with databases in Elixir. Here is an example:
 
