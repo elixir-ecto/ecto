@@ -25,8 +25,8 @@
       {Credo.Check.Design.DuplicatedCode, excluded_macros: []},
 
       # Disabled for now as those are checked by Code Climate
-      {Credo.Check.Design.TagTODO},
-      {Credo.Check.Design.TagFIXME},
+      {Credo.Check.Design.TagTODO, false},
+      {Credo.Check.Design.TagFIXME, false},
 
       {Credo.Check.Readability.FunctionNames},
       {Credo.Check.Readability.LargeNumbers, false}, # Because of Ecto migrations
