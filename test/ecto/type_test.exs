@@ -148,6 +148,7 @@ defmodule Ecto.TypeTest do
 
   @date ~D[2015-12-31]
   @leap_date ~D[2000-02-29]
+  @date_unix_epoch ~D[1970-01-01]
 
   test "date casting" do
     assert Ecto.Type.cast(:date, @date) == {:ok, @date}
@@ -178,6 +179,15 @@ defmodule Ecto.TypeTest do
     assert Ecto.Type.cast(:date, %{"year" => "", "month" => "01", "day" => "30"}) ==
            :error
     assert Ecto.Type.cast(:date, %{"year" => nil, "month" => "01", "day" => "30"}) ==
+           :error
+
+    assert Ecto.Type.cast(:date, DateTime.from_unix!(10)) ==
+           {:ok, @date_unix_epoch}
+    assert Ecto.Type.cast(:date, ~N[1970-01-01 12:23:34]) ==
+           {:ok, @date_unix_epoch}
+    assert Ecto.Type.cast(:date, @date) ==
+           {:ok, @date}
+    assert Ecto.Type.cast(:date, ~T[12:23:34]) ==
            :error
   end
 

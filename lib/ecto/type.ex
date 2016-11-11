@@ -671,8 +671,6 @@ defmodule Ecto.Type do
       {:error, _} -> :error
     end
   end
-  defp cast_date(%{__struct__: _} = struct),
-    do: {:ok, struct}
   defp cast_date(%{"year" => empty, "month" => empty, "day" => empty}) when empty in ["", nil],
     do: {:ok, nil}
   defp cast_date(%{year: empty, month: empty, day: empty}) when empty in ["", nil],
