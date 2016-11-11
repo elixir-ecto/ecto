@@ -714,6 +714,8 @@ defmodule Ecto.Schema do
 
     * `:defaults` - Default values to use when building the association
 
+    * `:primary_key` - if the underlying belongs_to field is a primary key
+
   ## Examples
 
       defmodule Comment do
@@ -1463,7 +1465,8 @@ defmodule Ecto.Schema do
   end
   # :primary_key is valid here to support associative entity
   # https://en.wikipedia.org/wiki/Associative_entity
-  @valid_belongs_to_options [:foreign_key, :references, :define_field, :type, :on_replace, :defaults, :primary_key]
+  @valid_belongs_to_options [:foreign_key, :references, :define_field, :type,
+                             :on_replace, :defaults, :primary_key]
 
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
