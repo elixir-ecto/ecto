@@ -45,15 +45,36 @@ defmodule Ecto.Integration.AlterTest do
     assert PoolRepo.all(values) == [1]
 
     assert :ok == up(PoolRepo, 20161112130000, AlterMigrationTwo, log: false)
-    assert_raise ArgumentError, ~r"stale type",
-      fn() -> PoolRepo.all(values) end
+
+    # optionally fail once with ArgumentError when preparing query prepared on
+    # another connection (and clear cache)
+    try do
+      PoolRepo.all(values)
+    rescue
+      err in [ArgumentError] ->
+        assert Exception.message(err) =~ "stale type"
+        assert [%Decimal{}] = PoolRepo.all(values)
+    else
+      result ->
+        assert [%Decimal{}] = result
+    end
 
     PoolRepo.transaction(fn() ->
       assert [%Decimal{}] = PoolRepo.all(values)
 
       assert :ok == down(PoolRepo, 20161112130000, AlterMigrationTwo, log: false)
-      catch_error PoolRepo.all(values, [mode: :savepoint])
-      assert PoolRepo.all(values) == [1]
+
+      # optionally fail once with database error when already prepared on
+      # connection (and clear cache)
+      try do
+        PoolRepo.all(values, [mode: :savepoint])
+      catch
+        :error, _ ->
+          assert PoolRepo.all(values) == [1]
+      else
+        result ->
+          assert result == [1]
+      end
     end)
 
   after
@@ -67,15 +88,26 @@ defmodule Ecto.Integration.AlterTest do
     assert PoolRepo.update_all(values, [set: [value: 2]]) == {1, nil}
 
     assert :ok == up(PoolRepo, 20161112130000, AlterMigrationTwo, log: false)
-    assert_raise ArgumentError, ~r"stale type information",
-      fn() -> PoolRepo.update_all(values, [set: [value: 3]]) end
+
+    # optionally fail once with ArgumentError when preparing query prepared on
+    # another connection (and clear cache)
+    try do
+      PoolRepo.update_all(values, [set: [value: 3]])
+    rescue
+      err in [ArgumentError] ->
+        assert Exception.message(err) =~ "stale type"
+        assert PoolRepo.update_all(values, [set: [value: 4]]) == {1, nil}
+    else
+      result ->
+        assert result == {1, nil}
+    end
 
     PoolRepo.transaction(fn() ->
-      assert PoolRepo.update_all(values, [set: [value: Decimal.new(3)]]) == {1, nil}
+      assert PoolRepo.update_all(values, [set: [value: Decimal.new(5)]]) == {1, nil}
 
       assert :ok == down(PoolRepo, 20161112130000, AlterMigrationTwo, log: false)
-      
-      assert PoolRepo.update_all(values, [set: [value: 4]]) == {1, nil}
+
+      assert PoolRepo.update_all(values, [set: [value: 6]]) == {1, nil}
     end)
 
   after
