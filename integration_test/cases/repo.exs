@@ -70,6 +70,7 @@ defmodule Ecto.Integration.RepoTest do
     assert post.inserted_at
   end
 
+  @tag :composite_pk
   test "insert, update and delete with composite pk" do
     c1 = TestRepo.insert!(%CompositePk{a: 1, b: 2, name: "first"})
     c2 = TestRepo.insert!(%CompositePk{a: 1, b: 3, name: "second"})
@@ -93,6 +94,7 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
+  @tag :composite_pk
   test "insert, update and delete with associated composite pk" do
     user = TestRepo.insert!(%User{})
     post = TestRepo.insert!(%Post{title: "post title", text: "post text"})
@@ -317,6 +319,7 @@ defmodule Ecto.Integration.RepoTest do
     refute changeset.valid?
   end
 
+  @tag :join
   @tag :unique_constraint
   test "unique constraint violation error message with join table in single changeset" do
     post =
@@ -342,6 +345,7 @@ defmodule Ecto.Integration.RepoTest do
     refute changeset.valid?
   end
 
+  @tag :join
   @tag :unique_constraint
   test "unique constraint violation error message with join table and separate changesets" do
     post =
