@@ -1,3 +1,4 @@
+Code.require_file "../sql/alter.exs", __DIR__
 Code.require_file "../sql/lock.exs", __DIR__
 Code.require_file "../sql/migration.exs", __DIR__
 Code.require_file "../sql/sandbox.exs", __DIR__
