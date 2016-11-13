@@ -18,7 +18,7 @@ defmodule Ecto.Migration do
             add :temp_hi, :integer
             add :prcp,    :float
 
-            timestamps
+            timestamps()
           end
         end
 
@@ -56,7 +56,7 @@ defmodule Ecto.Migration do
             add :temp_hi, :integer
             add :prcp,    :float
 
-            timestamps
+            timestamps()
           end
         end
       end
@@ -97,7 +97,7 @@ defmodule Ecto.Migration do
           add :prcp,    :float
           add :group_id, references(:groups)
 
-          timestamps
+          timestamps()
         end
 
         create index(:weather, [:city], prefix: "north_america")
@@ -145,7 +145,7 @@ defmodule Ecto.Migration do
         create constraint(:products, "price_must_be_positive", check: "price > 0", comment: "Index Comment")
         create table(:weather, prefix: "north_america", comment: "Table Comment") do
           add :city, :string, size: 40, comment: "Column Comment"
-          timestamps
+          timestamps()
         end
       end
 
@@ -252,7 +252,7 @@ defmodule Ecto.Migration do
         add :title, :string, default: "Untitled"
         add :body,  :text
 
-        timestamps
+        timestamps()
       end
 
   """
