@@ -730,10 +730,10 @@ defmodule Ecto.Type do
   defp cast_time(hour, minute, sec, nil) do
     cast_time(hour, minute, sec, {0, 0})
   end
-  defp cast_time(hour, minute, sec, {usec, precision} = usec_part)
+  defp cast_time(hour, minute, sec, {usec, precision})
        when is_integer(hour) and is_integer(minute) and
             (is_integer(sec) or is_nil(sec)) and is_integer(usec) and is_integer(precision) do
-    case Time.new(hour, minute, sec || 0, usec_part || {0, 0}) do
+    case Time.new(hour, minute, sec || 0, {usec, precision}) do
       {:ok, _} = ok -> ok
       {:error, _} -> :error
     end
