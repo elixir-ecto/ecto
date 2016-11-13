@@ -230,6 +230,11 @@ defmodule Ecto.TypeTest do
            :error
     assert Ecto.Type.cast(:time, %{hour: 23, minute: nil}) ==
            :error
+
+    assert Ecto.Type.cast(:time, ~N[2016-11-11 23:30:10]) ==
+           {:ok, ~T[23:30:10]}
+    assert Ecto.Type.cast(:time, ~D[2016-11-11]) ==
+           :error
   end
 
   @datetime ~N[2015-01-23 23:50:07]

@@ -711,23 +711,29 @@ defmodule Ecto.Type do
       {:error, _} -> :error
     end
   end
-  defp cast_time(%{__struct__: _} = struct),
-    do: {:ok, struct}
   defp cast_time(%{"hour" => empty, "minute" => empty}) when empty in ["", nil],
     do: {:ok, nil}
   defp cast_time(%{hour: empty, minute: empty}) when empty in ["", nil],
     do: {:ok, nil}
   defp cast_time(%{"hour" => hour, "minute" => minute} = map),
-    do: cast_time(to_i(hour), to_i(minute), to_i(map["second"]), to_i(map["microsecond"]))
+    do: cast_time(to_i(hour), to_i(minute), to_i(Map.get(map, "second")), to_i(Map.get(map, "microsecond")))
+  defp cast_time(%{hour: hour, minute: minute, second: second, microsecond: {microsecond, precision}}),
+    do: cast_time(to_i(hour), to_i(minute), to_i(second), {to_i(microsecond), to_i(precision)})
   defp cast_time(%{hour: hour, minute: minute} = map),
-    do: cast_time(to_i(hour), to_i(minute), to_i(map[:second]), to_i(map[:microsecond]))
+    do: cast_time(to_i(hour), to_i(minute), to_i(Map.get(map, :second)), to_i(Map.get(map, :microsecond)))
   defp cast_time(_),
     do: :error
 
-  defp cast_time(hour, minute, sec, usec)
+  defp cast_time(hour, minute, sec, usec) when is_integer(usec) do
+    cast_time(hour, minute, sec, {usec, 6})
+  end
+  defp cast_time(hour, minute, sec, nil) do
+    cast_time(hour, minute, sec, {0, 0})
+  end
+  defp cast_time(hour, minute, sec, {usec, precision} = usec_part)
        when is_integer(hour) and is_integer(minute) and
-            (is_integer(sec) or is_nil(sec)) and (is_integer(usec) or is_nil(usec)) do
-    case Time.new(hour, minute, sec || 0, usec || {0, 0}) do
+            (is_integer(sec) or is_nil(sec)) and is_integer(usec) and is_integer(precision) do
+    case Time.new(hour, minute, sec || 0, usec_part || {0, 0}) do
       {:ok, _} = ok -> ok
       {:error, _} -> :error
     end
