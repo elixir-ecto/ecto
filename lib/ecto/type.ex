@@ -764,34 +764,20 @@ defmodule Ecto.Type do
       {:error, _} -> :error
     end
   end
-  defp cast_naive_datetime(%{__struct__: _} = struct),
-    do: {:ok, struct}
   defp cast_naive_datetime(%{"year" => empty, "month" => empty, "day" => empty,
                              "hour" => empty, "minute" => empty}) when empty in ["", nil],
     do: {:ok, nil}
   defp cast_naive_datetime(%{year: empty, month: empty, day: empty,
                              hour: empty, minute: empty}) when empty in ["", nil],
     do: {:ok, nil}
-  defp cast_naive_datetime(%{"year" => year, "month" => month, "day" => day, "hour" => hour, "minute" => min} = map),
-    do: cast_naive_datetime(to_i(year), to_i(month), to_i(day),
-                            to_i(hour), to_i(min), to_i(map["second"]), to_i(map["microsecond"]))
-  defp cast_naive_datetime(%{year: year, month: month, day: day, hour: hour, minute: min} = map),
-    do: cast_naive_datetime(to_i(year), to_i(month), to_i(day),
-                            to_i(hour), to_i(min), to_i(map[:second]), to_i(map[:microsecond]))
-  defp cast_naive_datetime(_),
-    do: :error
-
-  defp cast_naive_datetime(year, month, day, hour, minute, sec, usec)
-       when is_integer(year) and is_integer(month) and is_integer(day) and
-            is_integer(hour) and is_integer(minute) and
-            (is_integer(sec) or is_nil(sec)) and (is_integer(usec) or is_nil(usec)) do
-    case NaiveDateTime.new(year, month, day, hour, minute, sec || 0, usec || {0, 0}) do
-      {:ok, _} = ok -> ok
-      {:error, _} -> :error
+  defp cast_naive_datetime(%{} = map) do
+    with {:ok, date} <- cast_date(map),
+         {:ok, time} <- cast_time(map) do
+      case NaiveDateTime.new(date, time) do
+        {:ok, _} = ok -> ok
+        {:error, _} -> :error
+      end
     end
-  end
-  defp cast_naive_datetime(_, _, _, _, _, _, _) do
-    :error
   end
 
   defp dump_naive_datetime(%NaiveDateTime{year: year, month: month, day: day,
