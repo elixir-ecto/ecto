@@ -81,22 +81,35 @@ defmodule Ecto.InvalidChangesetError do
   defexception [:action, :changeset]
 
   def message(%{action: action, changeset: changeset}) do
+    changes = extract_changes(changeset)
+    errors = Ecto.Changeset.traverse_errors(changeset, & &1)
+
     """
     could not perform #{action} because changeset is invalid.
 
-    * Changeset changes
+    Changeset changes
 
-    #{inspect changeset.changes}
+        #{inspect changes}
 
-    * Changeset params
+    Changeset params
 
-    #{inspect changeset.params}
+        #{inspect changeset.params}
 
-    * Changeset errors
+    Changeset errors
 
-    #{inspect changeset.errors}
+        #{inspect errors}
     """
   end
+
+  defp extract_changes(%Ecto.Changeset{changes: changes}) do
+    Enum.reduce(changes, %{}, fn({key, value}, acc) ->
+      Map.put(acc, key, extract_changes(value))
+    end)
+  end
+  defp extract_changes([%Ecto.Changeset{} = changeset | tail]),
+    do: [extract_changes(changeset) | extract_changes(tail)]
+  defp extract_changes(other),
+    do: other
 end
 
 defmodule Ecto.CastError do
