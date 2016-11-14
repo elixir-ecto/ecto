@@ -280,10 +280,20 @@ defmodule Ecto.Adapters.SQL do
       @doc false
       def __pool__, do: {unquote(pool_name), unquote(Macro.escape(norm_config))}
 
+      @doc """
+      A convenience function for SQL-based repositories that executes the given query.
+
+      See `Ecto.Adapters.SQL.query/3` for more information.
+      """
       def query(sql, params \\ [], opts \\ []) do
         Ecto.Adapters.SQL.query(__MODULE__, sql, params, opts)
       end
 
+      @doc """
+      A convenience function for SQL-based repositories that executes the given query.
+
+      See `Ecto.Adapters.SQL.query/3` for more information.
+      """
       def query!(sql, params \\ [], opts \\ []) do
         Ecto.Adapters.SQL.query!(__MODULE__, sql, params, opts)
       end
