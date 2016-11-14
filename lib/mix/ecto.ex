@@ -102,8 +102,23 @@ defmodule Mix.Ecto do
     with false <- Mix.Project.umbrella?,
          path = Path.relative_to(migrations_path(repo), Mix.Project.app_path),
          false <- File.dir?(path),
-         do: Mix.raise "Could not find migrations directory #{inspect path} for repo #{inspect repo}"
+         do: raise_missing_migrations(path, repo)
     repo
+  end
+
+  defp raise_missing_migrations(path, repo) do
+    Mix.raise """
+    Could not find migrations directory #{inspect path}
+    for repo #{inspect repo}.
+
+    This may be because you are in a new project and the
+    migration directory has not been created yet. Creating an
+    empty directory at the path above will fix this error.
+
+    If you expected existing migrations to be found, please
+    make sure your repository has been properly configured
+    and the configured path exists.
+    """
   end
 
   @doc """
