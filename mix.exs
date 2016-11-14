@@ -40,7 +40,7 @@ defmodule Ecto.Mixfile do
 
   defp deps do
     [{:poolboy, "~> 1.5"},
-     {:decimal, "~> 1.2"},
+     {:decimal, "~> 1.3"},
 
      # Drivers
      {:db_connection, "~> 1.0-rc.4", optional: true},
