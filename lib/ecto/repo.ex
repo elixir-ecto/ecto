@@ -651,7 +651,9 @@ defmodule Ecto.Repo do
   Updates a changeset using its primary key.
 
   A changeset is required as it is the only mechanism for
-  tracking dirty changes.
+  tracking dirty changes. Only the fields present in the `changes` part
+  of the changeset are sent to the database. Any other, in-memory
+  changes done to the schema are ignored.
 
   If the struct has no primary key, `Ecto.NoPrimaryKeyFieldError`
   will be raised.
