@@ -10,9 +10,9 @@ defmodule Ecto.Integration.StorageTest do
   alias Ecto.Integration.TestRepo
 
   def params do
-    Ecto.Repo.Supervisor.parse_url(
-      Application.get_env(:ecto, :pg_test_url) <> "/storage_mgt"
-    )
+    # Pass log false to ensure we can still create/drop.
+    url = Application.get_env(:ecto, :pg_test_url) <> "/storage_mgt"
+    [log: false] ++ Ecto.Repo.Supervisor.parse_url(url)
   end
 
   def wrong_params do
