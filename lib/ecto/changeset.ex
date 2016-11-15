@@ -1845,6 +1845,15 @@ defmodule Ecto.Changeset do
       cast(user, params, [:email])
       |> unique_constraint(:email, name: :posts_special_email_index)
 
+  Notice that the first param is just one of the unique index fields, this will
+  be used as the error key to the changeset errors keyword list. For example,
+  the above `unique_contraint/3` would generate something like:
+
+      Repo.insert!(%User{email: "john@elixir.org", company_id: 1})
+      changeset = User.changeset(%User{}, %{email: "john@elixir.org", company_id: 1})
+      {:error, changeset} = Repo.insert(changeset)
+      changeset.errors #=> [email: {"has already been taken", []}]
+
   Alternatively, you can give both `unique_index` and `unique_constraint`
   the same name:
 
