@@ -78,6 +78,17 @@ It is also possible to interpolate the whole keyword list to dynamically filter 
     filters = [state: "Sweden", state: "Brazil"]
     from(c in City, or_where: ^filters)
 
+## v2.1.0-rc.4
+
+### Enhancements
+
+  * Allow queries containing `where` conditions to be interpolated in `join`
+
+### Bug fixes
+
+  * Do not crash `ecto.create`/`ecto.drop` if the repository is configured with `log: false`
+  * Properly cast Calendar types when structs are given
+
 ## v2.1.0-rc.3 (2016-10-08)
 
 ### Enhancements
@@ -86,7 +97,7 @@ It is also possible to interpolate the whole keyword list to dynamically filter 
   * Validate primary key uniqueness at the repository level for assocs and embeds
   * Support passing `:ownership_timeout` when checking out a sandbox connection
 
-### Bug fix
+### Bug fixes
 
   * Ensure `@schema_prefix` module attribute is respected when querying associations with `Ecto.assoc/2`
   * Do not run transactions for empty `Ecto.Multi`
