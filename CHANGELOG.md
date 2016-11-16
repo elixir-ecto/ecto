@@ -78,7 +78,7 @@ It is also possible to interpolate the whole keyword list to dynamically filter 
     filters = [state: "Sweden", state: "Brazil"]
     from(c in City, or_where: ^filters)
 
-## v2.1.0-rc.4
+## v2.1.0-rc.4 (2016-11-16)
 
 ### Enhancements
 
