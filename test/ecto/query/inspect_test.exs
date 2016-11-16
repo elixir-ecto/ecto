@@ -60,6 +60,9 @@ defmodule Ecto.Query.InspectTest do
 
     assert i(from(x in Post, join: y in subquery(Comment), on: x.id == y.id)) ==
            ~s{from p in Inspect.Post, join: c in subquery(from c in Inspect.Comment), on: p.id == c.id}
+
+    assert i(from(x in Post, join: y in ^from(c in Comment, where: true), on: x.id == y.id)) ==
+           ~s{from p in Inspect.Post, join: c in ^#Ecto.Query<from c in Inspect.Comment, where: true>, on: p.id == c.id}
   end
 
   test "where" do

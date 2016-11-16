@@ -33,7 +33,7 @@ defmodule Ecto.Association do
                field: atom,
                unique: boolean}
 
-  alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr}
+  alias Ecto.Query.{BooleanExpr, QueryExpr}
 
   @doc """
   Builds the association struct.
@@ -172,7 +172,8 @@ defmodule Ecto.Association do
     #
     # Note we are being restrictive on the format
     # expected from assoc_query.
-    joins = assoc_to_join(refl.__struct__.assoc_query(refl, nil, values), position)
+    assoc_query = refl.__struct__.assoc_query(refl, nil, values)
+    joins = Ecto.Query.Planner.query_to_joins(assoc_query, position)
 
     # Add the new join to the query and traverse the remaining
     # joins that will start counting from the added join position.
@@ -188,9 +189,9 @@ defmodule Ecto.Association do
     # Update the mapping and start rewriting expressions
     # to make the last join point to the new from source.
     rewrite_ix = assoc.ix
-    [assoc|joins] = Enum.map([assoc|joins], &rewrite_join(&1, rewrite_ix))
+    [assoc | joins] = Enum.map([assoc | joins], &rewrite_join(&1, rewrite_ix))
 
-    %{query | wheres: [assoc_to_where(assoc)|query.wheres], joins: joins,
+    %{query | wheres: [assoc_to_where(assoc) | query.wheres], joins: joins,
               from: merge_from(query.from, assoc.source), sources: nil}
     |> distinct([x], true)
   end
@@ -201,54 +202,18 @@ defmodule Ecto.Association do
     |> Map.put(:op, :and)
   end
 
-  defp assoc_to_join(%{from: from, wheres: [on], order_bys: [], joins: joins}, position) do
-    last = length(joins) + position
-    join = %JoinExpr{qual: :inner, source: from, file: on.file, line: on.line,
-                     on: on |> Map.put(:__struct__, QueryExpr) |> Map.delete(:op)}
-
-    mapping = fn
-      0  -> last
-      ix -> ix + position - 1
-    end
-
-    for {%{on: on} = join, ix} <- Enum.with_index(joins ++ [join]) do
-      %{join | on: rewrite_expr(on, mapping), ix: ix + position}
-    end
-  end
-
   defp merge_from({"join expression", _}, assoc_source), do: assoc_source
   defp merge_from(from, _assoc_source), do: from
 
   # Rewrite all later joins
   defp rewrite_join(%{on: on, ix: ix} = join, mapping) when ix >= mapping do
-    %{join | on: rewrite_expr(on, &rewrite_ix(mapping, &1)), ix: rewrite_ix(mapping, ix)}
+    on = Ecto.Query.Planner.rewrite_sources(on, &rewrite_ix(mapping, &1))
+    %{join | on: on, ix: rewrite_ix(mapping, ix)}
   end
 
   # Previous joins are kept intact
   defp rewrite_join(join, _mapping) do
     join
-  end
-
-  defp rewrite_expr(%{expr: expr, params: params} = part, mapping) do
-    expr =
-      Macro.prewalk expr, fn
-        {:&, meta, [ix]} ->
-          {:&, meta, [mapping.(ix)]}
-        other ->
-          other
-      end
-
-    params =
-      Enum.map params, fn
-        {val, {composite, {ix, field}}} when is_integer(ix) ->
-          {val, {composite, {mapping.(ix), field}}}
-        {val, {ix, field}} when is_integer(ix) ->
-          {val, {mapping.(ix), field}}
-        val ->
-          val
-      end
-
-    %{part | expr: expr, params: params}
   end
 
   defp rewrite_ix(mapping, ix) when ix > mapping, do: ix - 1

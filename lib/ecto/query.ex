@@ -523,14 +523,16 @@ defmodule Ecto.Query do
   `:full`. For a keyword query the `:join` keyword can be changed to:
   `:inner_join`, `:left_join`, `:right_join` or `:full_join`.
 
-  It is also possible to use the atoms `:inner_lateral` and `:left_lateral`
-  using the Postgres adapter. See "Joining with fragments" below.
+  Currently it is possible to join on:
 
-  Currently it is possible to join on an Ecto.Schema (a module), an
-  existing source (a binary representing a table), an association or a
-  fragment. For a lateral join it is only possible to join on a fragment
-  since the join query must be able to access columns from the left side
-  of the join. See the examples below:
+    * a source representing a table, such as `p in "posts"`
+    * an `Ecto.Schema`, such as `p in Post`
+    * an association, such as `c in assoc(post, :comments)`
+    * a query fragment, such as `c in fragment("SOME COMPLEX QUERY")`
+    * a subquery, such as `c in subquery(another_query)`
+
+  The fragment support exists mostly for handling lateral joins.
+  See "Joining with fragments" below.
 
   ## Keywords examples
 
@@ -541,6 +543,25 @@ defmodule Ecto.Query do
       from p in Post,
         left_join: c in assoc(p, :comments),
         select: {p, c}
+
+  Besides the join expressions above, it is also possible to interpolate
+  an Ecto query as the right side of `in`. For example, the first query
+  above can also be written as:
+
+      posts = Post
+      from c in Comment,
+        join: p in ^posts, on: c.post_id == p.id,
+        select: {p.title, c.text}
+
+  The above is specially useful if you want to filter the kind of posts
+  that will be joined on:
+
+      public_posts = from p in Post, where: [public: true]
+      from c in Comment,
+        join: p in ^posts, on: c.post_id == p.id,
+        select: {p.title, c.text}
+
+  Only simple queries with `where` expressions can be interpolated.
 
   ## Expressions examples
 
@@ -558,8 +579,7 @@ defmodule Ecto.Query do
 
   ## Joining with fragments
 
-  When you need to join on a complex expression that cannot be
-  expressed via Ecto associations, Ecto supports fragments in joins:
+  When you need to join on a complex query, Ecto supports fragments in joins:
 
       Comment
       |> join(:inner, [c], p in fragment("SOME COMPLEX QUERY", c.id, ^some_param))

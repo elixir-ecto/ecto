@@ -98,10 +98,8 @@ defmodule Ecto.Query.Builder.Join do
     do: {expr, nil}
   def join!({source, module}) when is_binary(source) and is_atom(module),
     do: {source, module}
-  def join!(expr) do
-    raise ArgumentError,
-      "expected join to be a string, atom or {string, atom}, got: `#{inspect expr}`"
-  end
+  def join!(expr),
+    do: Ecto.Queryable.to_query(expr)
 
   @doc """
   Builds a quoted expression.

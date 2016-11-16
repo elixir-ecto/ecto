@@ -9,6 +9,78 @@ defmodule Ecto.Query.Planner do
   end
 
   @doc """
+  Converts a query to a list of joins.
+
+  The from is moved as last join with the where conditions as its "on"
+  in order to keep proper binding order.
+  """
+  def query_to_joins(%{from: from, wheres: wheres, joins: joins}, position) do
+    on = %QueryExpr{file: __ENV__.file, line: __ENV__.line, expr: true, params: []}
+
+    on =
+      Enum.reduce(wheres, on, fn %BooleanExpr{op: op, expr: expr, params: params}, acc ->
+        merge_expr_and_params(op, acc, expr, params)
+      end)
+
+    join = %JoinExpr{qual: :inner, source: from, file: __ENV__.file, line: __ENV__.line, on: on}
+    last = length(joins) + position
+
+    mapping = fn
+      0  -> last
+      ix -> ix + position - 1
+    end
+
+    for {%{on: on} = join, ix} <- Enum.with_index(joins ++ [join]) do
+      %{join | on: rewrite_sources(on, mapping), ix: ix + position}
+    end
+  end
+
+  defp merge_expr_and_params(op, %QueryExpr{expr: left_expr, params: left_params} = struct,
+                             right_expr, right_params) do
+    right_expr =
+      case length(left_params) do
+        0 ->
+          right_expr
+        prefix ->
+          Macro.prewalk(right_expr, fn
+            {:^, meta, [counter]} when is_integer(counter) -> {:^, meta, [prefix + counter]}
+            other -> other
+          end)
+      end
+
+    %{struct | expr: merge_expr(op, left_expr, right_expr), params: left_params ++ right_params}
+  end
+
+  defp merge_expr(_op, left, true), do: left
+  defp merge_expr(_op, true, right), do: right
+  defp merge_expr(op, left, right), do: {op, [], [left, right]}
+
+  @doc """
+  Rewrites the given query expression sources using the given mapping.
+  """
+  def rewrite_sources(%{expr: expr, params: params} = part, mapping) do
+    expr =
+      Macro.prewalk expr, fn
+        {:&, meta, [ix]} ->
+          {:&, meta, [mapping.(ix)]}
+        other ->
+          other
+      end
+
+    params =
+      Enum.map params, fn
+        {val, {composite, {ix, field}}} when is_integer(ix) ->
+          {val, {composite, {mapping.(ix), field}}}
+        {val, {ix, field}} when is_integer(ix) ->
+          {val, {mapping.(ix), field}}
+        val ->
+          val
+      end
+
+    %{part | expr: expr, params: params}
+  end
+
+  @doc """
   Plans the query for execution.
 
   Planning happens in multiple steps:
@@ -263,8 +335,21 @@ defmodule Ecto.Query.Planner do
                   child_sources ++ tail_sources, counter + 1, offset + length(child_sources), adapter)
   end
 
+  defp prepare_joins([%JoinExpr{source: %Ecto.Query{from: source} = join_query, on: on} = join|t],
+                      query, joins, sources, tail_sources, counter, offset, adapter) do
+    case join_query do
+      %{order_bys: [], limit: nil, offset: nil, group_bys: [], joins: [],
+        havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
+        source = prepare_source(query, source, adapter)
+        [join] = attach_on(query_to_joins(%{join_query | from: source}, counter), on)
+        prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
+      _ ->
+        error! query, join, "queries in joins can only have `where` conditions"
+    end
+  end
+
   defp prepare_joins([%JoinExpr{source: source} = join|t],
-                     query, joins, sources, tail_sources, counter, offset, adapter) do
+                      query, joins, sources, tail_sources, counter, offset, adapter) do
     source = prepare_source(query, source, adapter)
     join = %{join | source: source, ix: counter}
     prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
@@ -274,16 +359,8 @@ defmodule Ecto.Query.Planner do
     {joins, sources, tail_sources}
   end
 
-  defp attach_on(joins, %{expr: true}) do
-    joins
-  end
-  defp attach_on([%{on: %{expr: true}} = h|t], on) do
-    [%{h | on: on}|t]
-  end
-  defp attach_on([h|t], %{expr: extra_expr, params: extra_params}) do
-    %{on: %{expr: expr, params: params} = on} = h
-    on = %{on | expr: {:and, [], [expr, extra_expr]}, params: params ++ extra_params}
-    [%{h | on: on}|t]
+  defp attach_on([%{on: on} = h | t], %{expr: expr, params: params}) do
+    [%{h | on: merge_expr_and_params(:and, on, expr, params)} | t]
   end
 
   defp rewrite_join(%{on: on, ix: join_ix} = join, qual, ix, last_ix, source_ix, inc_ix) do

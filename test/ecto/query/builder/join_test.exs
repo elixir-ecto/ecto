@@ -13,8 +13,7 @@ defmodule Ecto.Query.Builder.JoinTest do
       join("posts", qual, [p], c in "comments", true)
     end
 
-    assert_raise ArgumentError,
-                 "expected join to be a string, atom or {string, atom}, got: `123`", fn ->
+    assert_raise Protocol.UndefinedError, fn ->
       source = 123
       join("posts", :left, [p], c in ^source, true)
     end

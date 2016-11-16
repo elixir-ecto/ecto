@@ -468,23 +468,24 @@ defmodule Ecto do
 
   ## Examples
 
-  In the example below, we get all comments associated with the given
+  In the example below, we get all comments associated to the given
   post:
 
       post = Repo.get Post, 1
-      Repo.all assoc(post, :comments)
+      Repo.all Ecto.assoc(post, :comments)
 
   `assoc/2` can also receive a list of posts, as long as the posts are
   not empty:
 
       posts = Repo.all from p in Post, where: is_nil(p.published_at)
-      Repo.all assoc(posts, :comments)
+      Repo.all Ecto.assoc(posts, :comments)
 
-  `assoc/2` can also be used to dynamically load through many associations.
-  For example, to get all authors for all comments for the given posts, do:
+  This function can also be used to dynamically load through associations
+  by giving it a list. For example, to get all authors for all comments for
+  the given posts, do:
 
       posts = Repo.all from p in Post, where: is_nil(p.published_at)
-      Repo.all assoc(posts, [:comments, :author])
+      Repo.all Ecto.assoc(posts, [:comments, :author])
 
   """
   def assoc(struct_or_structs, assocs) do

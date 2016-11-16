@@ -66,6 +66,9 @@ defimpl Inspect, for: Ecto.Query do
   defp unbound_from(%Ecto.SubQuery{query: query}) do
     "subquery(#{to_string query})"
   end
+  defp unbound_from(%Ecto.Query{} = query) do
+    "^" <> inspect(query)
+  end
 
   defp joins(joins, names) do
     joins
@@ -211,6 +214,8 @@ defimpl Inspect, for: Ecto.Query do
         assoc
       %JoinExpr{source: {:fragment, _, _}} ->
         "fragment"
+      %JoinExpr{source: %Ecto.Query{from: from}} ->
+        from_sources(from)
       %JoinExpr{source: source} ->
         from_sources(source)
     end)
