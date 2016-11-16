@@ -54,7 +54,7 @@ defmodule Ecto.Query.Builder.From do
     {query, binds} = escape(query)
 
     {count_bind, quoted} =
-      case Macro.expand(query, env) do
+      case expand_from(query, env) do
         schema when is_atom(schema) ->
           # Get the source at runtime so no unnecessary compile time
           # dependencies between modules are added
@@ -66,7 +66,7 @@ defmodule Ecto.Query.Builder.From do
           # When a binary is used, there is no schema
           {1, query(nil, source, nil)}
 
-        {source, schema} when is_binary(source) ->
+        {source, schema} when is_binary(source) and is_atom(schema) ->
           prefix = quote do: unquote(schema).__schema__(:prefix)
           {1, query(prefix, source, schema)}
 
@@ -80,6 +80,13 @@ defmodule Ecto.Query.Builder.From do
 
   defp query(prefix, source, schema) do
     {:%, [], [Ecto.Query, {:%{}, [], [from: {source, schema}, prefix: prefix]}]}
+  end
+
+  defp expand_from({left, right}, env) do
+    {left, Macro.expand(right, env)}
+  end
+  defp expand_from(other, env) do
+    Macro.expand(other, env)
   end
 
   @doc """

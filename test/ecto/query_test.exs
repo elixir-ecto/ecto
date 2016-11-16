@@ -57,6 +57,12 @@ defmodule Ecto.QueryTest do
         quote_and_eval(from("posts", 123))
       end
     end
+
+    test "can override the source for existing queries" do
+      query = %Query{from: {"posts", nil}}
+      query = from q in {"new_posts", query}, where: true
+      assert query.from == {"new_posts", nil}
+    end
   end
 
   describe "subqueries" do

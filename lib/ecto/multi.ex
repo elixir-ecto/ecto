@@ -292,8 +292,7 @@ defmodule Ecto.Multi do
   will receive changes so far as the first argument (prepended to those passed in
   the call to the function).
   """
-  @spec run(t, name, module, function, args) :: t
-    when function: atom, args: [any]
+  @spec run(t, name, module, function, args) :: t when function: atom, args: [any]
   def run(multi, name, mod, fun, args)
       when is_atom(mod) and is_atom(fun) and is_list(args) do
     add_operation(multi, name, {:run, {mod, fun, args}})
@@ -305,8 +304,8 @@ defmodule Ecto.Multi do
   Accepts the same arguments and options as `Ecto.Repo.insert_all/4` does.
   """
   @spec insert_all(t, name, schema_or_source, [entry], Keyword.t) :: t
-    when schema_or_source: binary | {binary | nil, binary} | Ecto.Schema.t,
-         entry: map | Keyword.t
+        when schema_or_source: binary | {binary | nil, binary} | Ecto.Schema.t,
+             entry: map | Keyword.t
   def insert_all(multi, name, schema_or_source, entries, opts \\ []) when is_list(opts) do
     add_operation(multi, name, {:insert_all, schema_or_source, entries, opts})
   end
