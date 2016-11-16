@@ -442,7 +442,10 @@ defmodule Ecto.Repo do
 
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
-      in the query.
+      in the query
+
+    * `:max_rows` - The number of rows to load from the database as we stream.
+      It is supported at least by Postgres and MySQL and defaults to 500.
 
   See the "Shared options" section at the module documentation.
 

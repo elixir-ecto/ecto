@@ -475,11 +475,11 @@ defmodule Ecto.Adapters.SQL do
   ## Options
 
     * `:timeout` - The time in milliseconds to wait for a query to finish,
-      `:infinity` will wait indefinitely. (default: 15_000)
+      `:infinity` will wait indefinitely (default: 15_000)
     * `:pool_timeout` - The time in milliseconds to wait for a call to the pool
-      to finish, `:infinity` will wait indefinitely. (default: 5_000)
-
+      to finish, `:infinity` will wait indefinitely (default: 5_000)
     * `:log` - When false, does not log the query
+    * `:max_rows` - The number of rows to load from the database as we stream
 
   ## Examples
 
