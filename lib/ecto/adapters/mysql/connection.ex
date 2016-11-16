@@ -31,6 +31,10 @@ if Code.ensure_loaded?(Mariaex) do
       DBConnection.execute(conn, query, map_params(params), opts)
     end
 
+    def stream(conn, sql, params, opts) do
+      Mariaex.stream(conn, sql, params, opts)
+    end
+
     defp map_params(params) do
       Enum.map params, fn
         %{__struct__: _} = value ->

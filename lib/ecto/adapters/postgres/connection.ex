@@ -110,6 +110,10 @@ if Code.ensure_loaded?(Postgrex) do
       end
     end
 
+    def stream(conn, sql, params, opts) do
+      Postgrex.stream(conn, sql, params, opts)
+    end
+
     alias Ecto.Query
     alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr}
 

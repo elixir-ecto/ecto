@@ -67,14 +67,12 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def execute(repo, meta, query, params, process, opts) do
-        opts =
-          case Map.fetch(meta, :sources) do
-            {:ok, tuple} when tuple_size(elem(tuple, 0)) == 2 ->
-              Keyword.put(opts, :source, tuple |> elem(0) |> elem(0))
-            _ ->
-              opts
-          end
         Ecto.Adapters.SQL.execute(repo, meta, query, params, process, opts)
+      end
+
+      @doc false
+      def stream(repo, meta, query, params, process, opts) do
+        Ecto.Adapters.SQL.stream(repo, meta, query, params, process, opts)
       end
 
       @doc false
@@ -249,6 +247,14 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
+  defp put_source(opts, %{sources: sources}) when tuple_size(elem(sources, 0)) == 2 do
+    {source, _} = elem(sources, 0)
+    Keyword.put(opts, :source, source)
+  end
+  defp put_source(opts, _) do
+    opts
+  end
+
   defp map_params(params) do
     Enum.map params, fn
       %{__struct__: _} = value ->
@@ -384,31 +390,35 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def execute(repo, _meta, {:cache, update, {id, prepared}}, params, nil, opts) do
+  def execute(repo, meta, prepared, params, mapper, opts) do
+    do_execute(repo, meta, prepared, params, mapper, put_source(opts, meta))
+  end
+
+  defp do_execute(repo, _meta, {:cache, update, {id, prepared}}, params, nil, opts) do
     execute_and_cache(repo, id, update, prepared, params, nil, opts)
   end
 
-  def execute(repo, %{fields: fields}, {:cache, update, {id, prepared}}, params, process, opts) do
+  defp do_execute(repo, %{fields: fields}, {:cache, update, {id, prepared}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     execute_and_cache(repo, id, update, prepared, params, mapper, opts)
   end
 
-  def execute(repo, _meta, {:cached, reset, {id, cached}}, params, nil, opts) do
+  defp do_execute(repo, _meta, {:cached, reset, {id, cached}}, params, nil, opts) do
     execute_or_reset(repo, id, reset, cached, params, nil, opts)
   end
 
- def execute(repo, %{fields: fields}, {:cached, reset, {id, cached}}, params, process, opts) do
+ defp do_execute(repo, %{fields: fields}, {:cached, reset, {id, cached}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     execute_or_reset(repo, id, reset, cached, params, mapper, opts)
   end
 
-  def execute(repo, _meta, {:nocache, {_id, prepared}}, params, nil, opts) do
+  defp do_execute(repo, _meta, {:nocache, {_id, prepared}}, params, nil, opts) do
     %{rows: rows, num_rows: num} =
       sql_call!(repo, :execute, [prepared], params, nil, opts)
     {num, rows}
   end
 
-  def execute(repo, %{fields: fields}, {:nocache, {_id, prepared}}, params, process, opts) do
+  defp do_execute(repo, %{fields: fields}, {:nocache, {_id, prepared}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     %{rows: rows, num_rows: num} =
       sql_call!(repo, :execute, [prepared], params, mapper, opts)
@@ -442,6 +452,106 @@ defmodule Ecto.Adapters.SQL do
     case sql_call(repo, callback, args, params, mapper, opts) do
       {:ok, res}    -> res
       {:error, err} -> raise err
+    end
+  end
+
+  @doc """
+  Returns a stream that runs a custom SQL query on given repo when reduced.
+
+  In case of success it is a enumerable containing maps with at least two keys:
+
+    * `:num_rows` - the number of rows affected
+
+    * `:rows` - the result set as a list. `nil` may be returned
+      instead of the list if the command does not yield any row
+      as result (but still yields the number of affected rows,
+      like a `delete` command without returning would)
+
+  In case of failure it raises an exception.
+
+  If the adapter supports a collectable stream, the stream may also be used as
+  the collectable in `Enum.into/3`. Behaviour depends on the adapter.
+
+  ## Options
+
+    * `:timeout` - The time in milliseconds to wait for a query to finish,
+      `:infinity` will wait indefinitely. (default: 15_000)
+    * `:pool_timeout` - The time in milliseconds to wait for a call to the pool
+      to finish, `:infinity` will wait indefinitely. (default: 5_000)
+
+    * `:log` - When false, does not log the query
+
+  ## Examples
+
+      iex> Ecto.Adapters.SQL.stream(MyRepo, "SELECT $1::integer + $2", [40, 2]) |> Enum.to_list()
+      [%{rows: [[42]], num_rows: 1}]
+
+  """
+  @spec stream(Ecto.Repo.t, String.t, [term], Keyword.t) :: Enum.t
+  def stream(repo, sql, params \\ [], opts \\ []) do
+    Ecto.Adapters.SQL.Stream.__build__(repo, sql, params, fn x -> x end, opts)
+  end
+
+  @doc false
+  def stream(repo, meta, prepared, params, mapper, opts) do
+    do_stream(repo, meta, prepared, params, mapper, put_source(opts, meta))
+  end
+
+  def do_stream(repo, _meta, {:cache, _, {_, prepared}}, params, nil, opts) do
+    prepare_stream(repo, prepared, params, nil, opts)
+  end
+
+  def do_stream(repo, %{fields: fields}, {:cache, _, {_, prepared}}, params, process, opts) do
+    mapper = &process_row(&1, process, fields)
+    prepare_stream(repo, prepared, params, mapper, opts)
+  end
+
+  def do_stream(repo, _, {:cached, _, {_, cached}}, params, nil, opts) do
+    prepare_stream(repo, String.Chars.to_string(cached), params, nil, opts)
+  end
+
+  def do_stream(repo, %{fields: fields}, {:cached, _, {_, cached}}, params, process, opts) do
+    mapper = &process_row(&1, process, fields)
+    prepare_stream(repo, String.Chars.to_string(cached), params, mapper, opts)
+  end
+
+  def do_stream(repo, _meta, {:nocache, {_id, prepared}}, params, nil, opts) do
+    prepare_stream(repo, prepared, params, nil, opts)
+  end
+
+  def do_stream(repo, %{fields: fields}, {:nocache, {_id, prepared}}, params, process, opts) do
+    mapper = &process_row(&1, process, fields)
+    prepare_stream(repo, prepared, params, mapper, opts)
+  end
+
+  defp prepare_stream(repo, prepared, params, mapper, opts) do
+    Ecto.Adapters.SQL.Stream.__build__(repo, prepared, params, mapper, opts)
+    |> Stream.map(fn(%{num_rows: nrows, rows: rows}) -> {nrows, rows} end)
+  end
+
+  @doc false
+  def reduce(repo, statement, params, mapper, opts, acc, fun) do
+    {pool, default_opts} = repo.__pool__
+    opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
+    case get_conn(pool) do
+      nil  ->
+        raise "cannot reduce stream outside of transaction"
+      conn ->
+        apply(repo.__sql__, :stream, [conn, statement, params, opts])
+        |> Enumerable.reduce(acc, fun)
+    end
+  end
+
+  @doc false
+  def into(repo, statement, params, mapper, opts) do
+    {pool, default_opts} = repo.__pool__
+    opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
+    case get_conn(pool) do
+      nil  ->
+        raise "cannot collect into stream outside of transaction"
+      conn ->
+        apply(repo.__sql__, :stream, [conn, statement, params, opts])
+        |> Collectable.into()
     end
   end
 

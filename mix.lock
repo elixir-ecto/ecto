@@ -1,12 +1,12 @@
 %{"backoff": {:hex, :backoff, "1.1.1"},
   "connection": {:hex, :connection, "1.0.4", "a1cae72211f0eef17705aaededacac3eb30e6625b04a6117c1b2db6ace7d5976", [:mix], []},
-  "db_connection": {:hex, :db_connection, "1.0.0-rc.5", "1d9ab6e01387bdf2de7a16c56866971f7c2f75aea7c69cae2a0346e4b537ae0d", [:mix], [{:connection, "~> 1.0.2", [hex: :connection, optional: false]}, {:poolboy, "~> 1.5", [hex: :poolboy, optional: true]}, {:sbroker, "~> 1.0.0-beta.3", [hex: :sbroker, optional: true]}]},
+  "db_connection": {:hex, :db_connection, "1.1.0", "b2b88db6d7d12f99997b584d09fad98e560b817a20dab6a526830e339f54cdb3", [:mix], [{:connection, "~> 1.0.2", [hex: :connection, optional: false]}, {:poolboy, "~> 1.5", [hex: :poolboy, optional: true]}, {:sbroker, "~> 1.0", [hex: :sbroker, optional: true]}]},
   "decimal": {:hex, :decimal, "1.2.0", "462960fd71af282e570f7b477f6be56bf8968e68277d4d0b641a635269bf4b0d", [:mix], []},
   "earmark": {:hex, :earmark, "1.0.2", "a0b0904d74ecc14da8bd2e6e0248e1a409a2bc91aade75fcf428125603de3853", [:mix], []},
   "ex_doc": {:hex, :ex_doc, "0.14.3", "e61cec6cf9731d7d23d254266ab06ac1decbb7651c3d1568402ec535d387b6f7", [:mix], [{:earmark, "~> 1.0", [hex: :earmark, optional: false]}]},
   "inch_ex": {:hex, :inch_ex, "0.5.3", "39f11e96181ab7edc9c508a836b33b5d9a8ec0859f56886852db3d5708889ae7", [:mix], [{:poison, "~> 1.5 or ~> 2.0", [hex: :poison, optional: false]}]},
-  "mariaex": {:hex, :mariaex, "0.7.8", "77bcc9e898a7f2231022ac0112f2832158d289fa3ef1e0020ceb61d00403134c", [:mix], [{:db_connection, "~> 1.0.0-rc", [hex: :db_connection, optional: false]}, {:decimal, "~> 1.0", [hex: :decimal, optional: false]}]},
+  "mariaex": {:git, "https://github.com/xerions/mariaex.git", "056a72bfb82d04c7e90a08f1040dfe92c47d517b", [branch: "master"]},
   "poison": {:hex, :poison, "2.2.0", "4763b69a8a77bd77d26f477d196428b741261a761257ff1cf92753a0d4d24a63", [:mix], []},
   "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], []},
-  "postgrex": {:hex, :postgrex, "0.12.0", "bdeeb4c42768c47c3c92228e66c70357fe9a9384fbc9de06abba774b22dd0635", [:mix], [{:connection, "~> 1.0", [hex: :connection, optional: false]}, {:db_connection, "~> 1.0-rc.4", [hex: :db_connection, optional: false]}, {:decimal, "~> 1.0", [hex: :decimal, optional: false]}]},
-  "sbroker": {:hex, :sbroker, "1.0.0-beta.5", "6b40b413630ba40659edaccf902174a44c06cf47c4f15e32d281239b3b5bcba6", [:rebar3], []}}
+  "postgrex": {:git, "https://github.com/elixir-ecto/postgrex.git", "a81aa36bce73c5fcfe9ba3998fdcb8897fdec70f", [branch: "master"]},
+  "sbroker": {:hex, :sbroker, "1.0.0", "28ff1b5e58887c5098539f236307b36fe1d3edaa2acff9d6a3d17c2dcafebbd0", [:rebar3], []}}

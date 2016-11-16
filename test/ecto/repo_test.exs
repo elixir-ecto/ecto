@@ -104,6 +104,15 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  test "stream emits row values lazily" do
+    stream = TestRepo.stream(MySchema)
+    refute_received :stream_execute
+    assert Enum.to_list(stream) == [1]
+    assert_received :stream_execute
+    assert Enum.take(stream, 0) == []
+    refute_received :stream_execute
+  end
+
   test "validates update_all" do
     # Success
     TestRepo.update_all(MySchema, set: [x: "321"])

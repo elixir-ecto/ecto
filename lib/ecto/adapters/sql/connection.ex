@@ -30,6 +30,13 @@ defmodule Ecto.Adapters.SQL.Connection do
             {:ok, term} | {:error | :reset, Exception.t}
 
   @doc """
+  Returns a stream that prepares and executes the given query with
+  `DBConnection`.
+  """
+  @callback stream(connection :: DBConnection.conn, prepared_query :: prepared, params :: [term], options :: Keyword.t) ::
+            Enum.t
+
+  @doc """
   Receives the exception returned by `query/4`.
 
   The constraints are in the keyword list and must return the

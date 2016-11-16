@@ -135,6 +135,10 @@ defmodule Ecto.Repo do
         Ecto.Repo.Queryable.all(__MODULE__, @adapter, queryable, opts)
       end
 
+      def stream(queryable, opts \\ []) do
+        Ecto.Repo.Queryable.stream(__MODULE__, @adapter, queryable, opts)
+      end
+
       def get(queryable, id, opts \\ []) do
         Ecto.Repo.Queryable.get(__MODULE__, @adapter, queryable, id, opts)
       end
@@ -426,6 +430,33 @@ defmodule Ecto.Repo do
       MyRepo.all(query)
   """
   @callback all(queryable :: Ecto.Query.t, opts :: Keyword.t) :: [Ecto.Schema.t] | no_return
+
+  @doc """
+  Returns a lazy enumerable that emits all entries from the data store
+  matching the given query. SQL adapters, such as Postgres and MySQL, can only
+  enumerate a stream inside a transaction.
+
+  May raise `Ecto.QueryError` if query validation fails.
+
+  ## Options
+
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This overrides the prefix set
+      in the query.
+
+  See the "Shared options" section at the module documentation.
+
+  ## Example
+
+      # Fetch all post titles
+      query = from p in Post,
+           select: p.title
+      stream = MyRepo.stream(query)
+      MyRepo.transaction(fn() ->
+        Enum.to_list(stream)
+      end)
+  """
+  @callback stream(queryable :: Ecto.Query.t, opts :: Keyword.t) :: Enum.t
 
   @doc """
   Inserts all entries into the repository.
