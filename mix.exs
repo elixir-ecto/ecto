@@ -45,14 +45,14 @@ defmodule Ecto.Mixfile do
      # Drivers
      {:db_connection, "~> 1.1", optional: true},
      {:postgrex, "~> 1.0-rc", optional: true},
-     {:mariaex, "~> 0.8", optional: true},
+     {:mariaex, "~> 0.8.0", optional: true},
 
      # Optional
-     {:sbroker, "~> 1.0-beta", optional: true},
+     {:sbroker, "~> 1.0", optional: true},
      {:poison, "~> 2.2 or ~> 3.0", optional: true},
 
      # Docs
-     {:ex_doc, "~> 0.12", only: :docs},
+     {:ex_doc, "~> 0.14", only: :docs},
      {:inch_ex, ">= 0.0.0", only: :docs}]
   end
 
