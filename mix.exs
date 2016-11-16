@@ -1,7 +1,7 @@
 defmodule Ecto.Mixfile do
   use Mix.Project
 
-  @version "2.1.0-rc.3"
+  @version "2.1.0-rc.4"
   @adapters [:pg, :mysql]
 
   def project do
@@ -44,8 +44,8 @@ defmodule Ecto.Mixfile do
 
      # Drivers
      {:db_connection, "~> 1.1", optional: true},
-     {:postgrex, "~> 0.12.0", github: "elixir-ecto/postgrex", branch: "master", optional: true},
-     {:mariaex, "~> 0.7.7", github: "xerions/mariaex", branch: "master", optional: true},
+     {:postgrex, "~> 1.0-rc", optional: true},
+     {:mariaex, "~> 0.8", optional: true},
 
      # Optional
      {:sbroker, "~> 1.0-beta", optional: true},

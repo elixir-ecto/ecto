@@ -83,6 +83,7 @@ It is also possible to interpolate the whole keyword list to dynamically filter 
 ### Enhancements
 
   * Allow queries containing `where` conditions to be interpolated in `join`
+  * Add `Repo.stream/2` that returns a stream which streams results from the database
 
 ### Bug fixes
 

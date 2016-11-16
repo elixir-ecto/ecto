@@ -11,9 +11,6 @@ defmodule Friends.Mixfile do
      aliases: aliases()]
   end
 
-  # Configuration for the OTP application
-  #
-  # Type "mix help compile.app" for more information
   def application do
     [applications: [:logger, :postgrex],
      mod: {Friends, []}]
@@ -23,15 +20,6 @@ defmodule Friends.Mixfile do
     [test: ["ecto.create", "ecto.migrate", "test"]]
   end
 
-  # Dependencies can be Hex packages:
-  #
-  #   {:mydep, "~> 0.3.0"}
-  #
-  # Or git/path repositories:
-  #
-  #   {:mydep, git: "https://github.com/elixir-lang/mydep.git", tag: "0.1.0"}
-  #
-  # Type "mix help deps" for more examples and options
   defp deps do
     # Normally you would specify a version of Ecto, like this:
     #
@@ -39,6 +27,6 @@ defmodule Friends.Mixfile do
     #
     # It is not done in this instance because we want to refer to the local Ecto.
     [{:ecto, path: "../.."},
-     {:postgrex, "~> 0.11"}]
+     {:postgrex, "~> 1.0-rc"}]
   end
 end
