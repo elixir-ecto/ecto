@@ -662,7 +662,7 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     def execute_ddl({:rename, %Table{} = current_table, %Table{} = new_table}) do
-      "ALTER TABLE #{quote_table(current_table.prefix, current_table.name)} RENAME TO #{quote_table(new_table.prefix, new_table.name)}"
+      "ALTER TABLE #{quote_table(current_table.prefix, current_table.name)} RENAME TO #{quote_table(nil, new_table.name)}"
     end
 
     def execute_ddl({:rename, %Table{} = table, current_column, new_column}) do
