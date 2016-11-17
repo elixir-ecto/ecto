@@ -391,7 +391,7 @@ This will return the following for the errors shown above:
 %{
   first_name: ["can't be blank"],
   last_name: ["can't be blank"],
-   bio: ["should be at least 15 characters"],
+  bio: ["should be at least 15 characters"],
 }
 ```
 
