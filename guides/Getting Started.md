@@ -76,7 +76,7 @@ config :friends, Friends.Repo,
 
 **NOTE**: Your PostgreSQL database may be setup to
 
- - not require a username and password. If the above configuration doesn't work, try removing the username and password fields, or setting them both to "postgres". 
+ - not require a username and password. If the above configuration doesn't work, try removing the username and password fields, or setting them both to "postgres".
  - be running on a non-standard port. The default port is `5432`. You can specify your specific port by adding it to the config: e.g. `port: 15432`.
 
 This configures how Ecto will connect to our database, called "friends". Specifically, it configures a "repo". More information about [Ecto.Repo can be found in its documentation](https://hexdocs.pm/ecto/Ecto.Repo.html).
@@ -281,7 +281,7 @@ changeset = Friends.Person.changeset(person, %{})
 Friends.Repo.insert(changeset)
 ```
 
-On the first line here, we get a struct from the `Friends.Person` module. We know what that does, because we saw it not too long ago. On the second line we do something brand new: we define a changeset. This changeset says that on the specified `person` object, we're looking to make some changes. In this case, we're not looking to change anything at all. 
+On the first line here, we get a struct from the `Friends.Person` module. We know what that does, because we saw it not too long ago. On the second line we do something brand new: we define a changeset. This changeset says that on the specified `person` object, we're looking to make some changes. In this case, we're not looking to change anything at all.
 
 On the final line, rather than inserting the `person`, we insert the `changeset`. The `changeset` knows about the `person`, the changes and the validation rules that must be met before the data can be entered into the database. When this third line runs, we'll see this:
 
@@ -611,7 +611,7 @@ Ecto.Query.from(p in Friends.Person, where: p.last_name == last_name) |> Friends
 ```
 
 ```
-** (Ecto.Query.CompileError) variable `last_name` is not a valid query expression. 
+** (Ecto.Query.CompileError) variable `last_name` is not a valid query expression.
   Variables need to be explicitly interpolated in queries with ^
              expanding macro: Ecto.Query.where/3
              iex:1: (file)
@@ -642,7 +642,7 @@ The pin operator instructs the query builder to use parameterised SQL queries pr
 Ecto queries don't have to be built in one spot. They can be built up by calling `Ecto.Query` functions on existing queries. For instance, if we want to find all people with the last name "Smith", we can do:
 
 ```elixir
-query = Friends.Person |> Ecto.Query.where(last_name: "Smith") 
+query = Friends.Person |> Ecto.Query.where(last_name: "Smith")
 ```
 
 If we want to scope this down further to only people with the first name of "Jane", we can do this:
@@ -749,4 +749,3 @@ Friends.Repo.delete(person)
 ```
 
 Similar to `insert` and `update`, `delete` returns a tuple. If the deletion succeeds, then the first element in the tuple will be `:ok`, but if it fails then it will be an `:error`.
-
