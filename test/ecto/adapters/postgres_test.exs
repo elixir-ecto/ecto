@@ -931,7 +931,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "rename table with prefix" do
     rename = {:rename, table(:posts, prefix: :foo), table(:new_posts, prefix: :foo)}
-    assert SQL.execute_ddl(rename) == ~s|ALTER TABLE "foo"."posts" RENAME TO "foo"."new_posts"|
+    assert SQL.execute_ddl(rename) == ~s|ALTER TABLE "foo"."posts" RENAME TO "new_posts"|
   end
 
   test "rename column" do
