@@ -2,8 +2,6 @@ if Code.ensure_loaded?(Mariaex) do
 
   defmodule Ecto.Adapters.MySQL.Connection do
     @moduledoc false
-
-    @default_port 3306
     @behaviour Ecto.Adapters.SQL.Connection
 
     ## Connection
