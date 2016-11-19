@@ -63,6 +63,12 @@ defmodule Ecto.RepoTest do
     end
 
     assert_raise Ecto.NoPrimaryKeyValueError, fn ->
+      schema
+      |> Ecto.Changeset.change()
+      |> TestRepo.update()
+    end
+
+    assert_raise Ecto.NoPrimaryKeyValueError, fn ->
       TestRepo.delete!(schema)
     end
   end
@@ -230,7 +236,7 @@ defmodule Ecto.RepoTest do
   end
 
   test "insert!, update!, insert_or_update! and delete! fail on changeset with wrong action" do
-    invalid = %Ecto.Changeset{valid?: true, data: %MySchema{}, action: :other}
+    invalid = %Ecto.Changeset{valid?: true, data: %MySchema{id: 123}, action: :other}
 
     assert_raise ArgumentError, "a changeset with action :other was given to Ecto.TestRepo.insert/2", fn ->
       TestRepo.insert!(invalid)
