@@ -108,14 +108,16 @@ defmodule Ecto.Query.Builder do
 
   def escape({:datetime_add, _, [datetime, count, interval]} = expr, type, params, vars, env) do
     assert_type!(expr, type, :naive_datetime)
-    {datetime, params} = escape(datetime, :naive_datetime, params, vars, env)
+    # TODO: use escape once support for Ecto.DateTime is removed
+    {datetime, params} = escape_datetime(datetime, params, vars, env)
     {count, interval, params} = escape_interval(count, interval, params, vars, env)
     {{:{}, [], [:datetime_add, [], [datetime, count, interval]]}, params}
   end
 
   def escape({:date_add, _, [date, count, interval]} = expr, type, params, vars, env) do
     assert_type!(expr, type, :date)
-    {date, params} = escape(date, :date, params, vars, env)
+    # TODO: use escape once support for Ecto.Date is removed
+    {date, params} = escape_date(date, params, vars, env)
     {count, interval, params} = escape_interval(count, interval, params, vars, env)
     {{:{}, [], [:date_add, [], [date, count, interval]]}, params}
   end
@@ -296,6 +298,22 @@ defmodule Ecto.Query.Builder do
 
   defp escape_fragment({key, _expr}, _type, _params, _vars, _env) do
     error! "fragment(...) with keywords accepts only atoms as keys, got `#{Macro.to_string(key)}`"
+  end
+
+  defp escape_datetime({:^, meta, [expr]}, params, vars, env) do
+    expr = quote do: Ecto.Query.Builder.cast_datetime!(unquote(expr))
+    escape({:^, meta, [expr]}, :naive_datetime, params, vars, env)
+  end
+  defp escape_datetime(expr, params, vars, env) do
+    escape(expr, :naive_datetime, params, vars, env)
+  end
+
+  defp escape_date({:^, meta, [expr]}, params, vars, env) do
+    expr = quote do: Ecto.Query.Builder.cast_date!(unquote(expr))
+    escape({:^, meta, [expr]}, :date, params, vars, env)
+  end
+  defp escape_date(expr, params, vars, env) do
+    escape(expr, :date, params, vars, env)
   end
 
   defp merge_fragments([h1|t1], [h2|t2]),
@@ -524,6 +542,26 @@ defmodule Ecto.Query.Builder do
     do: interval
   def interval!(other),
     do: error!("invalid interval: `#{inspect other}` (expected one of #{Enum.join(@interval, ", ")})")
+
+  @doc """
+  Called by escaper at runtime to cast Ecto.DateTime to :naive_datetime.
+  """
+  def cast_datetime!(%Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec, usec: usec}) do
+    {:ok, value} = NaiveDateTime.new(year, month, day, hour, min, sec, {usec, 6})
+    value
+  end
+  def cast_datetime!(value),
+    do: value
+
+  @doc """
+  Called by escaper at runtime to cast Ecto.Date to :date.
+  """
+  def cast_date!(%Ecto.Date{year: year, month: month, day: day}) do
+    {:ok, value} = Date.new(year, month, day)
+    value
+  end
+  def cast_date!(value),
+    do: value
 
   @doc """
   Negates the given number.
