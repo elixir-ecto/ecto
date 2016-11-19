@@ -699,7 +699,6 @@ if Code.ensure_loaded?(Postgrex) do
     defp add_comment([query], ""), do: query
     defp add_comment(queries, comment), do: queries ++ [comment]
 
-
     defp comment_on(_database_object, _name, nil), do:  ""
     defp comment_on(:column, {table_name, column_name}, comment) do
       column_name = quote_table(table_name, column_name)
@@ -718,6 +717,8 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     defp add_comments_for_columns(queries, []), do: queries
+    defp add_comments_for_columns(query, comments) when is_binary(query),
+      do: add_comments_for_columns([query], comments)
     defp add_comments_for_columns(queries, comments), do: queries ++ comments
 
     defp comments_for_columns(table, columns) do
