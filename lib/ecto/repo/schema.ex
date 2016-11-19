@@ -236,6 +236,7 @@ defmodule Ecto.Repo.Schema do
     assocs = schema.__schema__(:associations)
     return = schema.__schema__(:read_after_writes)
     force? = !!opts[:force]
+    filters = add_pk_filter!(changeset.filters, struct)
 
     # Differently from insert, update does not copy the struct
     # fields into the changeset. All changes must be in the
@@ -256,7 +257,6 @@ defmodule Ecto.Repo.Schema do
           original =  Map.take(changeset.changes, fields)
           {changes, autogen} = dump_changes!(:update, original, schema, [], types, adapter)
 
-          filters = add_pk_filter!(changeset.filters, struct)
           filters = dump_fields!(schema, :update, filters, types, adapter)
           args    = [repo, metadata(struct, opts), changes, filters, return, opts]
 
