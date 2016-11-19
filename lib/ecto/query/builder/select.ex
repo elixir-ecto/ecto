@@ -67,21 +67,11 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   # map/struct(var, [:foo, :bar])
-  defp escape({tag, _, [{var, _, context}, fields]}, {params, take}, vars, _env)
+  defp escape({tag, _, [{var, _, context}, fields]}, {params, take}, vars, env)
        when tag in [:map, :struct] and is_atom(var) and is_atom(context) do
-    taken =
-      case fields do
-        {:^, _, [interpolated]} ->
-          quote(do: Ecto.Query.Builder.Select.fields!(unquote(tag), unquote(interpolated)))
-        _ when is_list(fields) ->
-          fields
-        true ->
-          Builder.error! "`#{tag}/2` in `select` expects either a literal or "
-                         "an interpolated list of atom fields"
-      end
-
-    expr = Builder.escape_var(var, vars)
-    take = Map.put(take, Builder.find_var!(var, vars), {tag, taken})
+    taken = escape_fields(fields, tag, env)
+    expr  = Builder.escape_var(var, vars)
+    take  = Map.put(take, Builder.find_var!(var, vars), {tag, taken})
     {expr, {params, take}}
   end
 
@@ -110,6 +100,21 @@ defmodule Ecto.Query.Builder.Select do
   end
   defp escape_key(k, params_take, vars, env) do
     escape(k, params_take, vars, env)
+  end
+
+  defp escape_fields({:^, _, [interpolated]}, tag, _env) do
+    quote do
+      Ecto.Query.Builder.Select.fields!(unquote(tag), unquote(interpolated))
+    end
+  end
+  defp escape_fields(expr, tag, env) do
+    case Macro.expand(expr, env) do
+      fields when is_list(fields) ->
+        fields
+      _ ->
+        Builder.error! "`#{tag}/2` in `select` expects either a literal or " <>
+          "an interpolated list of atom fields"
+    end
   end
 
   @doc """

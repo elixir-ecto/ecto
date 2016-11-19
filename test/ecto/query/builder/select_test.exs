@@ -51,4 +51,12 @@ defmodule Ecto.Query.Builder.SelectTest do
     assert select("q", [q], map(q, ^fields)).select.take == %{0 => {:map, fields}}
     assert select("q", [q], struct(q, ^fields)).select.take == %{0 => {:struct, fields}}
   end
+
+  @fields [:field]
+
+  test "select sigil/attribute" do
+    fields = ~w[field]a
+    assert select("q", [q], map(q, ~w[field]a)).select.take == %{0 => {:map, fields}}
+    assert select("q", [q], struct(q, @fields)).select.take == %{0 => {:struct, fields}}
+  end
 end
