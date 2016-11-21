@@ -301,7 +301,7 @@ defmodule Ecto.Multi do
   @doc """
   Adds an insert_all operation to the multi.
 
-  Accepts the same arguments and options as `Ecto.Repo.insert_all/4` does.
+  Accepts the same arguments and options as `Ecto.Repo.insert_all/3` does.
   """
   @spec insert_all(t, name, schema_or_source, [entry], Keyword.t) :: t
         when schema_or_source: binary | {binary | nil, binary} | Ecto.Schema.t,
@@ -313,7 +313,7 @@ defmodule Ecto.Multi do
   @doc """
   Adds an update_all operation to the multi.
 
-  Accepts the same arguments and options as `Ecto.Repo.update_all/4` does.
+  Accepts the same arguments and options as `Ecto.Repo.update_all/3` does.
   """
   @spec update_all(t, name, Ecto.Queryable.t, Keyword.t, Keyword.t) :: t
   def update_all(multi, name, queryable, updates, opts \\ []) when is_list(opts) do
@@ -324,7 +324,7 @@ defmodule Ecto.Multi do
   @doc """
   Adds a delete_all operation to the multi.
 
-  Accepts the same arguments and options as `Ecto.Repo.delete_all/4` does.
+  Accepts the same arguments and options as `Ecto.Repo.delete_all/2` does.
   """
   @spec delete_all(t, name, Ecto.Queryable.t, Keyword.t) :: t
   def delete_all(multi, name, queryable, opts \\ []) when is_list(opts) do
