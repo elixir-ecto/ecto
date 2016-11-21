@@ -867,7 +867,7 @@ defmodule Ecto.Query do
   An update query expression.
 
   Updates are used to update the filtered entries. In order for
-  updates to be applied, `Ecto.Repo.update_all/3` must be invoked.
+  updates to be applied, `c:Ecto.Repo.update_all/3` must be invoked.
 
   ## Keywords example
 
