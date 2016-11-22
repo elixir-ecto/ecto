@@ -10,8 +10,8 @@ defmodule Ecto.Query.Builder.Dynamic do
   """
   @spec build([Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(binding, expr, env) do
-    {query, binding} = Builder.escape_binding(quote(do: query), binding)
-    {expr, params} = Builder.escape(expr, :any, %{}, binding, env)
+    {query, vars} = Builder.escape_binding(quote(do: query), binding)
+    {expr, params} = Builder.escape(expr, :any, %{}, vars, env)
     params = Builder.escape_params(params)
 
     quote do
@@ -19,6 +19,7 @@ defmodule Ecto.Query.Builder.Dynamic do
                                 _ = unquote(query)
                                 {unquote(expr), unquote(params)}
                               end,
+                              binding: unquote(Macro.escape(binding)),
                               file: unquote(env.file),
                               line: unquote(env.line)}
     end

@@ -1,9 +1,22 @@
+import Inspect.Algebra
+import Kernel, except: [to_string: 1]
+
+alias Ecto.Query.{DynamicExpr, JoinExpr}
+
+defimpl Inspect, for: Ecto.Query.DynamicExpr do
+  def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
+    {expr, _, _, _} =
+      Ecto.Query.Builder.Dynamic.expand(%Ecto.Query{joins: Enum.drop(binding, 1)}, dynamic)
+
+    names = for {name, _, _} <- binding, do: Atom.to_string(name)
+    args  = [Macro.to_string(binding),
+             Inspect.Ecto.Query.expr(expr, List.to_tuple(names), dynamic)]
+
+    surround_many("dynamic(", args, ")", opts, fn str, _ -> str end)
+  end
+end
+
 defimpl Inspect, for: Ecto.Query do
-  import Inspect.Algebra
-  import Kernel, except: [to_string: 1]
-
-  alias Ecto.Query.JoinExpr
-
   @doc false
   def inspect(query, opts) do
     list = Enum.map(to_list(query), fn
@@ -126,7 +139,8 @@ defimpl Inspect, for: Ecto.Query do
     expr(expr, names, part)
   end
 
-  defp expr(expr, names, part) do
+  @doc false
+  def expr(expr, names, part) do
     Macro.to_string(expr, &expr_to_string(&1, &2, names, part))
   end
 

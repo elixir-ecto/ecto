@@ -22,6 +22,27 @@ defmodule Ecto.Query.InspectTest do
   alias Inspect.Post
   alias Inspect.Comment
 
+  test "dynamic" do
+    assert inspect(dynamic([p], p.foo == true)) ==
+           "dynamic([p], p.foo == true)"
+
+    assert inspect(dynamic([p], p.foo == ^0)) ==
+           "dynamic([p], p.foo == ^0)"
+
+    assert inspect(dynamic([p, c], p.foo == c.bar)) ==
+           "dynamic([p, c], p.foo == c.bar)"
+
+    assert inspect(dynamic([p, ..., c], p.foo == c.bar)) ==
+           "dynamic([p, ..., c], p.foo == c.bar)"
+
+    assert inspect(dynamic([a, b, ..., c, d], a.foo == b.bar and c.foo == d.bar)) ==
+           "dynamic([a, b, ..., c, d], a.foo == b.bar and c.foo == d.bar)"
+
+    dynamic = dynamic([p], p.bar == ^1)
+    assert inspect(dynamic([p], p.foo == ^0 and ^dynamic)) ==
+           "dynamic([p], p.foo == ^0 and p.bar == ^1)"
+  end
+
   test "from" do
     assert i(from(Post, [])) ==
            ~s{from p in Inspect.Post}
