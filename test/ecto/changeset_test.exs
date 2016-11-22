@@ -879,6 +879,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "validate_acceptance/3" do
+    # accepted
     changeset = changeset(%{"terms_of_service" => "true"})
                 |> validate_acceptance(:terms_of_service)
     assert changeset.valid?
@@ -889,13 +890,32 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
     assert changeset.errors == []
 
+    # not accepted
     changeset = changeset(%{"terms_of_service" => "false"})
                 |> validate_acceptance(:terms_of_service)
     refute changeset.valid?
     assert changeset.errors == [terms_of_service: {"must be accepted", [validation: :acceptance]}]
 
+    changeset = changeset(%{"terms_of_service" => "other"})
+                |> validate_acceptance(:terms_of_service)
+    refute changeset.valid?
+    assert changeset.errors == [terms_of_service: {"must be accepted", [validation: :acceptance]}]
+
+    # empty params
     changeset = changeset(%{})
-                  |> validate_acceptance(:terms_of_service, message: "must be abided")
+                |> validate_acceptance(:terms_of_service)
+    refute changeset.valid?
+    assert changeset.errors == [terms_of_service: {"must be accepted", [validation: :acceptance]}]
+
+    # invalid params
+    changeset = changeset(:invalid)
+                |> validate_acceptance(:terms_of_service)
+    refute changeset.valid?
+    assert changeset.errors == []
+
+    # custom message
+    changeset = changeset(%{})
+                |> validate_acceptance(:terms_of_service, message: "must be abided")
     refute changeset.valid?
     assert changeset.errors == [terms_of_service: {"must be abided", [validation: :acceptance]}]
   end
