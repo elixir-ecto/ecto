@@ -74,6 +74,15 @@ defmodule Ecto.MultiTest do
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :delete}, []}}]
   end
 
+  test "error" do
+    multi =
+      Multi.new
+      |> Multi.error(:oops, :value)
+
+    assert multi.names      == MapSet.new([:oops])
+    assert multi.operations == [{:oops, {:error, :value}}]
+  end
+
   test "run with fun" do
     fun = fn changes -> {:ok, changes} end
     multi =
@@ -195,88 +204,6 @@ defmodule Ecto.MultiTest do
     ] = Ecto.Multi.to_list(multi)
   end
 
-  test "Repo.transaction success" do
-    changeset = Changeset.change(%Comment{id: 1}, x: 1)
-    multi =
-      Multi.new
-      |> Multi.insert(:insert, changeset)
-      |> Multi.run(:run, fn changes -> {:ok, changes} end)
-      |> Multi.update(:update, changeset)
-      |> Multi.delete(:delete, changeset)
-      |> Multi.insert_all(:insert_all, Comment, [[x: 1]])
-      |> Multi.update_all(:update_all, Comment, set: [x: 1])
-      |> Multi.delete_all(:delete_all, Comment)
-
-    assert {:ok, changes} = TestRepo.transaction(multi)
-    assert_received {:transaction, _}
-    assert {:messages, actions} = Process.info(self(), :messages)
-    assert actions == [{:insert, {nil, "comments"}}, {:update, {nil, "comments"}}, {:delete, {nil, "comments"}}, {:insert_all, {nil, "comments"}, [[x: 1]]},
-                       {:update_all, {nil, "comments"}}, {:delete_all, {nil, "comments"}}]
-    assert %Comment{} = changes.insert
-    assert %Comment{} = changes.update
-    assert %Comment{} = changes.delete
-    assert {1, nil}   = changes.insert_all
-    assert {1, nil}   = changes.update_all
-    assert {1, nil}   = changes.delete_all
-    assert Map.has_key?(changes.run, :insert)
-    refute Map.has_key?(changes.run, :update)
-  end
-
-  test "Repo.transaction with empty Multi" do
-    assert {:ok, changes} = TestRepo.transaction(Multi.new)
-    refute_received {:transaction, _}
-    assert changes == %{}
-  end
-
-  test "Repo.transaction rolling back from run" do
-    changeset = Changeset.change(%Comment{id: 1}, x: 1)
-    multi =
-      Multi.new
-      |> Multi.insert(:insert, changeset)
-      |> Multi.run(:run, fn _changes -> {:error, "error from run"} end)
-      |> Multi.update(:update, changeset)
-      |> Multi.delete(:delete, changeset)
-
-    assert {:error, :run, "error from run", changes} = TestRepo.transaction(multi)
-    assert_received {:transaction, _}
-    assert_received {:rollback, _}
-    assert {:messages, [{:insert, {nil, "comments"}}]} == Process.info(self(), :messages)
-    assert %Comment{} = changes.insert
-    refute Map.has_key?(changes, :run)
-    refute Map.has_key?(changes, :update)
-  end
-
-  test "Repo.transaction rolling back from repo" do
-    changeset = Changeset.change(%Comment{id: 1}, x: 1)
-    invalid   = put_in(changeset.data.__meta__.context, {:invalid, [unique: "comments_x_index"]})
-                |> Changeset.unique_constraint(:x)
-
-    multi =
-      Multi.new
-      |> Multi.insert(:insert, changeset)
-      |> Multi.run(:run, fn _changes -> {:ok, "ok"} end)
-      |> Multi.update(:update, invalid)
-      |> Multi.delete(:delete, changeset)
-
-    assert {:error, :update, error, changes} = TestRepo.transaction(multi)
-    assert_received {:transaction, _}
-    assert_received {:rollback, _}
-    assert {:messages, [{:insert, {nil, "comments"}}]} == Process.info(self(), :messages)
-    assert %Comment{} = changes.insert
-    assert "ok" == changes.run
-    assert error.errors == [x: {"has already been taken", []}]
-    refute Map.has_key?(changes, :update)
-  end
-
-  test "checks invalid changesets before starting transaction" do
-    changeset = %{Changeset.change(%Comment{}) | valid?: false}
-    multi = Multi.new |> Multi.insert(:invalid, changeset)
-
-    assert {:error, :invalid, invalid, %{}} = TestRepo.transaction(multi)
-    assert invalid.data == changeset.data
-    refute_received {:transaction, _}
-  end
-
   test "add changeset with invalid action" do
     changeset = %{Changeset.change(%Comment{}) | action: :invalid}
 
@@ -298,72 +225,176 @@ defmodule Ecto.MultiTest do
     end
   end
 
-  test "merge with fun" do
-    changeset = Changeset.change(%Comment{})
-    multi =
-      Multi.new
-      |> Multi.insert(:insert, changeset)
-      |> Multi.merge(fn data ->
-        Multi.new |> Multi.update(:update, Changeset.change(data.insert))
-      end)
-
-    assert {:ok, data} = TestRepo.transaction(multi)
-    assert %Comment{} = data.insert
-    assert %Comment{} = data.update
-  end
-
-  test "merge with mfa" do
-    changeset = Changeset.change(%Comment{})
-    multi =
-      Multi.new
-      |> Multi.insert(:insert, changeset)
-      |> Multi.merge(__MODULE__, :multi, [])
+  describe "merge/2" do
+    test "with fun" do
+      changeset = Changeset.change(%Comment{})
+      multi =
+        Multi.new
+        |> Multi.insert(:insert, changeset)
+        |> Multi.merge(fn data ->
+          Multi.new |> Multi.update(:update, Changeset.change(data.insert))
+        end)
 
       assert {:ok, data} = TestRepo.transaction(multi)
       assert %Comment{} = data.insert
       assert %Comment{} = data.update
-  end
-
-  test "merge rollbacks on errors" do
-    error = fn _ -> {:error, :error} end
-    ok    = fn _ -> {:ok, :ok} end
-
-    multi =
-      Multi.new
-      |> Multi.run(:outside_ok, ok)
-      |> Multi.merge(fn _ ->
-        Multi.new
-        |> Multi.run(:inside_ok, ok)
-        |> Multi.run(:inside_error, error)
-      end)
-      |> Multi.run(:outside_error, error)
-
-    assert {:error, :inside_error, :error, data} = TestRepo.transaction(multi)
-    assert :ok == data.outside_ok
-    assert :ok == data.inside_ok
-  end
-
-  test "merge does not allow repeated operations" do
-    fun = fn _ -> {:ok, :ok} end
-
-    multi =
-      Multi.new
-      |> Multi.merge(fn _ ->
-        Multi.new |> Multi.run(:run, fun)
-      end)
-      |> Multi.run(:run, fun)
-
-    assert_raise RuntimeError, ~r"found in both Ecto.Multi: \[:run\]", fn ->
-      TestRepo.transaction(multi)
     end
 
-    multi =
-      Multi.new
-      |> Multi.merge(fn _ -> Multi.new |> Multi.run(:run, fun) end)
-      |> Multi.merge(fn _ -> Multi.new |> Multi.run(:run, fun) end)
+    test "with mfa" do
+      changeset = Changeset.change(%Comment{})
+      multi =
+        Multi.new
+        |> Multi.insert(:insert, changeset)
+        |> Multi.merge(__MODULE__, :multi, [])
 
-    assert_raise RuntimeError, ~r"found in both Ecto.Multi: \[:run\]", fn ->
-      TestRepo.transaction(multi)
+        assert {:ok, data} = TestRepo.transaction(multi)
+        assert %Comment{} = data.insert
+        assert %Comment{} = data.update
+    end
+
+    test "rollbacks on errors" do
+      error = fn _ -> {:error, :error} end
+      ok    = fn _ -> {:ok, :ok} end
+
+      multi =
+        Multi.new
+        |> Multi.run(:outside_ok, ok)
+        |> Multi.merge(fn _ ->
+          Multi.new
+          |> Multi.run(:inside_ok, ok)
+          |> Multi.run(:inside_error, error)
+        end)
+        |> Multi.run(:outside_error, error)
+
+      assert {:error, :inside_error, :error, data} = TestRepo.transaction(multi)
+      assert :ok == data.outside_ok
+      assert :ok == data.inside_ok
+    end
+
+    test "does not allow repeated operations" do
+      fun = fn _ -> {:ok, :ok} end
+
+      multi =
+        Multi.new
+        |> Multi.merge(fn _ ->
+          Multi.new |> Multi.run(:run, fun)
+        end)
+        |> Multi.run(:run, fun)
+
+      assert_raise RuntimeError, ~r"found in both Ecto.Multi: \[:run\]", fn ->
+        TestRepo.transaction(multi)
+      end
+
+      multi =
+        Multi.new
+        |> Multi.merge(fn _ -> Multi.new |> Multi.run(:run, fun) end)
+        |> Multi.merge(fn _ -> Multi.new |> Multi.run(:run, fun) end)
+
+      assert_raise RuntimeError, ~r"found in both Ecto.Multi: \[:run\]", fn ->
+        TestRepo.transaction(multi)
+      end
+    end
+  end
+
+  describe "Repo.transaction" do
+    test "on success" do
+      changeset = Changeset.change(%Comment{id: 1}, x: 1)
+      multi =
+        Multi.new
+        |> Multi.insert(:insert, changeset)
+        |> Multi.run(:run, fn changes -> {:ok, changes} end)
+        |> Multi.update(:update, changeset)
+        |> Multi.delete(:delete, changeset)
+        |> Multi.insert_all(:insert_all, Comment, [[x: 1]])
+        |> Multi.update_all(:update_all, Comment, set: [x: 1])
+        |> Multi.delete_all(:delete_all, Comment)
+
+      assert {:ok, changes} = TestRepo.transaction(multi)
+      assert_received {:transaction, _}
+      assert {:messages, actions} = Process.info(self(), :messages)
+      assert actions == [{:insert, {nil, "comments"}}, {:update, {nil, "comments"}}, {:delete, {nil, "comments"}}, {:insert_all, {nil, "comments"}, [[x: 1]]},
+                         {:update_all, {nil, "comments"}}, {:delete_all, {nil, "comments"}}]
+      assert %Comment{} = changes.insert
+      assert %Comment{} = changes.update
+      assert %Comment{} = changes.delete
+      assert {1, nil}   = changes.insert_all
+      assert {1, nil}   = changes.update_all
+      assert {1, nil}   = changes.delete_all
+      assert Map.has_key?(changes.run, :insert)
+      refute Map.has_key?(changes.run, :update)
+    end
+
+    test "with empty multi" do
+      assert {:ok, changes} = TestRepo.transaction(Multi.new)
+      refute_received {:transaction, _}
+      assert changes == %{}
+    end
+
+    test "rolls back from run" do
+      changeset = Changeset.change(%Comment{id: 1}, x: 1)
+      multi =
+        Multi.new
+        |> Multi.insert(:insert, changeset)
+        |> Multi.run(:run, fn _changes -> {:error, "error from run"} end)
+        |> Multi.update(:update, changeset)
+        |> Multi.delete(:delete, changeset)
+
+      assert {:error, :run, "error from run", changes} = TestRepo.transaction(multi)
+      assert_received {:transaction, _}
+      assert_received {:rollback, _}
+      assert {:messages, [{:insert, {nil, "comments"}}]} == Process.info(self(), :messages)
+      assert %Comment{} = changes.insert
+      refute Map.has_key?(changes, :run)
+      refute Map.has_key?(changes, :update)
+    end
+
+  test "rolls back on error" do
+      changeset = Changeset.change(%Comment{id: 1}, x: 1)
+      multi =
+        Multi.new
+        |> Multi.insert(:insert, changeset)
+        |> Multi.error(:oops, "explicit error")
+        |> Multi.update(:update, changeset)
+        |> Multi.delete(:delete, changeset)
+
+      assert {:error, :oops, "explicit error", changes} = TestRepo.transaction(multi)
+      assert_received {:transaction, _}
+      assert_received {:rollback, _}
+      assert {:messages, [{:insert, {nil, "comments"}}]} == Process.info(self(), :messages)
+      assert %Comment{} = changes.insert
+      refute Map.has_key?(changes, :run)
+      refute Map.has_key?(changes, :update)
+    end
+
+    test "rolls back from repo" do
+      changeset = Changeset.change(%Comment{id: 1}, x: 1)
+      invalid   = put_in(changeset.data.__meta__.context, {:invalid, [unique: "comments_x_index"]})
+                  |> Changeset.unique_constraint(:x)
+
+      multi =
+        Multi.new
+        |> Multi.insert(:insert, changeset)
+        |> Multi.run(:run, fn _changes -> {:ok, "ok"} end)
+        |> Multi.update(:update, invalid)
+        |> Multi.delete(:delete, changeset)
+
+      assert {:error, :update, error, changes} = TestRepo.transaction(multi)
+      assert_received {:transaction, _}
+      assert_received {:rollback, _}
+      assert {:messages, [{:insert, {nil, "comments"}}]} == Process.info(self(), :messages)
+      assert %Comment{} = changes.insert
+      assert "ok" == changes.run
+      assert error.errors == [x: {"has already been taken", []}]
+      refute Map.has_key?(changes, :update)
+    end
+
+    test "checks invalid changesets before starting transaction" do
+      changeset = %{Changeset.change(%Comment{}) | valid?: false}
+      multi = Multi.new |> Multi.insert(:invalid, changeset)
+
+      assert {:error, :invalid, invalid, %{}} = TestRepo.transaction(multi)
+      assert invalid.data == changeset.data
+      refute_received {:transaction, _}
     end
   end
 end
