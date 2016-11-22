@@ -708,19 +708,19 @@ defmodule Ecto.Query do
 
   ## Keywords example
 
-      from(c in City, where: c.state == "Sweden")
-      from(c in City, where: [state: "Sweden"])
+      from(c in City, where: c.country == "Sweden")
+      from(c in City, where: [country: "Sweden"])
 
   It is also possible to interpolate the whole keyword list, allowing you to
   dynamically filter the source:
 
-      filters = [state: "Sweden"]
+      filters = [country: "Sweden"]
       from(c in City, where: ^filters)
 
   ## Expressions example
 
-      City |> where([c], c.state == "Sweden")
-      City |> where(state: "Sweden")
+      City |> where([c], c.country == "Sweden")
+      City |> where(country: "Sweden")
 
   """
   defmacro where(query, binding \\ [], expr) do
@@ -730,26 +730,46 @@ defmodule Ecto.Query do
   @doc """
   An OR where query expression.
 
-  Similar to `where` but combines with any previous expression by using
-  an `OR`. All where expressions have to evaluate to a boolean value.
+  Behaves exactly the same as `where` except it combines with any previous
+  expression by using an `OR`. All expressions have to evaluate to a boolean
+  value.
 
-  `where` also accepts a keyword list where the field given as key is going to
-  be compared with the given value. Each key-value pair will be combined using
-  `OR` and will always refer to the source given in `from`.
+  `or_where` also accepts a keyword list where each key is a field to be
+  compared with the given value. Each key-value pair will be combined
+  using `AND`, exactly as in `where`.
 
   ## Keywords example
 
-      from(c in City, where: [state: "Sweden"], or_where: [state: "Brazil"])
+      from(c in City, where: [country: "Sweden"], or_where: [country: "Brazil"])
 
-  It is also possible to interpolate the whole keyword list, allowing you to
-  dynamically filter the source:
+  If interpolating keyword lists, the keyword list entries are combined
+  using ANDs and joined to any existing expression with an OR:
 
-      filters = [state: "Sweden", state: "Brazil"]
-      from(c in City, or_where: ^filters)
+      filters = [country: "USA", name: "New York"]
+      from(c in City, where: [country: "Sweden"], or_where: ^filters)
+
+  is equivalent to:
+
+      from c in City, where: (c.country == "Sweden") or
+                             (c.country == "USA" and c.name == "New York")
+
+  The behaviour above is by design to keep the changes between `where`
+  and `or_where` minimal. Plus, if you have a keyword list and you
+  would like each pair to be combined using `or`, it can be easily done
+  with `Enum.reduce/3`:
+
+      filters = [country: "USA", is_tax_exempt: true]
+      Enum.reduce(filters, City, fn {key, value}, query ->
+        from q in query, or_where: field(q, ^key) == ^value
+      end)
+
+  which will be equivalent to:
+
+      from c in City, or_where: (c.country == "USA"), or_where: c.is_tax_exempt == true
 
   ## Expressions example
 
-      City |> where([c], c.state == "Sweden") |> or_where([c], c.state == "Brazil")
+      City |> where([c], c.country == "Sweden") |> or_where([c], c.country == "Brazil")
 
   """
   defmacro or_where(query, binding \\ [], expr) do
@@ -968,9 +988,9 @@ defmodule Ecto.Query do
   @doc """
   An OR having query expression.
 
-  Like `having` but combine previous expressions by using `OR`.
-  `or_having` behaves for `having` the same way `or_where` behaves
-  for `where`.
+  Like `having` but combines with the previous expression by using
+  `OR`. `or_having` behaves for `having` the same way `or_where`
+  behaves for `where`.
 
   ## Keywords example
 
