@@ -150,6 +150,7 @@ defmodule Ecto.Changeset do
 
   alias __MODULE__
   alias Ecto.Changeset.Relation
+  require Logger
 
   @empty_values [""]
 
@@ -395,9 +396,20 @@ defmodule Ecto.Changeset do
       Enum.map_reduce(required, {changes, errors, valid?},
                       &process_param(&1, :required, params, types, data, empty_values, defaults, &2))
 
+    check_unpermitted_keys(params, optional, required)
+
     %Changeset{params: params, data: data, valid?: valid?,
                errors: Enum.reverse(errors), changes: changes, required: required,
                types: types, empty_values: empty_values}
+  end
+
+  defp check_unpermitted_keys(params, optional, required) do
+    param_keys = params |> Map.keys |> Enum.map(&to_string/1)
+    optional_keys = optional |> Enum.map(&to_string/1)
+    required_keys = required |> Enum.map(&to_string/1)
+
+    unpermitted_keys = param_keys -- optional_keys -- required_keys
+    Logger.warn("Unpermitted keys present in params: #{Enum.join(unpermitted_keys, ", ")}")
   end
 
   defp do_cast(%{}, %{}, %{}, params, required, optional, _empty_values)
