@@ -293,24 +293,29 @@ defmodule Ecto.Query do
              havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
   @opaque t :: %__MODULE__{}
 
+  defmodule DynamicExpr do
+    @moduledoc false
+    defstruct [:fun, :file, :line]
+  end
+
   defmodule QueryExpr do
     @moduledoc false
-    defstruct [:expr, :file, :line, params: %{}]
+    defstruct [:expr, :file, :line, params: []]
   end
 
   defmodule BooleanExpr do
     @moduledoc false
-    defstruct [:op, :expr, :file, :line, params: %{}]
+    defstruct [:op, :expr, :file, :line, params: []]
   end
 
   defmodule SelectExpr do
     @moduledoc false
-    defstruct [:expr, :file, :line, :fields, params: %{}, take: %{}]
+    defstruct [:expr, :file, :line, :fields, params: [], take: %{}]
   end
 
   defmodule JoinExpr do
     @moduledoc false
-    defstruct [:qual, :source, :on, :file, :line, :assoc, :ix, params: %{}]
+    defstruct [:qual, :source, :on, :file, :line, :assoc, :ix, params: []]
   end
 
   defmodule Tagged do
@@ -322,17 +327,57 @@ defmodule Ecto.Query do
   end
 
   alias Ecto.Query.Builder
-  alias Ecto.Query.Builder.From
-  alias Ecto.Query.Builder.Filter
-  alias Ecto.Query.Builder.Select
-  alias Ecto.Query.Builder.Distinct
-  alias Ecto.Query.Builder.OrderBy
-  alias Ecto.Query.Builder.LimitOffset
-  alias Ecto.Query.Builder.GroupBy
-  alias Ecto.Query.Builder.Preload
-  alias Ecto.Query.Builder.Join
-  alias Ecto.Query.Builder.Lock
-  alias Ecto.Query.Builder.Update
+  alias Ecto.Query.Builder.{Distinct, Dynamic, Filter, From, GroupBy, Join,
+                            LimitOffset, Lock, OrderBy, Preload, Select, Update}
+
+  @doc """
+  Buids a dynamic query expression.
+
+  Dynamic query expressions allows developers to build queries
+  expression bit by bit so they are later interpolated in a query.
+
+  ## Examples
+
+  For example, imagine you have a set of conditions you want to
+  build your query on:
+
+      dynamic = false
+
+      dynamic =
+        if params["is_public"] do
+          dynamic([p], p.is_public or ^dynamic)
+        else
+          dynamic
+        end
+
+      dynamic =
+        if params["allow_reviewers"] do
+          dynamic([p, a], a.reviewer == true or ^dynamic)
+        else
+          dynamic
+        end
+
+      from query, where: ^dynamic
+
+  In the example above, we were able to build the query expressions
+  bit by bit, using different bindings, and later interpolate it all
+  at once inside the query.
+
+  A dynamic expression can always be interpolated inside another dynamic
+  expression however it can only be interpolated at the root of queries.
+  For example, the following is forbidden:
+
+      from q in query, where: q.some_condition and ^dynamic
+
+  That's easily solvable, however, by simply rewriting it to:
+
+      dynamic = dynamic([q], q.some_condition and ^dynamic)
+      from query, where: ^dynamic
+
+  """
+  defmacro dynamic(binding \\ [], expr) do
+    Dynamic.build(binding, expr, __CALLER__)
+  end
 
   @doc """
   Converts a query into a subquery.

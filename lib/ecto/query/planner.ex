@@ -2,7 +2,7 @@ defmodule Ecto.Query.Planner do
   # Normalizes a query and its parameters.
   @moduledoc false
 
-  alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr, SelectExpr}
+  alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, QueryExpr, SelectExpr}
 
   if map_size(%Ecto.Query{}) != 17 do
     raise "Ecto.Query match out of date in builder"
@@ -515,6 +515,15 @@ defmodule Ecto.Query.Planner do
   defp source_cache(%Ecto.SubQuery{params: inner, cache: key}, params),
     do: {key, Enum.reverse(inner, params)}
 
+  defp cast_param(_kind, query, expr, %DynamicExpr{}, _type, _value) do
+    error! query, expr, "dynamic expressions can only be interpolated inside other " <>
+                        "dynamic expressions or at the top level of a query expression " <>
+                        "(such as where/order_by/etc)"
+  end
+  defp cast_param(_kind, query, expr, [{_, _} | _], _type, _value) do
+    error! query, expr, "keyword lists can only be interpolated at the top level of " <>
+                        "where/having/distinct/order_by"
+  end
   defp cast_param(kind, query, expr, v, type, adapter) do
     type = type!(kind, query, expr, type)
 

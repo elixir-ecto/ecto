@@ -88,6 +88,20 @@ defmodule Ecto.Query.PlannerTest do
     assert Exception.message(exception) =~ "where: p.title == ^1"
   end
 
+  test "prepare: raises readable error on dynamic expressions/keyword lists" do
+    dynamic = dynamic([p], p.id == ^"1")
+    {_query, params, _key} = prepare(Post |> where([p], ^dynamic))
+    assert params == [1]
+
+    assert_raise Ecto.QueryError, ~r/dynamic expressions can only be interpolated/, fn ->
+      prepare(Post |> where([p], p.title == ^dynamic))
+    end
+
+    assert_raise Ecto.QueryError, ~r/keyword lists can only be interpolated/, fn ->
+      prepare(Post |> where([p], p.title == ^[foo: 1]))
+    end
+  end
+
   test "prepare: casts and dumps custom types" do
     permalink = "1-hello-world"
     {_query, params, _key} = prepare(Post |> where([p], p.id == ^permalink))

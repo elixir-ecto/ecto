@@ -4,54 +4,71 @@ defmodule Ecto.Query.Builder.FilterTest do
   import Ecto.Query.Builder.Filter
   doctest Ecto.Query.Builder.Filter
 
-  test "escape" do
-    import Kernel, except: [==: 2, and: 2]
+  import Ecto.Query
 
-    assert escape(:where, quote do [] end, [x: 0], __ENV__) ===
-           {true, %{}}
+  describe "escape" do
+    test "handles expressions and params" do
+      import Kernel, except: [==: 2, and: 2]
 
-    assert escape(:where, quote do [x: ^"foo"] end, [x: 0], __ENV__) ===
-           {Macro.escape(quote do &0.x == ^0 end), %{0 => {"foo", {0, :x}}}}
+      assert escape(:where, quote do [] end, [x: 0], __ENV__) ===
+             {true, %{}}
 
-    assert escape(:where, quote do [x: ^"foo", y: ^"bar"] end, [x: 0], __ENV__) ===
-           {Macro.escape(quote do &0.x == ^0 and &0.y == ^1 end),
-            %{0 => {"foo", {0, :x}}, 1 => {"bar", {0, :y}}}}
-  end
+      assert escape(:where, quote do [x: ^"foo"] end, [x: 0], __ENV__) ===
+             {Macro.escape(quote do &0.x == ^0 end), %{0 => {"foo", {0, :x}}}}
 
-  test "runtime!" do
-    assert runtime!(:where, []) |> Macro.to_string ==
-           "{true, []}"
-    assert runtime!(:where, [x: 11]) |> Macro.to_string ==
-           "{&0.x() == ^0, [{11, {0, :x}}]}"
-    assert runtime!(:where, [x: 11, y: 13]) |> Macro.to_string ==
-           "{&0.x() == ^0 and &0.y() == ^1, [{11, {0, :x}}, {13, {0, :y}}]}"
-  end
+      assert escape(:where, quote do [x: ^"foo", y: ^"bar"] end, [x: 0], __ENV__) ===
+             {Macro.escape(quote do &0.x == ^0 and &0.y == ^1 end),
+              %{0 => {"foo", {0, :x}}, 1 => {"bar", {0, :y}}}}
+    end
 
-  test "invalid filter" do
-    assert_raise Ecto.Query.CompileError,
-                 ~r"expected a keyword list at compile time in where, got: `\[\{1, 2\}\]`", fn ->
-      escape(:where, quote do [{1, 2}] end, [], __ENV__)
+    test "raises on invalid expressions" do
+      assert_raise Ecto.Query.CompileError,
+                   ~r"expected a keyword list at compile time in where, got: `\[\{1, 2\}\]`", fn ->
+        escape(:where, quote do [{1, 2}] end, [], __ENV__)
+      end
+    end
+
+    test "raises on nils" do
+      assert_raise Ecto.Query.CompileError,
+                   ~r"nil given for :x. Comparison with nil is forbidden as it is unsafe.", fn ->
+        escape(:where, quote do [x: nil] end, [], __ENV__)
+      end
     end
   end
 
-  test "nil filter" do
-    assert_raise Ecto.Query.CompileError,
-                 ~r"nil given for :x. Comparison with nil is forbidden as it is unsafe.", fn ->
-      escape(:where, quote do [x: nil] end, [], __ENV__)
+  describe "at runtime" do
+    test "accepts empty keyword lists" do
+      query = where(from(p in "posts"), [p], ^[])
+      assert query.wheres == []
     end
-  end
 
-  test "invalid runtime filter" do
-    assert_raise ArgumentError,
-                 ~r"expected a keyword list in `where`, got: `\[\{\"foo\", \"bar\"\}\]`", fn ->
-      runtime!(:where, [{"foo", "bar"}])
+    test "accepts keyword lists" do
+      %{wheres: [where]} = where(from(p in "posts"), [p], ^[foo: 1, bar: "baz"])
+      assert Macro.to_string(where.expr) ==
+             "&0.foo() == ^0 and &0.bar() == ^1"
+      assert where.params ==
+             [{1, {0, :foo}}, {"baz", {0, :bar}}]
     end
-  end
 
-  test "nil runtime filter" do
-    assert_raise ArgumentError,
-                 ~r"nil given for :x. Comparison with nil is forbidden as it is unsafe.", fn ->
-      runtime!(:where, [x: nil])
+    test "supports dynamic expressions" do
+      dynamic = dynamic([p], p.foo == ^1 and p.bar == ^"baz")
+      %{wheres: [where]} = where("posts", ^dynamic)
+      assert Macro.to_string(where.expr) ==
+             "&0.foo() == ^0 and &0.bar() == ^1"
+      assert where.params ==
+             [{1, {0, :foo}}, {"baz", {0, :bar}}]
+    end
+
+    test "raises on invalid keywords" do
+      assert_raise ArgumentError, fn ->
+        where(from(p in "posts"), [p], ^[{1, 2}])
+      end
+    end
+
+    test "raises on nil" do
+      assert_raise ArgumentError, fn ->
+        where(from(p in "posts"), [p], ^[foo: nil])
+      end
     end
   end
 end

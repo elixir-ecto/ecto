@@ -49,13 +49,10 @@ defmodule Ecto.Query.Builder.Filter do
   """
   @spec build(:where | :having, :and | :or, Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(kind, op, query, _binding, {:^, _, [var]}, env) do
-    expr =
-      quote do
-        {expr, params} = Ecto.Query.Builder.Filter.runtime!(unquote(kind), unquote(var))
-        %Ecto.Query.BooleanExpr{expr: expr, params: params, op: unquote(op),
-                                file: unquote(env.file), line: unquote(env.line)}
-      end
-    Builder.apply_query(query, __MODULE__, [kind, expr], env)
+    quote do
+      Ecto.Query.Builder.Filter.runtime!(unquote(kind), unquote(op), unquote(query),
+                                         unquote(var), unquote(env.file), unquote(env.line))
+    end
   end
 
   def build(kind, op, query, binding, expr, env) do
@@ -90,38 +87,44 @@ defmodule Ecto.Query.Builder.Filter do
   end
 
   @doc """
-  Invoked at runtime for interpolated lists.
+  Runtime callback for filters.
   """
-  def runtime!(_kind, []) do
-    {true, []}
+  def runtime!(kind, op, query, expr, file, line) do
+    boolean_expr =
+      case expr do
+        %Ecto.Query.DynamicExpr{} ->
+          {expr, params, file, line} = Ecto.Query.Builder.Dynamic.expand(query, expr)
+          %Ecto.Query.BooleanExpr{expr: expr, params: params, line: line, file: file, op: op}
+        kw when is_list(kw) ->
+          {expr, params} = kw!(kind, expr)
+          %Ecto.Query.BooleanExpr{expr: expr, params: params, line: line, file: file, op: op}
+        _ ->
+          raise ArgumentError, "expected a keyword list or dynamic expression in `#{kind}`, got: `#{inspect expr}`"
+      end
+    apply(query, kind, boolean_expr)
   end
 
-  def runtime!(kind, kw) when is_list(kw) do
-    {parts, params} = runtime!(kw, 0, [], [], kind, kw)
-    {Enum.reduce(parts, &{:and, [], [&2, &1]}), params}
+  defp kw!(kind, kw) do
+    case kw!(kw, 0, [], [], kind, kw) do
+      {[], params} -> {true, params}
+      {parts, params} -> {Enum.reduce(parts, &{:and, [], [&2, &1]}), params}
+    end
   end
 
-  def runtime!(kind, other) do
-    raise ArgumentError, "expected a keyword list in `#{kind}`, got: `#{inspect other}`"
-  end
-
-  defp runtime!([{field, nil}|_], _counter, _exprs, _params, _kind, _original) when is_atom(field) do
+  defp kw!([{field, nil}|_], _counter, _exprs, _params, _kind, _original) when is_atom(field) do
     raise ArgumentError, "nil given for #{inspect field}. Comparison with nil is forbidden as it is unsafe. " <>
                          "Instead write a query with is_nil/1, for example: is_nil(s.#{field})"
   end
-
-  defp runtime!([{field, value}|t], counter, exprs, params, kind, original) when is_atom(field) do
-    runtime!(t, counter + 1,
-             [{:==, [], [to_field(field), {:^, [], [counter]}]}|exprs],
-             [{value, {0, field}}|params],
-             kind, original)
+  defp kw!([{field, value}|t], counter, exprs, params, kind, original) when is_atom(field) do
+    kw!(t, counter + 1,
+        [{:==, [], [to_field(field), {:^, [], [counter]}]}|exprs],
+        [{value, {0, field}}|params],
+        kind, original)
   end
-
-  defp runtime!([], _counter, exprs, params, _kind, _original) do
+  defp kw!([], _counter, exprs, params, _kind, _original) do
     {Enum.reverse(exprs), Enum.reverse(params)}
   end
-
-  defp runtime!(_, _counter, _exprs, _params, kind, original) do
+  defp kw!(_, _counter, _exprs, _params, kind, original) do
     raise ArgumentError, "expected a keyword list in `#{kind}`, got: `#{inspect original}`"
   end
 
