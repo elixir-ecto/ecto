@@ -364,7 +364,8 @@ defmodule Ecto.Query do
   at once inside the query.
 
   A dynamic expression can always be interpolated inside another dynamic
-  expression or at the root of a `where`, `having` or `update`.
+  expression or at the root of a `where`, `having`, `update` or a `join`'s
+  `on`.
 
   For example, the following is forbidden because it is not at the
   root of a `where`:
@@ -572,8 +573,8 @@ defmodule Ecto.Query do
 
   Currently it is possible to join on:
 
-    * a source representing a table, such as `p in "posts"`
     * an `Ecto.Schema`, such as `p in Post`
+    * an Ecto query with zero or more where clauses, such as `from "posts", where: [public: true]`
     * an association, such as `c in assoc(post, :comments)`
     * a query fragment, such as `c in fragment("SOME COMPLEX QUERY")`
     * a subquery, such as `c in subquery(another_query)`
@@ -584,31 +585,46 @@ defmodule Ecto.Query do
   ## Keywords examples
 
       from c in Comment,
-        join: p in Post, on: c.post_id == p.id,
+        join: p in Post, on: p.id == c.post_id,
         select: {p.title, c.text}
 
       from p in Post,
         left_join: c in assoc(p, :comments),
         select: {p, c}
 
-  Besides the join expressions above, it is also possible to interpolate
-  an Ecto query as the right side of `in`. For example, the first query
-  above can also be written as:
+  Keywords can also be given or interpolated as part of `on`:
+
+      from c in Comment,
+        join: p in Post, on: [id: c.post_id],
+        select: {p.title, c.text}
+
+  Any key in `on` will apply to the currently joined expression.
+
+  It is also possible to interpolate an Ecto query on the right side
+  of `in`. For example, the query above can also be written as:
 
       posts = Post
       from c in Comment,
-        join: p in ^posts, on: c.post_id == p.id,
+        join: p in ^posts, on: [id: c.post_id],
         select: {p.title, c.text}
 
-  The above is specially useful if you want to filter the kind of posts
-  that will be joined on:
+  The above is specially useful to dynamically join on existing
+  queries, for example, choosing between public posts or posts
+  that have been recently published:
 
-      public_posts = from p in Post, where: [public: true]
+      posts =
+        if params["drafts"] do
+          from p in Post, where: [drafts: true]
+        else
+          from p in Post, where: [public: true]
+        end
+
       from c in Comment,
-        join: p in ^posts, on: c.post_id == p.id,
+        join: p in ^posts, on: [id: c.post_id],
         select: {p.title, c.text}
 
-  Only simple queries with `where` expressions can be interpolated.
+  Only simple queries with `where` expressions can be interpolated
+  in join.
 
   ## Expressions examples
 

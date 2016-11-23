@@ -65,18 +65,52 @@ Example:
 Ecto 2.0 introduced subqueries and Ecto 2.1 brings the ability to use maps to name the expressions selected in a subquery, allowing developers to return tables with conflicting fields or with any other complex expression such as fragments or aggregates:
 
     posts_with_private = from p in Post, select: %{title: p.title, public: not p.private}
-    from p in subquery(posts_with_private), where: ..., select: p
+    from p in subquery(posts_with_private), where: p.public, select: p
 
 ### `or_where` and `or_having`
 
-Ecto 2.1 adds `or_where` and `or_having` that allows developers to add new query filters using `OR` when combining with previous filters.
+Ecto 2.1 adds `or_where` and `or_having` that allows developers to add new query filters that combine with the previous expression using `OR`s.
 
     from(c in City, where: [state: "Sweden"], or_where: [state: "Brazil"])
 
-It is also possible to interpolate the whole keyword list to dynamically filter the source using OR filters:
+### Dynamic expressions
 
-    filters = [state: "Sweden", state: "Brazil"]
-    from(c in City, or_where: ^filters)
+Dynamic query expressions allows developers to build queries expression bit by bit so they are later interpolated in a query.
+
+For example, imagine you have a set of conditions you want to build your query on:
+
+    dynamic = false
+
+    dynamic =
+      if params["is_public"] do
+        dynamic([p], p.is_public or ^dynamic)
+      else
+        dynamic
+      end
+
+    dynamic =
+      if params["allow_reviewers"] do
+        dynamic([p, a], a.reviewer == true or ^dynamic)
+      else
+        dynamic
+      end
+
+    from query, where: ^dynamic
+
+In the example above, we were able to build the query expressions bit by bit, using different bindings, and later interpolate it all at once inside the query.
+
+A dynamic expression can always be interpolated inside another dynamic expression or at the root of a `where`, `having`, `update` or a `join`'s `on`.
+
+## v2.1.0-rc.5
+
+### Enhancements
+
+  * Support dynamic query building with `Ecto.Query.dynamic/2`
+  * Support interpolating keyword lists inside a `join`'s on
+
+### Backwards incompatible changes
+
+  * Interpolated keyword lists in `or_where` and `or_having` are now joined with `AND` to keep the exact same behaviour as `where` and `having`. In other words, the only difference between `where` and `or_where` is that `or_where` merges into previous expressions using `OR`
 
 ## v2.1.0-rc.4 (2016-11-16)
 

@@ -517,11 +517,11 @@ defmodule Ecto.Query.Planner do
 
   defp cast_param(_kind, query, expr, %DynamicExpr{}, _type, _value) do
     error! query, expr, "dynamic expressions can only be interpolated inside other " <>
-                        "dynamic expressions or at the top level of where/having/update expressions"
+                        "dynamic expressions or at the top level of where, having, update or a join's on"
   end
   defp cast_param(_kind, query, expr, [{_, _} | _], _type, _value) do
     error! query, expr, "keyword lists can only be interpolated at the top level of " <>
-                        "where/having/distinct/order_by/update expressions"
+                        "where, having, distinct, order_by, update or a join's on"
   end
   defp cast_param(kind, query, expr, v, type, adapter) do
     type = type!(kind, query, expr, type)

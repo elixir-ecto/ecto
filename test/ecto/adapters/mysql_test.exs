@@ -282,8 +282,8 @@ defmodule Ecto.Adapters.MySQLTest do
   test "interpolated values" do
     query = Schema
             |> select([m], {m.id, ^0})
-            |> join(:inner, [], Schema2, ^true)
-            |> join(:inner, [], Schema2, ^false)
+            |> join(:inner, [], Schema2, fragment("?", ^true))
+            |> join(:inner, [], Schema2, fragment("?", ^false))
             |> where([], fragment("?", ^true))
             |> where([], fragment("?", ^false))
             |> having([], fragment("?", ^true))
