@@ -6,7 +6,7 @@ alias Ecto.Query.{DynamicExpr, JoinExpr}
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
     {expr, _, _, _} =
-      Ecto.Query.Builder.Dynamic.expand(%Ecto.Query{joins: Enum.drop(binding, 1)}, dynamic)
+      Ecto.Query.Builder.Dynamic.fully_expand(%Ecto.Query{joins: Enum.drop(binding, 1)}, dynamic)
 
     names = for {name, _, _} <- binding, do: Atom.to_string(name)
     args  = [Macro.to_string(binding),

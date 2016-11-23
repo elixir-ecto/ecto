@@ -13,7 +13,7 @@ defmodule Ecto.Query.Builder.Update do
       {[], [], %{}}
 
       iex> escape([set: []], [], __ENV__)
-      {[set: []], [], %{}}
+      {[], [], %{}}
 
       iex> escape(quote(do: ^[set: []]), [], __ENV__)
       {[], [set: []], %{}}
@@ -22,7 +22,7 @@ defmodule Ecto.Query.Builder.Update do
       {[], [set: [foo: 1]], %{}}
 
       iex> escape(quote(do: [set: [foo: ^1]]), [], __ENV__)
-      {[set: [foo: {:{}, [], [:^, [], [0]]}]], [], %{0 => {1, {0, :foo}}}}
+      {[], [set: [foo: 1]], %{}}
 
   """
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, Macro.t, %{}}
@@ -40,8 +40,10 @@ defmodule Ecto.Query.Builder.Update do
 
   defp escape_op([{k, v}|t], compile, runtime, params, vars, env) when is_atom(k) and is_list(v) do
     validate_key!(k)
-    {v, params} = escape_field(k, v, params, vars, env)
-    escape_op(t, [{k, v}|compile], runtime, params, vars, env)
+    {compile_values, runtime_values, params} = escape_field(k, v, params, vars, env)
+    compile = if compile_values == [], do: compile, else: [{k, compile_values} | compile]
+    runtime = if runtime_values == [], do: runtime, else: [{k, runtime_values} | runtime]
+    escape_op(t, compile, runtime, params, vars, env)
   end
 
   defp escape_op([{k, {:^, _, [v]}}|t], compile, runtime, params, vars, env) when is_atom(k) do
@@ -58,10 +60,12 @@ defmodule Ecto.Query.Builder.Update do
   end
 
   defp escape_field(key, kw, params, vars, env) do
-    Enum.map_reduce kw, params, fn
-      {k, v}, acc when is_atom(k) ->
-        {v, params} = Builder.escape(v, type_for_key(key, {0, k}), acc, vars, env)
-        {{k, v}, params}
+    Enum.reduce kw, {[], [], params}, fn
+      {k, {:^, _, [v]}}, {compile, runtime, params} when is_atom(k) ->
+        {compile, [{k, v} | runtime], params}
+      {k, v}, {compile, runtime, params} when is_atom(k) ->
+        {v, params} = Builder.escape(v, type_for_key(key, {0, k}), params, vars, env)
+        {[{k, v} | compile], runtime, params}
       _, _acc ->
         Builder.error! "malformed #{inspect key} in update `#{Macro.to_string(kw)}`, " <>
                        "expected a keyword list"
@@ -99,18 +103,14 @@ defmodule Ecto.Query.Builder.Update do
         Builder.apply_query(query, __MODULE__, [update], env)
       end
 
-    query =
-      if runtime == [] do
-        query
-      else
-        update = quote do
-          Ecto.Query.Builder.Update.runtime(unquote(runtime), unquote(env.line), unquote(env.file))
-        end
-
-        Builder.apply_query(query, __MODULE__, [update], env)
+    if runtime == [] do
+      query
+    else
+      quote do
+        Ecto.Query.Builder.Update.update!(unquote(query), unquote(runtime),
+                                          unquote(env.file), unquote(env.line))
       end
-
-    query
+    end
   end
 
   @doc """
@@ -129,35 +129,38 @@ defmodule Ecto.Query.Builder.Update do
   we need to handle them at runtime. We do such in
   this callback.
   """
-  @spec runtime(term, line :: integer, file :: binary) :: Ecto.Query.t
-  def runtime(runtime, line, file) when is_list(runtime) do
+  def update!(query, runtime, file, line) when is_list(runtime) do
     {runtime, {params, _count}} =
       Enum.map_reduce runtime, {[], 0}, fn
         {k, v}, acc when is_atom(k) and is_list(v) ->
           validate_key!(k)
-          {v, params} = runtime_field(k, v, acc)
+          {v, params} = runtime_field!(query, k, v, acc)
           {{k, v}, params}
-        _, _acc ->
-          runtime_error! runtime
+        _, _ ->
+          runtime_error!(runtime)
       end
 
-    %Ecto.Query.QueryExpr{expr: runtime, params: Enum.reverse(params),
-                          file: file, line: line}
+    expr = %Ecto.Query.QueryExpr{expr: runtime, params: Enum.reverse(params),
+                                 file: file, line: line}
+
+    apply(query, expr)
   end
 
-  def runtime(runtime, _line, _file) do
+  def update!(_query, runtime, _file, _line) do
     runtime_error!(runtime)
   end
 
-  defp runtime_field(key, kw, acc) do
+  defp runtime_field!(query, key, kw, acc) do
     Enum.map_reduce kw, acc, fn
+      {k, %Ecto.Query.DynamicExpr{} = v}, {params, _count} when is_atom(k) ->
+        {v, params} = Ecto.Query.Builder.Dynamic.partially_expand(query, v, params)
+        {{k, v}, {params, length(params)}}
       {k, v}, {params, count} when is_atom(k) ->
-        params = [{v, type_for_key(key, {0, k})}|params]
+        params = [{v, type_for_key(key, {0, k})} | params]
         {{k, {:^, [], [count]}}, {params, count + 1}}
       _, _acc ->
-        raise ArgumentError,
-          "malformed #{inspect key} in update `#{inspect(kw)}`, " <>
-          "expected a keyword list"
+        raise ArgumentError, "malformed #{inspect key} in update `#{inspect(kw)}`, " <>
+                             "expected a keyword list"
     end
   end
 
@@ -168,9 +171,7 @@ defmodule Ecto.Query.Builder.Update do
   end
 
   defp validate_key!(key) when key in @keys, do: :ok
-  defp validate_key!(key) do
-    Builder.error! "unknown key `#{inspect(key)}` in update"
-  end
+  defp validate_key!(key), do: Builder.error! "unknown key `#{inspect(key)}` in update"
 
   # Out means the given type must be taken out of an array
   # It is the opposite of "left in right" in the query API.

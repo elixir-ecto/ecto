@@ -28,12 +28,19 @@ defmodule Ecto.Query.Builder.Dynamic do
   @doc """
   Expands a dynamic expression for insertion into the given query.
   """
-  def expand(query, %{file: file, line: line} = dynamic) do
-    {expr, params} = expand(query, dynamic, [])
+  def fully_expand(query, %{file: file, line: line} = dynamic) do
+    {expr, params} = partially_expand(query, dynamic, [])
     {expr, Enum.reverse(params), file, line}
   end
 
-  defp expand(query, %{fun: fun}, params) do
+  @doc """
+  Expands a dynamic expression as part of an existing expression.
+
+  Any dynamic expression parameter is prepended and the parameters
+  list is not reversed. This is useful when the dynamic expression
+  is given in the middle of an expression.
+  """
+  def partially_expand(query, %{fun: fun}, params) do
     {dynamic_expr, dynamic_params} =
       fun.(query)
 
@@ -44,7 +51,7 @@ defmodule Ecto.Query.Builder.Dynamic do
       {:^, meta, [ix]}, acc ->
         cond do
           dynamic = dynamic[ix] ->
-            expand(query, dynamic, acc)
+            partially_expand(query, dynamic, acc)
           rewrite = rewrite[ix] ->
             {{:^, meta, [rewrite]}, acc}
         end

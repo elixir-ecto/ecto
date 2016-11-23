@@ -93,7 +93,7 @@ defmodule Ecto.Query.Builder.Filter do
     boolean_expr =
       case expr do
         %Ecto.Query.DynamicExpr{} ->
-          {expr, params, file, line} = Ecto.Query.Builder.Dynamic.expand(query, expr)
+          {expr, params, file, line} = Ecto.Query.Builder.Dynamic.fully_expand(query, expr)
           %Ecto.Query.BooleanExpr{expr: expr, params: params, line: line, file: file, op: op}
         kw when is_list(kw) ->
           {expr, params} = kw!(kind, expr)
