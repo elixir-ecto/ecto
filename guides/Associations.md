@@ -200,9 +200,62 @@ iex(9)> Repo.all(User) |> Repo.preload(:avatar)
 ### Prep
 Let's assume we have two schemas: `User` and `Post`.
 
-The schemas and their migration look like this:
+The schamas and corresponding migrations look like this:
+```elixir
+# lib/ecto_assoc/user.ex
+defmodule EctoAssoc.User do
+  use Ecto.Schema
 
-TODO add listing
+  schema "users" do
+    field :name, :string
+    field :email, :string
+  end
+end
+```
+
+```elixir
+# create a migration: mix ecto.gen.migration create_user
+# priv/repo/migrations/*_create_user.exs
+defmodule EctoAssoc.Repo.Migrations.CreateUser do
+  use Ecto.Migration
+
+  def change do
+    create table(:users) do
+      add :name, :string
+      add :email, :string
+    end
+  end
+end
+```
+
+```elixir
+# lib/ecto_assoc/post.ex
+defmodule EctoAssoc.Post do
+  use Ecto.Schema
+
+  schema "posts" do
+    field :header, :string
+    field :body, :string
+  end
+end
+
+```
+
+```elixir
+# create a migration: mix ecto.gen.migration create_post
+# priv/repo/migrations/*_create_post.exs
+defmodule EctoAssoc.Repo.Migrations.CreatePost do
+  use Ecto.Migration
+
+  def change do
+    create table(:posts) do
+      add :header, :string
+      add :body, :string
+    end
+  end
+end
+```
+
 
 ### Adding Associations
 Now we want to associate the user with the post and vice versa:
