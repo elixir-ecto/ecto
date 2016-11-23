@@ -41,8 +41,10 @@ defmodule Ecto.Query.Builder.Update do
   defp escape_op([{k, v}|t], compile, runtime, params, vars, env) when is_atom(k) and is_list(v) do
     validate_key!(k)
     {compile_values, runtime_values, params} = escape_field(k, v, params, vars, env)
-    compile = if compile_values == [], do: compile, else: [{k, compile_values} | compile]
-    runtime = if runtime_values == [], do: runtime, else: [{k, runtime_values} | runtime]
+    compile =
+      if compile_values == [], do: compile, else: [{k, Enum.reverse(compile_values)} | compile]
+    runtime =
+      if runtime_values == [], do: runtime, else: [{k, Enum.reverse(runtime_values)} | runtime]
     escape_op(t, compile, runtime, params, vars, env)
   end
 

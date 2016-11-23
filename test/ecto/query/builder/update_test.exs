@@ -78,8 +78,9 @@ defmodule Ecto.Query.Builder.UpdateTest do
       dynamic = dynamic([p], ^false and ^true)
 
       %{updates: [update]} = update("foo", [_], set: [foo: ^1, bar: ^dynamic, baz: ^2])
-      assert Macro.to_string(update.expr) == "[set: [baz: ^0, bar: ^1 and ^2, foo: ^3]]"
-      assert update.params == [{2, {0, :baz}}, {false, :boolean}, {true, :boolean}, {1, {0, :foo}}]
+      assert Macro.to_string(update.expr) == "[set: [foo: ^0, bar: ^1 and ^2, baz: ^3]]"
+      assert update.params == [{1, {0, :foo}}, {false, :boolean},
+                               {true, :boolean}, {2, {0, :baz}}]
     end
 
     test "raises on malformed updates" do
