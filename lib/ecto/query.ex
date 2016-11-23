@@ -364,12 +364,14 @@ defmodule Ecto.Query do
   at once inside the query.
 
   A dynamic expression can always be interpolated inside another dynamic
-  expression however it can only be interpolated at the root of queries.
-  For example, the following is forbidden:
+  expression or at the root of a `where`, `having` or `update`.
+
+  For example, the following is forbidden because it is not at the
+  root of a `where`:
 
       from q in query, where: q.some_condition and ^dynamic
 
-  That's easily solvable, however, by simply rewriting it to:
+  Fortunately that's easily solvable by simply rewriting it to:
 
       dynamic = dynamic([q], q.some_condition and ^dynamic)
       from query, where: ^dynamic

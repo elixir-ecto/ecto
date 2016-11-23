@@ -24,11 +24,6 @@ defmodule Ecto.Query.Builder.Select do
 
   """
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {%{}, %{}}}
-  def escape({:^, _, [interpolated]}, _vars, _env) do
-    fields = quote(do: Ecto.Query.Builder.Select.fields!(:select, unquote(interpolated)))
-    {{:{}, [], [:&, [], [0]]}, {%{}, %{0 => {:any, fields}}}}
-  end
-
   def escape(other, vars, env) do
     if take?(other) do
       {{:{}, [], [:&, [], [0]]}, {%{}, %{0 => {:any, other}}}}
@@ -138,6 +133,15 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   @doc """
+  Called at runtime for interpolated/dynamic selects.
+  """
+  def select!(query, fields, file, line) do
+    take = %{0 => {:any, fields!(:select, fields)}}
+    expr = %Ecto.Query.SelectExpr{expr: {:&, [], [0]}, take: take, file: file, line: line}
+    apply(query, expr)
+  end
+
+  @doc """
   Builds a quoted expression.
 
   The quoted expression should evaluate to a query at runtime.
@@ -145,6 +149,14 @@ defmodule Ecto.Query.Builder.Select do
   runtime work.
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
+
+  def build(query, _binding, {:^, _, [var]}, env) do
+    quote do
+      Ecto.Query.Builder.Select.select!(unquote(query), unquote(var),
+                                        unquote(env.file), unquote(env.line))
+    end
+  end
+
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding)
     {expr, {params, take}} = escape(expr, binding, env)

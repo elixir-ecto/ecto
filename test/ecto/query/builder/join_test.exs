@@ -6,32 +6,19 @@ defmodule Ecto.Query.Builder.JoinTest do
 
   import Ecto.Query
 
-  test "invalid joins" do
-    assert_raise ArgumentError,
-                 ~r/invalid join qualifier `:whatever`/, fn ->
-      qual = :whatever
-      join("posts", qual, [p], c in "comments", true)
-    end
-
-    assert_raise Protocol.UndefinedError, fn ->
-      source = 123
-      join("posts", :left, [p], c in ^source, true)
-    end
-  end
-
   defmacro join_macro(left, right) do
     quote do
       fragment("? <> ?", unquote(left), unquote(right))
     end
   end
 
-  test "join with macros" do
+  test "expands macros as sources" do
     left = "left"
     right = "right"
     assert %{joins: [_]} = join("posts", :inner, [p], c in join_macro(^left, ^right), true)
   end
 
-  test "join interpolation" do
+  test "accepts queries on interpolation" do
     qual = :left
     source = "comments"
     assert %{joins: [%{source: {"comments", nil}}]} =
@@ -46,16 +33,37 @@ defmodule Ecto.Query.Builder.JoinTest do
     source = {"user_comments", Comment}
     assert %{joins: [%{source: {"user_comments", Comment}}]} =
             join("posts", qual, [p], c in ^source, true)
+
+    qual = :inner
+    source = from c in "comments", where: c.public
+    assert %{joins: [%{source: %Ecto.Query{from: {"comments", nil}}}]} =
+            join("posts", qual, [p], c in ^source, true)
   end
 
-  test "invalid assoc/2 field" do
-    assert_raise Ecto.Query.CompileError,
-    ~r/you passed the variable \`field_var\` to \`assoc\/2\`/, fn ->
-      escape({:assoc, nil, [{:join_var, nil, nil}, {:field_var, nil, nil}]}, nil, nil)
+  test "accepts interpolation on assoc/2 field" do
+    assoc = :comments
+    join("posts", :left, [p], c in assoc(p, ^assoc), true)
+  end
+
+  test "raises on invalid qualifier" do
+    assert_raise ArgumentError,
+                 ~r/invalid join qualifier `:whatever`/, fn ->
+      qual = :whatever
+      join("posts", qual, [p], c in "comments", true)
     end
   end
 
-  test "interpolated values are ok for assoc/2 field" do
-    escape({:assoc, nil, [{:join_var, nil, :context}, {:^, nil, [:interpolated_value]}]}, [join_var: true], nil)
+  test "raises on invalid interpolation" do
+    assert_raise Protocol.UndefinedError, fn ->
+      source = 123
+      join("posts", :left, [p], c in ^source, true)
+    end
+  end
+
+  test "raises on invalid assoc/2" do
+    assert_raise Ecto.Query.CompileError,
+                 ~r/you passed the variable \`field_var\` to \`assoc\/2\`/, fn ->
+      escape(quote do assoc(join_var, field_var) end, nil, nil)
+    end
   end
 end

@@ -9,7 +9,7 @@ defmodule Ecto.Query.Builder.PreloadTest do
   import Ecto.Query
   import Support.EvalHelpers
 
-  test "invalid preload" do
+  test "raises on invalid preloads" do
     assert_raise Ecto.Query.CompileError, ~r"`1` is not a valid preload expression", fn ->
       quote_and_eval(%Ecto.Query{} |> preload(1))
     end
@@ -21,12 +21,12 @@ defmodule Ecto.Query.Builder.PreloadTest do
     end
   end
 
-  test "preload accumulates" do
+  test "accumulates on multiple calls" do
     query = %Ecto.Query{} |> preload(:foo) |> preload(:bar)
     assert query.preloads == [:foo, :bar]
   end
 
-  test "preload interpolation" do
+  test "supports interpolation" do
     comments = :comments
     assert preload("posts", ^comments).preloads == [:comments]
     assert preload("posts", ^[comments]).preloads == [[:comments]]
