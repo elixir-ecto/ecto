@@ -90,13 +90,14 @@ defmodule Ecto.Repo.Supervisor do
   ## Callbacks
 
   def init({repo, _otp_app, adapter, opts}) do
+    if Keyword.get(opts, :query_cache_owner, true) do
+      :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
+    end
+
     case adapter.child_spec(repo, opts) do
       nil ->
         :ok
       child_spec ->
-        if Keyword.get(opts, :query_cache_owner, true) do
-          :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
-        end
         supervise([child_spec], strategy: :one_for_one)
     end
   end
