@@ -79,11 +79,12 @@ defmodule Ecto.Query.Builder.OrderBy do
   @doc """
   Called at runtime to verify a field.
   """
-  def field!(_kind, field) when is_atom(field),
-    do: to_field(field)
+  def field!(_kind, field) when is_atom(field) do
+    to_field(field)
+  end
   def field!(kind, other) do
     raise ArgumentError,
-      "expected a field as an atom in `#{kind}`, got: `#{inspect other}`"
+      "expected a field as an atom, a list or keyword list in `#{kind}`, got: `#{inspect other}`"
   end
 
   @doc """
@@ -91,13 +92,10 @@ defmodule Ecto.Query.Builder.OrderBy do
   """
   def order_by!(kind, exprs) do
     Enum.map List.wrap(exprs), fn
-      {dir, field} when dir in [:asc, :desc] and is_atom(field) ->
-        {dir, to_field(field)}
-      field when is_atom(field) ->
-        {:asc, to_field(field)}
-      _ ->
-        raise ArgumentError,
-          "expected a list or keyword list of fields in `#{kind}`, got: `#{inspect exprs}`"
+      {dir, field} when dir in [:asc, :desc] ->
+        {dir, field!(kind, field)}
+      field ->
+        {:asc, field!(kind, field)}
     end
   end
 

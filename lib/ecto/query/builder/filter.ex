@@ -50,8 +50,8 @@ defmodule Ecto.Query.Builder.Filter do
   @spec build(:where | :having, :and | :or, Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(kind, op, query, _binding, {:^, _, [var]}, env) do
     quote do
-      Ecto.Query.Builder.Filter.runtime!(unquote(kind), unquote(op), unquote(query),
-                                         unquote(var), unquote(env.file), unquote(env.line))
+      Ecto.Query.Builder.Filter.filter!(unquote(kind), unquote(op), unquote(query),
+                                        unquote(var), unquote(env.file), unquote(env.line))
     end
   end
 
@@ -89,7 +89,7 @@ defmodule Ecto.Query.Builder.Filter do
   @doc """
   Runtime callback for filters.
   """
-  def runtime!(kind, op, query, expr, file, line) do
+  def filter!(kind, op, query, expr, file, line) do
     boolean_expr =
       case expr do
         %Ecto.Query.DynamicExpr{} ->

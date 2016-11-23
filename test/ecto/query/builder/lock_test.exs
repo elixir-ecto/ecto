@@ -9,7 +9,7 @@ defmodule Ecto.Query.Builder.LockTest do
   import Ecto.Query
   import Support.EvalHelpers
 
-  test "invalid lock" do
+  test "raises on invalid lock" do
     assert_raise Ecto.Query.CompileError, ~r"`1` is not a valid lock", fn ->
       quote_and_eval(%Ecto.Query{} |> lock(1))
     end
