@@ -27,14 +27,14 @@ mix ecto.create
 
 This should work
 ```
-➤ iex -S mix
+$ iex -S mix
 ```
 
 ## One-to-one
 ### Prep
 Let's assume we have two schemas: User and Avatar.
 
-This is what the migrations and their corresponding schemas look like
+The schamas and corresponding migrations look like this:
 ```elixir
 # create a migration: mix ecto.gen.migration create_user
 # priv/repo/migrations/*_create_user.exs
@@ -107,42 +107,42 @@ defmodule EctoAssoc.Repo.Migrations.AvatarBelongsToUser do
   end
 end
 ```
-
 This adds a `user_id` column to the DB which refecences an entry in the users table.
 
-For the *avatar* we add a belongs_to field to the schema
+For the *avatar* we add a `belongs_to` field to the schema
+```elixir
+defmodule EctoAssoc.Avatar do
+  schema "avatars" do
+    field :nick_name, :string
+    field :pic_url, :string
+    belongs_to :user, EctoAssoc.User  # this was added
+  end
+end
 ```
-|  defmodule EctoAssoc.Avatar do
-|    schema "avatars" do
-|      field :nick_name, :string
-|      field :pic_url, :string
-| +    belongs_to :user, EctoAssoc.User
-|    end
-|  end
-```
-`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the avatar, i.e., you can access the user via =avatar.user=.
+`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the avatar, i.e., you can access the user via `avatar.user`.
 
 For the *user* we add a `has_one` field to the schema
-```
-| # lib/ecto_assoc/user.ex
-|  defmodule EctoAssoc.User do
-|    schema "users" do
-|      field :name, :string
-|      field :email, :string
-| +    has_one :avatar, EctoAssoc.Avatar
-|    end
-|  end
+```elixir
+# lib/ecto_assoc/user.ex
+defmodule EctoAssoc.User do
+  schema "users" do
+    field :name, :string
+    field :email, :string
+    has_one :avatar, EctoAssoc.Avatar  # this was added
+  end
+end
 ```
 `has_one` does not add anything to the DB.
-The foreign key of the associated schema, Avatar, is used to make the avatar available from the user, i.e., you can access the avatar via =user.avatar=.
+The foreign key of the associated schema, `Avatar`, is used to make the avatar available from the user, i.e., you can access the avatar via `user.avatar`.
 
 ### Persistence
-Now let's data in the DB.
+Now let's add data to the DB.
 Start iex:
 ```
 $ iex -S mix
 ```
 
+For convenience we alias some modules:
 ```elixir
 iex(1)> alias EctoAssoc.Repo
 EctoAssoc.Repo
@@ -220,7 +220,7 @@ For the *user* we
 
 TODO add listing
 
-### Persistence and Changesets
+### Persistence
 ```elixir
 iex(1)> alias EctoAssoc.Repo
 EctoAssoc.Repo
@@ -333,7 +333,7 @@ For the *tag* we
 
 TODO add listing
 
-### Persistence and Changesets
+### Persistence
 Let's create some tags
 #+BEGIN_SRC iex
 iex(14)> clickbait_tag = %Tag{} |> Ecto.Changeset.cast(%{name: "clickbait"}, [:name]) |> Repo.insert!()
