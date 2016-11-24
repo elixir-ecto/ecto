@@ -70,8 +70,8 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:fragment, [], [expr]]}, params}
   end
 
-  def escape({:fragment, _, [query|frags]}, _type, params, vars, env) when is_binary(query) do
-    pieces = split_binary(query)
+  def escape({:fragment, _, [query|frags]}, _type, params, vars, env) do
+    pieces = split_binary(query, env)
 
     if length(pieces) != length(frags) + 1 do
       error! "fragment(...) expects extra arguments in the same amount of question marks in string"
@@ -79,11 +79,6 @@ defmodule Ecto.Query.Builder do
 
     {frags, params} = Enum.map_reduce(frags, params, &escape(&1, :any, &2, vars, env))
     {{:{}, [], [:fragment, [], merge_fragments(pieces, frags)]}, params}
-  end
-
-  def escape({:fragment, _, [query | _]}, _type, _params, _vars, _env) do
-    error! "fragment(...) expects the first argument to be a string for SQL fragments, " <>
-           "a keyword list, or an interpolated value, got: `#{Macro.to_string(query)}`"
   end
 
   # interval
@@ -255,11 +250,24 @@ defmodule Ecto.Query.Builder do
     params
   end
 
-  defp split_binary(query), do: split_binary(query, "")
-  defp split_binary(<<>>, consumed), do: [consumed]
-  defp split_binary(<<??, rest :: binary >>, consumed), do: [consumed | split_binary(rest, "")]
-  defp split_binary(<<?\\, ??, rest :: binary >>, consumed), do: split_binary(rest, consumed <> <<??>>)
-  defp split_binary(<<first :: utf8, rest :: binary>>, consumed), do: split_binary(rest, consumed <> <<first>>)
+  defp split_binary(query, env) do
+    case Macro.expand(query, env) do
+      binary when is_binary(binary) ->
+        do_split_binary(binary, "")
+      _ ->
+        error! "fragment(...) expects the first argument to be a string for SQL fragments, " <>
+               "a keyword list, or an interpolated value, got: `#{Macro.to_string(query)}`"
+    end
+  end
+
+  defp do_split_binary(<<>>, consumed),
+    do: [consumed]
+  defp do_split_binary(<<??, rest :: binary >>, consumed),
+    do: [consumed | do_split_binary(rest, "")]
+  defp do_split_binary(<<?\\, ??, rest :: binary >>, consumed),
+    do: do_split_binary(rest, consumed <> <<??>>)
+  defp do_split_binary(<<first :: utf8, rest :: binary>>, consumed),
+    do: do_split_binary(rest, consumed <> <<first>>)
 
   defp escape_call({name, _, args}, type, params, vars, env) do
     {args, params} = Enum.map_reduce(args, params, &escape(&1, type, &2, vars, env))
