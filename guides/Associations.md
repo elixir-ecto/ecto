@@ -1,32 +1,77 @@
 # Ecto Association Guide
-This guide assumes you wokred through the getting started guide and want to know more about associations.
+This guide assumes you worked through the "getting started" guide and want to learn more about associations.
 
-With Ecto (like every other DB layer) you can associate schemas with other shemas.
+With ecto (like every other DB layer) you can associate schemas with other schemas.
 
-TODO explain a bit
-- one-to-one
-- one-to-many
-- many-to-many
+There are three kinds of associations
+- one-to-one,
+- one-to-many,and
+- many-to-many.
 
-This tutorial is going to walk you through the differen associations, how they work in ecto, TODO
+In this tutorial we're going to create a minimal ecto project
+(similar to the getting started guide),
+then we're going to create basic schemas and migrations,
+and finally associate the schemas.
 
 
 ## Ecto Setup
-TODO first steps of the getting started guide
+First, we're going to create a basic ecto project which is going to be used for
+the rest of the tutorial.
+Note, the steps are taken from the getting started guide.
+You can also clone the project from TODO.
 
+Let's create a new project.
 ```
-➤ mix new ecto_assoc --sup
+$ mix new ecto_assoc --sup
 ```
 
-add dependencies
+Add `ecto` and `postgrex` as dependencies to `mix.exs` and add them to our
+application:
+```
+# mix.exs
+# ...
+def application do
+  [applications: [:logger, :ecto, :postgrex],
+   mod: {EctoAssoc, []}]
+end
 
+defp deps do
+  [{:ecto, "~> 2.0"},
+   {:postgrex, "~> 0.11"}]
+end
+```
+
+Let's generate a repo and create the corresponding DB.
 ```
 mix ecto.gen.repo -r EctoAssoc.Repo
-mix ecto.create
 ```
 
-This should work
+Make sure the config for the repo is set properly:
 ```
+# config/config.exs
+config :ecto_assoc, EctoAssoc.Repo,
+  adapter: Ecto.Adapters.Postgres,
+  database: "ecto_assoc_repo",
+  username: "postgres",
+  password: "postgres",
+  hostname: "localhost"
+
+config :ecto_assoc, ecto_repos: [EctoAssoc.Repo]
+```
+
+Add the repo to the supervision tree:
+```elixir
+  def start(_type, _args) do
+    import Supervisor.Spec, warn: false
+    children = [
+      worker(EctoAssoc.Repo, [])
+    ]
+    ...
+```
+
+Finally let's create the DB:
+```
+$ mix ecto.create
 $ iex -S mix
 ```
 
@@ -34,7 +79,7 @@ $ iex -S mix
 ### Prep
 Let's assume we have two schemas: User and Avatar.
 
-The schamas and corresponding migrations look like this:
+The schemas and corresponding migrations look like this:
 ```elixir
 # create a migration: mix ecto.gen.migration create_user
 # priv/repo/migrations/*_create_user.exs
