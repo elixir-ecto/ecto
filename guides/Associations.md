@@ -27,7 +27,7 @@ $ mix new ecto_assoc --sup
 
 Add `ecto` and `postgrex` as dependencies to `mix.exs` and add them to our
 application:
-```
+```elixir
 # mix.exs
 # ...
 def application do
@@ -43,11 +43,11 @@ end
 
 Let's generate a repo and create the corresponding DB.
 ```
-mix ecto.gen.repo -r EctoAssoc.Repo
+$ mix ecto.gen.repo -r EctoAssoc.Repo
 ```
 
 Make sure the config for the repo is set properly:
-```
+```elixir
 # config/config.exs
 config :ecto_assoc, EctoAssoc.Repo,
   adapter: Ecto.Adapters.Postgres,
@@ -240,6 +240,7 @@ iex(9)> Repo.all(User) |> Repo.preload(:avatar)
    user: #Ecto.Association.NotLoaded<association :user is not loaded>,
    user_id: 4}, email: "jane@example.com", id: 4, name: "Jane Doe"}]
 ```
+
 
 ## Many-to-one
 ### Prep
