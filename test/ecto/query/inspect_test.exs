@@ -26,8 +26,8 @@ defmodule Ecto.Query.InspectTest do
     assert inspect(dynamic([p], p.foo == true)) ==
            "dynamic([p], p.foo == true)"
 
-    assert inspect(dynamic([p], p.foo == ^0)) ==
-           "dynamic([p], p.foo == ^0)"
+    assert inspect(dynamic([p], p.foo == ^"hello")) ==
+           "dynamic([p], p.foo == ^\"hello\")"
 
     assert inspect(dynamic([p, c], p.foo == c.bar)) ==
            "dynamic([p, c], p.foo == c.bar)"

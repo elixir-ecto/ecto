@@ -5,14 +5,14 @@ alias Ecto.Query.{DynamicExpr, JoinExpr}
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
-    {expr, _, _, _} =
+    {expr, params, _, _} =
       Ecto.Query.Builder.Dynamic.fully_expand(%Ecto.Query{joins: Enum.drop(binding, 1)}, dynamic)
+    names =
+      for {name, _, _} <- binding, do: Atom.to_string(name)
+    inspected =
+      Inspect.Ecto.Query.expr(expr, List.to_tuple(names), %{expr: expr, params: params})
 
-    names = for {name, _, _} <- binding, do: Atom.to_string(name)
-    args  = [Macro.to_string(binding),
-             Inspect.Ecto.Query.expr(expr, List.to_tuple(names), dynamic)]
-
-    surround_many("dynamic(", args, ")", opts, fn str, _ -> str end)
+    surround_many("dynamic(", [Macro.to_string(binding), inspected], ")", opts, fn str, _ -> str end)
   end
 end
 
