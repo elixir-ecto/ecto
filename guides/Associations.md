@@ -139,7 +139,7 @@ Now we want to associate the user with the avatar and vice versa:
 - one user has one avatar
 - one avatar belongs to one user
 
-For the *avatar* we create a migration that adds a `user_id` reference.
+For the *avatar* we create a migration that adds a `user_id` reference:
 ```elixir
 # priv/repo/migrations/20161117101812_avatar_belongs_to_user.exs
 defmodule EctoAssoc.Repo.Migrations.AvatarBelongsToUser do
@@ -154,7 +154,7 @@ end
 ```
 This adds a `user_id` column to the DB which refecences an entry in the users table.
 
-For the *avatar* we add a `belongs_to` field to the schema
+For the *avatar* we add a `belongs_to` field to the schema:
 ```elixir
 defmodule EctoAssoc.Avatar do
   schema "avatars" do
@@ -308,18 +308,58 @@ Now we want to associate the user with the post and vice versa:
 - one user has many post
 - one post belongs to one user
 
-For the *post* we
-- create a migration that adds the `user_id` reference
-- add a `belongs_to` field to the schema
+For the *post* we create a migration that adds a `user_id` reference:
+```elixir
+# mix ecto.gen.migration post_belongs_to_user
+# priv/repo/migrations/*_post_belongs_to_user.exs
+defmodule EctoAssoc.Repo.Migrations.PostBelongsToUser do
+  use Ecto.Migration
 
-TODO add listing
+  def change do
+    alter table(:posts) do
+      add :user_id, references(:users)
+    end
+  end
+end
+```
 
-For the *user* we
-- add a `has_many` field to the schema
+For the *post* we add a `belongs_to` field to the schema:
+```elixir
+defmodule EctoAssoc.Post do
+  use Ecto.Schema
 
-TODO add listing
+  schema "posts" do
+    field :header, :string
+    field :body, :string
+    belongs_to :user, EctoAssoc.User  # this was added
+  end
+end
+```
+`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the avatar, i.e., you can access the user via `avatar.user`.
+
+For the *user* we add a `has_many` field to the schema:
+```elixir
+defmodule EctoAssoc.User do
+  use Ecto.Schema
+
+  schema "users" do
+    field :name, :string
+    field :email, :string
+    has_many :posts, EctoAssoc.Post  # this was added
+  end
+end
+```
+`has_many` does not add anything to the DB.
+The foreign key of the associated schema, `Post`, is used to make the posts available from the user, i.e., you can access the posts via `user.posts`.
+
 
 ### Persistence
+Start iex:
+```
+$ iex -S mix
+```
+
+For convenience we alias some modules:
 ```elixir
 iex(1)> alias EctoAssoc.Repo
 EctoAssoc.Repo
@@ -331,66 +371,44 @@ iex(3)> alias EctoAssoc.Post
 EctoAssoc.Post
 ```
 
-```
+Let's create a User and store it in the DB:
+```elixir
 iex(6)> user_cs = %User{} |> Ecto.Changeset.cast(%{name: "John Doe", email: "johan@example.com"}, [:name, :email])
 #Ecto.Changeset<action: nil,
  changes: %{email: "johan@example.com", name: "John Doe"}, errors: [],
  data: #EctoAssoc.User<>, valid?: true>
 
 iex(7)> user = Repo.insert!(user_cs)
-14:33:35.513 [debug] QUERY OK db=0.3ms queue=0.1ms
-begin []
-14:33:35.534 [debug] QUERY OK db=4.6ms
-INSERT INTO "users" ("email","name") VALUES ($1,$2) RETURNING "id" ["johan@example.com", "John Doe"]
-14:33:35.535 [debug] QUERY OK db=1.2ms
-commit []
 %EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
  email: "johan@example.com", id: 1, name: "John Doe",
  posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}
 ```
 
-```
+Let's build an associated post and store it in the DB:
+```elixir
 iex(6)> post_cs = Ecto.build_assoc(user, :posts, %{header: "Clickbait header", body: "No real content"})
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:built, "posts">,
  body: "No real content", header: "Clickbait header", id: nil,
  user: #Ecto.Association.NotLoaded<association :user is not loaded>, user_id: 1}
 
 iex(7)> post = Repo.insert!(post_cs)
-14:54:28.193 [debug] QUERY OK db=0.3ms
-begin []
-14:54:28.197 [debug] QUERY OK db=2.9ms
-INSERT INTO "posts" ("body","header","user_id") VALUES ($1,$2,$3) RETURNING "id" ["No real content", "Clickbait header", 1]
-14:54:28.199 [debug] QUERY OK db=2.6ms
-commit []
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
  body: "No real content", header: "Clickbait header", id: 1,
  user: #Ecto.Association.NotLoaded<association :user is not loaded>, user_id: 1}
 ```
 
-Let's add another one.
-```
+Let's add another post to the user:
+```elixir
 iex(8)> post = Ecto.build_assoc(user, :posts, %{header: "5 ways to improve your Ecto", body: "TODO add url of this tutorial"}) |> Repo.insert!()
-14:56:45.571 [debug] QUERY OK db=0.4ms queue=0.1ms
-begin []
-14:56:45.573 [debug] QUERY OK db=2.2ms
-INSERT INTO "posts" ("body","header","user_id") VALUES ($1,$2,$3) RETURNING "id" ["TODO add url of this tutorial", "5 ways to improve your Ecto", 1]
-14:56:45.576 [debug] QUERY OK db=2.7ms
-commit []
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
  body: "TODO add url of this tutorial", header: "5 ways to improve your Ecto",
  id: 2, user: #Ecto.Association.NotLoaded<association :user is not loaded>,
  user_id: 1}
 ```
 
-Let's see if it worked
+Let's see if it worked:
 ```
 iex(11)> Repo.get(User, user.id) |> Repo.preload(:posts)
-
-14:58:17.170 [debug] QUERY OK source="users" db=2.0ms
-SELECT u0."id", u0."name", u0."email" FROM "users" AS u0 WHERE (u0."id" = $1) [1]
-
-14:58:17.173 [debug] QUERY OK source="posts" db=2.2ms queue=0.2ms
-SELECT p0."id", p0."header", p0."body", p0."user_id", p0."user_id" FROM "posts" AS p0 WHERE (p0."user_id" = $1) ORDER BY p0."user_id" [1]
 %EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
  email: "johan@example.com", id: 1, name: "John Doe",
  posts: [%EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
@@ -402,6 +420,9 @@ SELECT p0."id", p0."header", p0."body", p0."user_id", p0."user_id" FROM "posts" 
    id: 2, user: #Ecto.Association.NotLoaded<association :user is not loaded>,
    user_id: 1}]}
 ```
+
+TODO explain `build_assoc`
+
 
 ## Many-to-many
 ### Prep
