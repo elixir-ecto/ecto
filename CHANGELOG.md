@@ -123,6 +123,16 @@ Ecto now requires you to explicitly configure your repo's in your top level conf
 
 The configuration may be an empty list if it does not define any repo.
 
+## v2.0.6 (2016-11-24)
+
+### Enhancements
+
+  * [Ecto.Adapters.MySQL] Update mariaex dependency that supports the new DBConnection callbacks
+
+### Bug fixes
+
+  * [Ecto.Changeset] Ensure `validates_acceptance` works even when parameters are nil
+
 ## v2.0.5 (2016-09-07)
 
 ### Enhancements

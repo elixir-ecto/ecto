@@ -327,6 +327,14 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       do: proxy(:handle_execute_close, state, [query, params, maybe_savepoint(opts, state)])
     def handle_close(query, opts, state),
       do: proxy(:handle_close, state, [query, maybe_savepoint(opts, state)])
+    def handle_declare(query, params, opts, state),
+      do: proxy(:handle_declare, state, [query, params, maybe_savepoint(opts, state)])
+    def handle_first(query, cursor, opts, state),
+      do: proxy(:handle_first, state, [query, cursor, maybe_savepoint(opts, state)])
+    def handle_next(query, cursor, opts, state),
+      do: proxy(:handle_next, state, [query, cursor, maybe_savepoint(opts, state)])
+    def handle_deallocate(query, cursor, opts, state),
+      do: proxy(:handle_deallocate, state, [query, cursor, maybe_savepoint(opts, state)])
     def handle_info(msg, state),
       do: proxy(:handle_info, state, [msg])
 
