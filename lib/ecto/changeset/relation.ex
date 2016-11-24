@@ -19,8 +19,10 @@ defmodule Ecto.Changeset.Relation do
   @doc """
   Returns empty container for relation.
   """
-  def empty(%{cardinality: :one}), do: nil
-  def empty(%{cardinality: :many}), do: []
+  def empty(%{cardinality: cardinality}), do: cardinality_to_empty(cardinality)
+
+  defp cardinality_to_empty(:one), do: nil
+  defp cardinality_to_empty(:many), do: []
 
   @doc """
   Checks if the container can be considered empty.
@@ -57,7 +59,7 @@ defmodule Ecto.Changeset.Relation do
   Loading will fail if the association is not loaded but the struct is.
   """
   def load!(%{__meta__: %{state: :built}}, %NotLoaded{__cardinality__: cardinality}) do
-    do_empty(cardinality)
+    cardinality_to_empty(cardinality)
   end
 
   def load!(struct, %NotLoaded{__field__: field}) do
