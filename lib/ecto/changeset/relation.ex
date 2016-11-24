@@ -19,10 +19,8 @@ defmodule Ecto.Changeset.Relation do
   @doc """
   Returns empty container for relation.
   """
-  def empty(%{cardinality: cardinality}), do: do_empty(cardinality)
-
-  defp do_empty(:one), do: nil
-  defp do_empty(:many), do: []
+  def empty(%{cardinality: :one}), do: nil
+  def empty(%{cardinality: :many}), do: []
 
   @doc """
   Checks if the container can be considered empty.

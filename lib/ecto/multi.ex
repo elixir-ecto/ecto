@@ -136,7 +136,7 @@ defmodule Ecto.Multi do
   """
   @spec append(t, t) :: t
   def append(lhs, rhs) do
-    do_merge(lhs, rhs, &(&2 ++ &1))
+    merge_structs(lhs, rhs, &(&2 ++ &1))
   end
 
   @doc """
@@ -154,10 +154,10 @@ defmodule Ecto.Multi do
   """
   @spec prepend(t, t) :: t
   def prepend(lhs, rhs) do
-    do_merge(lhs, rhs, &(&1 ++ &2))
+    merge_structs(lhs, rhs, &(&1 ++ &2))
   end
 
-  defp do_merge(%Multi{} = lhs, %Multi{} = rhs, joiner) do
+  defp merge_structs(%Multi{} = lhs, %Multi{} = rhs, joiner) do
     %{names: lhs_names, operations: lhs_ops} = lhs
     %{names: rhs_names, operations: rhs_ops} = rhs
     case MapSet.intersection(lhs_names, rhs_names) |> MapSet.to_list do

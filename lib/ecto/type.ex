@@ -635,32 +635,32 @@ defmodule Ecto.Type do
     if of_base_type?(type, value) do
       {:ok, value}
     else
-      do_adapter_load(adapter.loaders(type(type), type), {:ok, value}, adapter)
+      process_loaders(adapter.loaders(type(type), type), {:ok, value}, adapter)
     end
   end
 
-  defp do_adapter_load(_, :error, _adapter),
+  defp process_loaders(_, :error, _adapter),
     do: :error
-  defp do_adapter_load([fun|t], {:ok, value}, adapter) when is_function(fun),
-    do: do_adapter_load(t, fun.(value), adapter)
-  defp do_adapter_load([type|t], {:ok, value}, adapter),
-    do: do_adapter_load(t, load(type, value, &adapter_load(adapter, &1, &2)), adapter)
-  defp do_adapter_load([], {:ok, _} = acc, _adapter),
+  defp process_loaders([fun|t], {:ok, value}, adapter) when is_function(fun),
+    do: process_loaders(t, fun.(value), adapter)
+  defp process_loaders([type|t], {:ok, value}, adapter),
+    do: process_loaders(t, load(type, value, &adapter_load(adapter, &1, &2)), adapter)
+  defp process_loaders([], {:ok, _} = acc, _adapter),
     do: acc
 
   @doc false
   def adapter_dump(_adapter, type, nil),
     do: dump(type, nil)
   def adapter_dump(adapter, type, value),
-    do: do_adapter_dump(adapter.dumpers(type(type), type), {:ok, value}, adapter)
+    do: process_dumpers(adapter.dumpers(type(type), type), {:ok, value}, adapter)
 
-  defp do_adapter_dump(_, :error, _adapter),
+  defp process_dumpers(_, :error, _adapter),
     do: :error
-  defp do_adapter_dump([fun|t], {:ok, value}, adapter) when is_function(fun),
-    do: do_adapter_dump(t, fun.(value), adapter)
-  defp do_adapter_dump([type|t], {:ok, value}, adapter),
-    do: do_adapter_dump(t, dump(type, value, &adapter_dump(adapter, &1, &2)), adapter)
-  defp do_adapter_dump([], {:ok, _} = acc, _adapter),
+  defp process_dumpers([fun|t], {:ok, value}, adapter) when is_function(fun),
+    do: process_dumpers(t, fun.(value), adapter)
+  defp process_dumpers([type|t], {:ok, value}, adapter),
+    do: process_dumpers(t, dump(type, value, &adapter_dump(adapter, &1, &2)), adapter)
+  defp process_dumpers([], {:ok, _} = acc, _adapter),
     do: acc
 
   ## Date

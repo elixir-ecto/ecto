@@ -71,7 +71,7 @@ defmodule Ecto.Query.Builder do
   end
 
   def escape({:fragment, _, [query|frags]}, _type, params, vars, env) do
-    pieces = split_binary(query, env)
+    pieces = expand_and_split_binary(query, env)
 
     if length(pieces) != length(frags) + 1 do
       error! "fragment(...) expects extra arguments in the same amount of question marks in string"
@@ -250,24 +250,24 @@ defmodule Ecto.Query.Builder do
     params
   end
 
-  defp split_binary(query, env) do
+  defp expand_and_split_binary(query, env) do
     case Macro.expand(query, env) do
       binary when is_binary(binary) ->
-        do_split_binary(binary, "")
+        split_binary(binary, "")
       _ ->
         error! "fragment(...) expects the first argument to be a string for SQL fragments, " <>
                "a keyword list, or an interpolated value, got: `#{Macro.to_string(query)}`"
     end
   end
 
-  defp do_split_binary(<<>>, consumed),
+  defp split_binary(<<>>, consumed),
     do: [consumed]
-  defp do_split_binary(<<??, rest :: binary >>, consumed),
-    do: [consumed | do_split_binary(rest, "")]
-  defp do_split_binary(<<?\\, ??, rest :: binary >>, consumed),
-    do: do_split_binary(rest, consumed <> <<??>>)
-  defp do_split_binary(<<first :: utf8, rest :: binary>>, consumed),
-    do: do_split_binary(rest, consumed <> <<first>>)
+  defp split_binary(<<??, rest :: binary >>, consumed),
+    do: [consumed | split_binary(rest, "")]
+  defp split_binary(<<?\\, ??, rest :: binary >>, consumed),
+    do: split_binary(rest, consumed <> <<??>>)
+  defp split_binary(<<first :: utf8, rest :: binary>>, consumed),
+    do: split_binary(rest, consumed <> <<first>>)
 
   defp escape_call({name, _, args}, type, params, vars, env) do
     {args, params} = Enum.map_reduce(args, params, &escape(&1, type, &2, vars, env))

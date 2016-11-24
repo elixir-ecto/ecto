@@ -257,7 +257,7 @@ defmodule Ecto.Migration do
 
   """
   defmacro create(object, do: block) do
-    do_create(object, :create, block)
+    expand_create(object, :create, block)
   end
 
   @doc """
@@ -267,10 +267,10 @@ defmodule Ecto.Migration do
   already exists.
   """
   defmacro create_if_not_exists(object, do: block) do
-    do_create(object, :create_if_not_exists, block)
+    expand_create(object, :create_if_not_exists, block)
   end
 
-  defp do_create(object, command, block) do
+  defp expand_create(object, command, block) do
     quote do
       table = %Table{} = unquote(object)
       Runner.start_command({unquote(command), Ecto.Migration.__prefix__(table)})
