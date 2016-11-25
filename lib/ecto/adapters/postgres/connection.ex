@@ -393,15 +393,18 @@ if Code.ensure_loaded?(Postgrex) do
     defp lock(lock_clause), do: lock_clause
 
     defp boolean(_name, [], _sources, _query), do: []
-    defp boolean(name, [%{expr: expr} | query_exprs], sources, query) do
+    defp boolean(name, [%{expr: expr, op: op} | query_exprs], sources, query) do
       name <> " " <>
-        Enum.reduce(query_exprs, paren_expr(expr, sources, query), fn
-          %BooleanExpr{expr: expr, op: :and}, acc ->
-            acc <> " AND " <> paren_expr(expr, sources, query)
-          %BooleanExpr{expr: expr, op: :or}, acc ->
-            acc <> " OR " <> paren_expr(expr, sources, query)
-        end)
+        (Enum.reduce(query_exprs, {op, paren_expr(expr, sources, query)}, fn
+          %BooleanExpr{expr: expr, op: op}, {op, acc} ->
+            {op, acc <> operator_to_boolean(op) <> paren_expr(expr, sources, query)}
+          %BooleanExpr{expr: expr, op: op}, {_, acc} ->
+            {op, "(" <> acc <> ")" <> operator_to_boolean(op) <> paren_expr(expr, sources, query)}
+        end) |> elem(1))
     end
+
+    defp operator_to_boolean(:and), do: " AND "
+    defp operator_to_boolean(:or), do: " OR "
 
     defp paren_expr(expr, sources, query) do
       "(" <> expr(expr, sources, query) <> ")"
