@@ -87,18 +87,28 @@ defmodule Ecto.InvalidChangesetError do
     """
     could not perform #{action} because changeset is invalid.
 
-    Changeset changes
+    Changes
 
-        #{inspect changes}
+    #{pretty changes}
 
-    Changeset params
+    Params
 
-        #{inspect changeset.params}
+    #{pretty changeset.params}
 
-    Changeset errors
+    Errors
 
-        #{inspect errors}
+    #{pretty errors}
+
+    Changeset
+
+    #{pretty changeset}
     """
+  end
+
+  defp pretty(term) do
+    inspect(term, pretty: true)
+    |> String.split("\n")
+    |> Enum.map_join("\n", &"    " <> &1)
   end
 
   defp extract_changes(%Ecto.Changeset{changes: changes}) do
