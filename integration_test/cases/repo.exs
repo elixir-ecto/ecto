@@ -553,6 +553,12 @@ defmodule Ecto.Integration.RepoTest do
            TestRepo.get(from(c in {"posts", Custom}), bid)
   end
 
+  test "get(!) with binary_id" do
+    custom = TestRepo.insert!(%Custom{})
+    bid = custom.bid
+    assert %Custom{bid: ^bid} = TestRepo.get(Custom, bid)
+  end
+
   test "get_by(!)" do
     post1 = TestRepo.insert!(%Post{title: "1", text: "hai"})
     post2 = TestRepo.insert!(%Post{title: "2", text: "hello"})
@@ -678,7 +684,7 @@ defmodule Ecto.Integration.RepoTest do
             %Post{inserted_at: nil, title: "date"}] = TestRepo.all(Post)
   end
 
-  test "insert all autogenerates for binary id type" do
+  test "insert all autogenerates for binary_id type" do
     custom = TestRepo.insert!(%Custom{bid: nil})
     assert custom.bid
     assert TestRepo.get(Custom, custom.bid)
