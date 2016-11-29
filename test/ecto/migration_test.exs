@@ -81,10 +81,10 @@ defmodule Ecto.MigrationTest do
     query = Query.from(p in "posts", where: p.body != "")
 
     assert view(:posts_with_body, query) ==
-           %View{name: :posts_with_body, query: query, sql: nil}
+           %View{name: :posts_with_body, query: query}
 
     assert view("posts-with-body", query) ==
-           %View{name: "posts-with-body", query: query, sql: nil}
+           %View{name: "posts-with-body", query: query}
   end
 
   test "chokes on alias types" do

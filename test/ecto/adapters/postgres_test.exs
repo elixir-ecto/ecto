@@ -956,15 +956,17 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "create view" do
     create = {:create, view(:view, from(s in Schema, select: s.x, where: s.x > 1))}
-    assert SQL.execute_ddl(create) == [
-      "CREATE VIEW view AS SELECT s0.\"x\" FROM \"schema\" AS s0 WHERE (s0.\"x\" > 1)"
-    ]
+    assert SQL.execute_ddl(create) == {
+      "CREATE VIEW view AS SELECT s0.\"x\" FROM \"schema\" AS s0 WHERE (s0.\"x\" > 1)",
+      []
+    }
 
     number = 1
     create = {:create, view(:view, from(s in Schema, select: s.x, where: s.x > ^number))}
-    assert SQL.execute_ddl(create) == [
-      "CREATE VIEW view AS SELECT s0.\"x\" FROM \"schema\" AS s0 WHERE (s0.\"x\" > $1)"
-    ]
+    assert SQL.execute_ddl(create) == {
+      "CREATE VIEW view AS SELECT s0.\"x\" FROM \"schema\" AS s0 WHERE (s0.\"x\" > $1)",
+      [1]
+    }
   end
 
   test "rename table" do

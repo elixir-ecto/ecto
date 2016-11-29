@@ -683,10 +683,10 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     def execute_ddl({:create, %View{} = view}) do
-      {query, _params, _key} = Ecto.Query.Planner.prepare(view.query, :all, Ecto.Adapters.Postgres, 0)
+      {query, params, _key} = Ecto.Query.Planner.prepare(view.query, :all, Ecto.Adapters.Postgres, 0)
       query = Ecto.Query.Planner.normalize(query, :all, Ecto.Adapters.Postgres, 0)
               |> all
-      ["CREATE VIEW #{view.name} AS #{query}"]
+      {"CREATE VIEW #{view.name} AS #{query}", params}
     end
 
     def execute_ddl(string) when is_binary(string), do: string

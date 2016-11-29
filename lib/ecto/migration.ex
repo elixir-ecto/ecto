@@ -225,10 +225,10 @@ defmodule Ecto.Migration do
     @moduledoc """
     Used internally by adapters.
 
-    To define a view in a migration, see `Ecto.Migration.view/2`
+    To define a view in a migration, see `Ecto.Migration.view/2` or `Ecto.Migration.view/1`
     """
-    defstruct name: nil, query: nil, sql: nil
-    @type t :: %__MODULE__{name: String.t | atom, query: Ecto.Query.t, sql: String.t}
+    defstruct name: nil, query: nil
+    @type t :: %__MODULE__{name: String.t | atom, query: Ecto.Query.t}
   end
 
   alias Ecto.Migration.Runner
