@@ -632,7 +632,7 @@ defmodule Ecto.Adapters.PostgresTest do
   # DDL
 
   import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1,
-                                references: 2, constraint: 2, constraint: 3]
+                                references: 2, constraint: 2, constraint: 3, view: 2,]
 
   test "executing a string during migration" do
     assert SQL.execute_ddl("example") == "example"
@@ -952,6 +952,19 @@ defmodule Ecto.Adapters.PostgresTest do
     drop = {:drop, constraint(:products, "price_must_be_positive", prefix: "foo")}
     assert SQL.execute_ddl(drop) ==
     ~s|ALTER TABLE "foo"."products" DROP CONSTRAINT "price_must_be_positive"|
+  end
+
+  test "create view" do
+    create = {:create, view(:view, from(s in Schema, select: s.x, where: s.x > 1))}
+    assert SQL.execute_ddl(create) == [
+      "CREATE VIEW view AS SELECT s0.\"x\" FROM \"schema\" AS s0 WHERE (s0.\"x\" > 1)"
+    ]
+
+    number = 1
+    create = {:create, view(:view, from(s in Schema, select: s.x, where: s.x > ^number))}
+    assert SQL.execute_ddl(create) == [
+      "CREATE VIEW view AS SELECT s0.\"x\" FROM \"schema\" AS s0 WHERE (s0.\"x\" > $1)"
+    ]
   end
 
   test "rename table" do

@@ -7,8 +7,20 @@ defmodule Ecto.MigrationTest do
   use Ecto.Migration
 
   alias Ecto.TestRepo
-  alias Ecto.Migration.{Table, Index, Reference, Constraint}
+  alias Ecto.Migration.{Table, Index, Reference, Constraint, View}
   alias Ecto.Migration.Runner
+  alias Ecto.Query
+
+  require Ecto.Query
+
+  defmodule Post do
+    use Ecto.Schema
+
+    schema "posts" do
+      field :title
+      field :body
+    end
+  end
 
   setup meta do
     {:ok, runner} =
@@ -63,6 +75,16 @@ defmodule Ecto.MigrationTest do
            %Constraint{table: :posts, name: :price_is_positive, check: "price > 0"}
     assert constraint(:posts, :exclude_price, exclude: "price") ==
            %Constraint{table: :posts, name: :exclude_price, exclude: "price"}
+  end
+
+  test "creates a view" do
+    query = Query.from(p in "posts", where: p.body != "")
+
+    assert view(:posts_with_body, query) ==
+           %View{name: :posts_with_body, query: query, sql: nil}
+
+    assert view("posts-with-body", query) ==
+           %View{name: "posts-with-body", query: query, sql: nil}
   end
 
   test "chokes on alias types" do

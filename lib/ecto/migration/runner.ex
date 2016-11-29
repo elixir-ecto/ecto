@@ -9,6 +9,7 @@ defmodule Ecto.Migration.Runner do
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
   alias Ecto.Migration.Constraint
+  alias Ecto.Migration.View
 
   @opts [timeout: :infinity, log: false]
 
@@ -259,6 +260,19 @@ defmodule Ecto.Migration.Runner do
     do: "create exclude constraint #{constraint.name} on table #{quote_name(constraint.prefix, constraint.table)}"
   defp command({:drop, %Constraint{} = constraint}),
     do: "drop constraint #{constraint.name} from table #{quote_name(constraint.prefix, constraint.table)}"
+
+  defp command({:create, %View{name: nil, query: nil}}),
+    do: raise ArgumentError, "a view must have a name and a query"
+  defp command({:create, %View{name: nil, query: %Ecto.Query{}}}),
+    do: raise ArgumentError, "a view must have a name"
+  defp command({:create, %View{name: _name, query: nil}}),
+    do: raise ArgumentError, "a view must have a query"
+  defp command({:create, %View{name: name, query: %Ecto.Query{}}}),
+    do: "create view #{name}"
+  defp command({:drop, %View{name: nil}}),
+    do: raise ArgumentError, "a view must have a name"
+  defp command({:drop, %View{name: name}}),
+    do: "drop view #{name}"
 
   defp quote_name(nil, name), do: quote_name(name)
   defp quote_name(prefix, name), do: quote_name(prefix) <> "." <> quote_name(name)
