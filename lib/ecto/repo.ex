@@ -84,7 +84,7 @@ defmodule Ecto.Repo do
     quote bind_quoted: [opts: opts] do
       @behaviour Ecto.Repo
 
-      {otp_app, adapter, config} = Ecto.Repo.Supervisor.parse_config(__MODULE__, opts)
+      {otp_app, adapter, config} = Ecto.Repo.Supervisor.compile_config(__MODULE__, opts)
       @otp_app otp_app
       @adapter adapter
       @config  config
@@ -109,7 +109,8 @@ defmodule Ecto.Repo do
       end
 
       def config do
-        Ecto.Repo.Supervisor.config(__MODULE__, @otp_app, [])
+        {:ok, config} = Ecto.Repo.Supervisor.runtime_config(:dry_run, __MODULE__, @otp_app, [])
+        config
       end
 
       def start_link(opts \\ []) do
@@ -226,6 +227,8 @@ defmodule Ecto.Repo do
     end
   end
 
+  @optional_callbacks init: 2
+
   @doc """
   Returns the adapter tied to the repository.
   """
@@ -241,6 +244,8 @@ defmodule Ecto.Repo do
 
   @doc """
   Returns the adapter configuration stored in the `:otp_app` environment.
+
+  Dynamic configuration is not reflected on this value.
   """
   @callback config() :: Keyword.t
 
@@ -252,12 +257,27 @@ defmodule Ecto.Repo do
   started or `{:error, term}` in case anything else goes wrong.
 
   ## Options
+
   See the configuration in the moduledoc for options shared between adapters,
   for adapter-specific configuration see the adapter's documentation.
   """
   @callback start_link(opts :: Keyword.t) :: {:ok, pid} |
                             {:error, {:already_started, pid}} |
                             {:error, term}
+
+  @doc """
+  A callback executed when the repo starts or when configuration is read.
+
+  The first argument is the context the callback is being invoked. If it
+  is becaused the Repo supervisor is starting, it will be `:supervisor`.
+  It will be `:dry_ryn` if it is called for reading configuration without
+  actually starting a process.
+
+  The second argument is the repository configuration as stored in the
+  application environment. It must return `{:ok, keyword}` with the updated
+  list of configuration or `:ignore` (only in the `:supervisor` case).
+  """
+  @callback init(:supervisor | :dry_run, config :: Keyword.t) :: {:ok, Keyword.t} | :ignore
 
   @doc """
   Shuts down the repository represented by the given pid.

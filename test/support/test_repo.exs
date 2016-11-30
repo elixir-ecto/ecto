@@ -128,6 +128,12 @@ Application.put_env(:ecto, Ecto.TestRepo, [user: "invalid"])
 
 defmodule Ecto.TestRepo do
   use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
+
+  def init(type, opts) do
+    opts = [url: "ecto://user:pass@local/hello"] ++ opts
+    opts[:parent] && send(opts[:parent], {__MODULE__, type, opts})
+    {:ok, opts}
+  end
 end
 
-Ecto.TestRepo.start_link(url: "ecto://user:pass@local/hello")
+Ecto.TestRepo.start_link()

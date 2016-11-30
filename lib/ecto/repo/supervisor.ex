@@ -6,29 +6,42 @@ defmodule Ecto.Repo.Supervisor do
   Starts the repo supervisor.
   """
   def start_link(repo, otp_app, adapter, opts) do
-    opts = config(repo, otp_app, opts)
-    name = opts[:name] || Application.get_env(otp_app, repo)[:name] || repo
+    name = opts[:name] || repo
     Supervisor.start_link(__MODULE__, {repo, otp_app, adapter, opts}, [name: name])
   end
 
   @doc """
-  Retrieves and normalizes the configuration for `repo` in `otp_app`.
+  Retrieves the runtime configuration.
   """
-  def config(repo, otp_app, custom) do
+  def runtime_config(type, repo, otp_app, custom) do
     if config = Application.get_env(otp_app, repo) do
-      config = Keyword.merge(config, custom)
-      {url, config} = Keyword.pop(config, :url)
-      [otp_app: otp_app, repo: repo] ++ Keyword.merge(config, parse_url(url || ""))
+      config = [otp_app: otp_app, repo: repo] ++ Keyword.merge(config, custom)
+
+      case repo_init(type, repo, config) do
+        {:ok, config} ->
+          {url, config} = Keyword.pop(config, :url)
+          {:ok, Keyword.merge(config, parse_url(url || ""))}
+        :ignore ->
+          :ignore
+      end
     else
       raise ArgumentError,
         "configuration for #{inspect repo} not specified in #{inspect otp_app} environment"
     end
   end
 
+  defp repo_init(type, repo, config) do
+    if Code.ensure_loaded?(repo) and function_exported?(repo, :init, 2) do
+      repo.init(type, config)
+    else
+      {:ok, config}
+    end
+  end
+
   @doc """
-  Parses the OTP configuration for compile time.
+  Retrieves the compile time configuration.
   """
-  def parse_config(repo, opts) do
+  def compile_config(repo, opts) do
     otp_app = Keyword.fetch!(opts, :otp_app)
     config  = Application.get_env(otp_app, repo, [])
     adapter = opts[:adapter] || config[:adapter]
@@ -58,6 +71,7 @@ defmodule Ecto.Repo.Supervisor do
       {:system, "DATABASE_URL"}
 
   """
+  # TODO: Deprecate `{:system, _}` in favor of `init/2`
   def parse_url(""), do: []
 
   def parse_url({:system, env}) when is_binary(env) do
@@ -89,11 +103,16 @@ defmodule Ecto.Repo.Supervisor do
 
   ## Callbacks
 
-  def init({repo, _otp_app, adapter, opts}) do
-    children = [adapter.child_spec(repo, opts)]
-    if Keyword.get(opts, :query_cache_owner, true) do
-      :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
+  def init({repo, otp_app, adapter, opts}) do
+    case runtime_config(:supervisor, repo, otp_app, opts) do
+      {:ok, opts} ->
+        children = [adapter.child_spec(repo, opts)]
+        if Keyword.get(opts, :query_cache_owner, true) do
+          :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
+        end
+        supervise(children, strategy: :one_for_one)
+      :ignore ->
+        :ignore
     end
-    supervise(children, strategy: :one_for_one)
   end
 end
