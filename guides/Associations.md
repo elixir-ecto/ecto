@@ -429,29 +429,121 @@ TODO explain `build_assoc`
 Let's assume we have two schemas: Post and Tag.
 
 The schemas and their migration look like this:
+```elixir
+# mix ecto.gen.migration create_post
+# priv/repo/migrations/*create_post.exs
+defmodule EctoAssoc.Repo.Migrations.CreatePost do
+  use Ecto.Migration
 
-TODO add listing
+  def change do
+    create table(:posts) do
+      add :header, :string
+      add :body, :string
+    end
+  end
+end
+```
+
+```elixir
+# lib/ecto_assoc/post.ex
+defmodule EctoAssoc.Post do
+  use Ecto.Schema
+
+  schema "posts" do
+    field :header, :string
+    field :body, :string
+  end
+end
+```
+
+```elixir
+# mix ecto.gen.migration create_tag
+# priv/repo/migrations/*create_tag.exs
+defmodule EctoAssoc.Repo.Migrations.CreateTag do
+  use Ecto.Migration
+
+  def change do
+    create table(:tags) do
+      add :name, :string
+    end
+  end
+end
+```
+
+```elixir
+defmodule EctoAssoc.Tag do
+  use Ecto.Schema
+
+  schema "tags" do
+    field :name, :string
+  end
+end
+```
+
 
 ### Adding Associations
 Now we want to associate the post with the tags and vice versa:
 - one post can have many tags
 - one tag can belong to many post
-This is a many-to-many relationship.
+This is a `many-to-many` relationship.
 
-One way to handle many-to-many relationships is to introduce an additional schema which explicitly tracks the tag-post relationship.
+One way to handle `many-to-many` relationships is to introduce an additional schema which explicitly tracks the tag-post relationship.
 So let's do that:
 
-➤ mix ecto.gen.migration create_tag_post_association
+```
+# $ mix ecto.gen.migration create_tag_post_association
+# priv/repo/migrations/*_create_tag_post_association
+defmodule EctoAssoc.Repo.Migrations.CreateTagPostAssociation do
+  use Ecto.Migration
 
-For the *post* we
-- add the many_to_many macro the schema
+  def change do
+    create table(:tag_post_associations) do
+      add :tag_id, references(:tags)
+      add :post_id, references(:posts)
+      # Note you can add additional data to the association schema, like:
+      # timestamps()
+    end
 
-TODO add listing
+    create unique_index(:tag_post_associations, [:tag_id, :post_id])
+  end
+end
+```
+On the DB level, this creates a new table `tag_post_associations` with two
+colums that point at the `tag_id` and `post_id`.
+We also create a unique index, such that the association is always unique.
 
-For the *tag* we
-- add the many_to_many macro the schema
+For the *post* we use the `many_to_many` macro to associate the `Tag` through the
+new `TagPostAssociation` schema.
 
-TODO add listing
+```elixir
+# lib/ecto_assoc/post.ex
+defmodule EctoAssoc.Post do
+  use Ecto.Schema
+
+  schema "posts" do
+    field :header, :string
+    field :body, :string
+    # the following line was added
+    many_to_many :tags, EctoAssoc.Tag, join_through: EctoAssoc.TagPostAssociation
+  end
+end
+```
+
+For the *post* we do the same.
+We use the `many_to_many` macro to associate the `Post` through the
+new `TagPostAssociation` schema.
+```elixir
+# lib/ecto_assoc/tag.ex
+defmodule EctoAssoc.Tag do
+  use Ecto.Schema
+
+  schema "tags" do
+    field :name, :string
+    # the following line was added
+    many_to_many :posts, EctoAssoc.Post, join_through: EctoAssoc.TagPostAssociation
+  end
+end
+```
 
 ### Persistence
 Let's create some tags
