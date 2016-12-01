@@ -340,6 +340,7 @@ if Code.ensure_loaded?(Postgrex) do
     defp join_qual(:left_lateral),  do: "LEFT OUTER JOIN LATERAL"
     defp join_qual(:right), do: "RIGHT OUTER JOIN"
     defp join_qual(:full),  do: "FULL OUTER JOIN"
+    defp join_qual(:cross), do: "CROSS JOIN"
 
     defp where(%Query{wheres: wheres} = query, sources) do
       boolean("WHERE", wheres, sources, query)

@@ -436,6 +436,12 @@ defmodule Ecto.Adapters.MySQLTest do
            ~s{(SELECT * FROM schema2) AS f1 ON f1.`id` = s0.`id`}
   end
 
+  test "cross join" do
+    query = from(p in Schema, cross_join: c in Schema2, select: {p.id, c.id}) |> normalize()
+    assert SQL.all(query) ==
+           "SELECT s0.`id`, s1.`id` FROM `schema` AS s0 CROSS JOIN `schema2` AS s1 ON TRUE"
+  end
+
   ## Associations
 
   test "association join belongs_to" do

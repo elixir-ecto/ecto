@@ -260,6 +260,7 @@ if Code.ensure_loaded?(Mariaex) do
     defp join_qual(:left, _),  do: "LEFT OUTER JOIN"
     defp join_qual(:right, _), do: "RIGHT OUTER JOIN"
     defp join_qual(:full, _),  do: "FULL OUTER JOIN"
+    defp join_qual(:cross, _), do: "CROSS JOIN"
     defp join_qual(mode, q),   do: error!(q, "join `#{inspect mode}` not supported by MySQL")
 
     defp where(%Query{wheres: wheres} = query, sources) do

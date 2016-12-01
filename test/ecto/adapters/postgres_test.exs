@@ -572,6 +572,12 @@ defmodule Ecto.Adapters.PostgresTest do
            "SELECT s0.\"id\", s2.\"id\" FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON TRUE INNER JOIN \"schema2\" AS s2 ON TRUE"
   end
 
+  test "cross join" do
+    query = from(p in Schema, cross_join: c in Schema2, select: {p.id, c.id}) |> normalize()
+    assert SQL.all(query) ==
+           "SELECT s0.\"id\", s1.\"id\" FROM \"schema\" AS s0 CROSS JOIN \"schema2\" AS s1 ON TRUE"
+  end
+
   # Schema based
 
   test "insert" do
