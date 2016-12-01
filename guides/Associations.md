@@ -546,84 +546,36 @@ end
 ```
 
 ### Persistence
-Let's create some tags
-#+BEGIN_SRC iex
+Let's create some tags:
+```elixir
 iex(14)> clickbait_tag = %Tag{} |> Ecto.Changeset.cast(%{name: "clickbait"}, [:name]) |> Repo.insert!()
-
-16:06:08.547 [debug] QUERY OK db=0.2ms
-begin []
-
-16:06:08.549 [debug] QUERY OK db=1.5ms
-INSERT INTO "tags" ("name") VALUES ($1) RETURNING "id" ["clickbait"]
-
-16:06:08.554 [debug] QUERY OK db=4.7ms
-commit []
 %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 1,
  name: "clickbait",
  posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}
+
 iex(15)> misc_tag = %Tag{} |> Ecto.Changeset.cast(%{name: "misc"}, [:name]) |> Repo.insert!()
-
-16:06:23.307 [debug] QUERY OK db=0.2ms
-begin []
-
-16:06:23.309 [debug] QUERY OK db=2.1ms
-INSERT INTO "tags" ("name") VALUES ($1) RETURNING "id" ["misc"]
-
-16:06:23.312 [debug] QUERY OK db=2.8ms
-commit []
 %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 2,
  name: "misc",
  posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}
+
 iex(16)> ecto_tag = %Tag{} |> Ecto.Changeset.cast(%{name: "ecto"}, [:name]) |> Repo.insert!()
-
-16:06:40.548 [debug] QUERY OK db=0.4ms queue=0.1ms
-begin []
-
-16:06:40.551 [debug] QUERY OK db=2.0ms
-INSERT INTO "tags" ("name") VALUES ($1) RETURNING "id" ["ecto"]
-
-16:06:40.553 [debug] QUERY OK db=2.7ms
-commit []
 %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 3,
  name: "ecto",
  posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}
 ```
 
-And let's create a post
-```
+And let's create a post:
+```elixir
 iex(5)> post = %Post{} |> Ecto.Changeset.cast(%{header: "Clickbait header", body: "No real content"}, [:header, :body]) |> Repo.insert!()
-
-16:04:19.158 [debug] QUERY OK db=0.2ms
-begin []
-
-16:04:19.171 [debug] QUERY OK db=1.3ms
-INSERT INTO "posts" ("body","header") VALUES ($1,$2) RETURNING "id" ["No real content", "Clickbait header"]
-
-16:04:19.172 [debug] QUERY OK db=1.2ms
-commit []
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
  body: "No real content", header: "Clickbait header", id: 1,
  tags: #Ecto.Association.NotLoaded<association :tags is not loaded>}
-
 ```
 
-Ok, but tag and post are not associated.
-```
-Repo.insert!(%TagPostAssociation{post: post, tag: clickbait_misc})
-Repo.insert!(%TagPostAssociation{post: post, tag: clickbait_misc})
-```
-
-```
+Ok, but tag and post are not associated, yet.
+We can create an association through the `TagPostAssociation` directly:
+```elixir
 iex(17)> Repo.insert!(%EctoAssoc.TagPostAssociation{post: post, tag: clickbait_tag})
-
-16:07:37.558 [debug] QUERY OK db=0.5ms queue=0.1ms
-begin []
-
-16:07:37.570 [debug] QUERY OK db=3.6ms
-INSERT INTO "tag_post_associations" ("post_id","tag_id") VALUES ($1,$2) RETURNING "id" [1, 1]
-
-16:07:37.573 [debug] QUERY OK db=2.7ms
-commit []
 %EctoAssoc.TagPostAssociation{__meta__: #Ecto.Schema.Metadata<:loaded, "tag_post_associations">,
  id: 1,
  post: %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
@@ -634,16 +586,8 @@ commit []
   name: "clickbait",
   posts: #Ecto.Association.NotLoaded<association :posts is not loaded>},
  tag_id: 1}
+
 iex(18)> Repo.insert!(%EctoAssoc.TagPostAssociation{post: post, tag: misc_tag})
-
-16:07:44.472 [debug] QUERY OK db=0.4ms queue=0.1ms
-begin []
-
-16:07:44.478 [debug] QUERY OK db=5.6ms
-INSERT INTO "tag_post_associations" ("post_id","tag_id") VALUES ($1,$2) RETURNING "id" [1, 2]
-
-16:07:44.481 [debug] QUERY OK db=3.0ms
-commit []
 %EctoAssoc.TagPostAssociation{__meta__: #Ecto.Schema.Metadata<:loaded, "tag_post_associations">,
  id: 2,
  post: %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
@@ -657,14 +601,8 @@ commit []
 ```
 
 Let's examin the the post
-```
+```elixir
 iex(21)> post = Repo.get(Post, 1) |> Repo.preload(:tags)
-
-16:09:28.129 [debug] QUERY OK source="posts" db=2.4ms
-SELECT p0."id", p0."header", p0."body" FROM "posts" AS p0 WHERE (p0."id" = $1) [1]
-
-16:09:28.133 [debug] QUERY OK source="tags" db=3.4ms queue=0.2ms
-SELECT t0."id", t0."name", p1."id" FROM "tags" AS t0 INNER JOIN "posts" AS p1 ON p1."id" = ANY($1) INNER JOIN "tag_post_associations" AS t2 ON t2."post_id" = p1."id" WHERE (t2."tag_id" = t0."id") ORDER BY p1."id" [[1]]
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
  body: "No real content", header: "Clickbait header", id: 1,
  tags: [%EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 1,
@@ -691,15 +629,9 @@ iex(52)> Enum.at(post.tags, 1).name
 "misc"
 ```
 
-And the association also work in the other direction
-```
+Of course, the associations also work in the other direction:
+```elixir
 iex(59)> tag = Repo.get(Tag, 1) |> Repo.preload(:posts)
-
-16:20:57.790 [debug] QUERY OK source="tags" db=1.4ms
-SELECT t0."id", t0."name" FROM "tags" AS t0 WHERE (t0."id" = $1) [1]
-
-16:20:57.792 [debug] QUERY OK source="posts" db=1.7ms queue=0.1ms
-SELECT p0."id", p0."header", p0."body", t1."id" FROM "posts" AS p0 INNER JOIN "tags" AS t1 ON t1."id" = ANY($1) INNER JOIN "tag_post_associations" AS t2 ON t2."tag_id" = t1."id" WHERE (t2."post_id" = p0."id") ORDER BY t1."id" [[1]]
 %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 1,
  name: "clickbait",
  posts: [%EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
