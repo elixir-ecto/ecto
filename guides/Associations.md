@@ -639,12 +639,10 @@ iex(59)> tag = Repo.get(Tag, 1) |> Repo.preload(:posts)
    tags: #Ecto.Association.NotLoaded<association :tags is not loaded>}]}
 ```
 
-## Next steps
-TODO Read about
-- `put_assoc`
-- `build_assoc`
-
-- `belongs_to`
-- `has_one`
-- `has_many`
-- `many_to_many`
+## References
+- [belongs_to](https://hexdocs.pm/ecto/Ecto.Schema.html#belongs_to/3)
+- [has_one](https://hexdocs.pm/ecto/Ecto.Schema.html#has_one/3)
+- [has_many](https://hexdocs.pm/ecto/Ecto.Schema.html#has_many/3)
+- [many_to_many](https://hexdocs.pm/ecto/Ecto.Schema.html#many_to_many/3)
+- [put_assoc](https://hexdocs.pm/ecto/Ecto.Changeset.html#put_assoc/4)
+- [build_assoc](https://hexdocs.pm/ecto/Ecto.html#build_assoc/3)
