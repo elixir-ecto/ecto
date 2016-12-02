@@ -1057,9 +1057,11 @@ defmodule Ecto.Integration.RepoTest do
       post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: :nothing)
       assert inserted.id
+      assert inserted.__meta__.state == :loaded
 
       {:ok, not_inserted} = TestRepo.insert(post, on_conflict: :nothing)
       assert not_inserted.id == nil
+      assert not_inserted.__meta__.state == :loaded
     end
 
     @tag :with_conflict_target
