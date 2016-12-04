@@ -3,10 +3,10 @@ This guide assumes you worked through the "getting started" guide and want to le
 
 With ecto (like every other DB layer) you can associate schemas with other schemas.
 
-There are three kinds of associations
-- one-to-one,
-- one-to-many,and
-- many-to-many.
+There are three kinds of associations:
+- one-to-one
+- one-to-many
+- many-to-many
 
 In this tutorial we're going to create a minimal ecto project
 (similar to the getting started guide),
@@ -18,26 +18,28 @@ and finally associate the schemas.
 First, we're going to create a basic ecto project which is going to be used for
 the rest of the tutorial.
 Note, the steps are taken from the getting started guide.
-You can also clone the project from TODO.
+You can also clone the project from (TODO add link to project).
 
 Let's create a new project.
 ```
 $ mix new ecto_assoc --sup
 ```
 
-Add `ecto` and `postgrex` as dependencies to `mix.exs` and add them to our
-application:
+Add `ecto` and `postgrex` as dependencies to `mix.exs`
 ```elixir
 # mix.exs
-# ...
-def application do
-  [applications: [:logger, :ecto, :postgrex],
-   mod: {EctoAssoc, []}]
-end
-
 defp deps do
   [{:ecto, "~> 2.0"},
    {:postgrex, "~> 0.11"}]
+end
+```
+
+Also add them to our application:
+```elixir
+# mix.exs
+def application do
+  [applications: [:logger, :ecto, :postgrex],
+   mod: {EctoAssoc, []}]
 end
 ```
 
@@ -72,7 +74,6 @@ Add the repo to the supervision tree:
 Finally let's create the DB:
 ```
 $ mix ecto.create
-$ iex -S mix
 ```
 
 ## One-to-one
@@ -246,19 +247,7 @@ iex(9)> Repo.all(User) |> Repo.preload(:avatar)
 ### Prep
 Let's assume we have two schemas: `User` and `Post`.
 
-The schamas and corresponding migrations look like this:
-```elixir
-# lib/ecto_assoc/user.ex
-defmodule EctoAssoc.User do
-  use Ecto.Schema
-
-  schema "users" do
-    field :name, :string
-    field :email, :string
-  end
-end
-```
-
+The schemas and corresponding migrations look like this:
 ```elixir
 # create a migration: mix ecto.gen.migration create_user
 # priv/repo/migrations/*_create_user.exs
@@ -275,16 +264,15 @@ end
 ```
 
 ```elixir
-# lib/ecto_assoc/post.ex
-defmodule EctoAssoc.Post do
+# lib/ecto_assoc/user.ex
+defmodule EctoAssoc.User do
   use Ecto.Schema
 
-  schema "posts" do
-    field :header, :string
-    field :body, :string
+  schema "users" do
+    field :name, :string
+    field :email, :string
   end
 end
-
 ```
 
 ```elixir
@@ -302,10 +290,22 @@ defmodule EctoAssoc.Repo.Migrations.CreatePost do
 end
 ```
 
+```elixir
+# lib/ecto_assoc/post.ex
+defmodule EctoAssoc.Post do
+  use Ecto.Schema
+
+  schema "posts" do
+    field :header, :string
+    field :body, :string
+  end
+end
+```
+
 
 ### Adding Associations
 Now we want to associate the user with the post and vice versa:
-- one user has many post
+- one user has many posts
 - one post belongs to one user
 
 For the *post* we create a migration that adds a `user_id` reference:
@@ -335,7 +335,8 @@ defmodule EctoAssoc.Post do
   end
 end
 ```
-`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the avatar, i.e., you can access the user via `avatar.user`.
+`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the post,
+i.e., you can access the user via `post.user`.
 
 For the *user* we add a `has_many` field to the schema:
 ```elixir
@@ -350,7 +351,8 @@ defmodule EctoAssoc.User do
 end
 ```
 `has_many` does not add anything to the DB.
-The foreign key of the associated schema, `Post`, is used to make the posts available from the user, i.e., you can access the posts via `user.posts`.
+The foreign key of the associated schema, `Post`, is used to make the posts available from the user,
+i.e., you can access the posts via `user.posts`.
 
 
 ### Persistence
@@ -484,13 +486,14 @@ end
 ### Adding Associations
 Now we want to associate the post with the tags and vice versa:
 - one post can have many tags
-- one tag can belong to many post
+- one tag can belong to many posts.
+
 This is a `many-to-many` relationship.
 
 One way to handle `many-to-many` relationships is to introduce an additional schema which explicitly tracks the tag-post relationship.
 So let's do that:
 
-```
+```elixir
 # $ mix ecto.gen.migration create_tag_post_association
 # priv/repo/migrations/*_create_tag_post_association
 defmodule EctoAssoc.Repo.Migrations.CreateTagPostAssociation do
@@ -600,7 +603,7 @@ iex(18)> Repo.insert!(%EctoAssoc.TagPostAssociation{post: post, tag: misc_tag})
  tag_id: 2}
 ```
 
-Let's examin the the post
+Let's examine the post
 ```elixir
 iex(21)> post = Repo.get(Post, 1) |> Repo.preload(:tags)
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
