@@ -62,10 +62,14 @@ defmodule Ecto.Changeset.Relation do
     cardinality_to_empty(cardinality)
   end
 
-  def load!(struct, %NotLoaded{__field__: field}) do
+  def load!(%{__meta__: _, __struct__: struct}, %NotLoaded{__field__: field}) do
     raise "attempting to cast or change association `#{field}` " <>
-          "from `#{inspect struct.__struct__}` that was not loaded. Please preload your " <>
+          "from `#{inspect struct}` that was not loaded. Please preload your " <>
           "associations before manipulating them through changesets"
+  end
+
+  def load!(_struct, %NotLoaded{__cardinality__: cardinality}) do
+    cardinality_to_empty(cardinality)
   end
 
   def load!(_struct, loaded), do: loaded
