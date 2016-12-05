@@ -1850,7 +1850,7 @@ defmodule Ecto.Changeset do
 
   Notice that the first param is just one of the unique index fields, this will
   be used as the error key to the changeset errors keyword list. For example,
-  the above `unique_contraint/3` would generate something like:
+  the above `unique_constraint/3` would generate something like:
 
       Repo.insert!(%User{email: "john@elixir.org", company_id: 1})
       changeset = User.changeset(%User{}, %{email: "john@elixir.org", company_id: 1})
