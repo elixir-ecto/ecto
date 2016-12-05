@@ -190,22 +190,26 @@ $ iex -S mix
 
 For convenience we alias some modules:
 ```elixir
-iex(1)> alias EctoAssoc.Repo
+iex> alias EctoAssoc.Repo
 EctoAssoc.Repo
-iex(2)> alias EctoAssoc.User
+
+iex> alias EctoAssoc.User
 EctoAssoc.User
-iex(3)> alias EctoAssoc.Avatar
+
+iex> alias EctoAssoc.Avatar
 EctoAssoc.Avatar
 ```
 
 Create a user changeset and insert it into the repo:
 ```elixir
-iex(5)> user_cs = %User{} |> Ecto.Changeset.cast(%{name: "John Doe", email: "johan@example.com"}, [:name, :email])
+iex> user_cs =
+...>   %User{}
+...>   |> Ecto.Changeset.cast(%{name: "John Doe", email: "johan@example.com"}, [:name, :email])
 #Ecto.Changeset<action: nil,
  changes: %{email: "johan@example.com", name: "John Doe"}, errors: [],
  data: #EctoAssoc.User<>, valid?: true>
 
-iex(6)> user = Repo.insert!(user_cs)
+iex> user = Repo.insert!(user_cs)
 %EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
  avatar: #Ecto.Association.NotLoaded<association :avatar is not loaded>,
  email: "johan@example.com", id: 3, name: "John Doe"}
@@ -213,7 +217,10 @@ iex(6)> user = Repo.insert!(user_cs)
 
 This time let's add another user with an avatar association. We use `Ecto.Changeset.put_assoc` for this.
 ```elixir
-iex(7)> user_cs = %User{} |> Ecto.Changeset.cast(%{name: "Jane Doe", email: "jane@example.com"}, [:name, :email]) |> Ecto.Changeset.put_assoc(:avatar, %{nick_name: "EctOr", pick_url: "http://elixir-lang.org/images/logo/logo.png"})
+iex> user_cs =
+...>   %User{}
+...>   |> Ecto.Changeset.cast(%{name: "Jane Doe", email: "jane@example.com"}, [:name, :email])
+...>   |> Ecto.Changeset.put_assoc(:avatar, %{nick_name: "EctOr", pick_url: "http://elixir-lang.org/images/logo/logo.png"})
 #Ecto.Changeset<action: nil,
  changes: %{avatar: #Ecto.Changeset<action: :insert,
     changes: %{nick_name: "EctOr",
@@ -221,7 +228,7 @@ iex(7)> user_cs = %User{} |> Ecto.Changeset.cast(%{name: "Jane Doe", email: "jan
     data: #EctoAssoc.Avatar<>, valid?: true>, email: "jane@example.com",
    name: "Jane Doe"}, errors: [], data: #EctoAssoc.User<>, valid?: true>
 
-iex(8)> user = Repo.insert!(user_cs)
+iex> user = Repo.insert!(user_cs)
 %EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
  avatar: %{__meta__: #Ecto.Schema.Metadata<:loaded, "avatars">,
    __struct__: EctoAssoc.Avatar, id: 2, nick_name: "EctOr", pic_url: nil,
@@ -232,7 +239,7 @@ iex(8)> user = Repo.insert!(user_cs)
 
 Let's verify that it works by retrieving all Users and their associated avatars:
 ```elixir
-iex(9)> Repo.all(User) |> Repo.preload(:avatar)
+iex> Repo.all(User) |> Repo.preload(:avatar)
 [%EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">, avatar: nil,
   email: "johan@example.com", id: 3, name: "John Doe"},
  %EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
@@ -363,24 +370,26 @@ $ iex -S mix
 
 For convenience we alias some modules:
 ```elixir
-iex(1)> alias EctoAssoc.Repo
+iex> alias EctoAssoc.Repo
 EctoAssoc.Repo
 
-iex(2)> alias EctoAssoc.User
+iex> alias EctoAssoc.User
 EctoAssoc.User
 
-iex(3)> alias EctoAssoc.Post
+iex> alias EctoAssoc.Post
 EctoAssoc.Post
 ```
 
 Let's create a User and store it in the DB:
 ```elixir
-iex(6)> user_cs = %User{} |> Ecto.Changeset.cast(%{name: "John Doe", email: "johan@example.com"}, [:name, :email])
+iex> user_cs =
+...>   %User{}
+...>   |> Ecto.Changeset.cast(%{name: "John Doe", email: "johan@example.com"}, [:name, :email])
 #Ecto.Changeset<action: nil,
  changes: %{email: "johan@example.com", name: "John Doe"}, errors: [],
  data: #EctoAssoc.User<>, valid?: true>
 
-iex(7)> user = Repo.insert!(user_cs)
+iex> user = Repo.insert!(user_cs)
 %EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
  email: "johan@example.com", id: 1, name: "John Doe",
  posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}
@@ -388,12 +397,12 @@ iex(7)> user = Repo.insert!(user_cs)
 
 Let's build an associated post and store it in the DB:
 ```elixir
-iex(6)> post_cs = Ecto.build_assoc(user, :posts, %{header: "Clickbait header", body: "No real content"})
+iex> post_cs = Ecto.build_assoc(user, :posts, %{header: "Clickbait header", body: "No real content"})
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:built, "posts">,
  body: "No real content", header: "Clickbait header", id: nil,
  user: #Ecto.Association.NotLoaded<association :user is not loaded>, user_id: 1}
 
-iex(7)> post = Repo.insert!(post_cs)
+iex> post = Repo.insert!(post_cs)
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
  body: "No real content", header: "Clickbait header", id: 1,
  user: #Ecto.Association.NotLoaded<association :user is not loaded>, user_id: 1}
@@ -401,7 +410,9 @@ iex(7)> post = Repo.insert!(post_cs)
 
 Let's add another post to the user:
 ```elixir
-iex(8)> post = Ecto.build_assoc(user, :posts, %{header: "5 ways to improve your Ecto", body: "TODO add url of this tutorial"}) |> Repo.insert!()
+iex> post =
+...>   Ecto.build_assoc(user, :posts, %{header: "5 ways to improve your Ecto", body: "TODO add url of this tutorial"})
+...>   |> Repo.insert!()
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
  body: "TODO add url of this tutorial", header: "5 ways to improve your Ecto",
  id: 2, user: #Ecto.Association.NotLoaded<association :user is not loaded>,
@@ -410,7 +421,7 @@ iex(8)> post = Ecto.build_assoc(user, :posts, %{header: "5 ways to improve your 
 
 Let's see if it worked:
 ```
-iex(11)> Repo.get(User, user.id) |> Repo.preload(:posts)
+iex> Repo.get(User, user.id) |> Repo.preload(:posts)
 %EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
  email: "johan@example.com", id: 1, name: "John Doe",
  posts: [%EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
@@ -551,17 +562,17 @@ end
 ### Persistence
 Let's create some tags:
 ```elixir
-iex(14)> clickbait_tag = %Tag{} |> Ecto.Changeset.cast(%{name: "clickbait"}, [:name]) |> Repo.insert!()
+iex> clickbait_tag = %Tag{} |> Ecto.Changeset.cast(%{name: "clickbait"}, [:name]) |> Repo.insert!()
 %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 1,
  name: "clickbait",
  posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}
 
-iex(15)> misc_tag = %Tag{} |> Ecto.Changeset.cast(%{name: "misc"}, [:name]) |> Repo.insert!()
+iex> misc_tag = %Tag{} |> Ecto.Changeset.cast(%{name: "misc"}, [:name]) |> Repo.insert!()
 %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 2,
  name: "misc",
  posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}
 
-iex(16)> ecto_tag = %Tag{} |> Ecto.Changeset.cast(%{name: "ecto"}, [:name]) |> Repo.insert!()
+iex> ecto_tag = %Tag{} |> Ecto.Changeset.cast(%{name: "ecto"}, [:name]) |> Repo.insert!()
 %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 3,
  name: "ecto",
  posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}
@@ -569,7 +580,10 @@ iex(16)> ecto_tag = %Tag{} |> Ecto.Changeset.cast(%{name: "ecto"}, [:name]) |> R
 
 And let's create a post:
 ```elixir
-iex(5)> post = %Post{} |> Ecto.Changeset.cast(%{header: "Clickbait header", body: "No real content"}, [:header, :body]) |> Repo.insert!()
+iex> post =
+...>   %Post{}
+...>   |> Ecto.Changeset.cast(%{header: "Clickbait header", body: "No real content"}, [:header, :body])
+...>   |> Repo.insert!()
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
  body: "No real content", header: "Clickbait header", id: 1,
  tags: #Ecto.Association.NotLoaded<association :tags is not loaded>}
@@ -578,7 +592,7 @@ iex(5)> post = %Post{} |> Ecto.Changeset.cast(%{header: "Clickbait header", body
 Ok, but tag and post are not associated, yet.
 We can create an association through the `TagPostAssociation` directly:
 ```elixir
-iex(17)> Repo.insert!(%EctoAssoc.TagPostAssociation{post: post, tag: clickbait_tag})
+iex> Repo.insert!(%EctoAssoc.TagPostAssociation{post: post, tag: clickbait_tag})
 %EctoAssoc.TagPostAssociation{__meta__: #Ecto.Schema.Metadata<:loaded, "tag_post_associations">,
  id: 1,
  post: %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
@@ -590,7 +604,7 @@ iex(17)> Repo.insert!(%EctoAssoc.TagPostAssociation{post: post, tag: clickbait_t
   posts: #Ecto.Association.NotLoaded<association :posts is not loaded>},
  tag_id: 1}
 
-iex(18)> Repo.insert!(%EctoAssoc.TagPostAssociation{post: post, tag: misc_tag})
+iex> Repo.insert!(%EctoAssoc.TagPostAssociation{post: post, tag: misc_tag})
 %EctoAssoc.TagPostAssociation{__meta__: #Ecto.Schema.Metadata<:loaded, "tag_post_associations">,
  id: 2,
  post: %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
@@ -605,7 +619,7 @@ iex(18)> Repo.insert!(%EctoAssoc.TagPostAssociation{post: post, tag: misc_tag})
 
 Let's examine the post
 ```elixir
-iex(21)> post = Repo.get(Post, 1) |> Repo.preload(:tags)
+iex> post = Repo.get(Post, 1) |> Repo.preload(:tags)
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
  body: "No real content", header: "Clickbait header", id: 1,
  tags: [%EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 1,
@@ -615,26 +629,30 @@ iex(21)> post = Repo.get(Post, 1) |> Repo.preload(:tags)
    name: "misc",
    posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}]}
 
-iex(48)> post.header
+iex> post.header
 "Clickbait header"
-iex(49)> post.body
+
+iex> post.body
 "No real content"
-iex(50)> post.tags
+
+iex> post.tags
 [%EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 1,
   name: "clickbait",
   posts: #Ecto.Association.NotLoaded<association :posts is not loaded>},
  %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 2,
   name: "misc",
   posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}]
-iex(51)> Enum.at(post.tags, 0).name
+
+iex> Enum.at(post.tags, 0).name
 "clickbait"
-iex(52)> Enum.at(post.tags, 1).name
+
+iex> Enum.at(post.tags, 1).name
 "misc"
 ```
 
 Of course, the associations also work in the other direction:
 ```elixir
-iex(59)> tag = Repo.get(Tag, 1) |> Repo.preload(:posts)
+iex> tag = Repo.get(Tag, 1) |> Repo.preload(:posts)
 %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 1,
  name: "clickbait",
  posts: [%EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
