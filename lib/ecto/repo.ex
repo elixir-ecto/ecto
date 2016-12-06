@@ -269,7 +269,7 @@ defmodule Ecto.Repo do
   A callback executed when the repo starts or when configuration is read.
 
   The first argument is the context the callback is being invoked. If it
-  is becaused the Repo supervisor is starting, it will be `:supervisor`.
+  is called because the Repo supervisor is starting, it will be `:supervisor`.
   It will be `:dry_ryn` if it is called for reading configuration without
   actually starting a process.
 
