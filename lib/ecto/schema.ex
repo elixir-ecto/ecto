@@ -1099,15 +1099,20 @@ defmodule Ecto.Schema do
   API so Ecto can properly track the embed life-cycle:
 
       order = Repo.get!(Order, 42)
+      item  = %Item{title: "Soap"}
 
       # Generate a changeset
       changeset = Ecto.Changeset.change(order)
 
-      # Change, put a new one or remove an item
-      changeset = Ecto.Changeset.put_change(changeset, :item, nil)
+      # Put a new embed to the changeset
+      changeset = Ecto.Changeset.put_embed(changeset, :item, item)
 
-      # Update the order
-      changeset = Repo.update!(changeset)
+      # Update the order, and fetch the item
+      item = Repo.update!(changeset).item
+
+      # Item is generated with a unique identification
+      item
+      # => %Item{id: "20a97d94-f79b-4e63-a875-85deed7719b7", title: "Soap"}
 
   ## Inline embedded schema
 
@@ -1240,16 +1245,25 @@ defmodule Ecto.Schema do
   Adding and removal of embeds can only be done via the `Ecto.Changeset`
   API so Ecto can properly track the embed life-cycle:
 
+      # Order has no items
       order = Repo.get!(Order, 42)
+      order.items
+      # => []
+
+      items  = [%Item{title: "Soap"}]
 
       # Generate a changeset
       changeset = Ecto.Changeset.change(order)
 
-      # Change, put a new one or remove all items
-      changeset = Ecto.Changeset.put_change(changeset, :items, [])
+      # Put a one or more new items
+      changeset = Ecto.Changeset.put_embed(changeset, :items, items)
 
-      # Update the order
-      changeset = Repo.update!(changeset)
+      # Update the order and fetch items
+      items = Repo.update!(changeset).items
+
+      # Items are generated with a unique identification
+      items
+      # => [%Item{id: "20a97d94-f79b-4e63-a875-85deed7719b7", title: "Soap"}]
 
   ## Inline embedded schema
 
