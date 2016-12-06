@@ -353,7 +353,9 @@ defmodule Ecto.Multi do
   @doc """
   Returns the list of operations stored in `multi`.
 
-  Inspecting the `Ecto.Multi` struct internals directly is discouraged.
+  Always use this function when you need to access the operations you
+  have defined in `Ecto.Multi`. Inspecting the `Ecto.Multi` struct internals
+  directly is discouraged.
   """
   def to_list(%Multi{operations: operations}) do
     operations
