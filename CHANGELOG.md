@@ -181,4 +181,4 @@ A dynamic expression can always be interpolated inside another dynamic expressio
 
 ## Previous versions
 
-  * See the CHANGELOG.md in the v2.0 branch
+  * See the CHANGELOG.md [in the v2.0 branch](https://github.com/elixir-ecto/ecto/blob/v2.0/CHANGELOG.md)
