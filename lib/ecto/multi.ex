@@ -27,9 +27,13 @@ defmodule Ecto.Multi do
   ## Run
 
   Multi allows you to run arbitrary functions as part of your transaction
-  via the `run/3` and `run/5`. Those functions will receive changes so far
-  as the first argument and have to return `{:ok, value}` or `{:error, value}`
-  as their result. Returning an error will abort any further operations
+  via the `run/3` and `run/5`. This is very useful when an operation depends
+  on the value of a previous operation. For this reason, the function given
+  as callback to `run/3` and `run/5` will receive all changes performed by
+  the multi so far as a map in the first argument.
+
+  The function given to `run` must return `{:ok, value}` or `{:error, value}`
+  as its result. Returning an error will abort any further operations
   and make the whole multi fail.
 
   ## Example

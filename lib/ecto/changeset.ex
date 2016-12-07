@@ -580,6 +580,7 @@ defmodule Ecto.Changeset do
 
       user
       |> Repo.preload(:addresses)
+      |> Ecto.Changeset.cast(params, [])
       |> Ecto.Changeset.cast_assoc(:addresses)
 
   Once `cast_assoc/3` is called, Ecto will compare those parameters
