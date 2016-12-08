@@ -451,4 +451,56 @@ defmodule Ecto.RepoTest do
     assert TestRepo.load(%{x: :string}, %{x: "abc", bad: "bad"}) ==
            %{x: "abc"}
   end
+
+  defmodule NoTransactionAdapter do
+    @behaviour Ecto.Adapter
+
+    defmacro __before_compile__(_opts), do: :ok
+
+    def ensure_all_started(_, _), do: {:ok, []}
+
+    def child_spec(_repo, _opts),
+      do: Supervisor.Spec.worker(Task, [:timer, :sleep, [:infinity]])
+
+    ## Types
+
+    def loaders(_primitive, type), do: [type]
+
+    def dumpers(_primitive, type), do: [type]
+
+    def autogenerate(_), do: nil
+
+    ## Queryable
+
+    def prepare(operation, query), do: {:nocache, {operation, query}}
+
+    def execute(_repo, _, {:nocache, {_, _}}, _, _, _), do:  {1, [[1]]}
+
+    def stream(_repo, _meta, _prepared, _params, _preprocess, _opts),
+      do: Stream.cycle([1])
+
+    ## Schema
+
+    def insert_all(_repo, _meta, _header, _rows, _on_conflict, _returning, _opts),
+      do: {1, nil}
+
+    def insert(_repo, _meta, _fields, _on_conflict, _return, _opts),
+      do: {:ok, []}
+
+    def update(_repo, _meta, [_|_], _filters, _return, _opts),
+      do: {:ok, []}
+
+    def delete(_repo, _meta, _filter, _opts),
+      do: {:ok, []}
+  end
+
+  defmodule NoTransactionRepo do
+    use Ecto.Repo, otp_app: :ecto, adapter: NoTransactionAdapter
+  end
+
+  test "no transaction functions generated on repo, without adapter support" do
+    refute function_exported?(NoTransactionRepo, :transaction, 2)
+    refute function_exported?(NoTransactionRepo, :in_transaction?, 2)
+    refute function_exported?(NoTransactionRepo, :rollback, 1)
+  end
 end

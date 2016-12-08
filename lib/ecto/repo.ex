@@ -121,17 +121,19 @@ defmodule Ecto.Repo do
         Supervisor.stop(pid, :normal, timeout)
       end
 
-      def transaction(fun_or_multi, opts \\ []) do
-        Ecto.Repo.Queryable.transaction(@adapter, __MODULE__, fun_or_multi, opts)
-      end
+      if function_exported?(@adapter, :transaction, 3) do
+        def transaction(fun_or_multi, opts \\ []) do
+          Ecto.Repo.Queryable.transaction(@adapter, __MODULE__, fun_or_multi, opts)
+        end
 
-      def in_transaction? do
-        @adapter.in_transaction?(__MODULE__)
-      end
+        def in_transaction? do
+          @adapter.in_transaction?(__MODULE__)
+        end
 
-      @spec rollback(term) :: no_return
-      def rollback(value) do
-        @adapter.rollback(__MODULE__, value)
+        @spec rollback(term) :: no_return
+        def rollback(value) do
+          @adapter.rollback(__MODULE__, value)
+        end
       end
 
       def all(queryable, opts \\ []) do
@@ -899,6 +901,7 @@ defmodule Ecto.Repo do
   """
   @callback transaction(fun_or_multi :: fun | Ecto.Multi.t, opts :: Keyword.t) ::
     {:ok, any} | {:error, any} | {:error, atom, any, %{atom => any}}
+  @optional_callbacks [transaction: 2]
 
   @doc """
   Returns true if the current process is inside a transaction.
@@ -914,6 +917,7 @@ defmodule Ecto.Repo do
 
   """
   @callback in_transaction?() :: boolean
+  @optional_callbacks [in_transaction?: 0]
 
   @doc """
   Rolls back the current transaction.
@@ -921,6 +925,7 @@ defmodule Ecto.Repo do
   The transaction will return the value given as `{:error, value}`.
   """
   @callback rollback(value :: any) :: no_return
+  @optional_callbacks [rollback: 1]
 
   @doc """
   Loads `data` into a struct or a map.
