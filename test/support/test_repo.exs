@@ -101,8 +101,6 @@ defmodule Ecto.TestAdapter do
     end
   end
 
-  def in_transaction?(_repo), do: false
-
   def rollback(_repo, value) do
     send self(), {:rollback, value}
     throw {:ecto_rollback, value}
