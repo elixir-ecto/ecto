@@ -44,7 +44,7 @@ defmodule Ecto.Mixfile do
 
      # Drivers
      {:db_connection, "~> 1.1", optional: true},
-     {:postgrex, "~> 1.0-rc", optional: true},
+     {:postgrex, "~> 0.13.0-dev", optional: true, github: "elixir-ecto/postgrex"},
      {:mariaex, "~> 0.8.0", optional: true},
 
      # Optional

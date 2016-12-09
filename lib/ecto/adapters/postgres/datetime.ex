@@ -1,57 +1,90 @@
 if Code.ensure_loaded?(Postgrex) do
-
-  defmodule Ecto.Adapters.Postgres.DateTime do
+  defmodule Ecto.Adapters.Postgres.Time do
     @moduledoc false
+    import Postgrex.BinaryUtils, warn: false
+    use Postgrex.BinaryExtension, [send: "time_send"]
 
-    alias Postgrex.TypeInfo
-    @behaviour Postgrex.Extension
+    def init(opts), do: opts
+
+    def encode(_) do
+      quote location: :keep do
+        {hour, min, sec, usec} when hour in 0..23 and min in 0..59 and sec in 0..59 and usec in 0..999_999 ->
+          time = {hour, min, sec}
+          <<8 :: int32, :calendar.time_to_seconds(time) * 1_000_000 + usec :: int64>>
+      end
+    end
+
+    def decode(_) do
+      quote location: :keep do
+        <<8 :: int32, microsecs :: int64>> ->
+          secs = div(microsecs, 1_000_000)
+          usec = rem(microsecs, 1_000_000)
+          {hour, min, sec} = :calendar.seconds_to_time(secs)
+          {hour, min, sec, usec}
+      end
+    end
+  end
+
+  defmodule Ecto.Adapters.Postgres.Date do
+    @moduledoc false
+    import Postgrex.BinaryUtils, warn: false
+    use Postgrex.BinaryExtension, send: "date_send"
 
     @gd_epoch :calendar.date_to_gregorian_days({2000, 1, 1})
+    @max_year 5874897
+
+    def init(opts), do: opts
+
+    def encode(_) do
+      quote location: :keep do
+        {year, month, day} when year <= unquote(@max_year) ->
+          date = {year, month, day}
+          <<4 :: int32, :calendar.date_to_gregorian_days(date) - unquote(@gd_epoch) :: int32>>
+      end
+    end
+
+    def decode(_) do
+      quote location: :keep do
+        <<4 :: int32, days :: int32>> ->
+          :calendar.gregorian_days_to_date(days + unquote(@gd_epoch))
+      end
+    end
+  end
+
+  defmodule Ecto.Adapters.Postgres.Timestamp do
+    @moduledoc false
+    import Postgrex.BinaryUtils, warn: false
+    use Postgrex.BinaryExtension, [send: "timestamp_send"]
+
     @gs_epoch :calendar.datetime_to_gregorian_seconds({{2000, 1, 1}, {0, 0, 0}})
+    @max_year 294276
 
-    @date_max_year 5874897
-    @timestamp_max_year 294276
+    def init(opts), do: opts
 
-    def init(_parameters, _opts),
-      do: :ok
-
-    def matching(_),
-      do: [send: "date_send", send: "time_send",
-           send: "timestamp_send", send: "timestamptz_send"]
-
-    def format(_),
-      do: :binary
-
-    ### ENCODING ###
-
-    def encode(%TypeInfo{send: "date_send"}, date, _, _),
-      do: encode_date(date)
-    def encode(%TypeInfo{send: "time_send"}, time, _, _),
-      do: encode_time(time)
-    def encode(%TypeInfo{send: "timestamp_send"}, timestamp, _, _),
-      do: encode_timestamp(timestamp)
-    def encode(%TypeInfo{send: "timestamptz_send"}, timestamp, _, _),
-      do: encode_timestamp(timestamp)
-
-    defp encode_date({year, month, day}) when year <= @date_max_year do
-      date = {year, month, day}
-      <<:calendar.date_to_gregorian_days(date) - @gd_epoch :: signed-32>>
+    def encode(_) do
+      quote location: :keep do
+        timestamp ->
+          Ecto.Adapters.Postgres.Timestamp.encode!(timestamp)
+      end
     end
 
-    defp encode_time({hour, min, sec, usec})
-        when hour in 0..23 and min in 0..59 and sec in 0..59 and usec in 0..999_999 do
-      time = {hour, min, sec}
-      <<:calendar.time_to_seconds(time) * 1_000_000 + usec :: signed-64>>
+    def decode(_) do
+      quote location: :keep do
+        <<8 :: int32, microsecs :: int64>> ->
+          Ecto.Adapters.Postgres.Timestamp.decode!(microsecs)
+      end
     end
 
-    defp encode_timestamp({{year, month, day}, {hour, min, sec, usec}})
-        when year <= @timestamp_max_year and hour in 0..23 and min in 0..59 and sec in 0..59 and usec in 0..999_999 do
+    ## Helpers
+
+    def encode!({{year, month, day}, {hour, min, sec, usec}})
+        when year <= @max_year and hour in 0..23 and min in 0..59 and sec in 0..59 and usec in 0..999_999 do
       datetime = {{year, month, day}, {hour, min, sec}}
       secs = :calendar.datetime_to_gregorian_seconds(datetime) - @gs_epoch
-      <<secs * 1_000_000 + usec :: signed-64>>
+      <<8 :: int32, secs * 1_000_000 + usec :: int64>>
     end
 
-    defp encode_timestamp(arg) do
+    def encode!(arg) do
       raise ArgumentError, """
       could not encode date/time: #{inspect arg}
 
@@ -63,41 +96,42 @@ if Code.ensure_loaded?(Postgrex) do
       """
     end
 
-    ### DECODING ###
-
-    def decode(%TypeInfo{send: "date_send"}, <<n :: signed-32>>, _, _),
-      do: decode_date(n)
-    def decode(%TypeInfo{send: "time_send"}, <<n :: signed-64>>, _, _),
-      do: decode_time(n)
-    def decode(%TypeInfo{send: "timestamp_send"}, <<n :: signed-64>>, _, _),
-      do: decode_timestamp(n)
-    def decode(%TypeInfo{send: "timestamptz_send"}, <<n :: signed-64>>, _, _),
-      do: decode_timestamp(n)
-
-    defp decode_date(days) do
-      :calendar.gregorian_days_to_date(days + @gd_epoch)
+    def decode!(microsecs) when microsecs < 0 and rem(microsecs, 1_000_000) != 0 do
+      secs = div(microsecs, 1_000_000) - 1
+      microsecs = 1_000_000 + rem(microsecs, 1_000_000)
+      split(secs, microsecs)
+    end
+    def decode!(microsecs) do
+      secs = div(microsecs, 1_000_000)
+      microsecs = rem(microsecs, 1_000_000)
+      split(secs, microsecs)
     end
 
-    defp decode_time(microsecs) do
-      secs = div(microsecs, 1_000_000)
-      msec = rem(microsecs, 1_000_000)
-      {hour, min, sec} = :calendar.seconds_to_time(secs)
-      {hour, min, sec, msec}
+    defp split(secs, microsecs) do
+      {date, {hour, min, sec}} = :calendar.gregorian_seconds_to_datetime(secs + @gs_epoch)
+      {date, {hour, min, sec, microsecs}}
+    end
+  end
+
+  defmodule Ecto.Adapters.Postgres.TimestampTZ do
+    @moduledoc false
+    import Postgrex.BinaryUtils, warn: false
+    use Postgrex.BinaryExtension, [send: "timestamptz_send"]
+
+    def init(opts), do: opts
+
+    def encode(_) do
+      quote location: :keep do
+        timestamp ->
+          Ecto.Adapters.Postgres.Timestamp.encode!(timestamp)
+      end
     end
 
-    defp decode_timestamp(microsecs) do
-      secs = div(microsecs, 1_000_000)
-      msec = rem(microsecs, 1_000_000)
-      {{year, month, day}, {hour, min, sec}} = :calendar.gregorian_seconds_to_datetime(secs + @gs_epoch)
-
-      time =
-        if year < 2000 and msec != 0 do
-          {hour, min, sec - 1, msec + 1_000_000}
-        else
-          {hour, min, sec, msec}
-        end
-
-      {{year, month, day}, time}
+    def decode(_) do
+      quote location: :keep do
+        <<8 :: int32, microsecs :: int64>> ->
+          Ecto.Adapters.Postgres.Timestamp.decode!(microsecs)
+      end
     end
   end
 end

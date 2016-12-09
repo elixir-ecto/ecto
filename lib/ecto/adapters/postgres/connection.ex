@@ -1,4 +1,7 @@
 if Code.ensure_loaded?(Postgrex) do
+  Postgrex.Types.define(Ecto.Adapters.Postgres.TypeModule,
+                        Ecto.Adapters.Postgres.extensions(),
+                        json: Application.get_env(:ecto, :json_library, Poison))
 
   defmodule Ecto.Adapters.Postgres.Connection do
     @moduledoc false
@@ -9,17 +12,10 @@ if Code.ensure_loaded?(Postgrex) do
     ## Module and Options
 
     def child_spec(opts) do
-      json = Application.get_env(:ecto, :json_library)
-      extensions = [{Ecto.Adapters.Postgres.DateTime, []},
-                    {Postgrex.Extensions.JSON, library: json}]
-
-      opts =
-        opts
-        |> Keyword.update(:extensions, extensions, &(&1 ++ extensions))
-        |> Keyword.put_new(:port, @default_port)
-        |> Keyword.put(:types, true)
-
-      Postgrex.child_spec(opts)
+      opts
+      |> Keyword.put_new(:port, @default_port)
+      |> Keyword.put_new(:types, Ecto.Adapters.Postgres.TypeModule)
+      |> Postgrex.child_spec()
     end
 
     def to_constraints(%Postgrex.Error{postgres: %{code: :unique_violation, constraint: constraint}}),

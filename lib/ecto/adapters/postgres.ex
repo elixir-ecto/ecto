@@ -74,7 +74,15 @@ defmodule Ecto.Adapters.Postgres do
   @behaviour Ecto.Adapter.Storage
   @behaviour Ecto.Adapter.Structure
 
-  ## Support arrays in place of IN
+  @doc """
+  All Ecto extensions for Postgrex.
+  """
+  def extensions do
+    [Ecto.Adapters.Postgres.Date, Ecto.Adapters.Postgres.Time,
+     Ecto.Adapters.Postgres.Timestamp, Ecto.Adapters.Postgres.TimestampTZ]
+  end
+
+  # Support arrays in place of IN
   @doc false
   def dumpers({:embed, _} = type, _),  do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
   def dumpers({:in, sub}, {:in, sub}), do: [{:array, sub}]

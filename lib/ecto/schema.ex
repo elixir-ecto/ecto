@@ -213,6 +213,11 @@ defmodule Ecto.Schema do
 
       config :ecto, :json_library, YourLibraryOfChoice
 
+  If changing the JSON library, remember to recompile Ecto afterwards by
+  cleaning the current build:
+
+      mix deps.clean --build ecto
+
   ### Casting
 
   When directly manipulating the struct, it is the responsibility of
