@@ -105,8 +105,17 @@ A dynamic expression can always be interpolated inside another dynamic expressio
 
 ### Enhancements
 
+  * Add `Ecto.Repo.init/2` callback for dynamic configuration
   * Support dynamic query building with `Ecto.Query.dynamic/2`
   * Support interpolating keyword lists inside a `join`'s on
+  * Allow passing sigils/attributes to fragment
+  * Add `Ecto.Multi.error/3` that forces a multi to error
+
+### Bug fixes
+
+  * Do not raise if a changeset with `:invalid` params in given to `validate_acceptance`
+  * Ensure proper precedence when mixing `where` and `or_where`
+  * Fix postgres prefixed table rename syntax
 
 ### Backwards incompatible changes
 
@@ -116,7 +125,7 @@ A dynamic expression can always be interpolated inside another dynamic expressio
 
 ### Enhancements
 
-  * Allow queries containing `where` conditions to be interpolated in `join`
+  * Allow queries containing `where` conditions to be interpolated as a `join` source
   * Add `Repo.stream/2` that returns a stream which streams results from the database
 
 ### Bug fixes
@@ -148,17 +157,9 @@ A dynamic expression can always be interpolated inside another dynamic expressio
 
   * Do not emit warnings when aliases are used in the schema
   * Correct use of "associated to" to "associated with" in error messages
-  * Ensure preloader recurs through :through associations using the proper key configurations
+  * Ensure preloader recurs through `:through` associations using the proper key configurations
 
 ## v2.1.0-rc.1 (2016-09-28)
-
-### Bug fixes
-
-  * Do not error when inserting an embed without or with non-default primary key
-  * Ensure `where` and `or_where` statements use different cache keys
-  * Support `or_where` in the query syntax
-
-## v2.1.0-rc.0 (2016-09-18)
 
 ### Enhancements
 
@@ -172,6 +173,10 @@ A dynamic expression can always be interpolated inside another dynamic expressio
   * Support `...` to specify all previous bindings up to the next one in the query syntax. For example, `where([p, ..., c], p.status == c.status)` matches `p` to the first binding and `c` to the last one
   * Only check for `nil` values during comparison. This avoids unnecessary restrictions on the query syntax on places `nil` should have been allowed
   * Allow the ordering direction to be set when using expressions with `Ecto.Query.distinct/3`
+
+### Bug fixes
+
+  * Do not error when inserting an embed without or with non-default primary key
 
 ### Deprecations
 
