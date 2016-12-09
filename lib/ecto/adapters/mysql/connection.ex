@@ -769,7 +769,7 @@ if Code.ensure_loaded?(Mariaex) do
     defp assemble(list, joiner) do
       list
       |> List.flatten
-      |> Enum.reject(fn(v)-> v == "" end)
+      |> Enum.reject(fn(v) -> v == "" end)
       |> Enum.join(joiner)
     end
 
