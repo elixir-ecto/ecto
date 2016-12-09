@@ -36,12 +36,15 @@ if Code.ensure_loaded?(Postgrex) do
     end
     def to_constraints(%Postgrex.Error{postgres: %{code: :foreign_key_violation, message: message}}) do
       case :binary.split(message, " foreign key constraint ") do
-        [_, quoted] -> [foreign_key: strip_quotes(quoted)]
-        _ -> []
+        [_, quoted] ->
+          [quoted | _] = :binary.split(quoted, " on table ")
+          [foreign_key: strip_quotes(quoted)]
+        _ ->
+          []
       end
     end
     def to_constraints(%Postgrex.Error{postgres: %{code: :exclusion_violation, message: message}}) do
-      case :binary.split(message, " exclude constraint ") do
+      case :binary.split(message, " exclusion constraint ") do
         [_, quoted] -> [exclude: strip_quotes(quoted)]
         _ -> []
       end
