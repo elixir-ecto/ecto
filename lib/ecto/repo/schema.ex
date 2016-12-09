@@ -667,7 +667,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp wrap_in_transaction(repo, adapter, opts, assocs, prepare, fun) do
-    if assocs != [] or prepare != [] and
+    if (assocs != [] or prepare != []) and
        Keyword.get(opts, :skip_transaction) != true and
        function_exported?(adapter, :transaction, 3) do
       adapter.transaction(repo, opts, fn ->
