@@ -1722,11 +1722,10 @@ defmodule Ecto.Schema do
   end
 
   defp store_mfa_autogenerate!(mod, name, type, mfa) do
-    cond do
-      autogenerate_id(type) ->
-        raise ArgumentError, ":autogenerate with {m, f, a} not supported by ID types"
-      true ->
-        Module.put_attribute(mod, :ecto_autogenerate, {name, mfa})
+    if autogenerate_id(type) do
+      raise ArgumentError, ":autogenerate with {m, f, a} not supported by ID types"
+    else
+      Module.put_attribute(mod, :ecto_autogenerate, {name, mfa})
     end
   end
 
