@@ -41,11 +41,15 @@ install:
   - mix local.hex --force
   - mix local.rebar --force
   - mix deps.get
-  - (cd examples/friends; mix deps.get)
+before_script:
+  - echo "local all postgres trust" | sudo tee /etc/postgresql/$PGVERSION/main/pg_hba.conf
+  - echo "host all postgres 127.0.0.1/32 trust" | sudo tee -a /etc/postgresql/$PGVERSION/main/pg_hba.conf
+  - echo "host all postgrex_md5_pw 127.0.0.1/32 md5" | sudo tee -a /etc/postgresql/$PGVERSION/main/pg_hba.conf
+  - echo "host all postgrex_cleartext_pw 127.0.0.1/32 password" | sudo tee -a /etc/postgresql/$PGVERSION/main/pg_hba.conf
+  - sudo service postgresql restart
 script:
   - mix test
 after_script:
-  - (cd examples/friends; mix test)
   - mix deps.get --only docs
   - MIX_ENV=docs mix inch.report
 notifications:
