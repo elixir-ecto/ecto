@@ -27,6 +27,7 @@ before_install:
   - sudo apt-get update -qq
   - sudo apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::="--force-confnew" install postgresql-$PGVERSION postgresql-contrib-$PGVERSION
 sudo: required
+dist: trusty
 cache: apt
 env:
   - MIX_ENV=test
