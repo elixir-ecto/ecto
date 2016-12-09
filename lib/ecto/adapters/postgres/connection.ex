@@ -36,12 +36,15 @@ if Code.ensure_loaded?(Postgrex) do
     end
     def to_constraints(%Postgrex.Error{postgres: %{code: :foreign_key_violation, message: message}}) do
       case :binary.split(message, " foreign key constraint ") do
-        [_, quoted] -> [foreign_key: strip_quotes(quoted)]
-        _ -> []
+        [_, quoted] ->
+          [quoted | _] = :binary.split(quoted, " on table ")
+          [foreign_key: strip_quotes(quoted)]
+        _ ->
+          []
       end
     end
     def to_constraints(%Postgrex.Error{postgres: %{code: :exclusion_violation, message: message}}) do
-      case :binary.split(message, " exclude constraint ") do
+      case :binary.split(message, " exclusion constraint ") do
         [_, quoted] -> [exclude: strip_quotes(quoted)]
         _ -> []
       end
@@ -928,8 +931,8 @@ if Code.ensure_loaded?(Postgrex) do
     defp ecto_to_db(:binary_id),      do: "uuid"
     defp ecto_to_db(:string),         do: "varchar"
     defp ecto_to_db(:binary),         do: "bytea"
-    defp ecto_to_db(:map),            do: "jsonb"
-    defp ecto_to_db({:map, _}),       do: "jsonb"
+    defp ecto_to_db(:map),            do: Application.fetch_env!(:ecto, :postgres_map_type)
+    defp ecto_to_db({:map, _}),       do: Application.fetch_env!(:ecto, :postgres_map_type)
     defp ecto_to_db(:utc_datetime),   do: "timestamp"
     defp ecto_to_db(:naive_datetime), do: "timestamp"
     defp ecto_to_db(other),           do: Atom.to_string(other)
