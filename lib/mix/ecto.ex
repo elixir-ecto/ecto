@@ -169,7 +169,7 @@ defmodule Mix.Ecto do
   def open?(file) do
     editor = System.get_env("ECTO_EDITOR") || ""
     if editor != "" do
-      :os.cmd(to_char_list(editor <> " " <> inspect(file)))
+      :os.cmd(to_charlist(editor <> " " <> inspect(file)))
       true
     else
       false

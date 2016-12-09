@@ -349,7 +349,7 @@ defmodule Ecto.Adapters.PostgresTest do
       "GROUP BY $6, $7 HAVING ($8) AND ($9) " <>
       "ORDER BY $10, s0.\"x\" LIMIT $11 OFFSET $12"
 
-    assert SQL.all(query) == String.rstrip(result)
+    assert SQL.all(query) == String.trim(result)
   end
 
   test "fragments and types" do
@@ -364,7 +364,7 @@ defmodule Ecto.Adapters.PostgresTest do
       "WHERE (extract($1 from s0.\"start_time\") = $2::integer) " <>
       "AND (extract($3 from s0.\"start_time\") = $4::integer)"
 
-    assert SQL.all(query) == String.rstrip(result)
+    assert SQL.all(query) == String.trim(result)
   end
 
   test "fragments allow ? to be escaped with backslash" do
@@ -377,7 +377,7 @@ defmodule Ecto.Adapters.PostgresTest do
       "SELECT TRUE FROM \"schema\" AS s0 " <>
       "WHERE (s0.\"start_time\" = \"query?\")"
 
-    assert SQL.all(query) == String.rstrip(result)
+    assert SQL.all(query) == String.trim(result)
   end
 
   ## *_all
@@ -981,6 +981,6 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   defp remove_newlines(string) do
-    string |> String.strip |> String.replace("\n", " ")
+    string |> String.trim |> String.replace("\n", " ")
   end
 end

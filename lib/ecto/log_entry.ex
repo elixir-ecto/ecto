@@ -75,7 +75,7 @@ defmodule Ecto.LogEntry do
 
     {entry, ["QUERY", ?\s, ok_error(result), ok_source(source), time("db", query_time, true),
              time("decode", decode_time, false), time("queue", queue_time, false), ?\n,
-             query, ?\s, inspect(params, char_lists: false)]}
+             query, ?\s, inspect(params, charlists: false)]}
   end
 
   ## Helpers

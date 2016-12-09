@@ -162,7 +162,7 @@ defmodule Ecto.Query.InspectTest do
     offset: 1, lock: "FOO", distinct: [asc: 1], update: [set: [id: ^3]], select: 1,
     preload: [:likes], preload: [comments: c]
     """
-    |> String.rstrip
+    |> String.trim
     |> String.replace("\n", " ")
 
     assert i(from(x in Post, join: y in assoc(x, :comments), where: true, or_where: true, group_by: x.id,
@@ -189,7 +189,7 @@ defmodule Ecto.Query.InspectTest do
       preload: [:likes],
       preload: [comments: c]
     """
-    |> String.rstrip
+    |> String.trim
 
     assert Inspect.Ecto.Query.to_string(
       from(x in Post, join: y in assoc(x, :comments), where: true, or_where: true, group_by: x.id,

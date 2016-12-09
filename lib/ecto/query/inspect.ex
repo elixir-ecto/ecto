@@ -175,7 +175,7 @@ defimpl Inspect, for: Ecto.Query do
 
   defp expr_to_string({:^, _, [ix]}, _, _, %{params: params}) do
     case Enum.at(params || [], ix) do
-      {value, _type} -> "^" <> Kernel.inspect(value, char_lists: :as_lists)
+      {value, _type} -> "^" <> Kernel.inspect(value, charlists: :as_lists)
       _              -> "^..."
     end
   end

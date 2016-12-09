@@ -305,7 +305,7 @@ defmodule Ecto.Adapters.MySQLTest do
       "GROUP BY ?, ? HAVING (?) AND (?) " <>
       "ORDER BY ?, s0.`x` LIMIT ? OFFSET ?"
 
-    assert SQL.all(query) == String.rstrip(result)
+    assert SQL.all(query) == String.trim(result)
   end
 
   ## *_all
@@ -772,6 +772,6 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   defp remove_newlines(string) do
-    string |> String.strip |> String.replace("\n", " ")
+    string |> String.trim |> String.replace("\n", " ")
   end
 end
