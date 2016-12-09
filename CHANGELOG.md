@@ -101,10 +101,11 @@ In the example above, we were able to build the query expressions bit by bit, us
 
 A dynamic expression can always be interpolated inside another dynamic expression or at the root of a `where`, `having`, `update` or a `join`'s `on`.
 
-## v2.1.0-rc.5
+## v2.1.0-rc.5 (2016-12-09)
 
 ### Enhancements
 
+  * Do not generate Repo transaction functions if the adapter does not support transactions
   * Add `Ecto.Repo.init/2` callback for dynamic configuration
   * Support dynamic query building with `Ecto.Query.dynamic/2`
   * Support interpolating keyword lists inside a `join`'s on

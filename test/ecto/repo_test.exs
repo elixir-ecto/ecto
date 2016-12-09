@@ -453,45 +453,7 @@ defmodule Ecto.RepoTest do
   end
 
   defmodule NoTransactionAdapter do
-    @behaviour Ecto.Adapter
-
     defmacro __before_compile__(_opts), do: :ok
-
-    def ensure_all_started(_, _), do: {:ok, []}
-
-    def child_spec(_repo, _opts),
-      do: Supervisor.Spec.worker(Task, [:timer, :sleep, [:infinity]])
-
-    ## Types
-
-    def loaders(_primitive, type), do: [type]
-
-    def dumpers(_primitive, type), do: [type]
-
-    def autogenerate(_), do: nil
-
-    ## Queryable
-
-    def prepare(operation, query), do: {:nocache, {operation, query}}
-
-    def execute(_repo, _, {:nocache, {_, _}}, _, _, _), do:  {1, [[1]]}
-
-    def stream(_repo, _meta, _prepared, _params, _preprocess, _opts),
-      do: Stream.cycle([1])
-
-    ## Schema
-
-    def insert_all(_repo, _meta, _header, _rows, _on_conflict, _returning, _opts),
-      do: {1, nil}
-
-    def insert(_repo, _meta, _fields, _on_conflict, _return, _opts),
-      do: {:ok, []}
-
-    def update(_repo, _meta, [_|_], _filters, _return, _opts),
-      do: {:ok, []}
-
-    def delete(_repo, _meta, _filter, _opts),
-      do: {:ok, []}
   end
 
   defmodule NoTransactionRepo do
