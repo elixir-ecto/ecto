@@ -49,7 +49,7 @@ before_script:
   - sudo service postgresql restart
 script:
   - ECTO_POOL=poolboy mix test
-  - ECTO_POOL=sojourn mix test
+  - ECTO_POOL=sbroker mix test
 after_script:
   - mix deps.get --only docs
   - MIX_ENV=docs mix inch.report
