@@ -30,13 +30,13 @@ sudo: required
 dist: trusty
 cache: apt
 env:
-  - MIX_ENV=test
-  - MIX_ENV=pg ECTO_POOL=poolboy PGVERSION=9.2
-  - MIX_ENV=pg ECTO_POOL=poolboy PGVERSION=9.6
-  - MIX_ENV=pg ECTO_POOL=sojourn PGVERSION=9.2
-  - MIX_ENV=pg ECTO_POOL=sojourn PGVERSION=9.6
-  - MIX_ENV=mysql ECTO_POOL=poolboy
-  - MIX_ENV=mysql ECTO_POOL=sojourn
+  global:
+    - PGVERSION=9.6
+  matrix:
+    - MIX_ENV=test
+    - MIX_ENV=pg PGVERSION=9.2
+    - MIX_ENV=pg
+    - MIX_ENV=mysql
 install:
   - mix local.hex --force
   - mix local.rebar --force
@@ -48,7 +48,8 @@ before_script:
   - echo "host all postgrex_cleartext_pw 127.0.0.1/32 password" | sudo tee -a /etc/postgresql/$PGVERSION/main/pg_hba.conf
   - sudo service postgresql restart
 script:
-  - mix test
+  - ECTO_POOL=poolboy mix test
+  - ECTO_POOL=sojourn mix test
 after_script:
   - mix deps.get --only docs
   - MIX_ENV=docs mix inch.report
