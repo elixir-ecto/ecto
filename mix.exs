@@ -51,6 +51,8 @@ defmodule Ecto.Mixfile do
      {:sbroker, "~> 1.0", optional: true},
      {:poison, "~> 2.2 or ~> 3.0", optional: true},
 
+     {:credo, "~> 0.5"},
+
      # Docs
      {:ex_doc, "~> 0.14", only: :docs},
      {:inch_ex, ">= 0.0.0", only: :docs}]
