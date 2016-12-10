@@ -183,6 +183,9 @@ if Code.ensure_loaded?(Postgrex) do
     defp on_conflict({:nothing, _, targets}) do
       "ON CONFLICT " <> conflict_target(targets) <> "DO NOTHING"
     end
+    defp on_conflict({:replace_all, _, targets}) do
+      error!(nil, "The :replace_all option is not supported by PostgreSQL")
+    end
     defp on_conflict({query, _, targets}) do
       "ON CONFLICT " <> conflict_target(targets) <> "DO " <> update_all(query, "UPDATE SET")
     end
