@@ -87,7 +87,7 @@ defmodule Ecto.InvalidChangesetError do
     """
     could not perform #{action} because changeset is invalid.
 
-    Changes
+    Applied changes
 
     #{pretty changes}
 
