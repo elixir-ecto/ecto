@@ -419,15 +419,9 @@ defmodule Ecto.Association.Has do
   @doc false
   def struct(module, name, opts) do
     ref =
-      cond do
-        ref = opts[:references] ->
-          ref
-        primary_key = Module.get_attribute(module, :primary_key) ->
-          elem(primary_key, 0)
-        true ->
-          raise ArgumentError, "need to set :references option for " <>
-            "association #{inspect name} when schema has no primary key"
-      end
+      module
+      |> Module.get_attribute(:primary_key)
+      |> get_ref(opts[:references], name)
 
     unless Module.get_attribute(module, :ecto_fields)[ref] do
       raise ArgumentError, "schema does not have the field #{inspect ref} used by " <>
@@ -472,6 +466,13 @@ defmodule Ecto.Association.Has do
       defaults: opts[:defaults] || []
     }
   end
+
+  defp get_ref(nil, nil, name) do
+    raise ArgumentError, "need to set :references option for " <>
+      "association #{inspect name} when schema has no primary key"
+  end
+  defp get_ref(primary_key, nil, _name), do: elem(primary_key, 0)
+  defp get_ref(_primary_key, references, _name), do: references
 
   @doc false
   def build(%{owner_key: owner_key, related_key: related_key} = refl, struct, attributes) do
