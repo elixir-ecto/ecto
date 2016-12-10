@@ -120,7 +120,7 @@ defmodule Ecto.InvalidChangesetError do
     end)
   end
   defp extract_changes([%Ecto.Changeset{action: :delete} | tail]),
-    do: [extract_changes(tail)]
+    do: extract_changes(tail)
   defp extract_changes([%Ecto.Changeset{} = changeset | tail]),
     do: [extract_changes(changeset) | extract_changes(tail)]
   defp extract_changes(other),
