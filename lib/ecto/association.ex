@@ -416,19 +416,6 @@ defmodule Ecto.Association.Has do
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
              :queryable, :on_delete, :on_replace, unique: true, defaults: [], relationship: :child]
 
-  defp get_ref(nil, nil, name) do
-    raise ArgumentError, "need to set :references option for " <>
-      "association #{inspect name} when schema has no primary key"
-  end
-
-  defp get_ref(primary_key, nil, _name) do
-    elem(primary_key, 0)
-  end
-
-  defp get_ref(_primary_key, references, _name) do
-    references
-  end
-
   @doc false
   def struct(module, name, opts) do
     ref =
@@ -479,6 +466,13 @@ defmodule Ecto.Association.Has do
       defaults: opts[:defaults] || []
     }
   end
+
+  defp get_ref(nil, nil, name) do
+    raise ArgumentError, "need to set :references option for " <>
+      "association #{inspect name} when schema has no primary key"
+  end
+  defp get_ref(primary_key, nil, _name), do: elem(primary_key, 0)
+  defp get_ref(_primary_key, references, _name), do: references
 
   @doc false
   def build(%{owner_key: owner_key, related_key: related_key} = refl, struct, attributes) do
