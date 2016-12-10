@@ -113,9 +113,14 @@ defmodule Ecto.InvalidChangesetError do
 
   defp extract_changes(%Ecto.Changeset{changes: changes}) do
     Enum.reduce(changes, %{}, fn({key, value}, acc) ->
-      Map.put(acc, key, extract_changes(value))
+      case value do
+        %Ecto.Changeset{action: :delete} -> acc
+        _ -> Map.put(acc, key, extract_changes(value))
+      end
     end)
   end
+  defp extract_changes([%Ecto.Changeset{action: :delete} | tail]),
+    do: [extract_changes(tail)]
   defp extract_changes([%Ecto.Changeset{} = changeset | tail]),
     do: [extract_changes(changeset) | extract_changes(tail)]
   defp extract_changes(other),
