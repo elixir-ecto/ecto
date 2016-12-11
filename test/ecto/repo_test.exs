@@ -196,7 +196,7 @@ defmodule Ecto.RepoTest do
   end
 
   test "insert!, update!, insert_or_update! and delete! fail on invalid changeset" do
-    invalid = %Ecto.Changeset{valid?: false, data: %MySchema{}}
+    invalid = %Ecto.Changeset{valid?: false, data: %MySchema{}, types: %{}}
 
     assert_raise Ecto.InvalidChangesetError,
                  ~r"could not perform insert because changeset is invalid", fn ->
