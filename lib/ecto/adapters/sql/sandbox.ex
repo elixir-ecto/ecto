@@ -473,18 +473,22 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     case DBConnection.Ownership.ownership_checkout(name, pool_opts) do
       :ok ->
         if isolation = opts[:isolation] do
-          query = "SET TRANSACTION ISOLATION LEVEL #{isolation}"
-          case Ecto.Adapters.SQL.query(repo, query, [], sandbox_subtransaction: false) do
-            {:ok, _} ->
-              :ok
-            {:error, error} ->
-              checkin(repo, opts)
-              raise error
-          end
+          set_transaction_isolation_level(repo, isolation)
         end
         :ok
       other ->
         other
+    end
+  end
+
+  defp set_transaction_isolation_level(repo, isolation) do
+    query = "SET TRANSACTION ISOLATION LEVEL #{isolation}"
+    case Ecto.Adapters.SQL.query(repo, query, [], sandbox_subtransaction: false) do
+      {:ok, _} ->
+        :ok
+      {:error, error} ->
+        checkin(repo, [])
+        raise error
     end
   end
 
