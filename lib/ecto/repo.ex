@@ -655,7 +655,7 @@ defmodule Ecto.Repo do
     * `:on_conflict` - How to react if the entry violates a primary key,
       unique or exclusion constraint. It may be `:raise` (the default),
       `:nothing` which will ignore any error, a keyword list of update
-      instructions (such as the one given to `c:update_all/3` or an
+      instructions (such as the one given to `c:update_all/3`) or an
       `Ecto.Query` which will act as an `UPDATE` statement. It maps to
       "ON CONFLICT" on databases like Postgres and "ON DUPLICATE KEY"
       on databases such as MySQL.
@@ -675,28 +675,33 @@ defmodule Ecto.Repo do
         {:error, changeset} -> # Something went wrong
       end
 
-  "Upsert" is also supported by passing the `:on_conflict` option:
+  "Upsert" is also supported by passing the `:on_conflict` option.
+  For example, imagine `:title` is marked as a unique column in
+  the database:
 
       # Insert it once
-      {:ok, inserted} = MyRepo.insert(%Post{title: "inserted"})
+      {:ok, inserted} = MyRepo.insert(%Post{title: "this is unique"})
 
-      # Insert with the same ID but do nothing on conflicts.
+      # Insert with the same title but do nothing on conflicts.
       # Keep in mind that, although this returns :ok, the returned
-      # struct may not necessarily reflect the data in the database.
-      {:ok, upserted} = MyRepo.insert(%Post{id: inserted.id, title: "updated"}, on_conflict: :nothing)
+      # struct does not reflect the data in the database. For instance,
+      # in case of "on_conflict: :nothing", the returned post has no ID.
+      {:ok, ignored} = MyRepo.insert(%Post{title: "this is unique"}, on_conflict: :nothing)
+      assert ignored.id == nil
 
-      # Now let's insert with the same ID but use a query to update
-      # a column on conflicts.  As before, although this returns :ok,
-      # the returned struct may not necessarily reflect the data in
-      # the database. In fact, any operation done on `:on_conflict`
-      # won't be automatically mapped to the struct.
+      # Now let's insert with the same title but use a query to update
+      # a column on conflicts. Although this returns :ok and a struct with
+      # the existing ID for successful operations, the other columns may
+      # not necessarily reflect the data in the database. In fact, any
+      # operation done on `:on_conflict` won't be automatically mapped to
+      # the struct.
 
-      # In Postgres:
-      on_conflict = [set: [title: "updated"]]
-      {:ok, updated} = MyRepo.insert(%Post{id: inserted.id, title: "updated"},
-                                     on_conflict: on_conflict, conflict_target: :id)
+      # In Postgres (it requires the conflict target for updates):
+      on_conflict = [set: [body: "updated"]]
+      {:ok, updated} = MyRepo.insert(%Post{title: "this is unique"},
+                                     on_conflict: on_conflict, conflict_target: :title)
 
-      # In MySQL:
+      # In MySQL (conflict target is not supported):
       on_conflict = [set: [title: "updated"]]
       {:ok, updated} = MyRepo.insert(%Post{id: inserted.id, title: "updated"},
                                      on_conflict: on_conflict)
