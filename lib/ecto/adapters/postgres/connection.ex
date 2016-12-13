@@ -589,7 +589,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     # DDL
 
-    alias Ecto.Migration.{Table, Index, Reference, Constraint}
+    alias Ecto.Migration.{Table, Index, Reference, Constraint, View}
 
     @drops [:drop, :drop_if_exists]
 
@@ -680,6 +680,12 @@ if Code.ensure_loaded?(Postgrex) do
 
     def execute_ddl({:drop, %Constraint{} = constraint}) do
       "ALTER TABLE #{quote_table(constraint.prefix, constraint.table)} DROP CONSTRAINT #{quote_name(constraint.name)}"
+    end
+
+    def execute_ddl({:create, %View{}=view}) do
+      materialized = if view.materialized, do: " MATERIALIZED ", else: " "
+
+      "CREATE" <> materialized <> "VIEW #{quote_table(view.prefix, view.name)} AS #{view.query}"
     end
 
     def execute_ddl(string) when is_binary(string), do: string

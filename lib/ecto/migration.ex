@@ -221,6 +221,14 @@ defmodule Ecto.Migration do
                            check: String.t | nil, exclude: String.t | nil, comment: String.t | nil}
   end
 
+  defmodule View do
+    @moduledoc """
+    Defines a view or materialized view used in migrations.
+    """
+    defstruct name: nil, materialized: false, prefix: nil, query: nil, with: nil
+    @type t :: %__MODULE__{name: atom, materialized: boolean, with: atom}
+  end
+
   alias Ecto.Migration.Runner
 
   @doc false
@@ -431,6 +439,10 @@ defmodule Ecto.Migration do
   """
   def table(name, opts \\ []) when is_atom(name) do
     struct(%Table{name: name}, opts)
+  end
+
+  def view(name, opts \\ []) when is_atom(name) do
+    struct(%View{name: name}, opts)
   end
 
   @doc ~S"""
