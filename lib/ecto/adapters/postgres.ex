@@ -65,6 +65,20 @@ defmodule Ecto.Adapters.Postgres do
     * `:lc_ctype` - the character classification
     * `:dump_path` - where to place dumped structures
 
+  ## Extensions
+
+  Both PostgreSQL and its adapter for Elixir, Postgrex, support an
+  extension system. If you want to use custom extensions for Postgrex
+  alongside Ecto, you must define a type module with your extensions:
+
+      Postgrex.Types.define(MyApp.PostgresTypes,
+                            [MyExtension.Foo, MyExtensionBar] ++ Ecto.Adapters.Postgres.extensions(),
+                            json: Poison)
+
+  Once your type module is defined, you can configure the repository to use it:
+
+      config :my_app, MyApp.Repo, types: MyApp.PostgresTypes
+
   """
 
   # Inherit all behaviour from Ecto.Adapters.SQL

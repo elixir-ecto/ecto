@@ -16,6 +16,18 @@ Ecto 2.1 also changed the defaults in `Ecto.Schema.timestamps/0` to use `:naive_
 
 The old Ecto types (`Ecto.Date`, `Ecto.Time` and `Ecto.DateTime`) are now deprecated.
 
+### New Postgrex extensions
+
+Ecto 2.1 depends on Postgrex 0.13 which defines a new extension system. Therefore passing the `:extensions` option to the repository configuration is no longer supported, instead you must define a type module:
+
+    Postgrex.Types.define(MyApp.PostgresTypes,
+                          [MyExtension.Foo, MyExtensionBar] ++ Ecto.Adapters.Postgres.extensions(),
+                          json: Poison)
+
+Once your type module is defined, you can configure the repository to use it:
+
+    config :my_app, MyApp.Repo, types: MyApp.PostgresTypes
+
 ### Dynamic through associations
 
 Ecto 2.1 allows developers to dynamically load through associations via the `Ecto.assoc/2` function. For example, to get all authors for all comments for an existing list of posts, one can do:

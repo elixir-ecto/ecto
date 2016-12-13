@@ -135,7 +135,7 @@ $ mix test
 Besides the unit tests above, it is recommended to run the adapter integration tests too:
 
 ```
-# Run only PostgreSQL tests (version of PostgreSQL must be >= 9.4 to support jsonb)
+# Run only PostgreSQL tests (PostgreSQL >= 9.5 is preferred for testing all Postgres features)
 MIX_ENV=pg mix test
 
 # Run all tests (unit and all adapters)
