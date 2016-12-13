@@ -272,7 +272,7 @@ defmodule Ecto.Repo do
 
   The first argument is the context the callback is being invoked. If it
   is called because the Repo supervisor is starting, it will be `:supervisor`.
-  It will be `:dry_ryn` if it is called for reading configuration without
+  It will be `:dry_run` if it is called for reading configuration without
   actually starting a process.
 
   The second argument is the repository configuration as stored in the
