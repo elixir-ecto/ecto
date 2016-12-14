@@ -174,41 +174,45 @@ defmodule Ecto.Repo.Schema do
     assocs = schema.__schema__(:associations)
     return = schema.__schema__(:read_after_writes)
 
-    # On insert, we always merge the whole struct into the
-    # changeset as changes, except the primary key if it is nil.
-    changeset = put_repo_and_action(changeset, :insert, repo)
-    changeset = surface_changes(changeset, struct, types, fields ++ assocs)
+    if changeset.action != :ignore do
+      # On insert, we always merge the whole struct into the
+      # changeset as changes, except the primary key if it is nil.
+      changeset = put_repo_and_action(changeset, :insert, repo)
+      changeset = surface_changes(changeset, struct, types, fields ++ assocs)
 
-    wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
-      opts = Keyword.put(opts, :skip_transaction, true)
-      user_changeset = run_prepare(changeset, prepare)
+      wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
+        opts = Keyword.put(opts, :skip_transaction, true)
+        user_changeset = run_prepare(changeset, prepare)
 
-      {changeset, parents, children} = pop_assocs(user_changeset, assocs)
-      changeset = process_parents(changeset, parents, opts)
+        {changeset, parents, children} = pop_assocs(user_changeset, assocs)
+        changeset = process_parents(changeset, parents, opts)
 
-      if changeset.valid? do
-        changeset = Ecto.Embedded.prepare(changeset, adapter, :insert)
+        if changeset.valid? do
+          changeset = Ecto.Embedded.prepare(changeset, adapter, :insert)
 
-        metadata = metadata(struct, opts)
-        {changes, extra, return} = autogenerate_id(metadata, changeset.changes, return, adapter)
-        {changes, autogen} = dump_changes!(:insert, Map.take(changes, fields), schema, extra, types, adapter)
+          metadata = metadata(struct, opts)
+          {changes, extra, return} = autogenerate_id(metadata, changeset.changes, return, adapter)
+          {changes, autogen} = dump_changes!(:insert, Map.take(changes, fields), schema, extra, types, adapter)
 
-        on_conflict = on_conflict(metadata, fn -> length(changes) end, adapter, opts)
-        args = [repo, metadata, changes, on_conflict, return, opts]
-        case apply(changeset, adapter, :insert, args) do
-          {:ok, values} ->
-            changeset
-            |> load_changes(:loaded, values ++ extra, autogen, adapter)
-            |> process_children(children, user_changeset, opts)
-          {:error, _} = error ->
-            error
-          {:invalid, constraints} ->
-            {:error, constraints_to_errors(user_changeset, :insert, constraints)}
+          on_conflict = on_conflict(metadata, fn -> length(changes) end, adapter, opts)
+          args = [repo, metadata, changes, on_conflict, return, opts]
+          case apply(changeset, adapter, :insert, args) do
+            {:ok, values} ->
+              changeset
+              |> load_changes(:loaded, values ++ extra, autogen, adapter)
+              |> process_children(children, user_changeset, opts)
+            {:error, _} = error ->
+              error
+            {:invalid, constraints} ->
+              {:error, constraints_to_errors(user_changeset, :insert, constraints)}
+          end
+        else
+          {:error, changeset}
         end
-      else
-        {:error, changeset}
-      end
-    end)
+      end)
+    else
+      {:ok, changeset.data}
+    end
   end
 
   defp do_insert(repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
@@ -243,7 +247,7 @@ defmodule Ecto.Repo.Schema do
     # changeset before hand.
     changeset = put_repo_and_action(changeset, :update, repo)
 
-    if changeset.changes != %{} or force? do
+    if (changeset.changes != %{} or force?) and changeset.action != :ignore do
       wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
         opts = Keyword.put(opts, :skip_transaction, true)
         user_changeset = run_prepare(changeset, prepare)
@@ -338,26 +342,30 @@ defmodule Ecto.Repo.Schema do
     schema  = struct.__struct__
     assocs = schema.__schema__(:associations)
 
-    changeset = put_repo_and_action(changeset, :delete, repo)
-    changeset = %{changeset | changes: %{}}
+    if changeset.action != :ignore do
+      changeset = put_repo_and_action(changeset, :delete, repo)
+      changeset = %{changeset | changes: %{}}
 
-    wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
-      changeset = run_prepare(changeset, prepare)
+      wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
+        changeset = run_prepare(changeset, prepare)
 
-      filters = add_pk_filter!(changeset.filters, struct)
-      filters = dump_fields!(schema, :delete, filters, types, adapter)
+        filters = add_pk_filter!(changeset.filters, struct)
+        filters = dump_fields!(schema, :delete, filters, types, adapter)
 
-      delete_assocs(changeset, repo, schema, assocs, opts)
-      args = [repo, metadata(struct, opts), filters, opts]
-      case apply(changeset, adapter, :delete, args) do
-        {:ok, values} ->
-          {:ok, load_changes(changeset, :deleted, values, [], adapter).data}
-        {:error, _} = error ->
-          error
-        {:invalid, constraints} ->
-          {:error, constraints_to_errors(changeset, :delete, constraints)}
-      end
-    end)
+        delete_assocs(changeset, repo, schema, assocs, opts)
+        args = [repo, metadata(struct, opts), filters, opts]
+        case apply(changeset, adapter, :delete, args) do
+          {:ok, values} ->
+            {:ok, load_changes(changeset, :deleted, values, [], adapter).data}
+          {:error, _} = error ->
+            error
+          {:invalid, constraints} ->
+            {:error, constraints_to_errors(changeset, :delete, constraints)}
+        end
+      end)
+    else
+      {:ok, changeset.data}
+    end
   end
 
   defp do_delete(repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
@@ -384,6 +392,8 @@ defmodule Ecto.Repo.Schema do
   defp struct_from_changeset!(_action, %{data: struct}),
     do: struct
 
+  defp put_repo_and_action(%{action: :ignore} = changeset, _action, _repo),
+    do: changeset
   defp put_repo_and_action(%{action: given}, action, repo) when given != nil and given != action,
     do: raise(ArgumentError, "a changeset with action #{inspect given} was given to #{inspect repo}.#{action}/2")
   defp put_repo_and_action(changeset, action, repo),
