@@ -166,7 +166,7 @@ if Code.ensure_loaded?(Postgrex) do
         end
 
       assemble(["INSERT INTO #{quote_table(prefix, table)}", insert_as(on_conflict),
-                values, on_conflict(on_conflict), returning(returning)])
+                values, on_conflict(on_conflict,header), returning(returning)])
     end
 
     defp insert_as({%{from: from} = query, _, _}) do
@@ -177,23 +177,34 @@ if Code.ensure_loaded?(Postgrex) do
       []
     end
 
-    defp on_conflict({:raise, _, []}) do
+    defp on_conflict({:raise, _, []},_header) do
       []
     end
-    defp on_conflict({:nothing, _, targets}) do
+    defp on_conflict({:nothing, _, targets}, _header) do
       "ON CONFLICT " <> conflict_target(targets) <> "DO NOTHING"
     end
-    defp on_conflict({:replace_all, _, targets}) do
-      error!(nil, "The :replace_all option is not supported by PostgreSQL")
+    defp on_conflict({:replace_all, _, targets}, header) do
+      "ON CONFLICT " <> conflict_target(targets) <> "DO " <> replace_all(header)
     end
-    defp on_conflict({query, _, targets}) do
+    defp on_conflict({query, _, targets}, _header) do
       "ON CONFLICT " <> conflict_target(targets) <> "DO " <> update_all(query, "UPDATE SET")
     end
     defp conflict_target([]) do
       ""
     end
+
     defp conflict_target(targets) do
       "(" <> Enum.map_join(targets, ",", &quote_name/1) <> ") "
+    end
+
+    defp replace_all(header) do
+      updates = Enum.map(header, fn field ->
+        quoted = quote_name(field)
+        quoted <> " = " <> "EXCLUDED." <> (field |> Atom.to_string)
+      end)
+      |> Enum.join(",")
+
+      "UPDATE SET " <> updates
     end
 
     defp insert_all([row|rows], counter, acc) do

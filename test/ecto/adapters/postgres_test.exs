@@ -611,6 +611,13 @@ defmodule Ecto.Adapters.PostgresTest do
     update = from("schema", update: [set: [z: ^"foo"]], where: [w: true]) |> normalize(:update_all, 2)
     query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], [:x, :y]}, [:z])
     assert query == ~s{INSERT INTO "schema" AS s0 ("x","y") VALUES ($1,$2) ON CONFLICT ("x","y") DO UPDATE SET "z" = $3 WHERE (s0."w" = TRUE) RETURNING "z"}
+
+    # For :replace_all
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {:replace_all, [], [:id]}, [])
+    assert query == ~s{INSERT INTO "schema" ("x","y") VALUES ($1,$2) ON CONFLICT ("id") DO UPDATE SET "x" = EXCLUDED.x,"y" = EXCLUDED.y}
+
+    query = SQL.insert(nil, "schema", [:x, :y], [[:x, :y]], {:replace_all, [], []}, [])
+    assert query == ~s{INSERT INTO "schema" ("x","y") VALUES ($1,$2) ON CONFLICT DO UPDATE SET "x" = EXCLUDED.x,"y" = EXCLUDED.y}
   end
 
   test "update" do

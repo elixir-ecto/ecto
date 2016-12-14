@@ -518,7 +518,6 @@ defmodule Ecto.Adapters.MySQLTest do
     assert query == ~s{DELETE FROM `prefix`.`schema` WHERE `x` = ? AND `y` = ?}
   end
 
-
   # DDL
 
   import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3,
