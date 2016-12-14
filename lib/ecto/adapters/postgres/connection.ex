@@ -80,7 +80,7 @@ if Code.ensure_loaded?(Postgrex) do
       end
     end
 
-    def execute(conn, sql, params, opts) when is_binary(sql) do
+    def execute(conn, sql, params, opts) when is_binary(sql) or is_list(sql) do
       query = %Postgrex.Query{name: "", statement: sql}
       opts  = [function: :prepare_execute] ++ opts
       case DBConnection.prepare_execute(conn, query, params, opts) do
@@ -585,7 +585,7 @@ if Code.ensure_loaded?(Postgrex) do
       current =
         case elem(sources, pos) do
           {table, schema} ->
-            name = String.first(table) <> Integer.to_string(pos)
+            name = [String.first(table), Integer.to_string(pos)]
             {quote_table(prefix, table), name, schema}
           {:fragment, _, _} ->
             {nil, [?f, Integer.to_string(pos)], nil}
@@ -608,198 +608,177 @@ if Code.ensure_loaded?(Postgrex) do
     def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
       options       = options_expr(table.options)
       if_not_exists = if command == :create_if_not_exists, do: " IF NOT EXISTS", else: ""
-      pk_definition = case pk_definition(columns) do
-        nil -> ""
-        pk -> ", #{pk}"
-      end
+      queries = [["CREATE TABLE", if_not_exists, ?\s,
+        quote_table(table.prefix, table.name), ?\s, ?(,
+        column_definitions(table, columns), pk_definition(columns, ", "), ?), options]]
 
-      queries = ["CREATE TABLE" <> if_not_exists <>
-        " #{quote_table(table.prefix, table.name)}" <>
-        " (#{column_definitions(table, columns)}#{pk_definition})" <> options]
-
-      queries = add_comment(queries, comment_on(:table, table.name, table.comment))
-
-      add_comments_for_columns(queries, comments_for_columns(table, columns))
+      queries ++
+        comments_on(:table, table.name, table.comment) ++
+        comments_for_columns(table, columns)
     end
 
     def execute_ddl({command, %Table{} = table}) when command in @drops do
       if_exists = if command == :drop_if_exists, do: " IF EXISTS", else: ""
 
-      "DROP TABLE" <> if_exists <> " #{quote_table(table.prefix, table.name)}"
+      [["DROP TABLE", if_exists, ?\s, quote_table(table.prefix, table.name)]]
     end
 
     def execute_ddl({:alter, %Table{} = table, changes}) do
-      pk_definition = case pk_definition(changes) do
-        nil -> ""
-        pk -> ", ADD #{pk}"
-      end
+      queries = [["ALTER TABLE ", quote_table(table.prefix, table.name), ?\s,
+                 column_changes(table, changes), pk_definition(changes, ", ADD ")]]
 
-      queries = ["ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}" <>
-      "#{pk_definition}"]
-
-      queries = add_comment(queries, comment_on(:table, table.name, table.comment))
-
-      add_comments_for_columns(queries, comments_for_columns(table, changes))
+      queries ++
+        comments_on(:table, table.name, table.comment) ++
+        comments_for_columns(table, changes)
     end
 
     def execute_ddl({:create, %Index{} = index}) do
-      fields = Enum.map_join(index.columns, ", ", &index_expr/1)
+      fields = intersperse_map(index.columns, ", ", &index_expr/1)
 
-      queries = [assemble(["CREATE",
-                if_do(index.unique, "UNIQUE"),
-                "INDEX",
-                if_do(index.concurrently, "CONCURRENTLY"),
-                quote_name(index.name),
-                "ON",
-                quote_table(index.prefix, index.table),
-                if_do(index.using, "USING #{index.using}"),
-                "(#{fields})",
-                if_do(index.where, "WHERE #{index.where}")])]
+      queries = [["CREATE ",
+                  if_do(index.unique, "UNIQUE "),
+                  "INDEX ",
+                  if_do(index.concurrently, "CONCURRENTLY "),
+                  quote_name(index.name),
+                  " ON ",
+                  quote_table(index.prefix, index.table),
+                  if_do(index.using, [" USING " , to_string(index.using)]),
+                  ?\s, ?(, fields, ?),
+                  if_do(index.where, [" WHERE ", to_string(index.where)])]]
 
-      add_comment(queries, comment_on(:index, index.name, index.comment))
+      queries ++ comments_on(:index, index.name, index.comment)
     end
 
     def execute_ddl({:create_if_not_exists, %Index{} = index}) do
-      assemble(["DO $$",
-                "BEGIN",
-                execute_ddl({:create, index}) <> ";",
-                "EXCEPTION WHEN duplicate_table THEN END; $$;"])
+      [["DO $$ BEGIN ",
+        execute_ddl({:create, index}), ";",
+        "EXCEPTION WHEN duplicate_table THEN END; $$;"]]
     end
 
     def execute_ddl({command, %Index{} = index}) when command in @drops do
-      if_exists = if command == :drop_if_exists, do: "IF EXISTS", else: []
+      if_exists = if command == :drop_if_exists, do: "IF EXISTS ", else: []
 
-      assemble(["DROP",
-                "INDEX",
-                if_do(index.concurrently, "CONCURRENTLY"),
-                if_exists,
-                quote_table(index.prefix, index.name)])
+      [["DROP INDEX ",
+        if_do(index.concurrently, "CONCURRENTLY "),
+        if_exists,
+        quote_table(index.prefix, index.name)]]
     end
 
     def execute_ddl({:rename, %Table{} = current_table, %Table{} = new_table}) do
-      "ALTER TABLE #{quote_table(current_table.prefix, current_table.name)} RENAME TO #{quote_table(nil, new_table.name)}"
+      [["ALTER TABLE ", quote_table(current_table.prefix, current_table.name),
+        " RENAME TO ", quote_table(nil, new_table.name)]]
     end
 
     def execute_ddl({:rename, %Table{} = table, current_column, new_column}) do
-      "ALTER TABLE #{quote_table(table.prefix, table.name)} RENAME #{quote_name(current_column)} TO #{quote_name(new_column)}"
+      [["ALTER TABLE ", quote_table(table.prefix, table.name), " RENAME ",
+        quote_name(current_column), " TO ", quote_name(new_column)]]
     end
 
     def execute_ddl({:create, %Constraint{} = constraint}) do
-      queries = ["ALTER TABLE #{quote_table(constraint.prefix, constraint.table)} ADD #{new_constraint_expr(constraint)}"]
+      queries = [["ALTER TABLE ", quote_table(constraint.prefix, constraint.table),
+                  " ADD ", new_constraint_expr(constraint)]]
 
-      add_comment(queries, comment_on(:constraint, constraint.name, constraint.comment, constraint.table))
+      queries ++ comments_on(:constraint, constraint.name, constraint.comment, constraint.table)
     end
 
     def execute_ddl({:drop, %Constraint{} = constraint}) do
-      "ALTER TABLE #{quote_table(constraint.prefix, constraint.table)} DROP CONSTRAINT #{quote_name(constraint.name)}"
+      [["ALTER TABLE ", quote_table(constraint.prefix, constraint.table),
+        " DROP CONSTRAINT ", quote_name(constraint.name)]]
     end
 
-    def execute_ddl(string) when is_binary(string), do: string
+    def execute_ddl(string) when is_binary(string), do: [string]
 
     def execute_ddl(keyword) when is_list(keyword),
       do: error!(nil, "PostgreSQL adapter does not support keyword lists in execute")
 
-    defp pk_definition(columns) do
+    defp pk_definition(columns, prefix) do
       pks =
         for {_, name, _, opts} <- columns,
             opts[:primary_key],
             do: name
 
       case pks do
-        [] -> nil
-        _  -> "PRIMARY KEY (" <> Enum.map_join(pks, ", ", &quote_name/1) <> ")"
+        [] -> []
+        _  -> [prefix, "PRIMARY KEY (", intersperse_map(pks, ", ", &quote_name/1), ")"]
       end
     end
 
-    defp add_comment([query], ""), do: query
-    defp add_comment(queries, comment), do: queries ++ [comment]
-
-    defp comment_on(_database_object, _name, nil), do:  ""
-    defp comment_on(:column, {table_name, column_name}, comment) do
+    defp comments_on(_database_object, _name, nil), do: []
+    defp comments_on(:column, {table_name, column_name}, comment) do
       column_name = quote_table(table_name, column_name)
-      "COMMENT ON COLUMN #{column_name} IS #{single_quote(comment)}"
+      [["COMMENT ON COLUMN ", column_name, " IS ", single_quote(comment)]]
     end
-    defp comment_on(:table, name, comment) do
-      "COMMENT ON TABLE #{quote_name(name)} IS #{single_quote(comment)}"
+    defp comments_on(:table, name, comment) do
+      [["COMMENT ON TABLE ", quote_name(name), " IS ", single_quote(comment)]]
     end
-    defp comment_on(:index, name, comment) do
-      "COMMENT ON INDEX #{quote_name(name)} IS #{single_quote(comment)}"
-    end
-
-    defp comment_on(:constraint, _name, nil, _table_name), do:  ""
-    defp comment_on(:constraint, name, comment, table_name) do
-      "COMMENT ON CONSTRAINT #{quote_name(name)} ON #{quote_name(table_name)} IS #{single_quote(comment)}"
+    defp comments_on(:index, name, comment) do
+      [["COMMENT ON INDEX ", quote_name(name), " IS ", single_quote(comment)]]
     end
 
-    defp add_comments_for_columns(queries, []), do: queries
-    defp add_comments_for_columns(query, comments) when is_binary(query),
-      do: add_comments_for_columns([query], comments)
-    defp add_comments_for_columns(queries, comments), do: queries ++ comments
+    defp comments_on(:constraint, _name, nil, _table_name), do:  []
+    defp comments_on(:constraint, name, comment, table_name) do
+      [["COMMENT ON CONSTRAINT ", quote_name(name), " ON ", quote_name(table_name),
+        " IS ", single_quote(comment)]]
+    end
 
     defp comments_for_columns(table, columns) do
-      Enum.map(columns, fn
+      Enum.flat_map(columns, fn
         {_operation, column_name, _column_type, opts} ->
-          comment_on(:column, {table.name, column_name}, opts[:comment])
-        _ -> ""
+          comments_on(:column, {table.name, column_name}, opts[:comment])
+        _ -> []
       end)
-      |> Enum.filter(fn(value) -> value != "" end)
     end
 
     defp column_definitions(table, columns) do
-      Enum.map_join(columns, ", ", &column_definition(table, &1))
+      intersperse_map(columns, ", ", &column_definition(table, &1))
     end
 
     defp column_definition(table, {:add, name, %Reference{} = ref, opts}) do
-      assemble([
-        quote_name(name), reference_column_type(ref.type, opts),
-        column_options(ref.type, opts), reference_expr(ref, table, name)
-      ])
+      [quote_name(name), ?\s, reference_column_type(ref.type, opts),
+       column_options(ref.type, opts), reference_expr(ref, table, name)]
     end
 
     defp column_definition(_table, {:add, name, type, opts}) do
-      assemble([quote_name(name), column_type(type, opts), column_options(type, opts)])
+      [quote_name(name), ?\s, column_type(type, opts), column_options(type, opts)]
     end
 
     defp column_changes(table, columns) do
-      Enum.map_join(columns, ", ", &column_change(table, &1))
+      intersperse_map(columns, ", ", &column_change(table, &1))
     end
 
     defp column_change(table, {:add, name, %Reference{} = ref, opts}) do
-      assemble([
-        "ADD COLUMN", quote_name(name), reference_column_type(ref.type, opts),
-        column_options(ref.type, opts), reference_expr(ref, table, name)
-      ])
+      ["ADD COLUMN ", quote_name(name), ?\s, reference_column_type(ref.type, opts),
+       column_options(ref.type, opts), reference_expr(ref, table, name)]
     end
 
     defp column_change(_table, {:add, name, type, opts}) do
-      assemble(["ADD COLUMN", quote_name(name), column_type(type, opts), column_options(type, opts)])
+      ["ADD COLUMN ", quote_name(name), ?\s, column_type(type, opts),
+       column_options(type, opts)]
     end
 
     defp column_change(table, {:modify, name, %Reference{} = ref, opts}) do
-      assemble([
-        "ALTER COLUMN", quote_name(name), "TYPE", reference_column_type(ref.type, opts),
-        constraint_expr(ref, table, name), modify_null(name, opts), modify_default(name, ref.type, opts)
-      ])
+      ["ALTER COLUMN ", quote_name(name), " TYPE ", reference_column_type(ref.type, opts),
+       constraint_expr(ref, table, name), modify_null(name, opts), modify_default(name, ref.type, opts)]
     end
 
     defp column_change(_table, {:modify, name, type, opts}) do
-      assemble(["ALTER COLUMN", quote_name(name), "TYPE",
-                column_type(type, opts), modify_null(name, opts), modify_default(name, type, opts)])
+      ["ALTER COLUMN ", quote_name(name), " TYPE ",
+       column_type(type, opts), modify_null(name, opts), modify_default(name, type, opts)]
     end
 
-    defp column_change(_table, {:remove, name}), do: "DROP COLUMN #{quote_name(name)}"
+    defp column_change(_table, {:remove, name}), do: ["DROP COLUMN ", quote_name(name)]
 
     defp modify_null(name, opts) do
       case Keyword.get(opts, :null) do
-        true  -> ", ALTER COLUMN #{quote_name(name)} DROP NOT NULL"
-        false -> ", ALTER COLUMN #{quote_name(name)} SET NOT NULL"
+        true  -> [", ALTER COLUMN ", quote_name(name), " DROP NOT NULL"]
+        false -> [", ALTER COLUMN ", quote_name(name), " SET NOT NULL"]
         nil   -> []
       end
     end
 
     defp modify_default(name, type, opts) do
       case Keyword.fetch(opts, :default) do
-        {:ok, val} -> ", ALTER COLUMN #{quote_name(name)} SET #{default_expr({:ok, val}, type)}"
+        {:ok, val} -> [", ALTER COLUMN ", quote_name(name), " SET", default_expr({:ok, val}, type)]
         :error -> []
       end
     end
@@ -810,27 +789,27 @@ if Code.ensure_loaded?(Postgrex) do
       [default_expr(default, type), null_expr(null)]
     end
 
-    defp null_expr(false), do: "NOT NULL"
-    defp null_expr(true), do: "NULL"
+    defp null_expr(false), do: " NOT NULL"
+    defp null_expr(true), do: " NULL"
     defp null_expr(_), do: []
 
     defp new_constraint_expr(%Constraint{check: check} = constraint) when is_binary(check) do
-      "CONSTRAINT #{quote_name(constraint.name)} CHECK (#{check})"
+      ["CONSTRAINT ", quote_name(constraint.name), " CHECK (", check, ")"]
     end
     defp new_constraint_expr(%Constraint{exclude: exclude} = constraint) when is_binary(exclude) do
-      "CONSTRAINT #{quote_name(constraint.name)} EXCLUDE USING #{exclude}"
+      ["CONSTRAINT ", quote_name(constraint.name), " EXCLUDE USING ", exclude]
     end
 
     defp default_expr({:ok, nil}, _type),
-      do: "DEFAULT NULL"
+      do: " DEFAULT NULL"
     defp default_expr({:ok, []}, type),
-      do: "DEFAULT ARRAY[]::#{ecto_to_db(type)}"
+      do: [" DEFAULT ARRAY[]::", ecto_to_db(type)]
     defp default_expr({:ok, literal}, _type) when is_binary(literal),
-      do: "DEFAULT '#{escape_string(literal)}'"
+      do: [" DEFAULT '", escape_string(literal), ?']
     defp default_expr({:ok, literal}, _type) when is_number(literal) or is_boolean(literal),
-      do: "DEFAULT #{literal}"
+      do: [" DEFAULT ", to_string(literal)]
     defp default_expr({:ok, {:fragment, expr}}, _type),
-      do: "DEFAULT #{expr}"
+      do: [" DEFAULT ", expr]
     defp default_expr({:ok, expr}, type),
       do: raise(ArgumentError, "unknown default `#{inspect expr}` for type `#{inspect type}`. " <>
                                ":default may be a string, number, boolean, empty list or a fragment(...)")
@@ -847,10 +826,10 @@ if Code.ensure_loaded?(Postgrex) do
     defp options_expr(keyword) when is_list(keyword),
       do: error!(nil, "PostgreSQL adapter does not support keyword lists in :options")
     defp options_expr(options),
-      do: " #{options}"
+      do: [?\s, options]
 
     defp column_type({:array, type}, opts),
-      do: column_type(type, opts) <> "[]"
+      do: [column_type(type, opts), "[]"]
     defp column_type(type, opts) do
       size      = Keyword.get(opts, :size)
       precision = Keyword.get(opts, :precision)
@@ -858,23 +837,23 @@ if Code.ensure_loaded?(Postgrex) do
       type_name = ecto_to_db(type)
 
       cond do
-        size            -> "#{type_name}(#{size})"
-        precision       -> "#{type_name}(#{precision},#{scale || 0})"
-        type == :string -> "#{type_name}(255)"
-        true            -> "#{type_name}"
+        size            -> [type_name, ?(, to_string(size), ?)]
+        precision       -> [type_name, ?(, to_string(precision), ?,, to_string(scale || 0), ?)]
+        type == :string -> [type_name, "(255)"]
+        true            -> type_name
       end
     end
 
     defp reference_expr(%Reference{} = ref, table, name),
-      do: "CONSTRAINT #{reference_name(ref, table, name)} REFERENCES " <>
-          "#{quote_table(table.prefix, ref.table)}(#{quote_name(ref.column)})" <>
-          reference_on_delete(ref.on_delete) <> reference_on_update(ref.on_update)
+      do: [" CONSTRAINT ", reference_name(ref, table, name), " REFERENCES ",
+           quote_table(table.prefix, ref.table), ?(, quote_name(ref.column), ?),
+           reference_on_delete(ref.on_delete), reference_on_update(ref.on_update)]
 
     defp constraint_expr(%Reference{} = ref, table, name),
-      do: ", ADD CONSTRAINT #{reference_name(ref, table, name)} " <>
-          "FOREIGN KEY (#{quote_name(name)}) " <>
-          "REFERENCES #{quote_table(table.prefix, ref.table)}(#{quote_name(ref.column)})" <>
-          reference_on_delete(ref.on_delete) <> reference_on_update(ref.on_update)
+      do: [", ADD CONSTRAINT ", reference_name(ref, table, name), ?\s,
+           "FOREIGN KEY (", quote_name(name),
+           ") REFERENCES ", quote_table(table.prefix, ref.table), ?(, quote_name(ref.column), ?),
+           reference_on_delete(ref.on_delete), reference_on_update(ref.on_update)]
 
     # A reference pointing to a serial column becomes integer in postgres
     defp reference_name(%Reference{name: nil}, table, column),
@@ -911,7 +890,7 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     defp quote_table(nil, name),    do: quote_table(name)
-    defp quote_table(prefix, name), do: quote_table(prefix) <> "." <> quote_table(name)
+    defp quote_table(prefix, name), do: [quote_table(prefix), ?., quote_table(name)]
 
     defp quote_table(name) when is_atom(name),
       do: quote_table(Atom.to_string(name))
@@ -919,16 +898,10 @@ if Code.ensure_loaded?(Postgrex) do
       if String.contains?(name, "\"") do
         error!(nil, "bad table name #{inspect name}")
       end
-      <<?", name::binary, ?">>
+      [?", name, ?"]
     end
 
-    defp single_quote(value), do: "\'#{escape_string(value)}\'"
-
-    defp assemble(list) do
-      list
-      |> List.flatten
-      |> Enum.join(" ")
-    end
+    defp single_quote(value), do: [?', escape_string(value), ?']
 
     defp intersperse_map(list, separator, mapper, acc \\ [])
     defp intersperse_map([], _separator, _mapper, acc),
@@ -958,7 +931,7 @@ if Code.ensure_loaded?(Postgrex) do
       :binary.replace(value, "'", "''", [:global])
     end
 
-    defp ecto_to_db({:array, t}),     do: ecto_to_db(t) <> "[]"
+    defp ecto_to_db({:array, t}),     do: [ecto_to_db(t), "[]"]
     defp ecto_to_db(:id),             do: "integer"
     defp ecto_to_db(:binary_id),      do: "uuid"
     defp ecto_to_db(:string),         do: "varchar"
