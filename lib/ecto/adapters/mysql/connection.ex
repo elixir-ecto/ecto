@@ -89,7 +89,7 @@ if Code.ensure_loaded?(Mariaex) do
       offset   = offset(query, sources)
       lock     = lock(query.lock)
 
-      IO.iodata_to_binary([select, from, join, where, group_by, having, order_by, limit, offset, lock])
+      IO.iodata_to_binary([select, from, join, where, group_by, having, order_by, limit, offset | lock])
     end
 
     def update_all(query, prefix \\ nil)
@@ -98,12 +98,12 @@ if Code.ensure_loaded?(Mariaex) do
       sources = create_names(query)
       {from, name} = get_source(query, sources, 0, from)
 
-      update = ["UPDATE ", from, " AS ", name]
-      fields = update_fields(query, sources)
       join   = join(query, sources)
+      prefix = prefix || ["UPDATE ", from, " AS ", name, join, " SET "]
+      fields = update_fields(query, sources)
       where  = where(query, sources)
 
-      IO.iodata_to_binary([prefix || [update, join, " SET "], fields, where])
+      IO.iodata_to_binary([prefix, fields | where])
     end
     def update_all(_query, _prefix) do
       error!(nil, "RETURNING is not supported in update_all by MySQL")
@@ -117,7 +117,7 @@ if Code.ensure_loaded?(Mariaex) do
       join   = join(query, sources)
       where  = where(query, sources)
 
-      IO.iodata_to_binary(["DELETE ", name, ".*", from, join, where])
+      IO.iodata_to_binary(["DELETE ", name, ".*", from, join | where])
     end
     def delete_all(_query),
       do: error!(nil, "RETURNING is not supported in delete_all by MySQL")
@@ -125,7 +125,7 @@ if Code.ensure_loaded?(Mariaex) do
     def insert(prefix, table, header, rows, on_conflict, []) do
       fields = intersperse_map(header, ?,, &quote_name/1)
       IO.iodata_to_binary(["INSERT INTO ", quote_table(prefix, table), " (",
-                           fields, ") VALUES ", insert_all(rows),
+                           fields, ") VALUES ", insert_all(rows) |
                            on_conflict(on_conflict, header)])
     end
     def insert(_prefix, _table, _header, _rows, _on_conflict, _returning) do
@@ -140,20 +140,17 @@ if Code.ensure_loaded?(Mariaex) do
     end
     defp on_conflict({:nothing, _, []}, [field | _]) do
       quoted = quote_name(field)
-      [" ON DUPLICATE KEY UPDATE ", quoted, " = ", quoted]
+      [" ON DUPLICATE KEY UPDATE ", quoted, " = " | quoted]
     end
     defp on_conflict({:replace_all, _, []}, header) do
-      updates = Enum.map(header, fn field ->
-        quoted = quote_name(field)
-
-        quoted <> " = VALUES(" <> quoted <> ")"
-      end)
-      |> Enum.join(",")
-
-      " ON DUPLICATE KEY UPDATE " <> updates
+      [" ON DUPLICATE KEY UPDATE " |
+       intersperse_map(header, ?,, fn field ->
+         quoted = quote_name(field)
+         [quoted, " = VALUES(", quoted, ?)]
+       end)]
     end
     defp on_conflict({query, _, []}, _header) do
-      [" ON DUPLICATE KEY ", update_all(query, "UPDATE ")]
+      [" ON DUPLICATE KEY " | update_all(query, "UPDATE ")]
     end
 
     defp insert_all(rows) do
@@ -181,8 +178,8 @@ if Code.ensure_loaded?(Mariaex) do
     ## Query generation
 
     binary_ops =
-      [==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
-       and: "AND", or: "OR", like: "LIKE"]
+      [==: " = ", !=: " != ", <=: " <= ", >=: " >= ", <: " < ", >: " > ",
+       and: " AND ", or: " OR ", like: " LIKE "]
 
     @binary_ops Keyword.keys(binary_ops)
 
@@ -194,7 +191,7 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp select(%Query{select: %{fields: fields}, distinct: distinct} = query,
                 sources) do
-      ["SELECT ", distinct(distinct, sources, query), select(fields, sources, query)]
+      ["SELECT ", distinct(distinct, sources, query) | select(fields, sources, query)]
     end
 
     defp distinct(nil, _sources, _query), do: []
@@ -217,7 +214,7 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp from(%{from: from} = query, sources) do
       {from, name} = get_source(query, sources, 0, from)
-      [" FROM ", from, " AS ", name]
+      [" FROM ", from, " AS " | name]
     end
 
     defp update_fields(%Query{updates: updates} = query, sources) do
@@ -228,12 +225,12 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp update_op(:set, key, value, sources, query) do
-      [quote_name(key), " = ", expr(value, sources, query)]
+      [quote_name(key), " = " | expr(value, sources, query)]
     end
 
     defp update_op(:inc, key, value, sources, query) do
       quoted = quote_name(key)
-      [quoted, " = ", quoted, " + ", expr(value, sources, query)]
+      [quoted, " = ", quoted, " + " | expr(value, sources, query)]
     end
 
     defp update_op(command, _key, _value, _sources, query) do
@@ -245,16 +242,15 @@ if Code.ensure_loaded?(Mariaex) do
       Enum.map(joins, fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
           {join, name} = get_source(query, sources, ix, source)
-          qual = join_qual(qual, query)
-          [?\s, qual, join, " AS ", name, " ON ", expr(expr, sources, query)]
+          [join_qual(qual, query), join, " AS ", name, " ON " | expr(expr, sources, query)]
       end)
     end
 
-    defp join_qual(:inner, _), do: "INNER JOIN "
-    defp join_qual(:left, _),  do: "LEFT OUTER JOIN "
-    defp join_qual(:right, _), do: "RIGHT OUTER JOIN "
-    defp join_qual(:full, _),  do: "FULL OUTER JOIN "
-    defp join_qual(:cross, _), do: "CROSS JOIN "
+    defp join_qual(:inner, _), do: " INNER JOIN "
+    defp join_qual(:left, _),  do: " LEFT OUTER JOIN "
+    defp join_qual(:right, _), do: " RIGHT OUTER JOIN "
+    defp join_qual(:full, _),  do: " FULL OUTER JOIN "
+    defp join_qual(:cross, _), do: " CROSS JOIN "
     defp join_qual(mode, q),   do: error!(q, "join `#{inspect mode}` not supported by MySQL")
 
     defp where(%Query{wheres: wheres} = query, sources) do
@@ -309,9 +305,9 @@ if Code.ensure_loaded?(Mariaex) do
       [name,
        Enum.reduce(query_exprs, {op, paren_expr(expr, sources, query)}, fn
          %BooleanExpr{expr: expr, op: op}, {op, acc} ->
-           {op, [acc, operator_to_boolean(op), paren_expr(expr, sources, query)]}
+           {op, [acc, operator_to_boolean(op) | paren_expr(expr, sources, query)]}
          %BooleanExpr{expr: expr, op: op}, {_, acc} ->
-           {op, [?(, acc, ?), operator_to_boolean(op), paren_expr(expr, sources, query)]}
+           {op, [?(, acc, ?), operator_to_boolean(op) | paren_expr(expr, sources, query)]}
        end) |> elem(1)]
     end
 
@@ -323,13 +319,13 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp expr({:^, [], [_ix]}, _sources, _query) do
-      "?"
+      '?'
     end
 
     defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, _query)
         when is_atom(field) do
       {_, name, _} = elem(sources, idx)
-      [name, ?., quote_name(field)]
+      [name, ?. | quote_name(field)]
     end
 
     defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
@@ -340,7 +336,7 @@ if Code.ensure_loaded?(Mariaex) do
           "Please specify a schema or specify exactly which fields from " <>
           "#{inspect name} you desire")
       end
-      intersperse_map(fields, ", ", &[name, ?., quote_name(&1)])
+      intersperse_map(fields, ", ", &[name, ?. | quote_name(&1)])
     end
 
     defp expr({:in, _, [_left, []]}, _sources, _query) do
@@ -366,7 +362,7 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp expr({:is_nil, _, [arg]}, sources, query) do
-      [expr(arg, sources, query), " IS NULL"]
+      [expr(arg, sources, query) | " IS NULL"]
     end
 
     defp expr({:not, _, [expr]}, sources, query) do
@@ -390,12 +386,12 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
       ["CAST(date_add(", expr(datetime, sources, query), ", ",
-       interval(count, interval, sources, query), ") AS datetime)"]
+       interval(count, interval, sources, query) | ") AS datetime)"]
     end
 
     defp expr({:date_add, _, [date, count, interval]}, sources, query) do
       ["CAST(date_add(", expr(date, sources, query), ", ",
-       interval(count, interval, sources, query), ") AS date)"]
+       interval(count, interval, sources, query) | ") AS date)"]
     end
 
     defp expr({:ilike, _, [_, _]}, _sources, query) do
@@ -412,9 +408,7 @@ if Code.ensure_loaded?(Mariaex) do
       case handle_call(fun, length(args)) do
         {:binary_op, op} ->
           [left, right] = args
-          [op_to_binary(left, sources, query),
-           ?\s, op, ?\s,
-           op_to_binary(right, sources, query)]
+          [op_to_binary(left, sources, query), op | op_to_binary(right, sources, query)]
         {:fun, fun} ->
           [fun, ?(, modifier, intersperse_map(args, ", ", &expr(&1, sources, query)), ?)]
       end
@@ -461,11 +455,11 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp interval(count, "millisecond", sources, query) do
-      ["INTERVAL (", expr(count, sources, query), " * 1000) microsecond"]
+      ["INTERVAL (", expr(count, sources, query) | " * 1000) microsecond"]
     end
 
     defp interval(count, interval, sources, query) do
-      ["INTERVAL ", expr(count, sources, query), ?\s, interval]
+      ["INTERVAL ", expr(count, sources, query), ?\s | interval]
     end
 
     defp op_to_binary({op, _, [_, _]} = expr, sources, query) when op in @binary_ops do
@@ -484,12 +478,12 @@ if Code.ensure_loaded?(Mariaex) do
       current =
         case elem(sources, pos) do
           {table, schema} ->
-            name = [String.first(table), Integer.to_string(pos)]
+            name = [String.first(table) | Integer.to_string(pos)]
             {quote_table(prefix, table), name, schema}
           {:fragment, _, _} ->
-            {nil, [?f, Integer.to_string(pos)], nil}
+            {nil, [?f | Integer.to_string(pos)], nil}
           %Ecto.SubQuery{} ->
-            {nil, [?s, Integer.to_string(pos)], nil}
+            {nil, [?s | Integer.to_string(pos)], nil}
         end
       [current | create_names(prefix, sources, pos + 1, limit)]
     end
@@ -697,11 +691,11 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp reference_on_delete(:nilify_all), do: " ON DELETE SET NULL"
     defp reference_on_delete(:delete_all), do: " ON DELETE CASCADE"
-    defp reference_on_delete(_), do: ""
+    defp reference_on_delete(_), do: []
 
     defp reference_on_update(:nilify_all), do: " ON UPDATE SET NULL"
     defp reference_on_update(:update_all), do: " ON UPDATE CASCADE"
-    defp reference_on_update(_), do: ""
+    defp reference_on_update(_), do: []
 
     ## Helpers
 
