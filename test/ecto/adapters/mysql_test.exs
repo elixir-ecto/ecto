@@ -524,7 +524,7 @@ defmodule Ecto.Adapters.MySQLTest do
                                 references: 1, references: 2, constraint: 3]
 
   test "executing a string during migration" do
-    assert SQL.execute_ddl("example") == "example"
+    assert execute_ddl("example") == ["example"]
   end
 
   test "create table" do
@@ -536,39 +536,39 @@ defmodule Ecto.Adapters.MySQLTest do
                 {:add, :published_at, :"datetime(6)", [null: true]},
                 {:add, :is_active, :boolean, [default: true]}]}
 
-    assert SQL.execute_ddl(create) == """
+    assert execute_ddl(create) == ["""
     CREATE TABLE `posts` (`name` varchar(20) DEFAULT 'Untitled' NOT NULL,
     `price` numeric(8,2) DEFAULT expr,
     `on_hand` integer DEFAULT 0 NULL,
     `likes` smallint unsigned DEFAULT 0 NOT NULL,
     `published_at` datetime(6) NULL,
     `is_active` boolean DEFAULT true) ENGINE = INNODB
-    """ |> remove_newlines
+    """ |> remove_newlines]
   end
 
   test "create empty table" do
     create = {:create, table(:posts), []}
 
-    assert SQL.execute_ddl(create) == """
+    assert execute_ddl(create) == ["""
     CREATE TABLE `posts` ENGINE = INNODB
-    """ |> remove_newlines
+    """ |> remove_newlines]
   end
 
   test "create table with prefix" do
     create = {:create, table(:posts, prefix: :foo),
                [{:add, :category_0, references(:categories, prefix: :foo), []}]}
 
-    assert SQL.execute_ddl(create) == """
-    CREATE TABLE `foo`.`posts` (`category_0` BIGINT UNSIGNED ,
+    assert execute_ddl(create) == ["""
+    CREATE TABLE `foo`.`posts` (`category_0` BIGINT UNSIGNED,
     CONSTRAINT `posts_category_0_fkey` FOREIGN KEY (`category_0`) REFERENCES `foo`.`categories`(`id`)) ENGINE = INNODB
-    """ |> remove_newlines
+    """ |> remove_newlines]
   end
 
   test "create table with engine" do
     create = {:create, table(:posts, engine: :myisam),
                [{:add, :id, :serial, [primary_key: true]}]}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial, PRIMARY KEY (`id`)) ENGINE = MYISAM|
+    assert execute_ddl(create) ==
+           [~s|CREATE TABLE `posts` (`id` serial, PRIMARY KEY (`id`)) ENGINE = MYISAM|]
   end
 
   test "create table with references" do
@@ -580,36 +580,36 @@ defmodule Ecto.Adapters.MySQLTest do
                 {:add, :category_3, references(:categories, on_delete: :delete_all), [null: false]},
                 {:add, :category_4, references(:categories, on_delete: :nilify_all), []}]}
 
-    assert SQL.execute_ddl(create) == """
+    assert execute_ddl(create) == ["""
     CREATE TABLE `posts` (`id` serial,
-    `category_0` BIGINT UNSIGNED ,
+    `category_0` BIGINT UNSIGNED,
     CONSTRAINT `posts_category_0_fkey` FOREIGN KEY (`category_0`) REFERENCES `categories`(`id`),
-    `category_1` BIGINT UNSIGNED ,
+    `category_1` BIGINT UNSIGNED,
     CONSTRAINT `foo_bar` FOREIGN KEY (`category_1`) REFERENCES `categories`(`id`),
-    `category_2` BIGINT UNSIGNED ,
+    `category_2` BIGINT UNSIGNED,
     CONSTRAINT `posts_category_2_fkey` FOREIGN KEY (`category_2`) REFERENCES `categories`(`id`),
-    `category_3` BIGINT UNSIGNED NOT NULL ,
+    `category_3` BIGINT UNSIGNED NOT NULL,
     CONSTRAINT `posts_category_3_fkey` FOREIGN KEY (`category_3`) REFERENCES `categories`(`id`) ON DELETE CASCADE,
-    `category_4` BIGINT UNSIGNED ,
+    `category_4` BIGINT UNSIGNED,
     CONSTRAINT `posts_category_4_fkey` FOREIGN KEY (`category_4`) REFERENCES `categories`(`id`) ON DELETE SET NULL,
     PRIMARY KEY (`id`)) ENGINE = INNODB
-    """ |> remove_newlines
+    """ |> remove_newlines]
   end
 
   test "create table with options" do
     create = {:create, table(:posts, options: "WITH FOO=BAR"),
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :created_at, :datetime, []}]}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial, `created_at` datetime, PRIMARY KEY (`id`)) ENGINE = INNODB WITH FOO=BAR|
+    assert execute_ddl(create) ==
+           [~s|CREATE TABLE `posts` (`id` serial, `created_at` datetime, PRIMARY KEY (`id`)) ENGINE = INNODB WITH FOO=BAR|]
   end
 
   test "create table with both engine and options" do
     create = {:create, table(:posts, engine: :myisam, options: "WITH FOO=BAR"),
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :created_at, :datetime, []}]}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE TABLE `posts` (`id` serial, `created_at` datetime, PRIMARY KEY (`id`)) ENGINE = MYISAM WITH FOO=BAR|
+    assert execute_ddl(create) ==
+           [~s|CREATE TABLE `posts` (`id` serial, `created_at` datetime, PRIMARY KEY (`id`)) ENGINE = MYISAM WITH FOO=BAR|]
   end
 
   test "create table with composite key" do
@@ -618,19 +618,19 @@ defmodule Ecto.Adapters.MySQLTest do
                 {:add, :b, :integer, [primary_key: true]},
                 {:add, :name, :string, []}]}
 
-    assert SQL.execute_ddl(create) == """
+    assert execute_ddl(create) == ["""
     CREATE TABLE `posts` (`a` integer, `b` integer, `name` varchar(255), PRIMARY KEY (`a`, `b`)) ENGINE = INNODB
-    """ |> remove_newlines
+    """ |> remove_newlines]
   end
 
   test "drop table" do
     drop = {:drop, table(:posts)}
-    assert SQL.execute_ddl(drop) == ~s|DROP TABLE `posts`|
+    assert execute_ddl(drop) == [~s|DROP TABLE `posts`|]
   end
 
   test "drop table with prefixes" do
     drop = {:drop, table(:posts, prefix: :foo)}
-    assert SQL.execute_ddl(drop) == ~s|DROP TABLE `foo`.`posts`|
+    assert execute_ddl(drop) == [~s|DROP TABLE `foo`.`posts`|]
   end
 
   test "alter table" do
@@ -642,15 +642,15 @@ defmodule Ecto.Adapters.MySQLTest do
                 {:modify, :permalink_id, references(:permalinks), null: false},
                 {:remove, :summary}]}
 
-    assert SQL.execute_ddl(alter) == """
+    assert execute_ddl(alter) == ["""
     ALTER TABLE `posts` ADD `title` varchar(100) DEFAULT 'Untitled' NOT NULL,
-    ADD `author_id` BIGINT UNSIGNED ,
+    ADD `author_id` BIGINT UNSIGNED,
     ADD CONSTRAINT `posts_author_id_fkey` FOREIGN KEY (`author_id`) REFERENCES `author`(`id`),
     MODIFY `price` numeric(8,2) NULL, MODIFY `cost` integer DEFAULT NULL NOT NULL,
-    MODIFY `permalink_id` BIGINT UNSIGNED NOT NULL ,
+    MODIFY `permalink_id` BIGINT UNSIGNED NOT NULL,
     ADD CONSTRAINT `posts_permalink_id_fkey` FOREIGN KEY (`permalink_id`) REFERENCES `permalinks`(`id`),
     DROP `summary`
-    """ |> remove_newlines
+    """ |> remove_newlines]
   end
 
   test "alter table with prefix" do
@@ -658,101 +658,101 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :author_id, references(:author), []},
                 {:modify, :permalink_id, references(:permalinks), null: false}]}
 
-    assert SQL.execute_ddl(alter) == """
-    ALTER TABLE `foo`.`posts` ADD `author_id` BIGINT UNSIGNED ,
+    assert execute_ddl(alter) == ["""
+    ALTER TABLE `foo`.`posts` ADD `author_id` BIGINT UNSIGNED,
     ADD CONSTRAINT `posts_author_id_fkey` FOREIGN KEY (`author_id`) REFERENCES `foo`.`author`(`id`),
-    MODIFY `permalink_id` BIGINT UNSIGNED NOT NULL ,
+    MODIFY `permalink_id` BIGINT UNSIGNED NOT NULL,
     ADD CONSTRAINT `posts_permalink_id_fkey` FOREIGN KEY (`permalink_id`) REFERENCES `foo`.`permalinks`(`id`)
-    """ |> remove_newlines
+    """ |> remove_newlines]
   end
 
   test "alter table with primary key" do
     alter = {:alter, table(:posts),
                [{:add, :my_pk, :serial, [primary_key: true]}]}
 
-    assert SQL.execute_ddl(alter) == """
+    assert execute_ddl(alter) == ["""
     ALTER TABLE `posts`
     ADD `my_pk` serial,
     ADD PRIMARY KEY (`my_pk`)
-    """ |> remove_newlines
+    """ |> remove_newlines]
   end
 
   test "create index" do
     create = {:create, index(:posts, [:category_id, :permalink])}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE INDEX `posts_category_id_permalink_index` ON `posts` (`category_id`, `permalink`)|
+    assert execute_ddl(create) ==
+           [~s|CREATE INDEX `posts_category_id_permalink_index` ON `posts` (`category_id`, `permalink`)|]
 
     create = {:create, index(:posts, ["permalink(8)"], name: "posts$main")}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE INDEX `posts$main` ON `posts` (permalink(8))|
+    assert execute_ddl(create) ==
+           [~s|CREATE INDEX `posts$main` ON `posts` (permalink(8))|]
   end
 
   test "create index with prefix" do
     create = {:create, index(:posts, [:category_id, :permalink], prefix: :foo)}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE INDEX `posts_category_id_permalink_index` ON `foo`.`posts` (`category_id`, `permalink`)|
+    assert execute_ddl(create) ==
+           [~s|CREATE INDEX `posts_category_id_permalink_index` ON `foo`.`posts` (`category_id`, `permalink`)|]
   end
 
   test "create index asserting concurrency" do
     create = {:create, index(:posts, ["permalink(8)"], name: "posts$main", concurrently: true)}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE INDEX `posts$main` ON `posts` (permalink(8)) LOCK=NONE|
+    assert execute_ddl(create) ==
+           [~s|CREATE INDEX `posts$main` ON `posts` (permalink(8)) LOCK=NONE|]
   end
 
   test "create unique index" do
     create = {:create, index(:posts, [:permalink], unique: true)}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE UNIQUE INDEX `posts_permalink_index` ON `posts` (`permalink`)|
+    assert execute_ddl(create) ==
+           [~s|CREATE UNIQUE INDEX `posts_permalink_index` ON `posts` (`permalink`)|]
   end
 
   test "create unique index with condition" do
     assert_raise ArgumentError, "MySQL adapter does not support where in indexes", fn ->
       create = {:create, index(:posts, [:permalink], unique: true, where: "public IS TRUE")}
-      SQL.execute_ddl(create)
+      execute_ddl(create)
     end
   end
 
   test "create constraints" do
     assert_raise ArgumentError, "MySQL adapter does not support check constraints", fn ->
       create = {:create, constraint(:products, "foo", check: "price")}
-      assert SQL.execute_ddl(create)
+      assert execute_ddl(create)
     end
 
     assert_raise ArgumentError, "MySQL adapter does not support exclusion constraints", fn ->
       create = {:create, constraint(:products, "bar", exclude: "price")}
-      assert SQL.execute_ddl(create)
+      assert execute_ddl(create)
     end
   end
 
   test "create an index using a different type" do
     create = {:create, index(:posts, [:permalink], using: :hash)}
-    assert SQL.execute_ddl(create) ==
-           ~s|CREATE INDEX `posts_permalink_index` ON `posts` (`permalink`) USING hash|
+    assert execute_ddl(create) ==
+           [~s|CREATE INDEX `posts_permalink_index` ON `posts` (`permalink`) USING hash|]
   end
 
   test "drop index" do
     drop = {:drop, index(:posts, [:id], name: "posts$main")}
-    assert SQL.execute_ddl(drop) == ~s|DROP INDEX `posts$main` ON `posts`|
+    assert execute_ddl(drop) == [~s|DROP INDEX `posts$main` ON `posts`|]
   end
 
   test "drop index with prefix" do
     drop = {:drop, index(:posts, [:id], name: "posts$main", prefix: :foo)}
-    assert SQL.execute_ddl(drop) == ~s|DROP INDEX `posts$main` ON `foo`.`posts`|
+    assert execute_ddl(drop) == [~s|DROP INDEX `posts$main` ON `foo`.`posts`|]
   end
 
   test "drop index asserting concurrency" do
     drop = {:drop, index(:posts, [:id], name: "posts$main", concurrently: true)}
-    assert SQL.execute_ddl(drop) == ~s|DROP INDEX `posts$main` ON `posts` LOCK=NONE|
+    assert execute_ddl(drop) == [~s|DROP INDEX `posts$main` ON `posts` LOCK=NONE|]
   end
 
   test "rename table" do
     rename = {:rename, table(:posts), table(:new_posts)}
-    assert SQL.execute_ddl(rename) == ~s|RENAME TABLE `posts` TO `new_posts`|
+    assert execute_ddl(rename) == [~s|RENAME TABLE `posts` TO `new_posts`|]
   end
 
   test "rename table with prefix" do
     rename = {:rename, table(:posts, prefix: :foo), table(:new_posts, prefix: :foo)}
-    assert SQL.execute_ddl(rename) == ~s|RENAME TABLE `foo`.`posts` TO `foo`.`new_posts`|
+    assert execute_ddl(rename) == [~s|RENAME TABLE `foo`.`posts` TO `foo`.`new_posts`|]
   end
 
   # Unsupported types and clauses
@@ -776,5 +776,9 @@ defmodule Ecto.Adapters.MySQLTest do
 
   defp remove_newlines(string) do
     string |> String.trim |> String.replace("\n", " ")
+  end
+
+  defp execute_ddl(command) do
+    command |> SQL.execute_ddl() |> Enum.map(&IO.iodata_to_binary/1)
   end
 end

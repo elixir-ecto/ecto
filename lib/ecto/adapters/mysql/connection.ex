@@ -502,58 +502,42 @@ if Code.ensure_loaded?(Mariaex) do
 
     alias Ecto.Migration.{Table, Index, Reference, Constraint}
 
-    defp wrap_in_parentheses(""), do: ""
-    defp wrap_in_parentheses(str), do: "(#{str})"
-
     def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
-      engine  = engine_expr(table.engine)
-      options = options_expr(table.options)
-      if_not_exists = if command == :create_if_not_exists, do: "IF NOT EXISTS", else: ""
+      table_structure =
+        case column_definitions(table, columns) ++ pk_definitions(columns, ", ") do
+          [] -> []
+          list -> [?\s, ?(, list, ?)]
+        end
 
-      table_structure = [column_definitions(table, columns), pk_definition(columns)]
-      |> assemble(", ")
-      |> wrap_in_parentheses
-
-      assemble([
-        "CREATE TABLE",
-        if_not_exists,
+      [["CREATE TABLE ",
+        if_do(command == :create_if_not_exists, "IF NOT EXISTS "),
         quote_table(table.prefix, table.name),
         table_structure,
-        engine,
-        options
-      ])
+        engine_expr(table.engine), options_expr(table.options)]]
     end
 
     def execute_ddl({command, %Table{} = table}) when command in [:drop, :drop_if_exists] do
-      if_exists = if command == :drop_if_exists, do: " IF EXISTS", else: ""
-
-      "DROP TABLE" <> if_exists <> " #{quote_table(table.prefix, table.name)}"
+      [["DROP TABLE ", if_do(command == :drop_if_exists, "IF EXISTS "),
+        quote_table(table.prefix, table.name)]]
     end
 
     def execute_ddl({:alter, %Table{} = table, changes}) do
-      pk_definition = case pk_definition(changes) do
-        "" -> ""
-        pk -> ", ADD #{pk}"
-      end
-      "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}" <>
-      "#{pk_definition}"
+      [["ALTER TABLE ", quote_table(table.prefix, table.name), ?\s,
+        column_changes(table, changes), pk_definitions(changes, ", ADD ")]]
     end
 
     def execute_ddl({:create, %Index{} = index}) do
-      create = "CREATE#{if index.unique, do: " UNIQUE"} INDEX"
-      using  = if index.using, do: "USING #{index.using}", else: []
-
       if index.where do
         error!(nil, "MySQL adapter does not support where in indexes")
       end
 
-      assemble([create,
-                quote_name(index.name),
-                "ON",
-                quote_table(index.prefix, index.table),
-                "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})",
-                using,
-                if_do(index.concurrently, "LOCK=NONE")])
+      [["CREATE", if_do(index.unique, " UNIQUE"), " INDEX ",
+        quote_name(index.name),
+        " ON ",
+        quote_table(index.prefix, index.table), ?\s,
+        ?(, intersperse_map(index.columns, ", ", &index_expr/1), ?),
+        if_do(index.using, [" USING ", to_string(index.using)]),
+        if_do(index.concurrently, " LOCK=NONE")]]
     end
 
     def execute_ddl({:create_if_not_exists, %Index{}}),
@@ -565,10 +549,10 @@ if Code.ensure_loaded?(Mariaex) do
       do: error!(nil, "MySQL adapter does not support exclusion constraints")
 
     def execute_ddl({:drop, %Index{} = index}) do
-      assemble(["DROP INDEX",
-                quote_name(index.name),
-                "ON #{quote_table(index.prefix, index.table)}",
-                if_do(index.concurrently, "LOCK=NONE")])
+      [["DROP INDEX ",
+        quote_name(index.name),
+        " ON ", quote_table(index.prefix, index.table),
+        if_do(index.concurrently, " LOCK=NONE")]]
     end
 
     def execute_ddl({:drop, %Constraint{}}),
@@ -578,68 +562,67 @@ if Code.ensure_loaded?(Mariaex) do
       do: error!(nil, "MySQL adapter does not support drop if exists for index")
 
     def execute_ddl({:rename, %Table{} = current_table, %Table{} = new_table}) do
-      "RENAME TABLE #{quote_table(current_table.prefix, current_table.name)} TO #{quote_table(new_table.prefix, new_table.name)}"
+      [["RENAME TABLE ", quote_table(current_table.prefix, current_table.name),
+        " TO ", quote_table(new_table.prefix, new_table.name)]]
     end
 
     def execute_ddl({:rename, _table, _current_column, _new_column}) do
       error!(nil, "MySQL adapter does not support renaming columns")
     end
 
-    def execute_ddl(string) when is_binary(string), do: string
+    def execute_ddl(string) when is_binary(string), do: [string]
 
     def execute_ddl(keyword) when is_list(keyword),
       do: error!(nil, "MySQL adapter does not support keyword lists in execute")
 
-    defp pk_definition(columns) do
+    defp pk_definitions(columns, prefix) do
       pks =
         for {_, name, _, opts} <- columns,
             opts[:primary_key],
             do: name
 
       case pks do
-        [] -> ""
-        _  -> "PRIMARY KEY (" <> Enum.map_join(pks, ", ", &quote_name/1) <> ")"
+        [] -> []
+        _  -> [[prefix, "PRIMARY KEY (", intersperse_map(pks, ", ", &quote_name/1), ?)]]
       end
     end
 
     defp column_definitions(table, columns) do
-      Enum.map_join(columns, ", ", &column_definition(table, &1))
+      intersperse_map(columns, ", ", &column_definition(table, &1))
     end
 
     defp column_definition(table, {:add, name, %Reference{} = ref, opts}) do
-      assemble([quote_name(name), reference_column_type(ref.type, opts),
-                column_options(opts), reference_expr(ref, table, name)])
+      [quote_name(name), ?\s, reference_column_type(ref.type, opts),
+       column_options(opts), reference_expr(ref, table, name)]
     end
 
     defp column_definition(_table, {:add, name, type, opts}) do
-      assemble([quote_name(name), column_type(type, opts), column_options(opts)])
+      [quote_name(name), ?\s, column_type(type, opts), column_options(opts)]
     end
 
     defp column_changes(table, columns) do
-      Enum.map_join(columns, ", ", &column_change(table, &1))
+      intersperse_map(columns, ", ", &column_change(table, &1))
     end
 
     defp column_change(table, {:add, name, %Reference{} = ref, opts}) do
-      assemble(["ADD", quote_name(name), reference_column_type(ref.type, opts),
-                column_options(opts), constraint_expr(ref, table, name)])
+      ["ADD ", quote_name(name), ?\s, reference_column_type(ref.type, opts),
+       column_options(opts), constraint_expr(ref, table, name)]
     end
 
     defp column_change(_table, {:add, name, type, opts}) do
-      assemble(["ADD", quote_name(name), column_type(type, opts), column_options(opts)])
+      ["ADD ", quote_name(name), ?\s, column_type(type, opts), column_options(opts)]
     end
 
     defp column_change(table, {:modify, name, %Reference{} = ref, opts}) do
-      assemble([
-        "MODIFY", quote_name(name), reference_column_type(ref.type, opts),
-        column_options(opts), constraint_expr(ref, table, name)
-      ])
+      ["MODIFY ", quote_name(name), ?\s, reference_column_type(ref.type, opts),
+       column_options(opts), constraint_expr(ref, table, name)]
     end
 
     defp column_change(_table, {:modify, name, type, opts}) do
-      assemble(["MODIFY", quote_name(name), column_type(type, opts), column_options(opts)])
+      ["MODIFY ", quote_name(name), ?\s, column_type(type, opts), column_options(opts)]
     end
 
-    defp column_change(_table, {:remove, name}), do: "DROP #{quote_name(name)}"
+    defp column_change(_table, {:remove, name}), do: ["DROP ", quote_name(name)]
 
     defp column_options(opts) do
       default = Keyword.fetch(opts, :default)
@@ -647,18 +630,18 @@ if Code.ensure_loaded?(Mariaex) do
       [default_expr(default), null_expr(null)]
     end
 
-    defp null_expr(false), do: "NOT NULL"
-    defp null_expr(true), do: "NULL"
+    defp null_expr(false), do: " NOT NULL"
+    defp null_expr(true), do: " NULL"
     defp null_expr(_), do: []
 
     defp default_expr({:ok, nil}),
-      do: "DEFAULT NULL"
+      do: " DEFAULT NULL"
     defp default_expr({:ok, literal}) when is_binary(literal),
-      do: "DEFAULT '#{escape_string(literal)}'"
+      do: [" DEFAULT '", escape_string(literal), ?']
     defp default_expr({:ok, literal}) when is_number(literal) or is_boolean(literal),
-      do: "DEFAULT #{literal}"
+      do: [" DEFAULT ", to_string(literal)]
     defp default_expr({:ok, {:fragment, expr}}),
-      do: "DEFAULT #{expr}"
+      do: [" DEFAULT ", expr]
     defp default_expr(:error),
       do: []
 
@@ -666,16 +649,15 @@ if Code.ensure_loaded?(Mariaex) do
       do: literal
     defp index_expr(literal), do: quote_name(literal)
 
-    defp engine_expr(nil), do: engine_expr("INNODB")
     defp engine_expr(storage_engine),
-      do: String.upcase("ENGINE = #{storage_engine}")
+      do: [" ENGINE = ", String.upcase(to_string(storage_engine || "INNODB"))]
 
     defp options_expr(nil),
-      do: ""
+      do: []
     defp options_expr(keyword) when is_list(keyword),
       do: error!(nil, "MySQL adapter does not support keyword lists in :options")
     defp options_expr(options),
-      do: "#{options}"
+      do: [?\s, to_string(options)]
 
     defp column_type(type, opts) do
       size      = Keyword.get(opts, :size)
@@ -684,24 +666,26 @@ if Code.ensure_loaded?(Mariaex) do
       type_name = ecto_to_db(type)
 
       cond do
-        size            -> "#{type_name}(#{size})"
-        precision       -> "#{type_name}(#{precision},#{scale || 0})"
-        type == :string -> "#{type_name}(255)"
-        true            -> "#{type_name}"
+        size            -> [type_name, ?(, to_string(size), ?)]
+        precision       -> [type_name, ?(, to_string(precision), ?,, to_string(scale || 0), ?)]
+        type == :string -> [type_name, "(255)"]
+        true            -> type_name
       end
     end
 
     defp constraint_expr(%Reference{} = ref, table, name),
-      do: ", ADD CONSTRAINT #{reference_name(ref, table, name)} " <>
-          "FOREIGN KEY (#{quote_name(name)}) " <>
-          "REFERENCES #{quote_table(table.prefix, ref.table)}(#{quote_name(ref.column)})" <>
-          reference_on_delete(ref.on_delete) <> reference_on_update(ref.on_update)
+      do: [", ADD CONSTRAINT ", reference_name(ref, table, name),
+           " FOREIGN KEY (", quote_name(name), ?),
+           " REFERENCES ", quote_table(table.prefix, ref.table),
+           ?(, quote_name(ref.column), ?),
+           reference_on_delete(ref.on_delete), reference_on_update(ref.on_update)]
 
     defp reference_expr(%Reference{} = ref, table, name),
-      do: ", CONSTRAINT #{reference_name(ref, table, name)} FOREIGN KEY " <>
-          "(#{quote_name(name)}) REFERENCES " <>
-          "#{quote_table(table.prefix, ref.table)}(#{quote_name(ref.column)})" <>
-          reference_on_delete(ref.on_delete) <> reference_on_update(ref.on_update)
+      do: [", CONSTRAINT ", reference_name(ref, table, name),
+           " FOREIGN KEY (", quote_name(name), ?),
+           " REFERENCES ", quote_table(table.prefix, ref.table),
+           ?(, quote_name(ref.column), ?),
+           reference_on_delete(ref.on_delete), reference_on_update(ref.on_update)]
 
     defp reference_name(%Reference{name: nil}, table, column),
       do: quote_name("#{table.name}_#{column}_fkey")
@@ -734,11 +718,11 @@ if Code.ensure_loaded?(Mariaex) do
         error!(nil, "bad field name #{inspect name}")
       end
 
-      <<?`, name::binary, ?`>>
+      [?`, name, ?`]
     end
 
     defp quote_table(nil, name),    do: quote_table(name)
-    defp quote_table(prefix, name), do: quote_table(prefix) <> "." <> quote_table(name)
+    defp quote_table(prefix, name), do: [quote_table(prefix), ?., quote_table(name)]
 
     defp quote_table(name) when is_atom(name),
       do: quote_table(Atom.to_string(name))
@@ -746,15 +730,7 @@ if Code.ensure_loaded?(Mariaex) do
       if String.contains?(name, "`") do
         error!(nil, "bad table name #{inspect name}")
       end
-      <<?`, name::binary, ?`>>
-    end
-
-    defp assemble(list), do: assemble(list, " ")
-    defp assemble(list, joiner) do
-      list
-      |> List.flatten
-      |> Enum.reject(fn(v) -> v == "" end)
-      |> Enum.join(joiner)
+      [?`, name, ?`]
     end
 
     defp intersperse_map(list, separator, mapper, acc \\ [])
@@ -764,18 +740,6 @@ if Code.ensure_loaded?(Mariaex) do
       do: [acc | mapper.(elem)]
     defp intersperse_map([elem | rest], separator, mapper, acc),
       do: intersperse_map(rest, separator, mapper, [acc, mapper.(elem), separator])
-
-    defp intersperse_reduce(list, separator, user_acc, reducer, acc \\ [])
-    defp intersperse_reduce([], _separator, user_acc, _reducer, acc),
-      do: {acc, user_acc}
-    defp intersperse_reduce([elem], _separator, user_acc, reducer, acc) do
-      {elem, user_acc} = reducer.(elem, user_acc)
-      {[acc | elem], user_acc}
-    end
-    defp intersperse_reduce([elem | rest], separator, user_acc, reducer, acc) do
-      {elem, user_acc} = reducer.(elem, user_acc)
-      intersperse_reduce(rest, separator, user_acc, reducer, [acc, elem, separator])
-    end
 
     defp if_do(condition, value) do
       if condition, do: value, else: []
