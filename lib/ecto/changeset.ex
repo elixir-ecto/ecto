@@ -500,8 +500,8 @@ defmodule Ecto.Changeset do
       {:ok, type} ->
         type
       :error ->
-        raise ArgumentError, "unknown field `#{key}` (note only fields, " <>
-          "embeds, belongs_to, has_one and has_many associations are supported in changesets)"
+        raise ArgumentError, "unknown field `#{key}`. Only fields, " <>
+          "embeds and associations (except :through ones) are supported in changesets"
     end
   end
 
