@@ -17,7 +17,7 @@ if Code.ensure_loaded?(Mariaex) do
       DBConnection.prepare_execute(conn, query, map_params(params), opts)
     end
 
-    def execute(conn, sql, params, opts) when is_binary(sql) do
+    def execute(conn, sql, params, opts) when is_binary(sql) or is_list(sql) do
       query = %Mariaex.Query{name: "", statement: sql}
       case DBConnection.prepare_execute(conn, query, map_params(params), opts) do
         {:ok, _, query} -> {:ok, query}
@@ -89,7 +89,7 @@ if Code.ensure_loaded?(Mariaex) do
       offset   = offset(query, sources)
       lock     = lock(query.lock)
 
-      assemble([select, from, join, where, group_by, having, order_by, limit, offset, lock])
+      IO.iodata_to_binary([select, from, join, where, group_by, having, order_by, limit, offset | lock])
     end
 
     def update_all(query, prefix \\ nil)
@@ -98,16 +98,12 @@ if Code.ensure_loaded?(Mariaex) do
       sources = create_names(query)
       {from, name} = get_source(query, sources, 0, from)
 
-      update = "UPDATE #{from} AS #{name}"
-      fields = update_fields(query, sources)
       join   = join(query, sources)
+      prefix = prefix || ["UPDATE ", from, " AS ", name, join, " SET "]
+      fields = update_fields(query, sources)
       where  = where(query, sources)
 
-      if prefix do
-        assemble([prefix, fields, where])
-      else
-        assemble([update, join, "SET", fields, where])
-      end
+      IO.iodata_to_binary([prefix, fields | where])
     end
     def update_all(_query, _prefix) do
       error!(nil, "RETURNING is not supported in update_all by MySQL")
@@ -117,20 +113,20 @@ if Code.ensure_loaded?(Mariaex) do
       sources = create_names(query)
       {_, name, _} = elem(sources, 0)
 
-      delete = "DELETE #{name}.*"
       from   = from(query, sources)
       join   = join(query, sources)
       where  = where(query, sources)
 
-      assemble([delete, from, join, where])
+      IO.iodata_to_binary(["DELETE ", name, ".*", from, join | where])
     end
     def delete_all(_query),
       do: error!(nil, "RETURNING is not supported in delete_all by MySQL")
 
     def insert(prefix, table, header, rows, on_conflict, []) do
-      fields = Enum.map_join(header, ",", &quote_name/1)
-      "INSERT INTO #{quote_table(prefix, table)} (" <> fields <> ") VALUES "
-        <> insert_all(rows) <> on_conflict(on_conflict, header)
+      fields = intersperse_map(header, ?,, &quote_name/1)
+      IO.iodata_to_binary(["INSERT INTO ", quote_table(prefix, table), " (",
+                           fields, ") VALUES ", insert_all(rows) |
+                           on_conflict(on_conflict, header)])
     end
     def insert(_prefix, _table, _header, _rows, _on_conflict, _returning) do
       error!(nil, "RETURNING is not supported in insert/insert_all by MySQL")
@@ -140,63 +136,50 @@ if Code.ensure_loaded?(Mariaex) do
       error!(nil, "The :conflict_target option is not supported in insert/insert_all by MySQL")
     end
     defp on_conflict({:raise, _, []}, _header) do
-      ""
+      []
     end
     defp on_conflict({:nothing, _, []}, [field | _]) do
       quoted = quote_name(field)
-      " ON DUPLICATE KEY UPDATE " <> quoted <> " = " <> quoted
+      [" ON DUPLICATE KEY UPDATE ", quoted, " = " | quoted]
     end
     defp on_conflict({:replace_all, _, []}, header) do
-      updates = Enum.map(header, fn field ->
-        quoted = quote_name(field)
-
-        quoted <> " = VALUES(" <> quoted <> ")"
-      end)
-      |> Enum.join(",")
-
-      " ON DUPLICATE KEY UPDATE " <> updates
+      [" ON DUPLICATE KEY UPDATE " |
+       intersperse_map(header, ?,, fn field ->
+         quoted = quote_name(field)
+         [quoted, " = VALUES(", quoted, ?)]
+       end)]
     end
     defp on_conflict({query, _, []}, _header) do
-      " ON DUPLICATE KEY " <> update_all(query, "UPDATE")
+      [" ON DUPLICATE KEY " | update_all(query, "UPDATE ")]
     end
 
     defp insert_all(rows) do
-      Enum.map_join(rows, ",", fn row ->
-        row = Enum.map_join(row, ",", fn
-          nil -> "DEFAULT"
-          _   -> "?"
-        end)
-        "(" <> row <> ")"
+      intersperse_map(rows, ?,, fn row ->
+        [?(, intersperse_map(row, ?,, &insert_all_value/1), ?)]
       end)
     end
 
+    defp insert_all_value(nil), do: "DEFAULT"
+    defp insert_all_value(_),   do: '?'
+
     def update(prefix, table, fields, filters, _returning) do
-      filters = Enum.map filters, fn field  ->
-        "#{quote_name(field)} = ?"
-      end
+      fields = intersperse_map(fields, ", ", &[quote_name(&1), " = ?"])
+      filters = intersperse_map(filters, " AND ", &[quote_name(&1), " = ?"])
 
-      fields = Enum.map fields, fn field ->
-        "#{quote_name(field)} = ?"
-      end
-
-      "UPDATE #{quote_table(prefix, table)} SET " <> Enum.join(fields, ", ") <>
-        " WHERE " <> Enum.join(filters, " AND ")
+      IO.iodata_to_binary(["UPDATE ", quote_table(prefix, table), " SET ", fields, " WHERE " | filters])
     end
 
     def delete(prefix, table, filters, _returning) do
-      filters = Enum.map filters, fn field ->
-        "#{quote_name(field)} = ?"
-      end
+      filters = intersperse_map(filters, " AND ", &[quote_name(&1), " = ?"])
 
-      "DELETE FROM #{quote_table(prefix, table)} WHERE " <>
-        Enum.join(filters, " AND ")
+      IO.iodata_to_binary(["DELETE FROM ", quote_table(prefix, table), " WHERE " | filters])
     end
 
     ## Query generation
 
     binary_ops =
-      [==: "=", !=: "!=", <=: "<=", >=: ">=", <:  "<", >:  ">",
-       and: "AND", or: "OR", like: "LIKE"]
+      [==: " = ", !=: " != ", <=: " <= ", >=: " >= ", <: " < ", >: " > ",
+       and: " AND ", or: " OR ", like: " LIKE "]
 
     @binary_ops Keyword.keys(binary_ops)
 
@@ -208,14 +191,12 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp select(%Query{select: %{fields: fields}, distinct: distinct} = query,
                 sources) do
-      "SELECT " <>
-        distinct(distinct, sources, query) <>
-        select(fields, sources, query)
+      ["SELECT ", distinct(distinct, sources, query) | select(fields, sources, query)]
     end
 
-    defp distinct(nil, _sources, _query), do: ""
+    defp distinct(nil, _sources, _query), do: []
     defp distinct(%QueryExpr{expr: true}, _sources, _query),  do: "DISTINCT "
-    defp distinct(%QueryExpr{expr: false}, _sources, _query), do: ""
+    defp distinct(%QueryExpr{expr: false}, _sources, _query), do: []
     defp distinct(%QueryExpr{expr: exprs}, _sources, query) when is_list(exprs) do
       error!(query, "DISTINCT with multiple columns is not supported by MySQL")
     end
@@ -223,9 +204,9 @@ if Code.ensure_loaded?(Mariaex) do
     defp select([], _sources, _query),
       do: "TRUE"
     defp select(fields, sources, query) do
-      Enum.map_join(fields, ", ", fn
+      intersperse_map(fields, ", ", fn
         {key, value} ->
-          expr(value, sources, query) <> " AS " <> quote_name(key)
+          [expr(value, sources, query), " AS ", quote_name(key)]
         value ->
           expr(value, sources, query)
       end)
@@ -233,23 +214,23 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp from(%{from: from} = query, sources) do
       {from, name} = get_source(query, sources, 0, from)
-      "FROM #{from} AS #{name}"
+      [" FROM ", from, " AS " | name]
     end
 
     defp update_fields(%Query{updates: updates} = query, sources) do
       for(%{expr: expr} <- updates,
           {op, kw} <- expr,
           {key, value} <- kw,
-          do: update_op(op, key, value, sources, query)) |> Enum.join(", ")
+          do: update_op(op, key, value, sources, query)) |> Enum.intersperse(", ")
     end
 
     defp update_op(:set, key, value, sources, query) do
-      quote_name(key) <> " = " <> expr(value, sources, query)
+      [quote_name(key), " = " | expr(value, sources, query)]
     end
 
     defp update_op(:inc, key, value, sources, query) do
       quoted = quote_name(key)
-      quoted <> " = " <> quoted <> " + " <> expr(value, sources, query)
+      [quoted, " = ", quoted, " + " | expr(value, sources, query)]
     end
 
     defp update_op(command, _key, _value, _sources, query) do
@@ -258,102 +239,93 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp join(%Query{joins: []}, _sources), do: []
     defp join(%Query{joins: joins} = query, sources) do
-      Enum.map_join(joins, " ", fn
+      Enum.map(joins, fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
           {join, name} = get_source(query, sources, ix, source)
-          qual = join_qual(qual, query)
-          "#{qual} " <> join <> " AS #{name} ON " <> expr(expr, sources, query)
+          [join_qual(qual, query), join, " AS ", name, " ON " | expr(expr, sources, query)]
       end)
     end
 
-    defp join_qual(:inner, _), do: "INNER JOIN"
-    defp join_qual(:left, _),  do: "LEFT OUTER JOIN"
-    defp join_qual(:right, _), do: "RIGHT OUTER JOIN"
-    defp join_qual(:full, _),  do: "FULL OUTER JOIN"
-    defp join_qual(:cross, _), do: "CROSS JOIN"
+    defp join_qual(:inner, _), do: " INNER JOIN "
+    defp join_qual(:left, _),  do: " LEFT OUTER JOIN "
+    defp join_qual(:right, _), do: " RIGHT OUTER JOIN "
+    defp join_qual(:full, _),  do: " FULL OUTER JOIN "
+    defp join_qual(:cross, _), do: " CROSS JOIN "
     defp join_qual(mode, q),   do: error!(q, "join `#{inspect mode}` not supported by MySQL")
 
     defp where(%Query{wheres: wheres} = query, sources) do
-      boolean("WHERE", wheres, sources, query)
+      boolean(" WHERE ", wheres, sources, query)
     end
 
     defp having(%Query{havings: havings} = query, sources) do
-      boolean("HAVING", havings, sources, query)
+      boolean(" HAVING ", havings, sources, query)
     end
 
+    defp group_by(%Query{group_bys: []}, _sources), do: []
     defp group_by(%Query{group_bys: group_bys} = query, sources) do
-      exprs =
-        Enum.map_join(group_bys, ", ", fn
-          %QueryExpr{expr: expr} ->
-            Enum.map_join(expr, ", ", &expr(&1, sources, query))
-        end)
-
-      case exprs do
-        "" -> []
-        _  -> "GROUP BY " <> exprs
-      end
+      [" GROUP BY " |
+       intersperse_map(group_bys, ", ", fn
+         %QueryExpr{expr: expr} ->
+           intersperse_map(expr, ", ", &expr(&1, sources, query))
+       end)]
     end
 
+    defp order_by(%Query{order_bys: []}, _sources), do: []
     defp order_by(%Query{order_bys: order_bys} = query, sources) do
-      exprs =
-        Enum.map_join(order_bys, ", ", fn
-          %QueryExpr{expr: expr} ->
-            Enum.map_join(expr, ", ", &order_by_expr(&1, sources, query))
-        end)
-
-      case exprs do
-        "" -> []
-        _  -> "ORDER BY " <> exprs
-      end
+      [" ORDER BY " |
+       intersperse_map(order_bys, ", ", fn
+         %QueryExpr{expr: expr} ->
+           intersperse_map(expr, ", ", &order_by_expr(&1, sources, query))
+       end)]
     end
 
     defp order_by_expr({dir, expr}, sources, query) do
       str = expr(expr, sources, query)
       case dir do
         :asc  -> str
-        :desc -> str <> " DESC"
+        :desc -> [str | " DESC"]
       end
     end
 
     defp limit(%Query{limit: nil}, _sources), do: []
     defp limit(%Query{limit: %QueryExpr{expr: expr}} = query, sources) do
-      "LIMIT " <> expr(expr, sources, query)
+      [" LIMIT " | expr(expr, sources, query)]
     end
 
     defp offset(%Query{offset: nil}, _sources), do: []
     defp offset(%Query{offset: %QueryExpr{expr: expr}} = query, sources) do
-      "OFFSET " <> expr(expr, sources, query)
+      [" OFFSET " | expr(expr, sources, query)]
     end
 
     defp lock(nil), do: []
-    defp lock(lock_clause), do: lock_clause
+    defp lock(lock_clause), do: [?\s | lock_clause]
 
     defp boolean(_name, [], _sources, _query), do: []
     defp boolean(name, [%{expr: expr, op: op} | query_exprs], sources, query) do
-      name <> " " <>
-        (Enum.reduce(query_exprs, {op, paren_expr(expr, sources, query)}, fn
-          %BooleanExpr{expr: expr, op: op}, {op, acc} ->
-            {op, acc <> operator_to_boolean(op) <> paren_expr(expr, sources, query)}
-          %BooleanExpr{expr: expr, op: op}, {_, acc} ->
-            {op, "(" <> acc <> ")" <> operator_to_boolean(op) <> paren_expr(expr, sources, query)}
-        end) |> elem(1))
+      [name,
+       Enum.reduce(query_exprs, {op, paren_expr(expr, sources, query)}, fn
+         %BooleanExpr{expr: expr, op: op}, {op, acc} ->
+           {op, [acc, operator_to_boolean(op) | paren_expr(expr, sources, query)]}
+         %BooleanExpr{expr: expr, op: op}, {_, acc} ->
+           {op, [?(, acc, ?), operator_to_boolean(op) | paren_expr(expr, sources, query)]}
+       end) |> elem(1)]
     end
 
     defp operator_to_boolean(:and), do: " AND "
     defp operator_to_boolean(:or), do: " OR "
 
     defp paren_expr(expr, sources, query) do
-      "(" <> expr(expr, sources, query) <> ")"
+      [?(, expr(expr, sources, query), ?)]
     end
 
     defp expr({:^, [], [_ix]}, _sources, _query) do
-      "?"
+      '?'
     end
 
     defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, _query)
         when is_atom(field) do
       {_, name, _} = elem(sources, idx)
-      "#{name}.#{quote_name(field)}"
+      [name, ?. | quote_name(field)]
     end
 
     defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
@@ -364,7 +336,7 @@ if Code.ensure_loaded?(Mariaex) do
           "Please specify a schema or specify exactly which fields from " <>
           "#{inspect name} you desire")
       end
-      Enum.map_join(fields, ", ", &"#{name}.#{quote_name(&1)}")
+      intersperse_map(fields, ", ", &[name, ?. | quote_name(&1)])
     end
 
     defp expr({:in, _, [_left, []]}, _sources, _query) do
@@ -372,8 +344,8 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp expr({:in, _, [left, right]}, sources, query) when is_list(right) do
-      args = Enum.map_join right, ",", &expr(&1, sources, query)
-      expr(left, sources, query) <> " IN (" <> args <> ")"
+      args = intersperse_map(right, ?,, &expr(&1, sources, query))
+      [expr(left, sources, query), " IN (", args, ?)]
     end
 
     defp expr({:in, _, [_, {:^, _, [_, 0]}]}, _sources, _query) do
@@ -381,20 +353,20 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp expr({:in, _, [left, {:^, _, [_, length]}]}, sources, query) do
-      args = Enum.join List.duplicate("?", length), ","
-      expr(left, sources, query) <> " IN (" <> args <> ")"
+      args = Enum.intersperse(List.duplicate(??, length), ?,)
+      [expr(left, sources, query), " IN (", args, ?)]
     end
 
     defp expr({:in, _, [left, right]}, sources, query) do
-      expr(left, sources, query) <> " = ANY(" <> expr(right, sources, query) <> ")"
+      [expr(left, sources, query), " = ANY(", expr(right, sources, query), ?)]
     end
 
     defp expr({:is_nil, _, [arg]}, sources, query) do
-      "#{expr(arg, sources, query)} IS NULL"
+      [expr(arg, sources, query) | " IS NULL"]
     end
 
     defp expr({:not, _, [expr]}, sources, query) do
-      "NOT (" <> expr(expr, sources, query) <> ")"
+      ["NOT (", expr(expr, sources, query), ?)]
     end
 
     defp expr(%Ecto.SubQuery{query: query, fields: fields}, _sources, _query) do
@@ -406,20 +378,20 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp expr({:fragment, _, parts}, sources, query) do
-      Enum.map_join(parts, "", fn
+      Enum.map(parts, fn
         {:raw, part}  -> part
         {:expr, expr} -> expr(expr, sources, query)
       end)
     end
 
     defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
-      "CAST(date_add(" <> expr(datetime, sources, query) <> ", "
-                       <> interval(count, interval, sources, query) <> ") AS datetime)"
+      ["CAST(date_add(", expr(datetime, sources, query), ", ",
+       interval(count, interval, sources, query) | ") AS datetime)"]
     end
 
     defp expr({:date_add, _, [date, count, interval]}, sources, query) do
-      "CAST(date_add(" <> expr(date, sources, query) <> ", "
-                       <> interval(count, interval, sources, query) <> ") AS date)"
+      ["CAST(date_add(", expr(date, sources, query), ", ",
+       interval(count, interval, sources, query) | ") AS date)"]
     end
 
     defp expr({:ilike, _, [_, _]}, _sources, query) do
@@ -430,18 +402,15 @@ if Code.ensure_loaded?(Mariaex) do
       {modifier, args} =
         case args do
           [rest, :distinct] -> {"DISTINCT ", [rest]}
-          _ -> {"", args}
+          _ -> {[], args}
         end
 
       case handle_call(fun, length(args)) do
         {:binary_op, op} ->
           [left, right] = args
-          op_to_binary(left, sources, query) <>
-          " #{op} "
-          <> op_to_binary(right, sources, query)
-
+          [op_to_binary(left, sources, query), op | op_to_binary(right, sources, query)]
         {:fun, fun} ->
-          "#{fun}(" <> modifier <> Enum.map_join(args, ", ", &expr(&1, sources, query)) <> ")"
+          [fun, ?(, modifier, intersperse_map(args, ", ", &expr(&1, sources, query)), ?)]
       end
     end
 
@@ -456,7 +425,7 @@ if Code.ensure_loaded?(Mariaex) do
     defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources, _query)
         when is_binary(binary) do
       hex = Base.encode16(binary, case: :lower)
-      "x'#{hex}'"
+      [?x, ?', hex, ?']
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query)
@@ -465,7 +434,7 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query) do
-      "CAST(#{expr(other, sources, query)} AS " <> ecto_cast_to_db(type, query) <> ")"
+      ["CAST(", expr(other, sources, query), " AS ", ecto_cast_to_db(type, query), ?)]
     end
 
     defp expr(nil, _sources, _query),   do: "NULL"
@@ -473,25 +442,24 @@ if Code.ensure_loaded?(Mariaex) do
     defp expr(false, _sources, _query), do: "FALSE"
 
     defp expr(literal, _sources, _query) when is_binary(literal) do
-      "'#{escape_string(literal)}'"
+      [?', escape_string(literal), ?']
     end
 
     defp expr(literal, _sources, _query) when is_integer(literal) do
-      String.Chars.Integer.to_string(literal)
+      Integer.to_string(literal)
     end
 
     defp expr(literal, _sources, _query) when is_float(literal) do
       # MySQL doesn't support float cast
-      expr = String.Chars.Float.to_string(literal)
-      "(0 + #{expr})"
+      ["(0 + ", Float.to_string(literal), ?)]
     end
 
     defp interval(count, "millisecond", sources, query) do
-      "INTERVAL (" <> expr(count, sources, query) <> " * 1000) microsecond"
+      ["INTERVAL (", expr(count, sources, query) | " * 1000) microsecond"]
     end
 
     defp interval(count, interval, sources, query) do
-      "INTERVAL " <> expr(count, sources, query) <> " " <> interval
+      ["INTERVAL ", expr(count, sources, query), ?\s | interval]
     end
 
     defp op_to_binary({op, _, [_, _]} = expr, sources, query) when op in @binary_ops do
@@ -510,14 +478,14 @@ if Code.ensure_loaded?(Mariaex) do
       current =
         case elem(sources, pos) do
           {table, schema} ->
-            name = String.first(table) <> Integer.to_string(pos)
+            name = [String.first(table) | Integer.to_string(pos)]
             {quote_table(prefix, table), name, schema}
           {:fragment, _, _} ->
-            {nil, "f" <> Integer.to_string(pos), nil}
+            {nil, [?f | Integer.to_string(pos)], nil}
           %Ecto.SubQuery{} ->
-            {nil, "s" <> Integer.to_string(pos), nil}
+            {nil, [?s | Integer.to_string(pos)], nil}
         end
-      [current|create_names(prefix, sources, pos + 1, limit)]
+      [current | create_names(prefix, sources, pos + 1, limit)]
     end
 
     defp create_names(_prefix, _sources, pos, pos) do
@@ -528,58 +496,42 @@ if Code.ensure_loaded?(Mariaex) do
 
     alias Ecto.Migration.{Table, Index, Reference, Constraint}
 
-    defp wrap_in_parentheses(""), do: ""
-    defp wrap_in_parentheses(str), do: "(#{str})"
-
     def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
-      engine  = engine_expr(table.engine)
-      options = options_expr(table.options)
-      if_not_exists = if command == :create_if_not_exists, do: "IF NOT EXISTS", else: ""
+      table_structure =
+        case column_definitions(table, columns) ++ pk_definitions(columns, ", ") do
+          [] -> []
+          list -> [?\s, ?(, list, ?)]
+        end
 
-      table_structure = [column_definitions(table, columns), pk_definition(columns)]
-      |> assemble(", ")
-      |> wrap_in_parentheses
-
-      assemble([
-        "CREATE TABLE",
-        if_not_exists,
+      [["CREATE TABLE ",
+        if_do(command == :create_if_not_exists, "IF NOT EXISTS "),
         quote_table(table.prefix, table.name),
         table_structure,
-        engine,
-        options
-      ])
+        engine_expr(table.engine), options_expr(table.options)]]
     end
 
     def execute_ddl({command, %Table{} = table}) when command in [:drop, :drop_if_exists] do
-      if_exists = if command == :drop_if_exists, do: " IF EXISTS", else: ""
-
-      "DROP TABLE" <> if_exists <> " #{quote_table(table.prefix, table.name)}"
+      [["DROP TABLE ", if_do(command == :drop_if_exists, "IF EXISTS "),
+        quote_table(table.prefix, table.name)]]
     end
 
     def execute_ddl({:alter, %Table{} = table, changes}) do
-      pk_definition = case pk_definition(changes) do
-        "" -> ""
-        pk -> ", ADD #{pk}"
-      end
-      "ALTER TABLE #{quote_table(table.prefix, table.name)} #{column_changes(table, changes)}" <>
-      "#{pk_definition}"
+      [["ALTER TABLE ", quote_table(table.prefix, table.name), ?\s,
+        column_changes(table, changes), pk_definitions(changes, ", ADD ")]]
     end
 
     def execute_ddl({:create, %Index{} = index}) do
-      create = "CREATE#{if index.unique, do: " UNIQUE"} INDEX"
-      using  = if index.using, do: "USING #{index.using}", else: []
-
       if index.where do
         error!(nil, "MySQL adapter does not support where in indexes")
       end
 
-      assemble([create,
-                quote_name(index.name),
-                "ON",
-                quote_table(index.prefix, index.table),
-                "(#{Enum.map_join(index.columns, ", ", &index_expr/1)})",
-                using,
-                if_do(index.concurrently, "LOCK=NONE")])
+      [["CREATE", if_do(index.unique, " UNIQUE"), " INDEX ",
+        quote_name(index.name),
+        " ON ",
+        quote_table(index.prefix, index.table), ?\s,
+        ?(, intersperse_map(index.columns, ", ", &index_expr/1), ?),
+        if_do(index.using, [" USING ", to_string(index.using)]),
+        if_do(index.concurrently, " LOCK=NONE")]]
     end
 
     def execute_ddl({:create_if_not_exists, %Index{}}),
@@ -591,10 +543,10 @@ if Code.ensure_loaded?(Mariaex) do
       do: error!(nil, "MySQL adapter does not support exclusion constraints")
 
     def execute_ddl({:drop, %Index{} = index}) do
-      assemble(["DROP INDEX",
-                quote_name(index.name),
-                "ON #{quote_table(index.prefix, index.table)}",
-                if_do(index.concurrently, "LOCK=NONE")])
+      [["DROP INDEX ",
+        quote_name(index.name),
+        " ON ", quote_table(index.prefix, index.table),
+        if_do(index.concurrently, " LOCK=NONE")]]
     end
 
     def execute_ddl({:drop, %Constraint{}}),
@@ -604,68 +556,67 @@ if Code.ensure_loaded?(Mariaex) do
       do: error!(nil, "MySQL adapter does not support drop if exists for index")
 
     def execute_ddl({:rename, %Table{} = current_table, %Table{} = new_table}) do
-      "RENAME TABLE #{quote_table(current_table.prefix, current_table.name)} TO #{quote_table(new_table.prefix, new_table.name)}"
+      [["RENAME TABLE ", quote_table(current_table.prefix, current_table.name),
+        " TO ", quote_table(new_table.prefix, new_table.name)]]
     end
 
     def execute_ddl({:rename, _table, _current_column, _new_column}) do
       error!(nil, "MySQL adapter does not support renaming columns")
     end
 
-    def execute_ddl(string) when is_binary(string), do: string
+    def execute_ddl(string) when is_binary(string), do: [string]
 
     def execute_ddl(keyword) when is_list(keyword),
       do: error!(nil, "MySQL adapter does not support keyword lists in execute")
 
-    defp pk_definition(columns) do
+    defp pk_definitions(columns, prefix) do
       pks =
         for {_, name, _, opts} <- columns,
             opts[:primary_key],
             do: name
 
       case pks do
-        [] -> ""
-        _  -> "PRIMARY KEY (" <> Enum.map_join(pks, ", ", &quote_name/1) <> ")"
+        [] -> []
+        _  -> [[prefix, "PRIMARY KEY (", intersperse_map(pks, ", ", &quote_name/1), ?)]]
       end
     end
 
     defp column_definitions(table, columns) do
-      Enum.map_join(columns, ", ", &column_definition(table, &1))
+      intersperse_map(columns, ", ", &column_definition(table, &1))
     end
 
     defp column_definition(table, {:add, name, %Reference{} = ref, opts}) do
-      assemble([quote_name(name), reference_column_type(ref.type, opts),
-                column_options(opts), reference_expr(ref, table, name)])
+      [quote_name(name), ?\s, reference_column_type(ref.type, opts),
+       column_options(opts), reference_expr(ref, table, name)]
     end
 
     defp column_definition(_table, {:add, name, type, opts}) do
-      assemble([quote_name(name), column_type(type, opts), column_options(opts)])
+      [quote_name(name), ?\s, column_type(type, opts), column_options(opts)]
     end
 
     defp column_changes(table, columns) do
-      Enum.map_join(columns, ", ", &column_change(table, &1))
+      intersperse_map(columns, ", ", &column_change(table, &1))
     end
 
     defp column_change(table, {:add, name, %Reference{} = ref, opts}) do
-      assemble(["ADD", quote_name(name), reference_column_type(ref.type, opts),
-                column_options(opts), constraint_expr(ref, table, name)])
+      ["ADD ", quote_name(name), ?\s, reference_column_type(ref.type, opts),
+       column_options(opts), constraint_expr(ref, table, name)]
     end
 
     defp column_change(_table, {:add, name, type, opts}) do
-      assemble(["ADD", quote_name(name), column_type(type, opts), column_options(opts)])
+      ["ADD ", quote_name(name), ?\s, column_type(type, opts), column_options(opts)]
     end
 
     defp column_change(table, {:modify, name, %Reference{} = ref, opts}) do
-      assemble([
-        "MODIFY", quote_name(name), reference_column_type(ref.type, opts),
-        column_options(opts), constraint_expr(ref, table, name)
-      ])
+      ["MODIFY ", quote_name(name), ?\s, reference_column_type(ref.type, opts),
+       column_options(opts), constraint_expr(ref, table, name)]
     end
 
     defp column_change(_table, {:modify, name, type, opts}) do
-      assemble(["MODIFY", quote_name(name), column_type(type, opts), column_options(opts)])
+      ["MODIFY ", quote_name(name), ?\s, column_type(type, opts), column_options(opts)]
     end
 
-    defp column_change(_table, {:remove, name}), do: "DROP #{quote_name(name)}"
+    defp column_change(_table, {:remove, name}), do: ["DROP ", quote_name(name)]
 
     defp column_options(opts) do
       default = Keyword.fetch(opts, :default)
@@ -673,18 +624,18 @@ if Code.ensure_loaded?(Mariaex) do
       [default_expr(default), null_expr(null)]
     end
 
-    defp null_expr(false), do: "NOT NULL"
-    defp null_expr(true), do: "NULL"
+    defp null_expr(false), do: " NOT NULL"
+    defp null_expr(true), do: " NULL"
     defp null_expr(_), do: []
 
     defp default_expr({:ok, nil}),
-      do: "DEFAULT NULL"
+      do: " DEFAULT NULL"
     defp default_expr({:ok, literal}) when is_binary(literal),
-      do: "DEFAULT '#{escape_string(literal)}'"
+      do: [" DEFAULT '", escape_string(literal), ?']
     defp default_expr({:ok, literal}) when is_number(literal) or is_boolean(literal),
-      do: "DEFAULT #{literal}"
+      do: [" DEFAULT ", to_string(literal)]
     defp default_expr({:ok, {:fragment, expr}}),
-      do: "DEFAULT #{expr}"
+      do: [" DEFAULT ", expr]
     defp default_expr(:error),
       do: []
 
@@ -692,16 +643,15 @@ if Code.ensure_loaded?(Mariaex) do
       do: literal
     defp index_expr(literal), do: quote_name(literal)
 
-    defp engine_expr(nil), do: engine_expr("INNODB")
     defp engine_expr(storage_engine),
-      do: String.upcase("ENGINE = #{storage_engine}")
+      do: [" ENGINE = ", String.upcase(to_string(storage_engine || "INNODB"))]
 
     defp options_expr(nil),
-      do: ""
+      do: []
     defp options_expr(keyword) when is_list(keyword),
       do: error!(nil, "MySQL adapter does not support keyword lists in :options")
     defp options_expr(options),
-      do: "#{options}"
+      do: [?\s, to_string(options)]
 
     defp column_type(type, opts) do
       size      = Keyword.get(opts, :size)
@@ -710,24 +660,26 @@ if Code.ensure_loaded?(Mariaex) do
       type_name = ecto_to_db(type)
 
       cond do
-        size            -> "#{type_name}(#{size})"
-        precision       -> "#{type_name}(#{precision},#{scale || 0})"
-        type == :string -> "#{type_name}(255)"
-        true            -> "#{type_name}"
+        size            -> [type_name, ?(, to_string(size), ?)]
+        precision       -> [type_name, ?(, to_string(precision), ?,, to_string(scale || 0), ?)]
+        type == :string -> [type_name, "(255)"]
+        true            -> type_name
       end
     end
 
     defp constraint_expr(%Reference{} = ref, table, name),
-      do: ", ADD CONSTRAINT #{reference_name(ref, table, name)} " <>
-          "FOREIGN KEY (#{quote_name(name)}) " <>
-          "REFERENCES #{quote_table(table.prefix, ref.table)}(#{quote_name(ref.column)})" <>
-          reference_on_delete(ref.on_delete) <> reference_on_update(ref.on_update)
+      do: [", ADD CONSTRAINT ", reference_name(ref, table, name),
+           " FOREIGN KEY (", quote_name(name), ?),
+           " REFERENCES ", quote_table(table.prefix, ref.table),
+           ?(, quote_name(ref.column), ?),
+           reference_on_delete(ref.on_delete), reference_on_update(ref.on_update)]
 
     defp reference_expr(%Reference{} = ref, table, name),
-      do: ", CONSTRAINT #{reference_name(ref, table, name)} FOREIGN KEY " <>
-          "(#{quote_name(name)}) REFERENCES " <>
-          "#{quote_table(table.prefix, ref.table)}(#{quote_name(ref.column)})" <>
-          reference_on_delete(ref.on_delete) <> reference_on_update(ref.on_update)
+      do: [", CONSTRAINT ", reference_name(ref, table, name),
+           " FOREIGN KEY (", quote_name(name), ?),
+           " REFERENCES ", quote_table(table.prefix, ref.table),
+           ?(, quote_name(ref.column), ?),
+           reference_on_delete(ref.on_delete), reference_on_update(ref.on_update)]
 
     defp reference_name(%Reference{name: nil}, table, column),
       do: quote_name("#{table.name}_#{column}_fkey")
@@ -739,11 +691,11 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp reference_on_delete(:nilify_all), do: " ON DELETE SET NULL"
     defp reference_on_delete(:delete_all), do: " ON DELETE CASCADE"
-    defp reference_on_delete(_), do: ""
+    defp reference_on_delete(_), do: []
 
     defp reference_on_update(:nilify_all), do: " ON UPDATE SET NULL"
     defp reference_on_update(:update_all), do: " ON UPDATE CASCADE"
-    defp reference_on_update(_), do: ""
+    defp reference_on_update(_), do: []
 
     ## Helpers
 
@@ -760,11 +712,11 @@ if Code.ensure_loaded?(Mariaex) do
         error!(nil, "bad field name #{inspect name}")
       end
 
-      <<?`, name::binary, ?`>>
+      [?`, name, ?`]
     end
 
     defp quote_table(nil, name),    do: quote_table(name)
-    defp quote_table(prefix, name), do: quote_table(prefix) <> "." <> quote_table(name)
+    defp quote_table(prefix, name), do: [quote_table(prefix), ?., quote_table(name)]
 
     defp quote_table(name) when is_atom(name),
       do: quote_table(Atom.to_string(name))
@@ -772,16 +724,16 @@ if Code.ensure_loaded?(Mariaex) do
       if String.contains?(name, "`") do
         error!(nil, "bad table name #{inspect name}")
       end
-      <<?`, name::binary, ?`>>
+      [?`, name, ?`]
     end
 
-    defp assemble(list), do: assemble(list, " ")
-    defp assemble(list, joiner) do
-      list
-      |> List.flatten
-      |> Enum.reject(fn(v) -> v == "" end)
-      |> Enum.join(joiner)
-    end
+    defp intersperse_map(list, separator, mapper, acc \\ [])
+    defp intersperse_map([], _separator, _mapper, acc),
+      do: acc
+    defp intersperse_map([elem], _separator, mapper, acc),
+      do: [acc | mapper.(elem)]
+    defp intersperse_map([elem | rest], separator, mapper, acc),
+      do: intersperse_map(rest, separator, mapper, [acc, mapper.(elem), separator])
 
     defp if_do(condition, value) do
       if condition, do: value, else: []
