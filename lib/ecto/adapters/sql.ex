@@ -13,6 +13,8 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   defmacro __using__(adapter) do
     quote do
+      alias Ecto.Migration.View
+
       @behaviour Ecto.Adapter
       @behaviour Ecto.Adapter.Migration
       @behaviour Ecto.Adapter.Transaction
@@ -129,6 +131,13 @@ defmodule Ecto.Adapters.SQL do
       ## Migration
 
       @doc false
+      def execute_ddl(repo, %View{}=definition, opts) do
+        {sql, params} = @conn.execute_ddl(definition)
+
+        Ecto.Adapters.SQL.query!(repo, sql, params, opts)
+
+        :ok
+      end
       def execute_ddl(repo, definition, opts) do
         sqls = @conn.execute_ddl(definition)
 

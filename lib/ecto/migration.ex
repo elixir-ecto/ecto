@@ -221,6 +221,16 @@ defmodule Ecto.Migration do
                            check: String.t | nil, exclude: String.t | nil, comment: String.t | nil}
   end
 
+  defmodule View do
+    @moduledoc """
+    Used internally by adapters.
+
+    To define a view in a migration, see `Ecto.Migration.view/2` or `Ecto.Migration.view/1`
+    """
+    defstruct name: nil, query: nil
+    @type t :: %__MODULE__{name: String.t | atom, query: Ecto.Query.t}
+  end
+
   alias Ecto.Migration.Runner
 
   @doc false
@@ -312,6 +322,7 @@ defmodule Ecto.Migration do
     * an index
     * a table with only an `:id` field
     * a constraint
+    * a view
 
   When reversing (in `change` running backward) indexes are only dropped if they
   exist and no errors are raised. To enforce dropping an index use `drop/1`.
@@ -336,6 +347,11 @@ defmodule Ecto.Migration do
   def create(%Table{} = table) do
     do_create table, :create
     table
+  end
+
+  def create(%View{} = view) do
+    Runner.execute {:create, view}
+    view
   end
 
   @doc """
@@ -779,6 +795,13 @@ defmodule Ecto.Migration do
   """
   def flush do
     Runner.flush
+  end
+
+  @doc """
+  """
+  def view(view_name), do: %View{name: view_name}
+  def view(view_name, query, opts \\ []) do
+    struct(%View{name: view_name, query: query}, opts)
   end
 
   defp validate_type!(:datetime) do
