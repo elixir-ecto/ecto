@@ -520,13 +520,9 @@ defmodule Ecto.Repo do
       This option is not supported by all databases.
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL).
-    * `:on_conflict` - How to react if the entry violates a primary key,
-      unique or exclusion constraint. It may be `:raise` (the default),
-      `:nothing` which will ignore any error, a keyword list of update
-      instructions (such as the one given to `c:update_all/3` or an
-      `Ecto.Query` which will act as an `UPDATE` statement. It maps to
-      "ON CONFLICT" on databases like Postgres and "ON DUPLICATE KEY"
-      on databases such as MySQL.
+    * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
+      `:replace_all`, a keyword list of update instructions or an `Ecto.Query`
+      query for updates. See the "Upserts" section for more information.
     * `:conflict_target` - Which columns to verify for conflicts. If
       none is specified, the conflict target is left up to the database
       and is usually made of primary keys and/or unique/exclusion constraints.
@@ -538,6 +534,23 @@ defmodule Ecto.Repo do
 
       MyRepo.insert_all(Post, [[title: "My first post"], [title: "My second post"]])
       MyRepo.insert_all(Post, [%{title: "My first post"}, %{title: "My second post"}])
+
+  ## Upserts
+
+  `insert_all` provides upserts (update or inserts) via the `:on_conflict`
+  option. The `:on_conflict` option supports the following values:
+
+    * `:raise` - raises if there is a conflicting primary key or unique index
+    * `:nothing` - ignores the error in case of conflicts
+    * `:replace_all` - replace all entries in the database by the one being
+      currently attempted
+    * a keyword list of update instructions - such as the one given to
+      `c:update_all/3`, for example: `[set: [title: "new title"]]`
+    * an `Ecto.Query` that will act as an `UPDATE` statement, such as the
+      one given to `c:update_all/3`
+
+  Upserts map to "ON CONFLICT" on databases like Postgres and "ON DUPLICATE KEY"
+  on databases such as MySQL.
 
   ## Return values
 
@@ -652,13 +665,9 @@ defmodule Ecto.Repo do
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
       in the struct.
-    * `:on_conflict` - How to react if the entry violates a primary key,
-      unique or exclusion constraint. It may be `:raise` (the default),
-      `:nothing` which will ignore any error, a keyword list of update
-      instructions (such as the one given to `c:update_all/3`) or an
-      `Ecto.Query` which will act as an `UPDATE` statement. It maps to
-      "ON CONFLICT" on databases like Postgres and "ON DUPLICATE KEY"
-      on databases such as MySQL.
+    * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
+      `:replace_all`, a keyword list of update instructions or an `Ecto.Query`
+      query for updates. See the "Upserts" section for more information.
     * `:conflict_target` - Which columns to verify for conflicts. If
       none is specified, the conflict target is left up to the database
       and is usually made of primary keys and/or unique/exclusion constraints.
@@ -675,8 +684,24 @@ defmodule Ecto.Repo do
         {:error, changeset} -> # Something went wrong
       end
 
-  "Upsert" is also supported by passing the `:on_conflict` option.
-  For example, imagine `:title` is marked as a unique column in
+  ## Upserts
+
+  `insert_all` provides upserts (update or inserts) via the `:on_conflict`
+  option. The `:on_conflict` option supports the following values:
+
+    * `:raise` - raises if there is a conflicting primary key or unique index
+    * `:nothing` - ignores the error in case of conflicts
+    * `:replace_all` - replace all entries in the database by the one being
+      currently attempted
+    * a keyword list of update instructions - such as the one given to
+      `c:update_all/3`, for example: `[set: [title: "new title"]]`
+    * an `Ecto.Query` that will act as an `UPDATE` statement, such as the
+      one given to `c:update_all/3`
+
+  Upserts map to "ON CONFLICT" on databases like Postgres and "ON DUPLICATE KEY"
+  on databases such as MySQL.
+
+  As an example, imagine `:title` is marked as a unique column in
   the database:
 
       # Insert it once
