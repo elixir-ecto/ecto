@@ -683,7 +683,7 @@ defmodule Ecto.Query do
       from(c in City, select: c) # returns the schema as a struct
       from(c in City, select: {c.name, c.population})
       from(c in City, select: [c.name, c.county])
-      from(c in City, select: {c.name, ^to_string(40 + 2), 43})
+      from(c in City, select: {c.name, type(^to_string(40 + 2), :string), 43})
       from(c in City, select: %{n: c.name, answer: 42})
 
   It is also possible to select a struct and limit the returned
