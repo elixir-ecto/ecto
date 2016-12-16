@@ -1135,123 +1135,45 @@ defmodule Ecto.Integration.RepoTest do
       assert updated.title != "second"
       assert TestRepo.get!(Post, inserted.id).title == "second"
     end
-  end
 
-  # defined new describe, because of the case of Mysql's upsert_all was being skipped via test_helper.
-  describe "upsert via insert_all only replace_all" do
-    @describetag :upsert_all_only_replace_all
-
-    @tag :replace_all_with_conflict_target
-    test "on conflict replace_all with conflict target" do
-      post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
-      {1, nil} = TestRepo.insert_all(Post, [post], on_conflict: :replace_all, conflict_target: :id)
-    end
-
-    # For postgres
-    @tag :replace_all_with_conflict_target
-    test "on conflict replace_all with duplicate primary-key record" do
-      post = %Post{title: "first", text: "text", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
-      {:ok, inserted} = TestRepo.insert(post, on_conflict: :replace_all, conflict_target: :id)
-      assert inserted.id
-
-      # Error on non-conflict target
-      changes = [%{id: inserted.id,
-                   title: "updated",
-                   text: "updated",
-                   uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}]
-
-      # Error on conflict target
-      assert TestRepo.insert_all(Post, changes, on_conflict: :replace_all, conflict_target: :id)
-
-      assert TestRepo.all(from p in Post, select: p.title) == ["updated"]
-      assert TestRepo.all(from p in Post, select: p.text) == ["updated"]
-      assert TestRepo.all(from p in Post, select: count(p.id)) == [1]
-    end
-
-    @tag :replace_all_with_conflict_target
-    test "on conflict replace_all,if multiple conflict records exists and with conflict_target" do
-      post_first = %Post{title: "first", public: true}
-      post_second = %Post{title: "second", public: false}
-
-      {:ok, inserted_first} = TestRepo.insert(post_first, on_conflict: :replace_all,conflict_target: :id)
-      {:ok, inserted_second} = TestRepo.insert(post_second, on_conflict: :replace_all,conflict_target: :id)
-
-      assert inserted_first.id
-      assert inserted_second.id
-      assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
-
-      # multiple record change value
-      changes = [%{id: inserted_first.id, title: "first_updated", text: "first_updated"},
-                 %{id: inserted_second.id, title: "second_updated", text: "second_updated"}]
-
-      TestRepo.insert_all(Post, changes, on_conflict: :replace_all,conflict_target: :id)
-
-      assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
-
-      updated_first =  TestRepo.get(Post, inserted_first.id)
-      assert updated_first.title == "first_updated"
-      assert updated_first.text == "first_updated"
-
-
-      updated_first =  TestRepo.get(Post, inserted_second.id)
-      assert updated_first.title == "second_updated"
-      assert updated_first.text == "second_updated"
-    end
-
-    @tag :replace_all_without_conflict_target
-    test "on conflict replace_all, without coflict_target" do
-      post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
-      {1, nil} = TestRepo.insert_all(Post, [post], on_conflict: :replace_all)
-    end
-
-    # For mysql
-    @tag :replace_all_without_conflict_target
-    test "on conflict replace_all with single duplicate record exists and without conflict_target" do
+    @tag :without_conflict_target
+    test "on conflict replace_all" do
       post = %Post{title: "first", text: "text", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: :replace_all)
       assert inserted.id
 
       # Error on non-conflict target
-      changes = [%{id: inserted.id,
-                   title: "updated",
-                   text: "updated",
-                   uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}]
+      post = %Post{id: inserted.id, title: "updated",
+                   text: "updated", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
 
       # Error on conflict target
-      assert TestRepo.insert_all(Post, changes, on_conflict: :replace_all)
+      post = TestRepo.insert!(post, on_conflict: :replace_all)
+      assert post.title == "updated"
+      assert post.text == "updated"
 
       assert TestRepo.all(from p in Post, select: p.title) == ["updated"]
       assert TestRepo.all(from p in Post, select: p.text) == ["updated"]
       assert TestRepo.all(from p in Post, select: count(p.id)) == [1]
     end
 
-    @tag :replace_all_without_conflict_target
-    test "on conflict replace_all,if multiple conflict records exists and without conflict_target" do
-      post_first = %Post{title: "first", public: true}
-      post_second = %Post{title: "second", public: false}
+    @tag :with_conflict_target
+    test "on conflict replace_all and conflict target" do
+      post = %Post{title: "first", text: "text", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      {:ok, inserted} = TestRepo.insert(post, on_conflict: :replace_all, conflict_target: :id)
+      assert inserted.id
 
-      {:ok, inserted_first} = TestRepo.insert(post_first, on_conflict: :replace_all)
-      {:ok, inserted_second} = TestRepo.insert(post_second, on_conflict: :replace_all)
+      # Error on non-conflict target
+      post = %Post{id: inserted.id, title: "updated",
+                   text: "updated", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
 
-      assert inserted_first.id
-      assert inserted_second.id
-      assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
+      # Error on conflict target
+      post = TestRepo.insert!(post, on_conflict: :replace_all, conflict_target: :id)
+      assert post.title == "updated"
+      assert post.text == "updated"
 
-      # multiple record change value
-      changes = [%{id: inserted_first.id, title: "first_updated", text: "first_updated"},
-                 %{id: inserted_second.id, title: "second_updated", text: "second_updated"}]
-
-      TestRepo.insert_all(Post, changes, on_conflict: :replace_all)
-
-      assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
-
-      updated_first =  TestRepo.get(Post, inserted_first.id)
-      assert updated_first.title == "first_updated"
-      assert updated_first.text == "first_updated"
-
-      updated_first =  TestRepo.get(Post, inserted_second.id)
-      assert updated_first.title == "second_updated"
-      assert updated_first.text == "second_updated"
+      assert TestRepo.all(from p in Post, select: p.title) == ["updated"]
+      assert TestRepo.all(from p in Post, select: p.text) == ["updated"]
+      assert TestRepo.all(from p in Post, select: count(p.id)) == [1]
     end
   end
 
@@ -1266,10 +1188,13 @@ defmodule Ecto.Integration.RepoTest do
 
     test "on conflict ignore" do
       post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
-      assert TestRepo.insert_all(Post, [post], on_conflict: :nothing) ==
-             {1, nil}
-      assert TestRepo.insert_all(Post, [post], on_conflict: :nothing) ==
-             {0, nil}
+      assert TestRepo.insert_all(Post, [post], on_conflict: :nothing) == {1, nil}
+
+      # PG returns 0, MySQL returns 1
+      {entries, nil} = TestRepo.insert_all(Post, [post], on_conflict: :nothing)
+      assert entries == 0 or entries == 1
+
+      assert length(TestRepo.all(Post)) == 1
     end
 
     @tag :with_conflict_target
@@ -1350,6 +1275,65 @@ defmodule Ecto.Integration.RepoTest do
       assert TestRepo.insert_all("posts", [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
              {1, nil}
       assert TestRepo.all(from p in Post, select: p.title) == ["second"]
+    end
+
+    @tag :without_conflict_target
+    test "on conflict replace_all" do
+      post_first = %Post{title: "first", public: true}
+      post_second = %Post{title: "second", public: false}
+
+      {:ok, inserted_first} = TestRepo.insert(post_first, on_conflict: :replace_all)
+      {:ok, inserted_second} = TestRepo.insert(post_second, on_conflict: :replace_all)
+
+      assert inserted_first.id
+      assert inserted_second.id
+      assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
+
+      # multiple record change value
+      changes = [%{id: inserted_first.id, title: "first_updated", text: "first_updated"},
+                 %{id: inserted_second.id, title: "second_updated", text: "second_updated"}]
+
+      TestRepo.insert_all(Post, changes, on_conflict: :replace_all)
+
+      assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
+
+      updated_first =  TestRepo.get(Post, inserted_first.id)
+      assert updated_first.title == "first_updated"
+      assert updated_first.text == "first_updated"
+
+      updated_first =  TestRepo.get(Post, inserted_second.id)
+      assert updated_first.title == "second_updated"
+      assert updated_first.text == "second_updated"
+    end
+
+    @tag :with_conflict_target
+    test "on conflict replace_all and conflict_target" do
+      post_first = %Post{title: "first", public: true}
+      post_second = %Post{title: "second", public: false}
+
+      {:ok, inserted_first} = TestRepo.insert(post_first, on_conflict: :replace_all,conflict_target: :id)
+      {:ok, inserted_second} = TestRepo.insert(post_second, on_conflict: :replace_all,conflict_target: :id)
+
+      assert inserted_first.id
+      assert inserted_second.id
+      assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
+
+      # multiple record change value
+      changes = [%{id: inserted_first.id, title: "first_updated", text: "first_updated"},
+                 %{id: inserted_second.id, title: "second_updated", text: "second_updated"}]
+
+      TestRepo.insert_all(Post, changes, on_conflict: :replace_all,conflict_target: :id)
+
+      assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
+
+      updated_first =  TestRepo.get(Post, inserted_first.id)
+      assert updated_first.title == "first_updated"
+      assert updated_first.text == "first_updated"
+
+
+      updated_first =  TestRepo.get(Post, inserted_second.id)
+      assert updated_first.title == "second_updated"
+      assert updated_first.text == "second_updated"
     end
   end
 end

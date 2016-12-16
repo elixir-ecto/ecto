@@ -171,17 +171,16 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def insert(repo, %{source: {prefix, source}, autogenerate_id: {key, :id}}, params,
-             {_, query_params, _} = on_conflict, [key], opts) do
+  def insert(repo, %{source: {prefix, source}} = meta, params,
+             {_, query_params, _} = on_conflict, returning, opts) do
+    key = primary_key!(meta, returning)
     {fields, values} = :lists.unzip(params)
     sql = @conn.insert(prefix, source, fields, [fields], on_conflict, [])
     case Ecto.Adapters.SQL.query(repo, sql, values ++ query_params, opts) do
-      {:ok, %{num_rows: 1, last_insert_id: 0}} ->
-        {:ok, []}
       {:ok, %{num_rows: 1, last_insert_id: last_insert_id}} ->
-        {:ok, [{key, last_insert_id}]}
+        {:ok, last_insert_id(key, last_insert_id)}
       {:ok, %{num_rows: 2, last_insert_id: last_insert_id}} ->
-        {:ok, [{key, last_insert_id}]}
+        {:ok, last_insert_id(key, last_insert_id)}
       {:error, err} ->
         case @conn.to_constraints(err) do
           []          -> raise err
@@ -190,14 +189,16 @@ defmodule Ecto.Adapters.MySQL do
     end
   end
 
-  def insert(repo, schema_meta, params, on_conflict, [], opts) do
-    super(repo, schema_meta, params, on_conflict, [], opts)
-  end
-
-  def insert(_repo, %{schema: schema}, _params, _on_conflict, returning, _opts) do
+  defp primary_key!(%{autogenerate_id: {key, :id}}, [key]), do: key
+  defp primary_key!(_, []), do: nil
+  defp primary_key!(%{schema: schema}, returning) do
     raise ArgumentError, "MySQL does not support :read_after_writes in schemas for non-primary keys. " <>
                          "The following fields in #{inspect schema} are tagged as such: #{inspect returning}"
   end
+
+  defp last_insert_id(nil, _last_insert_id), do: []
+  defp last_insert_id(_key, 0), do: []
+  defp last_insert_id(key, last_insert_id), do: [{key, last_insert_id}]
 
   @doc false
   def structure_dump(default, config) do
