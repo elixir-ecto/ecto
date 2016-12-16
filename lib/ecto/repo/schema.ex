@@ -416,6 +416,8 @@ defmodule Ecto.Repo.Schema do
         raise ArgumentError, ":conflict_target option is forbidden when :on_conflict is :raise"
       :nothing ->
         {:nothing, [], conflict_target}
+      :replace_all ->
+        {:replace_all, [], conflict_target}
       [_ | _] = on_conflict ->
         from = if schema, do: {source, schema}, else: source
         query = Ecto.Query.from from, update: ^on_conflict

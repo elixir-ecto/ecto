@@ -146,6 +146,16 @@ if Code.ensure_loaded?(Mariaex) do
       quoted = quote_name(field)
       " ON DUPLICATE KEY UPDATE " <> quoted <> " = " <> quoted
     end
+    defp on_conflict({:replace_all, _, []}, header) do
+      updates = Enum.map(header, fn field ->
+        quoted = quote_name(field)
+
+        quoted <> " = VALUES(" <> quoted <> ")"
+      end)
+      |> Enum.join(",")
+
+      " ON DUPLICATE KEY UPDATE " <> updates
+    end
     defp on_conflict({query, _, []}, _header) do
       " ON DUPLICATE KEY " <> update_all(query, "UPDATE")
     end
