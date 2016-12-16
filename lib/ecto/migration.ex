@@ -590,7 +590,7 @@ defmodule Ecto.Migration do
 
       alter table(:posts) do
         add :summary, :text # Database type
-        add :object,  :json
+        add :object,  :map  # Elixir type which is handled by the database
       end
 
   ## Options

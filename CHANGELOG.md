@@ -18,7 +18,7 @@ The old Ecto types (`Ecto.Date`, `Ecto.Time` and `Ecto.DateTime`) are now deprec
 
 ### New Postgrex extensions
 
-Ecto 2.1 depends on Postgrex 0.13 which defines a new extension system. Therefore passing the `:extensions` option to the repository configuration is no longer supported, instead you must define a type module:
+Ecto 2.1 depends on Postgrex 0.13 which defines a new extension system. Therefore passing the `:extensions` option to the repository configuration is no longer supported, instead you must define a type module. Create a new file anywhere in your application with the following:
 
     Postgrex.Types.define(MyApp.PostgresTypes,
                           [MyExtension.Foo, MyExtensionBar] ++ Ecto.Adapters.Postgres.extensions(),

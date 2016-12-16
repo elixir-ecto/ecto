@@ -69,7 +69,8 @@ defmodule Ecto.Adapters.Postgres do
 
   Both PostgreSQL and its adapter for Elixir, Postgrex, support an
   extension system. If you want to use custom extensions for Postgrex
-  alongside Ecto, you must define a type module with your extensions:
+  alongside Ecto, you must define a type module with your extensions.
+  Create a new file anywhere in your application with the following:
 
       Postgrex.Types.define(MyApp.PostgresTypes,
                             [MyExtension.Foo, MyExtensionBar] ++ Ecto.Adapters.Postgres.extensions(),
