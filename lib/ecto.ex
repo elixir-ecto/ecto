@@ -359,7 +359,7 @@ defmodule Ecto do
   entries in different tables, embeds stores the child along side the
   parent.
 
-  Databases like Mongo have native support for embeds. Databases
+  Databases like MongoDB have native support for embeds. Databases
   like PostgreSQL uses a mixture of JSONB (`embeds_one/3`) and ARRAY
   columns to provide this functionality.
 
