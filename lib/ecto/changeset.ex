@@ -382,63 +382,37 @@ defmodule Ecto.Changeset do
   @spec cast(Ecto.Schema.t | t | {data, types},
              %{binary => term} | %{atom => term} | :invalid,
              [String.t | atom]) :: t | no_return
-  def cast(data, params, allowed) do
-    do_cast(data, params, [], allowed)
-  end
+  def cast(data, params, allowed)
 
-  @doc """
-  WARNING: This function is deprecated in favor of `cast/3` + `validate_required/3`.
-
-  Converts the given `params` into a changeset for `data`
-  keeping only the set of `required` and `optional` keys.
-  """
-  def cast(data, params, required, optional)
-
-  def cast(data, params, required, optional) do
-    IO.puts :stderr, "warning: `Ecto.Changeset.cast/4` is deprecated, " <>
-                     "please use `cast/3` + `validate_required/3` instead\n" <> Exception.format_stacktrace
-    do_cast(data, params, required, optional)
-  end
-
-  defp do_cast(_data, %{__struct__: _} = params, _required, _optional) do
+  def cast(_data, %{__struct__: _} = params, _allowed) do
     raise Ecto.CastError, "expected params to be a map, got: `#{inspect params}`"
   end
 
-  defp do_cast({data, types}, params, required, optional) when is_map(data) do
-    do_cast(data, types, %{}, params, required, optional, @empty_values)
+  def cast({data, types}, params, allowed) when is_map(data) do
+    cast(data, types, %{}, params, allowed, @empty_values)
   end
 
-  defp do_cast(%Changeset{types: nil}, _params, _required, _optional) do
+  def cast(%Changeset{types: nil}, _params, _allowed) do
     raise ArgumentError, "changeset does not have types information"
   end
 
-  defp do_cast(%Changeset{changes: changes, data: data, types: types, empty_values: empty_values} = changeset,
-               params, required, optional) do
-    new_changeset = do_cast(data, types, changes, params, required, optional, empty_values)
+  def cast(%Changeset{changes: changes, data: data, types: types, empty_values: empty_values} = changeset,
+                      params, allowed) do
+    new_changeset = cast(data, types, changes, params, allowed, empty_values)
     cast_merge(changeset, new_changeset)
   end
 
-  defp do_cast(%{__struct__: module} = data, params, required, optional) do
-    do_cast(data, module.__changeset__, %{}, params, required, optional, @empty_values)
+  def cast(%{__struct__: module} = data, params, allowed) do
+    cast(data, module.__changeset__, %{}, params, allowed, @empty_values)
   end
 
-  defp do_cast(data, types, changes, :empty, required, optional, empty_values) do
-    IO.puts :stderr, "warning: passing :empty to Ecto.Changeset.cast/3 is deprecated, " <>
-                     "please pass an empty map or :invalid instead\n" <> Exception.format_stacktrace
-    do_cast(data, types, changes, :invalid, required, optional, empty_values)
-  end
-
-  defp do_cast(%{} = data, %{} = types, %{} = changes, :invalid, required, optional, empty_values)
-       when is_list(required) and is_list(optional) do
-    _ = Enum.map(optional, &process_empty_fields(&1, types))
-    required = Enum.map(required, &process_empty_fields(&1, types))
-
+  defp cast(%{} = data, %{} = types, %{} = changes, :invalid, allowed, empty_values) when is_list(allowed) do
+    _ = Enum.map(allowed, &process_empty_fields(&1, types))
     %Changeset{params: nil, data: data, valid?: false, errors: [],
-               changes: changes, required: required, types: types, empty_values: empty_values}
+               changes: changes, types: types, empty_values: empty_values}
   end
 
-  defp do_cast(%{} = data, %{} = types, %{} = changes, %{} = params, required, optional, empty_values)
-       when is_list(required) and is_list(optional) do
+  defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, allowed, empty_values) when is_list(allowed) do
     params = convert_params(params)
 
     defaults = case data do
@@ -447,20 +421,15 @@ defmodule Ecto.Changeset do
     end
 
     {_, {changes, errors, valid?}} =
-      Enum.map_reduce(optional, {changes, [], true},
-                      &process_param(&1, :optional, params, types, data, empty_values, defaults, &2))
-
-    {required, {changes, errors, valid?}} =
-      Enum.map_reduce(required, {changes, errors, valid?},
-                      &process_param(&1, :required, params, types, data, empty_values, defaults, &2))
+      Enum.map_reduce(allowed, {changes, [], true},
+                      &process_param(&1, params, types, data, empty_values, defaults, &2))
 
     %Changeset{params: params, data: data, valid?: valid?,
-               errors: Enum.reverse(errors), changes: changes, required: required,
+               errors: Enum.reverse(errors), changes: changes,
                types: types, empty_values: empty_values}
   end
 
-  defp do_cast(%{}, %{}, %{}, params, required, optional, _empty_values)
-       when is_list(required) and is_list(optional) do
+  defp cast(%{}, %{}, %{}, params, allowed, _empty_values) when is_list(allowed) do
     raise Ecto.CastError, "expected params to be a map, got: `#{inspect params}`"
   end
 
@@ -469,7 +438,7 @@ defmodule Ecto.Changeset do
   defp process_empty_fields(key, _types) when is_atom(key),
     do: key
 
-  defp process_param(key, kind, params, types, data, empty_values, defaults, {changes, errors, valid?}) do
+  defp process_param(key, params, types, data, empty_values, defaults, {changes, errors, valid?}) do
     {key, param_key} = cast_key(key)
     type = type!(types, key)
     current =
@@ -480,13 +449,9 @@ defmodule Ecto.Changeset do
 
     {key,
      case cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
-       {:ok, nil, valid?} when kind == :required ->
-         {errors, valid?} = error_on_nil(kind, key, Map.get(changes, key), errors, valid?)
-         {changes, errors, valid?}
        {:ok, value, valid?} ->
          {Map.put(changes, key, value), errors, valid?}
-       {:missing, current} ->
-         {errors, valid?} = error_on_nil(kind, key, Map.get(changes, key, current), errors, valid?)
+       :missing ->
          {changes, errors, valid?}
        :invalid ->
          {changes, [{key, {"is invalid", [type: type, validation: :cast]}} | errors], false}
@@ -522,14 +487,14 @@ defmodule Ecto.Changeset do
         value = if value in empty_values, do: Map.get(defaults, key), else: value
         case Ecto.Type.cast(type, value) do
           {:ok, ^current} ->
-            {:missing, current}
+            :missing
           {:ok, value} ->
             {:ok, value, valid?}
           :error ->
             :invalid
         end
       :error ->
-        {:missing, current}
+        :missing
     end
   end
 
@@ -547,11 +512,6 @@ defmodule Ecto.Changeset do
 
     end) || params
   end
-
-  defp error_on_nil(:required, key, nil, errors, _valid?),
-    do: {[{key, {"can't be blank", []}} | errors], false}
-  defp error_on_nil(_kind, _key, _value, errors, valid?),
-    do: {errors, valid?}
 
   ## Casting related
 
