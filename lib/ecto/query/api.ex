@@ -188,7 +188,7 @@ defmodule Ecto.Query.API do
   def from_now(count, interval), do: doc! [count, interval]
 
   @doc """
-  Substracts the given interval from the current time in UTC.
+  Subtracts the given interval from the current time in UTC.
 
   The current time in UTC is retrieved from Elixir and
   not from the database.
