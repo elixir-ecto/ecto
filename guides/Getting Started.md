@@ -292,7 +292,7 @@ On the final line, rather than inserting the `person`, we insert the `changeset`
   data: #Friends.Person<>, valid?: false>}
 ```
 
-Just like the last time we did an insert, this returns a tuple. This time however, the first element in the tuple is `:error`, which indicates something bad happened. The specifics of what happend are included in the changeset which is returned. We can access these by doing some pattern matching:
+Just like the last time we did an insert, this returns a tuple. This time however, the first element in the tuple is `:error`, which indicates something bad happened. The specifics of what happened are included in the changeset which is returned. We can access these by doing some pattern matching:
 
 ```elixir
 {:error, changeset} = Friends.Repo.insert(changeset)
