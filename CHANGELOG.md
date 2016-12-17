@@ -39,7 +39,7 @@ In fact, we now recommend developers to prefer dynamically loading through assoc
 
 ### Upsert
 
-Ecto 2.1 now supports upserts (insert or update instructions) on both `Ecto.Repo.insert/2` and `Ecto.Repo.insert_all/3` via the `:on_conflict` and `:conflict_target` options. 
+Ecto 2.1 now supports upserts (insert or update instructions) on both `Ecto.Repo.insert/2` and `Ecto.Repo.insert_all/3` via the `:on_conflict` and `:conflict_target` options.
 
 `:on_conflict` controls how the database behaves when the entry being inserted already matches an existing primary key, unique or exclusion constraint in the database. `:on_conflict` defaults to `:raise` but may be set to `:nothing` or a query that configures how to update the matching entries.
 
@@ -113,66 +113,7 @@ In the example above, we were able to build the query expressions bit by bit, us
 
 A dynamic expression can always be interpolated inside another dynamic expression or at the root of a `where`, `having`, `update` or a `join`'s `on`.
 
-## v2.1.0-rc.5 (2016-12-09)
-
-### Enhancements
-
-  * Do not generate Repo transaction functions if the adapter does not support transactions
-  * Add `Ecto.Repo.init/2` callback for dynamic configuration
-  * Support dynamic query building with `Ecto.Query.dynamic/2`
-  * Support interpolating keyword lists inside a `join`'s on
-  * Allow passing sigils/attributes to fragment
-  * Add `Ecto.Multi.error/3` that forces a multi to error
-
-### Bug fixes
-
-  * Do not raise if a changeset with `:invalid` params in given to `validate_acceptance`
-  * Ensure proper precedence when mixing `where` and `or_where`
-  * Fix postgres prefixed table rename syntax
-
-### Backwards incompatible changes
-
-  * Interpolated keyword lists in `or_where` and `or_having` are now joined with `AND` to keep the exact same behaviour as `where` and `having`. In other words, the only difference between `where` and `or_where` is that `or_where` merges into previous expressions using `OR`
-
-## v2.1.0-rc.4 (2016-11-16)
-
-### Enhancements
-
-  * Allow queries containing `where` conditions to be interpolated as a `join` source
-  * Add `Repo.stream/2` that returns a stream which streams results from the database
-
-### Bug fixes
-
-  * Do not crash `ecto.create`/`ecto.drop` if the repository is configured with `log: false`
-  * Properly cast Calendar types when structs are given
-
-## v2.1.0-rc.3 (2016-10-08)
-
-### Enhancements
-
-  * Add `Repo.load/2` for loading database values into a schema/struct
-  * Validate primary key uniqueness at the repository level for assocs and embeds
-  * Support passing `:ownership_timeout` when checking out a sandbox connection
-
-### Bug fixes
-
-  * Ensure `@schema_prefix` module attribute is respected when querying associations with `Ecto.assoc/2`
-  * Do not run transactions for empty `Ecto.Multi`
-  * Ensure `validate_confirmation` runs even if source field is missing
-
-## v2.1.0-rc.2 (2016-10-08)
-
-### Enhancements
-
-  * Raise error when non-existing field is being validated
-
-### Bug fixes
-
-  * Do not emit warnings when aliases are used in the schema
-  * Correct use of "associated to" to "associated with" in error messages
-  * Ensure preloader recurs through `:through` associations using the proper key configurations
-
-## v2.1.0-rc.1 (2016-09-28)
+## v2.1.0 (2016-12-17)
 
 ### Enhancements
 
@@ -186,9 +127,29 @@ A dynamic expression can always be interpolated inside another dynamic expressio
   * Support `...` to specify all previous bindings up to the next one in the query syntax. For example, `where([p, ..., c], p.status == c.status)` matches `p` to the first binding and `c` to the last one
   * Only check for `nil` values during comparison. This avoids unnecessary restrictions on the query syntax on places `nil` should have been allowed
   * Allow the ordering direction to be set when using expressions with `Ecto.Query.distinct/3`
+  * Do not generate Repo transaction functions if the adapter does not support transactions
+  * Add `Ecto.Repo.init/2` callback for dynamic configuration
+  * Support dynamic query building with `Ecto.Query.dynamic/2`
+  * Support interpolating keyword lists inside a `join`'s on
+  * Allow passing sigils/attributes to fragment
+  * Add `Ecto.Multi.error/3` that forces a multi to error
+  * Allow queries containing `where` conditions to be interpolated as a `join` source
+  * Add `Repo.stream/2` that returns a stream which streams results from the database
+  * Add `Repo.load/2` for loading database values into a schema/struct
+  * Validate primary key uniqueness at the repository level for assocs and embeds
+  * Support passing `:ownership_timeout` when checking out a sandbox connection
+  * Raise error when non-existing field is being validated
 
 ### Bug fixes
 
+  * Do not raise if a changeset with `:invalid` params in given to `validate_acceptance`
+  * Fix postgres prefixed table rename syntax
+  * Do not crash `ecto.create`/`ecto.drop` if the repository is configured with `log: false`
+  * Ensure `@schema_prefix` module attribute is respected when querying associations with `Ecto.assoc/2`
+  * Do not run transactions for empty `Ecto.Multi`
+  * Ensure `validate_confirmation` runs even if source field is missing
+  * Correct use of "associated to" to "associated with" in error messages
+  * Ensure preloader recurs through `:through` associations using the proper key configurations
   * Do not error when inserting an embed without or with non-default primary key
 
 ### Deprecations

@@ -12,6 +12,13 @@ if Code.ensure_loaded?(Postgrex) do
     ## Module and Options
 
     def child_spec(opts) do
+      if opts[:extensions] do
+        IO.warn """
+        The :extensions option is no longer supported in Postgrex 0.13.0.
+        Please check Ecto.Adapters.Postgres or the Ecto CHANGELOG for more
+        information on the new extensions system.
+        """
+      end
       opts
       |> Keyword.put_new(:port, @default_port)
       |> Keyword.put_new(:types, Ecto.Adapters.Postgres.TypeModule)
