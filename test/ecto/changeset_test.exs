@@ -31,9 +31,9 @@ defmodule Ecto.ChangesetTest do
     cast(schema, params, ~w(title body upvotes decimal topics virtual))
   end
 
-  ## cast/3
+  ## cast/4
 
-  test "cast/3: with valid string keys" do
+  test "cast/4: with valid string keys" do
     params = %{"title" => "hello", "body" => "world"}
     struct = %Post{}
 
@@ -47,7 +47,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
-  test "cast/3: with valid atom keys" do
+  test "cast/4: with valid atom keys" do
     params = %{title: "hello", body: "world"}
     struct = %Post{}
 
@@ -61,7 +61,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
-  test "cast/3: with empty values" do
+  test "cast/4: with empty values" do
     params = %{"title" => "", "body" => nil}
     struct = %Post{title: "foo", body: "bar"}
 
@@ -69,7 +69,16 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{title: "", body: nil}
   end
 
-  test "cast/3: with matching empty values" do
+  test "cast/4: with custom empty values" do
+    params = %{"title" => "empty", "body" => nil}
+    struct = %Post{title: "foo", body: "bar"}
+
+    changeset = cast(struct, params, ~w(title body)a, empty_values: ["empty"])
+    assert changeset.changes == %{title: "", body: nil}
+    assert changeset.empty_values == ["empty"]
+  end
+
+  test "cast/4: with matching empty values" do
     params = %{"title" => "", "body" => nil}
     struct = %Post{title: "", body: nil}
 
@@ -77,7 +86,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{}
   end
 
-  test "cast/3: with data and types" do
+  test "cast/4: with data and types" do
     data   = {%{title: "hello"}, %{title: :string, upvotes: :integer}}
     params = %{"title" => "world", "upvotes" => "0"}
 
@@ -90,7 +99,7 @@ defmodule Ecto.ChangesetTest do
     assert apply_changes(changeset) == %{title: "world", upvotes: 0}
   end
 
-  test "cast/3: with changeset" do
+  test "cast/4: with changeset" do
     base_changeset = cast(%Post{title: "valid"}, %{}, ~w(title))
                      |> validate_required(:title)
                      |> validate_length(:title, min: 3)
@@ -121,7 +130,7 @@ defmodule Ecto.ChangesetTest do
     assert length(changeset.constraints) == 1
   end
 
-  test "cast/3: struct with :invalid parameters" do
+  test "cast/4: struct with :invalid parameters" do
     changeset = cast(%Post{}, :invalid, ~w(title body))
     assert changeset.data == %Post{}
     assert changeset.params == nil
@@ -131,7 +140,7 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/3: changeset with :invalid parameters" do
+  test "cast/4: changeset with :invalid parameters" do
     changeset = cast(%Post{}, %{"title" => "sample"}, ~w(title)a)
     changeset = cast(changeset, :invalid, ~w(body)a)
     assert changeset.data == %Post{}
@@ -142,7 +151,7 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/3: field is marked as invalid" do
+  test "cast/4: field is marked as invalid" do
     params = %{"body" => :world}
     struct = %Post{}
 
@@ -152,13 +161,13 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/3: fails on invalid field" do
+  test "cast/4: fails on invalid field" do
     assert_raise ArgumentError, ~r"unknown field `unknown`", fn ->
       cast(%Post{}, %{}, ~w(unknown))
     end
   end
 
-  test "cast/3: fails on bad arguments" do
+  test "cast/4: fails on bad arguments" do
     assert_raise Ecto.CastError, ~r"expected params to be a map, got:", fn ->
       cast(%Post{}, %Post{}, ~w(unknown))
     end
@@ -176,13 +185,13 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-  test "cast/3: protects against atom injection" do
+  test "cast/4: protects against atom injection" do
     assert_raise ArgumentError, fn ->
       cast(%Post{}, %{}, ~w(surely_never_saw_this_atom_before))
     end
   end
 
-  test "cast/3: required field (via validate_required/2) of wrong type is marked as invalid" do
+  test "cast/4: required field (via validate_required/2) of wrong type is marked as invalid" do
     params = %{"body" => :world}
     struct = %Post{}
 

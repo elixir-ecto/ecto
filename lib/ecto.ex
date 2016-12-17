@@ -163,7 +163,7 @@ defmodule Ecto do
         end
       end
 
-  The `changeset/2` function first invokes `Ecto.Changeset.cast/3` with
+  The `changeset/2` function first invokes `Ecto.Changeset.cast/4` with
   the struct, the parameters and a list of allowed fields; this returns a changeset.
   The parameters is a map with binary keys and values that will be cast based
   on the type defined on the schema.

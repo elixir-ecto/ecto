@@ -4,7 +4,7 @@ defmodule Ecto.Changeset do
   definition of constraints when manipulating structs.
 
   There is an example of working with changesets in the introductory
-  documentation in the `Ecto` module. The functions `cast/3` and
+  documentation in the `Ecto` module. The functions `cast/4` and
   `change/2` are the usual entry points for creating changesets.
   The first one is used to cast and validate external parameters,
   such as parameters sent through a form, API, command line, etc.
@@ -84,7 +84,7 @@ defmodule Ecto.Changeset do
   cast from the command line or through an HTML form or any other text-based
   format, it is likely those means cannot express nil values. For
   those reasons, changesets include the concept of empty values, which are
-  values that will be automatically converted to `nil` on `cast/3`. Those
+  values that will be automatically converted to `nil` on `cast/4`. Those
   values are stored in the changeset `empty_values` field and default to
   `[""]`.
 
@@ -275,7 +275,7 @@ defmodule Ecto.Changeset do
   When a `{data, types}` is passed as the first argument, a changeset is
   created with the given data and types and marked as valid.
 
-  See `cast/3` if you'd prefer to cast and validate external parameters.
+  See `cast/4` if you'd prefer to cast and validate external parameters.
 
   ## Examples
 
@@ -343,11 +343,16 @@ defmodule Ecto.Changeset do
   to the type information from `data`. `params` is a map with string keys
   or a map with atom keys containing potentially unsafe data.
 
-  During casting, all `allowed` parameters will have their key name converted
+  During casting, all `permitted` parameters will have their key name converted
   to an atom and stored as a change in the `:changes` field of the changeset.
-  All parameters that are not explicitly allowed are ignored.
+  All parameters that are not explicitly permitted are ignored.
 
   If casting of all fields is successful, the changeset is returned as valid.
+
+  ## Options
+
+    * `:empty_values` - a list of values to be considered as empty when casting.
+      Defaults to the changeset value, which defaults to `[""]`
 
   ## Examples
 
@@ -373,46 +378,50 @@ defmodule Ecto.Changeset do
 
   ## Composing casts
 
-  `cast/3` also accepts a changeset as its first argument. In such cases, all
-  the effects caused by the call to `cast/3` (additional errors and changes)
+  `cast/4` also accepts a changeset as its first argument. In such cases, all
+  the effects caused by the call to `cast/4` (additional errors and changes)
   are simply added to the ones already present in the argument changeset.
-  Parameters are merged (**not deep-merged**) and the ones passed to `cast/3`
+  Parameters are merged (**not deep-merged**) and the ones passed to `cast/4`
   take precedence over the ones already in the changeset.
   """
   @spec cast(Ecto.Schema.t | t | {data, types},
              %{binary => term} | %{atom => term} | :invalid,
-             [String.t | atom]) :: t | no_return
-  def cast(data, params, allowed)
+             [String.t | atom],
+             Keyword.t) :: t | no_return
+  def cast(data, params, permitted, opts \\ [])
 
-  def cast(_data, %{__struct__: _} = params, _allowed) do
+  def cast(_data, %{__struct__: _} = params, _permitted, _opts) do
     raise Ecto.CastError, "expected params to be a map, got: `#{inspect params}`"
   end
 
-  def cast({data, types}, params, allowed) when is_map(data) do
-    cast(data, types, %{}, params, allowed, @empty_values)
+  def cast({data, types}, params, permitted, opts) when is_map(data) do
+    cast(data, types, %{}, params, permitted, opts)
   end
 
-  def cast(%Changeset{types: nil}, _params, _allowed) do
+  def cast(%Changeset{types: nil}, _params, _permitted, _opts) do
     raise ArgumentError, "changeset does not have types information"
   end
 
   def cast(%Changeset{changes: changes, data: data, types: types, empty_values: empty_values} = changeset,
-                      params, allowed) do
-    new_changeset = cast(data, types, changes, params, allowed, empty_values)
+                      params, permitted, opts) do
+    opts = Keyword.put_new(opts, :empty_values, empty_values)
+    new_changeset = cast(data, types, changes, params, permitted, opts)
     cast_merge(changeset, new_changeset)
   end
 
-  def cast(%{__struct__: module} = data, params, allowed) do
-    cast(data, module.__changeset__, %{}, params, allowed, @empty_values)
+  def cast(%{__struct__: module} = data, params, permitted, opts) do
+    cast(data, module.__changeset__, %{}, params, permitted, opts)
   end
 
-  defp cast(%{} = data, %{} = types, %{} = changes, :invalid, allowed, empty_values) when is_list(allowed) do
-    _ = Enum.map(allowed, &process_empty_fields(&1, types))
+  defp cast(%{} = data, %{} = types, %{} = changes, :invalid, permitted, opts) when is_list(permitted) do
+    {empty_values, _opts} = Keyword.pop(opts, :empty_values, @empty_values)
+    _ = Enum.map(permitted, &process_empty_fields(&1, types))
     %Changeset{params: nil, data: data, valid?: false, errors: [],
                changes: changes, types: types, empty_values: empty_values}
   end
 
-  defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, allowed, empty_values) when is_list(allowed) do
+  defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, permitted, opts) when is_list(permitted) do
+    {empty_values, _opts} = Keyword.pop(opts, :empty_values, @empty_values)
     params = convert_params(params)
 
     defaults = case data do
@@ -421,7 +430,7 @@ defmodule Ecto.Changeset do
     end
 
     {_, {changes, errors, valid?}} =
-      Enum.map_reduce(allowed, {changes, [], true},
+      Enum.map_reduce(permitted, {changes, [], true},
                       &process_param(&1, params, types, data, empty_values, defaults, &2))
 
     %Changeset{params: params, data: data, valid?: valid?,
@@ -429,7 +438,7 @@ defmodule Ecto.Changeset do
                types: types, empty_values: empty_values}
   end
 
-  defp cast(%{}, %{}, %{}, params, allowed, _empty_values) when is_list(allowed) do
+  defp cast(%{}, %{}, %{}, params, permitted, _opts) when is_list(permitted) do
     raise Ecto.CastError, "expected params to be a map, got: `#{inspect params}`"
   end
 
@@ -461,7 +470,7 @@ defmodule Ecto.Changeset do
   defp type!(types, key) do
     case Map.fetch(types, key) do
       {:ok, {tag, _}} when tag in @relations ->
-        raise "casting #{tag}s with cast/3 is not supported, use cast_#{tag}/3 instead"
+        raise "casting #{tag}s with cast/4 is not supported, use cast_#{tag}/3 instead"
       {:ok, type} ->
         type
       :error ->
@@ -524,7 +533,7 @@ defmodule Ecto.Changeset do
 
   The parameters for the given association will be retrieved
   from `changeset.params`. Those parameters are expected to be
-  a map with attributes, similar to the ones passed to `cast/3`.
+  a map with attributes, similar to the ones passed to `cast/4`.
   Once parameters are retrieved, `cast_assoc/3` will match those
   parameters with the associations already in the changeset record.
 
@@ -581,7 +590,7 @@ defmodule Ecto.Changeset do
       |> Ecto.Changeset.cast(params) # No need to allow :tags as we put them directly
       |> Ecto.Changeset.put_assoc(:tags, tags) # Explicitly set the tags
 
-  Note the changeset must have been previously `cast` using `cast/3`
+  Note the changeset must have been previously `cast` using `cast/4`
   before this function is invoked.
 
   ## Options
@@ -601,14 +610,14 @@ defmodule Ecto.Changeset do
 
   The parameters for the given embed will be retrieved
   from `changeset.params`. Those parameters are expected to be
-  a map with attributes, similar to the ones passed to `cast/3`.
+  a map with attributes, similar to the ones passed to `cast/4`.
   Once parameters are retrieved, `cast_embed/3` will match those
   parameters with the embeds already in the changeset record.
   See `cast_assoc/3` for an example of working with casts and
   associations which would also apply for embeds.
 
   The changeset must have been previously `cast` using
-  `cast/3` before this function is invoked.
+  `cast/4` before this function is invoked.
 
   ## Options
 
@@ -625,7 +634,7 @@ defmodule Ecto.Changeset do
   defp cast_relation(type, %Changeset{data: data, types: types}, _name, _opts)
       when data == nil or types == nil do
     raise ArgumentError, "cast_#{type}/3 expects the changeset to be cast. " <>
-                         "Please call cast/3 before calling cast_#{type}/3"
+                         "Please call cast/4 before calling cast_#{type}/3"
   end
 
   defp cast_relation(type, %Changeset{} = changeset, key, opts) do
@@ -913,7 +922,7 @@ defmodule Ecto.Changeset do
 
   The given `function` is invoked with the change value only if there
   is a change for the given `key`. Note that the value of the change
-  can still be `nil` (unless the field was marked as required on `cast/3`).
+  can still be `nil` (unless the field was marked as required on `cast/4`).
 
   ## Examples
 
