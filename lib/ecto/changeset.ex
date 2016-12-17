@@ -415,7 +415,7 @@ defmodule Ecto.Changeset do
 
   defp cast(%{} = data, %{} = types, %{} = changes, :invalid, permitted, opts) when is_list(permitted) do
     {empty_values, _opts} = Keyword.pop(opts, :empty_values, @empty_values)
-    _ = Enum.map(permitted, &process_empty_fields(&1, types))
+    _ = Enum.each(permitted, &cast_key/1)
     %Changeset{params: nil, data: data, valid?: false, errors: [],
                changes: changes, types: types, empty_values: empty_values}
   end
@@ -429,9 +429,9 @@ defmodule Ecto.Changeset do
       %{} -> %{}
     end
 
-    {_, {changes, errors, valid?}} =
-      Enum.map_reduce(permitted, {changes, [], true},
-                      &process_param(&1, params, types, data, empty_values, defaults, &2))
+    {changes, errors, valid?} =
+      Enum.reduce(permitted, {changes, [], true},
+                  &process_param(&1, params, types, data, empty_values, defaults, &2))
 
     %Changeset{params: params, data: data, valid?: valid?,
                errors: Enum.reverse(errors), changes: changes,
@@ -442,29 +442,24 @@ defmodule Ecto.Changeset do
     raise Ecto.CastError, "expected params to be a map, got: `#{inspect params}`"
   end
 
-  defp process_empty_fields(key, _types) when is_binary(key),
-    do: String.to_existing_atom(key)
-  defp process_empty_fields(key, _types) when is_atom(key),
-    do: key
-
   defp process_param(key, params, types, data, empty_values, defaults, {changes, errors, valid?}) do
     {key, param_key} = cast_key(key)
     type = type!(types, key)
+
     current =
       case Map.fetch(changes, key) do
         {:ok, value} -> value
         :error -> Map.get(data, key)
       end
 
-    {key,
-     case cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
-       {:ok, value, valid?} ->
-         {Map.put(changes, key, value), errors, valid?}
-       :missing ->
-         {changes, errors, valid?}
-       :invalid ->
-         {changes, [{key, {"is invalid", [type: type, validation: :cast]}} | errors], false}
-     end}
+    case cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
+      {:ok, value, valid?} ->
+        {Map.put(changes, key, value), errors, valid?}
+      :missing ->
+        {changes, errors, valid?}
+      :invalid ->
+        {changes, [{key, {"is invalid", [type: type, validation: :cast]}} | errors], false}
+    end
   end
 
   defp type!(types, key) do
