@@ -295,7 +295,9 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   defmodule Connection do
     @moduledoc false
-    @behaviour DBConnection
+    if Code.ensure_loaded?(DBConnection) do
+      @behaviour DBConnection
+    end
 
     def connect(_opts) do
       raise "should never be invoked"
@@ -362,7 +364,9 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   defmodule Pool do
     @moduledoc false
-    @behaviour DBConnection.Pool
+    if Code.ensure_loaded?(DBConnection) do
+      @behaviour DBConnection.Pool
+    end
 
     def ensure_all_started(_opts, _type) do
       raise "should never be invoked"
@@ -409,7 +413,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     def stop(owner, reason, {_conn_mod, conn_state, _in_transaction?}, opts) do
       opts[:sandbox_pool].stop(owner, reason, conn_state, opts)
     end
- end
+  end
 
   @doc """
   Sets the mode for the `repo` pool.
