@@ -91,14 +91,11 @@ defmodule Ecto.Repo.AutogenerateTest do
     assert default.updated_at == naive_datetime
   end
 
-  test "loads correctly after insert when setting field with different representation" do
+  test "loads correctly when field is given with different representation" do
     naive_datetime = ~N[2000-01-01 00:00:00]
     default = TestRepo.insert!(%Company{updated_at: naive_datetime})
     assert default.updated_at == ~N[2000-01-01 00:00:00.000000]
-  end
 
-  test "loads correctly after update when setting field with different representation" do
-    naive_datetime = ~N[2000-01-01 00:00:00]
     changeset = Ecto.Changeset.change(%Company{id: 1}, updated_at: naive_datetime)
     default = TestRepo.update!(changeset)
     assert default.updated_at == ~N[2000-01-01 00:00:00.000000]
