@@ -79,7 +79,7 @@ defmodule Ecto.Repo.AutogenerateTest do
   end
 
   test "does not set inserted_at and updated_at values if they were previously set" do
-    naive_datetime = ~N[2000-01-01 00:00:00]
+    naive_datetime = ~N[2000-01-01 00:00:00.000000]
     default = TestRepo.insert!(%Company{inserted_at: naive_datetime,
                                         updated_at: naive_datetime})
     assert default.inserted_at == naive_datetime
@@ -89,6 +89,12 @@ defmodule Ecto.Repo.AutogenerateTest do
     default = TestRepo.update!(changeset)
     refute default.inserted_at
     assert default.updated_at == naive_datetime
+  end
+
+  test "loads correctly after insert when setting field with different representation" do
+    naive_datetime = ~N[2000-01-01 00:00:00]
+    default = TestRepo.insert!(%Company{updated_at: naive_datetime})
+    assert default.updated_at == ~N[2000-01-01 00:00:00.000000]
   end
 
   test "sets custom inserted_at and updated_at values" do

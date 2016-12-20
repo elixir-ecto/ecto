@@ -192,7 +192,7 @@ defmodule Ecto.Repo.Schema do
         case apply(changeset, adapter, :insert, args) do
           {:ok, values} ->
             changeset
-            |> load_changes(:loaded, values ++ extra, autogen, adapter)
+            |> load_changes(:loaded, changes ++ values ++ extra, autogen, adapter)
             |> process_children(children, user_changeset, opts)
           {:error, _} = error ->
             error
