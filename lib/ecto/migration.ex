@@ -605,7 +605,15 @@ defmodule Ecto.Migration do
     * `:scale` - the scale of a numeric type. Default is 0 scale
 
   """
-  def add(column, type, opts \\ []) when is_atom(column) do
+  def add(column, type, opts \\ [])
+
+  def add(column, :datetime, opts) when is_atom(column) do
+    IO.warn "the :datetime type in migrations is deprecated, " <>
+            "please use :utc_datetime or :naive_datetime instead"
+    add(column, :naive_datetime, opts)
+  end
+
+  def add(column, type, opts) when is_atom(column) do
     validate_type!(type)
     Runner.subcommand {:add, column, type, opts}
   end
@@ -781,11 +789,6 @@ defmodule Ecto.Migration do
     Runner.flush
   end
 
-  defp validate_type!(:datetime) do
-    IO.warn "the :datetime type in migrations is deprecated, " <>
-            "please use :utc_datetime or :naive_datetime instead"
-    :naive_datetime
-  end
   defp validate_type!(type) when is_atom(type) do
     case Atom.to_string(type) do
       "Elixir." <> _ ->
