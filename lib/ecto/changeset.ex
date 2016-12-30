@@ -1082,6 +1082,7 @@ defmodule Ecto.Changeset do
   end
 
   def force_change(%Changeset{types: types} = changeset, key, value) do
+    ensure_field_exists!(changeset, key)
     case Map.get(types, key) do
       {tag, _} when tag in @relations ->
         raise "changing #{tag}s with force_change/3 is not supported, " <>

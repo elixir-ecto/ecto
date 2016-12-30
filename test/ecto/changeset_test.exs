@@ -494,6 +494,10 @@ defmodule Ecto.ChangesetTest do
 
     changeset = force_change(changeset, :upvotes, 5)
     assert changeset.changes.upvotes == 5
+
+    assert_raise ArgumentError, ~r/unknown field :bad for changeset on/, fn  ->
+      force_change(changeset, :bad, "bad")
+    end
   end
 
   test "apply_changes/1" do
