@@ -128,11 +128,11 @@ defmodule Ecto.Repo.EmbeddedTest do
     embed = %MyEmbed{x: "xyz"}
 
     # If embed is not in changeset, embeds are left out
-    changeset = Ecto.Changeset.change(%MySchema{id: 1, embed: embed}, x: "abc")
+    changeset = Ecto.Changeset.change(%MySchema{id: 1, embed: embed})
     schema = TestRepo.update!(changeset)
     assert schema.embed == embed
 
-    changeset = Ecto.Changeset.change(%MySchema{id: 1, embeds: [embed]}, x: "abc")
+    changeset = Ecto.Changeset.change(%MySchema{id: 1, embeds: [embed]})
     schema = TestRepo.update!(changeset)
     assert schema.embeds == [embed]
   end
@@ -231,7 +231,7 @@ defmodule Ecto.Repo.EmbeddedTest do
 
     changeset =
       %MySchema{id: 1, embed: embed}
-      |> Ecto.Changeset.change(x: "abc")
+      |> Ecto.Changeset.change
       |> Ecto.Changeset.put_embed(:embed, no_changes)
     schema = TestRepo.update!(changeset)
     refute schema.embed.updated_at
@@ -269,7 +269,7 @@ defmodule Ecto.Repo.EmbeddedTest do
     my_schema = %MySchema{id: 1, embed: nil}
     changeset =
       put_in(my_schema.__meta__.context, {:invalid, [unique: "my_schema_foo_index"]})
-      |> Ecto.Changeset.change(x: "foo")
+      |> Ecto.Changeset.change
       |> Ecto.Changeset.put_embed(:embed, embed)
       |> Ecto.Changeset.unique_constraint(:foo)
     assert {:error, changeset} = TestRepo.update(changeset)
