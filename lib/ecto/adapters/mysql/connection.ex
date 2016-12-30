@@ -751,7 +751,8 @@ if Code.ensure_loaded?(Mariaex) do
     defp ecto_to_db(type, query \\ nil)
     defp ecto_to_db({:array, _}, query),
       do: error!(query, "Array type is not supported by MySQL")
-    defp ecto_to_db(:id, _query),             do: "integer"
+    defp ecto_to_db(:id, _query),             do: "bigint unsigned"
+    defp ecto_to_db(:serial, _query),         do: "bigint unsigned not null auto_increment"
     defp ecto_to_db(:binary_id, _query),      do: "binary(16)"
     defp ecto_to_db(:string, _query),         do: "varchar"
     defp ecto_to_db(:float, _query),          do: "double"
