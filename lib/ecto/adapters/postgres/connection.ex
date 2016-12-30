@@ -838,7 +838,6 @@ if Code.ensure_loaded?(Postgrex) do
            ") REFERENCES ", quote_table(table.prefix, ref.table), ?(, quote_name(ref.column), ?),
            reference_on_delete(ref.on_delete), reference_on_update(ref.on_update)]
 
-    # A reference pointing to a serial column becomes bigint in postgres
     defp reference_name(%Reference{name: nil}, table, column),
       do: quote_name("#{table.name}_#{column}_fkey")
     defp reference_name(%Reference{name: name}, _table, _column),
