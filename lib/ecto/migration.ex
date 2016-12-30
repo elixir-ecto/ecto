@@ -771,8 +771,8 @@ defmodule Ecto.Migration do
 
   ## Options
 
-    * `:check` - The expression to evaluate on a row. Required when creating.
-    * `:name` - The name of the constraint - required.
+    * `:check` - A check constraint expresion. Required when creating a check constraint.
+    * `:exclude` - An exclusion constraint expression. Required when creating an exclusion constraint.
 
   """
   def constraint(table, name, opts \\ []) do
