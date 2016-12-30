@@ -964,6 +964,7 @@ defmodule Ecto.Changeset do
   end
 
   def put_change(%Changeset{types: types} = changeset, key, value) do
+    ensure_field_exists!(changeset, key)
     type = Map.get(types, key)
     {changes, errors, valid?} =
       put_change(changeset.data, changeset.changes, changeset.errors,
