@@ -845,6 +845,7 @@ if Code.ensure_loaded?(Postgrex) do
       do: quote_name(name)
 
     defp reference_column_type(:serial, _opts), do: "bigint"
+    defp reference_column_type(:bigserial, _opts), do: "bigint"
     defp reference_column_type(type, opts), do: column_type(type, opts)
 
     defp reference_on_delete(:nilify_all), do: " ON DELETE SET NULL"
@@ -915,8 +916,9 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     defp ecto_to_db({:array, t}),     do: [ecto_to_db(t), ?[, ?]]
-    defp ecto_to_db(:id),             do: "bigint"
-    defp ecto_to_db(:serial),         do: "bigserial"
+    defp ecto_to_db(:id),             do: "integer"
+    defp ecto_to_db(:serial),         do: "serial"
+    defp ecto_to_db(:bigserial),      do: "bigserial"
     defp ecto_to_db(:binary_id),      do: "uuid"
     defp ecto_to_db(:string),         do: "varchar"
     defp ecto_to_db(:binary),         do: "bytea"

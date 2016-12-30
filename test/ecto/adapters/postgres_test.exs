@@ -247,10 +247,10 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.all(query) == ~s{SELECT $1::uuid FROM "schema" AS s0}
 
     query = Schema |> select([], type(^1, Custom.Permalink)) |> normalize
-    assert SQL.all(query) == ~s{SELECT $1::bigint FROM "schema" AS s0}
+    assert SQL.all(query) == ~s{SELECT $1::integer FROM "schema" AS s0}
 
     query = Schema |> select([], type(^[1,2,3], {:array, Custom.Permalink})) |> normalize
-    assert SQL.all(query) == ~s{SELECT $1::bigint[] FROM "schema" AS s0}
+    assert SQL.all(query) == ~s{SELECT $1::integer[] FROM "schema" AS s0}
   end
 
   test "nested expressions" do
@@ -735,7 +735,7 @@ defmodule Ecto.Adapters.PostgresTest do
                {:add, :category_8, references(:categories, on_delete: :nilify_all, on_update: :update_all), [null: false]}]}
 
     assert execute_ddl(create) == ["""
-    CREATE TABLE "posts" ("id" bigserial,
+    CREATE TABLE "posts" ("id" serial,
     "category_0" bigint CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"),
     "category_1" bigint CONSTRAINT "foo_bar" REFERENCES "categories"("id"),
     "category_2" bigint CONSTRAINT "posts_category_2_fkey" REFERENCES "categories"("id"),
@@ -754,7 +754,7 @@ defmodule Ecto.Adapters.PostgresTest do
               [{:add, :id, :serial, [primary_key: true]},
                {:add, :created_at, :naive_datetime, []}]}
     assert execute_ddl(create) ==
-      [~s|CREATE TABLE "posts" ("id" bigserial, "created_at" timestamp, PRIMARY KEY ("id")) WITH FOO=BAR|]
+      [~s|CREATE TABLE "posts" ("id" serial, "created_at" timestamp, PRIMARY KEY ("id")) WITH FOO=BAR|]
   end
 
   test "create table with composite key" do
@@ -840,9 +840,20 @@ defmodule Ecto.Adapters.PostgresTest do
     """ |> remove_newlines]
   end
 
-  test "alter table with primary key" do
+  test "alter table with serial primary key" do
     alter = {:alter, table(:posts),
              [{:add, :my_pk, :serial, [primary_key: true]}]}
+
+    assert execute_ddl(alter) == ["""
+    ALTER TABLE "posts"
+    ADD COLUMN "my_pk" serial,
+    ADD PRIMARY KEY ("my_pk")
+    """ |> remove_newlines]
+  end
+
+  test "alter table with bigserial primary key" do
+    alter = {:alter, table(:posts),
+             [{:add, :my_pk, :bigserial, [primary_key: true]}]}
 
     assert execute_ddl(alter) == ["""
     ALTER TABLE "posts"

@@ -53,7 +53,7 @@ defmodule Ecto.MigrationTest do
 
   test "creates a reference" do
     assert references(:posts) ==
-           %Reference{table: :posts, column: :id, type: :serial}
+           %Reference{table: :posts, column: :id, type: :bigserial}
     assert references(:posts, type: :uuid, column: :other) ==
            %Reference{table: :posts, column: :other, type: :uuid}
   end
@@ -108,7 +108,7 @@ defmodule Ecto.MigrationTest do
 
     assert last_command() ==
            {:create, table,
-              [{:add, :id, :serial, [primary_key: true]},
+              [{:add, :id, :bigserial, [primary_key: true]},
                {:add, :title, :string, []},
                {:add, :cost, :decimal, [precision: 3]},
                {:add, :likes, :"int UNSIGNED", [default: 0]},
@@ -168,7 +168,7 @@ defmodule Ecto.MigrationTest do
     flush()
 
     assert last_command() ==
-           {:create, table, [{:add, :id, :serial, [primary_key: true]}]}
+           {:create, table, [{:add, :id, :bigserial, [primary_key: true]}]}
   end
 
   test "forward: alters a table" do

@@ -206,7 +206,7 @@ defmodule Ecto.Migration do
 
     To define a reference in a migration, see `Ecto.Migration.references/2`
     """
-    defstruct name: nil, table: nil, column: :id, type: :serial, on_delete: :nothing, on_update: :nothing
+    defstruct name: nil, table: nil, column: :id, type: :bigserial, on_delete: :nothing, on_update: :nothing
     @type t :: %__MODULE__{table: atom, column: atom, type: atom, on_delete: atom, on_update: atom}
   end
 
@@ -244,7 +244,7 @@ defmodule Ecto.Migration do
   Creates a table.
 
   By default, the table will also include a primary_key of name `:id`
-  and type `:serial`. Check `table/2` docs for more information.
+  and type `:bigserial`. Check `table/2` docs for more information.
 
   ## Examples
 
@@ -276,7 +276,7 @@ defmodule Ecto.Migration do
       Runner.start_command({unquote(command), Ecto.Migration.__prefix__(table)})
 
       if table.primary_key do
-        add(:id, :serial, primary_key: true)
+        add(:id, :bigserial, primary_key: true)
       end
 
       unquote(block)
@@ -359,7 +359,7 @@ defmodule Ecto.Migration do
   defp do_create(table, command) do
     columns =
       if table.primary_key do
-        [{:add, :id, :serial, primary_key: true}]
+        [{:add, :id, :bigserial, primary_key: true}]
       else
         []
       end
@@ -737,7 +737,7 @@ defmodule Ecto.Migration do
     * `:name` - The name of the underlying reference,
       defaults to "#{table}_#{column}_fkey"
     * `:column` - The foreign key column, default is `:id`
-    * `:type`   - The foreign key type, default is `:serial`
+    * `:type`   - The foreign key type, default is `:bigserial`
     * `:on_delete` - What to perform if the referenced entry
          is deleted. May be `:nothing`, `:delete_all` or
          `:nilify_all`. Defaults to `:nothing`.
