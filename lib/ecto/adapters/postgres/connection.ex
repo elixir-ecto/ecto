@@ -844,7 +844,7 @@ if Code.ensure_loaded?(Postgrex) do
     defp reference_name(%Reference{name: name}, _table, _column),
       do: quote_name(name)
 
-    defp reference_column_type(:serial, _opts), do: "bigint"
+    defp reference_column_type(:serial, _opts), do: "integer"
     defp reference_column_type(:bigserial, _opts), do: "bigint"
     defp reference_column_type(type, opts), do: column_type(type, opts)
 
