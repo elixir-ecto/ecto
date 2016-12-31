@@ -568,7 +568,7 @@ defmodule Ecto.Adapters.MySQLTest do
     create = {:create, table(:posts, engine: :myisam),
                [{:add, :id, :serial, [primary_key: true]}]}
     assert execute_ddl(create) ==
-           [~s|CREATE TABLE `posts` (`id` serial, PRIMARY KEY (`id`)) ENGINE = MYISAM|]
+           [~s|CREATE TABLE `posts` (`id` bigint unsigned not null auto_increment, PRIMARY KEY (`id`)) ENGINE = MYISAM|]
   end
 
   test "create table with references" do
@@ -581,7 +581,7 @@ defmodule Ecto.Adapters.MySQLTest do
                 {:add, :category_4, references(:categories, on_delete: :nilify_all), []}]}
 
     assert execute_ddl(create) == ["""
-    CREATE TABLE `posts` (`id` serial,
+    CREATE TABLE `posts` (`id` bigint unsigned not null auto_increment,
     `category_0` BIGINT UNSIGNED,
     CONSTRAINT `posts_category_0_fkey` FOREIGN KEY (`category_0`) REFERENCES `categories`(`id`),
     `category_1` BIGINT UNSIGNED,
@@ -601,7 +601,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :created_at, :datetime, []}]}
     assert execute_ddl(create) ==
-           [~s|CREATE TABLE `posts` (`id` serial, `created_at` datetime, PRIMARY KEY (`id`)) ENGINE = INNODB WITH FOO=BAR|]
+           [~s|CREATE TABLE `posts` (`id` bigint unsigned not null auto_increment, `created_at` datetime, PRIMARY KEY (`id`)) ENGINE = INNODB WITH FOO=BAR|]
   end
 
   test "create table with both engine and options" do
@@ -609,7 +609,7 @@ defmodule Ecto.Adapters.MySQLTest do
                [{:add, :id, :serial, [primary_key: true]},
                 {:add, :created_at, :datetime, []}]}
     assert execute_ddl(create) ==
-           [~s|CREATE TABLE `posts` (`id` serial, `created_at` datetime, PRIMARY KEY (`id`)) ENGINE = MYISAM WITH FOO=BAR|]
+           [~s|CREATE TABLE `posts` (`id` bigint unsigned not null auto_increment, `created_at` datetime, PRIMARY KEY (`id`)) ENGINE = MYISAM WITH FOO=BAR|]
   end
 
   test "create table with composite key" do
@@ -672,7 +672,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
     assert execute_ddl(alter) == ["""
     ALTER TABLE `posts`
-    ADD `my_pk` serial,
+    ADD `my_pk` bigint unsigned not null auto_increment,
     ADD PRIMARY KEY (`my_pk`)
     """ |> remove_newlines]
   end
