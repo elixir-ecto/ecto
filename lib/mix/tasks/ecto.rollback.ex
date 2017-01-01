@@ -44,6 +44,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
     * `--quiet` - do not log migration commands
     * `--prefix` - the prefix to run migrations on
     * `--pool-size` - the pool size if the repository is started only for the task (defaults to 1)
+    * `--log-sql` - log the raw sql migrations are running
 
   """
 
@@ -53,7 +54,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
 
     {opts, _, _} = OptionParser.parse args,
       switches: [all: :boolean, step: :integer, to: :integer, start: :boolean,
-                 quiet: :boolean, prefix: :string, pool_size: :integer],
+                 quiet: :boolean, prefix: :string, pool_size: :integer, log_sql: :boolean],
       aliases: [n: :step, v: :to]
 
     opts =
@@ -64,6 +65,11 @@ defmodule Mix.Tasks.Ecto.Rollback do
     opts =
       if opts[:quiet],
         do: Keyword.put(opts, :log, false),
+        else: opts
+
+    opts =
+      if opts[:quiet],
+        do: Keyword.put(opts, :log_sql, false),
         else: opts
 
     Enum.each repos, fn repo ->

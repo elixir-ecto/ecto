@@ -10,14 +10,13 @@ defmodule Ecto.Migration.Runner do
   alias Ecto.Migration.Index
   alias Ecto.Migration.Constraint
 
-  @opts [timeout: :infinity, log: false]
-
   @doc """
   Runs the given migration.
   """
   def run(repo, module, direction, operation, migrator_direction, opts) do
     level = Keyword.get(opts, :log, :info)
-    args  = [self(), repo, direction, migrator_direction, level]
+    log_sql = Keyword.get(opts, :log_sql, false)
+    args  = [self(), repo, direction, migrator_direction, level, log_sql]
 
     {:ok, runner} = Supervisor.start_child(Ecto.Migration.Supervisor, args)
     metadata(runner, opts)
@@ -42,11 +41,11 @@ defmodule Ecto.Migration.Runner do
   @doc """
   Starts the runner for the specified repo.
   """
-  def start_link(parent, repo, direction, migrator_direction, level) do
+  def start_link(parent, repo, direction, migrator_direction, level, log_sql) do
     Agent.start_link(fn ->
       Process.link(parent)
       %{direction: direction, repo: repo, migrator_direction: migrator_direction,
-        command: nil, subcommands: [], level: level, commands: []}
+        command: nil, subcommands: [], level: level, log_sql: log_sql, commands: []}
     end)
   end
 
@@ -214,9 +213,14 @@ defmodule Ecto.Migration.Runner do
     end)
   end
 
+  defp log_sql do
+    Agent.get(runner(), fn %{log_sql: log_sql} -> log_sql end)
+  end
+
   defp log_and_execute_ddl(repo, level, command) do
     log(level, command(command))
-    repo.__adapter__.execute_ddl(repo, command, @opts)
+    opts = [timeout: :infinity, log: log_sql]
+    repo.__adapter__.execute_ddl(repo, command, opts)
   end
 
   defp log(false, _msg), do: :ok
