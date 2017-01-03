@@ -389,7 +389,7 @@ defmodule Ecto do
   Ecto requires developers to specify the key `:ecto_repos` in their application
   configuration before using tasks like `ecto.create` and `ecto.migrate`. For example:
 
-      config :my_app, :ecto_repos, [MyApp.Repo]
+      config :my_app, ecto_repos: [MyApp.Repo]
 
       config :my_app, MyApp.Repo,
         adapter: Ecto.Adapters.Postgres,
