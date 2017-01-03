@@ -263,7 +263,7 @@ defmodule Ecto do
   which returns one entry or raises, `Repo.get/2` which fetches
   entries for a particular ID and more.
 
-  Finally, if you need a escape hatch, Ecto provides fragments
+  Finally, if you need an escape hatch, Ecto provides fragments
   (see `Ecto.Query.API.fragment/1`) to inject SQL (and non-SQL)
   fragments into queries. Also, most adapters provide direct
   APIs for queries, like `Ecto.Adapters.SQL.query/4`, allowing
