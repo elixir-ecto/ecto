@@ -355,7 +355,7 @@ defmodule Ecto do
 
   ### Embeds
 
-  Ecto also supports embeds. While associations keep parent and child
+  Ecto also supports [embeds](https://docs.mongodb.com/manual/core/data-model-design/#data-modeling-embedding). While associations keep parent and child
   entries in different tables, embeds stores the child along side the
   parent.
 
