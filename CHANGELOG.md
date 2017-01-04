@@ -113,11 +113,17 @@ In the example above, we were able to build the query expressions bit by bit, us
 
 A dynamic expression can always be interpolated inside another dynamic expression or at the root of a `where`, `having`, `update` or a `join`'s `on`.
 
+## v2.1.2 (2017-01-04)
+
+### Bug fixes
+
+  * Also properly deprecate `:datetime` in `modify` migration instructions
+
 ## v2.1.1 (2016-12-22)
 
 ### Bug fixes
 
-  * Properly deprecate `:datetime` in migrations
+  * Properly deprecate `:datetime` in `add` migration instructions
 
 ## v2.1.0 (2016-12-17)
 
