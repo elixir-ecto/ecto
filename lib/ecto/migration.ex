@@ -702,7 +702,15 @@ defmodule Ecto.Migration do
     * `:precision` - the precision for a numeric type. Default is no precision.
     * `:scale` - the scale of a numeric type. Default is 0 scale.
   """
-  def modify(column, type, opts \\ []) when is_atom(column) do
+  def modify(column, type, opts \\ [])
+
+  def modify(column, :datetime, opts) when is_atom(column) do
+    IO.warn "the :datetime type in migrations is deprecated, " <>
+            "please use :utc_datetime or :naive_datetime instead"
+    modify(column, :naive_datetime, opts)
+  end
+
+  def modify(column, type, opts) when is_atom(column) do
     Runner.subcommand {:modify, column, type, opts}
   end
 
