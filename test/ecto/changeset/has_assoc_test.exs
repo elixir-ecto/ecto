@@ -804,6 +804,21 @@ defmodule Ecto.Changeset.HasAssocTest do
     refute Map.has_key?(changeset.changes, :profile)
   end
 
+  test "put_assoc/4 with string map" do
+    ## test maps
+    base_changeset = Changeset.change(%Author{})
+
+    changeset = Changeset.put_assoc(base_changeset, :profile, %{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
+    assert Changeset.get_field(changeset, :profile).name == "michal"
+
+    changeset = Changeset.put_assoc(base_changeset, :profile, %{"name" => "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
+    assert Changeset.get_field(changeset, :profile).name == "michal"
+  end
+
   test "put_assoc/4 when replacing" do
     profile = %Profile{id: 1, name: "michal"} |> Ecto.put_meta(state: :loaded)
     base_changeset = Changeset.change(%Author{profile: profile})
