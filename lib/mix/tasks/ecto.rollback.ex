@@ -64,12 +64,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
 
     opts =
       if opts[:quiet],
-        do: Keyword.put(opts, :log, false),
-        else: opts
-
-    opts =
-      if opts[:quiet],
-        do: Keyword.put(opts, :log_sql, false),
+        do: Keyword.merge(opts, [log: false, log_sql: false]),
         else: opts
 
     Enum.each repos, fn repo ->
