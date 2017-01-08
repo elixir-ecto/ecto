@@ -175,10 +175,10 @@ defmodule Ecto.Changeset.Relation do
   def on_replace(%{on_replace: :raise, field: name, owner: owner}, _) do
     raise """
     you are attempting to change relation #{inspect name} of
-    #{inspect owner}, but there is missing data.
+    #{inspect owner}, but there is missing data or no `:on_replace` option to `many_to_many`.
 
     If you are attempting to update an existing entry, please make sure
-    you include the entry primary key (ID) alongside the data.
+    you include the entry primary key (ID) alongside the data or set `:on_replace` option.
 
     If you have a relationship with many children, at least the same N
     children must be given on update. By default it is not possible to
@@ -187,7 +187,7 @@ defmodule Ecto.Changeset.Relation do
 
     If you don't desire the current behavior or if you are using embeds
     without a primary key, it is possible to change this behaviour by
-    setting `:on_replace` when defining the relation. See `Ecto.Changeset`'s
+    setting `:on_replace` to `many_to_many` when defining the relation. See `Ecto.Changeset`'s
     section on related data for more info.
     """
   end
