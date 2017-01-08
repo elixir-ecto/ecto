@@ -131,7 +131,7 @@ defmodule Ecto.Migrator do
   during the migration process. The other option is to pass a list of tuples
   that identify the version number and migration modules to be run, for example:
 
-  `Ecto.Migrator.run(Repo, [{0, MyApp.Migration1}, {1, MyApp.Migration2}, ...], :up, opts)`
+      Ecto.Migrator.run(Repo, [{0, MyApp.Migration1}, {1, MyApp.Migration2}, ...], :up, opts)
 
   A strategy must be given as an option.
 
@@ -222,7 +222,7 @@ defmodule Ecto.Migrator do
   end
 
   # This function will match specific version/modules passed into `Migrator.run`.
-  defp migrations_for(migration_source) do
+  defp migrations_for(migration_source) when is_list(migration_source) do
     Enum.map migration_source, fn({version, module}) -> {version, module, :existing_module} end
   end
 
@@ -289,11 +289,11 @@ defmodule Ecto.Migrator do
 
   defp raise_no_migration_in_file(file) do
     raise Ecto.MigrationError,
-          "file #{Path.relative_to_cwd(file)} does not contain any Ecto.Migration"
+          "file #{Path.relative_to_cwd(file)} is not an Ecto.Migration"
   end
   defp raise_no_migration_in_module(mod) do
     raise Ecto.MigrationError,
-          "module #{mod} does not contain any Ecto.Migration"
+          "module #{inspect mod} is not an Ecto.Migration"
   end
 
   defp log(false, _msg), do: :ok
