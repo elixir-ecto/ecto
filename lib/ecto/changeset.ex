@@ -1266,8 +1266,8 @@ defmodule Ecto.Changeset do
 
     new_errors =
       for field <- fields,
-          ensure_field_exists!(changeset, field),
           missing?(changeset, field),
+          ensure_field_exists!(changeset, field),
           is_nil(errors[field]),
           do: {field, {message, [validation: :required]}}
 

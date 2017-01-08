@@ -610,6 +610,12 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "hello", "body" => "something"})
       |> validate_required(:bad)
     end
+
+    # When field is not an atom
+    assert_raise ArgumentError, ~r/expects field names to be atoms, got: `"title"`/, fn ->
+      changeset(%{"title" => "hello"})
+      |> validate_required("title")
+    end
   end
 
   test "validate_format/3" do
