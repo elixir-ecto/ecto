@@ -175,20 +175,16 @@ defmodule Ecto.Changeset.Relation do
   def on_replace(%{on_replace: :raise, field: name, owner: owner}, _) do
     raise """
     you are attempting to change relation #{inspect name} of
-    #{inspect owner}, but there is missing data.
+    #{inspect owner}, but the `:on_replace` option of this
+    relation is set to `:raise`.
 
-    If you are attempting to update an existing entry, please make sure
-    you include the entry primary key (ID) alongside the data.
+    By default, if you don't specify it, Ecto sets this option to
+    `:raise`, therefore not allowing you to change relations or
+    embeds through the parent record's changeset.
 
-    If you have a relationship with many children, at least the same N
-    children must be given on update. By default it is not possible to
-    orphan embed nor associated records, attempting to do so results in
-    this error message.
-
-    If you don't desire the current behavior or if you are using embeds
-    without a primary key, it is possible to change this behaviour by
-    setting `:on_replace` when defining the relation. See `Ecto.Changeset`'s
-    section on related data for more info.
+    It is possible to change this behaviour by setting `:on_replace`
+    when defining the relation. See `Ecto.Changeset`'s section on
+    "Assocs, embeds, and on replace" for more info.
     """
   end
 
