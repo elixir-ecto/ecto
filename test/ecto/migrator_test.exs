@@ -71,6 +71,8 @@ defmodule Ecto.MigratorTest do
     use Ecto.Migration
   end
 
+  defmodule EmptyModule do
+  end
 
   defmodule TestSchemaRepo do
     use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
@@ -332,5 +334,63 @@ defmodule Ecto.MigratorTest do
       end
     end
     """
+  end
+
+  describe "alternate migration source format" do
+    test "fails if there is no migration in file" do
+      assert_raise Ecto.MigrationError, "module Elixir.Ecto.MigratorTest.EmptyModule does not contain any Ecto.Migration", fn ->
+        run(TestRepo, [{13, EmptyModule}], :up, all: true, log: false)
+      end
+    end
+
+    test "fails if the module does not define migrations" do
+      assert_raise Ecto.MigrationError, "Ecto.MigratorTest.InvalidMigration does not implement a `up/0` or `change/0` function", fn ->
+        run(TestRepo, [{13, InvalidMigration}], :up, all: true, log: false)
+      end
+    end
+
+    test "fails if there are duplicated versions" do
+      assert_raise Ecto.MigrationError, "migrations can't be executed, migration version 13 is duplicated", fn ->
+        run(TestRepo, [{13, ChangeMigration}, {13, UpDownMigration}], :up, all: true, log: false)
+      end
+    end
+
+    test "fails if there are duplicated name" do
+      assert_raise Ecto.MigrationError, "migrations can't be executed, migration name Elixir.Ecto.MigratorTest.ChangeMigration is duplicated", fn ->
+        run(TestRepo, [{13, ChangeMigration}, {14, ChangeMigration}], :up, all: true, log: false)
+      end
+    end
+
+    test "upwards migrations skips migrations that are already up" do
+      assert run(TestRepo, [{1, ChangeMigration}], :up, all: true, log: false) == []
+    end
+
+    test "downwards migrations skips migrations that are already down" do
+      assert run(TestRepo, [{1, ChangeMigration}, {4, UpDownMigration}], :down, all: true, log: false) == [1]
+    end
+
+    test "stepwise migrations stop before all have been run" do
+      assert run(TestRepo, [{13, ChangeMigration}, {14, UpDownMigration}], :up, step: 1, log: false) == [13]
+    end
+
+    test "stepwise migrations stop at the number of available migrations" do
+      assert run(TestRepo, [{13, ChangeMigration}, {14, UpDownMigration}], :up, step: 2, log: false) == [13, 14]
+    end
+
+    test "stepwise migrations stop even if asked to exceed available" do
+      assert run(TestRepo, [{13, ChangeMigration}, {14, UpDownMigration}], :up, step: 3, log: false) == [13, 14]
+    end
+
+    test "version migrations stop before all have been run" do
+      assert run(TestRepo, [{13, ChangeMigration}, {14, UpDownMigration}], :up, to: 13, log: false) == [13]
+    end
+
+    test "version migrations stop at the number of available migrations" do
+      assert run(TestRepo, [{13, ChangeMigration}, {14, UpDownMigration}], :up, to: 14, log: false) == [13, 14]
+    end
+
+    test "version migrations stop even if asked to exceed available" do
+      assert run(TestRepo, [{13, ChangeMigration}, {14, UpDownMigration}], :up, to: 15, log: false) == [13, 14]
+    end
   end
 end

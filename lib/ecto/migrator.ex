@@ -124,7 +124,14 @@ defmodule Ecto.Migrator do
   end
 
   @doc """
-  Apply migrations in a directory to a repository with given strategy.
+  Apply migrations to a repository with a given strategy.
+
+  The second argument identifies where the migrations are sourced from. A file
+  path may be passed, in which case the migrations will be loaded from this
+  during the migration process. The other option is to pass a list of tuples
+  that identify the version number and migration modules to be run, for example:
+
+  `Ecto.Migrator.run(Repo, [{0, MyApp.Migration1}, {1, MyApp.Migration2}, ...], :up, opts)`
 
   A strategy must be given as an option.
 
@@ -137,17 +144,17 @@ defmodule Ecto.Migrator do
       Can be any of `Logger.level/0` values or `false`.
 
   """
-  @spec run(Ecto.Repo.t, binary, atom, Keyword.t) :: [integer]
-  def run(repo, directory, direction, opts) do
+  @spec run(Ecto.Repo.t, binary | [{integer, module}], atom, Keyword.t) :: [integer]
+  def run(repo, migration_source, direction, opts) do
     versions = migrated_versions(repo, opts)
 
     cond do
       opts[:all] ->
-        run_all(repo, versions, directory, direction, opts)
+        run_all(repo, versions, migration_source, direction, opts)
       to = opts[:to] ->
-        run_to(repo, versions, directory, direction, to, opts)
+        run_to(repo, versions, migration_source, direction, to, opts)
       step = opts[:step] ->
-        run_step(repo, versions, directory, direction, step, opts)
+        run_step(repo, versions, migration_source, direction, step, opts)
       true ->
         raise ArgumentError, "expected one of :all, :to, or :step strategies"
     end
@@ -170,7 +177,7 @@ defmodule Ecto.Migrator do
     end)
   end
 
-  defp run_to(repo, versions, directory, direction, target, opts) do
+  defp run_to(repo, versions, migration_source, direction, target, opts) do
     within_target_version? = fn
       {version, _, _}, target, :up ->
         version <= target
@@ -178,39 +185,45 @@ defmodule Ecto.Migrator do
         version >= target
     end
 
-    pending_in_direction(versions, directory, direction)
+    pending_in_direction(versions, migration_source, direction)
     |> Enum.take_while(&(within_target_version?.(&1, target, direction)))
     |> migrate(direction, repo, opts)
   end
 
-  defp run_step(repo, versions, directory, direction, count, opts) do
-    pending_in_direction(versions, directory, direction)
+  defp run_step(repo, versions, migration_source, direction, count, opts) do
+    pending_in_direction(versions, migration_source, direction)
     |> Enum.take(count)
     |> migrate(direction, repo, opts)
   end
 
-  defp run_all(repo, versions, directory, direction, opts) do
-    pending_in_direction(versions, directory, direction)
+  defp run_all(repo, versions, migration_source, direction, opts) do
+    pending_in_direction(versions, migration_source, direction)
     |> migrate(direction, repo, opts)
   end
 
-  defp pending_in_direction(versions, directory, :up) do
-    migrations_for(directory)
+  defp pending_in_direction(versions, migration_source, :up) do
+    migrations_for(migration_source)
     |> Enum.filter(fn {version, _name, _file} -> not (version in versions) end)
   end
 
-  defp pending_in_direction(versions, directory, :down) do
-    migrations_for(directory)
+  defp pending_in_direction(versions, migration_source, :down) do
+    migrations_for(migration_source)
     |> Enum.filter(fn {version, _name, _file} -> version in versions end)
     |> Enum.reverse
   end
 
-  defp migrations_for(directory) do
-    query = Path.join(directory, "*")
+  # This function will match directories passed into `Migrator.run`.
+  defp migrations_for(migration_source) when is_binary(migration_source) do
+    query = Path.join(migration_source, "*")
 
     for entry <- Path.wildcard(query),
         info = extract_migration_info(entry),
         do: info
+  end
+
+  # This function will match specific version/modules passed into `Migrator.run`.
+  defp migrations_for(migration_source) do
+    Enum.map migration_source, fn({version, module}) -> {version, module, :existing_module} end
   end
 
   defp extract_migration_info(file) do
@@ -234,17 +247,12 @@ defmodule Ecto.Migrator do
   defp migrate(migrations, direction, repo, opts) do
     ensure_no_duplication(migrations)
 
-    Enum.map migrations, fn {version, _name, file} ->
-      {mod, _bin} =
-        Enum.find(Code.load_file(file), fn {mod, _bin} ->
-          function_exported?(mod, :__migration__, 0)
-        end) || raise_no_migration_in_file(file)
-
+    Enum.map migrations, fn {version, name_or_mod, file} ->
+      mod = extract_module(file, name_or_mod)
       case direction do
         :up   -> do_up(repo, version, mod, opts)
         :down -> do_down(repo, version, mod, opts)
       end
-
       version
     end
   end
@@ -265,9 +273,27 @@ defmodule Ecto.Migrator do
 
   defp ensure_no_duplication([]), do: :ok
 
+  defp is_migration_module?({mod, _bin}), do: function_exported?(mod, :__migration__, 0)
+  defp is_migration_module?(mod), do: function_exported?(mod, :__migration__, 0)
+
+  defp extract_module(:existing_module, mod) do
+    if is_migration_module?(mod), do: mod, else: raise_no_migration_in_module(mod)
+  end
+  defp extract_module(file, _name) do
+    modules = Code.load_file(file)
+    case Enum.find(modules, &is_migration_module?/1) do
+      {mod, _bin} -> mod
+      _otherwise -> raise_no_migration_in_file(file)
+    end
+  end
+
   defp raise_no_migration_in_file(file) do
     raise Ecto.MigrationError,
           "file #{Path.relative_to_cwd(file)} does not contain any Ecto.Migration"
+  end
+  defp raise_no_migration_in_module(mod) do
+    raise Ecto.MigrationError,
+          "module #{mod} does not contain any Ecto.Migration"
   end
 
   defp log(false, _msg), do: :ok
