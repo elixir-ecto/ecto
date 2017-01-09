@@ -18,6 +18,8 @@ defmodule Ecto.Query.API do
   use them in Ecto queries (see docs for `fragment/1`).
   """
 
+  @dialyzer :no_return
+
   @doc """
   Binary `==` operation.
   """
