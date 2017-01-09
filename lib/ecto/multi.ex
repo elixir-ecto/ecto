@@ -375,6 +375,7 @@ defmodule Ecto.Multi do
   have defined in `Ecto.Multi`. Inspecting the `Ecto.Multi` struct internals
   directly is discouraged.
   """
+  @spec to_list(t) :: [{name, term}]
   def to_list(%Multi{operations: operations}) do
     operations
     |> Enum.reverse
@@ -387,6 +388,7 @@ defmodule Ecto.Multi do
     do: other
 
   @doc false
+  @spec __apply__(t, Ecto.Repo.t, fun, (term -> no_return)) :: {:ok, term} | {:error, term}
   def __apply__(%Multi{} = multi, repo, wrap, return) do
     multi.operations
     |> Enum.reverse

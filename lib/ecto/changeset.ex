@@ -1547,7 +1547,6 @@ defmodule Ecto.Changeset do
   defp decimal_compare(:lt, spec), do: spec in [:less_than, :less_than_or_equal_to]
   defp decimal_compare(:gt, spec), do: spec in [:greater_than, :greater_than_or_equal_to]
   defp decimal_compare(:eq, spec), do: spec in [:equal_to, :less_than_or_equal_to, :greater_than_or_equal_to]
-  defp decimal_compare(:qNaN, _spec), do: false
 
   @doc """
   Validates that the given field matches the confirmation
