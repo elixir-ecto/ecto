@@ -81,6 +81,7 @@ defmodule Ecto.Migrator do
 
     * `:log` - the level to use for logging. Defaults to `:info`.
       Can be any of `Logger.level/0` values or `false`.
+    * `:prefix` - the prefix to run the migrations on
 
   """
   @spec down(Ecto.Repo.t, integer, module) :: :ok | :already_down | no_return
@@ -142,6 +143,7 @@ defmodule Ecto.Migrator do
     * `:to` - runs all until the supplied version is reached
     * `:log` - the level to use for logging. Defaults to `:info`.
       Can be any of `Logger.level/0` values or `false`.
+    * `:prefix` - the prefix to run the migrations on
 
   """
   @spec run(Ecto.Repo.t, binary | [{integer, module}], atom, Keyword.t) :: [integer]
