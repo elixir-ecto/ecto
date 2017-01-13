@@ -1311,8 +1311,8 @@ defmodule Ecto.Integration.RepoTest do
       post_first = %Post{title: "first", public: true}
       post_second = %Post{title: "second", public: false}
 
-      {:ok, inserted_first} = TestRepo.insert(post_first, on_conflict: :replace_all,conflict_target: :id)
-      {:ok, inserted_second} = TestRepo.insert(post_second, on_conflict: :replace_all,conflict_target: :id)
+      {:ok, inserted_first} = TestRepo.insert(post_first, on_conflict: :replace_all, conflict_target: :id)
+      {:ok, inserted_second} = TestRepo.insert(post_second, on_conflict: :replace_all, conflict_target: :id)
 
       assert inserted_first.id
       assert inserted_second.id
@@ -1322,7 +1322,7 @@ defmodule Ecto.Integration.RepoTest do
       changes = [%{id: inserted_first.id, title: "first_updated", text: "first_updated"},
                  %{id: inserted_second.id, title: "second_updated", text: "second_updated"}]
 
-      TestRepo.insert_all(Post, changes, on_conflict: :replace_all,conflict_target: :id)
+      TestRepo.insert_all(Post, changes, on_conflict: :replace_all, conflict_target: :id)
 
       assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
 
