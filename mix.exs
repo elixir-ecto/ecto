@@ -30,7 +30,10 @@ defmodule Ecto.Mixfile do
      docs: [source_ref: "v#{@version}", main: "Ecto",
             canonical: "http://hexdocs.pm/ecto",
             source_url: "https://github.com/elixir-ecto/ecto",
-            extras: ["guides/Getting Started.md"]]]
+            extras: ["guides/Getting Started.md"]],
+
+     dialyzer: [plt_add_apps: [:db_connection, :postgrex, :mariaex,
+                               :sbroker, :poison, :mix, :eex]]]
   end
 
   def application do
@@ -53,7 +56,10 @@ defmodule Ecto.Mixfile do
 
      # Docs
      {:ex_doc, "~> 0.14", only: :docs},
-     {:inch_ex, ">= 0.0.0", only: :docs}]
+     {:inch_ex, ">= 0.0.0", only: :docs},
+
+     # Dev tools
+     {:dialyxir, "~> 0.4", only: :dev}]
   end
 
   defp test_paths(adapter) when adapter in @adapters, do: ["integration_test/#{adapter}"]
