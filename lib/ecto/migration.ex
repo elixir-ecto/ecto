@@ -75,7 +75,7 @@ defmodule Ecto.Migration do
   `:varchar` or `:char` in your migrations as `add :field_name, :text`.
   In your Ecto schema, they will all map to the same `:string` type.
 
-  Remember, atoms can containing arbitrary characters by enclosing in
+  Remember, atoms can contain arbitrary characters by enclosing in
   double quotes the characters following the colon. So, if you want to use
   field type with your database specific options, you can pass atoms containing
   these options like `:"int unsigned"`, `:"time without time zone"`.
