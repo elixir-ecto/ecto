@@ -1036,6 +1036,7 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert!(%Post{title: "1"}, [log: false])
   end
 
+  @tag :sql_query
   test "load" do
     inserted_at = ~N[2016-01-01 09:00:00.000000]
     TestRepo.insert!(%Post{title: "title1", inserted_at: inserted_at, public: false})
