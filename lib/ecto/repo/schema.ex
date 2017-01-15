@@ -40,7 +40,10 @@ defmodule Ecto.Repo.Schema do
     {rows, header} = extract_header_and_fields(rows, schema, autogen, adapter)
     counter = fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
     metadata = %{source: source, context: nil, schema: schema, autogenerate_id: autogen}
-    on_conflict = on_conflict(metadata, counter, adapter, opts)
+
+    {on_conflict, opts} = Keyword.pop(opts, :on_conflict, :raise)
+    {conflict_target, opts} = Keyword.pop(opts, :conflict_target, [])
+    on_conflict = on_conflict(on_conflict, conflict_target, metadata, counter, adapter)
 
     {count, rows} =
       adapter.insert_all(repo, metadata, Map.keys(header), rows, on_conflict, fields || [], opts)
@@ -168,6 +171,9 @@ defmodule Ecto.Repo.Schema do
     assocs = schema.__schema__(:associations)
     return = schema.__schema__(:read_after_writes)
 
+    {on_conflict, opts} = Keyword.pop(opts, :on_conflict, :raise)
+    {conflict_target, opts} = Keyword.pop(opts, :conflict_target, [])
+
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
     changeset = put_repo_and_action(changeset, :insert, repo)
@@ -187,7 +193,8 @@ defmodule Ecto.Repo.Schema do
         {changes, extra, return} = autogenerate_id(metadata, changeset.changes, return, adapter)
         {changes, autogen} = dump_changes!(:insert, Map.take(changes, fields), schema, extra, types, adapter)
 
-        on_conflict = on_conflict(metadata, fn -> length(changes) end, adapter, opts)
+        on_conflict = on_conflict(on_conflict, conflict_target, metadata,
+                                  fn -> length(changes) end, adapter)
         args = [repo, metadata, changes, on_conflict, return, opts]
         case apply(changeset, adapter, :insert, args) do
           {:ok, values} ->
@@ -401,9 +408,10 @@ defmodule Ecto.Repo.Schema do
       source: {Keyword.get(opts, :prefix, prefix), source}}
   end
 
-  defp on_conflict(%{source: {prefix, source}, schema: schema}, changes, adapter, opts) do
-    conflict_target = List.wrap Keyword.get(opts, :conflict_target)
-    case Keyword.get(opts, :on_conflict, :raise) do
+  defp on_conflict(on_conflict, conflict_target,
+                   %{source: {prefix, source}, schema: schema}, changes, adapter) do
+    conflict_target = List.wrap conflict_target
+    case on_conflict do
       :raise when conflict_target == [] ->
         {:raise, [], []}
       :raise ->
