@@ -70,6 +70,25 @@ defmodule Ecto.Integration.RepoTest do
     assert post.inserted_at
   end
 
+  test "insert, update and delete with action :ignore" do
+    changeset = %{Post.changeset(%Post{}, %{title: "hello"}) | action: :ignore}
+    TestRepo.insert! changeset
+    assert [] == TestRepo.all(Post)
+
+    changeset = %{Post.changeset(%Post{}, %{title: "hello"}) | action: :ignore, valid?: false}
+    {:error, ^changeset} = TestRepo.insert changeset
+
+    post = TestRepo.insert!(%Post{title: "hello"})
+
+    changeset = %{Post.changeset(post, %{title: "title1"}) | action: :ignore}
+    TestRepo.update! changeset
+    assert [] == TestRepo.all from p in Post, where: p.title == "title1"
+
+    changeset = %{Post.changeset(post, %{title: "title1"}) | action: :ignore}
+    TestRepo.delete! changeset
+    assert TestRepo.get_by(Post, title: "hello")
+  end
+
   @tag :composite_pk
   test "insert, update and delete with composite pk" do
     c1 = TestRepo.insert!(%CompositePk{a: 1, b: 2, name: "first"})

@@ -187,6 +187,14 @@ defmodule Ecto.RepoTest do
     assert {:error, ^delete} = TestRepo.delete(invalid)
   end
 
+  test "insert, update, insert_or_update and delete with changeset action :ignore" do
+    ignored = %Ecto.Changeset{valid?: true, data: %MySchema{id: 123}, action: :ignore}
+    assert {:ok, %MySchema{}} = TestRepo.insert(ignored)
+    assert {:ok, %MySchema{}} = TestRepo.update(ignored)
+    assert {:ok, %MySchema{}} = TestRepo.insert_or_update(ignored)
+    assert {:ok, %MySchema{}} = TestRepo.delete(ignored)
+  end
+
   test "insert!, update! and delete! accepts changesets" do
     valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{}, [])
     assert %MySchema{} = TestRepo.insert!(valid)
