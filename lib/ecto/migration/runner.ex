@@ -10,14 +10,14 @@ defmodule Ecto.Migration.Runner do
   alias Ecto.Migration.Index
   alias Ecto.Migration.Constraint
 
-  @opts [timeout: :infinity, log: false]
-
   @doc """
   Runs the given migration.
   """
   def run(repo, module, direction, operation, migrator_direction, opts) do
     level = Keyword.get(opts, :log, :info)
-    args  = [self(), repo, direction, migrator_direction, level]
+    sql = Keyword.get(opts, :log_sql, false)
+    log = %{level: level, sql: sql}
+    args  = [self(), repo, direction, migrator_direction, log]
 
     {:ok, runner} = Supervisor.start_child(Ecto.Migration.Supervisor, args)
     metadata(runner, opts)
@@ -42,11 +42,11 @@ defmodule Ecto.Migration.Runner do
   @doc """
   Starts the runner for the specified repo.
   """
-  def start_link(parent, repo, direction, migrator_direction, level) do
+  def start_link(parent, repo, direction, migrator_direction, log) do
     Agent.start_link(fn ->
       Process.link(parent)
       %{direction: direction, repo: repo, migrator_direction: migrator_direction,
-        command: nil, subcommands: [], level: level, commands: []}
+        command: nil, subcommands: [], log: log, commands: []}
     end)
   end
 
@@ -94,8 +94,8 @@ defmodule Ecto.Migration.Runner do
     commands  = if direction == :backward, do: commands, else: Enum.reverse(commands)
 
     for command <- commands do
-      {repo, direction, level} = repo_and_direction_and_level()
-      execute_in_direction(repo, direction, level, command)
+      {repo, direction, log} = runner_config()
+      execute_in_direction(repo, direction, log, command)
     end
   end
 
@@ -152,21 +152,21 @@ defmodule Ecto.Migration.Runner do
   ## Execute
   @creates [:create, :create_if_not_exists]
 
-  defp execute_in_direction(repo, :forward, level, command) do
-    log_and_execute_ddl(repo, level, command)
+  defp execute_in_direction(repo, :forward, log, command) do
+    log_and_execute_ddl(repo, log, command)
   end
 
-  defp execute_in_direction(repo, :backward, level, {command, %Index{} = index}) when command in @creates do
-    log_and_execute_ddl(repo, level, {:drop, index})
+  defp execute_in_direction(repo, :backward, log, {command, %Index{} = index}) when command in @creates do
+    log_and_execute_ddl(repo, log, {:drop, index})
   end
 
-  defp execute_in_direction(repo, :backward, level, {:drop, %Index{} = index}) do
-    log_and_execute_ddl(repo, level, {:create, index})
+  defp execute_in_direction(repo, :backward, log, {:drop, %Index{} = index}) do
+    log_and_execute_ddl(repo, log, {:create, index})
   end
 
-  defp execute_in_direction(repo, :backward, level, command) do
+  defp execute_in_direction(repo, :backward, log, command) do
     if reversed = reverse(command) do
-      log_and_execute_ddl(repo, level, reversed)
+      log_and_execute_ddl(repo, log, reversed)
     else
       raise Ecto.MigrationError, message:
         "cannot reverse migration command: #{command command}. " <>
@@ -208,15 +208,15 @@ defmodule Ecto.Migration.Runner do
     end
   end
 
-  defp repo_and_direction_and_level do
-    Agent.get(runner(), fn %{repo: repo, direction: direction, level: level} ->
-      {repo, direction, level}
+  defp runner_config do
+    Agent.get(runner(), fn %{repo: repo, direction: direction, log: log} ->
+      {repo, direction, log}
     end)
   end
 
-  defp log_and_execute_ddl(repo, level, command) do
+  defp log_and_execute_ddl(repo, %{level: level, sql: sql}, command) do
     log(level, command(command))
-    repo.__adapter__.execute_ddl(repo, command, @opts)
+    repo.__adapter__.execute_ddl(repo, command, [timeout: :infinity, log: sql])
   end
 
   defp log(false, _msg), do: :ok
