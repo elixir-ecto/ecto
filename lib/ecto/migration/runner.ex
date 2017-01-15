@@ -16,7 +16,7 @@ defmodule Ecto.Migration.Runner do
   def run(repo, module, direction, operation, migrator_direction, opts) do
     level = Keyword.get(opts, :log, :info)
     sql = Keyword.get(opts, :log_sql, false)
-    log = [level: level, sql: sql]
+    log = %{level: level, sql: sql}
     args  = [self(), repo, direction, migrator_direction, log]
 
     {:ok, runner} = Supervisor.start_child(Ecto.Migration.Supervisor, args)
@@ -214,7 +214,7 @@ defmodule Ecto.Migration.Runner do
     end)
   end
 
-  defp log_and_execute_ddl(repo, [level: level, sql: sql], command) do
+  defp log_and_execute_ddl(repo, %{level: level, sql: sql}, command) do
     log(level, command(command))
     repo.__adapter__.execute_ddl(repo, command, [timeout: :infinity, log: sql])
   end
