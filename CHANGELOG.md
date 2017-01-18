@@ -113,6 +113,13 @@ In the example above, we were able to build the query expressions bit by bit, us
 
 A dynamic expression can always be interpolated inside another dynamic expression or at the root of a `where`, `having`, `update` or a `join`'s `on`.
 
+## v2.1.3 (2017-01-18)
+
+### Bug fixes
+
+  * Avoid ambiguous columns on `insert_all` with `:on_conflict` using inc/push/pull
+  * Do not pass `:on_conflict` option to children on `insert`
+
 ## v2.1.2 (2017-01-04)
 
 ### Bug fixes
