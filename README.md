@@ -84,15 +84,7 @@ For example, if you want to use PostgreSQL, add to your `mix.exs` file:
 ```elixir
 defp deps do
   [{:postgrex, ">= 0.0.0"},
-   {:ecto, "~> 2.0.0"}]
-end
-```
-
-and update your applications list to include both projects:
-
-```elixir
-def application do
-  [applications: [:postgrex, :ecto]]
+   {:ecto, "~> 2.1"}]
 end
 ```
 
