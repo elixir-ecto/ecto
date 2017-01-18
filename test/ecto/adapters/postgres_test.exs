@@ -389,7 +389,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
     query = from(m in Schema, update: [set: [x: 0], inc: [y: 1, z: -3]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE "schema" AS s0 SET "x" = 0, "y" = "y" + 1, "z" = "z" + -3}
+           ~s{UPDATE "schema" AS s0 SET "x" = 0, "y" = s0."y" + 1, "z" = s0."z" + -3}
 
     query = from(e in Schema, where: e.x == 123, update: [set: [x: 0]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
@@ -420,11 +420,11 @@ defmodule Ecto.Adapters.PostgresTest do
   test "update all array ops" do
     query = from(m in Schema, update: [push: [w: 0]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE "schema" AS s0 SET "w" = array_append("w", 0)}
+           ~s{UPDATE "schema" AS s0 SET "w" = array_append(s0."w", 0)}
 
     query = from(m in Schema, update: [pull: [w: 0]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE "schema" AS s0 SET "w" = array_remove("w", 0)}
+           ~s{UPDATE "schema" AS s0 SET "w" = array_remove(s0."w", 0)}
   end
 
   test "update all with prefix" do

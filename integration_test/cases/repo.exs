@@ -1065,6 +1065,15 @@ defmodule Ecto.Integration.RepoTest do
     end
 
     @tag :with_conflict_target
+    test "on conflict with inc" do
+      uuid = "6fa459ea-ee8a-3ca4-894e-db77e160355e"
+      post = %Post{title: "first", uuid: uuid}
+      {:ok, _} = TestRepo.insert(post)
+      post = %{title: "upsert", uuid: uuid}
+      TestRepo.insert_all(Post, [post], on_conflict: [inc: [visits: 1]], conflict_target: :uuid)
+    end
+
+    @tag :with_conflict_target
     test "on conflict ignore and conflict target" do
       post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: :nothing, conflict_target: [:uuid])

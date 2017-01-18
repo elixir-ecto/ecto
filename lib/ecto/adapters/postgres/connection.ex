@@ -293,18 +293,18 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     defp update_op(:inc, key, value, sources, query) do
-      quoted = quote_name(key)
-      [quoted, " = ", quoted, " + " | expr(value, sources, query)]
+      [quote_name(key), " = ", quote_qualified_name(key, sources, 0), " + " |
+       expr(value, sources, query)]
     end
 
     defp update_op(:push, key, value, sources, query) do
-      quoted = quote_name(key)
-      [quoted, " = array_append(", quoted, ", ", expr(value, sources, query), ?)]
+      [quote_name(key), " = array_append(", quote_qualified_name(key, sources, 0),
+       ", ", expr(value, sources, query), ?)]
     end
 
     defp update_op(:pull, key, value, sources, query) do
-      quoted = quote_name(key)
-      [quoted, " = array_remove(", quoted, ", ", expr(value, sources, query), ?)]
+      [quote_name(key), " = array_remove(", quote_qualified_name(key, sources, 0),
+       ", ", expr(value, sources, query), ?)]
     end
 
     defp update_op(command, _key, _value, _sources, query) do
@@ -415,8 +415,7 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     defp expr({{:., _, [{:&, _, [idx]}, field]}, _, []}, sources, _query) when is_atom(field) do
-      {_, name, _} = elem(sources, idx)
-      [name, ?. | quote_name(field)]
+      quote_qualified_name(field, sources, idx)
     end
 
     defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
@@ -862,9 +861,14 @@ if Code.ensure_loaded?(Postgrex) do
       {expr || paren_expr(source, sources, query), name}
     end
 
-    defp quote_name(name)
-    defp quote_name(name) when is_atom(name),
-      do: quote_name(Atom.to_string(name))
+    defp quote_qualified_name(name, sources, ix) do
+      {_, source, _} = elem(sources, ix)
+      [source, ?. | quote_name(name)]
+    end
+
+    defp quote_name(name) when is_atom(name) do
+      quote_name(Atom.to_string(name))
+    end
     defp quote_name(name) do
       if String.contains?(name, "\"") do
         error!(nil, "bad field name #{inspect name}")
