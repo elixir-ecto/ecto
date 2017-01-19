@@ -143,6 +143,7 @@ defmodule Ecto.Integration.RepoTest do
     assert TestRepo.update!(changeset) == permalink
   end
 
+  @tag :no_primary_key
   test "insert with no primary key" do
     assert %Barebone{num: nil} = TestRepo.insert!(%Barebone{})
     assert %Barebone{num: 13} = TestRepo.insert!(%Barebone{num: 13})
