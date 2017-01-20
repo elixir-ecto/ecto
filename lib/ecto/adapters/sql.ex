@@ -408,7 +408,7 @@ defmodule Ecto.Adapters.SQL do
     execute_or_reset(repo, id, reset, cached, params, nil, opts)
   end
 
- defp do_execute(repo, %{fields: fields}, {:cached, reset, {id, cached}}, params, process, opts) do
+  defp do_execute(repo, %{fields: fields}, {:cached, reset, {id, cached}}, params, process, opts) do
     mapper = &process_row(&1, process, fields)
     execute_or_reset(repo, id, reset, cached, params, mapper, opts)
   end
