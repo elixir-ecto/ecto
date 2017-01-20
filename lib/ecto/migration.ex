@@ -378,7 +378,7 @@ defmodule Ecto.Migration do
 
       drop index(:posts, [:name])
       drop table(:posts)
-      drop constraint(:products, name: "price_must_be_positive")
+      drop constraint(:products, "price_must_be_positive")
 
   """
   def drop(%{} = index_or_table_or_constraint) do
