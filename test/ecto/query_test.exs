@@ -338,5 +338,10 @@ defmodule Ecto.QueryTest do
         from p in "posts", where: fragment(^clause)
       end
     end
+
+    test "keeps UTF-8 encoding" do
+      assert inspect(from p in "posts", where: fragment("héllò")) ==
+             ~s[#Ecto.Query<from p in \"posts\", where: fragment("héllò")>]
+    end
   end
 end
