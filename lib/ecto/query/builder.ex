@@ -267,7 +267,7 @@ defmodule Ecto.Query.Builder do
   defp split_binary(<<?\\, ??, rest :: binary >>, consumed),
     do: split_binary(rest, consumed <> <<??>>)
   defp split_binary(<<first :: utf8, rest :: binary>>, consumed),
-    do: split_binary(rest, consumed <> <<first>>)
+    do: split_binary(rest, consumed <> <<first :: utf8>>)
 
   defp escape_call({name, _, args}, type, params, vars, env) do
     {args, params} = Enum.map_reduce(args, params, &escape(&1, type, &2, vars, env))
