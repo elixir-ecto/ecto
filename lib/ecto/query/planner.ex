@@ -14,7 +14,7 @@ defmodule Ecto.Query.Planner do
   The from is moved as last join with the where conditions as its "on"
   in order to keep proper binding order.
   """
-  def query_to_joins(%{from: from, wheres: wheres, joins: joins}, position) do
+  def query_to_joins(qual, %{from: from, wheres: wheres, joins: joins}, position) do
     on = %QueryExpr{file: __ENV__.file, line: __ENV__.line, expr: true, params: []}
 
     on =
@@ -22,7 +22,7 @@ defmodule Ecto.Query.Planner do
         merge_expr_and_params(op, acc, expr, params)
       end)
 
-    join = %JoinExpr{qual: :inner, source: from, file: __ENV__.file, line: __ENV__.line, on: on}
+    join = %JoinExpr{qual: qual, source: from, file: __ENV__.file, line: __ENV__.line, on: on}
     last = length(joins) + position
 
     mapping = fn
@@ -335,13 +335,13 @@ defmodule Ecto.Query.Planner do
                   child_sources ++ tail_sources, counter + 1, offset + length(child_sources), adapter)
   end
 
-  defp prepare_joins([%JoinExpr{source: %Ecto.Query{from: source} = join_query, on: on} = join|t],
+  defp prepare_joins([%JoinExpr{source: %Ecto.Query{from: source} = join_query, qual: qual, on: on} = join|t],
                       query, joins, sources, tail_sources, counter, offset, adapter) do
     case join_query do
       %{order_bys: [], limit: nil, offset: nil, group_bys: [], joins: [],
         havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
         source = prepare_source(query, source, adapter)
-        [join] = attach_on(query_to_joins(%{join_query | from: source}, counter), on)
+        [join] = attach_on(query_to_joins(qual, %{join_query | from: source}, counter), on)
         prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
       _ ->
         error! query, join, "queries in joins can only have `where` conditions"
