@@ -436,10 +436,25 @@ defmodule Ecto.Adapters.MySQLTest do
            ~s{(SELECT * FROM schema2) AS f1 ON f1.`id` = s0.`id`}
   end
 
+  test "join with query interpolation" do
+    inner = Ecto.Queryable.to_query(Schema2)
+    query = from(p in Schema, left_join: c in ^inner, select: {p.id, c.id}) |> normalize()
+    assert SQL.all(query) ==
+           "SELECT s0.`id`, s1.`id` FROM `schema` AS s0 LEFT OUTER JOIN `schema2` AS s1 ON TRUE"
+  end
+
   test "cross join" do
     query = from(p in Schema, cross_join: c in Schema2, select: {p.id, c.id}) |> normalize()
     assert SQL.all(query) ==
            "SELECT s0.`id`, s1.`id` FROM `schema` AS s0 CROSS JOIN `schema2` AS s1 ON TRUE"
+  end
+
+  test "join produces correct bindings" do
+    query = from(p in Schema, join: c in Schema2, on: true)
+    query = from(p in query, join: c in Schema2, on: true, select: {p.id, c.id})
+    query = normalize(query)
+    assert SQL.all(query) ==
+           "SELECT s0.`id`, s2.`id` FROM `schema` AS s0 INNER JOIN `schema2` AS s1 ON TRUE INNER JOIN `schema2` AS s2 ON TRUE"
   end
 
   ## Associations
@@ -460,14 +475,6 @@ defmodule Ecto.Adapters.MySQLTest do
     query = Schema |> join(:inner, [p], pp in assoc(p, :permalink)) |> select([], true) |> normalize
     assert SQL.all(query) ==
            "SELECT TRUE FROM `schema` AS s0 INNER JOIN `schema3` AS s1 ON s1.`id` = s0.`y`"
-  end
-
-  test "join produces correct bindings" do
-    query = from(p in Schema, join: c in Schema2, on: true)
-    query = from(p in query, join: c in Schema2, on: true, select: {p.id, c.id})
-    query = normalize(query)
-    assert SQL.all(query) ==
-           "SELECT s0.`id`, s2.`id` FROM `schema` AS s0 INNER JOIN `schema2` AS s1 ON TRUE INNER JOIN `schema2` AS s2 ON TRUE"
   end
 
   # Schema based

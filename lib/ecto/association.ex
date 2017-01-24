@@ -173,7 +173,7 @@ defmodule Ecto.Association do
     # Note we are being restrictive on the format
     # expected from assoc_query.
     assoc_query = refl.__struct__.assoc_query(refl, nil, values)
-    joins = Ecto.Query.Planner.query_to_joins(assoc_query, position)
+    joins = Ecto.Query.Planner.query_to_joins(:inner, assoc_query, position)
 
     # Add the new join to the query and traverse the remaining
     # joins that will start counting from the added join position.
