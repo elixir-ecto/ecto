@@ -111,7 +111,7 @@ defmodule Ecto.Query do
   on the right side of `in`, we passed the query itself.
 
   Any value can be used on the right-side of `in` as long as it implements
-  the `Ecto.Queryable` protocol. For now, we know such protocols is
+  the `Ecto.Queryable` protocol. For now, we know the protocol is
   implemented for both atoms (like `User`) and strings (like "users").
 
   In any case, regardless if a schema has been given or not, Ecto
