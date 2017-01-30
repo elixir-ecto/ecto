@@ -495,6 +495,37 @@ defmodule Ecto.ChangesetTest do
     assert changed_post.title == "foo"
   end
 
+  test "apply_action/2 with valid changeset" do
+    post = %Post{}
+    assert post.title == ""
+
+    changeset = changeset(post, %{"title" => "foo"})
+    assert changeset.valid?
+    assert {:ok, changed_post} = apply_action(changeset, :update)
+
+    assert changed_post.__struct__ == post.__struct__
+    assert changed_post.title == "foo"
+  end
+
+  test "apply_action/2 with invalid changeset" do
+    changeset =
+      %Post{}
+      |> changeset(%{"title" => "foo"})
+      |> validate_length(:title, min: 10)
+
+    refute changeset.valid?
+    changeset_new_action = %Ecto.Changeset{changeset | action: :update}
+    assert {:error, ^changeset_new_action} = apply_action(changeset, :update)
+  end
+
+  test "apply_action/2 with invalid action" do
+    assert_raise ArgumentError, ~r/unknown action/, fn ->
+      %Post{}
+      |> changeset(%{})
+      |> apply_action(:invalid_action)
+    end
+  end
+
   ## Validations
 
   test "add_error/3" do
