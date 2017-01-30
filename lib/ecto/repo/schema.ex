@@ -8,7 +8,7 @@ defmodule Ecto.Repo.Schema do
   require Ecto.Query
 
   @doc """
-  Implementation for `Ecto.Repo.insert!/2`.
+  Implementation for `Ecto.Repo.insert_all/3`.
   """
   def insert_all(repo, adapter, schema, rows, opts) when is_atom(schema) do
     do_insert_all(repo, adapter, schema, schema.__schema__(:prefix),
