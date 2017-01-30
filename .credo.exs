@@ -17,6 +17,7 @@
     checks: [
       {Credo.Check.Consistency.ExceptionNames},
       {Credo.Check.Consistency.LineEndings},
+      {Credo.Check.Consistency.MultiAliasImportRequireUse},
       {Credo.Check.Consistency.SpaceAroundOperators},
       {Credo.Check.Consistency.SpaceInParentheses},
       {Credo.Check.Consistency.TabsOrSpaces},
@@ -32,10 +33,14 @@
       {Credo.Check.Readability.LargeNumbers, false}, # Because of Ecto migrations
       {Credo.Check.Readability.MaxLineLength, false},
       {Credo.Check.Readability.ModuleAttributeNames},
-      {Credo.Check.Readability.ModuleDoc, false}, # Until it is disabled for all .exs files
+      {Credo.Check.Readability.ModuleDoc},
       {Credo.Check.Readability.ModuleNames},
+      {Credo.Check.Readability.NoParenthesesWhenZeroArity, false},
       {Credo.Check.Readability.ParenthesesInCondition},
       {Credo.Check.Readability.PredicateFunctionNames},
+      {Credo.Check.Readability.SinglePipe},
+      {Credo.Check.Readability.Specs, false},
+      {Credo.Check.Readability.StringSigils},
       {Credo.Check.Readability.TrailingBlankLine},
       {Credo.Check.Readability.TrailingWhiteSpace},
       {Credo.Check.Readability.VariableNames},
@@ -43,6 +48,7 @@
 
       {Credo.Check.Refactor.ABCSize, false},
       {Credo.Check.Refactor.CondStatements},
+      {Credo.Check.Refactor.DoubleBooleanNegation, false},
       {Credo.Check.Refactor.FunctionArity, max_arity: 13}, # Don't do this at home.
       {Credo.Check.Refactor.MatchInCondition},
       {Credo.Check.Refactor.PipeChainStart, false},
@@ -51,7 +57,9 @@
       {Credo.Check.Refactor.NegatedConditionsWithElse},
       {Credo.Check.Refactor.Nesting},
       {Credo.Check.Refactor.UnlessWithElse},
+      {Credo.Check.Refactor.VariableRebinding, false},
 
+      {Credo.Check.Warning.BoolOperationOnSameValues},
       {Credo.Check.Warning.IExPry},
       {Credo.Check.Warning.IoInspect, false},
       {Credo.Check.Warning.NameRedeclarationByAssignment, false},
@@ -59,13 +67,12 @@
       {Credo.Check.Warning.NameRedeclarationByDef, false},
       {Credo.Check.Warning.NameRedeclarationByFn, false},
       {Credo.Check.Warning.OperationOnSameValues, false}, # Disabled because of p.x == p.x in Ecto queries
-      {Credo.Check.Warning.BoolOperationOnSameValues},
+      {Credo.Check.Warning.OperationWithConstantResult},
       {Credo.Check.Warning.UnusedEnumOperation},
       {Credo.Check.Warning.UnusedKeywordOperation},
       {Credo.Check.Warning.UnusedListOperation},
       {Credo.Check.Warning.UnusedStringOperation},
       {Credo.Check.Warning.UnusedTupleOperation},
-      {Credo.Check.Warning.OperationWithConstantResult},
     ]
   }
 ]}
