@@ -251,6 +251,7 @@ defmodule Ecto.Changeset do
 
   @relations [:embed, :assoc]
   @match_types [:exact, :suffix]
+  @actions [:insert, :update, :delete, :replace]
 
   @doc """
   Wraps the given data in a changeset or adds changes to a changeset.
@@ -1134,6 +1135,35 @@ defmodule Ecto.Changeset do
           acc
       end
     end)
+  end
+
+  @doc """
+  Applies the changeset action only if the changes are valid.
+
+  If the changes are valid, all changes are applied to the changeset data.
+  If the changes are invalid, no changes are applied, and an error tuple
+  is returned with the changeset containing the action that was attempted
+  to be applied.
+
+  The action may be one of #{Enum.map_join(@actions, ", ", &"`#{inspect &1}`")}.
+
+  ## Examples
+
+      iex> {:ok, data} = apply_action(changeset, :update)
+
+      iex> {:error, changeset} = apply_action(changeset, :update)
+      %Ecto.Changeset{action: :update}
+  """
+  @spec apply_action(t, action) :: {:ok, Ecto.Schema.t | data} | {:error, t}
+  def apply_action(%Changeset{} = changeset, action) when action in @actions do
+    if changeset.valid? do
+      {:ok, apply_changes(changeset)}
+    else
+      {:error, %Changeset{changeset | action: action}}
+    end
+  end
+  def apply_action(%Changeset{}, action) do
+    raise ArgumentError, "unknown action #{inspect action}. The following values are allowed: #{inspect @actions}"
   end
 
   ## Validations
