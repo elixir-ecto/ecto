@@ -1005,9 +1005,6 @@ defmodule Ecto.Query do
         group_by: p.category,
         select: {p.category, count(p.id)})
 
-      # Group on all fields on the Post schema
-      from(p in Post, group_by: p, select: p)
-
       # Using atoms
       from(p in Post, group_by: :category, select: {p.category, count(p.id)})
 
