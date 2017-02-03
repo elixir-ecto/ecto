@@ -1137,7 +1137,8 @@ defmodule Ecto.Query do
   receives the IDs to be fetched and it must return the associated data.
   This data will then be mapped and sorted:
 
-      Repo.all from p in Post, preload: [comments: fn _ -> previously_loaded_comments end]
+      comment_preloader = fn post_ids -> fetch_comments_by_post_ids(post_ids) end
+      Repo.all from p in Post, preload: [comments: ^comment_preloader]
 
   This is useful when the whole dataset was already loaded or must be
   explicitly fetched from elsewhere.
