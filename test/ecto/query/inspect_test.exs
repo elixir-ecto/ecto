@@ -39,8 +39,12 @@ defmodule Ecto.Query.InspectTest do
            "dynamic([a, b, ..., c, d], a.foo == b.bar and c.foo == d.bar)"
 
     dynamic = dynamic([p], p.bar == ^1)
-    assert inspect(dynamic([p], p.foo == ^0 and ^dynamic)) ==
-           "dynamic([p], p.foo == ^0 and p.bar == ^1)"
+    assert inspect(dynamic([p], ^dynamic and p.foo == ^0)) ==
+           "dynamic([p], p.bar == ^1 and p.foo == ^0)"
+
+    dynamic = dynamic([o, b], b.user_id == ^1 or ^false)
+    assert inspect(dynamic([o], o.type == ^2 and ^dynamic)) ==
+           "dynamic([o, b], o.type == ^2 and (b.user_id == ^1 or ^false))"
   end
 
   test "from" do

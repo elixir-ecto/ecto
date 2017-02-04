@@ -5,7 +5,7 @@ alias Ecto.Query.{DynamicExpr, JoinExpr}
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
-    {expr, params, _, _} =
+    {expr, binding, params, _, _} =
       Ecto.Query.Builder.Dynamic.fully_expand(%Ecto.Query{joins: Enum.drop(binding, 1)}, dynamic)
     names =
       for {name, _, _} <- binding, do: Atom.to_string(name)
@@ -162,7 +162,11 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp expr_to_string({:&, _, [ix]}, _, names, _) do
-    elem(names, ix)
+    try do
+      elem(names, ix)
+    rescue
+      ArgumentError -> "unknown_binding!"
+    end
   end
 
   # Inject the interpolated value

@@ -917,20 +917,13 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp get_source!(where, %{sources: sources}, ix) do
+  defp get_source!(where, %{sources: sources} = query, ix) do
     elem(sources, ix)
   rescue
     ArgumentError ->
-      raise ArgumentError, """
-      cannot prepare query because it has specified more bindings than
-      bindings available in #{where}. This may happen in situations like
-      below:
-
-          Post |> preload([p, c], comments: c) |> Repo.all
-
-      Since the binding `c` was never specified via a join, Ecto is
-      unable to construct or even pretty print the query.
-      """
+      error! query, "cannot prepare query because it has specified more bindings than " <>
+                    "bindings available in `#{where}` (look for `unknown_binding!` in " <>
+                    "the printed query below)"
   end
 
   ## Helpers

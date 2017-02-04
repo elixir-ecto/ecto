@@ -28,9 +28,9 @@ defmodule Ecto.Query.Builder.Dynamic do
   @doc """
   Expands a dynamic expression for insertion into the given query.
   """
-  def fully_expand(query, %{file: file, line: line} = dynamic) do
-    {expr, params} = partially_expand(query, dynamic, [])
-    {expr, Enum.reverse(params), file, line}
+  def fully_expand(query, %{file: file, line: line, binding: binding} = dynamic) do
+    {expr, {binding, params, _count}} = expand(query, dynamic, {binding, [], 0})
+    {expr, binding, Enum.reverse(params), file, line}
   end
 
   @doc """
@@ -40,38 +40,26 @@ defmodule Ecto.Query.Builder.Dynamic do
   list is not reversed. This is useful when the dynamic expression
   is given in the middle of an expression.
   """
-  def partially_expand(query, %{fun: fun}, params) do
+  def partially_expand(query, %{binding: binding} = dynamic, params) do
+    {expr, {_binding, params, _count}} = expand(query, dynamic, {binding, params, 0})
+    {expr, params}
+  end
+
+  defp expand(query, %{fun: fun}, {binding, params, count}) do
     {dynamic_expr, dynamic_params} =
       fun.(query)
 
-    {params, dynamic, rewrite} =
-      params_map(dynamic_params, params, %{}, %{}, 0, length(params))
-
-    Macro.postwalk(dynamic_expr, params, fn
-      {:^, meta, [ix]}, acc ->
-        cond do
-          dynamic = dynamic[ix] ->
-            partially_expand(query, dynamic, acc)
-          rewrite = rewrite[ix] ->
-            {{:^, meta, [rewrite]}, acc}
+    Macro.postwalk(dynamic_expr, {binding, params, count}, fn
+      {:^, meta, [ix]}, {binding, params, count} ->
+        case Enum.fetch!(dynamic_params, ix) do
+          {%Ecto.Query.DynamicExpr{binding: new_binding} = dynamic, _} ->
+            binding = if length(new_binding) > length(binding), do: new_binding, else: binding
+            expand(query, dynamic, {binding, params, count})
+          param ->
+            {{:^, meta, [count]}, {binding, [param | params], count + 1}}
         end
       expr, acc ->
         {expr, acc}
     end)
-  end
-
-  defp params_map([{%Ecto.Query.DynamicExpr{} = expr, _} | rest],
-                  params, dynamic, rewrite, count, offset) do
-    dynamic = Map.put(dynamic, count, expr)
-    params_map(rest, params, dynamic, rewrite, count + 1, offset - 1)
-  end
-
-  defp params_map([param | rest], params, dynamic, rewrite, count, offset) do
-    rewrite = Map.put(rewrite, count, count + offset)
-    params_map(rest, [param | params], dynamic, rewrite, count + 1, offset)
-  end
-
-  defp params_map([], params, dynamic, rewrite, _count, _offset) do
-    {params, dynamic, rewrite}
   end
 end

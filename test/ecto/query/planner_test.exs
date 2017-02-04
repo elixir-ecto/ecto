@@ -572,7 +572,7 @@ defmodule Ecto.Query.PlannerTest do
     end
 
     message = ~r"cannot prepare query because it has specified more bindings than"
-    assert_raise ArgumentError, message, fn ->
+    assert_raise Ecto.QueryError, message, fn ->
       Post |> preload([p, c], comments: c) |> normalize
     end
   end

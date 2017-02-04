@@ -91,7 +91,8 @@ defmodule Ecto.Query.Builder.Filter do
   Builds a filter based on the given arguments.
   """
   def filter!(_kind, query, %Ecto.Query.DynamicExpr{} = dynamic, _binding, _file, _line) do
-    Ecto.Query.Builder.Dynamic.fully_expand(query, dynamic)
+    {expr, _binding, params, file, line} = Ecto.Query.Builder.Dynamic.fully_expand(query, dynamic)
+    {expr, params, file, line}
   end
 
   def filter!(_kind, _query, bool, _binding, file, line) when is_boolean(bool) do
