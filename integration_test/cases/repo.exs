@@ -986,6 +986,12 @@ defmodule Ecto.Integration.RepoTest do
     assert p == %{id: pid, title: "post", comments: [%{text: "comment", post_id: pid}]}
   end
 
+  test "query select take with single nil column" do
+    %Post{} = TestRepo.insert!(%Post{title: "1", counter: nil})
+    assert %{counter: nil} =
+           TestRepo.one(from p in Post, where: p.title == "1", select: [:counter])
+  end
+
   test "query select take with nil assoc" do
     %{id: cid} = TestRepo.insert!(%Comment{text: "comment"})
     fields = [:id, :text, post: [:title]]

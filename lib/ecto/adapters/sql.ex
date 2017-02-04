@@ -399,8 +399,8 @@ defmodule Ecto.Adapters.SQL do
     execute_and_cache(repo, id, update, prepared, params, nil, opts)
   end
 
-  defp do_execute(repo, %{fields: fields}, {:cache, update, {id, prepared}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields)
+  defp do_execute(repo, %{fields: fields, sources: sources}, {:cache, update, {id, prepared}}, params, process, opts) do
+    mapper = &process_row(&1, process, fields, sources)
     execute_and_cache(repo, id, update, prepared, params, mapper, opts)
   end
 
@@ -408,8 +408,8 @@ defmodule Ecto.Adapters.SQL do
     execute_or_reset(repo, id, reset, cached, params, nil, opts)
   end
 
-  defp do_execute(repo, %{fields: fields}, {:cached, reset, {id, cached}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields)
+  defp do_execute(repo, %{fields: fields, sources: sources}, {:cached, reset, {id, cached}}, params, process, opts) do
+    mapper = &process_row(&1, process, fields, sources)
     execute_or_reset(repo, id, reset, cached, params, mapper, opts)
   end
 
@@ -419,8 +419,8 @@ defmodule Ecto.Adapters.SQL do
     {num, rows}
   end
 
-  defp do_execute(repo, %{fields: fields}, {:nocache, {_id, prepared}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields)
+  defp do_execute(repo, %{fields: fields, sources: sources}, {:nocache, {_id, prepared}}, params, process, opts) do
+    mapper = &process_row(&1, process, fields, sources)
     %{rows: rows, num_rows: num} =
       sql_call!(repo, :execute, [prepared], params, mapper, opts)
     {num, rows}
@@ -502,8 +502,8 @@ defmodule Ecto.Adapters.SQL do
     prepare_stream(repo, prepared, params, nil, opts)
   end
 
-  def do_stream(repo, %{fields: fields}, {:cache, _, {_, prepared}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields)
+  def do_stream(repo, %{fields: fields, sources: sources}, {:cache, _, {_, prepared}}, params, process, opts) do
+    mapper = &process_row(&1, process, fields, sources)
     prepare_stream(repo, prepared, params, mapper, opts)
   end
 
@@ -511,8 +511,8 @@ defmodule Ecto.Adapters.SQL do
     prepare_stream(repo, String.Chars.to_string(cached), params, nil, opts)
   end
 
-  def do_stream(repo, %{fields: fields}, {:cached, _, {_, cached}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields)
+  def do_stream(repo, %{fields: fields, sources: sources}, {:cached, _, {_, cached}}, params, process, opts) do
+    mapper = &process_row(&1, process, fields, sources)
     prepare_stream(repo, String.Chars.to_string(cached), params, mapper, opts)
   end
 
@@ -520,13 +520,14 @@ defmodule Ecto.Adapters.SQL do
     prepare_stream(repo, prepared, params, nil, opts)
   end
 
-  def do_stream(repo, %{fields: fields}, {:nocache, {_id, prepared}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields)
+  def do_stream(repo, %{fields: fields, sources: sources}, {:nocache, {_id, prepared}}, params, process, opts) do
+    mapper = &process_row(&1, process, fields, sources)
     prepare_stream(repo, prepared, params, mapper, opts)
   end
 
   defp prepare_stream(repo, prepared, params, mapper, opts) do
-    Ecto.Adapters.SQL.Stream.__build__(repo, prepared, params, mapper, opts)
+    repo
+    |> Ecto.Adapters.SQL.Stream.__build__(prepared, params, mapper, opts)
     |> Stream.map(fn(%{num_rows: nrows, rows: rows}) -> {nrows, rows} end)
   end
 
@@ -573,8 +574,12 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp process_row(row, process, fields) do
+  defp process_row(row, process, fields, sources) do
+    num_sources = tuple_size(sources)
     Enum.map_reduce(fields, row, fn
+      {:&, _, [_, _, counter]} = field, acc when num_sources == 1 ->
+        {val, rest} = Enum.split(acc, counter)
+        {process.(field, val, nil), rest}
       {:&, _, [_, _, counter]} = field, acc ->
         case split_and_not_nil(acc, counter, true, []) do
           {nil, rest} -> {nil, rest}
