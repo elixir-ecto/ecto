@@ -6,7 +6,13 @@
 
 ### Enhancements
 
+  * [Ecto.Adapters.Postgres] Use the "postgres" database for create/drop database commands
+  * [Ecto.Changeset] Add `apply_action/3`
+  * [Ecto.Migrator] Allow migration/rollback to log SQL commands via the `--log-sql` flag
+
 ### Bug fixes
+
+  * [Ecto.Query] Properly expand macros in `select`
 
 ### Deprecations
 
