@@ -40,9 +40,9 @@ defmodule Ecto.Query.Builder.Dynamic do
   list is not reversed. This is useful when the dynamic expression
   is given in the middle of an expression.
   """
-  def partially_expand(query, %{binding: binding} = dynamic, params) do
-    {expr, {_binding, params, _count}} = expand(query, dynamic, {binding, params, 0})
-    {expr, params}
+  def partially_expand(query, %{binding: binding} = dynamic, params, count) do
+    {expr, {_binding, params, count}} = expand(query, dynamic, {binding, params, count})
+    {expr, params, count}
   end
 
   defp expand(query, %{fun: fun}, {binding, params, count}) do
