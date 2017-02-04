@@ -66,7 +66,7 @@ defmodule Ecto.Query.Builder.Update do
       {k, {:^, _, [v]}}, {compile, runtime, params} when is_atom(k) ->
         {compile, [{k, v} | runtime], params}
       {k, v}, {compile, runtime, params} when is_atom(k) ->
-        {v, params} = Builder.escape(v, type_for_key(key, {0, k}), params, vars, env)
+        {v, {params, :acc}} = Builder.escape(v, type_for_key(key, {0, k}), {params, :acc}, vars, env)
         {[{k, v} | compile], runtime, params}
       _, _acc ->
         Builder.error! "malformed #{inspect key} in update `#{Macro.to_string(kw)}`, " <>

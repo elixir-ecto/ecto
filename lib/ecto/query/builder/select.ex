@@ -77,9 +77,12 @@ defmodule Ecto.Query.Builder.Select do
     {expr, params_take}
   end
 
-  defp escape(other, {params, take}, vars, env) do
-    {other, params} = Builder.escape(other, :any, params, vars, env)
-    {other, {params, take}}
+  defp escape(other, params_take, vars, env) do
+    Builder.escape(other, :any, params_take, vars, {env, &escape_with_type/5})
+  end
+
+  defp escape_with_type(expr, _type, params_take, vars, env) do
+    escape(expr, params_take, vars, env)
   end
 
   defp escape_pairs(pairs, params_take, vars, env) do

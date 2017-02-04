@@ -13,11 +13,23 @@ defmodule Ecto.QueryTest do
     end
   end
 
+  defmacro macro_map(key) do
+    quote do
+      %{"1" => unquote(key),
+        "2" => unquote(key)}
+    end
+  end
+
   describe "query building" do
     test "allows macros" do
       test_data = "test"
       query = from(p in "posts") |> where([q], macro_equal(q.title, ^test_data))
       assert "&0.title() == ^0" == Macro.to_string(hd(query.wheres).expr)
+    end
+
+    test "allows macros in select" do
+      key = "hello"
+      from(p in "posts", select: [macro_map(^key)])
     end
 
     test "does not allow nils in comparison at compile time" do

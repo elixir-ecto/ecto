@@ -20,13 +20,13 @@ defmodule Ecto.Query.Builder.Filter do
   def escape(kind, expr, binding, vars, env) when is_list(expr) do
     {parts, params} =
       Enum.map_reduce(expr, %{}, fn
-        {field, nil}, _acc ->
+        {field, nil}, _params ->
           Builder.error! "nil given for #{inspect field}. Comparison with nil is forbidden as it is unsafe. " <>
                          "Instead write a query with is_nil/1, for example: is_nil(s.#{field})"
-        {field, value}, acc when is_atom(field) ->
-          {value, params} = Builder.escape(value, {binding, field}, acc, vars, env)
+        {field, value}, params when is_atom(field) ->
+          {value, {params, :acc}} = Builder.escape(value, {binding, field}, {params, :acc}, vars, env)
           {{:{}, [], [:==, [], [to_escaped_field(binding, field), value]]}, params}
-        _, _acc ->
+        _, _params ->
           Builder.error! "expected a keyword list at compile time in #{kind}, " <>
                          "got: `#{Macro.to_string expr}`. If you would like to " <>
                          "pass a list dynamically, please interpolate the whole list with ^"
@@ -37,7 +37,8 @@ defmodule Ecto.Query.Builder.Filter do
   end
 
   def escape(_kind, expr, _binding, vars, env) do
-    Builder.escape(expr, :boolean, %{}, vars, env)
+    {expr, {params, :acc}} = Builder.escape(expr, :boolean, {%{}, :acc}, vars, env)
+    {expr, params}
   end
 
   @doc """

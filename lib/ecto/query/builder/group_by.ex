@@ -35,7 +35,8 @@ defmodule Ecto.Query.Builder.GroupBy do
   end
 
   defp do_escape(expr, params, vars, env) do
-    Builder.escape(expr, :any, params, vars, env)
+    {expr, {params, :acc}} = Builder.escape(expr, :any, {params, :acc}, vars, env)
+    {expr, params}
   end
 
   @doc """

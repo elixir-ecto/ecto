@@ -5,7 +5,8 @@ defmodule Ecto.Query.BuilderTest do
   doctest Ecto.Query.Builder
 
   defp escape(quoted, vars, env) do
-    escape(quoted, :any, %{}, vars, env)
+    {escaped, {params, :acc}} = escape(quoted, :any, {%{}, :acc}, vars, env)
+    {escaped, params}
   end
 
   test "escape" do
@@ -113,7 +114,8 @@ defmodule Ecto.Query.BuilderTest do
   end
 
   defp params(quoted, type, vars \\ []) do
-    escape(quoted, type, %{}, vars, __ENV__) |> elem(1)
+    {_, {params, :acc}} = escape(quoted, type, {%{}, :acc}, vars, __ENV__)
+    params
   end
 
   test "infers the type for parameter" do

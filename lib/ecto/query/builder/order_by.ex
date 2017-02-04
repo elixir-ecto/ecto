@@ -48,12 +48,12 @@ defmodule Ecto.Query.Builder.OrderBy do
   end
 
   defp do_escape({dir, expr}, params, kind, vars, env) do
-    {ast, params} = Builder.escape(expr, :any, params, vars, env)
+    {ast, {params, :acc}} = Builder.escape(expr, :any, {params, :acc}, vars, env)
     {{quoted_dir!(kind, dir), ast}, params}
   end
 
   defp do_escape(expr, params, _kind, vars, env) do
-    {ast, params} = Builder.escape(expr, :any, params, vars, env)
+    {ast, {params, :acc}} = Builder.escape(expr, :any, {params, :acc}, vars, env)
     {{:asc, ast}, params}
   end
 
