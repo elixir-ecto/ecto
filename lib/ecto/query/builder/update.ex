@@ -154,9 +154,9 @@ defmodule Ecto.Query.Builder.Update do
 
   defp runtime_field!(query, key, kw, acc) do
     Enum.map_reduce kw, acc, fn
-      {k, %Ecto.Query.DynamicExpr{} = v}, {params, _count} when is_atom(k) ->
-        {v, params} = Ecto.Query.Builder.Dynamic.partially_expand(query, v, params)
-        {{k, v}, {params, length(params)}}
+      {k, %Ecto.Query.DynamicExpr{} = v}, {params, count} when is_atom(k) ->
+        {v, params, count} = Ecto.Query.Builder.Dynamic.partially_expand(query, v, params, count)
+        {{k, v}, {params, count}}
       {k, v}, {params, count} when is_atom(k) ->
         params = [{v, type_for_key(key, {0, k})} | params]
         {{k, {:^, [], [count]}}, {params, count + 1}}
