@@ -972,19 +972,32 @@ defmodule Ecto.Integration.RepoTest do
   test "query select take with assocs" do
     %{id: pid} = TestRepo.insert!(%Post{title: "post"})
     TestRepo.insert!(%Comment{post_id: pid, text: "comment"})
-
     fields = [:id, :title, comments: [:text, :post_id]]
 
     [p] = Post |> preload(:comments) |> select([p], ^fields) |> TestRepo.all
-    assert match?(%Post{title: "post"}, p)
-    assert match?([%Comment{text: "comment"}], p.comments)
+    assert %Post{title: "post"} = p
+    assert [%Comment{text: "comment"}] = p.comments
 
     [p] = Post |> preload(:comments) |> select([p], struct(p, ^fields)) |> TestRepo.all
-    assert match?(%Post{title: "post"}, p)
-    assert match?([%Comment{text: "comment"}], p.comments)
+    assert %Post{title: "post"} = p
+    assert [%Comment{text: "comment"}] = p.comments
 
     [p] = Post |> preload(:comments) |> select([p], map(p, ^fields)) |> TestRepo.all
     assert p == %{id: pid, title: "post", comments: [%{text: "comment", post_id: pid}]}
+  end
+
+  test "query select take with nil assoc" do
+    %{id: cid} = TestRepo.insert!(%Comment{text: "comment"})
+    fields = [:id, :text, post: [:title]]
+
+    [c] = Comment |> preload(:post) |> select([c], ^fields) |> TestRepo.all
+    assert %Comment{id: ^cid, text: "comment", post: nil} = c
+
+    [c] = Comment |> preload(:post) |> select([c], struct(c, ^fields)) |> TestRepo.all
+    assert %Comment{id: ^cid, text: "comment", post: nil} = c
+
+    [c] = Comment |> preload(:post) |> select([c], map(c, ^fields)) |> TestRepo.all
+    assert c == %{id: cid, text: "comment", post: nil}
   end
 
   test "query count distinct" do

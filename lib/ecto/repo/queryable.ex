@@ -298,7 +298,9 @@ defmodule Ecto.Repo.Queryable do
   defp to_map(value, fields) when is_list(value) do
     Enum.map(value, &to_map(&1, fields))
   end
-
+  defp to_map(nil, _fields) do
+    nil
+  end
   defp to_map(value, fields) do
     for field <- fields, into: %{} do
       case field do
