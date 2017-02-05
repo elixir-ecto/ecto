@@ -131,17 +131,19 @@ defmodule Ecto.Adapters.MySQL do
   def storage_up(opts) do
     database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
     charset  = opts[:charset] || "utf8"
+    opts     = Keyword.put(opts, :skip_database, true)
 
     command =
       ~s(CREATE DATABASE `#{database}` DEFAULT CHARACTER SET = #{charset})
       |> concat_if(opts[:collation], &"DEFAULT COLLATE = #{&1}")
 
-    {output, status} = run_with_mysql command, opts
-
-    cond do
-      status == 0 -> :ok
-      String.contains?(output, "database exists") -> {:error, :already_up}
-      true                                        -> {:error, output}
+    case run_query(command, opts) do
+      {:ok, _} ->
+        :ok
+      {:error, %{mariadb: %{code: 1007}}} ->
+        {:error, :already_up}
+      {:error, error} ->
+        {:error, Exception.message(error)}
     end
   end
 
@@ -151,18 +153,18 @@ defmodule Ecto.Adapters.MySQL do
   @doc false
   def storage_down(opts) do
     database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
-    {output, status} = run_with_mysql("DROP DATABASE `#{database}`", opts)
+    command = "DROP DATABASE `#{database}`"
 
-    cond do
-      status == 0                               -> :ok
-      String.contains?(output, "doesn't exist") -> {:error, :already_down}
-      true                                      -> {:error, output}
+    case run_query(command, opts) do
+      {:ok, _} ->
+        :ok
+      {:error, %{mariadb: %{code: 1008}}} ->
+        {:error, :already_down}
+      {:error, %{mariadb: %{code: 1049}}} ->
+        {:error, :already_down}
+      {:error, error} ->
+        {:error, Exception.message(error)}
     end
-  end
-
-  defp run_with_mysql(sql_command, opts) do
-    args = ["--silent", "--execute", sql_command]
-    run_with_cmd("mysql", opts, args)
   end
 
   @doc false
@@ -254,6 +256,8 @@ defmodule Ecto.Adapters.MySQL do
       {output, _}  -> {:error, output}
     end
   end
+
+  ## Helpers
 
   defp run_query(sql, opts) do
     {:ok, _} = Application.ensure_all_started(:mariaex)
