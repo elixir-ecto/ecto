@@ -140,12 +140,11 @@ defmodule Ecto.Changeset do
   ## Schemaless changesets
 
   In the changeset examples so far, we have always used changesets to
-  validate and cast data backed up by a struct, such as the `%User{}`
+  validate and cast data contained in a struct, such as the `%User{}`
   struct defined by the `User` module.
 
-  However, changesets also run without a changeset, by passing a tuple
-  containing both the data and the supported types as a tuple instead
-  of a struct:
+  However, changesets can also be used with data in a plain map, by
+  passing a tuple containing both the data and the supported types:
 
       data  = %{}
       types = %{first_name: :string, last_name: :string, email: :string}
