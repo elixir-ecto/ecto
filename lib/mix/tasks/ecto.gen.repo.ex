@@ -81,7 +81,6 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
     end
   end
 
-
   embed_template :repo, """
   defmodule <%= inspect @mod %> do
     use Ecto.Repo, otp_app: <%= inspect @app %>
