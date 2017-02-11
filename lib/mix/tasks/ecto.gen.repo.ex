@@ -60,7 +60,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
     Mix.shell.info """
     Don't forget to add your new repo to your supervision tree
-    (typically in lib/#{app}.ex):
+    (typically in #{mixfile_loc(app)}):
 
         supervisor(#{inspect repo}, [])
 
@@ -71,6 +71,14 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
           ecto_repos: [#{inspect repo}]
 
     """
+  end
+
+  defp mixfile_loc(app) do
+    case Elixir.Version.compare(System.version, "1.4.0") do
+      :gt -> "lib/#{app}/application.ex"
+      :eq -> "lib/#{app}/application.ex"
+      :lt -> "lib/#{app}.ex"
+    end
   end
 
   embed_template :repo, """
