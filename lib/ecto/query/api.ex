@@ -87,6 +87,10 @@ defmodule Ecto.Query.API do
   PostgreSQL will do a case-sensitive operation, while the
   majority of other databases will be case-insensitive. For
   performing a case-insensitive `like` in PostgreSQL, see `ilike/2`.
+
+  You should be very careful when allowing user sent data to be used
+  as part of LIKE query, since they allow to perform
+  [LIKE-injections](https://githubengineering.com/like-injection/).
   """
   def like(string, search), do: doc! [string, search]
 
