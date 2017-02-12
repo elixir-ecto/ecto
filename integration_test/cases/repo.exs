@@ -893,7 +893,7 @@ defmodule Ecto.Integration.RepoTest do
   ## Query syntax
 
   test "query select expressions" do
-    %Post{} = TestRepo.insert!(%Post{title: "1", text: "hai"})
+    %Post{} = TestRepo.insert!(%Post{title: "1", text: "hai", counter: nil})
 
     assert [{"1", "hai"}] ==
            TestRepo.all(from p in Post, select: {p.title, p.text})
@@ -914,6 +914,9 @@ defmodule Ecto.Integration.RepoTest do
              p.title => p.text,
              "text"  => p.text
            })
+
+    assert %{counter: nil} =
+           TestRepo.one(from p in Post, where: p.title == "1", select: [:counter])
   end
 
   test "query select map update" do
