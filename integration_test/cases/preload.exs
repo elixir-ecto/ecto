@@ -77,6 +77,7 @@ defmodule Ecto.Integration.PreloadTest do
     assert %Post{id: ^pid2} = c3.post
   end
 
+  @tag :join
   test "preload many_to_many" do
     p1 = TestRepo.insert!(%Post{title: "1"})
     p2 = TestRepo.insert!(%Post{title: "2"})
@@ -196,6 +197,7 @@ defmodule Ecto.Integration.PreloadTest do
     assert l2.post.comments != []
   end
 
+  @tag :join
   test "preload has_many through many_to_many" do
     %Post{} = p1 = TestRepo.insert!(%Post{})
     %Post{} = p2 = TestRepo.insert!(%Post{})
@@ -264,6 +266,7 @@ defmodule Ecto.Integration.PreloadTest do
     assert c.post == nil
   end
 
+  @tag :join
   test "preload many_to_many with no associated entries" do
     p = TestRepo.insert!(%Post{title: "1"})
     p = TestRepo.preload(p, :users)
