@@ -141,9 +141,9 @@ defmodule Ecto.Repo.Queryable do
   defp preprocess({:&, _, [ix, fields, _]}, value, prefix, context, sources, adapter) do
     case elem(sources, ix) do
       {_source, nil} when is_map(value) ->
-        value
+        load_schemaless_map(fields, value, %{})
       {_source, nil} when is_list(value) ->
-        load_schemaless(fields, value, %{})
+        load_schemaless_list(fields, value, %{})
       {source, schema} when is_list(value) ->
         Ecto.Schema.__load__(schema, prefix, source, context, {fields, value},
                              &Ecto.Type.adapter_load(adapter, &1, &2))
@@ -188,9 +188,17 @@ defmodule Ecto.Repo.Queryable do
     []
   end
 
-  defp load_schemaless([field|fields], [value|values], acc),
-    do: load_schemaless(fields, values, Map.put(acc, field, value))
-  defp load_schemaless([], [], acc),
+  defp load_schemaless_map(fields, values, acc) do
+    for field <- fields,
+      key = Atom.to_string(field),
+      value = Map.fetch!(values, key),
+      into: acc,
+      do: {field, value}
+  end
+
+  defp load_schemaless_list([field|fields], [value|values], acc),
+    do: load_schemaless_list(fields, values, Map.put(acc, field, value))
+  defp load_schemaless_list([], [], acc),
     do: acc
 
   defp load!(type, value, adapter) do
