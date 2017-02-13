@@ -37,6 +37,9 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert {[{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :y]]}, [], []]},
                {:{}, [], [:^, [], [0]]}], {%{0 => {1, :any}}, %{}}} ==
               escape(quote do [x.y, ^1] end, [x: 0], __ENV__)
+
+      assert {{:{}, [], [:%, [], [Foo, {:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}]]}, {%{}, %{}}} ==
+             escape(quote do %Foo{a: a} end, [a: 0], __ENV__)
     end
 
     @fields [:field]

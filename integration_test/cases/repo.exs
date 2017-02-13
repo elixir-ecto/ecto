@@ -892,6 +892,10 @@ defmodule Ecto.Integration.RepoTest do
 
   ## Query syntax
 
+  defmodule Foo do
+    defstruct [:title]
+  end
+
   test "query select expressions" do
     %Post{} = TestRepo.insert!(%Post{title: "1", text: "hai"})
 
@@ -914,6 +918,9 @@ defmodule Ecto.Integration.RepoTest do
              p.title => p.text,
              "text"  => p.text
            })
+
+    assert [%Foo{title: "1"}] ==
+           TestRepo.all(from p in Post, select: %Foo{title: p.title})
   end
 
   test "query select map update" do
@@ -922,12 +929,19 @@ defmodule Ecto.Integration.RepoTest do
     assert [%Post{:title => "new title", text: "hai"}] =
            TestRepo.all(from p in Post, select: %{p | title: "new title"})
 
+    assert [%Post{title: "new title", text: "hai"}] =
+      TestRepo.all(from p in Post, select: %Post{p | title: "new title"})
+
     assert_raise KeyError, fn ->
       TestRepo.all(from p in Post, select: %{p | unknown: "new title"})
     end
 
     assert_raise BadMapError, fn ->
       TestRepo.all(from p in Post, select: %{p.title | title: "new title"})
+    end
+
+    assert_raise BadStructError, fn ->
+      TestRepo.all(from p in Post, select: %Foo{p | title: p.title})
     end
   end
 
