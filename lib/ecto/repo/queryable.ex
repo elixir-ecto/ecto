@@ -274,6 +274,17 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
+  defp transform_row({:%, _, [name, map]}, take, from, values) do
+    case transform_row(map, take, from, values) do
+      {%{__struct__: ^name} = struct, acc} ->
+        {struct, acc}
+      {%{__struct__: _} = struct, _acc} ->
+        raise BadStructError, struct: name, term: struct
+      {map, acc} when is_map(map) ->
+        {struct(name, map), acc}
+    end
+  end
+
   defp transform_row(list, take, from, values) when is_list(list) do
     Enum.map_reduce(list, values, &transform_row(&1, take, from, &2))
   end

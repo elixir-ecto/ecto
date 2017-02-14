@@ -850,6 +850,8 @@ defmodule Ecto.Query.Planner do
     do: collect_fields([data|pairs], query, take, from)
   defp collect_fields({:%{}, _, pairs}, query, take, from),
     do: collect_fields(pairs, query, take, from)
+  defp collect_fields({:%, _, [_name, expr]}, query, take, from),
+    do: collect_fields(expr, query, take, from)
   defp collect_fields(list, query, take, from) when is_list(list),
     do: Enum.flat_map_reduce(list, from, &collect_fields(&1, query, take, &2))
   defp collect_fields(expr, _query, _take, from) when is_atom(expr) or is_binary(expr) or is_number(expr),

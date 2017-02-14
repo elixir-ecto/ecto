@@ -44,6 +44,13 @@ defmodule Ecto.Query.Builder.Select do
     {expr, params_take}
   end
 
+  # Struct
+  defp escape({:%, _, [name, map]}, params_take, vars, env) do
+    name = Macro.expand(name, env)
+    {escaped_map, params_take} = escape(map, params_take, vars, env)
+    {{:{}, [], [:%, [], [name, escaped_map]]}, params_take}
+  end
+
   # Map
   defp escape({:%{}, _, [{:|, _, [data, pairs]}]}, params_take, vars, env) do
     {data, params_take} = escape(data, params_take, vars, env)

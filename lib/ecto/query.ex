@@ -684,6 +684,8 @@ defmodule Ecto.Query do
       from(c in City, select: {c.name, c.population})
       from(c in City, select: [c.name, c.county])
       from(c in City, select: %{n: c.name, answer: 42})
+      from(c in City, select: %{c | alternative_name: c.name})
+      from(c in City, select: %Data{name: c.name})
 
   It is also possible to select a struct and limit the returned
   fields at the same time:
