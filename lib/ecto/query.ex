@@ -498,7 +498,8 @@ defmodule Ecto.Query do
   @binds    [:where, :or_where, :select, :distinct, :order_by, :group_by,
              :having, :limit, :offset, :preload, :update]
   @no_binds [:lock]
-  @joins    [:join, :inner_join, :cross_join, :left_join, :right_join, :full_join]
+  @joins    [:join, :inner_join, :cross_join, :left_join, :right_join, :full_join,
+             :inner_lateral_join, :left_lateral_join]
 
   defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
     # If all bindings are integer indexes keep AST Macro expandable to %Query{},
@@ -530,12 +531,14 @@ defmodule Ecto.Query do
   defp from([{join, expr}|t], env, count_bind, quoted, binds) when join in @joins do
     qual =
       case join do
-        :join       -> :inner
-        :inner_join -> :inner
-        :left_join  -> :left
+        :join -> :inner
+        :full_join -> :full
+        :left_join -> :left
         :right_join -> :right
-        :full_join  -> :full
+        :inner_join -> :inner
         :cross_join -> :cross
+        :left_lateral_join -> :left_lateral
+        :inner_lateral_join -> :inner_lateral
       end
 
     {t, on} = collect_on(t, nil)
@@ -568,9 +571,10 @@ defmodule Ecto.Query do
   Receives a source that is to be joined to the query and a condition for
   the join. The join condition can be any expression that evaluates
   to a boolean value. The join is by default an inner join, the qualifier
-  can be changed by giving the atoms: `:inner`, `:left`, `:right`, `:cross`
-  or `:full`. For a keyword query the `:join` keyword can be changed to:
-  `:inner_join`, `:left_join`, `:right_join`, `:cross_join` or `:full_join`.
+  can be changed by giving the atoms: `:inner`, `:left`, `:right`, `:cross`,
+  `:full`, `:inner_lateral` or `:left_lateral`. For a keyword query the `:join`
+  keyword can be changed to: `:inner_join`, `:left_join`, `:right_join`,
+  `:cross_join`, `:full_join`, `:inner_lateral_join` or `:left_lateral_join`.
 
   Currently it is possible to join on:
 
