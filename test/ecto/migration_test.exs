@@ -128,6 +128,17 @@ defmodule Ecto.MigrationTest do
               [{:add, :title, :string, []}]}
   end
 
+  test "forward: creates a table without precision option for numeric type" do
+    assert_raise ArgumentError, "Column cost is missing precision option", fn ->
+      create(table(:posts)) do
+        add :title, :string
+        add :cost, :decimal, scale: 3
+        timestamps()
+      end
+      flush()
+    end
+  end
+
   test "forward: creates a table without updated_at timestamp" do
     create table = table(:posts, primary_key: false) do
       timestamps(inserted_at: :created_at, updated_at: false)
@@ -184,6 +195,15 @@ defmodule Ecto.MigrationTest do
               [{:add, :summary, :text, []},
                {:modify, :title, :text, []},
                {:remove, :views}]}
+  end
+
+  test "forward: alter numeric column without specifying precision" do
+    assert_raise ArgumentError, "Column cost is missing precision option", fn ->
+      alter table(:posts) do
+        modify :cost, :decimal, scale: 5
+      end
+      flush()
+    end
   end
 
   test "forward: rename column" do
