@@ -53,6 +53,38 @@ defmodule Ecto.MultiTest do
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :update}, []}}]
   end
 
+  test "insert_or_update changeset will insert the changeset if not loaded" do
+    changeset = Changeset.change(%Comment{})
+    multi     =
+      Multi.new
+      |> Multi.insert_or_update(:comment, changeset)
+
+    assert multi.names      == MapSet.new([:comment])
+    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}, []}}]
+  end
+
+  test "insert_or_update changeset will update the changeset if it was loaded" do
+    changeset = Changeset.change(%Comment{id: 1}, x: 2)
+    changeset = put_in(changeset.data.__meta__.state, :loaded)
+    multi     =
+      Multi.new
+      |> Multi.insert_or_update(:comment, changeset)
+
+    assert multi.names      == MapSet.new([:comment])
+    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :update}, []}}]
+  end
+
+  test "insert_or_update struct will insert" do
+    struct    = %Comment{}
+    changeset = Changeset.change(struct)
+    multi     =
+      Multi.new
+      |> Multi.insert(:comment, struct)
+
+    assert multi.names      == MapSet.new([:comment])
+    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}, []}}]
+  end
+  
   test "delete changeset" do
     changeset = Changeset.change(%Comment{})
     multi     =

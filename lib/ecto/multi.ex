@@ -239,6 +239,20 @@ defmodule Ecto.Multi do
   def update(multi, name, %Changeset{} = changeset, opts \\ []) do
     add_changeset(multi, :update, name, changeset, opts)
   end
+  
+  @doc """
+  Inserts or updates a changeset depending on whether the struct is persisted or not.
+
+  Accepts the same arguments and options as `c:Ecto.Repo.insert_or_update/2` does.
+  """
+  @spec insert_or_update(t, name, Changeset.t | Ecto.Schema.t, Keyword.t) :: t
+  def insert_or_update(multi, name, changeset_or_struct, opts \\ [])
+  def insert_or_update(multi, name, %Changeset{data: %{__meta__: %{state: :loaded}}} = changeset, opts) do
+    add_changeset(multi, :update, name, changeset, opts)
+  end
+  def insert_or_update(multi, name, changeset_or_struct, opts) do
+    add_changeset(multi, :insert, name, changeset_or_struct, opts)
+  end
 
   @doc """
   Adds a delete operation to the multi.
