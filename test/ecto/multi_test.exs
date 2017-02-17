@@ -74,17 +74,6 @@ defmodule Ecto.MultiTest do
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :update}, []}}]
   end
 
-  test "insert_or_update struct will insert" do
-    struct    = %Comment{}
-    changeset = Changeset.change(struct)
-    multi     =
-      Multi.new
-      |> Multi.insert(:comment, struct)
-
-    assert multi.names      == MapSet.new([:comment])
-    assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}, []}}]
-  end
-  
   test "delete changeset" do
     changeset = Changeset.change(%Comment{})
     multi     =
