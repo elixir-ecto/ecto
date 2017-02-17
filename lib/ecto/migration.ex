@@ -601,7 +601,7 @@ defmodule Ecto.Migration do
     * `:null` - when `false`, the column does not allow null values
     * `:size` - the size of the type (for example the numbers of characters).
       Default is no size, except for `:string` that defaults to 255.
-    * `:precision` - the precision for a numeric type. Default is no precision
+    * `:precision` - the precision for a numeric type. Required when `scale` is specified.
     * `:scale` - the scale of a numeric type. Default is 0 scale
 
   """
@@ -614,6 +614,10 @@ defmodule Ecto.Migration do
   end
 
   def add(column, type, opts) when is_atom(column) do
+    if opts[:scale] && !opts[:precision] do
+      raise ArgumentError, "Column #{Atom.to_string(column)} is missing precision option"
+    end
+
     validate_type!(type)
     Runner.subcommand {:add, column, type, opts}
   end
@@ -699,7 +703,7 @@ defmodule Ecto.Migration do
     * `:null` - sets to null or not null
     * `:default` - changes the default
     * `:size` - the size of the type (for example the numbers of characters). Default is no size.
-    * `:precision` - the precision for a numeric type. Default is no precision.
+    * `:precision` - the precision for a numeric type. Required when `scale` is specified.
     * `:scale` - the scale of a numeric type. Default is 0 scale.
   """
   def modify(column, type, opts \\ [])
@@ -711,6 +715,10 @@ defmodule Ecto.Migration do
   end
 
   def modify(column, type, opts) when is_atom(column) do
+    if opts[:scale] && !opts[:precision] do
+      raise ArgumentError, "Column #{Atom.to_string(column)} is missing precision option"
+    end
+
     Runner.subcommand {:modify, column, type, opts}
   end
 
