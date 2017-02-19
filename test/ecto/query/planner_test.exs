@@ -587,7 +587,7 @@ defmodule Ecto.Query.PlannerTest do
       normalize(query)
     end
 
-    message = ~r"requires an inner or left join, got right join"
+    message = ~r"requires an inner, left or lateral join, got right join"
     assert_raise Ecto.QueryError, message, fn ->
       query = from(p in Post, right_join: c in assoc(p, :comments), preload: [comments: c])
       normalize(query)
