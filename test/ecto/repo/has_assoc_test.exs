@@ -22,6 +22,14 @@ defmodule Ecto.Repo.HasAssocTest do
       belongs_to :my_schema, MySchema
       timestamps()
     end
+
+    def changeset(struct, params) do
+      if params[:delete] do
+        %{Ecto.Changeset.cast(struct, params, []) | action: :delete}
+      else
+        Ecto.Changeset.cast(struct, params, [])
+      end
+    end
   end
 
   defmodule MySchema do
@@ -32,7 +40,9 @@ defmodule Ecto.Repo.HasAssocTest do
       field :y, :binary
       has_one :assoc, MyAssoc, on_replace: :delete
       has_one :nilify_assoc, MyAssoc, on_replace: :nilify
+      has_one :delete_assoc, MyAssoc
       has_many :assocs, MyAssoc, on_replace: :delete
+      has_many :delete_assocs, MyAssoc
     end
   end
 
@@ -307,6 +317,32 @@ defmodule Ecto.Repo.HasAssocTest do
 
     {schema_prefix, _} = assoc.__meta__.source
     assert schema_prefix == "prefix"
+  end
+
+  test "updating assoc with action: :delete" do
+    sample = %MyAssoc{id: 10, x: "xyz"} |> Ecto.put_meta(state: :loaded)
+
+    changeset =
+      %MySchema{id: 1, delete_assoc: sample}
+      |> Ecto.Changeset.cast(%{x: "abc", delete_assoc: %{delete: true, id: 10}}, [:x])
+      |> Ecto.Changeset.cast_assoc(:delete_assoc)
+    schema = TestRepo.update!(changeset)
+    refute schema.delete_assoc
+    assert_received {:update, _} # Parent
+    assert_received {:delete, _} # Old assoc
+  end
+
+  test "updating assocs with action: :delete" do
+    sample = %MyAssoc{id: 10, x: "xyz"} |> Ecto.put_meta(state: :loaded)
+
+    changeset =
+      %MySchema{id: 1, delete_assocs: [sample]}
+      |> Ecto.Changeset.cast(%{x: "abc", delete_assocs: [%{delete: true, id: 10}]}, [:x])
+      |> Ecto.Changeset.cast_assoc(:delete_assocs)
+    schema = TestRepo.update!(changeset)
+    assert schema.delete_assocs == []
+    assert_received {:update, _} # Parent
+    assert_received {:delete, _} # Old assoc
   end
 
   test "replacing assocs on update on_replace: :delete" do
