@@ -12,7 +12,7 @@ defmodule Ecto.Migration do
         use Ecto.Migration
 
         def up do
-          create table(:weather) do
+          create table("weather") do
             add :city,    :string, size: 40
             add :temp_lo, :integer
             add :temp_hi, :integer
@@ -23,7 +23,7 @@ defmodule Ecto.Migration do
         end
 
         def down do
-          drop table(:weather)
+          drop table("weather")
         end
       end
 
@@ -50,7 +50,7 @@ defmodule Ecto.Migration do
         use Ecto.Migration
 
         def change do
-          create table(:weather) do
+          create table("weather") do
             add :city,    :string, size: 40
             add :temp_lo, :integer
             add :temp_hi, :integer
@@ -90,7 +90,7 @@ defmodule Ecto.Migration do
   The prefix is specified in the table options:
 
       def up do
-        create table(:weather, prefix: "north_america") do
+        create table("weather", prefix: "north_america") do
           add :city,    :string, size: 40
           add :temp_lo, :integer
           add :temp_hi, :integer
@@ -100,7 +100,7 @@ defmodule Ecto.Migration do
           timestamps()
         end
 
-        create index(:weather, [:city], prefix: "north_america")
+        create index("weather", [:city], prefix: "north_america")
       end
 
   Note: if using MySQL with a prefixed table, you must use the same prefix for the references since
@@ -124,7 +124,7 @@ defmodule Ecto.Migration do
         @disable_ddl_transaction true
 
         def change do
-          create index(:posts, [:slug], concurrently: true)
+          create index("posts", [:slug], concurrently: true)
         end
       end
 
@@ -141,9 +141,9 @@ defmodule Ecto.Migration do
   and indexes. At the moment there is support only for Postgres.
 
       def up do
-        create index(:posts, [:name], comment: "Index Comment")
-        create constraint(:products, "price_must_be_positive", check: "price > 0", comment: "Index Comment")
-        create table(:weather, prefix: "north_america", comment: "Table Comment") do
+        create index("posts", [:name], comment: "Index Comment")
+        create constraint("products", "price_must_be_positive", check: "price > 0", comment: "Index Comment")
+        create table("weather", prefix: "north_america", comment: "Table Comment") do
           add :city, :string, size: 40, comment: "Column Comment"
           timestamps()
         end
@@ -176,7 +176,7 @@ defmodule Ecto.Migration do
               options: nil
 
     @type t :: %__MODULE__{
-      table: atom,
+      table: String.t,
       prefix: atom,
       name: atom,
       columns: [atom | String.t],
@@ -196,7 +196,7 @@ defmodule Ecto.Migration do
     To define a table in a migration, see `Ecto.Migration.table/2`
     """
     defstruct name: nil, prefix: nil, comment: nil, primary_key: true, engine: nil, options: nil
-    @type t :: %__MODULE__{name: atom, prefix: atom | nil, comment: String.t | nil, primary_key: boolean,
+    @type t :: %__MODULE__{name: String.t, prefix: atom | nil, comment: String.t | nil, primary_key: boolean,
                            engine: atom, options: String.t}
   end
 
@@ -207,7 +207,7 @@ defmodule Ecto.Migration do
     To define a reference in a migration, see `Ecto.Migration.references/2`
     """
     defstruct name: nil, table: nil, column: :id, type: :bigserial, on_delete: :nothing, on_update: :nothing
-    @type t :: %__MODULE__{table: atom, column: atom, type: atom, on_delete: atom, on_update: atom}
+    @type t :: %__MODULE__{table: String.t, column: atom, type: atom, on_delete: atom, on_update: atom}
   end
 
   defmodule Constraint do
@@ -217,7 +217,7 @@ defmodule Ecto.Migration do
     To define a constraint in a migration, see `Ecto.Migration.constraint/3`
     """
     defstruct name: nil, table: nil, check: nil, exclude: nil, prefix: nil, comment: nil
-    @type t :: %__MODULE__{name: atom, table: atom, prefix: atom | nil,
+    @type t :: %__MODULE__{name: atom, table: String.t, prefix: atom | nil,
                            check: String.t | nil, exclude: String.t | nil, comment: String.t | nil}
   end
 
@@ -290,7 +290,7 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      alter table(:posts) do
+      alter table("posts") do
         add :summary, :text
         modify :title, :text
         remove :views
@@ -318,9 +318,9 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      create index(:posts, [:name])
-      create table(:version)
-      create constraint(:products, "price_must_be_positive", check: "price > 0")
+      create index("posts", [:name])
+      create table("version")
+      create constraint("products", "price_must_be_positive", check: "price > 0")
 
   """
   def create(%Index{} = index) do
@@ -343,9 +343,9 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      create_if_not_exists index(:posts, [:name])
+      create_if_not_exists index("posts", [:name])
 
-      create_if_not_exists table(:version)
+      create_if_not_exists table("version")
 
   """
   def create_if_not_exists(%Index{} = index) do
@@ -376,9 +376,9 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      drop index(:posts, [:name])
-      drop table(:posts)
-      drop constraint(:products, "price_must_be_positive")
+      drop index("posts", [:name])
+      drop table("posts")
+      drop constraint("products", "price_must_be_positive")
 
   """
   def drop(%{} = index_or_table_or_constraint) do
@@ -393,8 +393,8 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      drop_if_exists index(:posts, [:name])
-      drop_if_exists table(:posts)
+      drop_if_exists index("posts", [:name])
+      drop_if_exists table("posts")
 
   """
   def drop_if_exists(%{} = index_or_table) do
@@ -407,14 +407,14 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      create table(:products) do
+      create table("products") do
         add :name, :string
         add :price, :decimal
       end
 
-      drop table(:products)
+      drop table("products")
 
-      create table(:products, primary_key: false) do
+      create table("products", primary_key: false) do
         add :name, :string
         add :price, :decimal
       end
@@ -429,7 +429,13 @@ defmodule Ecto.Migration do
       statement, for example "WITH", "INHERITS" or "ON COMMIT" clauses
 
   """
-  def table(name, opts \\ []) when is_atom(name) do
+  def table(name, opts \\ [])
+
+  def table(name, opts) when is_atom(name) do
+    table(Atom.to_string(name), opts)
+  end
+
+  def table(name, opts) when is_binary(name) do
     struct(%Table{name: name}, opts)
   end
 
@@ -487,30 +493,38 @@ defmodule Ecto.Migration do
   ## Examples
 
       # Without a name, index defaults to products_category_id_sku_index
-      create index(:products, [:category_id, :sku], unique: true)
+      create index("products", [:category_id, :sku], unique: true)
 
       # Name can be given explicitly though
-      drop index(:products, [:category_id, :sku], name: :my_special_name)
+      drop index("products", [:category_id, :sku], name: :my_special_name)
 
       # Indexes can be added concurrently
-      create index(:products, [:category_id, :sku], concurrently: true)
+      create index("products", [:category_id, :sku], concurrently: true)
 
       # The index type can be specified
-      create index(:products, [:name], using: :hash)
+      create index("products", [:name], using: :hash)
 
       # Create an index on custom expressions
-      create index(:products, ["lower(name)"], name: :products_lower_name_index)
+      create index("products", ["lower(name)"], name: :products_lower_name_index)
 
       # Create a partial index
-      create index(:products, [:user_id], where: "price = 0", name: :free_products_index)
+      create index("products", [:user_id], where: "price = 0", name: :free_products_index)
 
   """
   def index(table, columns, opts \\ [])
-  def index(table, columns, opts) when is_atom(table) and is_list(columns) do
+
+  def index(table, columns, opts) when is_atom(table) do
+    index(Atom.to_string(table), columns, opts)
+  end
+
+  def index(table, columns, opts) when is_binary(table) and is_list(columns) do
     index = struct(%Index{table: table, columns: columns}, opts)
     %{index | name: index.name || default_index_name(index)}
   end
-  def index(table, column, opts) when is_atom(table) and is_atom(column), do: index(table, [column], opts)
+
+  def index(table, column, opts) when is_binary(table) and is_atom(column) do
+    index(table, [column], opts)
+  end
 
   @doc """
   Shortcut for creating a unique index.
@@ -518,10 +532,10 @@ defmodule Ecto.Migration do
   See `index/3` for more information.
   """
   def unique_index(table, columns, opts \\ [])
-  def unique_index(table, columns, opts) when is_atom(table) and is_list(columns) do
+
+  def unique_index(table, columns, opts) do
     index(table, columns, [unique: true] ++ opts)
   end
-  def unique_index(table, column, opts) when is_atom(table) and is_atom(column), do: unique_index(table, [column], opts)
 
   defp default_index_name(index) do
     [index.table, index.columns, "index"]
@@ -584,11 +598,11 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      create table(:posts) do
+      create table("posts") do
         add :title, :string, default: "Untitled"
       end
 
-      alter table(:posts) do
+      alter table("posts") do
         add :summary, :text # Database type
         add :object,  :map  # Elixir type which is handled by the database
       end
@@ -627,7 +641,7 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      rename table(:posts), to: table(:new_posts)
+      rename table("posts"), to: table("new_posts")
   """
   def rename(%Table{} = table_current, to: %Table{} = table_new) do
     Runner.execute {:rename, __prefix__(table_current), __prefix__(table_new)}
@@ -639,7 +653,7 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      rename table(:posts), :title, to: :summary
+      rename table("posts"), :title, to: :summary
   """
   def rename(%Table{} = table, current_column, to: new_column) when is_atom(current_column) and is_atom(new_column) do
     Runner.execute {:rename, __prefix__(table), current_column, new_column}
@@ -651,7 +665,7 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      create table(:posts) do
+      create table("posts") do
         add :inserted_at, :naive_datetime, default: fragment("now()")
       end
   """
@@ -694,7 +708,7 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      alter table(:posts) do
+      alter table("posts") do
         modify :title, :text
       end
 
@@ -730,7 +744,7 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      alter table(:posts) do
+      alter table("posts") do
         remove :title
       end
 
@@ -744,8 +758,8 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      create table(:products) do
-        add :group_id, references(:groups)
+      create table("products") do
+        add :group_id, references("groups")
       end
 
   ## Options
@@ -762,7 +776,13 @@ defmodule Ecto.Migration do
        `:nilify_all`. Defaults to `:nothing`.
 
   """
-  def references(table, opts \\ []) when is_atom(table) do
+  def references(table, opts \\ [])
+
+  def references(table, opts) when is_atom(table) do
+    references(Atom.to_string(table), opts)
+  end
+
+  def references(table, opts) when is_binary(table) do
     reference = struct(%Reference{table: table}, opts)
 
     unless reference.on_delete in [:nothing, :delete_all, :nilify_all] do
@@ -781,9 +801,9 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      create constraint(:users, :price_must_be_positive, check: "price > 0")
-      create constraint(:size_ranges, :no_overlap, exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|
-      drop   constraint(:products, "price_must_be_positive")
+      create constraint("users", :price_must_be_positive, check: "price > 0")
+      create constraint("size_ranges", :no_overlap, exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|
+      drop   constraint("products", "price_must_be_positive")
 
   ## Options
 
@@ -791,7 +811,13 @@ defmodule Ecto.Migration do
     * `:exclude` - An exclusion constraint expression. Required when creating an exclusion constraint.
 
   """
-  def constraint(table, name, opts \\ []) do
+  def constraint(table, name, opts \\ [])
+
+  def constraint(table, name, opts) when is_atom(table) do
+    constraint(Atom.to_string(table), name, opts)
+  end
+
+  def constraint(table, name, opts) when is_binary(table) do
     struct(%Constraint{table: table, name: name}, opts)
   end
 

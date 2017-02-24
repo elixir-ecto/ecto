@@ -31,38 +31,47 @@ defmodule Ecto.MigrationTest do
   end
 
   test "creates a table" do
-    assert table(:posts) == %Table{name: :posts, primary_key: true}
-    assert table(:posts, primary_key: false) == %Table{name: :posts, primary_key: false}
-    assert table(:posts, prefix: "foo") == %Table{name: :posts, primary_key: true, prefix: "foo"}
+    assert table(:posts) == %Table{name: "posts", primary_key: true}
+    assert table("posts") == %Table{name: "posts", primary_key: true}
+    assert table(:posts, primary_key: false) == %Table{name: "posts", primary_key: false}
+    assert table(:posts, prefix: "foo") == %Table{name: "posts", primary_key: true, prefix: "foo"}
   end
 
   test "creates an index" do
     assert index(:posts, [:title]) ==
-           %Index{table: :posts, unique: false, name: :posts_title_index, columns: [:title]}
+           %Index{table: "posts", unique: false, name: :posts_title_index, columns: [:title]}
+    assert index("posts", [:title]) ==
+           %Index{table: "posts", unique: false, name: :posts_title_index, columns: [:title]}
     assert index(:posts, :title) ==
-           %Index{table: :posts, unique: false, name: :posts_title_index, columns: [:title]}
+           %Index{table: "posts", unique: false, name: :posts_title_index, columns: [:title]}
     assert index(:posts, ["lower(title)"]) ==
-           %Index{table: :posts, unique: false, name: :posts_lower_title_index, columns: ["lower(title)"]}
+           %Index{table: "posts", unique: false, name: :posts_lower_title_index, columns: ["lower(title)"]}
     assert index(:posts, [:title], name: :foo, unique: true) ==
-           %Index{table: :posts, unique: true, name: :foo, columns: [:title]}
+           %Index{table: "posts", unique: true, name: :foo, columns: [:title]}
     assert unique_index(:posts, [:title], name: :foo) ==
-           %Index{table: :posts, unique: true, name: :foo, columns: [:title]}
+           %Index{table: "posts", unique: true, name: :foo, columns: [:title]}
     assert unique_index(:posts, :title, name: :foo) ==
-           %Index{table: :posts, unique: true, name: :foo, columns: [:title]}
+           %Index{table: "posts", unique: true, name: :foo, columns: [:title]}
   end
 
   test "creates a reference" do
     assert references(:posts) ==
-           %Reference{table: :posts, column: :id, type: :bigserial}
+           %Reference{table: "posts", column: :id, type: :bigserial}
+    assert references("posts") ==
+           %Reference{table: "posts", column: :id, type: :bigserial}
     assert references(:posts, type: :uuid, column: :other) ==
-           %Reference{table: :posts, column: :other, type: :uuid}
+           %Reference{table: "posts", column: :other, type: :uuid}
   end
 
   test "creates a constraint" do
     assert constraint(:posts, :price_is_positive, check: "price > 0") ==
-           %Constraint{table: :posts, name: :price_is_positive, check: "price > 0"}
+           %Constraint{table: "posts", name: :price_is_positive, check: "price > 0"}
+    assert constraint("posts", :price_is_positive, check: "price > 0") ==
+           %Constraint{table: "posts", name: :price_is_positive, check: "price > 0"}
     assert constraint(:posts, :exclude_price, exclude: "price") ==
-           %Constraint{table: :posts, name: :exclude_price, exclude: "price"}
+           %Constraint{table: "posts", name: :exclude_price, exclude: "price"}
+    assert constraint("posts", :exclude_price, exclude: "price") ==
+           %Constraint{table: "posts", name: :exclude_price, exclude: "price"}
   end
 
   test "chokes on alias types" do
@@ -112,7 +121,7 @@ defmodule Ecto.MigrationTest do
                {:add, :title, :string, []},
                {:add, :cost, :decimal, [precision: 3]},
                {:add, :likes, :"int UNSIGNED", [default: 0]},
-               {:add, :author_id, %Reference{table: :authors}, []},
+               {:add, :author_id, %Reference{table: "authors"}, []},
                {:add, :inserted_at, :naive_datetime, [null: false]},
                {:add, :updated_at, :naive_datetime, [null: false]}]}
 
@@ -191,7 +200,7 @@ defmodule Ecto.MigrationTest do
     flush()
 
     assert last_command() ==
-           {:alter, %Table{name: :posts},
+           {:alter, %Table{name: "posts"},
               [{:add, :summary, :text, []},
                {:modify, :title, :text, []},
                {:remove, :views}]}
@@ -210,7 +219,7 @@ defmodule Ecto.MigrationTest do
     result = rename(table(:posts), :given_name, to: :first_name)
     flush()
 
-    assert last_command() == {:rename, %Table{name: :posts}, :given_name, :first_name}
+    assert last_command() == {:rename, %Table{name: "posts"}, :given_name, :first_name}
     assert result == table(:posts)
   end
 
@@ -266,7 +275,7 @@ defmodule Ecto.MigrationTest do
   test "forward: renames a table" do
     result = rename(table(:posts), to: table(:new_posts))
     flush()
-    assert {:rename, %Table{name: :posts}, %Table{name: :new_posts}} = last_command()
+    assert {:rename, %Table{name: "posts"}, %Table{name: "new_posts"}} = last_command()
     assert result == table(:new_posts)
   end
 
@@ -414,7 +423,7 @@ defmodule Ecto.MigrationTest do
     flush()
 
     assert last_command() ==
-           {:alter, %Table{name: :posts},
+           {:alter, %Table{name: "posts"},
               [{:remove, :summary}]}
 
     assert_raise Ecto.MigrationError, ~r/cannot reverse migration command/, fn ->
@@ -429,7 +438,7 @@ defmodule Ecto.MigrationTest do
     rename table(:posts), :given_name, to: :first_name
     flush()
 
-    assert last_command() == {:rename, %Table{name: :posts}, :first_name, :given_name}
+    assert last_command() == {:rename, %Table{name: "posts"}, :first_name, :given_name}
   end
 
   test "backward: drops a table" do
@@ -454,7 +463,7 @@ defmodule Ecto.MigrationTest do
   test "backward: renames a table" do
     rename table(:posts), to: table(:new_posts)
     flush()
-    assert {:rename, %Table{name: :new_posts}, %Table{name: :posts}} = last_command()
+    assert {:rename, %Table{name: "new_posts"}, %Table{name: "posts"}} = last_command()
   end
 
   defp last_command(), do: Process.get(:last_command)
