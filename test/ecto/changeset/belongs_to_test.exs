@@ -345,6 +345,17 @@ defmodule Ecto.Changeset.BelongsToTest do
       Relation.change(assoc, [name: "michal"], profile)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
+
+    # Empty attributes
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, %{}, profile)
+    assert changeset.action == :insert
+    assert changeset.changes == %{}
+
+    assert {:ok, changeset, true, false} =
+      Relation.change(assoc, [], profile)
+    assert changeset.action == :insert
+    assert changeset.changes == %{}
   end
 
   test "change belongs_to with struct" do

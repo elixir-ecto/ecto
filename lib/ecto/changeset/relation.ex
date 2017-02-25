@@ -91,7 +91,7 @@ defmodule Ecto.Changeset.Relation do
 
   def cast(%{related: mod} = relation, params, current, on_cast) do
     pks = mod.__schema__(:primary_key)
-    cast_or_change(relation, params, current, struct_pk(mod, pks),
+    cast_or_change(relation, params, current, data_pk(pks),
                    param_pk(mod, pks), &do_cast(relation, &1, &2, &3, on_cast))
   end
 
@@ -124,7 +124,7 @@ defmodule Ecto.Changeset.Relation do
   end
 
   def change(%{related: mod} = relation, value, current) do
-    get_pks = struct_pk(mod, mod.__schema__(:primary_key))
+    get_pks = data_pk(mod.__schema__(:primary_key))
     cast_or_change(relation, value, current, get_pks, get_pks,
                    &do_change(relation, &1, &2, &3))
   end
@@ -361,11 +361,11 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
-  defp struct_pk(_mod, pks) do
+  defp data_pk(pks) do
     fn
-      %Changeset{data: struct} -> Enum.map(pks, &Map.get(struct, &1))
-      [_|_] = struct -> Enum.map(pks, &Keyword.get(struct, &1))
-      %{} = struct -> Enum.map(pks, &Map.get(struct, &1))
+      %Changeset{data: data} -> Enum.map(pks, &Map.get(data, &1))
+      map when is_map(map) -> Enum.map(pks, &Map.get(map, &1))
+      list when is_list(list) -> Enum.map(pks, &Keyword.get(list, &1))
     end
   end
 
