@@ -419,12 +419,10 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
-      {_, name, schema} = elem(sources, idx)
+      {source, name, schema} = elem(sources, idx)
       if is_nil(schema) and is_nil(fields) do
-        error!(query, "PostgreSQL requires a schema module when using selector " <>
-          "#{inspect name} but none was given. " <>
-          "Please specify a schema or specify exactly which fields from " <>
-          "#{inspect name} you desire")
+        error!(query, "PostgreSQL does not support selecting all fields from #{source} without a schema. " <>
+                      "Please specify a schema or specify exactly which fields you want to select")
       end
       intersperse_map(fields, ", ", &[name, ?. | quote_name(&1)])
     end
