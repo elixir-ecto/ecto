@@ -39,15 +39,6 @@ To install these dependencies, we will run this command:
 mix deps.get
 ```
 
-In this same file, we'll need to add `ecto` and `postgrex` to our applications list:
-
-```elixir
-def application do
-  [applications: [:logger, :ecto, :postgrex],
-   mod: {Friends, []}]
-end
-```
-
 The Postgrex application will receive queries from Ecto and execute them
 against our database. If we didn't do this step, we wouldn't be able to do any
 querying at all.

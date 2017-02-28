@@ -1,31 +1,25 @@
 # Ecto Association Guide
-This guide assumes you worked through the "getting started" guide and want to learn more about associations.
 
-With ecto (like every other DB layer) you can associate schemas with other schemas.
+This guide assumes you worked through the [Getting Started guide](getting-started.html) and want to learn more about associations.
 
 There are three kinds of associations:
-- one-to-one
-- one-to-many
-- many-to-many
 
-In this tutorial we're going to create a minimal ecto project
-(similar to the getting started guide),
-then we're going to create basic schemas and migrations,
-and finally associate the schemas.
+  * one-to-one
+  * one-to-many
+  * many-to-many
 
+In this tutorial we're going to create a minimal Ecto project then we're going to create basic schemas and migrations, and finally associate the schemas.
 
 ## Ecto Setup
-First, we're going to create a basic ecto project which is going to be used for
-the rest of the tutorial.
-Note, the steps are taken from the getting started guide.
-You can also clone the project from (TODO add link to project).
 
-Let's create a new project.
+First, we're going to create a fresh Ecto project which is going to be used for the rest of the tutorial:
+
 ```
 $ mix new ecto_assoc --sup
 ```
 
 Add `ecto` and `postgrex` as dependencies to `mix.exs`
+
 ```elixir
 # mix.exs
 defp deps do
@@ -34,21 +28,14 @@ defp deps do
 end
 ```
 
-Also add them to our application:
-```elixir
-# mix.exs
-def application do
-  [applications: [:logger, :ecto, :postgrex],
-   mod: {EctoAssoc, []}]
-end
-```
-
 Let's generate a repo and create the corresponding DB.
+
 ```
 $ mix ecto.gen.repo -r EctoAssoc.Repo
 ```
 
 Make sure the config for the repo is set properly:
+
 ```elixir
 # config/config.exs
 config :ecto_assoc, EctoAssoc.Repo,
@@ -62,6 +49,7 @@ config :ecto_assoc, ecto_repos: [EctoAssoc.Repo]
 ```
 
 Add the repo to the supervision tree:
+
 ```elixir
   def start(_type, _args) do
     import Supervisor.Spec, warn: false
@@ -72,17 +60,26 @@ Add the repo to the supervision tree:
 ```
 
 Finally let's create the DB:
+
 ```
 $ mix ecto.create
 ```
 
 ## One-to-one
-### Prep
-Let's assume we have two schemas: User and Avatar.
 
-The schemas and corresponding migrations look like this:
+### Prep
+
+Let's start with two schemas that are not yet associated: `User` and `Avatar`.
+
+We will generate the migration for `User`:
+
 ```elixir
-# create a migration: mix ecto.gen.migration create_user
+mix ecto.gen.migration create_user
+```
+
+And add some columns:
+
+```elixir
 # priv/repo/migrations/*_create_user.exs
 defmodule EctoAssoc.Repo.Migrations.CreateUser do
   use Ecto.Migration
@@ -96,6 +93,8 @@ defmodule EctoAssoc.Repo.Migrations.CreateUser do
 end
 ```
 
+And the following schema:
+
 ```elixir
 # lib/ecto_assoc/user.ex
 defmodule EctoAssoc.User do
@@ -108,8 +107,15 @@ defmodule EctoAssoc.User do
 end
 ```
 
+Avatar also has its own migration as well:
+
+```
+mix ecto.gen.migration create_avatar
+```
+
+with the following columns:
+
 ```elixir
-# create a migration: mix ecto.gen.migration create_avatar
 # priv/repo/migrations/*_create_avatar.exs
 defmodule EctoAssoc.Repo.Migrations.CreateAvatar do
   use Ecto.Migration
@@ -122,6 +128,8 @@ defmodule EctoAssoc.Repo.Migrations.CreateAvatar do
   end
 end
 ```
+
+and the following schema:
 
 ```elixir
 # lib/ecto_assoc/avatar.ex
@@ -136,11 +144,22 @@ end
 ```
 
 ### Adding Associations
-Now we want to associate the user with the avatar and vice versa:
-- one user has one avatar
-- one avatar belongs to one user
+
+Now we want to associate the user with the avatar and vice-versa:
+
+  * one user has one avatar
+  * one avatar belongs to one user
+
+The difference between [`has_one`](Ecto.Schema.html#has_one/3) and [`belongs_to`](Ecto.Schema.html#belongs_to/3) is where the primary key belongs. In this case, we want the "avatars" table to have a "user_id" columns, therefore the avatar belongs to the user.
 
 For the *avatar* we create a migration that adds a `user_id` reference:
+
+```
+mix ecto.gen.migration avatar_belongs_to_user
+```
+
+with the following steps:
+
 ```elixir
 # priv/repo/migrations/20161117101812_avatar_belongs_to_user.exs
 defmodule EctoAssoc.Repo.Migrations.AvatarBelongsToUser do
@@ -153,9 +172,11 @@ defmodule EctoAssoc.Repo.Migrations.AvatarBelongsToUser do
   end
 end
 ```
+
 This adds a `user_id` column to the DB which refecences an entry in the users table.
 
 For the *avatar* we add a `belongs_to` field to the schema:
+
 ```elixir
 defmodule EctoAssoc.Avatar do
   schema "avatars" do
@@ -165,9 +186,11 @@ defmodule EctoAssoc.Avatar do
   end
 end
 ```
-`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the avatar, i.e., you can access the user via `avatar.user`.
 
-For the *user* we add a `has_one` field to the schema
+`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the avatar. In this case, you can access the user via `avatar.user`.
+
+For the *user* we add a `has_one` field to the schema:
+
 ```elixir
 # lib/ecto_assoc/user.ex
 defmodule EctoAssoc.User do
@@ -178,112 +201,75 @@ defmodule EctoAssoc.User do
   end
 end
 ```
-`has_one` does not add anything to the DB.
-The foreign key of the associated schema, `Avatar`, is used to make the avatar available from the user, i.e., you can access the avatar via `user.avatar`.
+
+`has_one` does not add anything to the DB. The foreign key of the associated schema, `Avatar`, is used to make the avatar available from the user, allowing you to access the avatar via `user.avatar`.
 
 ### Persistence
-Now let's add data to the DB.
-Start iex:
+
+Now let's add data to the DB. Start iex:
+
 ```
 $ iex -S mix
 ```
 
 For convenience we alias some modules:
+
 ```elixir
-iex> alias EctoAssoc.Repo
-EctoAssoc.Repo
-
-iex> alias EctoAssoc.User
-EctoAssoc.User
-
-iex> alias EctoAssoc.Avatar
-EctoAssoc.Avatar
+iex> alias EctoAssoc.{Repo, User, Avatar}
 ```
 
-Create a user changeset and insert it into the repo:
-```elixir
-iex> user_cs =
-...>   %User{}
-...>   |> Ecto.Changeset.cast(%{name: "John Doe", email: "johan@example.com"}, [:name, :email])
-#Ecto.Changeset<action: nil,
- changes: %{email: "johan@example.com", name: "John Doe"}, errors: [],
- data: #EctoAssoc.User<>, valid?: true>
+Create a user struct and insert it into the repo:
 
-iex> user = Repo.insert!(user_cs)
+```elixir
+iex> user = %User{name: "John Doe", email: "john.doe@example.com"}
+iex> user = Repo.insert!(user)
 %EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
  avatar: #Ecto.Association.NotLoaded<association :avatar is not loaded>,
- email: "johan@example.com", id: 3, name: "John Doe"}
+ email: "john.doe@example.com", id: 3, name: "John Doe"}
 ```
 
-This time let's add another user with an avatar association. We use `Ecto.Changeset.put_assoc` for this.
-```elixir
-iex> user_cs =
-...>   %User{}
-...>   |> Ecto.Changeset.cast(%{name: "Jane Doe", email: "jane@example.com"}, [:name, :email])
-...>   |> Ecto.Changeset.put_assoc(:avatar, %{nick_name: "EctOr", pick_url: "http://elixir-lang.org/images/logo/logo.png"})
-#Ecto.Changeset<action: nil,
- changes: %{avatar: #Ecto.Changeset<action: :insert,
-    changes: %{nick_name: "EctOr",
-      pick_url: "http://elixir-lang.org/images/logo/logo.png"}, errors: [],
-    data: #EctoAssoc.Avatar<>, valid?: true>, email: "jane@example.com",
-   name: "Jane Doe"}, errors: [], data: #EctoAssoc.User<>, valid?: true>
+This time let's add another user with an avatar association. We can define it directly in the User struct in the `:avatar` field:
 
-iex> user = Repo.insert!(user_cs)
+```elixir
+iex> avatar = %Avatar{nick_name: "Elixir", pic_url: "http://elixir-lang.org/images/logo.png"}
+iex> user = %User{name: "John Doe", email: "john.doe@example.com", avatar: avatar}
+iex> user = Repo.insert!(user)
 %EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
  avatar: %{__meta__: #Ecto.Schema.Metadata<:loaded, "avatars">,
-   __struct__: EctoAssoc.Avatar, id: 2, nick_name: "EctOr", pic_url: nil,
-   pick_url: "http://elixir-lang.org/images/logo/logo.png",
+   __struct__: EctoAssoc.Avatar, id: 2, nick_name: "Elixir",
+   pic_url: "http://elixir-lang.org/images/logo.png",
    user: #Ecto.Association.NotLoaded<association :user is not loaded>,
    user_id: 4}, email: "jane@example.com", id: 4, name: "Jane Doe"}
 ```
 
 Let's verify that it works by retrieving all Users and their associated avatars:
+
 ```elixir
 iex> Repo.all(User) |> Repo.preload(:avatar)
 [%EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">, avatar: nil,
-  email: "johan@example.com", id: 3, name: "John Doe"},
+  email: "john.doe@example.com", id: 3, name: "John Doe"},
  %EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
   avatar: %EctoAssoc.Avatar{__meta__: #Ecto.Schema.Metadata<:loaded, "avatars">,
-   id: 2, nick_name: "EctOr", pic_url: nil,
+   id: 2, nick_name: "Elixir", pic_url: "http://elixir-lang.org/images/logo.png",
    user: #Ecto.Association.NotLoaded<association :user is not loaded>,
    user_id: 4}, email: "jane@example.com", id: 4, name: "Jane Doe"}]
 ```
 
+## One-to-many
 
-## Many-to-one
 ### Prep
-Let's assume we have two schemas: `User` and `Post`.
 
-The schemas and corresponding migrations look like this:
-```elixir
-# create a migration: mix ecto.gen.migration create_user
-# priv/repo/migrations/*_create_user.exs
-defmodule EctoAssoc.Repo.Migrations.CreateUser do
-  use Ecto.Migration
+Let's assume we have two schemas: `User` and `Post`. The `User` was defined in the previous section and the `Post` one will be defined now.
 
-  def change do
-    create table(:users) do
-      add :name, :string
-      add :email, :string
-    end
-  end
-end
+Let's start with the migration:
+
+```
+mix ecto.gen.migration create_post
 ```
 
-```elixir
-# lib/ecto_assoc/user.ex
-defmodule EctoAssoc.User do
-  use Ecto.Schema
-
-  schema "users" do
-    field :name, :string
-    field :email, :string
-  end
-end
-```
+with the following columns:
 
 ```elixir
-# create a migration: mix ecto.gen.migration create_post
 # priv/repo/migrations/*_create_post.exs
 defmodule EctoAssoc.Repo.Migrations.CreatePost do
   use Ecto.Migration
@@ -297,6 +283,8 @@ defmodule EctoAssoc.Repo.Migrations.CreatePost do
 end
 ```
 
+and the following schema:
+
 ```elixir
 # lib/ecto_assoc/post.ex
 defmodule EctoAssoc.Post do
@@ -309,15 +297,22 @@ defmodule EctoAssoc.Post do
 end
 ```
 
-
 ### Adding Associations
-Now we want to associate the user with the post and vice versa:
-- one user has many posts
-- one post belongs to one user
 
-For the *post* we create a migration that adds a `user_id` reference:
+Now we want to associate the user with the post and vice-versa:
+
+  * one user has many posts
+  * one post belongs to one user
+
+As in `one-to-one` associations, the belongs_to reveals on which table the foreign key should be added. For the *post* we create a migration that adds a `user_id` reference:
+
+```
+mix ecto.gen.migration post_belongs_to_user
+```
+
+with the following contents:
+
 ```elixir
-# mix ecto.gen.migration post_belongs_to_user
 # priv/repo/migrations/*_post_belongs_to_user.exs
 defmodule EctoAssoc.Repo.Migrations.PostBelongsToUser do
   use Ecto.Migration
@@ -331,6 +326,7 @@ end
 ```
 
 For the *post* we add a `belongs_to` field to the schema:
+
 ```elixir
 defmodule EctoAssoc.Post do
   use Ecto.Schema
@@ -342,10 +338,11 @@ defmodule EctoAssoc.Post do
   end
 end
 ```
-`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the post,
-i.e., you can access the user via `post.user`.
+
+`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the post. The user can be accessed via `post.user`.
 
 For the *user* we add a `has_many` field to the schema:
+
 ```elixir
 defmodule EctoAssoc.User do
   use Ecto.Schema
@@ -357,62 +354,54 @@ defmodule EctoAssoc.User do
   end
 end
 ```
-`has_many` does not add anything to the DB.
-The foreign key of the associated schema, `Post`, is used to make the posts available from the user,
-i.e., you can access the posts via `user.posts`.
 
+[`has_many`](Ecto.Schema.html#has_many/3) does not require anything to the DB. The foreign key of the associated schema, `Post`, is used to make the posts available from the user, allowing all posts for a given to user to be accessed via `user.posts`.
 
 ### Persistence
+
 Start iex:
+
 ```
 $ iex -S mix
 ```
 
 For convenience we alias some modules:
+
 ```elixir
-iex> alias EctoAssoc.Repo
-EctoAssoc.Repo
-
-iex> alias EctoAssoc.User
-EctoAssoc.User
-
-iex> alias EctoAssoc.Post
-EctoAssoc.Post
+iex> alias EctoAssoc.{Repo, User, Post}
 ```
 
 Let's create a User and store it in the DB:
-```elixir
-iex> user_cs =
-...>   %User{}
-...>   |> Ecto.Changeset.cast(%{name: "John Doe", email: "johan@example.com"}, [:name, :email])
-#Ecto.Changeset<action: nil,
- changes: %{email: "johan@example.com", name: "John Doe"}, errors: [],
- data: #EctoAssoc.User<>, valid?: true>
 
-iex> user = Repo.insert!(user_cs)
+```elixir
+iex> user = %User{name: "John Doe", email: "john.doe@example.com"}
+iex> user = Repo.insert!(user)
 %EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
- email: "johan@example.com", id: 1, name: "John Doe",
+ email: "john.doe@example.com", id: 1, name: "John Doe",
  posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}
 ```
 
-Let's build an associated post and store it in the DB:
+Let's build an associated post and store it in the DB. We can take a similar approach as we did in `one_to_one` and directly pass a list of posts in the `posts` field when inserting the user, effectively inserting the user and multiple posts at once.
+
+However, let's try a different approach and use [`Ecto.build_assoc/3`](Ecto.html#build_assoc/3) to build a post that is associated to the existing user we have just defined:
+
 ```elixir
-iex> post_cs = Ecto.build_assoc(user, :posts, %{header: "Clickbait header", body: "No real content"})
+iex> post = Ecto.build_assoc(user, :posts, %{header: "Clickbait header", body: "No real content"})
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:built, "posts">,
  body: "No real content", header: "Clickbait header", id: nil,
  user: #Ecto.Association.NotLoaded<association :user is not loaded>, user_id: 1}
 
-iex> post = Repo.insert!(post_cs)
+iex> Repo.insert!(post)
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
  body: "No real content", header: "Clickbait header", id: 1,
  user: #Ecto.Association.NotLoaded<association :user is not loaded>, user_id: 1}
 ```
 
 Let's add another post to the user:
+
 ```elixir
-iex> post =
-...>   Ecto.build_assoc(user, :posts, %{header: "5 ways to improve your Ecto", body: "TODO add url of this tutorial"})
-...>   |> Repo.insert!()
+iex> post = Ecto.build_assoc(user, :posts, %{header: "5 ways to improve your Ecto", body: "TODO add url of this tutorial"})
+iex> Repo.insert!(post)
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
  body: "TODO add url of this tutorial", header: "5 ways to improve your Ecto",
  id: 2, user: #Ecto.Association.NotLoaded<association :user is not loaded>,
@@ -420,10 +409,11 @@ iex> post =
 ```
 
 Let's see if it worked:
+
 ```
 iex> Repo.get(User, user.id) |> Repo.preload(:posts)
 %EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
- email: "johan@example.com", id: 1, name: "John Doe",
+ email: "john.doe@example.com", id: 1, name: "John Doe",
  posts: [%EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
    body: "No real content", header: "Clickbait header", id: 1,
    user: #Ecto.Association.NotLoaded<association :user is not loaded>,
@@ -434,43 +424,23 @@ iex> Repo.get(User, user.id) |> Repo.preload(:posts)
    user_id: 1}]}
 ```
 
-TODO explain `build_assoc`
-
+In the example above, `Ecto.build_assoc` received an existing `user` struct, that was already persisted to the database, and built a `Post` struct, based on its `:posts` association, with the `user_id` foreign key field properly set to the ID in the `user` struct.
 
 ## Many-to-many
+
 ### Prep
-Let's assume we have two schemas: Post and Tag.
 
-The schemas and their migration look like this:
-```elixir
-# mix ecto.gen.migration create_post
-# priv/repo/migrations/*create_post.exs
-defmodule EctoAssoc.Repo.Migrations.CreatePost do
-  use Ecto.Migration
+Let's assume we have two schemas: `Post` and `Tag`. The `Post` was defined in the previous section and the `Tag` one will be defined now.
 
-  def change do
-    create table(:posts) do
-      add :header, :string
-      add :body, :string
-    end
-  end
-end
+Let's start with the tag migration:
+
+```
+mix ecto.gen.migration create_tag
 ```
 
-```elixir
-# lib/ecto_assoc/post.ex
-defmodule EctoAssoc.Post do
-  use Ecto.Schema
-
-  schema "posts" do
-    field :header, :string
-    field :body, :string
-  end
-end
-```
+with the following columns:
 
 ```elixir
-# mix ecto.gen.migration create_tag
 # priv/repo/migrations/*create_tag.exs
 defmodule EctoAssoc.Repo.Migrations.CreateTag do
   use Ecto.Migration
@@ -483,6 +453,8 @@ defmodule EctoAssoc.Repo.Migrations.CreateTag do
 end
 ```
 
+and the following schema:
+
 ```elixir
 defmodule EctoAssoc.Tag do
   use Ecto.Schema
@@ -493,41 +465,45 @@ defmodule EctoAssoc.Tag do
 end
 ```
 
-
 ### Adding Associations
-Now we want to associate the post with the tags and vice versa:
-- one post can have many tags
-- one tag can belong to many posts.
 
-This is a `many-to-many` relationship.
+Now we want to associate the post with the tags and vice-versa:
 
-One way to handle `many-to-many` relationships is to introduce an additional schema which explicitly tracks the tag-post relationship.
+ * one post can have many tags
+ * one tag can have many posts
+
+This is a `many-to-many` relationship. Notice both sides can have many entries. In the previous sections we were used to put the foreign key on the side that "belongs to" the other, which is not available here.
+
+One way to handle `many-to-many` relationships is to introduce an additional table which explicitly tracks the tag-post relationship by pointing to both tags and posts entries.
+
 So let's do that:
 
+```
+mix ecto.gen.migration create_posts_tags
+```
+
+with the following contents:
+
 ```elixir
-# $ mix ecto.gen.migration create_tag_post_association
-# priv/repo/migrations/*_create_tag_post_association
-defmodule EctoAssoc.Repo.Migrations.CreateTagPostAssociation do
+# priv/repo/migrations/*_create_posts_tags
+defmodule EctoAssoc.Repo.Migrations.CreatePostsTags do
   use Ecto.Migration
 
   def change do
-    create table(:tag_post_associations) do
+    create table(:posts_tags) do
       add :tag_id, references(:tags)
       add :post_id, references(:posts)
-      # Note you can add additional data to the association schema, like:
-      # timestamps()
     end
 
-    create unique_index(:tag_post_associations, [:tag_id, :post_id])
+    create unique_index(:posts_tags, [:tag_id, :post_id])
   end
 end
 ```
-On the DB level, this creates a new table `tag_post_associations` with two
-colums that point at the `tag_id` and `post_id`.
-We also create a unique index, such that the association is always unique.
 
-For the *post* we use the `many_to_many` macro to associate the `Tag` through the
-new `TagPostAssociation` schema.
+On the DB level, this creates a new table `posts_tags` with two columns that point at the `tag_id` and `post_id`. We also create a unique index, such that the association is always unique.
+
+For the *post* we use the [`many_to_many`](Ecto.Schema.html#many_to_many/3) macro to associate the `Tag` through the
+new `posts_tags` table.
 
 ```elixir
 # lib/ecto_assoc/post.ex
@@ -538,14 +514,14 @@ defmodule EctoAssoc.Post do
     field :header, :string
     field :body, :string
     # the following line was added
-    many_to_many :tags, EctoAssoc.Tag, join_through: EctoAssoc.TagPostAssociation
+    many_to_many :tags, EctoAssoc.Tag, join_through: "posts_tags"
   end
 end
 ```
 
-For the *post* we do the same.
-We use the `many_to_many` macro to associate the `Post` through the
-new `TagPostAssociation` schema.
+For the *post* we do the same. We use the `many_to_many` macro to associate the `Post` through the
+new `posts_tags` schema:
+
 ```elixir
 # lib/ecto_assoc/tag.ex
 defmodule EctoAssoc.Tag do
@@ -554,72 +530,64 @@ defmodule EctoAssoc.Tag do
   schema "tags" do
     field :name, :string
     # the following line was added
-    many_to_many :posts, EctoAssoc.Post, join_through: EctoAssoc.TagPostAssociation
+    many_to_many :posts, EctoAssoc.Post, join_through: "posts_tags"
   end
 end
 ```
 
 ### Persistence
+
 Let's create some tags:
+
 ```elixir
-iex> clickbait_tag = %Tag{} |> Ecto.Changeset.cast(%{name: "clickbait"}, [:name]) |> Repo.insert!()
+iex> clickbait_tag = Repo.insert! %Tag{name: "clickbait"}
 %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 1,
  name: "clickbait",
  posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}
 
-iex> misc_tag = %Tag{} |> Ecto.Changeset.cast(%{name: "misc"}, [:name]) |> Repo.insert!()
+iex> misc_tag = Repo.insert! %Tag{name: "misc"}
 %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 2,
  name: "misc",
  posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}
 
-iex> ecto_tag = %Tag{} |> Ecto.Changeset.cast(%{name: "ecto"}, [:name]) |> Repo.insert!()
+iex> ecto_tag = Repo.insert! %Tag{name: "ecto"}
 %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 3,
  name: "ecto",
  posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}
 ```
 
 And let's create a post:
+
 ```elixir
-iex> post =
-...>   %Post{}
-...>   |> Ecto.Changeset.cast(%{header: "Clickbait header", body: "No real content"}, [:header, :body])
-...>   |> Repo.insert!()
+iex> post = %Post{header: "Clickbait header", body: "No real content"}
+...> post = Repo.insert!(post)
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
  body: "No real content", header: "Clickbait header", id: 1,
  tags: #Ecto.Association.NotLoaded<association :tags is not loaded>}
 ```
 
-Ok, but tag and post are not associated, yet.
-We can create an association through the `TagPostAssociation` directly:
-```elixir
-iex> Repo.insert!(%EctoAssoc.TagPostAssociation{post: post, tag: clickbait_tag})
-%EctoAssoc.TagPostAssociation{__meta__: #Ecto.Schema.Metadata<:loaded, "tag_post_associations">,
- id: 1,
- post: %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
-  body: "No real content", header: "Clickbait header", id: 1,
-  tags: #Ecto.Association.NotLoaded<association :tags is not loaded>},
- post_id: 1,
- tag: %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 1,
-  name: "clickbait",
-  posts: #Ecto.Association.NotLoaded<association :posts is not loaded>},
- tag_id: 1}
+Ok, but tag and post are not associated, yet. We for, as done in `one-to-one`, create either a post or a tag with the associated entries and insert them all at once. However, notice we cannot use `Ecto.build_assoc/3`, since the foreign key does not belong to the `post` nor the `tag` struct.
 
-iex> Repo.insert!(%EctoAssoc.TagPostAssociation{post: post, tag: misc_tag})
-%EctoAssoc.TagPostAssociation{__meta__: #Ecto.Schema.Metadata<:loaded, "tag_post_associations">,
- id: 2,
- post: %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
-  body: "No real content", header: "Clickbait header", id: 1,
-  tags: #Ecto.Association.NotLoaded<association :tags is not loaded>},
- post_id: 1,
- tag: %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 2,
-  name: "misc",
-  posts: #Ecto.Association.NotLoaded<association :posts is not loaded>},
- tag_id: 2}
+Another option is to use Ecto changesets, which provides many conveniences for dealing with *changes*. For example:
+
+```elixir
+iex> post_changeset = Ecto.Changeset.change(post)
+iex> post_with_tags = Ecto.Changeset.put_assoc(post, :tags, [clickbait_tag, misc_tag])
+iex> post = Repo.update!(post_with_tags)
+%EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
+ body: "No real content", header: "Clickbait header", id: 1,
+ tags: [%EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 1,
+   name: "clickbait",
+   posts: #Ecto.Association.NotLoaded<association :posts is not loaded>},
+  %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 2,
+   name: "misc",
+   posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}]}
 ```
 
-Let's examine the post
+Let's examine the post:
+
 ```elixir
-iex> post = Repo.get(Post, 1) |> Repo.preload(:tags)
+iex> post = Repo.get(Post, post.id) |> Repo.preload(:tags)
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
  body: "No real content", header: "Clickbait header", id: 1,
  tags: [%EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 1,
@@ -643,14 +611,12 @@ iex> post.tags
   name: "misc",
   posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}]
 
-iex> Enum.at(post.tags, 0).name
-"clickbait"
-
-iex> Enum.at(post.tags, 1).name
-"misc"
+iex> Enum.map(post.tags, & &1.name)
+["clickbait", "misc"]
 ```
 
-Of course, the associations also work in the other direction:
+The associations also works in the other direction:
+
 ```elixir
 iex> tag = Repo.get(Tag, 1) |> Repo.preload(:posts)
 %EctoAssoc.Tag{__meta__: #Ecto.Schema.Metadata<:loaded, "tags">, id: 1,
@@ -660,10 +626,21 @@ iex> tag = Repo.get(Tag, 1) |> Repo.preload(:posts)
    tags: #Ecto.Association.NotLoaded<association :tags is not loaded>}]}
 ```
 
+The advantage of using Ecto.Changeset is that it is responsible for tracking the changes between your data structures and the associated data. For example, if you want you remove the clickbait tag from from the post, one way to do so is by calling [`Ecto.Changeset.put_assoc/3`](Ecto.Changeset.html#put_assoc/4) once more but without the clickbait tag:
+
+```elixir
+iex> post_changeset = Ecto.Changeset.change(post)
+iex> post_with_tags = Ecto.Changeset.put_assoc(post, :tags, [misc_tag])
+iex> post = Repo.update!(post_with_tags)
+```
+
+Ecto will compare the data you gave with the tags currently in the post and conclude the association between the post and the clickbait tag must be removed.
+
 ## References
-- [belongs_to](https://hexdocs.pm/ecto/Ecto.Schema.html#belongs_to/3)
-- [has_one](https://hexdocs.pm/ecto/Ecto.Schema.html#has_one/3)
-- [has_many](https://hexdocs.pm/ecto/Ecto.Schema.html#has_many/3)
-- [many_to_many](https://hexdocs.pm/ecto/Ecto.Schema.html#many_to_many/3)
-- [put_assoc](https://hexdocs.pm/ecto/Ecto.Changeset.html#put_assoc/4)
-- [build_assoc](https://hexdocs.pm/ecto/Ecto.html#build_assoc/3)
+
+  * [Ecto.Schema.belongs_to](Ecto.Schema.html#belongs_to/3)
+  * [Ecto.Schema.has_one](Ecto.Schema.html#has_one/3)
+  * [Ecto.Schema.has_many](Ecto.Schema.html#has_many/3)
+  * [Ecto.Schema.many_to_many](Ecto.Schema.html#many_to_many/3)
+  * [Ecto.build_assoc](Ecto.html#build_assoc/3)
+  * [Ecto.Changeset.put_assoc](Ecto.Changeset.html#put_assoc/4)
