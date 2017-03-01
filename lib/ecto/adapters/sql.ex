@@ -320,7 +320,7 @@ defmodule Ecto.Adapters.SQL do
   defp normalize_pool(pool) do
     if function_exported?(pool, :unboxed_run, 2), do: DBConnection.Ownership, else: pool
   end
-    
+
   defp pool_name(module, config) do
     Keyword.get(config, :pool_name, default_pool_name(module, config))
   end

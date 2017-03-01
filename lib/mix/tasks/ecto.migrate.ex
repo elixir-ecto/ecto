@@ -72,7 +72,6 @@ defmodule Mix.Tasks.Ecto.Migrate do
       ensure_migrations_path(repo)
       {:ok, pid, apps} = ensure_started(repo, opts)
 
-      
       pool = repo.config[:pool]
       migrated =
         if function_exported?(pool, :unboxed_run, 2) do
