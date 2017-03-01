@@ -169,11 +169,13 @@ defmodule Ecto.Repo.Schema do
     schema = struct.__struct__
     fields = schema.__schema__(:fields)
     assocs = schema.__schema__(:associations)
-    return = case opts[:returning] do
-      true                    -> schema.__schema__(:fields)
-      list when is_list(list) -> list
-      _                       -> schema.__schema__(:read_after_writes)
+    return = cond do
+      is_list(opts[:returning]) -> opts[:returning]
+      opts[:returning] == true -> schema.__schema__(:fields)
+      true -> []
     end
+    |> Enum.concat(schema.__schema__(:read_after_writes))
+    |> Enum.uniq
 
     {on_conflict, opts} = Keyword.pop(opts, :on_conflict, :raise)
     {conflict_target, opts} = Keyword.pop(opts, :conflict_target, [])
