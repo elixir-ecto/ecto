@@ -169,7 +169,11 @@ defmodule Ecto.Repo.Schema do
     schema = struct.__struct__
     fields = schema.__schema__(:fields)
     assocs = schema.__schema__(:associations)
-    return = schema.__schema__(:read_after_writes)
+    return = case opts[:returning] do
+      true                    -> schema.__schema__(:fields)
+      list when is_list(list) -> list
+      _                       -> schema.__schema__(:read_after_writes)
+    end
 
     {on_conflict, opts} = Keyword.pop(opts, :on_conflict, :raise)
     {conflict_target, opts} = Keyword.pop(opts, :conflict_target, [])
@@ -199,7 +203,7 @@ defmodule Ecto.Repo.Schema do
         case apply(changeset, adapter, :insert, args) do
           {:ok, values} ->
             changeset
-            |> load_changes(:loaded, values ++ extra, autogen, adapter)
+            |> load_changes(:loaded, extra ++ values, autogen, adapter)
             |> process_children(children, user_changeset, opts)
           {:error, _} = error ->
             error
