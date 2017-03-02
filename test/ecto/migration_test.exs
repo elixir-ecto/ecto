@@ -7,7 +7,7 @@ defmodule Ecto.MigrationTest do
   use Ecto.Migration
 
   alias Ecto.TestRepo
-  alias Ecto.Migration.{Table, Index, Reference, Constraint}
+  alias Ecto.Migration.{Table, Index, Reference, Constraint, Extension}
   alias Ecto.Migration.Runner
 
   setup meta do
@@ -28,6 +28,13 @@ defmodule Ecto.MigrationTest do
   @tag prefix: "foo"
   test "allows prefix to be retrieved" do
     assert prefix() == "foo"
+  end
+
+  test "creates an extension" do
+    assert extension(:foo_extension) ==
+      %Extension{name: :foo_extension}
+    assert extension(:foo_extension, prefix: :foo_prefix) ==
+      %Extension{name: :foo_extension, prefix: :foo_prefix}
   end
 
   test "creates a table" do
