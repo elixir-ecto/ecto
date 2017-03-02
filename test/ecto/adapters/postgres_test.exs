@@ -704,28 +704,28 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "create table with comment on table" do
-    create = {:create, table(:posts, comment: "table comment"),
+    create = {:create, table(:posts, comment: "table comment", prefix: "foo"),
               [{:add, :category_0, references(:categories), []}]}
     assert execute_ddl(create) == [remove_newlines("""
-    CREATE TABLE "posts"
-    ("category_0" integer CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"))
+    CREATE TABLE "foo"."posts"
+    ("category_0" integer CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"))
     """),
-    ~s|COMMENT ON TABLE "posts" IS 'table comment'|]
+    ~s|COMMENT ON TABLE "foo"."posts" IS 'table comment'|]
   end
 
   test "create table with comment on columns" do
-    create = {:create, table(:posts),
+    create = {:create, table(:posts, prefix: "foo"),
               [
                 {:add, :category_0, references(:categories), [comment: "column comment"]},
                 {:add, :created_at, :timestamp, []},
                 {:add, :updated_at, :timestamp, [comment: "column comment 2"]}
               ]}
     assert execute_ddl(create) == [remove_newlines("""
-    CREATE TABLE "posts"
-    ("category_0" integer CONSTRAINT "posts_category_0_fkey" REFERENCES "categories"("id"), "created_at" timestamp, "updated_at" timestamp)
+    CREATE TABLE "foo"."posts"
+    ("category_0" integer CONSTRAINT "posts_category_0_fkey" REFERENCES "foo"."categories"("id"), "created_at" timestamp, "updated_at" timestamp)
     """),
-    ~s|COMMENT ON COLUMN "posts"."category_0" IS 'column comment'|,
-    ~s|COMMENT ON COLUMN "posts"."updated_at" IS 'column comment 2'|]
+    ~s|COMMENT ON COLUMN "foo"."posts"."category_0" IS 'column comment'|,
+    ~s|COMMENT ON COLUMN "foo"."posts"."updated_at" IS 'column comment 2'|]
   end
 
   test "create table with references" do
@@ -956,7 +956,7 @@ defmodule Ecto.Adapters.PostgresTest do
     assert execute_ddl(create) == [remove_newlines("""
     ALTER TABLE "foo"."products" ADD CONSTRAINT "price_must_be_positive" CHECK (price > 0)
     """),
-    ~s|COMMENT ON CONSTRAINT "price_must_be_positive" ON "products" IS 'comment'|]
+    ~s|COMMENT ON CONSTRAINT "price_must_be_positive" ON "foo"."products" IS 'comment'|]
   end
 
   test "drop constraint" do

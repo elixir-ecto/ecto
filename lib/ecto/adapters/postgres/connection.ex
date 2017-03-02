@@ -594,15 +594,16 @@ if Code.ensure_loaded?(Postgrex) do
     @drops [:drop, :drop_if_exists]
 
     def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
+      table_name = quote_table(table.prefix, table.name)
       query = ["CREATE TABLE ",
                if_do(command == :create_if_not_exists, "IF NOT EXISTS "),
-               quote_table(table.prefix, table.name), ?\s, ?(,
+               table_name, ?\s, ?(,
                column_definitions(table, columns), pk_definition(columns, ", "), ?),
                options_expr(table.options)]
 
       [query] ++
-        comments_on(:table, table.name, table.comment) ++
-        comments_for_columns(table, columns)
+        comments_on("TABLE", table_name, table.comment) ++
+        comments_for_columns(table_name, columns)
     end
 
     def execute_ddl({command, %Table{} = table}) when command in @drops do
@@ -611,12 +612,13 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     def execute_ddl({:alter, %Table{} = table, changes}) do
-      query = ["ALTER TABLE ", quote_table(table.prefix, table.name), ?\s,
+      table_name = quote_table(table.prefix, table.name)
+      query = ["ALTER TABLE ", table_name, ?\s,
                column_changes(table, changes), pk_definition(changes, ", ADD ")]
 
       [query] ++
-        comments_on(:table, table.name, table.comment) ++
-        comments_for_columns(table, changes)
+        comments_on("TABLE", table_name, table.comment) ++
+        comments_for_columns(table_name, changes)
     end
 
     def execute_ddl({:create, %Index{} = index}) do
@@ -633,7 +635,7 @@ if Code.ensure_loaded?(Postgrex) do
                   ?\s, ?(, fields, ?),
                   if_do(index.where, [" WHERE ", to_string(index.where)])]]
 
-      queries ++ comments_on(:index, index.name, index.comment)
+      queries ++ comments_on("INDEX", quote_name(index.name), index.comment)
     end
 
     def execute_ddl({:create_if_not_exists, %Index{} = index}) do
@@ -662,10 +664,11 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     def execute_ddl({:create, %Constraint{} = constraint}) do
-      queries = [["ALTER TABLE ", quote_table(constraint.prefix, constraint.table),
+      table_name = quote_table(constraint.prefix, constraint.table)
+      queries = [["ALTER TABLE ", table_name,
                   " ADD ", new_constraint_expr(constraint)]]
 
-      queries ++ comments_on(:constraint, constraint.name, constraint.comment, constraint.table)
+      queries ++ comments_on("CONSTRAINT", constraint.name, constraint.comment, table_name)
     end
 
     def execute_ddl({:drop, %Constraint{} = constraint}) do
@@ -690,28 +693,22 @@ if Code.ensure_loaded?(Postgrex) do
       end
     end
 
-    defp comments_on(_database_object, _name, nil), do: []
-    defp comments_on(:column, {table_name, column_name}, comment) do
-      column_name = quote_table(table_name, column_name)
-      [["COMMENT ON COLUMN ", column_name, " IS ", single_quote(comment)]]
-    end
-    defp comments_on(:table, name, comment) do
-      [["COMMENT ON TABLE ", quote_name(name), " IS ", single_quote(comment)]]
-    end
-    defp comments_on(:index, name, comment) do
-      [["COMMENT ON INDEX ", quote_name(name), " IS ", single_quote(comment)]]
+    defp comments_on(_object, _name, nil), do: []
+    defp comments_on(object, name, comment) do
+      [["COMMENT ON ", object, ?\s, name, " IS ", single_quote(comment)]]
     end
 
-    defp comments_on(:constraint, _name, nil, _table_name), do:  []
-    defp comments_on(:constraint, name, comment, table_name) do
-      [["COMMENT ON CONSTRAINT ", quote_name(name), " ON ", quote_name(table_name),
+    defp comments_on(_object, _name, nil, _table_name), do:  []
+    defp comments_on(object, name, comment, table_name) do
+      [["COMMENT ON ", object, ?\s, quote_name(name), " ON ", table_name,
         " IS ", single_quote(comment)]]
     end
 
-    defp comments_for_columns(table, columns) do
+    defp comments_for_columns(table_name, columns) do
       Enum.flat_map(columns, fn
         {_operation, column_name, _column_type, opts} ->
-          comments_on(:column, {table.name, column_name}, opts[:comment])
+          column_name = [table_name, ?. | quote_name(column_name)]
+          comments_on("COLUMN", column_name, opts[:comment])
         _ -> []
       end)
     end
