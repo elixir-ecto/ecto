@@ -348,11 +348,10 @@ defmodule Ecto.Adapters.SQL do
 
     # Check if the pool options should overridden
     {pool_name, pool_opts} =
-      case Keyword.fetch(opts, :pool) do
-        {:ok, pool} when pool != Ecto.Adapters.SQL.Sandbox ->
-          {pool_name(repo, opts), opts}
-        _ ->
-          repo.__pool__
+      if function_exported?(pool, :unboxed_run, 2) do
+        {pool_name(repo, opts), opts}
+      else
+        repo.__pool__
       end
 
     opts = [name: pool_name] ++ Keyword.delete(opts, :pool) ++ pool_opts
