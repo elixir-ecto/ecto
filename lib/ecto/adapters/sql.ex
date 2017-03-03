@@ -346,14 +346,7 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    # Check if the pool options should overridden
-    {pool_name, pool_opts} =
-      if function_exported?(pool, :unboxed_run, 2) do
-        {pool_name(repo, opts), opts}
-      else
-        repo.__pool__
-      end
-
+    {pool_name, pool_opts} = repo.__pool__
     opts = [name: pool_name] ++ Keyword.delete(opts, :pool) ++ pool_opts
     connection.child_spec(opts)
   end
