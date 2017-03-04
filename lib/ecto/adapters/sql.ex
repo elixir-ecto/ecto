@@ -318,6 +318,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp normalize_pool(pool) do
+    Code.ensure_loaded(pool)
     if function_exported?(pool, :unboxed_run, 2), do: DBConnection.Ownership, else: pool
   end
 
