@@ -26,17 +26,18 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def ensure_all_started(repo, type) do
-        {_, opts} = repo.__pool__
-        with {:ok, pool} <- DBConnection.ensure_all_started(opts, type),
-             {:ok, adapter} <- Application.ensure_all_started(@adapter, type),
-             # We always return the adapter to force it to be restarted if necessary
-             do: {:ok, pool ++ List.delete(adapter, @adapter) ++ [@adapter]}
+      def init(repo, config) do
+        Ecto.Adapters.SQL.init(repo, config)
       end
 
       @doc false
-      def child_spec(repo, opts) do
-        Ecto.Adapters.SQL.child_spec(@conn, @adapter, repo, opts)
+      def ensure_all_started(repo, type) do
+        Ecto.Adapters.SQL.ensure_all_started(@adapter, repo, type)
+      end
+
+      @doc false
+      def child_spec(opts, data) do
+        Ecto.Adapters.SQL.child_spec(@conn, @adapter, opts, data)
       end
 
       ## Types
@@ -186,11 +187,12 @@ defmodule Ecto.Adapters.SQL do
   @spec query!(Ecto.Repo.t, String.t, [term], Keyword.t) ::
                %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
   def query!(repo, sql, params \\ [], opts \\ []) do
-    query!(repo, sql, map_params(params), fn x -> x end, opts)
+    data = Ecto.Registry.lookup(repo)
+    query!(data, sql, map_params(params), fn x -> x end, opts)
   end
 
-  defp query!(repo, sql, params, mapper, opts) do
-    case query(repo, sql, params, mapper, opts) do
+  defp query!(data, sql, params, mapper, opts) do
+    case query(data, sql, params, mapper, opts) do
       {:ok, result} -> result
       {:error, err} -> raise err
     end
@@ -227,15 +229,15 @@ defmodule Ecto.Adapters.SQL do
   @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
               {:ok, %{rows: nil | [tuple], num_rows: non_neg_integer}} | {:error, Exception.t}
   def query(repo, sql, params \\ [], opts \\ []) do
-    query(repo, sql, map_params(params), fn x -> x end, opts)
+    data = Ecto.Registry.lookup(repo)
+    query(data, sql, map_params(params), fn x -> x end, opts)
   end
 
-  defp query(repo, sql, params, mapper, opts) do
-    sql_call(repo, :execute, [sql], params, mapper, opts)
+  defp query(data, sql, params, mapper, opts) do
+    sql_call(data, :execute, [sql], params, mapper, opts)
   end
 
-  defp sql_call(repo, callback, args, params, mapper, opts) do
-    {pool, default_opts} = repo.__pool__
+  defp sql_call({repo, pool, default_opts}, callback, args, params, mapper, opts) do
     conn = get_conn(pool) || pool
     opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
     args = args ++ [params, opts]
@@ -284,9 +286,6 @@ defmodule Ecto.Adapters.SQL do
       @doc false
       def __sql__, do: unquote(conn)
 
-      @doc false
-      def __pool__, do: {unquote(pool_name), unquote(Macro.escape(norm_config))}
-
       @doc """
       A convenience function for SQL-based repositories that executes the given query.
 
@@ -304,9 +303,23 @@ defmodule Ecto.Adapters.SQL do
       def query!(sql, params \\ [], opts \\ []) do
         Ecto.Adapters.SQL.query!(__MODULE__, sql, params, opts)
       end
-
-      defoverridable [__pool__: 0]
     end
+  end
+
+  @doc false
+  def init(repo, config) do
+    pool_name = pool_name(repo, config)
+    norm_config = normalize_config(config)
+    {:ok, {repo, pool_name, norm_config}}
+  end
+
+  @doc false
+  def ensure_all_started(adapter, repo, type) do
+    opts = normalize_config(repo.config())
+    with {:ok, from_pool} <- DBConnection.ensure_all_started(opts, type),
+         {:ok, from_adapter} <- Application.ensure_all_started(adapter, type),
+      # We always return the adapter to force it to be restarted if necessary
+      do: {:ok, from_pool ++ List.delete(from_adapter, adapter) ++ [adapter]}
   end
 
   defp normalize_config(config) do
@@ -331,7 +344,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def child_spec(connection, adapter, repo, opts) do
+  def child_spec(connection, adapter, opts, {repo, pool_name, pool_opts}) do
     unless Code.ensure_loaded?(connection) do
       raise """
       could not find #{inspect connection}.
@@ -346,7 +359,6 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    {pool_name, pool_opts} = repo.__pool__
     opts = [name: pool_name] ++ Keyword.delete(opts, :pool) ++ pool_opts
     connection.child_spec(opts)
   end
@@ -482,7 +494,8 @@ defmodule Ecto.Adapters.SQL do
   """
   @spec stream(Ecto.Repo.t, String.t, [term], Keyword.t) :: Enum.t
   def stream(repo, sql, params \\ [], opts \\ []) do
-    Ecto.Adapters.SQL.Stream.__build__(repo, sql, params, fn x -> x end, opts)
+    data = Ecto.Registry.lookup(repo)
+    Ecto.Adapters.SQL.Stream.__build__(data, sql, params, fn x -> x end, opts)
   end
 
   @doc false
@@ -524,8 +537,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def reduce(repo, statement, params, mapper, opts, acc, fun) do
-    {pool, default_opts} = repo.__pool__
+  def reduce({repo, pool, default_opts}, statement, params, mapper, opts, acc, fun) do
     opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
     case get_conn(pool) do
       nil  ->
@@ -537,8 +549,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def into(repo, statement, params, mapper, opts) do
-    {pool, default_opts} = repo.__pool__
+  def into({repo, pool, default_opts}, statement, params, mapper, opts) do
     opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
     case get_conn(pool) do
       nil  ->
@@ -596,8 +607,7 @@ defmodule Ecto.Adapters.SQL do
   ## Transactions
 
   @doc false
-  def transaction(repo, opts, fun) do
-   {pool, default_opts} = repo.__pool__
+  def transaction({repo, pool, default_opts}, opts, fun) do
     opts = with_log(repo, [], opts ++ default_opts)
     case get_conn(pool) do
       nil  -> do_transaction(pool, opts, fun)
@@ -618,14 +628,12 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def in_transaction?(repo) do
-    {pool, _} = repo.__pool__
+  def in_transaction?({repo, pool, _default_opts}) do
     !!get_conn(pool)
   end
 
   @doc false
-  def rollback(repo, value) do
-    {pool, _} = repo.__pool__
+  def rollback({repo, pool, _default_opts}, value) do
     case get_conn(pool) do
       nil  -> raise "cannot call rollback outside of transaction"
       conn -> DBConnection.rollback(conn, value)
