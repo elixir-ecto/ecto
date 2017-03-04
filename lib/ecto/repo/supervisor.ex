@@ -104,14 +104,15 @@ defmodule Ecto.Repo.Supervisor do
   ## Callbacks
 
   def init({repo, otp_app, adapter, opts}) do
-    with {:ok, opts} <- runtime_config(:supervisor, repo, otp_app, opts),
-         {:ok, data} <- adapter.init(repo, opts) do
-      Ecto.Registry.associate(self(), data)
-      children = [adapter.child_spec(opts, data)]
-      if Keyword.get(opts, :query_cache_owner, true) do
-        :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
-      end
-      supervise(children, strategy: :one_for_one)
+    case runtime_config(:supervisor, repo, otp_app, opts) do
+      {:ok, opts} ->
+        children = [adapter.child_spec(repo, opts)]
+        if Keyword.get(opts, :query_cache_owner, true) do
+          :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
+        end
+        supervise(children, strategy: :one_for_one)
+      other ->
+        other
     end
   end
 end

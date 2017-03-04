@@ -1,4 +1,6 @@
 defmodule Ecto.Registry do
+  @moduledoc false
+
   use GenServer
 
   ## Public interface

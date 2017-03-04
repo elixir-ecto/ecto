@@ -423,7 +423,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   def mode(repo, mode)
       when mode in [:auto, :manual]
       when elem(mode, 0) == :shared and is_pid(elem(mode, 1)) do
-    {repo, name, opts} = Ecto.Registry.lookup(repo)
+    {_repo_mod, name, opts} = Ecto.Registry.lookup(repo)
 
     if opts[:pool] != DBConnection.Ownership do
       raise """
@@ -464,7 +464,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       15000 ms if not set.
   """
   def checkout(repo, opts \\ []) do
-    {repo, name, pool_opts} =
+    {_repo_mod, name, pool_opts} =
       if Keyword.get(opts, :sandbox, true) do
         proxy_pool(repo)
       else
@@ -500,7 +500,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   Checks in the connection back into the sandbox pool.
   """
   def checkin(repo, _opts \\ []) do
-    {repo, name, opts} = Ecto.Registry.lookup(repo)
+    {_repo_mod, name, opts} = Ecto.Registry.lookup(repo)
     DBConnection.Ownership.ownership_checkin(name, opts)
   end
 
@@ -508,13 +508,13 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   Allows the `allow` process to use the same connection as `parent`.
   """
   def allow(repo, parent, allow, _opts \\ []) do
-    {repo, name, opts} = Ecto.Registry.lookup(repo)
+    {_repo_mod, name, opts} = Ecto.Registry.lookup(repo)
     DBConnection.Ownership.ownership_allow(name, parent, allow, opts)
   end
 
   defp proxy_pool(repo) do
-    {repo, name, opts} = Ecto.Registry.lookup(repo)
+    {repo_mod, name, opts} = Ecto.Registry.lookup(repo)
     {pool, opts} = Keyword.pop(opts, :ownership_pool, DBConnection.Poolboy)
-    {repo, name, [repo: repo, sandbox_pool: pool, ownership_pool: Pool] ++ opts}
+    {repo_mod, name, [repo: repo, sandbox_pool: pool, ownership_pool: Pool] ++ opts}
   end
 end

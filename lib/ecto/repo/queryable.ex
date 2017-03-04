@@ -11,13 +11,11 @@ defmodule Ecto.Repo.Queryable do
   require Ecto.Query
 
   def transaction(adapter, repo, fun, opts) when is_function(fun, 0) do
-    data = Ecto.Registry.lookup(repo)
-    adapter.transaction(data, opts, fun)
+    adapter.transaction(repo, opts, fun)
   end
 
   def transaction(adapter, repo, multi, opts) do
-    data = Ecto.Registry.lookup(repo)
-    wrap   = &adapter.transaction(data, opts, &1)
+    wrap   = &adapter.transaction(repo, opts, &1)
     return = &adapter.rollback(repo, &1)
 
     case Ecto.Multi.__apply__(multi, repo, wrap, return) do
@@ -26,16 +24,6 @@ defmodule Ecto.Repo.Queryable do
       {:error, {key, error_value, values}} ->
         {:error, key, error_value, values}
     end
-  end
-
-  def in_transaction?(adapter, repo) do
-    data = Ecto.Registry.lookup(repo)
-    adapter.in_transaction?(data)
-  end
-
-  def rollback(adapter, repo, value) do
-    data = Ecto.Registry.lookup(repo)
-    adapter.rollback(data, value)
   end
 
   def all(repo, adapter, queryable, opts) when is_list(opts) do
@@ -132,14 +120,14 @@ defmodule Ecto.Repo.Queryable do
 
   defp execute(operation, repo, adapter, query, opts) when is_list(opts) do
     {meta, prepared, params} = Planner.query(query, operation, repo, adapter, 0)
-    data = Ecto.Registry.lookup(repo)
+
     case meta do
       %{fields: nil} ->
-        adapter.execute(data, meta, prepared, params, nil, opts)
+        adapter.execute(repo, meta, prepared, params, nil, opts)
       %{select: select, fields: fields, prefix: prefix, take: take,
         sources: sources, assocs: assocs, preloads: preloads} ->
         preprocess    = preprocess(prefix, sources, adapter)
-        {count, rows} = adapter.execute(data, meta, prepared, params, preprocess, opts)
+        {count, rows} = adapter.execute(repo, meta, prepared, params, preprocess, opts)
         postprocess   = postprocess(select, fields, take)
         {_, take_0}   = Map.get(take, 0, {:any, %{}})
         {count,
@@ -152,15 +140,14 @@ defmodule Ecto.Repo.Queryable do
   defp stream(operation, repo, adapter, query, opts) do
     {meta, prepared, params} = Planner.query(query, operation, repo, adapter, 0)
 
-    data = Ecto.Registry.lookup(repo)
     case meta do
       %{fields: nil} ->
-        adapter.stream(data, meta, prepared, params, nil, opts)
+        adapter.stream(repo, meta, prepared, params, nil, opts)
         |> Stream.flat_map(fn({_, nil}) -> [] end)
       %{select: select, fields: fields, prefix: prefix, take: take,
         sources: sources, assocs: assocs, preloads: preloads} ->
         preprocess    = preprocess(prefix, sources, adapter)
-        stream        = adapter.stream(data, meta, prepared, params, preprocess, opts)
+        stream        = adapter.stream(repo, meta, prepared, params, preprocess, opts)
         postprocess   = postprocess(select, fields, take)
         {_, take_0}   = Map.get(take, 0, {:any, %{}})
 

@@ -45,11 +45,6 @@ defmodule Ecto.Adapter do
   """
   @callback child_spec(repo, options) :: Supervisor.Spec.spec
 
-  @doc """
-  Initializes the adapter
-  """
-  @callback init(repo, options) :: {:ok, state :: term} | {:error, reason :: term}
-
   ## Types
 
   @doc """

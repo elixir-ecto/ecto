@@ -127,12 +127,12 @@ defmodule Ecto.Repo do
         end
 
         def in_transaction? do
-          Ecto.Repo.Queryable.in_transaction?(@adapter, __MODULE__)
+          @adapter.in_transaction?(__MODULE__)
         end
 
         @spec rollback(term) :: no_return
         def rollback(value) do
-          Ecto.Repo.Queryable.rollback(@adapter, __MODULE__, value)
+          @adapter.rollback(__MODULE__, value)
         end
       end
 

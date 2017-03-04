@@ -26,18 +26,13 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def init(repo, config) do
-        Ecto.Adapters.SQL.init(repo, config)
-      end
-
-      @doc false
       def ensure_all_started(repo, type) do
         Ecto.Adapters.SQL.ensure_all_started(@adapter, repo, type)
       end
 
       @doc false
-      def child_spec(opts, data) do
-        Ecto.Adapters.SQL.child_spec(@conn, @adapter, opts, data)
+      def child_spec(repo, opts) do
+        Ecto.Adapters.SQL.child_spec(@conn, @adapter, repo, opts)
       end
 
       ## Types
@@ -187,12 +182,11 @@ defmodule Ecto.Adapters.SQL do
   @spec query!(Ecto.Repo.t, String.t, [term], Keyword.t) ::
                %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
   def query!(repo, sql, params \\ [], opts \\ []) do
-    data = Ecto.Registry.lookup(repo)
-    query!(data, sql, map_params(params), fn x -> x end, opts)
+    query!(repo, sql, map_params(params), fn x -> x end, opts)
   end
 
-  defp query!(data, sql, params, mapper, opts) do
-    case query(data, sql, params, mapper, opts) do
+  defp query!(repo, sql, params, mapper, opts) do
+    case query(repo, sql, params, mapper, opts) do
       {:ok, result} -> result
       {:error, err} -> raise err
     end
@@ -229,20 +223,20 @@ defmodule Ecto.Adapters.SQL do
   @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
               {:ok, %{rows: nil | [tuple], num_rows: non_neg_integer}} | {:error, Exception.t}
   def query(repo, sql, params \\ [], opts \\ []) do
-    data = Ecto.Registry.lookup(repo)
-    query(data, sql, map_params(params), fn x -> x end, opts)
+    query(repo, sql, map_params(params), fn x -> x end, opts)
   end
 
-  defp query(data, sql, params, mapper, opts) do
-    sql_call(data, :execute, [sql], params, mapper, opts)
+  defp query(repo, sql, params, mapper, opts) do
+    sql_call(repo, :execute, [sql], params, mapper, opts)
   end
 
-  defp sql_call({repo, pool, default_opts}, callback, args, params, mapper, opts) do
+  defp sql_call(repo, callback, args, params, mapper, opts) do
+    {repo_mod, pool, default_opts} = Ecto.Registry.lookup(repo)
     conn = get_conn(pool) || pool
-    opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
+    opts = [decode_mapper: mapper] ++ with_log(repo_mod, params, opts ++ default_opts)
     args = args ++ [params, opts]
     try do
-      apply(repo.__sql__, callback, [conn | args])
+      apply(repo_mod.__sql__, callback, [conn | args])
     rescue
       err in DBConnection.OwnershipError ->
         message = err.message <> "\nSee Ecto.Adapters.SQL.Sandbox docs for more information."
@@ -277,11 +271,7 @@ defmodule Ecto.Adapters.SQL do
   @timeout 15_000
 
   @doc false
-  def __before_compile__(conn, env) do
-    config = Module.get_attribute(env.module, :config)
-    pool_name = pool_name(env.module, config)
-    norm_config = normalize_config(config)
-
+  def __before_compile__(conn, _env) do
     quote do
       @doc false
       def __sql__, do: unquote(conn)
@@ -304,13 +294,6 @@ defmodule Ecto.Adapters.SQL do
         Ecto.Adapters.SQL.query!(__MODULE__, sql, params, opts)
       end
     end
-  end
-
-  @doc false
-  def init(repo, config) do
-    pool_name = pool_name(repo, config)
-    norm_config = normalize_config(config)
-    {:ok, {repo, pool_name, norm_config}}
   end
 
   @doc false
@@ -344,7 +327,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def child_spec(connection, adapter, opts, {repo, pool_name, pool_opts}) do
+  def child_spec(connection, adapter, repo, opts) do
     unless Code.ensure_loaded?(connection) do
       raise """
       could not find #{inspect connection}.
@@ -359,7 +342,10 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    opts = [name: pool_name] ++ Keyword.delete(opts, :pool) ++ pool_opts
+    pool_name = pool_name(repo, opts)
+    norm_config = normalize_config(opts)
+    Ecto.Registry.associate(self(), {repo, pool_name, norm_config})
+    opts = [name: pool_name] ++ Keyword.delete(opts, :pool) ++ norm_config
     connection.child_spec(opts)
   end
 
@@ -494,8 +480,7 @@ defmodule Ecto.Adapters.SQL do
   """
   @spec stream(Ecto.Repo.t, String.t, [term], Keyword.t) :: Enum.t
   def stream(repo, sql, params \\ [], opts \\ []) do
-    data = Ecto.Registry.lookup(repo)
-    Ecto.Adapters.SQL.Stream.__build__(data, sql, params, fn x -> x end, opts)
+    Ecto.Adapters.SQL.Stream.__build__(repo, sql, params, fn x -> x end, opts)
   end
 
   @doc false
@@ -537,25 +522,27 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def reduce({repo, pool, default_opts}, statement, params, mapper, opts, acc, fun) do
+  def reduce(repo, statement, params, mapper, opts, acc, fun) do
+    {repo_mod, pool, default_opts} = Ecto.Registry.lookup(repo)
     opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
     case get_conn(pool) do
       nil  ->
         raise "cannot reduce stream outside of transaction"
       conn ->
-        apply(repo.__sql__, :stream, [conn, statement, params, opts])
+        apply(repo_mod.__sql__, :stream, [conn, statement, params, opts])
         |> Enumerable.reduce(acc, fun)
     end
   end
 
   @doc false
-  def into({repo, pool, default_opts}, statement, params, mapper, opts) do
-    opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
+  def into(repo, statement, params, mapper, opts) do
+    {repo_mod, pool, default_opts} = Ecto.Registry.lookup(repo)
+    opts = [decode_mapper: mapper] ++ with_log(repo_mod, params, opts ++ default_opts)
     case get_conn(pool) do
       nil  ->
         raise "cannot collect into stream outside of transaction"
       conn ->
-        apply(repo.__sql__, :stream, [conn, statement, params, opts])
+        apply(repo_mod.__sql__, :stream, [conn, statement, params, opts])
         |> Collectable.into()
     end
   end
@@ -607,8 +594,9 @@ defmodule Ecto.Adapters.SQL do
   ## Transactions
 
   @doc false
-  def transaction({repo, pool, default_opts}, opts, fun) do
-    opts = with_log(repo, [], opts ++ default_opts)
+  def transaction(repo, opts, fun) do
+    {repo_mod, pool, default_opts} = Ecto.Registry.lookup(repo)
+    opts = with_log(repo_mod, [], opts ++ default_opts)
     case get_conn(pool) do
       nil  -> do_transaction(pool, opts, fun)
       conn -> DBConnection.transaction(conn, fn(_) -> fun.() end, opts)
@@ -628,12 +616,14 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def in_transaction?({repo, pool, _default_opts}) do
+  def in_transaction?(repo) do
+    {_repo_mod, pool, _default_opts} = Ecto.Registry.lookup(repo)
     !!get_conn(pool)
   end
 
   @doc false
-  def rollback({repo, pool, _default_opts}, value) do
+  def rollback(repo, value) do
+    {_repo_mod, pool, _default_opts} = Ecto.Registry.lookup(repo)
     case get_conn(pool) do
       nil  -> raise "cannot call rollback outside of transaction"
       conn -> DBConnection.rollback(conn, value)

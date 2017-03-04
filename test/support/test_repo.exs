@@ -5,15 +5,11 @@ defmodule Ecto.TestAdapter do
 
   defmacro __before_compile__(_opts), do: :ok
 
-  def init(repo, opts) do
-    {:ok, {repo, opts}}
-  end
-
   def ensure_all_started(_, _) do
     {:ok, []}
   end
 
-  def child_spec(opts, _data) do
+  def child_spec(_repo, opts) do
     :ecto   = opts[:otp_app]
     "user"  = opts[:username]
     "pass"  = opts[:password]
