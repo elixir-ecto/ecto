@@ -298,16 +298,17 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def ensure_all_started(adapter, repo, type) do
-    opts = normalize_config(repo.config())
+    opts = pool_config(repo, repo.config)
     with {:ok, from_pool} <- DBConnection.ensure_all_started(opts, type),
          {:ok, from_adapter} <- Application.ensure_all_started(adapter, type),
       # We always return the adapter to force it to be restarted if necessary
       do: {:ok, from_pool ++ List.delete(from_adapter, adapter) ++ [adapter]}
   end
 
-  defp normalize_config(config) do
-    config
-    |> Keyword.delete(:name)
+  defp pool_config(repo, opts) do
+    opts
+    |> Keyword.drop([:loggers, :priv, :url])
+    |> Keyword.put(:name, pool_name(repo, opts))
     |> Keyword.update(:pool, DBConnection.Poolboy, &normalize_pool/1)
     |> Keyword.put_new(:timeout, @timeout)
     |> Keyword.put_new(:pool_timeout, @pool_timeout)
@@ -318,12 +319,10 @@ defmodule Ecto.Adapters.SQL do
   defp normalize_pool(pool),
     do: pool
 
-  defp pool_name(module, config) do
-    Keyword.get(config, :pool_name, default_pool_name(module, config))
-  end
-
-  defp default_pool_name(repo, config) do
-    Module.concat(Keyword.get(config, :name, repo), Pool)
+  defp pool_name(repo, config) do
+    Keyword.get_lazy(config, :pool_name, fn ->
+      Module.concat(Keyword.get(config, :name, repo), Pool)
+    end)
   end
 
   @doc false
@@ -342,11 +341,10 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    pool_name = pool_name(repo, opts)
-    norm_config = normalize_config(opts)
-    Ecto.Registry.associate(self(), {repo, pool_name, norm_config})
-    opts = [name: pool_name] ++ Keyword.delete(opts, :pool) ++ norm_config
-    connection.child_spec(opts)
+    pool_config = pool_config(repo, opts)
+    pool_name = Keyword.fetch!(pool_config, :name)
+    Ecto.Registry.associate(self(), {repo, pool_name, pool_config})
+    connection.child_spec(pool_config)
   end
 
   ## Types
