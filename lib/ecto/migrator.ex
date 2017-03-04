@@ -40,8 +40,10 @@ defmodule Ecto.Migrator do
   """
   @spec migrated_versions(Ecto.Repo.t, Keyword.t) :: [integer]
   def migrated_versions(repo, opts \\ []) do
-    SchemaMigration.ensure_schema_migrations_table!(repo, opts[:prefix])
-    SchemaMigration.migrated_versions(repo, opts[:prefix])
+    verbose_schema_migration repo, "retrieve migrated versions", fn ->
+      SchemaMigration.ensure_schema_migrations_table!(repo, opts[:prefix])
+      SchemaMigration.migrated_versions(repo, opts[:prefix])
+    end
   end
 
   @doc """
@@ -70,7 +72,9 @@ defmodule Ecto.Migrator do
       attempt(repo, module, :forward, :up, :up, opts)
         || attempt(repo, module, :forward, :change, :up, opts)
         || raise Ecto.MigrationError, "#{inspect module} does not implement a `up/0` or `change/0` function"
-      SchemaMigration.up(repo, version, opts[:prefix])
+      verbose_schema_migration repo, "update schema migrations", fn ->
+        SchemaMigration.up(repo, version, opts[:prefix])
+      end
     end
   end
 
@@ -100,7 +104,9 @@ defmodule Ecto.Migrator do
       attempt(repo, module, :forward, :down, :down, opts)
         || attempt(repo, module, :backward, :change, :down, opts)
         || raise Ecto.MigrationError, "#{inspect module} does not implement a `down/0` or `change/0` function"
-      SchemaMigration.down(repo, version, opts[:prefix])
+      verbose_schema_migration repo, "update schema migrations", fn ->
+        SchemaMigration.down(repo, version, opts[:prefix])
+      end
     end
   end
 
@@ -264,6 +270,28 @@ defmodule Ecto.Migrator do
   end
 
   defp ensure_no_duplication([]), do: :ok
+
+  defp verbose_schema_migration(repo, reason, fun) do
+    try do
+      fun.()
+    rescue
+      error ->
+        Logger.error "Could not #{reason}. This error typically happens when the " <>
+                     "\"schema_migrations\" table, which Ecto uses for storing migration" <>
+                     "information, is already used by another library or for other purposes.\n\n" <>
+                     "You can fix this by running `mix ecto.drop` in the appropriate `MIX_ENV` " <>
+                     "to drop the existing database and let Ecto start a new one with a proper " <>
+                     "definition of \"schema_migrations\" or by configuring the repository to " <>
+                     "use another source:\n\n" <>
+                     """
+                         config #{inspect repo.config[:otp_app]}, #{inspect repo},
+                           migration_source: "some_other_table_for_schema_migrations"
+
+                     The full error is shown below.
+                     """
+        reraise error, System.stacktrace
+    end
+  end
 
   defp raise_no_migration_in_file(file) do
     raise Ecto.MigrationError,
