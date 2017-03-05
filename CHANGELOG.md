@@ -113,6 +113,20 @@ In the example above, we were able to build the query expressions bit by bit, us
 
 A dynamic expression can always be interpolated inside another dynamic expression or at the root of a `where`, `having`, `update` or a `join`'s `on`.
 
+## v2.1.4 (2017-03-05)
+
+### Bug fixes
+
+  * Accept utf-8 in query fragments
+  * Ensure `join` is properly qualified when query is interpolated
+  * Ensure proper parameter expansion in dynamic queries
+  * Ensure nil is returned for nil entries even if multiple fields are selected
+  * Also support `left_lateral_join` and `inner_lateral_join` in the keyword syntax
+  * Do not attempt to replace explicitly marked for delete association
+  * Improve error message when building SQL queries and the schema is missing
+  * Provide detailed error when we cannot interact with schema_migrations
+  * Avoid unused module attribute warnings
+
 ## v2.1.3 (2017-01-18)
 
 ### Bug fixes
