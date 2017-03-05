@@ -354,7 +354,12 @@ defmodule Ecto.Schema do
 
       meta?  = unquote(meta?)
       source = unquote(source)
-      prefix = Module.get_attribute(__MODULE__, :schema_prefix)
+      prefix = @schema_prefix
+
+      # Those module attributes are accessed only dynamically
+      # so we explicitly reference them here to avoid warnings.
+      _ = @foreign_key_type
+      _ = @timestamps_opts
 
       if meta? do
         unless is_binary(source) do
