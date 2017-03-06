@@ -177,7 +177,7 @@ defmodule Ecto.Migration.Runner do
   defp reverse({command, %Table{} = table, _columns}) when command in @creates,
     do: {:drop, table}
   defp reverse({:alter,  %Table{} = table, changes}) do
-    if reversed = table_reverse(changes) do
+    if reversed = table_reverse(changes, []) do
       {:alter, table, reversed}
     end
   end
@@ -189,15 +189,15 @@ defmodule Ecto.Migration.Runner do
     do: {:drop, constraint}
   defp reverse(_command), do: false
 
-  defp table_reverse([]),   do: []
-  defp table_reverse([h|t]) do
-    if reversed = table_reverse(h) do
-      [reversed|table_reverse(t)]
-    end
+  defp table_reverse([{:add, name, _type, _opts} | t], acc) do
+    table_reverse(t, [{:remove, name} | acc])
   end
-
-  defp table_reverse({:add, name, _type, _opts}), do: {:remove, name}
-  defp table_reverse(_), do: false
+  defp table_reverse([_ | _], _acc) do
+    false
+  end
+  defp table_reverse([], acc) do
+    acc
+  end
 
   ## Helpers
 
