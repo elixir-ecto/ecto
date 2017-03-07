@@ -7,7 +7,8 @@ defmodule Ecto.Adapters.SQL do
 
   Developers that use `Ecto.Adapters.SQL` should implement
   the callbacks required both by this module and the ones
-  from `Ecto.Adapters.SQL.Query` about building queries.
+  from `Ecto.Adapters.SQL.Connection` for handling connections
+  and performing queries.
   """
 
   @doc false
