@@ -28,6 +28,8 @@ defmodule Ecto.Repo do
   for more information. However, some configuration is shared across
   all adapters, they are:
 
+    * `:adapter` - a compile-time option that specifies the adapter itself
+
     * `:priv` - the directory where to keep repository data, like
       migrations, schema and more. Defaults to "priv/YOUR_REPO".
       It must always point to a subdirectory inside the priv directory.
@@ -45,6 +47,7 @@ defmodule Ecto.Repo do
       in `:debug` mode. You may pass any desired mod-fun-args
       triplet or `[{Ecto.LogEntry, :log, [:info]}]` if you want to
       keep the current behaviour but use another log level.
+      This option is processed at compile-time.
 
   ## URLs
 
