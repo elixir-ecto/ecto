@@ -512,6 +512,19 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     DBConnection.Ownership.ownership_allow(name, parent, allow, opts)
   end
 
+  @doc """
+  Runs a function outside of the sandbox.
+  """
+  def unboxed_run(repo, fun) do
+    checkin(repo)
+    checkout(repo, sandbox: false)
+    try do
+      fun.()
+    after
+      checkin(repo)
+    end
+  end
+
   defp proxy_pool(repo) do
     {name, opts} = repo.__pool__
     {pool, opts} = Keyword.pop(opts, :ownership_pool, DBConnection.Poolboy)

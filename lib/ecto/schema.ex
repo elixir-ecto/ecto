@@ -45,7 +45,7 @@ defmodule Ecto.Schema do
       set via Postgres' `search_path`). In MySQL the prefix points to databases.
 
     * `@foreign_key_type` - configures the default foreign key type
-      used by `belongs_to` associations. Defaults to `:integer`;
+      used by `belongs_to` associations. Defaults to `:id`;
 
     * `@timestamps_opts` - configures the default timestamps type
       used by `timestamps`. Defaults to `[type: :naive_datetime, usec: true]`;
@@ -354,7 +354,12 @@ defmodule Ecto.Schema do
 
       meta?  = unquote(meta?)
       source = unquote(source)
-      prefix = Module.get_attribute(__MODULE__, :schema_prefix)
+      prefix = @schema_prefix
+
+      # Those module attributes are accessed only dynamically
+      # so we explicitly reference them here to avoid warnings.
+      _ = @foreign_key_type
+      _ = @timestamps_opts
 
       if meta? do
         unless is_binary(source) do

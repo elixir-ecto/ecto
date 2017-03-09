@@ -7,7 +7,8 @@ defmodule Ecto.Adapters.SQL do
 
   Developers that use `Ecto.Adapters.SQL` should implement
   the callbacks required both by this module and the ones
-  from `Ecto.Adapters.SQL.Query` about building queries.
+  from `Ecto.Adapters.SQL.Connection` for handling connections
+  and performing queries.
   """
 
   @doc false
@@ -317,10 +318,13 @@ defmodule Ecto.Adapters.SQL do
     |> Keyword.put_new(:pool_timeout, @pool_timeout)
   end
 
-  defp normalize_pool(Ecto.Adapters.SQL.Sandbox),
-    do: DBConnection.Ownership
-  defp normalize_pool(pool),
-    do: pool
+  defp normalize_pool(pool) do
+    if Code.ensure_loaded?(pool) && function_exported?(pool, :unboxed_run, 2) do
+      DBConnection.Ownership
+    else
+      pool
+    end
+  end
 
   defp pool_name(module, config) do
     Keyword.get(config, :pool_name, default_pool_name(module, config))
@@ -346,15 +350,7 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    # Check if the pool options should overridden
-    {pool_name, pool_opts} =
-      case Keyword.fetch(opts, :pool) do
-        {:ok, pool} when pool != Ecto.Adapters.SQL.Sandbox ->
-          {pool_name(repo, opts), opts}
-        _ ->
-          repo.__pool__
-      end
-
+    {pool_name, pool_opts} = repo.__pool__
     opts = [name: pool_name] ++ Keyword.delete(opts, :pool) ++ pool_opts
     connection.child_spec(opts)
   end

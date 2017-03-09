@@ -572,7 +572,7 @@ Another option is to use Ecto changesets, which provides many conveniences for d
 
 ```elixir
 iex> post_changeset = Ecto.Changeset.change(post)
-iex> post_with_tags = Ecto.Changeset.put_assoc(post, :tags, [clickbait_tag, misc_tag])
+iex> post_with_tags = Ecto.Changeset.put_assoc(post_changeset, :tags, [clickbait_tag, misc_tag])
 iex> post = Repo.update!(post_with_tags)
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
  body: "No real content", header: "Clickbait header", id: 1,
@@ -630,7 +630,7 @@ The advantage of using Ecto.Changeset is that it is responsible for tracking the
 
 ```elixir
 iex> post_changeset = Ecto.Changeset.change(post)
-iex> post_with_tags = Ecto.Changeset.put_assoc(post, :tags, [misc_tag])
+iex> post_with_tags = Ecto.Changeset.put_assoc(post_changeset, :tags, [misc_tag])
 iex> post = Repo.update!(post_with_tags)
 ```
 
