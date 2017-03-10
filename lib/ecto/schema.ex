@@ -1157,7 +1157,6 @@ defmodule Ecto.Schema do
         end
       end
 
-
   Notice we have changed the table name to "abstract table: comments". You can
   choose whatever name you want, the point here is that this particular table
   will never exist.
@@ -1178,7 +1177,6 @@ defmodule Ecto.Schema do
           array_has_many :comments, {"tasks_comments", Comment}, foreign_key: :assoc_ids
         end
       end
-
 
   Now each association uses its own specific table, "posts_comments" and
   "tasks_comments", which must be created on migrations. The advantage of this
