@@ -79,7 +79,7 @@ defmodule Ecto.Repo.Supervisor do
   end
 
   def parse_url(url) when is_binary(url) do
-    info = url |> URI.decode() |> URI.parse()
+    info = URI.parse(url)
 
     if is_nil(info.host) do
       raise Ecto.InvalidURLError, url: url, message: "host is not present"
@@ -98,7 +98,7 @@ defmodule Ecto.Repo.Supervisor do
             hostname: info.host,
             port:     info.port]
 
-    Enum.reject(opts, fn {_k, v} -> is_nil(v) end)
+    for {k, v} <- opts, v, do: {k, if(is_binary(v), do: URI.decode(v), else: v)}
   end
 
   ## Callbacks
