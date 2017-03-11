@@ -28,11 +28,7 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def ensure_all_started(repo, type) do
-        {_, opts} = repo.__pool__
-        with {:ok, pool} <- DBConnection.ensure_all_started(opts, type),
-             {:ok, adapter} <- Application.ensure_all_started(@adapter, type),
-             # We always return the adapter to force it to be restarted if necessary
-             do: {:ok, pool ++ List.delete(adapter, @adapter) ++ [@adapter]}
+        Ecto.Adapters.SQL.ensure_all_started(@adapter, repo, type)
       end
 
       @doc false
@@ -236,12 +232,12 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp sql_call(repo, callback, args, params, mapper, opts) do
-    {pool, default_opts} = repo.__pool__
+    {repo_mod, pool, default_opts} = lookup_pool(repo)
     conn = get_conn(pool) || pool
-    opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
+    opts = [decode_mapper: mapper] ++ with_log(repo_mod, params, opts ++ default_opts)
     args = args ++ [params, opts]
     try do
-      apply(repo.__sql__, callback, [conn | args])
+      apply(repo_mod.__sql__, callback, [conn | args])
     rescue
       err in DBConnection.OwnershipError ->
         message = err.message <> "\nSee Ecto.Adapters.SQL.Sandbox docs for more information."
@@ -276,17 +272,10 @@ defmodule Ecto.Adapters.SQL do
   @timeout 15_000
 
   @doc false
-  def __before_compile__(conn, env) do
-    config = Module.get_attribute(env.module, :config)
-    pool_name = pool_name(env.module, config)
-    norm_config = normalize_config(config)
-
+  def __before_compile__(conn, _env) do
     quote do
       @doc false
       def __sql__, do: unquote(conn)
-
-      @doc false
-      def __pool__, do: {unquote(pool_name), unquote(Macro.escape(norm_config))}
 
       @doc """
       A convenience function for SQL-based repositories that executes the given query.
@@ -305,14 +294,22 @@ defmodule Ecto.Adapters.SQL do
       def query!(sql, params \\ [], opts \\ []) do
         Ecto.Adapters.SQL.query!(__MODULE__, sql, params, opts)
       end
-
-      defoverridable [__pool__: 0]
     end
   end
 
-  defp normalize_config(config) do
-    config
-    |> Keyword.delete(:name)
+  @doc false
+  def ensure_all_started(adapter, repo, type) do
+    opts = pool_config(repo, repo.config)
+    with {:ok, from_pool} <- DBConnection.ensure_all_started(opts, type),
+         {:ok, from_adapter} <- Application.ensure_all_started(adapter, type),
+      # We always return the adapter to force it to be restarted if necessary
+      do: {:ok, from_pool ++ List.delete(from_adapter, adapter) ++ [adapter]}
+  end
+
+  defp pool_config(repo, opts) do
+    opts
+    |> Keyword.drop([:loggers, :priv, :url])
+    |> Keyword.put(:name, pool_name(repo, opts))
     |> Keyword.update(:pool, DBConnection.Poolboy, &normalize_pool/1)
     |> Keyword.put_new(:timeout, @timeout)
     |> Keyword.put_new(:pool_timeout, @pool_timeout)
@@ -326,12 +323,10 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp pool_name(module, config) do
-    Keyword.get(config, :pool_name, default_pool_name(module, config))
-  end
-
-  defp default_pool_name(repo, config) do
-    Module.concat(Keyword.get(config, :name, repo), Pool)
+  defp pool_name(repo, config) do
+    Keyword.get_lazy(config, :pool_name, fn ->
+      Module.concat(Keyword.get(config, :name, repo), Pool)
+    end)
   end
 
   @doc false
@@ -350,9 +345,10 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    {pool_name, pool_opts} = repo.__pool__
-    opts = [name: pool_name] ++ Keyword.delete(opts, :pool) ++ pool_opts
-    connection.child_spec(opts)
+    pool_config = pool_config(repo, opts)
+    pool_name = Keyword.fetch!(pool_config, :name)
+    Ecto.Registry.associate(self(), {repo, pool_name, pool_config})
+    connection.child_spec(pool_config)
   end
 
   ## Types
@@ -529,26 +525,26 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def reduce(repo, statement, params, mapper, opts, acc, fun) do
-    {pool, default_opts} = repo.__pool__
+    {repo_mod, pool, default_opts} = lookup_pool(repo)
     opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
     case get_conn(pool) do
       nil  ->
         raise "cannot reduce stream outside of transaction"
       conn ->
-        apply(repo.__sql__, :stream, [conn, statement, params, opts])
+        apply(repo_mod.__sql__, :stream, [conn, statement, params, opts])
         |> Enumerable.reduce(acc, fun)
     end
   end
 
   @doc false
   def into(repo, statement, params, mapper, opts) do
-    {pool, default_opts} = repo.__pool__
-    opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
+    {repo_mod, pool, default_opts} = lookup_pool(repo)
+    opts = [decode_mapper: mapper] ++ with_log(repo_mod, params, opts ++ default_opts)
     case get_conn(pool) do
       nil  ->
         raise "cannot collect into stream outside of transaction"
       conn ->
-        apply(repo.__sql__, :stream, [conn, statement, params, opts])
+        apply(repo_mod.__sql__, :stream, [conn, statement, params, opts])
         |> Collectable.into()
     end
   end
@@ -601,8 +597,8 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def transaction(repo, opts, fun) do
-   {pool, default_opts} = repo.__pool__
-    opts = with_log(repo, [], opts ++ default_opts)
+    {repo_mod, pool, default_opts} = lookup_pool(repo)
+    opts = with_log(repo_mod, [], opts ++ default_opts)
     case get_conn(pool) do
       nil  -> do_transaction(pool, opts, fun)
       conn -> DBConnection.transaction(conn, fn(_) -> fun.() end, opts)
@@ -623,13 +619,13 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def in_transaction?(repo) do
-    {pool, _} = repo.__pool__
+    {_repo_mod, pool, _default_opts} = lookup_pool(repo)
     !!get_conn(pool)
   end
 
   @doc false
   def rollback(repo, value) do
-    {pool, _} = repo.__pool__
+    {_repo_mod, pool, _default_opts} = lookup_pool(repo)
     case get_conn(pool) do
       nil  -> raise "cannot call rollback outside of transaction"
       conn -> DBConnection.rollback(conn, value)
@@ -659,6 +655,10 @@ defmodule Ecto.Adapters.SQL do
   defp log_result(other), do: other
 
   ## Connection helpers
+
+  defp lookup_pool(repo) do
+    Ecto.Registry.lookup(repo)
+  end
 
   defp put_conn(pool, conn) do
     _ = Process.put(key(pool), conn)
