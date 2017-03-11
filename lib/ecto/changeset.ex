@@ -1021,7 +1021,7 @@ defmodule Ecto.Changeset do
   The given value may either be the embed struct, a
   changeset for the given embed or a map or keyword
   list of changes to be applied to the current embed.
-  On all cases, it is expected the keys to be atoms. 
+  On all cases, it is expected the keys to be atoms.
   If a map or keyword list are given and there is no
   embed, one will be created.
 
@@ -1841,7 +1841,7 @@ defmodule Ecto.Changeset do
   to explicitly tell the changeset which constraint name to use:
 
       cast(user, params, [:email])
-      |> unique_constraint(:email, name: :posts_special_email_index)
+      |> unique_constraint(:email, name: :users_special_email_index)
 
   Notice that the first param is just one of the unique index fields, this will
   be used as the error key to the changeset errors keyword list. For example,
@@ -1856,11 +1856,11 @@ defmodule Ecto.Changeset do
   the same name:
 
       # In the migration
-      create unique_index(:users, [:email, :company_id], name: :posts_email_company_id_index)
+      create unique_index(:users, [:email, :company_id], name: :users_email_company_id_index)
 
       # In the changeset function
       cast(user, params, [:email])
-      |> unique_constraint(:email, name: :posts_email_company_id_index)
+      |> unique_constraint(:email, name: :users_email_company_id_index)
 
   ## Case sensitivity
 
