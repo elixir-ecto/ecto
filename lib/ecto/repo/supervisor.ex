@@ -2,11 +2,13 @@ defmodule Ecto.Repo.Supervisor do
   @moduledoc false
   use Supervisor
 
+  @defaults [timeout: 15000, pool_timeout: 5000]
+
   @doc """
   Starts the repo supervisor.
   """
   def start_link(repo, otp_app, adapter, opts) do
-    name = opts[:name] || repo
+    name = Keyword.get(opts, :name, repo)
     Supervisor.start_link(__MODULE__, {repo, otp_app, adapter, opts}, [name: name])
   end
 
@@ -15,7 +17,8 @@ defmodule Ecto.Repo.Supervisor do
   """
   def runtime_config(type, repo, otp_app, custom) do
     if config = Application.get_env(otp_app, repo) do
-      config = [otp_app: otp_app, repo: repo] ++ Keyword.merge(config, custom)
+      config = [otp_app: otp_app, repo: repo] ++
+               (@defaults |> Keyword.merge(config) |> Keyword.merge(custom))
 
       case repo_init(type, repo, config) do
         {:ok, config} ->

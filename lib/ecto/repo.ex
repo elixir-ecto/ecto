@@ -250,7 +250,8 @@ defmodule Ecto.Repo do
   @doc """
   Returns the adapter configuration stored in the `:otp_app` environment.
 
-  Dynamic configuration is not reflected on this value.
+  If the `init/2` callback is implemented in the repository,
+  it will be invoked with the first argument set to `:dry_run`.
   """
   @callback config() :: Keyword.t
 

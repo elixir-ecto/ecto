@@ -268,9 +268,6 @@ defmodule Ecto.Adapters.SQL do
 
   ## Worker
 
-  @pool_timeout 5_000
-  @timeout 15_000
-
   @doc false
   def __before_compile__(conn, _env) do
     quote do
@@ -311,8 +308,6 @@ defmodule Ecto.Adapters.SQL do
     |> Keyword.drop([:loggers, :priv, :url])
     |> Keyword.put(:name, pool_name(repo, opts))
     |> Keyword.update(:pool, DBConnection.Poolboy, &normalize_pool/1)
-    |> Keyword.put_new(:timeout, @timeout)
-    |> Keyword.put_new(:pool_timeout, @pool_timeout)
   end
 
   defp normalize_pool(pool) do
