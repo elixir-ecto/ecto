@@ -111,8 +111,8 @@ defmodule Ecto.Repo.Supervisor do
           :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
         end
         supervise(children, strategy: :one_for_one)
-      other ->
-        other
+      :ignore ->
+        :ignore
     end
   end
 end

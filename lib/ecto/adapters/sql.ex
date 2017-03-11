@@ -231,7 +231,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp sql_call(repo, callback, args, params, mapper, opts) do
-    {repo_mod, pool, default_opts} = Ecto.Registry.lookup(repo)
+    {repo_mod, pool, default_opts} = lookup_pool(repo)
     conn = get_conn(pool) || pool
     opts = [decode_mapper: mapper] ++ with_log(repo_mod, params, opts ++ default_opts)
     args = args ++ [params, opts]
@@ -521,7 +521,7 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def reduce(repo, statement, params, mapper, opts, acc, fun) do
-    {repo_mod, pool, default_opts} = Ecto.Registry.lookup(repo)
+    {repo_mod, pool, default_opts} = lookup_pool(repo)
     opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
     case get_conn(pool) do
       nil  ->
@@ -534,7 +534,7 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def into(repo, statement, params, mapper, opts) do
-    {repo_mod, pool, default_opts} = Ecto.Registry.lookup(repo)
+    {repo_mod, pool, default_opts} = lookup_pool(repo)
     opts = [decode_mapper: mapper] ++ with_log(repo_mod, params, opts ++ default_opts)
     case get_conn(pool) do
       nil  ->
@@ -593,7 +593,7 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def transaction(repo, opts, fun) do
-    {repo_mod, pool, default_opts} = Ecto.Registry.lookup(repo)
+    {repo_mod, pool, default_opts} = lookup_pool(repo)
     opts = with_log(repo_mod, [], opts ++ default_opts)
     case get_conn(pool) do
       nil  -> do_transaction(pool, opts, fun)
@@ -615,13 +615,13 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def in_transaction?(repo) do
-    {_repo_mod, pool, _default_opts} = Ecto.Registry.lookup(repo)
+    {_repo_mod, pool, _default_opts} = lookup_pool(repo)
     !!get_conn(pool)
   end
 
   @doc false
   def rollback(repo, value) do
-    {_repo_mod, pool, _default_opts} = Ecto.Registry.lookup(repo)
+    {_repo_mod, pool, _default_opts} = lookup_pool(repo)
     case get_conn(pool) do
       nil  -> raise "cannot call rollback outside of transaction"
       conn -> DBConnection.rollback(conn, value)
@@ -651,6 +651,10 @@ defmodule Ecto.Adapters.SQL do
   defp log_result(other), do: other
 
   ## Connection helpers
+
+  defp lookup_pool(repo) do
+    Ecto.Registry.lookup(repo)
+  end
 
   defp put_conn(pool, conn) do
     _ = Process.put(key(pool), conn)

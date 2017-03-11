@@ -9,8 +9,7 @@ defmodule Ecto.Registry do
     GenServer.start_link(__MODULE__, :ok, [name: __MODULE__])
   end
 
-  def associate(repo_name, value) do
-    pid = GenServer.whereis(repo_name)
+  def associate(pid, value) when is_pid(pid) do
     GenServer.call(__MODULE__, {:associate, pid, value})
   end
 
@@ -22,7 +21,7 @@ defmodule Ecto.Registry do
   ## Callbacks
 
   def init(:ok) do
-    table = :ets.new(__MODULE__, [:named_table])
+    table = :ets.new(__MODULE__, [:named_table, read_concurrency: true])
     {:ok, table}
   end
 
