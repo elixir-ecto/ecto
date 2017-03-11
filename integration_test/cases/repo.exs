@@ -222,19 +222,6 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert!(%User{inserted_at: datetime})
     assert [%{inserted_at: ^datetime}] = TestRepo.all(User)
   end
-  
-  @tag :returning
-  @tag :with_conflict_target
-  test "insert with returning with schema" do
-    {:ok, c1} = TestRepo.insert(%Post{})
-    {:ok, c2} = TestRepo.insert(%Post{id: c1.id}, on_conflict: [set: [id: c1.id]], conflict_target: [:id], returning: [:id, :uuid])
-    {:ok, c3} = TestRepo.insert(%Post{id: c1.id}, on_conflict: [set: [id: c1.id]], conflict_target: [:id], returning: true)
-    {:ok, c4} = TestRepo.insert(%Post{id: c1.id}, on_conflict: [set: [id: c1.id]], conflict_target: [:id], returning: false)
-    
-    assert c2.uuid == c1.uuid
-    assert c3.uuid == c1.uuid
-    assert c4.uuid != c1.uuid
-  end
 
   test "optimistic locking in update/delete operations" do
     import Ecto.Changeset, only: [cast: 3, optimistic_lock: 2]
@@ -1161,6 +1148,19 @@ defmodule Ecto.Integration.RepoTest do
       assert updated.id == inserted.id
       assert updated.title != "second"
       assert TestRepo.get!(Post, inserted.id).title == "second"
+    end
+
+    @tag :returning
+    @tag :with_conflict_target
+    test "on conflict keyword list and conflict target and returning" do
+      {:ok, c1} = TestRepo.insert(%Post{})
+      {:ok, c2} = TestRepo.insert(%Post{id: c1.id}, on_conflict: [set: [id: c1.id]], conflict_target: [:id], returning: [:id, :uuid])
+      {:ok, c3} = TestRepo.insert(%Post{id: c1.id}, on_conflict: [set: [id: c1.id]], conflict_target: [:id], returning: true)
+      {:ok, c4} = TestRepo.insert(%Post{id: c1.id}, on_conflict: [set: [id: c1.id]], conflict_target: [:id], returning: false)
+
+      assert c2.uuid == c1.uuid
+      assert c3.uuid == c1.uuid
+      assert c4.uuid != c1.uuid
     end
 
     @tag :without_conflict_target
