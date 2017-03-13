@@ -14,6 +14,18 @@ defmodule Ecto.Changeset do
   constraints, association handling, are about manipulating
   changesets. Let's discuss some of this extra functionality.
 
+  ## External vs internal data
+
+  Changesets allow working with both kinds of data:
+
+    * internal to the application - for example programatically generated,
+      or coming from other subsystems. This use case is primarily covered
+      by the `change/2` and `put_change/3` functions.
+
+    * external to the application - for example data provided by the user in
+      a form that needs to be type-converted and properly validated. This use case
+      is primarily covered by the `cast/4` function.
+
   ## Validations and constraints
 
   Ecto changesets provide both validations and constraints which
@@ -88,10 +100,18 @@ defmodule Ecto.Changeset do
   values are stored in the changeset `empty_values` field and default to
   `[""]`.
 
-  ## Assocs, embeds and on replace
+  ## Associations, embeds and on replace
 
   Using changesets you can work with associations as well as with embedded
-  structs. Sometimes related data may be replaced by incoming data and by
+  structs. Changesets provide a convenient way to working with associations
+  as whole values - for example considering the entire list of has_many
+  associations and not focusing just on a single one. Two main functions
+  that provide this functionality are `cast_assoc/3` for working with external
+  data, and `put_assoc/3` for working with internal data - the difference
+  between those two functions is analogical to the difference between
+  `cast/4` and `change/2`.
+
+  Sometimes related data may be replaced by incoming data and by
   default Ecto won't allow such. Such behaviour can be changed when defining
   the relation by setting `:on_replace` option in your association/embed
   definition according to the values below:
@@ -264,8 +284,9 @@ defmodule Ecto.Changeset do
     * directly changing a struct without performing castings nor validations
     * directly bulk-adding changes to a changeset
 
-  Since neither validation nor casting is performed, `change/2` expects the keys in
-  `changes` to be atoms. `changes` can be a map as well as a keyword list.
+  The function is meant for working with data internal to the application.
+  Because of that neither validation nor casting is performed. This means
+  `change/2` expects the keys in the `changes` map or keyword to be atoms.
 
   When a changeset is passed as the first argument, the changes passed as the
   second argument are merged over the changes already in the changeset if they
@@ -522,6 +543,10 @@ defmodule Ecto.Changeset do
   @doc """
   Casts the given association with the changeset parameters.
 
+  This function should be used when working with the entire association at
+  once (and not a single element of a many-style association) and using data
+  external to the application.
+
   When updating the data, this function requires the association to have been
   preloaded in the changeset struct. Missing data will
   invoke the `:on_replace` behaviour defined on the association.
@@ -565,9 +590,17 @@ defmodule Ecto.Changeset do
       be invoked (see the "On replace" section on the module documentation)
 
   In other words, `cast_assoc/3` is useful when the associated data is
-  managed alongside the parent struct, all at once. If each side of the
-  association is managed separately, it is preferable to use `put_assoc/3`
-  and directly instruct Ecto how the association should look like.
+  managed alongside the parent struct, all at once.
+
+  To work with a single element of an association, other functions are
+  more appropriate. For example to insert a single associated struct for a
+  has_many association it's much easier to construct the associated struct with
+  `Ecto.build_assoc/3`, use the associated schema's changeset and finally
+  persist it with `c:Ecto.Repo.insert/2`.
+
+  Furthermore, if each side of the association is managed separately,
+  it is preferable to use `put_assoc/3` and directly instruct Ecto how
+  the association should look like.
 
   For example, imagine you are receiving a set of tags you want to
   associate to an user. Those tags are meant to exist upfront. Using
@@ -946,6 +979,8 @@ defmodule Ecto.Changeset do
   the new value, also, if the change has the same value as
   in the changeset data, it is not added to the list of changes.
 
+  The function is meant for working with data internal to the application.
+
   ## Examples
 
       iex> changeset = change(%Post{author: "bar"}, %{title: "foo"})
@@ -990,6 +1025,10 @@ defmodule Ecto.Changeset do
 
   @doc """
   Puts the given association as a change in the changeset.
+
+  This function should be used when working with the entire association at
+  once (and not a single element of a many-style association) and using data
+  internal to the application.
 
   When updating the data, this function requires the association to have been
   preloaded in the changeset struct. Missing data will
