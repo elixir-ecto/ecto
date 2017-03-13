@@ -1094,9 +1094,7 @@ defmodule Ecto.Schema do
       defmodule Item do
         use Ecto.Schema
 
-        # A required field for all embedded documents
-        @primary_key {:id, :binary_id, autogenerate: true}
-        schema "" do
+        embedded_schema do
           field :name
         end
       end
