@@ -649,6 +649,55 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  test "validate_required_without/3" do
+    # When valid
+    changeset =
+      changeset(%{"title" => "hello", "body" => "something"})
+      |> validate_required_without(:title, :decimal)
+    assert changeset.valid?
+    assert changeset.errors == []
+
+    # When "without field" is passed
+    changeset =
+      changeset(%{"title" => "hello", "body" => "something"})
+      |> validate_required_without(:decimal, [:body])
+    assert changeset.valid?
+    assert changeset.errors == []
+
+    # When missing
+    changeset = changeset(%{}) |> validate_required_without(:title, [:decimal, :body])
+    refute changeset.valid?
+    assert changeset.errors == [title: {"can't be blank without decimal, body", [validation: :required_without]}]
+
+    # When nil
+    changeset =
+      changeset(%{title: nil, body: "\n"})
+      |> validate_required_without(:title, :body, message: "is blank")
+      |> validate_required_without(:body, :title, message: "is blank")
+    refute changeset.valid?
+    assert changeset.errors == [body: {"is blank", [validation: :required_without]}, title: {"is blank", [validation: :required_without]}]
+
+    # When unknown field
+    assert_raise ArgumentError, ~r/unknown field :bad for changeset on/, fn  ->
+      changeset(%{"title" => "hello", "body" => "something"})
+      |> validate_required_without(:bad, :body)
+    end
+    assert_raise ArgumentError, ~r/unknown field :invalid for changeset on/, fn  ->
+      changeset(%{"invalid" => "something"})
+      |> validate_required_without(:decimal, :invalid)
+    end
+
+    # When field is not an atom
+    assert_raise ArgumentError, ~r/expects field names to be atoms, got: `"title"`/, fn ->
+      changeset(%{"title" => "hello"})
+      |> validate_required_without("title", :body)
+    end
+    assert_raise ArgumentError, ~r/expects field names to be atoms, got: `"body"`/, fn ->
+      changeset(%{"body" => "hello"})
+      |> validate_required_without(:title, "body")
+    end
+  end
+
   test "validate_format/3" do
     changeset =
       changeset(%{"title" => "foo@bar"})
