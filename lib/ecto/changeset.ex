@@ -1383,8 +1383,8 @@ defmodule Ecto.Changeset do
 
   ## Examples
 
-      validate_required(changeset, :title, :body])
-      validate_required(changeset, :title, [:description, :body])
+      validate_required_without(changeset, :title, :body])
+      validate_required_without(changeset, :title, [:description, :body])
 
   """
   @spec validate_required_without(t, atom, list | atom, Keyword.t) :: t
