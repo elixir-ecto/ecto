@@ -221,6 +221,11 @@ defmodule Ecto.Migration do
                            check: String.t | nil, exclude: String.t | nil, comment: String.t | nil}
   end
 
+  defmodule Command do
+    defstruct up: nil, down: nil
+    @type t :: %__MODULE__{up: String.t, down: String.t}
+  end
+
   alias Ecto.Migration.Runner
 
   @doc false
@@ -558,6 +563,13 @@ defmodule Ecto.Migration do
   """
   def execute(command) when is_binary(command) or is_list(command) do
     Runner.execute command
+  end
+
+  def execute(command_up, command_down)
+    when
+    (is_binary(command_up) or is_list(command_up)) and
+    (is_binary(command_down) or is_list(command_down)) do
+      Runner.execute %Command{up: command_up, down: command_down}
   end
 
   @doc """
