@@ -519,7 +519,7 @@ defmodule Ecto.Schema do
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
-      `:raise` (default), `:mark_as_invalid`, `:nilify`, `:update`, or `:delete`.
+      `:raise` (default), `:mark_as_invalid`, `:nilify`, or `:delete`.
       See `Ecto.Changeset`'s section on related data for more info.
 
     * `:defaults` - Default values to use when building the association
@@ -660,8 +660,8 @@ defmodule Ecto.Schema do
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
-      `:raise` (default), `:mark_as_invalid`, `:nilify`, or `:delete`.
-      See `Ecto.Changeset`'s section on related data for more info.
+      `:raise` (default), `:mark_as_invalid`, `:nilify`, `:update`, or
+      `:delete`. See `Ecto.Changeset`'s section on related data for more info.
 
     * `:defaults` - Default values to use when building the association
 
