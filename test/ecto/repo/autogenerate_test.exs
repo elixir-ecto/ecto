@@ -24,7 +24,7 @@ defmodule Ecto.Repo.AutogenerateTest do
 
   ## Autogenerate
 
-  @uuid "30313233-3435-3637-3839-616263646566"
+  @uuid "30313233-3435-4637-9839-616263646566"
 
   test "autogenerates values" do
     schema = TestRepo.insert!(%Company{})
