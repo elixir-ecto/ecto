@@ -70,13 +70,13 @@ Database   | Ecto Adapter           | Dependency                   | Ecto 2.0 co
 PostgreSQL | Ecto.Adapters.Postgres | [postgrex][postgrex]         | Yes
 MySQL      | Ecto.Adapters.MySQL    | [mariaex][mariaex]           | Yes
 MSSQL      | Tds.Ecto               | [tds_ecto][tds_ecto]         | No
-SQLite3    | Sqlite.Ecto            | [sqlite_ecto][sqlite_ecto]   | No
+SQLite3    | Sqlite.Ecto            | [sqlite_ecto2][sqlite_ecto2] | Yes
 MongoDB    | Mongo.Ecto             | [mongodb_ecto][mongodb_ecto] | No
 
 [postgrex]: http://github.com/ericmj/postgrex
 [mariaex]: http://github.com/xerions/mariaex
 [tds_ecto]: https://github.com/livehelpnow/tds_ecto
-[sqlite_ecto]: https://github.com/jazzyb/sqlite_ecto
+[sqlite_ecto2]: https://github.com/scouten/sqlite_ecto2
 [mongodb_ecto]: https://github.com/michalmuskala/mongodb_ecto
 
 For example, if you want to use PostgreSQL, add to your `mix.exs` file:
