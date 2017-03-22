@@ -109,13 +109,13 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "prepare: casts and dumps binary ids" do
-    uuid = "00010203-0405-0607-0809-0a0b0c0d0e0f"
+    uuid = "00010203-0405-4607-8809-0a0b0c0d0e0f"
     {_query, params, _key} = prepare(Comment |> where([c], c.uuid == ^uuid))
-    assert params == [<<0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15>>]
+    assert params == [<<0, 1, 2, 3, 4, 5, 70, 7, 136, 9, 10, 11, 12, 13, 14, 15>>]
 
     assert_raise Ecto.Query.CastError,
-                 ~r/`"00010203-0405-0607-0809"` cannot be dumped to type :binary_id/, fn ->
-      uuid = "00010203-0405-0607-0809"
+                 ~r/`"00010203-0405-4607-8809"` cannot be dumped to type :binary_id/, fn ->
+      uuid = "00010203-0405-4607-8809"
       prepare(Comment |> where([c], c.uuid == ^uuid))
     end
   end

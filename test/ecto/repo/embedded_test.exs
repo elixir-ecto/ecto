@@ -31,7 +31,7 @@ defmodule Ecto.Repo.EmbeddedTest do
     end
   end
 
-  @uuid "30313233-3435-3637-3839-616263646566"
+  @uuid "30313233-3435-4637-9839-616263646566"
 
   ## insert
 
