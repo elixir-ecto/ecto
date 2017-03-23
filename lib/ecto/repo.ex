@@ -548,8 +548,9 @@ defmodule Ecto.Repo do
 
     * `:raise` - raises if there is a conflicting primary key or unique index
     * `:nothing` - ignores the error in case of conflicts
-    * `:replace_all` - replace all entries in the database by the one being
-      currently attempted
+    * `:replace_all` - replace all values on the existing row with the values
+      in the excluded row (the corresponding record given in the function
+      parameters)
     * a keyword list of update instructions - such as the one given to
       `c:update_all/3`, for example: `[set: [title: "new title"]]`
     * an `Ecto.Query` that will act as an `UPDATE` statement, such as the
@@ -702,8 +703,8 @@ defmodule Ecto.Repo do
 
     * `:raise` - raises if there is a conflicting primary key or unique index
     * `:nothing` - ignores the error in case of conflicts
-    * `:replace_all` - replace all entries in the database by the one being
-      currently attempted
+    * `:replace_all` - replace all values on the existing row with the values
+      in the excluded row (the record given in the function parameters)
     * a keyword list of update instructions - such as the one given to
       `c:update_all/3`, for example: `[set: [title: "new title"]]`
     * an `Ecto.Query` that will act as an `UPDATE` statement, such as the
