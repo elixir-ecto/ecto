@@ -408,7 +408,7 @@ Friends.Repo.insert! Friends.Person.changeset(%Friends.Person{}, %{first_name: "
     lib/ecto/repo/schema.ex:111: Ecto.Repo.Schema.insert!/4
 ```
 
-This exception shows us the changes from the changeset, and how the changeset is invalid. This can be useful if you want to insert a bunch of data and then have an exception raised if that data does not insert correctly at all.
+This exception shows us the changes from the changeset, and how the changeset is invalid. This can be useful if you want to insert a bunch of data and then have an exception raised if that data is not inserted correctly at all.
 
 Now that we've covered inserting data into the database, let's look at how we can pull that data back out.
 
