@@ -222,6 +222,14 @@ defmodule Ecto.Migration do
   end
 
   defmodule Command do
+    @moduledoc """
+    Used internally by adapters.
+
+    This represents the up and down legs of a reversible raw command
+    that is usually define with `Ecto.Migration.execute/1`.
+
+    To define a reversible command in a migration, see `Ecto.Migration.execute/2`
+    """
     defstruct up: nil, down: nil
     @type t :: %__MODULE__{up: String.t, down: String.t}
   end
@@ -554,11 +562,18 @@ defmodule Ecto.Migration do
   @doc """
   Executes arbitrary SQL or a keyword command in NoSQL databases.
 
+  Reversible commands can be defined by calling `execute/2`.
+  This is useful for database-specific functionality that does not warrant special support in Ecto,
+  for example, creating and dropping a PostgreSQL extension, and avoids having to define
+  up/down blocks.
+
   ## Examples
 
       execute "UPDATE posts SET published_at = NULL"
 
       execute create: "posts", capped: true, size: 1024
+
+      execute "CREATE EXTENSION postgres_fdw", "DROP EXTENSION postgres_fdw"
 
   """
   def execute(command) when is_binary(command) or is_list(command) do
