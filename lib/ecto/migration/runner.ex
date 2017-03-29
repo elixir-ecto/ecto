@@ -157,12 +157,12 @@ defmodule Ecto.Migration.Runner do
     log_and_execute_ddl(repo, log, up)
   end
 
-  defp execute_in_direction(repo, :backward, log, %Command{down: down}) do
-    log_and_execute_ddl(repo, log, down)
-  end
-
   defp execute_in_direction(repo, :forward, log, command) do
     log_and_execute_ddl(repo, log, command)
+  end
+
+  defp execute_in_direction(repo, :backward, log, %Command{down: down}) do
+    log_and_execute_ddl(repo, log, down)
   end
 
   defp execute_in_direction(repo, :backward, log, {command, %Index{} = index}) when command in @creates do
