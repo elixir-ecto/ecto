@@ -7,7 +7,7 @@ defmodule Ecto.MigrationTest do
   use Ecto.Migration
 
   alias Ecto.TestRepo
-  alias Ecto.Migration.{Table, Index, Reference, Constraint, Command}
+  alias Ecto.Migration.{Table, Index, Reference, Constraint}
   alias Ecto.Migration.Runner
 
   setup meta do
@@ -75,8 +75,7 @@ defmodule Ecto.MigrationTest do
   end
 
   test "runs a reversible command" do
-    assert execute("SELECT 1", "SELECT 2") ==
-           %Command{command_up: "SELECT 1", command_down: "SELECT 2"}
+    assert execute("SELECT 1", "SELECT 2") == :ok
   end
 
   test "chokes on alias types" do
@@ -397,7 +396,7 @@ defmodule Ecto.MigrationTest do
   test "forward: executes a command" do
     execute "SELECT 1", "SELECT 2"
     flush()
-    # TODO
+    assert "SELECT 1" = last_command()
   end
 
   ## Reverse
@@ -482,7 +481,7 @@ defmodule Ecto.MigrationTest do
   test "backward: reverses a command" do
     execute "SELECT 1", "SELECT 2"
     flush()
-    # TODO
+    assert "SELECT 2" = last_command()
   end
 
   defp last_command(), do: Process.get(:last_command)

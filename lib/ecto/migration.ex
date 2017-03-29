@@ -580,10 +580,10 @@ defmodule Ecto.Migration do
     Runner.execute command
   end
 
-  def execute(command_up, command_down)
-    when (is_binary(command_up) or is_list(command_up)) and
-         (is_binary(command_down) or is_list(command_down)) do
-      Runner.execute %Command{up: command_up, down: command_down}
+  def execute(up, down)
+    when (is_binary(up) or is_list(up)) and
+         (is_binary(down) or is_list(down)) do
+      Runner.execute %Command{up: up, down: down}
   end
 
   @doc """
