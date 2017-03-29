@@ -7,7 +7,7 @@ defmodule Ecto.MigrationTest do
   use Ecto.Migration
 
   alias Ecto.TestRepo
-  alias Ecto.Migration.{Table, Index, Reference, Constraint}
+  alias Ecto.Migration.{Table, Index, Reference, Constraint, Command}
   alias Ecto.Migration.Runner
 
   setup meta do
@@ -72,6 +72,11 @@ defmodule Ecto.MigrationTest do
            %Constraint{table: "posts", name: :exclude_price, exclude: "price"}
     assert constraint("posts", :exclude_price, exclude: "price") ==
            %Constraint{table: "posts", name: :exclude_price, exclude: "price"}
+  end
+
+  test "runs a reversible command" do
+    assert execute("SELECT 1", "SELECT 2") ==
+           %Command{command_up: "SELECT 1", command_down: "SELECT 2"}
   end
 
   test "chokes on alias types" do
@@ -389,6 +394,12 @@ defmodule Ecto.MigrationTest do
     assert index.prefix == "foo"
   end
 
+  test "forward: executes a command" do
+    execute "SELECT 1", "SELECT 2"
+    flush()
+    # TODO
+  end
+
   ## Reverse
   @moduletag direction: :backward
 
@@ -466,6 +477,12 @@ defmodule Ecto.MigrationTest do
     rename table(:posts), to: table(:new_posts)
     flush()
     assert {:rename, %Table{name: "new_posts"}, %Table{name: "posts"}} = last_command()
+  end
+
+  test "backward: reverses a command" do
+    execute "SELECT 1", "SELECT 2"
+    flush()
+    # TODO
   end
 
   defp last_command(), do: Process.get(:last_command)
