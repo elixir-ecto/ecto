@@ -232,6 +232,7 @@ defmodule Ecto.Changeset do
   alias Ecto.Changeset.Relation
 
   @empty_values [""]
+  @unknown_fields :ignore
 
   # If a new field is added here, def merge must be adapted
   defstruct valid?: false, data: nil, params: nil, changes: %{}, repo: nil,
@@ -374,6 +375,9 @@ defmodule Ecto.Changeset do
 
     * `:empty_values` - a list of values to be considered as empty when casting.
       Defaults to the changeset value, which defaults to `[""]`
+    * `:unknown_fields` - either `:ignore` or `:error`. on encountering a field
+      not in `permitted` it will either be ignored or will result in a changeset
+      error. Defaults to `:ignore`
 
   ## Examples
 
@@ -443,6 +447,7 @@ defmodule Ecto.Changeset do
 
   defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, permitted, opts) when is_list(permitted) do
     {empty_values, _opts} = Keyword.pop(opts, :empty_values, @empty_values)
+    {unknown_fields, _opts} = Keyword.pop(opts, :unknown_fields, @unknown_fields)
     params = convert_params(params)
 
     defaults = case data do
@@ -454,9 +459,21 @@ defmodule Ecto.Changeset do
       Enum.reduce(permitted, {changes, [], true},
                   &process_param(&1, params, types, data, empty_values, defaults, &2))
 
-    %Changeset{params: params, data: data, valid?: valid?,
-               errors: Enum.reverse(errors), changes: changes,
-               types: types, empty_values: empty_values}
+    changeset =
+      %Changeset{params: params, data: data, valid?: valid?,
+                 errors: Enum.reverse(errors), changes: changes,
+                 types: types, empty_values: empty_values}
+
+    if unknown_fields == :error do
+      case Map.drop(params, permitted) do
+        map when map == %{} -> changeset
+        leftover ->
+          changeset = Map.update!(changeset, :errors, &(&1 ++ unknown_fields_errors(leftover)))
+          %{ changeset | valid?: false }
+      end
+    else
+      changeset
+    end
   end
 
   defp cast(%{}, %{}, %{}, params, permitted, _opts) when is_list(permitted) do
@@ -536,6 +553,13 @@ defmodule Ecto.Changeset do
         Map.put(acc || %{}, Atom.to_string(key), value)
 
     end) || params
+  end
+
+  defp unknown_fields_errors(params) do
+    Enum.map(params, fn({k, _}) ->
+      {key, _} = cast_key(k)
+      {key, {"is not a permitted field", [validation: :cast]}}
+    end)
   end
 
   ## Casting related

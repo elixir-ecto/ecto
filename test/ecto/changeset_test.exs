@@ -185,6 +185,28 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  test "cast/4: ignores unknown fields" do
+    params = %{"unknown" => true, "verboten" => true}
+    struct = %Post{}
+
+    changeset = cast(struct, params, ~w(body), [unknown_fields: :ignore])
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+    assert changeset.valid?
+  end
+
+  test "cast/4: errors on unknown fields" do
+    params = %{"unknown" => true, "verboten" => true}
+    struct = %Post{}
+
+    changeset = cast(struct, params, ~w(body), [unknown_fields: :error])
+    assert changeset.changes == %{}
+    assert changeset.errors ==
+      [unknown: {"is not a permitted field", [validation: :cast]},
+       verboten: {"is not a permitted field", [validation: :cast]}]
+    refute changeset.valid?
+  end
+
   test "cast/4: protects against atom injection" do
     assert_raise ArgumentError, fn ->
       cast(%Post{}, %{}, ~w(surely_never_saw_this_atom_before))
