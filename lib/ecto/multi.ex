@@ -27,7 +27,7 @@ defmodule Ecto.Multi do
   ## Run
 
   Multi allows you to run arbitrary functions as part of your transaction
-  via the `run/3` and `run/5`. This is very useful when an operation depends
+  via `run/3` and `run/5`. This is very useful when an operation depends
   on the value of a previous operation. For this reason, the function given
   as callback to `run/3` and `run/5` will receive all changes performed by
   the multi so far as a map in the first argument.
