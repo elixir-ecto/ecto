@@ -876,6 +876,12 @@ defmodule Ecto.ChangesetTest do
                 |> validate_confirmation(:password)
     refute changeset.valid?
     assert changeset.errors == [password_confirmation: {"does not match confirmation", [validation: :confirmation]}]
+
+    # invalid params
+    changeset = changeset(:invalid)
+                |> validate_confirmation(:password)
+    refute changeset.valid?
+    assert changeset.errors == []
   end
 
   test "validate_acceptance/3" do
