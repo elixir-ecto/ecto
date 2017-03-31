@@ -95,6 +95,12 @@ defmodule Ecto.Adapters.MySQL do
   datetimes and timestamps with MySQL, be aware of such
   differences and consult the documentation for your MySQL
   version.
+
+  Assuming your version of MySQL supports microsecond precision,
+  you will need to explicitly set it on the relevant columns
+  in your migration. For explicitly declared columns you can
+  add the `size: 6` option. If you're using the `timestamps()`
+  helper you can use `timestamps(size: 6)`.
   """
 
   # Inherit all behaviour from Ecto.Adapters.SQL
