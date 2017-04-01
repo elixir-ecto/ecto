@@ -69,7 +69,7 @@ Database   | Ecto Adapter           | Dependency                   | Ecto 2.0 co
 :----------| :--------------------- | :----------------------------| :-------------------
 PostgreSQL | Ecto.Adapters.Postgres | [postgrex][postgrex]         | Yes
 MySQL      | Ecto.Adapters.MySQL    | [mariaex][mariaex]           | Yes
-Mnesia     | Ecto.Adapters.Mnesia   | [ecto_mnesia][ecto_mnesia]   | Yes
+Mnesia     | EctoMnesia.Adapter     | [ecto_mnesia][ecto_mnesia]   | Yes
 MSSQL      | Tds.Ecto               | [tds_ecto][tds_ecto]         | No
 SQLite3    | Sqlite.Ecto            | [sqlite_ecto][sqlite_ecto]   | No
 MongoDB    | Mongo.Ecto             | [mongodb_ecto][mongodb_ecto] | No
