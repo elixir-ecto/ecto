@@ -70,6 +70,7 @@ Database   | Ecto Adapter           | Dependency                   | Ecto 2.0 co
 PostgreSQL | Ecto.Adapters.Postgres | [postgrex][postgrex]         | Yes
 MySQL      | Ecto.Adapters.MySQL    | [mariaex][mariaex]           | Yes
 Mnesia     | EctoMnesia.Adapter     | [ecto_mnesia][ecto_mnesia]   | Yes
+MSSQL      | MssqlEcto              | [mssql_ecto][mssql_ecto]     | Yes
 MSSQL      | Tds.Ecto               | [tds_ecto][tds_ecto]         | No
 SQLite3    | Sqlite.Ecto            | [sqlite_ecto][sqlite_ecto]   | No
 MongoDB    | Mongo.Ecto             | [mongodb_ecto][mongodb_ecto] | No
@@ -80,6 +81,7 @@ MongoDB    | Mongo.Ecto             | [mongodb_ecto][mongodb_ecto] | No
 [sqlite_ecto]: https://github.com/jazzyb/sqlite_ecto
 [mongodb_ecto]: https://github.com/michalmuskala/mongodb_ecto
 [ecto_mnesia]: https://github.com/Nebo15/ecto_mnesia
+[mssql_ecto]: https://github.com/findmypast-oss/mssql_ecto
 
 For example, if you want to use PostgreSQL, add to your `mix.exs` file:
 
