@@ -169,13 +169,7 @@ defmodule Ecto.Repo.Schema do
     schema = struct.__struct__
     fields = schema.__schema__(:fields)
     assocs = schema.__schema__(:associations)
-    return = cond do
-      is_list(opts[:returning]) -> opts[:returning]
-      opts[:returning] == true -> schema.__schema__(:fields)
-      true -> []
-    end
-    |> Enum.concat(schema.__schema__(:read_after_writes))
-    |> Enum.uniq
+    return = returning(schema, opts)
 
     {on_conflict, opts} = Keyword.pop(opts, :on_conflict, :raise)
     {conflict_target, opts} = Keyword.pop(opts, :conflict_target, [])
@@ -385,6 +379,16 @@ defmodule Ecto.Repo.Schema do
     do: Ecto.Schema.__load__(%{}, types, data, loader)
 
   ## Helpers
+
+  defp returning(schema, opts) do
+    from_opts =
+      cond do
+        is_list(opts[:returning]) -> opts[:returning]
+        opts[:returning] == true -> schema.__schema__(:fields)
+        true -> []
+      end
+    Enum.uniq(from_opts ++ schema.__schema__(:read_after_writes))
+  end
 
   defp struct_from_changeset!(action, %{data: nil}),
     do: raise(ArgumentError, "cannot #{action} a changeset without :data")
