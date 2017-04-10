@@ -27,7 +27,7 @@ defmodule Ecto do
   the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and
   the accompanying sample application.
 
-  After exploring the documentation and guides, considering checking out the
+  After exploring the documentation and guides, consider checking out the
   ["What's new in Ecto 2.0"](http://pages.plataformatec.com.br/ebook-whats-new-in-ecto-2-0)
   free ebook to learn more about many features in Ecto 2.0 such as `many_to_many`,
   schemaless queries, concurrent testing and more.
