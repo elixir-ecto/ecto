@@ -19,10 +19,10 @@ defmodule Ecto.UUIDTest do
 
   test "cast!" do
     assert Ecto.UUID.cast!(@test_uuid) == @test_uuid
-    assert_raise Ecto.CastError, "cannot cast <<96, 29, 116, 228, 168, 211, 75, 110, 131, 101, 237, 219, 76, 137, 51, 39>> to UUID", fn ->
+    assert_raise Ecto.Type.CastError, "cannot cast <<96, 29, 116, 228, 168, 211, 75, 110, 131, 101, 237, 219, 76, 137, 51, 39>> to Ecto.UUID", fn ->
       assert Ecto.UUID.cast!(@test_uuid_binary)
     end
-    assert_raise Ecto.CastError, "cannot cast nil to UUID", fn ->
+    assert_raise Ecto.Type.CastError, "cannot cast nil to Ecto.UUID", fn ->
       assert Ecto.UUID.cast!(nil)
     end
   end
