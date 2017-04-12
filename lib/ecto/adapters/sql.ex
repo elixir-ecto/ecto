@@ -628,7 +628,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def stage(repo, type, start, handle, stop, opts \\ []) do
+  def stage(fun, repo, start, handle, stop, opts) do
     {repo_mod, pool, default_opts} = lookup_pool(repo)
     default_opts =
       default_opts
@@ -649,7 +649,7 @@ defmodule Ecto.Adapters.SQL do
           delete_conn(pool)
         end
       end
-    DBConnection.Stage.start_link(pool, type, start, handle, stop, opts)
+    fun.(pool, start, handle, stop, opts)
   end
 
   ## Log

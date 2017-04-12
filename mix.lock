@@ -1,6 +1,6 @@
 %{"backoff": {:hex, :backoff, "1.1.1"},
   "connection": {:hex, :connection, "1.0.4", "a1cae72211f0eef17705aaededacac3eb30e6625b04a6117c1b2db6ace7d5976", [:mix], []},
-  "db_connection": {:git, "https://github.com/elixir-ecto/db_connection.git", "392affacc4a730d748bf95d7261de9e8a9709fe2", [branch: "jf-stream_stage"]},
+  "db_connection": {:git, "https://github.com/elixir-ecto/db_connection.git", "73238baf9778b1263e108a0df9198aade2921bea", [branch: "jf-stream_stage"]},
   "decimal": {:hex, :decimal, "1.3.1", "157b3cedb2bfcb5359372a7766dd7a41091ad34578296e951f58a946fcab49c6", [:mix], []},
   "earmark": {:hex, :earmark, "1.0.3", "89bdbaf2aca8bbb5c97d8b3b55c5dd0cff517ecc78d417e87f1d0982e514557b", [:mix], []},
   "ex_doc": {:hex, :ex_doc, "0.14.5", "c0433c8117e948404d93ca69411dd575ec6be39b47802e81ca8d91017a0cf83c", [:mix], [{:earmark, "~> 1.0", [hex: :earmark, optional: false]}]},
