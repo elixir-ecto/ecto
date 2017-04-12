@@ -1031,7 +1031,20 @@ defmodule Ecto.Changeset do
           "please use put_#{tag}/4 instead"
   end
 
-  defp put_change(data, changes, errors, valid?, key, value, _type) do
+  defp put_change(data, changes, errors, valid?, key, value, nil) do
+    put_change(data, changes, errors, valid?, key, value)
+  end
+
+  defp put_change(data, changes, errors, valid?, key, value, type) do
+    case Ecto.Type.cast(type, value) do
+      {:ok, value} ->
+        put_change(data, changes, errors, valid?, key, value)
+      :error ->
+        raise Ecto.CastError, "cannot cast #{inspect value} to type #{inspect type}"
+    end
+  end
+
+  defp put_change(data, changes, errors, valid?, key, value) do
     cond do
       Map.get(data, key) != value ->
         {Map.put(changes, key, value), errors, valid?}
