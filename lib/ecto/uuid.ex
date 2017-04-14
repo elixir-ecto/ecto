@@ -35,12 +35,12 @@ defmodule Ecto.UUID do
   def cast(_), do: :error
 
   @doc """
-  Same as `cast/1` but raises `Ecto.Type.CastError` on invalid arguments.
+  Same as `cast/1` but raises `Ecto.CastError` on invalid arguments.
   """
   def cast!(value) do
     case cast(value) do
       {:ok, uuid} -> uuid
-      :error -> raise Ecto.Type.CastError, value: value, type: __MODULE__
+      :error -> raise Ecto.CastError, type: __MODULE__, value: value
     end
   end
 

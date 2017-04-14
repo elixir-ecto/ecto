@@ -127,28 +127,21 @@ defmodule Ecto.InvalidChangesetError do
     do: other
 end
 
-defmodule Ecto.Type.CastError do
-  @moduledoc """
-  Raised when a value cannot be cast to a type.
-  """
-  defexception [:type, :value]
-
-  def exception(opts) do
-    type  = Keyword.fetch!(opts, :type)
-    value = Keyword.fetch!(opts, :value)
-    %__MODULE__{type: type, value: value}
-  end
-
-  def message(%{type: type, value: value}) do
-    "cannot cast #{inspect value} to #{inspect type}"
-  end
-end
-
 defmodule Ecto.CastError do
   @moduledoc """
   Raised when a changeset can't cast a value.
   """
-  defexception [:message]
+  defexception [:message, :type, :value]
+
+  def exception(message) when is_binary(message) do
+    %__MODULE__{message: message}
+  end
+  def exception(opts) do
+    type  = Keyword.fetch!(opts, :type)
+    value = Keyword.fetch!(opts, :value)
+    msg   = "cannot cast #{inspect value} to #{inspect type}"
+    %__MODULE__{message: msg, type: type, value: value}
+  end
 end
 
 defmodule Ecto.InvalidURLError do
