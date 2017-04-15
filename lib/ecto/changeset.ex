@@ -287,6 +287,8 @@ defmodule Ecto.Changeset do
   The function is meant for working with data internal to the application.
   Because of that neither validation nor casting is performed. This means
   `change/2` expects the keys in the `changes` map or keyword to be atoms.
+  If any value in the given `changes` does not match the
+  type for that key in the schema (or `types` map), an error is raised.
 
   When a changeset is passed as the first argument, the changes passed as the
   second argument are merged over the changes already in the changeset if they
@@ -999,6 +1001,9 @@ defmodule Ecto.Changeset do
   in the changeset data, it is not added to the list of changes.
 
   The function is meant for working with data internal to the application.
+  Because of that neither validation nor casting is performed. If `value`
+  does not match the type for the given `key` in the schema (or `types` map),
+  an error is raised.
 
   ## Examples
 
@@ -1037,10 +1042,12 @@ defmodule Ecto.Changeset do
 
   defp put_change(data, changes, errors, valid?, key, value, type) do
     case Ecto.Type.cast(type, value) do
-      {:ok, value} ->
+      {:ok, ^value} ->
         put_change(data, changes, errors, valid?, key, value)
+      {:ok, _} ->
+        raise Ecto.CastError, type: type, value: value
       :error ->
-        raise Ecto.CastError, "cannot cast #{inspect value} to type #{inspect type}"
+        raise Ecto.CastError, type: type, value: value
     end
   end
 
