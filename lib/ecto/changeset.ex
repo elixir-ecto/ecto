@@ -20,7 +20,7 @@ defmodule Ecto.Changeset do
 
     * internal to the application - for example programatically generated,
       or coming from other subsystems. This use case is primarily covered
-      by the `change/2` and `put_change/3` functions.
+      by the `change/2`, `put_change/3`, and `update_change/3` functions.
 
     * external to the application - for example data provided by the user in
       a form that needs to be type-converted and properly validated. This use case
