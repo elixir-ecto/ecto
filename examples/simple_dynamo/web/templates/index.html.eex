@@ -1,0 +1,28 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title><%= @title %></title>
+</head>
+<body>
+  <h1><%= @title %></h1>
+  <section>
+      <article>
+        <table>
+          <tr>
+            <th>City</th>
+            <th>Avg Low</th>
+            <th>Avg High</th>
+            <th>Percipitation</th>
+          </tr>
+        <%= lc { _id, city, temp_lo, temp_hi, prcp } inlist @results do %>
+          <tr>
+            <td><%= city %></td>
+            <td><%= temp_lo %></td>
+            <td><%= temp_hi %></td>
+            <td><%= prcp %></td>
+          </tr>
+        <% end %>
+      </article>
+  </section>
+</body>
+</html>
