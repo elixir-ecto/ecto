@@ -131,7 +131,17 @@ defmodule Ecto.CastError do
   @moduledoc """
   Raised when a changeset can't cast a value.
   """
-  defexception [:message]
+  defexception [:message, :type, :value]
+
+  def exception(message) when is_binary(message) do
+    %__MODULE__{message: message}
+  end
+  def exception(opts) do
+    type  = Keyword.fetch!(opts, :type)
+    value = Keyword.fetch!(opts, :value)
+    msg   = "cannot cast #{inspect value} to #{inspect type}"
+    %__MODULE__{message: msg, type: type, value: value}
+  end
 end
 
 defmodule Ecto.InvalidURLError do

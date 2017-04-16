@@ -40,7 +40,7 @@ defmodule Ecto.UUID do
   def cast!(value) do
     case cast(value) do
       {:ok, uuid} -> uuid
-      :error -> raise Ecto.CastError, "cannot cast #{inspect value} to UUID"
+      :error -> raise Ecto.CastError, type: __MODULE__, value: value
     end
   end
 
