@@ -133,13 +133,10 @@ defmodule Ecto.CastError do
   """
   defexception [:message, :type, :value]
 
-  def exception(message) when is_binary(message) do
-    %__MODULE__{message: message}
-  end
   def exception(opts) do
     type  = Keyword.fetch!(opts, :type)
     value = Keyword.fetch!(opts, :value)
-    msg   = "cannot cast #{inspect value} to #{inspect type}"
+    msg   = opts[:message] || "cannot cast #{inspect value} to #{inspect type}"
     %__MODULE__{message: msg, type: type, value: value}
   end
 end

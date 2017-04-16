@@ -57,7 +57,7 @@ defmodule Ecto.DateTest do
   test "cast!" do
     assert Ecto.Date.cast!("2015-12-31") == @date
 
-    assert_raise Ecto.CastError, "cannot cast \"2015-00-23\" to date", fn ->
+    assert_raise Ecto.CastError, "cannot cast \"2015-00-23\" to Ecto.Date", fn ->
       Ecto.Date.cast!("2015-00-23")
     end
   end
@@ -154,7 +154,7 @@ defmodule Ecto.TimeTest do
   test "cast!" do
     assert Ecto.Time.cast!("23:50:07") == @time
 
-    assert_raise Ecto.CastError, "cannot cast \"24:01:01\" to time", fn ->
+    assert_raise Ecto.CastError, "cannot cast \"24:01:01\" to Ecto.Time", fn ->
       Ecto.Time.cast!("24:01:01")
     end
   end
@@ -280,7 +280,7 @@ defmodule Ecto.DateTimeTest do
   test "cast!" do
     assert Ecto.DateTime.cast!("2015-01-23 23:50:07") == @datetime
 
-    assert_raise Ecto.CastError, "cannot cast \"2015-01-23P23:50:07\" to datetime", fn ->
+    assert_raise Ecto.CastError, "cannot cast \"2015-01-23P23:50:07\" to Ecto.DateTime", fn ->
       Ecto.DateTime.cast!("2015-01-23P23:50:07")
     end
   end

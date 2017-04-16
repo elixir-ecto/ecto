@@ -412,7 +412,8 @@ defmodule Ecto.Changeset do
   def cast(data, params, permitted, opts \\ [])
 
   def cast(_data, %{__struct__: _} = params, _permitted, _opts) do
-    raise Ecto.CastError, "expected params to be a map, got: `#{inspect params}`"
+    raise Ecto.CastError, type: :map, value: params,
+                          message: "expected params to be a :map, got: `#{inspect params}`"
   end
 
   def cast({data, types}, params, permitted, opts) when is_map(data) do
@@ -460,7 +461,8 @@ defmodule Ecto.Changeset do
   end
 
   defp cast(%{}, %{}, %{}, params, permitted, _opts) when is_list(permitted) do
-    raise Ecto.CastError, "expected params to be a map, got: `#{inspect params}`"
+    raise Ecto.CastError, type: :map, value: params,
+                          message: "expected params to be a :map, got: `#{inspect params}`"
   end
 
   defp process_param(key, params, types, data, empty_values, defaults, {changes, errors, valid?}) do
@@ -529,8 +531,9 @@ defmodule Ecto.Changeset do
         nil
 
       {key, _value}, _ when is_binary(key) ->
-        raise Ecto.CastError, "expected params to be a map with atoms or string keys, " <>
-                              "got a map with mixed keys: #{inspect params}"
+        raise Ecto.CastError, type: :map, value: params,
+                              message: "expected params to be a map with atoms or string keys, " <>
+                                       "got a map with mixed keys: #{inspect params}"
 
       {key, value}, acc when is_atom(key) ->
         Map.put(acc || %{}, Atom.to_string(key), value)

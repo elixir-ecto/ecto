@@ -134,7 +134,7 @@ defmodule Ecto.Date do
   def cast!(value) do
     case cast(value) do
       {:ok, date} -> date
-      :error -> raise Ecto.CastError, "cannot cast #{inspect value} to date"
+      :error -> raise Ecto.CastError, type: __MODULE__, value: value
     end
   end
 
@@ -301,7 +301,7 @@ defmodule Ecto.Time do
   def cast!(value) do
     case cast(value) do
       {:ok, time} -> time
-      :error -> raise Ecto.CastError, "cannot cast #{inspect value} to time"
+      :error -> raise Ecto.CastError, type: __MODULE__, value: value
     end
   end
 
@@ -434,7 +434,7 @@ defmodule Ecto.DateTime do
   def cast!(value) do
     case cast(value) do
       {:ok, datetime} -> datetime
-      :error -> raise Ecto.CastError, "cannot cast #{inspect value} to datetime"
+      :error -> raise Ecto.CastError, type: __MODULE__, value: value
     end
   end
 
