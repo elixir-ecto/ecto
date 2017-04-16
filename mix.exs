@@ -43,7 +43,9 @@ defmodule Ecto.Mixfile do
      {:decimal, "~> 1.2"},
 
      # Drivers
-     {:db_connection, "~> 1.1", optional: true},
+     {:db_connection, "~> 1.1", github: "elixir-ecto/db_connection", branch: "jf-stream_stage", override: true, optional: true},
+     {:gen_stage, "~> 0.11", optional: true},
+     {:flow, "~> 0.11", optional: true},
      {:postgrex, "~> 0.13.0", optional: true},
      {:mariaex, "~> 0.8.0", optional: true},
 

@@ -627,6 +627,31 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
+  @doc false
+  def stage(fun, repo, start, handle, stop, opts) do
+    {repo_mod, pool, default_opts} = lookup_pool(repo)
+    default_opts =
+      default_opts
+      |> Keyword.delete(:name)
+      |> Keyword.put_new(:caller, self())
+    opts = with_log(repo_mod, [], opts ++ default_opts)
+    start =
+      fn(conn) ->
+        put_conn(pool, conn)
+        start.()
+      end
+    handle = fn(_, arg, state) -> handle.(arg, state) end
+    stop =
+      fn(_, reason, state) ->
+        try do
+          stop.(reason, state)
+        after
+          delete_conn(pool)
+        end
+      end
+    fun.(pool, start, handle, stop, opts)
+  end
+
   ## Log
 
   defp with_log(repo, params, opts) do

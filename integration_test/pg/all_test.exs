@@ -3,6 +3,7 @@ Code.require_file "../sql/lock.exs", __DIR__
 Code.require_file "../sql/migration.exs", __DIR__
 Code.require_file "../sql/sandbox.exs", __DIR__
 Code.require_file "../sql/sql.exs", __DIR__
+Code.require_file "../sql/stage.exs", __DIR__
 Code.require_file "../sql/stream.exs", __DIR__
 Code.require_file "../sql/subquery.exs", __DIR__
 Code.require_file "../sql/transaction.exs", __DIR__
