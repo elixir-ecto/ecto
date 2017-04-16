@@ -444,6 +444,11 @@ defmodule Ecto.ChangesetTest do
       changeset(%{})
       |> update_change(:title, & &1 || "bar")
     assert changeset.changes == %{}
+
+    assert_raise Ecto.CastError, fn ->
+      changeset(%{"upvotes" => nil})
+      |> update_change(:upvotes, & &1 || "10")
+    end
   end
 
   test "put_change/3 and delete_change/2" do

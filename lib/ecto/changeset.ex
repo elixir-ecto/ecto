@@ -974,6 +974,11 @@ defmodule Ecto.Changeset do
   is a change for the given `key`. Note that the value of the change
   can still be `nil` (unless the field was marked as required on `cast/4`).
 
+  The function is meant for working with data internal to the application.
+  Because of that neither validation nor casting is performed. If the return
+  value of the `function` does not match the type for the given `key` in the
+  schema (or `types` map), an error is raised.
+
   ## Examples
 
       iex> changeset = change(%Post{}, %{impressions: 1})
@@ -986,8 +991,7 @@ defmodule Ecto.Changeset do
   def update_change(%Changeset{changes: changes} = changeset, key, function) when is_atom(key) do
     case Map.fetch(changes, key) do
       {:ok, value} ->
-        changes = Map.put(changes, key, function.(value))
-        %{changeset | changes: changes}
+        put_change(changeset, key, function.(value))
       :error ->
         changeset
     end
