@@ -104,6 +104,16 @@ config :my_app, Repo,
 
 We are currently looking for contributions to add support for other SQL databases and folks interested in exploring non-relational databases too.
 
+## Supported Versions
+
+| Branch | Support                  |
+| ------ | ------------------------ |
+| v2.2   | In development (master)  |
+| v2.1   | Bug fixes                |
+| v2.0   | Security patches only    |
+| v1.1   | Security patches only    |
+| v1.0   | Unsupported from 05/2017 |
+
 ## Important links
 
   * [Documentation](http://hexdocs.pm/ecto)
