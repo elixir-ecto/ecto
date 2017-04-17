@@ -215,6 +215,7 @@ defmodule Ecto.Query.Planner do
     query
     |> prepare_sources(adapter)
     |> prepare_assocs
+    |> rewrite_aliases
     |> prepare_cache(operation, adapter, counter)
   rescue
     e ->
@@ -609,6 +610,35 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  defp aliases_list(%{sources: sources}) do
+    Enum.map(Tuple.to_list(sources), fn({source, schema}) ->
+      schema.__schema__(:aliases)
+    end)
+  end
+
+  defp rewrite_aliases(query) do
+    aliases = aliases_list(query)
+
+    %{wheres: wheres, havings: havings} = query
+
+    %{query | wheres: rewrite_aliases(wheres, aliases),
+              havings: rewrite_aliases(havings, aliases)}
+  end
+  defp rewrite_aliases(exprs, aliases) when is_list(exprs) do
+    Enum.map(exprs, fn(expr) -> rewrite_aliases(expr, aliases) end)
+  end
+  defp rewrite_aliases(query = %{expr: expr}, aliases) do
+    %{query | expr: Macro.prewalk(expr, fn(ast) -> rewrite_aliases(ast, aliases) end)}
+  end
+  defp rewrite_aliases({{:., [], [{:&, [], [binding]}, field]}, [], []}, aliases) do
+    field_name = Enum.at(aliases, binding)[field] || field
+
+    {{:., [], [{:&, [], [binding]}, field_name]}, [], []}
+  end
+  defp rewrite_aliases(other, _) do
+    other
+  end
+
   defp find_source_expr(query, 0) do
     query.from
   end
@@ -942,7 +972,7 @@ defmodule Ecto.Query.Planner do
       {:error, {_, nil}} ->
         nil # Checked by the adapter
       {:error, {_, schema}} when schema != nil ->
-        schema.__schema__(:fields)
+        schema.__schema__(:db_fields)
       {:error, {:fragment, _, _}} ->
         nil # Checked by the adapter
       {:error, %Ecto.SubQuery{fields: fields}} ->

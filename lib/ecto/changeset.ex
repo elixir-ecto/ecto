@@ -1962,7 +1962,7 @@ defmodule Ecto.Changeset do
   """
   @spec unique_constraint(t, atom, Keyword.t) :: t
   def unique_constraint(changeset, field, opts \\ []) do
-    constraint = opts[:name] || "#{get_source(changeset)}_#{field}_index"
+    constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_index"
     message    = message(opts, "has already been taken")
     match_type = Keyword.get(opts, :match, :exact)
     add_constraint(changeset, :unique, to_string(constraint), match_type, field, {message, []})
@@ -2010,7 +2010,7 @@ defmodule Ecto.Changeset do
   """
   @spec foreign_key_constraint(t, atom, Keyword.t) :: t
   def foreign_key_constraint(changeset, field, opts \\ []) do
-    constraint = opts[:name] || "#{get_source(changeset)}_#{field}_fkey"
+    constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_fkey"
     message    = message(opts, "does not exist")
     add_constraint(changeset, :foreign_key, to_string(constraint), :exact, field, {message, []})
   end
@@ -2134,7 +2134,7 @@ defmodule Ecto.Changeset do
 
   """
   def exclusion_constraint(changeset, field, opts \\ []) do
-    constraint = opts[:name] || "#{get_source(changeset)}_#{field}_exclusion"
+    constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_exclusion"
     message    = message(opts, "violates an exclusion constraint")
     match_type = Keyword.get(opts, :match, :exact)
     add_constraint(changeset, :exclude, to_string(constraint), match_type, field, {message, []})
@@ -2173,6 +2173,11 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "cannot add constraint to changeset because association `#{assoc}` does not exist. " <>
                          "Did you mean one of `#{Enum.join(associations, "`, `")}`?"
   end
+
+  defp get_field_source(%{data: %{__struct__: schema}}, field) when is_atom(schema),
+    do: schema.__schema__(:aliases)[field] || field
+  defp get_field_source(%{data: data}, field),
+    do: raise(ArgumentError, "cannot add constraint to changeset because it does not have a source, got: #{inspect data}")
 
   @doc ~S"""
   Traverses changeset errors and applies the given function to error messages.
