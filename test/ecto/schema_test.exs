@@ -12,7 +12,7 @@ defmodule Ecto.SchemaTest do
       field :name,  :string, default: "eric", autogenerate: {String, :upcase, ["eric"]}
       field :email, :string, uniq: true, read_after_writes: true
       field :temp,  :any, default: "temp", virtual: true
-      field :count, :decimal, read_after_writes: true
+      field :count, :decimal, read_after_writes: true, source: :cnt
       field :array, {:array, :string}
       field :uuid, Ecto.UUID, autogenerate: true
       belongs_to :comment, Comment
@@ -38,6 +38,16 @@ defmodule Ecto.SchemaTest do
     assert Schema.__schema__(:type, :email)      == :string
     assert Schema.__schema__(:type, :array)      == {:array, :string}
     assert Schema.__schema__(:type, :comment_id) == :id
+  end
+
+  test "sources metadata" do
+    assert Schema.__schema__(:field_source, :id)         == :id
+    assert Schema.__schema__(:field_source, :name)       == :name
+    assert Schema.__schema__(:field_source, :email)      == :email
+    assert Schema.__schema__(:field_source, :array)      == :array
+    assert Schema.__schema__(:field_source, :comment_id) == :comment_id
+    assert Schema.__schema__(:field_source, :count)      == :cnt
+    assert Schema.__schema__(:field_source, :xyz)        == nil
   end
 
   test "changeset metadata" do
