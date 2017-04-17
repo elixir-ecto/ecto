@@ -48,6 +48,8 @@ defmodule Mix.Tasks.Ecto.Rollback do
 
   """
 
+  @recursive true
+
   @doc false
   def run(args, migrator \\ &Ecto.Migrator.run/4) do
     repos = parse_repo(args)
