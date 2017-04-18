@@ -331,7 +331,7 @@ defmodule Ecto.Query do
                             LimitOffset, Lock, OrderBy, Preload, Select, Update}
 
   @doc """
-  Buids a dynamic query expression.
+  Builds a dynamic query expression.
 
   Dynamic query expressions allows developers to build queries
   expression bit by bit so they are later interpolated in a query.
