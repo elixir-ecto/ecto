@@ -498,8 +498,14 @@ defmodule Ecto.Association.Has do
 
   @doc false
   def assoc_query(%{queryable: queryable, related_key: related_key}, query, values) do
-    from x in (query || queryable),
-      where: field(x, ^related_key) in ^values
+    assoc_query_where(query || queryable, related_key, values)
+  end
+
+  defp assoc_query_where(query, related_key, [value]) do
+    from x in query, where: field(x, ^related_key) == ^value
+  end
+  defp assoc_query_where(query, related_key, values) do
+    from x in query, where: field(x, ^related_key) in ^values
   end
 
   @doc false
