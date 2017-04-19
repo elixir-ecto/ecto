@@ -80,6 +80,13 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
+  def exists?(repo, adapter, queryable, clauses, opts) do
+    case all(repo, adapter, query_for_exists(repo, queryable, clauses), opts) do
+      [] -> false
+      _ -> true
+    end
+  end
+
   def update_all(repo, adapter, queryable, [], opts) when is_list(opts) do
     update_all(repo, adapter, queryable, opts)
   end
@@ -340,6 +347,12 @@ defmodule Ecto.Repo.Queryable do
 
   defp query_for_get_by(_repo, queryable, clauses) do
     Query.where(queryable, [], ^Enum.to_list(clauses))
+  end
+
+  defp query_for_exists(repo, queryable, clauses) do
+    query_for_get_by(repo, queryable, clauses)
+    |> Query.select(true)
+    |> Query.limit(1)
   end
 
   defp query_for_aggregate(queryable, aggregate, field) do
