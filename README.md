@@ -1,5 +1,5 @@
-# Ecto
-
+![Ecto](https://github.com/elixir-ecto/ecto/raw/master/guides/images/logo.png)
+=========
 [![Build Status](https://travis-ci.org/elixir-ecto/ecto.svg?branch=master)](https://travis-ci.org/elixir-ecto/ecto)
 [![Inline docs](http://inch-ci.org/github/elixir-ecto/ecto.svg?branch=master&style=flat)](http://inch-ci.org/github/elixir-ecto/ecto)
 [![Ebert](https://ebertapp.io/github/elixir-ecto/ecto.svg)](https://ebertapp.io/github/elixir-ecto/ecto)
@@ -158,6 +158,8 @@ $ MIX_ENV=docs mix docs
 
 ## Copyright and License
 
-Copyright (c) 2012, Plataformatec.
+"Ecto" and the Ecto logo are copyright (c) 2012 Plataformatec.
+
+The Ecto logo was designed by [Dane Wesolko](www.danewesolko.com).
 
 Ecto source code is licensed under the [Apache 2 License](LICENSE.md).

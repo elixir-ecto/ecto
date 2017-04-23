@@ -28,7 +28,7 @@ defmodule Ecto.Mixfile do
      # Docs
      name: "Ecto",
      docs: [source_ref: "v#{@version}", main: "Ecto",
-            canonical: "http://hexdocs.pm/ecto",
+            canonical: "http://hexdocs.pm/ecto", logo: "guides/images/e.png",
             source_url: "https://github.com/elixir-ecto/ecto",
             extras: ["guides/Getting Started.md", "guides/Associations.md"]]]
   end
