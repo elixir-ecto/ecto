@@ -4,7 +4,7 @@ This guide is an introduction to [Ecto](https://github.com/elixir-lang/ecto),
 the database wrapper and query generator for Elixir. Ecto provides a
 standardised API and a set of abstractions for talking to all the different
 kinds of databases, so that Elixir developers can query whatever database
-they're using by employing similar contructs.
+they're using by employing similar constructs.
 
 In this guide, we're going to learn some basics about Ecto, such as creating,
 reading, updating and destroying records from a PostgreSQL database. If you want
