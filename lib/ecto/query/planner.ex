@@ -611,7 +611,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp aliases_list(%{sources: sources}) do
-    Enum.map(Tuple.to_list(sources), fn({source, schema}) ->
+    Enum.map(Tuple.to_list(sources), fn({_, schema}) ->
       schema.__schema__(:aliases)
     end)
   end
@@ -619,10 +619,13 @@ defmodule Ecto.Query.Planner do
   defp rewrite_aliases(query) do
     aliases = aliases_list(query)
 
-    %{wheres: wheres, havings: havings} = query
-
-    %{query | wheres: rewrite_aliases(wheres, aliases),
-              havings: rewrite_aliases(havings, aliases)}
+    %{query | select: rewrite_aliases(query.select, aliases),
+              distinct: rewrite_aliases(query.distinct, aliases),
+              wheres: rewrite_aliases(query.wheres, aliases),
+              havings: rewrite_aliases(query.havings, aliases),
+              updates: rewrite_aliases(query.updates, aliases),
+              group_bys: rewrite_aliases(query.group_bys, aliases),
+              order_bys: rewrite_aliases(query.order_bys, aliases)}
   end
   defp rewrite_aliases(exprs, aliases) when is_list(exprs) do
     Enum.map(exprs, fn(expr) -> rewrite_aliases(expr, aliases) end)
@@ -632,13 +635,22 @@ defmodule Ecto.Query.Planner do
   end
   defp rewrite_aliases({{:., [], [{:&, [], [binding]}, field]}, [], []}, aliases) do
     field_name = Enum.at(aliases, binding)[field] || field
-
     {{:., [], [{:&, [], [binding]}, field_name]}, [], []}
+  end
+  defp rewrite_aliases({field, tag = %Ecto.Query.Tagged{type: {binding, field}}}, aliases) do
+    {Enum.at(aliases, binding)[field] || field, tag}
   end
   defp rewrite_aliases(other, _) do
     other
   end
-
+  defp rewrite_aliases_for_select({:ok, {op, fields}}, source = {_, schema}) when is_list(fields) do
+    aliases = schema.__schema__(:aliases)
+    fields = Enum.map(fields, fn(field) -> (aliases[field] || field) end)
+    {{:ok, {op, fields}}, source}
+  end
+  defp rewrite_aliases_for_select(fetched = {:error, _}, source) do
+    {fetched, source}
+  end
   defp find_source_expr(query, 0) do
     query.from
   end
@@ -955,7 +967,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp take!(source, query, fetched, field) do
-    case {fetched, source} do
+    case rewrite_aliases_for_select(fetched, source) do
       {{:ok, {:struct, _}}, {_, nil}} ->
         error! query, "struct/2 in select expects a source with a schema"
       {{:ok, {_, []}}, {_, _}} ->

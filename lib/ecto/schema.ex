@@ -408,7 +408,7 @@ defmodule Ecto.Schema do
         Ecto.Schema.__defstruct__(@struct_fields),
         Ecto.Schema.__changeset__(@changeset_fields),
         Ecto.Schema.__schema__(prefix, source, fields, aliased_fields, primary_key_fields),
-        Ecto.Schema.__types__(fields),
+        Ecto.Schema.__types__(fields, aliased_fields),
         Ecto.Schema.__assocs__(assocs),
         Ecto.Schema.__embeds__(embeds),
         Ecto.Schema.__read_after_writes__(@ecto_raw),
@@ -1411,6 +1411,17 @@ defmodule Ecto.Schema do
   defp type_to_module(:utc_datetime), do: DateTime
   defp type_to_module(other), do: other
 
+  defp replace_field_sources(fields = %{}, aliases) do
+    Enum.reduce(fields, %{}, fn
+      {field, value}, acc ->
+        field_name = case List.keyfind(aliases, String.to_atom(field), 1) do
+                       {aliased, _} -> to_string(aliased)
+                       nil -> field
+                     end
+
+        Map.put(acc, field_name, value)
+    end)
+  end
   defp replace_field_sources({fields, values}, aliases) do
     {replace_field_sources(fields, [], aliases), values}
   end
@@ -1422,19 +1433,8 @@ defmodule Ecto.Schema do
 
     replace_field_sources(fields, list ++ [field], aliases)
   end
-  defp replace_field_sources([], list, aliases) do
+  defp replace_field_sources([], list, _aliases) do
     list
-  end
-  defp replace_field_sources(fields = %{}, aliases) do
-    Enum.reduce(fields, %{}, fn
-      {field, value}, acc ->
-        field_name = case List.keyfind(aliases, String.to_atom(field), 1) do
-                       {aliased, _} -> to_string(aliased)
-                       nil -> field
-                     end
-
-        Map.put(acc, field_name, value)
-    end)
   end
 
   @doc false
@@ -1704,8 +1704,8 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __types__(fields) do
-    quoted =
+  def __types__(fields, aliased_fields) do
+    fields_quoted =
       Enum.map(fields, fn {name, type} ->
         quote do
           def __schema__(:type, unquote(name)) do
@@ -1714,11 +1714,21 @@ defmodule Ecto.Schema do
         end
       end)
 
+    aliases_quoted =
+      Enum.map(aliased_fields, fn {aliased_name, name} ->
+        quote do
+          def __schema__(:type, unquote(name)) do
+            __schema__(:type, unquote(aliased_name))
+          end
+        end
+      end)
+
     types = Macro.escape(Map.new(fields))
 
     quote do
       def __schema__(:types), do: unquote(types)
-      unquote(quoted)
+      unquote(fields_quoted)
+      unquote(aliases_quoted)
       def __schema__(:type, _), do: nil
     end
   end
