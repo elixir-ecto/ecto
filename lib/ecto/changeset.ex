@@ -2175,7 +2175,7 @@ defmodule Ecto.Changeset do
   end
 
   defp get_field_source(%{data: %{__struct__: schema}}, field) when is_atom(schema),
-    do: schema.__schema__(:aliases)[field] || field
+    do: schema.__schema__(:source, field) || field
   defp get_field_source(%{data: data}, _field),
     do: raise(ArgumentError, "cannot add constraint to changeset because it does not have a source, got: #{inspect data}")
 

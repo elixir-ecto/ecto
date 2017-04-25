@@ -610,47 +610,52 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp aliases_list(%{sources: sources}) do
-    Enum.map(Tuple.to_list(sources), fn({_, schema}) ->
-      schema.__schema__(:aliases)
-    end)
-  end
-
   defp rewrite_aliases(query) do
-    aliases = aliases_list(query)
-
-    %{query | select: rewrite_aliases(query.select, aliases),
-              distinct: rewrite_aliases(query.distinct, aliases),
-              wheres: rewrite_aliases(query.wheres, aliases),
-              havings: rewrite_aliases(query.havings, aliases),
-              updates: rewrite_aliases(query.updates, aliases),
-              group_bys: rewrite_aliases(query.group_bys, aliases),
-              order_bys: rewrite_aliases(query.order_bys, aliases)}
+    %{query | select: rewrite_aliases(:select, query),
+              distinct: rewrite_aliases(:distinct, query),
+              wheres: rewrite_aliases(:wheres, query),
+              havings: rewrite_aliases(:havings, query),
+              updates: rewrite_aliases(:updates, query),
+              group_bys: rewrite_aliases(:group_bys, query),
+              order_bys: rewrite_aliases(:order_bys, query)}
   end
-  defp rewrite_aliases(exprs, aliases) when is_list(exprs) do
-    Enum.map(exprs, fn(expr) -> rewrite_aliases(expr, aliases) end)
+  defp rewrite_aliases(key, query = %Ecto.Query{sources: sources}) do
+    rewrite_aliases(Map.get(query, key), Tuple.to_list(sources))
   end
-  defp rewrite_aliases(query = %{expr: expr}, aliases) do
-    %{query | expr: Macro.prewalk(expr, fn(ast) -> rewrite_aliases(ast, aliases) end)}
+  defp rewrite_aliases(exprs, sources) when is_list(exprs) do
+    Enum.map(exprs, fn(expr) -> rewrite_aliases(expr, sources) end)
   end
-  defp rewrite_aliases({{:., [], [{:&, [], [binding]}, field]}, [], []}, aliases) do
-    field_name = Enum.at(aliases, binding)[field] || field
-    {{:., [], [{:&, [], [binding]}, field_name]}, [], []}
+  defp rewrite_aliases(query = %{expr: expr}, sources) do
+    %{query | expr: Macro.prewalk(expr, fn(ast) -> rewrite_aliases(ast, sources) end)}
   end
-  defp rewrite_aliases({field, tag = %Ecto.Query.Tagged{type: {binding, field}}}, aliases) do
-    {Enum.at(aliases, binding)[field] || field, tag}
+  defp rewrite_aliases({{:., [], [{:&, [], [binding]}, field]}, [], []}, sources) do
+    {{:., [], [{:&, [], [binding]}, find_field_source(sources, binding, field)]}, [], []}
+  end
+  defp rewrite_aliases({field, tag = %Ecto.Query.Tagged{type: {binding, field}}}, sources) do
+    {find_field_source(sources, binding, field), tag}
+  end
+  defp rewrite_aliases({:ok, {op, fields}}, source) when is_list(fields) do
+    {{:ok, {op, find_field_source(source, fields)}}, source}
+  end
+  defp rewrite_aliases({:ok, {op, fields}}, source) do
+    {{:ok, {op, fields}}, source}
+  end
+  defp rewrite_aliases(:error, source) do
+    {:error, source}
   end
   defp rewrite_aliases(other, _) do
     other
   end
-  defp rewrite_aliases_for_select({:ok, {op, fields}}, source = {_, schema}) when is_list(fields) do
-    aliases = schema.__schema__(:aliases)
-    fields = Enum.map(fields, fn(field) -> (aliases[field] || field) end)
-    {{:ok, {op, fields}}, source}
-  end
-  defp rewrite_aliases_for_select(fetched = {:error, _}, source) do
-    {fetched, source}
-  end
+
+  defp find_field_source(sources, binding, field) when is_list(sources),
+    do: find_field_source(Enum.at(sources, binding), field)
+  defp find_field_source(source, fields) when is_list(fields),
+    do: Enum.map(fields, fn(field) -> find_field_source(source, field) end)
+  defp find_field_source({_, schema}, field) when not is_nil(schema),
+    do: schema.__schema__(:source, field) || field
+  defp find_field_source(_source, field),
+    do: field
+
   defp find_source_expr(query, 0) do
     query.from
   end
@@ -967,7 +972,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp take!(source, query, fetched, field) do
-    case rewrite_aliases_for_select(fetched, source) do
+    case rewrite_aliases(fetched, source) do
       {{:ok, {:struct, _}}, {_, nil}} ->
         error! query, "struct/2 in select expects a source with a schema"
       {{:ok, {_, []}}, {_, _}} ->
