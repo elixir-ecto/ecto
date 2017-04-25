@@ -160,6 +160,6 @@ $ MIX_ENV=docs mix docs
 
 "Ecto" and the Ecto logo are copyright (c) 2012 Plataformatec.
 
-The Ecto logo was designed by [Dane Wesolko](www.danewesolko.com).
+The Ecto logo was designed by [Dane Wesolko](http://www.danewesolko.com).
 
 Ecto source code is licensed under the [Apache 2 License](LICENSE.md).
