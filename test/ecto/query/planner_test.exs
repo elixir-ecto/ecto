@@ -16,6 +16,7 @@ defmodule Ecto.Query.PlannerTest do
       field :temp, :string, virtual: true
       field :posted, :naive_datetime
       field :uuid, :binary_id
+      field :rating, :integer, source: :star
       belongs_to :post, Ecto.Query.PlannerTest.Post
       has_many :post_comments, through: [:post, :comments]
     end
@@ -32,8 +33,10 @@ defmodule Ecto.Query.PlannerTest do
       field :posted, :naive_datetime
       field :visits, :integer
       field :links, {:array, Custom.Permalink}
+      field :permalink, :string, source: :url
       has_many :comments, Ecto.Query.PlannerTest.Comment
       has_many :extra_comments, Ecto.Query.PlannerTest.Comment
+      embeds_many :top_comments, Ecto.Query.PlannerTest.Comment, source: :comments
     end
   end
 
@@ -240,7 +243,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: generates a cache key" do
     {_query, _params, key} = prepare(from(Post, []))
-    assert key == [:all, 0, {"posts", Post, 27727487}]
+    assert key == [:all, 0, {"posts", Post, 67417863}]
 
     query = from(p in Post, select: 1, lock: "foo", where: is_nil(nil), or_where: is_nil(nil),
                             join: c in Comment, preload: :comments)
@@ -249,8 +252,8 @@ defmodule Ecto.Query.PlannerTest do
                    {:lock, "foo"},
                    {:prefix, "foo"},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
-                   {:join, [{:inner, {"comments", Ecto.Query.PlannerTest.Comment, 6996781}, true}]},
-                   {"posts", Ecto.Query.PlannerTest.Post, 27727487},
+                   {:join, [{:inner, {"comments", Ecto.Query.PlannerTest.Comment, 105102724}, true}]},
+                   {"posts", Ecto.Query.PlannerTest.Post, 67417863},
                    {:select, 1}]
   end
 
@@ -268,7 +271,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, params, key} = prepare(from(subquery(Post), []))
     assert %{query: %Ecto.Query{}, params: []} = query.from
     assert params == []
-    assert key == [:all, 0, [:all, 0, {"posts", Ecto.Query.PlannerTest.Post, 27727487}]]
+    assert key == [:all, 0, [:all, 0, {"posts", Ecto.Query.PlannerTest.Post, 67417863}]]
 
     posts = from(p in Post, where: p.title == ^"hello")
     query = from(c in Comment, join: p in subquery(posts), on: c.post_id == p.id)
@@ -395,6 +398,41 @@ defmodule Ecto.Query.PlannerTest do
     assert Exception.message(exception) =~ "from p in subquery(from p in Ecto.Query.PlannerTest.Post"
   end
 
+  test "prepare: rewrites aliases for fields" do
+    {query, _params, _key} = prepare(Post |> select([:permalink]))
+    %Ecto.Query.SelectExpr{expr: expr, take: take} = query.select
+    assert {:&, [], [0]} = expr
+    assert %{0 => {:any, [:permalink]}} = take
+
+    {query, _params, _key} = prepare(Post |> select([p], {p.permalink}))
+    %Ecto.Query.SelectExpr{expr: expr} = query.select
+    assert {:{}, [], [{{:., [], [{:&, [], [0]}, :url]}, [], []}]} = expr
+
+    {query, _params, _key} = prepare(Post |> distinct([:permalink]))
+    %Ecto.Query.QueryExpr{expr: expr} = query.distinct
+    assert [asc: {{:., [], [{:&, [], [0]}, :url]}, [], []}] = expr
+
+    {query, _params, _key} = prepare(Post |> where([p], p.permalink == "test-permalink"))
+    [%Ecto.Query.BooleanExpr{expr: expr}] = query.wheres
+    assert {:==, [],[{{:., [], [{:&, [], [0]}, :url]}, [], []}, _]} = expr
+
+    {query, _params, _key} = prepare(Post |> having([p], p.permalink == "test-permalink"))
+    [%Ecto.Query.BooleanExpr{expr: expr}] = query.havings
+    assert {:==, [],[{{:., [], [{:&, [], [0]}, :url]}, [], []}, _]} = expr
+
+    {query, _params, _key} = prepare(Post |> update(set: [permalink: "test-permalink"]))
+    [%Ecto.Query.QueryExpr{expr: expr}] = query.updates
+    assert [set: [url: %Ecto.Query.Tagged{type: {0, :permalink}, value: "test-permalink"}]] = expr
+
+    {query, _params, _key} = prepare(Post |> group_by(:permalink))
+    [%Ecto.Query.QueryExpr{expr: expr}] = query.group_bys
+    assert [{{:., [], [{:&, [], [0]}, :url]}, [], []}] = expr
+
+    {query, _params, _key} = prepare(Post |> order_by([:permalink]))
+    [%Ecto.Query.QueryExpr{expr: expr}] = query.order_bys
+    assert [asc: {{:., [], [{:&, [], [0]}, :url]}, [], []}] = expr
+  end
+
   test "normalize: tagged types" do
     {query, params} = from(Post, []) |> select([p], type(^"1", :integer))
                                      |> normalize_with_params
@@ -482,16 +520,16 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: select" do
     query = from(Post, []) |> normalize()
     assert query.select.expr == {:&, [], [0]}
-    assert query.select.fields == [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]}]
+    assert query.select.fields == [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links, :url, :comments], 9]}]
 
     query = from(Post, []) |> select([p], {p, p.title}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
+           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links, :url, :comments], 9]},
             {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
 
     query = from(Post, []) |> select([p], {p.title, p}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
+           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links, :url, :comments], 9]},
             {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
 
     query =
@@ -501,8 +539,8 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, _], {p.title, p})
       |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
-            {:&, [], [1, [:id, :text, :posted, :uuid, :post_id], 5]},
+           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links, :url, :comments], 9]},
+            {:&, [], [1, [:id, :text, :posted, :uuid, :star, :post_id], 6]},
             {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
   end
 
@@ -526,7 +564,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, struct(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
+           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links, :url, :comments], 9]},
             {:&, [], [1, [:id, :text], 2]}]
   end
 
@@ -572,7 +610,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, map(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
+           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links, :url, :comments], 9]},
             {:&, [], [1, [:id, :text], 2]}]
   end
 
