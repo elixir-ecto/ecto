@@ -1355,23 +1355,32 @@ defmodule Ecto.Changeset do
   @doc """
   Validates (unreliably) that conflicting records do not exist in the database.
 
-  This is not reliable because conflicting records could be inserted by another
-  process after this validation runs. Use a constraint for a reliable check.
+  The data in the changeset may conflict with existing records in the database.
+
+  For example:
+
+    - An existing user has this username
+    - An existing reservation overlaps this date range
+
+  Such conflicts cannot be reliably prevented with validations, because
+  conflicting records could be inserted by another process after validations
+  run. A uniqueness constraint would reliably prevent the first conflict, and an
+  exclusion constraint would reliably prevent the second.
 
   However, in most cases when there are conflicts, they will already exist by
-  the time of validation. Checking for them in the validation phase may allow
+  the time of validation. Checking for them in the validation phase allows
   users to fix errors like "username is already taken" at the same time as
-  errors like "email can't be blank", instead of fixing each constraint error
-  the database raises, one at a time, after the validations pass.
+  errors like "email can't be blank", instead of fixing the validation errors
+  first, then fixing each constraint error the database raises one at a time.
 
-  To use this, pass a function that finds existing records with which this
-  changeset would conflict, according to a unique or exclusion constraint. If
-  the function returns any an empty enumerable, there are no conflicts and the
-  validation passes. If the function returns an enumerable containing one
-  existing record, but the changeset is an update to that record (that is, the
+  To use this validation, pass a function that takes a changeset and finds
+  existing records with which the changeset would conflict. If the function
+  returns any an empty enumerable, there are no conflicts and the validation
+  passes. If the function returns an enumerable containing one existing
+  record, but the changeset is an update to that record (that is, the
   changeset and the existing record are for the same schema and have the same
-  primary key), the validation passes. Otherwise, the changeset would create a
-  conflict and the validation fails.
+  primary key), the validation passes. Otherwise, the changeset would create
+  a conflict and the validation fails.
 
   The `field_name` is where the error message (if any) will be placed.
 
@@ -1383,7 +1392,7 @@ defmodule Ecto.Changeset do
 
       validate_no_conflicts_unreliably(changeset, :title, &find_posts_with_title/1)
       validate_no_conflicts_unreliably(changeset, :title, &find_posts_with_title/1, message: "not original")
-      validate_no_conflicts_unreliably(changeset, :base, &find_overlapping_rentals/1, message: "an existing rental overlaps these dates")
+      validate_no_conflicts_unreliably(changeset, :start_date, &find_overlapping_rentals/1, message: "an existing rental overlaps these dates")
 
   A finder function might look like:
 
