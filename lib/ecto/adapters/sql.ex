@@ -641,10 +641,11 @@ defmodule Ecto.Adapters.SQL do
       pool_time: queue_time, result: result, query: query} = entry
     source = Keyword.get(opts, :source)
     caller_pid = Keyword.get(opts, :caller, self())
+    query_string = String.Chars.to_string(query)
     repo.__log__(%Ecto.LogEntry{query_time: query_time, decode_time: decode_time,
                                 queue_time: queue_time, result: log_result(result),
-                                params: params, query: String.Chars.to_string(query),
-                                ansi_color: sql_color(query), source: source,
+                                params: params, query: query_string,
+                                ansi_color: sql_color(query_string), source: source,
                                 caller_pid: caller_pid})
   end
 
