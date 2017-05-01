@@ -2127,8 +2127,15 @@ defmodule Ecto.Changeset do
     raise(ArgumentError, "cannot add constraint to changeset because it does not have a source, got: #{inspect data}")
 
   defp get_assoc(%{data: %{__struct__: schema}}, assoc) do
-    schema.__schema__(:association, assoc) ||
-      raise(ArgumentError, "cannot add constraint to changeset because association `#{assoc}` does not exist")
+    schema.__schema__(:association, assoc) || raise_invalid_assoc(schema, assoc)
+  end
+
+  defp raise_invalid_assoc(schema, assoc) do
+    associations = Enum.map_join(schema.__schema__(:associations), ", ", fn(association) ->
+      "`#{association}`"
+    end)
+    msg = "cannot add constraint to changeset because association `#{assoc}` does not exist. Did you mean one of #{associations}?"
+    raise(ArgumentError, msg)
   end
 
   @doc ~S"""
