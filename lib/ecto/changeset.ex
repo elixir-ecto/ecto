@@ -1312,7 +1312,8 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Validates that one or more fields are present in the changeset.
+  Validates that one or more fields are present in the changeset and
+  is meant to validate the user input.
 
   If the value of a field is `nil` or a string made only of whitespace,
   the changeset is marked as invalid and an error is added. Note the
