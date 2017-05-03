@@ -865,7 +865,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
     create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main")}
     assert execute_ddl(create) ==
-      [~s|CREATE INDEX "posts$main" ON "posts" (lower(permalink))|]
+      [~s|CREATE INDEX "posts$main" ON "posts" ((lower(permalink)))|]
   end
 
   test "create index with prefix" do
@@ -875,7 +875,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
     create = {:create, index(:posts, ["lower(permalink)"], name: "posts$main", prefix: :foo)}
     assert execute_ddl(create) ==
-      [~s|CREATE INDEX "posts$main" ON "foo"."posts" (lower(permalink))|]
+      [~s|CREATE INDEX "posts$main" ON "foo"."posts" ((lower(permalink)))|]
   end
 
   test "create index with comment" do
