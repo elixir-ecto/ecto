@@ -108,6 +108,10 @@ defmodule Ecto.Query.API do
   Checks if the given value is nil.
 
       from p in Post, where: is_nil(p.published_at)
+
+  To check if a given value is not nil use:
+
+      from p in Post, where: not is_nil(p.published_at)
   """
   def is_nil(value), do: doc! [value]
 
