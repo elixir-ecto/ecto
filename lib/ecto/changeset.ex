@@ -1824,7 +1824,7 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails.
       Defaults to "is invalid"
     * `:name` - the name of the constraint. Required.
-    * `:match` - how the changeset constraint name it matched against the
+    * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
       `:suffix` matches any repo constraint which `ends_with?` `:name`
        to this changeset constraint.
@@ -1869,7 +1869,7 @@ defmodule Ecto.Changeset do
     * `:name` - the constraint name. By default, the constraint
       name is inferred from the table + field. May be required
       explicitly for complex cases
-    * `:match` - how the changeset constraint name it matched against the
+    * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
       `:suffix` matches any repo constraint which `ends_with?` `:name`
        to this changeset constraint.
@@ -2097,7 +2097,7 @@ defmodule Ecto.Changeset do
     * `:name` - the constraint name. By default, the constraint
       name is inferred from the table + field. May be required
       explicitly for complex cases
-    * `:match` - how the changeset constraint name it matched against the
+    * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
       `:suffix` matches any repo constraint which `ends_with?` `:name`
        to this changeset constraint.
