@@ -221,6 +221,14 @@ defmodule Ecto.Migration do
                            check: String.t | nil, exclude: String.t | nil, comment: String.t | nil}
   end
 
+  defmodule Extension do
+    defstruct name: nil, prefix: nil
+    @type t :: %__MODULE__{
+      name: atom,
+      prefix: atom
+    }
+  end
+
   alias Ecto.Migration.Runner
 
   @doc false
@@ -336,6 +344,10 @@ defmodule Ecto.Migration do
   def create(%Table{} = table) do
     do_create table, :create
     table
+  end
+
+  def create(%Extension{} = extension) do
+    Runner.execute {:create, __prefix__(extension)}
   end
 
   @doc """
@@ -544,6 +556,10 @@ defmodule Ecto.Migration do
     |> String.replace(~r"[^\w_]", "_")
     |> String.replace("__", "_")
     |> String.to_atom
+  end
+
+  def extension(extension, opts \\ []) do
+    struct(%Extension{name: extension}, opts)
   end
 
   @doc """

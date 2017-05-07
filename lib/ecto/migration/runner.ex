@@ -9,6 +9,7 @@ defmodule Ecto.Migration.Runner do
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
   alias Ecto.Migration.Constraint
+  alias Ecto.Migration.Extension
 
   @doc """
   Runs the given migration.
@@ -164,6 +165,10 @@ defmodule Ecto.Migration.Runner do
     log_and_execute_ddl(repo, log, {:create, index})
   end
 
+  defp execute_in_direction(repo, :backward, log, {:create, %Extension{} = extension}) do
+    log_and_execute_ddl(repo, log, {:drop, extension})
+  end
+
   defp execute_in_direction(repo, :backward, log, command) do
     if reversed = reverse(command) do
       log_and_execute_ddl(repo, log, reversed)
@@ -259,6 +264,15 @@ defmodule Ecto.Migration.Runner do
     do: "create exclude constraint #{constraint.name} on table #{quote_name(constraint.prefix, constraint.table)}"
   defp command({:drop, %Constraint{} = constraint}),
     do: "drop constraint #{constraint.name} from table #{quote_name(constraint.prefix, constraint.table)}"
+
+  defp command({:create, %Extension{prefix: prefix} = extension}) when not is_nil(prefix),
+    do: "create extension #{extension.name} schema #{extension.prefix}"
+
+  defp command({:create, %Extension{} = extension}),
+    do: "create extension #{extension.name}"    
+
+  defp command({:drop, %Extension{} = extension}),
+    do: "drop extension #{extension.name}"
 
   defp quote_name(nil, name), do: quote_name(name)
   defp quote_name(prefix, name), do: quote_name(prefix) <> "." <> quote_name(name)

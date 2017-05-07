@@ -652,10 +652,25 @@ defmodule Ecto.Adapters.PostgresTest do
   # DDL
 
   import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1,
-                                references: 2, constraint: 2, constraint: 3]
+                                references: 2, constraint: 2, constraint: 3,
+                                extension: 1, extension: 2]
 
   test "executing a string during migration" do
     assert execute_ddl("example") == ["example"]
+  end
+
+  test "create extension" do
+    create = {:create, extension(:foo_extension)}
+    assert execute_ddl(create) == ["""
+    CREATE EXTENSION "foo_extension"
+    """ |> remove_newlines]
+  end
+
+  test "create extension with prefix" do
+    create = {:create, extension(:foo_extension, prefix: :foo_prefix)}
+    assert execute_ddl(create) == ["""
+    CREATE EXTENSION "foo_extension" SCHEMA "foo_prefix"
+    """ |> remove_newlines]
   end
 
   test "create table" do

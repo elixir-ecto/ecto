@@ -582,7 +582,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     # DDL
 
-    alias Ecto.Migration.{Table, Index, Reference, Constraint}
+    alias Ecto.Migration.{Table, Index, Reference, Constraint, Extension}
 
     @drops [:drop, :drop_if_exists]
 
@@ -602,6 +602,18 @@ if Code.ensure_loaded?(Postgrex) do
     def execute_ddl({command, %Table{} = table}) when command in @drops do
       [["DROP TABLE ", if_do(command == :drop_if_exists, "IF EXISTS "),
         quote_table(table.prefix, table.name)]]
+    end
+
+    def execute_ddl({:drop, %Extension{} = extension}) do
+      [["DROP EXTENSION ", quote_table(extension.name)]]
+    end
+
+    def execute_ddl({:create, %Extension{prefix: prefix} = extension}) when not is_nil(prefix) do
+      [["CREATE EXTENSION ", quote_name(extension.name), " SCHEMA ", quote_name(prefix)]]
+    end
+
+    def execute_ddl({:create, %Extension{} = extension}) do
+      [["CREATE EXTENSION ", quote_table(extension.name)]]
     end
 
     def execute_ddl({:alter, %Table{} = table, changes}) do
