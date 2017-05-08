@@ -165,14 +165,6 @@ defmodule Ecto.Migration.Runner do
     log_and_execute_ddl(repo, log, down)
   end
 
-  defp execute_in_direction(repo, :backward, log, {command, %Index{} = index}) when command in @creates do
-    log_and_execute_ddl(repo, log, {:drop, index})
-  end
-
-  defp execute_in_direction(repo, :backward, log, {:drop, %Index{} = index}) do
-    log_and_execute_ddl(repo, log, {:create, index})
-  end
-
   defp execute_in_direction(repo, :backward, log, command) do
     if reversed = reverse(command) do
       log_and_execute_ddl(repo, log, reversed)
@@ -182,6 +174,11 @@ defmodule Ecto.Migration.Runner do
         "You will need to explicitly define up/1 and down/1 in your migration"
     end
   end
+
+  defp reverse({command, %Index{} = index}) when command in @creates,
+    do: {:drop, index}
+  defp reverse({:drop, %Index{} = index}),
+    do: {:create, index}
 
   defp reverse({command, %Table{} = table, _columns}) when command in @creates,
     do: {:drop, table}
@@ -194,12 +191,9 @@ defmodule Ecto.Migration.Runner do
     do: {:rename, table_new, table_current}
   defp reverse({:rename, %Table{} = table, current_column, new_column}),
     do: {:rename, table, new_column, current_column}
+
   defp reverse({command, %Constraint{} = constraint}) when command in @creates,
     do: {:drop, constraint}
-
-  defp reverse({command, %Command{up: _, down: down} = command}),
-    do: down
-
   defp reverse(_command), do: false
 
   defp table_reverse([{:add, name, _type, _opts} | t], acc) do
