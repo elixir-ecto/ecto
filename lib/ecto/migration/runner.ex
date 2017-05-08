@@ -9,6 +9,7 @@ defmodule Ecto.Migration.Runner do
   alias Ecto.Migration.Table
   alias Ecto.Migration.Index
   alias Ecto.Migration.Constraint
+  alias Ecto.Migration.Command
 
   @doc """
   Runs the given migration.
@@ -152,8 +153,16 @@ defmodule Ecto.Migration.Runner do
   ## Execute
   @creates [:create, :create_if_not_exists]
 
+  defp execute_in_direction(repo, :forward, log, %Command{up: up}) do
+    log_and_execute_ddl(repo, log, up)
+  end
+
   defp execute_in_direction(repo, :forward, log, command) do
     log_and_execute_ddl(repo, log, command)
+  end
+
+  defp execute_in_direction(repo, :backward, log, %Command{down: down}) do
+    log_and_execute_ddl(repo, log, down)
   end
 
   defp execute_in_direction(repo, :backward, log, {command, %Index{} = index}) when command in @creates do
@@ -187,6 +196,10 @@ defmodule Ecto.Migration.Runner do
     do: {:rename, table, new_column, current_column}
   defp reverse({command, %Constraint{} = constraint}) when command in @creates,
     do: {:drop, constraint}
+
+  defp reverse({command, %Command{up: _, down: down} = command}),
+    do: down
+
   defp reverse(_command), do: false
 
   defp table_reverse([{:add, name, _type, _opts} | t], acc) do
