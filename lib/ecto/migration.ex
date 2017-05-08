@@ -828,7 +828,7 @@ defmodule Ecto.Migration do
   ## Examples
 
       create constraint("users", :price_must_be_positive, check: "price > 0")
-      create constraint("size_ranges", :no_overlap, exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|
+      create constraint("size_ranges", :no_overlap, exclude: ~s|gist (int4range("from", "to", '[]') WITH &&)|)
       drop   constraint("products", "price_must_be_positive")
 
   ## Options

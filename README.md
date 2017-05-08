@@ -1,5 +1,5 @@
-# Ecto
-
+![Ecto](https://github.com/elixir-ecto/ecto/raw/master/guides/images/logo.png)
+=========
 [![Build Status](https://travis-ci.org/elixir-ecto/ecto.svg?branch=master)](https://travis-ci.org/elixir-ecto/ecto)
 [![Inline docs](http://inch-ci.org/github/elixir-ecto/ecto.svg?branch=master&style=flat)](http://inch-ci.org/github/elixir-ecto/ecto)
 [![Ebert](https://ebertapp.io/github/elixir-ecto/ecto.svg)](https://ebertapp.io/github/elixir-ecto/ecto)
@@ -69,6 +69,8 @@ Database   | Ecto Adapter           | Dependency                   | Ecto 2.0 co
 :----------| :--------------------- | :----------------------------| :-------------------
 PostgreSQL | Ecto.Adapters.Postgres | [postgrex][postgrex]         | Yes
 MySQL      | Ecto.Adapters.MySQL    | [mariaex][mariaex]           | Yes
+Mnesia     | EctoMnesia.Adapter     | [ecto_mnesia][ecto_mnesia]   | Yes
+MSSQL      | MssqlEcto              | [mssql_ecto][mssql_ecto]     | Yes
 MSSQL      | Tds.Ecto               | [tds_ecto][tds_ecto]         | No
 SQLite3    | Sqlite.Ecto            | [sqlite_ecto][sqlite_ecto]   | No
 MongoDB    | Mongo.Ecto             | [mongodb_ecto][mongodb_ecto] | No
@@ -78,6 +80,8 @@ MongoDB    | Mongo.Ecto             | [mongodb_ecto][mongodb_ecto] | No
 [tds_ecto]: https://github.com/livehelpnow/tds_ecto
 [sqlite_ecto]: https://github.com/jazzyb/sqlite_ecto
 [mongodb_ecto]: https://github.com/michalmuskala/mongodb_ecto
+[ecto_mnesia]: https://github.com/Nebo15/ecto_mnesia
+[mssql_ecto]: https://github.com/findmypast-oss/mssql_ecto
 
 For example, if you want to use PostgreSQL, add to your `mix.exs` file:
 
@@ -99,6 +103,16 @@ config :my_app, Repo,
 ```
 
 We are currently looking for contributions to add support for other SQL databases and folks interested in exploring non-relational databases too.
+
+## Supported Versions
+
+| Branch | Support                  |
+| ------ | ------------------------ |
+| v2.2   | In development (master)  |
+| v2.1   | Bug fixes                |
+| v2.0   | Security patches only    |
+| v1.1   | Security patches only    |
+| v1.0   | Unsupported from 05/2017 |
 
 ## Important links
 
@@ -144,6 +158,8 @@ $ MIX_ENV=docs mix docs
 
 ## Copyright and License
 
-Copyright (c) 2012, Plataformatec.
+"Ecto" and the Ecto logo are copyright (c) 2012 Plataformatec.
+
+The Ecto logo was designed by [Dane Wesolko](http://www.danewesolko.com).
 
 Ecto source code is licensed under the [Apache 2 License](LICENSE.md).

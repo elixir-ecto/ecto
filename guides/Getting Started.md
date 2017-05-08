@@ -4,7 +4,7 @@ This guide is an introduction to [Ecto](https://github.com/elixir-lang/ecto),
 the database wrapper and query generator for Elixir. Ecto provides a
 standardised API and a set of abstractions for talking to all the different
 kinds of databases, so that Elixir developers can query whatever database
-they're using by employing similar contructs.
+they're using by employing similar constructs.
 
 In this guide, we're going to learn some basics about Ecto, such as creating,
 reading, updating and destroying records from a PostgreSQL database. If you want
@@ -232,7 +232,7 @@ Friends.Repo.insert(person)
 
 To insert the data into our database, we call `insert` on `Friends.Repo`, which is the module that uses Ecto to talk to our database. This function tells Ecto that we want to insert a new `Friends.Person` record into the database corresponding with `Friends.Repo`. The `person` struct here represents the data that we want to insert into the database.
 
-A successful insert will return a tuple, like so:
+A successful insertion will return a tuple, like so:
 
 ```elixir
 {:ok,
@@ -240,7 +240,7 @@ A successful insert will return a tuple, like so:
   first_name: nil, id: 1, last_name: nil}}
 ```
 
-The `:ok` atom can be used for pattern matching purposes to ensure that the insert succeeds. A situation where the insert may not succeed is if you have a constraint on the database itself. For instance, if the database had a unique constraint on a field called `email` so that an email can only be used for one person record, then the insertion would fail.
+The `:ok` atom can be used for pattern matching purposes to ensure that the insertion succeeds. A situation where the insertion may not succeed is if you have a constraint on the database itself. For instance, if the database had a unique constraint on a field called `email` so that an email can only be used for one person record, then the insertion would fail.
 
 You may wish to pattern match on the tuple in order to refer to the record inserted into the database:
 
@@ -283,7 +283,7 @@ On the final line, rather than inserting the `person`, we insert the `changeset`
   data: #Friends.Person<>, valid?: false>}
 ```
 
-Just like the last time we did an insert, this returns a tuple. This time however, the first element in the tuple is `:error`, which indicates something bad happened. The specifics of what happened are included in the changeset which is returned. We can access these by doing some pattern matching:
+Just like the last time we did an insertion, this returns a tuple. This time however, the first element in the tuple is `:error`, which indicates something bad happened. The specifics of what happened are included in the changeset which is returned. We can access these by doing some pattern matching:
 
 ```elixir
 {:error, changeset} = Friends.Repo.insert(changeset)
@@ -295,7 +295,7 @@ Then we can get to the errors by doing `changeset.errors`:
 [first_name: "can't be blank", last_name: "can't be blank"]
 ```
 
-And we can ask the changeset itself it is valid, even before doing an insert:
+And we can ask the changeset itself it is valid, even before doing an insertion:
 
 ```elixir
 changeset.valid?
@@ -347,7 +347,7 @@ case Friends.Repo.insert(changeset) do
 end
 ```
 
-**NOTE:** `changeset.valid?` will not check constraints (such as `uniqueness_constraint`). For that, you will need to attempt to do an insert and check for errors from the database. It's for this reason it's best practice to try inserting data and validate the returned tuple from `Friends.Repo.insert` to get the correct errors, as prior to insert the changeset will only contain validation errors from the application itself.
+**NOTE:** `changeset.valid?` will not check constraints (such as `uniqueness_constraint`). For that, you will need to attempt to do an insertion and check for errors from the database. It's for this reason it's best practice to try inserting data and validate the returned tuple from `Friends.Repo.insert` to get the correct errors, as prior to insertion the changeset will only contain validation errors from the application itself.
 
 If the insertion of the changeset succeeds, then you can do whatever you wish with the `person` returned in that result. If it fails, then you have access to the changeset and its errors. In the failure case, you may wish to present these errors to the end user. The errors in the changeset are a keyword list that looks like this:
 

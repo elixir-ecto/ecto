@@ -168,11 +168,11 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "cast/4: fails on bad arguments" do
-    assert_raise Ecto.CastError, ~r"expected params to be a map, got:", fn ->
+    assert_raise Ecto.CastError, ~r"expected params to be a :map, got:", fn ->
       cast(%Post{}, %Post{}, ~w(unknown))
     end
 
-    assert_raise Ecto.CastError, ~r"expected params to be a map, got:", fn ->
+    assert_raise Ecto.CastError, ~r"expected params to be a :map, got:", fn ->
       cast(%Post{}, "foo", ~w(unknown))
     end
 
@@ -922,6 +922,12 @@ defmodule Ecto.ChangesetTest do
                 |> validate_confirmation(:password)
     refute changeset.valid?
     assert changeset.errors == [password_confirmation: {"does not match confirmation", [validation: :confirmation]}]
+
+    # invalid params
+    changeset = changeset(:invalid)
+                |> validate_confirmation(:password)
+    refute changeset.valid?
+    assert changeset.errors == []
   end
 
   test "validate_acceptance/3" do
@@ -1054,7 +1060,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "assoc_constraint/3 with errors" do
-    message = ~r"cannot add constraint to changeset because association `unknown` does not exist"
+    message = ~r"cannot add constraint to changeset because association `unknown` does not exist. Did you mean one of `comments`, `comment`?"
     assert_raise ArgumentError, message, fn ->
       change(%Post{}) |> assoc_constraint(:unknown)
     end

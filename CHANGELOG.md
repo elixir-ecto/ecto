@@ -7,8 +7,11 @@
 ### Enhancements
 
   * [Ecto.Adapters.Postgres] Use the "postgres" database for create/drop database commands
+  * [Ecto.Adapters.MySQL] Use Mariaex instead of MySQL client to create & drop database
   * [Ecto.Changeset] Add `apply_action/2`
   * [Ecto.Migrator] Allow migration/rollback to log SQL commands via the `--log-sql` flag
+  * [Ecto.Repo] Implement `:returning` option on insert
+  * [mix ecto.drop] Add `--force`
 
 ### Bug fixes
 

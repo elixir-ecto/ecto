@@ -20,13 +20,14 @@ defmodule Mix.Tasks.Ecto.Drop do
 
     * `-r`, `--repo` - the repo to drop
     * `--no-compile` - do not compile before stopping
+    * `--force` - do not ask for confirmation
 
   """
 
   @doc false
   def run(args) do
     repos = parse_repo(args)
-    {opts, _, _} = OptionParser.parse args, switches: [quiet: :boolean]
+    {opts, _, _} = OptionParser.parse args, switches: [quiet: :boolean, force: :boolean]
 
     Enum.each repos, fn repo ->
       ensure_repo(repo, args)
@@ -34,6 +35,7 @@ defmodule Mix.Tasks.Ecto.Drop do
                                           "to drop storage for #{inspect repo}")
 
       if skip_safety_warnings?() or
+         opts[:force] or
          Mix.shell.yes?("Are you sure you want to drop the database for repo #{inspect repo}?") do
         drop_database(repo, opts)
       end

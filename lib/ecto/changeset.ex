@@ -412,7 +412,8 @@ defmodule Ecto.Changeset do
   def cast(data, params, permitted, opts \\ [])
 
   def cast(_data, %{__struct__: _} = params, _permitted, _opts) do
-    raise Ecto.CastError, "expected params to be a map, got: `#{inspect params}`"
+    raise Ecto.CastError, type: :map, value: params,
+                          message: "expected params to be a :map, got: `#{inspect params}`"
   end
 
   def cast({data, types}, params, permitted, opts) when is_map(data) do
@@ -460,7 +461,8 @@ defmodule Ecto.Changeset do
   end
 
   defp cast(%{}, %{}, %{}, params, permitted, _opts) when is_list(permitted) do
-    raise Ecto.CastError, "expected params to be a map, got: `#{inspect params}`"
+    raise Ecto.CastError, type: :map, value: params,
+                          message: "expected params to be a :map, got: `#{inspect params}`"
   end
 
   defp process_param(key, params, types, data, empty_values, defaults, {changes, errors, valid?}) do
@@ -529,8 +531,9 @@ defmodule Ecto.Changeset do
         nil
 
       {key, _value}, _ when is_binary(key) ->
-        raise Ecto.CastError, "expected params to be a map with atoms or string keys, " <>
-                              "got a map with mixed keys: #{inspect params}"
+        raise Ecto.CastError, type: :map, value: params,
+                              message: "expected params to be a map with atoms or string keys, " <>
+                                       "got a map with mixed keys: #{inspect params}"
 
       {key, value}, acc when is_atom(key) ->
         Map.put(acc || %{}, Atom.to_string(key), value)
@@ -1613,14 +1616,15 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_confirmation(t, atom, Keyword.t) :: t
-  def validate_confirmation(changeset, field, opts \\ []) do
+  def validate_confirmation(changeset, field, opts \\ [])
+  def validate_confirmation(%{params: params} = changeset, field, opts) when is_map(params) do
     param = Atom.to_string(field)
     error_param = "#{param}_confirmation"
     error_field = String.to_atom(error_param)
-    value = Map.get(changeset.params, param)
+    value = Map.get(params, param)
 
     errors =
-      case Map.fetch(changeset.params, error_param) do
+      case Map.fetch(params, error_param) do
         {:ok, ^value} ->
           []
         {:ok, _} ->
@@ -1633,6 +1637,9 @@ defmodule Ecto.Changeset do
     %{changeset | validations: [{:confirmation, opts} | changeset.validations],
                   errors: errors ++ changeset.errors,
                   valid?: changeset.valid? and errors == []}
+  end
+  def validate_confirmation(%{params: nil} = changeset, _, _) do
+    changeset
   end
 
   defp confirmation_missing(opts, error_field) do
@@ -1817,7 +1824,7 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails.
       Defaults to "is invalid"
     * `:name` - the name of the constraint. Required.
-    * `:match` - how the changeset constraint name it matched against the
+    * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
       `:suffix` matches any repo constraint which `ends_with?` `:name`
        to this changeset constraint.
@@ -1862,7 +1869,7 @@ defmodule Ecto.Changeset do
     * `:name` - the constraint name. By default, the constraint
       name is inferred from the table + field. May be required
       explicitly for complex cases
-    * `:match` - how the changeset constraint name it matched against the
+    * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
       `:suffix` matches any repo constraint which `ends_with?` `:name`
        to this changeset constraint.
@@ -2090,7 +2097,7 @@ defmodule Ecto.Changeset do
     * `:name` - the constraint name. By default, the constraint
       name is inferred from the table + field. May be required
       explicitly for complex cases
-    * `:match` - how the changeset constraint name it matched against the
+    * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
       `:suffix` matches any repo constraint which `ends_with?` `:name`
        to this changeset constraint.
@@ -2120,8 +2127,15 @@ defmodule Ecto.Changeset do
     raise(ArgumentError, "cannot add constraint to changeset because it does not have a source, got: #{inspect data}")
 
   defp get_assoc(%{data: %{__struct__: schema}}, assoc) do
-    schema.__schema__(:association, assoc) ||
-      raise(ArgumentError, "cannot add constraint to changeset because association `#{assoc}` does not exist")
+    schema.__schema__(:association, assoc) || raise_invalid_assoc(schema, assoc)
+  end
+
+  defp raise_invalid_assoc(schema, assoc) do
+    associations = Enum.map_join(schema.__schema__(:associations), ", ", fn(association) ->
+      "`#{association}`"
+    end)
+    msg = "cannot add constraint to changeset because association `#{assoc}` does not exist. Did you mean one of #{associations}?"
+    raise(ArgumentError, msg)
   end
 
   @doc ~S"""

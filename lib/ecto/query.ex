@@ -331,7 +331,7 @@ defmodule Ecto.Query do
                             LimitOffset, Lock, OrderBy, Preload, Select, Update}
 
   @doc """
-  Buids a dynamic query expression.
+  Builds a dynamic query expression.
 
   Dynamic query expressions allows developers to build queries
   expression bit by bit so they are later interpolated in a query.
@@ -488,7 +488,7 @@ defmodule Ecto.Query do
   """
   defmacro from(expr, kw \\ []) do
     unless Keyword.keyword?(kw) do
-      raise ArgumentError, "second argument to `from` must be a keyword list"
+      raise ArgumentError, "second argument to `from` must be a compile time keyword list"
     end
 
     {quoted, binds, count_bind} = From.build(expr, __CALLER__)
