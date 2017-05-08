@@ -799,6 +799,17 @@ defmodule Ecto.Type do
 
   ## UTC datetime
 
+  defp cast_utc_datetime(binary) when is_binary(binary) do
+    case DateTime.from_iso8601(binary) do
+      {:ok, datetime, _offset} -> {:ok, datetime}
+      {:error, :missing_offset} ->
+        case cast_naive_datetime(binary) do
+          {:ok, naive_datetime} -> {:ok, DateTime.from_naive!(naive_datetime, "Etc/UTC")}
+          :error -> :error
+        end
+      {:error, _} -> :error
+    end
+  end
   defp cast_utc_datetime(value) do
     case cast_naive_datetime(value) do
       {:ok, %NaiveDateTime{year: year, month: month, day: day,
