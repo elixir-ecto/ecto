@@ -812,11 +812,8 @@ defmodule Ecto.Type do
   end
   defp cast_utc_datetime(value) do
     case cast_naive_datetime(value) do
-      {:ok, %NaiveDateTime{year: year, month: month, day: day,
-                           hour: hour, minute: minute, second: second, microsecond: microsecond}} ->
-        {:ok, %DateTime{year: year, month: month, day: day,
-                        hour: hour, minute: minute, second: second, microsecond: microsecond,
-                        std_offset: 0, utc_offset: 0, zone_abbr: "UTC", time_zone: "Etc/UTC"}}
+      {:ok, %NaiveDateTime{} = naive_datetime} ->
+        {:ok, DateTime.from_naive!(naive_datetime, "Etc/UTC")}
       {:ok, _} = ok ->
         ok
       :error ->
