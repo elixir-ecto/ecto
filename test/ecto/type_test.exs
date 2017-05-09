@@ -328,6 +328,12 @@ defmodule Ecto.TypeTest do
     assert Ecto.Type.cast(:utc_datetime, %{year: 2015, month: 1, day: 23, hour: 23, minute: 50, second: 07}) ==
            {:ok, @datetime}
 
+    assert Ecto.Type.cast(:utc_datetime, %DateTime{calendar: Calendar.ISO, year: 2015, month: 1, day: 24,
+                                                   hour: 9, minute: 50, second: 7, microsecond: {0, 0},
+                                                   std_offset: 0, utc_offset: 36000,
+                                                   time_zone: "Etc/GMT-10", zone_abbr: "+10"}) ==
+           {:ok, @datetime}
+
     assert Ecto.Type.cast(:utc_datetime, %{"year" => "", "month" => "", "day" => "",
                                            "hour" => "", "minute" => ""}) ==
            {:ok, nil}
