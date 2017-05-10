@@ -13,10 +13,28 @@ defmodule Ecto.UUID do
   @doc """
   Casts to UUID.
   """
-  def cast(<< a1, a2, a3, a4, a5, a6, a7, a8, ?-,
-              b1, b2, b3, b4, ?-,
-              c1, c2, c3, c4, ?-,
-              d1, d2, d3, d4, ?-,
+  def cast(<< a::64, ?-, b::32, ?-, c::32, ?-, d::32, ?-, e::96 >>) do
+    do_cast(<< a::64, b::32, c::32, d::32, e::96 >>)
+  end
+  def cast(<< _::128 >> = binary) do
+    binary |> Base.encode16(case: :lower) |> do_cast()
+  end
+  def cast(_), do: :error
+
+  @doc """
+  Same as `cast/1` but raises `Ecto.CastError` on invalid arguments.
+  """
+  def cast!(value) do
+    case cast(value) do
+      {:ok, uuid} -> uuid
+      :error -> raise Ecto.CastError, type: __MODULE__, value: value
+    end
+  end
+
+  defp do_cast(<< a1, a2, a3, a4, a5, a6, a7, a8,
+              b1, b2, b3, b4,
+              c1, c2, c3, c4,
+              d1, d2, d3, d4,
               e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12 >>) do
     << c(a1), c(a2), c(a3), c(a4),
        c(a5), c(a6), c(a7), c(a8), ?-,
@@ -29,19 +47,7 @@ defmodule Ecto.UUID do
   catch
     :error -> :error
   else
-    casted ->
-      {:ok, casted}
-  end
-  def cast(_), do: :error
-
-  @doc """
-  Same as `cast/1` but raises `Ecto.CastError` on invalid arguments.
-  """
-  def cast!(value) do
-    case cast(value) do
-      {:ok, uuid} -> uuid
-      :error -> raise Ecto.CastError, type: __MODULE__, value: value
-    end
+    casted -> {:ok, casted}
   end
 
   @compile {:inline, c: 1}
