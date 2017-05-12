@@ -29,9 +29,9 @@ defmodule Ecto.UUID do
   catch
     :error -> :error
   else
-    casted ->
-      {:ok, casted}
+    casted -> {:ok, casted}
   end
+  def cast(<< _::128 >> = binary), do: encode(binary)
   def cast(_), do: :error
 
   @doc """
@@ -145,14 +145,14 @@ defmodule Ecto.UUID do
   Converts a binary UUID into a string.
   """
   def load(<<_::128>> = uuid) do
-   {:ok, encode(uuid)}
+    encode(uuid)
   end
   def load(<<_::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96>> = string) do
     raise "trying to load string UUID as Ecto.UUID: #{inspect string}. " <>
           "Maybe you wanted to declare :uuid as your database field?"
   end
   def load(%Ecto.Query.Tagged{type: :uuid, value: uuid}) do
-    {:ok, encode(uuid)}
+    encode(uuid)
   end
   def load(_), do: :error
 
@@ -160,7 +160,8 @@ defmodule Ecto.UUID do
   Generates a version 4 (random) UUID.
   """
   def generate do
-    bingenerate() |> encode
+    {:ok, uuid} = encode(bingenerate())
+    uuid
   end
 
   @doc """
@@ -185,10 +186,31 @@ defmodule Ecto.UUID do
                  e9::4, e10::4, e11::4, e12::4 >>) do
     << e(a1), e(a2), e(a3), e(a4), e(a5), e(a6), e(a7), e(a8), ?-,
        e(b1), e(b2), e(b3), e(b4), ?-,
-       e(c1), e(c2), e(c3), e(c4), ?-,
-       e(d1), e(d2), e(d3), e(d4), ?-,
+       encode_version(c1), e(c2), e(c3), e(c4), ?-,
+       encode_variant(d1), e(d2), e(d3), e(d4), ?-,
        e(e1), e(e2), e(e3), e(e4), e(e5), e(e6), e(e7), e(e8), e(e9), e(e10), e(e11), e(e12) >>
+  catch
+    :error -> :error
+  else
+    encoded -> {:ok, encoded}
   end
+
+  @compile {:inline, encode_version: 1}
+
+  defp encode_version(1), do: ?1
+  defp encode_version(2), do: ?2
+  defp encode_version(3), do: ?3
+  defp encode_version(4), do: ?4
+  defp encode_version(5), do: ?5
+  defp encode_version(_), do: throw(:error)
+
+  @compile {:inline, encode_variant: 1}
+
+  defp encode_variant(8), do: ?8
+  defp encode_variant(9), do: ?9
+  defp encode_variant(10), do: ?a
+  defp encode_variant(11), do: ?b
+  defp encode_variant(_), do: throw(:error)
 
   @compile {:inline, e: 1}
 
