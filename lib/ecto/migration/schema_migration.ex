@@ -19,15 +19,21 @@ defmodule Ecto.Migration.SchemaMigration do
   end
 
   def migrated_versions(repo, prefix) do
-    repo.all from(p in {get_source(repo), __MODULE__}, select: p.version) |> Map.put(:prefix, prefix), @opts
+    from(p in {get_source(repo), __MODULE__}, select: p.version)
+    |> Map.put(:prefix, prefix)
+    |> repo.all(@opts)
   end
 
   def up(repo, version, prefix) do
-    repo.insert! %__MODULE__{version: version} |> Ecto.put_meta(prefix: prefix, source: get_source(repo)), @opts
+    %__MODULE__{version: version}
+    |> Ecto.put_meta(prefix: prefix, source: get_source(repo))
+    |> repo.insert!(@opts)
   end
 
   def down(repo, version, prefix) do
-    repo.delete_all from(p in {get_source(repo), __MODULE__}, where: p.version == ^version) |> Map.put(:prefix, prefix), @opts
+    from(p in {get_source(repo), __MODULE__}, where: p.version == ^version)
+    |> Map.put(:prefix, prefix)
+    |> repo.delete_all(@opts)
   end
 
   def get_source(repo) do
