@@ -707,18 +707,27 @@ defmodule Ecto.Changeset do
   end
 
   defp on_cast_default(type, module) do
-    if Code.ensure_loaded?(module) and function_exported?(module, :changeset, 2) do
-      &module.changeset/2
-    else
-      raise ArgumentError, """
-      the module #{inspect module} does not define a changeset/2 function, which is used by cast_#{type}/3.
-      You need to either:
+    fn struct, params ->
+      try do
+        module.changeset(struct, params)
+      rescue
+        e in UndefinedFunctionError ->
+          case System.stacktrace do
+            [{^module, :changeset, args_or_arity, _}] when args_or_arity == 2
+                                                      when length(args_or_arity) == 2 ->
+              raise ArgumentError, """
+              the module #{inspect module} does not define a changeset/2 function,
+              which is used by cast_#{type}/3. You need to either:
 
-        1. implement the #{type}.changeset/2 function
-        2. pass the :with option to cast_#{type}/3 with an anonymous function that expects 2 args
+                1. implement the #{type}.changeset/2 function
+                2. pass the :with option to cast_#{type}/3 with an anonymous function that expects 2 args
 
-      When using an inline embed, the :with option must be given
-      """
+              When using an inline embed, the :with option must be given
+              """
+            stacktrace ->
+              reraise e, stacktrace
+          end
+      end
     end
   end
 
