@@ -922,9 +922,11 @@ defmodule Ecto.Repo do
 
   ## Examples
 
+      import Ecto.Changeset, only: [change: 2]
+
       MyRepo.transaction(fn ->
-        MyRepo.update!(%{alice | balance: alice.balance - 10})
-        MyRepo.update!(%{bob | balance: bob.balance + 10})
+        MyRepo.update!(change(alice, balance: alice.balance - 10))
+        MyRepo.update!(change(bob, balance: bob.balance + 10))
       end)
 
       # Roll back a transaction explicitly
