@@ -236,9 +236,10 @@ defmodule Ecto.Query.Planner do
   defp prepare_source(query, %Ecto.SubQuery{query: inner_query} = subquery, adapter) do
     try do
       {inner_query, params, key} = prepare(inner_query, :all, adapter, 0)
-      inner_query = inner_query |> returning(true) |> normalize_select()
-      %{subquery | query: inner_query, params: params, cache: key,
-                   fields: subquery_fields(inner_query, inner_query.select)}
+      %{select: select} = inner_query = inner_query |> returning(true) |> normalize_select()
+      {select, fields} = subquery_fields(inner_query, select)
+      %{subquery | query: %{inner_query | select: select},
+                   params: params, cache: key, fields: fields}
     rescue
       e -> raise Ecto.SubQueryError, query: query, exception: e
     end
@@ -255,28 +256,54 @@ defmodule Ecto.Query.Planner do
       when assocs != [] or preloads != [] do
     error!(query, "cannot preload associations in subquery")
   end
-  defp subquery_fields(query, %{expr: {:%{}, _, pairs} = expr}) do
-    Enum.map(pairs, fn
-      {key, _} when not is_atom(key) ->
-        error!(query, "only atom keys are allowed when selecting a map in subquery, got: `#{Macro.to_string(expr)}`")
-      {key, expr} ->
-        if valid_subquery_value?(expr) do
-          {key, expr}
-        else
-          error!(query, "containers (maps, lists, tuples) or sources (t) are not allowed when selecting a map in subquery, got: `#{Macro.to_string(expr)}`")
-        end
-    end)
+  defp subquery_fields(query, %{expr: {:%{}, meta, [{:|, _, [{:&, [], [ix]}, pairs]}]} = expr,
+                                fields: [{:&, _, [ix, [_ | _] = fields, _]} | _]} = select) do
+    # In case of map updates, we need to remove duplicated fields
+    # at query time because we use the field names as aliases and
+    # duplicate aliases will lead to invalid queries.
+    map_fields = subquery_map_fields(query, expr, pairs)
+    map_keys = Keyword.keys(map_fields)
+    invalid_keys = map_keys -- fields
+
+    if invalid_keys != [] do
+      error!(query, "invalid key `#{inspect hd(invalid_keys)}` on map update in subquery")
+    end
+
+    fields = subquery_selector_fields(fields -- map_keys, ix) ++ map_fields
+    {%{select | expr: {:%{}, meta, fields}, fields: fields}, fields}
   end
-  defp subquery_fields(_query, %{fields: [{:&, _, [ix, [_|_] = fields, _]}]}) do
+  defp subquery_fields(query, %{expr: {:%{}, _, pairs} = expr} = select) do
+    {select, subquery_map_fields(query, expr, pairs)}
+  end
+  defp subquery_fields(_query, %{expr: {:&, _, [ix]},
+                                 fields: [{:&, _, [ix, [_ | _] = fields, _]}]} = select) do
+    {select, subquery_selector_fields(fields, ix)}
+  end
+  defp subquery_fields(_query, %{expr: {{:., _, [{:&, _, [ix]}, field]}, _, []},
+                                 fields: [{{:., _, [{:&, _, [ix]}, field]}, _, []}]} = select) do
+    {select, [{field, {{:., [], [{:&, [], [ix]}, field]}, [], []}}]}
+  end
+  defp subquery_fields(query, %{expr: expr}) do
+    error!(query, "subquery must select a source (t), a field (t.field) or a map, got: `#{Macro.to_string(expr)}`")
+  end
+
+  defp subquery_selector_fields(fields, ix) do
     Enum.map(fields, fn field ->
       {field, {{:., [], [{:&, [], [ix]}, field]}, [], []}}
     end)
   end
-  defp subquery_fields(_query, %{fields: [{{:., _, [{:&, _, [ix]}, field]}, _, []}]}) do
-    [{field, {{:., [], [{:&, [], [ix]}, field]}, [], []}}]
-  end
-  defp subquery_fields(query, %{expr: expr}) do
-    error!(query, "subquery must select a source (t), a field (t.field) or a map, got: `#{Macro.to_string(expr)}`")
+
+  defp subquery_map_fields(query, expr, pairs) do
+    Enum.map(pairs, fn
+      {key, _} when not is_atom(key) ->
+        error!(query, "only atom keys are allowed when selecting a map in subquery, got: `#{Macro.to_string(expr)}`")
+      {key, value} ->
+        if valid_subquery_value?(value) do
+          {key, value}
+        else
+          error!(query, "containers (maps, lists, tuples) or sources (t) are not allowed when selecting a map in subquery, got: `#{Macro.to_string(expr)}`")
+        end
+    end)
   end
 
   defp valid_subquery_value?({_, _}), do: false
@@ -847,7 +874,7 @@ defmodule Ecto.Query.Planner do
   defp collect_fields({:{}, _, elems}, query, take, from),
     do: collect_fields(elems, query, take, from)
   defp collect_fields({:%{}, _, [{:|, _, [data, pairs]}]}, query, take, from),
-    do: collect_fields([data|pairs], query, take, from)
+    do: collect_fields([data | pairs], query, take, from)
   defp collect_fields({:%{}, _, pairs}, query, take, from),
     do: collect_fields(pairs, query, take, from)
   defp collect_fields({:%, _, [_name, expr]}, query, take, from),

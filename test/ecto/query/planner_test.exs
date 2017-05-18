@@ -296,31 +296,54 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  test "prepare: subqueries validates select fields" do
-    query = prepare(from(subquery(Post), [])) |> elem(0)
-    assert [{:id, {{:., [], [{:&, [], [0]}, :id]}, [], []}},
-            {:title, {{:., [], [{:&, [], [0]}, :title]}, [], []}} | _] = query.from.fields
-
-    query = from p in "posts", select: p.code
-    query = prepare(from(subquery(query), [])) |> elem(0)
-    assert [code: {{:., [], [{:&, [], [0]}, :code]}, [], []}] = query.from.fields
-
-    query = from p in Post, select: p.code
-    query = prepare(from(subquery(query), [])) |> elem(0)
-    assert [code: {{:., [], [{:&, [], [0]}, :code]}, [], []}] = query.from.fields
-
-    query = from p in Post, join: c in assoc(p, :comments), select: %{c: p.code}
-    query = prepare(from(subquery(query), [])) |> elem(0)
-    assert [c: {{:., [], [{:&, [], [0]}, :code]}, [], []}] = query.from.fields
-
-    query = from p in Post, select: fragment("? + ?", p.id, p.id)
-    assert_raise Ecto.SubQueryError, ~r/subquery must select a source \(t\), a field \(t\.field\) or a map/, fn ->
-      prepare(from(subquery(query), []))
+  describe "prepare: subqueries select" do
+    test "supports implicit select" do
+      query = prepare(from(subquery(Post), [])) |> elem(0)
+      assert [{:id, {{:., [], [{:&, [], [0]}, :id]}, [], []}},
+              {:title, {{:., [], [{:&, [], [0]}, :title]}, [], []}} | _] = query.from.fields
     end
 
-    query = from p in Post, select: %{p.id => p.title}
-    assert_raise Ecto.SubQueryError, ~r/only atom keys are allowed/, fn ->
-      prepare(from(subquery(query), []))
+    test "supports field selector" do
+      query = from p in "posts", select: p.code
+      query = prepare(from(subquery(query), [])) |> elem(0)
+      assert [code: {{:., [], [{:&, [], [0]}, :code]}, [], []}] = query.from.fields
+
+      query = from p in Post, select: p.code
+      query = prepare(from(subquery(query), [])) |> elem(0)
+      assert [code: {{:., [], [{:&, [], [0]}, :code]}, [], []}] = query.from.fields
+    end
+
+    test "supports maps" do
+      query = from p in Post, select: %{code: p.code}
+      query = prepare(from(subquery(query), [])) |> elem(0)
+      assert [code: {{:., [], [{:&, [], [0]}, :code]}, [], []}] = query.from.fields
+    end
+
+    test "supports update in maps" do
+      query = from p in Post, select: %{p | code: p.title}
+      query = prepare(from(subquery(query), [])) |> elem(0)
+      assert [{:id, {{:., [], [{:&, [], [0]}, :id]}, [], []}},
+              {:title, {{:., [], [{:&, [], [0]}, :title]}, [], []}} | _] = query.from.fields
+      assert {:code, {{:., [], [{:&, [], [0]}, :title]}, [], []}} = List.last(query.from.fields)
+
+      query = from p in Post, select: %{p | unknown: p.title}
+      assert_raise Ecto.SubQueryError, ~r/invalid key `:unknown` on map update in subquery/, fn ->
+        prepare(from(subquery(query), []))
+      end
+    end
+
+    test "requires atom keys for maps" do
+      query = from p in Post, select: %{p.id => p.title}
+      assert_raise Ecto.SubQueryError, ~r/only atom keys are allowed/, fn ->
+        prepare(from(subquery(query), []))
+      end
+    end
+
+    test "raises on custom expressions" do
+      query = from p in Post, select: fragment("? + ?", p.id, p.id)
+      assert_raise Ecto.SubQueryError, ~r/subquery must select a source \(t\), a field \(t\.field\) or a map/, fn ->
+        prepare(from(subquery(query), []))
+      end
     end
   end
 

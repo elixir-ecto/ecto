@@ -18,7 +18,7 @@ defmodule Ecto.Integration.SubQueryTest do
            TestRepo.all(from p in subquery(query), select: p)
   end
 
-  test "from: subqueries with select expression" do
+  test "from: subqueries with map and select expression" do
     TestRepo.insert!(%Post{text: "hello", public: true})
 
     query = from p in Post, select: %{text: p.text, pub: not p.public}
@@ -30,6 +30,20 @@ defmodule Ecto.Integration.SubQueryTest do
            TestRepo.all(from p in subquery(query), select: {p.text, p})
     assert [{%{text: "hello", pub: false}, false}] =
            TestRepo.all(from p in subquery(query), select: {p, p.pub})
+  end
+
+  test "from: subqueries with map update and select expression" do
+    TestRepo.insert!(%Post{text: "hello", public: true})
+
+    query = from p in Post, select: %{p | public: not p.public}
+    assert ["hello"] =
+           TestRepo.all(from p in subquery(query), select: p.text)
+    assert [%{text: "hello", public: false}] =
+           TestRepo.all(from p in subquery(query), select: p)
+    assert [{"hello", %{text: "hello", public: false}}] =
+           TestRepo.all(from p in subquery(query), select: {p.text, p})
+    assert [{%{text: "hello", public: false}, false}] =
+           TestRepo.all(from p in subquery(query), select: {p, p.public})
   end
 
   test "from: subqueries with aggregates" do
