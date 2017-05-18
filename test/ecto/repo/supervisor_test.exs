@@ -37,15 +37,6 @@ defmodule Ecto.Repo.SupervisorTest do
             password: "hunter2", port: 12345, repo: __MODULE__, username: "eric"]
   end
 
-  test "merges system url into configuration" do
-    System.put_env("ECTO_REPO_CONFIG_URL", "ecto://eric:hunter2@host:12345/mydb")
-    put_env(database: "hello", url: {:system, "ECTO_REPO_CONFIG_URL"})
-    {:ok, config} = runtime_config(:dry_run, __MODULE__, :ecto, [])
-    assert normalize(config) ==
-           [database: "mydb", hostname: "host", otp_app: :ecto,
-            password: "hunter2", port: 12345, repo: __MODULE__, username: "eric"]
-  end
-
   test "is no-op for nil or empty URL" do
     put_env(database: "hello", url: nil)
     {:ok, config} = runtime_config(:dry_run, __MODULE__, :ecto, [])
@@ -68,22 +59,8 @@ defmodule Ecto.Repo.SupervisorTest do
     assert {:port, 12345} in url
   end
 
-  test "parse_url from system env" do
-    System.put_env("ECTO_REPO_CONFIG_URL", "ecto://eric:hunter2@host:12345/mydb")
-    url = parse_url({:system, "ECTO_REPO_CONFIG_URL"})
-    assert {:password, "hunter2"} in url
-    assert {:username, "eric"} in url
-    assert {:hostname, "host"} in url
-    assert {:database, "mydb"} in url
-    assert {:port, 12345} in url
-  end
-
   test "parse_url returns no config when blank" do
     assert parse_url("") == []
-    assert parse_url({:system, "ECTO_REPO_CONFIG_NONE_URL"}) == []
-
-    System.put_env("ECTO_REPO_CONFIG_URL", "")
-    assert parse_url({:system, "ECTO_REPO_CONFIG_URL"}) == []
   end
 
   test "parse_urls empty username/password" do

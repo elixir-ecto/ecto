@@ -49,6 +49,22 @@ defmodule Ecto.Repo.Supervisor do
     config  = Application.get_env(otp_app, repo, [])
     adapter = opts[:adapter] || config[:adapter]
 
+    case Keyword.get(config, :url) do
+      {:system, env} = url ->
+        IO.warn """
+        Using #{inspect url} for your :url configuration is deprecated.
+
+        Instead define an init/2 callback in your repository that sets
+        the URL accordingly from your system environment:
+
+            def init(_type, config) do
+              {:ok, Keyword.put(config, :url, System.get_env(#{inspect env}))}
+            end
+        """
+      _ ->
+        :ok
+    end
+
     unless adapter do
       raise ArgumentError, "missing :adapter configuration in " <>
                            "config #{inspect otp_app}, #{inspect repo}"
@@ -69,12 +85,7 @@ defmodule Ecto.Repo.Supervisor do
 
       "ecto://username:password@hostname:port/database"
 
-  or
-
-      {:system, "DATABASE_URL"}
-
   """
-  # TODO: Deprecate `{:system, _}` in favor of `init/2`
   def parse_url(""), do: []
 
   def parse_url({:system, env}) when is_binary(env) do

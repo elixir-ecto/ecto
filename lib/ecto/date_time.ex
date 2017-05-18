@@ -1,4 +1,4 @@
-# TODO: Remove Ecto.Date|Time types on Ecto v2.2
+# TODO: Remove Ecto.Date|Time types on Ecto v2.3
 import Kernel, except: [to_string: 1]
 
 defmodule Ecto.DateTime.Utils do

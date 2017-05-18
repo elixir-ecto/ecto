@@ -567,6 +567,7 @@ defmodule Ecto.Query.Builder do
   Called by escaper at runtime to cast Ecto.DateTime to :naive_datetime.
   """
   def cast_datetime!(%Ecto.DateTime{year: year, month: month, day: day, hour: hour, min: min, sec: sec, usec: usec}) do
+    IO.warn "Ecto.DateTime is deprecated, please use :naive_datetime and NaiveDateTime instead"
     {:ok, value} = NaiveDateTime.new(year, month, day, hour, min, sec, {usec, 6})
     value
   end
@@ -577,6 +578,7 @@ defmodule Ecto.Query.Builder do
   Called by escaper at runtime to cast Ecto.Date to :date.
   """
   def cast_date!(%Ecto.Date{year: year, month: month, day: day}) do
+    IO.warn "Ecto.Date is deprecated, please use :date and Date instead"
     {:ok, value} = Date.new(year, month, day)
     value
   end

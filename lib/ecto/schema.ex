@@ -1342,7 +1342,7 @@ defmodule Ecto.Schema do
   ## Callbacks
 
   @doc false
-  # TODO: Remove :naive_datetime special case once from_unix is added to naive_datetime
+  # TODO: Use utc_now instead.
   def __timestamps__(:naive_datetime, :seconds) do
     NaiveDateTime.from_erl!(:erlang.universaltime, 0)
   end
@@ -1716,6 +1716,15 @@ defmodule Ecto.Schema do
       type == :any and not virtual? ->
         raise ArgumentError, "only virtual fields can have type :any, " <>
                              "invalid type for field #{inspect name}"
+      type == Ecto.DateTime ->
+        IO.warn "Ecto.DateTime is deprecated, plese use :naive_datetime instead"
+        type
+      type == Ecto.Date ->
+        IO.warn "Ecto.Date is deprecated, plese use :date instead"
+        type
+      type == Ecto.Time ->
+        IO.warn "Ecto.Time is deprecated, plese use :time instead"
+        type
       Ecto.Type.primitive?(type) ->
         type
       is_atom(type) ->

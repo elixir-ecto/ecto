@@ -400,10 +400,10 @@ iex> Repo.insert!(post)
 Let's add another post to the user:
 
 ```elixir
-iex> post = Ecto.build_assoc(user, :posts, %{header: "5 ways to improve your Ecto", body: "TODO add url of this tutorial"})
+iex> post = Ecto.build_assoc(user, :posts, %{header: "5 ways to improve your Ecto", body: "Add url of this tutorial"})
 iex> Repo.insert!(post)
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
- body: "TODO add url of this tutorial", header: "5 ways to improve your Ecto",
+ body: "Add url of this tutorial", header: "5 ways to improve your Ecto",
  id: 2, user: #Ecto.Association.NotLoaded<association :user is not loaded>,
  user_id: 1}
 ```
@@ -419,7 +419,7 @@ iex> Repo.get(User, user.id) |> Repo.preload(:posts)
    user: #Ecto.Association.NotLoaded<association :user is not loaded>,
    user_id: 1},
   %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
-   body: "TODO add url of this tutorial", header: "5 ways to improve your Ecto",
+   body: "Add url of this tutorial", header: "5 ways to improve your Ecto",
    id: 2, user: #Ecto.Association.NotLoaded<association :user is not loaded>,
    user_id: 1}]}
 ```

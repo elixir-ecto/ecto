@@ -60,11 +60,13 @@ defmodule Ecto.Repo do
   The schema can be of any value. The path represents the database name
   while options are simply merged in.
 
-  URLs also support `{:system, "KEY"}` to be given, telling Ecto to load
-  the configuration from the system environment instead:
+  In case the URL needs to be dynamically configured, for example by
+  reading a system environment variable, such can be done via the
+  `init/2` repository callback:
 
-      config :my_app, Repo,
-        url: {:system, "DATABASE_URL"}
+      def init(_type, config) do
+        {:ok, Keyword.put(config, :url, System.get_env("DATABASE_URL"))}
+      end
 
   ## Shared options
 
