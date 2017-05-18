@@ -205,7 +205,7 @@ defmodule Ecto.Repo.Schema do
         case apply(changeset, adapter, :insert, args) do
           {:ok, values} ->
             changeset
-            |> load_changes(:loaded, values ++ extra, autogen, adapter)
+            |> load_changes(:loaded, extra ++ values, autogen, adapter, opts)
             |> process_children(children, user_changeset, opts)
           {:error, _} = error ->
             error
@@ -276,7 +276,7 @@ defmodule Ecto.Repo.Schema do
           case apply(changeset, adapter, action, args) do
             {:ok, values} ->
               changeset
-              |> load_changes(:loaded, values, autogen, adapter)
+              |> load_changes(:loaded, values, autogen, adapter, opts)
               |> process_children(children, user_changeset, opts)
             {:error, _} = error ->
               error
@@ -358,7 +358,7 @@ defmodule Ecto.Repo.Schema do
       args = [repo, metadata(struct, opts), filters, opts]
       case apply(changeset, adapter, :delete, args) do
         {:ok, values} ->
-          {:ok, load_changes(changeset, :deleted, values, [], adapter).data}
+          {:ok, load_changes(changeset, :deleted, values, [], adapter, opts).data}
         {:error, _} = error ->
           error
         {:invalid, constraints} ->
@@ -537,13 +537,14 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp load_changes(%{types: types, changes: changes} = changeset, state, values, autogen, adapter) do
+  defp load_changes(%{types: types, changes: changes} = changeset, state, values, autogen, adapter, opts) do
     # It is ok to use types from changeset because we have
     # already filtered the results to be only about fields.
     data =
       changeset.data
       |> merge_changes(changes)
       |> merge_autogen(autogen)
+      |> apply_metadata(opts)
       |> load_each(values, types, adapter)
     data = put_in(data.__meta__.state, state)
     Map.put(changeset, :data, data)
@@ -611,6 +612,11 @@ defmodule Ecto.Repo.Schema do
           Map.put(acc, owner_key, value)
       end
     end
+  end
+
+  defp apply_metadata(struct, opts) do
+    prefix = Ecto.get_meta(struct, :prefix)
+    Ecto.put_meta(struct, prefix: Keyword.get(opts, :prefix, prefix))
   end
 
   defp process_children(changeset, assocs, user_changeset, opts) do

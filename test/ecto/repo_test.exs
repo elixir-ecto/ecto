@@ -171,6 +171,23 @@ defmodule Ecto.RepoTest do
     assert {:ok, %MySchema{}} = TestRepo.delete(valid)
   end
 
+  test "insert, update, insert_or_update and delete sets schema prefix" do
+    valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{}, [])
+    assert {:ok, schema} = TestRepo.insert(valid, prefix: "public")
+    {schema_prefix, _} = schema.__meta__.source
+    assert schema_prefix == "public"
+
+    valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{x: "foo"}, [:x])
+    assert {:ok, schema} = TestRepo.update(valid, prefix: "public")
+    {schema_prefix, _} = schema.__meta__.source
+    assert schema_prefix == "public"
+
+    valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{}, [])
+    assert {:ok, schema} = TestRepo.delete(valid, prefix: "public")
+    {schema_prefix, _} = schema.__meta__.source
+    assert schema_prefix == "public"
+  end
+
   test "insert, update, insert_or_update and delete errors on invalid changeset" do
     invalid = %Ecto.Changeset{valid?: false, data: %MySchema{}}
 
