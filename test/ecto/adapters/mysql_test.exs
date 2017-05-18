@@ -313,36 +313,36 @@ defmodule Ecto.Adapters.MySQLTest do
   test "update all" do
     query = from(m in Schema, update: [set: [x: 0]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE `schema` AS s0 SET `x` = 0}
+           ~s{UPDATE `schema` AS s0 SET s0.`x` = 0}
 
     query = from(m in Schema, update: [set: [x: 0], inc: [y: 1, z: -3]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE `schema` AS s0 SET `x` = 0, `y` = `y` + 1, `z` = `z` + -3}
+           ~s{UPDATE `schema` AS s0 SET s0.`x` = 0, s0.`y` = s0.`y` + 1, s0.`z` = s0.`z` + -3}
 
     query = from(e in Schema, where: e.x == 123, update: [set: [x: 0]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE `schema` AS s0 SET `x` = 0 WHERE (s0.`x` = 123)}
+           ~s{UPDATE `schema` AS s0 SET s0.`x` = 0 WHERE (s0.`x` = 123)}
 
     query = from(m in Schema, update: [set: [x: ^0]]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE `schema` AS s0 SET `x` = ?}
+           ~s{UPDATE `schema` AS s0 SET s0.`x` = ?}
 
     query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z)
                   |> update([_], set: [x: 0]) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE `schema` AS s0 INNER JOIN `schema2` AS s1 ON s0.`x` = s1.`z` SET `x` = 0}
+           ~s{UPDATE `schema` AS s0 INNER JOIN `schema2` AS s1 ON s0.`x` = s1.`z` SET s0.`x` = 0}
 
     query = from(e in Schema, where: e.x == 123, update: [set: [x: 0]],
                              join: q in Schema2, on: e.x == q.z) |> normalize(:update_all)
     assert SQL.update_all(query) ==
            ~s{UPDATE `schema` AS s0 INNER JOIN `schema2` AS s1 ON s0.`x` = s1.`z` } <>
-           ~s{SET `x` = 0 WHERE (s0.`x` = 123)}
+           ~s{SET s0.`x` = 0 WHERE (s0.`x` = 123)}
   end
 
   test "update all with prefix" do
     query = from(m in Schema, update: [set: [x: 0]]) |> normalize(:update_all)
     assert SQL.update_all(%{query | prefix: "prefix"}) ==
-           ~s{UPDATE `prefix`.`schema` AS s0 SET `x` = 0}
+           ~s{UPDATE `prefix`.`schema` AS s0 SET s0.`x` = 0}
   end
 
   test "delete all" do
