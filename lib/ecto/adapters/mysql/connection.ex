@@ -223,11 +223,11 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp update_fields(type, %Query{updates: updates} = query, sources) do
-      for(%{expr: expr} <- updates,
-          {op, kw} <- expr,
-          {key, value} <- kw,
-          do: update_op(op, update_key(type, key, query, sources), value, sources, query))
-          |> Enum.intersperse(", ")
+     fields = for(%{expr: expr} <- updates,
+                   {op, kw} <- expr,
+                   {key, value} <- kw,
+                   do: update_op(op, update_key(type, key, query, sources), value, sources, query))
+      Enum.intersperse(fields, ", ")
     end
 
     defp update_key(:update, key, %Query{from: from} = query, sources) do

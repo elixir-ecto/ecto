@@ -10,7 +10,6 @@ defmodule Ecto.Integration.UpdateAllTest do
   alias Ecto.Integration.Comment
   alias Ecto.Integration.User
 
-
   test "update_all" do
     user = TestRepo.insert!(%User{name: "Tester"})
     post = TestRepo.insert!(%Post{title: "foo"})
