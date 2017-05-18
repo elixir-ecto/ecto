@@ -7,11 +7,12 @@ defmodule Ecto.Association.NotLoaded do
   The fields are:
 
     * `__field__` - the association field in `owner`
+    * `__queryable__` - the queryable corresponding to the association
     * `__owner__` - the schema that owns the association
     * `__cardinality__` - the cardinality of the association
 
   """
-  defstruct [:__field__, :__owner__, :__cardinality__]
+  defstruct [:__field__, :__queryable__, :__owner__, :__cardinality__]
 
   defimpl Inspect do
     def inspect(not_loaded, _opts) do
