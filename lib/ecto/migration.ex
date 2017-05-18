@@ -448,7 +448,7 @@ defmodule Ecto.Migration do
     table(Atom.to_string(name), opts)
   end
 
-  def table(name, opts) when is_binary(name) do
+  def table(name, opts) when is_binary(name) and is_list(opts) do
     struct(%Table{name: name}, opts)
   end
 
@@ -530,13 +530,13 @@ defmodule Ecto.Migration do
     index(Atom.to_string(table), columns, opts)
   end
 
-  def index(table, columns, opts) when is_binary(table) and is_list(columns) do
-    index = struct(%Index{table: table, columns: columns}, opts)
-    %{index | name: index.name || default_index_name(index)}
-  end
-
   def index(table, column, opts) when is_binary(table) and is_atom(column) do
     index(table, [column], opts)
+  end
+
+  def index(table, columns, opts) when is_binary(table) and is_list(columns) and is_list(opts) do
+    index = struct(%Index{table: table, columns: columns}, opts)
+    %{index | name: index.name || default_index_name(index)}
   end
 
   @doc """
@@ -546,7 +546,7 @@ defmodule Ecto.Migration do
   """
   def unique_index(table, columns, opts \\ [])
 
-  def unique_index(table, columns, opts) do
+  def unique_index(table, columns, opts) when is_list(opts) do
     index(table, columns, [unique: true] ++ opts)
   end
 
@@ -659,7 +659,7 @@ defmodule Ecto.Migration do
     add(column, :naive_datetime, opts)
   end
 
-  def add(column, type, opts) when is_atom(column) do
+  def add(column, type, opts) when is_atom(column) and is_list(opts) do
     if opts[:scale] && !opts[:precision] do
       raise ArgumentError, "Column #{Atom.to_string(column)} is missing precision option"
     end
@@ -719,7 +719,7 @@ defmodule Ecto.Migration do
     * `:type` - column type, defaults to `:naive_datetime`
 
   """
-  def timestamps(opts \\ []) do
+  def timestamps(opts \\ []) when is_list(opts) do
     opts = Keyword.put_new(opts, :null, false)
 
     {type, opts} = Keyword.pop(opts, :type, :naive_datetime)
@@ -760,7 +760,7 @@ defmodule Ecto.Migration do
     modify(column, :naive_datetime, opts)
   end
 
-  def modify(column, type, opts) when is_atom(column) do
+  def modify(column, type, opts) when is_atom(column) and is_list(opts) do
     if opts[:scale] && !opts[:precision] do
       raise ArgumentError, "Column #{Atom.to_string(column)} is missing precision option"
     end
@@ -814,7 +814,7 @@ defmodule Ecto.Migration do
     references(Atom.to_string(table), opts)
   end
 
-  def references(table, opts) when is_binary(table) do
+  def references(table, opts) when is_binary(table) and is_list(opts) do
     reference = struct(%Reference{table: table}, opts)
 
     unless reference.on_delete in [:nothing, :delete_all, :nilify_all] do
@@ -849,7 +849,7 @@ defmodule Ecto.Migration do
     constraint(Atom.to_string(table), name, opts)
   end
 
-  def constraint(table, name, opts) when is_binary(table) do
+  def constraint(table, name, opts) when is_binary(table) and is_list(opts) do
     struct(%Constraint{table: table, name: name}, opts)
   end
 
