@@ -563,23 +563,30 @@ defmodule Ecto.Migration do
   Executes arbitrary SQL or a keyword command in NoSQL databases.
 
   Reversible commands can be defined by calling `execute/2`.
-  This is useful for database-specific functionality that does not warrant special support in Ecto,
-  for example, creating and dropping a PostgreSQL extension, and avoids having to define
-  up/down blocks.
 
   ## Examples
 
-      execute "UPDATE posts SET published_at = NULL"
+      execute "CREATE EXTENSION postgres_fdw"
 
       execute create: "posts", capped: true, size: 1024
-
-      execute "CREATE EXTENSION postgres_fdw", "DROP EXTENSION postgres_fdw"
 
   """
   def execute(command) when is_binary(command) or is_list(command) do
     Runner.execute command
   end
 
+  @doc """
+  Executes reversible SQL commands.
+
+  This is useful for database-specific functionality that does not
+  warrant special support in Ecto, for example, creating and dropping
+  a PostgreSQL extension, and avoids having to define up/down blocks.
+
+  ## Examples
+
+      execute "CREATE EXTENSION postgres_fdw", "DROP EXTENSION postgres_fdw"
+
+  """
   def execute(up, down) when (is_binary(up) or is_list(up)) and
                              (is_binary(down) or is_list(down)) do
     Runner.execute %Command{up: up, down: down}
