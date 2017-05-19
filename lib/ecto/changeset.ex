@@ -470,9 +470,9 @@ defmodule Ecto.Changeset do
     type = type!(types, key)
 
     current =
-      case Map.fetch(changes, key) do
-        {:ok, value} -> value
-        :error -> Map.get(data, key)
+      case changes do
+        %{^key => value} -> value
+        _ -> Map.get(data, key)
       end
 
     case cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
@@ -486,12 +486,12 @@ defmodule Ecto.Changeset do
   end
 
   defp type!(types, key) do
-    case Map.fetch(types, key) do
-      {:ok, {tag, _}} when tag in @relations ->
+    case types do
+      %{^key => {tag, _}} when tag in @relations ->
         raise "casting #{tag}s with cast/4 is not supported, use cast_#{tag}/3 instead"
-      {:ok, type} ->
+      %{^key => type} ->
         type
-      :error ->
+      _ ->
         raise ArgumentError, "unknown field `#{key}`. Only fields, " <>
           "embeds and associations (except :through ones) are supported in changesets"
     end
@@ -509,8 +509,8 @@ defmodule Ecto.Changeset do
     do: {key, Atom.to_string(key)}
 
   defp cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
-    case Map.fetch(params, param_key) do
-      {:ok, value} ->
+    case params do
+      %{^param_key => value} ->
         value = if value in empty_values, do: Map.get(defaults, key), else: value
         case Ecto.Type.cast(type, value) do
           {:ok, ^current} ->
@@ -520,13 +520,14 @@ defmodule Ecto.Changeset do
           :error ->
             :invalid
         end
-      :error ->
+      _ ->
         :missing
     end
   end
 
   defp convert_params(params) do
-    Enum.reduce(params, nil, fn
+    params
+    |> Enum.reduce(nil, fn
       {key, _value}, nil when is_binary(key) ->
         nil
 
@@ -535,10 +536,16 @@ defmodule Ecto.Changeset do
                               message: "expected params to be a map with atoms or string keys, " <>
                                        "got a map with mixed keys: #{inspect params}"
 
-      {key, value}, acc when is_atom(key) ->
-        Map.put(acc || %{}, Atom.to_string(key), value)
+      {key, value}, nil when is_atom(key) ->
+        [{Atom.to_string(key), value}]
 
-    end) || params
+      {key, value}, acc when is_atom(key) ->
+        [{Atom.to_string(key), value} | acc]
+    end)
+    |> case do
+      nil -> params
+      list -> :maps.from_list(list)
+    end
   end
 
   ## Casting related
