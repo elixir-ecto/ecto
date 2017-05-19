@@ -256,21 +256,23 @@ defmodule Ecto.Query.Planner do
       when assocs != [] or preloads != [] do
     error!(query, "cannot preload associations in subquery")
   end
-  defp subquery_fields(query, %{expr: {:%{}, meta, [{:|, _, [{:&, [], [ix]}, pairs]}]} = expr,
-                                fields: [{:&, _, [ix, [_ | _] = fields, _]} | _]} = select) do
+  defp subquery_fields(query, %{expr: {:%{}, _, [{:|, _, [{:&, [], [ix]}, pairs]}]} = expr,
+                                fields: [{:&, meta, [ix, [_ | _] = fields, _]} | rest]} = select) do
     # In case of map updates, we need to remove duplicated fields
     # at query time because we use the field names as aliases and
     # duplicate aliases will lead to invalid queries.
     map_fields = subquery_map_fields(query, expr, pairs)
     map_keys = Keyword.keys(map_fields)
+    kept_keys = fields -- map_keys
     invalid_keys = map_keys -- fields
 
     if invalid_keys != [] do
       error!(query, "invalid key `#{inspect hd(invalid_keys)}` on map update in subquery")
     end
 
-    fields = subquery_selector_fields(fields -- map_keys, ix) ++ map_fields
-    {%{select | expr: {:%{}, meta, fields}, fields: fields}, fields}
+    select_fields = [{:&, meta, [ix, kept_keys, length(kept_keys)]} | rest]
+    subquery_fields = subquery_selector_fields(kept_keys, ix) ++ map_fields
+    {%{select | fields: select_fields}, subquery_fields}
   end
   defp subquery_fields(query, %{expr: {:%{}, _, pairs} = expr} = select) do
     {select, subquery_map_fields(query, expr, pairs)}

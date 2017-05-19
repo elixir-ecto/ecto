@@ -38,11 +38,11 @@ defmodule Ecto.Integration.SubQueryTest do
     query = from p in Post, select: %{p | public: not p.public}
     assert ["hello"] =
            TestRepo.all(from p in subquery(query), select: p.text)
-    assert [%{text: "hello", public: false}] =
+    assert [%Post{text: "hello", public: false}] =
            TestRepo.all(from p in subquery(query), select: p)
-    assert [{"hello", %{text: "hello", public: false}}] =
+    assert [{"hello", %Post{text: "hello", public: false}}] =
            TestRepo.all(from p in subquery(query), select: {p.text, p})
-    assert [{%{text: "hello", public: false}, false}] =
+    assert [{%Post{text: "hello", public: false}, false}] =
            TestRepo.all(from p in subquery(query), select: {p, p.public})
   end
 
