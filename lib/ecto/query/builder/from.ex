@@ -33,7 +33,7 @@ defmodule Ecto.Query.Builder.From do
       ** (Ecto.Query.CompileError) binding list should contain only variables, got: x()
 
   """
-  @spec escape(Macro.t) :: {Keyword.t, Macro.t}
+  @spec escape(Macro.t) :: {Macro.t, Keyword.t}
   def escape({:in, _, [var, query]}) do
     Builder.escape_binding(query, List.wrap(var))
   end
