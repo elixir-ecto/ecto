@@ -269,7 +269,7 @@ defmodule Ecto.Changeset do
   }
 
   @relations [:embed, :assoc]
-  @match_types [:exact, :suffix]
+  @match_types [:exact, :suffix, :prefix]
   @actions [:insert, :update, :delete, :replace]
 
   @doc """

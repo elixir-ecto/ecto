@@ -1032,6 +1032,10 @@ defmodule Ecto.ChangesetTest do
     assert changeset.constraints ==
            [%{type: :unique, field: :title, constraint: "whatever", match: :suffix, error: {"is taken", []}}]
 
+    changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :prefix, message: "is taken")
+    assert changeset.constraints ==
+           [%{type: :unique, field: :title, constraint: "whatever", match: :prefix, error: {"is taken", []}}]
+
     assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
       change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :invalid, message: "is taken")
     end
