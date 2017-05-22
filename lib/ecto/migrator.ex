@@ -302,7 +302,8 @@ defmodule Ecto.Migrator do
       error ->
         Logger.error "Could not #{reason}. This error typically happens when the " <>
                      "\"schema_migrations\" table, which Ecto uses for storing migration " <>
-                     "information, is already used by another library or for other purposes.\n\n" <>
+                     "information, is already used by another library or for other purposes. " <>
+                     "This error may also occur when the database has not yet been created.\n\n" <>
                      "You can fix this by running `mix ecto.drop` in the appropriate `MIX_ENV` " <>
                      "to drop the existing database and let Ecto start a new one with a proper " <>
                      "definition of \"schema_migrations\" or by configuring the repository to " <>
