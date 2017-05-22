@@ -364,6 +364,16 @@ defmodule Ecto.RepoTest do
       refute changeset.valid?
     end
 
+    test "are mapped to repo constraint violation using prefix match" do
+      my_schema = %MySchema{id: 1}
+      changeset =
+        put_in(my_schema.__meta__.context, {:invalid, [unique: "foo_table_custom_foo_index"]})
+        |> Ecto.Changeset.change(x: "foo")
+        |> Ecto.Changeset.unique_constraint(:foo, name: "foo_table_custom_foo", match: :prefix)
+      assert {:error, changeset} = TestRepo.insert(changeset)
+      refute changeset.valid?
+    end
+
     test "may fail to map to repo constraint violation on name" do
       my_schema = %MySchema{id: 1}
       changeset =
