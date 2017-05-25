@@ -427,6 +427,8 @@ defmodule Ecto.Query.Planner do
         schema
       %Ecto.SubQuery{query: %{select: %{expr: {:&, _, [ix]}}, sources: sources}} when is_integer(ix) ->
         schema_for_association_join!(query, join, elem(sources, ix))
+      %Ecto.SubQuery{query: %{select: %{expr: {:%{}, _, [{:|, _, [{:&, _, [ix]}, _fields]}]}}, sources: sources}} when is_integer(ix) ->
+        schema_for_association_join!(query, join, elem(sources, ix))
       %Ecto.SubQuery{} ->
         error! query, join, "can only perform association joins on subqueries " <>
                             "that return a single source in select"
