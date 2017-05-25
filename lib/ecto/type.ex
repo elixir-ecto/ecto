@@ -278,10 +278,24 @@ defmodule Ecto.Type do
   @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
   def dump(type, value, dumper \\ &dump/2)
 
-  def dump(_type, nil, _dumper) do
-    {:ok, nil}
-  end
+#  def dump(_type, nil, _dumper) do
+#    {:ok, nil}
+#  end
+  def dump({:embed,_}, nil, _dumper), do: {:ok, nil}
 
+  def dump({:array,_}, nil, _dumper), do: {:ok, nil}
+
+  def dump(type, nil, _dumper) do
+    # call type.handles_nil? if optional call back is implemented by type
+    # function_exported?/3
+    case function_exported?(type, :handles_nil?, 0) do
+      true ->
+	type.dump(nil)
+      false ->
+	{:ok, nil}
+    end
+  end
+  
   def dump(:binary_id, value, _dumper) when is_binary(value) do
     {:ok, value}
   end
