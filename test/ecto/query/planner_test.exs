@@ -289,6 +289,20 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "prepare: subqueries with map updates in select can be used with assoc" do
+    query =
+      Post
+      |> select([post], %{post | title: ^"hello"})
+      |> subquery()
+      |> join(:left, [subquery_post], comment in assoc(subquery_post, :comments))
+      |> prepare()
+      |> elem(0)
+
+    assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
+    assert source == {"comments", Comment}
+    assert Macro.to_string(on.expr) == "&1.post_id() == &0.id()"
+  end
+
   test "prepare: subqueries do not support preloads" do
     query = from p in Post, join: c in assoc(p, :comments), preload: [comments: c]
     assert_raise Ecto.SubQueryError, ~r/cannot preload associations in subquery/, fn ->
