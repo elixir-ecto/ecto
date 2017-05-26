@@ -1038,3 +1038,240 @@ defmodule Ecto.Association.ManyToMany do
     end
   end
 end
+
+defmodule Ecto.Association.ArrayBelongsTo do
+  @moduledoc """
+  The association struct for `array_belongs_to` associations.
+
+  Its fields are:
+
+    * `cardinality` - The association cardinality
+    * `field` - The name of the association field on the schema
+    * `owner` - The schema where the association was defined
+    * `owner_key` - The key on the `owner` schema used for the association
+    * `related` - The schema that is associated
+    * `related_key` - The key on the `related` schema used for the association
+    * `queryable` - The real query to use for querying association
+    * `defaults` - Default fields used when building the association
+    * `relationship` - The relationship to the specified schema, default is `:child`
+    * `on_replace` - The action taken on associations when schema is replaced
+  """
+
+  @behaviour Ecto.Association
+  @on_replace_opts [:raise, :delete, :remove, :update]
+  defstruct [:field, :owner, :owner_key, :related, :related_key, :queryable,
+             :on_cast, defaults: [], cardinality: :many, relationship: :child,
+             unique: true]
+
+  @doc false
+  def struct(module, name, opts) do
+    ref       = if ref = opts[:references], do: ref, else: :id
+    queryable = Keyword.fetch!(opts, :queryable)
+    related   = Ecto.Association.related_from_query(queryable)
+
+    unless is_atom(related) do
+      raise ArgumentError, "association queryable must be a schema, got: #{inspect related}"
+    end
+
+    on_replace = Keyword.get(opts, :on_replace, :raise)
+
+    unless on_replace in @on_replace_opts do
+      raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
+        "The only valid options are : " <>
+        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
+    end
+
+    %__MODULE__{
+      field: name,
+      owner: module,
+      related: related,
+      owner_key: Keyword.fetch!(opts, :foreign_key),
+      related_key: ref,
+      queryable: queryable,
+      defaults: opts[:defaults] || []
+    }
+  end
+
+  @doc false
+  def build(refl, _, attributes) do
+    refl
+    |> build()
+    |> struct(attributes)
+  end
+
+  @doc false
+  def joins_query(%{queryable: queryable, related_key: related_key,
+                    owner: owner, owner_key: owner_key}) do
+    from o in owner,
+      join: q in ^queryable,
+      on: field(o, ^owner_key) in field(q, ^related_key)
+  end
+
+  @doc false
+  def assoc_query(%{queryable: queryable, related_key: related_key}, query, values) do
+    Enum.reduce(values, (query || queryable), fn value, query ->
+      from x in query, or_where: ^value in field(x, ^related_key)
+    end)
+  end
+
+  @doc false
+  def preload_info(%{related_key: related_key} = refl) do
+    {:assoc, refl, {0, related_key}}
+  end
+
+  @doc false
+  def on_repo_change() do
+  end
+
+  @behaviour Ecto.Changeset.Relation
+
+  @doc false
+  def build(%{related: related, queryable: queryable, defaults: defaults}) do
+    related
+    |> struct(defaults)
+    |> Ecto.Association.merge_source(queryable)
+  end
+end
+
+defmodule Ecto.Association.ArrayHas do
+  @moduledoc """
+  The association struct for `array_has_one` and `array_has_many` associations.
+
+  Its fields are:
+
+    * `cardinality` - The association cardinality
+    * `field` - The name of the association field on the schema
+    * `owner` - The schema where the association was defined
+    * `owner_key` - The key on the `owner` schema used for the association
+    * `related` - The schema that is associated
+    * `related_key` - The key on the `related` schema used for the association
+    * `queryable` - The real query to use for querying the association
+    * `on_delete` - The action taken on associations when schema is deleted
+    * `on_replace` - The action taken on associations when schema is replaced
+    * `defaults` - Default fields used when building the association
+    * `relationship` - The relationship to the specified schema, default is `:child`
+  """
+
+  @behaviour Ecto.Association
+  @on_delete_opts [:nothing, :remove_all, :delete_all]
+  @on_replace_opts [:raise, :mark_as_invalid, :delete, :remove]
+  @array_has_one_on_replace_opts @on_replace_opts ++ [:update]
+  defstruct [:cardinality, :field, :owner, :owner_key, :related, :related_key,
+             :on_cast, :queryable, :on_delete, :on_replace, unique: true,
+             defaults: [], relationship: :child]
+
+  @doc false
+  def struct(module, name, opts) do
+    ref =
+      module
+      |> Module.get_attribute(:primary_key)
+      |> get_ref(opts[:references], name)
+
+    unless Module.get_attribute(module, :ecto_fields)[ref] do
+      raise ArgumentError, "schema does not have the field #{inspect ref} used by" <>
+        "association #{inspect name}, please set the :references option accordingly"
+    end
+
+    queryable = Keyword.fetch!(opts, :queryable)
+    cardinality = Keyword.fetch!(opts, :cardinality)
+    related = Ecto.Association.related_from_query(queryable)
+
+    on_delete = Keyword.get(opts, :on_delete, :nothing)
+    unless on_delete in @on_delete_opts do
+      raise ArgumentError, "invalid :on_delete option for #{inspect name}. " <>
+        "The only valid options are: " <>
+        Enum.map_join(@on_delete_opts, ", ", &"`#{inspect &1}`")
+    end
+
+    on_replace = Keyword.get(opts, :on_replace, :raise)
+    on_replace_opts = if cardinality == :one, do: @array_has_one_on_replace_opts, else: @on_replace_opts
+
+    unless on_replace in on_replace_opts do
+      raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
+        "the only valid options are: " <>
+        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
+    end
+
+    %__MODULE__{
+      field: name,
+      cardinality: cardinality,
+      owner: module,
+      owner_key: ref,
+      related: related,
+      related_key: opts[:foreign_key] || Ecto.Association.association_key(module, ref),
+      queryable: queryable,
+      on_delete: on_delete,
+      on_replace: on_replace,
+      defaults: opts[:defaults] || []
+    }
+  end
+
+  defp get_ref(nil, nil, name) do
+    raise ArgumentError, "need to set :references option for " <>
+      "association #{inspect name} when schema has no primary key"
+  end
+  defp get_ref(primary_key, nil, _name), do: elem(primary_key, 0)
+  defp get_ref(_primary_key, references, _name), do: references
+
+  @doc false
+  def build(%{owner_key: owner_key, related_key: related_key} = refl, struct, attributes) do
+    refl
+    |> build()
+    |> struct(attributes)
+    # TODO: List operation
+    |> Map.put(related_key, Map.get(struct, owner_key))
+  end
+
+  @doc false
+  def joins_query(%{queryable: queryable, related_key: related_key,
+                    owner: owner, owner_key: owner_key}) do
+    from o in owner,
+      join: q in ^queryable,
+      on: field(o, ^owner_key) in field(q, ^related_key)
+  end
+
+  @doc false
+  def assoc_query(%{queryable: queryable, related_key: related_key}, query, values) do
+  end
+
+  def preload_info(%{related_key: related_key} = refl) do
+    {:assoc, refl, {0, related_key}}
+  end
+
+  @doc false
+  def on_repo_change() do
+  end
+
+  ## Relation callbacks
+  @behaviour Ecto.Changeset.Relation
+
+  @doc false
+  def build(%{related: related, queryable: queryable, default: defaults}) do
+    related
+    |> struct(defaults)
+    |> Ecto.Association.merge_source(queryable)
+  end
+
+  ## On delete callbacks
+
+  @doc false
+  def delete_all(refl, parent, repo, opts) do
+    if query = on_delete_query(refl, parent) do
+      repo.delete_all(query, opts)
+    end
+  end
+
+  @doc false
+  def remove_all(%{related_key: related_key} = refl, parent, repo, opts) do
+    if query = on_delete_query(refl, parent) do
+      repo.update_all(query, [pull: [{related_key, nil}]], opts)
+    end
+  end
+
+  defp on_delete_query(%{owner_key: owner_key, related_key: related_key,
+                         queryable: queryable}, parent) do
+    if value = Map.get(parent, owner_key) do
+      from x in queryable, where: ^value in field(x, ^related_key)
+    end
+  end
+end
