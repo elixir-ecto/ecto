@@ -28,6 +28,11 @@ defmodule Ecto.Repo do
   for more information. However, some configuration is shared across
   all adapters, they are:
 
+    * `:adapter` - a compile-time option that specifies the adapter itself.
+      As a compile-time option, it may also be given as an option to `use Ecto.Repo`.
+
+    * `:name`- The name of the Repo supervisor process
+
     * `:priv` - the directory where to keep repository data, like
       migrations, schema and more. Defaults to "priv/YOUR_REPO".
       It must always point to a subdirectory inside the priv directory.
@@ -45,6 +50,8 @@ defmodule Ecto.Repo do
       in `:debug` mode. You may pass any desired mod-fun-args
       triplet or `[{Ecto.LogEntry, :log, [:info]}]` if you want to
       keep the current behaviour but use another log level.
+      This option is processed at compile-time and may also be given
+      as an option to `use Ecto.Repo`.
 
   ## URLs
 
@@ -91,7 +98,7 @@ defmodule Ecto.Repo do
       @before_compile adapter
 
       loggers =
-        Enum.reduce(config[:loggers] || [Ecto.LogEntry], quote(do: entry), fn
+        Enum.reduce(opts[:loggers] || config[:loggers] || [Ecto.LogEntry], quote(do: entry), fn
           mod, acc when is_atom(mod) ->
             quote do: unquote(mod).log(unquote(acc))
           {Ecto.LogEntry, :log, [level]}, _acc when not level in [:error, :info, :warn, :debug] ->
