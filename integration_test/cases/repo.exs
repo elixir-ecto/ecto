@@ -1163,6 +1163,17 @@ defmodule Ecto.Integration.RepoTest do
       assert c4.uuid != c1.uuid
     end
 
+    @tag :returning
+    @tag :with_conflict_target
+    test "on conflict ignore and returning" do
+      post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      {:ok, inserted} = TestRepo.insert(post, on_conflict: :nothing, conflict_target: [:uuid])
+      assert inserted.id
+
+      {:ok, not_inserted} = TestRepo.insert(post, on_conflict: :nothing, conflict_target: [:uuid], returning: true)
+      assert not_inserted.id == nil
+    end
+
     @tag :without_conflict_target
     test "on conflict query" do
       on_conflict = from Post, update: [set: [title: "second"]]
