@@ -32,7 +32,11 @@ defmodule Ecto.Repo.Preloader do
   Implementation for `Ecto.Repo.preload/2`.
   """
   @spec preload(structs, atom, atom | list, Keyword.t) ::
-                structs when structs: [Ecto.Schema.t] | Ecto.Schema.t
+                structs when structs: [Ecto.Schema.t] | Ecto.Schema.t | nil
+  def preload(nil, _repo, _preloads, _opts) do
+    nil
+  end
+
   def preload(structs, repo, preloads, opts) when is_list(structs) do
     do_preload(structs, repo, preloads, opts[:take], opts)
   end

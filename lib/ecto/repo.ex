@@ -226,10 +226,8 @@ defmodule Ecto.Repo do
         Ecto.Repo.Schema.delete!(__MODULE__, @adapter, struct, opts)
       end
 
-      def preload(struct_or_structs, preloads, opts \\ [])
-      def preload(nil, _, _), do: nil
-      def preload(struct_or_structs, preloads, opts) do
-        Ecto.Repo.Preloader.preload(struct_or_structs, __MODULE__, preloads, opts)
+      def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
+        Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, __MODULE__, preloads, opts)
       end
 
       def load(schema_or_types, data) do
@@ -442,8 +440,8 @@ defmodule Ecto.Repo do
       posts = Repo.preload posts, comments: from(c in Comment, order_by: c.published_at)
 
   """
-  @callback preload(struct_or_structs, preloads :: term, opts :: Keyword.t) ::
-                    struct_or_structs when struct_or_structs: [Ecto.Schema.t] | Ecto.Schema.t
+  @callback preload(structs_or_struct_or_nil, preloads :: term, opts :: Keyword.t) ::
+                    structs_or_struct_or_nil when structs_or_struct_or_nil: [Ecto.Schema.t] | Ecto.Schema.t | nil
 
   @doc """
   Fetches all entries from the data store matching the given query.
