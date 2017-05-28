@@ -34,10 +34,6 @@ defmodule Ecto.Integration.TestRepo do
   use Ecto.Integration.Repo, otp_app: :ecto
 end
 
-defmodule Ecto.Integration.TestStage do
-  use Ecto.Repo.Stage, repo: TestRepo
-end
-
 # Pool repo for non-async tests
 alias Ecto.Integration.PoolRepo
 

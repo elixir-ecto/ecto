@@ -19,29 +19,4 @@ defmodule Ecto.Integration.CopyTest do
       assert TestRepo.all(Post) == [one, two]
     end
   end
-
-  test "stage copy to and from table" do
-    one = TestRepo.insert!(%Post{title: "one"})
-    two = TestRepo.insert!(%Post{title: "two"})
-
-    read = "COPY posts TO STDOUT"
-    {:ok, producer} = Ecto.Adapters.SQL.start_stage(TestRepo, read, [], [])
-
-    data =
-      [{producer, cancel: :transient}]
-      |> GenStage.stream()
-      |> Enum.to_list()
-
-    assert TestRepo.delete_all(Post) == {2, nil}
-
-    write = "COPY posts FROM STDIN"
-    {:ok, consumer} = Ecto.Adapters.SQL.start_stage(TestRepo, write, [], [stage_module: Postgrex.CopyConsumer])
-
-    {:ok, _} =
-      data
-      |> Flow.from_enumerable()
-      |> Flow.into_stages([consumer])
-
-    assert TestRepo.all(Post) == [one, two]
-  end
 end

@@ -17,6 +17,7 @@ defmodule Ecto.Adapters.SQL do
       @behaviour Ecto.Adapter
       @behaviour Ecto.Adapter.Migration
       @behaviour Ecto.Adapter.Transaction
+      @behaviour Ecto.Adapter.Stage
 
       @conn __MODULE__.Connection
       @adapter unquote(adapter)
@@ -139,13 +140,13 @@ defmodule Ecto.Adapters.SQL do
       ## GenStage
 
       @doc false
-      def stage_spec(repo, meta, query, params, process, flat_map, opts) do
-        Ecto.Adapters.SQL.stage_spec(repo, meta, query, params, process, flat_map, opts)
+      def start_producer(repo, meta, query, params, process, flat_map, opts) do
+        Ecto.Adapters.SQL.start_producer(repo, meta, query, params, process, flat_map, opts)
       end
 
       defoverridable [prepare: 2, execute: 6, insert: 6, update: 6, delete: 4, insert_all: 7,
                       execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1, ensure_all_started: 2,
-                      stage_spec: 7]
+                      start_producer: 7]
     end
   end
 
@@ -640,41 +641,29 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  @doc """
-  Return child specification for `GenStage` process running query.
-  """
-  def stage_spec(repo, statement, params, opts) do
-    stage_spec(repo, statement, params, fn x -> x end, nil, opts)
-  end
-
-  @doc """
-  Start link `GenStage` process running query.
-  """
-  def start_stage(repo, statement, params, opts) do
-    case stage_spec(repo, statement, params, opts) do
-      {_, {mod, fun, args}, _, _, _, _} ->
-        apply(mod, fun, args)
-      %{start: {mod, fun, args}} ->
-        apply(mod, fun, args)
-    end
-  end
-
   @doc false
-  def stage_spec(repo, meta, prepared, params, mapper, flat_map, opts) do
+  def start_producer(repo, meta, prepared, params, mapper, flat_map, opts) do
     stream = stream(repo, meta, prepared, params, mapper, flat_map, opts)
     %Ecto.Adapters.SQL.Stream{repo: repo, statement: statement, params: params,
       mapper: mapper, flat_map: flat_map, opts: opts} = stream
-    stage_spec(repo, statement, params, mapper, flat_map, opts)
+    start_producer(repo, statement, params, mapper, flat_map, opts)
   end
 
-  defp stage_spec(repo, statement, params, mapper, flat_map, opts) do
+  @doc """
+  Start link a `GenStage` producer that streams the result of a query.
+  """
+  def start_producer(repo, statement, params, opts) do
+    start_producer(repo, statement, params, fn x -> x end, nil, opts)
+  end
+
+  defp start_producer(repo, statement, params, mapper, flat_map, opts) do
     {repo_mod, pool, default_opts} = lookup_pool(repo)
     stage_opts = Keyword.delete(default_opts, :name)
     stream_mapper = flat_map && {__MODULE__, :stage_mapper, [pool, flat_map]}
     map_opts = [decode_mapper: mapper, stream_mapper: stream_mapper]
     opts = map_opts ++ with_log(repo, params, opts ++ stage_opts)
     opts = Keyword.put_new(opts, :caller, self())
-    apply(repo_mod.__sql__, :stage_spec, [pool, statement, params, opts])
+    repo_mod.__sql__.start_producer(pool, statement, params, opts)
   end
 
   @doc false

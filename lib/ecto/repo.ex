@@ -229,6 +229,12 @@ defmodule Ecto.Repo do
       def load(schema_or_types, data) do
         Ecto.Repo.Schema.load(@adapter, schema_or_types, data)
       end
+
+      if function_exported?(@adapter, :start_producer, 7) do
+        def start_producer(queryable, opts \\ []) do
+          Ecto.Repo.Queryable.start_producer(__MODULE__, @adapter, queryable, opts)
+        end
+      end
     end
   end
 
@@ -1009,4 +1015,40 @@ defmodule Ecto.Repo do
 
   """
   @callback load(Ecto.Schema.t | map(), map() | Keyword.t | {list, list}) :: Ecto.Schema.t | map()
+
+  @doc """
+  Starts and links to a `GenStage` producer that executes a query.
+
+
+  Returns a `GenStage` that produces all entries from the data store to its
+  consumer(s). SQL adapters, such as Postgres and MySQL, will wrap the query
+  inside a transaction.
+
+  May raise `Ecto.QueryError` if query validation fails.
+
+  ## Options
+
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This overrides the prefix set
+      in the query
+
+    * `:max_rows` - The number of rows to load from the database as we stream.
+      It is supported at least by Postgres and MySQL and defaults to 500.
+
+  See the "Shared options" section at the module documentation.
+
+  ## Example
+
+      # Fetch all post titles
+      query = from p in Post,
+           select: p.title
+      {:ok, producer} = MyRepo.start_producer(query)
+      [{producer, cancel: :transient}]
+      |> Flow.from_stages()
+      |> Flow.map(&IO.inspect/1)
+      |> Flow.run()
+  """
+  @callback start_producer(queryable :: Ecto.Query.t, opts :: Keyword.t) ::
+            GenServer.on_start
+  @optional_callbacks [start_producer: 2]
 end

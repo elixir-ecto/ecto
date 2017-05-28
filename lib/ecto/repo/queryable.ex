@@ -109,13 +109,13 @@ defmodule Ecto.Repo.Queryable do
     execute(:delete_all, repo, adapter, query, opts)
   end
 
-  def stage_spec(repo, adapter, queryable, opts) when is_list(opts) do
+  def start_producer(repo, adapter, queryable, opts) when is_list(opts) do
     query =
       queryable
       |> Ecto.Queryable.to_query
       |> Ecto.Query.Planner.returning(true)
       |> attach_prefix(opts)
-    lazy(&adapter.stage_spec/7, :all, repo, adapter, query, opts)
+    lazy(&adapter.start_producer/7, :all, repo, adapter, query, opts)
   end
 
   ## Helpers
