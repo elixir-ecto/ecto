@@ -16,6 +16,13 @@ defmodule Ecto.Adapters.SQL.Connection do
   @callback child_spec(options :: Keyword.t) :: {module, Keyword.t}
 
   @doc """
+  Receives `pool`, `statement`, `params` and `options` and returns `GenStage`
+  child specification
+  """
+  @callback stage_spec(pool :: GenServer.server, statement :: prepared, params :: [term], options :: Keyword.t) ::
+            Supervisor.spec()
+
+  @doc """
   Prepares and executes the given query with `DBConnection`.
   """
   @callback prepare_execute(connection :: DBConnection.t, name :: String.t, prepared, params :: [term], options :: Keyword.t) ::

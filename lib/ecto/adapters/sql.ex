@@ -69,8 +69,8 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def stream(repo, meta, query, params, process, opts) do
-        Ecto.Adapters.SQL.stream(repo, meta, query, params, process, opts)
+      def stream(repo, meta, query, params, process, flat_map, opts) do
+        Ecto.Adapters.SQL.stream(repo, meta, query, params, process, flat_map, opts)
       end
 
       @doc false
@@ -136,8 +136,16 @@ defmodule Ecto.Adapters.SQL do
         :ok
       end
 
+      ## GenStage
+
+      @doc false
+      def stage_spec(repo, meta, query, params, process, flat_map, opts) do
+        Ecto.Adapters.SQL.stage_spec(repo, meta, query, params, process, flat_map, opts)
+      end
+
       defoverridable [prepare: 2, execute: 6, insert: 6, update: 6, delete: 4, insert_all: 7,
-                      execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1, ensure_all_started: 2]
+                      execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1, ensure_all_started: 2,
+                      stage_spec: 7]
     end
   end
 
@@ -477,55 +485,60 @@ defmodule Ecto.Adapters.SQL do
   """
   @spec stream(Ecto.Repo.t, String.t, [term], Keyword.t) :: Enum.t
   def stream(repo, sql, params \\ [], opts \\ []) do
-    Ecto.Adapters.SQL.Stream.__build__(repo, sql, params, fn x -> x end, opts)
+    Ecto.Adapters.SQL.Stream.__build__(repo, sql, params, fn x -> x end, nil, opts)
   end
 
   @doc false
-  def stream(repo, meta, prepared, params, mapper, opts) do
-    do_stream(repo, meta, prepared, params, mapper, put_source(opts, meta))
+  def stream(repo, meta, prepared, params, mapper, flat_map, opts) do
+    do_stream(repo, meta, prepared, params, mapper, flat_map, put_source(opts, meta))
   end
 
-  def do_stream(repo, _meta, {:cache, _, {_, prepared}}, params, nil, opts) do
-    prepare_stream(repo, prepared, params, nil, opts)
+  def do_stream(repo, _meta, {:cache, _, {_, prepared}}, params, nil, flat_map, opts) do
+    prepare_stream(repo, prepared, params, nil, flat_map, opts)
   end
 
-  def do_stream(repo, %{fields: fields, sources: sources}, {:cache, _, {_, prepared}}, params, process, opts) do
+  def do_stream(repo, %{fields: fields, sources: sources}, {:cache, _, {_, prepared}}, params, process, flat_map, opts) do
     mapper = &process_row(&1, process, fields, sources)
-    prepare_stream(repo, prepared, params, mapper, opts)
+    prepare_stream(repo, prepared, params, mapper, flat_map, opts)
   end
 
-  def do_stream(repo, _, {:cached, _, {_, cached}}, params, nil, opts) do
-    prepare_stream(repo, String.Chars.to_string(cached), params, nil, opts)
+  def do_stream(repo, _, {:cached, _, {_, cached}}, params, nil, flat_map, opts) do
+    prepare_stream(repo, String.Chars.to_string(cached), params, nil, flat_map, opts)
   end
 
-  def do_stream(repo, %{fields: fields, sources: sources}, {:cached, _, {_, cached}}, params, process, opts) do
+  def do_stream(repo, %{fields: fields, sources: sources}, {:cached, _, {_, cached}}, params, process, flat_map, opts) do
     mapper = &process_row(&1, process, fields, sources)
-    prepare_stream(repo, String.Chars.to_string(cached), params, mapper, opts)
+    prepare_stream(repo, String.Chars.to_string(cached), params, mapper, flat_map, opts)
   end
 
-  def do_stream(repo, _meta, {:nocache, {_id, prepared}}, params, nil, opts) do
-    prepare_stream(repo, prepared, params, nil, opts)
+  def do_stream(repo, _meta, {:nocache, {_id, prepared}}, params, nil, flat_map, opts) do
+    prepare_stream(repo, prepared, params, nil, flat_map, opts)
   end
 
-  def do_stream(repo, %{fields: fields, sources: sources}, {:nocache, {_id, prepared}}, params, process, opts) do
+  def do_stream(repo, %{fields: fields, sources: sources}, {:nocache, {_id, prepared}}, params, process, flat_map, opts) do
     mapper = &process_row(&1, process, fields, sources)
-    prepare_stream(repo, prepared, params, mapper, opts)
+    prepare_stream(repo, prepared, params, mapper, flat_map, opts)
   end
 
-  defp prepare_stream(repo, prepared, params, mapper, opts) do
-    repo
-    |> Ecto.Adapters.SQL.Stream.__build__(prepared, params, mapper, opts)
-    |> Stream.map(fn(%{num_rows: nrows, rows: rows}) -> {nrows, rows} end)
+  defp prepare_stream(repo, prepared, params, mapper, flat_map, opts) do
+    Ecto.Adapters.SQL.Stream.__build__(repo, prepared, params, mapper, flat_map, opts)
   end
 
   @doc false
-  def reduce(repo, statement, params, mapper, opts, acc, fun) do
+  def stream_mapper(conn, %{num_rows: nrows, rows: rows}, conn, flat_map) do
+    flat_map.({nrows, rows})
+  end
+
+  @doc false
+  def reduce(repo, statement, params, mapper, flat_map, opts, acc, fun) do
     {repo_mod, pool, default_opts} = lookup_pool(repo)
-    opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
     case get_conn(pool) do
       nil  ->
         raise "cannot reduce stream outside of transaction"
       conn ->
+        stream_mapper = flat_map && {__MODULE__, :stream_mapper, [conn, flat_map]}
+        map_opts = [decode_mapper: mapper, stream_mapper: stream_mapper]
+        opts = map_opts ++ with_log(repo, params, opts ++ default_opts)
         apply(repo_mod.__sql__, :stream, [conn, statement, params, opts])
         |> Enumerable.reduce(acc, fun)
     end
@@ -627,29 +640,56 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
+  @doc """
+  Return child specification for `GenStage` process running query.
+  """
+  def stage_spec(repo, statement, params, opts) do
+    stage_spec(repo, statement, params, fn x -> x end, nil, opts)
+  end
+
+  @doc """
+  Start link `GenStage` process running query.
+  """
+  def start_stage(repo, statement, params, opts) do
+    case stage_spec(repo, statement, params, opts) do
+      {_, {mod, fun, args}, _, _, _, _} ->
+        apply(mod, fun, args)
+      %{start: {mod, fun, args}} ->
+        apply(mod, fun, args)
+    end
+  end
+
   @doc false
-  def stage(fun, repo, start, handle, stop, opts) do
+  def stage_spec(repo, meta, prepared, params, mapper, flat_map, opts) do
+    stream = stream(repo, meta, prepared, params, mapper, flat_map, opts)
+    %Ecto.Adapters.SQL.Stream{repo: repo, statement: statement, params: params,
+      mapper: mapper, flat_map: flat_map, opts: opts} = stream
+    stage_spec(repo, statement, params, mapper, flat_map, opts)
+  end
+
+  defp stage_spec(repo, statement, params, mapper, flat_map, opts) do
     {repo_mod, pool, default_opts} = lookup_pool(repo)
-    default_opts =
-      default_opts
-      |> Keyword.delete(:name)
-      |> Keyword.put_new(:caller, self())
-    opts = with_log(repo_mod, [], opts ++ default_opts)
-    start =
-      fn(conn) ->
-        put_conn(pool, conn)
-        start.()
+    stage_opts = Keyword.delete(default_opts, :name)
+    stream_mapper = flat_map && {__MODULE__, :stage_mapper, [pool, flat_map]}
+    map_opts = [decode_mapper: mapper, stream_mapper: stream_mapper]
+    opts = map_opts ++ with_log(repo, params, opts ++ stage_opts)
+    opts = Keyword.put_new(opts, :caller, self())
+    apply(repo_mod.__sql__, :stage_spec, [pool, statement, params, opts])
+  end
+
+  @doc false
+  def stage_mapper(stream_conn, res, pool, flat_map) do
+    cur_conn = get_conn(pool)
+    try do
+      put_conn(pool, stream_conn)
+      stream_mapper(stream_conn, res, stream_conn, flat_map)
+    after
+      if cur_conn do
+        put_conn(pool, cur_conn)
+      else
+        delete_conn(pool)
       end
-    handle = fn(_, arg, state) -> handle.(arg, state) end
-    stop =
-      fn(_, reason, state) ->
-        try do
-          stop.(reason, state)
-        after
-          delete_conn(pool)
-        end
-      end
-    fun.(pool, start, handle, stop, opts)
+    end
   end
 
   ## Log

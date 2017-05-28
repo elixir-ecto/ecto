@@ -2,16 +2,16 @@ defmodule Ecto.Integration.StageTest do
   use Ecto.Integration.Case, async: true
 
   alias Ecto.Integration.TestRepo
+  alias Ecto.Integration.TestStage
   alias Ecto.Integration.Post
   alias Ecto.Integration.Comment
-  alias Ecto.Adapters.SQL.Stage
   import Ecto.Query
 
   test "stream empty" do
-    {:ok, stage} = Stage.stream(TestRepo, Post)
+    {:ok, stage} = TestStage.start_link(Post)
     assert to_list(stage) === []
 
-    {:ok, stage} = Stage.stream(TestRepo, from p in Post)
+    {:ok, stage} = TestStage.start_link(from p in Post)
     assert to_list(stage) == []
   end
 
@@ -20,7 +20,7 @@ defmodule Ecto.Integration.StageTest do
     %Post{} = TestRepo.insert!(%Post{title: "title2"})
 
     query = from(p in "posts", order_by: p.title, select: p.title)
-    {:ok, stage} = Stage.stream(TestRepo, query)
+    {:ok, stage} = TestStage.start_link(query)
 
     assert to_list(stage) == ["title1", "title2"]
   end
@@ -31,7 +31,7 @@ defmodule Ecto.Integration.StageTest do
     %Comment{id: cid1} = TestRepo.insert!(%Comment{text: "1", post_id: p1.id})
     %Comment{id: cid2} = TestRepo.insert!(%Comment{text: "2", post_id: p1.id})
 
-    {:ok, stage} = Stage.stream(TestRepo, Ecto.assoc(p1, :comments))
+    {:ok, stage} = TestStage.start_link(Ecto.assoc(p1, :comments))
     assert [c1, c2] = to_list(stage)
 
     assert c1.id == cid1
@@ -49,7 +49,7 @@ defmodule Ecto.Integration.StageTest do
     %Comment{id: cid4} = TestRepo.insert!(%Comment{text: "4", post_id: p2.id})
 
     query = from(p in Post, preload: [:comments], select: p)
-    {:ok, stage} = Stage.stream(TestRepo, query, [max_rows: 2])
+    {:ok, stage} = TestStage.start_link(query, [max_rows: 2])
 
     assert [p1, p2, p3] = stage |> to_list() |> sort_by_id()
 

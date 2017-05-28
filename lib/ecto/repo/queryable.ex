@@ -41,7 +41,7 @@ defmodule Ecto.Repo.Queryable do
       |> Ecto.Queryable.to_query
       |> Ecto.Query.Planner.returning(true)
       |> attach_prefix(opts)
-    stream(:all, repo, adapter, query, opts)
+    lazy(&adapter.stream/7, :all, repo, adapter, query, opts)
   end
 
   def get(repo, adapter, queryable, id, opts) do
@@ -109,6 +109,15 @@ defmodule Ecto.Repo.Queryable do
     execute(:delete_all, repo, adapter, query, opts)
   end
 
+  def stage_spec(repo, adapter, queryable, opts) when is_list(opts) do
+    query =
+      queryable
+      |> Ecto.Queryable.to_query
+      |> Ecto.Query.Planner.returning(true)
+      |> attach_prefix(opts)
+    lazy(&adapter.stage_spec/7, :all, repo, adapter, query, opts)
+  end
+
   ## Helpers
 
   defp attach_prefix(query, opts) do
@@ -137,25 +146,27 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  defp stream(operation, repo, adapter, query, opts) do
+  defp lazy(fun, operation, repo, adapter, query, opts) do
     {meta, prepared, params} = Planner.query(query, operation, repo, adapter, 0)
 
     case meta do
       %{fields: nil} ->
-        adapter.stream(repo, meta, prepared, params, nil, opts)
-        |> Stream.flat_map(fn({_, nil}) -> [] end)
+        flat_map = fn({_, nil}) -> [] end
+        fun.(repo, meta, prepared, params, nil, flat_map, opts)
       %{select: select, fields: fields, prefix: prefix, take: take,
         sources: sources, assocs: assocs, preloads: preloads} ->
         preprocess    = preprocess(prefix, sources, adapter)
-        stream        = adapter.stream(repo, meta, prepared, params, preprocess, opts)
+
         postprocess   = postprocess(select, fields, take)
         {_, take_0}   = Map.get(take, 0, {:any, %{}})
 
-        Stream.flat_map(stream, fn({_, rows}) ->
+        flat_map = fn({_, rows}) ->
           rows
           |> Ecto.Repo.Assoc.query(assocs, sources)
           |> Ecto.Repo.Preloader.query(repo, preloads, take_0, postprocess, opts)
-        end)
+        end
+
+        fun.(repo, meta, prepared, params, preprocess, flat_map, opts)
     end
   end
 

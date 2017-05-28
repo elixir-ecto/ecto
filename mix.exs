@@ -44,9 +44,9 @@ defmodule Ecto.Mixfile do
 
      # Drivers
      {:db_connection, "~> 1.1", github: "elixir-ecto/db_connection", branch: "jf-stream_stage", override: true, optional: true},
-     {:gen_stage, "~> 0.11", optional: true},
-     {:flow, "~> 0.11", optional: true},
-     {:postgrex, "~> 0.13.0", optional: true},
+     {:gen_stage, "~> 0.11", github: "elixir-lang/gen_stage", branch: "jv-exit-signals", optional: true},
+     {:flow, "~> 0.11", github: "elixir-lang/flow", branch: "jv-exit-signals", optional: true},
+     {:postgrex, "~> 0.13.0", github: "elixir-ecto/postgrex", branch: "jf-stage", optional: true},
      {:mariaex, "~> 0.8.0", optional: true},
 
      # Optional

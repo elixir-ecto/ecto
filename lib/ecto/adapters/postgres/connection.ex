@@ -18,6 +18,11 @@ if Code.ensure_loaded?(Postgrex) do
       |> Postgrex.child_spec()
     end
 
+    def stage_spec(pool, statement, params, opts) do
+      stage_mod = Keyword.get(opts, :stage_module, Postgrex.Producer)
+      Supervisor.Spec.worker(stage_mod, [pool, statement, params, opts])
+    end
+
     def to_constraints(%Postgrex.Error{postgres: %{code: :unique_violation, constraint: constraint}}),
       do: [unique: constraint]
     def to_constraints(%Postgrex.Error{postgres: %{code: :foreign_key_violation, constraint: constraint}}),
