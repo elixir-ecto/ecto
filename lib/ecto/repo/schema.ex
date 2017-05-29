@@ -50,6 +50,45 @@ defmodule Ecto.Repo.Schema do
     {count, postprocess(rows, fields, adapter, schema, source)}
   end
 
+  @doc """
+  Implementation for `Ecto.Repo.start_consumer/2`.
+  """
+  def start_consumer(repo, adapter, schema, opts) when is_atom(schema) do
+    start_consumer(repo, adapter, schema, schema.__schema__(:prefix),
+                      schema.__schema__(:source), opts)
+  end
+
+  def start_consumer(repo, adapter, table, opts) when is_binary(table) do
+    start_consumer(repo, adapter, nil, nil, table, opts)
+  end
+
+  def start_consumer(repo, adapter, {source, schema}, opts) when is_atom(schema) do
+    start_consumer(repo, adapter, schema, schema.__schema__(:prefix), source, opts)
+  end
+
+  defp start_consumer(repo, adapter, schema, prefix, source, opts) do
+    returning = opts[:returning] || false
+    autogen   = schema && schema.__schema__(:autogenerate_id)
+    source    = {Keyword.get(opts, :prefix, prefix), source}
+    fields    = preprocess(returning, schema)
+
+    insert_all = fn(rows) ->
+        {rows, header} = extract_header_and_fields(rows, schema, autogen, adapter)
+        counter = fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
+        metadata = %{source: source, context: nil, schema: schema, autogenerate_id: autogen}
+
+        {on_conflict, opts} = Keyword.pop(opts, :on_conflict, :raise)
+        {conflict_target, opts} = Keyword.pop(opts, :conflict_target, [])
+        on_conflict = on_conflict(on_conflict, conflict_target, metadata, counter, adapter)
+
+        {count, _} =
+        adapter.insert_all(repo, metadata, Map.keys(header), rows, on_conflict, fields || [], opts)
+        count
+    end
+
+    adapter.start_consumer(repo, insert_all, opts)
+  end
+
   defp preprocess([_|_] = fields, _schema),
     do: fields
   defp preprocess([], _schema),

@@ -22,6 +22,10 @@ if Code.ensure_loaded?(Postgrex) do
       Postgrex.Producer.start_link(pool, statement, params, opts)
     end
 
+    def start_consumer(pool, fun, opts) do
+      Postgrex.Consumer.start_link(pool, fun, opts)
+    end
+
     def to_constraints(%Postgrex.Error{postgres: %{code: :unique_violation, constraint: constraint}}),
       do: [unique: constraint]
     def to_constraints(%Postgrex.Error{postgres: %{code: :foreign_key_violation, constraint: constraint}}),

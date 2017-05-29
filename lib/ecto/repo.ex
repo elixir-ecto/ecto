@@ -234,6 +234,10 @@ defmodule Ecto.Repo do
         def start_producer(queryable, opts \\ []) do
           Ecto.Repo.Queryable.start_producer(__MODULE__, @adapter, queryable, opts)
         end
+
+        def start_consumer(schema_or_source, opts \\ []) do
+          Ecto.Repo.Schema.start_consumer(__MODULE__, @adapter, schema_or_source, opts)
+        end
       end
     end
   end
@@ -1051,4 +1055,27 @@ defmodule Ecto.Repo do
   @callback start_producer(queryable :: Ecto.Query.t, opts :: Keyword.t) ::
             GenServer.on_start
   @optional_callbacks [start_producer: 2]
+
+  @doc """
+  Starts and links to a `GenStage` consumer that inserts all entries it
+  consumes.
+
+  Returns a `GenStage` consumer that uses `c:insert_all/3` to insert all
+  consumed entries in batches to the database. SQL adapters, such as Postgres
+  and MySQL, will wrap all the inserts inside a single transaction.
+
+  See `c:insert_all/3` for options.
+
+  ## Examples
+
+      {:ok, consumer} = MyRepo.start_consumer(Post)
+      "posts"
+      |> File.stream!()
+      |> Flow.from_enumerable(stages: 1)
+      |> Flow.map(&MyDecoder.decode/1)
+      |> Flow.into_stages([{consumer, cancel: :transient}])
+  """
+  @callback start_consumer(schema_or_source :: binary | {binary, Ecto.Schema.t} | Ecto.Schema.t, opts :: Keyword.t) ::
+            GenServer.on_start
+  @optional_callbacks [start_consumer: 2]
 end

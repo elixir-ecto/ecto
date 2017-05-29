@@ -9,6 +9,9 @@ defmodule Ecto.Adapters.SQL.Connection do
   @typedoc "The cache query which is a DBConnection Query"
   @type cached :: map
 
+  @typedoc "The DBConection transaction fun"
+  @type transaction :: (DBConnection.t, list -> term)
+
   @doc """
   Receives options and returns `DBConnection` supervisor child
   specification.
@@ -101,5 +104,11 @@ defmodule Ecto.Adapters.SQL.Connection do
   Start and link a `GenStage` producer that streams the result of a query.
   """
   @callback start_producer(pool :: GenServer.server, statement :: prepared, params :: [term], options :: Keyword.t) ::
+            GenServer.on_start
+
+  @doc """
+  Start and link a `GenStage` consumer that runs a transaction for the events.
+  """
+  @callback start_consumer(pool :: GenServer.server, transaction, options :: Keyword.t) ::
             GenServer.on_start
 end

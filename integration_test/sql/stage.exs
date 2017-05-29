@@ -57,6 +57,20 @@ defmodule Ecto.Integration.StageTest do
     assert [] = p3.comments
   end
 
+  test "insert entries" do
+    {:ok, stage} = TestRepo.start_consumer(Post)
+
+    mon = Process.monitor(stage)
+
+    [[title: "hello"], [title: "world"]]
+    |> Flow.from_enumerable()
+    |> Flow.into_stages([{stage, [cancel: :transient, max_demand: 1]}])
+
+    assert_receive {:DOWN, ^mon, _, _, :normal}
+
+    assert [%Post{title: "hello"}, %Post{title: "world"}] = TestRepo.all(Post)
+  end
+
   defp to_list(stage) do
     stage
     |> Flow.from_stage()

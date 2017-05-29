@@ -144,9 +144,14 @@ defmodule Ecto.Adapters.SQL do
         Ecto.Adapters.SQL.start_producer(repo, meta, query, params, process, flat_map, opts)
       end
 
+      @doc false
+      def start_consumer(repo, insert, opts) do
+        Ecto.Adapters.SQL.start_consumer(repo, insert, opts)
+      end
+
       defoverridable [prepare: 2, execute: 6, insert: 6, update: 6, delete: 4, insert_all: 7,
                       execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1, ensure_all_started: 2,
-                      start_producer: 7]
+                      start_producer: 7, start_consumer: 3]
     end
   end
 
@@ -652,7 +657,7 @@ defmodule Ecto.Adapters.SQL do
   @doc """
   Start link a `GenStage` producer that streams the result of a query.
   """
-  def start_producer(repo, statement, params, opts) do
+  def start_producer(repo, statement, params, opts \\ []) do
     start_producer(repo, statement, params, fn x -> x end, nil, opts)
   end
 
@@ -679,6 +684,25 @@ defmodule Ecto.Adapters.SQL do
         delete_conn(pool)
       end
     end
+  end
+
+  @doc """
+  Start link a `GenStage` consumers that runs a `transaction` for every batch of
+  events and maintains a state.
+  """
+  def start_consumer(repo, fun, opts \\ []) when is_function(fun, 1) do
+    {repo_mod, pool, default_opts} = lookup_pool(repo)
+
+    transaction =
+      fn(conn, rows) ->
+        put_conn(pool, conn)
+        fun.(rows)
+      end
+
+    stage_opts = Keyword.delete(default_opts, :name)
+    opts = with_log(repo, [], opts ++ stage_opts)
+    opts = Keyword.put_new(opts, :caller, self())
+    repo_mod.__sql__.start_consumer(pool, transaction, opts)
   end
 
   ## Log
