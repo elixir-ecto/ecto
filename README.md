@@ -59,7 +59,7 @@ end
 
 See the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and the [online documentation](http://hexdocs.pm/ecto).
 
-Also checkout the ["What's new in Ecto 2.0"](http://pages.plataformatec.com.br/ebook-whats-new-in-ecto-2-0) free ebook to learn more about many features in Ecto 2.0 such as `many_to_many`, schemaless queries, concurrent testing and more.
+Also checkout the ["What's new in Ecto 2.1"](http://pages.plataformatec.com.br/ebook-whats-new-in-ecto-2-0) free ebook to learn more about many features since Ecto 2.0 such as `many_to_many`, schemaless queries, concurrent testing, upsert and more.
 
 ## Usage
 
