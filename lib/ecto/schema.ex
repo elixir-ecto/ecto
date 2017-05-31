@@ -1339,6 +1339,28 @@ defmodule Ecto.Schema do
     end
   end
 
+  @doc """
+  Internal function for integrating associations into schemas.
+
+  This function exists as an extension point for libraries to
+  add new types of associations to Ecto. For the existing APIs,
+  see `belongs_to/3`, `has_many/3`, `has_one/3` and `many_to_many/3`.
+
+  This function expects the current schema, the association cardinality,
+  the association name, the association module (that implements
+  `Ecto.Association` callbacks) and a keyword list of options.
+  """
+  @spec association(module, :one | :many, atom(), module, Keyword.t) :: Ecto.Association.t
+  def association(schema, cardinality, name, association, opts) do
+    not_loaded  = %Ecto.Association.NotLoaded{__owner__: schema,
+                    __field__: name, __cardinality__: cardinality}
+    put_struct_field(schema, name, not_loaded)
+    opts = [cardinality: cardinality] ++ opts
+    struct = association.struct(schema, name, opts)
+    Module.put_attribute(schema, :ecto_assocs, {name, struct})
+    struct
+  end
+
   ## Callbacks
 
   @doc false
@@ -1668,17 +1690,6 @@ defmodule Ecto.Schema do
   end
 
   ## Private
-
-  defp association(mod, cardinality, name, association, opts) do
-    not_loaded  = %Ecto.Association.NotLoaded{__owner__: mod,
-                    __field__: name, __cardinality__: cardinality}
-    put_struct_field(mod, name, not_loaded)
-    opts = [cardinality: cardinality] ++ opts
-    struct = association.struct(mod, name, opts)
-    Module.put_attribute(mod, :ecto_assocs, {name, struct})
-
-    struct
-  end
 
   defp embed(mod, cardinality, name, schema, opts) do
     opts   = [cardinality: cardinality, related: schema] ++ opts
