@@ -217,7 +217,7 @@ defmodule Ecto.Query.Builder do
     {expr, params_acc}
   end
 
-  def escape(expr = {:=, _, _}, _type, _params_acc, _vars, _env) do
+  def escape({:=, _, _} = expr, _type, _params_acc, _vars, _env) do
     error! "`#{Macro.to_string(expr)}` is not a valid query expression. " <>
             "The match operator is not supported: `=`. " <>
             "Did you mean to use `==` instead?"
