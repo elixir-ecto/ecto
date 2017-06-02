@@ -1393,6 +1393,60 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
+  Validates that one or more fields are present in the changeset only when
+  any of the other specified fields are not present.
+
+  ## Options
+
+    * `:message` - the message on failure, defaults to "can't be blank"
+
+  ## Examples
+
+      validate_required_without(changeset, :title, :body])
+      validate_required_without(changeset, :title, [:description, :body])
+
+  """
+  @spec validate_required_without(t, atom, list | atom, Keyword.t) :: t
+  def validate_required_without(%{errors: errors} = changeset, field, fields_without, opts \\ []) do
+    fields_without = List.wrap(fields_without)
+    message = message(opts, "can't be blank without " <> Enum.join(fields_without, ", "))
+
+    with true <- missing?(changeset, field),
+         true  <- ensure_field_exists!(changeset, field),
+         false <- field_present?(changeset, fields_without)
+         do %{changeset | errors: [{field, {message, [validation: :required_without]}}] ++ errors, valid?: false}
+    else
+      _ -> changeset
+    end
+  end
+
+  defp field_present?(changeset, [head | tail]) do
+    case field_present?(changeset, head) do
+      false -> field_present?(changeset, tail)
+      _ -> true
+    end
+  end
+  defp field_present?(_, []), do: false
+  defp field_present?(changeset, field) do
+    with {false, true} <- {missing?(changeset, field), ensure_field_exists!(changeset, field)},
+         true  <- validation_passed_except_required?(changeset, field)
+         do true
+    else
+      _ -> false
+    end
+  end
+
+  defp validation_passed_except_required?(%Ecto.Changeset{errors: errors}, field) do
+    if Keyword.has_key?(errors, field) do
+      case Keyword.fetch!(errors, field) do
+        {_, [validation: :required]} -> true
+        _ -> false
+      end
+    end
+    true
+  end
+
+  @doc """
   Validates a change has the given format.
 
   The format has to be expressed as a regular expression.
