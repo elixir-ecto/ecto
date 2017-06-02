@@ -87,7 +87,7 @@ defmodule Ecto.Query.BuilderTest do
       escape(quote(do: true && false), [], __ENV__)
     end
 
-    assert_raise Ecto.Query.CompileError, ~r"match operator is  not supported: `=`", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"match operator is not supported: `=`", fn ->
       escape(quote(do: 1 = 1), [], __ENV__)
     end
 

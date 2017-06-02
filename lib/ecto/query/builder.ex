@@ -218,8 +218,8 @@ defmodule Ecto.Query.Builder do
   end
 
   def escape({:=, _, _}, _type, _params_acc, _vars, _env) do
-    error! "match operator is  not supported: `=`. " <>
-           "Instead use the comparison operator: `==`"
+    error! "match operator is not supported: `=`. " <>
+           "Did you mean to use `==` instead?"
   end
 
   def escape({op, _, _}, _type, _params_acc, _vars, _env) when op in ~w(|| && !)a do
