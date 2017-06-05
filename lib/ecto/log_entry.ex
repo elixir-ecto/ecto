@@ -52,7 +52,7 @@ defmodule Ecto.LogEntry do
   The logger call won't be removed at compile time as
   custom level is given.
   """
-  def log(entry, level) do
+  def log(entry, level) when level in ~w(error info warn debug)a do
     Logger.log(level, fn ->
       {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
       iodata
