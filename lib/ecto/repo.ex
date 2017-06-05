@@ -241,6 +241,8 @@ defmodule Ecto.Repo do
       def load(schema_or_types, data) do
         Ecto.Repo.Schema.load(@adapter, schema_or_types, data)
       end
+      
+      defoverridable child_spec: 1
     end
   end
 
