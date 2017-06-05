@@ -544,6 +544,25 @@ defmodule Ecto.Integration.RepoTest do
     assert_raise Ecto.NoResultsError, fn ->
       TestRepo.get!(Post, post1.id)
     end
+
+    assert_raise Ecto.NoResultsError, fn ->
+      TestRepo.get!(Post, "01") # With malformed
+    end
+  end
+
+  test "get(!) with UUID" do
+    post = TestRepo.insert!(%Post{uuid: nil})
+    malformed_uuid = "6fa459ea-ee8a-3ca4-894e-db77e160355"
+
+    assert TestRepo.get(Post, post.uuid) == post
+
+    assert_raise Ecto.NoResultsError, fn ->
+      TestRepo.get(Post, nil) # With empty
+    end
+
+    assert_raise Ecto.NoResultsError, fn ->
+      TestRepo.get(Post, malformed_uuid) # With malformed
+    end
   end
 
   test "get(!) with custom source" do
