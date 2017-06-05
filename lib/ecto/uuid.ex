@@ -113,6 +113,15 @@ defmodule Ecto.UUID do
         {:ok, binary}
     end
   end
+
+
+  @doc """
+  Returns value unchanged if it is already a 16 byte binary
+  """
+  def dump(value) when byte_size(value) == 16 do
+    {:ok, value}
+  end
+
   def dump(_), do: :error
 
   @compile {:inline, d: 1}
