@@ -52,9 +52,9 @@ Add the repo to the supervision tree:
 
 ```elixir
   def start(_type, _args) do
-    import Supervisor.Spec, warn: false
+    import Supervisor.Spec
     children = [
-      worker(EctoAssoc.Repo, [])
+      supervisor(EctoAssoc.Repo, [])
     ]
     ...
 ```

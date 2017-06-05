@@ -86,7 +86,7 @@ The final piece of configuration is to setup the `Friends.Repo` as a supervisor 
 
 ```elixir
 def start(_type, _args) do
-  import Supervisor.Spec, warn: false
+  import Supervisor.Spec
 
   children = [
     supervisor(Friends.Repo, []),

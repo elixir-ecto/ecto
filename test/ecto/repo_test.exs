@@ -26,6 +26,14 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  test "defines child_spec/1" do
+    assert TestRepo.child_spec([]) == %{
+      id: TestRepo,
+      start: {TestRepo, :start_link, [[]]},
+      type: :supervisor
+    }
+  end
+
   test "needs schema with primary key field" do
     schema = %MySchemaNoPK{x: "abc"}
 
