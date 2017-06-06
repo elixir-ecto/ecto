@@ -321,7 +321,7 @@ defmodule Ecto do
   with associations. For example, `Ecto.assoc/2` returns a query
   with all associated data to a given struct:
 
-      import Ecto
+      import Ecto.Query
 
       # Get all comments for the given post
       Repo.all assoc(post, :comments)
