@@ -80,7 +80,7 @@ defmodule Ecto.Query.API do
   @doc """
   Searches for `search` in `string`.
 
-      from p in Post, where: like(p.body, "Chapter%")
+      from p in Post, where: like(p.body, "%Chapter%")
 
   Translates to the underlying SQL LIKE query, therefore
   its behaviour is dependent on the database. In particular,
@@ -97,7 +97,7 @@ defmodule Ecto.Query.API do
   @doc """
   Searches for `search` in `string` in a case insensitive fashion.
 
-      from p in Post, where: ilike(p.body, "Chapter%")
+      from p in Post, where: ilike(p.body, "%Chapter%")
 
   Translates to the underlying SQL ILIKE query. This operation is
   only available on PostgreSQL.
