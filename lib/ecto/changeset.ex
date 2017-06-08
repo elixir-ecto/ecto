@@ -224,6 +224,7 @@ defmodule Ecto.Changeset do
     * `action`       - The action to be performed with the changeset
     * `types`        - Cache of the data's field types
     * `repo`         - The repository applying the changeset (only set after a Repo function is called)
+    * `opts`         - The opts given to the repo function applying the changeset (only set after a Repo function is called)
     * `empty_values` - A list of values to be considered empty
 
   """
@@ -237,7 +238,7 @@ defmodule Ecto.Changeset do
   defstruct valid?: false, data: nil, params: nil, changes: %{}, repo: nil,
             errors: [], validations: [], required: [], prepare: [],
             constraints: [], filters: %{}, action: nil, types: nil,
-            empty_values: @empty_values
+            empty_values: @empty_values, opts: nil
 
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,

@@ -176,7 +176,7 @@ defmodule Ecto.Repo.Schema do
 
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
-    changeset = put_repo_and_action(changeset, :insert, repo)
+    changeset = put_repo_action_and_opts(changeset, :insert, repo, opts)
     changeset = surface_changes(changeset, struct, types, fields ++ assocs)
 
     wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
@@ -212,8 +212,8 @@ defmodule Ecto.Repo.Schema do
     end)
   end
 
-  defp do_insert(repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
-    {:error, put_repo_and_action(changeset, :insert, repo)}
+  defp do_insert(repo, _adapter, %Changeset{valid?: false} = changeset, opts) do
+    {:error, put_repo_action_and_opts(changeset, :insert, repo, opts)}
   end
 
   @doc """
@@ -242,7 +242,7 @@ defmodule Ecto.Repo.Schema do
     # Differently from insert, update does not copy the struct
     # fields into the changeset. All changes must be in the
     # changeset before hand.
-    changeset = put_repo_and_action(changeset, :update, repo)
+    changeset = put_repo_action_and_opts(changeset, :update, repo, opts)
 
     if changeset.changes != %{} or force? do
       wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
@@ -287,8 +287,8 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp do_update(repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
-    {:error, put_repo_and_action(changeset, :update, repo)}
+  defp do_update(repo, _adapter, %Changeset{valid?: false} = changeset, opts) do
+    {:error, put_repo_action_and_opts(changeset, :update, repo, opts)}
   end
 
   @doc """
@@ -340,7 +340,7 @@ defmodule Ecto.Repo.Schema do
     schema  = struct.__struct__
     assocs = schema.__schema__(:associations)
 
-    changeset = put_repo_and_action(changeset, :delete, repo)
+    changeset = put_repo_action_and_opts(changeset, :delete, repo, opts)
     changeset = %{changeset | changes: %{}}
 
     wrap_in_transaction(repo, adapter, opts, assocs, prepare, fn ->
@@ -363,8 +363,8 @@ defmodule Ecto.Repo.Schema do
     end)
   end
 
-  defp do_delete(repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
-    {:error, put_repo_and_action(changeset, :delete, repo)}
+  defp do_delete(repo, _adapter, %Changeset{valid?: false} = changeset, opts) do
+    {:error, put_repo_action_and_opts(changeset, :delete, repo, opts)}
   end
 
   def load(adapter, schema_or_types, data) do
@@ -397,10 +397,10 @@ defmodule Ecto.Repo.Schema do
   defp struct_from_changeset!(_action, %{data: struct}),
     do: struct
 
-  defp put_repo_and_action(%{action: given}, action, repo) when given != nil and given != action,
+  defp put_repo_action_and_opts(%{action: given}, action, repo, _) when given != nil and given != action,
     do: raise(ArgumentError, "a changeset with action #{inspect given} was given to #{inspect repo}.#{action}/2")
-  defp put_repo_and_action(changeset, action, repo),
-    do: %{changeset | action: action, repo: repo}
+  defp put_repo_action_and_opts(changeset, action, repo, opts),
+    do: %{changeset | action: action, repo: repo, opts: opts}
 
   defp run_prepare(changeset, prepare) do
     Enum.reduce(Enum.reverse(prepare), changeset, fn fun, acc ->

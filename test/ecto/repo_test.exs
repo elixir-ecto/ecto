@@ -197,7 +197,7 @@ defmodule Ecto.RepoTest do
   end
 
   test "insert, update, insert_or_update and delete errors on invalid changeset" do
-    invalid = %Ecto.Changeset{valid?: false, data: %MySchema{}}
+    invalid = %Ecto.Changeset{valid?: false, data: %MySchema{}, opts: []}
 
     insert = %{invalid | action: :insert, repo: TestRepo}
     assert {:error, ^insert} = TestRepo.insert(invalid)
