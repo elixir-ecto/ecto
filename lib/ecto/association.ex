@@ -425,7 +425,7 @@ defmodule Ecto.Association.Has do
              :queryable, :on_delete, :on_replace, unique: true, defaults: [], relationship: :child]
 
   @doc false
-  def after_compile_validation(%{queryable: queryable}) do
+  def after_compile_validation(%{queryable: queryable, related_key: related_key}) do
     cond do
       not is_atom(queryable) ->
         :ok
@@ -433,6 +433,8 @@ defmodule Ecto.Association.Has do
         {:error, "associated schema #{inspect queryable} does not exist"}
       not function_exported?(queryable, :__schema__, 2) ->
         {:error, "associated module #{inspect queryable} is not an Ecto schema"}
+      is_nil queryable.__schema__(:type, related_key) ->
+        {:error, "associated schema #{inspect queryable} does not have field `#{related_key}`"}
       true ->
         :ok
     end
@@ -712,7 +714,7 @@ defmodule Ecto.Association.BelongsTo do
              :on_replace, defaults: [], cardinality: :one, relationship: :parent, unique: true]
 
   @doc false
-  def after_compile_validation(%{queryable: queryable}) do
+  def after_compile_validation(%{queryable: queryable, related_key: related_key}) do
     cond do
       not is_atom(queryable) ->
         :ok
@@ -720,6 +722,8 @@ defmodule Ecto.Association.BelongsTo do
         {:error, "associated schema #{inspect queryable} does not exist"}
       not function_exported?(queryable, :__schema__, 2) ->
         {:error, "associated module #{inspect queryable} is not an Ecto schema"}
+      is_nil queryable.__schema__(:type, related_key) ->
+        {:error, "associated schema #{inspect queryable} does not have field `#{related_key}`"}
       true ->
         :ok
     end
@@ -858,9 +862,9 @@ defmodule Ecto.Association.ManyToMany do
         {:error, "associated module #{inspect queryable} is not an Ecto schema"}
       not is_atom(join_through) ->
         :ok
-      not Code.ensure_compiled?(queryable) ->
+      not Code.ensure_compiled?(join_through) ->
         {:error, ":join_through schema #{inspect join_through} does not exist"}
-      not function_exported?(queryable, :__schema__, 2) ->
+      not function_exported?(join_through, :__schema__, 2) ->
         {:error, ":join_through module #{inspect join_through} is not an Ecto schema"}
       true ->
         :ok
