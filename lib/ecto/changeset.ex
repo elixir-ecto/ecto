@@ -351,6 +351,7 @@ defmodule Ecto.Changeset do
   defp get_changed(data, types, old_changes, new_changes, errors, valid?) do
     Enum.reduce(new_changes, {old_changes, errors, valid?}, fn
       {key, value}, {changes, errors, valid?} ->
+        ensure_field_exists!(data, types, key)
         put_change(data, changes, errors, valid?, key, value, Map.get(types, key))
     end)
   end
@@ -1018,6 +1019,7 @@ defmodule Ecto.Changeset do
   end
 
   def put_change(%Changeset{types: types} = changeset, key, value) do
+    ensure_field_exists!(changeset, key)
     type = Map.get(types, key)
     {changes, errors, valid?} =
       put_change(changeset.data, changeset.changes, changeset.errors,
@@ -1142,6 +1144,7 @@ defmodule Ecto.Changeset do
   end
 
   def force_change(%Changeset{types: types} = changeset, key, value) do
+    ensure_field_exists!(changeset, key)
     case Map.get(types, key) do
       {tag, _} when tag in @relations ->
         raise "changing #{tag}s with force_change/3 is not supported, " <>
@@ -1368,7 +1371,10 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp ensure_field_exists!(%Changeset{types: types, data: data}, field) do
+  defp ensure_field_exists!(%Changeset{data: data, types: types}, field) do
+    ensure_field_exists!(data, types, field)
+  end
+  defp ensure_field_exists!(data, types, field) do
     unless Map.has_key?(types, field) do
       raise ArgumentError, "unknown field #{inspect field} for changeset on #{inspect data}"
     end

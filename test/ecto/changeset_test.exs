@@ -354,6 +354,10 @@ defmodule Ecto.ChangesetTest do
     assert changeset.data == %{title: "hello"}
     assert changeset.changes == %{}
     assert apply_changes(changeset) == %{title: "hello"}
+
+    assert_raise ArgumentError, ~r/unknown field :bad for changeset on/, fn  ->
+      change(datatypes, bad: "bad")
+    end
   end
 
   test "change/2 with a changeset" do
@@ -384,6 +388,10 @@ defmodule Ecto.ChangesetTest do
 
     changeset = change(base_changeset, %{title: "new title", upvotes: 5})
     assert changeset.changes == %{title: "new title"}
+
+    assert_raise ArgumentError, ~r/unknown field :bad for changeset on/, fn  ->
+      change(base_changeset, bad: "bad")
+    end
   end
 
   test "fetch_field/2" do
@@ -469,6 +477,10 @@ defmodule Ecto.ChangesetTest do
 
     changeset = put_change(base_changeset, :upvotes, nil)
     assert changeset.changes.upvotes == nil
+
+    assert_raise ArgumentError, ~r/unknown field :bad for changeset on/, fn  ->
+      put_change(base_changeset, :bad, "bad")
+    end
   end
 
   test "force_change/3" do
@@ -482,6 +494,10 @@ defmodule Ecto.ChangesetTest do
 
     changeset = force_change(changeset, :upvotes, 5)
     assert changeset.changes.upvotes == 5
+
+    assert_raise ArgumentError, ~r/unknown field :bad for changeset on/, fn  ->
+      force_change(changeset, :bad, "bad")
+    end
   end
 
   test "apply_changes/1" do
