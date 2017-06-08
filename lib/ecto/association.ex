@@ -58,6 +58,14 @@ defmodule Ecto.Association do
   @callback struct(module, field :: atom, opts :: Keyword.t) :: t
 
   @doc """
+  Invoked after the schema is compiled to validate associations.
+
+  Useful for checking if associated modules exist without running
+  into deadlocks.
+  """
+  @callback after_compile_validation(t) :: :ok | {:error, String.t}
+
+  @doc """
   Builds a struct for the given association.
 
   The struct to build from is given as argument in case default values
@@ -417,6 +425,22 @@ defmodule Ecto.Association.Has do
              :queryable, :on_delete, :on_replace, unique: true, defaults: [], relationship: :child]
 
   @doc false
+  def after_compile_validation(%{queryable: queryable, related_key: related_key}) do
+    cond do
+      not is_atom(queryable) ->
+        :ok
+      not Code.ensure_compiled?(queryable) ->
+        {:error, "associated schema #{inspect queryable} does not exist"}
+      not function_exported?(queryable, :__schema__, 2) ->
+        {:error, "associated module #{inspect queryable} is not an Ecto schema"}
+      is_nil queryable.__schema__(:type, related_key) ->
+        {:error, "associated schema #{inspect queryable} does not have field `#{related_key}`"}
+      true ->
+        :ok
+    end
+  end
+
+  @doc false
   def struct(module, name, opts) do
     ref =
       module
@@ -605,6 +629,11 @@ defmodule Ecto.Association.HasThrough do
              relationship: :child, unique: true]
 
   @doc false
+  def after_compile_validation(_) do
+    :ok
+  end
+
+  @doc false
   def struct(module, name, opts) do
     through = Keyword.fetch!(opts, :through)
 
@@ -683,6 +712,22 @@ defmodule Ecto.Association.BelongsTo do
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify, :update]
   defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast,
              :on_replace, defaults: [], cardinality: :one, relationship: :parent, unique: true]
+
+  @doc false
+  def after_compile_validation(%{queryable: queryable, related_key: related_key}) do
+    cond do
+      not is_atom(queryable) ->
+        :ok
+      not Code.ensure_compiled?(queryable) ->
+        {:error, "associated schema #{inspect queryable} does not exist"}
+      not function_exported?(queryable, :__schema__, 2) ->
+        {:error, "associated module #{inspect queryable} is not an Ecto schema"}
+      is_nil queryable.__schema__(:type, related_key) ->
+        {:error, "associated schema #{inspect queryable} does not have field `#{related_key}`"}
+      true ->
+        :ok
+    end
+  end
 
   @doc false
   def struct(module, name, opts) do
@@ -805,6 +850,26 @@ defmodule Ecto.Association.ManyToMany do
   defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
              :on_replace, :join_keys, :join_through, :on_cast,
              defaults: [], relationship: :child, cardinality: :many, unique: false]
+
+  @doc false
+  def after_compile_validation(%{queryable: queryable, join_through: join_through}) do
+    cond do
+      not is_atom(queryable) ->
+        :ok
+      not Code.ensure_compiled?(queryable) ->
+        {:error, "associated schema #{inspect queryable} does not exist"}
+      not function_exported?(queryable, :__schema__, 2) ->
+        {:error, "associated module #{inspect queryable} is not an Ecto schema"}
+      not is_atom(join_through) ->
+        :ok
+      not Code.ensure_compiled?(join_through) ->
+        {:error, ":join_through schema #{inspect join_through} does not exist"}
+      not function_exported?(join_through, :__schema__, 2) ->
+        {:error, ":join_through module #{inspect join_through} is not an Ecto schema"}
+      true ->
+        :ok
+    end
+  end
 
   @doc false
   def struct(module, name, opts) do

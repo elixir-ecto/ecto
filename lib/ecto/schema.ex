@@ -349,6 +349,7 @@ defmodule Ecto.Schema do
 
   defp schema(source, meta?, type, block) do
     quote do
+      @after_compile Ecto.Schema
       Module.register_attribute(__MODULE__, :changeset_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
 
@@ -1577,6 +1578,24 @@ defmodule Ecto.Schema do
   end
 
   ## Quoted callbacks
+
+  @doc false
+  def __after_compile__(%{module: module} = env, _) do
+    # TODO: This is a hack, don't do this at home, it may break any time.
+    # We need to provide a proper API for this in Elixir.
+    if Process.info(self(), :error_handler) == {:error_handler, Kernel.ErrorHandler} do
+      for name <- module.__schema__(:associations) do
+        assoc = module.__schema__(:association, name)
+        case assoc.__struct__.after_compile_validation(assoc) do
+          :ok -> :ok
+          {:error, message} ->
+            IO.warn "invalid association `#{assoc.field}` in schema #{inspect module}: #{message}",
+                    Macro.Env.stacktrace(env)
+        end
+      end
+    end
+    :ok
+  end
 
   @doc false
   def __changeset__(changeset_fields) do
