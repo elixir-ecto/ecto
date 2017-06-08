@@ -82,12 +82,12 @@ defmodule Ecto.Migration do
 
   ## Prefixes
 
-  Migrations support specifying a table prefix or index prefix which will target either a schema
-  if using Postgres, or a different database if using MySQL. If no prefix is
-  provided, the default schema or database is used.
-  Any reference declared in the table migration refers by default to the table with
-  the same declared prefix.
-  The prefix is specified in the table options:
+  Migrations support specifying a table prefix or index prefix which will
+  target either a schema if using Postgres, or a different database if using
+  MySQL. If no prefix is provided, the default schema or database is used.
+
+  Any reference declared in the table migration refers by default to the table
+  with the same declared prefix. The prefix is specified in the table options:
 
       def up do
         create table("weather", prefix: "north_america") do
@@ -103,11 +103,11 @@ defmodule Ecto.Migration do
         create index("weather", [:city], prefix: "north_america")
       end
 
-  Note: if using MySQL with a prefixed table, you must use the same prefix for the references since
-  cross database references are not supported.
+  Note: if using MySQL with a prefixed table, you must use the same prefix
+  for the references since cross database references are not supported.
 
-  For both MySQL and Postgres with a prefixed table, you must use the same prefix for the index field to ensure
-  you index the prefix qualified table.
+  For both MySQL and Postgres with a prefixed table, you must use the same
+  prefix for the index field to ensure you index the prefix qualified table.
 
   ## Transactions
 
@@ -523,6 +523,9 @@ defmodule Ecto.Migration do
       # Create a partial index
       create index("products", [:user_id], where: "price = 0", name: :free_products_index)
 
+      # To create a tsvector index with GIN on Postgres
+      create index("products", ["to_tsvector('english', name)"],
+                   name: :products_name_vector, using: "GIN")
   """
   def index(table, columns, opts \\ [])
 
