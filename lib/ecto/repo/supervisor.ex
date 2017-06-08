@@ -45,7 +45,7 @@ defmodule Ecto.Repo.Supervisor do
   Retrieves the compile time configuration.
   """
   def compile_config(repo, opts) do
-    otp_app = Keyword.fetch!(opts, :otp_app)
+    otp_app = Keyword.get(opts, :otp_app)
     config  = Application.get_env(otp_app, repo, [])
     adapter = opts[:adapter] || config[:adapter]
 
