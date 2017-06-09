@@ -642,6 +642,10 @@ if Code.ensure_loaded?(Mariaex) do
       do: [" DEFAULT '", escape_string(literal), ?']
     defp default_expr({:ok, literal}) when is_number(literal) or is_boolean(literal),
       do: [" DEFAULT ", to_string(literal)]
+    defp default_expr({:ok, %{} = map}) do
+      default = Ecto.Adapter.json_library().encode!(map)
+      [" DEFAULT ", [?', escape_string(default), ?']]
+    end
     defp default_expr({:ok, {:fragment, expr}}),
       do: [" DEFAULT ", expr]
     defp default_expr(:error),
