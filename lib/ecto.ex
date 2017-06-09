@@ -170,7 +170,7 @@ defmodule Ecto do
 
   Any parameter that was not explicitly listed in the fields list will be ignored.
 
-  After casting, the changeset is given to many `Ecto.Changeset.validate_*/2`
+  After casting, the changeset is given to many `Ecto.Changeset.validate_*`
   functions that validate only the **changed fields**. In other words:
   if a field was not given as a parameter, it won't be validated at all.
   For example, if the params map contain only the "name" and "email" keys,
