@@ -38,14 +38,10 @@ if Code.ensure_loaded?(Mariaex) do
         %{__struct__: _} = value ->
           value
         %{} = value ->
-          json_library().encode!(value)
+          Ecto.Adapter.json_library().encode!(value)
         value ->
           value
       end
-    end
-
-    defp json_library do
-      Application.fetch_env!(:ecto, :json_library)
     end
 
     def to_constraints(%Mariaex.Error{mariadb: %{code: 1062, message: message}}) do

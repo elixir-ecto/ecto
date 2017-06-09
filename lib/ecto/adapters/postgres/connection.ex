@@ -1,7 +1,7 @@
 if Code.ensure_loaded?(Postgrex) do
   Postgrex.Types.define(Ecto.Adapters.Postgres.TypeModule,
                         Ecto.Adapters.Postgres.extensions(),
-                        json: Application.get_env(:ecto, :json_library, Poison))
+                        json: Ecto.Adapter.json_library())
 
   defmodule Ecto.Adapters.Postgres.Connection do
     @moduledoc false
