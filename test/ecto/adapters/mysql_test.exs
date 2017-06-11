@@ -527,7 +527,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
   # DDL
 
-  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3,
+  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, view: 1, view: 2,
                                 references: 1, references: 2, constraint: 3]
 
   test "executing a string during migration" do
@@ -682,6 +682,62 @@ defmodule Ecto.Adapters.MySQLTest do
     ADD `my_pk` bigint unsigned not null auto_increment,
     ADD PRIMARY KEY (`my_pk`)
     """ |> remove_newlines]
+  end
+
+  test "create view" do
+    create = {:create, view(:posts_names, query: from(p in "posts", select: p.name), sql: "SELECT `name` from `posts`")}
+    assert execute_ddl(create) ==
+      [~s|CREATE VIEW `posts_names` AS SELECT `name` from `posts`|]
+  end
+
+  test "create view with prefix" do
+    query = from(p in "posts", select: p.name)
+    |> Ecto.Queryable.to_query
+    |> Map.put(:prefix, "north")
+    create = {:create, view(:posts_names, query: query, sql: "SELECT `name` from `north`.`posts`", prefix: "north")}
+    assert execute_ddl(create) ==
+      [~s|CREATE VIEW `north`.`posts_names` AS SELECT `name` from `north`.`posts`|]
+  end
+
+  test "try create materialized view" do
+    create = {:create, view(:posts_names, query: from(p in "posts", select: p.name), sql: "SELECT `name` from `posts`", materialized: true)}
+    assert_raise ArgumentError, ~r"MySQL does not support materialized views", fn ->
+      execute_ddl(create)
+    end
+  end
+
+  test "create or replace view" do
+    create = {:create_or_replace, view(:posts_names, query: from(p in "posts", select: p.name), sql: "SELECT `name` from `posts`")}
+    assert execute_ddl(create) ==
+      [~s|CREATE OR REPLACE VIEW `posts_names` AS SELECT `name` from `posts`|]
+  end
+
+  test "try create view if not exists" do
+    create = {:create_if_not_exists,
+              view(:posts_names, query: from(p in "posts", select: p.name), sql: "SELECT `name` from `posts`")}
+    assert_raise ArgumentError, ~r"MySQL does not support create_if_not_exists for views", fn ->
+      execute_ddl(create)
+    end
+  end
+
+  test "drop view" do
+    drop = {:drop, view(:posts_names)}
+    assert execute_ddl(drop) == [~s|DROP VIEW `posts_names`|]
+  end
+
+  test "drop view with prefix" do
+    drop = {:drop, view(:posts_names, prefix: "north")}
+    assert execute_ddl(drop) == [~s|DROP VIEW `north`.`posts_names`|]
+  end
+
+  test "drop view if exists" do
+    drop = {:drop_if_exists, view(:posts_names)}
+    assert execute_ddl(drop) == [~s|DROP VIEW IF EXISTS `posts_names`|]
+  end
+
+  test "drop view if exists with prefix" do
+    drop = {:drop_if_exists, view(:posts_names, prefix: "north")}
+    assert execute_ddl(drop) == [~s|DROP VIEW IF EXISTS `north`.`posts_names`|]
   end
 
   test "create index" do

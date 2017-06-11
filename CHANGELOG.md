@@ -10,6 +10,7 @@
   * [Ecto.Adapters.MySQL] Use Mariaex instead of MySQL client to create & drop database
   * [Ecto.Changeset] Add `apply_action/2`
   * [Ecto.Migrations] Add reversible `execute/2` to migrations
+  * [Ecto.Migrations] Add SQL views support
   * [Ecto.Migrator] Allow migration/rollback to log SQL commands via the `--log-sql` flag
   * [Ecto.LogEntry] Add `:caller_pid` to the Ecto.LogEntry struct
   * [Ecto.Repo] Implement `:returning` option on insert

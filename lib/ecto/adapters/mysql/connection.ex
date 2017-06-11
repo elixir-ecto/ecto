@@ -506,7 +506,10 @@ if Code.ensure_loaded?(Mariaex) do
 
     ## DDL
 
-    alias Ecto.Migration.{Table, Index, Reference, Constraint}
+    alias Ecto.Migration.{Table, Index, Reference, Constraint, View}
+
+    @create [:create, :create_or_replace]
+    @drops [:drop, :drop_if_exists]
 
     def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
       table_structure =
@@ -530,6 +533,30 @@ if Code.ensure_loaded?(Mariaex) do
     def execute_ddl({:alter, %Table{} = table, changes}) do
       [["ALTER TABLE ", quote_table(table.prefix, table.name), ?\s,
         column_changes(table, changes), pk_definitions(changes, ", ADD ")]]
+    end
+
+    def execute_ddl({command, %View{materialized: true} = view}),
+      do: error!(nil, "MySQL does not support materialized views")
+
+    def execute_ddl({command, %View{} = view}) when command in @create do
+      queries = [["CREATE ",
+                  if_do(command == :create_or_replace, "OR REPLACE "),
+                  "VIEW ",
+                  quote_table(view.prefix, view.name),
+                  " AS ",
+                  view.sql
+                  ]]
+    end
+
+    def execute_ddl({command, %View{} = view}) when command == :create_if_not_exists,
+      do: error!(nil, "MySQL does not support create_if_not_exists for views")
+
+    def execute_ddl({command, %View{} = view}) when command in @drops do
+      if_exists = if command == :drop_if_exists, do: "IF EXISTS ", else: []
+      [["DROP ",
+        "VIEW ",
+        if_exists,
+        quote_table(view.prefix, view.name)]]
     end
 
     def execute_ddl({:create, %Index{} = index}) do

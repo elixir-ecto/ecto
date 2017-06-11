@@ -651,7 +651,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
   # DDL
 
-  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1,
+  import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3, references: 1, view: 1, view: 2,
                                 references: 2, constraint: 2, constraint: 3]
 
   test "executing a string during migration" do
@@ -773,6 +773,85 @@ defmodule Ecto.Adapters.PostgresTest do
     assert execute_ddl(create) == ["""
     CREATE TABLE "posts" ("a" integer, "b" integer, "name" varchar(255), PRIMARY KEY ("a", "b"))
     """ |> remove_newlines]
+  end
+
+  test "create view" do
+    create = {:create, view(:posts_names, query: from(p in "posts", select: p.name), sql: "SELECT name from posts")}
+    assert execute_ddl(create) ==
+      [~s|CREATE VIEW "posts_names" AS SELECT name from posts|]
+  end
+
+  test "create view with prefix" do
+    query = from(p in "posts", select: p.name)
+    |> Ecto.Queryable.to_query
+    |> Map.put(:prefix, "north")
+    create = {:create, view(:posts_names, query: query, sql: "SELECT name from north.posts", prefix: "north")}
+    assert execute_ddl(create) ==
+      [~s|CREATE VIEW "north"."posts_names" AS SELECT name from north.posts|]
+  end
+
+  test "create view with comment" do
+    create = {:create, view(:posts_names, query: from(p in "posts", select: p.name),
+                            sql: "SELECT name from posts", comment: "DBA")}
+    assert execute_ddl(create) ==
+      [~s|CREATE VIEW "posts_names" AS SELECT name from posts|, ~s|COMMENT ON VIEW \"posts_names\" IS 'DBA'|]
+  end
+
+  test "create materialized view" do
+    create = {:create, view(:posts_names, query: from(p in "posts", select: p.name), sql: "SELECT name from posts", materialized: true)}
+    assert execute_ddl(create) ==
+      [~s|CREATE MATERIALIZED VIEW "posts_names" AS SELECT name from posts|]
+  end
+
+  test "create materialized view if not exists" do
+    create = {:create_if_not_exists,
+              view(:posts_names, query: from(p in "posts", select: p.name), sql: "SELECT name from posts", materialized: true)}
+    assert execute_ddl(create) ==
+      [~s|CREATE MATERIALIZED VIEW IF NOT EXISTS "posts_names" AS SELECT name from posts|]
+  end
+
+  test "create or replace view" do
+    create = {:create_or_replace, view(:posts_names, query: from(p in "posts", select: p.name), sql: "SELECT name from posts")}
+    assert execute_ddl(create) ==
+      [~s|CREATE OR REPLACE VIEW "posts_names" AS SELECT name from posts|]
+  end
+
+  test "try create or replace materialized view" do
+    create = {:create_or_replace,
+              view(:posts_names, query: from(p in "posts", select: p.name), sql: "SELECT name from posts", materialized: true)}
+    assert_raise ArgumentError, ~r"PostgreSQL does not support create_or_replace for materialized views", fn ->
+      execute_ddl(create)
+    end
+  end
+
+  test "drop view" do
+    drop = {:drop, view(:posts_names)}
+    assert execute_ddl(drop) == [~s|DROP VIEW "posts_names"|]
+  end
+
+  test "drop view with prefix" do
+    drop = {:drop, view(:posts_names, prefix: "north")}
+    assert execute_ddl(drop) == [~s|DROP VIEW "north"."posts_names"|]
+  end
+
+  test "drop view if exists" do
+    drop = {:drop_if_exists, view(:posts_names)}
+    assert execute_ddl(drop) == [~s|DROP VIEW IF EXISTS "posts_names"|]
+  end
+
+  test "drop view if exists with prefix" do
+    drop = {:drop_if_exists, view(:posts_names, prefix: "north")}
+    assert execute_ddl(drop) == [~s|DROP VIEW IF EXISTS "north"."posts_names"|]
+  end
+
+  test "drop materialized view" do
+    drop = {:drop, view(:posts_names, materialized: true)}
+    assert execute_ddl(drop) == [~s|DROP MATERIALIZED VIEW "posts_names"|]
+  end
+
+  test "drop materialized view if exists" do
+    drop = {:drop_if_exists, view(:posts_names, materialized: true)}
+    assert execute_ddl(drop) == [~s|DROP MATERIALIZED VIEW IF EXISTS "posts_names"|]
   end
 
   test "drop table" do

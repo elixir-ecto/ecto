@@ -200,6 +200,17 @@ defmodule Ecto.Migration do
                            engine: atom, options: String.t}
   end
 
+  defmodule View do
+    @moduledoc """
+    Used internally by adapters.
+
+    To define a view in a migration, see `Ecto.Migration.view/2`
+    """
+    defstruct name: nil, prefix: nil, query: nil, sql: nil, comment: nil, materialized: false, options: nil
+    @type t :: %__MODULE__{name: String.t, query: Ecto.Query, prefix: atom | nil, sql: String.t | nil,
+                           comment: String.t | nil, materialized: boolean, options: String.t}
+  end
+
   defmodule Reference do
     @moduledoc """
     Used internally by adapters.
@@ -325,6 +336,7 @@ defmodule Ecto.Migration do
     * an index
     * a table with only an `:id` field
     * a constraint
+    * a view
 
   When reversing (in `change` running backward) indexes are only dropped if they
   exist and no errors are raised. To enforce dropping an index use `drop/1`.
@@ -333,6 +345,7 @@ defmodule Ecto.Migration do
 
       create index("posts", [:name])
       create table("version")
+      create view("posts_comments", query: from(p in "posts", select: p.comment))
       create constraint("products", "price_must_be_positive", check: "price > 0")
 
   """
@@ -349,6 +362,41 @@ defmodule Ecto.Migration do
   def create(%Table{} = table) do
     do_create table, :create
     table
+  end
+
+  def create(%View{} = view) do
+    Runner.execute {:create, __prefix__(update_view_sql(view))}
+  end
+
+  defp update_view_sql(view) do
+    %{:runner => runner} = Process.get(:ecto_migration)
+    Agent.get(runner, fn(%{:repo => repo}) ->
+      {sql, _params} = Ecto.Adapters.SQL.to_sql(:all, repo, view.query)
+      %View{view | :sql => sql}
+    end)
+  end
+
+  @doc """
+  Creates view, but if a view of the same name already exists, it is replaced.
+
+  ## Examples
+
+      create_or_replace view("posts_comments", query: from(p in "posts", select: p.comment))
+  """
+  def create_or_replace(%View{} = view) do
+    Runner.execute {:create_or_replace, __prefix__(update_view_sql(view))}
+  end
+
+  @doc """
+  Creates materialized view if one does not yes exist.
+
+  ## Examples
+
+      create_if_not_exists view("posts_comments", query: from(p in "posts", select: p.comment),
+                                materialized: true)
+  """
+  def create_if_not_exists(%View{} = view) do
+    Runner.execute {:create_if_not_exists, __prefix__(update_view_sql(view))}
   end
 
   @doc """
@@ -385,18 +433,20 @@ defmodule Ecto.Migration do
 
     * an index
     * a table
+    * a view
     * a constraint
 
   ## Examples
 
       drop index("posts", [:name])
       drop table("posts")
+      drop view("posts_with_tags")
       drop constraint("products", "price_must_be_positive")
 
   """
-  def drop(%{} = index_or_table_or_constraint) do
-    Runner.execute {:drop, __prefix__(index_or_table_or_constraint)}
-    index_or_table_or_constraint
+  def drop(%{} = index_or_table_or_view_or_constraint) do
+    Runner.execute {:drop, __prefix__(index_or_table_or_view_or_constraint)}
+    index_or_table_or_view_or_constraint
   end
 
   @doc """
@@ -408,11 +458,12 @@ defmodule Ecto.Migration do
 
       drop_if_exists index("posts", [:name])
       drop_if_exists table("posts")
+      drop_if_exists view("posts_with_tags")
 
   """
-  def drop_if_exists(%{} = index_or_table) do
-    Runner.execute {:drop_if_exists, __prefix__(index_or_table)}
-    index_or_table
+  def drop_if_exists(%{} = index_or_table_or_view) do
+    Runner.execute {:drop_if_exists, __prefix__(index_or_table_or_view)}
+    index_or_table_or_view
   end
 
   @doc """
@@ -450,6 +501,16 @@ defmodule Ecto.Migration do
 
   def table(name, opts) when is_binary(name) and is_list(opts) do
     struct(%Table{name: name}, opts)
+  end
+
+  def view(name, opts \\ [])
+
+  def view(name, opts) when is_atom(name) do
+    view(Atom.to_string(name), opts)
+  end
+
+  def view(name, opts) when is_binary(name) do
+    struct(%View{name: name}, opts)
   end
 
   @doc ~S"""
@@ -890,14 +951,13 @@ defmodule Ecto.Migration do
   end
 
   @doc false
-  def __prefix__(%{prefix: prefix} = index_or_table) do
+  def __prefix__(%{prefix: prefix} = prefixed) do
     runner_prefix = Runner.prefix()
-
     cond do
       is_nil(prefix) ->
-        %{index_or_table | prefix: runner_prefix}
+        %{prefixed | prefix: runner_prefix}
       is_nil(runner_prefix) or runner_prefix == to_string(prefix) ->
-        index_or_table
+        prefixed
       true ->
         raise Ecto.MigrationError,  message:
           "the :prefix option `#{prefix}` does match the migrator prefix `#{runner_prefix}`"
