@@ -1175,7 +1175,9 @@ defmodule Ecto.Changeset do
 
   ## Examples
 
-      apply_changes(changeset)
+      iex> changeset = change(%Post{author: "bar"}, %{title: "foo"})
+      iex> apply_changes(changeset)
+      %Post{author: "bar", title: "foo"}
 
   """
   @spec apply_changes(t) :: Ecto.Schema.t | data
@@ -1232,7 +1234,7 @@ defmodule Ecto.Changeset do
 
   An additional keyword list `keys` can be passed to provide additional
   contextual information for the error. This is useful when using
-  `traverse_errors`
+  `traverse_errors/2`
 
   ## Examples
 
@@ -1770,7 +1772,7 @@ defmodule Ecto.Changeset do
   fetched), an `Ecto.StaleEntryError` exception is raised.
 
   Optimistic locking also works with delete operations. Just call the
-  `optimistic_lock` function with the data before delete:
+  `optimistic_lock/3` function with the data before delete:
 
       iex> changeset = Ecto.Changeset.optimistic_lock(post, :lock_version)
       iex> Repo.delete(changeset)
