@@ -582,9 +582,10 @@ if Code.ensure_loaded?(Postgrex) do
 
     # DDL
 
-    alias Ecto.Migration.{Table, Index, Reference, Constraint}
+    alias Ecto.Migration.{Table, Index, Reference, Constraint, View}
 
     @drops [:drop, :drop_if_exists]
+    @create [:create, :create_or_replace, :create_if_not_exists]
 
     def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
       table_name = quote_table(table.prefix, table.name)
@@ -629,6 +630,35 @@ if Code.ensure_loaded?(Postgrex) do
                   if_do(index.where, [" WHERE ", to_string(index.where)])]]
 
       queries ++ comments_on("INDEX", quote_name(index.name), index.comment)
+    end
+
+    def execute_ddl({command, %View{materialized: true} = view}) when command == :create_or_replace,
+      do: error!(nil, "PostgreSQL does not support create_or_replace for materialized views")
+
+    def execute_ddl({command, %View{materialized: false} = view}) when command == :create_if_not_exists,
+      do: error!(nil, "PostgreSQL does not support create_if_not_exists for views")
+
+    def execute_ddl({command, %View{} = view}) when command in @create do
+      queries = [["CREATE ",
+                  if_do(command == :create_or_replace, "OR REPLACE "),
+                  if_do(view.materialized, "MATERIALIZED "),
+                  "VIEW ",
+                  if_do(command == :create_if_not_exists, "IF NOT EXISTS "),
+                  quote_table(view.prefix, view.name),
+                  " AS ",
+                  view.sql
+                  ]]
+
+      queries ++ comments_on("VIEW", quote_name(view.name), view.comment)
+    end
+
+    def execute_ddl({command, %View{} = view}) when command in @drops do
+      if_exists = if command == :drop_if_exists, do: "IF EXISTS ", else: []
+      [["DROP ",
+        if_do(view.materialized, "MATERIALIZED "),
+        "VIEW ",
+        if_exists,
+        quote_table(view.prefix, view.name)]]
     end
 
     def execute_ddl({:create_if_not_exists, %Index{} = index}) do

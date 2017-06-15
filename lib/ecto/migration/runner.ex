@@ -7,6 +7,7 @@ defmodule Ecto.Migration.Runner do
   require Logger
 
   alias Ecto.Migration.Table
+  alias Ecto.Migration.View
   alias Ecto.Migration.Index
   alias Ecto.Migration.Constraint
   alias Ecto.Migration.Command
@@ -234,6 +235,15 @@ defmodule Ecto.Migration.Runner do
 
   defp command({:create, %Table{} = table, _}),
     do: "create table #{quote_name(table.prefix, table.name)}"
+  defp command({:create, %View{} = view}) do
+    "create view #{quote_name(view.prefix, view.name)}"
+  end
+  defp command({:create_or_replace, %View{} = view}) do
+    "create or replace view #{quote_name(view.prefix, view.name)}"
+  end
+  defp command({:create_if_not_exists, %View{} = view}) do
+    "create materialized view if not exists #{quote_name(view.prefix, view.name)}"
+  end
   defp command({:create_if_not_exists, %Table{} = table, _}),
     do: "create table if not exists #{quote_name(table.prefix, table.name)}"
   defp command({:alter, %Table{} = table, _}),
@@ -251,6 +261,10 @@ defmodule Ecto.Migration.Runner do
     do: "drop index #{quote_name(index.prefix, index.name)}"
   defp command({:drop_if_exists, %Index{} = index}),
     do: "drop index if exists #{quote_name(index.prefix, index.name)}"
+  defp command({:drop, %View{} = view}),
+    do: "drop view #{quote_name(view.prefix, view.name)}"
+  defp command({:drop_if_exists, %View{} = view}),
+    do: "drop view if exists #{quote_name(view.prefix, view.name)}"
   defp command({:rename, %Table{} = current_table, %Table{} = new_table}),
     do: "rename table #{quote_name(current_table.prefix, current_table.name)} to #{quote_name(new_table.prefix, new_table.name)}"
   defp command({:rename, %Table{} = table, current_column, new_column}),
