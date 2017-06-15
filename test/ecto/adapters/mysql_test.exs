@@ -630,6 +630,39 @@ defmodule Ecto.Adapters.MySQLTest do
     """ |> remove_newlines]
   end
 
+  test "create table with a map column, and an empty map default" do
+    create = {:create, table(:posts),
+              [
+                {:add, :a, :map, [default: %{}]}
+              ]
+            }
+    assert execute_ddl(create) == ["""
+    CREATE TABLE `posts` (`a` text DEFAULT '{}') ENGINE = INNODB
+    """ |> remove_newlines]
+  end
+
+  test "create table with a map column, and a map default with values" do
+    create = {:create, table(:posts),
+              [
+                {:add, :a, :map, [default: %{foo: "bar", baz: "boom"}]}
+              ]
+            }
+    assert execute_ddl(create) == ["""
+    CREATE TABLE `posts` (`a` text DEFAULT '{"foo":"bar","baz":"boom"}') ENGINE = INNODB
+    """ |> remove_newlines]
+  end
+
+  test "create table with a map column, and a string default" do
+    create = {:create, table(:posts),
+              [
+                {:add, :a, :map, [default: ~s|{"foo":"bar","baz":"boom"}|]}
+              ]
+            }
+    assert execute_ddl(create) == ["""
+    CREATE TABLE `posts` (`a` text DEFAULT '{"foo":"bar","baz":"boom"}') ENGINE = INNODB
+    """ |> remove_newlines]
+  end
+
   test "drop table" do
     drop = {:drop, table(:posts)}
     assert execute_ddl(drop) == [~s|DROP TABLE `posts`|]
