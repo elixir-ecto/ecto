@@ -781,9 +781,7 @@ defmodule Ecto.Adapters.PostgresTest do
                 {:add, :a, :map, [default: %{}]}
               ]
             }
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "posts" ("a" jsonb DEFAULT '{}')
-    """ |> remove_newlines]
+    assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("a" jsonb DEFAULT '{}')|]
   end
 
   test "create table with a map column, and a map default with values" do
@@ -792,9 +790,7 @@ defmodule Ecto.Adapters.PostgresTest do
                 {:add, :a, :map, [default: %{foo: "bar", baz: "boom"}]}
               ]
             }
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "posts" ("a" jsonb DEFAULT '{"foo":"bar","baz":"boom"}')
-    """ |> remove_newlines]
+    assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("a" jsonb DEFAULT '{"foo":"bar","baz":"boom"}')|]
   end
 
   test "create table with a map column, and a string default" do
@@ -803,9 +799,7 @@ defmodule Ecto.Adapters.PostgresTest do
                 {:add, :a, :map, [default: ~s|{"foo":"bar","baz":"boom"}|]}
               ]
             }
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "posts" ("a" jsonb DEFAULT '{"foo":"bar","baz":"boom"}')
-    """ |> remove_newlines]
+    assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("a" jsonb DEFAULT '{"foo":"bar","baz":"boom"}')|]
   end
 
   test "drop table" do
