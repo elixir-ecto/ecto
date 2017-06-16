@@ -38,14 +38,10 @@ if Code.ensure_loaded?(Mariaex) do
         %{__struct__: _} = value ->
           value
         %{} = value ->
-          json_library().encode!(value)
+          Ecto.Adapter.json_library().encode!(value)
         value ->
           value
       end
-    end
-
-    defp json_library do
-      Application.fetch_env!(:ecto, :json_library)
     end
 
     def to_constraints(%Mariaex.Error{mariadb: %{code: 1062, message: message}}) do
@@ -646,6 +642,10 @@ if Code.ensure_loaded?(Mariaex) do
       do: [" DEFAULT '", escape_string(literal), ?']
     defp default_expr({:ok, literal}) when is_number(literal) or is_boolean(literal),
       do: [" DEFAULT ", to_string(literal)]
+    defp default_expr({:ok, %{} = map}) do
+      default = Ecto.Adapter.json_library().encode!(map)
+      [" DEFAULT ", [?', escape_string(default), ?']]
+    end
     defp default_expr({:ok, {:fragment, expr}}),
       do: [" DEFAULT ", expr]
     defp default_expr(:error),
