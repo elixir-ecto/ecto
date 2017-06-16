@@ -557,7 +557,7 @@ defmodule Ecto.Repo do
 
   ## Upserts
 
-  `c:insert_all` provides upserts (update or inserts) via the `:on_conflict`
+  `c:insert_all/3` provides upserts (update or inserts) via the `:on_conflict`
   option. The `:on_conflict` option supports the following values:
 
     * `:raise` - raises if there is a conflicting primary key or unique index
