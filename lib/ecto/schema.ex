@@ -1274,6 +1274,29 @@ defmodule Ecto.Schema do
       items
       # => [%Item{id: "20a97d94-f79b-4e63-a875-85deed7719b7", title: "Soap"}]
 
+  Updating of embeds must be done using a changeset for each changed embed.
+
+      # Order has an existing items
+      order = Repo.get!(Order, 42)
+      order.items
+      # => [%Item{id: "20a97d94-f79b-4e63-a875-85deed7719b7", title: "Soap"}]
+
+      # Generate a changeset
+      changeset = Ecto.Changeset.change(order)
+
+      # Put the updated item as a changeset
+      current_item = List.first(order.items)
+      item_changeset = Ecto.Changeset.change(current_item, title: "Mujju's Soap")
+      order_changeset = Ecto.Changeset.put_embed(changeset, :items, [item_changeset])
+
+      # Update the order and fetch items
+      items = Repo.update!(order_changeset).items
+
+      # Item has the updated title
+      items
+      # => [%Item{id: "20a97d94-f79b-4e63-a875-85deed7719b7", title: "Mujju's Soap"}]
+
+
   ## Inline embedded schema
 
   The schema module can be defined inline in the parent schema in simple
