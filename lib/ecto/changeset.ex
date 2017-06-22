@@ -2257,7 +2257,7 @@ defimpl Inspect, for: Ecto.Changeset do
   import Inspect.Algebra
 
   def inspect(changeset, opts) do
-    list = for attr <- [:action, :changes, :errors, :data, :valid?] do
+    list = for attr <- [:action, :changes, :errors, :data, :valid?, :warnings, :warningless?] do
       {attr, Map.get(changeset, attr)}
     end
 
