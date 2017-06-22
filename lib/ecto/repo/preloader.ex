@@ -99,11 +99,27 @@ defmodule Ecto.Repo.Preloader do
       # pool knows where to fetch the connection from and
       # set the proper timeouts.
       opts = Keyword.put_new(opts, :caller, self())
+      # We pass forward_logs: self() so logs are always produced
+      # in the "main" process to preserve logger metadata
+      opts = [forward_logs: self()] ++ opts
       assocs
       |> Enum.map(&Task.async(:erlang, :apply, [fun, [&1, opts]]))
-      |> Enum.map(&Task.await(&1, :infinity))
+      |> Enum.map(&await_task_and_log/1)
     else
       Enum.map(assocs, &fun.(&1, opts))
+    end
+  end
+
+  defp await_task_and_log(%Task{ref: ref} = task) do
+    receive do
+      {^ref, reply} ->
+        Process.demonitor(ref, [:flush])
+        reply
+      {:DOWN, ^ref, _, _, reason} ->
+        exit(reason)
+      {:ecto_log, repo, log} ->
+        repo.__log__(log)
+        await_task_and_log(task)
     end
   end
 
