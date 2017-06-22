@@ -330,32 +330,35 @@ defmodule Ecto.Changeset do
   def change(data, changes \\ %{})
 
   def change({data, types}, changes) when is_map(data) do
-    change(%Changeset{data: data, types: Enum.into(types, %{}), valid?: true}, changes)
+    change(%Changeset{data: data, types: Enum.into(types, %{}), valid?: true, warningless?: true}, changes)
   end
 
   def change(%Changeset{types: nil}, _changes) do
     raise ArgumentError, "changeset does not have types information"
   end
-#########################################################################################
+
   def change(%Changeset{changes: changes, types: types} = changeset, new_changes)
       when is_map(new_changes) or is_list(new_changes) do
-    {changes, errors, valid?} =
+    {changes, errors, valid?, warnings, warningless?} =
       get_changed(changeset.data, types, changes, new_changes,
-                  changeset.errors, changeset.valid?)
-    %{changeset | changes: changes, errors: errors, valid?: valid?}
+                  changeset.errors, changeset.valid?,
+                  changeset.warnings, changeset.warningless?)
+    %{changeset | changes: changes, errors: errors, valid?: valid?, warnings: warnings, warningless?: warningless?}
   end
 
   def change(%{__struct__: struct} = data, changes) when is_map(changes) or is_list(changes) do
     types = struct.__changeset__
-    {changes, errors, valid?} = get_changed(data, types, %{}, changes, [], true)
-    %Changeset{valid?: valid?, data: data, changes: changes,
-               errors: errors, types: types}
+    {changes, errors, valid?, warnings, warningless?} = get_changed(data, types, %{}, changes, [], true, [], true)
+    %Changeset{valid?: valid?, warningless?: warningless?,
+               data: data, changes: changes,
+               errors: errors, types: types,
+               warnings: warnings}
   end
 
-  defp get_changed(data, types, old_changes, new_changes, errors, valid?) do
-    Enum.reduce(new_changes, {old_changes, errors, valid?}, fn
-      {key, value}, {changes, errors, valid?} ->
-        put_change(data, changes, errors, valid?, key, value, Map.get(types, key))
+  defp get_changed(data, types, old_changes, new_changes, errors, valid?, warnings, warningless?) do
+    Enum.reduce(new_changes, {old_changes, errors, valid?, warnings, warningless?}, fn
+      {key, value}, {changes, errors, valid?, warnings, warningless?} ->
+        put_change(data, changes, errors, valid?, warnings, warningless?, key, value, Map.get(types, key))
     end)
   end
 
@@ -1023,26 +1026,26 @@ defmodule Ecto.Changeset do
 
   def put_change(%Changeset{types: types} = changeset, key, value) do
     type = Map.get(types, key)
-    {changes, errors, valid?} =
+    {changes, errors, valid?, warnings, warningless?} =
       put_change(changeset.data, changeset.changes, changeset.errors,
-                 changeset.valid?, key, value, type)
-    %{changeset | changes: changes, errors: errors, valid?: valid?}
+                 changeset.valid?, changeset.warnings, changeset.warningless?, key, value, type)
+    %{changeset | changes: changes, errors: errors, valid?: valid?, warnings: warnings, warningless?: warningless?}
   end
 
-  defp put_change(_data, _changes, _errors, _valid?, _key, _value, {tag, _})
+  defp put_change(_data, _changes, _errors, _valid?, _warnings, _warningless?, _key, _value, {tag, _})
       when tag in @relations do
     raise "changing #{tag}s with change/2 or put_change/3 is not supported, " <>
           "please use put_#{tag}/4 instead"
   end
 
-  defp put_change(data, changes, errors, valid?, key, value, _type) do
+  defp put_change(data, changes, errors, valid?, warnings, warningless?, key, value, _type) do
     cond do
       Map.get(data, key) != value ->
-        {Map.put(changes, key, value), errors, valid?}
+        {Map.put(changes, key, value), errors, valid?, warnings, warningless?}
       Map.has_key?(changes, key) ->
-        {Map.delete(changes, key), errors, valid?}
+        {Map.delete(changes, key), errors, valid?, warnings, warningless?}
       true ->
-        {changes, errors, valid?}
+        {changes, errors, valid?, warnings, warningless?}
     end
   end
 
@@ -2259,11 +2262,13 @@ defimpl Inspect, for: Ecto.Changeset do
     end
 
     surround_many("#Ecto.Changeset<", list, ">", opts, fn
-      {:action, action}, opts   -> concat("action: ", to_doc(action, opts))
-      {:changes, changes}, opts -> concat("changes: ", to_doc(changes, opts))
-      {:data, data}, _opts      -> concat("data: ", to_struct(data, opts))
-      {:errors, errors}, opts   -> concat("errors: ", to_doc(errors, opts))
-      {:valid?, valid?}, opts   -> concat("valid?: ", to_doc(valid?, opts))
+      {:action, action}, opts               -> concat("action: ", to_doc(action, opts))
+      {:changes, changes}, opts             -> concat("changes: ", to_doc(changes, opts))
+      {:data, data}, _opts                  -> concat("data: ", to_struct(data, opts))
+      {:errors, errors}, opts               -> concat("errors: ", to_doc(errors, opts))
+      {:valid?, valid?}, opts               -> concat("valid?: ", to_doc(valid?, opts))
+      {:warnings, warnings}, opts           -> concat("warnings: ", to_doc(warnings, opts))
+      {:warningless?, warningless?}, opts   -> concat("warningless?: ", to_doc(warningless?, opts))
     end)
   end
 
