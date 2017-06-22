@@ -234,12 +234,13 @@ defmodule Ecto.Changeset do
   @empty_values [""]
 
   # If a new field is added here, def merge must be adapted
-  defstruct valid?: false, data: nil, params: nil, changes: %{}, repo: nil,
-            errors: [], validations: [], required: [], prepare: [],
+  defstruct valid?: false, warningless?: false, data: nil, params: nil, changes: %{}, repo: nil,
+            errors: [], warnings: [], validations: [], required: [], prepare: [],
             constraints: [], filters: %{}, action: nil, types: nil,
             empty_values: @empty_values
 
   @type t :: %Changeset{valid?: boolean(),
+                        warningless?: boolean(),
                         repo: atom | nil,
                         data: Ecto.Schema.t | map | nil,
                         params: %{String.t => term} | nil,
@@ -247,6 +248,7 @@ defmodule Ecto.Changeset do
                         required: [atom],
                         prepare: [(t -> t)],
                         errors: [{atom, error}],
+                        warnings: [{atom, warning}],
                         constraints: [constraint],
                         validations: Keyword.t,
                         filters: %{atom => term},
@@ -254,6 +256,8 @@ defmodule Ecto.Changeset do
                         types: nil | %{atom => Ecto.Type.t}}
 
   @type error :: {String.t, Keyword.t}
+  @type warning :: {String.t, Keyword.t}
+
   @type action :: nil | :insert | :update | :delete | :replace
   @type constraint :: %{type: :unique, constraint: String.t, match: :exact | :suffix,
                         field: atom, message: error}
@@ -332,7 +336,7 @@ defmodule Ecto.Changeset do
   def change(%Changeset{types: nil}, _changes) do
     raise ArgumentError, "changeset does not have types information"
   end
-
+#########################################################################################
   def change(%Changeset{changes: changes, types: types} = changeset, new_changes)
       when is_map(new_changes) or is_list(new_changes) do
     {changes, errors, valid?} =
@@ -1256,6 +1260,12 @@ defmodule Ecto.Changeset do
   def add_error(%{errors: errors} = changeset, key, message, keys \\ []) when is_binary(message) do
     %{changeset | errors: [{key, {message, keys}}|errors], valid?: false}
   end
+
+  @spec add_warning(t, atom, String.t, Keyword.t) :: t
+  def add_warning(%{warnings: warnings} = changeset, key, message, keys \\ []) when is_binary(message) do
+    %{changeset | warnings: [{key, {message, keys}}|warnings], warningless?: false}
+  end
+
 
   @doc """
   Validates the given `field` change.
