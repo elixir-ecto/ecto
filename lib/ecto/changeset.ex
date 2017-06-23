@@ -707,7 +707,7 @@ defmodule Ecto.Changeset do
           case Relation.cast(relation, value, current, on_cast) do
             {:ok, change, relation_valid?, false} when change != original ->
               missing_relation(%{changeset | changes: Map.put(changes, key, change),
-                                 valid?: changeset.valid? and relation_valid?}, key, current, required?, relation, opts)
+                                 valid?: changeset.valid? and relation_valid? and changeset.warningless?}, key, current, required?, relation, opts)
             {:ok, _, _, _} ->
               missing_relation(changeset, key, current, required?, relation, opts)
             :error ->
