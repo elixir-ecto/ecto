@@ -476,7 +476,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes.upvotes == nil
 
     assert_raise Ecto.CastError, "cannot cast \"42\" to :integer", fn ->
-     put_change(base_changeset, :upvotes, "42")
+      put_change(base_changeset, :upvotes, "42")
     end
   end
 
