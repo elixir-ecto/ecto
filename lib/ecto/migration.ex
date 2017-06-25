@@ -563,7 +563,7 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Executes arbitrary SQL or a keyword command in NoSQL databases.
+  Executes arbitrary SQL or a keyword command.
 
   Reversible commands can be defined by calling `execute/2`.
 
