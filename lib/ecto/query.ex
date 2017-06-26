@@ -398,6 +398,34 @@ defmodule Ecto.Query do
       query = from Employee, order_by: [desc: :salary], limit: 10
       from e in subquery(query), select: avg(e.salary)
 
+  Although subqueries are not allowed in WHERE expressions,
+  most subqueries in WHERE expression can be rewritten as JOINs.
+  Imagine you want to write this query:
+
+      UPDATE posts
+        SET sync_started_at = $1
+        WHERE id IN (
+          SELECT id FROM posts
+            WHERE synced = false AND (sync_started_at IS NULL OR sync_started_at < $1)
+            LIMIT $2
+        )
+
+  If you attempt to write it as `where: p.id in ^subquery(foo)`,
+  Ecto won't accept such query. However, the subquery above can be
+  written as a JOIN, which is supported by Ecto. The final Ecto
+  query will look like this:
+
+      subset_query = from(p in Post,
+        where: p.synced == false and
+                 (is_nil(p.sync_started_at) or p.sync_started_at < ^min_sync_started_at),
+        limit: ^batch_size
+      )
+
+      Repo.update_all(
+        from(p in Post, join: s in subquery(subset_query), on: s.id == p.id),
+        set: [sync_started_at: Ecto.DateTime.utc()]
+      end)
+
   """
   def subquery(%Ecto.SubQuery{} = subquery),
     do: subquery
