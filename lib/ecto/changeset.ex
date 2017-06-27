@@ -1902,10 +1902,11 @@ defmodule Ecto.Changeset do
       create unique_index(:users, [:email, :company_id])
 
   Because such indexes have usually more complex names, we need
-  to explicitly tell the changeset which constraint name to use:
+  to explicitly tell the changeset which constraint name to use (here we're 
+  using the naming convention that `unique_index` uses):
 
       cast(user, params, [:email])
-      |> unique_constraint(:email, name: :users_special_email_index)
+      |> unique_constraint(:email, name: :users_email_company_id_index)
 
   Notice that the first param is just one of the unique index fields, this will
   be used as the error key to the changeset errors keyword list. For example,
