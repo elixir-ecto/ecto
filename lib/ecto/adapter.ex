@@ -190,4 +190,13 @@ defmodule Ecto.Adapter do
   def json_library do
     Application.get_env(:ecto, :json_library, Poison)
   end
+
+  def log(repo, log, opts) do
+    case Keyword.fetch(opts, :forward_logs) do
+      {:ok, pid} when is_pid(pid) ->
+        send(pid, {:ecto_log, repo, log})
+      :error ->
+        repo.__log__(log)
+    end
+  end
 end
