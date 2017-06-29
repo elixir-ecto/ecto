@@ -3,6 +3,8 @@ defmodule Ecto.Repo.Queryable do
   # for query related functionality.
   @moduledoc false
 
+  @dialyzer {:no_opaque, transaction: 4}
+
   alias Ecto.Query
   alias Ecto.Queryable
   alias Ecto.Query.Planner
