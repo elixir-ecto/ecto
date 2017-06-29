@@ -1388,13 +1388,11 @@ defmodule Ecto.Schema do
   ## Callbacks
 
   @doc false
-  # TODO: Use utc_now instead.
   def __timestamps__(:naive_datetime, :seconds) do
-    NaiveDateTime.from_erl!(:erlang.universaltime, 0)
+    %{NaiveDateTime.utc_now() | microsecond: {0, 6}}
   end
   def __timestamps__(:naive_datetime, :microseconds) do
-    timestamp = {_, _, usec} = :os.timestamp
-    NaiveDateTime.from_erl!(:calendar.now_to_datetime(timestamp), usec)
+    NaiveDateTime.utc_now()
   end
   def __timestamps__(type, :seconds) do
     type_to_module(type).from_unix!(System.system_time(:seconds) * 1000000, :microseconds)
