@@ -1902,7 +1902,7 @@ defmodule Ecto.Changeset do
       create unique_index(:users, [:email, :company_id])
 
   Because such indexes have usually more complex names, we need
-  to explicitly tell the changeset which constraint name to use (here we're 
+  to explicitly tell the changeset which constraint name to use (here we're
   using the naming convention that `unique_index` uses):
 
       cast(user, params, [:email])
@@ -2132,7 +2132,6 @@ defmodule Ecto.Changeset do
   defp no_assoc_message(:one), do: "is still associated with this entry"
   defp no_assoc_message(:many), do: "are still associated with this entry"
 
-
   defp add_constraint(changeset, type, constraint, match, field, error)
        when is_binary(constraint) and is_atom(field) and is_tuple(error) and is_atom(match)  do
     unless match in @match_types, do: raise(ArgumentError, "invalid match type: #{inspect match}. Allowed match types: #{inspect @match_types}")
@@ -2145,16 +2144,25 @@ defmodule Ecto.Changeset do
   defp get_source(%{data: data}), do:
     raise(ArgumentError, "cannot add constraint to changeset because it does not have a source, got: #{inspect data}")
 
-  defp get_assoc(%{data: %{__struct__: schema}}, assoc) do
-    schema.__schema__(:association, assoc) || raise_invalid_assoc(schema, assoc)
+  defp get_assoc(%{types: types}, assoc) do
+    case Map.fetch(types, assoc) do
+      {:ok, {:assoc, association}} ->
+        association
+      _ ->
+        raise_invalid_assoc(types, assoc)
+    end
   end
 
-  defp raise_invalid_assoc(schema, assoc) do
-    associations = Enum.map_join(schema.__schema__(:associations), ", ", fn(association) ->
-      "`#{association}`"
-    end)
-    msg = "cannot add constraint to changeset because association `#{assoc}` does not exist. Did you mean one of #{associations}?"
-    raise(ArgumentError, msg)
+  defp raise_invalid_assoc(types, assoc) do
+    associations =
+      Enum.reduce(types, "", fn
+        {_key, {:assoc, %{field: field}}}, "" -> "`#{field}`"
+        {_key, {:assoc, %{field: field}}}, acc -> acc <> ", `#{field}`"
+        _, acc -> acc
+      end)
+
+    raise ArgumentError, "cannot add constraint to changeset because association `#{assoc}` does not exist. " <>
+                         "Did you mean one of #{associations}?"
   end
 
   @doc ~S"""
