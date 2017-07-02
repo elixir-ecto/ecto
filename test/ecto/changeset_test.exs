@@ -2,6 +2,20 @@ defmodule Ecto.ChangesetTest do
   use ExUnit.Case, async: true
   import Ecto.Changeset
 
+  defmodule SocialSource do
+    use Ecto.Schema
+
+    @primary_key false
+    embedded_schema do
+      field :origin
+      field :url
+    end
+
+    def changeset(schema \\ %SocialSource{}, params) do
+      cast(schema, params, ~w(origin url))
+    end
+  end
+
   defmodule Comment do
     use Ecto.Schema
 
@@ -22,6 +36,7 @@ defmodule Ecto.ChangesetTest do
       field :topics, {:array, :string}
       field :virtual, :string, virtual: true
       field :published_at, :naive_datetime
+      field :source, :map
       has_many :comments, Ecto.ChangesetTest.Comment, on_replace: :delete
       has_one :comment, Ecto.ChangesetTest.Comment
     end
@@ -97,6 +112,44 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == []
     assert changeset.valid?
     assert apply_changes(changeset) == %{title: "world", upvotes: 0}
+  end
+
+  test "cast/4: with dynamic embed" do
+    data = {
+      %{
+        title: "hello"
+      },
+      %{
+        title: :string,
+        source: {
+          :embed,
+          %Ecto.Embedded{
+            cardinality: :one,
+            field: :source,
+            on_cast: &SocialSource.changeset(&1, &2),
+            on_replace: :raise,
+            owner: nil,
+            related: SocialSource,
+            unique: true
+          }
+        }
+      }
+    }
+
+    params = %{"title" => "world", "source" => %{"origin" => "facebook", "url" => "http://example.com/social"}}
+
+    changeset =
+      data
+      |> cast(params, ~w(title))
+      |> cast_embed(:source, required: true)
+
+    assert changeset.params == params
+    assert changeset.data  == %{title: "hello"}
+    assert %{title: "world", source: %Ecto.Changeset{}} = changeset.changes
+    assert changeset.errors == []
+    assert changeset.valid?
+    assert apply_changes(changeset) ==
+      %{title: "world", source: %Ecto.ChangesetTest.SocialSource{origin: "facebook", url: "http://example.com/social"}}
   end
 
   test "cast/4: with changeset" do
@@ -1064,7 +1117,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "assoc_constraint/3 with errors" do
-    message = ~r"cannot add constraint to changeset because association `unknown` does not exist. Did you mean one of `comments`, `comment`?"
+    message = ~r"cannot add constraint to changeset because association `unknown` does not exist. Did you mean one of `comment`, `comments`?"
     assert_raise ArgumentError, message, fn ->
       change(%Post{}) |> assoc_constraint(:unknown)
     end
