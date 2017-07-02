@@ -588,7 +588,9 @@ if Code.ensure_loaded?(Postgrex) do
 
     def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
       table_name = quote_table(table.prefix, table.name)
-      query = ["CREATE TABLE ",
+      query = ["CREATE ",
+               if_do(table.unlogged, "UNLOGGED "),
+               "TABLE ",
                if_do(command == :create_if_not_exists, "IF NOT EXISTS "),
                table_name, ?\s, ?(,
                column_definitions(table, columns), pk_definition(columns, ", "), ?),

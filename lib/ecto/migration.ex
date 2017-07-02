@@ -195,9 +195,9 @@ defmodule Ecto.Migration do
 
     To define a table in a migration, see `Ecto.Migration.table/2`
     """
-    defstruct name: nil, prefix: nil, comment: nil, primary_key: true, engine: nil, options: nil
+    defstruct name: nil, prefix: nil, comment: nil, primary_key: true, engine: nil, options: nil, unlogged: false
     @type t :: %__MODULE__{name: String.t, prefix: atom | nil, comment: String.t | nil, primary_key: boolean,
-                           engine: atom, options: String.t}
+                           engine: atom, options: String.t, unlogged: boolean}
   end
 
   defmodule Reference do
@@ -440,6 +440,7 @@ defmodule Ecto.Migration do
     * `:prefix` - the prefix for the table
     * `:options` - provide custom options that will be appended after generated
       statement, for example "WITH", "INHERITS" or "ON COMMIT" clauses
+    * `:unlogged` - Use Postgres UNLOGGED option to disable writes to WAL
 
   """
   def table(name, opts \\ [])

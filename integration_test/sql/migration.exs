@@ -233,6 +233,16 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule UnloggedMigration do
+    use Ecto.Migration
+
+    def change do
+      create table(:default)
+      create table(:unlogged_true, unlogged: true)
+      create table(:unlogged_false, unlogged: false)
+    end
+  end
+
   defmodule NoSQLMigration do
     use Ecto.Migration
 
@@ -418,6 +428,11 @@ defmodule Ecto.Integration.MigrationTest do
   test "prefix" do
     assert :ok == up(PoolRepo, 20151012120000, PrefixMigration, log: false)
     assert :ok == down(PoolRepo, 20151012120000, PrefixMigration, log: false)
+  end
+
+  @tag :unlogged
+  test "unlogged" do
+    assert :ok == up(PoolRepo, 20181012120000, UnloggedMigration, log: false)
   end
 
   @tag :alter_primary_key

@@ -687,6 +687,30 @@ defmodule Ecto.Adapters.PostgresTest do
     """ |> remove_newlines]
   end
 
+  test "create table with unlogged not present" do
+    create = {:create, table(:posts), []}
+
+    assert execute_ddl(create) == [remove_newlines("""
+    CREATE TABLE "posts" ()
+    """)]
+  end
+
+  test "create table with unlogged false" do
+    create = {:create, table(:posts, unlogged: :false), []}
+
+    assert execute_ddl(create) == [remove_newlines("""
+    CREATE TABLE "posts" ()
+    """)]
+  end
+
+  test "create table with unlogged true" do
+    create = {:create, table(:posts, unlogged: :true), []}
+
+    assert execute_ddl(create) == [remove_newlines("""
+    CREATE UNLOGGED TABLE "posts" ()
+    """)]
+  end
+
   test "create table with comment on columns and table" do
     create = {:create, table(:posts, comment: "comment"),
               [
