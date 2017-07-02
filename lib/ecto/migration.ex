@@ -440,6 +440,7 @@ defmodule Ecto.Migration do
     * `:prefix` - the prefix for the table
     * `:options` - provide custom options that will be appended after generated
       statement, for example "WITH", "INHERITS" or "ON COMMIT" clauses
+    * `:unlogged` - Use Postgres UNLOGGED option to disable writes to WAL
 
   """
   def table(name, opts \\ [])
