@@ -423,7 +423,7 @@ defmodule Ecto.Query do
 
       Repo.update_all(
         from(p in Post, join: s in subquery(subset_query), on: s.id == p.id),
-        set: [sync_started_at: Ecto.DateTime.utc()]
+        set: [sync_started_at: NaiveDateTime.utc_now()]
       end)
 
   """
@@ -994,6 +994,14 @@ defmodule Ecto.Query do
 
       User |> update([u], set: [name: "new name"])
       User |> update(set: [name: "new name"])
+
+  ## Interpolation
+
+      new_name = "new name"
+      from(u in User, update: [set: [name: ^new_name]])
+
+      new_name = "new name"
+      from(u in User, update: [set: [name: fragment("upper(?)", ^new_name)]])
 
   ## Operators
 
