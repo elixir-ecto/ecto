@@ -241,7 +241,7 @@ defmodule Ecto.Repo do
       def load(schema_or_types, data) do
         Ecto.Repo.Schema.load(@adapter, schema_or_types, data)
       end
-      
+
       defoverridable child_spec: 1
     end
   end
@@ -668,7 +668,7 @@ defmodule Ecto.Repo do
                        {integer, nil | [term]} | no_return
 
   @doc """
-  Inserts a struct or a changeset.
+  Inserts a struct defined via `Ecto.Schema` or a changeset.
 
   In case a struct is given, the struct is converted into a changeset
   with all non-nil fields as part of the changeset.
