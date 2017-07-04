@@ -359,7 +359,7 @@ defmodule Ecto.Changeset do
   Applies the given `params` as changes for the given `data` according to
   the given set of keys. Returns a changeset.
 
-  The given `data` may be either a changeset, a struct or a `{data, types}`
+  The given `data` may be either a changeset, a schema struct or a `{data, types}`
   tuple. The second argument is a map of `params` that are cast according
   to the type information from `data`. `params` is a map with string keys
   or a map with atom keys containing potentially unsafe data.
