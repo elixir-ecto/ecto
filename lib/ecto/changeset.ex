@@ -1819,7 +1819,7 @@ defmodule Ecto.Changeset do
         end)
       end
 
-  We retrieve the repo and from the comment changeset itself, and use
+  We retrieve the repo from the comment changeset itself and use
   update_all to update the counter cache in one query. Finally, the original
   changeset must be returned.
   """
