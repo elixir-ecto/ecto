@@ -96,9 +96,9 @@ defmodule Ecto.Changeset do
   cast from the command line or through an HTML form or any other text-based
   format, it is likely those means cannot express nil values. For
   those reasons, changesets include the concept of empty values, which are
-  values that will be automatically converted to `nil` on `cast/4`. Those
-  values are stored in the changeset `empty_values` field and default to
-  `[""]`.
+  values that will be automatically converted to the field's default value 
+  on `cast/4`. Those values are stored in the changeset `empty_values` field
+  and default to `[""]`.
 
   ## Associations, embeds and on replace
 
