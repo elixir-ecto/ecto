@@ -497,14 +497,17 @@ defmodule Ecto do
     end
 
     schema = hd(structs).__struct__
-    assoc = %{owner_key: owner_key} =
+    assoc = %{owner_key: owner_key, assoc_query_receives_structs: structs?} =
       Ecto.Association.association_from_schema!(schema, assoc)
 
-    values =
+    values = if structs? do
+      structs
+    else
       Enum.uniq for(struct <- structs,
         assert_struct!(schema, struct),
         key = Map.fetch!(struct, owner_key),
         do: key)
+    end
 
     Ecto.Association.assoc_query(assoc, assocs, nil, values)
   end
