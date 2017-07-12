@@ -1068,6 +1068,9 @@ defmodule Ecto.Changeset do
 
   Also see `cast_assoc/3` for a discussion of when to use
   `cast_assoc/3` and `put_assoc/3`.
+
+  Although it accepts an `opts` argument, there are no
+  options currently supported by `put_assoc/4`.
   """
   def put_assoc(changeset, name, value, opts \\ []) do
     put_relation(:assoc, changeset, name, value, opts)
@@ -1091,6 +1094,9 @@ defmodule Ecto.Changeset do
   Also see `cast_assoc/3` for a discussion of when to use
   `cast_assoc/3` and `put_assoc/3` which also applies to
   `put_embed/3`.
+
+  Although it accepts an `opts` argument, there are no
+  options currently supported by `put_embed/4`.
   """
   def put_embed(changeset, name, value, opts \\ []) do
     put_relation(:embed, changeset, name, value, opts)
