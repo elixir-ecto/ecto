@@ -341,7 +341,14 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp query_for_get_by(_repo, queryable, clauses) do
-    Query.where(queryable, [], ^Enum.to_list(clauses))
+    clauses
+    |> Enum.to_list
+    |> Enum.reduce(queryable, fn
+      ({key, nil}, query) ->
+        Query.where(query, [x], is_nil(field(x, ^key)))
+      ({key, value}, query) ->
+        Query.where(query, [x], field(x, ^key) == ^value)
+    end)
   end
 
   defp query_for_aggregate(queryable, aggregate, field) do
