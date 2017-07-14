@@ -341,9 +341,7 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp query_for_get_by(_repo, queryable, clauses) do
-    clauses
-    |> Enum.to_list
-    |> Enum.reduce(queryable, fn
+    Enum.reduce(clauses, queryable, fn
       ({key, nil}, query) ->
         Query.where(query, [x], is_nil(field(x, ^key)))
       ({key, value}, query) ->
