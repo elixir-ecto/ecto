@@ -496,7 +496,7 @@ defmodule Ecto.Query do
   end
 
   @binds    [:where, :or_where, :select, :distinct, :order_by, :group_by,
-             :having, :limit, :offset, :preload, :update]
+             :having, :or_having, :limit, :offset, :preload, :update]
   @no_binds [:lock]
   @joins    [:join, :inner_join, :cross_join, :left_join, :right_join, :full_join,
              :inner_lateral_join, :left_lateral_join]
