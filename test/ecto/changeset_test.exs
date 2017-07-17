@@ -499,6 +499,19 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{}
   end
 
+  test "update_change/3: required field (via validate_required/2) must be removed" do
+    params = %{"title" => nil}
+    struct = %Post{}
+
+    changeset = cast(struct, params, [:title])
+                |> validate_required([:title])
+                |> update_change(:title, &String.downcase/1)
+
+    assert changeset.changes == %{}
+    assert changeset.errors == [title: {"can't be blank", [validation: :required]}]
+    refute changeset.valid?
+  end
+
   test "put_change/3 and delete_change/2" do
     base_changeset = change(%Post{upvotes: 5})
 

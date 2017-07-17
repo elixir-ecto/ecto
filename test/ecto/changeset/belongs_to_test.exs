@@ -64,7 +64,7 @@ defmodule Ecto.Changeset.BelongsToTest do
 
   test "cast belongs_to with invalid params" do
     changeset = cast(%Author{}, %{"profile" => %{name: nil}}, :profile)
-    assert changeset.changes.profile.changes == %{name: nil}
+    assert changeset.changes.profile.changes == %{}
     assert changeset.changes.profile.errors  == [name: {"can't be blank", [validation: :required]}]
     assert changeset.changes.profile.action  == :insert
     refute changeset.changes.profile.valid?
