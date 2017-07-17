@@ -1363,18 +1363,20 @@ defmodule Ecto.Changeset do
     message = message(opts, "can't be blank")
     fields  = List.wrap(fields)
 
-    new_errors =
+    fields_with_errors =
       for field <- fields,
           missing?(changeset, field),
           ensure_field_exists!(changeset, field),
           is_nil(errors[field]),
-          do: {field, {message, [validation: :required]}}
+          do: field
+
+    new_errors = fields_with_errors
+                 |> Enum.map(&({&1, {message, [validation: :required]}}))
 
     case new_errors do
       [] -> %{changeset | required: fields ++ required}
       _  ->
-        new_errors_keys = Keyword.keys(new_errors)
-        changes = Map.drop(changes, new_errors_keys)
+        changes = Map.drop(changes, fields_with_errors)
         %{changeset | changes: changes, required: fields ++ required, errors: new_errors ++ errors, valid?: false}
     end
   end
