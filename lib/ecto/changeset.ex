@@ -970,7 +970,7 @@ defmodule Ecto.Changeset do
 
   The given `function` is invoked with the change value only if there
   is a change for the given `key`. Note that the value of the change
-  can still be `nil` (unless the field was marked as required on `cast/4`).
+  can still be `nil` (unless the field was marked as required on `validate_required/3`).
 
   ## Examples
 
@@ -1359,20 +1359,23 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_required(t, list | atom, Keyword.t) :: t
-  def validate_required(%{required: required, errors: errors} = changeset, fields, opts \\ []) do
+  def validate_required(%{required: required, errors: errors, changes: changes} = changeset, fields, opts \\ []) do
     message = message(opts, "can't be blank")
     fields  = List.wrap(fields)
 
-    new_errors =
+    fields_with_errors =
       for field <- fields,
           missing?(changeset, field),
           ensure_field_exists!(changeset, field),
           is_nil(errors[field]),
-          do: {field, {message, [validation: :required]}}
+          do: field
 
-    case new_errors do
+    case fields_with_errors do
       [] -> %{changeset | required: fields ++ required}
-      _  -> %{changeset | required: fields ++ required, errors: new_errors ++ errors, valid?: false}
+      _  ->
+        new_errors = Enum.map(fields_with_errors, &{&1, {message, [validation: :required]}})
+        changes = Map.drop(changes, fields_with_errors)
+        %{changeset | changes: changes, required: fields ++ required, errors: new_errors ++ errors, valid?: false}
     end
   end
 

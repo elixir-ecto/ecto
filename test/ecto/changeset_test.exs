@@ -687,6 +687,7 @@ defmodule Ecto.ChangesetTest do
       |> validate_required([:title, :body], message: "is blank")
     refute changeset.valid?
     assert changeset.required == [:title, :body]
+    assert changeset.changes == %{}
     assert changeset.errors == [title: {"is blank", [validation: :required]}, body: {"is blank", [validation: :required]}]
 
     # When unknown field
