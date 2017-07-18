@@ -107,7 +107,7 @@ defmodule Ecto.Query do
       query = from u in query, select: u.name
 
   Composing queries uses the same syntax as creating a query.
-  The difference is that, instead of passing a schema like `Weather`
+  The difference is that, instead of passing a schema like `User`
   on the right side of `in`, we passed the query itself.
 
   Any value can be used on the right-side of `in` as long as it implements
