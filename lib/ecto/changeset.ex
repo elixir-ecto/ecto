@@ -1370,14 +1370,10 @@ defmodule Ecto.Changeset do
           is_nil(errors[field]),
           do: field
 
-    new_errors = fields_with_errors
-                 |> Enum.map(fn field ->
-                   {field, {message, [validation: :required]}}
-                 end)
-
-    case new_errors do
+    case fields_with_errors do
       [] -> %{changeset | required: fields ++ required}
       _  ->
+        new_errors = Enum.map(fields_with_errors, &{&1, {message, [validation: :required]}})
         changes = Map.drop(changes, fields_with_errors)
         %{changeset | changes: changes, required: fields ++ required, errors: new_errors ++ errors, valid?: false}
     end
