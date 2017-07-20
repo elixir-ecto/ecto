@@ -490,13 +490,15 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
-  def assoc_query(%{queryable: queryable, related_key: related_key}, query, [value]) do
+  def assoc_query(%{queryable: queryable, related_key: related_key, owner_key: owner_key}, query, [value]) do
+    value = Map.get(value, owner_key)
     from x in (query || queryable),
       where: field(x, ^related_key) == ^value
   end
 
   @doc false
-  def assoc_query(%{queryable: queryable, related_key: related_key}, query, values) do
+  def assoc_query(%{queryable: queryable, related_key: related_key, owner_key: owner_key}, query, values) do
+    values = Enum.map(values, &(Map.get(&1, owner_key)))
     from x in (query || queryable),
       where: field(x, ^related_key) in ^values
   end
@@ -729,13 +731,15 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @doc false
-  def assoc_query(%{queryable: queryable, related_key: related_key}, query, [value]) do
+  def assoc_query(%{queryable: queryable, related_key: related_key, owner_key: owner_key}, query, [value]) do
+    value = Map.get(value, owner_key)
     from x in (query || queryable),
       where: field(x, ^related_key) == ^value
   end
 
   @doc false
-  def assoc_query(%{queryable: queryable, related_key: related_key}, query, values) do
+  def assoc_query(%{queryable: queryable, related_key: related_key, owner_key: owner_key}, query, values) do
+    values = Enum.map(values, &(Map.get(&1, owner_key)))
     from x in (query || queryable),
       where: field(x, ^related_key) in ^values
   end
@@ -897,6 +901,7 @@ defmodule Ecto.Association.ManyToMany do
                     queryable: queryable, owner: owner}, query, values) do
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
 
+    values = Enum.map(values, &(Map.get(&1, owner_key)))
     # We need to go all the way using owner and query so
     # Ecto has all the information necessary to cast fields.
     # This also helps validate the associated schema exists all the way.

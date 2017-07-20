@@ -464,7 +464,7 @@ defmodule Ecto do
   defp drop_meta([_|_] = attrs), do: Keyword.drop(attrs, [:__struct__, :__meta__])
 
   @doc """
-  Builds a query for the association in the given struct or structs.
+  Builds query/queries for the association in the given struct or structs.
 
   ## Examples
 
@@ -503,8 +503,8 @@ defmodule Ecto do
     values =
       Enum.uniq for(struct <- structs,
         assert_struct!(schema, struct),
-        key = Map.fetch!(struct, owner_key),
-        do: key)
+        _id = Map.get(struct, owner_key), # Filter out structs without owner_key data
+        do: struct)
 
     Ecto.Association.assoc_query(assoc, assocs, nil, values)
   end
