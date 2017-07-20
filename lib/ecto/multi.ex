@@ -239,7 +239,7 @@ defmodule Ecto.Multi do
   def update(multi, name, %Changeset{} = changeset, opts \\ []) do
     add_changeset(multi, :update, name, changeset, opts)
   end
-  
+
   @doc """
   Inserts or updates a changeset depending on whether the changeset was persisted or not.
 
@@ -257,7 +257,7 @@ defmodule Ecto.Multi do
   @doc """
   Adds a delete operation to the multi.
 
-  Accepts the same arguments and options as `Ecto.Repo.delete/3` does.
+  Accepts the same arguments and options as `c:Ecto.Repo.delete/3` does.
   """
   @spec delete(t, name, Changeset.t | Ecto.Schema.t, Keyword.t) :: t
   def delete(multi, name, changeset_or_struct, opts \\ [])
