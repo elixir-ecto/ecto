@@ -533,7 +533,7 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "self join on subquery" do
-    subquery = Schema |> select([r], %{x: r.x, y: r.y})
+    subquery = select(Schema, [r], %{x: r.x, y: r.y})
     query = subquery |> join(:inner, [c], p in subquery(subquery), true) |> normalize
     assert SQL.all(query) ==
            ~s{SELECT s0."x", s0."y" FROM "schema" AS s0 INNER JOIN } <>
@@ -542,7 +542,7 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "self join on subquery with fragment" do
-    subquery = Schema |> select([r], %{string: fragment("downcase(?)", ^"string")})
+    subquery = select(Schema, [r], %{string: fragment("downcase(?)", ^"string")})
     query = subquery |> join(:inner, [c], p in subquery(subquery), true) |> normalize
     assert SQL.all(query) ==
            ~s{SELECT downcase($1) FROM "schema" AS s0 INNER JOIN } <>
@@ -551,7 +551,7 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "join on subquery with simple select" do
-    subquery = Schema |> select([r], %{x: ^999, w: ^888})
+    subquery = select(Schema, [r], %{x: ^999, w: ^888})
     query = Schema
             |> select([r], %{y: ^666})
             |> join(:inner, [c], p in subquery(subquery), true)
