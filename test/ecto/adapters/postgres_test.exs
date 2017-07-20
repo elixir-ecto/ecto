@@ -565,6 +565,40 @@ defmodule Ecto.Adapters.PostgresTest do
            "SELECT s0.\"id\", s2.\"id\" FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON TRUE INNER JOIN \"schema2\" AS s2 ON TRUE"
   end
 
+  describe "query interpolation parameters" do
+    test "self join on subquery" do
+      subquery = select(Schema, [r], %{x: r.x, y: r.y})
+      query = subquery |> join(:inner, [c], p in subquery(subquery), true) |> normalize
+      assert SQL.all(query) ==
+             ~s{SELECT s0."x", s0."y" FROM "schema" AS s0 INNER JOIN } <>
+             ~s{(SELECT s0."x" AS "x", s0."y" AS "y" FROM "schema" AS s0) } <>
+             ~s{AS s1 ON TRUE}
+    end
+    
+    test "self join on subquery with fragment" do
+      subquery = select(Schema, [r], %{string: fragment("downcase(?)", ^"string")})
+      query = subquery |> join(:inner, [c], p in subquery(subquery), true) |> normalize
+      assert SQL.all(query) ==
+             ~s{SELECT downcase($1) FROM "schema" AS s0 INNER JOIN } <>
+             ~s{(SELECT downcase($2) AS "string" FROM "schema" AS s0) } <>
+             ~s{AS s1 ON TRUE}
+    end
+    
+    test "join on subquery with simple select" do
+      subquery = select(Schema, [r], %{x: ^999, w: ^888})
+      query = Schema
+              |> select([r], %{y: ^666})
+              |> join(:inner, [c], p in subquery(subquery), true)
+              |> where([a, b], a.x == ^111)
+              |> normalize
+    
+      assert SQL.all(query) ==
+             ~s{SELECT $1 FROM "schema" AS s0 INNER JOIN } <>
+             ~s{(SELECT $2 AS "x", $3 AS "w" FROM "schema" AS s0) AS s1 ON TRUE } <>
+             ~s{WHERE (s0."x" = $4)}
+    end
+  end
+
   ## Associations
 
   test "association join belongs_to" do
