@@ -88,17 +88,17 @@ defmodule Ecto.Association do
   @callback joins_query(t) :: Ecto.Query.t
 
   @doc """
-  Returns the association query on top of the given query.
+  Returns the association queries on top of the given query.
 
   If the query is `nil`, the association target must be used.
 
   This callback receives the association struct and it must return
-  a query that retrieves all associated entries with the given
+  queries that retrieves all associated entries with the given
   values for the owner key.
 
   This callback is used by `Ecto.assoc/2` and when preloading.
   """
-  @callback assoc_query(t, Ecto.Query.t | nil, values :: [term]) :: Ecto.Query.t
+  @callback assoc_query(t, Ecto.Query.t | nil, values :: [term]) :: [Ecto.Query.t]
 
   @doc """
   Returns information used by the preloader.
@@ -158,6 +158,7 @@ defmodule Ecto.Association do
 
   def assoc_query(%module{} = refl, [], query, values) do
     module.assoc_query(refl, query, values)
+    |> List.wrap()
   end
 
   def assoc_query(refl, t, query, values) do
@@ -172,7 +173,7 @@ defmodule Ecto.Association do
     #
     # Note we are being restrictive on the format
     # expected from assoc_query.
-    assoc_query = refl.__struct__.assoc_query(refl, nil, values)
+    [assoc_query] = refl.__struct__.assoc_query(refl, nil, values)
     joins = Ecto.Query.Planner.query_to_joins(assoc_query, position)
 
     # Add the new join to the query and traverse the remaining
@@ -194,6 +195,7 @@ defmodule Ecto.Association do
     %{query | wheres: [assoc_to_where(assoc) | query.wheres], joins: joins,
               from: merge_from(query.from, assoc.source), sources: nil}
     |> distinct([x], true)
+    |> List.wrap()
   end
 
   defp assoc_to_where(%{on: %QueryExpr{} = on}) do
@@ -492,15 +494,15 @@ defmodule Ecto.Association.Has do
   @doc false
   def assoc_query(%{queryable: queryable, related_key: related_key, owner_key: owner_key}, query, [value]) do
     value = Map.get(value, owner_key)
-    from x in (query || queryable),
-      where: field(x, ^related_key) == ^value
+    [from(x in (query || queryable),
+      where: field(x, ^related_key) == ^value)]
   end
 
   @doc false
   def assoc_query(%{queryable: queryable, related_key: related_key, owner_key: owner_key}, query, values) do
     values = Enum.map(values, &(Map.get(&1, owner_key)))
-    from x in (query || queryable),
-      where: field(x, ^related_key) in ^values
+    [from(x in (query || queryable),
+      where: field(x, ^related_key) in ^values)]
   end
 
   @doc false
@@ -733,15 +735,15 @@ defmodule Ecto.Association.BelongsTo do
   @doc false
   def assoc_query(%{queryable: queryable, related_key: related_key, owner_key: owner_key}, query, [value]) do
     value = Map.get(value, owner_key)
-    from x in (query || queryable),
-      where: field(x, ^related_key) == ^value
+    [from(x in (query || queryable),
+      where: field(x, ^related_key) == ^value)]
   end
 
   @doc false
   def assoc_query(%{queryable: queryable, related_key: related_key, owner_key: owner_key}, query, values) do
     values = Enum.map(values, &(Map.get(&1, owner_key)))
-    from x in (query || queryable),
-      where: field(x, ^related_key) in ^values
+    [from(x in (query || queryable),
+      where: field(x, ^related_key) in ^values)]
   end
 
   @doc false
@@ -905,10 +907,10 @@ defmodule Ecto.Association.ManyToMany do
     # We need to go all the way using owner and query so
     # Ecto has all the information necessary to cast fields.
     # This also helps validate the associated schema exists all the way.
-    from q in (query || queryable),
+    [from(q in (query || queryable),
       join: o in ^owner, on: field(o, ^owner_key) in ^values,
       join: j in ^join_through, on: field(j, ^join_owner_key) == field(o, ^owner_key),
-      where: field(j, ^join_related_key) == field(q, ^related_key)
+      where: field(j, ^join_related_key) == field(q, ^related_key))]
   end
 
   @doc false

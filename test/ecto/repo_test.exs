@@ -436,4 +436,24 @@ defmodule Ecto.RepoTest do
     assert TestRepo.load(%{x: :string}, %{x: "abc", bad: "bad"}) ==
            %{x: "abc"}
   end
+
+  describe "Repo.one/1" do
+    test "accpets a queryable" do
+      assert TestRepo.one(MySchema) == 1
+    end
+
+    test "accpets a list of queryables" do
+      assert TestRepo.one([MySchema]) == 1
+    end
+  end
+
+  describe "Repo.all/1" do
+    test "accpets a queryable" do
+      assert TestRepo.all(MySchema) == [1]
+    end
+
+    test "accpets a list of queryables" do
+      assert TestRepo.all([MySchema]) == [1]
+    end
+  end
 end

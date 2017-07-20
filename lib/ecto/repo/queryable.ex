@@ -26,6 +26,13 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
+  def all(repo, adapter, queryables, opts) when is_list(opts) and is_list(queryables) do
+    queryables
+    |> Enum.map(fn queryable ->
+      all(repo, adapter, queryable, opts)
+    end)
+    |> List.flatten()
+  end
   def all(repo, adapter, queryable, opts) when is_list(opts) do
     query =
       queryable
