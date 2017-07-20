@@ -57,7 +57,7 @@ defmodule Ecto.Repo.Preloader do
   defp preload_each([sample|_] = structs, repo, preloads, opts) do
     module = sample.__struct__
     prefix = preload_prefix(opts, sample)
-    {assocs, throughs} = expand(module, preloads, structs, {%{}, %{}})
+    {assocs, throughs} = expand(module, preloads, {%{}, %{}})
 
     assocs =
       maybe_pmap Map.values(assocs), repo, opts, fn
@@ -103,44 +103,36 @@ defmodule Ecto.Repo.Preloader do
     end
   end
 
-  defp preload_assoc(structs, module, repo, prefix, %{cardinality: card, assoc_query_receives_structs: structs?} = assoc,
+  defp preload_assoc(structs, module, repo, prefix, %{cardinality: card} = assoc,
                      related_key, query, preloads, take, opts) do
-    {fetch_ids_or_structs, loaded_ids, loaded_structs} =
-      fetch_ids_or_structs(structs, module, assoc, Keyword.put(opts, :return_struct, structs?))
-    {fetch_ids_or_structs, fetch_structs} = if structs? do
-      fetch_query(fetch_ids_or_structs, assoc, repo, query, prefix, related_key, take, opts)
-    else
-      fetch_query(fetch_ids_or_structs, assoc, repo, query, prefix, related_key, take, opts)
-    end
+    {fetch_ids, loaded_ids, loaded_structs} =
+      fetch_ids(structs, module, assoc, opts)
+    {fetch_ids, fetch_structs} =
+      fetch_query(fetch_ids, assoc, repo, query, prefix, related_key, take, opts)
 
     all = preload_each(Enum.reverse(loaded_structs, fetch_structs), repo, preloads, opts)
-    {:assoc, assoc, assoc_map(card, Enum.reverse(loaded_ids, fetch_ids_or_structs), all)}
+    {:assoc, assoc, assoc_map(card, Enum.reverse(loaded_ids, fetch_ids), all)}
   end
 
-  defp fetch_ids_or_structs(structs, module, assoc, opts) do
+  defp fetch_ids(structs, module, assoc, opts) do
     %{field: field, owner_key: owner_key, cardinality: card} = assoc
     force? = Keyword.get(opts, :force, false)
-    return_struct? = Keyword.get(opts, :return_struct, false)
 
-    Enum.reduce structs, {[], [], []}, fn struct, {fetch_ids_or_structs, loaded_ids, loaded_structs} ->
+    Enum.reduce structs, {[], [], []}, fn struct, {fetch_ids, loaded_ids, loaded_structs} ->
       assert_struct!(module, struct)
       %{^owner_key => id, ^field => value} = struct
 
       cond do
         card == :one and not is_nil(value) and Ecto.assoc_loaded?(value) and not force? ->
-          {fetch_ids_or_structs, [id|loaded_ids], [value|loaded_structs]}
+          {fetch_ids, [id|loaded_ids], [value|loaded_structs]}
         card == :many and Ecto.assoc_loaded?(value) and not force? ->
-          {fetch_ids_or_structs,
+          {fetch_ids,
            List.duplicate(id, length(value)) ++ loaded_ids,
            value ++ loaded_structs}
         is_nil(id) ->
-          {fetch_ids_or_structs, loaded_ids, loaded_structs}
+          {fetch_ids, loaded_ids, loaded_structs}
         true ->
-          if return_struct? do
-            {[struct|fetch_ids_or_structs], loaded_ids, loaded_structs}
-          else
-            {[id|fetch_ids_or_structs], loaded_ids, loaded_structs}
-          end
+          {[id|fetch_ids], loaded_ids, loaded_structs}
       end
     end
   end
@@ -154,8 +146,8 @@ defmodule Ecto.Repo.Preloader do
     unzip_ids data, [], []
   end
 
-  defp fetch_query(ids_or_structs, %{cardinality: card} = assoc, repo, query, prefix, related_key, take, opts) do
-    query = assoc.__struct__.assoc_query(assoc, query, Enum.uniq(ids_or_structs))
+  defp fetch_query(ids, %{cardinality: card} = assoc, repo, query, prefix, related_key, take, opts) do
+    query = assoc.__struct__.assoc_query(assoc, query, Enum.uniq(ids))
     field = related_key_to_field(query, related_key)
 
     # Normalize query
@@ -249,7 +241,7 @@ defmodule Ecto.Repo.Preloader do
 
   defp recur_through(field, {structs, owner}) do
     assoc = owner.__schema__(:association, field)
-    case assoc.__struct__.preload_info(assoc, structs) do
+    case assoc.__struct__.preload_info(assoc) do
       {:assoc, %{related: related}, _} ->
         pks = related.__schema__(:primary_key)
 
@@ -337,10 +329,10 @@ defmodule Ecto.Repo.Preloader do
 
   ## Expand
 
-  def expand(schema, preloads, structs \\ [], acc) do
+  def expand(schema, preloads, acc) do
     Enum.reduce(preloads, acc, fn {preload, {fields, query, sub_preloads}}, {assocs, throughs} ->
       assoc = Ecto.Association.association_from_schema!(schema, preload)
-      info  = assoc.__struct__.preload_info(assoc, structs)
+      info  = assoc.__struct__.preload_info(assoc)
 
       case info do
         {:assoc, _, _} ->

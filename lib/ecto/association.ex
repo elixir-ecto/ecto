@@ -31,7 +31,6 @@ defmodule Ecto.Association do
                owner: atom,
                owner_key: atom,
                field: atom,
-               assoc_query_receives_structs: true | false,
                unique: boolean}
 
   alias Ecto.Query.{BooleanExpr, QueryExpr}
@@ -98,18 +97,13 @@ defmodule Ecto.Association do
   values for the owner key.
 
   This callback is used by `Ecto.assoc/2` and when preloading.
-
-  If the `Ecto.Association.t` has `assoc_query_receives_structs` set to `true`,
-  instead of receiving a unique list of IDs, it will receive the list of all data
-  from which to fetch the association from. This flag allows customization of
-  associations beyond what Ecto can predict, Ecto itself does not use this flag.
   """
   @callback assoc_query(t, Ecto.Query.t | nil, values :: [term]) :: Ecto.Query.t
 
   @doc """
   Returns information used by the preloader.
   """
-  @callback preload_info(t, values :: [term]) ::
+  @callback preload_info(t) ::
               {:assoc, t, {integer, atom}} | {:through, t, [atom]}
 
   @doc """
@@ -413,7 +407,6 @@ defmodule Ecto.Association.Has do
     * `on_replace` - The action taken on associations when schema is replaced
     * `defaults` - Default fields used when building the association
     * `relationship` - The relationship to the specified schema, default is `:child`
-    * `assoc_query_receives_structs` - Always false
   """
 
   @behaviour Ecto.Association
@@ -421,8 +414,7 @@ defmodule Ecto.Association.Has do
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
   @has_one_on_replace_opts @on_replace_opts ++ [:update]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
-             :queryable, :on_delete, :on_replace, unique: true, defaults: [], relationship: :child,
-             assoc_query_receives_structs: false]
+             :queryable, :on_delete, :on_replace, unique: true, defaults: [], relationship: :child]
 
   @doc false
   def struct(module, name, opts) do
@@ -510,7 +502,7 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
-  def preload_info(%{related_key: related_key} = refl, _structs) do
+  def preload_info(%{related_key: related_key} = refl) do
     {:assoc, refl, {0, related_key}}
   end
 
@@ -605,12 +597,11 @@ defmodule Ecto.Association.HasThrough do
     * `owner_key` - The key on the `owner` schema used for the association
     * `through` - The through associations
     * `relationship` - The relationship to the specified schema, default `:child`
-    * `assoc_query_receives_structs` - Always false
   """
 
   @behaviour Ecto.Association
   defstruct [:cardinality, :field, :owner, :owner_key, :through, :on_cast,
-             relationship: :child, unique: true, assoc_query_receives_structs: false]
+             relationship: :child, unique: true]
 
   @doc false
   def struct(module, name, opts) do
@@ -648,7 +639,7 @@ defmodule Ecto.Association.HasThrough do
   end
 
   @doc false
-  def preload_info(%{through: through} = refl, _structs) do
+  def preload_info(%{through: through} = refl) do
     {:through, refl, through}
   end
 
@@ -685,14 +676,12 @@ defmodule Ecto.Association.BelongsTo do
     * `defaults` - Default fields used when building the association
     * `relationship` - The relationship to the specified schema, default `:parent`
     * `on_replace` - The action taken on associations when schema is replaced
-    * `assoc_query_receives_structs` - Always false
   """
 
   @behaviour Ecto.Association
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify, :update]
   defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast,
-             :on_replace, defaults: [], cardinality: :one, relationship: :parent, unique: true,
-             assoc_query_receives_structs: false]
+             :on_replace, defaults: [], cardinality: :one, relationship: :parent, unique: true]
 
   @doc false
   def struct(module, name, opts) do
@@ -752,7 +741,7 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @doc false
-  def preload_info(%{related_key: related_key} = refl, _structs) do
+  def preload_info(%{related_key: related_key} = refl) do
     {:assoc, refl, {0, related_key}}
   end
 
@@ -807,7 +796,6 @@ defmodule Ecto.Association.ManyToMany do
     * `join_keys` - The keyword list with many to many join keys
     * `join_through` - Atom (representing a schema) or a string (representing a table)
       for many to many associations
-    * `assoc_query_receives_structs` - Always false
   """
 
   @behaviour Ecto.Association
@@ -815,8 +803,7 @@ defmodule Ecto.Association.ManyToMany do
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
              :on_replace, :join_keys, :join_through, :on_cast,
-             defaults: [], relationship: :child, cardinality: :many, unique: false,
-             assoc_query_receives_structs: false]
+             defaults: [], relationship: :child, cardinality: :many, unique: false]
 
   @doc false
   def struct(module, name, opts) do
@@ -927,7 +914,7 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   @doc false
-  def preload_info(%{join_keys: [{_, owner_key}, {_, _}]} = refl, _structs) do
+  def preload_info(%{join_keys: [{_, owner_key}, {_, _}]} = refl) do
     {:assoc, refl, {-2, owner_key}}
   end
 
