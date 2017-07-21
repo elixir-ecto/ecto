@@ -2,7 +2,6 @@
 =========
 [![Build Status](https://travis-ci.org/elixir-ecto/ecto.svg?branch=master)](https://travis-ci.org/elixir-ecto/ecto)
 [![Inline docs](http://inch-ci.org/github/elixir-ecto/ecto.svg?branch=master&style=flat)](http://inch-ci.org/github/elixir-ecto/ecto)
-[![Ebert](https://ebertapp.io/github/elixir-ecto/ecto.svg)](https://ebertapp.io/github/elixir-ecto/ecto)
 
 Ecto is a domain specific language for writing queries and interacting with databases in Elixir. Here is an example:
 
@@ -69,19 +68,13 @@ Database   | Ecto Adapter           | Dependency                   | Ecto 2.0 co
 :----------| :--------------------- | :----------------------------| :-------------------
 PostgreSQL | Ecto.Adapters.Postgres | [postgrex][postgrex]         | Yes
 MySQL      | Ecto.Adapters.MySQL    | [mariaex][mariaex]           | Yes
-Mnesia     | EctoMnesia.Adapter     | [ecto_mnesia][ecto_mnesia]   | Yes
 MSSQL      | MssqlEcto              | [mssql_ecto][mssql_ecto]     | Yes
-MSSQL      | Tds.Ecto               | [tds_ecto][tds_ecto]         | No
-SQLite3    | Sqlite.Ecto            | [sqlite_ecto][sqlite_ecto]   | No
-MongoDB    | Mongo.Ecto             | [mongodb_ecto][mongodb_ecto] | No
+Mnesia     | EctoMnesia.Adapter     | [ecto_mnesia][ecto_mnesia]   | Yes
 
 [postgrex]: http://github.com/ericmj/postgrex
 [mariaex]: http://github.com/xerions/mariaex
-[tds_ecto]: https://github.com/livehelpnow/tds_ecto
-[sqlite_ecto]: https://github.com/jazzyb/sqlite_ecto
-[mongodb_ecto]: https://github.com/michalmuskala/mongodb_ecto
-[ecto_mnesia]: https://github.com/Nebo15/ecto_mnesia
 [mssql_ecto]: https://github.com/findmypast-oss/mssql_ecto
+[ecto_mnesia]: https://github.com/Nebo15/ecto_mnesia
 
 For example, if you want to use PostgreSQL, add to your `mix.exs` file:
 
