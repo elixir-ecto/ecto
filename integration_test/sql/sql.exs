@@ -53,7 +53,7 @@ defmodule Ecto.Integration.SQLTest do
       TestRepo.get(CorruptedPk, "abc")
     end
 
-    assert %CorruptedPk{a: "abc"} = TestRepo.update!(schema |> Ecto.Changeset.change, force: true)
+    assert %CorruptedPk{a: "abc"} = schema |> Ecto.Changeset.change(force: true) |> TestRepo.update!()
 
     assert_raise Ecto.MultipleResultsError, fn ->
       TestRepo.delete!(schema)
