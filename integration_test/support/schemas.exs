@@ -257,6 +257,21 @@ defmodule Ecto.Integration.CompositePk do
   end
 end
 
+defmodule Ecto.Integration.CorruptedPk do
+  @moduledoc """
+  This module is used to test:
+
+    * Primary keys that is not unique on a DB side
+
+  """
+  use Ecto.Integration.Schema
+
+  @primary_key false
+  schema "corrupted_pk" do
+    field :a, :string, primary_key: true
+  end
+end
+
 defmodule Ecto.Integration.PostUserCompositePk do
   @moduledoc """
   This module is used to test:

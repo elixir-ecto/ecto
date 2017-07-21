@@ -555,6 +555,8 @@ defmodule Ecto.Adapters.SQL do
         {:ok, Enum.zip(returning, values)}
       {:ok, %{num_rows: 0}} ->
         if on_conflict == :nothing, do: {:ok, []}, else: {:error, :stale}
+      {:ok, %{rows: nil, num_rows: num_rows}} when num_rows > 1 ->
+        raise Ecto.MultipleResultsError, sql_query: sql, count: num_rows
       {:error, err} ->
         case conn.to_constraints(err) do
           []          -> raise err
