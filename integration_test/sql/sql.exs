@@ -55,7 +55,7 @@ defmodule Ecto.Integration.SQLTest do
 
     assert %CorruptedPk{a: "abc"} = TestRepo.update!(schema |> Ecto.Changeset.change, force: true)
 
-    assert_raise Ecto.MultipleResultsError, ~s/expected at most one result but got 10 in query:\n\n/ <> _, fn ->
+    assert_raise Ecto.MultipleResultsError, fn ->
       TestRepo.delete!(schema)
     end
   end
