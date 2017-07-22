@@ -207,9 +207,14 @@ defmodule Ecto.MultipleResultsError do
     sql_query = Keyword.get(opts, :sql_query)
     count = Keyword.fetch!(opts, :count)
     query =
-      if sql_query,
-       do: sql_query,
-     else: opts |> Keyword.fetch!(:queryable) |> Ecto.Queryable.to_query() |> Inspect.Ecto.Query.to_string()
+      if sql_query do
+        sql_query
+      else
+        opts
+        |> Keyword.fetch!(:queryable)
+        |> Ecto.Queryable.to_query()
+        |> Inspect.Ecto.Query.to_string()
+      end
 
     msg = """
     expected at most one result but got #{count} in query:
