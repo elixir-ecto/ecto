@@ -96,7 +96,7 @@ defmodule Ecto.Changeset do
   cast from the command line or through an HTML form or any other text-based
   format, it is likely those means cannot express nil values. For
   those reasons, changesets include the concept of empty values, which are
-  values that will be automatically converted to the field's default value 
+  values that will be automatically converted to the field's default value
   on `cast/4`. Those values are stored in the changeset `empty_values` field
   and default to `[""]`.
 
@@ -1072,7 +1072,7 @@ defmodule Ecto.Changeset do
   Although it accepts an `opts` argument, there are no
   options currently supported by `put_assoc/4`.
   """
-  def put_assoc(changeset, name, value, opts \\ []) do
+  def put_assoc(%Changeset{} = changeset, name, value, opts \\ []) do
     put_relation(:assoc, changeset, name, value, opts)
   end
 
@@ -1098,11 +1098,11 @@ defmodule Ecto.Changeset do
   Although it accepts an `opts` argument, there are no
   options currently supported by `put_embed/4`.
   """
-  def put_embed(changeset, name, value, opts \\ []) do
+  def put_embed(%Changeset{} = changeset, name, value, opts \\ []) do
     put_relation(:embed, changeset, name, value, opts)
   end
 
-  defp put_relation(_type, %Changeset{types: nil}, _name, _value, _opts) do
+  defp put_relation(_type, %{types: nil}, _name, _value, _opts) do
     raise ArgumentError, "changeset does not have types information"
   end
 
@@ -1259,7 +1259,7 @@ defmodule Ecto.Changeset do
       false
   """
   @spec add_error(t, atom, String.t, Keyword.t) :: t
-  def add_error(%{errors: errors} = changeset, key, message, keys \\ []) when is_binary(message) do
+  def add_error(%Changeset{errors: errors} = changeset, key, message, keys \\ []) when is_binary(message) do
     %{changeset | errors: [{key, {message, keys}}|errors], valid?: false}
   end
 
@@ -1291,7 +1291,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_change(t, atom, (atom, term -> [error])) :: t
-  def validate_change(changeset, field, validator) when is_atom(field) do
+  def validate_change(%Changeset{} = changeset, field, validator) when is_atom(field) do
     %{changes: changes, errors: errors} = changeset
     ensure_field_exists!(changeset, field)
 
@@ -1330,7 +1330,8 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_change(t, atom, term, (atom, term -> [error])) :: t
-  def validate_change(%{validations: validations} = changeset, field, metadata, validator) do
+  def validate_change(%Changeset{validations: validations} = changeset,
+                      field, metadata, validator) do
     changeset = %{changeset | validations: [{field, metadata}|validations]}
     validate_change(changeset, field, validator)
   end
@@ -1359,9 +1360,10 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_required(t, list | atom, Keyword.t) :: t
-  def validate_required(%{required: required, errors: errors, changes: changes} = changeset, fields, opts \\ []) do
+  def validate_required(%Changeset{} = changeset, fields, opts \\ []) do
+    %{required: required, errors: errors, changes: changes} = changeset
     message = message(opts, "can't be blank")
-    fields  = List.wrap(fields)
+    fields = List.wrap(fields)
 
     fields_with_errors =
       for field <- fields,
@@ -1833,8 +1835,8 @@ defmodule Ecto.Changeset do
   changeset must be returned.
   """
   @spec prepare_changes(t, (t -> t)) :: t
-  def prepare_changes(changeset, function) when is_function(function, 1) do
-    update_in changeset.prepare, &[function|&1]
+  def prepare_changes(%Changeset{prepare: prepare} = changeset, function) when is_function(function, 1) do
+    %{changeset | prepare: [function | prepare]}
   end
 
   ## Constraints
@@ -2141,17 +2143,21 @@ defmodule Ecto.Changeset do
   defp no_assoc_message(:one), do: "is still associated with this entry"
   defp no_assoc_message(:many), do: "are still associated with this entry"
 
-  defp add_constraint(changeset, type, constraint, match, field, error)
+  defp add_constraint(%Changeset{constraints: constraints} = changeset,
+                      type, constraint, match, field, error)
        when is_binary(constraint) and is_atom(field) and is_tuple(error) and is_atom(match)  do
-    unless match in @match_types, do: raise(ArgumentError, "invalid match type: #{inspect match}. Allowed match types: #{inspect @match_types}")
-    update_in changeset.constraints, &[%{type: type, constraint: constraint, match: match,
-                                         field: field, error: error}|&1]
+    unless match in @match_types do
+      raise ArgumentError, "invalid match type: #{inspect match}. Allowed match types: #{inspect @match_types}"
+    end
+
+    %{changeset | constraints: [%{type: type, constraint: constraint, match: match,
+                                  field: field, error: error} | constraints]}
   end
 
   defp get_source(%{data: %{__meta__: %{source: {_prefix, source}}}}) when is_binary(source),
     do: source
   defp get_source(%{data: data}), do:
-    raise(ArgumentError, "cannot add constraint to changeset because it does not have a source, got: #{inspect data}")
+    raise ArgumentError, "cannot add constraint to changeset because it does not have a source, got: #{inspect data}"
 
   defp get_assoc(%{types: types}, assoc) do
     case Map.fetch(types, assoc) do
