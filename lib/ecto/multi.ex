@@ -194,7 +194,7 @@ defmodule Ecto.Multi do
 
   Duplicated operations are not allowed.
   """
-  @spec merge(t, (t -> {:ok | :error, any})) :: t
+  @spec merge(t, (map -> t)) :: t
   def merge(%Multi{} = multi, merge) when is_function(merge, 1) do
     Map.update!(multi, :operations, &[{:merge, {:merge, merge}} | &1])
   end
