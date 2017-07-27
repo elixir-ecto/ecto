@@ -181,7 +181,9 @@ defmodule Ecto.Adapters.SQL do
   Same as `query/4` but raises on invalid queries.
   """
   @spec query!(Ecto.Repo.t, String.t, [term], Keyword.t) ::
-               %{rows: nil | [[term] | binary], num_rows: non_neg_integer}
+               %{:rows => nil | [[term] | binary],
+                 :num_rows => non_neg_integer,
+                 optional(atom) => any}
                | no_return
   def query!(repo, sql, params \\ [], opts \\ []) do
     query!(repo, sql, map_params(params), fn x -> x end, opts)
@@ -223,7 +225,9 @@ defmodule Ecto.Adapters.SQL do
 
   """
   @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
-              {:ok, %{rows: nil | [[term] | binary], num_rows: non_neg_integer}}
+              {:ok, %{:rows => nil | [[term] | binary],
+                      :num_rows => non_neg_integer,
+                      optional(atom) => any}}
               | {:error, Exception.t}
   def query(repo, sql, params \\ [], opts \\ []) do
     query(repo, sql, map_params(params), fn x -> x end, opts)
