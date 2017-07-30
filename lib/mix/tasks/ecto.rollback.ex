@@ -16,7 +16,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
   by specifying the `:priv` key under the repository configuration.
 
   Runs the latest applied migration by default. To roll back to
-  to a version number, supply `--to version_number`.
+  a version number, supply `--to version_number`.
   To roll back a specific number of times, use `--step n`.
   To undo all applied migrations, provide `--all`.
 
