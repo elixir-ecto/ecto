@@ -37,18 +37,22 @@ defmodule Mix.Tasks.Ecto.Load do
       ensure_repo(repo, args)
       ensure_implements(repo.__adapter__, Ecto.Adapter.Structure,
                                           "to load structure for #{inspect repo}")
-      config = Keyword.merge(repo.config, opts)
+      load_structure(repo, opts)
+    end
+  end
 
-      case repo.__adapter__.structure_load(source_repo_priv(repo), config) do
-        {:ok, location} ->
-          unless opts[:quiet] do
-            Mix.shell.info "The structure for #{inspect repo} has been loaded from #{location}"
-          end
-        {:error, term} when is_binary(term) ->
-          Mix.raise "The structure for #{inspect repo} couldn't be loaded: #{term}"
-        {:error, term} ->
-          Mix.raise "The structure for #{inspect repo} couldn't be loaded: #{inspect term}"
-      end
+  defp load_structure(repo, opts) do
+    config = Keyword.merge(repo.config, opts)
+
+    case repo.__adapter__.structure_load(source_repo_priv(repo), config) do
+      {:ok, location} ->
+        unless opts[:quiet] do
+          Mix.shell.info "The structure for #{inspect repo} has been loaded from #{location}"
+        end
+      {:error, term} when is_binary(term) ->
+        Mix.raise "The structure for #{inspect repo} couldn't be loaded: #{term}"
+      {:error, term} ->
+        Mix.raise "The structure for #{inspect repo} couldn't be loaded: #{inspect term}"
     end
   end
 end
