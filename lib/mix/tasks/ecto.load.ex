@@ -36,7 +36,7 @@ defmodule Mix.Tasks.Ecto.Load do
       OptionParser.parse args, switches: [dump_path: :string, quiet: :boolean, force: :boolean], aliases: [d: :dump_path]
 
     opts = Keyword.merge(@default_opts, opts)
-    
+
     Enum.each parse_repo(args), fn repo ->
       ensure_repo(repo, args)
       ensure_implements(repo.__adapter__, Ecto.Adapter.Structure,
