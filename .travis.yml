@@ -1,16 +1,16 @@
 language: elixir
 elixir:
-  - 1.3.2
-  - 1.4.0-rc.1
+  - 1.3.4
+  - 1.4.5
 otp_release:
   - 18.2
   - 19.1
 matrix:
   # We are only interested on the newest/oldest pair
   exclude:
-    - elixir: 1.4.0-rc.1
+    - elixir: 1.4.5
       otp_release: 18.2
-    - elixir: 1.3.2
+    - elixir: 1.3.4
       otp_release: 19.1
 addons:
   apt:
