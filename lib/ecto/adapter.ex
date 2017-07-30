@@ -43,7 +43,7 @@ defmodule Ecto.Adapter do
   @doc """
   Returns the childspec that starts the adapter process.
   """
-  @callback child_spec(repo, options) :: Supervisor.Spec.spec
+  @callback child_spec(repo, options) :: :supervisor.child_spec
 
   ## Types
 
