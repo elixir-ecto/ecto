@@ -113,6 +113,28 @@ In the example above, we were able to build the query expressions bit by bit, us
 
 A dynamic expression can always be interpolated inside another dynamic expression or at the root of a `where`, `having`, `update` or a `join`'s `on`.
 
+## v2.1.5 (2017-07-30)
+
+### Bug fixes
+
+  * Properly revert alter table with multiple commands (55f5eacc)
+  * Decode database URL only after parsing (62637cc2)
+  * Handle changeset without params in `validate_confirmation` (56853edc)
+  * Fix some dialyzer issues (0bbf06f0)
+  * Support `or_having` in keyword queries (d5f227fb)
+  * Enhance validation performed by `Ecto.UUID.cast` (f2be1b38)
+  * Add parenthesis for migration index expression in postgres (e35e36b4)
+  * Avoid expensive `Code.ensure_loaded` calls (46674c3d)
+  * Set schema prefix on insert, update and delete (2a404dfb)
+  * Properly handle prefix in migrations with comments (4e534f8a)
+
+### Enhancements
+
+  * Add `Ecto.Multi.insert_or_update` (e41a42c2)
+  * Allow passing a list of migrations instead of directory to `Ecto.Migrator.run` (e2c42617)
+  * Accept all compile-time options on Repo (f055650e)
+  * Allow casting binary UUIDs (bf18e8bf)
+
 ## v2.1.4 (2017-03-05)
 
 ### Bug fixes
