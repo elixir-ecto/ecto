@@ -284,19 +284,24 @@ defmodule Ecto.Migrator do
       fun.()
     rescue
       error ->
-        Logger.error "Could not #{reason}. This error typically happens when the " <>
-                     "\"schema_migrations\" table, which Ecto uses for storing migration" <>
-                     "information, is already used by another library or for other purposes.\n\n" <>
-                     "You can fix this by running `mix ecto.drop` in the appropriate `MIX_ENV` " <>
-                     "to drop the existing database and let Ecto start a new one with a proper " <>
-                     "definition of \"schema_migrations\" or by configuring the repository to " <>
-                     "use another source:\n\n" <>
-                     """
-                         config #{inspect repo.config[:otp_app]}, #{inspect repo},
-                           migration_source: "some_other_table_for_schema_migrations"
+        Logger.error """
+        Could not #{reason}. This error usually happens due to the following:
 
-                     The full error is shown below.
-                     """
+          * The database does not exist
+          * The "schema_migrations" table, which Ecto uses for managing
+            migrations, was defined by another library
+
+        To fix the first issue, run "mix ecto.create".
+
+        To address the second, you can run "mix ecto.drop" followed by
+        "mix ecto.create". Alternatively you may configure Ecto to use
+        another table for managing migrations:
+
+            config #{inspect repo.config[:otp_app]}, #{inspect repo},
+              migration_source: "some_other_table_for_schema_migrations"
+
+        The full error report is shown below.
+        """
         reraise error, System.stacktrace
     end
   end
