@@ -1686,10 +1686,7 @@ defmodule Ecto.Schema do
   @doc false
   def __schema__(prefix, source, fields, aliased_fields, primary_key) do
     field_names = Enum.map(fields, &elem(&1, 0))
-
-    db_field_names = Enum.map(field_names, fn(field) ->
-      if List.keymember?(aliased_fields, field, 0), do: aliased_fields[field], else: field
-    end)
+    db_field_names = Enum.map(field_names, &(Keyword.get(aliased_fields, &1, &1)))
 
     # Hash is used by the query cache to specify
     # the underlying schema structure did not change.
