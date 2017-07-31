@@ -27,9 +27,8 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
   end
 
   setup do
-    opts = [disable_safety_warnings: true]
-    Application.put_env(:ecto, __MODULE__.Repo, opts)
-    Application.put_env(:ecto, __MODULE__.NoStorageRepo, opts)
+    Application.put_env(:ecto, __MODULE__.Repo, [])
+    Application.put_env(:ecto, __MODULE__.NoStorageRepo, [])
   end
 
   ## Create

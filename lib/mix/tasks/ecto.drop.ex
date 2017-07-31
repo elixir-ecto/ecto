@@ -4,6 +4,7 @@ defmodule Mix.Tasks.Ecto.Drop do
 
   @shortdoc "Drops the repository storage"
   @recursive true
+  @default_opts [force: false]
 
   @moduledoc """
   Drop the storage for the given repository.
@@ -28,6 +29,7 @@ defmodule Mix.Tasks.Ecto.Drop do
   def run(args) do
     repos = parse_repo(args)
     {opts, _, _} = OptionParser.parse args, switches: [quiet: :boolean, force: :boolean]
+    opts = Keyword.merge(@default_opts, opts)
 
     Enum.each repos, fn repo ->
       ensure_repo(repo, args)
