@@ -25,7 +25,7 @@ defmodule Ecto.SchemaTest do
     assert Schema.__schema__(:source)             == "my schema"
     assert Schema.__schema__(:prefix)             == nil
     assert Schema.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :source, :comment_id]
-    assert Schema.__schema__(:aliases)            == [source: :src]
+    assert Schema.__schema__(:field_aliases)             == [source: :src]
     assert Schema.__schema__(:db_fields)          == [:id, :name, :email, :count, :array, :uuid, :src, :comment_id]
     assert Schema.__schema__(:read_after_writes)  == [:email, :count]
     assert Schema.__schema__(:primary_key)        == [:id]
@@ -44,13 +44,13 @@ defmodule Ecto.SchemaTest do
   end
 
   test "sources metadata" do
-    assert Schema.__schema__(:source, :id)         == :id
-    assert Schema.__schema__(:source, :name)       == :name
-    assert Schema.__schema__(:source, :email)      == :email
-    assert Schema.__schema__(:source, :array)      == :array
-    assert Schema.__schema__(:source, :comment_id) == :comment_id
-    assert Schema.__schema__(:source, :source)     == :src
-    assert Schema.__schema__(:source, :xyz)        == nil
+    assert Schema.__schema__(:field_alias, :id)         == :id
+    assert Schema.__schema__(:field_alias, :name)       == :name
+    assert Schema.__schema__(:field_alias, :email)      == :email
+    assert Schema.__schema__(:field_alias, :array)      == :array
+    assert Schema.__schema__(:field_alias, :comment_id) == :comment_id
+    assert Schema.__schema__(:field_alias, :source)     == :src
+    assert Schema.__schema__(:field_alias, :xyz)        == nil
   end
 
   test "changeset metadata" do

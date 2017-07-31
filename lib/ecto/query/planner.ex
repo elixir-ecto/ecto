@@ -629,13 +629,13 @@ defmodule Ecto.Query.Planner do
     %{query | expr: Macro.prewalk(expr, fn(ast) -> rewrite_aliases(ast, sources) end)}
   end
   defp rewrite_aliases({{:., [], [{:&, [], [binding]}, field]}, [], []}, sources) do
-    {{:., [], [{:&, [], [binding]}, find_field_source(sources, binding, field)]}, [], []}
+    {{:., [], [{:&, [], [binding]}, find_field_alias(sources, binding, field)]}, [], []}
   end
   defp rewrite_aliases({field, tag = %Ecto.Query.Tagged{type: {binding, field}}}, sources) do
-    {find_field_source(sources, binding, field), tag}
+    {find_field_alias(sources, binding, field), tag}
   end
   defp rewrite_aliases({:ok, {op, fields}}, source) when is_list(fields) do
-    {{:ok, {op, find_field_source(source, fields)}}, source}
+    {{:ok, {op, find_field_alias(source, fields)}}, source}
   end
   defp rewrite_aliases({:ok, {op, fields}}, source) do
     {{:ok, {op, fields}}, source}
@@ -647,13 +647,13 @@ defmodule Ecto.Query.Planner do
     other
   end
 
-  defp find_field_source(sources, binding, field) when is_list(sources),
-    do: find_field_source(Enum.at(sources, binding), field)
-  defp find_field_source(source, fields) when is_list(fields),
-    do: Enum.map(fields, fn(field) -> find_field_source(source, field) end)
-  defp find_field_source({_, schema}, field) when not is_nil(schema),
-    do: schema.__schema__(:source, field) || field
-  defp find_field_source(_source, field),
+  defp find_field_alias(sources, binding, field) when is_list(sources),
+    do: find_field_alias(Enum.at(sources, binding), field)
+  defp find_field_alias(source, fields) when is_list(fields),
+    do: Enum.map(fields, fn(field) -> find_field_alias(source, field) end)
+  defp find_field_alias({_, schema}, field) when not is_nil(schema),
+    do: schema.__schema__(:field_alias, field) || field
+  defp find_field_alias(_source, field),
     do: field
 
   defp find_source_expr(query, 0) do
