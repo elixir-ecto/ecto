@@ -84,12 +84,25 @@ This module is what we'll be using to query our database shortly. It uses the `E
 
 The final piece of configuration is to setup the `Friends.Repo` as a supervisor within the application's supervision tree, which we can do in `lib/friends/application.ex` (or `lib/friends.ex` for elixir versions `< 1.4.0`), inside the `start/2` function:
 
+`Elixir < 1.5.0`:
 ```elixir
 def start(_type, _args) do
   import Supervisor.Spec
 
   children = [
     supervisor(Friends.Repo, []),
+  ]
+
+  ...
+```
+
+`Elixir >= 1.5.0`:
+```elixir
+def start(_type, _args) do
+  import Supervisor.Spec
+
+  children = [
+    Friends.Repo,
   ]
 
   ...
