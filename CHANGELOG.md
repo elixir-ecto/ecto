@@ -113,6 +113,16 @@ In the example above, we were able to build the query expressions bit by bit, us
 
 A dynamic expression can always be interpolated inside another dynamic expression or at the root of a `where`, `having`, `update` or a `join`'s `on`.
 
+## v2.1.6 (2017-08-01)
+
+### Bug fixes
+
+  * rollback the UUID validation tightening (cacabb38)
+
+### Enhancements
+
+  * prompt user to confirm before running load task in production (a8853174)
+
 ## v2.1.5 (2017-07-30)
 
 ### Bug fixes
