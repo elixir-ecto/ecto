@@ -204,22 +204,37 @@ defmodule Ecto.MultipleResultsError do
   defexception [:message]
 
   def exception(opts) do
-    sql_query = Keyword.get(opts, :sql_query)
+    query = Keyword.fetch!(opts, :queryable) |> Ecto.Queryable.to_query
     count = Keyword.fetch!(opts, :count)
-    query =
-      if sql_query do
-        sql_query
-      else
-        opts
-        |> Keyword.fetch!(:queryable)
-        |> Ecto.Queryable.to_query()
-        |> Inspect.Ecto.Query.to_string()
-      end
 
     msg = """
     expected at most one result but got #{count} in query:
 
-    #{query}
+    #{Inspect.Ecto.Query.to_string(query)}
+    """
+
+    %__MODULE__{message: msg}
+  end
+end
+
+defmodule Ecto.MultiplePrimaryKeyError do
+  defexception [:message]
+
+  def exception(opts) do
+    operation = Keyword.fetch!(opts, :operation)
+    source = Keyword.fetch!(opts, :source)
+    params = Keyword.fetch!(opts, :params)
+    count = Keyword.fetch!(opts, :count)
+
+    msg = """
+    expected #{operation} on #{source} to return at most one entry but got #{count} entries.
+
+    This typically means the field(s) set as primary_key in your schema/source
+    are not enough to uniquely identify entries in the repository.
+
+    Those are the parameters sent to the repository:
+
+    #{inspect params}
     """
 
     %__MODULE__{message: msg}

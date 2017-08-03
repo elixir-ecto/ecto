@@ -43,21 +43,15 @@ defmodule Ecto.Integration.SQLTest do
     assert sql =~ "barebones"
   end
 
-  test "struct/7 raises when primary key is not unique" do
+  test "raises when primary key is not unique on struct operation" do
     schema = %CorruptedPk{a: "abc"}
-    for _ <- 1..10, do: TestRepo.insert!(schema)
+    TestRepo.insert!(schema)
+    TestRepo.insert!(schema)
+    TestRepo.insert!(schema)
 
-    assert_raise Ecto.MultipleResultsError, ~s|expected at most one result but got 10 in query:\n\n| <>
-                                            ~s|from c in Ecto.Integration.CorruptedPk,\n| <>
-                                            ~s|  where: c.a == ^\"abc\"\n|, fn ->
-      TestRepo.get(CorruptedPk, "abc")
-    end
-
-    assert %CorruptedPk{a: "abc"} = schema |> Ecto.Changeset.change(force: true) |> TestRepo.update!()
-
-    assert_raise Ecto.MultipleResultsError, fn ->
-      TestRepo.delete!(schema)
-    end
+    assert_raise Ecto.MultiplePrimaryKeyError,
+                 ~r|expected delete on corrupted_pk to return at most one entry but got 3 entries|,
+                 fn -> TestRepo.delete!(schema) end
   end
 
   test "Repo.insert! escape" do

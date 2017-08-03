@@ -88,22 +88,22 @@ defmodule Ecto.Adapters.SQL do
                  {kind, conflict_params, _} = on_conflict, returning, opts) do
         {fields, values} = :lists.unzip(params)
         sql = @conn.insert(prefix, source, fields, [fields], on_conflict, returning)
-        Ecto.Adapters.SQL.struct(repo, @conn, sql, values ++ conflict_params, kind, returning, opts)
+        Ecto.Adapters.SQL.struct(repo, @conn, sql, {:insert, source, []}, values ++ conflict_params, kind, returning, opts)
       end
 
       @doc false
-      def update(repo, %{source: {prefix, source}}, fields, filter, returning, opts) do
+      def update(repo, %{source: {prefix, source}}, fields, params, returning, opts) do
         {fields, values1} = :lists.unzip(fields)
-        {filter, values2} = :lists.unzip(filter)
+        {filter, values2} = :lists.unzip(params)
         sql = @conn.update(prefix, source, fields, filter, returning)
-        Ecto.Adapters.SQL.struct(repo, @conn, sql, values1 ++ values2, :raise, returning, opts)
+        Ecto.Adapters.SQL.struct(repo, @conn, sql, {:update, source, params}, values1 ++ values2, :raise, returning, opts)
       end
 
       @doc false
-      def delete(repo, %{source: {prefix, source}}, filter, opts) do
-        {filter, values} = :lists.unzip(filter)
+      def delete(repo, %{source: {prefix, source}}, params, opts) do
+        {filter, values} = :lists.unzip(params)
         sql = @conn.delete(prefix, source, filter, [])
-        Ecto.Adapters.SQL.struct(repo, @conn, sql, values, :raise, [], opts)
+        Ecto.Adapters.SQL.struct(repo, @conn, sql, {:delete, source, params}, values, :raise, [], opts)
       end
 
       ## Transaction
@@ -551,7 +551,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def struct(repo, conn, sql, values, on_conflict, returning, opts) do
+  def struct(repo, conn, sql, {operation, source, params}, values, on_conflict, returning, opts) do
     case query(repo, sql, values, fn x -> x end, opts) do
       {:ok, %{rows: nil, num_rows: 1}} ->
         {:ok, []}
@@ -559,8 +559,9 @@ defmodule Ecto.Adapters.SQL do
         {:ok, Enum.zip(returning, values)}
       {:ok, %{num_rows: 0}} ->
         if on_conflict == :nothing, do: {:ok, []}, else: {:error, :stale}
-      {:ok, %{rows: nil, num_rows: num_rows}} when num_rows > 1 ->
-        raise Ecto.MultipleResultsError, sql_query: sql, count: num_rows
+      {:ok, %{num_rows: num_rows}} when num_rows > 1 ->
+        raise Ecto.MultiplePrimaryKeyError,
+              source: source, params: params, count: num_rows, operation: operation
       {:error, err} ->
         case conn.to_constraints(err) do
           []          -> raise err
