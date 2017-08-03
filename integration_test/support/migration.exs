@@ -97,6 +97,10 @@ defmodule Ecto.Integration.Migration do
       add :name, :string
     end
 
+    create table(:corrupted_pk, primary_key: false) do
+      add :a, :string
+    end
+
     create table(:posts_users_composite_pk) do
       add :post_id, references(:posts), primary_key: true
       add :user_id, references(:users), primary_key: true

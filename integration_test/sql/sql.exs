@@ -4,6 +4,7 @@ defmodule Ecto.Integration.SQLTest do
   alias Ecto.Integration.TestRepo
   alias Ecto.Integration.Barebone
   alias Ecto.Integration.Post
+  alias Ecto.Integration.CorruptedPk
   import Ecto.Query, only: [from: 2]
 
   test "fragmented types" do
@@ -40,6 +41,23 @@ defmodule Ecto.Integration.SQLTest do
     {sql, []} = Ecto.Adapters.SQL.to_sql(:delete_all, TestRepo, Barebone)
     assert sql =~ "DELETE"
     assert sql =~ "barebones"
+  end
+
+  test "struct/7 raises when primary key is not unique" do
+    schema = %CorruptedPk{a: "abc"}
+    for _ <- 1..10, do: TestRepo.insert!(schema)
+
+    assert_raise Ecto.MultipleResultsError, ~s|expected at most one result but got 10 in query:\n\n| <>
+                                            ~s|from c in Ecto.Integration.CorruptedPk,\n| <>
+                                            ~s|  where: c.a == ^\"abc\"\n|, fn ->
+      TestRepo.get(CorruptedPk, "abc")
+    end
+
+    assert %CorruptedPk{a: "abc"} = schema |> Ecto.Changeset.change(force: true) |> TestRepo.update!()
+
+    assert_raise Ecto.MultipleResultsError, fn ->
+      TestRepo.delete!(schema)
+    end
   end
 
   test "Repo.insert! escape" do
