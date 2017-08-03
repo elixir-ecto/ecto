@@ -418,13 +418,10 @@ if Code.ensure_loaded?(Postgrex) do
       quote_qualified_name(field, sources, idx)
     end
 
-    defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
-      {source, name, schema} = elem(sources, idx)
-      if is_nil(schema) and is_nil(fields) do
-        error!(query, "PostgreSQL does not support selecting all fields from #{source} without a schema. " <>
-                      "Please specify a schema or specify exactly which fields you want to select")
-      end
-      intersperse_map(fields, ", ", &[name, ?. | quote_name(&1)])
+    defp expr({:&, _, [idx]}, sources, query) do
+      {source, _name, _schema} = elem(sources, idx)
+      error!(query, "PostgreSQL does not support selecting all fields from #{source} without a schema. " <>
+                    "Please specify a schema or specify exactly which fields you want to select")
     end
 
     defp expr({:in, _, [_left, []]}, _sources, _query) do
@@ -452,8 +449,8 @@ if Code.ensure_loaded?(Postgrex) do
       ["NOT (", expr(expr, sources, query), ?)]
     end
 
-    defp expr(%Ecto.SubQuery{query: query, fields: fields}, _sources, _query) do
-      query.select.fields |> put_in(fields) |> all()
+    defp expr(%Ecto.SubQuery{query: query}, _sources, _query) do
+      all(query)
     end
 
     defp expr({:fragment, _, [kw]}, _sources, query) when is_list(kw) or tuple_size(kw) == 3 do

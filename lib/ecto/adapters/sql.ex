@@ -388,32 +388,15 @@ defmodule Ecto.Adapters.SQL do
     do_execute(repo, meta, prepared, params, mapper, put_source(opts, meta))
   end
 
-  defp do_execute(repo, _meta, {:cache, update, {id, prepared}}, params, nil, opts) do
-    execute_and_cache(repo, id, update, prepared, params, nil, opts)
-  end
-
-  defp do_execute(repo, %{fields: fields, sources: sources}, {:cache, update, {id, prepared}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields, sources)
+  defp do_execute(repo, _meta, {:cache, update, {id, prepared}}, params, mapper, opts) do
     execute_and_cache(repo, id, update, prepared, params, mapper, opts)
   end
 
-  defp do_execute(repo, _meta, {:cached, reset, {id, cached}}, params, nil, opts) do
-    execute_or_reset(repo, id, reset, cached, params, nil, opts)
-  end
-
-  defp do_execute(repo, %{fields: fields, sources: sources}, {:cached, reset, {id, cached}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields, sources)
+  defp do_execute(repo, _meta, {:cached, reset, {id, cached}}, params, mapper, opts) do
     execute_or_reset(repo, id, reset, cached, params, mapper, opts)
   end
 
-  defp do_execute(repo, _meta, {:nocache, {_id, prepared}}, params, nil, opts) do
-    %{rows: rows, num_rows: num} =
-      sql_call!(repo, :execute, [prepared], params, nil, opts)
-    {num, rows}
-  end
-
-  defp do_execute(repo, %{fields: fields, sources: sources}, {:nocache, {_id, prepared}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields, sources)
+  defp do_execute(repo, _meta, {:nocache, {_id, prepared}}, params, mapper, opts) do
     %{rows: rows, num_rows: num} =
       sql_call!(repo, :execute, [prepared], params, mapper, opts)
     {num, rows}
@@ -491,30 +474,15 @@ defmodule Ecto.Adapters.SQL do
     do_stream(repo, meta, prepared, params, mapper, put_source(opts, meta))
   end
 
-  def do_stream(repo, _meta, {:cache, _, {_, prepared}}, params, nil, opts) do
-    prepare_stream(repo, prepared, params, nil, opts)
-  end
-
-  def do_stream(repo, %{fields: fields, sources: sources}, {:cache, _, {_, prepared}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields, sources)
+  def do_stream(repo, _meta, {:cache, _, {_, prepared}}, params, mapper, opts) do
     prepare_stream(repo, prepared, params, mapper, opts)
   end
 
-  def do_stream(repo, _, {:cached, _, {_, cached}}, params, nil, opts) do
-    prepare_stream(repo, String.Chars.to_string(cached), params, nil, opts)
-  end
-
-  def do_stream(repo, %{fields: fields, sources: sources}, {:cached, _, {_, cached}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields, sources)
+  def do_stream(repo, _, {:cached, _, {_, cached}}, params, mapper, opts) do
     prepare_stream(repo, String.Chars.to_string(cached), params, mapper, opts)
   end
 
-  def do_stream(repo, _meta, {:nocache, {_id, prepared}}, params, nil, opts) do
-    prepare_stream(repo, prepared, params, nil, opts)
-  end
-
-  def do_stream(repo, %{fields: fields, sources: sources}, {:nocache, {_id, prepared}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields, sources)
+  def do_stream(repo, _meta, {:nocache, {_id, prepared}}, params, mapper, opts) do
     prepare_stream(repo, prepared, params, mapper, opts)
   end
 
@@ -568,33 +536,6 @@ defmodule Ecto.Adapters.SQL do
           constraints -> {:invalid, constraints}
         end
     end
-  end
-
-  defp process_row(row, process, fields, sources) do
-    num_sources = tuple_size(sources)
-    Enum.map_reduce(fields, row, fn
-      {:&, _, [_, _, counter]} = field, acc when num_sources == 1 ->
-        {val, rest} = Enum.split(acc, counter)
-        {process.(field, val, nil), rest}
-      {:&, _, [_, _, counter]} = field, acc ->
-        case split_and_not_nil(acc, counter, true, []) do
-          {nil, rest} -> {nil, rest}
-          {val, rest} -> {process.(field, val, nil), rest}
-        end
-      field, [h|t] ->
-        {process.(field, h, nil), t}
-    end) |> elem(0)
-  end
-
-  defp split_and_not_nil(rest, 0, true, _acc), do: {nil, rest}
-  defp split_and_not_nil(rest, 0, false, acc), do: {:lists.reverse(acc), rest}
-
-  defp split_and_not_nil([nil|t], count, all_nil?, acc) do
-    split_and_not_nil(t, count - 1, all_nil?, [nil|acc])
-  end
-
-  defp split_and_not_nil([h|t], count, _all_nil?, acc) do
-    split_and_not_nil(t, count - 1, false, [h|acc])
   end
 
   ## Transactions

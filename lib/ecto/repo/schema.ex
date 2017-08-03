@@ -50,7 +50,7 @@ defmodule Ecto.Repo.Schema do
     {count, postprocess(rows, fields, adapter, schema, source)}
   end
 
-  defp preprocess([_|_] = fields, _schema),
+  defp preprocess([_ | _] = fields, _schema),
     do: fields
   defp preprocess([], _schema),
     do: raise ArgumentError, ":returning expects at least one field to be given, got an empty list"
@@ -63,13 +63,18 @@ defmodule Ecto.Repo.Schema do
 
   defp postprocess(nil, false, _adapter, _schema, _source), do: nil
   defp postprocess(rows, fields, _adapter, nil, _source) do
-    Enum.map(rows, &Map.new(Enum.zip(fields, &1)))
+    for row <- rows, do: Map.new(Enum.zip(fields, row))
   end
   defp postprocess(rows, fields, adapter, schema, {prefix, source}) do
-    Enum.map(rows, fn row ->
-      Ecto.Schema.__load__(schema, prefix, source, nil, {fields, row},
-                           &Ecto.Type.adapter_load(adapter, &1, &2))
-    end)
+    struct = schema.__struct__()
+
+    types = schema.__schema__(:types)
+    types = for field <- fields, do: {field, Map.fetch!(types, field)}
+
+    for row <- rows do
+      Ecto.Schema.__safe_load__(struct, types, row, prefix, source,
+                                &Ecto.Type.adapter_load(adapter, &1, &2))
+    end
   end
 
   defp extract_header_and_fields(rows, schema, autogenerate_id, adapter) do
@@ -376,9 +381,9 @@ defmodule Ecto.Repo.Schema do
   defp do_load(schema, {fields, values}, loader) when is_list(fields) and is_list(values),
     do: do_load(schema, Enum.zip(fields, values), loader)
   defp do_load(schema, data, loader) when is_atom(schema),
-    do: Ecto.Schema.__load__(schema, nil, nil, nil, data, loader)
+    do: Ecto.Schema.__unsafe_load__(schema, data, loader)
   defp do_load(types, data, loader) when is_map(types),
-    do: Ecto.Schema.__load__(%{}, types, data, loader)
+    do: Ecto.Schema.__unsafe_load__(%{}, types, data, loader)
 
   ## Helpers
 
@@ -459,8 +464,8 @@ defmodule Ecto.Repo.Schema do
                            "and #{inspect from} respectively"
     end
 
-    {Ecto.Query.Planner.normalize(query, :update_all, adapter, counter),
-     params, conflict_target}
+    {query, _} = Ecto.Query.Planner.normalize(query, :update_all, adapter, counter)
+    {query, params, conflict_target}
   end
 
   defp apply(%{valid?: false} = changeset, _adapter, _action, _args) do
