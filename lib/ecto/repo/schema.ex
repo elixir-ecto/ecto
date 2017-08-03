@@ -706,7 +706,7 @@ defmodule Ecto.Repo.Schema do
   defp dump_field!(action, schema, field, type, value, adapter) do
     case Ecto.Type.adapter_dump(adapter, type, value) do
       {:ok, value} ->
-        {field, value}
+        {schema.__schema__(:field_alias, field), value}
       :error ->
         raise Ecto.ChangeError,
           message: "value `#{inspect value}` for `#{inspect schema}.#{field}` " <>
