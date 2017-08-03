@@ -233,10 +233,11 @@ defmodule Ecto.Query.Planner do
               sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple()}
   end
 
-  defp prepare_source(query, %Ecto.SubQuery{query: inner_query} = subquery, adapter) do
+  defp prepare_source(query, subquery, adapter, counter \\ 0)
+  defp prepare_source(query, %Ecto.SubQuery{query: inner_query} = subquery, adapter, counter) do
     try do
       {inner_query, params, key} = prepare(inner_query, :all, adapter, 0)
-      %{select: select} = inner_query = inner_query |> returning(true) |> normalize_select()
+      %{select: select} = inner_query = inner_query |> returning(true) |> normalize_query(:all, adapter, counter) |> elem(0) |> normalize_select()
       {select, fields} = subquery_fields(inner_query, select)
       %{subquery | query: %{inner_query | select: select},
                    params: params, cache: key, fields: fields}
@@ -245,11 +246,11 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp prepare_source(_query, {nil, schema}, _adapter) when is_atom(schema) and schema != nil,
+  defp prepare_source(_query, {nil, schema}, _adapter, _counter) when is_atom(schema) and schema != nil,
     do: {schema.__schema__(:source), schema}
-  defp prepare_source(_query, {source, schema}, _adapter) when is_binary(source) and is_atom(schema),
+  defp prepare_source(_query, {source, schema}, _adapter, _counter) when is_binary(source) and is_atom(schema),
     do: {source, schema}
-  defp prepare_source(_query, {:fragment, _, _} = source, _adapter),
+  defp prepare_source(_query, {:fragment, _, _} = source, _adapter, _counter),
     do: source
 
   defp subquery_fields(%{assocs: assocs, preloads: preloads} = query, _select)
@@ -379,7 +380,7 @@ defmodule Ecto.Query.Planner do
 
   defp prepare_joins([%JoinExpr{source: source} = join|t],
                       query, joins, sources, tail_sources, counter, offset, adapter) do
-    source = prepare_source(query, source, adapter)
+    source = prepare_source(query, source, adapter, counter)
     join = %{join | source: source, ix: counter}
     prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
   end
