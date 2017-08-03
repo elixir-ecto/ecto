@@ -47,9 +47,17 @@ defmodule Ecto.Query.PlannerTest do
 
   defp normalize_with_params(query, operation \\ :all) do
     {query, params, _key} = prepare(query, operation)
-    {query
-     |> Planner.returning(operation == :all)
-     |> Planner.normalize(operation, Ecto.TestAdapter, 0), params}
+    {query, _} =
+      query
+      |> Planner.returning(operation == :all)
+      |> Planner.normalize(operation, Ecto.TestAdapter, 0)
+    {query, params}
+  end
+
+  defp select_fields(fields, ix) do
+    for field <- fields do
+      {{:., [], [{:&, [], [ix]}, field]}, [], []}
+    end
   end
 
   test "prepare: merges all parameters" do
@@ -283,7 +291,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, _, _} = prepare(from(p in subquery(Post), join: c in assoc(p, :comments)))
     assert [%{source: {"comments", Ecto.Query.PlannerTest.Comment}}] = query.joins
 
-    message = ~r/can only perform association joins on subqueries that return a single source in select/
+    message = ~r/can only perform association joins on subqueries that return a source with schema in select/
     assert_raise Ecto.QueryError, message, fn ->
       prepare(from(p in subquery(from p in Post, select: p.title), join: c in assoc(p, :comments)))
     end
@@ -313,32 +321,38 @@ defmodule Ecto.Query.PlannerTest do
   describe "prepare: subqueries select" do
     test "supports implicit select" do
       query = prepare(from(subquery(Post), [])) |> elem(0)
-      assert [{:id, {{:., [], [{:&, [], [0]}, :id]}, [], []}},
-              {:title, {{:., [], [{:&, [], [0]}, :title]}, [], []}} | _] = query.from.fields
+      assert "%Ecto.Query.PlannerTest.Post{id: &0.id(), title: &0.title(), " <>
+             "text: &0.text(), code: &0.code(), posted: &0.posted(), " <>
+             "visits: &0.visits(), links: &0.links()}" =
+             Macro.to_string(query.from.query.select.expr)
     end
 
     test "supports field selector" do
       query = from p in "posts", select: p.code
       query = prepare(from(subquery(query), [])) |> elem(0)
-      assert [code: {{:., [], [{:&, [], [0]}, :code]}, [], []}] = query.from.fields
+      assert "%{code: &0.code()}" =
+             Macro.to_string(query.from.query.select.expr)
 
       query = from p in Post, select: p.code
       query = prepare(from(subquery(query), [])) |> elem(0)
-      assert [code: {{:., [], [{:&, [], [0]}, :code]}, [], []}] = query.from.fields
+      assert "%{code: &0.code()}" =
+             Macro.to_string(query.from.query.select.expr)
     end
 
     test "supports maps" do
       query = from p in Post, select: %{code: p.code}
       query = prepare(from(subquery(query), [])) |> elem(0)
-      assert [code: {{:., [], [{:&, [], [0]}, :code]}, [], []}] = query.from.fields
+      assert "%{code: &0.code()}" =
+             Macro.to_string(query.from.query.select.expr)
     end
 
     test "supports update in maps" do
       query = from p in Post, select: %{p | code: p.title}
       query = prepare(from(subquery(query), [])) |> elem(0)
-      assert [{:id, {{:., [], [{:&, [], [0]}, :id]}, [], []}},
-              {:title, {{:., [], [{:&, [], [0]}, :title]}, [], []}} | _] = query.from.fields
-      assert {:code, {{:., [], [{:&, [], [0]}, :title]}, [], []}} = List.last(query.from.fields)
+      assert "%Ecto.Query.PlannerTest.Post{id: &0.id(), title: &0.title(), " <>
+             "text: &0.text(), posted: &0.posted(), visits: &0.visits(), " <>
+             "links: &0.links(), code: &0.title()}" =
+             Macro.to_string(query.from.query.select.expr)
 
       query = from p in Post, select: %{p | unknown: p.title}
       assert_raise Ecto.SubQueryError, ~r/invalid key `:unknown` on map update in subquery/, fn ->
@@ -481,18 +495,20 @@ defmodule Ecto.Query.PlannerTest do
 
   test "normalize: select" do
     query = from(Post, []) |> normalize()
-    assert query.select.expr == {:&, [], [0]}
-    assert query.select.fields == [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]}]
+    assert query.select.expr ==
+             {:&, [], [0]}
+    assert query.select.fields ==
+           select_fields([:code, :id, :links, :posted, :text, :title, :visits], 0)
 
     query = from(Post, []) |> select([p], {p, p.title}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
-            {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
+           select_fields([:code, :id, :links, :posted, :text, :title, :visits], 0) ++
+           [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
 
     query = from(Post, []) |> select([p], {p.title, p}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
-            {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
+           select_fields([:code, :id, :links, :posted, :text, :title, :visits], 0) ++
+           [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
 
     query =
       from(Post, [])
@@ -501,9 +517,9 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, _], {p.title, p})
       |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
-            {:&, [], [1, [:id, :text, :posted, :uuid, :post_id], 5]},
-            {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
+           select_fields([:code, :id, :links, :posted, :text, :title, :visits], 0) ++
+           select_fields([:id, :post_id, :posted, :text, :uuid], 1) ++
+           [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
   end
 
   test "normalize: select with struct/2" do
@@ -513,12 +529,12 @@ defmodule Ecto.Query.PlannerTest do
 
     query = Post |> select([p], struct(p, [:id, :title])) |> normalize()
     assert query.select.expr == {:&, [], [0]}
-    assert query.select.fields == [{:&, [], [0, [:id, :title], 2]}]
+    assert query.select.fields == select_fields([:id, :title], 0)
 
     query = Post |> select([p], {struct(p, [:id, :title]), p.title}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title], 2]},
-            {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
+           select_fields([:id, :title], 0) ++
+           [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
 
     query =
       Post
@@ -526,8 +542,8 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, struct(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
-            {:&, [], [1, [:id, :text], 2]}]
+           select_fields([:code, :id, :links, :posted, :text, :title, :visits], 0) ++
+           select_fields([:id, :text], 1)
   end
 
   test "normalize: select with struct/2 on assoc" do
@@ -539,8 +555,8 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
     assert query.select.expr == {:&, [], [0]}
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title], 2]},
-            {:&, [], [1, [:id, :text], 2]}]
+           select_fields([:id, :title], 0) ++
+           select_fields([:id, :text], 1)
 
     query =
       Post
@@ -550,21 +566,21 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
     assert query.select.expr == {:&, [], [0]}
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title], 2]},
-            {:&, [], [1, [:id], 1]},
-            {:&, [], [1, [:id, :text], 2]},
-            {:&, [], [0, [:id], 1]}]
+           select_fields([:id, :title], 0) ++
+           select_fields([:id], 1) ++
+           select_fields([:id, :text], 1) ++
+           select_fields([:id], 0)
   end
 
   test "normalize: select with map/2" do
     query = Post |> select([p], map(p, [:id, :title])) |> normalize()
     assert query.select.expr == {:&, [], [0]}
-    assert query.select.fields == [{:&, [], [0, [:id, :title], 2]}]
+    assert query.select.fields == select_fields([:id, :title], 0)
 
     query = Post |> select([p], {map(p, [:id, :title]), p.title}) |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title], 2]},
-            {{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
+           select_fields([:id, :title], 0) ++
+           [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
 
     query =
       Post
@@ -572,8 +588,8 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, map(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title, :text, :code, :posted, :visits, :links], 7]},
-            {:&, [], [1, [:id, :text], 2]}]
+           select_fields([:code, :id, :links, :posted, :text, :title, :visits], 0) ++
+           select_fields([:id, :text], 1)
   end
 
   test "normalize: select with map/2 on assoc" do
@@ -585,8 +601,8 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
     assert query.select.expr == {:&, [], [0]}
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title], 2]},
-            {:&, [], [1, [:id, :text], 2]}]
+           select_fields([:id, :title], 0) ++
+           select_fields([:id, :text], 1)
 
     query =
       Post
@@ -596,10 +612,10 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
     assert query.select.expr == {:&, [], [0]}
     assert query.select.fields ==
-           [{:&, [], [0, [:id, :title], 2]},
-            {:&, [], [1, [:id], 1]},
-            {:&, [], [1, [:id, :text], 2]},
-            {:&, [], [0, [:id], 1]}]
+           select_fields([:id, :title], 0) ++
+           select_fields([:id], 1) ++
+           select_fields([:id, :text], 1) ++
+           select_fields([:id], 0)
   end
 
   test "normalize: preload" do
@@ -725,16 +741,16 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: merges subqueries fields when requested" do
     subquery = from p in Post, select: %{id: p.id, title: p.title}
     query = normalize(from(subquery(subquery), []))
-    assert query.select.fields == [{:&, [], [0, [:id, :title], 2]}]
+    assert query.select.fields == select_fields([:id, :title], 0)
 
     query = normalize(from(p in subquery(subquery), select: p.title))
-    assert query.select.fields == [{{:., [], [{:&, [], [0]}, :title]}, [ecto_type: :string], []}]
+    assert query.select.fields == [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
 
     query = normalize(from(c in Comment, join: p in subquery(subquery), select: p))
-    assert query.select.fields == [{:&, [], [1, [:id, :title], 2]}]
+    assert query.select.fields == select_fields([:id, :title], 1)
 
     query = normalize(from(c in Comment, join: p in subquery(subquery), select: p.title))
-    assert query.select.fields == [{{:., [], [{:&, [], [1]}, :title]}, [ecto_type: :string], []}]
+    assert query.select.fields == [{{:., [], [{:&, [], [1]}, :title]}, [], []}]
 
     subquery = from p in Post, select: %{id: p.id, title: p.title}
     assert_raise Ecto.QueryError, ~r/it is not possible to return a map\/struct subset of a subquery/, fn ->

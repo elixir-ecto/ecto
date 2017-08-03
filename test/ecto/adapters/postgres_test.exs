@@ -48,7 +48,8 @@ defmodule Ecto.Adapters.PostgresTest do
 
   defp normalize(query, operation \\ :all, counter \\ 0) do
     {query, _params, _key} = Ecto.Query.Planner.prepare(query, operation, Ecto.Adapters.Postgres, counter)
-    Ecto.Query.Planner.normalize(query, operation, Ecto.Adapters.Postgres, counter)
+    {query, _} = Ecto.Query.Planner.normalize(query, operation, Ecto.Adapters.Postgres, counter)
+    query
   end
 
   test "from" do
@@ -414,7 +415,7 @@ defmodule Ecto.Adapters.PostgresTest do
   test "update all with returning" do
     query = from(m in Schema, update: [set: [x: 0]]) |> select([m], m) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE "schema" AS s0 SET "x" = 0 RETURNING s0."id", s0."x", s0."y", s0."z", s0."w"}
+           ~s{UPDATE "schema" AS s0 SET "x" = 0 RETURNING s0."id", s0."w", s0."x", s0."y", s0."z"}
   end
 
   test "update all array ops" do
@@ -456,7 +457,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "delete all with returning" do
     query = Schema |> Queryable.to_query |> select([m], m) |> normalize
-    assert SQL.delete_all(query) == ~s{DELETE FROM "schema" AS s0 RETURNING s0."id", s0."x", s0."y", s0."z", s0."w"}
+    assert SQL.delete_all(query) == ~s{DELETE FROM "schema" AS s0 RETURNING s0."id", s0."w", s0."x", s0."y", s0."z"}
   end
 
   test "delete all with prefix" do
@@ -574,7 +575,7 @@ defmodule Ecto.Adapters.PostgresTest do
              ~s{(SELECT s0."x" AS "x", s0."y" AS "y" FROM "schema" AS s0) } <>
              ~s{AS s1 ON TRUE}
     end
-    
+
     test "self join on subquery with fragment" do
       subquery = select(Schema, [r], %{string: fragment("downcase(?)", ^"string")})
       query = subquery |> join(:inner, [c], p in subquery(subquery), true) |> normalize
@@ -583,7 +584,7 @@ defmodule Ecto.Adapters.PostgresTest do
              ~s{(SELECT downcase($2) AS "string" FROM "schema" AS s0) } <>
              ~s{AS s1 ON TRUE}
     end
-    
+
     test "join on subquery with simple select" do
       subquery = select(Schema, [r], %{x: ^999, w: ^888})
       query = Schema
@@ -591,7 +592,7 @@ defmodule Ecto.Adapters.PostgresTest do
               |> join(:inner, [c], p in subquery(subquery), true)
               |> where([a, b], a.x == ^111)
               |> normalize
-    
+
       assert SQL.all(query) ==
              ~s{SELECT $1 FROM "schema" AS s0 INNER JOIN } <>
              ~s{(SELECT $2 AS "x", $3 AS "w" FROM "schema" AS s0) AS s1 ON TRUE } <>

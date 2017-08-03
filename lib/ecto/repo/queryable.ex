@@ -124,18 +124,19 @@ defmodule Ecto.Repo.Queryable do
     {meta, prepared, params} = Planner.query(query, operation, repo, adapter, 0)
 
     case meta do
-      %{fields: nil} ->
+      %{select: nil} ->
         adapter.execute(repo, meta, prepared, params, nil, opts)
-      %{select: select, fields: fields, prefix: prefix, take: take,
-        sources: sources, assocs: assocs, preloads: preloads} ->
-        preprocess    = preprocess(prefix, sources, adapter)
-        {count, rows} = adapter.execute(repo, meta, prepared, params, preprocess, opts)
-        postprocess   = postprocess(select, fields, take)
-        {_, take_0}   = Map.get(take, 0, {:any, %{}})
+      %{select: select, prefix: prefix, sources: sources, preloads: preloads} ->
+        %{preprocess: preprocess, postprocess: postprocess, take: take, assocs: assocs} = select
+        all_nil? = tuple_size(sources) != 1
+        preprocessor = &preprocess(&1, preprocess, all_nil?, prefix, adapter)
+        {count, rows} = adapter.execute(repo, meta, prepared, params, preprocessor, opts)
+        postprocessor = postprocessor(postprocess, take, prefix, adapter)
+
         {count,
           rows
           |> Ecto.Repo.Assoc.query(assocs, sources)
-          |> Ecto.Repo.Preloader.query(repo, preloads, take_0, postprocess, opts)}
+          |> Ecto.Repo.Preloader.query(repo, preloads, take, postprocessor, opts)}
     end
   end
 
@@ -143,176 +144,155 @@ defmodule Ecto.Repo.Queryable do
     {meta, prepared, params} = Planner.query(query, operation, repo, adapter, 0)
 
     case meta do
-      %{fields: nil} ->
-        adapter.stream(repo, meta, prepared, params, nil, opts)
-        |> Stream.flat_map(fn({_, nil}) -> [] end)
-      %{select: select, fields: fields, prefix: prefix, take: take,
-        sources: sources, assocs: assocs, preloads: preloads} ->
-        preprocess    = preprocess(prefix, sources, adapter)
-        stream        = adapter.stream(repo, meta, prepared, params, preprocess, opts)
-        postprocess   = postprocess(select, fields, take)
-        {_, take_0}   = Map.get(take, 0, {:any, %{}})
+      %{select: nil} ->
+        repo
+        |> adapter.stream(meta, prepared, params, nil, opts)
+        |> Stream.flat_map(fn {_, nil} -> [] end)
+      %{select: select, prefix: prefix, sources: sources, preloads: preloads} ->
+        %{preprocess: preprocess, postprocess: postprocess, take: take, assocs: assocs} = select
+        all_nil? = tuple_size(sources) != 1
+        preprocessor = &preprocess(&1, preprocess, all_nil?, prefix, adapter)
+        stream = adapter.stream(repo, meta, prepared, params, preprocessor, opts)
+        postprocessor = postprocessor(postprocess, take, prefix, adapter)
 
-        Stream.flat_map(stream, fn({_, rows}) ->
+        Stream.flat_map(stream, fn {_, rows} ->
           rows
           |> Ecto.Repo.Assoc.query(assocs, sources)
-          |> Ecto.Repo.Preloader.query(repo, preloads, take_0, postprocess, opts)
+          |> Ecto.Repo.Preloader.query(repo, preloads, take, postprocessor, opts)
         end)
     end
   end
 
-  defp preprocess(prefix, sources, adapter) do
-    &preprocess(&1, &2, prefix, &3, sources, adapter)
+  defp preprocess(row, [], _all_nil?, _prefix, _adapter) do
+    row
+  end
+  defp preprocess(row, [{:source, source_schema, fields} | sources], all_nil?, prefix, adapter) do
+    {entry, rest} = process_source(source_schema, fields, row, all_nil?, prefix, adapter)
+    [entry | preprocess(rest, sources, true, prefix, adapter)]
+  end
+  defp preprocess(row, [source | sources], all_nil?, prefix, adapter) do
+    {entry, rest} = process(row, source, nil, prefix, adapter)
+    [entry | preprocess(rest, sources, all_nil?, prefix, adapter)]
   end
 
-  defp preprocess({:&, _, [ix, fields, _]}, value, prefix, context, sources, adapter) do
-    case elem(sources, ix) do
-      {_source, nil} when is_map(value) ->
-        value
-      {_source, nil} when is_list(value) ->
-        load_schemaless(fields, value, %{})
-      {source, schema} when is_list(value) ->
-        Ecto.Schema.__load__(schema, prefix, source, context, {fields, value},
-                             &Ecto.Type.adapter_load(adapter, &1, &2))
-      {source, schema} when is_map(value) ->
-        Ecto.Schema.__load__(schema, prefix, source, context, value,
-                             &Ecto.Type.adapter_load(adapter, &1, &2))
-      %Ecto.SubQuery{meta: %{sources: sources, fields: fields, select: select, take: take}} ->
-        loaded = load_subquery(fields, value, prefix, context, sources, adapter)
-        postprocess(select, fields, take).(loaded)
+  defp postprocessor({:from, :any, postprocess}, _take, prefix, adapter) do
+    fn [from | row] ->
+      row |> process(postprocess, from, prefix, adapter) |> elem(0)
+    end
+  end
+  defp postprocessor({:from, :map, postprocess}, take, prefix, adapter) do
+    fn [from | row] ->
+      row |> process(postprocess, to_map(from, take), prefix, adapter) |> elem(0)
+    end
+  end
+  defp postprocessor(postprocess, _take, prefix, adapter) do
+    fn row -> row |> process(postprocess, nil, prefix, adapter) |> elem(0) end
+  end
+
+  defp process(row, {:struct, struct, data, args}, from, prefix, adapter) do
+    case process(row, data, from, prefix, adapter) do
+      {%{__struct__: ^struct} = data, row} ->
+        process_update(data, args, row, from, prefix, adapter)
+      {data, _row} ->
+        raise BadStructError, struct: struct, term: data
+    end
+  end
+  defp process(row, {:struct, struct, args}, from, prefix, adapter) do
+    {fields, row} = process_kv(args, row, from, prefix, adapter)
+    {Map.merge(struct.__struct__(), Map.new(fields)), row}
+  end
+  defp process(row, {:map, data, args}, from, prefix, adapter) do
+    {data, row} = process(row, data, from, prefix, adapter)
+    process_update(data, args, row, from, prefix, adapter)
+  end
+  defp process(row, {:map, args}, from, prefix, adapter) do
+    {args, row} = process_kv(args, row, from, prefix, adapter)
+    {Map.new(args), row}
+  end
+  defp process(row, {:list, args}, from, prefix, adapter) do
+    process_args(args, row, from, prefix, adapter)
+  end
+  defp process(row, {:tuple, args}, from, prefix, adapter) do
+    {args, row} = process_args(args, row, from, prefix, adapter)
+    {List.to_tuple(args), row}
+  end
+  defp process(row, {:source, :from}, from, _prefix, _adapter) do
+    {from, row}
+  end
+  defp process(row, {:source, source_schema, fields}, _from, prefix, adapter) do
+    process_source(source_schema, fields, row, true, prefix, adapter)
+  end
+  defp process([value | row], {:value, :any}, _from, _prefix, _adapter) do
+    {value, row}
+  end
+  defp process([value | row], {:value, type}, _from, _prefix, adapter) do
+    {load!(type, value, nil, nil, adapter), row}
+  end
+  defp process(row, value, _from, _prefix, _adapter)
+       when is_binary(value) or is_number(value) or is_atom(value) do
+    {value, row}
+  end
+
+  defp process_update(data, args, row, from, prefix, adapter) do
+    {args, row} = process_kv(args, row, from, prefix, adapter)
+    data = Enum.reduce(args, data, fn {key, value}, acc -> %{acc | key => value} end)
+    {data, row}
+  end
+
+  defp process_source({source, schema}, types, row, all_nil?, prefix, adapter) do
+    case split_values(types, row, [], all_nil?) do
+      {nil, row} ->
+        {nil, row}
+      {values, row} ->
+        struct = if schema, do: schema.__struct__(), else: %{}
+        loader = &Ecto.Type.adapter_load(adapter, &1, &2)
+        {Ecto.Schema.__safe_load__(struct, types, values, prefix, source, loader), row}
     end
   end
 
-  defp preprocess({agg, meta, [{{:., _, [{:&, _, [_]}, _]}, _, []}]},
-                  value, _prefix, _context, _sources, adapter) when agg in ~w(avg min max sum)a do
-    type = Keyword.fetch!(meta, :ecto_type)
-    load!(type, value, adapter)
+  defp split_values([_ | types], [nil | values], acc, all_nil?) do
+    split_values(types, values, [nil | acc], all_nil?)
+  end
+  defp split_values([_ | types], [value | values], acc, _all_nil?) do
+    split_values(types, values, [value | acc], false)
+  end
+  defp split_values([], values, _acc, true) do
+    {nil, values}
+  end
+  defp split_values([], values, acc, false) do
+    {Enum.reverse(acc), values}
   end
 
-  defp preprocess({{:., _, [{:&, _, [_]}, _]}, meta, []}, value, _prefix, _context, _sources, adapter) do
-    type = Keyword.fetch!(meta, :ecto_type)
-    load!(type, value, adapter)
+  defp process_args(args, row, from, prefix, adapter) do
+    Enum.map_reduce(args, row, fn arg, row ->
+      process(row, arg, from, prefix, adapter)
+    end)
   end
 
-  defp preprocess(%Query.Tagged{tag: tag}, value, _prefix, _context, _sources, adapter) do
-    load!(tag, value, adapter)
+  defp process_kv(kv, row, from, prefix, adapter) do
+    Enum.map_reduce(kv, row, fn {key, value}, row ->
+      {key, row} = process(row, key, from, prefix, adapter)
+      {value, row} = process(row, value, from, prefix, adapter)
+      {{key, value}, row}
+    end)
   end
 
-  defp preprocess(_key, value, _prefix, _context, _sources, _adapter) do
-    value
-  end
-
-  defp load_subquery([{:&, [], [_, _, counter]} = field|fields], values, prefix, context, sources, adapter) do
-    {value, values} = Enum.split(values, counter)
-    [preprocess(field, value, prefix, context, sources, adapter) |
-     load_subquery(fields, values, prefix, context, sources, adapter)]
-  end
-  defp load_subquery([field|fields], [value|values], prefix, context, sources, adapter) do
-    [preprocess(field, value, prefix, context, sources, adapter) |
-     load_subquery(fields, values, prefix, context, sources, adapter)]
-  end
-  defp load_subquery([], [], _prefix, _context, _sources, _adapter) do
-    []
-  end
-
-  defp load_schemaless([field|fields], [value|values], acc),
-    do: load_schemaless(fields, values, Map.put(acc, field, value))
-  defp load_schemaless([], [], acc),
-    do: acc
-
-  defp load!(type, value, adapter) do
+  defp load!(type, value, field, struct, adapter) do
     case Ecto.Type.adapter_load(adapter, type, value) do
-      {:ok, value} -> value
-      :error -> raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type}"
+      {:ok, value} ->
+        value
+      :error ->
+        field = field && " for field #{inspect field}"
+        struct = struct && " in #{inspect struct}"
+        raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type}#{field}#{struct}"
     end
   end
 
-  defp postprocess(select, fields, take) do
-    # The planner always put the from as the first
-    # entry in the query, avoiding fetching it multiple
-    # times even if it appears multiple times in the query.
-    # So we always need to handle it specially.
-    from? = match?([{:&, _, [0, _, _]}|_], fields)
-    &postprocess(&1, select, take, from?)
-  end
-
-  defp postprocess(row, expr, take, true),
-    do: transform_row(expr, take, hd(row), tl(row)) |> elem(0)
-  defp postprocess(row, expr, take, false),
-    do: transform_row(expr, take, nil, row) |> elem(0)
-
-  defp transform_row({:&, _, [0]}, take, from, values) do
-    {convert_to_tag(from, take[0]), values}
-  end
-
-  defp transform_row({:&, _, [ix]}, take, _from, [value|values]) do
-    {convert_to_tag(value, take[ix]), values}
-  end
-
-  defp transform_row({:{}, _, list}, take, from, values) do
-    {result, values} = transform_row(list, take, from, values)
-    {List.to_tuple(result), values}
-  end
-
-  defp transform_row({left, right}, take, from, values) do
-    {[left, right], values} = transform_row([left, right], take, from, values)
-    {{left, right}, values}
-  end
-
-  defp transform_row({:%{}, _, [{:|, _, [data, pairs]}]}, take, from, values) do
-    {data, values} = transform_row(data, take, from, values)
-    Enum.reduce pairs, {data, values}, fn {k, v}, {data, acc} ->
-      {k, acc} = transform_row(k, take, from, acc)
-      {v, acc} = transform_row(v, take, from, acc)
-      {:maps.update(k, v, data), acc}
-    end
-  end
-
-  defp transform_row({:%{}, _, pairs}, take, from, values) do
-    Enum.reduce pairs, {%{}, values}, fn {k, v}, {map, acc} ->
-      {k, acc} = transform_row(k, take, from, acc)
-      {v, acc} = transform_row(v, take, from, acc)
-      {Map.put(map, k, v), acc}
-    end
-  end
-
-  defp transform_row({:%, _, [name, map]}, take, from, values) do
-    case transform_row(map, take, from, values) do
-      {%{__struct__: ^name} = struct, acc} ->
-        {struct, acc}
-      {%{__struct__: _} = struct, _acc} ->
-        raise BadStructError, struct: name, term: struct
-      {map, acc} when is_map(map) ->
-        {struct(name, map), acc}
-    end
-  end
-
-  defp transform_row(list, take, from, values) when is_list(list) do
-    Enum.map_reduce(list, values, &transform_row(&1, take, from, &2))
-  end
-
-  defp transform_row(expr, _take, _from, values)
-       when is_atom(expr) or is_binary(expr) or is_number(expr) do
-    {expr, values}
-  end
-
-  defp transform_row(_, _take, _from, [value|values]) do
-    {value, values}
-  end
-
-  # We only need to worry about the struct -> map scenario.
-  # map -> struct is denied during compilation time.
-  # map -> map, struct -> struct and map/struct -> any are noop.
-  defp convert_to_tag(%{__struct__: _} = value, {:map, fields}),
-    do: to_map(value, fields)
-  defp convert_to_tag(value, _),
-    do: value
-
-  defp to_map(value, fields) when is_list(value) do
-    Enum.map(value, &to_map(&1, fields))
-  end
   defp to_map(nil, _fields) do
     nil
+  end
+  defp to_map(value, fields) when is_list(value) do
+    Enum.map(value, &to_map(&1, fields))
   end
   defp to_map(value, fields) do
     for field <- fields, into: %{} do

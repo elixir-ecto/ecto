@@ -7,8 +7,7 @@ defmodule Ecto.Adapter do
   @type t :: module
 
   @typedoc "Ecto.Query metadata fields (stored in cache)"
-  @type query_meta :: %{prefix: binary | nil, sources: tuple, assocs: term,
-                        preloads: term, select: term, fields: [term]}
+  @type query_meta :: %{prefix: binary | nil, sources: tuple, preloads: term, select: map}
 
   @typedoc "Ecto.Schema metadata fields"
   @type schema_meta :: %{source: source, schema: atom, context: term, autogenerate_id: {atom, :id | :binary_id}}
@@ -20,7 +19,7 @@ defmodule Ecto.Adapter do
   @type returning :: [atom]
   @type prepared :: term
   @type cached :: term
-  @type process :: (field :: Macro.t, value :: term, context :: term -> term)
+  @type process :: (term -> term)
   @type autogenerate_id :: {field :: atom, type :: :id | :binary_id, value :: term} | nil
   @type on_conflict :: {:raise, list(), []} |
                        {:nothing, list(), [atom]} |

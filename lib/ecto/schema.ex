@@ -1406,46 +1406,52 @@ defmodule Ecto.Schema do
   defp type_to_module(other), do: other
 
   @doc false
-  def __load__(schema, prefix, source, context, data, loader) do
-    struct = schema.__struct__()
-    types = schema.__schema__(:types)
+  # Loads data into struct by assumes fields are properly
+  # named and belongs to the struct. Types and values are
+  # zipped together in one pass as they are loaded.
+  def __safe_load__(struct, types, values, prefix, source, loader) do
+    zipped = safe_load_zip(types, values, struct, loader)
 
-    case __load__(struct, types, data, loader) do
+    case Map.merge(struct, Map.new(zipped)) do
       %{__meta__: %Metadata{} = metadata} = struct ->
-        source = source || schema.__schema__(:source)
-        metadata = %{metadata | state: :loaded, source: {prefix, source}, context: context}
+        metadata = %{metadata | state: :loaded, source: {prefix, source}}
         Map.put(struct, :__meta__, metadata)
-      struct ->
-        struct
+      map ->
+        map
+    end
+  end
+
+  defp safe_load_zip([{field, type} | fields], [value | values], struct, loader) do
+    [{field, load!(struct, field, type, value, loader)} |
+     safe_load_zip(fields, values, struct, loader)]
+  end
+  defp safe_load_zip([], [], _struct, _loader) do
+    []
+  end
+
+  @doc false
+  # Assumes data does not all belongs to schema/struct
+  # and that it may also require source-based renaming.
+  def __unsafe_load__(schema, data, loader) do
+    types = schema.__schema__(:types)
+    struct = schema.__struct__()
+    case __unsafe_load__(struct, types, data, loader) do
+      %{__meta__: %Metadata{} = metadata} = struct ->
+        Map.put(struct, :__meta__, %{metadata | state: :loaded})
+      map ->
+        map
     end
   end
 
   @doc false
-  def __load__(struct, types, map, loader) when is_map(map) do
-    Enum.reduce(types, struct, fn
-      {field, type}, acc ->
-        case fetch_string_or_atom_field(map, field) do
-          {:ok, value} -> Map.put(acc, field, load!(struct, field, type, value, loader))
-          :error -> acc
-        end
+  def __unsafe_load__(struct, types, map, loader) when is_map(map) do
+    Enum.reduce(types, struct, fn {field, type}, acc ->
+      case fetch_string_or_atom_field(map, field) do
+        {:ok, value} -> Map.put(acc, field, load!(struct, field, type, value, loader))
+        :error -> acc
+      end
     end)
   end
-
-  def __load__(struct, types, {fields, values}, loader) when is_list(fields) and is_list(values) do
-    __load__(fields, values, struct, types, loader)
-  end
-
-  defp __load__([field|fields], [value|values], struct, types, loader) do
-    case Map.fetch(types, field) do
-      {:ok, type} ->
-        value = load!(struct, field, type, value, loader)
-        __load__(fields, values, Map.put(struct, field, value), types, loader)
-      :error ->
-        raise ArgumentError, "unknown field `#{field}`#{error_data(struct)}"
-    end
-  end
-
-  defp __load__([], [], struct, _types, _loader), do: struct
 
   defp fetch_string_or_atom_field(map, field) when is_atom(field) do
     case Map.fetch(map, Atom.to_string(field)) do

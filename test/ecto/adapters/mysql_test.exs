@@ -45,7 +45,8 @@ defmodule Ecto.Adapters.MySQLTest do
 
   defp normalize(query, operation \\ :all, counter \\ 0) do
     {query, _params, _key} = Ecto.Query.Planner.prepare(query, operation, Ecto.Adapters.MySQL, counter)
-    Ecto.Query.Planner.normalize(query, operation, Ecto.Adapters.MySQL, counter)
+    {query, _} = Ecto.Query.Planner.normalize(query, operation, Ecto.Adapters.MySQL, counter)
+    query
   end
 
   test "from" do

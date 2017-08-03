@@ -2,7 +2,7 @@ defmodule Ecto.SubQuery do
   @moduledoc """
   Stores subquery information.
   """
-  defstruct [:query, :params, :fields, :meta, :cache]
+  defstruct [:query, :params, :select, :cache]
 end
 
 defmodule Ecto.Query do
