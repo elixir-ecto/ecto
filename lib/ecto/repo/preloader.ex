@@ -314,6 +314,7 @@ defmodule Ecto.Repo.Preloader do
 
   defp query!(query) when is_function(query, 1), do: query
   defp query!(%Ecto.Query{} = query), do: query
+  defp query!(%Ecto.SubQuery{} = query), do: Ecto.Queryable.to_query(query)
 
   defp take(take, field) do
     case Access.fetch(take, field) do
