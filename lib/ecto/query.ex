@@ -291,7 +291,7 @@ defmodule Ecto.Query do
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [], updates: [],
              havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
-  @opaque t :: %__MODULE__{}
+  @type t :: %__MODULE__{}
 
   defmodule DynamicExpr do
     @moduledoc false
