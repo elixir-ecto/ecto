@@ -44,4 +44,13 @@ defmodule Ecto.Query.Builder.PreloadTest do
     assert preload("posts", [{^:users, ^fun}]).preloads == [users: fun]
     assert preload("posts", [users: ^{fun, :comments}]).preloads == [users: {fun, :comments}]
   end
+
+  test "supports subqueries" do
+    query = from u in "users", limit: 10
+    assert preload("posts", [users: ^subquery(query)]).preloads == [users: subquery(query)]
+
+    subquery = subquery(from u in "users")
+    assert preload("posts", [{^:users, ^subquery}]).preloads == [users: subquery]
+    assert preload("posts", [users: ^{subquery, :comments}]).preloads == [users: {subquery, :comments}]
+  end
 end
