@@ -700,7 +700,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp validate_and_increment(kind, query, exprs, counter, _operation, adapter)
-      when kind in ~w(where group_by having order_by update)a do
+       when kind in ~w(where group_by having order_by update)a do
     {exprs, counter} =
       Enum.reduce(exprs, {[], counter}, fn
         %{expr: []}, {list, acc} ->
@@ -739,6 +739,21 @@ defmodule Ecto.Query.Planner do
     {source, acc}
   end
 
+  defp prewalk(:update, query, expr, counter, adapter) do
+    source = get_source!(:update, query, 0)
+
+    {inner, acc} =
+      Enum.map_reduce expr.expr, counter, fn {op, kw}, counter ->
+        {kw, acc} =
+          Enum.map_reduce kw, counter, fn {field, value}, counter ->
+            {value, acc} = prewalk(value, :update, query, expr, counter, adapter)
+            {{field_source(source, field), value}, acc}
+          end
+        {{op, kw}, acc}
+      end
+
+    {%{expr | expr: inner, params: nil}, acc}
+  end
   defp prewalk(kind, query, expr, counter, adapter) do
     {inner, acc} = prewalk(expr.expr, kind, query, expr, counter, adapter)
     {%{expr | expr: inner, params: nil}, acc}
@@ -748,6 +763,12 @@ defmodule Ecto.Query.Planner do
     {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
     {right, acc} = validate_in(meta, expr, param, acc)
     {{:in, in_meta, [left, right]}, acc}
+  end
+
+  defp prewalk({{:., dot_meta, [{:&, amp_meta, [ix]}, field]}, meta, []},
+               kind, query, _expr, acc, _adapter) do
+    field = field_source(get_source!(kind, query, ix), field)
+    {{{:., dot_meta, [{:&, amp_meta, [ix]}, field]}, meta, []}, acc}
   end
 
   defp prewalk({:^, meta, [ix]}, _kind, _query, _expr, acc, _adapter) when is_integer(ix) do
@@ -993,13 +1014,10 @@ defmodule Ecto.Query.Planner do
         error! query, "struct/2 in select expects a source with a schema"
 
       {{:ok, {kind, fields}}, {source, schema}} ->
-        types = if schema, do: schema.__schema__(:types), else: %{}
-        types =
-          for field <- List.wrap(fields), is_atom(field) do
-            {field, Map.get(types, field, :any)}
-          end
+        dumper = if schema, do: schema.__schema__(:dump), else: %{}
         schema = if kind == :map, do: nil, else: schema
-        {{:source, {source, schema}, types}, select_fields(types, ix)}
+        {types, fields} = select_dump(List.wrap(fields), dumper, ix)
+        {{:source, {source, schema}, types}, fields}
 
       {{:ok, {_, _}}, {:fragment, _, _}} ->
         error! query, "it is not possible to return a map/struct subset of a fragment, " <>
@@ -1013,21 +1031,32 @@ defmodule Ecto.Query.Planner do
         {{:value, :map}, [{:&, [], [ix]}]}
 
       {:error, {_, schema}} ->
-        types = schema.__schema__(:types) |> Enum.to_list()
-        {{:source, source, types}, select_fields(types, ix)}
+        {types, fields} = select_dump(schema.__schema__(:fields), schema.__schema__(:dump), ix)
+        {{:source, source, types}, fields}
 
       {:error, {:fragment, _, _}} ->
         {{:value, :map}, [{:&, [], [ix]}]}
 
       {:error, %Ecto.SubQuery{select: select} = subquery} ->
-        {select, subquery |> subquery_types() |> select_fields(ix)}
+        fields = for {field, _} <- subquery_types(subquery), do: select_field(field, ix)
+        {select, fields}
     end
   end
 
-  defp select_fields(types, ix) do
-    for {field, _} <- types do
-      {{:., [], [{:&, [], [ix]}, field]}, [], []}
-    end
+  defp select_dump(fields, dumper, ix) do
+    fields
+    |> Enum.reverse
+    |> Enum.reduce({[], []}, fn
+      field, {types, exprs} when is_atom(field) ->
+        {source, type} = Map.get(dumper, field, {field, :any})
+        {[{field, type} | types], [select_field(source, ix) | exprs]}
+      _field, acc ->
+        acc
+    end)
+  end
+
+  defp select_field(field, ix) do
+    {{:., [], [{:&, [], [ix]}, field]}, [], []}
   end
 
   defp get_source!(where, %{sources: sources} = query, ix) do
@@ -1129,6 +1158,15 @@ defmodule Ecto.Query.Planner do
       :error ->
         {:error, "value `#{inspect v}` cannot be dumped to type #{inspect type}"}
     end
+  end
+
+  defp field_source({_, schema}, field) when schema != nil do
+    # If the field is not found we return the field itself
+    # which will be checked and raise later.
+    schema.__schema__(:field_source, field) || field
+  end
+  defp field_source(_, field) do
+    field
   end
 
   defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do

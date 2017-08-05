@@ -58,9 +58,11 @@ defmodule Ecto.Integration.RepoTest do
     post = %Post{title: "insert, update, delete", text: "fetch empty"}
     meta = post.__meta__
 
+    assert %Post{} = inserted = TestRepo.insert!(post)
+    assert %Post{} = updated = TestRepo.update!(Ecto.Changeset.change(inserted, text: "new"))
+
     deleted_meta = put_in meta.state, :deleted
-    assert %Post{} = to_be_deleted = TestRepo.insert!(post)
-    assert %Post{__meta__: ^deleted_meta} = TestRepo.delete!(to_be_deleted)
+    assert %Post{__meta__: ^deleted_meta} = TestRepo.delete!(updated)
 
     loaded_meta = put_in meta.state, :loaded
     assert %Post{__meta__: ^loaded_meta} = TestRepo.insert!(post)
@@ -68,6 +70,16 @@ defmodule Ecto.Integration.RepoTest do
     post = TestRepo.one(Post)
     assert post.__meta__.state == :loaded
     assert post.inserted_at
+  end
+
+  test "insert, update and delete with field source" do
+    permalink = %Permalink{url: "url"}
+    assert %Permalink{url: "url"} = inserted =
+           TestRepo.insert!(permalink)
+    assert %Permalink{url: "new"} = updated =
+           TestRepo.update!(Ecto.Changeset.change(inserted, url: "new"))
+    assert %Permalink{url: "new"} =
+           TestRepo.delete!(updated)
   end
 
   @tag :composite_pk
@@ -671,6 +683,20 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :returning
+  test "insert all with returning with schema with field source" do
+    assert {0, []} = TestRepo.insert_all(Permalink, [], returning: true)
+    assert {0, nil} = TestRepo.insert_all(Permalink, [], returning: false)
+
+    {2, [c1, c2]} = TestRepo.insert_all(Permalink, [[url: "1"], [url: "2"]], returning: [:id, :url])
+    assert %Permalink{url: "1", __meta__: %{state: :loaded}} = c1
+    assert %Permalink{url: "2", __meta__: %{state: :loaded}} = c2
+
+    {2, [c1, c2]} = TestRepo.insert_all(Permalink, [[url: "3"], [url: "4"]], returning: true)
+    assert %Permalink{url: "3", __meta__: %{state: :loaded}} = c1
+    assert %Permalink{url: "4", __meta__: %{state: :loaded}} = c2
+  end
+
+  @tag :returning
   test "insert all with returning without schema" do
     {2, [c1, c2]} = TestRepo.insert_all("comments", [[text: "1"], [text: "2"]], returning: [:id, :text])
     assert %{id: _, text: "1"} = c1
@@ -1023,6 +1049,12 @@ defmodule Ecto.Integration.RepoTest do
     assert c == %{id: cid, text: "comment", post: nil}
   end
 
+  test "query select field source" do
+    TestRepo.insert!(%Permalink{url: "url"})
+    assert ["url"] = Permalink |> select([p], p.url) |> TestRepo.all()
+    assert [1] = Permalink |> select([p], count(p.url)) |> TestRepo.all()
+  end
+
   test "query count distinct" do
     TestRepo.insert!(%Post{title: "1"})
     TestRepo.insert!(%Post{title: "1"})
@@ -1168,6 +1200,25 @@ defmodule Ecto.Integration.RepoTest do
 
     @tag :returning
     @tag :with_conflict_target
+    test "on conflict keyword list and conflict target and returning and field source" do
+      TestRepo.insert!(%Permalink{url: "old"})
+      {:ok, c1} = TestRepo.insert(%Permalink{url: "old"},
+                                  on_conflict: [set: [url: "new1"]],
+                                  conflict_target: [:url],
+                                  returning: [:url])
+
+      TestRepo.insert!(%Permalink{url: "old"})
+      {:ok, c2} = TestRepo.insert(%Permalink{url: "old"},
+                                  on_conflict: [set: [url: "new2"]],
+                                  conflict_target: [:url],
+                                  returning: true)
+
+      assert c1.url == "new1"
+      assert c2.url == "new2"
+    end
+
+    @tag :returning
+    @tag :with_conflict_target
     test "on conflict ignore and returning" do
       post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: :nothing, conflict_target: [:uuid])
@@ -1294,6 +1345,21 @@ defmodule Ecto.Integration.RepoTest do
       assert TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
              {1, nil}
       assert TestRepo.all(from p in Post, select: p.title) == ["second"]
+    end
+
+    @tag :with_conflict_target
+    @tag :returning
+    test "on conflict keyword list and conflict target and returning and source field" do
+      on_conflict = [set: [url: "new"]]
+      permalink = [url: "old"]
+
+      assert {1, [%Permalink{url: "old"}]} =
+             TestRepo.insert_all(Permalink, [permalink],
+                                 on_conflict: on_conflict, conflict_target: [:url], returning: [:url])
+
+      assert {1, [%Permalink{url: "new"}]} =
+             TestRepo.insert_all(Permalink, [permalink],
+                                 on_conflict: on_conflict, conflict_target: [:url], returning: [:url])
     end
 
     @tag :with_conflict_target

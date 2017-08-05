@@ -26,7 +26,7 @@ defmodule Ecto.Query.PlannerTest do
 
     @primary_key {:id, Custom.Permalink, []}
     schema "posts" do
-      field :title, :string
+      field :title, :string, source: :post_title
       field :text, :string
       field :code, :binary
       field :posted, :naive_datetime
@@ -478,7 +478,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, params} = where(Post, [p], p.title == ^"foo" and p.id in ^[1, 2, 3] and
                                        p.title == ^"bar") |> normalize_with_params()
     assert Macro.to_string(hd(query.wheres).expr) ==
-           "&0.title() == ^0 and &0.id() in ^(1, 3) and &0.title() == ^2"
+           "&0.post_title() == ^0 and &0.id() in ^(1, 3) and &0.post_title() == ^2"
     assert params == ["foo", 1, 2, 3, "bar"]
   end
 
@@ -498,17 +498,17 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.expr ==
              {:&, [], [0]}
     assert query.select.fields ==
-           select_fields([:code, :id, :links, :posted, :text, :title, :visits], 0)
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0)
 
     query = from(Post, []) |> select([p], {p, p.title}) |> normalize()
     assert query.select.fields ==
-           select_fields([:code, :id, :links, :posted, :text, :title, :visits], 0) ++
-           [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
+           [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query = from(Post, []) |> select([p], {p.title, p}) |> normalize()
     assert query.select.fields ==
-           select_fields([:code, :id, :links, :posted, :text, :title, :visits], 0) ++
-           [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
+           [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query =
       from(Post, [])
@@ -517,9 +517,9 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, _], {p.title, p})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:code, :id, :links, :posted, :text, :title, :visits], 0) ++
-           select_fields([:id, :post_id, :posted, :text, :uuid], 1) ++
-           [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
+           select_fields([:id, :text, :posted, :uuid, :post_id], 1) ++
+           [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
   end
 
   test "normalize: select with struct/2" do
@@ -529,12 +529,12 @@ defmodule Ecto.Query.PlannerTest do
 
     query = Post |> select([p], struct(p, [:id, :title])) |> normalize()
     assert query.select.expr == {:&, [], [0]}
-    assert query.select.fields == select_fields([:id, :title], 0)
+    assert query.select.fields == select_fields([:id, :post_title], 0)
 
     query = Post |> select([p], {struct(p, [:id, :title]), p.title}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :title], 0) ++
-           [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
+           select_fields([:id, :post_title], 0) ++
+           [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query =
       Post
@@ -542,7 +542,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, struct(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:code, :id, :links, :posted, :text, :title, :visits], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
            select_fields([:id, :text], 1)
   end
 
@@ -555,7 +555,7 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
     assert query.select.expr == {:&, [], [0]}
     assert query.select.fields ==
-           select_fields([:id, :title], 0) ++
+           select_fields([:id, :post_title], 0) ++
            select_fields([:id, :text], 1)
 
     query =
@@ -566,7 +566,7 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
     assert query.select.expr == {:&, [], [0]}
     assert query.select.fields ==
-           select_fields([:id, :title], 0) ++
+           select_fields([:id, :post_title], 0) ++
            select_fields([:id], 1) ++
            select_fields([:id, :text], 1) ++
            select_fields([:id], 0)
@@ -575,12 +575,12 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: select with map/2" do
     query = Post |> select([p], map(p, [:id, :title])) |> normalize()
     assert query.select.expr == {:&, [], [0]}
-    assert query.select.fields == select_fields([:id, :title], 0)
+    assert query.select.fields == select_fields([:id, :post_title], 0)
 
     query = Post |> select([p], {map(p, [:id, :title]), p.title}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :title], 0) ++
-           [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
+           select_fields([:id, :post_title], 0) ++
+           [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query =
       Post
@@ -588,7 +588,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, map(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:code, :id, :links, :posted, :text, :title, :visits], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
            select_fields([:id, :text], 1)
   end
 
@@ -601,7 +601,7 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
     assert query.select.expr == {:&, [], [0]}
     assert query.select.fields ==
-           select_fields([:id, :title], 0) ++
+           select_fields([:id, :post_title], 0) ++
            select_fields([:id, :text], 1)
 
     query =
@@ -612,7 +612,7 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
     assert query.select.expr == {:&, [], [0]}
     assert query.select.fields ==
-           select_fields([:id, :title], 0) ++
+           select_fields([:id, :post_title], 0) ++
            select_fields([:id], 1) ++
            select_fields([:id, :text], 1) ++
            select_fields([:id], 0)

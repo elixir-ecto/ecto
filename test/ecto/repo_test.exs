@@ -415,7 +415,7 @@ defmodule Ecto.RepoTest do
 
     test "raises on non-empty conflict_target with on_conflict raise" do
       assert_raise ArgumentError, ":conflict_target option is forbidden when :on_conflict is :raise", fn ->
-        TestRepo.insert(%MySchema{id: 1}, on_conflict: :raise, conflict_target: :oops)
+        TestRepo.insert(%MySchema{id: 1}, on_conflict: :raise, conflict_target: [:id])
       end
     end
 
@@ -479,7 +479,7 @@ defmodule Ecto.RepoTest do
            TestRepo.load(MySchema, %{bad: "bad"})
 
     # invalid value
-    assert_raise ArgumentError, "cannot load `0` as type :string for :x in schema Ecto.RepoTest.MySchema", fn ->
+    assert_raise ArgumentError, "cannot load `0` as type :string for field `x` in schema Ecto.RepoTest.MySchema", fn ->
       TestRepo.load(MySchema, %{x: 0})
     end
 

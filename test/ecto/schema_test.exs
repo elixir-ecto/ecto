@@ -26,7 +26,7 @@ defmodule Ecto.SchemaTest do
     assert Schema.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :comment_id]
     assert Schema.__schema__(:read_after_writes)  == [:email, :count]
     assert Schema.__schema__(:primary_key)        == [:id]
-    assert Schema.__schema__(:autogenerate_id)    == {:id, :id}
+    assert Schema.__schema__(:autogenerate_id)    == {:id, :id, :id}
   end
 
   test "types metadata" do
@@ -119,7 +119,7 @@ defmodule Ecto.SchemaTest do
 
   test "custom schema attributes" do
     assert %CustomSchema{perm: "abc"}.perm == "abc"
-    assert CustomSchema.__schema__(:autogenerate_id) == {:perm, :id}
+    assert CustomSchema.__schema__(:autogenerate_id) == {:perm, :perm, :id}
     assert CustomSchema.__schema__(:type, :comment_id) == :string
   end
 
@@ -137,11 +137,11 @@ defmodule Ecto.SchemaTest do
   end
 
   test "embedded schema" do
-    assert EmbeddedSchema.__schema__(:source)             == nil
-    assert EmbeddedSchema.__schema__(:prefix)             == nil
-    assert EmbeddedSchema.__schema__(:fields)             == [:id, :name]
-    assert EmbeddedSchema.__schema__(:primary_key)        == [:id]
-    assert EmbeddedSchema.__schema__(:autogenerate_id)    == {:id, :binary_id}
+    assert EmbeddedSchema.__schema__(:source)          == nil
+    assert EmbeddedSchema.__schema__(:prefix)          == nil
+    assert EmbeddedSchema.__schema__(:fields)          == [:id, :name]
+    assert EmbeddedSchema.__schema__(:primary_key)     == [:id]
+    assert EmbeddedSchema.__schema__(:autogenerate_id) == {:id, :id, :binary_id}
   end
 
   test "embeded schema does not have metadata" do

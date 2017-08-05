@@ -22,7 +22,7 @@ defmodule Ecto.Integration.Migration do
       add :intensity, :float
       add :author_id, :integer
       add :posted, :date
-      timestamps null: true
+      timestamps(null: true)
     end
 
     create table(:posts_users, primary_key: false) do
@@ -42,10 +42,12 @@ defmodule Ecto.Integration.Migration do
     create unique_index(:posts, [:uuid], comment: "posts index")
 
     create table(:permalinks) do
-      add :url, :string
+      add :uniform_resource_locator, :string
       add :post_id, references(:posts)
       add :user_id, references(:users)
     end
+
+    create unique_index(:permalinks, [:uniform_resource_locator])
 
     create table(:comments) do
       add :text, :string, size: 100

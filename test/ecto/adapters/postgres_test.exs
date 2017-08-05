@@ -415,7 +415,7 @@ defmodule Ecto.Adapters.PostgresTest do
   test "update all with returning" do
     query = from(m in Schema, update: [set: [x: 0]]) |> select([m], m) |> normalize(:update_all)
     assert SQL.update_all(query) ==
-           ~s{UPDATE "schema" AS s0 SET "x" = 0 RETURNING s0."id", s0."w", s0."x", s0."y", s0."z"}
+           ~s{UPDATE "schema" AS s0 SET "x" = 0 RETURNING s0."id", s0."x", s0."y", s0."z", s0."w"}
   end
 
   test "update all array ops" do
@@ -457,7 +457,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "delete all with returning" do
     query = Schema |> Queryable.to_query |> select([m], m) |> normalize
-    assert SQL.delete_all(query) == ~s{DELETE FROM "schema" AS s0 RETURNING s0."id", s0."w", s0."x", s0."y", s0."z"}
+    assert SQL.delete_all(query) == ~s{DELETE FROM "schema" AS s0 RETURNING s0."id", s0."x", s0."y", s0."z", s0."w"}
   end
 
   test "delete all with prefix" do

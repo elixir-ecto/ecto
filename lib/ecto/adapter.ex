@@ -20,7 +20,6 @@ defmodule Ecto.Adapter do
   @type prepared :: term
   @type cached :: term
   @type process :: (term -> term)
-  @type autogenerate_id :: {field :: atom, type :: :id | :binary_id, value :: term} | nil
   @type on_conflict :: {:raise, list(), []} |
                        {:nothing, list(), [atom]} |
                        {Ecto.Query.t, list(), [atom]}
