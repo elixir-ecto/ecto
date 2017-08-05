@@ -258,8 +258,6 @@ defmodule Ecto.Schema do
   * `__schema__(:field_source, field)` - Returns the alias of the given field;
 
   * `__schema__(:type, field)` - Returns the type of the given non-virtual field;
-  * `__schema__(:types)` - Returns a map of all non-virtual
-    field names and their type;
 
   * `__schema__(:associations)` - Returns a list of all association field names;
   * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
@@ -1444,7 +1442,7 @@ defmodule Ecto.Schema do
   # Assumes data does not all belongs to schema/struct
   # and that it may also require source-based renaming.
   def __unsafe_load__(schema, data, loader) do
-    types = schema.__schema__(:types)
+    types = schema.__schema__(:load)
     struct = schema.__struct__()
     case __unsafe_load__(struct, types, data, loader) do
       %{__meta__: %Metadata{} = metadata} = struct ->
@@ -1456,12 +1454,21 @@ defmodule Ecto.Schema do
 
   @doc false
   def __unsafe_load__(struct, types, map, loader) when is_map(map) do
-    Enum.reduce(types, struct, fn {field, type}, acc ->
-      case fetch_string_or_atom_field(map, field) do
+    Enum.reduce(types, struct, fn pair, acc ->
+      {field, source, type} = field_source_and_type(pair)
+      case fetch_string_or_atom_field(map, source) do
         {:ok, value} -> Map.put(acc, field, load!(struct, field, type, value, loader))
         :error -> acc
       end
     end)
+  end
+
+  @compile {:inline, field_source_and_type: 1, fetch_string_or_atom_field: 2}
+  defp field_source_and_type({field, {:source, source, type}}) do
+    {field, source, type}
+  end
+  defp field_source_and_type({field, type}) do
+    {field, field, type}
   end
 
   defp fetch_string_or_atom_field(map, field) when is_atom(field) do
@@ -1704,10 +1711,7 @@ defmodule Ecto.Schema do
         end
       end)
 
-    types = Macro.escape(Map.new(fields))
-
     quote do
-      def __schema__(:types), do: unquote(types)
       unquote(fields_quoted)
       unquote(sources_quoted)
       def __schema__(:type, _), do: nil
@@ -1738,7 +1742,7 @@ defmodule Ecto.Schema do
       end
 
     quote do
-      def __schema__(:load), do: %{unquote_splicing(mapping)}
+      def __schema__(:load), do: unquote(mapping)
     end
   end
 

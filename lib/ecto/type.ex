@@ -342,12 +342,12 @@ defmodule Ecto.Type do
 
   defp dump_embed(%{cardinality: :one, related: schema, field: field},
                   value, fun) when is_map(value) do
-    {:ok, dump_embed(field, schema, value, schema.__schema__(:types), fun)}
+    {:ok, dump_embed(field, schema, value, schema.__schema__(:dump), fun)}
   end
 
   defp dump_embed(%{cardinality: :many, related: schema, field: field},
                   value, fun) when is_list(value) do
-    types = schema.__schema__(:types)
+    types = schema.__schema__(:dump)
     {:ok, Enum.map(value, &dump_embed(field, schema, &1, types, fun))}
   end
 
@@ -356,12 +356,15 @@ defmodule Ecto.Type do
   end
 
   defp dump_embed(_field, schema, %{__struct__: schema} = struct, types, dumper) do
-    Enum.reduce(types, %{}, fn {field, type}, acc ->
+    Enum.reduce(types, %{}, fn {field, {source, type}}, acc ->
       value = Map.get(struct, field)
 
       case dumper.(type, value) do
-        {:ok, value} -> Map.put(acc, field, value)
-        :error       -> raise ArgumentError, "cannot dump `#{inspect value}` as type #{inspect type}"
+        {:ok, value} ->
+          Map.put(acc, source, value)
+        :error ->
+          raise ArgumentError, "cannot dump `#{inspect value}` as type #{inspect type} " <>
+                               "for field `#{field}` in schema #{inspect schema}"
       end
     end)
   end

@@ -10,7 +10,7 @@ defmodule Ecto.RepoTest do
 
     schema "my_schema" do
       field :x, :string
-      field :y, :binary
+      field :y, :binary, source: :yyy
       field :z, :string, default: "z"
       field :array, {:array, :string}
       field :map, {:map, :string}
@@ -433,7 +433,7 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "Repo.load/2" do
+  test "load/2" do
     # string fields
     assert %MySchema{x: "abc"} =
            TestRepo.load(MySchema, %{"x" => "abc"})
@@ -457,6 +457,10 @@ defmodule Ecto.RepoTest do
     # default value
     assert %MySchema{x: "abc", z: "z"} =
            TestRepo.load(MySchema, %{x: "abc"})
+
+    # source field
+    assert %MySchema{y: "abc"} =
+           TestRepo.load(MySchema, %{yyy: "abc"})
 
     # array field
     assert %MySchema{array: ["one", "two"]} =
