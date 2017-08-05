@@ -1691,7 +1691,6 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  # TODO: Keep or fields or sources.
   def __types__(fields, field_sources) do
     fields_quoted =
       Enum.map(fields, fn {name, type} ->
@@ -1703,18 +1702,19 @@ defmodule Ecto.Schema do
       end)
 
     sources_quoted =
-      Enum.map(field_sources, fn {name, source} ->
+      Enum.map(fields, fn {name, type} ->
         quote do
-          def __schema__(:type, unquote(source)) do
-            unquote(Macro.escape(fields[name]))
+          def __schema__(:source_type, unquote(field_sources[name] || name)) do
+            unquote(Macro.escape(type))
           end
         end
       end)
 
     quote do
       unquote(fields_quoted)
-      unquote(sources_quoted)
       def __schema__(:type, _), do: nil
+      unquote(sources_quoted)
+      def __schema__(:source_type, _), do: nil
     end
   end
 
