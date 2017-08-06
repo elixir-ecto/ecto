@@ -4,10 +4,10 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
   import Mix.Tasks.Ecto.Rollback, only: [run: 2]
   import Support.FileHelpers
 
-  migrations_path = Path.join([tmp_path(), inspect(Ecto.Migrate), "migrations"])
+  @migrations_path Path.join([tmp_path(), inspect(Ecto.Migrate), "migrations"])
 
   setup do
-    File.mkdir_p!(unquote(migrations_path))
+    File.mkdir_p!(@migrations_path)
     :ok
   end
 
@@ -73,7 +73,7 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
   test "runs the migrator yielding the repository and migrations path" do
     run ["-r", to_string(Repo), "--prefix", "foo"], fn repo, path, direction, opts ->
       assert repo == Repo
-      assert path == Application.app_dir(:ecto, "tmp/#{inspect(Ecto.Migrate)}/migrations")
+      assert path == Path.expand("tmp/#{inspect(Ecto.Migrate)}/migrations", File.cwd!)
       assert direction == :down
       assert opts[:step] == 1
       assert opts[:prefix] == "foo"
@@ -83,7 +83,7 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
   end
 
   test "raises when migrations path does not exist" do
-    File.rm_rf!(unquote(migrations_path))
+    File.rm_rf!(@migrations_path)
     assert_raise Mix.Error, fn ->
       run ["-r", to_string(Repo)], fn _, _, _, _ -> [] end
     end
