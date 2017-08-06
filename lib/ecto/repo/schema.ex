@@ -93,9 +93,14 @@ defmodule Ecto.Repo.Schema do
   end
   defp init_mapper(schema, dumper, adapter) do
     fn {field, value}, acc ->
-      {source, type} = Map.fetch!(dumper, field)
-      value = dump_field!(:insert_all, schema, field, type, value, adapter)
-      {{source, value}, Map.put(acc, source, true)}
+      case dumper do
+        %{^field => {source, type}} ->
+          value = dump_field!(:insert_all, schema, field, type, value, adapter)
+          {{source, value}, Map.put(acc, source, true)}
+        %{} ->
+          raise ArgumentError, "unknown field `#{field}` in schema #{inspect schema} given to " <>
+                               "insert_all. Note virtual fields and associations are not supported"
+      end
     end
   end
 

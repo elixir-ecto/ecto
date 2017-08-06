@@ -515,7 +515,7 @@ defmodule Ecto.Repo do
 
   It returns a tuple containing the number of entries
   and any returned result as second element. If the database
-  does not support RETURNING in UPDATE statements or no
+  does not support RETURNING in INSERT statements or no
   return result was selected, the second element will be `nil`.
 
   When a schema is given, the values given will be properly dumped
@@ -527,6 +527,9 @@ defmodule Ecto.Repo do
   to insert data into the database without the conveniences of
   `c:insert/2`. This is also consistent with `c:update_all/3` that
   does not handle timestamps as well.
+
+  It is also not possible to use `insert_all` to insert across multiple
+  tables, therefore associations are not supported.
 
   If a source is given, without a schema, the given fields are passed
   as is to the adapter.

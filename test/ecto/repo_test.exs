@@ -14,6 +14,7 @@ defmodule Ecto.RepoTest do
       field :z, :string, default: "z"
       field :array, {:array, :string}
       field :map, {:map, :string}
+      belongs_to :another, MySchema.Another
     end
   end
 
@@ -430,6 +431,14 @@ defmodule Ecto.RepoTest do
   describe "preload" do
     test "if first argument of preload is nil, it should return nil" do
       assert TestRepo.preload(nil, []) == nil
+    end
+  end
+
+  describe "insert_all" do
+    test "raises when on associations" do
+      assert_raise ArgumentError, fn ->
+        TestRepo.insert_all MySchema, [%{another: nil}]
+      end
     end
   end
 
