@@ -3,7 +3,6 @@ defmodule Mix.Tasks.Ecto.Load do
   import Mix.Ecto
 
   @shortdoc "Loads previously dumped database structure"
-  @recursive true
   @default_opts [force: false]
 
   @moduledoc """

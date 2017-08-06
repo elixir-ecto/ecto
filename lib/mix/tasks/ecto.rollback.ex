@@ -3,7 +3,6 @@ defmodule Mix.Tasks.Ecto.Rollback do
   import Mix.Ecto
 
   @shortdoc "Rolls back the repository migrations"
-  @recursive true
 
   @moduledoc """
   Reverts applied migrations in the given repository.

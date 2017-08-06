@@ -2,7 +2,6 @@ defmodule Mix.Tasks.Ecto.Dump do
   use Mix.Task
   import Mix.Ecto
 
-  @recursive true
   @shortdoc "Dumps the repository database structure"
 
   @moduledoc """

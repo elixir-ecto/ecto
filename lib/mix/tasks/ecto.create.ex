@@ -3,7 +3,6 @@ defmodule Mix.Tasks.Ecto.Create do
   import Mix.Ecto
 
   @shortdoc "Creates the repository storage"
-  @recursive true
 
   @moduledoc """
   Create the storage for the given repository.

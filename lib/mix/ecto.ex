@@ -21,28 +21,29 @@ defmodule Mix.Ecto do
   end
 
   defp parse_repo([], []) do
-    app = Mix.Project.config[:app]
+    apps =
+      if apps_paths = Mix.Project.apps_paths do
+        Map.keys(apps_paths)
+      else
+        [Mix.Project.config[:app]]
+      end
 
-    cond do
-      repos = Application.get_env(app, :ecto_repos) ->
-        repos
-
-      Map.has_key?(Mix.Project.deps_paths, :ecto) ->
+    apps
+    |> Enum.flat_map(&Application.get_env(&1, :ecto_repos, []))
+    |> Enum.uniq()
+    |> case do
+      [] ->
         Mix.shell.error """
-        warning: could not find repositories for application #{inspect app}.
+        warning: could not find Ecto repos in any of the apps: #{inspect apps}.
 
         You can avoid this warning by passing the -r flag or by setting the
-        repositories managed by this application in your config/config.exs:
+        repositories managed by those applications in your config/config.exs:
 
-            config #{inspect app}, ecto_repos: [...]
-
-        The configuration may be an empty list if it does not define any repo.
+            config #{inspect hd(apps)}, ecto_repos: [...]
         """
         []
-
-      true ->
-        []
-
+      repos ->
+        repos
     end
   end
 
@@ -145,21 +146,16 @@ defmodule Mix.Ecto do
   """
   @spec migrations_path(Ecto.Repo.t) :: String.t
   def migrations_path(repo) do
-    Path.join(build_repo_priv(repo), "migrations")
+    Path.join(source_repo_priv(repo), "migrations")
   end
 
   @doc """
   Returns the private repository path relative to the source.
   """
   def source_repo_priv(repo) do
-    repo.config()[:priv] || "priv/#{repo |> Module.split |> List.last |> Macro.underscore}"
-  end
-
-  @doc """
-  Returns the private repository path inside build.
-  """
-  def build_repo_priv(repo) do
-    Application.app_dir(Keyword.fetch!(repo.config(), :otp_app), source_repo_priv(repo))
+    priv = repo.config()[:priv] || "priv/#{repo |> Module.split |> List.last |> Macro.underscore}"
+    app = Keyword.fetch!(repo.config(), :otp_app)
+    Path.join(Mix.Project.deps_paths[app] || File.cwd!, priv)
   end
 
   @doc """
