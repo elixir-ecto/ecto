@@ -455,6 +455,9 @@ defmodule Ecto.Repo.Schema do
     metadata(schema, prefix, source, autogen_id, context, opts)
   end
 
+  defp conflict_target({:constraint, constraint}, _dumper) when is_atom(constraint) do
+    {:constraint, constraint}
+  end
   defp conflict_target(conflict_target, dumper) do
     for target <- List.wrap(conflict_target) do
       case dumper do
