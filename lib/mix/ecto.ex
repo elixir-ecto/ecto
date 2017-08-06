@@ -81,7 +81,15 @@ defmodule Mix.Ecto do
   """
   @spec ensure_started(Ecto.Repo.t, Keyword.t) :: {:ok, pid, [atom]} | no_return
   def ensure_started(repo, opts) do
-    {:ok, _} = Application.ensure_all_started(:ecto)
+    {:ok, started} = Application.ensure_all_started(:ecto)
+
+    # If we starting Ecto just now, assume
+    # logger has not been properly booted yet.
+    if :ecto in started && Process.whereis(Logger) do
+      Logger.App.stop
+      :ok = Logger.App.start
+    end
+
     {:ok, apps} = repo.__adapter__.ensure_all_started(repo, :temporary)
 
     pool_size = Keyword.get(opts, :pool_size, 1)
