@@ -95,6 +95,11 @@ defmodule Ecto.TypeTest do
     assert cast({:array, Custom}, 1) == :error
   end
 
+  test "in" do
+    assert cast({:in, :integer}, ["1", "2", "3"]) == {:ok, [1, 2, 3]}
+    assert cast({:in, :integer}, nil) == :error
+  end
+
   test "decimal" do
     assert cast(:decimal, "1.0") == {:ok, Decimal.new("1.0")}
     assert cast(:decimal, 1.0) == {:ok, Decimal.new("1.0")}

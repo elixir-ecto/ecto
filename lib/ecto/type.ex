@@ -540,6 +540,7 @@ defmodule Ecto.Type do
     cast_embed(type, value)
   end
 
+  def cast({:in, _type}, nil), do: :error
   def cast(_type, nil), do: {:ok, nil}
 
   def cast(:binary_id, value) when is_binary(value) do

@@ -21,21 +21,31 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "fetch empty" do
-    assert [] == TestRepo.all(Post)
-    assert [] == TestRepo.all(from p in Post)
+    assert TestRepo.all(Post) == []
+    assert TestRepo.all(from p in Post) == []
   end
 
   test "fetch with in" do
     TestRepo.insert!(%Post{title: "hello"})
 
-    assert []  = TestRepo.all from p in Post, where: p.title in []
-    assert []  = TestRepo.all from p in Post, where: p.title in ["1", "2", "3"]
-    assert []  = TestRepo.all from p in Post, where: p.title in ^[]
+    # Works without the query cache.
+    assert_raise Ecto.Query.CastError, fn ->
+      TestRepo.all(from p in Post, where: p.title in ^nil)
+    end
+
+    assert [] = TestRepo.all from p in Post, where: p.title in []
+    assert [] = TestRepo.all from p in Post, where: p.title in ["1", "2", "3"]
+    assert [] = TestRepo.all from p in Post, where: p.title in ^[]
 
     assert [_] = TestRepo.all from p in Post, where: not p.title in []
     assert [_] = TestRepo.all from p in Post, where: p.title in ["1", "hello", "3"]
     assert [_] = TestRepo.all from p in Post, where: p.title in ["1", ^"hello", "3"]
     assert [_] = TestRepo.all from p in Post, where: p.title in ^["1", "hello", "3"]
+
+    # Still doesn't work after the query cache.
+    assert_raise Ecto.Query.CastError, fn ->
+      TestRepo.all(from p in Post, where: p.title in ^nil)
+    end
   end
 
   test "fetch without schema" do
