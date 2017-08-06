@@ -673,7 +673,7 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize(:update_all)
     end
 
-    message = ~r"`update_all` allows only `where` and `join` expressions in query"
+    message = ~r"`update_all` allows only `where` and `join` expressions"
     assert_raise Ecto.QueryError, message, fn ->
       from(p in Post, order_by: p.title, update: [set: [title: "foo"]]) |> normalize(:update_all)
     end
@@ -685,7 +685,7 @@ defmodule Ecto.Query.PlannerTest do
       from(p in Post, update: [set: [name: "foo"]]) |> normalize(:delete_all)
     end
 
-    message = ~r"`delete_all` allows only `where` and `join` expressions in query"
+    message = ~r"`delete_all` allows only `where` and `join` expressions"
     assert_raise Ecto.QueryError, message, fn ->
       from(p in Post, order_by: p.title) |> normalize(:delete_all)
     end

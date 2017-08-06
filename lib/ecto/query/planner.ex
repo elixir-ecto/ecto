@@ -1212,7 +1212,9 @@ defmodule Ecto.Query.Planner do
                   havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
         query
       _ ->
-        error! query, "`#{operation}` allows only `where` and `join` expressions"
+        error! query, "`#{operation}` allows only `where` and `join` expressions. " <>
+                      "You can exclude unwanted expressions from a query by using " <>
+                      "Ecto.Query.exclude/2. Error found"
     end
   end
 
