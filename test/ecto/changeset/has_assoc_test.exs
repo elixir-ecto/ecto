@@ -812,6 +812,27 @@ defmodule Ecto.Changeset.HasAssocTest do
     refute Map.has_key?(changeset.changes, :profile)
   end
 
+  test "put_change/3 with has_one" do
+    changeset = Changeset.change(%Author{}, profile: %{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
+
+    base_changeset = Changeset.change(%Author{})
+    changeset = Changeset.put_change(base_changeset, :profile, [name: "michal"])
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
+
+    changeset = Changeset.put_change(base_changeset, :profile, %Profile{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
+
+    base_changeset = Changeset.change(%Author{profile: %Profile{name: "michal"}})
+    empty_update_changeset = Changeset.change(%Profile{name: "michal"})
+
+    changeset = Changeset.put_change(base_changeset, :profile, empty_update_changeset)
+    refute Map.has_key?(changeset.changes, :profile)
+  end
+
   test "put_assoc/4 with has_many" do
     base_changeset = Changeset.change(%Author{})
 
@@ -831,6 +852,27 @@ defmodule Ecto.Changeset.HasAssocTest do
     empty_update_changeset = Changeset.change(%Post{title: "hello"})
 
     changeset = Changeset.put_assoc(base_changeset, :posts, [empty_update_changeset])
+    refute Map.has_key?(changeset.changes, :posts)
+  end
+
+  test "put_change/3 with has_many" do
+    changeset = Changeset.change(%Author{}, posts: [%{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    base_changeset = Changeset.change(%Author{})
+    changeset = Changeset.put_change(base_changeset, :posts, [[title: "hello"]])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    changeset = Changeset.put_change(base_changeset, :posts, [%Post{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    base_changeset = Changeset.change(%Author{posts: [%Post{title: "hello"}]})
+    empty_update_changeset = Changeset.change(%Post{title: "hello"})
+
+    changeset = Changeset.put_change(base_changeset, :posts, [empty_update_changeset])
     refute Map.has_key?(changeset.changes, :posts)
   end
 

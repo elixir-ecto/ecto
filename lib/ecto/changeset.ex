@@ -1025,10 +1025,19 @@ defmodule Ecto.Changeset do
     %{changeset | changes: changes, errors: errors, valid?: valid?}
   end
 
-  defp put_change(_data, _changes, _errors, _valid?, _key, _value, {tag, _})
-      when tag in @relations do
-    raise "changing #{tag}s with change/2 or put_change/3 is not supported, " <>
-          "please use put_#{tag}/4 instead"
+  defp put_change(data, changes, errors, valid?, key, value, {tag, relation})
+       when tag in @relations do
+    current = Relation.load!(data, Map.get(data, key))
+
+    case Relation.change(relation, value, current) do
+      {:ok, _, _, true} ->
+        {changes, errors, valid?}
+      {:ok, change, relation_valid?, false} ->
+        {Map.put(changes, key, change), errors, valid? and relation_valid?}
+      :error ->
+        error = {key, {"is invalid", [type: expected_relation_type(relation)]}}
+        {changes, [error | errors], false}
+    end
   end
 
   defp put_change(data, changes, errors, valid?, key, value, _type) do
@@ -1050,27 +1059,24 @@ defmodule Ecto.Changeset do
   internal to the application.
 
   When updating the data, this function requires the association to have been
-  preloaded in the changeset struct. Missing data will
-  invoke the `:on_replace` behaviour defined on the association.
-  Preloading is not necessary for newly built structs.
+  preloaded in the changeset struct. Missing data will invoke the `:on_replace`
+  behaviour defined on the association. Preloading is not necessary for newly
+  built structs.
 
-  The given value may either be the association struct, a
-  changeset for the given association or a map or keyword
-  list of changes to be applied to the current association.
-  On all cases, it is expected the keys to be atoms. If a map
-  or keyword list are given and there is no association, one will
-  be created.
+  The given value may either be the association struct, a changeset for the
+  given association or a map or keyword list of changes to be applied to the
+  current association. On all cases, it is expected the keys to be atoms. If a
+  map or keyword list are given and there is no association, one will be created.
 
-  If the association has no changes, it will be skipped.
-  If the association is invalid, the changeset will be marked
-  as invalid. If the given value is not an association struct
-  or changeset, it will raise.
+  If the association has no changes, it will be skipped. If the association is
+  invalid, the changeset will be marked as invalid. If the given value is not any
+  of the above, it will raise.
 
-  Also see `cast_assoc/3` for a discussion of when to use
-  `cast_assoc/3` and `put_assoc/3`.
+  Also see `cast_assoc/3` for a discussion of when to use `cast_assoc/3` and
+  `put_assoc/3`.
 
-  Although it accepts an `opts` argument, there are no
-  options currently supported by `put_assoc/4`.
+  Although it accepts an `opts` argument, there are no options currently supported
+  by `put_assoc/4`.
   """
   def put_assoc(%Changeset{} = changeset, name, value, opts \\ []) do
     put_relation(:assoc, changeset, name, value, opts)
@@ -1102,26 +1108,16 @@ defmodule Ecto.Changeset do
     put_relation(:embed, changeset, name, value, opts)
   end
 
-  defp put_relation(_type, %{types: nil}, _name, _value, _opts) do
+  defp put_relation(_tag, %{types: nil}, _name, _value, _opts) do
     raise ArgumentError, "changeset does not have types information"
   end
 
-  defp put_relation(type, changeset, name, value, _opts) do
-    %{data: data, types: types, changes: changes} = changeset
-
-    relation = relation!(:put, type, name, Map.get(types, name))
-    current  = Relation.load!(data, Map.get(data, name))
-
-    case Relation.change(relation, value, current) do
-      {:ok, _, _, true} ->
-        changeset
-      {:ok, change, relation_valid?, false} ->
-        %{changeset | changes: Map.put(changes, name, change),
-                      valid?: changeset.valid? and relation_valid?}
-      :error ->
-        error = {name, {"is invalid", [type: expected_relation_type(relation)]}}
-        %{changeset | errors: [error | changeset.errors], valid?: false}
-    end
+  defp put_relation(tag, changeset, name, value, _opts) do
+    %{data: data, types: types, changes: changes, errors: errors, valid?: valid?} = changeset
+    relation = relation!(:put, tag, name, Map.get(types, name))
+    {changes, errors, valid?} =
+      put_change(data, changes, errors, valid?, name, value, {tag, relation})
+    %{changeset | changes: changes, errors: errors, valid?: valid?}
   end
 
   @doc """
