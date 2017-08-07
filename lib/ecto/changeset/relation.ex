@@ -131,17 +131,24 @@ defmodule Ecto.Changeset.Relation do
   end
 
   # This may be an insert or an update, get all fields.
-  defp do_change(_relation, %{__struct__: _} = changeset_or_struct, nil, _allowed_actions) do
+  defp do_change(relation, %{__struct__: _} = changeset_or_struct, nil, _allowed_actions) do
     changeset = Changeset.change(changeset_or_struct)
-    {:ok, put_new_action(changeset, action_from_changeset(changeset))}
+    {:ok,
+     changeset
+     |> assert_changeset_struct!(relation)
+     |> put_new_action(action_from_changeset(changeset))}
   end
 
   defp do_change(relation, nil, current, _allowed_actions) do
     on_replace(relation, current)
   end
 
-  defp do_change(_relation, %Changeset{} = changeset, _current, allowed_actions) do
-    {:ok, put_new_action(changeset, :update) |> check_action!(allowed_actions)}
+  defp do_change(relation, %Changeset{} = changeset, _current, allowed_actions) do
+    {:ok,
+     changeset
+     |> assert_changeset_struct!(relation)
+     |> put_new_action(:update)
+     |> check_action!(allowed_actions)}
   end
 
   defp do_change(_relation, %{__struct__: _} = struct, _current, allowed_actions) do
@@ -164,6 +171,13 @@ defmodule Ecto.Changeset.Relation do
   end
   defp action_from_changeset(_) do
     :insert # We don't care if it is insert/update for embeds (no meta)
+  end
+
+  defp assert_changeset_struct!(%{data: %{__struct__: mod}} = changeset, %{related: mod}) do
+    changeset
+  end
+  defp assert_changeset_struct!(%{data: data}, %{related: mod}) do
+    raise ArgumentError, "expected changeset data to be a #{mod} struct, got: #{inspect data}"
   end
 
   @doc """

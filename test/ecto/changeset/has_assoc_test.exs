@@ -876,6 +876,16 @@ defmodule Ecto.Changeset.HasAssocTest do
     refute Map.has_key?(changeset.changes, :posts)
   end
 
+  test "put_assoc/4 raises on invalid changeset" do
+    assert_raise ArgumentError, ~r/expected changeset data to be a Elixir.Ecto.Changeset.HasAssocTest.Profile/, fn ->
+      Changeset.change(%Author{}, profile: %Author{})
+    end
+
+    assert_raise ArgumentError, ~r/expected changeset data to be a Elixir.Ecto.Changeset.HasAssocTest.Post/, fn ->
+      Changeset.change(%Author{}, posts: [%Author{}])
+    end
+  end
+
   test "put_assoc/4 when replacing" do
     profile = %Profile{id: 1, name: "michal"} |> Ecto.put_meta(state: :loaded)
     base_changeset = Changeset.change(%Author{profile: profile})
