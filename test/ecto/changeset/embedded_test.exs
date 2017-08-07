@@ -51,7 +51,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     def set_action(schema, params) do
       changeset(schema, params)
-      |> Map.put(:action, :update)
+      |> Map.put(:action, Map.get(params, :action, :update))
     end
   end
 
@@ -75,7 +75,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     def set_action(schema, params) do
       changeset(schema, params)
-      |> Map.put(:action, :update)
+      |> Map.put(:action, Map.get(params, :action, :update))
     end
   end
 
@@ -168,6 +168,13 @@ defmodule Ecto.Changeset.EmbeddedTest do
                      %{"profile" => %{"id" => "michal"}}, :profile)
     assert changeset.changes == %{}
     assert changeset.errors == []
+  end
+
+  test "cast embeds_on discards changesets marked as ignore" do
+    changeset = cast(%Author{},
+                     %{"profile" => %{name: "michal", id: "id", action: :ignore}},
+                     :profile, with: &Profile.set_action/2)
+    assert changeset.changes == %{}
   end
 
   test "cast embeds_one when required" do
@@ -407,6 +414,23 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute Map.has_key?(changeset.changes, :posts)
   end
 
+  test "cast embeds_many discards changesets marked as ignore" do
+    changeset = cast(%Author{},
+                     %{"posts" => [%{title: "oops", action: :ignore}]},
+                     :posts, with: &Post.set_action/2)
+    assert changeset.changes == %{}
+
+    posts = [
+      %{title: "hello", action: :insert},
+      %{title: "oops", action: :ignore},
+      %{title: "world", action: :insert}
+    ]
+    changeset = cast(%Author{}, %{"posts" => posts},
+                     :posts, with: &Post.set_action/2)
+    assert Enum.map(changeset.changes.posts, &Ecto.Changeset.get_change(&1, :title)) ==
+           ["hello", "world"]
+  end
+
   test "cast embeds_many when required" do
     changeset = cast(%Author{posts: []}, %{}, :posts, required: true)
     assert changeset.required == [:posts]
@@ -467,50 +491,51 @@ defmodule Ecto.Changeset.EmbeddedTest do
   test "change embeds_one" do
     embed = Author.__schema__(:embed, :profile)
 
-    assert {:ok, nil, true, false} =
+    assert {:ok, nil, true} =
       Relation.change(embed, nil, %Profile{})
-    assert {:ok, nil, true, false} =
+    assert {:ok, nil, true} =
       Relation.change(embed, nil, nil)
 
     embed_schema = %Profile{}
     embed_schema_changeset = Changeset.change(embed_schema, name: "michal")
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(embed, embed_schema_changeset, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(embed, embed_schema_changeset, embed_schema)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
+    assert :ignore = Relation.change(embed, %{embed_schema_changeset | action: :ignore}, nil)
+
     empty_changeset = Changeset.change(embed_schema)
-    assert {:ok, _, true, true} =
-      Relation.change(embed, empty_changeset, embed_schema)
+    assert :ignore = Relation.change(embed, empty_changeset, embed_schema)
 
     embed_with_id = %Profile{id: 2}
-    assert {:ok, _, true, false} =
+    assert {:ok, _, true} =
       Relation.change(embed, %Profile{id: 1}, embed_with_id)
   end
 
   test "change embeds_one with attributes" do
-    assoc = Author.__schema__(:embed, :profile)
+    embed = Author.__schema__(:embed, :profile)
 
-    assert {:ok, changeset, true, false} =
-      Relation.change(assoc, %{name: "michal"}, nil)
+    assert {:ok, changeset, true} =
+      Relation.change(embed, %{name: "michal"}, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
 
     profile = %Profile{name: "other"}
 
-    assert {:ok, changeset, true, false} =
-      Relation.change(assoc, %{name: "michal"}, profile)
+    assert {:ok, changeset, true} =
+      Relation.change(embed, %{name: "michal"}, profile)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
 
-    assert {:ok, changeset, true, false} =
-      Relation.change(assoc, [name: "michal"], profile)
+    assert {:ok, changeset, true} =
+      Relation.change(embed, [name: "michal"], profile)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
   end
@@ -519,7 +544,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     embed = Author.__schema__(:embed, :profile)
     profile = %Profile{name: "michal"}
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(embed, profile, nil)
     assert changeset.action == :insert
   end
@@ -530,15 +555,15 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     # Adding
     changeset = %{Changeset.change(embed_schema, name: "michal") | action: :insert}
-    {:ok, changeset, _, _} = Relation.change(embed, changeset, nil)
+    {:ok, changeset, _} = Relation.change(embed, changeset, nil)
     assert changeset.action == :insert
 
     changeset = %{changeset | action: :update}
-    {:ok, changeset, _, _} = Relation.change(embed, changeset, nil)
+    {:ok, changeset, _} = Relation.change(embed, changeset, nil)
     assert changeset.action == :update
 
     changeset = %{changeset | action: :delete}
-    {:ok, changeset, _, _} = Relation.change(embed, changeset, nil)
+    {:ok, changeset, _} = Relation.change(embed, changeset, nil)
     assert changeset.action == :delete
 
     # Replacing
@@ -548,11 +573,11 @@ defmodule Ecto.Changeset.EmbeddedTest do
     end
 
     changeset = %{changeset | action: :update}
-    {:ok, changeset, _, _} = Relation.change(embed, changeset, embed_schema)
+    {:ok, changeset, _} = Relation.change(embed, changeset, embed_schema)
     assert changeset.action == :update
 
     changeset = %{changeset | action: :delete}
-    {:ok, changeset, _, _} = Relation.change(embed, changeset, embed_schema)
+    {:ok, changeset, _} = Relation.change(embed, changeset, embed_schema)
     assert changeset.action == :delete
   end
 
@@ -587,61 +612,65 @@ defmodule Ecto.Changeset.EmbeddedTest do
   test "change embeds_many" do
     embed = Author.__schema__(:embed, :posts)
 
-    assert {:ok, [old_changeset, new_changeset], true, false} =
+    assert {:ok, [old_changeset, new_changeset], true} =
       Relation.change(embed, [%Post{id: 1}], [%Post{id: 2}])
     assert old_changeset.action == :replace
     assert new_changeset.action == :insert
 
     embed_schema_changeset = Changeset.change(%Post{}, title: "hello")
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(embed, [embed_schema_changeset], [])
     assert changeset.action == :insert
     assert changeset.changes == %{title: "hello"}
 
     embed_schema = %Post{id: 1}
     embed_schema_changeset = Changeset.change(embed_schema, title: "hello")
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(embed, [embed_schema_changeset], [embed_schema])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(embed, [], [embed_schema_changeset])
     assert changeset.action == :replace
 
+    assert :ignore =
+      Relation.change(embed, [%{embed_schema_changeset | action: :ignore}], [embed_schema])
+    assert :ignore =
+      Relation.change(embed, [%{embed_schema_changeset | action: :ignore}], [])
+
     empty_changeset = Changeset.change(embed_schema)
-    assert {:ok, _, true, true} =
-      Relation.change(embed, [empty_changeset], [embed_schema])
+    assert :ignore = Relation.change(embed, [empty_changeset], [embed_schema])
   end
 
   test "change embeds_many with attributes" do
     assoc = Author.__schema__(:embed, :posts)
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [%{title: "hello"}], [])
     assert changeset.action == :insert
     assert changeset.changes == %{title: "hello"}
 
     post = %Post{title: "other"} |> Ecto.put_meta(state: :loaded)
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [%{title: "hello"}], [post])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [[title: "hello"]], [post])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
     post = %Post{title: "other"}
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [%{title: "hello"}], [post])
     assert changeset.action == :insert
     assert changeset.changes == %{title: "hello"}
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [[title: "hello"]], [post])
     assert changeset.action == :insert
     assert changeset.changes == %{title: "hello"}
@@ -651,15 +680,15 @@ defmodule Ecto.Changeset.EmbeddedTest do
     embed = Author.__schema__(:embed, :posts)
     post = %Post{title: "hello"}
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(embed, [post], [])
     assert changeset.action == :insert
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(embed, [Ecto.put_meta(post, state: :loaded)], [])
     assert changeset.action == :update
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(embed, [Ecto.put_meta(post, state: :deleted)], [])
     assert changeset.action == :delete
   end

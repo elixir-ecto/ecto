@@ -431,8 +431,17 @@ defmodule Ecto.Repo.Schema do
   defp struct_from_changeset!(_action, %{data: struct}),
     do: struct
 
+  defp put_repo_and_action(%{action: :ignore, valid?: valid?} = changeset, action, repo) do
+    if valid? do
+      raise ArgumentError, "a valid changeset with action :ignore was given to " <>
+                           "#{inspect repo}.#{action}/2. Changesets can only be ignored " <>
+                           "in a repository action if they are also invalid"
+    else
+      %{changeset | action: action, repo: repo}
+    end
+  end
   defp put_repo_and_action(%{action: given}, action, repo) when given != nil and given != action,
-    do: raise(ArgumentError, "a changeset with action #{inspect given} was given to #{inspect repo}.#{action}/2")
+    do: raise ArgumentError, "a changeset with action #{inspect given} was given to #{inspect repo}.#{action}/2"
   defp put_repo_and_action(changeset, action, repo),
     do: %{changeset | action: action, repo: repo}
 
@@ -576,12 +585,12 @@ defmodule Ecto.Repo.Schema do
             value = Relation.load!(struct, Map.get(struct, field))
             empty = Relation.empty(embed_or_assoc)
             case Relation.change(embed_or_assoc, value, empty) do
-              {:ok, change, _, false} when change != empty ->
+              {:ok, change, _} when change != empty ->
                 {Map.put(changes, field, change), errors}
-              {:ok, _, _, _} ->
-                {changes, errors}
               :error ->
                 {changes, [{field, "is invalid"}]}
+              _ -> # :ignore or ok with change == empty
+                {changes, errors}
             end
 
           # Struct has a non nil value

@@ -40,7 +40,7 @@ defmodule Ecto.Changeset.BelongsToTest do
 
     def set_action(schema, params) do
       changeset(schema, params)
-      |> Map.put(:action, :update)
+      |> Map.put(:action, Map.get(params, :action, :update))
     end
   end
 
@@ -102,6 +102,13 @@ defmodule Ecto.Changeset.BelongsToTest do
       cast(loaded, %{"profile" => ""}, :profile)
     end
     assert cast(loaded, %{}, :profile).changes == %{}
+  end
+
+  test "cast belongs_to discards changesets marked as ignore" do
+    changeset = cast(%Author{},
+                     %{"profile" => %{name: "michal", id: "id", action: :ignore}},
+                     :profile, with: &Profile.set_action/2)
+    assert changeset.changes == %{}
   end
 
   test "cast belongs_to with existing struct replacing" do
@@ -287,72 +294,73 @@ defmodule Ecto.Changeset.BelongsToTest do
 
   test "change belongs_to" do
     assoc = Author.__schema__(:association, :profile)
-    assert {:ok, nil, true, false} =
+    assert {:ok, nil, true} =
       Relation.change(assoc, nil, %Profile{})
-    assert {:ok, nil, true, false} =
+    assert {:ok, nil, true} =
       Relation.change(assoc, nil, nil)
 
     assoc_schema = %Profile{}
     assoc_schema_changeset = Changeset.change(assoc_schema, name: "michal")
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, assoc_schema_changeset, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, assoc_schema_changeset, assoc_schema)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
+    assert :ignore = Relation.change(assoc, %{assoc_schema_changeset | action: :ignore}, nil)
+
     empty_changeset = Changeset.change(assoc_schema)
-    assert {:ok, _, true, true} =
-      Relation.change(assoc, empty_changeset, assoc_schema)
+    assert :ignore = Relation.change(assoc, empty_changeset, assoc_schema)
 
     assoc_with_id = %Profile{id: 2}
-    assert {:ok, _, true, false} =
+    assert {:ok, _, true} =
       Relation.change(assoc, %Profile{id: 1}, assoc_with_id)
   end
 
   test "change belongs_to with attributes" do
     assoc = Author.__schema__(:association, :profile)
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, %{name: "michal"}, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
 
     profile = %Profile{name: "other"} |> Ecto.put_meta(state: :loaded)
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, %{name: "michal"}, profile)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, [name: "michal"], profile)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
     profile = %Profile{name: "other"}
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, %{name: "michal"}, profile)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, [name: "michal"], profile)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
 
     # Empty attributes
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, %{}, profile)
     assert changeset.action == :insert
     assert changeset.changes == %{}
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, [], profile)
     assert changeset.action == :insert
     assert changeset.changes == %{}
@@ -362,15 +370,15 @@ defmodule Ecto.Changeset.BelongsToTest do
     assoc = Author.__schema__(:association, :profile)
     profile = %Profile{name: "michal"}
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, profile, nil)
     assert changeset.action == :insert
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, Ecto.put_meta(profile, state: :loaded), nil)
     assert changeset.action == :update
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, Ecto.put_meta(profile, state: :deleted), nil)
     assert changeset.action == :delete
   end
@@ -381,15 +389,15 @@ defmodule Ecto.Changeset.BelongsToTest do
 
     # Adding
     changeset = %{Changeset.change(assoc_schema, name: "michal") | action: :insert}
-    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
+    {:ok, changeset, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :insert
 
     changeset = %{changeset | action: :update}
-    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
+    {:ok, changeset, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :update
 
     changeset = %{changeset | action: :delete}
-    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
+    {:ok, changeset, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :delete
 
     # Replacing
@@ -399,11 +407,11 @@ defmodule Ecto.Changeset.BelongsToTest do
     end
 
     changeset = %{changeset | action: :update}
-    {:ok, changeset, _, _} = Relation.change(assoc, changeset, assoc_schema)
+    {:ok, changeset, _} = Relation.change(assoc, changeset, assoc_schema)
     assert changeset.action == :update
 
     changeset = %{changeset | action: :delete}
-    {:ok, changeset, _, _} = Relation.change(assoc, changeset, assoc_schema)
+    {:ok, changeset, _} = Relation.change(assoc, changeset, assoc_schema)
     assert changeset.action == :delete
   end
 

@@ -77,7 +77,7 @@ defmodule Ecto.Changeset.Relation do
   def cast(%{cardinality: :one} = relation, nil, current, _on_cast) do
     case current && on_replace(relation, current) do
       :error -> :error
-      _ -> {:ok, nil, true, false}
+      _ -> {:ok, nil, true}
     end
   end
 
@@ -120,7 +120,7 @@ defmodule Ecto.Changeset.Relation do
   def change(%{cardinality: :one} = relation, nil, current) do
     case current && on_replace(relation, current) do
       :error -> :error
-      _ -> {:ok, nil, true, false}
+      _ -> {:ok, nil, true}
     end
   end
 
@@ -225,7 +225,7 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp cast_or_change(%{cardinality: :many}, [], [], _current_pks, _new_pks, _fun) do
-    {:ok, [], true, false}
+    {:ok, [], true}
   end
 
   defp cast_or_change(%{cardinality: :many, unique: unique}, value, current, current_pks, new_pks, fun) when is_list(value) do
@@ -258,8 +258,14 @@ defmodule Ecto.Changeset.Relation do
 
   defp single_change(new, current, fun, allowed_actions, skippable?) do
     case fun.(new, current, allowed_actions) do
+      {:ok, %{action: :ignore}} ->
+        :ignore
       {:ok, changeset} ->
-        {:ok, changeset, changeset.valid?, skippable? and skip?(changeset)}
+        if skippable? and skip?(changeset) do
+          :ignore
+        else
+          {:ok, changeset, changeset.valid?}
+        end
       :error ->
         :error
     end
@@ -272,6 +278,8 @@ defmodule Ecto.Changeset.Relation do
     pk_values = new_pks.(changes)
     {struct, current, allowed_actions} = pop_current(current, pk_values)
     case fun.(changes, struct, allowed_actions) do
+      {:ok, %{action: :ignore}} ->
+        map_changes(rest, new_pks, fun, current, acc, valid?, skip?, acc_pk_values)
       {:ok, changeset} ->
         changeset = maybe_add_error_on_pk(changeset, pk_values, acc_pk_values)
         map_changes(rest, new_pks, fun, current, [changeset | acc],
@@ -314,10 +322,6 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
-  defp reduce_delete_changesets([], _fun, acc, valid?, skip?) do
-    {:ok, acc, valid?, skip?}
-  end
-
   defp reduce_delete_changesets([struct | rest], fun, acc, valid?, _skip?) do
     case fun.(nil, struct, [:update, :delete]) do
       {:ok, changeset} ->
@@ -327,6 +331,12 @@ defmodule Ecto.Changeset.Relation do
         :error
     end
   end
+  defp reduce_delete_changesets([], _fun, _acc, _valid?, true) do
+    :ignore
+  end
+  defp reduce_delete_changesets([], _fun, acc, valid?, false) do
+    {:ok, acc, valid?}
+  end
 
   # helpers
 
@@ -335,6 +345,8 @@ defmodule Ecto.Changeset.Relation do
 
     cond do
       action in allowed_actions ->
+        changeset
+      action == :ignore ->
         changeset
       action == :insert ->
         raise "cannot #{action} related #{inspect changeset.data} " <>

@@ -21,7 +21,7 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
     def set_action(schema, params) do
       changeset(schema, params)
-      |> Map.put(:action, :update)
+      |> Map.put(:action, Map.get(params, :action, :update))
     end
   end
 
@@ -138,6 +138,23 @@ defmodule Ecto.Changeset.ManyToManyTest do
     refute Map.has_key?(changeset.changes, :posts)
   end
 
+  test "cast many_to_many discards changesets marked as ignore" do
+    changeset = cast(%Author{},
+                     %{"posts" => [%{title: "oops", action: :ignore}]},
+                     :posts, with: &Post.set_action/2)
+    assert changeset.changes == %{}
+
+    posts = [
+      %{title: "hello", action: :insert},
+      %{title: "oops", action: :ignore},
+      %{title: "world", action: :insert}
+    ]
+    changeset = cast(%Author{}, %{"posts" => posts},
+                     :posts, with: &Post.set_action/2)
+    assert Enum.map(changeset.changes.posts, &Ecto.Changeset.get_change(&1, :title)) ==
+           ["hello", "world"]
+  end
+
   test "cast many_to_many when required" do
     # Still no error because the loaded association is an empty list
     changeset = cast(%Author{}, %{posts: [%{title: "hello"}]}, :posts, required: true)
@@ -221,50 +238,55 @@ defmodule Ecto.Changeset.ManyToManyTest do
   test "change many_to_many" do
     assoc = Author.__schema__(:association, :posts)
 
-    assert {:ok, [old_changeset, new_changeset], true, false} =
+    assert {:ok, [old_changeset, new_changeset], true} =
       Relation.change(assoc, [%Post{id: 1}], [%Post{id: 2}])
     assert old_changeset.action == :replace
     assert new_changeset.action == :insert
 
     assoc_schema_changeset = Changeset.change(%Post{}, title: "hello")
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [assoc_schema_changeset], [])
     assert changeset.action == :insert
     assert changeset.changes == %{title: "hello"}
 
     assoc_schema = %Post{id: 1}
     assoc_schema_changeset = Changeset.change(assoc_schema, title: "hello")
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [assoc_schema_changeset], [assoc_schema])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [], [assoc_schema_changeset])
     assert changeset.action == :replace
 
+    assert :ignore =
+      Relation.change(assoc, [%{assoc_schema_changeset | action: :ignore}], [assoc_schema])
+    assert :ignore =
+      Relation.change(assoc, [%{assoc_schema_changeset | action: :ignore}], [])
+
     empty_changeset = Changeset.change(assoc_schema)
-    assert {:ok, _, true, true} =
+    assert :ignore =
       Relation.change(assoc, [empty_changeset], [assoc_schema])
   end
 
   test "change many_to_many with attributes" do
     assoc = Author.__schema__(:association, :posts)
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [%{title: "hello"}], [])
     assert changeset.action == :insert
     assert changeset.changes == %{title: "hello"}
 
     post = %Post{title: "other"} |> Ecto.put_meta(state: :loaded)
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [%{title: "hello"}], [post])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [[title: "hello"]], [post])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
@@ -274,15 +296,15 @@ defmodule Ecto.Changeset.ManyToManyTest do
     assoc = Author.__schema__(:association, :posts)
     post = %Post{title: "hello"}
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [post], [])
     assert changeset.action == :insert
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [Ecto.put_meta(post, state: :loaded)], [])
     assert changeset.action == :update
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [Ecto.put_meta(post, state: :deleted)], [])
     assert changeset.action == :delete
   end

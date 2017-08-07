@@ -203,15 +203,22 @@ defmodule Ecto.RepoTest do
 
     insert = %{invalid | action: :insert, repo: TestRepo}
     assert {:error, ^insert} = TestRepo.insert(invalid)
+    assert {:error, ^insert} = TestRepo.insert_or_update(invalid)
 
     update = %{invalid | action: :update, repo: TestRepo}
     assert {:error, ^update} = TestRepo.update(invalid)
 
-    update = %{invalid | action: :insert, repo: TestRepo}
-    assert {:error, ^update} = TestRepo.insert_or_update(invalid)
-
     delete = %{invalid | action: :delete, repo: TestRepo}
     assert {:error, ^delete} = TestRepo.delete(invalid)
+
+    ignore = %{invalid | action: :ignore, repo: TestRepo}
+    assert {:error, ^insert} = TestRepo.insert(ignore)
+    assert {:error, ^update} = TestRepo.update(ignore)
+    assert {:error, ^delete} = TestRepo.delete(ignore)
+
+    assert_raise ArgumentError, ~r"a valid changeset with action :ignore was given to Ecto.TestRepo.insert/2", fn ->
+      TestRepo.insert(%{ignore | valid?: true})
+    end
   end
 
   test "insert!, update! and delete! accepts changesets" do

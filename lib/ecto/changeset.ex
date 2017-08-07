@@ -175,9 +175,8 @@ defmodule Ecto.Changeset do
         |> validate_required(...)
         |> validate_length(...)
 
-  Such functionality makes Ecto extremely useful to cast,
-  validate and prune data even if it is not meant to be persisted
-  to the database.
+  Such functionality makes Ecto extremely useful to cast, validate and prune
+  data even if it is not meant to be persisted to the database.
 
   ### Changeset actions
 
@@ -191,22 +190,13 @@ defmodule Ecto.Changeset do
 
   This means that when working with changesets that are not meant to be
   persisted to the database, such as schemaless changesets, you may need
-  to explicitly set the action to one specific value. For example,
-  frameworks such as Phoenix uses the value of `changeset.action` to
-  decide if errors should be shown or not on a given form. In such cases,
-  the following construct is recommended:
+  to explicitly set the action to one specific value. Frameworks such as
+  Phoenix uses the action value to define how a HTML forms should act.
 
-      changeset = User.changeset(%User{}, %{age: 42, email: "mary@example.com"})
-
-      # Since we don't plan to call Repo.insert/2 or similar, we
-      # need to mimic part of its behaviour, which is to check if
-      # the changeset is valid and set its action accordingly if not.
-      if changeset.valid? do
-        ... success case ...
-      else
-        changeset = %{changeset | action: :insert} # action can be anything
-        ... failure case ...
-      end
+  Instead of setting the action manually, you may use `apply_action/2` that
+  emulates operations such as `Repo.insert`. `apply_action/2` will return
+  `{:ok, changes}` if the changeset is valid or `{:error, changeset}`, with
+  the given `action` set in the changeset in case of errors.
 
   ## The Ecto.Changeset struct
 
@@ -254,7 +244,7 @@ defmodule Ecto.Changeset do
                         types: nil | %{atom => Ecto.Type.t}}
 
   @type error :: {String.t, Keyword.t}
-  @type action :: nil | :insert | :update | :delete | :replace
+  @type action :: nil | :insert | :update | :delete | :replace | :ignore
   @type constraint :: %{type: :unique, constraint: String.t, match: :exact | :suffix,
                         field: atom, message: error}
   @type data :: map()
@@ -599,14 +589,36 @@ defmodule Ecto.Changeset do
       as parameter, the `:on_replace` callback for that association will
       be invoked (see the "On replace" section on the module documentation)
 
-  In other words, `cast_assoc/3` is useful when the associated data is
-  managed alongside the parent struct, all at once.
+  Every time the `changeset/2` function is invoked, it must return a changeset.
+  Note developers are allowed to explicitly set the `:action` field of a
+  changeset to instruct Ecto how to act in certain situations. Let's suppose
+  that, if one of the associations has only empty fields, you want to ignore
+  the entry altogether instead of showing an error. The changeset function could
+  be written like this:
+
+      def changeset(struct, params) do
+        struct
+        |> cast(struct, params, [:title, :body])
+        |> validate_requited([:title, :body])
+        |> case do
+          %{valid?: false, changes: %{}} = changeset ->
+            # If the changeset is invalid and has no changes, it is
+            # because all required fields are missing, so we ignore it.
+            %{changeset | action: :ignore}
+          changeset ->
+            changeset
+        end
+      end
+
+  ## Alternatives to cast_assoc/3
+
+  `cast_assoc/3` is useful when the associated data is managed alongside
+  the parent struct, all at once.
 
   To work with a single element of an association, other functions are
   more appropriate. For example to insert a single associated struct for a
-  has_many association it's much easier to construct the associated struct with
-  `Ecto.build_assoc/3`, use the associated schema's changeset and finally
-  persist it with `c:Ecto.Repo.insert/2`.
+  `has_many` association it's much easier to construct the associated struct
+  with `Ecto.build_assoc/3` and persist it directly with `c:Ecto.Repo.insert/2`.
 
   Furthermore, if each side of the association is managed separately,
   it is preferable to use `put_assoc/3` and directly instruct Ecto how
@@ -697,13 +709,13 @@ defmodule Ecto.Changeset do
         {:ok, value} ->
           current  = Relation.load!(data, original)
           case Relation.cast(relation, value, current, on_cast) do
-            {:ok, change, relation_valid?, false} when change != original ->
+            {:ok, change, relation_valid?} when change != original ->
               missing_relation(%{changeset | changes: Map.put(changes, key, change),
                                  valid?: changeset.valid? and relation_valid?}, key, current, required?, relation, opts)
-            {:ok, _, _, _} ->
-              missing_relation(changeset, key, current, required?, relation, opts)
             :error ->
               %{changeset | errors: [{key, {message(opts, :invalid_message, "is invalid"), [type: expected_relation_type(relation)]}} | changeset.errors], valid?: false}
+            _ -> # ignore or ok with change == original
+              missing_relation(changeset, key, current, required?, relation, opts)
           end
         :error ->
           missing_relation(changeset, key, original, required?, relation, opts)
@@ -1030,10 +1042,10 @@ defmodule Ecto.Changeset do
     current = Relation.load!(data, Map.get(data, key))
 
     case Relation.change(relation, value, current) do
-      {:ok, _, _, true} ->
-        {changes, errors, valid?}
-      {:ok, change, relation_valid?, false} ->
+      {:ok, change, relation_valid?} ->
         {Map.put(changes, key, change), errors, valid? and relation_valid?}
+      :ignore ->
+        {changes, errors, valid?}
       :error ->
         error = {key, {"is invalid", [type: expected_relation_type(relation)]}}
         {changes, [error | errors], false}
