@@ -820,13 +820,14 @@ defmodule Ecto.Changeset do
 
   def merge(%Changeset{data: data} = cs1, %Changeset{data: data} = cs2) do
     new_repo        = merge_identical(cs1.repo, cs2.repo, "repos")
+    new_repo_opts   = Keyword.merge(cs1.repo_opts, cs2.repo_opts)
     new_action      = merge_identical(cs1.action, cs2.action, "actions")
     new_filters     = Map.merge(cs1.filters, cs2.filters)
     new_validations = cs1.validations ++ cs2.validations
     new_constraints = cs1.constraints ++ cs2.constraints
     new_empty_vals  = Enum.uniq(cs1.empty_values ++ cs2.empty_values)
 
-    cast_merge %{cs1 | repo: new_repo, filters: new_filters,
+    cast_merge %{cs1 | repo: new_repo, repo_opts: new_repo_opts, filters: new_filters,
                        action: new_action, validations: new_validations,
                        constraints: new_constraints, empty_values: new_empty_vals}, cs2
   end

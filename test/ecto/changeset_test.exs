@@ -304,6 +304,13 @@ defmodule Ecto.ChangesetTest do
     assert Enum.find(changeset.validations, &match?({:title, {:length, _}}, &1))
   end
 
+  test "merge/2: repo opts" do
+    cs1 = %Post{} |> change() |> Map.put(:repo_opts, [a: 1, b: 2])
+    cs2 = %Post{} |> change() |> Map.put(:repo_opts, [b: 3, c: 4])
+    changeset = merge(cs1, cs2)
+    assert changeset.repo_opts == [a: 1, b: 3, c: 4]
+  end
+
   test "merge/2: merges constraints" do
     cs1 = cast(%Post{}, %{title: "Title"}, ~w(title))
                 |> unique_constraint(:title)
