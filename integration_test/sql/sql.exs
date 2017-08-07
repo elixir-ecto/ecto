@@ -14,6 +14,12 @@ defmodule Ecto.Integration.SQLTest do
     assert [^datetime] = TestRepo.all(query)
   end
 
+  test "fragmented schemaless types" do
+    decimal = Decimal.new("1.0")
+    TestRepo.insert!(%Post{cost: decimal})
+    assert [^decimal] = TestRepo.all(from p in "posts", select: type(fragment("cost"), :decimal))
+  end
+
   @tag :array_type
   test "fragment array types" do
     datetime1 = ~N[2014-01-16 00:00:00.0]

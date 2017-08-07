@@ -784,11 +784,10 @@ defmodule Ecto.Query.Planner do
     {{:^, meta, [acc]}, acc + 1}
   end
 
-  defp prewalk({:type, _, [{:^, meta, [ix]}, _expr]}, kind, query, expr, acc, _adapter) when is_integer(ix) do
-    {_, t} = Enum.fetch!(expr.params, ix)
-    type = field_type!(kind, query, expr, t)
-    {%Ecto.Query.Tagged{value: {:^, meta, [acc]}, tag: type,
-                        type: Ecto.Type.type(type)}, acc + 1}
+  defp prewalk({:type, _, [arg, type]}, kind, query, expr, acc, adapter) do
+    {arg, acc} = prewalk(arg, kind, query, expr, acc, adapter)
+    type = field_type!(kind, query, expr, type)
+    {%Ecto.Query.Tagged{value: arg, tag: type, type: Ecto.Type.type(type)}, acc}
   end
 
   defp prewalk(%Ecto.Query.Tagged{value: v, type: type} = tagged, kind, query, expr, acc, adapter) do

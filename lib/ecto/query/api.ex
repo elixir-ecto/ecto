@@ -358,18 +358,29 @@ defmodule Ecto.Query.API do
   def map(source, fields), do: doc! [source, fields]
 
   @doc """
-  Casts the given value to the given type.
+  Casts the given value to the given type at the database level.
 
   Most of the times, Ecto is able to proper cast interpolated
   values due to its type checking mechanism. In some situations
-  though, in particular when using fragments with `fragment/1`,
-  you may want to tell Ecto you are expecting a particular type:
+  though, you may want to tell Ecto that a parameter has some
+  particular type:
 
-      fragment("lower(?)", p.title) == type(^title, :string)
+      type(^title, :string)
 
   It is also possible to say the type must match the same of a column:
 
-      fragment("lower(?)", p.title) == type(^title, p.title)
+      type(^title, p.title)
+
+  `type/2` can also be used to cast fragments inside `select`:
+
+      type(fragment("NOW"), :naive_datetime)
+
+  Or fields for schemaless queries inside select:
+
+      from p in "posts", select: type(p.cost, :decimal)
+
+  `type/2` operates by casting at the database level and then by
+  verifying that the desired type was returned when loading the data.
   """
   def type(interpolated_value, type), do: doc! [interpolated_value, type]
 

@@ -52,7 +52,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [^datetime] = TestRepo.all(from u in User, where: u.inserted_at == ^datetime, select: u.inserted_at)
   end
 
-  test "aggregated types" do
+  test "aggregate types" do
     datetime = ~N[2014-01-16 20:26:51.000000]
     TestRepo.insert!(%Post{inserted_at: datetime})
     query = from p in Post, select: max(p.inserted_at)
@@ -223,6 +223,12 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   test "schemaless types" do
+    decimal = Decimal.new("1.0")
+    TestRepo.insert!(%Post{cost: decimal})
+    assert [^decimal] = TestRepo.all(from p in "posts", select: type(p.cost, :decimal))
+  end
+
+  test "schemaless calendar types" do
     datetime = ~N[2014-01-16 20:26:51]
     assert {1, _} =
            TestRepo.insert_all("posts", [[inserted_at: datetime]])

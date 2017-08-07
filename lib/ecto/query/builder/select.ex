@@ -84,12 +84,28 @@ defmodule Ecto.Query.Builder.Select do
     {expr, params_take}
   end
 
-  defp escape(other, params_take, vars, env) do
-    Builder.escape(other, :any, params_take, vars, {env, &escape_with_type/5})
+  defp escape({:type, _, [{{:., _, [{var, _, context}, field]}, _, []} = expr, type]},
+              params_take, vars, env) when is_atom(var) and is_atom(context) and is_atom(field) do
+    escape_with_type(expr, type, params_take, vars, env)
   end
 
-  defp escape_with_type(expr, _type, params_take, vars, env) do
+  defp escape({:type, _, [{:fragment, _, [_ | _]} = expr, type]}, params_take, vars, env) do
+    escape_with_type(expr, type, params_take, vars, env)
+  end
+
+  defp escape(expr, params_take, vars, env) do
+    Builder.escape(expr, :any, params_take, vars, {env, &escape_expansion/5})
+  end
+
+  defp escape_expansion(expr, _type, params_take, vars, env) do
     escape(expr, params_take, vars, env)
+  end
+
+  defp escape_with_type(expr, type, params_take, vars, env) do
+    type = Builder.validate_type!(type, vars)
+    {expr, params_take} =
+      Builder.escape(expr, type, params_take, vars, {env, &escape_expansion/5})
+    {{:{}, [], [:type, [], [expr, type]]}, params_take}
   end
 
   defp escape_pairs(pairs, params_take, vars, env) do

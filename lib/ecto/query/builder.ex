@@ -49,18 +49,18 @@ defmodule Ecto.Query.Builder do
 
   # tagged types
   def escape({:type, _, [{:^, _, [arg]}, type]}, _type, {params, acc}, vars, _env) do
-    {type, escaped} = validate_type!(type, vars)
-    index  = Map.size(params)
+    type = validate_type!(type, vars)
+    index = Map.size(params)
     params = Map.put(params, index, {arg, type})
 
-    expr = {:{}, [], [:type, [], [{:{}, [], [:^, [], [index]]}, escaped]]}
+    expr = {:{}, [], [:type, [], [{:{}, [], [:^, [], [index]]}, type]]}
     {expr, {params, acc}}
   end
 
   # fragments
   def escape({:fragment, _, [query]}, _type, params_acc, vars, env) when is_list(query) do
-    {escaped, params_acc} = Enum.map_reduce(query, params_acc, &escape_fragment(&1, :any, &2, vars, env))
-
+    {escaped, params_acc} =
+      Enum.map_reduce(query, params_acc, &escape_fragment(&1, :any, &2, vars, env))
     {{:{}, [], [:fragment, [], [escaped]]}, params_acc}
   end
 
@@ -365,25 +365,26 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  defp validate_type!({composite, type}, vars) do
-    {type, escaped} = validate_type!(type, vars)
-    {{composite, type}, {composite, escaped}}
+  @doc """
+  Validates the type with the given vars.
+  """
+  def validate_type!({composite, type}, vars) do
+    {composite, validate_type!(type, vars)}
   end
-
-  defp validate_type!({:^, _, [type]}, _vars),
-    do: {type, type}
-  defp validate_type!({:__aliases__, _, _} = type, _vars),
-    do: {type, type}
-  defp validate_type!(type, _vars) when is_atom(type),
-    do: {type, type}
-  defp validate_type!({{:., _, [{var, _, context}, field]}, _, []}, vars)
+  def validate_type!({:^, _, [type]}, _vars),
+    do: type
+  def validate_type!({:__aliases__, _, _} = type, _vars),
+    do: type
+  def validate_type!(type, _vars) when is_atom(type),
+    do: type
+  def validate_type!({{:., _, [{var, _, context}, field]}, _, []}, vars)
     when is_atom(var) and is_atom(context) and is_atom(field),
-    do: {{find_var!(var, vars), field}, escape_field(var, field, vars)}
-  defp validate_type!({:field, _, [{var, _, context}, field]}, vars)
+    do: {find_var!(var, vars), field}
+  def validate_type!({:field, _, [{var, _, context}, field]}, vars)
     when is_atom(var) and is_atom(context) and is_atom(field),
-    do: {{find_var!(var, vars), field}, escape_field(var, field, vars)}
+    do: {find_var!(var, vars), field}
 
-  defp validate_type!(type, _vars) do
+  def validate_type!(type, _vars) do
     error! "type/2 expects an alias, atom or source.field as second argument, got: `#{Macro.to_string(type)}`"
   end
 
