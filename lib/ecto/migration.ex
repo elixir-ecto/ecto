@@ -149,12 +149,25 @@ defmodule Ecto.Migration do
         end
       end
 
-  ## Schema Migrations table
+  ## Repo configuration
 
-  Version numbers of migrations will be saved in `schema_migrations` table.
-  But you can configure the table via:
+  The following migration configurations are available for under
+  a given repository.
 
-      config :app, App.Repo, migration_source: "my_migrations"
+    * `:migration_source` - Version numbers of migrations will be saved in
+      `schema_migrations` table but you can configure the table via:
+
+          config :app, App.Repo, migration_source: "my_migrations"
+
+    * `:migration_primary_key` - Ecto uses the `:id` column with type
+      `:bigserial` but you can configure it via:
+
+          config :app, App.Repo, migration_primary_key: [id: :uuid, type: :binary_id]
+
+    * `:migration_timestamps` - Ecto uses type `:naive_datetime` but you
+      can configure it via:
+
+          config :app, App.Repo, migration_timestamps: [type: :utc_datetime]
 
   """
 
@@ -289,7 +302,8 @@ defmodule Ecto.Migration do
       Runner.start_command({unquote(command), Ecto.Migration.__prefix__(table)})
 
       if table.primary_key do
-        add(:id, :bigserial, primary_key: true)
+        opts = Runner.repo_config(:migration_primary_key, [])
+        add(opts[:name] || :id, opts[:type] || :bigserial, primary_key: true)
       end
 
       unquote(block)
@@ -723,6 +737,7 @@ defmodule Ecto.Migration do
 
   """
   def timestamps(opts \\ []) when is_list(opts) do
+    opts = Keyword.merge(Runner.repo_config(:migration_timestamps, []), opts)
     opts = Keyword.put_new(opts, :null, false)
 
     {type, opts} = Keyword.pop(opts, :type, :naive_datetime)

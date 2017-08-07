@@ -154,7 +154,6 @@ defmodule Ecto.Adapters.Postgres do
   @doc false
   def structure_dump(default, config) do
     table = config[:migration_source] || "schema_migrations"
-
     with {:ok, versions} <- select_versions(table, config),
          {:ok, path} <- pg_dump(default, config),
          do: append_versions(table, versions, path)

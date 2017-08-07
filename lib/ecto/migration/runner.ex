@@ -47,7 +47,7 @@ defmodule Ecto.Migration.Runner do
     Agent.start_link(fn ->
       Process.link(parent)
       %{direction: direction, repo: repo, migrator_direction: migrator_direction,
-        command: nil, subcommands: [], log: log, commands: []}
+        command: nil, subcommands: [], log: log, commands: [], config: repo.config()}
     end)
   end
 
@@ -56,6 +56,13 @@ defmodule Ecto.Migration.Runner do
   """
   def stop() do
     Agent.stop(runner())
+  end
+
+  @doc """
+  Accesses the given repository configuration.
+  """
+  def repo_config(key, default) do
+    Agent.get(runner(), &Keyword.get(&1.config, key, default))
   end
 
   @doc """

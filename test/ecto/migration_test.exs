@@ -11,8 +11,14 @@ defmodule Ecto.MigrationTest do
   alias Ecto.Migration.Runner
 
   setup meta do
-    {:ok, runner} =
-      Runner.start_link(self(), TestRepo, meta[:direction] || :forward, :up, %{level: false, sql: false})
+    config = Application.get_env(:ecto, TestRepo, [])
+    Application.put_env(:ecto, TestRepo, Keyword.merge(config, meta[:repo_config] || []))
+    on_exit fn -> Application.put_env(:ecto, TestRepo, config) end
+  end
+
+  setup meta do
+    direction = meta[:direction] || :forward
+    {:ok, runner} = Runner.start_link(self(), TestRepo, direction, :up, %{level: false, sql: false})
     Runner.metadata(runner, meta)
     {:ok, runner: runner}
   end
@@ -139,6 +145,30 @@ defmodule Ecto.MigrationTest do
     assert last_command() ==
            {:create, table,
               [{:add, :title, :string, []}]}
+  end
+
+  @tag repo_config: [migration_primary_key: [name: :uuid, type: :uuid]]
+  test "forward: create a table with custom primary key" do
+    create(table = table(:posts)) do
+    end
+    flush()
+
+    assert last_command() ==
+           {:create, table, [{:add, :uuid, :uuid, [primary_key: true]}]}
+  end
+
+  @tag repo_config: [migration_timestamps: [type: :utc_datetime, null: true]]
+  test "forward: create a table with timestamps" do
+    create(table = table(:posts)) do
+      timestamps()
+    end
+    flush()
+
+    assert last_command() ==
+           {:create, table, [
+              {:add, :id, :bigserial, [primary_key: true]},
+              {:add, :inserted_at, :utc_datetime, [null: true]},
+              {:add, :updated_at, :utc_datetime, [null: true]}]}
   end
 
   test "forward: creates a table without precision option for numeric type" do
