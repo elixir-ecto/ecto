@@ -79,7 +79,8 @@ _   = Ecto.Adapters.Postgres.storage_down(TestRepo.config)
 if Version.match?(version, "~> 9.5") do
   ExUnit.configure(exclude: [:without_conflict_target])
 else
-  ExUnit.configure(exclude: [:upsert, :upsert_all, :array_type, :map_type])
+  Application.put_env(:ecto, :postgres_map_type, "json")
+  ExUnit.configure(exclude: [:upsert, :upsert_all, :array_type])
 end
 
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)

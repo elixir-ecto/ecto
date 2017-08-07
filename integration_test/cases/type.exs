@@ -151,7 +151,7 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   @tag :map_type
-  test "untyped map on update" do
+  test "map type on update" do
     post = TestRepo.insert!(%Post{meta: %{"world" => "hello"}})
     assert TestRepo.get!(Post, post.id).meta == %{"world" => "hello"}
 

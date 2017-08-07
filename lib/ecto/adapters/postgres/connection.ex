@@ -922,8 +922,8 @@ if Code.ensure_loaded?(Postgrex) do
     defp ecto_to_db(:binary_id),      do: "uuid"
     defp ecto_to_db(:string),         do: "varchar"
     defp ecto_to_db(:binary),         do: "bytea"
-    defp ecto_to_db(:map),            do: "jsonb"
-    defp ecto_to_db({:map, _}),       do: "jsonb"
+    defp ecto_to_db(:map),            do: Application.fetch_env!(:ecto, :postgres_map_type)
+    defp ecto_to_db({:map, _}),       do: Application.fetch_env!(:ecto, :postgres_map_type)
     defp ecto_to_db(:utc_datetime),   do: "timestamp"
     defp ecto_to_db(:naive_datetime), do: "timestamp"
     defp ecto_to_db(other),           do: Atom.to_string(other)
