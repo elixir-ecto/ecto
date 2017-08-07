@@ -702,6 +702,8 @@ defmodule Ecto.Type do
   defp dump_date(_),
     do: :error
 
+  defp load_date(%Date{} = date),
+    do: {:ok, date}
   defp load_date({year, month, day}),
     do: {:ok, %Date{year: year, month: month, day: day}}
   defp load_date(_),
@@ -753,6 +755,8 @@ defmodule Ecto.Type do
   defp dump_time(_),
     do: :error
 
+  defp load_time(%Time{} = time),
+    do: {:ok, time}
   defp load_time({hour, minute, second, microsecond}),
     do: {:ok, %Time{hour: hour, minute: minute, second: second, microsecond: {microsecond, 6}}}
   defp load_time({hour, minute, second}),
@@ -792,6 +796,8 @@ defmodule Ecto.Type do
   defp dump_naive_datetime(_),
     do: :error
 
+  defp load_naive_datetime(%NaiveDateTime{} = naive),
+    do: {:ok, naive}
   defp load_naive_datetime({{year, month, day}, {hour, minute, second, microsecond}}),
     do: {:ok, %NaiveDateTime{year: year, month: month, day: day,
                              hour: hour, minute: minute, second: second, microsecond: {microsecond, 6}}}
@@ -840,6 +846,8 @@ defmodule Ecto.Type do
   defp dump_utc_datetime(_),
     do: :error
 
+  defp load_utc_datetime(%DateTime{} = dt),
+    do: {:ok, dt}
   defp load_utc_datetime({{year, month, day}, {hour, minute, second, microsecond}}),
     do: {:ok, %DateTime{year: year, month: month, day: day,
                         hour: hour, minute: minute, second: second, microsecond: {microsecond, 6},
