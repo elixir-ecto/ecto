@@ -630,7 +630,7 @@ defmodule Ecto.Repo.Schema do
   defp merge_changes(data, changes),
     do: Map.merge(data, changes)
   defp merge_autogen(data, autogen),
-    do: Enum.reduce(autogen, data, fn {k, v}, acc -> Map.put(acc, k, v) end)
+    do: Enum.reduce(autogen, data, fn {k, v}, acc -> %{acc | k => v} end)
 
   defp apply_metadata(%{__meta__: meta} = data, state, source) do
     %{data | __meta__: %{meta | state: state, source: source}}
@@ -639,7 +639,7 @@ defmodule Ecto.Repo.Schema do
   defp load_each(struct, [{_, value} | kv], [{key, type} | types], adapter) do
     case Ecto.Type.adapter_load(adapter, type, value) do
       {:ok, value} ->
-        load_each(Map.put(struct, key, value), kv, types, adapter)
+        load_each(%{struct | key => value}, kv, types, adapter)
       :error ->
         raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type} " <>
                              "for field `#{key}` in schema #{inspect struct.__struct__}"
@@ -686,7 +686,7 @@ defmodule Ecto.Repo.Schema do
     Enum.reduce assocs, changes, fn {refl, _}, acc ->
       %{field: field, owner_key: owner_key, related_key: related_key} = refl
       related = Map.get(struct, field)
-      value   = related && Map.get(related, related_key)
+      value = related && Map.fetch!(related, related_key)
       case Map.fetch(changes, owner_key) do
         {:ok, current} when current != value ->
           raise ArgumentError,

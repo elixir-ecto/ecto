@@ -500,10 +500,7 @@ defmodule Ecto.Association.Has do
 
   @doc false
   def build(%{owner_key: owner_key, related_key: related_key} = refl, struct, attributes) do
-    refl
-    |> build()
-    |> struct(attributes)
-    |> Map.put(related_key, Map.get(struct, owner_key))
+    %{refl |> build() |> struct(attributes) | related_key => Map.get(struct, owner_key)}
   end
 
   @doc false
