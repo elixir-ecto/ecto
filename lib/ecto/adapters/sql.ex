@@ -150,12 +150,17 @@ defmodule Ecto.Adapters.SQL do
   The examples below are meant for reference. Each adapter will
   return a different result:
 
-      Ecto.Adapters.SQL.to_sql(:all, repo, Post)
+      iex> Ecto.Adapters.SQL.to_sql(:all, repo, Post)
       {"SELECT p.id, p.title, p.inserted_at, p.created_at FROM posts as p", []}
 
-      Ecto.Adapters.SQL.to_sql(:update_all, repo,
-                              from(p in Post, update: [set: [title: ^"hello"]]))
+      iex> Ecto.Adapters.SQL.to_sql(:update_all, repo,
+                                    from(p in Post, update: [set: [title: ^"hello"]]))
       {"UPDATE posts AS p SET title = $1", ["hello"]}
+
+  This function is also available under the repository with name `to_sql`:
+
+      iex> Repo.to_sql(:all, Post)
+      {"SELECT p.id, p.title, p.inserted_at, p.created_at FROM posts as p", []}
 
   """
   @spec to_sql(:all | :update_all | :delete_all, Ecto.Repo.t, Ecto.Queryable.t) ::
@@ -221,6 +226,11 @@ defmodule Ecto.Adapters.SQL do
   ## Examples
 
       iex> Ecto.Adapters.SQL.query(MyRepo, "SELECT $1::integer + $2", [40, 2])
+      {:ok, %{rows: [[42]], num_rows: 1}}
+
+  For convenience, this function is also available under the repository:
+
+      iex> MyRepo.query("SELECT $1::integer + $2", [40, 2])
       {:ok, %{rows: [[42]], num_rows: 1}}
 
   """
@@ -296,6 +306,15 @@ defmodule Ecto.Adapters.SQL do
       """
       def query!(sql, params \\ [], opts \\ []) do
         Ecto.Adapters.SQL.query!(__MODULE__, sql, params, opts)
+      end
+
+      @doc """
+      A convenience function for SQL-based repositories that translates the given query to SQL.
+
+      See `Ecto.Adapters.SQL.query/3` for more information.
+      """
+      def to_sql(operation, queryable) do
+        Ecto.Adapters.SQL.to_sql(operation, __MODULE__, queryable)
       end
     end
   end
