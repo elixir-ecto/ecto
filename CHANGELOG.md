@@ -28,29 +28,38 @@ Finally, the UPSERT support added on Ecto v2.1 is getting more improvements: the
 
   * [Ecto.Adapters.Postgres] Use the "postgres" database for create/drop database commands
   * [Ecto.Adapters.MySQL] Use TCP connections instead of MySQL command client to create & drop database
+  * [Ecto.Changeset] Support `action: :ignore` in changeset which is useful when casting associations and embeds and one or more children need to be rejected/ignored under certain circumstances
+  * [Ecto.Changeset] Add `:repo_opts` field to `Ecto.Changeset` which are given as options to to the repository whenever an operation is performed
   * [Ecto.Changeset] Add `apply_action/2`
   * [Ecto.Changeset] Add prefix constraint name checking to constraint validations
   * [Ecto.Changeset] Allow assocs and embeds in `change/2` and `put_change/3` - this gives a more generic API for developers to work that does not require explicit knowledge of the field type
-  * [Ecto.Migrations] Add reversible `execute/2` to migrations
+  * [Ecto.Migration] Add reversible `execute/2` to migrations
+  * [Ecto.Migration] Add `:migration_timestamps` and `:migration_primary_key` to control the migration defaults from the repository
   * [Ecto.Migrator] Allow migration/rollback to log SQL commands via the `--log-sql` flag
   * [Ecto.LogEntry] Add `:caller_pid` to the Ecto.LogEntry struct
   * [Ecto.Query] Allow map updates in subqueries
+  * [Ecto.Query] Support fragment and field access in `type/2` in select
   * [Ecto.Repo] Implement `:returning` option on insert
   * [Ecto.Repo] Add ON CONSTRAINT support to `:conflict_target` on `insert` and `insert_all`
   * [Ecto.Repo] Raise `MultiplePrimaryKeyError` when primary key is not unique on DB side
   * [Ecto.Schema] Validate schemas after compilation - this helps developers catch early mistakes such as foreign key mismatches early on
   * [Ecto.UUID] Allow casting binary UUIDs
+
   * [mix ecto.drop] Add `--force`
   * [mix ecto.load] Add `--force` and prompt user to confirm before continuing in production
 
 ### Bug fixes
 
   * [Ecto.Changeset] Remove the field from changes if it does not pass `validate_required`
+  * [Ecto.Changeset] Raise if changeset struct does not match relation
+  * [Ecto.Query] Consistently raise if `nil` is interpolated on the right side of `in`
   * [Ecto.Query] Properly expand macros in `select`
   * [Ecto.Query] Support `or_having` in keyword query
   * [Ecto.Query] Properly count the parameters when using interpolation inside a `select` inside a `subquery`
   * [Ecto.Repo] Set struct prefix on `insert`, `delete`, and `update` when the prefix is given as an option
   * [Ecto.UUID] Validate UUID version on casting
+  * [mix ecto.*] Make sure `Logger` is rebootted when running ecto tasks
+  * [mix ecto.*] No longer mark tasks as recursive and instead collect all repositories upfront. This fixes a bug where migration and rollback commands for a given repository could be executed multiple times from an umbrella project
 
 ### Deprecations
 
