@@ -15,9 +15,8 @@ defmodule Ecto.Integration.SQLTest do
   end
 
   test "fragmented schemaless types" do
-    decimal = Decimal.new("1.0")
-    TestRepo.insert!(%Post{cost: decimal})
-    assert [^decimal] = TestRepo.all(from p in "posts", select: type(fragment("cost"), :decimal))
+    TestRepo.insert!(%Post{visits: 123})
+    assert [123] = TestRepo.all(from p in "posts", select: type(fragment("visits"), :integer))
   end
 
   @tag :array_type

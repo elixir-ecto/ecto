@@ -223,9 +223,8 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   test "schemaless types" do
-    decimal = Decimal.new("1.0")
-    TestRepo.insert!(%Post{cost: decimal})
-    assert [^decimal] = TestRepo.all(from p in "posts", select: type(p.cost, :decimal))
+    TestRepo.insert!(%Post{visits: 123})
+    assert [123] = TestRepo.all(from p in "posts", select: type(p.visits, :integer))
   end
 
   test "schemaless calendar types" do
