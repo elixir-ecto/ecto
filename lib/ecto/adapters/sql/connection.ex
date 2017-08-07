@@ -55,17 +55,17 @@ defmodule Ecto.Adapters.SQL.Connection do
   @doc """
   Receives a query and must return a SELECT query.
   """
-  @callback all(query :: Ecto.Query.t) :: String.t
+  @callback all(query :: Ecto.Query.t) :: iodata
 
   @doc """
   Receives a query and values to update and must return an UPDATE query.
   """
-  @callback update_all(query :: Ecto.Query.t) :: String.t
+  @callback update_all(query :: Ecto.Query.t) :: iodata
 
   @doc """
   Receives a query and must return a DELETE query.
   """
-  @callback delete_all(query :: Ecto.Query.t) :: String.t
+  @callback delete_all(query :: Ecto.Query.t) :: iodata
 
   @doc """
   Returns an INSERT for the given `rows` in `table` returning
@@ -73,20 +73,20 @@ defmodule Ecto.Adapters.SQL.Connection do
   """
   @callback insert(prefix ::String.t, table :: String.t,
                    header :: [atom], rows :: [[atom | nil]],
-                   on_conflict :: Ecto.Adapter.on_conflict, returning :: [atom]) :: String.t
+                   on_conflict :: Ecto.Adapter.on_conflict, returning :: [atom]) :: iodata
 
   @doc """
   Returns an UPDATE for the given `fields` in `table` filtered by
   `filters` returning the given `returning`.
   """
   @callback update(prefix :: String.t, table :: String.t, fields :: [atom],
-                   filters :: [atom], returning :: [atom]) :: String.t
+                   filters :: [atom], returning :: [atom]) :: iodata
 
   @doc """
   Returns a DELETE for the `filters` returning the given `returning`.
   """
   @callback delete(prefix :: String.t, table :: String.t,
-                   filters :: [atom], returning :: [atom]) :: String.t
+                   filters :: [atom], returning :: [atom]) :: iodata
 
   ## DDL
 

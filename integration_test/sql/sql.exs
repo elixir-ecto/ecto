@@ -32,18 +32,22 @@ defmodule Ecto.Integration.SQLTest do
     assert result.rows == [[1]]
   end
 
+  test "query!/4 with iodata" do
+    result = TestRepo.query!(["SELECT", ?\s, ?1])
+    assert result.rows == [[1]]
+  end
+
   test "to_sql/3" do
-    {sql, []} = Ecto.Adapters.SQL.to_sql(:all, TestRepo, Barebone)
+    {sql, []} = TestRepo.to_sql(:all, Barebone)
     assert sql =~ "SELECT"
     assert sql =~ "barebones"
 
-    {sql, [0]} = Ecto.Adapters.SQL.to_sql(:update_all, TestRepo,
-                                          from(b in Barebone, update: [set: [num: ^0]]))
+    {sql, [0]} = TestRepo.to_sql(:update_all, from(b in Barebone, update: [set: [num: ^0]]))
     assert sql =~ "UPDATE"
     assert sql =~ "barebones"
     assert sql =~ "SET"
 
-    {sql, []} = Ecto.Adapters.SQL.to_sql(:delete_all, TestRepo, Barebone)
+    {sql, []} = TestRepo.to_sql(:delete_all, Barebone)
     assert sql =~ "DELETE"
     assert sql =~ "barebones"
   end

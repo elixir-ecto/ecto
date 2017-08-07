@@ -57,11 +57,11 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def prepare(:all, query),
-        do: {:cache, {System.unique_integer([:positive]), @conn.all(query)}}
+        do: {:cache, {System.unique_integer([:positive]), IO.iodata_to_binary(@conn.all(query))}}
       def prepare(:update_all, query),
-        do: {:cache, {System.unique_integer([:positive]), @conn.update_all(query)}}
+        do: {:cache, {System.unique_integer([:positive]), IO.iodata_to_binary(@conn.update_all(query))}}
       def prepare(:delete_all, query),
-        do: {:cache, {System.unique_integer([:positive]), @conn.delete_all(query)}}
+        do: {:cache, {System.unique_integer([:positive]), IO.iodata_to_binary(@conn.delete_all(query))}}
 
       @doc false
       def execute(repo, meta, query, params, process, opts) do

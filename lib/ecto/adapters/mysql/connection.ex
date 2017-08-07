@@ -85,7 +85,7 @@ if Code.ensure_loaded?(Mariaex) do
       offset   = offset(query, sources)
       lock     = lock(query.lock)
 
-      IO.iodata_to_binary([select, from, join, where, group_by, having, order_by, limit, offset | lock])
+      [select, from, join, where, group_by, having, order_by, limit, offset | lock]
     end
 
     def update_all(query, prefix \\ nil)
@@ -104,7 +104,7 @@ if Code.ensure_loaded?(Mariaex) do
       prefix = prefix || ["UPDATE ", from, " AS ", name, join, " SET "]
       where  = where(query, sources)
 
-      IO.iodata_to_binary([prefix, fields | where])
+      [prefix, fields | where]
     end
     def update_all(_query, _prefix) do
       error!(nil, "RETURNING is not supported in update_all by MySQL")
@@ -118,16 +118,15 @@ if Code.ensure_loaded?(Mariaex) do
       join   = join(query, sources)
       where  = where(query, sources)
 
-      IO.iodata_to_binary(["DELETE ", name, ".*", from, join | where])
+      ["DELETE ", name, ".*", from, join | where]
     end
     def delete_all(_query),
       do: error!(nil, "RETURNING is not supported in delete_all by MySQL")
 
     def insert(prefix, table, header, rows, on_conflict, []) do
       fields = intersperse_map(header, ?,, &quote_name/1)
-      IO.iodata_to_binary(["INSERT INTO ", quote_table(prefix, table), " (",
-                           fields, ") VALUES ", insert_all(rows) |
-                           on_conflict(on_conflict, header)])
+      ["INSERT INTO ", quote_table(prefix, table), " (", fields, ") VALUES ",
+       insert_all(rows) | on_conflict(on_conflict, header)]
     end
     def insert(_prefix, _table, _header, _rows, _on_conflict, _returning) do
       error!(nil, "RETURNING is not supported in insert/insert_all by MySQL")
@@ -166,14 +165,12 @@ if Code.ensure_loaded?(Mariaex) do
     def update(prefix, table, fields, filters, _returning) do
       fields = intersperse_map(fields, ", ", &[quote_name(&1), " = ?"])
       filters = intersperse_map(filters, " AND ", &[quote_name(&1), " = ?"])
-
-      IO.iodata_to_binary(["UPDATE ", quote_table(prefix, table), " SET ", fields, " WHERE " | filters])
+      ["UPDATE ", quote_table(prefix, table), " SET ", fields, " WHERE " | filters]
     end
 
     def delete(prefix, table, filters, _returning) do
       filters = intersperse_map(filters, " AND ", &[quote_name(&1), " = ?"])
-
-      IO.iodata_to_binary(["DELETE FROM ", quote_table(prefix, table), " WHERE " | filters])
+      ["DELETE FROM ", quote_table(prefix, table), " WHERE " | filters]
     end
 
     ## Query generation

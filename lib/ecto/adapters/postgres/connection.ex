@@ -131,7 +131,7 @@ if Code.ensure_loaded?(Postgrex) do
       offset   = offset(query, sources)
       lock     = lock(query.lock)
 
-      IO.iodata_to_binary([select, from, join, where, group_by, having, order_by, limit, offset | lock])
+      [select, from, join, where, group_by, having, order_by, limit, offset | lock]
     end
 
     def update_all(%{from: from} = query, prefix \\ nil) do
@@ -143,7 +143,7 @@ if Code.ensure_loaded?(Postgrex) do
       {join, wheres} = using_join(query, :update_all, "FROM", sources)
       where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
-      IO.iodata_to_binary([prefix, fields, join, where | returning(query, sources)])
+      [prefix, fields, join, where | returning(query, sources)]
     end
 
     def delete_all(%{from: from} = query) do
@@ -153,7 +153,7 @@ if Code.ensure_loaded?(Postgrex) do
       {join, wheres} = using_join(query, :delete_all, "USING", sources)
       where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
-      IO.iodata_to_binary(["DELETE FROM ", from, " AS ", name, join, where | returning(query, sources)])
+      ["DELETE FROM ", from, " AS ", name, join, where | returning(query, sources)]
     end
 
     def insert(prefix, table, header, rows, on_conflict, returning) do
@@ -164,8 +164,8 @@ if Code.ensure_loaded?(Postgrex) do
           [?\s, ?(, intersperse_map(header, ?,, &quote_name/1), ") VALUES " | insert_all(rows, 1)]
         end
 
-      IO.iodata_to_binary(["INSERT INTO ", quote_table(prefix, table), insert_as(on_conflict),
-                           values, on_conflict(on_conflict, header) | returning(returning)])
+      ["INSERT INTO ", quote_table(prefix, table), insert_as(on_conflict),
+       values, on_conflict(on_conflict, header) | returning(returning)]
     end
 
     defp insert_as({%{from: from} = query, _, _}) do
@@ -226,8 +226,8 @@ if Code.ensure_loaded?(Postgrex) do
         {[quote_name(field), " = $" | Integer.to_string(acc)], acc + 1}
       end)
 
-      IO.iodata_to_binary(["UPDATE ", quote_table(prefix, table), " SET ",
-                           fields, " WHERE ", filters | returning(returning)])
+      ["UPDATE ", quote_table(prefix, table), " SET ",
+       fields, " WHERE ", filters | returning(returning)]
     end
 
     def delete(prefix, table, filters, returning) do
@@ -235,8 +235,7 @@ if Code.ensure_loaded?(Postgrex) do
         {[quote_name(field), " = $" | Integer.to_string(acc)], acc + 1}
       end)
 
-      IO.iodata_to_binary(["DELETE FROM ", quote_table(prefix, table), " WHERE ",
-                           filters | returning(returning)])
+      ["DELETE FROM ", quote_table(prefix, table), " WHERE ", filters | returning(returning)]
     end
 
     ## Query generation
