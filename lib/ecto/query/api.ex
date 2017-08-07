@@ -371,16 +371,18 @@ defmodule Ecto.Query.API do
 
       type(^title, p.title)
 
-  `type/2` can also be used to cast fragments inside `select`:
+  Ecto will ensure `^title` is cast to the given type and enforce such
+  type at the database level. If the value is returned in a `select`,
+  Ecto will also enforce the proper type throughout.
+
+  Inside `select`, `type/2` can also be used to cast fragments:
 
       type(fragment("NOW"), :naive_datetime)
 
-  Or fields for schemaless queries inside select:
+  Or on fields for schemaless queries:
 
       from p in "posts", select: type(p.cost, :decimal)
 
-  `type/2` operates by casting at the database level and then by
-  verifying that the desired type was returned when loading the data.
   """
   def type(interpolated_value, type), do: doc! [interpolated_value, type]
 
