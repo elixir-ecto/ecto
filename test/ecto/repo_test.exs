@@ -182,17 +182,35 @@ defmodule Ecto.RepoTest do
   end
 
   test "insert, update, insert_or_update and delete sets schema prefix" do
-    valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{}, [])
+    valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{x: "foo"}, [:x])
+
     assert {:ok, schema} = TestRepo.insert(valid, prefix: "public")
     {schema_prefix, _} = schema.__meta__.source
     assert schema_prefix == "public"
 
-    valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{x: "foo"}, [:x])
     assert {:ok, schema} = TestRepo.update(valid, prefix: "public")
     {schema_prefix, _} = schema.__meta__.source
     assert schema_prefix == "public"
 
-    valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{}, [])
+    assert {:ok, schema} = TestRepo.delete(valid, prefix: "public")
+    {schema_prefix, _} = schema.__meta__.source
+    assert schema_prefix == "public"
+  end
+
+  test "insert, update, and delete sets schema prefix from changeset repo opts" do
+    valid =
+      %MySchema{id: 1}
+      |> Ecto.Changeset.cast(%{x: "foo"}, [:x])
+      |> Map.put(:repo_opts, [prefix: "public"])
+
+    assert {:ok, schema} = TestRepo.insert(valid, prefix: "public")
+    {schema_prefix, _} = schema.__meta__.source
+    assert schema_prefix == "public"
+
+    assert {:ok, schema} = TestRepo.update(valid, prefix: "public")
+    {schema_prefix, _} = schema.__meta__.source
+    assert schema_prefix == "public"
+
     assert {:ok, schema} = TestRepo.delete(valid, prefix: "public")
     {schema_prefix, _} = schema.__meta__.source
     assert schema_prefix == "public"

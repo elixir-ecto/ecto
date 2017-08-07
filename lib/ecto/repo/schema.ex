@@ -164,7 +164,9 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_insert(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
-    %{prepare: prepare} = changeset
+    %{prepare: prepare, repo_opts: repo_opts} = changeset
+    opts = Keyword.merge(repo_opts, opts)
+
     struct = struct_from_changeset!(:insert, changeset)
     schema = struct.__struct__
     dumper = schema.__schema__(:dump)
@@ -240,7 +242,9 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_update(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
-    %{prepare: prepare} = changeset
+    %{prepare: prepare, repo_opts: repo_opts} = changeset
+    opts = Keyword.merge(repo_opts, opts)
+
     struct = struct_from_changeset!(:update, changeset)
     schema = struct.__struct__
     dumper = schema.__schema__(:dump)
@@ -349,7 +353,9 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_delete(repo, adapter, %Changeset{valid?: true} = changeset, opts) do
-    %{prepare: prepare} = changeset
+    %{prepare: prepare, repo_opts: repo_opts} = changeset
+    opts = Keyword.merge(repo_opts, opts)
+
     struct = struct_from_changeset!(:delete, changeset)
     schema = struct.__struct__
     assocs = schema.__schema__(:associations)

@@ -213,8 +213,9 @@ defmodule Ecto.Changeset do
     * `filters`      - Filters (as a map `%{field => value}`) to narrow the scope of update/delete queries
     * `action`       - The action to be performed with the changeset
     * `types`        - Cache of the data's field types
-    * `repo`         - The repository applying the changeset (only set after a Repo function is called)
     * `empty_values` - A list of values to be considered empty
+    * `repo`         - The repository applying the changeset (only set after a Repo function is called)
+    * `repo_opts`    - A keyword list of options given to the underlying repository operation
 
   """
 
@@ -224,13 +225,14 @@ defmodule Ecto.Changeset do
   @empty_values [""]
 
   # If a new field is added here, def merge must be adapted
-  defstruct valid?: false, data: nil, params: nil, changes: %{}, repo: nil,
+  defstruct valid?: false, data: nil, params: nil, changes: %{},
             errors: [], validations: [], required: [], prepare: [],
             constraints: [], filters: %{}, action: nil, types: nil,
-            empty_values: @empty_values
+            empty_values: @empty_values, repo: nil, repo_opts: []
 
   @type t :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
+                        repo_opts: Keyword.t,
                         data: Ecto.Schema.t | map | nil,
                         params: %{String.t => term} | nil,
                         changes: %{atom => term},
