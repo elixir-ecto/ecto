@@ -346,6 +346,13 @@ defmodule Ecto.Query.PlannerTest do
              Macro.to_string(query.from.query.select.expr)
     end
 
+    test "supports structs" do
+      query = from p in Post, select: %Post{code: p.code}
+      query = prepare(from(subquery(query), [])) |> elem(0)
+      assert "%Ecto.Query.PlannerTest.Post{code: &0.code()}" =
+             Macro.to_string(query.from.query.select.expr)
+    end
+
     test "supports update in maps" do
       query = from p in Post, select: %{p | code: p.title}
       query = prepare(from(subquery(query), [])) |> elem(0)
@@ -356,6 +363,29 @@ defmodule Ecto.Query.PlannerTest do
 
       query = from p in Post, select: %{p | unknown: p.title}
       assert_raise Ecto.SubQueryError, ~r/invalid key `:unknown` on map update in subquery/, fn ->
+        prepare(from(subquery(query), []))
+      end
+    end
+
+    test "supports merge" do
+      query = from p in Post, select: merge(p, %{code: p.title})
+      query = prepare(from(subquery(query), [])) |> elem(0)
+      assert "%Ecto.Query.PlannerTest.Post{id: &0.id(), title: &0.title(), " <>
+             "text: &0.text(), posted: &0.posted(), visits: &0.visits(), " <>
+             "links: &0.links(), code: &0.title()}" =
+             Macro.to_string(query.from.query.select.expr)
+
+      query = from p in Post, select: merge(%{}, %{})
+      query = prepare(from(subquery(query), [])) |> elem(0)
+      assert "%{}" = Macro.to_string(query.from.query.select.expr)
+
+      assert_raise Ecto.SubQueryError, ~r/cannot merge because the left side is a map/, fn ->
+        query = from p in Post, select: merge(%{}, p)
+        prepare(from(subquery(query), []))
+      end
+
+      assert_raise Ecto.SubQueryError, ~r/cannot merge because the left side is a Ecto.Query/, fn ->
+        query = from p in Post, join: c in Comment, select: merge(p, c)
         prepare(from(subquery(query), []))
       end
     end

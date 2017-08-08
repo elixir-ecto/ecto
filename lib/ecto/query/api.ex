@@ -9,7 +9,7 @@ defmodule Ecto.Query.API do
     * Null check functions: `is_nil/1`
     * Aggregates: `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
     * Date/time intervals: `datetime_add/3`, `date_add/3`, `from_now/2`, `ago/2`
-    * Inside select: `struct/2`, `map/2` and literals (map, tuples, lists, etc)
+    * Inside select: `struct/2`, `map/2`, `merge/2` and literals (map, tuples, lists, etc)
     * General: `fragment/1`, `field/2` and `type/2`
 
   Note the functions in this module exist for documentation
@@ -309,16 +309,22 @@ defmodule Ecto.Query.API do
       fields = [:title, :body]
       from p in Post, select: ^fields
 
-  However, `struct/2` is still useful when you want to limit
-  the fields of different structs:
-
-      from(city in City, join: country in assoc(city, :country),
-           select: {struct(city, [:country_id, :name]), struct(country, [:id, :population])}
-
   For preloads, the selected fields may be specified from the parent:
 
       from(city in City, preload: :country,
            select: struct(city, [:country_id, :name, country: [:id, :population]]))
+
+  If the same source is selected multiple times with a `struct`,
+  the fields are merged in order to avoid fetching multiple copies
+  from the database. In other words, the expression below:
+
+      from(city in City, preload: :country,
+           select: {struct(city, [:country_id]), struct(city, [:name])}
+
+  is expanded to:
+
+      from(city in City, preload: :country,
+           select: {struct(city, [:country_id, :name]), struct(city, [:country_id, :name])}
 
   **IMPORTANT**: When filtering fields for associations, you
   MUST include the foreign keys used in the relationship,
@@ -340,11 +346,17 @@ defmodule Ecto.Query.API do
       fields = [:title, :body]
       from p in Post, select: map(p, ^fields)
 
-  `map/2` is also useful when you want to limit the fields
-  of different structs:
+  If the same source is selected multiple times with a `map`,
+  the fields are merged in order to avoid fetching multiple copies
+  from the database. In other words, the expression below:
 
-      from(city in City, join: country in assoc(city, :country),
-           select: {map(city, [:country_id, :name]), map(country, [:id, :population])}
+      from(city in City, preload: :country,
+           select: {map(city, [:country_id]), map(city, [:name])}
+
+  is expanded to:
+
+      from(city in City, preload: :country,
+           select: {map(city, [:country_id, :name]), map(city, [:country_id, :name])}
 
   For preloads, the selected fields may be specified from the parent:
 
@@ -356,6 +368,20 @@ defmodule Ecto.Query.API do
   otherwise Ecto will be unable to find associated records.
   """
   def map(source, fields), do: doc! [source, fields]
+
+  @doc """
+  Merges the map on the right over the map on the left.
+
+  If the map on the left side is a struct, Ecto will check
+  all of the field on the right previously exist on the left
+  before merging.
+
+      from(city in City, select: merge(c, %{virtual_field: "some_value"}))
+
+  This function is primarily used by `Ecto.Query.select_merge/3`
+  to merge different select clauses.
+  """
+  def merge(left_map, right_map), do: doc! [left_map, right_map]
 
   @doc """
   Casts the given value to the given type at the database level.

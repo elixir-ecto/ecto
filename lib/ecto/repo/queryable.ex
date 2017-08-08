@@ -189,6 +189,32 @@ defmodule Ecto.Repo.Queryable do
     fn row -> row |> process(postprocess, nil, prefix, adapter) |> elem(0) end
   end
 
+  defp process(row, {:merge, left, right}, from, prefix, adapter) do
+    {left, row} = process(row, left, from, prefix, adapter)
+    {right, row} = process(row, right, from, prefix, adapter)
+
+    data =
+      case {left, right} do
+        {%{__struct__: struct}, %{__struct__: struct}} ->
+          right
+          |> Map.from_struct()
+          |> Enum.reduce(left, fn {key, value}, acc -> %{acc | key => value} end)
+        {_, %{__struct__: _}} ->
+          raise ArgumentError, "can only merge with a struct on the right side when both sides " <>
+                               "represent the same struct. Left side is #{inspect left} and " <>
+                               "right side is #{inspect right}"
+        {%{__struct__: _}, %{}} ->
+          Enum.reduce(right, left, fn {key, value}, acc -> %{acc | key => value} end)
+        {%{}, %{}} ->
+          Map.merge(left, right)
+        {_, %{}} ->
+          raise ArgumentError, "cannot merge because the left side is not a map, got: #{inspect left}"
+        {%{}, _} ->
+          raise ArgumentError, "cannot merge because the right side is not a map, got: #{inspect right}"
+      end
+
+    {data, row}
+  end
   defp process(row, {:struct, struct, data, args}, from, prefix, adapter) do
     case process(row, data, from, prefix, adapter) do
       {%{__struct__: ^struct} = data, row} ->

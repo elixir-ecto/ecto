@@ -42,6 +42,17 @@ defmodule Ecto.Query.Builder.SelectTest do
              escape(quote do %Foo{a: a} end, [a: 0], __ENV__)
     end
 
+    test "on conflicting take" do
+      assert {_, {%{}, %{0 => {:map, [:foo, :bar, baz: :bat]}}}} =
+             escape(quote do {map(x, [:foo, :bar]), map(x, [baz: :bat])} end, [x: 0], __ENV__)
+
+      assert_raise Ecto.Query.CompileError,
+                   ~r"cannot apply select_merge because the binding at position 0",
+                   fn ->
+        escape(quote do {map(x, [:foo, :bar]), struct(x, [baz: :bat])} end, [x: 0], __ENV__)
+      end
+    end
+
     @fields [:field]
 
     test "supports sigils/attributes" do
@@ -64,6 +75,88 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert_raise Ecto.Query.CompileError, message, fn ->
         %Ecto.Query{} |> select([], 1) |> select([], 2)
       end
+    end
+  end
+
+  describe "select_merge" do
+    test "merges at compile time" do
+      query =
+        from p in "posts",
+          select: %{},
+          select_merge: %{a: map(p, [:title]), b: ^0},
+          select_merge: %{c: map(p, [:title, :body]), d: ^1}
+      assert Macro.to_string(query.select.expr) ==
+             "merge(%{a: &0, b: ^0}, %{c: &0, d: ^0})"
+      assert query.select.params ==
+             [{0, :any}, {1, :any}]
+      assert query.select.take ==
+             %{0 => {:map, [:title, :body]}}
+    end
+
+    test "merges at runtime time" do
+      query =
+        "posts"
+        |> select([], %{})
+        |> select_merge([p], %{a: map(p, [:title]), b: ^0})
+        |> select_merge([p], %{c: map(p, [:title, :body]), d: ^1})
+
+      assert Macro.to_string(query.select.expr) ==
+             "merge(%{a: &0, b: ^0}, %{c: &0, d: ^0})"
+      assert query.select.params ==
+             [{0, :any}, {1, :any}]
+      assert query.select.take ==
+             %{0 => {:map, [:title, :body]}}
+    end
+
+    test "defaults to struct" do
+      query = select_merge("posts", [p], %{title: nil})
+      assert Macro.to_string(query.select.expr) ==
+             "merge(&0, %{title: nil})"
+      assert query.select.params == []
+      assert query.select.take == %{}
+    end
+
+    test "on conflicting take" do
+      _ = from p in "posts", select: %{}, select_merge: map(p, [:title]), select_merge: [:body]
+      _ = from p in "posts", select: %{}, select_merge: map(p, [:title]), select_merge: map(p, [:body])
+      _ = from p in "posts", select: %{}, select_merge: [:title], select_merge: map(p, [:body])
+      _ = from p in "posts", select: %{}, select_merge: [:title], select_merge: struct(p, [:body])
+      _ = from p in "posts", select: %{}, select_merge: struct(p, [:title]), select_merge: [:body]
+      _ = from p in "posts", select: %{}, select_merge: struct(p, [:title]), select_merge: struct(p, [:body])
+
+      assert_raise Ecto.Query.CompileError,
+                   ~r"cannot apply select_merge because the binding at position 0",
+                   fn ->
+        from p in "posts", select_merge: map(p, [:title]), select_merge: struct(p, [:body])
+      end
+    end
+
+    test "optimizes map/struct merges" do
+      query =
+        from p in "posts",
+          select: %{t: {p.title, p.body}},
+          select_merge: %{t: p.title, b: p.body}
+      assert Macro.to_string(query.select.expr) == "%{t: &0.title(), b: &0.body()}"
+
+      query =
+        from p in "posts",
+          select: %Post{title: p.title},
+          select_merge: %{title: nil}
+      assert Macro.to_string(query.select.expr) == "%Post{title: nil}"
+
+      # Do not optimize because struct is on the right side
+      query =
+        from p in "posts",
+          select: %{title: p.title},
+          select_merge: %Post{title: nil}
+      assert Macro.to_string(query.select.expr) =~ "merge"
+
+      # Do not optimize because of parameter
+      query =
+        from p in "posts",
+          select: %{t: {p.title, ^0}},
+          select_merge: %{t: p.title, b: p.body}
+      assert Macro.to_string(query.select.expr) =~ "merge"
     end
   end
 end

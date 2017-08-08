@@ -221,6 +221,9 @@ defmodule Ecto.Query.InspectTest do
 
     assert i(from(p in Post, select: struct(p, [:foo]))) ==
            ~s{from p in Inspect.Post, select: struct(p, [:foo])}
+
+    assert i(from(p in Post, select: merge(p, %{foo: p.foo}))) ==
+           ~s"from p in Inspect.Post, select: merge(p, %{foo: p.foo})"
   end
 
   test "select after planner" do

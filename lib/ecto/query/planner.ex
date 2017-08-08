@@ -253,6 +253,24 @@ defmodule Ecto.Query.Planner do
     {query, meta}
   end
 
+  defp subquery_select({:merge, _, [left, right]}, take, query) do
+    {left_struct, left_fields} = subquery_select(left, take, query)
+    {right_struct, right_fields} = subquery_select(right, take, query)
+    struct =
+      case {left_struct, right_struct} do
+        {struct, struct} -> struct
+        {_, nil} -> left_struct
+        {nil, _} -> error!(query, "cannot merge because the left side is a map " <>
+                                  "and the right side is a #{inspect right_struct} struct")
+        {_, _} -> error!(query, "cannot merge because the left side is a #{inspect left_struct} " <>
+                                "and the right side is a #{inspect right_struct} struct")
+      end
+    {struct, Keyword.merge(left_fields, right_fields)}
+  end
+  defp subquery_select({:%, _, [name, map]}, take, query) do
+    {_, fields} = subquery_select(map, take, query)
+    {name, fields}
+  end
   defp subquery_select({:%{}, _, [{:|, _, [{:&, [], [ix]}, pairs]}]} = expr, take, query) do
     assert_subquery_fields!(query, expr, pairs)
     {source, _} = source_take!(:select, query, take, ix, ix)
@@ -945,6 +963,11 @@ defmodule Ecto.Query.Planner do
     {args, fields, from} = collect_kv(args, fields, from, query, take, [])
     struct!(name, args)
     {{:struct, name, args}, fields, from}
+  end
+
+  defp collect_fields({:merge, _, args}, fields, from, query, take) do
+    {[left, right], fields, from} = collect_args(args, fields, from, query, take, [])
+    {{:merge, left, right}, fields, from}
   end
 
   defp collect_fields(args, fields, from, query, take) when is_list(args) do

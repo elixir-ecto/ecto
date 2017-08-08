@@ -58,6 +58,13 @@ defmodule Ecto.Query.Builder.Select do
     {{:{}, [], [:%{}, [], [{:{}, [], [:|, [], [data, pairs]]}]]}, params_take}
   end
 
+  # Merge
+  defp escape({:merge, _, [left, right]}, params_take, vars, env) do
+    {left, params_take} = escape(left, params_take, vars, env)
+    {right, params_take} = escape(right, params_take, vars, env)
+    {{:{}, [], [:merge, [], [left, right]]}, params_take}
+  end
+
   defp escape({:%{}, _, pairs}, params_take, vars, env) do
     {pairs, params_take} = escape_pairs(pairs, params_take, vars, env)
     {{:{}, [], [:%{}, [], pairs]}, params_take}
@@ -72,8 +79,8 @@ defmodule Ecto.Query.Builder.Select do
   defp escape({tag, _, [{var, _, context}, fields]}, {params, take}, vars, env)
        when tag in [:map, :struct] and is_atom(var) and is_atom(context) do
     taken = escape_fields(fields, tag, env)
-    expr  = Builder.escape_var(var, vars)
-    take  = Map.put(take, Builder.find_var!(var, vars), {tag, taken})
+    expr = Builder.escape_var(var, vars)
+    take = merge_take(take, %{Builder.find_var!(var, vars) => {tag, taken}})
     {expr, {params, take}}
   end
 
@@ -161,10 +168,14 @@ defmodule Ecto.Query.Builder.Select do
   @doc """
   Called at runtime for interpolated/dynamic selects.
   """
-  def select!(query, fields, file, line) do
+  def select!(kind, query, fields, file, line) do
     take = %{0 => {:any, fields!(:select, fields)}}
     expr = %Ecto.Query.SelectExpr{expr: {:&, [], [0]}, take: take, file: file, line: line}
-    apply(query, expr)
+    if kind == :select do
+      apply(query, expr)
+    else
+      merge(query, expr)
+    end
   end
 
   @doc """
@@ -174,16 +185,16 @@ defmodule Ecto.Query.Builder.Select do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
+  @spec build(:select | :merge, Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
 
-  def build(query, _binding, {:^, _, [var]}, env) do
+  def build(kind, query, _binding, {:^, _, [var]}, env) do
     quote do
-      Ecto.Query.Builder.Select.select!(unquote(query), unquote(var),
+      Ecto.Query.Builder.Select.select!(unquote(kind), unquote(query), unquote(var),
                                         unquote(env.file), unquote(env.line))
     end
   end
 
-  def build(query, binding, expr, env) do
+  def build(kind, query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding)
     {expr, {params, take}} = escape(expr, binding, env)
     params = Builder.escape_params(params)
@@ -195,11 +206,18 @@ defmodule Ecto.Query.Builder.Select do
                          file: unquote(env.file),
                          line: unquote(env.line),
                          take: unquote(take)}
-    Builder.apply_query(query, __MODULE__, [select], env)
+
+    if kind == :select do
+      Builder.apply_query(query, __MODULE__, [select], env)
+    else
+      quote do
+        Builder.Select.merge(unquote(query), unquote(select))
+      end
+    end
   end
 
   @doc """
-  The callback applied by `build/4` to build the query.
+  The callback applied by `build/5` to build the query.
   """
   @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
   def apply(%Ecto.Query{select: nil} = query, expr) do
@@ -210,5 +228,63 @@ defmodule Ecto.Query.Builder.Select do
   end
   def apply(query, expr) do
     apply(Ecto.Queryable.to_query(query), expr)
+  end
+
+  @doc """
+  The callback applied by `build/5` when merging.
+  """
+  def merge(%Ecto.Query{select: nil} = query, new_select) do
+    merge(query, new_select, {:&, [], [0]}, [], %{}, new_select)
+  end
+  def merge(%Ecto.Query{select: old_select} = query, new_select) do
+    %{expr: old_expr, params: old_params, take: old_take} = old_select
+    merge(query, old_select, old_expr, old_params, old_take, new_select)
+  end
+  def merge(query, expr) do
+    merge(Ecto.Queryable.to_query(query), expr)
+  end
+
+  defp merge(query, select, old_expr, old_params, old_take, new_select) do
+    %{expr: new_expr, params: new_params, take: new_take} = new_select
+
+    expr =
+      case {old_expr, new_expr} do
+        {{:%{}, meta, old_fields}, {:%{}, _, new_fields}} when
+            (old_fields == [] or tuple_size(hd(old_fields)) == 2) and
+            (new_fields == [] or tuple_size(hd(new_fields)) == 2) and
+            old_params == [] ->
+          {:%{}, meta, Keyword.merge(old_fields, new_fields)}
+        {{:%, meta, [name, {:%{}, meta, old_fields}]}, {:%{}, _, new_fields}} when
+            (old_fields == [] or tuple_size(hd(old_fields)) == 2) and
+            (new_fields == [] or tuple_size(hd(new_fields)) == 2) and
+            old_params == [] ->
+          {:%, meta, [name, {:%{}, meta, Keyword.merge(old_fields, new_fields)}]}
+        {_, _} ->
+          {:merge, [], [old_expr, new_expr]}
+      end
+
+    select = %{
+      select | expr: expr,
+               params: old_params ++ new_params,
+               take: merge_take(old_take, new_take)
+    }
+
+    %{query | select: select}
+  end
+
+  defp merge_take(%{} = old_take, %{} = new_take) do
+    Map.merge(old_take, new_take, &merge_take_kind_and_fields/3)
+  end
+
+  defp merge_take_kind_and_fields(binding, {old_kind, old_fields}, {new_kind, new_fields}) do
+    {merge_take_kind(binding, old_kind, new_kind), Enum.uniq(old_fields ++ new_fields)}
+  end
+
+  defp merge_take_kind(_, kind, kind), do: kind
+  defp merge_take_kind(_, :any, kind), do: kind
+  defp merge_take_kind(_, kind, :any), do: kind
+  defp merge_take_kind(binding, old, new) do
+    Builder.error! "cannot apply select_merge because the binding at position #{binding} " <>
+                   "was previously specified as a `#{old}` and later as `#{new}`"
   end
 end
