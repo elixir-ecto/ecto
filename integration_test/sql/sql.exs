@@ -22,6 +22,38 @@ defmodule Ecto.Integration.SQLTest do
     assert [[[{{2014, 1, 16}, _}, {{2014, 2, 16}, _}]]] = result.rows
   end
 
+  test "math infix operations interoperability" do
+    decimal_result = Decimal.new(2.0)
+
+    # Single parameter
+
+    assert %{rows: [[2]]} = TestRepo.query!("SELECT 1 + $1::integer", [1])
+    assert %{rows: [[2.0]]} = TestRepo.query!("SELECT 1 + $1::float", [1])
+
+    assert %{rows: [[result]]} = TestRepo.query!("SELECT 1 + $1::numeric", [1])
+    assert Decimal.equal?(result, decimal_result)
+
+    assert %{rows: [[result]]} = TestRepo.query!("SELECT 1 + $1::numeric", [Decimal.new(1)])
+    assert Decimal.equal?(result, decimal_result)
+
+    # Two parameters
+    
+    assert_raise Postgrex.Error, ~r/ambiguous_function/, fn ->
+      TestRepo.query!("SELECT $1 + $2", [1, 2])
+    end
+
+    assert %{rows: [[2.0]]} = TestRepo.query!("SELECT $1::integer + $2::float", [1, 1.0])
+    assert %{rows: [[^decimal_result]]} = TestRepo.query!("SELECT $1::integer + $2::numeric", [1, Decimal.new(1.0)])
+    assert %{rows: [[2.0]]} = TestRepo.query!("SELECT $1::float + $2::numeric", [1.0, Decimal.new(1.0)])
+    assert %{rows: [[2.0]]} = TestRepo.query!("SELECT $1::numeric + $2::float", [Decimal.new(1.0), 1.0])
+
+    assert %{rows: [[0]]} = TestRepo.query!("SELECT $1::integer / $2::integer", [1, 2])
+    assert %{rows: [[0.5]]} = TestRepo.query!("SELECT $1::integer / $2::float", [1, 2])
+    
+    assert %{rows: [[result]]} = TestRepo.query!("SELECT $1::numeric / $2::integer", [Decimal.new(4), 2])
+    assert Decimal.equal?(result, decimal_result)
+  end
+
   test "query!/4" do
     result = TestRepo.query!("SELECT 1")
     assert result.rows == [[1]]
