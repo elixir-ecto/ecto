@@ -94,6 +94,9 @@ defmodule Ecto.Query.PlannerTest do
 
     assert Exception.message(exception) =~ "value `1` in `where` cannot be cast to type :string"
     assert Exception.message(exception) =~ "where: p.title == ^1"
+
+    {_query, params, _key} = prepare(Post |> select([p], p.visits + ^0.1))
+    assert params == [0.1]
   end
 
   test "prepare: raises readable error on dynamic expressions/keyword lists" do

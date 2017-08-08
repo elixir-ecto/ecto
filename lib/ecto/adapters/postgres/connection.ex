@@ -243,6 +243,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     binary_ops =
       [==: " = ", !=: " != ", <=: " <= ", >=: " >= ", <: " < ", >: " > ",
+       +: " + ", -: " - ", *: " * ", /: " / ",
        and: " AND ", or: " OR ", ilike: " ILIKE ", like: " LIKE "]
 
     @binary_ops Keyword.keys(binary_ops)
