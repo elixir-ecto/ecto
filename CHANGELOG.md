@@ -20,12 +20,16 @@ The `ecto.migrate` and `ecto.rollback` tasks have also been enhanced with the `-
 
 Ecto now will also warn at compile time of invalid relationships, such as a belongs_to that points to a schema that does not exist.
 
+The query syntax also seen some improvements: map updates are supported in subqueries, the new `Ecto.Query.select_merge/3` makes it easier to write composable `select` clauses in queries and the `type/2` macro has been extended to support casting of fragments and fields in schemaless queries.
+
 Finally, the UPSERT support added on Ecto v2.1 is getting more improvements: the `{:constraint, constraint}` is now supported as conflict target and the `:returning` option was added to `Ecto.Repo.insert/2`, mirroring the behaviour of `insert_all`.
 
-## v2.2.0-dev
+## v2.2.0-rc.0 (2017-08-08)
 
 ### Enhancements
 
+  * [Ecto.Adapters] Accept IO data from adapters to reduce memory usage when performing large queries
+  * [Ecto.Adapters.SQL] Also add `Ecto.Repo.to_sql/2` to Ecto.Repo based on SQL adapters
   * [Ecto.Adapters.Postgres] Use the "postgres" database for create/drop database commands
   * [Ecto.Adapters.MySQL] Use TCP connections instead of MySQL command client to create & drop database
   * [Ecto.Changeset] Support `action: :ignore` in changeset which is useful when casting associations and embeds and one or more children need to be rejected/ignored under certain circumstances
@@ -39,12 +43,13 @@ Finally, the UPSERT support added on Ecto v2.1 is getting more improvements: the
   * [Ecto.LogEntry] Add `:caller_pid` to the Ecto.LogEntry struct
   * [Ecto.Query] Allow map updates in subqueries
   * [Ecto.Query] Support fragment and field access in `type/2` in select
+  * [Ecto.Query] Add `select_merge/3` as a composable API for selects
   * [Ecto.Repo] Implement `:returning` option on insert
   * [Ecto.Repo] Add ON CONSTRAINT support to `:conflict_target` on `insert` and `insert_all`
   * [Ecto.Repo] Raise `MultiplePrimaryKeyError` when primary key is not unique on DB side
   * [Ecto.Schema] Validate schemas after compilation - this helps developers catch early mistakes such as foreign key mismatches early on
+  * [Ecto.Type] Allow adapters to pass Date, Time, NaiveDateTime and DateTime on load if desired
   * [Ecto.UUID] Allow casting binary UUIDs
-
   * [mix ecto.drop] Add `--force`
   * [mix ecto.load] Add `--force` and prompt user to confirm before continuing in production
 
