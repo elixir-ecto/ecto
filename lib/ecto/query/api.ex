@@ -376,7 +376,7 @@ defmodule Ecto.Query.API do
   all of the field on the right previously exist on the left
   before merging.
 
-      from(city in City, select: merge(c, %{virtual_field: "some_value"}))
+      from(city in City, select: merge(city, %{virtual_field: "some_value"}))
 
   This function is primarily used by `Ecto.Query.select_merge/3`
   to merge different select clauses.
