@@ -22,18 +22,57 @@ defmodule Ecto.Integration.SQLTest do
     assert [[[{{2014, 1, 16}, _}, {{2014, 2, 16}, _}]]] = result.rows
   end
 
-  test "math infix operations interoperability" do
+  @tag :mysql_decimal_casting
+  test "math infix operations interoperability in mysql" do
     decimal_result = Decimal.new(2.0)
 
     # Single parameter
 
-    assert %{rows: [[2]]} = TestRepo.query!("SELECT 1 + $1::integer", [1])
-    assert %{rows: [[2.0]]} = TestRepo.query!("SELECT 1 + $1::float", [1])
+    %{rows: [[result]]} = TestRepo.query!("SELECT 1 + CAST(? as decimal)", [1])
+    assert Decimal.equal?(result, decimal_result)
+
+    # Aparently literal floats are actually decimals in mysql
+    %{rows: [[result]]} = TestRepo.query!("SELECT 1.0 + CAST(? as decimal)", [1])
+    assert Decimal.equal?(result, decimal_result)
+
+    # Two parameters
+
+    # Less stricter than postgres
+    assert %{rows: [[2]]} = TestRepo.query!("SELECT ? + ?", [1, 1])
+
+    # Just a sanity check
+    assert %{rows: [[2.0]]} = TestRepo.query!("SELECT ? + CAST(? as decimal)", [1.0, 1])
+    
+    %{rows: [[result]]} = TestRepo.query!("SELECT CAST(? as decimal) + CAST(? as decimal)", [1, 1])
+    assert Decimal.equal?(result, decimal_result)
+
+    %{rows: [[result]]} = TestRepo.query!("SELECT CAST(? as decimal) + CAST(? as decimal)", [1, 1.0])
+    assert Decimal.equal?(result, decimal_result)
+
+    %{rows: [[result]]} = TestRepo.query!("SELECT CAST(? as decimal) + CAST(? as decimal)", [1, Decimal.new(1.0)])
+    assert Decimal.equal?(result, decimal_result)
+
+    %{rows: [[result]]} = TestRepo.query!("SELECT CAST(? as decimal) + CAST(? as decimal)", [1.0, Decimal.new(1.0)])
+    assert Decimal.equal?(result, decimal_result)
+
+    %{rows: [[result]]} = TestRepo.query!("SELECT CAST(? as decimal) + CAST(? as decimal)", [Decimal.new(1.0), 1.0])
+    assert Decimal.equal?(result, decimal_result)
+
+    assert %{rows: [[result]]} = TestRepo.query!("SELECT CAST(? as decimal) / CAST(? as decimal)", [Decimal.new(4), 2])
+    assert Decimal.equal?(result, decimal_result)
+  end
+
+  @tag :pg_decimal_casting
+  test "math infix operations interoperability in postgres" do
+    decimal_result = Decimal.new(2.0)
+
+    # Single parameter
 
     assert %{rows: [[result]]} = TestRepo.query!("SELECT 1 + $1::numeric", [1])
     assert Decimal.equal?(result, decimal_result)
 
-    assert %{rows: [[result]]} = TestRepo.query!("SELECT 1 + $1::numeric", [Decimal.new(1)])
+    # Aparently literal floats are actually decimals in postgres too
+    assert %{rows: [[result]]} = TestRepo.query!("SELECT 1.0 + $1::numeric", [Decimal.new(1)])
     assert Decimal.equal?(result, decimal_result)
 
     # Two parameters
@@ -42,15 +81,26 @@ defmodule Ecto.Integration.SQLTest do
       TestRepo.query!("SELECT $1 + $2", [1, 2])
     end
 
-    assert %{rows: [[2.0]]} = TestRepo.query!("SELECT $1::integer + $2::float", [1, 1.0])
-    assert %{rows: [[^decimal_result]]} = TestRepo.query!("SELECT $1::integer + $2::numeric", [1, Decimal.new(1.0)])
-    assert %{rows: [[2.0]]} = TestRepo.query!("SELECT $1::float + $2::numeric", [1.0, Decimal.new(1.0)])
-    assert %{rows: [[2.0]]} = TestRepo.query!("SELECT $1::numeric + $2::float", [Decimal.new(1.0), 1.0])
+    # Just a sanity check
+    assert %{rows: [[2.0]]} = TestRepo.query!("SELECT $1::float + $2::numeric", [1, 1])
 
-    assert %{rows: [[0]]} = TestRepo.query!("SELECT $1::integer / $2::integer", [1, 2])
-    assert %{rows: [[0.5]]} = TestRepo.query!("SELECT $1::integer / $2::float", [1, 2])
+    # Aparentyle in postgres you can cast and recast in sequence (TIL)
+    assert %{rows: [[result]]} = TestRepo.query!("SELECT $1::float::numeric + $2::numeric", [1, 1])
+    assert Decimal.equal?(result, decimal_result)
+
+    assert %{rows: [[result]]} = TestRepo.query!("SELECT $1::numeric + $2::numeric", [1, 1.0])
+    assert Decimal.equal?(result, decimal_result)
+
+    assert %{rows: [[result]]} = TestRepo.query!("SELECT $1::numeric + $2::numeric", [1, Decimal.new(1.0)])
+    assert Decimal.equal?(result, decimal_result)
+
+    assert %{rows: [[result]]} = TestRepo.query!("SELECT $1::numeric + $2::numeric", [1.0, Decimal.new(1.0)])
+    assert Decimal.equal?(result, decimal_result)
+
+    assert %{rows: [[result]]} = TestRepo.query!("SELECT $1::numeric + $2::numeric", [Decimal.new(1.0), 1.0])
+    assert Decimal.equal?(result, decimal_result)
     
-    assert %{rows: [[result]]} = TestRepo.query!("SELECT $1::numeric / $2::integer", [Decimal.new(4), 2])
+    assert %{rows: [[result]]} = TestRepo.query!("SELECT $1::numeric / $2::numeric", [4, 2])
     assert Decimal.equal?(result, decimal_result)
   end
 
