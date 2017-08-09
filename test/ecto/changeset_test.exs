@@ -37,6 +37,7 @@ defmodule Ecto.ChangesetTest do
     use Ecto.Schema
 
     schema "posts" do
+      field :id_part_2, :integer, primary_key: true
       field :title, :string, default: ""
       field :body
       field :uuid, :binary_id
@@ -54,7 +55,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defp changeset(schema \\ %Post{}, params) do
-    cast(schema, params, ~w(title body upvotes decimal topics virtual))
+    cast(schema, params, ~w(id id_part_2 title body upvotes decimal topics virtual))
   end
 
   ## cast/4
@@ -1042,6 +1043,37 @@ defmodule Ecto.ChangesetTest do
                 |> validate_acceptance(:terms_of_service, message: "must be abided")
     refute changeset.valid?
     assert changeset.errors == [terms_of_service: {"must be abided", [validation: :acceptance]}]
+  end
+
+  test "validate_no_conflicts_unreliably/3" do
+    find_posts_with_title = fn(changeset) ->
+      name = get_field(changeset, :title)
+      if name == "Existing Title" do
+        [%Post{title: "Existing Title", id: 1, id_part_2: 2, body: "blah blah"}]
+      else
+        []
+      end
+    end
+
+    # conflicting insert with default error message
+    changeset = validate_no_conflicts_unreliably(changeset(%Post{}, %{"title" => "Existing Title"}), :title, find_posts_with_title)
+    refute changeset.valid?
+    assert changeset.errors == [title: {"has already been taken", [validation: :validate_no_conflicts_unreliably]}]
+
+    # conflicting insert with custom error message
+    changeset = validate_no_conflicts_unreliably(changeset(%Post{}, %{"title" => "Existing Title"}), :title, find_posts_with_title, message: "not original")
+    refute changeset.valid?
+    assert changeset.errors == [title: {"not original", [validation: :validate_no_conflicts_unreliably]}]
+
+    # changeset with same primary key is an update, therefore not a conflict
+    changeset = validate_no_conflicts_unreliably(changeset(%Post{title: "Existing Title", id: 1, id_part_2: 2}, %{"body" => "Update..."}), :title, find_posts_with_title)
+    assert changeset.valid?
+    assert changeset.errors == []
+
+    # an update that assigns a duplicate title to a different primary key is a conflict
+    changeset = validate_no_conflicts_unreliably(changeset(%Post{title: "Existing Title", id: 1, id_part_2: 3}, %{"body" => "Update..."}), :title, find_posts_with_title)
+    refute changeset.valid?
+    assert changeset.errors == [title: {"has already been taken", [validation: :validate_no_conflicts_unreliably]}]
   end
 
   ## Locks
