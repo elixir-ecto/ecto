@@ -37,6 +37,7 @@ defmodule Ecto.ChangesetTest do
     use Ecto.Schema
 
     schema "posts" do
+      field :id_part_2, :integer, primary_key: true
       field :title, :string, default: ""
       field :body
       field :uuid, :binary_id
@@ -54,7 +55,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defp changeset(schema \\ %Post{}, params) do
-    cast(schema, params, ~w(title body upvotes decimal topics virtual))
+    cast(schema, params, ~w(id id_part_2 title body upvotes decimal topics virtual))
   end
 
   ## cast/4
@@ -1042,6 +1043,58 @@ defmodule Ecto.ChangesetTest do
                 |> validate_acceptance(:terms_of_service, message: "must be abided")
     refute changeset.valid?
     assert changeset.errors == [terms_of_service: {"must be abided", [validation: :acceptance]}]
+  end
+
+  test "validate_unique_tentatively/3" do
+    defmodule FakeRepoWithDup do
+      def one(_query), do: true
+    end
+    defmodule FakeRepoWithoutDup do
+      def one(_query), do: nil
+    end
+
+    base_changeset = changeset(%Post{}, %{"title" => "Hello World", "body" => "hi"})
+
+    # validate uniqueness of one field
+    changeset = validate_unique_tentatively(base_changeset, :title, FakeRepoWithDup)
+    assert changeset.errors == [
+      title: {
+        "has already been taken",
+        [validation: [:validate_unique_tentatively, [:title]]],
+      }
+    ]
+    changeset = validate_unique_tentatively(base_changeset, :title, FakeRepoWithoutDup)
+    assert changeset.valid?
+
+    # validate uniqueness of multiple fields
+    changeset = validate_unique_tentatively(
+      base_changeset, [:title, :body], FakeRepoWithDup
+    )
+    assert changeset.errors == [
+      title: {
+        "has already been taken",
+        [validation: [:validate_unique_tentatively, [:title, :body]]],
+      }
+    ]
+    changeset = validate_unique_tentatively(
+      base_changeset, [:title, :body], FakeRepoWithoutDup
+    )
+    assert changeset.valid?
+
+    # custom error message
+    changeset = validate_unique_tentatively(
+      base_changeset, [:title], FakeRepoWithDup, "is taken"
+    )
+    assert changeset.errors == [
+      title: {
+        "is taken",
+        [validation: [:validate_unique_tentatively, [:title]]],
+      }
+    ]
+    changeset = validate_unique_tentatively(
+      base_changeset, [:title], FakeRepoWithoutDup, "is taken"
+    )
+    assert changeset.valid?
   end
 
   ## Locks

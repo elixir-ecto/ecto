@@ -31,10 +31,10 @@ defmodule Ecto.Changeset do
   Ecto changesets provide both validations and constraints which
   are ultimately turned into errors in case something goes wrong.
 
-  The difference between them is that validations can be executed
-  without a need to interact with the database and, therefore, are
-  always executed before attempting to insert or update the entry
-  in the database.
+  The difference between them is that validations (with the exception of
+  `validate_unique_tentatively/3`) can be executed without a need to interact
+  with the database and, therefore, are always executed before attempting to
+  insert or update the entry in the database.
 
   However, constraints can only be checked in a safe way when
   performing the operation in the database. As a consequence,
@@ -219,6 +219,7 @@ defmodule Ecto.Changeset do
 
   """
 
+  require Ecto.Query
   alias __MODULE__
   alias Ecto.Changeset.Relation
 
@@ -1390,6 +1391,72 @@ defmodule Ecto.Changeset do
         changes = Map.drop(changes, fields_with_errors)
         %{changeset | changes: changes, required: fields ++ required, errors: new_errors ++ errors, valid?: false}
     end
+  end
+
+  @doc """
+  Validates (tentatively) that no existing record with a different primary key
+  has the same values for these fields.
+
+  This is tentative because a race condition may occur. A unique constraint
+  should also be used to ensure uniqueness.
+
+  However, in most cases where conflicting data exists, it will have been
+  inserted prior to the current validation phase. Noticing those conflicts
+  during validation gives the user a chance to correct them at the same time
+  as other validation errors.
+
+  ## Examples
+      validate_unique_tentatively(changeset, [:email], repo)
+      validate_unique_tentatively(changeset, [:city_name, :state_name], repo)
+      validate_unique_tentatively(changeset, [:city_name, :state_name], repo, "city must be unique within state")
+
+  """
+  def validate_unique_tentatively(changeset, field_names, repo, error_message \\ "has already been taken") do
+    field_names = List.wrap(field_names)
+    where_clause = Enum.map(field_names, fn (field_name) ->
+      {field_name, get_field(changeset, field_name)}
+    end)
+
+    # If we don't have values for all fields, we can't query for uniqueness
+    if Enum.any?(where_clause, fn (tuple) -> is_nil(elem(tuple, 1)) end) do
+      changeset
+    else
+      dups_query = Ecto.Query.from q in changeset.data.__struct__, where: ^where_clause
+
+      # For updates, don't flag a record as a dup of itself
+      pk_fields_and_vals = pk_fields_and_vals(changeset)
+      incomplete_pk? = Enum.any?(
+        pk_fields_and_vals,
+        fn {_field, val} -> is_nil(val) end
+      )
+      dups_query = if incomplete_pk? do
+        dups_query
+      else
+        Enum.reduce(
+          pk_fields_and_vals,
+          dups_query, fn ({field_name, val}, query) ->
+            Ecto.Query.from q in query, where: field(q, ^field_name) != ^val
+          end)
+      end
+
+      dups_exist_query = Ecto.Query.from q in dups_query, select: true, limit: 1
+      case repo.one(dups_exist_query) do
+        true -> add_error(
+          changeset,
+          hd(field_names),
+          error_message,
+          [validation: [:validate_unique_tentatively, field_names]]
+        )
+        nil  -> changeset
+      end
+    end
+  end
+
+  defp pk_fields_and_vals(%Changeset{} = changeset) do
+    primary_key_field_names = changeset.data.__struct__.__schema__(:primary_key)
+    Enum.map(primary_key_field_names, fn(field_name) ->
+      {field_name, get_field(changeset, field_name)}
+    end)
   end
 
   defp ensure_field_exists!(%Changeset{types: types, data: data}, field) do
