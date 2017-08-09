@@ -61,7 +61,8 @@ Finally, the UPSERT support added on Ecto v2.1 is getting more improvements: the
   * [Ecto.Query] Properly expand macros in `select`
   * [Ecto.Query] Support `or_having` in keyword query
   * [Ecto.Query] Properly count the parameters when using interpolation inside a `select` inside a `subquery`
-  * [Ecto.Repo] Set struct prefix on `insert`, `delete`, and `update` when the prefix is given as an option
+  * [Ecto.Query] Properly `select` expressions in subquery (for example, `{p.field}` doesn't make sense as a subquery return but it was silently accepted in the past)
+  * [Ecto.Repo] Set struct prefix on `insert`, `delete`, and `update` when the prefix is given as an option
   * [Ecto.UUID] Validate UUID version on casting
   * [mix ecto.*] Make sure `Logger` is rebootted when running ecto tasks
   * [mix ecto.*] No longer mark tasks as recursive and instead collect all repositories upfront. This fixes a bug where migration and rollback commands for a given repository could be executed multiple times from an umbrella project
