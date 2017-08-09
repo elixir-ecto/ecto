@@ -21,8 +21,8 @@ defmodule Ecto.UUID do
     << c(a1), c(a2), c(a3), c(a4),
        c(a5), c(a6), c(a7), c(a8), ?-,
        c(b1), c(b2), c(b3), c(b4), ?-,
-       cast_version(c1), c(c2), c(c3), c(c4), ?-,
-       cast_variant(d1), c(d2), c(d3), c(d4), ?-,
+       c(c1), c(c2), c(c3), c(c4), ?-,
+       c(d1), c(d2), c(d3), c(d4), ?-,
        c(e1), c(e2), c(e3), c(e4),
        c(e5), c(e6), c(e7), c(e8),
        c(e9), c(e10), c(e11), c(e12) >>
@@ -69,25 +69,6 @@ defmodule Ecto.UUID do
   defp c(?e), do: ?e
   defp c(?f), do: ?f
   defp c(_),  do: throw(:error)
-
-  @compile {:inline, cast_version: 1}
-
-  defp cast_version(?1), do: ?1
-  defp cast_version(?2), do: ?2
-  defp cast_version(?3), do: ?3
-  defp cast_version(?4), do: ?4
-  defp cast_version(?5), do: ?5
-  defp cast_version(_), do: throw(:error)
-
-  @compile {:inline, cast_variant: 1}
-
-  defp cast_variant(?8), do: ?8
-  defp cast_variant(?9), do: ?9
-  defp cast_variant(?a), do: ?a
-  defp cast_variant(?b), do: ?b
-  defp cast_variant(?A), do: ?a
-  defp cast_variant(?B), do: ?b
-  defp cast_variant(_), do: throw(:error)
 
   @doc """
   Converts a string representing a UUID into a binary.
@@ -148,8 +129,8 @@ defmodule Ecto.UUID do
     encode(uuid)
   end
   def load(<<_::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96>> = string) do
-    raise "trying to load string UUID as Ecto.UUID: #{inspect string}. " <>
-          "Maybe you wanted to declare :uuid as your database field?"
+    raise ArgumentError, "trying to load string UUID as Ecto.UUID: #{inspect string}. " <>
+                         "Maybe you wanted to declare :uuid as your database field?"
   end
   def load(%Ecto.Query.Tagged{type: :uuid, value: uuid}) do
     encode(uuid)
@@ -186,31 +167,14 @@ defmodule Ecto.UUID do
                  e9::4, e10::4, e11::4, e12::4 >>) do
     << e(a1), e(a2), e(a3), e(a4), e(a5), e(a6), e(a7), e(a8), ?-,
        e(b1), e(b2), e(b3), e(b4), ?-,
-       encode_version(c1), e(c2), e(c3), e(c4), ?-,
-       encode_variant(d1), e(d2), e(d3), e(d4), ?-,
+       e(c1), e(c2), e(c3), e(c4), ?-,
+       e(d1), e(d2), e(d3), e(d4), ?-,
        e(e1), e(e2), e(e3), e(e4), e(e5), e(e6), e(e7), e(e8), e(e9), e(e10), e(e11), e(e12) >>
   catch
     :error -> :error
   else
     encoded -> {:ok, encoded}
   end
-
-  @compile {:inline, encode_version: 1}
-
-  defp encode_version(1), do: ?1
-  defp encode_version(2), do: ?2
-  defp encode_version(3), do: ?3
-  defp encode_version(4), do: ?4
-  defp encode_version(5), do: ?5
-  defp encode_version(_), do: throw(:error)
-
-  @compile {:inline, encode_variant: 1}
-
-  defp encode_variant(8), do: ?8
-  defp encode_variant(9), do: ?9
-  defp encode_variant(10), do: ?a
-  defp encode_variant(11), do: ?b
-  defp encode_variant(_), do: throw(:error)
 
   @compile {:inline, e: 1}
 
