@@ -41,7 +41,7 @@ defmodule Ecto.TestAdapter do
   end
 
   def execute(_repo, _, {:nocache, {:all, _}}, _, _, _) do
-    {1, [[1]]}
+    Process.get(:test_repo_all_results) || {1, [[1]]}
   end
 
   def execute(_repo, _meta, {:nocache, {:delete_all, %{from: {_, SchemaMigration}}}}, [version], _, _) do

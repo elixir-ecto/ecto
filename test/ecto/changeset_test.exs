@@ -1045,30 +1045,30 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [terms_of_service: {"must be abided", [validation: :acceptance]}]
   end
 
-  test "validate_unique_tentatively/3" do
-    defmodule FakeRepoWithDup do
-      def one(_query), do: true
-    end
-    defmodule FakeRepoWithoutDup do
-      def one(_query), do: nil
-    end
+  alias Ecto.TestRepo
 
+  test "validate_unique_tentatively/3" do
+    dup_result = {1, [true]}
+    no_dup_result = {0, []}
     base_changeset = changeset(%Post{}, %{"title" => "Hello World", "body" => "hi"})
 
+    Process.put(:test_repo_all_results, dup_result)
     # validate uniqueness of one field
-    changeset = validate_unique_tentatively(base_changeset, :title, FakeRepoWithDup)
+    changeset = validate_unique_tentatively(base_changeset, :title, TestRepo)
     assert changeset.errors == [
       title: {
         "has already been taken",
         [validation: [:validate_unique_tentatively, [:title]]],
       }
     ]
-    changeset = validate_unique_tentatively(base_changeset, :title, FakeRepoWithoutDup)
+    Process.put(:test_repo_all_results, no_dup_result)
+    changeset = validate_unique_tentatively(base_changeset, :title, TestRepo)
     assert changeset.valid?
 
+    Process.put(:test_repo_all_results, dup_result)
     # validate uniqueness of multiple fields
     changeset = validate_unique_tentatively(
-      base_changeset, [:title, :body], FakeRepoWithDup
+      base_changeset, [:title, :body], TestRepo
     )
     assert changeset.errors == [
       title: {
@@ -1076,14 +1076,16 @@ defmodule Ecto.ChangesetTest do
         [validation: [:validate_unique_tentatively, [:title, :body]]],
       }
     ]
+    Process.put(:test_repo_all_results, no_dup_result)
     changeset = validate_unique_tentatively(
-      base_changeset, [:title, :body], FakeRepoWithoutDup
+      base_changeset, [:title, :body], TestRepo
     )
     assert changeset.valid?
 
+    Process.put(:test_repo_all_results, dup_result)
     # custom error message
     changeset = validate_unique_tentatively(
-      base_changeset, [:title], FakeRepoWithDup, "is taken"
+      base_changeset, [:title], TestRepo, "is taken"
     )
     assert changeset.errors == [
       title: {
@@ -1091,8 +1093,9 @@ defmodule Ecto.ChangesetTest do
         [validation: [:validate_unique_tentatively, [:title]]],
       }
     ]
+    Process.put(:test_repo_all_results, no_dup_result)
     changeset = validate_unique_tentatively(
-      base_changeset, [:title], FakeRepoWithoutDup, "is taken"
+      base_changeset, [:title], TestRepo, "is taken"
     )
     assert changeset.valid?
   end
