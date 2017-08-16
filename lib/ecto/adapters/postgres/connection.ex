@@ -796,7 +796,7 @@ if Code.ensure_loaded?(Postgrex) do
       do: []
 
     defp index_expr(literal) when is_binary(literal),
-      do: [?(, literal, ?)]
+      do: literal
     defp index_expr(literal),
       do: quote_name(literal)
 
