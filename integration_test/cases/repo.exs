@@ -550,6 +550,37 @@ defmodule Ecto.Integration.RepoTest do
     assert %Ecto.Changeset{} = changeset.changes.item
   end
 
+  test "validate_unique_tentatively/3" do
+    {:ok, inserted_post} = TestRepo.insert(%Post{title: "Greetings", text: "hi"})
+
+    new_post_changeset =
+      %Post{}
+      |> Post.changeset(%{title: "Greetings", text: "ho"})
+
+    assert Ecto.Changeset.validate_unique_tentatively(
+      new_post_changeset,
+      [:title],
+      TestRepo
+    ).errors[:title] ==
+      {"has already been taken", [validation: [:validate_unique_tentatively, [:title]]]}
+
+    assert Ecto.Changeset.validate_unique_tentatively(
+      new_post_changeset,
+      [:title, :text],
+      TestRepo
+    ).errors[:title] == nil
+
+    update_changeset =
+      inserted_post
+      |> Post.changeset(%{text: "ho"})
+
+    assert Ecto.Changeset.validate_unique_tentatively(
+      update_changeset,
+      [:title],
+      TestRepo
+    ).errors[:title] == nil # cannot conflict with itself
+  end
+
   test "get(!)" do
     post1 = TestRepo.insert!(%Post{title: "1", text: "hai"})
     post2 = TestRepo.insert!(%Post{title: "2", text: "hai"})
