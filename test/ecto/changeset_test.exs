@@ -37,7 +37,7 @@ defmodule Ecto.ChangesetTest do
     use Ecto.Schema
 
     schema "posts" do
-      field :id_part_2, :integer, primary_key: true
+      field :token, :integer, primary_key: true
       field :title, :string, default: ""
       field :body
       field :uuid, :binary_id
@@ -55,7 +55,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defp changeset(schema \\ %Post{}, params) do
-    cast(schema, params, ~w(id id_part_2 title body upvotes decimal topics virtual))
+    cast(schema, params, ~w(id token title body upvotes decimal topics virtual))
   end
 
   ## cast/4
@@ -1047,56 +1047,39 @@ defmodule Ecto.ChangesetTest do
 
   alias Ecto.TestRepo
 
-  test "validate_unique_tentatively/3" do
+  test "unsafe_validate_unique/3" do
     dup_result = {1, [true]}
     no_dup_result = {0, []}
     base_changeset = changeset(%Post{}, %{"title" => "Hello World", "body" => "hi"})
 
-    Process.put(:test_repo_all_results, dup_result)
     # validate uniqueness of one field
-    changeset = validate_unique_tentatively(base_changeset, :title, TestRepo)
-    assert changeset.errors == [
-      title: {
-        "has already been taken",
-        [validation: [:validate_unique_tentatively, [:title]]],
-      }
-    ]
+    Process.put(:test_repo_all_results, dup_result)
+    changeset = unsafe_validate_unique(base_changeset, :title, TestRepo)
+    assert changeset.errors ==
+           [title: {"has already been taken", validation: :unsafe_unique, fields: [:title]}]
+
     Process.put(:test_repo_all_results, no_dup_result)
-    changeset = validate_unique_tentatively(base_changeset, :title, TestRepo)
+    changeset = unsafe_validate_unique(base_changeset, :title, TestRepo)
     assert changeset.valid?
 
-    Process.put(:test_repo_all_results, dup_result)
     # validate uniqueness of multiple fields
-    changeset = validate_unique_tentatively(
-      base_changeset, [:title, :body], TestRepo
-    )
-    assert changeset.errors == [
-      title: {
-        "has already been taken",
-        [validation: [:validate_unique_tentatively, [:title, :body]]],
-      }
-    ]
+    Process.put(:test_repo_all_results, dup_result)
+    changeset = unsafe_validate_unique(base_changeset, [:title, :body], TestRepo)
+    assert changeset.errors ==
+           [title: {"has already been taken", validation: :unsafe_unique, fields: [:title, :body]}]
+
     Process.put(:test_repo_all_results, no_dup_result)
-    changeset = validate_unique_tentatively(
-      base_changeset, [:title, :body], TestRepo
-    )
+    changeset = unsafe_validate_unique(base_changeset, [:title, :body], TestRepo)
     assert changeset.valid?
 
-    Process.put(:test_repo_all_results, dup_result)
     # custom error message
-    changeset = validate_unique_tentatively(
-      base_changeset, [:title], TestRepo, "is taken"
-    )
-    assert changeset.errors == [
-      title: {
-        "is taken",
-        [validation: [:validate_unique_tentatively, [:title]]],
-      }
-    ]
+    Process.put(:test_repo_all_results, dup_result)
+    changeset = unsafe_validate_unique(base_changeset, [:title], TestRepo, message: "is taken")
+    assert changeset.errors ==
+           [title: {"is taken", validation: :unsafe_unique, fields: [:title]}]
+
     Process.put(:test_repo_all_results, no_dup_result)
-    changeset = validate_unique_tentatively(
-      base_changeset, [:title], TestRepo, "is taken"
-    )
+    changeset = unsafe_validate_unique(base_changeset, [:title], TestRepo, "is taken")
     assert changeset.valid?
   end
 

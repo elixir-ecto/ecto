@@ -31,15 +31,16 @@ defmodule Ecto.Changeset do
   Ecto changesets provide both validations and constraints which
   are ultimately turned into errors in case something goes wrong.
 
-  The difference between them is that validations (with the exception of
-  `validate_unique_tentatively/3`) can be executed without a need to interact
-  with the database and, therefore, are always executed before attempting to
-  insert or update the entry in the database.
+  The difference between them is that most validations can be
+  executed without a need to interact with the database and, therefore,
+  are always executed before attempting to insert or update the entry
+  in the database. Some validations may happen against the database but
+  they are inherently unsafe. Those validations start with a `unsafe_`
+  prefix, such as `unsafe_validate_unique/3`.
 
-  However, constraints can only be checked in a safe way when
-  performing the operation in the database. As a consequence,
-  validations are always checked before constraints. Constraints
-  won't even be checked in case validations failed.
+  On the other hand, constraints rely on the database and are always safe.
+  As a consequence, validations are always checked before constraints.
+  Constraints won't even be checked in case validations failed.
 
   Let's see an example:
 
@@ -1394,69 +1395,73 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Validates (tentatively) that no existing record with a different primary key
+  Validates that no existing record with a different primary key
   has the same values for these fields.
 
-  This is tentative because a race condition may occur. A unique constraint
-  should also be used to ensure uniqueness.
+  This function exists to provide quick feedback to users of your
+  application. It should not be relied on for any data guarantee as it
+  has race conditions and is inherently unsafe. For example, if this
+  check happens twice in the same time interval (because the user
+  submitted a form twice), both checks may pass and you may end-up with
+  duplicate entries in the database. Therefore, a `unique_constraint/3`
+  should also be used to ensure your data won't get corrupted.
 
-  However, in most cases where conflicting data exists, it will have been
-  inserted prior to the current validation phase. Noticing those conflicts
-  during validation gives the user a chance to correct them at the same time
-  as other validation errors.
+  However, because constraints are only checked if all validations
+  succeed, this function can be used as an early check to provide
+  early feedback to users, since most conflicting data will have been
+  inserted prior to the current validation phase.
 
   ## Examples
-      validate_unique_tentatively(changeset, [:email], repo)
-      validate_unique_tentatively(changeset, [:city_name, :state_name], repo)
-      validate_unique_tentatively(changeset, [:city_name, :state_name], repo, "city must be unique within state")
+
+      unsafe_validate_unique(changeset, [:email], repo)
+      unsafe_validate_unique(changeset, [:city_name, :state_name], repo)
+      unsafe_validate_unique(changeset, [:city_name, :state_name], repo, "city must be unique within state")
 
   """
-  def validate_unique_tentatively(changeset, field_names, repo, error_message \\ "has already been taken") do
-    field_names = List.wrap(field_names)
-    where_clause = Enum.map(field_names, fn (field_name) ->
-      {field_name, get_field(changeset, field_name)}
-    end)
+  def unsafe_validate_unique(changeset, fields, repo, opts \\ []) do
+    fields = List.wrap(fields)
+    %{validations: validations, data: %{__struct__: struct}} = changeset
+    changeset = %{changeset | validations: [{:unsafe_unique, fields} | validations]}
+
+    where_clause = for field <- fields do
+      {field, get_field(changeset, field)}
+    end
 
     # If we don't have values for all fields, we can't query for uniqueness
-    if Enum.any?(where_clause, fn (tuple) -> is_nil(elem(tuple, 1)) end) do
+    if Enum.any?(where_clause, &(&1 |> elem(1) |> is_nil())) do
       changeset
     else
-      dups_query = Ecto.Query.from q in changeset.data.__struct__, where: ^where_clause
+      pk_pairs = pk_fields_and_values(changeset, struct)
 
-      # For updates, don't flag a record as a dup of itself
-      pk_fields_and_vals = pk_fields_and_vals(changeset)
-      incomplete_pk? = Enum.any?(
-        pk_fields_and_vals,
-        fn {_field, val} -> is_nil(val) end
-      )
-      dups_query = if incomplete_pk? do
-        dups_query
-      else
-        Enum.reduce(
-          pk_fields_and_vals,
-          dups_query, fn ({field_name, val}, query) ->
-            Ecto.Query.from q in query, where: field(q, ^field_name) != ^val
+      query =
+        struct
+        |> Ecto.Query.where(^where_clause)
+        |> Ecto.Query.select(true)
+        |> Ecto.Query.limit(1)
+
+      query =
+        # It should not conflict with itself for updates
+        if Enum.any?(pk_pairs, &(&1 |> elem(1) |> is_nil())) do
+          query
+        else
+          Enum.reduce(pk_pairs, query, fn {field, value}, acc ->
+            Ecto.Query.where(acc, [q], field(q, ^field) != ^value)
           end)
-      end
+        end
 
-      dups_exist_query = Ecto.Query.from q in dups_query, select: true, limit: 1
-      case repo.one(dups_exist_query) do
-        true -> add_error(
-          changeset,
-          hd(field_names),
-          error_message,
-          [validation: [:validate_unique_tentatively, field_names]]
-        )
-        nil  -> changeset
+      if repo.one(query) do
+        add_error(changeset, hd(fields), message(opts, "has already been taken"),
+                  validation: :unsafe_unique, fields: fields)
+      else
+        changeset
       end
     end
   end
 
-  defp pk_fields_and_vals(%Changeset{} = changeset) do
-    primary_key_field_names = changeset.data.__struct__.__schema__(:primary_key)
-    Enum.map(primary_key_field_names, fn(field_name) ->
-      {field_name, get_field(changeset, field_name)}
-    end)
+  defp pk_fields_and_values(changeset, struct) do
+    for field <- struct.__schema__(:primary_key) do
+      {field, get_field(changeset, field)}
+    end
   end
 
   defp ensure_field_exists!(%Changeset{types: types, data: data}, field) do
@@ -1783,7 +1788,7 @@ defmodule Ecto.Changeset do
 
     case Ecto.Type.cast(:boolean, value) do
       {:ok, true} -> changeset
-      _ -> add_error(changeset, field, message(opts, "must be accepted"), [validation: :acceptance])
+      _ -> add_error(changeset, field, message(opts, "must be accepted"), validation: :acceptance)
     end
   end
   def validate_acceptance(%{params: nil} = changeset, _, _) do

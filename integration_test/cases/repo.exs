@@ -550,35 +550,20 @@ defmodule Ecto.Integration.RepoTest do
     assert %Ecto.Changeset{} = changeset.changes.item
   end
 
-  test "validate_unique_tentatively/3" do
+  test "unsafe_validate_unique/3" do
     {:ok, inserted_post} = TestRepo.insert(%Post{title: "Greetings", text: "hi"})
+    new_post_changeset = Post.changeset(%Post{}, %{title: "Greetings", text: "ho"})
 
-    new_post_changeset =
-      %Post{}
-      |> Post.changeset(%{title: "Greetings", text: "ho"})
+    changeset = Ecto.Changeset.unsafe_validate_unique(new_post_changeset, [:title], TestRepo)
+    assert changeset.errors[:title] ==
+           {"has already been taken", validation: :unsafe_unique, fields: [:title]}
 
-    assert Ecto.Changeset.validate_unique_tentatively(
-      new_post_changeset,
-      [:title],
-      TestRepo
-    ).errors[:title] ==
-      {"has already been taken", [validation: [:validate_unique_tentatively, [:title]]]}
+    changeset = Ecto.Changeset.unsafe_validate_unique(new_post_changeset, [:title, :text], TestRepo)
+    assert changeset.errors[:title] == nil
 
-    assert Ecto.Changeset.validate_unique_tentatively(
-      new_post_changeset,
-      [:title, :text],
-      TestRepo
-    ).errors[:title] == nil
-
-    update_changeset =
-      inserted_post
-      |> Post.changeset(%{text: "ho"})
-
-    assert Ecto.Changeset.validate_unique_tentatively(
-      update_changeset,
-      [:title],
-      TestRepo
-    ).errors[:title] == nil # cannot conflict with itself
+    update_changeset = Post.changeset(inserted_post, %{text: "ho"})
+    changeset = Ecto.Changeset.unsafe_validate_unique(update_changeset, [:title], TestRepo)
+    assert changeset.errors[:title] == nil # cannot conflict with itself
   end
 
   test "get(!)" do
