@@ -1420,7 +1420,13 @@ defmodule Ecto.Changeset do
   """
   def unsafe_validate_unique(changeset, fields, repo, opts \\ []) do
     fields = List.wrap(fields)
-    %{validations: validations, data: %{__struct__: struct}} = changeset
+    {validations, struct} =
+      case changeset do
+        %Ecto.Changeset{validations: validations, data: %{__struct__: struct}} ->
+          {validations, struct}
+        %Ecto.Changeset{} ->
+          raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets"
+      end
     changeset = %{changeset | validations: [{:unsafe_unique, fields} | validations]}
 
     where_clause = for field <- fields do
