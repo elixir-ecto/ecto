@@ -531,14 +531,17 @@ defmodule Ecto.Migration do
       # The index type can be specified
       create index("products", [:name], using: :hash)
 
-      # Create an index on custom expressions
-      create index("products", ["lower(name)"], name: :products_lower_name_index)
-
       # Create a partial index
       create index("products", [:user_id], where: "price = 0", name: :free_products_index)
 
+  Indexes also support custom expressions. Some databases may require the
+  index expression to be written between parens:
+
+      # Create an index on custom expressions
+      create index("products", ["(lower(name))"], name: :products_lower_name_index)
+
       # To create a tsvector index with GIN on Postgres
-      create index("products", ["to_tsvector('english', name)"],
+      create index("products", ["(to_tsvector('english', name))"],
                    name: :products_name_vector, using: "GIN")
   """
   def index(table, columns, opts \\ [])
