@@ -431,7 +431,7 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query)
-        when type in [:id, :integer, :float] do
+        when type in [:decimal, :float] do
       expr(other, sources, query)
     end
 
@@ -752,6 +752,8 @@ if Code.ensure_loaded?(Mariaex) do
       |> :binary.replace("\\", "\\\\", [:global])
     end
 
+    defp ecto_cast_to_db(:id, _query), do: "unsigned"
+    defp ecto_cast_to_db(:integer, _query), do: "unsigned"
     defp ecto_cast_to_db(:string, _query), do: "char"
     defp ecto_cast_to_db(type, query), do: ecto_to_db(type, query)
 
