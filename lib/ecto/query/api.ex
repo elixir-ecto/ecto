@@ -405,9 +405,13 @@ defmodule Ecto.Query.API do
 
       type(fragment("NOW"), :naive_datetime)
 
-  Or on fields for schemaless queries:
+  Or to type fields from schemaless queries:
 
       from p in "posts", select: type(p.cost, :decimal)
+
+  Or to type aggregation results:
+
+      from p in Post, select: type(avg(p.cost), :integer)
 
   """
   def type(interpolated_value, type), do: doc! [interpolated_value, type]

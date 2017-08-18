@@ -9,6 +9,8 @@ Ecto now supports specifying fields sources. This is useful when you use a datab
     field :name, :string, source: :NAME
     field :user_name, :string, source: :"user-name"
 
+The source option can be specified programatically by given a function to `@field_source_mapper` that receives the field name as an atom and returns the source name as an atom.
+
 On the migrations side, `execute/2` function was added, which allows developers to describe up and down commands inside the `change` callback:
 
     def change do
@@ -23,6 +25,19 @@ Ecto now will also warn at compile time of invalid relationships, such as a belo
 The query syntax also seen some improvements: map updates are supported in subqueries, the new `Ecto.Query.select_merge/3` makes it easier to write composable `select` clauses in queries and the `type/2` macro has been extended to support casting of fragments and fields in schemaless queries.
 
 Finally, the UPSERT support added on Ecto v2.1 is getting more improvements: the `{:constraint, constraint}` is now supported as conflict target and the `:returning` option was added to `Ecto.Repo.insert/2`, mirroring the behaviour of `insert_all`.
+
+## v2.2.0-rc.1 (2017-08-18)
+
+### Regressions
+
+  * [Ecto.UUID] Remove UUID version validation as it is not part of the RFC
+  * [Ecto.Adapters.Postgres] No longer add parens to migration index expression in order to support NULL/ASC/DESC
+
+### Enhancements
+
+  * [Ecto.Changeset] Add `unsafe_validate_unique/3` which validates uniqueness for faster feedback cycles but without data-integrity guarantees
+  * [Ecto.Query] Support aggregations in `type/2` in select
+  * [Ecto.Schema] Support `@field_source_mapper` in `Ecto.Schema` as a mechanism to programatically set the `:source` option
 
 ## v2.2.0-rc.0 (2017-08-08)
 
