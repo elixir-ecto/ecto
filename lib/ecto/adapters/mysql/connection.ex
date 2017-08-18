@@ -431,8 +431,8 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query)
-        when type in [:decimal, :float] do
-      expr(other, sources, query)
+         when type in [:decimal, :float] do
+      [expr(other, sources, query), " + 0"]
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query) do
