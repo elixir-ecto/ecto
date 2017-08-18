@@ -105,24 +105,33 @@ defmodule Ecto.SchemaTest do
 
     @primary_key {:perm, Custom.Permalink, autogenerate: true}
     @foreign_key_type :string
+    @field_source_mapper fn field -> field |> Atom.to_string |> String.upcase |> String.to_atom() end
 
     schema "users" do
       field :name
       capture_io :stderr, fn ->
         belongs_to :comment, Comment
       end
+      timestamps()
     end
   end
 
   test "custom schema attributes" do
     assert %CustomSchema{perm: "abc"}.perm == "abc"
-    assert CustomSchema.__schema__(:autogenerate_id) == {:perm, :perm, :id}
+    assert CustomSchema.__schema__(:autogenerate_id) == {:perm, :PERM, :id}
     assert CustomSchema.__schema__(:type, :comment_id) == :string
   end
 
   test "custom primary key" do
     assert Ecto.primary_key(%CustomSchema{}) == [perm: nil]
     assert Ecto.primary_key(%CustomSchema{perm: "hello"}) == [perm: "hello"]
+  end
+
+  test "custom field source mapper" do
+    assert CustomSchema.__schema__(:field_source, :perm) == :PERM
+    assert CustomSchema.__schema__(:field_source, :comment_id) == :COMMENT_ID
+    assert CustomSchema.__schema__(:field_source, :inserted_at) == :INSERTED_AT
+    assert CustomSchema.__schema__(:field_source, :updated_at) == :UPDATED_AT
   end
 
   defmodule EmbeddedSchema do

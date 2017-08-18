@@ -53,6 +53,12 @@ defmodule Ecto.Schema do
     * `@derive` - the same as `@derive` available in `Kernel.defstruct/1`
       as the schema defines a struct behind the scenes;
 
+    * `@field_source_mapper` - a function that receives the current field name
+      and returns the mapping of this field name in the underlying source.
+      In other words, it is a mechanism to automatically generate the `:source`
+      option for the `field` macro. It defaults to `fn x -> x end`, where no
+      field transformation is done;
+
   The advantage of configuring the schema via those attributes is
   that they can be set with a macro to configure application wide
   defaults.
@@ -314,6 +320,7 @@ defmodule Ecto.Schema do
       @timestamps_opts []
       @foreign_key_type :id
       @schema_prefix nil
+      @field_source_mapper fn x -> x end
 
       Module.register_attribute(__MODULE__, :ecto_primary_keys, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
@@ -1505,11 +1512,12 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :changeset_fields, {name, type})
     put_struct_field(mod, name, default)
 
-    if source = opts[:source] do
-      Module.put_attribute(mod, :ecto_field_sources, {name, source})
-    end
-
     unless virtual? do
+      source = opts[:source] || Module.get_attribute(mod, :field_source_mapper).(name)
+      if name != source do
+        Module.put_attribute(mod, :ecto_field_sources, {name, source})
+      end
+
       if raw = opts[:read_after_writes] do
         Module.put_attribute(mod, :ecto_raw, name)
       end
