@@ -212,7 +212,6 @@ defmodule Ecto.Integration.TypeTest do
   @tag :decimal_type
   test "decimal type" do
     decimal = Decimal.new("1.0")
-
     TestRepo.insert!(%Post{cost: decimal})
 
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == ^decimal, select: p.cost)
@@ -220,6 +219,16 @@ defmodule Ecto.Integration.TypeTest do
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == ^1, select: p.cost)
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == 1.0, select: p.cost)
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == 1, select: p.cost)
+  end
+
+  @tag :decimal_type
+  test "typed aggregations" do
+    decimal = Decimal.new("1.0")
+    TestRepo.insert!(%Post{cost: decimal})
+
+    assert [1] = TestRepo.all(from p in Post, select: type(sum(p.cost), :integer))
+    assert [1.0] = TestRepo.all(from p in Post, select: type(sum(p.cost), :float))
+    assert [^decimal] = TestRepo.all(from p in Post, select: type(sum(p.cost), :decimal))
   end
 
   test "schemaless types" do
