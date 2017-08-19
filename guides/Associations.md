@@ -519,7 +519,7 @@ defmodule EctoAssoc.Post do
 end
 ```
 
-For the *post* we do the same. We use the `many_to_many` macro to associate the `Post` through the
+For the *tag* we do the same. We use the `many_to_many` macro to associate the `Post` through the
 new `posts_tags` schema:
 
 ```elixir
