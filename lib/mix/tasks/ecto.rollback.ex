@@ -7,21 +7,21 @@ defmodule Mix.Tasks.Ecto.Rollback do
   @moduledoc """
   Reverts applied migrations in the given repository.
 
-  The repository must be set under `:ecto_repos` in the
-  current app configuration or given via the `-r` option.
-
-  By default, migrations are expected at "priv/YOUR_REPO/migrations"
-  directory of the current application but it can be configured
-  by specifying the `:priv` key under the repository configuration.
+  Migrations are expected at "priv/YOUR_REPO/migrations" directory
+  of the current application but it can be configured by specifying
+  the `:priv` key under the repository configuration.
 
   Runs the latest applied migration by default. To roll back to
-  a version number, supply `--to version_number`.
-  To roll back a specific number of times, use `--step n`.
-  To undo all applied migrations, provide `--all`.
+  a version number, supply `--to version_number`. To roll back a
+  specific number of times, use `--step n`. To undo all applied
+  migrations, provide `--all`.
 
-  If the repository has not been started yet, one will be
-  started outside our application supervision tree and shutdown
-  afterwards.
+  The repositories to rollback are the ones specified under the
+  `:ecto_repos` option in the current app configuration. However,
+  if the `-r` option is given, it replaces the `:ecto_repos` config.
+
+  If a repository has not yet been started, one will be started outside
+  your application supervision tree and shutdown afterwards.
 
   ## Examples
 

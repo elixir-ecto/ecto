@@ -7,8 +7,13 @@ defmodule Mix.Tasks.Ecto.Create do
   @moduledoc """
   Create the storage for the given repository.
 
-  The repository must be set under `:ecto_repos` in the
-  current app configuration or given via the `-r` option.
+  The repositories to create are the ones specified under the
+  `:ecto_repos` option in the current app configuration. However,
+  if the `-r` option is given, it replaces the `:ecto_repos` config.
+
+  Since Ecto tasks can only be executed once, if you need to create
+  multiple repositories, set `:ecto_repos` accordingly or pass the `-r`
+  flag multiple times.
 
   ## Examples
 
