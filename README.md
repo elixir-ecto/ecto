@@ -69,19 +69,23 @@ Database   | Ecto Adapter           | Dependency                   | Ecto 2.0 co
 PostgreSQL | Ecto.Adapters.Postgres | [postgrex][postgrex]         | Yes
 MySQL      | Ecto.Adapters.MySQL    | [mariaex][mariaex]           | Yes
 MSSQL      | MssqlEcto              | [mssql_ecto][mssql_ecto]     | Yes
+SQLite     | Sqlite.Ecto2           | [sqlite_ecto2][sqlite_ecto2] | Yes
 Mnesia     | EctoMnesia.Adapter     | [ecto_mnesia][ecto_mnesia]   | Yes
 
 [postgrex]: http://github.com/ericmj/postgrex
 [mariaex]: http://github.com/xerions/mariaex
 [mssql_ecto]: https://github.com/findmypast-oss/mssql_ecto
+[sqlite_ecto2]: https://github.com/scouten/sqlite_ecto2
 [ecto_mnesia]: https://github.com/Nebo15/ecto_mnesia
 
 For example, if you want to use PostgreSQL, add to your `mix.exs` file:
 
 ```elixir
 defp deps do
-  [{:postgrex, ">= 0.0.0"},
-   {:ecto, "~> 2.1"}]
+  [
+    {:postgrex, ">= 0.0.0"},
+    {:ecto, "~> 2.1"}
+  ]
 end
 ```
 
