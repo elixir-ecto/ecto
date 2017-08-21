@@ -603,7 +603,7 @@ defmodule Ecto.Changeset do
       def changeset(struct, params) do
         struct
         |> cast(struct, params, [:title, :body])
-        |> validate_requited([:title, :body])
+        |> validate_required([:title, :body])
         |> case do
           %{valid?: false, changes: changes} = changeset when changes == %{} ->
             # If the changeset is invalid and has no changes, it is
