@@ -762,6 +762,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(world), message: "yada")
     assert changeset.errors == [title: {"yada", [validation: :inclusion]}]
+
+    changeset =
+      changeset(%{"title" => "hello"})
+      |> validate_inclusion(:title, MapSet.new(~w(world)))
+    refute changeset.valid?
+    assert changeset.errors == [title: {"is invalid", [validation: :inclusion]}]
+    assert changeset.validations == [title: {:inclusion, MapSet.new(~w(world))}]
   end
 
   test "validate_subset/3" do

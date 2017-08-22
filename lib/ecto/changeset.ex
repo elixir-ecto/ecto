@@ -1529,7 +1529,17 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_inclusion(t, atom, Enum.t, Keyword.t) :: t
-  def validate_inclusion(changeset, field, data, opts \\ []) do
+  def validate_inclusion(changeset, field, data, opts \\ [])
+
+  def validate_inclusion(changeset, field, set = %MapSet{}, opts) do
+    validate_change changeset, field, {:inclusion, set}, fn _, value ->
+      if MapSet.member?(set, value),
+        do: [],
+        else: [{field, {message(opts, "is invalid"), [validation: :inclusion]}}]
+    end
+  end
+
+  def validate_inclusion(changeset, field, data, opts) do
     validate_change changeset, field, {:inclusion, data}, fn _, value ->
       if value in data,
         do: [],
