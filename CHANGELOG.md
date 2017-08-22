@@ -26,20 +26,7 @@ The query syntax also seen some improvements: map updates are supported in subqu
 
 Finally, the UPSERT support added on Ecto v2.1 is getting more improvements: the `{:constraint, constraint}` is now supported as conflict target and the `:returning` option was added to `Ecto.Repo.insert/2`, mirroring the behaviour of `insert_all`.
 
-## v2.2.0-rc.1 (2017-08-18)
-
-### Regressions
-
-  * [Ecto.UUID] Remove UUID version validation as it is not part of the RFC
-  * [Ecto.Adapters.Postgres] No longer add parens to migration index expression in order to support NULL/ASC/DESC
-
-### Enhancements
-
-  * [Ecto.Changeset] Add `unsafe_validate_unique/3` which validates uniqueness for faster feedback cycles but without data-integrity guarantees
-  * [Ecto.Query] Support aggregations in `type/2` in select
-  * [Ecto.Schema] Support `@field_source_mapper` in `Ecto.Schema` as a mechanism to programatically set the `:source` option
-
-## v2.2.0-rc.0 (2017-08-08)
+## v2.2.0 (2017-08-22)
 
 ### Enhancements
 
@@ -49,6 +36,7 @@ Finally, the UPSERT support added on Ecto v2.1 is getting more improvements: the
   * [Ecto.Adapters.MySQL] Use TCP connections instead of MySQL command client to create & drop database
   * [Ecto.Changeset] Support `action: :ignore` in changeset which is useful when casting associations and embeds and one or more children need to be rejected/ignored under certain circumstances
   * [Ecto.Changeset] Add `:repo_opts` field to `Ecto.Changeset` which are given as options to to the repository whenever an operation is performed
+  * [Ecto.Changeset] Add `unsafe_validate_unique/3` which validates uniqueness for faster feedback cycles but without data-integrity guarantees
   * [Ecto.Changeset] Add `apply_action/2`
   * [Ecto.Changeset] Add prefix constraint name checking to constraint validations
   * [Ecto.Changeset] Allow assocs and embeds in `change/2` and `put_change/3` - this gives a more generic API for developers to work that does not require explicit knowledge of the field type
@@ -57,12 +45,14 @@ Finally, the UPSERT support added on Ecto v2.1 is getting more improvements: the
   * [Ecto.Migrator] Allow migration/rollback to log SQL commands via the `--log-sql` flag
   * [Ecto.LogEntry] Add `:caller_pid` to the Ecto.LogEntry struct
   * [Ecto.Query] Allow map updates in subqueries
-  * [Ecto.Query] Support fragment and field access in `type/2` in select
+  * [Ecto.Query] Support fragment, aggregates and field access in `type/2` in select
   * [Ecto.Query] Add `select_merge/3` as a composable API for selects
   * [Ecto.Repo] Implement `:returning` option on insert
   * [Ecto.Repo] Add ON CONSTRAINT support to `:conflict_target` on `insert` and `insert_all`
   * [Ecto.Repo] Raise `MultiplePrimaryKeyError` when primary key is not unique on DB side
   * [Ecto.Schema] Validate schemas after compilation - this helps developers catch early mistakes such as foreign key mismatches early on
+  * [Ecto.Schema] Support the `:source` option in the `field/3` macro which configures the column/field name in the data storage
+  * [Ecto.Schema] Support `@field_source_mapper` in `Ecto.Schema` as a mechanism to programatically set the `:source` option
   * [Ecto.Type] Allow adapters to pass Date, Time, NaiveDateTime and DateTime on load if desired
   * [Ecto.UUID] Allow casting binary UUIDs
   * [mix ecto.drop] Add `--force`
