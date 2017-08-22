@@ -110,9 +110,31 @@ defmodule Ecto.Repo.Supervisor do
             password: password,
             database: database,
             hostname: info.host,
-            port:     info.port]
+            port:     info.port] ++ parse_uri_query(info)
 
     for {k, v} <- opts, v, do: {k, if(is_binary(v), do: URI.decode(v), else: v)}
+  end
+
+  defp parse_uri_query(%URI{query: nil}),
+    do: []
+  defp parse_uri_query(%URI{query: query} = url) do
+    query
+    |> URI.query_decoder()
+    |> Enum.reduce([], fn
+      {"ssl", "true"}, acc ->
+        [{:ssl, true}] ++ acc
+
+      {"timeout", timeout}, acc ->
+        {timeout, ""} = Integer.parse(timeout)
+        [{:timeout, timeout}] ++ acc
+
+      {"pool_timeout", pool_timeout}, acc ->
+        {pool_timeout, ""} = Integer.parse(pool_timeout)
+        [{:pool_timeout, pool_timeout}] ++ acc
+
+      {key, _value}, _acc ->
+        raise Ecto.InvalidURLError, url: url, message: "unsupported query parameter #{key}"
+    end)
   end
 
   ## Callbacks
