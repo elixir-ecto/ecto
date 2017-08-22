@@ -496,7 +496,7 @@ defmodule Ecto.Changeset do
   defp type!(types, key) do
     case Map.fetch(types, key) do
       {:ok, {tag, _}} when tag in @relations ->
-        raise "casting #{tag}s with cast/3 is not supported, use cast_#{tag}/3 instead"
+        raise "casting #{tag}s with cast/3 for :#{key} is not supported, use cast_#{tag}/3 instead"
       {:ok, type} ->
         type
       :error ->
