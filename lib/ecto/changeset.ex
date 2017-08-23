@@ -482,7 +482,7 @@ defmodule Ecto.Changeset do
   defp type!(types, key) do
     case types do
       %{^key => {tag, _}} when tag in @relations ->
-        raise "casting #{tag}s with cast/4 is not supported, use cast_#{tag}/3 instead"
+        raise "casting #{tag}s with cast/4 for #{inspect key} field is not supported, use cast_#{tag}/3 instead"
       %{^key => type} ->
         type
       _ ->
