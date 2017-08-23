@@ -2199,7 +2199,7 @@ defmodule Ecto.Changeset do
             "no_assoc_constraint can only be added to has one/many associations, got: #{inspect other}"
       end
 
-    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, {message, []})
+    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, {message, [validation: :no_assoc]})
   end
 
   @doc """
