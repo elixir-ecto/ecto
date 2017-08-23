@@ -105,9 +105,9 @@ We are currently looking for contributions to add support for other SQL database
 
 | Branch | Support                  |
 | ------ | ------------------------ |
-| v2.2   | In development (master)  |
-| v2.1   | Bug fixes                |
-| v2.0   | Security patches only    |
+| v2.2   | Bug fixes                |
+| v2.1   | Security patches only    |
+| v2.0   | Unsupported from 08/2017 |
 | v1.1   | Security patches only    |
 | v1.0   | Unsupported from 05/2017 |
 
