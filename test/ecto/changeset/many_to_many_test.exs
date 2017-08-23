@@ -115,19 +115,19 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
   test "cast many_to_many with invalid params" do
     changeset = cast(%Author{}, %{"posts" => "value"}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => ["value"]}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => nil}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => %{"id" => "invalid"}}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
   end
 
@@ -174,7 +174,7 @@ defmodule Ecto.Changeset.ManyToManyTest do
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
   end
 
   test "cast many_to_many with empty parameters" do
@@ -204,17 +204,17 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
     changeset = cast(schema, %{"invalid_posts" => []}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [invalid_posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(schema, %{"invalid_posts" => [%{"id" => 2}]}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [invalid_posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(schema, %{"invalid_posts" => [%{"id" => 2}]}, :invalid_posts, invalid_message: "a custom message")
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"a custom message", [type: {:array, :map}]}]
+    assert changeset.errors == [invalid_posts: {"a custom message", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
   end
 

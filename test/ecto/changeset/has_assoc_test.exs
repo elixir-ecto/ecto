@@ -96,7 +96,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"profile" => "value"}, :profile)
-    assert changeset.errors == [profile: {"is invalid", [type: :map]}]
+    assert changeset.errors == [profile: {"is invalid", [validation: :assoc, type: :map]}]
     refute changeset.valid?
   end
 
@@ -287,17 +287,17 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     changeset = cast(schema, %{"invalid_profile" => nil}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"is invalid", [type: :map]}]
+    assert changeset.errors == [invalid_profile: {"is invalid", [validation: :assoc, type: :map]}]
     refute changeset.valid?
 
     changeset = cast(schema, %{"invalid_profile" => %{"id" => 2}}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"is invalid", [type: :map]}]
+    assert changeset.errors == [invalid_profile: {"is invalid", [validation: :assoc, type: :map]}]
     refute changeset.valid?
 
     changeset = cast(schema, %{"invalid_profile" => nil}, :invalid_profile, invalid_message: "a custom message")
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"a custom message", [type: :map]}]
+    assert changeset.errors == [invalid_profile: {"a custom message", [validation: :assoc, type: :map]}]
     refute changeset.valid?
   end
 
@@ -417,19 +417,19 @@ defmodule Ecto.Changeset.HasAssocTest do
 
   test "cast has_many with invalid params" do
     changeset = cast(%Author{}, %{"posts" => "value"}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => ["value"]}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => nil}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => %{"id" => "invalid"}}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
   end
 
@@ -479,7 +479,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
   end
 
   test "cast has_many with empty parameters" do
@@ -509,12 +509,12 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     changeset = cast(schema, %{"invalid_posts" => []}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [invalid_posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(schema, %{"invalid_posts" => [%{"id" => 2}]}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [invalid_posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
   end
 
@@ -1061,8 +1061,8 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"can't be blank", [validation: :required]}]}
 
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
-    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"is invalid", [type: {:array, :map}]}]}
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"is invalid", [validation: :assoc, type: {:array, :map}]}]}
 
     changeset = cast(%Author{}, %{posts: []}, :posts, required: true)
     assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]

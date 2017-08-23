@@ -717,7 +717,7 @@ defmodule Ecto.Changeset do
               missing_relation(%{changeset | changes: Map.put(changes, key, change),
                                  valid?: changeset.valid? and relation_valid?}, key, current, required?, relation, opts)
             :error ->
-              %{changeset | errors: [{key, {message(opts, :invalid_message, "is invalid"), [type: expected_relation_type(relation)]}} | changeset.errors], valid?: false}
+              %{changeset | errors: [{key, {message(opts, :invalid_message, "is invalid"), [validation: type, type: expected_relation_type(relation)]}} | changeset.errors], valid?: false}
             _ -> # ignore or ok with change == original
               missing_relation(changeset, key, current, required?, relation, opts)
           end
