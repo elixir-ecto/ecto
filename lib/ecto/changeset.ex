@@ -2054,7 +2054,7 @@ defmodule Ecto.Changeset do
     constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_index"
     message    = message(opts, "has already been taken")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :unique, to_string(constraint), match_type, field, {message, []})
+    add_constraint(changeset, :unique, to_string(constraint), match_type, field, {message, [validation: :unique]})
   end
 
   @doc """
