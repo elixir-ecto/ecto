@@ -820,18 +820,18 @@ defmodule Ecto.ChangesetTest do
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, min: 6)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be at least %{count} character(s)", count: 6, validation: :length, type: :min}]
+    assert changeset.errors == [title: {"should be at least %{count} character(s)", count: 6, validation: :length, kind: :min}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, max: 4)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be at most %{count} character(s)", count: 4, validation: :length, type: :max}]
+    assert changeset.errors == [title: {"should be at most %{count} character(s)", count: 4, validation: :length, kind: :max}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 10)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be %{count} character(s)", count: 10, validation: :length, type: :is}]
+    assert changeset.errors == [title: {"should be %{count} character(s)", count: 10, validation: :length, kind: :is}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 10, message: "yada")
-    assert changeset.errors == [title: {"yada", count: 10, validation: :length, type: :is}]
+    assert changeset.errors == [title: {"yada", count: 10, validation: :length, kind: :is}]
   end
 
   test "validate_length/3 with list" do
@@ -848,18 +848,18 @@ defmodule Ecto.ChangesetTest do
 
     changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, min: 6, foo: true)
     refute changeset.valid?
-    assert changeset.errors == [topics: {"should have at least %{count} item(s)", count: 6, validation: :length, type: :min}]
+    assert changeset.errors == [topics: {"should have at least %{count} item(s)", count: 6, validation: :length, kind: :min}]
 
     changeset = changeset(%{"topics" => ["Politics", "Security", "Economy"]}) |> validate_length(:topics, max: 2)
     refute changeset.valid?
-    assert changeset.errors == [topics: {"should have at most %{count} item(s)", count: 2, validation: :length, type: :max}]
+    assert changeset.errors == [topics: {"should have at most %{count} item(s)", count: 2, validation: :length, kind: :max}]
 
     changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, is: 10)
     refute changeset.valid?
-    assert changeset.errors == [topics: {"should have %{count} item(s)", count: 10, validation: :length, type: :is}]
+    assert changeset.errors == [topics: {"should have %{count} item(s)", count: 10, validation: :length, kind: :is}]
 
     changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, is: 10, message: "yada")
-    assert changeset.errors == [topics: {"yada", count: 10, validation: :length, type: :is}]
+    assert changeset.errors == [topics: {"yada", count: 10, validation: :length, kind: :is}]
   end
 
   test "validate_number/3" do
@@ -1321,7 +1321,7 @@ defmodule Ecto.ChangesetTest do
       %Ecto.Changeset{}, field, {_, [name: "your title"]} ->
         "value in #{field} is taken"
         |> String.upcase()
-      %Ecto.Changeset{}, field, {_, [count: 3, validation: :length, type: :min] = keys} ->
+      %Ecto.Changeset{}, field, {_, [count: 3, validation: :length, kind: :min] = keys} ->
         "should be at least #{keys[:count]} character(s) in field #{field}"
         |> String.upcase()
       %Ecto.Changeset{validations: validations}, field, {_, [validation: :format]} ->
