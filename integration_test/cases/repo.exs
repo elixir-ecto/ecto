@@ -455,7 +455,7 @@ defmodule Ecto.Integration.RepoTest do
       changeset
       |> Ecto.Changeset.assoc_constraint(:post)
       |> TestRepo.insert()
-    assert changeset.errors == [post: {"does not exist", [validation: :assoc]}]
+    assert changeset.errors == [post: {"does not exist", [constraint: :assoc]}]
   end
 
   @tag :foreign_key_constraint

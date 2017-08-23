@@ -1198,22 +1198,22 @@ defmodule Ecto.ChangesetTest do
     changeset = change(%Comment{}) |> assoc_constraint(:post)
     assert changeset.constraints ==
            [%{type: :foreign_key, field: :post, constraint: "comments_post_id_fkey", match: :exact,
-              error: {"does not exist", [validation: :assoc]}}]
+              error: {"does not exist", [constraint: :assoc]}}]
 
     changeset = change(%Comment{}) |> assoc_constraint(:post, name: :whatever, message: "is not available")
     assert changeset.constraints ==
-           [%{type: :foreign_key, field: :post, constraint: "whatever", match: :exact, error: {"is not available", [validation: :assoc]}}]
+           [%{type: :foreign_key, field: :post, constraint: "whatever", match: :exact, error: {"is not available", [constraint: :assoc]}}]
   end
 
   test "assoc_constraint/3 on field with :source" do
     changeset = change(%Post{}) |> assoc_constraint(:category)
     assert changeset.constraints ==
            [%{type: :foreign_key, field: :category, constraint: "posts_category_id_fkey", match: :exact,
-              error: {"does not exist", [validation: :assoc]}}]
+              error: {"does not exist", [constraint: :assoc]}}]
 
     changeset = change(%Post{}) |> assoc_constraint(:category, name: :whatever, message: "is not available")
     assert changeset.constraints ==
-           [%{type: :foreign_key, field: :category, constraint: "whatever", match: :exact, error: {"is not available", [validation: :assoc]}}]
+           [%{type: :foreign_key, field: :category, constraint: "whatever", match: :exact, error: {"is not available", [constraint: :assoc]}}]
   end
 
   test "assoc_constraint/3 with errors" do

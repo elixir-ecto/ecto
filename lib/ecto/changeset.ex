@@ -2149,7 +2149,7 @@ defmodule Ecto.Changeset do
       end
 
     message = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, {message, [validation: :assoc]})
+    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, {message, [constraint: :assoc]})
   end
 
   @doc """
