@@ -499,7 +499,7 @@ defmodule Ecto.Integration.RepoTest do
       |> Ecto.Changeset.change
       |> Ecto.Changeset.no_assoc_constraint(:permalink)
       |> TestRepo.delete()
-    assert changeset.errors == [permalink: {"is still associated with this entry", [validation: :no_assoc]}]
+    assert changeset.errors == [permalink: {"is still associated with this entry", [constraint: :no_assoc]}]
   end
 
   test "insert and update with failing child foreign key" do
