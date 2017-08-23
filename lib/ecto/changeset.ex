@@ -1690,14 +1690,14 @@ defmodule Ecto.Changeset do
     result = Decimal.cmp(value, Decimal.new(target_value))
     case decimal_compare(result, spec_key) do
       true  -> nil
-      false -> [{field, {message, validation: :number, number: target_value}}]
+      false -> [{field, {message, validation: :number, type: spec_key, number: target_value}}]
     end
   end
 
-  defp validate_number(field, value, message, _spec_key, spec_function, target_value) do
+  defp validate_number(field, value, message, spec_key, spec_function, target_value) do
     case apply(spec_function, [value, target_value]) do
       true  -> nil
-      false -> [{field, {message, validation: :number, number: target_value}}]
+      false -> [{field, {message, validation: :number, type: spec_key, number: target_value}}]
     end
   end
 
