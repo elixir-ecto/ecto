@@ -873,7 +873,7 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"upvotes" => -1})
                 |> validate_number(:upvotes, greater_than: 0)
     refute changeset.valid?
-    assert changeset.errors == [upvotes: {"must be greater than %{number}", validation: :number, type: :greater_than, number: 0}]
+    assert changeset.errors == [upvotes: {"must be greater than %{number}", validation: :number, kind: :greater_than, number: 0}]
     assert changeset.validations == [upvotes: {:number, [greater_than: 0]}]
 
     # Multiple validations
@@ -887,12 +887,12 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 100, less_than: 0)
     refute changeset.valid?
-    assert changeset.errors == [upvotes: {"must be greater than %{number}", validation: :number, type: :greater_than, number: 100}]
+    assert changeset.errors == [upvotes: {"must be greater than %{number}", validation: :number, kind: :greater_than, number: 100}]
 
     # Multiple validations with custom message errors
     changeset = changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 100, less_than: 0, message: "yada")
-    assert changeset.errors == [upvotes: {"yada", validation: :number, type: :greater_than, number: 100}]
+    assert changeset.errors == [upvotes: {"yada", validation: :number, kind: :greater_than, number: 100}]
   end
 
   test "validate_number/3 with decimal" do
