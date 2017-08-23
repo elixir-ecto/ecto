@@ -180,8 +180,8 @@ if Code.ensure_loaded?(Postgrex) do
       do: []
     defp on_conflict({:nothing, _, targets}, _header),
       do: [" ON CONFLICT ", conflict_target(targets) | "DO NOTHING"]
-    defp on_conflict({:replace_all, _, targets}, header),
-      do: [" ON CONFLICT ", conflict_target(targets), "DO " | replace_all(header)]
+    defp on_conflict({fields, _, targets}, _header) when is_list(fields),
+      do: [" ON CONFLICT ", conflict_target(targets), "DO " | replace(fields)]
     defp on_conflict({query, _, targets}, _header),
       do: [" ON CONFLICT ", conflict_target(targets), "DO " | update_all(query, "UPDATE SET ")]
 
@@ -192,9 +192,9 @@ if Code.ensure_loaded?(Postgrex) do
     defp conflict_target(targets),
       do: [?(, intersperse_map(targets, ?,, &quote_name/1), ?), ?\s]
 
-    defp replace_all(header) do
+    defp replace(fields) do
       ["UPDATE SET " |
-       intersperse_map(header, ?,, fn field ->
+       intersperse_map(fields, ?,, fn field ->
          quoted = quote_name(field)
          [quoted, " = ", "EXCLUDED." | quoted]
        end)]

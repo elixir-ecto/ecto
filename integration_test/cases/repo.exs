@@ -1185,7 +1185,7 @@ defmodule Ecto.Integration.RepoTest do
     end
 
     test "on conflict ignore" do
-      post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      post = %Post{title: "first", uuid: Ecto.UUID.generate()}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: :nothing)
       assert inserted.id
       assert inserted.__meta__.state == :loaded
@@ -1198,7 +1198,7 @@ defmodule Ecto.Integration.RepoTest do
     @tag :with_conflict_target
     test "on conflict and associations" do
       on_conflict = [set: [title: "second"]]
-      post = %Post{uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e",
+      post = %Post{uuid: Ecto.UUID.generate(),
                    title: "first", comments: [%Comment{}]}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:uuid])
       assert inserted.id
@@ -1215,7 +1215,7 @@ defmodule Ecto.Integration.RepoTest do
 
     @tag :with_conflict_target
     test "on conflict ignore and conflict target" do
-      post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      post = %Post{title: "first", uuid: Ecto.UUID.generate()}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: :nothing, conflict_target: [:uuid])
       assert inserted.id
 
@@ -1230,7 +1230,7 @@ defmodule Ecto.Integration.RepoTest do
     @tag :without_conflict_target
     test "on conflict keyword list" do
       on_conflict = [set: [title: "second"]]
-      post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      post = %Post{title: "first", uuid: Ecto.UUID.generate()}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict)
       assert inserted.id
 
@@ -1243,7 +1243,7 @@ defmodule Ecto.Integration.RepoTest do
     @tag :with_conflict_target
     test "on conflict keyword list and conflict target" do
       on_conflict = [set: [title: "second"]]
-      post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      post = %Post{title: "first", uuid: Ecto.UUID.generate()}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:uuid])
       assert inserted.id
 
@@ -1305,7 +1305,7 @@ defmodule Ecto.Integration.RepoTest do
     @tag :returning
     @tag :with_conflict_target
     test "on conflict ignore and returning" do
-      post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      post = %Post{title: "first", uuid: Ecto.UUID.generate()}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: :nothing, conflict_target: [:uuid])
       assert inserted.id
 
@@ -1316,7 +1316,7 @@ defmodule Ecto.Integration.RepoTest do
     @tag :without_conflict_target
     test "on conflict query" do
       on_conflict = from Post, update: [set: [title: "second"]]
-      post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      post = %Post{title: "first", uuid: Ecto.UUID.generate()}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict)
       assert inserted.id
 
@@ -1329,7 +1329,7 @@ defmodule Ecto.Integration.RepoTest do
     @tag :with_conflict_target
     test "on conflict query and conflict target" do
       on_conflict = from Post, update: [set: [title: "second"]]
-      post = %Post{title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      post = %Post{title: "first", uuid: Ecto.UUID.generate()}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:uuid])
       assert inserted.id
 
@@ -1344,41 +1344,35 @@ defmodule Ecto.Integration.RepoTest do
 
     @tag :without_conflict_target
     test "on conflict replace_all" do
-      post = %Post{title: "first", text: "text", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
+      post = %Post{title: "first", text: "text", uuid: Ecto.UUID.generate()}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: :replace_all)
       assert inserted.id
 
-      # Error on non-conflict target
-      post = %Post{id: inserted.id, title: "updated",
-                   text: "updated", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
-
-      # Error on conflict target
+      post = %Post{title: "updated", text: "updated", uuid: post.uuid}
       post = TestRepo.insert!(post, on_conflict: :replace_all)
+      assert post.id == inserted.id
       assert post.title == "updated"
       assert post.text == "updated"
 
-      assert TestRepo.all(from p in Post, select: p.title) == ["updated"]
-      assert TestRepo.all(from p in Post, select: p.text) == ["updated"]
+      assert TestRepo.all(from p in Post, select: {p.id, p.title, p.text}) ==
+             [{inserted.id, "updated", "updated"}]
       assert TestRepo.all(from p in Post, select: count(p.id)) == [1]
     end
 
     @tag :with_conflict_target
     test "on conflict replace_all and conflict target" do
-      post = %Post{title: "first", text: "text", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
-      {:ok, inserted} = TestRepo.insert(post, on_conflict: :replace_all, conflict_target: :id)
+      post = %Post{title: "first", text: "text", uuid: Ecto.UUID.generate()}
+      {:ok, inserted} = TestRepo.insert(post, on_conflict: :replace_all, conflict_target: :uuid)
       assert inserted.id
 
-      # Error on non-conflict target
-      post = %Post{id: inserted.id, title: "updated",
-                   text: "updated", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"}
-
-      # Error on conflict target
-      post = TestRepo.insert!(post, on_conflict: :replace_all, conflict_target: :id)
+      post = %Post{title: "updated", text: "updated", uuid: post.uuid}
+      post = TestRepo.insert!(post, on_conflict: :replace_all, conflict_target: :uuid)
+      assert post.id == inserted.id
       assert post.title == "updated"
       assert post.text == "updated"
 
-      assert TestRepo.all(from p in Post, select: p.title) == ["updated"]
-      assert TestRepo.all(from p in Post, select: p.text) == ["updated"]
+      assert TestRepo.all(from p in Post, select: {p.id, p.title, p.text}) ==
+             [{inserted.id, "updated", "updated"}]
       assert TestRepo.all(from p in Post, select: count(p.id)) == [1]
     end
   end
@@ -1387,13 +1381,13 @@ defmodule Ecto.Integration.RepoTest do
     @describetag :upsert_all
 
     test "on conflict raise" do
-      post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
+      post = [title: "first", uuid: Ecto.UUID.generate()]
       {1, nil} = TestRepo.insert_all(Post, [post], on_conflict: :raise)
       assert catch_error(TestRepo.insert_all(Post, [post], on_conflict: :raise))
     end
 
     test "on conflict ignore" do
-      post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
+      post = [title: "first", uuid: Ecto.UUID.generate()]
       assert TestRepo.insert_all(Post, [post], on_conflict: :nothing) == {1, nil}
 
       # PG returns 0, MySQL returns 1
@@ -1405,7 +1399,7 @@ defmodule Ecto.Integration.RepoTest do
 
     @tag :with_conflict_target
     test "on conflict ignore and conflict target" do
-      post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
+      post = [title: "first", uuid: Ecto.UUID.generate()]
       assert TestRepo.insert_all(Post, [post], on_conflict: :nothing, conflict_target: [:uuid]) ==
              {1, nil}
 
@@ -1420,7 +1414,7 @@ defmodule Ecto.Integration.RepoTest do
     @tag :with_conflict_target
     test "on conflict keyword list and conflict target" do
       on_conflict = [set: [title: "second"]]
-      post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
+      post = [title: "first", uuid: Ecto.UUID.generate()]
       {1, nil} = TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:uuid])
 
       # Error on non-conflict target
@@ -1450,7 +1444,7 @@ defmodule Ecto.Integration.RepoTest do
     @tag :with_conflict_target
     test "on conflict query and conflict target" do
       on_conflict = from Post, update: [set: [title: "second"]]
-      post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
+      post = [title: "first", uuid: Ecto.UUID.generate()]
       assert TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
              {1, nil}
 
@@ -1467,7 +1461,7 @@ defmodule Ecto.Integration.RepoTest do
     @tag :with_conflict_target
     test "on conflict query and conflict target and returning" do
       on_conflict = from Post, update: [set: [title: "second"]]
-      post = [title: "first", uuid: "6fa459ea-ee8a-3ca4-894e-db77e160355e"]
+      post = [title: "first", uuid: Ecto.UUID.generate()]
       {1, [%{id: id}]} = TestRepo.insert_all(Post, [post], on_conflict: on_conflict,
                                             conflict_target: [:uuid], returning: [:id])
 
@@ -1484,7 +1478,7 @@ defmodule Ecto.Integration.RepoTest do
     @tag :with_conflict_target
     test "source (without an ecto schema) on conflict query and conflict target" do
       on_conflict = [set: [title: "second"]]
-      {:ok, uuid} = Ecto.UUID.dump("6fa459ea-ee8a-3ca4-894e-db77e160355e")
+      {:ok, uuid} = Ecto.UUID.dump(Ecto.UUID.generate())
       post = [title: "first", uuid: uuid]
       assert TestRepo.insert_all("posts", [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
              {1, nil}
@@ -1500,61 +1494,122 @@ defmodule Ecto.Integration.RepoTest do
 
     @tag :without_conflict_target
     test "on conflict replace_all" do
-      post_first = %Post{title: "first", public: true}
-      post_second = %Post{title: "second", public: false}
+      post_first = %Post{title: "first", public: true, uuid: Ecto.UUID.generate}
+      post_second = %Post{title: "second", public: false, uuid: Ecto.UUID.generate}
 
-      {:ok, inserted_first} = TestRepo.insert(post_first, on_conflict: :replace_all)
-      {:ok, inserted_second} = TestRepo.insert(post_second, on_conflict: :replace_all)
+      {:ok, post_first} = TestRepo.insert(post_first, on_conflict: :replace_all)
+      {:ok, post_second} = TestRepo.insert(post_second, on_conflict: :replace_all)
 
-      assert inserted_first.id
-      assert inserted_second.id
+      assert post_first.id
+      assert post_second.id
       assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
 
-      # multiple record change value
-      changes = [%{id: inserted_first.id, title: "first_updated", text: "first_updated"},
-                 %{id: inserted_second.id, title: "second_updated", text: "second_updated"}]
+      # Multiple record change value: note IDS are also replaced
+      changes = [%{id: post_first.id + 2, title: "first_updated",
+                   text: "first_updated", uuid: post_first.uuid},
+                 %{id: post_second.id + 2, title: "second_updated",
+                   text: "second_updated", uuid: post_second.uuid}]
 
       TestRepo.insert_all(Post, changes, on_conflict: :replace_all)
-
       assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
 
-      updated_first =  TestRepo.get(Post, inserted_first.id)
+      updated_first = TestRepo.get(Post, post_first.id + 2)
       assert updated_first.title == "first_updated"
       assert updated_first.text == "first_updated"
 
-      updated_first =  TestRepo.get(Post, inserted_second.id)
-      assert updated_first.title == "second_updated"
-      assert updated_first.text == "second_updated"
+      updated_second = TestRepo.get(Post, post_second.id + 2)
+      assert updated_second.title == "second_updated"
+      assert updated_second.text == "second_updated"
     end
 
     @tag :with_conflict_target
     test "on conflict replace_all and conflict_target" do
-      post_first = %Post{title: "first", public: true}
-      post_second = %Post{title: "second", public: false}
+      post_first = %Post{title: "first", public: true, uuid: Ecto.UUID.generate()}
+      post_second = %Post{title: "second", public: false, uuid: Ecto.UUID.generate()}
 
-      {:ok, inserted_first} = TestRepo.insert(post_first, on_conflict: :replace_all, conflict_target: :id)
-      {:ok, inserted_second} = TestRepo.insert(post_second, on_conflict: :replace_all, conflict_target: :id)
+      {:ok, post_first} = TestRepo.insert(post_first, on_conflict: :replace_all, conflict_target: :uuid)
+      {:ok, post_second} = TestRepo.insert(post_second, on_conflict: :replace_all, conflict_target: :uuid)
 
-      assert inserted_first.id
-      assert inserted_second.id
+      assert post_first.id
+      assert post_second.id
       assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
 
-      # multiple record change value
-      changes = [%{id: inserted_first.id, title: "first_updated", text: "first_updated"},
-                 %{id: inserted_second.id, title: "second_updated", text: "second_updated"}]
+      # Multiple record change value: note IDS are also replaced
+      changes = [%{id: post_first.id + 2, title: "first_updated",
+                   text: "first_updated", uuid: post_first.uuid},
+                 %{id: post_second.id + 2, title: "second_updated",
+                   text: "second_updated", uuid: post_second.uuid}]
 
-      TestRepo.insert_all(Post, changes, on_conflict: :replace_all, conflict_target: :id)
-
+      TestRepo.insert_all(Post, changes, on_conflict: :replace_all, conflict_target: :uuid)
       assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
 
-      updated_first =  TestRepo.get(Post, inserted_first.id)
+      updated_first = TestRepo.get(Post, post_first.id + 2)
       assert updated_first.title == "first_updated"
       assert updated_first.text == "first_updated"
 
+      updated_second = TestRepo.get(Post, post_second.id + 2)
+      assert updated_second.title == "second_updated"
+      assert updated_second.text == "second_updated"
+    end
 
-      updated_first =  TestRepo.get(Post, inserted_second.id)
-      assert updated_first.title == "second_updated"
-      assert updated_first.text == "second_updated"
+    @tag :without_conflict_target
+    test "on conflict replace_all_except_primary_key" do
+      post_first = %Post{title: "first", public: true, uuid: Ecto.UUID.generate}
+      post_second = %Post{title: "second", public: false, uuid: Ecto.UUID.generate}
+
+      {:ok, post_first} = TestRepo.insert(post_first, on_conflict: :replace_all_except_primary_key)
+      {:ok, post_second} = TestRepo.insert(post_second, on_conflict: :replace_all_except_primary_key)
+
+      assert post_first.id
+      assert post_second.id
+      assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
+
+      # Multiple record change value: note IDS are not replaced
+      changes = [%{id: post_first.id + 2, title: "first_updated",
+                   text: "first_updated", uuid: post_first.uuid},
+                 %{id: post_second.id + 2, title: "second_updated",
+                   text: "second_updated", uuid: post_second.uuid}]
+
+      TestRepo.insert_all(Post, changes, on_conflict: :replace_all_except_primary_key)
+      assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
+
+      updated_first = TestRepo.get(Post, post_first.id)
+      assert updated_first.title == "first_updated"
+      assert updated_first.text == "first_updated"
+
+      updated_second = TestRepo.get(Post, post_second.id)
+      assert updated_second.title == "second_updated"
+      assert updated_second.text == "second_updated"
+    end
+
+    @tag :with_conflict_target
+    test "on conflict replace_all_except_primary_key and conflict_target" do
+      post_first = %Post{title: "first", public: true, uuid: Ecto.UUID.generate()}
+      post_second = %Post{title: "second", public: false, uuid: Ecto.UUID.generate()}
+
+      {:ok, post_first} = TestRepo.insert(post_first, on_conflict: :replace_all_except_primary_key, conflict_target: :uuid)
+      {:ok, post_second} = TestRepo.insert(post_second, on_conflict: :replace_all_except_primary_key, conflict_target: :uuid)
+
+      assert post_first.id
+      assert post_second.id
+      assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
+
+      # Multiple record change value: note IDS are not replaced
+      changes = [%{id: post_first.id + 2, title: "first_updated",
+                   text: "first_updated", uuid: post_first.uuid},
+                 %{id: post_second.id + 2, title: "second_updated",
+                   text: "second_updated", uuid: post_second.uuid}]
+
+      TestRepo.insert_all(Post, changes, on_conflict: :replace_all_except_primary_key, conflict_target: :uuid)
+      assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
+
+      updated_first = TestRepo.get(Post, post_first.id)
+      assert updated_first.title == "first_updated"
+      assert updated_first.text == "first_updated"
+
+      updated_second = TestRepo.get(Post, post_second.id)
+      assert updated_second.title == "second_updated"
+      assert updated_second.text == "second_updated"
     end
   end
 end

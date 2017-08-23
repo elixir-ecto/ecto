@@ -544,8 +544,9 @@ defmodule Ecto.Repo do
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL).
     * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
-      `:replace_all`, a keyword list of update instructions or an `Ecto.Query`
-      query for updates. See the "Upserts" section for more information.
+      `:replace_all`, `:replace_all_except_primary_key`, a keyword list of
+      update instructions or an `Ecto.Query` query for updates. See the
+      "Upserts" section for more information.
     * `:conflict_target` - Which columns to verify for conflicts. If
       none is specified, the conflict target is left up to the database
       and is usually made of primary keys and/or unique/exclusion constraints.
@@ -570,6 +571,8 @@ defmodule Ecto.Repo do
     * `:replace_all` - replace all values on the existing row with the values
       in the excluded row (the corresponding record given in the function
       parameters)
+    * `:replace_all_except_primary_key` - same as above except primary keys are
+      not replaced. This option requires a schema
     * a keyword list of update instructions - such as the one given to
       `c:update_all/3`, for example: `[set: [title: "new title"]]`
     * an `Ecto.Query` that will act as an `UPDATE` statement, such as the
@@ -701,8 +704,9 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This overrides the prefix set
       in the struct.
     * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
-      `:replace_all`, a keyword list of update instructions or an `Ecto.Query`
-      query for updates. See the "Upserts" section for more information.
+      `:replace_all`, `:replace_all_except_primary_key`, a keyword list of
+      update instructions or an `Ecto.Query` query for updates. See the
+      "Upserts" section for more information.
     * `:conflict_target` - Which columns to verify for conflicts. If
       none is specified, the conflict target is left up to the database
       and is usually made of primary keys and/or unique/exclusion constraints.
@@ -729,7 +733,9 @@ defmodule Ecto.Repo do
     * `:raise` - raises if there is a conflicting primary key or unique index
     * `:nothing` - ignores the error in case of conflicts
     * `:replace_all` - replace all values on the existing row with the values
-      in the excluded row (the record given in the function parameters)
+      in the excluded row except (the record given in the function parameters)
+    * `:replace_all_except_primary_key` - same as above except primary keys are
+      not replaced
     * a keyword list of update instructions - such as the one given to
       `c:update_all/3`, for example: `[set: [title: "new title"]]`
     * an `Ecto.Query` that will act as an `UPDATE` statement, such as the
@@ -781,7 +787,7 @@ defmodule Ecto.Repo do
   database, you have three options:
 
     * Use `on_conflict: :replace_all`, although that will replace all
-      fields in the database with current ones:
+      fields in the database with current ones (except for primary keys):
 
           MyRepo.insert(%Post{title: "this is unique"},
                         on_conflict: :replace_all, conflict_target: :title)

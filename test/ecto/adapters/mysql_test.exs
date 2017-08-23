@@ -523,7 +523,7 @@ defmodule Ecto.Adapters.MySQLTest do
     query = insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], []}, [])
     assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `z` = ?}
 
-    query = insert(nil, "schema", [:x, :y], [[:x, :y]], {:replace_all, [], []}, [])
+    query = insert(nil, "schema", [:x, :y], [[:x, :y]], {[:x, :y], [], []}, [])
     assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `x` = VALUES(`x`),`y` = VALUES(`y`)}
   end
 

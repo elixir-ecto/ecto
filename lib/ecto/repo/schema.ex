@@ -46,10 +46,13 @@ defmodule Ecto.Repo.Schema do
     {on_conflict, opts} = Keyword.pop(opts, :on_conflict, :raise)
     {conflict_target, opts} = Keyword.pop(opts, :conflict_target, [])
     conflict_target = conflict_target(conflict_target, dumper)
-    on_conflict = on_conflict(on_conflict, conflict_target, metadata, counter, adapter)
 
+    keys = Map.keys(header)
+    on_conflict =
+      on_conflict(on_conflict, conflict_target, metadata, keys, counter, adapter)
     {count, rows} =
-      adapter.insert_all(repo, metadata, Map.keys(header), rows, on_conflict, return_sources, opts)
+      adapter.insert_all(repo, metadata, keys, rows, on_conflict, return_sources, opts)
+
     {count, postprocess(rows, return_fields_or_types, adapter, schema, metadata)}
   end
 
@@ -68,17 +71,13 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp extract_header_and_fields(rows, schema, dumper, autogen_id, adapter) do
-    header = init_header(autogen_id)
     mapper = init_mapper(schema, dumper, adapter)
 
-    Enum.map_reduce(rows, header, fn fields, header ->
+    Enum.map_reduce(rows, %{}, fn fields, header ->
       {fields, header} = Enum.map_reduce(fields, header, mapper)
-      {autogenerate_id(autogen_id, fields, adapter), header}
+      autogenerate_id(autogen_id, fields, header, adapter)
     end)
   end
-
-  defp init_header(nil), do: %{}
-  defp init_header({_, source, _}), do: %{source => true}
 
   defp init_mapper(nil, _dumper, _adapter) do
     fn {field, value}, acc ->
@@ -104,16 +103,16 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp autogenerate_id(nil, fields, _adapter), do: fields
-  defp autogenerate_id({key, source, type}, fields, adapter) do
+  defp autogenerate_id(nil, fields, header, _adapter), do: {fields, header}
+  defp autogenerate_id({key, source, type}, fields, header, adapter) do
     case :lists.keyfind(key, 1, fields) do
       {^key, _} ->
-        fields
+        {fields, header}
       false ->
         if value = adapter.autogenerate(type) do
-          [{source, value} | fields]
+          {[{source, value} | fields], Map.put(header, source, true)}
         else
-          fields
+          {fields, header}
         end
     end
   end
@@ -203,9 +202,11 @@ defmodule Ecto.Repo.Schema do
 
         {changes, extra, return_types, return_sources} =
           autogenerate_id(autogen_id, changeset.changes, return_types, return_sources, adapter)
-        {changes, autogen} = dump_changes!(:insert, Map.take(changes, fields), schema, extra, dumper, adapter)
-        on_conflict = on_conflict(on_conflict, conflict_target, metadata,
-                                  fn -> length(changes) end, adapter)
+        {changes, autogen} =
+          dump_changes!(:insert, Map.take(changes, fields), schema, extra, dumper, adapter)
+        on_conflict =
+          on_conflict(on_conflict, conflict_target, metadata, Keyword.keys(changes),
+                      fn -> length(changes) end, adapter)
 
         args = [repo, metadata, changes, on_conflict, return_sources, opts]
         case apply(changeset, adapter, :insert, args) do
@@ -492,7 +493,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp on_conflict(on_conflict, conflict_target,
-                   %{source: {prefix, source}, schema: schema}, changes, adapter) do
+                   %{source: {prefix, source}, schema: schema}, header, counter_fun, adapter) do
     case on_conflict do
       :raise when conflict_target == [] ->
         {:raise, [], []}
@@ -501,20 +502,24 @@ defmodule Ecto.Repo.Schema do
       :nothing ->
         {:nothing, [], conflict_target}
       :replace_all ->
-        {:replace_all, [], conflict_target}
+        {header, [], conflict_target}
+      :replace_all_except_primary_key when is_nil(schema) ->
+        raise ArgumentError, "cannot use :replace_all_except_primary_key on operations without a schema"
+      :replace_all_except_primary_key ->
+        {header -- schema.__schema__(:primary_key), [], conflict_target}
       [_ | _] = on_conflict ->
         from = if schema, do: {source, schema}, else: source
         query = Ecto.Query.from from, update: ^on_conflict
-        on_conflict_query(query, {source, schema}, prefix, changes, adapter, conflict_target)
+        on_conflict_query(query, {source, schema}, prefix, counter_fun, adapter, conflict_target)
       %Ecto.Query{} = query ->
-        on_conflict_query(query, {source, schema}, prefix, changes, adapter, conflict_target)
+        on_conflict_query(query, {source, schema}, prefix, counter_fun, adapter, conflict_target)
       other ->
         raise ArgumentError, "unknown value for :on_conflict, got: #{inspect other}"
     end
   end
 
-  defp on_conflict_query(query, from, prefix, changes, adapter, conflict_target) do
-    counter = changes.()
+  defp on_conflict_query(query, from, prefix, counter_fun, adapter, conflict_target) do
+    counter = counter_fun.()
 
     {query, params, _} =
       %{query | prefix: prefix}
@@ -735,7 +740,7 @@ defmodule Ecto.Repo.Schema do
 
   defp dump_changes!(action, changes, schema, extra, dumper, adapter) do
     autogen = autogenerate_changes(schema, action, changes)
-    dumped  =
+    dumped =
       dump_fields!(action, schema, changes, dumper, adapter) ++
       dump_fields!(action, schema, autogen, dumper, adapter) ++
       extra

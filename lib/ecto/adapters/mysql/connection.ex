@@ -142,9 +142,9 @@ if Code.ensure_loaded?(Mariaex) do
       quoted = quote_name(field)
       [" ON DUPLICATE KEY UPDATE ", quoted, " = " | quoted]
     end
-    defp on_conflict({:replace_all, _, []}, header) do
+    defp on_conflict({fields, _, []}, _header) when is_list(fields) do
       [" ON DUPLICATE KEY UPDATE " |
-       intersperse_map(header, ?,, fn field ->
+       intersperse_map(fields, ?,, fn field ->
          quoted = quote_name(field)
          [quoted, " = VALUES(", quoted, ?)]
        end)]
