@@ -2101,7 +2101,7 @@ defmodule Ecto.Changeset do
   def foreign_key_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_fkey"
     message    = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, field, {message, []})
+    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, field, {message, [validation: :foreign]})
   end
 
   @doc """

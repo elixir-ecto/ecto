@@ -1176,22 +1176,22 @@ defmodule Ecto.ChangesetTest do
     changeset = change(%Comment{}) |> foreign_key_constraint(:post_id)
     assert changeset.constraints ==
            [%{type: :foreign_key, field: :post_id, constraint: "comments_post_id_fkey", match: :exact,
-              error: {"does not exist", []}}]
+              error: {"does not exist", [validation: :foreign]}}]
 
     changeset = change(%Comment{}) |> foreign_key_constraint(:post_id, name: :whatever, message: "is not available")
     assert changeset.constraints ==
-           [%{type: :foreign_key, field: :post_id, constraint: "whatever", match: :exact, error: {"is not available", []}}]
+           [%{type: :foreign_key, field: :post_id, constraint: "whatever", match: :exact, error: {"is not available", [validation: :foreign]}}]
   end
 
   test "foreign_key_constraint/3 on field with :source" do
     changeset = change(%Post{}) |> foreign_key_constraint(:permalink)
     assert changeset.constraints ==
            [%{type: :foreign_key, field: :permalink, constraint: "posts_url_fkey", match: :exact,
-              error: {"does not exist", []}}]
+              error: {"does not exist", [validation: :foreign]}}]
 
     changeset = change(%Post{}) |> foreign_key_constraint(:permalink, name: :whatever, message: "is not available")
     assert changeset.constraints ==
-           [%{type: :foreign_key, field: :permalink, constraint: "whatever", match: :exact, error: {"is not available", []}}]
+           [%{type: :foreign_key, field: :permalink, constraint: "whatever", match: :exact, error: {"is not available", [validation: :foreign]}}]
   end
 
   test "assoc_constraint/3" do
