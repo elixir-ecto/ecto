@@ -1133,19 +1133,19 @@ defmodule Ecto.ChangesetTest do
 
     assert changeset.constraints ==
            [%{type: :unique, field: :title, constraint: "posts_title_index", match: :exact,
-              error: {"has already been taken", [validation: :unique]}}]
+              error: {"has already been taken", [constraint: :unique]}}]
 
     changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, message: "is taken")
     assert changeset.constraints ==
-           [%{type: :unique, field: :title, constraint: "whatever", match: :exact, error: {"is taken", [validation: :unique]}}]
+           [%{type: :unique, field: :title, constraint: "whatever", match: :exact, error: {"is taken", [constraint: :unique]}}]
 
     changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :suffix, message: "is taken")
     assert changeset.constraints ==
-           [%{type: :unique, field: :title, constraint: "whatever", match: :suffix, error: {"is taken", [validation: :unique]}}]
+           [%{type: :unique, field: :title, constraint: "whatever", match: :suffix, error: {"is taken", [constraint: :unique]}}]
 
     changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :prefix, message: "is taken")
     assert changeset.constraints ==
-           [%{type: :unique, field: :title, constraint: "whatever", match: :prefix, error: {"is taken", [validation: :unique]}}]
+           [%{type: :unique, field: :title, constraint: "whatever", match: :prefix, error: {"is taken", [constraint: :unique]}}]
 
     assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
       change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :invalid, message: "is taken")
@@ -1157,15 +1157,15 @@ defmodule Ecto.ChangesetTest do
 
     assert changeset.constraints ==
            [%{type: :unique, field: :permalink, constraint: "posts_url_index", match: :exact,
-              error: {"has already been taken", [validation: :unique]}}]
+              error: {"has already been taken", [constraint: :unique]}}]
 
     changeset = change(%Post{}) |> unique_constraint(:permalink, name: :whatever, message: "is taken")
     assert changeset.constraints ==
-           [%{type: :unique, field: :permalink, constraint: "whatever", match: :exact, error: {"is taken", [validation: :unique]}}]
+           [%{type: :unique, field: :permalink, constraint: "whatever", match: :exact, error: {"is taken", [constraint: :unique]}}]
 
     changeset = change(%Post{}) |> unique_constraint(:permalink, name: :whatever, match: :suffix, message: "is taken")
     assert changeset.constraints ==
-           [%{type: :unique, field: :permalink, constraint: "whatever", match: :suffix, error: {"is taken", [validation: :unique]}}]
+           [%{type: :unique, field: :permalink, constraint: "whatever", match: :suffix, error: {"is taken", [constraint: :unique]}}]
 
     assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
       change(%Post{}) |> unique_constraint(:permalink, name: :whatever, match: :invalid, message: "is taken")

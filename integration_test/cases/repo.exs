@@ -288,7 +288,7 @@ defmodule Ecto.Integration.RepoTest do
       changeset
       |> Ecto.Changeset.unique_constraint(:uuid)
       |> TestRepo.insert()
-    assert changeset.errors == [uuid: {"has already been taken", [validation: :unique]}]
+    assert changeset.errors == [uuid: {"has already been taken", [constraint: :unique]}]
     assert changeset.data.__meta__.state == :built
   end
 
@@ -305,7 +305,7 @@ defmodule Ecto.Integration.RepoTest do
       }
 
     [_, p2, _] = changeset.changes.posts
-    assert p2.errors == [uuid: {"has already been taken", [validation: :unique]}]
+    assert p2.errors == [uuid: {"has already been taken", [constraint: :unique]}]
   end
 
   @tag :id_type
@@ -318,7 +318,7 @@ defmodule Ecto.Integration.RepoTest do
       changeset
       |> Ecto.Changeset.unique_constraint(:uuid)
       |> TestRepo.insert()
-    assert changeset.errors == [uuid: {"has already been taken", [validation: :unique]}]
+    assert changeset.errors == [uuid: {"has already been taken", [constraint: :unique]}]
     assert changeset.data.__meta__.state == :built
   end
 
