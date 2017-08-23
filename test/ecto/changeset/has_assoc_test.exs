@@ -476,6 +476,11 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert changeset.changes == %{}
     assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]
 
+    changeset = cast(%Author{posts: [%Post{title: "hello", id: 1}]}, %{}, :posts, required: true)
+    assert changeset.required == [:posts]
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
