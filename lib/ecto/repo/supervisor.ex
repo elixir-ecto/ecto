@@ -3,6 +3,7 @@ defmodule Ecto.Repo.Supervisor do
   use Supervisor
 
   @defaults [timeout: 15000, pool_timeout: 5000]
+  @integer_url_query_params ["timeout", "pool_size", "pool_timeout"]
 
   @doc """
   Starts the repo supervisor.
@@ -124,17 +125,26 @@ defmodule Ecto.Repo.Supervisor do
       {"ssl", "true"}, acc ->
         [{:ssl, true}] ++ acc
 
-      {"timeout", timeout}, acc ->
-        {timeout, ""} = Integer.parse(timeout)
-        [{:timeout, timeout}] ++ acc
-
-      {"pool_timeout", pool_timeout}, acc ->
-        {pool_timeout, ""} = Integer.parse(pool_timeout)
-        [{:pool_timeout, pool_timeout}] ++ acc
+      {key, value}, acc when key in @integer_url_query_params ->
+        [{String.to_atom(key), parse_integer!(key, value, url)}] ++ acc
 
       {key, _value}, _acc ->
         raise Ecto.InvalidURLError, url: url, message: "unsupported query parameter #{key}"
     end)
+  end
+
+  defp parse_integer!(key, value, url) do
+    case Integer.parse(value) do
+      {int, ""} ->
+        int
+
+      {_int, remainder_of_binary} ->
+        raise Ecto.InvalidURLError, url: url, message: "can not parse value for parameter #{key} as an integer, " <>
+                                                       "binary remainder #{remainder_of_binary} should not be present"
+
+      :error ->
+        raise Ecto.InvalidURLError, url: url, message: "can not parse value #{value} for parameter #{key} as an integer"
+    end
   end
 
   ## Callbacks
