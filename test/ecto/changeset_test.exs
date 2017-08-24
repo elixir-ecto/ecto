@@ -820,18 +820,18 @@ defmodule Ecto.ChangesetTest do
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, min: 6)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be at least %{count} character(s)", count: 6, validation: :length, min: 6}]
+    assert changeset.errors == [title: {"should be at least %{count} character(s)", count: 6, validation: :length, kind: :min}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, max: 4)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be at most %{count} character(s)", count: 4, validation: :length, max: 4}]
+    assert changeset.errors == [title: {"should be at most %{count} character(s)", count: 4, validation: :length, kind: :max}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 10)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be %{count} character(s)", count: 10, validation: :length, is: 10}]
+    assert changeset.errors == [title: {"should be %{count} character(s)", count: 10, validation: :length, kind: :is}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 10, message: "yada")
-    assert changeset.errors == [title: {"yada", count: 10, validation: :length, is: 10}]
+    assert changeset.errors == [title: {"yada", count: 10, validation: :length, kind: :is}]
   end
 
   test "validate_length/3 with list" do
@@ -848,18 +848,18 @@ defmodule Ecto.ChangesetTest do
 
     changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, min: 6, foo: true)
     refute changeset.valid?
-    assert changeset.errors == [topics: {"should have at least %{count} item(s)", count: 6, validation: :length, min: 6}]
+    assert changeset.errors == [topics: {"should have at least %{count} item(s)", count: 6, validation: :length, kind: :min}]
 
     changeset = changeset(%{"topics" => ["Politics", "Security", "Economy"]}) |> validate_length(:topics, max: 2)
     refute changeset.valid?
-    assert changeset.errors == [topics: {"should have at most %{count} item(s)", count: 2, validation: :length, max: 2}]
+    assert changeset.errors == [topics: {"should have at most %{count} item(s)", count: 2, validation: :length, kind: :max}]
 
     changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, is: 10)
     refute changeset.valid?
-    assert changeset.errors == [topics: {"should have %{count} item(s)", count: 10, validation: :length, is: 10}]
+    assert changeset.errors == [topics: {"should have %{count} item(s)", count: 10, validation: :length, kind: :is}]
 
     changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, is: 10, message: "yada")
-    assert changeset.errors == [topics: {"yada", count: 10, validation: :length, is: 10}]
+    assert changeset.errors == [topics: {"yada", count: 10, validation: :length, kind: :is}]
   end
 
   test "validate_number/3" do
@@ -873,7 +873,7 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"upvotes" => -1})
                 |> validate_number(:upvotes, greater_than: 0)
     refute changeset.valid?
-    assert changeset.errors == [upvotes: {"must be greater than %{number}", validation: :number, number: 0}]
+    assert changeset.errors == [upvotes: {"must be greater than %{number}", validation: :number, kind: :greater_than, number: 0}]
     assert changeset.validations == [upvotes: {:number, [greater_than: 0]}]
 
     # Multiple validations
@@ -887,12 +887,12 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 100, less_than: 0)
     refute changeset.valid?
-    assert changeset.errors == [upvotes: {"must be greater than %{number}", validation: :number, number: 100}]
+    assert changeset.errors == [upvotes: {"must be greater than %{number}", validation: :number, kind: :greater_than, number: 100}]
 
     # Multiple validations with custom message errors
     changeset = changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 100, less_than: 0, message: "yada")
-    assert changeset.errors == [upvotes: {"yada", validation: :number, number: 100}]
+    assert changeset.errors == [upvotes: {"yada", validation: :number, kind: :greater_than, number: 100}]
   end
 
   test "validate_number/3 with decimal" do
@@ -1133,19 +1133,19 @@ defmodule Ecto.ChangesetTest do
 
     assert changeset.constraints ==
            [%{type: :unique, field: :title, constraint: "posts_title_index", match: :exact,
-              error: {"has already been taken", []}}]
+              error: {"has already been taken", [constraint: :unique]}}]
 
     changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, message: "is taken")
     assert changeset.constraints ==
-           [%{type: :unique, field: :title, constraint: "whatever", match: :exact, error: {"is taken", []}}]
+           [%{type: :unique, field: :title, constraint: "whatever", match: :exact, error: {"is taken", [constraint: :unique]}}]
 
     changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :suffix, message: "is taken")
     assert changeset.constraints ==
-           [%{type: :unique, field: :title, constraint: "whatever", match: :suffix, error: {"is taken", []}}]
+           [%{type: :unique, field: :title, constraint: "whatever", match: :suffix, error: {"is taken", [constraint: :unique]}}]
 
     changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :prefix, message: "is taken")
     assert changeset.constraints ==
-           [%{type: :unique, field: :title, constraint: "whatever", match: :prefix, error: {"is taken", []}}]
+           [%{type: :unique, field: :title, constraint: "whatever", match: :prefix, error: {"is taken", [constraint: :unique]}}]
 
     assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
       change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :invalid, message: "is taken")
@@ -1157,15 +1157,15 @@ defmodule Ecto.ChangesetTest do
 
     assert changeset.constraints ==
            [%{type: :unique, field: :permalink, constraint: "posts_url_index", match: :exact,
-              error: {"has already been taken", []}}]
+              error: {"has already been taken", [constraint: :unique]}}]
 
     changeset = change(%Post{}) |> unique_constraint(:permalink, name: :whatever, message: "is taken")
     assert changeset.constraints ==
-           [%{type: :unique, field: :permalink, constraint: "whatever", match: :exact, error: {"is taken", []}}]
+           [%{type: :unique, field: :permalink, constraint: "whatever", match: :exact, error: {"is taken", [constraint: :unique]}}]
 
     changeset = change(%Post{}) |> unique_constraint(:permalink, name: :whatever, match: :suffix, message: "is taken")
     assert changeset.constraints ==
-           [%{type: :unique, field: :permalink, constraint: "whatever", match: :suffix, error: {"is taken", []}}]
+           [%{type: :unique, field: :permalink, constraint: "whatever", match: :suffix, error: {"is taken", [constraint: :unique]}}]
 
     assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
       change(%Post{}) |> unique_constraint(:permalink, name: :whatever, match: :invalid, message: "is taken")
@@ -1176,44 +1176,44 @@ defmodule Ecto.ChangesetTest do
     changeset = change(%Comment{}) |> foreign_key_constraint(:post_id)
     assert changeset.constraints ==
            [%{type: :foreign_key, field: :post_id, constraint: "comments_post_id_fkey", match: :exact,
-              error: {"does not exist", []}}]
+              error: {"does not exist", [constraint: :foreign]}}]
 
     changeset = change(%Comment{}) |> foreign_key_constraint(:post_id, name: :whatever, message: "is not available")
     assert changeset.constraints ==
-           [%{type: :foreign_key, field: :post_id, constraint: "whatever", match: :exact, error: {"is not available", []}}]
+           [%{type: :foreign_key, field: :post_id, constraint: "whatever", match: :exact, error: {"is not available", [constraint: :foreign]}}]
   end
 
   test "foreign_key_constraint/3 on field with :source" do
     changeset = change(%Post{}) |> foreign_key_constraint(:permalink)
     assert changeset.constraints ==
            [%{type: :foreign_key, field: :permalink, constraint: "posts_url_fkey", match: :exact,
-              error: {"does not exist", []}}]
+              error: {"does not exist", [constraint: :foreign]}}]
 
     changeset = change(%Post{}) |> foreign_key_constraint(:permalink, name: :whatever, message: "is not available")
     assert changeset.constraints ==
-           [%{type: :foreign_key, field: :permalink, constraint: "whatever", match: :exact, error: {"is not available", []}}]
+           [%{type: :foreign_key, field: :permalink, constraint: "whatever", match: :exact, error: {"is not available", [constraint: :foreign]}}]
   end
 
   test "assoc_constraint/3" do
     changeset = change(%Comment{}) |> assoc_constraint(:post)
     assert changeset.constraints ==
            [%{type: :foreign_key, field: :post, constraint: "comments_post_id_fkey", match: :exact,
-              error: {"does not exist", []}}]
+              error: {"does not exist", [constraint: :assoc]}}]
 
     changeset = change(%Comment{}) |> assoc_constraint(:post, name: :whatever, message: "is not available")
     assert changeset.constraints ==
-           [%{type: :foreign_key, field: :post, constraint: "whatever", match: :exact, error: {"is not available", []}}]
+           [%{type: :foreign_key, field: :post, constraint: "whatever", match: :exact, error: {"is not available", [constraint: :assoc]}}]
   end
 
   test "assoc_constraint/3 on field with :source" do
     changeset = change(%Post{}) |> assoc_constraint(:category)
     assert changeset.constraints ==
            [%{type: :foreign_key, field: :category, constraint: "posts_category_id_fkey", match: :exact,
-              error: {"does not exist", []}}]
+              error: {"does not exist", [constraint: :assoc]}}]
 
     changeset = change(%Post{}) |> assoc_constraint(:category, name: :whatever, message: "is not available")
     assert changeset.constraints ==
-           [%{type: :foreign_key, field: :category, constraint: "whatever", match: :exact, error: {"is not available", []}}]
+           [%{type: :foreign_key, field: :category, constraint: "whatever", match: :exact, error: {"is not available", [constraint: :assoc]}}]
   end
 
   test "assoc_constraint/3 with errors" do
@@ -1232,24 +1232,24 @@ defmodule Ecto.ChangesetTest do
     changeset = change(%Post{}) |> no_assoc_constraint(:comments)
     assert changeset.constraints ==
            [%{type: :foreign_key, field: :comments, constraint: "comments_post_id_fkey", match: :exact,
-              error: {"are still associated with this entry", []}}]
+              error: {"are still associated with this entry", [constraint: :no_assoc]}}]
 
     changeset = change(%Post{}) |> no_assoc_constraint(:comments, name: :whatever, message: "exists")
     assert changeset.constraints ==
            [%{type: :foreign_key, field: :comments, constraint: "whatever", match: :exact,
-              error: {"exists", []}}]
+              error: {"exists", [constraint: :no_assoc]}}]
   end
 
   test "no_assoc_constraint/3 with has_one" do
     changeset = change(%Post{}) |> no_assoc_constraint(:comment)
     assert changeset.constraints ==
            [%{type: :foreign_key, field: :comment, constraint: "comments_post_id_fkey", match: :exact,
-              error: {"is still associated with this entry", []}}]
+              error: {"is still associated with this entry", [constraint: :no_assoc]}}]
 
     changeset = change(%Post{}) |> no_assoc_constraint(:comment, name: :whatever, message: "exists")
     assert changeset.constraints ==
            [%{type: :foreign_key, field: :comment, constraint: "whatever", match: :exact,
-              error: {"exists", []}}]
+              error: {"exists", [constraint: :no_assoc]}}]
   end
 
   test "no_assoc_constraint/3 with errors" do
@@ -1321,8 +1321,8 @@ defmodule Ecto.ChangesetTest do
       %Ecto.Changeset{}, field, {_, [name: "your title"]} ->
         "value in #{field} is taken"
         |> String.upcase()
-      %Ecto.Changeset{}, field, {_, [count: 3, validation: :length, min: 3] = keys} ->
-        "should be at least #{keys[:min]} character(s) in field #{field}"
+      %Ecto.Changeset{}, field, {_, [count: 3, validation: :length, kind: :min] = keys} ->
+        "should be at least #{keys[:count]} character(s) in field #{field}"
         |> String.upcase()
       %Ecto.Changeset{validations: validations}, field, {_, [validation: :format]} ->
         validation = Keyword.get_values(validations, field)

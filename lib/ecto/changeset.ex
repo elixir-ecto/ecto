@@ -717,7 +717,7 @@ defmodule Ecto.Changeset do
               missing_relation(%{changeset | changes: Map.put(changes, key, change),
                                  valid?: changeset.valid? and relation_valid?}, key, current, required?, relation, opts)
             :error ->
-              %{changeset | errors: [{key, {message(opts, :invalid_message, "is invalid"), [type: expected_relation_type(relation)]}} | changeset.errors], valid?: false}
+              %{changeset | errors: [{key, {message(opts, :invalid_message, "is invalid"), [validation: type, type: expected_relation_type(relation)]}} | changeset.errors], valid?: false}
             _ -> # ignore or ok with change == original
               missing_relation(changeset, key, current, required?, relation, opts)
           end
@@ -1629,21 +1629,21 @@ defmodule Ecto.Changeset do
 
   defp wrong_length(_type, value, value, _opts), do: nil
   defp wrong_length(:string, _length, value, opts), do:
-    {message(opts, "should be %{count} character(s)"), count: value, validation: :length, is: value}
+    {message(opts, "should be %{count} character(s)"), count: value, validation: :length, kind: :is}
   defp wrong_length(:list, _length, value, opts), do:
-    {message(opts, "should have %{count} item(s)"), count: value, validation: :length, is: value}
+    {message(opts, "should have %{count} item(s)"), count: value, validation: :length, kind: :is}
 
   defp too_short(_type, length, value, _opts) when length >= value, do: nil
   defp too_short(:string, _length, value, opts), do:
-    {message(opts, "should be at least %{count} character(s)"), count: value, validation: :length, min: value}
+    {message(opts, "should be at least %{count} character(s)"), count: value, validation: :length, kind: :min}
   defp too_short(:list, _length, value, opts), do:
-    {message(opts, "should have at least %{count} item(s)"), count: value, validation: :length, min: value}
+    {message(opts, "should have at least %{count} item(s)"), count: value, validation: :length, kind: :min}
 
   defp too_long(_type, length, value, _opts) when length <= value, do: nil
   defp too_long(:string, _length, value, opts), do:
-    {message(opts, "should be at most %{count} character(s)"), count: value, validation: :length, max: value}
+    {message(opts, "should be at most %{count} character(s)"), count: value, validation: :length, kind: :max}
   defp too_long(:list, _length, value, opts), do:
-    {message(opts, "should have at most %{count} item(s)"), count: value, validation: :length, max: value}
+    {message(opts, "should have at most %{count} item(s)"), count: value, validation: :length, kind: :max}
 
   @doc """
   Validates the properties of a number.
@@ -1690,14 +1690,14 @@ defmodule Ecto.Changeset do
     result = Decimal.cmp(value, Decimal.new(target_value))
     case decimal_compare(result, spec_key) do
       true  -> nil
-      false -> [{field, {message, validation: :number, number: target_value}}]
+      false -> [{field, {message, validation: :number, kind: spec_key, number: target_value}}]
     end
   end
 
-  defp validate_number(field, value, message, _spec_key, spec_function, target_value) do
+  defp validate_number(field, value, message, spec_key, spec_function, target_value) do
     case apply(spec_function, [value, target_value]) do
       true  -> nil
-      false -> [{field, {message, validation: :number, number: target_value}}]
+      false -> [{field, {message, validation: :number, kind: spec_key, number: target_value}}]
     end
   end
 
@@ -2054,7 +2054,7 @@ defmodule Ecto.Changeset do
     constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_index"
     message    = message(opts, "has already been taken")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :unique, to_string(constraint), match_type, field, {message, []})
+    add_constraint(changeset, :unique, to_string(constraint), match_type, field, {message, [constraint: :unique]})
   end
 
   @doc """
@@ -2101,7 +2101,7 @@ defmodule Ecto.Changeset do
   def foreign_key_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_fkey"
     message    = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, field, {message, []})
+    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, field, {message, [constraint: :foreign]})
   end
 
   @doc """
@@ -2149,7 +2149,7 @@ defmodule Ecto.Changeset do
       end
 
     message = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, {message, []})
+    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, {message, [constraint: :assoc]})
   end
 
   @doc """
@@ -2199,7 +2199,7 @@ defmodule Ecto.Changeset do
             "no_assoc_constraint can only be added to has one/many associations, got: #{inspect other}"
       end
 
-    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, {message, []})
+    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, {message, [constraint: :no_assoc]})
   end
 
   @doc """
