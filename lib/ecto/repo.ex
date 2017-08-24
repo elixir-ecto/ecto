@@ -65,7 +65,7 @@ defmodule Ecto.Repo do
   while options are simply merged in.
 
   URL can include query parameters to override shared and adapter-specific
-  options: `ssl`, `timeout`, `pool_timeout`, `pool_size`:
+  options `ssl`, `timeout`, `pool_timeout`, `pool_size`:
 
     config :my_app, Repo,
         url: "ecto://postgres:postgres@localhost/ecto_simple?ssl=true&pool_size=10"
