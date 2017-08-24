@@ -190,6 +190,11 @@ defimpl Inspect, for: Ecto.Query do
     :binary.part(string, 0, size - 2)
   end
 
+  # Types need to be converted back to AST for fields
+  defp expr_to_string({:type, [], [expr, type]}, _string, names, part) do
+    "type(#{expr(expr, names, part)}, #{type |> type_to_expr() |> expr(names, part)})"
+  end
+
   # Tagged values
   defp expr_to_string(%Ecto.Query.Tagged{value: value, tag: nil}, _, _names, _) do
     inspect value
@@ -201,6 +206,16 @@ defimpl Inspect, for: Ecto.Query do
 
   defp expr_to_string(_expr, string, _, _) do
     string
+  end
+
+  defp type_to_expr({composite, type}) when is_atom(composite) do
+    {composite, type_to_expr(type)}
+  end
+  defp type_to_expr({part, type}) when is_integer(part) do
+    {{:., [], [{:&, [], [part]}, type]}, [], []}
+  end
+  defp type_to_expr(type) do
+    type
   end
 
   defp unmerge_fragments([{:raw, s}, {:expr, v}|t], frag, args, names, part) do

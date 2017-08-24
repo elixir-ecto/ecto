@@ -38,7 +38,7 @@
       {Credo.Check.Readability.ParenthesesOnZeroArityDefs, false},
       {Credo.Check.Readability.ParenthesesInCondition},
       {Credo.Check.Readability.PredicateFunctionNames},
-      {Credo.Check.Readability.SinglePipe},
+      {Credo.Check.Readability.SinglePipe, false}, # A common idiom in Ecto tests
       {Credo.Check.Readability.Specs, false},
       {Credo.Check.Readability.StringSigils},
       {Credo.Check.Readability.TrailingBlankLine},

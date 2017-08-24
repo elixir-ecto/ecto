@@ -41,7 +41,7 @@ defmodule Ecto.TestAdapter do
   end
 
   def execute(_repo, _, {:nocache, {:all, _}}, _, _, _) do
-    {1, [[1]]}
+    Process.get(:test_repo_all_results) || {1, [[1]]}
   end
 
   def execute(_repo, _meta, {:nocache, {:delete_all, %{from: {_, SchemaMigration}}}}, [version], _, _) do
@@ -71,7 +71,7 @@ defmodule Ecto.TestAdapter do
   def insert(_repo, %{source: {nil, "schema_migrations"}}, val, _, _, _) do
     version = Keyword.fetch!(val, :version)
     Process.put(:migrated_versions, [version|migrated_versions()])
-    {:ok, [version: 1]}
+    {:ok, []}
   end
 
   def insert(_repo, %{context: nil, source: source}, _fields, _on_conflict, return, _opts),

@@ -2,7 +2,6 @@ defmodule Mix.Tasks.Ecto.Dump do
   use Mix.Task
   import Mix.Ecto
 
-  @recursive true
   @shortdoc "Dumps the repository database structure"
 
   @moduledoc """
@@ -11,6 +10,13 @@ defmodule Mix.Tasks.Ecto.Dump do
 
   The repository must be set under `:ecto_repos` in the
   current app configuration or given via the `-r` option.
+
+  This task needs some shell utility to be present on the machine running the task.
+
+   Database   | Utility needed
+   :--------- | :-------------
+   PostgreSQL | pg_dump
+   MySQL      | mysqldump
 
   ## Example
 

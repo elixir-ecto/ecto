@@ -32,7 +32,11 @@ defmodule Ecto.Repo.Preloader do
   Implementation for `Ecto.Repo.preload/2`.
   """
   @spec preload(structs, atom, atom | list, Keyword.t) ::
-                structs when structs: [Ecto.Schema.t] | Ecto.Schema.t
+                structs when structs: [Ecto.Schema.t] | Ecto.Schema.t | nil
+  def preload(nil, _repo, _preloads, _opts) do
+    nil
+  end
+
   def preload(structs, repo, preloads, opts) when is_list(structs) do
     do_preload(structs, repo, preloads, opts[:take], opts)
   end
@@ -90,7 +94,7 @@ defmodule Ecto.Repo.Preloader do
 
   defp maybe_pmap(assocs, repo, opts, fun) do
     if match?([_,_|_], assocs) and not repo.in_transaction? and
-       Keyword.get(opts, :in_parallel, true) do
+         Keyword.get(opts, :in_parallel, true) do
       # We pass caller: self() so pools like the ownership
       # pool knows where to fetch the connection from and
       # set the proper timeouts.

@@ -27,13 +27,12 @@ defmodule Ecto.Adapters.Postgres do
   recompilation in order to make an effect.
 
     * `:adapter` - The adapter name, in this case, `Ecto.Adapters.Postgres`
-    * `:name`- The name of the Repo supervisor process
-    * `:pool` - The connection pool module, defaults to `DBConnection.Poolboy`
-    * `:pool_timeout` - The default timeout to use on pool calls, defaults to `5000`
-    * `:timeout` - The default timeout to use on queries, defaults to `15000`
 
   ### Connection options
 
+    * `:pool` - The connection pool module, defaults to `DBConnection.Poolboy`
+    * `:pool_timeout` - The default timeout to use on pool calls, defaults to `5000`
+    * `:timeout` - The default timeout to use on queries, defaults to `15000`
     * `:hostname` - Server hostname
     * `:port` - Server port (default: 5432)
     * `:username` - Username
@@ -155,7 +154,6 @@ defmodule Ecto.Adapters.Postgres do
   @doc false
   def structure_dump(default, config) do
     table = config[:migration_source] || "schema_migrations"
-
     with {:ok, versions} <- select_versions(table, config),
          {:ok, path} <- pg_dump(default, config),
          do: append_versions(table, versions, path)

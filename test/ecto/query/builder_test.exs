@@ -87,6 +87,10 @@ defmodule Ecto.Query.BuilderTest do
       escape(quote(do: true && false), [], __ENV__)
     end
 
+    assert_raise Ecto.Query.CompileError, ~r"`1 = 1` is not a valid query expression. The match operator is not supported: `=`", fn ->
+      escape(quote(do: 1 = 1), [], __ENV__)
+    end
+
     assert_raise Ecto.Query.CompileError, ~r"`unknown\(1, 2\)` is not a valid query expression", fn ->
       escape(quote(do: unknown(1, 2)), [], __ENV__)
     end

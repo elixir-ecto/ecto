@@ -16,6 +16,9 @@ defmodule Ecto.Query.Builder.Preload do
       iex> escape([foo: :bar], [])
       {[foo: [:bar]], []}
 
+      iex> escape([:foo, :bar], [])
+      {[:foo, :bar], []}
+
       iex> escape([foo: [:bar, bar: :bat]], [])
       {[foo: [:bar, bar: [:bat]]], []}
 

@@ -4,6 +4,7 @@ defmodule Ecto.Integration.SQLTest do
   alias Ecto.Integration.TestRepo
   alias Ecto.Integration.Barebone
   alias Ecto.Integration.Post
+  alias Ecto.Integration.CorruptedPk
   import Ecto.Query, only: [from: 2]
 
   test "fragmented types" do
@@ -11,6 +12,11 @@ defmodule Ecto.Integration.SQLTest do
     TestRepo.insert!(%Post{inserted_at: datetime})
     query = from p in Post, where: fragment("? >= ?", p.inserted_at, ^datetime), select: p.inserted_at
     assert [^datetime] = TestRepo.all(query)
+  end
+
+  test "fragmented schemaless types" do
+    TestRepo.insert!(%Post{visits: 123})
+    assert [123] = TestRepo.all(from p in "posts", select: type(fragment("visits"), :integer))
   end
 
   @tag :array_type
@@ -26,20 +32,35 @@ defmodule Ecto.Integration.SQLTest do
     assert result.rows == [[1]]
   end
 
+  test "query!/4 with iodata" do
+    result = TestRepo.query!(["SELECT", ?\s, ?1])
+    assert result.rows == [[1]]
+  end
+
   test "to_sql/3" do
-    {sql, []} = Ecto.Adapters.SQL.to_sql(:all, TestRepo, Barebone)
+    {sql, []} = TestRepo.to_sql(:all, Barebone)
     assert sql =~ "SELECT"
     assert sql =~ "barebones"
 
-    {sql, [0]} = Ecto.Adapters.SQL.to_sql(:update_all, TestRepo,
-                                          from(b in Barebone, update: [set: [num: ^0]]))
+    {sql, [0]} = TestRepo.to_sql(:update_all, from(b in Barebone, update: [set: [num: ^0]]))
     assert sql =~ "UPDATE"
     assert sql =~ "barebones"
     assert sql =~ "SET"
 
-    {sql, []} = Ecto.Adapters.SQL.to_sql(:delete_all, TestRepo, Barebone)
+    {sql, []} = TestRepo.to_sql(:delete_all, Barebone)
     assert sql =~ "DELETE"
     assert sql =~ "barebones"
+  end
+
+  test "raises when primary key is not unique on struct operation" do
+    schema = %CorruptedPk{a: "abc"}
+    TestRepo.insert!(schema)
+    TestRepo.insert!(schema)
+    TestRepo.insert!(schema)
+
+    assert_raise Ecto.MultiplePrimaryKeyError,
+                 ~r|expected delete on corrupted_pk to return at most one entry but got 3 entries|,
+                 fn -> TestRepo.delete!(schema) end
   end
 
   test "Repo.insert! escape" do

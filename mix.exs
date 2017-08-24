@@ -1,7 +1,7 @@
 defmodule Ecto.Mixfile do
   use Mix.Project
 
-  @version "2.2.0-dev"
+  @version "2.2.0-rc.1"
   @adapters [:pg, :mysql]
 
   def project do
@@ -34,26 +34,31 @@ defmodule Ecto.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :decimal, :poolboy],
-     env: [json_library: Poison, postgres_map_type: "jsonb"], mod: {Ecto.Application, []}]
+    [
+      applications: [:logger, :decimal, :poolboy, :crypto],
+      env: [json_library: Poison, postgres_map_type: "jsonb"],
+      mod: {Ecto.Application, []}
+    ]
   end
 
   defp deps do
-    [{:poolboy, "~> 1.5"},
-     {:decimal, "~> 1.2"},
+    [
+      {:poolboy, "~> 1.5"},
+      {:decimal, "~> 1.2"},
 
-     # Drivers
-     {:db_connection, "~> 1.1", optional: true},
-     {:postgrex, "~> 0.13.0", optional: true},
-     {:mariaex, "~> 0.8.0", optional: true},
+      # Drivers
+      {:db_connection, "~> 1.1", optional: true},
+      {:postgrex, "~> 0.13.0", optional: true},
+      {:mariaex, "~> 0.8.0", optional: true},
 
-     # Optional
-     {:sbroker, "~> 1.0", optional: true},
-     {:poison, "~> 2.2 or ~> 3.0", optional: true},
+      # Optional
+      {:sbroker, "~> 1.0", optional: true},
+      {:poison, "~> 2.2 or ~> 3.0", optional: true},
 
-     # Docs
-     {:ex_doc, "~> 0.16", only: :docs},
-     {:inch_ex, ">= 0.0.0", only: :docs}]
+      # Docs
+      {:ex_doc, "~> 0.16", only: :docs},
+      {:inch_ex, ">= 0.0.0", only: :docs}
+    ]
   end
 
   defp test_paths(adapter) when adapter in @adapters, do: ["integration_test/#{adapter}"]

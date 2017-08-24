@@ -58,9 +58,10 @@ defmodule Ecto do
   but used as part of your application supervision tree.
 
   If your application was generated with a supervisor (by passing `--sup` to `mix new`)
-  you will have a `lib/my_app.ex` file containing the application start callback that
-  defines and starts your supervisor. You just need to edit the `start/2` function to
-  start the repo as a supervisor on your application's supervisor:
+  you will have a `lib/my_app/application.ex` file (or `lib/my_app.ex` for Elixir versions `< 1.4.0`)
+  containing the application start callback that defines and starts your supervisor. 
+  You just need to edit the `start/2` function to start the repo as a supervisor on
+  your application's supervisor:
 
       def start(_type, _args) do
         import Supervisor.Spec
@@ -170,7 +171,7 @@ defmodule Ecto do
 
   Any parameter that was not explicitly listed in the fields list will be ignored.
 
-  After casting, the changeset is given to many `Ecto.Changeset.validate_*/2`
+  After casting, the changeset is given to many `Ecto.Changeset.validate_*`
   functions that validate only the **changed fields**. In other words:
   if a field was not given as a parameter, it won't be validated at all.
   For example, if the params map contain only the "name" and "email" keys,

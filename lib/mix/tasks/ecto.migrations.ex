@@ -3,7 +3,6 @@ defmodule Mix.Tasks.Ecto.Migrations do
   import Mix.Ecto
 
   @shortdoc "Displays the repository migration status"
-  @recursive true
 
   @moduledoc """
   Displays the up / down migration status for the given repository.

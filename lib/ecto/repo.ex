@@ -28,7 +28,10 @@ defmodule Ecto.Repo do
   for more information. However, some configuration is shared across
   all adapters, they are:
 
-    * `:adapter` - a compile-time option that specifies the adapter itself
+    * `:adapter` - a compile-time option that specifies the adapter itself.
+      As a compile-time option, it may also be given as an option to `use Ecto.Repo`.
+
+    * `:name`- The name of the Repo supervisor process
 
     * `:priv` - the directory where to keep repository data, like
       migrations, schema and more. Defaults to "priv/YOUR_REPO".
@@ -47,7 +50,8 @@ defmodule Ecto.Repo do
       in `:debug` mode. You may pass any desired mod-fun-args
       triplet or `[{Ecto.LogEntry, :log, [:info]}]` if you want to
       keep the current behaviour but use another log level.
-      This option is processed at compile-time.
+      This option is processed at compile-time and may also be given
+      as an option to `use Ecto.Repo`.
 
   ## URLs
 
@@ -62,7 +66,7 @@ defmodule Ecto.Repo do
 
   In case the URL needs to be dynamically configured, for example by
   reading a system environment variable, such can be done via the
-  `init/2` repository callback:
+  `c:init/2` repository callback:
 
       def init(_type, config) do
         {:ok, Keyword.put(config, :url, System.get_env("DATABASE_URL"))}
@@ -96,7 +100,7 @@ defmodule Ecto.Repo do
       @before_compile adapter
 
       loggers =
-        Enum.reduce(config[:loggers] || [Ecto.LogEntry], quote(do: entry), fn
+        Enum.reduce(opts[:loggers] || config[:loggers] || [Ecto.LogEntry], quote(do: entry), fn
           mod, acc when is_atom(mod) ->
             quote do: unquote(mod).log(unquote(acc))
           {Ecto.LogEntry, :log, [level]}, _acc when not level in [:error, :info, :warn, :debug] ->
@@ -116,6 +120,14 @@ defmodule Ecto.Repo do
       def config do
         {:ok, config} = Ecto.Repo.Supervisor.runtime_config(:dry_run, __MODULE__, @otp_app, [])
         config
+      end
+
+      def child_spec(opts) do
+        %{
+          id: __MODULE__,
+          start: {__MODULE__, :start_link, [opts]},
+          type: :supervisor
+        }
       end
 
       def start_link(opts \\ []) do
@@ -222,15 +234,15 @@ defmodule Ecto.Repo do
         Ecto.Repo.Schema.delete!(__MODULE__, @adapter, struct, opts)
       end
 
-      def preload(struct_or_structs, preloads, opts \\ [])
-      def preload(nil, _, _), do: nil
-      def preload(struct_or_structs, preloads, opts) do
-        Ecto.Repo.Preloader.preload(struct_or_structs, __MODULE__, preloads, opts)
+      def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
+        Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, __MODULE__, preloads, opts)
       end
 
       def load(schema_or_types, data) do
         Ecto.Repo.Schema.load(@adapter, schema_or_types, data)
       end
+
+      defoverridable child_spec: 1
     end
   end
 
@@ -252,7 +264,7 @@ defmodule Ecto.Repo do
   @doc """
   Returns the adapter configuration stored in the `:otp_app` environment.
 
-  If the `init/2` callback is implemented in the repository,
+  If the `c:init/2` callback is implemented in the repository,
   it will be invoked with the first argument set to `:dry_run`.
   """
   @callback config() :: Keyword.t
@@ -311,7 +323,7 @@ defmodule Ecto.Repo do
   @callback get(queryable :: Ecto.Queryable.t, id :: term, opts :: Keyword.t) :: Ecto.Schema.t | nil | no_return
 
   @doc """
-  Similar to `get/3` but raises `Ecto.NoResultsError` if no record was found.
+  Similar to `c:get/3` but raises `Ecto.NoResultsError` if no record was found.
 
   ## Options
 
@@ -394,7 +406,7 @@ defmodule Ecto.Repo do
   @callback one(queryable :: Ecto.Queryable.t, opts :: Keyword.t) :: Ecto.Schema.t | nil | no_return
 
   @doc """
-  Similar to `one/2` but raises `Ecto.NoResultsError` if no record was found.
+  Similar to `c:one/2` but raises `Ecto.NoResultsError` if no record was found.
 
   Raises if more than one entry.
 
@@ -438,8 +450,8 @@ defmodule Ecto.Repo do
       posts = Repo.preload posts, comments: from(c in Comment, order_by: c.published_at)
 
   """
-  @callback preload(struct_or_structs, preloads :: term, opts :: Keyword.t) ::
-                    struct_or_structs when struct_or_structs: [Ecto.Schema.t] | Ecto.Schema.t
+  @callback preload(structs_or_struct_or_nil, preloads :: term, opts :: Keyword.t) ::
+                    structs_or_struct_or_nil when structs_or_struct_or_nil: [Ecto.Schema.t] | Ecto.Schema.t | nil
 
   @doc """
   Fetches all entries from the data store matching the given query.
@@ -503,7 +515,7 @@ defmodule Ecto.Repo do
 
   It returns a tuple containing the number of entries
   and any returned result as second element. If the database
-  does not support RETURNING in UPDATE statements or no
+  does not support RETURNING in INSERT statements or no
   return result was selected, the second element will be `nil`.
 
   When a schema is given, the values given will be properly dumped
@@ -515,6 +527,9 @@ defmodule Ecto.Repo do
   to insert data into the database without the conveniences of
   `c:insert/2`. This is also consistent with `c:update_all/3` that
   does not handle timestamps as well.
+
+  It is also not possible to use `insert_all` to insert across multiple
+  tables, therefore associations are not supported.
 
   If a source is given, without a schema, the given fields are passed
   as is to the adapter.
@@ -529,11 +544,14 @@ defmodule Ecto.Repo do
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL).
     * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
-      `:replace_all`, a keyword list of update instructions or an `Ecto.Query`
-      query for updates. See the "Upserts" section for more information.
+      `:replace_all`, `:replace_all_except_primary_key`, a keyword list of
+      update instructions or an `Ecto.Query` query for updates. See the
+      "Upserts" section for more information.
     * `:conflict_target` - Which columns to verify for conflicts. If
       none is specified, the conflict target is left up to the database
       and is usually made of primary keys and/or unique/exclusion constraints.
+      May also be `{:constraint, constraint_name_as_atom}` in databases
+      that support the "ON CONSTRAINT" expression.
 
   See the "Shared options" section at the module documentation for
   remaining options.
@@ -545,7 +563,7 @@ defmodule Ecto.Repo do
 
   ## Upserts
 
-  `insert_all` provides upserts (update or inserts) via the `:on_conflict`
+  `c:insert_all/3` provides upserts (update or inserts) via the `:on_conflict`
   option. The `:on_conflict` option supports the following values:
 
     * `:raise` - raises if there is a conflicting primary key or unique index
@@ -553,6 +571,8 @@ defmodule Ecto.Repo do
     * `:replace_all` - replace all values on the existing row with the values
       in the excluded row (the corresponding record given in the function
       parameters)
+    * `:replace_all_except_primary_key` - same as above except primary keys are
+      not replaced. This option requires a schema
     * a keyword list of update instructions - such as the one given to
       `c:update_all/3`, for example: `[set: [title: "new title"]]`
     * an `Ecto.Query` that will act as an `UPDATE` statement, such as the
@@ -564,7 +584,7 @@ defmodule Ecto.Repo do
   ## Return values
 
   By default, both Postgres and MySQL return the amount of entries
-  inserted on `insert_all`. However, when the `:on_conflict` option
+  inserted on `c:insert_all/3`. However, when the `:on_conflict` option
   is specified, Postgres will only return a row if it was affected
   while MySQL returns at least the number of entries attempted.
 
@@ -618,8 +638,12 @@ defmodule Ecto.Repo do
       from(p in Post, where: p.id < 10, update: [set: [title: "New title"]])
       |> MyRepo.update_all([])
 
-      from(p in Post, where: p.id < 10, update: [set: [title: fragment("?", new_title)]])
+      from(p in Post, where: p.id < 10, update: [set: [title: ^new_title]])
       |> MyRepo.update_all([])
+
+      from(p in Post, where: p.id < 10, update: [set: [title: fragment("upper(?)", ^new_title)]])
+      |> MyRepo.update_all([])
+
   """
   @callback update_all(queryable :: Ecto.Queryable.t, updates :: Keyword.t, opts :: Keyword.t) ::
                        {integer, nil | [term]} | no_return
@@ -656,7 +680,7 @@ defmodule Ecto.Repo do
                        {integer, nil | [term]} | no_return
 
   @doc """
-  Inserts a struct or a changeset.
+  Inserts a struct defined via `Ecto.Schema` or a changeset.
 
   In case a struct is given, the struct is converted into a changeset
   with all non-nil fields as part of the changeset.
@@ -680,11 +704,14 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This overrides the prefix set
       in the struct.
     * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
-      `:replace_all`, a keyword list of update instructions or an `Ecto.Query`
-      query for updates. See the "Upserts" section for more information.
+      `:replace_all`, `:replace_all_except_primary_key`, a keyword list of
+      update instructions or an `Ecto.Query` query for updates. See the
+      "Upserts" section for more information.
     * `:conflict_target` - Which columns to verify for conflicts. If
       none is specified, the conflict target is left up to the database
       and is usually made of primary keys and/or unique/exclusion constraints.
+      May also be `{:constraint, constraint_name_as_atom}` in databases
+      that support the "ON CONSTRAINT" expression.
 
   See the "Shared options" section at the module documentation.
 
@@ -700,13 +727,15 @@ defmodule Ecto.Repo do
 
   ## Upserts
 
-  `insert` provides upserts (update or inserts) via the `:on_conflict`
+  `c:insert/2` provides upserts (update or inserts) via the `:on_conflict`
   option. The `:on_conflict` option supports the following values:
 
     * `:raise` - raises if there is a conflicting primary key or unique index
     * `:nothing` - ignores the error in case of conflicts
     * `:replace_all` - replace all values on the existing row with the values
-      in the excluded row (the record given in the function parameters)
+      in the excluded row except (the record given in the function parameters)
+    * `:replace_all_except_primary_key` - same as above except primary keys are
+      not replaced
     * a keyword list of update instructions - such as the one given to
       `c:update_all/3`, for example: `[set: [title: "new title"]]`
     * an `Ecto.Query` that will act as an `UPDATE` statement, such as the
@@ -718,22 +747,24 @@ defmodule Ecto.Repo do
   As an example, imagine `:title` is marked as a unique column in
   the database:
 
-      # Insert it once
       {:ok, inserted} = MyRepo.insert(%Post{title: "this is unique"})
 
-      # Insert with the same title but do nothing on conflicts.
-      # Keep in mind that, although this returns :ok, the returned
-      # struct does not reflect the data in the database. For instance,
-      # in case of "on_conflict: :nothing", the returned post has no ID.
+  Now we can insert with the same title but do nothing on conflicts:
+
       {:ok, ignored} = MyRepo.insert(%Post{title: "this is unique"}, on_conflict: :nothing)
       assert ignored.id == nil
 
-      # Now let's insert with the same title but use a query to update
-      # a column on conflicts. Although this returns :ok and a struct with
-      # the existing ID for successful operations, the other columns may
-      # not necessarily reflect the data in the database. In fact, any
-      # operation done on `:on_conflict` won't be automatically mapped to
-      # the struct.
+  Because we used `on_conflict: :nothing`, instead of getting an error,
+  we got `{:ok, struct}`. However the returned struct does not reflect
+  the data in the database. One possible mechanism to detect if an
+  insert or nothing happened in case of `on_conflict: :nothing` is by
+  checking the `id` field. `id` will be nil if the field is autogenerated
+  by the database and no insert happened.
+
+  For actual upserts, where an insert or update may happen, the situation
+  is slightly more complex, as the database does not actually inform us
+  if an insert or update happened. Let's insert a post with the same title
+  but use a query to update the body column in case of conflicts:
 
       # In Postgres (it requires the conflict target for updates):
       on_conflict = [set: [body: "updated"]]
@@ -744,6 +775,36 @@ defmodule Ecto.Repo do
       on_conflict = [set: [title: "updated"]]
       {:ok, updated} = MyRepo.insert(%Post{id: inserted.id, title: "updated"},
                                      on_conflict: on_conflict)
+
+  In the examples above, even though it returned `:ok`, we do not know
+  if we inserted new data or if we updated only the `:on_conflict` fields.
+  In case an update happened, the data in the struct most likely does
+  not match the data in the database. For example, autogenerated fields
+  such as `inserted_at` will point to now rather than the time the
+  struct was actually inserted.
+
+  If you need to guarantee the data in the returned struct mirrors the
+  database, you have three options:
+
+    * Use `on_conflict: :replace_all`, although that will replace all
+      fields in the database with current ones (except for primary keys):
+
+          MyRepo.insert(%Post{title: "this is unique"},
+                        on_conflict: :replace_all, conflict_target: :title)
+
+    * Specify `read_after_writes: true` in your schema for choosing
+      fields that are read from the database after every operation.
+      Or pass `returning: true` to `insert` to read all fields back:
+
+          MyRepo.insert(%Post{title: "this is unique"}, returning: true,
+                        on_conflict: on_conflict, conflict_target: :title)
+
+    * Alternatively, read the data again from the database in a separate
+      query. This option requires the primary key to be generated by the
+      database:
+
+          {:ok, updated} = MyRepo.insert(%Post{title: "this is unique"}, on_conflict: on_conflict)
+          Repo.get(Post, updated.id)
 
   """
   @callback insert(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
@@ -770,7 +831,7 @@ defmodule Ecto.Repo do
   it accepts:
 
     * `:force` - By default, if there are no changes in the changeset,
-      `update!/2` is a no-op. By setting this option to true, update
+      `c:update/2` is a no-op. By setting this option to true, update
       callbacks will always be executed, even if there are no changes
       (including timestamps).
     * `:prefix` - The prefix to run the query on (such as the schema path
@@ -861,26 +922,26 @@ defmodule Ecto.Repo do
             {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
 
   @doc """
-  Same as `insert/2` but returns the struct or raises if the changeset is invalid.
+  Same as `c:insert/2` but returns the struct or raises if the changeset is invalid.
   """
   @callback insert!(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
             Ecto.Schema.t | no_return
 
   @doc """
-  Same as `update/2` but returns the struct or raises if the changeset is invalid.
+  Same as `c:update/2` but returns the struct or raises if the changeset is invalid.
   """
   @callback update!(changeset :: Ecto.Changeset.t, opts :: Keyword.t) ::
             Ecto.Schema.t | no_return
 
   @doc """
-  Same as `insert_or_update/2` but returns the struct or raises if the changeset
+  Same as `c:insert_or_update/2` but returns the struct or raises if the changeset
   is invalid.
   """
   @callback insert_or_update!(changeset :: Ecto.Changeset.t, opts :: Keyword.t) ::
             Ecto.Schema.t | no_return
 
   @doc """
-  Same as `delete/2` but returns the struct or raises if the changeset is invalid.
+  Same as `c:delete/2` but returns the struct or raises if the changeset is invalid.
   """
   @callback delete!(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
             Ecto.Schema.t | no_return
@@ -894,13 +955,13 @@ defmodule Ecto.Repo do
   and the error will bubble up from the transaction function.
   If no error occurred the transaction will be committed when the
   function returns. A transaction can be explicitly rolled back
-  by calling `rollback/1`, this will immediately leave the function
+  by calling `c:rollback/1`, this will immediately leave the function
   and return the value given to `rollback` as `{:error, value}`.
 
   A successful transaction returns the value returned by the function
   wrapped in a tuple as `{:ok, value}`.
 
-  If `transaction/2` is called inside another transaction, the function
+  If `c:transaction/2` is called inside another transaction, the function
   is simply executed, without wrapping the new transaction call in any
   way. If there is an error in the inner transaction and the error is
   rescued, or the inner transaction is rolled back, the whole outer

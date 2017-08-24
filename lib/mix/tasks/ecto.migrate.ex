@@ -3,26 +3,29 @@ defmodule Mix.Tasks.Ecto.Migrate do
   import Mix.Ecto
 
   @shortdoc "Runs the repository migrations"
-  @recursive true
 
   @moduledoc """
   Runs the pending migrations for the given repository.
 
-  The repository must be set under `:ecto_repos` in the
-  current app configuration or given via the `-r` option.
+  Migrations are expected at "priv/YOUR_REPO/migrations" directory
+  of the current application but it can be configured to be any
+  subdirectory of `priv` by specifying the `:priv` key under the
+  repository configuration.
 
-  By default, migrations are expected at "priv/YOUR_REPO/migrations"
-  directory of the current application but it can be configured
-  to be any subdirectory of `priv` by specifying the `:priv` key
-  under the repository configuration.
+  Runs all pending migrations by default. To migrate up to a specific
+  version number, supply `--to version_number`. To migrate a specific
+  number of times, use `--step n`.
 
-  Runs all pending migrations by default. To migrate up
-  to a version number, supply `--to version_number`.
-  To migrate up a specific number of times, use `--step n`.
+  The repositories to migrate are the ones specified under the
+  `:ecto_repos` option in the current app configuration. However,
+  if the `-r` option is given, it replaces the `:ecto_repos` config.
 
-  If the repository has not been started yet, one will be
-  started outside our application supervision tree and shutdown
-  afterwards.
+  Since Ecto tasks can only be executed once, if you need to migrate
+  multiple repositories, set `:ecto_repos` accordingly or pass the `-r`
+  flag multiple times.
+
+  If a repository has not yet been started, one will be started outside
+  your application supervision tree and shutdown afterwards.
 
   ## Examples
 

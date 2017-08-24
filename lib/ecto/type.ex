@@ -356,12 +356,12 @@ defmodule Ecto.Type do
 
   defp dump_embed(%{cardinality: :one, related: schema, field: field},
                   value, fun) when is_map(value) do
-    {:ok, dump_embed(field, schema, value, schema.__schema__(:types), fun)}
+    {:ok, dump_embed(field, schema, value, schema.__schema__(:dump), fun)}
   end
 
   defp dump_embed(%{cardinality: :many, related: schema, field: field},
                   value, fun) when is_list(value) do
-    types = schema.__schema__(:types)
+    types = schema.__schema__(:dump)
     {:ok, Enum.map(value, &dump_embed(field, schema, &1, types, fun))}
   end
 
@@ -370,12 +370,15 @@ defmodule Ecto.Type do
   end
 
   defp dump_embed(_field, schema, %{__struct__: schema} = struct, types, dumper) do
-    Enum.reduce(types, %{}, fn {field, type}, acc ->
+    Enum.reduce(types, %{}, fn {field, {source, type}}, acc ->
       value = Map.get(struct, field)
 
       case dumper.(type, value) do
-        {:ok, value} -> Map.put(acc, field, value)
-        :error       -> raise ArgumentError, "cannot dump `#{inspect value}` as type #{inspect type}"
+        {:ok, value} ->
+          Map.put(acc, source, value)
+        :error ->
+          raise ArgumentError, "cannot dump `#{inspect value}` as type #{inspect type} " <>
+                               "for field `#{field}` in schema #{inspect schema}"
       end
     end)
   end
@@ -466,7 +469,7 @@ defmodule Ecto.Type do
   end
 
   defp load_embed(_field, schema, value, loader) when is_map(value) do
-    Ecto.Schema.__load__(schema, nil, nil, nil, value, loader)
+    Ecto.Schema.__unsafe_load__(schema, value, loader)
   end
 
   defp load_embed(field, _schema, value, _fun) do
@@ -551,6 +554,7 @@ defmodule Ecto.Type do
     cast_embed(type, value)
   end
 
+  def cast({:in, _type}, nil), do: :error
   def cast(_type, nil), do: {:ok, nil}
 
   def cast(:binary_id, value) when is_binary(value) do
@@ -712,6 +716,8 @@ defmodule Ecto.Type do
   defp dump_date(_),
     do: :error
 
+  defp load_date(%Date{} = date),
+    do: {:ok, date}
   defp load_date({year, month, day}),
     do: {:ok, %Date{year: year, month: month, day: day}}
   defp load_date(_),
@@ -763,6 +769,8 @@ defmodule Ecto.Type do
   defp dump_time(_),
     do: :error
 
+  defp load_time(%Time{} = time),
+    do: {:ok, time}
   defp load_time({hour, minute, second, microsecond}),
     do: {:ok, %Time{hour: hour, minute: minute, second: second, microsecond: {microsecond, 6}}}
   defp load_time({hour, minute, second}),
@@ -802,6 +810,8 @@ defmodule Ecto.Type do
   defp dump_naive_datetime(_),
     do: :error
 
+  defp load_naive_datetime(%NaiveDateTime{} = naive),
+    do: {:ok, naive}
   defp load_naive_datetime({{year, month, day}, {hour, minute, second, microsecond}}),
     do: {:ok, %NaiveDateTime{year: year, month: month, day: day,
                              hour: hour, minute: minute, second: second, microsecond: {microsecond, 6}}}
@@ -850,6 +860,8 @@ defmodule Ecto.Type do
   defp dump_utc_datetime(_),
     do: :error
 
+  defp load_utc_datetime(%DateTime{} = dt),
+    do: {:ok, dt}
   defp load_utc_datetime({{year, month, day}, {hour, minute, second, microsecond}}),
     do: {:ok, %DateTime{year: year, month: month, day: day,
                         hour: hour, minute: minute, second: second, microsecond: {microsecond, 6},

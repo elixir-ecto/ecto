@@ -18,6 +18,9 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
       mix ecto.gen.migration add_posts_table
       mix ecto.gen.migration add_posts_table -r Custom.Repo
 
+  The generated migration filename will be prefixed with the current
+  timestamp in UTC which is used for versioning and ordering.
+
   By default, the migration will be generated to the
   "priv/YOUR_REPO/migrations" directory of the current application
   but it can be configured to be any subdirectory of `priv` by
@@ -43,7 +46,7 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
       case OptionParser.parse(args, switches: @switches) do
         {opts, [name], _} ->
           ensure_repo(repo, args)
-          path = Path.relative_to(migrations_path(repo), Mix.Project.app_path)
+          path = migrations_path(repo)
           file = Path.join(path, "#{timestamp()}_#{underscore(name)}.exs")
           create_directory path
 

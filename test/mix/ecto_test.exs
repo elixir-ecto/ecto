@@ -63,8 +63,8 @@ defmodule Mix.EctoTest do
 
   test "migrations path" do
     Process.put(:priv, nil)
-    assert migrations_path(Repo) == Application.app_dir(:ecto, "priv/repo/migrations")
+    assert migrations_path(Repo) == Path.expand("priv/repo/migrations", File.cwd!)
     Process.put(:priv, "hello")
-    assert migrations_path(Repo) == Application.app_dir(:ecto, "hello/migrations")
+    assert migrations_path(Repo) == Path.expand("hello/migrations", File.cwd!)
   end
 end

@@ -72,6 +72,10 @@ defmodule Ecto.Query.Builder.UpdateTest do
       %{updates: [update]} = update("foo", [_], set: ^[foo: dynamic])
       assert Macro.to_string(update.expr) == "[set: [foo: true]]"
       assert update.params == []
+
+      %{updates: [update]} = update("foo", [_], ^[set: [foo: dynamic]])
+      assert Macro.to_string(update.expr) == "[set: [foo: true]]"
+      assert update.params == []
     end
 
     test "accepts dynamic expressions with parameters" do

@@ -1,6 +1,6 @@
 # Ecto Association Guide
 
-This guide assumes you worked through the [Getting Started guide](getting-started.html) and want to learn more about associations.
+This guide assumes you worked through the [Getting Started guide](Getting%20Started.md) and want to learn more about associations.
 
 There are three kinds of associations:
 
@@ -52,9 +52,9 @@ Add the repo to the supervision tree:
 
 ```elixir
   def start(_type, _args) do
-    import Supervisor.Spec, warn: false
+    import Supervisor.Spec
     children = [
-      worker(EctoAssoc.Repo, [])
+      supervisor(EctoAssoc.Repo, [])
     ]
     ...
 ```
@@ -519,7 +519,7 @@ defmodule EctoAssoc.Post do
 end
 ```
 
-For the *post* we do the same. We use the `many_to_many` macro to associate the `Post` through the
+For the *tag* we do the same. We use the `many_to_many` macro to associate the `Post` through the
 new `posts_tags` schema:
 
 ```elixir
@@ -638,9 +638,9 @@ Ecto will compare the data you gave with the tags currently in the post and conc
 
 ## References
 
-  * [Ecto.Schema.belongs_to](Ecto.Schema.html#belongs_to/3)
-  * [Ecto.Schema.has_one](Ecto.Schema.html#has_one/3)
-  * [Ecto.Schema.has_many](Ecto.Schema.html#has_many/3)
-  * [Ecto.Schema.many_to_many](Ecto.Schema.html#many_to_many/3)
-  * [Ecto.build_assoc](Ecto.html#build_assoc/3)
-  * [Ecto.Changeset.put_assoc](Ecto.Changeset.html#put_assoc/4)
+  * [Ecto.Schema.belongs_to](https://hexdocs.pm/ecto/Ecto.Schema.html#belongs_to/3)
+  * [Ecto.Schema.has_one](https://hexdocs.pm/ecto/Ecto.Schema.html#has_one/3)
+  * [Ecto.Schema.has_many](https://hexdocs.pm/ecto/Ecto.Schema.html#has_many/3)
+  * [Ecto.Schema.many_to_many](https://hexdocs.pm/ecto/Ecto.Schema.html#many_to_many/3)
+  * [Ecto.build_assoc](https://hexdocs.pm/ecto/Ecto.html#build_assoc/3)
+  * [Ecto.Changeset.put_assoc](https://hexdocs.pm/ecto/Ecto.Changeset.html#put_assoc/4)

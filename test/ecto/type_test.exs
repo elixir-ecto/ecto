@@ -22,7 +22,7 @@ defmodule Ecto.TypeTest do
 
     @primary_key {:id, :binary_id, autogenerate: true}
     schema "" do
-      field :a, :integer
+      field :a, :integer, source: :abc
       field :b, :integer, virtual: true
       field :c, :integer, default: 0
     end
@@ -95,6 +95,11 @@ defmodule Ecto.TypeTest do
     assert cast({:array, Custom}, 1) == :error
   end
 
+  test "in" do
+    assert cast({:in, :integer}, ["1", "2", "3"]) == {:ok, [1, 2, 3]}
+    assert cast({:in, :integer}, nil) == :error
+  end
+
   test "decimal" do
     assert cast(:decimal, "1.0") == {:ok, Decimal.new("1.0")}
     assert cast(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
@@ -115,11 +120,12 @@ defmodule Ecto.TypeTest do
                            owner: __MODULE__, related: Schema}
     type  = {:embed, embed}
 
-    assert {:ok, %Schema{a: 1, c: 0}} = adapter_load(Ecto.TestAdapter, type, %{"a" => 1})
+    assert {:ok, %Schema{id: @uuid_string, a: 1, c: 0}} =
+           adapter_load(Ecto.TestAdapter, type, %{"id" => @uuid_binary, "abc" => 1})
     assert {:ok, nil} == adapter_load(Ecto.TestAdapter,type, nil)
     assert :error == adapter_load(Ecto.TestAdapter, type, 1)
 
-    assert {:ok, %{a: 1, c: 0, id: @uuid_binary}} ==
+    assert {:ok, %{abc: 1, c: 0, id: @uuid_binary}} ==
            adapter_dump(Ecto.TestAdapter, type, %Schema{id: @uuid_string, a: 1})
 
     assert :error == cast(type, %{"a" => 1})
@@ -133,14 +139,15 @@ defmodule Ecto.TypeTest do
                            owner: __MODULE__, related: Schema}
     type  = {:embed, embed}
 
-    assert {:ok, [%Schema{a: 1, c: 0}]} = adapter_load(Ecto.TestAdapter, type, [%{"a" => 1}])
+    assert {:ok, [%Schema{id: @uuid_string, a: 1, c: 0}]} =
+           adapter_load(Ecto.TestAdapter, type, [%{"id" => @uuid_binary, "abc" => 1}])
     assert {:ok, []} == adapter_load(Ecto.TestAdapter, type, nil)
     assert :error == adapter_load(Ecto.TestAdapter, type, 1)
 
-    assert {:ok, [%{a: 1, id: @uuid_binary, c: 0}]} ==
+    assert {:ok, [%{id: @uuid_binary, abc: 1, c: 0}]} ==
            adapter_dump(Ecto.TestAdapter, type, [%Schema{id: @uuid_string, a: 1}])
 
-    assert cast(type, [%{"a" => 1}]) == :error
+    assert cast(type, [%{"abc" => 1}]) == :error
     assert cast(type, [%Schema{}]) == {:ok, [%Schema{}]}
     assert cast(type, []) == {:ok, []}
     assert match?({:array, :any}, type)

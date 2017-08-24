@@ -1,7 +1,7 @@
 if Code.ensure_loaded?(Postgrex) do
   Postgrex.Types.define(Ecto.Adapters.Postgres.TypeModule,
                         Ecto.Adapters.Postgres.extensions(),
-                        json: Application.get_env(:ecto, :json_library, Poison))
+                        json: Ecto.Adapter.json_library())
 
   defmodule Ecto.Adapters.Postgres.Connection do
     @moduledoc false
@@ -131,7 +131,7 @@ if Code.ensure_loaded?(Postgrex) do
       offset   = offset(query, sources)
       lock     = lock(query.lock)
 
-      IO.iodata_to_binary([select, from, join, where, group_by, having, order_by, limit, offset | lock])
+      [select, from, join, where, group_by, having, order_by, limit, offset | lock]
     end
 
     def update_all(%{from: from} = query, prefix \\ nil) do
@@ -143,7 +143,7 @@ if Code.ensure_loaded?(Postgrex) do
       {join, wheres} = using_join(query, :update_all, "FROM", sources)
       where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
-      IO.iodata_to_binary([prefix, fields, join, where | returning(query, sources)])
+      [prefix, fields, join, where | returning(query, sources)]
     end
 
     def delete_all(%{from: from} = query) do
@@ -153,7 +153,7 @@ if Code.ensure_loaded?(Postgrex) do
       {join, wheres} = using_join(query, :delete_all, "USING", sources)
       where = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
-      IO.iodata_to_binary(["DELETE FROM ", from, " AS ", name, join, where | returning(query, sources)])
+      ["DELETE FROM ", from, " AS ", name, join, where | returning(query, sources)]
     end
 
     def insert(prefix, table, header, rows, on_conflict, returning) do
@@ -164,8 +164,8 @@ if Code.ensure_loaded?(Postgrex) do
           [?\s, ?(, intersperse_map(header, ?,, &quote_name/1), ") VALUES " | insert_all(rows, 1)]
         end
 
-      IO.iodata_to_binary(["INSERT INTO ", quote_table(prefix, table), insert_as(on_conflict),
-                           values, on_conflict(on_conflict, header) | returning(returning)])
+      ["INSERT INTO ", quote_table(prefix, table), insert_as(on_conflict),
+       values, on_conflict(on_conflict, header) | returning(returning)]
     end
 
     defp insert_as({%{from: from} = query, _, _}) do
@@ -180,19 +180,21 @@ if Code.ensure_loaded?(Postgrex) do
       do: []
     defp on_conflict({:nothing, _, targets}, _header),
       do: [" ON CONFLICT ", conflict_target(targets) | "DO NOTHING"]
-    defp on_conflict({:replace_all, _, targets}, header),
-      do: [" ON CONFLICT ", conflict_target(targets), "DO " | replace_all(header)]
+    defp on_conflict({fields, _, targets}, _header) when is_list(fields),
+      do: [" ON CONFLICT ", conflict_target(targets), "DO " | replace(fields)]
     defp on_conflict({query, _, targets}, _header),
       do: [" ON CONFLICT ", conflict_target(targets), "DO " | update_all(query, "UPDATE SET ")]
 
+    defp conflict_target({:constraint, constraint}),
+      do: ["ON CONSTRAINT ", quote_name(constraint), ?\s]
     defp conflict_target([]),
       do: []
     defp conflict_target(targets),
       do: [?(, intersperse_map(targets, ?,, &quote_name/1), ?), ?\s]
 
-    defp replace_all(header) do
+    defp replace(fields) do
       ["UPDATE SET " |
-       intersperse_map(header, ?,, fn field ->
+       intersperse_map(fields, ?,, fn field ->
          quoted = quote_name(field)
          [quoted, " = ", "EXCLUDED." | quoted]
        end)]
@@ -224,8 +226,8 @@ if Code.ensure_loaded?(Postgrex) do
         {[quote_name(field), " = $" | Integer.to_string(acc)], acc + 1}
       end)
 
-      IO.iodata_to_binary(["UPDATE ", quote_table(prefix, table), " SET ",
-                           fields, " WHERE ", filters | returning(returning)])
+      ["UPDATE ", quote_table(prefix, table), " SET ",
+       fields, " WHERE ", filters | returning(returning)]
     end
 
     def delete(prefix, table, filters, returning) do
@@ -233,8 +235,7 @@ if Code.ensure_loaded?(Postgrex) do
         {[quote_name(field), " = $" | Integer.to_string(acc)], acc + 1}
       end)
 
-      IO.iodata_to_binary(["DELETE FROM ", quote_table(prefix, table), " WHERE ",
-                           filters | returning(returning)])
+      ["DELETE FROM ", quote_table(prefix, table), " WHERE ", filters | returning(returning)]
     end
 
     ## Query generation
@@ -418,13 +419,10 @@ if Code.ensure_loaded?(Postgrex) do
       quote_qualified_name(field, sources, idx)
     end
 
-    defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
-      {source, name, schema} = elem(sources, idx)
-      if is_nil(schema) and is_nil(fields) do
-        error!(query, "PostgreSQL does not support selecting all fields from #{source} without a schema. " <>
-                      "Please specify a schema or specify exactly which fields you want to select")
-      end
-      intersperse_map(fields, ", ", &[name, ?. | quote_name(&1)])
+    defp expr({:&, _, [idx]}, sources, query) do
+      {source, _name, _schema} = elem(sources, idx)
+      error!(query, "PostgreSQL does not support selecting all fields from #{source} without a schema. " <>
+                    "Please specify a schema or specify exactly which fields you want to select")
     end
 
     defp expr({:in, _, [_left, []]}, _sources, _query) do
@@ -452,8 +450,8 @@ if Code.ensure_loaded?(Postgrex) do
       ["NOT (", expr(expr, sources, query), ?)]
     end
 
-    defp expr(%Ecto.SubQuery{query: query, fields: fields}, _sources, _query) do
-      query.select.fields |> put_in(fields) |> all()
+    defp expr(%Ecto.SubQuery{query: query}, _sources, _query) do
+      all(query)
     end
 
     defp expr({:fragment, _, [kw]}, _sources, query) when is_list(kw) or tuple_size(kw) == 3 do
@@ -785,16 +783,20 @@ if Code.ensure_loaded?(Postgrex) do
       do: [" DEFAULT '", escape_string(literal), ?']
     defp default_expr({:ok, literal}, _type) when is_number(literal) or is_boolean(literal),
       do: [" DEFAULT ", to_string(literal)]
+    defp default_expr({:ok, %{} = map}, :map) do
+      default = Ecto.Adapter.json_library().encode!(map)
+      [" DEFAULT ", single_quote(default)]
+    end
     defp default_expr({:ok, {:fragment, expr}}, _type),
       do: [" DEFAULT ", expr]
     defp default_expr({:ok, expr}, type),
       do: raise(ArgumentError, "unknown default `#{inspect expr}` for type `#{inspect type}`. " <>
-                               ":default may be a string, number, boolean, empty list or a fragment(...)")
+                               ":default may be a string, number, boolean, empty list, map (when type is Map), or a fragment(...)")
     defp default_expr(:error, _),
       do: []
 
     defp index_expr(literal) when is_binary(literal),
-      do: [?(, literal, ?)]
+      do: literal
     defp index_expr(literal),
       do: quote_name(literal)
 

@@ -24,7 +24,7 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     def set_action(schema, params) do
       changeset(schema, params)
-      |> Map.put(:action, :update)
+      |> Map.put(:action, Map.get(params, :action, :update))
     end
   end
 
@@ -65,7 +65,7 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     def set_action(schema, params) do
       changeset(schema, params)
-      |> Map.put(:action, :update)
+      |> Map.put(:action, Map.get(params, :action, :update))
     end
   end
 
@@ -89,14 +89,14 @@ defmodule Ecto.Changeset.HasAssocTest do
 
   test "cast has_one with invalid params" do
     changeset = cast(%Author{}, %{"profile" => %{name: nil}}, :profile)
-    assert changeset.changes.profile.changes == %{name: nil}
+    assert changeset.changes.profile.changes == %{}
     assert changeset.changes.profile.errors  == [name: {"can't be blank", [validation: :required]}]
     assert changeset.changes.profile.action  == :insert
     refute changeset.changes.profile.valid?
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"profile" => "value"}, :profile)
-    assert changeset.errors == [profile: {"is invalid", [type: :map]}]
+    assert changeset.errors == [profile: {"is invalid", [validation: :assoc, type: :map]}]
     refute changeset.valid?
   end
 
@@ -246,6 +246,13 @@ defmodule Ecto.Changeset.HasAssocTest do
     end
   end
 
+  test "cast has_one discards changesets marked as ignore" do
+    changeset = cast(%Author{},
+                     %{"profile" => %{name: "michal", id: "id", action: :ignore}},
+                     :profile, with: &Profile.set_action/2)
+    assert changeset.changes == %{}
+  end
+
   test "cast has_one with empty parameters" do
     changeset = cast(%Author{profile: nil}, %{}, :profile)
     assert changeset.changes == %{}
@@ -280,17 +287,17 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     changeset = cast(schema, %{"invalid_profile" => nil}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"is invalid", [type: :map]}]
+    assert changeset.errors == [invalid_profile: {"is invalid", [validation: :assoc, type: :map]}]
     refute changeset.valid?
 
     changeset = cast(schema, %{"invalid_profile" => %{"id" => 2}}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"is invalid", [type: :map]}]
+    assert changeset.errors == [invalid_profile: {"is invalid", [validation: :assoc, type: :map]}]
     refute changeset.valid?
 
     changeset = cast(schema, %{"invalid_profile" => nil}, :invalid_profile, invalid_message: "a custom message")
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"a custom message", [type: :map]}]
+    assert changeset.errors == [invalid_profile: {"a custom message", [validation: :assoc, type: :map]}]
     refute changeset.valid?
   end
 
@@ -410,27 +417,43 @@ defmodule Ecto.Changeset.HasAssocTest do
 
   test "cast has_many with invalid params" do
     changeset = cast(%Author{}, %{"posts" => "value"}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => ["value"]}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => nil}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => %{"id" => "invalid"}}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
   end
 
   test "cast has_many without changes skips" do
     changeset = cast(%Author{posts: [%Post{title: "hello", id: 1}]},
                      %{"posts" => [%{"id" => 1}]}, :posts)
+    assert changeset.changes == %{}
+  end
 
-    refute Map.has_key?(changeset.changes, :posts)
+  test "cast has_many discards changesets marked as ignore" do
+    changeset = cast(%Author{},
+                     %{"posts" => [%{title: "oops", action: :ignore}]},
+                     :posts, with: &Post.set_action/2)
+    assert changeset.changes == %{}
+
+    posts = [
+      %{title: "hello", action: :insert},
+      %{title: "oops", action: :ignore},
+      %{title: "world", action: :insert}
+    ]
+    changeset = cast(%Author{}, %{"posts" => posts},
+                     :posts, with: &Post.set_action/2)
+    assert Enum.map(changeset.changes.posts, &Ecto.Changeset.get_change(&1, :title)) ==
+           ["hello", "world"]
   end
 
   test "cast has_many when required" do
@@ -444,15 +467,24 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert changeset.changes == %{posts: []}
     assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]
 
+    changeset = cast(%Author{posts: [%Post{title: "hello", id: 1}]}, %{posts: []}, :posts, required: true)
+    assert changeset.required == [:posts]
+    assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]
+
     changeset = cast(%Author{posts: []}, %{}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
     assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]
 
+    changeset = cast(%Author{posts: [%Post{title: "hello", id: 1}]}, %{}, :posts, required: true)
+    assert changeset.required == [:posts]
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
   end
 
   test "cast has_many with empty parameters" do
@@ -482,12 +514,12 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     changeset = cast(schema, %{"invalid_posts" => []}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [invalid_posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
 
     changeset = cast(schema, %{"invalid_posts" => [%{"id" => 2}]}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"is invalid", [type: {:array, :map}]}]
+    assert changeset.errors == [invalid_posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
     refute changeset.valid?
   end
 
@@ -513,61 +545,62 @@ defmodule Ecto.Changeset.HasAssocTest do
   test "change has_one" do
     assoc = Author.__schema__(:association, :profile)
 
-    assert {:ok, nil, true, false} =
+    assert {:ok, nil, true} =
       Relation.change(assoc, nil, %Profile{})
-    assert {:ok, nil, true, false} =
+    assert {:ok, nil, true} =
       Relation.change(assoc, nil, nil)
 
     assoc_schema = %Profile{}
     assoc_schema_changeset = Changeset.change(assoc_schema, name: "michal")
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, assoc_schema_changeset, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, assoc_schema_changeset, assoc_schema)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
+    assert :ignore = Relation.change(assoc, %{assoc_schema_changeset | action: :ignore}, nil)
+
     empty_changeset = Changeset.change(assoc_schema)
-    assert {:ok, _, true, true} =
-      Relation.change(assoc, empty_changeset, assoc_schema)
+    assert :ignore = Relation.change(assoc, empty_changeset, assoc_schema)
 
     assoc_with_id = %Profile{id: 2}
-    assert {:ok, _, true, false} =
+    assert {:ok, _, true} =
       Relation.change(assoc, %Profile{id: 1}, assoc_with_id)
   end
 
   test "change has_one with attributes" do
     assoc = Author.__schema__(:association, :profile)
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, %{name: "michal"}, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
 
     profile = %Profile{name: "other"} |> Ecto.put_meta(state: :loaded)
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, %{name: "michal"}, profile)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, [name: "michal"], profile)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
     profile = %Profile{name: "other"}
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, %{name: "michal"}, profile)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, [name: "michal"], profile)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
@@ -577,15 +610,15 @@ defmodule Ecto.Changeset.HasAssocTest do
     assoc = Author.__schema__(:association, :profile)
     profile = %Profile{name: "michal"}
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, profile, nil)
     assert changeset.action == :insert
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, Ecto.put_meta(profile, state: :loaded), nil)
     assert changeset.action == :update
 
-    assert {:ok, changeset, true, false} =
+    assert {:ok, changeset, true} =
       Relation.change(assoc, Ecto.put_meta(profile, state: :deleted), nil)
     assert changeset.action == :delete
   end
@@ -603,15 +636,15 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     # Adding
     changeset = %{Changeset.change(assoc_schema, name: "michal") | action: :insert}
-    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
+    {:ok, changeset, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :insert
 
     changeset = %{Changeset.change(assoc_schema) | action: :update}
-    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
+    {:ok, changeset, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :update
 
     changeset = %{Changeset.change(assoc_schema) | action: :delete}
-    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
+    {:ok, changeset, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :delete
 
     # Replacing
@@ -621,11 +654,11 @@ defmodule Ecto.Changeset.HasAssocTest do
     end
 
     changeset = %{Changeset.change(assoc_schema) | action: :update}
-    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
+    {:ok, changeset, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :update
 
     changeset = %{Changeset.change(assoc_schema) | action: :delete}
-    {:ok, changeset, _, _} = Relation.change(assoc, changeset, nil)
+    {:ok, changeset, _} = Relation.change(assoc, changeset, nil)
     assert changeset.action == :delete
   end
 
@@ -660,62 +693,66 @@ defmodule Ecto.Changeset.HasAssocTest do
   test "change has_many" do
     assoc = Author.__schema__(:association, :posts)
 
-    assert {:ok, [old_changeset, new_changeset], true, false} =
+    assert {:ok, [old_changeset, new_changeset], true} =
       Relation.change(assoc, [%Post{id: 1}], [%Post{id: 2}])
     assert old_changeset.action == :replace
     assert new_changeset.action == :insert
 
     assoc_schema_changeset = Changeset.change(%Post{}, title: "hello")
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [assoc_schema_changeset], [])
     assert changeset.action == :insert
     assert changeset.changes == %{title: "hello"}
 
     assoc_schema = %Post{id: 1}
     assoc_schema_changeset = Changeset.change(assoc_schema, title: "hello")
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [assoc_schema_changeset], [assoc_schema])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [], [assoc_schema_changeset])
     assert changeset.action == :replace
 
+    assert :ignore =
+      Relation.change(assoc, [%{assoc_schema_changeset | action: :ignore}], [assoc_schema])
+    assert :ignore =
+      Relation.change(assoc, [%{assoc_schema_changeset | action: :ignore}], [])
+
     empty_changeset = Changeset.change(assoc_schema)
-    assert {:ok, _, true, true} =
-      Relation.change(assoc, [empty_changeset], [assoc_schema])
+    assert :ignore = Relation.change(assoc, [empty_changeset], [assoc_schema])
   end
 
   test "change has_many with attributes" do
     assoc = Author.__schema__(:association, :posts)
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [%{title: "hello"}], [])
     assert changeset.action == :insert
     assert changeset.changes == %{title: "hello"}
 
     post = %Post{title: "other"} |> Ecto.put_meta(state: :loaded)
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [%{title: "hello"}], [post])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [[title: "hello"]], [post])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
     post = %Post{title: "other"}
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [%{title: "hello"}], [post])
     assert changeset.action == :insert
     assert changeset.changes == %{title: "hello"}
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [[title: "hello"]], [post])
     assert changeset.action == :insert
     assert changeset.changes == %{title: "hello"}
@@ -725,15 +762,15 @@ defmodule Ecto.Changeset.HasAssocTest do
     assoc = Author.__schema__(:association, :posts)
     post = %Post{title: "hello"}
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [post], [])
     assert changeset.action == :insert
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [Ecto.put_meta(post, state: :loaded)], [])
     assert changeset.action == :update
 
-    assert {:ok, [changeset], true, false} =
+    assert {:ok, [changeset], true} =
       Relation.change(assoc, [Ecto.put_meta(post, state: :deleted)], [])
     assert changeset.action == :delete
   end
@@ -786,10 +823,14 @@ defmodule Ecto.Changeset.HasAssocTest do
 
   ## Other
 
-  test "put_assoc/4" do
+  test "put_assoc/4 with has_one" do
     base_changeset = Changeset.change(%Author{})
 
     changeset = Changeset.put_assoc(base_changeset, :profile, %{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
+
+    changeset = Changeset.put_assoc(base_changeset, :profile, [name: "michal"])
     assert %Ecto.Changeset{} = changeset.changes.profile
     assert changeset.changes.profile.action == :insert
 
@@ -802,6 +843,80 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     changeset = Changeset.put_assoc(base_changeset, :profile, empty_update_changeset)
     refute Map.has_key?(changeset.changes, :profile)
+  end
+
+  test "put_change/3 with has_one" do
+    changeset = Changeset.change(%Author{}, profile: %{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
+
+    base_changeset = Changeset.change(%Author{})
+    changeset = Changeset.put_change(base_changeset, :profile, [name: "michal"])
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
+
+    changeset = Changeset.put_change(base_changeset, :profile, %Profile{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
+
+    base_changeset = Changeset.change(%Author{profile: %Profile{name: "michal"}})
+    empty_update_changeset = Changeset.change(%Profile{name: "michal"})
+
+    changeset = Changeset.put_change(base_changeset, :profile, empty_update_changeset)
+    refute Map.has_key?(changeset.changes, :profile)
+  end
+
+  test "put_assoc/4 with has_many" do
+    base_changeset = Changeset.change(%Author{})
+
+    changeset = Changeset.put_assoc(base_changeset, :posts, [%{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    changeset = Changeset.put_assoc(base_changeset, :posts, [[title: "hello"]])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    changeset = Changeset.put_assoc(base_changeset, :posts, [%Post{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    base_changeset = Changeset.change(%Author{posts: [%Post{title: "hello"}]})
+    empty_update_changeset = Changeset.change(%Post{title: "hello"})
+
+    changeset = Changeset.put_assoc(base_changeset, :posts, [empty_update_changeset])
+    refute Map.has_key?(changeset.changes, :posts)
+  end
+
+  test "put_change/3 with has_many" do
+    changeset = Changeset.change(%Author{}, posts: [%{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    base_changeset = Changeset.change(%Author{})
+    changeset = Changeset.put_change(base_changeset, :posts, [[title: "hello"]])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    changeset = Changeset.put_change(base_changeset, :posts, [%Post{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    base_changeset = Changeset.change(%Author{posts: [%Post{title: "hello"}]})
+    empty_update_changeset = Changeset.change(%Post{title: "hello"})
+
+    changeset = Changeset.put_change(base_changeset, :posts, [empty_update_changeset])
+    refute Map.has_key?(changeset.changes, :posts)
+  end
+
+  test "put_assoc/4 raises on invalid changeset" do
+    assert_raise ArgumentError, ~r/expected changeset data to be a Elixir.Ecto.Changeset.HasAssocTest.Profile/, fn ->
+      Changeset.change(%Author{}, profile: %Author{})
+    end
+
+    assert_raise ArgumentError, ~r/expected changeset data to be a Elixir.Ecto.Changeset.HasAssocTest.Post/, fn ->
+      Changeset.change(%Author{}, posts: [%Author{}])
+    end
   end
 
   test "put_assoc/4 when replacing" do
@@ -951,8 +1066,8 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"can't be blank", [validation: :required]}]}
 
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts, required: true)
-    assert changeset.errors == [posts: {"is invalid", [type: {:array, :map}]}]
-    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"is invalid", [type: {:array, :map}]}]}
+    assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"is invalid", [validation: :assoc, type: {:array, :map}]}]}
 
     changeset = cast(%Author{}, %{posts: []}, :posts, required: true)
     assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]

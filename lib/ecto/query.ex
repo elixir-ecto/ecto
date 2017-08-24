@@ -2,7 +2,7 @@ defmodule Ecto.SubQuery do
   @moduledoc """
   Stores subquery information.
   """
-  defstruct [:query, :params, :fields, :meta, :cache]
+  defstruct [:query, :params, :select, :cache]
 end
 
 defmodule Ecto.Query do
@@ -107,7 +107,7 @@ defmodule Ecto.Query do
       query = from u in query, select: u.name
 
   Composing queries uses the same syntax as creating a query.
-  The difference is that, instead of passing a schema like `Weather`
+  The difference is that, instead of passing a schema like `User`
   on the right side of `in`, we passed the query itself.
 
   Any value can be used on the right-side of `in` as long as it implements
@@ -291,7 +291,7 @@ defmodule Ecto.Query do
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [], updates: [],
              havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
-  @opaque t :: %__MODULE__{}
+  @type t :: %__MODULE__{}
 
   defmodule DynamicExpr do
     @moduledoc false
@@ -364,8 +364,12 @@ defmodule Ecto.Query do
   at once inside the query.
 
   A dynamic expression can always be interpolated inside another dynamic
-  expression or at the root of a `where`, `having`, `update` or a `join`'s
-  `on`.
+  expression and into the constructs described below.
+
+  ## `where`, `having` and a `join`'s `on'
+
+  `dynamic` can be interpolated at the root of a `where`, `having` or
+  a `join`'s `on`.
 
   For example, the following is forbidden because it is not at the
   root of a `where`:
@@ -376,6 +380,13 @@ defmodule Ecto.Query do
 
       dynamic = dynamic([q], q.some_condition and ^dynamic)
       from query, where: ^dynamic
+
+  ## Updates
+
+  Dynamic is also supported as each field in an update, for example:
+
+      update_to = dynamic([p], p.sum / p.count)
+      from query, update: [set: [average: ^update_to]]
 
   """
   defmacro dynamic(binding \\ [], expr) do
@@ -397,6 +408,34 @@ defmodule Ecto.Query do
       # Get the average salary of the top 10 highest salaries
       query = from Employee, order_by: [desc: :salary], limit: 10
       from e in subquery(query), select: avg(e.salary)
+
+  Although subqueries are not allowed in WHERE expressions,
+  most subqueries in WHERE expression can be rewritten as JOINs.
+  Imagine you want to write this query:
+
+      UPDATE posts
+        SET sync_started_at = $1
+        WHERE id IN (
+          SELECT id FROM posts
+            WHERE synced = false AND (sync_started_at IS NULL OR sync_started_at < $1)
+            LIMIT $2
+        )
+
+  If you attempt to write it as `where: p.id in ^subquery(foo)`,
+  Ecto won't accept such query. However, the subquery above can be
+  written as a JOIN, which is supported by Ecto. The final Ecto
+  query will look like this:
+
+      subset_query = from(p in Post,
+        where: p.synced == false and
+                 (is_nil(p.sync_started_at) or p.sync_started_at < ^min_sync_started_at),
+        limit: ^batch_size
+      )
+
+      Repo.update_all(
+        from(p in Post, join: s in subquery(subset_query), on: s.id == p.id),
+        set: [sync_started_at: NaiveDateTime.utc_now()]
+      end)
 
   """
   def subquery(%Ecto.SubQuery{} = subquery),
@@ -496,7 +535,7 @@ defmodule Ecto.Query do
   end
 
   @binds    [:where, :or_where, :select, :distinct, :order_by, :group_by,
-             :having, :limit, :offset, :preload, :update]
+             :having, :or_having, :limit, :offset, :preload, :update, :select_merge]
   @no_binds [:lock]
   @joins    [:join, :inner_join, :cross_join, :left_join, :right_join, :full_join,
              :inner_lateral_join, :left_lateral_join]
@@ -673,11 +712,15 @@ defmodule Ecto.Query do
   that should be performed on the fields. Any expression that is accepted in a
   query can be a select field.
 
-  The sub-expressions in the query can be wrapped in lists, tuples or maps as
-  shown in the examples. A full schema can also be selected.
+  Selelct also allows each expression to be wrapped in lists, tuples or maps as
+  shown in the examples below. A full schema can also be selected.
 
   There can only be one select expression in a query, if the select expression
-  is omitted, the query will by default select the full schema.
+  is omitted, the query will by default select the full schema. If select is
+  given more than once, an error is raised. Use `exclude/2` if you would like
+  to remove a previous select for overriding or see `select_merge/3` for a
+  limited version of `select` that is composable and can be called multiple
+  times.
 
   `select` also accepts a list of atoms where each atom refers to a field in
   the source to be selected.
@@ -719,7 +762,48 @@ defmodule Ecto.Query do
 
   """
   defmacro select(query, binding \\ [], expr) do
-    Select.build(query, binding, expr, __CALLER__)
+    Select.build(:select, query, binding, expr, __CALLER__)
+  end
+
+  @doc """
+  Mergeable select query expression.
+
+  This macro is similar to `select/3` except it may be specified
+  multiple times as long as every entry is a map. This is useful
+  for merging and composing selects. For example:
+
+      query = from p in Post, select: %{}
+
+      query =
+        if include_title? do
+          from p in query, select_merge: %{title: p.title}
+        else
+          query
+        end
+
+      query =
+        if include_visits? do
+          from p in query, select_merge: %{visits: p.visits}
+        else
+          query
+        end
+
+  In the example above, the query is built little by little by merging
+  into a final map. If both conditions above are true, the final query
+  would be equivalent to:
+
+      from p in Post, select: %{title: p.title, visits: p.visits}
+
+  If `:select_merge` is called and there is no value selected previously,
+  it will default to the source, `p` in the example above.
+
+  The left-side of a merge can be a struct or a map. The right side
+  must always be a map. If the left-side is a struct, the fields on
+  the right side must be part of the struct, otherwise an error is
+  raised.
+  """
+  defmacro select_merge(query, binding \\ [], expr) do
+    Select.build(:merge, query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -851,7 +935,9 @@ defmodule Ecto.Query do
   Orders the fields based on one or more fields. It accepts a single field
   or a list of fields. The default direction is ascending (`:asc`) and can be
   customized in a keyword list as shown in the examples.
-  There can be several order by expressions in a query.
+
+  There can be several order by expressions in a query and new expressions
+  are always appended to the previous ones.
 
   `order_by` also accepts a list of atoms where each atom refers to a field in
   source or a keyword list where the direction is given as key and the field
@@ -966,6 +1052,14 @@ defmodule Ecto.Query do
 
       User |> update([u], set: [name: "new name"])
       User |> update(set: [name: "new name"])
+
+  ## Interpolation
+
+      new_name = "new name"
+      from(u in User, update: [set: [name: ^new_name]])
+
+      new_name = "new name"
+      from(u in User, update: [set: [name: fragment("upper(?)", ^new_name)]])
 
   ## Operators
 

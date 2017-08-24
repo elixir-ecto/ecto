@@ -57,11 +57,11 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def prepare(:all, query),
-        do: {:cache, {System.unique_integer([:positive]), @conn.all(query)}}
+        do: {:cache, {System.unique_integer([:positive]), IO.iodata_to_binary(@conn.all(query))}}
       def prepare(:update_all, query),
-        do: {:cache, {System.unique_integer([:positive]), @conn.update_all(query)}}
+        do: {:cache, {System.unique_integer([:positive]), IO.iodata_to_binary(@conn.update_all(query))}}
       def prepare(:delete_all, query),
-        do: {:cache, {System.unique_integer([:positive]), @conn.delete_all(query)}}
+        do: {:cache, {System.unique_integer([:positive]), IO.iodata_to_binary(@conn.delete_all(query))}}
 
       @doc false
       def execute(repo, meta, query, params, process, opts) do
@@ -88,22 +88,22 @@ defmodule Ecto.Adapters.SQL do
                  {kind, conflict_params, _} = on_conflict, returning, opts) do
         {fields, values} = :lists.unzip(params)
         sql = @conn.insert(prefix, source, fields, [fields], on_conflict, returning)
-        Ecto.Adapters.SQL.struct(repo, @conn, sql, values ++ conflict_params, kind, returning, opts)
+        Ecto.Adapters.SQL.struct(repo, @conn, sql, {:insert, source, []}, values ++ conflict_params, kind, returning, opts)
       end
 
       @doc false
-      def update(repo, %{source: {prefix, source}}, fields, filter, returning, opts) do
+      def update(repo, %{source: {prefix, source}}, fields, params, returning, opts) do
         {fields, values1} = :lists.unzip(fields)
-        {filter, values2} = :lists.unzip(filter)
+        {filter, values2} = :lists.unzip(params)
         sql = @conn.update(prefix, source, fields, filter, returning)
-        Ecto.Adapters.SQL.struct(repo, @conn, sql, values1 ++ values2, :raise, returning, opts)
+        Ecto.Adapters.SQL.struct(repo, @conn, sql, {:update, source, params}, values1 ++ values2, :raise, returning, opts)
       end
 
       @doc false
-      def delete(repo, %{source: {prefix, source}}, filter, opts) do
-        {filter, values} = :lists.unzip(filter)
+      def delete(repo, %{source: {prefix, source}}, params, opts) do
+        {filter, values} = :lists.unzip(params)
         sql = @conn.delete(prefix, source, filter, [])
-        Ecto.Adapters.SQL.struct(repo, @conn, sql, values, :raise, [], opts)
+        Ecto.Adapters.SQL.struct(repo, @conn, sql, {:delete, source, params}, values, :raise, [], opts)
       end
 
       ## Transaction
@@ -150,12 +150,17 @@ defmodule Ecto.Adapters.SQL do
   The examples below are meant for reference. Each adapter will
   return a different result:
 
-      Ecto.Adapters.SQL.to_sql(:all, repo, Post)
+      iex> Ecto.Adapters.SQL.to_sql(:all, repo, Post)
       {"SELECT p.id, p.title, p.inserted_at, p.created_at FROM posts as p", []}
 
-      Ecto.Adapters.SQL.to_sql(:update_all, repo,
-                              from(p in Post, update: [set: [title: ^"hello"]]))
+      iex> Ecto.Adapters.SQL.to_sql(:update_all, repo,
+                                    from(p in Post, update: [set: [title: ^"hello"]]))
       {"UPDATE posts AS p SET title = $1", ["hello"]}
+
+  This function is also available under the repository with name `to_sql`:
+
+      iex> Repo.to_sql(:all, Post)
+      {"SELECT p.id, p.title, p.inserted_at, p.created_at FROM posts as p", []}
 
   """
   @spec to_sql(:all | :update_all | :delete_all, Ecto.Repo.t, Ecto.Queryable.t) ::
@@ -181,7 +186,10 @@ defmodule Ecto.Adapters.SQL do
   Same as `query/4` but raises on invalid queries.
   """
   @spec query!(Ecto.Repo.t, String.t, [term], Keyword.t) ::
-               %{rows: nil | [tuple], num_rows: non_neg_integer} | no_return
+               %{:rows => nil | [[term] | binary],
+                 :num_rows => non_neg_integer,
+                 optional(atom) => any}
+               | no_return
   def query!(repo, sql, params \\ [], opts \\ []) do
     query!(repo, sql, map_params(params), fn x -> x end, opts)
   end
@@ -218,11 +226,19 @@ defmodule Ecto.Adapters.SQL do
   ## Examples
 
       iex> Ecto.Adapters.SQL.query(MyRepo, "SELECT $1::integer + $2", [40, 2])
-      {:ok, %{rows: [{42}], num_rows: 1}}
+      {:ok, %{rows: [[42]], num_rows: 1}}
+
+  For convenience, this function is also available under the repository:
+
+      iex> MyRepo.query("SELECT $1::integer + $2", [40, 2])
+      {:ok, %{rows: [[42]], num_rows: 1}}
 
   """
   @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
-              {:ok, %{rows: nil | [tuple], num_rows: non_neg_integer}} | {:error, Exception.t}
+              {:ok, %{:rows => nil | [[term] | binary],
+                      :num_rows => non_neg_integer,
+                      optional(atom) => any}}
+              | {:error, Exception.t}
   def query(repo, sql, params \\ [], opts \\ []) do
     query(repo, sql, map_params(params), fn x -> x end, opts)
   end
@@ -290,6 +306,15 @@ defmodule Ecto.Adapters.SQL do
       """
       def query!(sql, params \\ [], opts \\ []) do
         Ecto.Adapters.SQL.query!(__MODULE__, sql, params, opts)
+      end
+
+      @doc """
+      A convenience function for SQL-based repositories that translates the given query to SQL.
+
+      See `Ecto.Adapters.SQL.query/3` for more information.
+      """
+      def to_sql(operation, queryable) do
+        Ecto.Adapters.SQL.to_sql(operation, __MODULE__, queryable)
       end
     end
   end
@@ -382,32 +407,15 @@ defmodule Ecto.Adapters.SQL do
     do_execute(repo, meta, prepared, params, mapper, put_source(opts, meta))
   end
 
-  defp do_execute(repo, _meta, {:cache, update, {id, prepared}}, params, nil, opts) do
-    execute_and_cache(repo, id, update, prepared, params, nil, opts)
-  end
-
-  defp do_execute(repo, %{fields: fields, sources: sources}, {:cache, update, {id, prepared}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields, sources)
+  defp do_execute(repo, _meta, {:cache, update, {id, prepared}}, params, mapper, opts) do
     execute_and_cache(repo, id, update, prepared, params, mapper, opts)
   end
 
-  defp do_execute(repo, _meta, {:cached, reset, {id, cached}}, params, nil, opts) do
-    execute_or_reset(repo, id, reset, cached, params, nil, opts)
-  end
-
-  defp do_execute(repo, %{fields: fields, sources: sources}, {:cached, reset, {id, cached}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields, sources)
+  defp do_execute(repo, _meta, {:cached, reset, {id, cached}}, params, mapper, opts) do
     execute_or_reset(repo, id, reset, cached, params, mapper, opts)
   end
 
-  defp do_execute(repo, _meta, {:nocache, {_id, prepared}}, params, nil, opts) do
-    %{rows: rows, num_rows: num} =
-      sql_call!(repo, :execute, [prepared], params, nil, opts)
-    {num, rows}
-  end
-
-  defp do_execute(repo, %{fields: fields, sources: sources}, {:nocache, {_id, prepared}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields, sources)
+  defp do_execute(repo, _meta, {:nocache, {_id, prepared}}, params, mapper, opts) do
     %{rows: rows, num_rows: num} =
       sql_call!(repo, :execute, [prepared], params, mapper, opts)
     {num, rows}
@@ -485,30 +493,15 @@ defmodule Ecto.Adapters.SQL do
     do_stream(repo, meta, prepared, params, mapper, put_source(opts, meta))
   end
 
-  def do_stream(repo, _meta, {:cache, _, {_, prepared}}, params, nil, opts) do
-    prepare_stream(repo, prepared, params, nil, opts)
-  end
-
-  def do_stream(repo, %{fields: fields, sources: sources}, {:cache, _, {_, prepared}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields, sources)
+  def do_stream(repo, _meta, {:cache, _, {_, prepared}}, params, mapper, opts) do
     prepare_stream(repo, prepared, params, mapper, opts)
   end
 
-  def do_stream(repo, _, {:cached, _, {_, cached}}, params, nil, opts) do
-    prepare_stream(repo, String.Chars.to_string(cached), params, nil, opts)
-  end
-
-  def do_stream(repo, %{fields: fields, sources: sources}, {:cached, _, {_, cached}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields, sources)
+  def do_stream(repo, _, {:cached, _, {_, cached}}, params, mapper, opts) do
     prepare_stream(repo, String.Chars.to_string(cached), params, mapper, opts)
   end
 
-  def do_stream(repo, _meta, {:nocache, {_id, prepared}}, params, nil, opts) do
-    prepare_stream(repo, prepared, params, nil, opts)
-  end
-
-  def do_stream(repo, %{fields: fields, sources: sources}, {:nocache, {_id, prepared}}, params, process, opts) do
-    mapper = &process_row(&1, process, fields, sources)
+  def do_stream(repo, _meta, {:nocache, {_id, prepared}}, params, mapper, opts) do
     prepare_stream(repo, prepared, params, mapper, opts)
   end
 
@@ -545,7 +538,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def struct(repo, conn, sql, values, on_conflict, returning, opts) do
+  def struct(repo, conn, sql, {operation, source, params}, values, on_conflict, returning, opts) do
     case query(repo, sql, values, fn x -> x end, opts) do
       {:ok, %{rows: nil, num_rows: 1}} ->
         {:ok, []}
@@ -553,39 +546,15 @@ defmodule Ecto.Adapters.SQL do
         {:ok, Enum.zip(returning, values)}
       {:ok, %{num_rows: 0}} ->
         if on_conflict == :nothing, do: {:ok, []}, else: {:error, :stale}
+      {:ok, %{num_rows: num_rows}} when num_rows > 1 ->
+        raise Ecto.MultiplePrimaryKeyError,
+              source: source, params: params, count: num_rows, operation: operation
       {:error, err} ->
         case conn.to_constraints(err) do
           []          -> raise err
           constraints -> {:invalid, constraints}
         end
     end
-  end
-
-  defp process_row(row, process, fields, sources) do
-    num_sources = tuple_size(sources)
-    Enum.map_reduce(fields, row, fn
-      {:&, _, [_, _, counter]} = field, acc when num_sources == 1 ->
-        {val, rest} = Enum.split(acc, counter)
-        {process.(field, val, nil), rest}
-      {:&, _, [_, _, counter]} = field, acc ->
-        case split_and_not_nil(acc, counter, true, []) do
-          {nil, rest} -> {nil, rest}
-          {val, rest} -> {process.(field, val, nil), rest}
-        end
-      field, [h|t] ->
-        {process.(field, h, nil), t}
-    end) |> elem(0)
-  end
-
-  defp split_and_not_nil(rest, 0, true, _acc), do: {nil, rest}
-  defp split_and_not_nil(rest, 0, false, acc), do: {:lists.reverse(acc), rest}
-
-  defp split_and_not_nil([nil|t], count, all_nil?, acc) do
-    split_and_not_nil(t, count - 1, all_nil?, [nil|acc])
-  end
-
-  defp split_and_not_nil([h|t], count, _all_nil?, acc) do
-    split_and_not_nil(t, count - 1, false, [h|acc])
   end
 
   ## Transactions

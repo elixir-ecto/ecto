@@ -405,7 +405,7 @@ defmodule Ecto.MultiTest do
       assert {:messages, [{:insert, {nil, "comments"}}]} == Process.info(self(), :messages)
       assert %Comment{} = changes.insert
       assert "ok" == changes.run
-      assert error.errors == [x: {"has already been taken", []}]
+      assert error.errors == [x: {"has already been taken", [constraint: :unique]}]
       refute Map.has_key?(changes, :update)
     end
 

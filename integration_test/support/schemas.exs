@@ -106,6 +106,7 @@ defmodule Ecto.Integration.Permalink do
   @moduledoc """
   This module is used to test:
 
+    * Field sources
     * Relationships
     * Dependent callbacks
 
@@ -113,7 +114,7 @@ defmodule Ecto.Integration.Permalink do
   use Ecto.Integration.Schema
 
   schema "permalinks" do
-    field :url, :string
+    field :url, :string, source: :uniform_resource_locator
     belongs_to :post, Ecto.Integration.Post, on_replace: :nilify
     belongs_to :user, Ecto.Integration.User
     has_many :post_comments_authors, through: [:post, :comments_authors]
@@ -254,6 +255,21 @@ defmodule Ecto.Integration.CompositePk do
     field :a, :integer, primary_key: true
     field :b, :integer, primary_key: true
     field :name, :string
+  end
+end
+
+defmodule Ecto.Integration.CorruptedPk do
+  @moduledoc """
+  This module is used to test:
+
+    * Primary keys that is not unique on a DB side
+
+  """
+  use Ecto.Integration.Schema
+
+  @primary_key false
+  schema "corrupted_pk" do
+    field :a, :string, primary_key: true
   end
 end
 

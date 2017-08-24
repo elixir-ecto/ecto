@@ -172,33 +172,13 @@ defmodule Ecto.Query.Planner do
   end
 
   defp query_without_cache(query, operation, adapter, counter) do
-    %{select: select} = query = normalize(query, operation, adapter, counter)
+    {query, select} = normalize(query, operation, adapter, counter)
     {cache, prepared} = adapter.prepare(operation, query)
     {cache, select, prepared}
   end
 
-  defp build_meta(%{prefix: prefix, sources: sources, assocs: assocs, preloads: preloads},
-                  %{expr: select, fields: fields, take: take}) do
-    %{prefix: prefix, sources: build_sources_meta(sources, 1, tuple_size(sources)),
-      fields: fields, take: take, assocs: assocs, preloads: preloads, select: select}
-  end
-  defp build_meta(%{prefix: prefix, sources: sources, assocs: assocs, preloads: preloads},
-                  nil) do
-    %{prefix: prefix, sources: build_sources_meta(sources, 1, tuple_size(sources)),
-      fields: nil, take: nil, assocs: assocs, preloads: preloads, select: nil}
-  end
-
-  defp build_sources_meta(sources, pos, size) when pos <= size do
-    case :erlang.element(pos, sources) do
-      %Ecto.SubQuery{query: %{select: select} = query} = subquery ->
-        subquery = %{subquery | meta: build_meta(query, select), cache: nil, query: nil, params: nil}
-        build_sources_meta(:erlang.setelement(pos, sources, subquery), pos + 1, size)
-      _ ->
-        build_sources_meta(sources, pos + 1, size)
-    end
-  end
-  defp build_sources_meta(sources, _, _) do
-    sources
+  defp build_meta(%{prefix: prefix, sources: sources, preloads: preloads}, select) do
+    %{prefix: prefix, select: select, preloads: preloads, sources: sources}
   end
 
   @doc """
@@ -236,10 +216,9 @@ defmodule Ecto.Query.Planner do
   defp prepare_source(query, %Ecto.SubQuery{query: inner_query} = subquery, adapter) do
     try do
       {inner_query, params, key} = prepare(inner_query, :all, adapter, 0)
-      %{select: select} = inner_query = inner_query |> returning(true) |> normalize_select()
-      {select, fields} = subquery_fields(inner_query, select)
-      %{subquery | query: %{inner_query | select: select},
-                   params: params, cache: key, fields: fields}
+      assert_no_subquery_assocs!(inner_query)
+      {inner_query, select} = inner_query |> returning(true) |> subquery_select(adapter)
+      %{subquery | query: inner_query, params: params, cache: key, select: select}
     rescue
       e -> raise Ecto.SubQueryError, query: query, exception: e
     end
@@ -252,58 +231,107 @@ defmodule Ecto.Query.Planner do
   defp prepare_source(_query, {:fragment, _, _} = source, _adapter),
     do: source
 
-  defp subquery_fields(%{assocs: assocs, preloads: preloads} = query, _select)
-      when assocs != [] or preloads != [] do
+  defp assert_no_subquery_assocs!(%{assocs: assocs, preloads: preloads} = query)
+       when assocs != [] or preloads != [] do
     error!(query, "cannot preload associations in subquery")
   end
-  defp subquery_fields(query, %{expr: {:%{}, _, [{:|, _, [{:&, [], [ix]}, pairs]}]} = expr,
-                                fields: [{:&, meta, [ix, [_ | _] = fields, _]} | rest]} = select) do
+  defp assert_no_subquery_assocs!(query) do
+    query
+  end
+
+  defp subquery_select(%{select: %{expr: expr, take: take} = select} = query, adapter) do
+    expr =
+      case subquery_select(expr, take, query) do
+        {nil, fields} ->
+          {:%{}, [], fields}
+        {struct, fields} ->
+          {:%, [], [struct, {:%{}, [], fields}]}
+      end
+    query = put_in(query.select.expr, expr)
+    {expr, _} = prewalk(expr, :select, query, select, 0, adapter)
+    {meta, _fields, _from} = collect_fields(expr, [], :error, query, take)
+    {query, meta}
+  end
+
+  defp subquery_select({:merge, _, [left, right]}, take, query) do
+    {left_struct, left_fields} = subquery_select(left, take, query)
+    {right_struct, right_fields} = subquery_select(right, take, query)
+    struct =
+      case {left_struct, right_struct} do
+        {struct, struct} -> struct
+        {_, nil} -> left_struct
+        {nil, _} -> error!(query, "cannot merge because the left side is a map " <>
+                                  "and the right side is a #{inspect right_struct} struct")
+        {_, _} -> error!(query, "cannot merge because the left side is a #{inspect left_struct} " <>
+                                "and the right side is a #{inspect right_struct} struct")
+      end
+    {struct, Keyword.merge(left_fields, right_fields)}
+  end
+  defp subquery_select({:%, _, [name, map]}, take, query) do
+    {_, fields} = subquery_select(map, take, query)
+    {name, fields}
+  end
+  defp subquery_select({:%{}, _, [{:|, _, [{:&, [], [ix]}, pairs]}]} = expr, take, query) do
+    assert_subquery_fields!(query, expr, pairs)
+    {source, _} = source_take!(:select, query, take, ix, ix)
+    {struct, fields} = subquery_struct_and_fields(source)
+
+    update_keys = Keyword.keys(pairs)
+    case update_keys -- fields do
+      [] -> :ok
+      [key | _] -> error!(query, "invalid key `#{inspect key}` on map update in subquery")
+    end
+
     # In case of map updates, we need to remove duplicated fields
     # at query time because we use the field names as aliases and
     # duplicate aliases will lead to invalid queries.
-    map_fields = subquery_map_fields(query, expr, pairs)
-    map_keys = Keyword.keys(map_fields)
-    kept_keys = fields -- map_keys
-    invalid_keys = map_keys -- fields
-
-    if invalid_keys != [] do
-      error!(query, "invalid key `#{inspect hd(invalid_keys)}` on map update in subquery")
-    end
-
-    select_fields = [{:&, meta, [ix, kept_keys, length(kept_keys)]} | rest]
-    subquery_fields = subquery_selector_fields(kept_keys, ix) ++ map_fields
-    {%{select | fields: select_fields}, subquery_fields}
+    kept_keys = fields -- update_keys
+    {struct, subquery_fields(kept_keys, ix) ++ pairs}
   end
-  defp subquery_fields(query, %{expr: {:%{}, _, pairs} = expr} = select) do
-    {select, subquery_map_fields(query, expr, pairs)}
+  defp subquery_select({:%{}, _, pairs} = expr, _take, query) do
+    assert_subquery_fields!(query, expr, pairs)
+    {nil, pairs}
   end
-  defp subquery_fields(_query, %{expr: {:&, _, [ix]},
-                                 fields: [{:&, _, [ix, [_ | _] = fields, _]}]} = select) do
-    {select, subquery_selector_fields(fields, ix)}
+  defp subquery_select({:&, _, [ix]}, take, query) do
+    {source, _} = source_take!(:select, query, take, ix, ix)
+    {struct, fields} = subquery_struct_and_fields(source)
+    {struct, subquery_fields(fields, ix)}
   end
-  defp subquery_fields(_query, %{expr: {{:., _, [{:&, _, [ix]}, field]}, _, []},
-                                 fields: [{{:., _, [{:&, _, [ix]}, field]}, _, []}]} = select) do
-    {select, [{field, {{:., [], [{:&, [], [ix]}, field]}, [], []}}]}
+  defp subquery_select({{:., _, [{:&, _, [ix]}, field]}, _, []}, _take, _query) do
+    {nil, subquery_fields([field], ix)}
   end
-  defp subquery_fields(query, %{expr: expr}) do
+  defp subquery_select(expr, _take, query) do
     error!(query, "subquery must select a source (t), a field (t.field) or a map, got: `#{Macro.to_string(expr)}`")
   end
 
-  defp subquery_selector_fields(fields, ix) do
-    Enum.map(fields, fn field ->
-      {field, {{:., [], [{:&, [], [ix]}, field]}, [], []}}
-    end)
+  defp subquery_struct_and_fields({:source, {_, schema}, types}) do
+    {schema, Keyword.keys(types)}
+  end
+  defp subquery_struct_and_fields({:struct, name, types}) do
+    {name, Keyword.keys(types)}
+  end
+  defp subquery_struct_and_fields({:map, types}) do
+    {nil, Keyword.keys(types)}
   end
 
-  defp subquery_map_fields(query, expr, pairs) do
-    Enum.map(pairs, fn
+  defp subquery_fields(fields, ix) do
+    for field <- fields do
+      {field, {{:., [], [{:&, [], [ix]}, field]}, [], []}}
+    end
+  end
+
+  defp subquery_types(%{select: {:map, types}}), do: types
+  defp subquery_types(%{select: {:struct, _name, types}}), do: types
+
+  defp assert_subquery_fields!(query, expr, pairs) do
+    Enum.each(pairs, fn
       {key, _} when not is_atom(key) ->
         error!(query, "only atom keys are allowed when selecting a map in subquery, got: `#{Macro.to_string(expr)}`")
       {key, value} ->
         if valid_subquery_value?(value) do
           {key, value}
         else
-          error!(query, "containers (maps, lists, tuples) or sources (t) are not allowed when selecting a map in subquery, got: `#{Macro.to_string(expr)}`")
+          error!(query, "maps, lists, tuples and sources are not allowed as map values in subquery, got: `#{Macro.to_string(expr)}`")
         end
     end)
   end
@@ -425,11 +453,11 @@ defmodule Ecto.Query.Planner do
                               "because it does not have a schema"
       {_, schema} ->
         schema
-      %Ecto.SubQuery{query: %{select: %{expr: {:&, _, [ix]}}, sources: sources}} when is_integer(ix) ->
-        schema_for_association_join!(query, join, elem(sources, ix))
+      %Ecto.SubQuery{select: {:struct, schema, _}} ->
+        schema
       %Ecto.SubQuery{} ->
         error! query, join, "can only perform association joins on subqueries " <>
-                            "that return a single source in select"
+                            "that return a source with schema in select"
       _ ->
         error! query, join, "can only perform association joins on sources with a schema"
     end
@@ -553,7 +581,7 @@ defmodule Ecto.Query.Planner do
                         "where, having, distinct, order_by, update or a join's on"
   end
   defp cast_param(kind, query, expr, v, type, adapter) do
-    type = type!(kind, query, expr, type)
+    type = field_type!(kind, query, expr, type)
 
     try do
       case cast_param(kind, type, v, adapter) do
@@ -686,7 +714,7 @@ defmodule Ecto.Query.Planner do
     error! query, "`#{kind}` does not allow subqueries in `from`"
   end
   defp validate_and_increment(:from, query, expr, counter, _kind, adapter) do
-    prewalk(expr, :from, query, expr, counter, adapter)
+    prewalk_source(expr, :from, query, expr, counter, adapter)
   end
 
   defp validate_and_increment(kind, query, expr, counter, _operation, adapter)
@@ -699,7 +727,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp validate_and_increment(kind, query, exprs, counter, _operation, adapter)
-      when kind in ~w(where group_by having order_by update)a do
+       when kind in ~w(where group_by having order_by update)a do
     {exprs, counter} =
       Enum.reduce(exprs, {[], counter}, fn
         %{expr: []}, {list, acc} ->
@@ -713,24 +741,49 @@ defmodule Ecto.Query.Planner do
 
   defp validate_and_increment(:join, query, exprs, counter, _operation, adapter) do
     Enum.map_reduce exprs, counter, fn join, acc ->
-      {source, acc} = prewalk(join.source, :join, query, join, acc, adapter)
+      {source, acc} = prewalk_source(join.source, :join, query, join, acc, adapter)
       {on, acc} = prewalk(:join, query, join.on, acc, adapter)
       {%{join | on: on, source: source, params: nil}, acc}
     end
   end
 
-  defp prewalk(kind, query, expr, counter, adapter) do
-    {inner, acc} = prewalk(expr.expr, kind, query, expr, counter, adapter)
-    {%{expr | expr: inner, params: nil}, acc}
+  defp prewalk_source({:fragment, meta, fragments}, kind, query, expr, acc, adapter) do
+    {fragments, acc} = prewalk(fragments, kind, query, expr, acc, adapter)
+    {{:fragment, meta, fragments}, acc}
   end
-
-  defp prewalk(%Ecto.SubQuery{query: inner_query} = subquery, _kind, query, _expr, counter, adapter) do
+  defp prewalk_source(%Ecto.SubQuery{query: inner_query} = subquery, _kind, query, _expr, counter, adapter) do
     try do
       {inner_query, counter} = normalize_query(inner_query, :all, adapter, counter)
-      {%{subquery | query: inner_query, params: nil}, counter}
+      {inner_query, _} = normalize_select(inner_query)
+      keys = subquery |> subquery_types() |> Keyword.keys()
+      inner_query = update_in(inner_query.select.fields, &Enum.zip(keys, &1))
+      {%{subquery | query: inner_query}, counter}
     rescue
       e -> raise Ecto.SubQueryError, query: query, exception: e
     end
+  end
+  defp prewalk_source(source, _kind, _query, _expr, acc, _adapter) do
+    {source, acc}
+  end
+
+  defp prewalk(:update, query, expr, counter, adapter) do
+    source = get_source!(:update, query, 0)
+
+    {inner, acc} =
+      Enum.map_reduce expr.expr, counter, fn {op, kw}, counter ->
+        {kw, acc} =
+          Enum.map_reduce kw, counter, fn {field, value}, counter ->
+            {value, acc} = prewalk(value, :update, query, expr, counter, adapter)
+            {{field_source(source, field), value}, acc}
+          end
+        {{op, kw}, acc}
+      end
+
+    {%{expr | expr: inner, params: nil}, acc}
+  end
+  defp prewalk(kind, query, expr, counter, adapter) do
+    {inner, acc} = prewalk(expr.expr, kind, query, expr, counter, adapter)
+    {%{expr | expr: inner, params: nil}, acc}
   end
 
   defp prewalk({:in, in_meta, [left, {:^, meta, [param]}]}, kind, query, expr, acc, adapter) do
@@ -739,15 +792,20 @@ defmodule Ecto.Query.Planner do
     {{:in, in_meta, [left, right]}, acc}
   end
 
+  defp prewalk({{:., dot_meta, [{:&, amp_meta, [ix]}, field]}, meta, []},
+               kind, query, _expr, acc, _adapter) do
+    field = field_source(get_source!(kind, query, ix), field)
+    {{{:., dot_meta, [{:&, amp_meta, [ix]}, field]}, meta, []}, acc}
+  end
+
   defp prewalk({:^, meta, [ix]}, _kind, _query, _expr, acc, _adapter) when is_integer(ix) do
     {{:^, meta, [acc]}, acc + 1}
   end
 
-  defp prewalk({:type, _, [{:^, meta, [ix]}, _expr]}, kind, query, expr, acc, _adapter) when is_integer(ix) do
-    {_, t} = Enum.fetch!(expr.params, ix)
-    type   = type!(kind, query, expr, t)
-    {%Ecto.Query.Tagged{value: {:^, meta, [acc]}, tag: type,
-                        type: Ecto.Type.type(type)}, acc + 1}
+  defp prewalk({:type, _, [arg, type]}, kind, query, expr, acc, adapter) do
+    {arg, acc} = prewalk(arg, kind, query, expr, acc, adapter)
+    type = field_type!(kind, query, expr, type)
+    {%Ecto.Query.Tagged{value: arg, tag: type, type: Ecto.Type.type(type)}, acc}
   end
 
   defp prewalk(%Ecto.Query.Tagged{value: v, type: type} = tagged, kind, query, expr, acc, adapter) do
@@ -779,7 +837,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp dump_param(kind, query, expr, v, type, adapter) do
-    type = type!(kind, query, expr, type)
+    type = field_type!(kind, query, expr, type)
 
     case dump_param(kind, type, v, adapter) do
       {:ok, v} ->
@@ -802,150 +860,234 @@ defmodule Ecto.Query.Planner do
     {{:^, meta, [acc, length]}, acc + 1}
   end
 
-  defp normalize_select(%{select: %{fields: nil} = select} = query) do
-    %{query | select: normalize_fields(query, select)}
+  defp normalize_select(%{select: nil} = query) do
+    {query, nil}
   end
   defp normalize_select(query) do
-    query
-  end
+    %{assocs: assocs, preloads: preloads, select: select} = query
+    %{take: take, expr: expr} = select
+    {tag, from_take} = Map.get(take, 0, {:any, []})
+    source = get_source!(:select, query, 0)
 
-  defp normalize_fields(%{assocs: [], preloads: []} = query,
-                        %{take: take, expr: expr} = select) do
-    {fields, from} = collect_fields(expr, query, take, :error)
-
-    fields =
-      case from do
-        {:ok, from} -> [select_source(0, from)|fields]
-        :error -> fields
+    # In from, if there is a schema and we have a map tag with preloads,
+    # it needs to be converted to a map in a later pass.
+    {take, from_tag} =
+      case tag do
+        :map when is_tuple(source) and elem(source, 1) != nil and preloads != [] ->
+          {Map.put(take, 0, {:struct, from_take}), :map}
+        _ ->
+          {take, :any}
       end
 
-    %{select | fields: fields}
+    {postprocess, fields, from} =
+      collect_fields(expr, [], :error, query, take)
+
+    {fields, preprocess, postprocess} =
+      case from do
+        {:ok, from_pre, from_taken} ->
+          {assoc_exprs, assoc_fields} = collect_assocs([], [], query, tag, from_take, assocs)
+          fields = from_taken ++ Enum.reverse(assoc_fields, Enum.reverse(fields))
+          preprocess = [from_pre | Enum.reverse(assoc_exprs)]
+          {fields, preprocess, {:from, from_tag, postprocess}}
+        :error when preloads != [] or assocs != [] ->
+          error! query, "the binding used in `from` must be selected in `select` when using `preload`"
+        :error ->
+          {Enum.reverse(fields), [], postprocess}
+      end
+
+    select = %{preprocess: preprocess, postprocess: postprocess, take: from_take, assocs: assocs}
+    {put_in(query.select.fields, fields), select}
   end
 
-  defp normalize_fields(%{assocs: assocs} = query,
-                        %{take: take, expr: expr} = select) do
-    {fields, from} = collect_fields(expr, query, take, :error)
-
-    case from do
-      {:ok, from} ->
-        {tag, take} = Map.get(take, 0, {:any, %{}})
-        assocs = collect_assocs(query, tag, take, assocs)
-        fields = [select_source(0, from)|assocs] ++ fields
-        %{select | fields: fields}
-      :error ->
-        error! query, "the binding used in `from` must be selected in `select` when using `preload`"
-    end
+  defp collect_fields({:&, _, [0]}, fields, :error, query, take) do
+    {expr, taken} = source_take!(:select, query, take, 0, 0)
+    {{:source, :from}, fields, {:ok, expr, taken}}
+  end
+  defp collect_fields({:&, _, [0]}, fields, from, _query, _take) do
+    {{:source, :from}, fields, from}
+  end
+  defp collect_fields({:&, _, [ix]}, fields, from, query, take) do
+    {expr, taken} = source_take!(:select, query, take, ix, ix)
+    {expr, Enum.reverse(taken, fields), from}
   end
 
-  defp collect_fields({:&, _, [0]}, query, take, :error) do
-    fields = take!(:select, query, take, 0, 0)
-    {[], {:ok, fields}}
-  end
-  defp collect_fields({:&, _, [0]}, _query, _take, from) do
-    {[], from}
-  end
-  defp collect_fields({:&, _, [ix]}, query, take, from) do
-    fields = take!(:select, query, take, ix, ix)
-    {[select_source(ix, fields)], from}
-  end
-
-  defp collect_fields({agg, meta, [{{:., _, [{:&, _, [ix]}, field]}, _, []} | _] = args},
-                      %{select: select} = query, _take, from) when agg in ~w(count avg min max sum)a do
+  defp collect_fields({agg, _, [{{:., _, [{:&, _, [ix]}, field]}, _, []} | _]} = expr,
+                      fields, from, %{select: select} = query, _take)
+       when agg in ~w(count avg min max sum)a do
     type =
+      # TODO: Support the :number type
       case agg do
         :count -> :integer
-        # TODO: Support the :number type
         :avg -> :any
         :sum -> :any
         _ -> source_type!(:select, query, select, ix, field)
       end
-    {[{agg, [ecto_type: type] ++ meta, args}], from}
+    {{:value, type}, [expr | fields], from}
   end
 
-  defp collect_fields({{:., _, [{:&, _, [ix]}, field]} = dot, meta, []},
-                      %{select: select} = query, _take, from) do
+  defp collect_fields({{:., _, [{:&, _, [ix]}, field]}, _, []} = expr,
+                      fields, from, %{select: select} = query, _take) do
     type = source_type!(:select, query, select, ix, field)
-    {[{dot, [ecto_type: type] ++ meta, []}], from}
+    {{:value, type}, [expr | fields], from}
   end
 
-  defp collect_fields({left, right}, query, take, from) do
-    {left, from} = collect_fields(left, query, take, from)
-    {right, from} = collect_fields(right, query, take, from)
-    {left ++ right, from}
-  end
-  defp collect_fields({:{}, _, elems}, query, take, from),
-    do: collect_fields(elems, query, take, from)
-  defp collect_fields({:%{}, _, [{:|, _, [data, pairs]}]}, query, take, from),
-    do: collect_fields([data | pairs], query, take, from)
-  defp collect_fields({:%{}, _, pairs}, query, take, from),
-    do: collect_fields(pairs, query, take, from)
-  defp collect_fields({:%, _, [_name, expr]}, query, take, from),
-    do: collect_fields(expr, query, take, from)
-  defp collect_fields(list, query, take, from) when is_list(list),
-    do: Enum.flat_map_reduce(list, from, &collect_fields(&1, query, take, &2))
-  defp collect_fields(expr, _query, _take, from) when is_atom(expr) or is_binary(expr) or is_number(expr),
-    do: {[], from}
-  defp collect_fields(expr, _query, _take, from),
-    do: {[expr], from}
-
-  defp fetch_assoc(tag, take, assoc) do
-    case Access.fetch(take, assoc) do
-      {:ok, value} -> {:ok, {tag, value}}
-      :error -> :error
-    end
+  defp collect_fields({left, right}, fields, from, query, take) do
+    {args, fields, from} = collect_args([left, right], fields, from, query, take, [])
+    {{:tuple, args}, fields, from}
   end
 
-  defp collect_assocs(query, tag, take, [{assoc, {ix, children}}|tail]) do
+  defp collect_fields({:{}, _, args}, fields, from, query, take) do
+    {args, fields, from} = collect_args(args, fields, from, query, take, [])
+    {{:tuple, args}, fields, from}
+  end
+
+  defp collect_fields({:%{}, _, [{:|, _, [data, args]}]}, fields, from, query, take) do
+    {data, fields, from} = collect_fields(data, fields, from, query, take)
+    {args, fields, from} = collect_kv(args, fields, from, query, take, [])
+    {{:map, data, args}, fields, from}
+  end
+
+  defp collect_fields({:%{}, _, args}, fields, from, query, take) do
+    {args, fields, from} = collect_kv(args, fields, from, query, take, [])
+    {{:map, args}, fields, from}
+  end
+
+  defp collect_fields({:%, _, [name, {:%{}, _, [{:|, _, [data, args]}]}]}, fields, from, query, take) do
+    {data, fields, from} = collect_fields(data, fields, from, query, take)
+    {args, fields, from} = collect_kv(args, fields, from, query, take, [])
+    struct!(name, args)
+    {{:struct, name, data, args}, fields, from}
+  end
+
+  defp collect_fields({:%, _, [name, {:%{}, _, args}]}, fields, from, query, take) do
+    {args, fields, from} = collect_kv(args, fields, from, query, take, [])
+    struct!(name, args)
+    {{:struct, name, args}, fields, from}
+  end
+
+  defp collect_fields({:merge, _, args}, fields, from, query, take) do
+    {[left, right], fields, from} = collect_args(args, fields, from, query, take, [])
+    {{:merge, left, right}, fields, from}
+  end
+
+  defp collect_fields(args, fields, from, query, take) when is_list(args) do
+    {args, fields, from} = collect_args(args, fields, from, query, take, [])
+    {{:list, args}, fields, from}
+  end
+
+  defp collect_fields(expr, fields, from, _query, _take)
+       when is_atom(expr) or is_binary(expr) or is_number(expr) do
+    {expr, fields, from}
+  end
+
+  defp collect_fields(%Ecto.Query.Tagged{tag: tag} = expr, fields, from, _query, _take) do
+    {{:value, tag}, [expr | fields], from}
+  end
+
+  defp collect_fields(expr, fields, from, _query, _take) do
+    {{:value, :any}, [expr | fields], from}
+  end
+
+  defp collect_kv([{key, value} | elems], fields, from, query, take, acc) do
+    {key, fields, from} = collect_fields(key, fields, from, query, take)
+    {value, fields, from} = collect_fields(value, fields, from, query, take)
+    collect_kv(elems, fields, from, query, take, [{key, value} | acc])
+  end
+  defp collect_kv([], fields, from, _query, _take, acc) do
+    {Enum.reverse(acc), fields, from}
+  end
+
+  defp collect_args([elem | elems], fields, from, query, take, acc) do
+    {elem, fields, from} = collect_fields(elem, fields, from, query, take)
+    collect_args(elems, fields, from, query, take, [elem | acc])
+  end
+  defp collect_args([], fields, from, _query, _take, acc) do
+    {Enum.reverse(acc), fields, from}
+  end
+
+  defp collect_assocs(exprs, fields, query, tag, take, [{assoc, {ix, children}}|tail]) do
     case get_source!(:preload, query, ix) do
       {_, schema} = source when schema != nil ->
-        fields = take!(source, query, fetch_assoc(tag, take, assoc), assoc)
-        [select_source(ix, fields)] ++
-          collect_assocs(query, tag, fields, children) ++
-          collect_assocs(query, tag, take, tail)
+        {fetch, take_children} = fetch_assoc(tag, take, assoc)
+        {expr, taken} = take!(source, query, fetch, assoc, ix)
+        exprs = [expr | exprs]
+        fields = Enum.reverse(taken, fields)
+        {exprs, fields} = collect_assocs(exprs, fields, query, tag, take_children, children)
+        {exprs, fields} = collect_assocs(exprs, fields, query, tag, take, tail)
+        {exprs, fields}
       _ ->
         error! query, "can only preload sources with a schema " <>
                       "(fragments, binary and subqueries are not supported)"
     end
   end
-  defp collect_assocs(_query, _tag, _take, []) do
-    []
+  defp collect_assocs(exprs, fields, _query, _tag, _take, []) do
+    {exprs, fields}
   end
 
-  defp select_source(ix, nil), do: {:&, [], [ix, nil, nil]}
-  defp select_source(ix, fields) when is_list(fields) do
-    fields = for field <- fields, is_atom(field), do: field
-    {:&, [], [ix, fields, length(fields)]}
+  defp fetch_assoc(tag, take, assoc) do
+    case Access.fetch(take, assoc) do
+      {:ok, value} -> {{:ok, {tag, value}}, value}
+      :error -> {:error, []}
+    end
   end
 
-  defp take!(kind, query, take, field, ix) do
+  defp source_take!(kind, query, take, field, ix) do
     source = get_source!(kind, query, ix)
-    take!(source, query, Access.fetch(take, field), field)
+    take!(source, query, Access.fetch(take, field), field, ix)
   end
 
-  defp take!(source, query, fetched, field) do
+  defp take!(source, query, fetched, field, ix) do
     case {fetched, source} do
-      {{:ok, {:struct, _}}, {_, nil}} ->
-        error! query, "struct/2 in select expects a source with a schema"
       {{:ok, {_, []}}, {_, _}} ->
         error! query, "at least one field must be selected for binding `#{field}`, got an empty list"
-      {{:ok, {_, fields}}, {_, _}} ->
-        List.wrap(fields)
+
+      {{:ok, {:struct, _}}, {_, nil}} ->
+        error! query, "struct/2 in select expects a source with a schema"
+
+      {{:ok, {kind, fields}}, {source, schema}} ->
+        dumper = if schema, do: schema.__schema__(:dump), else: %{}
+        schema = if kind == :map, do: nil, else: schema
+        {types, fields} = select_dump(List.wrap(fields), dumper, ix)
+        {{:source, {source, schema}, types}, fields}
+
       {{:ok, {_, _}}, {:fragment, _, _}} ->
         error! query, "it is not possible to return a map/struct subset of a fragment, " <>
                       "you must explicitly return the desired individual fields"
+
       {{:ok, {_, _}}, %Ecto.SubQuery{}} ->
         error! query, "it is not possible to return a map/struct subset of a subquery, " <>
                       "you must explicitly select the whole subquery or individual fields only"
 
       {:error, {_, nil}} ->
-        nil # Checked by the adapter
-      {:error, {_, schema}} when schema != nil ->
-        schema.__schema__(:fields)
+        {{:value, :map}, [{:&, [], [ix]}]}
+
+      {:error, {_, schema}} ->
+        {types, fields} = select_dump(schema.__schema__(:fields), schema.__schema__(:dump), ix)
+        {{:source, source, types}, fields}
+
       {:error, {:fragment, _, _}} ->
-        nil # Checked by the adapter
-      {:error, %Ecto.SubQuery{fields: fields}} ->
-        Keyword.keys(fields)
+        {{:value, :map}, [{:&, [], [ix]}]}
+
+      {:error, %Ecto.SubQuery{select: select} = subquery} ->
+        fields = for {field, _} <- subquery_types(subquery), do: select_field(field, ix)
+        {select, fields}
     end
+  end
+
+  defp select_dump(fields, dumper, ix) do
+    fields
+    |> Enum.reverse
+    |> Enum.reduce({[], []}, fn
+      field, {types, exprs} when is_atom(field) ->
+        {source, type} = Map.get(dumper, field, {field, :any})
+        {[{field, type} | types], [select_field(source, ix) | exprs]}
+      _field, acc ->
+        acc
+    end)
+  end
+
+  defp select_field(field, ix) do
+    {{:., [], [{:&, [], [ix]}, field]}, [], []}
   end
 
   defp get_source!(where, %{sources: sources} = query, ix) do
@@ -978,17 +1120,31 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp source_type!(_kind, _query, _expr, nil, _field), do: :any
-  defp source_type!(kind, query, expr, ix, field) when is_integer(ix) do
+  defp field_type!(kind, query, expr, {composite, {ix, field}}) when is_integer(ix) do
+    {composite, type!(kind, :type, query, expr, ix, field)}
+  end
+  defp field_type!(kind, query, expr, {ix, field}) when is_integer(ix) do
+    type!(kind, :type, query, expr, ix, field)
+  end
+  defp field_type!(_kind, _query, _expr, type) do
+    type
+  end
+
+  defp source_type!(kind, query, expr, ix, field) do
+    type!(kind, :source_type, query, expr, ix, field)
+  end
+
+  defp type!(_kind, _lookup, _query, _expr, nil, _field), do: :any
+  defp type!(kind, lookup, query, expr, ix, field) when is_integer(ix) do
     case get_source!(kind, query, ix) do
       {_, schema} ->
-        source_type!(kind, query, expr, schema, field)
+        type!(kind, lookup, query, expr, schema, field)
       {:fragment, _, _} ->
         :any
-      %Ecto.SubQuery{fields: fields, query: inner_query} ->
-        case Keyword.fetch(fields, field) do
-          {:ok, {{:., _, [{:&, _, [ix]}, field]}, _, []}} ->
-            source_type!(kind, inner_query, expr, ix, field)
+      %Ecto.SubQuery{} = subquery ->
+        case Keyword.fetch(subquery_types(subquery), field) do
+          {:ok, {:value, type}} ->
+            type
           {:ok, _} ->
             :any
           :error ->
@@ -996,23 +1152,12 @@ defmodule Ecto.Query.Planner do
         end
     end
   end
-  defp source_type!(kind, query, expr, schema, field) when is_atom(schema) do
-    if type = schema.__schema__(:type, field) do
+  defp type!(kind, lookup, query, expr, schema, field) when is_atom(schema) do
+    if type = schema.__schema__(lookup, field) do
       type
     else
-      error! query, expr, "field `#{inspect schema}.#{field}` in `#{kind}` " <>
-                          "does not exist in the schema"
+      error! query, expr, "field `#{field}` in `#{kind}` does not exist in schema #{inspect schema}"
     end
-  end
-
-  defp type!(kind, query, expr, {composite, {ix, field}}) when is_integer(ix) do
-    {composite, source_type!(kind, query, expr, ix, field)}
-  end
-  defp type!(kind, query, expr, {ix, field}) when is_integer(ix) do
-    source_type!(kind, query, expr, ix, field)
-  end
-  defp type!(_kind, _query, _expr, type) do
-    type
   end
 
   defp normalize_param(_kind, {:out, {:array, type}}, _value) do
@@ -1049,6 +1194,15 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  defp field_source({_, schema}, field) when schema != nil do
+    # If the field is not found we return the field itself
+    # which will be checked and raise later.
+    schema.__schema__(:field_source, field) || field
+  end
+  defp field_source(_, field) do
+    field
+  end
+
   defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do
     changes =
       Enum.reduce(updates, %{}, fn update, acc ->
@@ -1080,7 +1234,9 @@ defmodule Ecto.Query.Planner do
                   havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
         query
       _ ->
-        error! query, "`#{operation}` allows only `where` and `join` expressions"
+        error! query, "`#{operation}` allows only `where` and `join` expressions. " <>
+                      "You can exclude unwanted expressions from a query by using " <>
+                      "Ecto.Query.exclude/2. Error found"
     end
   end
 

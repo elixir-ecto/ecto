@@ -82,12 +82,12 @@ defmodule Ecto.Migration do
 
   ## Prefixes
 
-  Migrations support specifying a table prefix or index prefix which will target either a schema
-  if using Postgres, or a different database if using MySQL. If no prefix is
-  provided, the default schema or database is used.
-  Any reference declared in the table migration refers by default to the table with
-  the same declared prefix.
-  The prefix is specified in the table options:
+  Migrations support specifying a table prefix or index prefix which will
+  target either a schema if using Postgres, or a different database if using
+  MySQL. If no prefix is provided, the default schema or database is used.
+
+  Any reference declared in the table migration refers by default to the table
+  with the same declared prefix. The prefix is specified in the table options:
 
       def up do
         create table("weather", prefix: "north_america") do
@@ -103,11 +103,11 @@ defmodule Ecto.Migration do
         create index("weather", [:city], prefix: "north_america")
       end
 
-  Note: if using MySQL with a prefixed table, you must use the same prefix for the references since
-  cross database references are not supported.
+  Note: if using MySQL with a prefixed table, you must use the same prefix
+  for the references since cross database references are not supported.
 
-  For both MySQL and Postgres with a prefixed table, you must use the same prefix for the index field to ensure
-  you index the prefix qualified table.
+  For both MySQL and Postgres with a prefixed table, you must use the same
+  prefix for the index field to ensure you index the prefix qualified table.
 
   ## Transactions
 
@@ -149,12 +149,25 @@ defmodule Ecto.Migration do
         end
       end
 
-  ## Schema Migrations table
+  ## Repo configuration
 
-  Version numbers of migrations will be saved in `schema_migrations` table.
-  But you can configure the table via:
+  The following migration configurations are available for under
+  a given repository.
 
-      config :app, App.Repo, migration_source: "my_migrations"
+    * `:migration_source` - Version numbers of migrations will be saved in
+      `schema_migrations` table but you can configure the table via:
+
+          config :app, App.Repo, migration_source: "my_migrations"
+
+    * `:migration_primary_key` - Ecto uses the `:id` column with type
+      `:bigserial` but you can configure it via:
+
+          config :app, App.Repo, migration_primary_key: [id: :uuid, type: :binary_id]
+
+    * `:migration_timestamps` - Ecto uses type `:naive_datetime` but you
+      can configure it via:
+
+          config :app, App.Repo, migration_timestamps: [type: :utc_datetime]
 
   """
 
@@ -289,7 +302,8 @@ defmodule Ecto.Migration do
       Runner.start_command({unquote(command), Ecto.Migration.__prefix__(table)})
 
       if table.primary_key do
-        add(:id, :bigserial, primary_key: true)
+        opts = Runner.repo_config(:migration_primary_key, [])
+        add(opts[:name] || :id, opts[:type] || :bigserial, primary_key: true)
       end
 
       unquote(block)
@@ -517,12 +531,18 @@ defmodule Ecto.Migration do
       # The index type can be specified
       create index("products", [:name], using: :hash)
 
-      # Create an index on custom expressions
-      create index("products", ["lower(name)"], name: :products_lower_name_index)
-
       # Create a partial index
       create index("products", [:user_id], where: "price = 0", name: :free_products_index)
 
+  Indexes also support custom expressions. Some databases may require the
+  index expression to be written between parens:
+
+      # Create an index on custom expressions
+      create index("products", ["(lower(name))"], name: :products_lower_name_index)
+
+      # To create a tsvector index with GIN on Postgres
+      create index("products", ["(to_tsvector('english', name))"],
+                   name: :products_name_vector, using: "GIN")
   """
   def index(table, columns, opts \\ [])
 
@@ -560,7 +580,7 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Executes arbitrary SQL or a keyword command in NoSQL databases.
+  Executes arbitrary SQL or a keyword command.
 
   Reversible commands can be defined by calling `execute/2`.
 
@@ -720,6 +740,7 @@ defmodule Ecto.Migration do
 
   """
   def timestamps(opts \\ []) when is_list(opts) do
+    opts = Keyword.merge(Runner.repo_config(:migration_timestamps, []), opts)
     opts = Keyword.put_new(opts, :null, false)
 
     {type, opts} = Keyword.pop(opts, :type, :naive_datetime)

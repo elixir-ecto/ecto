@@ -38,14 +38,10 @@ if Code.ensure_loaded?(Mariaex) do
         %{__struct__: _} = value ->
           value
         %{} = value ->
-          json_library().encode!(value)
+          Ecto.Adapter.json_library().encode!(value)
         value ->
           value
       end
-    end
-
-    defp json_library do
-      Application.fetch_env!(:ecto, :json_library)
     end
 
     def to_constraints(%Mariaex.Error{mariadb: %{code: 1062, message: message}}) do
@@ -89,7 +85,7 @@ if Code.ensure_loaded?(Mariaex) do
       offset   = offset(query, sources)
       lock     = lock(query.lock)
 
-      IO.iodata_to_binary([select, from, join, where, group_by, having, order_by, limit, offset | lock])
+      [select, from, join, where, group_by, having, order_by, limit, offset | lock]
     end
 
     def update_all(query, prefix \\ nil)
@@ -108,7 +104,7 @@ if Code.ensure_loaded?(Mariaex) do
       prefix = prefix || ["UPDATE ", from, " AS ", name, join, " SET "]
       where  = where(query, sources)
 
-      IO.iodata_to_binary([prefix, fields | where])
+      [prefix, fields | where]
     end
     def update_all(_query, _prefix) do
       error!(nil, "RETURNING is not supported in update_all by MySQL")
@@ -122,16 +118,15 @@ if Code.ensure_loaded?(Mariaex) do
       join   = join(query, sources)
       where  = where(query, sources)
 
-      IO.iodata_to_binary(["DELETE ", name, ".*", from, join | where])
+      ["DELETE ", name, ".*", from, join | where]
     end
     def delete_all(_query),
       do: error!(nil, "RETURNING is not supported in delete_all by MySQL")
 
     def insert(prefix, table, header, rows, on_conflict, []) do
       fields = intersperse_map(header, ?,, &quote_name/1)
-      IO.iodata_to_binary(["INSERT INTO ", quote_table(prefix, table), " (",
-                           fields, ") VALUES ", insert_all(rows) |
-                           on_conflict(on_conflict, header)])
+      ["INSERT INTO ", quote_table(prefix, table), " (", fields, ") VALUES ",
+       insert_all(rows) | on_conflict(on_conflict, header)]
     end
     def insert(_prefix, _table, _header, _rows, _on_conflict, _returning) do
       error!(nil, "RETURNING is not supported in insert/insert_all by MySQL")
@@ -147,9 +142,9 @@ if Code.ensure_loaded?(Mariaex) do
       quoted = quote_name(field)
       [" ON DUPLICATE KEY UPDATE ", quoted, " = " | quoted]
     end
-    defp on_conflict({:replace_all, _, []}, header) do
+    defp on_conflict({fields, _, []}, _header) when is_list(fields) do
       [" ON DUPLICATE KEY UPDATE " |
-       intersperse_map(header, ?,, fn field ->
+       intersperse_map(fields, ?,, fn field ->
          quoted = quote_name(field)
          [quoted, " = VALUES(", quoted, ?)]
        end)]
@@ -170,14 +165,12 @@ if Code.ensure_loaded?(Mariaex) do
     def update(prefix, table, fields, filters, _returning) do
       fields = intersperse_map(fields, ", ", &[quote_name(&1), " = ?"])
       filters = intersperse_map(filters, " AND ", &[quote_name(&1), " = ?"])
-
-      IO.iodata_to_binary(["UPDATE ", quote_table(prefix, table), " SET ", fields, " WHERE " | filters])
+      ["UPDATE ", quote_table(prefix, table), " SET ", fields, " WHERE " | filters]
     end
 
     def delete(prefix, table, filters, _returning) do
       filters = intersperse_map(filters, " AND ", &[quote_name(&1), " = ?"])
-
-      IO.iodata_to_binary(["DELETE FROM ", quote_table(prefix, table), " WHERE " | filters])
+      ["DELETE FROM ", quote_table(prefix, table), " WHERE " | filters]
     end
 
     ## Query generation
@@ -342,13 +335,10 @@ if Code.ensure_loaded?(Mariaex) do
       [name, ?. | quote_name(field)]
     end
 
-    defp expr({:&, _, [idx, fields, _counter]}, sources, query) do
-      {source, name, schema} = elem(sources, idx)
-      if is_nil(schema) and is_nil(fields) do
-        error!(query, "MySQL does not support selecting all fields from #{source} without a schema. " <>
-                      "Please specify a schema or specify exactly which fields you want to select")
-      end
-      intersperse_map(fields, ", ", &[name, ?. | quote_name(&1)])
+    defp expr({:&, _, [idx]}, sources, query) do
+      {source, _name, _schema} = elem(sources, idx)
+      error!(query, "MySQL does not support selecting all fields from #{source} without a schema. " <>
+                    "Please specify a schema or specify exactly which fields you want to select")
     end
 
     defp expr({:in, _, [_left, []]}, _sources, _query) do
@@ -381,8 +371,8 @@ if Code.ensure_loaded?(Mariaex) do
       ["NOT (", expr(expr, sources, query), ?)]
     end
 
-    defp expr(%Ecto.SubQuery{query: query, fields: fields}, _sources, _query) do
-      query.select.fields |> put_in(fields) |> all()
+    defp expr(%Ecto.SubQuery{query: query}, _sources, _query) do
+      all(query)
     end
 
     defp expr({:fragment, _, [kw]}, _sources, query) when is_list(kw) or tuple_size(kw) == 3 do
@@ -441,8 +431,8 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query)
-        when type in [:id, :integer, :float] do
-      expr(other, sources, query)
+         when type in [:decimal, :float] do
+      [expr(other, sources, query), " + 0"]
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query) do
@@ -646,6 +636,10 @@ if Code.ensure_loaded?(Mariaex) do
       do: [" DEFAULT '", escape_string(literal), ?']
     defp default_expr({:ok, literal}) when is_number(literal) or is_boolean(literal),
       do: [" DEFAULT ", to_string(literal)]
+    defp default_expr({:ok, %{} = map}) do
+      default = Ecto.Adapter.json_library().encode!(map)
+      [" DEFAULT ", [?', escape_string(default), ?']]
+    end
     defp default_expr({:ok, {:fragment, expr}}),
       do: [" DEFAULT ", expr]
     defp default_expr(:error),
@@ -758,6 +752,8 @@ if Code.ensure_loaded?(Mariaex) do
       |> :binary.replace("\\", "\\\\", [:global])
     end
 
+    defp ecto_cast_to_db(:id, _query), do: "unsigned"
+    defp ecto_cast_to_db(:integer, _query), do: "unsigned"
     defp ecto_cast_to_db(:string, _query), do: "char"
     defp ecto_cast_to_db(type, query), do: ecto_to_db(type, query)
 
