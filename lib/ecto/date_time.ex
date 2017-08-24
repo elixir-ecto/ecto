@@ -86,6 +86,15 @@ defmodule Ecto.DateTime.Utils do
 end
 
 defmodule Ecto.Date do
+  @moduledoc """
+  A deprecated Ecto type for dates.
+
+  This type is deprecated in favour of the `:date` type.
+  """
+
+  @behaviour Ecto.Type
+  defstruct [:year, :month, :day]
+
   import Ecto.DateTime.Utils
 
   @doc """
@@ -95,13 +104,6 @@ defmodule Ecto.Date do
   against `t2` and returns `:lt`, `:eq` or `:gt`.
   """
   defdelegate compare(t1, t2), to: Ecto.DateTime.Utils
-
-  @moduledoc """
-  An Ecto type for dates.
-  """
-
-  @behaviour Ecto.Type
-  defstruct [:year, :month, :day]
 
   @doc """
   The Ecto primitive type.
@@ -223,6 +225,15 @@ defmodule Ecto.Date do
 end
 
 defmodule Ecto.Time do
+  @moduledoc """
+  A deprecated Ecto type for time.
+
+  This type is deprecated in favour of the `:time` type.
+  """
+
+  @behaviour Ecto.Type
+  defstruct [:hour, :min, :sec, usec: 0]
+
   import Ecto.DateTime.Utils
 
   @doc """
@@ -232,13 +243,6 @@ defmodule Ecto.Time do
   against `t2` and returns `:lt`, `:eq` or `:gt`.
   """
   defdelegate compare(t1, t2), to: Ecto.DateTime.Utils
-
-  @moduledoc """
-  An Ecto type for time.
-  """
-
-  @behaviour Ecto.Type
-  defstruct [:hour, :min, :sec, usec: 0]
 
   @doc """
   The Ecto primitive type.
@@ -384,6 +388,15 @@ defmodule Ecto.Time do
 end
 
 defmodule Ecto.DateTime do
+  @moduledoc """
+  A deprecated Ecto type that includes a date and a time.
+
+  This type is deprecated in favour of the `:naive_datetime` type.
+  """
+
+  @behaviour Ecto.Type
+  defstruct [:year, :month, :day, :hour, :min, :sec, usec: 0]
+
   import Ecto.DateTime.Utils
 
   @unix_epoch :calendar.datetime_to_gregorian_seconds {{1970, 1, 1}, {0, 0, 0}}
@@ -395,13 +408,6 @@ defmodule Ecto.DateTime do
   against `t2` and returns `:lt`, `:eq` or `:gt`.
   """
   defdelegate compare(t1, t2), to: Ecto.DateTime.Utils
-
-  @moduledoc """
-  An Ecto type that includes a date and a time.
-  """
-
-  @behaviour Ecto.Type
-  defstruct [:year, :month, :day, :hour, :min, :sec, usec: 0]
 
   @doc """
   The Ecto primitive type.
