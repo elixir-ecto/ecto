@@ -77,6 +77,10 @@ defmodule Ecto.Repo.SupervisorTest do
     assert parse_url("") == []
   end
 
+  test "parse_url keeps false values" do
+    assert {:ssl, false} in parse_url("ecto://eric:it+й@host:12345/mydb?ssl=false")
+  end
+
   test "parse_urls empty username/password" do
     url = parse_url("ecto://host:12345/mydb")
     assert !Keyword.has_key?(url, :username)

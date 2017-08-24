@@ -84,7 +84,7 @@ defmodule Ecto.Repo.Supervisor do
 
   The format must be:
 
-      "ecto://username:password@hostname:port/database"
+      "ecto://username:password@hostname:port/database?ssl=true&timeout=1000"
 
   """
   def parse_url(""), do: []
@@ -115,7 +115,7 @@ defmodule Ecto.Repo.Supervisor do
 
     query_opts = parse_uri_query(info)
 
-    for {k, v} <- url_opts ++ query_opts, v, do: {k, if(is_binary(v), do: URI.decode(v), else: v)}
+    for {k, v} <- url_opts ++ query_opts, not is_nil(v), do: {k, if(is_binary(v), do: URI.decode(v), else: v)}
   end
 
   defp parse_uri_query(%URI{query: nil}),
@@ -126,6 +126,9 @@ defmodule Ecto.Repo.Supervisor do
     |> Enum.reduce([], fn
       {"ssl", "true"}, acc ->
         [{:ssl, true}] ++ acc
+
+      {"ssl", "false"}, acc ->
+        [{:ssl, false}] ++ acc
 
       {key, value}, acc when key in @integer_url_query_params ->
         [{String.to_atom(key), parse_integer!(key, value, url)}] ++ acc
