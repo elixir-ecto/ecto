@@ -102,5 +102,18 @@ defmodule Ecto.Repo.SupervisorTest do
     assert_raise Ecto.InvalidURLError, ~r"unsupported query parameter uknown_param", fn ->
       parse_url("ecto://eric:it+й@host:12345/mydb?uknown_param=value")
     end
+
+    for key <- ["timeout", "pool_size", "pool_timeout"] do
+      message = "can not parse value for parameter #{key} as an integer, " <>
+                "binary remainder binrem should not be present"
+
+      assert_raise Ecto.InvalidURLError, Regex.compile!(message), fn ->
+        parse_url("ecto://eric:it+й@host:12345/mydb?#{key}=123binrem")
+      end
+
+      assert_raise Ecto.InvalidURLError, ~r"can not parse value not_an_int for parameter #{key} as an integer", fn ->
+        parse_url("ecto://eric:it+й@host:12345/mydb?#{key}=not_an_int")
+      end
+    end
   end
 end
