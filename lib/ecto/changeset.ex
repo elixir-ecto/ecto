@@ -1622,7 +1622,7 @@ defmodule Ecto.Changeset do
         count_type = opts[:count] || :graphemes
         {type, length} = case {value, count_type} do
           {value, :codepoints} when is_binary(value) ->
-            {:string, length(String.codepoints(value))}
+            {:string, codepoints_length(value, 0)}
           {value, :graphemes} when is_binary(value) ->
             {:string, String.length(value)}
           {value, _} when is_list(value) ->
@@ -1636,6 +1636,10 @@ defmodule Ecto.Changeset do
         if error, do: [{field, error}], else: []
     end
   end
+
+  defp codepoints_length(<<_::utf8, rest::binary>>, acc), do: codepoints_length(rest, acc + 1)
+  defp codepoints_length(<<_, rest::binary>>, acc), do: codepoints_length(rest, acc + 1)
+  defp codepoints_length(<<>>, acc), do: acc
 
   defp wrong_length(_type, value, value, _opts), do: nil
   defp wrong_length(:string, _length, value, opts), do:
