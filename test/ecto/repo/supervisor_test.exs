@@ -104,7 +104,7 @@ defmodule Ecto.Repo.SupervisorTest do
       parse_url("ecto://eric:hunter2@host:123")
     end
 
-    assert_raise Ecto.InvalidURLError, ~r"unsupported query parameter uknown_param", fn ->
+    assert_raise Ecto.InvalidURLError, ~r"unsupported query parameter `uknown_param`", fn ->
       parse_url("ecto://eric:it+й@host:12345/mydb?uknown_param=value")
     end
 
