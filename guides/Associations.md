@@ -626,15 +626,61 @@ iex> tag = Repo.get(Tag, 1) |> Repo.preload(:posts)
    tags: #Ecto.Association.NotLoaded<association :tags is not loaded>}]}
 ```
 
-The advantage of using Ecto.Changeset is that it is responsible for tracking the changes between your data structures and the associated data. For example, if you want you remove the clickbait tag from from the post, one way to do so is by calling [`Ecto.Changeset.put_assoc/3`](Ecto.Changeset.html#put_assoc/4) once more but without the clickbait tag:
+The advantage of using Ecto.Changeset is that it is responsible for tracking the changes between your data structures and the associated data. For example, if you want you remove the clickbait tag from from the post, one way to do so is by calling [`Ecto.Changeset.put_assoc/3`](Ecto.Changeset.html#put_assoc/4) once more but without the clickbait tag.  This will not work right now, because the `:on_replace` option for the `many_to_many` relationship defaults to `:raise`.  Go ahead and try it.  When you try to call `put_assoc`, a runtime error will be raised:
+
+```elixir
+iex> post_changeset = Ecto.Changeset.change(post)
+iex> post_with_tags = Ecto.Changeset.put_assoc(post_changeset, :tags, [misc_tag])
+** (RuntimeError) you are attempting to change relation :tags of
+Website.CMS.Page but the `:on_replace` option of
+this relation is set to `:raise`.
+
+By default it is not possible to replace or delete embeds and
+associations during `cast`. Therefore Ecto requires all existing
+data to be given on update. Failing to do so results in this
+error message.
+
+If you want to replace data or automatically delete any data
+not sent to `cast`, please set the appropriate `:on_replace`
+option when defining the relation. The docs for `Ecto.Changeset`
+covers the supported options in the "Related data" section.
+
+However, if you don't want to allow data to be replaced or
+deleted, only updated, make sure that:
+
+  * If you are attempting to update an existing entry, you
+    are including the entry primary key (ID) in the data.
+
+  * If you have a relationship with many children, at least
+    the same N children must be given on update.
+...
+```
+
+You should carefully read the documentation for [`Ecto.Schema.many_to_many/3`](Ecto.Schema.html#many_to_many/3). It makes sense in this case that we want to delete relationships in the join table `posts_tags` when updating a post with new tags.  Here we want to drop the tag "clickbait" and just keep the tag "misc", so we really do want the relationship in the joining table to be removed.  To do that, change the definition of the `many_to_many/3` in the Post schema:
+
+```elixir
+# lib/ecto_assoc/post.ex
+defmodule EctoAssoc.Post do
+  use Ecto.Schema
+
+  schema "posts" do
+    field :header, :string
+    field :body, :string
+    # the following line was edited to change the on_replace option from its default value of :raise
+    many_to_many :tags, EctoAssoc.Tag, join_through: "posts_tags", on_replace: :delete
+  end
+end
+```
+
+On the other hand, it probably *doesn't* make much sense to be able to remove relationships from the other end.  That is, with just a tag, it is hard to decide if a post should be related to the tag or not.  So it makes sense that we should still raise an error if we try to change posts that are related to tags from the tag side of things.
+
+With the `:on_replace` option changed, Ecto will compare the data you gave with the tags currently in the post and conclude the association between the post and the clickbait tag must be removed, as follows:
 
 ```elixir
 iex> post_changeset = Ecto.Changeset.change(post)
 iex> post_with_tags = Ecto.Changeset.put_assoc(post_changeset, :tags, [misc_tag])
 iex> post = Repo.update!(post_with_tags)
 ```
-
-Ecto will compare the data you gave with the tags currently in the post and conclude the association between the post and the clickbait tag must be removed.
 
 ## References
 
