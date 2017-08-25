@@ -134,7 +134,7 @@ defmodule Ecto.Repo.Supervisor do
         [{String.to_atom(key), parse_integer!(key, value, url)}] ++ acc
 
       {key, _value}, _acc ->
-        raise Ecto.InvalidURLError, url: url, message: "unsupported query parameter #{key}"
+        raise Ecto.InvalidURLError, url: url, message: "unsupported query parameter `#{key}`"
     end)
   end
 
