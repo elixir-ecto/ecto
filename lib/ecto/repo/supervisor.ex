@@ -142,13 +142,8 @@ defmodule Ecto.Repo.Supervisor do
     case Integer.parse(value) do
       {int, ""} ->
         int
-
-      {_int, remainder_of_binary} ->
-        raise Ecto.InvalidURLError, url: url, message: "can not parse value for parameter #{key} as an integer, " <>
-                                                       "binary remainder #{remainder_of_binary} should not be present"
-
-      :error ->
-        raise Ecto.InvalidURLError, url: url, message: "can not parse value #{value} for parameter #{key} as an integer"
+      _ ->
+        raise Ecto.InvalidURLError, url: url, message: "can not parse value `#{value}` for parameter `#{key}` as an integer"
     end
   end
 
