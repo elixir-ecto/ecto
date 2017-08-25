@@ -832,6 +832,13 @@ defmodule Ecto.ChangesetTest do
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 10, message: "yada")
     assert changeset.errors == [title: {"yada", count: 10, validation: :length, kind: :is}]
+
+    changeset = changeset(%{"title" => "\u0065\u0301"}) |> validate_length(:title, max: 1)
+    assert changeset.valid?
+
+    changeset = changeset(%{"title" => "\u0065\u0301"}) |> validate_length(:title, max: 1, count: :codepoints)
+    refute changeset.valid?
+    assert changeset.errors == [title: {"should be at most %{count} character(s)", count: 1, validation: :length, kind: :max}]
   end
 
   test "validate_length/3 with list" do
