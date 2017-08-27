@@ -443,12 +443,23 @@ defmodule Ecto.Repo do
 
   ## Examples
 
+      # Use a single atom to preload an association
       posts = Repo.preload posts, :comments
-      posts = Repo.preload posts, comments: :permalinks
-      posts = Repo.preload posts, [:comments, :authors]
-      posts = Repo.preload posts, [comments: [:replies, :likes], authors: []]
-      posts = Repo.preload posts, comments: from(c in Comment, order_by: c.published_at)
 
+      # Use a list of atoms to preload multiple associations
+      posts = Repo.preload posts, [:comments, :authors]
+
+      # Use a keyword list to preload nested associations as well
+      posts = Repo.preload posts, [comments: [:replies, :likes], authors: []]
+
+      # Use a keyword list to customize how associations are queried
+      posts = Repo.preload posts, [comments: from(c in Comment, order_by: c.published_at)]
+
+      # Use a two-element tuple for a custom query and nested association definition
+      query = from c in Comment, order_by: c.published_at
+      posts = Repo.preload posts, [comments: {query, [:replies, :likes]}]
+
+  Note: Preloading nested associations in a custom query definition does work as well.
   """
   @callback preload(structs_or_struct_or_nil, preloads :: term, opts :: Keyword.t) ::
                     structs_or_struct_or_nil when structs_or_struct_or_nil: [Ecto.Schema.t] | Ecto.Schema.t | nil
