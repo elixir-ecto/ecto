@@ -112,7 +112,6 @@ defmodule Ecto.RepoTest do
   test "validates get_by" do
     TestRepo.get_by(MySchema, id: 123)
     TestRepo.get_by(MySchema, %{id: 123})
-    TestRepo.get_by(MySchema, id: nil)
 
     message = ~r"value `:atom` in `where` cannot be cast to type :id in query"
     assert_raise Ecto.Query.CastError, message, fn ->
