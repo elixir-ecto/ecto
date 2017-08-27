@@ -1865,15 +1865,6 @@ defmodule Ecto.Schema do
       type == :any and not virtual? ->
         raise ArgumentError, "only virtual fields can have type :any, " <>
                              "invalid type for field #{inspect name}"
-      type == Ecto.DateTime ->
-        IO.warn "Ecto.DateTime is deprecated, please use :naive_datetime instead"
-        type
-      type == Ecto.Date ->
-        IO.warn "Ecto.Date is deprecated, please use :date instead"
-        type
-      type == Ecto.Time ->
-        IO.warn "Ecto.Time is deprecated, please use :time instead"
-        type
       Ecto.Type.primitive?(type) ->
         type
       is_atom(type) ->
