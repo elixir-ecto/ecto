@@ -443,6 +443,10 @@ if Code.ensure_loaded?(Mariaex) do
     defp expr(true, _sources, _query),  do: "TRUE"
     defp expr(false, _sources, _query), do: "FALSE"
 
+    defp expr(%{__struct__: Mariaex.TypedValue, value: bin}, sources, query) when is_binary(bin) do
+      expr(bin, sources, query)
+    end
+
     defp expr(literal, _sources, _query) when is_binary(literal) do
       [?', escape_string(literal), ?']
     end

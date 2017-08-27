@@ -110,6 +110,32 @@ defmodule Ecto.Adapters.MySQL do
   @behaviour Ecto.Adapter.Storage
   @behaviour Ecto.Adapter.Structure
 
+  # Add dumpers functions if tagged values are supported by the driver
+  try do
+    DBConnection.Query.encode(
+      %Mariaex.Query{type: :binary, num_params: 1},
+      [%{__struct__: Mariaex.TypedValue, type: :binary, value: <<3, 2, 1>>}], [])
+
+    @doc false
+    def dumpers(:binary, type),  do: [type, &encode_binary/1]
+    def dumpers(:string, type),  do: [type, &encode_string/1]
+    def dumpers(type_a, type_b), do: super(type_a, type_b)
+
+    defp additional_loaders(:binary, type), do: [&decode_binary/1, type]
+    defp additional_loaders(:string, type), do: [&decode_binary/1, type]
+    defp additional_loaders(_, type),       do: [type]
+
+    defp encode_binary(bin), do: {:ok, encode_typed(:binary, bin)}
+    defp encode_string(bin), do: {:ok, encode_typed(:string, bin)}
+    defp encode_typed(type, val), do: %Mariaex.TypedValue{type: type, value: val}
+
+    defp decode_binary(%{"value" => val}) when is_binary(val), do: {:ok, val}
+    defp decode_binary(val) when is_binary(val), do: {:ok, val}
+  catch
+    _, _ ->
+      defp additional_loaders(_, type), do: [type]
+  end
+
   ## Custom MySQL types
 
   @doc false
@@ -119,7 +145,7 @@ defmodule Ecto.Adapters.MySQL do
   def loaders(:float, type),          do: [&float_decode/1, type]
   def loaders(:binary_id, type),      do: [Ecto.UUID, type]
   def loaders({:embed, _} = type, _), do: [&json_decode/1, &Ecto.Adapters.SQL.load_embed(type, &1)]
-  def loaders(_, type),               do: [type]
+  def loaders(type_a, type_b),        do: additional_loaders(type_a, type_b)
 
   defp bool_decode(<<0>>), do: {:ok, false}
   defp bool_decode(<<1>>), do: {:ok, true}
