@@ -1303,7 +1303,7 @@ defmodule Ecto.Changeset do
       [title: {"cannot be foo", []}]
 
   """
-  @spec validate_change(t, atom, (atom, term -> [{atom, String.t} | {atom, {String.t, Keyword.t}])) :: t
+  @spec validate_change(t, atom, (atom, term -> [{atom, String.t} | {atom, {String.t, Keyword.t}}])) :: t
   def validate_change(%Changeset{} = changeset, field, validator) when is_atom(field) do
     %{changes: changes, errors: errors} = changeset
     ensure_field_exists!(changeset, field)
@@ -1342,7 +1342,7 @@ defmodule Ecto.Changeset do
       [title: :useless_validator]
 
   """
-  @spec validate_change(t, atom, term, (atom, term -> [{atom, String.t} | {atom, {String.t, Keyword.t}])) :: t
+  @spec validate_change(t, atom, term, (atom, term -> [{atom, String.t} | {atom, {String.t, Keyword.t}}])) :: t
   def validate_change(%Changeset{validations: validations} = changeset,
                       field, metadata, validator) do
     changeset = %{changeset | validations: [{field, metadata}|validations]}

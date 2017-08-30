@@ -32,6 +32,13 @@ defmodule Ecto.QueryTest do
       from(p in "posts", select: [macro_map(^key)])
     end
 
+    defmacrop macrotest(x), do: quote(do: is_nil(unquote(x)) or unquote(x) == "A")
+    defmacrop deeper_macrotest(x), do: quote(do: macrotest(unquote(x)) or unquote(x) == "B")
+    test "allows macro in where" do
+      _ = from(p in "posts", where: p.title == "C" or macrotest(p.title))
+      _ = from(p in "posts", where: p.title == "C" or deeper_macrotest(p.title))
+    end
+
     test "does not allow nils in comparison at compile time" do
       assert_raise Ecto.Query.CompileError,
                    ~r"comparison with nil is forbidden as it is unsafe", fn ->

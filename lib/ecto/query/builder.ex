@@ -487,7 +487,7 @@ defmodule Ecto.Query.Builder do
   end
 
   defp try_expansion(expr, type, params, vars, {env, fun}) do
-    case Macro.expand(expr, env) do
+    case Macro.expand_once(expr, env) do
       ^expr ->
         error! """
         `#{Macro.to_string(expr)}` is not a valid query expression.
