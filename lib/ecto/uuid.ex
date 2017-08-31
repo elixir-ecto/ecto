@@ -5,6 +5,8 @@ defmodule Ecto.UUID do
 
   @behaviour Ecto.Type
 
+  @type t :: String.t
+
   @doc """
   The Ecto type.
   """
