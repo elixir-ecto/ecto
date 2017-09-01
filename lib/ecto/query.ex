@@ -409,6 +409,11 @@ defmodule Ecto.Query do
       query = from Employee, order_by: [desc: :salary], limit: 10
       from e in subquery(query), select: avg(e.salary)
 
+  A prefix can be specified for a subquery, similar to standard repo operations:
+
+      query = from Employee, order_by: [desc: :salary], limit: 10
+      from e in subquery(query, prefix: "my_prefix"), select: avg(e.salary)
+
   Although subqueries are not allowed in WHERE expressions,
   most subqueries in WHERE expression can be rewritten as JOINs.
   Imagine you want to write this query:
@@ -438,12 +443,29 @@ defmodule Ecto.Query do
       end)
 
   """
-  def subquery(%Ecto.SubQuery{} = subquery),
-    do: subquery
-  def subquery(%Ecto.Query{} = query),
-    do: %Ecto.SubQuery{query: query}
-  def subquery(queryable),
-    do: %Ecto.SubQuery{query: Ecto.Queryable.to_query(queryable)}
+  def subquery(query_source, opts \\ []) do
+    query_source = if Keyword.has_key?(opts, :prefix) do
+      prefix = Keyword.fetch!(opts, :prefix)
+      add_prefix_to(query_source, prefix)
+    else
+      query_source
+    end
+    wrap_query(query_source)
+  end
+
+  defp add_prefix_to(%Ecto.SubQuery{query: query} = subquery, prefix) do
+    with_prefix = %{query | prefix: prefix}
+    %{subquery | query: with_prefix}
+  end
+  defp add_prefix_to(%Ecto.Query{} = query, prefix), do: %{query | prefix: prefix}
+  defp add_prefix_to(queryable, prefix) do
+    query = Ecto.Queryable.to_query(queryable)
+    %{query | prefix: prefix}
+  end
+
+  defp wrap_query(%Ecto.SubQuery{} = subquery), do: subquery
+  defp wrap_query(%Ecto.Query{} = query), do: %Ecto.SubQuery{query: query}
+  defp wrap_query(queryable), do: %Ecto.SubQuery{query: Ecto.Queryable.to_query(queryable)}
 
   @doc """
   Resets a previously set field on a query.
