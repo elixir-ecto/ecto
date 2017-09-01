@@ -443,29 +443,17 @@ defmodule Ecto.Query do
       end)
 
   """
-  def subquery(query_source, opts \\ []) do
-    query_source = if Keyword.has_key?(opts, :prefix) do
-      prefix = Keyword.fetch!(opts, :prefix)
-      add_prefix_to(query_source, prefix)
-    else
-      query_source
+  def subquery(query, opts \\ []) do
+    subquery = wrap_in_subquery(query)
+    case Keyword.fetch(opts, :prefix) do
+      {:ok, prefix} when is_binary(prefix) -> put_in(subquery.query.prefix, prefix)
+      :error -> subquery
     end
-    wrap_query(query_source)
   end
 
-  defp add_prefix_to(%Ecto.SubQuery{query: query} = subquery, prefix) do
-    with_prefix = %{query | prefix: prefix}
-    %{subquery | query: with_prefix}
-  end
-  defp add_prefix_to(%Ecto.Query{} = query, prefix), do: %{query | prefix: prefix}
-  defp add_prefix_to(queryable, prefix) do
-    query = Ecto.Queryable.to_query(queryable)
-    %{query | prefix: prefix}
-  end
-
-  defp wrap_query(%Ecto.SubQuery{} = subquery), do: subquery
-  defp wrap_query(%Ecto.Query{} = query), do: %Ecto.SubQuery{query: query}
-  defp wrap_query(queryable), do: %Ecto.SubQuery{query: Ecto.Queryable.to_query(queryable)}
+  defp wrap_in_subquery(%Ecto.SubQuery{} = subquery), do: subquery
+  defp wrap_in_subquery(%Ecto.Query{} = query), do: %Ecto.SubQuery{query: query}
+  defp wrap_in_subquery(queryable), do: %Ecto.SubQuery{query: Ecto.Queryable.to_query(queryable)}
 
   @doc """
   Resets a previously set field on a query.
