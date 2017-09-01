@@ -305,7 +305,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "invalid field type" do
-    assert_raise ArgumentError, "invalid type {:apa} for field :name", fn ->
+    assert_raise ArgumentError, "invalid or unknown type {:apa} for field :name", fn ->
       defmodule SchemaInvalidFieldType do
         use Ecto.Schema
 
@@ -321,6 +321,16 @@ defmodule Ecto.SchemaTest do
 
         schema "invalidtype" do
           field :name, OMG
+        end
+      end
+    end
+
+    assert_raise ArgumentError, ~r/schema Ecto.SchemaTest.Schema is not a valid type for field :name/, fn ->
+      defmodule SchemaInvalidFieldType do
+        use Ecto.Schema
+
+        schema "invalidtype" do
+          field :name, Schema
         end
       end
     end
