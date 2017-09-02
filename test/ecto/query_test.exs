@@ -83,6 +83,18 @@ defmodule Ecto.QueryTest do
       assert subquery(subquery("posts")).query.from == {"posts", nil}
       assert subquery(subquery("posts").query).query.from == {"posts", nil}
     end
+
+    test "prefix is not applied if left blank" do
+      assert subquery("posts").query.prefix == nil
+      assert subquery(subquery("posts")).query.prefix == nil
+      assert subquery(subquery("posts").query).query.prefix == nil
+    end
+
+    test "applies prefix to the subquery's query if provided" do
+      assert subquery("posts", prefix: "my_prefix").query.prefix == "my_prefix"
+      assert subquery(subquery("posts", prefix: "my_prefix")).query.prefix == "my_prefix"
+      assert subquery(subquery("posts", prefix: "my_prefix").query).query.prefix == "my_prefix"
+    end
   end
 
   describe "bindings" do
