@@ -232,7 +232,7 @@ This time let's add another user with an avatar association. We can define it di
 
 ```elixir
 iex> avatar = %Avatar{nick_name: "Elixir", pic_url: "http://elixir-lang.org/images/logo.png"}
-iex> user = %User{name: "John Doe", email: "john.doe@example.com", avatar: avatar}
+iex> user = %User{name: "Jane Doe", email: "jane@example.com", avatar: avatar}
 iex> user = Repo.insert!(user)
 %EctoAssoc.User{__meta__: #Ecto.Schema.Metadata<:loaded, "users">,
  avatar: %{__meta__: #Ecto.Schema.Metadata<:loaded, "avatars">,
