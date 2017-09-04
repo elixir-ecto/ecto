@@ -834,6 +834,8 @@ defmodule Ecto.Migration do
   end
 
   def references(table, opts) when is_binary(table) and is_list(opts) do
+    repo_opts = Keyword.take(Runner.repo_config(:migration_primary_key, []), [:type])
+    opts = Keyword.merge(repo_opts, opts)
     reference = struct(%Reference{table: table}, opts)
 
     unless reference.on_delete in [:nothing, :delete_all, :nilify_all] do
