@@ -1415,7 +1415,7 @@ defmodule Ecto.Changeset do
 
       unsafe_validate_unique(changeset, [:email], repo)
       unsafe_validate_unique(changeset, [:city_name, :state_name], repo)
-      unsafe_validate_unique(changeset, [:city_name, :state_name], repo, "city must be unique within state")
+      unsafe_validate_unique(changeset, [:city_name, :state_name], repo, message: "city must be unique within state")
 
   """
   def unsafe_validate_unique(changeset, fields, repo, opts \\ []) do
