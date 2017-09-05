@@ -1036,7 +1036,7 @@ defmodule Ecto.Integration.RepoTest do
       assert p3 == %{id: pid3}
     end
 
-    test "take with assocs" do
+    test "take with preload assocs" do
       %{id: pid} = TestRepo.insert!(%Post{title: "post"})
       TestRepo.insert!(%Comment{post_id: pid, text: "comment"})
       fields = [:id, :title, comments: [:text, :post_id]]
@@ -1053,13 +1053,7 @@ defmodule Ecto.Integration.RepoTest do
       assert p == %{id: pid, title: "post", comments: [%{text: "comment", post_id: pid}]}
     end
 
-    test "take with single nil column" do
-      %Post{} = TestRepo.insert!(%Post{title: "1", counter: nil})
-      assert %{counter: nil} =
-             TestRepo.one(from p in Post, where: p.title == "1", select: [:counter])
-    end
-
-    test "take with nil assoc" do
+    test "take with nil preload assoc" do
       %{id: cid} = TestRepo.insert!(%Comment{text: "comment"})
       fields = [:id, :text, post: [:title]]
 
@@ -1071,6 +1065,30 @@ defmodule Ecto.Integration.RepoTest do
 
       [c] = Comment |> preload(:post) |> select([c], map(c, ^fields)) |> TestRepo.all
       assert c == %{id: cid, text: "comment", post: nil}
+    end
+
+    test "take with join assocs" do
+      %{id: pid} = TestRepo.insert!(%Post{title: "post"})
+      %{id: cid} = TestRepo.insert!(%Comment{post_id: pid, text: "comment"})
+      fields = [:id, :title, comments: [:text, :post_id, :id]]
+      query = from p in Post, where: p.id == ^pid, join: c in assoc(p, :comments), preload: [comments: c]
+
+      p = TestRepo.one(from q in query, select: ^fields)
+      assert %Post{title: "post"} = p
+      assert [%Comment{text: "comment"}] = p.comments
+
+      p = TestRepo.one(from q in query, select: struct(q, ^fields))
+      assert %Post{title: "post"} = p
+      assert [%Comment{text: "comment"}] = p.comments
+
+      p = TestRepo.one(from q in query, select: map(q, ^fields))
+      assert p == %{id: pid, title: "post", comments: [%{text: "comment", post_id: pid, id: cid}]}
+    end
+
+    test "take with single nil column" do
+      %Post{} = TestRepo.insert!(%Post{title: "1", counter: nil})
+      assert %{counter: nil} =
+             TestRepo.one(from p in Post, where: p.title == "1", select: [:counter])
     end
 
     test "field source" do
