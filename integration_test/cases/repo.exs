@@ -271,7 +271,7 @@ defmodule Ecto.Integration.RepoTest do
         |> TestRepo.insert()
       end
 
-    assert exception.message =~ "unique: posts_uuid_index"
+    assert exception.message =~ "posts_uuid_index (unique_constraint)"
     assert exception.message =~ "The changeset has not defined any constraint."
 
     message = ~r/constraint error when attempting to insert struct/
@@ -282,7 +282,7 @@ defmodule Ecto.Integration.RepoTest do
         |> TestRepo.insert()
       end
 
-    assert exception.message =~ "unique: posts_email_changeset"
+    assert exception.message =~ "posts_email_changeset (unique_constraint)"
 
     {:error, changeset} =
       changeset
@@ -408,7 +408,7 @@ defmodule Ecto.Integration.RepoTest do
         |> TestRepo.insert()
       end
 
-    assert exception.message =~ "foreign_key: comments_post_id_fkey"
+    assert exception.message =~ "comments_post_id_fkey (foreign_key_constraint)"
     assert exception.message =~ "The changeset has not defined any constraint."
 
     message = ~r/constraint error when attempting to insert struct/
@@ -419,7 +419,7 @@ defmodule Ecto.Integration.RepoTest do
         |> TestRepo.insert()
       end
 
-    assert exception.message =~ "foreign_key: comments_post_id_other"
+    assert exception.message =~ "comments_post_id_other (foreign_key_constraint)"
 
     {:error, changeset} =
       changeset
@@ -438,7 +438,7 @@ defmodule Ecto.Integration.RepoTest do
         |> TestRepo.insert()
       end
 
-    assert exception.message =~ "foreign_key: comments_post_id_fkey"
+    assert exception.message =~ "comments_post_id_fkey (foreign_key_constraint)"
     assert exception.message =~ "The changeset has not defined any constraint."
 
     message = ~r/constraint error when attempting to insert struct/
@@ -449,7 +449,7 @@ defmodule Ecto.Integration.RepoTest do
         |> TestRepo.insert()
       end
 
-    assert exception.message =~ "foreign_key: comments_post_id_other"
+    assert exception.message =~ "comments_post_id_other (foreign_key_constraint)"
 
     {:error, changeset} =
       changeset
@@ -468,7 +468,7 @@ defmodule Ecto.Integration.RepoTest do
         TestRepo.delete!(user)
       end
 
-    assert exception.message =~ "foreign_key: permalinks_user_id_fkey"
+    assert exception.message =~ "permalinks_user_id_fkey (foreign_key_constraint)"
     assert exception.message =~ "The changeset has not defined any constraint."
   end
 
@@ -486,7 +486,7 @@ defmodule Ecto.Integration.RepoTest do
         |> TestRepo.delete()
       end
 
-    assert exception.message =~ "foreign_key: permalinks_user_id_pther"
+    assert exception.message =~ "permalinks_user_id_pther (foreign_key_constraint)"
   end
 
   @tag :foreign_key_constraint

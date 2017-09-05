@@ -277,17 +277,19 @@ defmodule Ecto.ConstraintError do
           "The changeset has not defined any constraint."
         constraints ->
           "The changeset defined the following constraints:\n\n" <>
-            Enum.map_join(constraints, "\n", &"    * #{&1.type}: #{&1.constraint}")
+            Enum.map_join(constraints, "\n", &"    * #{&1.constraint} (#{&1.type}_constraint)")
       end
 
     msg = """
     constraint error when attempting to #{action} struct:
 
-        * #{type}: #{constraint}
+        * #{constraint} (#{type}_constraint)
 
     If you would like to convert this constraint into an error, please
-    call #{type}_constraint/3 in your changeset and define the proper
-    constraint name. #{constraints}
+    call `#{type}_constraint/3` in your changeset with the constraint
+    `:name` as an option.
+
+    #{constraints}
     """
 
     %__MODULE__{message: msg, type: type, constraint: constraint}
