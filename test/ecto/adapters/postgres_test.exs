@@ -78,8 +78,11 @@ defmodule Ecto.Adapters.PostgresTest do
     query = "posts" |> select([r], r.x) |> normalize
     assert all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
 
-    query = "posts" |> select([:x]) |> normalize
-    assert all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
+    query = "Posts" |> select([:x]) |> normalize
+    assert all(query) == ~s{SELECT P0."x" FROM "Posts" AS P0}
+
+    query = "0posts" |> select([:x]) |> normalize
+    assert all(query) == ~s{SELECT t0."x" FROM "0posts" AS t0}
 
     assert_raise Ecto.QueryError, ~r"PostgreSQL does not support selecting all fields from \"posts\" without a schema", fn ->
       all from(p in "posts", select: p) |> normalize()
