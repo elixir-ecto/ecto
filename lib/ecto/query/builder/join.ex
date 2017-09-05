@@ -47,6 +47,10 @@ defmodule Ecto.Query.Builder.Join do
     {:_, quote(do: Ecto.Query.subquery(unquote(expr))), nil, %{}}
   end
 
+  def escape({:subquery, _, [expr, opts]}, _vars, _env) do
+    {:_, quote(do: Ecto.Query.subquery(unquote(expr), unquote(opts))), nil, %{}}
+  end
+
   def escape({:fragment, _, [_|_]} = expr, vars, env) do
     {expr, {params, :acc}} = Builder.escape(expr, :any, {%{}, :acc}, vars, env)
     {:_, expr, nil, params}
