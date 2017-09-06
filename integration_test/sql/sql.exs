@@ -78,6 +78,7 @@ defmodule Ecto.Integration.SQLTest do
     assert ["'"] == TestRepo.all(query)
   end
 
+  @tag :insert_cell_wise_defaults
   test "Repo.insert_all escape" do
     TestRepo.insert_all(Post, [%{title: "'"}])
 
