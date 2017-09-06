@@ -1718,7 +1718,10 @@ defmodule Ecto.Schema do
         end
       end)
 
+    types = Macro.escape(Map.new(fields))
+
     quote do
+      def __schema__(:types), do: unquote(types)
       unquote(fields_quoted)
       def __schema__(:type, _), do: nil
       unquote(sources_quoted)
