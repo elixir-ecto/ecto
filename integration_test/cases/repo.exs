@@ -502,6 +502,7 @@ defmodule Ecto.Integration.RepoTest do
     assert changeset.errors == [permalink: {"is still associated with this entry", [constraint: :no_assoc]}]
   end
 
+  @tag :foreign_key_constraint
   test "insert and update with failing child foreign key" do
     defmodule Order do
       use Ecto.Integration.Schema
