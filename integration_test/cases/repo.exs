@@ -671,6 +671,7 @@ defmodule Ecto.Integration.RepoTest do
     assert TestRepo.aggregate(query, :count, :visits) == 3
   end
 
+  @tag :insert_cell_wise_defaults
   test "insert all" do
     assert {2, nil} = TestRepo.insert_all("comments", [[text: "1"], %{text: "2", lock_version: 2}])
     assert {2, nil} = TestRepo.insert_all({"comments", Comment}, [[text: "3"], %{text: "4", lock_version: 2}])
@@ -687,11 +688,13 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :invalid_prefix
+  @tag :insert_cell_wise_defaults
   test "insert all with invalid prefix" do
     assert catch_error(TestRepo.insert_all(Post, [[], []], prefix: "oops"))
   end
 
   @tag :returning
+  @tag :insert_cell_wise_defaults
   test "insert all with returning with schema" do
     assert {0, []} = TestRepo.insert_all(Comment, [], returning: true)
     assert {0, nil} = TestRepo.insert_all(Comment, [], returning: false)
@@ -706,6 +709,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :returning
+  @tag :insert_cell_wise_defaults
   test "insert all with returning with schema with field source" do
     assert {0, []} = TestRepo.insert_all(Permalink, [], returning: true)
     assert {0, nil} = TestRepo.insert_all(Permalink, [], returning: false)
@@ -720,6 +724,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :returning
+  @tag :insert_cell_wise_defaults
   test "insert all with returning without schema" do
     {2, [c1, c2]} = TestRepo.insert_all("comments", [[text: "1"], [text: "2"]], returning: [:id, :text])
     assert %{id: _, text: "1"} = c1
@@ -730,6 +735,7 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
+  @tag :insert_cell_wise_defaults
   test "insert all with dumping" do
     datetime = ~N[2014-01-16 20:26:51.000000]
     assert {2, nil} = TestRepo.insert_all(Post, [%{inserted_at: datetime}, %{title: "date"}])
@@ -737,6 +743,7 @@ defmodule Ecto.Integration.RepoTest do
             %Post{inserted_at: nil, title: "date"}] = TestRepo.all(Post)
   end
 
+  @tag :insert_cell_wise_defaults
   test "insert all autogenerates for binary_id type" do
     custom = TestRepo.insert!(%Custom{bid: nil})
     assert custom.bid
