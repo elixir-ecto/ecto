@@ -18,6 +18,7 @@ defmodule Ecto.Integration.SubQueryTest do
            TestRepo.all(from p in subquery(query), select: p)
   end
 
+  @tag :map_boolean_in_expression
   test "from: subqueries with map and select expression" do
     TestRepo.insert!(%Post{text: "hello", public: true})
 
@@ -32,6 +33,7 @@ defmodule Ecto.Integration.SubQueryTest do
            TestRepo.all(from p in subquery(query), select: {p, p.pub})
   end
 
+  @tag :map_boolean_in_expression
   test "from: subqueries with map update and select expression" do
     TestRepo.insert!(%Post{text: "hello", public: true})
 
