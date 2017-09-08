@@ -1626,7 +1626,7 @@ defmodule Ecto.Changeset do
           {value, :graphemes} when is_binary(value) ->
             {:string, String.length(value)}
           {value, _} when is_list(value) ->
-            {:list, length(value)}
+            {:list, list_length(changeset, field, value)}
         end
 
         error = ((is = opts[:is]) && wrong_length(type, length, is, opts)) ||
@@ -1640,6 +1640,15 @@ defmodule Ecto.Changeset do
   defp codepoints_length(<<_::utf8, rest::binary>>, acc), do: codepoints_length(rest, acc + 1)
   defp codepoints_length(<<_, rest::binary>>, acc), do: codepoints_length(rest, acc + 1)
   defp codepoints_length(<<>>, acc), do: acc
+
+  defp list_length(%{types: types}, field, value) do
+    case Map.fetch(types, field) do
+      {:ok, {:assoc, association}} ->
+        if Relation.empty?(association, value), do: 0, else: length(value)
+      {:ok, {:array, _}} ->
+        length(value)
+    end
+  end
 
   defp wrong_length(_type, value, value, _opts), do: nil
   defp wrong_length(:string, _length, value, opts), do:
