@@ -1865,25 +1865,16 @@ defmodule Ecto.Schema do
       type == :any and not virtual? ->
         raise ArgumentError, "only virtual fields can have type :any, " <>
                              "invalid type for field #{inspect name}"
-      type == Ecto.DateTime ->
-        IO.warn "Ecto.DateTime is deprecated, plese use :naive_datetime instead"
-        type
-      type == Ecto.Date ->
-        IO.warn "Ecto.Date is deprecated, plese use :date instead"
-        type
-      type == Ecto.Time ->
-        IO.warn "Ecto.Time is deprecated, plese use :time instead"
-        type
       Ecto.Type.primitive?(type) ->
         type
-      is_atom(type) ->
-        if Code.ensure_compiled?(type) and function_exported?(type, :type, 0) do
-          type
-        else
-          raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}"
-        end
+      is_atom(type) and Code.ensure_compiled?(type) and function_exported?(type, :type, 0) ->
+        type
+      is_atom(type) and function_exported?(type, :__schema__, 1) ->
+        raise ArgumentError,
+          "schema #{inspect type} is not a valid type for field #{inspect name}." <>
+          " Did you mean to use belongs_to, has_one, has_many, embeds_one, or embeds_many instead?"
       true ->
-        raise ArgumentError, "invalid type #{inspect type} for field #{inspect name}"
+        raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}"
     end
   end
 

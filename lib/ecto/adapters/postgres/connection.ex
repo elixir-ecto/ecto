@@ -564,7 +564,7 @@ if Code.ensure_loaded?(Postgrex) do
       current =
         case elem(sources, pos) do
           {table, schema} ->
-            name = [String.first(table) | Integer.to_string(pos)]
+            name = [create_alias(table) | Integer.to_string(pos)]
             {quote_table(prefix, table), name, schema}
           {:fragment, _, _} ->
             {nil, [?f | Integer.to_string(pos)], nil}
@@ -576,6 +576,13 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp create_names(_prefix, _sources, pos, pos) do
       []
+    end
+
+    defp create_alias(<<first, _rest::binary>>) when first in ?a..?z when first in ?A..?Z do
+      <<first>>
+    end
+    defp create_alias(_) do
+      "t"
     end
 
     # DDL

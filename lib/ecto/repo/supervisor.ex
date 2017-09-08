@@ -51,8 +51,8 @@ defmodule Ecto.Repo.Supervisor do
 
     case Keyword.get(config, :url) do
       {:system, env} = url ->
-        IO.warn """
-        Using #{inspect url} for your :url configuration is deprecated.
+        raise """
+        Using #{inspect url} for your :url configuration is no longer supported.
 
         Instead define an init/2 callback in your repository that sets
         the URL accordingly from your system environment:
@@ -87,10 +87,6 @@ defmodule Ecto.Repo.Supervisor do
 
   """
   def parse_url(""), do: []
-
-  def parse_url({:system, env}) when is_binary(env) do
-    parse_url(System.get_env(env) || "")
-  end
 
   def parse_url(url) when is_binary(url) do
     info = URI.parse(url)

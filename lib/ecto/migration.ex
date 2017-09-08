@@ -673,15 +673,14 @@ defmodule Ecto.Migration do
   """
   def add(column, type, opts \\ [])
 
-  def add(column, :datetime, opts) when is_atom(column) do
-    IO.warn "the :datetime type in migrations is deprecated, " <>
-            "please use :utc_datetime or :naive_datetime instead"
-    add(column, :naive_datetime, opts)
+  def add(column, :datetime, _opts) when is_atom(column) do
+    raise ArgumentError, "the :datetime type in migrations is not supported, " <>
+                         "please use :utc_datetime or :naive_datetime instead"
   end
 
   def add(column, type, opts) when is_atom(column) and is_list(opts) do
     if opts[:scale] && !opts[:precision] do
-      raise ArgumentError, "Column #{Atom.to_string(column)} is missing precision option"
+      raise ArgumentError, "column #{Atom.to_string(column)} is missing precision option"
     end
 
     validate_type!(type)
@@ -775,15 +774,14 @@ defmodule Ecto.Migration do
   """
   def modify(column, type, opts \\ [])
 
-  def modify(column, :datetime, opts) when is_atom(column) do
-    IO.warn "the :datetime type in migrations is deprecated, " <>
-            "please use :utc_datetime or :naive_datetime instead"
-    modify(column, :naive_datetime, opts)
+  def modify(column, :datetime, _opts) when is_atom(column) do
+    raise ArgumentError, "the :datetime type in migrations is not supported, " <>
+                         "please use :utc_datetime or :naive_datetime instead"
   end
 
   def modify(column, type, opts) when is_atom(column) and is_list(opts) do
     if opts[:scale] && !opts[:precision] do
-      raise ArgumentError, "Column #{Atom.to_string(column)} is missing precision option"
+      raise ArgumentError, "column #{Atom.to_string(column)} is missing precision option"
     end
 
     Runner.subcommand {:modify, column, type, opts}

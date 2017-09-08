@@ -271,7 +271,7 @@ defmodule Ecto.Integration.RepoTest do
         |> TestRepo.insert()
       end
 
-    assert exception.message =~ "unique: posts_uuid_index"
+    assert exception.message =~ "posts_uuid_index (unique_constraint)"
     assert exception.message =~ "The changeset has not defined any constraint."
 
     message = ~r/constraint error when attempting to insert struct/
@@ -282,7 +282,7 @@ defmodule Ecto.Integration.RepoTest do
         |> TestRepo.insert()
       end
 
-    assert exception.message =~ "unique: posts_email_changeset"
+    assert exception.message =~ "posts_email_changeset (unique_constraint)"
 
     {:error, changeset} =
       changeset
@@ -408,7 +408,7 @@ defmodule Ecto.Integration.RepoTest do
         |> TestRepo.insert()
       end
 
-    assert exception.message =~ "foreign_key: comments_post_id_fkey"
+    assert exception.message =~ "comments_post_id_fkey (foreign_key_constraint)"
     assert exception.message =~ "The changeset has not defined any constraint."
 
     message = ~r/constraint error when attempting to insert struct/
@@ -419,7 +419,7 @@ defmodule Ecto.Integration.RepoTest do
         |> TestRepo.insert()
       end
 
-    assert exception.message =~ "foreign_key: comments_post_id_other"
+    assert exception.message =~ "comments_post_id_other (foreign_key_constraint)"
 
     {:error, changeset} =
       changeset
@@ -438,7 +438,7 @@ defmodule Ecto.Integration.RepoTest do
         |> TestRepo.insert()
       end
 
-    assert exception.message =~ "foreign_key: comments_post_id_fkey"
+    assert exception.message =~ "comments_post_id_fkey (foreign_key_constraint)"
     assert exception.message =~ "The changeset has not defined any constraint."
 
     message = ~r/constraint error when attempting to insert struct/
@@ -449,7 +449,7 @@ defmodule Ecto.Integration.RepoTest do
         |> TestRepo.insert()
       end
 
-    assert exception.message =~ "foreign_key: comments_post_id_other"
+    assert exception.message =~ "comments_post_id_other (foreign_key_constraint)"
 
     {:error, changeset} =
       changeset
@@ -468,7 +468,7 @@ defmodule Ecto.Integration.RepoTest do
         TestRepo.delete!(user)
       end
 
-    assert exception.message =~ "foreign_key: permalinks_user_id_fkey"
+    assert exception.message =~ "permalinks_user_id_fkey (foreign_key_constraint)"
     assert exception.message =~ "The changeset has not defined any constraint."
   end
 
@@ -486,7 +486,7 @@ defmodule Ecto.Integration.RepoTest do
         |> TestRepo.delete()
       end
 
-    assert exception.message =~ "foreign_key: permalinks_user_id_pther"
+    assert exception.message =~ "permalinks_user_id_pther (foreign_key_constraint)"
   end
 
   @tag :foreign_key_constraint
@@ -601,7 +601,6 @@ defmodule Ecto.Integration.RepoTest do
   test "get_by(!)" do
     post1 = TestRepo.insert!(%Post{title: "1", text: "hai"})
     post2 = TestRepo.insert!(%Post{title: "2", text: "hello"})
-    post3 = TestRepo.insert!(%Post{title: "3", text: nil})
 
     assert post1 == TestRepo.get_by(Post, id: post1.id)
     assert post1 == TestRepo.get_by(Post, text: post1.text)
@@ -609,13 +608,11 @@ defmodule Ecto.Integration.RepoTest do
     assert post2 == TestRepo.get_by(Post, id: to_string(post2.id)) # With casting
     assert nil   == TestRepo.get_by(Post, text: "hey")
     assert nil   == TestRepo.get_by(Post, id: post2.id, text: "hey")
-    assert post3 == TestRepo.get_by(Post, text: nil)
 
     assert post1 == TestRepo.get_by!(Post, id: post1.id)
     assert post1 == TestRepo.get_by!(Post, text: post1.text)
     assert post1 == TestRepo.get_by!(Post, id: post1.id, text: post1.text)
     assert post2 == TestRepo.get_by!(Post, id: to_string(post2.id)) # With casting
-    assert post3 == TestRepo.get_by!(Post, text: nil)
 
     assert post1 == TestRepo.get_by!(Post, %{id: post1.id})
 
@@ -1039,7 +1036,7 @@ defmodule Ecto.Integration.RepoTest do
       assert p3 == %{id: pid3}
     end
 
-    test "take with assocs" do
+    test "take with preload assocs" do
       %{id: pid} = TestRepo.insert!(%Post{title: "post"})
       TestRepo.insert!(%Comment{post_id: pid, text: "comment"})
       fields = [:id, :title, comments: [:text, :post_id]]
@@ -1056,13 +1053,7 @@ defmodule Ecto.Integration.RepoTest do
       assert p == %{id: pid, title: "post", comments: [%{text: "comment", post_id: pid}]}
     end
 
-    test "take with single nil column" do
-      %Post{} = TestRepo.insert!(%Post{title: "1", counter: nil})
-      assert %{counter: nil} =
-             TestRepo.one(from p in Post, where: p.title == "1", select: [:counter])
-    end
-
-    test "take with nil assoc" do
+    test "take with nil preload assoc" do
       %{id: cid} = TestRepo.insert!(%Comment{text: "comment"})
       fields = [:id, :text, post: [:title]]
 
@@ -1074,6 +1065,30 @@ defmodule Ecto.Integration.RepoTest do
 
       [c] = Comment |> preload(:post) |> select([c], map(c, ^fields)) |> TestRepo.all
       assert c == %{id: cid, text: "comment", post: nil}
+    end
+
+    test "take with join assocs" do
+      %{id: pid} = TestRepo.insert!(%Post{title: "post"})
+      %{id: cid} = TestRepo.insert!(%Comment{post_id: pid, text: "comment"})
+      fields = [:id, :title, comments: [:text, :post_id, :id]]
+      query = from p in Post, where: p.id == ^pid, join: c in assoc(p, :comments), preload: [comments: c]
+
+      p = TestRepo.one(from q in query, select: ^fields)
+      assert %Post{title: "post"} = p
+      assert [%Comment{text: "comment"}] = p.comments
+
+      p = TestRepo.one(from q in query, select: struct(q, ^fields))
+      assert %Post{title: "post"} = p
+      assert [%Comment{text: "comment"}] = p.comments
+
+      p = TestRepo.one(from q in query, select: map(q, ^fields))
+      assert p == %{id: pid, title: "post", comments: [%{text: "comment", post_id: pid, id: cid}]}
+    end
+
+    test "take with single nil column" do
+      %Post{} = TestRepo.insert!(%Post{title: "1", counter: nil})
+      assert %{counter: nil} =
+             TestRepo.one(from p in Post, where: p.title == "1", select: [:counter])
     end
 
     test "field source" do

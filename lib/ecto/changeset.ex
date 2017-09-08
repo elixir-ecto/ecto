@@ -1303,7 +1303,7 @@ defmodule Ecto.Changeset do
       [title: {"cannot be foo", []}]
 
   """
-  @spec validate_change(t, atom, (atom, term -> [error])) :: t
+  @spec validate_change(t, atom, (atom, term -> [{atom, String.t} | {atom, {String.t, Keyword.t}}])) :: t
   def validate_change(%Changeset{} = changeset, field, validator) when is_atom(field) do
     %{changes: changes, errors: errors} = changeset
     ensure_field_exists!(changeset, field)
@@ -1342,7 +1342,7 @@ defmodule Ecto.Changeset do
       [title: :useless_validator]
 
   """
-  @spec validate_change(t, atom, term, (atom, term -> [error])) :: t
+  @spec validate_change(t, atom, term, (atom, term -> [{atom, String.t} | {atom, {String.t, Keyword.t}}])) :: t
   def validate_change(%Changeset{validations: validations} = changeset,
                       field, metadata, validator) do
     changeset = %{changeset | validations: [{field, metadata}|validations]}
@@ -1415,7 +1415,7 @@ defmodule Ecto.Changeset do
 
       unsafe_validate_unique(changeset, [:email], repo)
       unsafe_validate_unique(changeset, [:city_name, :state_name], repo)
-      unsafe_validate_unique(changeset, [:city_name, :state_name], repo, "city must be unique within state")
+      unsafe_validate_unique(changeset, [:city_name, :state_name], repo, message: "city must be unique within state")
 
   """
   def unsafe_validate_unique(changeset, fields, repo, opts \\ []) do
@@ -1584,11 +1584,18 @@ defmodule Ecto.Changeset do
   @doc """
   Validates a change is a string or list of the given length.
 
+  Note that the length of a string is counted in graphemes. If using
+  this validation to match a character limit of a database backend,
+  it's likely that the limit ignores graphemes and limits the number
+  of unicode characters. Then consider using the `:count` option to
+  limit the number of codepoints.
+
   ## Options
 
     * `:is` - the length must be exactly this value
     * `:min` - the length must be greater than or equal to this value
     * `:max` - the length must be less than or equal to this value
+    * `:count` - what length to count for string, `:graphemes` (default) or `:codepoints`
     * `:message` - the message on failure, depending on the validation, is one of:
       * for strings:
         * "should be %{count} character(s)"
@@ -1612,10 +1619,13 @@ defmodule Ecto.Changeset do
   def validate_length(changeset, field, opts) when is_list(opts) do
     validate_change changeset, field, {:length, opts}, fn
       _, value ->
-        {type, length} = case value do
-          value when is_binary(value) ->
+        count_type = opts[:count] || :graphemes
+        {type, length} = case {value, count_type} do
+          {value, :codepoints} when is_binary(value) ->
+            {:string, codepoints_length(value, 0)}
+          {value, :graphemes} when is_binary(value) ->
             {:string, String.length(value)}
-          value when is_list(value) ->
+          {value, _} when is_list(value) ->
             {:list, length(value)}
         end
 
@@ -1626,6 +1636,10 @@ defmodule Ecto.Changeset do
         if error, do: [{field, error}], else: []
     end
   end
+
+  defp codepoints_length(<<_::utf8, rest::binary>>, acc), do: codepoints_length(rest, acc + 1)
+  defp codepoints_length(<<_, rest::binary>>, acc), do: codepoints_length(rest, acc + 1)
+  defp codepoints_length(<<>>, acc), do: acc
 
   defp wrong_length(_type, value, value, _opts), do: nil
   defp wrong_length(:string, _length, value, opts), do:

@@ -49,7 +49,7 @@ defmodule Ecto.Integration.ConstraintsTest do
       assert_raise Ecto.ConstraintError, ~r/constraint error when attempting to insert struct/, fn ->
         PoolRepo.insert(overlapping_changeset)
       end
-    assert exception.message =~ "exclude: cannot_overlap"
+    assert exception.message =~ "cannot_overlap (exclude_constraint)"
     assert exception.message =~ "The changeset has not defined any constraint."
 
     message = ~r/constraint error when attempting to insert struct/
@@ -59,7 +59,7 @@ defmodule Ecto.Integration.ConstraintsTest do
         |> Ecto.Changeset.exclusion_constraint(:from)
         |> PoolRepo.insert()
       end
-    assert exception.message =~ "exclude: cannot_overlap"
+    assert exception.message =~ "cannot_overlap (exclude_constraint)"
 
     {:error, changeset} =
       overlapping_changeset
@@ -77,7 +77,7 @@ defmodule Ecto.Integration.ConstraintsTest do
         PoolRepo.insert(changeset)
       end
 
-    assert exception.message =~ "check: positive_price"
+    assert exception.message =~ "positive_price (check_constraint)"
     assert exception.message =~ "The changeset has not defined any constraint."
 
     # When the changeset does expect the db error, but doesn't give a custom message

@@ -66,6 +66,12 @@ defmodule Ecto.Query.Builder.JoinTest do
     join("posts", :left, [p], c in assoc(p, ^assoc), true)
   end
 
+  test "accepts subqueries" do
+    subquery = "comments"
+    join("posts", :left, [p], c in subquery(subquery), true)
+    join("posts", :left, [p], c in subquery(subquery, prefix: "sample"), true)
+  end
+
   test "raises on invalid qualifier" do
     assert_raise ArgumentError,
                  ~r/invalid join qualifier `:whatever`/, fn ->
