@@ -2304,9 +2304,10 @@ defmodule Ecto.Changeset do
       ...> end)
       %{title: ["should be at least 3 characters"]}
 
-  Optionally function can accept three arguments: `changeset`, `field` and error tuple `{msg, opts}`.
-  It is useful whenever you want to extract validations rules from `changeset.validations`
-  to build detailed error description.
+  Optionally function can accept three arguments: `changeset`, `field`
+  and error tuple `{msg, opts}`. It is useful whenever you want to extract
+  validations rules from `changeset.validations` to build detailed error
+  description.
   """
   @spec traverse_errors(t, (error -> String.t) | (Changeset.t, atom, error -> String.t)) :: %{atom => [String.t]}
   def traverse_errors(%Changeset{errors: errors, changes: changes, types: types} = changeset, msg_func)
