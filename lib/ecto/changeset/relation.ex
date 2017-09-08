@@ -29,19 +29,14 @@ defmodule Ecto.Changeset.Relation do
   """
   def empty?(%{cardinality: _}, %NotLoaded{}), do: true
   def empty?(%{cardinality: :many}, []), do: true
-  def empty?(%{cardinality: :many}, changes) do
-    Enum.all?(changes, fn
-      %Changeset{action: action} when action in [:replace, :delete] -> true
-      _ -> false
-    end)
-  end
+  def empty?(%{cardinality: :many}, changes), do: filter_empty(changes) == []
   def empty?(%{cardinality: :one}, nil), do: true
   def empty?(%{}, _), do: false
 
   @doc """
   Filter empty changes
   """
-  def filter_empty(%{cardinality: :many}, changes) do
+  def filter_empty(changes) do
     Enum.filter(changes, fn(%{action: action}) -> not action in [:replace, :delete] end)
   end
 

@@ -1643,8 +1643,8 @@ defmodule Ecto.Changeset do
 
   defp list_length(%{types: types}, field, value) do
     case Map.fetch(types, field) do
-      {:ok, {:assoc, association}} ->
-        length(Relation.filter_empty(association, value))
+      {:ok, {tag, _association}} when tag in [:embed, :assoc] ->
+        length(Relation.filter_empty(value))
       {:ok, {:array, _}} ->
         length(value)
     end
