@@ -514,5 +514,16 @@ defmodule Ecto.MigrationTest do
     assert "SELECT 2" = last_command()
   end
 
+  test "references foreign keys types must be the same as primary defaults" do
+    %{runner: runner} = Process.get(:ecto_migration)
+    Agent.update(runner, fn state ->
+      config = Keyword.put(state.config, :migration_primary_key, [type: :binary_id])
+      Map.put(state, :config, config)
+    end)
+
+    assert references(:posts) ==
+           %Reference{table: "posts", column: :id, type: :binary_id}
+  end
+
   defp last_command(), do: Process.get(:last_command)
 end

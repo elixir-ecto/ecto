@@ -7,6 +7,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
   alias Ecto.Queryable
   alias Ecto.Adapters.MySQL.Connection, as: SQL
+  alias Ecto.Migration.Reference
 
   defmodule Schema do
     use Ecto.Schema
@@ -549,7 +550,7 @@ defmodule Ecto.Adapters.MySQLTest do
   # DDL
 
   import Ecto.Migration, only: [table: 1, table: 2, index: 2, index: 3,
-                                references: 1, references: 2, constraint: 3]
+                                constraint: 3]
 
   test "executing a string during migration" do
     assert execute_ddl("example") == ["example"]
@@ -584,7 +585,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "create table with prefix" do
     create = {:create, table(:posts, prefix: :foo),
-               [{:add, :category_0, references(:categories, prefix: :foo), []}]}
+               [{:add, :category_0, %Reference{table: :categories}, []}]}
 
     assert execute_ddl(create) == ["""
     CREATE TABLE `foo`.`posts` (`category_0` BIGINT UNSIGNED,
@@ -602,11 +603,11 @@ defmodule Ecto.Adapters.MySQLTest do
   test "create table with references" do
     create = {:create, table(:posts),
                [{:add, :id, :serial, [primary_key: true]},
-                {:add, :category_0, references(:categories), []},
-                {:add, :category_1, references(:categories, name: :foo_bar), []},
-                {:add, :category_2, references(:categories, on_delete: :nothing), []},
-                {:add, :category_3, references(:categories, on_delete: :delete_all), [null: false]},
-                {:add, :category_4, references(:categories, on_delete: :nilify_all), []}]}
+                {:add, :category_0, %Reference{table: :categories}, []},
+                {:add, :category_1, %Reference{table: :categories, name: :foo_bar}, []},
+                {:add, :category_2, %Reference{table: :categories, on_delete: :nothing}, []},
+                {:add, :category_3, %Reference{table: :categories, on_delete: :delete_all}, [null: false]},
+                {:add, :category_4, %Reference{table: :categories, on_delete: :nilify_all}, []}]}
 
     assert execute_ddl(create) == ["""
     CREATE TABLE `posts` (`id` bigint unsigned not null auto_increment,
@@ -691,10 +692,10 @@ defmodule Ecto.Adapters.MySQLTest do
   test "alter table" do
     alter = {:alter, table(:posts),
                [{:add, :title, :string, [default: "Untitled", size: 100, null: false]},
-                {:add, :author_id, references(:author), []},
+                {:add, :author_id, %Reference{table: :author}, []},
                 {:modify, :price, :numeric, [precision: 8, scale: 2, null: true]},
                 {:modify, :cost, :integer, [null: false, default: nil]},
-                {:modify, :permalink_id, references(:permalinks), null: false},
+                {:modify, :permalink_id, %Reference{table: :permalinks}, null: false},
                 {:remove, :summary}]}
 
     assert execute_ddl(alter) == ["""
@@ -710,8 +711,8 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "alter table with prefix" do
     alter = {:alter, table(:posts, prefix: :foo),
-               [{:add, :author_id, references(:author), []},
-                {:modify, :permalink_id, references(:permalinks), null: false}]}
+               [{:add, :author_id, %Reference{table: :author}, []},
+                {:modify, :permalink_id, %Reference{table: :permalinks}, null: false}]}
 
     assert execute_ddl(alter) == ["""
     ALTER TABLE `foo`.`posts` ADD `author_id` BIGINT UNSIGNED,
