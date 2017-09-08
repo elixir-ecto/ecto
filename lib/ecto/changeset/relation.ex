@@ -39,6 +39,13 @@ defmodule Ecto.Changeset.Relation do
   def empty?(%{}, _), do: false
 
   @doc """
+  Filter empty changes
+  """
+  def filter_empty(%{cardinality: :many}, changes) do
+    Enum.filter(changes, fn(%{action: action}) -> not action in [:replace, :delete] end)
+  end
+
+  @doc """
   Applies related changeset changes
   """
   def apply_changes(%{cardinality: :one}, nil) do

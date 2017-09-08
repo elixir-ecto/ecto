@@ -1644,7 +1644,7 @@ defmodule Ecto.Changeset do
   defp list_length(%{types: types}, field, value) do
     case Map.fetch(types, field) do
       {:ok, {:assoc, association}} ->
-        if Relation.empty?(association, value), do: 0, else: length(value)
+        length(Relation.filter_empty(association, value))
       {:ok, {:array, _}} ->
         length(value)
     end
