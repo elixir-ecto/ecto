@@ -37,7 +37,12 @@ defmodule Ecto.Changeset.Relation do
   Filter empty changes
   """
   def filter_empty(changes) do
-    Enum.filter(changes, fn(%{action: action}) -> not action in [:replace, :delete] end)
+    Enum.filter(changes, fn(change) ->
+      case change do
+        %{action: action} -> not action in [:replace, :delete]
+        _ -> true
+      end
+    end)
   end
 
   @doc """
