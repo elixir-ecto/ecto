@@ -869,6 +869,12 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [topics: {"yada", count: 10, validation: :length, kind: :is}]
   end
 
+  test "validate_length/3 with associations" do
+    post = %Post{comments: [%Comment{}]}
+    changeset = change(post) |> put_assoc(:comments, []) |> validate_length(:comments, min: 1)
+    assert changeset.errors == [comments: {"should have at least %{count} item(s)", count: 1, validation: :length, kind: :min}]
+  end
+
   test "validate_number/3" do
     changeset = changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 0)
