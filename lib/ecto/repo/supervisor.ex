@@ -3,6 +3,7 @@ defmodule Ecto.Repo.Supervisor do
   use Supervisor
 
   @defaults [timeout: 15000, pool_timeout: 5000]
+  @integer_url_query_params ["timeout", "pool_size", "pool_timeout"]
 
   @doc """
   Starts the repo supervisor.
@@ -83,7 +84,7 @@ defmodule Ecto.Repo.Supervisor do
 
   The format must be:
 
-      "ecto://username:password@hostname:port/database"
+      "ecto://username:password@hostname:port/database?ssl=true&timeout=1000"
 
   """
   def parse_url(""), do: []
@@ -106,13 +107,44 @@ defmodule Ecto.Repo.Supervisor do
     destructure [username, password], info.userinfo && String.split(info.userinfo, ":")
     "/" <> database = info.path
 
-    opts = [username: username,
-            password: password,
-            database: database,
-            hostname: info.host,
-            port:     info.port]
+    url_opts = [username: username,
+                password: password,
+                database: database,
+                hostname: info.host,
+                port:     info.port]
 
-    for {k, v} <- opts, v, do: {k, if(is_binary(v), do: URI.decode(v), else: v)}
+    query_opts = parse_uri_query(info)
+
+    for {k, v} <- url_opts ++ query_opts, not is_nil(v), do: {k, if(is_binary(v), do: URI.decode(v), else: v)}
+  end
+
+  defp parse_uri_query(%URI{query: nil}),
+    do: []
+  defp parse_uri_query(%URI{query: query} = url) do
+    query
+    |> URI.query_decoder()
+    |> Enum.reduce([], fn
+      {"ssl", "true"}, acc ->
+        [{:ssl, true}] ++ acc
+
+      {"ssl", "false"}, acc ->
+        [{:ssl, false}] ++ acc
+
+      {key, value}, acc when key in @integer_url_query_params ->
+        [{String.to_atom(key), parse_integer!(key, value, url)}] ++ acc
+
+      {key, _value}, _acc ->
+        raise Ecto.InvalidURLError, url: url, message: "unsupported query parameter `#{key}`"
+    end)
+  end
+
+  defp parse_integer!(key, value, url) do
+    case Integer.parse(value) do
+      {int, ""} ->
+        int
+      _ ->
+        raise Ecto.InvalidURLError, url: url, message: "can not parse value `#{value}` for parameter `#{key}` as an integer"
+    end
   end
 
   ## Callbacks

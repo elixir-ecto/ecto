@@ -64,6 +64,12 @@ defmodule Ecto.Repo do
   The schema can be of any value. The path represents the database name
   while options are simply merged in.
 
+  URL can include query parameters to override shared and adapter-specific
+  options `ssl`, `timeout`, `pool_timeout`, `pool_size`:
+
+    config :my_app, Repo,
+        url: "ecto://postgres:postgres@localhost/ecto_simple?ssl=true&pool_size=10"
+
   In case the URL needs to be dynamically configured, for example by
   reading a system environment variable, such can be done via the
   `c:init/2` repository callback:
