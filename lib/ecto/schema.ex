@@ -1652,7 +1652,7 @@ defmodule Ecto.Schema do
     if Process.info(self(), :error_handler) == {:error_handler, Kernel.ErrorHandler} do
       for name <- module.__schema__(:associations) do
         assoc = module.__schema__(:association, name)
-        case assoc.__struct__.after_compile_validation(assoc) do
+        case assoc.__struct__.after_compile_validation(assoc, env) do
           :ok -> :ok
           {:error, message} ->
             IO.warn "invalid association `#{assoc.field}` in schema #{inspect module}: #{message}",
