@@ -268,10 +268,10 @@ defmodule Ecto.Adapters.PostgresTest do
     assert all(query) == ~s{SELECT $1::uuid FROM "schema" AS s0}
 
     query = Schema |> select([], type(^1, Custom.Permalink)) |> normalize
-    assert all(query) == ~s{SELECT $1::integer FROM "schema" AS s0}
+    assert all(query) == ~s{SELECT $1::bigint FROM "schema" AS s0}
 
     query = Schema |> select([], type(^[1,2,3], {:array, Custom.Permalink})) |> normalize
-    assert all(query) == ~s{SELECT $1::integer[] FROM "schema" AS s0}
+    assert all(query) == ~s{SELECT $1::bigint[] FROM "schema" AS s0}
   end
 
   test "nested expressions" do
@@ -382,8 +382,8 @@ defmodule Ecto.Adapters.PostgresTest do
 
     result =
       "SELECT TRUE FROM \"schema\" AS s0 " <>
-      "WHERE (extract($1 from s0.\"start_time\") = $2::integer) " <>
-      "AND (extract($3 from s0.\"start_time\") = $4::integer)"
+      "WHERE (extract($1 from s0.\"start_time\") = $2::bigint) " <>
+      "AND (extract($3 from s0.\"start_time\") = $4::bigint)"
 
     assert all(query) == String.trim(result)
   end
