@@ -26,6 +26,23 @@ The query syntax also seen some improvements: map updates are supported in subqu
 
 Finally, the UPSERT support added on Ecto v2.1 is getting more improvements: the `{:constraint, constraint}` is now supported as conflict target and the `:returning` option was added to `Ecto.Repo.insert/2`, mirroring the behaviour of `insert_all`.
 
+## v2.2.2 (2017-09-09)
+
+### Enhancements
+
+  * [Ecto.Changeset] Allow validation of codepoint count in validate_length
+  * [Ecto.Query] Support `prefix` in subqueries
+
+### Bug fixes
+
+  * [Ecto.Adapters] Properly alias table names starting with numbers
+  * [Ecto.Adapters.Postgres] Make sure type/2 with integer/id types are tagged as bigint in Posgres
+  * [Ecto.Changeset] Properly validate `has_many`/`many_to_many` associations on `validate_length/3` when entries are being deleted/replaced
+  * [Ecto.Migration] Set foreign key type to the same type as the primary key in the repository configuration
+  * [Ecto.Repo] Do not attempt to preload `has_one`/`belongs_to` associations already loaded as nil
+  * [Ecto.Schema] Do not attempt to validate associations if the associated module is in context
+  * [Ecto.Schema] Bring back `__schema__(:types)` for backwards compatibility
+
 ## v2.2.1 (2017-08-27)
 
 ### Bug fixes
