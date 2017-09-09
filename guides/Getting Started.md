@@ -99,7 +99,6 @@ def start(_type, _args) do
 `Elixir >= 1.5.0`:
 ```elixir
 def start(_type, _args) do
-  import Supervisor.Spec
 
   children = [
     Friends.Repo,
