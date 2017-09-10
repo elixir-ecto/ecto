@@ -25,6 +25,8 @@ defmodule Ecto.Migrator do
   alias Ecto.Migration.Runner
   alias Ecto.Migration.SchemaMigration
 
+  import Ecto.Query, only: [from: 1]
+
   @doc """
   Gets all migrated versions.
 
@@ -57,13 +59,19 @@ defmodule Ecto.Migrator do
   """
   @spec up(Ecto.Repo.t, integer, module, Keyword.t) :: :ok | :already_up | no_return
   def up(repo, version, module, opts \\ []) do
-    versions = migrated_versions(repo, opts)
+    verbose_schema_migration repo, "create schema migrations table", fn ->
+      SchemaMigration.ensure_schema_migrations_table!(repo, opts[:prefix])
+    end
 
-    if version in versions do
-      :already_up
-    else
-      do_up(repo, version, module, opts)
-      :ok
+    lock_schema_migrations repo, opts, fn ->
+      versions = SchemaMigration.migrated_versions(repo, opts[:prefix])
+
+      if version in versions do
+        :already_up
+      else
+        do_up(repo, version, module, opts)
+        :ok
+      end
     end
   end
 
@@ -72,9 +80,10 @@ defmodule Ecto.Migrator do
       attempt(repo, module, :forward, :up, :up, opts)
         || attempt(repo, module, :forward, :change, :up, opts)
         || raise Ecto.MigrationError, "#{inspect module} does not implement a `up/0` or `change/0` function"
-      verbose_schema_migration repo, "update schema migrations", fn ->
-        SchemaMigration.up(repo, version, opts[:prefix])
-      end
+    end
+
+    verbose_schema_migration repo, "update schema migrations", fn ->
+      SchemaMigration.up(repo, version, opts[:prefix])
     end
   end
 
@@ -90,13 +99,19 @@ defmodule Ecto.Migrator do
   """
   @spec down(Ecto.Repo.t, integer, module) :: :ok | :already_down | no_return
   def down(repo, version, module, opts \\ []) do
-    versions = migrated_versions(repo, opts)
+    verbose_schema_migration repo, "create schema migrations table", fn ->
+      SchemaMigration.ensure_schema_migrations_table!(repo, opts[:prefix])
+    end
 
-    if version in versions do
-      do_down(repo, version, module, opts)
-      :ok
-    else
-      :already_down
+    lock_schema_migrations repo, opts, fn ->
+      versions = SchemaMigration.migrated_versions(repo, opts[:prefix])
+
+      if version in versions do
+        do_down(repo, version, module, opts)
+        :ok
+      else
+        :already_down
+      end
     end
   end
 
@@ -105,13 +120,27 @@ defmodule Ecto.Migrator do
       attempt(repo, module, :forward, :down, :down, opts)
         || attempt(repo, module, :backward, :change, :down, opts)
         || raise Ecto.MigrationError, "#{inspect module} does not implement a `down/0` or `change/0` function"
-      verbose_schema_migration repo, "update schema migrations", fn ->
-        SchemaMigration.down(repo, version, opts[:prefix])
-      end
+    end
+
+    verbose_schema_migration repo, "update schema migrations", fn ->
+      SchemaMigration.down(repo, version, opts[:prefix])
     end
   end
 
   defp run_maybe_in_transaction(repo, module, fun) do
+    Task.async(fn ->
+      do_run_maybe_in_transaction(repo, module, fun)
+    end)
+    |> Task.await(:infinity)
+    |> case do
+      {:error, error, stacktrace} ->
+        reraise error, stacktrace
+      result ->
+        result
+    end
+  end
+
+  defp do_run_maybe_in_transaction(repo, module, fun) do
     cond do
       module.__migration__[:disable_ddl_transaction] ->
         fun.()
@@ -120,6 +149,8 @@ defmodule Ecto.Migrator do
       true ->
         fun.()
     end
+  rescue error ->
+    {:error, error, System.stacktrace}
   end
 
   defp attempt(repo, module, direction, operation, reference, opts) do
@@ -154,17 +185,23 @@ defmodule Ecto.Migrator do
   """
   @spec run(Ecto.Repo.t, binary | [{integer, module}], atom, Keyword.t) :: [integer]
   def run(repo, migration_source, direction, opts) do
-    versions = migrated_versions(repo, opts)
+    verbose_schema_migration repo, "create schema migrations table", fn ->
+      SchemaMigration.ensure_schema_migrations_table!(repo, opts[:prefix])
+    end
 
-    cond do
-      opts[:all] ->
-        run_all(repo, versions, migration_source, direction, opts)
-      to = opts[:to] ->
-        run_to(repo, versions, migration_source, direction, to, opts)
-      step = opts[:step] ->
-        run_step(repo, versions, migration_source, direction, step, opts)
-      true ->
-        raise ArgumentError, "expected one of :all, :to, or :step strategies"
+    lock_schema_migrations repo, opts, fn ->
+      versions = SchemaMigration.migrated_versions(repo, opts[:prefix])
+
+      cond do
+        opts[:all] ->
+          run_all(repo, versions, migration_source, direction, opts)
+        to = opts[:to] ->
+          run_to(repo, versions, migration_source, direction, to, opts)
+        step = opts[:step] ->
+          run_step(repo, versions, migration_source, direction, step, opts)
+        true ->
+          raise ArgumentError, "expected one of :all, :to, or :step strategies"
+      end
     end
   end
 
@@ -177,12 +214,34 @@ defmodule Ecto.Migrator do
     versions = migrated_versions(repo)
 
     Enum.map(pending_in_direction(versions, directory, :down) |> Enum.reverse, fn {a, b, _}
-     -> {:up, a, b}
+      -> {:up, a, b}
     end)
     ++
     Enum.map(pending_in_direction(versions, directory, :up), fn {a, b, _} ->
       {:down, a, b}
     end)
+  end
+
+  defp lock_schema_migrations(repo, opts, fun) do
+    repo.transaction(fn ->
+      # TODO: Move to adapter
+      Ecto.Query.from(p in {SchemaMigration.get_source(repo), SchemaMigration}, select: p.version, lock: "FOR UPDATE")
+      |> Map.put(:prefix, opts[:prefix])
+      |> repo.all(timeout: :infinity, log: false)
+
+      try do
+        fun.()
+      rescue
+        error ->
+          {:error, error, System.stacktrace}
+      end
+    end)
+    |> case do
+      {:ok, {:error, error, stacktrace}} ->
+        reraise error, stacktrace
+      {:ok, result} ->
+        result
+    end
   end
 
   defp run_to(repo, versions, migration_source, direction, target, opts) do
