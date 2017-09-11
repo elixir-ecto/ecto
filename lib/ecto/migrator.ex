@@ -75,18 +75,21 @@ defmodule Ecto.Migrator do
   end
 
   defp do_up(repo, version, module, opts) do
-    result = run_maybe_in_transaction repo, module, fn ->
+    run_maybe_in_transaction(repo, module, fn ->
       attempt(repo, module, :forward, :up, :up, opts)
         || attempt(repo, module, :forward, :change, :up, opts)
         || {:error, Ecto.MigrationError.exception(
             "#{inspect module} does not implement a `up/0` or `change/0` function")}
+    end)
+    |> case do
+      :ok ->
+        verbose_schema_migration repo, "update schema migrations", fn ->
+          SchemaMigration.up(repo, version, opts[:prefix])
+        end
+        :ok
+      error ->
+        error
     end
-
-    verbose_schema_migration repo, "update schema migrations", fn ->
-      SchemaMigration.up(repo, version, opts[:prefix])
-    end
-
-    result
   end
 
   @doc """
@@ -117,18 +120,21 @@ defmodule Ecto.Migrator do
   end
 
   defp do_down(repo, version, module, opts) do
-    result = run_maybe_in_transaction repo, module, fn ->
+    run_maybe_in_transaction(repo, module, fn ->
       attempt(repo, module, :forward, :down, :down, opts)
         || attempt(repo, module, :backward, :change, :down, opts)
         || {:error, Ecto.MigrationError.exception(
             "#{inspect module} does not implement a `down/0` or `change/0` function")}
+    end)
+    |> case do
+      :ok ->
+        verbose_schema_migration repo, "update schema migrations", fn ->
+          SchemaMigration.down(repo, version, opts[:prefix])
+        end
+        :ok
+      error ->
+        error
     end
-
-    verbose_schema_migration repo, "update schema migrations", fn ->
-      SchemaMigration.down(repo, version, opts[:prefix])
-    end
-
-    result
   end
 
   defp run_maybe_in_transaction(repo, module, fun) do
