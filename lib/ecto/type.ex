@@ -126,6 +126,18 @@ defmodule Ecto.Type do
   """
   @callback dump(term) :: {:ok, term} | :error
 
+  @doc """
+  Optional call back for types to support the dump of nil into other value.
+  Some queer database designs have nil represented by something else:
+  " ", "N/A" , 0, etc.
+
+  This callback is called with any term that has nil stored in the struct.
+  Type is responsible for implementing dump/1
+  to return value to be written into database
+  that represent `no value` as per database design.
+  """
+  @callback handles_nil?() :: boolean
+
   ## Functions
 
   @doc """
@@ -290,12 +302,12 @@ defmodule Ecto.Type do
     # function_exported?/3
     case function_exported?(type, :handles_nil?, 0) do
       true ->
-	type.dump(nil)
+	      type.dump(nil)
       false ->
-	{:ok, nil}
+	      {:ok, nil}
     end
   end
-  
+
   def dump(:binary_id, value, _dumper) when is_binary(value) do
     {:ok, value}
   end
