@@ -108,6 +108,11 @@ defmodule Ecto.TestAdapter do
 
   ## Migrations
 
+  def lock_for_migrations(repo, opts, fun) do
+    send self(), {:lock_for_migrations, fun}
+    {:ok, fun.()}
+  end
+
   def supports_ddl_transaction? do
     Process.get(:supports_ddl_transaction?) || false
   end

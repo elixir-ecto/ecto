@@ -137,13 +137,13 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def lock_for_migrations(repo, opts) do
-        Ecto.Adapters.SQL.lock_for_migrations(repo, opts)
+      def lock_for_migrations(repo, opts, fun) do
+        Ecto.Adapters.SQL.lock_for_migrations(repo, opts, fun)
       end
 
       defoverridable [prepare: 2, execute: 6, insert: 6, update: 6, delete: 4, insert_all: 7,
                       execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1, ensure_all_started: 2,
-                      lock_for_migrations: 2]
+                      lock_for_migrations: 3]
     end
   end
 
@@ -605,8 +605,18 @@ defmodule Ecto.Adapters.SQL do
   ## Migrations
 
   @doc false
-  def lock_for_migrations(repo, opts) do
-    # TODO: Figure out what should go here
+  def lock_for_migrations(repo, opts, fun) do
+    alias Ecto.Migration.SchemaMigration
+    import Ecto.Query, only: [from: 2]
+
+    transaction(repo, opts, fn ->
+      from(p in {SchemaMigration.get_source(repo), SchemaMigration}, select: p.version)
+      |> Map.put(:prefix, opts[:prefix])
+      |> Map.put(:lock, "FOR UPDATE")
+      |> repo.all(timeout: :infinity, log: false)
+
+      fun.()
+    end)
   end
 
   ## Log
