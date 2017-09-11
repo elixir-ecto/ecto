@@ -149,7 +149,8 @@ defmodule Ecto.Migrator do
       module.__migration__[:disable_ddl_transaction] ->
         fun.()
       repo.__adapter__.supports_ddl_transaction? ->
-        repo.transaction(fun, [log: false, timeout: :infinity])
+        {:ok, result} = repo.transaction(fun, [log: false, timeout: :infinity])
+        result
       true ->
         fun.()
     end
