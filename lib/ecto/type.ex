@@ -126,6 +126,7 @@ defmodule Ecto.Type do
   """
   @callback dump(term) :: {:ok, term} | :error
 
+  @optional_callbacks handles_nil?: 0
   @doc """
   Optional call back for types to support the dump of nil into other value.
   Some queer database designs have nil represented by something else:
@@ -136,7 +137,8 @@ defmodule Ecto.Type do
   to return value to be written into database
   that represent `no value` as per database design.
   """
-  @callback handles_nil?() :: boolean
+  @spec handles_nil?() :: boolean
+  def handles_nil?(), do: false
 
   ## Functions
 
