@@ -51,5 +51,6 @@ defmodule Ecto.Adapter.Migration  do
   """
   @callback execute_ddl(repo :: Ecto.Repo.t, command, options :: Keyword.t) :: :ok | no_return
 
-  @callback lock_for_migrations(repo :: Ecto.Repo.t, options :: Keyword.t, function :: fun) :: {:ok, any} | {:error, any}
+  @callback lock_for_migrations(repo :: Ecto.Repo.t, table :: String.t, options :: Keyword.t, function :: fun) ::
+    {:ok, any} | {:error, any}
 end

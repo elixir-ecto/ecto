@@ -25,8 +25,6 @@ defmodule Ecto.Migrator do
   alias Ecto.Migration.Runner
   alias Ecto.Migration.SchemaMigration
 
-  import Ecto.Query, only: [from: 1]
-
   @doc """
   Gets all migrated versions.
 
@@ -44,8 +42,9 @@ defmodule Ecto.Migrator do
   def migrated_versions(repo, opts \\ []) do
     verbose_schema_migration repo, "retrieve migrated versions", fn ->
       SchemaMigration.ensure_schema_migrations_table!(repo, opts[:prefix])
-      SchemaMigration.migrated_versions(repo, opts[:prefix])
     end
+
+    lock_for_migrations repo, opts, fn versions -> versions end
   end
 
   @doc """
@@ -63,9 +62,7 @@ defmodule Ecto.Migrator do
       SchemaMigration.ensure_schema_migrations_table!(repo, opts[:prefix])
     end
 
-    lock_for_migrations repo, opts, fn ->
-      versions = SchemaMigration.migrated_versions(repo, opts[:prefix])
-
+    lock_for_migrations repo, opts, fn versions ->
       if version in versions do
         :already_up
       else
@@ -108,9 +105,7 @@ defmodule Ecto.Migrator do
       SchemaMigration.ensure_schema_migrations_table!(repo, opts[:prefix])
     end
 
-    lock_for_migrations repo, opts, fn ->
-      versions = SchemaMigration.migrated_versions(repo, opts[:prefix])
-
+    lock_for_migrations repo, opts, fn versions ->
       if version in versions do
         do_down(repo, version, module, opts)
       else
@@ -194,9 +189,7 @@ defmodule Ecto.Migrator do
       SchemaMigration.ensure_schema_migrations_table!(repo, opts[:prefix])
     end
 
-    lock_for_migrations repo, opts, fn ->
-      versions = SchemaMigration.migrated_versions(repo, opts[:prefix])
-
+    lock_for_migrations repo, opts, fn versions ->
       cond do
         opts[:all] ->
           run_all(repo, versions, migration_source, direction, opts)
@@ -228,8 +221,10 @@ defmodule Ecto.Migrator do
   end
 
   defp lock_for_migrations(repo, opts, fun) do
+    table = SchemaMigration.get_source(repo)
+
     repo
-    |> repo.__adapter__.lock_for_migrations(opts, fun)
+    |> repo.__adapter__.lock_for_migrations(table, opts, fun)
     |> case do
       {:ok, {kind, reason, stacktrace}} ->
         :erlang.raise(kind, reason, stacktrace)

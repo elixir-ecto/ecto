@@ -35,11 +35,6 @@ defmodule Ecto.TestAdapter do
 
   def prepare(operation, query), do: {:nocache, {operation, query}}
 
-  def execute(_repo, _, {:nocache, {:all, %{from: {_, SchemaMigration}}}}, _, _, _) do
-    {length(migrated_versions()),
-     Enum.map(migrated_versions(), &List.wrap/1)}
-  end
-
   def execute(_repo, _, {:nocache, {:all, _}}, _, _, _) do
     Process.get(:test_repo_all_results) || {1, [[1]]}
   end
@@ -108,9 +103,9 @@ defmodule Ecto.TestAdapter do
 
   ## Migrations
 
-  def lock_for_migrations(repo, opts, fun) do
+  def lock_for_migrations(repo, table, opts, fun) do
     send self(), {:lock_for_migrations, fun}
-    {:ok, fun.()}
+    {:ok, fun.(migrated_versions())}
   end
 
   def supports_ddl_transaction? do
