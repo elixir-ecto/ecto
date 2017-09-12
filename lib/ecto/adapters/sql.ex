@@ -610,7 +610,7 @@ defmodule Ecto.Adapters.SQL do
 
     transaction(repo, opts, fn ->
       versions =
-        from(p in table, select: p.version)
+        from(p in table, select: type(p.version, :integer))
         |> Map.put(:prefix, opts[:prefix])
         |> Map.put(:lock, "FOR UPDATE")
         |> repo.all()
