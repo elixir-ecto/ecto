@@ -58,25 +58,29 @@ defmodule Ecto.Repo.Preloader do
 
   defp preload_each(structs, _repo, [], _opts),   do: structs
   defp preload_each([], _repo, _preloads, _opts), do: []
-  defp preload_each([sample|_] = structs, repo, preloads, opts) do
-    module = sample.__struct__
-    prefix = preload_prefix(opts, sample)
-    {assocs, throughs} = expand(module, preloads, {%{}, %{}})
+  defp preload_each(structs, repo, preloads, opts) do
+    if sample = Enum.find(structs, & &1) do
+      module = sample.__struct__
+      prefix = preload_prefix(opts, sample)
+      {assocs, throughs} = expand(module, preloads, {%{}, %{}})
 
-    assocs =
-      maybe_pmap Map.values(assocs), repo, opts, fn
-        {{:assoc, assoc, related_key}, take, query, sub_preloads}, opts ->
-          preload_assoc(structs, module, repo, prefix, assoc, related_key,
-                        query, sub_preloads, take, opts)
+      assocs =
+        maybe_pmap Map.values(assocs), repo, opts, fn
+          {{:assoc, assoc, related_key}, take, query, sub_preloads}, opts ->
+            preload_assoc(structs, module, repo, prefix, assoc, related_key,
+                          query, sub_preloads, take, opts)
+        end
+
+      throughs =
+        Map.values(throughs)
+
+      for struct <- structs do
+        struct = Enum.reduce assocs, struct, &load_assoc/2
+        struct = Enum.reduce throughs, struct, &load_through/2
+        struct
       end
-
-    throughs =
-      Map.values(throughs)
-
-    for struct <- structs do
-      struct = Enum.reduce assocs, struct, &load_assoc/2
-      struct = Enum.reduce throughs, struct, &load_through/2
-      struct
+    else
+      structs
     end
   end
 
