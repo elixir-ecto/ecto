@@ -162,6 +162,18 @@ defmodule Ecto.Integration.PreloadTest do
     assert c3.post_permalink.id == lid2
   end
 
+  test "preload through with nil association" do
+    %Comment{} = c = TestRepo.insert!(%Comment{post_id: nil})
+
+    c = TestRepo.preload(c, [:post, :post_permalink])
+    assert c.post == nil
+    assert c.post_permalink == nil
+
+    c = TestRepo.preload(c, [:post, :post_permalink])
+    assert c.post == nil
+    assert c.post_permalink == nil
+  end
+
   test "preload has_many through-through" do
     %Post{id: pid1} = TestRepo.insert!(%Post{})
     %Post{id: pid2} = TestRepo.insert!(%Post{})
