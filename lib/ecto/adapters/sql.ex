@@ -608,7 +608,7 @@ defmodule Ecto.Adapters.SQL do
   def lock_for_migrations(repo, table, opts, fun) do
     import Ecto.Query, only: [from: 2]
 
-    transaction(repo, [log: false, timeout: :infinity] ++ [opts], fn ->
+    transaction(repo, opts ++ [log: false, timeout: :infinity], fn ->
       versions =
         from(p in table, select: type(p.version, :integer))
         |> Map.put(:prefix, opts[:prefix])
