@@ -35,13 +35,8 @@ defmodule Ecto.TestAdapter do
 
   def prepare(operation, query), do: {:nocache, {operation, query}}
 
-  def execute(_repo, _, {:nocache, {:all, %{from: {_, SchemaMigration}}}}, _, _, _) do
-    {length(migrated_versions()),
-     Enum.map(migrated_versions(), &List.wrap/1)}
-  end
-
   def execute(_repo, _, {:nocache, {:all, _}}, _, _, _) do
-    Process.get(:test_repo_all_results) || {1, [[1]]}
+    get_config(:test_repo_all_results, {1, [[1]]})
   end
 
   def execute(_repo, _meta, {:nocache, {:delete_all, %{from: {_, SchemaMigration}}}}, [version], _, _) do
@@ -50,13 +45,13 @@ defmodule Ecto.TestAdapter do
   end
 
   def execute(_repo, meta, {:nocache, {op, %{from: {source, _}}}}, _params, _preprocess, _opts) do
-    send self(), {op, {meta.prefix,source}}
+    send test_process(), {op, {meta.prefix,source}}
     {1, nil}
   end
 
   def stream(repo, meta, prepared, params, preprocess, opts) do
     Stream.map([:execute], fn(:execute) ->
-      send self(), :stream_execute
+      send test_process(), :stream_execute
       execute(repo, meta, prepared, params, preprocess, opts)
     end)
   end
@@ -64,7 +59,7 @@ defmodule Ecto.TestAdapter do
   ## Schema
 
   def insert_all(_repo, %{source: source}, _header, rows, _on_conflict, _returning, _opts) do
-    send self(), {:insert_all, source, rows}
+    send test_process(), {:insert_all, source, rows}
     {1, nil}
   end
 
@@ -75,24 +70,24 @@ defmodule Ecto.TestAdapter do
   end
 
   def insert(_repo, %{context: nil, source: source}, _fields, _on_conflict, return, _opts),
-    do: send(self(), {:insert, source}) && {:ok, Enum.zip(return, 1..length(return))}
+    do: send(test_process(), {:insert, source}) && {:ok, Enum.zip(return, 1..length(return))}
   def insert(_repo, %{context: {:invalid, _} = res}, _fields, _on_conflict, _return, _opts),
     do: res
 
   # Notice the list of changes is never empty.
   def update(_repo, %{context: nil, source: source}, [_|_], _filters, return, _opts),
-    do: send(self(), {:update, source}) && {:ok, Enum.zip(return, 1..length(return))}
+    do: send(test_process(), {:update, source}) && {:ok, Enum.zip(return, 1..length(return))}
   def update(_repo, %{context: {:invalid, _} = res}, [_|_], _filters, _return, _opts),
     do: res
 
   def delete(_repo, meta, _filter, _opts),
-    do: send(self(), {:delete, meta.source}) && {:ok, []}
+    do: send(test_process(), {:delete, meta.source}) && {:ok, []}
 
   ## Transactions
 
   def transaction(_repo, _opts, fun) do
     # Makes transactions "trackable" in tests
-    send self(), {:transaction, fun}
+    send test_process(), {:transaction, fun}
     try do
       {:ok, fun.()}
     catch
@@ -102,14 +97,19 @@ defmodule Ecto.TestAdapter do
   end
 
   def rollback(_repo, value) do
-    send self(), {:rollback, value}
+    send test_process(), {:rollback, value}
     throw {:ecto_rollback, value}
   end
 
   ## Migrations
 
+  def lock_for_migrations(_repo, _table, _opts, fun) do
+    send test_process(), {:lock_for_migrations, fun}
+    {:ok, fun.(migrated_versions())}
+  end
+
   def supports_ddl_transaction? do
-    Process.get(:supports_ddl_transaction?) || false
+    get_config(:supports_ddl_transaction?, false)
   end
 
   def execute_ddl(_repo, command, _) do
@@ -118,7 +118,17 @@ defmodule Ecto.TestAdapter do
   end
 
   defp migrated_versions do
-    Process.get(:migrated_versions) || []
+    get_config(:migrated_versions, [])
+  end
+
+  defp test_process do
+    get_config(:test_process, self())
+  end
+
+  defp get_config(name, default) do
+    :ecto
+    |> Application.get_env(__MODULE__, [])
+    |> Keyword.get(name, Process.get(name, default))
   end
 end
 

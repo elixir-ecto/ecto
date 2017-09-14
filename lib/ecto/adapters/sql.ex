@@ -136,8 +136,14 @@ defmodule Ecto.Adapters.SQL do
         :ok
       end
 
+      @doc false
+      def lock_for_migrations(repo, table, opts, fun) do
+        Ecto.Adapters.SQL.lock_for_migrations(repo, table, opts, fun)
+      end
+
       defoverridable [prepare: 2, execute: 6, insert: 6, update: 6, delete: 4, insert_all: 7,
-                      execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1, ensure_all_started: 2]
+                      execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1, ensure_all_started: 2,
+                      lock_for_migrations: 4]
     end
   end
 
@@ -594,6 +600,23 @@ defmodule Ecto.Adapters.SQL do
       nil  -> raise "cannot call rollback outside of transaction"
       conn -> DBConnection.rollback(conn, value)
     end
+  end
+
+  ## Migrations
+
+  @doc false
+  def lock_for_migrations(repo, table, opts, fun) do
+    import Ecto.Query, only: [from: 2]
+
+    transaction(repo, opts ++ [log: false, timeout: :infinity], fn ->
+      versions =
+        from(p in table, select: type(p.version, :integer))
+        |> Map.put(:prefix, opts[:prefix])
+        |> Map.put(:lock, "FOR UPDATE")
+        |> repo.all()
+
+      fun.(versions)
+    end)
   end
 
   ## Log

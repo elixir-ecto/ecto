@@ -18,12 +18,6 @@ defmodule Ecto.Migration.SchemaMigration do
     create_migrations_table(adapter, repo, prefix)
   end
 
-  def migrated_versions(repo, prefix) do
-    from(p in {get_source(repo), __MODULE__}, select: p.version)
-    |> Map.put(:prefix, prefix)
-    |> repo.all(@opts)
-  end
-
   def up(repo, version, prefix) do
     %__MODULE__{version: version}
     |> Ecto.put_meta(prefix: prefix, source: get_source(repo))

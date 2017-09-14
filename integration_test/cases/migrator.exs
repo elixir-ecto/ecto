@@ -111,7 +111,7 @@ defmodule Ecto.Integration.MigratorTest do
   end
 
   defp count_entries() do
-    length Process.get(:migrations)
+    PoolRepo.aggregate(SchemaMigration, :count, :version)
   end
 
   defp create_migration(num) do

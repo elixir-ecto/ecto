@@ -50,4 +50,7 @@ defmodule Ecto.Adapter.Migration  do
     * `:log` - When false, does not log begin/commit/rollback queries
   """
   @callback execute_ddl(repo :: Ecto.Repo.t, command, options :: Keyword.t) :: :ok | no_return
+
+  @callback lock_for_migrations(repo :: Ecto.Repo.t, table :: String.t, options :: Keyword.t, function :: fun) ::
+    {:ok, any} | {:error, any}
 end

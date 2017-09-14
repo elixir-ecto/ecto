@@ -85,6 +85,14 @@ defmodule Ecto.MigratorTest do
     :ok
   end
 
+  def put_test_adapter_config(config) do
+    Application.put_env(:ecto, Ecto.TestAdapter, config)
+
+    on_exit fn ->
+      Application.delete_env(:ecto, Ecto.TestAdapter)
+    end
+  end
+
   test "custom schema migrations table is right" do
     assert SchemaMigration.get_source(TestRepo) == "schema_migrations"
     assert SchemaMigration.get_source(TestSchemaRepo) == "my_schema_migrations"
@@ -297,7 +305,7 @@ defmodule Ecto.MigratorTest do
 
   test "migrations run inside a transaction if the adapter supports ddl transactions" do
     capture_log fn ->
-      Process.put(:supports_ddl_transaction?, true)
+      put_test_adapter_config(supports_ddl_transaction?: true, test_process: self())
       up(TestRepo, 0, ChangeMigration)
       assert_receive {:transaction, _}
     end
@@ -305,7 +313,7 @@ defmodule Ecto.MigratorTest do
 
   test "migrations can be forced to run outside a transaction" do
     capture_log fn ->
-      Process.put(:supports_ddl_transaction?, true)
+      put_test_adapter_config(supports_ddl_transaction?: true, test_process: self())
       up(TestRepo, 0, NoTransactionMigration)
       refute_received {:transaction, _}
     end
@@ -313,7 +321,7 @@ defmodule Ecto.MigratorTest do
 
   test "migrations does not run inside a transaction if the adapter does not support ddl transactions" do
     capture_log fn ->
-      Process.put(:supports_ddl_transaction?, false)
+      put_test_adapter_config(supports_ddl_transaction?: false, test_process: self())
       up(TestRepo, 0, ChangeMigration)
       refute_received {:transaction, _}
     end
