@@ -418,7 +418,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   @doc """
   Sets the mode for the `repo` pool.
 
-  The mode can be `:auto`, `:manual` or `:shared`.
+  The mode can be `:auto`, `:manual` or `{:shared, <pid>}`.
   """
   def mode(repo, mode)
       when mode in [:auto, :manual]
