@@ -468,7 +468,7 @@ defmodule Ecto.Query.Builder do
     try_expansion(expr, type, params, vars, {env, &escape/5})
   end
 
-  defp try_expansion(expr, type, params, vars, {env, fun} = env_fun) do
+  defp try_expansion(expr, type, params, vars, {env, fun}) do
     case Macro.expand_once(expr, env) do
       ^expr ->
         error! """
@@ -481,7 +481,7 @@ defmodule Ecto.Query.Builder do
           you need to explicitly interpolate it with ^
         """
       expanded ->
-        fun.(expanded, type, params, vars, env_fun)
+        fun.(expanded, type, params, vars, env)
     end
   end
 
