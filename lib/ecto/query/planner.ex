@@ -857,7 +857,7 @@ defmodule Ecto.Query.Planner do
   defp validate_in(meta, expr, param, acc) do
     {v, _t} = Enum.fetch!(expr.params, param)
     length  = length(v)
-    {{:^, meta, [acc, length]}, acc + 1}
+    {{:^, meta, [acc, length]}, acc + length}
   end
 
   defp normalize_select(%{select: nil} = query) do

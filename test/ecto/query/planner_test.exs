@@ -341,7 +341,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, params} = where(Post, [p], p.title == ^"foo" and p.id in ^[1, 2, 3] and
                                        p.title == ^"bar") |> normalize_with_params()
     assert Macro.to_string(hd(query.wheres).expr) ==
-           "&0.post_title() == ^0 and &0.id() in ^(1, 3) and &0.post_title() == ^2"
+           "&0.post_title() == ^0 and &0.id() in ^(1, 3) and &0.post_title() == ^4"
     assert params == ["foo", 1, 2, 3, "bar"]
   end
 
