@@ -160,6 +160,7 @@ defmodule Mix.Ecto do
   @doc """
   Returns the private repository path relative to the source.
   """
+  @spec source_repo_priv(Ecto.Repo.t) :: String.t
   def source_repo_priv(repo) do
     priv = repo.config()[:priv] || "priv/#{repo |> Module.split |> List.last |> Macro.underscore}"
     app = Keyword.fetch!(repo.config(), :otp_app)
