@@ -16,7 +16,7 @@ defmodule Ecto.Association.NotLoaded do
   defimpl Inspect do
     def inspect(not_loaded, _opts) do
       msg = "association #{inspect not_loaded.__field__} is not loaded"
-      ~s(#Ecto.Association.NotLoaded<#{msg}>)
+      ~s(##{inspect @for}<#{msg}>)
     end
   end
 end
