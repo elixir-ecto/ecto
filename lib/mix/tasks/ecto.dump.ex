@@ -4,6 +4,16 @@ defmodule Mix.Tasks.Ecto.Dump do
 
   @shortdoc "Dumps the repository database structure"
 
+  @aliases [
+    d: :dump_path,
+    q: :quiet
+  ]
+
+  @switches [
+    dump_path: :string,
+    quiet: :boolean
+  ]
+
   @moduledoc """
   Dumps the current environment's database structure for the
   given repository into a structure file.
@@ -26,11 +36,12 @@ defmodule Mix.Tasks.Ecto.Dump do
 
     * `-r`, `--repo` - the repo to load the structure info from
     * `-d`, `--dump-path` - the path of the dump file to create
+    * `-q`, `--quiet` - run the command quietly
   """
 
   def run(args) do
     {opts, _, _} =
-      OptionParser.parse args, switches: [dump_path: :string, quiet: :boolean], aliases: [d: :dump_path]
+      OptionParser.parse args, switches: @switches, aliases: @aliases
 
     Enum.each parse_repo(args), fn repo ->
       ensure_repo(repo, args)
