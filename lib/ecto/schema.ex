@@ -316,7 +316,6 @@ defmodule Ecto.Schema do
     The `:context` field represents additional state some databases require
     for proper updates of data. It is not used by the built-in adapters of
     `Ecto.Adapters.Postres` and `Ecto.Adapters.MySQL`.
-
     """
     defstruct [:state, :source, :context]
 
@@ -384,7 +383,6 @@ defmodule Ecto.Schema do
   An additional field called `__meta__` is added to the struct for storing
   internal Ecto state. This field always has a `Ecto.Schema.Metatdata` struct
   as value and can be manipulated with the `Ecto.put_meta/2` function.
-
   """
   defmacro schema(source, [do: block]) do
     schema(source, true, :id, block)
