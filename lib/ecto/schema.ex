@@ -280,22 +280,50 @@ defmodule Ecto.Schema do
   defined so structs and changeset functionalities are available.
   """
 
-  @type t :: struct
+  @type source :: String.t
+  @type prefix :: String.t | nil
+  @type schema :: %{__struct__: atom, __meta__: Ecto.Schema.Metadata.t, optional(atom) => any}
+  @type embedded_schema :: %{__struct__: atom, optional(atom) => any}
+  @type t :: schema | embedded_schema
 
   defmodule Metadata do
     @moduledoc """
     Stores metadata of a struct.
 
-    The fields are:
+    ## State
 
-      * `state` - the state in a struct's lifetime, one of `:built`,
-        `:loaded`, `:deleted`
-      * `source` - the source for the schema alongside the query prefix,
-        defaults to `{nil, "source"}`
-      * `context` - context stored by the database
+    The state of the schema is stored in the `:state` field and allows
+    following values:
+
+      * `:build` - the stuct was constructed in memory and is not persisted
+        to database yet;
+      * `:loaded` - the struct was loaded from database and represents
+        persisted data;
+      * `:deleted` - the struct was deleted and no longer represents persisted
+        data.
+
+    ## Source
+
+    The `:source` field is a tuple tracking the database source (table or
+    collection) where the struct is or should be persisted. It is represented
+    as a tuple consisting of two fields:
+
+      * source - tracking the table or collection name.
+      * prefix - tracking the ecto prefix of the table or collection.
+
+    ## Context
+
+    The `:context` field represents additional state some databases require
+    for proper updates of data. It is not used by the built-in adapters of
+    `Ecto.Adapters.Postres` and `Ecto.Adapters.MySQL`.
 
     """
     defstruct [:state, :source, :context]
+
+    @type state :: :built | :loaded | :deleted
+    @type source :: {Ecto.Schema.prefix, Ecto.Schema.source}
+    @type context :: any
+    @type t :: %__MODULE__{state: state, source: source, context: context}
 
     defimpl Inspect do
       import Inspect.Algebra
@@ -343,13 +371,20 @@ defmodule Ecto.Schema do
   Embedded schemas by default set the primary key type
   to `:binary_id` but such can be configured with the
   `@primary_key` attribute.
+
+  Embedded schemas don't define the `__meta__` field.
   """
   defmacro embedded_schema([do: block]) do
     schema(nil, false, :binary_id, block)
   end
 
   @doc """
-  Defines a schema with a source name and field definitions.
+  Defines a schema struct with a source name and field definitions.
+
+  An additional field called `__meta__` is added to the struct for storing
+  internal Ecto state. This field always has a `Ecto.Schema.Metatdata` struct
+  as value and can be manipulated with the `Ecto.put_meta/2` function.
+
   """
   defmacro schema(source, [do: block]) do
     schema(source, true, :id, block)
