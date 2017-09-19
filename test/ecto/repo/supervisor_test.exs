@@ -59,8 +59,26 @@ defmodule Ecto.Repo.SupervisorTest do
     assert {:port, 12345} in url
   end
 
+  test "parse_url query string" do
+    encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb?ssl=true&pool_timeout=1000&timeout=1000&pool_size=42")
+    url = parse_url(encoded_url)
+    assert {:password, "it+й"} in url
+    assert {:username, "eric"} in url
+    assert {:hostname, "host"} in url
+    assert {:database, "mydb"} in url
+    assert {:port, 12345} in url
+    assert {:ssl, true} in url
+    assert {:timeout, 1000} in url
+    assert {:pool_timeout, 1000} in url
+    assert {:pool_size, 42} in url
+  end
+
   test "parse_url returns no config when blank" do
     assert parse_url("") == []
+  end
+
+  test "parse_url keeps false values" do
+    assert {:ssl, false} in parse_url("ecto://eric:it+й@host:12345/mydb?ssl=false")
   end
 
   test "parse_urls empty username/password" do
@@ -84,6 +102,16 @@ defmodule Ecto.Repo.SupervisorTest do
 
     assert_raise Ecto.InvalidURLError, ~r"path should be a database name", fn ->
       parse_url("ecto://eric:hunter2@host:123")
+    end
+
+    assert_raise Ecto.InvalidURLError, ~r"unsupported query parameter `uknown_param`", fn ->
+      parse_url("ecto://eric:it+й@host:12345/mydb?uknown_param=value")
+    end
+
+    for key <- ["timeout", "pool_size", "pool_timeout"] do
+      assert_raise Ecto.InvalidURLError, ~r"can not parse value `not_an_int` for parameter `#{key}` as an integer", fn ->
+        parse_url("ecto://eric:it+й@host:12345/mydb?#{key}=not_an_int")
+      end
     end
   end
 end

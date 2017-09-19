@@ -505,7 +505,7 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query) do
-      [expr(other, sources, query), ?:, ?: | ecto_to_db(type)]
+      [expr(other, sources, query), ?:, ?: | tagged_to_db(type)]
     end
 
     defp expr(nil, _sources, _query),   do: "NULL"
@@ -523,6 +523,12 @@ if Code.ensure_loaded?(Postgrex) do
     defp expr(literal, _sources, _query) when is_float(literal) do
       [Float.to_string(literal) | "::float"]
     end
+
+    defp tagged_to_db({:array, type}), do: [tagged_to_db(type), ?[, ?]]
+    # Always use the largest possible type for integers
+    defp tagged_to_db(:id), do: "bigint"
+    defp tagged_to_db(:integer), do: "bigint"
+    defp tagged_to_db(type), do: ecto_to_db(type)
 
     defp interval(count, interval, _sources, _query) when is_integer(count) do
       ["interval '", String.Chars.Integer.to_string(count), ?\s, interval, ?\']

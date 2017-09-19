@@ -16,17 +16,17 @@ defmodule Ecto.Repo.Preloader do
   def query(rows, repo, preloads, take, fun, opts) do
     rows
     |> extract
-    |> do_preload(repo, preloads, take, opts)
+    |> normalize_and_preload_each(repo, preloads, take, opts)
     |> unextract(rows, fun)
   end
 
   defp extract([[nil|_]|t2]), do: extract(t2)
-  defp extract([[h|_]|t2]),   do: [h|extract(t2)]
-  defp extract([]),           do: []
+  defp extract([[h|_]|t2]), do: [h|extract(t2)]
+  defp extract([]), do: []
 
-  defp unextract(structs, [[nil|_] = h2|t2], fun),  do: [fun.(h2)|unextract(structs, t2, fun)]
+  defp unextract(structs, [[nil|_] = h2|t2], fun), do: [fun.(h2)|unextract(structs, t2, fun)]
   defp unextract([h1|structs], [[_|t1]|t2], fun), do: [fun.([h1|t1])|unextract(structs, t2, fun)]
-  defp unextract([], [], _fun),                   do: []
+  defp unextract([], [], _fun), do: []
 
   @doc """
   Implementation for `Ecto.Repo.preload/2`.
@@ -38,14 +38,14 @@ defmodule Ecto.Repo.Preloader do
   end
 
   def preload(structs, repo, preloads, opts) when is_list(structs) do
-    do_preload(structs, repo, preloads, opts[:take], opts)
+    normalize_and_preload_each(structs, repo, preloads, opts[:take], opts)
   end
 
   def preload(struct, repo, preloads, opts) when is_map(struct) do
-    do_preload([struct], repo, preloads, opts[:take], opts) |> hd()
+    normalize_and_preload_each([struct], repo, preloads, opts[:take], opts) |> hd()
   end
 
-  defp do_preload(structs, repo, preloads, take, opts) do
+  defp normalize_and_preload_each(structs, repo, preloads, take, opts) do
     preloads = normalize(preloads, take, preloads)
     preload_each(structs, repo, preloads, opts)
   rescue
@@ -58,25 +58,29 @@ defmodule Ecto.Repo.Preloader do
 
   defp preload_each(structs, _repo, [], _opts),   do: structs
   defp preload_each([], _repo, _preloads, _opts), do: []
-  defp preload_each([sample|_] = structs, repo, preloads, opts) do
-    module = sample.__struct__
-    prefix = preload_prefix(opts, sample)
-    {assocs, throughs} = expand(module, preloads, {%{}, %{}})
+  defp preload_each(structs, repo, preloads, opts) do
+    if sample = Enum.find(structs, & &1) do
+      module = sample.__struct__
+      prefix = preload_prefix(opts, sample)
+      {assocs, throughs} = expand(module, preloads, {%{}, %{}})
 
-    assocs =
-      maybe_pmap Map.values(assocs), repo, opts, fn
-        {{:assoc, assoc, related_key}, take, query, sub_preloads}, opts ->
-          preload_assoc(structs, module, repo, prefix, assoc, related_key,
-                        query, sub_preloads, take, opts)
+      assocs =
+        maybe_pmap Map.values(assocs), repo, opts, fn
+          {{:assoc, assoc, related_key}, take, query, sub_preloads}, opts ->
+            preload_assoc(structs, module, repo, prefix, assoc, related_key,
+                          query, sub_preloads, take, opts)
+        end
+
+      throughs =
+        Map.values(throughs)
+
+      for struct <- structs do
+        struct = Enum.reduce assocs, struct, &load_assoc/2
+        struct = Enum.reduce throughs, struct, &load_through/2
+        struct
       end
-
-    throughs =
-      Map.values(throughs)
-
-    for struct <- structs do
-      struct = Enum.reduce assocs, struct, &load_assoc/2
-      struct = Enum.reduce throughs, struct, &load_through/2
-      struct
+    else
+      structs
     end
   end
 
@@ -122,22 +126,25 @@ defmodule Ecto.Repo.Preloader do
     %{field: field, owner_key: owner_key, cardinality: card} = assoc
     force? = Keyword.get(opts, :force, false)
 
-    Enum.reduce structs, {[], [], []}, fn struct, {fetch_ids, loaded_ids, loaded_structs} ->
-      assert_struct!(module, struct)
-      %{^owner_key => id, ^field => value} = struct
+    Enum.reduce structs, {[], [], []}, fn
+      nil, acc ->
+        acc
+      struct, {fetch_ids, loaded_ids, loaded_structs} ->
+        assert_struct!(module, struct)
+        %{^owner_key => id, ^field => value} = struct
 
-      cond do
-        card == :one and not is_nil(value) and Ecto.assoc_loaded?(value) and not force? ->
-          {fetch_ids, [id|loaded_ids], [value|loaded_structs]}
-        card == :many and Ecto.assoc_loaded?(value) and not force? ->
-          {fetch_ids,
-           List.duplicate(id, length(value)) ++ loaded_ids,
-           value ++ loaded_structs}
-        is_nil(id) ->
-          {fetch_ids, loaded_ids, loaded_structs}
-        true ->
-          {[id|fetch_ids], loaded_ids, loaded_structs}
-      end
+        cond do
+          card == :one and Ecto.assoc_loaded?(value) and not force? ->
+            {fetch_ids, [id|loaded_ids], [value|loaded_structs]}
+          card == :many and Ecto.assoc_loaded?(value) and not force? ->
+            {fetch_ids,
+             List.duplicate(id, length(value)) ++ loaded_ids,
+             value ++ loaded_structs}
+          is_nil(id) ->
+            {fetch_ids, loaded_ids, loaded_structs}
+          true ->
+            {[id|fetch_ids], loaded_ids, loaded_structs}
+        end
     end
   end
 
@@ -219,6 +226,10 @@ defmodule Ecto.Repo.Preloader do
     do: {ids, structs, acc}
 
   ## Load preloaded data
+
+  defp load_assoc({:assoc, _assoc, _ids}, nil) do
+    nil
+  end
 
   defp load_assoc({:assoc, assoc, ids}, struct) do
     %{field: field, owner_key: owner_key, cardinality: cardinality} = assoc

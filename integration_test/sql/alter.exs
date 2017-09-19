@@ -58,26 +58,8 @@ defmodule Ecto.Integration.AlterTest do
       result ->
         assert [%Decimal{}] = result
     end
-
-    PoolRepo.transaction(fn() ->
-      assert [%Decimal{}] = PoolRepo.all(values)
-
-      assert :ok == down(PoolRepo, 20161112130000, AlterMigrationTwo, log: false)
-
-      # optionally fail once with database error when already prepared on
-      # connection (and clear cache)
-      try do
-        PoolRepo.all(values, [mode: :savepoint])
-      catch
-        :error, _ ->
-          assert PoolRepo.all(values) == [1]
-      else
-        result ->
-          assert result == [1]
-      end
-    end)
-
   after
+    assert :ok == down(PoolRepo, 20161112130000, AlterMigrationTwo, log: false)
     assert :ok == down(PoolRepo, 20161112120000, AlterMigrationOne, log: false)
   end
 
@@ -101,16 +83,8 @@ defmodule Ecto.Integration.AlterTest do
       result ->
         assert result == {1, nil}
     end
-
-    PoolRepo.transaction(fn() ->
-      assert PoolRepo.update_all(values, [set: [value: Decimal.new(5)]]) == {1, nil}
-
-      assert :ok == down(PoolRepo, 20161112130000, AlterMigrationTwo, log: false)
-
-      assert PoolRepo.update_all(values, [set: [value: 6]]) == {1, nil}
-    end)
-
   after
+    assert :ok == down(PoolRepo, 20161112130000, AlterMigrationTwo, log: false)
     assert :ok == down(PoolRepo, 20161112120000, AlterMigrationOne, log: false)
   end
 end

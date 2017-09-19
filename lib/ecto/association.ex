@@ -63,7 +63,7 @@ defmodule Ecto.Association do
   Useful for checking if associated modules exist without running
   into deadlocks.
   """
-  @callback after_compile_validation(t) :: :ok | {:error, String.t}
+  @callback after_compile_validation(t, Macro.Env.t) :: :ok | {:error, String.t}
 
   @doc """
   Builds a struct for the given association.
@@ -425,9 +425,9 @@ defmodule Ecto.Association.Has do
              :queryable, :on_delete, :on_replace, unique: true, defaults: [], relationship: :child]
 
   @doc false
-  def after_compile_validation(%{queryable: queryable, related_key: related_key}) do
+  def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
     cond do
-      not is_atom(queryable) ->
+      not is_atom(queryable) or queryable in env.context_modules ->
         :ok
       not Code.ensure_compiled?(queryable) ->
         {:error, "associated schema #{inspect queryable} does not exist"}
@@ -626,7 +626,7 @@ defmodule Ecto.Association.HasThrough do
              relationship: :child, unique: true]
 
   @doc false
-  def after_compile_validation(_) do
+  def after_compile_validation(_, _) do
     :ok
   end
 
@@ -711,9 +711,9 @@ defmodule Ecto.Association.BelongsTo do
              :on_replace, defaults: [], cardinality: :one, relationship: :parent, unique: true]
 
   @doc false
-  def after_compile_validation(%{queryable: queryable, related_key: related_key}) do
+  def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
     cond do
-      not is_atom(queryable) ->
+      not is_atom(queryable) or queryable in env.context_modules ->
         :ok
       not Code.ensure_compiled?(queryable) ->
         {:error, "associated schema #{inspect queryable} does not exist"}
@@ -849,9 +849,9 @@ defmodule Ecto.Association.ManyToMany do
              defaults: [], relationship: :child, cardinality: :many, unique: false]
 
   @doc false
-  def after_compile_validation(%{queryable: queryable, join_through: join_through}) do
+  def after_compile_validation(%{queryable: queryable, join_through: join_through}, env) do
     cond do
-      not is_atom(queryable) ->
+      not is_atom(queryable) or queryable in env.context_modules ->
         :ok
       not Code.ensure_compiled?(queryable) ->
         {:error, "associated schema #{inspect queryable} does not exist"}

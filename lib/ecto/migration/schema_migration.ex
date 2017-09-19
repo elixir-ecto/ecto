@@ -18,10 +18,9 @@ defmodule Ecto.Migration.SchemaMigration do
     create_migrations_table(adapter, repo, prefix)
   end
 
-  def migrated_versions(repo, prefix) do
-    from(p in {get_source(repo), __MODULE__}, select: p.version)
+  def versions(repo, prefix) do
+    from(p in get_source(repo), select: type(p.version, :integer))
     |> Map.put(:prefix, prefix)
-    |> repo.all(@opts)
   end
 
   def up(repo, version, prefix) do
@@ -31,7 +30,7 @@ defmodule Ecto.Migration.SchemaMigration do
   end
 
   def down(repo, version, prefix) do
-    from(p in {get_source(repo), __MODULE__}, where: p.version == ^version)
+    from(p in get_source(repo), where: p.version == type(^version, :integer))
     |> Map.put(:prefix, prefix)
     |> repo.delete_all(@opts)
   end

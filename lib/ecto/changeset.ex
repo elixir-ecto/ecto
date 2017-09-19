@@ -1626,7 +1626,7 @@ defmodule Ecto.Changeset do
           {value, :graphemes} when is_binary(value) ->
             {:string, String.length(value)}
           {value, _} when is_list(value) ->
-            {:list, length(value)}
+            {:list, list_length(changeset, field, value)}
         end
 
         error = ((is = opts[:is]) && wrong_length(type, length, is, opts)) ||
@@ -1640,6 +1640,15 @@ defmodule Ecto.Changeset do
   defp codepoints_length(<<_::utf8, rest::binary>>, acc), do: codepoints_length(rest, acc + 1)
   defp codepoints_length(<<_, rest::binary>>, acc), do: codepoints_length(rest, acc + 1)
   defp codepoints_length(<<>>, acc), do: acc
+
+  defp list_length(%{types: types}, field, value) do
+    case Map.fetch(types, field) do
+      {:ok, {tag, _association}} when tag in [:embed, :assoc] ->
+        length(Relation.filter_empty(value))
+      _ ->
+        length(value)
+    end
+  end
 
   defp wrong_length(_type, value, value, _opts), do: nil
   defp wrong_length(:string, _length, value, opts), do:
@@ -2304,9 +2313,10 @@ defmodule Ecto.Changeset do
       ...> end)
       %{title: ["should be at least 3 characters"]}
 
-  Optionally function can accept three arguments: `changeset`, `field` and error tuple `{msg, opts}`.
-  It is useful whenever you want to extract validations rules from `changeset.validations`
-  to build detailed error description.
+  Optionally function can accept three arguments: `changeset`, `field`
+  and error tuple `{msg, opts}`. It is useful whenever you want to extract
+  validations rules from `changeset.validations` to build detailed error
+  description.
   """
   @spec traverse_errors(t, (error -> String.t) | (Changeset.t, atom, error -> String.t)) :: %{atom => [String.t]}
   def traverse_errors(%Changeset{errors: errors, changes: changes, types: types} = changeset, msg_func)

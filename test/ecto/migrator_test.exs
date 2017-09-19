@@ -85,6 +85,14 @@ defmodule Ecto.MigratorTest do
     :ok
   end
 
+  def put_test_adapter_config(config) do
+    Application.put_env(:ecto, Ecto.TestAdapter, config)
+
+    on_exit fn ->
+      Application.delete_env(:ecto, Ecto.TestAdapter)
+    end
+  end
+
   test "custom schema migrations table is right" do
     assert SchemaMigration.get_source(TestRepo) == "schema_migrations"
     assert SchemaMigration.get_source(TestSchemaRepo) == "my_schema_migrations"
@@ -92,7 +100,7 @@ defmodule Ecto.MigratorTest do
 
   test "logs migrations" do
     output = capture_log fn ->
-      :ok = up(TestRepo, 0, ChangeMigration)
+      :ok = up(TestRepo, 10, ChangeMigration)
     end
 
     assert output =~ "== Running Ecto.MigratorTest.ChangeMigration.change/0 forward"
@@ -101,7 +109,7 @@ defmodule Ecto.MigratorTest do
     assert output =~ ~r"== Migrated in \d.\ds"
 
     output = capture_log fn ->
-      :ok = down(TestRepo, 0, ChangeMigration)
+      :ok = down(TestRepo, 10, ChangeMigration)
     end
 
     assert output =~ "== Running Ecto.MigratorTest.ChangeMigration.change/0 backward"
@@ -110,7 +118,7 @@ defmodule Ecto.MigratorTest do
     assert output =~ ~r"== Migrated in \d.\ds"
 
     output = capture_log fn ->
-      :ok = up(TestRepo, 0, ChangeMigrationPrefix)
+      :ok = up(TestRepo, 11, ChangeMigrationPrefix)
     end
 
     assert output =~ "== Running Ecto.MigratorTest.ChangeMigrationPrefix.change/0 forward"
@@ -119,7 +127,7 @@ defmodule Ecto.MigratorTest do
     assert output =~ ~r"== Migrated in \d.\ds"
 
     output = capture_log fn ->
-      :ok = down(TestRepo, 0, ChangeMigrationPrefix)
+      :ok = down(TestRepo, 11, ChangeMigrationPrefix)
     end
 
     assert output =~ "== Running Ecto.MigratorTest.ChangeMigrationPrefix.change/0 backward"
@@ -128,7 +136,7 @@ defmodule Ecto.MigratorTest do
     assert output =~ ~r"== Migrated in \d.\ds"
 
     output = capture_log fn ->
-      :ok = up(TestRepo, 0, UpDownMigration)
+      :ok = up(TestRepo, 12, UpDownMigration)
     end
 
     assert output =~ "== Running Ecto.MigratorTest.UpDownMigration.up/0 forward"
@@ -136,7 +144,7 @@ defmodule Ecto.MigratorTest do
     assert output =~ ~r"== Migrated in \d.\ds"
 
     output = capture_log fn ->
-      :ok = down(TestRepo, 0, UpDownMigration)
+      :ok = down(TestRepo, 12, UpDownMigration)
     end
 
     assert output =~ "== Running Ecto.MigratorTest.UpDownMigration.down/0 forward"
@@ -297,7 +305,7 @@ defmodule Ecto.MigratorTest do
 
   test "migrations run inside a transaction if the adapter supports ddl transactions" do
     capture_log fn ->
-      Process.put(:supports_ddl_transaction?, true)
+      put_test_adapter_config(supports_ddl_transaction?: true, test_process: self())
       up(TestRepo, 0, ChangeMigration)
       assert_receive {:transaction, _}
     end
@@ -305,7 +313,7 @@ defmodule Ecto.MigratorTest do
 
   test "migrations can be forced to run outside a transaction" do
     capture_log fn ->
-      Process.put(:supports_ddl_transaction?, true)
+      put_test_adapter_config(supports_ddl_transaction?: true, test_process: self())
       up(TestRepo, 0, NoTransactionMigration)
       refute_received {:transaction, _}
     end
@@ -313,7 +321,7 @@ defmodule Ecto.MigratorTest do
 
   test "migrations does not run inside a transaction if the adapter does not support ddl transactions" do
     capture_log fn ->
-      Process.put(:supports_ddl_transaction?, false)
+      put_test_adapter_config(supports_ddl_transaction?: false, test_process: self())
       up(TestRepo, 0, ChangeMigration)
       refute_received {:transaction, _}
     end
