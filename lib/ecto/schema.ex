@@ -282,8 +282,8 @@ defmodule Ecto.Schema do
 
   @type source :: String.t
   @type prefix :: String.t | nil
-  @type schema :: %{__struct__: atom, __meta__: Ecto.Schema.Metadata.t, optional(atom) => any}
-  @type embedded_schema :: %{__struct__: atom, optional(atom) => any}
+  @type schema :: %{optional(atom) => any, __struct__: atom, __meta__: Ecto.Schema.Metadata.t}
+  @type embedded_schema :: %{optional(atom) => any, __struct__: atom}
   @type t :: schema | embedded_schema
 
   defmodule Metadata do
