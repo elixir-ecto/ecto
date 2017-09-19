@@ -879,8 +879,8 @@ defmodule Ecto.Schema do
 
       Repo.insert!(build_assoc(post, :comments))
 
-  where `build_assoc/3` is defined in `Ecto`. You can also
-  use `assoc/2` in both `Ecto` and in the query syntax
+  leveraging the `Ecto.build_assoc/3` function. You can also
+  use `Ecto.assoc/2` and `Ecto.Query.assoc/2` in the query syntax
   to easily retrieve associated comments to a given post or
   task:
 
