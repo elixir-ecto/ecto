@@ -3,6 +3,7 @@ defmodule Mix.Tasks.Ecto.Dump do
   import Mix.Ecto
 
   @shortdoc "Dumps the repository database structure"
+  @default_opts [quiet: false]
 
   @aliases [
     d: :dump_path,
@@ -42,6 +43,8 @@ defmodule Mix.Tasks.Ecto.Dump do
   def run(args) do
     {opts, _, _} =
       OptionParser.parse args, switches: @switches, aliases: @aliases
+
+    opts = Keyword.merge(@default_opts, opts)
 
     Enum.each parse_repo(args), fn repo ->
       ensure_repo(repo, args)

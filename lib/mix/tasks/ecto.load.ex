@@ -3,7 +3,19 @@ defmodule Mix.Tasks.Ecto.Load do
   import Mix.Ecto
 
   @shortdoc "Loads previously dumped database structure"
-  @default_opts [force: false]
+  @default_opts [force: false, quiet: false]
+
+  @aliases [
+    d: :dump_path,
+    f: :force,
+    q: :quiet
+  ]
+
+  @switches [
+    dump_path: :string,
+    force: :boolean,
+    quiet: :boolean
+  ]
 
   @moduledoc """
   Loads the current environment's database structure for the
@@ -27,12 +39,13 @@ defmodule Mix.Tasks.Ecto.Load do
 
     * `-r`, `--repo` - the repo to load the structure info into
     * `-d`, `--dump-path` - the path of the dump file to load from
-    * `--force` - do not ask for confirmation
+    * `-f`, `--force` - do not ask for confirmation
+    * `-q`, `--quiet` - run the command quietly
   """
 
   def run(args) do
     {opts, _, _} =
-      OptionParser.parse args, switches: [dump_path: :string, quiet: :boolean, force: :boolean], aliases: [d: :dump_path]
+      OptionParser.parse args, switches: @switches, aliases: @aliases
 
     opts = Keyword.merge(@default_opts, opts)
 
