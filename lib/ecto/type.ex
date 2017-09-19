@@ -350,9 +350,9 @@ defmodule Ecto.Type do
   @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
   def dump(type, value, dumper \\ &dump/2)
 
-  def dump({:embed,_}, nil, _dumper), do: {:ok, nil}
+  def dump({:embed, _}, nil, _dumper), do: {:ok, nil}
 
-  def dump({:array,_}, nil, _dumper), do: {:ok, nil}
+  def dump({:array, _}, nil, _dumper), do: {:ok, nil}
 
   def dump(type, nil, _dumper) do
     case function_exported?(type, :handles_nil?, 0) do

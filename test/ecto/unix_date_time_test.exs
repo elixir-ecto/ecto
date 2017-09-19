@@ -79,7 +79,7 @@ defmodule Ecto.UnixDateTimeTest do
   end
 
   test "dump" do
-    assert UnixDateTime.dump(@test_date_120) =={:ok, 120}
+    assert UnixDateTime.dump(@test_date_120) == {:ok, 120}
     assert UnixDateTime.dump(@test_date_0) == {:ok, 0}
     assert UnixDateTime.dump(@test_nil) == {:ok, 0}
     assert UnixDateTime.dump(@test_0) == :error
