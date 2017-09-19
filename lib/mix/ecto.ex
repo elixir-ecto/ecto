@@ -86,8 +86,14 @@ defmodule Mix.Ecto do
     # If we starting Ecto just now, assume
     # logger has not been properly booted yet.
     if :ecto in started && Process.whereis(Logger) do
-      Logger.App.stop
-      :ok = Logger.App.start
+      backends = Application.get_env(:logger, :backends, [])
+      try do
+        Logger.App.stop
+        Application.put_env(:logger, :backends, [:console])
+        :ok = Logger.App.start
+      after
+        Application.put_env(:logger, :backends, backends)
+      end
     end
 
     {:ok, apps} = repo.__adapter__.ensure_all_started(repo, :temporary)
