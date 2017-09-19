@@ -23,11 +23,11 @@ defmodule Ecto.Type do
         where: fragment("?->>? ILIKE ?", s.original_url, "port", "443")
 
   So the custom type does need to handle the conversion from 
-  external data to runtime data ([`cast/1`](#c:cast/1)) as well as 
+  external data to runtime data (`c:cast/1`) as well as 
   transforming that runtime data into the `:map` Ecto native type and 
-  back ([`dump/1`](#c:dump/1) and [`load/1`](#c:load/1)).
+  back (`c:dump/1` and `c:load/1`).
 
-      defmodule URI.Type do
+      defmodule EctoURI do
         @behaviour Ecto.Type
         def type, do: :map
 
@@ -68,7 +68,7 @@ defmodule Ecto.Type do
         use Ecto.Schema
 
         schema "posts" do
-          field :original_url, URI.Type
+          field :original_url, EctoURI
         end
       end
 
