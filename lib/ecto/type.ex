@@ -57,7 +57,7 @@ defmodule Ecto.Type do
 
         # When dumping data to the database, we *expect* an URI struct
         # but any value could be inserted into the schema struct at runtime,
-        # so we need guard against them.
+        # so we need to guard against them.
         def dump(%URI{} = uri), do: {:ok, Map.from_struct(uri)}
         def dump(_), do: :error
       end
