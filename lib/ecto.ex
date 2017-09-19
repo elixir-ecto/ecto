@@ -556,9 +556,12 @@ defmodule Ecto do
     * `:prefix` - changes the struct query prefix
     * `:context` - changes the struct meta context
     * `:state` - changes the struct state
+
+  Please refer to the `Ecto.Schema.Metadata` module for more information.
   """
-  @spec put_meta(Ecto.Schema.t, [source: String.t, prefix: String.t,
-                                context: term, state: :built | :loaded | :deleted]) :: Ecto.Schema.t
+  @spec put_meta(Ecto.Schema.schema, meta) :: Ecto.Schema.schema
+        when meta: [source: Ecto.Schema.source, prefix: Ecto.Schema.prefix,
+                    context: Ecto.Schema.Metadata.context, state: Ecto.Schema.Metadata.state]
   def put_meta(struct, opts) do
     update_in struct.__meta__, &update_meta(opts, &1)
   end
@@ -571,15 +574,15 @@ defmodule Ecto do
     end
   end
 
-  defp update_meta([{:source, source}|t], %{source: {prefix, _}} = meta) do
+  defp update_meta([{:source, source} | t], %{source: {prefix, _}} = meta) do
     update_meta t, %{meta | source: {prefix, source}}
   end
 
-  defp update_meta([{:prefix, prefix}|t], %{source: {_, source}} = meta) do
+  defp update_meta([{:prefix, prefix} | t], %{source: {_, source}} = meta) do
     update_meta t, %{meta | source: {prefix, source}}
   end
 
-  defp update_meta([{:context, context}|t], meta) do
+  defp update_meta([{:context, context} | t], meta) do
     update_meta t, %{meta | context: context}
   end
 
