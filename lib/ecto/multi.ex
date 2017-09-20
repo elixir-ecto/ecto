@@ -101,7 +101,7 @@ defmodule Ecto.Multi do
 
   @type run :: (t -> {:ok | :error, any}) | {module, atom, [any]}
   @type merge :: (map -> t) | {module, atom, [any]}
-  @typep schema_or_source :: binary | {binary | nil, binary} | Ecto.Schema.t
+  @typep schema_or_source :: binary | {binary | nil, binary} | atom
   @typep operation :: {:changeset, Changeset.t, Keyword.t} |
                       {:run, run} |
                       {:merge, merge} |
@@ -330,8 +330,7 @@ defmodule Ecto.Multi do
   Accepts the same arguments and options as `c:Ecto.Repo.insert_all/3` does.
   """
   @spec insert_all(t, name, schema_or_source, [entry], Keyword.t) :: t
-        when schema_or_source: binary | {binary | nil, binary} | Ecto.Schema.t,
-             entry: map | Keyword.t
+        when entry: map | Keyword.t
   def insert_all(multi, name, schema_or_source, entries, opts \\ []) when is_list(opts) do
     add_operation(multi, name, {:insert_all, schema_or_source, entries, opts})
   end
