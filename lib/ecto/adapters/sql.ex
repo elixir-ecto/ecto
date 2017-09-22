@@ -606,10 +606,11 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def lock_for_migrations(repo, query, opts, fun) do
+    {_repo_mod, _pool, default_opts} = lookup_pool(repo)
     {:ok, result} =
       transaction(repo, opts ++ [log: false, timeout: :infinity], fn ->
         query
-        |> Map.put(:lock, "FOR UPDATE")
+        |> Map.put(:lock, Keyword.get(default_opts, :migration_lock, "FOR UPDATE"))
         |> repo.all()
         |> fun.()
       end)

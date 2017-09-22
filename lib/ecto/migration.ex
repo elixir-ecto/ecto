@@ -169,6 +169,11 @@ defmodule Ecto.Migration do
 
           config :app, App.Repo, migration_timestamps: [type: :utc_datetime]
 
+    * `:migration_lock` - Ecto will lock the migration table to handle concurrent
+      migrators using `FOR UPDATE` by default but you can configure it via:
+
+          config :app, App.Repo, migration_lock: nil
+
   """
 
   defmodule Index do
