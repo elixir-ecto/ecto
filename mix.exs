@@ -7,7 +7,7 @@ defmodule Ecto.Mixfile do
   def project do
     [app: :ecto,
      version: @version,
-     elixir: "~> 1.4",
+     elixir: "~> 1.5",
      deps: deps(),
      build_per_environment: false,
      consolidate_protocols: false,

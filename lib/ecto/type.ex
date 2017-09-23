@@ -195,7 +195,7 @@ defmodule Ecto.Type do
   end
   """
   @optional_callbacks handles_nil?: 0
-  @spec handles_nil?() :: boolean
+  @spec handles_nil? :: boolean
   def handles_nil?(), do: false
 
   ## Functions
