@@ -357,10 +357,8 @@ defmodule Ecto.Type do
 
   def dump(type, nil, _dumper) do
     case function_exported?(type, :handles_nil?, 0) do
-      true ->
-	      type.dump(nil)
-      false ->
-	      {:ok, nil}
+      true -> type.dump(nil)
+      false -> {:ok, nil}
     end
   end
 
