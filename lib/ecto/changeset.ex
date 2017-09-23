@@ -173,8 +173,8 @@ defmodule Ecto.Changeset do
       changeset =
         {data, types}
         |> Ecto.Changeset.cast(params["sign_up"], Map.keys(types))
-        |> validate_required(...)
-        |> validate_length(...)
+        |> Ecto.Changeset.validate_required(...)
+        |> Ecto.Changeset.validate_length(...)
 
   Such functionality makes Ecto extremely useful to cast, validate and prune
   data even if it is not meant to be persisted to the database.
