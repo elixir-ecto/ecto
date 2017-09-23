@@ -135,7 +135,7 @@ defmodule Ecto.Type do
   This callback is called from dump/1 to verify that type is willing
   to convert values to the one that legacy applications consider as nil
   on insert.
-  
+
   Type is responsible for implementing dump/1
   to return value to be written into database
   that represent `no value` as per database design.
@@ -143,7 +143,7 @@ defmodule Ecto.Type do
   or [unix_date_time_test.exs in feature/dump_nil branch](blob/feature/dump_nil/test/ecto/unix_date_time_test.exs)
 
   defmodule UnixDateTime do
-  
+
   #An Ecto type for Date Time stored in DB as integer produced by unix `date +%s` command
   #The DB column declared as 'NOT NULL DEFAULT 0'
   #The use of 0 instead nil is lame because `date +%s` returns 0 for 1970-01-01 00:00:00
@@ -157,13 +157,13 @@ defmodule Ecto.Type do
 
   # The Ecto type.
   def type, do: __MODULE__
-  
+
   # This is a %DateTime{}.
-  
+
   @type t :: %DateTime{}
 
   # Casts to __MODULE__.
-  
+
   @spec cast(t | any) :: {:ok, t} | :error
   def cast(%DateTime{} = date), do: {:ok, date}
 
@@ -194,9 +194,10 @@ defmodule Ecto.Type do
 
   end
   """
+  @callback handles_nil? :: boolean
   @optional_callbacks handles_nil?: 0
   @spec handles_nil? :: boolean
-  def handles_nil?(), do: false
+  def handles_nil? , do: false
 
   ## Functions
 
