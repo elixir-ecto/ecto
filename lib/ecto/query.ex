@@ -722,7 +722,7 @@ defmodule Ecto.Query do
   that should be performed on the fields. Any expression that is accepted in a
   query can be a select field.
 
-  Selelct also allows each expression to be wrapped in lists, tuples or maps as
+  Select also allows each expression to be wrapped in lists, tuples or maps as
   shown in the examples below. A full schema can also be selected.
 
   There can only be one select expression in a query, if the select expression
