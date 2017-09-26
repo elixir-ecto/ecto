@@ -36,7 +36,7 @@ defmodule Mix.Tasks.Ecto.Create do
     Enum.each repos, fn repo ->
       ensure_repo(repo, args)
       ensure_implements(repo.__adapter__, Ecto.Adapter.Storage,
-                                          "to create storage for #{inspect repo}")
+                                          "create storage for #{inspect repo}")
       case repo.__adapter__.storage_up(repo.config) do
         :ok ->
           unless opts[:quiet] do
