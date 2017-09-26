@@ -1419,7 +1419,7 @@ defmodule Ecto.Changeset do
       unsafe_validate_unique(changeset, [:city_name, :state_name], repo, prefix: "public")
 
   """
-  def unsafe_validate_unique(changeset, fields, repo, opts \\ []) do
+  def unsafe_validate_unique(changeset, fields, repo, opts \\ []) when is_list(opts) do
     fields = List.wrap(fields)
     {validations, struct} =
       case changeset do
@@ -1457,10 +1457,10 @@ defmodule Ecto.Changeset do
         end
 
       query =
-        if is_list(opts) && opts[:prefix] do
+        if prefix = opts[:prefix] do
           query
           |> Ecto.Queryable.to_query
-          |> Map.put(:prefix, opts[:prefix])
+          |> Map.put(:prefix, prefix)
         else
           query
         end
