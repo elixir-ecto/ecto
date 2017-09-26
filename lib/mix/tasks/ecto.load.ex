@@ -52,7 +52,7 @@ defmodule Mix.Tasks.Ecto.Load do
     Enum.each parse_repo(args), fn repo ->
       ensure_repo(repo, args)
       ensure_implements(repo.__adapter__, Ecto.Adapter.Structure,
-                                          "to load structure for #{inspect repo}")
+                                          "load structure for #{inspect repo}")
 
       if skip_safety_warnings?() or
           opts[:force] or
