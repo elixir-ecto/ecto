@@ -1094,8 +1094,14 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors ==
            [title: {"is taken", validation: :unsafe_unique, fields: [:title]}]
 
+    # with prefix option
+    Process.put(:test_repo_all_results, dup_result)
+    changeset = unsafe_validate_unique(base_changeset, :title, TestRepo, prefix: "public")
+    assert changeset.errors ==
+           [title: {"has already been taken", validation: :unsafe_unique, fields: [:title]}]
+
     Process.put(:test_repo_all_results, no_dup_result)
-    changeset = unsafe_validate_unique(base_changeset, [:title], TestRepo, "is taken")
+    changeset = unsafe_validate_unique(base_changeset, :title, TestRepo, prefix: "public")
     assert changeset.valid?
   end
 
