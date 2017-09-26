@@ -49,7 +49,7 @@ defmodule Mix.Tasks.Ecto.Dump do
     Enum.each parse_repo(args), fn repo ->
       ensure_repo(repo, args)
       ensure_implements(repo.__adapter__, Ecto.Adapter.Structure,
-                                          "to dump structure for #{inspect repo}")
+                                          "dump structure for #{inspect repo}")
       config = Keyword.merge(repo.config, opts)
 
       case repo.__adapter__.structure_dump(source_repo_priv(repo), config) do
