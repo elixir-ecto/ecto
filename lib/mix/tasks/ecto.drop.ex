@@ -38,7 +38,7 @@ defmodule Mix.Tasks.Ecto.Drop do
     Enum.each repos, fn repo ->
       ensure_repo(repo, args)
       ensure_implements(repo.__adapter__, Ecto.Adapter.Storage,
-                                          "to drop storage for #{inspect repo}")
+                                          "drop storage for #{inspect repo}")
 
       if skip_safety_warnings?() or
          opts[:force] or
