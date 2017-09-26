@@ -1415,10 +1415,11 @@ defmodule Ecto.Changeset do
 
       unsafe_validate_unique(changeset, [:email], repo)
       unsafe_validate_unique(changeset, [:city_name, :state_name], repo)
-      unsafe_validate_unique(changeset, [:city_name, :state_name], repo, "city must be unique within state")
+      unsafe_validate_unique(changeset, [:city_name, :state_name], repo, message: "city must be unique within state")
+      unsafe_validate_unique(changeset, [:city_name, :state_name], repo, prefix: "public")
 
   """
-  def unsafe_validate_unique(changeset, fields, repo, opts \\ []) do
+  def unsafe_validate_unique(changeset, fields, repo, opts \\ []) when is_list(opts) do
     fields = List.wrap(fields)
     {validations, struct} =
       case changeset do
@@ -1453,6 +1454,15 @@ defmodule Ecto.Changeset do
           Enum.reduce(pk_pairs, query, fn {field, value}, acc ->
             Ecto.Query.where(acc, [q], field(q, ^field) != ^value)
           end)
+        end
+
+      query =
+        if prefix = opts[:prefix] do
+          query
+          |> Ecto.Queryable.to_query
+          |> Map.put(:prefix, prefix)
+        else
+          query
         end
 
       if repo.one(query) do
