@@ -196,6 +196,9 @@ defmodule Ecto.TypeTest do
            {:ok, @date}
     assert Ecto.Type.cast(:date, ~T[12:23:34]) ==
            :error
+
+    assert Ecto.Type.cast(:date, "2015-12-31T00:00:00") == {:ok, @date}
+    assert Ecto.Type.cast(:date, "2015-12-31 00:00:00") == {:ok, @date}
   end
 
   @time ~T[23:50:07]

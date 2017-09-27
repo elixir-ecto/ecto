@@ -681,8 +681,13 @@ defmodule Ecto.Type do
 
   defp cast_date(binary) when is_binary(binary) do
     case Date.from_iso8601(binary) do
-      {:ok, _} = ok -> ok
-      {:error, _} -> :error
+      {:ok, _} = ok ->
+        ok
+      {:error, _} ->
+        case NaiveDateTime.from_iso8601(binary) do
+          {:ok, naive_datetime} -> {:ok, NaiveDateTime.to_date(naive_datetime)}
+          {:error, _} -> :error
+        end
     end
   end
   defp cast_date(%{"year" => empty, "month" => empty, "day" => empty}) when empty in ["", nil],
@@ -823,9 +828,9 @@ defmodule Ecto.Type do
     case DateTime.from_iso8601(binary) do
       {:ok, datetime, _offset} -> {:ok, datetime}
       {:error, :missing_offset} ->
-        case cast_naive_datetime(binary) do
+        case NaiveDateTime.from_iso8601(binary) do
           {:ok, naive_datetime} -> {:ok, DateTime.from_naive!(naive_datetime, "Etc/UTC")}
-          :error -> :error
+          {:error, _} -> :error
         end
       {:error, _} -> :error
     end
