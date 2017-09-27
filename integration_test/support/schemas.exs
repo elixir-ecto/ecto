@@ -43,6 +43,7 @@ defmodule Ecto.Integration.Post do
     field :posted, :date
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
     has_one :permalink, Ecto.Integration.Permalink, on_delete: :delete_all, on_replace: :delete
+    has_one :update_permalink, Ecto.Integration.Permalink, foreign_key: :post_id, on_delete: :delete_all, on_replace: :update
     has_many :comments_authors, through: [:comments, :author]
     belongs_to :author, Ecto.Integration.User
     many_to_many :users, Ecto.Integration.User,
@@ -116,8 +117,13 @@ defmodule Ecto.Integration.Permalink do
   schema "permalinks" do
     field :url, :string, source: :uniform_resource_locator
     belongs_to :post, Ecto.Integration.Post, on_replace: :nilify
+    belongs_to :update_post, Ecto.Integration.Post, on_replace: :update, foreign_key: :post_id, define_field: false
     belongs_to :user, Ecto.Integration.User
     has_many :post_comments_authors, through: [:post, :comments_authors]
+  end
+
+  def changeset(schema, params) do
+    Ecto.Changeset.cast(schema, params, [:url])
   end
 end
 

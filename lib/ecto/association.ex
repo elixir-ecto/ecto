@@ -378,7 +378,7 @@ defmodule Ecto.Association do
       changeset = %{Ecto.Changeset.change(previous) | action: :replace}
 
       case mod.on_repo_change(meta, parent_changeset, changeset, opts) do
-        {:ok, nil} ->
+        {:ok, _} ->
           :ok
         {:error, changeset} ->
           raise Ecto.InvalidChangesetError,
@@ -533,6 +533,7 @@ defmodule Ecto.Association.Has do
                      %{action: :replace} = changeset, opts) do
     changeset = case on_replace do
       :nilify -> %{changeset | action: :update}
+      :update -> %{changeset | action: :update}
       :delete -> %{changeset | action: :delete}
     end
 
@@ -793,9 +794,14 @@ defmodule Ecto.Association.BelongsTo do
     {:ok, nil}
   end
 
-  def on_repo_change(%{on_replace: :delete} = refl, parent_changeset,
+  def on_repo_change(%{on_replace: on_replace} = refl, parent_changeset,
                      %{action: :replace} = changeset, opts) do
-    on_repo_change(refl, parent_changeset, %{changeset | action: :delete}, opts)
+    changeset =
+      case on_replace do
+        :delete -> %{changeset | action: :delete}
+        :update -> %{changeset | action: :update}
+      end
+    on_repo_change(refl, parent_changeset, changeset, opts)
   end
 
   def on_repo_change(_refl, %{data: parent, repo: repo}, %{action: action} = changeset, opts) do

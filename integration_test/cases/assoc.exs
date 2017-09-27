@@ -231,6 +231,46 @@ defmodule Ecto.Integration.AssocTest do
     assert [2] == TestRepo.all(from(p in Permalink, select: count(p.id)))
   end
 
+  test "has_one changeset assoc (on_replace: :update)" do
+    # Insert new
+    changeset =
+      %Post{title: "1"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:update_permalink, %Permalink{url: "1"})
+    post = TestRepo.insert!(changeset)
+    assert post.update_permalink.id
+    assert post.update_permalink.post_id == post.id
+    assert post.update_permalink.url == "1"
+    post = TestRepo.get!(from(Post, preload: [:update_permalink]), post.id)
+    assert post.update_permalink.url == "1"
+
+    perma = post.update_permalink
+
+    # Cast on update
+    changeset =
+      post
+      |> Ecto.Changeset.cast(%{update_permalink: %{url: "2"}}, [])
+      |> Ecto.Changeset.cast_assoc(:update_permalink)
+    post = TestRepo.update!(changeset)
+    assert post.update_permalink.id == perma.id
+    assert post.update_permalink.post_id == post.id
+    assert post.update_permalink.url == "2"
+    post = TestRepo.get!(from(Post, preload: [:update_permalink]), post.id)
+    assert post.update_permalink.url == "2"
+
+    # Replacing with nil (on_replace: :update)
+    changeset =
+      post
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:update_permalink, nil)
+    post = TestRepo.update!(changeset)
+    refute post.update_permalink
+    post = TestRepo.get!(from(Post, preload: [:update_permalink]), post.id)
+    refute post.update_permalink
+
+    assert [1] == TestRepo.all(from(p in Permalink, select: count(p.id)))
+  end
+
   test "has_many changeset assoc (on_replace: :delete)" do
     c1 = TestRepo.insert! %Comment{text: "1"}
     c2 = %Comment{text: "2"}
@@ -486,6 +526,40 @@ defmodule Ecto.Integration.AssocTest do
       |> Ecto.Changeset.put_assoc(:post, nil)
     perma = TestRepo.update!(changeset)
     assert perma.post == nil
+    assert perma.post_id == nil
+  end
+
+  test "belongs_to changeset assoc (on_replace: :update)" do
+    # Insert new
+    changeset =
+      %Permalink{url: "1"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:update_post, %Post{title: "1"})
+    perma = TestRepo.insert!(changeset)
+    post = perma.update_post
+    assert perma.post_id
+    assert perma.post_id == post.id
+    assert perma.update_post.title == "1"
+
+    # Casting on update
+    changeset =
+      perma
+      |> Ecto.Changeset.cast(%{update_post: %{title: "2"}}, [])
+      |> Ecto.Changeset.cast_assoc(:update_post)
+    perma = TestRepo.update!(changeset)
+    assert perma.update_post.id == post.id
+    post = perma.update_post
+    assert perma.post_id
+    assert perma.post_id == post.id
+    assert perma.update_post.title == "2"
+
+    # Replace with nil
+    changeset =
+      perma
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:update_post, nil)
+    perma = TestRepo.update!(changeset)
+    assert perma.update_post == nil
     assert perma.post_id == nil
   end
 
