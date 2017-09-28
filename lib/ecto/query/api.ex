@@ -286,14 +286,24 @@ defmodule Ecto.Query.API do
   outside the query expression and send it to the database by interpolating
   the value in the query.
 
-      def window_sorting(field, dir) do
-        expr = "ROW_NUMBER() OVER(ORDER BY \#{field} \#{dir})"
+      def window_sorting(sorters) do
+        sort = sorters |> Enum.map(fn %{sort: key, direction: dir} ->
+          dir = case dir do
+            :asc -> "ASC"
+            :desc -> "DESC"
+          end
+          "\#{key} \#{dir}"
+        end
+        |> Enum.join(",")
+      
+        expr = "ROW_NUMBER() OVER(ORDER BY \#{sort})"
         from p in Post,
           select: %{p | id: unsafe_fragment(^expr)}
       end
 
   In the example above, we are using the row_number() sql window function to
-  do a particular type of ordering.
+  do a particular type of ordering, using a list of sorters which are not
+  known at compile time.
 
   It is very important to keep in mind that no input sanitization is done
   by Ecto, so the application may be open to sql injection attacks if the
