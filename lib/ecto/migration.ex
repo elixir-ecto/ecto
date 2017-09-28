@@ -822,11 +822,11 @@ defmodule Ecto.Migration do
     * `:column` - The foreign key column, default is `:id`
     * `:type`   - The foreign key type, default is `:bigserial`
     * `:on_delete` - What to perform if the referenced entry
-       is deleted. May be `:nothing`, `:delete_all` or
-       `:nilify_all`. Defaults to `:nothing`.
+       is deleted. May be `:nothing`, `:delete_all`,
+       `:nilify_all` or `:restrict`. Defaults to `:nothing`.
     * `:on_update` - What to perform if the referenced entry
-       is updated. May be `:nothing`, `:update_all` or
-       `:nilify_all`. Defaults to `:nothing`.
+       is updated. May be `:nothing`, `:update_all`,
+       `:nilify_all` or `:restrict`. Defaults to `:nothing`.
 
   """
   def references(table, opts \\ [])
@@ -840,11 +840,11 @@ defmodule Ecto.Migration do
     opts = Keyword.merge(repo_opts, opts)
     reference = struct(%Reference{table: table}, opts)
 
-    unless reference.on_delete in [:nothing, :delete_all, :nilify_all] do
+    unless reference.on_delete in [:nothing, :delete_all, :nilify_all, :restrict] do
       raise ArgumentError, "unknown :on_delete value: #{inspect reference.on_delete}"
     end
 
-    unless reference.on_update in [:nothing, :update_all, :nilify_all] do
+    unless reference.on_update in [:nothing, :update_all, :nilify_all, :restrict] do
       raise ArgumentError, "unknown :on_update value: #{inspect reference.on_update}"
     end
 

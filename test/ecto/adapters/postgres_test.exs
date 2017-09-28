@@ -800,7 +800,9 @@ defmodule Ecto.Adapters.PostgresTest do
                {:add, :category_5, %Reference{table: :categories, on_update: :nothing}, []},
                {:add, :category_6, %Reference{table: :categories, on_update: :update_all}, [null: false]},
                {:add, :category_7, %Reference{table: :categories, on_update: :nilify_all}, []},
-               {:add, :category_8, %Reference{table: :categories, on_delete: :nilify_all, on_update: :update_all}, [null: false]}]}
+               {:add, :category_8, %Reference{table: :categories, on_delete: :nilify_all, on_update: :update_all}, [null: false]},
+               {:add, :category_9, %Reference{table: :categories, on_delete: :restrict}, []},
+               {:add, :category_10, %Reference{table: :categories, on_update: :restrict}, []}]}
 
     assert execute_ddl(create) == ["""
     CREATE TABLE "posts" ("id" serial,
@@ -813,6 +815,8 @@ defmodule Ecto.Adapters.PostgresTest do
     "category_6" bigint NOT NULL CONSTRAINT "posts_category_6_fkey" REFERENCES "categories"("id") ON UPDATE CASCADE,
     "category_7" bigint CONSTRAINT "posts_category_7_fkey" REFERENCES "categories"("id") ON UPDATE SET NULL,
     "category_8" bigint NOT NULL CONSTRAINT "posts_category_8_fkey" REFERENCES "categories"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+    "category_9" bigint CONSTRAINT "posts_category_9_fkey" REFERENCES "categories"("id") ON DELETE RESTRICT,
+    "category_10" bigint CONSTRAINT "posts_category_10_fkey" REFERENCES "categories"("id") ON UPDATE RESTRICT,
     PRIMARY KEY ("id"))
     """ |> remove_newlines]
   end
