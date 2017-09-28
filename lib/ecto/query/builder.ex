@@ -82,6 +82,17 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:fragment, [], merge_fragments(pieces, frags)]}, params_acc}
   end
 
+  def escape({:unsafe_fragment, _, [{:^, _, [var]} = _expr]}, _type, params_acc, _vars, _env) do
+    expr = quote do
+      Ecto.Query.Builder.binary!(unquote(var))
+    end
+    {{:{}, [], [:fragment, [], [{:raw, expr}]]}, params_acc}
+  end
+
+  def escape({:unsafe_fragment, _, _}, _type, _params_acc, _vars, _env) do
+    error! "unsafe_fragment(...) expects only an interpolated string"
+  end
+
   # interval
 
   def escape({:from_now, meta, [count, interval]}, type, params_acc, vars, env) do
@@ -541,6 +552,21 @@ defmodule Ecto.Query.Builder do
     end
 
     kw
+  end
+
+  @doc """
+  Called by escaper at runtime to verify binaries.
+  """
+  def binary!(v) do
+    unless is_binary(v) do
+      raise ArgumentError, "`unsafe_fragment/1` expects only an interpolated string. " <>
+                           "You should build your binary and pass as an interpolated value " <>
+                           "with the `^` operator. " <>
+                           "WARNING: interpolating the fragment may open you to sql injection attacks! " <>
+                           "You may want to use `fragment/1`, which also prevents sql injection."
+    end
+
+    v
   end
 
   @doc """

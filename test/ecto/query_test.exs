@@ -375,4 +375,55 @@ defmodule Ecto.QueryTest do
              ~s[#Ecto.Query<from p in \"posts\", where: fragment("héllò")>]
     end
   end
+
+  describe "unsafe_fragment/1" do
+    test "raises with non interpolated binary fragment" do
+      message = ~r"expects only an interpolated string"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        quote_and_eval(
+          from p in "posts", where: unsafe_fragment("1 = 1")
+        )
+      end
+    end
+
+    test "raises with non interpolated binary and params" do
+      message = ~r"expects only an interpolated string"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        quote_and_eval(
+          from p in "posts", where: unsafe_fragment("1 = ?", 1)
+        )
+      end
+    end
+
+    test "raises with non interpolated keyword list" do
+      message = ~r"expects only an interpolated string"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        quote_and_eval(
+          from p in "posts", where: unsafe_fragment(["foo": "bar"])
+        )
+      end
+    end
+
+    test "raises at runtime when interpolation is a keyword list" do
+      assert_raise ArgumentError, ~r"expects only an interpolated string", fn ->
+        clause = ["foo": "bar"]
+        from p in "posts", where: unsafe_fragment(^clause)
+      end
+    end
+
+    test "works with interpolated binary fragment" do
+      val = 1
+      clause = "1 = #{val}"
+      query = from p in "posts", where: unsafe_fragment(^clause)
+
+      assert inspect(query) ==
+            ~s[#Ecto.Query<from p in \"posts\", where: fragment(\"1 = 1\")>]
+    end
+
+    test "keeps UTF-8 encoding" do
+      clause = "héllò"
+      assert inspect(from p in "posts", where: unsafe_fragment(^clause)) ==
+             ~s[#Ecto.Query<from p in \"posts\", where: fragment("héllò")>]
+    end
+  end
 end
