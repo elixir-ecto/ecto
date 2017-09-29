@@ -204,9 +204,10 @@ defmodule Ecto.Repo.Schema do
         changes = Map.merge(changeset.changes, embeds)
         {changes, extra, return_types, return_sources} =
           autogenerate_id(autogen_id, changes, return_types, return_sources, adapter)
-        {changes, autogen} = dump_changes!(:insert, Map.take(changes, fields), schema, extra, dumper, adapter)
-        on_conflict = on_conflict(on_conflict, conflict_target, metadata,
-                                  fn -> length(changes) end, adapter)
+        {changes, autogen} =
+          dump_changes!(:insert, Map.take(changes, fields), schema, extra, dumper, adapter)
+        on_conflict =
+          on_conflict(on_conflict, conflict_target, metadata, fn -> length(changes) end, adapter)
 
         args = [repo, metadata, changes, on_conflict, return_sources, opts]
         case apply(changeset, adapter, :insert, args) do
