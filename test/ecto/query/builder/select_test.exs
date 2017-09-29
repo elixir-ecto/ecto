@@ -159,4 +159,44 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert Macro.to_string(query.select.expr) =~ "merge"
     end
   end
+
+  describe "select with type fragments" do
+    test "supports typed fragment" do
+      from p in "posts", select: type(fragment("cost"), :decimal)
+    end
+
+    test "supports typed fragment with interpolated keyword" do
+      foo = ["$eq": 42]
+      from p in "posts", select: type(fragment(^foo), :decimal)
+    end
+
+    test "raises at runtime on invalid interpolation" do
+      foo = "cost"
+      assert_raise ArgumentError, ~r/only a keyword list may be interpolated/, fn ->
+        from p in "posts", select: type(fragment(^foo), :decimal)
+      end
+    end
+  end
+
+  describe "select with type unsafe fragments" do
+    test "raises on not interpolated binary" do
+      assert_raise Ecto.Query.CompileError, ~r/expects a single argument/, fn ->
+        escape(quote do
+          select([c], type(unsafe_fragment("cost"), :decimal))
+        end, [], __ENV__)
+      end
+    end
+
+    test "raises on interpolated keyword" do
+      assert_raise ArgumentError, ~r/ expects only an interpolated string/, fn ->
+        foo = ["$eq": 42]
+        from p in "posts", select: type(unsafe_fragment(^foo), :decimal)
+      end
+    end
+
+    test "accepts an interpolated binary" do
+      foo = "cost"
+      from p in "posts", select: type(unsafe_fragment(^foo), :decimal)
+    end
+  end
 end
