@@ -56,7 +56,7 @@ defmodule Ecto.Query.Builder.Join do
     {:_, expr, nil, params}
   end
 
-  def escape({:unsafe_fragment, _, [{:^, _, [_var]}]} = expr, vars, env) do
+  def escape({:unsafe_fragment, _, [_]} = expr, vars, env) do
     {expr, {params, :acc}} = Builder.escape(expr, :any, {%{}, :acc}, vars, env)
     {:_, expr, nil, params}
   end
