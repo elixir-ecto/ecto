@@ -196,13 +196,14 @@ defmodule Ecto.Repo.Schema do
       changeset = process_parents(changeset, parents, opts)
 
       if changeset.valid? do
-        changeset = Ecto.Embedded.prepare(changeset, adapter, :insert)
+        embeds = Ecto.Embedded.prepare(changeset, adapter, :insert)
 
         autogen_id = schema.__schema__(:autogenerate_id)
         metadata = metadata(struct, autogen_id, opts)
 
+        changes = Map.merge(changeset.changes, embeds)
         {changes, extra, return_types, return_sources} =
-          autogenerate_id(autogen_id, changeset.changes, return_types, return_sources, adapter)
+          autogenerate_id(autogen_id, changes, return_types, return_sources, adapter)
         {changes, autogen} = dump_changes!(:insert, Map.take(changes, fields), schema, extra, dumper, adapter)
         on_conflict = on_conflict(on_conflict, conflict_target, metadata,
                                   fn -> length(changes) end, adapter)
@@ -210,8 +211,9 @@ defmodule Ecto.Repo.Schema do
         args = [repo, metadata, changes, on_conflict, return_sources, opts]
         case apply(changeset, adapter, :insert, args) do
           {:ok, values} ->
+            values = extra ++ values
             changeset
-            |> load_changes(:loaded, return_types, extra ++ values, autogen, adapter, metadata)
+            |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, metadata)
             |> process_children(children, user_changeset, opts)
           {:error, _} = error ->
             error
@@ -271,9 +273,9 @@ defmodule Ecto.Repo.Schema do
         changeset = process_parents(changeset, parents, opts)
 
         if changeset.valid? do
-          changeset = Ecto.Embedded.prepare(changeset, adapter, :update)
+          embeds = Ecto.Embedded.prepare(changeset, adapter, :update)
 
-          original = Map.take(changeset.changes, fields)
+          original = changeset.changes |> Map.merge(embeds) |> Map.take(fields)
           {changes, autogen} = dump_changes!(:update, original, schema, [], dumper, adapter)
 
           metadata = metadata(struct, schema.__schema__(:autogenerate_id), opts)
@@ -289,7 +291,7 @@ defmodule Ecto.Repo.Schema do
           case apply(changeset, adapter, action, args) do
             {:ok, values} ->
               changeset
-              |> load_changes(:loaded, return_types, values, autogen, adapter, metadata)
+              |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, metadata)
               |> process_children(children, user_changeset, opts)
             {:error, _} = error ->
               error
@@ -375,7 +377,8 @@ defmodule Ecto.Repo.Schema do
       args = [repo, metadata, filters, opts]
       case apply(changeset, adapter, :delete, args) do
         {:ok, values} ->
-          {:ok, load_changes(changeset, :deleted, [], values, [], adapter, metadata).data}
+          changeset = load_changes(changeset, :deleted, [], values, %{}, [], adapter, metadata)
+          {:ok, changeset.data}
         {:error, _} = error ->
           error
         {:invalid, constraints} ->
@@ -614,23 +617,25 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp load_changes(%{changes: changes} = changeset,
-                    state, types, values, autogen, adapter, %{source: source}) do
+  defp load_changes(changeset, state, types, values, embeds, autogen, adapter, metadata) do
+    %{changes: changes} = changeset
+    %{source: source} = metadata
+
     # It is ok to use types from changeset because we have
     # already filtered the results to be only about fields.
     data =
       changeset.data
-      |> merge_changes(changes)
+      |> Map.merge(changes)
+      |> Map.merge(embeds)
       |> merge_autogen(autogen)
       |> apply_metadata(state, source)
       |> load_each(values, types, adapter)
     Map.put(changeset, :data, data)
   end
 
-  defp merge_changes(data, changes),
-    do: Map.merge(data, changes)
-  defp merge_autogen(data, autogen),
-    do: Enum.reduce(autogen, data, fn {k, v}, acc -> %{acc | k => v} end)
+  defp merge_autogen(data, autogen) do
+    Enum.reduce(autogen, data, fn {k, v}, acc -> %{acc | k => v} end)
+  end
 
   defp apply_metadata(%{__meta__: meta} = data, state, source) do
     %{data | __meta__: %{meta | state: state, source: source}}

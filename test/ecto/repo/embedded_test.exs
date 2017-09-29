@@ -22,12 +22,22 @@ defmodule Ecto.Repo.EmbeddedTest do
     end
   end
 
+  defmodule MyAssoc do
+    use Ecto.Schema
+
+    schema "my_assocs" do
+      field :x
+      field :my_assoc_id
+    end
+  end
+
   defmodule MySchema do
     use Ecto.Schema
 
     schema "my_schema" do
       embeds_one :embed, MyEmbed, on_replace: :delete
       embeds_many :embeds, MyEmbed, on_replace: :delete
+      has_one :assoc, MyAssoc
     end
   end
 
@@ -94,6 +104,22 @@ defmodule Ecto.Repo.EmbeddedTest do
     assert changeset.changes.embed
     refute changeset.changes.embed.data.id
     refute changeset.valid?
+  end
+
+  test "returns untouched changeset on invalid child association" do
+    invalid_assoc =
+      put_in(%MyAssoc{}.__meta__.context, {:invalid, [unique: "my_assocs_foo_index"]})
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.unique_constraint(:foo)
+
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:assoc, invalid_assoc)
+      |> Ecto.Changeset.put_embed(:embed, %MyEmbed{x: "xyz"})
+
+    {:error, changeset} = TestRepo.insert(changeset)
+    assert %Ecto.Changeset{} = changeset.changes.embed
   end
 
   test "handles nested embeds on insert" do
