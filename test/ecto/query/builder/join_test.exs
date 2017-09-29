@@ -73,24 +73,18 @@ defmodule Ecto.Query.Builder.JoinTest do
   end
 
   test "accepts interpolated binary as unsafe fragment" do
-    frag = "comments"
-    join("posts", :left, [p], c in unsafe_fragment(^frag), true)
+    join("posts", :left, [p], c in unsafe_fragment(^"comments"), true)
+    join("posts", :left, [p], c in unsafe_fragment(^"?", 1), true)
   end
 
   test "raises on non interpolated argument" do
-    assert_raise Ecto.Query.CompileError, ~r/expects a single argument/, fn ->
+    assert_raise Ecto.Query.CompileError, ~r/unsafe_fragment\(...\) expects the first argument/, fn ->
       escape(quote do
         join("posts", :left, [p], c in unsafe_fragment("comments"), true)
       end, [], __ENV__)
     end
 
-    assert_raise Ecto.Query.CompileError, ~r/expects a single argument/, fn ->
-      escape(quote do
-        join("posts", :left, [p], c in unsafe_fragment(["post"]), true)
-      end, [], __ENV__)
-    end
-
-    assert_raise Ecto.Query.CompileError, ~r/expects a single argument/, fn ->
+    assert_raise Ecto.Query.CompileError, ~r/unsafe_fragment\(...\) expects the first argument/, fn ->
       escape(quote do
         join("posts", :left, [p], c in unsafe_fragment(["$eq": "foo"]), true)
       end, [], __ENV__)
@@ -98,13 +92,8 @@ defmodule Ecto.Query.Builder.JoinTest do
   end
 
   test "raises on invalid interpolated unsafe fragments" do
-    frag = ["comments", "authors"]
-    assert_raise ArgumentError, ~r/expects only an interpolated string/, fn ->
-      join("posts", :left, [p], c in unsafe_fragment(^frag), true)
-    end
-
     frag = ["comments": "authors"]
-    assert_raise ArgumentError, ~r/expects only an interpolated string/, fn ->
+    assert_raise ArgumentError, ~r/unsafe_fragment\(...\) expects the first argument/, fn ->
       join("posts", :left, [p], c in unsafe_fragment(^frag), true)
     end
   end

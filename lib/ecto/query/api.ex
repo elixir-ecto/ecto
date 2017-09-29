@@ -306,7 +306,7 @@ defmodule Ecto.Query.API do
   known at compile time.
 
   It is very important to keep in mind that no input sanitization is done
-  by Ecto, so the application may be open to sql injection attacks if the
+  by Ecto, so the application may be open to SQL injection attacks if the
   expression is not built properly.
 
   Only an interpolated string (binary) is supported, any other value will

@@ -100,7 +100,7 @@ defmodule Ecto.Query.Builder.Select do
     escape_with_type(expr, type, params_take, vars, env)
   end
 
-  defp escape({:type, _, [{:unsafe_fragment, _, [_]} = expr, type]}, params_take, vars, env) do
+  defp escape({:type, _, [{:unsafe_fragment, _, [_ | _]} = expr, type]}, params_take, vars, env) do
     escape_with_type(expr, type, params_take, vars, env)
   end
 
