@@ -271,6 +271,49 @@ defmodule Ecto.Query.API do
   """
   def fragment(fragments), do: doc! [fragments]
 
+  @doc ~S"""
+  Send an unsafe fragment directly to the database.
+
+  WARNING: sending an unsafe fragment may expose your application to sql
+  injection attacks. Think twice before using it and try to reach the same
+  result using the safe fragment/1 API.
+
+  Sometimes it is not possible to represent all possible databases queries
+  using Ecto's syntax or fragment/1, expecially when dealing with specific
+  database construct and dynamic fields.
+
+  To overcome this, it is possible to build the expression as a binary
+  outside the query expression and send it to the database by interpolating
+  the value in the query.
+
+      def window_sorting(sorters) do
+        sort = sorters |> Enum.map(fn %{sort: key, direction: dir} ->
+          dir = case dir do
+            :asc -> "ASC"
+            :desc -> "DESC"
+          end
+          "#{key} #{dir}"
+        end
+        |> Enum.join(",")
+
+        expr = "ROW_NUMBER() OVER(ORDER BY #{sort})"
+        from p in Post,
+          select: %{p | id: unsafe_fragment(^expr)}
+      end
+
+  In the example above, we are using the row_number() sql window function to
+  do a particular type of ordering, using a list of sorters which are not
+  known at compile time.
+
+  It is very important to keep in mind that no input sanitization is done
+  by Ecto, so the application may be open to sql injection attacks if the
+  expression is not built properly.
+
+  Only an interpolated string (binary) is supported, any other value will
+  result into a compilation error or ArgumentError during runtime.
+  """
+  def unsafe_fragment(fragment), do: doc! [fragment]
+
   @doc """
   Allows a field to be dynamically accessed.
 

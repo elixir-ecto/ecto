@@ -100,6 +100,10 @@ defmodule Ecto.Query.Builder.Select do
     escape_with_type(expr, type, params_take, vars, env)
   end
 
+  defp escape({:type, _, [{:unsafe_fragment, _, [_]} = expr, type]}, params_take, vars, env) do
+    escape_with_type(expr, type, params_take, vars, env)
+  end
+
   defp escape({:type, _, [{agg, _, [_ | _]} = expr, type]}, params_take, vars, env)
        when agg in ~w(avg count max min sum)a do
     escape_with_type(expr, type, params_take, vars, env)

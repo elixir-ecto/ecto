@@ -82,6 +82,23 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:fragment, [], merge_fragments(pieces, frags)]}, params_acc}
   end
 
+  def escape({:unsafe_fragment, _, [{:^, _, [var]} = _expr]}, _type, params_acc, _vars, _env) do
+    expr = quote do
+      Ecto.Query.Builder.unsafe_fragment!(unquote(var))
+    end
+    {{:{}, [], [:fragment, [], [{:raw, expr}]]}, params_acc}
+  end
+
+  def escape({:unsafe_fragment, _, [_ | _]}, _type, _params_acc, _vars, _env) do
+    error! """
+    unsafe_fragment(...) expects a single argument to be interpolated as ^argument
+    
+    The argument is a string that will be sent to the database as is. For this reason,
+    use this feature with extreme care and instead prefer to use fragment as much 
+    as possible.
+    """
+  end
+
   # interval
 
   def escape({:from_now, meta, [count, interval]}, type, params_acc, vars, env) do
@@ -536,11 +553,44 @@ defmodule Ecto.Query.Builder do
   """
   def keyword!(kw) do
     unless Keyword.keyword?(kw) do
-      raise ArgumentError, "to prevent sql injection, only a keyword list may be interpolated " <>
-                           "as the first argument to `fragment/1` with the `^` operator, got `#{inspect kw}`"
+      message = """
+      to prevent sql injection, only a keyword list may be interpolated
+      as the first argument to `fragment/1` with the `^` operator, got `#{inspect kw}`
+      """
+      message = if is_binary(kw) do
+        message <> """
+
+        For interpolated strings use `unsafe_fragment/1` to pass the argument
+        as-is to the database, paying attention to possible sql injection attack
+        vectors as no escaping is done by Ecto.
+        
+        Use `unsafe_fragment/1` only as last resort and wisely.
+        """
+      else
+        message
+      end
+      raise ArgumentError, message: message
     end
 
     kw
+  end
+
+  @doc """
+  Called by escaper at runtime to verify binaries.
+  """
+  def unsafe_fragment!(v) do
+    unless is_binary(v) do
+      raise ArgumentError, """
+        `unsafe_fragment/1` expects only an interpolated string.
+          You should build your binary and pass as an interpolated value with the `^` operator.
+
+          WARNING: interpolating the fragment may open you to sql injection attacks!
+
+          You may want to use `fragment/1`, which also prevents sql injection.
+        """
+    end
+
+    v
   end
 
   @doc """
