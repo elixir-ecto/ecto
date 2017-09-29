@@ -271,7 +271,7 @@ defmodule Ecto.Query.API do
   """
   def fragment(fragments), do: doc! [fragments]
 
-  @doc """
+  @doc ~S"""
   Send an unsafe fragment directly to the database.
 
   WARNING: sending an unsafe fragment may expose your application to sql
@@ -292,11 +292,11 @@ defmodule Ecto.Query.API do
             :asc -> "ASC"
             :desc -> "DESC"
           end
-          "\#{key} \#{dir}"
+          "#{key} #{dir}"
         end
         |> Enum.join(",")
       
-        expr = "ROW_NUMBER() OVER(ORDER BY \#{sort})"
+        expr = "ROW_NUMBER() OVER(ORDER BY #{sort})"
         from p in Post,
           select: %{p | id: unsafe_fragment(^expr)}
       end
