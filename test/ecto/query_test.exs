@@ -378,7 +378,7 @@ defmodule Ecto.QueryTest do
 
   describe "unsafe_fragment/1" do
     test "raises with non interpolated binary fragment" do
-      message = ~r"expects only an interpolated string"
+      message = ~r"expects a single argument to be interpolated"
       assert_raise Ecto.Query.CompileError, message, fn ->
         quote_and_eval(
           from p in "posts", where: unsafe_fragment("1 = 1")
@@ -387,7 +387,7 @@ defmodule Ecto.QueryTest do
     end
 
     test "raises with non interpolated binary and params" do
-      message = ~r"expects only an interpolated string"
+      message = ~r"expects a single argument to be interpolated"
       assert_raise Ecto.Query.CompileError, message, fn ->
         quote_and_eval(
           from p in "posts", where: unsafe_fragment("1 = ?", 1)
@@ -395,8 +395,26 @@ defmodule Ecto.QueryTest do
       end
     end
 
+    test "raises with non interpolated, non empty list" do
+      message = ~r"expects a single argument to be interpolated"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        quote_and_eval(
+          from p in "posts", where: unsafe_fragment(["foo", "bar"])
+        )
+      end
+    end
+
+    test "raises with non interpolated, empty list" do
+      message = ~r"expects a single argument to be interpolated"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        quote_and_eval(
+          from p in "posts", where: unsafe_fragment([])
+        )
+      end
+    end
+
     test "raises with non interpolated keyword list" do
-      message = ~r"expects only an interpolated string"
+      message = ~r"expects a single argument to be interpolated"
       assert_raise Ecto.Query.CompileError, message, fn ->
         quote_and_eval(
           from p in "posts", where: unsafe_fragment(["foo": "bar"])
@@ -407,6 +425,20 @@ defmodule Ecto.QueryTest do
     test "raises at runtime when interpolation is a keyword list" do
       assert_raise ArgumentError, ~r"expects only an interpolated string", fn ->
         clause = ["foo": "bar"]
+        from p in "posts", where: unsafe_fragment(^clause)
+      end
+    end
+
+    test "raises at runtime when interpolation is a non empty list" do
+      assert_raise ArgumentError, ~r"expects only an interpolated string", fn ->
+        clause = ["foo", "bar"]
+        from p in "posts", where: unsafe_fragment(^clause)
+      end
+    end
+
+    test "raises at runtime when interpolation is an empty list" do
+      assert_raise ArgumentError, ~r"expects only an interpolated string", fn ->
+        clause = []
         from p in "posts", where: unsafe_fragment(^clause)
       end
     end
