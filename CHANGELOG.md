@@ -26,6 +26,21 @@ The query syntax also seen some improvements: map updates are supported in subqu
 
 Finally, the UPSERT support added on Ecto v2.1 is getting more improvements: the `{:constraint, constraint}` is now supported as conflict target and the `:returning` option was added to `Ecto.Repo.insert/2`, mirroring the behaviour of `insert_all`.
 
+## v2.2.5 (2017-09-29)
+
+### Enhancements
+
+  * [Ecto.Changeset] Support `:prefix` on `unsafe_validate_unique`
+  * [Ecto.Migration] Support for `ON DELETE RESTRICT` and `ON UPDATE RESTRICT` in migrations
+  * [Ecto.Query] Fix params counter when using `in` in some places in query
+  * [Ecto.Schema] Properly support `on_replace: :update` on `belongs_to`/`has_one`
+  * [Ecto.Type] Allow casting Date from NaiveDateTime ISO
+
+### Bug fixes
+
+  * [Ecto.Repo] Do not surface embeds if repo operation fails
+  * [Mix.Tasks.Ecto.Migrate] Only keep logger backends when running migrations
+
 ## v2.2.4 (2017-09-15)
 
 ### Bug fixes
