@@ -295,7 +295,7 @@ defmodule Ecto.Query.API do
           "#{key} #{dir}"
         end
         |> Enum.join(",")
-      
+
         expr = "ROW_NUMBER() OVER(ORDER BY #{sort})"
         from p in Post,
           select: %{p | id: unsafe_fragment(^expr)}
