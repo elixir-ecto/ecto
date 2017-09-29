@@ -553,8 +553,23 @@ defmodule Ecto.Query.Builder do
   """
   def keyword!(kw) do
     unless Keyword.keyword?(kw) do
-      raise ArgumentError, "to prevent sql injection, only a keyword list may be interpolated " <>
-                           "as the first argument to `fragment/1` with the `^` operator, got `#{inspect kw}`"
+      message = """
+      to prevent sql injection, only a keyword list may be interpolated
+      as the first argument to `fragment/1` with the `^` operator, got `#{inspect kw}`
+      """
+      message = if is_binary(kw) do
+        message <> """
+
+        For interpolated strings use `unsafe_fragment/1` to pass the argument
+        as-is to the database, paying attention to possible sql injection attack
+        vectors as no escaping is done by Ecto.
+        
+        Use `unsafe_fragment/1` only as last resort and wisely.
+        """
+      else
+        message
+      end
+      raise ArgumentError, message: message
     end
 
     kw
