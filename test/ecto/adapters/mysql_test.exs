@@ -272,6 +272,9 @@ defmodule Ecto.Adapters.MySQLTest do
 
     query = Schema |> select([e], 1 in fragment("foo")) |> normalize
     assert all(query) == ~s{SELECT 1 = ANY(foo) FROM `schema` AS s0}
+
+    query = Schema |> select([e], e.x == ^0 or e.x in ^[1, 2, 3] or e.x == ^4) |> normalize
+    assert all(query) == ~s{SELECT ((s0.`x` = ?) OR s0.`x` IN (?,?,?)) OR (s0.`x` = ?) FROM `schema` AS s0}
   end
 
   test "having" do
