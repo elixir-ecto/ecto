@@ -1549,7 +1549,7 @@ defmodule Ecto.Changeset do
 
   @doc ~S"""
   Validates a change, of type enum, is a subset of the given enumerable. Like
-  validate_inclusion/4 for lists.
+  `validate_inclusion/4` for lists.
 
   ## Options
 
