@@ -788,7 +788,7 @@ defmodule Ecto.Query.Planner do
 
   defp prewalk({:in, in_meta, [left, {:^, meta, [param]}]}, kind, query, expr, acc, adapter) do
     {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
-    {right, acc} = validate_in(meta, expr, param, acc)
+    {right, acc} = validate_in(meta, expr, param, acc, adapter)
     {{:in, in_meta, [left, right]}, acc}
   end
 
@@ -854,10 +854,14 @@ defmodule Ecto.Query.Planner do
          do: dump_param(adapter, type, v)
   end
 
-  defp validate_in(meta, expr, param, acc) do
-    {v, _t} = Enum.fetch!(expr.params, param)
-    length  = length(v)
-    {{:^, meta, [acc, length]}, acc + length}
+  defp validate_in(meta, expr, param, acc, adapter) do
+    {v, t} = Enum.fetch!(expr.params, param)
+    length = length(v)
+
+    case adapter.dumpers(t, t) do
+      [{:in, _} | _] -> {{:^, meta, [acc, length]}, acc + length}
+      _ -> {{:^, meta, [acc, length]}, acc + 1}
+    end
   end
 
   defp normalize_select(%{select: nil} = query) do
