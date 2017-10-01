@@ -1092,5 +1092,6 @@ defmodule Ecto.Repo do
       [%User{...}, ...]
 
   """
-  @callback load(Ecto.Schema.t | map(), map() | Keyword.t | {list, list}) :: Ecto.Schema.t | map()
+  @callback load(struct_or_map :: Ecto.Schema.t | map(), data :: map() | Keyword.t | {list, list}) ::
+            Ecto.Schema.t | map()
 end
