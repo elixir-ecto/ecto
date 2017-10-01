@@ -585,7 +585,7 @@ defmodule Ecto.DateTime do
 
   @doc """
   Converts `Ecto.DateTime` to its ISO 8601 representation
-  without timezone specification.
+  without time zone specification.
   """
   def to_iso8601(%Ecto.DateTime{year: year, month: month, day: day,
                                 hour: hour, min: min, sec: sec, usec: usec}) do
