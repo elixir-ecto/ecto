@@ -160,8 +160,8 @@ defmodule Ecto.Schema do
 
   Timestamps are typically represented by `:naive_datetime` or
   `:utc_datetime`. The naive datetime uses Elixir's `NaiveDateTime` which
-  has no timezone information while `:utc_datetime` uses a `DateTime` and
-  expects the time_zone to be set to UTC.
+  has no time zone information while `:utc_datetime` uses a `DateTime` and
+  expects the time zone to be set to UTC.
 
   ### Custom types
 
@@ -381,7 +381,7 @@ defmodule Ecto.Schema do
   Defines a schema struct with a source name and field definitions.
 
   An additional field called `__meta__` is added to the struct for storing
-  internal Ecto state. This field always has a `Ecto.Schema.Metatdata` struct
+  internal Ecto state. This field always has a `Ecto.Schema.Metadata` struct
   as value and can be manipulated with the `Ecto.put_meta/2` function.
   """
   defmacro schema(source, [do: block]) do
@@ -1894,7 +1894,7 @@ defmodule Ecto.Schema do
       type == :datetime ->
         raise ArgumentError, "invalid type :datetime for field #{inspect name}. " <>
                              "You probably meant to choose one between :naive_datetime " <>
-                             "(no timezone information) or :utc_datetime (timezone is set to UTC)"
+                             "(no time zone information) or :utc_datetime (time zone is set to UTC)"
       type == :any and not virtual? ->
         raise ArgumentError, "only virtual fields can have type :any, " <>
                              "invalid type for field #{inspect name}"
