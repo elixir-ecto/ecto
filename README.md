@@ -58,7 +58,7 @@ end
 
 See the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and the [online documentation](http://hexdocs.pm/ecto).
 
-Also checkout the ["What's new in Ecto 2.1"](http://pages.plataformatec.com.br/ebook-whats-new-in-ecto-2-0) free ebook to learn more about many features since Ecto 2.0 such as `many_to_many`, schemaless queries, concurrent testing, upsert and more.
+Also checkout the ["What's new in Ecto 2.1"](http://pages.plataformatec.com.br/ebook-whats-new-in-ecto-2-0) free ebook to learn more about many features since Ecto 2.1 such as `many_to_many`, schemaless queries, concurrent testing, upsert and more. Note the book still largely applies to Ecto 3.0 as the major change in Ecto 3.0 was the removal of the outdated Ecto datetime types in favor of Elixir's Calendar types.
 
 ## Usage
 
@@ -105,6 +105,7 @@ We are currently looking for contributions to add support for other SQL database
 
 | Branch | Support                  |
 | ------ | ------------------------ |
+| v3.0   | In development           |
 | v2.2   | Bug fixes                |
 | v2.1   | Security patches only    |
 | v2.0   | Unsupported from 08/2017 |
