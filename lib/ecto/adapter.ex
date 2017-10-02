@@ -183,9 +183,4 @@ defmodule Ecto.Adapter do
   @callback delete(repo, schema_meta, filters, options) ::
                      {:ok, fields} | {:invalid, constraints} |
                      {:error, :stale} | no_return
-
-  @doc false
-  def json_library do
-    Application.get_env(:ecto, :json_library, Poison)
-  end
 end

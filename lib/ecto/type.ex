@@ -297,7 +297,7 @@ defmodule Ecto.Type do
   end
 
   def dump(:any, value, _dumper) do
-    Ecto.DataType.dump(value)
+    {:ok, value}
   end
 
   def dump({:embed, embed}, value, dumper) do
@@ -323,20 +323,20 @@ defmodule Ecto.Type do
     {:ok, Decimal.new(term)}
   end
 
-  def dump(:date, term, _dumper) do
-    dump_date(term)
+  def dump(:time, %Time{} = time, _dumper) do
+    {:ok, time}
   end
 
-  def dump(:time, term, _dumper) do
-    dump_time(term)
+  def dump(:naive_datetime, %NaiveDateTime{} = naive_datetime, _dumper) do
+    {:ok, naive_datetime}
   end
 
-  def dump(:naive_datetime, term, _dumper) do
-    dump_naive_datetime(term)
-  end
-
-  def dump(:utc_datetime, term, _dumper) do
-    dump_utc_datetime(term)
+  def dump(:utc_datetime, %DateTime{time_zone: time_zone} = datetime, _loader) do
+    if time_zone != "Etc/UTC" do
+      message = ":utc_datetime expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
+      raise ArgumentError, message
+    end
+    {:ok, DateTime.to_naive(datetime)}
   end
 
   def dump(type, value, _dumper) do
@@ -419,20 +419,16 @@ defmodule Ecto.Type do
     map(Map.to_list(value), type, loader, %{})
   end
 
-  def load(:date, term, _loader) do
-    load_date(term)
+  def load(:time, %Time{} = time, _loader) do
+    {:ok, zerofy_microsecond(time)}
   end
 
-  def load(:time, term, _loader) do
-    load_time(term)
+  def load(:naive_datetime, %NaiveDateTime{} = naive_datetime, _loader) do
+    {:ok, zerofy_microsecond(naive_datetime)}
   end
 
-  def load(:naive_datetime, term, _loader) do
-    load_naive_datetime(term)
-  end
-
-  def load(:utc_datetime, term, _loader) do
-    load_utc_datetime(term)
+  def load(:utc_datetime, %NaiveDateTime{} = naive_datetime, _loader) do
+    naive_datetime |> zerofy_microsecond |> DateTime.from_naive("Etc/UTC")
   end
 
   def load(type, value, _loader) do
@@ -592,15 +588,24 @@ defmodule Ecto.Type do
   end
 
   def cast(:time, term) do
-    cast_time(term)
+    case cast_time(term) do
+      {:ok, time} -> {:ok, zerofy_microsecond(time)}
+      :error -> :error
+    end
   end
 
   def cast(:naive_datetime, term) do
-    cast_naive_datetime(term)
+    case cast_naive_datetime(term) do
+      {:ok, naive_datetime} -> {:ok, zerofy_microsecond(naive_datetime)}
+      :error -> :error
+    end
   end
 
   def cast(:utc_datetime, term) do
-    cast_utc_datetime(term)
+    case cast_utc_datetime(term) do
+      {:ok, utc_datetime} -> {:ok, zerofy_microsecond(utc_datetime)}
+      :error -> :error
+    end
   end
 
   def cast(type, term) when type in [:id, :integer] and is_binary(term) do
@@ -710,20 +715,6 @@ defmodule Ecto.Type do
   defp cast_date(_, _, _),
     do: :error
 
-  defp dump_date(%Date{year: year, month: month, day: day}),
-    do: {:ok, {year, month, day}}
-  defp dump_date(%{__struct__: _} = struct),
-    do: Ecto.DataType.dump(struct)
-  defp dump_date(_),
-    do: :error
-
-  defp load_date(%Date{} = date),
-    do: {:ok, date}
-  defp load_date({year, month, day}),
-    do: {:ok, %Date{year: year, month: month, day: day}}
-  defp load_date(_),
-    do: :error
-
   ## Time
 
   defp cast_time(binary) when is_binary(binary) do
@@ -763,22 +754,6 @@ defmodule Ecto.Type do
     :error
   end
 
-  defp dump_time(%Time{hour: hour, minute: minute, second: second, microsecond: {microsecond, _}}),
-    do: {:ok, {hour, minute, second, microsecond}}
-  defp dump_time(%{__struct__: _} = struct),
-    do: Ecto.DataType.dump(struct)
-  defp dump_time(_),
-    do: :error
-
-  defp load_time(%Time{} = time),
-    do: {:ok, time}
-  defp load_time({hour, minute, second, microsecond}),
-    do: {:ok, %Time{hour: hour, minute: minute, second: second, microsecond: {microsecond, 6}}}
-  defp load_time({hour, minute, second}),
-    do: {:ok, %Time{hour: hour, minute: minute, second: second}}
-  defp load_time(_),
-    do: :error
-
   ## Naive datetime
 
   defp cast_naive_datetime(binary) when is_binary(binary) do
@@ -802,25 +777,6 @@ defmodule Ecto.Type do
       end
     end
   end
-
-  defp dump_naive_datetime(%NaiveDateTime{year: year, month: month, day: day,
-                                          hour: hour, minute: minute, second: second, microsecond: {microsecond, _}}),
-    do: {:ok, {{year, month, day}, {hour, minute, second, microsecond}}}
-  defp dump_naive_datetime(%{__struct__: _} = struct),
-    do: Ecto.DataType.dump(struct)
-  defp dump_naive_datetime(_),
-    do: :error
-
-  defp load_naive_datetime(%NaiveDateTime{} = naive),
-    do: {:ok, naive}
-  defp load_naive_datetime({{year, month, day}, {hour, minute, second, microsecond}}),
-    do: {:ok, %NaiveDateTime{year: year, month: month, day: day,
-                             hour: hour, minute: minute, second: second, microsecond: {microsecond, 6}}}
-  defp load_naive_datetime({{year, month, day}, {hour, minute, second}}),
-    do: {:ok, %NaiveDateTime{year: year, month: month, day: day,
-                             hour: hour, minute: minute, second: second}}
-  defp load_naive_datetime(_),
-    do: :error
 
   ## UTC datetime
 
@@ -853,40 +809,20 @@ defmodule Ecto.Type do
     end
   end
 
-  defp dump_utc_datetime(%DateTime{year: year, month: month, day: day, time_zone: "Etc/UTC",
-                                   hour: hour, minute: minute, second: second, microsecond: {microsecond, _}}),
-    do: {:ok, {{year, month, day}, {hour, minute, second, microsecond}}}
-  defp dump_utc_datetime(%{__struct__: _} = struct),
-    do: Ecto.DataType.dump(struct)
-  defp dump_utc_datetime(_),
-    do: :error
-
-  defp load_utc_datetime(%DateTime{} = dt),
-    do: {:ok, dt}
-  defp load_utc_datetime({{year, month, day}, {hour, minute, second, microsecond}}),
-    do: {:ok, %DateTime{year: year, month: month, day: day,
-                        hour: hour, minute: minute, second: second, microsecond: {microsecond, 6},
-                        std_offset: 0, utc_offset: 0, zone_abbr: "UTC", time_zone: "Etc/UTC"}}
-  defp load_utc_datetime({{year, month, day}, {hour, minute, second}}),
-    do: {:ok, %DateTime{year: year, month: month, day: day,
-                        hour: hour, minute: minute, second: second,
-                        std_offset: 0, utc_offset: 0, zone_abbr: "UTC", time_zone: "Etc/UTC"}}
-  defp load_utc_datetime(_),
-    do: :error
-
   ## Helpers
 
   # Checks if a value is of the given primitive type.
-  defp of_base_type?(:any, _),           do: true
-  defp of_base_type?(:id, term),         do: is_integer(term)
-  defp of_base_type?(:float, term),      do: is_float(term)
-  defp of_base_type?(:integer, term),    do: is_integer(term)
-  defp of_base_type?(:boolean, term),    do: is_boolean(term)
-  defp of_base_type?(:binary, term),     do: is_binary(term)
-  defp of_base_type?(:string, term),     do: is_binary(term)
-  defp of_base_type?(:map, term),        do: is_map(term) and not Map.has_key?(term, :__struct__)
-  defp of_base_type?(:decimal, value),   do: Kernel.match?(%{__struct__: Decimal}, value)
-  defp of_base_type?(_, _),              do: false
+  defp of_base_type?(:any, _),         do: true
+  defp of_base_type?(:id, term),       do: is_integer(term)
+  defp of_base_type?(:float, term),    do: is_float(term)
+  defp of_base_type?(:integer, term),  do: is_integer(term)
+  defp of_base_type?(:boolean, term),  do: is_boolean(term)
+  defp of_base_type?(:binary, term),   do: is_binary(term)
+  defp of_base_type?(:string, term),   do: is_binary(term)
+  defp of_base_type?(:map, term),      do: is_map(term) and not Map.has_key?(term, :__struct__)
+  defp of_base_type?(:decimal, value), do: Kernel.match?(%Decimal{}, value)
+  defp of_base_type?(:date, value),    do: Kernel.match?(%Date{}, value)
+  defp of_base_type?(_, _),            do: false
 
   defp array([h|t], type, fun, acc) do
     case fun.(type, h) do
@@ -910,7 +846,12 @@ defmodule Ecto.Type do
     {:ok, acc}
   end
 
-  defp map(_, _, _, _), do: :error
+  defp map(_, _, _, _) do
+    :error
+  end
+
+  defp zerofy_microsecond(nil), do: nil
+  defp zerofy_microsecond(map), do: %{map | microsecond: {0, 0}}
 
   defp to_i(nil), do: nil
   defp to_i(int) when is_integer(int), do: int

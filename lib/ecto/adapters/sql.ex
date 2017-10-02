@@ -23,7 +23,7 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       defmacro __before_compile__(env) do
-        Ecto.Adapters.SQL.__before_compile__(@conn, env)
+        Ecto.Adapters.SQL.__before_compile__(@conn, @adapter, env)
       end
 
       @doc false
@@ -197,7 +197,7 @@ defmodule Ecto.Adapters.SQL do
                  optional(atom) => any}
                | no_return
   def query!(repo, sql, params \\ [], opts \\ []) do
-    query!(repo, sql, map_params(params), fn x -> x end, opts)
+    query!(repo, sql, params, fn x -> x end, opts)
   end
 
   defp query!(repo, sql, params, mapper, opts) do
@@ -246,7 +246,7 @@ defmodule Ecto.Adapters.SQL do
                       optional(atom) => any}}
               | {:error, Exception.t}
   def query(repo, sql, params \\ [], opts \\ []) do
-    query(repo, sql, map_params(params), fn x -> x end, opts)
+    query(repo, sql, params, fn x -> x end, opts)
   end
 
   defp query(repo, sql, params, mapper, opts) do
@@ -275,23 +275,20 @@ defmodule Ecto.Adapters.SQL do
     opts
   end
 
-  defp map_params(params) do
-    Enum.map params, fn
-      %{__struct__: _} = value ->
-        {:ok, value} = Ecto.DataType.dump(value)
-        value
-      [_|_] = value ->
-        {:ok, value} = Ecto.DataType.dump(value)
-        value
-      value ->
-        value
-    end
-  end
-
   ## Worker
 
   @doc false
-  def __before_compile__(conn, _env) do
+  def __before_compile__(conn, adapter, _env) do
+    if value = Application.get_env(:ecto, :json_library) do
+      IO.warn """
+      The :json_library configuration for the :ecto application is deprecated.
+      Please configure the :json_library in the adapter instead:
+
+          config #{inspect adapter}, :json_library, #{inspect value}
+
+      """
+    end
+
     quote do
       @doc false
       def __sql__, do: unquote(conn)

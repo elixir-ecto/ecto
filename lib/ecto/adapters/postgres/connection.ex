@@ -1,8 +1,4 @@
 if Code.ensure_loaded?(Postgrex) do
-  Postgrex.Types.define(Ecto.Adapters.Postgres.TypeModule,
-                        Ecto.Adapters.Postgres.extensions(),
-                        json: Ecto.Adapter.json_library())
-
   defmodule Ecto.Adapters.Postgres.Connection do
     @moduledoc false
 
@@ -14,7 +10,6 @@ if Code.ensure_loaded?(Postgrex) do
     def child_spec(opts) do
       opts
       |> Keyword.put_new(:port, @default_port)
-      |> Keyword.put_new(:types, Ecto.Adapters.Postgres.TypeModule)
       |> Postgrex.child_spec()
     end
 
@@ -797,7 +792,7 @@ if Code.ensure_loaded?(Postgrex) do
     defp default_expr({:ok, literal}, _type) when is_number(literal) or is_boolean(literal),
       do: [" DEFAULT ", to_string(literal)]
     defp default_expr({:ok, %{} = map}, :map) do
-      default = Ecto.Adapter.json_library().encode!(map)
+      default = Application.get_env(:postgrex, :json_library, Poison).encode!(map)
       [" DEFAULT ", single_quote(default)]
     end
     defp default_expr({:ok, {:fragment, expr}}, _type),

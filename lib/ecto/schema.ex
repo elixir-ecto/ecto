@@ -48,7 +48,7 @@ defmodule Ecto.Schema do
       used by `belongs_to` associations. Defaults to `:id`;
 
     * `@timestamps_opts` - configures the default timestamps type
-      used by `timestamps`. Defaults to `[type: :naive_datetime, usec: true]`;
+      used by `timestamps`. Defaults to `[type: :naive_datetime]`;
 
     * `@derive` - the same as `@derive` available in `Kernel.defstruct/1`
       as the schema defines a struct behind the scenes;
@@ -144,19 +144,13 @@ defmodule Ecto.Schema do
   `:map`                  | `map` |
   `{:map, inner_type}`    | `map` |
   `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal) |
+  `:date`                 | `Date` |
+  `:time`                 | `Time` |
+  `:naive_datetime`       | `NaiveDateTime` |
+  `:utc_datetime`         | `DateTime` |
 
   **Note:** For the `{:array, inner_type}` and `{:map, inner_type}` type,
   replace `inner_type` with one of the valid types, such as `:string`.
-
-  Since Ecto 2.1, Ecto also supports the Calendar types that are part
-  of Elixir standard library:
-
-  Ecto type               | Elixir type
-  :---------------------- | :----------------------
-  `:date`                 | `Date`
-  `:time`                 | `Time`
-  `:naive_datetime`       | `NaiveDateTime`
-  `:utc_datetime`         | `DateTime`
 
   Timestamps are typically represented by `:naive_datetime` or
   `:utc_datetime`. The naive datetime uses Elixir's `NaiveDateTime` which
@@ -215,14 +209,20 @@ defmodule Ecto.Schema do
 
       {:poison, "~> 1.0"}
 
-  You can however tell Ecto to use any other library by configuring it:
 
-      config :ecto, :json_library, YourLibraryOfChoice
+  You can however configure the adapter to use another library. For example,
+  if using Postgres:
 
-  If changing the JSON library, remember to recompile Ecto afterwards by
-  cleaning the current build:
+      config :postgrex, :json_library, YourLibraryOfChoice
 
-      mix deps.clean --build ecto
+  Or if using MySQL:
+
+      config :mariaex, :json_library, YourLibraryOfChoice
+
+  If changing the JSON library, remember to recompile the adapter afterwards
+  by cleaning the current build:
+
+      mix deps.clean --build postgrex
 
   ### Casting
 
@@ -506,8 +506,6 @@ defmodule Ecto.Schema do
   ## Options
 
     * `:type` - the timestamps type, defaults to `:naive_datetime`.
-    * `:usec` - sets whether microseconds are used in timestamps.
-      Microseconds will be 0 if false. Defaults to true.
     * `:inserted_at` - the name of the column for insertion times or `false`
     * `:updated_at` - the name of the column for update times or `false`
     * `:autogenerate` - a module-function-args tuple used for generating
@@ -518,14 +516,12 @@ defmodule Ecto.Schema do
   defmacro timestamps(opts \\ []) do
     quote bind_quoted: binding() do
       timestamps =
-        [inserted_at: :inserted_at, updated_at: :updated_at,
-         type: :naive_datetime, usec: true]
+        [inserted_at: :inserted_at, updated_at: :updated_at, type: :naive_datetime]
         |> Keyword.merge(@timestamps_opts)
         |> Keyword.merge(opts)
 
-      type      = Keyword.fetch!(timestamps, :type)
-      precision = if Keyword.fetch!(timestamps, :usec), do: :microseconds, else: :seconds
-      autogen   = timestamps[:autogenerate] || {Ecto.Schema, :__timestamps__, [type, precision]}
+      type = Keyword.fetch!(timestamps, :type)
+      autogen = timestamps[:autogenerate] || {Ecto.Schema, :__timestamps__, [type]}
 
       if inserted_at = Keyword.fetch!(timestamps, :inserted_at) do
         Ecto.Schema.field(inserted_at, type, [])
@@ -1437,22 +1433,15 @@ defmodule Ecto.Schema do
   ## Callbacks
 
   @doc false
-  def __timestamps__(:naive_datetime, :seconds) do
-    %{NaiveDateTime.utc_now() | microsecond: {0, 6}}
+  def __timestamps__(:naive_datetime) do
+    %{NaiveDateTime.utc_now() | microsecond: {0, 0}}
   end
-  def __timestamps__(:naive_datetime, :microseconds) do
-    NaiveDateTime.utc_now()
+  def __timestamps__(:utc_datetime) do
+    DateTime.from_unix!(System.system_time(:seconds), :seconds)
   end
-  def __timestamps__(type, :seconds) do
-    type_to_module(type).from_unix!(System.system_time(:seconds) * 1000000, :microseconds)
+  def __timestamps__(type) do
+    type.from_unix!(System.system_time(:microseconds), :microseconds)
   end
-  def __timestamps__(type, :microseconds) do
-    type_to_module(type).from_unix!(System.system_time(:microseconds), :microseconds)
-  end
-
-  defp type_to_module(:naive_datetime), do: NaiveDateTime
-  defp type_to_module(:utc_datetime), do: DateTime
-  defp type_to_module(other), do: other
 
   @doc false
   # Loads data into struct by assumes fields are properly

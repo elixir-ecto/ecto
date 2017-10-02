@@ -7,7 +7,9 @@ if Code.ensure_loaded?(Mariaex) do
     ## Connection
 
     def child_spec(opts) do
-      Mariaex.child_spec(opts)
+      opts
+      |> Keyword.put_new(:datetime, :structs)
+      |> Mariaex.child_spec()
     end
 
     ## Query
@@ -38,7 +40,7 @@ if Code.ensure_loaded?(Mariaex) do
         %{__struct__: _} = value ->
           value
         %{} = value ->
-          Ecto.Adapter.json_library().encode!(value)
+          json_encode!(value)
         value ->
           value
       end
@@ -644,7 +646,7 @@ if Code.ensure_loaded?(Mariaex) do
     defp default_expr({:ok, literal}) when is_number(literal) or is_boolean(literal),
       do: [" DEFAULT ", to_string(literal)]
     defp default_expr({:ok, %{} = map}) do
-      default = Ecto.Adapter.json_library().encode!(map)
+      default = json_encode!(map)
       [" DEFAULT ", [?', escape_string(default), ?']]
     end
     defp default_expr({:ok, {:fragment, expr}}),
@@ -767,8 +769,7 @@ if Code.ensure_loaded?(Mariaex) do
     defp ecto_cast_to_db(type, query), do: ecto_to_db(type, query)
 
     defp ecto_to_db(type, query \\ nil)
-    defp ecto_to_db({:array, _}, query),
-      do: error!(query, "Array type is not supported by MySQL")
+    defp ecto_to_db({:array, _}, query),      do: error!(query, "Array type is not supported by MySQL")
     defp ecto_to_db(:id, _query),             do: "integer"
     defp ecto_to_db(:serial, _query),         do: "bigint unsigned not null auto_increment"
     defp ecto_to_db(:bigserial, _query),      do: "bigint unsigned not null auto_increment"
@@ -788,6 +789,10 @@ if Code.ensure_loaded?(Mariaex) do
     end
     defp error!(query, message) do
       raise Ecto.QueryError, query: query, message: message
+    end
+
+    defp json_encode!(value) do
+      Application.get_env(:mariaex, :json_library, Poison).encode!(value)
     end
   end
 end

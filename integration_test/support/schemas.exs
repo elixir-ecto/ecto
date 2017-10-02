@@ -2,13 +2,11 @@ defmodule Ecto.Integration.Schema do
   defmacro __using__(_) do
     quote do
       use Ecto.Schema
-
       type =
         Application.get_env(:ecto, :primary_key_type) ||
         raise ":primary_key_type not set in :ecto application"
       @primary_key {:id, type, autogenerate: true}
       @foreign_key_type type
-      @timestamps_opts [usec: false]
     end
   end
 end
@@ -61,21 +59,6 @@ defmodule Ecto.Integration.Post do
   def changeset(schema, params) do
     cast(schema, params, ~w(counter title text temp public cost visits
                            intensity bid uuid meta posted))
-  end
-end
-
-defmodule Ecto.Integration.PostUsecTimestamps do
-  @moduledoc """
-  This module is used to test:
-
-    * Usec timestamps
-
-  """
-  use Ecto.Integration.Schema
-
-  schema "posts" do
-    field :title, :string
-    timestamps usec: true
   end
 end
 

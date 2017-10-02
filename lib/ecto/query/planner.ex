@@ -974,6 +974,20 @@ defmodule Ecto.Query.Planner do
     {{:merge, left, right}, fields, from}
   end
 
+  defp collect_fields({:date_add, _, [arg | _]} = expr, fields, from, query, take) do
+    case collect_fields(arg, fields, from, query, take) do
+      {{:value, :any}, _, _} -> {{:value, :date}, [expr | fields], from}
+      {type, _, _} -> {type, [expr | fields], from}
+    end
+  end
+
+  defp collect_fields({:datetime_add, _, [arg | _]} = expr, fields, from, query, take) do
+    case collect_fields(arg, fields, from, query, take) do
+      {{:value, :any}, _, _} -> {{:value, :naive_datetime}, [expr | fields], from}
+      {type, _, _} -> {type, [expr | fields], from}
+    end
+  end
+
   defp collect_fields(args, fields, from, query, take) when is_list(args) do
     {args, fields, from} = collect_args(args, fields, from, query, take, [])
     {{:list, args}, fields, from}

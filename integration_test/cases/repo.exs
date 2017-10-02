@@ -13,7 +13,6 @@ defmodule Ecto.Integration.RepoTest do
   alias Ecto.Integration.Custom
   alias Ecto.Integration.Barebone
   alias Ecto.Integration.CompositePk
-  alias Ecto.Integration.PostUsecTimestamps
   alias Ecto.Integration.PostUserCompositePk
 
   test "returns already started for started repos" do
@@ -233,14 +232,8 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{id: 15} = TestRepo.update!(changeset)
   end
 
-  @tag :uses_usec
-  test "insert and fetch a schema with timestamps with usec" do
-    p1 = TestRepo.insert!(%PostUsecTimestamps{title: "hello"})
-    assert [p1] == TestRepo.all(PostUsecTimestamps)
-  end
-
   test "insert and fetch a schema with utc timestamps" do
-    datetime = System.system_time(:seconds) * 1_000_000 |> DateTime.from_unix!(:microseconds)
+    datetime = DateTime.from_unix!(System.system_time(:seconds), :seconds)
     TestRepo.insert!(%User{inserted_at: datetime})
     assert [%{inserted_at: ^datetime}] = TestRepo.all(User)
   end
@@ -738,10 +731,9 @@ defmodule Ecto.Integration.RepoTest do
 
   @tag :insert_cell_wise_defaults
   test "insert all with dumping" do
-    datetime = ~N[2014-01-16 20:26:51.000000]
-    assert {2, nil} = TestRepo.insert_all(Post, [%{inserted_at: datetime}, %{title: "date"}])
-    assert [%Post{inserted_at: ^datetime, title: nil},
-            %Post{inserted_at: nil, title: "date"}] = TestRepo.all(Post)
+    uuid = Ecto.UUID.generate
+    assert {1, nil} = TestRepo.insert_all(Post, [%{uuid: uuid}])
+    assert [%Post{uuid: ^uuid, title: nil}] = TestRepo.all(Post)
   end
 
   @tag :insert_cell_wise_defaults
@@ -874,7 +866,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "update all with casting and dumping" do
     text = "hai"
-    datetime = ~N[2014-01-16 20:26:51.000000]
+    datetime = ~N[2014-01-16 20:26:51]
     assert %Post{id: id} = TestRepo.insert!(%Post{})
 
     assert {1, nil} = TestRepo.update_all(Post, set: [text: text, inserted_at: datetime])

@@ -80,14 +80,8 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp init_mapper(nil, _dumper, _adapter) do
-    fn {field, value}, acc ->
-      case Ecto.DataType.dump(value) do
-        {:ok, value} ->
-          {{field, value}, Map.put(acc, field, true)}
-        :error ->
-          raise Ecto.ChangeError,
-            message: "value `#{inspect value}` cannot be dumped with Ecto.DataType"
-      end
+    fn {field, _} = tuple, acc ->
+      {tuple, Map.put(acc, field, true)}
     end
   end
   defp init_mapper(schema, dumper, adapter) do

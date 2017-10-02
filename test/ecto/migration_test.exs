@@ -85,8 +85,7 @@ defmodule Ecto.MigrationTest do
   end
 
   test "chokes on alias types" do
-    assert_raise ArgumentError,
-                 ~r"Ecto.DateTime is not a valid database type", fn ->
+    assert_raise ArgumentError, ~r"Ecto.DateTime is not a valid database type", fn ->
       add(:hello, Ecto.DateTime)
     end
   end

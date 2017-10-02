@@ -142,7 +142,7 @@ defmodule Ecto.Query.PlannerTest do
   test "prepare: casts and dumps custom types in right side of in-expressions" do
     datetime = ~N[2015-01-07 21:18:13.0]
     {_query, params, _key} = prepare(Comment |> where([c], c.posted in ^[datetime]))
-    assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
+    assert params == [~N[2015-01-07 21:18:13]]
 
     permalink = "1-hello-world"
     {_query, params, _key} = prepare(Post |> where([p], p.id in ^[permalink]))
@@ -150,7 +150,7 @@ defmodule Ecto.Query.PlannerTest do
 
     datetime = ~N[2015-01-07 21:18:13.0]
     {_query, params, _key} = prepare(Comment |> where([c], c.posted in [^datetime]))
-    assert params == [{{2015, 1, 7}, {21, 18, 13, 0}}]
+    assert params == [~N[2015-01-07 21:18:13]]
 
     permalink = "1-hello-world"
     {_query, params, _key} = prepare(Post |> where([p], p.id in [^permalink]))

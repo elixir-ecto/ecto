@@ -92,8 +92,7 @@ defmodule Ecto.Adapters.Postgres do
   All Ecto extensions for Postgrex.
   """
   def extensions do
-    [Ecto.Adapters.Postgres.Date, Ecto.Adapters.Postgres.Time,
-     Ecto.Adapters.Postgres.Timestamp, Ecto.Adapters.Postgres.TimestampTZ]
+    []
   end
 
   # Support arrays in place of IN

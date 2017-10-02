@@ -33,7 +33,7 @@ defmodule Ecto.Mixfile do
   def application do
     [
       applications: [:logger, :decimal, :poolboy, :crypto],
-      env: [json_library: Poison, postgres_map_type: "jsonb"],
+      env: [postgres_map_type: "jsonb"],
       mod: {Ecto.Application, []}
     ]
   end
@@ -45,8 +45,8 @@ defmodule Ecto.Mixfile do
 
       # Drivers
       {:db_connection, "~> 1.1", optional: true},
-      {:postgrex, "~> 0.13.0", optional: true},
-      {:mariaex, "~> 0.8.0", optional: true},
+      {:postgrex, "~> 0.14.0-dev", optional: true, github: "elixir-ecto/postgrex"},
+      {:mariaex, "~> 0.9.0-dev", optional: true, github: "josevalim/mariaex", branch: "jv-datetime-structs"},
 
       # Optional
       {:sbroker, "~> 1.0", optional: true},
@@ -107,6 +107,8 @@ defmodule Ecto.Mixfile do
         # Ecto.Multi,
         # Ecto.Schema,
         # Ecto.Schema.Metadata,
+        # Ecto.Type,
+        # Ecto.UUID,
 
         "Repo and Queries": [
           Ecto.LogEntry,
@@ -115,15 +117,6 @@ defmodule Ecto.Mixfile do
           Ecto.Query.API,
           Ecto.Queryable,
           Ecto.SubQuery
-        ],
-
-        "Types": [
-          Ecto.DataType,
-          Ecto.Date,
-          Ecto.DateTime,
-          Ecto.Time,
-          Ecto.Type,
-          Ecto.UUID,
         ],
 
         "Adapters": [

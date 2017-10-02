@@ -131,7 +131,7 @@ defmodule Ecto.Adapters.MySQL do
   defp float_decode(x), do: {:ok, x}
 
   defp json_decode(x) when is_binary(x),
-    do: {:ok, Application.get_env(:ecto, :json_library).decode!(x)}
+    do: {:ok, Application.get_env(:mariaex, :json_library, Poison).decode!(x)}
   defp json_decode(x),
     do: {:ok, x}
 

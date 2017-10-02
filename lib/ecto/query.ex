@@ -321,8 +321,8 @@ defmodule Ecto.Query do
   defmodule Tagged do
     @moduledoc false
     # * value is the tagged value
-    # * tag is the directly tagged value, like Ecto.DateTime
-    # * type is the underlying tag type, like :datetime
+    # * tag is the directly tagged value, like Ecto.UUID
+    # * type is the underlying tag type, like :string
     defstruct [:value, :tag, :type]
   end
 
