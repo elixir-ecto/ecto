@@ -50,7 +50,7 @@ defmodule Ecto.Mixfile do
       {:poison, "~> 2.2 or ~> 3.0", optional: true},
 
       # Docs
-      {:ex_doc, "~> 0.16", only: :docs},
+      {:ex_doc, "~> 0.17", only: :docs},
       {:inch_ex, ">= 0.0.0", only: :docs}
     ]
   end
