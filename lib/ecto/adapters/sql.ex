@@ -604,6 +604,10 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def lock_for_migrations(repo, query, opts, fun) do
     {_repo_mod, _pool, default_opts} = lookup_pool(repo)
+
+    if Keyword.fetch(opts, :pool_size) == {:ok, 1},
+      do: raise_pool_size_error()
+
     {:ok, result} =
       transaction(repo, opts ++ [log: false, timeout: :infinity], fn ->
         query
@@ -613,6 +617,33 @@ defmodule Ecto.Adapters.SQL do
       end)
 
     result
+  end
+
+  defp raise_pool_size_error do
+    raise Ecto.MigrationError, """
+    Migrations failed to run because the connection pool size is less than 2.
+
+    Ecto requires a pool size of at least 2 to support concurrent migrators.
+    When migrations run, Ecto and will use one connection to maintain a lock
+    and another to run migrations.
+
+    If you are running migrations with mix, you can increase the number
+    of connections via the pool size option:
+
+        mix ecto.migrate --pool-size=2
+
+    If you are running the Ecto.Migrator programmatically, you can configure the pool
+    size via your application config:
+
+        config :my_app, Repo,
+          adapter: Ecto.Adapters.Postgres,
+          database: "ecto_simple",
+          username: "postgres",
+          password: "postgres",
+          hostname: "localhost",
+          pool_size: 2 # at least
+
+    """
   end
 
   ## Log
