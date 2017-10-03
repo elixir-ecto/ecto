@@ -98,7 +98,7 @@ defmodule Mix.Ecto do
 
     {:ok, apps} = repo.__adapter__.ensure_all_started(repo, :temporary)
 
-    pool_size = Keyword.get(opts, :pool_size, 1)
+    pool_size = Keyword.get(opts, :pool_size, 2)
     case repo.start_link(pool_size: pool_size) do
       {:ok, pid} ->
         {:ok, pid, apps}

@@ -21,7 +21,7 @@ defmodule Mix.EctoTest do
 
   defmodule Repo do
     def start_link(opts) do
-      assert opts[:pool_size] == 1
+      assert opts[:pool_size] == 2
       Process.get(:start_link)
     end
 
