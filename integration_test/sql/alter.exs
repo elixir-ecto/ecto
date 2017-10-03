@@ -36,15 +36,18 @@ defmodule Ecto.Integration.AlterTest do
   end
 
   import Ecto.Query, only: [from: 1, from: 2]
-  import Ecto.Migrator, only: [up: 4, down: 4]
+
+  defp run(direction, repo, module) do
+    Ecto.Migration.Runner.run(repo, module, :forward, direction, direction, log: false)
+  end
 
   test "reset cache on returning query after alter column type" do
     values = from v in "alter_col_type", select: v.value
 
-    assert :ok == up(PoolRepo, 20161112120000, AlterMigrationOne, log: false)
+    assert :ok == run(:up, PoolRepo, AlterMigrationOne)
     assert PoolRepo.all(values) == [1]
 
-    assert :ok == up(PoolRepo, 20161112130000, AlterMigrationTwo, log: false)
+    assert :ok == run(:up, PoolRepo, AlterMigrationTwo)
 
     # optionally fail once with ArgumentError when preparing query prepared on
     # another connection (and clear cache)
@@ -58,18 +61,35 @@ defmodule Ecto.Integration.AlterTest do
       result ->
         assert [%Decimal{}] = result
     end
+
+    PoolRepo.transaction(fn() ->
+      assert [%Decimal{}] = PoolRepo.all(values)
+
+      assert :ok == run(:down, PoolRepo, AlterMigrationTwo)
+
+      # optionally fail once with database error when already prepared on
+      # connection (and clear cache)
+      try do
+        PoolRepo.all(values, [mode: :savepoint])
+      catch
+        :error, _ ->
+          assert PoolRepo.all(values) == [1]
+      else
+        result ->
+          assert result == [1]
+      end
+    end)
   after
-    assert :ok == down(PoolRepo, 20161112130000, AlterMigrationTwo, log: false)
-    assert :ok == down(PoolRepo, 20161112120000, AlterMigrationOne, log: false)
+    assert :ok == run(:down, PoolRepo, AlterMigrationOne)
   end
 
   test "reset cache on paramterised query after alter column type" do
     values = from v in "alter_col_type"
 
-    assert :ok == up(PoolRepo, 20161112120000, AlterMigrationOne, log: false)
+    assert :ok == run(:up, PoolRepo, AlterMigrationOne)
     assert PoolRepo.update_all(values, [set: [value: 2]]) == {1, nil}
 
-    assert :ok == up(PoolRepo, 20161112130000, AlterMigrationTwo, log: false)
+    assert :ok == run(:up, PoolRepo, AlterMigrationTwo)
 
     # optionally fail once with ArgumentError when preparing query prepared on
     # another connection (and clear cache)
@@ -83,8 +103,15 @@ defmodule Ecto.Integration.AlterTest do
       result ->
         assert result == {1, nil}
     end
+
+    PoolRepo.transaction(fn() ->
+      assert PoolRepo.update_all(values, [set: [value: Decimal.new(5)]]) == {1, nil}
+
+      assert :ok == run(:down, PoolRepo, AlterMigrationTwo)
+
+      assert PoolRepo.update_all(values, [set: [value: 6]]) == {1, nil}
+    end)
   after
-    assert :ok == down(PoolRepo, 20161112130000, AlterMigrationTwo, log: false)
-    assert :ok == down(PoolRepo, 20161112120000, AlterMigrationOne, log: false)
+    assert :ok == run(:down, PoolRepo, AlterMigrationOne)
   end
 end
