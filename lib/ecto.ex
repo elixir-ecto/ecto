@@ -1,5 +1,8 @@
 defmodule Ecto do
   @moduledoc ~S"""
+  
+  Ecto is a domain specific language for writing queries and interacting with databases in Elixir.
+  
   Ecto is split into 4 main components:
 
     * `Ecto.Repo` - repositories are wrappers around the data store.
