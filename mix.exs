@@ -55,7 +55,7 @@ defmodule Ecto.Mixfile do
       # Docs
       {:ex_doc, "~> 0.17", only: :docs},
       {:inch_ex, ">= 0.0.0", only: :docs},
-      {:makedown, "~> 0.2", only: :docs},
+      {:makedown, "~> 0.2.1", only: :docs},
       {:makeup_elixir, "~> 0.2", only: :docs},
     ]
   end
