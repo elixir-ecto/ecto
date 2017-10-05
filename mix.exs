@@ -54,7 +54,9 @@ defmodule Ecto.Mixfile do
 
       # Docs
       {:ex_doc, "~> 0.17", only: :docs},
-      {:inch_ex, ">= 0.0.0", only: :docs}
+      {:inch_ex, ">= 0.0.0", only: :docs},
+      {:makedown, "~> 0.2", only: :docs},
+      {:makeup_elixir, "~> 0.2", only: :docs},
     ]
   end
 
@@ -95,6 +97,12 @@ defmodule Ecto.Mixfile do
       canonical: "http://hexdocs.pm/ecto",
       logo: "guides/images/e.png",
       source_url: "https://github.com/elixir-ecto/ecto",
+      # Extra assets (CSS and Javascript for makedown)
+      assets: "deps/makedown/priv/ex_doc/assets",
+      # Extra CSS
+      before_closing_head_tag: fn _ -> ~S(<link rel="stylesheet" href="assets/makedown.css"/>) end,
+      # Extra Javascript
+      before_closing_body_tag: fn _ -> ~S(<script src="assets/makedown.js"></script>) end,
       extras: [
         "guides/Getting Started.md",
         "guides/Associations.md"
