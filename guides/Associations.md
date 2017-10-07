@@ -107,7 +107,7 @@ defmodule EctoAssoc.User do
 end
 ```
 
-Avatar also has its own migration as well:
+`Avatar` also has its own migration as well:
 
 ```
 mix ecto.gen.migration create_avatar
@@ -150,9 +150,9 @@ Now we want to associate the user with the avatar and vice-versa:
   * one user has one avatar
   * one avatar belongs to one user
 
-The difference between [`has_one`](Ecto.Schema.html#has_one/3) and [`belongs_to`](Ecto.Schema.html#belongs_to/3) is where the primary key belongs. In this case, we want the "avatars" table to have a "user_id" columns, therefore the avatar belongs to the user.
+The difference between [`has_one`](Ecto.Schema.html#has_one/3) and [`belongs_to`](Ecto.Schema.html#belongs_to/3) is where the primary key belongs. In this case, we want the "avatars" table to have a "user_id" column, therefore the avatar belongs to the user.
 
-For the *avatar* we create a migration that adds a `user_id` reference:
+For the `Avatar` we create a migration that adds a `user_id` reference:
 
 ```
 mix ecto.gen.migration avatar_belongs_to_user
@@ -175,7 +175,7 @@ end
 
 This adds a `user_id` column to the DB which references an entry in the users table.
 
-For the *avatar* we add a `belongs_to` field to the schema:
+For the `Avatar` we add a `belongs_to` field to the schema:
 
 ```elixir
 defmodule EctoAssoc.Avatar do
@@ -189,7 +189,7 @@ end
 
 `belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the avatar. In this case, you can access the user via `avatar.user`.
 
-For the *user* we add a `has_one` field to the schema:
+For the `User` we add a `has_one` field to the schema:
 
 ```elixir
 # lib/ecto_assoc/user.ex
@@ -228,7 +228,7 @@ iex> user = Repo.insert!(user)
  email: "john.doe@example.com", id: 3, name: "John Doe"}
 ```
 
-This time let's add another user with an avatar association. We can define it directly in the User struct in the `:avatar` field:
+This time let's add another user with an avatar association. We can define it directly in the `User` struct in the `:avatar` field:
 
 ```elixir
 iex> avatar = %Avatar{nick_name: "Elixir", pic_url: "http://elixir-lang.org/images/logo.png"}
@@ -242,7 +242,7 @@ iex> user = Repo.insert!(user)
    user_id: 4}, email: "jane@example.com", id: 4, name: "Jane Doe"}
 ```
 
-Let's verify that it works by retrieving all Users and their associated avatars:
+Let's verify that it works by retrieving all users and their associated avatars:
 
 ```elixir
 iex> Repo.all(User) |> Repo.preload(:avatar)
@@ -259,7 +259,7 @@ iex> Repo.all(User) |> Repo.preload(:avatar)
 
 ### Prep
 
-Let's assume we have two schemas: `User` and `Post`. The `User` was defined in the previous section and the `Post` one will be defined now.
+Let's assume we have two schemas: `User` and `Post`. The `User` schema was defined in the previous section and the `Post` schema will be defined now.
 
 Let's start with the migration:
 
@@ -304,7 +304,7 @@ Now we want to associate the user with the post and vice-versa:
   * one user has many posts
   * one post belongs to one user
 
-As in `one-to-one` associations, the belongs_to reveals on which table the foreign key should be added. For the *post* we create a migration that adds a `user_id` reference:
+As in `one-to-one` associations, the `belongs_to` reveals on which table the foreign key should be added. For the `Post` we create a migration that adds a `user_id` reference:
 
 ```
 mix ecto.gen.migration post_belongs_to_user
@@ -325,7 +325,7 @@ defmodule EctoAssoc.Repo.Migrations.PostBelongsToUser do
 end
 ```
 
-For the *post* we add a `belongs_to` field to the schema:
+For the `Post` we add a `belongs_to` field to the schema:
 
 ```elixir
 defmodule EctoAssoc.Post do
@@ -339,9 +339,9 @@ defmodule EctoAssoc.Post do
 end
 ```
 
-`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the post. The user can be accessed via `post.user`.
+`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the `Post`. The user can be accessed via `post.user`.
 
-For the *user* we add a `has_many` field to the schema:
+For the `User` we add a `has_many` field to the schema:
 
 ```elixir
 defmodule EctoAssoc.User do
@@ -355,7 +355,7 @@ defmodule EctoAssoc.User do
 end
 ```
 
-[`has_many`](Ecto.Schema.html#has_many/3) does not require anything to the DB. The foreign key of the associated schema, `Post`, is used to make the posts available from the user, allowing all posts for a given to user to be accessed via `user.posts`.
+[`has_many`](Ecto.Schema.html#has_many/3) does not add anything to the DB. The foreign key of the associated schema, `Post`, is used to make the posts available from the user, allowing all posts for a given to user to be accessed via `user.posts`.
 
 ### Persistence
 
@@ -371,7 +371,7 @@ For convenience we alias some modules:
 iex> alias EctoAssoc.{Repo, User, Post}
 ```
 
-Let's create a User and store it in the DB:
+Let's create a `User` and store it in the DB:
 
 ```elixir
 iex> user = %User{name: "John Doe", email: "john.doe@example.com"}
@@ -424,13 +424,13 @@ iex> Repo.get(User, user.id) |> Repo.preload(:posts)
    user_id: 1}]}
 ```
 
-In the example above, `Ecto.build_assoc` received an existing `user` struct, that was already persisted to the database, and built a `Post` struct, based on its `:posts` association, with the `user_id` foreign key field properly set to the ID in the `user` struct.
+In the example above, `Ecto.build_assoc` received an existing `User` struct, that was already persisted to the database, and built a `Post` struct, based on its `:posts` association, with the `user_id` foreign key field properly set to the ID in the `User` struct.
 
 ## Many-to-many
 
 ### Prep
 
-Let's assume we have two schemas: `Post` and `Tag`. The `Post` was defined in the previous section and the `Tag` one will be defined now.
+Let's assume we have two schemas: `Post` and `Tag`. The `Post` schema was defined in the previous section and the `Tag` schema will be defined now.
 
 Let's start with the tag migration:
 
@@ -472,7 +472,7 @@ Now we want to associate the post with the tags and vice-versa:
  * one post can have many tags
  * one tag can have many posts
 
-This is a `many-to-many` relationship. Notice both sides can have many entries. In the previous sections we were used to put the foreign key on the side that "belongs to" the other, which is not available here.
+This is a `many-to-many` relationship. Notice both sides can have many entries. In the previous sections we put the foreign key on the side that "belongs to" the other, which is not available here.
 
 One way to handle `many-to-many` relationships is to introduce an additional table which explicitly tracks the tag-post relationship by pointing to both tags and posts entries.
 
@@ -502,7 +502,7 @@ end
 
 On the DB level, this creates a new table `posts_tags` with two columns that point at the `tag_id` and `post_id`. We also create a unique index, such that the association is always unique.
 
-For the *post* we use the [`many_to_many`](Ecto.Schema.html#many_to_many/3) macro to associate the `Tag` through the
+For the `Post` we use the [`many_to_many`](Ecto.Schema.html#many_to_many/3) macro to associate the `Tag` through the
 new `posts_tags` table.
 
 ```elixir
@@ -519,7 +519,7 @@ defmodule EctoAssoc.Post do
 end
 ```
 
-For the *tag* we do the same. We use the `many_to_many` macro to associate the `Post` through the
+For the `Tag` we do the same. We use the `many_to_many` macro to associate the `Post` through the
 new `posts_tags` schema:
 
 ```elixir
@@ -566,7 +566,7 @@ iex> post = %Post{header: "Clickbait header", body: "No real content"}
  tags: #Ecto.Association.NotLoaded<association :tags is not loaded>}
 ```
 
-Ok, but tag and post are not associated, yet. We for, as done in `one-to-one`, create either a post or a tag with the associated entries and insert them all at once. However, notice we cannot use `Ecto.build_assoc/3`, since the foreign key does not belong to the `post` nor the `tag` struct.
+Ok, but tag and post are not associated, yet. We might expect, as done in `one-to-one`, to create either a post or a tag with the associated entries and insert them all at once. However, notice we cannot use `Ecto.build_assoc/3`, since the foreign key does not belong to the `Post` nor the `Tag` struct.
 
 Another option is to use Ecto changesets, which provides many conveniences for dealing with *changes*. For example:
 
@@ -615,7 +615,7 @@ iex> Enum.map(post.tags, & &1.name)
 ["clickbait", "misc"]
 ```
 
-The associations also works in the other direction:
+The association also works in the other direction:
 
 ```elixir
 iex> tag = Repo.get(Tag, 1) |> Repo.preload(:posts)
@@ -626,7 +626,7 @@ iex> tag = Repo.get(Tag, 1) |> Repo.preload(:posts)
    tags: #Ecto.Association.NotLoaded<association :tags is not loaded>}]}
 ```
 
-The advantage of using Ecto.Changeset is that it is responsible for tracking the changes between your data structures and the associated data. For example, if you want you remove the clickbait tag from from the post, one way to do so is by calling [`Ecto.Changeset.put_assoc/3`](Ecto.Changeset.html#put_assoc/4) once more but without the clickbait tag.  This will not work right now, because the `:on_replace` option for the `many_to_many` relationship defaults to `:raise`.  Go ahead and try it.  When you try to call `put_assoc`, a runtime error will be raised:
+The advantage of using Ecto.Changeset is that it is responsible for tracking the changes between your data structures and the associated data. For example, if you want to remove the clickbait tag from from the post, one way to do so is by calling [`Ecto.Changeset.put_assoc/3`](Ecto.Changeset.html#put_assoc/4) once more but without the clickbait tag.  This will not work right now, because the `:on_replace` option for the `many_to_many` relationship defaults to `:raise`.  Go ahead and try it.  When you try to call `put_assoc`, a runtime error will be raised:
 
 ```elixir
 iex> post_changeset = Ecto.Changeset.change(post)
@@ -656,7 +656,7 @@ deleted, only updated, make sure that:
 ...
 ```
 
-You should carefully read the documentation for [`Ecto.Schema.many_to_many/3`](Ecto.Schema.html#many_to_many/3). It makes sense in this case that we want to delete relationships in the join table `posts_tags` when updating a post with new tags.  Here we want to drop the tag "clickbait" and just keep the tag "misc", so we really do want the relationship in the joining table to be removed.  To do that, change the definition of the `many_to_many/3` in the Post schema:
+You should carefully read the documentation for [`Ecto.Schema.many_to_many/3`](Ecto.Schema.html#many_to_many/3). It makes sense in this case that we want to delete relationships in the join table `posts_tags` when updating a post with new tags.  Here we want to drop the tag "clickbait" and just keep the tag "misc", so we really do want the relationship in the joining table to be removed.  To do that, change the definition of the `many_to_many/3` in the `Post` schema:
 
 ```elixir
 # lib/ecto_assoc/post.ex
