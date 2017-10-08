@@ -605,7 +605,7 @@ defmodule Ecto.Adapters.SQL do
   def lock_for_migrations(repo, query, opts, fun) do
     {_repo_mod, _pool, default_opts} = lookup_pool(repo)
 
-    if Keyword.fetch(opts, :pool_size) == {:ok, 1} do
+    if Keyword.fetch(default_opts, :pool_size) == {:ok, 1} do
       raise_pool_size_error()
     end
 
