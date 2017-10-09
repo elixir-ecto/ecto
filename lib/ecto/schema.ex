@@ -461,7 +461,7 @@ defmodule Ecto.Schema do
 
   @doc """
   Defines a field on the schema with given name and type.  
-  Ecto will directly map the names of the schema to the database fields without implicitely altering them.
+  The field name will be equal to the field name used in the database unless overridden with the `:source` option.
   This behaviour is to ensure consistency between what you write in the schema and what other people accessing
   the database should expect by reading your code.
 
