@@ -462,7 +462,7 @@ defmodule Ecto.Schema do
   @doc """
   Defines a field on the schema with given name and type.
 
-  The field name will be used to read and write to the database as is
+  The field name will be used as is to read and write to the database
   by all of the built-in adapters unless overridden with the `:source`
   option.
 
