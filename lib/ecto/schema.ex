@@ -460,10 +460,11 @@ defmodule Ecto.Schema do
   ## API
 
   @doc """
-  Defines a field on the schema with given name and type.  
-  The field name will be equal to the field name used in the database unless overridden with the `:source` option.
-  This behaviour is to ensure consistency between what you write in the schema and what other people accessing
-  the database should expect by reading your code.
+  Defines a field on the schema with given name and type.
+
+  The field name will be used to read and write to the database as is
+  by all of the built-in adapters unless overridden with the `:source`
+  option.
 
   ## Options
 
