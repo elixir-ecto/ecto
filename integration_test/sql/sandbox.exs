@@ -7,6 +7,12 @@ defmodule Ecto.Integration.SandboxTest do
 
   import ExUnit.CaptureLog
 
+  test "raises if repo is not started or not exist" do
+    assert_raise RuntimeError, ~r"could not lookup UnknownRepo because it was not started", fn ->
+      Sandbox.mode(UnknownRepo, :manual)
+    end
+  end
+
   test "include link to SQL sandbox on ownership errors" do
     assert_raise DBConnection.OwnershipError,
              ~r"See Ecto.Adapters.SQL.Sandbox docs for more information.", fn ->
