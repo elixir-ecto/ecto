@@ -968,11 +968,11 @@ defmodule Ecto.Query do
 
   A fragment can also be used:
 
-    from c in City, order_by: [
-      # a deterministic shuffled order
-      fragment("? % ? DESC", c.id, ^modulus),
-      desc: c.id,
-    ]
+      from c in City, order_by: [
+        # a deterministic shuffled order
+        fragment("? % ? DESC", c.id, ^modulus),
+        desc: c.id,
+      ]
 
   ## Expressions example
 
