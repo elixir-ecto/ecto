@@ -27,10 +27,11 @@ defmodule Ecto.Multi do
   ## Run
 
   Multi allows you to run arbitrary functions as part of your transaction
-  via `run/3` and `run/5`. This is very useful when an operation depends
-  on the value of a previous operation. For this reason, the function given
-  as callback to `run/3` and `run/5` will receive all changes performed by
-  the multi so far as a map in the first argument.
+  via `run/3` and `run/5`. This is especially useful when an operation
+  depends on the value of a previous operation. For this reason, the
+  function given as a callback to `run/3` and `run/5` will receive the repo
+  as the first argument, and all changes performed by the multi so far as a
+  map for the second argument.
 
   The function given to `run` must return `{:ok, value}` or `{:error, value}`
   as its result. Returning an error will abort any further operations
@@ -132,8 +133,8 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> lhs = Ecto.Multi.new |> Ecto.Multi.run(:left, &{:ok, &1})
-      iex> rhs = Ecto.Multi.new |> Ecto.Multi.run(:right, &{:error, &1})
+      iex> lhs = Ecto.Multi.new |> Ecto.Multi.run(:left, fn _, _ -> {:ok, :ok} end)
+      iex> rhs = Ecto.Multi.new |> Ecto.Multi.run(:right, fn _, _ -> {:error, :error} end)
       iex> Ecto.Multi.append(lhs, rhs) |> Ecto.Multi.to_list |> Keyword.keys
       [:left, :right]
 
@@ -150,8 +151,8 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> lhs = Ecto.Multi.new |> Ecto.Multi.run(:left, &{:ok, &1})
-      iex> rhs = Ecto.Multi.new |> Ecto.Multi.run(:right, &{:error, &1})
+      iex> lhs = Ecto.Multi.new |> Ecto.Multi.run(:left, fn _, _ -> {:ok, :ok} end)
+      iex> rhs = Ecto.Multi.new |> Ecto.Multi.run(:right, fn _, _ -> {:error, :error} end)
       iex> Ecto.Multi.prepend(lhs, rhs) |> Ecto.Multi.to_list |> Keyword.keys
       [:right, :left]
 
@@ -239,7 +240,7 @@ defmodule Ecto.Multi do
   def update(multi, name, %Changeset{} = changeset, opts \\ []) do
     add_changeset(multi, :update, name, changeset, opts)
   end
-  
+
   @doc """
   Inserts or updates a changeset depending on whether the changeset was persisted or not.
 
@@ -303,10 +304,17 @@ defmodule Ecto.Multi do
   Adds a function to run as part of the multi.
 
   The function should return either `{:ok, value}` or `{:error, value}`,
-  and receives changes so far as an argument.
+  and receives the repo as the first argument, and the changes so far
+  as the second argument.
   """
   @spec run(t, name, (t -> {:ok | :error, any})) :: t
   def run(multi, name, run) when is_function(run, 1) do
+    IO.warn "Giving an anonymous function with 1 argument to Ecto.Multi.run/3 is deprecated. " <>
+              "Please pass an anonymous function that receives the repository and the changes so far"
+    run(multi, name, fn _repo, changes -> run.(changes) end)
+  end
+
+  def run(multi, name, run) when is_function(run, 2) do
     add_operation(multi, name, {:run, run})
   end
 
@@ -315,8 +323,8 @@ defmodule Ecto.Multi do
 
   Similar to `run/3`, but allows to pass module name, function and arguments.
   The function should return either `{:ok, value}` or `{:error, value}`, and
-  will receive changes so far as the first argument (prepended to those passed in
-  the call to the function).
+  receives the repo as the first argument, and the changes so far as the
+  second argument (prepended to those passed in the call to the function).
   """
   @spec run(t, name, module, function, args) :: t when function: atom, args: [any]
   def run(multi, name, mod, fun, args)
@@ -433,8 +441,8 @@ defmodule Ecto.Multi do
 
   defp apply_operation({:changeset, changeset, opts}, _acc, _apply_args, repo),
     do: apply(repo, changeset.action, [changeset, opts])
-  defp apply_operation({:run, run}, acc, _apply_args, _repo),
-    do: apply_fun(run, acc)
+  defp apply_operation({:run, run}, acc, _apply_args, repo),
+    do: apply_run_fun(run, repo, acc)
   defp apply_operation({:error, value}, _acc, _apply_args, _repo),
     do: {:error, value}
   defp apply_operation({:insert_all, source, entries, opts}, _acc, _apply_args, repo),
@@ -444,10 +452,13 @@ defmodule Ecto.Multi do
   defp apply_operation({:delete_all, query, opts}, _acc, _apply_args, repo),
     do: {:ok, repo.delete_all(query, opts)}
   defp apply_operation({:merge, merge}, acc, {wrap, return}, repo),
-    do: {:merge, __apply__(apply_fun(merge, acc), repo, wrap, return)}
+    do: {:merge, __apply__(apply_merge_fun(merge, acc), repo, wrap, return)}
 
-  defp apply_fun({mod, fun, args}, acc), do: apply(mod, fun, [acc | args])
-  defp apply_fun(fun, acc),              do: apply(fun, [acc])
+  defp apply_merge_fun({mod, fun, args}, acc), do: apply(mod, fun, [acc | args])
+  defp apply_merge_fun(fun, acc),              do: apply(fun, [acc])
+
+  defp apply_run_fun({mod, fun, args}, repo, acc), do: apply(mod, fun, [repo, acc | args])
+  defp apply_run_fun(fun, repo, acc),              do: apply(fun, [repo, acc])
 
   defp merge_results(changes, new_changes, names) do
     new_names = new_changes |> Map.keys |> MapSet.new
