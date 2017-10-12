@@ -1353,8 +1353,9 @@ defmodule Ecto.Changeset do
   Validates that one or more fields are present in the changeset.
 
   If the value of a field is `nil` or a string made only of whitespace,
-  the changeset is marked as invalid and an error is added. Note the
-  error won't be added though if the field already has an error.
+  the changeset is marked as invalid, the field is removed from the changeset's
+  changes, and an error is added. Note the error won't be added though if the
+  field already has an error.
 
   You can pass a single field name or a list of field names that
   are required.
