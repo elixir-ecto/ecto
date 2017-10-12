@@ -61,6 +61,27 @@ defmodule Ecto.Integration.PoolRepo do
   end
 end
 
+# Pool repo for non-async tests that need a single connection
+alias Ecto.Integration.SingleConnectionRepo
+
+Application.put_env(:ecto, SingleConnectionRepo,
+  adapter: Ecto.Adapters.MySQL,
+  pool: pool,
+  url: Application.get_env(:ecto, :mysql_test_url) <> "/ecto_test",
+  pool_size: 1)
+
+defmodule Ecto.Integration.SingleConnectionRepo do
+  use Ecto.Integration.Repo, otp_app: :ecto
+
+  def create_prefix(prefix) do
+    "create database #{prefix}"
+  end
+
+  def drop_prefix(prefix) do
+    "drop database #{prefix}"
+  end
+end
+
 defmodule Ecto.Integration.Case do
   use ExUnit.CaseTemplate
 
@@ -77,6 +98,7 @@ _   = Ecto.Adapters.MySQL.storage_down(TestRepo.config)
 
 {:ok, _pid} = TestRepo.start_link
 {:ok, _pid} = PoolRepo.start_link
+{:ok, _pid} = SingleConnectionRepo.start_link
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)
 Ecto.Adapters.SQL.Sandbox.mode(TestRepo, :manual)
 Process.flag(:trap_exit, true)
