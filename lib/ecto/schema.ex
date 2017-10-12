@@ -205,7 +205,7 @@ defmodule Ecto.Schema do
 
   For maps to work in such databases, Ecto will need a JSON library.
   By default Ecto will use [Poison](http://github.com/devinus/poison)
-  which needs to be added your deps in `mix.exs`:
+  which needs to be added to your deps in `mix.exs`:
 
       {:poison, "~> 1.0"}
 
