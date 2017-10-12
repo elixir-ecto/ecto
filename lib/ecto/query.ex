@@ -966,6 +966,14 @@ defmodule Ecto.Query do
       values = [asc: :name, desc: :population]
       from(c in City, order_by: ^values)
 
+  A fragment can also be used:
+
+      from c in City, order_by: [
+        # a deterministic shuffled order
+        fragment("? % ? DESC", c.id, ^modulus),
+        desc: c.id,
+      ]
+
   ## Expressions example
 
       City |> order_by([c], asc: c.name, desc: c.population)
