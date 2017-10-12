@@ -631,7 +631,7 @@ defmodule Ecto.Adapters.SQL do
     If you are running migrations with Mix, you can increase the number
     of connections via the pool size option:
 
-        mix ecto.migrate --pool-size=2
+        mix ecto.migrate --pool-size 2
 
     If you are running the Ecto.Migrator programmatically, you can configure
     the pool size via your application config:

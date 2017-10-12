@@ -7,12 +7,10 @@ defmodule Ecto.Integration.MigratorTest do
   import Ecto.Migrator, only: [migrated_versions: 1]
 
   alias Ecto.Integration.PoolRepo
-  alias Ecto.Integration.SingleConnectionRepo
   alias Ecto.Migration.SchemaMigration
 
   setup do
     PoolRepo.delete_all(SchemaMigration)
-    SingleConnectionRepo.delete_all(SchemaMigration)
     :ok
   end
 
@@ -113,6 +111,15 @@ defmodule Ecto.Integration.MigratorTest do
   end
 
   test "raises when connection pool is too small" do
+    config = Application.fetch_env!(:ecto, PoolRepo)
+    Application.put_env(:ecto, __MODULE__.SingleConnectionRepo, Keyword.put(config, :pool_size, 1))
+
+    defmodule SingleConnectionRepo do
+      use Ecto.Repo, otp_app: :ecto
+    end
+
+    {:ok, _pid} = SingleConnectionRepo.start_link
+
     in_tmp fn path ->
       exception_message = ~r/Migrations failed to run because the connection pool size is less than 2/
 

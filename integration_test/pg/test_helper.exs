@@ -57,29 +57,6 @@ defmodule Ecto.Integration.PoolRepo do
   end
 end
 
-# Pool repo for non-async tests that need a single connection
-alias Ecto.Integration.SingleConnectionRepo
-
-Application.put_env(:ecto, SingleConnectionRepo,
-  adapter: Ecto.Adapters.Postgres,
-  pool: pool,
-  url: Application.get_env(:ecto, :pg_test_url) <> "/ecto_test",
-  pool_size: 1,
-  max_restarts: 20,
-  max_seconds: 10)
-
-defmodule Ecto.Integration.SingleConnectionRepo do
-  use Ecto.Integration.Repo, otp_app: :ecto
-
-  def create_prefix(prefix) do
-    "create database #{prefix}"
-  end
-
-  def drop_prefix(prefix) do
-    "drop database #{prefix}"
-  end
-end
-
 defmodule Ecto.Integration.Case do
   use ExUnit.CaseTemplate
 
@@ -96,7 +73,6 @@ _   = Ecto.Adapters.Postgres.storage_down(TestRepo.config)
 
 {:ok, _pid} = TestRepo.start_link
 {:ok, _pid} = PoolRepo.start_link
-{:ok, _pid} = SingleConnectionRepo.start_link
 
 %{rows: [[version]]} = TestRepo.query!("SHOW server_version", [])
 
