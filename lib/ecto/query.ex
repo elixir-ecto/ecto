@@ -807,10 +807,9 @@ defmodule Ecto.Query do
   If `:select_merge` is called and there is no value selected previously,
   it will default to the source, `p` in the example above.
 
-  The left-side of a merge can be a struct or a map. The right side
-  must always be a map. If the left-side is a struct, the fields on
-  the right side must be part of the struct, otherwise an error is
-  raised.
+  The argument given to `:select_merge` must always be a map. The value
+  being merged on must be a struct or a map. If it is a struct, the fields
+  merged later on must be part of the struct, otherwise an error is raised.
   """
   defmacro select_merge(query, binding \\ [], expr) do
     Select.build(:merge, query, binding, expr, __CALLER__)
@@ -966,6 +965,14 @@ defmodule Ecto.Query do
 
       values = [asc: :name, desc: :population]
       from(c in City, order_by: ^values)
+
+  A fragment can also be used:
+
+      from c in City, order_by: [
+        # a deterministic shuffled order
+        fragment("? % ? DESC", c.id, ^modulus),
+        desc: c.id,
+      ]
 
   ## Expressions example
 

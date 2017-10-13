@@ -437,6 +437,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     # If the mode is set to anything but shared, let's
     # automatically checkin the current connection to
     # force it to act according to the chosen mode.
+    # TODO: This is may no longer be necessary on latest DBConnection
     if mode in [:auto, :manual] do
       checkin(repo, [])
     end
