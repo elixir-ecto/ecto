@@ -16,10 +16,15 @@ defmodule Ecto.Adapters.Postgres do
   ## Options
 
   Postgres options split in different categories described
-  below. All options should be given via the repository
-  configuration. These options are also passed to the module
-  specified in the `:pool` option, so check that module's
-  documentation for more options.
+  below. All options can be given via the repository
+  configuration:
+  
+      config :your_app, YourApp.Repo,
+        adapter: Ecto.Adapters.Postgres,
+        ...
+
+  Non-compile time options can also be returned from the
+  repository `init/2` callback.
 
   ### Compile time options
 
@@ -41,6 +46,8 @@ defmodule Ecto.Adapters.Postgres do
     * `:ssl_opts` - A list of ssl options, see Erlang's `ssl` docs
     * `:parameters` - Keyword list of connection parameters
     * `:connect_timeout` - The timeout for establishing new connections (default: 5000)
+    * `:prepare` - How to prepare queries, either `:named` to use named queries
+      or `:unnamed` to force unnamed queries (default: `:named`)
     * `:socket_options` - Specifies socket configuration
 
   The `:socket_options` are particularly useful when configuring the size
