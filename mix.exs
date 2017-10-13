@@ -53,7 +53,8 @@ defmodule Ecto.Mixfile do
       {:poison, "~> 2.2 or ~> 3.0", optional: true},
 
       # Docs
-      {:ex_doc, "~> 0.17", only: :docs},
+      {:ex_doc, ">= 0.18.1", only: :docs},
+      {:ex_doc_makeup, "~> 0.1", only: :docs},
       {:inch_ex, ">= 0.0.0", only: :docs}
     ]
   end
@@ -95,6 +96,7 @@ defmodule Ecto.Mixfile do
       canonical: "http://hexdocs.pm/ecto",
       logo: "guides/images/e.png",
       source_url: "https://github.com/elixir-ecto/ecto",
+      markdown_processor: ExDocMakeup,
       extras: [
         "guides/Getting Started.md",
         "guides/Associations.md"
