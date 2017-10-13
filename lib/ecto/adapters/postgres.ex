@@ -41,6 +41,8 @@ defmodule Ecto.Adapters.Postgres do
     * `:ssl_opts` - A list of ssl options, see Erlang's `ssl` docs
     * `:parameters` - Keyword list of connection parameters
     * `:connect_timeout` - The timeout for establishing new connections (default: 5000)
+    * `:prepare` - How to prepare queries, either `:named` to use named queries
+      or `:unnamed` to force unnamed queries (default: `:named`)
     * `:socket_options` - Specifies socket configuration
 
   The `:socket_options` are particularly useful when configuring the size
@@ -63,21 +65,6 @@ defmodule Ecto.Adapters.Postgres do
     * `:lc_collate` - the collation order
     * `:lc_ctype` - the character classification
     * `:dump_path` - where to place dumped structures
-
-  ### Adapter options
-
-  It should be noted that some adapter options may be set in your
-  repo configuration. For example, suppose you have a setup that
-  requires unnamed prepared statements. The Postgres adapter has
-  an option for this and can be set in your repo config.
-
-  config :my_app, MyApp.Repo,
-    adapter: Ecto.Adapters.Postgres,
-    database: "my_app_repo",
-    username: "user",
-    password: "pass",
-    hostname: "localhost"
-    prepare: :unnamed
 
   ## Extensions
 
