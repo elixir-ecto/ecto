@@ -29,7 +29,7 @@ And should be rewritten as:
 
 This means Ecto no longer requires Ecto-specific extensions on databases such as Postgres which leads to better integration with 3rd party libraries and faster compilation times.
 
-## v3.0.0-dev (2017-08-18)
+## v3.0.0-dev (In Progress)
 
 ### Enhancements
 
@@ -40,6 +40,7 @@ This means Ecto no longer requires Ecto-specific extensions on databases such as
 
 ### Backwards incompatible changes
 
+  * [Ecto.Multi] `Ecto.Multi.run/3` and `Ecto.Multi.run/5` now receive the repo in which the transaction is executing as the first argument to functions, and the changes so far as the second argument.
   * [Ecto.DateTime] `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` were previously deprecated and have now been removed
   * [Ecto.Schema]`:time`, `:naive_datetime` and `:utc_datetime` no longer keep microseconds information. If you want to keep microseconds, use `:time_usec`, `:naive_datetime_usec`, `:utc_datetime_usec`
 
