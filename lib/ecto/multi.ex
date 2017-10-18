@@ -151,8 +151,8 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> lhs = Ecto.Multi.new |> Ecto.Multi.run(:left, fn _, _ -> {:ok, :ok} end)
-      iex> rhs = Ecto.Multi.new |> Ecto.Multi.run(:right, fn _, _ -> {:error, :error} end)
+      iex> lhs = Ecto.Multi.new |> Ecto.Multi.run(:left, fn _, changes -> {:ok, changes} end)
+      iex> rhs = Ecto.Multi.new |> Ecto.Multi.run(:right, fn _, changes -> {:error, changes} end)
       iex> Ecto.Multi.prepend(lhs, rhs) |> Ecto.Multi.to_list |> Keyword.keys
       [:right, :left]
 
