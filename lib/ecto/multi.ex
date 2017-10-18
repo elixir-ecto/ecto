@@ -100,7 +100,7 @@ defmodule Ecto.Multi do
 
   defstruct operations: [], names: MapSet.new
 
-  @type run :: (t -> {:ok | :error, any}) | {module, atom, [any]}
+  @type run :: ((Ecto.Repo.t, map) -> {:ok | :error, any}) | {module, atom, [any]}
   @type merge :: (map -> t) | {module, atom, [any]}
   @typep schema_or_source :: binary | {binary | nil, binary} | atom
   @typep operation :: {:changeset, Changeset.t, Keyword.t} |
@@ -307,7 +307,7 @@ defmodule Ecto.Multi do
   and receives the repo as the first argument, and the changes so far
   as the second argument.
   """
-  @spec run(t, name, (t -> {:ok | :error, any})) :: t
+  @spec run(t, name, run) :: t
   def run(multi, name, run) when is_function(run, 1) do
     IO.warn "Giving an anonymous function with 1 argument to Ecto.Multi.run/3 is deprecated. " <>
               "Please pass an anonymous function that receives the repository and the changes so far"
