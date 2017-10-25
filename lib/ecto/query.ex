@@ -95,6 +95,20 @@ defmodule Ecto.Query do
   For this reason, we will use schemas on the remaining examples but
   remember Ecto does not require them in order to write queries.
 
+  ## `nil` comparison
+
+  `nil` comparison in filters, such as where and having, is forbidden
+  and it will raise an error:
+  
+      # Raises if age is nil
+      from u in User, where: u.age == ^age
+  
+  This is done as a security measure to avoid attacks that attempt
+  to traverse entries with nil columns. To check that value is `nil`,
+  use `is_nil/1` instead:
+  
+      from u in User, where: is_nil(u.age)
+
   ## Composition
 
   Ecto queries are composable. For example, the query above can
