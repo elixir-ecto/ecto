@@ -95,6 +95,13 @@ defmodule Ecto.Query do
   For this reason, we will use schemas on the remaining examples but
   remember Ecto does not require them in order to write queries.
 
+  ## `nil` comparison
+
+  Comparison with a infix operators with `nil` is forbidden as it is unsafe
+  and would expose security risks. To check that value is `nil` use `is_nil/1`.
+
+  If you want to dynamically extend your query, use a query composition.
+
   ## Composition
 
   Ecto queries are composable. For example, the query above can
