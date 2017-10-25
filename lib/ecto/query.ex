@@ -97,10 +97,8 @@ defmodule Ecto.Query do
 
   ## `nil` comparison
 
-  Nil comparison with a infix operators is forbidden as it is unsafe
-  and would expose security risks. To check that value is `nil` use `is_nil/1`.
-
-  If you want to dynamically extend your query, use a query composition.
+  `nil` comparison is forbidden as it is unsafe and would expose
+  security risks. To check that value is `nil` use `is_nil/1`.
 
   ## Composition
 
