@@ -14,6 +14,8 @@ defimpl Enumerable, for: Ecto.Adapters.SQL.Stream do
 
   def member?(_, _), do: {:error, __MODULE__}
 
+  def slice(_), do: {:error, __MODULE__}
+
   def reduce(stream, acc, fun) do
     %Ecto.Adapters.SQL.Stream{repo: repo, statement: statement, params: params,
                               mapper: mapper, opts: opts} = stream
