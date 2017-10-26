@@ -156,6 +156,16 @@ defmodule Ecto.MigrationTest do
            {:create, table, [{:add, :uuid, :uuid, [primary_key: true]}]}
   end
 
+  @tag repo_config: [migration_primary_key: [type: :uuid, default: {:fragment, "gen_random_uuid()"}]]
+  test "forward: create a table with custom primary key options" do
+    create(table = table(:posts)) do
+    end
+    flush()
+
+    assert last_command() ==
+           {:create, table, [{:add, :id, :uuid, [primary_key: true, default: {:fragment, "gen_random_uuid()"}]}]}
+  end
+
   @tag repo_config: [migration_timestamps: [type: :utc_datetime, null: true]]
   test "forward: create a table with timestamps" do
     create(table = table(:posts)) do
