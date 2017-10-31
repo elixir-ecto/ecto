@@ -1947,10 +1947,12 @@ defmodule Ecto.Changeset do
         comment
         |> cast(params, [:body, :post_id])
         |> prepare_changes(fn changeset ->
-          assoc(changeset.data, :post)
-          |> changeset.repo.update_all(inc: [comment_count: 1])
-          changeset
-        end)
+             if post_id = get_change(changeset, :post_id) do
+               query = from Post, where: [id: ^post_id]
+               changeset.repo.update_all(query, inc: [comment_count: 1])
+             end
+             changeset
+           end)
       end
 
   We retrieve the repo from the comment changeset itself and use

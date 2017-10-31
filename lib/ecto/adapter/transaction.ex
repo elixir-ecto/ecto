@@ -10,7 +10,7 @@ defmodule Ecto.Adapter.Transaction  do
   is the value return by the function or `{:error, value}` if the transaction
   was rolled back where `value` is the value given to `rollback/1`.
 
-  See `Ecto.Repo.transaction/1`.
+  See `c:Ecto.Repo.transaction/2`.
   """
   @callback transaction(repo :: Ecto.Repo.t, options :: Keyword.t, function :: fun) :: {:ok, any} | {:error, any}
 
@@ -24,7 +24,7 @@ defmodule Ecto.Adapter.Transaction  do
 
   The transaction will return the value given as `{:error, value}`.
 
-  See `Ecto.Repo.rollback/1`.
+  See `c:Ecto.Repo.rollback/1`.
   """
   @callback rollback(repo :: Ecto.Repo.t, value :: any) :: no_return
 end
