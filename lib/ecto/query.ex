@@ -1127,7 +1127,8 @@ defmodule Ecto.Query do
   is given as an argument to an aggregate function.
 
   `group_by` also accepts a list of atoms where each atom refers to
-  a field in source.
+  a field in source. For more complicated queries you can access fields
+  directly instead of atoms.
 
   ## Keywords examples
 
@@ -1138,6 +1139,11 @@ defmodule Ecto.Query do
 
       # Using atoms
       from(p in Post, group_by: :category, select: {p.category, count(p.id)})
+
+      # Using direct fields access
+      from(p in Post,
+        join: c in assoc(p, :category)
+        group_by: [p.id, c.name])
 
   ## Expressions example
 
