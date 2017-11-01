@@ -136,6 +136,79 @@ defmodule Ecto.Type do
   """
   @callback dump(term) :: {:ok, term} | :error
 
+  @doc """
+  Optional callback for types to support the dump of nil value in the structure
+  into other value of the database column.
+  Some queer legacy database designs have nil represented by other value of database column:
+  " ", "N/A" , 0, etc.
+
+  This callback is called from dump/1 to verify that type is willing
+  to convert values to the one that legacy applications consider as nil
+  on insert.
+
+  Type is responsible for implementing dump/1
+  to return value to be written into database
+  that represent `no value` as per database design.
+  ## Example (see my sample project: [https://github.com/borodark/type_test](https://github.com/borodark/type_test))
+  or [unix_date_time_test.exs in feature/dump_nil branch](blob/feature/dump_nil/test/ecto/unix_date_time_test.exs)
+
+  defmodule UnixDateTime do
+
+  #An Ecto type for Date Time stored in DB as integer produced by unix `date +%s` command
+  #The DB column declared as 'NOT NULL DEFAULT 0'
+  #The use of 0 instead nil is lame because `date +%s` returns 0 for 1970-01-01 00:00:00
+  #and negative values represent dates prior to that date
+  #Unfortunately some legacy databases can not be changed but we want to use Ecto with these systems. 
+
+  @behaviour Ecto.Type
+
+  @spec handles_nil?() :: boolean
+  def handles_nil?(), do: true
+
+  # The Ecto type.
+  def type, do: __MODULE__
+
+  # This is a %DateTime{}.
+
+  @type t :: %DateTime{}
+
+  # Casts to __MODULE__.
+
+  @spec cast(t | any) :: {:ok, t} | :error
+  def cast(%DateTime{} = date), do: {:ok, date}
+
+  def cast(_), do: :error
+
+  # Converts a string representing a UUID into a binary.
+
+  @spec dump(t | any) :: {:ok, integer} | :error
+  # Write 0 for no value
+  def dump(nil), do: {:ok, 0}
+  # Write integer for any valid date
+  def dump(%DateTime{} = date), do: {:ok, DateTime.to_unix(date)}
+
+  def dump(_), do: :error
+
+  Converts an integer: into DateTime.
+
+  @spec load(integer) :: {:ok, t} | :error
+  # If DB contains 0 this means Date has a default value
+  # and it's blank
+  def load(0), do: {:ok, nil}
+
+  def load(value) when is_integer(value) do
+  {:ok, DateTime.from_unix!(value)}
+  end
+
+  def load(_), do: :error
+
+  end
+  """
+  @callback handles_nil? :: boolean
+  @optional_callbacks handles_nil?: 0
+  @spec handles_nil? :: boolean
+  def handles_nil? , do: false
+
   ## Functions
 
   @doc """
@@ -288,8 +361,15 @@ defmodule Ecto.Type do
   @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
   def dump(type, value, dumper \\ &dump/2)
 
-  def dump(_type, nil, _dumper) do
-    {:ok, nil}
+  def dump({:embed, _}, nil, _dumper), do: {:ok, nil}
+
+  def dump({:array, _}, nil, _dumper), do: {:ok, nil}
+
+  def dump(type, nil, _dumper) do
+    case function_exported?(type, :handles_nil?, 0) do
+      true -> type.dump(nil)
+      false -> {:ok, nil}
+    end
   end
 
   def dump(:binary_id, value, _dumper) when is_binary(value) do
