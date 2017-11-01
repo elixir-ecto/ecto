@@ -308,7 +308,12 @@ defmodule Ecto.Migration do
 
       if table.primary_key do
         opts = Runner.repo_config(:migration_primary_key, [])
-        add(opts[:name] || :id, opts[:type] || :bigserial, primary_key: true)
+        opts = Keyword.put(opts, :primary_key, true)
+
+        {name, opts} = Keyword.pop(opts, :name, :id)
+        {type, opts} = Keyword.pop(opts, :type, :bigserial)
+
+        add(name, type, opts)
       end
 
       unquote(block)
