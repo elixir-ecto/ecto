@@ -96,11 +96,10 @@ defmodule Ecto.Adapters.MySQL do
   differences and consult the documentation for your MySQL
   version.
 
-  Assuming your version of MySQL supports microsecond precision,
-  you will need to explicitly set it on the relevant columns
-  in your migration. For explicitly declared columns you can
-  add the `size: 6` option. If you're using the `timestamps()`
-  helper you can use `timestamps(size: 6)`.
+  If your version of MySQL supports microsecond precision, you
+  will be able to utilize Ecto's usec types. The precision for a
+  usec type will default to 6 but can be explicitly declared by
+  using the `precision` option.
   """
 
   # Inherit all behaviour from Ecto.Adapters.SQL

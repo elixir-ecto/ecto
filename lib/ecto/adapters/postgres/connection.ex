@@ -817,6 +817,21 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp column_type({:array, type}, opts),
       do: [column_type(type, opts), "[]"]
+
+    defp column_type(type, _opts) when type in ~w(time utc_datetime naive_datetime)a,
+      do: [ecto_to_db(type), "(0)"]
+
+    defp column_type(type, opts) when type in ~w(time_usec utc_datetime_usec naive_datetime_usec)a do
+      precision = Keyword.get(opts, :precision)
+      type_name = ecto_to_db(type)
+
+      if precision do
+        [type_name, ?(, to_string(precision), ?)]
+      else
+        type_name
+      end
+    end
+
     defp column_type(type, opts) do
       size      = Keyword.get(opts, :size)
       precision = Keyword.get(opts, :precision)
@@ -925,18 +940,21 @@ if Code.ensure_loaded?(Postgrex) do
       :binary.replace(value, "'", "''", [:global])
     end
 
-    defp ecto_to_db({:array, t}),     do: [ecto_to_db(t), ?[, ?]]
-    defp ecto_to_db(:id),             do: "integer"
-    defp ecto_to_db(:serial),         do: "serial"
-    defp ecto_to_db(:bigserial),      do: "bigserial"
-    defp ecto_to_db(:binary_id),      do: "uuid"
-    defp ecto_to_db(:string),         do: "varchar"
-    defp ecto_to_db(:binary),         do: "bytea"
-    defp ecto_to_db(:map),            do: Application.fetch_env!(:ecto, :postgres_map_type)
-    defp ecto_to_db({:map, _}),       do: Application.fetch_env!(:ecto, :postgres_map_type)
-    defp ecto_to_db(:utc_datetime),   do: "timestamp"
-    defp ecto_to_db(:naive_datetime), do: "timestamp"
-    defp ecto_to_db(other),           do: Atom.to_string(other)
+    defp ecto_to_db({:array, t}),          do: [ecto_to_db(t), ?[, ?]]
+    defp ecto_to_db(:id),                  do: "integer"
+    defp ecto_to_db(:serial),              do: "serial"
+    defp ecto_to_db(:bigserial),           do: "bigserial"
+    defp ecto_to_db(:binary_id),           do: "uuid"
+    defp ecto_to_db(:string),              do: "varchar"
+    defp ecto_to_db(:binary),              do: "bytea"
+    defp ecto_to_db(:map),                 do: Application.fetch_env!(:ecto, :postgres_map_type)
+    defp ecto_to_db({:map, _}),            do: Application.fetch_env!(:ecto, :postgres_map_type)
+    defp ecto_to_db(:time_usec),           do: "time"
+    defp ecto_to_db(:utc_datetime),        do: "timestamp"
+    defp ecto_to_db(:utc_datetime_usec),   do: "timestamp"
+    defp ecto_to_db(:naive_datetime),      do: "timestamp"
+    defp ecto_to_db(:naive_datetime_usec), do: "timestamp"
+    defp ecto_to_db(other),                do: Atom.to_string(other)
 
     defp error!(nil, message) do
       raise ArgumentError, message

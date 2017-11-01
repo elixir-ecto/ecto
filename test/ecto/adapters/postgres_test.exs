@@ -829,7 +829,7 @@ defmodule Ecto.Adapters.PostgresTest do
               [{:add, :id, :serial, [primary_key: true]},
                {:add, :created_at, :naive_datetime, []}]}
     assert execute_ddl(create) ==
-      [~s|CREATE TABLE "posts" ("id" serial, "created_at" timestamp, PRIMARY KEY ("id")) WITH FOO=BAR|]
+      [~s|CREATE TABLE "posts" ("id" serial, "created_at" timestamp(0), PRIMARY KEY ("id")) WITH FOO=BAR|]
   end
 
   test "create table with composite key" do
@@ -868,6 +868,78 @@ defmodule Ecto.Adapters.PostgresTest do
               ]
             }
     assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("a" jsonb DEFAULT '{"foo":"bar","baz":"boom"}')|]
+  end
+
+  test "create table with time columns" do
+    create = {:create, table(:posts),
+              [{:add, :published_at, :time, [precision: 3]},
+               {:add, :submitted_at, :time, []}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE "posts"
+    ("published_at" time(0),
+    "submitted_at" time(0))
+    """ |> remove_newlines]
+  end
+
+  test "create table with time_usec columns" do
+    create = {:create, table(:posts),
+              [{:add, :published_at, :time_usec, [precision: 3]},
+               {:add, :submitted_at, :time_usec, []}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE "posts"
+    ("published_at" time(3),
+    "submitted_at" time)
+    """ |> remove_newlines]
+  end
+
+  test "create table with utc_datetime columns" do
+    create = {:create, table(:posts),
+              [{:add, :published_at, :utc_datetime, [precision: 3]},
+               {:add, :submitted_at, :utc_datetime, []}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE "posts"
+    ("published_at" timestamp(0),
+    "submitted_at" timestamp(0))
+    """ |> remove_newlines]
+  end
+
+  test "create table with utc_datetime_usec columns" do
+    create = {:create, table(:posts),
+              [{:add, :published_at, :utc_datetime_usec, [precision: 3]},
+               {:add, :submitted_at, :utc_datetime_usec, []}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE "posts"
+    ("published_at" timestamp(3),
+    "submitted_at" timestamp)
+    """ |> remove_newlines]
+  end
+
+  test "create table with naive_datetime columns" do
+    create = {:create, table(:posts),
+              [{:add, :published_at, :naive_datetime, [precision: 3]},
+               {:add, :submitted_at, :naive_datetime, []}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE "posts"
+    ("published_at" timestamp(0),
+    "submitted_at" timestamp(0))
+    """ |> remove_newlines]
+  end
+
+  test "create table with naive_datetime_usec columns" do
+    create = {:create, table(:posts),
+              [{:add, :published_at, :naive_datetime_usec, [precision: 3]},
+               {:add, :submitted_at, :naive_datetime_usec, []}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE "posts"
+    ("published_at" timestamp(3),
+    "submitted_at" timestamp)
+    """ |> remove_newlines]
   end
 
   test "drop table" do
