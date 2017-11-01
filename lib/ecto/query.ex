@@ -329,7 +329,7 @@ defmodule Ecto.Query do
 
   defmodule JoinExpr do
     @moduledoc false
-    defstruct [:qual, :source, :on, :file, :line, :assoc, :ix, params: []]
+    defstruct [:qual, :source, :on, :file, :line, :assoc, :ix, :hint, params: []]
   end
 
   defmodule Tagged do
@@ -605,7 +605,8 @@ defmodule Ecto.Query do
       end
 
     {t, on} = collect_on(t, nil)
-    {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, on, count_bind, env)
+    {t, hint} = collect_hint(t, nil)
+    {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, on, hint, count_bind, env)
     from(t, env, count_bind, quoted, binds)
   end
 
@@ -620,6 +621,11 @@ defmodule Ecto.Query do
   defp from([], _env, _count_bind, quoted, _binds) do
     quoted
   end
+
+  defp collect_hint([{:hint, expr}|t], nil),
+    do: collect_hint(t, expr)
+  defp collect_hint(other, acc),
+    do: {other, acc}
 
   defp collect_on([{:on, expr}|t], nil),
     do: collect_on(t, expr)
@@ -724,8 +730,8 @@ defmodule Ecto.Query do
       |> select([g, gs], {g.name, gs.sold_on})
 
   """
-  defmacro join(query, qual, binding \\ [], expr, on \\ nil) do
-    Join.build(query, qual, binding, expr, on, nil, __CALLER__)
+  defmacro join(query, qual, binding \\ [], expr, on \\ nil, hint \\ nil) do
+    Join.build(query, qual, binding, expr, on, hint, nil, __CALLER__)
     |> elem(0)
   end
 

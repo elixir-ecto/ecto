@@ -61,6 +61,12 @@ defmodule Ecto.Query.Builder.JoinTest do
     assert join.on.params == [{true, {1, :public}}]
   end
 
+  test "accepts hint option" do
+    assert %{joins: [join]} =
+      join("posts", :inner, [p], c in "comments", ^[post_id: 1, public: true], hint("force index (id)"))
+    assert Macro.to_string(join.hint) == "\" force index (id) \""
+  end
+
   test "accepts interpolation on assoc/2 field" do
     assoc = :comments
     join("posts", :left, [p], c in assoc(p, ^assoc), true)

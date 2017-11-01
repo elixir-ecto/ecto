@@ -249,9 +249,9 @@ if Code.ensure_loaded?(Mariaex) do
     defp join(%Query{joins: []}, _sources), do: []
     defp join(%Query{joins: joins} = query, sources) do
       Enum.map(joins, fn
-        %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
+        %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source, hint: hint} ->
           {join, name} = get_source(query, sources, ix, source)
-          [join_qual(qual, query), join, " AS ", name, " ON " | expr(expr, sources, query)]
+          [join_qual(qual, query), join, " AS ", name, hint || "", " ON " | expr(expr, sources, query)]
       end)
     end
 

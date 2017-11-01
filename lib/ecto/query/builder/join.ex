@@ -117,9 +117,9 @@ defmodule Ecto.Query.Builder.Join do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, Macro.Env.t) ::
+  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, Macro.t, Macro.Env.t) ::
               {Macro.t, Keyword.t, non_neg_integer | nil}
-  def build(query, qual, binding, expr, on, count_bind, env) do
+  def build(query, qual, binding, expr, on, hint, count_bind, env) do
     {query, binding} = Builder.escape_binding(query, binding)
     {join_bind, join_source, join_assoc, join_params} = escape(expr, binding, env)
     join_params = Builder.escape_params(join_params)
@@ -152,22 +152,23 @@ defmodule Ecto.Query.Builder.Join do
       end
 
     query = build_on(on || true, query, binding, count_bind, qual,
-                     join_source, join_assoc, join_params, env)
+                     join_source, join_assoc, join_params, hint, env)
     {query, binding, next_bind}
   end
 
   def build_on({:^, _, [var]}, query, _binding, count_bind,
-               join_qual, join_source, join_assoc, join_params, env) do
+               join_qual, join_source, join_assoc, join_params, hint, env) do
     quote do
       query = unquote(query)
-      Ecto.Query.Builder.Join.join!(query, unquote(var), unquote(count_bind),
-                                    unquote(join_qual), unquote(join_source), unquote(join_assoc),
-                                    unquote(join_params), unquote(env.file), unquote(env.line))
+      Ecto.Query.Builder.Join.join!(query,
+        unquote(var), unquote(count_bind), unquote(join_qual),
+        unquote(join_source), unquote(join_assoc), unquote(join_params),
+        unquote(hint), unquote(env.file), unquote(env.line))
     end
   end
 
   def build_on(on, query, binding, count_bind,
-               join_qual, join_source, join_assoc, join_params, env) do
+               join_qual, join_source, join_assoc, join_params, hint, env) do
     {on_expr, on_params} = Ecto.Query.Builder.Filter.escape(:on, on, count_bind, binding, env)
     on_params = Builder.escape_params(on_params)
 
@@ -176,11 +177,16 @@ defmodule Ecto.Query.Builder.Join do
         %JoinExpr{qual: unquote(join_qual), source: unquote(join_source),
                   assoc: unquote(join_assoc), file: unquote(env.file),
                   line: unquote(env.line), params: unquote(join_params),
+                  hint: unquote(hint),
                   on: %QueryExpr{expr: unquote(on_expr), params: unquote(on_params),
                                  line: unquote(env.line), file: unquote(env.file)}}
       end
 
     Builder.apply_query(query, __MODULE__, [join], env)
+  end
+
+  defmacro hint(expr) do
+    " " <> expr <> " "
   end
 
   @doc """
@@ -196,12 +202,13 @@ defmodule Ecto.Query.Builder.Join do
   @doc """
   Called at runtime to build a join.
   """
-  def join!(query, expr, count_bind, join_qual, join_source, join_assoc, join_params, file, line) do
+  def join!(query, expr, count_bind, join_qual, join_source, join_assoc, join_params, hint, file, line) do
     {on_expr, on_params, on_file, on_line} =
       Ecto.Query.Builder.Filter.filter!(:on, query, expr, count_bind, file, line)
 
     join = %JoinExpr{qual: join_qual, source: join_source, assoc: join_assoc,
                      file: file, line: line, params: join_params,
+                     hint: hint,
                      on: %QueryExpr{expr: on_expr, params: on_params,
                                     line: on_line, file: on_file}}
 
