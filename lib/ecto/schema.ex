@@ -147,15 +147,12 @@ defmodule Ecto.Schema do
   `:date`                 | `Date` |
   `:time`                 | `Time` |
   `:naive_datetime`       | `NaiveDateTime` |
+  `:naive_datetime_usec`  | `NaiveDateTime` |
   `:utc_datetime`         | `DateTime` |
+  `:utc_datetime_usec`    | `DateTime` |
 
   **Note:** For the `{:array, inner_type}` and `{:map, inner_type}` type,
   replace `inner_type` with one of the valid types, such as `:string`.
-
-  Timestamps are typically represented by `:naive_datetime` or
-  `:utc_datetime`. The naive datetime uses Elixir's `NaiveDateTime` which
-  has no time zone information while `:utc_datetime` uses a `DateTime` and
-  expects the time zone to be set to UTC.
 
   ### Custom types
 
@@ -175,6 +172,33 @@ defmodule Ecto.Schema do
   Finally, schemas can also have virtual fields by passing the
   `virtual: true` option. These fields are not persisted to the database
   and can optionally not be type checked by declaring type `:any`.
+
+  ### The datetime types
+
+  Four different datetime primitive types are available:
+
+    * `naive_datetime` - has a precision of 0 microseconds and casts values
+      to Elixir's `NaiveDateTime` struct which has no timezone information.
+
+    * `naive_datetime_usec` - has a default precision of 6 microseconds and
+      also casts values to `NaiveDateTime` with no timezone information.
+
+    * `utc_datetime` - has a precision of 0 microseconds and casts values to
+      to Elixir's `DateTime` struct and expects the time zone to be set to UTC.
+
+    * `utc_datetime_usec` has a default precision of 6 microseconds and also
+      casts values to `DateTime` expecting the time zone be set to UTC.
+
+  Having these different types allows developers to choose a type that will
+  be compatible with the database and your project's precision requirements.
+  For example, some older versions of MySQL do not support microseconds in
+  datetime fields.
+
+  When choosing what datetime type to work with, keep in mind that Elixir
+  functions like `NaiveDateTime.utc_now/0` have a default precision of 6.
+  Casting a value with a precision greater than 0 to a non-`usec` type will
+  truncate all microseconds and set the precision to 0, making the raw utc_now
+  value ≠ to the cast value.
 
   ### The map type
 

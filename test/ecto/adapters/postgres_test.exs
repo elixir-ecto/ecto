@@ -875,11 +875,7 @@ defmodule Ecto.Adapters.PostgresTest do
               [{:add, :published_at, :time, [precision: 3]},
                {:add, :submitted_at, :time, []}]}
 
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "posts"
-    ("published_at" time(0),
-    "submitted_at" time(0))
-    """ |> remove_newlines]
+    assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("published_at" time(0), "submitted_at" time(0))|]
   end
 
   test "create table with time_usec columns" do
@@ -887,11 +883,7 @@ defmodule Ecto.Adapters.PostgresTest do
               [{:add, :published_at, :time_usec, [precision: 3]},
                {:add, :submitted_at, :time_usec, []}]}
 
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "posts"
-    ("published_at" time(3),
-    "submitted_at" time)
-    """ |> remove_newlines]
+    assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("published_at" time(3), "submitted_at" time)|]
   end
 
   test "create table with utc_datetime columns" do
@@ -899,11 +891,7 @@ defmodule Ecto.Adapters.PostgresTest do
               [{:add, :published_at, :utc_datetime, [precision: 3]},
                {:add, :submitted_at, :utc_datetime, []}]}
 
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "posts"
-    ("published_at" timestamp(0),
-    "submitted_at" timestamp(0))
-    """ |> remove_newlines]
+    assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("published_at" timestamp(0), "submitted_at" timestamp(0))|]
   end
 
   test "create table with utc_datetime_usec columns" do
@@ -911,11 +899,7 @@ defmodule Ecto.Adapters.PostgresTest do
               [{:add, :published_at, :utc_datetime_usec, [precision: 3]},
                {:add, :submitted_at, :utc_datetime_usec, []}]}
 
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "posts"
-    ("published_at" timestamp(3),
-    "submitted_at" timestamp)
-    """ |> remove_newlines]
+    assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("published_at" timestamp(3), "submitted_at" timestamp)|]
   end
 
   test "create table with naive_datetime columns" do
@@ -923,11 +907,7 @@ defmodule Ecto.Adapters.PostgresTest do
               [{:add, :published_at, :naive_datetime, [precision: 3]},
                {:add, :submitted_at, :naive_datetime, []}]}
 
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "posts"
-    ("published_at" timestamp(0),
-    "submitted_at" timestamp(0))
-    """ |> remove_newlines]
+    assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("published_at" timestamp(0), "submitted_at" timestamp(0))|]
   end
 
   test "create table with naive_datetime_usec columns" do
@@ -935,11 +915,7 @@ defmodule Ecto.Adapters.PostgresTest do
               [{:add, :published_at, :naive_datetime_usec, [precision: 3]},
                {:add, :submitted_at, :naive_datetime_usec, []}]}
 
-    assert execute_ddl(create) == ["""
-    CREATE TABLE "posts"
-    ("published_at" timestamp(3),
-    "submitted_at" timestamp)
-    """ |> remove_newlines]
+    assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("published_at" timestamp(3), "submitted_at" timestamp)|]
   end
 
   test "drop table" do
