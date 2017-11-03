@@ -1464,9 +1464,19 @@ defmodule Ecto.Schema do
   def __timestamps__(:naive_datetime) do
     %{NaiveDateTime.utc_now() | microsecond: {0, 0}}
   end
+
+  def __timestamps__(:naive_datetime_usec) do
+    NaiveDateTime.utc_now()
+  end
+
   def __timestamps__(:utc_datetime) do
     DateTime.from_unix!(System.system_time(:seconds), :seconds)
   end
+
+  def __timestamps__(:utc_datetime_usec) do
+    DateTime.from_unix!(System.system_time(:microseconds), :microseconds)
+  end
+
   def __timestamps__(type) do
     type.from_unix!(System.system_time(:microseconds), :microseconds)
   end

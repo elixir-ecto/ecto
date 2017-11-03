@@ -22,6 +22,38 @@ defmodule Ecto.Repo.AutogenerateTest do
     end
   end
 
+  defmodule NaiveMod do
+    use Ecto.Schema
+
+    schema "naive_mod" do
+      timestamps(type: :naive_datetime)
+    end
+  end
+
+  defmodule NaiveUsecMod do
+    use Ecto.Schema
+
+    schema "naive_usec_mod" do
+      timestamps(type: :naive_datetime_usec)
+    end
+  end
+
+  defmodule UtcMod do
+    use Ecto.Schema
+
+    schema "utc_mod" do
+      timestamps(type: :utc_datetime)
+    end
+  end
+
+  defmodule UtcUsecMod do
+    use Ecto.Schema
+
+    schema "utc_usec_mod" do
+      timestamps(type: :utc_datetime_usec)
+    end
+  end
+
   ## Autogenerate
 
   @uuid "30313233-3435-4637-9839-616263646566"
@@ -51,8 +83,8 @@ defmodule Ecto.Repo.AutogenerateTest do
 
   test "sets inserted_at and updated_at values" do
     default = TestRepo.insert!(%Company{})
-    assert %NaiveDateTime{} = default.inserted_at
-    assert %NaiveDateTime{} = default.updated_at
+    assert %NaiveDateTime{microsecond: {0, 0}} = default.inserted_at
+    assert %NaiveDateTime{microsecond: {0, 0}} = default.updated_at
     assert_received {:insert, _}
 
     # No change
@@ -74,7 +106,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     changeset = Ecto.Changeset.change(%Company{id: 1})
     default = TestRepo.update!(changeset, force: true)
     refute default.inserted_at
-    assert %NaiveDateTime{} = default.updated_at
+    assert %NaiveDateTime{microsecond: {0, 0}} = default.updated_at
     assert_received {:update, _}
   end
 
@@ -93,11 +125,51 @@ defmodule Ecto.Repo.AutogenerateTest do
 
   test "sets custom inserted_at and updated_at values" do
     default = TestRepo.insert!(%Manager{})
-    assert %DateTime{time_zone: "Etc/UTC"} = default.created_on
-    assert %DateTime{time_zone: "Etc/UTC"} = default.updated_on
+    assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.created_on
+    assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.updated_on
 
     default = TestRepo.update!(%Manager{id: 1} |> Ecto.Changeset.change, force: true)
     refute default.created_on
-    assert %DateTime{time_zone: "Etc/UTC"} = default.updated_on
+    assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.updated_on
+  end
+
+  test "sets the timestamps type to naive_datetime" do
+    default = TestRepo.insert!(%NaiveMod{})
+    assert %NaiveDateTime{microsecond: {0, 0}} = default.inserted_at
+    assert %NaiveDateTime{microsecond: {0, 0}} = default.updated_at
+
+    default = TestRepo.update!(%NaiveMod{id: 1} |> Ecto.Changeset.change, force: true)
+    refute default.inserted_at
+    assert %NaiveDateTime{microsecond: {0, 0}} = default.updated_at
+  end
+
+  test "sets the timestamps type to naive_datetime_usec" do
+    default = TestRepo.insert!(%NaiveUsecMod{})
+    assert %NaiveDateTime{microsecond: {_, 6}} = default.inserted_at
+    assert %NaiveDateTime{microsecond: {_, 6}} = default.updated_at
+
+    default = TestRepo.update!(%NaiveUsecMod{id: 1} |> Ecto.Changeset.change, force: true)
+    refute default.inserted_at
+    assert %NaiveDateTime{microsecond: {_, 6}} = default.updated_at
+  end
+
+  test "sets the timestamps type to utc_datetime" do
+    default = TestRepo.insert!(%UtcMod{})
+    assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.inserted_at
+    assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.updated_at
+
+    default = TestRepo.update!(%UtcMod{id: 1} |> Ecto.Changeset.change, force: true)
+    refute default.inserted_at
+    assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.updated_at
+  end
+
+  test "sets the timestamps type to utc_datetime_usec" do
+    default = TestRepo.insert!(%UtcUsecMod{})
+    assert %DateTime{time_zone: "Etc/UTC", microsecond: {_, 6}} = default.inserted_at
+    assert %DateTime{time_zone: "Etc/UTC", microsecond: {_, 6}} = default.updated_at
+
+    default = TestRepo.update!(%UtcUsecMod{id: 1} |> Ecto.Changeset.change, force: true)
+    refute default.inserted_at
+    assert %DateTime{time_zone: "Etc/UTC", microsecond: {_, 6}} = default.updated_at
   end
 end
