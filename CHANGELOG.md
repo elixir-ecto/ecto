@@ -4,7 +4,7 @@
 
 This is a new major release for Ecto v3.0. Despite the major number, this is a small release with the main goal of removing the previously deprecated Ecto datetime types in favor of the Calendar types that ship as part of Elixir.
 
-In other words, `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` no longer exist. Instead developers should use `Date`, `Time` and `NaiveDateTime` that ship as part of Elixir and are the preferred types since Ecto 2.1. Database adapters have also been standarized to work with Elixir types and they no longer return tuples when developers perform raw queries.
+In other words, `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` no longer exist. Instead developers should use `Date`, `Time`, `DateTime` and `NaiveDateTime` that ship as part of Elixir and are the preferred types since Ecto 2.1. Database adapters have also been standarized to work with Elixir types and they no longer return tuples when developers perform raw queries.
 
 (TO BE IMPLEMENTED) To uniformly support microseconds across all databases, the types `:time`, `:naive_datetime`, `:utc_datetime` will now discard any microseconds information. Ecto v3.0 introduces the types `:time_usec`, `:naive_datetime_usec` and `:utc_datetime_usec` as an alternative for those interested in keeping microseconds. If you want to keep microseconds in your migrations and schemas, you need to configure your repository:
 
@@ -42,7 +42,7 @@ This means Ecto no longer requires Ecto-specific extensions on databases such as
 
   * [Ecto.Multi] `Ecto.Multi.run/3` and `Ecto.Multi.run/5` now receive the repo in which the transaction is executing as the first argument to functions, and the changes so far as the second argument.
   * [Ecto.DateTime] `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` were previously deprecated and have now been removed
-  * [Ecto.Schema]`:time`, `:naive_datetime` and `:utc_datetime` no longer keep microseconds information. If you want to keep microseconds, use `:time_usec`, `:naive_datetime_usec`, `:utc_datetime_usec`
+  * [Ecto.Schema] `:time`, `:naive_datetime` and `:utc_datetime` no longer keep microseconds information. If you want to keep microseconds, use `:time_usec`, `:naive_datetime_usec`, `:utc_datetime_usec`
 
 ## Previous versions
 
