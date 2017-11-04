@@ -66,8 +66,8 @@ defmodule Ecto.Repo.Preloader do
 
       assocs =
         maybe_pmap Map.values(assocs), repo, opts, fn
-          {{:assoc, assoc, _related_key}, take, query, sub_preloads}, opts ->
-            preload_assoc(structs, module, repo, prefix, assoc,
+          {{:assoc, assoc, related_key}, take, query, sub_preloads}, opts ->
+            preload_assoc(structs, module, repo, prefix, assoc, related_key,
                           query, sub_preloads, take, opts)
         end
 
@@ -112,11 +112,15 @@ defmodule Ecto.Repo.Preloader do
   end
 
   defp preload_assoc(structs, module, repo, prefix, %{cardinality: card} = assoc,
-                     query, preloads, take, opts) do
+                     related_key, query, preloads, take, opts) do
     {fetch_structs, loaded_ids, loaded_structs} =
       fetch_structs(structs, module, assoc, opts)
 
-    fetch_structs = assoc.__struct__.preload(assoc, repo, query, take, prefix, fetch_structs, opts)
+    fetch_structs = if is_function(query, 1) do
+                      fetch_query(structs, assoc, query, prefix, related_key, take)
+                    else
+                      assoc.__struct__.preload(assoc, repo, query, take, prefix, fetch_structs, opts)
+                    end
 
     {fetch_ids, fetch_structs} =
       fetch_structs
