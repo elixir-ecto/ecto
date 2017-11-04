@@ -390,7 +390,7 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
       ["CAST(date_add(", expr(datetime, sources, query), ", ",
-       interval(count, interval, sources, query) | ") AS datetime)"]
+       interval(count, interval, sources, query) | ") AS datetime(6))"]
     end
 
     defp expr({:date_add, _, [date, count, interval]}, sources, query) do

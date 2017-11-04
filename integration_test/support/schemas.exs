@@ -278,3 +278,18 @@ defmodule Ecto.Integration.PostUserCompositePk do
     timestamps()
   end
 end
+
+defmodule Ecto.Integration.Article do
+  @moduledoc """
+  This module is used to test:
+
+    * usec datetime types
+
+  """
+  use Ecto.Integration.Schema
+
+  schema "articles" do
+    field :published_at, :naive_datetime_usec
+    field :submitted_at, :utc_datetime_usec
+  end
+end
