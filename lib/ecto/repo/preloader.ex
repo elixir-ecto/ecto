@@ -115,7 +115,7 @@ defmodule Ecto.Repo.Preloader do
                      query, preloads, take, opts) do
     {fetch_structs, loaded_ids, loaded_structs} =
       fetch_structs(structs, module, assoc, opts)
-    
+
     fetch_structs = assoc.__struct__.preload(assoc, repo, query, take, prefix, fetch_structs, opts)
 
     {fetch_ids, fetch_structs} =

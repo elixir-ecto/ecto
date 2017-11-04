@@ -118,7 +118,7 @@ defmodule Ecto.Association do
   Preforms a preload operation (typically using `Ecto.Repo.Preloader.fetch_query/7`).
   """
   @callback preload(t, module, Ecto.Query.t, [atom], String.t, [Ecto.Schema.t], Keyword.t) :: Ecto.Schema.t | [Ecto.Schema.t] | Ecto.Query.t
-  
+
   @doc """
   Performs the repository change on the association.
 
