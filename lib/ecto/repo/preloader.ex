@@ -66,8 +66,8 @@ defmodule Ecto.Repo.Preloader do
 
       assocs =
         maybe_pmap Map.values(assocs), repo, opts, fn
-          {{:assoc, assoc, related_key}, take, query, sub_preloads}, opts ->
-            preload_assoc(structs, module, repo, prefix, assoc, related_key,
+          {{:assoc, assoc, _related_key}, take, query, sub_preloads}, opts ->
+            preload_assoc(structs, module, repo, prefix, assoc,
                           query, sub_preloads, take, opts)
         end
 
@@ -112,53 +112,62 @@ defmodule Ecto.Repo.Preloader do
   end
 
   defp preload_assoc(structs, module, repo, prefix, %{cardinality: card} = assoc,
-                     related_key, query, preloads, take, opts) do
-    {fetch_ids, loaded_ids, loaded_structs} =
-      fetch_ids(structs, module, assoc, opts)
+                     query, preloads, take, opts) do
+    {fetch_structs, loaded_ids, loaded_structs} =
+      fetch_structs(structs, module, assoc, opts)
+    
+    fetch_structs = assoc.__struct__.preload(assoc, repo, query, take, prefix, fetch_structs, opts)
+
     {fetch_ids, fetch_structs} =
-      fetch_query(fetch_ids, assoc, repo, query, prefix, related_key, take, opts)
+      fetch_structs
+      |> unzip_structs([], [])
 
     all = preload_each(Enum.reverse(loaded_structs, fetch_structs), repo, preloads, opts)
     {:assoc, assoc, assoc_map(card, Enum.reverse(loaded_ids, fetch_ids), all)}
   end
 
-  defp fetch_ids(structs, module, assoc, opts) do
+  defp fetch_structs(structs, module, assoc, opts) do
     %{field: field, owner_key: owner_key, cardinality: card} = assoc
     force? = Keyword.get(opts, :force, false)
 
     Enum.reduce structs, {[], [], []}, fn
       nil, acc ->
         acc
-      struct, {fetch_ids, loaded_ids, loaded_structs} ->
+      struct, {fetch_structs, loaded_ids, loaded_structs} ->
         assert_struct!(module, struct)
         %{^owner_key => id, ^field => value} = struct
 
         cond do
           card == :one and Ecto.assoc_loaded?(value) and not force? ->
-            {fetch_ids, [id|loaded_ids], [value|loaded_structs]}
+            {fetch_structs, [id|loaded_ids], [value|loaded_structs]}
           card == :many and Ecto.assoc_loaded?(value) and not force? ->
-            {fetch_ids,
+            {fetch_structs,
              List.duplicate(id, length(value)) ++ loaded_ids,
              value ++ loaded_structs}
           is_nil(id) ->
-            {fetch_ids, loaded_ids, loaded_structs}
+            {fetch_structs, loaded_ids, loaded_structs}
           true ->
-            {[id|fetch_ids], loaded_ids, loaded_structs}
+            {[struct|fetch_structs], loaded_ids, loaded_structs}
         end
     end
   end
 
-  defp fetch_query([], _assoc, _repo, _query, _prefix, _related_key, _take, _opts) do
-    {[], []}
+  @doc false
+  def fetch_query(structs, assoc, query, prefix, related_key, take)
+  def fetch_query([], _assoc, _query, _prefix, _related_key, _take) do
+    []
   end
 
-  defp fetch_query(ids, _assoc, _repo, query, _prefix, {_, key}, _take, _opts) when is_function(query, 1) do
-    data = ids |> Enum.uniq |> query.() |> Enum.map(&{Map.fetch!(&1, key), &1}) |> Enum.sort
-    unzip_ids data, [], []
+  def fetch_query(structs, %{owner_key: owner_key}, query, _prefix, {_, key}, _take) when is_function(query, 1) do
+    structs
+    |> Enum.map(&(Map.get(&1, owner_key)))
+    |> Enum.uniq
+    |> query.()
+    |> Enum.map(&{Map.fetch!(&1, key), &1})
+    |> Enum.sort
   end
 
-  defp fetch_query(ids, %{cardinality: card} = assoc, repo, query, prefix, related_key, take, opts) do
-    query = assoc.__struct__.assoc_query(assoc, query, Enum.uniq(ids))
+  def fetch_query(_structs, %{cardinality: card}, query, prefix, related_key, take) do
     field = related_key_to_field(query, related_key)
 
     # Normalize query
@@ -168,18 +177,15 @@ defmodule Ecto.Repo.Preloader do
     query = update_in query.select.expr, &{:{}, [], [field, &1]}
 
     # If we are returning many results, we must sort by the key too
-    query =
-      case card do
-        :many ->
-          update_in query.order_bys, fn order_bys ->
-            [%Ecto.Query.QueryExpr{expr: [asc: field], params: [],
-                                   file: __ENV__.file, line: __ENV__.line}|order_bys]
-          end
-        :one ->
-          query
-      end
-
-    unzip_ids repo.all(query, opts), [], []
+    case card do
+      :many ->
+        update_in query.order_bys, fn order_bys ->
+          [%Ecto.Query.QueryExpr{expr: [asc: field], params: [],
+                                  file: __ENV__.file, line: __ENV__.line}|order_bys]
+        end
+      :one ->
+        query
+    end
   end
 
   defp related_key_to_field(query, {pos, key}) do
@@ -189,8 +195,8 @@ defmodule Ecto.Repo.Preloader do
   defp related_key_pos(_query, pos) when pos >= 0, do: pos
   defp related_key_pos(query, pos), do: Ecto.Query.Builder.count_binds(query) + pos
 
-  defp unzip_ids([{k, v}|t], acc1, acc2), do: unzip_ids(t, [k|acc1], [v|acc2])
-  defp unzip_ids([], acc1, acc2), do: {acc1, acc2}
+  defp unzip_structs([{k, v}|t], acc1, acc2), do: unzip_structs(t, [k|acc1], [v|acc2])
+  defp unzip_structs([], acc1, acc2), do: {acc1, acc2}
 
   defp assert_struct!(mod, %{__struct__: mod}), do: true
   defp assert_struct!(mod, %{__struct__: struct}) do

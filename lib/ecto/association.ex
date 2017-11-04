@@ -115,6 +115,11 @@ defmodule Ecto.Association do
               {:assoc, t, {integer, atom}} | {:through, t, [atom]}
 
   @doc """
+  Preforms a preload operation (typically using `Ecto.Repo.Preloader.fetch_query/7`).
+  """
+  @callback preload(t, module, Ecto.Query.t, [atom], String.t, [Ecto.Schema.t], Keyword.t) :: Ecto.Schema.t | [Ecto.Schema.t] | Ecto.Query.t
+  
+  @doc """
   Performs the repository change on the association.
 
   Receives the parent changeset, the current changesets
@@ -524,6 +529,17 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
+  def preload(%{related_key: related_key, owner_key: owner_key} = refl, repo, query, fields, prefix, structs, opts) do
+    ids = structs |> Enum.map(&(Map.get(&1, owner_key)))
+    query = assoc_query(refl, query, Enum.uniq(ids))
+    Ecto.Repo.Preloader.fetch_query(structs, refl, query, prefix, {0, related_key}, fields)
+    |> case do
+      list when is_list(list) -> list
+      query -> repo.all(query, opts)
+    end
+  end
+
+  @doc false
   def preload_info(%{related_key: related_key} = refl) do
     {:assoc, refl, {0, related_key}}
   end
@@ -667,6 +683,17 @@ defmodule Ecto.Association.HasThrough do
   end
 
   @doc false
+  def preload(%{through: through, owner_key: owner_key} = refl, repo, query, fields, prefix, structs, opts) do
+    ids = structs |> Enum.map(&(Map.get(&1, owner_key)))
+    query = assoc_query(refl, query, Enum.uniq(ids))
+    Ecto.Repo.Preloader.fetch_query(structs, refl, query, prefix, through, fields)
+    |> case do
+      list when is_list(list) -> list
+      query -> repo.all(query, opts)
+    end
+  end
+
+  @doc false
   def preload_info(%{through: through} = refl) do
     {:through, refl, through}
   end
@@ -782,6 +809,17 @@ defmodule Ecto.Association.BelongsTo do
   def assoc_query(%{queryable: queryable, related_key: related_key}, query, values) do
     from x in (query || queryable),
       where: field(x, ^related_key) in ^values
+  end
+
+  @doc false
+  def preload(%{related_key: related_key, owner_key: owner_key} = refl, repo, query, fields, prefix, structs, opts) do
+    ids = structs |> Enum.map(&(Map.get(&1, owner_key)))
+    query = assoc_query(refl, query, Enum.uniq(ids))
+    Ecto.Repo.Preloader.fetch_query(structs, refl, query, prefix, {0, related_key}, fields)
+    |> case do
+      list when is_list(list) -> list
+      query -> repo.all(query, opts)
+    end
   end
 
   @doc false
@@ -980,6 +1018,17 @@ defmodule Ecto.Association.ManyToMany do
     refl
     |> build()
     |> struct(attributes)
+  end
+
+  @doc false
+  def preload(%{join_keys: [{_, owner_key}, {_, _}]} = refl, repo, query, fields, prefix, structs, opts) do
+    ids = structs |> Enum.map(&(Map.get(&1, owner_key)))
+    query = assoc_query(refl, query, Enum.uniq(ids))
+    Ecto.Repo.Preloader.fetch_query(structs, refl, query, prefix, {-2, owner_key}, fields)
+    |> case do
+      list when is_list(list) -> list
+      query -> repo.all(query, opts)
+    end
   end
 
   @doc false
