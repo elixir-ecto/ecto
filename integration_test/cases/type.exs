@@ -26,11 +26,16 @@ defmodule Ecto.Integration.TypeTest do
     # Integers
     assert [1] = TestRepo.all(from p in Post, where: p.visits == ^integer, select: p.visits)
     assert [1] = TestRepo.all(from p in Post, where: p.visits == 1, select: p.visits)
+    assert [3] = TestRepo.all(from p in Post, select: p.visits + 2)
 
     # Floats
     assert [0.1] = TestRepo.all(from p in Post, where: p.intensity == ^float, select: p.intensity)
     assert [0.1] = TestRepo.all(from p in Post, where: p.intensity == 0.1, select: p.intensity)
     assert [1500.0] = TestRepo.all(from p in Post, select: 1500.0)
+    assert [1.1] = TestRepo.all(from p in Post, select: p.intensity + ^integer)
+    assert [1.1] = TestRepo.all(from p in Post, select: p.visits + 0.1)
+    # FIXME There should be no need for typecasting (?)
+    assert [1.1] = TestRepo.all(from p in Post, select: p.visits + type(^float, :float))
 
     # Booleans
     assert [true] = TestRepo.all(from p in Post, where: p.public == ^true, select: p.public)
@@ -219,6 +224,12 @@ defmodule Ecto.Integration.TypeTest do
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == ^1, select: p.cost)
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == 1.0, select: p.cost)
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == 1, select: p.cost)
+
+    decimal_result = Decimal.new("2.0")
+    assert [^decimal_result] = TestRepo.all(from p in Post, select: p.cost + 1)
+    assert [2.0] = TestRepo.all(from p in Post, select: p.cost + 1.0)
+    assert [^decimal_result] = TestRepo.all(from p in Post, select: p.cost + ^decimal)
+    assert [^decimal_result] = TestRepo.all(from p in Post, select: p.cost * 2)
   end
 
   @tag :decimal_type

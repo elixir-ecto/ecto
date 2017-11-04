@@ -157,6 +157,14 @@ defmodule Ecto.Query.BuilderTest do
     assert quoted_type({:sigil_w, [], ["foo", []]}, []) == {:array, :string}
     assert quoted_type({:sigil_s, [], ["foo", []]}, []) == :string
 
+    assert quoted_type({:+, [], [1, 2]}, []) == :integer
+    assert quoted_type({:+, [], [1, 0.1]}, []) == :float
+    assert quoted_type({:-, [], [1, 2]}, []) == :integer
+    assert quoted_type({:-, [], [1, 0.1]}, []) == :float
+    assert quoted_type({:/, [], [1, 2]}, []) == :float
+    assert quoted_type({:*, [], [1, 2]}, []) == :integer
+    assert quoted_type({:*, [], [1, 0.1]}, []) == :float
+
     assert quoted_type({:==, [], [1, 2]}, []) == :boolean
     assert quoted_type({:like, [], [1, 2]}, []) == :boolean
     assert quoted_type({:and, [], [1, 2]}, []) == :boolean

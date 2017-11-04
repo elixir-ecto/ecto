@@ -34,7 +34,7 @@ defmodule Ecto.Integration.StorageTest do
   end
 
   def run_psql(sql, args \\ []) do
-    args = ["-U", params()[:username], "-c", sql | args]
+    args = ["-U", params()[:username], "-h", params()[:hostname], "-c", sql | args]
     System.cmd "psql", args
   end
 

@@ -3,6 +3,8 @@ defmodule Ecto.Query.Builder do
 
   alias Ecto.Query
 
+  @number_types ~w(integer float decimal)a
+
   @typedoc """
   Quoted types store primitive types and types in the format
   {source, quoted}. The latter are handled directly in the planner,
@@ -190,6 +192,26 @@ defmodule Ecto.Query.Builder do
      {params |> wrap_nil(left) |> wrap_nil(right), acc}}
   end
 
+  # mathematical operators
+  def escape({math_op, _, [left, right]} = expr, type, params_acc, vars, env)
+      when math_op in ~w(+ - * /)a do
+    assert_type!(expr, type, :number)
+    
+    args_type =
+      case Enum.map([left, right], &quoted_type(&1, vars)) do
+        [:float, _]                          -> :float
+        [_, :float]                          -> :float
+        [type, _] when type in @number_types -> type
+        [_, type] when type in @number_types -> type
+        _                                    -> :any
+      end
+
+    {left,  params_acc} = escape(left, args_type, params_acc, vars, env)
+    {right, params_acc} = escape(right, args_type, params_acc, vars, env)
+
+    {{:{}, [], [math_op, [], [left, right]]}, params_acc}
+  end
+
   # in operator
   def escape({:in, _, [left, right]} = expr, type, params_acc, vars, env)
       when is_list(right)
@@ -372,6 +394,10 @@ defmodule Ecto.Query.Builder do
   defp call_type(_, _),                                           do: nil
 
   defp assert_type!(_expr, {int, _field}, _actual) when is_integer(int) do
+    :ok
+  end
+
+  defp assert_type!(_expr, type, :number) when type in @number_types do
     :ok
   end
 
@@ -676,6 +702,18 @@ defmodule Ecto.Query.Builder do
   def quoted_type(literal, _vars) when is_binary(literal),  do: :string
   def quoted_type(literal, _vars) when is_boolean(literal), do: :boolean
   def quoted_type(literal, _vars) when is_integer(literal), do: :integer
+
+  # Mathematical operations
+  def quoted_type({:/, _, [_, _]}, _vars), do: :float
+  def quoted_type({math_op, _, [_, _] = args}, vars) when math_op in ~w(+ - *)a do
+    case Enum.map(args, &quoted_type(&1, vars)) do
+      [:integer, :integer]           -> :integer
+      [:decimal, :decimal]           -> :decimal
+      [a, b] when a in @number_types 
+              and b in @number_types -> :float
+      _                              -> :any
+    end
+  end
 
   def quoted_type({name, _, args}, _vars) when is_atom(name) and is_list(args) do
     case call_type(name, length(args)) do
