@@ -287,6 +287,8 @@ defmodule Ecto.Integration.IntervalTest do
     dec = Decimal.new(1)
 
     assert [^datetime] =
+           TestRepo.all(from p in User, select: datetime_add(^datetime, 0, "year"))
+    assert [^datetime] =
            TestRepo.all(from p in User, select: datetime_add(p.inserted_at, 1, "year"))
     assert [^datetime] =
            TestRepo.all(from p in User, select: datetime_add(p.inserted_at, 1.0, "year"))
