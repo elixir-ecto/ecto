@@ -1040,7 +1040,7 @@ defmodule Ecto.Association.ManyToMany do
   @doc false
   def preload(%{join_keys: [{_, owner_key}, {_, _}]} = refl, repo, query, structs, opts) do
     ids = structs |> Enum.map(&(Map.get(&1, owner_key)))
-    
+
     refl
     |> assoc_query(query, Enum.uniq(ids))
     |> Ecto.Repo.Preloader.normalize_query(refl, {-2, owner_key})
