@@ -1,8 +1,8 @@
 Logger.configure(level: :info)
 
-# :uses_usec, :uses_msec and :modify_column are supported
-# on MySQL 5.6 but that is not yet supported in travis.
-ExUnit.start exclude: [:array_type, :read_after_writes, :returning,
+# :modify_column is supported on MySQL 5.7
+# but that is not yet supported in travis.
+ExUnit.start exclude: [:array_type, :read_after_writes, :returning, :modify_column,
                        :strict_savepoint, :create_index_if_not_exists,
                        :transaction_isolation, :rename_column, :with_conflict_target]
 
