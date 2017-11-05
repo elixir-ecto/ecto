@@ -117,9 +117,10 @@ defmodule Ecto.Repo.Preloader do
       fetch_structs(structs, module, assoc, opts)
 
     fetch_structs = if is_function(query, 1) do
-                      fetch_query(structs, assoc, query, prefix, related_key, take)
+                      run_query_func(structs, assoc, query, related_key)
                     else
-                      assoc.__struct__.preload(assoc, repo, query, take, prefix, fetch_structs, opts)
+                      query = %{Ecto.Query.Planner.returning(query || Ecto.Query.from(q in assoc.queryable), take || true) | prefix: prefix}
+                      assoc.__struct__.preload(assoc, repo, query, fetch_structs, opts)
                     end
 
     {fetch_ids, fetch_structs} =
@@ -157,12 +158,12 @@ defmodule Ecto.Repo.Preloader do
   end
 
   @doc false
-  def fetch_query(structs, assoc, query, prefix, related_key, take)
-  def fetch_query([], _assoc, _query, _prefix, _related_key, _take) do
+  defp run_query_func([], _assoc, _query,  _related_key) do
     []
   end
 
-  def fetch_query(structs, %{owner_key: owner_key}, query, _prefix, {_, key}, _take) when is_function(query, 1) do
+  @doc false
+  defp run_query_func(structs, %{owner_key: owner_key}, query, {_, key}) when is_function(query, 1) do
     structs
     |> Enum.map(&(Map.get(&1, owner_key)))
     |> Enum.uniq
@@ -171,11 +172,9 @@ defmodule Ecto.Repo.Preloader do
     |> Enum.sort
   end
 
-  def fetch_query(_structs, %{cardinality: card}, query, prefix, related_key, take) do
+  @doc false
+  def normalize_query(query, %{cardinality: card}, related_key) do
     field = related_key_to_field(query, related_key)
-
-    # Normalize query
-    query = %{Ecto.Query.Planner.returning(query, take || true) | prefix: prefix}
 
     # Add the related key to the query results
     query = update_in query.select.expr, &{:{}, [], [field, &1]}
