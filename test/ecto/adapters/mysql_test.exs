@@ -682,6 +682,84 @@ defmodule Ecto.Adapters.MySQLTest do
     assert execute_ddl(create) == [~s|CREATE TABLE `posts` (`a` text DEFAULT '{"foo":"bar","baz":"boom"}') ENGINE = INNODB|]
   end
 
+  test "create table with time columns" do
+    create = {:create, table(:posts),
+              [{:add, :published_at, :time, [precision: 3]},
+               {:add, :submitted_at, :time, []}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE `posts`
+    (`published_at` time,
+    `submitted_at` time)
+    ENGINE = INNODB
+    """ |> remove_newlines]
+  end
+
+  test "create table with time_usec columns" do
+    create = {:create, table(:posts),
+              [{:add, :published_at, :time_usec, [precision: 3]},
+               {:add, :submitted_at, :time_usec, []}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE `posts`
+    (`published_at` time(3),
+    `submitted_at` time(6))
+    ENGINE = INNODB
+    """ |> remove_newlines]
+  end
+
+  test "create table with utc_datetime columns" do
+    create = {:create, table(:posts),
+              [{:add, :published_at, :utc_datetime, [precision: 3]},
+               {:add, :submitted_at, :utc_datetime, []}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE `posts`
+    (`published_at` datetime,
+    `submitted_at` datetime)
+    ENGINE = INNODB
+    """ |> remove_newlines]
+  end
+
+  test "create table with utc_datetime_usec columns" do
+    create = {:create, table(:posts),
+              [{:add, :published_at, :utc_datetime_usec, [precision: 3]},
+               {:add, :submitted_at, :utc_datetime_usec, []}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE `posts`
+    (`published_at` datetime(3),
+    `submitted_at` datetime(6))
+    ENGINE = INNODB
+    """ |> remove_newlines]
+  end
+
+  test "create table with naive_datetime columns" do
+    create = {:create, table(:posts),
+              [{:add, :published_at, :naive_datetime, [precision: 3]},
+               {:add, :submitted_at, :naive_datetime, []}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE `posts`
+    (`published_at` datetime,
+    `submitted_at` datetime)
+    ENGINE = INNODB
+    """ |> remove_newlines]
+  end
+
+  test "create table with naive_datetime_usec columns" do
+    create = {:create, table(:posts),
+              [{:add, :published_at, :naive_datetime_usec, [precision: 3]},
+               {:add, :submitted_at, :naive_datetime_usec, []}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE `posts`
+    (`published_at` datetime(3),
+    `submitted_at` datetime(6))
+    ENGINE = INNODB
+    """ |> remove_newlines]
+  end
+
   test "drop table" do
     drop = {:drop, table(:posts)}
     assert execute_ddl(drop) == [~s|DROP TABLE `posts`|]

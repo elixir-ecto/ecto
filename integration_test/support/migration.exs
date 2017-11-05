@@ -110,5 +110,10 @@ defmodule Ecto.Integration.Migration do
     end
 
     create unique_index(:posts_users_composite_pk, [:post_id, :user_id])
+
+    create table(:articles) do
+      add :published_at, :naive_datetime_usec
+      add :submitted_at, :utc_datetime_usec
+    end
   end
 end

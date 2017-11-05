@@ -10,21 +10,21 @@ defmodule Ecto.Type do
 
   ## Example
 
-  Imagine you want to store an URI struct as part of a schema in an 
-  url-shortening service. There isn't an Ecto field type to support 
+  Imagine you want to store an URI struct as part of a schema in an
+  url-shortening service. There isn't an Ecto field type to support
   that value at runtime, therefore a custom one is needed.
 
-  You also want to query not only by the full url, but for example 
+  You also want to query not only by the full url, but for example
   by specific ports used. This is possible by putting the URI data
-  into a map field instead of just storing the plain 
+  into a map field instead of just storing the plain
   string representation.
 
       from s in ShortUrl,
         where: fragment("?->>? ILIKE ?", s.original_url, "port", "443")
 
-  So the custom type does need to handle the conversion from 
-  external data to runtime data (`c:cast/1`) as well as 
-  transforming that runtime data into the `:map` Ecto native type and 
+  So the custom type does need to handle the conversion from
+  external data to runtime data (`c:cast/1`) as well as
+  transforming that runtime data into the `:map` Ecto native type and
   back (`c:dump/1` and `c:load/1`).
 
       defmodule EctoURI do
@@ -45,10 +45,10 @@ defmodule Ecto.Type do
 
         # When loading data from the database, we are guaranteed to
         # receive a map (as databases are strict) and we will
-        # just put the data back into an URI struct to be stored 
+        # just put the data back into an URI struct to be stored
         # in the loaded schema struct.
         def load(data) when is_map(data) do
-          data = 
+          data =
             for {key, val} <- data do
               {String.to_existing_atom(key), val}
             end
@@ -87,10 +87,16 @@ defmodule Ecto.Type do
 
   @typep base      :: :integer | :float | :boolean | :string | :map |
                       :binary | :decimal | :id | :binary_id |
-                      :utc_datetime  | :naive_datetime | :date | :time | :any
+                      :utc_datetime | :naive_datetime | :date | :time | :any |
+                      :utc_datetime_usec | :naive_datetime_usec | :time_usec
   @typep composite :: {:array, t} | {:map, t} | {:embed, Ecto.Embedded.t} | {:in, t}
 
-  @base      ~w(integer float boolean string binary decimal datetime utc_datetime naive_datetime date time id binary_id map any)a
+  @base ~w(
+    integer float boolean string map
+    binary decimal id binary_id
+    utc_datetime naive_datetime date time any
+    utc_datetime_usec naive_datetime_usec time_usec
+  )a
   @composite ~w(array map in embed)a
 
   @doc """
@@ -324,16 +330,32 @@ defmodule Ecto.Type do
   end
 
   def dump(:time, %Time{} = time, _dumper) do
+    {:ok, zerofy_microsecond(time)}
+  end
+
+  def dump(:time_usec, %Time{} = time, _dumper) do
     {:ok, time}
   end
 
   def dump(:naive_datetime, %NaiveDateTime{} = naive_datetime, _dumper) do
+    {:ok, zerofy_microsecond(naive_datetime)}
+  end
+
+  def dump(:naive_datetime_usec, %NaiveDateTime{} = naive_datetime, _dumper) do
     {:ok, naive_datetime}
   end
 
-  def dump(:utc_datetime, %DateTime{time_zone: time_zone} = datetime, _loader) do
+  def dump(:utc_datetime, %DateTime{time_zone: time_zone} = datetime, _dumper) do
     if time_zone != "Etc/UTC" do
       message = ":utc_datetime expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
+      raise ArgumentError, message
+    end
+    {:ok, datetime |> DateTime.to_naive() |> zerofy_microsecond()}
+  end
+
+  def dump(:utc_datetime_usec, %DateTime{time_zone: time_zone} = datetime, _dumper) do
+    if time_zone != "Etc/UTC" do
+      message = ":utc_datetime_usec expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
       raise ArgumentError, message
     end
     {:ok, DateTime.to_naive(datetime)}
@@ -423,12 +445,24 @@ defmodule Ecto.Type do
     {:ok, zerofy_microsecond(time)}
   end
 
+  def load(:time_usec, %Time{} = time, _loader) do
+    {:ok, time}
+  end
+
   def load(:naive_datetime, %NaiveDateTime{} = naive_datetime, _loader) do
     {:ok, zerofy_microsecond(naive_datetime)}
   end
 
+  def load(:naive_datetime_usec, %NaiveDateTime{} = naive_datetime, _loader) do
+    {:ok, naive_datetime}
+  end
+
   def load(:utc_datetime, %NaiveDateTime{} = naive_datetime, _loader) do
     naive_datetime |> zerofy_microsecond |> DateTime.from_naive("Etc/UTC")
+  end
+
+  def load(:utc_datetime_usec, %NaiveDateTime{} = naive_datetime, _loader) do
+     DateTime.from_naive(naive_datetime, "Etc/UTC")
   end
 
   def load(type, value, _loader) do
@@ -594,6 +628,10 @@ defmodule Ecto.Type do
     end
   end
 
+  def cast(:time_usec, term) do
+    cast_time(term)
+  end
+
   def cast(:naive_datetime, term) do
     case cast_naive_datetime(term) do
       {:ok, naive_datetime} -> {:ok, zerofy_microsecond(naive_datetime)}
@@ -601,11 +639,19 @@ defmodule Ecto.Type do
     end
   end
 
+  def cast(:naive_datetime_usec, term) do
+    cast_naive_datetime(term)
+  end
+
   def cast(:utc_datetime, term) do
     case cast_utc_datetime(term) do
       {:ok, utc_datetime} -> {:ok, zerofy_microsecond(utc_datetime)}
       :error -> :error
     end
+  end
+
+  def cast(:utc_datetime_usec, term) do
+    cast_utc_datetime(term)
   end
 
   def cast(type, term) when type in [:id, :integer] and is_binary(term) do

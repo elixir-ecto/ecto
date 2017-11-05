@@ -390,7 +390,7 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
       ["CAST(date_add(", expr(datetime, sources, query), ", ",
-       interval(count, interval, sources, query) | ") AS datetime)"]
+       interval(count, interval, sources, query) | ") AS datetime(6))"]
     end
 
     defp expr({:date_add, _, [date, count, interval]}, sources, query) do
@@ -668,6 +668,16 @@ if Code.ensure_loaded?(Mariaex) do
     defp options_expr(options),
       do: [?\s, to_string(options)]
 
+    defp column_type(type, _opts) when type in ~w(time utc_datetime naive_datetime)a,
+      do: ecto_to_db(type)
+
+    defp column_type(type, opts) when type in ~w(time_usec utc_datetime_usec naive_datetime_usec)a do
+      precision = Keyword.get(opts, :precision, 6)
+      type_name = ecto_to_db(type)
+
+      [type_name, ?(, to_string(precision), ?)]
+    end
+
     defp column_type(type, opts) do
       size      = Keyword.get(opts, :size)
       precision = Keyword.get(opts, :precision)
@@ -769,20 +779,23 @@ if Code.ensure_loaded?(Mariaex) do
     defp ecto_cast_to_db(type, query), do: ecto_to_db(type, query)
 
     defp ecto_to_db(type, query \\ nil)
-    defp ecto_to_db({:array, _}, query),      do: error!(query, "Array type is not supported by MySQL")
-    defp ecto_to_db(:id, _query),             do: "integer"
-    defp ecto_to_db(:serial, _query),         do: "bigint unsigned not null auto_increment"
-    defp ecto_to_db(:bigserial, _query),      do: "bigint unsigned not null auto_increment"
-    defp ecto_to_db(:binary_id, _query),      do: "binary(16)"
-    defp ecto_to_db(:string, _query),         do: "varchar"
-    defp ecto_to_db(:float, _query),          do: "double"
-    defp ecto_to_db(:binary, _query),         do: "blob"
-    defp ecto_to_db(:uuid, _query),           do: "binary(16)" # MySQL does not support uuid
-    defp ecto_to_db(:map, _query),            do: "text"
-    defp ecto_to_db({:map, _}, _query),       do: "text"
-    defp ecto_to_db(:utc_datetime, _query),   do: "datetime"
-    defp ecto_to_db(:naive_datetime, _query), do: "datetime"
-    defp ecto_to_db(other, _query),           do: Atom.to_string(other)
+    defp ecto_to_db({:array, _}, query),           do: error!(query, "Array type is not supported by MySQL")
+    defp ecto_to_db(:id, _query),                  do: "integer"
+    defp ecto_to_db(:serial, _query),              do: "bigint unsigned not null auto_increment"
+    defp ecto_to_db(:bigserial, _query),           do: "bigint unsigned not null auto_increment"
+    defp ecto_to_db(:binary_id, _query),           do: "binary(16)"
+    defp ecto_to_db(:string, _query),              do: "varchar"
+    defp ecto_to_db(:float, _query),               do: "double"
+    defp ecto_to_db(:binary, _query),              do: "blob"
+    defp ecto_to_db(:uuid, _query),                do: "binary(16)" # MySQL does not support uuid
+    defp ecto_to_db(:map, _query),                 do: "text"
+    defp ecto_to_db({:map, _}, _query),            do: "text"
+    defp ecto_to_db(:time_usec, _query),           do: "time"
+    defp ecto_to_db(:utc_datetime, _query),        do: "datetime"
+    defp ecto_to_db(:utc_datetime_usec, _query),   do: "datetime"
+    defp ecto_to_db(:naive_datetime, _query),      do: "datetime"
+    defp ecto_to_db(:naive_datetime_usec, _query), do: "datetime"
+    defp ecto_to_db(other, _query),                do: Atom.to_string(other)
 
     defp error!(nil, message) do
       raise ArgumentError, message
