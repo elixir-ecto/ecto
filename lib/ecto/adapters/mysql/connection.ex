@@ -389,8 +389,8 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
-      ["CAST(date_add(", expr(datetime, sources, query), ", ",
-       interval(count, interval, sources, query) | ") AS datetime(6))"]
+      ["date_add(", expr(datetime, sources, query), ", ",
+       interval(count, interval, sources, query) | ")"]
     end
 
     defp expr({:date_add, _, [date, count, interval]}, sources, query) do
@@ -776,6 +776,8 @@ if Code.ensure_loaded?(Mariaex) do
     defp ecto_cast_to_db(:id, _query), do: "unsigned"
     defp ecto_cast_to_db(:integer, _query), do: "unsigned"
     defp ecto_cast_to_db(:string, _query), do: "char"
+    defp ecto_cast_to_db(:utc_datetime_usec, _query), do: "datetime(6)"
+    defp ecto_cast_to_db(:naive_datetime_usec, _query), do: "datetime(6)"
     defp ecto_cast_to_db(type, query), do: ecto_to_db(type, query)
 
     defp ecto_to_db(type, query \\ nil)

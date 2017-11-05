@@ -177,16 +177,16 @@ defmodule Ecto.Schema do
 
   Four different datetime primitive types are available:
 
-    * `naive_datetime` - has a precision of 0 microseconds and casts values
+    * `naive_datetime` - has a precision of seconds and casts values
       to Elixir's `NaiveDateTime` struct which has no timezone information.
 
-    * `naive_datetime_usec` - has a default precision of 6 microseconds and
+    * `naive_datetime_usec` - has a default precision of microseconds and
       also casts values to `NaiveDateTime` with no timezone information.
 
-    * `utc_datetime` - has a precision of 0 microseconds and casts values to
+    * `utc_datetime` - has a precision of seconds and casts values to
       to Elixir's `DateTime` struct and expects the time zone to be set to UTC.
 
-    * `utc_datetime_usec` has a default precision of 6 microseconds and also
+    * `utc_datetime_usec` has a default precision of microseconds and also
       casts values to `DateTime` expecting the time zone be set to UTC.
 
   Having these different types allows developers to choose a type that will
@@ -197,8 +197,7 @@ defmodule Ecto.Schema do
   When choosing what datetime type to work with, keep in mind that Elixir
   functions like `NaiveDateTime.utc_now/0` have a default precision of 6.
   Casting a value with a precision greater than 0 to a non-`usec` type will
-  truncate all microseconds and set the precision to 0, making the raw utc_now
-  value ≠ to the cast value.
+  truncate all microseconds and set the precision to 0.
 
   ### The map type
 
