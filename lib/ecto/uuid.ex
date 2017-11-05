@@ -146,9 +146,6 @@ defmodule Ecto.UUID do
     raise ArgumentError, "trying to load string UUID as Ecto.UUID: #{inspect string}. " <>
                          "Maybe you wanted to declare :uuid as your database field?"
   end
-  def load(%Ecto.Query.Tagged{type: :uuid, value: uuid}) do
-    encode(uuid)
-  end
   def load(_), do: :error
 
   @doc """
