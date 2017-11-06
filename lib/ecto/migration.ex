@@ -872,6 +872,7 @@ defmodule Ecto.Migration do
 
     * `:check` - A check constraint expression. Required when creating a check constraint.
     * `:exclude` - An exclusion constraint expression. Required when creating an exclusion constraint.
+    * `:prefix` - The prefix for the table.
 
   """
   def constraint(table, name, opts \\ [])
