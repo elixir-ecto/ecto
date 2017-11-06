@@ -461,8 +461,8 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
-      [?(, expr(datetime, sources, query), "::timestamp + ",
-       interval(count, interval, sources, query) | ")::timestamp"]
+      [expr(datetime, sources, query), "::timestamp + ",
+       interval(count, interval, sources, query)]
     end
 
     defp expr({:date_add, _, [date, count, interval]}, sources, query) do
