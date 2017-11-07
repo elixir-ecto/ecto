@@ -383,9 +383,9 @@ defmodule Ecto.QueryTest do
     end
   end
 
-  describe "unsafe_fragment/1" do
+  describe "unsafe_fragment/2" do
     test "raises with non interpolated binary fragment" do
-      message = ~r"unsafe_fragment\(...\) expects the first argument"
+      message = ~r"unsafe_fragment expects the first argument"
       assert_raise Ecto.Query.CompileError, message, fn ->
         quote_and_eval(
           from p in "posts", where: unsafe_fragment("1 = 1")
@@ -394,15 +394,15 @@ defmodule Ecto.QueryTest do
     end
 
     test "raises at runtime when interpolation is not a string" do
-      assert_raise ArgumentError, ~r"unsafe_fragment\(...\) expects the first argument", fn ->
+      assert_raise ArgumentError, ~r"unsafe_fragment expects the first argument", fn ->
         clause = ["foo": "bar"]
         from p in "posts", where: unsafe_fragment(^clause)
       end
     end
 
     test "raises at runtime on parameter mismatch" do
-      assert_raise ArgumentError, ~r"unsafe_fragment\(...\) expects extra arguments", fn ->
-        from p in "posts", where: unsafe_fragment(^"foo = bar", 1)
+      assert_raise ArgumentError, ~r"unsafe_fragment\/2 expects to have as many fragment", fn ->
+        from p in "posts", where: unsafe_fragment(^"foo = bar", [1])
       end
     end
 
@@ -417,7 +417,7 @@ defmodule Ecto.QueryTest do
 
     test "works with interpolated binary fragment and question marks" do
       clause = "? = ?"
-      query = from p in "posts", where: unsafe_fragment(^clause, 1, 2)
+      query = from p in "posts", where: unsafe_fragment(^clause, [1, 2])
 
       assert inspect(query) ==
             ~s[#Ecto.Query<from p in \"posts\", where: fragment(\"? = ?\", 1, 2)>]
