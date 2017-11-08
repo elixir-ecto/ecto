@@ -339,13 +339,18 @@ defmodule Ecto.Schema do
     The `:context` field represents additional state some databases require
     for proper updates of data. It is not used by the built-in adapters of
     `Ecto.Adapters.Postres` and `Ecto.Adapters.MySQL`.
+
+    ## Schema
+
+    The `:schema` field refers the module name for the schema this metadata belongs to.
     """
-    defstruct [:state, :source, :context]
+    defstruct [:state, :source, :context, :schema]
 
     @type state :: :built | :loaded | :deleted
     @type source :: {Ecto.Schema.prefix, Ecto.Schema.source}
     @type context :: any
-    @type t :: %__MODULE__{state: state, source: source, context: context}
+    @type schema :: module
+    @type t :: %__MODULE__{state: state, source: source, context: context, schema: schema}
 
     defimpl Inspect do
       import Inspect.Algebra
@@ -431,8 +436,8 @@ defmodule Ecto.Schema do
           raise ArgumentError, "schema source must be a string, got: #{inspect source}"
         end
 
-        Module.put_attribute(__MODULE__, :struct_fields,
-                             {:__meta__, %Metadata{state: :built, source: {prefix, source}}})
+        meta = %Metadata{state: :built, source: {prefix, source}, schema: __MODULE__}
+        Module.put_attribute(__MODULE__, :struct_fields, {:__meta__, meta})
       end
 
       if @primary_key == nil do

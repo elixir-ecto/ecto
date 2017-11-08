@@ -4,7 +4,7 @@ defmodule Ecto.PoisonTest do
   defmodule User do
     use Ecto.Schema
 
-    embedded_schema do
+    schema "users" do
       has_many :comments, Ecto.Comment
     end
   end
@@ -18,6 +18,13 @@ defmodule Ecto.PoisonTest do
     assert_raise RuntimeError,
                  ~r/cannot encode association :comments from Ecto.PoisonTest.User to JSON/, fn ->
       Poison.encode!(%User{}.comments)
+    end
+  end
+
+  test "fails when encoding __meta__" do
+    assert_raise RuntimeError,
+                 ~r/cannot encode metadata from the :__meta__ field for Ecto.PoisonTest.User to JSON/, fn ->
+      Poison.encode!(%User{comments: []})
     end
   end
 end
