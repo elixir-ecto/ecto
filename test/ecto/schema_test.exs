@@ -79,6 +79,7 @@ defmodule Ecto.SchemaTest do
     assert schema.__meta__.source == {"prefix", "my schema"}
     assert Ecto.get_meta(schema, :prefix) == "prefix"
     assert Ecto.get_meta(schema, :source) == "my schema"
+    assert schema.__meta__.schema == Schema
 
     schema = Ecto.put_meta(schema, context: "foobar", state: :loaded)
     assert schema.__meta__.state == :loaded
