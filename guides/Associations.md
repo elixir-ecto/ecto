@@ -48,15 +48,31 @@ config :ecto_assoc, EctoAssoc.Repo,
 config :ecto_assoc, ecto_repos: [EctoAssoc.Repo]
 ```
 
-Add the repo to the supervision tree:
+Add the repo as a supervisor within the application's supervision tree:
 
+`Elixir < 1.5.0`:
 ```elixir
-  def start(_type, _args) do
-    import Supervisor.Spec
-    children = [
-      supervisor(EctoAssoc.Repo, [])
-    ]
-    ...
+# lib/ecto_assoc/application.exs
+def start(_type, _args) do
+  import Supervisor.Spec
+
+  children = [
+    supervisor(EctoAssoc.Repo, []),
+  ]
+
+  ...
+```
+
+`Elixir >= 1.5.0`:
+```elixir
+# lib/ecto_assoc/application.exs
+def start(_type, _args) do
+
+  children = [
+    EctoAssoc.Repo,
+  ]
+
+  ...
 ```
 
 Finally let's create the DB:
