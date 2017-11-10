@@ -246,17 +246,43 @@ defmodule Ecto.Integration.AssocTest do
 
     perma = post.update_permalink
 
-    # Cast on update
+    # Put on update
     changeset =
       post
-      |> Ecto.Changeset.cast(%{update_permalink: %{url: "2"}}, [])
-      |> Ecto.Changeset.cast_assoc(:update_permalink)
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:update_permalink, %{url: "2"})
     post = TestRepo.update!(changeset)
     assert post.update_permalink.id == perma.id
     assert post.update_permalink.post_id == post.id
     assert post.update_permalink.url == "2"
     post = TestRepo.get!(from(Post, preload: [:update_permalink]), post.id)
     assert post.update_permalink.url == "2"
+
+    # Cast on update
+    changeset =
+      post
+      |> Ecto.Changeset.cast(%{update_permalink: %{url: "3"}}, [])
+      |> Ecto.Changeset.cast_assoc(:update_permalink)
+    post = TestRepo.update!(changeset)
+    assert post.update_permalink.id == perma.id
+    assert post.update_permalink.post_id == post.id
+    assert post.update_permalink.url == "3"
+    post = TestRepo.get!(from(Post, preload: [:update_permalink]), post.id)
+    assert post.update_permalink.url == "3"
+
+    # Replace with new struct
+    assert_raise RuntimeError, ~r"you are only allowed\sto update the existing entry", fn ->
+      post
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:update_permalink, %Permalink{url: "4"})
+    end
+
+    # Replace with existing struct
+    assert_raise RuntimeError, ~r"you are only allowed\sto update the existing entry", fn ->
+      post
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:update_permalink, TestRepo.insert!(%Permalink{url: "5"}))
+    end
 
     # Replacing with nil (on_replace: :update)
     changeset =
@@ -268,7 +294,7 @@ defmodule Ecto.Integration.AssocTest do
     post = TestRepo.get!(from(Post, preload: [:update_permalink]), post.id)
     refute post.update_permalink
 
-    assert [1] == TestRepo.all(from(p in Permalink, select: count(p.id)))
+    assert [2] == TestRepo.all(from(p in Permalink, select: count(p.id)))
   end
 
   test "has_many changeset assoc (on_replace: :delete)" do
