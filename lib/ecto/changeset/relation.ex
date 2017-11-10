@@ -229,6 +229,27 @@ defmodule Ecto.Changeset.Relation do
     {:ok, Changeset.change(changeset_or_struct) |> put_new_action(:replace)}
   end
 
+  defp raise_if_updating_with_struct!(%{field: name, owner: owner}, %{__struct__: _} = new) do
+    raise """
+    you have set that the relation #{inspect name} of #{inspect owner}
+    has `:on_replace` set to `:update` but you are giving it a struct/
+    changeset to put_assoc/put_change.
+
+    Since you have set `:on_replace` to `:update`, you are only allowed
+    to update the existing entry by giving updated fields as a map or
+    keyword list or set it to nil.
+
+    If you indeed want to replace the existing #{inspect name}, you have
+    to change the foreign key field directly.
+
+    Got: #{inspect new}
+    """
+  end
+
+  defp raise_if_updating_with_struct!(_, _) do
+    true
+  end
+
   defp cast_or_change(%{cardinality: :one} = relation, value, current, current_pks,
                       new_pks, fun) when is_map(value) or is_list(value) or is_nil(value) do
     single_change(relation, value, current_pks, new_pks, fun, current)
@@ -256,7 +277,8 @@ defmodule Ecto.Changeset.Relation do
 
   defp single_change(%{on_replace: on_replace} = relation, new, current_pks, new_pks, fun, current) do
     pk_values = new_pks.(new)
-    if on_replace == :update or (pk_values == current_pks.(current) and pk_values != []) do
+    if (pk_values == current_pks.(current) and pk_values != []) or
+         (on_replace == :update and raise_if_updating_with_struct!(relation, new)) do
       single_change(new, current, fun, allowed_actions(pk_values), true)
     else
       case on_replace(relation, current) do
