@@ -792,7 +792,8 @@ if Code.ensure_loaded?(Postgrex) do
     defp default_expr({:ok, literal}, _type) when is_number(literal) or is_boolean(literal),
       do: [" DEFAULT ", to_string(literal)]
     defp default_expr({:ok, %{} = map}, :map) do
-      default = Application.get_env(:postgrex, :json_library, Poison).encode!(map)
+      library = Application.get_env(:postgrex, :json_library, Poison)
+      default = IO.iodata_to_binary(library.encode_to_iodata!(map))
       [" DEFAULT ", single_quote(default)]
     end
     defp default_expr({:ok, {:fragment, expr}}, _type),

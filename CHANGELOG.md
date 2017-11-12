@@ -28,6 +28,8 @@ And should be rewritten as:
     config :mariaex, :json_library, CustomJSONLib
 
 This means Ecto no longer requires Ecto-specific extensions on databases such as Postgres which leads to better integration with 3rd party libraries and faster compilation times.
+Ecto also now requires the json library to implement an `encode_to_iodata!/1` function instead of `encode!` in line
+with the interface required by Postgrex.
 
 ## v3.0.0-dev (In Progress)
 
