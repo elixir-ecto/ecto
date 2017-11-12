@@ -807,7 +807,8 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp json_encode!(value) do
-      Application.get_env(:mariaex, :json_library, Poison).encode!(value)
+      library = Application.get_env(:mariaex, :json_library, Poison)
+      IO.iodata_to_binary(library.encode_to_iodata!(value))
     end
   end
 end
