@@ -180,7 +180,7 @@ defmodule Ecto.Query.Builder.SelectTest do
 
   describe "select with type unsafe fragments" do
     test "raises on not interpolated binary" do
-      assert_raise Ecto.Query.CompileError, ~r/unsafe_fragment\(...\) expects the first argument/, fn ->
+      assert_raise Ecto.Query.CompileError, ~r/unsafe_fragment expects the first argument/, fn ->
         escape(quote do
           select([c], type(unsafe_fragment("cost"), :decimal))
         end, [], __ENV__)
@@ -188,7 +188,7 @@ defmodule Ecto.Query.Builder.SelectTest do
     end
 
     test "raises on interpolated keyword" do
-      assert_raise ArgumentError, ~r/unsafe_fragment\(...\) expects the first argument/, fn ->
+      assert_raise ArgumentError, ~r/unsafe_fragment expects the first argument/, fn ->
         foo = ["$eq": 42]
         from p in "posts", select: type(unsafe_fragment(^foo), :decimal)
       end
@@ -196,7 +196,7 @@ defmodule Ecto.Query.Builder.SelectTest do
 
     test "accepts an interpolated binary" do
       from p in "posts", select: type(unsafe_fragment(^"cost"), :decimal)
-      from p in "posts", select: type(unsafe_fragment(^"?", 1), :decimal)
+      from p in "posts", select: type(unsafe_fragment(^"?", [1]), :decimal)
     end
   end
 end

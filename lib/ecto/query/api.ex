@@ -312,7 +312,28 @@ defmodule Ecto.Query.API do
   Only an interpolated string (binary) is supported, any other value will
   result into a compilation error or ArgumentError during runtime.
   """
-  def unsafe_fragment(fragment), do: doc! [fragment]
+  def unsafe_fragment(string), do: doc! [string]
+
+  @doc """
+  Sends an unsafe fragment directly to the database.
+
+  WARNING: sending an unsafe fragment may expose your application to sql
+  injection attacks. Think twice before using it and try to reach the same
+  result using the safe fragment/1 API.
+
+  This function will replace any `?` characters in `string` with values
+  from the `fragments` list.
+
+      unsafe_fragment(^"ROW_NUMBER() OVER(ORDER BY ?)", [sort])
+
+  Only binary values are supported for `string`, any other value will result in
+  an ArgumentError during runtime.
+
+  It is expected that the number of `?` characters in `string` will match the
+  number of elements in the `fragments` list. If there is a mismatch, it will
+  result in an ArgumentErorr during runtime.
+  """
+  def unsafe_fragment(string, fragments), do: doc! [string, fragments]
 
   @doc """
   Allows a field to be dynamically accessed.

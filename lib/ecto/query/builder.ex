@@ -82,7 +82,15 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:fragment, [], merge_fragments(pieces, frags)]}, params_acc}
   end
 
-  def escape({:unsafe_fragment, _, [{:^, _, [var]} | frags]}, _type, params_acc, vars, env) do
+  def escape({:unsafe_fragment, _, [{:^, _, [var]}]}, _type, params_acc, _vars, _env) do
+    expr = quote do
+      Ecto.Query.Builder.unsafe_fragment!(unquote(var))
+    end
+
+    {{:{}, [], [:fragment, [], expr]}, params_acc}
+  end
+
+  def escape({:unsafe_fragment, _, [{:^, _, [var]}, frags]}, _type, params_acc, vars, env) do
     {frags, params_acc} = Enum.map_reduce(frags, params_acc, &escape(&1, :any, &2, vars, env))
 
     expr = quote do
@@ -291,8 +299,8 @@ defmodule Ecto.Query.Builder do
     interpolated as the first argument via the `^` operator.
 
     If you are in a rare situation where the string that must be sent to the database
-    is defined dynamically, you can use unsafe_fragment(...) to bypass Ecto checks
-    and send the string as is. Use unsafe_fragment(...) only as last resort and wisely.
+    is defined dynamically, you can use unsafe_fragment to bypass Ecto checks
+    and send the string as is. Use unsafe_fragment only as last resort and wisely.
 
     Got: `#{arg}`
     """
@@ -300,11 +308,11 @@ defmodule Ecto.Query.Builder do
 
   defp bad_unsafe_fragment_message(arg) do
     """
-    unsafe_fragment(...) expects the first argument to be interpolated as ^argument
+    unsafe_fragment expects the first argument to be interpolated as ^argument
 
     The interpolated argument should be a string that will be sent to the database
     as is. For this reason, use this feature with extreme care and instead prefer
-    to use fragment(...) as much  as possible.
+    to use fragment(...) as much as possible.
 
     Got: `#{arg}`
     """
@@ -583,13 +591,24 @@ defmodule Ecto.Query.Builder do
   @doc """
   Called by escaper at runtime to verify binaries.
   """
+  def unsafe_fragment!(string) do
+    unless is_binary(string) do
+      raise ArgumentError, bad_unsafe_fragment_message(inspect(string))
+    end
+
+    [{:raw, string}]
+  end
+
+  @doc """
+  Called by escaper at runtime to verify binaries.
+  """
   def unsafe_fragment!(string, fragments) do
     if is_binary(string) do
       pieces = split_fragment(string, "")
 
       if length(pieces) != length(fragments) + 1 do
         raise ArgumentError,
-              "unsafe_fragment(...) expects extra arguments in the same amount of question marks in string"
+              "unsafe_fragment/2 expects to have as many fragment elements as there are question marks in string"
       end
 
       merge_fragments(pieces, fragments)
