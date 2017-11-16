@@ -222,6 +222,11 @@ defmodule Ecto.Query.API do
                  fragment("lower(?)", p.title) == ^title
       end
 
+  Every occurence of the `?` character will be interpreted as a place
+  for additional argument. If the literal character `?` is required,
+  it can be escaped with `\\\\?` (one escape for strings, another for
+  fragment).
+
   In the example above, we are using the lower procedure in the
   database to downcase the title column.
 
