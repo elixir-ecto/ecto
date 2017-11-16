@@ -523,6 +523,10 @@ defmodule Ecto.Type do
       {:ok, 1}
       iex> cast(:integer, "1")
       {:ok, 1}
+      iex> cast(:integer, "1 ")
+      {:ok, 1}
+      iex> cast(:integer, " 1")
+      :error
       iex> cast(:integer, "1.0")
       :error
 
@@ -530,6 +534,10 @@ defmodule Ecto.Type do
       {:ok, 1}
       iex> cast(:id, "1")
       {:ok, 1}
+      iex> cast(:id, "1 ")
+      {:ok, 1}
+      iex> cast(:id, " 1")
+      :error
       iex> cast(:id, "1.0")
       :error
 
@@ -541,6 +549,12 @@ defmodule Ecto.Type do
       {:ok, 1.0}
       iex> cast(:float, "1.0")
       {:ok, 1.0}
+      iex> cast(:float, "1.0 ")
+      {:ok, 1.0}
+      iex> cast(:float, "1.0f")
+      :error
+      iex> cast(:float, " 1.0")
+      :error
       iex> cast(:float, "1-foo")
       :error
 
@@ -600,7 +614,7 @@ defmodule Ecto.Type do
   end
 
   def cast(:float, term) when is_binary(term) do
-    case Float.parse(term) do
+    case term |> String.trim_trailing() |> Float.parse() do
       {float, ""} -> {:ok, float}
       _           -> :error
     end
@@ -655,7 +669,7 @@ defmodule Ecto.Type do
   end
 
   def cast(type, term) when type in [:id, :integer] and is_binary(term) do
-    case Integer.parse(term) do
+    case term |> String.trim_trailing() |> Integer.parse() do
       {int, ""} -> {:ok, int}
       _         -> :error
     end
