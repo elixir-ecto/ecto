@@ -7,20 +7,20 @@ defmodule Ecto.Repo.Assoc do
   Transforms a result set based on query assocs, loading
   the associations onto their parent schema.
   """
-  @spec query([Ecto.Schema.t], list, tuple) :: [Ecto.Schema.t]
-  def query(rows, assocs, sources)
+  @spec query([list], list, tuple, (list -> list)) :: [Ecto.Schema.t]
+  def query(rows, assocs, sources, fun)
 
-  def query([], _assocs, _sources), do: []
-  def query(rows, [], _sources), do: rows
+  def query([], _assocs, _sources, _fun), do: []
+  def query(rows, [], _sources, fun), do: Enum.map(rows, fun)
 
-  def query(rows, assocs, sources) do
+  def query(rows, assocs, sources, fun) do
     # Create rose tree of accumulator dicts in the same
     # structure as the fields tree
     accs = create_accs(0, assocs, sources, [])
 
     # Populate tree of dicts of associated entities from the result set
     {_keys, _cache, rows, sub_dicts} = Enum.reduce(rows, accs, fn row, acc ->
-      merge(row, acc, 0) |> elem(0)
+      merge(fun.(row), acc, 0) |> elem(0)
     end)
 
     # Create the reflections that will be loaded into memory.
