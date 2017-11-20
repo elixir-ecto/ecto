@@ -318,7 +318,7 @@ defmodule Ecto.Schema do
     The state of the schema is stored in the `:state` field and allows
     following values:
 
-      * `:build` - the stuct was constructed in memory and is not persisted
+      * `:built` - the stuct was constructed in memory and is not persisted
         to database yet;
       * `:loaded` - the struct was loaded from database and represents
         persisted data;
