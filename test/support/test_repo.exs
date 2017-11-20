@@ -35,24 +35,30 @@ defmodule Ecto.TestAdapter do
 
   def prepare(operation, query), do: {:nocache, {operation, query}}
 
-  def execute(_repo, _, {:nocache, {:all, _}}, _, _, _) do
-    Process.get(:test_repo_all_results, {1, [[1]]})
+  def execute(_repo, _, {:nocache, {:all, %{select: %{fields: [_|_] = fields}}}}, _, _) do
+    # Pad nil values after first
+    values = List.duplicate(nil, length(fields) - 1)
+    Process.get(:test_repo_all_results, {1, [[1 | values]]})
   end
 
-  def execute(_repo, _meta, {:nocache, {:delete_all, %{from: {_, SchemaMigration}}}}, [version], _, _) do
+  def execute(_repo, _, {:nocache, {:all, %{select: %{fields: []}}}}, _, _) do
+    Process.get(:test_repo_all_results, {1, [[]]})
+  end
+
+  def execute(_repo, _meta, {:nocache, {:delete_all, %{from: {_, SchemaMigration}}}}, [version], _) do
     Process.put(:migrated_versions, List.delete(migrated_versions(), version))
     {1, nil}
   end
 
-  def execute(_repo, meta, {:nocache, {op, %{from: {source, _}}}}, _params, _preprocess, _opts) do
+  def execute(_repo, meta, {:nocache, {op, %{from: {source, _}}}}, _params, _opts) do
     send test_process(), {op, {meta.prefix, source}}
     {1, nil}
   end
 
-  def stream(repo, meta, prepared, params, preprocess, opts) do
+  def stream(repo, meta, prepared, params, opts) do
     Stream.map([:execute], fn(:execute) ->
       send test_process(), :stream_execute
-      execute(repo, meta, prepared, params, preprocess, opts)
+      execute(repo, meta, prepared, params, opts)
     end)
   end
 

@@ -64,13 +64,13 @@ defmodule Ecto.Adapters.SQL do
         do: {:cache, {System.unique_integer([:positive]), IO.iodata_to_binary(@conn.delete_all(query))}}
 
       @doc false
-      def execute(repo, meta, query, params, process, opts) do
-        Ecto.Adapters.SQL.execute(repo, meta, query, params, process, opts)
+      def execute(repo, meta, query, params, opts) do
+        Ecto.Adapters.SQL.execute(repo, meta, query, params, opts)
       end
 
       @doc false
-      def stream(repo, meta, query, params, process, opts) do
-        Ecto.Adapters.SQL.stream(repo, meta, query, params, process, opts)
+      def stream(repo, meta, query, params, opts) do
+        Ecto.Adapters.SQL.stream(repo, meta, query, params, opts)
       end
 
       @doc false
@@ -141,7 +141,7 @@ defmodule Ecto.Adapters.SQL do
         Ecto.Adapters.SQL.lock_for_migrations(repo, query, opts, fun)
       end
 
-      defoverridable [prepare: 2, execute: 6, insert: 6, update: 6, delete: 4, insert_all: 7,
+      defoverridable [prepare: 2, execute: 5, insert: 6, update: 6, delete: 4, insert_all: 7,
                       execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1, ensure_all_started: 2,
                       lock_for_migrations: 4]
     end
@@ -197,11 +197,7 @@ defmodule Ecto.Adapters.SQL do
                  optional(atom) => any}
                | no_return
   def query!(repo, sql, params \\ [], opts \\ []) do
-    query!(repo, sql, params, fn x -> x end, opts)
-  end
-
-  defp query!(repo, sql, params, mapper, opts) do
-    case query(repo, sql, params, mapper, opts) do
+    case query(repo, sql, params, opts) do
       {:ok, result} -> result
       {:error, err} -> raise err
     end
@@ -246,17 +242,13 @@ defmodule Ecto.Adapters.SQL do
                       optional(atom) => any}}
               | {:error, Exception.t}
   def query(repo, sql, params \\ [], opts \\ []) do
-    query(repo, sql, params, fn x -> x end, opts)
+    sql_call(repo, :execute, [sql], params, opts)
   end
 
-  defp query(repo, sql, params, mapper, opts) do
-    sql_call(repo, :execute, [sql], params, mapper, opts)
-  end
-
-  defp sql_call(repo, callback, args, params, mapper, opts) do
+  defp sql_call(repo, callback, args, params, opts) do
     {repo_mod, pool, default_opts} = lookup_pool(repo)
     conn = get_conn(pool) || pool
-    opts = [decode_mapper: mapper] ++ with_log(repo_mod, params, opts ++ default_opts)
+    opts = with_log(repo_mod, params, opts ++ default_opts)
     args = args ++ [params, opts]
     try do
       apply(repo_mod.__sql__, callback, [conn | args])
@@ -406,51 +398,46 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def execute(repo, meta, prepared, params, mapper, opts) do
-    do_execute(repo, meta, prepared, params, mapper, put_source(opts, meta))
-  end
-
-  defp do_execute(repo, _meta, {:cache, update, {id, prepared}}, params, mapper, opts) do
-    execute_and_cache(repo, id, update, prepared, params, mapper, opts)
-  end
-
-  defp do_execute(repo, _meta, {:cached, reset, {id, cached}}, params, mapper, opts) do
-    execute_or_reset(repo, id, reset, cached, params, mapper, opts)
-  end
-
-  defp do_execute(repo, _meta, {:nocache, {_id, prepared}}, params, mapper, opts) do
-    %{rows: rows, num_rows: num} =
-      sql_call!(repo, :execute, [prepared], params, mapper, opts)
+  def execute(repo, meta, prepared, params, opts) do
+    %{num_rows: num, rows: rows} = do_execute(repo, meta, prepared, params, put_source(opts, meta))
     {num, rows}
   end
 
-  defp execute_and_cache(repo, id, update, prepared, params, mapper, opts) do
+  defp do_execute(repo, _meta, {:cache, update, {id, prepared}}, params, opts) do
+    execute_and_cache(repo, id, update, prepared, params, opts)
+  end
+
+  defp do_execute(repo, _meta, {:cached, reset, {id, cached}}, params, opts) do
+    execute_or_reset(repo, id, reset, cached, params, opts)
+  end
+
+  defp do_execute(repo, _meta, {:nocache, {_id, prepared}}, params, opts) do
+    case sql_call(repo, :execute, [prepared], params, opts) do
+      {:ok, res}    -> res
+      {:error, err} -> raise err
+    end
+  end
+
+  defp execute_and_cache(repo, id, update, prepared, params, opts) do
     name = "ecto_" <> Integer.to_string(id)
-    case sql_call(repo, :prepare_execute, [name, prepared], params, mapper, opts) do
-      {:ok, query, %{num_rows: num, rows: rows}} ->
+    case sql_call(repo, :prepare_execute, [name, prepared], params, opts) do
+      {:ok, query, result} ->
         update.({id, query})
-        {num, rows}
+        result
       {:error, err} ->
         raise err
     end
   end
 
-  defp execute_or_reset(repo, id, reset, cached, params, mapper, opts) do
-    case sql_call(repo, :execute, [cached], params, mapper, opts) do
-      {:ok, %{num_rows: num, rows: rows}} ->
-        {num, rows}
+  defp execute_or_reset(repo, id, reset, cached, params, opts) do
+    case sql_call(repo, :execute, [cached], params, opts) do
+      {:ok, result} ->
+        result
       {:error, err} ->
         raise err
       {:reset, err} ->
         reset.({id, String.Chars.to_string(cached)})
         raise err
-    end
-  end
-
-  defp sql_call!(repo, callback, args, params, mapper, opts) do
-    case sql_call(repo, callback, args, params, mapper, opts) do
-      {:ok, res}    -> res
-      {:error, err} -> raise err
     end
   end
 
@@ -488,36 +475,36 @@ defmodule Ecto.Adapters.SQL do
   """
   @spec stream(Ecto.Repo.t, String.t, [term], Keyword.t) :: Enum.t
   def stream(repo, sql, params \\ [], opts \\ []) do
-    Ecto.Adapters.SQL.Stream.__build__(repo, sql, params, fn x -> x end, opts)
+    Ecto.Adapters.SQL.Stream.__build__(repo, sql, params, opts)
   end
 
   @doc false
-  def stream(repo, meta, prepared, params, mapper, opts) do
-    do_stream(repo, meta, prepared, params, mapper, put_source(opts, meta))
+  def stream(repo, meta, prepared, params, opts) do
+    do_stream(repo, meta, prepared, params, put_source(opts, meta))
   end
 
-  def do_stream(repo, _meta, {:cache, _, {_, prepared}}, params, mapper, opts) do
-    prepare_stream(repo, prepared, params, mapper, opts)
+  def do_stream(repo, _meta, {:cache, _, {_, prepared}}, params, opts) do
+    prepare_stream(repo, prepared, params, opts)
   end
 
-  def do_stream(repo, _, {:cached, _, {_, cached}}, params, mapper, opts) do
-    prepare_stream(repo, String.Chars.to_string(cached), params, mapper, opts)
+  def do_stream(repo, _, {:cached, _, {_, cached}}, params, opts) do
+    prepare_stream(repo, String.Chars.to_string(cached), params, opts)
   end
 
-  def do_stream(repo, _meta, {:nocache, {_id, prepared}}, params, mapper, opts) do
-    prepare_stream(repo, prepared, params, mapper, opts)
+  def do_stream(repo, _meta, {:nocache, {_id, prepared}}, params, opts) do
+    prepare_stream(repo, prepared, params, opts)
   end
 
-  defp prepare_stream(repo, prepared, params, mapper, opts) do
+  defp prepare_stream(repo, prepared, params, opts) do
     repo
-    |> Ecto.Adapters.SQL.Stream.__build__(prepared, params, mapper, opts)
+    |> Ecto.Adapters.SQL.Stream.__build__(prepared, params, opts)
     |> Stream.map(fn(%{num_rows: nrows, rows: rows}) -> {nrows, rows} end)
   end
 
   @doc false
-  def reduce(repo, statement, params, mapper, opts, acc, fun) do
+  def reduce(repo, statement, params, opts, acc, fun) do
     {repo_mod, pool, default_opts} = lookup_pool(repo)
-    opts = [decode_mapper: mapper] ++ with_log(repo, params, opts ++ default_opts)
+    opts = with_log(repo, params, opts ++ default_opts)
     case get_conn(pool) do
       nil  ->
         raise "cannot reduce stream outside of transaction"
@@ -528,9 +515,9 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def into(repo, statement, params, mapper, opts) do
+  def into(repo, statement, params, opts) do
     {repo_mod, pool, default_opts} = lookup_pool(repo)
-    opts = [decode_mapper: mapper] ++ with_log(repo_mod, params, opts ++ default_opts)
+    opts = with_log(repo_mod, params, opts ++ default_opts)
     case get_conn(pool) do
       nil  ->
         raise "cannot collect into stream outside of transaction"
@@ -542,7 +529,7 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def struct(repo, conn, sql, {operation, source, params}, values, on_conflict, returning, opts) do
-    case query(repo, sql, values, fn x -> x end, opts) do
+    case query(repo, sql, values, opts) do
       {:ok, %{rows: nil, num_rows: 1}} ->
         {:ok, []}
       {:ok, %{rows: [values], num_rows: 1}} ->

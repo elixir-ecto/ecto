@@ -19,7 +19,6 @@ defmodule Ecto.Adapter do
   @type returning :: [atom]
   @type prepared :: term
   @type cached :: term
-  @type process :: (term -> term)
   @type on_conflict :: {:raise, list(), []} |
                        {:nothing, list(), [atom]} |
                        {Ecto.Query.t, list(), [atom]}
@@ -128,13 +127,8 @@ defmodule Ecto.Adapter do
 
   The `meta` field is a map containing some of the fields found
   in the `Ecto.Query` struct.
-
-  It receives a process function that should be invoked for each
-  selected field in the query result in order to convert them to the
-  expected Ecto type. The `process` function will be nil if no
-  result set is expected from the query.
   """
-  @callback execute(repo, query_meta, query, params :: list(), process | nil, options) :: result when
+  @callback execute(repo, query_meta, query, params :: list(), options) :: result when
               result: {integer, [[term]] | nil} | no_return,
               query: {:nocache, prepared} |
                      {:cached, (prepared -> :ok), cached} |

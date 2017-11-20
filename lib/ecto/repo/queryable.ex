@@ -125,17 +125,17 @@ defmodule Ecto.Repo.Queryable do
 
     case meta do
       %{select: nil} ->
-        adapter.execute(repo, meta, prepared, params, nil, opts)
+        adapter.execute(repo, meta, prepared, params, opts)
       %{select: select, prefix: prefix, sources: sources, preloads: preloads} ->
         %{preprocess: preprocess, postprocess: postprocess, take: take, assocs: assocs} = select
         all_nil? = tuple_size(sources) != 1
         preprocessor = &preprocess(&1, preprocess, all_nil?, prefix, adapter)
-        {count, rows} = adapter.execute(repo, meta, prepared, params, preprocessor, opts)
+        {count, rows} = adapter.execute(repo, meta, prepared, params, opts)
         postprocessor = postprocessor(postprocess, take, prefix, adapter)
 
         {count,
           rows
-          |> Ecto.Repo.Assoc.query(assocs, sources)
+          |> Ecto.Repo.Assoc.query(assocs, sources, preprocessor)
           |> Ecto.Repo.Preloader.query(repo, preloads, take, postprocessor, opts)}
     end
   end
@@ -146,18 +146,18 @@ defmodule Ecto.Repo.Queryable do
     case meta do
       %{select: nil} ->
         repo
-        |> adapter.stream(meta, prepared, params, nil, opts)
+        |> adapter.stream(meta, prepared, params, opts)
         |> Stream.flat_map(fn {_, nil} -> [] end)
       %{select: select, prefix: prefix, sources: sources, preloads: preloads} ->
         %{preprocess: preprocess, postprocess: postprocess, take: take, assocs: assocs} = select
         all_nil? = tuple_size(sources) != 1
         preprocessor = &preprocess(&1, preprocess, all_nil?, prefix, adapter)
-        stream = adapter.stream(repo, meta, prepared, params, preprocessor, opts)
+        stream = adapter.stream(repo, meta, prepared, params, opts)
         postprocessor = postprocessor(postprocess, take, prefix, adapter)
 
         Stream.flat_map(stream, fn {_, rows} ->
           rows
-          |> Ecto.Repo.Assoc.query(assocs, sources)
+          |> Ecto.Repo.Assoc.query(assocs, sources, preprocessor)
           |> Ecto.Repo.Preloader.query(repo, preloads, take, postprocessor, opts)
         end)
     end
