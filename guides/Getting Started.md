@@ -550,8 +550,8 @@ To fetch a record based on its ID, you use the `get` function:
 
 ```elixir
 Friends.Person |> Friends.Repo.get(1)
-%Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 28,
- first_name: "Ryan", id: 1, last_name: "Bigg"}
+#=> %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 28,
+     first_name: "Ryan", id: 1, last_name: "Bigg"}
 ```
 
 ### Fetch a single record based on a specific attribute
@@ -560,8 +560,8 @@ If we want to get a record based on something other than the `id` attribute, we 
 
 ```elixir
  Friends.Person |> Friends.Repo.get_by(first_name: "Ryan")
- %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 28,
-  first_name: "Ryan", id: 1, last_name: "Bigg"}
+ #=> %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 28,
+      first_name: "Ryan", id: 1, last_name: "Bigg"}
 ```
 
 ### Filtering results
@@ -697,6 +697,7 @@ If the changeset fails for any reason, the result of `Friends.Repo.update` will 
 
 ```elixir
 changeset = Friends.Person.changeset(person, %{first_name: ""})
+Friends.Repo.update(changeset)
 #=> {:error,
      #Ecto.Changeset<action: :update, changes: %{first_name: ""},
       errors: [first_name: "can't be blank"], data: #Friends.Person<>,
@@ -746,7 +747,7 @@ Similar to updating, we must first fetch a record from the database and then cal
 ```elixir
 person = Friends.Repo.get(Friends.Person, 1)
 Friends.Repo.delete(person)
-{:ok,
+#=> {:ok,
  %Friends.Person{__meta__: #Ecto.Schema.Metadata<:deleted>, age: 29,
   first_name: "Ryan", id: 2, last_name: "Bigg"}}
 ```
