@@ -105,7 +105,7 @@ defmodule Ecto.Changeset do
 
   Using changesets you can work with associations as well as with embedded
   structs. Changesets provide a convenient way to working with associations
-  as whole values - for example considering the entire list of has_many
+  as whole values - for example considering the entire list of `has_many`
   associations and not focusing just on a single one. Two main functions
   that provide this functionality are `cast_assoc/3` for working with external
   data, and `put_assoc/3` for working with internal data - the difference
@@ -192,7 +192,7 @@ defmodule Ecto.Changeset do
   This means that when working with changesets that are not meant to be
   persisted to the database, such as schemaless changesets, you may need
   to explicitly set the action to one specific value. Frameworks such as
-  Phoenix uses the action value to define how a HTML forms should act.
+  Phoenix use the action value to define how HTML forms should act.
 
   Instead of setting the action manually, you may use `apply_action/2` that
   emulates operations such as `Repo.insert`. `apply_action/2` will return
@@ -351,18 +351,22 @@ defmodule Ecto.Changeset do
 
   @doc """
   Applies the given `params` as changes for the given `data` according to
-  the given set of keys. Returns a changeset.
+  the given set of `permitted` keys. Returns a changeset.
 
   The given `data` may be either a changeset, a schema struct or a `{data, types}`
   tuple. The second argument is a map of `params` that are cast according
   to the type information from `data`. `params` is a map with string keys
-  or a map with atom keys containing potentially unsafe data.
+  or a map with atom keys containing potentially invalid data.
 
-  During casting, all `permitted` parameters will have their key name converted
-  to an atom and stored as a change in the `:changes` field of the changeset.
+  During casting, all `permitted` parameters whose values match the specified
+  type information will have their key name converted to an atom and stored
+  together with the value as a change in the `:changes` field of the changeset.
   All parameters that are not explicitly permitted are ignored.
 
   If casting of all fields is successful, the changeset is returned as valid.
+
+  Note that `cast/4` validates the types in the `params`, but not in the given
+  `data`.
 
   ## Options
 
@@ -2216,8 +2220,8 @@ defmodule Ecto.Changeset do
   ## Options
 
     * `:message` - the message in case the constraint check fails,
-      defaults to "is still associated with this entry" (for has_one)
-      and "are still associated with this entry" (for has_many)
+      defaults to "is still associated with this entry" (for `has_one`)
+      and "are still associated with this entry" (for `has_many`)
     * `:name` - the constraint name. By default, the constraint
       name is inferred from the association table + association
       field. May be required explicitly for complex cases

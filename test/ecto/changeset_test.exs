@@ -268,6 +268,20 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
+  test "cast/4: does not validate types in data" do
+    params = %{}
+    struct = %Post{title: 100, decimal: "string"}
+
+    changeset = cast(struct, params, ~w(title decimal)a)
+    assert changeset.params == %{}
+    assert changeset.data  == struct
+    assert changeset.changes == %{}
+    assert changeset.errors == []
+    assert changeset.validations == []
+    assert changeset.required == []
+    assert changeset.valid?
+  end
+
   ## Changeset functions
 
   test "merge/2: merges changes" do
