@@ -47,8 +47,15 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
         {opts, [name], _} ->
           ensure_repo(repo, args)
           path = migrations_path(repo)
-          file = Path.join(path, "#{timestamp()}_#{underscore(name)}.exs")
+          base_name = "#{underscore(name)}.exs"
+          file = Path.join(path, "#{timestamp()}_#{base_name}")
           create_directory path
+
+          fuzzy_path = Path.join(path, "*_#{base_name}")
+          unless [] == Path.wildcard(fuzzy_path) do
+            Mix.raise "migration can't be created," <>
+              " existing migration files for #{name} already exist."
+          end
 
           assigns = [mod: Module.concat([repo, Migrations, camelize(name)]),
                      change: opts[:change]]
