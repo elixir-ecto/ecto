@@ -39,6 +39,13 @@ defmodule Mix.Tasks.Ecto.Gen.MigrationTest do
     assert String.match? name, ~r/^\d{14}_my_migration\.exs$/
   end
 
+  test "raises when existing migration exists" do
+    run ["-r", to_string(Repo), "my_migration"]
+    assert_raise Mix.Error, ~r"migration can't be created", fn ->
+      run ["-r", to_string(Repo), "my_migration"]
+    end
+  end
+
   test "raises when missing file" do
     assert_raise Mix.Error, fn -> run ["-r", to_string(Repo)] end
   end
