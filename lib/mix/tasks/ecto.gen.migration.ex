@@ -52,13 +52,11 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
           create_directory path
 
           fuzzy_path = Path.join(path, "*_#{base_name}")
-          unless [] == Path.wildcard(fuzzy_path) do
-            Mix.raise "migration can't be created," <>
-              " existing migration files for #{name} already exist."
+          if Path.wildcard(fuzzy_path) != [] do
+            Mix.raise "migration can't be created, there is already a migration file with name #{name}."
           end
 
-          assigns = [mod: Module.concat([repo, Migrations, camelize(name)]),
-                     change: opts[:change]]
+          assigns = [mod: Module.concat([repo, Migrations, camelize(name)]), change: opts[:change]]
           create_file file, migration_template(assigns)
 
           if open?(file) and Mix.shell.yes?("Do you want to run this migration?") do
