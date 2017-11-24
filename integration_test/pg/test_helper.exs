@@ -76,6 +76,12 @@ _   = Ecto.Adapters.Postgres.storage_down(TestRepo.config)
 
 %{rows: [[version]]} = TestRepo.query!("SHOW server_version", [])
 
+version =
+  case String.split(version, ".") do
+    [x, y] -> "#{x}.#{y}.0"
+    _other -> version
+  end
+
 if Version.match?(version, "~> 9.5") do
   ExUnit.configure(exclude: [:without_conflict_target])
 else
