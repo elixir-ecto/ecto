@@ -9,7 +9,7 @@ defmodule Ecto.Schema do
   ## Example
 
       defmodule User do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "users" do
           field :name, :string
@@ -71,7 +71,7 @@ defmodule Ecto.Schema do
       defmodule MyApp.Schema do
         defmacro __using__(_) do
           quote do
-            use Ecto.Schema
+            import Ecto.Schema, only: [schema: 2, embedded_schema: 1]
             @primary_key {:id, :binary_id, autogenerate: true}
             @foreign_key_type :binary_id
           end
@@ -600,7 +600,7 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Post do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
         schema "posts" do
           has_many :comments, Comment
         end
@@ -620,7 +620,7 @@ defmodule Ecto.Schema do
   via the `:through` option. Let's see an example:
 
       defmodule Post do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "posts" do
           has_many :comments, Comment
@@ -640,7 +640,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule Comment do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "comments" do
           belongs_to :author, Author
@@ -741,7 +741,7 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Post do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "posts" do
           has_one :permalink, Permalink
@@ -805,7 +805,7 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Comment do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "comments" do
           belongs_to :post, Post
@@ -820,7 +820,7 @@ defmodule Ecto.Schema do
   field explicitly and then pass `define_field: false` to `belongs_to`:
 
       defmodule Comment do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "comments" do
           field :post_id, :integer, ... # custom options
@@ -860,7 +860,7 @@ defmodule Ecto.Schema do
   and define a new Comment schema:
 
       defmodule Comment do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "abstract table: comments" do
           # This will be used by associations on each "concrete" table
@@ -875,7 +875,7 @@ defmodule Ecto.Schema do
   Now in your Post and Task schemas:
 
       defmodule Post do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "posts" do
           has_many :comments, {"posts_comments", Comment}, foreign_key: :assoc_id
@@ -883,7 +883,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule Task do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "tasks" do
           has_many :comments, {"tasks_comments", Comment}, foreign_key: :assoc_id
@@ -922,7 +922,7 @@ defmodule Ecto.Schema do
   is a intermediary table responsible for associating the entries:
 
       defmodule Comment do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
         schema "comments" do
           # ...
         end
@@ -931,7 +931,7 @@ defmodule Ecto.Schema do
   In your posts and tasks:
 
       defmodule Post do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "posts" do
           many_to_many :comments, Comment, join_through: "posts_comments"
@@ -939,7 +939,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule Task do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "tasks" do
           many_to_many :comments, Comment, join_through: "tasks_comments"
@@ -1050,7 +1050,7 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Post do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
         schema "posts" do
           many_to_many :tags, Tag, join_through: "posts_tags"
         end
@@ -1084,7 +1084,7 @@ defmodule Ecto.Schema do
   In our example, a User has and belongs to many Organizations
 
       defmodule UserOrganization do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         @primary_key false
         schema "users_organizations" do
@@ -1102,7 +1102,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule User do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "users" do
           many_to_many :organizations, Organization, join_through: UserOrganization
@@ -1110,7 +1110,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule Organization do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "organizations" do
           many_to_many :users, User, join_through: UserOrganization
@@ -1159,7 +1159,7 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Order do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "orders" do
           embeds_one :item, Item
@@ -1167,7 +1167,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule Item do
-        use Ecto.Schema
+        import Ecto.Schema, only: [embedded_schema: 1]
 
         embedded_schema do
           field :name
@@ -1203,7 +1203,7 @@ defmodule Ecto.Schema do
   cases:
 
       defmodule Parent do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "parents" do
           field :name, :string
@@ -1306,7 +1306,7 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Order do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "orders" do
           embeds_many :items, Item
@@ -1314,7 +1314,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule Item do
-        use Ecto.Schema
+        import Ecto.Schema, only: [embedded_schema: 1]
 
         embedded_schema do
           field :name
@@ -1377,7 +1377,7 @@ defmodule Ecto.Schema do
   cases:
 
       defmodule Parent do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "parents" do
           field :name, :string

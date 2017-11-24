@@ -2,7 +2,7 @@ defmodule Ecto.PoisonTest do
   use ExUnit.Case, async: true
 
   defmodule User do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "users" do
       has_many :comments, Ecto.Comment

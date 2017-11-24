@@ -114,7 +114,7 @@ And the following schema:
 ```elixir
 # lib/ecto_assoc/user.ex
 defmodule EctoAssoc.User do
-  use Ecto.Schema
+  import Ecto.Schema, only: [schema: 2]
 
   schema "users" do
     field :name, :string
@@ -150,7 +150,7 @@ and the following schema:
 ```elixir
 # lib/ecto_assoc/avatar.ex
 defmodule EctoAssoc.Avatar do
-  use Ecto.Schema
+  import Ecto.Schema, only: [schema: 2]
 
   schema "avatars" do
     field :nick_name, :string
@@ -304,7 +304,7 @@ and the following schema:
 ```elixir
 # lib/ecto_assoc/post.ex
 defmodule EctoAssoc.Post do
-  use Ecto.Schema
+  import Ecto.Schema, only: [schema: 2]
 
   schema "posts" do
     field :header, :string
@@ -345,7 +345,7 @@ For the `Post` we add a `belongs_to` field to the schema:
 
 ```elixir
 defmodule EctoAssoc.Post do
-  use Ecto.Schema
+  import Ecto.Schema, only: [schema: 2]
 
   schema "posts" do
     field :header, :string
@@ -361,7 +361,7 @@ For the `User` we add a `has_many` field to the schema:
 
 ```elixir
 defmodule EctoAssoc.User do
-  use Ecto.Schema
+  import Ecto.Schema, only: [schema: 2]
 
   schema "users" do
     field :name, :string
@@ -473,7 +473,7 @@ and the following schema:
 
 ```elixir
 defmodule EctoAssoc.Tag do
-  use Ecto.Schema
+  import Ecto.Schema, only: [schema: 2]
 
   schema "tags" do
     field :name, :string
@@ -524,7 +524,7 @@ new `posts_tags` table.
 ```elixir
 # lib/ecto_assoc/post.ex
 defmodule EctoAssoc.Post do
-  use Ecto.Schema
+  import Ecto.Schema, only: [schema: 2]
 
   schema "posts" do
     field :header, :string
@@ -541,7 +541,7 @@ new `posts_tags` schema:
 ```elixir
 # lib/ecto_assoc/tag.ex
 defmodule EctoAssoc.Tag do
-  use Ecto.Schema
+  import Ecto.Schema, only: [schema: 2]
 
   schema "tags" do
     field :name, :string
@@ -677,7 +677,7 @@ You should carefully read the documentation for [`Ecto.Schema.many_to_many/3`](E
 ```elixir
 # lib/ecto_assoc/post.ex
 defmodule EctoAssoc.Post do
-  use Ecto.Schema
+  import Ecto.Schema, only: [schema: 2]
 
   schema "posts" do
     field :header, :string

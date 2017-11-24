@@ -7,7 +7,7 @@ defmodule Ecto.MultiTest do
   alias Ecto.TestRepo
 
   defmodule Comment do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "comments" do
       field :x, :integer

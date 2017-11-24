@@ -1,5 +1,5 @@
 defmodule Inspect.Post do
-  use Ecto.Schema
+  import Ecto.Schema, only: [schema: 2]
 
   schema "posts" do
     field :visits, :integer
@@ -9,7 +9,7 @@ defmodule Inspect.Post do
 end
 
 defmodule Inspect.Comment do
-  use Ecto.Schema
+  import Ecto.Schema, only: [schema: 2]
 
   schema "comments" do
   end

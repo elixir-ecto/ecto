@@ -17,7 +17,7 @@ defmodule Ecto.AssociationTest do
   alias __MODULE__.AuthorPermalink
 
   defmodule Post do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "posts" do
       field :title, :string
@@ -31,7 +31,7 @@ defmodule Ecto.AssociationTest do
   end
 
   defmodule Comment do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "comments" do
       field :text, :string
@@ -44,7 +44,7 @@ defmodule Ecto.AssociationTest do
   end
 
   defmodule Permalink do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "permalinks" do
       field :url, :string
@@ -54,7 +54,7 @@ defmodule Ecto.AssociationTest do
   end
 
   defmodule PostWithPrefix do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
     @schema_prefix "my_prefix"
 
     schema "posts" do
@@ -64,7 +64,7 @@ defmodule Ecto.AssociationTest do
   end
 
   defmodule CommentWithPrefix do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
     @schema_prefix "my_prefix"
 
     schema "comments" do
@@ -73,7 +73,7 @@ defmodule Ecto.AssociationTest do
   end
 
   defmodule Author do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "authors" do
       field :title, :string
@@ -91,7 +91,7 @@ defmodule Ecto.AssociationTest do
   end
 
   defmodule AuthorPermalink do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "authors_permalinks" do
       field :author_id
@@ -100,7 +100,7 @@ defmodule Ecto.AssociationTest do
   end
 
   defmodule Summary do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "summaries" do
       has_one :post, Post, defaults: [title: "default"], on_replace: :nilify
@@ -111,7 +111,7 @@ defmodule Ecto.AssociationTest do
   end
 
   defmodule Email do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "emails" do
       belongs_to :author, {"post_authors", Author}
@@ -119,7 +119,7 @@ defmodule Ecto.AssociationTest do
   end
 
   defmodule Profile do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "profiles" do
       field :name
@@ -616,7 +616,7 @@ defmodule Ecto.AssociationTest do
   describe "after_compile_validation/2" do
     defp after_compile_validation(assoc, name, opts) do
       defmodule Sample do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "sample" do
           opts = [cardinality: :one] ++ opts

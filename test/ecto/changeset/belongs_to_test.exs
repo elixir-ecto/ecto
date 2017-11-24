@@ -9,7 +9,7 @@ defmodule Ecto.Changeset.BelongsToTest do
   alias __MODULE__.Profile
 
   defmodule Author do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "authors" do
       field :title, :string
@@ -22,7 +22,7 @@ defmodule Ecto.Changeset.BelongsToTest do
   end
 
   defmodule Profile do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "profiles" do
       field :name

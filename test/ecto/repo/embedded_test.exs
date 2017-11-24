@@ -4,7 +4,7 @@ defmodule Ecto.Repo.EmbeddedTest do
   alias Ecto.TestRepo, as: TestRepo
 
   defmodule SubEmbed do
-    use Ecto.Schema
+    import Ecto.Schema, only: [embedded_schema: 1]
 
     @primary_key false
     embedded_schema do
@@ -13,7 +13,7 @@ defmodule Ecto.Repo.EmbeddedTest do
   end
 
   defmodule MyEmbed do
-    use Ecto.Schema
+    import Ecto.Schema, only: [embedded_schema: 1]
 
     embedded_schema do
       field :x, :string
@@ -23,7 +23,7 @@ defmodule Ecto.Repo.EmbeddedTest do
   end
 
   defmodule MyAssoc do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "my_assocs" do
       field :x
@@ -32,7 +32,7 @@ defmodule Ecto.Repo.EmbeddedTest do
   end
 
   defmodule MySchema do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "my_schema" do
       embeds_one :embed, MyEmbed, on_replace: :delete

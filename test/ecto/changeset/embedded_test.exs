@@ -11,7 +11,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
   alias __MODULE__.Post
 
   defmodule Author do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "authors" do
       field :name, :string
@@ -32,7 +32,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
   end
 
   defmodule Post do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
     import Ecto.Changeset
 
     schema "posts" do
@@ -56,7 +56,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
   end
 
   defmodule Profile do
-    use Ecto.Schema
+    import Ecto.Schema, only: [embedded_schema: 1]
     import Ecto.Changeset
 
     embedded_schema do
@@ -297,7 +297,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
       "options are: `:raise`, `:mark_as_invalid`, `:delete`"
     assert_raise ArgumentError, error_message, fn ->
       defmodule Topic do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "topics" do
           embeds_many :tags, Tag, on_replace: :update

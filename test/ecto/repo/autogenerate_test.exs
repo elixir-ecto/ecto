@@ -4,7 +4,7 @@ defmodule Ecto.Repo.AutogenerateTest do
   use ExUnit.Case, async: true
 
   defmodule Manager do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     @timestamps_opts [inserted_at: :created_on]
     schema "manager" do
@@ -13,7 +13,7 @@ defmodule Ecto.Repo.AutogenerateTest do
   end
 
   defmodule Company do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "default" do
       field :code, Ecto.UUID, autogenerate: true
@@ -23,7 +23,7 @@ defmodule Ecto.Repo.AutogenerateTest do
   end
 
   defmodule NaiveMod do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "naive_mod" do
       timestamps(type: :naive_datetime)
@@ -31,7 +31,7 @@ defmodule Ecto.Repo.AutogenerateTest do
   end
 
   defmodule NaiveUsecMod do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "naive_usec_mod" do
       timestamps(type: :naive_datetime_usec)
@@ -39,7 +39,7 @@ defmodule Ecto.Repo.AutogenerateTest do
   end
 
   defmodule UtcMod do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "utc_mod" do
       timestamps(type: :utc_datetime)
@@ -47,7 +47,7 @@ defmodule Ecto.Repo.AutogenerateTest do
   end
 
   defmodule UtcUsecMod do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "utc_usec_mod" do
       timestamps(type: :utc_datetime_usec)

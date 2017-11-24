@@ -61,7 +61,7 @@ defmodule Ecto do
 
   If your application was generated with a supervisor (by passing `--sup` to `mix new`)
   you will have a `lib/my_app/application.ex` file (or `lib/my_app.ex` for Elixir versions `< 1.4.0`)
-  containing the application start callback that defines and starts your supervisor. 
+  containing the application start callback that defines and starts your supervisor.
   You just need to edit the `start/2` function to start the repo as a supervisor on
   your application's supervisor:
 
@@ -82,7 +82,7 @@ defmodule Ecto do
   Let's see an example:
 
       defmodule Weather do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         # weather is the DB table
         schema "weather" do
@@ -147,7 +147,7 @@ defmodule Ecto do
   we apply them to the data. Imagine the given schema:
 
       defmodule User do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         import Ecto.Changeset
 
@@ -279,7 +279,7 @@ defmodule Ecto do
   Ecto supports defining associations on schemas:
 
       defmodule Post do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "posts" do
           has_many :comments, Comment
@@ -287,7 +287,7 @@ defmodule Ecto do
       end
 
       defmodule Comment do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "comments" do
           field :title, :string

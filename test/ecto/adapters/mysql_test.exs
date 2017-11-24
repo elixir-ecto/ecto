@@ -10,7 +10,7 @@ defmodule Ecto.Adapters.MySQLTest do
   alias Ecto.Migration.Reference
 
   defmodule Schema do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "schema" do
       field :x, :integer
@@ -27,7 +27,7 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   defmodule Schema2 do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "schema2" do
       belongs_to :post, Ecto.Adapters.MySQLTest.Schema,
@@ -37,7 +37,7 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   defmodule Schema3 do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "schema3" do
       field :binary, :binary

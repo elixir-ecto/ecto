@@ -7,7 +7,7 @@ defmodule Ecto.Integration.LockTest do
   alias Ecto.Integration.PoolRepo
 
   defmodule LockCounter do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "lock_counters" do
       field :count, :integer

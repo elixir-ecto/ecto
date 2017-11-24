@@ -18,7 +18,7 @@ defmodule Ecto.TypeTest do
   end
 
   defmodule Schema do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     @primary_key {:id, :binary_id, autogenerate: true}
     schema "" do
