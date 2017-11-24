@@ -369,23 +369,11 @@ defmodule Ecto.Schema do
   @doc false
   defmacro __using__(_) do
     quote do
+      IO.warn(
+        "`use Ecto.Schema` is deprecated and replaced by: " <>
+        "`import Ecto.Schema, only: [schema: 2, embedded_schema: 1]`"
+      )
       import Ecto.Schema, only: [schema: 2, embedded_schema: 1]
-
-      @primary_key nil
-      @timestamps_opts []
-      @foreign_key_type :id
-      @schema_prefix nil
-      @field_source_mapper fn x -> x end
-
-      Module.register_attribute(__MODULE__, :ecto_primary_keys, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_field_sources, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_embeds, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_autoupdate, accumulate: true)
-      Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
     end
   end
 
@@ -418,18 +406,27 @@ defmodule Ecto.Schema do
 
   defp schema(source, meta?, type, block) do
     quote do
+      Module.register_attribute(__MODULE__, :ecto_primary_keys, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_field_sources, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_embeds, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_autoupdate, accumulate: true)
+      Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
+
       @after_compile Ecto.Schema
       Module.register_attribute(__MODULE__, :changeset_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
 
       meta?  = unquote(meta?)
       source = unquote(source)
-      prefix = @schema_prefix
+      prefix = Module.get_attribute(__MODULE__, :schema_prefix)
 
-      # Those module attributes are accessed only dynamically
-      # so we explicitly reference them here to avoid warnings.
-      _ = @foreign_key_type
-      _ = @timestamps_opts
+      @foreign_key_type Module.get_attribute(__MODULE__, :foreign_key_type) || :id
+      @timestamps_opts Module.get_attribute(__MODULE__, :timestamps_opts) || []
+      @field_source_mapper Module.get_attribute(__MODULE__, :field_source_mapper) || fn x -> x end
 
       if meta? do
         unless is_binary(source) do
@@ -440,7 +437,7 @@ defmodule Ecto.Schema do
         Module.put_attribute(__MODULE__, :struct_fields, {:__meta__, meta})
       end
 
-      if @primary_key == nil do
+      if Module.get_attribute(__MODULE__, :primary_key) == nil do
         @primary_key {:id, unquote(type), autogenerate: true}
       end
 
@@ -1694,7 +1691,7 @@ defmodule Ecto.Schema do
 
     block =
       quote do
-        use Ecto.Schema
+        import Ecto.Schema, only: [embedded_schema: 1]
 
         @primary_key unquote(Macro.escape(pk))
         embedded_schema do
