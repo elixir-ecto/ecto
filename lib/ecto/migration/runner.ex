@@ -114,8 +114,19 @@ defmodule Ecto.Migration.Runner do
   is in `:backward` direction and `command` is irreversible.
   """
   def execute(command) do
-    Agent.update runner(), fn state ->
-      %{state | command: nil, subcommands: [], commands: [command|state.commands]}
+    reply =
+      Agent.get_and_update(runner(), fn
+        %{command: nil} = state ->
+          {:ok, %{state | subcommands: [], commands: [command|state.commands]}}
+        %{command: _} = state ->
+          {:error, %{state | command: nil}}
+      end)
+
+    case reply do
+      :ok ->
+        :ok
+      :error ->
+        raise Ecto.MigrationError, "cannot execute nested commands"
     end
   end
 
@@ -123,7 +134,20 @@ defmodule Ecto.Migration.Runner do
   Starts a command.
   """
   def start_command(command) do
-    Agent.update runner(), &put_in(&1.command, command)
+    reply =
+      Agent.get_and_update(runner(), fn
+        %{command: nil} = state ->
+          {:ok, %{state | command: command}}
+        %{command: _} = state ->
+          {:error, %{state | command: command}}
+      end)
+
+    case reply do
+      :ok ->
+        :ok
+      :error ->
+        raise Ecto.MigrationError, "cannot execute nested commands"
+    end
   end
 
   @doc """

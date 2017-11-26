@@ -438,6 +438,23 @@ defmodule Ecto.MigrationTest do
     assert "SELECT 1" = last_command()
   end
 
+  test "fails gracefully with nested create" do
+    assert_raise Ecto.MigrationError, "cannot execute nested commands", fn ->
+      create table(:posts) do
+        create index(:posts, [:foo])
+      end
+      flush()
+    end
+
+    assert_raise Ecto.MigrationError, "cannot execute nested commands", fn ->
+      create table(:posts) do
+        create table(:foo) do
+        end
+      end
+      flush()
+    end
+  end
+
   ## Reverse
   @moduletag direction: :backward
 
