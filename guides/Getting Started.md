@@ -222,7 +222,7 @@ person = %Friends.Person{age: 28}
 Or with syntax like this:
 
 ```elixir
-%{person | age: 28}
+person = %{person | age: 28}
 ```
 
 We can retrieve values using this syntax:
