@@ -27,7 +27,31 @@ defmodule Ecto.Adapters.SQL.Connection do
   @callback execute(connection :: DBConnection.t, prepared_query :: prepared, params :: [term], options :: Keyword.t) ::
             {:ok, term} | {:error, Exception.t}
   @callback execute(connection :: DBConnection.t, prepared_query :: cached, params :: [term], options :: Keyword.t) ::
-            {:ok, term} | {:error | :reset, Exception.t}
+            {:ok, term} | {:ok, replacement_query :: cached, term} | {:error | :reset, Exception.t}
+
+  @doc """
+  Begin a transaction with `DBConnection`.
+  """
+  @callback begin(connection :: DBConnection.t, options :: Keyword.t) ::
+            {:ok, DBConnection.conn, term} | {:error, Exception.t}
+
+  @doc """
+  Commit a transaction with `DBConnection`.
+  """
+  @callback commit(connection :: DBConnection.conn, options :: Keyword.t) ::
+            {:ok, term} | {:error, Exception.t}
+
+  @doc """
+  Begin a transaction with `DBConnection`.
+  """
+  @callback rollback(connection :: DBConnection.conn, options :: Keyword.t) ::
+            {:ok, term} | {:error, Exception.t}
+
+  @doc """
+  Get status of a connection with `DBConnection`.
+  """
+  @callback status(connection :: DBConnection.conn, options :: Keyword.t) ::
+            :transaction | :idle | :error
 
   @doc """
   Returns a stream that prepares and executes the given query with

@@ -44,9 +44,9 @@ defmodule Ecto.Mixfile do
       {:decimal, "~> 1.2"},
 
       # Drivers
-      {:db_connection, "~> 1.1", optional: true},
-      {:postgrex, "~> 0.14.0-dev", optional: true, github: "elixir-ecto/postgrex"},
-      {:mariaex, "~> 0.9.0-dev", optional: true, github: "xerions/mariaex"},
+      {:db_connection, "~> 1.1", optional: true, override: true, github: "elixir-ecto/db_connection", ref: "eb45ccd"},
+      {:postgrex, "~> 0.14.0-dev", optional: true, github: "elixir-ecto/postgrex", ref: "1d0a766"},
+      {:mariaex, "~> 0.9.0-dev", optional: true, github: "fishcakez/mariaex", ref: "cf37d53"},
 
       # Optional
       {:sbroker, "~> 1.0", optional: true},

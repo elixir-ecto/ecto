@@ -3,6 +3,7 @@ if Code.ensure_loaded?(Postgrex) do
     @moduledoc false
 
     @default_port 5432
+    @reset_codes [:feature_not_supported, :datatype_mismatch, :undefined_function]
     @behaviour Ecto.Adapters.SQL.Connection
 
     ## Module and Options
@@ -90,12 +91,19 @@ if Code.ensure_loaded?(Postgrex) do
 
     def execute(conn, %{} = query, params, opts) do
       opts = [function: :execute] ++ opts
-      case DBConnection.execute(conn, query, params, opts) do
+      try do
+        DBConnection.execute(conn, query, params, opts)
+      rescue
+        err in [ArgumentError] ->
+          {:reset, err}
+      else
         {:ok, _} = ok ->
+          ok
+        {:ok, _, _} = ok ->
           ok
         {:error, %ArgumentError{} = err} ->
           {:reset, err}
-        {:error, %Postgrex.Error{postgres: %{code: :feature_not_supported}} = err} ->
+        {:error, %Postgrex.Error{postgres: %{code: code}} = err} when code in @reset_codes ->
           {:reset, err}
         {:error, %Postgrex.Error{}} = error ->
           error
@@ -103,6 +111,11 @@ if Code.ensure_loaded?(Postgrex) do
           raise err
       end
     end
+
+    defdelegate begin(conn, opts), to: DBConnection
+    defdelegate commit(conn, opts), to: DBConnection
+    defdelegate rollback(conn, opts), to: DBConnection
+    defdelegate status(conn, opts), to: DBConnection
 
     def stream(conn, sql, params, opts) do
       Postgrex.stream(conn, sql, params, opts)
