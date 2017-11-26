@@ -178,7 +178,7 @@ defmodule Ecto.Adapters.MySQL do
 
   @doc false
   def supports_ddl_transaction? do
-    true
+    false
   end
 
   @doc false
