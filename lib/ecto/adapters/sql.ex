@@ -654,26 +654,24 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp flatten_transaction(repo, pool, conn, opts, fun) do
-    try do
-      fun.()
-    catch
-      :throw, {__MODULE__, :rollback, ^conn, reason} ->
-        fail_conn(pool, conn)
-        {:error, reason}
-      kind, reason ->
-        stack = System.stacktrace()
-        fail_conn(pool, conn)
-        :erlang.raise(kind, reason, stack)
-    else
-      result ->
-        case transaction_call(repo, :status, conn, opts) do
-          :transaction ->
-            {:ok, result}
-          _failure ->
-            fail_conn(pool, conn)
-            {:error, :rollback}
-        end
-    end
+    fun.()
+  catch
+    :throw, {__MODULE__, :rollback, ^conn, reason} ->
+      fail_conn(pool, conn)
+      {:error, reason}
+    kind, reason ->
+      stack = System.stacktrace()
+      fail_conn(pool, conn)
+      :erlang.raise(kind, reason, stack)
+  else
+    result ->
+      case transaction_call(repo, :status, conn, opts) do
+        :transaction ->
+          {:ok, result}
+        _failure ->
+          fail_conn(pool, conn)
+          {:error, :rollback}
+      end
   end
 
   defp transaction_call(repo, callback, conn, opts) do
@@ -691,7 +689,7 @@ defmodule Ecto.Adapters.SQL do
     {_repo_mod, pool, _default_opts} = lookup_pool(repo)
     case safe_get_conn(pool) do
       nil  -> raise "cannot call rollback outside of transaction"
-      {_, conn}-> throw({__MODULE__, :rollback, conn, value})
+      {_, conn} -> throw({__MODULE__, :rollback, conn, value})
     end
   end
 
