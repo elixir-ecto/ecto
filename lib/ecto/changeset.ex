@@ -45,7 +45,7 @@ defmodule Ecto.Changeset do
   Let's see an example:
 
       defmodule User do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
         import Ecto.Changeset
 
         schema "users" do
@@ -136,7 +136,7 @@ defmodule Ecto.Changeset do
   you to manually mark it for deletion, as in the example below:
 
       defmodule Comment do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
         import Ecto.Changeset
 
         schema "comments" do
@@ -1878,7 +1878,7 @@ defmodule Ecto.Changeset do
   a field to the schema too:
 
       defmodule Post do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "posts" do
           field :title, :string

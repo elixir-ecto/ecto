@@ -6,7 +6,7 @@ defmodule Ecto.RepoTest do
   require Ecto.TestRepo, as: TestRepo
 
   defmodule MySchema do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "my_schema" do
       field :x, :string
@@ -19,7 +19,7 @@ defmodule Ecto.RepoTest do
   end
 
   defmodule MySchemaNoPK do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     @primary_key false
     schema "my_schema" do

@@ -5,7 +5,7 @@ defmodule Ecto.Repo.ManyToManyTest do
   require Ecto.TestRepo, as: TestRepo
 
   defmodule SubAssoc do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "sub_assoc" do
       field :y, :string
@@ -14,7 +14,7 @@ defmodule Ecto.Repo.ManyToManyTest do
   end
 
   defmodule MyAssoc do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "my_assoc" do
       field :x, :string
@@ -24,7 +24,7 @@ defmodule Ecto.Repo.ManyToManyTest do
   end
 
   defmodule MySchemaAssoc do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "schemas_assocs" do
       belongs_to :my_schema, MySchema
@@ -34,7 +34,7 @@ defmodule Ecto.Repo.ManyToManyTest do
   end
 
   defmodule MySchema do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "my_schema" do
       field :x, :string

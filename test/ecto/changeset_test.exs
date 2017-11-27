@@ -3,7 +3,7 @@ defmodule Ecto.ChangesetTest do
   import Ecto.Changeset
 
   defmodule SocialSource do
-    use Ecto.Schema
+    import Ecto.Schema, only: [embedded_schema: 1]
 
     @primary_key false
     embedded_schema do
@@ -17,7 +17,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defmodule Category do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "categories" do
       field :name, :string
@@ -26,7 +26,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defmodule Comment do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "comments" do
       belongs_to :post, Ecto.ChangesetTest.Post
@@ -34,7 +34,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defmodule Post do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "posts" do
       field :token, :integer, primary_key: true

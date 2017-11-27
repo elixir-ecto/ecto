@@ -193,7 +193,7 @@ Let's create the schema within our application at `lib/friends/person.ex`:
 
 ```elixir
 defmodule Friends.Person do
-  use Ecto.Schema
+  import Ecto.Schema, only: [schema: 2]
 
   schema "people" do
     field :first_name, :string

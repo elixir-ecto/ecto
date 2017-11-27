@@ -10,7 +10,7 @@ defmodule Ecto.Changeset.HasAssocTest do
   alias __MODULE__.Profile
 
   defmodule Post do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "posts" do
       field :title, :string
@@ -29,7 +29,7 @@ defmodule Ecto.Changeset.HasAssocTest do
   end
 
   defmodule Author do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "authors" do
       field :title, :string
@@ -47,7 +47,7 @@ defmodule Ecto.Changeset.HasAssocTest do
   end
 
   defmodule Profile do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "profiles" do
       field :name
@@ -317,7 +317,7 @@ defmodule Ecto.Changeset.HasAssocTest do
       "options are: `:raise`, `:mark_as_invalid`, `:delete`, `:nilify`"
     assert_raise ArgumentError, error_message, fn ->
       defmodule Topic do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "topics" do
           has_many :tags, Tag, on_replace: :update

@@ -173,7 +173,7 @@ defmodule Ecto.Integration.RepoTest do
   @tag :read_after_writes
   test "insert and update with changeset read after writes" do
     defmodule RAW do
-      use Ecto.Schema
+      import Ecto.Schema, only: [schema: 2]
 
       schema "comments" do
         field :text, :string
@@ -204,7 +204,7 @@ defmodule Ecto.Integration.RepoTest do
   @tag :id_type
   test "insert autogenerates for custom id type" do
     defmodule ID do
-      use Ecto.Schema
+      import Ecto.Schema, only: [schema: 2]
 
       @primary_key {:id, Elixir.Custom.Permalink, autogenerate: true}
       schema "posts" do

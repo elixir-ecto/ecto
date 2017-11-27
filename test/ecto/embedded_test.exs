@@ -5,7 +5,7 @@ defmodule Ecto.EmbeddedTest do
   alias Ecto.Embedded
 
   defmodule Author do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "authors" do
       field :name, :string

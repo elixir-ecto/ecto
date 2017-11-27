@@ -65,7 +65,7 @@ defmodule Ecto.Type do
   Now we can use our new field type above in our schemas:
 
       defmodule ShortUrl do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "posts" do
           field :original_url, EctoURI

@@ -9,7 +9,7 @@ defmodule Ecto.Schema do
   ## Example
 
       defmodule User do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "users" do
           field :name, :string
@@ -71,7 +71,7 @@ defmodule Ecto.Schema do
       defmodule MyApp.Schema do
         defmacro __using__(_) do
           quote do
-            use Ecto.Schema
+            import Ecto.Schema, only: [schema: 2, embedded_schema: 1]
             @primary_key {:id, :binary_id, autogenerate: true}
             @foreign_key_type :binary_id
           end
@@ -369,23 +369,11 @@ defmodule Ecto.Schema do
   @doc false
   defmacro __using__(_) do
     quote do
+      IO.warn(
+        "`use Ecto.Schema` is deprecated and replaced by: " <>
+        "`import Ecto.Schema, only: [schema: 2, embedded_schema: 1]`"
+      )
       import Ecto.Schema, only: [schema: 2, embedded_schema: 1]
-
-      @primary_key nil
-      @timestamps_opts []
-      @foreign_key_type :id
-      @schema_prefix nil
-      @field_source_mapper fn x -> x end
-
-      Module.register_attribute(__MODULE__, :ecto_primary_keys, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_field_sources, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_embeds, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_autoupdate, accumulate: true)
-      Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
     end
   end
 
@@ -418,18 +406,27 @@ defmodule Ecto.Schema do
 
   defp schema(source, meta?, type, block) do
     quote do
+      Module.register_attribute(__MODULE__, :ecto_primary_keys, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_field_sources, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_embeds, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_autoupdate, accumulate: true)
+      Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
+
       @after_compile Ecto.Schema
       Module.register_attribute(__MODULE__, :changeset_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
 
       meta?  = unquote(meta?)
       source = unquote(source)
-      prefix = @schema_prefix
+      prefix = Module.get_attribute(__MODULE__, :schema_prefix)
 
-      # Those module attributes are accessed only dynamically
-      # so we explicitly reference them here to avoid warnings.
-      _ = @foreign_key_type
-      _ = @timestamps_opts
+      @foreign_key_type Module.get_attribute(__MODULE__, :foreign_key_type) || :id
+      @timestamps_opts Module.get_attribute(__MODULE__, :timestamps_opts) || []
+      @field_source_mapper Module.get_attribute(__MODULE__, :field_source_mapper) || fn x -> x end
 
       if meta? do
         unless is_binary(source) do
@@ -440,7 +437,7 @@ defmodule Ecto.Schema do
         Module.put_attribute(__MODULE__, :struct_fields, {:__meta__, meta})
       end
 
-      if @primary_key == nil do
+      if Module.get_attribute(__MODULE__, :primary_key) == nil do
         @primary_key {:id, unquote(type), autogenerate: true}
       end
 
@@ -603,7 +600,7 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Post do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
         schema "posts" do
           has_many :comments, Comment
         end
@@ -623,7 +620,7 @@ defmodule Ecto.Schema do
   via the `:through` option. Let's see an example:
 
       defmodule Post do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "posts" do
           has_many :comments, Comment
@@ -643,7 +640,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule Comment do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "comments" do
           belongs_to :author, Author
@@ -744,7 +741,7 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Post do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "posts" do
           has_one :permalink, Permalink
@@ -808,7 +805,7 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Comment do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "comments" do
           belongs_to :post, Post
@@ -823,7 +820,7 @@ defmodule Ecto.Schema do
   field explicitly and then pass `define_field: false` to `belongs_to`:
 
       defmodule Comment do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "comments" do
           field :post_id, :integer, ... # custom options
@@ -863,7 +860,7 @@ defmodule Ecto.Schema do
   and define a new Comment schema:
 
       defmodule Comment do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "abstract table: comments" do
           # This will be used by associations on each "concrete" table
@@ -878,7 +875,7 @@ defmodule Ecto.Schema do
   Now in your Post and Task schemas:
 
       defmodule Post do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "posts" do
           has_many :comments, {"posts_comments", Comment}, foreign_key: :assoc_id
@@ -886,7 +883,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule Task do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "tasks" do
           has_many :comments, {"tasks_comments", Comment}, foreign_key: :assoc_id
@@ -925,7 +922,7 @@ defmodule Ecto.Schema do
   is a intermediary table responsible for associating the entries:
 
       defmodule Comment do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
         schema "comments" do
           # ...
         end
@@ -934,7 +931,7 @@ defmodule Ecto.Schema do
   In your posts and tasks:
 
       defmodule Post do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "posts" do
           many_to_many :comments, Comment, join_through: "posts_comments"
@@ -942,7 +939,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule Task do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "tasks" do
           many_to_many :comments, Comment, join_through: "tasks_comments"
@@ -1053,7 +1050,7 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Post do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
         schema "posts" do
           many_to_many :tags, Tag, join_through: "posts_tags"
         end
@@ -1087,7 +1084,7 @@ defmodule Ecto.Schema do
   In our example, a User has and belongs to many Organizations
 
       defmodule UserOrganization do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         @primary_key false
         schema "users_organizations" do
@@ -1105,7 +1102,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule User do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "users" do
           many_to_many :organizations, Organization, join_through: UserOrganization
@@ -1113,7 +1110,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule Organization do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "organizations" do
           many_to_many :users, User, join_through: UserOrganization
@@ -1162,7 +1159,7 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Order do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "orders" do
           embeds_one :item, Item
@@ -1170,7 +1167,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule Item do
-        use Ecto.Schema
+        import Ecto.Schema, only: [embedded_schema: 1]
 
         embedded_schema do
           field :name
@@ -1206,7 +1203,7 @@ defmodule Ecto.Schema do
   cases:
 
       defmodule Parent do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "parents" do
           field :name, :string
@@ -1309,7 +1306,7 @@ defmodule Ecto.Schema do
   ## Examples
 
       defmodule Order do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "orders" do
           embeds_many :items, Item
@@ -1317,7 +1314,7 @@ defmodule Ecto.Schema do
       end
 
       defmodule Item do
-        use Ecto.Schema
+        import Ecto.Schema, only: [embedded_schema: 1]
 
         embedded_schema do
           field :name
@@ -1380,7 +1377,7 @@ defmodule Ecto.Schema do
   cases:
 
       defmodule Parent do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "parents" do
           field :name, :string
@@ -1694,7 +1691,7 @@ defmodule Ecto.Schema do
 
     block =
       quote do
-        use Ecto.Schema
+        import Ecto.Schema, only: [embedded_schema: 1]
 
         @primary_key unquote(Macro.escape(pk))
         embedded_schema do

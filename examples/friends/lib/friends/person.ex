@@ -1,5 +1,5 @@
 defmodule Friends.Person do
-  use Ecto.Schema
+  import Ecto.Schema, only: [schema: 2]
 
   schema "people" do
     field :first_name, :string

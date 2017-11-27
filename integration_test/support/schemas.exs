@@ -1,7 +1,7 @@
 defmodule Ecto.Integration.Schema do
   defmacro __using__(_) do
     quote do
-      use Ecto.Schema
+      import Ecto.Schema, only: [schema: 2, embedded_schema: 1]
       type =
         Application.get_env(:ecto, :primary_key_type) ||
         raise ":primary_key_type not set in :ecto application"
@@ -208,7 +208,7 @@ defmodule Ecto.Integration.Item do
     * Embedding
 
   """
-  use Ecto.Schema
+  import Ecto.Schema, only: [embedded_schema: 1]
 
   embedded_schema do
     field :price, :integer

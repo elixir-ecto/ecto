@@ -6,7 +6,7 @@ defmodule Ecto.SchemaTest do
   import ExUnit.CaptureIO
 
   defmodule Schema do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "my schema" do
       field :name,  :string, default: "eric", autogenerate: {String, :upcase, ["eric"]}
@@ -102,7 +102,7 @@ defmodule Ecto.SchemaTest do
   end
 
   defmodule CustomSchema do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     @primary_key {:perm, Custom.Permalink, autogenerate: true}
     @foreign_key_type :string
@@ -136,7 +136,7 @@ defmodule Ecto.SchemaTest do
   end
 
   defmodule EmbeddedSchema do
-    use Ecto.Schema
+    import Ecto.Schema, only: [embedded_schema: 1]
 
     embedded_schema do
       field :name,  :string, default: "eric"
@@ -156,7 +156,7 @@ defmodule Ecto.SchemaTest do
   end
 
   defmodule CustomEmbeddedSchema do
-    use Ecto.Schema
+    import Ecto.Schema, only: [embedded_schema: 1]
 
     @primary_key false
     embedded_schema do
@@ -172,7 +172,7 @@ defmodule Ecto.SchemaTest do
   end
 
   defmodule InlineEmbeddedSchema do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "inline_embedded_schema" do
       embeds_one :one, One, primary_key: false do
@@ -194,7 +194,7 @@ defmodule Ecto.SchemaTest do
   end
 
   defmodule Timestamps do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "timestamps" do
       timestamps autogenerate: {:m, :f, [:a]}
@@ -211,7 +211,7 @@ defmodule Ecto.SchemaTest do
   ## Schema prefix
 
   defmodule SchemaWithPrefix do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     @schema_prefix "tenant"
     schema "company" do
@@ -257,7 +257,7 @@ defmodule Ecto.SchemaTest do
   ## Composite primary keys
 
   defmodule SchemaCompositeKeys do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     # Extra key without disabling @primary_key
     schema "composite_keys" do
@@ -269,7 +269,7 @@ defmodule Ecto.SchemaTest do
   # Associative_entity map example:
   # https://en.wikipedia.org/wiki/Associative_entity
   defmodule AssocCompositeKeys do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     @primary_key false
     schema "student_course_registers" do
@@ -295,7 +295,7 @@ defmodule Ecto.SchemaTest do
   test "field name clash" do
     assert_raise ArgumentError, "field/association :name is already set on schema", fn ->
       defmodule SchemaFieldNameClash do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "clash" do
           field :name, :string
@@ -308,7 +308,7 @@ defmodule Ecto.SchemaTest do
   test "invalid field type" do
     assert_raise ArgumentError, "invalid or unknown type {:apa} for field :name", fn ->
       defmodule SchemaInvalidFieldType do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "invalidtype" do
           field :name, {:apa}
@@ -318,7 +318,7 @@ defmodule Ecto.SchemaTest do
 
     assert_raise ArgumentError, "invalid or unknown type OMG for field :name", fn ->
       defmodule SchemaInvalidFieldType do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "invalidtype" do
           field :name, OMG
@@ -328,7 +328,7 @@ defmodule Ecto.SchemaTest do
 
     assert_raise ArgumentError, ~r/schema Ecto.SchemaTest.Schema is not a valid type for field :name/, fn ->
       defmodule SchemaInvalidFieldType do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "invalidtype" do
           field :name, Schema
@@ -340,7 +340,7 @@ defmodule Ecto.SchemaTest do
   test "fail invalid schema" do
     assert_raise ArgumentError, "schema source must be a string, got: :hello", fn ->
       defmodule SchemaFail do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema :hello do
           field :x, :string
@@ -354,7 +354,7 @@ defmodule Ecto.SchemaTest do
     assert_raise ArgumentError,
                  "field :x does not support :autogenerate because it uses a primitive type :string", fn ->
       defmodule AutogenerateFail do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "hello" do
           field :x, :string, autogenerate: true
@@ -366,7 +366,7 @@ defmodule Ecto.SchemaTest do
                  "only primary keys allow :autogenerate for type :id, " <>
                  "field :x is not a primary key", fn ->
       defmodule AutogenerateFail do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "hello" do
           field :x, :id, autogenerate: true
@@ -377,7 +377,7 @@ defmodule Ecto.SchemaTest do
     assert_raise ArgumentError,
                  "cannot mark the same field as autogenerate and read_after_writes", fn ->
       defmodule AutogenerateFail do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "hello" do
           field :x, Ecto.UUID, autogenerate: true, read_after_writes: true
@@ -389,7 +389,7 @@ defmodule Ecto.SchemaTest do
   ## Associations
 
   defmodule AssocSchema do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     schema "assocs" do
       has_many :posts, Post
@@ -517,7 +517,7 @@ defmodule Ecto.SchemaTest do
   end
 
   defmodule CustomAssocSchema do
-    use Ecto.Schema
+    import Ecto.Schema, only: [schema: 2]
 
     @primary_key {:pk, :integer, []}
     @foreign_key_type :string
@@ -557,7 +557,7 @@ defmodule Ecto.SchemaTest do
   test "has_* validates option" do
     assert_raise ArgumentError, "invalid option :unknown for has_many/3", fn ->
       defmodule InvalidHasOption do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "assoc" do
           has_many :posts, Post, unknown: :option
@@ -570,7 +570,7 @@ defmodule Ecto.SchemaTest do
     message = ~r"schema does not have the field :pk used by association :posts"
     assert_raise ArgumentError, message, fn ->
       defmodule PkAssocMisMatch do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "assoc" do
           has_many :posts, Post, references: :pk
@@ -583,7 +583,7 @@ defmodule Ecto.SchemaTest do
     message = ~r"association queryable must be a schema or {source, schema}, got: 123"
     assert_raise ArgumentError, message, fn ->
       defmodule QueryableMisMatch do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "assoc" do
           has_many :posts, 123
@@ -596,7 +596,7 @@ defmodule Ecto.SchemaTest do
     message = ~r"schema does not have the association :whatever used by association :posts"
     assert_raise ArgumentError, message, fn ->
       defmodule PkAssocMisMatch do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "assoc" do
           has_many :posts, through: [:whatever, :works]
@@ -609,7 +609,7 @@ defmodule Ecto.SchemaTest do
     message = ~r"When using the :through option, the schema should not be passed as second argument"
     assert_raise ArgumentError, message, fn ->
       defmodule ThroughMatch do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "assoc" do
           has_many :posts, Post, through: [:whatever, :works]
@@ -623,7 +623,7 @@ defmodule Ecto.SchemaTest do
     message = ~r"foreign_key :#{name} must be distinct from corresponding association name"
     assert_raise ArgumentError, message, fn ->
       defmodule SchemaBadForeignKey do
-        use Ecto.Schema
+        import Ecto.Schema, only: [schema: 2]
 
         schema "fk_assoc_name_clash" do
           belongs_to name, User, foreign_key: name
