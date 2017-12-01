@@ -1148,12 +1148,12 @@ defmodule Ecto.ChangesetTest do
     changeset = change(%Post{}) |> check_constraint(:title, name: :title_must_be_short)
     assert changeset.constraints ==
            [%{type: :check, field: :title, constraint: "title_must_be_short", match: :exact,
-              error: {"is invalid", [constraint: :check]}}]
+              error: {"is invalid", [constraint: :check, constraint_name: "title_must_be_short"]}}]
 
     changeset = change(%Post{}) |> check_constraint(:title, name: :title_must_be_short, message: "cannot be more than 15 characters")
     assert changeset.constraints ==
            [%{type: :check, field: :title, constraint: "title_must_be_short", match: :exact,
-              error: {"cannot be more than 15 characters", [constraint: :check]}}]
+              error: {"cannot be more than 15 characters", [constraint: :check, constraint_name: "title_must_be_short"]}}]
 
     assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
       change(%Post{}) |> check_constraint(:title, name: :whatever, match: :invalid, message: "match is invalid")
@@ -1304,12 +1304,12 @@ defmodule Ecto.ChangesetTest do
     changeset = change(%Post{}) |> exclusion_constraint(:title)
     assert changeset.constraints ==
            [%{type: :exclude, field: :title, constraint: "posts_title_exclusion", match: :exact,
-              error: {"violates an exclusion constraint", [constraint: :exclusion]}}]
+              error: {"violates an exclusion constraint", [constraint: :exclude, constraint_name: "posts_title_exclusion"]}}]
 
     changeset = change(%Post{}) |> exclusion_constraint(:title, name: :whatever, message: "is invalid")
     assert changeset.constraints ==
            [%{type: :exclude, field: :title, constraint: "whatever", match: :exact,
-              error: {"is invalid", [constraint: :exclusion]}}]
+              error: {"is invalid", [constraint: :exclude, constraint_name: "whatever"]}}]
 
     assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
       change(%Post{}) |> exclusion_constraint(:title, name: :whatever, match: :invalid, message: "match is invalid")
