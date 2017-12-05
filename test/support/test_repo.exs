@@ -31,6 +31,15 @@ defmodule Ecto.TestAdapter do
   def autogenerate(:embed_id), do: Ecto.UUID.autogenerate
   def autogenerate(:binary_id), do: Ecto.UUID.autogenerate
 
+  def expressions_for_traversal(:update_all) do
+    [update: :updates] ++ expressions_for_traversal(:default)
+  end
+  def expressions_for_traversal(_) do
+    [distinct: :distinct, select: :select, from: :from, join: :joins,
+     where: :wheres, group_by: :group_bys, having: :havings,
+     order_by: :order_bys, limit: :limit, offset: :offset]
+  end
+
   ## Queryable
 
   def prepare(operation, query), do: {:nocache, {operation, query}}
