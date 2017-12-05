@@ -120,6 +120,20 @@ defmodule Ecto.Adapters.MySQL do
   def loaders({:embed, _} = type, _), do: [&json_decode/1, &Ecto.Adapters.SQL.load_embed(type, &1)]
   def loaders(_, type),               do: [type]
 
+  @doc false
+  def expressions_for_traversal(:update_all) do
+    expressions_for_traversal(:default)
+  end
+  def expressions_for_traversal(:default) do
+    [distinct: :distinct, select: :select, from: :from, join: :joins,
+     update: :updates, where: :wheres, group_by: :group_bys,
+     having: :havings, order_by: :order_bys, limit: :limit, offset: :offset]
+  end
+  def expressions_for_traversal(_) do
+    expressions_for_traversal(:default)
+    |> Keyword.drop([:update])
+  end
+
   defp bool_decode(<<0>>), do: {:ok, false}
   defp bool_decode(<<1>>), do: {:ok, true}
   defp bool_decode(0), do: {:ok, false}
