@@ -1304,12 +1304,12 @@ defmodule Ecto.ChangesetTest do
     changeset = change(%Post{}) |> exclusion_constraint(:title)
     assert changeset.constraints ==
            [%{type: :exclude, field: :title, constraint: "posts_title_exclusion", match: :exact,
-              error: {"violates an exclusion constraint", [constraint: :exclude, constraint_name: "posts_title_exclusion"]}}]
+              error: {"violates an exclusion constraint", [constraint: :exclusion, constraint_name: "posts_title_exclusion"]}}]
 
     changeset = change(%Post{}) |> exclusion_constraint(:title, name: :whatever, message: "is invalid")
     assert changeset.constraints ==
            [%{type: :exclude, field: :title, constraint: "whatever", match: :exact,
-              error: {"is invalid", [constraint: :exclude, constraint_name: "whatever"]}}]
+              error: {"is invalid", [constraint: :exclusion, constraint_name: "whatever"]}}]
 
     assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
       change(%Post{}) |> exclusion_constraint(:title, name: :whatever, match: :invalid, message: "match is invalid")

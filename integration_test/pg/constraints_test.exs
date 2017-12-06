@@ -65,7 +65,7 @@ defmodule Ecto.Integration.ConstraintsTest do
       overlapping_changeset
       |> Ecto.Changeset.exclusion_constraint(:from, name: :cannot_overlap)
       |> PoolRepo.insert()
-    assert changeset.errors == [from: {"violates an exclusion constraint", [constraint: :exclude, constraint_name: "cannot_overlap"]}]
+    assert changeset.errors == [from: {"violates an exclusion constraint", [constraint: :exclusion, constraint_name: "cannot_overlap"]}]
     assert changeset.data.__meta__.state == :built
   end
 
