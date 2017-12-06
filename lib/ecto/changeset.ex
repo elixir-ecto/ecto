@@ -1993,7 +1993,7 @@ defmodule Ecto.Changeset do
     constraint_string = to_string(constraint)
     message    = message(opts, "is invalid")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :check, constraint_string, match_type, field, {message, [constraint: :check, constraint_name: constraint_string]})
+    add_constraint(changeset, :check, constraint_string, match_type, field, message)
   end
 
   @doc """
@@ -2096,7 +2096,7 @@ defmodule Ecto.Changeset do
     constraint_string = to_string(constraint)
     message    = message(opts, "has already been taken")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :unique, constraint_string, match_type, field, {message, [constraint: :unique, constraint_name: constraint_string]})
+    add_constraint(changeset, :unique, constraint_string, match_type, field, message)
   end
 
   @doc """
@@ -2144,7 +2144,7 @@ defmodule Ecto.Changeset do
     constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_fkey"
     constraint_string = to_string(constraint)
     message    = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, constraint_string, :exact, field, {message, [constraint: :foreign, constraint_name: constraint_string]})
+    add_constraint(changeset, :foreign_key, constraint_string, :exact, field, message, :foreign)
   end
 
   @doc """
@@ -2193,7 +2193,7 @@ defmodule Ecto.Changeset do
     constraint_string = to_string(constraint)
 
     message = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, constraint_string, :exact, assoc, {message, [constraint: :assoc, constraint_name: constraint_string]})
+    add_constraint(changeset, :foreign_key, constraint_string, :exact, assoc, message, :assoc)
   end
 
   @doc """
@@ -2244,7 +2244,7 @@ defmodule Ecto.Changeset do
       end
     constraint_string = to_string(constraint)
 
-    add_constraint(changeset, :foreign_key, constraint_string, :exact, assoc, {message, [constraint: :no_assoc, constraint_name: constraint_string]})
+    add_constraint(changeset, :foreign_key, constraint_string, :exact, assoc, message, :no_assoc)
   end
 
   @doc """
@@ -2272,21 +2272,25 @@ defmodule Ecto.Changeset do
     constraint_string = to_string(constraint)
     message    = message(opts, "violates an exclusion constraint")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :exclude, constraint_string, match_type, field, {message, [constraint: :exclusion, constraint_name: constraint_string]})
+    add_constraint(changeset, :exclude, constraint_string, match_type, field, message, :exclusion)
   end
 
   defp no_assoc_message(:one), do: "is still associated with this entry"
   defp no_assoc_message(:many), do: "are still associated with this entry"
 
+  defp add_constraint(changeset, type, constraint, match, field, message) do
+    add_constraint(changeset, type, constraint, match, field, message, type)
+  end
+
   defp add_constraint(%Changeset{constraints: constraints} = changeset,
-                      type, constraint, match, field, error)
-       when is_binary(constraint) and is_atom(field) and is_tuple(error) and is_atom(match)  do
+                      type, constraint, match, field, message, meta_type)
+       when is_binary(constraint) and is_atom(field) and is_binary(message) and is_atom(match)  do
     unless match in @match_types do
       raise ArgumentError, "invalid match type: #{inspect match}. Allowed match types: #{inspect @match_types}"
     end
 
     %{changeset | constraints: [%{type: type, constraint: constraint, match: match,
-                                  field: field, error: error} | constraints]}
+                                  field: field, error: {message, [constraint: meta_type, constraint_name: constraint]}} | constraints]}
   end
 
   defp get_source(%{data: %{__meta__: %{source: {_prefix, source}}}}) when is_binary(source),
