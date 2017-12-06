@@ -1148,12 +1148,12 @@ defmodule Ecto.ChangesetTest do
     changeset = change(%Post{}) |> check_constraint(:title, name: :title_must_be_short)
     assert changeset.constraints ==
            [%{type: :check, field: :title, constraint: "title_must_be_short", match: :exact,
-              error: {"is invalid", []}}]
+              error: {"is invalid", [constraint: :check]}}]
 
     changeset = change(%Post{}) |> check_constraint(:title, name: :title_must_be_short, message: "cannot be more than 15 characters")
     assert changeset.constraints ==
            [%{type: :check, field: :title, constraint: "title_must_be_short", match: :exact,
-              error: {"cannot be more than 15 characters", []}}]
+              error: {"cannot be more than 15 characters", [constraint: :check]}}]
 
     assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
       change(%Post{}) |> check_constraint(:title, name: :whatever, match: :invalid, message: "match is invalid")
@@ -1304,12 +1304,12 @@ defmodule Ecto.ChangesetTest do
     changeset = change(%Post{}) |> exclusion_constraint(:title)
     assert changeset.constraints ==
            [%{type: :exclude, field: :title, constraint: "posts_title_exclusion", match: :exact,
-              error: {"violates an exclusion constraint", []}}]
+              error: {"violates an exclusion constraint", [constraint: :exclusion]}}]
 
     changeset = change(%Post{}) |> exclusion_constraint(:title, name: :whatever, message: "is invalid")
     assert changeset.constraints ==
            [%{type: :exclude, field: :title, constraint: "whatever", match: :exact,
-              error: {"is invalid", []}}]
+              error: {"is invalid", [constraint: :exclusion]}}]
 
     assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
       change(%Post{}) |> exclusion_constraint(:title, name: :whatever, match: :invalid, message: "match is invalid")

@@ -1992,7 +1992,7 @@ defmodule Ecto.Changeset do
     constraint = opts[:name] || raise ArgumentError, "must supply the name of the constraint"
     message    = message(opts, "is invalid")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :check, to_string(constraint), match_type, field, {message, []})
+    add_constraint(changeset, :check, to_string(constraint), match_type, field, {message, [constraint: :check]})
   end
 
   @doc """
@@ -2266,7 +2266,7 @@ defmodule Ecto.Changeset do
     constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_exclusion"
     message    = message(opts, "violates an exclusion constraint")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :exclude, to_string(constraint), match_type, field, {message, []})
+    add_constraint(changeset, :exclude, to_string(constraint), match_type, field, {message, [constraint: :exclusion]})
   end
 
   defp no_assoc_message(:one), do: "is still associated with this entry"
