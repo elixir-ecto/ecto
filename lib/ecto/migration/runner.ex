@@ -3,7 +3,6 @@ defmodule Ecto.Migration.Runner do
   # in either `:forward` or `:backward` directions.
   @moduledoc false
 
-  use GenServer
   require Logger
 
   alias Ecto.Migration.Table
