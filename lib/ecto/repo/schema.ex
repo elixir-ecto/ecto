@@ -566,8 +566,8 @@ defmodule Ecto.Repo.Schema do
           end)
 
         case user_constraint do
-          %{field: field, error: error} ->
-            {field, error}
+          %{field: field, error_message: error_message, error_type: error_type} ->
+            {field, {error_message, [constraint: error_type, constraint_name: constraint]}}
           nil ->
             raise Ecto.ConstraintError, action: action, type: type,
                                         constraint: constraint, changeset: changeset

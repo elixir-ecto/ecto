@@ -2225,6 +2225,7 @@ defmodule Ecto.Changeset do
     * `:name` - the constraint name. By default, the constraint
       name is inferred from the association table + association
       field. May be required explicitly for complex cases
+
   """
   @spec no_assoc_constraint(t, atom, Keyword.t) :: t | no_return
   def no_assoc_constraint(changeset, assoc, opts \\ []) do
@@ -2277,14 +2278,22 @@ defmodule Ecto.Changeset do
   end
 
   defp add_constraint(%Changeset{constraints: constraints} = changeset,
-                      type, constraint, match, field, message, meta_type)
-       when is_binary(constraint) and is_atom(field) and is_binary(message) and is_atom(match)  do
+                      type, constraint, match, field, error_message, error_type)
+       when is_binary(constraint) and is_atom(field) and is_binary(error_message) do
     unless match in @match_types do
       raise ArgumentError, "invalid match type: #{inspect match}. Allowed match types: #{inspect @match_types}"
     end
 
-    %{changeset | constraints: [%{type: type, constraint: constraint, match: match,
-                                  field: field, error: {message, [constraint: meta_type, constraint_name: constraint]}} | constraints]}
+    constraint = %{
+      constraint: constraint,
+      error_message: error_message,
+      error_type: error_type,
+      field: field,
+      match: match,
+      type: type
+    }
+
+    %{changeset | constraints: [constraint | constraints]}
   end
 
   defp get_source(%{data: %{__meta__: %{source: {_prefix, source}}}}) when is_binary(source),
