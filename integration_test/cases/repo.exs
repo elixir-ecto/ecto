@@ -281,7 +281,7 @@ defmodule Ecto.Integration.RepoTest do
       changeset
       |> Ecto.Changeset.unique_constraint(:uuid)
       |> TestRepo.insert()
-    assert changeset.errors == [uuid: {"has already been taken", [constraint: :unique]}]
+    assert changeset.errors == [uuid: {"has already been taken", [constraint: :unique, constraint_name: "posts_uuid_index"]}]
     assert changeset.data.__meta__.state == :built
   end
 
@@ -298,7 +298,7 @@ defmodule Ecto.Integration.RepoTest do
       }
 
     [_, p2, _] = changeset.changes.posts
-    assert p2.errors == [uuid: {"has already been taken", [constraint: :unique]}]
+    assert p2.errors == [uuid: {"has already been taken", [constraint: :unique, constraint_name: "posts_uuid_index"]}]
   end
 
   @tag :id_type
@@ -311,7 +311,7 @@ defmodule Ecto.Integration.RepoTest do
       changeset
       |> Ecto.Changeset.unique_constraint(:uuid)
       |> TestRepo.insert()
-    assert changeset.errors == [uuid: {"has already been taken", [constraint: :unique]}]
+    assert changeset.errors == [uuid: {"has already been taken", [constraint: :unique, constraint_name: "customs_uuid_index"]}]
     assert changeset.data.__meta__.state == :built
   end
 
@@ -418,7 +418,7 @@ defmodule Ecto.Integration.RepoTest do
       changeset
       |> Ecto.Changeset.foreign_key_constraint(:post_id)
       |> TestRepo.insert()
-    assert changeset.errors == [post_id: {"does not exist", [constraint: :foreign]}]
+    assert changeset.errors == [post_id: {"does not exist", [constraint: :foreign, constraint_name: "comments_post_id_fkey"]}]
   end
 
   @tag :foreign_key_constraint
@@ -448,7 +448,7 @@ defmodule Ecto.Integration.RepoTest do
       changeset
       |> Ecto.Changeset.assoc_constraint(:post)
       |> TestRepo.insert()
-    assert changeset.errors == [post: {"does not exist", [constraint: :assoc]}]
+    assert changeset.errors == [post: {"does not exist", [constraint: :assoc, constraint_name: "comments_post_id_fkey"]}]
   end
 
   @tag :foreign_key_constraint
@@ -492,7 +492,7 @@ defmodule Ecto.Integration.RepoTest do
       |> Ecto.Changeset.change
       |> Ecto.Changeset.no_assoc_constraint(:permalink)
       |> TestRepo.delete()
-    assert changeset.errors == [permalink: {"is still associated with this entry", [constraint: :no_assoc]}]
+    assert changeset.errors == [permalink: {"is still associated with this entry", [constraint: :no_assoc, constraint_name: "permalinks_user_id_fkey"]}]
   end
 
   @tag :foreign_key_constraint

@@ -65,7 +65,7 @@ defmodule Ecto.Integration.ConstraintsTest do
       overlapping_changeset
       |> Ecto.Changeset.exclusion_constraint(:from, name: :cannot_overlap)
       |> PoolRepo.insert()
-    assert changeset.errors == [from: {"violates an exclusion constraint", [constraint: :exclusion]}]
+    assert changeset.errors == [from: {"violates an exclusion constraint", [constraint: :exclusion, constraint_name: "cannot_overlap"]}]
     assert changeset.data.__meta__.state == :built
   end
 
@@ -85,7 +85,7 @@ defmodule Ecto.Integration.ConstraintsTest do
       changeset
       |> Ecto.Changeset.check_constraint(:price, name: :positive_price)
       |> PoolRepo.insert()
-    assert changeset.errors == [price: {"is invalid", [constraint: :check]}]
+    assert changeset.errors == [price: {"is invalid", [constraint: :check, constraint_name: "positive_price"]}]
     assert changeset.data.__meta__.state == :built
 
     # When the changeset does expect the db error and gives a custom message
@@ -94,7 +94,7 @@ defmodule Ecto.Integration.ConstraintsTest do
       changeset
       |> Ecto.Changeset.check_constraint(:price, name: :positive_price, message: "price must be greater than 0")
       |> PoolRepo.insert()
-    assert changeset.errors == [price: {"price must be greater than 0", [constraint: :check]}]
+    assert changeset.errors == [price: {"price must be greater than 0", [constraint: :check, constraint_name: "positive_price"]}]
     assert changeset.data.__meta__.state == :built
 
     # When the change does not violate the check constraint
