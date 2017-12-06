@@ -2093,9 +2093,10 @@ defmodule Ecto.Changeset do
   @spec unique_constraint(t, atom, Keyword.t) :: t
   def unique_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_index"
+    constraint_string = to_string(constraint)
     message    = message(opts, "has already been taken")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :unique, to_string(constraint), match_type, field, {message, [constraint: :unique]})
+    add_constraint(changeset, :unique, constraint_string, match_type, field, {message, [constraint: :unique, constraint_name: constraint_string]})
   end
 
   @doc """
@@ -2141,8 +2142,9 @@ defmodule Ecto.Changeset do
   @spec foreign_key_constraint(t, atom, Keyword.t) :: t
   def foreign_key_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_fkey"
+    constraint_string = to_string(constraint)
     message    = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, field, {message, [constraint: :foreign]})
+    add_constraint(changeset, :foreign_key, constraint_string, :exact, field, {message, [constraint: :foreign, constraint_name: constraint_string]})
   end
 
   @doc """
@@ -2188,9 +2190,10 @@ defmodule Ecto.Changeset do
           raise ArgumentError,
             "assoc_constraint can only be added to belongs to associations, got: #{inspect other}"
       end
+    constraint_string = to_string(constraint)
 
     message = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, {message, [constraint: :assoc]})
+    add_constraint(changeset, :foreign_key, constraint_string, :exact, assoc, {message, [constraint: :assoc, constraint_name: constraint_string]})
   end
 
   @doc """
@@ -2239,8 +2242,9 @@ defmodule Ecto.Changeset do
           raise ArgumentError,
             "no_assoc_constraint can only be added to has one/many associations, got: #{inspect other}"
       end
+    constraint_string = to_string(constraint)
 
-    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, {message, [constraint: :no_assoc]})
+    add_constraint(changeset, :foreign_key, constraint_string, :exact, assoc, {message, [constraint: :no_assoc, constraint_name: constraint_string]})
   end
 
   @doc """
