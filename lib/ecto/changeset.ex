@@ -1990,10 +1990,9 @@ defmodule Ecto.Changeset do
   """
   def check_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || raise ArgumentError, "must supply the name of the constraint"
-    constraint_string = to_string(constraint)
     message    = message(opts, "is invalid")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :check, constraint_string, match_type, field, message)
+    add_constraint(changeset, :check, to_string(constraint), match_type, field, message)
   end
 
   @doc """
@@ -2093,10 +2092,9 @@ defmodule Ecto.Changeset do
   @spec unique_constraint(t, atom, Keyword.t) :: t
   def unique_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_index"
-    constraint_string = to_string(constraint)
     message    = message(opts, "has already been taken")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :unique, constraint_string, match_type, field, message)
+    add_constraint(changeset, :unique, to_string(constraint), match_type, field, message)
   end
 
   @doc """
@@ -2142,9 +2140,8 @@ defmodule Ecto.Changeset do
   @spec foreign_key_constraint(t, atom, Keyword.t) :: t
   def foreign_key_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_fkey"
-    constraint_string = to_string(constraint)
     message    = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, constraint_string, :exact, field, message, :foreign)
+    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, field, message, :foreign)
   end
 
   @doc """
@@ -2190,10 +2187,9 @@ defmodule Ecto.Changeset do
           raise ArgumentError,
             "assoc_constraint can only be added to belongs to associations, got: #{inspect other}"
       end
-    constraint_string = to_string(constraint)
 
     message = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, constraint_string, :exact, assoc, message, :assoc)
+    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, message, :assoc)
   end
 
   @doc """
@@ -2242,9 +2238,8 @@ defmodule Ecto.Changeset do
           raise ArgumentError,
             "no_assoc_constraint can only be added to has one/many associations, got: #{inspect other}"
       end
-    constraint_string = to_string(constraint)
 
-    add_constraint(changeset, :foreign_key, constraint_string, :exact, assoc, message, :no_assoc)
+    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, message, :no_assoc)
   end
 
   @doc """
@@ -2269,10 +2264,9 @@ defmodule Ecto.Changeset do
   """
   def exclusion_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_exclusion"
-    constraint_string = to_string(constraint)
     message    = message(opts, "violates an exclusion constraint")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :exclude, constraint_string, match_type, field, message, :exclusion)
+    add_constraint(changeset, :exclude, to_string(constraint), match_type, field, message, :exclusion)
   end
 
   defp no_assoc_message(:one), do: "is still associated with this entry"
