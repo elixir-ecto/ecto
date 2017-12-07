@@ -530,12 +530,11 @@ defmodule Ecto do
       true
 
   """
-  def assoc_loaded?(association) do
-    case association do
-      %Ecto.Association.NotLoaded{} -> false
-      _ -> true
-    end
-  end
+  def assoc_loaded?(%Ecto.Association.NotLoaded{}), do: false
+  def assoc_loaded?(%_{}), do: true
+  def assoc_loaded?([]), do: true
+  def assoc_loaded?(nil), do: true
+  def assoc_loaded?(other), do: raise ArgumentError, "expected associated entries, got #{inspect other}"
 
   @doc """
   Gets the metadata from the given struct.
