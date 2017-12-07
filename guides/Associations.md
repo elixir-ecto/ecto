@@ -399,7 +399,7 @@ iex> user = Repo.insert!(user)
 
 Let's build an associated post and store it in the DB. We can take a similar approach as we did in `one_to_one` and directly pass a list of posts in the `posts` field when inserting the user, effectively inserting the user and multiple posts at once.
 
-However, let's try a different approach and use [`Ecto.build_assoc/3`](Ecto.html#build_assoc/3) to build a post that is associated to the existing user we have just defined:
+However, let's try a different approach and use [`Ecto.build_assoc/3`](Ecto.html#build_assoc/3) to build a post that is associated with the existing user we have just defined:
 
 ```elixir
 iex> post = Ecto.build_assoc(user, :posts, %{header: "Clickbait header", body: "No real content"})
@@ -584,7 +584,7 @@ iex> post = %Post{header: "Clickbait header", body: "No real content"}
 
 Ok, but tag and post are not associated, yet. We might expect, as done in `one-to-one`, to create either a post or a tag with the associated entries and insert them all at once. However, notice we cannot use `Ecto.build_assoc/3`, since the foreign key does not belong to the `Post` nor the `Tag` struct.
 
-Another option is to use Ecto changesets, which provides many conveniences for dealing with *changes*. For example:
+Another option is to use Ecto changesets, which provide many conveniences for dealing with *changes*. For example:
 
 ```elixir
 iex> post_changeset = Ecto.Changeset.change(post)
@@ -642,13 +642,13 @@ iex> tag = Repo.get(Tag, 1) |> Repo.preload(:posts)
    tags: #Ecto.Association.NotLoaded<association :tags is not loaded>}]}
 ```
 
-The advantage of using Ecto.Changeset is that it is responsible for tracking the changes between your data structures and the associated data. For example, if you want to remove the clickbait tag from from the post, one way to do so is by calling [`Ecto.Changeset.put_assoc/3`](Ecto.Changeset.html#put_assoc/4) once more but without the clickbait tag.  This will not work right now, because the `:on_replace` option for the `many_to_many` relationship defaults to `:raise`.  Go ahead and try it.  When you try to call `put_assoc`, a runtime error will be raised:
+The advantage of using [`Ecto.Changeset`](Ecto.Changeset.html) is that it is responsible for tracking the changes between your data structures and the associated data. For example, if you want to remove the "clickbait" tag from the post, one way to do so is by calling [`Ecto.Changeset.put_assoc/3`](Ecto.Changeset.html#put_assoc/4) once more but without the "clickbait" tag.  This will not work right now, because the `:on_replace` option for the `many_to_many` relationship defaults to `:raise`.  Go ahead and try it.  When you try to call `put_assoc`, a runtime error will be raised:
 
 ```elixir
 iex> post_changeset = Ecto.Changeset.change(post)
 iex> post_with_tags = Ecto.Changeset.put_assoc(post_changeset, :tags, [misc_tag])
 ** (RuntimeError) you are attempting to change relation :tags of
-Website.CMS.Page but the `:on_replace` option of
+EctoAssoc.Post but the `:on_replace` option of
 this relation is set to `:raise`.
 
 By default it is not possible to replace or delete embeds and
@@ -690,7 +690,7 @@ end
 
 On the other hand, it probably *doesn't* make much sense to be able to remove relationships from the other end.  That is, with just a tag, it is hard to decide if a post should be related to the tag or not.  So it makes sense that we should still raise an error if we try to change posts that are related to tags from the tag side of things.
 
-With the `:on_replace` option changed, Ecto will compare the data you gave with the tags currently in the post and conclude the association between the post and the clickbait tag must be removed, as follows:
+With the `:on_replace` option changed, Ecto will compare the data you gave with the tags currently in the post and conclude the association between the post and the "clickbait" tag must be removed, as follows:
 
 ```elixir
 iex> post_changeset = Ecto.Changeset.change(post)
