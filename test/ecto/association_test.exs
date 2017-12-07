@@ -465,6 +465,7 @@ defmodule Ecto.AssociationTest do
   test "assoc_loaded?/1 sets association to loaded/not loaded" do
     refute Ecto.assoc_loaded?(%Post{}.comments)
     assert Ecto.assoc_loaded?(%Post{comments: []}.comments)
+    assert Ecto.assoc_loaded?(%Post{comments: [%Comment{}]}.comments)
     assert Ecto.assoc_loaded?(%Post{permalink: nil}.permalink)
   end
 

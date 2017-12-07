@@ -531,8 +531,8 @@ defmodule Ecto do
 
   """
   def assoc_loaded?(%Ecto.Association.NotLoaded{}), do: false
+  def assoc_loaded?(list) when is_list(list), do: true
   def assoc_loaded?(%_{}), do: true
-  def assoc_loaded?([]), do: true
   def assoc_loaded?(nil), do: true
   def assoc_loaded?(other), do: raise ArgumentError, "expected associated entries, got #{inspect other}"
 
