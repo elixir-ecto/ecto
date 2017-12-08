@@ -462,9 +462,11 @@ defmodule Ecto.AssociationTest do
     assert comment.__meta__.source == {nil, "comments"}
   end
 
-  test "sets association to loaded/not loaded" do
+  test "assoc_loaded?/1 sets association to loaded/not loaded" do
     refute Ecto.assoc_loaded?(%Post{}.comments)
     assert Ecto.assoc_loaded?(%Post{comments: []}.comments)
+    assert Ecto.assoc_loaded?(%Post{comments: [%Comment{}]}.comments)
+    assert Ecto.assoc_loaded?(%Post{permalink: nil}.permalink)
   end
 
   test "assoc/2" do
