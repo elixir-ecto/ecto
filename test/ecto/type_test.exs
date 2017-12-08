@@ -100,6 +100,13 @@ defmodule Ecto.TypeTest do
     assert cast({:in, :integer}, nil) == :error
   end
 
+  test "tuple" do
+    assert cast({:tuple, [:integer, :integer, :integer]}, {"1", "2", "3"}) == {:ok, {1, 2, 3}}
+    assert cast({:tuple, [:integer, :integer, :integer]}, {1, 2}) == :error
+    assert dump({:tuple, [Custom]}, {"foo"}) == {:ok, {:dump}}
+    assert dump({:tuple, [Custom]}, {"foo", "bar"}) == :error
+  end
+
   test "decimal" do
     assert cast(:decimal, "1.0") == {:ok, Decimal.new("1.0")}
     assert cast(:decimal, 1.0) == {:ok, Decimal.new("1.0")}

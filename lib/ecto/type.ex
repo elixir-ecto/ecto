@@ -89,7 +89,7 @@ defmodule Ecto.Type do
                       :binary | :decimal | :id | :binary_id |
                       :utc_datetime | :naive_datetime | :date | :time | :any |
                       :utc_datetime_usec | :naive_datetime_usec | :time_usec
-  @typep composite :: {:array, t} | {:map, t} | {:embed, Ecto.Embedded.t} | {:in, t}
+  @typep composite :: {:array, t} | {:map, t} | {:embed, Ecto.Embedded.t} | {:in, t} | {:tuple, [t]}
 
   @base ~w(
     integer float boolean string map
@@ -97,7 +97,7 @@ defmodule Ecto.Type do
     utc_datetime naive_datetime date time any
     utc_datetime_usec naive_datetime_usec time_usec
   )a
-  @composite ~w(array map in embed)a
+  @composite ~w(array map in embed tuple)a
 
   @doc """
   Returns the underlying schema type for the custom type.
@@ -322,6 +322,14 @@ defmodule Ecto.Type do
     case dump({:array, type}, value, dumper) do
       {:ok, v} -> {:ok, {:in, v}}
       :error -> :error
+    end
+  end
+
+  def dump({:tuple, types}, value, dumper) when is_tuple(value) do
+    if Enum.count(types) == tuple_size(value) do
+      tuple(Tuple.to_list(value), types, [], &dump(&1, &2, dumper))
+    else
+      :error
     end
   end
 
@@ -597,6 +605,14 @@ defmodule Ecto.Type do
 
   def cast({:in, type}, term) when is_list(term) do
     array(term, type, &cast/2, [])
+  end
+
+  def cast({:tuple, types}, term) when is_tuple(term) do
+    if Enum.count(types) == tuple_size(term) do
+      tuple(Tuple.to_list(term), types, [], &cast/2)
+    else
+      :error
+    end
   end
 
   def cast(:float, term) when is_binary(term) do
@@ -894,6 +910,17 @@ defmodule Ecto.Type do
 
   defp map(_, _, _, _) do
     :error
+  end
+
+  defp tuple([], [], acc, _fun) do
+    {:ok, List.to_tuple(Enum.reverse(acc))}
+  end
+
+  defp tuple([h|t], [type | types_rest], acc, fun) do
+    case fun.(type, h) do
+      {:ok, value} -> tuple(t, types_rest, [value | acc], fun)
+      :error -> :error
+    end
   end
 
   defp zerofy_microsecond(nil), do: nil

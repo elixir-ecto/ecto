@@ -470,6 +470,10 @@ if Code.ensure_loaded?(Postgrex) do
        interval(count, interval, sources, query) | ")::date"]
     end
 
+    defp expr({:{}, _, elems}, sources, query) do
+      [?(, intersperse_map(elems, ?,, &expr(&1, sources, query)), ?)]
+    end
+
     defp expr({fun, _, args}, sources, query) when is_atom(fun) and is_list(args) do
       {modifier, args} =
         case args do
