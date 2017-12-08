@@ -1550,7 +1550,7 @@ defmodule Ecto.Integration.RepoTest do
       assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
 
       # Multiple record change value: note IDS are also replaced
-      changes = [%{id: post_first.id + 2, title: "first_updated",
+      changes = [%{id: post_second.id + 1, title: "first_updated",
                    text: "first_updated", uuid: post_first.uuid},
                  %{id: post_second.id + 2, title: "second_updated",
                    text: "second_updated", uuid: post_second.uuid}]
@@ -1558,7 +1558,7 @@ defmodule Ecto.Integration.RepoTest do
       TestRepo.insert_all(Post, changes, on_conflict: :replace_all, conflict_target: :uuid)
       assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
 
-      updated_first = TestRepo.get(Post, post_first.id + 2)
+      updated_first = TestRepo.get(Post, post_second.id + 1)
       assert updated_first.title == "first_updated"
       assert updated_first.text == "first_updated"
 
