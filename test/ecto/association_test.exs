@@ -469,12 +469,6 @@ defmodule Ecto.AssociationTest do
     assert Ecto.assoc_loaded?(%Post{permalink: nil}.permalink)
   end
 
-  test "assoc_loaded?/1 fails on not struct, list or nil" do
-    assert_raise ArgumentError, ~r"expected associated entries, got :whatever", fn ->
-      Ecto.assoc_loaded?(:whatever)
-    end
-  end
-
   test "assoc/2" do
     assert inspect(assoc(%Post{id: 1}, :comments)) ==
            inspect(from c in Comment, where: c.post_id == ^1)
