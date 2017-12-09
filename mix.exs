@@ -55,7 +55,11 @@ defmodule Ecto.MixProject do
 
       # Docs
       {:ex_doc, "~> 0.17", only: :docs},
-      {:inch_ex, ">= 0.0.0", only: :docs}
+      {:inch_ex, ">= 0.0.0", only: :docs},
+
+      # Benchmarks
+      {:benchee, "~> 0.11.0"},
+      {:benchee_json, "~> 0.4.0"}
     ]
   end
 
