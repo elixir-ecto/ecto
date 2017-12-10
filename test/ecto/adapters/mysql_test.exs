@@ -355,13 +355,13 @@ defmodule Ecto.Adapters.MySQLTest do
     query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z)
                   |> update([_], set: [x: 0]) |> normalize(:update_all)
     assert update_all(query) ==
-           ~s{UPDATE `schema` AS s0 INNER JOIN `schema2` AS s1 ON s0.`x` = s1.`z` SET s0.`x` = 0}
+           ~s{UPDATE `schema` AS s0, `schema2` AS s1 SET s0.`x` = 0 WHERE (s0.`x` = s1.`z`)}
 
     query = from(e in Schema, where: e.x == 123, update: [set: [x: 0]],
                              join: q in Schema2, on: e.x == q.z) |> normalize(:update_all)
     assert update_all(query) ==
-           ~s{UPDATE `schema` AS s0 INNER JOIN `schema2` AS s1 ON s0.`x` = s1.`z` } <>
-           ~s{SET s0.`x` = 0 WHERE (s0.`x` = 123)}
+           ~s{UPDATE `schema` AS s0, `schema2` AS s1 } <>
+           ~s{SET s0.`x` = 0 WHERE (s0.`x` = s1.`z`) AND (s0.`x` = 123)}
   end
 
   test "update all with prefix" do
