@@ -583,9 +583,10 @@ defmodule Ecto.Migration do
   defp default_index_name(index) do
     [index.table, index.columns, "index"]
     |> List.flatten
+    |> Enum.map(&to_string(&1))
+    |> Enum.map(&String.replace(&1, ~r"[^\w_]", "_"))
+    |> Enum.map(&String.replace_trailing(&1, "_", ""))
     |> Enum.join("_")
-    |> String.replace(~r"[^\w_]", "_")
-    |> String.replace("__", "_")
     |> String.to_atom
   end
 
