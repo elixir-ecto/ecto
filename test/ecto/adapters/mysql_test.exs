@@ -482,6 +482,17 @@ defmodule Ecto.Adapters.MySQLTest do
            "SELECT s0.`id`, s2.`id` FROM `schema` AS s0 INNER JOIN `schema2` AS s1 ON TRUE INNER JOIN `schema2` AS s2 ON TRUE"
   end
 
+  test "params order is correct on update_all with join (issue #2303)" do
+    id = Ecto.UUID.generate()
+    query =
+      from p in "people", join: u in "users",
+      on: p.id == u.person_id and u.id == ^id,
+      update: [set: [first_name: ^"John", last_name: ^"Doe"]]
+
+    {_query, params, _key} = Ecto.Query.Planner.prepare(query, :update_all, Ecto.Adapters.MySQL, 0)
+    assert [^id, "John", "Doe"] = params
+  end
+
   ## Associations
 
   test "association join belongs_to" do

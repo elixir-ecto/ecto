@@ -468,7 +468,7 @@ defmodule Ecto.Query.Planner do
   """
   def prepare_cache(query, operation, adapter, counter) do
     {query, {cache, params}} =
-      traverse_exprs(query, operation, {[], []}, &{&3, merge_cache(&1, &2, &3, &4, adapter)})
+      traverse_exprs(query, operation, adapter, {[], []}, &{&3, merge_cache(&1, &2, &3, &4, adapter)})
     {query, Enum.reverse(params), finalize_cache(query, operation, cache, counter)}
   end
 
@@ -706,7 +706,7 @@ defmodule Ecto.Query.Planner do
         assert_only_filter_expressions!(query, operation)
     end
 
-    traverse_exprs(query, operation, counter,
+    traverse_exprs(query, operation, adapter, counter,
                    &validate_and_increment(&1, &2, &3, &4, operation, adapter))
   end
 
@@ -1125,14 +1125,10 @@ defmodule Ecto.Query.Planner do
 
   # Traverse all query components with expressions.
   # Therefore from, preload, assocs and lock are not traversed.
-  defp traverse_exprs(query, operation, acc, fun) do
-    extra =
-      case operation do
-        :update_all -> [update: :updates]
-        _ -> []
-      end
+  defp traverse_exprs(query, operation, adapter, acc, fun) do
+    exprs = adapter.expressions_for_traversal(operation)
 
-    Enum.reduce extra ++ @exprs, {query, acc}, fn {kind, key}, {query, acc} ->
+    Enum.reduce exprs, {query, acc}, fn {kind, key}, {query, acc} ->
       {traversed, acc} = fun.(kind, query, Map.fetch!(query, key), acc)
       {Map.put(query, key, traversed), acc}
     end

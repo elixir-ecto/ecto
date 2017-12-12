@@ -53,6 +53,16 @@ defmodule Ecto.Adapters.SQL do
       def dumpers(:binary_id, type),      do: [type, Ecto.UUID]
       def dumpers(_, type),               do: [type]
 
+      @doc false
+      def expressions_for_traversal(:update_all) do
+        [update: :updates] ++ expressions_for_traversal(:default)
+      end
+      def expressions_for_traversal(_) do
+        [distinct: :distinct, select: :select, from: :from, join: :joins,
+         where: :wheres, group_by: :group_bys, having: :havings,
+         order_by: :order_bys, limit: :limit, offset: :offset]
+      end
+
       ## Query
 
       @doc false
@@ -143,7 +153,7 @@ defmodule Ecto.Adapters.SQL do
 
       defoverridable [prepare: 2, execute: 5, insert: 6, update: 6, delete: 4, insert_all: 7,
                       execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1, ensure_all_started: 2,
-                      lock_for_migrations: 4]
+                      lock_for_migrations: 4, expressions_for_traversal: 1]
     end
   end
 
