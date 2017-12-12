@@ -104,8 +104,8 @@ defmodule Ecto.Repo.Preloader do
       # set the proper timeouts.
       opts = Keyword.put_new(opts, :caller, self())
       assocs
-      |> Enum.map(&Task.async(:erlang, :apply, [fun, [&1, opts]]))
-      |> Enum.map(&Task.await(&1, :infinity))
+      |> Task.async_stream(&fun.(&1, opts), timeout: :infinity)
+      |> Enum.map(fn {:ok, assoc} -> assoc end)
     else
       Enum.map(assocs, &fun.(&1, opts))
     end
