@@ -105,7 +105,7 @@ defmodule Ecto.Repo.Preloader do
       opts = Keyword.put_new(opts, :caller, self())
       assocs
       |> Task.async_stream(&fun.(&1, opts), timeout: :infinity)
-      |> Stream.map(fn {:ok, assoc} -> assoc end)
+      |> Enum.map(fn {:ok, assoc} -> assoc end)
     else
       Enum.map(assocs, &fun.(&1, opts))
     end
