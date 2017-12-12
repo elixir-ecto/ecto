@@ -39,8 +39,11 @@ defmodule Mix.Tasks.Ecto.Load do
 
     * `-r`, `--repo` - the repo to load the structure info into
     * `-d`, `--dump-path` - the path of the dump file to load from
-    * `-f`, `--force` - do not ask for confirmation
     * `-q`, `--quiet` - run the command quietly
+    * `-f`, `--force` - do not ask for confirmation when loading data.
+      Configuration is asked only when `:start_permanent` is set to true
+      (typically in production)
+
   """
 
   def run(args) do
