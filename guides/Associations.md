@@ -659,7 +659,8 @@ error message.
 If you want to replace data or automatically delete any data
 not sent to `cast`, please set the appropriate `:on_replace`
 option when defining the relation. The docs for `Ecto.Changeset`
-covers the supported options in the "Related data" section.
+covers the supported options in the "Associations, embeds and on
+replace" section.
 
 However, if you don't want to allow data to be replaced or
 deleted, only updated, make sure that:
