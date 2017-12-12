@@ -662,7 +662,7 @@ defmodule Ecto.Schema do
   This `:through` association will return all authors for all comments
   that belongs to that post:
 
-      # Get all comments for a given post
+      # Get all comments authors for a given post
       post = Repo.get(Post, 42)
       authors = Repo.all assoc(post, :comments_authors)
 
