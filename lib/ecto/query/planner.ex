@@ -1138,9 +1138,6 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp field_type!(kind, query, expr, {:tuple, fields}) do
-    {:tuple, Enum.map(fields, &field_type!(kind, query, expr, &1))}
-  end
   defp field_type!(kind, query, expr, {composite, {ix, field}}) when is_integer(ix) do
     {composite, type!(kind, :type, query, expr, ix, field)}
   end
