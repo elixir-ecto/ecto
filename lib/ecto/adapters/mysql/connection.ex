@@ -262,7 +262,7 @@ if Code.ensure_loaded?(Mariaex) do
             value != true,
             do: expr |> Map.put(:__struct__, BooleanExpr) |> Map.put(:op, :and)
 
-      {[?, ,?\s | froms], wheres}
+      {[?,, ?\s | froms], wheres}
     end
 
     defp join(%Query{joins: []}, _sources), do: []
