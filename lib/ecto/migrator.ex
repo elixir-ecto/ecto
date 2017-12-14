@@ -275,7 +275,7 @@ defmodule Ecto.Migrator do
     downs = versions
             |> pending_in_direction(migration_source, :up)
             |> Enum.map(fn {version, name, _} -> {:down, version, name} end)
-                      
+          
     ups_with_file ++ ups_without_file ++ downs
   end
 
