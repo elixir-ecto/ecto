@@ -275,7 +275,7 @@ defmodule Ecto.MigratorTest do
     end
   end
 
-  test "version migrations work iside directories" do
+  test "version migrations work inside directories" do
     in_tmp fn path ->
       File.mkdir_p!("foo")
       create_migration "foo/13_version_in_dir.exs"
