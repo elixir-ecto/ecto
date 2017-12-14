@@ -262,10 +262,8 @@ defmodule Ecto.Query.Builder do
   end
 
   # Tuple
-  def escape({:{}, _, list}, _, params_acc, vars, env) do
-    {list, params_acc} = Enum.map_reduce(list, params_acc, &escape(&1, :any, &2, vars, env))
-    expr = {:{}, [], [:{}, [], list]}
-    {expr, params_acc}
+  def escape({:{}, _, _}, _, _, _, _) do
+    error! "Tuples can only be used in comparisons with literal tuples of the same size"
   end
 
   # Other functions - no type casting

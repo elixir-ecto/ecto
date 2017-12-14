@@ -30,6 +30,11 @@ defmodule Ecto.Query.Builder.FilterTest do
                    ~r"expected a keyword list at compile time in where, got: `\[\{1, 2\}\]`", fn ->
         escape(:where, quote do [{1, 2}] end, 0, [], __ENV__)
       end
+
+      assert_raise Ecto.Query.CompileError,
+                   ~r"Tuples can only be used in comparisons with literal tuples of the same size", fn ->
+        escape(:where, quote do {1, 2} > ^foo end, 0, [], __ENV__)
+      end
     end
 
     test "raises on nils" do
