@@ -128,6 +128,9 @@ defmodule Ecto.Adapters.MySQLTest do
   test "where" do
     query = Schema |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> normalize
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 WHERE (s0.`x` = 42) AND (s0.`y` != 43)}
+
+    query = Schema |> where([r], {r.x, r.y} > {1, 2}) |> select([r], r.x) |> normalize
+    assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 WHERE ((s0.`x`,s0.`y`) > (1,2))}
   end
 
   test "or_where" do

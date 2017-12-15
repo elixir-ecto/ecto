@@ -240,6 +240,32 @@ defmodule Ecto.Query.Builder do
            "Instead use boolean operators: `and`, `or`, and `not`"
   end
 
+  # Tuple
+  def escape({left, right}, type, params_acc, vars, env) do
+    escape({:{}, [], [left, right]}, type, params_acc, vars, env)
+  end
+
+  # Tuple
+  def escape({:{}, _, list}, {:tuple, types}, params_acc, vars, env) do
+    if Enum.count(list) == Enum.count(types) do
+      {list, params_acc} =
+        list
+        |> Enum.zip(types)
+        |> Enum.map_reduce(params_acc, fn {expr, type}, params_acc ->
+             escape(expr, type, params_acc, vars, env)
+           end)
+      expr = {:{}, [], [:{}, [], list]}
+      {expr, params_acc}
+    else
+      escape({:{}, [], list}, :any, params_acc, vars, env)
+    end
+  end
+
+  # Tuple
+  def escape({:{}, _, _}, _, _, _, _) do
+    error! "Tuples can only be used in comparisons with literal tuples of the same size"
+  end
+
   # Other functions - no type casting
   def escape({name, _, args} = expr, type, params_acc, vars, env) when is_atom(name) and is_list(args) do
     case call_type(name, length(args)) do
@@ -676,6 +702,10 @@ defmodule Ecto.Query.Builder do
   def quoted_type(literal, _vars) when is_binary(literal),  do: :string
   def quoted_type(literal, _vars) when is_boolean(literal), do: :boolean
   def quoted_type(literal, _vars) when is_integer(literal), do: :integer
+
+  # Tuples
+  def quoted_type({left, right}, vars), do: quoted_type({:{}, [], [left, right]}, vars)
+  def quoted_type({:{}, _, elems}, vars), do: {:tuple, Enum.map(elems, &quoted_type(&1, vars))}
 
   def quoted_type({name, _, args}, _vars) when is_atom(name) and is_list(args) do
     case call_type(name, length(args)) do

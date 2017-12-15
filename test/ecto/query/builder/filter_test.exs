@@ -19,12 +19,21 @@ defmodule Ecto.Query.Builder.FilterTest do
       assert escape(:where, quote do [x: ^"foo", y: ^"bar"] end, 0, [x: 0], __ENV__) ===
              {Macro.escape(quote do &0.x == ^0 and &0.y == ^1 end),
               %{0 => {"foo", {0, :x}}, 1 => {"bar", {0, :y}}}}
+
+      assert escape(:where, quote do {x.x} == {^"foo"} end, 0, [x: 0], __ENV__) ===
+             {Macro.escape(quote do {&0.x} == {^0} end),
+              %{0 => {"foo", {0, :x}}}}
     end
 
     test "raises on invalid expressions" do
       assert_raise Ecto.Query.CompileError,
                    ~r"expected a keyword list at compile time in where, got: `\[\{1, 2\}\]`", fn ->
         escape(:where, quote do [{1, 2}] end, 0, [], __ENV__)
+      end
+
+      assert_raise Ecto.Query.CompileError,
+                   ~r"Tuples can only be used in comparisons with literal tuples of the same size", fn ->
+        escape(:where, quote do {1, 2} > ^foo end, 0, [], __ENV__)
       end
     end
 
