@@ -303,6 +303,26 @@ defmodule Ecto.MigratorTest do
     end
   end
 
+  test "migrations will give the migration status while file is deleted" do
+    in_tmp fn path ->
+      create_migration "1_up_migration_1.exs"
+      create_migration "2_up_migration_2.exs"
+      create_migration "3_up_migration_3.exs"
+      create_migration "4_down_migration_1.exs"
+
+      File.rm("2_up_migration_2.exs")
+
+      expected_result = [
+        {:up, 1, "up_migration_1"},
+        {:up, 2, "** FILE NOT FOUND **"},
+        {:up, 3, "up_migration_3"},
+        {:down, 4, "down_migration_1"},
+      ]
+
+      assert migrations(TestRepo, path) == expected_result
+    end
+  end
+
   test "migrations run inside a transaction if the adapter supports ddl transactions" do
     capture_log fn ->
       put_test_adapter_config(supports_ddl_transaction?: true, test_process: self())

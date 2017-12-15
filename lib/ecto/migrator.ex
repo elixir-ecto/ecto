@@ -209,15 +209,10 @@ defmodule Ecto.Migrator do
 
   """
   def migrations(repo, directory) do
-    versions = migrated_versions(repo)
-
-    Enum.map(pending_in_direction(versions, directory, :down) |> Enum.reverse, fn {a, b, _}
-      -> {:up, a, b}
-    end)
-    ++
-    Enum.map(pending_in_direction(versions, directory, :up), fn {a, b, _} ->
-      {:down, a, b}
-    end)
+    repo
+    |> migrated_versions
+    |> collect_migrations(directory)
+    |> Enum.sort_by(fn {_, version, _} -> version end)
   end
 
   defp lock_for_migrations(repo, opts, fun) do
@@ -266,6 +261,34 @@ defmodule Ecto.Migrator do
     migrations_for(migration_source)
     |> Enum.filter(fn {version, _name, _file} -> version in versions end)
     |> Enum.reverse
+  end
+
+  defp collect_migrations(versions, migration_source) do
+    ups_with_file =
+      versions
+      |> pending_in_direction(migration_source, :down)
+      |> Enum.map(fn {version, name, _} -> {:up, version, name} end)
+
+    ups_without_file =
+      versions
+      |> versions_without_file(migration_source)
+      |> Enum.map(fn version -> {:up, version, "** FILE NOT FOUND **"} end)
+
+    downs =
+      versions
+      |> pending_in_direction(migration_source, :up)
+      |> Enum.map(fn {version, name, _} -> {:down, version, name} end)
+
+    ups_with_file ++ ups_without_file ++ downs
+  end
+
+  defp versions_without_file(versions, migration_source) do
+    versions_with_file =
+      migration_source
+      |> migrations_for
+      |> Enum.map(&elem(&1, 0))
+
+    versions -- versions_with_file
   end
 
   # This function will match directories passed into `Migrator.run`.
