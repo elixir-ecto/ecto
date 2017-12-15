@@ -264,25 +264,29 @@ defmodule Ecto.Migrator do
   end
 
   defp collect_migrations(versions, migration_source) do
-    ups_with_file = versions
-                    |> pending_in_direction(migration_source, :down)
-                    |> Enum.map(fn {version, name, _} -> {:up, version, name} end)
+    ups_with_file = 
+      versions
+      |> pending_in_direction(migration_source, :down)
+      |> Enum.map(fn {version, name, _} -> {:up, version, name} end)
 
-    ups_without_file = versions
-                       |> versions_without_file(migration_source)
-                       |> Enum.map(fn version -> {:up, version, "** FILE NOT FOUND **"} end)
+    ups_without_file = 
+      versions
+      |> versions_without_file(migration_source)
+      |> Enum.map(fn version -> {:up, version, "** FILE NOT FOUND **"} end)
 
-    downs = versions
-            |> pending_in_direction(migration_source, :up)
-            |> Enum.map(fn {version, name, _} -> {:down, version, name} end)
+    downs = 
+      versions
+      |> pending_in_direction(migration_source, :up)
+      |> Enum.map(fn {version, name, _} -> {:down, version, name} end)
           
     ups_with_file ++ ups_without_file ++ downs
   end
 
   defp versions_without_file(versions, migration_source) do
-    versions_with_file = migration_source
-                         |> migrations_for
-                         |> Enum.map(&elem(&1, 0))
+    versions_with_file = 
+      migration_source
+      |> migrations_for
+      |> Enum.map(&elem(&1, 0))
 
     versions -- versions_with_file
   end
