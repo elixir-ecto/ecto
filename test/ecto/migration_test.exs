@@ -343,6 +343,33 @@ defmodule Ecto.MigrationTest do
     assert table.prefix == "foo"
   end
 
+  @tag prefix: "foo", repo_config: [migration_default_prefix: "baz"]
+  test "forward: creates a table with prefix from manager overriding the default prefix configuration" do
+    create(table(:posts))
+    flush()
+
+    {_, table, _} = last_command()
+    assert table.prefix == "foo"
+  end
+
+  @tag repo_config: [migration_default_prefix: "baz"]
+  test "forward: creates a table with prefix from migration overriding the default prefix configuration" do
+    create(table(:posts, prefix: "foo"))
+    flush()
+
+    {_, table, _} = last_command()
+    assert table.prefix == "foo"
+  end  
+
+  @tag repo_config: [migration_default_prefix: "baz"]
+  test "forward: create a table with prefix from configuration" do
+    create(table(:posts))
+    flush()
+
+    {_, table, _} = last_command()
+    assert table.prefix == "baz"
+  end
+
   @tag prefix: :foo
   test "forward: creates a table with prefix from manager matching atom prefix" do
     create(table(:posts, prefix: "foo"))
@@ -385,6 +412,14 @@ defmodule Ecto.MigrationTest do
     assert table.prefix == "foo"
   end
 
+  @tag repo_config: [migration_default_prefix: "baz"]
+  test "forward: drops a table with prefix from configuration" do
+    drop(table(:posts))
+    flush()
+    {:drop, table} = last_command()
+    assert table.prefix == "baz"
+  end
+
   test "forward: rename column on table with index prefixed from migration" do
     rename(table(:posts, prefix: "foo"), :given_name, to: :first_name)
     flush()
@@ -404,6 +439,16 @@ defmodule Ecto.MigrationTest do
     assert new_name == :first_name
   end
 
+  @tag repo_config: [migration_default_prefix: "baz"]
+  test "forward: rename column on table with index prefixed from configuration" do
+    rename(table(:posts), :given_name, to: :first_name)
+    flush()
+
+    {_, table, _, new_name} = last_command()
+    assert table.prefix == "baz"
+    assert new_name == :first_name
+  end
+
   test "forward: creates an index with prefix from migration" do
     create index(:posts, [:title], prefix: "foo")
     flush()
@@ -419,6 +464,14 @@ defmodule Ecto.MigrationTest do
     assert index.prefix == "foo"
   end
 
+  @tag repo_config: [migration_default_prefix: "baz"]
+  test "forward: creates an index with prefix from configuration" do
+    create index(:posts, [:title])
+    flush()
+    {_, index} = last_command()
+    assert index.prefix == "baz"
+  end
+
   test "forward: drops an index with a prefix from migration" do
     drop index(:posts, [:title], prefix: "foo")
     flush()
@@ -432,6 +485,14 @@ defmodule Ecto.MigrationTest do
     flush()
     {_, index} = last_command()
     assert index.prefix == "foo"
+  end
+
+  @tag repo_config: [migration_default_prefix: "baz"]
+  test "forward: drops an index with a prefix from configuration" do
+    drop index(:posts, [:title])
+    flush()
+    {_, index} = last_command()
+    assert index.prefix == "baz"
   end
 
   test "forward: executes a command" do
