@@ -926,12 +926,12 @@ defmodule Ecto.Migration do
 
   @doc false
   def __prefix__(%{prefix: prefix} = index_or_table) do
-    default_prefix = Runner.repo_config(:migration_default_prefix, nil)
     runner_prefix = Runner.prefix()
 
     cond do
       is_nil(prefix) ->
-        %{index_or_table | prefix: (runner_prefix || default_prefix)}
+        prefix = runner_prefix || Runner.repo_config(:migration_default_prefix, nil)
+        %{index_or_table | prefix: prefix}
       is_nil(runner_prefix) or runner_prefix == to_string(prefix) ->
         index_or_table
       true ->
