@@ -345,7 +345,7 @@ defmodule Ecto.Repo do
   @doc """
   Fetches a single result from the query.
 
-  Returns `nil` if no result was found.
+  Returns `nil` if no result was found. Raises if more than one entry.
 
   ## Options
 
@@ -360,6 +360,8 @@ defmodule Ecto.Repo do
 
   @doc """
   Similar to `get_by/3` but raises `Ecto.NoResultsError` if no record was found.
+  
+  Raises if more than one entry.
 
   ## Options
 
