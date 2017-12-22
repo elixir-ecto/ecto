@@ -744,6 +744,19 @@ defmodule Ecto.Adapters.PostgresTest do
     """ |> remove_newlines]
   end
 
+  test "string type with size: nil" do
+    create = {:create, table(:posts),
+              [{:add, :name, :string, [default: "Untitled", size: 20, null: false]},
+               {:add, :title, :string, []},
+               {:add, :body, :string, [size: nil]}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE "posts" ("name" varchar(20) DEFAULT 'Untitled' NOT NULL,
+    "title" varchar(255),
+    "body" varchar)
+    """ |> remove_newlines]
+  end
+
   test "create table with prefix" do
     create = {:create, table(:posts, prefix: :foo),
               [{:add, :category_0, %Reference{table: :categories}, []}]}
