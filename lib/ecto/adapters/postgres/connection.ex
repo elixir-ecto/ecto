@@ -837,6 +837,16 @@ if Code.ensure_loaded?(Postgrex) do
       end
     end
 
+    defp column_type(:string = type, opts) do
+      size      = Keyword.get(opts, :size, 255)
+      type_name = ecto_to_db(type)
+
+      case size do
+        nil -> type_name
+        _   -> [type_name, ?(, to_string(size), ?)]
+      end
+    end
+
     defp column_type(type, opts) do
       size      = Keyword.get(opts, :size)
       precision = Keyword.get(opts, :precision)
@@ -844,10 +854,9 @@ if Code.ensure_loaded?(Postgrex) do
       type_name = ecto_to_db(type)
 
       cond do
-        size            -> [type_name, ?(, to_string(size), ?)]
-        precision       -> [type_name, ?(, to_string(precision), ?,, to_string(scale || 0), ?)]
-        type == :string -> [type_name, "(255)"]
-        true            -> type_name
+        size      -> [type_name, ?(, to_string(size), ?)]
+        precision -> [type_name, ?(, to_string(precision), ?,, to_string(scale || 0), ?)]
+        true      -> type_name
       end
     end
 
