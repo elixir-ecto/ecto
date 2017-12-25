@@ -1792,7 +1792,7 @@ defmodule Ecto.Changeset do
           confirmation_missing(opts, error_field)
       end
 
-    %{changeset | validations: [{:confirmation, opts} | changeset.validations],
+    %{changeset | validations: [{field, {:confirmation, opts}} | changeset.validations],
                   errors: errors ++ changeset.errors,
                   valid?: changeset.valid? and errors == []}
   end
