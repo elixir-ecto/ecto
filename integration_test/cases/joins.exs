@@ -133,6 +133,14 @@ defmodule Ecto.Integration.JoinsTest do
     [{^p1, ^post}, {^p2, ^post}] = TestRepo.all(query)
   end
 
+  test "join two queries" do
+    associated_query = from(post in Post, where: post.title == "1")
+
+    query = from(user in User, join: post in ^associated_query, on: post.author_id == user.id, where: user.name == "frank")
+
+    TestRepo.all(query)
+  end
+
   test "has_many through association join" do
     p1 = TestRepo.insert!(%Post{})
     p2 = TestRepo.insert!(%Post{})
