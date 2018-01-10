@@ -136,7 +136,7 @@ defmodule Ecto.Integration.JoinsTest do
   test "join two queries" do
     associated_query = from(post in Post, where: post.title == "1")
 
-    query = from(user in User, join: post in ^associated_query, on: post.author_id == user.id, where: user.title == "2")
+    query = from(user in User, join: post in ^associated_query, on: post.author_id == user.id, where: user.name == "frank")
 
     TestRepo.all(query)
   end
