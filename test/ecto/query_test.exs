@@ -360,6 +360,47 @@ defmodule Ecto.QueryTest do
       assert excluded_query.preloads == base.preloads
       assert excluded_query.assocs == base.assocs
     end
+
+    test "removes join qualifiers" do
+      base = %Ecto.Query{}
+
+      inner_query         = from p in "posts", inner_join: b in "blogs"
+      cross_query         = from p in "posts", cross_join: b in "blogs"
+      left_query          = from p in "posts", left_join: b in "blogs"
+      right_query         = from p in "posts", right_join: b in "blogs"
+      full_query          = from p in "posts", full_join: b in "blogs"
+      inner_lateral_query = from p in "posts", inner_lateral_join: b in "blogs"
+      left_lateral_query  = from p in "posts", left_lateral_join: b in "blogs"
+
+      refute inner_query.joins == base.joins
+      refute cross_query.joins == base.joins
+      refute left_query.joins == base.joins
+      refute right_query.joins == base.joins
+      refute full_query.joins == base.joins
+      refute inner_lateral_query.joins == base.joins
+      refute left_lateral_query.joins == base.joins
+
+      excluded_inner_query = exclude(inner_query, :inner_join)
+      assert excluded_inner_query.joins == base.joins
+
+      excluded_cross_query = exclude(cross_query, :cross_join)
+      assert excluded_cross_query.joins == base.joins
+
+      excluded_left_query = exclude(left_query, :left_join)
+      assert excluded_left_query.joins == base.joins
+
+      excluded_right_query = exclude(right_query, :right_join)
+      assert excluded_right_query.joins == base.joins
+
+      excluded_full_query = exclude(full_query, :full_join)
+      assert excluded_full_query.joins == base.joins
+
+      excluded_inner_lateral_query = exclude(inner_lateral_query, :inner_lateral_join)
+      assert excluded_inner_lateral_query.joins == base.joins
+
+      excluded_left_lateral_query = exclude(left_lateral_query, :left_lateral_join)
+      assert excluded_left_lateral_query.joins == base.joins
+    end
   end
 
   describe "fragment/1" do
