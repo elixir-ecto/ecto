@@ -100,9 +100,9 @@ if Code.ensure_loaded?(Mariaex) do
         update_fields(:update, query, sources)
       end
 
-      join   = join(query, sources)
+      {join, wheres} = using_join(query, :update_all, sources)
       prefix = prefix || ["UPDATE ", from, " AS ", name, join, " SET "]
-      where  = where(query, sources)
+      where  = where(%{query | wheres: wheres ++ query.wheres}, sources)
 
       [prefix, fields | where]
     end
@@ -242,6 +242,25 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp update_op(command, _quoted_key, _value, _sources, query) do
       error!(query, "Unknown update operation #{inspect command} for MySQL")
+    end
+
+    defp using_join(%Query{joins: []}, _kind, _sources), do: {[], []}
+    defp using_join(%Query{joins: joins} = query, kind, sources) do
+      froms =
+        intersperse_map(joins, ", ", fn
+          %JoinExpr{qual: :inner, ix: ix, source: source} ->
+            {join, name} = get_source(query, sources, ix, source)
+            [join, " AS " | name]
+          %JoinExpr{qual: qual} ->
+            error!(query, "MySQL adapter supports only inner joins on #{kind}, got: `#{qual}`")
+        end)
+
+      wheres =
+        for %JoinExpr{on: %QueryExpr{expr: value} = expr} <- joins,
+            value != true,
+            do: expr |> Map.put(:__struct__, BooleanExpr) |> Map.put(:op, :and)
+
+      {[?,, ?\s | froms], wheres}
     end
 
     defp join(%Query{joins: []}, _sources), do: []
