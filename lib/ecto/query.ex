@@ -476,7 +476,7 @@ defmodule Ecto.Query do
   Resets a previously set field on a query.
 
   It can reset many fields except the query source (`from`). When excluding
-  a `:join`, it will remove _all_ types of joins. If you prefer to remove a
+  a `:join`, it will remove *all* types of joins. If you prefer to remove a
   single type of join, please see paragraph below.
 
   ## Examples
@@ -494,7 +494,7 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :preload)
 
   You can also remove specific joins as well such as `left_join` and
-  `inner_join`.
+  `inner_join`:
 
       Ecto.Query.exclude(query, :inner_join)
       Ecto.Query.exclude(query, :cross_join)
