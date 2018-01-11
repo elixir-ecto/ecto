@@ -1626,5 +1626,37 @@ defmodule Ecto.Integration.RepoTest do
       assert updated_second.title == "second_updated"
       assert updated_second.text == "second_updated"
     end
+
+    @tag :with_conflict_target
+    test "on conflict replace and conflict_target" do
+      post_first = %Post{title: "first", visits: 10, public: true, uuid: Ecto.UUID.generate}
+      post_second = %Post{title: "second", visits: 20, public: false, uuid: Ecto.UUID.generate}
+
+      {:ok, post_first} = TestRepo.insert(post_first, on_conflict: {:replace, [:title, :visits]}, conflict_target: :uuid)
+      {:ok, post_second} = TestRepo.insert(post_second, on_conflict: {:replace, [:title, :visits]}, conflict_target: :uuid)
+
+      assert post_first.id
+      assert post_second.id
+      assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
+
+      # Multiple record change value: note `public` field is not changed
+      changes = [%{id: post_first.id, title: "first_updated", visits: 11, public: false, text: "first_updated", uuid: post_first.uuid},
+                 %{id: post_second.id, title: "second_updated", visits: 21, public: true, text: "second_updated", uuid: post_second.uuid}]
+
+      TestRepo.insert_all(Post, changes, on_conflict: {:replace, [:title, :visits, :text]}, conflict_target: :uuid)
+      assert TestRepo.all(from p in Post, select: count(p.id)) == [2]
+
+      updated_first = TestRepo.get(Post, post_first.id)
+      assert updated_first.title == "first_updated"
+      assert updated_first.visits == 11
+      assert updated_first.public == true
+      assert updated_first.text == "first_updated"
+
+      updated_second = TestRepo.get(Post, post_second.id)
+      assert updated_second.title == "second_updated"
+      assert updated_second.visits == 21
+      assert updated_second.public == false
+      assert updated_second.text == "second_updated"
+    end
   end
 end
