@@ -1760,7 +1760,7 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:message` - the message on failure, defaults to "does not match"
+    * `:message` - the message on failure, defaults to "does not match confirmation"
     * `:required` - boolean, sets whether existence of confirmation parameter
       is required for addition of error. Defaults to false
 
