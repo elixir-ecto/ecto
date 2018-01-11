@@ -500,6 +500,10 @@ defmodule Ecto.Repo.Schema do
         {:nothing, [], conflict_target}
       :replace_all ->
         {header, [], conflict_target}
+      {:replace, keys} when is_list(keys) and conflict_target == [] ->
+        raise ArgumentError, ":conflict_target option is required when :on_conflict is replace"
+      {:replace, keys} when is_list(keys) ->
+        {keys, [], conflict_target}
       :replace_all_except_primary_key when is_nil(schema) ->
         raise ArgumentError, "cannot use :replace_all_except_primary_key on operations without a schema"
       :replace_all_except_primary_key ->

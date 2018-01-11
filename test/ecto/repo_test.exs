@@ -444,6 +444,12 @@ defmodule Ecto.RepoTest do
       end
     end
 
+    test "raises on empty conflict_target with on_conflict replace" do
+      assert_raise ArgumentError, ":conflict_target option is required when :on_conflict is replace", fn ->
+        TestRepo.insert(%MySchema{id: 1}, on_conflict: {:replace, []})
+      end
+    end
+
     test "raises on query mismatch" do
       assert_raise ArgumentError, ~r"cannot run on_conflict: query", fn ->
         query = from p in "posts"

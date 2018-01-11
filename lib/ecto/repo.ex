@@ -563,8 +563,8 @@ defmodule Ecto.Repo do
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL).
     * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
-      `:replace_all`, `:replace_all_except_primary_key`, a keyword list of
-      update instructions or an `Ecto.Query` query for updates. See the
+      `:replace_all`, `:replace_all_except_primary_key`, `{:replace, columns}`, a keyword list of
+      update instructions, `{:replace, columns}` or an `Ecto.Query` query for updates. See the
       "Upserts" section for more information.
     * `:conflict_target` - Which columns to verify for conflicts. If
       none is specified, the conflict target is left up to the database
@@ -592,6 +592,8 @@ defmodule Ecto.Repo do
       parameters)
     * `:replace_all_except_primary_key` - same as above except primary keys are
       not replaced. This option requires a schema
+    * `{:replace, columns}` - replace only specific columns. This option requires
+      conflict_target
     * a keyword list of update instructions - such as the one given to
       `c:update_all/3`, for example: `[set: [title: "new title"]]`
     * an `Ecto.Query` that will act as an `UPDATE` statement, such as the
@@ -725,7 +727,7 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This overrides the prefix set
       in the struct.
     * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
-      `:replace_all`, `:replace_all_except_primary_key`, a keyword list of
+      `:replace_all`, `:replace_all_except_primary_key`, `{:replace, columns}`, a keyword list of
       update instructions or an `Ecto.Query` query for updates. See the
       "Upserts" section for more information.
     * `:conflict_target` - Which columns to verify for conflicts. If
@@ -757,6 +759,8 @@ defmodule Ecto.Repo do
       in the excluded row except (the record given in the function parameters)
     * `:replace_all_except_primary_key` - same as above except primary keys are
       not replaced
+    * `{:replace, columns}` - replace only specific columns. This option requires
+      conflict_target
     * a keyword list of update instructions - such as the one given to
       `c:update_all/3`, for example: `[set: [title: "new title"]]`
     * an `Ecto.Query` that will act as an `UPDATE` statement, such as the
