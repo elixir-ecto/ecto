@@ -61,6 +61,8 @@ defmodule Ecto.Query.Planner do
   def rewrite_sources(%{expr: expr, params: params} = part, mapping) do
     expr =
       Macro.prewalk expr, fn
+        %Ecto.Query.Tagged{type: type, tag: tag} = tagged ->
+          %{tagged | type: rewrite_type(type, mapping), tag: rewrite_type(tag, mapping)}
         {:&, meta, [ix]} ->
           {:&, meta, [mapping.(ix)]}
         other ->
@@ -69,15 +71,25 @@ defmodule Ecto.Query.Planner do
 
     params =
       Enum.map params, fn
-        {val, {composite, {ix, field}}} when is_integer(ix) ->
-          {val, {composite, {mapping.(ix), field}}}
-        {val, {ix, field}} when is_integer(ix) ->
-          {val, {mapping.(ix), field}}
+        {val, type} ->
+          {val, rewrite_type(type, mapping)}
         val ->
           val
       end
 
     %{part | expr: expr, params: params}
+  end
+
+  defp rewrite_type({composite, {ix, field}}, mapping) when is_integer(ix) do
+    {composite, {mapping.(ix), field}}
+  end
+
+  defp rewrite_type({ix, field}, mapping) when is_integer(ix) do
+    {mapping.(ix), field}
+  end
+
+  defp rewrite_type(other, _mapping) do
+    other
   end
 
   @doc """
