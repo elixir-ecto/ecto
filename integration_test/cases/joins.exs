@@ -70,7 +70,7 @@ defmodule Ecto.Integration.JoinsTest do
     query = from(p in Post, join: c in ^permalink, on: c.post_id == p.id, select: {p, c})
     assert [{^p2, ^c1}] = TestRepo.all(query)
 
-    # Joined query witho parameter
+    # Joined query with parameter
     permalink = from c in Permalink, where: c.url == "1"
 
     query = from(p in Post, join: c in ^permalink, on: c.id == ^c1.id, order_by: p.title, select: {p, c})
