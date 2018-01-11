@@ -40,7 +40,7 @@ This means Ecto no longer requires Ecto-specific extensions on databases such as
   * [Ecto.Query] Support tuples in filter expressions, allowing queries such as `where: {p.foo, p.bar} > {^foo, ^bar}`
   * [Ecto.Repo] Allow some query parameters such as `ssl` and `pool_size` to be given in the repository URL
   * [Ecto.Repo] Support `:replace_all_except_primary_key` as `:on_conflict` strategy
-  * [Ecto.Repo] Support `{:replace, columns}` as `:on_conflict` strategy
+  * [Ecto.Repo] Support `{:replace, fields}` as `:on_conflict` strategy
 
 ### Bug fixes
 
