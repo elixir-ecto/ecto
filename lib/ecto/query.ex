@@ -99,14 +99,14 @@ defmodule Ecto.Query do
 
   `nil` comparison in filters, such as where and having, is forbidden
   and it will raise an error:
-  
+
       # Raises if age is nil
       from u in User, where: u.age == ^age
-  
+
   This is done as a security measure to avoid attacks that attempt
   to traverse entries with nil columns. To check that value is `nil`,
   use `is_nil/1` instead:
-  
+
       from u in User, where: is_nil(u.age)
 
   ## Composition
@@ -469,6 +469,9 @@ defmodule Ecto.Query do
   defp wrap_in_subquery(%Ecto.Query{} = query), do: %Ecto.SubQuery{query: query}
   defp wrap_in_subquery(queryable), do: %Ecto.SubQuery{query: Ecto.Queryable.to_query(queryable)}
 
+  @joins [:join, :inner_join, :cross_join, :left_join, :right_join, :full_join,
+          :inner_lateral_join, :left_lateral_join]
+
   @doc """
   Resets a previously set field on a query.
 
@@ -483,6 +486,10 @@ defmodule Ecto.Query do
   def exclude(query, field), do: do_exclude(Ecto.Queryable.to_query(query), field)
 
   defp do_exclude(%Ecto.Query{} = query, :join), do: %{query | joins: []}
+  defp do_exclude(%Ecto.Query{} = query, join_keyword) when join_keyword in @joins do
+    qual = join_qual(join_keyword)
+    %{query | joins: Enum.reject(query.joins, &(&1.qual == qual))}
+  end
   defp do_exclude(%Ecto.Query{} = query, :where), do: %{query | wheres: []}
   defp do_exclude(%Ecto.Query{} = query, :order_by), do: %{query | order_bys: []}
   defp do_exclude(%Ecto.Query{} = query, :group_by), do: %{query | group_bys: []}
@@ -561,8 +568,6 @@ defmodule Ecto.Query do
   @binds    [:where, :or_where, :select, :distinct, :order_by, :group_by,
              :having, :or_having, :limit, :offset, :preload, :update, :select_merge]
   @no_binds [:lock]
-  @joins    [:join, :inner_join, :cross_join, :left_join, :right_join, :full_join,
-             :inner_lateral_join, :left_lateral_join]
 
   defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
     # If all bindings are integer indexes keep AST Macro expandable to %Query{},
@@ -592,18 +597,7 @@ defmodule Ecto.Query do
   end
 
   defp from([{join, expr}|t], env, count_bind, quoted, binds) when join in @joins do
-    qual =
-      case join do
-        :join -> :inner
-        :full_join -> :full
-        :left_join -> :left
-        :right_join -> :right
-        :inner_join -> :inner
-        :cross_join -> :cross
-        :left_lateral_join -> :left_lateral
-        :inner_lateral_join -> :inner_lateral
-      end
-
+    qual = join_qual(join)
     {t, on} = collect_on(t, nil)
     {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, on, count_bind, env)
     from(t, env, count_bind, quoted, binds)
@@ -620,6 +614,15 @@ defmodule Ecto.Query do
   defp from([], _env, _count_bind, quoted, _binds) do
     quoted
   end
+
+  defp join_qual(:join), do: :inner
+  defp join_qual(:full_join), do: :full
+  defp join_qual(:left_join), do: :left
+  defp join_qual(:right_join), do: :right
+  defp join_qual(:inner_join), do: :inner
+  defp join_qual(:cross_join), do: :cross
+  defp join_qual(:left_lateral_join), do: :left_lateral
+  defp join_qual(:inner_lateral_join), do: :inner_lateral
 
   defp collect_on([{:on, expr}|t], nil),
     do: collect_on(t, expr)
