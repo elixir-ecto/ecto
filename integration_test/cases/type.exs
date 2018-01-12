@@ -101,6 +101,9 @@ defmodule Ecto.Integration.TypeTest do
     assert TestRepo.all(from t in Tag, where: 1 in t.ints, select: t.ints) == [ints]
 
     # Update
+    tag = TestRepo.update!(Ecto.Changeset.change tag, ints: nil)
+    assert TestRepo.get!(Tag, tag.id).ints == nil
+
     tag = TestRepo.update!(Ecto.Changeset.change tag, ints: [3, 2, 1])
     assert TestRepo.get!(Tag, tag.id).ints == [3, 2, 1]
 
@@ -110,6 +113,9 @@ defmodule Ecto.Integration.TypeTest do
 
     {1, _} = TestRepo.update_all(Tag, pull: [ints: 2])
     assert TestRepo.get!(Tag, tag.id).ints == [3, 1, 0]
+
+    {1, _} = TestRepo.update_all(Tag, set: [ints: nil])
+    assert TestRepo.get!(Tag, tag.id).ints == nil
   end
 
   @tag :array_type
@@ -120,6 +126,9 @@ defmodule Ecto.Integration.TypeTest do
     assert TestRepo.all(from t in Tag, where: t.uuids == ^[], select: t.uuids) == []
     assert TestRepo.all(from t in Tag, where: t.uuids == ^["51fcfbdd-ad60-4ccb-8bf9-47aabd66d075"],
                                        select: t.uuids) == [uuids]
+
+    {1, _} = TestRepo.update_all(Tag, set: [uuids: nil])
+    assert TestRepo.all(from t in Tag, select: t.uuids) == [nil]
   end
 
   @tag :array_type
