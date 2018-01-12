@@ -273,8 +273,14 @@ defmodule Ecto.Query.Builder.Select do
             old_params == [] ->
           {:%, meta, [name, {:%{}, meta, Keyword.merge(old_fields, new_fields)}]}
 
-        {_, _} ->
+        {_, {:%{}, _, _}} ->
           {:merge, [], [old_expr, new_expr]}
+
+        {_, _} ->
+          raise Ecto.QueryError,
+               query: query,
+               message: "cannot select_merge #{merge_argument_to_error(new_expr)} into " <>
+                          "#{merge_argument_to_error(old_expr)}, those select expressions are incompatible"
       end
 
     select = %{
@@ -284,6 +290,14 @@ defmodule Ecto.Query.Builder.Select do
     }
 
     %{query | select: select}
+  end
+
+  defp merge_argument_to_error({:&, _, [ix]}) do
+    "source at position #{ix}"
+  end
+
+  defp merge_argument_to_error(other) do
+    Macro.to_string(other)
   end
 
   defp add_take(take, key, value) do

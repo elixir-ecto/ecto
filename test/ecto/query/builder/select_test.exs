@@ -108,6 +108,14 @@ defmodule Ecto.Query.Builder.SelectTest do
              %{0 => {:map, [:title, :body]}}
     end
 
+    test "raises on incompatible pairs" do
+      assert_raise Ecto.QueryError, ~r/those select expressions are incompatible/, fn ->
+        from p in "posts",
+          select: %{title: p.title},
+          select_merge: %Post{title: nil}
+      end
+    end
+
     test "defaults to struct" do
       query = select_merge("posts", [p], %{title: nil})
       assert Macro.to_string(query.select.expr) == "merge(&0, %{title: nil})"
@@ -132,17 +140,17 @@ defmodule Ecto.Query.Builder.SelectTest do
     end
 
     test "on conflicting take" do
-      _ = from p in "posts", select: %{}, select_merge: map(p, [:title]), select_merge: [:body]
-      _ = from p in "posts", select: %{}, select_merge: map(p, [:title]), select_merge: map(p, [:body])
-      _ = from p in "posts", select: %{}, select_merge: [:title], select_merge: map(p, [:body])
-      _ = from p in "posts", select: %{}, select_merge: [:title], select_merge: struct(p, [:body])
-      _ = from p in "posts", select: %{}, select_merge: struct(p, [:title]), select_merge: [:body]
-      _ = from p in "posts", select: %{}, select_merge: struct(p, [:title]), select_merge: struct(p, [:body])
+      _ = from p in "posts", select: p, select_merge: map(p, [:title]), select_merge: [:body]
+      _ = from p in "posts", select: p, select_merge: map(p, [:title]), select_merge: map(p, [:body])
+      _ = from p in "posts", select: p, select_merge: [:title], select_merge: map(p, [:body])
+      _ = from p in "posts", select: p, select_merge: [:title], select_merge: struct(p, [:body])
+      _ = from p in "posts", select: p, select_merge: struct(p, [:title]), select_merge: [:body]
+      _ = from p in "posts", select: p, select_merge: struct(p, [:title]), select_merge: struct(p, [:body])
 
       assert_raise Ecto.Query.CompileError,
                    ~r"cannot apply select_merge because the binding at position 0",
                    fn ->
-        from p in "posts", select: %{}, select_merge: map(p, [:title]), select_merge: struct(p, [:body])
+        from p in "posts", select: map(p, [:title]), select_merge: struct(p, [:title])
       end
     end
 
@@ -159,14 +167,6 @@ defmodule Ecto.Query.Builder.SelectTest do
           select_merge: %{title: nil}
       assert Macro.to_string(query.select.expr) == "%Post{title: nil}"
 
-      # Do not optimize because struct is on the right side
-      query =
-        from p in "posts",
-          select: %{title: p.title},
-          select_merge: %Post{title: nil}
-      assert Macro.to_string(query.select.expr) =~ "merge"
-
-      # Do not optimize because of parameter
       query =
         from p in "posts",
           select: %{t: {p.title, ^0}},
