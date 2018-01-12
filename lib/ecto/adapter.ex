@@ -21,6 +21,7 @@ defmodule Ecto.Adapter do
   @type cached :: term
   @type on_conflict :: {:raise, list(), []} |
                        {:nothing, list(), [atom]} |
+                       {[atom], list(), [atom]} |
                        {Ecto.Query.t, list(), [atom]}
 
   @typep repo :: Ecto.Repo.t
