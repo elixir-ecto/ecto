@@ -524,8 +524,6 @@ defmodule Ecto.Repo.Schema do
 
     {query, params, _} =
       %{query | prefix: prefix}
-      |> Ecto.Query.Planner.assert_no_select!(:update_all)
-      |> Ecto.Query.Planner.returning(false)
       |> Ecto.Query.Planner.prepare(:update_all, adapter, counter)
 
     unless query.from == from do

@@ -162,7 +162,7 @@ defmodule Ecto.Repo.Preloader do
     field = related_key_to_field(query, related_key)
 
     # Normalize query
-    query = %{Ecto.Query.Planner.returning(query, take || true) | prefix: prefix}
+    query = %{Ecto.Query.Planner.ensure_select(query, take || true) | prefix: prefix}
 
     # Add the related key to the query results
     query = update_in query.select.expr, &{:{}, [], [field, &1]}

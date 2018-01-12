@@ -135,15 +135,6 @@ defmodule Ecto.RepoTest do
     query = from(e in MySchema, where: e.x == "123", update: [set: [x: "321"]])
     TestRepo.update_all(query, [])
 
-    # Failures
-    assert_raise ArgumentError, ~r/:returning expects at least one field to be given/, fn ->
-      TestRepo.update_all MySchema, [set: [x: "321"]], returning: []
-    end
-
-    assert_raise Ecto.QueryError, fn ->
-      TestRepo.update_all from(e in MySchema, select: e), set: [x: "321"]
-    end
-
     assert_raise Ecto.QueryError, fn ->
       TestRepo.update_all from(e in MySchema, order_by: e.x), set: [x: "321"]
     end
@@ -155,15 +146,6 @@ defmodule Ecto.RepoTest do
 
     query = from(e in MySchema, where: e.x == "123")
     TestRepo.delete_all(query)
-
-    # Failures
-    assert_raise ArgumentError, ~r/:returning expects at least one field to be given/, fn ->
-      TestRepo.delete_all MySchema, returning: []
-    end
-
-    assert_raise Ecto.QueryError, fn ->
-      TestRepo.delete_all from(e in MySchema, select: e)
-    end
 
     assert_raise Ecto.QueryError, fn ->
       TestRepo.delete_all from(e in MySchema, order_by: e.x)

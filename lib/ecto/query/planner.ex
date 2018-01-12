@@ -229,7 +229,7 @@ defmodule Ecto.Query.Planner do
     try do
       {inner_query, params, key} = prepare(inner_query, :all, adapter, 0)
       assert_no_subquery_assocs!(inner_query)
-      {inner_query, select} = inner_query |> returning(true) |> subquery_select(adapter)
+      {inner_query, select} = inner_query |> ensure_select(true) |> subquery_select(adapter)
       %{subquery | query: inner_query, params: params, cache: key, select: select}
     rescue
       e -> raise Ecto.SubQueryError, query: query, exception: e
@@ -658,34 +658,21 @@ defmodule Ecto.Query.Planner do
   @doc """
   Used for customizing the query returning result.
   """
-  def returning(%{select: select} = query, _fields) when select != nil do
+  def ensure_select(%{select: select} = query, _fields) when select != nil do
     query
   end
-  def returning(%{select: nil}, []) do
+  def ensure_select(%{select: nil}, []) do
     raise ArgumentError, ":returning expects at least one field to be given, got an empty list"
   end
-  def returning(%{select: nil} = query, fields) when is_list(fields) do
+  def ensure_select(%{select: nil} = query, fields) when is_list(fields) do
     %{query | select: %SelectExpr{expr: {:&, [], [0]}, take: %{0 => {:any, fields}},
                                   line: __ENV__.line, file: __ENV__.file}}
   end
-  def returning(%{select: nil} = query, true) do
+  def ensure_select(%{select: nil} = query, true) do
     %{query | select: %SelectExpr{expr: {:&, [], [0]}, line: __ENV__.line, file: __ENV__.file}}
   end
-  def returning(%{select: nil} = query, false) do
+  def ensure_select(%{select: nil} = query, false) do
     query
-  end
-
-  @doc """
-  Asserts there is no select statement in the given query.
-  """
-  def assert_no_select!(%{select: nil} = query, _operation) do
-    query
-  end
-  def assert_no_select!(%{select: _} = query, operation) do
-    raise Ecto.QueryError,
-      query: query,
-      message: "`select` clause is not supported in `#{operation}`, " <>
-               "please pass the :returning option instead"
   end
 
   @doc """

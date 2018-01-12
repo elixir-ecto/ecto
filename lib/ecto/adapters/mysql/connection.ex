@@ -109,7 +109,7 @@ if Code.ensure_loaded?(Mariaex) do
       [prefix, fields | where]
     end
     def update_all(_query, _prefix) do
-      error!(nil, "RETURNING is not supported in update_all by MySQL")
+      error!(nil, ":select is not supported in update_all by MySQL")
     end
 
     def delete_all(%{select: nil} = query) do
@@ -123,7 +123,7 @@ if Code.ensure_loaded?(Mariaex) do
       ["DELETE ", name, ".*", from, join | where]
     end
     def delete_all(_query),
-      do: error!(nil, "RETURNING is not supported in delete_all by MySQL")
+      do: error!(nil, ":select is not supported in delete_all by MySQL")
 
     def insert(prefix, table, header, rows, on_conflict, []) do
       fields = intersperse_map(header, ?,, &quote_name/1)
@@ -131,7 +131,7 @@ if Code.ensure_loaded?(Mariaex) do
        insert_all(rows) | on_conflict(on_conflict, header)]
     end
     def insert(_prefix, _table, _header, _rows, _on_conflict, _returning) do
-      error!(nil, "RETURNING is not supported in insert/insert_all by MySQL")
+      error!(nil, ":returning is not supported in insert/insert_all by MySQL")
     end
 
     defp on_conflict({_, _, [_ | _]}, _header) do

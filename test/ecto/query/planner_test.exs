@@ -49,7 +49,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, params, _key} = prepare(query, operation)
     {query, _} =
       query
-      |> Planner.returning(operation == :all)
+      |> Planner.ensure_select(operation == :all)
       |> Planner.normalize(operation, Ecto.TestAdapter, 0)
     {query, params}
   end
