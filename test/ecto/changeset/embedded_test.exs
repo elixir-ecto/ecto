@@ -40,13 +40,13 @@ defmodule Ecto.Changeset.EmbeddedTest do
     end
 
     def changeset(schema, params) do
-      cast(schema, params, ~w(title))
+      cast(schema, params, ~w(title)a)
       |> validate_required(:title)
       |> validate_length(:title, min: 3)
     end
 
     def optional_changeset(schema, params) do
-      cast(schema, params, ~w(title))
+      cast(schema, params, ~w(title)a)
     end
 
     def set_action(schema, params) do
@@ -64,13 +64,13 @@ defmodule Ecto.Changeset.EmbeddedTest do
     end
 
     def changeset(schema, params) do
-      cast(schema, params, ~w(name id))
+      cast(schema, params, ~w(name id)a)
       |> validate_required(:name)
       |> validate_length(:name, min: 3)
     end
 
     def optional_changeset(schema, params) do
-      cast(schema, params, ~w(name))
+      cast(schema, params, ~w(name)a)
     end
 
     def set_action(schema, params) do
@@ -797,7 +797,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     params = %{"name" => "hi", "profile" => %{"name" => "hi"}}
     changeset =
       %Author{}
-      |> Changeset.cast(params, ~w(name))
+      |> Changeset.cast(params, ~w(name)a)
       |> Changeset.cast_embed(:profile)
       |> Changeset.add_error(:name, "is invalid")
 
@@ -818,7 +818,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
                                            %{"title" => "valid"}]}
     changeset =
       %Author{}
-      |> Changeset.cast(params, ~w(name))
+      |> Changeset.cast(params, ~w(name)a)
       |> Changeset.cast_embed(:posts)
       |> Changeset.add_error(:name, "is invalid")
 

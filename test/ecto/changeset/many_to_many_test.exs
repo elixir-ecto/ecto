@@ -15,7 +15,7 @@ defmodule Ecto.Changeset.ManyToManyTest do
     end
 
     def changeset(schema, params) do
-      Changeset.cast(schema, params, ~w(title))
+      Changeset.cast(schema, params, ~w(title)a)
       |> Changeset.validate_required(:title)
     end
 
