@@ -303,7 +303,13 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: validate fields" do
-    message = ~r"field `temp` in `select` does not exist in schema Ecto.Query.PlannerTest.Comment"
+    message = ~r"field `unknown` in `select` does not exist in schema Ecto.Query.PlannerTest.Comment"
+    assert_raise Ecto.QueryError, message, fn ->
+      query = from(Comment, []) |> select([c], c.unknown)
+      normalize(query)
+    end
+
+    message = ~r"field `temp` in `select` is a virtual field in schema Ecto.Query.PlannerTest.Comment"
     assert_raise Ecto.QueryError, message, fn ->
       query = from(Comment, []) |> select([c], c.temp)
       normalize(query)

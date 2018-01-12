@@ -279,8 +279,11 @@ defmodule Ecto.Query.Planner do
     {source, _} = source_take!(:select, query, take, ix, ix)
     {struct, fields} = subquery_struct_and_fields(source)
 
+    # Map updates may contain virtual fields, so we need to consider those
+    valid_keys = if struct, do: Map.keys(struct.__struct__), else: fields
     update_keys = Keyword.keys(pairs)
-    case update_keys -- fields do
+
+    case update_keys -- valid_keys do
       [] -> :ok
       [key | _] -> error!(query, "invalid key `#{inspect key}` on map update in subquery")
     end
@@ -1173,10 +1176,13 @@ defmodule Ecto.Query.Planner do
     end
   end
   defp type!(kind, lookup, query, expr, schema, field) when is_atom(schema) do
-    if type = schema.__schema__(lookup, field) do
-      type
-    else
-      error! query, expr, "field `#{field}` in `#{kind}` does not exist in schema #{inspect schema}"
+    cond do
+      type = schema.__schema__(lookup, field) ->
+        type
+      Map.has_key?(schema.__struct__, field) ->
+        error! query, expr, "field `#{field}` in `#{kind}` is a virtual field in schema #{inspect schema}"
+      true ->
+        error! query, expr, "field `#{field}` in `#{kind}` does not exist in schema #{inspect schema}"
     end
   end
 
