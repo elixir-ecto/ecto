@@ -10,6 +10,19 @@ defmodule Ecto.Integration.PreloadTest do
   alias Ecto.Integration.User
   alias Ecto.Integration.Custom
 
+  test "preload with parameter from select_merge" do
+    p1 = TestRepo.insert!(%Post{title: "p1"})
+    TestRepo.insert!(%Comment{text: "c1", post: p1})
+
+    comments =
+      from(c in Comment, select: struct(c, [:text]))
+      |> select_merge([c], %{post_id: c.post_id})
+      |> preload(:post)
+      |> TestRepo.all()
+
+    assert [%{text: "c1", post: %{title: "p1"}}] = comments
+  end
+
   test "preload has_many" do
     p1 = TestRepo.insert!(%Post{title: "1"})
     p2 = TestRepo.insert!(%Post{title: "2"})

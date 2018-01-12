@@ -915,17 +915,29 @@ defmodule Ecto.Query.Planner do
     {put_in(query.select.fields, fields), select}
   end
 
+  # Handling of source
+
+  defp collect_fields({:merge, _, [{:&, _, [0]}, right]}, fields, :error, query, take) do
+    {expr, taken} = source_take!(:select, query, take, 0, 0)
+    {right, right_fields, _from} = collect_fields(right, [], {:source, :from}, query, take)
+    {{:source, :from}, fields, {:ok, {:merge, expr, right}, taken ++ Enum.reverse(right_fields)}}
+  end
+
   defp collect_fields({:&, _, [0]}, fields, :error, query, take) do
     {expr, taken} = source_take!(:select, query, take, 0, 0)
     {{:source, :from}, fields, {:ok, expr, taken}}
   end
+
   defp collect_fields({:&, _, [0]}, fields, from, _query, _take) do
     {{:source, :from}, fields, from}
   end
+
   defp collect_fields({:&, _, [ix]}, fields, from, query, take) do
     {expr, taken} = source_take!(:select, query, take, ix, ix)
     {expr, Enum.reverse(taken, fields), from}
   end
+
+  # Expression handling
 
   defp collect_fields({agg, _, [{{:., _, [{:&, _, [ix]}, field]}, _, []} | _]} = expr,
                       fields, from, %{select: select} = query, _take)
