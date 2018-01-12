@@ -80,7 +80,7 @@ defmodule Ecto.Query.Builder.Select do
        when tag in [:map, :struct] and is_atom(var) and is_atom(context) do
     taken = escape_fields(fields, tag, env)
     expr = Builder.escape_var(var, vars)
-    take = merge_take(take, %{Builder.find_var!(var, vars) => {tag, taken}})
+    take = add_take(take, Builder.find_var!(var, vars), {tag, taken})
     {expr, {params, take}}
   end
 
@@ -258,16 +258,21 @@ defmodule Ecto.Query.Builder.Select do
 
     expr =
       case {old_expr, new_expr} do
+        {{:&, _, [ix]} = source, {:&, _, [ix]}} when is_integer(ix) ->
+          source
+
         {{:%{}, meta, old_fields}, {:%{}, _, new_fields}} when
             (old_fields == [] or tuple_size(hd(old_fields)) == 2) and
             (new_fields == [] or tuple_size(hd(new_fields)) == 2) and
             old_params == [] ->
           {:%{}, meta, Keyword.merge(old_fields, new_fields)}
+
         {{:%, meta, [name, {:%{}, meta, old_fields}]}, {:%{}, _, new_fields}} when
             (old_fields == [] or tuple_size(hd(old_fields)) == 2) and
             (new_fields == [] or tuple_size(hd(new_fields)) == 2) and
             old_params == [] ->
           {:%, meta, [name, {:%{}, meta, Keyword.merge(old_fields, new_fields)}]}
+
         {_, _} ->
           {:merge, [], [old_expr, new_expr]}
       end
@@ -275,14 +280,30 @@ defmodule Ecto.Query.Builder.Select do
     select = %{
       select | expr: expr,
                params: old_params ++ new_params,
-               take: merge_take(old_take, new_take)
+               take: merge_take(old_expr, old_take, new_take)
     }
 
     %{query | select: select}
   end
 
-  defp merge_take(%{} = old_take, %{} = new_take) do
-    Map.merge(old_take, new_take, &merge_take_kind_and_fields/3)
+  defp add_take(take, key, value) do
+    Map.update(take, key, value, &merge_take_kind_and_fields(key, &1, value))
+  end
+
+  defp merge_take(old_expr, %{} = old_take, %{} = new_take) do
+    Enum.reduce(new_take, old_take, fn {binding, new_value}, acc ->
+      case acc do
+        %{^binding => old_value} ->
+          Map.put(acc, binding, merge_take_kind_and_fields(binding, old_value, new_value))
+
+        %{} ->
+          # If the binding is a not filtered source, merge shouldn't restrict it
+          case old_expr do
+            {:&, _, [^binding]} -> acc
+            _ -> Map.put(acc, binding, new_value)
+          end
+      end
+    end)
   end
 
   defp merge_take_kind_and_fields(binding, {old_kind, old_fields}, {new_kind, new_fields}) do
