@@ -18,7 +18,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     end
 
     def changeset(schema, params) do
-      Changeset.cast(schema, params, ~w(title author_id))
+      Changeset.cast(schema, params, ~w(title author_id)a)
       |> Changeset.validate_required(:title)
     end
 
@@ -55,12 +55,12 @@ defmodule Ecto.Changeset.HasAssocTest do
     end
 
     def changeset(schema, params) do
-      Changeset.cast(schema, params, ~w(name id))
+      Changeset.cast(schema, params, ~w(name id)a)
       |> Changeset.validate_required(:name)
     end
 
     def optional_changeset(schema, params) do
-      Changeset.cast(schema, params, ~w(name))
+      Changeset.cast(schema, params, ~w(name)a)
     end
 
     def set_action(schema, params) do

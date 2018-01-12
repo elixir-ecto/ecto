@@ -12,7 +12,7 @@ defmodule Ecto.ChangesetTest do
     end
 
     def changeset(schema \\ %SocialSource{}, params) do
-      cast(schema, params, ~w(origin url))
+      cast(schema, params, ~w(origin url)a)
     end
   end
 
@@ -55,7 +55,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defp changeset(schema \\ %Post{}, params) do
-    cast(schema, params, ~w(id token title body upvotes decimal topics virtual))
+    cast(schema, params, ~w(id token title body upvotes decimal topics virtual)a)
   end
 
   ## cast/4
@@ -117,7 +117,7 @@ defmodule Ecto.ChangesetTest do
     data   = {%{title: "hello"}, %{title: :string, upvotes: :integer}}
     params = %{"title" => "world", "upvotes" => "0"}
 
-    changeset = cast(data, params, ~w(title upvotes))
+    changeset = cast(data, params, ~w(title upvotes)a)
     assert changeset.params == params
     assert changeset.data  == %{title: "hello"}
     assert changeset.changes == %{title: "world", upvotes: 0}
@@ -152,7 +152,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset =
       data
-      |> cast(params, ~w(title))
+      |> cast(params, ~w(title)a)
       |> cast_embed(:source, required: true)
 
     assert changeset.params == params
@@ -165,7 +165,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "cast/4: with changeset" do
-    base_changeset = cast(%Post{title: "valid"}, %{}, ~w(title))
+    base_changeset = cast(%Post{title: "valid"}, %{}, ~w(title)a)
                      |> validate_required(:title)
                      |> validate_length(:title, min: 3)
                      |> unique_constraint(:title)
@@ -179,7 +179,7 @@ defmodule Ecto.ChangesetTest do
     assert length(changeset.constraints) == 1
 
     # Value changes
-    changeset = cast(changeset, %{body: "new body"}, ~w(body))
+    changeset = cast(changeset, %{body: "new body"}, ~w(body)a)
     assert changeset.valid?
     assert changeset.changes  == %{body: "new body"}
     assert changeset.required == [:title]
@@ -187,7 +187,7 @@ defmodule Ecto.ChangesetTest do
     assert length(changeset.constraints) == 1
 
     # Nil changes
-    changeset = cast(changeset, %{body: nil}, ~w(body))
+    changeset = cast(changeset, %{body: nil}, ~w(body)a)
     assert changeset.valid?
     assert changeset.changes  == %{body: nil}
     assert changeset.required == [:title]
@@ -196,7 +196,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "cast/4: struct with :invalid parameters" do
-    changeset = cast(%Post{}, :invalid, ~w(title body))
+    changeset = cast(%Post{}, :invalid, ~w(title body)a)
     assert changeset.data == %Post{}
     assert changeset.params == nil
     assert changeset.changes == %{}
@@ -220,7 +220,7 @@ defmodule Ecto.ChangesetTest do
     params = %{"body" => :world}
     struct = %Post{}
 
-    changeset = cast(struct, params, ~w(body))
+    changeset = cast(struct, params, ~w(body)a)
     assert changeset.changes == %{}
     assert changeset.errors == [body: {"is invalid", [type: :string, validation: :cast]}]
     refute changeset.valid?
@@ -228,17 +228,17 @@ defmodule Ecto.ChangesetTest do
 
   test "cast/4: fails on invalid field" do
     assert_raise ArgumentError, ~r"unknown field `unknown`", fn ->
-      cast(%Post{}, %{}, ~w(unknown))
+      cast(%Post{}, %{}, ~w(unknown)a)
     end
   end
 
   test "cast/4: fails on bad arguments" do
     assert_raise Ecto.CastError, ~r"expected params to be a :map, got:", fn ->
-      cast(%Post{}, %Post{}, ~w(unknown))
+      cast(%Post{}, %Post{}, ~w(unknown)a)
     end
 
     assert_raise Ecto.CastError, ~r"expected params to be a :map, got:", fn ->
-      cast(%Post{}, "foo", ~w(unknown))
+      cast(%Post{}, "foo", ~w(unknown)a)
     end
 
     assert_raise Ecto.CastError, ~r"mixed keys", fn ->
@@ -252,7 +252,7 @@ defmodule Ecto.ChangesetTest do
 
   test "cast/4: protects against atom injection" do
     assert_raise ArgumentError, fn ->
-      cast(%Post{}, %{}, ~w(surely_never_saw_this_atom_before))
+      cast(%Post{}, %{}, ~w(surely_never_saw_this_atom_before)a)
     end
   end
 
@@ -282,15 +282,20 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
+  test "cast/4: warns when permitted isn't atom list" do
+    output = ExUnit.CaptureIO.capture_io(:stderr, fn -> cast(%Post{}, %{title: "foo"}, ~w(title)) end)
+    assert output =~ "expected permitted to be an atom list, got:"
+  end
+
   ## Changeset functions
 
   test "merge/2: merges changes" do
-    cs1 = cast(%Post{}, %{title: "foo"}, ~w(title))
-    cs2 = cast(%Post{}, %{body: "bar"}, ~w(body))
+    cs1 = cast(%Post{}, %{title: "foo"}, ~w(title)a)
+    cs2 = cast(%Post{}, %{body: "bar"}, ~w(body)a)
     assert merge(cs1, cs2).changes == %{body: "bar", title: "foo"}
 
-    cs1 = cast(%Post{}, %{title: "foo"}, ~w(title))
-    cs2 = cast(%Post{}, %{title: "bar"}, ~w(title))
+    cs1 = cast(%Post{}, %{title: "foo"}, ~w(title)a)
+    cs2 = cast(%Post{}, %{title: "bar"}, ~w(title)a)
     changeset = merge(cs1, cs2)
     assert changeset.valid?
     assert changeset.params == %{"title" => "bar"}
@@ -298,8 +303,8 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "merge/2: merges errors" do
-    cs1 = cast(%Post{}, %{}, ~w(title)) |> validate_required(:title)
-    cs2 = cast(%Post{}, %{}, ~w(title body)) |> validate_required([:title, :body])
+    cs1 = cast(%Post{}, %{}, ~w(title)a) |> validate_required(:title)
+    cs2 = cast(%Post{}, %{}, ~w(title body)a) |> validate_required([:title, :body])
     changeset = merge(cs1, cs2)
     refute changeset.valid?
     assert changeset.errors ==
@@ -307,9 +312,9 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "merge/2: merges validations" do
-    cs1 = cast(%Post{}, %{title: "Title"}, ~w(title))
+    cs1 = cast(%Post{}, %{title: "Title"}, ~w(title)a)
                 |> validate_length(:title, min: 1, max: 10)
-    cs2 = cast(%Post{}, %{body: "Body"}, ~w(body))
+    cs2 = cast(%Post{}, %{body: "Body"}, ~w(body)a)
                 |> validate_format(:body, ~r/B/)
 
     changeset = merge(cs1, cs2)
@@ -327,9 +332,9 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "merge/2: merges constraints" do
-    cs1 = cast(%Post{}, %{title: "Title"}, ~w(title))
+    cs1 = cast(%Post{}, %{title: "Title"}, ~w(title)a)
                 |> unique_constraint(:title)
-    cs2 = cast(%Post{}, %{body: "Body"}, ~w(body))
+    cs2 = cast(%Post{}, %{body: "Body"}, ~w(body)a)
                 |> unique_constraint(:body)
 
     changeset = merge(cs1, cs2)
@@ -338,9 +343,9 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "merge/2: merges parameters" do
-    empty = cast(%Post{}, %{}, ~w(title))
-    cs1   = cast(%Post{}, %{body: "foo"}, ~w(body))
-    cs2   = cast(%Post{}, %{body: "bar"}, ~w(body))
+    empty = cast(%Post{}, %{}, ~w(title)a)
+    cs1   = cast(%Post{}, %{body: "foo"}, ~w(body)a)
+    cs2   = cast(%Post{}, %{body: "bar"}, ~w(body)a)
     assert merge(cs1, cs2).params == %{"body" => "bar"}
 
     assert merge(cs1, empty).params == %{"body" => "foo"}
@@ -349,15 +354,15 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "merge/2: gives required fields precedence over optional ones" do
-    cs1 = cast(%Post{}, %{}, ~w(title)) |> validate_required(:title)
-    cs2 = cast(%Post{}, %{}, ~w(title))
+    cs1 = cast(%Post{}, %{}, ~w(title)a) |> validate_required(:title)
+    cs2 = cast(%Post{}, %{}, ~w(title)a)
     changeset = merge(cs1, cs2)
     assert changeset.required == [:title]
   end
 
   test "merge/2: doesn't duplicate required or optional fields" do
-    cs1 = cast(%Post{}, %{}, ~w(title body)) |> validate_required([:title, :body])
-    cs2 = cast(%Post{}, %{}, ~w(body title)) |> validate_required([:body, :title])
+    cs1 = cast(%Post{}, %{}, ~w(title body)a) |> validate_required([:title, :body])
+    cs2 = cast(%Post{}, %{}, ~w(body title)a) |> validate_required([:body, :title])
     changeset = merge(cs1, cs2)
     assert Enum.sort(changeset.required) == [:body, :title]
   end
@@ -379,8 +384,8 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "merge/2: fails when the :data, :repo or :action field are not equal" do
-    cs1 = cast(%Post{title: "foo"}, %{}, ~w(title))
-    cs2 = cast(%Post{title: "bar"}, %{}, ~w(title))
+    cs1 = cast(%Post{title: "foo"}, %{}, ~w(title)a)
+    cs2 = cast(%Post{title: "bar"}, %{}, ~w(title)a)
 
     assert_raise ArgumentError, "different :data when merging changesets", fn ->
       merge(cs1, cs2)
@@ -443,7 +448,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "change/2 with a changeset" do
-    base_changeset = cast(%Post{upvotes: 5}, %{title: "title"}, ~w(title))
+    base_changeset = cast(%Post{upvotes: 5}, %{title: "title"}, ~w(title)a)
 
     assert change(base_changeset) == base_changeset
 
