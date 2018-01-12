@@ -14,8 +14,11 @@ defmodule Ecto.Integration.SubQueryTest do
     query = from p in Post, select: p
     assert ["hello"] =
            TestRepo.all(from p in subquery(query), select: p.text)
-    assert [%Post{inserted_at: %NaiveDateTime{}}] =
+    assert [post] =
            TestRepo.all(from p in subquery(query), select: p)
+
+    assert %NaiveDateTime{} = post.inserted_at
+    assert post.__meta__.state == :loaded
   end
 
   test "from: subqueries with map and select expression" do
