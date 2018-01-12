@@ -282,11 +282,6 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
-  test "cast/4: warns when permitted isn't atom list" do
-    output = ExUnit.CaptureIO.capture_io(:stderr, fn -> cast(%Post{}, %{title: "foo"}, ~w(title)) end)
-    assert output =~ "expected permitted to be an atom list, got:"
-  end
-
   ## Changeset functions
 
   test "merge/2: merges changes" do

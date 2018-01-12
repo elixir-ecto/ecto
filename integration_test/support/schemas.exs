@@ -58,7 +58,7 @@ defmodule Ecto.Integration.Post do
 
   def changeset(schema, params) do
     cast(schema, params, ~w(counter title text temp public cost visits
-                           intensity bid uuid meta posted))
+                           intensity bid uuid meta posted)a)
   end
 end
 
