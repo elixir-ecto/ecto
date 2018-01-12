@@ -49,6 +49,16 @@ defmodule Ecto.Integration.SubQueryTest do
            TestRepo.all(from p in subquery(query), select: {p, p.public})
   end
 
+  test "from: subqueries with map update on virtual field and select expression" do
+    TestRepo.insert!(%Post{text: "hello"})
+
+    query = from p in Post, select: %{p | temp: p.text}
+    assert ["hello"] =
+           TestRepo.all(from p in subquery(query), select: p.temp)
+    assert [%Post{text: "hello", temp: "hello"}] =
+           TestRepo.all(from p in subquery(query), select: p)
+  end
+
   test "from: subqueries with aggregates" do
     TestRepo.insert!(%Post{visits: 10})
     TestRepo.insert!(%Post{visits: 11})
