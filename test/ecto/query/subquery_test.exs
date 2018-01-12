@@ -156,16 +156,6 @@ defmodule Ecto.Query.SubqueryTest do
       query = from p in Post, select: merge(%{}, %{})
       query = prepare(from(subquery(query), [])) |> elem(0)
       assert "%{}" = Macro.to_string(query.from.query.select.expr)
-
-      assert_raise Ecto.SubQueryError, ~r/cannot merge because the left side is a map/, fn ->
-        query = from p in Post, select: merge(%{}, p)
-        prepare(from(subquery(query), []))
-      end
-
-      assert_raise Ecto.SubQueryError, ~r/cannot merge because the left side is a Ecto.Query/, fn ->
-        query = from p in Post, join: c in Comment, select: merge(p, c)
-        prepare(from(subquery(query), []))
-      end
     end
 
     test "requires atom keys for maps" do

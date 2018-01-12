@@ -204,14 +204,6 @@ defmodule Ecto.Repo.Queryable do
 
     data =
       case {left, right} do
-        {%{__struct__: struct}, %{__struct__: struct}} ->
-          right
-          |> Map.from_struct()
-          |> Enum.reduce(left, fn {key, value}, acc -> %{acc | key => value} end)
-        {_, %{__struct__: _}} ->
-          raise ArgumentError, "can only merge with a struct on the right side when both sides " <>
-                               "represent the same struct. Left side is #{inspect left} and " <>
-                               "right side is #{inspect right}"
         {%{__struct__: _}, %{}} ->
           Enum.reduce(right, left, fn {key, value}, acc -> %{acc | key => value} end)
         {%{}, %{}} ->

@@ -1108,11 +1108,6 @@ defmodule Ecto.Integration.RepoTest do
 
       # Merge on struct
       assert [%Post{title: "2"}] =
-             Post |> select([p], merge(%Post{title: p.title}, %Post{title: "2"})) |> TestRepo.all()
-      assert [%Post{title: "2"}] =
-             Post |> select([p], %Post{title: p.title}) |> select_merge([p], %Post{title: "2"}) |> TestRepo.all()
-
-      assert [%Post{title: "2"}] =
              Post |> select([p], merge(%Post{title: p.title}, %{title: "2"})) |> TestRepo.all()
       assert [%Post{title: "2"}] =
              Post |> select([p], %Post{title: p.title}) |> select_merge([p], %{title: "2"}) |> TestRepo.all()
@@ -1122,22 +1117,6 @@ defmodule Ecto.Integration.RepoTest do
              Post |> select([p], merge(%{title: p.title}, %{title: "2"})) |> TestRepo.all()
       assert [%{title: "2"}] =
              Post |> select([p], %{title: p.title}) |> select_merge([p], %{title: "2"}) |> TestRepo.all()
-
-      # Merge errors
-      assert_raise ArgumentError,
-                   ~r/can only merge with a struct on the right side when both sides represent the same struct/, fn ->
-        Post |> select([p], merge(%{title: p.title}, %Post{title: "2"})) |> TestRepo.all()
-      end
-
-      assert_raise ArgumentError,
-                   ~r/cannot merge because the left side is not a map/, fn ->
-        Post |> select([p], merge(p.title, %{title: "2"})) |> TestRepo.all()
-      end
-
-      assert_raise ArgumentError,
-                   ~r/cannot merge because the right side is not a map/, fn ->
-        Post |> select([p], merge(%{title: "2"}, p.title)) |> TestRepo.all()
-      end
     end
   end
 

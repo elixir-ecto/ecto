@@ -267,17 +267,8 @@ defmodule Ecto.Query.Planner do
 
   defp subquery_select({:merge, _, [left, right]}, take, query) do
     {left_struct, left_fields} = subquery_select(left, take, query)
-    {right_struct, right_fields} = subquery_select(right, take, query)
-    struct =
-      case {left_struct, right_struct} do
-        {struct, struct} -> struct
-        {_, nil} -> left_struct
-        {nil, _} -> error!(query, "cannot merge because the left side is a map " <>
-                                  "and the right side is a #{inspect right_struct} struct")
-        {_, _} -> error!(query, "cannot merge because the left side is a #{inspect left_struct} " <>
-                                "and the right side is a #{inspect right_struct} struct")
-      end
-    {struct, Keyword.merge(left_fields, right_fields)}
+    {nil, right_fields} = subquery_select(right, take, query)
+    {left_struct, Keyword.merge(left_fields, right_fields)}
   end
   defp subquery_select({:%, _, [name, map]}, take, query) do
     {_, fields} = subquery_select(map, take, query)
