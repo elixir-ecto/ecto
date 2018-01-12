@@ -468,8 +468,8 @@ defmodule Ecto.Changeset do
   end
 
   defp validate_permitted_list(permitted) do
-    if Enum.any?(permitted, &!is_atom(&1)) do
-      IO.warn("expected permitted to be an atom list, got: `#{inspect permitted}`")
+    if Enum.any?(permitted, &not is_atom(&1)) do
+      IO.warn("expected permitted parameters given to cast/3 to be a list of atoms, got: `#{inspect permitted}`")
     end
   end
 
