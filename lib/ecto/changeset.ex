@@ -669,6 +669,7 @@ defmodule Ecto.Changeset do
     * `:required` - if the association is a required field
     * `:required_message` - the message on failure, defaults to "can't be blank"
     * `:invalid_message` - the message on failure, defaults to "is invalid"
+    * `:force_update_on_change` - if the update should mark the parent struct as updated
   """
   def cast_assoc(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:assoc, changeset, name, opts)
@@ -695,6 +696,7 @@ defmodule Ecto.Changeset do
     * `:required` - if the embed is a required field
     * `:required_message` - the message on failure, defaults to "can't be blank"
     * `:invalid_message` - the message on failure, defaults to "is invalid"
+    * `:force_update_on_change` - if the update should mark the parent struct as updated
   """
   def cast_embed(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:embed, changeset, name, opts)
@@ -717,6 +719,13 @@ defmodule Ecto.Changeset do
         {update_in(changeset.required, &[key|&1]), true}
       else
         {changeset, false}
+      end
+
+    changeset =
+      if opts[:force_update_on_change] do
+        update_in(changeset.repo_opts, &Keyword.put(&1, :force, true))
+      else
+        changeset
       end
 
     on_cast  = Keyword.get_lazy(opts, :with, fn -> on_cast_default(type, related) end)

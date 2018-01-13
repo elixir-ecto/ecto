@@ -214,6 +214,15 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
   end
 
+  test "cast has_one with `:force_update_on_change` option" do
+    changeset = cast(%Author{}, %{"profile" => %{"name" => "michal"}}, :profile)
+    assert changeset.repo_opts == []
+
+    changeset = cast(%Author{}, %{"profile" => %{"name" => "michal"}}, :profile,
+      force_update_on_change: true)
+    assert changeset.repo_opts[:force]
+  end
+
   test "cast has_one with optional" do
     changeset = cast(%Author{profile: %Profile{id: "id"}}, %{"profile" => nil}, :profile)
     assert changeset.changes.profile == nil
@@ -485,6 +494,14 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
     assert changeset.errors == [posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
+  end
+
+  test "cast has_many with `:force_update_on_change` option" do
+    changeset = cast(%Author{}, %{posts: [%{title: "hello"}]}, :posts, force_update_on_change: true)
+    assert changeset.repo_opts[:force]
+
+    changeset = cast(%Author{}, %{posts: [%{title: "hello"}]}, :posts)
+    assert changeset.repo_opts == []
   end
 
   test "cast has_many with empty parameters" do
