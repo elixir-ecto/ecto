@@ -669,6 +669,8 @@ defmodule Ecto.Changeset do
     * `:required` - if the association is a required field
     * `:required_message` - the message on failure, defaults to "can't be blank"
     * `:invalid_message` - the message on failure, defaults to "is invalid"
+    * `:force_update_on_change` - force the parent record to be updated in the repository if
+      there is a change, defaults to true
   """
   def cast_assoc(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:assoc, changeset, name, opts)
@@ -695,6 +697,8 @@ defmodule Ecto.Changeset do
     * `:required` - if the embed is a required field
     * `:required_message` - the message on failure, defaults to "can't be blank"
     * `:invalid_message` - the message on failure, defaults to "is invalid"
+    * `:force_update_on_change` - force the parent record to be updated in the repository if
+      there is a change, defaults to true
   """
   def cast_embed(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:embed, changeset, name, opts)
@@ -728,6 +732,7 @@ defmodule Ecto.Changeset do
           current  = Relation.load!(data, original)
           case Relation.cast(relation, value, current, on_cast) do
             {:ok, change, relation_valid?} when change != original ->
+              changeset = force_update(changeset, opts)
               missing_relation(%{changeset | changes: Map.put(changes, key, change),
                                  valid?: changeset.valid? and relation_valid?}, key, current, required?, relation, opts)
             :error ->
@@ -791,6 +796,14 @@ defmodule Ecto.Changeset do
     do: raise(ArgumentError, "expected `#{name}` to be an #{type} in `#{op}_#{type}`, got: `#{other}`")
   defp relation!(op, type, name, schema_type),
     do: raise(ArgumentError, "expected `#{name}` to be an #{type} in `#{op}_#{type}`, got: `#{inspect schema_type}`")
+
+  defp force_update(changeset, opts) do
+    if Keyword.get(opts, :force_update_on_change, true) do
+      put_in(changeset.repo_opts[:force], true)
+    else
+      changeset
+    end
+  end
 
   ## Working with changesets
 
