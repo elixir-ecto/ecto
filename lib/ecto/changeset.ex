@@ -723,7 +723,6 @@ defmodule Ecto.Changeset do
         {changeset, false}
       end
 
-    forced_update? = Keyword.get(opts, :force_update_on_change, true)
     on_cast  = Keyword.get_lazy(opts, :with, fn -> on_cast_default(type, related) end)
     original = Map.get(data, key)
 
@@ -733,7 +732,7 @@ defmodule Ecto.Changeset do
           current  = Relation.load!(data, original)
           case Relation.cast(relation, value, current, on_cast) do
             {:ok, change, relation_valid?} when change != original ->
-              changeset = force_update(changeset, forced_update?)
+              changeset = force_update(changeset, opts)
               missing_relation(%{changeset | changes: Map.put(changes, key, change),
                                  valid?: changeset.valid? and relation_valid?}, key, current, required?, relation, opts)
             :error ->
@@ -798,10 +797,13 @@ defmodule Ecto.Changeset do
   defp relation!(op, type, name, schema_type),
     do: raise(ArgumentError, "expected `#{name}` to be an #{type} in `#{op}_#{type}`, got: `#{inspect schema_type}`")
 
-  defp force_update(changeset, true) do
-    changeset = update_in(changeset.repo_opts, &Keyword.put(&1, :force, true))
+  defp force_update(changeset, opts) do
+    if Keyword.get(opts, :force_update_on_change, true) do
+      update_in(changeset.repo_opts, &Keyword.put(&1, :force, true))
+    else
+      changeset
+    end
   end
-  defp force_update(changeset, _), do: changeset
 
   ## Working with changesets
 
