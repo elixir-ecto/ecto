@@ -799,7 +799,7 @@ defmodule Ecto.Changeset do
 
   defp force_update(changeset, opts) do
     if Keyword.get(opts, :force_update_on_change, true) do
-      update_in(changeset.repo_opts, &Keyword.put(&1, :force, true))
+      put_in(changeset.repo_opts[:force], true)
     else
       changeset
     end
