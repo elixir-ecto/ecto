@@ -215,12 +215,17 @@ defmodule Ecto.Changeset.HasAssocTest do
   end
 
   test "cast has_one with `:force_update_on_change` option" do
-    changeset = cast(%Author{}, %{"profile" => %{"name" => "michal"}}, :profile)
+    changeset = cast(%Author{}, %{profile: %{name: "michal"}}, :profile,
+                     force_update_on_change: true)
+    assert changeset.repo_opts[:force]
+
+    changeset = cast(%Author{}, %{profile: %{name: "michal"}}, :profile,
+                     force_update_on_change: false)
     assert changeset.repo_opts == []
 
-    changeset = cast(%Author{}, %{"profile" => %{"name" => "michal"}}, :profile,
-      force_update_on_change: true)
-    assert changeset.repo_opts[:force]
+    changeset = cast(%Author{profile: %{name: "michal"}}, %{name: "michal"}, :profile,
+                     force_update_on_change: true)
+    assert changeset.repo_opts == []
   end
 
   test "cast has_one with optional" do
@@ -500,7 +505,11 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = cast(%Author{}, %{posts: [%{title: "hello"}]}, :posts, force_update_on_change: true)
     assert changeset.repo_opts[:force]
 
-    changeset = cast(%Author{}, %{posts: [%{title: "hello"}]}, :posts)
+    changeset = cast(%Author{}, %{posts: [%{title: "hello"}]}, :posts, force_update_on_change: false)
+    assert changeset.repo_opts == []
+
+    changeset = cast(%Author{posts: [%Post{title: "hello"}]}, %{posts: [%{title: "hello"}]}, :posts,
+                     force_update_on_change: true)
     assert changeset.repo_opts == []
   end
 

@@ -669,7 +669,8 @@ defmodule Ecto.Changeset do
     * `:required` - if the association is a required field
     * `:required_message` - the message on failure, defaults to "can't be blank"
     * `:invalid_message` - the message on failure, defaults to "is invalid"
-    * `:force_update_on_change` - if the update should mark the parent struct as updated
+    * `:force_update_on_change` - force the parent record to be updated in the repository if
+      there is a change, defaults to true
   """
   def cast_assoc(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:assoc, changeset, name, opts)
@@ -696,7 +697,8 @@ defmodule Ecto.Changeset do
     * `:required` - if the embed is a required field
     * `:required_message` - the message on failure, defaults to "can't be blank"
     * `:invalid_message` - the message on failure, defaults to "is invalid"
-    * `:force_update_on_change` - if the update should mark the parent struct as updated
+    * `:force_update_on_change` - force the parent record to be updated in the repository if
+      there is a change, defaults to true
   """
   def cast_embed(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:embed, changeset, name, opts)
@@ -721,13 +723,7 @@ defmodule Ecto.Changeset do
         {changeset, false}
       end
 
-    changeset =
-      if opts[:force_update_on_change] do
-        update_in(changeset.repo_opts, &Keyword.put(&1, :force, true))
-      else
-        changeset
-      end
-
+    forced_update? = Keyword.get(opts, :force_update_on_change, true)
     on_cast  = Keyword.get_lazy(opts, :with, fn -> on_cast_default(type, related) end)
     original = Map.get(data, key)
 
@@ -737,6 +733,7 @@ defmodule Ecto.Changeset do
           current  = Relation.load!(data, original)
           case Relation.cast(relation, value, current, on_cast) do
             {:ok, change, relation_valid?} when change != original ->
+              changeset = force_update(changeset, forced_update?)
               missing_relation(%{changeset | changes: Map.put(changes, key, change),
                                  valid?: changeset.valid? and relation_valid?}, key, current, required?, relation, opts)
             :error ->
@@ -800,6 +797,11 @@ defmodule Ecto.Changeset do
     do: raise(ArgumentError, "expected `#{name}` to be an #{type} in `#{op}_#{type}`, got: `#{other}`")
   defp relation!(op, type, name, schema_type),
     do: raise(ArgumentError, "expected `#{name}` to be an #{type} in `#{op}_#{type}`, got: `#{inspect schema_type}`")
+
+  defp force_update(changeset, true) do
+    changeset = update_in(changeset.repo_opts, &Keyword.put(&1, :force, true))
+  end
+  defp force_update(changeset, _), do: changeset
 
   ## Working with changesets
 

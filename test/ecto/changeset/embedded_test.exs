@@ -211,11 +211,15 @@ defmodule Ecto.Changeset.EmbeddedTest do
   end
 
   test "cast embeds_one with `:force_update_on_change` option" do
-    changeset = cast(%Author{profile: %Profile{id: "id"}}, %{"profile" => nil}, :profile,
+    changeset = cast(%Author{profile: %Profile{id: "id"}}, %{profile: nil}, :profile,
                      force_update_on_change: true)
     assert changeset.repo_opts[:force]
 
-    changeset = cast(%Author{profile: %Profile{id: "id"}}, %{"profile" => nil}, :profile)
+    changeset = cast(%Author{profile: %Profile{id: "id"}}, %{profile: nil}, :profile,
+                     force_update_on_change: false)
+    assert changeset.repo_opts == []
+
+    changeset = cast(%Author{profile: nil}, %{profile: nil}, :profile, force_update_on_change: true)
     assert changeset.repo_opts == []
   end
 
@@ -452,11 +456,15 @@ defmodule Ecto.Changeset.EmbeddedTest do
   end
 
   test "cast embeds_many with `:force_update_on_change` option" do
-    changeset = cast(%Author{}, %{"posts" => [%{"title" => "hello"}]}, :posts,
-                     force_update_on_change: true)
+    params = [%{title: "hello"}]
+    changeset = cast(%Author{}, %{posts: params}, :posts, force_update_on_change: true)
     assert changeset.repo_opts[:force]
 
-    changeset = cast(%Author{}, %{"posts" => [%{"title" => "hello"}]}, :posts)
+    changeset = cast(%Author{}, %{posts: params}, :posts, force_update_on_change: false)
+    assert changeset.repo_opts == []
+
+    changeset = cast(%Author{posts: [%Post{title: "hello"}]}, %{posts: params}, :posts,
+                     force_update_on_change: true)
     assert changeset.repo_opts == []
   end
 
