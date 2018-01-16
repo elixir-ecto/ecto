@@ -2,7 +2,7 @@ defmodule Ecto.Integration.SandboxTest do
   use ExUnit.Case
 
   alias Ecto.Adapters.SQL.Sandbox
-  alias Ecto.Integration.TestRepo
+  alias Ecto.Integration.{PoolRepo, TestRepo}
   alias Ecto.Integration.Post
 
   import ExUnit.CaptureLog
@@ -10,6 +10,16 @@ defmodule Ecto.Integration.SandboxTest do
   test "raises if repo is not started or not exist" do
     assert_raise RuntimeError, ~r"could not lookup UnknownRepo because it was not started", fn ->
       Sandbox.mode(UnknownRepo, :manual)
+    end
+  end
+
+  test "raises if repo is not using sandbox" do
+    assert_raise RuntimeError, ~r"cannot configure sandbox with pool DBConnection.Poolboy", fn ->
+      Sandbox.mode(PoolRepo, :manual)
+    end
+
+    assert_raise RuntimeError, ~r"cannot configure sandbox with pool DBConnection.Poolboy", fn ->
+      Sandbox.checkout(PoolRepo)
     end
   end
 

@@ -423,16 +423,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   def mode(repo, mode)
       when mode in [:auto, :manual]
       when elem(mode, 0) == :shared and is_pid(elem(mode, 1)) do
-    {_repo_mod, name, opts} = Ecto.Registry.lookup(repo)
-
-    if opts[:pool] != DBConnection.Ownership do
-      raise """
-      cannot configure sandbox with pool #{inspect opts[:pool]}.
-      To use the SQL Sandbox, configure your repository pool as:
-
-            pool: #{inspect __MODULE__}
-      """
-    end
+    {_repo_mod, name, opts} = proxy_pool(repo)
 
     # If the mode is set to anything but shared, let's
     # automatically checkin the current connection to
@@ -528,6 +519,16 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   defp proxy_pool(repo) do
     {repo_mod, name, opts} = Ecto.Registry.lookup(repo)
+
+    if opts[:pool] != DBConnection.Ownership do
+      raise """
+      cannot configure sandbox with pool #{inspect opts[:pool]}.
+      To use the SQL Sandbox, configure your repository pool as:
+
+            pool: #{inspect __MODULE__}
+      """
+    end
+
     {pool, opts} = Keyword.pop(opts, :ownership_pool, DBConnection.Poolboy)
     {repo_mod, name, [repo: repo, sandbox_pool: pool, ownership_pool: Pool] ++ opts}
   end
