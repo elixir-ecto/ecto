@@ -280,10 +280,25 @@ defmodule Ecto.Query.Builder do
   # Vars are not allowed
   def escape({name, _, context} = var, _type, _params_acc, _vars, _env) when is_atom(name) and is_atom(context) do
     error! "variable `#{Macro.to_string(var)}` is not a valid query expression. " <>
-           "Variables need to be explicitly interpolated in queries with ^"
+           "IF you wanted to inject a variable, you have to explicitly interpolate it " <>
+           "with ^. If you wanted to refer to a field, use the source.field syntax"
   end
 
-  # Everything else is not allowed
+  # Raise nice error messages for fun calls.
+  def escape({fun, _, args} = other, _type, _params_acc, _vars, _env) when is_atom(fun) and is_list(args) do
+    error! """
+    `#{Macro.to_string(other)}` is not a valid query expression. \
+    If you are trying to invoke a function that is not supported by Ecto, \
+    you can use fragments:
+
+        fragment("some_function(?, ?, ?)", m.some_field, 1)
+
+    See Ecto.Query.API to learn more about the supported functions and \
+    Ecto.Query.API.fragment/1 to learn more about fragments.
+    """
+  end
+
+  # For everything else we raise
   def escape(other, _type, _params_acc, _vars, _env) do
     error! "`#{Macro.to_string(other)}` is not a valid query expression"
   end
