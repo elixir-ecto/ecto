@@ -563,9 +563,9 @@ defmodule Ecto.Repo do
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL).
     * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
-      `:replace_all`, `:replace_all_except_primary_key`, `{:replace, fields}`, a keyword list of
-      update instructions, `{:replace, fields}` or an `Ecto.Query` query for updates. See the
-      "Upserts" section for more information.
+      `:replace_all`, `:replace_all_except_primary_key`, `{:replace, fields}`,
+      a keyword list of update instructions, `{:replace, fields}` or an `Ecto.Query`
+      query for updates. See the "Upserts" section for more information.
     * `:conflict_target` - Which columns to verify for conflicts. If
       none is specified, the conflict target is left up to the database
       and is usually made of primary keys and/or unique/exclusion constraints.
@@ -717,9 +717,9 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL). This overrides the prefix set
       in the struct.
     * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
-      `:replace_all`, `:replace_all_except_primary_key`, `{:replace, fields}`, a keyword list of
-      update instructions or an `Ecto.Query` query for updates. See the
-      "Upserts" section for more information.
+      `:replace_all`, `:replace_all_except_primary_key`, `{:replace, fields}`,
+      a keyword list of update instructions or an `Ecto.Query` query for updates.
+      See the "Upserts" section for more information.
     * `:conflict_target` - Which columns to verify for conflicts. If
       none is specified, the conflict target is left up to the database
       and is usually made of primary keys and/or unique/exclusion constraints.
