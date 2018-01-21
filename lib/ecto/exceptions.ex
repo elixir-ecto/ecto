@@ -280,19 +280,13 @@ defmodule Ecto.ConstraintError do
             Enum.map_join(constraints, "\n", &"    * #{&1.constraint} (#{&1.type}_constraint)")
       end
 
-    func =
-      case type do
-        :exclude -> "exclusion"
-        _ -> type
-      end
-
     msg = """
     constraint error when attempting to #{action} struct:
 
         * #{constraint} (#{type}_constraint)
 
     If you would like to convert this constraint into an error, please
-    call `#{func}_constraint/3` in your changeset with the constraint
+    call `#{type}_constraint/3` in your changeset with the constraint
     `:name` as an option.
 
     #{constraints}
