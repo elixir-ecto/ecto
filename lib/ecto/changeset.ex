@@ -250,7 +250,7 @@ defmodule Ecto.Changeset do
 
   @type error :: {String.t, Keyword.t}
   @type action :: nil | :insert | :update | :delete | :replace | :ignore
-  @type constraint :: %{type: :check | :exclude | :foreign_key | :unique,
+  @type constraint :: %{type: :check | :exclusion | :foreign_key | :unique,
                         constraint: String.t, match: :exact | :suffix | :prefix,
                         field: atom, error_message: String.t, error_type: atom}
   @type data :: map()
@@ -2290,7 +2290,7 @@ defmodule Ecto.Changeset do
     constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_exclusion"
     message    = message(opts, "violates an exclusion constraint")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :exclude, to_string(constraint), match_type, field, message, :exclusion)
+    add_constraint(changeset, :exclusion, to_string(constraint), match_type, field, message, :exclusion)
   end
 
   defp no_assoc_message(:one), do: "is still associated with this entry"
