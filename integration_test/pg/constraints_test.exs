@@ -51,6 +51,7 @@ defmodule Ecto.Integration.ConstraintsTest do
       end
     assert exception.message =~ "cannot_overlap (exclude_constraint)"
     assert exception.message =~ "The changeset has not defined any constraint."
+    assert exception.message =~ "call `exclusion_constraint/3`"
 
     message = ~r/constraint error when attempting to insert struct/
     exception =
@@ -79,6 +80,7 @@ defmodule Ecto.Integration.ConstraintsTest do
 
     assert exception.message =~ "positive_price (check_constraint)"
     assert exception.message =~ "The changeset has not defined any constraint."
+    assert exception.message =~ "call `check_constraint/3`"
 
     # When the changeset does expect the db error, but doesn't give a custom message
     {:error, changeset} =

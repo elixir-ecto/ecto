@@ -266,6 +266,7 @@ defmodule Ecto.Integration.RepoTest do
 
     assert exception.message =~ "posts_uuid_index (unique_constraint)"
     assert exception.message =~ "The changeset has not defined any constraint."
+    assert exception.message =~ "call `unique_constraint/3`"
 
     message = ~r/constraint error when attempting to insert struct/
     exception =
@@ -403,6 +404,7 @@ defmodule Ecto.Integration.RepoTest do
 
     assert exception.message =~ "comments_post_id_fkey (foreign_key_constraint)"
     assert exception.message =~ "The changeset has not defined any constraint."
+    assert exception.message =~ "call `foreign_key_constraint/3`"
 
     message = ~r/constraint error when attempting to insert struct/
     exception =
