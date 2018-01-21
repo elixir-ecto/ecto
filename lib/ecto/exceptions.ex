@@ -291,8 +291,8 @@ defmodule Ecto.ConstraintError do
 
         * #{constraint} (#{type}_constraint)
 
-    If you would like to convert this constraint into an error, please
-    call `#{func}_constraint/3` in your changeset with the constraint
+    If you would like to convert this exception into a changeset error,
+    please call `#{func}_constraint/3` on your changeset with the constraint
     `:name` as an option.
 
     #{constraints}
