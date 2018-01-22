@@ -174,11 +174,13 @@ defmodule Ecto.Query do
       query = from q in query, order_by: q.inserted_at
 
   The example above will work if the input query has 1 or 10
-  bindings. In the example above, we will always sort by the
-  `inserted_at` column from the `from` source.
+  bindings. As long as the number of bindings is less than the
+  number of from + joins, Ecto will match only what you have
+  specified. The first binding always matches the source given
+  in `from`.
 
   Similarly, if you are interested only on the last binding
-  (or the last bindings) in a query, you can use ... to
+  (or the last bindings) in a query, you can use `...` to
   specify "all bindings before" and match on the last one.
 
   For instance, imagine you wrote:
@@ -193,10 +195,11 @@ defmodule Ecto.Query do
 
       from [p, ..., c] in posts_with_comments, select: {p.title, c.body}
 
-  In other words, `...` will include all the binding between the first and
-  the last, which may be no binding at all, one or many. Using `...` can
-  be handy from time to time but most of its uses can be avoided by relying
-  on the keyword query syntax when writing queries.
+  In other words, `...` will include all the binding between the
+  first and the last, which may be no binding at all, one or many.
+  Using `...` can be handy from time to time but most of its uses
+  can be avoided by relying on the keyword query syntax when writing
+  queries.
 
   ### Bindingless operations
 
@@ -585,7 +588,7 @@ defmodule Ecto.Query do
     end
 
     {quoted, binds, count_bind} = From.build(expr, __CALLER__)
-    from(kw, __CALLER__, count_bind, quoted, binds)
+    from(kw, __CALLER__, count_bind, quoted, to_query_binds(binds))
   end
 
   @binds    [:where, :or_where, :select, :distinct, :order_by, :group_by,
@@ -623,7 +626,7 @@ defmodule Ecto.Query do
     qual = join_qual(join)
     {t, on} = collect_on(t, nil)
     {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, on, count_bind, env)
-    from(t, env, count_bind, quoted, binds)
+    from(t, env, count_bind, quoted, to_query_binds(binds))
   end
 
   defp from([{:on, _value}|_], _env, _count_bind, _quoted, _binds) do
@@ -636,6 +639,10 @@ defmodule Ecto.Query do
 
   defp from([], _env, _count_bind, quoted, _binds) do
     quoted
+  end
+
+  defp to_query_binds(binds) do
+    for {k, v} <- binds, do: {{k, [], nil}, v}
   end
 
   defp join_qual(:join), do: :inner
@@ -751,7 +758,8 @@ defmodule Ecto.Query do
 
   """
   defmacro join(query, qual, binding \\ [], expr, on \\ nil) do
-    Join.build(query, qual, binding, expr, on, nil, __CALLER__)
+    query
+    |> Join.build(qual, binding, expr, on, nil, __CALLER__)
     |> elem(0)
   end
 

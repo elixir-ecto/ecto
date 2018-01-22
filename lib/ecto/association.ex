@@ -233,7 +233,7 @@ defmodule Ecto.Association do
   """
   def joins_query(query, through, counter) do
     Enum.reduce(through, {query, counter}, fn current, {acc, counter} ->
-      query = join(acc, :inner, [x: counter], assoc(x, ^current))
+      query = join(acc, :inner, [{x, counter}], assoc(x, ^current))
       {query, counter + 1}
     end) |> elem(0)
   end

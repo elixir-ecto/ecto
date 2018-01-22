@@ -143,7 +143,7 @@ defmodule Ecto.QueryTest do
 
     test "can be added through joins with a counter" do
       base = join("comments", :inner, [c], p in "posts", true)
-      assert select(base, [p: 1], p) == select(base, [c, p], p)
+      assert select(base, [{p, 1}], p) == select(base, [c, p], p)
     end
 
     test "raise on binding collision" do

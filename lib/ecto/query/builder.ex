@@ -493,7 +493,7 @@ defmodule Ecto.Query.Builder do
       iex> escape_binding(%Ecto.Query{}, quote do: [x, y, z])
       {%Ecto.Query{}, [x: 0, y: 1, z: 2]}
 
-      iex> escape_binding(%Ecto.Query{}, quote do: [x: 0, z: 2])
+      iex> escape_binding(%Ecto.Query{}, quote do: [{x, 0}, {z, 2}])
       {%Ecto.Query{}, [x: 0, z: 2]}
 
       iex> escape_binding(%Ecto.Query{}, quote do: [x, y, x])
@@ -536,8 +536,8 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  defp escape_bind({{var, _} = tuple, _}) when is_atom(var),
-    do: tuple
+  defp escape_bind({{{var, _, context}, ix}, _}) when is_atom(var) and is_atom(context),
+    do: {var, ix}
   defp escape_bind({{var, _, context}, ix}) when is_atom(var) and is_atom(context),
     do: {var, ix}
   defp escape_bind({bind, _ix}),
