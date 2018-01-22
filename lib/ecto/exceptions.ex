@@ -87,6 +87,10 @@ defmodule Ecto.InvalidChangesetError do
     """
     could not perform #{action} because changeset is invalid.
 
+    Errors
+
+    #{pretty errors}
+
     Applied changes
 
     #{pretty changes}
@@ -94,10 +98,6 @@ defmodule Ecto.InvalidChangesetError do
     Params
 
     #{pretty changeset.params}
-
-    Errors
-
-    #{pretty errors}
 
     Changeset
 
