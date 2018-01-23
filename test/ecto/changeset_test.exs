@@ -614,6 +614,29 @@ defmodule Ecto.ChangesetTest do
 
   ## Validations
 
+  describe "validation_specs/1" do
+
+    test "returns an empty list if no validations are specified" do
+      result = 
+        changeset(%{})
+        |> validation_specs()
+      
+      assert result == []
+    end
+
+    test "returns the appropriate validations" do
+      result =
+        changeset(%{})
+        |> validate_length(:title, less_than: 20, message: "too long")
+        |> validate_format(:title, ~r/wombat/)
+        |> validation_specs()
+
+      assert [ val1, val2 ] = result
+      assert val1 == { :title, { :format, ~r/wombat/ }}
+      assert val2 == { :title, { :length, less_than: 20, message: "too long" }}
+    end 
+  end 
+
   test "add_error/3" do
     changeset =
       changeset(%{})

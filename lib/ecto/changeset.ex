@@ -1213,6 +1213,7 @@ defmodule Ecto.Changeset do
     update_in changeset.changes, &Map.delete(&1, key)
   end
 
+  
   @doc """
   Applies the changeset changes to the changeset data.
 
@@ -1274,6 +1275,62 @@ defmodule Ecto.Changeset do
   end
 
   ## Validations
+
+    @doc """
+  Returns a keyword list of the validations for this changeset.
+
+  The keys in the list are the names of fields, and the values are a
+  validation associated with the field. A field may occur multiple
+  times in the list.
+
+  A quick example:
+
+      iex> %Post{}    |>
+      ...> change()   |>
+      ...> validate_format(:title, ~r/^\w+:\s/,
+      ...>      message: "must start with a topic")  |>
+      ...> validate_length(:title, max: 100)
+      ...> validation_specs()
+      [
+        title: { :length, [ max: 100 ]},
+        title: { :format, ~r/^\w+:\s/ }
+      ]
+
+  The following validations may be included in the result. 
+  
+  This first group contains validations that take a keyword list of validators,
+  where the validators are show immediately following the validation type. 
+  This list may also include a `message:` key.
+
+    * `{ :length, [ «validators»… ] }`
+
+      * `min: n`
+      * `max: n`
+      * `is: n`
+      * `count: :graphemes | :codepoints`
+
+  * `{ :number,  [ «validators»… ] }`
+    
+     * `equal_to: n`
+     * `greater_than: n`
+     * `greater_than_or_equal_to: n`
+     * `less_than: n`
+     * `less_than_or_equal_to: n`
+
+  The other validators simply take a value:
+
+  * `{ :exclusion, «Enum.t» }`
+  * `{ :format, ~r/pattern/ }`
+  * `{ :inclusion, «Enum.t» }`
+  * `{ :subset, «Enum.t» }`
+
+  (since: 1.7.0)
+  """
+
+  @spec validation_specs(t) :: [ atom: { atom, ([ atom: any ] | any) } ]
+  def validation_specs(%Changeset{validations: validations}) do
+    validations
+  end
 
   @doc """
   Adds an error to the changeset.
