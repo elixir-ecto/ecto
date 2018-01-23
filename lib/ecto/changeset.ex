@@ -212,22 +212,25 @@ defmodule Ecto.Changeset do
 
   ## The Ecto.Changeset struct
 
-  The fields are:
+  The public fields are:
 
     * `valid?`       - Stores if the changeset is valid
     * `data`         - The changeset source data, for example, a struct
     * `params`       - The parameters as given on changeset creation
     * `changes`      - The `changes` from parameters that were approved in casting
     * `errors`       - All errors from validations
-    * `validations`  - All validations performed in the changeset
-    * `constraints`  - All constraints defined in the changeset
     * `required`     - All required fields as a list of atoms
-    * `filters`      - Filters (as a map `%{field => value}`) to narrow the scope of update/delete queries
     * `action`       - The action to be performed with the changeset
     * `types`        - Cache of the data's field types
     * `empty_values` - A list of values to be considered empty
     * `repo`         - The repository applying the changeset (only set after a Repo function is called)
     * `repo_opts`    - A keyword list of options given to the underlying repository operation
+
+  The following fields are private and must not be accessed directly.
+
+    * `validations`
+    * `constraints`
+    * `filters`
 
   """
 
@@ -253,7 +256,7 @@ defmodule Ecto.Changeset do
                         prepare: [(t -> t)],
                         errors: [{atom, error}],
                         constraints: [constraint],
-                        validations: Keyword.t,
+                        validations: [{atom, term}],
                         filters: %{atom => term},
                         action: action,
                         types: nil | %{atom => Ecto.Type.t}}
@@ -1223,6 +1226,7 @@ defmodule Ecto.Changeset do
     update_in changeset.changes, &Map.delete(&1, key)
   end
 
+
   @doc """
   Applies the changeset changes to the changeset data.
 
@@ -1284,6 +1288,61 @@ defmodule Ecto.Changeset do
   end
 
   ## Validations
+
+  @doc ~S"""
+  Returns a keyword list of the validations for this changeset.
+
+  The keys in the list are the names of fields, and the values are a
+  validation associated with the field. A field may occur multiple
+  times in the list.
+
+  ## Example
+
+      %Post{}
+      |> change()
+      |> validate_format(:title, ~r/^\w+:\s/, message: "must start with a topic")
+      |> validate_length(:title, max: 100)
+      |> validations()
+      #=> [
+        title: {:length, [ max: 100 ]},
+        title: {:format, ~r/^\w+:\s/}
+      ]
+
+  The following validations may be included in the result. The list is
+  not necessarily exhaustive. For example, custom validations written
+  by the developer will also appear in our return value.
+
+  This first group contains validations that take a keyword list of validators,
+  where the validators are shown immediately following the validation type.
+  This list may also include a `message:` key.
+
+    * `{:length, [option]}`
+
+      * `min: n`
+      * `max: n`
+      * `is: n`
+      * `count: :graphemes | :codepoints`
+
+    * `{:number,  [option]}`
+
+     * `equal_to: n`
+     * `greater_than: n`
+     * `greater_than_or_equal_to: n`
+     * `less_than: n`
+     * `less_than_or_equal_to: n`
+
+  The other validators simply take a value:
+
+    * `{:exclusion, Enum.t}`
+    * `{:format, ~r/pattern/}`
+    * `{:inclusion, Enum.t}`
+    * `{:subset, Enum.t}`
+
+  """
+  @spec validations(t) :: [{atom, term}]
+  def validations(%Changeset{validations: validations}) do
+    validations
+  end
 
   @doc """
   Adds an error to the changeset.
@@ -2002,6 +2061,26 @@ defmodule Ecto.Changeset do
   end
 
   ## Constraints
+
+  @doc """
+  Returns all constraints in a changeset.
+
+  A constraint is a map with the following fields:
+
+    * `:type` - the type of the constraint that will be checked in the database,
+      such as `:check`, `:unique`, etc
+    * `:constraint` - the database constraint name as a string
+    * `:match` - the type of match Ecto will perform on a violated constraint
+      against the `:constraint` value. It is `:exact`, `:suffix` or `:prefix`
+    * `:field` - the field a violated constraint will apply the error to
+    * `:error_message` - the error message in case of violated constraints
+    * `:error_type` - the type of error that identifies the error message
+
+  """
+  @spec constraints(t) :: [constraint]
+  def constraints(%Changeset{constraints: constraints}) do
+    constraints
+  end
 
   @doc """
   Checks for a check constraint in the given field.
