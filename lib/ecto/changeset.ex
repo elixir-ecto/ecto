@@ -1289,17 +1289,19 @@ defmodule Ecto.Changeset do
       ...> change()   |>
       ...> validate_format(:title, ~r/^\w+:\s/,
       ...>      message: "must start with a topic")  |>
-      ...> validate_length(:title, max: 100)
-      ...> validation_specs()
+      ...> validate_length(:title, max: 100)         |>
+      ...> validation_list()
       [
         title: { :length, [ max: 100 ]},
         title: { :format, ~r/^\w+:\s/ }
       ]
 
-  The following validations may be included in the result. 
+  The following validations may be included in the result. The list is
+  not necessarily exhaustive. For example, custom validations written
+  by the developer will also appear in our return value.
   
   This first group contains validations that take a keyword list of validators,
-  where the validators are show immediately following the validation type. 
+  where the validators are shown immediately following the validation type. 
   This list may also include a `message:` key.
 
     * `{ :length, [ «validators»… ] }`
@@ -1327,7 +1329,7 @@ defmodule Ecto.Changeset do
   (since: 1.7.0)
   """
 
-  @spec validation_specs(t) :: [ atom: { atom, ([ atom: any ] | any) } ]
+  @spec validation_specs(t) :: [ atom: { atom, ([ atom: term ] | term) } ]
   def validation_specs(%Changeset{validations: validations}) do
     validations
   end
