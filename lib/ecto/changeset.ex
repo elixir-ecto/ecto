@@ -90,6 +90,16 @@ defmodule Ecto.Changeset do
   happens. By moving constraints to the database, we also provide a safe,
   correct and data-race free means of checking the user input.
 
+  ### Deferred constraints
+
+  Some databases support deferred constraints, i.e., constraints which are
+  checked at the end of the transaction rather than at the end of each statement.
+
+  Changesets do not support this type of constraints. When working with deferred
+  constraints, a violation while invoking `Repo.insert/2` or `Repo.update/2` won't
+  return `{:error, changeset}`, but rather raise an error at the end of the
+  transaction.
+
   ## Empty values
 
   Many times, the data given on cast needs to be further pruned, specially
@@ -2150,17 +2160,6 @@ defmodule Ecto.Changeset do
   Now, when invoking `Repo.insert/2` or `Repo.update/2`, if the
   associated post does not exist, it will be converted into an
   error and `{:error, changeset}` returned by the repository.
-
-  ## Limitations
-
-  In Postgres, you can define deferred foreign key constraints, i.e.,
-  foreign keys which are checked at the end of the transaction
-  rather than at the end of each statement.
-
-  Ecto does not support this type of constraints. When working with
-  tables using deferred constraints, a foreign key violation while invoking
-  `Repo.insert/2` or `Repo.update/2` won't return `{:error, changeset}`,
-  but will raise a `Postgrex.Error` instead.
 
   ## Options
 
