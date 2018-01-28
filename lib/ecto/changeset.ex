@@ -2151,6 +2151,17 @@ defmodule Ecto.Changeset do
   associated post does not exist, it will be converted into an
   error and `{:error, changeset}` returned by the repository.
 
+  ## Limitations
+
+  In Postgres, you can define deferred foreign key constraints, i.e.,
+  foreign keys which are checked at the end of the transaction
+  rather than at the end of each statement.
+
+  Ecto does not support this type of constraints. When working with
+  tables using deferred constraints, a foreign key violation while invoking
+  `Repo.insert/2` or `Repo.update/2` won't return `{:error, changeset}`,
+  but will raise a `Postgrex.Error` instead.
+
   ## Options
 
     * `:message` - the message in case the constraint check fails,
