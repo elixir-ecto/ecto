@@ -58,18 +58,19 @@ defmodule Ecto.Query.Builder.From do
         schema when is_atom(schema) ->
           # Get the source at runtime so no unnecessary compile time
           # dependencies between modules are added
-          source = quote do: unquote(schema).__schema__(:source)
-          prefix = quote do: unquote(schema).__schema__(:prefix)
-          {1, query(prefix, source, schema)}
+          source = quote do: Ecto.Queryable.to_query(unquote(schema))
+          {1, source}
 
         source when is_binary(source) ->
           # When a binary is used, there is no schema
           {1, query(nil, source, nil)}
 
         {source, schema} when is_binary(source) and is_atom(schema) ->
-          prefix = quote do: unquote(schema).__schema__(:prefix)
-          {1, query(prefix, source, schema)}
-
+          query = quote bind_quoted: [schema: schema, source: source] do
+            source_query = Ecto.Queryable.to_query(schema)
+            %{source_query | from: {source, schema}}
+          end
+          {1, query}
         other ->
           {nil, other}
       end

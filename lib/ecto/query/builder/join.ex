@@ -62,7 +62,7 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   def escape({:__aliases__, _, _} = module, _vars, _env) do
-    {:_, {nil, module}, nil, %{}}
+    {:_, quote(do: Ecto.Queryable.to_query(unquote(module))), nil, %{}}
   end
 
   def escape(string, _vars, _env) when is_binary(string) do
@@ -70,7 +70,7 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   def escape({string, {:__aliases__, _, _} = module}, _vars, _env) when is_binary(string) do
-    {:_, {string, module}, nil, %{}}
+    {:_, quote do from _ in {unquote(string), unquote(module)} end, nil, %{}}
   end
 
   def escape({string, atom}, _vars, _env) when is_binary(string) and is_atom(atom) do
