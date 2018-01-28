@@ -507,7 +507,7 @@ defmodule Ecto.Association.Has do
   def joins_query(%{queryable: queryable, related_key: related_key,
                     owner: owner, owner_key: owner_key}) do
     from o in owner,
-      join: q in ^queryable,
+      join: q in ^Ecto.Queryable.to_query(queryable),
       on: field(q, ^related_key) == field(o, ^owner_key)
   end
 
@@ -768,7 +768,7 @@ defmodule Ecto.Association.BelongsTo do
   def joins_query(%{queryable: queryable, related_key: related_key,
                     owner: owner, owner_key: owner_key}) do
     from o in owner,
-      join: q in ^queryable,
+      join: q in ^Ecto.Queryable.to_query(queryable),
       on: field(q, ^related_key) == field(o, ^owner_key)
   end
 
@@ -953,7 +953,7 @@ defmodule Ecto.Association.ManyToMany do
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
     from o in owner,
       join: j in ^join_through, on: field(j, ^join_owner_key) == field(o, ^owner_key),
-      join: q in ^queryable, on: field(j, ^join_related_key) == field(q, ^related_key)
+      join: q in ^Ecto.Queryable.to_query(queryable), on: field(j, ^join_related_key) == field(q, ^related_key)
   end
 
   @doc false
