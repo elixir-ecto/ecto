@@ -250,13 +250,27 @@ defmodule Ecto.Adapters.SQL do
     conn = get_conn(pool) || pool
     opts = with_log(repo_mod, params, opts ++ default_opts)
     args = args ++ [params, opts]
+    sql_call(repo_mod, callback, [conn | args])
+  end
+
+  defp sql_call(repo_mod, callback, args) do
     try do
-      apply(repo_mod.__sql__, callback, [conn | args])
+      apply(repo_mod.__sql__, callback, args)
     rescue
-      err in DBConnection.OwnershipError ->
-        message = err.message <> "\nSee Ecto.Adapters.SQL.Sandbox docs for more information."
-        reraise %{err | message: message}, System.stacktrace
+      err in [DBConnection.OwnershipError] ->
+        stack = System.stacktrace()
+        reraise ownership_error(err), stack
+    else
+      {:error, %struct{} = err} when struct in [DBConnection.OwnershipError] ->
+        {:error, ownership_error(err)}
+      other ->
+        other
     end
+  end
+
+  defp ownership_error(%{message: message} = err) do
+    message = message <> "\nSee Ecto.Adapters.SQL.Sandbox docs for more information."
+    %{err | message: message}
   end
 
   defp put_source(opts, %{sources: sources}) when tuple_size(elem(sources, 0)) == 2 do
@@ -433,6 +447,9 @@ defmodule Ecto.Adapters.SQL do
     case sql_call(repo, :execute, [cached], params, opts) do
       {:ok, result} ->
         result
+      {:ok, query, result} ->
+        reset.({id, String.Chars.to_string(query)})
+        result
       {:error, err} ->
         raise err
       {:reset, err} ->
@@ -553,36 +570,126 @@ defmodule Ecto.Adapters.SQL do
   def transaction(repo, opts, fun) do
     {repo_mod, pool, default_opts} = lookup_pool(repo)
     opts = with_log(repo_mod, [], opts ++ default_opts)
-    case get_conn(pool) do
-      nil  -> do_transaction(pool, opts, fun)
-      conn -> DBConnection.transaction(conn, fn(_) -> fun.() end, opts)
+    case safe_get_conn(pool) do
+      nil  -> outter_transaction(repo, pool, opts, fun)
+      {:ok, conn} -> inner_transaction(repo, pool, conn, opts, fun)
+      {:error, _} -> {:error, :rollback}
     end
   end
 
-  defp do_transaction(pool, opts, fun) do
-    run = fn(conn) ->
-      try do
-        put_conn(pool, conn)
-        fun.()
-      after
-        delete_conn(pool)
-      end
+  defp outter_transaction(repo, pool, opts, fun) do
+    conn = begin_transaction(repo, pool, opts)
+    try do
+      put_conn(pool, conn)
+      transaction_call(repo, :status, conn, opts)
+      fun.()
+    catch
+      :throw, {__MODULE__, :rollback, ^conn, reason} ->
+        rollback_transaction(repo, conn, opts)
+        {:error, reason}
+      kind, reason ->
+        stack = System.stacktrace()
+        rollback_transaction(repo, conn, opts)
+        :erlang.raise(kind, reason, stack)
+    else
+      result ->
+        with {:ok, ^conn} <- safe_get_conn(pool) do
+          case commit_transaction(repo, conn, opts) do
+            :ok ->
+              {:ok, result}
+            {:error, _} = error ->
+              error
+          end
+        else
+          _ ->
+            rollback_transaction(repo, conn, opts)
+            {:error, :rollback}
+        end
+    after
+      delete_conn(pool)
     end
-    DBConnection.transaction(pool, run, opts)
+  end
+
+  defp begin_transaction(repo, pool, opts) do
+    case transaction_call(repo, :begin, pool, opts) do
+      {:ok, conn, _} ->
+        conn
+      {:error, err} ->
+        raise err
+    end
+  end
+
+  defp commit_transaction(repo, conn, opts) do
+    case transaction_call(repo, :commit, conn, opts) do
+      {:ok, _} ->
+        :ok
+      {:error, %struct{}}
+          when struct in [DBConnection.ConnectionError, DBConnection.TransactionError] ->
+        {:error, :rollback}
+      {:error, err} ->
+        raise err
+    end
+  end
+
+  defp rollback_transaction(repo, conn, opts) do
+    case transaction_call(repo, :rollback, conn, opts) do
+      {:ok, _} ->
+        :ok
+      {:error, %struct{}}
+          when struct in [DBConnection.ConnectionError, DBConnection.TransactionError] ->
+        :ok
+      {:error, err} ->
+        raise err
+    end
+  end
+
+  defp inner_transaction(repo, pool, conn, opts, fun) do
+    case transaction_call(repo, :status, conn, opts) do
+      :transaction ->
+        flatten_transaction(repo, pool, conn, opts, fun)
+      _failure ->
+        fail_conn(pool, conn)
+        {:error, :rollback}
+    end
+  end
+
+  defp flatten_transaction(repo, pool, conn, opts, fun) do
+    fun.()
+  catch
+    :throw, {__MODULE__, :rollback, ^conn, reason} ->
+      fail_conn(pool, conn)
+      {:error, reason}
+    kind, reason ->
+      stack = System.stacktrace()
+      fail_conn(pool, conn)
+      :erlang.raise(kind, reason, stack)
+  else
+    result ->
+      case transaction_call(repo, :status, conn, opts) do
+        :transaction ->
+          {:ok, result}
+        _failure ->
+          fail_conn(pool, conn)
+          {:error, :rollback}
+      end
+  end
+
+  defp transaction_call(repo, callback, conn, opts) do
+    sql_call(repo, callback, [conn, opts])
   end
 
   @doc false
   def in_transaction?(repo) do
     {_repo_mod, pool, _default_opts} = lookup_pool(repo)
-    !!get_conn(pool)
+    !!safe_get_conn(pool)
   end
 
   @doc false
   def rollback(repo, value) do
     {_repo_mod, pool, _default_opts} = lookup_pool(repo)
-    case get_conn(pool) do
+    case safe_get_conn(pool) do
       nil  -> raise "cannot call rollback outside of transaction"
-      conn -> DBConnection.rollback(conn, value)
+      {_, conn} -> throw({__MODULE__, :rollback, conn, value})
     end
   end
 
@@ -666,12 +773,28 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp put_conn(pool, conn) do
-    _ = Process.put(key(pool), conn)
+    _ = Process.put(key(pool), {:ok, conn})
     :ok
   end
 
-  defp get_conn(pool) do
+  defp fail_conn(pool, conn) do
+    _ = Process.put(key(pool), {:error, conn})
+    :ok
+  end
+
+  defp safe_get_conn(pool) do
     Process.get(key(pool))
+  end
+
+  defp get_conn(pool) do
+    case Process.get(key(pool)) do
+      {:ok, conn} ->
+        conn
+      {:error, _conn} ->
+        raise DBConnection.ConnectionError, "transaction rolling back"
+      nil ->
+        nil
+    end
   end
 
   defp delete_conn(pool) do

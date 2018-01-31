@@ -16,20 +16,34 @@ if Code.ensure_loaded?(Mariaex) do
 
     def prepare_execute(conn, name, sql, params, opts) do
       query = %Mariaex.Query{name: name, statement: sql}
-      DBConnection.prepare_execute(conn, query, map_params(params), opts)
+      case DBConnection.prepare_execute(conn, query, map_params(params), opts) do
+        {:ok, _, _} = ok -> ok
+        {:error, %Mariaex.Error{}} = error -> error
+        {:error, err} -> raise err
+      end
     end
 
     def execute(conn, sql, params, opts) when is_binary(sql) or is_list(sql) do
       query = %Mariaex.Query{name: "", statement: sql}
       case DBConnection.prepare_execute(conn, query, map_params(params), opts) do
-        {:ok, _, query} -> {:ok, query}
-        {:error, _} = err -> err
+        {:ok, _, result} -> {:ok, result}
+        {:error, %Mariaex.Error{}} = error -> error
+        {:error, err} -> raise err
       end
     end
 
     def execute(conn, %{} = query, params, opts) do
-      DBConnection.execute(conn, query, map_params(params), opts)
+      case DBConnection.execute(conn, query, map_params(params), opts) do
+        {:ok, _} = ok -> ok
+        {:error, %Mariaex.Error{}} = error -> error
+        {:error, err} -> raise err
+      end
     end
+
+    defdelegate begin(conn, opts), to: DBConnection
+    defdelegate commit(conn, opts), to: DBConnection
+    defdelegate rollback(conn, opts), to: DBConnection
+    defdelegate status(conn, opts), to: DBConnection
 
     def stream(conn, sql, params, opts) do
       Mariaex.stream(conn, sql, params, opts)

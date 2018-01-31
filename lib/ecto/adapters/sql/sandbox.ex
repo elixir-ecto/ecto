@@ -317,19 +317,32 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       case conn_mod.handle_begin(opts, state) do
         {:ok, value, state} ->
           {:ok, value, {conn_mod, state, true}}
+        {status, state} ->
+          {status, {conn_mod, state, false}}
         {kind, err, state} ->
           {kind, err, {conn_mod, state, false}}
       end
     end
     def handle_commit(opts, {conn_mod, state, true}) do
       opts = [mode: :savepoint] ++ opts
-      proxy(:handle_commit, {conn_mod, state, false}, [opts])
+      case conn_mod.handle_commit(opts, state) do
+        {:ok, value, state} ->
+          {:ok, value, {conn_mod, state, false}}
+        {:idle, state} ->
+          {:idle, {conn_mod, state. false}}
+        {status, state} ->
+            {status, {conn_mod, state, true}}
+        {kind, err, state} ->
+          {kind, err, {conn_mod, state, false}}
+      end
     end
     def handle_rollback(opts, {conn_mod, state, true}) do
       opts = [mode: :savepoint] ++ opts
       proxy(:handle_rollback, {conn_mod, state, false}, [opts])
     end
 
+    def handle_status(opts, state),
+      do: proxy(:handle_status, state, [maybe_savepoint(opts, state)])
     def handle_prepare(query, opts, state),
       do: proxy(:handle_prepare, state, [query, maybe_savepoint(opts, state)])
     def handle_execute(query, params, opts, state),
@@ -338,6 +351,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       do: proxy(:handle_close, state, [query, maybe_savepoint(opts, state)])
     def handle_declare(query, params, opts, state),
       do: proxy(:handle_declare, state, [query, params, maybe_savepoint(opts, state)])
+    def handle_fetch(query, cursor, opts, state),
+      do: proxy(:handle_fetch, state, [query, cursor, maybe_savepoint(opts, state)])
     def handle_first(query, cursor, opts, state),
       do: proxy(:handle_first, state, [query, cursor, maybe_savepoint(opts, state)])
     def handle_next(query, cursor, opts, state),

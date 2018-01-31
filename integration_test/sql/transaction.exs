@@ -172,6 +172,74 @@ defmodule Ecto.Integration.TransactionTest do
     assert [%Trans{text: "7"}] = PoolRepo.all(Trans)
   end
 
+  test "transaction is rolled back after user rollback" do
+    assert PoolRepo.transaction(fn ->
+      PoolRepo.insert!(%Trans{text: "8"})
+      Ecto.Adapters.SQL.query(PoolRepo, "ROLLBACK", [])
+    end) == {:error, :rollback}
+  end
+
+  test "transaction is rolled back on nested transaction attempt after user rollback" do
+    assert PoolRepo.transaction(fn ->
+      PoolRepo.insert!(%Trans{text: "9"})
+      Ecto.Adapters.SQL.query(PoolRepo, "ROLLBACK", [])
+      assert PoolRepo.transaction(fn -> :ok end) == {:error, :rollback}
+      assert_raise DBConnection.ConnectionError, "transaction rolling back",
+        fn -> PoolRepo.all(Trans) end
+    end) == {:error, :rollback}
+  end
+
+  test "transaction is rolled back after user rollback in nested transaction" do
+    assert PoolRepo.transaction(fn ->
+      PoolRepo.insert!(%Trans{text: "10"})
+      assert PoolRepo.transaction(fn ->
+        Ecto.Adapters.SQL.query(PoolRepo, "ROLLBACK", [])
+      end) == {:error, :rollback}
+      assert_raise DBConnection.ConnectionError, "transaction rolling back",
+        fn -> PoolRepo.all(Trans) end
+    end) == {:error, :rollback}
+  end
+
+  @tag :transaction_error_status
+  test "transaction is rolled back after SQL error" do
+    assert PoolRepo.transaction(fn ->
+      PoolRepo.insert!(%Trans{id: 11, text: "11"})
+      assert_raise Ecto.ConstraintError, fn -> PoolRepo.insert!(%Trans{id: 11, text: "11"}) end
+    end) == {:error, :rollback}
+
+    assert [] = TestRepo.all(Trans)
+  end
+
+  @tag :transaction_error_status
+  test "transaction is rolled back on nested transaction attempt after SQL error" do
+    assert PoolRepo.transaction(fn ->
+      PoolRepo.insert!(%Trans{id: 12, text: "12"})
+      assert_raise Ecto.ConstraintError, fn -> PoolRepo.insert!(%Trans{id: 12, text: "12"}) end
+
+      assert PoolRepo.transaction(fn -> flunk "ran transaction" end) == {:error, :rollback}
+      assert_raise DBConnection.ConnectionError, "transaction rolling back",
+        fn -> PoolRepo.all(Trans) end
+    end) == {:error, :rollback}
+
+    assert [] = TestRepo.all(Trans)
+  end
+
+  @tag :transaction_error_status
+  test "transaction is rolled back after SQL error in nested transaction" do
+    assert PoolRepo.transaction(fn ->
+      PoolRepo.insert!(%Trans{id: 13, text: "13"})
+      assert PoolRepo.transaction(fn ->
+        assert_raise Ecto.ConstraintError, fn -> PoolRepo.insert!(%Trans{id: 13, text: "13"}) end
+      end) == {:error, :rollback}
+
+      assert_raise DBConnection.ConnectionError, "transaction rolling back",
+        fn -> PoolRepo.all(Trans) end
+      assert PoolRepo.transaction(fn -> flunk "ran transaction" end) == {:error, :rollback}
+    end) == {:error, :rollback}
+
+    assert [] = TestRepo.all(Trans)
+  end
+
   ## Logging
 
   test "log begin, commit and rollback" do
@@ -224,37 +292,23 @@ defmodule Ecto.Integration.TransactionTest do
     catch_error(PoolRepo.query!("savepoint foobar"))
   end
 
-  test "log raises after begin, drops the whole transaction" do
-    try do
-      PoolRepo.transaction(fn ->
-        PoolRepo.insert!(%Trans{text: "8"})
-        Process.put(:on_log, fn _ -> raise UniqueError end)
-        PoolRepo.transaction(fn -> flunk "log did not raise" end)
-      end)
-    rescue
-      UniqueError -> :ok
-    end
-
-    assert [] = PoolRepo.all(Trans)
-  end
-
   test "log raises after commit, does commit" do
     try do
       PoolRepo.transaction(fn ->
-        PoolRepo.insert!(%Trans{text: "10"})
+        PoolRepo.insert!(%Trans{text: "14"})
         Process.put(:on_log, fn _ -> raise UniqueError end)
       end)
     rescue
       UniqueError -> :ok
     end
 
-    assert [%Trans{text: "10"}] = PoolRepo.all(Trans)
+    assert [%Trans{text: "14"}] = PoolRepo.all(Trans)
   end
 
   test "log raises after rollback, does rollback" do
     try do
       PoolRepo.transaction(fn ->
-        PoolRepo.insert!(%Trans{text: "11"})
+        PoolRepo.insert!(%Trans{text: "15"})
         Process.put(:on_log, fn _ -> raise UniqueError end)
         PoolRepo.rollback(:rollback)
       end)
