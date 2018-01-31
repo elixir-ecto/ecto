@@ -860,7 +860,7 @@ defmodule Ecto.Type do
   # Checks if a value is of the given primitive type.
   defp of_base_type?(:any, _),         do: true
   defp of_base_type?(:id, term),       do: is_integer(term)
-  defp of_base_type?(:float, term),    do: is_float(term)
+  defp of_base_type?(:float, term),    do: is_float(term) or is_integer(term)
   defp of_base_type?(:integer, term),  do: is_integer(term)
   defp of_base_type?(:boolean, term),  do: is_boolean(term)
   defp of_base_type?(:binary, term),   do: is_binary(term)

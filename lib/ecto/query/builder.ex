@@ -57,6 +57,16 @@ defmodule Ecto.Query.Builder do
     {expr, {params, acc}}
   end
 
+  def escape({:type, _, [{math_op, _, [_, _]} = op_expr, type]}, _type, params_acc, vars, env)
+      when math_op in ~w(+ - * /)a do
+    type = validate_type!(type, vars)
+
+    {op_expr, params_acc} = escape(op_expr, type, params_acc, vars, env)
+
+    expr = {:{}, [], [:type, [], [op_expr, type]]}
+    {expr, params_acc}
+  end
+
   # fragments
   def escape({:fragment, _, [query]}, _type, params_acc, vars, env) when is_list(query) do
     {escaped, params_acc} =
@@ -188,6 +198,15 @@ defmodule Ecto.Query.Builder do
     {params, acc} = params_acc
     {{:{}, [], [comp_op, [], [left, right]]},
      {params |> wrap_nil(left) |> wrap_nil(right), acc}}
+  end
+
+  # mathematical operators
+  def escape({math_op, _, [left, right]}, type, params_acc, vars, env) 
+      when math_op in ~w(+ - * /)a do
+    {left,  params_acc} = escape(left, type, params_acc, vars, env)
+    {right, params_acc} = escape(right, type, params_acc, vars, env)
+
+    {{:{}, [], [math_op, [], [left, right]]}, params_acc}
   end
 
   # in operator

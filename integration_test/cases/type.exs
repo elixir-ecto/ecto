@@ -26,11 +26,13 @@ defmodule Ecto.Integration.TypeTest do
     # Integers
     assert [1] = TestRepo.all(from p in Post, where: p.visits == ^integer, select: p.visits)
     assert [1] = TestRepo.all(from p in Post, where: p.visits == 1, select: p.visits)
+    assert [3] = TestRepo.all(from p in Post, select: p.visits + 2)
 
     # Floats
     assert [0.1] = TestRepo.all(from p in Post, where: p.intensity == ^float, select: p.intensity)
     assert [0.1] = TestRepo.all(from p in Post, where: p.intensity == 0.1, select: p.intensity)
     assert [1500.0] = TestRepo.all(from p in Post, select: 1500.0)
+    assert [0.5] = TestRepo.all(from p in Post, select: p.intensity * 5)
 
     # Booleans
     assert [true] = TestRepo.all(from p in Post, where: p.public == ^true, select: p.public)
@@ -74,6 +76,12 @@ defmodule Ecto.Integration.TypeTest do
     # Custom types
     uuid = Ecto.UUID.generate()
     assert [^uuid] = TestRepo.all(from Post, select: type(^uuid, Ecto.UUID))
+
+    # Math operations
+    assert [4]   = TestRepo.all(from Post, select: type(2 + ^"2", :integer))
+    assert [4.0] = TestRepo.all(from Post, select: type(2 + ^"2", :float))
+    assert [4]   = TestRepo.all(from p in Post, select: type(2 + ^"2", p.visits))
+    assert [4.0] = TestRepo.all(from p in Post, select: type(2 + ^"2", p.intensity))
   end
 
   test "binary id type" do
@@ -228,6 +236,9 @@ defmodule Ecto.Integration.TypeTest do
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == ^1, select: p.cost)
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == 1.0, select: p.cost)
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == 1, select: p.cost)
+
+    assert [Decimal.new("2.0")] == TestRepo.all(from p in Post, select: p.cost * 2)
+    assert [Decimal.new("2.0")] == TestRepo.all(from p in Post, select: p.cost + p.cost)
   end
 
   @tag :decimal_type

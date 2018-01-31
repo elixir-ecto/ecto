@@ -20,6 +20,10 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do &0.y > &1.z end), %{}} ==
            escape(quote do x.y > y.z end, [x: 0, y: 1], __ENV__)
 
+    import Kernel, except: [+: 2]
+    assert {Macro.escape(quote do &0.y + &1.z end), %{}} ==
+           escape(quote do x.y + y.z end, [x: 0, y: 1], __ENV__)
+
     assert {Macro.escape(quote do avg(0) end), %{}} ==
            escape(quote do avg(0) end, [], __ENV__)
 
