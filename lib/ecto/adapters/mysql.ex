@@ -55,6 +55,17 @@ defmodule Ecto.Adapters.MySQL do
     * `:collation` - the collation order
     * `:dump_path` - where to place dumped structures
 
+  ### After connect callback
+
+  If you want to execute a callback as soon as connection is established
+  to the database, you can use the `:after_connect` configuration. For
+  example, in your repository configuration you can add:
+
+    after_connect: {Mariaex, :query!, ["SET variable = value", []]}
+
+  You can also specify your own module that will receive the Mariaex
+  connection as argument.
+
   ## Limitations
 
   There are some limitations when using Ecto with MySQL that one
