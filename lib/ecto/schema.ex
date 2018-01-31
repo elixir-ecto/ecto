@@ -142,7 +142,6 @@ defmodule Ecto.Schema do
 
       @primary_key {:id, :integer, autogenerate: false, source: :legacy_id}
 
-
   ## Types and casting
 
   When defining the schema, types need to be given. Types are split
@@ -651,7 +650,6 @@ defmodule Ecto.Schema do
           has_many :children, Comment, foreign_key: :parent_id, references: :id
         end
       end
-
 
   ## has_many/has_one :through
 
