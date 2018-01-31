@@ -71,6 +71,17 @@ defmodule Ecto.Adapters.Postgres do
     * `:lc_ctype` - the character classification
     * `:dump_path` - where to place dumped structures
 
+  ### After connect callback
+
+  If you want to execute a callback as soon as connection is established
+  to the database, you can use the `:after_connect` configuration. For
+  example, in your repository configuration you can add:
+
+    after_connect: {Postgrex, :query!, ["SET search_path TO global_prefix", []]}
+
+  You can also specify your own module that will receive the Postgrex
+  connection as argument.
+
   ## Extensions
 
   Both PostgreSQL and its adapter for Elixir, Postgrex, support an
