@@ -179,6 +179,7 @@ if Code.ensure_loaded?(Mariaex) do
 
     binary_ops =
       [==: " = ", !=: " != ", <=: " <= ", >=: " >= ", <: " < ", >: " > ",
+       +: " + ", -: " - ", *: " * ", /: " / ",
        and: " AND ", or: " OR ", like: " LIKE "]
 
     @binary_ops Keyword.keys(binary_ops)
