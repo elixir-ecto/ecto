@@ -861,7 +861,7 @@ defmodule Ecto.Adapters.PostgresTest do
                 {:add, :a, :map, [default: %{foo: "bar", baz: "boom"}]}
               ]
             }
-    assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("a" jsonb DEFAULT '{"foo":"bar","baz":"boom"}')|]
+    assert execute_ddl(create) == [~s|CREATE TABLE "posts" ("a" jsonb DEFAULT '{"baz":"boom","foo":"bar"}')|]
   end
 
   test "create table with a map column, and a string default" do

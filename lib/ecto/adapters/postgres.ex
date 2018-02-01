@@ -90,8 +90,7 @@ defmodule Ecto.Adapters.Postgres do
   Create a new file anywhere in your application with the following:
 
       Postgrex.Types.define(MyApp.PostgresTypes,
-                            [MyExtension.Foo, MyExtensionBar] ++ Ecto.Adapters.Postgres.extensions(),
-                            json: Poison)
+                            [MyExtension.Foo, MyExtensionBar] ++ Ecto.Adapters.Postgres.extensions())
 
   Once your type module is defined, you can configure the repository to use it:
 
