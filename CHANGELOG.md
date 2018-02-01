@@ -2,9 +2,11 @@
 
 ## Highlights
 
-This is a new major release for Ecto v3.0. Despite the major number, this is a small release with the main goal of removing the previously deprecated Ecto datetime types in favor of the Calendar types that ship as part of Elixir.
+This is a new major release for Ecto v3.0. Despite the major number, this is a small release with the main goal of removing the previously deprecated Ecto datetime types in favor of the Calendar types that ship as part of Elixir and updating to the latest JSON handling best practices.
 
-In other words, `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` no longer exist. Instead developers should use `Date`, `Time`, `DateTime` and `NaiveDateTime` that ship as part of Elixir and are the preferred types since Ecto 2.1. Database adapters have also been standarized to work with Elixir types and they no longer return tuples when developers perform raw queries.
+### Calendar types
+
+`Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` no longer exist. Instead developers should use `Date`, `Time`, `DateTime` and `NaiveDateTime` that ship as part of Elixir and are the preferred types since Ecto 2.1. Database adapters have also been standarized to work with Elixir types and they no longer return tuples when developers perform raw queries.
 
 To uniformly support microseconds across all databases, the types `:time`, `:naive_datetime`, `:utc_datetime` will now discard any microseconds information. Ecto v3.0 introduces the types `:time_usec`, `:naive_datetime_usec` and `:utc_datetime_usec` as an alternative for those interested in keeping microseconds. If you want to keep microseconds in your migrations and schemas, you need to configure your repository:
 
@@ -15,7 +17,11 @@ And then in your schema:
 
     @timestamps_opts [type: :naive_datetime_usec]
 
-Finally, Ecto v3.0 moved the management of the JSON library to adapters. This means that the following configuration will emit a warning:
+### JSON handling
+
+Ecto v3.0 moved the management of the JSON library to adapters. All adapters should default to [`Jason`](https://github.com/michalmuskala/jason).
+
+The following configuration will emit a warning:
 
     config :ecto, :json_library, CustomJSONLib
 
@@ -27,7 +33,15 @@ And should be rewritten as:
     # For MySQL
     config :mariaex, :json_library, CustomJSONLib
 
-This means Ecto no longer requires Ecto-specific extensions on databases. This leads to better integration with 3rd party libraries and faster compilation times. Ecto also now requires the JSON library to implement an `encode_to_iodata!/1` function instead of `encode!` in line with the interface required by adapters such as Postgrex.
+If you want to rollback to Poison, you need to configure your adapter accordingly:
+
+    # For Postgres
+    config :postgrex, :json_library, Poison
+
+    # For MySQL
+    config :mariaex, :json_library, Poison
+
+We recommend everyone to migrate to Jason. Built-in support for Poison will be removed in future Ecto 3.x releases.
 
 ## v3.0.0-dev (In Progress)
 

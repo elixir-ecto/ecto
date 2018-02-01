@@ -271,14 +271,28 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def __before_compile__(conn, adapter, _env) do
-    if value = Application.get_env(:ecto, :json_library) do
-      IO.warn """
-      The :json_library configuration for the :ecto application is deprecated.
-      Please configure the :json_library in the adapter instead:
+    case Application.get_env(:ecto, :json_library) do
+      nil ->
+        :ok
 
-          config #{inspect adapter}, :json_library, #{inspect value}
+      Jason ->
+        IO.warn """
+        Jason is the default :json_library in Ecto 3.0.
+        You no longer need to configure it explicitly,
+        please remove this line from your config files:
 
-      """
+            config :ecto, :json_library, Jason
+
+        """
+
+      value ->
+        IO.warn """
+        The :json_library configuration for the :ecto application is deprecated.
+        Please configure the :json_library in the adapter instead:
+
+            config #{inspect adapter}, :json_library, #{inspect value}
+
+        """
     end
 
     quote do

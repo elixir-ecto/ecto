@@ -673,7 +673,7 @@ defmodule Ecto.Adapters.MySQLTest do
                 {:add, :a, :map, [default: %{foo: "bar", baz: "boom"}]}
               ]
             }
-    assert execute_ddl(create) == [~s|CREATE TABLE `posts` (`a` text DEFAULT '{"foo":"bar","baz":"boom"}') ENGINE = INNODB|]
+    assert execute_ddl(create) == [~s|CREATE TABLE `posts` (`a` text DEFAULT '{"baz":"boom","foo":"bar"}') ENGINE = INNODB|]
   end
 
   test "create table with a map column, and a string default" do
