@@ -268,6 +268,21 @@ defmodule Ecto.QueryTest do
     end
   end
 
+  describe "named joins" do
+    test "assigns a name to a join" do
+      quoted =
+        quote do
+          from(p in Post,
+            join: b in Blog,
+            join: {:comment, c} in Comment)
+        end
+
+      assert {:%{}, _, list} = Macro.expand(quoted, __ENV__)
+      [_, {_, _, [_, {_, _, join_attrs}]}] = list[:joins]
+      assert join_attrs[:name] == :comment
+    end
+  end
+
   describe "exclude/2" do
     test "removes the given field" do
       base = %Ecto.Query{}
