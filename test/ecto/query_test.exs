@@ -281,6 +281,13 @@ defmodule Ecto.QueryTest do
       [_, {_, _, [_, {_, _, join_attrs}]}] = list[:joins]
       assert join_attrs[:name] == :comment
     end
+
+    test "match on binding by name" do
+      "posts"
+      |> join(:inner, [p], {:comments, c} in "comments")
+      |> where([comments: c], c.id == 0)
+      |> IO.inspect
+    end
   end
 
   describe "exclude/2" do

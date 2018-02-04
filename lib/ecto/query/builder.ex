@@ -526,22 +526,48 @@ defmodule Ecto.Query.Builder do
   def escape_binding(query, binding) when is_list(binding) do
     vars = binding |> Enum.with_index |> Enum.map(&escape_bind(&1))
     assert_no_dup_binding!(vars)
-    case Enum.split_while(vars, & elem(&1, 0) != :...) do
+    result = case Enum.split_while(vars, & elem(&1, 0) != :...) do
       {vars, []} ->
-        {query, vars}
+        case Enum.split_while(vars, & !is_atom(elem(&1, 1))) do
+          {vars, []} ->
+            {query, vars}
+          {vars, named} ->
+            query =
+              quote do
+              query = Ecto.Queryable.to_query(unquote(query))
+              escape_count = Ecto.Query.Builder.count_binds(query)
+              named_binds = Ecto.Query.Builder.named_binds(query)
+              query
+            end
+
+            named_binds =
+              Enum.map(named, fn {k, name} -> {k, quote(do: named_binds[unquote(name)])} end)
+
+            {query, vars ++ named_binds}
+        end
       {vars, [_ | tail]} ->
         query =
           quote do
             query = Ecto.Queryable.to_query(unquote(query))
             escape_count = Ecto.Query.Builder.count_binds(query)
+            named_binds = Ecto.Query.Builder.named_binds(query)
             query
           end
-        tail =
+        tail_fn = fn tail ->
           tail
           |> Enum.with_index(-length(tail))
           |> Enum.map(fn {{k, _}, count} -> {k, quote(do: escape_count + unquote(count))} end)
-        {query, vars ++ tail}
+        end
+        case Enum.split_while(tail, & !is_atom(elem(&1, 1))) do
+          {tail, []} ->
+            {query, vars ++ tail_fn.(tail)}
+          {tail, named} ->
+            named_binds =
+              Enum.map(named, fn {k, name} -> {k, quote(do: named_binds[unquote(name)])} end)
+            {query, vars ++ tail_fn.(tail) ++ named_binds}
+        end
     end
+    result
   end
   def escape_binding(_query, bind) do
     error! "binding should be list of variables, got: #{Macro.to_string(bind)}"
@@ -559,6 +585,8 @@ defmodule Ecto.Query.Builder do
     do: {var, ix}
   defp escape_bind({{var, _, context}, ix}) when is_atom(var) and is_atom(context),
     do: {var, ix}
+  defp escape_bind({{name, {var, _, context}}, _ix}) when is_atom(name) and is_atom(var) and is_atom(context),
+    do: {var, name}
   defp escape_bind({bind, _ix}),
     do: error!("binding list should contain only variables, got: #{Macro.to_string(bind)}")
 
@@ -778,6 +806,14 @@ defmodule Ecto.Query.Builder do
   @spec count_binds(Ecto.Query.t) :: non_neg_integer
   def count_binds(%Query{joins: joins}) do
     1 + length(joins)
+  end
+
+  def named_binds(%Query{joins: joins}) do
+    joins
+    |> Enum.with_index(1)
+    |> Enum.map(fn {%{name: name}, idx} -> {name, idx} end)
+    |> Enum.into(%{})
+    |> Map.delete(nil)
   end
 
   @doc """
