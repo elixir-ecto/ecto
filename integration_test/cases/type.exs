@@ -238,7 +238,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [^decimal] = TestRepo.all(from p in Post, where: p.cost == 1, select: p.cost)
 
     assert [Decimal.new("2.0")] == TestRepo.all(from p in Post, select: p.cost * 2)
-    assert [Decimal.new("2.0")] == TestRepo.all(from p in Post, select: p.cost + p.cost)
+    assert [Decimal.new("0.0")] == TestRepo.all(from p in Post, select: p.cost - p.cost)
   end
 
   @tag :decimal_type

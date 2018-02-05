@@ -201,7 +201,7 @@ defmodule Ecto.Query.Builder do
   end
 
   # mathematical operators
-  def escape({math_op, _, [left, right]}, type, params_acc, vars, env) 
+  def escape({math_op, _, [left, right]}, type, params_acc, vars, env)
       when math_op in ~w(+ - * /)a do
     {left,  params_acc} = escape(left, type, params_acc, vars, env)
     {right, params_acc} = escape(right, type, params_acc, vars, env)
