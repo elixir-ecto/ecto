@@ -286,7 +286,6 @@ defmodule Ecto.QueryTest do
       "posts"
       |> join(:inner, [p], {:comments, c} in "comments")
       |> where([comments: c], c.id == 0)
-      |> IO.inspect
     end
   end
 

@@ -96,7 +96,6 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   def escape(join, vars, env) do
-    IO.inspect join
     case Macro.expand(join, env) do
       ^join ->
         Builder.error! "malformed join `#{Macro.to_string(join)}` in query expression"
