@@ -536,21 +536,20 @@ defmodule Ecto.Query.Builder do
               quote do
               query = Ecto.Queryable.to_query(unquote(query))
               escape_count = Ecto.Query.Builder.count_binds(query)
-              named_binds = Ecto.Query.Builder.named_binds(query)
+              bind_mappings = Ecto.Query.Builder.named_binds(query)
               query
             end
 
-            named_binds =
-              Enum.map(named, fn {k, name} -> {k, quote(do: named_binds[unquote(name)])} end)
+            mapped_binds =
+              Enum.map(named, fn {k, name} -> {k, quote(do: bind_mappings[unquote(name)])} end)
 
-            {query, vars ++ named_binds}
+            {query, vars ++ mapped_binds}
         end
       {vars, [_ | tail]} ->
         query =
           quote do
             query = Ecto.Queryable.to_query(unquote(query))
             escape_count = Ecto.Query.Builder.count_binds(query)
-            named_binds = Ecto.Query.Builder.named_binds(query)
             query
           end
         tail_fn = fn tail ->
@@ -562,9 +561,13 @@ defmodule Ecto.Query.Builder do
           {tail, []} ->
             {query, vars ++ tail_fn.(tail)}
           {tail, named} ->
-            named_binds =
-              Enum.map(named, fn {k, name} -> {k, quote(do: named_binds[unquote(name)])} end)
-            {query, vars ++ tail_fn.(tail) ++ named_binds}
+            quote do
+              bind_mappings = Ecto.Query.Builder.named_binds(query)
+              query
+            end
+            mapped_binds =
+              Enum.map(named, fn {k, name} -> {k, quote(do: bind_mappings[unquote(name)])} end)
+            {query, vars ++ tail_fn.(tail) ++ mapped_binds}
         end
     end
     result
