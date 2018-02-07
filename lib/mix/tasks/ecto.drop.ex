@@ -18,11 +18,11 @@ defmodule Mix.Tasks.Ecto.Drop do
   @moduledoc """
   Drop the storage for the given repository.
 
-  The repositories to create are the ones specified under the
+  The repositories to drop are the ones specified under the
   `:ecto_repos` option in the current app configuration. However,
   if the `-r` option is given, it replaces the `:ecto_repos` config.
 
-  Since Ecto tasks can only be executed once, if you need to create
+  Since Ecto tasks can only be executed once, if you need to drop
   multiple repositories, set `:ecto_repos` accordingly or pass the `-r`
   flag multiple times.
 
