@@ -283,9 +283,24 @@ defmodule Ecto.QueryTest do
     end
 
     test "match on binding by name" do
-      "posts"
-      |> join(:inner, [p], {:comments, c} in "comments")
-      |> where([comments: c], c.id == 0)
+      query =
+        "posts"
+        |> join(:inner, [p], {:comments, c} in "comments")
+        |> where([comments: c], c.id == 0)
+
+      assert [%{name: :comments}] = query.joins
+      assert [%{expr: {_, _, [_, %{type: {1, :id}}]}}] = query.wheres
+    end
+
+    test "match on binding by name with ... in the middle" do
+      query =
+        "posts"
+        |> join(:inner, [p], c in "comments")
+        |> join(:inner, [], {:authors, a} in "comments")
+        |> where([p, ..., authors: a], a.id == 0)
+
+      assert [%{source: {"comments", _}}, %{name: :authors}] = query.joins
+      assert [%{expr: {_, _, [_, %{type: {2, :id}}]}}] = query.wheres
     end
   end
 
