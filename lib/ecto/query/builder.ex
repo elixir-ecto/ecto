@@ -811,7 +811,10 @@ defmodule Ecto.Query.Builder do
   def named_binds(%Query{joins: joins}) do
     joins
     |> Enum.with_index(1)
-    |> Enum.map(fn {%{name: name}, idx} -> {name, idx} end)
+    |> Enum.map(fn
+      {%{name: name}, idx} -> {name, idx}
+      {{name, _, _}, idx} -> {name, idx}
+    end)
     |> Enum.into(%{})
     |> Map.delete(nil)
   end
