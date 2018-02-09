@@ -124,6 +124,13 @@ defmodule Ecto.Query.BuilderTest do
            escape(quote(do: ^([] ++ [])), [], __ENV__)
   end
 
+  test "escape_binding with named binding in the input" do
+    assert {_, [x: 0,
+                y: 1,
+                z: {_, _, [{:bind_mappings, _, _}, :z_name]}]} =
+      escape_binding(%Ecto.Query{}, quote do: [x, y, z_name: z])
+  end
+
   defp params(quoted, type, vars \\ []) do
     {_, {params, :acc}} = escape(quoted, type, {%{}, :acc}, vars, __ENV__)
     params
