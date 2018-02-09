@@ -307,7 +307,7 @@ Then we can get to the errors by doing `changeset.errors`:
 [first_name: "can't be blank", last_name: "can't be blank"]
 ```
 
-And we can ask the changeset itself it is valid, even before doing an insertion:
+And we can ask the changeset itself if it is valid, even before doing an insertion:
 
 ```elixir
 changeset.valid?
