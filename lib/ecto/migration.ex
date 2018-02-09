@@ -162,7 +162,7 @@ defmodule Ecto.Migration do
     * `:migration_primary_key` - Ecto uses the `:id` column with type
       `:bigserial` but you can configure it via:
 
-          config :app, App.Repo, migration_primary_key: [id: :uuid, type: :binary_id]
+          config :app, App.Repo, migration_primary_key: [name: :uuid, type: :binary_id]
 
     * `:migration_timestamps` - Ecto uses type `:naive_datetime` but you
       can configure it via:
