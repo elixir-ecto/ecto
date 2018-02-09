@@ -54,7 +54,11 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-  defp changeset(schema \\ %Post{}, params) do
+  defp my_changeset() do
+    my_changeset(%{})
+  end
+
+  defp my_changeset(schema \\ %Post{}, params) do
     cast(schema, params, ~w(id token title body upvotes decimal topics virtual)a)
   end
 
@@ -473,7 +477,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "fetch_field/2" do
-    changeset = changeset(%Post{body: "bar"}, %{"title" => "foo"})
+    changeset = my_changeset(%Post{body: "bar"}, %{"title" => "foo"})
 
     assert fetch_field(changeset, :title) == {:changes, "foo"}
     assert fetch_field(changeset, :body) == {:data, "bar"}
@@ -481,7 +485,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "get_field/3" do
-    changeset = changeset(%Post{body: "bar"}, %{"title" => "foo"})
+    changeset = my_changeset(%Post{body: "bar"}, %{"title" => "foo"})
 
     assert get_field(changeset, :title) == "foo"
     assert get_field(changeset, :body) == "bar"
@@ -498,7 +502,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "fetch_change/2" do
-    changeset = changeset(%{"title" => "foo", "body" => nil, "upvotes" => nil})
+    changeset = my_changeset(%{"title" => "foo", "body" => nil, "upvotes" => nil})
 
     assert fetch_change(changeset, :title) == {:ok, "foo"}
     assert fetch_change(changeset, :body) == :error
@@ -506,7 +510,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "get_change/3" do
-    changeset = changeset(%{"title" => "foo", "body" => nil, "upvotes" => nil})
+    changeset = my_changeset(%{"title" => "foo", "body" => nil, "upvotes" => nil})
 
     assert get_change(changeset, :title) == "foo"
     assert get_change(changeset, :body) == nil
@@ -517,17 +521,17 @@ defmodule Ecto.ChangesetTest do
 
   test "update_change/3" do
     changeset =
-      changeset(%{"title" => "foo"})
+      my_changeset(%{"title" => "foo"})
       |> update_change(:title, & &1 <> "bar")
     assert changeset.changes.title == "foobar"
 
     changeset =
-      changeset(%{"upvotes" => nil})
+      my_changeset(%{"upvotes" => nil})
       |> update_change(:upvotes, & &1 || 10)
     assert changeset.changes.upvotes == 10
 
     changeset =
-      changeset(%{})
+      my_changeset()
       |> update_change(:title, & &1 || "bar")
     assert changeset.changes == %{}
   end
@@ -574,7 +578,7 @@ defmodule Ecto.ChangesetTest do
     post = %Post{}
     assert post.title == ""
 
-    changeset = changeset(post, %{"title" => "foo"})
+    changeset = my_changeset(post, %{"title" => "foo"})
     changed_post = apply_changes(changeset)
 
     assert changed_post.__struct__ == post.__struct__
@@ -585,7 +589,7 @@ defmodule Ecto.ChangesetTest do
     post = %Post{}
     assert post.title == ""
 
-    changeset = changeset(post, %{"title" => "foo"})
+    changeset = my_changeset(post, %{"title" => "foo"})
     assert changeset.valid?
     assert {:ok, changed_post} = apply_action(changeset, :update)
 
@@ -596,7 +600,7 @@ defmodule Ecto.ChangesetTest do
   test "apply_action/2 with invalid changeset" do
     changeset =
       %Post{}
-      |> changeset(%{"title" => "foo"})
+      |> my_changeset(%{"title" => "foo"})
       |> validate_length(:title, min: 10)
 
     refute changeset.valid?
@@ -607,21 +611,44 @@ defmodule Ecto.ChangesetTest do
   test "apply_action/2 with invalid action" do
     assert_raise ArgumentError, ~r/unknown action/, fn ->
       %Post{}
-      |> changeset(%{})
+      |> my_changeset(%{})
       |> apply_action(:invalid_action)
     end
   end
 
   ## Validations
 
+  describe "validation_specs/1" do
+
+    test "returns an empty list if no validations are specified" do
+      result = 
+        my_changeset()
+        |> validation_specs()
+      
+      assert result == []
+    end
+
+    test "returns the appropriate validations" do
+      result =
+        my_changeset()
+        |> validate_length(:title, less_than: 20, message: "too long")
+        |> validate_format(:title, ~r/wombat/)
+        |> validation_specs()
+
+      assert [ val1, val2 ] = result
+      assert val1 == { :title, { :format, ~r/wombat/ }}
+      assert val2 == { :title, { :length, less_than: 20, message: "too long" }}
+    end 
+  end 
+
   test "add_error/3" do
     changeset =
-      changeset(%{})
+      my_changeset()
       |> add_error(:foo, "bar")
     assert changeset.errors == [foo: {"bar", []}]
 
     changeset =
-      changeset(%{})
+      my_changeset()
       |> add_error(:foo, "bar", additional: "information")
     assert changeset.errors == [foo: {"bar", [additional: "information"]}]
   end
@@ -629,7 +656,7 @@ defmodule Ecto.ChangesetTest do
   test "validate_change/3" do
     # When valid
     changeset =
-      changeset(%{"title" => "hello"})
+      my_changeset(%{"title" => "hello"})
       |> validate_change(:title, fn :title, "hello" -> [] end)
 
     assert changeset.valid?
@@ -637,7 +664,7 @@ defmodule Ecto.ChangesetTest do
 
     # When invalid with binary
     changeset =
-      changeset(%{"title" => "hello"})
+      my_changeset(%{"title" => "hello"})
       |> validate_change(:title, fn :title, "hello" -> [title: "oops"] end)
 
     refute changeset.valid?
@@ -645,7 +672,7 @@ defmodule Ecto.ChangesetTest do
 
     # When invalid with tuple
     changeset =
-      changeset(%{"title" => "hello"})
+      my_changeset(%{"title" => "hello"})
       |> validate_change(:title, fn :title, "hello" -> [title: {"oops", type: "bar"}] end)
 
     refute changeset.valid?
@@ -653,7 +680,7 @@ defmodule Ecto.ChangesetTest do
 
     # When missing
     changeset =
-      changeset(%{})
+      my_changeset()
       |> validate_change(:title, fn :title, "hello" -> [title: "oops"] end)
 
     assert changeset.valid?
@@ -661,7 +688,7 @@ defmodule Ecto.ChangesetTest do
 
     # When nil
     changeset =
-      changeset(%{"title" => nil})
+      my_changeset(%{"title" => nil})
       |> validate_change(:title, fn :title, "hello" -> [title: "oops"] end)
 
     assert changeset.valid?
@@ -669,7 +696,7 @@ defmodule Ecto.ChangesetTest do
 
     # When virtual
     changeset =
-      changeset(%{"virtual" => "hello"})
+      my_changeset(%{"virtual" => "hello"})
       |> validate_change(:virtual, fn :virtual, "hello" -> [] end)
 
     assert changeset.valid?
@@ -677,14 +704,14 @@ defmodule Ecto.ChangesetTest do
 
     # When unknown field
     assert_raise ArgumentError, ~r/unknown field :bad for changeset on/, fn  ->
-      changeset(%{"title" => "hello"})
+      my_changeset(%{"title" => "hello"})
       |> validate_change(:bad, fn _, _ -> [] end)
     end
   end
 
   test "validate_change/4" do
     changeset =
-      changeset(%{"title" => "hello"})
+      my_changeset(%{"title" => "hello"})
       |> validate_change(:title, :oops, fn :title, "hello" -> [title: "oops"] end)
 
     refute changeset.valid?
@@ -692,7 +719,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.validations == [title: :oops]
 
     changeset =
-      changeset(%{})
+      my_changeset()
       |> validate_change(:title, :oops, fn :title, "hello" -> [title: "oops"] end)
 
     assert changeset.valid?
@@ -703,20 +730,20 @@ defmodule Ecto.ChangesetTest do
   test "validate_required/2" do
     # When valid
     changeset =
-      changeset(%{"title" => "hello", "body" => "something"})
+      my_changeset(%{"title" => "hello", "body" => "something"})
       |> validate_required(:title)
     assert changeset.valid?
     assert changeset.errors == []
 
     # When missing
-    changeset = changeset(%{}) |> validate_required(:title)
+    changeset = my_changeset() |> validate_required(:title)
     refute changeset.valid?
     assert changeset.required == [:title]
     assert changeset.errors == [title: {"can't be blank", [validation: :required]}]
 
     # When nil
     changeset =
-      changeset(%{title: nil, body: "\n"})
+      my_changeset(%{title: nil, body: "\n"})
       |> validate_required([:title, :body], message: "is blank")
     refute changeset.valid?
     assert changeset.required == [:title, :body]
@@ -725,161 +752,161 @@ defmodule Ecto.ChangesetTest do
 
     # When unknown field
     assert_raise ArgumentError, ~r/unknown field :bad for changeset on/, fn  ->
-      changeset(%{"title" => "hello", "body" => "something"})
+      my_changeset(%{"title" => "hello", "body" => "something"})
       |> validate_required(:bad)
     end
 
     # When field is not an atom
     assert_raise ArgumentError, ~r/expects field names to be atoms, got: `"title"`/, fn ->
-      changeset(%{"title" => "hello"})
+      my_changeset(%{"title" => "hello"})
       |> validate_required("title")
     end
   end
 
   test "validate_format/3" do
     changeset =
-      changeset(%{"title" => "foo@bar"})
+      my_changeset(%{"title" => "foo@bar"})
       |> validate_format(:title, ~r/@/)
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [title: {:format, ~r/@/}]
 
     changeset =
-      changeset(%{"title" => "foobar"})
+      my_changeset(%{"title" => "foobar"})
       |> validate_format(:title, ~r/@/)
     refute changeset.valid?
     assert changeset.errors == [title: {"has invalid format", [validation: :format]}]
     assert changeset.validations == [title: {:format, ~r/@/}]
 
     changeset =
-      changeset(%{"title" => "foobar"})
+      my_changeset(%{"title" => "foobar"})
       |> validate_format(:title, ~r/@/, message: "yada")
     assert changeset.errors == [title: {"yada", [validation: :format]}]
   end
 
   test "validate_inclusion/3" do
     changeset =
-      changeset(%{"title" => "hello"})
+      my_changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(hello))
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [title: {:inclusion, ~w(hello)}]
 
     changeset =
-      changeset(%{"title" => "hello"})
+      my_changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(world))
     refute changeset.valid?
     assert changeset.errors == [title: {"is invalid", [validation: :inclusion]}]
     assert changeset.validations == [title: {:inclusion, ~w(world)}]
 
     changeset =
-      changeset(%{"title" => "hello"})
+      my_changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(world), message: "yada")
     assert changeset.errors == [title: {"yada", [validation: :inclusion]}]
   end
 
   test "validate_subset/3" do
     changeset =
-      changeset(%{"topics" => ["cat", "dog"]})
+      my_changeset(%{"topics" => ["cat", "dog"]})
       |> validate_subset(:topics, ~w(cat dog))
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [topics: {:subset, ~w(cat dog)}]
 
     changeset =
-      changeset(%{"topics" => ["cat", "laptop"]})
+      my_changeset(%{"topics" => ["cat", "laptop"]})
       |> validate_subset(:topics, ~w(cat dog))
     refute changeset.valid?
     assert changeset.errors == [topics: {"has an invalid entry", [validation: :subset]}]
     assert changeset.validations == [topics: {:subset, ~w(cat dog)}]
 
     changeset =
-      changeset(%{"topics" => ["laptop"]})
+      my_changeset(%{"topics" => ["laptop"]})
       |> validate_subset(:topics, ~w(cat dog), message: "yada")
     assert changeset.errors == [topics: {"yada", [validation: :subset]}]
   end
 
   test "validate_exclusion/3" do
     changeset =
-      changeset(%{"title" => "world"})
+      my_changeset(%{"title" => "world"})
       |> validate_exclusion(:title, ~w(hello))
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [title: {:exclusion, ~w(hello)}]
 
     changeset =
-      changeset(%{"title" => "world"})
+      my_changeset(%{"title" => "world"})
       |> validate_exclusion(:title, ~w(world))
     refute changeset.valid?
     assert changeset.errors == [title: {"is reserved", [validation: :exclusion]}]
     assert changeset.validations == [title: {:exclusion, ~w(world)}]
 
     changeset =
-      changeset(%{"title" => "world"})
+      my_changeset(%{"title" => "world"})
       |> validate_exclusion(:title, ~w(world), message: "yada")
     assert changeset.errors == [title: {"yada", [validation: :exclusion]}]
   end
 
   test "validate_length/3 with string" do
-    changeset = changeset(%{"title" => "world"}) |> validate_length(:title, min: 3, max: 7)
+    changeset = my_changeset(%{"title" => "world"}) |> validate_length(:title, min: 3, max: 7)
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [title: {:length, [min: 3, max: 7]}]
 
-    changeset = changeset(%{"title" => "world"}) |> validate_length(:title, min: 5, max: 5)
+    changeset = my_changeset(%{"title" => "world"}) |> validate_length(:title, min: 5, max: 5)
     assert changeset.valid?
 
-    changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 5)
+    changeset = my_changeset(%{"title" => "world"}) |> validate_length(:title, is: 5)
     assert changeset.valid?
 
-    changeset = changeset(%{"title" => "world"}) |> validate_length(:title, min: 6)
+    changeset = my_changeset(%{"title" => "world"}) |> validate_length(:title, min: 6)
     refute changeset.valid?
     assert changeset.errors == [title: {"should be at least %{count} character(s)", count: 6, validation: :length, kind: :min}]
 
-    changeset = changeset(%{"title" => "world"}) |> validate_length(:title, max: 4)
+    changeset = my_changeset(%{"title" => "world"}) |> validate_length(:title, max: 4)
     refute changeset.valid?
     assert changeset.errors == [title: {"should be at most %{count} character(s)", count: 4, validation: :length, kind: :max}]
 
-    changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 10)
+    changeset = my_changeset(%{"title" => "world"}) |> validate_length(:title, is: 10)
     refute changeset.valid?
     assert changeset.errors == [title: {"should be %{count} character(s)", count: 10, validation: :length, kind: :is}]
 
-    changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 10, message: "yada")
+    changeset = my_changeset(%{"title" => "world"}) |> validate_length(:title, is: 10, message: "yada")
     assert changeset.errors == [title: {"yada", count: 10, validation: :length, kind: :is}]
 
-    changeset = changeset(%{"title" => "\u0065\u0301"}) |> validate_length(:title, max: 1)
+    changeset = my_changeset(%{"title" => "\u0065\u0301"}) |> validate_length(:title, max: 1)
     assert changeset.valid?
 
-    changeset = changeset(%{"title" => "\u0065\u0301"}) |> validate_length(:title, max: 1, count: :codepoints)
+    changeset = my_changeset(%{"title" => "\u0065\u0301"}) |> validate_length(:title, max: 1, count: :codepoints)
     refute changeset.valid?
     assert changeset.errors == [title: {"should be at most %{count} character(s)", count: 1, validation: :length, kind: :max}]
   end
 
   test "validate_length/3 with list" do
-    changeset = changeset(%{"topics" => ["Politics", "Security", "Economy", "Elections"]}) |> validate_length(:topics, min: 3, max: 7)
+    changeset = my_changeset(%{"topics" => ["Politics", "Security", "Economy", "Elections"]}) |> validate_length(:topics, min: 3, max: 7)
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [topics: {:length, [min: 3, max: 7]}]
 
-    changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, min: 2, max: 2)
+    changeset = my_changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, min: 2, max: 2)
     assert changeset.valid?
 
-    changeset = changeset(%{"topics" => ["Politics", "Security", "Economy"]}) |> validate_length(:topics, is: 3)
+    changeset = my_changeset(%{"topics" => ["Politics", "Security", "Economy"]}) |> validate_length(:topics, is: 3)
     assert changeset.valid?
 
-    changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, min: 6, foo: true)
+    changeset = my_changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, min: 6, foo: true)
     refute changeset.valid?
     assert changeset.errors == [topics: {"should have at least %{count} item(s)", count: 6, validation: :length, kind: :min}]
 
-    changeset = changeset(%{"topics" => ["Politics", "Security", "Economy"]}) |> validate_length(:topics, max: 2)
+    changeset = my_changeset(%{"topics" => ["Politics", "Security", "Economy"]}) |> validate_length(:topics, max: 2)
     refute changeset.valid?
     assert changeset.errors == [topics: {"should have at most %{count} item(s)", count: 2, validation: :length, kind: :max}]
 
-    changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, is: 10)
+    changeset = my_changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, is: 10)
     refute changeset.valid?
     assert changeset.errors == [topics: {"should have %{count} item(s)", count: 10, validation: :length, kind: :is}]
 
-    changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, is: 10, message: "yada")
+    changeset = my_changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, is: 10, message: "yada")
     assert changeset.errors == [topics: {"yada", count: 10, validation: :length, kind: :is}]
   end
 
@@ -893,150 +920,150 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "validate_number/3" do
-    changeset = changeset(%{"upvotes" => 3})
+    changeset = my_changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 0)
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [upvotes: {:number, [greater_than: 0]}]
 
     # Single error
-    changeset = changeset(%{"upvotes" => -1})
+    changeset = my_changeset(%{"upvotes" => -1})
                 |> validate_number(:upvotes, greater_than: 0)
     refute changeset.valid?
     assert changeset.errors == [upvotes: {"must be greater than %{number}", validation: :number, kind: :greater_than, number: 0}]
     assert changeset.validations == [upvotes: {:number, [greater_than: 0]}]
 
     # Multiple validations
-    changeset = changeset(%{"upvotes" => 3})
+    changeset = my_changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 0, less_than: 100)
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [upvotes: {:number, [greater_than: 0, less_than: 100]}]
 
     # Multiple validations with multiple errors
-    changeset = changeset(%{"upvotes" => 3})
+    changeset = my_changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 100, less_than: 0)
     refute changeset.valid?
     assert changeset.errors == [upvotes: {"must be greater than %{number}", validation: :number, kind: :greater_than, number: 100}]
 
     # Multiple validations with custom message errors
-    changeset = changeset(%{"upvotes" => 3})
+    changeset = my_changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 100, less_than: 0, message: "yada")
     assert changeset.errors == [upvotes: {"yada", validation: :number, kind: :greater_than, number: 100}]
   end
 
   test "validate_number/3 with decimal" do
-    changeset = changeset(%{"decimal" => Decimal.new(1)})
+    changeset = my_changeset(%{"decimal" => Decimal.new(1)})
                 |> validate_number(:decimal, greater_than: Decimal.new(-3))
     assert changeset.valid?
 
-    changeset = changeset(%{"decimal" => Decimal.new(-3)})
+    changeset = my_changeset(%{"decimal" => Decimal.new(-3)})
                 |> validate_number(:decimal, less_than: Decimal.new(1))
     assert changeset.valid?
 
-    changeset = changeset(%{"decimal" => Decimal.new(-1)})
+    changeset = my_changeset(%{"decimal" => Decimal.new(-1)})
                 |> validate_number(:decimal, equal_to: Decimal.new(-1))
     assert changeset.valid?
 
-    changeset = changeset(%{"decimal" => Decimal.new(-3)})
+    changeset = my_changeset(%{"decimal" => Decimal.new(-3)})
                 |> validate_number(:decimal, less_than_or_equal_to: Decimal.new(-1))
     assert changeset.valid?
-    changeset = changeset(%{"decimal" => Decimal.new(-3)})
+    changeset = my_changeset(%{"decimal" => Decimal.new(-3)})
                 |> validate_number(:decimal, less_than_or_equal_to: Decimal.new(-3))
     assert changeset.valid?
 
-    changeset = changeset(%{"decimal" => Decimal.new(-1)})
+    changeset = my_changeset(%{"decimal" => Decimal.new(-1)})
                 |> validate_number(:decimal, greater_than_or_equal_to: Decimal.new(-1.5))
     assert changeset.valid?
-    changeset = changeset(%{"decimal" => Decimal.new(1.5)})
+    changeset = my_changeset(%{"decimal" => Decimal.new(1.5)})
                 |> validate_number(:decimal, greater_than_or_equal_to: Decimal.new(1.5))
     assert changeset.valid?
 
-    changeset = changeset(%{"decimal" => Decimal.new(4.9)})
+    changeset = my_changeset(%{"decimal" => Decimal.new(4.9)})
                 |> validate_number(:decimal, greater_than_or_equal_to: 4.9)
     assert changeset.valid?
-    changeset = changeset(%{"decimal" => Decimal.new(5)})
+    changeset = my_changeset(%{"decimal" => Decimal.new(5)})
                 |> validate_number(:decimal, less_than: 4)
     refute changeset.valid?
   end
 
   test "validate_number/3 with bad options" do
     assert_raise ArgumentError, "unknown option :min given to validate_number/3", fn  ->
-      validate_number(changeset(%{"upvotes" => 1}), :upvotes, min: Decimal.new(1.5))
+      validate_number(my_changeset(%{"upvotes" => 1}), :upvotes, min: Decimal.new(1.5))
     end
   end
 
   test "validate_confirmation/3" do
-    changeset = changeset(%{"title" => "title", "title_confirmation" => "title"})
+    changeset = my_changeset(%{"title" => "title", "title_confirmation" => "title"})
                 |> validate_confirmation(:title)
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [{:title, {:confirmation, []}}]
 
-    changeset = changeset(%{"title" => "title"})
+    changeset = my_changeset(%{"title" => "title"})
                 |> validate_confirmation(:title)
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [{:title, {:confirmation, []}}]
 
-    changeset = changeset(%{"title" => "title"})
+    changeset = my_changeset(%{"title" => "title"})
                 |> validate_confirmation(:title, required: false)
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [{:title, {:confirmation, [required: false]}}]
 
-    changeset = changeset(%{"title" => "title"})
+    changeset = my_changeset(%{"title" => "title"})
                 |> validate_confirmation(:title, required: true)
     refute changeset.valid?
     assert changeset.errors == [title_confirmation: {"can't be blank", [validation: :required]}]
     assert changeset.validations == [{:title, {:confirmation, [required: true]}}]
 
-    changeset = changeset(%{"title" => "title", "title_confirmation" => nil})
+    changeset = my_changeset(%{"title" => "title", "title_confirmation" => nil})
                 |> validate_confirmation(:title)
     refute changeset.valid?
     assert changeset.errors == [title_confirmation: {"does not match confirmation", [validation: :confirmation]}]
     assert changeset.validations == [{:title, {:confirmation, []}}]
 
-    changeset = changeset(%{"title" => "title", "title_confirmation" => "not title"})
+    changeset = my_changeset(%{"title" => "title", "title_confirmation" => "not title"})
                 |> validate_confirmation(:title)
     refute changeset.valid?
     assert changeset.errors == [title_confirmation: {"does not match confirmation", [validation: :confirmation]}]
     assert changeset.validations == [{:title, {:confirmation, []}}]
 
-    changeset = changeset(%{"title" => "title", "title_confirmation" => "not title"})
+    changeset = my_changeset(%{"title" => "title", "title_confirmation" => "not title"})
                 |> validate_confirmation(:title, message: "doesn't match field below")
     refute changeset.valid?
     assert changeset.errors == [title_confirmation: {"doesn't match field below", [validation: :confirmation]}]
     assert changeset.validations == [{:title, {:confirmation, [message: "doesn't match field below"]}}]
 
     # Skip when no parameter
-    changeset = changeset(%{"title" => "title"})
+    changeset = my_changeset(%{"title" => "title"})
                 |> validate_confirmation(:title, message: "password doesn't match")
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [{:title, {:confirmation, [message: "password doesn't match"]}}]
 
     # With casting
-    changeset = changeset(%{"upvotes" => "1", "upvotes_confirmation" => "1"})
+    changeset = my_changeset(%{"upvotes" => "1", "upvotes_confirmation" => "1"})
                 |> validate_confirmation(:upvotes)
     assert changeset.valid?
     assert changeset.errors == []
     assert changeset.validations == [{:upvotes, {:confirmation, []}}]
 
     # With blank change
-    changeset = changeset(%{"password" => "", "password_confirmation" => "password"})
+    changeset = my_changeset(%{"password" => "", "password_confirmation" => "password"})
                 |> validate_confirmation(:password)
     refute changeset.valid?
     assert changeset.errors == [password_confirmation: {"does not match confirmation", [validation: :confirmation]}]
 
     # With missing change
-    changeset = changeset(%{"password_confirmation" => "password"})
+    changeset = my_changeset(%{"password_confirmation" => "password"})
                 |> validate_confirmation(:password)
     refute changeset.valid?
     assert changeset.errors == [password_confirmation: {"does not match confirmation", [validation: :confirmation]}]
 
     # invalid params
-    changeset = changeset(:invalid)
+    changeset = my_changeset(:invalid)
                 |> validate_confirmation(:password)
     refute changeset.valid?
     assert changeset.errors == []
@@ -1045,41 +1072,41 @@ defmodule Ecto.ChangesetTest do
 
   test "validate_acceptance/3" do
     # accepted
-    changeset = changeset(%{"terms_of_service" => "true"})
+    changeset = my_changeset(%{"terms_of_service" => "true"})
                 |> validate_acceptance(:terms_of_service)
     assert changeset.valid?
     assert changeset.errors == []
 
-    changeset = changeset(%{"terms_of_service" => "1"})
+    changeset = my_changeset(%{"terms_of_service" => "1"})
                 |> validate_acceptance(:terms_of_service, message: "must be abided")
     assert changeset.valid?
     assert changeset.errors == []
 
     # not accepted
-    changeset = changeset(%{"terms_of_service" => "false"})
+    changeset = my_changeset(%{"terms_of_service" => "false"})
                 |> validate_acceptance(:terms_of_service)
     refute changeset.valid?
     assert changeset.errors == [terms_of_service: {"must be accepted", [validation: :acceptance]}]
 
-    changeset = changeset(%{"terms_of_service" => "other"})
+    changeset = my_changeset(%{"terms_of_service" => "other"})
                 |> validate_acceptance(:terms_of_service)
     refute changeset.valid?
     assert changeset.errors == [terms_of_service: {"must be accepted", [validation: :acceptance]}]
 
     # empty params
-    changeset = changeset(%{})
+    changeset = my_changeset()
                 |> validate_acceptance(:terms_of_service)
     refute changeset.valid?
     assert changeset.errors == [terms_of_service: {"must be accepted", [validation: :acceptance]}]
 
     # invalid params
-    changeset = changeset(:invalid)
+    changeset = my_changeset(:invalid)
                 |> validate_acceptance(:terms_of_service)
     refute changeset.valid?
     assert changeset.errors == []
 
     # custom message
-    changeset = changeset(%{})
+    changeset = my_changeset()
                 |> validate_acceptance(:terms_of_service, message: "must be abided")
     refute changeset.valid?
     assert changeset.errors == [terms_of_service: {"must be abided", [validation: :acceptance]}]
@@ -1090,7 +1117,7 @@ defmodule Ecto.ChangesetTest do
   test "unsafe_validate_unique/3" do
     dup_result = {1, [true]}
     no_dup_result = {0, []}
-    base_changeset = changeset(%Post{}, %{"title" => "Hello World", "body" => "hi"})
+    base_changeset = my_changeset(%Post{}, %{"title" => "Hello World", "body" => "hi"})
 
     # validate uniqueness of one field
     Process.put(:test_repo_all_results, dup_result)
@@ -1132,11 +1159,11 @@ defmodule Ecto.ChangesetTest do
   ## Locks
 
   test "optimistic_lock/3 with changeset" do
-    changeset = changeset(%{}) |> optimistic_lock(:upvotes)
+    changeset = my_changeset() |> optimistic_lock(:upvotes)
     assert changeset.filters == %{upvotes: 0}
     assert changeset.changes == %{upvotes: 1}
 
-    changeset = changeset(%Post{upvotes: 2}, %{upvotes: 1}) |> optimistic_lock(:upvotes)
+    changeset = my_changeset(%Post{upvotes: 2}, %{upvotes: 1}) |> optimistic_lock(:upvotes)
     assert changeset.filters == %{upvotes: 1}
     assert changeset.changes == %{upvotes: 2}
   end
@@ -1330,7 +1357,7 @@ defmodule Ecto.ChangesetTest do
 
   test "traverses changeset errors" do
     changeset =
-      changeset(%{"title" => "title", "body" => "hi", "upvotes" => :bad})
+      my_changeset(%{"title" => "title", "body" => "hi", "upvotes" => :bad})
       |> validate_length(:body, min: 3)
       |> validate_format(:body, ~r/888/)
       |> add_error(:title, "is taken", name: "your title")
@@ -1355,7 +1382,7 @@ defmodule Ecto.ChangesetTest do
 
   test "traverses changeset errors with field" do
     changeset =
-      changeset(%{"title" => "title", "body" => "hi", "upvotes" => :bad})
+      my_changeset(%{"title" => "title", "body" => "hi", "upvotes" => :bad})
       |> validate_length(:body, min: 3)
       |> validate_format(:body, ~r/888/)
       |> validate_inclusion(:body, ["hola", "bonjour", "hallo"])
@@ -1394,7 +1421,7 @@ defmodule Ecto.ChangesetTest do
     assert inspect(%Ecto.Changeset{}) ==
            "#Ecto.Changeset<action: nil, changes: %{}, errors: [], data: nil, valid?: false>"
 
-    assert inspect(changeset(%{"title" => "title", "body" => "hi"})) ==
+    assert inspect(my_changeset(%{"title" => "title", "body" => "hi"})) ==
            "#Ecto.Changeset<action: nil, changes: %{body: \"hi\", title: \"title\"}, " <>
            "errors: [], data: #Ecto.ChangesetTest.Post<>, valid?: true>"
   end
