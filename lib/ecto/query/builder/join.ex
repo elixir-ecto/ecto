@@ -17,24 +17,41 @@ defmodule Ecto.Query.Builder.Join do
       iex> escape(quote(do: x in "foo"), [], __ENV__)
       {nil, :x, {"foo", nil}, nil, %{}}
 
+      iex> escape(quote(do: {:foo_name, x} in "foo"), [], __ENV__)
+      {:foo_name, :x, {"foo", nil}, nil, %{}}
+
       iex> escape(quote(do: "foo"), [], __ENV__)
       {nil, :_, {"foo", nil}, nil, %{}}
 
       iex> escape(quote(do: x in Sample), [], __ENV__)
       {nil, :x, {nil, {:__aliases__, [alias: false], [:Sample]}}, nil, %{}}
 
+      iex> escape(quote(do: {:sample_name, x} in Sample), [], __ENV__)
+      {:sample_name, :x, {nil, {:__aliases__, [alias: false], [:Sample]}}, nil, %{}}
+
       iex> escape(quote(do: x in {"foo", Sample}), [], __ENV__)
       {nil, :x, {"foo", {:__aliases__, [alias: false], [:Sample]}}, nil, %{}}
+
+      iex> escape(quote(do: {:sample_name, x} in {"foo", Sample}), [], __ENV__)
+      {:sample_name, :x, {"foo", {:__aliases__, [alias: false], [:Sample]}}, nil, %{}}
 
       iex> escape(quote(do: x in {"foo", :sample}), [], __ENV__)
       {nil, :x, {"foo", :sample}, nil, %{}}
 
+      iex> escape(quote(do: {:sample_name, x} in {"foo", :sample}), [], __ENV__)
+      {:sample_name, :x, {"foo", :sample}, nil, %{}}
+
       iex> escape(quote(do: c in assoc(p, :comments)), [p: 0], __ENV__)
       {nil, :c, nil, {0, :comments}, %{}}
+
+      iex> escape(quote(do: {:comments_name, c} in assoc(p, :comments)), [p: 0], __ENV__)
+      {:comments_name, :c, nil, {0, :comments}, %{}}
 
       iex> escape(quote(do: x in fragment("foo")), [], __ENV__)
       {nil, :x, {:{}, [], [:fragment, [], [raw: "foo"]]}, nil, %{}}
 
+      iex> escape(quote(do: {:foo_name, x} in fragment("foo")), [], __ENV__)
+      {:foo_name, :x, {:{}, [], [:fragment, [], [raw: "foo"]]}, nil, %{}}
   """
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {atom | nil, [atom], Macro.t | nil, Macro.t | nil, %{}}
   def escape({:in, _, [{var, _, context}, expr]}, vars, env)
