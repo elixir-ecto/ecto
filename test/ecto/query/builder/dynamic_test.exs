@@ -11,7 +11,9 @@ defmodule Ecto.Query.Builder.DynamicTest do
   end
 
   defp named_query do
-    from p in "posts", join: {:comments, c} in "comments", on: p.id == c.post_id
+    from p in "posts",
+      join: {:authors, a} in "authors", on: a.id == p.author_id,
+      join: {:comments, c} in "comments", on: p.id == c.post_id
   end
 
   describe "fully_expand/2" do
@@ -83,12 +85,12 @@ defmodule Ecto.Query.Builder.DynamicTest do
       dynamic = dynamic([comments: c], c.bar == ^"bar")
       assert {expr, _, params, _, _} = fully_expand(named_query(), dynamic)
       assert Macro.to_string(expr) ==
-        "&1.bar() == ^0"
-      assert params == [{"bar", {1, :bar}}]
+        "&2.bar() == ^0"
+      assert params == [{"bar", {2, :bar}}]
     end
 
     test "with ... and named join" do
-      dynamic = dynamic([p, ..., comments: c], p.foo == c.bar and c.baz == ^"baz")
+      dynamic = dynamic([p, ..., authors: a], p.foo == a.bar and a.baz == ^"baz")
       assert {expr, _, params, _, _} = fully_expand(named_query(), dynamic)
       assert Macro.to_string(expr) ==
         "&0.foo() == &1.bar() and &1.baz() == ^0"
