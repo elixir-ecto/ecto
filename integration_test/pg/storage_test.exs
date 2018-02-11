@@ -91,6 +91,6 @@ defmodule Ecto.Integration.StorageTest do
   test "structure dump and load with migrations table" do
     {:ok, path} = Postgres.structure_dump(tmp_path(), TestRepo.config())
     contents = File.read!(path)
-    assert contents =~ ~s[INSERT INTO "schema_migrations" (version) VALUES (0)]
+    assert contents =~ ~s[INSERT INTO public."schema_migrations" (version) VALUES (0)]
   end
 end
