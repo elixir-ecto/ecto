@@ -1117,6 +1117,10 @@ defmodule Ecto.Query.Planner do
       {:error, %Ecto.SubQuery{select: select} = subquery} ->
         fields = for {field, _} <- subquery_types(subquery), do: select_field(field, ix)
         {select, fields}
+
+      {:error, %FromExpr{source: {source, schema}}} ->
+        {types, fields} = select_dump(schema.__schema__(:fields), schema.__schema__(:dump), ix)
+        {{:source, {source, schema}, types}, fields}
     end
   end
 

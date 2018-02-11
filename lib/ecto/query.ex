@@ -1411,7 +1411,7 @@ defmodule Ecto.Query do
     %QueryExpr{expr: expr, file: __ENV__.file, line: __ENV__.line}
   end
 
-  defp assert_schema!(%{from: {_source, schema}}) when schema != nil, do: schema
+  defp assert_schema!(%{from: %FromExpr{source: {_source, schema}}}) when schema != nil, do: schema
   defp assert_schema!(query) do
     raise Ecto.QueryError, query: query, message: "expected a from expression with a schema"
   end

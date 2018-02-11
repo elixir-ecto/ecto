@@ -89,7 +89,15 @@ defmodule Ecto.Repo.Assoc do
   defp maybe_first(list, _), do: list
 
   defp create_refls(idx, fields, dicts, sources) do
-    {_source, schema} = elem(sources, idx)
+    {_source, schema} =
+      case elem(sources, idx) do
+        (%Ecto.Query.FromExpr{}) = from ->
+          from.source
+        (%Ecto.Query.JoinExpr{}) = join ->
+          join.source
+        ({_source, _schema}) = source ->
+          source
+      end
 
     Enum.map(:lists.zip(dicts, fields), fn
       {{_primary_keys, _cache, dict, sub_dicts}, {field, {child_idx, child_fields}}} ->
@@ -103,7 +111,15 @@ defmodule Ecto.Repo.Assoc do
       create_accs(child_idx, child_fields, sources, %{})
     end)
 
-    {_source, schema} = elem(sources, idx)
+    {_source, schema} =
+      case elem(sources, idx) do
+        (%Ecto.Query.FromExpr{}) = from ->
+          from.source
+        (%Ecto.Query.JoinExpr{}) = join ->
+          join.source
+        ({_source, _schema}) = source ->
+          source
+      end
     {schema.__schema__(:primary_key), %{}, initial_dict, acc}
   end
 end
