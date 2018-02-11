@@ -211,7 +211,7 @@ defmodule Ecto.Association do
   end
 
   defp merge_from(%FromExpr{source: {"join expression", _}} = from, assoc_source),
-    do: %{ from | source: assoc_source }
+    do: %{from | source: assoc_source}
   defp merge_from(from, _assoc_source), do: from
 
   # Rewrite all later joins

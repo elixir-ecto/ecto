@@ -237,8 +237,8 @@ defmodule Ecto.Query.Planner do
   end
 
   defp prepare_source(query, %FromExpr{source: source} = from, adapter),
-    do: %{ from | source: prepare_source(query, source, adapter),
-                  prefix: prepare_prefix(query, from) }
+    do: %{from | source: prepare_source(query, source, adapter),
+                 prefix: prepare_prefix(query, from)}
   defp prepare_source(_query, {nil, schema}, _adapter) when is_atom(schema) and schema != nil,
     do: {schema.__schema__(:source), schema}
   defp prepare_source(_query, {source, schema}, _adapter) when is_binary(source) and is_atom(schema),
