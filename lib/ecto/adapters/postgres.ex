@@ -176,7 +176,7 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   defp select_versions(table, config) do
-    case run_query(~s[SELECT version FROM "#{table}" ORDER BY version], config) do
+    case run_query(~s[SELECT version FROM public."#{table}" ORDER BY version], config) do
       {:ok, %{rows: rows}} -> {:ok, Enum.map(rows, &hd/1)}
       {:error, %{postgres: %{code: :undefined_table}}} -> {:ok, []}
       {:error, _} = error -> error
@@ -199,11 +199,11 @@ defmodule Ecto.Adapters.Postgres do
   defp append_versions(_table, [], path) do
     {:ok, path}
   end
+
   defp append_versions(table, versions, path) do
     sql =
-      ~s[INSERT INTO "#{table}" (version) VALUES ] <>
-      Enum.map_join(versions, ", ", &"(#{&1})") <>
-      ~s[;\n\n]
+      ~s[INSERT INTO public."#{table}" (version) VALUES ] <>
+        Enum.map_join(versions, ", ", &"(#{&1})") <> ~s[;\n\n]
 
     File.open!(path, [:append], fn file ->
       IO.write(file, sql)
