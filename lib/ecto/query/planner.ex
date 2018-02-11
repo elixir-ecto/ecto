@@ -2,7 +2,7 @@ defmodule Ecto.Query.Planner do
   # Normalizes a query and its parameters.
   @moduledoc false
 
-  alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, QueryExpr, SelectExpr}
+  alias Ecto.Query.{BooleanExpr, DynamicExpr, FromExpr, JoinExpr, QueryExpr, SelectExpr}
 
   if map_size(%Ecto.Query{}) != 17 do
     raise "Ecto.Query match out of date in builder"
@@ -236,12 +236,28 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  defp prepare_source(query, %FromExpr{source: source} = from, adapter),
+    do: %{ from | source: prepare_source(query, source, adapter),
+                  prefix: prepare_prefix(query, from) }
   defp prepare_source(_query, {nil, schema}, _adapter) when is_atom(schema) and schema != nil,
     do: {schema.__schema__(:source), schema}
   defp prepare_source(_query, {source, schema}, _adapter) when is_binary(source) and is_atom(schema),
     do: {source, schema}
   defp prepare_source(_query, {:fragment, _, _} = source, _adapter),
     do: source
+
+  defp prepare_prefix(query, {_source, nil}),
+    do: query.prefix
+  defp prepare_prefix(query, {_source, schema}) when is_atom(schema) and schema != nil,
+    do: schema.__schema__(:prefix) || query.prefix
+  defp prepare_prefix(query, {:fragment, _, _}),
+    do: query.prefix
+  defp prepare_prefix(query, %FromExpr{} = from),
+    do: from.prefix || query.prefix
+  defp prepare_prefix(query, %JoinExpr{} = join),
+    do: join.prefix || query.prefix
+  defp prepare_prefix(query, %Ecto.SubQuery{} = subquery),
+    do: subquery.query.prefix || query.prefix
 
   defp assert_no_subquery_assocs!(%{assocs: assocs, preloads: preloads} = query)
        when assocs != [] or preloads != [] do
@@ -405,7 +421,7 @@ defmodule Ecto.Query.Planner do
         havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
         source = prepare_source(query, source, adapter)
         [join] = attach_on(query_to_joins(qual, %{join_query | from: source}, counter), on)
-        prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
+        prepare_joins(t, query, [join|joins], [join|sources], tail_sources, counter + 1, offset, adapter)
       _ ->
         error! query, join, "queries in joins can only have `where` conditions"
     end
@@ -413,9 +429,10 @@ defmodule Ecto.Query.Planner do
 
   defp prepare_joins([%JoinExpr{source: source} = join|t],
                       query, joins, sources, tail_sources, counter, offset, adapter) do
+    prefix = prepare_prefix(query, source)
     source = prepare_source(query, source, adapter)
-    join = %{join | source: source, ix: counter}
-    prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
+    join = %{join | prefix: prefix, source: source, ix: counter}
+    prepare_joins(t, query, [join|joins], [join|sources], tail_sources, counter + 1, offset, adapter)
   end
 
   defp prepare_joins([], _query, joins, sources, tail_sources, _counter, _offset, _adapter) do
@@ -459,6 +476,10 @@ defmodule Ecto.Query.Planner do
                               "because it does not have a schema"
       {_, schema} ->
         schema
+      %FromExpr{source: source} ->
+        schema_for_association_join!(query, join, source)
+      %JoinExpr{source: source} ->
+        schema_for_association_join!(query, join, source)
       %Ecto.SubQuery{select: {:struct, schema, _}} ->
         schema
       %Ecto.SubQuery{} ->
@@ -569,6 +590,8 @@ defmodule Ecto.Query.Planner do
   defp prepend_if(cache, true, prepend), do: prepend ++ cache
   defp prepend_if(cache, false, _prepend), do: cache
 
+  defp source_cache(%FromExpr{source: source}, params),
+    do: source_cache(source, params)
   defp source_cache({_, nil} = source, params),
     do: {source, params}
   defp source_cache({bin, schema}, params),
@@ -1114,7 +1137,14 @@ defmodule Ecto.Query.Planner do
   end
 
   defp get_source!(where, %{sources: sources} = query, ix) do
-    elem(sources, ix)
+    case elem(sources, ix) do
+      %FromExpr{source: source} ->
+        source
+      %JoinExpr{source: source} ->
+        source
+      source ->
+        source
+    end
   rescue
     ArgumentError ->
       error! query, "cannot prepare query because it has specified more bindings than " <>
@@ -1161,6 +1191,8 @@ defmodule Ecto.Query.Planner do
   defp type!(kind, lookup, query, expr, ix, field) when is_integer(ix) do
     case get_source!(kind, query, ix) do
       {_, schema} ->
+        type!(kind, lookup, query, expr, schema, field)
+      %FromExpr{source: {_, schema}} ->
         type!(kind, lookup, query, expr, schema, field)
       {:fragment, _, _} ->
         :any
@@ -1221,6 +1253,11 @@ defmodule Ecto.Query.Planner do
   end
 
   defp field_source({_, schema}, field) when schema != nil do
+    # If the field is not found we return the field itself
+    # which will be checked and raise later.
+    schema.__schema__(:field_source, field) || field
+  end
+  defp field_source(%FromExpr{source: {_, schema}}, field) when schema != nil do
     # If the field is not found we return the field itself
     # which will be checked and raise later.
     schema.__schema__(:field_source, field) || field

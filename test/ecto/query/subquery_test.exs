@@ -62,7 +62,7 @@ defmodule Ecto.Query.SubqueryTest do
     posts = from(p in Post, where: p.title == ^"hello")
     query = from(c in Comment, join: p in subquery(posts), on: c.post_id == p.id)
     {query, params, key} = prepare(query, [])
-    assert {"comments", Comment} = query.from
+    assert %Ecto.Query.FromExpr{source: {"comments", Comment}} = query.from
     assert [%{source: %{query: %Ecto.Query{}, params: ["hello"]}}] = query.joins
     assert params == ["hello"]
     assert [[], 0, {:join, [{:inner, [:all|_], _}]}, {"comments", _, _}] = key

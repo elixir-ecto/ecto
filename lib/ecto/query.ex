@@ -310,6 +310,11 @@ defmodule Ecto.Query do
              havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
   @type t :: %__MODULE__{}
 
+  defmodule FromExpr do
+    @moduledoc false
+    defstruct [:prefix, :source, :file, :line]
+  end
+
   defmodule DynamicExpr do
     @moduledoc false
     defstruct [:fun, :binding, :file, :line]
@@ -332,7 +337,7 @@ defmodule Ecto.Query do
 
   defmodule JoinExpr do
     @moduledoc false
-    defstruct [:qual, :source, :on, :file, :line, :assoc, :ix, params: []]
+    defstruct [:qual, :prefix, :source, :on, :file, :line, :assoc, :ix, params: []]
   end
 
   defmodule Tagged do

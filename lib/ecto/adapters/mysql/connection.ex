@@ -71,7 +71,7 @@ if Code.ensure_loaded?(Mariaex) do
     ## Query
 
     alias Ecto.Query
-    alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr}
+    alias Ecto.Query.{BooleanExpr, FromExpr, JoinExpr, QueryExpr}
 
     def all(query) do
       sources = create_names(query)
@@ -504,21 +504,28 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp create_names(prefix, sources, pos, limit) when pos < limit do
       current =
-        case elem(sources, pos) do
-          {table, schema} ->
-            name = [create_alias(table) | Integer.to_string(pos)]
-            {quote_table(prefix, table), name, schema}
-          {:fragment, _, _} ->
-            {nil, [?f | Integer.to_string(pos)], nil}
-          %Ecto.SubQuery{} ->
-            {nil, [?s | Integer.to_string(pos)], nil}
-        end
+        sources
+        |> elem(pos)
+        |> create_name(prefix, pos)
       [current | create_names(prefix, sources, pos + 1, limit)]
     end
 
     defp create_names(_prefix, _sources, pos, pos) do
       []
     end
+
+    defp create_name({table, schema}, prefix, pos),
+      do: {quote_table(prefix, table),
+           [create_alias(table) | Integer.to_string(pos)],
+           schema}
+    defp create_name({:fragment, _, _}, _prefix, pos),
+      do: {nil, [?f | Integer.to_string(pos)], nil}
+    defp create_name(%Ecto.SubQuery{}, _prefix, pos),
+      do: {nil, [?s | Integer.to_string(pos)], nil}
+    defp create_name(%FromExpr{} = from, prefix, pos),
+      do: create_name(from.source, from.prefix || prefix, pos)
+    defp create_name(%JoinExpr{} = join, prefix, pos),
+      do: create_name(join.source, join.prefix || prefix, pos)
 
     defp create_alias(<<first, _rest::binary>>) when first in ?a..?z when first in ?A..?Z do
       <<first>>

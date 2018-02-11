@@ -82,6 +82,13 @@ defimpl Inspect, for: Ecto.Query do
   defp unbound_from(%Ecto.Query{} = query) do
     "^" <> inspect(query)
   end
+  defp unbound_from(%Ecto.Query.FromExpr{} = from) do
+    if is_nil(from.prefix) do
+      unbound_from(from.source)
+    else
+      "FromExpr(\"#{from.prefix}\", #{unbound_from(from.source)})"
+    end
+  end
 
   defp joins(joins, names) do
     joins
@@ -239,6 +246,7 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp from_sources(%Ecto.SubQuery{query: query}), do: from_sources(query.from)
+  defp from_sources(%Ecto.Query.FromExpr{source: source}), do: from_sources(source)
   defp from_sources({source, schema}), do: schema || source
   defp from_sources(nil), do: "query"
 

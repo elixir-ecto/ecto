@@ -383,7 +383,7 @@ defmodule Ecto.Repo.Queryable do
     {{:., [], [{:&, [], [ix]}, field]}, [], []}
   end
 
-  defp assert_schema!(%{from: {_source, schema}}) when schema != nil, do: schema
+  defp assert_schema!(%{from: %Ecto.Query.FromExpr{source: {_source, schema}}}) when schema != nil, do: schema
   defp assert_schema!(query) do
     raise Ecto.QueryError,
       query: query,

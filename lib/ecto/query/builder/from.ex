@@ -2,6 +2,7 @@ defmodule Ecto.Query.Builder.From do
   @moduledoc false
 
   alias Ecto.Query.Builder
+  alias Ecto.Query.FromExpr
 
   @doc """
   Handles from expressions.
@@ -60,15 +61,15 @@ defmodule Ecto.Query.Builder.From do
           # dependencies between modules are added
           source = quote do: unquote(schema).__schema__(:source)
           prefix = quote do: unquote(schema).__schema__(:prefix)
-          {1, query(prefix, source, schema)}
+          {1, query(prefix, source, schema, env)}
 
         source when is_binary(source) ->
           # When a binary is used, there is no schema
-          {1, query(nil, source, nil)}
+          {1, query(nil, source, nil, env)}
 
         {source, schema} when is_binary(source) and is_atom(schema) ->
           prefix = quote do: unquote(schema).__schema__(:prefix)
-          {1, query(prefix, source, schema)}
+          {1, query(prefix, source, schema, env)}
 
         other ->
           {nil, other}
@@ -78,8 +79,13 @@ defmodule Ecto.Query.Builder.From do
     {quoted, binds, count_bind}
   end
 
-  defp query(prefix, source, schema) do
-    {:%, [], [Ecto.Query, {:%{}, [], [from: {source, schema}, prefix: prefix]}]}
+  defp query(prefix, source, schema, env) do
+    from =
+      quote do
+        %FromExpr{prefix: unquote(prefix), source: {unquote(source), unquote(schema)},
+                  file: unquote(env.file), line: unquote(env.line)}
+      end
+    {:%, [], [Ecto.Query, {:%{}, [], [from: from]}]}
   end
 
   defp expand_from({left, right}, env) do
