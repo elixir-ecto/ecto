@@ -606,7 +606,7 @@ Ok, but tag and post are not associated, yet. We might expect, as done in `one-t
 Another option is to use Ecto changesets, which provide many conveniences for dealing with *changes*. For example:
 
 ```elixir
-iex> post_changeset = Ecto.Changeset.change(post)
+iex> post_changeset = post |> Repo.preload(:tags) |> Ecto.Changeset.change
 iex> post_with_tags = Ecto.Changeset.put_assoc(post_changeset, :tags, [clickbait_tag, misc_tag])
 iex> post = Repo.update!(post_with_tags)
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
@@ -618,6 +618,8 @@ iex> post = Repo.update!(post_with_tags)
    name: "misc",
    posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}]}
 ```
+
+Note that in this example that we need to `Repo.preload` the `tags` association before we can change it.
 
 Let's examine the post:
 
@@ -664,7 +666,7 @@ iex> tag = Repo.get(Tag, 1) |> Repo.preload(:posts)
 The advantage of using [`Ecto.Changeset`](Ecto.Changeset.html) is that it is responsible for tracking the changes between your data structures and the associated data. For example, if you want to remove the "clickbait" tag from the post, one way to do so is by calling [`Ecto.Changeset.put_assoc/3`](Ecto.Changeset.html#put_assoc/4) once more but without the "clickbait" tag.  This will not work right now, because the `:on_replace` option for the `many_to_many` relationship defaults to `:raise`.  Go ahead and try it.  When you try to call `put_assoc`, a runtime error will be raised:
 
 ```elixir
-iex> post_changeset = Ecto.Changeset.change(post)
+iex> post_changeset = post |> Repo.preload(:tags) |> Ecto.Changeset.change
 iex> post_with_tags = Ecto.Changeset.put_assoc(post_changeset, :tags, [misc_tag])
 ** (RuntimeError) you are attempting to change relation :tags of
 EctoAssoc.Post but the `:on_replace` option of
@@ -713,7 +715,7 @@ On the other hand, it probably *doesn't* make much sense to be able to remove re
 With the `:on_replace` option changed, Ecto will compare the data you gave with the tags currently in the post and conclude the association between the post and the "clickbait" tag must be removed, as follows:
 
 ```elixir
-iex> post_changeset = Ecto.Changeset.change(post)
+iex> post_changeset = post |> Repo.preload(:tags) |> Ecto.Changeset.change
 iex> post_with_tags = Ecto.Changeset.put_assoc(post_changeset, :tags, [misc_tag])
 iex> post = Repo.update!(post_with_tags)
 ```
