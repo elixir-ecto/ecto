@@ -535,6 +535,7 @@ defmodule EctoAssoc.Post do
   schema "posts" do
     field :header, :string
     field :body, :string
+    belongs_to :user, EctoAssoc.User
     # the following line was added
     many_to_many :tags, EctoAssoc.Tag, join_through: "posts_tags"
   end
