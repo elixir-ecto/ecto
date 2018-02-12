@@ -355,7 +355,7 @@ defmodule EctoAssoc.Post do
 end
 ```
 
-`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the `Post`. The user can be accessed via `post.user`.
+`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the `Post`. We saw this previously for the link from avatars to their users. The user in this case can be accessed via `post.user`.
 
 For the `User` we add a `has_many` field to the schema:
 
