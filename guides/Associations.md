@@ -2,6 +2,10 @@
 
 This guide assumes you worked through the [Getting Started guide](Getting%20Started.md) and want to learn more about associations.
 
+If you want to see the code from this guide, you can view it [at
+ecto/examples/ecto_assoc on GitHub](https://github.com/elixir-
+lang/ecto/tree/master/examples/ecto_assoc).
+
 There are three kinds of associations:
 
   * one-to-one
@@ -189,7 +193,7 @@ defmodule EctoAssoc.Repo.Migrations.AvatarBelongsToUser do
 end
 ```
 
-This adds a `user_id` column to the DB which references an entry in the users table.
+This adds a `user_id` column to the DB which references an entry in the users table. We will need to run `mix ecto.migrate` to run this migration.
 
 For the `Avatar` we add a `belongs_to` field to the schema:
 
@@ -280,14 +284,14 @@ Let's assume we have two schemas: `User` and `Post`. The `User` schema was defin
 Let's start with the migration:
 
 ```
-mix ecto.gen.migration create_post
+mix ecto.gen.migration create_posts
 ```
 
 with the following columns:
 
 ```elixir
-# priv/repo/migrations/*_create_post.exs
-defmodule EctoAssoc.Repo.Migrations.CreatePost do
+# priv/repo/migrations/*_create_posts.exs
+defmodule EctoAssoc.Repo.Migrations.CreatePosts do
   use Ecto.Migration
 
   def change do
@@ -341,6 +345,8 @@ defmodule EctoAssoc.Repo.Migrations.PostBelongsToUser do
 end
 ```
 
+We will need to run `mix ecto.migrate` here again to run these latest migrations.
+
 For the `Post` we add a `belongs_to` field to the schema:
 
 ```elixir
@@ -355,7 +361,7 @@ defmodule EctoAssoc.Post do
 end
 ```
 
-`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the `Post`. The user can be accessed via `post.user`.
+`belongs_to` is a macro which uses a foreign key (in this case `user_id`) to make the associated schema accessible through the `Post`. We saw this previously for the link from avatars to their users. The user in this case can be accessed via `post.user`.
 
 For the `User` we add a `has_many` field to the schema:
 
@@ -451,14 +457,14 @@ Let's assume we have two schemas: `Post` and `Tag`. The `Post` schema was define
 Let's start with the tag migration:
 
 ```
-mix ecto.gen.migration create_tag
+mix ecto.gen.migration create_tags
 ```
 
 with the following columns:
 
 ```elixir
-# priv/repo/migrations/*create_tag.exs
-defmodule EctoAssoc.Repo.Migrations.CreateTag do
+# priv/repo/migrations/*create_tags.exs
+defmodule EctoAssoc.Repo.Migrations.CreateTags do
   use Ecto.Migration
 
   def change do
@@ -516,7 +522,11 @@ defmodule EctoAssoc.Repo.Migrations.CreatePostsTags do
 end
 ```
 
-On the DB level, this creates a new table `posts_tags` with two columns that point at the `tag_id` and `post_id`. We also create a unique index, such that the association is always unique.
+On the DB level, this creates a new table `posts_tags` with two columns that point at the `tag_id` and `post_id`. This type of table is often referred to as a "join table", as it joins two tables together.
+
+Let's run `mix ecto.migrate` to run these migrations.
+
+We also create a unique index, such that the association is always unique. There can only be a single record with the same `post_id` and `tag_id` combination in this table.
 
 For the `Post` we use the [`many_to_many`](Ecto.Schema.html#many_to_many/3) macro to associate the `Tag` through the
 new `posts_tags` table.
@@ -529,6 +539,7 @@ defmodule EctoAssoc.Post do
   schema "posts" do
     field :header, :string
     field :body, :string
+    belongs_to :user, EctoAssoc.User
     # the following line was added
     many_to_many :tags, EctoAssoc.Tag, join_through: "posts_tags"
   end
@@ -552,6 +563,18 @@ end
 ```
 
 ### Persistence
+
+Start iex:
+
+```
+$ iex -S mix
+```
+
+For convenience we alias some modules:
+
+```elixir
+iex> alias EctoAssoc.{Repo, Post, Tag}
+```
 
 Let's create some tags:
 
@@ -587,7 +610,7 @@ Ok, but tag and post are not associated, yet. We might expect, as done in `one-t
 Another option is to use Ecto changesets, which provide many conveniences for dealing with *changes*. For example:
 
 ```elixir
-iex> post_changeset = Ecto.Changeset.change(post)
+iex> post_changeset = post |> Repo.preload(:tags) |> Ecto.Changeset.change
 iex> post_with_tags = Ecto.Changeset.put_assoc(post_changeset, :tags, [clickbait_tag, misc_tag])
 iex> post = Repo.update!(post_with_tags)
 %EctoAssoc.Post{__meta__: #Ecto.Schema.Metadata<:loaded, "posts">,
@@ -599,6 +622,8 @@ iex> post = Repo.update!(post_with_tags)
    name: "misc",
    posts: #Ecto.Association.NotLoaded<association :posts is not loaded>}]}
 ```
+
+Note that in this example that we need to `Repo.preload` the `tags` association before we can change it.
 
 Let's examine the post:
 
@@ -645,7 +670,7 @@ iex> tag = Repo.get(Tag, 1) |> Repo.preload(:posts)
 The advantage of using [`Ecto.Changeset`](Ecto.Changeset.html) is that it is responsible for tracking the changes between your data structures and the associated data. For example, if you want to remove the "clickbait" tag from the post, one way to do so is by calling [`Ecto.Changeset.put_assoc/3`](Ecto.Changeset.html#put_assoc/4) once more but without the "clickbait" tag.  This will not work right now, because the `:on_replace` option for the `many_to_many` relationship defaults to `:raise`.  Go ahead and try it.  When you try to call `put_assoc`, a runtime error will be raised:
 
 ```elixir
-iex> post_changeset = Ecto.Changeset.change(post)
+iex> post_changeset = post |> Repo.preload(:tags) |> Ecto.Changeset.change
 iex> post_with_tags = Ecto.Changeset.put_assoc(post_changeset, :tags, [misc_tag])
 ** (RuntimeError) you are attempting to change relation :tags of
 EctoAssoc.Post but the `:on_replace` option of
@@ -694,7 +719,7 @@ On the other hand, it probably *doesn't* make much sense to be able to remove re
 With the `:on_replace` option changed, Ecto will compare the data you gave with the tags currently in the post and conclude the association between the post and the "clickbait" tag must be removed, as follows:
 
 ```elixir
-iex> post_changeset = Ecto.Changeset.change(post)
+iex> post_changeset = post |> Repo.preload(:tags) |> Ecto.Changeset.change
 iex> post_with_tags = Ecto.Changeset.put_assoc(post_changeset, :tags, [misc_tag])
 iex> post = Repo.update!(post_with_tags)
 ```
