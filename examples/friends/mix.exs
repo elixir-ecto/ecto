@@ -16,7 +16,7 @@ defmodule Friends.Mixfile do
   def application do
     [
       applications: [:logger, :ecto, :postgrex],
-      mod: {Friends, []}
+      mod: {Friends.Application, []}
     ]
   end
 
