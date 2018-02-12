@@ -520,6 +520,8 @@ end
 
 On the DB level, this creates a new table `posts_tags` with two columns that point at the `tag_id` and `post_id`. This type of table is often referred to as a "join table", as it joins two tables together.
 
+Let's run `mix ecto.migrate` to run these migrations.
+
 We also create a unique index, such that the association is always unique. There can only be a single record with the same `post_id` and `tag_id` combination in this table.
 
 For the `Post` we use the [`many_to_many`](Ecto.Schema.html#many_to_many/3) macro to associate the `Tag` through the
