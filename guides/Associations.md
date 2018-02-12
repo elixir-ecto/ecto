@@ -560,6 +560,18 @@ end
 
 ### Persistence
 
+Start iex:
+
+```
+$ iex -S mix
+```
+
+For convenience we alias some modules:
+
+```elixir
+iex> alias EctoAssoc.{Repo, Post, Tag}
+```
+
 Let's create some tags:
 
 ```elixir
