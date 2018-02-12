@@ -55,4 +55,4 @@ after_script:
 notifications:
   recipients:
     - jose.valim@plataformatec.com.br
-    - eric.meadows.jonsson@gmail.com
+    - michal+travis@muskala.eu
