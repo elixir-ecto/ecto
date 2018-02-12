@@ -341,6 +341,8 @@ defmodule EctoAssoc.Repo.Migrations.PostBelongsToUser do
 end
 ```
 
+We will need to run `mix ecto.migrate` here again to run these latest migrations.
+
 For the `Post` we add a `belongs_to` field to the schema:
 
 ```elixir
