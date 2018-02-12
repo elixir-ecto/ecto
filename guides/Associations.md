@@ -453,14 +453,14 @@ Let's assume we have two schemas: `Post` and `Tag`. The `Post` schema was define
 Let's start with the tag migration:
 
 ```
-mix ecto.gen.migration create_tag
+mix ecto.gen.migration create_tags
 ```
 
 with the following columns:
 
 ```elixir
-# priv/repo/migrations/*create_tag.exs
-defmodule EctoAssoc.Repo.Migrations.CreateTag do
+# priv/repo/migrations/*create_tags.exs
+defmodule EctoAssoc.Repo.Migrations.CreateTags do
   use Ecto.Migration
 
   def change do
