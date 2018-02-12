@@ -189,7 +189,7 @@ defmodule EctoAssoc.Repo.Migrations.AvatarBelongsToUser do
 end
 ```
 
-This adds a `user_id` column to the DB which references an entry in the users table.
+This adds a `user_id` column to the DB which references an entry in the users table. We will need to run `mix ecto.migrate` to run this migration.
 
 For the `Avatar` we add a `belongs_to` field to the schema:
 
