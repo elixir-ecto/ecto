@@ -280,14 +280,14 @@ Let's assume we have two schemas: `User` and `Post`. The `User` schema was defin
 Let's start with the migration:
 
 ```
-mix ecto.gen.migration create_post
+mix ecto.gen.migration create_posts
 ```
 
 with the following columns:
 
 ```elixir
-# priv/repo/migrations/*_create_post.exs
-defmodule EctoAssoc.Repo.Migrations.CreatePost do
+# priv/repo/migrations/*_create_posts.exs
+defmodule EctoAssoc.Repo.Migrations.CreatePosts do
   use Ecto.Migration
 
   def change do
