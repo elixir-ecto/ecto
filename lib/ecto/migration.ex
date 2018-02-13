@@ -820,6 +820,10 @@ defmodule Ecto.Migration do
     Runner.subcommand {:remove, column}
   end
 
+  def remove(column, type, opts \\ []) when is_atom(column) do
+    Runner.subcommand {:remove, column, type, opts}
+  end
+
   @doc ~S"""
   Defines a foreign key.
 
