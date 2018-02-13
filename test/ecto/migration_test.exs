@@ -565,6 +565,22 @@ defmodule Ecto.MigrationTest do
     end
   end
 
+  test "backward: removing a column (remove/3 called)" do
+    alter table(:posts) do
+      remove :title, :string, []
+    end
+    flush()
+    assert {:alter, %Table{name: "posts"}, [{:add, :title, :string, []}]} = last_command()
+  end
+
+  test "backward: removing a column (remove/2 called)" do
+    alter table(:posts) do
+      remove :title, :string
+    end
+    flush()
+    assert {:alter, %Table{name: "posts"}, [{:add, :title, :string, []}]} = last_command()
+  end
+
   test "backward: rename column" do
     rename table(:posts), :given_name, to: :first_name
     flush()
