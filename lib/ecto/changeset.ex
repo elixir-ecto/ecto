@@ -450,7 +450,6 @@ defmodule Ecto.Changeset do
 
   defp cast(%{} = data, %{} = types, %{} = changes, :invalid, permitted, opts) when is_list(permitted) do
     {empty_values, _opts} = Keyword.pop(opts, :empty_values, @empty_values)
-    validate_permitted_list(permitted)
     _ = Enum.each(permitted, &cast_key/1)
     %Changeset{params: nil, data: data, valid?: false, errors: [],
                changes: changes, types: types, empty_values: empty_values}
@@ -458,7 +457,6 @@ defmodule Ecto.Changeset do
 
   defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, permitted, opts) when is_list(permitted) do
     {empty_values, _opts} = Keyword.pop(opts, :empty_values, @empty_values)
-    validate_permitted_list(permitted)
     params = convert_params(params)
 
     defaults = case data do
@@ -478,12 +476,6 @@ defmodule Ecto.Changeset do
   defp cast(%{}, %{}, %{}, params, permitted, _opts) when is_list(permitted) do
     raise Ecto.CastError, type: :map, value: params,
                           message: "expected params to be a :map, got: `#{inspect params}`"
-  end
-
-  defp validate_permitted_list(permitted) do
-    if Enum.any?(permitted, &not is_atom(&1)) do
-      IO.warn("expected permitted parameters given to cast/3 to be a list of atoms, got: `#{inspect permitted}`")
-    end
   end
 
   defp process_param(key, params, types, data, empty_values, defaults, {changes, errors, valid?}) do
@@ -519,6 +511,7 @@ defmodule Ecto.Changeset do
   end
 
   defp cast_key(key) when is_binary(key) do
+    IO.warn("expected keys given to cast/3 to be atoms, got: `#{inspect key}`")
     try do
       {String.to_existing_atom(key), key}
     rescue
