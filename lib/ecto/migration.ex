@@ -807,7 +807,8 @@ defmodule Ecto.Migration do
   Removes a column when altering a table.
 
   This command is not reversible as Ecto does not know what
-  is the current type to add the column back as.
+  is the current type to add the column back as. See
+  `remove/3` as a reversible alternative.
 
   ## Examples
 
@@ -820,6 +821,19 @@ defmodule Ecto.Migration do
     Runner.subcommand {:remove, column}
   end
 
+  @doc """
+  Removes a column when altering a table in a reversible way.
+
+  `type` and `opts` are exactly the same as in `add/3` and
+  they are only used when the command is reversed.
+
+  ## Examples
+
+      alter table("posts") do
+        remove :title, :string, default: ""
+      end
+
+  """
   def remove(column, type, opts \\ []) when is_atom(column) do
     Runner.subcommand {:remove, column, type, opts}
   end
