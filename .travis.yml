@@ -1,11 +1,7 @@
 language: elixir
 elixir:
-  - 1.4.5
-  - 1.5.3
-  - 1.6.0
+  - 1.6.1
 otp_release:
-  - 18.3
-  - 19.3
   - 20.2
 addons:
   apt:
@@ -25,9 +21,11 @@ sudo: required
 dist: trusty
 cache: apt
 matrix:
-  exclude:
-    - elixir: 1.6.0
-      otp_release: 18.3
+  include:
+  - otp_release: 18.3
+    elixir: 1.4.5
+  - otp_release: 19.3
+    elixir: 1.5.3
 env:
   global:
     - PGVERSION=9.6
