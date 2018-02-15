@@ -33,7 +33,7 @@ defmodule Ecto.Association do
                field: atom,
                unique: boolean}
 
-  alias Ecto.Query.{BooleanExpr, QueryExpr}
+  alias Ecto.Query.{BooleanExpr, FromExpr, QueryExpr}
 
   @doc """
   Builds the association struct.
@@ -169,7 +169,7 @@ defmodule Ecto.Association do
   end
 
   def assoc_query(refl, t, query, values) do
-    query = query || %Ecto.Query{from: {"join expression", nil}, prefix: refl.queryable.__schema__(:prefix)}
+    query = query || %Ecto.Query{from: %FromExpr{source: {"join expression", nil}, prefix: refl.queryable.__schema__(:prefix)}}
 
     # Find the position for upcoming joins
     position = length(query.joins) + 1
@@ -210,7 +210,8 @@ defmodule Ecto.Association do
     |> Map.put(:op, :and)
   end
 
-  defp merge_from({"join expression", _}, assoc_source), do: assoc_source
+  defp merge_from(%FromExpr{source: {"join expression", _}} = from, assoc_source),
+    do: %{from | source: assoc_source}
   defp merge_from(from, _assoc_source), do: from
 
   # Rewrite all later joins

@@ -204,7 +204,11 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: nested joins associations" do
     query = from(c in Comment, left_join: assoc(c, :post_comments)) |> prepare |> elem(0)
-    assert {{"comments", _}, {"comments", _}, {"posts", _}} = query.sources
+    assert {
+      %Ecto.Query.FromExpr{source: {"comments", _}},
+      %Ecto.Query.JoinExpr{source: {"comments", _}},
+      %Ecto.Query.JoinExpr{source: {"posts", _}},
+    } = query.sources
     assert [join1, join2] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [2, 1]
     assert Macro.to_string(join1.on.expr) == "&2.id() == &0.post_id()"
@@ -212,7 +216,12 @@ defmodule Ecto.Query.PlannerTest do
 
     query = from(p in Comment, left_join: assoc(p, :post),
                                left_join: assoc(p, :post_comments)) |> prepare |> elem(0)
-    assert {{"comments", _}, {"posts", _}, {"comments", _}, {"posts", _}} = query.sources
+    assert {
+      %Ecto.Query.FromExpr{source: {"comments", _}},
+      %Ecto.Query.JoinExpr{source: {"posts", _}},
+      %Ecto.Query.JoinExpr{source: {"comments", _}},
+      %Ecto.Query.JoinExpr{source: {"posts", _}},
+    } = query.sources
     assert [join1, join2, join3] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [1, 3, 2]
     assert Macro.to_string(join1.on.expr) == "&1.id() == &0.post_id()"
@@ -221,7 +230,12 @@ defmodule Ecto.Query.PlannerTest do
 
     query = from(p in Comment, left_join: assoc(p, :post_comments),
                                left_join: assoc(p, :post)) |> prepare |> elem(0)
-    assert {{"comments", _}, {"comments", _}, {"posts", _}, {"posts", _}} = query.sources
+    assert {
+      %Ecto.Query.FromExpr{source: {"comments", _}},
+      %Ecto.Query.JoinExpr{source: {"comments", _}},
+      %Ecto.Query.JoinExpr{source: {"posts", _}},
+      %Ecto.Query.JoinExpr{source: {"posts", _}},
+    } = query.sources
     assert [join1, join2, join3] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [3, 1, 2]
     assert Macro.to_string(join1.on.expr) == "&3.id() == &0.post_id()"

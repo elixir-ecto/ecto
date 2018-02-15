@@ -32,7 +32,7 @@ defmodule Ecto.Repo.Queryable do
     query =
       queryable
       |> Ecto.Queryable.to_query
-      |> Ecto.Query.Planner.ensure_select(true)
+      |> Planner.ensure_select(true)
       |> attach_prefix(opts)
     execute(:all, repo, adapter, query, opts) |> elem(1)
   end
@@ -113,7 +113,7 @@ defmodule Ecto.Repo.Queryable do
     case Keyword.fetch(opts, :returning) do
       {:ok, value} ->
         IO.warn ":returning option for #{inspect kind} is deprecated, please specify a select instead"
-        Ecto.Query.Planner.ensure_select(query, value)
+        Planner.ensure_select(query, value)
 
       :error ->
         query
@@ -383,7 +383,7 @@ defmodule Ecto.Repo.Queryable do
     {{:., [], [{:&, [], [ix]}, field]}, [], []}
   end
 
-  defp assert_schema!(%{from: {_source, schema}}) when schema != nil, do: schema
+  defp assert_schema!(%{from: %Ecto.Query.FromExpr{source: {_source, schema}}}) when schema != nil, do: schema
   defp assert_schema!(query) do
     raise Ecto.QueryError,
       query: query,

@@ -526,7 +526,7 @@ defmodule Ecto.Repo.Schema do
       %{query | prefix: prefix}
       |> Ecto.Query.Planner.prepare(:update_all, adapter, counter)
 
-    unless query.from == from do
+    unless query.from.source == from do
       raise ArgumentError, "cannot run on_conflict: query because the query " <>
                            "has a different {source, schema} pair than the " <>
                            "original struct/changeset/query. Got #{inspect query.from} " <>

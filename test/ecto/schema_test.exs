@@ -229,18 +229,22 @@ defmodule Ecto.SchemaTest do
     import Ecto.Query
 
     query = from(SchemaWithPrefix, select: 1)
-    assert query.prefix == "tenant"
+    assert query.from.prefix == "tenant"
 
     query = from({"another_company", SchemaWithPrefix}, select: 1)
-    assert query.prefix == "tenant"
+    assert query.from.prefix == "tenant"
 
     from = SchemaWithPrefix
     query = from(from, select: 1)
-    assert query.prefix == "tenant"
+    assert query.from.prefix == "tenant"
 
     from = {"another_company", SchemaWithPrefix}
     query = from(from, select: 1)
-    assert query.prefix == "tenant"
+    assert query.from.prefix == "tenant"
+
+    from = SchemaWithPrefix
+    query = from(from, select: 1)
+    refute query.prefix == query.from.prefix
   end
 
   test "updates meta prefix with put_meta" do

@@ -44,7 +44,7 @@ defmodule Ecto.Query.Builder.JoinTest do
 
     qual = :inner
     source = from c in "comments", where: c.public
-    assert %{joins: [%{source: %Ecto.Query{from: {"comments", nil}}}]} =
+    assert %{joins: [%{source: %Ecto.Query{from: %Ecto.Query.FromExpr{source: {"comments", nil}}}}]} =
             join("posts", qual, [p], c in ^source, true)
   end
 
