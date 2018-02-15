@@ -802,6 +802,9 @@ defmodule Ecto.Type do
       end
     end
   end
+  defp cast_naive_datetime(_) do
+    :error
+  end
 
   defp dump_naive_datetime(%NaiveDateTime{year: year, month: month, day: day,
                                           hour: hour, minute: minute, second: second, microsecond: {microsecond, _}}),
