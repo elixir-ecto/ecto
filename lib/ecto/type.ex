@@ -823,6 +823,9 @@ defmodule Ecto.Type do
       end
     end
   end
+  defp cast_naive_datetime(_) do
+    :error
+  end
 
   ## UTC datetime
 
