@@ -467,7 +467,7 @@ defmodule Ecto.TypeTest do
       assert Ecto.Type.cast(:naive_datetime_usec, ~T[23:50:07]) == :error
     end
 
-    test "cast :naive_datetime_usec from Integer" do
+    test "cast :naive_datetime_usec from integer" do
       assert Ecto.Type.cast(:naive_datetime_usec, 1) == :error
     end
 
@@ -638,7 +638,7 @@ defmodule Ecto.TypeTest do
       assert Ecto.Type.cast(:utc_datetime_usec, ~T[12:23:34]) == :error
     end
 
-    test "cast :utc_datetime_usec from Integer" do
+    test "cast :utc_datetime_usec from integer" do
       assert Ecto.Type.cast(:utc_datetime_usec, 1) == :error
     end
 
