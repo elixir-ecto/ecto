@@ -497,15 +497,15 @@ defmodule Ecto.Adapters.SQL do
     do_stream(repo, meta, prepared, params, put_source(opts, meta))
   end
 
-  def do_stream(repo, _meta, {:cache, _, {_, prepared}}, params, opts) do
+  defp do_stream(repo, _meta, {:cache, _, {_, prepared}}, params, opts) do
     prepare_stream(repo, prepared, params, opts)
   end
 
-  def do_stream(repo, _, {:cached, _, {_, cached}}, params, opts) do
+  defp do_stream(repo, _, {:cached, _, {_, cached}}, params, opts) do
     prepare_stream(repo, String.Chars.to_string(cached), params, opts)
   end
 
-  def do_stream(repo, _meta, {:nocache, {_id, prepared}}, params, opts) do
+  defp do_stream(repo, _meta, {:nocache, {_id, prepared}}, params, opts) do
     prepare_stream(repo, prepared, params, opts)
   end
 
