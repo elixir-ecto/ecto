@@ -69,12 +69,14 @@ Database   | Ecto Adapter           | Dependency                   | Ecto 2.0 co
 PostgreSQL | Ecto.Adapters.Postgres | [postgrex][postgrex]         | Yes
 MySQL      | Ecto.Adapters.MySQL    | [mariaex][mariaex]           | Yes
 MSSQL      | MssqlEcto              | [mssql_ecto][mssql_ecto]     | Yes
+MSSQL      | Tds.Ecto               | [tds_ecto][tds_ecto]         | Yes
 SQLite     | Sqlite.Ecto2           | [sqlite_ecto2][sqlite_ecto2] | Yes
 Mnesia     | EctoMnesia.Adapter     | [ecto_mnesia][ecto_mnesia]   | Yes
 
 [postgrex]: http://github.com/ericmj/postgrex
 [mariaex]: http://github.com/xerions/mariaex
 [mssql_ecto]: https://github.com/findmypast-oss/mssql_ecto
+[tds_ecto]: https://github.com/livehelpnow/tds_ecto
 [sqlite_ecto2]: https://github.com/scouten/sqlite_ecto2
 [ecto_mnesia]: https://github.com/Nebo15/ecto_mnesia
 
