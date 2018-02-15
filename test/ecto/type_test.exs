@@ -385,8 +385,8 @@ defmodule Ecto.TypeTest do
     assert Ecto.Type.cast(:naive_datetime, DateTime.from_unix!(10, :seconds)) ==
            {:ok, ~N[1970-01-01 00:00:10]}
 
-    assert Ecto.Type.cast(:naive_datetime, @time) ==
-           :error
+    assert Ecto.Type.cast(:naive_datetime, @time) == :error
+    assert Ecto.Type.cast(:naive_datetime, 1) == :error
   end
 
   test "dump :naive_datetime" do
@@ -465,6 +465,10 @@ defmodule Ecto.TypeTest do
 
     test "cast :naive_datetime_usec from Time" do
       assert Ecto.Type.cast(:naive_datetime_usec, ~T[23:50:07]) == :error
+    end
+
+    test "cast :naive_datetime_usec from integer" do
+      assert Ecto.Type.cast(:naive_datetime_usec, 1) == :error
     end
 
     test "dump :naive_datetime_usec" do
@@ -546,8 +550,8 @@ defmodule Ecto.TypeTest do
     assert Ecto.Type.cast(:utc_datetime, %{year: 2015, month: 1, day: 23, hour: 23, minute: nil}) ==
            :error
 
-    assert Ecto.Type.cast(:utc_datetime, ~T[12:23:34]) ==
-           :error
+    assert Ecto.Type.cast(:utc_datetime, ~T[12:23:34]) == :error
+    assert Ecto.Type.cast(:utc_datetime, 1) == :error
   end
 
   test "dump :utc_datetime" do
@@ -632,6 +636,10 @@ defmodule Ecto.TypeTest do
 
     test "cast :utc_datetime_usec from Time" do
       assert Ecto.Type.cast(:utc_datetime_usec, ~T[12:23:34]) == :error
+    end
+
+    test "cast :utc_datetime_usec from integer" do
+      assert Ecto.Type.cast(:utc_datetime_usec, 1) == :error
     end
 
     test "dump :utc_datetime_usec" do
