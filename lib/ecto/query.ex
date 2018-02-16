@@ -776,17 +776,17 @@ defmodule Ecto.Query do
   @join_opts [:on]
 
   defp parse_join_opts([]), do: {:opts, []}
-  defp parse_join_opts(lst) when is_list(lst) do
-    opts = Keyword.take(lst, @join_opts)
+  defp parse_join_opts(list) when is_list(list) do
+    opts = Keyword.take(list, @join_opts)
 
-    case {lst, opts} do
-      {lst, []} ->
-        {:expr, lst}
+    case {list, opts} do
+      {list, []} ->
+        {:expr, list}
       {opts, opts} ->
         {:opts, opts}
-      {lst, _} ->
+      {list, _} ->
         raise ArgumentError, "invalid option(s) passed to Ecto.Query.join/5: " <>
-          "#{inspect(Keyword.keys(lst) -- @join_opts)}. Valid options: #{inspect @join_opts}."
+          "#{inspect(Keyword.keys(list) -- @join_opts)}. Valid options: #{inspect @join_opts}."
     end
   end
   defp parse_join_opts(expr), do: {:expr, expr}
