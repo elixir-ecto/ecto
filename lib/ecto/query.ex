@@ -625,7 +625,7 @@ defmodule Ecto.Query do
   defp from([{join, expr}|t], env, count_bind, quoted, binds) when join in @joins do
     qual = join_qual(join)
     {t, on} = collect_on(t, nil)
-    {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, on, count_bind, env)
+    {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, count_bind, env, on: on)
     from(t, env, count_bind, quoted, to_query_binds(binds))
   end
 
@@ -769,7 +769,7 @@ defmodule Ecto.Query do
       end
 
     query
-    |> Join.build(qual, binding, expr, opts[:on], nil, __CALLER__)
+    |> Join.build(qual, binding, expr, nil, __CALLER__, opts)
     |> elem(0)
   end
 
