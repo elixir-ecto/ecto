@@ -268,6 +268,42 @@ defmodule Ecto.QueryTest do
     end
   end
 
+  describe "named joins" do
+    test "assigns a name to a join" do
+      quoted =
+        quote do
+          from(p in Post,
+            join: b in Blog,
+            join: {:comment, c} in Comment)
+        end
+
+      assert {:%{}, _, list} = Macro.expand(quoted, __ENV__)
+      [_, {_, _, [_, {_, _, join_attrs}]}] = list[:joins]
+      assert join_attrs[:name] == :comment
+    end
+
+    test "match on binding by name" do
+      query =
+        "posts"
+        |> join(:inner, [p], {:comments, c} in "comments")
+        |> where([comments: c], c.id == 0)
+
+      assert [%{name: :comments}] = query.joins
+      assert [%{expr: {_, _, [_, %{type: {1, :id}}]}}] = query.wheres
+    end
+
+    test "match on binding by name with ... in the middle" do
+      query =
+        "posts"
+        |> join(:inner, [p], c in "comments")
+        |> join(:inner, [], {:authors, a} in "comments")
+        |> where([p, ..., authors: a], a.id == 0)
+
+      assert [%{source: {"comments", _}}, %{name: :authors}] = query.joins
+      assert [%{expr: {_, _, [_, %{type: {2, :id}}]}}] = query.wheres
+    end
+  end
+
   describe "exclude/2" do
     test "removes the given field" do
       base = %Ecto.Query{}
