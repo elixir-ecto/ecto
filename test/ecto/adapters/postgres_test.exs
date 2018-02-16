@@ -359,8 +359,8 @@ defmodule Ecto.Adapters.PostgresTest do
   test "interpolated values" do
     query = "schema"
             |> select([m], {m.id, ^true})
-            |> join(:inner, [], Schema2, fragment("?", ^true))
-            |> join(:inner, [], Schema2, fragment("?", ^false))
+            |> join(:inner, [], Schema2, on: fragment("?", ^true))
+            |> join(:inner, [], Schema2, on: fragment("?", ^false))
             |> where([], fragment("?", ^true))
             |> where([], fragment("?", ^false))
             |> having([], fragment("?", ^true))
@@ -429,7 +429,7 @@ defmodule Ecto.Adapters.PostgresTest do
     assert update_all(query) ==
            ~s{UPDATE "schema" AS s0 SET "x" = $1}
 
-    query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z)
+    query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z)
                   |> update([_], set: [x: 0]) |> normalize(:update_all)
     assert update_all(query) ==
            ~s{UPDATE "schema" AS s0 SET "x" = 0 FROM "schema2" AS s1 WHERE (s0."x" = s1."z")}
@@ -471,7 +471,7 @@ defmodule Ecto.Adapters.PostgresTest do
     assert delete_all(query) ==
            ~s{DELETE FROM "schema" AS s0 WHERE (s0."x" = 123)}
 
-    query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z) |> normalize
+    query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z) |> normalize
     assert delete_all(query) ==
            ~s{DELETE FROM "schema" AS s0 USING "schema2" AS s1 WHERE (s0."x" = s1."z")}
 
@@ -497,45 +497,45 @@ defmodule Ecto.Adapters.PostgresTest do
   ## Joins
 
   test "join" do
-    query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z) |> select([], true) |> normalize
+    query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z) |> select([], true) |> normalize
     assert all(query) ==
            ~s{SELECT TRUE FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON s0."x" = s1."z"}
 
-    query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z)
-                  |> join(:inner, [], Schema, true) |> select([], true) |> normalize
+    query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z)
+                  |> join(:inner, [], Schema, on: true) |> select([], true) |> normalize
     assert all(query) ==
            ~s{SELECT TRUE FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON s0."x" = s1."z" } <>
            ~s{INNER JOIN "schema" AS s2 ON TRUE}
   end
 
   test "join with nothing bound" do
-    query = Schema |> join(:inner, [], q in Schema2, q.z == q.z) |> select([], true) |> normalize
+    query = Schema |> join(:inner, [], q in Schema2, on: q.z == q.z) |> select([], true) |> normalize
     assert all(query) ==
            ~s{SELECT TRUE FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON s1."z" = s1."z"}
   end
 
   test "join without schema" do
-    query = "posts" |> join(:inner, [p], q in "comments", p.x == q.z) |> select([], true) |> normalize
+    query = "posts" |> join(:inner, [p], q in "comments", on: p.x == q.z) |> select([], true) |> normalize
     assert all(query) ==
            ~s{SELECT TRUE FROM "posts" AS p0 INNER JOIN "comments" AS c1 ON p0."x" = c1."z"}
   end
 
   test "join with subquery" do
     posts = subquery("posts" |> where(title: ^"hello") |> select([r], %{x: r.x, y: r.y}))
-    query = "comments" |> join(:inner, [c], p in subquery(posts), true) |> select([_, p], p.x) |> normalize
+    query = "comments" |> join(:inner, [c], p in subquery(posts), on: true) |> select([_, p], p.x) |> normalize
     assert all(query) ==
            ~s{SELECT s1."x" FROM "comments" AS c0 } <>
            ~s{INNER JOIN (SELECT p0."x" AS "x", p0."y" AS "y" FROM "posts" AS p0 WHERE (p0."title" = $1)) AS s1 ON TRUE}
 
     posts = subquery("posts" |> where(title: ^"hello") |> select([r], %{x: r.x, z: r.y}))
-    query = "comments" |> join(:inner, [c], p in subquery(posts), true) |> select([_, p], p) |> normalize
+    query = "comments" |> join(:inner, [c], p in subquery(posts), on: true) |> select([_, p], p) |> normalize
     assert all(query) ==
            ~s{SELECT s1."x", s1."z" FROM "comments" AS c0 } <>
            ~s{INNER JOIN (SELECT p0."x" AS "x", p0."y" AS "z" FROM "posts" AS p0 WHERE (p0."title" = $1)) AS s1 ON TRUE}
   end
 
   test "join with prefix" do
-    query = Schema |> join(:inner, [p], q in Schema2, p.x == q.z) |> select([], true) |> normalize
+    query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z) |> select([], true) |> normalize
     assert all(%{query | prefix: "prefix"}) ==
            ~s{SELECT TRUE FROM "prefix"."schema" AS s0 INNER JOIN "prefix"."schema2" AS s1 ON s0."x" = s1."z"}
   end
@@ -554,7 +554,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
   test "join with fragment and on defined" do
     query = Schema
-            |> join(:inner, [p], q in fragment("SELECT * FROM schema2"), q.id == p.id)
+            |> join(:inner, [p], q in fragment("SELECT * FROM schema2"), on: q.id == p.id)
             |> select([p], {p.id, ^0})
             |> normalize
     assert all(query) ==
@@ -598,7 +598,7 @@ defmodule Ecto.Adapters.PostgresTest do
   describe "query interpolation parameters" do
     test "self join on subquery" do
       subquery = select(Schema, [r], %{x: r.x, y: r.y})
-      query = subquery |> join(:inner, [c], p in subquery(subquery), true) |> normalize
+      query = subquery |> join(:inner, [c], p in subquery(subquery), on: true) |> normalize
       assert all(query) ==
              ~s{SELECT s0."x", s0."y" FROM "schema" AS s0 INNER JOIN } <>
              ~s{(SELECT s0."x" AS "x", s0."y" AS "y" FROM "schema" AS s0) } <>
@@ -607,7 +607,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
     test "self join on subquery with fragment" do
       subquery = select(Schema, [r], %{string: fragment("downcase(?)", ^"string")})
-      query = subquery |> join(:inner, [c], p in subquery(subquery), true) |> normalize
+      query = subquery |> join(:inner, [c], p in subquery(subquery), on: true) |> normalize
       assert all(query) ==
              ~s{SELECT downcase($1) FROM "schema" AS s0 INNER JOIN } <>
              ~s{(SELECT downcase($2) AS "string" FROM "schema" AS s0) } <>
@@ -618,7 +618,7 @@ defmodule Ecto.Adapters.PostgresTest do
       subquery = select(Schema, [r], %{x: ^999, w: ^888})
       query = Schema
               |> select([r], %{y: ^666})
-              |> join(:inner, [c], p in subquery(subquery), true)
+              |> join(:inner, [c], p in subquery(subquery), on: true)
               |> where([a, b], a.x == ^111)
               |> normalize
 

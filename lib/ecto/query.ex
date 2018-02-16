@@ -730,7 +730,7 @@ defmodule Ecto.Query do
   ## Expressions examples
 
       Comment
-      |> join(:inner, [c], p in Post, c.post_id == p.id)
+      |> join(:inner, [c], p in Post, on: c.post_id == p.id)
       |> select([c, p], {p.title, c.text})
 
       Post
@@ -738,7 +738,7 @@ defmodule Ecto.Query do
       |> select([p, c], {p, c})
 
       Post
-      |> join(:left, [p], c in Comment, c.post_id == p.id and c.is_visible == true)
+      |> join(:left, [p], c in Comment, on: c.post_id == p.id and c.is_visible == true)
       |> select([p, c], {p, c})
 
   ## Joining with fragments
