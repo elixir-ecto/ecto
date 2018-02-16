@@ -757,11 +757,39 @@ defmodule Ecto.Query do
       |> select([g, gs], {g.name, gs.sold_on})
 
   """
-  defmacro join(query, qual, binding \\ [], expr, on \\ nil) do
+  defmacro join(query, qual, binding \\ [], expr, opts \\ []) do
+    opts =
+      case parse_join_opts(opts) do
+        {:opts, opts} ->
+          opts
+        {:expr, on_expr} ->
+          IO.warn "Passing raw `on` expression as the last argument to Ecto.Query.join/5 is deprecated. " <>
+            "Please use :on keyword option instead."
+          [on: on_expr]
+      end
+
     query
-    |> Join.build(qual, binding, expr, on, nil, __CALLER__)
+    |> Join.build(qual, binding, expr, opts[:on], nil, __CALLER__)
     |> elem(0)
   end
+
+  @join_opts [:on]
+
+  defp parse_join_opts([]), do: {:opts, []}
+  defp parse_join_opts(lst) when is_list(lst) do
+    opts = Keyword.take(lst, @join_opts)
+
+    case {lst, opts} do
+      {lst, []} ->
+        {:expr, lst}
+      {opts, opts} ->
+        {:opts, opts}
+      {lst, _} ->
+        raise ArgumentError, "invalid option(s) passed to Ecto.Query.join/5: " <>
+          "#{inspect(Keyword.keys(lst) -- @join_opts)}. Valid options: #{inspect @join_opts}."
+    end
+  end
+  defp parse_join_opts(expr), do: {:expr, expr}
 
   @doc """
   A select query expression.

@@ -119,4 +119,12 @@ defmodule Ecto.Query.Builder.JoinTest do
       escape(quote do assoc(join_var, field_var) end, nil, nil)
     end
   end
+
+  test "raises on mix of valid and invalid options passed to join/5" do
+    assert_raise ArgumentError, ~r/invalid option\(s\) passed/, fn ->
+      escape(quote do
+        join("posts", :left, [p], c in "comments", on: true, foo: :bar)
+      end, [], __ENV__)
+    end
+  end
 end
