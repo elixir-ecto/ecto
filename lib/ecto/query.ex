@@ -624,9 +624,14 @@ defmodule Ecto.Query do
 
   defp from([{join, expr}|t], env, count_bind, quoted, binds) when join in @joins do
     qual = join_qual(join)
+    {t, as} = pop_join_as(t)
     {t, on} = collect_on(t, nil)
-    {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, count_bind, env, on: on)
+    {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, count_bind, env, as: as, on: on)
     from(t, env, count_bind, quoted, to_query_binds(binds))
+  end
+
+  defp from([{:as, _value}|_], _env, _count_bind, _quoted, _binds) do
+    Builder.error! "`as` keyword must immediately follow a join"
   end
 
   defp from([{:on, _value}|_], _env, _count_bind, _quoted, _binds) do
@@ -653,6 +658,9 @@ defmodule Ecto.Query do
   defp join_qual(:cross_join), do: :cross
   defp join_qual(:left_lateral_join), do: :left_lateral
   defp join_qual(:inner_lateral_join), do: :inner_lateral
+
+  defp pop_join_as([{:as, expr}|t]), do: {t, expr}
+  defp pop_join_as(t), do: {t, nil}
 
   defp collect_on([{:on, expr}|t], nil),
     do: collect_on(t, expr)
@@ -773,7 +781,7 @@ defmodule Ecto.Query do
     |> elem(0)
   end
 
-  @join_opts [:on]
+  @join_opts [:on, :as]
 
   defp parse_join_opts([]), do: {:opts, []}
   defp parse_join_opts(list) when is_list(list) do
