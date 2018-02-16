@@ -138,11 +138,11 @@ defmodule Ecto.QueryTest do
 
     test "can be added through joins" do
       from(c in "comments", join: p in "posts", select: {p.title, c.text})
-      "comments" |> join(:inner, [c], p in "posts", true) |> select([c, p], {p.title, c.text})
+      "comments" |> join(:inner, [c], p in "posts", on: true) |> select([c, p], {p.title, c.text})
     end
 
     test "can be added through joins with a counter" do
-      base = join("comments", :inner, [c], p in "posts", true)
+      base = join("comments", :inner, [c], p in "posts", on: true)
       assert select(base, [{p, 1}], p) == select(base, [c, p], p)
     end
 
@@ -196,7 +196,7 @@ defmodule Ecto.QueryTest do
       query =
         "posts"
         |> join(:inner, [], "comments")
-        |> join(:inner, [..., c], v in "votes", c.id == v.id)
+        |> join(:inner, [..., c], v in "votes", on: c.id == v.id)
 
       assert hd(tl(query.joins)).on.expr ==
              {:==, [], [

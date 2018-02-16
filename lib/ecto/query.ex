@@ -730,7 +730,7 @@ defmodule Ecto.Query do
   ## Expressions examples
 
       Comment
-      |> join(:inner, [c], p in Post, c.post_id == p.id)
+      |> join(:inner, [c], p in Post, on: c.post_id == p.id)
       |> select([c, p], {p.title, c.text})
 
       Post
@@ -738,7 +738,7 @@ defmodule Ecto.Query do
       |> select([p, c], {p, c})
 
       Post
-      |> join(:left, [p], c in Comment, c.post_id == p.id and c.is_visible == true)
+      |> join(:left, [p], c in Comment, on: c.post_id == p.id and c.is_visible == true)
       |> select([p, c], {p, c})
 
   ## Joining with fragments
@@ -757,11 +757,39 @@ defmodule Ecto.Query do
       |> select([g, gs], {g.name, gs.sold_on})
 
   """
-  defmacro join(query, qual, binding \\ [], expr, on \\ nil) do
+  defmacro join(query, qual, binding \\ [], expr, opts \\ []) do
+    opts =
+      case parse_join_opts(opts) do
+        {:opts, opts} ->
+          opts
+        {:expr, on_expr} ->
+          IO.warn "Passing raw `on` expression as the last argument to Ecto.Query.join/5 is deprecated. " <>
+            "Please use :on keyword option instead."
+          [on: on_expr]
+      end
+
     query
-    |> Join.build(qual, binding, expr, on, nil, __CALLER__)
+    |> Join.build(qual, binding, expr, opts[:on], nil, __CALLER__)
     |> elem(0)
   end
+
+  @join_opts [:on]
+
+  defp parse_join_opts([]), do: {:opts, []}
+  defp parse_join_opts(list) when is_list(list) do
+    opts = Keyword.take(list, @join_opts)
+
+    case {list, opts} do
+      {list, []} ->
+        {:expr, list}
+      {opts, opts} ->
+        {:opts, opts}
+      {list, _} ->
+        raise ArgumentError, "invalid option(s) passed to Ecto.Query.join/5: " <>
+          "#{inspect(Keyword.keys(list) -- @join_opts)}. Valid options: #{inspect @join_opts}."
+    end
+  end
+  defp parse_join_opts(expr), do: {:expr, expr}
 
   @doc """
   A select query expression.
