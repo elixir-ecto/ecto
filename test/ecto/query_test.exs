@@ -120,7 +120,7 @@ defmodule Ecto.QueryTest do
 
     test "must be a list of variables" do
       assert_raise Ecto.Query.CompileError,
-                   "binding list should contain only variables, got: 0", fn ->
+                   "binding list should contain only variables or `{:bind_name, var}` tuples, got: 0", fn ->
         quote_and_eval select(%Query{}, [0], 1)
       end
     end
@@ -234,6 +234,47 @@ defmodule Ecto.QueryTest do
         from(p in "posts",
           join: b in "blogs", as: :foo,
           join: c in "comments", as: :foo)
+      end
+    end
+
+    test "match on binding by name" do
+      query =
+        "posts"
+        |> join(:inner, [p], c in "comments", as: :comment)
+        |> where([comment: c], c.id == 0)
+
+      assert inspect(query) ==
+        ~s[#Ecto.Query<from p in \"posts\", join: c in \"comments\", on: true, where: c.id == 0>]
+    end
+
+    test "match on binding by name with ... in the middle" do
+      query =
+        "posts"
+        |> join(:inner, [p], c in "comments")
+        |> join(:inner, [], a in "authors", as: :authors)
+        |> where([p, ..., authors: a], a.id == 0)
+
+      assert inspect(query) ==
+        ~s[#Ecto.Query<from p in \"posts\", join: c in \"comments\", on: true, join: a in \"authors\", on: true, where: a.id == 0>]
+    end
+
+    test "referring to non-existing binding" do
+      message = ~r"there is no bind named `:nope`"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        "posts"
+        |> join(:inner, [p], c in "comments", as: :comment)
+        |> where([nope: c], c.id == 0)
+      end
+    end
+
+    test "named bind not in tail of the list" do
+      message = ~r"tuples must be at the end of the binding list"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+      quote_and_eval(
+        "posts"
+        |> join(:inner, [p], c in "comments", as: :comment)
+        |> where([{:comment, c}, p], c.id == 0)
+      )
       end
     end
   end
