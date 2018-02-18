@@ -519,13 +519,52 @@ defmodule Ecto.Query.Builder do
       ** (Ecto.Query.CompileError) variable `x` is bound twice
 
       iex> escape_binding(%Ecto.Query{}, quote do: [a, b, :foo])
-      ** (Ecto.Query.CompileError) binding list should contain only variables, got: :foo
+      ** (Ecto.Query.CompileError) binding list should contain only variables or `{:bind_name, var}` tuples, got: :foo
 
   """
   @spec escape_binding(Macro.t | Ecto.Query.t, list) :: {Macro.t | Ecto.Query.t, Keyword.t}
   def escape_binding(query, binding) when is_list(binding) do
     vars = binding |> Enum.with_index |> Enum.map(&escape_bind(&1))
-    assert_no_dup_binding!(vars)
+
+    with :ok <- assert_no_duplicate_bind(vars),
+         {positional_vars, named_vars} <- Enum.split_while(vars, & !named_bind?(&1)),
+         :ok <- assert_named_binds_in_tail(named_vars),
+         {query, positional_binds} <- calculate_positional_binds(query, positional_vars),
+         {query, named_binds} <- calculate_named_binds(query, named_vars) do
+      {query, positional_binds ++ named_binds}
+    else
+      {:error, {:duplicate_bind, var}} ->
+        error! "variable `#{var}` is bound twice"
+      {:error, :named_binds_not_in_tail} ->
+        error! "named binds in the form of `{:bind_name, var}` tuples must be at the end " <>
+          "of the binding list, got: #{Macro.to_string(binding)}"
+    end
+   end
+  def escape_binding(_query, bind) do
+    error! "binding should be list of variables and `{:bind_name, var}` tuples " <>
+      "at the end, got: #{Macro.to_string(bind)}"
+  end
+
+  defp assert_named_binds_in_tail(named_vars) do
+    if Enum.all?(named_vars, &named_bind?/1) do
+      :ok
+    else
+      {:error, :named_binds_not_in_tail}
+    end
+  end
+
+  defp named_bind?({_, {:named, _}}), do: true
+  defp named_bind?(_), do: false
+
+  defp assert_no_duplicate_bind(vars) do
+    bound_vars = vars |> Keyword.keys |> Enum.filter(& &1 != :_)
+    case bound_vars -- Enum.uniq(bound_vars) do
+      []  -> :ok
+      dup -> {:error, {:duplicate_bind, hd(dup)}}
+    end
+  end
+
+  defp calculate_positional_binds(query, vars) do
     case Enum.split_while(vars, & elem(&1, 0) != :...) do
       {vars, []} ->
         {query, vars}
@@ -543,24 +582,38 @@ defmodule Ecto.Query.Builder do
         {query, vars ++ tail}
     end
   end
-  def escape_binding(_query, bind) do
-    error! "binding should be list of variables, got: #{Macro.to_string(bind)}"
-  end
 
-  defp assert_no_dup_binding!(vars) do
-    bound_vars = vars |> Keyword.keys |> Enum.filter(& &1 != :_)
-    case bound_vars -- Enum.uniq(bound_vars) do
-      []  -> :ok
-      dup -> error! "variable `#{hd dup}` is bound twice"
-    end
+  defp calculate_named_binds(query, []), do: {query, []}
+  defp calculate_named_binds(query, vars) do
+    query =
+      quote do
+        query = Ecto.Queryable.to_query(unquote(query))
+        aliases = query.aliases || %{}
+        query
+      end
+
+    vars = Enum.map(vars, fn {k, {_, name}} ->
+      ix = quote do
+        case Map.fetch(aliases, unquote(name)) do
+          {:ok, ix} -> ix
+          :error -> Ecto.Query.Builder.error! "there is no bind named `#{inspect unquote(name)}`"
+        end
+      end
+      {k, ix}
+    end)
+
+    {query, vars}
   end
 
   defp escape_bind({{{var, _, context}, ix}, _}) when is_atom(var) and is_atom(context),
     do: {var, ix}
   defp escape_bind({{var, _, context}, ix}) when is_atom(var) and is_atom(context),
     do: {var, ix}
+  defp escape_bind({{name, {var, _, context}}, _ix}) when is_atom(name) and is_atom(var) and is_atom(context),
+    do: {var, {:named, name}}
   defp escape_bind({bind, _ix}),
-    do: error!("binding list should contain only variables, got: #{Macro.to_string(bind)}")
+    do: error!("binding list should contain only variables or " <>
+          "`{:bind_name, var}` tuples, got: #{Macro.to_string(bind)}")
 
   defp try_expansion(expr, type, params, vars, %Macro.Env{} = env) do
     try_expansion(expr, type, params, vars, {env, &escape/5})
