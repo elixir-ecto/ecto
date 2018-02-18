@@ -216,6 +216,28 @@ defmodule Ecto.QueryTest do
     end
   end
 
+  describe "named bindings" do
+    test "assigns a name to a join" do
+      query =
+        from(p in "posts",
+          join: b in "blogs",
+          join: c in "comments", as: :comment,
+          join: l in "links", as: :link)
+
+      assert %{comment: 2, link: 3} == query.aliases
+      assert [_, %{alias: :comment}, %{alias: :link}] = query.joins
+    end
+
+    test "crashes on assigning the same name twice" do
+      message = ~r"alias `:foo` already exists"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        from(p in "posts",
+          join: b in "blogs", as: :foo,
+          join: c in "comments", as: :foo)
+      end
+    end
+  end
+
   describe "keyword queries" do
     test "are supported through from/2" do
       # queries need to be on the same line or == wont work
