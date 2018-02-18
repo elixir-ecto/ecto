@@ -305,7 +305,7 @@ defmodule Ecto.Query do
   specially on insert, use `Ecto.put_meta/2`.
   """
 
-  defstruct [prefix: nil, sources: nil, from: nil, joins: [], wheres: [], select: nil,
+  defstruct [prefix: nil, sources: nil, from: nil, joins: [], aliases: nil, wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [], updates: [],
              havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
   @type t :: %__MODULE__{}
@@ -332,7 +332,7 @@ defmodule Ecto.Query do
 
   defmodule JoinExpr do
     @moduledoc false
-    defstruct [:qual, :source, :on, :file, :line, :assoc, :ix, params: []]
+    defstruct [:qual, :source, :on, :file, :line, :assoc, :alias, :ix, params: []]
   end
 
   defmodule Tagged do
