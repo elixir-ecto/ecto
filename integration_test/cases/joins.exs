@@ -77,6 +77,18 @@ defmodule Ecto.Integration.JoinsTest do
     assert [{^p1, ^c1}, {^p2, ^c1}] = TestRepo.all(query)
   end
 
+  test "named joins" do
+    _p = TestRepo.insert!(%Post{title: "1"})
+    p2 = TestRepo.insert!(%Post{title: "2"})
+    c1 = TestRepo.insert!(%Permalink{url: "1", post_id: p2.id})
+
+    query =
+      from(p in Post, join: c in assoc(p, :permalink), as: :permalink, order_by: p.id)
+      |> select([p, permalink: c], {p, c})
+
+    assert [{^p2, ^c1}] = TestRepo.all(query) 
+  end
+
   @tag :left_join
   test "left joins with missing entries" do
     p1 = TestRepo.insert!(%Post{title: "1"})
