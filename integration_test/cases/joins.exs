@@ -86,7 +86,7 @@ defmodule Ecto.Integration.JoinsTest do
       from(p in Post, join: c in assoc(p, :permalink), as: :permalink, order_by: p.id)
       |> select([p, permalink: c], {p, c})
 
-    assert [{^p2, ^c1}] = TestRepo.all(query) 
+    assert [{^p2, ^c1}] = TestRepo.all(query)
   end
 
   @tag :left_join
