@@ -134,12 +134,14 @@ defmodule Ecto.Changeset do
       changeset, and it will be marked as invalid
     * `:nilify` - sets owner reference column to `nil` (available only for
       associations). Use this on a `belongs_to` column to allow the association
-      to be cleared out so that it can be set to a new value.
+      to be cleared out so that it can be set to a new value. Will set `action`
+      on associated changesets to `:replace`
     * `:update` - updates the association, available only for `has_one` and `belongs_to`.
       This option will update all the fields given to the changeset including the id
       for the association
     * `:delete` - removes the association or related data from the database.
-      This option has to be used carefully
+      This option has to be used carefully. Will set `action` on associated changesets
+      to `:delete`
 
   The `:delete` option in particular must be used carefully as it would allow
   users to delete any associated data. If you need deletion, it is often preferred
