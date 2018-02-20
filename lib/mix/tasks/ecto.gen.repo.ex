@@ -51,7 +51,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
       {:ok, contents} ->
         Mix.shell.info [:green, "* updating ", :reset, "config/config.exs"]
         File.write! "config/config.exs",
-                    String.replace(contents, "use Mix.Config", config_template(opts))
+                    String.replace(contents, "use Mix.Config\n", config_template(opts))
       {:error, _} ->
         create_file "config/config.exs", config_template(opts)
     end
