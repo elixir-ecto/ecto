@@ -1206,7 +1206,7 @@ defmodule Ecto.Schema do
         use Ecto.Schema
 
         embedded_schema do
-          field :name
+          field :title
         end
       end
 
@@ -1353,7 +1353,7 @@ defmodule Ecto.Schema do
         use Ecto.Schema
 
         embedded_schema do
-          field :name
+          field :title
         end
       end
 
