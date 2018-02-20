@@ -12,7 +12,7 @@ defmodule Mix.Tasks.Ecto do
 
   @doc false
   def run(args) do
-    {_opts, args, _} = OptionParser.parse(args)
+    {_opts, args, _} = OptionParser.parse(args, switches: [])
 
     case args do
       [] -> general()

@@ -48,7 +48,6 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
         username: "user",
         password: "pass",
         hostname: "localhost"
-
       # World
       """
     end
