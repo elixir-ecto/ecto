@@ -141,7 +141,7 @@ defmodule Ecto.Changeset do
       for the association
     * `:delete` - removes the association or related data from the database.
       This option has to be used carefully. Will set `action` on associated changesets
-      to `:delete`
+      to `:replace`
 
   The `:delete` option in particular must be used carefully as it would allow
   users to delete any associated data. If you need deletion, it is often preferred
