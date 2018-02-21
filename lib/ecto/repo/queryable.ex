@@ -184,11 +184,9 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  defp preprocessor({_, {:source, source_schema, fields}}, preprocess, sources, prefix, adapter) do
-    all_nil? = tuple_size(sources) != 1
-
+  defp preprocessor({_, {:source, source_schema, fields}}, preprocess, _sources, prefix, adapter) do
     fn row ->
-      {entry, rest} = process_source(source_schema, fields, row, all_nil?, prefix, adapter)
+      {entry, rest} = process_source(source_schema, fields, row, false, prefix, adapter)
       preprocess(rest, preprocess, entry, prefix, adapter)
     end
   end

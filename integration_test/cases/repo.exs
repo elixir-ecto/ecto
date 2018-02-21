@@ -1093,6 +1093,13 @@ defmodule Ecto.Integration.RepoTest do
              TestRepo.one(from p in Post, where: p.title == "1", select: [:counter])
     end
 
+    test "take with join assocs and single nil column" do
+      %{id: post_id} = TestRepo.insert!(%Post{title: "1"}, counter: nil)
+      TestRepo.insert!(%Comment{post_id: post_id, text: "comment"})
+      assert %{counter: nil} ==
+              TestRepo.one(from p in Post, join: c in assoc(p, :comments), where: p.title == "1", select:  map(p, [:counter]))
+    end
+
     test "field source" do
       TestRepo.insert!(%Permalink{url: "url"})
       assert ["url"] = Permalink |> select([p], p.url) |> TestRepo.all()
