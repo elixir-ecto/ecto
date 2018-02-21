@@ -136,11 +136,17 @@ defmodule Ecto.Repo.Queryable do
       %{select: nil} ->
         adapter.execute(repo, meta, prepared, params, opts)
       %{select: select, prefix: prefix, sources: sources, preloads: preloads} ->
-        %{preprocess: preprocess, postprocess: postprocess, take: take, assocs: assocs} = select
-        all_nil? = tuple_size(sources) != 1
-        preprocessor = &preprocess(&1, preprocess, all_nil?, prefix, adapter)
+        %{
+          preprocess: preprocess,
+          postprocess: postprocess,
+          take: take,
+          assocs: assocs,
+          from: from
+        } = select
+
+        preprocessor = preprocessor(from, preprocess, sources, prefix, adapter)
         {count, rows} = adapter.execute(repo, meta, prepared, params, opts)
-        postprocessor = postprocessor(postprocess, take, prefix, adapter)
+        postprocessor = postprocessor(from, postprocess, take, prefix, adapter)
 
         {count,
           rows
@@ -158,11 +164,17 @@ defmodule Ecto.Repo.Queryable do
         |> adapter.stream(meta, prepared, params, opts)
         |> Stream.flat_map(fn {_, nil} -> [] end)
       %{select: select, prefix: prefix, sources: sources, preloads: preloads} ->
-        %{preprocess: preprocess, postprocess: postprocess, take: take, assocs: assocs} = select
-        all_nil? = tuple_size(sources) != 1
-        preprocessor = &preprocess(&1, preprocess, all_nil?, prefix, adapter)
+        %{
+          preprocess: preprocess,
+          postprocess: postprocess,
+          take: take,
+          assocs: assocs,
+          from: from
+        } = select
+
+        preprocessor = preprocessor(from, preprocess, sources, prefix, adapter)
         stream = adapter.stream(repo, meta, prepared, params, opts)
-        postprocessor = postprocessor(postprocess, take, prefix, adapter)
+        postprocessor = postprocessor(from, postprocess, take, prefix, adapter)
 
         Stream.flat_map(stream, fn {_, rows} ->
           rows
@@ -172,38 +184,64 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  defp preprocess(row, [], _all_nil?, _prefix, _adapter) do
-    row
+  defp preprocessor({_, {:source, source_schema, fields}}, preprocess, sources, prefix, adapter) do
+    all_nil? = tuple_size(sources) != 1
+
+    fn row ->
+      {entry, rest} = process_source(source_schema, fields, row, all_nil?, prefix, adapter)
+      preprocess(rest, preprocess, entry, prefix, adapter)
+    end
   end
-  defp preprocess(row, [{:source, source_schema, fields} | sources], all_nil?, prefix, adapter) do
-    {entry, rest} = process_source(source_schema, fields, row, all_nil?, prefix, adapter)
-    [entry | preprocess(rest, sources, true, prefix, adapter)]
+  defp preprocessor({_, from}, preprocess, _sources, prefix, adapter) do
+    fn row ->
+      {entry, rest} = process(row, from, nil, prefix, adapter)
+      preprocess(rest, preprocess, entry, prefix, adapter)
+    end
   end
-  defp preprocess(row, [source | sources], all_nil?, prefix, adapter) do
-    {entry, rest} = process(row, source, nil, prefix, adapter)
-    [entry | preprocess(rest, sources, all_nil?, prefix, adapter)]
+  defp preprocessor(:none, preprocess, _sources, prefix, adapter) do
+    fn row ->
+      preprocess(row, preprocess, nil, prefix, adapter)
+    end
   end
 
-  defp postprocessor({:from, :any, postprocess}, _take, prefix, adapter) do
+  defp preprocess(row, [], _from, _prefix, _adapter) do
+    row
+  end
+  defp preprocess(row, [source | sources], from, prefix, adapter) do
+    {entry, rest} = process(row, source, from, prefix, adapter)
+    [entry | preprocess(rest, sources, from, prefix, adapter)]
+  end
+
+  defp postprocessor({:any, _}, postprocess, _take, prefix, adapter) do
     fn [from | row] ->
       row |> process(postprocess, from, prefix, adapter) |> elem(0)
     end
   end
-  defp postprocessor({:from, :map, postprocess}, take, prefix, adapter) do
+  defp postprocessor({:map, _}, postprocess, take, prefix, adapter) do
     fn [from | row] ->
       row |> process(postprocess, to_map(from, take), prefix, adapter) |> elem(0)
     end
   end
-  defp postprocessor(postprocess, _take, prefix, adapter) do
+  defp postprocessor(:none, postprocess, _take, prefix, adapter) do
     fn row -> row |> process(postprocess, nil, prefix, adapter) |> elem(0) end
   end
 
+  defp process(row, {:source, :from}, from, _prefix, _adapter) do
+    {from, row}
+  end
+  defp process(row, {:source, source_schema, fields}, _from, prefix, adapter) do
+    process_source(source_schema, fields, row, true, prefix, adapter)
+  end
   defp process(row, {:merge, left, right}, from, prefix, adapter) do
     {left, row} = process(row, left, from, prefix, adapter)
     {right, row} = process(row, right, from, prefix, adapter)
 
     data =
       case {left, right} do
+        {%{__struct__: s}, %{__struct__: s}} ->
+          Map.merge(left, right)
+        {%{__struct__: _}, %{__struct__: _}} ->
+          raise ArgumentError, "cannot merge structs of different types, got: #{inspect left} and #{inspect right}"
         {%{__struct__: _}, %{}} ->
           Enum.reduce(right, left, fn {key, value}, acc -> %{acc | key => value} end)
         {%{}, %{}} ->
@@ -235,9 +273,6 @@ defmodule Ecto.Repo.Queryable do
         {map, row}
     end
   end
-  defp process(row, {:map, {:source, :from}, args}, nil, _prefix, _adapter) do
-    {Map.new(args), row}
-  end
   defp process(row, {:map, data, args}, from, prefix, adapter) do
     {data, row} = process(row, data, from, prefix, adapter)
     process_update(data, args, row, from, prefix, adapter)
@@ -252,12 +287,6 @@ defmodule Ecto.Repo.Queryable do
   defp process(row, {:tuple, args}, from, prefix, adapter) do
     {args, row} = process_args(args, row, from, prefix, adapter)
     {List.to_tuple(args), row}
-  end
-  defp process(row, {:source, :from}, from, _prefix, _adapter) do
-    {from, row}
-  end
-  defp process(row, {:source, source_schema, fields}, _from, prefix, adapter) do
-    process_source(source_schema, fields, row, true, prefix, adapter)
   end
   defp process([value | row], {:value, :any}, _from, _prefix, _adapter) do
     {value, row}

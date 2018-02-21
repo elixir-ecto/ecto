@@ -879,20 +879,27 @@ defmodule Ecto.Query.Planner do
     {postprocess, fields, from} =
       collect_fields(expr, [], :error, query, take)
 
-    {fields, preprocess, postprocess} =
+    {fields, preprocess, from} =
       case from do
-        {:ok, from_pre, from_taken} ->
+        {:ok, from_pre, from_expr, from_taken} ->
           {assoc_exprs, assoc_fields} = collect_assocs([], [], query, tag, from_take, assocs)
           fields = from_taken ++ Enum.reverse(assoc_fields, Enum.reverse(fields))
           preprocess = [from_pre | Enum.reverse(assoc_exprs)]
-          {fields, preprocess, {:from, from_tag, postprocess}}
+          {fields, preprocess, {from_tag, from_expr}}
         :error when preloads != [] or assocs != [] ->
           error! query, "the binding used in `from` must be selected in `select` when using `preload`"
         :error ->
-          {Enum.reverse(fields), [], postprocess}
+          {Enum.reverse(fields), [], :none}
       end
 
-    select = %{preprocess: preprocess, postprocess: postprocess, take: from_take, assocs: assocs}
+    select = %{
+      preprocess: preprocess,
+      postprocess: postprocess,
+      take: from_take,
+      assocs: assocs,
+      from: from
+    }
+
     {put_in(query.select.fields, fields), select}
   end
 
@@ -900,13 +907,17 @@ defmodule Ecto.Query.Planner do
 
   defp collect_fields({:merge, _, [{:&, _, [0]}, right]}, fields, :error, query, take) do
     {expr, taken} = source_take!(:select, query, take, 0, 0)
-    {right, right_fields, _from} = collect_fields(right, [], {:source, :from}, query, take)
-    {{:source, :from}, fields, {:ok, {:merge, expr, right}, taken ++ Enum.reverse(right_fields)}}
+    from = {:ok, {:source, :from}, expr, taken}
+
+    {right, right_fields, _from} = collect_fields(right, [], from, query, take)
+    from = {:ok, {:merge, {:source, :from}, right}, expr, taken ++ Enum.reverse(right_fields)}
+
+    {{:source, :from}, fields, from}
   end
 
   defp collect_fields({:&, _, [0]}, fields, :error, query, take) do
     {expr, taken} = source_take!(:select, query, take, 0, 0)
-    {{:source, :from}, fields, {:ok, expr, taken}}
+    {{:source, :from}, fields, {:ok, {:source, :from}, expr, taken}}
   end
 
   defp collect_fields({:&, _, [0]}, fields, from, _query, _take) do
