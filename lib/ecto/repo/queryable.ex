@@ -235,6 +235,9 @@ defmodule Ecto.Repo.Queryable do
         {map, row}
     end
   end
+  defp process(row, {:map, {:source, :from}, args}, nil, _prefix, _adapter) do
+    {Map.new(args), row}
+  end
   defp process(row, {:map, data, args}, from, prefix, adapter) do
     {data, row} = process(row, data, from, prefix, adapter)
     process_update(data, args, row, from, prefix, adapter)
