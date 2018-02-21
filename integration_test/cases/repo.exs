@@ -1120,6 +1120,15 @@ defmodule Ecto.Integration.RepoTest do
       assert [%{title: "2"}] =
              Post |> select([p], %{title: p.title}) |> select_merge([p], %{title: "2"}) |> TestRepo.all()
     end
+
+    test "merge with update" do
+      %Post{} = TestRepo.insert!(%Post{title: "1", counter: 1})
+
+      assert [%Post{title: "1", counter: 2}] =
+        Post |> select([p], merge(p, %{p | counter: 2})) |> TestRepo.all()
+      assert [%Post{title: "1", counter: 2}] =
+        Post |> select([p], p) |> select_merge([p], %{p | counter: 2}) |> TestRepo.all()
+    end
   end
 
   test "query count distinct" do
