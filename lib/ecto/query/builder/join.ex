@@ -117,11 +117,13 @@ defmodule Ecto.Query.Builder.Join do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.Env.t, Keyword.t) ::
+  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, atom, Macro.Env.t) ::
               {Macro.t, Keyword.t, non_neg_integer | nil}
-  def build(query, qual, binding, expr, count_bind, env, opts) do
-    on = opts[:on]
-    alias_name = opts[:as]
+  def build(query, qual, binding, expr, count_bind, on, as, env) do
+    if not is_atom(as) do
+      Builder.error! "`as` must be a compile time atom, got: `#{Macro.to_string(as)}`"
+    end
+
     {query, binding} = Builder.escape_binding(query, binding)
     {join_bind, join_source, join_assoc, join_params} = escape(expr, binding, env)
     join_params = Builder.escape_params(join_params)
@@ -153,81 +155,76 @@ defmodule Ecto.Query.Builder.Join do
         quote(do: unquote(count_bind) + 1)
       end
 
-    query = build_on(on || true, query, binding, count_bind, qual,
-                     join_source, join_assoc, join_params, alias_name, env)
+    query = build_on(on || true, as, query, binding, count_bind, qual,
+                     join_source, join_assoc, join_params, env)
     {query, binding, next_bind}
   end
 
-  def build_on({:^, _, [var]}, query, _binding, count_bind,
-               join_qual, join_source, join_assoc, join_params, alias_name, env) do
+  def build_on({:^, _, [var]}, as, query, _binding, count_bind,
+               join_qual, join_source, join_assoc, join_params, env) do
     quote do
       query = unquote(query)
-      Ecto.Query.Builder.Join.join!(query, unquote(var), unquote(count_bind),
+      Ecto.Query.Builder.Join.join!(query, unquote(var), unquote(as), unquote(count_bind),
                                     unquote(join_qual), unquote(join_source), unquote(join_assoc),
-                                    unquote(alias_name), unquote(join_params), unquote(env.file),
-                                    unquote(env.line))
+                                    unquote(join_params), unquote(env.file), unquote(env.line))
     end
   end
 
-  def build_on(on, query, binding, count_bind,
-               join_qual, join_source, join_assoc, join_params, alias_name, env) do
+  def build_on(on, as, query, binding, count_bind,
+               join_qual, join_source, join_assoc, join_params, env) do
     {on_expr, on_params} = Ecto.Query.Builder.Filter.escape(:on, on, count_bind, binding, env)
     on_params = Builder.escape_params(on_params)
 
     join =
       quote do
         %JoinExpr{qual: unquote(join_qual), source: unquote(join_source),
-                  assoc: unquote(join_assoc), alias: unquote(alias_name), file: unquote(env.file),
+                  assoc: unquote(join_assoc), file: unquote(env.file),
                   line: unquote(env.line), params: unquote(join_params),
                   on: %QueryExpr{expr: unquote(on_expr), params: unquote(on_params),
                                  line: unquote(env.line), file: unquote(env.file)}}
       end
 
-    Builder.apply_query(query, __MODULE__, [join], env)
+    Builder.apply_query(query, __MODULE__, [join, as, count_bind], env)
   end
 
   @doc """
   Applies the join expression to the query.
   """
-  def apply(%Ecto.Query{joins: joins, aliases: aliases} = query, expr) do
-    join_count = Builder.count_binds(query)
-    aliases = update_aliases(aliases, expr, join_count)
-
+  def apply(%Ecto.Query{joins: joins, aliases: aliases} = query, expr, as, count_bind) do
+    aliases = apply_aliases(aliases, as, count_bind)
     %{query | joins: joins ++ [expr], aliases: aliases}
   end
-  def apply(query, expr) do
-    apply(Ecto.Queryable.to_query(query), expr)
+  def apply(query, expr, as, count_bind) do
+    apply(Ecto.Queryable.to_query(query), expr, as, count_bind)
   end
 
-  def update_aliases(aliases, %JoinExpr{alias: nil}, _), do: aliases
-  def update_aliases(aliases, %JoinExpr{alias: name}, join_count) do
-    aliases = aliases || %{}
-
+  def apply_aliases(aliases, nil, _), do: aliases
+  def apply_aliases(aliases = %{}, name, join_count) when is_atom(name) and is_integer(join_count) do
     if Map.has_key?(aliases, name) do
       Builder.error! "alias `#{inspect name}` already exists"
     else
       Map.put(aliases, name, join_count)
     end
   end
-  def update_aliases(aliases, expr, join_count) do
+  def apply_aliases(aliases, name, join_count) do
     quote do
-      Ecto.Query.Builder.Join.update_aliases(unquote(aliases), unquote(expr), unquote(join_count))
+      Ecto.Query.Builder.Join.apply_aliases(unquote(Macro.escape(aliases)), unquote(name), unquote(join_count))
     end
   end
 
   @doc """
   Called at runtime to build a join.
   """
-  def join!(query, expr, count_bind, join_qual, join_source, join_assoc, alias_name, join_params, file, line) do
+  def join!(query, expr, as, count_bind, join_qual, join_source, join_assoc, join_params, file, line) do
     {on_expr, on_params, on_file, on_line} =
       Ecto.Query.Builder.Filter.filter!(:on, query, expr, count_bind, file, line)
 
-    join = %JoinExpr{qual: join_qual, source: join_source, assoc: join_assoc, alias: alias_name,
+    join = %JoinExpr{qual: join_qual, source: join_source, assoc: join_assoc,
                      file: file, line: line, params: join_params,
                      on: %QueryExpr{expr: on_expr, params: on_params,
                                     line: on_line, file: on_file}}
 
-    apply(query, join)
+    apply(query, join, as, count_bind)
   end
 
   defp validate_qual(qual) when is_atom(qual) do

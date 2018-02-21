@@ -121,9 +121,23 @@ defmodule Ecto.Query.Builder.JoinTest do
   end
 
   test "raises on mix of valid and invalid options passed to join/5" do
-    assert_raise ArgumentError, ~r/invalid option\(s\) passed/, fn ->
+    assert_raise ArgumentError, ~r/invalid options passed/, fn ->
       escape(quote do
         join("posts", :left, [p], c in "comments", on: true, foo: :bar)
+      end, [], __ENV__)
+    end
+  end
+
+  test "raises on non-atom as" do
+    assert_raise Ecto.Query.CompileError, ~r/`as` must be a compile time atom/, fn ->
+      escape(quote do
+        join("posts", :left, [p], c in "comments", on: true, as: "string")
+      end, [], __ENV__)
+    end
+
+    assert_raise Ecto.Query.CompileError, ~r/`as` must be a compile time atom/, fn ->
+      escape(quote do
+        join("posts", :left, [p], c in "comments", on: true, as: atom)
       end, [], __ENV__)
     end
   end

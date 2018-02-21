@@ -305,7 +305,7 @@ defmodule Ecto.Query do
   specially on insert, use `Ecto.put_meta/2`.
   """
 
-  defstruct [prefix: nil, sources: nil, from: nil, joins: [], aliases: nil, wheres: [], select: nil,
+  defstruct [prefix: nil, sources: nil, from: nil, joins: [], aliases: %{}, wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [], updates: [],
              havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
   @type t :: %__MODULE__{}
@@ -332,7 +332,7 @@ defmodule Ecto.Query do
 
   defmodule JoinExpr do
     @moduledoc false
-    defstruct [:qual, :source, :on, :file, :line, :assoc, :alias, :ix, params: []]
+    defstruct [:qual, :source, :on, :file, :line, :assoc, :ix, params: []]
   end
 
   defmodule Tagged do
@@ -624,9 +624,8 @@ defmodule Ecto.Query do
 
   defp from([{join, expr}|t], env, count_bind, quoted, binds) when join in @joins do
     qual = join_qual(join)
-    {t, as} = pop_join_as(t)
-    {t, on} = collect_on(t, nil)
-    {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, count_bind, env, as: as, on: on)
+    {t, on, as} = collect_on_and_as(t, nil, nil)
+    {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, count_bind, on, as, env)
     from(t, env, count_bind, quoted, to_query_binds(binds))
   end
 
@@ -659,15 +658,16 @@ defmodule Ecto.Query do
   defp join_qual(:left_lateral_join), do: :left_lateral
   defp join_qual(:inner_lateral_join), do: :inner_lateral
 
-  defp pop_join_as([{:as, expr}|t]), do: {t, expr}
-  defp pop_join_as(t), do: {t, nil}
-
-  defp collect_on([{:on, expr}|t], nil),
-    do: collect_on(t, expr)
-  defp collect_on([{:on, expr}|t], acc),
-    do: collect_on(t, {:and, [], [acc, expr]})
-  defp collect_on(other, acc),
-    do: {other, acc}
+  defp collect_on_and_as([{:on, on} | t], nil, as),
+    do: collect_on_and_as(t, on, as)
+  defp collect_on_and_as([{:on, expr} | t], on, as),
+    do: collect_on_and_as(t, {:and, [], [on, expr]}, as)
+  defp collect_on_and_as([{:as, as} | t], on, nil),
+    do: collect_on_and_as(t, on, as)
+  defp collect_on_and_as([{:as, _} | _], _, _),
+    do: Builder.error! "`as` keyword was given more than once to the same join"
+  defp collect_on_and_as(other, on, as),
+    do: {other, on, as}
 
   @doc """
   A join query expression.
@@ -766,18 +766,18 @@ defmodule Ecto.Query do
 
   """
   defmacro join(query, qual, binding \\ [], expr, opts \\ []) do
-    opts =
+    {on, as} =
       case parse_join_opts(opts) do
         {:opts, opts} ->
-          opts
+          {Keyword.get(opts, :on), Keyword.get(opts, :as)}
         {:expr, on_expr} ->
           IO.warn "Passing raw `on` expression as the last argument to Ecto.Query.join/5 is deprecated. " <>
             "Please use :on keyword option instead."
-          [on: on_expr]
+          {on_expr, nil}
       end
 
     query
-    |> Join.build(qual, binding, expr, nil, __CALLER__, opts)
+    |> Join.build(qual, binding, expr, nil, on, as, __CALLER__)
     |> elem(0)
   end
 
@@ -793,7 +793,7 @@ defmodule Ecto.Query do
       {opts, opts} ->
         {:opts, opts}
       {list, _} ->
-        raise ArgumentError, "invalid option(s) passed to Ecto.Query.join/5: " <>
+        raise ArgumentError, "invalid options passed to Ecto.Query.join/5: " <>
           "#{inspect(Keyword.keys(list) -- @join_opts)}. Valid options: #{inspect @join_opts}."
     end
   end

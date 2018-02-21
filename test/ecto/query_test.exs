@@ -120,7 +120,7 @@ defmodule Ecto.QueryTest do
 
     test "must be a list of variables" do
       assert_raise Ecto.Query.CompileError,
-                   "binding list should contain only variables or `{:bind_name, var}` tuples, got: 0", fn ->
+                   "binding list should contain only variables or `{as, var}` tuples, got: 0", fn ->
         quote_and_eval select(%Query{}, [0], 1)
       end
     end
@@ -222,18 +222,30 @@ defmodule Ecto.QueryTest do
         from(p in "posts",
           join: b in "blogs",
           join: c in "comments", as: :comment,
-          join: l in "links", as: :link)
+          join: l in "links", on: l.valid, as: :link)
 
       assert %{comment: 2, link: 3} == query.aliases
-      assert [_, %{alias: :comment}, %{alias: :link}] = query.joins
     end
 
-    test "crashes on assigning the same name twice" do
+    test "crashes on duplicate as for keyword query" do
+      message = ~r"`as` keyword was given more than once to the same join"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        quote_and_eval(from(p in "posts", join: b in "blogs", as: :foo, as: :bar))
+      end
+    end
+
+    test "crashes on assigning the same name twice at compile time" do
       message = ~r"alias `:foo` already exists"
       assert_raise Ecto.Query.CompileError, message, fn ->
-        from(p in "posts",
-          join: b in "blogs", as: :foo,
-          join: c in "comments", as: :foo)
+        quote_and_eval(from(p in "posts", join: b in "blogs", as: :foo, join: c in "comments", as: :foo))
+      end
+    end
+
+    test "crashes on assigning the same name twice at runtime" do
+      message = ~r"alias `:foo` already exists"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        query = "posts"
+        from(p in query, join: b in "blogs", as: :foo, join: c in "comments", as: :foo)
       end
     end
 

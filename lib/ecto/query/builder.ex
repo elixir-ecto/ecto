@@ -519,7 +519,7 @@ defmodule Ecto.Query.Builder do
       ** (Ecto.Query.CompileError) variable `x` is bound twice
 
       iex> escape_binding(%Ecto.Query{}, quote do: [a, b, :foo])
-      ** (Ecto.Query.CompileError) binding list should contain only variables or `{:bind_name, var}` tuples, got: :foo
+      ** (Ecto.Query.CompileError) binding list should contain only variables or `{as, var}` tuples, got: :foo
 
   """
   @spec escape_binding(Macro.t | Ecto.Query.t, list) :: {Macro.t | Ecto.Query.t, Keyword.t}
@@ -536,12 +536,12 @@ defmodule Ecto.Query.Builder do
       {:error, {:duplicate_bind, var}} ->
         error! "variable `#{var}` is bound twice"
       {:error, :named_binds_not_in_tail} ->
-        error! "named binds in the form of `{:bind_name, var}` tuples must be at the end " <>
+        error! "named binds in the form of `{as, var}` tuples must be at the end " <>
           "of the binding list, got: #{Macro.to_string(binding)}"
     end
    end
   def escape_binding(_query, bind) do
-    error! "binding should be list of variables and `{:bind_name, var}` tuples " <>
+    error! "binding should be list of variables and `{as, var}` tuples " <>
       "at the end, got: #{Macro.to_string(bind)}"
   end
 
@@ -613,7 +613,7 @@ defmodule Ecto.Query.Builder do
     do: {var, {:named, name}}
   defp escape_bind({bind, _ix}),
     do: error!("binding list should contain only variables or " <>
-          "`{:bind_name, var}` tuples, got: #{Macro.to_string(bind)}")
+          "`{as, var}` tuples, got: #{Macro.to_string(bind)}")
 
   defp try_expansion(expr, type, params, vars, %Macro.Env{} = env) do
     try_expansion(expr, type, params, vars, {env, &escape/5})
@@ -889,11 +889,11 @@ defmodule Ecto.Query.Builder do
 
   # Unescapes an `Ecto.Query` struct.
   defp unescape_query({:%, _, [Query, {:%{}, _, list}]}) do
-    struct(Query, list)
+    struct(Query, unescape_aliases(list))
   end
   defp unescape_query({:%{}, _, list} = ast) do
     if List.keyfind(list, :__struct__, 0) == {:__struct__, Query} do
-      Enum.into(list, %{})
+      Enum.into(unescape_aliases(list), %{})
     else
       ast
     end
@@ -902,9 +902,25 @@ defmodule Ecto.Query.Builder do
     other
   end
 
+  defp unescape_aliases(query) do
+    case List.keytake(query, :aliases, 0) do
+      {{:aliases, {:%{}, _, aliases}}, query} -> [aliases: Map.new(aliases)] ++ query
+      _ -> query
+    end
+  end
+
   # Escapes an `Ecto.Query` and associated structs.
   defp escape_query(%Query{} = query),
-    do: {:%{}, [], Map.to_list(query)}
+    do: {:%{}, [], escape_aliases(query)}
   defp escape_query(other),
     do: other
+
+  defp escape_aliases(%{aliases: aliases} = query) do
+    query = Map.to_list(Map.delete(query, :aliases))
+
+    case aliases do
+      %{} -> [aliases: {:%{}, [], Map.to_list(aliases)}] ++ query
+      aliases -> [aliases: aliases] ++ query
+    end
+  end
 end

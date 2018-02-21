@@ -30,7 +30,7 @@ defmodule Ecto.Query.Builder.From do
       {quote(do: other), []}
 
       iex> escape(quote do: x() in other)
-      ** (Ecto.Query.CompileError) binding list should contain only variables or `{:bind_name, var}` tuples, got: x()
+      ** (Ecto.Query.CompileError) binding list should contain only variables or `{as, var}` tuples, got: x()
 
   """
   @spec escape(Macro.t) :: {Macro.t, Keyword.t}
@@ -79,7 +79,7 @@ defmodule Ecto.Query.Builder.From do
   end
 
   defp query(prefix, source, schema) do
-    {:%, [], [Ecto.Query, {:%{}, [], [from: {source, schema}, prefix: prefix]}]}
+    {:%, [], [Ecto.Query, {:%{}, [], [from: {source, schema}, prefix: prefix, aliases: {:%{}, [], []}]}]}
   end
 
   defp expand_from({left, right}, env) do
