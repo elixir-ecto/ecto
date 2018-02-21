@@ -1121,7 +1121,7 @@ defmodule Ecto.Integration.RepoTest do
              Post |> select([p], %{title: p.title}) |> select_merge([p], %{title: "2"}) |> TestRepo.all()
     end
 
-    test "merge with update" do
+    test "merge with update on self" do
       %Post{} = TestRepo.insert!(%Post{title: "1", counter: 1})
 
       assert [%Post{title: "1", counter: 2}] =
