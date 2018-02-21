@@ -73,7 +73,7 @@ defmodule Ecto.Query.Builder.GroupBy do
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
-    {query, binding} = Builder.escape_binding(query, binding)
+    {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, params} = escape(expr, binding, env)
     params = Builder.escape_params(params)
 

@@ -124,7 +124,7 @@ defmodule Ecto.Query.Builder.Join do
       Builder.error! "`as` must be a compile time atom, got: `#{Macro.to_string(as)}`"
     end
 
-    {query, binding} = Builder.escape_binding(query, binding)
+    {query, binding} = Builder.escape_binding(query, binding, env)
     {join_bind, join_source, join_assoc, join_params} = escape(expr, binding, env)
     join_params = Builder.escape_params(join_params)
 

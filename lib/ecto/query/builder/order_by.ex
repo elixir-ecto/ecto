@@ -110,7 +110,7 @@ defmodule Ecto.Query.Builder.OrderBy do
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
-    {query, binding} = Builder.escape_binding(query, binding)
+    {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, params} = escape(:order_by, expr, binding, env)
     params = Builder.escape_params(params)
 

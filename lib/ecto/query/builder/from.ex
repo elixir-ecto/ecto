@@ -11,34 +11,34 @@ defmodule Ecto.Query.Builder.From do
 
   ## Examples
 
-      iex> escape(quote do: MySchema)
+      iex> escape(quote(do: MySchema), __ENV__)
       {quote(do: MySchema), []}
 
-      iex> escape(quote do: p in posts)
+      iex> escape(quote(do: p in posts), __ENV__)
       {quote(do: posts), [p: 0]}
 
-      iex> escape(quote do: p in {"posts", MySchema})
+      iex> escape(quote(do: p in {"posts", MySchema}), __ENV__)
       {quote(do: {"posts", MySchema}), [p: 0]}
 
-      iex> escape(quote do: [p, q] in posts)
+      iex> escape(quote(do: [p, q] in posts), __ENV__)
       {quote(do: posts), [p: 0, q: 1]}
 
-      iex> escape(quote do: [_, _] in abc)
+      iex> escape(quote(do: [_, _] in abc), __ENV__)
       {quote(do: abc), [_: 0, _: 1]}
 
-      iex> escape(quote do: other)
+      iex> escape(quote(do: other), __ENV__)
       {quote(do: other), []}
 
-      iex> escape(quote do: x() in other)
+      iex> escape(quote(do: x() in other), __ENV__)
       ** (Ecto.Query.CompileError) binding list should contain only variables or `{as, var}` tuples, got: x()
 
   """
-  @spec escape(Macro.t) :: {Macro.t, Keyword.t}
-  def escape({:in, _, [var, query]}) do
-    Builder.escape_binding(query, List.wrap(var))
+  @spec escape(Macro.t, Macro.Env.t) :: {Macro.t, Keyword.t}
+  def escape({:in, _, [var, query]}, env) do
+    Builder.escape_binding(query, List.wrap(var), env)
   end
 
-  def escape(query) do
+  def escape(query, _env) do
     {query, []}
   end
 
@@ -51,7 +51,7 @@ defmodule Ecto.Query.Builder.From do
   """
   @spec build(Macro.t, Macro.Env.t) :: {Macro.t, Keyword.t, non_neg_integer | nil}
   def build(query, env) do
-    {query, binds} = escape(query)
+    {query, binds} = escape(query, env)
 
     {count_bind, quoted} =
       case expand_from(query, env) do

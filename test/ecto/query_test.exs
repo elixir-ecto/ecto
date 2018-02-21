@@ -271,8 +271,7 @@ defmodule Ecto.QueryTest do
     end
 
     test "referring to non-existing binding" do
-      message = ~r"there is no bind named `:nope`"
-      assert_raise Ecto.Query.CompileError, message, fn ->
+      assert_raise Ecto.QueryError, ~r"unknown bind name `:nope`", fn ->
         "posts"
         |> join(:inner, [p], c in "comments", as: :comment)
         |> where([nope: c], c.id == 0)

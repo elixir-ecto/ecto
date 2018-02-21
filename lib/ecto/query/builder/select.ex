@@ -209,7 +209,7 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   def build(kind, query, binding, expr, env) do
-    {query, binding} = Builder.escape_binding(query, binding)
+    {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, {params, take}} = escape(expr, binding, env)
     params = Builder.escape_params(params)
     take   = {:%{}, [], Map.to_list(take)}
