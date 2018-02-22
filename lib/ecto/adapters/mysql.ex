@@ -284,7 +284,7 @@ defmodule Ecto.Adapters.MySQL do
 
     opts =
       opts
-      |> Keyword.delete(:name)
+      |> Keyword.drop([:name, :log])
       |> Keyword.put(:pool, DBConnection.Connection)
       |> Keyword.put(:backoff_type, :stop)
 
