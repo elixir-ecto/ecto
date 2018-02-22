@@ -302,6 +302,10 @@ defmodule Ecto.Type do
     {:ok, value}
   end
 
+  def dump(:string, value, _dumper) when is_integer(value) do
+    {:ok, "#{value}"}
+  end
+
   def dump(:any, value, _dumper) do
     {:ok, value}
   end
@@ -431,6 +435,10 @@ defmodule Ecto.Type do
 
   def load(:binary_id, value, _loader) when is_binary(value) do
     {:ok, value}
+  end
+
+  def load(:string, value, _loader) when is_integer(value) do
+    {:ok, "#{value}"}
   end
 
   def load({:array, type}, value, loader) when is_list(value) do
@@ -585,6 +593,10 @@ defmodule Ecto.Type do
 
   def cast(:binary_id, value) when is_binary(value) do
     {:ok, value}
+  end
+
+  def cast(:string, value) when is_integer(value) do
+    {:ok, "#{value}"}
   end
 
   def cast({:array, type}, term) when is_list(term) do
