@@ -144,7 +144,7 @@ defmodule Ecto.Repo.Queryable do
           from: from
         } = select
 
-        preprocessor = preprocessor(from, preprocess, sources, prefix, adapter)
+        preprocessor = preprocessor(from, preprocess, prefix, adapter)
         {count, rows} = adapter.execute(repo, meta, prepared, params, opts)
         postprocessor = postprocessor(from, postprocess, take, prefix, adapter)
 
@@ -172,7 +172,7 @@ defmodule Ecto.Repo.Queryable do
           from: from
         } = select
 
-        preprocessor = preprocessor(from, preprocess, sources, prefix, adapter)
+        preprocessor = preprocessor(from, preprocess, prefix, adapter)
         stream = adapter.stream(repo, meta, prepared, params, opts)
         postprocessor = postprocessor(from, postprocess, take, prefix, adapter)
 
@@ -184,19 +184,19 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  defp preprocessor({_, {:source, source_schema, fields}}, preprocess, _sources, prefix, adapter) do
+  defp preprocessor({_, {:source, source_schema, fields}}, preprocess, prefix, adapter) do
     fn row ->
       {entry, rest} = process_source(source_schema, fields, row, false, prefix, adapter)
       preprocess(rest, preprocess, entry, prefix, adapter)
     end
   end
-  defp preprocessor({_, from}, preprocess, _sources, prefix, adapter) do
+  defp preprocessor({_, from}, preprocess, prefix, adapter) do
     fn row ->
       {entry, rest} = process(row, from, nil, prefix, adapter)
       preprocess(rest, preprocess, entry, prefix, adapter)
     end
   end
-  defp preprocessor(:none, preprocess, _sources, prefix, adapter) do
+  defp preprocessor(:none, preprocess, prefix, adapter) do
     fn row ->
       preprocess(row, preprocess, nil, prefix, adapter)
     end
