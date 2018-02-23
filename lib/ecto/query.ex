@@ -332,7 +332,7 @@ defmodule Ecto.Query do
 
   defmodule JoinExpr do
     @moduledoc false
-    defstruct [:qual, :source, :on, :file, :line, :assoc, :ix, params: []]
+    defstruct [:qual, :source, :on, :file, :line, :assoc, :as, :ix, params: []]
   end
 
   defmodule Tagged do

@@ -178,7 +178,7 @@ defmodule Ecto.Query.Builder.Join do
     join =
       quote do
         %JoinExpr{qual: unquote(join_qual), source: unquote(join_source),
-                  assoc: unquote(join_assoc), file: unquote(env.file),
+                  assoc: unquote(join_assoc), as: unquote(as), file: unquote(env.file),
                   line: unquote(env.line), params: unquote(join_params),
                   on: %QueryExpr{expr: unquote(on_expr), params: unquote(on_params),
                                  line: unquote(env.line), file: unquote(env.file)}}
@@ -219,7 +219,7 @@ defmodule Ecto.Query.Builder.Join do
     {on_expr, on_params, on_file, on_line} =
       Ecto.Query.Builder.Filter.filter!(:on, query, expr, count_bind, file, line)
 
-    join = %JoinExpr{qual: join_qual, source: join_source, assoc: join_assoc,
+    join = %JoinExpr{qual: join_qual, source: join_source, assoc: join_assoc, as: as,
                      file: file, line: line, params: join_params,
                      on: %QueryExpr{expr: on_expr, params: on_params,
                                     line: on_line, file: on_file}}

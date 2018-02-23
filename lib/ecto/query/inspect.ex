@@ -89,19 +89,19 @@ defimpl Inspect, for: Ecto.Query do
     |> Enum.flat_map(fn {expr, ix} -> join(expr, elem(names, expr.ix || ix + 1), names) end)
   end
 
-  defp join(%JoinExpr{qual: qual, assoc: {ix, right}}, name, names) do
+  defp join(%JoinExpr{qual: qual, assoc: {ix, right}, as: as}, name, names) do
     string = "#{name} in assoc(#{elem(names, ix)}, #{inspect right})"
-    [{join_qual(qual), string}]
+    [{join_qual(qual), string}] ++ kw_inspect(:as, as)
   end
 
-  defp join(%JoinExpr{qual: qual, source: {:fragment, _, _} = source, on: on} = part, name, names) do
+  defp join(%JoinExpr{qual: qual, source: {:fragment, _, _} = source, on: on, as: as} = part, name, names) do
     string = "#{name} in #{expr(source, names, part)}"
-    [{join_qual(qual), string}, on: expr(on, names)]
+    [{join_qual(qual), string}] ++ kw_inspect(:as, as) ++ [on: expr(on, names)]
   end
 
-  defp join(%JoinExpr{qual: qual, source: source, on: on}, name, names) do
+  defp join(%JoinExpr{qual: qual, source: source, on: on, as: as}, name, names) do
     string = "#{name} in #{unbound_from source}"
-    [{join_qual(qual), string}, on: expr(on, names)]
+    [{join_qual(qual), string}] ++ kw_inspect(:as, as) ++ [on: expr(on, names)]
   end
 
   defp preloads([]),       do: []
