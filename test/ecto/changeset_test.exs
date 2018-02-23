@@ -961,7 +961,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "validate_number/3 with bad options" do
-    assert_raise ArgumentError, "unknown option :min given to validate_number/3", fn  ->
+    assert_raise ArgumentError, ~r"unknown option :min given to validate_number/3", fn  ->
       validate_number(changeset(%{"upvotes" => 1}), :upvotes, min: Decimal.new(1.5))
     end
   end

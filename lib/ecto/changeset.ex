@@ -1805,7 +1805,13 @@ defmodule Ecto.Changeset do
               validate_number(field, value, message || default_message,
                               spec_key, spec_function, target_value)
             :error ->
-              raise ArgumentError, "unknown option #{inspect spec_key} given to validate_number/3"
+              supported_options = @number_validators |> Map.keys() |> Enum.map_join("\n", &"* #{inspect(&1)}")
+              raise ArgumentError, """
+              unknown option #{inspect spec_key} given to validate_number/3
+
+              The supported options are:
+              #{supported_options}
+              """
           end
         end
     end
