@@ -23,20 +23,23 @@ defmodule Ecto.LogEntryTest do
     entry = %{entry | params: [1, 2, 3], query_time: 0, queue_time: 0}
     assert to_binary(entry) == "QUERY OK db=0.0ms\ndone [1, 2, 3]"
 
-    diff = :erlang.convert_time_unit(1, :micro_seconds, :native)
-    entry = %{entry | params: [1, 2, 3], query_time: 2100 * diff, queue_time: 100 * diff}
-    assert to_binary(entry) == "QUERY OK db=2.1ms queue=0.1ms\ndone [1, 2, 3]"
+    query_time = :erlang.convert_time_unit(210000, :micro_seconds, :native)
+    queue_time = :erlang.convert_time_unit(10000, :micro_seconds, :native)
+    decode_time = :erlang.convert_time_unit(50000, :micro_seconds, :native)
 
-    entry = %{entry | params: [1, 2, 3], query_time: 2100 * diff, queue_time: 100 * diff,
+    entry = %{entry | params: [1, 2, 3], query_time: query_time, queue_time: queue_time}
+    assert to_binary(entry) == "QUERY OK db=210.0ms queue=10.0ms\ndone [1, 2, 3]"
+
+    entry = %{entry | params: [1, 2, 3], query_time: query_time, queue_time: queue_time,
                                          result: {:error, :error}}
-    assert to_binary(entry) == "QUERY ERROR db=2.1ms queue=0.1ms\ndone [1, 2, 3]"
+    assert to_binary(entry) == "QUERY ERROR db=210.0ms queue=10.0ms\ndone [1, 2, 3]"
 
-    entry = %{entry | params: [1, 2, 3], query_time: 2100 * diff, decode_time: 500 * diff,
-                                         queue_time: 100 * diff, result: {:error, :error}}
-    assert to_binary(entry) == "QUERY ERROR db=2.1ms decode=0.5ms queue=0.1ms\ndone [1, 2, 3]"
+    entry = %{entry | params: [1, 2, 3], query_time: query_time, decode_time: decode_time,
+                                         queue_time: queue_time, result: {:error, :error}}
+    assert to_binary(entry) == "QUERY ERROR db=210.0ms decode=50.0ms queue=10.0ms\ndone [1, 2, 3]"
 
     entry = %{entry | source: "test"}
-    assert to_binary(entry) == "QUERY ERROR source=\"test\" db=2.1ms decode=0.5ms queue=0.1ms\ndone [1, 2, 3]"
+    assert to_binary(entry) == "QUERY ERROR source=\"test\" db=210.0ms decode=50.0ms queue=10.0ms\ndone [1, 2, 3]"
   end
 
   defp to_binary(entry) do
