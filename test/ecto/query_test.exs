@@ -256,7 +256,7 @@ defmodule Ecto.QueryTest do
         |> where([comment: c], c.id == 0)
 
       assert inspect(query) ==
-        ~s[#Ecto.Query<from p in \"posts\", join: c in \"comments\", on: true, where: c.id == 0>]
+        ~s[#Ecto.Query<from p in \"posts\", join: c in \"comments\", as: :comment, on: true, where: c.id == 0>]
     end
 
     test "match on binding by name with ... in the middle" do
@@ -267,7 +267,7 @@ defmodule Ecto.QueryTest do
         |> where([p, ..., authors: a], a.id == 0)
 
       assert inspect(query) ==
-        ~s[#Ecto.Query<from p in \"posts\", join: c in \"comments\", on: true, join: a in \"authors\", on: true, where: a.id == 0>]
+        ~s[#Ecto.Query<from p in \"posts\", join: c in \"comments\", on: true, join: a in \"authors\", as: :authors, on: true, where: a.id == 0>]
     end
 
     test "referring to non-existing binding" do

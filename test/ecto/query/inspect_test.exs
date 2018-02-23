@@ -90,6 +90,17 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p in Inspect.Post, join: c in ^#Ecto.Query<from c in Inspect.Comment, where: true>, on: p.id == c.id}
   end
 
+  test "as" do
+    assert i(from(x in Post, join: y in Comment, as: :comment, on: x.id == y.id)) ==
+      ~s{from p in Inspect.Post, join: c in Inspect.Comment, as: :comment, on: p.id == c.id}
+
+    assert i(from(x in Post, inner_join: y in fragment("foo ? and ?", x.id, ^1), as: :foo, on: y.id == x.id)) ==
+      ~s{from p in Inspect.Post, join: f in fragment("foo ? and ?", p.id, ^1), as: :foo, on: f.id == p.id}
+
+    assert i(from(x in Post, join: y in subquery(Comment), as: :comment, on: x.id == y.id)) ==
+      ~s{from p in Inspect.Post, join: c in subquery(from c in Inspect.Comment), as: :comment, on: p.id == c.id}
+  end
+
   test "where" do
     assert i(from(x in Post, where: x.foo == x.bar, where: true)) ==
            ~s{from p in Inspect.Post, where: p.foo == p.bar, where: true}
