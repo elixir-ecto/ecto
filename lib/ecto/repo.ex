@@ -817,6 +817,12 @@ defmodule Ecto.Repo do
           {:ok, updated} = MyRepo.insert(%Post{title: "this is unique"}, on_conflict: on_conflict)
           Repo.get(Post, updated.id)
 
+  Because of the inability to know if the struct is up to date or not,
+  using associations with the `:on_conflict` option is not recommended.
+  For instance, Ecto may even trigger constraint violations when associations
+  are used with `on_conflict: :nothing`, as no ID will be available in
+  the case the record already exists, and it is not possible for Ecto to
+  detect such cases reliably.
   """
   @callback insert(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
             {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
