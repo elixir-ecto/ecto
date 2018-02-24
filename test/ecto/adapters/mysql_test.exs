@@ -541,11 +541,14 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   test "update" do
-    query = update(nil, "schema", [:id], [:x, :y], [])
+    query = update(nil, "schema", [:id], [x: 1, y: 2], [])
     assert query == ~s{UPDATE `schema` SET `id` = ? WHERE `x` = ? AND `y` = ?}
 
-    query = update("prefix", "schema", [:id], [:x, :y], [])
+    query = update("prefix", "schema", [:id], [x: 1, y: 2], [])
     assert query == ~s{UPDATE `prefix`.`schema` SET `id` = ? WHERE `x` = ? AND `y` = ?}
+
+    query = update("prefix", "schema", [:id], [x: 1, y: nil], [])
+    assert query == ~s{UPDATE `prefix`.`schema` SET `id` = ? WHERE `x` = ? AND `y` IS NULL}
   end
 
   test "delete" do

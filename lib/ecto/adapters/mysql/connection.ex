@@ -166,12 +166,24 @@ if Code.ensure_loaded?(Mariaex) do
 
     def update(prefix, table, fields, filters, _returning) do
       fields = intersperse_map(fields, ", ", &[quote_name(&1), " = ?"])
-      filters = intersperse_map(filters, " AND ", &[quote_name(&1), " = ?"])
+      filters = intersperse_map(filters, " AND ", fn
+        {field, nil} ->
+          [quote_name(field), " IS NULL"]
+
+        {field, _value} ->
+          [quote_name(field), " = ?"]
+      end)
       ["UPDATE ", quote_table(prefix, table), " SET ", fields, " WHERE " | filters]
     end
 
     def delete(prefix, table, filters, _returning) do
-      filters = intersperse_map(filters, " AND ", &[quote_name(&1), " = ?"])
+      filters = intersperse_map(filters, " AND ", fn
+        {field, nil} ->
+          [quote_name(field), " IS NULL"]
+
+        {field, _value} ->
+          [quote_name(field), " = ?"]
+      end)
       ["DELETE FROM ", quote_table(prefix, table), " WHERE " | filters]
     end
 

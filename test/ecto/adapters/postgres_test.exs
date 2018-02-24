@@ -697,14 +697,17 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "update" do
-    query = update(nil, "schema", [:x, :y], [:id], [])
+    query = update(nil, "schema", [:x, :y], [id: 1], [])
     assert query == ~s{UPDATE "schema" SET "x" = $1, "y" = $2 WHERE "id" = $3}
 
-    query = update(nil, "schema", [:x, :y], [:id], [:z])
+    query = update(nil, "schema", [:x, :y], [id: 1], [:z])
     assert query == ~s{UPDATE "schema" SET "x" = $1, "y" = $2 WHERE "id" = $3 RETURNING "z"}
 
-    query = update("prefix", "schema", [:x, :y], [:id], [])
+    query = update("prefix", "schema", [:x, :y], [id: 1], [])
     assert query == ~s{UPDATE "prefix"."schema" SET "x" = $1, "y" = $2 WHERE "id" = $3}
+
+    query = update("prefix", "schema", [:x, :y], [id: 1, updated_at: nil], [])
+    assert query == ~s{UPDATE "prefix"."schema" SET "x" = $1, "y" = $2 WHERE "id" = $3 AND "updated_at" IS NULL}
   end
 
   test "delete" do
