@@ -711,14 +711,17 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "delete" do
-    query = delete(nil, "schema", [:x, :y], [])
+    query = delete(nil, "schema", [x: 1, y: 2], [])
     assert query == ~s{DELETE FROM "schema" WHERE "x" = $1 AND "y" = $2}
 
-    query = delete(nil, "schema", [:x, :y], [:z])
+    query = delete(nil, "schema", [x: 1, y: 2], [:z])
     assert query == ~s{DELETE FROM "schema" WHERE "x" = $1 AND "y" = $2 RETURNING "z"}
 
-    query = delete("prefix", "schema", [:x, :y], [])
+    query = delete("prefix", "schema", [x: 1, y: 2], [])
     assert query == ~s{DELETE FROM "prefix"."schema" WHERE "x" = $1 AND "y" = $2}
+
+    query = delete("prefix", "schema", [x: nil, y: 1], [])
+    assert query == ~s{DELETE FROM "prefix"."schema" WHERE "x" IS NULL AND "y" = $1}
   end
 
   # DDL
