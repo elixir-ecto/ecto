@@ -697,25 +697,31 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "update" do
-    query = update(nil, "schema", [:x, :y], [:id], [])
+    query = update(nil, "schema", [:x, :y], [id: 1], [])
     assert query == ~s{UPDATE "schema" SET "x" = $1, "y" = $2 WHERE "id" = $3}
 
-    query = update(nil, "schema", [:x, :y], [:id], [:z])
+    query = update(nil, "schema", [:x, :y], [id: 1], [:z])
     assert query == ~s{UPDATE "schema" SET "x" = $1, "y" = $2 WHERE "id" = $3 RETURNING "z"}
 
-    query = update("prefix", "schema", [:x, :y], [:id], [])
+    query = update("prefix", "schema", [:x, :y], [id: 1], [])
     assert query == ~s{UPDATE "prefix"."schema" SET "x" = $1, "y" = $2 WHERE "id" = $3}
+
+    query = update("prefix", "schema", [:x, :y], [id: 1, updated_at: nil], [])
+    assert query == ~s{UPDATE "prefix"."schema" SET "x" = $1, "y" = $2 WHERE "id" = $3 AND "updated_at" IS NULL}
   end
 
   test "delete" do
-    query = delete(nil, "schema", [:x, :y], [])
+    query = delete(nil, "schema", [x: 1, y: 2], [])
     assert query == ~s{DELETE FROM "schema" WHERE "x" = $1 AND "y" = $2}
 
-    query = delete(nil, "schema", [:x, :y], [:z])
+    query = delete(nil, "schema", [x: 1, y: 2], [:z])
     assert query == ~s{DELETE FROM "schema" WHERE "x" = $1 AND "y" = $2 RETURNING "z"}
 
-    query = delete("prefix", "schema", [:x, :y], [])
+    query = delete("prefix", "schema", [x: 1, y: 2], [])
     assert query == ~s{DELETE FROM "prefix"."schema" WHERE "x" = $1 AND "y" = $2}
+
+    query = delete("prefix", "schema", [x: nil, y: 1], [])
+    assert query == ~s{DELETE FROM "prefix"."schema" WHERE "x" IS NULL AND "y" = $1}
   end
 
   # DDL

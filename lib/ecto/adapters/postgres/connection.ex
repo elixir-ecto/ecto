@@ -217,8 +217,12 @@ if Code.ensure_loaded?(Postgrex) do
         {[quote_name(field), " = $" | Integer.to_string(acc)], acc + 1}
       end)
 
-      {filters, _count} = intersperse_reduce(filters, " AND ", count, fn field, acc ->
-        {[quote_name(field), " = $" | Integer.to_string(acc)], acc + 1}
+      {filters, _count} = intersperse_reduce(filters, " AND ", count, fn
+        {field, nil}, acc ->
+          {[quote_name(field), " IS NULL"], acc}
+
+        {field, _value}, acc ->
+          {[quote_name(field), " = $" | Integer.to_string(acc)], acc + 1}
       end)
 
       ["UPDATE ", quote_table(prefix, table), " SET ",
@@ -226,8 +230,12 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     def delete(prefix, table, filters, returning) do
-      {filters, _} = intersperse_reduce(filters, " AND ", 1, fn field, acc ->
-        {[quote_name(field), " = $" | Integer.to_string(acc)], acc + 1}
+      {filters, _} = intersperse_reduce(filters, " AND ", 1, fn
+        {field, nil}, acc ->
+          {[quote_name(field), " IS NULL"], acc}
+
+        {field, _value}, acc ->
+          {[quote_name(field), " = $" | Integer.to_string(acc)], acc + 1}
       end)
 
       ["DELETE FROM ", quote_table(prefix, table), " WHERE ", filters | returning(returning)]

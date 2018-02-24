@@ -242,15 +242,54 @@ defmodule Ecto.Integration.RepoTest do
     import Ecto.Changeset, only: [cast: 3, optimistic_lock: 2]
     base_post = TestRepo.insert!(%Comment{})
 
-    cs_ok =
+    changeset_ok =
       base_post
       |> cast(%{"text" => "foo.bar"}, ~w(text)a)
       |> optimistic_lock(:lock_version)
-    TestRepo.update!(cs_ok)
+    TestRepo.update!(changeset_ok)
 
-    cs_stale = optimistic_lock(base_post, :lock_version)
-    assert_raise Ecto.StaleEntryError, fn -> TestRepo.update!(cs_stale) end
-    assert_raise Ecto.StaleEntryError, fn -> TestRepo.delete!(cs_stale) end
+    changeset_stale = optimistic_lock(base_post, :lock_version)
+    assert_raise Ecto.StaleEntryError, fn -> TestRepo.update!(changeset_stale) end
+    assert_raise Ecto.StaleEntryError, fn -> TestRepo.delete!(changeset_stale) end
+  end
+
+  test "optimistic locking in update operation with nil field" do
+    import Ecto.Changeset, only: [cast: 3, optimistic_lock: 3]
+
+    base_post =
+      %Comment{}
+      |> cast(%{lock_version: nil}, [:lock_version])
+      |> TestRepo.insert!()
+
+    incrementer =
+      fn
+        nil -> 1
+        old_value -> old_value + 1
+      end
+
+    changeset_ok =
+      base_post
+      |> cast(%{"text" => "foo.bar"}, ~w(text)a)
+      |> optimistic_lock(:lock_version, incrementer)
+    TestRepo.update!(changeset_ok)
+  end
+
+  test "optimistic locking in delete operation with nil field" do
+    import Ecto.Changeset, only: [cast: 3, optimistic_lock: 3]
+
+    base_post =
+      %Comment{}
+      |> cast(%{lock_version: nil}, [:lock_version])
+      |> TestRepo.insert!()
+
+    incrementer =
+      fn
+        nil -> 1
+        old_value -> old_value + 1
+      end
+
+    changeset_ok = optimistic_lock(base_post, :lock_version, incrementer)
+    TestRepo.delete!(changeset_ok)
   end
 
   @tag :unique_constraint

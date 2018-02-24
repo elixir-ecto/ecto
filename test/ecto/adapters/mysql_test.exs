@@ -541,19 +541,25 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   test "update" do
-    query = update(nil, "schema", [:id], [:x, :y], [])
+    query = update(nil, "schema", [:id], [x: 1, y: 2], [])
     assert query == ~s{UPDATE `schema` SET `id` = ? WHERE `x` = ? AND `y` = ?}
 
-    query = update("prefix", "schema", [:id], [:x, :y], [])
+    query = update("prefix", "schema", [:id], [x: 1, y: 2], [])
     assert query == ~s{UPDATE `prefix`.`schema` SET `id` = ? WHERE `x` = ? AND `y` = ?}
+
+    query = update("prefix", "schema", [:id], [x: 1, y: nil], [])
+    assert query == ~s{UPDATE `prefix`.`schema` SET `id` = ? WHERE `x` = ? AND `y` IS NULL}
   end
 
   test "delete" do
-    query = delete(nil, "schema", [:x, :y], [])
+    query = delete(nil, "schema", [x: 1, y: 2], [])
     assert query == ~s{DELETE FROM `schema` WHERE `x` = ? AND `y` = ?}
 
-    query = delete("prefix", "schema", [:x, :y], [])
+    query = delete("prefix", "schema", [x: 1, y: 2], [])
     assert query == ~s{DELETE FROM `prefix`.`schema` WHERE `x` = ? AND `y` = ?}
+
+    query = delete(nil, "schema", [x: nil, y: 1], [])
+    assert query == ~s{DELETE FROM `schema` WHERE `x` IS NULL AND `y` = ?}
   end
 
   # DDL
