@@ -93,17 +93,17 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def update(repo, %{source: {prefix, source}}, fields, params, returning, opts) do
-        {fields, values1} = :lists.unzip(fields)
-        {filter, values2} = :lists.unzip(params)
-        sql = @conn.update(prefix, source, fields, filter, returning)
-        Ecto.Adapters.SQL.struct(repo, @conn, sql, {:update, source, params}, values1 ++ values2, :raise, returning, opts)
+        {fields, field_values} = :lists.unzip(fields)
+        filter_values = params |> Keyword.values() |> Enum.reject(&is_nil(&1))
+        sql = @conn.update(prefix, source, fields, params, returning)
+        Ecto.Adapters.SQL.struct(repo, @conn, sql, {:update, source, params}, field_values ++ filter_values, :raise, returning, opts)
       end
 
       @doc false
       def delete(repo, %{source: {prefix, source}}, params, opts) do
-        {filter, values} = :lists.unzip(params)
-        sql = @conn.delete(prefix, source, filter, [])
-        Ecto.Adapters.SQL.struct(repo, @conn, sql, {:delete, source, params}, values, :raise, [], opts)
+        filter_values = params |> Keyword.values() |> Enum.reject(&is_nil(&1))
+        sql = @conn.delete(prefix, source, params, [])
+        Ecto.Adapters.SQL.struct(repo, @conn, sql, {:delete, source, params}, filter_values, :raise, [], opts)
       end
 
       ## Transaction
