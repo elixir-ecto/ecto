@@ -150,7 +150,7 @@ defmodule Ecto.Repo.Supervisor do
       {:ok, opts} ->
         children = [adapter.child_spec(repo, opts)]
         if Keyword.get(opts, :query_cache_owner, true) do
-          :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
+          Ecto.Query.Planner.new_query_cache(repo)
         end
         supervise(children, strategy: :one_for_one)
       :ignore ->

@@ -93,6 +93,13 @@ defmodule Ecto.Query.Planner do
   end
 
   @doc """
+  Define the query cache table.
+  """
+  def new_query_cache(repo) do
+    :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
+  end
+
+  @doc """
   Plans the query for execution.
 
   Planning happens in multiple steps:

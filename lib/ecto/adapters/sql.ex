@@ -518,7 +518,7 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def reduce(repo, statement, params, opts, acc, fun) do
     {repo_mod, pool, default_opts} = lookup_pool(repo)
-    opts = with_log(repo, params, opts ++ default_opts)
+    opts = with_log(repo_mod, params, opts ++ default_opts)
     case get_conn(pool) do
       nil  ->
         raise "cannot reduce stream outside of transaction"
