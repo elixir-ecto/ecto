@@ -50,7 +50,7 @@ We recommend everyone to migrate to Jason. Built-in support for Poison will be r
   * [Ecto.Changeset] Put constraint name in error metadata for constraints
   * [Ecto.Migration] Migrations now lock the migrations table in order to avoid concurrent migrations in a cluster. The type of lock can be configured via the `:migration_lock` repository configuration and defaults to "FOR UPDATE" or disabled if set to nil
   * [Ecto.Migration] Add `migration_default_prefix`
-  * [Ecto.Query] Add `unsafe_fragment` to queries which allow developers to send dynamicly generated fragments to the database that are not checked (and therefore unsafe)
+  * [Ecto.Query] Add `unsafe_fragment` to queries which allow developers to send dynamically generated fragments to the database that are not checked (and therefore unsafe)
   * [Ecto.Query] Support tuples in filter expressions, allowing queries such as `where: {p.foo, p.bar} > {^foo, ^bar}`
   * [Ecto.Query] Support excluding specific join types in `exclude/2`
   * [Ecto.Repo] Support `:replace_all_except_primary_key` as `:on_conflict` strategy
@@ -65,13 +65,13 @@ We recommend everyone to migrate to Jason. Built-in support for Poison will be r
 ### Deprecations
 
   * [Ecto.Changeset] Passing a list of binaries to `cast/3` is deprecated, please pass a list of atoms instead
-  * [Ecto.Multi] `Ecto.Multi.run/3` now receive the repo in which the transaction is executing as the first argument to functions, and the changes so far as the second argument
+  * [Ecto.Multi] `Ecto.Multi.run/3` now receives the repo in which the transaction is executing as the first argument to functions, and the changes so far as the second argument
   * [Ecto.Repo] The `:returning` option for `update_all` and `delete_all` has been deprecated as those statements now support `select` clauses
 
 ### Backwards incompatible changes
 
-  * [Ecto.Multi] `Ecto.Multi.run/5` now receive the repo in which the transaction is executing as the first argument to functions, and the changes so far as the second argument
   * [Ecto.DateTime] `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` were previously deprecated and have now been removed
+  * [Ecto.Multi] `Ecto.Multi.run/5` now receives the repo in which the transaction is executing as the first argument to functions, and the changes so far as the second argument
   * [Ecto.Schema] `:time`, `:naive_datetime` and `:utc_datetime` no longer keep microseconds information. If you want to keep microseconds, use `:time_usec`, `:naive_datetime_usec`, `:utc_datetime_usec`
 
 ### Adapter changes
@@ -80,7 +80,7 @@ We recommend everyone to migrate to Jason. Built-in support for Poison will be r
   * [Ecto.Adapter] The `on_conflict` argument for `insert` and `insert_all` no longer receives a `{:replace_all, list(), atom()}` tuple. Instead, it receives a `{fields :: [atom()], list(), atom()}` where `fields` is a list of atoms of the fields to be replaced
   * [Ecto.Adapter] `exclusion_constraint` will now have type `:exclusion` on the adapter metadata instead of `:exclude` (affects PostgreSQL only)
   * [Ecto.Adapter.Migration] A new `lock_for_migration/4` callback has been added. It is implemented by default by `Ecto.Adapters.SQL`
-  * [Ecto.Query] Tuple expressions are now supported in queries. For example, `where: {p.foo, p.bar} > {p.bar, p.baz}` should translate to `WHERE (p.foo, p.bar) > (p.bar, p.baz)` in SQL databases. Adapters should be changed to handle the `{:{}, meta, exprs}` from the query AST
+  * [Ecto.Query] Tuple expressions are now supported in queries. For example, `where: {p.foo, p.bar} > {p.bar, p.baz}` should translate to `WHERE (p.foo, p.bar) > (p.bar, p.baz)` in SQL databases. Adapters should be changed to handle `{:{}, meta, exprs}` in the query AST
 
 ## Previous versions
 
