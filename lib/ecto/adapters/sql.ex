@@ -23,7 +23,7 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       defmacro __before_compile__(env) do
-        Ecto.Adapters.SQL.__before_compile__(@conn, @adapter, env)
+        Ecto.Adapters.SQL.__before_compile__(@adapter, env)
       end
 
       @doc false
@@ -246,12 +246,12 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp sql_call(repo, callback, args, params, opts) do
-    {repo_mod, pool, default_opts} = lookup_pool(repo)
+    {repo_mod, sql, pool, default_opts} = lookup_pool(repo)
     conn = get_conn(pool) || pool
     opts = with_log(repo_mod, params, opts ++ default_opts)
     args = args ++ [params, opts]
     try do
-      apply(repo_mod.__sql__, callback, [conn | args])
+      apply(sql, callback, [conn | args])
     rescue
       err in DBConnection.OwnershipError ->
         message = err.message <> "\nSee Ecto.Adapters.SQL.Sandbox docs for more information."
@@ -270,7 +270,7 @@ defmodule Ecto.Adapters.SQL do
   ## Worker
 
   @doc false
-  def __before_compile__(conn, adapter, _env) do
+  def __before_compile__(adapter, _env) do
     case Application.get_env(:ecto, :json_library) do
       nil ->
         :ok
@@ -296,9 +296,6 @@ defmodule Ecto.Adapters.SQL do
     end
 
     quote do
-      @doc false
-      def __sql__, do: unquote(conn)
-
       @doc """
       A convenience function for SQL-based repositories that executes the given query.
 
@@ -376,7 +373,7 @@ defmodule Ecto.Adapters.SQL do
 
     pool_config = pool_config(repo, opts)
     pool_name = Keyword.fetch!(pool_config, :name)
-    Ecto.Registry.associate(self(), {repo, pool_name, pool_config})
+    Ecto.Registry.associate(self(), {repo, connection, pool_name, pool_config})
     connection.child_spec(pool_config)
   end
 
@@ -517,26 +514,26 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def reduce(repo, statement, params, opts, acc, fun) do
-    {repo_mod, pool, default_opts} = lookup_pool(repo)
+    {repo_mod, sql, pool, default_opts} = lookup_pool(repo)
     opts = with_log(repo_mod, params, opts ++ default_opts)
     case get_conn(pool) do
       nil  ->
         raise "cannot reduce stream outside of transaction"
       conn ->
-        apply(repo_mod.__sql__, :stream, [conn, statement, params, opts])
+        apply(sql, :stream, [conn, statement, params, opts])
         |> Enumerable.reduce(acc, fun)
     end
   end
 
   @doc false
   def into(repo, statement, params, opts) do
-    {repo_mod, pool, default_opts} = lookup_pool(repo)
+    {repo_mod, sql, pool, default_opts} = lookup_pool(repo)
     opts = with_log(repo_mod, params, opts ++ default_opts)
     case get_conn(pool) do
       nil  ->
         raise "cannot collect into stream outside of transaction"
       conn ->
-        apply(repo_mod.__sql__, :stream, [conn, statement, params, opts])
+        apply(sql, :stream, [conn, statement, params, opts])
         |> Collectable.into()
     end
   end
@@ -565,7 +562,7 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def transaction(repo, opts, fun) do
-    {repo_mod, pool, default_opts} = lookup_pool(repo)
+    {repo_mod, _sql, pool, default_opts} = lookup_pool(repo)
     opts = with_log(repo_mod, [], opts ++ default_opts)
     case get_conn(pool) do
       nil  -> do_transaction(pool, opts, fun)
@@ -587,13 +584,13 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def in_transaction?(repo) do
-    {_repo_mod, pool, _default_opts} = lookup_pool(repo)
+    {_repo_mod, _sql, pool, _default_opts} = lookup_pool(repo)
     !!get_conn(pool)
   end
 
   @doc false
   def rollback(repo, value) do
-    {_repo_mod, pool, _default_opts} = lookup_pool(repo)
+    {_repo_mod, _sql, pool, _default_opts} = lookup_pool(repo)
     case get_conn(pool) do
       nil  -> raise "cannot call rollback outside of transaction"
       conn -> DBConnection.rollback(conn, value)
@@ -604,7 +601,7 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def lock_for_migrations(repo, query, opts, fun) do
-    {_repo_mod, _pool, default_opts} = lookup_pool(repo)
+    {_repo_mod, _sql, _pool, default_opts} = lookup_pool(repo)
 
     if Keyword.fetch(default_opts, :pool_size) == {:ok, 1} do
       raise_pool_size_error()
