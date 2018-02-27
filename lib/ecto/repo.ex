@@ -1018,7 +1018,7 @@ defmodule Ecto.Repo do
 
   """
   @callback transaction(fun_or_multi :: fun | Ecto.Multi.t, opts :: Keyword.t) ::
-    {:ok, any} | {:error, any} | {:error, atom, any, %{atom => any}}
+    {:ok, any} | {:error, any} | {:error, Ecto.Multi.name, any, %{Ecto.Multi.name => any}}
   @optional_callbacks [transaction: 2]
 
   @doc """
