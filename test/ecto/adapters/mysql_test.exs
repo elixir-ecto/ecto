@@ -532,6 +532,15 @@ defmodule Ecto.Adapters.MySQLTest do
 
     query = insert(nil, "schema", [:x, :y], [[:x, :y]], {:replace_all, [], []}, [])
     assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `x` = VALUES(`x`),`y` = VALUES(`y`)}
+
+    assert_raise ArgumentError, "The :conflict_target option is not supported in insert/insert_all by MySQL", fn ->
+      insert(nil, "schema", [:x, :y], [[:x, :y]], {[:x, :y], [], [:x]}, [])
+    end
+
+    assert_raise ArgumentError, "Using a query with :where in combination with the :on_conflict option is not supported by MySQL", fn ->
+      update = from("schema", update: [set: [x: ^"foo"]], where: [z: "bar"]) |> normalize(:update_all)
+      insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], []}, [])
+    end
   end
 
   test "update" do
