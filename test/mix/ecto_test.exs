@@ -61,10 +61,10 @@ defmodule Mix.EctoTest do
     assert_raise Mix.Error, fn -> ensure_started(Repo, []) end
   end
 
-  test "migrations path" do
+  test "source_priv_repo" do
     Process.put(:priv, nil)
-    assert migrations_path(Repo) == Path.expand("priv/repo/migrations", File.cwd!)
+    assert source_repo_priv(Repo) == Path.expand("priv/repo", File.cwd!)
     Process.put(:priv, "hello")
-    assert migrations_path(Repo) == Path.expand("hello/migrations", File.cwd!)
+    assert source_repo_priv(Repo) == Path.expand("hello", File.cwd!)
   end
 end

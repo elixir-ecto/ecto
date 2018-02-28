@@ -299,7 +299,7 @@ defmodule Ecto.Adapters.SQL do
       @doc """
       A convenience function for SQL-based repositories that executes the given query.
 
-      See `Ecto.Adapters.SQL.query/3` for more information.
+      See `Ecto.Adapters.SQL.query/4` for more information.
       """
       def query(sql, params \\ [], opts \\ []) do
         Ecto.Adapters.SQL.query(__MODULE__, sql, params, opts)
@@ -308,7 +308,7 @@ defmodule Ecto.Adapters.SQL do
       @doc """
       A convenience function for SQL-based repositories that executes the given query.
 
-      See `Ecto.Adapters.SQL.query/3` for more information.
+      See `Ecto.Adapters.SQL.query!/4` for more information.
       """
       def query!(sql, params \\ [], opts \\ []) do
         Ecto.Adapters.SQL.query!(__MODULE__, sql, params, opts)
@@ -317,7 +317,7 @@ defmodule Ecto.Adapters.SQL do
       @doc """
       A convenience function for SQL-based repositories that translates the given query to SQL.
 
-      See `Ecto.Adapters.SQL.query/3` for more information.
+      See `Ecto.Adapters.SQL.to_sql/3` for more information.
       """
       def to_sql(operation, queryable) do
         Ecto.Adapters.SQL.to_sql(operation, __MODULE__, queryable)

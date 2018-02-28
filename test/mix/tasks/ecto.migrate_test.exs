@@ -56,7 +56,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
 
   test "runs the migrator with app_repo config" do
     Application.put_env(:ecto, :ecto_repos, [Repo])
-    run ["--no-start"], fn _, _, _, _ ->
+    run ["--no-start"], fn _, _, _ ->
       Process.put(:migrated, true)
       []
     end
@@ -67,7 +67,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   end
 
   test "runs the migrator after starting repo" do
-    run ["-r", to_string(Repo), "--no-start"], fn _, _, _, _ ->
+    run ["-r", to_string(Repo), "--no-start"], fn _, _, _ ->
       Process.put(:migrated, true)
       []
     end
@@ -76,7 +76,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   end
 
   test "runs the migrator with the already started repo" do
-    run ["-r", to_string(StartedRepo), "--no-start"], fn _, _, _, _ ->
+    run ["-r", to_string(StartedRepo), "--no-start"], fn _, _, _ ->
       Process.put(:migrated, true)
       []
     end
@@ -85,7 +85,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   end
 
   test "runs the migrator with two repos" do
-    run ["-r", to_string(Repo), "-r", to_string(StartedRepo), "--no-start"], fn _, _, _, _ ->
+    run ["-r", to_string(Repo), "-r", to_string(StartedRepo), "--no-start"], fn _, _, _ ->
       Process.put(:migrated, true)
       []
     end
@@ -95,9 +95,8 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   end
 
   test "runs the migrator yielding the repository and migrations path" do
-    run ["-r", to_string(Repo), "--quiet", "--prefix", "foo"], fn repo, path, direction, opts ->
+    run ["-r", to_string(Repo), "--quiet", "--prefix", "foo"], fn repo, direction, opts ->
       assert repo == Repo
-      assert path == Path.expand("tmp/#{inspect(Ecto.Migrate)}/migrations", File.cwd!)
       assert direction == :up
       assert opts[:all] == true
       assert opts[:log] == false
@@ -110,7 +109,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
   test "raises when migrations path does not exist" do
     File.rm_rf!(@migrations_path)
     assert_raise Mix.Error, fn ->
-      run ["-r", to_string(Repo)], fn _, _, _, _ -> [] end
+      run ["-r", to_string(Repo)], fn _, _, _ -> [] end
     end
     assert !Process.get(:started)
   end

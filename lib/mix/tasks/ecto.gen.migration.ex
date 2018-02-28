@@ -46,7 +46,7 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
       case OptionParser.parse(args, switches: @switches) do
         {opts, [name], _} ->
           ensure_repo(repo, args)
-          path = migrations_path(repo)
+          path = Path.join(source_repo_priv(repo), "migrations")
           base_name = "#{underscore(name)}.exs"
           file = Path.join(path, "#{timestamp()}_#{base_name}")
           create_directory path

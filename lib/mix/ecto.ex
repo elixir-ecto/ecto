@@ -115,9 +115,9 @@ defmodule Mix.Ecto do
   @spec ensure_migrations_path(Ecto.Repo.t) :: Ecto.Repo.t | no_return
   def ensure_migrations_path(repo) do
     with false <- Mix.Project.umbrella?,
-         path = Path.relative_to(migrations_path(repo), Mix.Project.app_path),
+         path = Path.join(source_repo_priv(repo), "migrations"),
          false <- File.dir?(path),
-         do: raise_missing_migrations(path, repo)
+         do: raise_missing_migrations(Path.relative_to_cwd(path), repo)
     repo
   end
 
@@ -156,19 +156,12 @@ defmodule Mix.Ecto do
   end
 
   @doc """
-  Gets the migrations path from a repository.
-  """
-  @spec migrations_path(Ecto.Repo.t) :: String.t
-  def migrations_path(repo) do
-    Path.join(source_repo_priv(repo), "migrations")
-  end
-
-  @doc """
   Returns the private repository path relative to the source.
   """
   def source_repo_priv(repo) do
-    priv = repo.config()[:priv] || "priv/#{repo |> Module.split |> List.last |> Macro.underscore}"
-    app = Keyword.fetch!(repo.config(), :otp_app)
+    config = repo.config()
+    priv = config[:priv] || "priv/#{repo |> Module.split |> List.last |> Macro.underscore}"
+    app = Keyword.fetch!(config, :otp_app)
     Path.join(Mix.Project.deps_paths[app] || File.cwd!, priv)
   end
 

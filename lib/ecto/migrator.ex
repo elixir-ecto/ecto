@@ -26,6 +26,17 @@ defmodule Ecto.Migrator do
   alias Ecto.Migration.SchemaMigration
 
   @doc """
+  Gets the migrations path from a repository.
+  """
+  @spec migrations_path(Ecto.Repo.t) :: String.t
+  def migrations_path(repo) do
+    config = repo.config()
+    priv = config[:priv] || "priv/#{repo |> Module.split |> List.last |> Macro.underscore}"
+    app = Keyword.fetch!(config, :otp_app)
+    Application.app_dir(app, Path.join(priv, "migrations"))
+  end
+
+  @doc """
   Gets all migrated versions.
 
   This function ensures the migration table exists
@@ -162,6 +173,19 @@ defmodule Ecto.Migrator do
   end
 
   @doc """
+  Runs migrations for the given repository.
+
+  Equivalent to:
+
+      Ecto.Migrator.run(repo, Ecto.Migrator.migrations_path(repo), direction, opts)
+
+  """
+  @spec run(Ecto.Repo.t, atom, Keyword.t) :: [integer]
+  def run(repo, direction, opts) do
+    run(repo, migrations_path(repo), direction, opts)
+  end
+
+  @doc """
   Apply migrations to a repository with a given strategy.
 
   The second argument identifies where the migrations are sourced from. A file
@@ -207,7 +231,21 @@ defmodule Ecto.Migrator do
   Returns an array of tuples as the migration status of the given repo,
   without actually running any migrations.
 
+  Equivalent to:
+
+      Ecto.Migrator.migrations(repo, Ecto.Migrator.migrations_path(repo))
+
   """
+  @spec migrations(Ecto.Repo.t) :: [{:up | :down, id :: integer(), name :: String.t}]
+  def migrations(repo) do
+    migrations(repo, migrations_path(repo))
+  end
+
+  @doc """
+  Returns an array of tuples as the migration status of the given repo,
+  without actually running any migrations.
+  """
+  @spec migrations(Ecto.Repo.t, String.t) :: [{:up | :down, id :: integer(), name :: String.t}]
   def migrations(repo, directory) do
     repo
     |> migrated_versions
