@@ -1,6 +1,6 @@
 ### Precheck
 
-* Do not use the issues tracker for help or support requests (try Stack Overflow, IRC or mailing lists, etc).
+* Do not use the issues tracker for help or support requests (try Elixir Forum, Stack Overflow, IRC or mailing lists, etc).
 * For proposing a new feature, please start a discussion on [elixir-ecto](https://groups.google.com/forum/#!forum/elixir-ecto).
 * For bugs, do a quick search and make sure the bug has not yet been reported.
 * Finally, be nice and have fun!
