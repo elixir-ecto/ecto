@@ -3,6 +3,7 @@ defmodule Ecto.Query.API do
   This module lists all functions allowed in the query API.
 
     * Comparison operators: `==`, `!=`, `<=`, `>=`, `<`, `>`
+    * Arithmetic operators: `+`, `-`, `*`, `/`
     * Boolean operators: `and`, `or`, `not`
     * Inclusion operator: `in/2`
     * Search functions: `like/2` and `ilike/2`
@@ -16,6 +17,14 @@ defmodule Ecto.Query.API do
   purposes and one should never need to invoke them directly.
   Furthermore, it is possible to define your own macros and
   use them in Ecto queries (see docs for `fragment/1`).
+
+  ## About the arithmetic operators
+
+  The Ecto implementation of these operators provide only
+  a thin layer above the adapters. So if your adapter allows you
+  to use them in a certain way (like adding a date and an
+  interval in PostgreSQL), it should work just fine in Ecto
+  queries.
   """
 
   @dialyzer :no_return
@@ -49,6 +58,26 @@ defmodule Ecto.Query.API do
   Binary `>` operation.
   """
   def left > right, do: doc! [left, right]
+
+  @doc """
+  Binary `+` operation.
+  """
+  def left + right, do: doc! [left, right]
+
+  @doc """
+  Binary `-` operation.
+  """
+  def left - right, do: doc! [left, right]
+
+  @doc """
+  Binary `*` operation.
+  """
+  def left * right, do: doc! [left, right]
+
+  @doc """
+  Binary `/` operation.
+  """
+  def left / right, do: doc! [left, right]
 
   @doc """
   Binary `and` operation.
@@ -448,6 +477,12 @@ defmodule Ecto.Query.API do
   Ecto will ensure `^title` is cast to the given type and enforce such
   type at the database level. If the value is returned in a `select`,
   Ecto will also enforce the proper type throughout.
+
+  When performing arithmetic operations, `type/2` can be used to cast
+  all the parameters in the operation to the same type:
+
+      from p in Post,
+        select: type(p.visits + ^a_float + ^a_integer, :decimal)
 
   Inside `select`, `type/2` can also be used to cast fragments:
 
