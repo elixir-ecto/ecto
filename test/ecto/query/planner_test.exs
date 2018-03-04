@@ -5,8 +5,7 @@ defmodule Ecto.Query.PlannerTest do
 
   import Ecto.Query
 
-  alias Ecto.Query.Planner
-  alias Ecto.Query.JoinExpr
+  alias Ecto.Query.{Planner, JoinExpr, FromExpr}
 
   defmodule Comment do
     use Ecto.Schema
@@ -203,35 +202,37 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: joins" do
     query = from(p in Post, join: c in "comments") |> prepare |> elem(0)
-    assert hd(query.joins).source == {"comments", nil}
+    assert hd(query.joins).source == %FromExpr{source: "comments", schema: nil}
 
     query = from(p in Post, join: c in Comment) |> prepare |> elem(0)
-    assert hd(query.joins).source == {"comments", Comment}
+    assert hd(query.joins).source == %FromExpr{source: "comments", schema: Comment}
 
     query = from(p in Post, join: c in {"post_comments", Comment}) |> prepare |> elem(0)
-    assert hd(query.joins).source == {"post_comments", Comment}
+    assert hd(query.joins).source == %FromExpr{source: "post_comments", schema: Comment}
   end
 
   test "prepare: joins associations" do
     query = from(p in Post, join: assoc(p, :comments)) |> prepare |> elem(0)
     assert %JoinExpr{on: on, source: source, assoc: nil, qual: :inner} = hd(query.joins)
-    assert source == {"comments", Comment}
+    assert source == %FromExpr{source: "comments", schema: Comment}
     assert Macro.to_string(on.expr) == "&1.post_id() == &0.id()"
 
     query = from(p in Post, left_join: assoc(p, :comments)) |> prepare |> elem(0)
     assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
-    assert source == {"comments", Comment}
+    assert source == %FromExpr{source: "comments", schema: Comment}
     assert Macro.to_string(on.expr) == "&1.post_id() == &0.id()"
 
     query = from(p in Post, left_join: c in assoc(p, :comments), on: p.title == c.text) |> prepare |> elem(0)
     assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
-    assert source == {"comments", Comment}
+    assert source == %FromExpr{source: "comments", schema: Comment}
     assert Macro.to_string(on.expr) == "&1.post_id() == &0.id() and &0.title() == &1.text()"
   end
 
   test "prepare: nested joins associations" do
     query = from(c in Comment, left_join: assoc(c, :post_comments)) |> prepare |> elem(0)
-    assert {{"comments", _}, {"comments", _}, {"posts", _}} = query.sources
+    assert {%FromExpr{source: "comments"},
+            %FromExpr{source: "comments"},
+            %FromExpr{source: "posts"}} = query.sources
     assert [join1, join2] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [2, 1]
     assert Macro.to_string(join1.on.expr) == "&2.id() == &0.post_id()"
@@ -239,7 +240,10 @@ defmodule Ecto.Query.PlannerTest do
 
     query = from(p in Comment, left_join: assoc(p, :post),
                                left_join: assoc(p, :post_comments)) |> prepare |> elem(0)
-    assert {{"comments", _}, {"posts", _}, {"comments", _}, {"posts", _}} = query.sources
+    assert {%FromExpr{source: "comments"},
+            %FromExpr{source: "posts"},
+            %FromExpr{source: "comments"},
+            %FromExpr{source: "posts"}} = query.sources
     assert [join1, join2, join3] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [1, 3, 2]
     assert Macro.to_string(join1.on.expr) == "&1.id() == &0.post_id()"
@@ -248,7 +252,10 @@ defmodule Ecto.Query.PlannerTest do
 
     query = from(p in Comment, left_join: assoc(p, :post_comments),
                                left_join: assoc(p, :post)) |> prepare |> elem(0)
-    assert {{"comments", _}, {"comments", _}, {"posts", _}, {"posts", _}} = query.sources
+    assert {%FromExpr{source: "comments"},
+            %FromExpr{source: "comments"},
+            %FromExpr{source: "posts"},
+            %FromExpr{source: "posts"}} = query.sources
     assert [join1, join2, join3] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [3, 1, 2]
     assert Macro.to_string(join1.on.expr) == "&3.id() == &0.post_id()"
@@ -259,14 +266,16 @@ defmodule Ecto.Query.PlannerTest do
   test "prepare: joins associations with custom queries" do
     query = from(p in Post, left_join: assoc(p, :special_comments)) |> prepare |> elem(0)
 
-    assert {{"posts", _}, {"comments", _}} = query.sources
+    assert {%FromExpr{source: "posts"}, %FromExpr{source: "comments"}} = query.sources
     assert [join] = query.joins
     assert join.ix == 1
     assert Macro.to_string(join.on.expr) == "&1.special() and &1.post_id() == &0.id()"
 
     query = from(p in Post, left_join: assoc(p, :shared_special_comments)) |> prepare |> elem(0)
 
-    assert {{"posts", _}, {"comments", _}, {"comment_posts", _}} = query.sources
+    assert {%FromExpr{source: "posts"},
+            %FromExpr{source: "comments"},
+            %FromExpr{source: "comment_posts"}} = query.sources
     assert [join1, join2] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [2, 1]
     assert Macro.to_string(join1.on.expr) == "&2.deleted() and &2.post_id() == &0.id()"
@@ -284,7 +293,13 @@ defmodule Ecto.Query.PlannerTest do
                    |> elem(0)
 
     assert [join1, join2, join3, join4, join5, join6] = query.joins
-    assert {{"posts", _}, {"comments", _}, {"posts", _}, {"comments", _}, {"comment_posts", _}, {"comments", _}, {"comment_posts", _}} = query.sources
+    assert {%FromExpr{source: "posts"},
+            %FromExpr{source: "comments"},
+            %FromExpr{source: "posts"},
+            %FromExpr{source: "comments"},
+            %FromExpr{source: "comment_posts"},
+            %FromExpr{source: "comments"},
+            %FromExpr{source: "comment_posts"}} = query.sources
 
     assert Macro.to_string(join1.on.expr) == "&1.special() and &1.post_id() == &0.id()"
     assert Macro.to_string(join2.on.expr) == "&2.id() == &1.post_id()"

@@ -1,7 +1,7 @@
 import Inspect.Algebra
 import Kernel, except: [to_string: 1]
 
-alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr}
+alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr, FromExpr}
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
@@ -70,11 +70,11 @@ defimpl Inspect, for: Ecto.Query do
 
   defp bound_from(from, name), do: ["from #{name} in #{unbound_from from}"]
 
-  defp unbound_from(nil),           do: "query"
-  defp unbound_from({source, nil}), do: inspect source
-  defp unbound_from({nil, schema}),  do: inspect schema
-  defp unbound_from(from = {source, schema}) do
-    inspect if source == schema.__schema__(:source), do: schema, else: from
+  defp unbound_from(nil), do: "query"
+  defp unbound_from(%FromExpr{source: source, schema: nil}), do: inspect source
+  defp unbound_from(%FromExpr{source: nil, schema: schema}),  do: inspect schema
+  defp unbound_from(%FromExpr{source: source, schema: schema}) do
+    inspect if source == schema.__schema__(:source), do: schema, else: {source, schema}
   end
   defp unbound_from(%Ecto.SubQuery{query: query}) do
     "subquery(#{to_string query})"
@@ -242,7 +242,7 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp from_sources(%Ecto.SubQuery{query: query}), do: from_sources(query.from)
-  defp from_sources({source, schema}), do: schema || source
+  defp from_sources(%FromExpr{source: source, schema: schema}), do: schema || source
   defp from_sources(nil), do: "query"
 
   defp join_sources(joins) do

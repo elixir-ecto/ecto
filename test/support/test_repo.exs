@@ -45,12 +45,12 @@ defmodule Ecto.TestAdapter do
     Process.get(:test_repo_all_results, {1, [[]]})
   end
 
-  def execute(_repo, _meta, {:nocache, {:delete_all, %{from: {_, SchemaMigration}}}}, [version], _) do
+  def execute(_repo, _meta, {:nocache, {:delete_all, %{from: %{schema: SchemaMigration}}}}, [version], _) do
     Process.put(:migrated_versions, List.delete(migrated_versions(), version))
     {1, nil}
   end
 
-  def execute(_repo, meta, {:nocache, {op, %{from: {source, _}}}}, _params, _opts) do
+  def execute(_repo, meta, {:nocache, {op, %{from: %{source: source}}}}, _params, _opts) do
     send test_process(), {op, {meta.prefix, source}}
     {1, nil}
   end

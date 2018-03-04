@@ -19,7 +19,7 @@ end
 
 defimpl Ecto.Queryable, for: BitString do
   def to_query(source) when is_binary(source),
-    do: %Ecto.Query{from: {source, nil}}
+    do: %Ecto.Query{from: %Ecto.Query.FromExpr{source: source, schema: nil}}
 end
 
 defimpl Ecto.Queryable, for: Atom do
@@ -42,8 +42,19 @@ end
 
 defimpl Ecto.Queryable, for: Tuple do
   def to_query({source, %Ecto.Query{from: {_, schema}} = query}) when is_binary(source),
-    do: %{query | from: {source, schema}}
+    do: %{query | from: %Ecto.Query.FromExpr{source: source, schema: schema}}
 
-  def to_query({source, schema} = from) when is_binary(source) and is_atom(schema) and not is_nil(schema),
+  def to_query({source, %Ecto.Query{from: %Ecto.Query.FromExpr{schema: schema}} = query}) when is_binary(source),
+    do: %{query | from: %Ecto.Query.FromExpr{source: source, schema: schema}}
+
+  def to_query({source, schema}) when is_binary(source) and is_atom(schema) and not is_nil(schema),
+    do: %Ecto.Query{from: %Ecto.Query.FromExpr{source: source, schema: schema}, prefix: schema.__schema__(:prefix)}
+end
+
+defimpl Ecto.Queryable, for: Ecto.Query.FromExpr do
+  def to_query(%Ecto.Query.FromExpr{schema: schema} = from) when is_atom(schema),
     do: %Ecto.Query{from: from, prefix: schema.__schema__(:prefix)}
+
+  def to_query(%Ecto.Query.FromExpr{} = from),
+    do: %Ecto.Query{from: from}
 end

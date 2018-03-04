@@ -5,6 +5,7 @@ defmodule Ecto.Repo.Schema do
 
   alias Ecto.Changeset
   alias Ecto.Changeset.Relation
+  alias Ecto.Query.FromExpr
   require Ecto.Query
 
   @doc """
@@ -511,11 +512,11 @@ defmodule Ecto.Repo.Schema do
       :replace_all_except_primary_key ->
         {header -- schema.__schema__(:primary_key), [], conflict_target}
       [_ | _] = on_conflict ->
-        from = if schema, do: {source, schema}, else: source
+        from = if schema, do: %FromExpr{source: source, schema: schema}, else: source
         query = Ecto.Query.from from, update: ^on_conflict
-        on_conflict_query(query, {source, schema}, prefix, counter_fun, adapter, conflict_target)
+        on_conflict_query(query, %FromExpr{source: source, schema: schema}, prefix, counter_fun, adapter, conflict_target)
       %Ecto.Query{} = query ->
-        on_conflict_query(query, {source, schema}, prefix, counter_fun, adapter, conflict_target)
+        on_conflict_query(query, %FromExpr{source: source, schema: schema}, prefix, counter_fun, adapter, conflict_target)
       other ->
         raise ArgumentError, "unknown value for :on_conflict, got: #{inspect other}"
     end

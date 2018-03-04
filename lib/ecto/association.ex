@@ -39,7 +39,7 @@ defmodule Ecto.Association do
                field: atom,
                unique: boolean}
 
-  alias Ecto.Query.{BooleanExpr, QueryExpr}
+  alias Ecto.Query.{BooleanExpr, QueryExpr, FromExpr}
 
   @doc """
   Builds the association struct.
@@ -175,7 +175,7 @@ defmodule Ecto.Association do
   end
 
   def assoc_query(refl, t, query, values) do
-    query = query || %Ecto.Query{from: {"join expression", nil}, prefix: refl.queryable.__schema__(:prefix)}
+    query = query || %Ecto.Query{from: %FromExpr{source: "join expression"}, prefix: refl.queryable.__schema__(:prefix)}
 
     # Find the position for upcoming joins
     position = length(query.joins) + 1
@@ -229,7 +229,7 @@ defmodule Ecto.Association do
     |> Map.put(:op, :and)
   end
 
-  defp merge_from({"join expression", _}, assoc_source), do: assoc_source
+  defp merge_from(%FromExpr{source: "join expression"}, assoc_source), do: assoc_source
   defp merge_from(from, _assoc_source), do: from
 
   # Rewrite all later joins
@@ -262,7 +262,7 @@ defmodule Ecto.Association do
 
   ## Examples
 
-      iex> Ecto.Association.related_from_query({"custom_source", Schema}, :comments_v1)
+      iex> Ecto.Association.related_from_query(%Ecto.Query.FromExpr{source: "custom_source", schema: Schema}, :comments_v1)
       Schema
 
       iex> Ecto.Association.related_from_query(Schema, :comments_v1)
@@ -272,8 +272,8 @@ defmodule Ecto.Association do
       ** (ArgumentError) association :comments_v1 queryable must be a schema, a {source, schema}, or a query. got: "wrong"
   """
   def related_from_query(atom, _name) when is_atom(atom), do: atom
-  def related_from_query({source, schema}, _name) when is_binary(source) and is_atom(schema), do: schema
-  def related_from_query(%Ecto.Query{from: {source, schema}} = query, name) when is_binary(source) and is_atom(schema) do
+  def related_from_query(%FromExpr{source: source, schema: schema}, _name) when is_binary(source) and is_atom(schema), do: schema
+  def related_from_query(%Ecto.Query{from: %FromExpr{source: source, schema: schema}} = query, name) when is_binary(source) and is_atom(schema) do
     case query do
       %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [], joins: [],
                   havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
@@ -297,7 +297,7 @@ defmodule Ecto.Association do
   """
   def merge_source(schema, query)
 
-  def merge_source(struct, {source, _}) do
+  def merge_source(struct, %FromExpr{source: source}) do
     Ecto.put_meta(struct, source: source)
   end
 
