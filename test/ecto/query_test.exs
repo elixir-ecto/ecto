@@ -76,19 +76,13 @@ defmodule Ecto.QueryTest do
         quote_and_eval(from("posts", 123))
       end
     end
-
-    test "can override the source for existing queries" do
-      query = %Query{from: {"posts", nil}}
-      query = from q in {"new_posts", query}, where: true
-      assert query.from == {"new_posts", nil}
-    end
   end
 
   describe "subqueries" do
     test "builds a subquery struct" do
-      assert subquery("posts").query.from == {"posts", nil}
-      assert subquery(subquery("posts")).query.from == {"posts", nil}
-      assert subquery(subquery("posts").query).query.from == {"posts", nil}
+      assert subquery("posts").query.from.source == {"posts", nil}
+      assert subquery(subquery("posts")).query.from.source == {"posts", nil}
+      assert subquery(subquery("posts").query).query.from.source == {"posts", nil}
     end
 
     test "prefix is not applied if left blank" do

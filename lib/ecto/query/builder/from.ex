@@ -79,7 +79,12 @@ defmodule Ecto.Query.Builder.From do
   end
 
   defp query(prefix, source, schema) do
-    {:%, [], [Ecto.Query, {:%{}, [], [from: {source, schema}, prefix: prefix, aliases: {:%{}, [], []}]}]}
+    {:%, [], [Ecto.Query,
+              {:%{}, [],
+               [from: {:%, [], [Ecto.Query.FromExpr,
+                                {:%{}, [], [source: {source, schema}]}]},
+                prefix: prefix,
+                aliases: {:%{}, [], []}]}]}
   end
 
   defp expand_from({left, right}, env) do

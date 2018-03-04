@@ -129,9 +129,9 @@ if Code.ensure_loaded?(Postgrex) do
       [select, from, join, where, group_by, having, order_by, limit, offset | lock]
     end
 
-    def update_all(%{from: from} = query, prefix \\ nil) do
+    def update_all(%{from: %{source: source}} = query, prefix \\ nil) do
       sources = create_names(query)
-      {from, name} = get_source(query, sources, 0, from)
+      {from, name} = get_source(query, sources, 0, source)
 
       prefix = prefix || ["UPDATE ", from, " AS ", name | " SET "]
       fields = update_fields(query, sources)
@@ -281,8 +281,8 @@ if Code.ensure_loaded?(Postgrex) do
        exprs}
     end
 
-    defp from(%{from: from} = query, sources) do
-      {from, name} = get_source(query, sources, 0, from)
+    defp from(%{from: %{source: source}} = query, sources) do
+      {from, name} = get_source(query, sources, 0, source)
       [" FROM ", from, " AS " | name]
     end
 

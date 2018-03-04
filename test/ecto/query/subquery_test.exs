@@ -55,14 +55,14 @@ defmodule Ecto.Query.SubqueryTest do
 
   test "prepare: subqueries" do
     {query, params, key} = prepare(from(subquery(Post), []))
-    assert %{query: %Ecto.Query{}, params: []} = query.from
+    assert %{query: %Ecto.Query{}, params: []} = query.from.source
     assert params == []
     assert key == [:all, 0, [:all, 0, {"posts", Post, 127044068}]]
 
     posts = from(p in Post, where: p.title == ^"hello")
     query = from(c in Comment, join: p in subquery(posts), on: c.post_id == p.id)
     {query, params, key} = prepare(query, [])
-    assert {"comments", Comment} = query.from
+    assert {"comments", Comment} = query.from.source
     assert [%{source: %{query: %Ecto.Query{}, params: ["hello"]}}] = query.joins
     assert params == ["hello"]
     assert [[], 0, {:join, [{:inner, [:all|_], _}]}, {"comments", _, _}] = key
@@ -104,33 +104,33 @@ defmodule Ecto.Query.SubqueryTest do
       query = prepare(from(subquery(Post), [])) |> elem(0)
       assert "%Ecto.Query.SubqueryTest.Post{id: &0.id(), title: &0.title(), " <>
              "text: &0.text()}" =
-             Macro.to_string(query.from.query.select.expr)
+             Macro.to_string(query.from.source.query.select.expr)
     end
 
     test "supports field selector" do
       query = from p in "posts", select: p.text
       query = prepare(from(subquery(query), [])) |> elem(0)
       assert "%{text: &0.text()}" =
-             Macro.to_string(query.from.query.select.expr)
+             Macro.to_string(query.from.source.query.select.expr)
 
       query = from p in Post, select: p.text
       query = prepare(from(subquery(query), [])) |> elem(0)
       assert "%{text: &0.text()}" =
-             Macro.to_string(query.from.query.select.expr)
+             Macro.to_string(query.from.source.query.select.expr)
     end
 
     test "supports maps" do
       query = from p in Post, select: %{text: p.text}
       query = prepare(from(subquery(query), [])) |> elem(0)
       assert "%{text: &0.text()}" =
-             Macro.to_string(query.from.query.select.expr)
+             Macro.to_string(query.from.source.query.select.expr)
     end
 
     test "supports structs" do
       query = from p in Post, select: %Post{text: p.text}
       query = prepare(from(subquery(query), [])) |> elem(0)
       assert "%Ecto.Query.SubqueryTest.Post{text: &0.text()}" =
-             Macro.to_string(query.from.query.select.expr)
+             Macro.to_string(query.from.source.query.select.expr)
     end
 
     test "supports update in maps" do
@@ -138,7 +138,7 @@ defmodule Ecto.Query.SubqueryTest do
       query = prepare(from(subquery(query), [])) |> elem(0)
       assert "%Ecto.Query.SubqueryTest.Post{id: &0.id(), title: &0.title(), " <>
              "text: &0.title()}" =
-             Macro.to_string(query.from.query.select.expr)
+             Macro.to_string(query.from.source.query.select.expr)
 
       query = from p in Post, select: %{p | unknown: p.title}
       assert_raise Ecto.SubQueryError, ~r/invalid key `:unknown` on map update in subquery/, fn ->
@@ -151,11 +151,11 @@ defmodule Ecto.Query.SubqueryTest do
       query = prepare(from(subquery(query), [])) |> elem(0)
       assert "%Ecto.Query.SubqueryTest.Post{id: &0.id(), title: &0.title(), " <>
              "text: &0.title()}" =
-             Macro.to_string(query.from.query.select.expr)
+             Macro.to_string(query.from.source.query.select.expr)
 
       query = from p in Post, select: merge(%{}, %{})
       query = prepare(from(subquery(query), [])) |> elem(0)
-      assert "%{}" = Macro.to_string(query.from.query.select.expr)
+      assert "%{}" = Macro.to_string(query.from.source.query.select.expr)
     end
 
     test "requires atom keys for maps" do
@@ -226,8 +226,8 @@ defmodule Ecto.Query.SubqueryTest do
 
     {query, params} = normalize_with_params(query)
     assert [_, {:^, _, [0]}] = query.select.expr
-    assert [%{expr: {:==, [], [_, {:^, [], [1]}]}}] = query.from.query.wheres
-    assert [%{expr: [asc: {:==, [], [_, {:^, [], [2]}]}]}] = query.from.query.order_bys
+    assert [%{expr: {:==, [], [_, {:^, [], [1]}]}}] = query.from.source.query.wheres
+    assert [%{expr: [asc: {:==, [], [_, {:^, [], [2]}]}]}] = query.from.source.query.order_bys
     assert [%{expr: {:==, [], [_, {:^, [], [3]}]}}] = query.wheres
     assert params == ["first", "hello", "world", "last"]
   end

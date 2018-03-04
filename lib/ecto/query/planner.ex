@@ -14,7 +14,7 @@ defmodule Ecto.Query.Planner do
   The from is moved as last join with the where conditions as its "on"
   in order to keep proper binding order.
   """
-  def query_to_joins(qual, %{from: from, wheres: wheres, joins: joins}, position) do
+  def query_to_joins(qual, source, %{wheres: wheres, joins: joins}, position) do
     on = %QueryExpr{file: __ENV__.file, line: __ENV__.line, expr: true, params: []}
 
     on =
@@ -22,7 +22,7 @@ defmodule Ecto.Query.Planner do
         merge_expr_and_params(op, acc, expr, params)
       end)
 
-    join = %JoinExpr{qual: qual, source: from, file: __ENV__.file, line: __ENV__.line, on: on}
+    join = %JoinExpr{qual: qual, source: source, file: __ENV__.file, line: __ENV__.line, on: on}
     last = length(joins) + position
 
     mapping = fn
@@ -224,12 +224,20 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare all sources, by traversing and expanding joins.
   """
-  def prepare_sources(%{from: from} = query, adapter) do
-    from = from || error!(query, "query must have a from expression")
-    from = prepare_source(query, from, adapter)
-    {joins, sources, tail_sources} = prepare_joins(query, [from], length(query.joins), adapter)
+  def prepare_sources(query, adapter) do
+    {from, sources} = prepare_from(query, adapter)
+    {joins, sources, tail_sources} = prepare_joins(query, sources, length(query.joins), adapter)
     %{query | from: from, joins: joins |> Enum.reverse,
               sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple()}
+  end
+
+  defp prepare_from(%{from: nil} = query, _adapter) do
+    error!(query, "query must have a from expression")
+  end
+
+  defp prepare_from(%{from: from} = query, adapter) do
+    source = prepare_source(query, from.source, adapter)
+    {%{from | source: source}, [source]}
   end
 
   defp prepare_source(query, %Ecto.SubQuery{query: inner_query} = subquery, adapter) do
@@ -390,7 +398,7 @@ defmodule Ecto.Query.Planner do
     source_ix = counter
 
     {child_joins, child_sources, child_tail} =
-      prepare_joins(child, [child.from], offset + last_ix - 1, adapter)
+      prepare_joins(child, [child.from.source], offset + last_ix - 1, adapter)
 
     # Rewrite joins indexes as mentioned above
     child_joins = Enum.map(child_joins, &rewrite_join(&1, qual, ix, last_ix, source_ix, offset))
@@ -405,13 +413,13 @@ defmodule Ecto.Query.Planner do
                   child_sources ++ tail_sources, counter + 1, offset + length(child_sources), adapter)
   end
 
-  defp prepare_joins([%JoinExpr{source: %Ecto.Query{from: source} = join_query, qual: qual, on: on} = join|t],
+  defp prepare_joins([%JoinExpr{source: %Ecto.Query{} = join_query, qual: qual, on: on} = join|t],
                       query, joins, sources, tail_sources, counter, offset, adapter) do
     case join_query do
       %{order_bys: [], limit: nil, offset: nil, group_bys: [], joins: [],
         havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
-        source = prepare_source(query, source, adapter)
-        [join] = attach_on(query_to_joins(qual, %{join_query | from: source}, counter), on)
+        source = prepare_source(join_query, join_query.from.source, adapter)
+        [join] = attach_on(query_to_joins(qual, source, join_query, counter), on)
         prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
       _ ->
         error! query, join, "queries in joins can only have `where` conditions"
@@ -485,8 +493,8 @@ defmodule Ecto.Query.Planner do
     {query, Enum.reverse(params), finalize_cache(query, operation, cache, counter)}
   end
 
-  defp merge_cache(:from, _query, expr, {cache, params}, _adapter) do
-    {key, params} = source_cache(expr, params)
+  defp merge_cache(:from, _query, %{source: source}, {cache, params}, _adapter) do
+    {key, params} = source_cache(source, params)
     {merge_cache(key, cache, key != :nocache), params}
   end
 
@@ -710,11 +718,12 @@ defmodule Ecto.Query.Planner do
                    &validate_and_increment(&1, &2, &3, &4, operation, adapter))
   end
 
-  defp validate_and_increment(:from, query, %Ecto.SubQuery{}, _counter, kind, _adapter) when kind != :all do
+  defp validate_and_increment(:from, query, %{source: %Ecto.SubQuery{}}, _counter, kind, _adapter) when kind != :all do
     error! query, "`#{kind}` does not allow subqueries in `from`"
   end
-  defp validate_and_increment(:from, query, expr, counter, _kind, adapter) do
-    prewalk_source(expr, :from, query, expr, counter, adapter)
+  defp validate_and_increment(:from, query, %{source: source} = expr, counter, _kind, adapter) do
+    {source, acc} = prewalk_source(source, :from, query, expr, counter, adapter)
+    {%{expr | source: source}, acc}
   end
 
   defp validate_and_increment(kind, query, expr, counter, _operation, adapter)

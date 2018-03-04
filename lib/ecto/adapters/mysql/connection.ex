@@ -90,11 +90,15 @@ if Code.ensure_loaded?(Mariaex) do
       [select, from, join, where, group_by, having, order_by, limit, offset | lock]
     end
 
-    def update_all(query, prefix \\ nil)
+    def update_all(query, prefix \\ nil) do
+      %{from: %{source: source}, select: select} = query
 
-    def update_all(%{from: from, select: nil} = query, prefix) do
+      if select do
+        error!(nil, ":select is not supported in update_all by MySQL")
+      end
+
       sources = create_names(query)
-      {from, name} = get_source(query, sources, 0, from)
+      {from, name} = get_source(query, sources, 0, source)
 
       fields = if prefix do
         update_fields(:on_conflict, query, sources)
@@ -108,11 +112,12 @@ if Code.ensure_loaded?(Mariaex) do
 
       [prefix, fields | where]
     end
-    def update_all(_query, _prefix) do
-      error!(nil, ":select is not supported in update_all by MySQL")
-    end
 
     def delete_all(%{select: nil} = query) do
+      if query.select do
+        error!(nil, ":select is not supported in delete_all by MySQL")
+      end
+
       sources = create_names(query)
       {_, name, _} = elem(sources, 0)
 
@@ -122,8 +127,6 @@ if Code.ensure_loaded?(Mariaex) do
 
       ["DELETE ", name, ".*", from, join | where]
     end
-    def delete_all(_query),
-      do: error!(nil, ":select is not supported in delete_all by MySQL")
 
     def insert(prefix, table, header, rows, on_conflict, []) do
       fields = intersperse_map(header, ?,, &quote_name/1)
@@ -228,8 +231,8 @@ if Code.ensure_loaded?(Mariaex) do
       end)
     end
 
-    defp from(%{from: from} = query, sources) do
-      {from, name} = get_source(query, sources, 0, from)
+    defp from(%{from: %{source: source}} = query, sources) do
+      {from, name} = get_source(query, sources, 0, source)
       [" FROM ", from, " AS " | name]
     end
 

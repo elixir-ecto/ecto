@@ -39,7 +39,7 @@ defmodule Ecto.Association do
                field: atom,
                unique: boolean}
 
-  alias Ecto.Query.{BooleanExpr, QueryExpr}
+  alias Ecto.Query.{BooleanExpr, QueryExpr, FromExpr}
 
   @doc """
   Builds the association struct.
@@ -175,7 +175,10 @@ defmodule Ecto.Association do
   end
 
   def assoc_query(refl, t, query, values) do
-    query = query || %Ecto.Query{from: {"join expression", nil}, prefix: refl.queryable.__schema__(:prefix)}
+    query = query || %Ecto.Query{
+      from: %FromExpr{source: {"join expression", nil}},
+      prefix: refl.queryable.__schema__(:prefix)
+    }
 
     # Find the position for upcoming joins
     position = length(query.joins) + 1
@@ -187,7 +190,8 @@ defmodule Ecto.Association do
     # Note we are being restrictive on the format
     # expected from assoc_query.
     assoc_query = refl.__struct__.assoc_query(refl, nil, values)
-    joins = Ecto.Query.Planner.query_to_joins(:inner, assoc_query, position)
+    %{from: %{source: assoc_source}} = assoc_query
+    joins = Ecto.Query.Planner.query_to_joins(:inner, assoc_source, assoc_query, position)
 
     # Add the new join to the query and traverse the remaining
     # joins that will start counting from the added join position.
@@ -229,8 +233,10 @@ defmodule Ecto.Association do
     |> Map.put(:op, :and)
   end
 
-  defp merge_from({"join expression", _}, assoc_source), do: assoc_source
-  defp merge_from(from, _assoc_source), do: from
+  defp merge_from(%FromExpr{source: {"join expression", _}} = from, assoc_source),
+    do: %{from | source: assoc_source}
+  defp merge_from(from, _assoc_source),
+    do: from
 
   # Rewrite all later joins
   defp rewrite_join(%{on: on, ix: ix} = join, mapping) when ix >= mapping do
@@ -273,15 +279,15 @@ defmodule Ecto.Association do
   """
   def related_from_query(atom, _name) when is_atom(atom), do: atom
   def related_from_query({source, schema}, _name) when is_binary(source) and is_atom(schema), do: schema
-  def related_from_query(%Ecto.Query{from: {source, schema}} = query, name) when is_binary(source) and is_atom(schema) do
+  def related_from_query(%Ecto.Query{from: %FromExpr{source: {_, schema}}} = query, name) when is_atom(schema) do
     case query do
       %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [], joins: [],
                   havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
         schema
       _ ->
         raise ArgumentError,
-          "A query was provided for many_to_many #{inspect name}, but that query included a statement other" <>
-          "than a `where` clause. Queries in :join_through only support `where` clauses, nothing else."
+          "A query was provided for association #{inspect name}, but that query included a statement other" <>
+          "than a `where` clause. Queries in associations only support `where` clauses, nothing else."
     end
   end
   def related_from_query(queryable, name) do
