@@ -725,9 +725,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [title: {"is blank", [validation: :required]}, body: {"is blank", [validation: :required]}]
 
     # When type is binary skip value triming (byte 12 == emtpy character in strings)
-    changeset =
-        changeset(%{color: <<12, 12, 12>>})
-      |> validate_required(:color)
+    changeset = changeset(%{color: <<12, 12, 12>>}) |> validate_required(:color)
     assert changeset.valid?
     assert changeset.errors == []
 
