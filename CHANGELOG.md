@@ -26,6 +26,21 @@ The query syntax also seen some improvements: map updates are supported in subqu
 
 Finally, the UPSERT support added on Ecto v2.1 is getting more improvements: the `{:constraint, constraint}` is now supported as conflict target and the `:returning` option was added to `Ecto.Repo.insert/2`, mirroring the behaviour of `insert_all`.
 
+## v2.2.9 (2018-03-09)
+
+### Enhancements
+
+  * [Ecto.Adapters.MySQL] Raise clearer error when using where in on_conflict with MySQL
+  * [Ecto.Adapters.SQL] Document after_connect callbacks
+  * [Ecto.Repo] Improve docs for assoc with on_conflict
+  * [Ecto.Schema] Promote using :jsonb for Postgres for :embeds_many
+
+### Bug fixes
+
+  * [Ecto.Adapters.MySQL] Do not crash ecto.create/drop on log: false with mysql
+  * [Ecto.Adepters.Postgres] Prepend the schema "public" when referring to the schema_migrations table on ecto.dump
+  * [Ecto.Type] Do not raise when casting integer to NaiveDateTime
+
 ## v2.2.8 (2018-01-13)
 
 ### Enhancements
