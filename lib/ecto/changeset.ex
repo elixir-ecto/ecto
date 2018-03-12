@@ -740,14 +740,21 @@ defmodule Ecto.Changeset do
           current  = Relation.load!(data, original)
           case Relation.cast(relation, value, current, on_cast) do
             {:ok, change, relation_valid?} when change != original ->
-              changeset = force_update(changeset, opts)
-              missing_relation(%{changeset | changes: Map.put(changes, key, change),
-                                 valid?: changeset.valid? and relation_valid?}, key, current, required?, relation, opts)
+              valid? = changeset.valid? and relation_valid?
+              changes = Map.put(changes, key, change)
+              changeset = %{force_update(changeset, opts) | changes: changes, valid?: valid?}
+              missing_relation(changeset, key, current, required?, relation, opts)
+
             :error ->
-              %{changeset | errors: [{key, {message(opts, :invalid_message, "is invalid"), [validation: type, type: expected_relation_type(relation)]}} | changeset.errors], valid?: false}
-            _ -> # ignore or ok with change == original
+              meta = [validation: type, type: expected_relation_type(relation)]
+              error = {key, {message(opts, :invalid_message, "is invalid"), meta}}
+              %{changeset | errors: [error | changeset.errors], valid?: false}
+
+            # ignore or ok with change == original
+            _ ->
               missing_relation(changeset, key, current, required?, relation, opts)
           end
+
         :error ->
           missing_relation(changeset, key, original, required?, relation, opts)
       end
@@ -965,7 +972,7 @@ defmodule Ecto.Changeset do
   defp change_as_field(types, key, value) do
     case Map.get(types, key) do
       {tag, relation} when tag in @relations ->
-         Relation.apply_changes(relation, value)
+        Relation.apply_changes(relation, value)
       _other ->
         value
     end
