@@ -1,25 +1,8 @@
-defmodule Ecto.Bench.User do
-  use Ecto.Schema
-
-  schema "users" do
-    field(:name, :string)
-    field(:email, :string)
-    timestamps()
-  end
-
-  def changeset(data) do
-    Ecto.Changeset.cast(%__MODULE__{}, data, [:name, :email])
-  end
-end
-
 alias Ecto.Bench.User
 
-data = %{
-  name: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
-  email: "foobar@email.com"
-}
+data = User.data()
 
-struct = struct(User, data)
+struct = struct(User, User.data())
 
 changeset = User.changeset(data)
 
