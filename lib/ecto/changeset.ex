@@ -1593,7 +1593,11 @@ defmodule Ecto.Changeset do
                              "that was not loaded. Please preload your associations " <>
                              "before calling validate_required/3 or pass the :required " <>
                              "option to Ecto.Changeset.cast_assoc/3"
-      value when is_binary(value) -> String.trim_leading(value) == ""
+      value when is_binary(value) ->
+        case Map.fetch!(changeset.types, field) do
+          :binary -> value == ""
+          _ -> String.trim_leading(value) == ""
+        end
       nil -> true
       _ -> false
     end
