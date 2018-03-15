@@ -1464,8 +1464,8 @@ defmodule Ecto.Changeset do
   ## Options
 
     * `:message` - the message on failure, defaults to "can't be blank"
-    * `:trim` - boolean, sets whether leading whitespaces are removed
-                before running the validation, defaults to true
+    * `:trim` - a boolean that sets whether whitespaces are removed before
+      running the validation on binaries/strings, defaults to true
 
   ## Examples
 
