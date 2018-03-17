@@ -20,7 +20,7 @@ config :my_app, MyApp.Repo,
  ```
  
 Thereby, we configure the database connection for our test setup.
-In this case, we use a `Postgres` database and set it up through the `sandbox` that will wrap each test in a transaction.
+In this case, we use a Postgres database and set it up to use the sandbox pool that will wrap each test in a transaction.
 
 We also need to add an explicit statement to the end of `test/test_helper.exs` about the `sandbox` mode:
 
@@ -64,7 +64,7 @@ The case template above brings `Ecto` and `Ecto.Query` functions into your tests
 And then in each test that uses the repository:
 
 ```elixir
-defmodule MyTest do
+defmodule MyApp.MyTest do
   use MyApp.RepoCase
   
   # Tests etc...
@@ -73,8 +73,8 @@ end
 
 In case you don't want to define a "case template", you can checkout on each individual case:
 
-```
-defmodule MyTest do
+```elixir
+defmodule MyApp.MyTest do
   use ExUnit.Case
 
   setup do
