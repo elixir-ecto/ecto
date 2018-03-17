@@ -84,3 +84,23 @@ defmodule MyApp.MyTest do
   # Tests etc...
 end
 ```
+
+For convenience reasons, you can also define `aliases` to automatically set up your database at the execution of your tests.
+Change the following content in your `mix.exs`.
+
+```elixir
+
+  def project do
+    [app: :my_app,
+    
+     ...
+     
+     aliases: aliases()]
+  end
+  
+  defp aliases do
+    [ ...
+     "test": ["ecto.create --quiet", "ecto.migrate", "test"]
+    ]
+  end
+```
