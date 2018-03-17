@@ -26,8 +26,8 @@ Ecto.Adapters.SQL.Sandbox.mode(MyApp.Repo, :manual)
 
 If you do not start `Ecto` as an `extra_applications` in your `mix.exs`, you also need to explicitely start the `Repo` for your tests:
 ```
-{:ok, _pid} = Drones.Repo.start_link
-Ecto.Adapters.SQL.Sandbox.mode(Drones.Repo, :manual)
+{:ok, _pid} = MyApp.Repo.start_link
+Ecto.Adapters.SQL.Sandbox.mode(MyApp.Repo, :manual)
 ```
 
 Lastly, you need to establish the database connection ahead of your tests.
