@@ -65,6 +65,8 @@ defmodule MyTest do
 end
 ```
 
+The second alternative is presented in the following:
+
 ```
 defmodule MyTest do
   use ExUnit.Case
