@@ -120,6 +120,10 @@ This tells our application about the repo, which will allow us to run commands s
 
 We've now configured our application so that it's able to make queries to our database. Let's now create our database, add a table to it, and then perform some queries.
 
+## Test Environment Setup
+
+The test environment setup is described [here](Testing%20with%20Ecto.md).
+
 ## Setting up the database
 
 To be able to query a database, it first needs to exist. We can create the database with this command:
