@@ -29,7 +29,7 @@ Ecto.Adapters.SQL.Sandbox.mode(MyApp.Repo, :manual)
 ```
 
 Lastly, you need to establish the database connection ahead of your tests.
-You can enable it either for all of your test cases by extending the `ExUnit` template:
+You can enable it either for all of your test cases by extending the `ExUnit` template or by setting it up individually for each test. Let's start with the former:
 
 ```elixir
 defmodule MyApp.RepoCase do
