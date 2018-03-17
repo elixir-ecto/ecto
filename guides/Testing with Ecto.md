@@ -1,9 +1,12 @@
 # Testing with Ecto
 
 After you have successfully set up your database connection with Ecto for your application,
-its usage for your tests requires further changes. Create the `config/test.exs` file or append the following content:
+its usage for your tests requires further changes, especially if you want to leverage the
+Ecto SQL Sandbox that allows you to run tests that talk to the database concurrently.
 
-```
+Create the `config/test.exs` file or append the following content:
+
+```elixir
 use Mix.Config
 
 config :my_app, MyApp.Repo,
@@ -17,25 +20,19 @@ config :my_app, MyApp.Repo,
  ```
  
 Thereby, we configure the database connection for our test setup.
-In this case, we use a `Postgres` database and set it up through the `sandbox` as temporary data storage for a test run only.
+In this case, we use a `Postgres` database and set it up through the `sandbox` that will wrap each test in a transaction.
 
-We also need to add an explicit statement to `test/test_helper.exs` about the `sandbox` mode:
-```
-Ecto.Adapters.SQL.Sandbox.mode(MyApp.Repo, :manual)
-```
+We also need to add an explicit statement to the end of `test/test_helper.exs` about the `sandbox` mode:
 
-If you do not start `Ecto` as an `extra_applications` in your `mix.exs`, you also need to explicitely start the `Repo` for your tests:
-```
-{:ok, _pid} = MyApp.Repo.start_link
+```elixir
 Ecto.Adapters.SQL.Sandbox.mode(MyApp.Repo, :manual)
 ```
 
 Lastly, you need to establish the database connection ahead of your tests.
-You can enable it either for all of your test cases by extending the `ExUnit` template or by setting it up individually for each test.
+You can enable it either for all of your test cases by extending the `ExUnit` template:
 
-
-```
-defmodule MyApp.ModelCase do
+```elixir
+defmodule MyApp.RepoCase do
   use ExUnit.CaseTemplate
 
   using do
@@ -43,9 +40,8 @@ defmodule MyApp.ModelCase do
       alias MyApp.Repo
 
       import Ecto
-      import Ecto.Changeset
       import Ecto.Query
-      import MyApp.ModelCase
+      import MyApp.RepoCase
       
       # and any other stuff
     end
@@ -53,19 +49,29 @@ defmodule MyApp.ModelCase do
 
   setup tags do
     :ok = Ecto.Adapters.SQL.Sandbox.checkout(MyApp.Repo)
+    
+    unless tags[:async] do
+      Ecto.Adapters.SQL.Sandbox.mode(MyApp.Repo, {:shared, self()})
+    end
+    
+    :ok
   end
 end
 ```
 
-```
+The case template above brings `Ecto` and `Ecto.Query` functions into your tests and checkouts a database connection. It also enables a shared sandbox connection mode in case the test is not running asynchronously. See `Ecto.Adapters.SQL.Sandbox` for more information.
+
+And then in each test that uses the repository:
+
+```elixir
 defmodule MyTest do
-  use MyApp.ModelCase
+  use MyApp.RepoCase
   
   # Tests etc...
 end
 ```
 
-The second alternative is presented in the following:
+In case you don't want to define a "case template", you can checkout on each individual case:
 
 ```
 defmodule MyTest do
