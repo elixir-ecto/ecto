@@ -122,6 +122,7 @@ We've now configured our application so that it's able to make queries to our da
 ## Test Environment Setup
 
 The test environment setup is described [here](Testing%20with%20Ecto.md).
+
 ## Setting up the database
 
 To be able to query a database, it first needs to exist. We can create the database with this command:
