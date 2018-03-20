@@ -63,7 +63,7 @@ defmodule Ecto.Mixfile do
       maintainers: ["Eric Meadows-Jönsson", "José Valim", "James Fish", "Michał Muskała"],
       licenses: ["Apache 2.0"],
       links: %{"GitHub" => "https://github.com/elixir-ecto/ecto"},
-      files: ~w(mix.exs README.md CHANGELOG.md lib) ++
+      files: ~w(.formatter.exs mix.exs README.md CHANGELOG.md lib) ++
              ~w(integration_test/cases integration_test/sql integration_test/support)
     ]
   end
