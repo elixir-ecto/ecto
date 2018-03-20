@@ -12,12 +12,9 @@ defmodule Mix.Tasks.Ecto do
 
   @doc false
   def run(args) do
-    {_opts, args, _} = OptionParser.parse(args)
-
     case args do
       [] -> general()
-      _ ->
-        Mix.raise "Invalid arguments, expected: mix ecto"
+      _ -> Mix.raise "Invalid arguments, expected: mix ecto"
     end
   end
 
