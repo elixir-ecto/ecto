@@ -1542,21 +1542,21 @@ defmodule Ecto.Changeset do
     else
       pk_pairs = pk_fields_and_values(changeset, struct)
 
+      pk_query =
+        # It should not conflict with itself for updates
+        if Enum.any?(pk_pairs, &(&1 |> elem(1) |> is_nil())) do
+          struct
+        else
+          Enum.reduce(pk_pairs, struct, fn {field, value}, acc ->
+            Ecto.Query.or_where(acc, [q], field(q, ^field) != ^value)
+          end)
+        end
+
       query =
-        struct
+        pk_query
         |> Ecto.Query.where(^where_clause)
         |> Ecto.Query.select(true)
         |> Ecto.Query.limit(1)
-
-      query =
-        # It should not conflict with itself for updates
-        if Enum.any?(pk_pairs, &(&1 |> elem(1) |> is_nil())) do
-          query
-        else
-          Enum.reduce(pk_pairs, query, fn {field, value}, acc ->
-            Ecto.Query.where(acc, [q], field(q, ^field) != ^value)
-          end)
-        end
 
       query =
         if prefix = opts[:prefix] do
