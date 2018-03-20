@@ -255,12 +255,16 @@ defmodule Ecto.Integration.CompositePk do
 
   """
   use Ecto.Integration.Schema
+  import Ecto.Changeset
 
   @primary_key false
   schema "composite_pk" do
     field :a, :integer, primary_key: true
     field :b, :integer, primary_key: true
     field :name, :string
+  end
+  def changeset(schema, params) do
+    cast(schema, params, ~w(a b name)a)
   end
 end
 

@@ -566,6 +566,25 @@ defmodule Ecto.Integration.RepoTest do
     assert changeset.errors[:title] == nil # cannot conflict with itself
   end
 
+  test "unsafe_validate_unique/3 with composite keys" do
+    {:ok, inserted_post} = TestRepo.insert(%CompositePk{a: 123, b: 456, name: "UniqueName"})
+
+    different_pk = CompositePk.changeset(%CompositePk{}, %{name: "UniqueName", a: 789, b: 321})
+    changeset = Ecto.Changeset.unsafe_validate_unique(different_pk, [:name], TestRepo)
+    assert changeset.errors[:name] ==
+      {"has already been taken", validation: :unsafe_unique, fields: [:name]}
+
+    partial_pk = CompositePk.changeset(%CompositePk{}, %{name: "UniqueName", a: 789, b: 456})
+    changeset = Ecto.Changeset.unsafe_validate_unique(partial_pk, [:name], TestRepo)
+    assert changeset.errors[:name] ==
+           {"has already been taken", validation: :unsafe_unique, fields: [:name]}
+
+    update_changeset = CompositePk.changeset(inserted_post, %{name: "NewName"})
+    changeset = Ecto.Changeset.unsafe_validate_unique(update_changeset, [:name], TestRepo)
+    assert changeset.valid?
+    assert changeset.errors[:name] == nil # cannot conflict with itself
+  end
+
   test "get(!)" do
     post1 = TestRepo.insert!(%Post{title: "1", text: "hai"})
     post2 = TestRepo.insert!(%Post{title: "2", text: "hai"})
