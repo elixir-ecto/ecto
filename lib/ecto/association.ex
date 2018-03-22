@@ -1048,7 +1048,7 @@ defmodule Ecto.Association.ManyToMany do
   defp validate_join_through(name, nil) do
     raise ArgumentError, "many_to_many #{inspect name} associations require the :join_through option to be given"
   end
-  defp validate_join_through(name, query = %Ecto.Query{}) do
+  defp validate_join_through(name, %Ecto.Query{} = query) do
     allowed_keys = [:wheres, :sources, :from, :aliases]
     default = %Ecto.Query{}
     query
