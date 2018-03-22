@@ -256,7 +256,7 @@ defmodule Ecto.Association do
       Schema
 
       iex> Ecto.Association.related_from_query("wrong")
-      ** (ArgumentError) association queryable must be a schema or {source, schema}, got: "wrong"
+      ** (ArgumentError) association queryable must be a schema,  or {source, schema}, or a query. got: "wrong"
 
   """
   def related_from_query(atom) when is_atom(atom), do: atom
@@ -264,8 +264,8 @@ defmodule Ecto.Association do
   def related_from_query(%Ecto.Query{from: schema}) when is_atom(schema), do: schema
   def related_from_query(%Ecto.Query{from: {source, schema}}) when is_binary(source) and is_atom(schema), do: schema
   def related_from_query(queryable) do
-    raise ArgumentError, "association queryable must be a schema " <>
-      "or {source, schema}, got: #{inspect queryable}"
+    raise ArgumentError, "association queryable must be a schema, " <>
+      " or {source, schema}, or a query. got: #{inspect queryable}"
   end
 
   @doc """
