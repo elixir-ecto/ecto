@@ -1048,8 +1048,18 @@ defmodule Ecto.Association.ManyToMany do
   defp validate_join_through(name, nil) do
     raise ArgumentError, "many_to_many #{inspect name} associations require the :join_through option to be given"
   end
-  defp validate_join_through(_, %Ecto.Query{}) do
-    :ok
+  defp validate_join_through(name, query = %Ecto.Query{}) do
+    allowed_keys = [:wheres, :sources, :from, :aliases]
+    default = %Ecto.Query{}
+    query
+    |> Map.from_struct()
+    |> Enum.each(fn {key, value} ->
+      unless (key in allowed_keys) or Map.get(default, key) == value do
+        raise ArgumentError,
+          "many_to_many #{inspect name} was given a query with a `#{inspect key}` statement. Associations " <>
+          "cannot accept queries with select `#{inspect key }` statements"
+      end
+    end)
   end
   defp validate_join_through(_, join_through) when is_atom(join_through) or is_binary(join_through) do
     :ok
