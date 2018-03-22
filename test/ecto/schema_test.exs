@@ -388,13 +388,95 @@ defmodule Ecto.SchemaTest do
 
   ## Associations
 
+  defmodule Post do
+    use Ecto.Schema
+
+    import Ecto.Query, only: [from: 2]
+
+    schema "post_assoc" do
+      field :score, :integer
+    end
+
+    def low_score() do
+      from post in __MODULE__,
+        where: post.score < 25
+    end
+  end
+
+  defmodule Comment do
+    use Ecto.Schema
+
+    import Ecto.Query, only: [from: 2]
+
+    schema "comment_assoc" do
+      field :score, :integer
+    end
+
+    def high_score() do
+      from comment in __MODULE__,
+        where: comment.score > 100
+    end
+  end
+
+  defmodule User do
+    use Ecto.Schema
+
+    import Ecto.Query, only: [from: 2]
+
+    schema "user_assoc" do
+      field :score, :integer
+    end
+
+    def middle_range_score() do
+      from author in __MODULE__,
+        where: author.score > 25,
+        where: author.score < 75
+    end
+
+    def awesome() do
+      from author in __MODULE__,
+        where: author.score > 1000
+    end
+  end
+
+  defmodule AssocEditors do
+    use Ecto.Schema
+
+    import Ecto.Query, only: [from: 2]
+
+    schema "assoc_join_table" do
+      belongs_to :user, User
+      belongs_to :assoc, AssocSchema
+
+      field :deleted, :boolean
+    end
+
+    def active() do
+      from join_row in __MODULE__,
+        where: not(join_row.deleted)
+    end
+  end
+
+  ## Associations
+
   defmodule AssocSchema do
     use Ecto.Schema
 
     schema "assocs" do
       has_many :posts, Post
+      has_many :low_scoring_posts, Post.low_score()
       has_one :author, User
+
+      has_one :middle_range_author, User.middle_range_score()
+
       belongs_to :comment, Comment
+
+      belongs_to :high_scoring_comment, Comment.high_score(),
+        foreign_key: :comment_id,
+        define_field: false
+
+      many_to_many :awesome_editors, User.awesome(), join_through: AssocEditors.active(), on_replace: :delete
+
       has_many :comment_authors, through: [:comment, :authors]
       has_one :comment_main_author, through: [:comment, :main_author]
       has_many :emails, {"users_emails", Email}, on_replace: :delete
@@ -434,6 +516,27 @@ defmodule Ecto.SchemaTest do
     posts = (%AssocSchema{}).posts
     assert %Ecto.Association.NotLoaded{__cardinality__: :many} = posts
     assert inspect(posts) == "#Ecto.Association.NotLoaded<association :posts is not loaded>"
+  end
+
+  test "has_many association via query" do
+    struct = %Ecto.Association.Has{
+      field: :low_scoring_posts,
+      owner: AssocSchema,
+      cardinality: :many,
+      on_delete: :nothing,
+      related: Post,
+      owner_key: :id,
+      related_key: :assoc_schema_id,
+      queryable: Post.low_score(),
+      on_replace: :raise
+    }
+
+    assert AssocSchema.__schema__(:association, :low_scoring_posts) == struct
+    assert AssocSchema.__changeset__.low_scoring_posts == {:assoc, struct}
+
+    low_scoring_posts = (%AssocSchema{}).low_scoring_posts
+    assert %Ecto.Association.NotLoaded{__cardinality__: :many} = low_scoring_posts
+    assert inspect(low_scoring_posts) == "#Ecto.Association.NotLoaded<association :low_scoring_posts is not loaded>"
   end
 
   test "has_many through association" do
@@ -476,6 +579,20 @@ defmodule Ecto.SchemaTest do
     assert inspect(author) == "#Ecto.Association.NotLoaded<association :author is not loaded>"
   end
 
+  test "has_one association via query" do
+    struct =
+      %Ecto.Association.Has{field: :middle_range_author, owner: AssocSchema, cardinality: :one, on_delete: :nothing,
+                            related: User, owner_key: :id, related_key: :assoc_schema_id,
+                            queryable: User.middle_range_score(), on_replace: :raise}
+
+    assert AssocSchema.__schema__(:association, :middle_range_author) == struct
+    assert AssocSchema.__changeset__.middle_range_author == {:assoc, struct}
+
+    author = (%AssocSchema{}).middle_range_author
+    assert %Ecto.Association.NotLoaded{__cardinality__: :one} = author
+    assert inspect(author) == "#Ecto.Association.NotLoaded<association :middle_range_author is not loaded>"
+  end
+
   test "has_one through association" do
     assert AssocSchema.__schema__(:association, :comment_main_author) ==
            %Ecto.Association.HasThrough{field: :comment_main_author, owner: AssocSchema, cardinality: :one,
@@ -514,6 +631,42 @@ defmodule Ecto.SchemaTest do
     comment = (%AssocSchema{}).comment
     assert %Ecto.Association.NotLoaded{} = comment
     assert inspect(comment) == "#Ecto.Association.NotLoaded<association :comment is not loaded>"
+  end
+
+  test "belongs_to association via query" do
+    struct =
+      %Ecto.Association.BelongsTo{field: :high_scoring_comment, owner: AssocSchema, cardinality: :one,
+       related: Comment, owner_key: :comment_id, related_key: :id,
+       queryable: Comment.high_score(), on_replace: :raise, defaults: []}
+
+    assert AssocSchema.__schema__(:association, :high_scoring_comment) == struct
+    assert AssocSchema.__changeset__.high_scoring_comment == {:assoc, struct}
+
+    comment = (%AssocSchema{}).high_scoring_comment
+    assert %Ecto.Association.NotLoaded{} = comment
+    assert inspect(comment) == "#Ecto.Association.NotLoaded<association :high_scoring_comment is not loaded>"
+  end
+
+  test "many_to_many association via query" do
+    struct = %Ecto.Association.ManyToMany{
+      field: :awesome_editors,
+      owner: AssocSchema,
+      cardinality: :many,
+      on_delete: :nothing,
+      related: User,
+      owner_key: :id,
+      queryable: User.awesome(),
+      on_replace: :delete,
+      join_keys: [assoc_schema_id: :id, user_id: :id],
+      join_through: AssocEditors.active()
+    }
+
+    assert AssocSchema.__schema__(:association, :awesome_editors) == struct
+    assert AssocSchema.__changeset__.awesome_editors == {:assoc, struct}
+
+    awesome_editors = (%AssocSchema{}).awesome_editors
+    assert %Ecto.Association.NotLoaded{__cardinality__: :many} = awesome_editors
+    assert inspect(awesome_editors) == "#Ecto.Association.NotLoaded<association :awesome_editors is not loaded>"
   end
 
   defmodule CustomAssocSchema do

@@ -261,6 +261,8 @@ defmodule Ecto.Association do
   """
   def related_from_query(atom) when is_atom(atom), do: atom
   def related_from_query({source, schema}) when is_binary(source) and is_atom(schema), do: schema
+  def related_from_query(%Ecto.Query{from: schema}) when is_atom(schema), do: schema
+  def related_from_query(%Ecto.Query{from: {source, schema}}) when is_binary(source) and is_atom(schema), do: schema
   def related_from_query(queryable) do
     raise ArgumentError, "association queryable must be a schema " <>
       "or {source, schema}, got: #{inspect queryable}"
@@ -884,13 +886,7 @@ defmodule Ecto.Association.ManyToMany do
   def struct(module, name, opts) do
     join_through = opts[:join_through]
 
-    if join_through && (is_atom(join_through) or is_binary(join_through)) do
-      :ok
-    else
-      raise ArgumentError,
-        "many_to_many #{inspect name} associations require the :join_through option to be " <>
-        "given and it must be an atom (representing a schema) or a string (representing a table)"
-    end
+    validate_join_through(name, join_through)
 
     join_keys = opts[:join_keys]
     queryable = Keyword.fetch!(opts, :queryable)
@@ -1047,6 +1043,21 @@ defmodule Ecto.Association.ManyToMany do
       {:error, changeset} ->
         {:error, changeset}
     end
+  end
+
+  defp validate_join_through(name, nil) do
+    raise ArgumentError, "many_to_many #{inspect name} associations require the :join_through option to be given"
+  end
+  defp validate_join_through(_, %Ecto.Query{}) do
+    :ok
+  end
+  defp validate_join_through(_, join_through) when is_atom(join_through) or is_binary(join_through) do
+    :ok
+  end
+  defp validate_join_through(name, _join_through) do
+    raise ArgumentError,
+      "many_to_many #{inspect name} associations require the :join_through option to be " <>
+      "an atom (representing a schema) or a string (representing a table)"
   end
 
   defp insert_join?(%{action: :insert}, _, _field, _related_key), do: true
