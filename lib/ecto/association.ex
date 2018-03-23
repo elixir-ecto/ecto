@@ -210,6 +210,19 @@ defmodule Ecto.Association do
     |> distinct([x], true)
   end
 
+  @doc """
+  Add the default assoc query where clauses a provided query
+  """
+  def combine_assoc_query(assoc_queryable, nil), do: assoc_queryable
+  def combine_assoc_query(%Ecto.Query{wheres: assoc_wheres}, provided_queryable) do
+    provided_queryable
+    |> Ecto.Queryable.to_query()
+    |> Map.update!(:wheres, &Kernel.++(&1, assoc_wheres))
+  end
+  def combine_assoc_query(_, provided_queryable) do
+    provided_queryable
+  end
+
   defp assoc_to_where(%{on: %QueryExpr{} = on}) do
     on
     |> Map.put(:__struct__, BooleanExpr)
@@ -520,13 +533,14 @@ defmodule Ecto.Association.Has do
 
   @doc false
   def assoc_query(%{queryable: queryable, related_key: related_key}, query, [value]) do
-    from x in (query || queryable),
+
+    from x in Ecto.Association.combine_assoc_query(queryable, query),
       where: field(x, ^related_key) == ^value
   end
 
   @doc false
   def assoc_query(%{queryable: queryable, related_key: related_key}, query, values) do
-    from x in (query || queryable),
+    from x in Ecto.Association.combine_assoc_query(queryable, query),
       where: field(x, ^related_key) in ^values
   end
 
@@ -781,13 +795,13 @@ defmodule Ecto.Association.BelongsTo do
 
   @doc false
   def assoc_query(%{queryable: queryable, related_key: related_key}, query, [value]) do
-    from x in (query || queryable),
+    from x in Ecto.Association.combine_assoc_query(queryable, query),
       where: field(x, ^related_key) == ^value
   end
 
   @doc false
   def assoc_query(%{queryable: queryable, related_key: related_key}, query, values) do
-    from x in (query || queryable),
+    from x in Ecto.Association.combine_assoc_query(queryable, query),
       where: field(x, ^related_key) in ^values
   end
 
@@ -970,7 +984,7 @@ defmodule Ecto.Association.ManyToMany do
     # We need to go all the way using owner and query so
     # Ecto has all the information necessary to cast fields.
     # This also helps validate the associated schema exists all the way.
-    from q in (query || queryable),
+    from q in Ecto.Association.combine_assoc_query(queryable, query),
       join: o in ^owner, on: field(o, ^owner_key) in ^values,
       join: j in ^join_through, on: field(j, ^join_owner_key) == field(o, ^owner_key),
       where: field(j, ^join_related_key) == field(q, ^related_key)
