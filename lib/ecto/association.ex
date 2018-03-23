@@ -261,7 +261,6 @@ defmodule Ecto.Association do
   """
   def related_from_query(atom) when is_atom(atom), do: atom
   def related_from_query({source, schema}) when is_binary(source) and is_atom(schema), do: schema
-  def related_from_query(%Ecto.Query{from: schema}) when is_atom(schema), do: schema
   def related_from_query(%Ecto.Query{from: {source, schema}}) when is_binary(source) and is_atom(schema), do: schema
   def related_from_query(queryable) do
     raise ArgumentError, "association queryable must be a schema, " <>
@@ -1049,17 +1048,15 @@ defmodule Ecto.Association.ManyToMany do
     raise ArgumentError, "many_to_many #{inspect name} associations require the :join_through option to be given"
   end
   defp validate_join_through(name, %Ecto.Query{} = query) do
-    allowed_keys = [:wheres, :sources, :from, :aliases]
-    default = %Ecto.Query{}
-    query
-    |> Map.from_struct()
-    |> Enum.each(fn {key, value} ->
-      unless (key in allowed_keys) or Map.get(default, key) == value do
+    case query do
+      %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [], joins: [],
+                  havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
+        query
+      _ ->
         raise ArgumentError,
-          "many_to_many #{inspect name} was given a query with a `#{inspect key}` statement. Associations " <>
-          "cannot accept queries with select `#{inspect key }` statements"
-      end
-    end)
+          "A query was provided for many_to_many #{inspect name}, but that query included a statement other" <>
+          "than a `where` clause. Queries in :join_through only support `where` clauses, nothing else."
+    end
   end
   defp validate_join_through(_, join_through) when is_atom(join_through) or is_binary(join_through) do
     :ok
@@ -1067,7 +1064,8 @@ defmodule Ecto.Association.ManyToMany do
   defp validate_join_through(name, _join_through) do
     raise ArgumentError,
       "many_to_many #{inspect name} associations require the :join_through option to be " <>
-      "an atom (representing a schema) or a string (representing a table)"
+      "an atom (representing a schema), a string (representing a table) or a query" <>
+      "with only `where` clauses."
   end
 
   defp insert_join?(%{action: :insert}, _, _field, _related_key), do: true

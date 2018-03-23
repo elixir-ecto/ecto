@@ -27,37 +27,20 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  defmodule Author do
+  defmodule CommentPost do
     use Ecto.Schema
 
-    schema "authors" do
-      field :super_user, :boolean
-    end
-
-    def super() do
-      from author in __MODULE__,
-        where: author.super_user
-    end
-
-    def not_super() do
-      from author in __MODULE__,
-        where: not(author.super_user)
-    end
-  end
-
-  defmodule PostAuthors do
-    use Ecto.Schema
-
-    schema "post_authors" do
+    schema "comment_posts" do
+      belongs_to :comment, Comment
       belongs_to :post, Post
-      belongs_to :author, Author
+      belongs_to :special_comment, Comment.special()
 
       field :deleted, :boolean
     end
 
     def active() do
-      from join_row in __MODULE__,
-        where: not(join_row.deleted)
+      from comment_post in __MODULE__,
+        where: not(comment_post.deleted)
     end
   end
 
@@ -72,12 +55,11 @@ defmodule Ecto.Query.PlannerTest do
       field :posted, :naive_datetime
       field :visits, :integer
       field :links, {:array, Custom.Permalink}
-      belongs_to :author, Ecto.Query.PlannerTest.Author.not_super()
       has_many :comments, Ecto.Query.PlannerTest.Comment
       has_many :extra_comments, Ecto.Query.PlannerTest.Comment
       has_many :special_comments, Ecto.Query.PlannerTest.Comment.special()
 
-      many_to_many :super_authors, Author.super(), join_through: PostAuthors.active()
+      many_to_many :shared_special_comments, Comment.special(), join_through: CommentPost.active()
     end
   end
 
@@ -281,13 +263,13 @@ defmodule Ecto.Query.PlannerTest do
     assert join.ix == 1
     assert Macro.to_string(join.on.expr) == "&1.special() and &1.post_id() == &0.id()"
 
-    query = from(p in Post, left_join: assoc(p, :super_authors)) |> prepare |> elem(0)
+    query = from(p in Post, left_join: assoc(p, :shared_special_comments)) |> prepare |> elem(0)
 
-    assert {{"posts", _}, {"authors", _}, {"post_authors", _}} = query.sources
+    assert {{"posts", _}, {"comments", _}, {"comment_posts", _}} = query.sources
     assert [join1, join2] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [2, 1]
     assert Macro.to_string(join1.on.expr) == "not(&2.deleted()) and &2.post_id() == &0.id()"
-    assert Macro.to_string(join2.on.expr) == "&1.super_user() and &2.author_id() == &1.id()"
+    assert Macro.to_string(join2.on.expr) == "&1.special() and &2.comment_id() == &1.id()"
   end
 
   test "prepare: cannot associate without schema" do
