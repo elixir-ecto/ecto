@@ -256,6 +256,23 @@ defmodule Ecto.Query.PlannerTest do
     assert Macro.to_string(join3.on.expr) == "&2.id() == &0.post_id()"
   end
 
+  test "prepare: joins associations with custom queries" do
+    query = from(p in Post, left_join: assoc(p, :special_comments)) |> prepare |> elem(0)
+
+    assert {{"posts", _}, {"comments", _}} = query.sources
+    assert [join] = query.joins
+    assert join.ix == 1
+    assert Macro.to_string(join.on.expr) == "&1.special() and &1.post_id() == &0.id()"
+
+    query = from(p in Post, left_join: assoc(p, :shared_special_comments)) |> prepare |> elem(0)
+
+    assert {{"posts", _}, {"comments", _}, {"comment_posts", _}} = query.sources
+    assert [join1, join2] = query.joins
+    assert Enum.map(query.joins, & &1.ix) == [2, 1]
+    assert Macro.to_string(join1.on.expr) == "not(&2.deleted()) and &2.post_id() == &0.id()"
+    assert Macro.to_string(join2.on.expr) == "&1.special() and &2.comment_id() == &1.id()"
+  end
+
   test "prepare: nested joins associations with custom queries" do
     query = from(p in Post,
                    join: c in assoc(p, :special_comments),
@@ -275,23 +292,6 @@ defmodule Ecto.Query.PlannerTest do
     assert Macro.to_string(join4.on.expr) == "&3.special() and &6.comment_id() == &3.id()"
     assert Macro.to_string(join5.on.expr) == "&4.comment_id() == &3.id()"
     assert Macro.to_string(join6.on.expr) == "&5.special() and &5.id() == &4.special_comment_id()"
-  end
-
-  test "prepare: joins associations with queries" do
-    query = from(p in Post, left_join: assoc(p, :special_comments)) |> prepare |> elem(0)
-
-    assert {{"posts", _}, {"comments", _}} = query.sources
-    assert [join] = query.joins
-    assert join.ix == 1
-    assert Macro.to_string(join.on.expr) == "&1.special() and &1.post_id() == &0.id()"
-
-    query = from(p in Post, left_join: assoc(p, :shared_special_comments)) |> prepare |> elem(0)
-
-    assert {{"posts", _}, {"comments", _}, {"comment_posts", _}} = query.sources
-    assert [join1, join2] = query.joins
-    assert Enum.map(query.joins, & &1.ix) == [2, 1]
-    assert Macro.to_string(join1.on.expr) == "not(&2.deleted()) and &2.post_id() == &0.id()"
-    assert Macro.to_string(join2.on.expr) == "&1.special() and &2.comment_id() == &1.id()"
   end
 
   test "prepare: cannot associate without schema" do
