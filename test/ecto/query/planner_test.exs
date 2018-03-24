@@ -322,7 +322,7 @@ defmodule Ecto.Query.PlannerTest do
                    {:lock, "foo"},
                    {:prefix, "foo"},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
-                   {:join, [{:inner, {"comments", Comment, 6996781}, true}]},
+                   {:join, [{:inner, {"comments", Comment, 48293978}, true}]},
                    {"posts", Post, 27727487},
                    {:select, 1}]
   end
@@ -452,7 +452,7 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
     assert query.select.fields ==
            select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
-           select_fields([:id, :text, :posted, :uuid, :post_id], 1) ++
+           select_fields([:id, :text, :posted, :uuid, :special, :post_id], 1) ++
            [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
   end
 
