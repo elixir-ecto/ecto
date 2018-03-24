@@ -84,7 +84,6 @@ defmodule Ecto.AssociationTest do
     end
   end
 
-
   defmodule AuthorPermalink do
     use Ecto.Schema
 

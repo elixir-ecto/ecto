@@ -19,6 +19,7 @@ defmodule Ecto.Query.PlannerTest do
       field :special, :boolean
       belongs_to :post, Ecto.Query.PlannerTest.Post
       has_many :post_comments, through: [:post, :comments]
+      has_many :comment_posts, Ecto.Query.PlannerTest.CommentPost
     end
 
     def special() do
@@ -253,6 +254,27 @@ defmodule Ecto.Query.PlannerTest do
     assert Macro.to_string(join1.on.expr) == "&3.id() == &0.post_id()"
     assert Macro.to_string(join2.on.expr) == "&1.post_id() == &3.id()"
     assert Macro.to_string(join3.on.expr) == "&2.id() == &0.post_id()"
+  end
+
+  test "prepare: nested joins associations with custom queries" do
+    query = from(p in Post,
+                   join: c in assoc(p, :special_comments),
+                   join: p2 in assoc(c, :post),
+                   join: c1 in assoc(p, :shared_special_comments),
+                   join: cp in assoc(c1, :comment_posts),
+                   join: c2 in assoc(cp, :special_comment))
+                   |> prepare
+                   |> elem(0)
+
+    assert [join1, join2, join3, join4, join5, join6] = query.joins
+    assert {{"posts", _}, {"comments", _}, {"posts", _}, {"comments", _}, {"comment_posts", _}, {"comments", _}, {"comment_posts", _}} = query.sources
+
+    assert Macro.to_string(join1.on.expr) == "&1.special() and &1.post_id() == &0.id()"
+    assert Macro.to_string(join2.on.expr) == "&2.id() == &1.post_id()"
+    assert Macro.to_string(join3.on.expr) == "not(&6.deleted()) and &6.post_id() == &0.id()"
+    assert Macro.to_string(join4.on.expr) == "&3.special() and &6.comment_id() == &3.id()"
+    assert Macro.to_string(join5.on.expr) == "&4.comment_id() == &3.id()"
+    assert Macro.to_string(join6.on.expr) == "&5.special() and &5.id() == &4.special_comment_id()"
   end
 
   test "prepare: joins associations with queries" do
