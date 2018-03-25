@@ -112,7 +112,6 @@ if Code.ensure_loaded?(Postgrex) do
     alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr}
 
     def all(query) do
-      IO.inspect(query)
       sources = create_names(query)
       {select_distinct, order_by_distinct} = distinct(query.distinct, sources, query)
 
