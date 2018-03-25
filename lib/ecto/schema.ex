@@ -650,10 +650,10 @@ defmodule Ecto.Schema do
         end
       end
 
-  A query with *only* where clauses can be provided, instead of a related schema, and the where clauses
-  on that query will be added as `on` clauses when using `assoc` query builders or when preloading.
-  Generally the query should not be defined in the association itself, but in a function elsewhere,
-  keeping your schema readable. Ensure that the provided query is sourced from the schema you wish to relate to.
+  ## Using Queries as Associations
+
+  A query can also be given instead of a schema. Querying, joining or preloading the association will
+  use the given query. Currently only where clauses can be provided in queries. Let's see an example:
 
       defmodule Comment do
         ...
@@ -669,6 +669,10 @@ defmodule Ecto.Schema do
           has_many :deleted_comments, Comment.deleted()
         end
       end
+
+  Note: building the association does not consider the query filters.
+  For example, if the given query requires the active field of the associated records to be true,
+  building such association won't automatically set the active field to true.
 
   ## has_many/has_one :through
 
@@ -811,10 +815,10 @@ defmodule Ecto.Schema do
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :permalink))
       post.permalink #=> %Permalink{...}
 
-  A query with *only* where clauses can be provided, instead of a related schema, and the where clauses
-  on that query will be added as `on` clauses when using `assoc` query builders or when preloading.
-  Generally the query should not be defined in the association itself, but in a function elsewhere,
-  keeping your schema readable. Ensure that the provided query is sourced from the schema you wish to relate to.
+  ## Using Queries as Associations
+
+  A query can also be given instead of a schema. Querying, joining or preloading the association will
+  use the given query. Currently only where clauses can be provided in queries. Let's see an example:
 
       defmodule Post do
         ...
@@ -830,6 +834,10 @@ defmodule Ecto.Schema do
           has_one :post, Post.active()
         end
       end
+
+  Note: building the association does not consider the query filters.
+  For example, if the given query requires the active field of the associated records to be true,
+  building such association won't automatically set the active field to true.
   """
   defmacro has_one(name, queryable, opts \\ []) do
     queryable = expand_alias(queryable, __CALLER__)
@@ -903,10 +911,10 @@ defmodule Ecto.Schema do
         end
       end
 
-  A query with *only* where clauses can be provided, instead of a related schema, and the where clauses
-  on that query will be added as `on` clauses when using `assoc` query builders or when preloading.
-  Generally the query should not be defined in the association itself, but in a function elsewhere,
-  keeping your schema readable. Ensure that the provided query is sourced from the schema you wish to relate to.
+  ## Using Queries as Associations
+
+  A query can also be given instead of a schema. Querying, joining or preloading the association will
+  use the given query. Currently only where clauses can be provided in queries. Let's see an example:
 
       defmodule Post do
         ...
@@ -922,6 +930,10 @@ defmodule Ecto.Schema do
           belongs_to :post, Post.active()
         end
       end
+
+  Note: building the association does not consider the query filters.
+  For example, if the given query requires the active field of the associated records to be true,
+  building such association won't automatically set the active field to true.
 
   ## Polymorphic associations
 
@@ -1221,11 +1233,11 @@ defmodule Ecto.Schema do
         {:error, changeset} -> # Handle the error
       end
 
-  A query with *only* where clauses can be provided, instead of a related schema, and the where clauses
-  on that query will be added as `on` clauses when using `assoc` query builders or when preloading.
-  Many to many relationships additionally support providing a query for the `join_through`.
-  Generally the query should not be defined in the association itself, but in a function elsewhere,
-  keeping your schema readable. Ensure that the provided query is sourced from the schema you wish to relate to.
+  ## Using Queries as Associations
+
+  A query can also be given instead of a schema, both for the join_through and the destination.
+  Querying, joining or preloading the association will use the given query. Currently only where
+  clauses can be provided in queries. Let's see an example:
 
       defmodule UserOrganization do
         use Ecto.Schema
@@ -1266,6 +1278,10 @@ defmodule Ecto.Schema do
           many_to_many :users, User.not_banned(), join_through: UserOrganization.active()
         end
       end
+
+  Note: building the association does not consider the query filters.
+  For example, if the given query requires the active field of the associated records to be true,
+  building such association won't automatically set the active field to true.
   """
   defmacro many_to_many(name, queryable, opts \\ []) do
     quote do
