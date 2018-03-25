@@ -262,21 +262,30 @@ defmodule Ecto.Association do
 
   ## Examples
 
-      iex> Ecto.Association.related_from_query({"custom_source", Schema})
+      iex> Ecto.Association.related_from_query({"custom_source", Schema}, :comments_v1)
       Schema
 
-      iex> Ecto.Association.related_from_query(Schema)
+      iex> Ecto.Association.related_from_query(Schema, :comments_v1)
       Schema
 
-      iex> Ecto.Association.related_from_query("wrong")
-      ** (ArgumentError) association queryable must be a schema,  or {source, schema}, or a query. got: "wrong"
-
+      iex> Ecto.Association.related_from_query("wrong", :comments_v1)
+      ** (ArgumentError) association :comments_v1 queryable must be a schema, a {source, schema}, or a query. got: "wrong"
   """
-  def related_from_query(atom) when is_atom(atom), do: atom
-  def related_from_query({source, schema}) when is_binary(source) and is_atom(schema), do: schema
-  def related_from_query(%Ecto.Query{from: {source, schema}}) when is_binary(source) and is_atom(schema), do: schema
-  def related_from_query(queryable) do
-    raise ArgumentError, "association queryable must be a schema, " <>
+  def related_from_query(atom, _name) when is_atom(atom), do: atom
+  def related_from_query({source, schema}, _name) when is_binary(source) and is_atom(schema), do: schema
+  def related_from_query(%Ecto.Query{from: {source, schema}} = query, name) when is_binary(source) and is_atom(schema) do
+    case query do
+      %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [], joins: [],
+                  havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
+        schema
+      _ ->
+        raise ArgumentError,
+          "A query was provided for many_to_many #{inspect name}, but that query included a statement other" <>
+          "than a `where` clause. Queries in :join_through only support `where` clauses, nothing else."
+    end
+  end
+  def related_from_query(queryable, name) do
+    raise ArgumentError, "association #{inspect name} queryable must be a schema, " <>
       "a {source, schema}, or a query. got: #{inspect queryable}"
   end
 
@@ -474,7 +483,7 @@ defmodule Ecto.Association.Has do
 
     queryable = Keyword.fetch!(opts, :queryable)
     cardinality = Keyword.fetch!(opts, :cardinality)
-    related = Ecto.Association.related_from_query(queryable)
+    related = Ecto.Association.related_from_query(queryable, name)
 
     if opts[:through] do
       raise ArgumentError, "invalid association #{inspect name}. When using the :through " <>
@@ -752,7 +761,7 @@ defmodule Ecto.Association.BelongsTo do
   def struct(module, name, opts) do
     ref       = if ref = opts[:references], do: ref, else: :id
     queryable = Keyword.fetch!(opts, :queryable)
-    related   = Ecto.Association.related_from_query(queryable)
+    related   = Ecto.Association.related_from_query(queryable, name)
 
     unless is_atom(related) do
       raise ArgumentError, "association queryable must be a schema, got: #{inspect related}"
@@ -903,7 +912,7 @@ defmodule Ecto.Association.ManyToMany do
 
     join_keys = opts[:join_keys]
     queryable = Keyword.fetch!(opts, :queryable)
-    related   = Ecto.Association.related_from_query(queryable)
+    related   = Ecto.Association.related_from_query(queryable, name)
 
     {owner_key, join_keys} =
       case join_keys do
