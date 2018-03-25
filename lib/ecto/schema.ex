@@ -650,6 +650,26 @@ defmodule Ecto.Schema do
         end
       end
 
+  A query with *only* where clauses can be provided, instead of a related schema, and the where clauses
+  on that query will be added as `on` clauses when using `assoc` query builders or when preloading.
+  Generally the query should not be defined in the association itself, but in a function elsewhere,
+  keeping your schema readable. Ensure that the provided query is sourced from the schema you wish to relate to.
+
+      defmodule Comment do
+        ...
+        def deleted() do
+          from comment in Comment,
+            where: not(is_nil(comment.deleted_at))
+        end
+      end
+
+      defmodule Post do
+        use Ecto.Schema
+        schema "posts" do
+          has_many :deleted_comments, Comment.deleted()
+        end
+      end
+
   ## has_many/has_one :through
 
   Ecto also supports defining associations in terms of other associations
@@ -791,6 +811,25 @@ defmodule Ecto.Schema do
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :permalink))
       post.permalink #=> %Permalink{...}
 
+  A query with *only* where clauses can be provided, instead of a related schema, and the where clauses
+  on that query will be added as `on` clauses when using `assoc` query builders or when preloading.
+  Generally the query should not be defined in the association itself, but in a function elsewhere,
+  keeping your schema readable. Ensure that the provided query is sourced from the schema you wish to relate to.
+
+      defmodule Post do
+        ...
+        def active() do
+          from post in Post,
+            where: post.active
+        end
+      end
+
+      defmodule Comment do
+        use Ecto.Schema
+        schema "comments" do
+          has_one :post, Post.active()
+        end
+      end
   """
   defmacro has_one(name, queryable, opts \\ []) do
     queryable = expand_alias(queryable, __CALLER__)
@@ -861,6 +900,26 @@ defmodule Ecto.Schema do
         schema "comments" do
           field :post_id, :integer, ... # custom options
           belongs_to :post, Post, define_field: false
+        end
+      end
+
+  A query with *only* where clauses can be provided, instead of a related schema, and the where clauses
+  on that query will be added as `on` clauses when using `assoc` query builders or when preloading.
+  Generally the query should not be defined in the association itself, but in a function elsewhere,
+  keeping your schema readable. Ensure that the provided query is sourced from the schema you wish to relate to.
+
+      defmodule Post do
+        ...
+        def active() do
+          from post in Post,
+            where: post.active
+        end
+      end
+
+      defmodule Comment do
+        use Ecto.Schema
+        schema "posts" do
+          belongs_to :post, Post.active()
         end
       end
 
@@ -1160,6 +1219,52 @@ defmodule Ecto.Schema do
       case Repo.insert(changeset) do
         {:ok, assoc} -> # Assoc was created!
         {:error, changeset} -> # Handle the error
+      end
+
+  A query with *only* where clauses can be provided, instead of a related schema, and the where clauses
+  on that query will be added as `on` clauses when using `assoc` query builders or when preloading.
+  Many to many relationships additionally support providing a query for the `join_through`.
+  Generally the query should not be defined in the association itself, but in a function elsewhere,
+  keeping your schema readable. Ensure that the provided query is sourced from the schema you wish to relate to.
+
+      defmodule UserOrganization do
+        use Ecto.Schema
+
+        @primary_key false
+        schema "users_organizations" do
+          belongs_to :user, User
+          belongs_to :organization, Organization
+
+          field :deleted, :boolean
+          timestamps # Added bonus, a join schema will also allow you to set timestamps
+        end
+
+        def active() do
+          from user_organization in UserOrganization,
+            where: is_nil(user_organization.deleted)
+        end
+      end
+
+      defmodule User do
+        use Ecto.Schema
+
+        schema "users" do
+          many_to_many :organizations, Organization, join_through: UserOrganization
+          field :banned, :boolean
+        end
+
+        def not_banned() do
+          from user in User,
+            where: not(user.banned)
+        end
+      end
+
+      defmodule Organization do
+        use Ecto.Schema
+
+        schema "organizations" do
+          many_to_many :users, User.not_banned(), join_through: UserOrganization.active()
+        end
       end
   """
   defmacro many_to_many(name, queryable, opts \\ []) do
