@@ -4,7 +4,7 @@ defmodule Ecto.Query.Planner do
 
   alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, QueryExpr, SelectExpr}
 
-  if map_size(%Ecto.Query{}) != 18 do
+  if map_size(%Ecto.Query{}) != 19 do
     raise "Ecto.Query match out of date in builder"
   end
 
@@ -228,7 +228,8 @@ defmodule Ecto.Query.Planner do
     from = from || error!(query, "query must have a from expression")
     from = prepare_source(query, from, adapter)
     {joins, sources, tail_sources} = prepare_joins(query, [from], length(query.joins), adapter)
-    %{query | from: from, joins: joins |> Enum.reverse,
+    with_ctes = prepare_with_ctes(query, adapter)
+    %{query | with_ctes: with_ctes, from: from, joins: joins |> Enum.reverse,
               sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple()}
   end
 
@@ -243,6 +244,8 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  defp prepare_source(_query, {:cte, cte}, _adapter) when is_atom(cte) and cte != nil,
+    do: {:cte, cte}
   defp prepare_source(_query, {nil, schema}, _adapter) when is_atom(schema) and schema != nil,
     do: {schema.__schema__(:source), schema}
   defp prepare_source(_query, {source, schema}, _adapter) when is_binary(source) and is_atom(schema),
@@ -354,6 +357,19 @@ defmodule Ecto.Query.Planner do
   defp valid_subquery_value?({container, _, args})
        when container in [:{}, :%{}, :&] and is_list(args), do: false
   defp valid_subquery_value?(_), do: true
+
+  defp prepare_with_ctes(%{with_ctes: with_ctes} = query, adapter) do
+    Enum.map(with_ctes, fn with_cte ->
+      prepared =
+        with_cte.query
+        |> prepare(:all, adapter, 0)
+        |> elem(0)
+        |> normalize(:all, adapter, 0)
+        |> elem(0)
+
+      %{with_cte | query: prepared}
+    end)
+  end
 
   defp prepare_joins(query, sources, offset, adapter) do
     prepare_joins(query.joins, query, [], sources, [], 1, offset, adapter)
@@ -578,6 +594,8 @@ defmodule Ecto.Query.Planner do
 
   defp source_cache({_, nil} = source, params),
     do: {source, params}
+  defp source_cache({:cte, _cte}, params),
+    do: {:nocache, params}
   defp source_cache({bin, schema}, params),
     do: {{bin, schema, schema.__schema__(:hash)}, params}
   defp source_cache({:fragment, _, _} = source, params),
@@ -1238,6 +1256,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  defp field_source({:cte, _}, field), do: field
   defp field_source({_, schema}, field) when schema != nil do
     # If the field is not found we return the field itself
     # which will be checked and raise later.

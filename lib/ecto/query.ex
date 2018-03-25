@@ -307,7 +307,7 @@ defmodule Ecto.Query do
 
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], aliases: %{}, wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [], updates: [],
-             havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
+             havings: [], preloads: [], assocs: [], with_ctes: [], distinct: nil, lock: nil]
   @type t :: %__MODULE__{}
 
   defmodule DynamicExpr do
@@ -341,6 +341,19 @@ defmodule Ecto.Query do
     # * tag is the directly tagged value, like Ecto.UUID
     # * type is the underlying tag type, like :string
     defstruct [:value, :tag, :type]
+  end
+
+  defmodule WithCte do
+    @moduledoc false
+    defstruct [:query, :as, :file, :line]
+
+    def apply(%Ecto.Query{aliases: aliases, with_ctes: with_ctes} = query, with_cte, as) do
+      %{query | aliases: Map.put(aliases, as, :with_cte), with_ctes: [with_cte | with_ctes]}
+    end
+    def apply(query, with_cte, as) do
+      __MODULE__.apply(Ecto.Queryable.to_query(query), with_cte, as)
+    end
+
   end
 
   alias Ecto.Query.Builder
@@ -629,8 +642,22 @@ defmodule Ecto.Query do
     from(t, env, count_bind, quoted, to_query_binds(binds))
   end
 
+  defp from([{:with_cte, cte}|t], env, count_bind, quoted, binds) do
+    {t, _on, as} = collect_on_and_as(t, nil, nil)
+    unless as do
+      Builder.error! "`as` keyword is required for with_cte"
+    end
+    with_cte =
+      quote do
+        %WithCte{query: unquote(cte), as: unquote(as)}
+      end
+
+    quoted = Builder.apply_query(quoted, WithCte, [with_cte, as], env)
+    from(t, env, count_bind, quoted, binds)
+  end
+
   defp from([{:as, _value}|_], _env, _count_bind, _quoted, _binds) do
-    Builder.error! "`as` keyword must immediately follow a join"
+    Builder.error! "`as` keyword must immediately follow a join or a with"
   end
 
   defp from([{:on, _value}|_], _env, _count_bind, _quoted, _binds) do
@@ -798,6 +825,11 @@ defmodule Ecto.Query do
     end
   end
   defp parse_join_opts(expr), do: {:expr, expr}
+
+
+  # defmacro with_cte(query, qual, binding \\ [], expr, opts \\ []) do
+
+  # end
 
   @doc """
   A select query expression.
