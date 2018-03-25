@@ -89,6 +89,10 @@ defmodule Ecto.Query.Builder.Join do
     {:_, quote(do: Ecto.Query.Builder.Join.join!(unquote(expr))), nil, %{}}
   end
 
+  def escape({:cte, _, [cte]} = expr, _vars, _env) do
+    {:_, {:cte, cte}, nil, %{}}
+  end
+
   def escape(join, vars, env) do
     case Macro.expand(join, env) do
       ^join ->

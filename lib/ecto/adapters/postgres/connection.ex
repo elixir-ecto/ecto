@@ -115,18 +115,28 @@ if Code.ensure_loaded?(Postgrex) do
       sources = create_names(query)
       {select_distinct, order_by_distinct} = distinct(query.distinct, sources, query)
 
-      from     = from(query, sources)
-      select   = select(query, select_distinct, sources)
-      join     = join(query, sources)
-      where    = where(query, sources)
-      group_by = group_by(query, sources)
-      having   = having(query, sources)
-      order_by = order_by(query, order_by_distinct, sources)
-      limit    = limit(query, sources)
-      offset   = offset(query, sources)
-      lock     = lock(query.lock)
+      with_ctes = with_ctes(query.with_ctes)
+      from      = from(query, sources)
+      select    = select(query, select_distinct, sources)
+      join      = join(query, sources)
+      where     = where(query, sources)
+      group_by  = group_by(query, sources)
+      having    = having(query, sources)
+      order_by  = order_by(query, order_by_distinct, sources)
+      limit     = limit(query, sources)
+      offset    = offset(query, sources)
+      lock      = lock(query.lock)
 
-      [select, from, join, where, group_by, having, order_by, limit, offset | lock]
+      [with_ctes, select, from, join, where, group_by, having, order_by, limit, offset | lock]
+    end
+
+    def with_ctes(query, current_with_statement \\ [])
+    def with_ctes([], statement), do: statement
+    def with_ctes([with_cte|rest], []) do
+      with_ctes(rest, ["WITH ", to_string(with_cte.as), " AS (", all(with_cte.query), ") "])
+    end
+    def with_ctes([with_cte|rest], current_with_statement) do
+      with_ctes(rest, current_with_statement ++ [", ", to_string(with_cte.as), " AS (", all(with_cte.query), ") "])
     end
 
     def update_all(%{from: from} = query, prefix \\ nil) do
@@ -892,14 +902,20 @@ if Code.ensure_loaded?(Postgrex) do
 
     ## Helpers
 
+    defp get_source(_, _, _, {:cte, cte}) do
+       string_name = to_string(cte)
+       {string_name, string_name}
+    end
     defp get_source(query, sources, ix, source) do
       {expr, name, _schema} = elem(sources, ix)
       {expr || paren_expr(source, sources, query), name}
     end
 
     defp quote_qualified_name(name, sources, ix) do
-      {_, source, _} = elem(sources, ix)
-      [source, ?. | quote_name(name)]
+      case elem(sources, ix) do
+        {[_, "cte", _], _, cte_alias} -> [to_string(cte_alias), ?. | quote_name(name)]
+        {_, source, _} -> [source, ?. | quote_name(name)]
+      end
     end
 
     defp quote_name(name) when is_atom(name) do

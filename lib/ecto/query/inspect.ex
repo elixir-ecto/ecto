@@ -47,6 +47,8 @@ defimpl Inspect, for: Ecto.Query do
       |> generate_names
       |> List.to_tuple
 
+    with_ctes = with_ctes(query.with_ctes)
+
     from      = bound_from(query.from, elem(names, 0))
     joins     = joins(query.joins, names)
     preloads  = preloads(query.preloads)
@@ -64,7 +66,7 @@ defimpl Inspect, for: Ecto.Query do
     select    = kw_expr(:select, query.select, names)
     distinct  = kw_expr(:distinct, query.distinct, names)
 
-    Enum.concat [from, joins, wheres, group_bys, havings, order_bys,
+    Enum.concat [with_ctes, from, joins, wheres, group_bys, havings, order_bys,
                  limit, offset, lock, distinct, updates, select, preloads, assocs]
   end
 
@@ -73,6 +75,9 @@ defimpl Inspect, for: Ecto.Query do
   defp unbound_from(nil),           do: "query"
   defp unbound_from({source, nil}), do: inspect source
   defp unbound_from({nil, schema}),  do: inspect schema
+  defp unbound_from({:cte, cte}) do
+    "cte(#{inspect cte})"
+  end
   defp unbound_from(from = {source, schema}) do
     inspect if source == schema.__schema__(:source), do: schema, else: from
   end
@@ -81,6 +86,12 @@ defimpl Inspect, for: Ecto.Query do
   end
   defp unbound_from(%Ecto.Query{} = query) do
     "^" <> inspect(query)
+  end
+
+  defp with_ctes(with_ctes) do
+    Enum.flat_map(with_ctes, fn with_cte ->
+      ["with: #{inspect with_cte.as} as: #{inspect with_cte.query}"]
+    end)
   end
 
   defp joins(joins, names) do
