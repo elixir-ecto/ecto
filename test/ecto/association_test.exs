@@ -21,12 +21,18 @@ defmodule Ecto.AssociationTest do
 
     schema "posts" do
       field :title, :string
+      field :upvotes, :integer
 
       has_many :comments, Comment
       has_one :permalink, Permalink
       has_many :permalinks, Permalink
       belongs_to :author, Author, defaults: [title: "World!"]
       belongs_to :summary, Summary
+    end
+
+    def awesome() do
+      from row in __MODULE__,
+        where: row.upvotes >= 1000
     end
   end
 
@@ -48,8 +54,14 @@ defmodule Ecto.AssociationTest do
 
     schema "permalinks" do
       field :url, :string
+      field :special, :boolean
       many_to_many :authors, Author, join_through: AuthorPermalink, defaults: [title: "m2m!"]
       has_many :author_emails, through: [:authors, :emails]
+    end
+
+    def special() do
+      from row in __MODULE__,
+        where: row.special
     end
   end
 
@@ -72,30 +84,50 @@ defmodule Ecto.AssociationTest do
     end
   end
 
-  defmodule Author do
-    use Ecto.Schema
-
-    schema "authors" do
-      field :title, :string
-      has_many :posts, Post, on_replace: :delete
-      has_many :posts_comments, through: [:posts, :comments]    # many -> many
-      has_many :posts_permalinks, through: [:posts, :permalink] # many -> one
-      has_many :emails, {"users_emails", Email}
-      has_one :profile, {"users_profiles", Profile},
-        defaults: [name: "default"], on_replace: :delete
-      many_to_many :permalinks, {"custom_permalinks", Permalink},
-        join_through: "authors_permalinks"
-      has_many :posts_with_prefix, PostWithPrefix
-      has_many :comments_with_prefix, through: [:posts_with_prefix, :comments_with_prefix]
-    end
-  end
-
   defmodule AuthorPermalink do
     use Ecto.Schema
 
     schema "authors_permalinks" do
       field :author_id
       field :permalink_id
+      field :deleted, :boolean
+    end
+
+    def active() do
+      from row in __MODULE__,
+        where: not(row.deleted)
+    end
+  end
+
+  defmodule Author do
+    use Ecto.Schema
+
+    schema "authors" do
+      field :title, :string
+      field :super_user, :boolean
+      has_many :posts, Post, on_replace: :delete
+      has_many :posts_comments, through: [:posts, :comments]    # many -> many
+      has_many :posts_permalinks, through: [:posts, :permalink] # many -> one
+      has_many :emails, {"users_emails", Email}
+      has_many :awesome_posts, Post.awesome()
+      has_one :profile, {"users_profiles", Profile},
+        defaults: [name: "default"], on_replace: :delete
+      many_to_many :permalinks, {"custom_permalinks", Permalink},
+        join_through: "authors_permalinks"
+
+      many_to_many :active_special_permalinks, Permalink.special(),
+        join_through: AuthorPermalink.active()
+      many_to_many :special_permalinks, Permalink.special(),
+        join_through: AuthorPermalink
+      many_to_many :active_permalinks, Permalink,
+        join_through: AuthorPermalink.active()
+      has_many :posts_with_prefix, PostWithPrefix
+      has_many :comments_with_prefix, through: [:posts_with_prefix, :comments_with_prefix]
+    end
+
+    def super_users() do
+      from row in __MODULE__,
+        where: row.super_user
     end
   end
 
@@ -104,6 +136,7 @@ defmodule Ecto.AssociationTest do
 
     schema "summaries" do
       has_one :post, Post, defaults: [title: "default"], on_replace: :nilify
+      has_one :awesome_post, Post.awesome()
       has_many :posts, Post, on_replace: :nilify
       has_one :post_author, through: [:post, :author]        # one -> belongs
       has_many :post_comments, through: [:post, :comments]   # one -> many
@@ -115,6 +148,7 @@ defmodule Ecto.AssociationTest do
 
     schema "emails" do
       belongs_to :author, {"post_authors", Author}
+      belongs_to :super_user, Author.super_users(), foreign_key: :author_id, define_field: false
     end
   end
 
@@ -161,6 +195,25 @@ defmodule Ecto.AssociationTest do
            inspect(from c in Comment, where: c.post_id in ^[1, 2, 3], limit: 5)
   end
 
+  test "has many query-based assoc query" do
+    assoc = Author.__schema__(:association, :awesome_posts)
+    assert inspect(Ecto.Association.Has.joins_query(assoc)) ==
+           inspect(from a in Author, join: p in ^(from p in Post, where: p.upvotes >= 1000), on: p.author_id == a.id)
+
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [])) ==
+           inspect(from p in Post, where: p.upvotes >= 1000, where: p.author_id in ^[])
+
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1, 2, 3])) ==
+           inspect(from p in Post, where: p.upvotes >= 1000, where: p.author_id in ^[1, 2, 3])
+  end
+
+  test "has many query-based assoc with custom query" do
+    assoc = Author.__schema__(:association, :awesome_posts)
+    query = from p in Post, limit: 5
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, query, [1, 2, 3])) ==
+           inspect(from p in Post, where: p.upvotes >= 1000, where: p.author_id in ^[1, 2, 3], limit: 5)
+  end
+
   test "has one" do
     assoc = Post.__schema__(:association, :permalink)
 
@@ -195,6 +248,25 @@ defmodule Ecto.AssociationTest do
     query = from c in Permalink, limit: 5
     assert inspect(Ecto.Association.Has.assoc_query(assoc, query, [1, 2, 3])) ==
            inspect(from c in Permalink, where: c.post_id in ^[1, 2, 3], limit: 5)
+  end
+
+  test "has one query-based assoc query" do
+    assoc = Summary.__schema__(:association, :awesome_post)
+    assert inspect(Ecto.Association.Has.joins_query(assoc)) ==
+           inspect(from s in Summary, join: p in ^(from p in Post, where: p.upvotes >= 1000), on: p.summary_id == s.id)
+
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [])) ==
+           inspect(from p in Post, where: p.upvotes >= 1000, where: p.summary_id in ^[])
+
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, nil, [1, 2, 3])) ==
+           inspect(from p in Post, where: p.upvotes >= 1000, where: p.summary_id in ^[1, 2, 3])
+  end
+
+  test "has one query-based assoc with custom query" do
+    assoc = Summary.__schema__(:association, :awesome_post)
+    query = from p in Post, limit: 5
+    assert inspect(Ecto.Association.Has.assoc_query(assoc, query, [1, 2, 3])) ==
+           inspect(from p in Post, where: p.upvotes >= 1000, where: p.summary_id in ^[1, 2, 3], limit: 5)
   end
 
   test "belongs to" do
@@ -234,6 +306,25 @@ defmodule Ecto.AssociationTest do
     query = from a in Author, limit: 5
     assert inspect(Ecto.Association.BelongsTo.assoc_query(assoc, query, [1, 2, 3])) ==
            inspect(from a in Author, where: a.id in ^[1, 2, 3], limit: 5)
+  end
+
+  test "belongs to query-based assoc query" do
+    assoc = Email.__schema__(:association, :super_user)
+    assert inspect(Ecto.Association.BelongsTo.joins_query(assoc)) ==
+           inspect(from e in Email, join: a in ^(from a in Author, where: a.super_user), on: a.id == e.author_id)
+
+    assert inspect(Ecto.Association.BelongsTo.assoc_query(assoc, nil, [])) ==
+           inspect(from a in Author, where: a.super_user, where: a.id in ^[])
+
+    assert inspect(Ecto.Association.BelongsTo.assoc_query(assoc, nil, [1, 2, 3])) ==
+           inspect(from a in Author, where: a.super_user, where: a.id in ^[1, 2, 3])
+  end
+
+  test "belongs to query-based assoc with custom query" do
+    assoc = Email.__schema__(:association, :super_user)
+    query = from a in Author, limit: 5
+    assert inspect(Ecto.Association.BelongsTo.assoc_query(assoc, query, [1, 2, 3])) ==
+           inspect(from a in Author, where: a.super_user, where: a.id in ^[1, 2, 3], limit: 5)
   end
 
   test "many to many" do
@@ -286,6 +377,125 @@ defmodule Ecto.AssociationTest do
                     join: p in Permalink, on: p.id in ^[1, 2, 3],
                     join: m in AuthorPermalink, on: m.permalink_id == p.id,
                     where: m.author_id == a.id, limit: 5)
+  end
+
+  test "many to many query-based assoc and query based join_through query" do
+    assoc = Author.__schema__(:association, :active_special_permalinks)
+    assert inspect(Ecto.Association.ManyToMany.joins_query(assoc)) ==
+           inspect(from a in Author,
+                    join: m in ^(from m in AuthorPermalink, where: not(m.deleted)),
+                    on: m.author_id == a.id,
+                    join: p in ^(from p in Permalink, where: p.special),
+                    on: m.permalink_id == p.id)
+
+    assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [])) ==
+           inspect(from p in Permalink, where: p.special,
+                    join: a in Author, on: a.id in ^[],
+                    join: m in ^(from m in AuthorPermalink, where: not(m.deleted)),
+                    on: m.author_id == a.id,
+                    where: m.permalink_id == p.id
+             )
+
+    assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [1, 2, 3])) ==
+           inspect(from p in Permalink, where: p.special,
+                    join: a in Author, on: a.id in ^[1, 2, 3],
+                    join: m in ^(from m in AuthorPermalink, where: not(m.deleted)),
+                    on: m.author_id == a.id,
+                    where: m.permalink_id == p.id
+             )
+  end
+
+  test "many to many query-based assoc and query based join through with custom query" do
+    assoc = Author.__schema__(:association, :active_special_permalinks)
+    query = from p in Permalink, limit: 5
+    assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, query, [1, 2, 3])) ==
+           inspect(from p in Permalink,
+                    join: a in Author,
+                    on: a.id in ^[1, 2, 3],
+                    join: m in ^(from m in AuthorPermalink, where: not(m.deleted)),
+                    on: m.author_id == a.id,
+                    where: p.special(),
+                    where: m.permalink_id == p.id,
+                    limit: 5)
+  end
+
+  test "many to many query-based assoc query" do
+    assoc = Author.__schema__(:association, :special_permalinks)
+    assert inspect(Ecto.Association.ManyToMany.joins_query(assoc)) ==
+           inspect(from a in Author,
+                    join: m in AuthorPermalink,
+                    on: m.author_id == a.id,
+                    join: p in ^(from p in Permalink, where: p.special),
+                    on: m.permalink_id == p.id)
+
+    assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [])) ==
+           inspect(from p in Permalink, where: p.special,
+                    join: a in Author, on: a.id in ^[],
+                    join: m in AuthorPermalink,
+                    on: m.author_id == a.id,
+                    where: m.permalink_id == p.id
+             )
+
+    assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [1, 2, 3])) ==
+           inspect(from p in Permalink, where: p.special,
+                    join: a in Author, on: a.id in ^[1, 2, 3],
+                    join: m in AuthorPermalink,
+                    on: m.author_id == a.id,
+                    where: m.permalink_id == p.id
+             )
+  end
+
+  test "many to many query-based assoc query with custom query" do
+    assoc = Author.__schema__(:association, :special_permalinks)
+    query = from p in Permalink, limit: 5
+    assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, query, [1, 2, 3])) ==
+           inspect(from p in Permalink,
+                    join: a in Author,
+                    on: a.id in ^[1, 2, 3],
+                    join: m in AuthorPermalink,
+                    on: m.author_id == a.id,
+                    where: p.special(),
+                    where: m.permalink_id == p.id,
+                    limit: 5)
+  end
+
+  test "many to many query-based join through query" do
+    assoc = Author.__schema__(:association, :active_permalinks)
+    assert inspect(Ecto.Association.ManyToMany.joins_query(assoc)) ==
+           inspect(from a in Author,
+                    join: m in ^(from m in AuthorPermalink, where: not(m.deleted)),
+                    on: m.author_id == a.id,
+                    join: p in Permalink,
+                    on: m.permalink_id == p.id)
+
+    assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [])) ==
+           inspect(from p in Permalink,
+                    join: a in Author, on: a.id in ^[],
+                    join: m in ^(from m in AuthorPermalink, where: not(m.deleted)),
+                    on: m.author_id == a.id,
+                    where: m.permalink_id == p.id
+             )
+
+    assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, nil, [1, 2, 3])) ==
+           inspect(from p in Permalink,
+                    join: a in Author, on: a.id in ^[1, 2, 3],
+                    join: m in ^(from m in AuthorPermalink, where: not(m.deleted)),
+                    on: m.author_id == a.id,
+                    where: m.permalink_id == p.id
+             )
+  end
+
+  test "many to many query-based join through with custom query" do
+    assoc = Author.__schema__(:association, :active_permalinks)
+    query = from p in Permalink, limit: 5
+    assert inspect(Ecto.Association.ManyToMany.assoc_query(assoc, query, [1, 2, 3])) ==
+           inspect(from p in Permalink,
+                    join: a in Author,
+                    on: a.id in ^[1, 2, 3],
+                    join: m in ^(from m in AuthorPermalink, where: not(m.deleted)),
+                    on: m.author_id == a.id,
+                    where: m.permalink_id == p.id,
+                    limit: 5)
   end
 
   test "has many through many to many" do

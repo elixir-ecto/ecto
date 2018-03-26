@@ -580,7 +580,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "has_* expects a queryable" do
-    message = ~r"association queryable must be a schema or {source, schema}, got: 123"
+    message = ~r"association :posts queryable must be a schema, a {source, schema}, or a query. got: 123"
     assert_raise ArgumentError, message, fn ->
       defmodule QueryableMisMatch do
         use Ecto.Schema

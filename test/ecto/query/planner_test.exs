@@ -16,8 +16,32 @@ defmodule Ecto.Query.PlannerTest do
       field :temp, :string, virtual: true
       field :posted, :naive_datetime
       field :uuid, :binary_id
+      field :special, :boolean
       belongs_to :post, Ecto.Query.PlannerTest.Post
       has_many :post_comments, through: [:post, :comments]
+      has_many :comment_posts, Ecto.Query.PlannerTest.CommentPost
+    end
+
+    def special() do
+      from comment in __MODULE__,
+        where: comment.special
+    end
+  end
+
+  defmodule CommentPost do
+    use Ecto.Schema
+
+    schema "comment_posts" do
+      belongs_to :comment, Comment
+      belongs_to :post, Post
+      belongs_to :special_comment, Comment.special()
+
+      field :deleted, :boolean
+    end
+
+    def inactive() do
+      from comment_post in __MODULE__,
+        where: comment_post.deleted
     end
   end
 
@@ -34,6 +58,9 @@ defmodule Ecto.Query.PlannerTest do
       field :links, {:array, Custom.Permalink}
       has_many :comments, Ecto.Query.PlannerTest.Comment
       has_many :extra_comments, Ecto.Query.PlannerTest.Comment
+      has_many :special_comments, Ecto.Query.PlannerTest.Comment.special()
+
+      many_to_many :shared_special_comments, Comment.special(), join_through: CommentPost.inactive()
     end
   end
 
@@ -229,6 +256,44 @@ defmodule Ecto.Query.PlannerTest do
     assert Macro.to_string(join3.on.expr) == "&2.id() == &0.post_id()"
   end
 
+  test "prepare: joins associations with custom queries" do
+    query = from(p in Post, left_join: assoc(p, :special_comments)) |> prepare |> elem(0)
+
+    assert {{"posts", _}, {"comments", _}} = query.sources
+    assert [join] = query.joins
+    assert join.ix == 1
+    assert Macro.to_string(join.on.expr) == "&1.special() and &1.post_id() == &0.id()"
+
+    query = from(p in Post, left_join: assoc(p, :shared_special_comments)) |> prepare |> elem(0)
+
+    assert {{"posts", _}, {"comments", _}, {"comment_posts", _}} = query.sources
+    assert [join1, join2] = query.joins
+    assert Enum.map(query.joins, & &1.ix) == [2, 1]
+    assert Macro.to_string(join1.on.expr) == "&2.deleted() and &2.post_id() == &0.id()"
+    assert Macro.to_string(join2.on.expr) == "&1.special() and &2.comment_id() == &1.id()"
+  end
+
+  test "prepare: nested joins associations with custom queries" do
+    query = from(p in Post,
+                   join: c in assoc(p, :special_comments),
+                   join: p2 in assoc(c, :post),
+                   join: c1 in assoc(p, :shared_special_comments),
+                   join: cp in assoc(c1, :comment_posts),
+                   join: c2 in assoc(cp, :special_comment))
+                   |> prepare
+                   |> elem(0)
+
+    assert [join1, join2, join3, join4, join5, join6] = query.joins
+    assert {{"posts", _}, {"comments", _}, {"posts", _}, {"comments", _}, {"comment_posts", _}, {"comments", _}, {"comment_posts", _}} = query.sources
+
+    assert Macro.to_string(join1.on.expr) == "&1.special() and &1.post_id() == &0.id()"
+    assert Macro.to_string(join2.on.expr) == "&2.id() == &1.post_id()"
+    assert Macro.to_string(join3.on.expr) == "&6.deleted() and &6.post_id() == &0.id()"
+    assert Macro.to_string(join4.on.expr) == "&3.special() and &6.comment_id() == &3.id()"
+    assert Macro.to_string(join5.on.expr) == "&4.comment_id() == &3.id()"
+    assert Macro.to_string(join6.on.expr) == "&5.special() and &5.id() == &4.special_comment_id()"
+  end
+
   test "prepare: cannot associate without schema" do
     query   = from(p in "posts", join: assoc(p, :comments))
     message = ~r"cannot perform association join on \"posts\" because it does not have a schema"
@@ -257,7 +322,7 @@ defmodule Ecto.Query.PlannerTest do
                    {:lock, "foo"},
                    {:prefix, "foo"},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
-                   {:join, [{:inner, {"comments", Comment, 6996781}, true}]},
+                   {:join, [{:inner, {"comments", Comment, 48293978}, true}]},
                    {"posts", Post, 27727487},
                    {:select, 1}]
   end
@@ -387,7 +452,7 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
     assert query.select.fields ==
            select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
-           select_fields([:id, :text, :posted, :uuid, :post_id], 1) ++
+           select_fields([:id, :text, :posted, :uuid, :special, :post_id], 1) ++
            [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
   end
 
