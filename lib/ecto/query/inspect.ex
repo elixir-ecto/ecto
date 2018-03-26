@@ -1,7 +1,7 @@
 import Inspect.Algebra
 import Kernel, except: [to_string: 1]
 
-alias Ecto.Query.{DynamicExpr, JoinExpr}
+alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr}
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
@@ -89,9 +89,9 @@ defimpl Inspect, for: Ecto.Query do
     |> Enum.flat_map(fn {expr, ix} -> join(expr, elem(names, expr.ix || ix + 1), names) end)
   end
 
-  defp join(%JoinExpr{qual: qual, assoc: {ix, right}, as: as}, name, names) do
+  defp join(%JoinExpr{qual: qual, assoc: {ix, right}, on: on, as: as}, name, names) do
     string = "#{name} in assoc(#{elem(names, ix)}, #{inspect right})"
-    [{join_qual(qual), string}] ++ kw_inspect(:as, as)
+    [{join_qual(qual), string}] ++ kw_inspect(:as, as) ++ maybe_on(on, names)
   end
 
   defp join(%JoinExpr{qual: qual, source: {:fragment, _, _} = source, on: on, as: as} = part, name, names) do
@@ -103,6 +103,9 @@ defimpl Inspect, for: Ecto.Query do
     string = "#{name} in #{unbound_from source}"
     [{join_qual(qual), string}] ++ kw_inspect(:as, as) ++ [on: expr(on, names)]
   end
+
+  defp maybe_on(%QueryExpr{expr: true}, _names), do: []
+  defp maybe_on(%QueryExpr{} = on, names), do: [on: expr(on, names)]
 
   defp preloads([]),       do: []
   defp preloads(preloads), do: [preload: inspect(preloads)]
