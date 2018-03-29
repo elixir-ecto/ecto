@@ -248,10 +248,10 @@ defmodule Ecto.Changeset do
             constraints: [], filters: %{}, action: nil, types: nil,
             empty_values: @empty_values, repo: nil, repo_opts: []
 
-  @type t :: %Changeset{valid?: boolean(),
+  @type t(data_type) :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
                         repo_opts: Keyword.t,
-                        data: Ecto.Schema.t | map | nil,
+                        data: data_type | nil,
                         params: %{String.t => term} | nil,
                         changes: %{atom => term},
                         required: [atom],
@@ -263,6 +263,7 @@ defmodule Ecto.Changeset do
                         action: action,
                         types: nil | %{atom => Ecto.Type.t}}
 
+  @type t :: t(Ecto.Schema.t | map)
   @type error :: {String.t, Keyword.t}
   @type action :: nil | :insert | :update | :delete | :replace | :ignore
   @type constraint :: %{type: :check | :exclusion | :foreign_key | :unique,
