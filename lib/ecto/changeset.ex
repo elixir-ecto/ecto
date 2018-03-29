@@ -251,7 +251,7 @@ defmodule Ecto.Changeset do
   @type t(data_type) :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
                         repo_opts: Keyword.t,
-                        data: data_type | nil,
+                        data: data_type,
                         params: %{String.t => term} | nil,
                         changes: %{atom => term},
                         required: [atom],
@@ -263,7 +263,7 @@ defmodule Ecto.Changeset do
                         action: action,
                         types: nil | %{atom => Ecto.Type.t}}
 
-  @type t :: t(Ecto.Schema.t | map)
+  @type t :: t(Ecto.Schema.t | map | nil)
   @type error :: {String.t, Keyword.t}
   @type action :: nil | :insert | :update | :delete | :replace | :ignore
   @type constraint :: %{type: :check | :exclusion | :foreign_key | :unique,
