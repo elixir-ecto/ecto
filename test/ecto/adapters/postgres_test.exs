@@ -240,6 +240,12 @@ defmodule Ecto.Adapters.PostgresTest do
     assert SQL.all(query) == ~s{SELECT $1::integer[] FROM "model" AS m0}
   end
 
+  @tag :agg
+  test "tagged type with aggregate function" do
+    query = from(r in Model) |> select([r], type(sum(r.x), r.x)) |> normalize
+    assert SQL.all(query) == "SELECT type(sum(m0.\"x\"), m0.\"x\") FROM \"model\" AS m0"
+  end
+
   test "nested expressions" do
     z = 123
     query = from(r in Model, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> normalize

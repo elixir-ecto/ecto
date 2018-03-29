@@ -302,6 +302,7 @@ defmodule Ecto.Query.Builder do
   defp call_type(bool, 2) when bool in ~w(and or)a,               do: {:boolean, :boolean}
   defp call_type(:not, 1),                                        do: {:boolean, :boolean}
   defp call_type(:is_nil, 1),                                     do: {:any, :boolean}
+  defp call_type(:type, 2),                                       do: {:any, :any}
   defp call_type(_, _),                                           do: nil
 
   defp assert_type!(_expr, {int, _field}, _actual) when is_integer(int) do
@@ -309,7 +310,7 @@ defmodule Ecto.Query.Builder do
   end
 
   defp assert_type!(expr, type, actual) do
-    if Ecto.Type.match?(type, actual) do
+    if Ecto.Type.match?(Macro.expand(type, __ENV__), actual) do
       :ok
     else
       error! "expression `#{Macro.to_string(expr)}` does not type check. " <>

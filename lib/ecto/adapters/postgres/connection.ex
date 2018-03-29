@@ -493,6 +493,10 @@ if Code.ensure_loaded?(Postgrex) do
       String.Chars.Float.to_string(literal) <> "::float"
     end
 
+    defp expr(atom, _sources, _query) when is_atom(atom) do
+      atom
+    end
+
     defp interval(count, interval, _sources, _query) when is_integer(count) do
       "interval '" <> String.Chars.Integer.to_string(count) <> " " <> interval <> "'"
     end
