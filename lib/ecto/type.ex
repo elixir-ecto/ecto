@@ -763,6 +763,9 @@ defmodule Ecto.Type do
 
   ## Time
 
+  defp cast_time(<<hour::2-bytes, ?:, minute::2-bytes>>) do
+    cast_time(%{"hour" => hour, "minute" => minute})
+  end
   defp cast_time(binary) when is_binary(binary) do
     case Time.from_iso8601(binary) do
       {:ok, _} = ok -> ok
