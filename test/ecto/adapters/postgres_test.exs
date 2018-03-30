@@ -578,7 +578,7 @@ defmodule Ecto.Adapters.PostgresTest do
   test "cross join" do
     query = from(p in Schema, cross_join: c in Schema2, select: {p.id, c.id}) |> normalize()
     assert all(query) ==
-           "SELECT s0.\"id\", s1.\"id\" FROM \"schema\" AS s0 CROSS JOIN \"schema2\" AS s1 ON TRUE"
+           "SELECT s0.\"id\", s1.\"id\" FROM \"schema\" AS s0 CROSS JOIN \"schema2\" AS s1"
   end
 
   test "join produces correct bindings" do

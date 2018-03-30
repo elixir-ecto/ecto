@@ -271,9 +271,12 @@ if Code.ensure_loaded?(Mariaex) do
       Enum.map(joins, fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
           {join, name} = get_source(query, sources, ix, source)
-          [join_qual(qual, query), join, " AS ", name, " ON " | expr(expr, sources, query)]
+          [join_qual(qual, query), join, " AS ", name | join_on(qual, expr, sources, query)]
       end)
     end
+
+    defp join_on(:cross, true, _sources, _query), do: []
+    defp join_on(_qual, expr, sources, query), do: [" ON " | expr(expr, sources, query)]
 
     defp join_qual(:inner, _), do: " INNER JOIN "
     defp join_qual(:left, _),  do: " LEFT OUTER JOIN "
