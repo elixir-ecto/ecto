@@ -209,11 +209,14 @@ defmodule Ecto.TypeTest do
     assert Ecto.Type.cast(:time, @time) == {:ok, @time}
     assert Ecto.Type.cast(:time, @time_zero) ==  {:ok, @time_zero}
 
+    assert Ecto.Type.cast(:time, "23:50") == {:ok, @time_zero}
     assert Ecto.Type.cast(:time, "23:50:07") == {:ok, @time}
     assert Ecto.Type.cast(:time, "23:50:07Z") == {:ok, @time}
     assert Ecto.Type.cast(:time, "23:50:07.030000") == {:ok, @time_usec}
     assert Ecto.Type.cast(:time, "23:50:07.030000Z") == {:ok, @time_usec}
 
+    assert Ecto.Type.cast(:time, "24:01") == :error
+    assert Ecto.Type.cast(:time, "00:61") == :error
     assert Ecto.Type.cast(:time, "24:01:01") == :error
     assert Ecto.Type.cast(:time, "00:61:00") == :error
     assert Ecto.Type.cast(:time, "00:00:61") == :error
