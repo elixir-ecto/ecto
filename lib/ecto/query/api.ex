@@ -159,6 +159,12 @@ defmodule Ecto.Query.API do
   def count(value, :distinct), do: doc! [value, :distinct]
 
   @doc """
+  Applies the given expression as a FILTER clause against an
+  aggregate. This is currently only supported by Postgres.
+  """
+  def filter(value, filter), do: doc! [value, filter]
+
+  @doc """
   Calculates the average for the given entry.
 
       from p in Payment, select: avg(p.value)

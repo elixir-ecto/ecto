@@ -248,6 +248,13 @@ defmodule Ecto.Query.Builder do
     {expr, params_acc}
   end
 
+  def escape({:filter, _, [agg, filters]}, type, params_acc, vars, env) do
+    {agg, params_acc} = escape(agg, type, params_acc, vars, env)
+    {filters, params_acc} = escape(filters, type, params_acc, vars, env)
+    expr = {:{}, [], [:filter, [], [agg, filters]]}
+    {expr, params_acc}
+  end
+
   def escape({:=, _, _} = expr, _type, _params_acc, _vars, _env) do
     error! "`#{Macro.to_string(expr)}` is not a valid query expression. " <>
             "The match operator is not supported: `=`. " <>
@@ -790,6 +797,7 @@ defmodule Ecto.Query.Builder do
   def quoted_type({agg, _, [expr]}, vars) when agg in [:max, :min, :sum] do
     quoted_type(expr, vars)
   end
+  def quoted_type({:filter, _, [aggregate_type, _]}, vars), do: quoted_type(aggregate_type, vars)
 
   # Literals
   def quoted_type(literal, _vars) when is_float(literal),   do: :float
