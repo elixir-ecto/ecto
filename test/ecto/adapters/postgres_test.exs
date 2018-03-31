@@ -116,6 +116,7 @@ defmodule Ecto.Adapters.PostgresTest do
     assert all(query) == ~s{SELECT count(DISTINCT s0."x") FROM "schema" AS s0}
   end
 
+  @tag :aggregate_filters
   test "aggregate filters" do
     query = Schema |> select([r], count(r.x) |> filter(r.x > 10)) |> normalize
     assert all(query) == ~s{SELECT count(s0."x") FILTER (WHERE s0."x" > 10) FROM "schema" AS s0}
