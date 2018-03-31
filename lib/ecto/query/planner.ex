@@ -1030,7 +1030,7 @@ defmodule Ecto.Query.Planner do
   defp aggregate_type(:count, _, _), do: :integer
   defp aggregate_type(:avg, _, _), do: :any
   defp aggregate_type(:sum, _, _), do: :any
-  defp aggregate_type(_, {{:., _, [{:&, _, [ix]}, field]}, _, []}, query = %{select: select}) do
+  defp aggregate_type(_, {{:., _, [{:&, _, [ix]}, field]}, _, []}, %{select: select} = query) do
     source_type!(:select, query, select, ix, field)
   end
 
