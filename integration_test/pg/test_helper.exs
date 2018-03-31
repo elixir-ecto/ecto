@@ -89,7 +89,6 @@ else
   ExUnit.configure(exclude: [:upsert, :upsert_all, :array_type, :aggregate_filters])
 end
 
-end
 :ok = Ecto.Migrator.up(TestRepo, 0, Ecto.Integration.Migration, log: false)
 Ecto.Adapters.SQL.Sandbox.mode(TestRepo, :manual)
 Process.flag(:trap_exit, true)
