@@ -166,6 +166,13 @@ defmodule Ecto.Adapters.MySQLTest do
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 LIMIT 3 OFFSET 5}
   end
 
+  test "aggregate filters" do
+    query = Schema |> select([r], count(r.x) |> filter(r.x > 10)) |> normalize
+    assert_raise Ecto.QueryError, fn ->
+      all(query)
+    end
+  end
+
   test "lock" do
     query = Schema |> lock("LOCK IN SHARE MODE") |> select([], true) |> normalize
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 LOCK IN SHARE MODE}

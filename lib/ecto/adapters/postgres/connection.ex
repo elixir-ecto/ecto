@@ -484,7 +484,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp expr({:filter, _, [agg, filters]}, sources, query) do
       aggregate = expr(agg, sources, query)
-      [aggregate, " FILTER(WHERE ", intersperse_map(filters, " AND ", &expr(&1, sources, query)), ?)]
+      [aggregate, " FILTER (WHERE ", intersperse_map(filters, " AND ", &expr(&1, sources, query)), ?)]
     end
 
     defp expr({:{}, _, elems}, sources, query) do
