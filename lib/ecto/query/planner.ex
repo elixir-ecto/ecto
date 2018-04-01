@@ -957,6 +957,29 @@ defmodule Ecto.Query.Planner do
     {type, [expr | fields], from}
   end
 
+  # defp collect_fields({:coalesce, _, values} = expr, fields, from, query, take) do
+  #   coalesce_type =
+  #     Enum.find_value(values, :any, fn value ->
+  #       case collect_fields(value, fields, from, query, take) do
+  #         {{:value, :any}, _, _} ->
+  #           false
+  #         {:any, _, _} ->
+  #           false
+  #         {{:value, type}, _, _} ->
+  #           type
+  #         {value, _, _} ->
+  #           value_type = value_type(value)
+  #           if value_type != :any do
+  #             value_type
+  #           else
+  #             false
+  #           end
+  #       end
+  #     end)
+
+  #   {{:value, coalesce_type}, [expr | fields], from}
+  # end
+
   defp collect_fields({{:., _, [{:&, _, [ix]}, field]}, _, []} = expr,
                       fields, from, %{select: select} = query, _take) do
     type = source_type!(:select, query, select, ix, field)
@@ -1069,6 +1092,13 @@ defmodule Ecto.Query.Planner do
   defp collect_assocs(exprs, fields, _query, _tag, _take, []) do
     {exprs, fields}
   end
+
+  # If they
+  defp value_type(literal) when is_integer(literal), do: :integer
+  defp value_type(literal) when is_float(literal), do: :float
+  defp value_type(literal) when is_binary(literal), do: :binary
+  defp value_type(literal) when is_bitstring(literal), do: :string
+  defp value_type(_), do: :any
 
   defp fetch_assoc(tag, take, assoc) do
     case Access.fetch(take, assoc) do

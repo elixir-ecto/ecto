@@ -158,6 +158,12 @@ defmodule Ecto.Query.API do
   """
   def count(value, :distinct), do: doc! [value, :distinct]
 
+
+  @doc """
+  Takes the first value provided that is non-null.
+  """
+  def coalesce(value, expr), do: doc! [value, expr]
+
   @doc """
   Applies the given expression as a FILTER clause against an
   aggregate. This is currently only supported by Postgres.

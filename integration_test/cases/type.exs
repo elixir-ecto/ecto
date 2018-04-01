@@ -66,6 +66,23 @@ defmodule Ecto.Integration.TypeTest do
     datetime = ~N[2014-01-16 20:26:51]
     TestRepo.insert!(%Post{inserted_at: datetime})
     query = from p in Post, select: filter(max(p.inserted_at), p.public == ^true)
+  end
+
+  test "coalesce type" do
+    TestRepo.insert!(%Article{published_at: nil})
+    datetime = ~N[2014-01-16 20:26:51]
+    query = from a in Article, select: coalesce(a.published_at, ^datetime)
+    assert [^datetime] = TestRepo.all(query)
+
+    query = from a in "articles", select: coalesce(a.published_at, ^datetime)
+    assert [^datetime] = TestRepo.all(query)
+  end
+
+  test "coalesce type with unknown base type" do
+    TestRepo.insert!(%Article{published_at: nil})
+    datetime = ~N[2014-01-16 20:26:51]
+
+    query = from a in "articles", select: coalesce(a.published_at, ^datetime)
     assert [^datetime] = TestRepo.all(query)
   end
 
