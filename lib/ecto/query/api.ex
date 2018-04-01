@@ -161,9 +161,8 @@ defmodule Ecto.Query.API do
   @doc """
   Applies the given expression as a FILTER clause against an
   aggregate. This is currently only supported by Postgres.
-  Any number of filters may be provided.
 
-      from p in Payment, select: filter(avg(p.value), p.value > 0, p.value < 100)
+      from p in Payment, select: filter(avg(p.value), p.value > 0 and p.value < 100)
 
       from p in Payment, select: avg(p.value) |> filter(p.value < 0)
   """
