@@ -251,7 +251,7 @@ defmodule Ecto.Query.Builder do
   def escape({:filter, _, [aggregate]}, type, params_acc, vars, env) do
     escape(aggregate, type, params_acc, vars, env)
   end
-  def escape({:filter, _, [aggregate | filter_expr]}, type, params_acc, vars, env) do
+  def escape({:filter, _, [aggregate, filter_expr]}, type, params_acc, vars, env) do
     {aggregate, params_acc} = escape(aggregate, type, params_acc, vars, env)
     {filter_expr, params_acc} = escape(filter_expr, type, params_acc, vars, env)
     {{:{}, [], [:filter, [], [aggregate, filter_expr]]}, params_acc}

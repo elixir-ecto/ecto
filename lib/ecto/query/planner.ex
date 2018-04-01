@@ -938,15 +938,23 @@ defmodule Ecto.Query.Planner do
 
   # Expression handling
 
-  defp collect_fields({agg, _, [field | _]} = expr, fields, from, query, _take)
+  defp collect_fields({agg, _, [{{:., _, [{:&, _, [ix]}, field]}, _, []} | _]} = expr,
+                      fields, from, %{select: select} = query, _take)
        when agg in ~w(count avg min max sum)a do
-    {{:value, aggregate_type(agg, field, query)}, [expr | fields], from}
+    type =
+      # TODO: Support the :number type
+      case agg do
+        :count -> :integer
+        :avg -> :any
+        :sum -> :any
+        _ -> source_type!(:select, query, select, ix, field)
+      end
+    {{:value, type}, [expr | fields], from}
   end
 
-  defp collect_fields({:filter, _, [{agg, _, [field | _]}, _]} = expr, fields, from, query, _take)
-        when agg in ~w(count avg min max sum)a do
-    type = aggregate_type(agg, field, query)
-    {{:value, type}, [expr | fields], from}
+  defp collect_fields({:filter, _, [call, _]} = expr, fields, from, query, take) do
+    {type, _, _} = collect_fields(call, fields, from, query, take)
+    {type, [expr | fields], from}
   end
 
   defp collect_fields({{:., _, [{:&, _, [ix]}, field]}, _, []} = expr,
@@ -1024,14 +1032,6 @@ defmodule Ecto.Query.Planner do
 
   defp collect_fields(expr, fields, from, _query, _take) do
     {{:value, :any}, [expr | fields], from}
-  end
-
-  # TODO: Support the :number type
-  defp aggregate_type(:count, _, _), do: :integer
-  defp aggregate_type(:avg, _, _), do: :any
-  defp aggregate_type(:sum, _, _), do: :any
-  defp aggregate_type(_, {{:., _, [{:&, _, [ix]}, field]}, _, []}, %{select: select} = query) do
-    source_type!(:select, query, select, ix, field)
   end
 
   defp collect_kv([{key, value} | elems], fields, from, query, take, acc) do
