@@ -257,10 +257,6 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:filter, [], [aggregate, filter_expr]]}, params_acc}
   end
 
-  def escape({:coalesce, _, values}, type, params_acc, vars, env) do
-    {arg, params_acc} = escape(values, type, params_acc, vars, env)
-    {{:{}, [], [:coalesce, [], arg]}, params_acc}
-  end
   def escape({:coalesce, _, [left, right]}, type, params_acc, vars, env) do
     {left, params_acc} = escape(left, type, params_acc, vars, env)
     {right, params_acc} = escape(right, type, params_acc, vars, env)
