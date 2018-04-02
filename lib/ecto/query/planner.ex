@@ -952,35 +952,11 @@ defmodule Ecto.Query.Planner do
     {{:value, type}, [expr | fields], from}
   end
 
-<<<<<<< HEAD
   defp collect_fields({:filter, _, [call, _]} = expr, fields, from, query, take) do
     {type, _, _} = collect_fields(call, fields, from, query, take)
     {type, [expr | fields], from}
   end
 
-  # defp collect_fields({:coalesce, _, values} = expr, fields, from, query, take) do
-  #   coalesce_type =
-  #     Enum.find_value(values, :any, fn value ->
-  #       case collect_fields(value, fields, from, query, take) do
-  #         {{:value, :any}, _, _} ->
-  #           false
-  #         {:any, _, _} ->
-  #           false
-  #         {{:value, type}, _, _} ->
-  #           type
-  #         {value, _, _} ->
-  #           value_type = value_type(value)
-  #           if value_type != :any do
-  #             value_type
-  #           else
-  #             false
-  #           end
-  #       end
-  #     end)
-
-  #   {{:value, coalesce_type}, [expr | fields], from}
-  # end
-=======
   defp collect_fields({:coalesce, _, [left, right]} = expr, fields, from, query, take) do
     {left_type, _, _} = collect_fields(left, fields, from, query, take)
     {right_type, _, _} = collect_fields(right, fields, from, query, take)
@@ -994,7 +970,6 @@ defmodule Ecto.Query.Planner do
 
     {type, [expr | fields], from}
   end
->>>>>>> added testing, and simplified building/planning
 
   defp collect_fields({{:., _, [{:&, _, [ix]}, field]}, _, []} = expr,
                       fields, from, %{select: select} = query, _take) do
