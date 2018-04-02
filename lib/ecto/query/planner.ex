@@ -952,6 +952,11 @@ defmodule Ecto.Query.Planner do
     {{:value, type}, [expr | fields], from}
   end
 
+  defp collect_fields({:filter, _, [call, _]} = expr, fields, from, query, take) do
+    {type, _, _} = collect_fields(call, fields, from, query, take)
+    {type, [expr | fields], from}
+  end
+
   defp collect_fields({{:., _, [{:&, _, [ix]}, field]}, _, []} = expr,
                       fields, from, %{select: select} = query, _take) do
     type = source_type!(:select, query, select, ix, field)

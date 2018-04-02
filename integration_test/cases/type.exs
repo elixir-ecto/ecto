@@ -61,6 +61,14 @@ defmodule Ecto.Integration.TypeTest do
     assert [^datetime] = TestRepo.all(query)
   end
 
+  @tag :aggregate_filters
+  test "aggregate filter types" do
+    datetime = ~N[2014-01-16 20:26:51]
+    TestRepo.insert!(%Post{inserted_at: datetime})
+    query = from p in Post, select: filter(max(p.inserted_at), p.public == ^true)
+    assert [^datetime] = TestRepo.all(query)
+  end
+
   test "tagged types" do
     TestRepo.insert!(%Post{})
 

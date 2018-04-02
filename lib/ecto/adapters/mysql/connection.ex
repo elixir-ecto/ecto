@@ -411,6 +411,10 @@ if Code.ensure_loaded?(Mariaex) do
       ["NOT (", expr(expr, sources, query), ?)]
     end
 
+    defp expr({:filter, _, _}, _sources, query) do
+      error!(query, "MySQL adapter does not support aggregate filters")
+    end
+
     defp expr(%Ecto.SubQuery{query: query}, _sources, _query) do
       all(query)
     end
