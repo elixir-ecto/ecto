@@ -70,7 +70,7 @@ defmodule Ecto.Integration.TypeTest do
 
   test "coalesce type" do
     TestRepo.insert!(%Post{text: nil})
-    text = <<0,1>>
+    text = <<0, 1>>
     query = from p in Post, select: coalesce(p.text, ^text)
     assert [^text] = TestRepo.all(query)
   end
