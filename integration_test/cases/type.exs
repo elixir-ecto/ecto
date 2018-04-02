@@ -10,7 +10,7 @@ defmodule Ecto.Integration.TypeTest do
   test "primitive types" do
     integer  = 1
     float    = 0.1
-    text     = <<0,1>>
+    text     = <<0, 1>>
     uuid     = "00010203-0405-4607-8809-0a0b0c0d0e0f"
     datetime = ~N[2014-01-16 20:26:51]
 

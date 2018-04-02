@@ -158,7 +158,6 @@ defmodule Ecto.Query.API do
   """
   def count(value, :distinct), do: doc! [value, :distinct]
 
-
   @doc """
   Takes whichever value is not null, or null if they both are.
 
