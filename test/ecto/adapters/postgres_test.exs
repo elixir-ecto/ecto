@@ -156,8 +156,8 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "coalesce" do
-    query = Schema |> select([s], coalesce(s.x, 5)) |> nromalize
-    assert all(query) == ~s{SELECT coalesce(s0.x, 5) FROM `schema` AS s0}
+    query = Schema |> select([s], coalesce(s.x, 5)) |> normalize
+    assert all(query) == ~s{SELECT coalesce(s0."x", 5) FROM "schema" AS s0}
   end
 
   test "where" do
