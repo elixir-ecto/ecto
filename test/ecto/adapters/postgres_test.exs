@@ -155,6 +155,11 @@ defmodule Ecto.Adapters.PostgresTest do
     assert all(query) == ~s{SELECT DISTINCT ON (s0."x") s0."x" FROM "schema" AS s0 ORDER BY s0."x" DESC, s0."y"}
   end
 
+  test "coalesce" do
+    query = Schema |> select([s], coalesce(s.x, 5)) |> nromalize
+    assert all(query) == ~s{SELECT coalesce(s0.x, 5) FROM `schema` AS s0}
+  end
+
   test "where" do
     query = Schema |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> normalize
     assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 WHERE (s0."x" = 42) AND (s0."y" != 43)}

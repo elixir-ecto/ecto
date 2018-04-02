@@ -3,7 +3,7 @@ Code.require_file "../support/types.exs", __DIR__
 defmodule Ecto.Integration.TypeTest do
   use Ecto.Integration.Case, async: Application.get_env(:ecto, :async_integration_tests, true)
 
-  alias Ecto.Integration.{Custom, Item, Order, Post, User, Tag}
+  alias Ecto.Integration.{Custom, Item, Order, Post, User, Tag, Article}
   alias Ecto.Integration.TestRepo
   import Ecto.Query
 
@@ -70,7 +70,7 @@ defmodule Ecto.Integration.TypeTest do
 
   test "coalesce type" do
     TestRepo.insert!(%Article{published_at: nil})
-    datetime = ~N[2014-01-16 20:26:51]
+    datetime = ~N[2014-01-16 20:26:51.000000]
     query = from a in Article, select: coalesce(a.published_at, ^datetime)
     assert [^datetime] = TestRepo.all(query)
 
@@ -80,7 +80,7 @@ defmodule Ecto.Integration.TypeTest do
 
   test "coalesce type with unknown base type" do
     TestRepo.insert!(%Article{published_at: nil})
-    datetime = ~N[2014-01-16 20:26:51]
+    datetime = ~N[2014-01-16 20:26:51.000000]
 
     query = from a in "articles", select: coalesce(a.published_at, ^datetime)
     assert [^datetime] = TestRepo.all(query)

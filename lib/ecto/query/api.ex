@@ -160,7 +160,13 @@ defmodule Ecto.Query.API do
 
 
   @doc """
-  Takes the first value provided that is non-null.
+  Takes whichever value is not null, or null if they both are.
+
+  In SQL, COALESCE takes any number of arguments, but in ecto
+  it only takes two, so it must be chained to achieve the same
+  effect.
+
+      from p in Payment, select: p.value |> coalesce(p.backup_value) |> coalesce(0)
   """
   def coalesce(value, expr), do: doc! [value, expr]
 

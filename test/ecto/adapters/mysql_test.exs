@@ -178,6 +178,11 @@ defmodule Ecto.Adapters.MySQLTest do
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 LOCK IN SHARE MODE}
   end
 
+  test "coalesce" do
+    query = Schema |> select([s], coalesce(s.x, 5)) |> nromalize
+    assert all(query) == ~s{SELECT coalesce(s0.x, 5) FROM `schema` AS s0}
+  end
+
   test "string escape" do
     query = "schema" |> where(foo: "'\\  ") |> select([], true) |> normalize
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 WHERE (s0.`foo` = '''\\\\  ')}

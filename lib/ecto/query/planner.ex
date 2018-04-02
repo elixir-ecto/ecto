@@ -952,6 +952,7 @@ defmodule Ecto.Query.Planner do
     {{:value, type}, [expr | fields], from}
   end
 
+<<<<<<< HEAD
   defp collect_fields({:filter, _, [call, _]} = expr, fields, from, query, take) do
     {type, _, _} = collect_fields(call, fields, from, query, take)
     {type, [expr | fields], from}
@@ -979,6 +980,21 @@ defmodule Ecto.Query.Planner do
 
   #   {{:value, coalesce_type}, [expr | fields], from}
   # end
+=======
+  defp collect_fields({:coalesce, _, [left, right]} = expr, fields, from, query, take) do
+    {left_type, _, _} = collect_fields(left, fields, from, query, take)
+    {right_type, _, _} = collect_fields(right, fields, from, query, take)
+
+    type =
+      case {left_type, right_type} do
+        {_, {:value, type}} when type != :any -> {:value, type}
+        {{:value, type}, _} when type != :any -> {:value, type}
+        _ -> {:value, :any}
+      end
+
+    {type, [expr | fields], from}
+  end
+>>>>>>> added testing, and simplified building/planning
 
   defp collect_fields({{:., _, [{:&, _, [ix]}, field]}, _, []} = expr,
                       fields, from, %{select: select} = query, _take) do
@@ -1092,13 +1108,6 @@ defmodule Ecto.Query.Planner do
   defp collect_assocs(exprs, fields, _query, _tag, _take, []) do
     {exprs, fields}
   end
-
-  # If they
-  defp value_type(literal) when is_integer(literal), do: :integer
-  defp value_type(literal) when is_float(literal), do: :float
-  defp value_type(literal) when is_binary(literal), do: :binary
-  defp value_type(literal) when is_bitstring(literal), do: :string
-  defp value_type(_), do: :any
 
   defp fetch_assoc(tag, take, assoc) do
     case Access.fetch(take, assoc) do
