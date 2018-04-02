@@ -957,6 +957,20 @@ defmodule Ecto.Query.Planner do
     {type, [expr | fields], from}
   end
 
+  defp collect_fields({:coalesce, _, [left, right]} = expr, fields, from, query, take) do
+    {left_type, _, _} = collect_fields(left, fields, from, query, take)
+    {right_type, _, _} = collect_fields(right, fields, from, query, take)
+
+    type =
+      case {left_type, right_type} do
+        {_, {:value, type}} when type != :any -> {:value, type}
+        {{:value, type}, _} when type != :any -> {:value, type}
+        _ -> {:value, :any}
+      end
+
+    {type, [expr | fields], from}
+  end
+
   defp collect_fields({{:., _, [{:&, _, [ix]}, field]}, _, []} = expr,
                       fields, from, %{select: select} = query, _take) do
     type = source_type!(:select, query, select, ix, field)

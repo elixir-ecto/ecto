@@ -159,6 +159,17 @@ defmodule Ecto.Query.API do
   def count(value, :distinct), do: doc! [value, :distinct]
 
   @doc """
+  Takes whichever value is not null, or null if they both are.
+
+  In SQL, COALESCE takes any number of arguments, but in ecto
+  it only takes two, so it must be chained to achieve the same
+  effect.
+
+      from p in Payment, select: p.value |> coalesce(p.backup_value) |> coalesce(0)
+  """
+  def coalesce(value, expr), do: doc! [value, expr]
+
+  @doc """
   Applies the given expression as a FILTER clause against an
   aggregate. This is currently only supported by Postgres.
 

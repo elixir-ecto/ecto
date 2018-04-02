@@ -10,7 +10,7 @@ defmodule Ecto.Integration.TypeTest do
   test "primitive types" do
     integer  = 1
     float    = 0.1
-    text     = <<0,1>>
+    text     = <<0, 1>>
     uuid     = "00010203-0405-4607-8809-0a0b0c0d0e0f"
     datetime = ~N[2014-01-16 20:26:51]
 
@@ -67,6 +67,21 @@ defmodule Ecto.Integration.TypeTest do
     TestRepo.insert!(%Post{inserted_at: datetime})
     query = from p in Post, select: filter(max(p.inserted_at), p.public == ^true)
     assert [^datetime] = TestRepo.all(query)
+  end
+
+  test "coalesce type when default" do
+    TestRepo.insert!(%Post{text: nil})
+    text = <<0, 1>>
+    query = from p in Post, select: coalesce(p.text, ^text)
+    assert [^text] = TestRepo.all(query)
+  end
+
+  test "coalesce type when value" do
+    text = <<0, 2>>
+    default_text = <<0, 1>>
+    TestRepo.insert!(%Post{text: text})
+    query = from p in Post, select: coalesce(p.text, ^default_text)
+    assert [^text] = TestRepo.all(query)
   end
 
   test "tagged types" do
