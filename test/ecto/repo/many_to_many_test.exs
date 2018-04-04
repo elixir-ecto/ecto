@@ -70,7 +70,7 @@ defmodule Ecto.Repo.ManyToManyTest do
       |> Ecto.Changeset.put_assoc(:assocs, [sample])
     schema = TestRepo.insert!(changeset)
     [assoc] = schema.assocs
-    assert assoc.__meta__.source == "prefix"
+    assert assoc.__meta__.prefix == "prefix"
   end
 
   test "handles assocs on insert with schema" do

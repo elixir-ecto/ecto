@@ -351,7 +351,7 @@ defmodule Ecto.Schema do
 
     ## Prefix
 
-    Tracks the struct prefix in the data storage.
+    Tracks the source prefix in the data storage.
 
     ## Context
 
