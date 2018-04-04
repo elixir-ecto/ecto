@@ -194,7 +194,7 @@ defmodule Ecto.Changeset.BelongsToTest do
 
     profile = changeset.changes.profile
     assert profile.data.name == "default"
-    assert profile.data.__meta__.source == {nil, "authors_profiles"}
+    assert profile.data.__meta__.source == "authors_profiles"
     assert profile.changes == %{}
     assert profile.errors  == []
     assert profile.action  == :insert

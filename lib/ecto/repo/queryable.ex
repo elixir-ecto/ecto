@@ -264,8 +264,8 @@ defmodule Ecto.Repo.Queryable do
     {fields, row} = process_kv(args, row, from, prefix, adapter)
 
     case Map.merge(struct.__struct__(), Map.new(fields)) do
-      %{__meta__: %Ecto.Schema.Metadata{source: {_, source}} = metadata} = struct ->
-        metadata = %{metadata | state: :loaded, source: {prefix, source}}
+      %{__meta__: %Ecto.Schema.Metadata{} = metadata} = struct ->
+        metadata = %{metadata | state: :loaded, prefix: prefix}
         {Map.put(struct, :__meta__, metadata), row}
       map ->
         {map, row}

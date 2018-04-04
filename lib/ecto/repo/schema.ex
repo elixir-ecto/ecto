@@ -62,7 +62,7 @@ defmodule Ecto.Repo.Schema do
   defp postprocess(rows, fields, _adapter, nil, _metadata) do
     for row <- rows, do: Map.new(Enum.zip(fields, row))
   end
-  defp postprocess(rows, types, adapter, schema, %{source: {prefix, source}}) do
+  defp postprocess(rows, types, adapter, schema, %{source: source, prefix: prefix}) do
     struct = schema.__struct__()
     for row <- rows do
       Ecto.Schema.__safe_load__(struct, types, row, prefix, source,
@@ -465,10 +465,11 @@ defmodule Ecto.Repo.Schema do
       autogenerate_id: case autogen_id do nil -> nil; {_, source, type} -> {source, type} end,
       context: context,
       schema: schema,
-      source: {Keyword.get(opts, :prefix, prefix), source}
+      source: source,
+      prefix: Keyword.get(opts, :prefix, prefix)
     }
   end
-  defp metadata(%{__struct__: schema, __meta__: %{context: context, source: {prefix, source}}},
+  defp metadata(%{__struct__: schema, __meta__: %{context: context, source: source, prefix: prefix}},
                 autogen_id, opts) do
     metadata(schema, prefix, source, autogen_id, context, opts)
   end
@@ -489,8 +490,9 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp on_conflict(on_conflict, conflict_target,
-                   %{source: {prefix, source}, schema: schema}, header, counter_fun, adapter) do
+  defp on_conflict(on_conflict, conflict_target, metadata, header, counter_fun, adapter) do
+    %{source: source, schema: schema, prefix: prefix} = metadata
+
     case on_conflict do
       :raise when conflict_target == [] ->
         {:raise, [], []}
@@ -620,7 +622,6 @@ defmodule Ecto.Repo.Schema do
 
   defp load_changes(changeset, state, types, values, embeds, autogen, adapter, metadata) do
     %{changes: changes} = changeset
-    %{source: source} = metadata
 
     # It is ok to use types from changeset because we have
     # already filtered the results to be only about fields.
@@ -629,7 +630,7 @@ defmodule Ecto.Repo.Schema do
       |> Map.merge(changes)
       |> Map.merge(embeds)
       |> merge_autogen(autogen)
-      |> apply_metadata(state, source)
+      |> apply_metadata(state, metadata)
       |> load_each(values, types, adapter)
     Map.put(changeset, :data, data)
   end
@@ -638,8 +639,8 @@ defmodule Ecto.Repo.Schema do
     Enum.reduce(autogen, data, fn {k, v}, acc -> %{acc | k => v} end)
   end
 
-  defp apply_metadata(%{__meta__: meta} = data, state, source) do
-    %{data | __meta__: %{meta | state: state, source: source}}
+  defp apply_metadata(%{__meta__: meta} = data, state, %{source: source, prefix: prefix}) do
+    %{data | __meta__: %{meta | state: state, source: source, prefix: prefix}}
   end
 
   defp load_each(struct, [{_, value} | kv], [{key, type} | types], adapter) do

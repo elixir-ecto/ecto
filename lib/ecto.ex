@@ -543,9 +543,9 @@ defmodule Ecto do
   def get_meta(struct, :state),
     do: struct.__meta__.state
   def get_meta(struct, :source),
-    do: struct.__meta__.source |> elem(1)
+    do: struct.__meta__.source
   def get_meta(struct, :prefix),
-    do: struct.__meta__.source |> elem(0)
+    do: struct.__meta__.prefix
 
   @doc """
   Returns a new struct with updated metadata.
@@ -574,12 +574,12 @@ defmodule Ecto do
     end
   end
 
-  defp update_meta([{:source, source} | t], %{source: {prefix, _}} = meta) do
-    update_meta t, %{meta | source: {prefix, source}}
+  defp update_meta([{:source, source} | t], meta) do
+    update_meta t, %{meta | source: source}
   end
 
-  defp update_meta([{:prefix, prefix} | t], %{source: {_, source}} = meta) do
-    update_meta t, %{meta | source: {prefix, source}}
+  defp update_meta([{:prefix, prefix} | t], meta) do
+    update_meta t, %{meta | prefix: prefix}
   end
 
   defp update_meta([{:context, context} | t], meta) do

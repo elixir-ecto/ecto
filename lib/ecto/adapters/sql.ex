@@ -74,7 +74,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def insert_all(repo, %{source: {prefix, source}}, header, rows,
+      def insert_all(repo, %{source: source, prefix: prefix}, header, rows,
                      {_, conflict_params, _} = on_conflict, returning, opts) do
         {rows, params} = Ecto.Adapters.SQL.unzip_inserts(header, rows)
         sql = @conn.insert(prefix, source, header, rows, on_conflict, returning)
@@ -84,7 +84,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def insert(repo, %{source: {prefix, source}}, params,
+      def insert(repo, %{source: source, prefix: prefix}, params,
                  {kind, conflict_params, _} = on_conflict, returning, opts) do
         {fields, values} = :lists.unzip(params)
         sql = @conn.insert(prefix, source, fields, [fields], on_conflict, returning)
@@ -92,7 +92,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def update(repo, %{source: {prefix, source}}, fields, params, returning, opts) do
+      def update(repo, %{source: source, prefix: prefix}, fields, params, returning, opts) do
         {fields, field_values} = :lists.unzip(fields)
         filter_values = params |> Keyword.values() |> Enum.reject(&is_nil(&1))
         sql = @conn.update(prefix, source, fields, params, returning)
@@ -100,7 +100,7 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def delete(repo, %{source: {prefix, source}}, params, opts) do
+      def delete(repo, %{source: source, prefix: prefix}, params, opts) do
         filter_values = params |> Keyword.values() |> Enum.reject(&is_nil(&1))
         sql = @conn.delete(prefix, source, params, [])
         Ecto.Adapters.SQL.struct(repo, @conn, sql, {:delete, source, params}, filter_values, :raise, [], opts)

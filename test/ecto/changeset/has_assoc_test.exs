@@ -239,7 +239,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert (changeset.types.profile |> elem(1)).on_cast == &Profile.optional_changeset/2
     profile = changeset.changes.profile
     assert profile.data.name == "default"
-    assert profile.data.__meta__.source == {nil, "users_profiles"}
+    assert profile.data.__meta__.source == "users_profiles"
     assert profile.changes == %{}
     assert profile.errors  == []
     assert profile.action  == :insert

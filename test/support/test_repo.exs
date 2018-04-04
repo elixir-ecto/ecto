@@ -64,30 +64,43 @@ defmodule Ecto.TestAdapter do
 
   ## Schema
 
-  def insert_all(_repo, %{source: source}, _header, rows, _on_conflict, _returning, _opts) do
-    send test_process(), {:insert_all, source, rows}
+  def insert_all(_repo, meta, _header, rows, _on_conflict, _returning, _opts) do
+    %{source: source, prefix: prefix} = meta
+    send test_process(), {:insert_all, {prefix, source}, rows}
     {1, nil}
   end
 
-  def insert(_repo, %{source: {nil, "schema_migrations"}}, val, _, _, _) do
+  def insert(_repo, %{source: "schema_migrations"}, val, _, _, _) do
     version = Keyword.fetch!(val, :version)
     Process.put(:migrated_versions, [version|migrated_versions()])
     {:ok, []}
   end
 
-  def insert(_repo, %{context: nil, source: source}, _fields, _on_conflict, return, _opts),
-    do: send(test_process(), {:insert, source}) && {:ok, Enum.zip(return, 1..length(return))}
-  def insert(_repo, %{context: {:invalid, _} = res}, _fields, _on_conflict, _return, _opts),
-    do: res
+  def insert(_repo, %{context: nil} = meta, _fields, _on_conflict, return, _opts) do
+    %{source: source, prefix: prefix} = meta
+    send(test_process(), {:insert, {prefix, source}})
+    {:ok, Enum.zip(return, 1..length(return))}
+  end
+
+  def insert(_repo, %{context: {:invalid, _} = res}, _fields, _on_conflict, _return, _opts) do
+    res
+  end
 
   # Notice the list of changes is never empty.
-  def update(_repo, %{context: nil, source: source}, [_|_], _filters, return, _opts),
-    do: send(test_process(), {:update, source}) && {:ok, Enum.zip(return, 1..length(return))}
-  def update(_repo, %{context: {:invalid, _} = res}, [_|_], _filters, _return, _opts),
-    do: res
+  def update(_repo, %{context: nil, source: source, prefix: prefix}, [_|_], _filters, return, _opts) do
+    send(test_process(), {:update, {prefix, source}})
+    {:ok, Enum.zip(return, 1..length(return))}
+  end
 
-  def delete(_repo, meta, _filter, _opts),
-    do: send(test_process(), {:delete, meta.source}) && {:ok, []}
+  def update(_repo, %{context: {:invalid, _} = res}, [_|_], _filters, _return, _opts) do
+    res
+  end
+
+  def delete(_repo, meta, _filter, _opts) do
+    %{source: source, prefix: prefix} = meta
+    send(test_process(), {:delete, {prefix, source}})
+    {:ok, []}
+  end
 
   ## Transactions
 
