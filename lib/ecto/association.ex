@@ -308,7 +308,7 @@ defmodule Ecto.Association do
   @doc false
   def update_parent_prefix(changeset, parent) do
     case parent do
-      %{__meta__: %{source: {prefix, _}}} ->
+      %{__meta__: %{prefix: prefix}} ->
         update_in changeset.data, &Ecto.put_meta(&1, prefix: prefix)
       _ ->
         changeset
@@ -1030,9 +1030,7 @@ defmodule Ecto.Association.ManyToMany do
         where: field(j, ^join_owner_key) == ^owner_value and
                field(j, ^join_related_key) == ^related_value
 
-    {prefix, _} = owner.__meta__.source
-    query = Map.put(query, :prefix, prefix)
-
+    query = Map.put(query, :prefix, owner.__meta__.prefix)
     repo.delete_all query, opts
     {:ok, nil}
   end

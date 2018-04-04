@@ -624,16 +624,16 @@ defmodule Ecto.AssociationTest do
 
   test "build/2 with custom source" do
     email = build_assoc(%Author{id: 1}, :emails)
-    assert email.__meta__.source == {nil, "users_emails"}
+    assert email.__meta__.source == "users_emails"
 
     profile = build_assoc(%Author{id: 1}, :profile)
-    assert profile.__meta__.source == {nil, "users_profiles"}
+    assert profile.__meta__.source == "users_profiles"
 
     profile = build_assoc(%Email{id: 1}, :author)
-    assert profile.__meta__.source == {nil, "post_authors"}
+    assert profile.__meta__.source == "post_authors"
 
     permalink = build_assoc(%Author{id: 1}, :permalinks)
-    assert permalink.__meta__.source == {nil, "custom_permalinks"}
+    assert permalink.__meta__.source == "custom_permalinks"
   end
 
   test "build/3 with custom attributes" do
@@ -667,9 +667,9 @@ defmodule Ecto.AssociationTest do
     assert build_assoc(%Summary{id: 1}, :post, title: "Hello").title == "Hello"
 
     # Should not allow overriding of __meta__
-    meta = %{__meta__: %{source: {nil, "posts"}}}
+    meta = %{__meta__: %{source: "posts"}}
     comment = build_assoc(%Post{id: 1}, :comments, meta)
-    assert comment.__meta__.source == {nil, "comments"}
+    assert comment.__meta__.source == "comments"
   end
 
   test "assoc_loaded?/1 sets association to loaded/not loaded" do

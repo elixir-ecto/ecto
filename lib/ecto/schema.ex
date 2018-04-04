@@ -346,12 +346,12 @@ defmodule Ecto.Schema do
 
     ## Source
 
-    The `:source` field is a tuple tracking the database source (table or
-    collection) where the struct is or should be persisted. It is represented
-    as a tuple consisting of two fields:
+    The `:source` tracks the (table or collection) where the struct is or should
+    be persisted to.
 
-      * source - tracking the table or collection name.
-      * prefix - tracking the ecto prefix of the table or collection.
+    ## Prefix
+
+    Tracks the source prefix in the data storage.
 
     ## Context
 
@@ -363,19 +363,23 @@ defmodule Ecto.Schema do
 
     The `:schema` field refers the module name for the schema this metadata belongs to.
     """
-    defstruct [:state, :source, :context, :schema]
+    defstruct [:state, :source, :context, :schema, :prefix]
 
     @type state :: :built | :loaded | :deleted
-    @type source :: {Ecto.Schema.prefix, Ecto.Schema.source}
-    @type context :: any
-    @type schema :: module
-    @type t :: %__MODULE__{state: state, source: source, context: context, schema: schema}
+
+    @type t :: %__MODULE__{
+      context: any,
+      prefix: Ecto.Schema.prefix,
+      schema: module,
+      source: Ecto.Schema.source,
+      state: state,
+    }
 
     defimpl Inspect do
       import Inspect.Algebra
 
       def inspect(metadata, opts) do
-        %{source: {prefix, source}, state: state, context: context} = metadata
+        %{source: source, prefix: prefix, state: state, context: context} = metadata
         entries =
           for entry <- [state, prefix, source, context],
               entry != nil,
@@ -455,7 +459,7 @@ defmodule Ecto.Schema do
           raise ArgumentError, "schema source must be a string, got: #{inspect source}"
         end
 
-        meta = %Metadata{state: :built, source: {prefix, source}, schema: __MODULE__}
+        meta = %Metadata{state: :built, source: source, prefix: prefix, schema: __MODULE__}
         Module.put_attribute(__MODULE__, :struct_fields, {:__meta__, meta})
       end
 
@@ -1649,7 +1653,7 @@ defmodule Ecto.Schema do
 
     case Map.merge(struct, Map.new(zipped)) do
       %{__meta__: %Metadata{} = metadata} = struct ->
-        metadata = %{metadata | state: :loaded, source: {prefix, source}}
+        metadata = %{metadata | state: :loaded, source: source, prefix: prefix}
         Map.put(struct, :__meta__, metadata)
       map ->
         map

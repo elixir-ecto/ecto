@@ -50,7 +50,7 @@ defmodule Ecto.Repo.BelongsToTest do
     assert assoc.inserted_at
   end
 
-  test "handles assocs on insert preserving parent schema_prefix" do
+  test "handles assocs on insert preserving parent schema prefix" do
     sample = %MyAssoc{x: "xyz"}
 
     changeset =
@@ -60,9 +60,7 @@ defmodule Ecto.Repo.BelongsToTest do
       |> Ecto.Changeset.put_assoc(:assoc, sample)
     schema = TestRepo.insert!(changeset)
     assoc = schema.assoc
-
-    {schema_prefix, _} = assoc.__meta__.source
-    assert schema_prefix == "prefix"
+    assert assoc.__meta__.prefix == "prefix"
   end
 
   test "handles assocs from struct on insert" do
@@ -180,7 +178,7 @@ defmodule Ecto.Repo.BelongsToTest do
     refute_received {:rollback, _}
   end
 
-  test "handles valid nested assocs on insert preserving parent schema_prefix" do
+  test "handles valid nested assocs on insert preserving parent schema prefix" do
     assoc =
       %MyAssoc{x: "xyz"}
       |> Ecto.Changeset.change
@@ -192,8 +190,7 @@ defmodule Ecto.Repo.BelongsToTest do
       |> Ecto.Changeset.put_assoc(:assoc, assoc)
     schema = TestRepo.insert!(changeset)
 
-    {schema_prefix, _} = schema.assoc.sub_assoc.__meta__.source
-    assert schema_prefix == "prefix"
+    assert schema.assoc.sub_assoc.__meta__.prefix == "prefix"
   end
 
   test "handles invalid nested assocs on insert" do
@@ -245,7 +242,7 @@ defmodule Ecto.Repo.BelongsToTest do
     assert assoc.updated_at
   end
 
-    test "inserting assocs on update preserving parent schema_prefix" do
+    test "inserting assocs on update preserving parent schema prefix" do
     sample = %MyAssoc{x: "xyz"}
 
     changeset =
@@ -255,9 +252,7 @@ defmodule Ecto.Repo.BelongsToTest do
       |> Ecto.Changeset.put_assoc(:assoc, sample)
     schema = TestRepo.update!(changeset)
     assoc = schema.assoc
-
-    {schema_prefix, _} = assoc.__meta__.source
-    assert schema_prefix == "prefix"
+    assert assoc.__meta__.prefix == "prefix"
   end
 
   test "replacing assocs on update (on_replace: :delete)" do
@@ -396,7 +391,7 @@ defmodule Ecto.Repo.BelongsToTest do
     assert schema.assoc == nil
   end
 
-  test "removing assocs on update preserving parent schema_prefix" do
+  test "removing assocs on update preserving parent schema prefix" do
     assoc = %MyAssoc{x: "xyz", id: 1} |> Ecto.put_meta(state: :loaded)
 
     changeset =

@@ -70,15 +70,14 @@ defmodule Ecto.SchemaTest do
 
   test "reads and writes metadata" do
     schema = %Schema{}
-    assert schema.__meta__.source == {nil, "my schema"}
+    assert schema.__meta__.source == "my schema"
+    assert schema.__meta__.prefix == nil
     schema = Ecto.put_meta(schema, source: "new schema")
-    assert schema.__meta__.source == {nil, "new schema"}
+    assert schema.__meta__.source == "new schema"
     schema = Ecto.put_meta(schema, prefix: "prefix")
-    assert schema.__meta__.source == {"prefix", "new schema"}
-    schema = Ecto.put_meta(schema, source: "my schema")
-    assert schema.__meta__.source == {"prefix", "my schema"}
+    assert schema.__meta__.prefix == "prefix"
     assert Ecto.get_meta(schema, :prefix) == "prefix"
-    assert Ecto.get_meta(schema, :source) == "my schema"
+    assert Ecto.get_meta(schema, :source) == "new schema"
     assert schema.__meta__.schema == Schema
 
     schema = Ecto.put_meta(schema, context: "foobar", state: :loaded)
@@ -222,7 +221,8 @@ defmodule Ecto.SchemaTest do
   test "schema prefix metadata" do
     assert SchemaWithPrefix.__schema__(:source) == "company"
     assert SchemaWithPrefix.__schema__(:prefix) == "tenant"
-    assert %SchemaWithPrefix{}.__meta__.source == {"tenant", "company"}
+    assert %SchemaWithPrefix{}.__meta__.source == "company"
+    assert %SchemaWithPrefix{}.__meta__.prefix == "tenant"
   end
 
   test "schema prefix in queries" do
@@ -241,17 +241,6 @@ defmodule Ecto.SchemaTest do
     from = {"another_company", SchemaWithPrefix}
     query = from(from, select: 1)
     assert query.prefix == "tenant"
-  end
-
-  test "updates meta prefix with put_meta" do
-    schema = %SchemaWithPrefix{}
-    assert schema.__meta__.source == {"tenant", "company"}
-    schema = Ecto.put_meta(schema, source: "new_company")
-    assert schema.__meta__.source == {"tenant", "new_company"}
-    schema = Ecto.put_meta(schema, prefix: "prefix")
-    assert schema.__meta__.source == {"prefix", "new_company"}
-    schema = Ecto.put_meta(schema, prefix: nil)
-    assert schema.__meta__.source == {nil, "new_company"}
   end
 
   ## Composite primary keys

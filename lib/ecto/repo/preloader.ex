@@ -89,7 +89,7 @@ defmodule Ecto.Repo.Preloader do
       {:ok, prefix} ->
         prefix
       :error ->
-        %{__meta__: %{source: {prefix, _}}} = sample
+        %{__meta__: %{prefix: prefix}} = sample
         prefix
     end
   end

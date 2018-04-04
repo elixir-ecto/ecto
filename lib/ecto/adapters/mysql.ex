@@ -193,7 +193,7 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def insert(repo, %{source: {prefix, source}} = meta, params,
+  def insert(repo, %{source: source, prefix: prefix} = meta, params,
              {_, query_params, _} = on_conflict, returning, opts) do
     key = primary_key!(meta, returning)
     {fields, values} = :lists.unzip(params)

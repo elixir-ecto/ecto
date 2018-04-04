@@ -642,7 +642,7 @@ defmodule Ecto.Integration.RepoTest do
     custom = Ecto.put_meta(%Custom{}, source: "posts")
     custom = TestRepo.insert!(custom)
     bid    = custom.bid
-    assert %Custom{bid: ^bid, __meta__: %{source: {nil, "posts"}}} =
+    assert %Custom{bid: ^bid, __meta__: %{source: "posts"}} =
            TestRepo.get(from(c in {"posts", Custom}), bid)
   end
 

@@ -60,7 +60,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert_received {:insert_all, {nil, "schemas_assocs"}, [[my_schema_id: 1, my_assoc_id: 1]]}
   end
 
-  test "handles assocs on insert preserving parent schema_prefix" do
+  test "handles assocs on insert preserving parent schema prefix" do
     sample = %MyAssoc{x: "xyz"}
 
     changeset =
@@ -70,9 +70,7 @@ defmodule Ecto.Repo.ManyToManyTest do
       |> Ecto.Changeset.put_assoc(:assocs, [sample])
     schema = TestRepo.insert!(changeset)
     [assoc] = schema.assocs
-
-    {schema_prefix, _} = assoc.__meta__.source
-    assert schema_prefix == "prefix"
+    assert assoc.__meta__.prefix == "prefix"
   end
 
   test "handles assocs on insert with schema" do
@@ -192,7 +190,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert_received {:insert_all, {nil, "schemas_assocs"}, [[my_schema_id: 1, my_assoc_id: 1]]}
   end
 
-  test "handles valid nested assocs on insert preserving parent schema_index" do
+  test "handles valid nested assocs on insert preserving parent schema prefix" do
     assoc =
       %MyAssoc{x: "xyz"}
       |> Ecto.Changeset.change
@@ -203,9 +201,7 @@ defmodule Ecto.Repo.ManyToManyTest do
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:assocs, [assoc])
     schema = TestRepo.insert!(changeset)
-
-    {schema_prefix, _} = hd(schema.assocs).sub_assoc.__meta__.source
-    assert schema_prefix == "prefix"
+    assert hd(schema.assocs).sub_assoc.__meta__.prefix == "prefix"
   end
 
   test "handles invalid nested assocs on insert" do
@@ -259,7 +255,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert_received {:insert_all, {nil, "schemas_assocs"}, [[my_schema_id: 3, my_assoc_id: 1]]}
   end
 
-  test "inserting assocs on update preserving parent schema_prefix" do
+  test "inserting assocs on update preserving parent schema prefix" do
     sample = %MyAssoc{x: "xyz"}
 
     changeset =
@@ -269,9 +265,7 @@ defmodule Ecto.Repo.ManyToManyTest do
       |> Ecto.Changeset.put_assoc(:assocs, [sample])
     schema = TestRepo.update!(changeset)
     [assoc] = schema.assocs
-
-    {schema_prefix, _} = assoc.__meta__.source
-    assert schema_prefix == "prefix"
+    assert assoc.__meta__.prefix == "prefix"
   end
 
   test "inserting assocs on update with schema" do
@@ -431,7 +425,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert_received {:delete_all, {nil, "schemas_assocs"}}
   end
 
-  test "removing assocs on update preserving parent schema_prefix" do
+  test "removing assocs on update preserving parent schema prefix" do
     assoc = %MyAssoc{x: "xyz", id: 1}
 
     changeset =
