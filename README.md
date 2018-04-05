@@ -64,14 +64,15 @@ Also checkout the ["What's new in Ecto 2.1"](http://pages.plataformatec.com.br/e
 
 You need to add both Ecto and the database adapter as a dependency to your `mix.exs` file. The supported databases and their adapters are:
 
-Database   | Ecto Adapter           | Dependency                   | Ecto 2.0 compatible?
-:----------| :--------------------- | :----------------------------| :-------------------
-PostgreSQL | Ecto.Adapters.Postgres | [postgrex][postgrex]         | Yes
-MySQL      | Ecto.Adapters.MySQL    | [mariaex][mariaex]           | Yes
-MSSQL      | MssqlEcto              | [mssql_ecto][mssql_ecto]     | Yes
-MSSQL      | Tds.Ecto               | [tds_ecto][tds_ecto]         | Yes
-SQLite     | Sqlite.Ecto2           | [sqlite_ecto2][sqlite_ecto2] | Yes
-Mnesia     | EctoMnesia.Adapter     | [ecto_mnesia][ecto_mnesia]   | Yes
+Database   | Ecto Adapter           | Dependency                           | Ecto 2.0 compatible?
+:----------| :--------------------- | :------------------------------------| :-------------------
+PostgreSQL | Ecto.Adapters.Postgres | [postgrex][postgrex]                 | Yes
+MySQL      | Ecto.Adapters.MySQL    | [mariaex][mariaex]                   | Yes
+MSSQL      | MssqlEcto              | [mssql_ecto][mssql_ecto]             | Yes
+MSSQL      | Tds.Ecto               | [tds_ecto][tds_ecto]                 | Yes
+SQLite     | Sqlite.Ecto2           | [sqlite_ecto2][sqlite_ecto2]         | Yes
+Mnesia     | EctoMnesia.Adapter     | [ecto_mnesia][ecto_mnesia]           | Yes
+ClickHouse | ClickhouseEcto         | [clickhouse_ecto][clickhouse_ecto]   | Yes
 
 [postgrex]: http://github.com/ericmj/postgrex
 [mariaex]: http://github.com/xerions/mariaex
@@ -79,6 +80,7 @@ Mnesia     | EctoMnesia.Adapter     | [ecto_mnesia][ecto_mnesia]   | Yes
 [tds_ecto]: https://github.com/livehelpnow/tds_ecto
 [sqlite_ecto2]: https://github.com/scouten/sqlite_ecto2
 [ecto_mnesia]: https://github.com/Nebo15/ecto_mnesia
+[clickhouse_ecto]: https://github.com/appodeal/clickhouse_ecto
 
 For example, if you want to use PostgreSQL, add to your `mix.exs` file:
 
