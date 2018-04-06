@@ -7,8 +7,7 @@ defmodule Ecto.Repo.Queryable do
 
   alias Ecto.Query
   alias Ecto.Queryable
-  alias Ecto.Query.Planner
-  alias Ecto.Query.SelectExpr
+  alias Ecto.Query.{Planner, SelectExpr, FromExpr}
 
   require Ecto.Query
 
@@ -303,7 +302,7 @@ defmodule Ecto.Repo.Queryable do
     {data, row}
   end
 
-  defp process_source({source, schema}, types, row, all_nil?, prefix, adapter) do
+  defp process_source(%FromExpr{source: source, schema: schema}, types, row, all_nil?, prefix, adapter) do
     case split_values(types, row, [], all_nil?) do
       {nil, row} ->
         {nil, row}
@@ -413,7 +412,7 @@ defmodule Ecto.Repo.Queryable do
     {{:., [], [{:&, [], [ix]}, field]}, [], []}
   end
 
-  defp assert_schema!(%{from: {_source, schema}}) when schema != nil, do: schema
+  defp assert_schema!(%{from: %FromExpr{schema: schema}}) when schema != nil, do: schema
   defp assert_schema!(query) do
     raise Ecto.QueryError,
       query: query,

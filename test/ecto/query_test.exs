@@ -6,6 +6,7 @@ defmodule Ecto.QueryTest do
   import Support.EvalHelpers
   import Ecto.Query
   alias Ecto.Query
+  alias Ecto.Query.FromExpr
 
   defmacrop macro_equal(column, value) do
     quote do
@@ -80,15 +81,15 @@ defmodule Ecto.QueryTest do
     test "can override the source for existing queries" do
       query = %Query{from: {"posts", nil}}
       query = from q in {"new_posts", query}, where: true
-      assert query.from == {"new_posts", nil}
+      assert query.from == %FromExpr{source: "new_posts", schema: nil}
     end
   end
 
   describe "subqueries" do
     test "builds a subquery struct" do
-      assert subquery("posts").query.from == {"posts", nil}
-      assert subquery(subquery("posts")).query.from == {"posts", nil}
-      assert subquery(subquery("posts").query).query.from == {"posts", nil}
+      assert subquery("posts").query.from == %FromExpr{source: "posts", schema: nil}
+      assert subquery(subquery("posts")).query.from == %FromExpr{source: "posts", schema: nil}
+      assert subquery(subquery("posts").query).query.from == %FromExpr{source: "posts", schema: nil}
     end
 
     test "prefix is not applied if left blank" do

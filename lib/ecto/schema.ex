@@ -1771,6 +1771,7 @@ defmodule Ecto.Schema do
   @doc false
   def __has_many__(mod, name, queryable, opts) do
     check_options!(opts, @valid_has_options, "has_many/3")
+    queryable = cast_queryable(queryable)
 
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
       association(mod, :many, name, Ecto.Association.HasThrough, queryable)
@@ -1784,6 +1785,7 @@ defmodule Ecto.Schema do
   @doc false
   def __has_one__(mod, name, queryable, opts) do
     check_options!(opts, @valid_has_options, "has_one/3")
+    queryable = cast_queryable(queryable)
 
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
       association(mod, :one, name, Ecto.Association.HasThrough, queryable)
@@ -1802,6 +1804,7 @@ defmodule Ecto.Schema do
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
     check_options!(opts, @valid_belongs_to_options, "belongs_to/3")
+    queryable = cast_queryable(queryable)
 
     opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
     foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)
@@ -1824,11 +1827,15 @@ defmodule Ecto.Schema do
   @doc false
   def __many_to_many__(mod, name, queryable, opts) do
     check_options!(opts, @valid_many_to_many_options, "many_to_many/3")
+    queryable = cast_queryable(queryable)
 
     struct =
       association(mod, :many, name, Ecto.Association.ManyToMany, [queryable: queryable] ++ opts)
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
+
+  defp cast_queryable({source, schema}), do: %Ecto.Query.FromExpr{source: source, schema: schema}
+  defp cast_queryable(queryable), do: queryable
 
   @valid_embeds_one_options [:strategy, :on_replace, :source]
 
@@ -1912,7 +1919,7 @@ defmodule Ecto.Schema do
     hash = :erlang.phash2({primary_key, fields})
 
     quote do
-      def __schema__(:query),       do: %Ecto.Query{from: {unquote(source), __MODULE__}, prefix: unquote(prefix)}
+      def __schema__(:query),       do: %Ecto.Query{from: %Ecto.Query.FromExpr{source: unquote(source), schema: __MODULE__}, prefix: unquote(prefix)}
       def __schema__(:prefix),      do: unquote(prefix)
       def __schema__(:source),      do: unquote(source)
       def __schema__(:fields),      do: unquote(field_names)

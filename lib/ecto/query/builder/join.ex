@@ -4,7 +4,7 @@ defmodule Ecto.Query.Builder.Join do
   @moduledoc false
 
   alias Ecto.Query.Builder
-  alias Ecto.Query.{JoinExpr, QueryExpr}
+  alias Ecto.Query.{JoinExpr, QueryExpr, FromExpr}
 
   @doc """
   Escapes a join expression (not including the `on` expression).
@@ -15,19 +15,19 @@ defmodule Ecto.Query.Builder.Join do
   ## Examples
 
       iex> escape(quote(do: x in "foo"), [], __ENV__)
-      {:x, {"foo", nil}, nil, %{}}
+      {:x, {:%, [], [Ecto.Query.FromExpr, {:%{}, [], [source: "foo"]}]}, nil, %{}}
 
       iex> escape(quote(do: "foo"), [], __ENV__)
-      {:_, {"foo", nil}, nil, %{}}
+      {:_, {:%, [], [Ecto.Query.FromExpr, {:%{}, [], [source: "foo"]}]}, nil, %{}}
 
       iex> escape(quote(do: x in Sample), [], __ENV__)
-      {:x, {nil, {:__aliases__, [alias: false], [:Sample]}}, nil, %{}}
+      {:x, {:%, [], [Ecto.Query.FromExpr, {:%{}, [], [schema: {:__aliases__, [alias: false], [:Sample]}]}]}, nil, %{}}
 
       iex> escape(quote(do: x in {"foo", Sample}), [], __ENV__)
-      {:x, {"foo", {:__aliases__, [alias: false], [:Sample]}}, nil, %{}}
+      {:x, {:%, [], [Ecto.Query.FromExpr, {:%{}, [], [source: "foo", schema: {:__aliases__, [alias: false], [:Sample]}]}]}, nil, %{}}
 
       iex> escape(quote(do: x in {"foo", :sample}), [], __ENV__)
-      {:x, {"foo", :sample}, nil, %{}}
+      {:x, {:%, [], [Ecto.Query.FromExpr, {:%{}, [], [source: "foo", schema: :sample]}]}, nil, %{}}
 
       iex> escape(quote(do: c in assoc(p, :comments)), [p: 0], __ENV__)
       {:c, nil, {0, :comments}, %{}}
@@ -62,19 +62,19 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   def escape({:__aliases__, _, _} = module, _vars, _env) do
-    {:_, {nil, module}, nil, %{}}
+    {:_, {:%, [], [FromExpr, {:%{}, [], [schema: module]}]}, nil, %{}}
   end
 
   def escape(string, _vars, _env) when is_binary(string) do
-    {:_, {string, nil}, nil, %{}}
+    {:_, {:%, [], [FromExpr, {:%{}, [], [source: string]}]}, nil, %{}}
   end
 
   def escape({string, {:__aliases__, _, _} = module}, _vars, _env) when is_binary(string) do
-    {:_, {string, module}, nil, %{}}
+    {:_, {:%, [], [FromExpr, {:%{}, [], [source: string, schema: module]}]}, nil, %{}}
   end
 
   def escape({string, atom}, _vars, _env) when is_binary(string) and is_atom(atom) do
-    {:_, {string, atom}, nil, %{}}
+    {:_, {:%, [], [FromExpr, {:%{}, [], [source: string, schema: atom]}]}, nil, %{}}
   end
 
   def escape({:assoc, _, [{var, _, context}, field]}, vars, _env)
@@ -102,11 +102,11 @@ defmodule Ecto.Query.Builder.Join do
   Called at runtime to check dynamic joins.
   """
   def join!(expr) when is_atom(expr),
-    do: {nil, expr}
+    do: %FromExpr{source: nil, schema: expr}
   def join!(expr) when is_binary(expr),
-    do: {expr, nil}
-  def join!({source, module}) when is_binary(source) and is_atom(module),
-    do: {source, module}
+    do: %FromExpr{source: expr, schema: nil}
+  def join!(%FromExpr{source: source, schema: module}) when is_binary(source) and is_atom(module),
+    do: %FromExpr{source: source, schema: module}
   def join!(expr),
     do: Ecto.Queryable.to_query(expr)
 

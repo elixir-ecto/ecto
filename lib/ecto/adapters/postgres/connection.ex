@@ -585,7 +585,7 @@ if Code.ensure_loaded?(Postgrex) do
     defp create_names(prefix, sources, pos, limit) when pos < limit do
       current =
         case elem(sources, pos) do
-          {table, schema} ->
+          %Ecto.Query.FromExpr{source: table, schema: schema} ->
             name = [create_alias(table) | Integer.to_string(pos)]
             {quote_table(prefix, table), name, schema}
           {:fragment, _, _} ->

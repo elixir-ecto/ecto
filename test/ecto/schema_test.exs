@@ -415,7 +415,7 @@ defmodule Ecto.SchemaTest do
     struct =
       %Ecto.Association.Has{field: :emails, owner: AssocSchema, cardinality: :many, on_delete: :nothing,
                             related: Email, owner_key: :id, related_key: :assoc_schema_id,
-                            queryable: {"users_emails", Email}, on_replace: :delete}
+                            queryable: %Ecto.Query.FromExpr{source: "users_emails", schema: Email}, on_replace: :delete}
 
     assert AssocSchema.__schema__(:association, :emails) == struct
     assert AssocSchema.__changeset__.emails == {:assoc, struct}
@@ -455,7 +455,7 @@ defmodule Ecto.SchemaTest do
     struct =
       %Ecto.Association.Has{field: :profile, owner: AssocSchema, cardinality: :one, on_delete: :nothing,
                             related: Profile, owner_key: :id, related_key: :assoc_schema_id,
-                            queryable: {"users_profiles", Profile}, on_replace: :raise}
+                            queryable: %Ecto.Query.FromExpr{source: "users_profiles", schema: Profile}, on_replace: :raise}
 
     assert AssocSchema.__schema__(:association, :profile) == struct
     assert AssocSchema.__changeset__.profile == {:assoc, struct}
@@ -495,7 +495,7 @@ defmodule Ecto.SchemaTest do
     struct =
       %Ecto.Association.BelongsTo{field: :summary, owner: AssocSchema, cardinality: :one,
        related: Summary, owner_key: :summary_id, related_key: :id,
-       queryable: {"post_summary", Summary}, on_replace: :raise, defaults: []}
+       queryable: %Ecto.Query.FromExpr{source: "post_summary", schema: Summary}, on_replace: :raise, defaults: []}
 
     assert AssocSchema.__schema__(:association, :summary) == struct
     assert AssocSchema.__changeset__.summary == {:assoc, struct}

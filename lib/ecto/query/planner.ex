@@ -2,7 +2,7 @@ defmodule Ecto.Query.Planner do
   # Normalizes a query and its parameters.
   @moduledoc false
 
-  alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, QueryExpr, SelectExpr}
+  alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, QueryExpr, SelectExpr, FromExpr}
 
   if map_size(%Ecto.Query{}) != 18 do
     raise "Ecto.Query match out of date in builder"
@@ -243,10 +243,10 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp prepare_source(_query, {nil, schema}, _adapter) when is_atom(schema) and schema != nil,
-    do: {schema.__schema__(:source), schema}
-  defp prepare_source(_query, {source, schema}, _adapter) when is_binary(source) and is_atom(schema),
-    do: {source, schema}
+  defp prepare_source(_query, %FromExpr{source: nil, schema: schema}, _adapter) when is_atom(schema) and schema != nil,
+    do: %FromExpr{source: schema.__schema__(:source), schema: schema}
+  defp prepare_source(_query, %FromExpr{source: source, schema: schema}, _adapter) when is_binary(source) and is_atom(schema),
+    do: %FromExpr{source: source, schema: schema}
   defp prepare_source(_query, {:fragment, _, _} = source, _adapter),
     do: source
 
@@ -317,7 +317,7 @@ defmodule Ecto.Query.Planner do
     error!(query, "subquery must select a source (t), a field (t.field) or a map, got: `#{Macro.to_string(expr)}`")
   end
 
-  defp subquery_struct_and_fields({:source, {_, schema}, types}) do
+  defp subquery_struct_and_fields({:source, %FromExpr{schema: schema}, types}) do
     {schema, Keyword.keys(types)}
   end
   defp subquery_struct_and_fields({:struct, name, types}) do
@@ -461,10 +461,10 @@ defmodule Ecto.Query.Planner do
 
   defp schema_for_association_join!(query, join, source) do
     case source do
-      {source, nil} ->
+      %FromExpr{source: source, schema: nil} ->
           error! query, join, "cannot perform association join on #{inspect source} " <>
                               "because it does not have a schema"
-      {_, schema} ->
+      %FromExpr{schema: schema} ->
         schema
       %Ecto.SubQuery{select: {:struct, schema, _}} ->
         schema
@@ -576,9 +576,9 @@ defmodule Ecto.Query.Planner do
   defp prepend_if(cache, true, prepend), do: prepend ++ cache
   defp prepend_if(cache, false, _prepend), do: cache
 
-  defp source_cache({_, nil} = source, params),
-    do: {source, params}
-  defp source_cache({bin, schema}, params),
+  defp source_cache(%FromExpr{source: source, schema: nil}, params),
+    do: {{source, nil}, params}
+  defp source_cache(%FromExpr{source: bin, schema: schema}, params),
     do: {{bin, schema, schema.__schema__(:hash)}, params}
   defp source_cache({:fragment, _, _} = source, params),
     do: {source, params}
@@ -624,7 +624,7 @@ defmodule Ecto.Query.Planner do
   defp prepare_assocs(_query, _ix, []), do: :ok
   defp prepare_assocs(query, ix, assocs) do
     # We validate the schema exists when preparing joins above
-    {_, parent_schema} = get_source!(:preload, query, ix)
+    %FromExpr{schema: parent_schema} = get_source!(:preload, query, ix)
 
     Enum.each assocs, fn {assoc, {child_ix, child_assocs}} ->
       refl = parent_schema.__schema__(:association, assoc)
@@ -876,8 +876,8 @@ defmodule Ecto.Query.Planner do
     # In from, if there is a schema and we have a map tag with preloads,
     # it needs to be converted to a map in a later pass.
     {take, from_tag} =
-      case tag do
-        :map when is_tuple(source) and elem(source, 1) != nil and preloads != [] ->
+      case {tag, source} do
+        {:map, %FromExpr{schema: schema}} when schema != nil and preloads != [] ->
           {Map.put(take, 0, {:struct, from_take}), :map}
         _ ->
           {take, :any}
@@ -1067,7 +1067,7 @@ defmodule Ecto.Query.Planner do
 
   defp collect_assocs(exprs, fields, query, tag, take, [{assoc, {ix, children}}|tail]) do
     case get_source!(:preload, query, ix) do
-      {_, schema} = source when schema != nil ->
+      %FromExpr{schema: schema} = source when schema != nil ->
         {fetch, take_children} = fetch_assoc(tag, take, assoc)
         {expr, taken} = take!(source, query, fetch, assoc, ix)
         exprs = [expr | exprs]
@@ -1098,17 +1098,17 @@ defmodule Ecto.Query.Planner do
 
   defp take!(source, query, fetched, field, ix) do
     case {fetched, source} do
-      {{:ok, {_, []}}, {_, _}} ->
+      {{:ok, {_, []}}, %FromExpr{}} ->
         error! query, "at least one field must be selected for binding `#{field}`, got an empty list"
 
-      {{:ok, {:struct, _}}, {_, nil}} ->
+      {{:ok, {:struct, _}}, %FromExpr{schema: nil}} ->
         error! query, "struct/2 in select expects a source with a schema"
 
-      {{:ok, {kind, fields}}, {source, schema}} ->
+      {{:ok, {kind, fields}}, %FromExpr{schema: schema} = from} ->
         dumper = if schema, do: schema.__schema__(:dump), else: %{}
         schema = if kind == :map, do: nil, else: schema
         {types, fields} = select_dump(List.wrap(fields), dumper, ix)
-        {{:source, {source, schema}, types}, fields}
+        {{:source, %{from | schema: schema}, types}, fields}
 
       {{:ok, {_, _}}, {:fragment, _, _}} ->
         error! query, "it is not possible to return a map/struct subset of a fragment, " <>
@@ -1118,10 +1118,10 @@ defmodule Ecto.Query.Planner do
         error! query, "it is not possible to return a map/struct subset of a subquery, " <>
                       "you must explicitly select the whole subquery or individual fields only"
 
-      {:error, {_, nil}} ->
+      {:error, %FromExpr{schema: nil}} ->
         {{:value, :map}, [{:&, [], [ix]}]}
 
-      {:error, {_, schema}} ->
+      {:error, %FromExpr{schema: schema}} ->
         {types, fields} = select_dump(schema.__schema__(:fields), schema.__schema__(:dump), ix)
         {{:source, source, types}, fields}
 
@@ -1197,7 +1197,7 @@ defmodule Ecto.Query.Planner do
   defp type!(_kind, _lookup, _query, _expr, nil, _field), do: :any
   defp type!(kind, lookup, query, expr, ix, field) when is_integer(ix) do
     case get_source!(kind, query, ix) do
-      {_, schema} ->
+      %FromExpr{schema: schema} ->
         type!(kind, lookup, query, expr, schema, field)
       {:fragment, _, _} ->
         :any
@@ -1257,7 +1257,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp field_source({_, schema}, field) when schema != nil do
+  defp field_source(%FromExpr{schema: schema}, field) when schema != nil do
     # If the field is not found we return the field itself
     # which will be checked and raise later.
     schema.__schema__(:field_source, field) || field

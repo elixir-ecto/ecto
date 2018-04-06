@@ -5,8 +5,7 @@ defmodule Ecto.Query.SubqueryTest do
 
   import Ecto.Query
 
-  alias Ecto.Query.Planner
-  alias Ecto.Query.JoinExpr
+  alias Ecto.Query.{Planner, JoinExpr, FromExpr}
 
   defmodule Comment do
     use Ecto.Schema
@@ -62,7 +61,7 @@ defmodule Ecto.Query.SubqueryTest do
     posts = from(p in Post, where: p.title == ^"hello")
     query = from(c in Comment, join: p in subquery(posts), on: c.post_id == p.id)
     {query, params, key} = prepare(query, [])
-    assert {"comments", Comment} = query.from
+    assert %FromExpr{source: "comments", schema: Comment} = query.from
     assert [%{source: %{query: %Ecto.Query{}, params: ["hello"]}}] = query.joins
     assert params == ["hello"]
     assert [[], 0, {:join, [{:inner, [:all|_], _}]}, {"comments", _, _}] = key
@@ -70,7 +69,7 @@ defmodule Ecto.Query.SubqueryTest do
 
   test "prepare: subqueries with association joins" do
     {query, _, _} = prepare(from(p in subquery(Post), join: c in assoc(p, :comments)))
-    assert [%{source: {"comments", Comment}}] = query.joins
+    assert [%{source: %FromExpr{source: "comments", schema: Comment}}] = query.joins
 
     message = ~r/can only perform association joins on subqueries that return a source with schema in select/
     assert_raise Ecto.QueryError, message, fn ->
@@ -88,7 +87,7 @@ defmodule Ecto.Query.SubqueryTest do
       |> elem(0)
 
     assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
-    assert source == {"comments", Comment}
+    assert source == %FromExpr{source: "comments", schema: Comment}
     assert Macro.to_string(on.expr) == "&1.post_id() == &0.id()"
   end
 

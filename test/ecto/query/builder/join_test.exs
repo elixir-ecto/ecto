@@ -4,6 +4,7 @@ defmodule Ecto.Query.Builder.JoinTest do
   import Ecto.Query.Builder.Join
   doctest Ecto.Query.Builder.Join
 
+  alias Ecto.Query.FromExpr
   import Ecto.Query
 
   defmacro join_macro(left, right) do
@@ -29,22 +30,22 @@ defmodule Ecto.Query.Builder.JoinTest do
   test "accepts queries on interpolation" do
     qual = :left
     source = "comments"
-    assert %{joins: [%{source: {"comments", nil}}]} =
+    assert %{joins: [%{source: %FromExpr{source: "comments", schema: nil}}]} =
             join("posts", qual, [p], c in ^source, on: true)
 
     qual = :right
     source = Comment
-    assert %{joins: [%{source: {nil, Comment}}]} =
+    assert %{joins: [%{source: %FromExpr{source: nil, schema: Comment}}]} =
             join("posts", qual, [p], c in ^source, on: true)
 
     qual = :right
-    source = {"user_comments", Comment}
-    assert %{joins: [%{source: {"user_comments", Comment}}]} =
+    source = %FromExpr{source: "user_comments", schema: Comment}
+    assert %{joins: [%{source: %FromExpr{source: "user_comments", schema: Comment}}]} =
             join("posts", qual, [p], c in ^source, on: true)
 
     qual = :inner
     source = from c in "comments", where: c.public
-    assert %{joins: [%{source: %Ecto.Query{from: {"comments", nil}}}]} =
+    assert %{joins: [%{source: %Ecto.Query{from: %FromExpr{source: "comments", schema: nil}}}]} =
             join("posts", qual, [p], c in ^source, on: true)
   end
 

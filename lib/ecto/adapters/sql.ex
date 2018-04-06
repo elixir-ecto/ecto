@@ -260,7 +260,7 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp put_source(opts, %{sources: sources}) when tuple_size(elem(sources, 0)) == 2 do
-    {source, _} = elem(sources, 0)
+    %Ecto.Query.FromExpr{source: source} = elem(sources, 0)
     Keyword.put(opts, :source, source)
   end
   defp put_source(opts, _) do
