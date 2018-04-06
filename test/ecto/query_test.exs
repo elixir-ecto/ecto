@@ -221,6 +221,19 @@ defmodule Ecto.QueryTest do
       assert %{comment: 2, link: 3} == query.aliases
     end
 
+    test "assigns a name to query source" do
+      query = from p in "posts", as: :post
+
+      assert %{post: 0} == query.aliases
+    end
+
+    test "assign to source fails when non-atom name passed" do
+      message = ~r"`as` must be a compile time atom, got: `\"post\"`"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        quote_and_eval(from(p in "posts", as: "post"))
+      end
+    end
+
     test "crashes on duplicate as for keyword query" do
       message = ~r"`as` keyword was given more than once to the same join"
       assert_raise Ecto.Query.CompileError, message, fn ->
@@ -251,6 +264,15 @@ defmodule Ecto.QueryTest do
 
       assert inspect(query) ==
         ~s[#Ecto.Query<from p in \"posts\", join: c in \"comments\", as: :comment, on: true, where: c.id == 0>]
+    end
+
+    test "match on binding by name for source" do
+      query =
+        from(p in "posts", as: :post)
+        |> where([post: p], p.id == 0)
+
+      assert inspect(query) ==
+        ~s[#Ecto.Query<from p in \"posts\", as: :post, where: p.id == 0>]
     end
 
     test "match on binding by name with ... in the middle" do
