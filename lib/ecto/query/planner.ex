@@ -250,7 +250,6 @@ defmodule Ecto.Query.Planner do
   defp prepare_source(_query, {:fragment, _, _} = source, _adapter),
     do: source
 
-
   defp assert_no_subquery_assocs!(%{assocs: assocs, preloads: preloads} = query)
        when assocs != [] or preloads != [] do
     error!(query, "cannot preload associations in subquery")
