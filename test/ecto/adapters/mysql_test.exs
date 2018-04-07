@@ -231,11 +231,9 @@ defmodule Ecto.Adapters.MySQLTest do
         order_by: type(fragment("(?->>?)", field(e, ^:map), ^"value"), ^:decimal),
         select: true)
 
-    result =
-      "SELECT TRUE FROM `schema3` AS s0 " <>
-      "ORDER BY (s0.`map`->>?) + 0"
+    result = "SELECT TRUE FROM `schema3` AS s0 ORDER BY (s0.`map`->>?) + 0"
 
-    assert all(query) == String.trim(result)
+    assert all(query) == result
   end
 
   test "fragments" do

@@ -404,11 +404,9 @@ defmodule Ecto.Adapters.PostgresTest do
         order_by: type(fragment("(?->>?)", field(e, ^:map), ^"value"), ^:decimal),
         select: true)
 
-    result =
-      "SELECT TRUE FROM \"schema3\" AS s0 " <>
-      "ORDER BY (s0.\"map\"->>$1)::decimal"
+    result = "SELECT TRUE FROM \"schema3\" AS s0 ORDER BY (s0.\"map\"->>$1)::decimal"
 
-    assert all(query) == String.trim(result)
+    assert all(query) == result
   end
 
   test "fragments and types" do
