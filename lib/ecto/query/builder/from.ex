@@ -49,8 +49,12 @@ defmodule Ecto.Query.Builder.From do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, Macro.Env.t) :: {Macro.t, Keyword.t, non_neg_integer | nil}
-  def build(query, env) do
+  @spec build(Macro.t, Macro.Env.t, atom) :: {Macro.t, Keyword.t, non_neg_integer | nil}
+  def build(query, env, as) do
+    if not is_atom(as) do
+      Builder.error! "`as` must be a compile time atom, got: `#{Macro.to_string(as)}`"
+    end
+
     {query, binds} = escape(query, env)
 
     {count_bind, quoted} =
@@ -60,15 +64,15 @@ defmodule Ecto.Query.Builder.From do
           # dependencies between modules are added
           source = quote do: unquote(schema).__schema__(:source)
           prefix = quote do: unquote(schema).__schema__(:prefix)
-          {1, query(prefix, source, schema)}
+          {1, query(prefix, source, schema, as)}
 
         source when is_binary(source) ->
           # When a binary is used, there is no schema
-          {1, query(nil, source, nil)}
+          {1, query(nil, source, nil, as)}
 
         {source, schema} when is_binary(source) and is_atom(schema) ->
           prefix = quote do: unquote(schema).__schema__(:prefix)
-          {1, query(prefix, source, schema)}
+          {1, query(prefix, source, schema, as)}
 
         other ->
           {nil, other}
@@ -78,13 +82,15 @@ defmodule Ecto.Query.Builder.From do
     {quoted, binds, count_bind}
   end
 
-  defp query(prefix, source, schema) do
+  defp query(prefix, source, schema, as) do
+    aliases = if as, do: [{as, 0}], else: []
+
     {:%, [], [Ecto.Query,
               {:%{}, [],
                [from: {:%, [], [Ecto.Query.FromExpr,
-                                {:%{}, [], [source: {source, schema}]}]},
+                                {:%{}, [], [source: {source, schema}, as: as]}]},
                 prefix: prefix,
-                aliases: {:%{}, [], []}]}]}
+                aliases: {:%{}, [], aliases}]}]}
   end
 
   defp expand_from({left, right}, env) do

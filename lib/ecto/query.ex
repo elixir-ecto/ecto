@@ -312,7 +312,7 @@ defmodule Ecto.Query do
 
   defmodule FromExpr do
     @moduledoc false
-    defstruct [:source]
+    defstruct [:source, :as]
   end
 
   defmodule DynamicExpr do
@@ -592,7 +592,8 @@ defmodule Ecto.Query do
       raise ArgumentError, "second argument to `from` must be a compile time keyword list"
     end
 
-    {quoted, binds, count_bind} = From.build(expr, __CALLER__)
+    {kw, as} = collect_as(kw)
+    {quoted, binds, count_bind} = From.build(expr, __CALLER__, as)
     from(kw, __CALLER__, count_bind, quoted, to_query_binds(binds))
   end
 
@@ -673,6 +674,9 @@ defmodule Ecto.Query do
     do: Builder.error! "`as` keyword was given more than once to the same join"
   defp collect_on_and_as(other, on, as),
     do: {other, on, as}
+
+  defp collect_as([{:as, as} | t]), do: {t, as}
+  defp collect_as(t), do: {t, nil}
 
   @doc """
   A join query expression.

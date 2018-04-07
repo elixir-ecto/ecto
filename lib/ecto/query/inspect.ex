@@ -69,7 +69,9 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp bound_from(nil, name), do: ["from #{name} in query"]
-  defp bound_from(%{source: source}, name), do: ["from #{name} in #{inspect_source source}"]
+  defp bound_from(%{source: source, as: as}, name) do
+    ["from #{name} in #{inspect_source source}"] ++ kw_inspect(:as, as)
+  end
 
   defp inspect_source(%Ecto.Query{} = query), do: "^" <> inspect(query)
   defp inspect_source(%Ecto.SubQuery{query: query}), do: "subquery(#{to_string query})"

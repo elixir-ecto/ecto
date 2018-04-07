@@ -47,6 +47,16 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
+  test "fetch using named from" do
+    TestRepo.insert!(%Post{title: "hello"})
+
+    query =
+      from(p in Post, as: :post)
+      |> where([post: p], p.title == "hello")
+
+    assert [_] = TestRepo.all query
+  end
+
   test "fetch without schema" do
     %Post{} = TestRepo.insert!(%Post{title: "title1"})
     %Post{} = TestRepo.insert!(%Post{title: "title2"})
