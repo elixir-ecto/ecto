@@ -43,6 +43,9 @@ defmodule Ecto.Adapters.PostgresTest do
       field :list1, {:array, :string}
       field :list2, {:array, :integer}
       field :binary, :binary
+      embeds_one :map do
+        field :value, :decimal
+      end
     end
   end
 
@@ -393,6 +396,17 @@ defmodule Ecto.Adapters.PostgresTest do
       "ORDER BY $10, s0.\"x\" LIMIT $11 OFFSET $12"
 
     assert all(query) == String.trim(result)
+  end
+
+  test "order_by and types" do
+    query =
+      normalize from(e in "schema3",
+        order_by: type(fragment("(?->>?)", field(e, ^:map), ^"value"), ^:decimal),
+        select: true)
+
+    result = "SELECT TRUE FROM \"schema3\" AS s0 ORDER BY (s0.\"map\"->>$1)::decimal"
+
+    assert all(query) == result
   end
 
   test "fragments and types" do
