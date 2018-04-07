@@ -67,6 +67,24 @@ defmodule Ecto.Query.Builder do
     {expr, params_acc}
   end
 
+  def escape({:type, _, [{{:., _, [{var, _, context}, field]}, _, []} = expr, type]}, _type, params_take, vars, env)
+      when is_atom(var) and is_atom(context) and is_atom(field) do
+    escape_with_type(expr, type, params_take, vars, env)
+  end
+
+  def escape({:type, _, [{:fragment, _, [_ | _]} = expr, type]}, _type, params_take, vars, env) do
+    escape_with_type(expr, type, params_take, vars, env)
+  end
+
+  def escape({:type, _, [{:unsafe_fragment, _, [_ | _]} = expr, type]}, _type, params_take, vars, env) do
+    escape_with_type(expr, type, params_take, vars, env)
+  end
+
+  def escape({:type, _, [{agg, _, [_ | _]} = expr, type]}, _type, params_take, vars, env)
+      when agg in ~w(avg count max min sum)a do
+    escape_with_type(expr, type, params_take, vars, env)
+  end
+
   # fragments
   def escape({:fragment, _, [query]}, _type, params_acc, vars, env) when is_list(query) do
     {escaped, params_acc} =
@@ -335,6 +353,18 @@ defmodule Ecto.Query.Builder do
   # For everything else we raise
   def escape(other, _type, _params_acc, _vars, _env) do
     error! "`#{Macro.to_string(other)}` is not a valid query expression"
+  end
+
+  defp escape_with_type(expr, type, params_take, vars, env) do
+    type = validate_type!(type, vars)
+
+    {expr, params_take} = escape(expr, type, params_take, vars, {env, &escape_expansion/5})
+
+    {{:{}, [], [:type, [], [expr, type]]}, params_take}
+  end
+
+  defp escape_expansion(expr, type, params_take, vars, env) do
+    escape(expr, type, params_take, vars, env)
   end
 
   defp wrap_nil(params, {:{}, _, [:^, _, [ix]]}) do

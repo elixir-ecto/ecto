@@ -46,6 +46,16 @@ defmodule Ecto.Adapters.PostgresTest do
     end
   end
 
+  defmodule Schema4 do
+    use Ecto.Schema
+
+    schema "schema4" do
+      embeds_one :map do
+        field :value, :decimal
+      end
+    end
+  end
+
   defp normalize(query, operation \\ :all, counter \\ 0) do
     {query, _params, _key} = Ecto.Query.Planner.prepare(query, operation, Ecto.Adapters.Postgres, counter)
     {query, _} = Ecto.Query.Planner.normalize(query, operation, Ecto.Adapters.Postgres, counter)
@@ -391,6 +401,19 @@ defmodule Ecto.Adapters.PostgresTest do
       "INNER JOIN \"schema2\" AS s2 ON $3 WHERE ($4) AND ($5) " <>
       "GROUP BY $6, $7 HAVING ($8) AND ($9) " <>
       "ORDER BY $10, s0.\"x\" LIMIT $11 OFFSET $12"
+
+    assert all(query) == String.trim(result)
+  end
+
+  test "order_by and types" do
+    query =
+      normalize from(e in "schema4",
+        order_by: type(fragment("(?->>?)", field(e, ^:map), ^"value"), ^:decimal),
+        select: true)
+
+    result =
+      "SELECT TRUE FROM \"schema4\" AS s0 " <>
+      "ORDER BY (s0.\"map\"->>$1)::decimal"
 
     assert all(query) == String.trim(result)
   end
