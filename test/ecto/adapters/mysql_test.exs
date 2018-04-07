@@ -41,9 +41,6 @@ defmodule Ecto.Adapters.MySQLTest do
 
     schema "schema3" do
       field :binary, :binary
-      embeds_one :map do
-        field :value, :decimal
-      end
     end
   end
 
@@ -226,14 +223,8 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   test "order_by and types" do
-    query =
-      normalize from(e in "schema3",
-        order_by: type(fragment("(?->>?)", field(e, ^:map), ^"value"), ^:decimal),
-        select: true)
-
-    result = "SELECT TRUE FROM `schema3` AS s0 ORDER BY (s0.`map`->>?) + 0"
-
-    assert all(query) == result
+    query = "schema3" |> order_by([e], type(fragment("?", e.binary), ^:decimal)) |> select(true) |> normalize()
+    assert all(query) == "SELECT TRUE FROM `schema3` AS s0 ORDER BY s0.`binary` + 0"
   end
 
   test "fragments" do
