@@ -43,6 +43,20 @@ If you want to rollback to Poison, you need to configure your adapter accordingl
 
 We recommend everyone to migrate to Jason. Built-in support for Poison will be removed in future Ecto 3.x releases.
 
+### Named bindings
+
+One of the exciting additions in Ecto v3.0 is the addition of named bindings to make the query composition even more flexible:
+
+    query = Post
+
+    # Filter by the join
+    query = from p in query,
+              join: c in Comment, as: :comments, where: c.post_id == p.id
+
+    # Extend the query
+    query = from [p, comments: c] in query,
+              select: {p.title, c.body}
+
 ## v3.0.0-dev (In Progress)
 
 ### Enhancements
@@ -59,6 +73,8 @@ We recommend everyone to migrate to Jason. Built-in support for Poison will be r
   * [Ecto.Query] Allow joins in queries to be named via `:as` and allow named bindings
   * [Ecto.Query] Support excluding specific join types in `exclude/2`
   * [Ecto.Query] Allow virtual field update in subqueries
+  * [Ecto.Query] Support `coalesce/2` in queries, such as `select: coalesce(p.title, p.old_title)`
+  * [Ecto.Query] Support `filter/2` in queries, such as `select: filter(count(p.id), p.public == true)`
   * [Ecto.Repo] Support `:replace_all_except_primary_key` as `:on_conflict` strategy
   * [Ecto.Repo] Support `{:replace, fields}` as `:on_conflict` strategy
   * [Ecto.Repo] Support `select` in queries given to `update_all` and `delete_all`
@@ -87,8 +103,12 @@ We recommend everyone to migrate to Jason. Built-in support for Poison will be r
   * [Ecto.Adapter] The database types `time`, `utc_datetime` and `naive_datetime` should translate to types with seconds precision while the database types `time_usec`, `utc_datetime_usec` and `naive_datetime_usec` should have microseconds precision
   * [Ecto.Adapter] The `on_conflict` argument for `insert` and `insert_all` no longer receives a `{:replace_all, list(), atom()}` tuple. Instead, it receives a `{fields :: [atom()], list(), atom()}` where `fields` is a list of atoms of the fields to be replaced
   * [Ecto.Adapter] `exclusion_constraint` will now have type `:exclusion` on the adapter metadata instead of `:exclude` (affects PostgreSQL only)
+  * [Ecto.Adapter] `insert`/`update`/`delete` now receive both `:source` and `:prefix` fields instead of a single `:source` field with both `source` and `prefix` in it
   * [Ecto.Adapter.Migration] A new `lock_for_migration/4` callback has been added. It is implemented by default by `Ecto.Adapters.SQL`
+  * [Ecto.Query] The `from` field in `Ecto.Query` now returns a `Ecto.Query.FromExpr` with the `:source` field, unifying the behaviour in `from` and `join` expressions
   * [Ecto.Query] Tuple expressions are now supported in queries. For example, `where: {p.foo, p.bar} > {p.bar, p.baz}` should translate to `WHERE (p.foo, p.bar) > (p.bar, p.baz)` in SQL databases. Adapters should be changed to handle `{:{}, meta, exprs}` in the query AST
+  * [Ecto.Query] Adapters should support the following arithmetic operators in queries `+`, `-`, `*` and `/`
+  * [Ecto.Query] Adapters should support `filter/2` in queries, as in `select: filter(count(p.id), p.public == true)`
 
 ## Previous versions
 
