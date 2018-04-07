@@ -201,6 +201,30 @@ defmodule Ecto.Query do
   can be avoided by relying on the keyword query syntax when writing
   queries.
 
+  Another option for flexibly building queries with joins are
+  named bindings. Coming back to the previous example, provided
+  we bind a join to a concrete name:
+
+      posts_with_comments =
+        from p in query,
+          join: c in Comment, as: :comment, where: c.post_id == p.id
+
+  , we can refer to it by that name using a following form of
+  bindings list:
+
+      from [p, comment: c] in posts_with_comments, select: {p.title, c.body}
+
+  This approach lets us not worry about keeping track of the position
+  of the bindings when composing the query.
+
+  What's more, a name can be assigned to the first binding as well, unless
+  the binding itself is a query:
+
+      from p in Posts, as: :post
+
+  Only atoms are accepted for binding names. Named binding references
+  are expected to be placed in the tail position of bindings list.
+
   ### Bindingless operations
 
   Although bindings are extremely useful when working with joins,
