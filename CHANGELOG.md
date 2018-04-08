@@ -26,6 +26,19 @@ The query syntax also seen some improvements: map updates are supported in subqu
 
 Finally, the UPSERT support added on Ecto v2.1 is getting more improvements: the `{:constraint, constraint}` is now supported as conflict target and the `:returning` option was added to `Ecto.Repo.insert/2`, mirroring the behaviour of `insert_all`.
 
+## v2.2.10 (2018-04-08)
+
+### Enhancements
+
+  * [Ecto] Add .formatter.exs file
+  * [Ecto.Changeset] Add `:trim` option for `validate_required`
+  * [Ecto.Type] Support "hh:mm" format in `:time` field
+
+### Bug fixes
+
+  * [Ecto.Changeset] Fix `unsafe_validate_unique/3` for partially matching composite keys
+  * [Ecto.Query] Do not generate default ON on cross joins
+
 ## v2.2.9 (2018-03-09)
 
 ### Enhancements
