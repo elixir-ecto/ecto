@@ -74,8 +74,11 @@ defmodule Ecto.Query.Builder.From do
           prefix = quote do: unquote(schema).__schema__(:prefix)
           {1, query(prefix, source, schema, as)}
 
-        other ->
+        other when is_nil(as) ->
           {nil, other}
+
+        _other ->
+          Builder.error! "`as` can't be used with query in `from`"
       end
 
     quoted = Builder.apply_query(quoted, __MODULE__, [length(binds)], env)
