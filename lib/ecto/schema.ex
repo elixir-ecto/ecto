@@ -1505,9 +1505,9 @@ defmodule Ecto.Schema do
 
   @doc false
   def __field__(mod, name, type, opts) do
-    check_type!(name, type, opts[:virtual])
-    pk? = opts[:primary_key] || false
     virtual? = opts[:virtual] || false
+    check_type!(name, type, virtual?)
+    pk? = opts[:primary_key] || false
 
     default = default_for_type(type, opts)
     Module.put_attribute(mod, :changeset_fields, {name, type})
