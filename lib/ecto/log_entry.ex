@@ -21,14 +21,29 @@ defmodule Ecto.LogEntry do
 
   alias Ecto.LogEntry
 
-  @type t :: %LogEntry{query: String.t | (t -> String.t), source: String.t | Enum.t | nil,
-                       params: [term], query_time: integer, decode_time: integer | nil,
-                       queue_time: integer | nil, connection_pid: pid | nil,
-                       result: {:ok, term} | {:error, Exception.t},
-                       ansi_color: IO.ANSI.ansicode | nil, caller_pid: pid | nil}
+  @type t :: %LogEntry{
+          query: String.t() | (t -> String.t()),
+          source: String.t() | Enum.t() | nil,
+          params: [term],
+          query_time: integer,
+          decode_time: integer | nil,
+          queue_time: integer | nil,
+          connection_pid: pid | nil,
+          result: {:ok, term} | {:error, Exception.t()},
+          ansi_color: IO.ANSI.ansicode() | nil,
+          caller_pid: pid | nil
+        }
 
-  defstruct query: nil, source: nil, params: [], query_time: nil, decode_time: nil,
-            queue_time: nil, result: nil, connection_pid: nil, caller_pid: nil, ansi_color: nil
+  defstruct query: nil,
+            source: nil,
+            params: [],
+            query_time: nil,
+            decode_time: nil,
+            queue_time: nil,
+            result: nil,
+            connection_pid: nil,
+            caller_pid: nil,
+            ansi_color: nil
 
   require Logger
 
@@ -39,10 +54,15 @@ defmodule Ecto.LogEntry do
   `compile_time_purge_level` is set to higher than debug.
   """
   def log(%{connection_pid: connection_pid, ansi_color: ansi_color} = entry) do
-    Logger.debug(fn ->
-      {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
-      iodata
-    end, ecto_conn_pid: connection_pid, ansi_color: ansi_color)
+    Logger.debug(
+      fn ->
+        {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
+        iodata
+      end,
+      ecto_conn_pid: connection_pid,
+      ansi_color: ansi_color
+    )
+
     entry
   end
 
@@ -53,10 +73,15 @@ defmodule Ecto.LogEntry do
   custom level is given.
   """
   def log(entry, level) do
-    Logger.log(level, fn ->
-      {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
-      iodata
-    end, ecto_conn_pid: entry.connection_pid)
+    Logger.log(
+      level,
+      fn ->
+        {_entry, iodata} = Ecto.LogEntry.to_iodata(entry)
+        iodata
+      end,
+      ecto_conn_pid: entry.connection_pid
+    )
+
     entry
   end
 
@@ -66,31 +91,52 @@ defmodule Ecto.LogEntry do
   The entry is automatically resolved if it hasn't been yet.
   """
   def to_iodata(entry) do
-    %{query_time: query_time, decode_time: decode_time, queue_time: queue_time,
-      params: params, query: query, result: result, source: source} = entry
+    %{
+      query_time: query_time,
+      decode_time: decode_time,
+      queue_time: queue_time,
+      params: params,
+      query: query,
+      result: result,
+      source: source
+    } = entry
 
-    params = Enum.map params, fn
-      %Ecto.Query.Tagged{value: value} -> value
-      value -> value
-    end
+    params =
+      Enum.map(params, fn
+        %Ecto.Query.Tagged{value: value} -> value
+        value -> value
+      end)
 
-    {entry, ["QUERY", ?\s, ok_error(result), ok_source(source), time("db", query_time, true),
-             time("decode", decode_time, false), time("queue", queue_time, false), ?\n,
-             query, ?\s, inspect(params, charlists: false)]}
+    {entry,
+     [
+       "QUERY",
+       ?\s,
+       ok_error(result),
+       ok_source(source),
+       time("db", query_time, true),
+       time("decode", decode_time, false),
+       time("queue", queue_time, false),
+       ?\n,
+       query,
+       ?\s,
+       inspect(params, charlists: false)
+     ]}
   end
 
   ## Helpers
 
-  defp ok_error({:ok, _}),    do: "OK"
+  defp ok_error({:ok, _}), do: "OK"
   defp ok_error({:error, _}), do: "ERROR"
 
-  defp ok_source(nil),    do: ""
+  defp ok_source(nil), do: ""
   defp ok_source(source), do: " source=#{inspect(source)}"
 
   defp time(_label, nil, _force), do: []
+
   defp time(label, time, force) do
     us = System.convert_time_unit(time, :native, :micro_seconds)
     ms = div(us, 100) / 10
+
     if force or ms > 0 do
       [?\s, label, ?=, :io_lib_format.fwrite_g(ms), ?m, ?s]
     else

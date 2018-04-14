@@ -14,12 +14,14 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
   defmodule Repo do
     def start_link(_) do
       Process.put(:started, true)
-      Task.start_link fn ->
+
+      Task.start_link(fn ->
         Process.flag(:trap_exit, true)
+
         receive do
           {:EXIT, _, :normal} -> :ok
         end
-      end
+      end)
     end
 
     def stop(_pid) do
@@ -54,38 +56,43 @@ defmodule Mix.Tasks.Ecto.RollbackTest do
   end
 
   test "runs the migrator after starting repo" do
-    run ["-r", to_string(Repo), "--no-start"], fn _, _, _ ->
+    run(["-r", to_string(Repo), "--no-start"], fn _, _, _ ->
       Process.put(:migrated, true)
       []
-    end
+    end)
+
     assert Process.get(:migrated)
     assert Process.get(:started)
   end
 
   test "runs the migrator with already started repo" do
-    run ["-r", to_string(StartedRepo), "--no-start"], fn _, _, _ ->
+    run(["-r", to_string(StartedRepo), "--no-start"], fn _, _, _ ->
       Process.put(:migrated, true)
       []
-    end
+    end)
+
     assert Process.get(:migrated)
   end
 
   test "runs the migrator yielding the repository and migrations path" do
-    run ["-r", to_string(Repo), "--prefix", "foo"], fn repo, direction, opts ->
+    run(["-r", to_string(Repo), "--prefix", "foo"], fn repo, direction, opts ->
       assert repo == Repo
       assert direction == :down
       assert opts[:step] == 1
       assert opts[:prefix] == "foo"
       []
-    end
+    end)
+
     assert Process.get(:started)
   end
 
   test "raises when migrations path does not exist" do
     File.rm_rf!(@migrations_path)
+
     assert_raise Mix.Error, fn ->
-      run ["-r", to_string(Repo)], fn _, _, _ -> [] end
+      run(["-r", to_string(Repo)], fn _, _, _ -> [] end)
     end
+
     assert !Process.get(:started)
   end
 end

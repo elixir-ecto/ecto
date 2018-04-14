@@ -18,7 +18,7 @@ defmodule Ecto.Adapters.Postgres do
   Postgres options split in different categories described
   below. All options can be given via the repository
   configuration:
-  
+
       config :your_app, YourApp.Repo,
         adapter: Ecto.Adapters.Postgres,
         ...
@@ -114,18 +114,20 @@ defmodule Ecto.Adapters.Postgres do
 
   # Support arrays in place of IN
   @doc false
-  def dumpers({:embed, _} = type, _),  do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
+  def dumpers({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
   def dumpers({:in, sub}, {:in, sub}), do: [{:array, sub}]
-  def dumpers(:binary_id, type),       do: [type, Ecto.UUID]
-  def dumpers(_, type),                do: [type]
+  def dumpers(:binary_id, type), do: [type, Ecto.UUID]
+  def dumpers(_, type), do: [type]
 
   ## Storage API
 
   @doc false
   def storage_up(opts) do
-    database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
+    database =
+      Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
+
     encoding = opts[:encoding] || "UTF8"
-    opts     = Keyword.put(opts, :database, "postgres")
+    opts = Keyword.put(opts, :database, "postgres")
 
     command =
       ~s(CREATE DATABASE "#{database}" ENCODING '#{encoding}')
@@ -136,27 +138,33 @@ defmodule Ecto.Adapters.Postgres do
     case run_query(command, opts) do
       {:ok, _} ->
         :ok
+
       {:error, %{postgres: %{code: :duplicate_database}}} ->
         {:error, :already_up}
+
       {:error, error} ->
         {:error, Exception.message(error)}
     end
   end
 
-  defp concat_if(content, nil, _fun),  do: content
+  defp concat_if(content, nil, _fun), do: content
   defp concat_if(content, value, fun), do: content <> " " <> fun.(value)
 
   @doc false
   def storage_down(opts) do
-    database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
-    command  = "DROP DATABASE \"#{database}\""
-    opts     = Keyword.put(opts, :database, "postgres")
+    database =
+      Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
+
+    command = "DROP DATABASE \"#{database}\""
+    opts = Keyword.put(opts, :database, "postgres")
 
     case run_query(command, opts) do
       {:ok, _} ->
         :ok
+
       {:error, %{postgres: %{code: :invalid_catalog_name}}} ->
         {:error, :already_down}
+
       {:error, error} ->
         {:error, Exception.message(error)}
     end
@@ -170,6 +178,7 @@ defmodule Ecto.Adapters.Postgres do
   @doc false
   def structure_dump(default, config) do
     table = config[:migration_source] || "schema_migrations"
+
     with {:ok, versions} <- select_versions(table, config),
          {:ok, path} <- pg_dump(default, config),
          do: append_versions(table, versions, path)
@@ -187,10 +196,17 @@ defmodule Ecto.Adapters.Postgres do
     path = config[:dump_path] || Path.join(default, "structure.sql")
     File.mkdir_p!(Path.dirname(path))
 
-    case run_with_cmd("pg_dump", config, ["--file", path, "--schema-only", "--no-acl",
-                                          "--no-owner", config[:database]]) do
+    case run_with_cmd("pg_dump", config, [
+           "--file",
+           path,
+           "--schema-only",
+           "--no-acl",
+           "--no-owner",
+           config[:database]
+         ]) do
       {_output, 0} ->
         {:ok, path}
+
       {output, _} ->
         {:error, output}
     end
@@ -215,9 +231,10 @@ defmodule Ecto.Adapters.Postgres do
   @doc false
   def structure_load(default, config) do
     path = config[:dump_path] || Path.join(default, "structure.sql")
+
     case run_with_cmd("psql", config, ["--quiet", "--file", path, config[:database]]) do
       {_output, 0} -> {:ok, path}
-      {output, _}  -> {:error, output}
+      {output, _} -> {:error, output}
     end
   end
 
@@ -232,28 +249,33 @@ defmodule Ecto.Adapters.Postgres do
       |> Keyword.put(:pool, DBConnection.Connection)
       |> Keyword.put(:backoff_type, :stop)
 
-    {:ok, pid} = Task.Supervisor.start_link
+    {:ok, pid} = Task.Supervisor.start_link()
 
-    task = Task.Supervisor.async_nolink(pid, fn ->
-      {:ok, conn} = Postgrex.start_link(opts)
+    task =
+      Task.Supervisor.async_nolink(pid, fn ->
+        {:ok, conn} = Postgrex.start_link(opts)
 
-      value = Ecto.Adapters.Postgres.Connection.execute(conn, sql, [], opts)
-      GenServer.stop(conn)
-      value
-    end)
+        value = Ecto.Adapters.Postgres.Connection.execute(conn, sql, [], opts)
+        GenServer.stop(conn)
+        value
+      end)
 
     timeout = Keyword.get(opts, :timeout, 15_000)
 
     case Task.yield(task, timeout) || Task.shutdown(task) do
       {:ok, {:ok, result}} ->
         {:ok, result}
+
       {:ok, {:error, error}} ->
         {:error, error}
+
       {:exit, {%{__struct__: struct} = error, _}}
-          when struct in [Postgrex.Error, DBConnection.Error] ->
+      when struct in [Postgrex.Error, DBConnection.Error] ->
         {:error, error}
-      {:exit, reason}  ->
+
+      {:exit, reason} ->
         {:error, RuntimeError.exception(Exception.format_exit(reason))}
+
       nil ->
         {:error, RuntimeError.exception("command timed out")}
     end
@@ -262,27 +284,24 @@ defmodule Ecto.Adapters.Postgres do
   defp run_with_cmd(cmd, opts, opt_args) do
     unless System.find_executable(cmd) do
       raise "could not find executable `#{cmd}` in path, " <>
-            "please guarantee it is available before running ecto commands"
+              "please guarantee it is available before running ecto commands"
     end
 
-    env =
-      [{"PGCONNECT_TIMEOUT", "10"}]
+    env = [{"PGCONNECT_TIMEOUT", "10"}]
+
     env =
       if password = opts[:password] do
-        [{"PGPASSWORD", password}|env]
+        [{"PGPASSWORD", password} | env]
       else
         env
       end
 
-    args =
-      []
-    args =
-      if username = opts[:username], do: ["-U", username|args], else: args
-    args =
-      if port = opts[:port], do: ["-p", to_string(port)|args], else: args
+    args = []
+    args = if username = opts[:username], do: ["-U", username | args], else: args
+    args = if port = opts[:port], do: ["-p", to_string(port) | args], else: args
 
     host = opts[:hostname] || System.get_env("PGHOST") || "localhost"
-    args = ["--host", host|args]
+    args = ["--host", host | args]
     args = args ++ opt_args
     System.cmd(cmd, args, env: env, stderr_to_stdout: true)
   end

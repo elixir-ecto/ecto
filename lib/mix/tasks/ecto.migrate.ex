@@ -58,10 +58,20 @@ defmodule Mix.Tasks.Ecto.Migrate do
   def run(args, migrator \\ &Ecto.Migrator.run/3) do
     repos = parse_repo(args)
 
-    {opts, _, _} = OptionParser.parse args,
-      switches: [all: :boolean, step: :integer, to: :integer, quiet: :boolean,
-                 prefix: :string, pool_size: :integer, log_sql: :boolean],
-      aliases: [n: :step, v: :to]
+    {opts, _, _} =
+      OptionParser.parse(
+        args,
+        switches: [
+          all: :boolean,
+          step: :integer,
+          to: :integer,
+          quiet: :boolean,
+          prefix: :string,
+          pool_size: :integer,
+          log_sql: :boolean
+        ],
+        aliases: [n: :step, v: :to]
+      )
 
     opts =
       if opts[:to] || opts[:step] || opts[:all],
@@ -70,15 +80,16 @@ defmodule Mix.Tasks.Ecto.Migrate do
 
     opts =
       if opts[:quiet],
-        do: Keyword.merge(opts, [log: false, log_sql: false]),
+        do: Keyword.merge(opts, log: false, log_sql: false),
         else: opts
 
-    Enum.each repos, fn repo ->
+    Enum.each(repos, fn repo ->
       ensure_repo(repo, args)
       ensure_migrations_path(repo)
       {:ok, pid, apps} = ensure_started(repo, opts)
 
       pool = repo.config[:pool]
+
       migrated =
         if function_exported?(pool, :unboxed_run, 2) do
           pool.unboxed_run(repo, fn -> migrator.(repo, :up, opts) end)
@@ -88,6 +99,6 @@ defmodule Mix.Tasks.Ecto.Migrate do
 
       pid && repo.stop(pid)
       restart_apps_if_migrated(apps, migrated)
-    end
+    end)
   end
 end

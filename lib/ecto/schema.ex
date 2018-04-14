@@ -322,9 +322,9 @@ defmodule Ecto.Schema do
   defined so structs and changeset functionalities are available.
   """
 
-  @type source :: String.t
-  @type prefix :: String.t | nil
-  @type schema :: %{optional(atom) => any, __struct__: atom, __meta__: Ecto.Schema.Metadata.t}
+  @type source :: String.t()
+  @type prefix :: String.t() | nil
+  @type schema :: %{optional(atom) => any, __struct__: atom, __meta__: Ecto.Schema.Metadata.t()}
   @type embedded_schema :: %{optional(atom) => any, __struct__: atom}
   @type t :: schema | embedded_schema
 
@@ -368,23 +368,23 @@ defmodule Ecto.Schema do
     @type state :: :built | :loaded | :deleted
 
     @type t :: %__MODULE__{
-      context: any,
-      prefix: Ecto.Schema.prefix,
-      schema: module,
-      source: Ecto.Schema.source,
-      state: state,
-    }
+            context: any,
+            prefix: Ecto.Schema.prefix(),
+            schema: module,
+            source: Ecto.Schema.source(),
+            state: state
+          }
 
     defimpl Inspect do
       import Inspect.Algebra
 
       def inspect(metadata, opts) do
         %{source: source, prefix: prefix, state: state, context: context} = metadata
+
         entries =
-          for entry <- [state, prefix, source, context],
-              entry != nil,
-              do: to_doc(entry, opts)
-        concat ["#Ecto.Schema.Metadata<"] ++ Enum.intersperse(entries, ", ") ++ [">"]
+          for entry <- [state, prefix, source, context], entry != nil, do: to_doc(entry, opts)
+
+        concat(["#Ecto.Schema.Metadata<"] ++ Enum.intersperse(entries, ", ") ++ [">"])
       end
     end
   end
@@ -424,7 +424,7 @@ defmodule Ecto.Schema do
 
   Embedded schemas don't define the `__meta__` field.
   """
-  defmacro embedded_schema([do: block]) do
+  defmacro embedded_schema(do: block) do
     schema(nil, false, :binary_id, block)
   end
 
@@ -435,7 +435,7 @@ defmodule Ecto.Schema do
   internal Ecto state. This field always has a `Ecto.Schema.Metadata` struct
   as value and can be manipulated with the `Ecto.put_meta/2` function.
   """
-  defmacro schema(source, [do: block]) do
+  defmacro schema(source, do: block) do
     schema(source, true, :id, block)
   end
 
@@ -445,7 +445,7 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :changeset_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
 
-      meta?  = unquote(meta?)
+      meta? = unquote(meta?)
       source = unquote(source)
       prefix = @schema_prefix
 
@@ -456,7 +456,7 @@ defmodule Ecto.Schema do
 
       if meta? do
         unless is_binary(source) do
-          raise ArgumentError, "schema source must be a string, got: #{inspect source}"
+          raise ArgumentError, "schema source must be a string, got: #{inspect(source)}"
         end
 
         meta = %Metadata{state: :built, source: source, prefix: prefix, schema: __MODULE__}
@@ -471,9 +471,11 @@ defmodule Ecto.Schema do
         case @primary_key do
           false ->
             []
+
           {name, type, opts} ->
             Ecto.Schema.__field__(__MODULE__, name, type, [primary_key: true] ++ opts)
             [name]
+
           other ->
             raise ArgumentError, "@primary_key must be false or {name, type, opts}"
         end
@@ -485,15 +487,15 @@ defmodule Ecto.Schema do
         :ok
       end
 
-      primary_key_fields = @ecto_primary_keys |> Enum.reverse
-      autogenerate = @ecto_autogenerate |> Enum.reverse
-      autoupdate = @ecto_autoupdate |> Enum.reverse
-      fields = @ecto_fields |> Enum.reverse
-      field_sources = @ecto_field_sources |> Enum.reverse
-      assocs = @ecto_assocs |> Enum.reverse
-      embeds = @ecto_embeds |> Enum.reverse
+      primary_key_fields = @ecto_primary_keys |> Enum.reverse()
+      autogenerate = @ecto_autogenerate |> Enum.reverse()
+      autoupdate = @ecto_autoupdate |> Enum.reverse()
+      fields = @ecto_fields |> Enum.reverse()
+      field_sources = @ecto_field_sources |> Enum.reverse()
+      assocs = @ecto_assocs |> Enum.reverse()
+      embeds = @ecto_embeds |> Enum.reverse()
 
-      Module.eval_quoted __ENV__, [
+      Module.eval_quoted(__ENV__, [
         Ecto.Schema.__defstruct__(@struct_fields),
         Ecto.Schema.__changeset__(@changeset_fields),
         Ecto.Schema.__schema__(prefix, source, fields, primary_key_fields),
@@ -504,7 +506,8 @@ defmodule Ecto.Schema do
         Ecto.Schema.__assocs__(assocs),
         Ecto.Schema.__embeds__(embeds),
         Ecto.Schema.__read_after_writes__(@ecto_raw),
-        Ecto.Schema.__autogenerate__(@ecto_autogenerate_id, autogenerate, autoupdate)]
+        Ecto.Schema.__autogenerate__(@ecto_autogenerate_id, autogenerate, autoupdate)
+      ])
     end
   end
 
@@ -765,6 +768,7 @@ defmodule Ecto.Schema do
   """
   defmacro has_many(name, queryable, opts \\ []) do
     queryable = expand_alias(queryable, __CALLER__)
+
     quote do
       Ecto.Schema.__has_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -845,6 +849,7 @@ defmodule Ecto.Schema do
   """
   defmacro has_one(name, queryable, opts \\ []) do
     queryable = expand_alias(queryable, __CALLER__)
+
     quote do
       Ecto.Schema.__has_one__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -1061,6 +1066,7 @@ defmodule Ecto.Schema do
   """
   defmacro belongs_to(name, queryable, opts \\ []) do
     queryable = expand_alias(queryable, __CALLER__)
+
     quote do
       Ecto.Schema.__belongs_to__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -1419,6 +1425,7 @@ defmodule Ecto.Schema do
 
   defmacro embeds_one(name, schema, opts) do
     schema = expand_alias(schema, __CALLER__)
+
     quote do
       Ecto.Schema.__embeds_one__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
     end
@@ -1431,7 +1438,14 @@ defmodule Ecto.Schema do
   """
   defmacro embeds_one(name, schema, opts, do: block) do
     quote do
-      {schema, opts} = Ecto.Schema.__embeds_module__(__ENV__, unquote(schema), unquote(opts), unquote(Macro.escape(block)))
+      {schema, opts} =
+        Ecto.Schema.__embeds_module__(
+          __ENV__,
+          unquote(schema),
+          unquote(opts),
+          unquote(Macro.escape(block))
+        )
+
       Ecto.Schema.__embeds_one__(__MODULE__, unquote(name), schema, opts)
     end
   end
@@ -1582,6 +1596,7 @@ defmodule Ecto.Schema do
 
   defmacro embeds_many(name, schema, opts) do
     schema = expand_alias(schema, __CALLER__)
+
     quote do
       Ecto.Schema.__embeds_many__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
     end
@@ -1594,7 +1609,14 @@ defmodule Ecto.Schema do
   """
   defmacro embeds_many(name, schema, opts, do: block) do
     quote do
-      {schema, opts} = Ecto.Schema.__embeds_module__(__ENV__, unquote(schema), unquote(opts), unquote(Macro.escape(block)))
+      {schema, opts} =
+        Ecto.Schema.__embeds_module__(
+          __ENV__,
+          unquote(schema),
+          unquote(opts),
+          unquote(Macro.escape(block))
+        )
+
       Ecto.Schema.__embeds_many__(__MODULE__, unquote(name), schema, opts)
     end
   end
@@ -1610,10 +1632,14 @@ defmodule Ecto.Schema do
   the association name, the association module (that implements
   `Ecto.Association` callbacks) and a keyword list of options.
   """
-  @spec association(module, :one | :many, atom(), module, Keyword.t) :: Ecto.Association.t
+  @spec association(module, :one | :many, atom(), module, Keyword.t()) :: Ecto.Association.t()
   def association(schema, cardinality, name, association, opts) do
-    not_loaded  = %Ecto.Association.NotLoaded{__owner__: schema,
-                    __field__: name, __cardinality__: cardinality}
+    not_loaded = %Ecto.Association.NotLoaded{
+      __owner__: schema,
+      __field__: name,
+      __cardinality__: cardinality
+    }
+
     put_struct_field(schema, name, not_loaded)
     opts = [cardinality: cardinality] ++ opts
     struct = association.struct(schema, name, opts)
@@ -1655,15 +1681,19 @@ defmodule Ecto.Schema do
       %{__meta__: %Metadata{} = metadata} = struct ->
         metadata = %{metadata | state: :loaded, source: source, prefix: prefix}
         Map.put(struct, :__meta__, metadata)
+
       map ->
         map
     end
   end
 
   defp safe_load_zip([{field, type} | fields], [value | values], struct, loader) do
-    [{field, load!(struct, field, type, value, loader)} |
-     safe_load_zip(fields, values, struct, loader)]
+    [
+      {field, load!(struct, field, type, value, loader)}
+      | safe_load_zip(fields, values, struct, loader)
+    ]
   end
+
   defp safe_load_zip([], [], _struct, _loader) do
     []
   end
@@ -1674,9 +1704,11 @@ defmodule Ecto.Schema do
   def __unsafe_load__(schema, data, loader) do
     types = schema.__schema__(:load)
     struct = schema.__struct__()
+
     case __unsafe_load__(struct, types, data, loader) do
       %{__meta__: %Metadata{} = metadata} = struct ->
         Map.put(struct, :__meta__, %{metadata | state: :loaded})
+
       map ->
         map
     end
@@ -1686,6 +1718,7 @@ defmodule Ecto.Schema do
   def __unsafe_load__(struct, types, map, loader) when is_map(map) do
     Enum.reduce(types, struct, fn pair, acc ->
       {field, source, type} = field_source_and_type(pair)
+
       case fetch_string_or_atom_field(map, source) do
         {:ok, value} -> Map.put(acc, field, load!(struct, field, type, value, loader))
         :error -> acc
@@ -1697,6 +1730,7 @@ defmodule Ecto.Schema do
   defp field_source_and_type({field, {:source, source, type}}) do
     {field, source, type}
   end
+
   defp field_source_and_type({field, type}) do
     {field, field, type}
   end
@@ -1712,15 +1746,18 @@ defmodule Ecto.Schema do
     case loader.(type, value) do
       {:ok, value} ->
         value
+
       :error ->
-        raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type} " <>
-                             "for field `#{field}`#{error_data(struct)}"
+        raise ArgumentError,
+              "cannot load `#{inspect(value)}` as type #{inspect(type)} " <>
+                "for field `#{field}`#{error_data(struct)}"
     end
   end
 
   defp error_data(%{__struct__: atom}) do
-    " in schema #{inspect atom}"
+    " in schema #{inspect(atom)}"
   end
+
   defp error_data(other) when is_map(other) do
     ""
   end
@@ -1737,6 +1774,7 @@ defmodule Ecto.Schema do
 
     unless virtual? do
       source = opts[:source] || Module.get_attribute(mod, :field_source_mapper).(name)
+
       if name != source do
         Module.put_attribute(mod, :ecto_field_sources, {name, source})
       end
@@ -1748,8 +1786,10 @@ defmodule Ecto.Schema do
       case gen = opts[:autogenerate] do
         {_, _, _} ->
           store_mfa_autogenerate!(mod, name, type, gen)
+
         true ->
           store_type_autogenerate!(mod, name, source || name, type, pk?)
+
         _ ->
           :ok
       end
@@ -1775,8 +1815,7 @@ defmodule Ecto.Schema do
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
       association(mod, :many, name, Ecto.Association.HasThrough, queryable)
     else
-      struct =
-        association(mod, :many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+      struct = association(mod, :many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
       Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
     end
   end
@@ -1788,16 +1827,23 @@ defmodule Ecto.Schema do
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
       association(mod, :one, name, Ecto.Association.HasThrough, queryable)
     else
-      struct =
-        association(mod, :one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+      struct = association(mod, :one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
       Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
     end
   end
 
   # :primary_key is valid here to support associative entity
   # https://en.wikipedia.org/wiki/Associative_entity
-  @valid_belongs_to_options [:foreign_key, :references, :define_field, :type,
-                             :on_replace, :defaults, :primary_key, :source]
+  @valid_belongs_to_options [
+    :foreign_key,
+    :references,
+    :define_field,
+    :type,
+    :on_replace,
+    :defaults,
+    :primary_key,
+    :source
+  ]
 
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
@@ -1807,7 +1853,8 @@ defmodule Ecto.Schema do
     foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)
 
     if name == Keyword.get(opts, :foreign_key) do
-      raise ArgumentError, "foreign_key #{inspect name} must be distinct from corresponding association name"
+      raise ArgumentError,
+            "foreign_key #{inspect(name)} must be distinct from corresponding association name"
     end
 
     if Keyword.get(opts, :define_field, true) do
@@ -1816,10 +1863,18 @@ defmodule Ecto.Schema do
 
     struct =
       association(mod, :one, name, Ecto.Association.BelongsTo, [queryable: queryable] ++ opts)
+
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_many_to_many_options [:join_through, :join_keys, :on_delete, :defaults, :on_replace, :unique]
+  @valid_many_to_many_options [
+    :join_through,
+    :join_keys,
+    :on_delete,
+    :defaults,
+    :on_replace,
+    :unique
+  ]
 
   @doc false
   def __many_to_many__(mod, name, queryable, opts) do
@@ -1827,6 +1882,7 @@ defmodule Ecto.Schema do
 
     struct =
       association(mod, :many, name, Ecto.Association.ManyToMany, [queryable: queryable] ++ opts)
+
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 
@@ -1875,20 +1931,27 @@ defmodule Ecto.Schema do
     if Process.info(self(), :error_handler) == {:error_handler, Kernel.ErrorHandler} do
       for name <- module.__schema__(:associations) do
         assoc = module.__schema__(:association, name)
+
         case assoc.__struct__.after_compile_validation(assoc, env) do
-          :ok -> :ok
+          :ok ->
+            :ok
+
           {:error, message} ->
-            IO.warn "invalid association `#{assoc.field}` in schema #{inspect module}: #{message}",
-                    Macro.Env.stacktrace(env)
+            IO.warn(
+              "invalid association `#{assoc.field}` in schema #{inspect(module)}: #{message}",
+              Macro.Env.stacktrace(env)
+            )
         end
       end
     end
+
     :ok
   end
 
   @doc false
   def __changeset__(changeset_fields) do
     map = changeset_fields |> Enum.into(%{}) |> Macro.escape()
+
     quote do
       def __changeset__, do: unquote(map)
     end
@@ -1912,11 +1975,11 @@ defmodule Ecto.Schema do
     hash = :erlang.phash2({primary_key, fields})
 
     quote do
-      def __schema__(:prefix),      do: unquote(prefix)
-      def __schema__(:source),      do: unquote(source)
-      def __schema__(:fields),      do: unquote(field_names)
+      def __schema__(:prefix), do: unquote(prefix)
+      def __schema__(:source), do: unquote(source)
+      def __schema__(:fields), do: unquote(field_names)
       def __schema__(:primary_key), do: unquote(primary_key)
-      def __schema__(:hash),        do: unquote(hash)
+      def __schema__(:hash), do: unquote(hash)
 
       def __schema__(:query) do
         %Ecto.Query{
@@ -2059,7 +2122,7 @@ defmodule Ecto.Schema do
   ## Private
 
   defp embed(mod, cardinality, name, schema, opts) do
-    opts   = [cardinality: cardinality, related: schema] ++ opts
+    opts = [cardinality: cardinality, related: schema] ++ opts
     struct = Ecto.Embedded.struct(mod, name, opts)
 
     __field__(mod, name, {:embed, struct}, opts)
@@ -2070,16 +2133,17 @@ defmodule Ecto.Schema do
     fields = Module.get_attribute(mod, :struct_fields)
 
     if List.keyfind(fields, name, 0) do
-      raise ArgumentError, "field/association #{inspect name} is already set on schema"
+      raise ArgumentError, "field/association #{inspect(name)} is already set on schema"
     end
 
     Module.put_attribute(mod, :struct_fields, {name, assoc})
   end
 
   defp check_options!(opts, valid, fun_arity) do
-    case Enum.find(opts, fn {k, _} -> not(k in valid) end) do
+    case Enum.find(opts, fn {k, _} -> not (k in valid) end) do
       {k, _} ->
-        raise ArgumentError, "invalid option #{inspect k} for #{fun_arity}"
+        raise ArgumentError, "invalid option #{inspect(k)} for #{fun_arity}"
+
       nil ->
         :ok
     end
@@ -2088,22 +2152,29 @@ defmodule Ecto.Schema do
   defp check_type!(name, type, virtual?) do
     cond do
       type == :datetime ->
-        raise ArgumentError, "invalid type :datetime for field #{inspect name}. " <>
-                             "You probably meant to choose one between :naive_datetime " <>
-                             "(no time zone information) or :utc_datetime (time zone is set to UTC)"
+        raise ArgumentError,
+              "invalid type :datetime for field #{inspect(name)}. " <>
+                "You probably meant to choose one between :naive_datetime " <>
+                "(no time zone information) or :utc_datetime (time zone is set to UTC)"
+
       type == :any and not virtual? ->
-        raise ArgumentError, "only virtual fields can have type :any, " <>
-                             "invalid type for field #{inspect name}"
+        raise ArgumentError,
+              "only virtual fields can have type :any, " <>
+                "invalid type for field #{inspect(name)}"
+
       Ecto.Type.primitive?(type) ->
         type
+
       is_atom(type) and Code.ensure_compiled?(type) and function_exported?(type, :type, 0) ->
         type
+
       is_atom(type) and function_exported?(type, :__schema__, 1) ->
         raise ArgumentError,
-          "schema #{inspect type} is not a valid type for field #{inspect name}." <>
-          " Did you mean to use belongs_to, has_one, has_many, embeds_one, or embeds_many instead?"
+              "schema #{inspect(type)} is not a valid type for field #{inspect(name)}." <>
+                " Did you mean to use belongs_to, has_one, has_many, embeds_one, or embeds_many instead?"
+
       true ->
-        raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}"
+        raise ArgumentError, "invalid or unknown type #{inspect(type)} for field #{inspect(name)}"
     end
   end
 
@@ -2120,22 +2191,28 @@ defmodule Ecto.Schema do
       id = autogenerate_id(type) ->
         cond do
           not pk? ->
-            raise ArgumentError, "only primary keys allow :autogenerate for type #{inspect type}, " <>
-                                 "field #{inspect name} is not a primary key"
+            raise ArgumentError,
+                  "only primary keys allow :autogenerate for type #{inspect(type)}, " <>
+                    "field #{inspect(name)} is not a primary key"
+
           Module.get_attribute(mod, :ecto_autogenerate_id) ->
-            raise ArgumentError, "only one primary key with ID type may be marked as autogenerated"
+            raise ArgumentError,
+                  "only one primary key with ID type may be marked as autogenerated"
+
           true ->
             Module.put_attribute(mod, :ecto_autogenerate_id, {name, source, id})
         end
 
       Ecto.Type.primitive?(type) ->
-        raise ArgumentError, "field #{inspect name} does not support :autogenerate because it uses a " <>
-                             "primitive type #{inspect type}"
+        raise ArgumentError,
+              "field #{inspect(name)} does not support :autogenerate because it uses a " <>
+                "primitive type #{inspect(type)}"
 
       # Note the custom type has already been loaded in check_type!/3
       not function_exported?(type, :autogenerate, 0) ->
-        raise ArgumentError, "field #{inspect name} does not support :autogenerate because it uses a " <>
-                             "custom type #{inspect type} that does not define autogenerate/0"
+        raise ArgumentError,
+              "field #{inspect(name)} does not support :autogenerate because it uses a " <>
+                "custom type #{inspect(type)} that does not define autogenerate/0"
 
       true ->
         Module.put_attribute(mod, :ecto_autogenerate, {name, {type, :autogenerate, []}})
@@ -2153,6 +2230,6 @@ defmodule Ecto.Schema do
 
   defp expand_alias({:__aliases__, _, _} = ast, env),
     do: Macro.expand(ast, %{env | function: {:__schema__, 2}})
-  defp expand_alias(ast, _env),
-    do: ast
+
+  defp expand_alias(ast, _env), do: ast
 end

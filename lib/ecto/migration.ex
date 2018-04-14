@@ -199,17 +199,17 @@ defmodule Ecto.Migration do
               options: nil
 
     @type t :: %__MODULE__{
-      table: String.t,
-      prefix: atom,
-      name: atom,
-      columns: [atom | String.t],
-      unique: boolean,
-      concurrently: boolean,
-      using: atom | String.t,
-      where: atom | String.t,
-      comment: String.t | nil,
-      options: String.t
-    }
+            table: String.t(),
+            prefix: atom,
+            name: atom,
+            columns: [atom | String.t()],
+            unique: boolean,
+            concurrently: boolean,
+            using: atom | String.t(),
+            where: atom | String.t(),
+            comment: String.t() | nil,
+            options: String.t()
+          }
   end
 
   defmodule Table do
@@ -219,8 +219,15 @@ defmodule Ecto.Migration do
     To define a table in a migration, see `Ecto.Migration.table/2`
     """
     defstruct name: nil, prefix: nil, comment: nil, primary_key: true, engine: nil, options: nil
-    @type t :: %__MODULE__{name: String.t, prefix: atom | nil, comment: String.t | nil, primary_key: boolean,
-                           engine: atom, options: String.t}
+
+    @type t :: %__MODULE__{
+            name: String.t(),
+            prefix: atom | nil,
+            comment: String.t() | nil,
+            primary_key: boolean,
+            engine: atom,
+            options: String.t()
+          }
   end
 
   defmodule Reference do
@@ -229,8 +236,20 @@ defmodule Ecto.Migration do
 
     To define a reference in a migration, see `Ecto.Migration.references/2`
     """
-    defstruct name: nil, table: nil, column: :id, type: :bigserial, on_delete: :nothing, on_update: :nothing
-    @type t :: %__MODULE__{table: String.t, column: atom, type: atom, on_delete: atom, on_update: atom}
+    defstruct name: nil,
+              table: nil,
+              column: :id,
+              type: :bigserial,
+              on_delete: :nothing,
+              on_update: :nothing
+
+    @type t :: %__MODULE__{
+            table: String.t(),
+            column: atom,
+            type: atom,
+            on_delete: atom,
+            on_update: atom
+          }
   end
 
   defmodule Constraint do
@@ -240,8 +259,15 @@ defmodule Ecto.Migration do
     To define a constraint in a migration, see `Ecto.Migration.constraint/3`
     """
     defstruct name: nil, table: nil, check: nil, exclude: nil, prefix: nil, comment: nil
-    @type t :: %__MODULE__{name: atom, table: String.t, prefix: atom | nil,
-                           check: String.t | nil, exclude: String.t | nil, comment: String.t | nil}
+
+    @type t :: %__MODULE__{
+            name: atom,
+            table: String.t(),
+            prefix: atom | nil,
+            check: String.t() | nil,
+            exclude: String.t() | nil,
+            comment: String.t() | nil
+          }
   end
 
   defmodule Command do
@@ -254,7 +280,7 @@ defmodule Ecto.Migration do
     To define a reversible command in a migration, see `Ecto.Migration.execute/2`
     """
     defstruct up: nil, down: nil
-    @type t :: %__MODULE__{up: String.t, down: String.t}
+    @type t :: %__MODULE__{up: String.t(), down: String.t()}
   end
 
   alias Ecto.Migration.Runner
@@ -271,8 +297,7 @@ defmodule Ecto.Migration do
   @doc false
   defmacro __before_compile__(_env) do
     quote do
-      def __migration__,
-        do: [disable_ddl_transaction: @disable_ddl_transaction]
+      def __migration__, do: [disable_ddl_transaction: @disable_ddl_transaction]
     end
   end
 
@@ -322,7 +347,7 @@ defmodule Ecto.Migration do
       end
 
       unquote(block)
-      Runner.end_command
+      Runner.end_command()
       table
     end
   end
@@ -344,7 +369,7 @@ defmodule Ecto.Migration do
       table = %Table{} = unquote(object)
       Runner.start_command({:alter, Ecto.Migration.__prefix__(table)})
       unquote(block)
-      Runner.end_command
+      Runner.end_command()
     end
   end
 
@@ -366,17 +391,17 @@ defmodule Ecto.Migration do
 
   """
   def create(%Index{} = index) do
-    Runner.execute {:create, __prefix__(index)}
+    Runner.execute({:create, __prefix__(index)})
     index
   end
 
   def create(%Constraint{} = constraint) do
-    Runner.execute {:create, __prefix__(constraint)}
+    Runner.execute({:create, __prefix__(constraint)})
     constraint
   end
 
   def create(%Table{} = table) do
-    do_create table, :create
+    do_create(table, :create)
     table
   end
 
@@ -391,11 +416,11 @@ defmodule Ecto.Migration do
 
   """
   def create_if_not_exists(%Index{} = index) do
-    Runner.execute {:create_if_not_exists, __prefix__(index)}
+    Runner.execute({:create_if_not_exists, __prefix__(index)})
   end
 
   def create_if_not_exists(%Table{} = table) do
-    do_create table, :create_if_not_exists
+    do_create(table, :create_if_not_exists)
   end
 
   defp do_create(table, command) do
@@ -406,7 +431,7 @@ defmodule Ecto.Migration do
         []
       end
 
-    Runner.execute {command, __prefix__(table), columns}
+    Runner.execute({command, __prefix__(table), columns})
   end
 
   @doc """
@@ -424,7 +449,7 @@ defmodule Ecto.Migration do
 
   """
   def drop(%{} = index_or_table_or_constraint) do
-    Runner.execute {:drop, __prefix__(index_or_table_or_constraint)}
+    Runner.execute({:drop, __prefix__(index_or_table_or_constraint)})
     index_or_table_or_constraint
   end
 
@@ -440,7 +465,7 @@ defmodule Ecto.Migration do
 
   """
   def drop_if_exists(%{} = index_or_table) do
-    Runner.execute {:drop_if_exists, __prefix__(index_or_table)}
+    Runner.execute({:drop_if_exists, __prefix__(index_or_table)})
     index_or_table
   end
 
@@ -587,12 +612,12 @@ defmodule Ecto.Migration do
 
   defp default_index_name(index) do
     [index.table, index.columns, "index"]
-    |> List.flatten
+    |> List.flatten()
     |> Enum.map(&to_string(&1))
     |> Enum.map(&String.replace(&1, ~r"[^\w_]", "_"))
     |> Enum.map(&String.replace_trailing(&1, "_", ""))
     |> Enum.join("_")
-    |> String.to_atom
+    |> String.to_atom()
   end
 
   @doc """
@@ -608,7 +633,7 @@ defmodule Ecto.Migration do
 
   """
   def execute(command) when is_binary(command) or is_list(command) do
-    Runner.execute command
+    Runner.execute(command)
   end
 
   @doc """
@@ -623,9 +648,9 @@ defmodule Ecto.Migration do
       execute "CREATE EXTENSION postgres_fdw", "DROP EXTENSION postgres_fdw"
 
   """
-  def execute(up, down) when (is_binary(up) or is_list(up)) and
-                             (is_binary(down) or is_list(down)) do
-    Runner.execute %Command{up: up, down: down}
+  def execute(up, down)
+      when (is_binary(up) or is_list(up)) and (is_binary(down) or is_list(down)) do
+    Runner.execute(%Command{up: up, down: down})
   end
 
   @doc """
@@ -633,14 +658,14 @@ defmodule Ecto.Migration do
   """
   @spec direction :: :up | :down
   def direction do
-    Runner.migrator_direction
+    Runner.migrator_direction()
   end
 
   @doc """
   Gets the migrator prefix.
   """
   def prefix do
-    Runner.prefix
+    Runner.prefix()
   end
 
   @doc """
@@ -690,8 +715,9 @@ defmodule Ecto.Migration do
   def add(column, type, opts \\ [])
 
   def add(column, :datetime, _opts) when is_atom(column) do
-    raise ArgumentError, "the :datetime type in migrations is not supported, " <>
-                         "please use :utc_datetime or :naive_datetime instead"
+    raise ArgumentError,
+          "the :datetime type in migrations is not supported, " <>
+            "please use :utc_datetime or :naive_datetime instead"
   end
 
   def add(column, type, opts) when is_atom(column) and is_list(opts) do
@@ -700,7 +726,7 @@ defmodule Ecto.Migration do
     end
 
     validate_type!(type)
-    Runner.subcommand {:add, column, type, opts}
+    Runner.subcommand({:add, column, type, opts})
   end
 
   @doc """
@@ -711,7 +737,7 @@ defmodule Ecto.Migration do
       rename table("posts"), to: table("new_posts")
   """
   def rename(%Table{} = table_current, to: %Table{} = table_new) do
-    Runner.execute {:rename, __prefix__(table_current), __prefix__(table_new)}
+    Runner.execute({:rename, __prefix__(table_current), __prefix__(table_new)})
     table_new
   end
 
@@ -722,8 +748,9 @@ defmodule Ecto.Migration do
 
       rename table("posts"), :title, to: :summary
   """
-  def rename(%Table{} = table, current_column, to: new_column) when is_atom(current_column) and is_atom(new_column) do
-    Runner.execute {:rename, __prefix__(table), current_column, new_column}
+  def rename(%Table{} = table, current_column, to: new_column)
+      when is_atom(current_column) and is_atom(new_column) do
+    Runner.execute({:rename, __prefix__(table), current_column, new_column})
     table
   end
 
@@ -791,8 +818,9 @@ defmodule Ecto.Migration do
   def modify(column, type, opts \\ [])
 
   def modify(column, :datetime, _opts) when is_atom(column) do
-    raise ArgumentError, "the :datetime type in migrations is not supported, " <>
-                         "please use :utc_datetime or :naive_datetime instead"
+    raise ArgumentError,
+          "the :datetime type in migrations is not supported, " <>
+            "please use :utc_datetime or :naive_datetime instead"
   end
 
   def modify(column, type, opts) when is_atom(column) and is_list(opts) do
@@ -800,7 +828,7 @@ defmodule Ecto.Migration do
       raise ArgumentError, "column #{Atom.to_string(column)} is missing precision option"
     end
 
-    Runner.subcommand {:modify, column, type, opts}
+    Runner.subcommand({:modify, column, type, opts})
   end
 
   @doc """
@@ -818,7 +846,7 @@ defmodule Ecto.Migration do
 
   """
   def remove(column) when is_atom(column) do
-    Runner.subcommand {:remove, column}
+    Runner.subcommand({:remove, column})
   end
 
   @doc """
@@ -835,7 +863,7 @@ defmodule Ecto.Migration do
 
   """
   def remove(column, type, opts \\ []) when is_atom(column) do
-    Runner.subcommand {:remove, column, type, opts}
+    Runner.subcommand({:remove, column, type, opts})
   end
 
   @doc ~S"""
@@ -873,11 +901,11 @@ defmodule Ecto.Migration do
     reference = struct(%Reference{table: table}, opts)
 
     unless reference.on_delete in [:nothing, :delete_all, :nilify_all, :restrict] do
-      raise ArgumentError, "unknown :on_delete value: #{inspect reference.on_delete}"
+      raise ArgumentError, "unknown :on_delete value: #{inspect(reference.on_delete)}"
     end
 
     unless reference.on_update in [:nothing, :update_all, :nilify_all, :restrict] do
-      raise ArgumentError, "unknown :on_update value: #{inspect reference.on_update}"
+      raise ArgumentError, "unknown :on_update value: #{inspect(reference.on_update)}"
     end
 
     reference
@@ -916,15 +944,16 @@ defmodule Ecto.Migration do
   on a change/0 function and resets commands queue.
   """
   def flush do
-    Runner.flush
+    Runner.flush()
   end
 
   defp validate_type!(type) when is_atom(type) do
     case Atom.to_string(type) do
       "Elixir." <> _ ->
         raise ArgumentError,
-          "#{inspect type} is not a valid database type, " <>
-          "please use an atom like :string, :text and so on"
+              "#{inspect(type)} is not a valid database type, " <>
+                "please use an atom like :string, :text and so on"
+
       _ ->
         :ok
     end
@@ -950,11 +979,14 @@ defmodule Ecto.Migration do
       is_nil(prefix) ->
         prefix = runner_prefix || Runner.repo_config(:migration_default_prefix, nil)
         %{index_or_table | prefix: prefix}
+
       is_nil(runner_prefix) or runner_prefix == to_string(prefix) ->
         index_or_table
+
       true ->
-        raise Ecto.MigrationError,  message:
-          "the :prefix option `#{prefix}` does match the migrator prefix `#{runner_prefix}`"
+        raise Ecto.MigrationError,
+          message:
+            "the :prefix option `#{prefix}` does match the migrator prefix `#{runner_prefix}`"
     end
   end
 end

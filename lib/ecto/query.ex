@@ -325,9 +325,24 @@ defmodule Ecto.Query do
   specially on insert, use `Ecto.put_meta/2`.
   """
 
-  defstruct [prefix: nil, sources: nil, from: nil, joins: [], aliases: %{}, wheres: [], select: nil,
-             order_bys: [], limit: nil, offset: nil, group_bys: [], updates: [],
-             havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
+  defstruct prefix: nil,
+            sources: nil,
+            from: nil,
+            joins: [],
+            aliases: %{},
+            wheres: [],
+            select: nil,
+            order_bys: [],
+            limit: nil,
+            offset: nil,
+            group_bys: [],
+            updates: [],
+            havings: [],
+            preloads: [],
+            assocs: [],
+            distinct: nil,
+            lock: nil
+
   @type t :: %__MODULE__{}
 
   defmodule FromExpr do
@@ -369,8 +384,21 @@ defmodule Ecto.Query do
   end
 
   alias Ecto.Query.Builder
-  alias Ecto.Query.Builder.{Distinct, Dynamic, Filter, From, GroupBy, Join,
-                            LimitOffset, Lock, OrderBy, Preload, Select, Update}
+
+  alias Ecto.Query.Builder.{
+    Distinct,
+    Dynamic,
+    Filter,
+    From,
+    GroupBy,
+    Join,
+    LimitOffset,
+    Lock,
+    OrderBy,
+    Preload,
+    Select,
+    Update
+  }
 
   @doc """
   Builds a dynamic query expression.
@@ -487,6 +515,7 @@ defmodule Ecto.Query do
   """
   def subquery(query, opts \\ []) do
     subquery = wrap_in_subquery(query)
+
     case Keyword.fetch(opts, :prefix) do
       {:ok, prefix} when is_binary(prefix) -> put_in(subquery.query.prefix, prefix)
       :error -> subquery
@@ -497,8 +526,16 @@ defmodule Ecto.Query do
   defp wrap_in_subquery(%Ecto.Query{} = query), do: %Ecto.SubQuery{query: query}
   defp wrap_in_subquery(queryable), do: %Ecto.SubQuery{query: Ecto.Queryable.to_query(queryable)}
 
-  @joins [:join, :inner_join, :cross_join, :left_join, :right_join, :full_join,
-          :inner_lateral_join, :left_lateral_join]
+  @joins [
+    :join,
+    :inner_join,
+    :cross_join,
+    :left_join,
+    :right_join,
+    :full_join,
+    :inner_lateral_join,
+    :left_lateral_join
+  ]
 
   @doc """
   Resets a previously set field on a query.
@@ -537,10 +574,12 @@ defmodule Ecto.Query do
   def exclude(query, field), do: do_exclude(Ecto.Queryable.to_query(query), field)
 
   defp do_exclude(%Ecto.Query{} = query, :join), do: %{query | joins: []}
+
   defp do_exclude(%Ecto.Query{} = query, join_keyword) when join_keyword in @joins do
     qual = join_qual(join_keyword)
     %{query | joins: Enum.reject(query.joins, &(&1.qual == qual))}
   end
+
   defp do_exclude(%Ecto.Query{} = query, :where), do: %{query | wheres: []}
   defp do_exclude(%Ecto.Query{} = query, :order_by), do: %{query | order_bys: []}
   defp do_exclude(%Ecto.Query{} = query, :group_by), do: %{query | group_bys: []}
@@ -617,11 +656,24 @@ defmodule Ecto.Query do
     from(kw, __CALLER__, count_bind, quoted, to_query_binds(binds))
   end
 
-  @binds    [:where, :or_where, :select, :distinct, :order_by, :group_by,
-             :having, :or_having, :limit, :offset, :preload, :update, :select_merge]
+  @binds [
+    :where,
+    :or_where,
+    :select,
+    :distinct,
+    :order_by,
+    :group_by,
+    :having,
+    :or_having,
+    :limit,
+    :offset,
+    :preload,
+    :update,
+    :select_merge
+  ]
   @no_binds [:lock]
 
-  defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
+  defp from([{type, expr} | t], env, count_bind, quoted, binds) when type in @binds do
     # If all bindings are integer indexes keep AST Macro expandable to %Query{},
     # otherwise ensure that quoted code is evaluated before macro call
     quoted =
@@ -639,7 +691,7 @@ defmodule Ecto.Query do
     from(t, env, count_bind, quoted, binds)
   end
 
-  defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @no_binds do
+  defp from([{type, expr} | t], env, count_bind, quoted, binds) when type in @no_binds do
     quoted =
       quote do
         Ecto.Query.unquote(type)(unquote(quoted), unquote(expr))
@@ -648,23 +700,23 @@ defmodule Ecto.Query do
     from(t, env, count_bind, quoted, binds)
   end
 
-  defp from([{join, expr}|t], env, count_bind, quoted, binds) when join in @joins do
+  defp from([{join, expr} | t], env, count_bind, quoted, binds) when join in @joins do
     qual = join_qual(join)
     {t, on, as} = collect_on_and_as(t, nil, nil)
     {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, count_bind, on, as, env)
     from(t, env, count_bind, quoted, to_query_binds(binds))
   end
 
-  defp from([{:as, _value}|_], _env, _count_bind, _quoted, _binds) do
-    Builder.error! "`as` keyword must immediately follow a join"
+  defp from([{:as, _value} | _], _env, _count_bind, _quoted, _binds) do
+    Builder.error!("`as` keyword must immediately follow a join")
   end
 
-  defp from([{:on, _value}|_], _env, _count_bind, _quoted, _binds) do
-    Builder.error! "`on` keyword must immediately follow a join"
+  defp from([{:on, _value} | _], _env, _count_bind, _quoted, _binds) do
+    Builder.error!("`on` keyword must immediately follow a join")
   end
 
-  defp from([{key, _value}|_], _env, _count_bind, _quoted, _binds) do
-    Builder.error! "unsupported #{inspect key} in keyword query expression"
+  defp from([{key, _value} | _], _env, _count_bind, _quoted, _binds) do
+    Builder.error!("unsupported #{inspect(key)} in keyword query expression")
   end
 
   defp from([], _env, _count_bind, quoted, _binds) do
@@ -684,16 +736,17 @@ defmodule Ecto.Query do
   defp join_qual(:left_lateral_join), do: :left_lateral
   defp join_qual(:inner_lateral_join), do: :inner_lateral
 
-  defp collect_on_and_as([{:on, on} | t], nil, as),
-    do: collect_on_and_as(t, on, as)
+  defp collect_on_and_as([{:on, on} | t], nil, as), do: collect_on_and_as(t, on, as)
+
   defp collect_on_and_as([{:on, expr} | t], on, as),
     do: collect_on_and_as(t, {:and, [], [on, expr]}, as)
-  defp collect_on_and_as([{:as, as} | t], on, nil),
-    do: collect_on_and_as(t, on, as)
+
+  defp collect_on_and_as([{:as, as} | t], on, nil), do: collect_on_and_as(t, on, as)
+
   defp collect_on_and_as([{:as, _} | _], _, _),
-    do: Builder.error! "`as` keyword was given more than once to the same join"
-  defp collect_on_and_as(other, on, as),
-    do: {other, on, as}
+    do: Builder.error!("`as` keyword was given more than once to the same join")
+
+  defp collect_on_and_as(other, on, as), do: {other, on, as}
 
   defp collect_as([{:as, as} | t]), do: {t, as}
   defp collect_as(t), do: {t, nil}
@@ -799,9 +852,13 @@ defmodule Ecto.Query do
       case parse_join_opts(opts) do
         {:opts, opts} ->
           {Keyword.get(opts, :on), Keyword.get(opts, :as)}
+
         {:expr, on_expr} ->
-          IO.warn "Passing raw `on` expression as the last argument to Ecto.Query.join/5 is deprecated. " <>
-            "Please use :on keyword option instead."
+          IO.warn(
+            "Passing raw `on` expression as the last argument to Ecto.Query.join/5 is deprecated. " <>
+              "Please use :on keyword option instead."
+          )
+
           {on_expr, nil}
       end
 
@@ -813,19 +870,26 @@ defmodule Ecto.Query do
   @join_opts [:on, :as]
 
   defp parse_join_opts([]), do: {:opts, []}
+
   defp parse_join_opts(list) when is_list(list) do
     opts = Keyword.take(list, @join_opts)
 
     case {list, opts} do
       {list, []} ->
         {:expr, list}
+
       {opts, opts} ->
         {:opts, opts}
+
       {list, _} ->
-        raise ArgumentError, "invalid options passed to Ecto.Query.join/5: " <>
-          "#{inspect(Keyword.keys(list) -- @join_opts)}. Valid options: #{inspect @join_opts}."
+        raise ArgumentError,
+              "invalid options passed to Ecto.Query.join/5: " <>
+                "#{inspect(Keyword.keys(list) -- @join_opts)}. Valid options: #{
+                  inspect(@join_opts)
+                }."
     end
   end
+
   defp parse_join_opts(expr), do: {:expr, expr}
 
   @doc """
@@ -1093,7 +1157,7 @@ defmodule Ecto.Query do
       City |> order_by(asc: :name) # Sorts by the cities name
 
   """
-  defmacro order_by(query, binding \\ [], expr)  do
+  defmacro order_by(query, binding \\ [], expr) do
     OrderBy.build(query, binding, expr, __CALLER__)
   end
 
@@ -1413,13 +1477,16 @@ defmodule Ecto.Query do
 
   def first(%Ecto.Query{} = query, nil) do
     query = %{query | limit: limit()}
+
     case query do
       %{order_bys: []} ->
         %{query | order_bys: [order_by_pk(query, :asc)]}
+
       %{} ->
         query
     end
   end
+
   def first(queryable, nil), do: first(Ecto.Queryable.to_query(queryable), nil)
   def first(queryable, key), do: first(order_by(queryable, ^key), nil)
 
@@ -1440,19 +1507,25 @@ defmodule Ecto.Query do
 
   def last(%Ecto.Query{} = query, nil) do
     query = %{query | limit: limit()}
-    update_in query.order_bys, fn
+
+    update_in(query.order_bys, fn
       [] ->
         [order_by_pk(query, :desc)]
+
       order_bys ->
         for %{expr: expr} = order_by <- order_bys do
-          %{order_by | expr:
-              Enum.map(expr, fn
-                {:desc, ast} -> {:asc, ast}
-                {:asc, ast} -> {:desc, ast}
-              end)}
+          %{
+            order_by
+            | expr:
+                Enum.map(expr, fn
+                  {:desc, ast} -> {:asc, ast}
+                  {:asc, ast} -> {:desc, ast}
+                end)
+          }
         end
-    end
+    end)
   end
+
   def last(queryable, nil), do: last(Ecto.Queryable.to_query(queryable), nil)
   def last(queryable, key), do: last(order_by(queryable, ^key), nil)
 
@@ -1466,12 +1539,15 @@ defmodule Ecto.Query do
 
   defp order_by_pk(query, dir) do
     schema = assert_schema!(query)
-    pks    = schema.__schema__(:primary_key)
-    expr   = for pk <- pks, do: {dir, field(0, pk)}
+    pks = schema.__schema__(:primary_key)
+    expr = for pk <- pks, do: {dir, field(0, pk)}
     %QueryExpr{expr: expr, file: __ENV__.file, line: __ENV__.line}
   end
 
-  defp assert_schema!(%{from: %Ecto.Query.FromExpr{source: {_source, schema}}}) when schema != nil, do: schema
+  defp assert_schema!(%{from: %Ecto.Query.FromExpr{source: {_source, schema}}})
+       when schema != nil,
+       do: schema
+
   defp assert_schema!(query) do
     raise Ecto.QueryError, query: query, message: "expected a from expression with a schema"
   end

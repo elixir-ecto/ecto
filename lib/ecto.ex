@@ -406,11 +406,11 @@ defmodule Ecto do
   @doc """
   Returns the schema primary keys as a keyword list.
   """
-  @spec primary_key(Ecto.Schema.t) :: Keyword.t
+  @spec primary_key(Ecto.Schema.t()) :: Keyword.t()
   def primary_key(%{__struct__: schema} = struct) do
-    Enum.map schema.__schema__(:primary_key), fn(field) ->
+    Enum.map(schema.__schema__(:primary_key), fn field ->
       {field, Map.fetch!(struct, field)}
-    end
+    end)
   end
 
   @doc """
@@ -419,7 +419,7 @@ defmodule Ecto do
   Raises `Ecto.NoPrimaryKeyFieldError` if the schema has no
   primary key field.
   """
-  @spec primary_key!(Ecto.Schema.t) :: Keyword.t | no_return
+  @spec primary_key!(Ecto.Schema.t()) :: Keyword.t() | no_return
   def primary_key!(%{__struct__: schema} = struct) do
     case primary_key(struct) do
       [] -> raise Ecto.NoPrimaryKeyFieldError, schema: schema
@@ -469,7 +469,7 @@ defmodule Ecto do
   end
 
   defp drop_meta(%{} = attrs), do: Map.drop(attrs, [:__struct__, :__meta__])
-  defp drop_meta([_|_] = attrs), do: Keyword.drop(attrs, [:__struct__, :__meta__])
+  defp drop_meta([_ | _] = attrs), do: Keyword.drop(attrs, [:__struct__, :__meta__])
 
   @doc """
   Builds a query for the association in the given struct or structs.
@@ -501,18 +501,21 @@ defmodule Ecto do
     structs = List.wrap(struct_or_structs)
 
     if structs == [] do
-      raise ArgumentError, "cannot retrieve association #{inspect assoc} for empty list"
+      raise ArgumentError, "cannot retrieve association #{inspect(assoc)} for empty list"
     end
 
     schema = hd(structs).__struct__
-    assoc = %{owner_key: owner_key} =
-      Ecto.Association.association_from_schema!(schema, assoc)
+    assoc = %{owner_key: owner_key} = Ecto.Association.association_from_schema!(schema, assoc)
 
     values =
-      Enum.uniq for(struct <- structs,
-        assert_struct!(schema, struct),
-        key = Map.fetch!(struct, owner_key),
-        do: key)
+      Enum.uniq(
+        for(
+          struct <- structs,
+          assert_struct!(schema, struct),
+          key = Map.fetch!(struct, owner_key),
+          do: key
+        )
+      )
 
     Ecto.Association.assoc_query(assoc, assocs, nil, values)
   end
@@ -538,14 +541,10 @@ defmodule Ecto do
   @doc """
   Gets the metadata from the given struct.
   """
-  def get_meta(struct, :context),
-    do: struct.__meta__.context
-  def get_meta(struct, :state),
-    do: struct.__meta__.state
-  def get_meta(struct, :source),
-    do: struct.__meta__.source
-  def get_meta(struct, :prefix),
-    do: struct.__meta__.prefix
+  def get_meta(struct, :context), do: struct.__meta__.context
+  def get_meta(struct, :state), do: struct.__meta__.state
+  def get_meta(struct, :source), do: struct.__meta__.source
+  def get_meta(struct, :prefix), do: struct.__meta__.prefix
 
   @doc """
   Returns a new struct with updated metadata.
@@ -559,31 +558,35 @@ defmodule Ecto do
 
   Please refer to the `Ecto.Schema.Metadata` module for more information.
   """
-  @spec put_meta(Ecto.Schema.schema, meta) :: Ecto.Schema.schema
-        when meta: [source: Ecto.Schema.source, prefix: Ecto.Schema.prefix,
-                    context: Ecto.Schema.Metadata.context, state: Ecto.Schema.Metadata.state]
+  @spec put_meta(Ecto.Schema.schema(), meta) :: Ecto.Schema.schema()
+        when meta: [
+               source: Ecto.Schema.source(),
+               prefix: Ecto.Schema.prefix(),
+               context: Ecto.Schema.Metadata.context(),
+               state: Ecto.Schema.Metadata.state()
+             ]
   def put_meta(struct, opts) do
-    update_in struct.__meta__, &update_meta(opts, &1)
+    update_in(struct.__meta__, &update_meta(opts, &1))
   end
 
-  defp update_meta([{:state, state}|t], meta) do
+  defp update_meta([{:state, state} | t], meta) do
     if state in [:built, :loaded, :deleted] do
-      update_meta t, %{meta | state: state}
+      update_meta(t, %{meta | state: state})
     else
-      raise ArgumentError, "invalid state #{inspect state}"
+      raise ArgumentError, "invalid state #{inspect(state)}"
     end
   end
 
   defp update_meta([{:source, source} | t], meta) do
-    update_meta t, %{meta | source: source}
+    update_meta(t, %{meta | source: source})
   end
 
   defp update_meta([{:prefix, prefix} | t], meta) do
-    update_meta t, %{meta | prefix: prefix}
+    update_meta(t, %{meta | prefix: prefix})
   end
 
   defp update_meta([{:context, context} | t], meta) do
-    update_meta t, %{meta | context: context}
+    update_meta(t, %{meta | context: context})
   end
 
   defp update_meta([], meta) do
@@ -591,13 +594,14 @@ defmodule Ecto do
   end
 
   defp update_meta([{k, _}], _meta) do
-    raise ArgumentError, "unknown meta key #{inspect k}"
+    raise ArgumentError, "unknown meta key #{inspect(k)}"
   end
 
   defp assert_struct!(module, %{__struct__: struct}) do
     if struct != module do
-      raise ArgumentError, "expected a homogeneous list containing the same struct, " <>
-                           "got: #{inspect module} and #{inspect struct}"
+      raise ArgumentError,
+            "expected a homogeneous list containing the same struct, " <>
+              "got: #{inspect(module)} and #{inspect(struct)}"
     else
       true
     end

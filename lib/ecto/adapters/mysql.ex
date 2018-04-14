@@ -123,13 +123,16 @@ defmodule Ecto.Adapters.MySQL do
   ## Custom MySQL types
 
   @doc false
-  def loaders(:map, type),            do: [&json_decode/1, type]
-  def loaders({:map, _}, type),       do: [&json_decode/1, type]
-  def loaders(:boolean, type),        do: [&bool_decode/1, type]
-  def loaders(:float, type),          do: [&float_decode/1, type]
-  def loaders(:binary_id, type),      do: [Ecto.UUID, type]
-  def loaders({:embed, _} = type, _), do: [&json_decode/1, &Ecto.Adapters.SQL.load_embed(type, &1)]
-  def loaders(_, type),               do: [type]
+  def loaders(:map, type), do: [&json_decode/1, type]
+  def loaders({:map, _}, type), do: [&json_decode/1, type]
+  def loaders(:boolean, type), do: [&bool_decode/1, type]
+  def loaders(:float, type), do: [&float_decode/1, type]
+  def loaders(:binary_id, type), do: [Ecto.UUID, type]
+
+  def loaders({:embed, _} = type, _),
+    do: [&json_decode/1, &Ecto.Adapters.SQL.load_embed(type, &1)]
+
+  def loaders(_, type), do: [type]
 
   defp bool_decode(<<0>>), do: {:ok, false}
   defp bool_decode(<<1>>), do: {:ok, true}
@@ -142,16 +145,18 @@ defmodule Ecto.Adapters.MySQL do
 
   defp json_decode(x) when is_binary(x),
     do: {:ok, Application.get_env(:mariaex, :json_library, Jason).decode!(x)}
-  defp json_decode(x),
-    do: {:ok, x}
+
+  defp json_decode(x), do: {:ok, x}
 
   ## Storage API
 
   @doc false
   def storage_up(opts) do
-    database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
-    charset  = opts[:charset] || "utf8"
-    opts     = Keyword.put(opts, :skip_database, true)
+    database =
+      Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
+
+    charset = opts[:charset] || "utf8"
+    opts = Keyword.put(opts, :skip_database, true)
 
     command =
       ~s(CREATE DATABASE `#{database}` DEFAULT CHARACTER SET = #{charset})
@@ -160,28 +165,35 @@ defmodule Ecto.Adapters.MySQL do
     case run_query(command, opts) do
       {:ok, _} ->
         :ok
+
       {:error, %{mariadb: %{code: 1007}}} ->
         {:error, :already_up}
+
       {:error, error} ->
         {:error, Exception.message(error)}
     end
   end
 
-  defp concat_if(content, nil, _fun),  do: content
+  defp concat_if(content, nil, _fun), do: content
   defp concat_if(content, value, fun), do: content <> " " <> fun.(value)
 
   @doc false
   def storage_down(opts) do
-    database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
+    database =
+      Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
+
     command = "DROP DATABASE `#{database}`"
 
     case run_query(command, opts) do
       {:ok, _} ->
         :ok
+
       {:error, %{mariadb: %{code: 1008}}} ->
         {:error, :already_down}
+
       {:error, %{mariadb: %{code: 1049}}} ->
         {:error, :already_down}
+
       {:error, error} ->
         {:error, Exception.message(error)}
     end
@@ -193,19 +205,28 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def insert(repo, %{source: source, prefix: prefix} = meta, params,
-             {_, query_params, _} = on_conflict, returning, opts) do
+  def insert(
+        repo,
+        %{source: source, prefix: prefix} = meta,
+        params,
+        {_, query_params, _} = on_conflict,
+        returning,
+        opts
+      ) do
     key = primary_key!(meta, returning)
     {fields, values} = :lists.unzip(params)
     sql = @conn.insert(prefix, source, fields, [fields], on_conflict, [])
+
     case Ecto.Adapters.SQL.query(repo, sql, values ++ query_params, opts) do
       {:ok, %{num_rows: 1, last_insert_id: last_insert_id}} ->
         {:ok, last_insert_id(key, last_insert_id)}
+
       {:ok, %{num_rows: 2, last_insert_id: last_insert_id}} ->
         {:ok, last_insert_id(key, last_insert_id)}
+
       {:error, err} ->
         case @conn.to_constraints(err) do
-          []          -> raise err
+          [] -> raise err
           constraints -> {:invalid, constraints}
         end
     end
@@ -213,9 +234,11 @@ defmodule Ecto.Adapters.MySQL do
 
   defp primary_key!(%{autogenerate_id: {key, :id}}, [key]), do: key
   defp primary_key!(_, []), do: nil
+
   defp primary_key!(%{schema: schema}, returning) do
-    raise ArgumentError, "MySQL does not support :read_after_writes in schemas for non-primary keys. " <>
-                         "The following fields in #{inspect schema} are tagged as such: #{inspect returning}"
+    raise ArgumentError,
+          "MySQL does not support :read_after_writes in schemas for non-primary keys. " <>
+            "The following fields in #{inspect(schema)} are tagged as such: #{inspect(returning)}"
   end
 
   defp last_insert_id(nil, _last_insert_id), do: []
@@ -225,7 +248,7 @@ defmodule Ecto.Adapters.MySQL do
   @doc false
   def structure_dump(default, config) do
     table = config[:migration_source] || "schema_migrations"
-    path  = config[:dump_path] || Path.join(default, "structure.sql")
+    path = config[:dump_path] || Path.join(default, "structure.sql")
 
     with {:ok, versions} <- select_versions(table, config),
          {:ok, contents} <- mysql_dump(config),
@@ -254,12 +277,12 @@ defmodule Ecto.Adapters.MySQL do
   defp append_versions(_table, [], contents) do
     {:ok, contents}
   end
+
   defp append_versions(table, versions, contents) do
     {:ok,
-      contents <>
-      ~s[INSERT INTO `#{table}` (version) VALUES ] <>
-      Enum.map_join(versions, ", ", &"(#{&1})") <>
-      ~s[;\n\n]}
+     contents <>
+       ~s[INSERT INTO `#{table}` (version) VALUES ] <>
+       Enum.map_join(versions, ", ", &"(#{&1})") <> ~s[;\n\n]}
   end
 
   @doc false
@@ -267,13 +290,15 @@ defmodule Ecto.Adapters.MySQL do
     path = config[:dump_path] || Path.join(default, "structure.sql")
 
     args = [
-      "--execute", "SET FOREIGN_KEY_CHECKS = 0; SOURCE #{path}; SET FOREIGN_KEY_CHECKS = 1",
-      "--database", config[:database]
+      "--execute",
+      "SET FOREIGN_KEY_CHECKS = 0; SOURCE #{path}; SET FOREIGN_KEY_CHECKS = 1",
+      "--database",
+      config[:database]
     ]
 
     case run_with_cmd("mysql", config, args) do
       {_output, 0} -> {:ok, path}
-      {output, _}  -> {:error, output}
+      {output, _} -> {:error, output}
     end
   end
 
@@ -288,28 +313,33 @@ defmodule Ecto.Adapters.MySQL do
       |> Keyword.put(:pool, DBConnection.Connection)
       |> Keyword.put(:backoff_type, :stop)
 
-    {:ok, pid} = Task.Supervisor.start_link
+    {:ok, pid} = Task.Supervisor.start_link()
 
-    task = Task.Supervisor.async_nolink(pid, fn ->
-      {:ok, conn} = Mariaex.start_link(opts)
+    task =
+      Task.Supervisor.async_nolink(pid, fn ->
+        {:ok, conn} = Mariaex.start_link(opts)
 
-      value = Ecto.Adapters.MySQL.Connection.execute(conn, sql, [], opts)
-      GenServer.stop(conn)
-      value
-    end)
+        value = Ecto.Adapters.MySQL.Connection.execute(conn, sql, [], opts)
+        GenServer.stop(conn)
+        value
+      end)
 
     timeout = Keyword.get(opts, :timeout, 15_000)
 
     case Task.yield(task, timeout) || Task.shutdown(task) do
       {:ok, {:ok, result}} ->
         {:ok, result}
+
       {:ok, {:error, error}} ->
         {:error, error}
+
       {:exit, {%{__struct__: struct} = error, _}}
-          when struct in [Mariaex.Error, DBConnection.Error] ->
+      when struct in [Mariaex.Error, DBConnection.Error] ->
         {:error, error}
-      {:exit, reason}  ->
+
+      {:exit, reason} ->
         {:error, RuntimeError.exception(Exception.format_exit(reason))}
+
       nil ->
         {:error, RuntimeError.exception("command timed out")}
     end
@@ -318,7 +348,7 @@ defmodule Ecto.Adapters.MySQL do
   defp run_with_cmd(cmd, opts, opt_args) do
     unless System.find_executable(cmd) do
       raise "could not find executable `#{cmd}` in path, " <>
-            "please guarantee it is available before running ecto commands"
+              "please guarantee it is available before running ecto commands"
     end
 
     env =
@@ -330,7 +360,11 @@ defmodule Ecto.Adapters.MySQL do
 
     host = opts[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
     port = opts[:port] || System.get_env("MYSQL_TCP_PORT") || "3306"
-    args = ["--user", opts[:username], "--host", host, "--port", to_string(port), "--protocol=tcp"] ++ opt_args
+
+    args =
+      ["--user", opts[:username], "--host", host, "--port", to_string(port), "--protocol=tcp"] ++
+        opt_args
+
     System.cmd(cmd, args, env: env, stderr_to_stdout: true)
   end
 end

@@ -23,246 +23,271 @@ defmodule Ecto.Query.InspectTest do
   alias Inspect.Comment
 
   test "dynamic" do
-    assert inspect(dynamic([p], p.foo == true)) ==
-           "dynamic([p], p.foo == true)"
+    assert inspect(dynamic([p], p.foo == true)) == "dynamic([p], p.foo == true)"
 
-    assert inspect(dynamic([p], p.foo == ^"hello")) ==
-           "dynamic([p], p.foo == ^\"hello\")"
+    assert inspect(dynamic([p], p.foo == ^"hello")) == "dynamic([p], p.foo == ^\"hello\")"
 
-    assert inspect(dynamic([p, c], p.foo == c.bar)) ==
-           "dynamic([p, c], p.foo == c.bar)"
+    assert inspect(dynamic([p, c], p.foo == c.bar)) == "dynamic([p, c], p.foo == c.bar)"
 
-    assert inspect(dynamic([p, ..., c], p.foo == c.bar)) ==
-           "dynamic([p, ..., c], p.foo == c.bar)"
+    assert inspect(dynamic([p, ..., c], p.foo == c.bar)) == "dynamic([p, ..., c], p.foo == c.bar)"
 
     assert inspect(dynamic([a, b, ..., c, d], a.foo == b.bar and c.foo == d.bar)) ==
-           "dynamic([a, b, ..., c, d], a.foo == b.bar and c.foo == d.bar)"
+             "dynamic([a, b, ..., c, d], a.foo == b.bar and c.foo == d.bar)"
 
     dynamic = dynamic([p], p.bar == ^1)
+
     assert inspect(dynamic([p], ^dynamic and p.foo == ^0)) ==
-           "dynamic([p], p.bar == ^1 and p.foo == ^0)"
+             "dynamic([p], p.bar == ^1 and p.foo == ^0)"
 
     dynamic = dynamic([o, b], b.user_id == ^1 or ^false)
+
     assert inspect(dynamic([o], o.type == ^2 and ^dynamic)) ==
-           "dynamic([o, b], o.type == ^2 and (b.user_id == ^1 or ^false))"
+             "dynamic([o, b], o.type == ^2 and (b.user_id == ^1 or ^false))"
   end
 
   test "from" do
-    assert i(from(Post, [])) ==
-           ~s{from p in Inspect.Post}
+    assert i(from(Post, [])) == ~s{from p in Inspect.Post}
 
-    assert i(from(x in Post, [])) ==
-          ~s{from p in Inspect.Post}
+    assert i(from(x in Post, [])) == ~s{from p in Inspect.Post}
 
-    assert i(from(x in "posts", [])) ==
-           ~s{from p in "posts"}
+    assert i(from(x in "posts", [])) == ~s{from p in "posts"}
 
-    assert i(from(x in {"user_posts", Post}, [])) ==
-           ~s[from p in {"user_posts", Inspect.Post}]
+    assert i(from(x in {"user_posts", Post}, [])) == ~s[from p in {"user_posts", Inspect.Post}]
 
-    assert i(from(subquery(Post), [])) ==
-           ~s{from p in subquery(from p in Inspect.Post)}
+    assert i(from(subquery(Post), [])) == ~s{from p in subquery(from p in Inspect.Post)}
   end
 
   test "join" do
     assert i(from(x in Post, join: y in Comment)) ==
-           ~s{from p in Inspect.Post, join: c in Inspect.Comment, on: true}
+             ~s{from p in Inspect.Post, join: c in Inspect.Comment, on: true}
 
     assert i(from(x in Post, join: y in Comment, on: x.id == y.id)) ==
-           ~s{from p in Inspect.Post, join: c in Inspect.Comment, on: p.id == c.id}
+             ~s{from p in Inspect.Post, join: c in Inspect.Comment, on: p.id == c.id}
 
     assert i(from(x in Post, full_join: y in Comment, on: x.id == y.id)) ==
-           ~s{from p in Inspect.Post, full_join: c in Inspect.Comment, on: p.id == c.id}
+             ~s{from p in Inspect.Post, full_join: c in Inspect.Comment, on: p.id == c.id}
 
     assert i(from(x in Post, full_join: y in {"user_comments", Comment}, on: x.id == y.id)) ==
-           ~s[from p in Inspect.Post, full_join: c in {"user_comments", Inspect.Comment}, on: p.id == c.id]
+             ~s[from p in Inspect.Post, full_join: c in {"user_comments", Inspect.Comment}, on: p.id == c.id]
 
     assert i(from(x in Post, left_join: y in assoc(x, :comments))) ==
-           ~s{from p in Inspect.Post, left_join: c in assoc(p, :comments)}
+             ~s{from p in Inspect.Post, left_join: c in assoc(p, :comments)}
 
     assert i(from(x in Post, left_join: y in assoc(x, :comments), on: y.published == true)) ==
-           ~s{from p in Inspect.Post, left_join: c in assoc(p, :comments), on: c.published == true}
+             ~s{from p in Inspect.Post, left_join: c in assoc(p, :comments), on: c.published == true}
 
     assert i(from(x in Post, right_join: y in assoc(x, :post), join: z in assoc(y, :post))) ==
-           ~s{from p0 in Inspect.Post, right_join: p1 in assoc(p0, :post), join: p2 in assoc(p1, :post)}
+             ~s{from p0 in Inspect.Post, right_join: p1 in assoc(p0, :post), join: p2 in assoc(p1, :post)}
 
-    assert i(from(x in Post, inner_join: y in fragment("foo ? and ?", x.id, ^1), on: y.id == x.id)) ==
-           ~s{from p in Inspect.Post, join: f in fragment("foo ? and ?", p.id, ^1), on: f.id == p.id}
+    assert i(
+             from(x in Post, inner_join: y in fragment("foo ? and ?", x.id, ^1), on: y.id == x.id)
+           ) ==
+             ~s{from p in Inspect.Post, join: f in fragment("foo ? and ?", p.id, ^1), on: f.id == p.id}
 
     assert i(from(x in Post, join: y in subquery(Comment), on: x.id == y.id)) ==
-           ~s{from p in Inspect.Post, join: c in subquery(from c in Inspect.Comment), on: p.id == c.id}
+             ~s{from p in Inspect.Post, join: c in subquery(from c in Inspect.Comment), on: p.id == c.id}
 
     assert i(from(x in Post, join: y in ^from(c in Comment, where: true), on: x.id == y.id)) ==
-           ~s{from p in Inspect.Post, join: c in ^#Ecto.Query<from c in Inspect.Comment, where: true>, on: p.id == c.id}
+             ~s{from p in Inspect.Post, join: c in ^#Ecto.Query<from c in Inspect.Comment, where: true>, on: p.id == c.id}
   end
 
   test "as" do
     assert i(from(x in Post, join: y in Comment, as: :comment, on: x.id == y.id)) ==
-      ~s{from p in Inspect.Post, join: c in Inspect.Comment, as: :comment, on: p.id == c.id}
+             ~s{from p in Inspect.Post, join: c in Inspect.Comment, as: :comment, on: p.id == c.id}
 
-    assert i(from(x in Post, inner_join: y in fragment("foo ? and ?", x.id, ^1), as: :foo, on: y.id == x.id)) ==
-      ~s{from p in Inspect.Post, join: f in fragment("foo ? and ?", p.id, ^1), as: :foo, on: f.id == p.id}
+    assert i(
+             from(
+               x in Post,
+               inner_join: y in fragment("foo ? and ?", x.id, ^1),
+               as: :foo,
+               on: y.id == x.id
+             )
+           ) ==
+             ~s{from p in Inspect.Post, join: f in fragment("foo ? and ?", p.id, ^1), as: :foo, on: f.id == p.id}
 
     assert i(from(x in Post, join: y in subquery(Comment), as: :comment, on: x.id == y.id)) ==
-      ~s{from p in Inspect.Post, join: c in subquery(from c in Inspect.Comment), as: :comment, on: p.id == c.id}
+             ~s{from p in Inspect.Post, join: c in subquery(from c in Inspect.Comment), as: :comment, on: p.id == c.id}
   end
 
   test "where" do
     assert i(from(x in Post, where: x.foo == x.bar, where: true)) ==
-           ~s{from p in Inspect.Post, where: p.foo == p.bar, where: true}
+             ~s{from p in Inspect.Post, where: p.foo == p.bar, where: true}
   end
 
   test "group by" do
     assert i(from(x in Post, group_by: [x.foo, x.bar], group_by: x.foobar)) ==
-           ~s{from p in Inspect.Post, group_by: [p.foo, p.bar], group_by: [p.foobar]}
+             ~s{from p in Inspect.Post, group_by: [p.foo, p.bar], group_by: [p.foobar]}
   end
 
   test "having" do
     assert i(from(x in Post, having: x.foo == x.bar, having: true)) ==
-           ~s{from p in Inspect.Post, having: p.foo == p.bar, having: true}
+             ~s{from p in Inspect.Post, having: p.foo == p.bar, having: true}
   end
 
   test "order by" do
     assert i(from(x in Post, order_by: [asc: x.foo, desc: x.bar], order_by: x.foobar)) ==
-           ~s{from p in Inspect.Post, order_by: [asc: p.foo, desc: p.bar], order_by: [asc: p.foobar]}
+             ~s{from p in Inspect.Post, order_by: [asc: p.foo, desc: p.bar], order_by: [asc: p.foobar]}
   end
 
   test "limit" do
-    assert i(from(x in Post, limit: 123)) ==
-           ~s{from p in Inspect.Post, limit: 123}
+    assert i(from(x in Post, limit: 123)) == ~s{from p in Inspect.Post, limit: 123}
   end
 
   test "offset" do
-    assert i(from(x in Post, offset: 123)) ==
-           ~s{from p in Inspect.Post, offset: 123}
+    assert i(from(x in Post, offset: 123)) == ~s{from p in Inspect.Post, offset: 123}
   end
 
   test "distinct" do
-    assert i(from(x in Post, distinct: true)) ==
-           ~s{from p in Inspect.Post, distinct: true}
+    assert i(from(x in Post, distinct: true)) == ~s{from p in Inspect.Post, distinct: true}
 
     assert i(from(x in Post, distinct: [x.foo])) ==
-           ~s{from p in Inspect.Post, distinct: [asc: p.foo]}
+             ~s{from p in Inspect.Post, distinct: [asc: p.foo]}
 
     assert i(from(x in Post, distinct: [desc: x.foo])) ==
-           ~s{from p in Inspect.Post, distinct: [desc: p.foo]}
+             ~s{from p in Inspect.Post, distinct: [desc: p.foo]}
   end
 
   test "lock" do
-    assert i(from(x in Post, lock: "FOOBAR")) ==
-           ~s{from p in Inspect.Post, lock: "FOOBAR"}
+    assert i(from(x in Post, lock: "FOOBAR")) == ~s{from p in Inspect.Post, lock: "FOOBAR"}
   end
 
   test "preload" do
     assert i(from(x in Post, preload: :comments)) ==
-           ~s"from p in Inspect.Post, preload: [:comments]"
+             ~s"from p in Inspect.Post, preload: [:comments]"
 
     assert i(from(x in Post, join: y in assoc(x, :comments), preload: [comments: y])) ==
-           ~s"from p in Inspect.Post, join: c in assoc(p, :comments), preload: [comments: c]"
+             ~s"from p in Inspect.Post, join: c in assoc(p, :comments), preload: [comments: c]"
 
     assert i(from(x in Post, join: y in assoc(x, :comments), preload: [comments: {y, post: x}])) ==
-           ~s"from p in Inspect.Post, join: c in assoc(p, :comments), preload: [comments: {c, [post: p]}]"
+             ~s"from p in Inspect.Post, join: c in assoc(p, :comments), preload: [comments: {c, [post: p]}]"
   end
 
   test "fragments" do
     value = "foobar"
+
     assert i(from(x in Post, where: fragment("downcase(?) == ?", x.id, ^value))) ==
-           ~s{from p in Inspect.Post, where: fragment("downcase(?) == ?", p.id, ^"foobar")}
+             ~s{from p in Inspect.Post, where: fragment("downcase(?) == ?", p.id, ^"foobar")}
 
     assert i(from(x in Post, where: fragment(^[title: [foo: "foobar"]]))) ==
-           ~s{from p in Inspect.Post, where: fragment(title: [foo: "foobar"])}
+             ~s{from p in Inspect.Post, where: fragment(title: [foo: "foobar"])}
 
     assert i(from(x in Post, where: fragment(title: [foo: ^value]))) ==
-      ~s{from p in Inspect.Post, where: fragment(title: [foo: ^"foobar"])}
+             ~s{from p in Inspect.Post, where: fragment(title: [foo: ^"foobar"])}
   end
 
   test "inspect all" do
-    string = """
-    from p in Inspect.Post, join: c in assoc(p, :comments), where: true, or_where: true,
-    group_by: [p.id], having: true, or_having: true, order_by: [asc: p.id], limit: 1,
-    offset: 1, lock: "FOO", distinct: [asc: 1], update: [set: [id: ^3]], select: 1,
-    preload: [:likes], preload: [comments: c]
-    """
-    |> String.trim
-    |> String.replace("\n", " ")
+    string =
+      """
+      from p in Inspect.Post, join: c in assoc(p, :comments), where: true, or_where: true,
+      group_by: [p.id], having: true, or_having: true, order_by: [asc: p.id], limit: 1,
+      offset: 1, lock: "FOO", distinct: [asc: 1], update: [set: [id: ^3]], select: 1,
+      preload: [:likes], preload: [comments: c]
+      """
+      |> String.trim()
+      |> String.replace("\n", " ")
 
-    assert i(from(x in Post, join: y in assoc(x, :comments), where: true, or_where: true, group_by: x.id,
-                             having: true, or_having: true, order_by: x.id, limit: 1, offset: 1,
-                             lock: "FOO", select: 1, distinct: 1,
-                             update: [set: [id: ^3]], preload: [:likes, comments: y])) == string
+    assert i(
+             from(
+               x in Post,
+               join: y in assoc(x, :comments),
+               where: true,
+               or_where: true,
+               group_by: x.id,
+               having: true,
+               or_having: true,
+               order_by: x.id,
+               limit: 1,
+               offset: 1,
+               lock: "FOO",
+               select: 1,
+               distinct: 1,
+               update: [set: [id: ^3]],
+               preload: [:likes, comments: y]
+             )
+           ) == string
   end
 
   test "to_string all" do
-    string = """
-    from p in Inspect.Post,
-      join: c in assoc(p, :comments),
-      where: true,
-      or_where: true,
-      group_by: [p.id],
-      having: true,
-      or_having: true,
-      order_by: [asc: p.id],
-      limit: 1,
-      offset: 1,
-      lock: "FOO",
-      distinct: [asc: 1],
-      update: [set: [id: 3]],
-      select: 1,
-      preload: [:likes],
-      preload: [comments: c]
-    """
-    |> String.trim
+    string =
+      """
+      from p in Inspect.Post,
+        join: c in assoc(p, :comments),
+        where: true,
+        or_where: true,
+        group_by: [p.id],
+        having: true,
+        or_having: true,
+        order_by: [asc: p.id],
+        limit: 1,
+        offset: 1,
+        lock: "FOO",
+        distinct: [asc: 1],
+        update: [set: [id: 3]],
+        select: 1,
+        preload: [:likes],
+        preload: [comments: c]
+      """
+      |> String.trim()
 
     assert Inspect.Ecto.Query.to_string(
-      from(x in Post, join: y in assoc(x, :comments), where: true, or_where: true, group_by: x.id,
-                      having: true, or_having: true, order_by: x.id, limit: 1, offset: 1, update: [set: [id: 3]],
-                      lock: "FOO", distinct: 1, select: 1, preload: [:likes, comments: y])
-    ) == string
+             from(
+               x in Post,
+               join: y in assoc(x, :comments),
+               where: true,
+               or_where: true,
+               group_by: x.id,
+               having: true,
+               or_having: true,
+               order_by: x.id,
+               limit: 1,
+               offset: 1,
+               update: [set: [id: 3]],
+               lock: "FOO",
+               distinct: 1,
+               select: 1,
+               preload: [:likes, comments: y]
+             )
+           ) == string
   end
 
   test "container values" do
-    assert i(from(Post, select: <<1, 2, 3>>)) ==
-           "from p in Inspect.Post, select: <<1, 2, 3>>"
+    assert i(from(Post, select: <<1, 2, 3>>)) == "from p in Inspect.Post, select: <<1, 2, 3>>"
 
     foo = <<1, 2, 3>>
+
     assert i(from(p in Post, select: {p, ^foo})) ==
-           "from p in Inspect.Post, select: {p, ^<<1, 2, 3>>}"
+             "from p in Inspect.Post, select: {p, ^<<1, 2, 3>>}"
   end
 
   test "select" do
-    assert i(from(p in Post, select: p)) ==
-           ~s{from p in Inspect.Post, select: p}
+    assert i(from(p in Post, select: p)) == ~s{from p in Inspect.Post, select: p}
 
-    assert i(from(p in Post, select: [:foo])) ==
-           ~s{from p in Inspect.Post, select: [:foo]}
+    assert i(from(p in Post, select: [:foo])) == ~s{from p in Inspect.Post, select: [:foo]}
 
     assert i(from(p in Post, select: struct(p, [:foo]))) ==
-           ~s{from p in Inspect.Post, select: struct(p, [:foo])}
+             ~s{from p in Inspect.Post, select: struct(p, [:foo])}
 
     assert i(from(p in Post, select: merge(p, %{foo: p.foo}))) ==
-           ~s"from p in Inspect.Post, select: merge(p, %{foo: p.foo})"
+             ~s"from p in Inspect.Post, select: merge(p, %{foo: p.foo})"
   end
 
   test "select after planner" do
-    assert i(plan from(p in Post, select: p)) ==
-           ~s{from p in Inspect.Post, select: p}
+    assert i(plan(from(p in Post, select: p))) == ~s{from p in Inspect.Post, select: p}
 
-    assert i(plan from(p in Post, select: [:foo])) ==
-           ~s{from p in Inspect.Post, select: [:foo]}
+    assert i(plan(from(p in Post, select: [:foo]))) == ~s{from p in Inspect.Post, select: [:foo]}
   end
 
   test "params" do
     assert i(from(x in Post, where: ^123 > ^(1 * 3))) ==
-           ~s{from p in Inspect.Post, where: ^123 > ^3}
+             ~s{from p in Inspect.Post, where: ^123 > ^3}
 
     assert i(from(x in Post, where: x.id in ^[97])) ==
-           ~s{from p in Inspect.Post, where: p.id in ^[97]}
+             ~s{from p in Inspect.Post, where: p.id in ^[97]}
   end
 
   test "params after planner" do
-    query = plan from(x in Post, where: ^123 > ^(1 * 3) and x.id in ^[1, 2, 3])
-    assert i(query) ==
-           ~s{from p in Inspect.Post, where: ^... > ^... and p.id in ^...}
+    query = plan(from(x in Post, where: ^123 > ^(1 * 3) and x.id in ^[1, 2, 3]))
+    assert i(query) == ~s{from p in Inspect.Post, where: ^... > ^... and p.id in ^...}
   end
 
   test "tagged types" do
@@ -286,7 +311,7 @@ defmodule Ecto.Query.InspectTest do
   end
 
   def i(query) do
-    assert "#Ecto.Query<" <> rest = inspect query
+    assert "#Ecto.Query<" <> rest = inspect(query)
     size = byte_size(rest)
     assert ">" = :binary.part(rest, size - 1, 1)
     :binary.part(rest, 0, size - 1)

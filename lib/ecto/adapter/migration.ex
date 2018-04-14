@@ -1,4 +1,4 @@
-defmodule Ecto.Adapter.Migration  do
+defmodule Ecto.Adapter.Migration do
   @moduledoc """
   Specifies the adapter migrations API.
   """
@@ -9,30 +9,31 @@ defmodule Ecto.Adapter.Migration  do
 
   @typedoc "All migration commands"
   @type command ::
-    raw :: String.t |
-    {:create, Table.t, [table_subcommand]} |
-    {:create_if_not_exists, Table.t, [table_subcommand]} |
-    {:alter, Table.t, [table_subcommand]} |
-    {:drop, Table.t} |
-    {:drop_if_exists, Table.t} |
-    {:create, Index.t} |
-    {:create_if_not_exists, Index.t} |
-    {:drop, Index.t} |
-    {:drop_if_exists, Index.t}
+          raw ::
+          String.t()
+          | {:create, Table.t(), [table_subcommand]}
+          | {:create_if_not_exists, Table.t(), [table_subcommand]}
+          | {:alter, Table.t(), [table_subcommand]}
+          | {:drop, Table.t()}
+          | {:drop_if_exists, Table.t()}
+          | {:create, Index.t()}
+          | {:create_if_not_exists, Index.t()}
+          | {:drop, Index.t()}
+          | {:drop_if_exists, Index.t()}
 
   @typedoc "All commands allowed within the block passed to `table/2`"
   @type table_subcommand ::
-    {:add, field :: atom, type :: Ecto.Type.t | Reference.t, Keyword.t} |
-    {:modify, field :: atom, type :: Ecto.Type.t | Reference.t, Keyword.t} |
-    {:remove, field :: atom, type :: Ecto.Type.t | Reference.t, Keyword.t} |
-    {:remove, field :: atom}
+          {:add, field :: atom, type :: Ecto.Type.t() | Reference.t(), Keyword.t()}
+          | {:modify, field :: atom, type :: Ecto.Type.t() | Reference.t(), Keyword.t()}
+          | {:remove, field :: atom, type :: Ecto.Type.t() | Reference.t(), Keyword.t()}
+          | {:remove, field :: atom}
 
   @typedoc """
   A DDL object is a struct that represents a table or index in a database schema.
   These database objects can be modified through the use of a Data Definition Language,
   hence the name DDL object.
   """
-  @type ddl_object :: Table.t | Index.t
+  @type ddl_object :: Table.t() | Index.t()
 
   @doc """
   Checks if the adapter supports ddl transaction.
@@ -50,7 +51,7 @@ defmodule Ecto.Adapter.Migration  do
       to finish, `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log begin/commit/rollback queries
   """
-  @callback execute_ddl(repo :: Ecto.Repo.t, command, options :: Keyword.t) :: :ok | no_return
+  @callback execute_ddl(repo :: Ecto.Repo.t(), command, options :: Keyword.t()) :: :ok | no_return
 
   @doc """
   The callback responsible for locking the migrations table
@@ -59,6 +60,11 @@ defmodule Ecto.Adapter.Migration  do
   It returns the result of calling the given function with a
   list of versions.
   """
-  @callback lock_for_migrations(repo :: Ecto.Repo.t, query :: Ecto.Query.t,
-                                options :: Keyword.t, ([version :: integer] -> result)) :: result when result: var
+  @callback lock_for_migrations(
+              repo :: Ecto.Repo.t(),
+              query :: Ecto.Query.t(),
+              options :: Keyword.t(),
+              ([version :: integer] -> result)
+            ) :: result
+            when result: var
 end

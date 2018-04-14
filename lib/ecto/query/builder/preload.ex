@@ -44,60 +44,65 @@ defmodule Ecto.Query.Builder.Preload do
       ** (Ecto.Query.CompileError) cannot preload join association `:bar` with binding `c` because parent preload is not a join association
 
   """
-  @spec escape(Macro.t, Keyword.t) :: {[Macro.t], [Macro.t]} | no_return
+  @spec escape(Macro.t(), Keyword.t()) :: {[Macro.t()], [Macro.t()]} | no_return
   def escape(preloads, vars) do
     {preloads, assocs} = escape(preloads, :both, [], [], vars)
     {Enum.reverse(preloads), Enum.reverse(assocs)}
   end
 
   defp escape(atom, _mode, preloads, assocs, _vars) when is_atom(atom) do
-    {[atom|preloads], assocs}
+    {[atom | preloads], assocs}
   end
 
   defp escape(list, mode, preloads, assocs, vars) when is_list(list) do
-    Enum.reduce list, {preloads, assocs}, fn item, acc ->
+    Enum.reduce(list, {preloads, assocs}, fn item, acc ->
       escape_each(item, mode, acc, vars)
-    end
+    end)
   end
 
   defp escape({:^, _, [inner]}, _mode, preloads, assocs, _vars) do
-    {[inner|preloads], assocs}
+    {[inner | preloads], assocs}
   end
 
   defp escape(other, _mode, _preloads, _assocs, _vars) do
-    Builder.error! "`#{Macro.to_string other}` is not a valid preload expression. " <>
-                   "preload expects an atom, a list of atoms or a keyword list with " <>
-                   "more preloads as values. Use ^ on the outermost preload to interpolate a value"
+    Builder.error!(
+      "`#{Macro.to_string(other)}` is not a valid preload expression. " <>
+        "preload expects an atom, a list of atoms or a keyword list with " <>
+        "more preloads as values. Use ^ on the outermost preload to interpolate a value"
+    )
   end
 
   defp escape_each({key, {:^, _, [inner]}}, _mode, {preloads, assocs}, _vars) do
     key = escape_key(key)
-    {[{key, inner}|preloads], assocs}
+    {[{key, inner} | preloads], assocs}
   end
 
-  defp escape_each({key, {var, _, context}}, mode, {preloads, assocs}, vars) when is_atom(context) do
+  defp escape_each({key, {var, _, context}}, mode, {preloads, assocs}, vars)
+       when is_atom(context) do
     assert_assoc!(mode, key, var)
     key = escape_key(key)
     idx = Builder.find_var!(var, vars)
-    {preloads, [{key, {idx, []}}|assocs]}
+    {preloads, [{key, {idx, []}} | assocs]}
   end
 
-  defp escape_each({key, {{var, _, context}, list}}, mode, {preloads, assocs}, vars) when is_atom(context) do
+  defp escape_each({key, {{var, _, context}, list}}, mode, {preloads, assocs}, vars)
+       when is_atom(context) do
     assert_assoc!(mode, key, var)
     key = escape_key(key)
     idx = Builder.find_var!(var, vars)
     {inner_preloads, inner_assocs} = escape(list, :assoc, [], [], vars)
-    assocs = [{key, {idx, Enum.reverse(inner_assocs)}}|assocs]
+    assocs = [{key, {idx, Enum.reverse(inner_assocs)}} | assocs]
+
     case inner_preloads do
       [] -> {preloads, assocs}
-      _  -> {[{key, Enum.reverse(inner_preloads)}|preloads], assocs}
+      _ -> {[{key, Enum.reverse(inner_preloads)} | preloads], assocs}
     end
   end
 
   defp escape_each({key, list}, _mode, {preloads, assocs}, vars) do
     key = escape_key(key)
     {inner_preloads, []} = escape(list, :preload, [], [], vars)
-    {[{key, Enum.reverse(inner_preloads)}|preloads], assocs}
+    {[{key, Enum.reverse(inner_preloads)} | preloads], assocs}
   end
 
   defp escape_each(other, mode, {preloads, assocs}, vars) do
@@ -113,23 +118,25 @@ defmodule Ecto.Query.Builder.Preload do
   end
 
   defp escape_key(other) do
-    Builder.error! "malformed key in preload `#{Macro.to_string(other)}` in query expression"
+    Builder.error!("malformed key in preload `#{Macro.to_string(other)}` in query expression")
   end
 
   defp assert_assoc!(mode, _atom, _var) when mode in [:both, :assoc], do: :ok
+
   defp assert_assoc!(_mode, atom, var) do
-    Builder.error! "cannot preload join association `#{Macro.to_string atom}` with binding `#{var}` " <>
-                   "because parent preload is not a join association"
+    Builder.error!(
+      "cannot preload join association `#{Macro.to_string(atom)}` with binding `#{var}` " <>
+        "because parent preload is not a join association"
+    )
   end
 
   @doc """
   Called at runtime to check dynamic preload keys.
   """
-  def key!(key) when is_atom(key),
-    do: key
+  def key!(key) when is_atom(key), do: key
+
   def key!(key) do
-    raise ArgumentError,
-      "expected key in preload to be an atom, got: `#{inspect key}`"
+    raise ArgumentError, "expected key in preload to be an atom, got: `#{inspect(key)}`"
   end
 
   @doc """
@@ -139,7 +146,7 @@ defmodule Ecto.Query.Builder.Preload do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
+  @spec build(Macro.t(), [Macro.t()], Macro.t(), Macro.Env.t()) :: Macro.t()
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
     {preloads, assocs} = escape(expr, binding)
@@ -149,10 +156,11 @@ defmodule Ecto.Query.Builder.Preload do
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term, term) :: Ecto.Query.t
+  @spec apply(Ecto.Queryable.t(), term, term) :: Ecto.Query.t()
   def apply(%Ecto.Query{preloads: p, assocs: a} = query, preloads, assocs) do
     %{query | preloads: p ++ preloads, assocs: a ++ assocs}
   end
+
   def apply(query, preloads, assocs) do
     apply(Ecto.Queryable.to_query(query), preloads, assocs)
   end

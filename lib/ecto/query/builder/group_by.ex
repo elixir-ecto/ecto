@@ -15,14 +15,14 @@ defmodule Ecto.Query.Builder.GroupBy do
         13],
        %{}}
   """
-  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: Macro.t
+  @spec escape(Macro.t(), Keyword.t(), Macro.Env.t()) :: Macro.t()
   def escape({:^, _, [expr]}, _vars, _env) do
     {quote(do: Ecto.Query.Builder.GroupBy.group_by!(unquote(expr))), %{}}
   end
 
   def escape(expr, vars, env) do
     expr
-    |> List.wrap
+    |> List.wrap()
     |> Enum.map_reduce(%{}, &do_escape(&1, &2, vars, env))
   end
 
@@ -42,24 +42,24 @@ defmodule Ecto.Query.Builder.GroupBy do
   @doc """
   Called at runtime to verify a field.
   """
-  def field!(field) when is_atom(field),
-    do: to_field(field)
+  def field!(field) when is_atom(field), do: to_field(field)
+
   def field!(other) do
-    raise ArgumentError,
-      "expected a field as an atom in `group_by`, got: `#{inspect other}`"
+    raise ArgumentError, "expected a field as an atom in `group_by`, got: `#{inspect(other)}`"
   end
 
   @doc """
   Called at runtime to verify group_by.
   """
   def group_by!(group_by) do
-    Enum.map List.wrap(group_by), fn
+    Enum.map(List.wrap(group_by), fn
       field when is_atom(field) ->
         to_field(field)
+
       _ ->
         raise ArgumentError,
-          "expected a list of fields in `group_by`, got: `#{inspect group_by}`"
-    end
+              "expected a list of fields in `group_by`, got: `#{inspect(group_by)}`"
+    end)
   end
 
   defp to_field(field), do: {{:., [], [{:&, [], [0]}, field]}, [], []}
@@ -71,27 +71,31 @@ defmodule Ecto.Query.Builder.GroupBy do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
+  @spec build(Macro.t(), [Macro.t()], Macro.t(), Macro.Env.t()) :: Macro.t()
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, params} = escape(expr, binding, env)
     params = Builder.escape_params(params)
 
-    group_by = quote do: %Ecto.Query.QueryExpr{
-                           expr: unquote(expr),
-                           params: unquote(params),
-                           file: unquote(env.file),
-                           line: unquote(env.line)}
+    group_by =
+      quote do: %Ecto.Query.QueryExpr{
+              expr: unquote(expr),
+              params: unquote(params),
+              file: unquote(env.file),
+              line: unquote(env.line)
+            }
+
     Builder.apply_query(query, __MODULE__, [group_by], env)
   end
 
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
+  @spec apply(Ecto.Queryable.t(), term) :: Ecto.Query.t()
   def apply(%Ecto.Query{group_bys: group_bys} = query, expr) do
     %{query | group_bys: group_bys ++ [expr]}
   end
+
   def apply(query, expr) do
     apply(Ecto.Queryable.to_query(query), expr)
   end

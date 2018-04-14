@@ -31,63 +31,67 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
     repo =
       case parse_repo(args) do
-        [] -> Mix.raise "ecto.gen.repo expects the repository to be given as -r MyApp.Repo"
+        [] -> Mix.raise("ecto.gen.repo expects the repository to be given as -r MyApp.Repo")
         [repo] -> repo
-        [_ | _] -> Mix.raise "ecto.gen.repo expects a single repository to be given"
+        [_ | _] -> Mix.raise("ecto.gen.repo expects a single repository to be given")
       end
 
-    config      = Mix.Project.config
+    config = Mix.Project.config()
     underscored = Macro.underscore(inspect(repo))
 
     base = Path.basename(underscored)
     file = Path.join("lib", underscored) <> ".ex"
-    app  = config[:app] || :YOUR_APP_NAME
+    app = config[:app] || :YOUR_APP_NAME
     opts = [mod: repo, app: app, base: base]
 
-    create_directory Path.dirname(file)
-    create_file file, repo_template(opts)
+    create_directory(Path.dirname(file))
+    create_file(file, repo_template(opts))
 
-    case File.read "config/config.exs" do
+    case File.read("config/config.exs") do
       {:ok, contents} ->
-        Mix.shell.info [:green, "* updating ", :reset, "config/config.exs"]
-        File.write! "config/config.exs",
-                    String.replace(contents, "use Mix.Config\n", config_template(opts))
+        Mix.shell().info([:green, "* updating ", :reset, "config/config.exs"])
+
+        File.write!(
+          "config/config.exs",
+          String.replace(contents, "use Mix.Config\n", config_template(opts))
+        )
+
       {:error, _} ->
-        create_file "config/config.exs", config_template(opts)
+        create_file("config/config.exs", config_template(opts))
     end
 
     open?("config/config.exs")
 
-    Mix.shell.info """
+    Mix.shell().info("""
     Don't forget to add your new repo to your supervision tree
     (typically in #{mixfile_loc(app)}):
 
-        supervisor(#{inspect repo}, [])
+        supervisor(#{inspect(repo)}, [])
 
     And to add it to the list of ecto repositories in your
     configuration files (so Ecto tasks work as expected):
 
-        config #{inspect app},
-          ecto_repos: [#{inspect repo}]
+        config #{inspect(app)},
+          ecto_repos: [#{inspect(repo)}]
 
-    """
+    """)
   end
 
   defp mixfile_loc(app) do
-    case Elixir.Version.compare(System.version, "1.4.0") do
+    case Elixir.Version.compare(System.version(), "1.4.0") do
       :gt -> "lib/#{app}/application.ex"
       :eq -> "lib/#{app}/application.ex"
       :lt -> "lib/#{app}.ex"
     end
   end
 
-  embed_template :repo, """
+  embed_template(:repo, """
   defmodule <%= inspect @mod %> do
     use Ecto.Repo, otp_app: <%= inspect @app %>
   end
-  """
+  """)
 
-  embed_template :config, """
+  embed_template(:config, """
   use Mix.Config
 
   config <%= inspect @app %>, <%= inspect @mod %>,
@@ -96,5 +100,5 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
     username: "user",
     password: "pass",
     hostname: "localhost"
-  """
+  """)
 end

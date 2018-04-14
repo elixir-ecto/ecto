@@ -6,7 +6,7 @@ defmodule Ecto.Registry do
   ## Public interface
 
   def start_link() do
-    GenServer.start_link(__MODULE__, :ok, [name: __MODULE__])
+    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
   def associate(pid, value) when is_pid(pid) do
@@ -16,7 +16,8 @@ defmodule Ecto.Registry do
   def lookup(repo_name) do
     pid =
       GenServer.whereis(repo_name) ||
-        raise "could not lookup #{inspect repo_name} because it was not started or it does not exist"
+        raise "could not lookup #{inspect(repo_name)} because it was not started or it does not exist"
+
     :ets.lookup_element(__MODULE__, pid, 3)
   end
 

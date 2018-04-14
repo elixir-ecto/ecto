@@ -33,33 +33,34 @@ defmodule Mix.Tasks.Ecto.Migrations do
   def run(args, migrations \\ &Ecto.Migrator.migrations/1, puts \\ &IO.puts/1) do
     repos = parse_repo(args)
 
-    result = Enum.map(repos, fn repo ->
-      ensure_repo(repo, args)
-      ensure_migrations_path(repo)
-      {:ok, pid, _} = ensure_started(repo, all: true)
+    result =
+      Enum.map(repos, fn repo ->
+        ensure_repo(repo, args)
+        ensure_migrations_path(repo)
+        {:ok, pid, _} = ensure_started(repo, all: true)
 
-      repo_status = migrations.(repo)
+        repo_status = migrations.(repo)
 
-      pid && repo.stop(pid)
+        pid && repo.stop(pid)
 
-      """
+        """
 
-      Repo: #{inspect repo}
+        Repo: #{inspect(repo)}
 
-        Status    Migration ID    Migration Name
-      --------------------------------------------------
-      """ <>
-      Enum.map_join(repo_status, "\n", fn({status, number, description}) ->
-        status =
-          case status do
-            :up   -> "up  "
-            :down -> "down"
-          end
+          Status    Migration ID    Migration Name
+        --------------------------------------------------
+        """ <>
+          Enum.map_join(repo_status, "\n", fn {status, number, description} ->
+            status =
+              case status do
+                :up -> "up  "
+                :down -> "down"
+              end
 
-        "  #{status}      #{number}  #{description}"
-      end) <> "\n"
-    end)
+            "  #{status}      #{number}  #{description}"
+          end) <> "\n"
+      end)
 
-     puts.(Enum.join(result, "\n"))
+    puts.(Enum.join(result, "\n"))
   end
 end

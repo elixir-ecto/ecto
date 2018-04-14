@@ -17,12 +17,13 @@ defmodule Ecto.Repo.Queryable do
   end
 
   def transaction(adapter, repo, %Ecto.Multi{} = multi, opts) do
-    wrap   = &adapter.transaction(repo, opts, &1)
+    wrap = &adapter.transaction(repo, opts, &1)
     return = &adapter.rollback(repo, &1)
 
     case Ecto.Multi.__apply__(multi, repo, wrap, return) do
       {:ok, values} ->
         {:ok, values}
+
       {:error, {key, error_value, values}} ->
         {:error, key, error_value, values}
     end
@@ -31,18 +32,20 @@ defmodule Ecto.Repo.Queryable do
   def all(repo, adapter, queryable, opts) when is_list(opts) do
     query =
       queryable
-      |> Ecto.Queryable.to_query
+      |> Ecto.Queryable.to_query()
       |> Ecto.Query.Planner.ensure_select(true)
       |> attach_prefix(opts)
+
     execute(:all, repo, adapter, query, opts) |> elem(1)
   end
 
   def stream(repo, adapter, queryable, opts) when is_list(opts) do
     query =
       queryable
-      |> Ecto.Queryable.to_query
+      |> Ecto.Queryable.to_query()
       |> Ecto.Query.Planner.ensure_select(true)
       |> attach_prefix(opts)
+
     stream(:all, repo, adapter, query, opts)
   end
 
@@ -69,7 +72,7 @@ defmodule Ecto.Repo.Queryable do
   def one(repo, adapter, queryable, opts) do
     case all(repo, adapter, queryable, opts) do
       [one] -> one
-      []    -> nil
+      [] -> nil
       other -> raise Ecto.MultipleResultsError, queryable: queryable, count: length(other)
     end
   end
@@ -77,7 +80,7 @@ defmodule Ecto.Repo.Queryable do
   def one!(repo, adapter, queryable, opts) do
     case all(repo, adapter, queryable, opts) do
       [one] -> one
-      []    -> raise Ecto.NoResultsError, queryable: queryable
+      [] -> raise Ecto.NoResultsError, queryable: queryable
       other -> raise Ecto.MultipleResultsError, queryable: queryable, count: length(other)
     end
   end
@@ -87,32 +90,37 @@ defmodule Ecto.Repo.Queryable do
   end
 
   def update_all(repo, adapter, queryable, updates, opts) when is_list(opts) do
-    query = Query.from queryable, update: ^updates
+    query = Query.from(queryable, update: ^updates)
     update_all(repo, adapter, query, opts)
   end
 
   defp update_all(repo, adapter, queryable, opts) do
     query =
       queryable
-      |> Ecto.Queryable.to_query
+      |> Ecto.Queryable.to_query()
       |> maybe_returning(:update_all, opts)
       |> attach_prefix(opts)
+
     execute(:update_all, repo, adapter, query, opts)
   end
 
   def delete_all(repo, adapter, queryable, opts) when is_list(opts) do
     query =
       queryable
-      |> Ecto.Queryable.to_query
+      |> Ecto.Queryable.to_query()
       |> maybe_returning(:delete_all, opts)
       |> attach_prefix(opts)
+
     execute(:delete_all, repo, adapter, query, opts)
   end
 
   defp maybe_returning(query, kind, opts) do
     case Keyword.fetch(opts, :returning) do
       {:ok, value} ->
-        IO.warn ":returning option for #{inspect kind} is deprecated, please specify a select instead"
+        IO.warn(
+          ":returning option for #{inspect(kind)} is deprecated, please specify a select instead"
+        )
+
         Ecto.Query.Planner.ensure_select(query, value)
 
       :error ->
@@ -135,6 +143,7 @@ defmodule Ecto.Repo.Queryable do
     case meta do
       %{select: nil} ->
         adapter.execute(repo, meta, prepared, params, opts)
+
       %{select: select, prefix: prefix, sources: sources, preloads: preloads} ->
         %{
           preprocess: preprocess,
@@ -149,9 +158,9 @@ defmodule Ecto.Repo.Queryable do
         postprocessor = postprocessor(from, postprocess, take, prefix, adapter)
 
         {count,
-          rows
-          |> Ecto.Repo.Assoc.query(assocs, sources, preprocessor)
-          |> Ecto.Repo.Preloader.query(repo, preloads, take, postprocessor, opts)}
+         rows
+         |> Ecto.Repo.Assoc.query(assocs, sources, preprocessor)
+         |> Ecto.Repo.Preloader.query(repo, preloads, take, postprocessor, opts)}
     end
   end
 
@@ -163,6 +172,7 @@ defmodule Ecto.Repo.Queryable do
         repo
         |> adapter.stream(meta, prepared, params, opts)
         |> Stream.flat_map(fn {_, nil} -> [] end)
+
       %{select: select, prefix: prefix, sources: sources, preloads: preloads} ->
         %{
           preprocess: preprocess,
@@ -190,12 +200,14 @@ defmodule Ecto.Repo.Queryable do
       preprocess(rest, preprocess, entry, prefix, adapter)
     end
   end
+
   defp preprocessor({_, from}, preprocess, prefix, adapter) do
     fn row ->
       {entry, rest} = process(row, from, nil, prefix, adapter)
       preprocess(rest, preprocess, entry, prefix, adapter)
     end
   end
+
   defp preprocessor(:none, preprocess, prefix, adapter) do
     fn row ->
       preprocess(row, preprocess, nil, prefix, adapter)
@@ -205,6 +217,7 @@ defmodule Ecto.Repo.Queryable do
   defp preprocess(row, [], _from, _prefix, _adapter) do
     row
   end
+
   defp preprocess(row, [source | sources], from, prefix, adapter) do
     {entry, rest} = process(row, source, from, prefix, adapter)
     [entry | preprocess(rest, sources, from, prefix, adapter)]
@@ -215,11 +228,13 @@ defmodule Ecto.Repo.Queryable do
       row |> process(postprocess, from, prefix, adapter) |> elem(0)
     end
   end
+
   defp postprocessor({:map, _}, postprocess, take, prefix, adapter) do
     fn [from | row] ->
       row |> process(postprocess, to_map(from, take), prefix, adapter) |> elem(0)
     end
   end
+
   defp postprocessor(:none, postprocess, _take, prefix, adapter) do
     fn row -> row |> process(postprocess, nil, prefix, adapter) |> elem(0) end
   end
@@ -227,9 +242,11 @@ defmodule Ecto.Repo.Queryable do
   defp process(row, {:source, :from}, from, _prefix, _adapter) do
     {from, row}
   end
+
   defp process(row, {:source, source_schema, fields}, _from, prefix, adapter) do
     process_source(source_schema, fields, row, true, prefix, adapter)
   end
+
   defp process(row, {:merge, left, right}, from, prefix, adapter) do
     {left, row} = process(row, left, from, prefix, adapter)
     {right, row} = process(row, right, from, prefix, adapter)
@@ -238,28 +255,41 @@ defmodule Ecto.Repo.Queryable do
       case {left, right} do
         {%{__struct__: s}, %{__struct__: s}} ->
           Map.merge(left, right)
+
         {%{__struct__: _}, %{__struct__: _}} ->
-          raise ArgumentError, "cannot merge structs of different types, got: #{inspect left} and #{inspect right}"
+          raise ArgumentError,
+                "cannot merge structs of different types, got: #{inspect(left)} and #{
+                  inspect(right)
+                }"
+
         {%{__struct__: _}, %{}} ->
           Enum.reduce(right, left, fn {key, value}, acc -> %{acc | key => value} end)
+
         {%{}, %{}} ->
           Map.merge(left, right)
+
         {_, %{}} ->
-          raise ArgumentError, "cannot merge because the left side is not a map, got: #{inspect left}"
+          raise ArgumentError,
+                "cannot merge because the left side is not a map, got: #{inspect(left)}"
+
         {%{}, _} ->
-          raise ArgumentError, "cannot merge because the right side is not a map, got: #{inspect right}"
+          raise ArgumentError,
+                "cannot merge because the right side is not a map, got: #{inspect(right)}"
       end
 
     {data, row}
   end
+
   defp process(row, {:struct, struct, data, args}, from, prefix, adapter) do
     case process(row, data, from, prefix, adapter) do
       {%{__struct__: ^struct} = data, row} ->
         process_update(data, args, row, from, prefix, adapter)
+
       {data, _row} ->
         raise BadStructError, struct: struct, term: data
     end
   end
+
   defp process(row, {:struct, struct, args}, from, prefix, adapter) do
     {fields, row} = process_kv(args, row, from, prefix, adapter)
 
@@ -267,31 +297,39 @@ defmodule Ecto.Repo.Queryable do
       %{__meta__: %Ecto.Schema.Metadata{} = metadata} = struct ->
         metadata = %{metadata | state: :loaded, prefix: prefix}
         {Map.put(struct, :__meta__, metadata), row}
+
       map ->
         {map, row}
     end
   end
+
   defp process(row, {:map, data, args}, from, prefix, adapter) do
     {data, row} = process(row, data, from, prefix, adapter)
     process_update(data, args, row, from, prefix, adapter)
   end
+
   defp process(row, {:map, args}, from, prefix, adapter) do
     {args, row} = process_kv(args, row, from, prefix, adapter)
     {Map.new(args), row}
   end
+
   defp process(row, {:list, args}, from, prefix, adapter) do
     process_args(args, row, from, prefix, adapter)
   end
+
   defp process(row, {:tuple, args}, from, prefix, adapter) do
     {args, row} = process_args(args, row, from, prefix, adapter)
     {List.to_tuple(args), row}
   end
+
   defp process([value | row], {:value, :any}, _from, _prefix, _adapter) do
     {value, row}
   end
+
   defp process([value | row], {:value, type}, _from, _prefix, adapter) do
     {load!(type, value, nil, nil, adapter), row}
   end
+
   defp process(row, value, _from, _prefix, _adapter)
        when is_binary(value) or is_number(value) or is_atom(value) do
     {value, row}
@@ -307,6 +345,7 @@ defmodule Ecto.Repo.Queryable do
     case split_values(types, row, [], all_nil?) do
       {nil, row} ->
         {nil, row}
+
       {values, row} ->
         struct = if schema, do: schema.__struct__(), else: %{}
         loader = &Ecto.Type.adapter_load(adapter, &1, &2)
@@ -317,12 +356,15 @@ defmodule Ecto.Repo.Queryable do
   defp split_values([_ | types], [nil | values], acc, all_nil?) do
     split_values(types, values, [nil | acc], all_nil?)
   end
+
   defp split_values([_ | types], [value | values], acc, _all_nil?) do
     split_values(types, values, [value | acc], false)
   end
+
   defp split_values([], values, _acc, true) do
     {nil, values}
   end
+
   defp split_values([], values, acc, false) do
     {Enum.reverse(acc), values}
   end
@@ -345,19 +387,24 @@ defmodule Ecto.Repo.Queryable do
     case Ecto.Type.adapter_load(adapter, type, value) do
       {:ok, value} ->
         value
+
       :error ->
-        field = field && " for field #{inspect field}"
-        struct = struct && " in #{inspect struct}"
-        raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type}#{field}#{struct}"
+        field = field && " for field #{inspect(field)}"
+        struct = struct && " in #{inspect(struct)}"
+
+        raise ArgumentError,
+              "cannot load `#{inspect(value)}` as type #{inspect(type)}#{field}#{struct}"
     end
   end
 
   defp to_map(nil, _fields) do
     nil
   end
+
   defp to_map(value, fields) when is_list(value) do
     Enum.map(value, &to_map(&1, fields))
   end
+
   defp to_map(value, fields) do
     for field <- fields, into: %{} do
       case field do
@@ -368,19 +415,21 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp query_for_get(repo, _queryable, nil) do
-    raise ArgumentError, "cannot perform #{inspect repo}.get/2 because the given value is nil"
+    raise ArgumentError, "cannot perform #{inspect(repo)}.get/2 because the given value is nil"
   end
 
   defp query_for_get(repo, queryable, id) do
-    query  = Queryable.to_query(queryable)
+    query = Queryable.to_query(queryable)
     schema = assert_schema!(query)
+
     case schema.__schema__(:primary_key) do
       [pk] ->
         Query.from(x in query, where: field(x, ^pk) == ^id)
+
       pks ->
         raise ArgumentError,
-          "#{inspect repo}.get/2 requires the schema #{inspect schema} " <>
-          "to have exactly one primary key, got: #{inspect pks}"
+              "#{inspect(repo)}.get/2 requires the schema #{inspect(schema)} " <>
+                "to have exactly one primary key, got: #{inspect(pks)}"
     end
   end
 
@@ -390,23 +439,28 @@ defmodule Ecto.Repo.Queryable do
 
   defp query_for_aggregate(queryable, aggregate, field) do
     query = %{Queryable.to_query(queryable) | preloads: [], assocs: []}
-    ast   = field(0, field)
+    ast = field(0, field)
 
     query =
       case query do
-        %{group_bys: [_|_]} ->
+        %{group_bys: [_ | _]} ->
           raise Ecto.QueryError, message: "cannot aggregate on query with group_by", query: query
+
         %{distinct: nil, limit: nil, offset: nil} ->
           %{query | order_bys: []}
+
         _ ->
           select = %SelectExpr{expr: ast, file: __ENV__.file, line: __ENV__.line}
+
           %{query | select: select}
           |> Query.subquery()
           |> Queryable.Ecto.SubQuery.to_query()
       end
 
-    %{query | select: %SelectExpr{expr: {aggregate, [], [ast]},
-                                  file: __ENV__.file, line: __ENV__.line}}
+    %{
+      query
+      | select: %SelectExpr{expr: {aggregate, [], [ast]}, file: __ENV__.file, line: __ENV__.line}
+    }
   end
 
   defp field(ix, field) when is_integer(ix) and is_atom(field) do
@@ -414,6 +468,7 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp assert_schema!(%{from: %{source: {_source, schema}}}) when schema != nil, do: schema
+
   defp assert_schema!(query) do
     raise Ecto.QueryError,
       query: query,

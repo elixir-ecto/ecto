@@ -3,13 +3,15 @@ defmodule Ecto.Embedded do
   alias __MODULE__
   alias Ecto.Changeset
 
-  @type t :: %Embedded{cardinality: :one | :many,
-                       on_replace: :raise | :mark_as_invalid | :delete,
-                       field: atom,
-                       owner: atom,
-                       on_cast: nil | fun,
-                       related: atom,
-                       unique: boolean}
+  @type t :: %Embedded{
+          cardinality: :one | :many,
+          on_replace: :raise | :mark_as_invalid | :delete,
+          field: atom,
+          owner: atom,
+          on_cast: nil | fun,
+          related: atom,
+          unique: boolean
+        }
 
   @behaviour Ecto.Changeset.Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
@@ -29,12 +31,15 @@ defmodule Ecto.Embedded do
   def struct(module, name, opts) do
     opts = Keyword.put_new(opts, :on_replace, :raise)
     cardinality = Keyword.fetch!(opts, :cardinality)
-    on_replace_opts = if cardinality == :one, do: @embeds_one_on_replace_opts, else: @on_replace_opts
+
+    on_replace_opts =
+      if cardinality == :one, do: @embeds_one_on_replace_opts, else: @on_replace_opts
 
     unless opts[:on_replace] in on_replace_opts do
-      raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
-        "The only valid options are: " <>
-        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
+      raise ArgumentError,
+            "invalid `:on_replace` option for #{inspect(name)}. " <>
+              "The only valid options are: " <>
+              Enum.map_join(@on_replace_opts, ", ", &"`#{inspect(&1)}`")
     end
 
     struct(%Embedded{field: name, owner: module}, opts)
@@ -57,10 +62,10 @@ defmodule Ecto.Embedded do
   end
 
   defp prepare(embeds, types, adapter, repo_action) do
-    Enum.reduce embeds, embeds, fn {name, changeset}, acc ->
+    Enum.reduce(embeds, embeds, fn {name, changeset}, acc ->
       {:embed, embed} = Map.get(types, name)
       Map.put(acc, name, prepare_each(embed, changeset, adapter, repo_action))
-    end
+    end)
   end
 
   defp prepare_each(%{cardinality: :one}, nil, _adapter, _repo_action) do
@@ -79,20 +84,21 @@ defmodule Ecto.Embedded do
         do: prepared
   end
 
-  defp to_struct(%Changeset{valid?: false}, _action,
-                 %{related: schema}, _adapter) do
-    raise ArgumentError, "changeset for embedded #{inspect schema} is invalid, " <>
-                         "but the parent changeset was not marked as invalid"
+  defp to_struct(%Changeset{valid?: false}, _action, %{related: schema}, _adapter) do
+    raise ArgumentError,
+          "changeset for embedded #{inspect(schema)} is invalid, " <>
+            "but the parent changeset was not marked as invalid"
   end
 
-  defp to_struct(%Changeset{data: %{__struct__: actual}}, _action,
-                 %{related: expected}, _adapter) when actual != expected do
-    raise ArgumentError, "expected changeset for embedded schema `#{inspect expected}`, " <>
-                         "got: #{inspect actual}"
+  defp to_struct(%Changeset{data: %{__struct__: actual}}, _action, %{related: expected}, _adapter)
+       when actual != expected do
+    raise ArgumentError,
+          "expected changeset for embedded schema `#{inspect(expected)}`, " <>
+            "got: #{inspect(actual)}"
   end
 
-  defp to_struct(%Changeset{changes: changes, data: schema}, :update,
-                 _embed, _adapter) when changes == %{} do
+  defp to_struct(%Changeset{changes: changes, data: schema}, :update, _embed, _adapter)
+       when changes == %{} do
     schema
   end
 
@@ -117,20 +123,34 @@ defmodule Ecto.Embedded do
 
   defp check_action!(:replace, action, %{on_replace: :delete} = embed),
     do: check_action!(:delete, action, embed)
+
   defp check_action!(:update, :insert, %{related: schema}),
-    do: raise(ArgumentError, "got action :update in changeset for embedded #{inspect schema} while inserting")
+    do:
+      raise(
+        ArgumentError,
+        "got action :update in changeset for embedded #{inspect(schema)} while inserting"
+      )
+
   defp check_action!(:delete, :insert, %{related: schema}),
-    do: raise(ArgumentError, "got action :delete in changeset for embedded #{inspect schema} while inserting")
+    do:
+      raise(
+        ArgumentError,
+        "got action :delete in changeset for embedded #{inspect(schema)} while inserting"
+      )
+
   defp check_action!(action, _, _), do: action
 
   defp autogenerate_id(changes, _struct, :insert, schema, adapter) do
     case schema.__schema__(:autogenerate_id) do
       {key, _source, :binary_id} ->
         Map.put_new_lazy(changes, key, fn -> adapter.autogenerate(:embed_id) end)
+
       {_key, :id} ->
-        raise ArgumentError, "embedded schema `#{inspect schema}` cannot autogenerate `:id` primary keys, " <>
-                             "those are typically used for auto-incrementing constraints. " <>
-                             "Maybe you meant to use `:binary_id` instead?"
+        raise ArgumentError,
+              "embedded schema `#{inspect(schema)}` cannot autogenerate `:id` primary keys, " <>
+                "those are typically used for auto-incrementing constraints. " <>
+                "Maybe you meant to use `:binary_id` instead?"
+
       nil ->
         changes
     end
@@ -140,17 +160,18 @@ defmodule Ecto.Embedded do
     for {_, nil} <- Ecto.primary_key(struct) do
       raise Ecto.NoPrimaryKeyValueError, struct: struct
     end
+
     changes
   end
 
   defp autogenerate(changes, action, schema) do
-    Enum.reduce schema.__schema__(action_to_auto(action)), changes, fn
-      {k, {mod, fun, args}}, acc ->
-        case Map.fetch(acc, k) do
-          {:ok, _} -> acc
-          :error   -> Map.put(acc, k, apply(mod, fun, args))
-        end
-    end
+    Enum.reduce(schema.__schema__(action_to_auto(action)), changes, fn {k, {mod, fun, args}},
+                                                                       acc ->
+      case Map.fetch(acc, k) do
+        {:ok, _} -> acc
+        :error -> Map.put(acc, k, apply(mod, fun, args))
+      end
+    end)
   end
 
   defp action_to_auto(:insert), do: :autogenerate

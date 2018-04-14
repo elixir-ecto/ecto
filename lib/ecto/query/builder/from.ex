@@ -33,7 +33,7 @@ defmodule Ecto.Query.Builder.From do
       ** (Ecto.Query.CompileError) binding list should contain only variables or `{as, var}` tuples, got: x()
 
   """
-  @spec escape(Macro.t, Macro.Env.t) :: {Macro.t, Keyword.t}
+  @spec escape(Macro.t(), Macro.Env.t()) :: {Macro.t(), Keyword.t()}
   def escape({:in, _, [var, query]}, env) do
     Builder.escape_binding(query, List.wrap(var), env)
   end
@@ -49,10 +49,10 @@ defmodule Ecto.Query.Builder.From do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, Macro.Env.t, atom) :: {Macro.t, Keyword.t, non_neg_integer | nil}
+  @spec build(Macro.t(), Macro.Env.t(), atom) :: {Macro.t(), Keyword.t(), non_neg_integer | nil}
   def build(query, env, as) do
     if not is_atom(as) do
-      Builder.error! "`as` must be a compile time atom, got: `#{Macro.to_string(as)}`"
+      Builder.error!("`as` must be a compile time atom, got: `#{Macro.to_string(as)}`")
     end
 
     {query, binds} = escape(query, env)
@@ -85,17 +85,22 @@ defmodule Ecto.Query.Builder.From do
   defp query(prefix, source, schema, as) do
     aliases = if as, do: [{as, 0}], else: []
 
-    {:%, [], [Ecto.Query,
-              {:%{}, [],
-               [from: {:%, [], [Ecto.Query.FromExpr,
-                                {:%{}, [], [source: {source, schema}, as: as]}]},
-                prefix: prefix,
-                aliases: {:%{}, [], aliases}]}]}
+    {:%, [],
+     [
+       Ecto.Query,
+       {:%{}, [],
+        [
+          from: {:%, [], [Ecto.Query.FromExpr, {:%{}, [], [source: {source, schema}, as: as]}]},
+          prefix: prefix,
+          aliases: {:%{}, [], aliases}
+        ]}
+     ]}
   end
 
   defp expand_from({left, right}, env) do
     {left, Macro.expand(right, env)}
   end
+
   defp expand_from(other, env) do
     Macro.expand(other, env)
   end
@@ -103,7 +108,7 @@ defmodule Ecto.Query.Builder.From do
   @doc """
   The callback applied by `build/2` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, non_neg_integer) :: Ecto.Query.t
+  @spec apply(Ecto.Queryable.t(), non_neg_integer) :: Ecto.Query.t()
   def apply(query, binds) do
     query = Ecto.Queryable.to_query(query)
     check_binds(query, binds)
@@ -112,8 +117,10 @@ defmodule Ecto.Query.Builder.From do
 
   defp check_binds(query, count) do
     if count > 1 and count > Builder.count_binds(query) do
-      Builder.error! "`from` in query expression specified #{count} " <>
-                     "binds but query contains #{Builder.count_binds(query)} binds"
+      Builder.error!(
+        "`from` in query expression specified #{count} " <>
+          "binds but query contains #{Builder.count_binds(query)} binds"
+      )
     end
   end
 end

@@ -8,20 +8,22 @@ defmodule Ecto.Query.Builder.Dynamic do
   @doc """
   Builds a dynamic expression.
   """
-  @spec build([Macro.t], Macro.t, Macro.Env.t) :: Macro.t
+  @spec build([Macro.t()], Macro.t(), Macro.Env.t()) :: Macro.t()
   def build(binding, expr, env) do
     {query, vars} = Builder.escape_binding(quote(do: query), binding, env)
     {expr, {params, :acc}} = Builder.escape(expr, :any, {%{}, :acc}, vars, env)
     params = Builder.escape_params(params)
 
     quote do
-      %Ecto.Query.DynamicExpr{fun: fn query ->
-                                _ = unquote(query)
-                                {unquote(expr), unquote(params)}
-                              end,
-                              binding: unquote(Macro.escape(binding)),
-                              file: unquote(env.file),
-                              line: unquote(env.line)}
+      %Ecto.Query.DynamicExpr{
+        fun: fn query ->
+          _ = unquote(query)
+          {unquote(expr), unquote(params)}
+        end,
+        binding: unquote(Macro.escape(binding)),
+        file: unquote(env.file),
+        line: unquote(env.line)
+      }
     end
   end
 
@@ -46,8 +48,7 @@ defmodule Ecto.Query.Builder.Dynamic do
   end
 
   defp expand(query, %{fun: fun}, {binding, params, count}) do
-    {dynamic_expr, dynamic_params} =
-      fun.(query)
+    {dynamic_expr, dynamic_params} = fun.(query)
 
     Macro.postwalk(dynamic_expr, {binding, params, count}, fn
       {:^, meta, [ix]}, {binding, params, count} ->
@@ -55,9 +56,11 @@ defmodule Ecto.Query.Builder.Dynamic do
           {%Ecto.Query.DynamicExpr{binding: new_binding} = dynamic, _} ->
             binding = if length(new_binding) > length(binding), do: new_binding, else: binding
             expand(query, dynamic, {binding, params, count})
+
           param ->
             {{:^, meta, [count]}, {binding, [param | params], count + 1}}
         end
+
       expr, acc ->
         {expr, acc}
     end)

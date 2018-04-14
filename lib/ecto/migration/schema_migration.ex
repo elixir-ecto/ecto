@@ -40,13 +40,15 @@ defmodule Ecto.Migration.SchemaMigration do
   end
 
   defp create_migrations_table(adapter, repo, prefix) do
-    table_name = repo |> get_source |> String.to_atom
+    table_name = repo |> get_source |> String.to_atom()
     table = %Ecto.Migration.Table{name: table_name, prefix: prefix}
 
     # DDL queries do not log, so we do not need to pass log: false here.
-    adapter.execute_ddl(repo,
-      {:create_if_not_exists, table, [
-        {:add, :version, :bigint, primary_key: true},
-        {:add, :inserted_at, :naive_datetime, []}]}, @opts)
+    adapter.execute_ddl(
+      repo,
+      {:create_if_not_exists, table,
+       [{:add, :version, :bigint, primary_key: true}, {:add, :inserted_at, :naive_datetime, []}]},
+      @opts
+    )
   end
 end

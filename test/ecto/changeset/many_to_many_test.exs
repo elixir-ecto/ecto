@@ -32,7 +32,10 @@ defmodule Ecto.Changeset.ManyToManyTest do
       field :title, :string
       many_to_many :posts, Post, join_through: "authors_posts", on_replace: :delete
       many_to_many :raise_posts, Post, join_through: "authors_posts", on_replace: :raise
-      many_to_many :invalid_posts, Post, join_through: "authors_posts", on_replace: :mark_as_invalid
+
+      many_to_many :invalid_posts, Post,
+        join_through: "authors_posts",
+        on_replace: :mark_as_invalid
     end
   end
 
@@ -46,8 +49,8 @@ defmodule Ecto.Changeset.ManyToManyTest do
     changeset = cast(%Author{}, %{"posts" => [%{"title" => "hello"}]}, :posts)
     [post_change] = changeset.changes.posts
     assert post_change.changes == %{title: "hello"}
-    assert post_change.errors  == []
-    assert post_change.action  == :insert
+    assert post_change.errors == []
+    assert post_change.action == :insert
     assert post_change.valid?
     assert changeset.valid?
   end
@@ -56,8 +59,8 @@ defmodule Ecto.Changeset.ManyToManyTest do
     changeset = cast(%Author{}, %{"posts" => %{0 => %{"title" => "hello"}}}, :posts)
     [post_change] = changeset.changes.posts
     assert post_change.changes == %{title: "hello"}
-    assert post_change.errors  == []
-    assert post_change.action  == :insert
+    assert post_change.errors == []
+    assert post_change.action == :insert
     assert post_change.valid?
     assert changeset.valid?
   end
@@ -66,27 +69,37 @@ defmodule Ecto.Changeset.ManyToManyTest do
     assert cast(%Author{}, %{"posts" => []}, :posts).changes == %{posts: []}
     assert cast(%Author{posts: []}, %{"posts" => []}, :posts).changes == %{}
 
-    loaded = put_in %Author{}.__meta__.state, :loaded
-    assert_raise RuntimeError, ~r"attempting to cast or change association `posts` .* that was not loaded", fn ->
-      cast(loaded, %{"posts" => []}, :posts)
-    end
+    loaded = put_in(%Author{}.__meta__.state, :loaded)
+
+    assert_raise RuntimeError,
+                 ~r"attempting to cast or change association `posts` .* that was not loaded",
+                 fn ->
+                   cast(loaded, %{"posts" => []}, :posts)
+                 end
+
     assert cast(loaded, %{}, :posts).changes == %{}
   end
 
   # Please note the order is important in this test.
   test "cast many_to_many changing schemas" do
-    posts = [%Post{title: "first", id: 1},
-             %Post{title: "second", id: 2},
-             %Post{title: "third", id: 3}]
-    params = [%{"title" => "new"},
-              %{"id" => 2, "title" => nil},
-              %{"id" => 3, "title" => "new name"}]
+    posts = [
+      %Post{title: "first", id: 1},
+      %Post{title: "second", id: 2},
+      %Post{title: "third", id: 3}
+    ]
+
+    params = [
+      %{"title" => "new"},
+      %{"id" => 2, "title" => nil},
+      %{"id" => 3, "title" => "new name"}
+    ]
 
     changeset = cast(%Author{posts: posts}, %{"posts" => params}, :posts)
     [first, new, second, third] = changeset.changes.posts
 
     assert first.data.id == 1
-    assert first.required == [] # Check for not running changeset function
+    # Check for not running changeset function
+    assert first.required == []
     assert first.action == :replace
     assert first.valid?
 
@@ -108,6 +121,7 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
   test "cast many_to_many with invalid operation" do
     params = %{"posts" => [%{"id" => 1, "title" => "new"}]}
+
     assert_raise RuntimeError, ~r"cannot update related", fn ->
       cast(%Author{posts: []}, params, :posts, with: &Post.set_action/2)
     end
@@ -132,16 +146,21 @@ defmodule Ecto.Changeset.ManyToManyTest do
   end
 
   test "cast many_to_many without changes skips" do
-    changeset = cast(%Author{posts: [%Post{title: "hello", id: 1}]},
-                     %{"posts" => [%{"id" => 1}]}, :posts)
+    changeset =
+      cast(%Author{posts: [%Post{title: "hello", id: 1}]}, %{"posts" => [%{"id" => 1}]}, :posts)
 
     refute Map.has_key?(changeset.changes, :posts)
   end
 
   test "cast many_to_many discards changesets marked as ignore" do
-    changeset = cast(%Author{},
-                     %{"posts" => [%{title: "oops", action: :ignore}]},
-                     :posts, with: &Post.set_action/2)
+    changeset =
+      cast(
+        %Author{},
+        %{"posts" => [%{title: "oops", action: :ignore}]},
+        :posts,
+        with: &Post.set_action/2
+      )
+
     assert changeset.changes == %{}
 
     posts = [
@@ -149,10 +168,11 @@ defmodule Ecto.Changeset.ManyToManyTest do
       %{title: "oops", action: :ignore},
       %{title: "world", action: :insert}
     ]
-    changeset = cast(%Author{}, %{"posts" => posts},
-                     :posts, with: &Post.set_action/2)
+
+    changeset = cast(%Author{}, %{"posts" => posts}, :posts, with: &Post.set_action/2)
+
     assert Enum.map(changeset.changes.posts, &Ecto.Changeset.get_change(&1, :title)) ==
-           ["hello", "world"]
+             ["hello", "world"]
   end
 
   test "cast many_to_many when required" do
@@ -166,7 +186,9 @@ defmodule Ecto.Changeset.ManyToManyTest do
     assert changeset.changes == %{}
     assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]
 
-    changeset = cast(%Author{posts: []}, %{}, :posts, required: true, required_message: "a custom message")
+    changeset =
+      cast(%Author{posts: []}, %{}, :posts, required: true, required_message: "a custom message")
+
     assert changeset.required == [:posts]
     assert changeset.changes == %{}
     assert changeset.errors == [posts: {"a custom message", [validation: :required]}]
@@ -190,6 +212,7 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
   test "cast many_to_many with on_replace: :raise" do
     schema = %Author{raise_posts: [%Post{id: 1}]}
+
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
       cast(schema, %{"raise_posts" => []}, :raise_posts)
     end
@@ -204,17 +227,36 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
     changeset = cast(schema, %{"invalid_posts" => []}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
+
+    assert changeset.errors == [
+             invalid_posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}
+           ]
+
     refute changeset.valid?
 
     changeset = cast(schema, %{"invalid_posts" => [%{"id" => 2}]}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}]
+
+    assert changeset.errors == [
+             invalid_posts: {"is invalid", [validation: :assoc, type: {:array, :map}]}
+           ]
+
     refute changeset.valid?
 
-    changeset = cast(schema, %{"invalid_posts" => [%{"id" => 2}]}, :invalid_posts, invalid_message: "a custom message")
+    changeset =
+      cast(
+        schema,
+        %{"invalid_posts" => [%{"id" => 2}]},
+        :invalid_posts,
+        invalid_message: "a custom message"
+      )
+
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"a custom message", [validation: :assoc, type: {:array, :map}]}]
+
+    assert changeset.errors == [
+             invalid_posts: {"a custom message", [validation: :assoc, type: {:array, :map}]}
+           ]
+
     refute changeset.valid?
   end
 
@@ -222,7 +264,7 @@ defmodule Ecto.Changeset.ManyToManyTest do
     schema = %Author{}
 
     params = %{posts: [%{title: "hello", id: 1}]}
-    schema = cast(schema, params, :posts) |> Changeset.apply_changes
+    schema = cast(schema, params, :posts) |> Changeset.apply_changes()
     params = %{posts: []}
     changeset = cast(schema, params, :posts)
     changeset = cast(changeset, params, :posts)
@@ -239,55 +281,52 @@ defmodule Ecto.Changeset.ManyToManyTest do
     assoc = Author.__schema__(:association, :posts)
 
     assert {:ok, [old_changeset, new_changeset], true} =
-      Relation.change(assoc, [%Post{id: 1}], [%Post{id: 2}])
+             Relation.change(assoc, [%Post{id: 1}], [%Post{id: 2}])
+
     assert old_changeset.action == :replace
     assert new_changeset.action == :insert
 
     assoc_schema_changeset = Changeset.change(%Post{}, title: "hello")
 
-    assert {:ok, [changeset], true} =
-      Relation.change(assoc, [assoc_schema_changeset], [])
+    assert {:ok, [changeset], true} = Relation.change(assoc, [assoc_schema_changeset], [])
     assert changeset.action == :insert
     assert changeset.changes == %{title: "hello"}
 
     assoc_schema = %Post{id: 1}
     assoc_schema_changeset = Changeset.change(assoc_schema, title: "hello")
+
     assert {:ok, [changeset], true} =
-      Relation.change(assoc, [assoc_schema_changeset], [assoc_schema])
+             Relation.change(assoc, [assoc_schema_changeset], [assoc_schema])
+
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
-    assert {:ok, [changeset], true} =
-      Relation.change(assoc, [], [assoc_schema_changeset])
+    assert {:ok, [changeset], true} = Relation.change(assoc, [], [assoc_schema_changeset])
     assert changeset.action == :replace
 
     assert :ignore =
-      Relation.change(assoc, [%{assoc_schema_changeset | action: :ignore}], [assoc_schema])
-    assert :ignore =
-      Relation.change(assoc, [%{assoc_schema_changeset | action: :ignore}], [])
+             Relation.change(assoc, [%{assoc_schema_changeset | action: :ignore}], [assoc_schema])
+
+    assert :ignore = Relation.change(assoc, [%{assoc_schema_changeset | action: :ignore}], [])
 
     empty_changeset = Changeset.change(assoc_schema)
-    assert :ignore =
-      Relation.change(assoc, [empty_changeset], [assoc_schema])
+    assert :ignore = Relation.change(assoc, [empty_changeset], [assoc_schema])
   end
 
   test "change many_to_many with attributes" do
     assoc = Author.__schema__(:association, :posts)
 
-    assert {:ok, [changeset], true} =
-      Relation.change(assoc, [%{title: "hello"}], [])
+    assert {:ok, [changeset], true} = Relation.change(assoc, [%{title: "hello"}], [])
     assert changeset.action == :insert
     assert changeset.changes == %{title: "hello"}
 
     post = %Post{title: "other"} |> Ecto.put_meta(state: :loaded)
 
-    assert {:ok, [changeset], true} =
-      Relation.change(assoc, [%{title: "hello"}], [post])
+    assert {:ok, [changeset], true} = Relation.change(assoc, [%{title: "hello"}], [post])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
 
-    assert {:ok, [changeset], true} =
-      Relation.change(assoc, [[title: "hello"]], [post])
+    assert {:ok, [changeset], true} = Relation.change(assoc, [[title: "hello"]], [post])
     assert changeset.action == :update
     assert changeset.changes == %{title: "hello"}
   end
@@ -296,16 +335,17 @@ defmodule Ecto.Changeset.ManyToManyTest do
     assoc = Author.__schema__(:association, :posts)
     post = %Post{title: "hello"}
 
-    assert {:ok, [changeset], true} =
-      Relation.change(assoc, [post], [])
+    assert {:ok, [changeset], true} = Relation.change(assoc, [post], [])
     assert changeset.action == :insert
 
     assert {:ok, [changeset], true} =
-      Relation.change(assoc, [Ecto.put_meta(post, state: :loaded)], [])
+             Relation.change(assoc, [Ecto.put_meta(post, state: :loaded)], [])
+
     assert changeset.action == :update
 
     assert {:ok, [changeset], true} =
-      Relation.change(assoc, [Ecto.put_meta(post, state: :deleted)], [])
+             Relation.change(assoc, [Ecto.put_meta(post, state: :deleted)], [])
+
     assert changeset.action == :delete
   end
 

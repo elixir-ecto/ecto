@@ -5,29 +5,37 @@ defmodule Ecto.Mixfile do
   @adapters [:pg, :mysql]
 
   def project do
-    [app: :ecto,
-     version: @version,
-     elixir: "~> 1.4",
-     deps: deps(),
-     build_per_environment: false,
-     consolidate_protocols: false,
-     test_paths: test_paths(Mix.env),
-     xref: [exclude: [Mariaex, Ecto.Adapters.MySQL.Connection,
-                      Postgrex, Ecto.Adapters.Postgres.Connection,
-                      DBConnection, DBConnection.Ownership]],
+    [
+      app: :ecto,
+      version: @version,
+      elixir: "~> 1.4",
+      deps: deps(),
+      build_per_environment: false,
+      consolidate_protocols: false,
+      test_paths: test_paths(Mix.env()),
+      xref: [
+        exclude: [
+          Mariaex,
+          Ecto.Adapters.MySQL.Connection,
+          Postgrex,
+          Ecto.Adapters.Postgres.Connection,
+          DBConnection,
+          DBConnection.Ownership
+        ]
+      ],
 
-     # Custom testing
-     aliases: ["test.all": ["test", "test.adapters"],
-               "test.adapters": &test_adapters/1],
-     preferred_cli_env: ["test.all": :test],
+      # Custom testing
+      aliases: ["test.all": ["test", "test.adapters"], "test.adapters": &test_adapters/1],
+      preferred_cli_env: ["test.all": :test],
 
-     # Hex
-     description: "A database wrapper and language integrated query for Elixir",
-     package: package(),
+      # Hex
+      description: "A database wrapper and language integrated query for Elixir",
+      package: package(),
 
-     # Docs
-     name: "Ecto",
-     docs: docs()]
+      # Docs
+      name: "Ecto",
+      docs: docs()
+    ]
   end
 
   def application do
@@ -67,8 +75,9 @@ defmodule Ecto.Mixfile do
       maintainers: ["Eric Meadows-Jönsson", "José Valim", "James Fish", "Michał Muskała"],
       licenses: ["Apache 2.0"],
       links: %{"GitHub" => "https://github.com/elixir-ecto/ecto"},
-      files: ~w(.formatter.exs mix.exs README.md CHANGELOG.md lib) ++
-             ~w(integration_test/cases integration_test/sql integration_test/support)
+      files:
+        ~w(.formatter.exs mix.exs README.md CHANGELOG.md lib) ++
+          ~w(integration_test/cases integration_test/sql integration_test/support)
     ]
   end
 
@@ -77,12 +86,17 @@ defmodule Ecto.Mixfile do
   end
 
   defp env_run(env, args) do
-    args = if IO.ANSI.enabled?, do: ["--color"|args], else: ["--no-color"|args]
+    args = if IO.ANSI.enabled?(), do: ["--color" | args], else: ["--no-color" | args]
 
-    IO.puts "==> Running tests for MIX_ENV=#{env} mix test"
-    {_, res} = System.cmd "mix", ["test"|args],
-                          into: IO.binstream(:stdio, :line),
-                          env: [{"MIX_ENV", to_string(env)}]
+    IO.puts("==> Running tests for MIX_ENV=#{env} mix test")
+
+    {_, res} =
+      System.cmd(
+        "mix",
+        ["test" | args],
+        into: IO.binstream(:stdio, :line),
+        env: [{"MIX_ENV", to_string(env)}]
+      )
 
     if res > 0 do
       System.at_exit(fn _ -> exit({:shutdown, 1}) end)
@@ -119,37 +133,33 @@ defmodule Ecto.Mixfile do
           Ecto.Queryable,
           Ecto.SubQuery
         ],
-
-        "Adapters": [
+        Adapters: [
           Ecto.Adapters.MySQL,
           Ecto.Adapters.Postgres,
           Ecto.Adapters.SQL,
           Ecto.Adapters.SQL.Connection,
-          Ecto.Adapters.SQL.Sandbox,
+          Ecto.Adapters.SQL.Sandbox
         ],
-
         "Adapter specification": [
           Ecto.Adapter,
           Ecto.Adapter.Migration,
           Ecto.Adapter.Storage,
           Ecto.Adapter.Structure,
-          Ecto.Adapter.Transaction,
+          Ecto.Adapter.Transaction
         ],
-
         "Association structs": [
           Ecto.Association.BelongsTo,
           Ecto.Association.Has,
           Ecto.Association.HasThrough,
           Ecto.Association.ManyToMany,
-          Ecto.Association.NotLoaded,
+          Ecto.Association.NotLoaded
         ],
-
         "Migration structs": [
           Ecto.Migration.Command,
           Ecto.Migration.Constraint,
           Ecto.Migration.Index,
           Ecto.Migration.Reference,
-          Ecto.Migration.Table,
+          Ecto.Migration.Table
         ]
       ]
     ]

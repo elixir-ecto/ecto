@@ -317,14 +317,17 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       case conn_mod.handle_begin(opts, state) do
         {:ok, value, state} ->
           {:ok, value, {conn_mod, state, true}}
+
         {kind, err, state} ->
           {kind, err, {conn_mod, state, false}}
       end
     end
+
     def handle_commit(opts, {conn_mod, state, true}) do
       opts = [mode: :savepoint] ++ opts
       proxy(:handle_commit, {conn_mod, state, false}, [opts])
     end
+
     def handle_rollback(opts, {conn_mod, state, true}) do
       opts = [mode: :savepoint] ++ opts
       proxy(:handle_rollback, {conn_mod, state, false}, [opts])
@@ -332,20 +335,26 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
     def handle_prepare(query, opts, state),
       do: proxy(:handle_prepare, state, [query, maybe_savepoint(opts, state)])
+
     def handle_execute(query, params, opts, state),
       do: proxy(:handle_execute, state, [query, params, maybe_savepoint(opts, state)])
+
     def handle_close(query, opts, state),
       do: proxy(:handle_close, state, [query, maybe_savepoint(opts, state)])
+
     def handle_declare(query, params, opts, state),
       do: proxy(:handle_declare, state, [query, params, maybe_savepoint(opts, state)])
+
     def handle_first(query, cursor, opts, state),
       do: proxy(:handle_first, state, [query, cursor, maybe_savepoint(opts, state)])
+
     def handle_next(query, cursor, opts, state),
       do: proxy(:handle_next, state, [query, cursor, maybe_savepoint(opts, state)])
+
     def handle_deallocate(query, cursor, opts, state),
       do: proxy(:handle_deallocate, state, [query, cursor, maybe_savepoint(opts, state)])
-    def handle_info(msg, state),
-      do: proxy(:handle_info, state, [msg])
+
+    def handle_info(msg, state), do: proxy(:handle_info, state, [msg])
 
     defp maybe_savepoint(opts, {_, _, in_transaction?}) do
       if not in_transaction? and Keyword.get(opts, :sandbox_subtransaction, true) do
@@ -388,9 +397,11 @@ defmodule Ecto.Adapters.SQL.Sandbox do
           case conn_mod.handle_begin([mode: :transaction] ++ opts, conn_state) do
             {:ok, _, conn_state} ->
               {:ok, pool_ref, Connection, {conn_mod, conn_state, false}}
+
             {_error_or_disconnect, err, conn_state} ->
               pool_mod.disconnect(pool_ref, err, conn_state, opts)
           end
+
         error ->
           error
       end
@@ -398,9 +409,11 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
     def checkin(pool_ref, {conn_mod, conn_state, _in_transaction?}, opts) do
       pool_mod = opts[:sandbox_pool]
+
       case conn_mod.handle_rollback([mode: :transaction] ++ opts, conn_state) do
         {:ok, _, conn_state} ->
           pool_mod.checkin(pool_ref, conn_state, opts)
+
         {_error_or_disconnect, err, conn_state} ->
           pool_mod.disconnect(pool_ref, err, conn_state, opts)
       end
@@ -471,7 +484,9 @@ defmodule Ecto.Adapters.SQL.Sandbox do
         if isolation = opts[:isolation] do
           set_transaction_isolation_level(repo, isolation)
         end
+
         :ok
+
       other ->
         other
     end
@@ -479,9 +494,11 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   defp set_transaction_isolation_level(repo, isolation) do
     query = "SET TRANSACTION ISOLATION LEVEL #{isolation}"
+
     case Ecto.Adapters.SQL.query(repo, query, [], sandbox_subtransaction: false) do
       {:ok, _} ->
         :ok
+
       {:error, error} ->
         checkin(repo, [])
         raise error
@@ -510,6 +527,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   def unboxed_run(repo, fun) do
     checkin(repo)
     checkout(repo, sandbox: false)
+
     try do
       fun.()
     after
@@ -522,10 +540,10 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
     if opts[:pool] != DBConnection.Ownership do
       raise """
-      cannot configure sandbox with pool #{inspect opts[:pool]}.
+      cannot configure sandbox with pool #{inspect(opts[:pool])}.
       To use the SQL Sandbox, configure your repository pool as:
 
-            pool: #{inspect __MODULE__}
+            pool: #{inspect(__MODULE__)}
       """
     end
 

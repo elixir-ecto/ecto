@@ -42,31 +42,41 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
     no_umbrella!("ecto.gen.migration")
     repos = parse_repo(args)
 
-    Enum.each repos, fn repo ->
+    Enum.each(repos, fn repo ->
       case OptionParser.parse(args, switches: @switches) do
         {opts, [name], _} ->
           ensure_repo(repo, args)
           path = Path.join(source_repo_priv(repo), "migrations")
           base_name = "#{underscore(name)}.exs"
           file = Path.join(path, "#{timestamp()}_#{base_name}")
-          create_directory path
+          create_directory(path)
 
           fuzzy_path = Path.join(path, "*_#{base_name}")
+
           if Path.wildcard(fuzzy_path) != [] do
-            Mix.raise "migration can't be created, there is already a migration file with name #{name}."
+            Mix.raise(
+              "migration can't be created, there is already a migration file with name #{name}."
+            )
           end
 
-          assigns = [mod: Module.concat([repo, Migrations, camelize(name)]), change: opts[:change]]
-          create_file file, migration_template(assigns)
+          assigns = [
+            mod: Module.concat([repo, Migrations, camelize(name)]),
+            change: opts[:change]
+          ]
 
-          if open?(file) and Mix.shell.yes?("Do you want to run this migration?") do
-            Mix.Task.run "ecto.migrate", [repo]
+          create_file(file, migration_template(assigns))
+
+          if open?(file) and Mix.shell().yes?("Do you want to run this migration?") do
+            Mix.Task.run("ecto.migrate", [repo])
           end
+
         {_, _, _} ->
-          Mix.raise "expected ecto.gen.migration to receive the migration file name, " <>
-                    "got: #{inspect Enum.join(args, " ")}"
+          Mix.raise(
+            "expected ecto.gen.migration to receive the migration file name, " <>
+              "got: #{inspect(Enum.join(args, " "))}"
+          )
       end
-    end
+    end)
   end
 
   defp timestamp do
@@ -74,10 +84,10 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
     "#{y}#{pad(m)}#{pad(d)}#{pad(hh)}#{pad(mm)}#{pad(ss)}"
   end
 
-  defp pad(i) when i < 10, do: << ?0, ?0 + i >>
+  defp pad(i) when i < 10, do: <<?0, ?0 + i>>
   defp pad(i), do: to_string(i)
 
-  embed_template :migration, """
+  embed_template(:migration, """
   defmodule <%= inspect @mod %> do
     use Ecto.Migration
 
@@ -85,5 +95,5 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
   <%= @change %>
     end
   end
-  """
+  """)
 end

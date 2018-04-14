@@ -15,17 +15,19 @@ defmodule Mix.Tasks.Ecto do
     {_opts, args, _} = OptionParser.parse(args, switches: [])
 
     case args do
-      [] -> general()
+      [] ->
+        general()
+
       _ ->
-        Mix.raise "Invalid arguments, expected: mix ecto"
+        Mix.raise("Invalid arguments, expected: mix ecto")
     end
   end
 
   defp general() do
     Application.ensure_all_started(:ecto)
-    Mix.shell.info "Ecto v#{Application.spec(:ecto, :vsn)}"
-    Mix.shell.info "A database wrapper and language integrated query for Elixir."
-    Mix.shell.info "\nAvailable tasks:\n"
+    Mix.shell().info("Ecto v#{Application.spec(:ecto, :vsn)}")
+    Mix.shell().info("A database wrapper and language integrated query for Elixir.")
+    Mix.shell().info("\nAvailable tasks:\n")
     Mix.Tasks.Help.run(["--search", "ecto."])
   end
 end

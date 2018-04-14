@@ -1,4 +1,4 @@
-defmodule Ecto.Adapter.Storage  do
+defmodule Ecto.Adapter.Storage do
   @moduledoc """
   Specifies the adapter storage API.
   """
@@ -18,7 +18,7 @@ defmodule Ecto.Adapter.Storage  do
                  hostname: 'localhost')
 
   """
-  @callback storage_up(options :: Keyword.t) :: :ok | {:error, :already_up} | {:error, term}
+  @callback storage_up(options :: Keyword.t()) :: :ok | {:error, :already_up} | {:error, term}
 
   @doc """
   Drops the storage given by options.
@@ -35,5 +35,5 @@ defmodule Ecto.Adapter.Storage  do
                    hostname: 'localhost')
 
   """
-  @callback storage_down(options :: Keyword.t) :: :ok | {:error, :already_down} | {:error, term}
+  @callback storage_down(options :: Keyword.t()) :: :ok | {:error, :already_down} | {:error, term}
 end

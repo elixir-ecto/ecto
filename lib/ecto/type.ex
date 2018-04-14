@@ -77,19 +77,33 @@ defmodule Ecto.Type do
   import Kernel, except: [match?: 2]
 
   @typedoc "An Ecto type, primitive or custom."
-  @type t         :: primitive | custom
+  @type t :: primitive | custom
 
   @typedoc "Primitive Ecto types (handled by Ecto)."
   @type primitive :: base | composite
 
   @typedoc "Custom types are represented by user-defined modules."
-  @type custom    :: module
+  @type custom :: module
 
-  @typep base      :: :integer | :float | :boolean | :string | :map |
-                      :binary | :decimal | :id | :binary_id |
-                      :utc_datetime | :naive_datetime | :date | :time | :any |
-                      :utc_datetime_usec | :naive_datetime_usec | :time_usec
-  @typep composite :: {:array, t} | {:map, t} | {:embed, Ecto.Embedded.t} | {:in, t}
+  @typep base ::
+           :integer
+           | :float
+           | :boolean
+           | :string
+           | :map
+           | :binary
+           | :decimal
+           | :id
+           | :binary_id
+           | :utc_datetime
+           | :naive_datetime
+           | :date
+           | :time
+           | :any
+           | :utc_datetime_usec
+           | :naive_datetime_usec
+           | :time_usec
+  @typep composite :: {:array, t} | {:map, t} | {:embed, Ecto.Embedded.t()} | {:in, t}
 
   @base ~w(
     integer float boolean string map
@@ -250,7 +264,7 @@ defmodule Ecto.Type do
     end
   end
 
-  defp do_match?(_left, :any),  do: true
+  defp do_match?(_left, :any), do: true
   defp do_match?(:any, _right), do: true
   defp do_match?({outer, left}, {outer, right}), do: match?(left, right)
   defp do_match?({:array, :any}, {:embed, %{cardinality: :many}}), do: true
@@ -347,17 +361,23 @@ defmodule Ecto.Type do
 
   def dump(:utc_datetime, %DateTime{time_zone: time_zone} = datetime, _dumper) do
     if time_zone != "Etc/UTC" do
-      message = ":utc_datetime expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
+      message =
+        ":utc_datetime expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
+
       raise ArgumentError, message
     end
+
     {:ok, datetime |> DateTime.to_naive() |> zerofy_microsecond()}
   end
 
   def dump(:utc_datetime_usec, %DateTime{time_zone: time_zone} = datetime, _dumper) do
     if time_zone != "Etc/UTC" do
-      message = ":utc_datetime_usec expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
+      message =
+        ":utc_datetime_usec expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
+
       raise ArgumentError, message
     end
+
     {:ok, DateTime.to_naive(datetime)}
   end
 
@@ -365,20 +385,22 @@ defmodule Ecto.Type do
     cond do
       not primitive?(type) ->
         type.dump(value)
+
       of_base_type?(type, value) ->
         {:ok, value}
+
       true ->
         :error
     end
   end
 
-  defp dump_embed(%{cardinality: :one, related: schema, field: field},
-                  value, fun) when is_map(value) do
+  defp dump_embed(%{cardinality: :one, related: schema, field: field}, value, fun)
+       when is_map(value) do
     {:ok, dump_embed(field, schema, value, schema.__schema__(:dump), fun)}
   end
 
-  defp dump_embed(%{cardinality: :many, related: schema, field: field},
-                  value, fun) when is_list(value) do
+  defp dump_embed(%{cardinality: :many, related: schema, field: field}, value, fun)
+       when is_list(value) do
     types = schema.__schema__(:dump)
     {:ok, Enum.map(value, &dump_embed(field, schema, &1, types, fun))}
   end
@@ -394,15 +416,17 @@ defmodule Ecto.Type do
       case dumper.(type, value) do
         {:ok, value} ->
           Map.put(acc, source, value)
+
         :error ->
-          raise ArgumentError, "cannot dump `#{inspect value}` as type #{inspect type} " <>
-                               "for field `#{field}` in schema #{inspect schema}"
+          raise ArgumentError,
+                "cannot dump `#{inspect(value)}` as type #{inspect(type)} " <>
+                  "for field `#{field}` in schema #{inspect(schema)}"
       end
     end)
   end
 
   defp dump_embed(field, _schema, value, _types, _fun) do
-    raise ArgumentError, "cannot dump embed `#{field}`, invalid value: #{inspect value}"
+    raise ArgumentError, "cannot dump embed `#{field}`, invalid value: #{inspect(value)}"
   end
 
   @doc """
@@ -462,15 +486,17 @@ defmodule Ecto.Type do
   end
 
   def load(:utc_datetime_usec, %NaiveDateTime{} = naive_datetime, _loader) do
-     DateTime.from_naive(naive_datetime, "Etc/UTC")
+    DateTime.from_naive(naive_datetime, "Etc/UTC")
   end
 
   def load(type, value, _loader) do
     cond do
       not primitive?(type) ->
         type.load(value)
+
       of_base_type?(type, value) ->
         {:ok, value}
+
       true ->
         :error
     end
@@ -478,15 +504,15 @@ defmodule Ecto.Type do
 
   defp load_embed(%{cardinality: :one}, nil, _fun), do: {:ok, nil}
 
-  defp load_embed(%{cardinality: :one, related: schema, field: field},
-                  value, fun) when is_map(value) do
+  defp load_embed(%{cardinality: :one, related: schema, field: field}, value, fun)
+       when is_map(value) do
     {:ok, load_embed(field, schema, value, fun)}
   end
 
   defp load_embed(%{cardinality: :many}, nil, _fun), do: {:ok, []}
 
-  defp load_embed(%{cardinality: :many, related: schema, field: field},
-                  value, fun) when is_list(value) do
+  defp load_embed(%{cardinality: :many, related: schema, field: field}, value, fun)
+       when is_list(value) do
     {:ok, Enum.map(value, &load_embed(field, schema, &1, fun))}
   end
 
@@ -499,7 +525,7 @@ defmodule Ecto.Type do
   end
 
   defp load_embed(field, _schema, value, _fun) do
-    raise ArgumentError, "cannot load embed `#{field}`, invalid value: #{inspect value}"
+    raise ArgumentError, "cannot load embed `#{field}`, invalid value: #{inspect(value)}"
   end
 
   @doc """
@@ -602,17 +628,19 @@ defmodule Ecto.Type do
   def cast(:float, term) when is_binary(term) do
     case Float.parse(term) do
       {float, ""} -> {:ok, float}
-      _           -> :error
+      _ -> :error
     end
   end
+
   def cast(:float, term) when is_integer(term), do: {:ok, term + 0.0}
 
-  def cast(:boolean, term) when term in ~w(true 1),  do: {:ok, true}
+  def cast(:boolean, term) when term in ~w(true 1), do: {:ok, true}
   def cast(:boolean, term) when term in ~w(false 0), do: {:ok, false}
 
   def cast(:decimal, term) when is_binary(term) do
     Decimal.parse(term)
   end
+
   def cast(:decimal, term) when is_number(term) do
     {:ok, Decimal.new(term)}
   end
@@ -657,7 +685,7 @@ defmodule Ecto.Type do
   def cast(type, term) when type in [:id, :integer] and is_binary(term) do
     case Integer.parse(term) do
       {int, ""} -> {:ok, int}
-      _         -> :error
+      _ -> :error
     end
   end
 
@@ -665,19 +693,23 @@ defmodule Ecto.Type do
     cond do
       not primitive?(type) ->
         type.cast(term)
+
       of_base_type?(type, term) ->
         {:ok, term}
+
       true ->
         :error
     end
   end
 
   defp cast_embed(%{cardinality: :one}, nil), do: {:ok, nil}
+
   defp cast_embed(%{cardinality: :one, related: schema}, %{__struct__: schema} = struct) do
     {:ok, struct}
   end
 
   defp cast_embed(%{cardinality: :many}, nil), do: {:ok, []}
+
   defp cast_embed(%{cardinality: :many, related: schema}, value) when is_list(value) do
     if Enum.all?(value, &Kernel.match?(%{__struct__: ^schema}, &1)) do
       {:ok, value}
@@ -696,6 +728,7 @@ defmodule Ecto.Type do
   def adapter_load(_adapter, type, nil) do
     load(type, nil)
   end
+
   def adapter_load(adapter, type, value) do
     if of_base_type?(type, value) do
       {:ok, value}
@@ -704,29 +737,31 @@ defmodule Ecto.Type do
     end
   end
 
-  defp process_loaders(_, :error, _adapter),
-    do: :error
-  defp process_loaders([fun|t], {:ok, value}, adapter) when is_function(fun),
+  defp process_loaders(_, :error, _adapter), do: :error
+
+  defp process_loaders([fun | t], {:ok, value}, adapter) when is_function(fun),
     do: process_loaders(t, fun.(value), adapter)
-  defp process_loaders([type|t], {:ok, value}, adapter),
+
+  defp process_loaders([type | t], {:ok, value}, adapter),
     do: process_loaders(t, load(type, value, &adapter_load(adapter, &1, &2)), adapter)
-  defp process_loaders([], {:ok, _} = acc, _adapter),
-    do: acc
+
+  defp process_loaders([], {:ok, _} = acc, _adapter), do: acc
 
   @doc false
-  def adapter_dump(_adapter, type, nil),
-    do: dump(type, nil)
+  def adapter_dump(_adapter, type, nil), do: dump(type, nil)
+
   def adapter_dump(adapter, type, value),
     do: process_dumpers(adapter.dumpers(type(type), type), {:ok, value}, adapter)
 
-  defp process_dumpers(_, :error, _adapter),
-    do: :error
-  defp process_dumpers([fun|t], {:ok, value}, adapter) when is_function(fun),
+  defp process_dumpers(_, :error, _adapter), do: :error
+
+  defp process_dumpers([fun | t], {:ok, value}, adapter) when is_function(fun),
     do: process_dumpers(t, fun.(value), adapter)
-  defp process_dumpers([type|t], {:ok, value}, adapter),
+
+  defp process_dumpers([type | t], {:ok, value}, adapter),
     do: process_dumpers(t, dump(type, value, &adapter_dump(adapter, &1, &2)), adapter)
-  defp process_dumpers([], {:ok, _} = acc, _adapter),
-    do: acc
+
+  defp process_dumpers([], {:ok, _} = acc, _adapter), do: acc
 
   ## Date
 
@@ -734,6 +769,7 @@ defmodule Ecto.Type do
     case Date.from_iso8601(binary) do
       {:ok, _} = ok ->
         ok
+
       {:error, _} ->
         case NaiveDateTime.from_iso8601(binary) do
           {:ok, naive_datetime} -> {:ok, NaiveDateTime.to_date(naive_datetime)}
@@ -741,63 +777,90 @@ defmodule Ecto.Type do
         end
     end
   end
+
   defp cast_date(%{"year" => empty, "month" => empty, "day" => empty}) when empty in ["", nil],
     do: {:ok, nil}
-  defp cast_date(%{year: empty, month: empty, day: empty}) when empty in ["", nil],
-    do: {:ok, nil}
+
+  defp cast_date(%{year: empty, month: empty, day: empty}) when empty in ["", nil], do: {:ok, nil}
+
   defp cast_date(%{"year" => year, "month" => month, "day" => day}),
     do: cast_date(to_i(year), to_i(month), to_i(day))
+
   defp cast_date(%{year: year, month: month, day: day}),
     do: cast_date(to_i(year), to_i(month), to_i(day))
-  defp cast_date(_),
-    do: :error
 
-  defp cast_date(year, month, day) when is_integer(year) and is_integer(month) and is_integer(day) do
+  defp cast_date(_), do: :error
+
+  defp cast_date(year, month, day)
+       when is_integer(year) and is_integer(month) and is_integer(day) do
     case Date.new(year, month, day) do
       {:ok, _} = ok -> ok
       {:error, _} -> :error
     end
   end
-  defp cast_date(_, _, _),
-    do: :error
+
+  defp cast_date(_, _, _), do: :error
 
   ## Time
 
   defp cast_time(<<hour::2-bytes, ?:, minute::2-bytes>>),
     do: cast_time(to_i(hour), to_i(minute), 0, nil)
+
   defp cast_time(binary) when is_binary(binary) do
     case Time.from_iso8601(binary) do
       {:ok, _} = ok -> ok
       {:error, _} -> :error
     end
   end
-  defp cast_time(%{"hour" => empty, "minute" => empty}) when empty in ["", nil],
-    do: {:ok, nil}
-  defp cast_time(%{hour: empty, minute: empty}) when empty in ["", nil],
-    do: {:ok, nil}
+
+  defp cast_time(%{"hour" => empty, "minute" => empty}) when empty in ["", nil], do: {:ok, nil}
+  defp cast_time(%{hour: empty, minute: empty}) when empty in ["", nil], do: {:ok, nil}
+
   defp cast_time(%{"hour" => hour, "minute" => minute} = map),
-    do: cast_time(to_i(hour), to_i(minute), to_i(Map.get(map, "second")), to_i(Map.get(map, "microsecond")))
-  defp cast_time(%{hour: hour, minute: minute, second: second, microsecond: {microsecond, precision}}),
-    do: cast_time(to_i(hour), to_i(minute), to_i(second), {to_i(microsecond), to_i(precision)})
+    do:
+      cast_time(
+        to_i(hour),
+        to_i(minute),
+        to_i(Map.get(map, "second")),
+        to_i(Map.get(map, "microsecond"))
+      )
+
+  defp cast_time(%{
+         hour: hour,
+         minute: minute,
+         second: second,
+         microsecond: {microsecond, precision}
+       }),
+       do: cast_time(to_i(hour), to_i(minute), to_i(second), {to_i(microsecond), to_i(precision)})
+
   defp cast_time(%{hour: hour, minute: minute} = map),
-    do: cast_time(to_i(hour), to_i(minute), to_i(Map.get(map, :second)), to_i(Map.get(map, :microsecond)))
-  defp cast_time(_),
-    do: :error
+    do:
+      cast_time(
+        to_i(hour),
+        to_i(minute),
+        to_i(Map.get(map, :second)),
+        to_i(Map.get(map, :microsecond))
+      )
+
+  defp cast_time(_), do: :error
 
   defp cast_time(hour, minute, sec, usec) when is_integer(usec) do
     cast_time(hour, minute, sec, {usec, 6})
   end
+
   defp cast_time(hour, minute, sec, nil) do
     cast_time(hour, minute, sec, {0, 0})
   end
+
   defp cast_time(hour, minute, sec, {usec, precision})
-       when is_integer(hour) and is_integer(minute) and
-            (is_integer(sec) or is_nil(sec)) and is_integer(usec) and is_integer(precision) do
+       when is_integer(hour) and is_integer(minute) and (is_integer(sec) or is_nil(sec)) and
+              is_integer(usec) and is_integer(precision) do
     case Time.new(hour, minute, sec || 0, {usec, precision}) do
       {:ok, _} = ok -> ok
       {:error, _} -> :error
     end
   end
+
   defp cast_time(_, _, _, _) do
     :error
   end
@@ -810,12 +873,21 @@ defmodule Ecto.Type do
       {:error, _} -> :error
     end
   end
-  defp cast_naive_datetime(%{"year" => empty, "month" => empty, "day" => empty,
-                             "hour" => empty, "minute" => empty}) when empty in ["", nil],
-    do: {:ok, nil}
-  defp cast_naive_datetime(%{year: empty, month: empty, day: empty,
-                             hour: empty, minute: empty}) when empty in ["", nil],
-    do: {:ok, nil}
+
+  defp cast_naive_datetime(%{
+         "year" => empty,
+         "month" => empty,
+         "day" => empty,
+         "hour" => empty,
+         "minute" => empty
+       })
+       when empty in ["", nil],
+       do: {:ok, nil}
+
+  defp cast_naive_datetime(%{year: empty, month: empty, day: empty, hour: empty, minute: empty})
+       when empty in ["", nil],
+       do: {:ok, nil}
+
   defp cast_naive_datetime(%{} = map) do
     with {:ok, date} <- cast_date(map),
          {:ok, time} <- cast_time(map) do
@@ -825,6 +897,7 @@ defmodule Ecto.Type do
       end
     end
   end
+
   defp cast_naive_datetime(_) do
     :error
   end
@@ -833,28 +906,37 @@ defmodule Ecto.Type do
 
   defp cast_utc_datetime(binary) when is_binary(binary) do
     case DateTime.from_iso8601(binary) do
-      {:ok, datetime, _offset} -> {:ok, datetime}
+      {:ok, datetime, _offset} ->
+        {:ok, datetime}
+
       {:error, :missing_offset} ->
         case NaiveDateTime.from_iso8601(binary) do
           {:ok, naive_datetime} -> {:ok, DateTime.from_naive!(naive_datetime, "Etc/UTC")}
           {:error, _} -> :error
         end
-      {:error, _} -> :error
+
+      {:error, _} ->
+        :error
     end
   end
+
   defp cast_utc_datetime(%DateTime{time_zone: "Etc/UTC"} = datetime), do: {:ok, datetime}
+
   defp cast_utc_datetime(%DateTime{} = datetime) do
-    case (datetime |> DateTime.to_unix() |> DateTime.from_unix()) do
+    case datetime |> DateTime.to_unix() |> DateTime.from_unix() do
       {:ok, _} = ok -> ok
       {:error, _} -> :error
     end
   end
+
   defp cast_utc_datetime(value) do
     case cast_naive_datetime(value) do
       {:ok, %NaiveDateTime{} = naive_datetime} ->
         {:ok, DateTime.from_naive!(naive_datetime, "Etc/UTC")}
+
       {:ok, _} = ok ->
         ok
+
       :error ->
         :error
     end
@@ -863,22 +945,22 @@ defmodule Ecto.Type do
   ## Helpers
 
   # Checks if a value is of the given primitive type.
-  defp of_base_type?(:any, _),         do: true
-  defp of_base_type?(:id, term),       do: is_integer(term)
-  defp of_base_type?(:float, term),    do: is_float(term)
-  defp of_base_type?(:integer, term),  do: is_integer(term)
-  defp of_base_type?(:boolean, term),  do: is_boolean(term)
-  defp of_base_type?(:binary, term),   do: is_binary(term)
-  defp of_base_type?(:string, term),   do: is_binary(term)
-  defp of_base_type?(:map, term),      do: is_map(term) and not Map.has_key?(term, :__struct__)
+  defp of_base_type?(:any, _), do: true
+  defp of_base_type?(:id, term), do: is_integer(term)
+  defp of_base_type?(:float, term), do: is_float(term)
+  defp of_base_type?(:integer, term), do: is_integer(term)
+  defp of_base_type?(:boolean, term), do: is_boolean(term)
+  defp of_base_type?(:binary, term), do: is_binary(term)
+  defp of_base_type?(:string, term), do: is_binary(term)
+  defp of_base_type?(:map, term), do: is_map(term) and not Map.has_key?(term, :__struct__)
   defp of_base_type?(:decimal, value), do: Kernel.match?(%Decimal{}, value)
-  defp of_base_type?(:date, value),    do: Kernel.match?(%Date{}, value)
-  defp of_base_type?(_, _),            do: false
+  defp of_base_type?(:date, value), do: Kernel.match?(%Date{}, value)
+  defp of_base_type?(_, _), do: false
 
-  defp array([h|t], type, fun, acc) do
+  defp array([h | t], type, fun, acc) do
     case fun.(type, h) do
-      {:ok, h} -> array(t, type, fun, [h|acc])
-      :error   -> :error
+      {:ok, h} -> array(t, type, fun, [h | acc])
+      :error -> :error
     end
   end
 
@@ -906,6 +988,7 @@ defmodule Ecto.Type do
 
   defp to_i(nil), do: nil
   defp to_i(int) when is_integer(int), do: int
+
   defp to_i(bin) when is_binary(bin) do
     case Integer.parse(bin) do
       {int, ""} -> int

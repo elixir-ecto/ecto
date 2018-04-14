@@ -39,29 +39,35 @@ defmodule Ecto.Adapters.SQL do
       ## Types
 
       @doc false
-      def autogenerate(:id),        do: nil
-      def autogenerate(:embed_id),  do: Ecto.UUID.generate()
+      def autogenerate(:id), do: nil
+      def autogenerate(:embed_id), do: Ecto.UUID.generate()
       def autogenerate(:binary_id), do: Ecto.UUID.bingenerate()
 
       @doc false
       def loaders({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.load_embed(type, &1)]
-      def loaders(:binary_id, type),      do: [Ecto.UUID, type]
-      def loaders(_, type),               do: [type]
+      def loaders(:binary_id, type), do: [Ecto.UUID, type]
+      def loaders(_, type), do: [type]
 
       @doc false
       def dumpers({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
-      def dumpers(:binary_id, type),      do: [type, Ecto.UUID]
-      def dumpers(_, type),               do: [type]
+      def dumpers(:binary_id, type), do: [type, Ecto.UUID]
+      def dumpers(_, type), do: [type]
 
       ## Query
 
       @doc false
       def prepare(:all, query),
         do: {:cache, {System.unique_integer([:positive]), IO.iodata_to_binary(@conn.all(query))}}
+
       def prepare(:update_all, query),
-        do: {:cache, {System.unique_integer([:positive]), IO.iodata_to_binary(@conn.update_all(query))}}
+        do:
+          {:cache,
+           {System.unique_integer([:positive]), IO.iodata_to_binary(@conn.update_all(query))}}
+
       def prepare(:delete_all, query),
-        do: {:cache, {System.unique_integer([:positive]), IO.iodata_to_binary(@conn.delete_all(query))}}
+        do:
+          {:cache,
+           {System.unique_integer([:positive]), IO.iodata_to_binary(@conn.delete_all(query))}}
 
       @doc false
       def execute(repo, meta, query, params, opts) do
@@ -74,21 +80,46 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
-      def insert_all(repo, %{source: source, prefix: prefix}, header, rows,
-                     {_, conflict_params, _} = on_conflict, returning, opts) do
+      def insert_all(
+            repo,
+            %{source: source, prefix: prefix},
+            header,
+            rows,
+            {_, conflict_params, _} = on_conflict,
+            returning,
+            opts
+          ) do
         {rows, params} = Ecto.Adapters.SQL.unzip_inserts(header, rows)
         sql = @conn.insert(prefix, source, header, rows, on_conflict, returning)
+
         %{rows: rows, num_rows: num} =
           Ecto.Adapters.SQL.query!(repo, sql, Enum.reverse(params) ++ conflict_params, opts)
+
         {num, rows}
       end
 
       @doc false
-      def insert(repo, %{source: source, prefix: prefix}, params,
-                 {kind, conflict_params, _} = on_conflict, returning, opts) do
+      def insert(
+            repo,
+            %{source: source, prefix: prefix},
+            params,
+            {kind, conflict_params, _} = on_conflict,
+            returning,
+            opts
+          ) do
         {fields, values} = :lists.unzip(params)
         sql = @conn.insert(prefix, source, fields, [fields], on_conflict, returning)
-        Ecto.Adapters.SQL.struct(repo, @conn, sql, {:insert, source, []}, values ++ conflict_params, kind, returning, opts)
+
+        Ecto.Adapters.SQL.struct(
+          repo,
+          @conn,
+          sql,
+          {:insert, source, []},
+          values ++ conflict_params,
+          kind,
+          returning,
+          opts
+        )
       end
 
       @doc false
@@ -96,14 +127,34 @@ defmodule Ecto.Adapters.SQL do
         {fields, field_values} = :lists.unzip(fields)
         filter_values = params |> Keyword.values() |> Enum.reject(&is_nil(&1))
         sql = @conn.update(prefix, source, fields, params, returning)
-        Ecto.Adapters.SQL.struct(repo, @conn, sql, {:update, source, params}, field_values ++ filter_values, :raise, returning, opts)
+
+        Ecto.Adapters.SQL.struct(
+          repo,
+          @conn,
+          sql,
+          {:update, source, params},
+          field_values ++ filter_values,
+          :raise,
+          returning,
+          opts
+        )
       end
 
       @doc false
       def delete(repo, %{source: source, prefix: prefix}, params, opts) do
         filter_values = params |> Keyword.values() |> Enum.reject(&is_nil(&1))
         sql = @conn.delete(prefix, source, params, [])
-        Ecto.Adapters.SQL.struct(repo, @conn, sql, {:delete, source, params}, filter_values, :raise, [], opts)
+
+        Ecto.Adapters.SQL.struct(
+          repo,
+          @conn,
+          sql,
+          {:delete, source, params},
+          filter_values,
+          :raise,
+          [],
+          opts
+        )
       end
 
       ## Transaction
@@ -141,9 +192,18 @@ defmodule Ecto.Adapters.SQL do
         Ecto.Adapters.SQL.lock_for_migrations(repo, query, opts, fun)
       end
 
-      defoverridable [prepare: 2, execute: 5, insert: 6, update: 6, delete: 4, insert_all: 7,
-                      execute_ddl: 3, loaders: 2, dumpers: 2, autogenerate: 1, ensure_all_started: 2,
-                      lock_for_migrations: 4]
+      defoverridable prepare: 2,
+                     execute: 5,
+                     insert: 6,
+                     update: 6,
+                     delete: 4,
+                     insert_all: 7,
+                     execute_ddl: 3,
+                     loaders: 2,
+                     dumpers: 2,
+                     autogenerate: 1,
+                     ensure_all_started: 2,
+                     lock_for_migrations: 4
     end
   end
 
@@ -169,8 +229,8 @@ defmodule Ecto.Adapters.SQL do
       {"SELECT p.id, p.title, p.inserted_at, p.created_at FROM posts as p", []}
 
   """
-  @spec to_sql(:all | :update_all | :delete_all, Ecto.Repo.t, Ecto.Queryable.t) ::
-               {String.t, [term]}
+  @spec to_sql(:all | :update_all | :delete_all, Ecto.Repo.t(), Ecto.Queryable.t()) ::
+          {String.t(), [term]}
   def to_sql(kind, repo, queryable) do
     adapter = repo.__adapter__
 
@@ -181,8 +241,10 @@ defmodule Ecto.Adapters.SQL do
     |> case do
       {_meta, {:cached, _reset, {_id, cached}}, params} ->
         {String.Chars.to_string(cached), params}
+
       {_meta, {:cache, _update, {_id, prepared}}, params} ->
         {prepared, params}
+
       {_meta, {:nocache, {_id, prepared}}, params} ->
         {prepared, params}
     end
@@ -191,11 +253,9 @@ defmodule Ecto.Adapters.SQL do
   @doc """
   Same as `query/4` but raises on invalid queries.
   """
-  @spec query!(Ecto.Repo.t, String.t, [term], Keyword.t) ::
-               %{:rows => nil | [[term] | binary],
-                 :num_rows => non_neg_integer,
-                 optional(atom) => any}
-               | no_return
+  @spec query!(Ecto.Repo.t(), String.t(), [term], Keyword.t()) ::
+          %{:rows => nil | [[term] | binary], :num_rows => non_neg_integer, optional(atom) => any}
+          | no_return
   def query!(repo, sql, params \\ [], opts \\ []) do
     case query(repo, sql, params, opts) do
       {:ok, result} -> result
@@ -236,11 +296,14 @@ defmodule Ecto.Adapters.SQL do
       {:ok, %{rows: [[42]], num_rows: 1}}
 
   """
-  @spec query(Ecto.Repo.t, String.t, [term], Keyword.t) ::
-              {:ok, %{:rows => nil | [[term] | binary],
-                      :num_rows => non_neg_integer,
-                      optional(atom) => any}}
-              | {:error, Exception.t}
+  @spec query(Ecto.Repo.t(), String.t(), [term], Keyword.t()) ::
+          {:ok,
+           %{
+             :rows => nil | [[term] | binary],
+             :num_rows => non_neg_integer,
+             optional(atom) => any
+           }}
+          | {:error, Exception.t()}
   def query(repo, sql, params \\ [], opts \\ []) do
     sql_call(repo, :execute, [sql], params, opts)
   end
@@ -250,12 +313,13 @@ defmodule Ecto.Adapters.SQL do
     conn = get_conn(pool) || pool
     opts = with_log(repo_mod, params, opts ++ default_opts)
     args = args ++ [params, opts]
+
     try do
       apply(sql, callback, [conn | args])
     rescue
       err in DBConnection.OwnershipError ->
         message = err.message <> "\nSee Ecto.Adapters.SQL.Sandbox docs for more information."
-        reraise %{err | message: message}, System.stacktrace
+        reraise %{err | message: message}, System.stacktrace()
     end
   end
 
@@ -263,6 +327,7 @@ defmodule Ecto.Adapters.SQL do
     {source, _} = elem(sources, 0)
     Keyword.put(opts, :source, source)
   end
+
   defp put_source(opts, _) do
     opts
   end
@@ -276,23 +341,23 @@ defmodule Ecto.Adapters.SQL do
         :ok
 
       Jason ->
-        IO.warn """
+        IO.warn("""
         Jason is the default :json_library in Ecto 3.0.
         You no longer need to configure it explicitly,
         please remove this line from your config files:
 
             config :ecto, :json_library, Jason
 
-        """
+        """)
 
       value ->
-        IO.warn """
+        IO.warn("""
         The :json_library configuration for the :ecto application is deprecated.
         Please configure the :json_library in the adapter instead:
 
-            config #{inspect adapter}, :json_library, #{inspect value}
+            config #{inspect(adapter)}, :json_library, #{inspect(value)}
 
-        """
+        """)
     end
 
     quote do
@@ -328,10 +393,11 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def ensure_all_started(adapter, repo, type) do
     opts = pool_config(repo, repo.config)
+
     with {:ok, from_pool} <- DBConnection.ensure_all_started(opts, type),
          {:ok, from_adapter} <- Application.ensure_all_started(adapter, type),
-      # We always return the adapter to force it to be restarted if necessary
-      do: {:ok, from_pool ++ List.delete(from_adapter, adapter) ++ [adapter]}
+         # We always return the adapter to force it to be restarted if necessary
+         do: {:ok, from_pool ++ List.delete(from_adapter, adapter) ++ [adapter]}
   end
 
   defp pool_config(repo, opts) do
@@ -359,11 +425,11 @@ defmodule Ecto.Adapters.SQL do
   def child_spec(connection, adapter, repo, opts) do
     unless Code.ensure_loaded?(connection) do
       raise """
-      could not find #{inspect connection}.
+      could not find #{inspect(connection)}.
 
-      Please verify you have added #{inspect adapter} as a dependency:
+      Please verify you have added #{inspect(adapter)} as a dependency:
 
-          {#{inspect adapter}, ">= 0.0.0"}
+          {#{inspect(adapter)}, ">= 0.0.0"}
 
       And remember to recompile Ecto afterwards by cleaning the current build:
 
@@ -398,19 +464,21 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def unzip_inserts(header, rows) do
-    Enum.map_reduce rows, [], fn fields, params ->
-      Enum.map_reduce header, params, fn key, acc ->
+    Enum.map_reduce(rows, [], fn fields, params ->
+      Enum.map_reduce(header, params, fn key, acc ->
         case :lists.keyfind(key, 1, fields) do
-          {^key, value} -> {key, [value|acc]}
+          {^key, value} -> {key, [value | acc]}
           false -> {nil, acc}
         end
-      end
-    end
+      end)
+    end)
   end
 
   @doc false
   def execute(repo, meta, prepared, params, opts) do
-    %{num_rows: num, rows: rows} = do_execute(repo, meta, prepared, params, put_source(opts, meta))
+    %{num_rows: num, rows: rows} =
+      do_execute(repo, meta, prepared, params, put_source(opts, meta))
+
     {num, rows}
   end
 
@@ -424,17 +492,19 @@ defmodule Ecto.Adapters.SQL do
 
   defp do_execute(repo, _meta, {:nocache, {_id, prepared}}, params, opts) do
     case sql_call(repo, :execute, [prepared], params, opts) do
-      {:ok, res}    -> res
+      {:ok, res} -> res
       {:error, err} -> raise err
     end
   end
 
   defp execute_and_cache(repo, id, update, prepared, params, opts) do
     name = "ecto_" <> Integer.to_string(id)
+
     case sql_call(repo, :prepare_execute, [name, prepared], params, opts) do
       {:ok, query, result} ->
         update.({id, query})
         result
+
       {:error, err} ->
         raise err
     end
@@ -444,8 +514,10 @@ defmodule Ecto.Adapters.SQL do
     case sql_call(repo, :execute, [cached], params, opts) do
       {:ok, result} ->
         result
+
       {:error, err} ->
         raise err
+
       {:reset, err} ->
         reset.({id, String.Chars.to_string(cached)})
         raise err
@@ -484,7 +556,7 @@ defmodule Ecto.Adapters.SQL do
       [%{rows: [[42]], num_rows: 1}]
 
   """
-  @spec stream(Ecto.Repo.t, String.t, [term], Keyword.t) :: Enum.t
+  @spec stream(Ecto.Repo.t(), String.t(), [term], Keyword.t()) :: Enum.t()
   def stream(repo, sql, params \\ [], opts \\ []) do
     Ecto.Adapters.SQL.Stream.__build__(repo, sql, params, opts)
   end
@@ -509,16 +581,18 @@ defmodule Ecto.Adapters.SQL do
   defp prepare_stream(repo, prepared, params, opts) do
     repo
     |> Ecto.Adapters.SQL.Stream.__build__(prepared, params, opts)
-    |> Stream.map(fn(%{num_rows: nrows, rows: rows}) -> {nrows, rows} end)
+    |> Stream.map(fn %{num_rows: nrows, rows: rows} -> {nrows, rows} end)
   end
 
   @doc false
   def reduce(repo, statement, params, opts, acc, fun) do
     {repo_mod, sql, pool, default_opts} = lookup_pool(repo)
     opts = with_log(repo_mod, params, opts ++ default_opts)
+
     case get_conn(pool) do
-      nil  ->
+      nil ->
         raise "cannot reduce stream outside of transaction"
+
       conn ->
         apply(sql, :stream, [conn, statement, params, opts])
         |> Enumerable.reduce(acc, fun)
@@ -529,9 +603,11 @@ defmodule Ecto.Adapters.SQL do
   def into(repo, statement, params, opts) do
     {repo_mod, sql, pool, default_opts} = lookup_pool(repo)
     opts = with_log(repo_mod, params, opts ++ default_opts)
+
     case get_conn(pool) do
-      nil  ->
+      nil ->
         raise "cannot collect into stream outside of transaction"
+
       conn ->
         apply(sql, :stream, [conn, statement, params, opts])
         |> Collectable.into()
@@ -543,16 +619,23 @@ defmodule Ecto.Adapters.SQL do
     case query(repo, sql, values, opts) do
       {:ok, %{rows: nil, num_rows: 1}} ->
         {:ok, []}
+
       {:ok, %{rows: [values], num_rows: 1}} ->
         {:ok, Enum.zip(returning, values)}
+
       {:ok, %{num_rows: 0}} ->
         if on_conflict == :nothing, do: {:ok, []}, else: {:error, :stale}
+
       {:ok, %{num_rows: num_rows}} when num_rows > 1 ->
         raise Ecto.MultiplePrimaryKeyError,
-              source: source, params: params, count: num_rows, operation: operation
+          source: source,
+          params: params,
+          count: num_rows,
+          operation: operation
+
       {:error, err} ->
         case conn.to_constraints(err) do
-          []          -> raise err
+          [] -> raise err
           constraints -> {:invalid, constraints}
         end
     end
@@ -564,14 +647,15 @@ defmodule Ecto.Adapters.SQL do
   def transaction(repo, opts, fun) do
     {repo_mod, _sql, pool, default_opts} = lookup_pool(repo)
     opts = with_log(repo_mod, [], opts ++ default_opts)
+
     case get_conn(pool) do
-      nil  -> do_transaction(pool, opts, fun)
-      conn -> DBConnection.transaction(conn, fn(_) -> fun.() end, opts)
+      nil -> do_transaction(pool, opts, fun)
+      conn -> DBConnection.transaction(conn, fn _ -> fun.() end, opts)
     end
   end
 
   defp do_transaction(pool, opts, fun) do
-    run = fn(conn) ->
+    run = fn conn ->
       try do
         put_conn(pool, conn)
         fun.()
@@ -579,6 +663,7 @@ defmodule Ecto.Adapters.SQL do
         delete_conn(pool)
       end
     end
+
     DBConnection.transaction(pool, run, opts)
   end
 
@@ -591,8 +676,9 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def rollback(repo, value) do
     {_repo_mod, _sql, pool, _default_opts} = lookup_pool(repo)
+
     case get_conn(pool) do
-      nil  -> raise "cannot call rollback outside of transaction"
+      nil -> raise "cannot call rollback outside of transaction"
       conn -> DBConnection.rollback(conn, value)
     end
   end
@@ -649,22 +735,35 @@ defmodule Ecto.Adapters.SQL do
 
   defp with_log(repo, params, opts) do
     case Keyword.pop(opts, :log, true) do
-      {true, opts}  -> [log: &log(repo, params, &1, opts)] ++ opts
+      {true, opts} -> [log: &log(repo, params, &1, opts)] ++ opts
       {false, opts} -> opts
     end
   end
 
   defp log(repo, params, entry, opts) do
-    %{connection_time: query_time, decode_time: decode_time,
-      pool_time: queue_time, result: result, query: query} = entry
+    %{
+      connection_time: query_time,
+      decode_time: decode_time,
+      pool_time: queue_time,
+      result: result,
+      query: query
+    } = entry
+
     source = Keyword.get(opts, :source)
     caller_pid = Keyword.get(opts, :caller, self())
     query_string = String.Chars.to_string(query)
-    repo.__log__(%Ecto.LogEntry{query_time: query_time, decode_time: decode_time,
-                                queue_time: queue_time, result: log_result(result),
-                                params: params, query: query_string,
-                                ansi_color: sql_color(query_string), source: source,
-                                caller_pid: caller_pid})
+
+    repo.__log__(%Ecto.LogEntry{
+      query_time: query_time,
+      decode_time: decode_time,
+      queue_time: queue_time,
+      result: log_result(result),
+      params: params,
+      query: query_string,
+      ansi_color: sql_color(query_string),
+      source: source,
+      caller_pid: caller_pid
+    })
   end
 
   defp log_result({:ok, _query, res}), do: {:ok, res}

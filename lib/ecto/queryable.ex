@@ -31,20 +31,21 @@ defimpl Ecto.Queryable, for: Atom do
       module.__schema__(:query)
     rescue
       UndefinedFunctionError ->
-        message = if :code.is_loaded(module) do
-          "the given module does not provide a schema"
-        else
-          "the given module does not exist"
-        end
+        message =
+          if :code.is_loaded(module) do
+            "the given module does not provide a schema"
+          else
+            "the given module does not exist"
+          end
 
-        raise Protocol.UndefinedError,
-          protocol: @protocol, value: module, description: message
+        raise Protocol.UndefinedError, protocol: @protocol, value: module, description: message
     end
   end
 end
 
 defimpl Ecto.Queryable, for: Tuple do
-  def to_query({source, schema} = from) when is_binary(source) and is_atom(schema) and not is_nil(schema) do
+  def to_query({source, schema} = from)
+      when is_binary(source) and is_atom(schema) and not is_nil(schema) do
     %Ecto.Query{
       from: %Ecto.Query.FromExpr{source: from},
       prefix: schema.__schema__(:prefix)

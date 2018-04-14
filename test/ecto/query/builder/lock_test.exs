@@ -1,4 +1,4 @@
-Code.require_file "../../../support/eval_helpers.exs", __DIR__
+Code.require_file("../../../support/eval_helpers.exs", __DIR__)
 
 defmodule Ecto.Query.Builder.LockTest do
   use ExUnit.Case, async: true

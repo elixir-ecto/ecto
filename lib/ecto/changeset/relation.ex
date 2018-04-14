@@ -4,17 +4,19 @@ defmodule Ecto.Changeset.Relation do
   alias Ecto.Changeset
   alias Ecto.Association.NotLoaded
 
-  @type t :: %{cardinality: :one | :many,
-               on_replace: :raise | :mark_as_invalid | atom,
-               relationship: :parent | :child,
-               owner: atom,
-               related: atom,
-               field: atom}
+  @type t :: %{
+          cardinality: :one | :many,
+          on_replace: :raise | :mark_as_invalid | atom,
+          relationship: :parent | :child,
+          owner: atom,
+          related: atom,
+          field: atom
+        }
 
   @doc """
   Builds the related data.
   """
-  @callback build(t) :: Ecto.Schema.t
+  @callback build(t) :: Ecto.Schema.t()
 
   @doc """
   Returns empty container for relation.
@@ -55,12 +57,10 @@ defmodule Ecto.Changeset.Relation do
   end
 
   def apply_changes(%{cardinality: :many}, changesets) do
-    for changeset <- changesets,
-      struct = apply_changes(changeset),
-      do: struct
+    for changeset <- changesets, struct = apply_changes(changeset), do: struct
   end
 
-  defp apply_changes(%Changeset{action: :delete}),  do: nil
+  defp apply_changes(%Changeset{action: :delete}), do: nil
   defp apply_changes(%Changeset{action: :replace}), do: nil
   defp apply_changes(changeset), do: Changeset.apply_changes(changeset)
 
@@ -75,8 +75,8 @@ defmodule Ecto.Changeset.Relation do
 
   def load!(struct, %NotLoaded{__field__: field}) do
     raise "attempting to cast or change association `#{field}` " <>
-          "from `#{inspect struct.__struct__}` that was not loaded. Please preload your " <>
-          "associations before manipulating them through changesets"
+            "from `#{inspect(struct.__struct__)}` that was not loaded. Please preload your " <>
+            "associations before manipulating them through changesets"
   end
 
   def load!(_struct, loaded), do: loaded
@@ -95,22 +95,30 @@ defmodule Ecto.Changeset.Relation do
     params =
       params
       |> Enum.map(&key_as_int/1)
-      |> Enum.sort
+      |> Enum.sort()
       |> Enum.map(&elem(&1, 1))
+
     cast(relation, params, current, on_cast)
   end
 
   def cast(%{related: mod} = relation, params, current, on_cast) do
     pks = mod.__schema__(:primary_key)
-    cast_or_change(relation, params, current, data_pk(pks),
-                   param_pk(mod, pks), &do_cast(relation, &1, &2, &3, on_cast))
+
+    cast_or_change(
+      relation,
+      params,
+      current,
+      data_pk(pks),
+      param_pk(mod, pks),
+      &do_cast(relation, &1, &2, &3, on_cast)
+    )
   end
 
   defp do_cast(meta, params, nil, allowed_actions, on_cast) do
     {:ok,
-      on_cast.(meta.__struct__.build(meta), params)
-      |> put_new_action(:insert)
-      |> check_action!(allowed_actions)}
+     on_cast.(meta.__struct__.build(meta), params)
+     |> put_new_action(:insert)
+     |> check_action!(allowed_actions)}
   end
 
   defp do_cast(relation, nil, current, _allowed_actions, _on_cast) do
@@ -119,9 +127,9 @@ defmodule Ecto.Changeset.Relation do
 
   defp do_cast(_meta, params, struct, allowed_actions, on_cast) do
     {:ok,
-      on_cast.(struct, params)
-      |> put_new_action(:update)
-      |> check_action!(allowed_actions)}
+     on_cast.(struct, params)
+     |> put_new_action(:update)
+     |> check_action!(allowed_actions)}
   end
 
   @doc """
@@ -136,13 +144,13 @@ defmodule Ecto.Changeset.Relation do
 
   def change(%{related: mod} = relation, value, current) do
     get_pks = data_pk(mod.__schema__(:primary_key))
-    cast_or_change(relation, value, current, get_pks, get_pks,
-                   &do_change(relation, &1, &2, &3))
+    cast_or_change(relation, value, current, get_pks, get_pks, &do_change(relation, &1, &2, &3))
   end
 
   # This may be an insert or an update, get all fields.
   defp do_change(relation, %{__struct__: _} = changeset_or_struct, nil, _allowed_actions) do
     changeset = Changeset.change(changeset_or_struct)
+
     {:ok,
      changeset
      |> assert_changeset_struct!(relation)
@@ -162,11 +170,15 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp do_change(_relation, %{__struct__: _} = struct, _current, allowed_actions) do
-    {:ok, struct |> Ecto.Changeset.change |> put_new_action(:update) |> check_action!(allowed_actions)}
+    {:ok,
+     struct
+     |> Ecto.Changeset.change()
+     |> put_new_action(:update)
+     |> check_action!(allowed_actions)}
   end
 
   defp do_change(%{related: mod} = relation, changes, current, allowed_actions)
-      when is_list(changes) or is_map(changes) do
+       when is_list(changes) or is_map(changes) do
     changeset = Ecto.Changeset.change(current || mod.__struct__, changes)
     changeset = put_new_action(changeset, action_from_changeset(changeset))
     do_change(relation, changeset, current, allowed_actions)
@@ -174,20 +186,23 @@ defmodule Ecto.Changeset.Relation do
 
   defp action_from_changeset(%{data: %{__meta__: %{state: state}}}) do
     case state do
-      :built   -> :insert
-      :loaded  -> :update
+      :built -> :insert
+      :loaded -> :update
       :deleted -> :delete
     end
   end
+
   defp action_from_changeset(_) do
-    :insert # We don't care if it is insert/update for embeds (no meta)
+    # We don't care if it is insert/update for embeds (no meta)
+    :insert
   end
 
   defp assert_changeset_struct!(%{data: %{__struct__: mod}} = changeset, %{related: mod}) do
     changeset
   end
+
   defp assert_changeset_struct!(%{data: data}, %{related: mod}) do
-    raise ArgumentError, "expected changeset data to be a #{mod} struct, got: #{inspect data}"
+    raise ArgumentError, "expected changeset data to be a #{mod} struct, got: #{inspect(data)}"
   end
 
   @doc """
@@ -199,8 +214,8 @@ defmodule Ecto.Changeset.Relation do
 
   def on_replace(%{on_replace: :raise, field: name, owner: owner}, _) do
     raise """
-    you are attempting to change relation #{inspect name} of
-    #{inspect owner} but the `:on_replace` option of
+    you are attempting to change relation #{inspect(name)} of
+    #{inspect(owner)} but the `:on_replace` option of
     this relation is set to `:raise`.
 
     By default it is not possible to replace or delete embeds and
@@ -232,7 +247,7 @@ defmodule Ecto.Changeset.Relation do
 
   defp raise_if_updating_with_struct!(%{field: name, owner: owner}, %{__struct__: _} = new) do
     raise """
-    you have set that the relation #{inspect name} of #{inspect owner}
+    you have set that the relation #{inspect(name)} of #{inspect(owner)}
     has `:on_replace` set to `:update` but you are giving it a struct/
     changeset to put_assoc/put_change.
 
@@ -240,10 +255,10 @@ defmodule Ecto.Changeset.Relation do
     to update the existing entry by giving updated fields as a map or
     keyword list or set it to nil.
 
-    If you indeed want to replace the existing #{inspect name}, you have
+    If you indeed want to replace the existing #{inspect(name)}, you have
     to change the foreign key field directly.
 
-    Got: #{inspect new}
+    Got: #{inspect(new)}
     """
   end
 
@@ -251,8 +266,8 @@ defmodule Ecto.Changeset.Relation do
     true
   end
 
-  defp cast_or_change(%{cardinality: :one} = relation, value, current, current_pks,
-                      new_pks, fun) when is_map(value) or is_list(value) or is_nil(value) do
+  defp cast_or_change(%{cardinality: :one} = relation, value, current, current_pks, new_pks, fun)
+       when is_map(value) or is_list(value) or is_nil(value) do
     single_change(relation, value, current_pks, new_pks, fun, current)
   end
 
@@ -260,8 +275,25 @@ defmodule Ecto.Changeset.Relation do
     {:ok, [], true}
   end
 
-  defp cast_or_change(%{cardinality: :many, unique: unique}, value, current, current_pks, new_pks, fun) when is_list(value) do
-    map_changes(value, new_pks, fun, process_current(current, current_pks), [], true, true, unique && %{})
+  defp cast_or_change(
+         %{cardinality: :many, unique: unique},
+         value,
+         current,
+         current_pks,
+         new_pks,
+         fun
+       )
+       when is_list(value) do
+    map_changes(
+      value,
+      new_pks,
+      fun,
+      process_current(current, current_pks),
+      [],
+      true,
+      true,
+      unique && %{}
+    )
   end
 
   defp cast_or_change(_, _, _, _, _, _), do: :error
@@ -276,8 +308,16 @@ defmodule Ecto.Changeset.Relation do
     single_change(new, nil, fun, [:insert], false)
   end
 
-  defp single_change(%{on_replace: on_replace} = relation, new, current_pks, new_pks, fun, current) do
+  defp single_change(
+         %{on_replace: on_replace} = relation,
+         new,
+         current_pks,
+         new_pks,
+         fun,
+         current
+       ) do
     pk_values = new_pks.(new)
+
     if (pk_values == current_pks.(current) and pk_values != []) or
          (on_replace == :update and raise_if_updating_with_struct!(relation, new)) do
       single_change(new, current, fun, allowed_actions(pk_values), true)
@@ -293,12 +333,14 @@ defmodule Ecto.Changeset.Relation do
     case fun.(new, current, allowed_actions) do
       {:ok, %{action: :ignore}} ->
         :ignore
+
       {:ok, changeset} ->
         if skippable? and skip?(changeset) do
           :ignore
         else
           {:ok, changeset, changeset.valid?}
         end
+
       :error ->
         :error
     end
@@ -307,17 +349,28 @@ defmodule Ecto.Changeset.Relation do
   # map changes
 
   defp map_changes([changes | rest], new_pks, fun, current, acc, valid?, skip?, acc_pk_values)
-      when is_map(changes) or is_list(changes) do
+       when is_map(changes) or is_list(changes) do
     pk_values = new_pks.(changes)
     {struct, current, allowed_actions} = pop_current(current, pk_values)
+
     case fun.(changes, struct, allowed_actions) do
       {:ok, %{action: :ignore}} ->
         map_changes(rest, new_pks, fun, current, acc, valid?, skip?, acc_pk_values)
+
       {:ok, changeset} ->
         changeset = maybe_add_error_on_pk(changeset, pk_values, acc_pk_values)
-        map_changes(rest, new_pks, fun, current, [changeset | acc],
-                    valid? and changeset.valid?, (struct != nil) and skip? and skip?(changeset),
-                    acc_pk_values && Map.put(acc_pk_values, pk_values, true))
+
+        map_changes(
+          rest,
+          new_pks,
+          fun,
+          current,
+          [changeset | acc],
+          valid? and changeset.valid?,
+          struct != nil and skip? and skip?(changeset),
+          acc_pk_values && Map.put(acc_pk_values, pk_values, true)
+        )
+
       :error ->
         :error
     end
@@ -334,7 +387,7 @@ defmodule Ecto.Changeset.Relation do
 
   defp maybe_add_error_on_pk(%{data: %{__struct__: schema}} = changeset, pk_values, acc_pk_values) do
     if is_map(acc_pk_values) and not missing_pks?(pk_values) and
-       Map.has_key?(acc_pk_values, pk_values) do
+         Map.has_key?(acc_pk_values, pk_values) do
       Enum.reduce(schema.__schema__(:primary_key), changeset, fn pk, acc ->
         Changeset.add_error(acc, pk, "has already been taken")
       end)
@@ -358,15 +411,17 @@ defmodule Ecto.Changeset.Relation do
   defp reduce_delete_changesets([struct | rest], fun, acc, valid?, _skip?) do
     case fun.(nil, struct, [:update, :delete]) do
       {:ok, changeset} ->
-        reduce_delete_changesets(rest, fun, [changeset | acc],
-                                 valid? and changeset.valid?, false)
+        reduce_delete_changesets(rest, fun, [changeset | acc], valid? and changeset.valid?, false)
+
       :error ->
         :error
     end
   end
+
   defp reduce_delete_changesets([], _fun, _acc, _valid?, true) do
     :ignore
   end
+
   defp reduce_delete_changesets([], _fun, acc, valid?, false) do
     {:ok, acc, valid?}
   end
@@ -379,17 +434,20 @@ defmodule Ecto.Changeset.Relation do
     cond do
       action in allowed_actions ->
         changeset
+
       action == :ignore ->
         changeset
+
       action == :insert ->
-        raise "cannot #{action} related #{inspect changeset.data} " <>
-              "because it is already associated with the given struct"
+        raise "cannot #{action} related #{inspect(changeset.data)} " <>
+                "because it is already associated with the given struct"
+
       true ->
-        raise "cannot #{action} related #{inspect changeset.data} because " <>
-              "it already exists and it is not currently associated with the " <>
-              "given struct. Ecto forbids casting existing records through " <>
-              "the association field for security reasons. Instead, set " <>
-              "the foreign key value accordingly"
+        raise "cannot #{action} related #{inspect(changeset.data)} because " <>
+                "it already exists and it is not currently associated with the " <>
+                "given struct. Ecto forbids casting existing records through " <>
+                "the association field for security reasons. Instead, set " <>
+                "the foreign key value accordingly"
     end
   end
 
@@ -399,23 +457,26 @@ defmodule Ecto.Changeset.Relation do
       _ -> {key, val}
     end
   end
+
   defp key_as_int(key_val), do: key_val
 
-  defp process_current(nil, _get_pks),
-    do: %{}
+  defp process_current(nil, _get_pks), do: %{}
+
   defp process_current(current, get_pks) do
     Enum.reduce(current, {%{}, 0}, fn struct, {acc, index} ->
       case get_pks.(struct) do
-        []  -> {Map.put(acc, index, struct), index + 1}
+        [] -> {Map.put(acc, index, struct), index + 1}
         pks -> {Map.put(acc, pks, struct), index}
       end
-    end) |> elem(0)
+    end)
+    |> elem(0)
   end
 
   defp pop_current(current, pk_values) do
     case Map.fetch(current, pk_values) do
       {:ok, struct} ->
         {struct, Map.delete(current, pk_values), allowed_actions(pk_values)}
+
       :error ->
         {nil, current, [:insert]}
     end
@@ -431,24 +492,24 @@ defmodule Ecto.Changeset.Relation do
 
   defp param_pk(mod, pks) do
     pks = Enum.map(pks, &{&1, Atom.to_string(&1), mod.__schema__(:type, &1)})
+
     fn params ->
-      Enum.map pks, fn {atom_key, string_key, type} ->
+      Enum.map(pks, fn {atom_key, string_key, type} ->
         original = Map.get(params, string_key) || Map.get(params, atom_key)
+
         case Ecto.Type.cast(type, original) do
           {:ok, value} -> value
-          :error       -> original
+          :error -> original
         end
-      end
+      end)
     end
   end
 
   defp put_new_action(%{action: action} = changeset, new_action) when is_nil(action),
     do: Map.put(changeset, :action, new_action)
-  defp put_new_action(changeset, _new_action),
-    do: changeset
 
-  defp skip?(%{valid?: true, changes: empty, action: :update}) when empty == %{},
-    do: true
-  defp skip?(_changeset),
-    do: false
+  defp put_new_action(changeset, _new_action), do: changeset
+
+  defp skip?(%{valid?: true, changes: empty, action: :update}) when empty == %{}, do: true
+  defp skip?(_changeset), do: false
 end
