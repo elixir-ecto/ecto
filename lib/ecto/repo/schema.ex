@@ -199,8 +199,25 @@ defmodule Ecto.Repo.Schema do
           autogenerate_id(autogen_id, changes, return_types, return_sources, adapter)
         {changes, autogen} =
           dump_changes!(:insert, Map.take(changes, fields), schema, extra, dumper, adapter)
+
+        changed_keys =
+          case on_conflict do
+            :replace_all ->
+              changed_keys = Keyword.keys(changes)
+
+              params_keys =
+                get_params(changeset)
+                |> Map.keys()
+                |> Enum.map(&String.to_atom(&1))
+
+              Enum.uniq(changed_keys ++ params_keys)
+
+            _ ->
+              Keyword.keys(changes)
+          end
+
         on_conflict =
-          on_conflict(on_conflict, conflict_target, metadata, Keyword.keys(changes),
+          on_conflict(on_conflict, conflict_target, metadata, changed_keys,
                       fn -> length(changes) end, adapter)
 
         args = [repo, metadata, changes, on_conflict, return_sources, opts]
@@ -224,6 +241,8 @@ defmodule Ecto.Repo.Schema do
   defp do_insert(repo, _adapter, %Changeset{valid?: false} = changeset, _opts) do
     {:error, put_repo_and_action(changeset, :insert, repo)}
   end
+
+  defp get_params(changeset), do: if is_nil(changeset.params), do: %{}, else: changeset.params
 
   @doc """
   Implementation for `Ecto.Repo.update/2`.
