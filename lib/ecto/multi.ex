@@ -397,10 +397,11 @@ defmodule Ecto.Multi do
   @doc false
   @spec __apply__(t, Ecto.Repo.t, fun, (term -> no_return)) :: {:ok, term} | {:error, term}
   def __apply__(%Multi{} = multi, repo, wrap, return) do
-    multi.operations
-    |> Enum.reverse
-    |> check_operations_valid
-    |> apply_operations(multi.names, repo, wrap, return)
+    operations = Enum.reverse(multi.operations)
+
+    with {:ok, operations} <- check_operations_valid(operations) do
+      apply_operations(operations, multi.names, repo, wrap, return)
+    end
   end
 
   defp check_operations_valid(operations) do
@@ -412,8 +413,8 @@ defmodule Ecto.Multi do
   defp invalid_operation(_operation),
     do: nil
 
-  defp apply_operations({:ok, []}, _names, _repo, _wrap, _return), do: {:ok, %{}}
-  defp apply_operations({:ok, operations}, names, repo, wrap, return) do
+  defp apply_operations([], _names, _repo, _wrap, _return), do: {:ok, %{}}
+  defp apply_operations(operations, names, repo, wrap, return) do
     wrap.(fn ->
       operations
       |> Enum.reduce({%{}, names}, &apply_operation(&1, repo, wrap, return, &2))
@@ -421,17 +422,18 @@ defmodule Ecto.Multi do
     end)
   end
 
-  defp apply_operations({:error, error}, _names, _repo, _wrap, _return) do
-    {:error, error}
+  defp apply_operation({_, {:merge, merge}}, repo, wrap, return, {acc, names}) do
+    case __apply__(apply_merge_fun(merge, acc), repo, wrap, return) do
+      {:ok, value} ->
+        merge_results(acc, value, names)
+      {:error, {name, value, nested_acc}} ->
+        {acc, _names} = merge_results(acc, nested_acc, names)
+        return.({name, value, acc})
+    end
   end
 
   defp apply_operation({name, operation}, repo, wrap, return, {acc, names}) do
     case apply_operation(operation, acc, {wrap, return}, repo) do
-      {:merge, {:ok, value}} ->
-        merge_results(acc, value, names)
-      {:merge, {:error, {name, value, nested_acc}}} ->
-        {acc, _names} = merge_results(acc, nested_acc, names)
-        return.({name, value, acc})
       {:ok, value} ->
         {Map.put(acc, name, value), names}
       {:error, value} ->
@@ -451,14 +453,12 @@ defmodule Ecto.Multi do
     do: {:ok, repo.update_all(query, updates, opts)}
   defp apply_operation({:delete_all, query, opts}, _acc, _apply_args, repo),
     do: {:ok, repo.delete_all(query, opts)}
-  defp apply_operation({:merge, merge}, acc, {wrap, return}, repo),
-    do: {:merge, __apply__(apply_merge_fun(merge, acc), repo, wrap, return)}
 
   defp apply_merge_fun({mod, fun, args}, acc), do: apply(mod, fun, [acc | args])
-  defp apply_merge_fun(fun, acc),              do: apply(fun, [acc])
+  defp apply_merge_fun(fun, acc), do: apply(fun, [acc])
 
   defp apply_run_fun({mod, fun, args}, repo, acc), do: apply(mod, fun, [repo, acc | args])
-  defp apply_run_fun(fun, repo, acc),              do: apply(fun, [repo, acc])
+  defp apply_run_fun(fun, repo, acc), do: apply(fun, [repo, acc])
 
   defp merge_results(changes, new_changes, names) do
     new_names = new_changes |> Map.keys |> MapSet.new
