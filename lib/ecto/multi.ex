@@ -219,6 +219,17 @@ defmodule Ecto.Multi do
   Adds an insert operation to the multi.
 
   Accepts the same arguments and options as `c:Ecto.Repo.insert/2` does.
+
+  ## Example
+
+      iex> post = %Post{title: "first"}
+      iex> Ecto.Multi.new |> Ecto.Multi.insert(:insert, post) |> Ecto.Multi.to_list |> Ecto.Multi.to_list
+      [
+        insert: {:insert,
+        #Ecto.Changeset<action: :insert, changes: %{}, errors: [],
+          data: #MyApp.Post<>, valid?: true>, []}
+      ]
+
   """
   @spec insert(t, name, Changeset.t | Ecto.Schema.t, Keyword.t) :: t
   def insert(multi, name, changeset_or_struct, opts \\ [])
