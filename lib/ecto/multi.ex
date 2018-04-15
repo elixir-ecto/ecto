@@ -375,6 +375,15 @@ defmodule Ecto.Multi do
   Adds an insert_all operation to the multi.
 
   Accepts the same arguments and options as `c:Ecto.Repo.insert_all/3` does.
+
+  ## Example
+
+      iex> Ecto.Multi.new |> Ecto.Multi.insert_all(:insert_all, Post, [%{title: "My first post"}, %{title: "My second post"}]) |> Ecto.Multi.to_list
+      [
+        insert_all: {:insert_all, Post,
+        [%{title: "My first post"}, %{title: "My second post"}], []}
+      ]
+
   """
   @spec insert_all(t, name, schema_or_source, [entry], Keyword.t) :: t
         when entry: map | Keyword.t
