@@ -246,6 +246,23 @@ defmodule Ecto.Multi do
   Adds an update operation to the multi.
 
   Accepts the same arguments and options as `c:Ecto.Repo.update/2` does.
+
+  ## Example
+
+      iex> post = %Post{title: "first"} |> Repo.insert!
+      iex> post = Post.changeset(post, %{title: "second"})
+      iex> Ecto.Multi.new |> Ecto.Multi.update(:update, post) |> Ecto.Multi.to_list
+      [
+        update: {:update,
+          #Ecto.Changeset<
+            action: :update,
+            changes: %{title: "second"},
+            errors: [],
+            data: #Post<>,
+            valid?: true
+          >, []}
+      ]
+
   """
   @spec update(t, name, Changeset.t, Keyword.t) :: t
   def update(multi, name, %Changeset{} = changeset, opts \\ []) do
