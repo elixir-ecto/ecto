@@ -223,7 +223,7 @@ defmodule Ecto.Multi do
   ## Example
 
       iex> post = %Post{title: "first"}
-      iex> Ecto.Multi.new |> Ecto.Multi.insert(:insert, post) |> Ecto.Multi.to_list |> Ecto.Multi.to_list
+      iex> Ecto.Multi.new |> Ecto.Multi.insert(:insert, post) |> Ecto.Multi.to_list
       [
         insert: {:insert,
         #Ecto.Changeset<action: :insert, changes: %{}, errors: [],
@@ -270,6 +270,17 @@ defmodule Ecto.Multi do
   Adds a delete operation to the multi.
 
   Accepts the same arguments and options as `c:Ecto.Repo.delete/2` does.
+
+  ## Example
+
+      iex> post = %Post{title: "first"} |> Repo.insert!
+      iex> Ecto.Multi.new |> Ecto.Multi.delete(:delete, post) |> Ecto.Multi.to_list
+      [
+        delete: {:delete,
+        #Ecto.Changeset<action: :delete, changes: %{}, errors: [],
+          data: #Post<>, valid?: true>, []}
+      ]
+
   """
   @spec delete(t, name, Changeset.t | Ecto.Schema.t, Keyword.t) :: t
   def delete(multi, name, changeset_or_struct, opts \\ [])
