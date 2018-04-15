@@ -292,8 +292,8 @@ defmodule Ecto.Multi do
   Causes the multi to fail with the given value.
 
   Running the multi in a transaction will execute
-  all previous steps until this operation which
-  halt with the given `value`.
+  no previous steps and returns the value of the first
+  error added.
   """
   @spec error(t, name, error :: term) :: t
   def error(multi, name, value) do
@@ -410,6 +410,8 @@ defmodule Ecto.Multi do
 
   defp invalid_operation({name, {:changeset, %{valid?: false} = changeset, _}}),
     do: {:error, {name, changeset, %{}}}
+  defp invalid_operation({name, {:error, value}}),
+    do: {:error, {name, value, %{}}}
   defp invalid_operation(_operation),
     do: nil
 

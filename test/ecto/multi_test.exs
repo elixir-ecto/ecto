@@ -369,24 +369,6 @@ defmodule Ecto.MultiTest do
       refute Map.has_key?(changes, :update)
     end
 
-    test "rolls back on error" do
-      changeset = Changeset.change(%Comment{id: 1}, x: 1)
-      multi =
-        Multi.new
-        |> Multi.insert(:insert, changeset)
-        |> Multi.error(:oops, "explicit error")
-        |> Multi.update(:update, changeset)
-        |> Multi.delete(:delete, changeset)
-
-      assert {:error, :oops, "explicit error", changes} = TestRepo.transaction(multi)
-      assert_received {:transaction, _}
-      assert_received {:rollback, _}
-      assert {:messages, [{:insert, {nil, "comments"}}]} == Process.info(self(), :messages)
-      assert %Comment{} = changes.insert
-      refute Map.has_key?(changes, :run)
-      refute Map.has_key?(changes, :update)
-    end
-
     test "rolls back from repo" do
       changeset = Changeset.change(%Comment{id: 1}, x: 1)
       invalid   = put_in(changeset.data.__meta__.context, {:invalid, [unique: "comments_x_index"]})
@@ -415,6 +397,13 @@ defmodule Ecto.MultiTest do
 
       assert {:error, :invalid, invalid, %{}} = TestRepo.transaction(multi)
       assert invalid.data == changeset.data
+      refute_received {:transaction, _}
+    end
+
+    test "checks error operation before starting transaction" do
+      multi = Multi.new |> Multi.error(:invalid, "error")
+
+      assert {:error, :invalid, "error", %{}} = TestRepo.transaction(multi)
       refute_received {:transaction, _}
     end
   end
