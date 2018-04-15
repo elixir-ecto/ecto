@@ -273,6 +273,36 @@ defmodule Ecto.Multi do
   Inserts or updates a changeset depending on whether the changeset was persisted or not.
 
   Accepts the same arguments and options as `c:Ecto.Repo.insert_or_update/2` does.
+
+  ## Example
+
+      iex> changeset = Post.changeset(%Post{}, %{title: "first"})
+      iex> Ecto.Multi.new |> Ecto.Multi.insert_or_update(:insert_or_update, changeset) |> Ecto.Multi.to_list
+      [
+        insert_or_update: {:insert,
+          #Ecto.Changeset<
+            action: :insert,
+            changes: %{title: "first"},
+            errors: [],
+            data: #Post<>,
+            valid?: true
+          >, []}
+      ]
+
+      iex> post = Post.changeset(%Post{}, %{title: "first"}) |> Repo.insert!
+      iex> changeset = Post.changeset(post, %{title: "second"})
+      iex> Ecto.Multi.new |> Ecto.Multi.insert_or_update(:insert_or_update, changeset) |> Ecto.Multi.to_list
+      [
+        insert_or_update: {:update,
+          #Ecto.Changeset<
+            action: :update,
+            changes: %{title: "second"},
+            errors: [],
+            data: #Post<>,
+            valid?: true
+          >, []}
+      ]
+
   """
   @spec insert_or_update(t, name, Changeset.t , Keyword.t) :: t
   def insert_or_update(multi, name, changeset, opts \\ [])
