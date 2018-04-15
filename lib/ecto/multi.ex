@@ -397,6 +397,14 @@ defmodule Ecto.Multi do
   Adds a delete_all operation to the multi.
 
   Accepts the same arguments and options as `c:Ecto.Repo.delete_all/2` does.
+
+  ## Example
+
+      iex> Repo.insert_all(Post, [[title: "My first post"], [title: "My second post"]])
+      iex> queryable = from(p in Post, where: p.id < 10)
+      iex> Ecto.Multi.new |> Ecto.Multi.delete_all(:delete_all, queryable) |> Ecto.Multi.to_list
+      [delete_all: {:delete_all, #Ecto.Query<from p in Post, where: p.id < 10>, []}]
+
   """
   @spec delete_all(t, name, Ecto.Queryable.t, Keyword.t) :: t
   def delete_all(multi, name, queryable, opts \\ []) when is_list(opts) do
