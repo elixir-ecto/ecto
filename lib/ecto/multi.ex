@@ -219,6 +219,13 @@ defmodule Ecto.Multi do
   Adds an insert operation to the multi.
 
   Accepts the same arguments and options as `c:Ecto.Repo.insert/2` does.
+
+  ## Example
+
+      post = %Post{title: "first"}
+      multi = Ecto.Multi.new |> Ecto.Multi.insert(:insert, post)
+      MyApp.Repo.transaction(multi)
+
   """
   @spec insert(t, name, Changeset.t | Ecto.Schema.t, Keyword.t) :: t
   def insert(multi, name, changeset_or_struct, opts \\ [])
@@ -235,6 +242,14 @@ defmodule Ecto.Multi do
   Adds an update operation to the multi.
 
   Accepts the same arguments and options as `c:Ecto.Repo.update/2` does.
+
+  ## Example
+
+      post = MyApp.Repo.get!(Post, 1)
+      post = Ecto.Changeset.change post, title: "New title"
+      multi = Ecto.Multi.new |> Ecto.Multi.update(:update, post)
+      MyApp.Repo.transaction(multi)
+
   """
   @spec update(t, name, Changeset.t, Keyword.t) :: t
   def update(multi, name, %Changeset{} = changeset, opts \\ []) do
@@ -245,6 +260,18 @@ defmodule Ecto.Multi do
   Inserts or updates a changeset depending on whether the changeset was persisted or not.
 
   Accepts the same arguments and options as `c:Ecto.Repo.insert_or_update/2` does.
+
+  ## Example
+
+  post = Post.changeset(%Post{}, %{title: "New title"})
+  multi = Ecto.Multi.new |> Ecto.Multi.insert_or_update(:insert_or_update, post)
+  MyApp.Repo.transaction(multi)
+
+      post = MyApp.Repo.get!(Post, 1)
+      post = Post.changeset(post, %{title: "Updated title"})
+      multi = Ecto.Multi.new |> Ecto.Multi.insert_or_update(:insert_or_update, post)
+      MyApp.Repo.transaction(multi)
+
   """
   @spec insert_or_update(t, name, Changeset.t , Keyword.t) :: t
   def insert_or_update(multi, name, changeset, opts \\ [])
@@ -259,6 +286,13 @@ defmodule Ecto.Multi do
   Adds a delete operation to the multi.
 
   Accepts the same arguments and options as `c:Ecto.Repo.delete/2` does.
+
+  ## Example
+
+      post = MyApp.Repo.get!(Post, 1)
+      multi = Ecto.Multi.new |> Ecto.Multi.delete(:delete, post)
+      MyApp.Repo.transaction(multi)
+
   """
   @spec delete(t, name, Changeset.t | Ecto.Schema.t, Keyword.t) :: t
   def delete(multi, name, changeset_or_struct, opts \\ [])
@@ -336,6 +370,13 @@ defmodule Ecto.Multi do
   Adds an insert_all operation to the multi.
 
   Accepts the same arguments and options as `c:Ecto.Repo.insert_all/3` does.
+
+  ## Example
+
+      posts = [%{title: "My first post"}, %{title: "My second post"}]
+      multi = Ecto.Multi.new |> Ecto.Multi.insert_all(:insert_all, Post, posts)
+      MyApp.Repo.transaction(multi)
+
   """
   @spec insert_all(t, name, schema_or_source, [entry], Keyword.t) :: t
         when entry: map | Keyword.t
@@ -358,6 +399,13 @@ defmodule Ecto.Multi do
   Adds a delete_all operation to the multi.
 
   Accepts the same arguments and options as `c:Ecto.Repo.delete_all/2` does.
+
+  ## Example
+
+      queryable = from(p in Post, where: p.id < 5)
+      multi = Ecto.Multi.new |> Ecto.Multi.delete_all(:delete_all, queryable)
+      MyApp.Repo.transaction(multi)
+
   """
   @spec delete_all(t, name, Ecto.Queryable.t, Keyword.t) :: t
   def delete_all(multi, name, queryable, opts \\ []) when is_list(opts) do
