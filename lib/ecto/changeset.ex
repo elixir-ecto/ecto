@@ -1846,10 +1846,7 @@ defmodule Ecto.Changeset do
     end
   end
 
-  if function_exported?(Decimal, :from_float, 1) do
-    defp decimal_new(term) when is_float(term), do: Decimal.from_float(term)
-  end
-
+  defp decimal_new(term) when is_float(term), do: Decimal.from_float(term)
   defp decimal_new(term), do: Decimal.new(term)
 
   defp decimal_compare(:lt, spec), do: spec in [:less_than, :less_than_or_equal_to]

@@ -325,8 +325,12 @@ defmodule Ecto.Type do
     end
   end
 
-  def dump(:decimal, term, _dumper) when is_number(term) do
-    {:ok, decimal_new(term)}
+  def dump(:decimal, term, _dumper) when is_integer(term) do
+    {:ok, Decimal.new(term)}
+  end
+
+  def dump(:decimal, term, _dumper) when is_float(term) do
+    {:ok, Decimal.from_float(term)}
   end
 
   def dump(:time, %Time{} = time, _dumper) do
@@ -611,8 +615,11 @@ defmodule Ecto.Type do
   def cast(:decimal, term) when is_binary(term) do
     Decimal.parse(term)
   end
-  def cast(:decimal, term) when is_number(term) do
-    {:ok, decimal_new(term)}
+  def cast(:decimal, term) when is_integer(term) do
+    {:ok, Decimal.new(term)}
+  end
+  def cast(:decimal, term) when is_float(term) do
+    {:ok, Decimal.from_float(term)}
   end
 
   def cast(:date, term) do
@@ -910,10 +917,4 @@ defmodule Ecto.Type do
       _ -> nil
     end
   end
-
-  if function_exported?(Decimal, :from_float, 1) do
-    defp decimal_new(term) when is_float(term), do: Decimal.from_float(term)
-  end
-
-  defp decimal_new(term), do: Decimal.new(term)
 end
