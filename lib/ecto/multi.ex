@@ -263,9 +263,9 @@ defmodule Ecto.Multi do
 
   ## Example
 
-  post = Post.changeset(%Post{}, %{title: "New title"})
-  multi = Ecto.Multi.new |> Ecto.Multi.insert_or_update(:insert_or_update, post)
-  MyApp.Repo.transaction(multi)
+      post = Post.changeset(%Post{}, %{title: "New title"})
+      multi = Ecto.Multi.new |> Ecto.Multi.insert_or_update(:insert_or_update, post)
+      MyApp.Repo.transaction(multi)
 
       post = MyApp.Repo.get!(Post, 1)
       post = Post.changeset(post, %{title: "Updated title"})
