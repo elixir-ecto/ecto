@@ -222,13 +222,9 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> post = %Post{title: "first"}
-      iex> Ecto.Multi.new |> Ecto.Multi.insert(:insert, post) |> Ecto.Multi.to_list
-      [
-        insert: {:insert,
-        #Ecto.Changeset<action: :insert, changes: %{}, errors: [],
-          data: #MyApp.Post<>, valid?: true>, []}
-      ]
+  post = %Post{title: "first"}
+  multi = Ecto.Multi.new |> Ecto.Multi.insert(:insert, post)
+  MyApp.Repo.transaction(multi)
 
   """
   @spec insert(t, name, Changeset.t | Ecto.Schema.t, Keyword.t) :: t
@@ -249,19 +245,10 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> post = %Post{title: "first"} |> Repo.insert!
-      iex> post = Post.changeset(post, %{title: "second"})
-      iex> Ecto.Multi.new |> Ecto.Multi.update(:update, post) |> Ecto.Multi.to_list
-      [
-        update: {:update,
-          #Ecto.Changeset<
-            action: :update,
-            changes: %{title: "second"},
-            errors: [],
-            data: #Post<>,
-            valid?: true
-          >, []}
-      ]
+  post = MyApp.Repo.get!(Post, 1)
+  post = Ecto.Changeset.change post, title: "New title"
+  multi = Ecto.Multi.new |> Ecto.Multi.update(:update, post)
+  MyApp.Repo.transaction(multi)
 
   """
   @spec update(t, name, Changeset.t, Keyword.t) :: t
@@ -276,32 +263,14 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> changeset = Post.changeset(%Post{}, %{title: "first"})
-      iex> Ecto.Multi.new |> Ecto.Multi.insert_or_update(:insert_or_update, changeset) |> Ecto.Multi.to_list
-      [
-        insert_or_update: {:insert,
-          #Ecto.Changeset<
-            action: :insert,
-            changes: %{title: "first"},
-            errors: [],
-            data: #Post<>,
-            valid?: true
-          >, []}
-      ]
+  post = Post.changeset(%Post{}, %{title: "New title"})
+  multi = Ecto.Multi.new |> Ecto.Multi.insert_or_update(:insert_or_update, post)
+  MyApp.Repo.transaction(multi)
 
-      iex> post = Post.changeset(%Post{}, %{title: "first"}) |> Repo.insert!
-      iex> changeset = Post.changeset(post, %{title: "second"})
-      iex> Ecto.Multi.new |> Ecto.Multi.insert_or_update(:insert_or_update, changeset) |> Ecto.Multi.to_list
-      [
-        insert_or_update: {:update,
-          #Ecto.Changeset<
-            action: :update,
-            changes: %{title: "second"},
-            errors: [],
-            data: #Post<>,
-            valid?: true
-          >, []}
-      ]
+  post = MyApp.Repo.get!(Post, 1)
+  post = Post.changeset(post, %{title: "Updated title"})
+  multi = Ecto.Multi.new |> Ecto.Multi.insert_or_update(:insert_or_update, post)
+  MyApp.Repo.transaction(multi)
 
   """
   @spec insert_or_update(t, name, Changeset.t , Keyword.t) :: t
@@ -320,13 +289,9 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> post = %Post{title: "first"} |> Repo.insert!
-      iex> Ecto.Multi.new |> Ecto.Multi.delete(:delete, post) |> Ecto.Multi.to_list
-      [
-        delete: {:delete,
-        #Ecto.Changeset<action: :delete, changes: %{}, errors: [],
-          data: #Post<>, valid?: true>, []}
-      ]
+  post = MyApp.Repo.get!(Post, 1)
+  multi = Ecto.Multi.new |> Ecto.Multi.delete(:delete, post)
+  MyApp.Repo.transaction(multi)
 
   """
   @spec delete(t, name, Changeset.t | Ecto.Schema.t, Keyword.t) :: t
@@ -408,11 +373,9 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> Ecto.Multi.new |> Ecto.Multi.insert_all(:insert_all, Post, [%{title: "My first post"}, %{title: "My second post"}]) |> Ecto.Multi.to_list
-      [
-        insert_all: {:insert_all, Post,
-        [%{title: "My first post"}, %{title: "My second post"}], []}
-      ]
+  posts = [%{title: "My first post"}, %{title: "My second post"}]
+  multi = Ecto.Multi.new |> Ecto.Multi.insert_all(:insert_all, Post, posts)
+  MyApp.Repo.transaction(multi)
 
   """
   @spec insert_all(t, name, schema_or_source, [entry], Keyword.t) :: t
@@ -439,10 +402,9 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> Repo.insert_all(Post, [[title: "My first post"], [title: "My second post"]])
-      iex> queryable = from(p in Post, where: p.id < 10)
-      iex> Ecto.Multi.new |> Ecto.Multi.delete_all(:delete_all, queryable) |> Ecto.Multi.to_list
-      [delete_all: {:delete_all, #Ecto.Query<from p in Post, where: p.id < 10>, []}]
+  queryable = from(p in Post, where: p.id < 5)
+  multi = Ecto.Multi.new |> Ecto.Multi.delete_all(:delete_all, queryable)
+  MyApp.Repo.transaction(multi)
 
   """
   @spec delete_all(t, name, Ecto.Queryable.t, Keyword.t) :: t
