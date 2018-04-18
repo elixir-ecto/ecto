@@ -325,8 +325,12 @@ defmodule Ecto.Type do
     end
   end
 
-  def dump(:decimal, term, _dumper) when is_number(term) do
+  def dump(:decimal, term, _dumper) when is_integer(term) do
     {:ok, Decimal.new(term)}
+  end
+
+  def dump(:decimal, term, _dumper) when is_float(term) do
+    {:ok, Decimal.from_float(term)}
   end
 
   def dump(:time, %Time{} = time, _dumper) do
@@ -560,10 +564,8 @@ defmodule Ecto.Type do
       iex> cast(:binary, "beef")
       {:ok, "beef"}
 
-      iex> cast(:decimal, Decimal.new(1.0))
-      {:ok, Decimal.new(1.0)}
       iex> cast(:decimal, Decimal.new("1.0"))
-      {:ok, Decimal.new(1.0)}
+      {:ok, Decimal.new("1.0")}
 
       iex> cast({:array, :integer}, [1, 2, 3])
       {:ok, [1, 2, 3]}
@@ -613,8 +615,11 @@ defmodule Ecto.Type do
   def cast(:decimal, term) when is_binary(term) do
     Decimal.parse(term)
   end
-  def cast(:decimal, term) when is_number(term) do
+  def cast(:decimal, term) when is_integer(term) do
     {:ok, Decimal.new(term)}
+  end
+  def cast(:decimal, term) when is_float(term) do
+    {:ok, Decimal.from_float(term)}
   end
 
   def cast(:date, term) do
