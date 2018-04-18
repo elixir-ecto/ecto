@@ -3,8 +3,7 @@
 This guide assumes you worked through the [Getting Started guide](Getting%20Started.md) and want to learn more about associations.
 
 If you want to see the code from this guide, you can view it [at
-ecto/examples/ecto_assoc on GitHub](https://github.com/elixir-
-lang/ecto/tree/master/examples/ecto_assoc).
+ecto/examples/ecto_assoc on GitHub](https://github.com/elixir-lang/ecto/tree/master/examples/ecto_assoc).
 
 There are three kinds of associations:
 
