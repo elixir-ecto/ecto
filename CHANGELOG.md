@@ -95,6 +95,7 @@ One of the exciting additions in Ecto v3.0 is the addition of named bindings to 
 ### Backwards incompatible changes
 
   * [Ecto.DateTime] `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` were previously deprecated and have now been removed
+  * [Ecto.DataType] `Ecto.DataType` protocol has been removed
   * [Ecto.Multi] `Ecto.Multi.run/5` now receives the repo in which the transaction is executing as the first argument to functions, and the changes so far as the second argument
   * [Ecto.Schema] `:time`, `:naive_datetime` and `:utc_datetime` no longer keep microseconds information. If you want to keep microseconds, use `:time_usec`, `:naive_datetime_usec`, `:utc_datetime_usec`
 
