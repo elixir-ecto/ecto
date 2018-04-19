@@ -222,7 +222,7 @@ defmodule Ecto.Association do
   def combine_assoc_query(%{where: nil}, queryable), do: queryable
   def combine_assoc_query(%{where: []}, queryable), do: queryable
   def combine_assoc_query(%{where: {module, function, args}} = assoc, queryable) do
-    combine_assoc_query(%{assoc | where: apply(Macro.expand(module, __ENV__), function, args)}, queryable)
+    combine_assoc_query(%{assoc | where: apply(module, function, args)}, queryable)
   end
   def combine_assoc_query(%{where: where}, queryable) do
     Ecto.Query.where(queryable, _, ^where)
@@ -984,7 +984,7 @@ defmodule Ecto.Association.ManyToMany do
   defp join_through_query(queryable, []), do: queryable
   defp join_through_query(queryable, nil), do: queryable
   defp join_through_query(queryable, {module, function, args}) do
-    join_through_query(queryable, apply(Macro.expand(module, __ENV__), function, args))
+    join_through_query(queryable, apply(module, function, args))
   end
   defp join_through_query(queryable, where) do
     from row in queryable,

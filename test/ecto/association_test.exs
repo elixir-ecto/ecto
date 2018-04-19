@@ -106,7 +106,7 @@ defmodule Ecto.AssociationTest do
       has_many :posts_comments, through: [:posts, :comments]    # many -> many
       has_many :posts_permalinks, through: [:posts, :permalink] # many -> one
       has_many :emails, {"users_emails", Email}
-      has_many :awesome_posts, Post, where: Post.awesome()
+      has_many :awesome_posts, Post, where: {Post, :awesome, []}
       has_one :profile, {"users_profiles", Profile},
         defaults: [name: "default"], on_replace: :delete
       many_to_many :permalinks, {"custom_permalinks", Permalink},
@@ -114,16 +114,16 @@ defmodule Ecto.AssociationTest do
 
       many_to_many :active_special_permalinks, Permalink,
         join_through: AuthorPermalink,
-        join_through_where: AuthorPermalink.active(),
-        where: Permalink.special()
+        join_through_where: {AuthorPermalink, :active, []},
+        where: {Permalink, :special, []}
 
       many_to_many :special_permalinks, Permalink,
         join_through: AuthorPermalink,
-        where: Permalink.special()
+        where: {Permalink, :special, []}
 
       many_to_many :active_permalinks, Permalink,
         join_through: AuthorPermalink,
-        join_through_where: AuthorPermalink.active()
+        join_through_where: {AuthorPermalink, :active, []}
 
       has_many :posts_with_prefix, PostWithPrefix
       has_many :comments_with_prefix, through: [:posts_with_prefix, :comments_with_prefix]
@@ -139,7 +139,7 @@ defmodule Ecto.AssociationTest do
 
     schema "summaries" do
       has_one :post, Post, defaults: [title: "default"], on_replace: :nilify
-      has_one :awesome_post, Post, where: Post.awesome()
+      has_one :awesome_post, Post, where: {Post, :awesome, []}
       has_many :posts, Post, on_replace: :nilify
       has_one :post_author, through: [:post, :author]        # one -> belongs
       has_many :post_comments, through: [:post, :comments]   # one -> many
@@ -151,7 +151,7 @@ defmodule Ecto.AssociationTest do
 
     schema "emails" do
       belongs_to :author, {"post_authors", Author}
-      belongs_to :super_user, Author, where: Author.super_users(), foreign_key: :author_id, define_field: false
+      belongs_to :super_user, Author, where: {Author, :super_users, []}, foreign_key: :author_id, define_field: false
     end
   end
 

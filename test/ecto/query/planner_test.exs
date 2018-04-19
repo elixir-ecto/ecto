@@ -33,7 +33,7 @@ defmodule Ecto.Query.PlannerTest do
     schema "comment_posts" do
       belongs_to :comment, Comment
       belongs_to :post, Post
-      belongs_to :special_comment, Comment, where: Comment.special()
+      belongs_to :special_comment, Comment, where: {Comment, :special, []}
 
       field :deleted, :boolean
     end
@@ -56,9 +56,9 @@ defmodule Ecto.Query.PlannerTest do
       field :links, {:array, Custom.Permalink}
       has_many :comments, Ecto.Query.PlannerTest.Comment
       has_many :extra_comments, Ecto.Query.PlannerTest.Comment
-      has_many :special_comments, Ecto.Query.PlannerTest.Comment, where: Ecto.Query.PlannerTest.Comment.special()
+      has_many :special_comments, Ecto.Query.PlannerTest.Comment, where: {Ecto.Query.PlannerTest.Comment, :special, []}
 
-      many_to_many :shared_special_comments, Comment, join_through: CommentPost, where: Comment.special(), join_through_where: CommentPost.inactive()
+      many_to_many :shared_special_comments, Comment, join_through: CommentPost, where: {Comment, :special, []}, join_through_where: {CommentPost, :inactive, []}
     end
   end
 
