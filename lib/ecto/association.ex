@@ -37,7 +37,8 @@ defmodule Ecto.Association do
                owner: atom,
                owner_key: atom,
                field: atom,
-               unique: boolean}
+               unique: boolean,
+               where: mfa | Macro.t() | Keyword.t()}
 
   alias Ecto.Query.{BooleanExpr, QueryExpr, FromExpr}
 
@@ -217,14 +218,14 @@ defmodule Ecto.Association do
   @doc """
   Add the default assoc query where clauses a provided query
   """
-  def combine_assoc_query(assoc_queryable, nil), do: assoc_queryable
-  def combine_assoc_query(%Ecto.Query{wheres: assoc_wheres}, provided_queryable) do
-    provided_queryable
-    |> Ecto.Queryable.to_query()
-    |> Map.update!(:wheres, &Kernel.++(&1, assoc_wheres))
+  def combine_assoc_query(%{queryable: queryable} = assoc, nil), do: combine_assoc_query(assoc, queryable)
+  def combine_assoc_query(%{where: nil}, queryable), do: queryable
+  def combine_assoc_query(%{where: []}, queryable), do: queryable
+  def combine_assoc_query(%{where: {module, function, args}} = assoc, queryable) do
+    combine_assoc_query(%{assoc | where: apply(Macro.expand(module, __ENV__), function, args)}, queryable)
   end
-  def combine_assoc_query(_, provided_queryable) do
-    provided_queryable
+  def combine_assoc_query(%{where: where}, queryable) do
+    Ecto.Query.where(queryable, _, ^where)
   end
 
   defp assoc_to_where(%{on: %QueryExpr{} = on}) do
@@ -275,24 +276,13 @@ defmodule Ecto.Association do
       Schema
 
       iex> Ecto.Association.related_from_query("wrong", :comments_v1)
-      ** (ArgumentError) association :comments_v1 queryable must be a schema, a {source, schema}, or a query. got: "wrong"
+      ** (ArgumentError) association :comments_v1 queryable must be a schema or a {source, schema}. got: "wrong"
   """
   def related_from_query(atom, _name) when is_atom(atom), do: atom
   def related_from_query({source, schema}, _name) when is_binary(source) and is_atom(schema), do: schema
-  def related_from_query(%Ecto.Query{from: %FromExpr{source: {_, schema}}} = query, name) when is_atom(schema) do
-    case query do
-      %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [], joins: [],
-                  havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
-        schema
-      _ ->
-        raise ArgumentError,
-          "A query was provided for association #{inspect name}, but that query included a statement other" <>
-          "than a `where` clause. Queries in associations only support `where` clauses, nothing else."
-    end
-  end
   def related_from_query(queryable, name) do
-    raise ArgumentError, "association #{inspect name} queryable must be a schema, " <>
-      "a {source, schema}, or a query. got: #{inspect queryable}"
+    raise ArgumentError, "association #{inspect name} queryable must be a schema or " <>
+      "a {source, schema}. got: #{inspect queryable}"
   end
 
   @doc """
@@ -457,7 +447,7 @@ defmodule Ecto.Association.Has do
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
   @has_one_on_replace_opts @on_replace_opts ++ [:update]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
-             :queryable, :on_delete, :on_replace, unique: true, defaults: [], relationship: :child]
+             :queryable, :on_delete, :on_replace, :where, unique: true, defaults: [], relationship: :child]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
@@ -522,7 +512,8 @@ defmodule Ecto.Association.Has do
       queryable: queryable,
       on_delete: on_delete,
       on_replace: on_replace,
-      defaults: opts[:defaults] || []
+      defaults: opts[:defaults] || [],
+      where: opts[:where]
     }
   end
 
@@ -539,23 +530,21 @@ defmodule Ecto.Association.Has do
   end
 
   @doc false
-  def joins_query(%{queryable: queryable, related_key: related_key,
-                    owner: owner, owner_key: owner_key}) do
+  def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key} = assoc) do
     from o in owner,
-      join: q in ^queryable,
+      join: q in ^Ecto.Association.combine_assoc_query(assoc, nil),
       on: field(q, ^related_key) == field(o, ^owner_key)
   end
 
   @doc false
-  def assoc_query(%{queryable: queryable, related_key: related_key}, query, [value]) do
-
-    from x in Ecto.Association.combine_assoc_query(queryable, query),
+  def assoc_query(%{related_key: related_key} = assoc, query, [value]) do
+    from x in Ecto.Association.combine_assoc_query(assoc, query),
       where: field(x, ^related_key) == ^value
   end
 
   @doc false
-  def assoc_query(%{queryable: queryable, related_key: related_key}, query, values) do
-    from x in Ecto.Association.combine_assoc_query(queryable, query),
+  def assoc_query(%{related_key: related_key} = assoc, query, values) do
+    from x in Ecto.Association.combine_assoc_query(assoc, query),
       where: field(x, ^related_key) in ^values
   end
 
@@ -659,7 +648,7 @@ defmodule Ecto.Association.HasThrough do
   """
 
   @behaviour Ecto.Association
-  defstruct [:cardinality, :field, :owner, :owner_key, :through, :on_cast,
+  defstruct [:cardinality, :field, :owner, :owner_key, :through, :on_cast, :where,
              relationship: :child, unique: true]
 
   @doc false
@@ -692,6 +681,7 @@ defmodule Ecto.Association.HasThrough do
       through: through,
       owner: module,
       owner_key: refl.owner_key,
+      where: opts[:where]
     }
   end
 
@@ -744,7 +734,7 @@ defmodule Ecto.Association.BelongsTo do
 
   @behaviour Ecto.Association
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify, :update]
-  defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast,
+  defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast, :where,
              :on_replace, defaults: [], cardinality: :one, relationship: :parent, unique: true]
 
   @doc false
@@ -789,7 +779,8 @@ defmodule Ecto.Association.BelongsTo do
       related_key: ref,
       queryable: queryable,
       on_replace: on_replace,
-      defaults: opts[:defaults] || []
+      defaults: opts[:defaults] || [],
+      where: opts[:where]
     }
   end
 
@@ -801,22 +792,22 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @doc false
-  def joins_query(%{queryable: queryable, related_key: related_key,
-                    owner: owner, owner_key: owner_key}) do
+  def joins_query(%{related_key: related_key,
+                    owner: owner, owner_key: owner_key} = assoc) do
     from o in owner,
-      join: q in ^queryable,
+      join: q in ^Ecto.Association.combine_assoc_query(assoc, nil),
       on: field(q, ^related_key) == field(o, ^owner_key)
   end
 
   @doc false
-  def assoc_query(%{queryable: queryable, related_key: related_key}, query, [value]) do
-    from x in Ecto.Association.combine_assoc_query(queryable, query),
+  def assoc_query(%{related_key: related_key} = assoc, query, [value]) do
+    from x in Ecto.Association.combine_assoc_query(assoc, query),
       where: field(x, ^related_key) == ^value
   end
 
   @doc false
-  def assoc_query(%{queryable: queryable, related_key: related_key}, query, values) do
-    from x in Ecto.Association.combine_assoc_query(queryable, query),
+  def assoc_query(%{related_key: related_key} = assoc, query, values) do
+    from x in Ecto.Association.combine_assoc_query(assoc, query),
       where: field(x, ^related_key) in ^values
   end
 
@@ -887,7 +878,7 @@ defmodule Ecto.Association.ManyToMany do
   @on_delete_opts [:nothing, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
-             :on_replace, :join_keys, :join_through, :on_cast,
+             :on_replace, :join_keys, :join_through, :join_through_where, :on_cast, :where,
              defaults: [], relationship: :child, cardinality: :many, unique: false]
 
   @doc false
@@ -964,11 +955,13 @@ defmodule Ecto.Association.ManyToMany do
       owner_key: owner_key,
       join_keys: join_keys,
       join_through: join_through,
+      join_through_where: opts[:join_through_where],
       queryable: queryable,
       on_delete: on_delete,
       on_replace: on_replace,
       defaults: opts[:defaults] || [],
-      unique: Keyword.get(opts, :unique, false)
+      unique: Keyword.get(opts, :unique, false),
+      where: opts[:where]
     }
   end
 
@@ -978,12 +971,24 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   @doc false
-  def joins_query(%{queryable: queryable, owner: owner,
-                    join_through: join_through, join_keys: join_keys}) do
+  def joins_query(%{owner: owner, join_through_where: join_through_where,
+                    join_through: join_through, join_keys: join_keys} = assoc) do
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
+    join_through_query = join_through_query(join_through, join_through_where)
+
     from o in owner,
-      join: j in ^join_through, on: field(j, ^join_owner_key) == field(o, ^owner_key),
-      join: q in ^queryable, on: field(j, ^join_related_key) == field(q, ^related_key)
+      join: j in ^join_through_query, on: field(j, ^join_owner_key) == field(o, ^owner_key),
+      join: q in ^Ecto.Association.combine_assoc_query(assoc, nil), on: field(j, ^join_related_key) == field(q, ^related_key)
+  end
+
+  defp join_through_query(queryable, []), do: queryable
+  defp join_through_query(queryable, nil), do: queryable
+  defp join_through_query(queryable, {module, function, args}) do
+    join_through_query(queryable, apply(Macro.expand(module, __ENV__), function, args))
+  end
+  defp join_through_query(queryable, where) do
+    from row in queryable,
+      where: ^where
   end
 
   @doc false
@@ -993,15 +998,16 @@ defmodule Ecto.Association.ManyToMany do
 
   @doc false
   def assoc_query(%{join_through: join_through, join_keys: join_keys,
-                    queryable: queryable, owner: owner}, query, values) do
+                    owner: owner, join_through_where: join_through_where} = assoc, query, values) do
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
 
+    join_through_query = join_through_query(join_through, join_through_where)
     # We need to go all the way using owner and query so
     # Ecto has all the information necessary to cast fields.
     # This also helps validate the associated schema exists all the way.
-    from q in Ecto.Association.combine_assoc_query(queryable, query),
+    from q in Ecto.Association.combine_assoc_query(assoc, query),
       join: o in ^owner, on: field(o, ^owner_key) in ^values,
-      join: j in ^join_through, on: field(j, ^join_owner_key) == field(o, ^owner_key),
+      join: j in ^join_through_query, on: field(j, ^join_owner_key) == field(o, ^owner_key),
       where: field(j, ^join_related_key) == field(q, ^related_key)
   end
 
@@ -1074,25 +1080,13 @@ defmodule Ecto.Association.ManyToMany do
   defp validate_join_through(name, nil) do
     raise ArgumentError, "many_to_many #{inspect name} associations require the :join_through option to be given"
   end
-  defp validate_join_through(name, %Ecto.Query{} = query) do
-    case query do
-      %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [], joins: [],
-                  havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
-        query
-      _ ->
-        raise ArgumentError,
-          "A query was provided for many_to_many #{inspect name}, but that query included a statement other" <>
-          "than a `where` clause. Queries in :join_through only support `where` clauses, nothing else."
-    end
-  end
   defp validate_join_through(_, join_through) when is_atom(join_through) or is_binary(join_through) do
     :ok
   end
   defp validate_join_through(name, _join_through) do
     raise ArgumentError,
       "many_to_many #{inspect name} associations require the :join_through option to be " <>
-      "an atom (representing a schema), a string (representing a table) or a query" <>
-      "with only `where` clauses."
+      "an atom (representing a schema) or a string (representing a table)."
   end
 
   defp insert_join?(%{action: :insert}, _, _field, _related_key), do: true

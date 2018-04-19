@@ -765,6 +765,7 @@ defmodule Ecto.Schema do
   """
   defmacro has_many(name, queryable, opts \\ []) do
     queryable = expand_alias(queryable, __CALLER__)
+    opts = Keyword.update(opts, :where, nil, &Ecto.Schema.escape_mfa(&1, __CALLER__))
     quote do
       Ecto.Schema.__has_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -845,6 +846,7 @@ defmodule Ecto.Schema do
   """
   defmacro has_one(name, queryable, opts \\ []) do
     queryable = expand_alias(queryable, __CALLER__)
+    opts = Keyword.update(opts, :where, nil, &Ecto.Schema.escape_mfa(&1, __CALLER__))
     quote do
       Ecto.Schema.__has_one__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -1061,6 +1063,7 @@ defmodule Ecto.Schema do
   """
   defmacro belongs_to(name, queryable, opts \\ []) do
     queryable = expand_alias(queryable, __CALLER__)
+    opts = Keyword.update(opts, :where, nil, &Ecto.Schema.escape_mfa(&1, __CALLER__))
     quote do
       Ecto.Schema.__belongs_to__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -1288,6 +1291,11 @@ defmodule Ecto.Schema do
   building such association won't automatically set the active field to true.
   """
   defmacro many_to_many(name, queryable, opts \\ []) do
+    opts =
+      opts
+      |> Keyword.update(:where, nil, &Ecto.Schema.escape_mfa(&1, __CALLER__))
+      |> Keyword.update(:join_through_where, nil, &Ecto.Schema.escape_mfa(&1, __CALLER__))
+
     quote do
       Ecto.Schema.__many_to_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -1621,6 +1629,12 @@ defmodule Ecto.Schema do
     struct
   end
 
+  @spec escape_mfa(any, Macro.env) :: any
+  def escape_mfa({{:., _, [module = {:__aliases__, _, _}, function]}, _, args}, caller) do
+    Macro.escape({expand_alias(module, caller), function, args})
+  end
+  def escape_mfa(other), do: other
+
   ## Callbacks
 
   @doc false
@@ -1766,7 +1780,7 @@ defmodule Ecto.Schema do
     end
   end
 
-  @valid_has_options [:foreign_key, :references, :through, :on_delete, :defaults, :on_replace]
+  @valid_has_options [:foreign_key, :references, :through, :on_delete, :defaults, :on_replace, :where]
 
   @doc false
   def __has_many__(mod, name, queryable, opts) do
@@ -1797,7 +1811,7 @@ defmodule Ecto.Schema do
   # :primary_key is valid here to support associative entity
   # https://en.wikipedia.org/wiki/Associative_entity
   @valid_belongs_to_options [:foreign_key, :references, :define_field, :type,
-                             :on_replace, :defaults, :primary_key, :source]
+                             :on_replace, :defaults, :primary_key, :source, :where]
 
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
@@ -1819,7 +1833,8 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_many_to_many_options [:join_through, :join_keys, :on_delete, :defaults, :on_replace, :unique]
+  @valid_many_to_many_options [:join_through, :join_keys, :on_delete, :defaults, :on_replace,
+                               :unique, :where, :join_through_where]
 
   @doc false
   def __many_to_many__(mod, name, queryable, opts) do
