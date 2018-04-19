@@ -38,7 +38,7 @@ defmodule Ecto.Association do
                owner_key: atom,
                field: atom,
                unique: boolean,
-               where: mfa | Macro.t() | Keyword.t()}
+               where: mfa | Ecto.Query.DynamicExpr.t() | Keyword.t()}
 
   alias Ecto.Query.{BooleanExpr, QueryExpr, FromExpr}
 
@@ -221,8 +221,9 @@ defmodule Ecto.Association do
   def combine_assoc_query(%{queryable: queryable} = assoc, nil), do: combine_assoc_query(assoc, queryable)
   def combine_assoc_query(%{where: nil}, queryable), do: queryable
   def combine_assoc_query(%{where: []}, queryable), do: queryable
-  def combine_assoc_query(%{where: {module, function, args}} = assoc, queryable) do
-    combine_assoc_query(%{assoc | where: apply(module, function, args)}, queryable)
+  def combine_assoc_query(%{where: {module, function, args}}, queryable) do
+    where = apply(module, function, args)
+    Ecto.Query.where(queryable, _, ^where)
   end
   def combine_assoc_query(%{where: where}, queryable) do
     Ecto.Query.where(queryable, _, ^where)
@@ -984,11 +985,11 @@ defmodule Ecto.Association.ManyToMany do
   defp join_through_query(queryable, []), do: queryable
   defp join_through_query(queryable, nil), do: queryable
   defp join_through_query(queryable, {module, function, args}) do
-    join_through_query(queryable, apply(module, function, args))
+    where = apply(module, function, args)
+    Ecto.Query.where(queryable, _, ^where)
   end
   defp join_through_query(queryable, where) do
-    from row in queryable,
-      where: ^where
+    Ecto.Query.where(queryable, _, ^where)
   end
 
   @doc false
@@ -1086,7 +1087,7 @@ defmodule Ecto.Association.ManyToMany do
   defp validate_join_through(name, _join_through) do
     raise ArgumentError,
       "many_to_many #{inspect name} associations require the :join_through option to be " <>
-      "an atom (representing a schema) or a string (representing a table)."
+      "an atom (representing a schema) or a string (representing a table)"
   end
 
   defp insert_join?(%{action: :insert}, _, _field, _related_key), do: true

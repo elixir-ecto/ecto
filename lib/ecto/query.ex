@@ -337,6 +337,9 @@ defmodule Ecto.Query do
 
   defmodule DynamicExpr do
     @moduledoc false
+
+    @type t :: %__MODULE__{}
+
     defstruct [:fun, :binding, :file, :line]
   end
 
