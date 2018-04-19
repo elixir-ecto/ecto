@@ -765,7 +765,7 @@ defmodule Ecto.Schema do
   """
   defmacro has_many(name, queryable, opts \\ []) do
     queryable = expand_alias(queryable, __CALLER__)
-    opts = Keyword.update(opts, :where, nil, &Ecto.Schema.escape_mfa(&1, __CALLER__))
+    opts = Keyword.update(opts, :where, nil, &Ecto.Schema.escape_association_where(&1, __CALLER__))
     quote do
       Ecto.Schema.__has_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -846,7 +846,7 @@ defmodule Ecto.Schema do
   """
   defmacro has_one(name, queryable, opts \\ []) do
     queryable = expand_alias(queryable, __CALLER__)
-    opts = Keyword.update(opts, :where, nil, &Ecto.Schema.escape_mfa(&1, __CALLER__))
+    opts = Keyword.update(opts, :where, nil, &Ecto.Schema.escape_association_where(&1, __CALLER__))
     quote do
       Ecto.Schema.__has_one__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -1063,7 +1063,7 @@ defmodule Ecto.Schema do
   """
   defmacro belongs_to(name, queryable, opts \\ []) do
     queryable = expand_alias(queryable, __CALLER__)
-    opts = Keyword.update(opts, :where, nil, &Ecto.Schema.escape_mfa(&1, __CALLER__))
+    opts = Keyword.update(opts, :where, nil, &Ecto.Schema.escape_association_where(&1, __CALLER__))
     quote do
       Ecto.Schema.__belongs_to__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -1293,8 +1293,8 @@ defmodule Ecto.Schema do
   defmacro many_to_many(name, queryable, opts \\ []) do
     opts =
       opts
-      |> Keyword.update(:where, nil, &Ecto.Schema.escape_mfa(&1, __CALLER__))
-      |> Keyword.update(:join_through_where, nil, &Ecto.Schema.escape_mfa(&1, __CALLER__))
+      |> Keyword.update(:where, nil, &Ecto.Schema.escape_association_where(&1, __CALLER__))
+      |> Keyword.update(:join_through_where, nil, &Ecto.Schema.escape_association_where(&1, __CALLER__))
 
     quote do
       Ecto.Schema.__many_to_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
@@ -1629,11 +1629,22 @@ defmodule Ecto.Schema do
     struct
   end
 
-  @spec escape_mfa(any, Macro.env) :: any
-  def escape_mfa({{:., _, [module = {:__aliases__, _, _}, function]}, _, args}, caller) do
+  @spec escape_association_where(any, Macro.env) :: any
+  def escape_association_where({{:., _, [module = {:__aliases__, _, _}, function]}, _, args}, caller) do
     Macro.escape({expand_alias(module, caller), function, args})
   end
-  def escape_mfa(other), do: other
+  # This doesn't work
+  def escape_association_where({:dynamic, _, args}, _) do
+    Macro.escape({Ecto.Query, :dynamic, args})
+  end
+  def escape_association_where(keyword, _) when is_list(keyword) do
+    keyword
+  end
+  def escape_association_where(other, _) do
+    IO.inspect(other)
+    raise "Only keyword lists, remote function calls and `dynamic` expressions allowed in `where`" <>
+      "and `join_through_where`: got #{Macro.to_string(other)}"
+  end
 
   ## Callbacks
 
