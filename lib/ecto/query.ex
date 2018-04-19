@@ -328,7 +328,6 @@ defmodule Ecto.Query do
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], aliases: %{}, wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [], updates: [],
              havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
-  @type t :: %__MODULE__{}
 
   defmodule FromExpr do
     @moduledoc false
@@ -367,6 +366,9 @@ defmodule Ecto.Query do
     # * type is the underlying tag type, like :string
     defstruct [:value, :tag, :type]
   end
+
+  @type t :: %__MODULE__{}
+  @opaque dynamic :: %DynamicExpr{}
 
   alias Ecto.Query.Builder
   alias Ecto.Query.Builder.{Distinct, Dynamic, Filter, From, GroupBy, Join,

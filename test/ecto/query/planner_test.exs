@@ -23,8 +23,7 @@ defmodule Ecto.Query.PlannerTest do
     end
 
     def special() do
-      from comment in __MODULE__,
-        where: comment.special
+      dynamic([row], row.special)
     end
   end
 
@@ -34,14 +33,13 @@ defmodule Ecto.Query.PlannerTest do
     schema "comment_posts" do
       belongs_to :comment, Comment
       belongs_to :post, Post
-      belongs_to :special_comment, Comment.special()
+      belongs_to :special_comment, Comment, where: {Comment, :special, []}
 
       field :deleted, :boolean
     end
 
     def inactive() do
-      from comment_post in __MODULE__,
-        where: comment_post.deleted
+      dynamic([row], row.deleted)
     end
   end
 
@@ -58,9 +56,9 @@ defmodule Ecto.Query.PlannerTest do
       field :links, {:array, Custom.Permalink}
       has_many :comments, Ecto.Query.PlannerTest.Comment
       has_many :extra_comments, Ecto.Query.PlannerTest.Comment
-      has_many :special_comments, Ecto.Query.PlannerTest.Comment.special()
+      has_many :special_comments, Ecto.Query.PlannerTest.Comment, where: {Ecto.Query.PlannerTest.Comment, :special, []}
 
-      many_to_many :shared_special_comments, Comment.special(), join_through: CommentPost.inactive()
+      many_to_many :shared_special_comments, Comment, join_through: CommentPost, where: {Comment, :special, []}, join_through_where: {CommentPost, :inactive, []}
     end
   end
 
