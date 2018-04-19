@@ -38,7 +38,7 @@ defmodule Ecto.Association do
                owner_key: atom,
                field: atom,
                unique: boolean,
-               where: mfa | Ecto.Query.DynamicExpr.t() | Keyword.t()}
+               where: mfa | Ecto.Query.dynamic() | Keyword.t()}
 
   alias Ecto.Query.{BooleanExpr, QueryExpr, FromExpr}
 
