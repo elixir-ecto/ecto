@@ -8,16 +8,21 @@ defmodule Mix.Tasks.Ecto.Migrate do
   Runs the pending migrations for the given repository.
 
   Migrations are expected at "priv/YOUR_REPO/migrations" directory
-  of the current application but it can be configured to be any
-  subdirectory of `priv` by specifying the `:priv` key under the
-  repository configuration.  When building the migrations path,
-  "migrations" is appended to the path specified in the `:priv` key.
-  For example, if `:priv` is set to "priv/YOUR_REPO/my_migrations",
-  the migrations path will be "priv/YOUR_REPO/my_migrations/migrations".
+  of the current application, where "YOUR_REPO" is the last segment
+  in your repository name. For example, the repository `MyApp.Repo`
+  will use "priv/repo/migrations". The repository `Whatever.MyRepo`
+  will use "priv/my_repo/migrations".
 
-  Runs all pending migrations by default. To migrate up to a specific
-  version number, supply `--to version_number`. To migrate a specific
-  number of times, use `--step n`.
+  You can configure a repository to use another directory by specifying
+  the `:priv` key under the repository configuration. The "migrations"
+  part will be automatically appended to it. For instance, to use
+  "priv/custom_repo/migrations":
+
+      config :my_app, MyApp.Repo, priv: "priv/custom_repo"
+
+  This task runs all pending migrations by default. To migrate up to a
+  specific version number, supply `--to version_number`. To migrate a
+  specific number of times, use `--step n`.
 
   The repositories to migrate are the ones specified under the
   `:ecto_repos` option in the current app configuration. However,
