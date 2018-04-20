@@ -64,33 +64,31 @@ defmodule Ecto.Query.Builder.From do
           # dependencies between modules are added
           source = quote do: unquote(schema).__schema__(:source)
           prefix = quote do: unquote(schema).__schema__(:prefix)
-          {1, query(prefix, source, schema, as)}
+          {1, query(prefix, source, schema)}
 
         source when is_binary(source) ->
           # When a binary is used, there is no schema
-          {1, query(nil, source, nil, as)}
+          {1, query(nil, source, nil)}
 
         {source, schema} when is_binary(source) and is_atom(schema) ->
           prefix = quote do: unquote(schema).__schema__(:prefix)
-          {1, query(prefix, source, schema, as)}
+          {1, query(prefix, source, schema)}
 
         other ->
           {nil, other}
       end
 
-    quoted = Builder.apply_query(quoted, __MODULE__, [length(binds)], env)
+    quoted = Builder.apply_query(quoted, __MODULE__, [length(binds), as], env)
     {quoted, binds, count_bind}
   end
 
-  defp query(prefix, source, schema, as) do
-    aliases = if as, do: [{as, 0}], else: []
-
+  defp query(prefix, source, schema) do
     {:%, [], [Ecto.Query,
               {:%{}, [],
                [from: {:%, [], [Ecto.Query.FromExpr,
-                                {:%{}, [], [source: {source, schema}, as: as]}]},
+                                {:%{}, [], [source: {source, schema}]}]},
                 prefix: prefix,
-                aliases: {:%{}, [], aliases}]}]}
+                aliases: {:%{}, [], []}]}]}
   end
 
   defp expand_from({left, right}, env) do
@@ -103,12 +101,33 @@ defmodule Ecto.Query.Builder.From do
   @doc """
   The callback applied by `build/2` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, non_neg_integer) :: Ecto.Query.t
-  def apply(query, binds) do
-    query = Ecto.Queryable.to_query(query)
+  @spec apply(Ecto.Queryable.t, non_neg_integer, atom) :: Ecto.Query.t
+  def apply(query, binds, as) do
+    query =
+      query
+      |> Ecto.Queryable.to_query()
+      |> maybe_apply_as(as)
+
     check_binds(query, binds)
     query
   end
+
+  defp maybe_apply_as(query, nil), do: query
+  defp maybe_apply_as(query, as) do
+    if raw_source?(query) do
+      %{from: from, aliases: aliases} = query
+      %{query | aliases: Map.put(aliases, as, 0), from: %{from | as: as}}
+    else
+      query
+    end
+  end
+
+  defp raw_source?(%{from: %{source: source}}), do: raw_source?(source)
+  defp raw_source?({{{:., _, [schema, :__schema__]}, _, [:source]}, schema}), do: true
+  defp raw_source?(schema) when is_atom(schema), do: true
+  defp raw_source?(source) when is_binary(source), do: true
+  defp raw_source?({source, schema}) when is_binary(source) and is_atom(schema), do: true
+  defp raw_source?(_), do: false
 
   defp check_binds(query, count) do
     if count > 1 and count > Builder.count_binds(query) do

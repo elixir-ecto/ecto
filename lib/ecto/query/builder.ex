@@ -930,11 +930,11 @@ defmodule Ecto.Query.Builder do
 
   # Unescapes an `Ecto.Query` struct.
   defp unescape_query({:%, _, [Query, {:%{}, _, list}]}) do
-    struct(Query, unescape_aliases(list))
+    struct(Query, unescape_from(unescape_aliases(list)))
   end
   defp unescape_query({:%{}, _, list} = ast) do
     if List.keyfind(list, :__struct__, 0) == {:__struct__, Query} do
-      Enum.into(unescape_aliases(list), %{})
+      Enum.into(unescape_from(unescape_aliases(list)), %{})
     else
       ast
     end
@@ -950,18 +950,36 @@ defmodule Ecto.Query.Builder do
     end
   end
 
+  defp unescape_from(query) do
+    case List.keytake(query, :from, 0) do
+      {{:from, {:%, _, [_, {:%{}, _, from}]}}, query} ->
+        [from: struct(Query.FromExpr, from)] ++ query
+      _ ->
+        query
+    end
+  end
+
   # Escapes an `Ecto.Query` and associated structs.
-  defp escape_query(%Query{} = query),
-    do: {:%{}, [], escape_aliases(query)}
+  defp escape_query(%Query{from: from, aliases: aliases} = query) do
+    escaped_from = escape_from(from)
+    escaped_aliases = escape_aliases(aliases)
+
+    query =
+      query
+      |> Map.drop([:from, :aliases])
+      |> Map.to_list()
+
+    {:%{}, [], escaped_from ++ escaped_aliases ++ query}
+  end
   defp escape_query(other),
     do: other
 
-  defp escape_aliases(%{aliases: aliases} = query) do
-    query = Map.to_list(Map.delete(query, :aliases))
+  defp escape_aliases(%{} = aliases), do: [aliases: {:%{}, [], Map.to_list(aliases)}]
+  defp escape_aliases(aliases), do: [aliases: aliases]
 
-    case aliases do
-      %{} -> [aliases: {:%{}, [], Map.to_list(aliases)}] ++ query
-      aliases -> [aliases: aliases] ++ query
-    end
+  defp escape_from(%Query.FromExpr{} = from) do
+    from = from |> Map.from_struct() |> Map.to_list()
+    [from: {:%, [], [Query.FromExpr, {:%{}, [], from}]}]
   end
+  defp escape_from(from), do: [from: from]
 end

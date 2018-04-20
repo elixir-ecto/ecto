@@ -227,6 +227,13 @@ defmodule Ecto.QueryTest do
       assert %{post: 0} == query.aliases
     end
 
+    test "assigns a name to query source in var" do
+      posts_source = "posts"
+      query = from p in posts_source, as: :post
+
+      assert %{post: 0} == query.aliases
+    end
+
     test "assign to source fails when non-atom name passed" do
       message = ~r"`as` must be a compile time atom, got: `\"post\"`"
       assert_raise Ecto.Query.CompileError, message, fn ->
