@@ -118,7 +118,7 @@ defmodule Ecto.Query.Builder.From do
       %{from: from, aliases: aliases} = query
       %{query | aliases: Map.put(aliases, as, 0), from: %{from | as: as}}
     else
-      Builder.error! "can't alias query expression in `from` with `#{inspect as}`"
+      query
     end
   end
 
