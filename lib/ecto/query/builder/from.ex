@@ -57,29 +57,29 @@ defmodule Ecto.Query.Builder.From do
 
     {query, binds} = escape(query, env)
 
-    {count_bind, quoted} =
-      case expand_from(query, env) do
-        schema when is_atom(schema) ->
-          # Get the source at runtime so no unnecessary compile time
-          # dependencies between modules are added
-          source = quote do: unquote(schema).__schema__(:source)
-          prefix = quote do: unquote(schema).__schema__(:prefix)
-          {1, query(prefix, source, schema, as)}
+    case expand_from(query, env) do
+      schema when is_atom(schema) ->
+        # Get the source at runtime so no unnecessary compile time
+        # dependencies between modules are added
+        source = quote do: unquote(schema).__schema__(:source)
+        prefix = quote do: unquote(schema).__schema__(:prefix)
+        {query(prefix, source, schema, as), binds, 1}
 
-        source when is_binary(source) ->
-          # When a binary is used, there is no schema
-          {1, query(nil, source, nil, as)}
+      source when is_binary(source) ->
+        # When a binary is used, there is no schema
+        {query(nil, source, nil, as), binds, 1}
 
-        {source, schema} when is_binary(source) and is_atom(schema) ->
-          prefix = quote do: unquote(schema).__schema__(:prefix)
-          {1, query(prefix, source, schema, as)}
+      {source, schema} when is_binary(source) and is_atom(schema) ->
+        prefix = quote do: unquote(schema).__schema__(:prefix)
+        {query(prefix, source, schema, as), binds, 1}
 
-        other ->
-          {nil, other}
-      end
+      _other ->
+        quoted = quote do
+          Ecto.Query.Builder.From.apply(unquote(query), unquote(length(binds)), unquote(as))
+        end
 
-    quoted = Builder.apply_query(quoted, __MODULE__, [length(binds)], env)
-    {quoted, binds, count_bind}
+        {quoted, binds, nil}
+    end
   end
 
   defp query(prefix, source, schema, as) do
@@ -103,11 +103,20 @@ defmodule Ecto.Query.Builder.From do
   @doc """
   The callback applied by `build/2` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, non_neg_integer) :: Ecto.Query.t
-  def apply(query, binds) do
-    query = Ecto.Queryable.to_query(query)
+  @spec apply(Ecto.Queryable.t, non_neg_integer, atom) :: Ecto.Query.t
+  def apply(query, binds, as) do
+    query =
+      query
+      |> Ecto.Queryable.to_query()
+      |> maybe_apply_as(as)
+
     check_binds(query, binds)
     query
+  end
+
+  defp maybe_apply_as(query, nil), do: query
+  defp maybe_apply_as(%{from: from, aliases: aliases} = query, as) do
+    %{query | aliases: Map.put(aliases, as, 0), from: %{from | as: as}}
   end
 
   defp check_binds(query, count) do

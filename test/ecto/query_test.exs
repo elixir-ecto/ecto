@@ -225,6 +225,23 @@ defmodule Ecto.QueryTest do
       query = from p in "posts", as: :post
 
       assert %{post: 0} == query.aliases
+      assert %{as: :post} = query.from
+    end
+
+    test "assigns a name to query source in var" do
+      posts_source = "posts"
+      query = from p in posts_source, as: :post
+
+      assert %{post: 0} == query.aliases
+      assert %{as: :post} = query.from
+    end
+
+    test "assigns a name to a subquery source" do
+      posts_query = from p in "posts"
+      query = from p in subquery(posts_query), as: :post
+
+      assert %{post: 0} == query.aliases
+      assert %{as: :post} = query.from
     end
 
     test "assign to source fails when non-atom name passed" do
