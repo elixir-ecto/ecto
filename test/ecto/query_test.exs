@@ -234,6 +234,13 @@ defmodule Ecto.QueryTest do
       assert %{post: 0} == query.aliases
     end
 
+    test "assign to source fails when query provided as source" do
+      message = ~r"can't alias query expression in `from` with `:post`"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        from p in subquery("posts"), as: :post
+      end
+    end
+
     test "assign to source fails when non-atom name passed" do
       message = ~r"`as` must be a compile time atom, got: `\"post\"`"
       assert_raise Ecto.Query.CompileError, message, fn ->
