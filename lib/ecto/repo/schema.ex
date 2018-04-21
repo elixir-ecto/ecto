@@ -200,24 +200,17 @@ defmodule Ecto.Repo.Schema do
         {changes, autogen} =
           dump_changes!(:insert, Map.take(changes, fields), schema, extra, dumper, adapter)
 
-        changed_keys =
+        {changeset, changed_fields} =
           case on_conflict do
             :replace_all ->
-              changed_keys = Keyword.keys(changes)
+              lift_values_from_changeset(changeset, struct, fields)
 
-              params_keys =
-                get_params(changeset)
-                |> Map.keys()
-                |> Enum.map(&String.to_atom(&1))
-
-              Enum.uniq(changed_keys ++ params_keys)
-
-            _ ->
-              Keyword.keys(changes)
+           _ ->
+            {changeset, Keyword.keys(changes)}
           end
 
         on_conflict =
-          on_conflict(on_conflict, conflict_target, metadata, changed_keys,
+          on_conflict(on_conflict, conflict_target, metadata, changed_fields,
                       fn -> length(changes) end, adapter)
 
         args = [repo, metadata, changes, on_conflict, return_sources, opts]
@@ -242,7 +235,30 @@ defmodule Ecto.Repo.Schema do
     {:error, put_repo_and_action(changeset, :insert, repo)}
   end
 
-  defp get_params(changeset), do: if is_nil(changeset.params), do: %{}, else: changeset.params
+  defp lift_values_from_changeset(%{changes: changes, types: types} = changeset, struct, fields) do
+    {changes, fields} =
+      Enum.reduce fields, {changes, []}, fn field, {changes, fields} ->
+        case {struct, changes, types} do
+          {_, %{^field => _}, _} ->
+            {changes, [field | fields]}
+
+          {_, _, %{^field => {tag, _}}} when tag in [:assoc, :embed] ->
+            {changes, fields}
+
+          {_, _, %{^field => :id}} ->
+            {changes, fields}
+
+          {%{^field => value}, _, _} ->
+            fields = [field | fields]
+            {Map.put(changes, field, value), fields}
+
+          {_, _, _} ->
+            {changes, fields}
+        end
+      end
+
+    {%{changeset | changes: changes}, fields}
+  end
 
   @doc """
   Implementation for `Ecto.Repo.update/2`.
