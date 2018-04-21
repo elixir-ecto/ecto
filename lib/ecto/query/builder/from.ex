@@ -115,8 +115,15 @@ defmodule Ecto.Query.Builder.From do
   end
 
   defp maybe_apply_as(query, nil), do: query
+  defp maybe_apply_as(%{from: %{as: from_as}}, as) when not is_nil(from_as) do
+    Builder.error! "can't apply alias `#{inspect as}` - source binding has `#{inspect from_as}` alias already"
+  end
   defp maybe_apply_as(%{from: from, aliases: aliases} = query, as) do
-    %{query | aliases: Map.put(aliases, as, 0), from: %{from | as: as}}
+    if Map.has_key?(aliases, as) do
+      Builder.error! "alias `#{inspect as}` already exists"
+    else
+      %{query | aliases: Map.put(aliases, as, 0), from: %{from | as: as}}
+    end
   end
 
   defp check_binds(query, count) do

@@ -273,6 +273,22 @@ defmodule Ecto.QueryTest do
       end
     end
 
+    test "crashes on assigning the same name twice when aliasing source" do
+      message = ~r"alias `:foo` already exists"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        query = from p in "posts", join: b in "blogs", as: :foo
+        from(p in query, as: :foo)
+      end
+    end
+
+    test "crashes on assigning the name to source when it already has one" do
+      message = ~r"can't apply alias `:foo` - source binding has `:post` alias already"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        query = from p in "posts", as: :post
+        from(p in query, as: :foo)
+      end
+    end
+
     test "match on binding by name" do
       query =
         "posts"
