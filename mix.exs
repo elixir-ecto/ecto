@@ -1,4 +1,4 @@
-defmodule Ecto.Mixfile do
+defmodule Ecto.MixProject do
   use Mix.Project
 
   @version "3.0.0-dev"
