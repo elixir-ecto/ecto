@@ -1245,7 +1245,7 @@ defmodule Ecto.Query do
 
   Preload also allows functions to be given. In such cases, the function
   receives the IDs to be fetched and it must return the associated data.
-  This data will then be mapped and sorted:
+  This data will then be mapped and sorted by the relationship key:
 
       comment_preloader = fn post_ids -> fetch_comments_by_post_ids(post_ids) end
       Repo.all from p in Post, preload: [comments: ^comment_preloader]
