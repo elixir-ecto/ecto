@@ -6,7 +6,6 @@ locals_without_parens = [
   field: 1,
   field: 2,
   field: 3,
-  timestamps: 0,
   timestamps: 1,
   belongs_to: 2,
   belongs_to: 3,
