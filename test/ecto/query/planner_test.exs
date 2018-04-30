@@ -17,9 +17,24 @@ defmodule Ecto.Query.PlannerTest do
       field :posted, :naive_datetime
       field :uuid, :binary_id
       field :special, :boolean
+      field :crazy_comment, :string
       belongs_to :post, Ecto.Query.PlannerTest.Post
+      belongs_to :crazy_post, Ecto.Query.PlannerTest.Post, where: {Ecto.Query.PlannerTest.Post, :crazy, []}
+      belongs_to :crazy_post_by_parameter, Ecto.Query.PlannerTest.Post,
+        where: {Ecto.Query.PlannerTest.Post, :crazy_by_parameter, []},
+        foreign_key: :crazy_post_id,
+        define_field: false
+
       has_many :post_comments, through: [:post, :comments]
       has_many :comment_posts, Ecto.Query.PlannerTest.CommentPost
+    end
+
+    def crazy() do
+      dynamic([row], row.crazy_comment == "crazy")
+    end
+
+    def crazy_by_parameter() do
+      dynamic([row], row.crazy_comment == ^"crazy")
     end
 
     def special() do
@@ -54,11 +69,22 @@ defmodule Ecto.Query.PlannerTest do
       field :posted, :naive_datetime
       field :visits, :integer
       field :links, {:array, Custom.Permalink}
+      field :crazy_post, :string
       has_many :comments, Ecto.Query.PlannerTest.Comment
       has_many :extra_comments, Ecto.Query.PlannerTest.Comment
       has_many :special_comments, Ecto.Query.PlannerTest.Comment, where: {Ecto.Query.PlannerTest.Comment, :special, []}
+      many_to_many :crazy_comments, Comment, join_through: CommentPost, where: {Comment, :crazy, []}
+      many_to_many :crazy_comments_by_parameter, Comment, join_through: CommentPost, where: {Comment, :crazy_by_parameter, []}
 
       many_to_many :shared_special_comments, Comment, join_through: CommentPost, where: {Comment, :special, []}, join_through_where: {CommentPost, :inactive, []}
+    end
+
+    def crazy() do
+      Ecto.Query.dynamic([row], row.crazy_post == "crazy")
+    end
+
+    def crazy_by_parameter() do
+      Ecto.Query.dynamic([row], row.crazy_post == ^"crazy")
     end
   end
 
@@ -311,7 +337,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: generates a cache key" do
     {_query, _params, key} = prepare(from(Post, []))
-    assert key == [:all, 0, {"posts", Post, 27727487}]
+    assert key == [:all, 0, {"posts", Post, 11832799}]
 
     query = from(p in Post, select: 1, lock: "foo", where: is_nil(nil), or_where: is_nil(nil),
                             join: c in Comment, preload: :comments)
@@ -320,8 +346,8 @@ defmodule Ecto.Query.PlannerTest do
                    {:lock, "foo"},
                    {:prefix, "foo"},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
-                   {:join, [{:inner, {"comments", Comment, 48293978}, true}]},
-                   {"posts", Post, 27727487},
+                   {:join, [{:inner, {"comments", Comment, 47313942}, true}]},
+                   {"posts", Post, 11832799},
                    {:select, 1}]
   end
 
@@ -357,6 +383,24 @@ defmodule Ecto.Query.PlannerTest do
     assert_raise Ecto.Query.CastError, ~r/value `"1"` in `select` cannot be cast to type Ecto.UUID/, fn ->
       from(Post, []) |> select([p], type(^"1", Ecto.UUID)) |> normalize
     end
+  end
+
+  test "normalize: assoc join with wheres that have tagged types" do
+    {_query, params} =
+      from(post in Post,
+        join: comment in assoc(post, :crazy_comments),
+        join: post in assoc(comment, :crazy_post)) |> normalize_with_params()
+
+    assert(params == [])
+  end
+
+  test "normalize: assoc join with wheres that have parameters" do
+    {_query, params} =
+      from(post in Post,
+        join: comment in assoc(post, :crazy_comments_by_parameter),
+        join: post in assoc(comment, :crazy_post_by_parameter)) |> normalize_with_params()
+
+    assert(params == ["crazy", "crazy"])
   end
 
   test "normalize: dumps in query expressions" do
@@ -430,16 +474,16 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.expr ==
              {:&, [], [0]}
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0)
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0)
 
     query = from(Post, []) |> select([p], {p, p.title}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0) ++
            [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query = from(Post, []) |> select([p], {p.title, p}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0) ++
            [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query =
@@ -449,8 +493,8 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, _], {p.title, p})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
-           select_fields([:id, :text, :posted, :uuid, :special, :post_id], 1) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0) ++
+           select_fields([:id, :text, :posted, :uuid, :special, :crazy_comment, :post_id, :crazy_post_id], 1) ++
            [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
   end
 
@@ -474,7 +518,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, struct(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0) ++
            select_fields([:id, :text], 1)
   end
 
@@ -520,7 +564,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, map(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0) ++
            select_fields([:id, :text], 1)
   end
 

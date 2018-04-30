@@ -442,16 +442,18 @@ defmodule Ecto.Query.Planner do
   end
 
   defp rewrite_join(%{on: on, ix: join_ix} = join, qual, ix, last_ix, source_ix, inc_ix) do
-    on = update_in on.expr, fn expr ->
-      Macro.prewalk expr, fn
+    expr = Macro.prewalk on.expr, fn
         {:&, meta, [join_ix]} ->
           {:&, meta, [rewrite_ix(join_ix, ix, last_ix, source_ix, inc_ix)]}
+        expr = %Ecto.Query.Tagged{type: {type_ix, type}} when is_integer(type_ix) ->
+          %{expr | type: {rewrite_ix(type_ix, ix, last_ix, source_ix, inc_ix), type}}
         other ->
           other
       end
-    end
 
-    %{join | on: on, qual: qual,
+    params = Enum.map(on.params, &rewrite_param_ix(&1, ix, last_ix, source_ix, inc_ix))
+
+    %{join | on: %{on | expr: expr, params: params}, qual: qual,
              ix: rewrite_ix(join_ix, ix, last_ix, source_ix, inc_ix)}
   end
 
@@ -466,6 +468,12 @@ defmodule Ecto.Query.Planner do
 
   # All others need to be incremented by the offset sources
   defp rewrite_ix(join_ix, _ix, _last_ix, _source_ix, inc_ix), do: join_ix + inc_ix
+
+  defp rewrite_param_ix({value, {type_ix, field}}, ix, last_ix, source_ix, inc_ix) when is_integer(type_ix) do
+    {value, {rewrite_ix(type_ix, ix, last_ix, source_ix, inc_ix), field}}
+  end
+
+  defp rewrite_param_ix(param, _, _, _, _), do: param
 
   defp schema_for_association_join!(query, join, source) do
     case source do
