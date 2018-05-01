@@ -327,7 +327,7 @@ defmodule Ecto.Query.Builder do
   # Vars are not allowed
   def escape({name, _, context} = var, _type, _params_acc, _vars, _env) when is_atom(name) and is_atom(context) do
     error! "variable `#{Macro.to_string(var)}` is not a valid query expression. " <>
-           "IF you wanted to inject a variable, you have to explicitly interpolate it " <>
+           "If you wanted to inject a variable, you have to explicitly interpolate it " <>
            "with ^. If you wanted to refer to a field, use the source.field syntax"
   end
 
