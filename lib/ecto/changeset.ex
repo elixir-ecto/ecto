@@ -573,17 +573,9 @@ defmodule Ecto.Changeset do
   This function should be used when working with the entire association at
   once (and not a single element of a many-style association) and using data
   external to the application.
-
-  When updating the data, this function requires the association to have been
-  preloaded in the changeset struct. Missing data will
-  invoke the `:on_replace` behaviour defined on the association.
-  Preloading is not necessary for newly built structs.
-
-  The parameters for the given association will be retrieved
-  from `changeset.params`. Those parameters are expected to be
-  a map with attributes, similar to the ones passed to `cast/4`.
-  Once parameters are retrieved, `cast_assoc/3` will match those
-  parameters with the associations already in the changeset record.
+  
+  `cast_assoc/3` works matching the records extracted form the database (preload)
+  and compares it with the parameters provided form an external source.
 
   For example, imagine a user has many addresses relationship where
   post data is sent as follows
@@ -595,28 +587,40 @@ defmodule Ecto.Changeset do
 
   and then
 
-      user
-      |> Repo.preload(:addresses)
+      User
+      |> Repo.get!(id)
+      |> Repo.preload(:addresses) # Only required when updating data
       |> Ecto.Changeset.cast(params, [])
-      |> Ecto.Changeset.cast_assoc(:addresses)
+      |> Ecto.Changeset.cast_assoc(:addresses, with: &MyApp.Address.changeset/2)
 
-  Once `cast_assoc/3` is called, Ecto will compare those parameters
-  with the addresses already associated with the user and act as follows:
+  The parameters for the given association will be retrieved
+  from `changeset.params`. Those parameters are expected to be
+  a map with attributes, similar to the ones passed to `cast/4`.
+  Once parameters are retrieved, `cast_assoc/3` will match those
+  parameters with the associations already in the changeset record.
+
+  Once `cast_assoc/3` is called, Ecto will compare each parameter
+  with the user's already preloaded addresses and act as follows:
 
     * If the parameter does not contain an ID, the parameter data
-      will be passed to `changeset/2` with a new struct and become
-      an insert operation
+      will be passed to `MyApp.Address.changeset/2` with a new struct
+      and become an insert operation
     * If the parameter contains an ID and there is no associated child
-      with such ID, the parameter data will be passed to `changeset/2`
-      with a new struct and become an insert operation
+      with such ID, the parameter data will be passed to
+      `MyApp.Address.changeset/2` with a new struct and become an insert
+      operation
     * If the parameter contains an ID and there is an associated child
-      with such ID, the parameter data will be passed to `changeset/2`
-      with the existing struct and become an update operation
+      with such ID, the parameter data will be passed to
+      `MyApp.Address.changeset/2` with the existing struct and become an
+      update operation
     * If there is an associated child with an ID and its ID is not given
       as parameter, the `:on_replace` callback for that association will
       be invoked (see the "On replace" section on the module documentation)
 
-  Every time the `changeset/2` function is invoked, it must return a changeset.
+  Every time the `MyApp.Address.changeset/2` function is invoked, it must
+  return a changeset. This changeset will be applied to your Repo with
+  the propper action accordingly.
+  
   Note developers are allowed to explicitly set the `:action` field of a
   changeset to instruct Ecto how to act in certain situations. Let's suppose
   that, if one of the associations has only empty fields, you want to ignore
