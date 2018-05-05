@@ -1282,7 +1282,8 @@ defmodule Ecto.Changeset do
       iex> {:error, changeset} = apply_action(changeset, :update)
       %Ecto.Changeset{action: :update}
   """
-  @spec apply_action(t, action) :: {:ok, Ecto.Schema.t | data} | {:error, t}
+  @spec apply_action(t, :insert | :update | :delete | :replace) ::
+          {:ok, Ecto.Schema.t() | data} | {:error, t}
   def apply_action(%Changeset{} = changeset, action) when action in @actions do
     if changeset.valid? do
       {:ok, apply_changes(changeset)}
