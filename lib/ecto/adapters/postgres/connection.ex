@@ -413,6 +413,14 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp operator_to_boolean(:and), do: " AND "
     defp operator_to_boolean(:or), do: " OR "
+    
+    # Don't wrap json functions in parentheses
+    defp paren_expr(expr = {:fragment, _, [{:raw, raw_expr} | _] }, sources, query) do
+      cond do
+        String.match?(raw_expr, ~r/^\s*jsonb?/i) -> [expr(expr, sources, query)]
+        true -> [?(, expr(expr, sources, query), ?)]
+      end
+    end
 
     defp paren_expr(expr, sources, query) do
       [?(, expr(expr, sources, query), ?)]

@@ -662,7 +662,6 @@ defmodule Ecto.Adapters.PostgresTest do
   end
 
   test "association join has_many" do
-
     query = Schema |> join(:inner, [p], c in assoc(p, :comments)) |> select([], true) |> normalize
     assert all(query) ==
            "SELECT TRUE FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON s1.\"z\" = s0.\"x\""
