@@ -415,7 +415,7 @@ if Code.ensure_loaded?(Postgrex) do
     defp operator_to_boolean(:or), do: " OR "
 
     defp parens_for_select([first_expr | _] = expr) do
-      if String.match?(first_expr, ~r/SELECT/i) do
+      if is_binary(first_expr) and String.starts_with?(first_expr, ["SELECT", "select"]) do
         [?(, expr, ?)]
       else
         expr
