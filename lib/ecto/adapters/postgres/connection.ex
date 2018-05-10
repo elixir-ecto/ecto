@@ -804,26 +804,26 @@ if Code.ensure_loaded?(Postgrex) do
       ["CONSTRAINT ", quote_name(constraint.name), " EXCLUDE USING ", exclude]
     end
 
-    defp default_expr({:ok, nil}, _type),
-      do: " DEFAULT NULL"
-    defp default_expr({:ok, []}, type),
-      do: [" DEFAULT ARRAY[]::", ecto_to_db(type)]
-    defp default_expr({:ok, literal}, _type) when is_binary(literal),
-      do: [" DEFAULT '", escape_string(literal), ?']
-    defp default_expr({:ok, literal}, _type) when is_number(literal) or is_boolean(literal),
-      do: [" DEFAULT ", to_string(literal)]
-    defp default_expr({:ok, %{} = map}, :map) do
+    defp default_expr({:ok, nil}, _type),    do: " DEFAULT NULL"
+    defp default_expr({:ok, literal}, type), do: [" DEFAULT ", default_type(literal, type)]
+    defp default_expr(:error, _),            do: []
+
+    defp default_type(list, {:array, inner} = type) when is_list(list) do
+      ["ARRAY[",  Enum.map(list, &default_type(&1, inner)) |> Enum.intersperse(?,), "]::", ecto_to_db(type)]
+    end
+    defp default_type(literal, _type) when is_binary(literal),  do: [?', escape_string(literal), ?']
+    defp default_type(literal, _type) when is_number(literal),  do: to_string(literal)
+    defp default_type(literal, _type) when is_boolean(literal), do: to_string(literal)
+    defp default_type(%{} = map, :map) do
       library = Application.get_env(:postgrex, :json_library, Jason)
       default = IO.iodata_to_binary(library.encode_to_iodata!(map))
-      [" DEFAULT ", single_quote(default)]
+      [single_quote(default)]
     end
-    defp default_expr({:ok, {:fragment, expr}}, _type),
-      do: [" DEFAULT ", expr]
-    defp default_expr({:ok, expr}, type),
+    defp default_type({:fragment, expr}, _type),
+      do: [expr]
+    defp default_type(expr, type),
       do: raise(ArgumentError, "unknown default `#{inspect expr}` for type `#{inspect type}`. " <>
-                               ":default may be a string, number, boolean, empty list, map (when type is Map), or a fragment(...)")
-    defp default_expr(:error, _),
-      do: []
+                               ":default may be a string, number, boolean, list of strings, list of integers, map (when type is Map), or a fragment(...)")
 
     defp index_expr(literal) when is_binary(literal),
       do: literal
