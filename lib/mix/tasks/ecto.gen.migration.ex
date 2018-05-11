@@ -49,7 +49,7 @@ defmodule Mix.Tasks.Ecto.Gen.Migration do
           path = Path.join(source_repo_priv(repo), "migrations")
           base_name = "#{underscore(name)}.exs"
           file = Path.join(path, "#{timestamp()}_#{base_name}")
-          create_directory path
+          unless File.dir?(path), do: create_directory path
 
           fuzzy_path = Path.join(path, "*_#{base_name}")
           if Path.wildcard(fuzzy_path) != [] do
