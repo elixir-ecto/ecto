@@ -89,6 +89,27 @@ defmodule Ecto.Integration.JoinsTest do
     assert [{^p2, ^c1}] = TestRepo.all(query)
   end
 
+  test "joins with dynamic in :on" do
+    p = TestRepo.insert!(%Post{title: "1"})
+    c = TestRepo.insert!(%Permalink{url: "1", post_id: p.id})
+
+    join_on = dynamic([p, ..., c], c.id == ^c.id)
+
+    query =
+      from(p in Post, join: c in Permalink, on: ^join_on)
+      |> select([p, c], {p, c})
+
+    assert [{^p, ^c}] = TestRepo.all(query)
+
+    join_on = dynamic([p, permalink: c], c.id == ^c.id)
+
+    query =
+      from(p in Post, join: c in Permalink, as: :permalink, on: ^join_on)
+      |> select([p, c], {p, c})
+
+    assert [{^p, ^c}] = TestRepo.all(query)
+  end
+
   @tag :cross_join
   test "cross joins with missing entries" do
     p1 = TestRepo.insert!(%Post{title: "1"})

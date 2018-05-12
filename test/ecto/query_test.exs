@@ -208,6 +208,15 @@ defmodule Ecto.QueryTest do
               {{:., [], [{:&, [], [1]}, :id]}, [], []}
              ]}
     end
+
+    test "dynamic in :on takes new binding when ... is used" do
+      join_on = dynamic([p, ..., c], c.text == "Test Comment")
+
+      query = from p in "posts", join: c in "comments", on: ^join_on
+
+      assert inspect(query) ==
+        ~s[#Ecto.Query<from p in \"posts\", join: c in \"comments\", on: c.text == \"Test Comment\">]
+    end
   end
 
   describe "named bindings" do
@@ -336,6 +345,15 @@ defmodule Ecto.QueryTest do
         |> where([{:comment, c}, p], c.id == 0)
       )
       end
+    end
+
+    test "dynamic in :on takes new binding when alias is used" do
+      join_on = dynamic([p, comment: c], c.text == "Test Comment")
+
+      query = from p in "posts", join: c in "comments", as: :comment, on: ^join_on
+
+      assert inspect(query) ==
+        ~s[#Ecto.Query<from p in \"posts\", join: c in \"comments\", as: :comment, on: c.text == \"Test Comment\">]
     end
   end
 

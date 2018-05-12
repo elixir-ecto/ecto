@@ -216,13 +216,15 @@ defmodule Ecto.Query.Builder.Join do
   Called at runtime to build a join.
   """
   def join!(query, expr, as, count_bind, join_qual, join_source, join_assoc, join_params, file, line) do
-    {on_expr, on_params, on_file, on_line} =
-      Ecto.Query.Builder.Filter.filter!(:on, query, expr, count_bind, file, line)
-
+    # join without expanded :on is built and applied to the query, so that expansion of dynamic
+    # :on accounts for the new binding
     join = %JoinExpr{qual: join_qual, source: join_source, assoc: join_assoc, as: as,
-                     file: file, line: line, params: join_params,
-                     on: %QueryExpr{expr: on_expr, params: on_params,
-                                    line: on_line, file: on_file}}
+                     file: file, line: line, params: join_params, on: %QueryExpr{}}
+
+    {on_expr, on_params, on_file, on_line} =
+      Ecto.Query.Builder.Filter.filter!(:on, apply(query, join, as, count_bind), expr, count_bind, file, line)
+
+    join = %{join | on: %QueryExpr{expr: on_expr, params: on_params, line: on_line, file: on_file}}
 
     apply(query, join, as, count_bind)
   end
