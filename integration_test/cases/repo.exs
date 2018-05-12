@@ -1454,6 +1454,19 @@ defmodule Ecto.Integration.RepoTest do
       assert TestRepo.all(from p in Post, select: {p.id, p.title, p.text}) ==
              [{inserted.id, "updated", "updated"}]
       assert TestRepo.all(from p in Post, select: count(p.id)) == [1]
+
+      changeset = Post.changeset(%Post{}, %{title: nil, text: "text", uuid: post.uuid})
+      post = TestRepo.insert!(changeset, on_conflict: :replace_all, conflict_target: :uuid)
+
+      db_post = TestRepo.get_by!(Post, uuid: post.uuid)
+
+      assert post.id == inserted.id
+      assert is_nil(post.title)
+      assert post.text == "text"
+
+      assert db_post.id == inserted.id
+      assert is_nil(db_post.title)
+      assert db_post.text == "text"
     end
   end
 
