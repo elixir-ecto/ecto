@@ -414,6 +414,14 @@ if Code.ensure_loaded?(Postgrex) do
     defp operator_to_boolean(:and), do: " AND "
     defp operator_to_boolean(:or), do: " OR "
 
+    defp parens_for_select([first_expr | _] = expr) do
+      if is_binary(first_expr) and String.starts_with?(first_expr, ["SELECT", "select"]) do
+        [?(, expr, ?)]
+      else
+        expr
+      end
+    end
+
     defp paren_expr(expr, sources, query) do
       [?(, expr(expr, sources, query), ?)]
     end
@@ -458,7 +466,7 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     defp expr(%Ecto.SubQuery{query: query}, _sources, _query) do
-      all(query)
+      [?(, all(query), ?)]
     end
 
     defp expr({:fragment, _, [kw]}, _sources, query) when is_list(kw) or tuple_size(kw) == 3 do
@@ -470,6 +478,7 @@ if Code.ensure_loaded?(Postgrex) do
         {:raw, part}  -> part
         {:expr, expr} -> expr(expr, sources, query)
       end)
+      |> parens_for_select
     end
 
     defp expr({:datetime_add, _, [datetime, count, interval]}, sources, query) do
@@ -902,7 +911,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp get_source(query, sources, ix, source) do
       {expr, name, _schema} = elem(sources, ix)
-      {expr || paren_expr(source, sources, query), name}
+      {expr || expr(source, sources, query), name}
     end
 
     defp quote_qualified_name(name, sources, ix) do

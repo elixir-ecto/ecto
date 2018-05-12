@@ -605,6 +605,12 @@ defmodule Ecto.Adapters.PostgresTest do
            "SELECT s0.\"id\", s1.\"id\" FROM \"schema\" AS s0 CROSS JOIN \"schema2\" AS s1"
   end
 
+  test "cross join with fragment" do
+    query = from(p in Schema, cross_join: fragment("jsonb_each(?)", p.j), select: {p.id}) |> normalize()
+    assert all(query) ==
+           ~s{SELECT s0."id" FROM "schema" AS s0 CROSS JOIN jsonb_each(s0."j") AS f1}
+  end
+
   test "join produces correct bindings" do
     query = from(p in Schema, join: c in Schema2, on: true)
     query = from(p in query, join: c in Schema2, on: true, select: {p.id, c.id})
