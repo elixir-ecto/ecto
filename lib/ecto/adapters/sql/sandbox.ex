@@ -80,7 +80,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   The test above will fail with an error similar to:
 
-      ** (RuntimeError) cannot find ownership process for #PID<0.35.0>
+      ** (DBConnection.OwnershipError) cannot find ownership process for #PID<0.35.0>
 
   That's because the `setup` block is checking out the connection only
   for the test process. Once we spawn a Task, there is no connection
