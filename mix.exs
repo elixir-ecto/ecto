@@ -94,7 +94,8 @@ defmodule Ecto.Mixfile do
       source_url: "https://github.com/elixir-ecto/ecto",
       extras: [
         "guides/Getting Started.md",
-        "guides/Associations.md"
+        "guides/Associations.md",
+        "guides/Testing with Ecto.md",
       ],
       groups_for_modules: [
         # Ecto,
