@@ -94,9 +94,9 @@ defmodule Ecto.Multi do
         assert inspect(query) == "#Ecto.Query<from a in Session>"
       end
 
-  It is worth noting that the name of each operation does not have to be an
-  atom. This can be particularly useful when you wish to update a collection of
-  changesets at once, and track their errors individually:
+  The name of each operation does not have to be an atom. This can be particularly
+  useful when you wish to update a collection of changesets at once, and track their
+  errors individually:
 
       accounts = [%Account{id: 1}, %Account{id: 2}]
 
