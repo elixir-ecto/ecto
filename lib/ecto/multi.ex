@@ -93,6 +93,20 @@ defmodule Ecto.Multi do
         assert log_changeset.valid?
         assert inspect(query) == "#Ecto.Query<from a in Session>"
       end
+
+  The name of each operation does not have to be an atom. This can be particularly
+  useful when you wish to update a collection of changesets at once, and track their
+  errors individually:
+
+      accounts = [%Account{id: 1}, %Account{id: 2}]
+
+      Enum.reduce(accounts, Multi.new(), fn account, multi ->
+        Multi.update(
+          multi,
+          {:account, account.id},
+          Account.password_reset_changeset(account, params)
+        )
+      end)
   """
 
   alias __MODULE__
