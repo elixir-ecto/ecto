@@ -286,6 +286,12 @@ defmodule Ecto.Adapters.SQL.Sandbox do
         System.unique_integer [:positive]
       end
 
+  In fact, avoiding unique emails like above can also have a positive
+  impact on the test suite performance, as it reduces contention and
+  wait between concurrent tests. We have heard reports where using
+  dynamic values for uniquely indexed columns, as we did for e-mail
+  above, made a test suite run between 2x to 3x faster.
+
   Deadlocks may happen in other circumstances. If you believe you
   are hitting a scenario that has not been described here, please
   report an issue so we can improve our examples. As a last resort,
