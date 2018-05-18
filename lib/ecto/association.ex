@@ -2,7 +2,7 @@ import Ecto.Query, only: [from: 2, join: 4, distinct: 3]
 
 defmodule Ecto.Association.NotLoaded do
   @moduledoc """
-  Struct returned by one to one associations when they are not loaded.
+  Struct returned by associations when they are not loaded.
 
   The fields are:
 
