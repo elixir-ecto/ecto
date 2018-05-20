@@ -238,6 +238,9 @@ defmodule Ecto.Query.Builder.Select do
 
     expr =
       case {classify_merge(old_expr, old_take), classify_merge(new_expr, new_take)} do
+        {_, _} when old_expr == new_expr ->
+          new_expr
+
         {{:source, meta, ix}, {:source, _, ix}} ->
           {:&, meta, [ix]}
 
@@ -303,8 +306,8 @@ defmodule Ecto.Query.Builder.Select do
   defp map_compile_merge(meta, [_ | _] = old_fields, _, [_ | _] = new_fields, _),
     do: {:%{}, meta, Keyword.merge(old_fields, new_fields)}
 
-  defp map_compile_merge(_meta, _, expr, _, expr), do: expr
-  defp map_compile_merge(meta, _, old_expr, _, new_expr), do: {:merge, meta, [old_expr, new_expr]}
+  defp map_compile_merge(meta, _, old_expr, _, new_expr),
+    do: {:merge, meta, [old_expr, new_expr]}
 
   defp merge_argument_to_error({:&, _, [0]}, %{from: %{source: {source, alias}}}) do
     "source #{inspect(source || alias)}"
@@ -346,7 +349,7 @@ defmodule Ecto.Query.Builder.Select do
   defp merge_take_kind(_, :any, kind), do: kind
   defp merge_take_kind(_, kind, :any), do: kind
   defp merge_take_kind(binding, old, new) do
-    Builder.error! "cannot apply select_merge because the binding at position #{binding} " <>
+    Builder.error! "cannot select_merge because the binding at position #{binding} " <>
                    "was previously specified as a `#{old}` and later as `#{new}`"
   end
 end

@@ -47,7 +47,7 @@ defmodule Ecto.Query.Builder.SelectTest do
              escape(quote do {map(x, [:foo, :bar]), map(x, [baz: :bat])} end, [x: 0], __ENV__)
 
       assert_raise Ecto.Query.CompileError,
-                   ~r"cannot apply select_merge because the binding at position 0",
+                   ~r"cannot select_merge because the binding at position 0",
                    fn ->
         escape(quote do {map(x, [:foo, :bar]), struct(x, [baz: :bat])} end, [x: 0], __ENV__)
       end
@@ -155,7 +155,7 @@ defmodule Ecto.Query.Builder.SelectTest do
       _ = from p in "posts", select: p, select_merge: struct(p, [:title]), select_merge: struct(p, [:body])
 
       assert_raise Ecto.Query.CompileError,
-                   ~r"cannot apply select_merge because the binding at position 0",
+                   ~r"cannot select_merge because the binding at position 0",
                    fn ->
         from p in "posts", select: map(p, [:title]), select_merge: struct(p, [:title])
       end
