@@ -51,7 +51,7 @@ defmodule Ecto.Repo.Preloader do
   rescue
     e ->
       # Reraise errors so we ignore the preload inner stacktrace
-      reraise e
+      filter_and_reraise e, System.stacktrace
   end
 
   ## Preloading
@@ -400,7 +400,7 @@ defmodule Ecto.Repo.Preloader do
     end
   end
 
-  defp reraise(exception) do
-    reraise exception, Enum.reject(System.stacktrace, &match?({__MODULE__, _, _, _}, &1))
+  defp filter_and_reraise(exception, stacktrace) do
+    reraise exception, Enum.reject(stacktrace, &match?({__MODULE__, _, _, _}, &1))
   end
 end

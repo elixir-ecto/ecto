@@ -211,7 +211,7 @@ defmodule Ecto.Query.Planner do
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
-      reraise e
+      filter_and_reraise e, System.stacktrace
   end
 
   @doc """
@@ -706,7 +706,7 @@ defmodule Ecto.Query.Planner do
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
-      reraise e
+      filter_and_reraise e, System.stacktrace
   end
 
   defp normalize_query(query, operation, adapter, counter) do
@@ -1274,8 +1274,8 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp reraise(exception) do
-    reraise exception, Enum.reject(System.stacktrace, &match?({__MODULE__, _, _, _}, &1))
+  defp filter_and_reraise(exception, stacktrace) do
+    reraise exception, Enum.reject(stacktrace, &match?({__MODULE__, _, _, _}, &1))
   end
 
   defp error!(query, message) do
