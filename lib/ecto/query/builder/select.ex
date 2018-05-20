@@ -237,30 +237,30 @@ defmodule Ecto.Query.Builder.Select do
     %{expr: new_expr, params: new_params, take: new_take} = new_select
 
     expr =
-      case {old_expr, new_expr} do
-        {{:&, _, [ix]} = source, {:&, _, [ix]}} when is_integer(ix) ->
-          source
+      case {classify_merge(old_expr, old_take), classify_merge(new_expr, new_take)} do
+        {{:source, meta, ix}, {:source, _, ix}} ->
+          {:&, meta, [ix]}
 
-        {{:%{}, meta, old_fields}, {:%{}, _, new_fields}} when
-            (old_fields == [] or tuple_size(hd(old_fields)) == 2) and
-            (new_fields == [] or tuple_size(hd(new_fields)) == 2) and
-            old_params == [] ->
-          {:%{}, meta, Keyword.merge(old_fields, new_fields)}
-
-        {{:%, meta, [name, {:%{}, meta, old_fields}]}, {:%{}, _, new_fields}} when
-            (old_fields == [] or tuple_size(hd(old_fields)) == 2) and
-            (new_fields == [] or tuple_size(hd(new_fields)) == 2) and
-            old_params == [] ->
+        {{:struct, meta, name, old_fields}, {:map, _, [_ | _] = new_fields}} when old_params == [] ->
           {:%, meta, [name, {:%{}, meta, Keyword.merge(old_fields, new_fields)}]}
 
-        {_, {:%{}, _, _}} ->
+        {{:map, meta, old_fields}, {:map, _, new_fields}} when old_params == [] ->
+          map_compile_merge(meta, old_fields, old_expr, new_fields, new_expr)
+
+        {_, {:map, _, _}} ->
           {:merge, [], [old_expr, new_expr]}
 
         {_, _} ->
-          raise Ecto.QueryError,
-               query: query,
-               message: "cannot select_merge #{merge_argument_to_error(new_expr)} into " <>
-                          "#{merge_argument_to_error(old_expr)}, those select expressions are incompatible"
+          message = """
+          cannot select_merge #{merge_argument_to_error(new_expr, query)} into \
+          #{merge_argument_to_error(old_expr, query)}, those select expressions are incompatible. \
+          You can only select_merge:
+
+            * a map into another map, struct or source
+            * a source (such as post) into the same source
+          """
+
+          raise Ecto.QueryError, query: query, message: message
       end
 
     select = %{
@@ -272,11 +272,49 @@ defmodule Ecto.Query.Builder.Select do
     %{query | select: select}
   end
 
-  defp merge_argument_to_error({:&, _, [ix]}) do
-    "source at position #{ix}"
+  defp classify_merge({:&, meta, [ix]}, take) when is_integer(ix) do
+    case take do
+      %{^ix => {:map, _}} -> {:map, meta, :runtime}
+      _ -> {:source, meta, ix}
+    end
   end
 
-  defp merge_argument_to_error(other) do
+  defp classify_merge({:%, meta, [name, {:%{}, _, fields}]}, _take)
+       when fields == [] or tuple_size(hd(fields)) == 2 do
+    {:struct, meta, name, fields}
+  end
+
+  defp classify_merge({:%{}, meta, fields}, _take)
+       when fields == [] or tuple_size(hd(fields)) == 2 do
+    {:map, meta, fields}
+  end
+
+  defp classify_merge({:%{}, meta, _}, _take) do
+    {:map, meta, :runtime}
+  end
+
+  defp classify_merge(_, _take) do
+    :error
+  end
+
+  defp map_compile_merge(_meta, [], _old_expr, _new_fields, new_expr), do: new_expr
+  defp map_compile_merge(_meta, _old_fields, old_expr, [], _new_expr), do: old_expr
+
+  defp map_compile_merge(meta, [_ | _] = old_fields, _, [_ | _] = new_fields, _),
+    do: {:%{}, meta, Keyword.merge(old_fields, new_fields)}
+
+  defp map_compile_merge(_meta, _, expr, _, expr), do: expr
+  defp map_compile_merge(meta, _, old_expr, _, new_expr), do: {:merge, meta, [old_expr, new_expr]}
+
+  defp merge_argument_to_error({:&, _, [0]}, %{from: %{source: {source, alias}}}) do
+    "source #{inspect(source || alias)}"
+  end
+
+  defp merge_argument_to_error({:&, _, [ix]}, _query) do
+    "join (at position #{ix})"
+  end
+
+  defp merge_argument_to_error(other, _query) do
     Macro.to_string(other)
   end
 
