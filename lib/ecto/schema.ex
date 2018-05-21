@@ -1755,16 +1755,20 @@ defmodule Ecto.Schema do
 
   @doc false
   def __field__(mod, name, type, opts) do
+    check_field_type!(name, type, opts)
+    define_field(mod, name, type, opts)
+  end
+
+  defp define_field(mod, name, type, opts) do
     virtual? = opts[:virtual] || false
-    check_field_type!(name, type, virtual?)
     pk? = opts[:primary_key] || false
 
-    default = default_for_type(type, opts)
     Module.put_attribute(mod, :changeset_fields, {name, type})
-    put_struct_field(mod, name, default)
+    put_struct_field(mod, name, Keyword.get(opts, :default))
 
     unless virtual? do
       source = opts[:source] || Module.get_attribute(mod, :field_source_mapper).(name)
+
       if name != source do
         Module.put_attribute(mod, :ecto_field_sources, {name, source})
       end
@@ -1996,7 +2000,7 @@ defmodule Ecto.Schema do
     opts   = [cardinality: cardinality, related: schema] ++ opts
     struct = Ecto.Embedded.struct(mod, name, opts)
 
-    __field__(mod, name, {:embed, struct}, opts)
+    define_field(mod, name, {:embed, struct}, opts)
     Module.put_attribute(mod, :ecto_embeds, {name, struct})
   end
 
@@ -2012,21 +2016,24 @@ defmodule Ecto.Schema do
 
   defp check_options!(opts, valid, fun_arity) do
     case Enum.find(opts, fn {k, _} -> not(k in valid) end) do
-      {k, _} ->
-        raise ArgumentError, "invalid option #{inspect k} for #{fun_arity}"
-      nil ->
-        :ok
+      {k, _} -> raise ArgumentError, "invalid option #{inspect k} for #{fun_arity}"
+      nil -> :ok
     end
   end
 
-  defp check_field_type!(name, type, virtual?) do
-    cond do
-      type == :datetime ->
-        raise ArgumentError, "invalid type :datetime for field #{inspect name}. " <>
-                             "You probably meant to choose one between :naive_datetime " <>
-                             "(no time zone information) or :utc_datetime (time zone is set to UTC)"
+  defp check_field_type!(name, :datetime, _opts) do
+    raise ArgumentError, "invalid type :datetime for field #{inspect name}. " <>
+                           "You probably meant to choose one between :naive_datetime " <>
+                           "(no time zone information) or :utc_datetime (time zone is set to UTC)"
+  end
 
-      type == :any and not virtual? ->
+  defp check_field_type!(name, {:embed, _}, _opts) do
+    raise ArgumentError, "cannot declare field #{inspect name} as embed. Use embeds_one/many instead"
+  end
+
+  defp check_field_type!(name, type, opts) do
+    cond do
+      type == :any and !opts[:virtual] ->
         raise ArgumentError, "only virtual fields can have type :any, " <>
                              "invalid type for field #{inspect name}"
 
@@ -2084,10 +2091,6 @@ defmodule Ecto.Schema do
   defp autogenerate_id(type) do
     id = if Ecto.Type.primitive?(type), do: type, else: type.type
     if id in [:id, :binary_id], do: id, else: nil
-  end
-
-  defp default_for_type(_, opts) do
-    Keyword.get(opts, :default)
   end
 
   defp expand_alias({:__aliases__, _, _} = ast, env),
