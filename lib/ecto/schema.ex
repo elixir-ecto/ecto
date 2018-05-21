@@ -440,71 +440,95 @@ defmodule Ecto.Schema do
   end
 
   defp schema(source, meta?, type, block) do
+    prelude =
+      quote do
+        @after_compile Ecto.Schema
+        Module.register_attribute(__MODULE__, :changeset_fields, accumulate: true)
+        Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
+
+        meta?  = unquote(meta?)
+        source = unquote(source)
+        prefix = @schema_prefix
+
+        # Those module attributes are accessed only dynamically
+        # so we explicitly reference them here to avoid warnings.
+        _ = @foreign_key_type
+        _ = @timestamps_opts
+
+        if meta? do
+          unless is_binary(source) do
+            raise ArgumentError, "schema source must be a string, got: #{inspect source}"
+          end
+
+          meta = %Metadata{state: :built, source: source, prefix: prefix, schema: __MODULE__}
+          Module.put_attribute(__MODULE__, :struct_fields, {:__meta__, meta})
+        end
+
+        if @primary_key == nil do
+          @primary_key {:id, unquote(type), autogenerate: true}
+        end
+
+        primary_key_fields =
+          case @primary_key do
+            false ->
+              []
+            {name, type, opts} ->
+              Ecto.Schema.__field__(__MODULE__, name, type, [primary_key: true] ++ opts)
+              [name]
+            other ->
+              raise ArgumentError, "@primary_key must be false or {name, type, opts}"
+          end
+
+        try do
+          import Ecto.Schema
+          unquote(block)
+        after
+          :ok
+        end
+      end
+
+    postlude =
+      quote unquote: false do
+        primary_key_fields = @ecto_primary_keys |> Enum.reverse
+        autogenerate = @ecto_autogenerate |> Enum.reverse
+        autoupdate = @ecto_autoupdate |> Enum.reverse
+        fields = @ecto_fields |> Enum.reverse
+        field_sources = @ecto_field_sources |> Enum.reverse
+        assocs = @ecto_assocs |> Enum.reverse
+        embeds = @ecto_embeds |> Enum.reverse
+
+        defstruct @struct_fields
+
+        def __changeset__ do
+          %{unquote_splicing(Macro.escape(@changeset_fields))}
+        end
+
+        def __schema__(:prefix), do: unquote(prefix)
+        def __schema__(:source), do: unquote(source)
+        def __schema__(:fields), do: unquote(Enum.map(fields, &elem(&1, 0)))
+        def __schema__(:primary_key), do: unquote(primary_key_fields)
+        def __schema__(:hash), do: unquote(:erlang.phash2({primary_key_fields, fields}))
+        def __schema__(:read_after_writes), do: unquote(Enum.reverse(@ecto_raw))
+        def __schema__(:autogenerate_id), do: unquote(Macro.escape(@ecto_autogenerate_id))
+        def __schema__(:autogenerate), do: unquote(Macro.escape(autogenerate))
+        def __schema__(:autoupdate), do: unquote(Macro.escape(autoupdate))
+
+        def __schema__(:query) do
+          %Ecto.Query{
+            from: %Ecto.Query.FromExpr{source: {unquote(source), __MODULE__}},
+            prefix: unquote(prefix)
+          }
+        end
+
+        for clauses <- Ecto.Schema.__schema__(fields, field_sources, assocs, embeds),
+            {args, body} <- clauses do
+          def __schema__(unquote_splicing(args)), do: unquote(body)
+        end
+      end
+
     quote do
-      @after_compile Ecto.Schema
-      Module.register_attribute(__MODULE__, :changeset_fields, accumulate: true)
-      Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
-
-      meta?  = unquote(meta?)
-      source = unquote(source)
-      prefix = @schema_prefix
-
-      # Those module attributes are accessed only dynamically
-      # so we explicitly reference them here to avoid warnings.
-      _ = @foreign_key_type
-      _ = @timestamps_opts
-
-      if meta? do
-        unless is_binary(source) do
-          raise ArgumentError, "schema source must be a string, got: #{inspect source}"
-        end
-
-        meta = %Metadata{state: :built, source: source, prefix: prefix, schema: __MODULE__}
-        Module.put_attribute(__MODULE__, :struct_fields, {:__meta__, meta})
-      end
-
-      if @primary_key == nil do
-        @primary_key {:id, unquote(type), autogenerate: true}
-      end
-
-      primary_key_fields =
-        case @primary_key do
-          false ->
-            []
-          {name, type, opts} ->
-            Ecto.Schema.__field__(__MODULE__, name, type, [primary_key: true] ++ opts)
-            [name]
-          other ->
-            raise ArgumentError, "@primary_key must be false or {name, type, opts}"
-        end
-
-      try do
-        import Ecto.Schema
-        unquote(block)
-      after
-        :ok
-      end
-
-      primary_key_fields = @ecto_primary_keys |> Enum.reverse
-      autogenerate = @ecto_autogenerate |> Enum.reverse
-      autoupdate = @ecto_autoupdate |> Enum.reverse
-      fields = @ecto_fields |> Enum.reverse
-      field_sources = @ecto_field_sources |> Enum.reverse
-      assocs = @ecto_assocs |> Enum.reverse
-      embeds = @ecto_embeds |> Enum.reverse
-
-      Module.eval_quoted __ENV__, [
-        Ecto.Schema.__defstruct__(@struct_fields),
-        Ecto.Schema.__changeset__(@changeset_fields),
-        Ecto.Schema.__schema__(prefix, source, fields, primary_key_fields),
-        Ecto.Schema.__types__(fields, field_sources),
-        Ecto.Schema.__dumper__(fields, field_sources),
-        Ecto.Schema.__loader__(fields, field_sources),
-        Ecto.Schema.__field_sources__(fields, field_sources),
-        Ecto.Schema.__assocs__(assocs),
-        Ecto.Schema.__embeds__(embeds),
-        Ecto.Schema.__read_after_writes__(@ecto_raw),
-        Ecto.Schema.__autogenerate__(@ecto_autogenerate_id, autogenerate, autoupdate)]
+      unquote(prelude)
+      unquote(postlude)
     end
   end
 
@@ -1612,8 +1636,12 @@ defmodule Ecto.Schema do
   """
   @spec association(module, :one | :many, atom(), module, Keyword.t) :: Ecto.Association.t
   def association(schema, cardinality, name, association, opts) do
-    not_loaded  = %Ecto.Association.NotLoaded{__owner__: schema,
-                    __field__: name, __cardinality__: cardinality}
+    not_loaded = %Ecto.Association.NotLoaded{
+      __owner__: schema,
+      __field__: name,
+      __cardinality__: cardinality
+    }
+
     put_struct_field(schema, name, not_loaded)
     opts = [cardinality: cardinality] ++ opts
     struct = association.struct(schema, name, opts)
@@ -1728,7 +1756,7 @@ defmodule Ecto.Schema do
   @doc false
   def __field__(mod, name, type, opts) do
     virtual? = opts[:virtual] || false
-    check_type!(name, type, virtual?)
+    check_field_type!(name, type, virtual?)
     pk? = opts[:primary_key] || false
 
     default = default_for_type(type, opts)
@@ -1876,185 +1904,90 @@ defmodule Ecto.Schema do
     if Process.info(self(), :error_handler) == {:error_handler, Kernel.ErrorHandler} do
       for name <- module.__schema__(:associations) do
         assoc = module.__schema__(:association, name)
+
         case assoc.__struct__.after_compile_validation(assoc, env) do
-          :ok -> :ok
+          :ok ->
+            :ok
+
           {:error, message} ->
             IO.warn "invalid association `#{assoc.field}` in schema #{inspect module}: #{message}",
                     Macro.Env.stacktrace(env)
         end
       end
     end
+
     :ok
   end
 
   @doc false
-  def __changeset__(changeset_fields) do
-    map = changeset_fields |> Enum.into(%{}) |> Macro.escape()
-    quote do
-      def __changeset__, do: unquote(map)
-    end
-  end
-
-  @doc false
-  def __defstruct__(struct_fields) do
-    quote do
-      defstruct unquote(Macro.escape(struct_fields))
-    end
-  end
-
-  @doc false
-  def __schema__(prefix, source, fields, primary_key) do
-    field_names = Enum.map(fields, &elem(&1, 0))
-
-    # Hash is used by the query cache to specify
-    # the underlying schema structure did not change.
-    # We don't include the source because the source
-    # is already part of the query cache itself.
-    hash = :erlang.phash2({primary_key, fields})
-
-    quote do
-      def __schema__(:prefix),      do: unquote(prefix)
-      def __schema__(:source),      do: unquote(source)
-      def __schema__(:fields),      do: unquote(field_names)
-      def __schema__(:primary_key), do: unquote(primary_key)
-      def __schema__(:hash),        do: unquote(hash)
-
-      def __schema__(:query) do
-        %Ecto.Query{
-          from: %Ecto.Query.FromExpr{source: {unquote(source), __MODULE__}},
-          prefix: unquote(prefix)
-        }
-      end
-    end
-  end
-
-  @doc false
-  def __types__(fields, field_sources) do
-    fields_quoted =
-      Enum.map(fields, fn {name, type} ->
-        quote do
-          def __schema__(:type, unquote(name)) do
-            unquote(Macro.escape(type))
-          end
-        end
-      end)
-
-    sources_quoted =
-      Enum.map(fields, fn {name, type} ->
-        quote do
-          def __schema__(:source_type, unquote(field_sources[name] || name)) do
-            unquote(Macro.escape(type))
-          end
-        end
-      end)
-
-    quote do
-      unquote(fields_quoted)
-      def __schema__(:type, _), do: nil
-      unquote(sources_quoted)
-      def __schema__(:source_type, _), do: nil
-    end
-  end
-
-  @doc false
-  def __dumper__(fields, field_sources) do
-    mapping =
-      for {name, type} <- fields do
-        {name, {field_sources[name] || name, Macro.escape(type)}}
-      end
-
-    quote do
-      def __schema__(:dump), do: %{unquote_splicing(mapping)}
-    end
-  end
-
-  @doc false
-  def __loader__(fields, field_sources) do
-    mapping =
+  def __schema__(fields, field_sources, assocs, embeds) do
+    load =
       for {name, type} <- fields do
         if alias = field_sources[name] do
-          {name, Macro.escape({:source, alias, type})}
+          {name, {:source, alias, type}}
         else
-          {name, Macro.escape(type)}
+          {name, type}
         end
       end
 
-    quote do
-      def __schema__(:load), do: unquote(mapping)
-    end
-  end
+    dump =
+      for {name, type} <- fields do
+        {name, {field_sources[name] || name, type}}
+      end
 
-  @doc false
-  def __field_sources__(fields, field_sources) do
-    quoted =
-      Enum.map(fields, fn {name, _type} ->
-        quote do
-          def __schema__(:field_source, unquote(name)) do
-            unquote(field_sources[name] || name)
-          end
-        end
-      end)
+    field_sources_quoted =
+      for {name, _type} <- fields do
+        {[:field_source, name], field_sources[name] || name}
+      end
 
-    quote do
-      unquote(quoted)
-      def __schema__(:field_source, _field), do: nil
-    end
-  end
+    types_quoted =
+      for {name, type} <- fields do
+        {[:type, name], Macro.escape(type)}
+      end
 
-  @doc false
-  def __assocs__(assocs) do
-    quoted =
-      Enum.map(assocs, fn {name, refl} ->
-        quote do
-          def __schema__(:association, unquote(name)) do
-            unquote(Macro.escape(refl))
-          end
-        end
-      end)
+    source_types_quoted =
+      for {name, type} <- fields do
+        {[:source_type, field_sources[name] || name], Macro.escape(type)}
+      end
+
+    assoc_quoted =
+      for {name, refl} <- assocs do
+        {[:association, name], Macro.escape(refl)}
+      end
 
     assoc_names = Enum.map(assocs, &elem(&1, 0))
 
-    quote do
-      def __schema__(:associations), do: unquote(assoc_names)
-      unquote(quoted)
-      def __schema__(:association, _), do: nil
-    end
-  end
-
-  @doc false
-  def __embeds__(embeds) do
-    quoted =
-      Enum.map(embeds, fn {name, refl} ->
-        quote do
-          def __schema__(:embed, unquote(name)) do
-            unquote(Macro.escape(refl))
-          end
-        end
-      end)
+    embed_quoted =
+      for {name, refl} <- embeds do
+        {[:embed, name], Macro.escape(refl)}
+      end
 
     embed_names = Enum.map(embeds, &elem(&1, 0))
 
-    quote do
-      def __schema__(:embeds), do: unquote(embed_names)
-      unquote(quoted)
-      def __schema__(:embed, _), do: nil
-    end
-  end
+    single_arg = [
+      {[:dump], dump |> Map.new() |> Macro.escape()},
+      {[:load], load |> Macro.escape()},
+      {[:associations], assoc_names},
+      {[:embeds], embed_names}
+    ]
 
-  @doc false
-  def __read_after_writes__(fields) do
-    quote do
-      def __schema__(:read_after_writes), do: unquote(Enum.reverse(fields))
-    end
-  end
+    catch_all = [
+      {[:field_source, quote(do: _)], nil},
+      {[:type, quote(do: _)], nil},
+      {[:source_type, quote(do: _)], nil},
+      {[:association, quote(do: _)], nil},
+      {[:embed, quote(do: _)], nil}
+    ]
 
-  @doc false
-  def __autogenerate__(id, insert, update) do
-    quote do
-      def __schema__(:autogenerate_id), do: unquote(Macro.escape(id))
-      def __schema__(:autogenerate), do: unquote(Macro.escape(insert))
-      def __schema__(:autoupdate), do: unquote(Macro.escape(update))
-    end
+    [
+      single_arg,
+      field_sources_quoted,
+      types_quoted,
+      source_types_quoted,
+      assoc_quoted,
+      embed_quoted,
+      catch_all
+    ]
   end
 
   ## Private
@@ -2086,23 +2019,28 @@ defmodule Ecto.Schema do
     end
   end
 
-  defp check_type!(name, type, virtual?) do
+  defp check_field_type!(name, type, virtual?) do
     cond do
       type == :datetime ->
         raise ArgumentError, "invalid type :datetime for field #{inspect name}. " <>
                              "You probably meant to choose one between :naive_datetime " <>
                              "(no time zone information) or :utc_datetime (time zone is set to UTC)"
+
       type == :any and not virtual? ->
         raise ArgumentError, "only virtual fields can have type :any, " <>
                              "invalid type for field #{inspect name}"
+
       Ecto.Type.primitive?(type) ->
         type
+
       is_atom(type) and Code.ensure_compiled?(type) and function_exported?(type, :type, 0) ->
         type
+
       is_atom(type) and function_exported?(type, :__schema__, 1) ->
         raise ArgumentError,
           "schema #{inspect type} is not a valid type for field #{inspect name}." <>
           " Did you mean to use belongs_to, has_one, has_many, embeds_one, or embeds_many instead?"
+
       true ->
         raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}"
     end

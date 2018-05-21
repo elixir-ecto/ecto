@@ -1,3 +1,5 @@
+# TODO: Remove Poison handling once we have fully migrated to Jason
+
 if Code.ensure_loaded?(Poison.Encoder) do
   defimpl Poison.Encoder, for: Decimal do
     def encode(decimal, _opts), do: <<?", Decimal.to_string(decimal, :normal)::binary, ?">>

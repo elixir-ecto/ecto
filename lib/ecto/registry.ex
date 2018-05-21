@@ -1,3 +1,5 @@
+# Consider moving it to inside SQL adapters
+
 defmodule Ecto.Registry do
   @moduledoc false
 
