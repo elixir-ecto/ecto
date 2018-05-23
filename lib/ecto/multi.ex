@@ -250,6 +250,16 @@ defmodule Ecto.Multi do
   ## Example
 
       Ecto.Multi.new()
+      |> Ecto.Multi.insert(:insert, %Post{title: "first"})
+      |> MyApp.Repo.transaction()
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert(:fun, fn _changes ->
+           %Post{title: "first"}
+         end)
+      |> MyApp.Repo.transaction()
+
+      Ecto.Multi.new()
       |> Ecto.Multi.insert(:post, %Post{title: "first"})
       |> Ecto.Multi.insert(:comment, fn %{post: post} ->
            Ecto.build_assoc(post, :comments)
@@ -280,9 +290,17 @@ defmodule Ecto.Multi do
   ## Example
 
       post = MyApp.Repo.get!(Post, 1)
-      post = Ecto.Changeset.change post, title: "New title"
-      multi = Ecto.Multi.new |> Ecto.Multi.update(:update, post)
-      MyApp.Repo.transaction(multi)
+      changeset = Ecto.Changeset.change(post, title: "New title")
+      Ecto.Multi.new()
+      |> Ecto.Multi.update(:update, changeset)
+      |> MyApp.Repo.transaction()
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.update(:fun, fn _changes ->
+           post = MyApp.Repo.get!(Post, 1)
+           Ecto.Changeset.change(post, title: "New title")
+         end)
+      |> MyApp.Repo.transaction()
 
   """
   @spec update(t, name, Changeset.t | fun(Changeset.t), Keyword.t) :: t
@@ -303,14 +321,25 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      post = Post.changeset(%Post{}, %{title: "New title"})
-      multi = Ecto.Multi.new |> Ecto.Multi.insert_or_update(:insert_or_update, post)
-      MyApp.Repo.transaction(multi)
+      changeset = Post.changeset(%Post{}, %{title: "New title"})
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert_or_update(:insert_or_update, changeset)
+      |> MyApp.Repo.transaction()
 
       post = MyApp.Repo.get!(Post, 1)
-      post = Post.changeset(post, %{title: "Updated title"})
-      multi = Ecto.Multi.new |> Ecto.Multi.insert_or_update(:insert_or_update, post)
-      MyApp.Repo.transaction(multi)
+      changeset = Post.changeset(post, %{title: "Updated title"})
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert_or_update(:insert_or_update, changeset)
+      |> MyApp.Repo.transaction()
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert_or_update(:insert, fn _changes ->
+           Post.changeset(%Post{}, %{title: "New title"})
+         end)
+      |> Ecto.Multi.insert_or_update(:update, fn %{insert: post} ->
+           Ecto.Changeset.change(post, title: "Updated title")
+         end)
+      |> MyApp.Repo.transaction()
 
   """
   @spec insert_or_update(t, name, Changeset.t | fun(Changeset.t), Keyword.t) :: t
@@ -336,8 +365,15 @@ defmodule Ecto.Multi do
   ## Example
 
       post = MyApp.Repo.get!(Post, 1)
-      multi = Ecto.Multi.new |> Ecto.Multi.delete(:delete, post)
-      MyApp.Repo.transaction(multi)
+      Ecto.Multi.new()
+      |> Ecto.Multi.delete(:delete, post)
+      |> MyApp.Repo.transaction()
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.delete(:delete, fn _changes ->
+           MyApp.Repo.get!(Post, 1)
+         end)
+      |> MyApp.Repo.transaction()
 
   """
   @spec delete(t, name, Changeset.t | Ecto.Schema.t | fun(Changeset.t | Ecto.Schema.t), Keyword.t) :: t
@@ -430,8 +466,9 @@ defmodule Ecto.Multi do
   ## Example
 
       posts = [%{title: "My first post"}, %{title: "My second post"}]
-      multi = Ecto.Multi.new |> Ecto.Multi.insert_all(:insert_all, Post, posts)
-      MyApp.Repo.transaction(multi)
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert_all(:insert_all, Post, posts)
+      |> MyApp.Repo.transaction()
 
   """
   @spec insert_all(t, name, schema_or_source, [map | Keyword.t], Keyword.t) :: t
@@ -443,6 +480,13 @@ defmodule Ecto.Multi do
   Adds an update_all operation to the multi.
 
   Accepts the same arguments and options as `c:Ecto.Repo.update_all/3` does.
+
+  ## Example
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.update_all(:update_all, Post, set: [title: "New title"])
+      |> MyApp.Repo.transaction()
+
   """
   @spec update_all(t, name, Ecto.Queryable.t, Keyword.t, Keyword.t) :: t
   def update_all(multi, name, queryable, updates, opts \\ []) when is_list(opts) do
@@ -458,8 +502,9 @@ defmodule Ecto.Multi do
   ## Example
 
       queryable = from(p in Post, where: p.id < 5)
-      multi = Ecto.Multi.new |> Ecto.Multi.delete_all(:delete_all, queryable)
-      MyApp.Repo.transaction(multi)
+      Ecto.Multi.new()
+      |> Ecto.Multi.delete_all(:delete_all, queryable)
+      |> MyApp.Repo.transaction()
 
   """
   @spec delete_all(t, name, Ecto.Queryable.t, Keyword.t) :: t
