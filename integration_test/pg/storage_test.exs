@@ -89,10 +89,10 @@ defmodule Ecto.Integration.StorageTest do
   end
 
   test "structure load will fail on SQL errors" do
+    File.mkdir_p!(tmp_path())
     error_path = Path.join(tmp_path(), "error.sql")
     File.write!(error_path, "DO $$ BEGIN RAISE EXCEPTION 'failing SQL'; END $$;")
-    {:error, message} = Postgres.structure_load(tmp_path(), [dump_path: error_path] ++
-                                                            TestRepo.config())
+    {:error, message} = Postgres.structure_load(tmp_path(), [dump_path: error_path] ++ TestRepo.config())
     assert message =~ ~r/ERROR.*failing SQL/
   end
 
