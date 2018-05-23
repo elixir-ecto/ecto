@@ -22,7 +22,7 @@ defmodule Ecto.LogEntry do
   alias Ecto.LogEntry
 
   @type t :: %LogEntry{query: String.t | (t -> String.t), source: String.t | Enum.t | nil,
-                       params: [term], query_time: integer, decode_time: integer | nil,
+                       params: [term], query_time: integer | nil, decode_time: integer | nil,
                        queue_time: integer | nil, connection_pid: pid | nil,
                        result: {:ok, term} | {:error, Exception.t},
                        ansi_color: IO.ANSI.ansicode | nil, caller_pid: pid | nil}
