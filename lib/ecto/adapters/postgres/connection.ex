@@ -526,7 +526,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp expr(%Ecto.Query.Tagged{value: binary, type: :binary}, _sources, _query)
         when is_binary(binary) do
-      ["'\\x", Base.encode16(binary, case: :lower) | "'::bytea"]
+      format_binary(binary)
     end
 
     defp expr(%Ecto.Query.Tagged{value: other, type: type}, sources, query) do
@@ -820,6 +820,7 @@ if Code.ensure_loaded?(Postgrex) do
     defp default_type(list, {:array, inner} = type) when is_list(list) do
       ["ARRAY[",  Enum.map(list, &default_type(&1, inner)) |> Enum.intersperse(?,), "]::", ecto_to_db(type)]
     end
+    defp default_type(literal, :binary) when is_binary(literal), do: format_binary(literal)
     defp default_type(literal, _type) when is_binary(literal),  do: [?', escape_string(literal), ?']
     defp default_type(literal, _type) when is_number(literal),  do: to_string(literal)
     defp default_type(literal, _type) when is_boolean(literal), do: to_string(literal)
@@ -969,6 +970,10 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp escape_string(value) when is_binary(value) do
       :binary.replace(value, "'", "''", [:global])
+    end
+
+    defp format_binary(value) when is_binary(value) do
+      ["'\\x", Base.encode16(value, case: :lower) | "'::bytea"]
     end
 
     defp ecto_to_db({:array, t}),          do: [ecto_to_db(t), ?[, ?]]

@@ -767,7 +767,8 @@ defmodule Ecto.Adapters.PostgresTest do
                {:add, :is_active, :boolean, [default: true]},
                {:add, :tags, {:array, :string}, [default: []]},
                {:add, :languages, {:array, :string}, [default: ["pt", "es"]]},
-               {:add, :limits, {:array, :integer}, [default: [100, 30_000]]}]}
+               {:add, :limits, {:array, :integer}, [default: [100, 30_000]]},
+               {:add, :blob, :binary, [default: <<0>>]}]}
 
     assert execute_ddl(create) == ["""
     CREATE TABLE "posts" ("name" varchar(20) DEFAULT 'Untitled' NOT NULL,
@@ -777,7 +778,8 @@ defmodule Ecto.Adapters.PostgresTest do
     "is_active" boolean DEFAULT true,
     "tags" varchar(255)[] DEFAULT ARRAY[]::varchar[],
     "languages" varchar(255)[] DEFAULT ARRAY['pt','es']::varchar[],
-    "limits" integer[] DEFAULT ARRAY[100,30000]::integer[])
+    "limits" integer[] DEFAULT ARRAY[100,30000]::integer[],
+    "blob" bytea DEFAULT '\\x00'::bytea)
     """ |> remove_newlines]
   end
 
