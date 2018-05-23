@@ -254,12 +254,6 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
       Ecto.Multi.new()
-      |> Ecto.Multi.insert(:fun, fn _changes ->
-           %Post{title: "first"}
-         end)
-      |> MyApp.Repo.transaction()
-
-      Ecto.Multi.new()
       |> Ecto.Multi.insert(:post, %Post{title: "first"})
       |> Ecto.Multi.insert(:comment, fn %{post: post} ->
            Ecto.build_assoc(post, :comments)
@@ -296,8 +290,8 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
       Ecto.Multi.new()
-      |> Ecto.Multi.update(:fun, fn _changes ->
-           post = MyApp.Repo.get!(Post, 1)
+      |> Ecto.Multi.insert(:post, %Post{title: "first"})
+      |> Ecto.Multi.update(:fun, %{post: post} ->
            Ecto.Changeset.change(post, title: "New title")
          end)
       |> MyApp.Repo.transaction()
@@ -326,18 +320,12 @@ defmodule Ecto.Multi do
       |> Ecto.Multi.insert_or_update(:insert_or_update, changeset)
       |> MyApp.Repo.transaction()
 
-      post = MyApp.Repo.get!(Post, 1)
-      changeset = Post.changeset(post, %{title: "Updated title"})
       Ecto.Multi.new()
-      |> Ecto.Multi.insert_or_update(:insert_or_update, changeset)
-      |> MyApp.Repo.transaction()
-
-      Ecto.Multi.new()
-      |> Ecto.Multi.insert_or_update(:insert, fn _changes ->
-           Post.changeset(%Post{}, %{title: "New title"})
+      |> Ecto.Multi.run(:post, fn _repo ->
+           MyApp.Repo.get!(Post, 1)
          end)
-      |> Ecto.Multi.insert_or_update(:update, fn %{insert: post} ->
-           Ecto.Changeset.change(post, title: "Updated title")
+      |> Ecto.Multi.insert_or_update(:update, fn %{post: post} ->
+           Ecto.Changeset.change(post, title: "New title")
          end)
       |> MyApp.Repo.transaction()
 
@@ -370,8 +358,12 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
       Ecto.Multi.new()
-      |> Ecto.Multi.delete(:delete, fn _changes ->
+      |> Ecto.Multi.run(:post, fn _repo ->
            MyApp.Repo.get!(Post, 1)
+         end)
+      |> Ecto.Multi.delete(:delete, fn %{post: post} ->
+           # Others validations
+           post
          end)
       |> MyApp.Repo.transaction()
 
