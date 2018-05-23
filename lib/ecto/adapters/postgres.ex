@@ -215,7 +215,9 @@ defmodule Ecto.Adapters.Postgres do
   @doc false
   def structure_load(default, config) do
     path = config[:dump_path] || Path.join(default, "structure.sql")
-    case run_with_cmd("psql", config, ["--quiet", "--file", path, config[:database]]) do
+    args = ["--quiet", "--file", path, "-vON_ERROR_STOP=1",
+            "--single-transaction", config[:database]]
+    case run_with_cmd("psql", config, args) do
       {_output, 0} -> {:ok, path}
       {output, _}  -> {:error, output}
     end
