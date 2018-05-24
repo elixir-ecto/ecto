@@ -972,7 +972,7 @@ if Code.ensure_loaded?(Postgrex) do
       :binary.replace(value, "'", "''", [:global])
     end
 
-    defp format_binary(value) when is_binary(value) do
+    defp format_binary(value) do
       ["'\\x", Base.encode16(value, case: :lower) | "'::bytea"]
     end
 
