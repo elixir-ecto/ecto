@@ -1475,6 +1475,6 @@ defmodule Ecto.Query do
 
   defp assert_schema!(%{from: %Ecto.Query.FromExpr{source: {_source, schema}}}) when schema != nil, do: schema
   defp assert_schema!(query) do
-    raise Ecto.QueryError, query: query, message: "expected a from expression with a schema"
+    raise Ecto.QueryError, query: query, message: "expected an expression with a schema"
   end
 end
