@@ -883,6 +883,51 @@ defmodule Ecto.Adapters.PostgresTest do
     """ |> remove_newlines]
   end
 
+  test "create table with binary column and null-byte default" do
+    create = {:create, table(:blobs),
+              [{:add, :blob, :binary, [default: <<0>>]}]}
+
+    assert_raise ArgumentError, ~r"UTF-8", fn ->
+      execute_ddl(create)
+    end
+  end
+
+  test "create table with binary column and null-byte-containing default" do
+    create = {:create, table(:blobs),
+              [{:add, :blob, :binary, [default: "foo" <> <<0>>]}]}
+
+    assert_raise ArgumentError, ~r"UTF-8", fn ->
+      execute_ddl(create)
+    end
+  end
+
+  test "create table with binary column and UTF-8 default" do
+    create = {:create, table(:blobs),
+              [{:add, :blob, :binary, [default: "foo"]}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE "blobs" ("blob" bytea DEFAULT 'foo')
+    """ |> remove_newlines]
+  end
+
+  test "create table with binary column and hex bytea literal default" do
+    create = {:create, table(:blobs),
+              [{:add, :blob, :binary, [default: "\\x666F6F"]}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE "blobs" ("blob" bytea DEFAULT '\\x666F6F')
+    """ |> remove_newlines]
+  end
+
+  test "create table with binary column and hex bytea literal null-byte" do
+    create = {:create, table(:blobs),
+              [{:add, :blob, :binary, [default: "\\x00"]}]}
+
+    assert execute_ddl(create) == ["""
+    CREATE TABLE "blobs" ("blob" bytea DEFAULT '\\x00')
+    """ |> remove_newlines]
+  end
+
   test "create table with a map column, and an empty map default" do
     create = {:create, table(:posts),
               [
