@@ -821,13 +821,13 @@ if Code.ensure_loaded?(Postgrex) do
       ["ARRAY[",  Enum.map(list, &default_type(&1, inner)) |> Enum.intersperse(?,), "]::", ecto_to_db(type)]
     end
     defp default_type(literal, _type) when is_binary(literal) do
-      if :binary.match(literal, <<0>>) == :nomatch && String.valid?(literal) do
+      if :binary.match(literal, <<0>>) == :nomatch and String.valid?(literal) do
         [?', escape_string(literal), ?']
       else
         encoded = "\\x" <> Base.encode16(literal, case: :lower)
-        raise(ArgumentError, "default values are interpolated as UTF-8 strings and cannot contain null bytes. " <>
+        raise ArgumentError, "default values are interpolated as UTF-8 strings and cannot contain null bytes. " <>
                              "`#{inspect literal}` is invalid. If you want to write it as a binary, use \"#{encoded}\", " <>
-                             "otherwise refer to PostgreSQL documentation for instructions on how to escape this SQL type")
+                             "otherwise refer to PostgreSQL documentation for instructions on how to escape this SQL type"
       end
     end
     defp default_type(literal, _type) when is_number(literal),  do: to_string(literal)
