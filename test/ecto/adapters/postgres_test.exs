@@ -887,7 +887,7 @@ defmodule Ecto.Adapters.PostgresTest do
     create = {:create, table(:blobs),
               [{:add, :blob, :binary, [default: <<0>>]}]}
 
-    assert_raise ArgumentError, ~r"UTF-8", fn ->
+    assert_raise ArgumentError, ~r"\\x00\b", fn ->
       execute_ddl(create)
     end
   end
@@ -896,7 +896,7 @@ defmodule Ecto.Adapters.PostgresTest do
     create = {:create, table(:blobs),
               [{:add, :blob, :binary, [default: "foo" <> <<0>>]}]}
 
-    assert_raise ArgumentError, ~r"UTF-8", fn ->
+    assert_raise ArgumentError, ~r"\\x666f6f00\b", fn ->
       execute_ddl(create)
     end
   end
