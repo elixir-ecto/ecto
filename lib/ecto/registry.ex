@@ -36,8 +36,11 @@ defmodule Ecto.Registry do
   end
 
   def handle_info({:DOWN, ref, _type, pid, _reason}, table) do
-    [{^pid, ^ref, _}] = :ets.lookup(table, pid)
-    :ets.delete(table, pid)
+    case :ets.lookup(table, pid) do
+      [{^pid, ^ref, _}] -> :ets.delete(table, pid)
+      _ -> true
+    end
+
     {:noreply, table}
   end
 
