@@ -40,8 +40,4 @@ defmodule Ecto.Registry do
     :ets.delete(table, pid)
     {:noreply, table}
   end
-
-  def handle_info(_msg, state) do
-    {:noreply, state}
-  end
 end
