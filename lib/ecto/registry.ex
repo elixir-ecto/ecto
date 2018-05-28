@@ -41,7 +41,7 @@ defmodule Ecto.Registry do
     {:noreply, table}
   end
 
-  def handle_info(_msg, state) do
-    {:noreply, state}
+  def handle_info(msg, state) do
+    super(msg, state)
   end
 end
