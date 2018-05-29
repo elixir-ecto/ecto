@@ -1,14 +1,16 @@
 defmodule Ecto.Adapters.SQL.Stream do
   @moduledoc false
 
-  defstruct [:repo, :statement, :params, :opts]
+  defstruct [:meta, :statement, :params, :opts]
 
-  def __build__(repo, statement, params, opts) do
-    %__MODULE__{repo: repo, statement: statement, params: params, opts: opts}
+  def build(meta, statement, params, opts) do
+    %__MODULE__{meta: meta, statement: statement, params: params, opts: opts}
   end
 end
 
-defimpl Enumerable, for: Ecto.Adapters.SQL.Stream do
+alias Ecto.Adapters.SQL.Stream
+
+defimpl Enumerable, for: Stream do
   def count(_), do: {:error, __MODULE__}
 
   def member?(_, _), do: {:error, __MODULE__}
@@ -16,17 +18,15 @@ defimpl Enumerable, for: Ecto.Adapters.SQL.Stream do
   def slice(_), do: {:error, __MODULE__}
 
   def reduce(stream, acc, fun) do
-    %Ecto.Adapters.SQL.Stream{repo: repo, statement: statement, params: params,
-                              opts: opts} = stream
-    Ecto.Adapters.SQL.reduce(repo, statement, params, opts, acc, fun)
+    %Stream{meta: meta, statement: statement, params: params, opts: opts} = stream
+    Ecto.Adapters.SQL.reduce(meta, statement, params, opts, acc, fun)
   end
 end
 
-defimpl Collectable, for: Ecto.Adapters.SQL.Stream do
+defimpl Collectable, for: Stream do
   def into(stream) do
-    %Ecto.Adapters.SQL.Stream{repo: repo, statement: statement, params: params,
-                              opts: opts} = stream
-    {state, fun} = Ecto.Adapters.SQL.into(repo, statement, params, opts)
+    %Stream{meta: meta, statement: statement, params: params, opts: opts} = stream
+    {state, fun} = Ecto.Adapters.SQL.into(meta, statement, params, opts)
     {state, make_into(fun, stream)}
   end
 
@@ -35,6 +35,7 @@ defimpl Collectable, for: Ecto.Adapters.SQL.Stream do
       state, :done ->
         fun.(state, :done)
         stream
+
       state, acc ->
         fun.(state, acc)
     end

@@ -193,16 +193,21 @@ defmodule Ecto.Adapters.MySQL do
   end
 
   @doc false
-  def insert(repo, %{source: source, prefix: prefix} = meta, params,
-             {_, query_params, _} = on_conflict, returning, opts) do
-    key = primary_key!(meta, returning)
+  def insert(adapter_meta, schema_meta, params, on_conflict, returning, opts) do
+    %{source: source, prefix: prefix} = schema_meta
+    {_, query_params, _} = on_conflict
+
+    key = primary_key!(schema_meta, returning)
     {fields, values} = :lists.unzip(params)
     sql = @conn.insert(prefix, source, fields, [fields], on_conflict, [])
-    case Ecto.Adapters.SQL.query(repo, sql, values ++ query_params, opts) do
+
+    case Ecto.Adapters.SQL.query(adapter_meta, sql, values ++ query_params, opts) do
       {:ok, %{num_rows: 1, last_insert_id: last_insert_id}} ->
         {:ok, last_insert_id(key, last_insert_id)}
+
       {:ok, %{num_rows: 2, last_insert_id: last_insert_id}} ->
         {:ok, last_insert_id(key, last_insert_id)}
+
       {:error, err} ->
         case @conn.to_constraints(err) do
           []          -> raise err

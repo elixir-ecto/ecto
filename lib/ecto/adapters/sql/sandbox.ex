@@ -427,9 +427,9 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   The mode can be `:auto`, `:manual` or `{:shared, <pid>}`.
   """
   def mode(repo, mode)
-      when mode in [:auto, :manual]
-      when elem(mode, 0) == :shared and is_pid(elem(mode, 1)) do
-    {_repo_mod, _sql, name, opts} = proxy_pool(repo)
+      when is_atom(repo) and mode in [:auto, :manual]
+      when is_atom(repo) and elem(mode, 0) == :shared and is_pid(elem(mode, 1)) do
+    {_loggers, _sql, name, opts} = proxy_pool(repo)
 
     # If the mode is set to anything but shared, let's
     # automatically checkin the current connection to
@@ -460,13 +460,14 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       owned. Defaults to the compiled value from your repo config in
       `config/config.exs` (or preferably in `config/test.exs`), or
       15000 ms if not set.
+
   """
-  def checkout(repo, opts \\ []) do
-    {_repo_mod, _sql, name, pool_opts} =
+  def checkout(repo, opts \\ []) when is_atom(repo) do
+    {_loggers, _sql, name, pool_opts} =
       if Keyword.get(opts, :sandbox, true) do
         proxy_pool(repo)
       else
-        Ecto.Registry.lookup(repo)
+        Ecto.Adapter.lookup_meta(repo)
       end
 
     pool_opts_overrides = Keyword.take(opts, [:ownership_timeout])
@@ -477,7 +478,9 @@ defmodule Ecto.Adapters.SQL.Sandbox do
         if isolation = opts[:isolation] do
           set_transaction_isolation_level(repo, isolation)
         end
+
         :ok
+
       other ->
         other
     end
@@ -485,9 +488,11 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   defp set_transaction_isolation_level(repo, isolation) do
     query = "SET TRANSACTION ISOLATION LEVEL #{isolation}"
+
     case Ecto.Adapters.SQL.query(repo, query, [], sandbox_subtransaction: false) do
       {:ok, _} ->
         :ok
+
       {:error, error} ->
         checkin(repo, [])
         raise error
@@ -497,25 +502,26 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   @doc """
   Checks in the connection back into the sandbox pool.
   """
-  def checkin(repo, _opts \\ []) do
-    {_repo_mod, _sql, name, opts} = Ecto.Registry.lookup(repo)
+  def checkin(repo, _opts \\ []) when is_atom(repo) do
+    {_loggers, _sql, name, opts} = Ecto.Adapter.lookup_meta(repo)
     DBConnection.Ownership.ownership_checkin(name, opts)
   end
 
   @doc """
   Allows the `allow` process to use the same connection as `parent`.
   """
-  def allow(repo, parent, allow, _opts \\ []) do
-    {_repo_mod, _sql, name, opts} = Ecto.Registry.lookup(repo)
+  def allow(repo, parent, allow, _opts \\ []) when is_atom(repo) do
+    {_loggers, _sql, name, opts} = Ecto.Adapter.lookup_meta(repo)
     DBConnection.Ownership.ownership_allow(name, parent, allow, opts)
   end
 
   @doc """
   Runs a function outside of the sandbox.
   """
-  def unboxed_run(repo, fun) do
+  def unboxed_run(repo, fun) when is_atom(repo) do
     checkin(repo)
     checkout(repo, sandbox: false)
+
     try do
       fun.()
     after
@@ -524,7 +530,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   end
 
   defp proxy_pool(repo) do
-    {repo_mod, sql, name, opts} = Ecto.Registry.lookup(repo)
+    {loggers, sql, name, opts} = Ecto.Adapter.lookup_meta(repo)
 
     if opts[:pool] != DBConnection.Ownership do
       raise """
@@ -536,6 +542,6 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     end
 
     {pool, opts} = Keyword.pop(opts, :ownership_pool, DBConnection.Poolboy)
-    {repo_mod, sql, name, [repo: repo, sandbox_pool: pool, ownership_pool: Pool] ++ opts}
+    {loggers, sql, name, [repo: repo, sandbox_pool: pool, ownership_pool: Pool] ++ opts}
   end
 end

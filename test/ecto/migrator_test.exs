@@ -349,6 +349,7 @@ defmodule Ecto.MigratorTest do
 
   defp create_migration(name) do
     module = name |> Path.basename |> Path.rootname
+
     File.write! name, """
     defmodule Ecto.MigrationTest.S#{module} do
       use Ecto.Migration

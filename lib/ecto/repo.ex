@@ -50,8 +50,6 @@ defmodule Ecto.Repo do
       in `:debug` mode. You may pass any desired mod-fun-args
       triplet or `[{Ecto.LogEntry, :log, [:info]}]` if you want to
       keep the current behaviour but use another log level.
-      This option is processed at compile-time and may also be given
-      as an option to `use Ecto.Repo`.
 
   ## URLs
 
@@ -99,34 +97,23 @@ defmodule Ecto.Repo do
     quote bind_quoted: [opts: opts] do
       @behaviour Ecto.Repo
 
-      {otp_app, adapter, config} = Ecto.Repo.Supervisor.compile_config(__MODULE__, opts)
+      {otp_app, adapter} = Ecto.Repo.Supervisor.compile_config(__MODULE__, opts)
       @otp_app otp_app
       @adapter adapter
-      @config  config
       @before_compile adapter
 
-      loggers =
-        Enum.reduce(opts[:loggers] || config[:loggers] || [Ecto.LogEntry], quote(do: entry), fn
-          mod, acc when is_atom(mod) ->
-            quote do: unquote(mod).log(unquote(acc))
-          {Ecto.LogEntry, :log, [level]}, _acc when not(level in [:error, :info, :warn, :debug]) ->
-            raise ArgumentError, "the log level #{inspect level} is not supported in Ecto.LogEntry"
-          {mod, fun, args}, acc ->
-            quote do: unquote(mod).unquote(fun)(unquote(acc), unquote_splicing(args))
-        end)
+      # Config and metadata
+
+      def config do
+        {:ok, config} = Ecto.Repo.Supervisor.runtime_config(:runtime, __MODULE__, @otp_app, [])
+        config
+      end
 
       def __adapter__ do
         @adapter
       end
 
-      def __log__(entry) do
-        unquote(loggers)
-      end
-
-      def config do
-        {:ok, config} = Ecto.Repo.Supervisor.runtime_config(:dry_run, __MODULE__, @otp_app, [])
-        config
-      end
+      ## Process lifecycle
 
       def child_spec(opts) do
         %{
@@ -140,115 +127,119 @@ defmodule Ecto.Repo do
         Ecto.Repo.Supervisor.start_link(__MODULE__, @otp_app, @adapter, opts)
       end
 
-      def stop(pid, timeout \\ 5000) do
-        Supervisor.stop(pid, :normal, timeout)
+      def stop(timeout \\ 5000) do
+        Supervisor.stop(__MODULE__, :normal, timeout)
       end
+
+      ## Transactions
 
       if function_exported?(@adapter, :transaction, 3) do
         def transaction(fun_or_multi, opts \\ []) do
-          Ecto.Repo.Queryable.transaction(@adapter, __MODULE__, fun_or_multi, opts)
+          Ecto.Repo.Transaction.transaction(__MODULE__, fun_or_multi, opts)
         end
 
         def in_transaction? do
-          @adapter.in_transaction?(__MODULE__)
+          Ecto.Repo.Transaction.in_transaction?(__MODULE__)
         end
 
         @spec rollback(term) :: no_return
         def rollback(value) do
-          @adapter.rollback(__MODULE__, value)
+          Ecto.Repo.Transaction.rollback(__MODULE__, value)
         end
       end
 
-      def all(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.all(__MODULE__, @adapter, queryable, opts)
-      end
-
-      def stream(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.stream(__MODULE__, @adapter, queryable, opts)
-      end
-
-      def get(queryable, id, opts \\ []) do
-        Ecto.Repo.Queryable.get(__MODULE__, @adapter, queryable, id, opts)
-      end
-
-      def get!(queryable, id, opts \\ []) do
-        Ecto.Repo.Queryable.get!(__MODULE__, @adapter, queryable, id, opts)
-      end
-
-      def get_by(queryable, clauses, opts \\ []) do
-        Ecto.Repo.Queryable.get_by(__MODULE__, @adapter, queryable, clauses, opts)
-      end
-
-      def get_by!(queryable, clauses, opts \\ []) do
-        Ecto.Repo.Queryable.get_by!(__MODULE__, @adapter, queryable, clauses, opts)
-      end
-
-      def one(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.one(__MODULE__, @adapter, queryable, opts)
-      end
-
-      def one!(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.one!(__MODULE__, @adapter, queryable, opts)
-      end
-
-      def aggregate(queryable, aggregate, field, opts \\ [])
-          when aggregate in [:count, :avg, :max, :min, :sum] and is_atom(field) do
-        Ecto.Repo.Queryable.aggregate(__MODULE__, @adapter, queryable, aggregate, field, opts)
-      end
-
-      def insert_all(schema_or_source, entries, opts \\ []) do
-        Ecto.Repo.Schema.insert_all(__MODULE__, @adapter, schema_or_source, entries, opts)
-      end
-
-      def update_all(queryable, updates, opts \\ []) do
-        Ecto.Repo.Queryable.update_all(__MODULE__, @adapter, queryable, updates, opts)
-      end
-
-      def delete_all(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.delete_all(__MODULE__, @adapter, queryable, opts)
-      end
-
-      def insert(struct, opts \\ []) do
-        Ecto.Repo.Schema.insert(__MODULE__, @adapter, struct, opts)
-      end
-
-      def update(struct, opts \\ []) do
-        Ecto.Repo.Schema.update(__MODULE__, @adapter, struct, opts)
-      end
-
-      def insert_or_update(changeset, opts \\ []) do
-        Ecto.Repo.Schema.insert_or_update(__MODULE__, @adapter, changeset, opts)
-      end
-
-      def delete(struct, opts \\ []) do
-        Ecto.Repo.Schema.delete(__MODULE__, @adapter, struct, opts)
-      end
-
-      def insert!(struct, opts \\ []) do
-        Ecto.Repo.Schema.insert!(__MODULE__, @adapter, struct, opts)
-      end
-
-      def update!(struct, opts \\ []) do
-        Ecto.Repo.Schema.update!(__MODULE__, @adapter, struct, opts)
-      end
-
-      def insert_or_update!(changeset, opts \\ []) do
-        Ecto.Repo.Schema.insert_or_update!(__MODULE__, @adapter, changeset, opts)
-      end
-
-      def delete!(struct, opts \\ []) do
-        Ecto.Repo.Schema.delete!(__MODULE__, @adapter, struct, opts)
-      end
-
-      def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
-        Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, __MODULE__, preloads, opts)
-      end
+      ## Schemas
 
       def load(schema_or_types, data) do
         Ecto.Repo.Schema.load(@adapter, schema_or_types, data)
       end
 
-      defoverridable child_spec: 1
+      def insert(struct, opts \\ []) do
+        Ecto.Repo.Schema.insert(__MODULE__, struct, opts)
+      end
+
+      def update(struct, opts \\ []) do
+        Ecto.Repo.Schema.update(__MODULE__, struct, opts)
+      end
+
+      def insert_or_update(changeset, opts \\ []) do
+        Ecto.Repo.Schema.insert_or_update(__MODULE__, changeset, opts)
+      end
+
+      def delete(struct, opts \\ []) do
+        Ecto.Repo.Schema.delete(__MODULE__, struct, opts)
+      end
+
+      def insert!(struct, opts \\ []) do
+        Ecto.Repo.Schema.insert!(__MODULE__, struct, opts)
+      end
+
+      def update!(struct, opts \\ []) do
+        Ecto.Repo.Schema.update!(__MODULE__, struct, opts)
+      end
+
+      def insert_or_update!(changeset, opts \\ []) do
+        Ecto.Repo.Schema.insert_or_update!(__MODULE__, changeset, opts)
+      end
+
+      def delete!(struct, opts \\ []) do
+        Ecto.Repo.Schema.delete!(__MODULE__, struct, opts)
+      end
+
+      def insert_all(schema_or_source, entries, opts \\ []) do
+        Ecto.Repo.Schema.insert_all(__MODULE__, schema_or_source, entries, opts)
+      end
+
+      ## Queryable
+
+      def update_all(queryable, updates, opts \\ []) do
+        Ecto.Repo.Queryable.update_all(__MODULE__, queryable, updates, opts)
+      end
+
+      def delete_all(queryable, opts \\ []) do
+        Ecto.Repo.Queryable.delete_all(__MODULE__, queryable, opts)
+      end
+
+      def all(queryable, opts \\ []) do
+        Ecto.Repo.Queryable.all(__MODULE__, queryable, opts)
+      end
+
+      def stream(queryable, opts \\ []) do
+        Ecto.Repo.Queryable.stream(__MODULE__, queryable, opts)
+      end
+
+      def get(queryable, id, opts \\ []) do
+        Ecto.Repo.Queryable.get(__MODULE__, queryable, id, opts)
+      end
+
+      def get!(queryable, id, opts \\ []) do
+        Ecto.Repo.Queryable.get!(__MODULE__, queryable, id, opts)
+      end
+
+      def get_by(queryable, clauses, opts \\ []) do
+        Ecto.Repo.Queryable.get_by(__MODULE__, queryable, clauses, opts)
+      end
+
+      def get_by!(queryable, clauses, opts \\ []) do
+        Ecto.Repo.Queryable.get_by!(__MODULE__, queryable, clauses, opts)
+      end
+
+      def one(queryable, opts \\ []) do
+        Ecto.Repo.Queryable.one(__MODULE__, queryable, opts)
+      end
+
+      def one!(queryable, opts \\ []) do
+        Ecto.Repo.Queryable.one!(__MODULE__, queryable, opts)
+      end
+
+      def aggregate(queryable, aggregate, field, opts \\ [])
+          when aggregate in [:count, :avg, :max, :min, :sum] and is_atom(field) do
+        Ecto.Repo.Queryable.aggregate(__MODULE__, queryable, aggregate, field, opts)
+      end
+
+      def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
+        Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, __MODULE__, preloads, opts)
+      end
     end
   end
 
@@ -257,23 +248,15 @@ defmodule Ecto.Repo do
   @doc """
   Returns the adapter tied to the repository.
   """
-  @callback __adapter__ :: Ecto.Adapter.t
-
-  @doc """
-  A callback invoked by adapters that logs the given action.
-
-  See `Ecto.LogEntry` for more information and `Ecto.Repo` module
-  documentation on setting up your own loggers.
-  """
-  @callback __log__(entry :: Ecto.LogEntry.t) :: Ecto.LogEntry.t
+  @callback __adapter__ :: Ecto.Adapter.t()
 
   @doc """
   Returns the adapter configuration stored in the `:otp_app` environment.
 
   If the `c:init/2` callback is implemented in the repository,
-  it will be invoked with the first argument set to `:dry_run`.
+  it will be invoked with the first argument set to `:runtime`.
   """
-  @callback config() :: Keyword.t
+  @callback config() :: Keyword.t()
 
   @doc """
   Starts any connection pooling or supervision and return `{:ok, pid}`
@@ -287,28 +270,29 @@ defmodule Ecto.Repo do
   See the configuration in the moduledoc for options shared between adapters,
   for adapter-specific configuration see the adapter's documentation.
   """
-  @callback start_link(opts :: Keyword.t) :: {:ok, pid} |
-                            {:error, {:already_started, pid}} |
-                            {:error, term}
+  @callback start_link(opts :: Keyword.t()) ::
+              {:ok, pid}
+              | {:error, {:already_started, pid}}
+              | {:error, term}
 
   @doc """
   A callback executed when the repo starts or when configuration is read.
 
   The first argument is the context the callback is being invoked. If it
   is called because the Repo supervisor is starting, it will be `:supervisor`.
-  It will be `:dry_run` if it is called for reading configuration without
+  It will be `:runtime` if it is called for reading configuration without
   actually starting a process.
 
   The second argument is the repository configuration as stored in the
   application environment. It must return `{:ok, keyword}` with the updated
   list of configuration or `:ignore` (only in the `:supervisor` case).
   """
-  @callback init(:supervisor | :dry_run, config :: Keyword.t) :: {:ok, Keyword.t} | :ignore
+  @callback init(:supervisor | :runtime, config :: Keyword.t()) :: {:ok, Keyword.t()} | :ignore
 
   @doc """
-  Shuts down the repository represented by the given pid.
+  Shuts down the repository.
   """
-  @callback stop(pid, timeout) :: :ok
+  @callback stop(timeout) :: :ok
 
   @doc """
   Fetches a single struct from the data store where the primary key matches the
@@ -326,7 +310,8 @@ defmodule Ecto.Repo do
       MyRepo.get(Post, 42)
 
   """
-  @callback get(queryable :: Ecto.Queryable.t, id :: term, opts :: Keyword.t) :: Ecto.Schema.t | nil | no_return
+  @callback get(queryable :: Ecto.Queryable.t(), id :: term, opts :: Keyword.t()) ::
+              Ecto.Schema.t() | nil | no_return
 
   @doc """
   Similar to `c:get/3` but raises `Ecto.NoResultsError` if no record was found.
@@ -340,7 +325,8 @@ defmodule Ecto.Repo do
       MyRepo.get!(Post, 42)
 
   """
-  @callback get!(queryable :: Ecto.Queryable.t, id :: term, opts :: Keyword.t) :: Ecto.Schema.t | nil | no_return
+  @callback get!(queryable :: Ecto.Queryable.t(), id :: term, opts :: Keyword.t()) ::
+              Ecto.Schema.t() | nil | no_return
 
   @doc """
   Fetches a single result from the query.
@@ -356,7 +342,11 @@ defmodule Ecto.Repo do
       MyRepo.get_by(Post, title: "My post")
 
   """
-  @callback get_by(queryable :: Ecto.Queryable.t, clauses :: Keyword.t | map, opts :: Keyword.t) :: Ecto.Schema.t | nil | no_return
+  @callback get_by(
+              queryable :: Ecto.Queryable.t(),
+              clauses :: Keyword.t() | map,
+              opts :: Keyword.t()
+            ) :: Ecto.Schema.t() | nil | no_return
 
   @doc """
   Similar to `get_by/3` but raises `Ecto.NoResultsError` if no record was found.
@@ -372,7 +362,11 @@ defmodule Ecto.Repo do
       MyRepo.get_by!(Post, title: "My post")
 
   """
-  @callback get_by!(queryable :: Ecto.Queryable.t, clauses :: Keyword.t | map, opts :: Keyword.t) :: Ecto.Schema.t | nil | no_return
+  @callback get_by!(
+              queryable :: Ecto.Queryable.t(),
+              clauses :: Keyword.t() | map,
+              opts :: Keyword.t()
+            ) :: Ecto.Schema.t() | nil | no_return
 
   @doc """
   Calculate the given `aggregate` over the given `field`.
@@ -399,8 +393,12 @@ defmodule Ecto.Repo do
       query = from Post, limit: 10
       Repo.aggregate(query, :avg, :visits)
   """
-  @callback aggregate(queryable :: Ecto.Queryable.t, aggregate :: :avg | :count | :max | :min | :sum,
-                      field :: atom, opts :: Keyword.t) :: term | nil
+  @callback aggregate(
+              queryable :: Ecto.Queryable.t(),
+              aggregate :: :avg | :count | :max | :min | :sum,
+              field :: atom,
+              opts :: Keyword.t()
+            ) :: term | nil
 
   @doc """
   Fetches a single result from the query.
@@ -411,7 +409,8 @@ defmodule Ecto.Repo do
 
   See the "Shared options" section at the module documentation.
   """
-  @callback one(queryable :: Ecto.Queryable.t, opts :: Keyword.t) :: Ecto.Schema.t | nil | no_return
+  @callback one(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
+              Ecto.Schema.t() | nil | no_return
 
   @doc """
   Similar to `c:one/2` but raises `Ecto.NoResultsError` if no record was found.
@@ -422,7 +421,8 @@ defmodule Ecto.Repo do
 
   See the "Shared options" section at the module documentation.
   """
-  @callback one!(queryable :: Ecto.Queryable.t, opts :: Keyword.t) :: Ecto.Schema.t | no_return
+  @callback one!(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
+              Ecto.Schema.t() | no_return
 
   @doc """
   Preloads all associations on the given struct or structs.
@@ -469,8 +469,9 @@ defmodule Ecto.Repo do
 
   Note: The query given to preload may also preload its own associations.
   """
-  @callback preload(structs_or_struct_or_nil, preloads :: term, opts :: Keyword.t) ::
-                    structs_or_struct_or_nil when structs_or_struct_or_nil: [Ecto.Schema.t] | Ecto.Schema.t | nil
+  @callback preload(structs_or_struct_or_nil, preloads :: term, opts :: Keyword.t()) ::
+              structs_or_struct_or_nil
+            when structs_or_struct_or_nil: [Ecto.Schema.t()] | Ecto.Schema.t() | nil
 
   @doc """
   Fetches all entries from the data store matching the given query.
@@ -492,7 +493,7 @@ defmodule Ecto.Repo do
            select: p.title
       MyRepo.all(query)
   """
-  @callback all(queryable :: Ecto.Query.t, opts :: Keyword.t) :: [Ecto.Schema.t] | no_return
+  @callback all(queryable :: Ecto.Query.t(), opts :: Keyword.t()) :: [Ecto.Schema.t()] | no_return
 
   @doc """
   Returns a lazy enumerable that emits all entries from the data store
@@ -522,7 +523,7 @@ defmodule Ecto.Repo do
         Enum.to_list(stream)
       end)
   """
-  @callback stream(queryable :: Ecto.Query.t, opts :: Keyword.t) :: Enum.t
+  @callback stream(queryable :: Ecto.Query.t(), opts :: Keyword.t()) :: Enum.t()
 
   @doc """
   Inserts all entries into the repository.
@@ -615,8 +616,11 @@ defmodule Ecto.Repo do
   the number of attempted entries plus the number of entries modified
   by the UPDATE query.
   """
-  @callback insert_all(schema_or_source :: binary | {binary, Ecto.Schema.t} | Ecto.Schema.t,
-                       entries :: [map | Keyword.t], opts :: Keyword.t) :: {integer, nil | [term]} | no_return
+  @callback insert_all(
+              schema_or_source :: binary | {binary, Ecto.Schema.t()} | Ecto.Schema.t(),
+              entries :: [map | Keyword.t()],
+              opts :: Keyword.t()
+            ) :: {integer, nil | [term]} | no_return
 
   @doc """
   Updates all entries matching the given query with the given values.
@@ -662,8 +666,11 @@ defmodule Ecto.Repo do
       |> MyRepo.update_all([])
 
   """
-  @callback update_all(queryable :: Ecto.Queryable.t, updates :: Keyword.t, opts :: Keyword.t) ::
-                       {integer, nil | [term]} | no_return
+  @callback update_all(
+              queryable :: Ecto.Queryable.t(),
+              updates :: Keyword.t(),
+              opts :: Keyword.t()
+            ) :: {integer, nil | [term]} | no_return
 
   @doc """
   Deletes all entries matching the given query.
@@ -688,8 +695,8 @@ defmodule Ecto.Repo do
 
       from(p in Post, where: p.id < 10) |> MyRepo.delete_all
   """
-  @callback delete_all(queryable :: Ecto.Queryable.t, opts :: Keyword.t) ::
-                       {integer, nil | [term]} | no_return
+  @callback delete_all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
+              {integer, nil | [term]} | no_return
 
   @doc """
   Inserts a struct defined via `Ecto.Schema` or a changeset.
@@ -829,8 +836,10 @@ defmodule Ecto.Repo do
   the case the record already exists, and it is not possible for Ecto to
   detect such cases reliably.
   """
-  @callback insert(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
-            {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
+  @callback insert(
+              struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(),
+              opts :: Keyword.t()
+            ) :: {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
 
   @doc """
   Updates a changeset using its primary key.
@@ -869,8 +878,8 @@ defmodule Ecto.Repo do
         {:error, changeset} -> # Something went wrong
       end
   """
-  @callback update(changeset :: Ecto.Changeset.t, opts :: Keyword.t) ::
-            {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
+  @callback update(changeset :: Ecto.Changeset.t(), opts :: Keyword.t()) ::
+              {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
 
   @doc """
   Inserts or updates a changeset depending on whether the struct is persisted
@@ -910,8 +919,8 @@ defmodule Ecto.Repo do
         {:error, changeset} -> # Something went wrong
       end
   """
-  @callback insert_or_update(changeset :: Ecto.Changeset.t, opts :: Keyword.t) ::
-            {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
+  @callback insert_or_update(changeset :: Ecto.Changeset.t(), opts :: Keyword.t()) ::
+              {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
 
   @doc """
   Deletes a struct using its primary key.
@@ -940,33 +949,39 @@ defmodule Ecto.Repo do
       end
 
   """
-  @callback delete(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
-            {:ok, Ecto.Schema.t} | {:error, Ecto.Changeset.t}
+  @callback delete(
+              struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(),
+              opts :: Keyword.t()
+            ) :: {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
 
   @doc """
   Same as `c:insert/2` but returns the struct or raises if the changeset is invalid.
   """
-  @callback insert!(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
-            Ecto.Schema.t | no_return
+  @callback insert!(
+              struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(),
+              opts :: Keyword.t()
+            ) :: Ecto.Schema.t() | no_return
 
   @doc """
   Same as `c:update/2` but returns the struct or raises if the changeset is invalid.
   """
-  @callback update!(changeset :: Ecto.Changeset.t, opts :: Keyword.t) ::
-            Ecto.Schema.t | no_return
+  @callback update!(changeset :: Ecto.Changeset.t(), opts :: Keyword.t()) ::
+              Ecto.Schema.t() | no_return
 
   @doc """
   Same as `c:insert_or_update/2` but returns the struct or raises if the changeset
   is invalid.
   """
-  @callback insert_or_update!(changeset :: Ecto.Changeset.t, opts :: Keyword.t) ::
-            Ecto.Schema.t | no_return
+  @callback insert_or_update!(changeset :: Ecto.Changeset.t(), opts :: Keyword.t()) ::
+              Ecto.Schema.t() | no_return
 
   @doc """
   Same as `c:delete/2` but returns the struct or raises if the changeset is invalid.
   """
-  @callback delete!(struct_or_changeset :: Ecto.Schema.t | Ecto.Changeset.t, opts :: Keyword.t) ::
-            Ecto.Schema.t | no_return
+  @callback delete!(
+              struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(),
+              opts :: Keyword.t()
+            ) :: Ecto.Schema.t() | no_return
 
   @doc """
   Runs the given function or `Ecto.Multi` inside a transaction.
@@ -1028,8 +1043,10 @@ defmodule Ecto.Repo do
       |> MyRepo.transaction
 
   """
-  @callback transaction(fun_or_multi :: fun | Ecto.Multi.t, opts :: Keyword.t) ::
-    {:ok, any} | {:error, any} | {:error, Ecto.Multi.name, any, %{Ecto.Multi.name => any}}
+  @callback transaction(fun_or_multi :: fun | Ecto.Multi.t(), opts :: Keyword.t()) ::
+              {:ok, any}
+              | {:error, any}
+              | {:error, Ecto.Multi.name(), any, %{Ecto.Multi.name() => any}}
   @optional_callbacks [transaction: 2]
 
   @doc """
@@ -1095,6 +1112,8 @@ defmodule Ecto.Repo do
       [%User{...}, ...]
 
   """
-  @callback load(struct_or_map :: Ecto.Schema.t | map(), data :: map() | Keyword.t | {list, list}) ::
-            Ecto.Schema.t | map()
+  @callback load(
+              struct_or_map :: Ecto.Schema.t() | map(),
+              data :: map() | Keyword.t() | {list, list}
+            ) :: Ecto.Schema.t() | map()
 end

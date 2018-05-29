@@ -33,6 +33,39 @@ defmodule Ecto.LogEntry do
   require Logger
 
   @doc """
+  Validates the MFAs to be applied.
+  """
+  def validate!(mfas) do
+    unless is_list(mfas) do
+      raise ArgumentError, "expected loggers to be a list, got: #{inspect(mfas)}"
+    end
+
+    Enum.each(mfas, fn
+      mod when is_atom(mod) ->
+        :ok
+
+      {Ecto.LogEntry, :log, [level]} when not (level in [:error, :info, :warn, :debug]) ->
+        raise ArgumentError, "the log level #{inspect(level)} is not supported in Ecto.LogEntry"
+
+      {mod, fun, args} when is_atom(mod) and is_atom(fun) and is_list(args) ->
+        :ok
+    end)
+  end
+
+  @doc """
+  Applies the given entry to the mfas.
+  """
+  def apply(entry, mfas) do
+    Enum.reduce(mfas, entry, fn
+      mod, acc when is_atom(mod) ->
+        mod.log(acc)
+
+      {mod, fun, args}, acc ->
+        apply(mod, fun, [acc | args])
+    end)
+  end
+
+  @doc """
   Logs the given entry in debug mode.
 
   The logger call will be removed at compile time if

@@ -1,8 +1,12 @@
 defmodule Ecto.Integration.Repo do
   defmacro __using__(opts) do
     quote do
-      loggers = [loggers: [Ecto.LogEntry, {Ecto.Integration.Repo, :log, [:on_log]}]]
-      use Ecto.Repo, loggers ++ unquote(opts)
+      use Ecto.Repo, unquote(opts)
+
+      def init(_, opts) do
+        loggers = [Ecto.LogEntry, {Ecto.Integration.Repo, :log, [:on_log]}]
+        {:ok, Keyword.put(opts, :loggers, loggers)}
+      end
     end
   end
 

@@ -255,12 +255,15 @@ defmodule Ecto.Migrator do
 
   defp lock_for_migrations(repo, opts, fun) do
     query = SchemaMigration.versions(repo, opts[:prefix])
+    meta = Ecto.Adapter.lookup_meta(repo)
 
-    case repo.__adapter__.lock_for_migrations(repo, query, opts, fun) do
+    case repo.__adapter__.lock_for_migrations(meta, query, opts, &fun.(repo.all(&1))) do
       {kind, reason, stacktrace} ->
         :erlang.raise(kind, reason, stacktrace)
+
       {:error, error} ->
         raise error
+
       result ->
         result
     end

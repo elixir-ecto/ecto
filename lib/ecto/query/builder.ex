@@ -820,7 +820,7 @@ defmodule Ecto.Query.Builder do
   # Aggregates
   def quoted_type({:count, _, [_, _]}, _vars), do: :integer
   def quoted_type({:count, _, [_]}, _vars), do: :integer
-  def quoted_type({agg, _, [_]}, _vars) when agg in [:avg, :sum], do: :any # TODO: Support the number type
+  def quoted_type({agg, _, [_]}, _vars) when agg in [:avg, :sum], do: :any
   def quoted_type({agg, _, [expr]}, vars) when agg in [:max, :min, :sum] do
     quoted_type(expr, vars)
   end

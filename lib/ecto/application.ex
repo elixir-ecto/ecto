@@ -7,7 +7,7 @@ defmodule Ecto.Application do
     import Supervisor.Spec
 
     children = [
-      worker(Ecto.Registry, []),
+      worker(Ecto.Repo.Registry, []),
       supervisor(Ecto.Migration.Supervisor, [])
     ]
 

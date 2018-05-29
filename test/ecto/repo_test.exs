@@ -93,7 +93,7 @@ defmodule Ecto.RepoTest do
   test "validates get" do
     TestRepo.get(MySchema, 123)
 
-    message = "cannot perform Ecto.TestRepo.get/2 because the given value is nil"
+    message = "cannot perform Ecto.Repo.get/2 because the given value is nil"
     assert_raise ArgumentError, message, fn ->
       TestRepo.get(MySchema, nil)
     end

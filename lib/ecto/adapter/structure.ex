@@ -1,6 +1,6 @@
 defmodule Ecto.Adapter.Structure  do
   @moduledoc """
-  Specifies the adapter structure API.
+  Specifies the adapter structure (dump/load) API.
   """
 
   @doc """

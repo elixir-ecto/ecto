@@ -14,8 +14,17 @@ defmodule Ecto.Migration.SchemaMigration do
   @opts [timeout: :infinity, log: false]
 
   def ensure_schema_migrations_table!(repo, prefix) do
-    adapter = repo.__adapter__
-    create_migrations_table(adapter, repo, prefix)
+    table_name = repo |> get_source |> String.to_atom()
+    table = %Ecto.Migration.Table{name: table_name, prefix: prefix}
+    meta = Ecto.Adapter.lookup_meta(repo)
+
+    commands = [
+      {:add, :version, :bigint, primary_key: true},
+      {:add, :inserted_at, :naive_datetime, []}
+    ]
+
+    # DDL queries do not log, so we do not need to pass log: false here.
+    repo.__adapter__.execute_ddl(meta, {:create_if_not_exists, table, commands}, @opts)
   end
 
   def versions(repo, prefix) do
@@ -37,16 +46,5 @@ defmodule Ecto.Migration.SchemaMigration do
 
   def get_source(repo) do
     Keyword.get(repo.config, :migration_source, "schema_migrations")
-  end
-
-  defp create_migrations_table(adapter, repo, prefix) do
-    table_name = repo |> get_source |> String.to_atom
-    table = %Ecto.Migration.Table{name: table_name, prefix: prefix}
-
-    # DDL queries do not log, so we do not need to pass log: false here.
-    adapter.execute_ddl(repo,
-      {:create_if_not_exists, table, [
-        {:add, :version, :bigint, primary_key: true},
-        {:add, :inserted_at, :naive_datetime, []}]}, @opts)
   end
 end

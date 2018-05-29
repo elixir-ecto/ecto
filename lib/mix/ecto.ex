@@ -96,14 +96,16 @@ defmodule Mix.Ecto do
       end
     end
 
-    {:ok, apps} = repo.__adapter__.ensure_all_started(repo, :temporary)
-
+    {:ok, apps} = repo.__adapter__.ensure_all_started(repo.config(), :temporary)
     pool_size = Keyword.get(opts, :pool_size, 2)
+
     case repo.start_link(pool_size: pool_size) do
       {:ok, pid} ->
         {:ok, pid, apps}
+
       {:error, {:already_started, _pid}} ->
         {:ok, nil, apps}
+
       {:error, error} ->
         Mix.raise "Could not start repo #{inspect repo}, error: #{inspect error}"
     end

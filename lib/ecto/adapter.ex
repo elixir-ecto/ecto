@@ -1,47 +1,53 @@
 defmodule Ecto.Adapter do
   @moduledoc """
-  This module specifies the adapter API that an adapter is required to
-  implement.
+  Specifies the API required from adapters.
   """
 
   @type t :: module
+
+  @typedoc "The metadata returned by the adapter init/1"
+  @type adapter_meta :: term
 
   @typedoc "Ecto.Query metadata fields (stored in cache)"
   @type query_meta :: %{prefix: binary | nil, sources: tuple, preloads: term, select: map}
 
   @typedoc "Ecto.Schema metadata fields"
-  @type schema_meta :: %{source: source, schema: atom, context: term, autogenerate_id: {atom, :id | :binary_id}}
+  @type schema_meta :: %{
+          source: source,
+          schema: atom,
+          context: term,
+          autogenerate_id: {atom, :id | :binary_id}
+        }
 
   @type source :: {prefix :: binary | nil, table :: binary}
-  @type fields :: Keyword.t
-  @type filters :: Keyword.t
-  @type constraints :: Keyword.t
+  @type fields :: Keyword.t()
+  @type filters :: Keyword.t()
+  @type constraints :: Keyword.t()
   @type returning :: [atom]
   @type prepared :: term
   @type cached :: term
-  @type on_conflict :: {:raise, list(), []} |
-                       {:nothing, list(), [atom]} |
-                       {[atom], list(), [atom]} |
-                       {Ecto.Query.t, list(), [atom]}
-
-  @typep repo :: Ecto.Repo.t
-  @typep options :: Keyword.t
+  @type on_conflict ::
+          {:raise, list(), []}
+          | {:nothing, list(), [atom]}
+          | {[atom], list(), [atom]}
+          | {Ecto.Query.t(), list(), [atom]}
+  @type options :: Keyword.t()
 
   @doc """
   The callback invoked in case the adapter needs to inject code.
   """
-  @macrocallback __before_compile__(env :: Macro.Env.t) :: Macro.t
+  @macrocallback __before_compile__(env :: Macro.Env.t()) :: Macro.t()
 
   @doc """
   Ensure all applications necessary to run the adapter are started.
   """
-  @callback ensure_all_started(repo, type :: :application.restart_type) ::
-    {:ok, [atom]} | {:error, atom}
+  @callback ensure_all_started(config :: Keyword.t(), type :: :application.restart_type()) ::
+              {:ok, [atom]} | {:error, atom}
 
   @doc """
-  Returns the childspec that starts the adapter process.
+  Initializes the adapter supervision tree by returning the children and adapter metadata.
   """
-  @callback child_spec(repo, options) :: :supervisor.child_spec
+  @callback init(config :: Keyword.t()) :: {:ok, [:supervisor.child_spec()], adapter_meta}
 
   ## Types
 
@@ -71,8 +77,8 @@ defmodule Ecto.Adapter do
       def loaders(_primitive, type), do: [type]
 
   """
-  @callback loaders(primitive_type :: Ecto.Type.primitive, ecto_type :: Ecto.Type.t) ::
-            [(term -> {:ok, term} | :error) | Ecto.Type.t]
+  @callback loaders(primitive_type :: Ecto.Type.primitive(), ecto_type :: Ecto.Type.t()) ::
+              [(term -> {:ok, term} | :error) | Ecto.Type.t()]
 
   @doc """
   Returns the dumpers for a given type.
@@ -100,8 +106,8 @@ defmodule Ecto.Adapter do
       def dumpers(_primitive, type), do: [type]
 
   """
-  @callback dumpers(primitive_type :: Ecto.Type.primitive, ecto_type :: Ecto.Type.t) ::
-            [(term -> {:ok, term} | :error) | Ecto.Type.t]
+  @callback dumpers(primitive_type :: Ecto.Type.primitive(), ecto_type :: Ecto.Type.t()) ::
+              [(term -> {:ok, term} | :error) | Ecto.Type.t()]
 
   @doc """
   Called to autogenerate a value for id/embed_id/binary_id.
@@ -116,7 +122,7 @@ defmodule Ecto.Adapter do
 
   The returned result is given to `execute/6`.
   """
-  @callback prepare(atom :: :all | :update_all | :delete_all, query :: Ecto.Query.t) ::
+  @callback prepare(atom :: :all | :update_all | :delete_all, query :: Ecto.Query.t()) ::
               {:cache, prepared} | {:nocache, prepared}
 
   @doc """
@@ -129,17 +135,25 @@ defmodule Ecto.Adapter do
   The `meta` field is a map containing some of the fields found
   in the `Ecto.Query` struct.
   """
-  @callback execute(repo, query_meta, query, params :: list(), options) :: result when
-              result: {integer, [[term]] | nil} | no_return,
-              query: {:nocache, prepared} |
-                     {:cached, (prepared -> :ok), cached} |
-                     {:cache, (cached -> :ok), prepared}
+  @callback execute(adapter_meta, query_meta, query, params :: list(), options) :: result
+            when result: {integer, [[term]] | nil} | no_return,
+                 query:
+                   {:nocache, prepared}
+                   | {:cached, (prepared -> :ok), cached}
+                   | {:cache, (cached -> :ok), prepared}
 
   @doc """
   Inserts multiple entries into the data store.
   """
-  @callback insert_all(repo, schema_meta, header :: [atom], [fields], on_conflict, returning, options) ::
-              {integer, [[term]] | nil} | no_return
+  @callback insert_all(
+              adapter_meta,
+              schema_meta,
+              header :: [atom],
+              [fields],
+              on_conflict,
+              returning,
+              options
+            ) :: {integer, [[term]] | nil} | no_return
 
   @doc """
   Inserts a single new struct in the data store.
@@ -150,8 +164,8 @@ defmodule Ecto.Adapter do
   field has type `:id` or `:binary_id` and no value was set by the
   developer or none was autogenerated by the adapter.
   """
-  @callback insert(repo, schema_meta, fields, on_conflict, returning, options) ::
-                    {:ok, fields} | {:invalid, constraints} | no_return
+  @callback insert(adapter_meta, schema_meta, fields, on_conflict, returning, options) ::
+              {:ok, fields} | {:invalid, constraints} | no_return
 
   @doc """
   Updates a single struct with the given filters.
@@ -162,9 +176,8 @@ defmodule Ecto.Adapter do
   in case there is no record matching the given filters,
   `{:error, :stale}` is returned.
   """
-  @callback update(repo, schema_meta, fields, filters, returning, options) ::
-                    {:ok, fields} | {:invalid, constraints} |
-                    {:error, :stale} | no_return
+  @callback update(adapter_meta, schema_meta, fields, filters, returning, options) ::
+              {:ok, fields} | {:invalid, constraints} | {:error, :stale} | no_return
 
   @doc """
   Deletes a single struct with the given filters.
@@ -175,7 +188,14 @@ defmodule Ecto.Adapter do
   in case there is no record matching the given filters,
   `{:error, :stale}` is returned.
   """
-  @callback delete(repo, schema_meta, filters, options) ::
-                     {:ok, fields} | {:invalid, constraints} |
-                     {:error, :stale} | no_return
+  @callback delete(adapter_meta, schema_meta, filters, options) ::
+              {:ok, fields} | {:invalid, constraints} | {:error, :stale} | no_return
+
+  @doc """
+  Returns the adapter metadata from the `init/2` callback.
+  """
+  def lookup_meta(name) do
+    {_, meta} = Ecto.Repo.Registry.lookup(name)
+    meta
+  end
 end

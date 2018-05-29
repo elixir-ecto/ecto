@@ -95,8 +95,8 @@ defmodule Ecto.Query.Planner do
   @doc """
   Define the query cache table.
   """
-  def new_query_cache(repo) do
-    :ets.new(repo, [:set, :public, :named_table, read_concurrency: true])
+  def new_query_cache(name) do
+    :ets.new(name, [:set, :public, :named_table, read_concurrency: true])
   end
 
   @doc """
@@ -124,69 +124,69 @@ defmodule Ecto.Query.Planner do
   The cache value is the compiled query by the adapter
   along-side the select expression.
   """
-  def query(query, operation, repo, adapter, counter) do
+  def query(query, operation, name, adapter, counter) do
     {query, params, key} = prepare(query, operation, adapter, counter)
     if key == :nocache do
       {_, select, prepared} = query_without_cache(query, operation, adapter, counter)
       {build_meta(query, select), {:nocache, prepared}, params}
     else
-      query_with_cache(query, operation, repo, adapter, counter, key, params)
+      query_with_cache(query, operation, name, adapter, counter, key, params)
     end
   end
 
-  defp query_with_cache(query, operation, repo, adapter, counter, key, params) do
-    case query_lookup(query, operation, repo, adapter, counter, key) do
+  defp query_with_cache(query, operation, name, adapter, counter, key, params) do
+    case query_lookup(query, operation, name, adapter, counter, key) do
       {:nocache, select, prepared} ->
         {build_meta(query, select), {:nocache, prepared}, params}
       {_, :cached, select, cached} ->
-        reset = &cache_reset(repo, key, &1)
+        reset = &cache_reset(name, key, &1)
         {build_meta(query, select), {:cached, reset, cached}, params}
       {_, :cache, select, prepared} ->
-        update = &cache_update(repo, key, &1)
+        update = &cache_update(name, key, &1)
         {build_meta(query, select), {:cache, update, prepared}, params}
     end
   end
 
-  defp query_lookup(query, operation, repo, adapter, counter, key) do
+  defp query_lookup(query, operation, name, adapter, counter, key) do
     try do
-      :ets.lookup(repo, key)
+      :ets.lookup(name, key)
     rescue
       ArgumentError ->
         raise ArgumentError,
-          "repo #{inspect repo} is not started, please ensure it is part of your supervision tree"
+          "repository named #{inspect name} is not started, please ensure it is part of your supervision tree"
     else
       [term] -> term
-      [] -> query_prepare(query, operation, adapter, counter, repo, key)
+      [] -> query_prepare(query, operation, adapter, counter, name, key)
     end
   end
 
-  defp query_prepare(query, operation, adapter, counter, repo, key) do
+  defp query_prepare(query, operation, adapter, counter, name, key) do
     case query_without_cache(query, operation, adapter, counter) do
       {:cache, select, prepared} ->
         elem = {key, :cache, select, prepared}
-        cache_insert(repo, key, elem)
+        cache_insert(name, key, elem)
       {:nocache, _, _} = nocache ->
         nocache
     end
   end
 
-  defp cache_insert(repo, key, elem) do
-    case :ets.insert_new(repo, elem) do
+  defp cache_insert(name, key, elem) do
+    case :ets.insert_new(name, elem) do
       true ->
         elem
       false ->
-        [elem] = :ets.lookup(repo, key)
+        [elem] = :ets.lookup(name, key)
         elem
     end
   end
 
-  defp cache_update(repo, key, cached) do
-    _ = :ets.update_element(repo, key, [{2, :cached}, {4, cached}])
+  defp cache_update(name, key, cached) do
+    _ = :ets.update_element(name, key, [{2, :cached}, {4, cached}])
     :ok
   end
 
-  defp cache_reset(repo, key, prepared) do
-    _ = :ets.update_element(repo, key, [{2, :cache}, {4, prepared}])
+  defp cache_reset(name, key, prepared) do
+    _ = :ets.update_element(name, key, [{2, :cache}, {4, prepared}])
     :ok
   end
 
@@ -959,13 +959,13 @@ defmodule Ecto.Query.Planner do
                       fields, from, %{select: select} = query, _take)
        when agg in ~w(count avg min max sum)a do
     type =
-      # TODO: Support the :number type
       case agg do
         :count -> :integer
         :avg -> :any
         :sum -> :any
         _ -> source_type!(:select, query, select, ix, field)
       end
+
     {{:value, type}, [expr | fields], from}
   end
 

@@ -69,7 +69,7 @@ defmodule Ecto.Integration.Case do
   end
 end
 
-{:ok, _} = Ecto.Adapters.MySQL.ensure_all_started(TestRepo, :temporary)
+{:ok, _} = Ecto.Adapters.MySQL.ensure_all_started(TestRepo.config(), :temporary)
 
 # Load up the repository, start it, and run migrations
 _   = Ecto.Adapters.MySQL.storage_down(TestRepo.config)

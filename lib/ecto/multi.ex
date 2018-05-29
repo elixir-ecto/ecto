@@ -590,11 +590,11 @@ defmodule Ecto.Multi do
   defp apply_operation({:error, value}, _acc, _apply_args, _repo),
     do: {:error, value}
   defp apply_operation({:insert_all, source, entries, opts}, _acc, _apply_args, repo),
-    do: {:ok, repo.insert_all(source, entries, opts)}
+    do: {:ok, Ecto.Repo.Schema.insert_all(repo, source, entries, opts)}
   defp apply_operation({:update_all, query, updates, opts}, _acc, _apply_args, repo),
-    do: {:ok, repo.update_all(query, updates, opts)}
+    do: {:ok, Ecto.Repo.Queryable.update_all(repo, query, updates, opts)}
   defp apply_operation({:delete_all, query, opts}, _acc, _apply_args, repo),
-    do: {:ok, repo.delete_all(query, opts)}
+    do: {:ok, Ecto.Repo.Queryable.delete_all(repo, query, opts)}
 
   defp apply_merge_fun({mod, fun, args}, acc), do: apply(mod, fun, [acc | args])
   defp apply_merge_fun(fun, acc), do: apply(fun, [acc])

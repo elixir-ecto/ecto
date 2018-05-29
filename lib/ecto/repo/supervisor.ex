@@ -2,7 +2,7 @@ defmodule Ecto.Repo.Supervisor do
   @moduledoc false
   use Supervisor
 
-  @defaults [timeout: 15000, pool_timeout: 5000]
+  @defaults [timeout: 15000, pool_timeout: 5000, pool_size: 10, loggers: [Ecto.LogEntry]]
   @integer_url_query_params ["timeout", "pool_size", "pool_timeout"]
 
   @doc """
@@ -10,21 +10,22 @@ defmodule Ecto.Repo.Supervisor do
   """
   def start_link(repo, otp_app, adapter, opts) do
     name = Keyword.get(opts, :name, repo)
-    Supervisor.start_link(__MODULE__, {repo, otp_app, adapter, opts}, [name: name])
+    Supervisor.start_link(__MODULE__, {name, repo, otp_app, adapter, opts}, [name: name])
   end
 
   @doc """
   Retrieves the runtime configuration.
   """
-  def runtime_config(type, repo, otp_app, custom) do
+  def runtime_config(type, repo, otp_app, opts) do
     if config = Application.get_env(otp_app, repo) do
-      config = [otp_app: otp_app, repo: repo] ++
-               (@defaults |> Keyword.merge(config) |> Keyword.merge(custom))
+      config = [otp_app: otp_app] ++ (@defaults |> Keyword.merge(config) |> Keyword.merge(opts))
+      config = Keyword.put_new(config, :name, repo)
 
       case repo_init(type, repo, config) do
         {:ok, config} ->
           {url, config} = Keyword.pop(config, :url)
           {:ok, Keyword.merge(config, parse_url(url || ""))}
+
         :ignore ->
           :ignore
       end
@@ -50,22 +51,6 @@ defmodule Ecto.Repo.Supervisor do
     config  = Application.get_env(otp_app, repo, [])
     adapter = opts[:adapter] || config[:adapter]
 
-    case Keyword.get(config, :url) do
-      {:system, env} = url ->
-        raise """
-        Using #{inspect url} for your :url configuration is no longer supported.
-
-        Instead define an init/2 callback in your repository that sets
-        the URL accordingly from your system environment:
-
-            def init(_type, config) do
-              {:ok, Keyword.put(config, :url, System.get_env(#{inspect env}))}
-            end
-        """
-      _ ->
-        :ok
-    end
-
     unless adapter do
       raise ArgumentError, "missing :adapter configuration in " <>
                            "config #{inspect otp_app}, #{inspect repo}"
@@ -76,7 +61,7 @@ defmodule Ecto.Repo.Supervisor do
                            "ensure it is correct and it is included as a project dependency"
     end
 
-    {otp_app, adapter, config}
+    {otp_app, adapter}
   end
 
   @doc """
@@ -111,7 +96,9 @@ defmodule Ecto.Repo.Supervisor do
 
     query_opts = parse_uri_query(info)
 
-    for {k, v} <- url_opts ++ query_opts, not is_nil(v), do: {k, if(is_binary(v), do: URI.decode(v), else: v)}
+    for {k, v} <- url_opts ++ query_opts,
+        not is_nil(v),
+        do: {k, if(is_binary(v), do: URI.decode(v), else: v)}
   end
 
   defp parse_uri_query(%URI{query: nil}),
@@ -138,21 +125,25 @@ defmodule Ecto.Repo.Supervisor do
     case Integer.parse(value) do
       {int, ""} ->
         int
+
       _ ->
-        raise Ecto.InvalidURLError, url: url, message: "can not parse value `#{value}` for parameter `#{key}` as an integer"
+        raise Ecto.InvalidURLError,
+              url: url,
+              message: "can not parse value `#{value}` for parameter `#{key}` as an integer"
     end
   end
 
   ## Callbacks
 
-  def init({repo, otp_app, adapter, opts}) do
+  def init({name, repo, otp_app, adapter, opts}) do
     case runtime_config(:supervisor, repo, otp_app, opts) do
       {:ok, opts} ->
-        children = [adapter.child_spec(repo, opts)]
-        if Keyword.get(opts, :query_cache_owner, true) do
-          Ecto.Query.Planner.new_query_cache(repo)
-        end
+        Ecto.LogEntry.validate!(opts[:loggers])
+        {:ok, children, meta} = adapter.init(opts)
+        Ecto.Query.Planner.new_query_cache(name)
+        Ecto.Repo.Registry.associate(self(), {adapter, meta})
         supervise(children, strategy: :one_for_one)
+
       :ignore ->
         :ignore
     end
