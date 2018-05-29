@@ -47,7 +47,7 @@ defmodule Ecto.Adapter do
   @doc """
   Initializes the adapter supervision tree by returning the children and adapter metadata.
   """
-  @callback init(config :: Keyword.t()) :: {:ok, [:supervisor.child_spec()], adapter_meta}
+  @callback init(config :: Keyword.t()) :: {:ok, :supervisor.child_spec(), adapter_meta}
 
   ## Types
 
@@ -193,9 +193,40 @@ defmodule Ecto.Adapter do
 
   @doc """
   Returns the adapter metadata from the `init/2` callback.
+
+  It expects a name or a pid representing a repo.
   """
-  def lookup_meta(name) do
-    {_, meta} = Ecto.Repo.Registry.lookup(name)
+  def lookup_meta(repo_name_or_pid) do
+    {_, _, meta} = Ecto.Repo.Registry.lookup(repo_name_or_pid)
     meta
+  end
+
+  @doc """
+  Plans and prepares a query for the given repo, leveraging its query cache.
+
+  This operation uses the query cache if one is available.
+  """
+  def prepare_query(operation, repo_name_or_pid, queryable) do
+    {adapter, cache, _meta} = Ecto.Repo.Registry.lookup(repo_name_or_pid)
+
+    {_meta, prepared, params} =
+      queryable
+      |> Ecto.Queryable.to_query()
+      |> Ecto.Query.Planner.ensure_select(operation == :all)
+      |> Ecto.Query.Planner.query(operation, cache, adapter, 0)
+
+    {prepared, params}
+  end
+
+  @doc """
+  Plans a query using the given adapter.
+
+  This does not expect the repository and therefore does not leverage the cache.
+  """
+  def plan_query(operation, adapter, queryable) do
+    query = Ecto.Queryable.to_query(queryable)
+    {query, params, _key} = Ecto.Query.Planner.prepare(query, operation, adapter, 0)
+    {query, _} = Ecto.Query.Planner.normalize(query, operation, adapter, 0)
+    {query, params}
   end
 end

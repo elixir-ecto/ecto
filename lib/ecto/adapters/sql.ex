@@ -166,22 +166,14 @@ defmodule Ecto.Adapters.SQL do
   @spec to_sql(:all | :update_all | :delete_all, Ecto.Repo.t, Ecto.Queryable.t) ::
                {String.t, [term]}
   def to_sql(kind, repo, queryable) do
-    # TODO: Move this API to the adapter.
-    # Note the `repo` given to the planner is actually the name.
-    adapter = repo.__adapter__
-
-    queryable
-    |> Ecto.Queryable.to_query()
-    |> Ecto.Query.Planner.ensure_select(kind == :all)
-    |> Ecto.Query.Planner.query(kind, repo, adapter, 0)
-    |> case do
-      {_meta, {:cached, _reset, {_id, cached}}, params} ->
+    case Ecto.Adapter.prepare_query(kind, repo, queryable) do
+      {{:cached, _reset, {_id, cached}}, params} ->
         {String.Chars.to_string(cached), params}
 
-      {_meta, {:cache, _update, {_id, prepared}}, params} ->
+      {{:cache, _update, {_id, prepared}}, params} ->
         {prepared, params}
 
-      {_meta, {:nocache, {_id, prepared}}, params} ->
+      {{:nocache, {_id, prepared}}, params} ->
         {prepared, params}
     end
   end
@@ -398,7 +390,7 @@ defmodule Ecto.Adapters.SQL do
     loggers = Keyword.fetch!(config, :loggers)
     pool_config = pool_config(config)
     pool_name = Keyword.fetch!(pool_config, :name)
-    {:ok, [connection.child_spec(pool_config)], {loggers, connection, pool_name, pool_config}}
+    {:ok, connection.child_spec(pool_config), {loggers, connection, pool_name, pool_config}}
   end
 
   defp pool_config(config) do

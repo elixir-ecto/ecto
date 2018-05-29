@@ -44,9 +44,8 @@ defmodule Ecto.Adapters.MySQLTest do
     end
   end
 
-  defp normalize(query, operation \\ :all, counter \\ 0) do
-    {query, _params, _key} = Ecto.Query.Planner.prepare(query, operation, Ecto.Adapters.MySQL, counter)
-    {query, _} = Ecto.Query.Planner.normalize(query, operation, Ecto.Adapters.MySQL, counter)
+  defp plan(query, operation \\ :all) do
+    {query, _params} = Ecto.Adapter.plan_query(operation, Ecto.Adapters.MySQL, query)
     query
   end
 
@@ -68,265 +67,265 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   test "from" do
-    query = Schema |> select([r], r.x) |> normalize
+    query = Schema |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0}
   end
 
   test "from without schema" do
-    query = "posts" |> select([r], r.x) |> normalize
+    query = "posts" |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT p0.`x` FROM `posts` AS p0}
 
-    query = "Posts" |> select([:x]) |> normalize
+    query = "Posts" |> select([:x]) |> plan()
     assert all(query) == ~s{SELECT P0.`x` FROM `Posts` AS P0}
 
-    query = "0posts" |> select([:x]) |> normalize
+    query = "0posts" |> select([:x]) |> plan()
     assert all(query) == ~s{SELECT t0.`x` FROM `0posts` AS t0}
 
     assert_raise Ecto.QueryError, ~r"MySQL does not support selecting all fields from `posts` without a schema", fn ->
-      all from(p in "posts", select: p) |> normalize()
+      all from(p in "posts", select: p) |> plan()
     end
   end
 
   test "from with subquery" do
-    query = subquery("posts" |> select([r], %{x: r.x, y: r.y})) |> select([r], r.x) |> normalize
+    query = subquery("posts" |> select([r], %{x: r.x, y: r.y})) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM (SELECT p0.`x` AS `x`, p0.`y` AS `y` FROM `posts` AS p0) AS s0}
 
-    query = subquery("posts" |> select([r], %{x: r.x, z: r.y})) |> select([r], r) |> normalize
+    query = subquery("posts" |> select([r], %{x: r.x, z: r.y})) |> select([r], r) |> plan()
     assert all(query) == ~s{SELECT s0.`x`, s0.`z` FROM (SELECT p0.`x` AS `x`, p0.`y` AS `z` FROM `posts` AS p0) AS s0}
   end
 
   test "select" do
-    query = Schema |> select([r], {r.x, r.y}) |> normalize
+    query = Schema |> select([r], {r.x, r.y}) |> plan()
     assert all(query) == ~s{SELECT s0.`x`, s0.`y` FROM `schema` AS s0}
 
-    query = Schema |> select([r], [r.x, r.y]) |> normalize
+    query = Schema |> select([r], [r.x, r.y]) |> plan()
     assert all(query) == ~s{SELECT s0.`x`, s0.`y` FROM `schema` AS s0}
 
-    query = Schema |> select([r], struct(r, [:x, :y])) |> normalize
+    query = Schema |> select([r], struct(r, [:x, :y])) |> plan()
     assert all(query) == ~s{SELECT s0.`x`, s0.`y` FROM `schema` AS s0}
   end
 
   test "distinct" do
-    query = Schema |> distinct([r], true) |> select([r], {r.x, r.y}) |> normalize
+    query = Schema |> distinct([r], true) |> select([r], {r.x, r.y}) |> plan()
     assert all(query) == ~s{SELECT DISTINCT s0.`x`, s0.`y` FROM `schema` AS s0}
 
-    query = Schema |> distinct([r], false) |> select([r], {r.x, r.y}) |> normalize
+    query = Schema |> distinct([r], false) |> select([r], {r.x, r.y}) |> plan()
     assert all(query) == ~s{SELECT s0.`x`, s0.`y` FROM `schema` AS s0}
 
-    query = Schema |> distinct(true) |> select([r], {r.x, r.y}) |> normalize
+    query = Schema |> distinct(true) |> select([r], {r.x, r.y}) |> plan()
     assert all(query) == ~s{SELECT DISTINCT s0.`x`, s0.`y` FROM `schema` AS s0}
 
-    query = Schema |> distinct(false) |> select([r], {r.x, r.y}) |> normalize
+    query = Schema |> distinct(false) |> select([r], {r.x, r.y}) |> plan()
     assert all(query) == ~s{SELECT s0.`x`, s0.`y` FROM `schema` AS s0}
 
     assert_raise Ecto.QueryError, ~r"DISTINCT with multiple columns is not supported by MySQL", fn ->
-      query = Schema |> distinct([r], [r.x, r.y]) |> select([r], {r.x, r.y}) |> normalize
+      query = Schema |> distinct([r], [r.x, r.y]) |> select([r], {r.x, r.y}) |> plan()
       all(query)
     end
   end
 
   test "where" do
-    query = Schema |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> normalize
+    query = Schema |> where([r], r.x == 42) |> where([r], r.y != 43) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 WHERE (s0.`x` = 42) AND (s0.`y` != 43)}
 
-    query = Schema |> where([r], {r.x, r.y} > {1, 2}) |> select([r], r.x) |> normalize
+    query = Schema |> where([r], {r.x, r.y} > {1, 2}) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 WHERE ((s0.`x`,s0.`y`) > (1,2))}
   end
 
   test "or_where" do
-    query = Schema |> or_where([r], r.x == 42) |> or_where([r], r.y != 43) |> select([r], r.x) |> normalize
+    query = Schema |> or_where([r], r.x == 42) |> or_where([r], r.y != 43) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 WHERE (s0.`x` = 42) OR (s0.`y` != 43)}
 
-    query = Schema |> or_where([r], r.x == 42) |> or_where([r], r.y != 43) |> where([r], r.z == 44) |> select([r], r.x) |> normalize
+    query = Schema |> or_where([r], r.x == 42) |> or_where([r], r.y != 43) |> where([r], r.z == 44) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 WHERE ((s0.`x` = 42) OR (s0.`y` != 43)) AND (s0.`z` = 44)}
   end
 
   test "order by" do
-    query = Schema |> order_by([r], r.x) |> select([r], r.x) |> normalize
+    query = Schema |> order_by([r], r.x) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 ORDER BY s0.`x`}
 
-    query = Schema |> order_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
+    query = Schema |> order_by([r], [r.x, r.y]) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 ORDER BY s0.`x`, s0.`y`}
 
-    query = Schema |> order_by([r], [asc: r.x, desc: r.y]) |> select([r], r.x) |> normalize
+    query = Schema |> order_by([r], [asc: r.x, desc: r.y]) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 ORDER BY s0.`x`, s0.`y` DESC}
 
-    query = Schema |> order_by([r], []) |> select([r], r.x) |> normalize
+    query = Schema |> order_by([r], []) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0}
   end
 
   test "limit and offset" do
-    query = Schema |> limit([r], 3) |> select([], true) |> normalize
+    query = Schema |> limit([r], 3) |> select([], true) |> plan()
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 LIMIT 3}
 
-    query = Schema |> offset([r], 5) |> select([], true) |> normalize
+    query = Schema |> offset([r], 5) |> select([], true) |> plan()
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 OFFSET 5}
 
-    query = Schema |> offset([r], 5) |> limit([r], 3) |> select([], true) |> normalize
+    query = Schema |> offset([r], 5) |> limit([r], 3) |> select([], true) |> plan()
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 LIMIT 3 OFFSET 5}
   end
 
   test "aggregate filters" do
-    query = Schema |> select([r], count(r.x) |> filter(r.x > 10)) |> normalize
+    query = Schema |> select([r], count(r.x) |> filter(r.x > 10)) |> plan()
     assert_raise Ecto.QueryError, ~r/MySQL adapter does not support aggregate filters in query/, fn ->
       all(query)
     end
   end
 
   test "lock" do
-    query = Schema |> lock("LOCK IN SHARE MODE") |> select([], true) |> normalize
+    query = Schema |> lock("LOCK IN SHARE MODE") |> select([], true) |> plan()
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 LOCK IN SHARE MODE}
   end
 
   test "coalesce" do
-    query = Schema |> select([s], coalesce(s.x, 5)) |> normalize
+    query = Schema |> select([s], coalesce(s.x, 5)) |> plan()
     assert all(query) == ~s{SELECT coalesce(s0.`x`, 5) FROM `schema` AS s0}
   end
 
   test "string escape" do
-    query = "schema" |> where(foo: "'\\  ") |> select([], true) |> normalize
+    query = "schema" |> where(foo: "'\\  ") |> select([], true) |> plan()
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 WHERE (s0.`foo` = '''\\\\  ')}
 
-    query = "schema" |> where(foo: "'") |> select([], true) |> normalize
+    query = "schema" |> where(foo: "'") |> select([], true) |> plan()
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 WHERE (s0.`foo` = '''')}
   end
 
   test "binary ops" do
-    query = Schema |> select([r], r.x == 2) |> normalize
+    query = Schema |> select([r], r.x == 2) |> plan()
     assert all(query) == ~s{SELECT s0.`x` = 2 FROM `schema` AS s0}
 
-    query = Schema |> select([r], r.x != 2) |> normalize
+    query = Schema |> select([r], r.x != 2) |> plan()
     assert all(query) == ~s{SELECT s0.`x` != 2 FROM `schema` AS s0}
 
-    query = Schema |> select([r], r.x <= 2) |> normalize
+    query = Schema |> select([r], r.x <= 2) |> plan()
     assert all(query) == ~s{SELECT s0.`x` <= 2 FROM `schema` AS s0}
 
-    query = Schema |> select([r], r.x >= 2) |> normalize
+    query = Schema |> select([r], r.x >= 2) |> plan()
     assert all(query) == ~s{SELECT s0.`x` >= 2 FROM `schema` AS s0}
 
-    query = Schema |> select([r], r.x < 2) |> normalize
+    query = Schema |> select([r], r.x < 2) |> plan()
     assert all(query) == ~s{SELECT s0.`x` < 2 FROM `schema` AS s0}
 
-    query = Schema |> select([r], r.x > 2) |> normalize
+    query = Schema |> select([r], r.x > 2) |> plan()
     assert all(query) == ~s{SELECT s0.`x` > 2 FROM `schema` AS s0}
 
-    query = Schema |> select([r], r.x + 2) |> normalize
+    query = Schema |> select([r], r.x + 2) |> plan()
     assert all(query) == ~s{SELECT s0.`x` + 2 FROM `schema` AS s0}
   end
 
   test "is_nil" do
-    query = Schema |> select([r], is_nil(r.x)) |> normalize
+    query = Schema |> select([r], is_nil(r.x)) |> plan()
     assert all(query) == ~s{SELECT s0.`x` IS NULL FROM `schema` AS s0}
 
-    query = Schema |> select([r], not is_nil(r.x)) |> normalize
+    query = Schema |> select([r], not is_nil(r.x)) |> plan()
     assert all(query) == ~s{SELECT NOT (s0.`x` IS NULL) FROM `schema` AS s0}
   end
 
   test "order_by and types" do
-    query = "schema3" |> order_by([e], type(fragment("?", e.binary), ^:decimal)) |> select(true) |> normalize()
+    query = "schema3" |> order_by([e], type(fragment("?", e.binary), ^:decimal)) |> select(true) |> plan()
     assert all(query) == "SELECT TRUE FROM `schema3` AS s0 ORDER BY s0.`binary` + 0"
   end
 
   test "fragments" do
-    query = Schema |> select([r], fragment("lcase(?)", r.x)) |> normalize
+    query = Schema |> select([r], fragment("lcase(?)", r.x)) |> plan()
     assert all(query) == ~s{SELECT lcase(s0.`x`) FROM `schema` AS s0}
 
-    query = Schema |> select([r], r.x) |> where([], fragment("? = \"query\\?\"", ^10)) |> normalize
+    query = Schema |> select([r], r.x) |> where([], fragment("? = \"query\\?\"", ^10)) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 WHERE (? = \"query?\")}
 
     value = 13
-    query = Schema |> select([r], fragment("lcase(?, ?)", r.x, ^value)) |> normalize
+    query = Schema |> select([r], fragment("lcase(?, ?)", r.x, ^value)) |> plan()
     assert all(query) == ~s{SELECT lcase(s0.`x`, ?) FROM `schema` AS s0}
 
-    query = Schema |> select([], fragment(title: 2)) |> normalize
+    query = Schema |> select([], fragment(title: 2)) |> plan()
     assert_raise Ecto.QueryError, fn ->
       all(query)
     end
   end
 
   test "literals" do
-    query = "schema" |> where(foo: true) |> select([], true) |> normalize
+    query = "schema" |> where(foo: true) |> select([], true) |> plan()
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 WHERE (s0.`foo` = TRUE)}
 
-    query = "schema" |> where(foo: false) |> select([], true) |> normalize
+    query = "schema" |> where(foo: false) |> select([], true) |> plan()
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 WHERE (s0.`foo` = FALSE)}
 
-    query = "schema" |> where(foo: "abc") |> select([], true) |> normalize
+    query = "schema" |> where(foo: "abc") |> select([], true) |> plan()
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 WHERE (s0.`foo` = 'abc')}
 
-    query = "schema" |> where(foo: 123) |> select([], true) |> normalize
+    query = "schema" |> where(foo: 123) |> select([], true) |> plan()
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 WHERE (s0.`foo` = 123)}
 
-    query = "schema" |> where(foo: 123.0) |> select([], true) |> normalize
+    query = "schema" |> where(foo: 123.0) |> select([], true) |> plan()
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 WHERE (s0.`foo` = (0 + 123.0))}
   end
 
   test "tagged type" do
-    query = Schema |> select([], type(^"601d74e4-a8d3-4b6e-8365-eddb4c893327", Ecto.UUID)) |> normalize
+    query = Schema |> select([], type(^"601d74e4-a8d3-4b6e-8365-eddb4c893327", Ecto.UUID)) |> plan()
     assert all(query) == ~s{SELECT CAST(? AS binary(16)) FROM `schema` AS s0}
   end
 
   test "string type" do
-    query = Schema |> select([], type(^"test", :string)) |> normalize
+    query = Schema |> select([], type(^"test", :string)) |> plan()
     assert all(query) == ~s{SELECT CAST(? AS char) FROM `schema` AS s0}
   end
 
   test "nested expressions" do
     z = 123
-    query = from(r in Schema, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> normalize
+    query = from(r in Schema, []) |> select([r], r.x > 0 and (r.y > ^(-z)) or true) |> plan()
     assert all(query) == ~s{SELECT ((s0.`x` > 0) AND (s0.`y` > ?)) OR TRUE FROM `schema` AS s0}
   end
 
   test "in expression" do
-    query = Schema |> select([e], 1 in []) |> normalize
+    query = Schema |> select([e], 1 in []) |> plan()
     assert all(query) == ~s{SELECT false FROM `schema` AS s0}
 
-    query = Schema |> select([e], 1 in [1,e.x,3]) |> normalize
+    query = Schema |> select([e], 1 in [1,e.x,3]) |> plan()
     assert all(query) == ~s{SELECT 1 IN (1,s0.`x`,3) FROM `schema` AS s0}
 
-    query = Schema |> select([e], 1 in ^[]) |> normalize
+    query = Schema |> select([e], 1 in ^[]) |> plan()
     assert all(query) == ~s{SELECT false FROM `schema` AS s0}
 
-    query = Schema |> select([e], 1 in ^[1, 2, 3]) |> normalize
+    query = Schema |> select([e], 1 in ^[1, 2, 3]) |> plan()
     assert all(query) == ~s{SELECT 1 IN (?,?,?) FROM `schema` AS s0}
 
-    query = Schema |> select([e], 1 in [1, ^2, 3]) |> normalize
+    query = Schema |> select([e], 1 in [1, ^2, 3]) |> plan()
     assert all(query) == ~s{SELECT 1 IN (1,?,3) FROM `schema` AS s0}
 
-    query = Schema |> select([e], 1 in fragment("foo")) |> normalize
+    query = Schema |> select([e], 1 in fragment("foo")) |> plan()
     assert all(query) == ~s{SELECT 1 = ANY(foo) FROM `schema` AS s0}
 
-    query = Schema |> select([e], e.x == ^0 or e.x in ^[1, 2, 3] or e.x == ^4) |> normalize
+    query = Schema |> select([e], e.x == ^0 or e.x in ^[1, 2, 3] or e.x == ^4) |> plan()
     assert all(query) == ~s{SELECT ((s0.`x` = ?) OR s0.`x` IN (?,?,?)) OR (s0.`x` = ?) FROM `schema` AS s0}
   end
 
   test "having" do
-    query = Schema |> having([p], p.x == p.x) |> select([p], p.x) |> normalize
+    query = Schema |> having([p], p.x == p.x) |> select([p], p.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 HAVING (s0.`x` = s0.`x`)}
 
-    query = Schema |> having([p], p.x == p.x) |> having([p], p.y == p.y) |> select([p], [p.y, p.x]) |> normalize
+    query = Schema |> having([p], p.x == p.x) |> having([p], p.y == p.y) |> select([p], [p.y, p.x]) |> plan()
     assert all(query) == ~s{SELECT s0.`y`, s0.`x` FROM `schema` AS s0 HAVING (s0.`x` = s0.`x`) AND (s0.`y` = s0.`y`)}
   end
 
   test "or_having" do
-    query = Schema |> or_having([p], p.x == p.x) |> select([p], p.x) |> normalize
+    query = Schema |> or_having([p], p.x == p.x) |> select([p], p.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 HAVING (s0.`x` = s0.`x`)}
 
-    query = Schema |> or_having([p], p.x == p.x) |> or_having([p], p.y == p.y) |> select([p], [p.y, p.x]) |> normalize
+    query = Schema |> or_having([p], p.x == p.x) |> or_having([p], p.y == p.y) |> select([p], [p.y, p.x]) |> plan()
     assert all(query) == ~s{SELECT s0.`y`, s0.`x` FROM `schema` AS s0 HAVING (s0.`x` = s0.`x`) OR (s0.`y` = s0.`y`)}
   end
 
   test "group by" do
-    query = Schema |> group_by([r], r.x) |> select([r], r.x) |> normalize
+    query = Schema |> group_by([r], r.x) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 GROUP BY s0.`x`}
 
-    query = Schema |> group_by([r], 2) |> select([r], r.x) |> normalize
+    query = Schema |> group_by([r], 2) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 GROUP BY 2}
 
-    query = Schema |> group_by([r], [r.x, r.y]) |> select([r], r.x) |> normalize
+    query = Schema |> group_by([r], [r.x, r.y]) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 GROUP BY s0.`x`, s0.`y`}
 
-    query = Schema |> group_by([r], []) |> select([r], r.x) |> normalize
+    query = Schema |> group_by([r], []) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0}
   end
 
@@ -345,7 +344,7 @@ defmodule Ecto.Adapters.MySQLTest do
             |> order_by([], ^:x)
             |> limit([], ^4)
             |> offset([], ^5)
-            |> normalize
+            |> plan()
 
     result =
       "SELECT s0.`id`, ? FROM `schema` AS s0 INNER JOIN `schema2` AS s1 ON ? " <>
@@ -359,105 +358,105 @@ defmodule Ecto.Adapters.MySQLTest do
   ## *_all
 
   test "update all" do
-    query = from(m in Schema, update: [set: [x: 0]]) |> normalize(:update_all)
+    query = from(m in Schema, update: [set: [x: 0]]) |> plan(:update_all)
     assert update_all(query) ==
            ~s{UPDATE `schema` AS s0 SET s0.`x` = 0}
 
-    query = from(m in Schema, update: [set: [x: 0], inc: [y: 1, z: -3]]) |> normalize(:update_all)
+    query = from(m in Schema, update: [set: [x: 0], inc: [y: 1, z: -3]]) |> plan(:update_all)
     assert update_all(query) ==
            ~s{UPDATE `schema` AS s0 SET s0.`x` = 0, s0.`y` = s0.`y` + 1, s0.`z` = s0.`z` + -3}
 
-    query = from(e in Schema, where: e.x == 123, update: [set: [x: 0]]) |> normalize(:update_all)
+    query = from(e in Schema, where: e.x == 123, update: [set: [x: 0]]) |> plan(:update_all)
     assert update_all(query) ==
            ~s{UPDATE `schema` AS s0 SET s0.`x` = 0 WHERE (s0.`x` = 123)}
 
-    query = from(m in Schema, update: [set: [x: ^0]]) |> normalize(:update_all)
+    query = from(m in Schema, update: [set: [x: ^0]]) |> plan(:update_all)
     assert update_all(query) ==
            ~s{UPDATE `schema` AS s0 SET s0.`x` = ?}
 
     query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z)
-                  |> update([_], set: [x: 0]) |> normalize(:update_all)
+                  |> update([_], set: [x: 0]) |> plan(:update_all)
     assert update_all(query) ==
            ~s{UPDATE `schema` AS s0, `schema2` AS s1 SET s0.`x` = 0 WHERE (s0.`x` = s1.`z`)}
 
     query = from(e in Schema, where: e.x == 123, update: [set: [x: 0]],
-                             join: q in Schema2, on: e.x == q.z) |> normalize(:update_all)
+                             join: q in Schema2, on: e.x == q.z) |> plan(:update_all)
     assert update_all(query) ==
            ~s{UPDATE `schema` AS s0, `schema2` AS s1 } <>
            ~s{SET s0.`x` = 0 WHERE (s0.`x` = s1.`z`) AND (s0.`x` = 123)}
   end
 
   test "update all with prefix" do
-    query = from(m in Schema, update: [set: [x: 0]]) |> normalize(:update_all)
+    query = from(m in Schema, update: [set: [x: 0]]) |> plan(:update_all)
     assert update_all(%{query | prefix: "prefix"}) ==
            ~s{UPDATE `prefix`.`schema` AS s0 SET s0.`x` = 0}
   end
 
   test "delete all" do
-    query = Schema |> Queryable.to_query |> normalize
+    query = Schema |> Queryable.to_query |> plan()
     assert delete_all(query) == ~s{DELETE s0.* FROM `schema` AS s0}
 
-    query = from(e in Schema, where: e.x == 123) |> normalize
+    query = from(e in Schema, where: e.x == 123) |> plan()
     assert delete_all(query) ==
            ~s{DELETE s0.* FROM `schema` AS s0 WHERE (s0.`x` = 123)}
 
-    query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z) |> normalize
+    query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z) |> plan()
     assert delete_all(query) ==
            ~s{DELETE s0.* FROM `schema` AS s0 INNER JOIN `schema2` AS s1 ON s0.`x` = s1.`z`}
 
-    query = from(e in Schema, where: e.x == 123, join: q in Schema2, on: e.x == q.z) |> normalize
+    query = from(e in Schema, where: e.x == 123, join: q in Schema2, on: e.x == q.z) |> plan()
     assert delete_all(query) ==
            ~s{DELETE s0.* FROM `schema` AS s0 } <>
            ~s{INNER JOIN `schema2` AS s1 ON s0.`x` = s1.`z` WHERE (s0.`x` = 123)}
   end
 
   test "delete all with prefix" do
-    query = Schema |> Queryable.to_query |> normalize
+    query = Schema |> Queryable.to_query |> plan()
     assert delete_all(%{query | prefix: "prefix"}) == ~s{DELETE s0.* FROM `prefix`.`schema` AS s0}
   end
 
   ## Joins
 
   test "join" do
-    query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z) |> select([], true) |> normalize
+    query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z) |> select([], true) |> plan()
     assert all(query) ==
            ~s{SELECT TRUE FROM `schema` AS s0 INNER JOIN `schema2` AS s1 ON s0.`x` = s1.`z`}
 
     query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z)
-                  |> join(:inner, [], Schema, on: true) |> select([], true) |> normalize
+                  |> join(:inner, [], Schema, on: true) |> select([], true) |> plan()
     assert all(query) ==
            ~s{SELECT TRUE FROM `schema` AS s0 INNER JOIN `schema2` AS s1 ON s0.`x` = s1.`z` } <>
            ~s{INNER JOIN `schema` AS s2 ON TRUE}
   end
 
   test "join with nothing bound" do
-    query = Schema |> join(:inner, [], q in Schema2, on: q.z == q.z) |> select([], true) |> normalize
+    query = Schema |> join(:inner, [], q in Schema2, on: q.z == q.z) |> select([], true) |> plan()
     assert all(query) ==
            ~s{SELECT TRUE FROM `schema` AS s0 INNER JOIN `schema2` AS s1 ON s1.`z` = s1.`z`}
   end
 
   test "join without schema" do
-    query = "posts" |> join(:inner, [p], q in "comments", on: p.x == q.z) |> select([], true) |> normalize
+    query = "posts" |> join(:inner, [p], q in "comments", on: p.x == q.z) |> select([], true) |> plan()
     assert all(query) ==
            ~s{SELECT TRUE FROM `posts` AS p0 INNER JOIN `comments` AS c1 ON p0.`x` = c1.`z`}
   end
 
   test "join with subquery" do
     posts = subquery("posts" |> where(title: ^"hello") |> select([r], %{x: r.x, y: r.y}))
-    query = "comments" |> join(:inner, [c], p in subquery(posts), on: true) |> select([_, p], p.x) |> normalize
+    query = "comments" |> join(:inner, [c], p in subquery(posts), on: true) |> select([_, p], p.x) |> plan()
     assert all(query) ==
            ~s{SELECT s1.`x` FROM `comments` AS c0 } <>
            ~s{INNER JOIN (SELECT p0.`x` AS `x`, p0.`y` AS `y` FROM `posts` AS p0 WHERE (p0.`title` = ?)) AS s1 ON TRUE}
 
     posts = subquery("posts" |> where(title: ^"hello") |> select([r], %{x: r.x, z: r.y}))
-    query = "comments" |> join(:inner, [c], p in subquery(posts), on: true) |> select([_, p], p) |> normalize
+    query = "comments" |> join(:inner, [c], p in subquery(posts), on: true) |> select([_, p], p) |> plan()
     assert all(query) ==
            ~s{SELECT s1.`x`, s1.`z` FROM `comments` AS c0 } <>
            ~s{INNER JOIN (SELECT p0.`x` AS `x`, p0.`y` AS `z` FROM `posts` AS p0 WHERE (p0.`title` = ?)) AS s1 ON TRUE}
   end
 
   test "join with prefix" do
-    query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z) |> select([], true) |> normalize
+    query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z) |> select([], true) |> plan()
     assert all(%{query | prefix: "prefix"}) ==
            ~s{SELECT TRUE FROM `prefix`.`schema` AS s0 INNER JOIN `prefix`.`schema2` AS s1 ON s0.`x` = s1.`z`}
   end
@@ -467,7 +466,7 @@ defmodule Ecto.Adapters.MySQLTest do
             |> join(:inner, [p], q in fragment("SELECT * FROM schema2 AS s2 WHERE s2.id = ? AND s2.field = ?", p.x, ^10))
             |> select([p], {p.id, ^0})
             |> where([p], p.id > 0 and p.id < ^100)
-            |> normalize
+            |> plan()
     assert all(query) ==
            ~s{SELECT s0.`id`, ? FROM `schema` AS s0 INNER JOIN } <>
            ~s{(SELECT * FROM schema2 AS s2 WHERE s2.id = s0.`x` AND s2.field = ?) AS f1 ON TRUE } <>
@@ -478,7 +477,7 @@ defmodule Ecto.Adapters.MySQLTest do
     query = Schema
             |> join(:inner, [p], q in fragment("SELECT * FROM schema2"), on: q.id == p.id)
             |> select([p], {p.id, ^0})
-            |> normalize
+            |> plan()
     assert all(query) ==
            ~s{SELECT s0.`id`, ? FROM `schema` AS s0 INNER JOIN } <>
            ~s{(SELECT * FROM schema2) AS f1 ON f1.`id` = s0.`id`}
@@ -486,13 +485,13 @@ defmodule Ecto.Adapters.MySQLTest do
 
   test "join with query interpolation" do
     inner = Ecto.Queryable.to_query(Schema2)
-    query = from(p in Schema, left_join: c in ^inner, select: {p.id, c.id}) |> normalize()
+    query = from(p in Schema, left_join: c in ^inner, select: {p.id, c.id}) |> plan()
     assert all(query) ==
            "SELECT s0.`id`, s1.`id` FROM `schema` AS s0 LEFT OUTER JOIN `schema2` AS s1 ON TRUE"
   end
 
   test "cross join" do
-    query = from(p in Schema, cross_join: c in Schema2, select: {p.id, c.id}) |> normalize()
+    query = from(p in Schema, cross_join: c in Schema2, select: {p.id, c.id}) |> plan()
     assert all(query) ==
            "SELECT s0.`id`, s1.`id` FROM `schema` AS s0 CROSS JOIN `schema2` AS s1"
   end
@@ -500,7 +499,7 @@ defmodule Ecto.Adapters.MySQLTest do
   test "join produces correct bindings" do
     query = from(p in Schema, join: c in Schema2, on: true)
     query = from(p in query, join: c in Schema2, on: true, select: {p.id, c.id})
-    query = normalize(query)
+    query = plan(query)
     assert all(query) ==
            "SELECT s0.`id`, s2.`id` FROM `schema` AS s0 INNER JOIN `schema2` AS s1 ON TRUE INNER JOIN `schema2` AS s2 ON TRUE"
   end
@@ -508,19 +507,19 @@ defmodule Ecto.Adapters.MySQLTest do
   ## Associations
 
   test "association join belongs_to" do
-    query = Schema2 |> join(:inner, [c], p in assoc(c, :post)) |> select([], true) |> normalize
+    query = Schema2 |> join(:inner, [c], p in assoc(c, :post)) |> select([], true) |> plan()
     assert all(query) ==
            "SELECT TRUE FROM `schema2` AS s0 INNER JOIN `schema` AS s1 ON s1.`x` = s0.`z`"
   end
 
   test "association join has_many" do
-    query = Schema |> join(:inner, [p], c in assoc(p, :comments)) |> select([], true) |> normalize
+    query = Schema |> join(:inner, [p], c in assoc(p, :comments)) |> select([], true) |> plan()
     assert all(query) ==
            "SELECT TRUE FROM `schema` AS s0 INNER JOIN `schema2` AS s1 ON s1.`z` = s0.`x`"
   end
 
   test "association join has_one" do
-    query = Schema |> join(:inner, [p], pp in assoc(p, :permalink)) |> select([], true) |> normalize
+    query = Schema |> join(:inner, [p], pp in assoc(p, :permalink)) |> select([], true) |> plan()
     assert all(query) ==
            "SELECT TRUE FROM `schema` AS s0 INNER JOIN `schema3` AS s1 ON s1.`id` = s0.`y`"
   end
@@ -545,13 +544,9 @@ defmodule Ecto.Adapters.MySQLTest do
     query = insert(nil, "schema", [:x, :y], [[:x, :y]], {:nothing, [], []}, [])
     assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `x` = `x`}
 
-    update = from("schema", update: [set: [z: "foo"]]) |> normalize(:update_all)
+    update = from("schema", update: [set: [z: "foo"]]) |> plan(:update_all)
     query = insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], []}, [])
     assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `z` = 'foo'}
-
-    update = from("schema", update: [set: [z: ^"foo"]]) |> normalize(:update_all, 2)
-    query = insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], []}, [])
-    assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `z` = ?}
 
     query = insert(nil, "schema", [:x, :y], [[:x, :y]], {[:x, :y], [], []}, [])
     assert query == ~s{INSERT INTO `schema` (`x`,`y`) VALUES (?,?) ON DUPLICATE KEY UPDATE `x` = VALUES(`x`),`y` = VALUES(`y`)}
@@ -561,7 +556,7 @@ defmodule Ecto.Adapters.MySQLTest do
     end
 
     assert_raise ArgumentError, "Using a query with :where in combination with the :on_conflict option is not supported by MySQL", fn ->
-      update = from("schema", update: [set: [x: ^"foo"]], where: [z: "bar"]) |> normalize(:update_all)
+      update = from("schema", update: [set: [x: ^"foo"]], where: [z: "bar"]) |> plan(:update_all)
       insert(nil, "schema", [:x, :y], [[:x, :y]], {update, [], []}, [])
     end
   end
@@ -937,14 +932,14 @@ defmodule Ecto.Adapters.MySQLTest do
       Schema
       |> join(:inner_lateral, [p], q in fragment("SELECT * FROM schema2 AS s2 WHERE s2.id = ? AND s2.field = ?", p.x, ^10))
       |> select([p, q], {p.id, q.z})
-      |> normalize
+      |> plan()
       |> all
     end
   end
 
   test "arrays" do
     assert_raise Ecto.QueryError, ~r"Array type is not supported by MySQL", fn ->
-      query = Schema |> select([], fragment("?", [1, 2, 3])) |> normalize
+      query = Schema |> select([], fragment("?", [1, 2, 3])) |> plan()
       all(query)
     end
   end

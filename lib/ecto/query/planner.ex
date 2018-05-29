@@ -96,7 +96,7 @@ defmodule Ecto.Query.Planner do
   Define the query cache table.
   """
   def new_query_cache(name) do
-    :ets.new(name, [:set, :public, :named_table, read_concurrency: true])
+    :ets.new(name, [:set, :public, read_concurrency: true])
   end
 
   @doc """

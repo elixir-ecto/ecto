@@ -114,8 +114,8 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp execute(operation, name, query, opts) when is_list(opts) do
-    {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
-    {query_meta, prepared, params} = Planner.query(query, operation, name, adapter, 0)
+    {adapter, cache, adapter_meta} = Ecto.Repo.Registry.lookup(name)
+    {query_meta, prepared, params} = Planner.query(query, operation, cache, adapter, 0)
 
     case query_meta do
       %{select: nil} ->
@@ -141,8 +141,8 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp stream(operation, name, query, opts) do
-    {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
-    {query_meta, prepared, params} = Planner.query(query, operation, name, adapter, 0)
+    {adapter, cache, adapter_meta} = Ecto.Repo.Registry.lookup(name)
+    {query_meta, prepared, params} = Planner.query(query, operation, cache, adapter, 0)
 
     case query_meta do
       %{select: nil} ->

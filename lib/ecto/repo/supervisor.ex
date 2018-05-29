@@ -139,10 +139,10 @@ defmodule Ecto.Repo.Supervisor do
     case runtime_config(:supervisor, repo, otp_app, opts) do
       {:ok, opts} ->
         Ecto.LogEntry.validate!(opts[:loggers])
-        {:ok, children, meta} = adapter.init(opts)
-        Ecto.Query.Planner.new_query_cache(name)
-        Ecto.Repo.Registry.associate(self(), {adapter, meta})
-        supervise(children, strategy: :one_for_one)
+        {:ok, child, meta} = adapter.init(opts)
+        cache = Ecto.Query.Planner.new_query_cache(name)
+        Ecto.Repo.Registry.associate(self(), {adapter, cache, meta})
+        supervise([child], strategy: :one_for_one, max_restarts: 0)
 
       :ignore ->
         :ignore
