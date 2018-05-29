@@ -31,6 +31,12 @@ defmodule Ecto.Migration do
   `up/0` is used to update your database and `down/0` rolls back
   the prompted changes.
 
+  Ecto creates a table (see the `:migration_source` configuration)
+  in the database in order to keep track of migrations and will add
+  an entry to this table for each migration you define. Ecto also
+  locks the table when adding/removing entries, guaranteeing two
+  different servers cannot run the same migration at the same time.
+
   Ecto provides some mix tasks to help developers work with migrations:
 
     * `mix ecto.gen.migration add_weather_table` - generates a
@@ -118,10 +124,9 @@ defmodule Ecto.Migration do
 
   ## Transactions
 
-  By default, Ecto runs all migrations inside a transaction. That's not always
-  ideal: for example, PostgreSQL allows to create/drop indexes concurrently but
-  only outside of any transaction (see the [PostgreSQL
-  docs](http://www.postgresql.org/docs/9.2/static/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY)).
+  For PostgreSQL, Ecto always runs migrations inside a transaction, but that's not
+  always desired: for example, you cannot create/drop indexes concurrently inside
+  a transaction (see the [PostgreSQL docs](http://www.postgresql.org/docs/9.2/static/sql-createindex.html#SQL-CREATEINDEX-CONCURRENTLY)).
 
   Migrations can be forced to run outside a transaction by setting the
   `@disable_ddl_transaction` module attribute to `true`:

@@ -57,6 +57,10 @@ One of the exciting additions in Ecto v3.0 is the addition of named bindings to 
     query = from [p, comments: c] in query,
               select: {p.title, c.body}
 
+### Locked migrations
+
+Running migrations will now lock the migrations table, allowing you to concurrently run migrations in a cluster without worrying that two servers will race each other or without running migrations twice.
+
 ## v3.0.0-dev (In Progress)
 
 ### Enhancements
