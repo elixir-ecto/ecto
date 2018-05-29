@@ -9,8 +9,8 @@ defmodule Ecto.Repo.Supervisor do
   Starts the repo supervisor.
   """
   def start_link(repo, otp_app, adapter, opts) do
-    name = Keyword.get(opts, :name, repo)
-    Supervisor.start_link(__MODULE__, {name, repo, otp_app, adapter, opts}, [name: name])
+    sup_opts = if name = Keyword.get(opts, :name, repo), do: [name: name], else: []
+    Supervisor.start_link(__MODULE__, {name, repo, otp_app, adapter, opts}, sup_opts)
   end
 
   @doc """
@@ -19,7 +19,6 @@ defmodule Ecto.Repo.Supervisor do
   def runtime_config(type, repo, otp_app, opts) do
     if config = Application.get_env(otp_app, repo) do
       config = [otp_app: otp_app] ++ (@defaults |> Keyword.merge(config) |> Keyword.merge(opts))
-      config = Keyword.put_new(config, :name, repo)
 
       case repo_init(type, repo, config) do
         {:ok, config} ->
@@ -141,11 +140,30 @@ defmodule Ecto.Repo.Supervisor do
         Ecto.LogEntry.validate!(opts[:loggers])
         {:ok, child, meta} = adapter.init(opts)
         cache = Ecto.Query.Planner.new_query_cache(name)
-        Ecto.Repo.Registry.associate(self(), {adapter, cache, meta})
+        child = wrap_start(child, [adapter, cache, meta])
         supervise([child], strategy: :one_for_one, max_restarts: 0)
 
       :ignore ->
         :ignore
     end
+  end
+
+  def start_child({mod, fun, args}, adapter, cache, meta) do
+    case apply(mod, fun, args) do
+      {:ok, pid} ->
+        Ecto.Repo.Registry.associate(self(), {adapter, cache, {pid, meta}})
+        {:ok, pid}
+
+      other ->
+        other
+    end
+  end
+
+  defp wrap_start({id, start, restart, shutdown, type, mods}, args) do
+    {id, {__MODULE__, :start_child, [start | args]}, restart, shutdown, type, mods}
+  end
+
+  defp wrap_start(%{start: start} = spec, args) do
+    %{spec | start: {__MODULE__, :start_child, [start | args]}}
   end
 end

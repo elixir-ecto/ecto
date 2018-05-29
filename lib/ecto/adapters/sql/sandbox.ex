@@ -429,7 +429,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   def mode(repo, mode)
       when is_atom(repo) and mode in [:auto, :manual]
       when is_atom(repo) and elem(mode, 0) == :shared and is_pid(elem(mode, 1)) do
-    {_loggers, _sql, name, opts} = proxy_pool(repo)
+    {pool, {_loggers, _sql, opts}} = proxy_pool(repo)
 
     # If the mode is set to anything but shared, let's
     # automatically checkin the current connection to
@@ -439,7 +439,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       checkin(repo, [])
     end
 
-    DBConnection.Ownership.ownership_mode(name, mode, opts)
+    DBConnection.Ownership.ownership_mode(pool, mode, opts)
   end
 
   @doc """
@@ -463,7 +463,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   """
   def checkout(repo, opts \\ []) when is_atom(repo) do
-    {_loggers, _sql, name, pool_opts} =
+    {pool, {_loggers, _sql, pool_opts}} =
       if Keyword.get(opts, :sandbox, true) do
         proxy_pool(repo)
       else
@@ -473,7 +473,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     pool_opts_overrides = Keyword.take(opts, [:ownership_timeout])
     pool_opts = Keyword.merge(pool_opts, pool_opts_overrides)
 
-    case DBConnection.Ownership.ownership_checkout(name, pool_opts) do
+    case DBConnection.Ownership.ownership_checkout(pool, pool_opts) do
       :ok ->
         if isolation = opts[:isolation] do
           set_transaction_isolation_level(repo, isolation)
@@ -503,16 +503,16 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   Checks in the connection back into the sandbox pool.
   """
   def checkin(repo, _opts \\ []) when is_atom(repo) do
-    {_loggers, _sql, name, opts} = Ecto.Adapter.lookup_meta(repo)
-    DBConnection.Ownership.ownership_checkin(name, opts)
+    {pool, {_loggers, _sql, opts}} = Ecto.Adapter.lookup_meta(repo)
+    DBConnection.Ownership.ownership_checkin(pool, opts)
   end
 
   @doc """
   Allows the `allow` process to use the same connection as `parent`.
   """
   def allow(repo, parent, allow, _opts \\ []) when is_atom(repo) do
-    {_loggers, _sql, name, opts} = Ecto.Adapter.lookup_meta(repo)
-    DBConnection.Ownership.ownership_allow(name, parent, allow, opts)
+    {pool, {_loggers, _sql, opts}} = Ecto.Adapter.lookup_meta(repo)
+    DBConnection.Ownership.ownership_allow(pool, parent, allow, opts)
   end
 
   @doc """
@@ -530,7 +530,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   end
 
   defp proxy_pool(repo) do
-    {loggers, sql, name, opts} = Ecto.Adapter.lookup_meta(repo)
+    {pool, {loggers, sql, opts}} = Ecto.Adapter.lookup_meta(repo)
 
     if opts[:pool] != DBConnection.Ownership do
       raise """
@@ -541,7 +541,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       """
     end
 
-    {pool, opts} = Keyword.pop(opts, :ownership_pool, DBConnection.Poolboy)
-    {loggers, sql, name, [repo: repo, sandbox_pool: pool, ownership_pool: Pool] ++ opts}
+    {sandbox_pool, opts} = Keyword.pop(opts, :ownership_pool, DBConnection.Poolboy)
+    {pool, {loggers, sql, [repo: repo, sandbox_pool: sandbox_pool, ownership_pool: Pool] ++ opts}}
   end
 end
