@@ -18,8 +18,12 @@ defmodule Ecto.Query.PlannerTest do
       field :uuid, :binary_id
       field :special, :boolean
       field :crazy_comment, :string
+
       belongs_to :post, Ecto.Query.PlannerTest.Post
-      belongs_to :crazy_post, Ecto.Query.PlannerTest.Post, where: {Ecto.Query.PlannerTest.Post, :crazy, []}
+
+      belongs_to :crazy_post, Ecto.Query.PlannerTest.Post,
+        where: {Ecto.Query.PlannerTest.Post, :crazy, []}
+
       belongs_to :crazy_post_by_parameter, Ecto.Query.PlannerTest.Post,
         where: {Ecto.Query.PlannerTest.Post, :crazy_by_parameter, []},
         foreign_key: :crazy_post_id,
@@ -62,6 +66,7 @@ defmodule Ecto.Query.PlannerTest do
     use Ecto.Schema
 
     @primary_key {:id, Custom.Permalink, []}
+    @schema_prefix "my_prefix"
     schema "posts" do
       field :title, :string, source: :post_title
       field :text, :string
@@ -98,10 +103,12 @@ defmodule Ecto.Query.PlannerTest do
 
   defp normalize_with_params(query, operation \\ :all) do
     {query, params, _key} = prepare(query, operation)
+
     {query, _} =
       query
       |> Planner.ensure_select(operation == :all)
       |> Planner.normalize(operation, Ecto.TestAdapter, 0)
+
     {query, params}
   end
 
@@ -338,7 +345,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: generates a cache key" do
     {_query, _params, key} = prepare(from(Post, []))
-    assert key == [:all, 0, {"posts", Post, 11832799, nil}]
+    assert key == [:all, 0, {"posts", Post, 11832799, "my_prefix"}]
 
     query =
       from(
@@ -371,6 +378,38 @@ defmodule Ecto.Query.PlannerTest do
 
     {_query, _params, key} = Planner.prepare(query, :all, Ecto.Adapters.Postgres, 0)
     assert key != :nocache
+  end
+
+  test "prepare: normalizes prefixes" do
+    # No schema prefix in from
+    {query, _, _} = from(Comment, select: 1) |> prepare()
+    assert query.sources == {{"comments", Comment, nil}}
+
+    {query, _, _} = from(Comment, select: 1) |> Map.put(:prefix, "global") |> prepare()
+    assert query.sources == {{"comments", Comment, "global"}}
+
+    {query, _, _} = from(Comment, prefix: "local", select: 1) |> Map.put(:prefix, "global") |> prepare()
+    assert query.sources == {{"comments", Comment, "local"}}
+
+    # Schema prefix in from
+    {query, _, _} = from(Post, select: 1) |> prepare()
+    assert query.sources == {{"posts", Post, "my_prefix"}}
+
+    {query, _, _} = from(Post, select: 1) |> Map.put(:prefix, "global") |> prepare()
+    assert query.sources == {{"posts", Post, "my_prefix"}}
+
+    {query, _, _} = from(Post, prefix: "local", select: 1) |> Map.put(:prefix, "global") |> prepare()
+    assert query.sources == {{"posts", Post, "local"}}
+
+    # Schema prefix in join
+    {query, _, _} = from(c in Comment, join: assoc(c, :post)) |> prepare()
+    assert query.sources == {{"comments", Comment, nil}, {"posts", Post, "my_prefix"}}
+
+    {query, _, _} = from(c in Comment, join: assoc(c, :post)) |> Map.put(:prefix, "global") |> prepare()
+    assert query.sources == {{"comments", Comment, "global"}, {"posts", Post, "my_prefix"}}
+
+    {query, _, _} = from(c in Comment, join: assoc(c, :post), prefix: "local") |> Map.put(:prefix, "global") |> prepare()
+    assert query.sources == {{"comments", Comment, "global"}, {"posts", Post, "local"}}
   end
 
   test "normalize: tagged types" do

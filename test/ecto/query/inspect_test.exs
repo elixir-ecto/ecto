@@ -297,8 +297,7 @@ defmodule Ecto.Query.InspectTest do
   end
 
   def plan(query) do
-    {query, _params, _key} = Ecto.Query.Planner.prepare(query, :all, Ecto.TestAdapter, 0)
-    {query, _} = Ecto.Query.Planner.normalize(query, :all, Ecto.TestAdapter, 0)
+    {query, _} = Ecto.Adapter.plan_query(:all, Ecto.TestAdapter, query)
     query
   end
 

@@ -453,9 +453,15 @@ defmodule Ecto.Query.Planner do
     [%{h | on: merge_expr_and_params(:and, on, expr, params)} | t]
   end
 
-  defp rewrite_join_prefix(%{prefix: prefix} = join, _prefix) when prefix != nil, do: join
-  defp rewrite_join_prefix(%{prefix: nil} = join, nil), do: join
-  defp rewrite_join_prefix(join, prefix), do: %{join | prefix: prefix}
+  defp rewrite_join_prefix(%{prefix: nil, source: {_, schema}} = join, nil)
+       when schema != nil,
+       do: %{join | prefix: schema.__schema__(:prefix)}
+
+  defp rewrite_join_prefix(%{prefix: nil} = join, prefix)
+       when prefix != nil,
+       do: %{join | prefix: prefix}
+
+  defp rewrite_join_prefix(join, _prefix), do: join
 
   defp rewrite_join(%{on: on, ix: join_ix} = join, qual, ix, last_ix, source_ix, inc_ix) do
     expr = Macro.prewalk on.expr, fn

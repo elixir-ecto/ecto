@@ -40,10 +40,12 @@ defmodule Ecto.Query.SubqueryTest do
 
   defp normalize_with_params(query, operation \\ :all) do
     {query, params, _key} = prepare(query, operation)
+
     {query, _} =
       query
       |> Planner.ensure_select(operation == :all)
       |> Planner.normalize(operation, Ecto.TestAdapter, 0)
+
     {query, params}
   end
 

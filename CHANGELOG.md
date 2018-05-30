@@ -79,6 +79,7 @@ Running migrations will now lock the migrations table, allowing you to concurren
   * [Ecto.Query] Allow virtual field update in subqueries
   * [Ecto.Query] Support `coalesce/2` in queries, such as `select: coalesce(p.title, p.old_title)`
   * [Ecto.Query] Support `filter/2` in queries, such as `select: filter(count(p.id), p.public == true)`
+  * [Ecto.Query] The `:prefix` option is now allowed on both `from` and `join` expressions
   * [Ecto.Repo] Support `:replace_all_except_primary_key` as `:on_conflict` strategy
   * [Ecto.Repo] Support `{:replace, fields}` as `:on_conflict` strategy
   * [Ecto.Repo] Support `select` in queries given to `update_all` and `delete_all`
@@ -102,9 +103,11 @@ Running migrations will now lock the migrations table, allowing you to concurren
   * [Ecto.DataType] `Ecto.DataType` protocol has been removed
   * [Ecto.Multi] `Ecto.Multi.run/5` now receives the repo in which the transaction is executing as the first argument to functions, and the changes so far as the second argument
   * [Ecto.Schema] `:time`, `:naive_datetime` and `:utc_datetime` no longer keep microseconds information. If you want to keep microseconds, use `:time_usec`, `:naive_datetime_usec`, `:utc_datetime_usec`
+  * [Ecto.Schema] The `@schema_prefix` option now only affects the `from`/`join` of where the schema is used and no longer the whole query
 
 ### Adapter changes
 
+  * [Ecto.Adapter] The `:sources` field in `query_meta` now contains three elements tuples with `{source, schema, prefix}` in order to support `from`/`join` prefixes (#2572)
   * [Ecto.Adapter] The database types `time`, `utc_datetime` and `naive_datetime` should translate to types with seconds precision while the database types `time_usec`, `utc_datetime_usec` and `naive_datetime_usec` should have microseconds precision
   * [Ecto.Adapter] The `on_conflict` argument for `insert` and `insert_all` no longer receives a `{:replace_all, list(), atom()}` tuple. Instead, it receives a `{fields :: [atom()], list(), atom()}` where `fields` is a list of atoms of the fields to be replaced
   * [Ecto.Adapter] `exclusion_constraint` will now have type `:exclusion` on the adapter metadata instead of `:exclude` (affects PostgreSQL only)
