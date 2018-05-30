@@ -7,8 +7,9 @@ defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
     {expr, binding, params, _, _} =
       Ecto.Query.Builder.Dynamic.fully_expand(%Ecto.Query{joins: Enum.drop(binding, 1)}, dynamic)
-    names =
-      for {name, _, _} <- binding, do: Atom.to_string(name)
+
+    names = for {name, _, _} <- binding, do: Atom.to_string(name)
+
     inspected =
       Inspect.Ecto.Query.expr(expr, List.to_tuple(names), %{expr: expr, params: params})
 
@@ -69,8 +70,8 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp bound_from(nil, name), do: ["from #{name} in query"]
-  defp bound_from(%{source: source, as: as}, name) do
-    ["from #{name} in #{inspect_source source}"] ++ kw_inspect(:as, as)
+  defp bound_from(%{source: source} = from, name) do
+    ["from #{name} in #{inspect_source source}"] ++ kw_as_and_prefix(from)
   end
 
   defp inspect_source(%Ecto.Query{} = query), do: "^" <> inspect(query)
@@ -87,19 +88,19 @@ defimpl Inspect, for: Ecto.Query do
     |> Enum.flat_map(fn {expr, ix} -> join(expr, elem(names, expr.ix || ix + 1), names) end)
   end
 
-  defp join(%JoinExpr{qual: qual, assoc: {ix, right}, on: on, as: as}, name, names) do
+  defp join(%JoinExpr{qual: qual, assoc: {ix, right}, on: on} = join, name, names) do
     string = "#{name} in assoc(#{elem(names, ix)}, #{inspect right})"
-    [{join_qual(qual), string}] ++ kw_inspect(:as, as) ++ maybe_on(on, names)
+    [{join_qual(qual), string}] ++ kw_as_and_prefix(join) ++ maybe_on(on, names)
   end
 
-  defp join(%JoinExpr{qual: qual, source: {:fragment, _, _} = source, on: on, as: as} = part, name, names) do
+  defp join(%JoinExpr{qual: qual, source: {:fragment, _, _} = source, on: on} = join = part, name, names) do
     string = "#{name} in #{expr(source, names, part)}"
-    [{join_qual(qual), string}] ++ kw_inspect(:as, as) ++ [on: expr(on, names)]
+    [{join_qual(qual), string}] ++ kw_as_and_prefix(join) ++ [on: expr(on, names)]
   end
 
-  defp join(%JoinExpr{qual: qual, source: source, on: on, as: as}, name, names) do
+  defp join(%JoinExpr{qual: qual, source: source, on: on} = join, name, names) do
     string = "#{name} in #{inspect_source source}"
-    [{join_qual(qual), string}] ++ kw_inspect(:as, as) ++ [on: expr(on, names)]
+    [{join_qual(qual), string}] ++ kw_as_and_prefix(join) ++ [on: expr(on, names)]
   end
 
   defp maybe_on(%QueryExpr{expr: true}, _names), do: []
@@ -135,6 +136,10 @@ defimpl Inspect, for: Ecto.Query do
 
   defp kw_inspect(_key, nil), do: []
   defp kw_inspect(key, val),  do: [{key, inspect(val)}]
+
+  defp kw_as_and_prefix(%{as: as, prefix: prefix}) do
+    kw_inspect(:as, as) ++ kw_inspect(:prefix, prefix)
+  end
 
   defp expr(%{expr: expr} = part, names) do
     expr(expr, names, part)

@@ -294,8 +294,8 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp put_source(opts, %{sources: sources}) when tuple_size(elem(sources, 0)) == 2 do
-    {source, _} = elem(sources, 0)
+  defp put_source(opts, %{sources: sources}) when is_binary(elem(elem(sources, 0), 0)) do
+    {source, _, _} = elem(sources, 0)
     Keyword.put(opts, :source, source)
   end
 

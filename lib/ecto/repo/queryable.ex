@@ -120,7 +120,7 @@ defmodule Ecto.Repo.Queryable do
     case query_meta do
       %{select: nil} ->
         adapter.execute(adapter_meta, query_meta, prepared, params, opts)
-      %{select: select, prefix: prefix, sources: sources, preloads: preloads} ->
+      %{select: select, sources: sources, preloads: preloads} ->
         %{
           preprocess: preprocess,
           postprocess: postprocess,
@@ -129,9 +129,9 @@ defmodule Ecto.Repo.Queryable do
           from: from
         } = select
 
-        preprocessor = preprocessor(from, preprocess, prefix, adapter)
+        preprocessor = preprocessor(from, preprocess, adapter)
         {count, rows} = adapter.execute(adapter_meta, query_meta, prepared, params, opts)
-        postprocessor = postprocessor(from, postprocess, take, prefix, adapter)
+        postprocessor = postprocessor(from, postprocess, take, adapter)
 
         {count,
           rows
@@ -149,7 +149,7 @@ defmodule Ecto.Repo.Queryable do
         adapter_meta
         |> adapter.stream(query_meta, prepared, params, opts)
         |> Stream.flat_map(fn {_, nil} -> [] end)
-      %{select: select, prefix: prefix, sources: sources, preloads: preloads} ->
+      %{select: select, sources: sources, preloads: preloads} ->
         %{
           preprocess: preprocess,
           postprocess: postprocess,
@@ -158,9 +158,9 @@ defmodule Ecto.Repo.Queryable do
           from: from
         } = select
 
-        preprocessor = preprocessor(from, preprocess, prefix, adapter)
+        preprocessor = preprocessor(from, preprocess, adapter)
         stream = adapter.stream(adapter_meta, query_meta, prepared, params, opts)
-        postprocessor = postprocessor(from, postprocess, take, prefix, adapter)
+        postprocessor = postprocessor(from, postprocess, take, adapter)
 
         Stream.flat_map(stream, fn {_, rows} ->
           rows
@@ -170,55 +170,55 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  defp preprocessor({_, {:source, source_schema, fields}}, preprocess, prefix, adapter) do
+  defp preprocessor({_, {:source, source_schema, prefix, fields}}, preprocess, adapter) do
     fn row ->
       {entry, rest} = process_source(source_schema, fields, row, false, prefix, adapter)
-      preprocess(rest, preprocess, entry, prefix, adapter)
+      preprocess(rest, preprocess, entry, adapter)
     end
   end
-  defp preprocessor({_, from}, preprocess, prefix, adapter) do
+  defp preprocessor({_, from}, preprocess, adapter) do
     fn row ->
-      {entry, rest} = process(row, from, nil, prefix, adapter)
-      preprocess(rest, preprocess, entry, prefix, adapter)
+      {entry, rest} = process(row, from, nil, adapter)
+      preprocess(rest, preprocess, entry, adapter)
     end
   end
-  defp preprocessor(:none, preprocess, prefix, adapter) do
+  defp preprocessor(:none, preprocess, adapter) do
     fn row ->
-      preprocess(row, preprocess, nil, prefix, adapter)
+      preprocess(row, preprocess, nil, adapter)
     end
   end
 
-  defp preprocess(row, [], _from, _prefix, _adapter) do
+  defp preprocess(row, [], _from, _adapter) do
     row
   end
-  defp preprocess(row, [source | sources], from, prefix, adapter) do
-    {entry, rest} = process(row, source, from, prefix, adapter)
-    [entry | preprocess(rest, sources, from, prefix, adapter)]
+  defp preprocess(row, [source | sources], from, adapter) do
+    {entry, rest} = process(row, source, from, adapter)
+    [entry | preprocess(rest, sources, from, adapter)]
   end
 
-  defp postprocessor({:any, _}, postprocess, _take, prefix, adapter) do
+  defp postprocessor({:any, _}, postprocess, _take, adapter) do
     fn [from | row] ->
-      row |> process(postprocess, from, prefix, adapter) |> elem(0)
+      row |> process(postprocess, from, adapter) |> elem(0)
     end
   end
-  defp postprocessor({:map, _}, postprocess, take, prefix, adapter) do
+  defp postprocessor({:map, _}, postprocess, take, adapter) do
     fn [from | row] ->
-      row |> process(postprocess, to_map(from, take), prefix, adapter) |> elem(0)
+      row |> process(postprocess, to_map(from, take), adapter) |> elem(0)
     end
   end
-  defp postprocessor(:none, postprocess, _take, prefix, adapter) do
-    fn row -> row |> process(postprocess, nil, prefix, adapter) |> elem(0) end
+  defp postprocessor(:none, postprocess, _take, adapter) do
+    fn row -> row |> process(postprocess, nil, adapter) |> elem(0) end
   end
 
-  defp process(row, {:source, :from}, from, _prefix, _adapter) do
+  defp process(row, {:source, :from}, from, _adapter) do
     {from, row}
   end
-  defp process(row, {:source, source_schema, fields}, _from, prefix, adapter) do
+  defp process(row, {:source, source_schema, prefix, fields}, _from, adapter) do
     process_source(source_schema, fields, row, true, prefix, adapter)
   end
-  defp process(row, {:merge, left, right}, from, prefix, adapter) do
-    {left, row} = process(row, left, from, prefix, adapter)
-    {right, row} = process(row, right, from, prefix, adapter)
+  defp process(row, {:merge, left, right}, from, adapter) do
+    {left, row} = process(row, left, from, adapter)
+    {right, row} = process(row, right, from, adapter)
 
     data =
       case {left, right} do
@@ -238,53 +238,54 @@ defmodule Ecto.Repo.Queryable do
 
     {data, row}
   end
-  defp process(row, {:struct, struct, data, args}, from, prefix, adapter) do
-    case process(row, data, from, prefix, adapter) do
+  defp process(row, {:struct, struct, data, args}, from, adapter) do
+    case process(row, data, from, adapter) do
       {%{__struct__: ^struct} = data, row} ->
-        process_update(data, args, row, from, prefix, adapter)
+        process_update(data, args, row, from, adapter)
       {data, _row} ->
         raise BadStructError, struct: struct, term: data
     end
   end
-  defp process(row, {:struct, struct, args}, from, prefix, adapter) do
-    {fields, row} = process_kv(args, row, from, prefix, adapter)
+  defp process(row, {:struct, struct, args}, from, adapter) do
+    {fields, row} = process_kv(args, row, from, adapter)
 
     case Map.merge(struct.__struct__(), Map.new(fields)) do
-      %{__meta__: %Ecto.Schema.Metadata{} = metadata} = struct ->
-        metadata = %{metadata | state: :loaded, prefix: prefix}
-        {Map.put(struct, :__meta__, metadata), row}
+      %{__meta__: %Ecto.Schema.Metadata{state: state} = metadata} = struct
+      when state != :loaded ->
+        {Map.put(struct, :__meta__, %{metadata | state: :loaded}), row}
+
       map ->
         {map, row}
     end
   end
-  defp process(row, {:map, data, args}, from, prefix, adapter) do
-    {data, row} = process(row, data, from, prefix, adapter)
-    process_update(data, args, row, from, prefix, adapter)
+  defp process(row, {:map, data, args}, from, adapter) do
+    {data, row} = process(row, data, from, adapter)
+    process_update(data, args, row, from, adapter)
   end
-  defp process(row, {:map, args}, from, prefix, adapter) do
-    {args, row} = process_kv(args, row, from, prefix, adapter)
+  defp process(row, {:map, args}, from, adapter) do
+    {args, row} = process_kv(args, row, from, adapter)
     {Map.new(args), row}
   end
-  defp process(row, {:list, args}, from, prefix, adapter) do
-    process_args(args, row, from, prefix, adapter)
+  defp process(row, {:list, args}, from, adapter) do
+    process_args(args, row, from, adapter)
   end
-  defp process(row, {:tuple, args}, from, prefix, adapter) do
-    {args, row} = process_args(args, row, from, prefix, adapter)
+  defp process(row, {:tuple, args}, from, adapter) do
+    {args, row} = process_args(args, row, from, adapter)
     {List.to_tuple(args), row}
   end
-  defp process([value | row], {:value, :any}, _from, _prefix, _adapter) do
+  defp process([value | row], {:value, :any}, _from, __adapter) do
     {value, row}
   end
-  defp process([value | row], {:value, type}, _from, _prefix, adapter) do
+  defp process([value | row], {:value, type}, _from, adapter) do
     {load!(type, value, nil, nil, adapter), row}
   end
-  defp process(row, value, _from, _prefix, _adapter)
+  defp process(row, value, _from, _adapter)
        when is_binary(value) or is_number(value) or is_atom(value) do
     {value, row}
   end
 
-  defp process_update(data, args, row, from, prefix, adapter) do
-    {args, row} = process_kv(args, row, from, prefix, adapter)
+  defp process_update(data, args, row, from, adapter) do
+    {args, row} = process_kv(args, row, from, adapter)
     data = Enum.reduce(args, data, fn {key, value}, acc -> %{acc | key => value} end)
     {data, row}
   end
@@ -313,16 +314,16 @@ defmodule Ecto.Repo.Queryable do
     {Enum.reverse(acc), values}
   end
 
-  defp process_args(args, row, from, prefix, adapter) do
+  defp process_args(args, row, from, adapter) do
     Enum.map_reduce(args, row, fn arg, row ->
-      process(row, arg, from, prefix, adapter)
+      process(row, arg, from, adapter)
     end)
   end
 
-  defp process_kv(kv, row, from, prefix, adapter) do
+  defp process_kv(kv, row, from, adapter) do
     Enum.map_reduce(kv, row, fn {key, value}, row ->
-      {key, row} = process(row, key, from, prefix, adapter)
-      {value, row} = process(row, value, from, prefix, adapter)
+      {key, row} = process(row, key, from, adapter)
+      {value, row} = process(row, value, from, adapter)
       {{key, value}, row}
     end)
   end

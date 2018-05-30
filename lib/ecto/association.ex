@@ -176,10 +176,14 @@ defmodule Ecto.Association do
   end
 
   def assoc_query(refl, t, query, values) do
-    query = query || %Ecto.Query{
-      from: %FromExpr{source: {"join expression", nil}},
-      prefix: refl.queryable.__schema__(:prefix)
-    }
+    query =
+      query ||
+      %Ecto.Query{
+        from: %FromExpr{
+          source: {"join expression", nil},
+          prefix: refl.queryable.__schema__(:prefix)
+        }
+      }
 
     # Find the position for upcoming joins
     position = length(query.joins) + 1
@@ -210,9 +214,15 @@ defmodule Ecto.Association do
     rewrite_ix = assoc.ix
     [assoc | joins] = Enum.map([assoc | joins], &rewrite_join(&1, rewrite_ix))
 
-    %{query | wheres: [assoc_to_where(assoc) | query.wheres], joins: joins,
-              from: merge_from(query.from, assoc.source), sources: nil}
-    |> distinct([x], true)
+    query = %{
+      query
+      | wheres: [assoc_to_where(assoc) | query.wheres],
+        joins: joins,
+        from: merge_from(query.from, assoc.source),
+        sources: nil
+    }
+
+    distinct(query, [x], true)
   end
 
   @doc """
@@ -221,10 +231,12 @@ defmodule Ecto.Association do
   def combine_assoc_query(%{queryable: queryable} = assoc, nil), do: combine_assoc_query(assoc, queryable)
   def combine_assoc_query(%{where: nil}, queryable), do: queryable
   def combine_assoc_query(%{where: []}, queryable), do: queryable
+
   def combine_assoc_query(%{where: {module, function, args}}, queryable) do
     where = apply(module, function, args)
     Ecto.Query.where(queryable, _, ^where)
   end
+
   def combine_assoc_query(%{where: where}, queryable) do
     Ecto.Query.where(queryable, _, ^where)
   end

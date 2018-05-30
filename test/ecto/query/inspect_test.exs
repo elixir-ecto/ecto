@@ -97,6 +97,9 @@ defmodule Ecto.Query.InspectTest do
   end
 
   test "as" do
+    assert i(from(x in Post, as: :post)) ==
+      ~s{from p in Inspect.Post, as: :post}
+
     assert i(from(x in Post, join: y in Comment, as: :comment, on: x.id == y.id)) ==
       ~s{from p in Inspect.Post, join: c in Inspect.Comment, as: :comment, on: p.id == c.id}
 
@@ -105,6 +108,20 @@ defmodule Ecto.Query.InspectTest do
 
     assert i(from(x in Post, join: y in subquery(Comment), as: :comment, on: x.id == y.id)) ==
       ~s{from p in Inspect.Post, join: c in subquery(from c in Inspect.Comment), as: :comment, on: p.id == c.id}
+  end
+
+  test "prefix" do
+    assert i(from(x in Post, prefix: "post")) ==
+      ~s{from p in Inspect.Post, prefix: "post"}
+
+    assert i(from(x in Post, join: y in Comment, prefix: "comment", on: x.id == y.id)) ==
+      ~s{from p in Inspect.Post, join: c in Inspect.Comment, prefix: "comment", on: p.id == c.id}
+
+    assert i(from(x in Post, inner_join: y in fragment("foo ? and ?", x.id, ^1), prefix: "foo", on: y.id == x.id)) ==
+      ~s{from p in Inspect.Post, join: f in fragment("foo ? and ?", p.id, ^1), prefix: "foo", on: f.id == p.id}
+
+    assert i(from(x in Post, join: y in subquery(Comment), prefix: "comment", on: x.id == y.id)) ==
+      ~s{from p in Inspect.Post, join: c in subquery(from c in Inspect.Comment), prefix: "comment", on: p.id == c.id}
   end
 
   test "where" do

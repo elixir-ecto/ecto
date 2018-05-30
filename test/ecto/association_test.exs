@@ -601,6 +601,16 @@ defmodule Ecto.AssociationTest do
                         where: e.author_id == a.id, distinct: true)
   end
 
+  describe "prefixes" do
+    test "respects the join prefix" do
+      query = from a in Author, join: p in assoc(a, :posts_with_prefix), prefix: "custom"
+      assert hd(query.joins).prefix == "custom"
+
+      query = from a in Author, join: p in assoc(a, :comments_with_prefix), prefix: "custom"
+      assert hd(query.joins).prefix == "custom"
+    end
+  end
+
   ## Integration tests through Ecto
 
   test "build/2" do
@@ -692,8 +702,8 @@ defmodule Ecto.AssociationTest do
 
   test "assoc/2 with prefixes" do
     author = %Author{id: 1}
-    assert Ecto.assoc(author, :posts_with_prefix).prefix == "my_prefix"
-    assert Ecto.assoc(author, :comments_with_prefix).prefix == "my_prefix"
+    assert Ecto.assoc(author, :posts_with_prefix).from.prefix == "my_prefix"
+    assert Ecto.assoc(author, :comments_with_prefix).from.prefix == "my_prefix"
   end
 
   test "assoc/2 filters nil ids" do

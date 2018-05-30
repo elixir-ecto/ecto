@@ -47,8 +47,7 @@ defmodule Ecto.QueryTest do
     end
 
     test "does not allow nils in comparison at runtime" do
-      assert_raise ArgumentError,
-                   ~r"comparison with nil is forbidden as it is unsafe", fn ->
+      assert_raise ArgumentError, ~r"comparison with nil is forbidden as it is unsafe", fn ->
         Post |> where([p], p.title == ^nil)
       end
     end
@@ -349,11 +348,28 @@ defmodule Ecto.QueryTest do
 
     test "dynamic in :on takes new binding when alias is used" do
       join_on = dynamic([p, comment: c], c.text == "Test Comment")
-
       query = from p in "posts", join: c in "comments", as: :comment, on: ^join_on
 
       assert inspect(query) ==
         ~s[#Ecto.Query<from p in \"posts\", join: c in \"comments\", as: :comment, on: c.text == \"Test Comment\">]
+    end
+  end
+
+  describe "prefixes" do
+    test "are supported on from and join" do
+      query = from "posts", prefix: "hello", join: "comments", prefix: "world"
+      assert query.from.prefix == "hello"
+      assert hd(query.joins).prefix == "world"
+    end
+
+    test "are expected to be compile-time strings" do
+      assert_raise Ecto.Query.CompileError, ~r"`prefix` must be a compile time string", fn ->
+        quote_and_eval(from "posts", prefix: 123)
+      end
+
+      assert_raise Ecto.Query.CompileError, ~r"`prefix` must be a compile time string", fn ->
+        quote_and_eval(from "posts", join: "comments", prefix: 123)
+      end
     end
   end
 
@@ -399,7 +415,6 @@ defmodule Ecto.QueryTest do
 
     test "are built at compile time even with joins" do
       from(c in "comments", join: p in "posts", on: c.text == "", select: c)
-      from(c in "comments", join: p in {"user_posts", Post}, on: c.text == "", select: c)
       from(p in "posts", join: c in assoc(p, :comments), select: p)
 
       message = ~r"`on` keyword must immediately follow a join"
