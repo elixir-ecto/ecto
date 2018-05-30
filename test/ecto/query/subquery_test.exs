@@ -40,10 +40,12 @@ defmodule Ecto.Query.SubqueryTest do
 
   defp normalize_with_params(query, operation \\ :all) do
     {query, params, _key} = prepare(query, operation)
+
     {query, _} =
       query
       |> Planner.ensure_select(operation == :all)
       |> Planner.normalize(operation, Ecto.TestAdapter, 0)
+
     {query, params}
   end
 
@@ -57,7 +59,7 @@ defmodule Ecto.Query.SubqueryTest do
     {query, params, key} = prepare(from(subquery(Post), []))
     assert %{query: %Ecto.Query{}, params: []} = query.from.source
     assert params == []
-    assert key == [:all, 0, [:all, 0, {"posts", Post, 127044068}]]
+    assert key == [:all, 0, [:all, 0, {"posts", Post, 127044068, nil}]]
 
     posts = from(p in Post, where: p.title == ^"hello")
     query = from(c in Comment, join: p in subquery(posts), on: c.post_id == p.id)
@@ -65,7 +67,7 @@ defmodule Ecto.Query.SubqueryTest do
     assert {"comments", Comment} = query.from.source
     assert [%{source: %{query: %Ecto.Query{}, params: ["hello"]}}] = query.joins
     assert params == ["hello"]
-    assert [[], 0, {:join, [{:inner, [:all|_], _}]}, {"comments", _, _}] = key
+    assert [[], 0, {:join, [{:inner, [:all | _], _}]}, {"comments", _, _, _}] = key
   end
 
   test "prepare: subqueries with association joins" do

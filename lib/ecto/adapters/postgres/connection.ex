@@ -163,8 +163,8 @@ if Code.ensure_loaded?(Postgrex) do
        values, on_conflict(on_conflict, header) | returning(returning)]
     end
 
-    defp insert_as({%{from: from} = query, _, _}) do
-      {_, name} = get_source(%{query | joins: []}, create_names(query), 0, from)
+    defp insert_as({%{sources: sources}, _, _}) do
+      {_expr, name, _schema} = create_name(sources, 0)
       [" AS " | name]
     end
     defp insert_as({_, _, _}) do
@@ -587,26 +587,30 @@ if Code.ensure_loaded?(Postgrex) do
     defp returning(returning),
       do: [" RETURNING " | intersperse_map(returning, ", ", &quote_name/1)]
 
-    defp create_names(%{prefix: prefix, sources: sources}) do
-      create_names(prefix, sources, 0, tuple_size(sources)) |> List.to_tuple()
+    defp create_names(%{sources: sources}) do
+      create_names(sources, 0, tuple_size(sources)) |> List.to_tuple()
     end
 
-    defp create_names(prefix, sources, pos, limit) when pos < limit do
-      current =
-        case elem(sources, pos) do
-          {table, schema} ->
-            name = [create_alias(table) | Integer.to_string(pos)]
-            {quote_table(prefix, table), name, schema}
-          {:fragment, _, _} ->
-            {nil, [?f | Integer.to_string(pos)], nil}
-          %Ecto.SubQuery{} ->
-            {nil, [?s | Integer.to_string(pos)], nil}
-        end
-      [current | create_names(prefix, sources, pos + 1, limit)]
+    defp create_names(sources, pos, limit) when pos < limit do
+      [create_name(sources, pos) | create_names(sources, pos + 1, limit)]
     end
 
-    defp create_names(_prefix, _sources, pos, pos) do
+    defp create_names(_sources, pos, pos) do
       []
+    end
+
+    defp create_name(sources, pos) do
+      case elem(sources, pos) do
+        {:fragment, _, _} ->
+          {nil, [?f | Integer.to_string(pos)], nil}
+
+        {table, schema, prefix} ->
+          name = [create_alias(table) | Integer.to_string(pos)]
+          {quote_table(prefix, table), name, schema}
+
+        %Ecto.SubQuery{} ->
+          {nil, [?s | Integer.to_string(pos)], nil}
+      end
     end
 
     defp create_alias(<<first, _rest::binary>>) when first in ?a..?z when first in ?A..?Z do

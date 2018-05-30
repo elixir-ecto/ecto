@@ -18,8 +18,12 @@ defmodule Ecto.Query.PlannerTest do
       field :uuid, :binary_id
       field :special, :boolean
       field :crazy_comment, :string
+
       belongs_to :post, Ecto.Query.PlannerTest.Post
-      belongs_to :crazy_post, Ecto.Query.PlannerTest.Post, where: {Ecto.Query.PlannerTest.Post, :crazy, []}
+
+      belongs_to :crazy_post, Ecto.Query.PlannerTest.Post,
+        where: {Ecto.Query.PlannerTest.Post, :crazy, []}
+
       belongs_to :crazy_post_by_parameter, Ecto.Query.PlannerTest.Post,
         where: {Ecto.Query.PlannerTest.Post, :crazy_by_parameter, []},
         foreign_key: :crazy_post_id,
@@ -62,6 +66,7 @@ defmodule Ecto.Query.PlannerTest do
     use Ecto.Schema
 
     @primary_key {:id, Custom.Permalink, []}
+    @schema_prefix "my_prefix"
     schema "posts" do
       field :title, :string, source: :post_title
       field :text, :string
@@ -98,10 +103,12 @@ defmodule Ecto.Query.PlannerTest do
 
   defp normalize_with_params(query, operation \\ :all) do
     {query, params, _key} = prepare(query, operation)
+
     {query, _} =
       query
       |> Planner.ensure_select(operation == :all)
       |> Planner.normalize(operation, Ecto.TestAdapter, 0)
+
     {query, params}
   end
 
@@ -255,7 +262,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: nested joins associations" do
     query = from(c in Comment, left_join: assoc(c, :post_comments)) |> prepare |> elem(0)
-    assert {{"comments", _}, {"comments", _}, {"posts", _}} = query.sources
+    assert {{"comments", _, _}, {"comments", _, _}, {"posts", _, _}} = query.sources
     assert [join1, join2] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [2, 1]
     assert Macro.to_string(join1.on.expr) == "&2.id() == &0.post_id()"
@@ -263,7 +270,7 @@ defmodule Ecto.Query.PlannerTest do
 
     query = from(p in Comment, left_join: assoc(p, :post),
                                left_join: assoc(p, :post_comments)) |> prepare |> elem(0)
-    assert {{"comments", _}, {"posts", _}, {"comments", _}, {"posts", _}} = query.sources
+    assert {{"comments", _, _}, {"posts", _, _}, {"comments", _, _}, {"posts", _, _}} = query.sources
     assert [join1, join2, join3] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [1, 3, 2]
     assert Macro.to_string(join1.on.expr) == "&1.id() == &0.post_id()"
@@ -272,7 +279,7 @@ defmodule Ecto.Query.PlannerTest do
 
     query = from(p in Comment, left_join: assoc(p, :post_comments),
                                left_join: assoc(p, :post)) |> prepare |> elem(0)
-    assert {{"comments", _}, {"comments", _}, {"posts", _}, {"posts", _}} = query.sources
+    assert {{"comments", _, _}, {"comments", _, _}, {"posts", _, _}, {"posts", _, _}} = query.sources
     assert [join1, join2, join3] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [3, 1, 2]
     assert Macro.to_string(join1.on.expr) == "&3.id() == &0.post_id()"
@@ -283,14 +290,14 @@ defmodule Ecto.Query.PlannerTest do
   test "prepare: joins associations with custom queries" do
     query = from(p in Post, left_join: assoc(p, :special_comments)) |> prepare |> elem(0)
 
-    assert {{"posts", _}, {"comments", _}} = query.sources
+    assert {{"posts", _, _}, {"comments", _, _}} = query.sources
     assert [join] = query.joins
     assert join.ix == 1
     assert Macro.to_string(join.on.expr) == "&1.special() and &1.post_id() == &0.id()"
 
     query = from(p in Post, left_join: assoc(p, :shared_special_comments)) |> prepare |> elem(0)
 
-    assert {{"posts", _}, {"comments", _}, {"comment_posts", _}} = query.sources
+    assert {{"posts", _, _}, {"comments", _, _}, {"comment_posts", _, _}} = query.sources
     assert [join1, join2] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [2, 1]
     assert Macro.to_string(join1.on.expr) == "&2.deleted() and &2.post_id() == &0.id()"
@@ -308,7 +315,8 @@ defmodule Ecto.Query.PlannerTest do
                    |> elem(0)
 
     assert [join1, join2, join3, join4, join5, join6] = query.joins
-    assert {{"posts", _}, {"comments", _}, {"posts", _}, {"comments", _}, {"comment_posts", _}, {"comments", _}, {"comment_posts", _}} = query.sources
+    assert {{"posts", _, _}, {"comments", _, _}, {"posts", _, _}, {"comments", _, _},
+            {"comment_posts", _, _}, {"comments", _, _}, {"comment_posts", _, _}} = query.sources
 
     assert Macro.to_string(join1.on.expr) == "&1.special() and &1.post_id() == &0.id()"
     assert Macro.to_string(join2.on.expr) == "&2.id() == &1.post_id()"
@@ -337,17 +345,28 @@ defmodule Ecto.Query.PlannerTest do
 
   test "prepare: generates a cache key" do
     {_query, _params, key} = prepare(from(Post, []))
-    assert key == [:all, 0, {"posts", Post, 11832799}]
+    assert key == [:all, 0, {"posts", Post, 11832799, "my_prefix"}]
 
-    query = from(p in Post, select: 1, lock: "foo", where: is_nil(nil), or_where: is_nil(nil),
-                            join: c in Comment, preload: :comments)
+    query =
+      from(
+        p in Post,
+        prefix: "hello",
+        select: 1,
+        lock: "foo",
+        where: is_nil(nil),
+        or_where: is_nil(nil),
+        join: c in Comment,
+        prefix: "world",
+        preload: :comments
+      )
+
     {_query, _params, key} = prepare(%{query | prefix: "foo"})
     assert key == [:all, 0,
                    {:lock, "foo"},
                    {:prefix, "foo"},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
-                   {:join, [{:inner, {"comments", Comment, 47313942}, true}]},
-                   {"posts", Post, 11832799},
+                   {:join, [{:inner, {"comments", Comment, 47313942, "world"}, true}]},
+                   {"posts", Post, 11832799, "hello"},
                    {:select, 1}]
   end
 
@@ -359,6 +378,38 @@ defmodule Ecto.Query.PlannerTest do
 
     {_query, _params, key} = Planner.prepare(query, :all, Ecto.Adapters.Postgres, 0)
     assert key != :nocache
+  end
+
+  test "prepare: normalizes prefixes" do
+    # No schema prefix in from
+    {query, _, _} = from(Comment, select: 1) |> prepare()
+    assert query.sources == {{"comments", Comment, nil}}
+
+    {query, _, _} = from(Comment, select: 1) |> Map.put(:prefix, "global") |> prepare()
+    assert query.sources == {{"comments", Comment, "global"}}
+
+    {query, _, _} = from(Comment, prefix: "local", select: 1) |> Map.put(:prefix, "global") |> prepare()
+    assert query.sources == {{"comments", Comment, "local"}}
+
+    # Schema prefix in from
+    {query, _, _} = from(Post, select: 1) |> prepare()
+    assert query.sources == {{"posts", Post, "my_prefix"}}
+
+    {query, _, _} = from(Post, select: 1) |> Map.put(:prefix, "global") |> prepare()
+    assert query.sources == {{"posts", Post, "my_prefix"}}
+
+    {query, _, _} = from(Post, prefix: "local", select: 1) |> Map.put(:prefix, "global") |> prepare()
+    assert query.sources == {{"posts", Post, "local"}}
+
+    # Schema prefix in join
+    {query, _, _} = from(c in Comment, join: assoc(c, :post)) |> prepare()
+    assert query.sources == {{"comments", Comment, nil}, {"posts", Post, "my_prefix"}}
+
+    {query, _, _} = from(c in Comment, join: assoc(c, :post)) |> Map.put(:prefix, "global") |> prepare()
+    assert query.sources == {{"comments", Comment, "global"}, {"posts", Post, "my_prefix"}}
+
+    {query, _, _} = from(c in Comment, join: assoc(c, :post), prefix: "local") |> Map.put(:prefix, "global") |> prepare()
+    assert query.sources == {{"comments", Comment, "global"}, {"posts", Post, "local"}}
   end
 
   test "normalize: tagged types" do

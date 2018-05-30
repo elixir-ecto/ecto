@@ -387,9 +387,11 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   test "update all with prefix" do
-    query = from(m in Schema, update: [set: [x: 0]]) |> plan(:update_all)
-    assert update_all(%{query | prefix: "prefix"}) ==
-           ~s{UPDATE `prefix`.`schema` AS s0 SET s0.`x` = 0}
+    query = from(m in Schema, update: [set: [x: 0]]) |> Map.put(:prefix, "prefix") |> plan(:update_all)
+    assert update_all(query) == ~s{UPDATE `prefix`.`schema` AS s0 SET s0.`x` = 0}
+
+    query = from(m in Schema, prefix: "first", update: [set: [x: 0]]) |> Map.put(:prefix, "prefix") |> plan(:update_all)
+    assert update_all(query) == ~s{UPDATE `first`.`schema` AS s0 SET s0.`x` = 0}
   end
 
   test "delete all" do
@@ -411,8 +413,11 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   test "delete all with prefix" do
-    query = Schema |> Queryable.to_query |> plan()
-    assert delete_all(%{query | prefix: "prefix"}) == ~s{DELETE s0.* FROM `prefix`.`schema` AS s0}
+    query = Schema |> Queryable.to_query |> Map.put(:prefix, "prefix") |> plan()
+    assert delete_all(query) == ~s{DELETE s0.* FROM `prefix`.`schema` AS s0}
+
+    query = Schema |> from(prefix: "first") |> Map.put(:prefix, "prefix") |> plan()
+    assert delete_all(query) == ~s{DELETE s0.* FROM `first`.`schema` AS s0}
   end
 
   ## Joins
@@ -456,9 +461,13 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   test "join with prefix" do
-    query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z) |> select([], true) |> plan()
-    assert all(%{query | prefix: "prefix"}) ==
+    query = Schema |> join(:inner, [p], q in Schema2, on: p.x == q.z) |> select([], true) |> Map.put(:prefix, "prefix") |> plan()
+    assert all(query) ==
            ~s{SELECT TRUE FROM `prefix`.`schema` AS s0 INNER JOIN `prefix`.`schema2` AS s1 ON s0.`x` = s1.`z`}
+
+    query = Schema |> from(prefix: "first") |> join(:inner, [p], q in Schema2, on: p.x == q.z, prefix: "second") |> select([], true) |> Map.put(:prefix, "prefix") |> plan()
+    assert all(query) ==
+           ~s{SELECT TRUE FROM `first`.`schema` AS s0 INNER JOIN `second`.`schema2` AS s1 ON s0.`x` = s1.`z`}
   end
 
   test "join with fragment" do

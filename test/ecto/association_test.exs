@@ -692,8 +692,8 @@ defmodule Ecto.AssociationTest do
 
   test "assoc/2 with prefixes" do
     author = %Author{id: 1}
-    assert Ecto.assoc(author, :posts_with_prefix).prefix == "my_prefix"
-    assert Ecto.assoc(author, :comments_with_prefix).prefix == "my_prefix"
+    assert Ecto.assoc(author, :posts_with_prefix).from.prefix == "my_prefix"
+    assert Ecto.assoc(author, :comments_with_prefix).from.prefix == "my_prefix"
   end
 
   test "assoc/2 filters nil ids" do

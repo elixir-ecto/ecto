@@ -131,7 +131,7 @@ defmodule Ecto.Query do
   In any case, regardless if a schema has been given or not, Ecto
   queries are always composable thanks to its binding system.
 
-  ### Query bindings
+  ### Positional bindings
 
   On the left side of `in` we specify the query bindings.  This is
   done inside from and join clauses.  In the query below `u` is a
@@ -197,6 +197,8 @@ defmodule Ecto.Query do
 
   In other words, `...` will include all the binding between the
   first and the last, which may be no binding at all, one or many.
+
+  ### Named bindings
 
   Another option for flexibly building queries with joins are
   named bindings. Coming back to the previous example, provided
@@ -311,18 +313,43 @@ defmodule Ecto.Query do
   in the public schema, while MySQL queries are assumed to be in the
   database set in the config for the repo.
 
-  To set the prefix on a query:
+  The query prefix may be set either for the whole query or on each
+  individual `from` and `join` expression. If a `prefix` is not given
+  to a `from` or a `join`, the prefix of the schema given to the `from`
+  or `join` is used. The query prefix is used only if none of the above
+  are declared.
+
+  Let's see some examples. To see the query prefix globally, the simplest
+  mechanism is to pass an option to the repository operation:
+
+      results = Repo.all(query, prefix: "accounts")
+
+  You may also set the prefix for the whole query by setting the prefix field:
 
       results =
         query # May be User or an Ecto.Query itself
         |> Ecto.Queryable.to_query
-        |> Map.put(:prefix, "foo")
-        |> Repo.all
+        |> Map.put(:prefix, "accounts")
+        |> Repo.all()
 
-  When a prefix is set in a query, all loaded structs will belong to that
-  prefix, so operations like update and delete will be applied to the
-  proper prefix. In case you want to manually set the prefix for new data,
-  specially on insert, use `Ecto.put_meta/2`.
+  Setting the prefix in the query changes the default prefix of all `from`
+  and `join` expressions. You can override the query prefix by either setting
+  the `@schema_prefix` in your schema definitions or by passing the prefix
+  option:
+
+      from u in User,
+        prefix: "accounts",
+        join: p in assoc(u, :posts),
+        prefix: "public"
+
+  Overall, here is the prefix lookup precedence:
+
+    1. The `:prefix` option given to `from`/`join` has the highest precedence
+    2. Then it falls back to the `@schema_prefix` attribute declared in the schema
+      given to `from`/`join`
+    3. Then it falls back to the query prefix
+
+  The prefixes set in the query will be preserved when loading data.
   """
 
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], aliases: %{}, wheres: [], select: nil,
@@ -331,7 +358,7 @@ defmodule Ecto.Query do
 
   defmodule FromExpr do
     @moduledoc false
-    defstruct [:source, :as]
+    defstruct [:source, :as, :prefix]
   end
 
   defmodule DynamicExpr do
@@ -356,7 +383,7 @@ defmodule Ecto.Query do
 
   defmodule JoinExpr do
     @moduledoc false
-    defstruct [:qual, :source, :on, :file, :line, :assoc, :as, :ix, params: []]
+    defstruct [:qual, :source, :on, :file, :line, :assoc, :as, :ix, :prefix, params: []]
   end
 
   defmodule Tagged do
@@ -614,8 +641,8 @@ defmodule Ecto.Query do
       raise ArgumentError, "second argument to `from` must be a compile time keyword list"
     end
 
-    {kw, as} = collect_as(kw)
-    {quoted, binds, count_bind} = From.build(expr, __CALLER__, as)
+    {kw, as, prefix} = collect_as_and_prefix(kw, nil, nil)
+    {quoted, binds, count_bind} = From.build(expr, __CALLER__, as, prefix)
     from(kw, __CALLER__, count_bind, quoted, to_query_binds(binds))
   end
 
@@ -652,17 +679,20 @@ defmodule Ecto.Query do
 
   defp from([{join, expr}|t], env, count_bind, quoted, binds) when join in @joins do
     qual = join_qual(join)
-    {t, on, as} = collect_on_and_as(t, nil, nil)
-    {quoted, binds, count_bind} = Join.build(quoted, qual, binds, expr, count_bind, on, as, env)
-    from(t, env, count_bind, quoted, to_query_binds(binds))
-  end
+    {t, on, as, prefix} = collect_on(t, nil, nil, nil)
 
-  defp from([{:as, _value}|_], _env, _count_bind, _quoted, _binds) do
-    Builder.error! "`as` keyword must immediately follow a join"
+    {quoted, binds, count_bind} =
+      Join.build(quoted, qual, binds, expr, count_bind, on, as, prefix, env)
+
+    from(t, env, count_bind, quoted, to_query_binds(binds))
   end
 
   defp from([{:on, _value}|_], _env, _count_bind, _quoted, _binds) do
     Builder.error! "`on` keyword must immediately follow a join"
+  end
+
+  defp from([{key, _value}|_], _env, _count_bind, _quoted, _binds) when key in [:as, :prefix] do
+    Builder.error! "`#{key}` keyword must immediately follow a from/join/on"
   end
 
   defp from([{key, _value}|_], _env, _count_bind, _quoted, _binds) do
@@ -686,19 +716,28 @@ defmodule Ecto.Query do
   defp join_qual(:left_lateral_join), do: :left_lateral
   defp join_qual(:inner_lateral_join), do: :inner_lateral
 
-  defp collect_on_and_as([{:on, on} | t], nil, as),
-    do: collect_on_and_as(t, on, as)
-  defp collect_on_and_as([{:on, expr} | t], on, as),
-    do: collect_on_and_as(t, {:and, [], [on, expr]}, as)
-  defp collect_on_and_as([{:as, as} | t], on, nil),
-    do: collect_on_and_as(t, on, as)
-  defp collect_on_and_as([{:as, _} | _], _, _),
-    do: Builder.error! "`as` keyword was given more than once to the same join"
-  defp collect_on_and_as(other, on, as),
-    do: {other, on, as}
+  defp collect_on([{key, _} | _] = t, on, as, prefix) when key in [:as, :prefix] do
+    {t, as, prefix} = collect_as_and_prefix(t, as, prefix)
+    collect_on(t, on, as, prefix)
+  end
 
-  defp collect_as([{:as, as} | t]), do: {t, as}
-  defp collect_as(t), do: {t, nil}
+  defp collect_on([{:on, on} | t], nil, as, prefix),
+    do: collect_on(t, on, as, prefix)
+  defp collect_on([{:on, expr} | t], on, as, prefix),
+    do: collect_on(t, {:and, [], [on, expr]}, as, prefix)
+  defp collect_on(t, on, as, prefix),
+    do: {t, on, as, prefix}
+
+  defp collect_as_and_prefix([{:as, as} | t], nil, prefix),
+    do: collect_as_and_prefix(t, as, prefix)
+  defp collect_as_and_prefix([{:as, _} | _], _, _),
+    do: Builder.error! "`as` keyword was given more than once to the same join"
+  defp collect_as_and_prefix([{:prefix, prefix} | t], as, nil),
+    do: collect_as_and_prefix(t, as, prefix)
+  defp collect_as_and_prefix([{:prefix, _} | _], _, _),
+    do: Builder.error! "`prefix` keyword was given more than once to the same join"
+  defp collect_as_and_prefix(t, as, prefix),
+    do: {t, as, prefix}
 
   @doc """
   A join query expression.
@@ -714,18 +753,30 @@ defmodule Ecto.Query do
   Currently it is possible to join on:
 
     * an `Ecto.Schema`, such as `p in Post`
-    * an Ecto query with zero or more where clauses, such as `from "posts", where: [public: true]`
+    * an Ecto query with zero or more where clauses,
+      such as `from "posts", where: [public: true]`
     * an association, such as `c in assoc(post, :comments)`
-    * a query fragment, such as `c in fragment("SOME COMPLEX QUERY")`
     * a subquery, such as `c in subquery(another_query)`
+    * a query fragment, such as `c in fragment("SOME COMPLEX QUERY")`,
+      see "Joining with fragments" below.
 
-  The fragment support exists mostly for handling lateral joins.
-  See "Joining with fragments" below.
+  ## Options
+
+  Each join accepts the following options:
+
+    * `:on` - a query expression or keyword list to filter the join
+    * `:as` - a named binding for the join
+    * `:prefix` - the prefix to be used for the join when issueing a database query
+
+  In the keyword query sytax, those options must be given immediately
+  after the join. In the expression syntax, the options are given as
+  the fifth argument.
 
   ## Keywords examples
 
       from c in Comment,
-        join: p in Post, on: p.id == c.post_id,
+        join: p in Post,
+        on: p.id == c.post_id,
         select: {p.title, c.text}
 
       from p in Post,
@@ -735,7 +786,8 @@ defmodule Ecto.Query do
   Keywords can also be given or interpolated as part of `on`:
 
       from c in Comment,
-        join: p in Post, on: [id: c.post_id],
+        join: p in Post,
+        on: [id: c.post_id],
         select: {p.title, c.text}
 
   Any key in `on` will apply to the currently joined expression.
@@ -745,7 +797,8 @@ defmodule Ecto.Query do
 
       posts = Post
       from c in Comment,
-        join: p in ^posts, on: [id: c.post_id],
+        join: p in ^posts,
+        on: [id: c.post_id],
         select: {p.title, c.text}
 
   The above is specially useful to dynamically join on existing
@@ -796,39 +849,39 @@ defmodule Ecto.Query do
       |> select([g, gs], {g.name, gs.sold_on})
 
   """
+  @join_opts [:on, :as, :prefix]
+
   defmacro join(query, qual, binding \\ [], expr, opts \\ []) do
-    {on, as} =
-      case parse_join_opts(opts) do
-        {:opts, opts} ->
-          {Keyword.get(opts, :on), Keyword.get(opts, :as)}
-        {:expr, on_expr} ->
-          IO.warn "Passing raw `on` expression as the last argument to Ecto.Query.join/5 is deprecated. " <>
-            "Please use :on keyword option instead."
-          {on_expr, nil}
-      end
+    {t, on, as, prefix} = opts |> parse_join_opts() |> collect_on(nil, nil, nil)
+
+    with [{key, _} | _] <- t do
+      raise ArgumentError, "invalid option `#{key}` passed to Ecto.Query.join/5, " <>
+                             "valid options are: #{inspect(@join_opts)}"
+    end
 
     query
-    |> Join.build(qual, binding, expr, nil, on, as, __CALLER__)
+    |> Join.build(qual, binding, expr, nil, on, as, prefix, __CALLER__)
     |> elem(0)
   end
 
-  @join_opts [:on, :as]
+  @join_opts [:on, :as, :prefix]
 
-  defp parse_join_opts([]), do: {:opts, []}
+  defp parse_join_opts([]), do: []
   defp parse_join_opts(list) when is_list(list) do
-    opts = Keyword.take(list, @join_opts)
+    case Keyword.split(list, @join_opts) do
+      {opts, []} ->
+        opts
 
-    case {list, opts} do
-      {list, []} ->
-        {:expr, list}
-      {opts, opts} ->
-        {:opts, opts}
-      {list, _} ->
-        raise ArgumentError, "invalid options passed to Ecto.Query.join/5: " <>
-          "#{inspect(Keyword.keys(list) -- @join_opts)}. Valid options: #{inspect @join_opts}."
+      {[], expr} ->
+        IO.warn "Passing raw `on` expression as the last argument to Ecto.Query.join/5 is deprecated. " <>
+            "Please use :on keyword option instead."
+        [on: expr]
+
+      {_, _} ->
+        list
     end
   end
-  defp parse_join_opts(expr), do: {:expr, expr}
+  defp parse_join_opts(expr), do: [on: expr]
 
   @doc """
   A select query expression.

@@ -225,22 +225,32 @@ defmodule Ecto.SchemaTest do
     assert %SchemaWithPrefix{}.__meta__.prefix == "tenant"
   end
 
-  test "schema prefix in queries" do
+  test "schema prefix in queries from" do
     import Ecto.Query
 
     query = from(SchemaWithPrefix, select: 1)
-    assert query.prefix == "tenant"
+    assert query.from.prefix == "tenant"
 
     query = from({"another_company", SchemaWithPrefix}, select: 1)
-    assert query.prefix == "tenant"
+    assert query.from.prefix == "tenant"
 
     from = SchemaWithPrefix
     query = from(from, select: 1)
-    assert query.prefix == "tenant"
+    assert query.from.prefix == "tenant"
 
     from = {"another_company", SchemaWithPrefix}
     query = from(from, select: 1)
-    assert query.prefix == "tenant"
+    assert query.from.prefix == "tenant"
+  end
+
+  test "schema prefix in queries join" do
+    import Ecto.Query
+
+    query = from("query", join: _ in SchemaWithPrefix, select: 1)
+    assert hd(query.joins).prefix == "tenant"
+
+    query = from("query", join: _ in {"another_company", SchemaWithPrefix}, select: 1)
+    assert hd(query.joins).prefix == "tenant"
   end
 
   ## Composite primary keys

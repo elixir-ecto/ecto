@@ -54,8 +54,8 @@ defmodule Ecto.TestAdapter do
     {1, nil}
   end
 
-  def execute(_, meta, {:nocache, {op, %{from: %{source: {source, _}}}}}, _params, _opts) do
-    send test_process(), {op, {meta.prefix, source}}
+  def execute(_, _meta, {:nocache, {op, %{prefix: prefix, from: %{source: {source, _}}}}}, _params, _opts) do
+    send test_process(), {op, {prefix, source}}
     {1, nil}
   end
 

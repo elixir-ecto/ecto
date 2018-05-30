@@ -50,11 +50,10 @@ defmodule Ecto.Schema do
 
     * `@schema_prefix` - configures the schema prefix. Defaults to `nil`,
       which generates structs and queries without prefix. When set, the
-      prefix will be used by every built struct and on queries where the
-      current schema is used in `from` (and only `from` exclusively). If
-      a schema is used as a join or part of an assoc, `@schema_prefix` won't
-      be obeyed. In PostgreSQL, the prefix is called "SCHEMA" (typically
-      set via Postgres' `search_path`). In MySQL the prefix points to databases.
+      prefix will be used by every built struct and on queries whenever
+      the schema is used in a `from` or a `join`. In PostgreSQL, the prefix
+      is called "SCHEMA" (typically set via Postgres' `search_path`).
+      In MySQL the prefix points to databases.
 
     * `@foreign_key_type` - configures the default foreign key type
       used by `belongs_to` associations. Defaults to `:id`;
@@ -515,8 +514,10 @@ defmodule Ecto.Schema do
 
         def __schema__(:query) do
           %Ecto.Query{
-            from: %Ecto.Query.FromExpr{source: {unquote(source), __MODULE__}},
-            prefix: unquote(prefix)
+            from: %Ecto.Query.FromExpr{
+              source: {unquote(source), __MODULE__},
+              prefix: unquote(prefix)
+            }
           }
         end
 

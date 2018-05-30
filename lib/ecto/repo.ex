@@ -493,7 +493,7 @@ defmodule Ecto.Repo do
            select: p.title
       MyRepo.all(query)
   """
-  @callback all(queryable :: Ecto.Query.t(), opts :: Keyword.t()) :: [Ecto.Schema.t()] | no_return
+  @callback all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: [Ecto.Schema.t()] | no_return
 
   @doc """
   Returns a lazy enumerable that emits all entries from the data store
@@ -523,7 +523,7 @@ defmodule Ecto.Repo do
         Enum.to_list(stream)
       end)
   """
-  @callback stream(queryable :: Ecto.Query.t(), opts :: Keyword.t()) :: Enum.t()
+  @callback stream(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: Enum.t()
 
   @doc """
   Inserts all entries into the repository.
