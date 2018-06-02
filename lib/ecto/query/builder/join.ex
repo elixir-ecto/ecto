@@ -21,13 +21,19 @@ defmodule Ecto.Query.Builder.Join do
       {:_, {"foo", nil}, nil, %{}}
 
       iex> escape(quote(do: x in Sample), [], __ENV__)
-      {:x, {nil, {:__aliases__, [alias: false], [:Sample]}}, nil, %{}}
+      {:x, {nil, Sample}, nil, %{}}
 
-      iex> escape(quote(do: x in {"foo", Sample}), [], __ENV__)
-      {:x, {"foo", {:__aliases__, [alias: false], [:Sample]}}, nil, %{}}
+      iex> escape(quote(do: x in __MODULE__), [], __ENV__)
+      {:x, {nil, __MODULE__}, nil, %{}}
 
       iex> escape(quote(do: x in {"foo", :sample}), [], __ENV__)
       {:x, {"foo", :sample}, nil, %{}}
+
+      iex> escape(quote(do: x in {"foo", Sample}), [], __ENV__)
+      {:x, {"foo", Sample}, nil, %{}}
+
+      iex> escape(quote(do: x in {"foo", __MODULE__}), [], __ENV__)
+      {:x, {"foo", __MODULE__}, nil, %{}}
 
       iex> escape(quote(do: c in assoc(p, :comments)), [p: 0], __ENV__)
       {:c, nil, {0, :comments}, %{}}
@@ -56,20 +62,14 @@ defmodule Ecto.Query.Builder.Join do
     {:_, expr, nil, params}
   end
 
-  def escape({:__aliases__, _, _} = module, _vars, _env) do
-    {:_, {nil, module}, nil, %{}}
-  end
+  def escape({string, schema} = join, _vars, env) when is_binary(string) do
+    case Macro.expand(schema, env) do
+      schema when is_atom(schema) ->
+        {:_, {string, schema}, nil, %{}}
 
-  def escape(string, _vars, _env) when is_binary(string) do
-    {:_, {string, nil}, nil, %{}}
-  end
-
-  def escape({string, {:__aliases__, _, _} = module}, _vars, _env) when is_binary(string) do
-    {:_, {string, module}, nil, %{}}
-  end
-
-  def escape({string, atom}, _vars, _env) when is_binary(string) and is_atom(atom) do
-    {:_, {string, atom}, nil, %{}}
+      _ ->
+        Builder.error! "malformed join `#{Macro.to_string(join)}` in query expression"
+    end
   end
 
   def escape({:assoc, _, [{var, _, context}, field]}, vars, _env)
@@ -82,6 +82,14 @@ defmodule Ecto.Query.Builder.Join do
 
   def escape({:^, _, [expr]}, _vars, _env) do
     {:_, quote(do: Ecto.Query.Builder.Join.join!(unquote(expr))), nil, %{}}
+  end
+
+  def escape(string, _vars, _env) when is_binary(string) do
+    {:_, {string, nil}, nil, %{}}
+  end
+
+  def escape(schema, _vars, _env) when is_atom(schema) do
+    {:_, {nil, schema}, nil, %{}}
   end
 
   def escape(join, vars, env) do
