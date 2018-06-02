@@ -5,6 +5,13 @@ defmodule Ecto.RepoTest do
   import Ecto, only: [put_meta: 2]
   require Ecto.TestRepo, as: TestRepo
 
+  defmodule MyParent do
+    use Ecto.Schema
+
+    schema "my_parent" do
+    end
+  end
+
   defmodule MySchema do
     use Ecto.Schema
 
@@ -14,7 +21,7 @@ defmodule Ecto.RepoTest do
       field :z, :string, default: "z"
       field :array, {:array, :string}
       field :map, {:map, :string}
-      belongs_to :another, MySchema.Another
+      belongs_to :parent, MyParent
     end
   end
 
@@ -126,6 +133,14 @@ defmodule Ecto.RepoTest do
     assert_received :stream_execute
     assert Enum.take(stream, 0) == []
     refute_received :stream_execute
+  end
+
+  test "stream does not work with preloads" do
+    query = from m in MySchema, preload: [:parent]
+
+    assert_raise Ecto.QueryError, ~r"preloads are not supported on streams", fn ->
+      TestRepo.stream(query)
+    end
   end
 
   test "validates update_all" do
