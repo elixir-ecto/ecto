@@ -109,7 +109,7 @@ defmodule Ecto.Repo do
         Enum.reduce(opts[:loggers] || config[:loggers] || [Ecto.LogEntry], quote(do: entry), fn
           mod, acc when is_atom(mod) ->
             quote do: unquote(mod).log(unquote(acc))
-          {Ecto.LogEntry, :log, [level]}, _acc when not level in [:error, :info, :warn, :debug] ->
+          {Ecto.LogEntry, :log, [level]}, _acc when not(level in [:error, :info, :warn, :debug]) ->
             raise ArgumentError, "the log level #{inspect level} is not supported in Ecto.LogEntry"
           {mod, fun, args}, acc ->
             quote do: unquote(mod).unquote(fun)(unquote(acc), unquote_splicing(args))

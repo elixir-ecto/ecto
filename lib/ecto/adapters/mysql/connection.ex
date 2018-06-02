@@ -152,7 +152,7 @@ if Code.ensure_loaded?(Mariaex) do
     defp on_conflict({%{wheres: []} = query, _, []}, _header) do
       [" ON DUPLICATE KEY " | update_all(query, "UPDATE ")]
     end
-    defp on_conflict({query, _, []}, _header) do
+    defp on_conflict({_query, _, []}, _header) do
       error!(nil, "Using a query with :where in combination with the :on_conflict option is not supported by MySQL")
     end
 
