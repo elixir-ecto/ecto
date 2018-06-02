@@ -155,6 +155,11 @@ defmodule Ecto.Repo.Queryable do
         stream = adapter.stream(repo, meta, prepared, params, preprocessor, opts)
         postprocessor = postprocessor(postprocess, take, prefix, adapter)
 
+        if preloads != [] do
+          IO.warn "passing a query with preloads to #{inspect repo}.stream/2 leads to " <>
+                  "erratic behaviour and will raise in future Ecto versions"
+        end
+
         Stream.flat_map(stream, fn {_, rows} ->
           rows
           |> Ecto.Repo.Assoc.query(assocs, sources)
