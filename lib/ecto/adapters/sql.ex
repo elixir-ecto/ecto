@@ -620,7 +620,7 @@ defmodule Ecto.Adapters.SQL do
       query!(meta, sql, [], opts)
     end
 
-    :ok
+    {:ok, []}
   end
 
   @doc false

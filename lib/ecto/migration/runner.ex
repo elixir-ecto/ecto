@@ -258,7 +258,8 @@ defmodule Ecto.Migration.Runner do
   defp log_and_execute_ddl(repo, %{level: level, sql: sql}, command) do
     log(level, command(command))
     meta = Ecto.Adapter.lookup_meta(repo)
-    repo.__adapter__.execute_ddl(meta, command, timeout: :infinity, log: sql)
+    {:ok, _} = repo.__adapter__.execute_ddl(meta, command, timeout: :infinity, log: sql)
+    :ok
   end
 
   defp log(false, _msg), do: :ok

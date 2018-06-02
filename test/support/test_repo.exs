@@ -133,7 +133,7 @@ defmodule Ecto.TestAdapter do
 
   def execute_ddl(_, command, _) do
     Process.put(:last_command, command)
-    :ok
+    {:ok, []}
   end
 
   defp migrated_versions do

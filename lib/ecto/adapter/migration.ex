@@ -54,7 +54,7 @@ defmodule Ecto.Adapter.Migration do
       to finish, `:infinity` will wait indefinitely (default: 5000);
     * `:log` - When false, does not log begin/commit/rollback queries
   """
-  @callback execute_ddl(adapter_meta, command, options :: Keyword.t()) :: :ok
+  @callback execute_ddl(adapter_meta, command, options :: Keyword.t()) :: {:ok, list()}
 
   @doc """
   Locks the migrations table and emits the locked versions for callback execution.
