@@ -659,11 +659,7 @@ defmodule Ecto.Adapters.SQL do
     the pool size via your application config:
 
         config :my_app, Repo,
-          adapter: Ecto.Adapters.Postgres,
-          database: "ecto_simple",
-          username: "postgres",
-          password: "postgres",
-          hostname: "localhost",
+          ...,
           pool_size: 2 # at least
     """
   end
