@@ -334,7 +334,7 @@ defmodule Ecto.Changeset do
       "body"
 
   """
-  @spec change(Ecto.Schema.t | t | {data, types}, %{atom => term} | Keyword.t) :: t | no_return
+  @spec change(Ecto.Schema.t | t | {data, types}, %{atom => term} | Keyword.t) :: t
   def change(data, changes \\ %{})
 
   def change({data, types}, changes) when is_map(data) do
@@ -424,7 +424,7 @@ defmodule Ecto.Changeset do
   @spec cast(Ecto.Schema.t | t | {data, types},
              %{binary => term} | %{atom => term} | :invalid,
              [String.t | atom],
-             Keyword.t) :: t | no_return
+             Keyword.t) :: t
   def cast(data, params, permitted, opts \\ [])
 
   def cast(_data, %{__struct__: _} = params, _permitted, _opts) do
@@ -864,7 +864,7 @@ defmodule Ecto.Changeset do
       ** (ArgumentError) different :data when merging changesets
 
   """
-  @spec merge(t, t) :: t | no_return
+  @spec merge(t, t) :: t
   def merge(changeset1, changeset2)
 
   def merge(%Changeset{data: data} = cs1, %Changeset{data: data} = cs2) do
@@ -1076,7 +1076,7 @@ defmodule Ecto.Changeset do
       %{title: "bar"}
 
   """
-  @spec put_change(t, atom, term) :: t | no_return
+  @spec put_change(t, atom, term) :: t
   def put_change(%Changeset{types: nil}, _key, _value) do
     raise ArgumentError, "changeset does not have types information"
   end
@@ -1202,7 +1202,7 @@ defmodule Ecto.Changeset do
       %{title: "bar", author: "bar"}
 
   """
-  @spec force_change(t, atom, term) :: t | no_return
+  @spec force_change(t, atom, term) :: t
   def force_change(%Changeset{types: nil}, _key, _value) do
     raise ArgumentError, "changeset does not have types information"
   end
@@ -1811,7 +1811,7 @@ defmodule Ecto.Changeset do
       validate_number(changeset, :the_answer_to_life_the_universe_and_everything, equal_to: 42)
 
   """
-  @spec validate_number(t, atom, Keyword.t) :: t | no_return
+  @spec validate_number(t, atom, Keyword.t) :: t
   def validate_number(changeset, field, opts) do
     validate_change changeset, field, {:number, opts}, fn
       field, value ->
@@ -2038,7 +2038,7 @@ defmodule Ecto.Changeset do
       iex> Ecto.Changeset.optimistic_lock(post, :lock_uuid, fn _ -> Ecto.UUID.generate end)
 
   """
-  @spec optimistic_lock(Ecto.Schema.t | t, atom, (term -> term)) :: t | no_return
+  @spec optimistic_lock(Ecto.Schema.t | t, atom, (term -> term)) :: t
   def optimistic_lock(data_or_changeset, field, incrementer \\ &(&1 + 1)) do
     changeset = change(data_or_changeset, %{})
     current = get_field(changeset, field)
@@ -2312,7 +2312,7 @@ defmodule Ecto.Changeset do
       name is inferred from the table + association field.
       May be required explicitly for complex cases
   """
-  @spec assoc_constraint(t, atom, Keyword.t) :: t | no_return
+  @spec assoc_constraint(t, atom, Keyword.t) :: t
   def assoc_constraint(changeset, assoc, opts \\ []) do
     constraint = opts[:name] ||
       case get_assoc(changeset, assoc) do
@@ -2362,7 +2362,7 @@ defmodule Ecto.Changeset do
       field. May be required explicitly for complex cases
 
   """
-  @spec no_assoc_constraint(t, atom, Keyword.t) :: t | no_return
+  @spec no_assoc_constraint(t, atom, Keyword.t) :: t
   def no_assoc_constraint(changeset, assoc, opts \\ []) do
     {constraint, message} =
       case get_assoc(changeset, assoc) do

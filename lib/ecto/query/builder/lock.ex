@@ -12,7 +12,7 @@ defmodule Ecto.Query.Builder.Lock do
       "FOO"
 
   """
-  @spec escape(Macro.t) :: Macro.t | no_return
+  @spec escape(Macro.t) :: Macro.t
   def escape(lock) when is_binary(lock), do: lock
 
   def escape(other) do

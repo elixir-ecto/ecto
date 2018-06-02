@@ -530,7 +530,7 @@ defmodule Ecto.Query.Builder do
   A escaped variable is represented internally as
   `&0`, `&1` and so on.
   """
-  @spec escape_var(atom, Keyword.t) :: Macro.t | no_return
+  @spec escape_var(atom, Keyword.t) :: Macro.t
   def escape_var(var, vars) do
     {:{}, [], [:&, [], [find_var!(var, vars)]]}
   end

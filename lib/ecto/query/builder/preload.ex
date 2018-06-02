@@ -44,7 +44,7 @@ defmodule Ecto.Query.Builder.Preload do
       ** (Ecto.Query.CompileError) cannot preload join association `:bar` with binding `c` because parent preload is not a join association
 
   """
-  @spec escape(Macro.t, Keyword.t) :: {[Macro.t], [Macro.t]} | no_return
+  @spec escape(Macro.t, Keyword.t) :: {[Macro.t], [Macro.t]}
   def escape(preloads, vars) do
     {preloads, assocs} = escape(preloads, :both, [], [], vars)
     {Enum.reverse(preloads), Enum.reverse(assocs)}

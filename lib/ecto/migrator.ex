@@ -67,7 +67,7 @@ defmodule Ecto.Migrator do
       Can be any of `Logger.level/0` values or `false`.
     * `:prefix` - the prefix to run the migrations on
   """
-  @spec up(Ecto.Repo.t, integer, module, Keyword.t) :: :ok | :already_up | no_return
+  @spec up(Ecto.Repo.t, integer, module, Keyword.t) :: :ok | :already_up
   def up(repo, version, module, opts \\ []) do
     verbose_schema_migration repo, "create schema migrations table", fn ->
       SchemaMigration.ensure_schema_migrations_table!(repo, opts[:prefix])
@@ -110,7 +110,7 @@ defmodule Ecto.Migrator do
     * `:prefix` - the prefix to run the migrations on
 
   """
-  @spec down(Ecto.Repo.t, integer, module) :: :ok | :already_down | no_return
+  @spec down(Ecto.Repo.t, integer, module) :: :ok | :already_down
   def down(repo, version, module, opts \\ []) do
     verbose_schema_migration repo, "create schema migrations table", fn ->
       SchemaMigration.ensure_schema_migrations_table!(repo, opts[:prefix])

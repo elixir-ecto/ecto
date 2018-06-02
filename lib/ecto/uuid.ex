@@ -48,7 +48,7 @@ defmodule Ecto.UUID do
   @doc """
   Same as `cast/1` but raises `Ecto.CastError` on invalid arguments.
   """
-  @spec cast!(t | raw | any) :: t | no_return
+  @spec cast!(t | raw | any) :: t
   def cast!(value) do
     case cast(value) do
       {:ok, uuid} -> uuid

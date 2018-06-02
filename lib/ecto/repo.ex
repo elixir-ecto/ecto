@@ -309,7 +309,7 @@ defmodule Ecto.Repo do
 
   """
   @callback get(queryable :: Ecto.Queryable.t(), id :: term, opts :: Keyword.t()) ::
-              Ecto.Schema.t() | nil | no_return
+              Ecto.Schema.t() | nil
 
   @doc """
   Similar to `c:get/3` but raises `Ecto.NoResultsError` if no record was found.
@@ -324,7 +324,7 @@ defmodule Ecto.Repo do
 
   """
   @callback get!(queryable :: Ecto.Queryable.t(), id :: term, opts :: Keyword.t()) ::
-              Ecto.Schema.t() | nil | no_return
+              Ecto.Schema.t() | nil
 
   @doc """
   Fetches a single result from the query.
@@ -344,7 +344,7 @@ defmodule Ecto.Repo do
               queryable :: Ecto.Queryable.t(),
               clauses :: Keyword.t() | map,
               opts :: Keyword.t()
-            ) :: Ecto.Schema.t() | nil | no_return
+            ) :: Ecto.Schema.t() | nil
 
   @doc """
   Similar to `get_by/3` but raises `Ecto.NoResultsError` if no record was found.
@@ -364,7 +364,7 @@ defmodule Ecto.Repo do
               queryable :: Ecto.Queryable.t(),
               clauses :: Keyword.t() | map,
               opts :: Keyword.t()
-            ) :: Ecto.Schema.t() | nil | no_return
+            ) :: Ecto.Schema.t() | nil
 
   @doc """
   Calculate the given `aggregate` over the given `field`.
@@ -408,7 +408,7 @@ defmodule Ecto.Repo do
   See the "Shared options" section at the module documentation.
   """
   @callback one(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
-              Ecto.Schema.t() | nil | no_return
+              Ecto.Schema.t() | nil
 
   @doc """
   Similar to `c:one/2` but raises `Ecto.NoResultsError` if no record was found.
@@ -420,7 +420,7 @@ defmodule Ecto.Repo do
   See the "Shared options" section at the module documentation.
   """
   @callback one!(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
-              Ecto.Schema.t() | no_return
+              Ecto.Schema.t()
 
   @doc """
   Preloads all associations on the given struct or structs.
@@ -491,7 +491,7 @@ defmodule Ecto.Repo do
            select: p.title
       MyRepo.all(query)
   """
-  @callback all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: [Ecto.Schema.t()] | no_return
+  @callback all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: [Ecto.Schema.t()]
 
   @doc """
   Returns a lazy enumerable that emits all entries from the data store
@@ -619,7 +619,7 @@ defmodule Ecto.Repo do
               schema_or_source :: binary | {binary, Ecto.Schema.t()} | Ecto.Schema.t(),
               entries :: [map | Keyword.t()],
               opts :: Keyword.t()
-            ) :: {integer, nil | [term]} | no_return
+            ) :: {integer, nil | [term]}
 
   @doc """
   Updates all entries matching the given query with the given values.
@@ -669,7 +669,7 @@ defmodule Ecto.Repo do
               queryable :: Ecto.Queryable.t(),
               updates :: Keyword.t(),
               opts :: Keyword.t()
-            ) :: {integer, nil | [term]} | no_return
+            ) :: {integer, nil | [term]}
 
   @doc """
   Deletes all entries matching the given query.
@@ -695,7 +695,7 @@ defmodule Ecto.Repo do
       from(p in Post, where: p.id < 10) |> MyRepo.delete_all
   """
   @callback delete_all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
-              {integer, nil | [term]} | no_return
+              {integer, nil | [term]}
 
   @doc """
   Inserts a struct defined via `Ecto.Schema` or a changeset.
@@ -958,20 +958,20 @@ defmodule Ecto.Repo do
   @callback insert!(
               struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(),
               opts :: Keyword.t()
-            ) :: Ecto.Schema.t() | no_return
+            ) :: Ecto.Schema.t()
 
   @doc """
   Same as `c:update/2` but returns the struct or raises if the changeset is invalid.
   """
   @callback update!(changeset :: Ecto.Changeset.t(), opts :: Keyword.t()) ::
-              Ecto.Schema.t() | no_return
+              Ecto.Schema.t()
 
   @doc """
   Same as `c:insert_or_update/2` but returns the struct or raises if the changeset
   is invalid.
   """
   @callback insert_or_update!(changeset :: Ecto.Changeset.t(), opts :: Keyword.t()) ::
-              Ecto.Schema.t() | no_return
+              Ecto.Schema.t()
 
   @doc """
   Same as `c:delete/2` but returns the struct or raises if the changeset is invalid.
@@ -979,7 +979,7 @@ defmodule Ecto.Repo do
   @callback delete!(
               struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(),
               opts :: Keyword.t()
-            ) :: Ecto.Schema.t() | no_return
+            ) :: Ecto.Schema.t()
 
   @doc """
   Runs the given function or `Ecto.Multi` inside a transaction.

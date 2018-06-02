@@ -416,7 +416,7 @@ defmodule Ecto do
   Raises `Ecto.NoPrimaryKeyFieldError` if the schema has no
   primary key field.
   """
-  @spec primary_key!(Ecto.Schema.t) :: Keyword.t | no_return
+  @spec primary_key!(Ecto.Schema.t) :: Keyword.t
   def primary_key!(%{__struct__: schema} = struct) do
     case primary_key(struct) do
       [] -> raise Ecto.NoPrimaryKeyFieldError, schema: schema

@@ -54,7 +54,7 @@ defmodule Mix.Ecto do
   @doc """
   Ensures the given module is a repository.
   """
-  @spec ensure_repo(module, list) :: Ecto.Repo.t | no_return
+  @spec ensure_repo(module, list) :: Ecto.Repo.t
   def ensure_repo(repo, args) do
     Mix.Task.run "loadpaths", args
 
@@ -79,7 +79,7 @@ defmodule Mix.Ecto do
   @doc """
   Ensures the given repository is started and running.
   """
-  @spec ensure_started(Ecto.Repo.t, Keyword.t) :: {:ok, pid, [atom]} | no_return
+  @spec ensure_started(Ecto.Repo.t, Keyword.t) :: {:ok, pid, [atom]}
   def ensure_started(repo, opts) do
     {:ok, started} = Application.ensure_all_started(:ecto)
 
@@ -114,7 +114,7 @@ defmodule Mix.Ecto do
   @doc """
   Ensures the given repository's migrations path exists on the file system.
   """
-  @spec ensure_migrations_path(Ecto.Repo.t) :: Ecto.Repo.t | no_return
+  @spec ensure_migrations_path(Ecto.Repo.t) :: Ecto.Repo.t
   def ensure_migrations_path(repo) do
     with false <- Mix.Project.umbrella?,
          path = Path.join(source_repo_priv(repo), "migrations"),

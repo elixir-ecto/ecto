@@ -224,7 +224,6 @@ defmodule Ecto.Adapters.SQL do
                %{:rows => nil | [[term] | binary],
                  :num_rows => non_neg_integer,
                  optional(atom) => any}
-               | no_return
   def query!(repo, sql, params \\ [], opts \\ []) do
     case query(repo, sql, params, opts) do
       {:ok, result} -> result
