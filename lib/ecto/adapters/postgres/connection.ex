@@ -381,9 +381,14 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp order_by_expr({dir, expr}, sources, query) do
       str = expr(expr, sources, query)
+
       case dir do
         :asc  -> str
+        :asc_nulls_last -> [str | " ASC NULLS LAST"]
+        :asc_nulls_first -> [str | " ASC NULLS FIRST"]
         :desc -> [str | " DESC"]
+        :desc_nulls_last -> [str | " DESC NULLS LAST"]
+        :desc_nulls_first -> [str | " DESC NULLS FIRST"]
       end
     end
 

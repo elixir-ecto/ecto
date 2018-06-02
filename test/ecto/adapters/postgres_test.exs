@@ -185,6 +185,12 @@ defmodule Ecto.Adapters.PostgresTest do
     query = Schema |> order_by([r], [asc: r.x, desc: r.y]) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 ORDER BY s0."x", s0."y" DESC}
 
+    query = Schema |> order_by([r], [asc_nulls_first: r.x, desc_nulls_first: r.y]) |> select([r], r.x) |> plan()
+    assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 ORDER BY s0."x" ASC NULLS FIRST, s0."y" DESC NULLS FIRST}
+
+    query = Schema |> order_by([r], [asc_nulls_last: r.x, desc_nulls_last: r.y]) |> select([r], r.x) |> plan()
+    assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 ORDER BY s0."x" ASC NULLS LAST, s0."y" DESC NULLS LAST}
+
     query = Schema |> order_by([r], []) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0}
   end

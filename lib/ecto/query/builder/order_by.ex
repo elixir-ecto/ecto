@@ -5,12 +5,22 @@ defmodule Ecto.Query.Builder.OrderBy do
 
   alias Ecto.Query.Builder
 
+  @directions [
+    :asc,
+    :asc_nulls_last,
+    :asc_nulls_first,
+    :desc,
+    :desc_nulls_last,
+    :desc_nulls_first
+  ]
+
   @doc """
   Escapes an order by query.
 
   The query is escaped to a list of `{direction, expression}`
   pairs at runtime. Escaping also validates direction is one of
-  `:asc` or `:desc`.
+  `:asc`, `:asc_nulls_last`, `:asc_nulls_first`, `:desc`,
+  `:desc_nulls_last` or `:desc_nulls_first`.
 
   ## Examples
 
@@ -63,18 +73,27 @@ defmodule Ecto.Query.Builder.OrderBy do
   """
   def quoted_dir!(kind, {:^, _, [expr]}),
     do: quote(do: Ecto.Query.Builder.OrderBy.dir!(unquote(kind), unquote(expr)))
-  def quoted_dir!(_kind, dir) when dir in [:asc, :desc],
+  def quoted_dir!(_kind, dir) when dir in @directions,
     do: dir
-  def quoted_dir!(kind, other),
-    do: Builder.error!("expected :asc, :desc or interpolated value in `#{kind}`, got: `#{inspect other}`")
+  def quoted_dir!(kind, other) do
+    Builder.error!(
+      "expected #{Enum.map_join(@directions, ", ", &inspect/1)} or interpolated value " <>
+        "in `#{kind}`, got: `#{inspect other}`"
+    )
+  end
 
   @doc """
   Called by at runtime to verify the direction.
   """
-  def dir!(_kind, dir) when dir in [:asc, :desc],
+  def dir!(_kind, dir) when dir in @directions,
     do: dir
-  def dir!(kind, other),
-    do: Builder.error!("expected :asc or :desc in `#{kind}`, got: `#{inspect other}`")
+
+  def dir!(kind, other) do
+    Builder.error!(
+      "expected one of #{Enum.map_join(@directions, ", ", &inspect/1)} " <>
+        "in `#{kind}`, got: `#{inspect other}`"
+    )
+  end
 
   @doc """
   Called at runtime to verify a field.
@@ -92,7 +111,7 @@ defmodule Ecto.Query.Builder.OrderBy do
   """
   def order_by!(kind, exprs) do
     Enum.map List.wrap(exprs), fn
-      {dir, field} when dir in [:asc, :desc] ->
+      {dir, field} when dir in @directions ->
         {dir, field!(kind, field)}
       field ->
         {:asc, field!(kind, field)}

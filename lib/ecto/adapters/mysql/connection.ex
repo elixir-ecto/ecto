@@ -331,9 +331,11 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp order_by_expr({dir, expr}, sources, query) do
       str = expr(expr, sources, query)
+
       case dir do
         :asc  -> str
         :desc -> [str | " DESC"]
+        _ -> error!(query, "#{dir} is not supported in ORDER BY in MySQL")
       end
     end
 

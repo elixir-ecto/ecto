@@ -1111,9 +1111,20 @@ defmodule Ecto.Query do
 
   Orders the fields based on one or more fields. It accepts a single field
   or a list of fields. The default direction is ascending (`:asc`) and can be
-  customized in a keyword list as shown in the examples.
+  customized in a keyword list as one of the following:
 
-  There can be several order by expressions in a query and new expressions
+    * `:asc`
+    * `:asc_nulls_last`
+    * `:asc_nulls_first`
+    * `:desc`
+    * `:desc_nulls_last`
+    * `:desc_nulls_first`
+
+  The `*_nulls_first` and `*_nulls_last` variants are not supported by all
+  databases. While all databases default to ascending order, the choice of
+  "nulls first" or "nulls last" is specific to each database implementation.
+
+  `order_by` may be invoked or listed in a query many times. New expressions
   are always appended to the previous ones.
 
   `order_by` also accepts a list of atoms where each atom refers to a field in
@@ -1127,11 +1138,11 @@ defmodule Ecto.Query do
       from(c in City, order_by: [asc: c.name, desc: c.population])
 
       from(c in City, order_by: [:name, :population])
-      from(c in City, order_by: [asc: :name, desc: :population])
+      from(c in City, order_by: [asc: :name, desc_nulls_first: :population])
 
   A keyword list can also be interpolated:
 
-      values = [asc: :name, desc: :population]
+      values = [asc: :name, desc_nulls_first: :population]
       from(c in City, order_by: ^values)
 
   A fragment can also be used:
@@ -1503,7 +1514,11 @@ defmodule Ecto.Query do
           %{order_by | expr:
               Enum.map(expr, fn
                 {:desc, ast} -> {:asc, ast}
+                {:desc_nulls_last, ast} -> {:asc_nulls_first, ast}
+                {:desc_nulls_first, ast} -> {:asc_nulls_last, ast}
                 {:asc, ast} -> {:desc, ast}
+                {:asc_nulls_last, ast} -> {:desc_nulls_first, ast}
+                {:asc_nulls_first, ast} -> {:desc_nulls_last, ast}
               end)}
         end
     end

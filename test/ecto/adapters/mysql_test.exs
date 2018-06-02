@@ -152,6 +152,12 @@ defmodule Ecto.Adapters.MySQLTest do
 
     query = Schema |> order_by([r], []) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0}
+
+    for dir <- [:asc_nulls_first, :asc_nulls_last, :desc_nulls_first, :desc_nulls_last] do
+      assert_raise Ecto.QueryError, ~r"#{dir} is not supported in ORDER BY in MySQL", fn ->
+        Schema |> order_by([r], [{^dir, r.x}]) |> select([r], r.x) |> plan() |> all()
+      end
+    end
   end
 
   test "limit and offset" do

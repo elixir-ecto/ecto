@@ -84,6 +84,7 @@ Running migrations will now lock the migrations table, allowing you to concurren
   * [Ecto.Query] Support `coalesce/2` in queries, such as `select: coalesce(p.title, p.old_title)`
   * [Ecto.Query] Support `filter/2` in queries, such as `select: filter(count(p.id), p.public == true)`
   * [Ecto.Query] The `:prefix` option is now allowed on both `from` and `join` expressions
+  * [Ecto.Query] Support `:asc_nulls_last`, `:asc_nulls_first`, `:desc_nulls_last`, and `:desc_nulls_first` in `order_by`
   * [Ecto.Repo] Support `:replace_all_except_primary_key` as `:on_conflict` strategy
   * [Ecto.Repo] Support `{:replace, fields}` as `:on_conflict` strategy
   * [Ecto.Repo] Support `select` in queries given to `update_all` and `delete_all`
