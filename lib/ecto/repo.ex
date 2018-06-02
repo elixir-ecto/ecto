@@ -497,8 +497,10 @@ defmodule Ecto.Repo do
 
   @doc """
   Returns a lazy enumerable that emits all entries from the data store
-  matching the given query. SQL adapters, such as Postgres and MySQL, can only
-  enumerate a stream inside a transaction.
+  matching the given query.
+
+  SQL adapters, such as Postgres and MySQL, can only enumerate a stream
+  inside a transaction.
 
   May raise `Ecto.QueryError` if query validation fails.
 
