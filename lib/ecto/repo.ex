@@ -567,11 +567,10 @@ defmodule Ecto.Repo do
       `:replace_all`, `:replace_all_except_primary_key`, `{:replace, fields}`,
       a keyword list of update instructions, `{:replace, fields}` or an `Ecto.Query`
       query for updates. See the "Upserts" section for more information.
-    * `:conflict_target` - Which columns to verify for conflicts. If
-      none is specified, the conflict target is left up to the database
-      and is usually made of primary keys and/or unique/exclusion constraints.
+    * `:conflict_target` - A list of index column names to verify for conflicts.
+      If none is specified, the conflict target is left up to the database.
       May also be `{:constraint, constraint_name_as_atom}` in databases
-      that support the "ON CONSTRAINT" expression.
+      that support the "ON CONSTRAINT" expression, such as PostgreSQL.
 
   See the "Shared options" section at the module documentation for
   remaining options.
@@ -726,11 +725,10 @@ defmodule Ecto.Repo do
       `:replace_all`, `:replace_all_except_primary_key`, `{:replace, fields}`,
       a keyword list of update instructions or an `Ecto.Query` query for updates.
       See the "Upserts" section for more information.
-    * `:conflict_target` - Which columns to verify for conflicts. If
-      none is specified, the conflict target is left up to the database
-      and is usually made of primary keys and/or unique/exclusion constraints.
+    * `:conflict_target` - A list of index column names to verify for conflicts.
+      If none is specified, the conflict target is left up to the database.
       May also be `{:constraint, constraint_name_as_atom}` in databases
-      that support the "ON CONSTRAINT" expression.
+      that support the "ON CONSTRAINT" expression, such as PostgreSQL.
 
   See the "Shared options" section at the module documentation.
 
