@@ -20,7 +20,6 @@ defmodule Ecto.Adapters.Postgres do
   configuration:
   
       config :your_app, YourApp.Repo,
-        adapter: Ecto.Adapters.Postgres,
         ...
 
   Non-compile time options can also be returned from the

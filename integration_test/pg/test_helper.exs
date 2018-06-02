@@ -25,20 +25,18 @@ pool =
 alias Ecto.Integration.TestRepo
 
 Application.put_env(:ecto, TestRepo,
-  adapter: Ecto.Adapters.Postgres,
   url: Application.get_env(:ecto, :pg_test_url) <> "/ecto_test",
   pool: Ecto.Adapters.SQL.Sandbox,
   ownership_pool: pool)
 
 defmodule Ecto.Integration.TestRepo do
-  use Ecto.Integration.Repo, otp_app: :ecto
+  use Ecto.Integration.Repo, otp_app: :ecto, adapter: Ecto.Adapters.Postgres
 end
 
 # Pool repo for non-async tests
 alias Ecto.Integration.PoolRepo
 
 Application.put_env(:ecto, PoolRepo,
-  adapter: Ecto.Adapters.Postgres,
   pool: pool,
   url: Application.get_env(:ecto, :pg_test_url) <> "/ecto_test",
   pool_size: 10,
@@ -46,7 +44,7 @@ Application.put_env(:ecto, PoolRepo,
   max_seconds: 10)
 
 defmodule Ecto.Integration.PoolRepo do
-  use Ecto.Integration.Repo, otp_app: :ecto
+  use Ecto.Integration.Repo, otp_app: :ecto, adapter: Ecto.Adapters.Postgres
 
   def create_prefix(prefix) do
     "create schema #{prefix}"

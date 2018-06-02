@@ -60,8 +60,12 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
     Mix.shell.info """
     Don't forget to add your new repo to your supervision tree
-    (typically in #{mixfile_loc(app)}):
+    (typically in lib/#{app}/application.ex):
 
+        # For Elixir v1.5 and later
+        {#{inspect repo}, []}
+
+        # For Elixir v1.4 and earlier
         supervisor(#{inspect repo}, [])
 
     And to add it to the list of ecto repositories in your
@@ -73,17 +77,11 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
     """
   end
 
-  defp mixfile_loc(app) do
-    case Elixir.Version.compare(System.version, "1.4.0") do
-      :gt -> "lib/#{app}/application.ex"
-      :eq -> "lib/#{app}/application.ex"
-      :lt -> "lib/#{app}.ex"
-    end
-  end
-
   embed_template :repo, """
   defmodule <%= inspect @mod %> do
-    use Ecto.Repo, otp_app: <%= inspect @app %>
+    use Ecto.Repo,
+      otp_app: <%= inspect @app %>,
+      adapter: Ecto.Adapters.Postgres
   end
   """
 
@@ -91,7 +89,6 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
   use Mix.Config
 
   config <%= inspect @app %>, <%= inspect @mod %>,
-    adapter: Ecto.Adapters.Postgres,
     database: "<%= @app %>_<%= @base %>",
     username: "user",
     password: "pass",

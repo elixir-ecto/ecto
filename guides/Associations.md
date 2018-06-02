@@ -42,7 +42,6 @@ Make sure the config for the repo is set properly:
 ```elixir
 # config/config.exs
 config :ecto_assoc, EctoAssoc.Repo,
-  adapter: Ecto.Adapters.Postgres,
   database: "ecto_assoc_repo",
   username: "postgres",
   password: "postgres",
@@ -53,24 +52,9 @@ config :ecto_assoc, ecto_repos: [EctoAssoc.Repo]
 
 Add the repo as a supervisor within the application's supervision tree:
 
-`Elixir < 1.5.0`:
 ```elixir
 # lib/ecto_assoc/application.exs
 def start(_type, _args) do
-  import Supervisor.Spec
-
-  children = [
-    supervisor(EctoAssoc.Repo, []),
-  ]
-
-  ...
-```
-
-`Elixir >= 1.5.0`:
-```elixir
-# lib/ecto_assoc/application.exs
-def start(_type, _args) do
-
   children = [
     EctoAssoc.Repo,
   ]

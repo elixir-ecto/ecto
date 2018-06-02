@@ -40,14 +40,15 @@ defmodule Ecto do
   repository as follows:
 
       defmodule Repo do
-        use Ecto.Repo, otp_app: :my_app
+        use Ecto.Repo,
+          otp_app: :my_app,
+          adapter: Ecto.Adapters.Postgres
       end
 
   Where the configuration for the Repo must be in your application
   environment, usually defined in your `config/config.exs`:
 
       config :my_app, Repo,
-        adapter: Ecto.Adapters.Postgres,
         database: "ecto_simple",
         username: "postgres",
         password: "postgres",
@@ -60,16 +61,13 @@ defmodule Ecto do
   but used as part of your application supervision tree.
 
   If your application was generated with a supervisor (by passing `--sup` to `mix new`)
-  you will have a `lib/my_app/application.ex` file (or `lib/my_app.ex` for Elixir versions `< 1.4.0`)
-  containing the application start callback that defines and starts your supervisor. 
-  You just need to edit the `start/2` function to start the repo as a supervisor on
-  your application's supervisor:
+  you will have a `lib/my_app/application.ex` file containing the application start
+  callback that defines and starts your supervisor.  You just need to edit the `start/2`
+  function to start the repo as a supervisor on your application's supervisor:
 
       def start(_type, _args) do
-        import Supervisor.Spec
-
         children = [
-          supervisor(Repo, [])
+          {MyApp.Repo, []}
         ]
 
         opts = [strategy: :one_for_one, name: MyApp.Supervisor]
@@ -395,7 +393,6 @@ defmodule Ecto do
       config :my_app, :ecto_repos, [MyApp.Repo]
 
       config :my_app, MyApp.Repo,
-        adapter: Ecto.Adapters.Postgres,
         database: "ecto_simple",
         username: "postgres",
         password: "postgres",

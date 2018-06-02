@@ -31,13 +31,12 @@ pool =
 alias Ecto.Integration.TestRepo
 
 Application.put_env(:ecto, TestRepo,
-  adapter: Ecto.Adapters.MySQL,
   url: Application.get_env(:ecto, :mysql_test_url) <> "/ecto_test",
   pool: Ecto.Adapters.SQL.Sandbox,
   ownership_pool: pool)
 
 defmodule Ecto.Integration.TestRepo do
-  use Ecto.Integration.Repo, otp_app: :ecto
+  use Ecto.Integration.Repo, otp_app: :ecto, adapter: Ecto.Adapters.MySQL
 end
 
 # Pool repo for non-async tests
@@ -50,7 +49,7 @@ Application.put_env(:ecto, PoolRepo,
   pool_size: 10)
 
 defmodule Ecto.Integration.PoolRepo do
-  use Ecto.Integration.Repo, otp_app: :ecto
+  use Ecto.Integration.Repo, otp_app: :ecto, adapter: Ecto.Adapters.MySQL
 
   def create_prefix(prefix) do
     "create database #{prefix}"

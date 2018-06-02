@@ -115,7 +115,7 @@ defmodule Ecto.Integration.MigratorTest do
     Application.put_env(:ecto, __MODULE__.SingleConnectionRepo, Keyword.put(config, :pool_size, 1))
 
     defmodule SingleConnectionRepo do
-      use Ecto.Repo, otp_app: :ecto
+      use Ecto.Repo, otp_app: :ecto, adapter: PoolRepo.__adapter__
     end
 
     {:ok, _pid} = SingleConnectionRepo.start_link

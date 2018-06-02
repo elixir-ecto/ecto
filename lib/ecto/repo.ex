@@ -11,13 +11,14 @@ defmodule Ecto.Repo do
   the repository configuration. For example, the repository:
 
       defmodule Repo do
-        use Ecto.Repo, otp_app: :my_app
+        use Ecto.Repo,
+          otp_app: :my_app,
+          adapter: Ecto.Adapters.Postgres
       end
 
   Could be configured with:
 
       config :my_app, Repo,
-        adapter: Ecto.Adapters.Postgres,
         database: "ecto_simple",
         username: "postgres",
         password: "postgres",
@@ -27,9 +28,6 @@ defmodule Ecto.Repo do
   to the adapter, so check `Ecto.Adapters.Postgres` documentation
   for more information. However, some configuration is shared across
   all adapters, they are:
-
-    * `:adapter` - a compile-time option that specifies the adapter itself.
-      As a compile-time option, it may also be given as an option to `use Ecto.Repo`.
 
     * `:name`- The name of the Repo supervisor process
 

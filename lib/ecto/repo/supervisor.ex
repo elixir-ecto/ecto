@@ -17,20 +17,16 @@ defmodule Ecto.Repo.Supervisor do
   Retrieves the runtime configuration.
   """
   def runtime_config(type, repo, otp_app, opts) do
-    if config = Application.get_env(otp_app, repo) do
-      config = [otp_app: otp_app] ++ (@defaults |> Keyword.merge(config) |> Keyword.merge(opts))
+    config = Application.get_env(otp_app, repo, [])
+    config = [otp_app: otp_app] ++ (@defaults |> Keyword.merge(config) |> Keyword.merge(opts))
 
-      case repo_init(type, repo, config) do
-        {:ok, config} ->
-          {url, config} = Keyword.pop(config, :url)
-          {:ok, Keyword.merge(config, parse_url(url || ""))}
+    case repo_init(type, repo, config) do
+      {:ok, config} ->
+        {url, config} = Keyword.pop(config, :url)
+        {:ok, Keyword.merge(config, parse_url(url || ""))}
 
-        :ignore ->
-          :ignore
-      end
-    else
-      raise ArgumentError,
-        "configuration for #{inspect repo} not specified in #{inspect otp_app} environment"
+      :ignore ->
+        :ignore
     end
   end
 
@@ -48,7 +44,7 @@ defmodule Ecto.Repo.Supervisor do
   def compile_config(repo, opts) do
     otp_app = Keyword.fetch!(opts, :otp_app)
     config  = Application.get_env(otp_app, repo, [])
-    adapter = opts[:adapter] || config[:adapter]
+    adapter = opts[:adapter] || deprecated_adapter(otp_app, repo, config)
 
     unless adapter do
       raise ArgumentError, "missing :adapter configuration in " <>
@@ -61,6 +57,22 @@ defmodule Ecto.Repo.Supervisor do
     end
 
     {otp_app, adapter}
+  end
+
+  defp deprecated_adapter(otp_app, repo, config) do
+    if adapter = config[:adapter] do
+      IO.warn """
+      retrieving the :adapter from config files for #{inspect repo} is deprecated.
+      Instead pass the adapter configuration when defining the module:
+
+          defmodule #{inspect repo} do
+            use #{inspect repo},
+              otp_app: #{inspect otp_app},
+              adapter: #{inspect adapter}
+      """
+
+      adapter
+    end
   end
 
   @doc """

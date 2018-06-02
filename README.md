@@ -10,7 +10,6 @@ Ecto is a domain specific language for writing queries and interacting with data
 config :my_app, ecto_repos: [Sample.Repo]
 
 config :my_app, Sample.Repo,
-  adapter: Ecto.Adapters.Postgres,
   database: "ecto_simple",
   username: "postgres",
   password: "postgres",
@@ -20,7 +19,8 @@ config :my_app, Sample.Repo,
 # In your application code
 defmodule Sample.Repo do
   use Ecto.Repo,
-    otp_app: :my_app
+    otp_app: :my_app,
+    adapter: Ecto.Adapters.Postgres
 end
 
 defmodule Sample.Weather do
@@ -93,11 +93,13 @@ end
 
 Then run `mix deps.get` in your shell to fetch the dependencies. If you want to use another database, just choose the proper dependency from the table above.
 
-Finally, in the repository configuration, you will need to specify the `adapter:` respective to the chosen dependency. For PostgreSQL it is:
+Finally, in the repository definition, you will need to specify the `adapter:` respective to the chosen dependency. For PostgreSQL it is:
 
 ```elixir
-config :my_app, Repo,
-  adapter: Ecto.Adapters.Postgres,
+defmodule MyApp.Repo do
+  use Ecto Repo,
+    otp_app: :my_app,
+    adapter: Ecto.Adapters.Postgres,
   ...
 ```
 

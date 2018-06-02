@@ -49,6 +49,12 @@ defmodule Ecto.Repo.SupervisorTest do
            [database: "hello", otp_app: :ecto]
   end
 
+  test "works without an environment" do
+    Application.delete_env(:ecto, __MODULE__)
+    {:ok, config} = runtime_config(:runtime, __MODULE__, :ecto, [])
+    assert normalize(config) == [otp_app: :ecto]
+  end
+
   test "parse_url options" do
     encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb")
     url = parse_url(encoded_url)

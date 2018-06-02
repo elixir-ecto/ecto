@@ -10,7 +10,6 @@ Create the `config/test.exs` file or append the following content:
 use Mix.Config
 
 config :my_app, MyApp.Repo,
-  adapter: Ecto.Adapters.Postgres,
   username: "postgres",
   password: "postgres",
   database: "myapp_test",
