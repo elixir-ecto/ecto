@@ -260,7 +260,7 @@ defmodule Ecto.QueryTest do
     end
 
     test "crashes on duplicate as for keyword query" do
-      message = ~r"`as` keyword was given more than once to the same join"
+      message = ~r"`as` keyword was given more than once"
       assert_raise Ecto.Query.CompileError, message, fn ->
         quote_and_eval(from(p in "posts", join: b in "blogs", as: :foo, as: :bar))
       end
@@ -290,7 +290,7 @@ defmodule Ecto.QueryTest do
     end
 
     test "crashes on assigning the name to source when it already has one" do
-      message = ~r"can't apply alias `:foo` - source binding has `:post` alias already"
+      message = ~r"can't apply alias `:foo`, binding in `from` is already aliased to `:post`"
       assert_raise Ecto.Query.CompileError, message, fn ->
         query = from p in "posts", as: :post
         from(p in query, as: :foo)
@@ -362,6 +362,21 @@ defmodule Ecto.QueryTest do
       assert hd(query.joins).prefix == "world"
     end
 
+    test "are supported on dynamic from" do
+      posts = "posts"
+      query = from posts, prefix: "hello"
+      assert query.from.prefix == "hello"
+    end
+
+    test "raises when conflicting with dynamic from" do
+      posts = from "posts", prefix: "hello"
+
+      message = "can't apply prefix `\"world\"`, `from` is already prefixed to `\"hello\"`"
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        from posts, prefix: "world"
+      end
+    end
+
     test "are expected to be compile-time strings" do
       assert_raise Ecto.Query.CompileError, ~r"`prefix` must be a compile time string", fn ->
         quote_and_eval(from "posts", prefix: 123)
@@ -369,6 +384,34 @@ defmodule Ecto.QueryTest do
 
       assert_raise Ecto.Query.CompileError, ~r"`prefix` must be a compile time string", fn ->
         quote_and_eval(from "posts", join: "comments", prefix: 123)
+      end
+    end
+  end
+
+  describe "hints" do
+    test "are supported on from and join" do
+      query = from "posts", hints: "hello", join: "comments", hints: ["world", "extra"]
+      assert query.from.hints == ["hello"]
+      assert hd(query.joins).hints == ["world", "extra"]
+    end
+
+    test "are supported on dynamic from" do
+      posts = "posts"
+      query = from posts, hints: "hello"
+      assert query.from.hints == ["hello"]
+
+      posts = from "posts", hints: "hello"
+      query = from posts, hints: "world"
+      assert query.from.hints == ["hello", "world"]
+    end
+
+    test "are expected to be compile-time strings or list of strings" do
+      assert_raise Ecto.Query.CompileError, ~r"`hints` must be a compile time string", fn ->
+        quote_and_eval(from "posts", hints: 123)
+      end
+
+      assert_raise Ecto.Query.CompileError, ~r"`hints` must be a compile time string", fn ->
+        quote_and_eval(from "posts", join: "comments", hints: 123)
       end
     end
   end

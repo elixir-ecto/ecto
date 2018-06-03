@@ -49,9 +49,18 @@ defmodule Ecto.Query.Builder.From do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t(), Macro.Env.t(), atom, String.t | nil) ::
+  @spec build(Macro.t(), Macro.Env.t(), atom, String.t | nil, nil | String.t | [String.t]) ::
           {Macro.t(), Keyword.t(), non_neg_integer | nil}
-  def build(query, env, as, prefix) do
+  def build(query, env, as, prefix, maybe_hints) do
+    hints = List.wrap(maybe_hints)
+
+    unless Enum.all?(hints, &is_binary/1) do
+      Builder.error!(
+        "`hints` must be a compile time string or list of strings, " <>
+          "got: `#{Macro.to_string(maybe_hints)}`"
+      )
+    end
+
     unless is_atom(as) do
       Builder.error!("`as` must be a compile time atom, got: `#{Macro.to_string(as)}`")
     end
@@ -68,28 +77,28 @@ defmodule Ecto.Query.Builder.From do
         # dependencies between modules are added
         source = quote(do: unquote(schema).__schema__(:source))
         prefix = prefix || quote(do: unquote(schema).__schema__(:prefix))
-        {query(prefix, source, schema, as), binds, 1}
+        {query(prefix, source, schema, as, hints), binds, 1}
 
       source when is_binary(source) ->
         # When a binary is used, there is no schema
-        {query(prefix, source, nil, as), binds, 1}
+        {query(prefix, source, nil, as, hints), binds, 1}
 
       {source, schema} when is_binary(source) and is_atom(schema) ->
         prefix = prefix || quote(do: unquote(schema).__schema__(:prefix))
-        {query(prefix, source, schema, as), binds, 1}
+        {query(prefix, source, schema, as, hints), binds, 1}
 
       _other ->
         quoted = quote do
-          Ecto.Query.Builder.From.apply(unquote(query), unquote(length(binds)), unquote(as))
+          Ecto.Query.Builder.From.apply(unquote(query), unquote(length(binds)), unquote(as), unquote(prefix), unquote(hints))
         end
 
         {quoted, binds, nil}
     end
   end
 
-  defp query(prefix, source, schema, as) do
+  defp query(prefix, source, schema, as, hints) do
     aliases = if as, do: [{as, 0}], else: []
-    from_fields = [source: {source, schema}, as: as, prefix: prefix]
+    from_fields = [source: {source, schema}, as: as, prefix: prefix, hints: hints]
 
     query_fields = [
       from: {:%, [], [Ecto.Query.FromExpr, {:%{}, [], from_fields}]},
@@ -110,12 +119,14 @@ defmodule Ecto.Query.Builder.From do
   @doc """
   The callback applied by `build/2` to build the query.
   """
-  @spec apply(Ecto.Queryable.t(), non_neg_integer, atom) :: Ecto.Query.t()
-  def apply(query, binds, as) do
+  @spec apply(Ecto.Queryable.t(), non_neg_integer, atom, String.t | nil, [String.t]) :: Ecto.Query.t()
+  def apply(query, binds, as, prefix, hints) do
     query =
       query
       |> Ecto.Queryable.to_query()
       |> maybe_apply_as(as)
+      |> maybe_apply_prefix(prefix)
+      |> maybe_apply_hints(hints)
 
     check_binds(query, binds)
     query
@@ -125,7 +136,7 @@ defmodule Ecto.Query.Builder.From do
 
   defp maybe_apply_as(%{from: %{as: from_as}}, as) when not is_nil(from_as) do
     Builder.error!(
-      "can't apply alias `#{inspect(as)}` - source binding has `#{inspect(from_as)}` alias already"
+      "can't apply alias `#{inspect(as)}`, binding in `from` is already aliased to `#{inspect(from_as)}`"
     )
   end
 
@@ -136,6 +147,21 @@ defmodule Ecto.Query.Builder.From do
       %{query | aliases: Map.put(aliases, as, 0), from: %{from | as: as}}
     end
   end
+
+  defp maybe_apply_prefix(query, nil), do: query
+
+  defp maybe_apply_prefix(%{from: %{prefix: from_prefix}}, prefix) when not is_nil(from_prefix) do
+    Builder.error!(
+      "can't apply prefix `#{inspect(prefix)}`, `from` is already prefixed to `#{inspect(from_prefix)}`"
+    )
+  end
+
+  defp maybe_apply_prefix(query, prefix) do
+    put_in query.from.prefix, prefix
+  end
+
+  defp maybe_apply_hints(query, []), do: query
+  defp maybe_apply_hints(query, hints), do: update_in(query.from.hints, &(&1 ++ hints))
 
   defp check_binds(query, count) do
     if count > 1 and count > Builder.count_binds(query) do

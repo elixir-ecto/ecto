@@ -358,7 +358,7 @@ defmodule Ecto.Query do
 
   defmodule FromExpr do
     @moduledoc false
-    defstruct [:source, :as, :prefix]
+    defstruct [:source, :as, :prefix, hints: []]
   end
 
   defmodule DynamicExpr do
@@ -383,7 +383,7 @@ defmodule Ecto.Query do
 
   defmodule JoinExpr do
     @moduledoc false
-    defstruct [:qual, :source, :on, :file, :line, :assoc, :as, :ix, :prefix, params: []]
+    defstruct [:qual, :source, :on, :file, :line, :assoc, :as, :ix, :prefix, params: [], hints: []]
   end
 
   defmodule Tagged do
@@ -641,14 +641,15 @@ defmodule Ecto.Query do
       raise ArgumentError, "second argument to `from` must be a compile time keyword list"
     end
 
-    {kw, as, prefix} = collect_as_and_prefix(kw, nil, nil)
-    {quoted, binds, count_bind} = From.build(expr, __CALLER__, as, prefix)
+    {kw, as, prefix, hints} = collect_as_and_prefix_and_hints(kw, nil, nil, nil)
+    {quoted, binds, count_bind} = From.build(expr, __CALLER__, as, prefix, hints)
     from(kw, __CALLER__, count_bind, quoted, to_query_binds(binds))
   end
 
-  @binds    [:where, :or_where, :select, :distinct, :order_by, :group_by,
-             :having, :or_having, :limit, :offset, :preload, :update, :select_merge]
+  @from_join_opts [:as, :prefix, :hints]
   @no_binds [:lock]
+  @binds [:where, :or_where, :select, :distinct, :order_by, :group_by] ++
+           [:having, :or_having, :limit, :offset, :preload, :update, :select_merge]
 
   defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
     # If all bindings are integer indexes keep AST Macro expandable to %Query{},
@@ -679,10 +680,10 @@ defmodule Ecto.Query do
 
   defp from([{join, expr}|t], env, count_bind, quoted, binds) when join in @joins do
     qual = join_qual(join)
-    {t, on, as, prefix} = collect_on(t, nil, nil, nil)
+    {t, on, as, prefix, hints} = collect_on(t, nil, nil, nil, nil)
 
     {quoted, binds, count_bind} =
-      Join.build(quoted, qual, binds, expr, count_bind, on, as, prefix, env)
+      Join.build(quoted, qual, binds, expr, count_bind, on, as, prefix, hints, env)
 
     from(t, env, count_bind, quoted, to_query_binds(binds))
   end
@@ -691,8 +692,8 @@ defmodule Ecto.Query do
     Builder.error! "`on` keyword must immediately follow a join"
   end
 
-  defp from([{key, _value}|_], _env, _count_bind, _quoted, _binds) when key in [:as, :prefix] do
-    Builder.error! "`#{key}` keyword must immediately follow a from/join/on"
+  defp from([{key, _value}|_], _env, _count_bind, _quoted, _binds) when key in @from_join_opts do
+    Builder.error! "`#{key}` keyword must immediately follow a from/join"
   end
 
   defp from([{key, _value}|_], _env, _count_bind, _quoted, _binds) do
@@ -716,28 +717,32 @@ defmodule Ecto.Query do
   defp join_qual(:left_lateral_join), do: :left_lateral
   defp join_qual(:inner_lateral_join), do: :inner_lateral
 
-  defp collect_on([{key, _} | _] = t, on, as, prefix) when key in [:as, :prefix] do
-    {t, as, prefix} = collect_as_and_prefix(t, as, prefix)
-    collect_on(t, on, as, prefix)
+  defp collect_on([{key, _} | _] = t, on, as, prefix, hints) when key in @from_join_opts do
+    {t, as, prefix, hints} = collect_as_and_prefix_and_hints(t, as, prefix, hints)
+    collect_on(t, on, as, prefix, hints)
   end
 
-  defp collect_on([{:on, on} | t], nil, as, prefix),
-    do: collect_on(t, on, as, prefix)
-  defp collect_on([{:on, expr} | t], on, as, prefix),
-    do: collect_on(t, {:and, [], [on, expr]}, as, prefix)
-  defp collect_on(t, on, as, prefix),
-    do: {t, on, as, prefix}
+  defp collect_on([{:on, on} | t], nil, as, prefix, hints),
+    do: collect_on(t, on, as, prefix, hints)
+  defp collect_on([{:on, expr} | t], on, as, prefix, hints),
+    do: collect_on(t, {:and, [], [on, expr]}, as, prefix, hints)
+  defp collect_on(t, on, as, prefix, hints),
+    do: {t, on, as, prefix, hints}
 
-  defp collect_as_and_prefix([{:as, as} | t], nil, prefix),
-    do: collect_as_and_prefix(t, as, prefix)
-  defp collect_as_and_prefix([{:as, _} | _], _, _),
-    do: Builder.error! "`as` keyword was given more than once to the same join"
-  defp collect_as_and_prefix([{:prefix, prefix} | t], as, nil),
-    do: collect_as_and_prefix(t, as, prefix)
-  defp collect_as_and_prefix([{:prefix, _} | _], _, _),
-    do: Builder.error! "`prefix` keyword was given more than once to the same join"
-  defp collect_as_and_prefix(t, as, prefix),
-    do: {t, as, prefix}
+  defp collect_as_and_prefix_and_hints([{:as, as} | t], nil, prefix, hints),
+    do: collect_as_and_prefix_and_hints(t, as, prefix, hints)
+  defp collect_as_and_prefix_and_hints([{:as, _} | _], _, _, _),
+    do: Builder.error! "`as` keyword was given more than once to the same from/join"
+  defp collect_as_and_prefix_and_hints([{:prefix, prefix} | t], as, nil, hints),
+    do: collect_as_and_prefix_and_hints(t, as, prefix, hints)
+  defp collect_as_and_prefix_and_hints([{:prefix, _} | _], _, _, _),
+    do: Builder.error! "`prefix` keyword was given more than once to the same from/join"
+  defp collect_as_and_prefix_and_hints([{:hints, hints} | t], as, prefix, nil),
+    do: collect_as_and_prefix_and_hints(t, as, prefix, hints)
+  defp collect_as_and_prefix_and_hints([{:hints, _} | _], _, _, _),
+    do: Builder.error! "`hints` keyword was given more than once to the same from/join"
+  defp collect_as_and_prefix_and_hints(t, as, prefix, hints),
+    do: {t, as, prefix, hints}
 
   @doc """
   A join query expression.
@@ -849,10 +854,10 @@ defmodule Ecto.Query do
       |> select([g, gs], {g.name, gs.sold_on})
 
   """
-  @join_opts [:on, :as, :prefix]
+  @join_opts [:on | @from_join_opts]
 
   defmacro join(query, qual, binding \\ [], expr, opts \\ []) do
-    {t, on, as, prefix} = opts |> parse_join_opts() |> collect_on(nil, nil, nil)
+    {t, on, as, prefix, hints} = opts |> parse_join_opts() |> collect_on(nil, nil, nil, nil)
 
     with [{key, _} | _] <- t do
       raise ArgumentError, "invalid option `#{key}` passed to Ecto.Query.join/5, " <>
@@ -860,11 +865,9 @@ defmodule Ecto.Query do
     end
 
     query
-    |> Join.build(qual, binding, expr, nil, on, as, prefix, __CALLER__)
+    |> Join.build(qual, binding, expr, nil, on, as, prefix, hints, __CALLER__)
     |> elem(0)
   end
-
-  @join_opts [:on, :as, :prefix]
 
   defp parse_join_opts([]), do: []
   defp parse_join_opts(list) when is_list(list) do

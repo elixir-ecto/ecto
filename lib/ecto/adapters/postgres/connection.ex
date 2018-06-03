@@ -281,6 +281,10 @@ if Code.ensure_loaded?(Postgrex) do
        exprs}
     end
 
+    defp from(%{from: %{hints: [_ | _]}} = query, _sources) do
+      error!(query, "table hints are not supported by PostgreSQL")
+    end
+
     defp from(%{from: %{source: source}} = query, sources) do
       {from, name} = get_source(query, sources, 0, source)
       [" FROM ", from, " AS " | name]
@@ -313,7 +317,7 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     defp update_op(command, _key, _value, _sources, query) do
-      error!(query, "Unknown update operation #{inspect command} for PostgreSQL")
+      error!(query, "unknown update operation #{inspect command} for PostgreSQL")
     end
 
     defp using_join(%Query{joins: []}, _kind, _prefix, _sources), do: {[], []}
@@ -338,7 +342,11 @@ if Code.ensure_loaded?(Postgrex) do
     defp join(%Query{joins: []}, _sources), do: []
     defp join(%Query{joins: joins} = query, sources) do
       [?\s | intersperse_map(joins, ?\s, fn
-        %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
+        %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source, hints: hints} ->
+          if hints != [] do
+            error!(query, "table hints are not supported by PostgreSQL")
+          end
+
           {join, name} = get_source(query, sources, ix, source)
           [join_qual(qual), join, " AS ", name | join_on(qual, expr, sources, query)]
       end)]

@@ -71,6 +71,11 @@ defmodule Ecto.Adapters.MySQLTest do
     assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0}
   end
 
+  test "from with hints" do
+    query = Schema |> from(hints: ["USE INDEX FOO", "USE INDEX BAR"]) |> select([r], r.x) |> plan()
+    assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 USE INDEX FOO USE INDEX BAR}
+  end
+
   test "from without schema" do
     query = "posts" |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT p0.`x` FROM `posts` AS p0}
@@ -438,6 +443,14 @@ defmodule Ecto.Adapters.MySQLTest do
     assert all(query) ==
            ~s{SELECT TRUE FROM `schema` AS s0 INNER JOIN `schema2` AS s1 ON s0.`x` = s1.`z` } <>
            ~s{INNER JOIN `schema` AS s2 ON TRUE}
+  end
+
+  test "join with hints" do
+    assert Schema
+           |> join(:inner, [p], q in Schema2, hints: ["USE INDEX FOO", "USE INDEX BAR"])
+           |> select([], true)
+           |> plan()
+           |> all() == ~s{SELECT TRUE FROM `schema` AS s0 INNER JOIN `schema2` AS s1 USE INDEX FOO USE INDEX BAR ON TRUE}
   end
 
   test "join with nothing bound" do

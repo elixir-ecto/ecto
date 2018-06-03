@@ -231,9 +231,9 @@ if Code.ensure_loaded?(Mariaex) do
       end)
     end
 
-    defp from(%{from: %{source: source}} = query, sources) do
+    defp from(%{from: %{source: source, hints: hints}} = query, sources) do
       {from, name} = get_source(query, sources, 0, source)
-      [" FROM ", from, " AS " | name]
+      [" FROM ", from, " AS ", name | Enum.map(hints, &[?\s | &1])]
     end
 
     defp update_fields(type, %Query{updates: updates} = query, sources) do
@@ -287,9 +287,9 @@ if Code.ensure_loaded?(Mariaex) do
     defp join(%Query{joins: []}, _sources), do: []
     defp join(%Query{joins: joins} = query, sources) do
       Enum.map(joins, fn
-        %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source} ->
+        %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source, hints: hints} ->
           {join, name} = get_source(query, sources, ix, source)
-          [join_qual(qual, query), join, " AS ", name | join_on(qual, expr, sources, query)]
+          [join_qual(qual, query), join, " AS ", name, Enum.map(hints, &[?\s | &1]) | join_on(qual, expr, sources, query)]
       end)
     end
 

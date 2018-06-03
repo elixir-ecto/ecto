@@ -73,6 +73,12 @@ defmodule Ecto.Adapters.PostgresTest do
     assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0}
   end
 
+  test "from with hints" do
+    assert_raise Ecto.QueryError, ~r/table hints are not supported by PostgreSQL/, fn ->
+      Schema |> from(hints: "USE INDEX FOO") |> select([r], r.x) |> plan() |> all()
+    end
+  end
+
   test "from without schema" do
     query = "posts" |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT p0."x" FROM "posts" AS p0}
@@ -536,6 +542,16 @@ defmodule Ecto.Adapters.PostgresTest do
     assert all(query) ==
            ~s{SELECT TRUE FROM "schema" AS s0 INNER JOIN "schema2" AS s1 ON s0."x" = s1."z" } <>
            ~s{INNER JOIN "schema" AS s2 ON TRUE}
+  end
+
+  test "join with hints" do
+    assert_raise Ecto.QueryError, ~r/table hints are not supported by PostgreSQL/, fn ->
+      Schema
+      |> join(:inner, [p], q in Schema2, hints: ["USE INDEX FOO", "USE INDEX BAR"])
+      |> select([], true)
+      |> plan()
+      |> all()
+    end
   end
 
   test "join with nothing bound" do

@@ -125,9 +125,18 @@ defmodule Ecto.Query.Builder.Join do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, atom, String.t | nil, Macro.Env.t) ::
+  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, atom, String.t | nil, nil | String.t | [String.t], Macro.Env.t) ::
               {Macro.t, Keyword.t, non_neg_integer | nil}
-  def build(query, qual, binding, expr, count_bind, on, as, prefix, env) do
+  def build(query, qual, binding, expr, count_bind, on, as, prefix, maybe_hints, env) do
+    hints = List.wrap(maybe_hints)
+
+    unless Enum.all?(hints, &is_binary/1) do
+      Builder.error!(
+        "`hints` must be a compile time string or list of strings, " <>
+          "got: `#{Macro.to_string(maybe_hints)}`"
+      )
+    end
+
     unless is_atom(as) do
       Builder.error! "`as` must be a compile time atom, got: `#{Macro.to_string(as)}`"
     end
@@ -183,7 +192,8 @@ defmodule Ecto.Query.Builder.Join do
       params: join_params,
       prefix: prefix,
       qual: join_qual,
-      source: join_source
+      source: join_source,
+      hints: hints
     ]
 
     query = build_on(on || true, join, as, query, binding, count_bind, env)
