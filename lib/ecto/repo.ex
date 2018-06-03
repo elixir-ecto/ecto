@@ -465,7 +465,7 @@ defmodule Ecto.Repo do
       query = from c in Comment, order_by: c.published_at
       posts = Repo.preload posts, [comments: {query, [:replies, :likes]}]
 
-  Note: The query given to preload may also preload its own associations.
+  The query given to preload may also preload its own associations.
   """
   @callback preload(structs_or_struct_or_nil, preloads :: term, opts :: Keyword.t()) ::
               structs_or_struct_or_nil

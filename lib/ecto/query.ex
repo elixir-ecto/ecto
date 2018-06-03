@@ -1370,19 +1370,21 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Preloads the associations into the given struct.
+  Preloads the associations into the result set.
 
-  Preloading allows developers to specify associations that are preloaded
-  into the struct. Consider this example:
+  Imagine you have an schema `Post` with a `has_many :comments`
+  association and you execute the following query:
 
       Repo.all from p in Post, preload: [:comments]
 
   The example above will fetch all posts from the database and then do
   a separate query returning all comments associated with the given posts.
+  The comments are then processed and associated to each returned `post`
+  under the `comments` field.
 
-  However, often times, you want posts and comments to be selected and
+  Often times, you may want posts and comments to be selected and
   filtered in the same query. For such cases, you can explicitly tell
-  the association to be preloaded into the struct:
+  an existing join to be preloaded into the result set:
 
       Repo.all from p in Post,
                  join: c in assoc(p, :comments),
@@ -1390,7 +1392,11 @@ defmodule Ecto.Query do
                  preload: [comments: c]
 
   In the example above, instead of issuing a separate query to fetch
-  comments, Ecto will fetch posts and comments in a single query.
+  comments, Ecto will fetch posts and comments in a single query and
+  then do a separate pass associating each comment to its parent post.
+  Therefore, instead of returning `number_of_posts * number_of_comments`
+  results, like a `join` would, it returns only posts with the `comments`
+  fields properly filled in.
 
   Nested associations can also be preloaded in both formats:
 
@@ -1402,14 +1408,6 @@ defmodule Ecto.Query do
                  join: l in assoc(c, :likes),
                  where: l.inserted_at > c.updated_at,
                  preload: [comments: {c, likes: l}]
-
-  Keep in mind neither format can be nested arbitrarily. For
-  example, the query below is invalid because we cannot preload
-  likes with the join association `c`.
-
-      Repo.all from p in Post,
-                 join: c in assoc(p, :comments),
-                 preload: [comments: {c, :likes}]
 
   ## Preload queries
 
@@ -1437,7 +1435,7 @@ defmodule Ecto.Query do
 
   Preload also allows functions to be given. In such cases, the function
   receives the IDs to be fetched and it must return the associated data.
-  This data will then be mapped and sorted by the relationship key:
+  Ecto then will map this data and sort it by the relationship key:
 
       comment_preloader = fn post_ids -> fetch_comments_by_post_ids(post_ids) end
       Repo.all from p in Post, preload: [comments: ^comment_preloader]
@@ -1456,7 +1454,11 @@ defmodule Ecto.Query do
   ## Expressions examples
 
       Post |> preload(:comments) |> select([p], p)
-      Post |> join(:left, [p], c in assoc(p, :comments)) |> preload([p, c], [:user, comments: c]) |> select([p], p)
+
+      Post
+      |> join(:left, [p], c in assoc(p, :comments))
+      |> preload([p, c], [:user, comments: c])
+      |> select([p], p)
 
   """
   defmacro preload(query, bindings \\ [], expr) do
