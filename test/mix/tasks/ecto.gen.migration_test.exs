@@ -23,10 +23,10 @@ defmodule Mix.Tasks.Ecto.Gen.MigrationTest do
   end
 
   test "generates a new migration" do
-    run ["-r", to_string(Repo), "my_migration"]
-    assert [name] = File.ls!(@migrations_path)
-    assert String.match? name, ~r/^\d{14}_my_migration\.exs$/
-    assert_file Path.join(@migrations_path, name), fn file ->
+    [path] = run ["-r", to_string(Repo), "my_migration"]
+    assert Path.dirname(path) == @migrations_path
+    assert Path.basename(path) =~ ~r/^\d{14}_my_migration\.exs$/
+    assert_file path, fn file ->
       assert file =~ "defmodule Mix.Tasks.Ecto.Gen.MigrationTest.Repo.Migrations.MyMigration do"
       assert file =~ "use Ecto.Migration"
       assert file =~ "def change do"
@@ -36,7 +36,7 @@ defmodule Mix.Tasks.Ecto.Gen.MigrationTest do
   test "underscores the filename when generating a migration" do
     run ["-r", to_string(Repo), "MyMigration"]
     assert [name] = File.ls!(@migrations_path)
-    assert String.match? name, ~r/^\d{14}_my_migration\.exs$/
+    assert name =~ ~r/^\d{14}_my_migration\.exs$/
   end
 
   test "raises when existing migration exists" do
