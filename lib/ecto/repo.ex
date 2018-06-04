@@ -184,6 +184,10 @@ defmodule Ecto.Repo do
         Ecto.Repo.Schema.delete!(__MODULE__, struct, opts)
       end
 
+      def count(queryable, field \\ :id) do
+        Ecto.Repo.Queryable.aggregate(__MODULE__, @adapter, queryable, :count, field, [])
+      end
+
       def insert_all(schema_or_source, entries, opts \\ []) do
         Ecto.Repo.Schema.insert_all(__MODULE__, schema_or_source, entries, opts)
       end
@@ -397,6 +401,20 @@ defmodule Ecto.Repo do
               field :: atom,
               opts :: Keyword.t()
             ) :: term | nil
+
+  @doc """
+  Calculates the records over the given `field`.
+
+  ## Examples
+
+      Repo.count(Post)
+
+      Repo.count("posts")
+
+      # Another primary key
+      Repo.count(Post, :title)
+  """
+  @callback count(queryable :: Ecto.Queryable.t, field :: atom) :: integer
 
   @doc """
   Fetches a single result from the query.

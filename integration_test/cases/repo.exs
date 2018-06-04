@@ -740,6 +740,20 @@ defmodule Ecto.Integration.RepoTest do
     assert TestRepo.aggregate(query, :count, :visits) == 3
   end
 
+  test "count" do
+    assert TestRepo.count(Post) == 0
+
+    TestRepo.insert!(%Post{visits: 10})
+    TestRepo.insert!(%Post{visits: 12})
+    TestRepo.insert!(%Post{visits: 14})
+
+    assert TestRepo.count("posts") == 3
+
+    TestRepo.insert!(%Post{visits: 14})
+
+    assert TestRepo.count(Post, :visits) == 4
+  end
+
   @tag :insert_cell_wise_defaults
   test "insert all" do
     assert {2, nil} = TestRepo.insert_all("comments", [[text: "1"], %{text: "2", lock_version: 2}])
