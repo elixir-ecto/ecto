@@ -48,6 +48,17 @@ defmodule Ecto.Repo.Queryable do
     one!(name, query_for_aggregate(queryable, aggregate, field), opts)
   end
 
+  def exists?(name, queryable, opts) do
+    queryable = Query.exclude(queryable, :select)
+                |> Query.select(1)
+                |> Query.limit(1)
+
+    case all(name, queryable, opts) do
+      [1] -> true
+      [] -> false
+    end
+  end
+
   def one(name, queryable, opts) do
     case all(name, queryable, opts) do
       [one] -> one
