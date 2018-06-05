@@ -8,6 +8,9 @@ defmodule Ecto.Type do
   types can be used in Ecto to augment existing types or providing
   your own types.
 
+  Note: `nil` values are always bypassed and cannot be handled by
+  custom types.
+
   ## Example
 
   Imagine you want to store an URI struct as part of a schema in an
