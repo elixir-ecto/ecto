@@ -649,6 +649,9 @@ defmodule Ecto.Schema do
 
     * `:defaults` - Default values to use when building the association
 
+    * `:where` - A filter for the association. See "Filtering associations" below.
+      It does not apply to `:through` associations.
+
   ## Examples
 
       defmodule Post do
@@ -666,8 +669,8 @@ defmodule Ecto.Schema do
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :comments))
       post.comments #=> [%Comment{...}, ...]
 
-  `has_many` can be used to define hierachical relationships within a single schema,
-  for example threaded comments.
+  `has_many` can be used to define hierachical relationships within a single
+  schema, for example threaded comments.
 
       defmodule Comment do
         use Ecto.Schema
@@ -679,29 +682,57 @@ defmodule Ecto.Schema do
         end
       end
 
-  ## Using Queries as Associations
+  ## Filtering associations
 
-  A query can also be given instead of a schema. Querying, joining or preloading the association will
-  use the given query. Currently only where clauses can be provided in queries. Let's see an example:
+  A query can also be given instead of a schema. Querying, joining or preloading
+  the association will use the given query. Currently only where clauses can be
+  provided in queries. Let's see some examples:
+
+      defmodule Post do
+        use Ecto.Schema
+
+        schema "posts" do
+          has_many :public_comments, Comment,
+            where: [public: true]
+
+          has_many :deleted_comments, Comment,
+            where: dynamic([c], not(is_nil(comment.deleted_at)))
+        end
+      end
+
+  The `:where` option may receive a dynamic query, a keyword list or a MFA
+  (a tuple with a module, function and args to invoke). The MFA is especially
+  useful to avoid duplication in those definitions:
 
       defmodule Comment do
-        ...
-        def deleted() do
-          from comment in Comment,
-            where: not(is_nil(comment.deleted_at))
+        def deleted_filter do
+          dynamic([c], not(is_nil(comment.deleted_at)))
         end
       end
 
       defmodule Post do
         use Ecto.Schema
+
         schema "posts" do
-          has_many :deleted_comments, Comment.deleted()
+          has_many :deleted_comments, Comment,
+            where: {Comment, :deleted_filter, []}
         end
       end
 
-  Note: building the association does not consider the query filters.
-  For example, if the given query requires the active field of the associated records to be true,
-  building such association won't automatically set the active field to true.
+  **Important!** Please use this feature only when strictly necessary,
+  otherwise it is very easy to end-up with large schemas with dozens of
+  different associations polluting your schema and affecting your
+  application performance. For instance, if you are using associations
+  only for different querying purposes, then it is preferrable to build
+  and compose queries, rather than defining multiple associations:
+
+      posts
+      |> Ecto.assoc(:comments)
+      |> Comment.deleted()
+
+  Or when preloading:
+
+      from posts, preload: [comments: ^Comment.deleted()]
 
   ## has_many/has_one :through
 
@@ -827,6 +858,9 @@ defmodule Ecto.Schema do
 
     * `:defaults` - Default values to use when building the association
 
+    * `:where` - A filter for the association. See "Filtering associations"
+      in `has_many/3`. It does not apply to `:through` associations.
+
   ## Examples
 
       defmodule Post do
@@ -913,6 +947,9 @@ defmodule Ecto.Schema do
     * `:primary_key` - If the underlying belongs_to field is a primary key
 
     * `:source` - The source for the underlying field
+
+    * `:where` - A filter for the association. See "Filtering associations"
+      in `has_many/3`.
 
   ## Examples
 
@@ -1146,6 +1183,12 @@ defmodule Ecto.Schema do
       repository operations. Keep in mind this does not guarantee uniqueness at the
       database level. For such it is preferred to set a unique index in the database.
       For example: `create unique_index(:posts_tags, [:post_id, :tag_id])`
+
+    * `:where` - A filter for the association. See "Filtering associations"
+      in `has_many/3`
+
+    * `:join_through_where` - A filter for the join through association.
+      See "Filtering associations" in `has_many/3`
 
   ## Removing data
 

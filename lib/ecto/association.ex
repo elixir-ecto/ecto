@@ -228,7 +228,9 @@ defmodule Ecto.Association do
   @doc """
   Add the default assoc query where clauses a provided query
   """
-  def combine_assoc_query(%{queryable: queryable} = assoc, nil), do: combine_assoc_query(assoc, queryable)
+  def combine_assoc_query(%{queryable: queryable} = assoc, nil),
+    do: combine_assoc_query(assoc, queryable)
+
   def combine_assoc_query(%{where: nil}, queryable), do: queryable
   def combine_assoc_query(%{where: []}, queryable), do: queryable
 

@@ -89,6 +89,7 @@ Running migrations will now lock the migrations table, allowing you to concurren
   * [Ecto.Repo] Support `{:replace, fields}` as `:on_conflict` strategy
   * [Ecto.Repo] Support `select` in queries given to `update_all` and `delete_all`
   * [Ecto.Repo] Preloading now only sorts results by the relationship key instead of sorting by the whole struct
+  * [Ecto.Schema] Allow `:where` option to be given to `has_many`/`has_one`/`belongs_to`/`many_to_many`. `many_to_many` also supports `:join_through_where`
 
 ### Bug fixes
 
