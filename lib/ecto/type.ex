@@ -8,6 +8,9 @@ defmodule Ecto.Type do
   types can be used in Ecto to augment existing types or providing
   your own types.
 
+  Note: `nil` values are always bypassed and cannot be handled by
+  custom types.
+
   ## Example
 
   Imagine you want to store an URI struct as part of a schema in an
@@ -139,9 +142,6 @@ defmodule Ecto.Type do
 
   This callback is called with any term that was stored in the struct
   and it needs to validate them and convert it to an Ecto native type.
-
-  Note: nil values are always bypassed and cannot be handled by custom
-  types.
   """
   @callback dump(term) :: {:ok, term} | :error
 
