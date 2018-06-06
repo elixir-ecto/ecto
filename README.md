@@ -97,7 +97,7 @@ Finally, in the repository definition, you will need to specify the `adapter:` r
 
 ```elixir
 defmodule MyApp.Repo do
-  use Ecto Repo,
+  use Ecto.Repo,
     otp_app: :my_app,
     adapter: Ecto.Adapters.Postgres,
   ...
