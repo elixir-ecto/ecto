@@ -1069,6 +1069,7 @@ defmodule Ecto.Schema do
       end
   """
   defmacro many_to_many(name, queryable, opts \\ []) do
+    queryable = expand_alias(queryable, __CALLER__)
     quote do
       Ecto.Schema.__many_to_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
