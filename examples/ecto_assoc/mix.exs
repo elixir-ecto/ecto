@@ -11,7 +11,6 @@ defmodule EctoAssoc.Mixfile do
     ]
   end
 
-  # Run "mix help compile.app" to learn about applications.
   def application do
     [
       extra_applications: [:logger],
@@ -19,11 +18,15 @@ defmodule EctoAssoc.Mixfile do
     ]
   end
 
-  # Run "mix help deps" to learn about dependencies.
   defp deps do
+    # Normally you would specify a version of Ecto, like this:
+    #
+    # {:ecto, "~> 2.0"}
+    #
+    # It is not done in this instance because we want to refer to the local Ecto.
     [
-      {:ecto, "~> 2.0"},
-      {:postgrex, "~> 0.11"}
+      {:ecto, path: "../.."},
+      {:postgrex, ">= 0.0.0", override: true}
     ]
   end
 end
