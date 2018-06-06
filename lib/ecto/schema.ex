@@ -1313,6 +1313,7 @@ defmodule Ecto.Schema do
   building such association won't automatically set the active field to true.
   """
   defmacro many_to_many(name, queryable, opts \\ []) do
+    queryable = expand_alias(queryable, __CALLER__)
     quote do
       Ecto.Schema.__many_to_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
