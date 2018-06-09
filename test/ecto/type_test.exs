@@ -106,6 +106,18 @@ defmodule Ecto.TypeTest do
     assert cast(:decimal, 1) == {:ok, Decimal.new("1")}
     assert cast(:decimal, Decimal.new("1")) == {:ok, Decimal.new("1")}
 
+    assert_raise Ecto.CastError, ~r{cannot cast "nan" to :decimal}, fn ->
+      cast(:decimal, "nan")
+    end
+
+    assert_raise Ecto.CastError, ~r{cannot cast #Decimal<NaN> to :decimal}, fn ->
+      cast(:decimal, Decimal.new("NaN"))
+    end
+
+    assert_raise Ecto.CastError, ~r{cannot cast #Decimal<Infinity> to :decimal}, fn ->
+      cast(:decimal, Decimal.new("Infinity"))
+    end
+
     assert dump(:decimal, "1.0") == :error
     assert dump(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
     assert dump(:decimal, 1) == {:ok, Decimal.new("1")}

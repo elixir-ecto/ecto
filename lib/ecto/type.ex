@@ -512,11 +512,13 @@ defmodule Ecto.Type do
   @doc """
   Casts a value to the given type.
 
-  `cast/2` is used by the finder queries and changesets
-  to cast outside values to specific types.
+  `cast/2` is used by the finder queries and changesets to cast outside values to
+  specific types.
 
-  Note that nil can be cast to all primitive types as data
-  stores allow nil to be set on any column.
+  Note that nil can be cast to all primitive types as data stores allow nil to be
+  set on any column.
+
+  NaN and infinite decimals are not supported, use custom types instead.
 
       iex> cast(:any, "whatever")
       {:ok, "whatever"}
@@ -616,13 +618,18 @@ defmodule Ecto.Type do
   def cast(:boolean, term) when term in ~w(false 0), do: {:ok, false}
 
   def cast(:decimal, term) when is_binary(term) do
-    Decimal.parse(term)
+    term
+    |> Decimal.parse()
+    |> validate_decimal(term)
   end
   def cast(:decimal, term) when is_integer(term) do
     {:ok, Decimal.new(term)}
   end
   def cast(:decimal, term) when is_float(term) do
     {:ok, Decimal.from_float(term)}
+  end
+  def cast(:decimal, %Decimal{} = term) do
+    validate_decimal({:ok, term}, term)
   end
 
   def cast(:date, term) do
@@ -920,4 +927,11 @@ defmodule Ecto.Type do
       _ -> nil
     end
   end
+
+  defp validate_decimal({:ok, %Decimal{coef: coef}}, value) when coef in [:inf, :qNaN, :sNaN] do
+    message = "cannot cast #{inspect value} to :decimal. Define custom type to handle NaN or infinite decimals"
+    raise Ecto.CastError, type: :decimal, value: value, message: message
+  end
+
+  defp validate_decimal(other, _), do: other
 end
