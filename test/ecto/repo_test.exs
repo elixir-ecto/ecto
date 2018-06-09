@@ -134,6 +134,63 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  describe "aggregate" do
+    test "aggregates on the given field" do
+      TestRepo.aggregate(MySchema, :min, :id)
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: min(m.id)>"
+
+      TestRepo.aggregate(MySchema, :max, :id)
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: max(m.id)>"
+
+      TestRepo.aggregate(MySchema, :sum, :id)
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: sum(m.id)>"
+
+      TestRepo.aggregate(MySchema, :avg, :id)
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: avg(m.id)>"
+
+      TestRepo.aggregate(MySchema, :count, :id)
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: count(m.id)>"
+    end
+
+    test "removes any preload from query" do
+      from(MySchema, preload: :parent) |> TestRepo.aggregate(:count, :id)
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: count(m.id)>"
+    end
+
+    test "removes order by from query without distinct/limit/offset" do
+      from(MySchema, order_by: :id) |> TestRepo.aggregate(:count, :id)
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: count(m.id)>"
+    end
+
+    test "overrides any select" do
+      from(MySchema, select: true) |> TestRepo.aggregate(:count, :id)
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: count(m.id)>"
+    end
+
+    test "uses subqueries with distinct/limit/offset" do
+      from(MySchema, limit: 5) |> TestRepo.aggregate(:count, :id)
+      assert_received {:all, query}
+      assert inspect(query) ==
+               "#Ecto.Query<from m in subquery(from m in Ecto.RepoTest.MySchema,\n" <>
+                "  limit: 5,\n" <>
+                "  select: %{id: m.id}), select: count(m.id)>"
+    end
+
+    test "raises when aggregating with group_by" do
+      assert_raise Ecto.QueryError, ~r"cannot aggregate on query with group_by", fn ->
+        from(MySchema, group_by: [:id]) |> TestRepo.aggregate(:count, :id)
+      end
+    end
+  end
+
   describe "stream" do
     test "emits row values lazily" do
       stream = TestRepo.stream(MySchema)
