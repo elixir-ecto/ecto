@@ -35,18 +35,10 @@ defmodule Ecto.TestAdapter do
 
   def prepare(operation, query), do: {:nocache, {operation, query}}
 
+  # Migration emutation
+
   def execute(_, _, {:nocache, {:all, %{from: %{source: {"schema_migrations", _}}}}}, _, _) do
     {length(migrated_versions()), Enum.map(migrated_versions(), &List.wrap/1)}
-  end
-
-  def execute(_, _, {:nocache, {:all, %{select: %{fields: [_|_] = fields}}}}, _, _) do
-    # Pad nil values after first
-    values = List.duplicate(nil, length(fields) - 1)
-    Process.get(:test_repo_all_results, {1, [[1 | values]]})
-  end
-
-  def execute(_, _, {:nocache, {:all, %{select: %{fields: []}}}}, _, _) do
-    Process.get(:test_repo_all_results, {1, [[]]})
   end
 
   def execute(_, _meta, {:nocache, {:delete_all, %{from: %{source: {_, SchemaMigration}}}}}, [version], _) do
@@ -54,16 +46,32 @@ defmodule Ecto.TestAdapter do
     {1, nil}
   end
 
-  def execute(_, _meta, {:nocache, {op, %{prefix: prefix, from: %{source: {source, _}}}}}, _params, _opts) do
-    send test_process(), {op, {prefix, source}}
+  # Regular operations
+
+  def execute(_, _, {:nocache, {:all, query}}, _, _) do
+    send test_process(), {:all, query}
+    Process.get(:test_repo_all_results) || results_for_all_query(query)
+  end
+
+  def execute(_, _meta, {:nocache, {op, query}}, _params, _opts) do
+    send test_process(), {op, query}
     {1, nil}
   end
 
-  def stream(adapter_meta, query_meta, prepared, params, opts) do
-    Stream.map([:execute], fn(:execute) ->
-      send test_process(), :stream_execute
-      execute(adapter_meta, query_meta, prepared, params, opts)
+  def stream(_, _meta, {:nocache, {:all, query}}, _params, _opts) do
+    Stream.map([:execute], fn :execute ->
+      send test_process(), {:stream, query}
+      results_for_all_query(query)
     end)
+  end
+
+  defp results_for_all_query(%{select: %{fields: [_ | _] = fields}}) do
+    values = List.duplicate(nil, length(fields) - 1)
+    {1, [[1 | values]]}
+  end
+
+  defp results_for_all_query(%{select: %{fields: []}}) do
+    {1, [[]]}
   end
 
   ## Schema
@@ -86,22 +94,23 @@ defmodule Ecto.TestAdapter do
     {:ok, Enum.zip(return, 1..length(return))}
   end
 
-  def insert(_, %{context: {:invalid, _} = res}, _fields, _on_conflict, _return, _opts) do
-    res
+  def insert(_, %{context: {:invalid, invalid}}, _fields, _on_conflict, _return, _opts) do
+    {:invalid, invalid}
   end
 
   # Notice the list of changes is never empty.
-  def update(_, %{context: nil, source: source, prefix: prefix}, [_|_], _filters, return, _opts) do
+  def update(_, %{context: nil} = schema_meta, [_ | _], _filters, return, _opts) do
+    %{source: source, prefix: prefix} = schema_meta
     send(test_process(), {:update, {prefix, source}})
     {:ok, Enum.zip(return, 1..length(return))}
   end
 
-  def update(_, %{context: {:invalid, _} = res}, [_|_], _filters, _return, _opts) do
-    res
+  def update(_, %{context: {:invalid, invalid}}, [_|_], _filters, _return, _opts) do
+    {:invalid, invalid}
   end
 
-  def delete(_, meta, _filter, _opts) do
-    %{source: source, prefix: prefix} = meta
+  def delete(_, schema_meta, _filter, _opts) do
+    %{source: source, prefix: prefix} = schema_meta
     send(test_process(), {:delete, {prefix, source}})
     {:ok, []}
   end

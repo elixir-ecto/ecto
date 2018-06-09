@@ -301,7 +301,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert_received {:insert, _} # New assoc
     refute_received {:delete, _} # Old assoc
     assert_received {:insert_all, {nil, "schemas_assocs"}, [[my_schema_id: 3, my_assoc_id: 1]]}
-    assert_received {:delete_all, {nil, "schemas_assocs"}}
+    assert_received {:delete_all, %{prefix: nil, from: %{source: {"schemas_assocs", _}}}}
 
     # Replacing assoc with nil
     changeset =
@@ -422,7 +422,7 @@ defmodule Ecto.Repo.ManyToManyTest do
       |> Ecto.Changeset.put_assoc(:assocs, [])
     schema = TestRepo.update!(changeset)
     assert schema.assocs == []
-    assert_received {:delete_all, {nil, "schemas_assocs"}}
+    assert_received {:delete_all, %{prefix: nil, from: %{source: {"schemas_assocs", _}}}}
   end
 
   test "removing assocs on update preserving parent schema prefix" do
@@ -434,7 +434,7 @@ defmodule Ecto.Repo.ManyToManyTest do
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:assocs, [])
     TestRepo.update!(changeset)
-    assert_received {:delete_all, {"prefix", "schemas_assocs"}}
+    assert_received {:delete_all, %{prefix: "prefix", from: %{source: {"schemas_assocs", _}}}}
   end
 
   test "returns untouched changeset on invalid children on update" do

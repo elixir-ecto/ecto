@@ -377,16 +377,15 @@ defmodule Ecto.MultiTest do
 
       assert {:ok, changes} = TestRepo.transaction(multi)
       assert_received {:transaction, _}
-      assert {:messages, actions} = Process.info(self(), :messages)
-      assert actions == [
+      assert {:messages, [
         {:insert, {nil, "comments"}},
         {:update, {nil, "comments"}},
         {:update, {nil, "comments"}},
         {:delete, {nil, "comments"}},
         {:insert_all, {nil, "comments"}, [[x: 1]]},
-        {:update_all, {nil, "comments"}},
-        {:delete_all, {nil, "comments"}}
-      ]
+        {:update_all, %{prefix: nil, from: %{source: {"comments", _}}}},
+        {:delete_all, %{prefix: nil, from: %{source: {"comments", _}}}}
+      ]} = Process.info(self(), :messages)
 
       assert %Comment{} = changes.insert
       assert %Comment{} = changes.update
