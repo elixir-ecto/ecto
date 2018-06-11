@@ -707,9 +707,29 @@ defmodule Ecto.Integration.RepoTest do
 
     query = from p in Post, where: is_nil(p.id)
     refute query |> first |> TestRepo.one
-    refute query |> first |> TestRepo.one
+    refute query |> last |> TestRepo.one
     assert_raise Ecto.NoResultsError, fn -> query |> first |> TestRepo.one! end
     assert_raise Ecto.NoResultsError, fn -> query |> last |> TestRepo.one! end
+  end
+
+  test "exists?" do
+    TestRepo.insert!(%Post{title: "1", text: "hai", visits: 2})
+    TestRepo.insert!(%Post{title: "2", text: "hai", visits: 1})
+
+    query = from p in Post, where: not is_nil(p.title), limit: 2
+    assert query |> TestRepo.exists? == true
+
+    query = from p in Post, where: p.title == "1", select: p.title
+    assert query |> TestRepo.exists? == true
+
+    query = from p in Post, where: is_nil(p.id)
+    assert query |> TestRepo.exists? == false
+
+    query = from p in Post, where: is_nil(p.id)
+    assert query |> TestRepo.exists? == false
+
+    query = from(p in Post, select: {p.visits, avg(p.visits)}, group_by: p.visits, having: avg(p.visits) > 1)
+    assert query |> TestRepo.exists? == true
   end
 
   test "aggregate" do

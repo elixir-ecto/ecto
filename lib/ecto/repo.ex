@@ -235,6 +235,10 @@ defmodule Ecto.Repo do
         Ecto.Repo.Queryable.aggregate(__MODULE__, queryable, aggregate, field, opts)
       end
 
+      def exists?(queryable, opts \\ []) do
+        Ecto.Repo.Queryable.exists?(__MODULE__, queryable, opts)
+      end
+
       def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
         Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, __MODULE__, preloads, opts)
       end
