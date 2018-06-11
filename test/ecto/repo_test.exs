@@ -191,6 +191,42 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  describe "exists?" do
+    test "selects 1 and sets limit to 1" do
+      TestRepo.exists?(MySchema)
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+
+      from(MySchema, select: [:id], limit: 10) |> TestRepo.exists?
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+    end
+
+    test "removes any preload from query" do
+      from(MySchema, preload: :parent) |> TestRepo.exists?
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+    end
+
+    test "removes distinct from query" do
+      from(MySchema, select: [:id], distinct: true) |> TestRepo.exists?
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+    end
+
+    test "removes order by from query without distinct/limit/offset" do
+      from(MySchema, order_by: :id) |> TestRepo.exists?
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+    end
+
+    test "overrides any select" do
+      from(MySchema, select: true) |> TestRepo.exists?
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+    end
+  end
+
   describe "stream" do
     test "emits row values lazily" do
       stream = TestRepo.stream(MySchema)

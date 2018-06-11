@@ -50,6 +50,9 @@ defmodule Ecto.Repo.Queryable do
 
   def exists?(name, queryable, opts) do
     queryable = Query.exclude(queryable, :select)
+                |> Query.exclude(:preload)
+                |> Query.exclude(:order_by)
+                |> Query.exclude(:distinct)
                 |> Query.select(1)
                 |> Query.limit(1)
 
