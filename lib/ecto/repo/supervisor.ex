@@ -66,7 +66,7 @@ defmodule Ecto.Repo.Supervisor do
       Instead pass the adapter configuration when defining the module:
 
           defmodule #{inspect repo} do
-            use #{inspect repo},
+            use Ecto.Repo,
               otp_app: #{inspect otp_app},
               adapter: #{inspect adapter}
       """
