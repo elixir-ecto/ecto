@@ -620,7 +620,7 @@ defmodule Ecto.Type do
   def cast(:decimal, term) when is_binary(term) do
     term
     |> Decimal.parse()
-    |> validate_decimal(term)
+    |> validate_decimal()
   end
   def cast(:decimal, term) when is_integer(term) do
     {:ok, Decimal.new(term)}
@@ -629,7 +629,7 @@ defmodule Ecto.Type do
     {:ok, Decimal.from_float(term)}
   end
   def cast(:decimal, %Decimal{} = term) do
-    validate_decimal({:ok, term}, term)
+    validate_decimal({:ok, term})
   end
 
   def cast(:date, term) do
@@ -928,10 +928,8 @@ defmodule Ecto.Type do
     end
   end
 
-  defp validate_decimal({:ok, %Decimal{coef: coef}}, value) when coef in [:inf, :qNaN, :sNaN] do
-    message = "cannot cast #{inspect value} to :decimal. Define custom type to handle NaN or infinite decimals"
-    raise Ecto.CastError, type: :decimal, value: value, message: message
-  end
-
-  defp validate_decimal(other, _), do: other
+  defp validate_decimal({:ok, %Decimal{coef: coef}}) when coef in [:inf, :qNaN, :sNaN],
+    do: :error
+  defp validate_decimal(other),
+    do: other
 end
