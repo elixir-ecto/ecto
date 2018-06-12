@@ -142,6 +142,12 @@ defmodule Ecto.Adapters.PostgresTest do
     query = Schema |> distinct([r], [r.x, r.y]) |> select([r], {r.x, r.y}) |> plan()
     assert all(query) == ~s{SELECT DISTINCT ON (s0."x", s0."y") s0."x", s0."y" FROM "schema" AS s0}
 
+    query = Schema |> distinct([r], [asc: r.x, desc: r.y]) |> select([r], {r.x, r.y}) |> plan()
+    assert all(query) == ~s{SELECT DISTINCT ON (s0."x", s0."y") s0."x", s0."y" FROM "schema" AS s0}
+
+    query = Schema |> distinct([r], [asc_nulls_first: r.x, desc_nulls_last: r.y]) |> select([r], {r.x, r.y}) |> plan()
+    assert all(query) == ~s{SELECT DISTINCT ON (s0."x", s0."y") s0."x", s0."y" FROM "schema" AS s0}
+
     query = Schema |> distinct([r], true) |> select([r], {r.x, r.y}) |> plan()
     assert all(query) == ~s{SELECT DISTINCT s0."x", s0."y" FROM "schema" AS s0}
 
@@ -158,6 +164,9 @@ defmodule Ecto.Adapters.PostgresTest do
   test "distinct with order by" do
     query = Schema |> order_by([r], [r.y]) |> distinct([r], desc: r.x) |> select([r], r.x) |> plan()
     assert all(query) == ~s{SELECT DISTINCT ON (s0."x") s0."x" FROM "schema" AS s0 ORDER BY s0."x" DESC, s0."y"}
+
+    query = Schema |> order_by([r], [r.y]) |> distinct([r], desc_nulls_last: r.x) |> select([r], r.x) |> plan()
+    assert all(query) == ~s{SELECT DISTINCT ON (s0."x") s0."x" FROM "schema" AS s0 ORDER BY s0."x" DESC NULLS LAST, s0."y"}
   end
 
   test "coalesce" do
