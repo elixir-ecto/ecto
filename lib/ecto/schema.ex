@@ -835,7 +835,7 @@ defmodule Ecto.Schema do
   ## Options
 
     * `:foreign_key` - Sets the foreign key, this should map to a field on the
-      other schema, defaults to the underscored name of the current schema
+      other schema, defaults to the underscored name of the current module
       suffixed by `_id`
 
     * `:references`  - Sets the key on the current schema to be used for the
