@@ -229,6 +229,18 @@ if Code.ensure_loaded?(Postgrex) do
        fields, " WHERE ", filters | returning(returning)]
     end
 
+    def update(%{from: %{source: source}} = query) do
+      sources = create_names(query)
+
+      {from, name} = get_source(query, sources, 0, source)
+
+      prefix = ["UPDATE ", from, " AS ", name | " SET "]
+      fields = update_fields(query, sources)
+      where = where(query, sources)
+
+      [prefix, fields, where | returning(query, sources)]
+    end
+
     def delete(prefix, table, filters, returning) do
       {filters, _} = intersperse_reduce(filters, " AND ", 1, fn
         {field, nil}, acc ->
