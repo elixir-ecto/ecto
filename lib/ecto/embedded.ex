@@ -171,9 +171,7 @@ defmodule Ecto.Embedded do
   defp action_to_auto(:insert), do: :autogenerate
   defp action_to_auto(:update), do: :autoupdate
 
-  @doc """
-  Callback invoked to build relations.
-  """
+  @impl true
   def build(%Embedded{related: related}) do
     related.__struct__
   end
