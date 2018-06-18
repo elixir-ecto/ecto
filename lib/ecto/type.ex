@@ -281,7 +281,7 @@ defmodule Ecto.Type do
     end
   end
   def __typespec__(mod) when is_atom(mod) do
-    # TODO: this is not 100% reliable, custom type may not have defined t()
+    # This is not 100% reliable, custom type may not have defined t()
     quote do: unquote(mod).t()
   end
 
