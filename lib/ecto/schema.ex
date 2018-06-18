@@ -550,7 +550,8 @@ defmodule Ecto.Schema do
       they would then be the same for all records.
 
     * `:source` - Defines the name that is to be used in database for this field.
-      This is useful when attaching to an existing database.
+      This is useful when attaching to an existing database. The value should be
+      an atom.
 
     * `:autogenerate` - a `{module, function, args}` tuple for a function
       to call to generate the field value before insertion if value is not set.
