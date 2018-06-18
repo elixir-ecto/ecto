@@ -247,22 +247,22 @@ defmodule Ecto.Type do
     quote do: binary()
   end
   def __typespec__({:array, inner}) do
-    quote do: [Macro.escape(Ecto.Type.__typespec__(unquote(inner)))]
+    quote do: [unquote(Ecto.Type.__typespec__((inner)))]
   end
   def __typespec__(:map) do
-    quote do: map()
+    quote do: %{String.t() => term()}
   end
   def __typespec__({:map, inner}) do
-    quote do: [Macro.escape(Ecto.Type.__typespec__(unquote(inner)))]
+    quote do: %{String.t() => unquote(Ecto.Type.__typespec__(inner))}
   end
   def __typespec__(:decimal) do
     quote do: Decimal.t()
   end
   def __typespec__(:date) do
-    quote do: Decimal.t()
+    quote do: Date.t()
   end
   def __typespec__(:time) do
-    quote do: Decimal.t()
+    quote do: Time.t()
   end
   def __typespec__(type) when type in [:naive_datetime, :naive_datetime_usec] do
     quote do: NaiveDateTime.t()
