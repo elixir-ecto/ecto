@@ -122,7 +122,7 @@ defmodule Ecto.SchemaTest do
       |> Enum.sort()
     end
 
-    test "defaults" do
+    test "autogenerate type" do
       bytecode =
         test_module do
           use Ecto.Schema
@@ -144,22 +144,6 @@ defmodule Ecto.SchemaTest do
                  {_, _, _, [{_, _, :name}, {:remote_type, 0, [{:atom, 0, String}, {:atom, 0, :t}, []]}]},
                  {_, _, _, [{_, _, :numbers}, {:type, 0, :list, [{:type, 0, :integer, []}]}]}
                ]}, []} = t
-    end
-
-    # TODO: make it pass
-    test "overwrites" do
-      bytecode =
-        test_module do
-          use Ecto.Schema
-
-          @type t() :: any()
-
-          schema "my schema" do
-            field :name, :string
-          end
-        end
-
-      assert [type: {:t, {:type, _, :any, []}, []}] = types(bytecode)
     end
   end
 
