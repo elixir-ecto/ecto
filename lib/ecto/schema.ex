@@ -525,6 +525,13 @@ defmodule Ecto.Schema do
             {args, body} <- clauses do
           def __schema__(unquote_splicing(args)), do: unquote(body)
         end
+
+        field_types =
+          for {name, type} <- @changeset_fields do
+            {name, Ecto.Type.__typespec__(type)}
+          end
+
+        @type t() :: %__MODULE__{unquote_splicing(field_types)}
       end
 
     quote do

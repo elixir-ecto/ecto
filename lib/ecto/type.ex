@@ -224,6 +224,67 @@ defmodule Ecto.Type do
     end
   end
 
+  @doc false
+  def __typespec__(:id) do
+    quote do: integer()
+  end
+  def __typespec__(:binary_id) do
+    quote do: binary()
+  end
+  def __typespec__(:integer) do
+    quote do: integer()
+  end
+  def __typespec__(:float) do
+    quote do: float()
+  end
+  def __typespec__(:boolean) do
+    quote do: boolean()
+  end
+  def __typespec__(:string) do
+    quote do: String.t()
+  end
+  def __typespec__(:binary) do
+    quote do: binary()
+  end
+  def __typespec__({:array, inner}) do
+    quote do: [Macro.escape(Ecto.Type.__typespec__(unquote(inner)))]
+  end
+  def __typespec__(:map) do
+    quote do: map()
+  end
+  def __typespec__({:map, inner}) do
+    quote do: [Macro.escape(Ecto.Type.__typespec__(unquote(inner)))]
+  end
+  def __typespec__(:decimal) do
+    quote do: Decimal.t()
+  end
+  def __typespec__(:date) do
+    quote do: Decimal.t()
+  end
+  def __typespec__(:time) do
+    quote do: Decimal.t()
+  end
+  def __typespec__(type) when type in [:naive_datetime, :naive_datetime_usec] do
+    quote do: NaiveDateTime.t()
+  end
+  def __typespec__(type) when type in [:utc_datetime, :utc_datetime_usec] do
+    quote do: DateTime.t()
+  end
+  def __typespec__({kind, %{cardinality: :one, related: related}}) when kind in [:assoc, :embed] do
+    quote do
+      unquote(related).t()
+    end
+  end
+  def __typespec__({kind, %{cardinality: :many, related: related}}) when kind in [:assoc, :embed] do
+    quote do
+      [unquote(related).t()]
+    end
+  end
+  def __typespec__(mod) when is_atom(mod) do
+    # TODO: this is not 100% reliable, custom type may not have defined t()
+    quote do: unquote(mod).t()
+  end
+
   @doc """
   Checks if a given type matches with a primitive type
   that can be found in queries.
