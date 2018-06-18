@@ -12,6 +12,14 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  defmodule MyEmbed do
+    use Ecto.Schema
+
+    embedded_schema do
+      field :x, :string
+    end
+  end
+
   defmodule MySchema do
     use Ecto.Schema
 
@@ -22,6 +30,8 @@ defmodule Ecto.RepoTest do
       field :array, {:array, :string}
       field :map, {:map, :string}
       belongs_to :parent, MyParent
+
+      embeds_many :embeds, MyEmbed
     end
   end
 
@@ -540,6 +550,33 @@ defmodule Ecto.RepoTest do
       assert Process.get(:ecto_repo) == TestRepo
       assert Process.get(:ecto_counter) == 2
     end
+  end
+
+  test "prepare_changes on embeds" do
+    embed_changeset =
+      %MyEmbed{}
+      |> Ecto.Changeset.cast(%{x: "one"}, [:x])
+      |> Ecto.Changeset.prepare_changes(fn %{repo: repo} = changeset ->
+        Process.put(:ecto_repo, repo)
+        Process.put(:ecto_counter, 1)
+        changeset
+      end)
+      |> Ecto.Changeset.prepare_changes(fn changeset ->
+        1 = Process.get(:ecto_counter)
+        Process.put(:ecto_counter, 2)
+        Ecto.Changeset.update_change(changeset, :x, &String.upcase/1)
+      end)
+
+    changeset =
+      %MySchema{id: 1}
+      |> Ecto.Changeset.cast(%{x: "one"}, [:x])
+      |> Ecto.Changeset.put_embed(:embeds, [embed_changeset])
+
+    %MySchema{embeds: [embed]} = TestRepo.insert!(changeset)
+    assert embed.x == "ONE"
+    assert_received {:transaction, _}
+    assert Process.get(:ecto_repo) == TestRepo
+    assert Process.get(:ecto_counter) == 2
   end
 
   describe "changeset constraints" do

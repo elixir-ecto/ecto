@@ -48,33 +48,35 @@ defmodule Ecto.Embedded do
   loaded into the schema struct afterwards.
   """
   def prepare(changeset, adapter, repo_action) do
-    %{changes: changes, data: %{__struct__: schema}, types: types} = changeset
-    prepare(Map.take(changes, schema.__schema__(:embeds)), types, adapter, repo_action)
+    %{changes: changes, data: %{__struct__: schema}, types: types, repo: repo} = changeset
+    prepare(Map.take(changes, schema.__schema__(:embeds)), types, adapter, repo, repo_action)
   end
 
-  defp prepare(embeds, _types, _adapter, _repo_action) when embeds == %{} do
+  defp prepare(embeds, _types, _adapter, _repo, _repo_action) when embeds == %{} do
     embeds
   end
 
-  defp prepare(embeds, types, adapter, repo_action) do
-    Enum.reduce embeds, embeds, fn {name, changeset}, acc ->
+  defp prepare(embeds, types, adapter, repo, repo_action) do
+    Enum.reduce embeds, embeds, fn {name, changeset_or_changesets}, acc ->
       {:embed, embed} = Map.get(types, name)
-      Map.put(acc, name, prepare_each(embed, changeset, adapter, repo_action))
+      Map.put(acc, name, prepare_each(embed, changeset_or_changesets, adapter, repo, repo_action))
     end
   end
 
-  defp prepare_each(%{cardinality: :one}, nil, _adapter, _repo_action) do
+  defp prepare_each(%{cardinality: :one}, nil, _adapter, _repo, _repo_action) do
     nil
   end
 
-  defp prepare_each(%{cardinality: :one} = embed, changeset, adapter, repo_action) do
+  defp prepare_each(%{cardinality: :one} = embed, changeset, adapter, repo, repo_action) do
     action = check_action!(changeset.action, repo_action, embed)
+    changeset = run_prepare(changeset, repo)
     to_struct(changeset, action, embed, adapter)
   end
 
-  defp prepare_each(%{cardinality: :many} = embed, changesets, adapter, repo_action) do
+  defp prepare_each(%{cardinality: :many} = embed, changesets, adapter, repo, repo_action) do
     for changeset <- changesets,
         action = check_action!(changeset.action, repo_action, embed),
+        changeset = run_prepare(changeset, repo),
         prepared = to_struct(changeset, action, embed, adapter),
         do: prepared
   end
@@ -109,6 +111,19 @@ defmodule Ecto.Embedded do
     |> autogenerate_id(struct, action, schema, adapter)
     |> autogenerate(action, schema)
     |> apply_embeds(struct)
+  end
+
+  defp run_prepare(changeset, repo) do
+    changeset = %{changeset | repo: repo}
+
+    Enum.reduce(Enum.reverse(changeset.prepare), changeset, fn fun, acc ->
+      case fun.(acc) do
+        %Ecto.Changeset{} = acc -> acc
+        other ->
+          raise "expected function #{inspect fun} given to Ecto.Changeset.prepare_changes/2 " <>
+                "to return an Ecto.Changeset, got: `#{inspect other}`"
+      end
+    end)
   end
 
   defp apply_embeds(changes, struct) do
@@ -156,9 +171,7 @@ defmodule Ecto.Embedded do
   defp action_to_auto(:insert), do: :autogenerate
   defp action_to_auto(:update), do: :autoupdate
 
-  @doc """
-  Callback invoked to build relations.
-  """
+  @impl true
   def build(%Embedded{related: related}) do
     related.__struct__
   end
