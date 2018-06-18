@@ -100,53 +100,6 @@ defmodule Ecto.SchemaTest do
     assert %Schema{}.array == nil
   end
 
-  describe "typespec" do
-    defmacrop test_module(do: block) do
-      quote do
-        {:module, _, bytecode, _} =
-          defmodule TypespecSample do
-            unquote(block)
-          end
-
-        :code.delete(TypespecSample)
-        :code.purge(TypespecSample)
-        bytecode
-      end
-    end
-
-    # TODO: uses private API!
-    defp types(bytecode) do
-      bytecode
-      |> Code.Typespec.fetch_types()
-      |> elem(1)
-      |> Enum.sort()
-    end
-
-    test "autogenerate type" do
-      bytecode =
-        test_module do
-          use Ecto.Schema
-
-          schema "my schema" do
-            field :name, :string
-            field :numbers, {:array, :integer}
-          end
-        end
-
-      assert [type: t] = types(bytecode)
-
-      assert {:t,
-              {:type, _, :map,
-               [
-                 {_, _, _, [{_, _, :__struct__}, {:atom, 0, Ecto.SchemaTest.TypespecSample}]},
-                 {_, _, _, [{_, _, :__meta__}, {:type, 0, :term, []}]},
-                 {_, _, _, [{_, _, :id}, {:type, 0, :integer, []}]},
-                 {_, _, _, [{_, _, :name}, {:remote_type, 0, [{:atom, 0, String}, {:atom, 0, :t}, []]}]},
-                 {_, _, _, [{_, _, :numbers}, {:type, 0, :list, [{:type, 0, :integer, []}]}]}
-               ]}, []} = t
-    end
-  end
-
   defmodule CustomSchema do
     use Ecto.Schema
 
