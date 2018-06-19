@@ -1,13 +1,15 @@
 Application.put_env(
   :ecto,
   Ecto.Bench.PgRepo,
-  url: Application.get_env(:ecto, :pg_bench_url) <> "/ecto_test"
+  url: Application.get_env(:ecto, :pg_bench_url) <> "/ecto_test",
+  adapter: Ecto.Adapters.Postgres
 )
 
 Application.put_env(
   :ecto,
   Ecto.Bench.MySQLRepo,
-  url: Application.get_env(:ecto, :mysql_bench_url) <> "/ecto_test"
+  url: Application.get_env(:ecto, :mysql_bench_url) <> "/ecto_test",
+  adapter: Ecto.Adapters.MySQL
 )
 
 defmodule Ecto.Bench.PgRepo do

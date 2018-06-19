@@ -1,16 +1,13 @@
 alias Ecto.Bench.User
 
-data = User.data()
-
-struct = struct(User, User.data())
-
-changeset = User.changeset(data)
-
-inputs = %{"pg" => Ecto.Bench.PgRepo, "mysql" => Ecto.Bench.MySQLRepo}
+inputs = %{
+  "Struct" => struct(User, User.sample_data()),
+  "Changeset" => User.changeset(User.sample_data())
+}
 
 jobs = %{
-  "insert_plain" => fn repo -> repo.insert!(struct) end,
-  "insert_changeset" => fn repo -> repo.insert!(changeset) end
+  "Pg Insert" => fn entry -> Ecto.Bench.PgRepo.insert!(entry) end,
+  "MySQL Insert" => fn entry -> Ecto.Bench.MySQLRepo.insert!(entry) end
 }
 
 path = System.get_env("BENCHMARKS_OUTPUT_PATH") || raise "I DON'T KNOW WHERE TO WRITE!!!"

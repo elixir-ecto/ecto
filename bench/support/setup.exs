@@ -1,7 +1,8 @@
 Code.require_file("repo.exs", __DIR__)
-Code.require_file("migration.exs", __DIR__)
+Code.require_file("migrations.exs", __DIR__)
+Code.require_file("models.exs", __DIR__)
 
-alias Ecto.Bench.{PgRepo, MySQLRepo, Migration}
+alias Ecto.Bench.{PgRepo, MySQLRepo, CreateUser}
 
 {:ok, _} = Ecto.Adapters.Postgres.ensure_all_started(PgRepo, :temporary)
 {:ok, _} = Ecto.Adapters.MySQL.ensure_all_started(MySQLRepo, :temporary)
@@ -15,5 +16,5 @@ _ = Ecto.Adapters.MySQL.storage_down(MySQLRepo.config())
 {:ok, _pid} = PgRepo.start_link()
 {:ok, _pid} = MySQLRepo.start_link()
 
-:ok = Ecto.Migrator.up(PgRepo, 0, Migration, log: false)
-:ok = Ecto.Migrator.up(MySQLRepo, 0, Migration, log: false)
+:ok = Ecto.Migrator.up(PgRepo, 0, CreateUser, log: false)
+:ok = Ecto.Migrator.up(MySQLRepo, 0, CreateUser, log: false)
