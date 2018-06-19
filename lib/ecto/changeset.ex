@@ -202,7 +202,7 @@ defmodule Ecto.Changeset do
     This works fine, if you keep adding more `tags` to a post, but if you want to then remove some `tags` ecto will throw a `:raise` error.
     By default `:on_replace` is set to `:raise`, it is expecting the same amount of `tags` if you are to do another upsert.
 
-    Setting `:on_replace` to `:delete` will tell ecto that you want to delete the row in the linkning table called `posts_tags`.
+    Setting `:on_replace` to `:delete` will tell ecto that you want to delete the row in the linking table called `posts_tags`.
     Now you can add and remove `tags` to your `posts` at will.
 
     `many_to_many many_to_many(:tags, Tag, join_through: "posts_tags", :on_replace: :delete)`
