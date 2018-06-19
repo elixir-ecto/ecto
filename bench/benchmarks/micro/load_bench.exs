@@ -8,7 +8,7 @@
 # Raw data can be in different types (e.g. keyword lists, maps), in this tests
 # we benchmark against map inputs
 
-# ----------------------------Factores(don't change)---------------------------
+# ----------------------------Factors(don't change)---------------------------
 # Different adapters supported by Ecto, each one has its own implementation that
 # is tested against different inputs
 
@@ -26,7 +26,7 @@ inputs = %{
 }
 
 jobs = %{
-  "PG Loader" => fn data -> Enum.map(data, &Ecto.Bench.PgRepo.load(User, &1)) end,
+  "Pg Loader" => fn data -> Enum.map(data, &Ecto.Bench.PgRepo.load(User, &1)) end,
   "MySQL Loader" => fn data -> Enum.map(data, &Ecto.Bench.MySQLRepo.load(User, &1)) end,
 }
 
@@ -37,5 +37,5 @@ Benchee.run(
   jobs,
   inputs: inputs,
   formatters: [Benchee.Formatters.JSON],
-  formatter_options: [json: [file: file]],
+  formatter_options: [json: [file: file]]
 )
