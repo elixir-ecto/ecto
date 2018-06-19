@@ -171,6 +171,42 @@ defmodule Ecto.Changeset do
         end
       end
 
+    ## Many to many updating associactions
+    `many_to_many` associations can only use the following flags for `:on_replace`: `:raise`, `:mark_as_invalid` and `:delete`.
+
+    To properly handle changes for your `many_to_many` fields you have to use `:delete`, take the example below:
+
+      defmodule Tag do
+        use Ecto.Schema
+        import Ecto.Changeset
+
+        schema "tags" do
+          field :title :string
+
+          many_to_many many_to_many(:posts, Post, join_through: "posts_tags")
+        end
+      end
+
+      defmodule Post do
+        use Ecto.Schema
+        import Ecto.Changeset
+
+        schema "posts" do
+          field :title :string
+
+          many_to_many many_to_many(:tags, Tag, join_through: "posts_tags")
+        end
+      end
+
+    `tags` has many `posts`, `posts` can have many `tags` thus they have a `many_to_many` realtionship.
+    This works fine, if you keep adding more `tags` to a post, but if you want to then remove some `tags` ecto will throw a `:raise` error.
+    By default `:on_replace` is set to `:raise`, it is expecting the same amount of `tags` if you are to do another upsert.
+
+    Setting `:on_replace` to `:delete` will tell ecto that you want to delete the row in the linking table called `posts_tags`.
+    Now you can add and remove `tags` to your `posts` at will.
+
+    `many_to_many many_to_many(:tags, Tag, join_through: "posts_tags", :on_replace: :delete)`
+
   ## Schemaless changesets
 
   In the changeset examples so far, we have always used changesets to
@@ -573,7 +609,7 @@ defmodule Ecto.Changeset do
   This function should be used when working with the entire association at
   once (and not a single element of a many-style association) and using data
   external to the application.
-  
+
   `cast_assoc/3` works matching the records extracted form the database (preload)
   and compares it with the parameters provided form an external source.
 
@@ -620,7 +656,7 @@ defmodule Ecto.Changeset do
   Every time the `MyApp.Address.changeset/2` function is invoked, it must
   return a changeset. This changeset will be applied to your Repo with
   the propper action accordingly.
-  
+
   Note developers are allowed to explicitly set the `:action` field of a
   changeset to instruct Ecto how to act in certain situations. Let's suppose
   that, if one of the associations has only empty fields, you want to ignore
