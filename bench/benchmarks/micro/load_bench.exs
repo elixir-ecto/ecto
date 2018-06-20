@@ -19,10 +19,15 @@
 alias Ecto.Bench.User
 
 inputs = %{
-  "Small (1 Thousand)" => 1..1_000 |> Enum.map(fn(_) -> %{name: "Alice", email: "email@email.com"} end),
-  "Medium (100 Thousand)" => 1..100_000 |> Enum.map(fn(_) -> %{name: "Alice", email: "email@email.com"} end),
-  "Big (1 Million)" => 1..1_000_000 |> Enum.map(fn(_) -> %{name: "Alice", email: "email@email.com"} end),
-  "Large (5 Million)" => 1..5_000_000 |> Enum.map(fn(_) -> %{name: "Alice", email: "email@email.com"} end),
+  "Small 1 Thousand" => 1..1_000 |> Enum.map(fn(_) -> %{name: "Alice", email: "email@email.com"} end),
+  "Medium 100 Thousand" => 1..100_000 |> Enum.map(fn(_) -> %{name: "Alice", email: "email@email.com"} end),
+  "Big 1 Million" => 1..1_000_000 |> Enum.map(fn(_) -> %{name: "Alice", email: "email@email.com"} end),
+  "Large 5 Million" => 1..5_000_000 |> Enum.map(fn(_) -> %{name: "Alice", email: "email@email.com"} end),
+
+  "Time attr" => 1..100_000 |> Enum.map(fn(_) -> %{name: "Alice", time_attr: ~T[21:25:04.361140] } end),
+  "Date attr" => 1..100_000 |> Enum.map(fn(_) -> %{name: "Alice", date_attr: ~D[2018-06-20] } end),
+  "NaiveDateTime attr" => 1..100_000 |> Enum.map(fn(_) -> %{name: "Alice", naive_datetime_attr: ~N[2018-06-20 21:32:07.424178]} end),
+  "DateTime attr" => 1..100_000 |> Enum.map(fn(_) -> %{name: "Alice", utc_datetime_attr: DateTime.utc_now()} end)
 }
 
 jobs = %{
