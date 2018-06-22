@@ -928,7 +928,8 @@ defmodule Ecto.Repo do
   Deletes a struct using its primary key.
 
   If the struct has no primary key, `Ecto.NoPrimaryKeyFieldError`
-  will be raised.
+  will be raised. If the struct has been removed from db prior to
+  call, `Ecto.StaleEntryError` will be raised.
 
   It returns `{:ok, struct}` if the struct has been successfully
   deleted or `{:error, changeset}` if there was a validation
