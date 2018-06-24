@@ -526,12 +526,15 @@ defmodule Ecto.Schema do
           def __schema__(unquote_splicing(args)), do: unquote(body)
         end
 
-        field_types =
+        types =
           for {name, type} <- @changeset_fields do
             {name, Ecto.Type.__typespec__(type)}
           end
 
-        @type t() :: %__MODULE__{unquote_splicing(field_types)}
+        types = [{:__struct__, __MODULE__} | types]
+        types = if meta?, do: [{:__meta__, quote do: Ecto.Schema.Metadata.t()} | types], else: types
+
+        @type t() :: %{unquote_splicing(types)}
       end
 
     quote do
