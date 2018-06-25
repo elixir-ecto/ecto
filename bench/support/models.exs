@@ -8,7 +8,7 @@ defmodule Ecto.Bench.User do
     field(:time_attr, :time)
     field(:date_attr, :date)
     field(:naive_datetime_attr, :naive_datetime)
-    field(:utc_datetime_attr, :utc_datetime)
+    field(:uuid, :binary_id)
   end
 
   @required_attrs [
@@ -18,7 +18,7 @@ defmodule Ecto.Bench.User do
     :time_attr,
     :date_attr,
     :naive_datetime_attr,
-    :utc_datetime_attr
+    :uuid
   ]
 
   def changeset() do
@@ -37,7 +37,7 @@ defmodule Ecto.Bench.User do
       time_attr: Time.utc_now(),
       date_attr: Date.utc_today(),
       naive_datetime_attr: NaiveDateTime.utc_now(),
-      utc_datetime_attr: DateTime.utc_now()
+      uuid: Ecto.UUID.generate()
     }
   end
 end

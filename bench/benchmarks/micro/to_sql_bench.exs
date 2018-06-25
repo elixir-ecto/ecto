@@ -30,18 +30,20 @@ inputs = %{
   "Fetch First Registry" => {:all, first(User)},
   "Fetch Last Registry" => {:all, last(User)},
   "Ordinary Order By" => {:all, order_by(User, desc: :name)},
-  "Complex Query 2 Joins" => {:all,
-    from(User, where: [name: "Thanos"])
-    |> join(:left, [u], ux in User, u.id == ux.id)
-    |> join(:right, [j], uj in User, j.id == 1 and j.email == "email@email")
-    |> select([u, ux], {u.name, ux.email})},
-  "Complex Query 4 Joins" => {:all,
-    from(User)
-    |> join(:left, [u], g in Game, g.name == u.name)
-    |> join(:right, [g], u in User, g.id == 1 and u.email == "email@email")
-    |> join(:inner, [u], g in fragment("SELECT * from games where game.id = ?", u.id))
-    |> join(:left, [g], u in fragment("SELECT * from users = ?", g.id))
-    |> select([u, g], {u.name, g.price})}
+  "Complex Query 2 Joins" =>
+    {:all,
+     from(User, where: [name: "Thanos"])
+     |> join(:left, [u], ux in User, u.id == ux.id)
+     |> join(:right, [j], uj in User, j.id == 1 and j.email == "email@email")
+     |> select([u, ux], {u.name, ux.email})},
+  "Complex Query 4 Joins" =>
+    {:all,
+     from(User)
+     |> join(:left, [u], g in Game, g.name == u.name)
+     |> join(:right, [g], u in User, g.id == 1 and u.email == "email@email")
+     |> join(:inner, [u], g in fragment("SELECT * from games where game.id = ?", u.id))
+     |> join(:left, [g], u in fragment("SELECT * from users = ?", g.id))
+     |> select([u, g], {u.name, g.price})}
 }
 
 jobs = %{

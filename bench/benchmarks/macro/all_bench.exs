@@ -3,9 +3,10 @@ alias Ecto.Bench.User
 limit = 5_000
 
 users =
-1..limit
-|> Enum.map(fn _ -> User.sample_data() end)
+  1..limit
+  |> Enum.map(fn _ -> User.sample_data() end)
 
+# We need to insert data to fetch
 Ecto.Bench.PgRepo.insert_all(User, users)
 Ecto.Bench.MySQLRepo.insert_all(User, users)
 
@@ -23,3 +24,7 @@ Benchee.run(
   formatter_options: [json: [file: file]],
   time: 10
 )
+
+# Clean inserted data
+Ecto.Bench.PgRepo.delete_all(User)
+Ecto.Bench.MySQLRepo.delete_all(User)

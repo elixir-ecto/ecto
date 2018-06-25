@@ -9,7 +9,7 @@ defmodule Ecto.Bench.CreateUser do
       add(:time_attr, :time)
       add(:date_attr, :date)
       add(:naive_datetime_attr, :naive_datetime)
-      add(:utc_datetime_attr, :utc_datetime)
+      add(:uuid, :binary_id)
     end
   end
 end

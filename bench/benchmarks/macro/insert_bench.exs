@@ -19,3 +19,7 @@ Benchee.run(
   formatters: [Benchee.Formatters.JSON],
   formatter_options: [json: [file: file]]
 )
+
+# Clean inserted data
+Ecto.Bench.PgRepo.delete_all(User)
+Ecto.Bench.MySQLRepo.delete_all(User)
