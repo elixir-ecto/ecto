@@ -1055,6 +1055,15 @@ defmodule Ecto.Repo do
   @doc """
   Returns true if the current process is inside a transaction.
 
+  If you are using the `Ecto.Adapters.SQL.Sandbox` in tests, note that even
+  though each test is inside a transaction, `in_transaction?/0` will only
+  return true inside transactions explicitly created with `transaction/2`. This
+  is done so the test environment mimics dev and prod.
+
+  If you are trying to debug transaction-related code while using
+  `Ecto.Adapters.SQL.Sandbox`, it may be more helpful to configure the database
+  to log all statements and consult those logs.
+
   ## Examples
 
       MyRepo.in_transaction?
