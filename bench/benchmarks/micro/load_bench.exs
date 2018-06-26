@@ -13,8 +13,9 @@
 # is tested against different inputs
 
 # ----------------------------Parameters(change)-------------------------------
-# Different sizes of raw data(small, medium, big) fetched from db that has to
-# be loaded into Ecto structures.
+# Different sizes of raw data(small, medium, big) and different attribute types
+# such as UUID, Date and Time fetched from the database and needs to be
+# loaded into Ecto structures.
 
 alias Ecto.Bench.User
 

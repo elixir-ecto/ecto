@@ -1,3 +1,21 @@
+# -----------------------------------Goal--------------------------------------
+# Compare the performance of querying all objects of the different supported
+# databases
+
+# -------------------------------Description-----------------------------------
+# This benchmark tracks performance of querying a set of objects registered in
+# the database with Repo.all/2 function. The query pass through
+# the steps of translating the SQL statements, sending them to the database and
+# load the results into Ecto structures. Both, Ecto Adapters and Database itself
+# play a role and can affect the results of this benchmark.
+
+# ----------------------------Factors(don't change)---------------------------
+# Different adapters supported by Ecto with the proper database up and running
+
+# ----------------------------Parameters(change)-------------------------------
+# There is only a unique parameter in this benchmark, the User objects to be
+# fetched.
+
 alias Ecto.Bench.User
 
 limit = 5_000
