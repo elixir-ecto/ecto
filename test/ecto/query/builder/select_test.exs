@@ -115,6 +115,16 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert query.select.take == %{0 => {:map, [:title]}}
     end
 
+    test "supports '...' in binding list with no prior select" do
+      query =
+        "posts"
+        |> select_merge([..., p], %{title: p.title})
+
+      assert Macro.to_string(query.select.expr) == "merge(&0, %{title: &0.title()})"
+      assert query.select.params == []
+      assert query.select.take == %{}
+    end
+
     test "raises on incompatible pairs" do
       assert_raise Ecto.QueryError, ~r/those select expressions are incompatible/, fn ->
         from p in "posts",
