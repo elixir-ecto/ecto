@@ -115,6 +115,15 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert query.select.take == %{}
     end
 
+    test "supports '...' in binding list with no prior select" do
+      query =
+        "posts"
+        |> select_merge([..., p], %{title: p.title})
+       assert Macro.to_string(query.select.expr) == "merge(&0, %{title: &0.title()})"
+      assert query.select.params == []
+      assert query.select.take == %{}
+    end
+
     test "with take" do
       # On select
       query = from p in "posts", select: p, select_merge: [:title]
