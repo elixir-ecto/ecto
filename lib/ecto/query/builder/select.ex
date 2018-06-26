@@ -200,7 +200,8 @@ defmodule Ecto.Query.Builder.Select do
       Builder.apply_query(query, __MODULE__, [select], env)
     else
       quote do
-        Builder.Select.merge(unquote(query), unquote(select))
+        query = unquote(query)
+        Builder.Select.merge(query, unquote(select))
       end
     end
   end
