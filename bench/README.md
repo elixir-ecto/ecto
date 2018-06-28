@@ -7,7 +7,13 @@ need `Postgres` and `MySQL` up and running.
 To run the benchmarks tests just type in the console:
 
 ```
-$ export BENCHMARKS_OUTPUT_PATH=bench/results && mix run bench/bench_helper.exs
+# POSIX-compatible shells
+$ BENCHMARKS_OUTPUT_PATH=bench/results && mix run bench/bench_helper.exs
+```
+
+```
+# other shells
+$ env BENCHMARKS_OUTPUT_PATH=bench/results && mix run bench/bench_helper.exs
 ```
 
 Benchmarks are inside the benchmarks/ directory and are divided into two
