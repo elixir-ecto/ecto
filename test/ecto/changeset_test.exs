@@ -749,7 +749,7 @@ defmodule Ecto.ChangesetTest do
       |> validate_required("title")
     end
 
-    # When field is not an atom
+    # When field is nil
     assert_raise FunctionClauseError, fn ->
       changeset(%{"title" => "hello"})
       |> validate_required(nil)
