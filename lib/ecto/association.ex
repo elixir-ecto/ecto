@@ -537,7 +537,7 @@ defmodule Ecto.Association.Has do
     }
   end
 
-  defp get_ref(nil, nil, name) do
+  defp get_ref(primary_key, nil, name) when primary_key in [nil, false] do
     raise ArgumentError, "need to set :references option for " <>
       "association #{inspect name} when schema has no primary key"
   end
