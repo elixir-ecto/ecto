@@ -261,9 +261,15 @@ defmodule Ecto.Query.Builder do
     {expr, params_acc}
   end
 
+  def escape({:count, _, []}, _type, params_acc, _vars, _env) do
+    expr = {:{}, [], [:count, [], []]}
+    {expr, params_acc}
+  end
+
   def escape({:filter, _, [aggregate]}, type, params_acc, vars, env) do
     escape(aggregate, type, params_acc, vars, env)
   end
+
   def escape({:filter, _, [aggregate, filter_expr]}, type, params_acc, vars, env) do
     {aggregate, params_acc} = escape(aggregate, type, params_acc, vars, env)
     {filter_expr, params_acc} = escape(filter_expr, type, params_acc, vars, env)
@@ -820,6 +826,7 @@ defmodule Ecto.Query.Builder do
   # Aggregates
   def quoted_type({:count, _, [_, _]}, _vars), do: :integer
   def quoted_type({:count, _, [_]}, _vars), do: :integer
+  def quoted_type({:count, _, []}, _vars), do: :integer
   def quoted_type({agg, _, [_]}, _vars) when agg in [:avg, :sum], do: :any
   def quoted_type({agg, _, [expr]}, vars) when agg in [:max, :min, :sum] do
     quoted_type(expr, vars)

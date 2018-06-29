@@ -8,7 +8,7 @@ defmodule Ecto.Query.API do
     * Inclusion operator: `in/2`
     * Search functions: `like/2` and `ilike/2`
     * Null check functions: `is_nil/1`
-    * Aggregates: `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
+    * Aggregates: `count/0`, `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
     * Date/time intervals: `datetime_add/3`, `date_add/3`, `from_now/2`, `ago/2`
     * Inside select: `struct/2`, `map/2`, `merge/2` and literals (map, tuples, lists, etc)
     * General: `fragment/1`, `field/2` and `type/2`
@@ -157,6 +157,13 @@ defmodule Ecto.Query.API do
       from p in Post, select: count(p.id, :distinct)
   """
   def count(value, :distinct), do: doc! [value, :distinct]
+
+  @doc """
+  Counts the entries in the table.
+
+      from p in Post, select: count()
+  """
+  def count, do: doc! []
 
   @doc """
   Takes whichever value is not null, or null if they both are.

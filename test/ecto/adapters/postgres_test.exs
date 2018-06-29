@@ -119,6 +119,9 @@ defmodule Ecto.Adapters.PostgresTest do
 
     query = Schema |> select([r], count(r.x, :distinct)) |> plan()
     assert all(query) == ~s{SELECT count(DISTINCT s0."x") FROM "schema" AS s0}
+
+    query = Schema |> select([r], count()) |> plan()
+    assert all(query) == ~s{SELECT count(*) FROM "schema" AS s0}
   end
 
   test "aggregate filters" do
@@ -127,6 +130,9 @@ defmodule Ecto.Adapters.PostgresTest do
 
     query = Schema |> select([r], count(r.x) |> filter(r.x > 10 and r.x < 50)) |> plan()
     assert all(query) == ~s{SELECT count(s0."x") FILTER (WHERE (s0."x" > 10) AND (s0."x" < 50)) FROM "schema" AS s0}
+
+    query = Schema |> select([r], count() |> filter(r.x > 10)) |> plan()
+    assert all(query) == ~s{SELECT count(*) FILTER (WHERE s0."x" > 10) FROM "schema" AS s0}
   end
 
   test "distinct" do
