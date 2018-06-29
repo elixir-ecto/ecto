@@ -249,6 +249,10 @@ defmodule Ecto.ChangesetTest do
     assert_raise FunctionClauseError, fn ->
       cast(%Post{}, %{}, %{})
     end
+
+    assert_raise FunctionClauseError, fn ->
+      cast(%Post{}, %{"title" => "foo"}, nil)
+    end
   end
 
   test "cast/4: protects against atom injection" do
@@ -743,6 +747,12 @@ defmodule Ecto.ChangesetTest do
     assert_raise ArgumentError, ~r/expects field names to be atoms, got: `"title"`/, fn ->
       changeset(%{"title" => "hello"})
       |> validate_required("title")
+    end
+
+    # When field is not an atom
+    assert_raise FunctionClauseError, fn ->
+      changeset(%{"title" => "hello"})
+      |> validate_required(nil)
     end
   end
 
