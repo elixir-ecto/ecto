@@ -429,7 +429,7 @@ defmodule Ecto.Changeset do
 
   def cast(_data, %{__struct__: _} = params, _permitted, _opts) do
     raise Ecto.CastError, type: :map, value: params,
-                          message: "expected params to be a :map, got: `#{inspect params}`"
+                          message: "expected params to be a :map, got: `#{inspect(params)}`"
   end
 
   def cast({data, types}, params, permitted, opts) when is_map(data) do
@@ -573,7 +573,7 @@ defmodule Ecto.Changeset do
   This function should be used when working with the entire association at
   once (and not a single element of a many-style association) and using data
   external to the application.
-  
+
   `cast_assoc/3` works matching the records extracted form the database (preload)
   and compares it with the parameters provided form an external source.
 
@@ -620,7 +620,7 @@ defmodule Ecto.Changeset do
   Every time the `MyApp.Address.changeset/2` function is invoked, it must
   return a changeset. This changeset will be applied to your Repo with
   the propper action accordingly.
-  
+
   Note developers are allowed to explicitly set the `:action` field of a
   changeset to instruct Ecto how to act in certain situations. Let's suppose
   that, if one of the associations has only empty fields, you want to ignore
@@ -1480,7 +1480,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec validate_required(t, list | atom, Keyword.t) :: t
-  def validate_required(%Changeset{} = changeset, fields, opts \\ []) do
+  def validate_required(%Changeset{} = changeset, fields, opts \\ []) when not is_nil(fields) do
     %{required: required, errors: errors, changes: changes} = changeset
     message = message(opts, "can't be blank")
     trim = Keyword.get(opts, :trim, true)
