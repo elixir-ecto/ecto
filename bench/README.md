@@ -8,12 +8,12 @@ To run the benchmarks tests just type in the console:
 
 ```
 # POSIX-compatible shells
-$ BENCHMARKS_OUTPUT_PATH=bench/results && mix run bench/bench_helper.exs
+$ BENCHMARKS_OUTPUT_PATH=bench/results mix run bench/bench_helper.exs
 ```
 
 ```
 # other shells
-$ env BENCHMARKS_OUTPUT_PATH=bench/results && mix run bench/bench_helper.exs
+$ env BENCHMARKS_OUTPUT_PATH=bench/results mix run bench/bench_helper.exs
 ```
 
 Benchmarks are inside the benchmarks/ directory and are divided into two
