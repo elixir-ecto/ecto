@@ -513,6 +513,8 @@ if Code.ensure_loaded?(Postgrex) do
       [?(, intersperse_map(elems, ?,, &expr(&1, sources, query)), ?)]
     end
 
+    defp expr({:count, _, []}, _sources, _query), do: "count(*)"
+
     defp expr({fun, _, args}, sources, query) when is_atom(fun) and is_list(args) do
       {modifier, args} =
         case args do
