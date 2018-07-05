@@ -176,6 +176,11 @@ defmodule Ecto.Adapters.MySQLTest do
     assert all(query) == ~s{SELECT TRUE FROM `schema` AS s0 LIMIT 3 OFFSET 5}
   end
 
+  test "aggregates" do
+    query = Schema |> select(count()) |> plan()
+    assert all(query) == ~s{SELECT count(*) FROM `schema` AS s0}
+  end
+
   test "aggregate filters" do
     query = Schema |> select([r], count(r.x) |> filter(r.x > 10)) |> plan()
     assert_raise Ecto.QueryError, ~r/MySQL adapter does not support aggregate filters in query/, fn ->
