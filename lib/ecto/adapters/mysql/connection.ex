@@ -182,6 +182,23 @@ if Code.ensure_loaded?(Mariaex) do
       ["UPDATE ", quote_table(prefix, table), " SET ", fields, " WHERE " | filters]
     end
 
+    def update(%Ecto.Query{} = query) do
+      %{from: %{source: source}, select: select} = query
+
+      if select do
+        error!(nil, ":select is not supported in update by MySQL")
+      end
+
+      sources = create_names(query)
+      {from, name} = get_source(query, sources, 0, source)
+
+      fields = update_fields(:on_conflict, query, sources)
+      prefix = ["UPDATE ", from, " AS ", name, " SET "]
+      where  = where(query, sources)
+
+      [prefix, fields | where]
+    end
+
     def delete(prefix, table, filters, _returning) do
       filters = intersperse_map(filters, " AND ", fn
         {field, nil} ->

@@ -53,6 +53,7 @@ defmodule Ecto.Adapters.PostgresTest do
 
   defp all(query), do: query |> SQL.all |> IO.iodata_to_binary()
   defp update_all(query), do: query |> SQL.update_all |> IO.iodata_to_binary()
+  defp update(query), do: query |> SQL.update() |> IO.iodata_to_binary()
   defp delete_all(query), do: query |> SQL.delete_all |> IO.iodata_to_binary()
   defp execute_ddl(query), do: query |> SQL.execute_ddl |> Enum.map(&IO.iodata_to_binary/1)
 
@@ -775,6 +776,12 @@ defmodule Ecto.Adapters.PostgresTest do
 
     query = update("prefix", "schema", [:x, :y], [id: 1, updated_at: nil], [])
     assert query == ~s{UPDATE "prefix"."schema" SET "x" = $1, "y" = $2 WHERE "id" = $3 AND "updated_at" IS NULL}
+
+    query = from(m in Schema, update: [set: [x: 0, y: 1]], where: [id: 0]) |> plan(:update_all) |> update()
+    assert query == ~s{UPDATE "schema" AS s0 SET "x" = 0, "y" = 1 WHERE (s0."id" = 0)}
+
+    query = from(m in Schema, update: [set: [x: 0, y: 1]], where: [id: 0], select: [:id]) |> plan(:update_all) |> update()
+    assert query == ~s{UPDATE "schema" AS s0 SET "x" = 0, "y" = 1 WHERE (s0."id" = 0) RETURNING s0."id"}
   end
 
   test "delete" do

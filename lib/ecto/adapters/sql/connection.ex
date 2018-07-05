@@ -83,6 +83,11 @@ defmodule Ecto.Adapters.SQL.Connection do
                    filters :: [atom], returning :: [atom]) :: iodata
 
   @doc """
+  Returns an UPDATE for the given `query`.
+  """
+  @callback update(query :: Ecto.Query.t) :: iodata
+
+  @doc """
   Returns a DELETE for the `filters` returning the given `returning`.
   """
   @callback delete(prefix :: String.t, table :: String.t,

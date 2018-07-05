@@ -99,6 +99,13 @@ defmodule Ecto.TestAdapter do
   end
 
   # Notice the list of changes is never empty.
+  def update(_, query, _opts) do
+    %{from: %{source: source}, prefix: prefix} = query
+    send(test_process(), {:update, {prefix, source}})
+
+    {:ok, []}
+  end
+
   def update(_, %{context: nil} = schema_meta, [_ | _], _filters, return, _opts) do
     %{source: source, prefix: prefix} = schema_meta
     send(test_process(), {:update, {prefix, source}})

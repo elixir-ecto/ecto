@@ -51,6 +51,7 @@ defmodule Ecto.Adapters.MySQLTest do
 
   defp all(query), do: query |> SQL.all |> IO.iodata_to_binary()
   defp update_all(query), do: query |> SQL.update_all |> IO.iodata_to_binary()
+  defp update(query), do: query |> SQL.update |> IO.iodata_to_binary()
   defp delete_all(query), do: query |> SQL.delete_all |> IO.iodata_to_binary()
   defp execute_ddl(query), do: query |> SQL.execute_ddl |> Enum.map(&IO.iodata_to_binary/1)
 
@@ -603,6 +604,9 @@ defmodule Ecto.Adapters.MySQLTest do
 
     query = update("prefix", "schema", [:id], [x: 1, y: nil], [])
     assert query == ~s{UPDATE `prefix`.`schema` SET `id` = ? WHERE `x` = ? AND `y` IS NULL}
+
+    query = from(m in Schema, update: [set: [x: 0, y: 1]], where: [id: 1]) |> plan(:update_all) |> update()
+    assert query == ~s{UPDATE `schema` AS s0 SET `x` = 0, `y` = 1 WHERE (s0.`id` = 1)}
   end
 
   test "delete" do
