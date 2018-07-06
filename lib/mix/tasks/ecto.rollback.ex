@@ -49,7 +49,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
     * `-r`, `--repo` - the repo to rollback
     * `--all` - revert all applied migrations
     * `--step` / `-n` - revert n number of applied migrations
-    * `--to` / `-v` - revert all migrations down to and including version
+    * `--to` - revert all migrations down to and including version
     * `--quiet` - do not log migration commands
     * `--prefix` - the prefix to run migrations on
     * `--pool-size` - the pool size if the repository is started only for the task (defaults to 1)
@@ -64,7 +64,7 @@ defmodule Mix.Tasks.Ecto.Rollback do
     {opts, _, _} = OptionParser.parse args,
       switches: [all: :boolean, step: :integer, to: :integer, start: :boolean,
                  quiet: :boolean, prefix: :string, pool_size: :integer, log_sql: :boolean],
-      aliases: [n: :step, v: :to]
+      aliases: [n: :step]
 
     opts =
       if opts[:to] || opts[:step] || opts[:all],
