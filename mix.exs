@@ -12,6 +12,7 @@ defmodule Ecto.MixProject do
      build_per_environment: false,
      consolidate_protocols: false,
      test_paths: test_paths(Mix.env),
+     elixirc_paths: elixirc_paths(Mix.env),
      xref: [exclude: [Mariaex, Ecto.Adapters.MySQL.Connection,
                       Postgrex, Ecto.Adapters.Postgres.Connection,
                       DBConnection, DBConnection.Ownership]],
@@ -29,6 +30,9 @@ defmodule Ecto.MixProject do
      name: "Ecto",
      docs: docs()]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 
   def application do
     [

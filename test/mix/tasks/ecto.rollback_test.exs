@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Ecto.RollbackTest do
-  use ExUnit.Case
+  use Ecto.MixTaskCase
 
   import Mix.Tasks.Ecto.Rollback, only: [run: 2]
   import Support.FileHelpers
