@@ -92,7 +92,7 @@ defmodule Ecto.Query.Builder.JoinTest do
   end
 
   test "raises on invalid interpolated unsafe fragments" do
-    frag = ["comments": "authors"]
+    frag = [comments: "authors"]
     assert_raise ArgumentError, ~r/unsafe_fragment\(...\) expects the first argument/, fn ->
       join("posts", :left, [p], c in unsafe_fragment(^frag), on: true)
     end

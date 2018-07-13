@@ -635,7 +635,7 @@ defmodule Ecto.QueryTest do
 
     test "raises at runtime when interpolation is not a string" do
       assert_raise ArgumentError, ~r"unsafe_fragment\(...\) expects the first argument", fn ->
-        clause = ["foo": "bar"]
+        clause = [foo: "bar"]
         from p in "posts", where: unsafe_fragment(^clause)
       end
     end
