@@ -266,6 +266,35 @@ defmodule Ecto.Query.Builder do
     {expr, params_acc}
   end
 
+  @over_aggs [
+    row_number: {[], :integer},
+    rank: {[], :integer},
+    dense_rank: {[], :integer},
+    percent_rank: {[], :float},
+    cume_dist: {[], :float},
+    ntile: {[:integer], :integer},
+    first_value: {[:any], :any},
+    last_value: {[:any], :any},
+    nth_value: {[:any, :integer], :any},
+    lag: {[:any, :integer, :any], :any},
+    lead: {[:any, :integer, :any], :any},
+    lag: {[:any, :integer], :any},
+    lead: {[:any, :integer], :any},
+    lag: {[:any], :any},
+    lead: {[:any], :any},
+  ]
+  @over_agg_names Enum.uniq(Keyword.keys(@over_aggs))
+  @over_agg_names_with_arity Enum.map(@over_aggs, fn {name, {in_types, _}} -> {name, length(in_types)} end)
+
+  def escape({agg, _, nil}, _type, _params_acc, _vars, _env) when {agg, 0} in @over_agg_names_with_arity do
+    error! "#{agg}/#{0} must be invoked using window function syntax"
+  end
+
+  def escape({agg, _, args}, _type, _params_acc, _vars, _env) when {agg, length(args)} in @over_agg_names_with_arity do
+    arity = length(args || [])
+    error! "#{agg}/#{arity} must be invoked using window function syntax"
+  end
+
   def escape({:filter, _, [aggregate]}, type, params_acc, vars, env) do
     escape(aggregate, type, params_acc, vars, env)
   end
@@ -280,6 +309,13 @@ defmodule Ecto.Query.Builder do
     {left, params_acc} = escape(left, type, params_acc, vars, env)
     {right, params_acc} = escape(right, type, params_acc, vars, env)
     {{:{}, [], [:coalesce, [], [left, right]]}, params_acc}
+  end
+
+  def escape({:over, _, [{agg_name, _, agg_args} | over_args]}, type, params_acc, vars, env) do
+    aggregate = {agg_name, [], agg_args || []}
+    {aggregate, params_acc} = escape_window_function(aggregate, type, params_acc, vars, env)
+    {window, params_acc} = escape_window(over_args, type, params_acc, vars, env)
+    {{:{}, [], [:over, [], [aggregate, window]]}, params_acc}
   end
 
   def escape({:=, _, _} = expr, _type, _params_acc, _vars, _env) do
@@ -431,6 +467,42 @@ defmodule Ecto.Query.Builder do
   defp split_fragment(<<first :: utf8, rest :: binary>>, consumed),
     do: split_fragment(rest, consumed <> <<first :: utf8>>)
 
+  defp escape_window([], _type, params_acc, _vars, _env),
+    do: {nil, params_acc}
+  defp escape_window([window_name], _type, params_acc, _vars, _env) when is_atom(window_name),
+    do: {window_name, params_acc}
+  defp escape_window([{:partition_by, _, expr}], _type, params_acc, vars, env) do
+    Ecto.Query.Builder.Windows.escape_window(expr, params_acc, vars, env)
+  end
+
+  defp escape_window_function({agg, _, nil} = expr, type, params_acc, vars, env)
+      when {agg, 0} in @over_agg_names_with_arity do
+    escape_window_function(expr, type, params_acc, vars, env)
+  end
+
+  defp escape_window_function({agg, _, args} = expr, type, params_acc, vars, env)
+       when {agg, length(args)} in @over_agg_names_with_arity do
+    {in_types, out_type} = window_function_call_type(agg, length(args))
+    assert_type!(expr, type, out_type)
+
+    {args, params} = args
+                     |> Enum.zip(in_types)
+                     |> Enum.map_reduce(params_acc, fn {arg, type}, acc -> escape(arg, type, acc, vars, env) end)
+    {{:{}, [], [agg, [], args]}, params}
+  end
+
+  defp escape_window_function({agg, _, args}, _type, _params, _vars, _env) when agg in @over_agg_names do
+    variants = @over_aggs
+    |> Keyword.get_values(agg)
+    |> Enum.map(fn {in_types, _} -> "\t* #{agg}/#{length(in_types)}" end)
+    |> Enum.join("\n")
+    error! "window function #{agg}/#{length(args)} is undefined. Did you mean one of: \n" <> variants
+  end
+
+  defp escape_window_function(expr, type, params, vars, env) do
+    escape(expr, type, params, vars, env)
+  end
+
   defp escape_call({name, _, args}, type, params, vars, env) do
     {args, params} = Enum.map_reduce(args, params, &escape(&1, type, &2, vars, env))
     expr = {:{}, [], [name, [], args]}
@@ -474,6 +546,10 @@ defmodule Ecto.Query.Builder do
     do: [{:raw, h1}, {:expr, h2}|merge_fragments(t1, t2)]
   defp merge_fragments([h1], []),
     do: [{:raw, h1}]
+
+  for {agg, {in_types, out_type}} <- @over_aggs do
+    defp window_function_call_type(unquote(agg), unquote(length(in_types))), do: unquote({in_types, out_type})
+  end
 
   defp call_type(agg, 1)  when agg in ~w(avg count max min sum)a, do: {:any, :any}
   defp call_type(comp, 2) when comp in ~w(== != < > <= >=)a,      do: {:any, :boolean}

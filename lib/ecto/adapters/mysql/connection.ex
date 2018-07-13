@@ -82,12 +82,13 @@ if Code.ensure_loaded?(Mariaex) do
       where    = where(query, sources)
       group_by = group_by(query, sources)
       having   = having(query, sources)
+      window   = window(query, sources)
       order_by = order_by(query, sources)
       limit    = limit(query, sources)
       offset   = offset(query, sources)
       lock     = lock(query.lock)
 
-      [select, from, join, where, group_by, having, order_by, limit, offset | lock]
+      [select, from, join, where, group_by, having, window, order_by, limit, offset | lock]
     end
 
     def update_all(query, prefix \\ nil) do
@@ -320,13 +321,34 @@ if Code.ensure_loaded?(Mariaex) do
        end)]
     end
 
+    defp window(%Query{windows: []}, _sources), do: []
+    defp window(%Query{windows: windows} = query, sources) do
+      [" WINDOW " |
+       intersperse_map(windows, ", ", fn
+         {name, definition} ->
+           [quote_name(name), " AS ", partition_by(definition, sources, query)] end)]
+    end
+
+    defp partition_by(%QueryExpr{expr: opts}, sources, %Query{} = query) do
+      fields = Keyword.get(opts, :fields)
+      order_bys = Keyword.get_values(opts, :order_by) |> Enum.concat
+      fields = fields |> intersperse_map(", ", &expr(&1, sources, query))
+      ["(PARTITION BY ",
+        fields,
+        order_by(order_bys, query, sources),
+        ?)]
+    end
+
     defp order_by(%Query{order_bys: []}, _sources), do: []
     defp order_by(%Query{order_bys: order_bys} = query, sources) do
+      order_bys = Enum.flat_map(order_bys, & &1.expr)
+      order_by(order_bys, query, sources)
+    end
+
+    defp order_by([], _query, _sources), do: []
+    defp order_by(order_bys, query, sources) do
       [" ORDER BY " |
-       intersperse_map(order_bys, ", ", fn
-         %QueryExpr{expr: expr} ->
-           intersperse_map(expr, ", ", &order_by_expr(&1, sources, query))
-       end)]
+       intersperse_map(order_bys, ", ", &order_by_expr(&1, sources, query))]
     end
 
     defp order_by_expr({dir, expr}, sources, query) do
@@ -455,6 +477,21 @@ if Code.ensure_loaded?(Mariaex) do
 
     defp expr({:ilike, _, [_, _]}, _sources, query) do
       error!(query, "ilike is not supported by MySQL")
+    end
+
+    defp expr({:over, _, [agg, %QueryExpr{} = window]}, sources, query) do
+      aggregate = expr(agg, sources, query)
+      [aggregate, " OVER ", partition_by(window, sources, query)]
+    end
+
+    defp expr({:over, _, [agg, nil]}, sources, query) do
+      aggregate = expr(agg, sources, query)
+      [aggregate, " OVER ()"]
+    end
+
+    defp expr({:over, _, [agg, name]}, sources, query) when is_atom(name) do
+      aggregate = expr(agg, sources, query)
+      [aggregate, " OVER ", quote_name(name)]
     end
 
     defp expr({:{}, _, elems}, sources, query) do

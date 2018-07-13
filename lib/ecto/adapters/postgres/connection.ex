@@ -121,12 +121,13 @@ if Code.ensure_loaded?(Postgrex) do
       where    = where(query, sources)
       group_by = group_by(query, sources)
       having   = having(query, sources)
+      window   = window(query, sources)
       order_by = order_by(query, order_by_distinct, sources)
       limit    = limit(query, sources)
       offset   = offset(query, sources)
       lock     = lock(query.lock)
 
-      [select, from, join, where, group_by, having, order_by, limit, offset | lock]
+      [select, from, join, where, group_by, having, window, order_by, limit, offset | lock]
     end
 
     def update_all(%{from: %{source: source}} = query, prefix \\ nil) do
@@ -382,9 +383,32 @@ if Code.ensure_loaded?(Postgrex) do
        end)]
     end
 
+    defp window(%Query{windows: []}, _sources), do: []
+    defp window(%Query{windows: windows} = query, sources) do
+      [" WINDOW " |
+       intersperse_map(windows, ", ", fn
+         {name, definition} ->
+           [quote_name(name), " AS ", partition_by(definition, sources, query)] end)]
+    end
+
+    defp partition_by(%QueryExpr{expr: opts}, sources, %Query{} = query) do
+      fields = Keyword.get(opts, :fields)
+      order_bys = Keyword.get_values(opts, :order_by) |> Enum.concat
+      fields = fields |> intersperse_map(", ", &expr(&1, sources, query))
+      ["(PARTITION BY ",
+        fields,
+        order_by(order_bys, query, [], sources),
+        ?)]
+    end
+
     defp order_by(%Query{order_bys: []}, _distinct, _sources), do: []
     defp order_by(%Query{order_bys: order_bys} = query, distinct, sources) do
       order_bys = Enum.flat_map(order_bys, & &1.expr)
+      order_by(order_bys, query, distinct, sources)
+    end
+
+    defp order_by([], _query, _distinct, _sources), do: []
+    defp order_by(order_bys, query, distinct, sources) do
       [" ORDER BY " |
        intersperse_map(distinct ++ order_bys, ", ", &order_by_expr(&1, sources, query))]
     end
@@ -508,6 +532,21 @@ if Code.ensure_loaded?(Postgrex) do
     defp expr({:filter, _, [agg, filter]}, sources, query) do
       aggregate = expr(agg, sources, query)
       [aggregate, " FILTER (WHERE ", expr(filter, sources, query), ?)]
+    end
+
+    defp expr({:over, _, [agg, %QueryExpr{} = window]}, sources, query) do
+      aggregate = expr(agg, sources, query)
+      [aggregate, " OVER ", partition_by(window, sources, query)]
+    end
+
+    defp expr({:over, _, [agg, nil]}, sources, query) do
+      aggregate = expr(agg, sources, query)
+      [aggregate, " OVER ()"]
+    end
+
+    defp expr({:over, _, [agg, name]}, sources, query) when is_atom(name) do
+      aggregate = expr(agg, sources, query)
+      [aggregate, " OVER ", quote_name(name)]
     end
 
     defp expr({:{}, _, elems}, sources, query) do

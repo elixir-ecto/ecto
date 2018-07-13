@@ -144,6 +144,34 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p in Inspect.Post, having: p.foo == p.bar, having: true}
   end
 
+  test "window" do
+    assert i(from(x in Post, windows: [a: partition_by x.foo])) ==
+           ~s{from p in Inspect.Post, windows: [a: partition_by([p.foo])]}
+
+    assert i(from(x in Post, windows: [a: partition_by(x.foo), b: partition_by(x.bar)])) ==
+           ~s{from p in Inspect.Post, windows: [a: partition_by([p.foo])], windows: [b: partition_by([p.bar])]}
+
+    assert i(from(x in Post, windows: [a: partition_by(x.foo)], windows: [b: partition_by(x.bar)])) ==
+           ~s{from p in Inspect.Post, windows: [a: partition_by([p.foo])], windows: [b: partition_by([p.bar])]}
+
+    assert i(from(x in Post, windows: [a: partition_by(x.foo, order_by: x.bar)])) ==
+             ~s{from p in Inspect.Post, windows: [a: partition_by([p.foo], order_by: [asc: p.bar])]}
+
+    assert i(from(x in Post, windows: [a: partition_by([x.foo, x.bar], order_by: x.bar)])) ==
+             ~s{from p in Inspect.Post, windows: [a: partition_by([p.foo, p.bar], order_by: [asc: p.bar])]}
+  end
+
+  test "over" do
+    assert i(from(x in Post, select: count(x.x) |> over)) ==
+           ~s{from p in Inspect.Post, select: over(count(p.x))}
+
+    assert i(from(x in Post, select: count(x.x) |> over(partition_by(x.bar)))) ==
+           ~s{from p in Inspect.Post, select: over(count(p.x), partition_by([p.bar]))}
+
+    assert i(from(x in Post, select: count(x.x) |> over(partition_by([x.foo, x.bar], order_by: x.bar)))) ==
+           ~s{from p in Inspect.Post, select: over(count(p.x), partition_by([p.foo, p.bar], order_by: [asc: p.bar]))}
+  end
+
   test "order by" do
     assert i(from(x in Post, order_by: [asc: x.foo, desc: x.bar], order_by: x.foobar)) ==
            ~s{from p in Inspect.Post, order_by: [asc: p.foo, desc: p.bar], order_by: [asc: p.foobar]}
