@@ -1704,15 +1704,15 @@ defmodule Ecto.Schema do
   end
 
   def __timestamps__(:utc_datetime) do
-    DateTime.from_unix!(System.system_time(:seconds), :seconds)
+    DateTime.from_unix!(System.system_time(:second), :second)
   end
 
   def __timestamps__(:utc_datetime_usec) do
-    DateTime.from_unix!(System.system_time(:microseconds), :microseconds)
+    DateTime.from_unix!(System.system_time(:microsecond), :microsecond)
   end
 
   def __timestamps__(type) do
-    type.from_unix!(System.system_time(:microseconds), :microseconds)
+    type.from_unix!(System.system_time(:microsecond), :microsecond)
   end
 
   @doc false
