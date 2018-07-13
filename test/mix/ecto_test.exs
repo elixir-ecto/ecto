@@ -1,5 +1,5 @@
 defmodule Mix.EctoTest do
-  use Ecto.MixTaskCase, async: true
+  use Ecto.MixTaskCase
   import Mix.Ecto
 
   test "parse repo" do

@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Ecto.Gen.MigrationTest do
-  use Ecto.MixTaskCase, async: true
+  use Ecto.MixTaskCase
 
   import Support.FileHelpers
   import Mix.Tasks.Ecto.Gen.Migration, only: [run: 1]

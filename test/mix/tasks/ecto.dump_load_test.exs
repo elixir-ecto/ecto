@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Ecto.DumpLoadTest do
-  use Ecto.MixTaskCase, async: true
+  use Ecto.MixTaskCase
 
   alias Mix.Tasks.Ecto.{Load, Dump}
 

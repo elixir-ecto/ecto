@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.Ecto.CreateDropTest do
-  use Ecto.MixTaskCase, async: true
+  use Ecto.MixTaskCase
 
   alias Mix.Tasks.Ecto.{Create, Drop}
 
