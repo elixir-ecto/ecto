@@ -237,6 +237,13 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   `Ecto.Adapters.SQL.Sandbox.checkout/2` instead of setting a longer timeout
   globally in your config.
 
+  ### Deferred triggers
+
+  Deferred triggers are triggers that are deferred until the transaction
+  terminates. Since the SQL Sandbox runs the whole test inside a transaction
+  and emulates transaction calls with savepoints, deferred triggers do not
+  work with the SQL sandbox.
+
   ### Database locks and deadlocks
 
   Since the sandbox relies on concurrent transactional tests, there is
