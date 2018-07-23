@@ -64,7 +64,7 @@ defmodule Ecto.Repo do
   options `ssl`, `timeout`, `pool_timeout`, `pool_size`:
 
     config :my_app, Repo,
-        url: "ecto://postgres:postgres@localhost/ecto_simple?ssl=true&pool_size=10"
+        url: "ecto://postgres:postgres@localhost/ecto_simple?ssl=true&pool_size=10&timeout=infinity&pool_timeout=infinity"
 
   In case the URL needs to be dynamically configured, for example by
   reading a system environment variable, such can be done via the

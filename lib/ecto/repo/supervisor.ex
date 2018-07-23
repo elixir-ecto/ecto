@@ -124,6 +124,12 @@ defmodule Ecto.Repo.Supervisor do
       {"ssl", "false"}, acc ->
         [{:ssl, false}] ++ acc
 
+      {"pool_timeout", "infinity"}, acc ->
+        [{:pool_timeout, :infinity}] ++ acc
+
+      {"timeout", "infinity"}, acc ->
+        [{:timeout, :infinity}] ++ acc
+
       {key, value}, acc when key in @integer_url_query_params ->
         [{String.to_atom(key), parse_integer!(key, value, url)}] ++ acc
 
