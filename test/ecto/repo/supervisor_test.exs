@@ -120,4 +120,10 @@ defmodule Ecto.Repo.SupervisorTest do
       end
     end
   end
+
+  test "parse_url accepts infinity in timeouts" do
+    url = parse_url("ecto://host:12345/mydb?pool_timeout=infinity&timeout=infinity")
+    assert {:pool_timeout, :infinity} in url
+    assert {:timeout, :infinity} in url
+  end
 end
