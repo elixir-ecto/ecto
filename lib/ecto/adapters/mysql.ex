@@ -30,6 +30,7 @@ defmodule Ecto.Adapters.MySQL do
     * `:port` - Server port (default: 3306)
     * `:username` - Username
     * `:password` - User password
+    * `:protocol` - Protocol used for the mysql client connection (default: tcp)
     * `:ssl` - Set to true if ssl should be used (default: false)
     * `:ssl_opts` - A list of ssl options, see Erlang's `ssl` docs
     * `:parameters` - Keyword list of connection parameters
@@ -333,9 +334,18 @@ defmodule Ecto.Adapters.MySQL do
         []
       end
 
-    host = opts[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
-    port = opts[:port] || System.get_env("MYSQL_TCP_PORT") || "3306"
-    args = ["--user", opts[:username], "--host", host, "--port", to_string(port), "--protocol=tcp"] ++ opt_args
+    host     = opts[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
+    port     = opts[:port] || System.get_env("MYSQL_TCP_PORT") || "3306"
+    protocol = opts[:protocol] || System.get_env("MYSQL_PROTOCOL") || "tcp"
+
+    args =
+      [
+        "--user", opts[:username],
+        "--host", host,
+        "--port", to_string(port),
+        "--protocol", protocol
+      ] ++ opt_args
+
     System.cmd(cmd, args, env: env, stderr_to_stdout: true)
   end
 end
