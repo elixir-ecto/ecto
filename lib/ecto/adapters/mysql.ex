@@ -35,7 +35,7 @@ defmodule Ecto.Adapters.MySQL do
     * `:parameters` - Keyword list of connection parameters
     * `:connect_timeout` - The timeout for establishing new connections (default: 5000)
     * `:socket_options` - Specifies socket configuration
-    * `:protocol` - The protocol used for the mysql client connection (default: tcp).
+    * `:cli_protocol` - The protocol used for the mysql client connection (default: tcp).
       This option is only used for `mix ecto.load` and `mix ecto.dump`,
       via the `mysql` command. For more information, please check
       [MySQL docs](https://dev.mysql.com/doc/en/connecting.html)
@@ -339,7 +339,7 @@ defmodule Ecto.Adapters.MySQL do
 
     host     = opts[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
     port     = opts[:port] || System.get_env("MYSQL_TCP_PORT") || "3306"
-    protocol = opts[:protocol] || System.get_env("MYSQL_PROTOCOL") || "tcp"
+    protocol = opts[:cli_protocol] || System.get_env("MYSQL_CLI_PROTOCOL") || "tcp"
 
     args =
       [
