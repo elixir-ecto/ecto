@@ -35,6 +35,10 @@ defmodule Ecto.Adapters.MySQL do
     * `:parameters` - Keyword list of connection parameters
     * `:connect_timeout` - The timeout for establishing new connections (default: 5000)
     * `:socket_options` - Specifies socket configuration
+    * `:cli_protocol` - The protocol used for the mysql client connection (default: tcp).
+      This option is only used for `mix ecto.load` and `mix ecto.dump`,
+      via the `mysql` command. For more information, please check
+      [MySQL docs](https://dev.mysql.com/doc/en/connecting.html)
 
   The `:socket_options` are particularly useful when configuring the size
   of both send and receive buffers. For example, when Ecto starts with a
@@ -333,9 +337,18 @@ defmodule Ecto.Adapters.MySQL do
         []
       end
 
-    host = opts[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
-    port = opts[:port] || System.get_env("MYSQL_TCP_PORT") || "3306"
-    args = ["--user", opts[:username], "--host", host, "--port", to_string(port), "--protocol=tcp"] ++ opt_args
+    host     = opts[:hostname] || System.get_env("MYSQL_HOST") || "localhost"
+    port     = opts[:port] || System.get_env("MYSQL_TCP_PORT") || "3306"
+    protocol = opts[:cli_protocol] || System.get_env("MYSQL_CLI_PROTOCOL") || "tcp"
+
+    args =
+      [
+        "--user", opts[:username],
+        "--host", host,
+        "--port", to_string(port),
+        "--protocol", protocol
+      ] ++ opt_args
+
     System.cmd(cmd, args, env: env, stderr_to_stdout: true)
   end
 end
