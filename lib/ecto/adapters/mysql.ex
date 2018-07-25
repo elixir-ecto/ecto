@@ -37,6 +37,10 @@ defmodule Ecto.Adapters.MySQL do
     * `:connect_timeout` - The timeout for establishing new connections (default: 5000)
     * `:socket_options` - Specifies socket configuration
 
+  The `:protocol` option is only used for `ecto.load` and `ecto.dump`, via
+  the `mysql` command. For more information please check out the [MySQL
+  documentation](https://dev.mysql.com/doc/en/connecting.html).
+
   The `:socket_options` are particularly useful when configuring the size
   of both send and receive buffers. For example, when Ecto starts with a
   pool of 20 connections, the memory usage may quickly grow from 20MB to
