@@ -30,16 +30,15 @@ defmodule Ecto.Adapters.MySQL do
     * `:port` - Server port (default: 3306)
     * `:username` - Username
     * `:password` - User password
-    * `:protocol` - Protocol used for the mysql client connection (default: tcp)
     * `:ssl` - Set to true if ssl should be used (default: false)
     * `:ssl_opts` - A list of ssl options, see Erlang's `ssl` docs
     * `:parameters` - Keyword list of connection parameters
     * `:connect_timeout` - The timeout for establishing new connections (default: 5000)
     * `:socket_options` - Specifies socket configuration
-
-  The `:protocol` option is only used for `ecto.load` and `ecto.dump`, via
-  the `mysql` command. For more information please check out the [MySQL
-  documentation](https://dev.mysql.com/doc/en/connecting.html).
+    * `:protocol` - The protocol used for the mysql client connection (default: tcp).
+      This option is only used for `mix ecto.load` and `mix ecto.dump`,
+      via the `mysql` command. For more information, please check
+      [MySQL docs](https://dev.mysql.com/doc/en/connecting.html)
 
   The `:socket_options` are particularly useful when configuring the size
   of both send and receive buffers. For example, when Ecto starts with a
