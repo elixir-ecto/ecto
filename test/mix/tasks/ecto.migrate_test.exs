@@ -22,7 +22,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
       end
     end
 
-    def stop(_pid) do
+    def stop do
       :ok
     end
 
@@ -41,7 +41,7 @@ defmodule Mix.Tasks.Ecto.MigrateTest do
       {:error, {:already_started, :whatever}}
     end
 
-    def stop(_) do
+    def stop do
       raise "should not be called"
     end
 

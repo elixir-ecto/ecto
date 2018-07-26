@@ -91,7 +91,7 @@ defmodule Mix.Tasks.Ecto.Migrate do
           migrator.(repo, :up, opts)
         end
 
-      pid && repo.stop(pid)
+      pid && repo.stop()
       restart_apps_if_migrated(apps, migrated)
     end
   end
