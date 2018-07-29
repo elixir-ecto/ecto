@@ -461,6 +461,7 @@ end
 and the following schema:
 
 ```elixir
+# lib/ecto_assoc/tag.ex
 defmodule EctoAssoc.Tag do
   use Ecto.Schema
 
