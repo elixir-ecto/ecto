@@ -1449,6 +1449,13 @@ defmodule Ecto.Schema do
   When defining an inline embed, the `:primary_key` option may be given to
   customize the embed primary key type.
 
+  Options should be passed before the `do` block like this:
+
+      embeds_one :child, Child, on_replace: :delete do
+        field :name, :string
+        field :age,  :integer
+      end
+
   Defining embedded schema in such a way will define a `Parent.Child` module
   with the appropriate struct. In order to properly cast the embedded schema.
   When casting the inline-defined embedded schemas you need to use the `:with`
