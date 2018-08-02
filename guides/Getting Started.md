@@ -108,7 +108,7 @@ We've now configured our application so that it's able to make queries to our da
 
 ## Test Environment Setup
 
-The test environment setup is described [here](testing-with-ecto.html).
+The test environment setup is described [here](TestingWithEcto.md).
 
 ## Setting up the database
 
