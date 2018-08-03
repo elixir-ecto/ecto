@@ -612,7 +612,7 @@ defmodule Ecto.Type do
       _           -> :error
     end
   end
-  def cast(:float, term) when is_integer(term), do: {:ok, term + 0.0}
+  def cast(:float, term) when is_integer(term), do: {:ok, :erlang.float(term)}
 
   def cast(:boolean, term) when term in ~w(true 1),  do: {:ok, true}
   def cast(:boolean, term) when term in ~w(false 0), do: {:ok, false}
