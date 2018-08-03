@@ -682,7 +682,9 @@ deleted, only updated, make sure that:
 ...
 ```
 
-You should carefully read the documentation for [`Ecto.Schema.many_to_many/3`](Ecto.Schema.html#many_to_many/3). It makes sense in this case that we want to delete relationships in the join table `posts_tags` when updating a post with new tags.  Here we want to drop the tag "clickbait" and just keep the tag "misc", so we really do want the relationship in the joining table to be removed.  To do that, change the definition of the `many_to_many/3` in the `Post` schema:
+You should carefully read the documentation for [`Ecto.Schema.many_to_many/3`](Ecto.Schema.html#many_to_many/3).
+
+From a pragmatic point of view, when we update a post with new tags, we most likely *do* intend to remove the old tags from the relationship in the joining table. To do that, change the definition of the `many_to_many/3` in the `Post` schema:
 
 ```elixir
 # lib/ecto_assoc/post.ex
@@ -698,7 +700,7 @@ defmodule EctoAssoc.Post do
 end
 ```
 
-On the other hand, it probably *doesn't* make much sense to be able to remove relationships from the other end.  That is, with just a tag, it is hard to decide if a post should be related to the tag or not.  So it makes sense that we should still raise an error if we try to change posts that are related to tags from the tag side of things.
+From the tags side of things, it makes sense to get an error for removing a relationship between a tag and a post. After all, with just the tag, it is hard to decide which posts should be related.
 
 With the `:on_replace` option changed, Ecto will compare the data you gave with the tags currently in the post and conclude the association between the post and the "clickbait" tag must be removed, as follows:
 
