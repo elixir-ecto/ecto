@@ -376,7 +376,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     [first, new, second, third] = changeset.changes.posts
 
     assert first.data.id == 1
-    assert first.required == [] # Check for not running chgangeset function
+    assert first.required == [] # Check for not running changeset function
     assert first.action == :replace
     assert first.valid?
 

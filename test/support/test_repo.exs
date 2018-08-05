@@ -35,7 +35,7 @@ defmodule Ecto.TestAdapter do
 
   def prepare(operation, query), do: {:nocache, {operation, query}}
 
-  # Migration emutation
+  # Migration emulation
 
   def execute(_, _, {:nocache, {:all, %{from: %{source: {"schema_migrations", _}}}}}, _, _) do
     {length(migrated_versions()), Enum.map(migrated_versions(), &List.wrap/1)}
