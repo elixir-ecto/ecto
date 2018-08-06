@@ -336,7 +336,7 @@ defmodule Ecto.Schema do
     The state of the schema is stored in the `:state` field and allows
     following values:
 
-      * `:built` - the stuct was constructed in memory and is not persisted
+      * `:built` - the struct was constructed in memory and is not persisted
         to database yet;
       * `:loaded` - the struct was loaded from database and represents
         persisted data;
@@ -670,7 +670,7 @@ defmodule Ecto.Schema do
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :comments))
       post.comments #=> [%Comment{...}, ...]
 
-  `has_many` can be used to define hierachical relationships within a single
+  `has_many` can be used to define hierarchical relationships within a single
   schema, for example threaded comments.
 
       defmodule Comment do
@@ -724,7 +724,7 @@ defmodule Ecto.Schema do
   otherwise it is very easy to end-up with large schemas with dozens of
   different associations polluting your schema and affecting your
   application performance. For instance, if you are using associations
-  only for different querying purposes, then it is preferrable to build
+  only for different querying purposes, then it is preferable to build
   and compose queries, rather than defining multiple associations:
 
       posts

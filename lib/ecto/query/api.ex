@@ -341,7 +341,7 @@ defmodule Ecto.Query.API do
   result using the safe fragment/1 API.
 
   Sometimes it is not possible to represent all possible databases queries
-  using Ecto's syntax or fragment/1, expecially when dealing with specific
+  using Ecto's syntax or fragment/1, especially when dealing with specific
   database construct and dynamic fields.
 
   To overcome this, it is possible to build the expression as a binary

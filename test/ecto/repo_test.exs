@@ -512,7 +512,7 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  describe "changest prepare" do
+  describe "changeset prepare" do
     defp prepare_changeset() do
       %MySchema{id: 1}
       |> Ecto.Changeset.cast(%{x: "one"}, [:x])

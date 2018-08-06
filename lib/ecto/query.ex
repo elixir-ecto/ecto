@@ -771,9 +771,9 @@ defmodule Ecto.Query do
 
     * `:on` - a query expression or keyword list to filter the join
     * `:as` - a named binding for the join
-    * `:prefix` - the prefix to be used for the join when issueing a database query
+    * `:prefix` - the prefix to be used for the join when issuing a database query
 
-  In the keyword query sytax, those options must be given immediately
+  In the keyword query syntax, those options must be given immediately
   after the join. In the expression syntax, the options are given as
   the fifth argument.
 

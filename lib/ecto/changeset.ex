@@ -18,7 +18,7 @@ defmodule Ecto.Changeset do
 
   Changesets allow working with both kinds of data:
 
-    * internal to the application - for example programatically generated,
+    * internal to the application - for example programmatically generated,
       or coming from other subsystems. This use case is primarily covered
       by the `change/2` and `put_change/3` functions.
 
@@ -619,7 +619,7 @@ defmodule Ecto.Changeset do
 
   Every time the `MyApp.Address.changeset/2` function is invoked, it must
   return a changeset. This changeset will be applied to your Repo with
-  the propper action accordingly.
+  the proper action accordingly.
 
   Note developers are allowed to explicitly set the `:action` field of a
   changeset to instruct Ecto how to act in certain situations. Let's suppose
