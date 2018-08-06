@@ -18,7 +18,7 @@ defmodule Ecto.Changeset do
 
   Changesets allow working with both kinds of data:
 
-    * internal to the application - for example programatically generated,
+    * internal to the application - for example programmatically generated,
       or coming from other subsystems. This use case is primarily covered
       by the `change/2` and `put_change/3` functions.
 
