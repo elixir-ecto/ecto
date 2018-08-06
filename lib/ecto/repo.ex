@@ -569,7 +569,7 @@ defmodule Ecto.Repo do
       May also be `{:constraint, constraint_name_as_atom}` in databases
       that support the "ON CONSTRAINT" expression or `{:fragment, binary_fragment}`
       for targets that require expressions on columns rather than raw column names,
-      e.g. ON CONFLICT (coalesce(u.firstname, ""), coalesce(u.lastname, ""))
+      e.g. `ON CONFLICT (coalesce(firstname, ""), coalesce(lastname, ""))`.
 
   See the "Shared options" section at the module documentation for
   remaining options.
