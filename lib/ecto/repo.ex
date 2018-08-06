@@ -721,7 +721,7 @@ defmodule Ecto.Repo do
       all fields in the given struct. May be a list of fields, where a
       struct is still returned but only with the given fields. In any case,
       it will include fields with `read_after_writes` set to true.
-      This option is not supported by all databases.
+      Not all databases support this option.
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
       in the struct.
