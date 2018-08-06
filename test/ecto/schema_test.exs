@@ -150,7 +150,7 @@ defmodule Ecto.SchemaTest do
     assert EmbeddedSchema.__schema__(:autogenerate_id) == {:id, :id, :binary_id}
   end
 
-  test "embeded schema does not have metadata" do
+  test "embedded schema does not have metadata" do
     refute match?(%{__meta__: _}, %EmbeddedSchema{})
   end
 
