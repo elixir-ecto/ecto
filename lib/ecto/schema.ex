@@ -724,7 +724,7 @@ defmodule Ecto.Schema do
   otherwise it is very easy to end-up with large schemas with dozens of
   different associations polluting your schema and affecting your
   application performance. For instance, if you are using associations
-  only for different querying purposes, then it is preferrable to build
+  only for different querying purposes, then it is preferable to build
   and compose queries, rather than defining multiple associations:
 
       posts
