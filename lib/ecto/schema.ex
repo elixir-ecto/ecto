@@ -670,7 +670,7 @@ defmodule Ecto.Schema do
       [post] = Repo.all(from(p in Post, where: p.id == 42, preload: :comments))
       post.comments #=> [%Comment{...}, ...]
 
-  `has_many` can be used to define hierachical relationships within a single
+  `has_many` can be used to define hierarchical relationships within a single
   schema, for example threaded comments.
 
       defmodule Comment do
