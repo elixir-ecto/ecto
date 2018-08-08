@@ -43,7 +43,7 @@ defmodule Ecto.Adapters.Postgres do
     * `:port` - Server port (default: 5432)
     * `:username` - Username
     * `:password` - User password
-    * `:maintenance_database` - Default maintenance database name
+    * `:maintenance_database` - Specifies the name of the database to connect to when creating or dropping the database. Defaults to `"postgres"`
     * `:ssl` - Set to true if ssl should be used (default: false)
     * `:ssl_opts` - A list of ssl options, see Erlang's `ssl` docs
     * `:parameters` - Keyword list of connection parameters
