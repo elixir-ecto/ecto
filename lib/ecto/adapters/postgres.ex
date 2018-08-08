@@ -128,7 +128,7 @@ defmodule Ecto.Adapters.Postgres do
     database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
     encoding = opts[:encoding] || "UTF8"
     maintenance_database = Keyword.get(opts, :maintenance_database, @default_maintenance_database)
-    opts     = Keyword.put(opts, :database, maintenance_database)
+    opts = Keyword.put(opts, :database, maintenance_database)
 
     command =
       ~s(CREATE DATABASE "#{database}" ENCODING '#{encoding}')
