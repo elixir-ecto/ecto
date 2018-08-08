@@ -154,7 +154,7 @@ defmodule Ecto.Adapters.Postgres do
     database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
     command  = "DROP DATABASE \"#{database}\""
     maintenance_database = Keyword.get(opts, :maintenance_database, @default_maintenance_database)
-    opts     = Keyword.put(opts, :database, maintenance_database)
+    opts = Keyword.put(opts, :database, maintenance_database)
 
     case run_query(command, opts) do
       {:ok, _} ->
