@@ -185,7 +185,7 @@ defmodule Ecto.Changeset do
 
       changeset =
         {data, types}
-        |> Ecto.Changeset.cast(params["sign_up"], Map.keys(types))
+        |> Ecto.Changeset.cast(data["sign_up"], Map.keys(types))
         |> Ecto.Changeset.validate_required(...)
         |> Ecto.Changeset.validate_length(...)
 
