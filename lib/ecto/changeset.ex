@@ -174,20 +174,54 @@ defmodule Ecto.Changeset do
   ## Schemaless changesets
 
   In the changeset examples so far, we have always used changesets to
-  validate and cast data contained in a struct, such as the `%User{}`
-  struct defined by the `User` module.
-
-  However, changesets can also be used with data in a plain map, by
+  validate and cast data contained in a struct defined by an Ecto Schema, such as the `%User{}`
+  struct defined by the `User` module. 
+  
+  However, changesets can also be used without defining our structs using an Ecto schema:
+  
+      user = %User{}
+      types = %{first_name: :string, last_name: :string, email: :string}
+      changeset =
+        {user, types}
+        |> Ecto.Changeset.cast(params["name"], Map.keys(types))      
+      #   |> Ecto.Changeset.validate_required(...)
+      #   |> Ecto.Changeset.validate_length(...)
+                
+  Where the user struct refers to the definition in the following module. 
+  
+    defmodule User do
+      defstruct [:name, :age]
+    end 
+  
+  Returning the Changeset as a response:
+  
+    #Ecto.Changeset<
+    action: nil,
+    changes: %{name: "Callum"},
+    errors: [],
+    data: #User<>,
+    valid?: true>
+        
+  Elixir structs are just bare maps underneath. Changesets can also be used with data in a plain map, by
   passing a tuple containing both the data and the supported types:
 
-      data  = %{}
-      types = %{first_name: :string, last_name: :string, email: :string}
-
-      changeset =
-        {data, types}
-        |> Ecto.Changeset.cast(params["sign_up"], Map.keys(types))
-        |> Ecto.Changeset.validate_required(...)
-        |> Ecto.Changeset.validate_length(...)
+    data  = %{}
+    types = %{name: :string}
+    params = %{name: "Callum"}
+    changeset =
+      {data, types}
+        |> Ecto.Changeset.cast(params, Map.keys(types))
+    #   |> Ecto.Changeset.validate_required(...)
+    #   |> Ecto.Changeset.validate_length(...)
+        
+  This will produce the following changeset where `params` have been casted to `data` given specified types:
+  
+    Ecto.Changeset<
+    action: nil,
+    changes: %{name: "Callum"},
+    errors: [],
+    data: %{},
+    valid?: true>
 
   Such functionality makes Ecto extremely useful to cast, validate and prune
   data even if it is not meant to be persisted to the database.
