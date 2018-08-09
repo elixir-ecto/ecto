@@ -7,6 +7,8 @@ defmodule Ecto.TypeTest do
     def load(_),   do: {:ok, :load}
     def dump(_),   do: {:ok, :dump}
     def cast(_),   do: {:ok, :cast}
+    def equal?(true, _), do: true
+    def equal?(_, _), do: false
   end
 
   defmodule CustomAny do
@@ -661,5 +663,70 @@ defmodule Ecto.TypeTest do
       assert Ecto.Type.load(:utc_datetime_usec, ~N[2015-01-23 23:50:07.008000]) == {:ok, @datetime_usec}
       assert Ecto.Type.load(:utc_datetime_usec, ~N[2000-02-29 23:50:07]) == {:ok, @datetime_leapyear}
     end
+  end
+
+  describe "equal?/3" do
+    test "primitive" do
+      assert Ecto.Type.equal?(:integer, 1, 1)
+      refute Ecto.Type.equal?(:integer, 1, 2)
+    end
+
+    test "composite primitive" do
+      assert Ecto.Type.equal?({:array, :integer}, [1], [1])
+      refute Ecto.Type.equal?({:array, :integer}, [1], [2])
+      refute Ecto.Type.equal?({:array, :integer}, [1, 1], [1])
+      refute Ecto.Type.equal?({:array, :integer}, [1], [1, 1])
+    end
+
+    test "semantical comparison" do
+      assert Ecto.Type.equal?(:decimal, d(1), d("1.0"))
+      refute Ecto.Type.equal?(:decimal, d(1), d("1.1"))
+
+      assert Ecto.Type.equal?(:time, ~T[09:00:00], ~T[09:00:00.000000])
+      refute Ecto.Type.equal?(:time, ~T[09:00:00], ~T[09:00:00.999999])
+      assert Ecto.Type.equal?(:time_usec, ~T[09:00:00], ~T[09:00:00.000000])
+      refute Ecto.Type.equal?(:time_usec, ~T[09:00:00], ~T[09:00:00.999999])
+
+      assert Ecto.Type.equal?(:naive_datetime, ~N[2018-01-01 09:00:00], ~N[2018-01-01 09:00:00.000000])
+      refute Ecto.Type.equal?(:naive_datetime, ~N[2018-01-01 09:00:00], ~N[2018-01-01 09:00:00.999999])
+      assert Ecto.Type.equal?(:naive_datetime_usec, ~N[2018-01-01 09:00:00], ~N[2018-01-01 09:00:00.000000])
+      refute Ecto.Type.equal?(:naive_datetime_usec, ~N[2018-01-01 09:00:00], ~N[2018-01-01 09:00:00.999999])
+
+      assert Ecto.Type.equal?(:utc_datetime, utc("2018-01-01 09:00:00"), utc("2018-01-01 09:00:00.000000"))
+      refute Ecto.Type.equal?(:utc_datetime, utc("2018-01-01 09:00:00"), utc("2018-01-01 09:00:00.999999"))
+      assert Ecto.Type.equal?(:utc_datetime_usec, utc("2018-01-01 09:00:00"), utc("2018-01-01 09:00:00.000000"))
+      refute Ecto.Type.equal?(:utc_datetime_usec, utc("2018-01-01 09:00:00"), utc("2018-01-01 09:00:00.999999"))
+    end
+
+    test "composite semantical comparison" do
+      assert Ecto.Type.equal?({:array, :decimal}, [d(1)], [d("1.0")])
+      refute Ecto.Type.equal?({:array, :decimal}, [d(1)], [d("1.1")])
+      refute Ecto.Type.equal?({:array, :decimal}, [d(1), d(1)], [d(1)])
+      refute Ecto.Type.equal?({:array, :decimal}, [d(1)], [d(1), d(1)])
+
+      assert Ecto.Type.equal?({:array, {:array, :decimal}}, [[d(1)]], [[d("1.0")]])
+      refute Ecto.Type.equal?({:array, {:array, :decimal}}, [[d(1)]], [[d("1.1")]])
+
+      assert Ecto.Type.equal?({:map, :decimal}, %{x: d(1)}, %{x: d("1.0")})
+    end
+
+    test "custom structural comparison" do
+      uuid = "00000000-0000-0000-0000-000000000000"
+      assert Ecto.Type.equal?(Ecto.UUID, uuid, uuid)
+      refute Ecto.Type.equal?(Ecto.UUID, uuid, "")
+    end
+
+    test "custom semantical comparison" do
+      assert Ecto.Type.equal?(Custom, true, false)
+      refute Ecto.Type.equal?(Custom, false, false)
+    end
+  end
+
+  defp d(decimal), do: Decimal.new(decimal)
+
+  defp utc(string) do
+    string
+    |> NaiveDateTime.from_iso8601!()
+    |> DateTime.from_naive!("Etc/UTC")
   end
 end
