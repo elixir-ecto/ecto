@@ -3,7 +3,7 @@ Code.require_file "../support/types.exs", __DIR__
 defmodule Ecto.Integration.TypeTest do
   use Ecto.Integration.Case, async: Application.get_env(:ecto, :async_integration_tests, true)
 
-  alias Ecto.Integration.{Custom, Item, Order, Post, User, Tag}
+  alias Ecto.Integration.{Custom, Item, Order, Post, User, Tag, Article}
   alias Ecto.Integration.TestRepo
   import Ecto.Query
 
@@ -52,6 +52,19 @@ defmodule Ecto.Integration.TypeTest do
     datetime = DateTime.from_unix!(System.system_time(:seconds), :seconds)
     TestRepo.insert!(%User{inserted_at: datetime})
     assert [^datetime] = TestRepo.all(from u in User, where: u.inserted_at == ^datetime, select: u.inserted_at)
+
+    # usec
+    naive_datetime = ~N[2014-01-16 20:26:51.000000]
+    datetime = DateTime.from_naive!(~N[2014-01-16 20:26:51.000000], "Etc/UTC")
+    TestRepo.insert!(%Article{published_at: naive_datetime, submitted_at: datetime})
+    assert [^naive_datetime] = TestRepo.all(from u in Article, where: u.published_at == ^naive_datetime, select: u.published_at)
+    assert [^datetime] = TestRepo.all(from u in Article, where: u.submitted_at == ^datetime, select: u.submitted_at)
+
+    naive_datetime = ~N[2014-01-16 20:26:51.123000]
+    datetime = DateTime.from_naive!(~N[2014-01-16 20:26:51.123000], "Etc/UTC")
+    TestRepo.insert!(%Article{published_at: naive_datetime, submitted_at: datetime})
+    assert [^naive_datetime] = TestRepo.all(from u in Article, where: u.published_at == ^naive_datetime, select: u.published_at)
+    assert [^datetime] = TestRepo.all(from u in Article, where: u.submitted_at == ^datetime, select: u.submitted_at)
   end
 
   test "aggregate types" do
