@@ -477,8 +477,16 @@ defmodule Ecto.Type do
     naive_datetime |> zerofy_microsecond |> DateTime.from_naive("Etc/UTC")
   end
 
+  def load(:utc_datetime, %DateTime{} = datetime, _loader) do
+    {:ok, zerofy_microsecond(datetime)}
+  end
+
   def load(:utc_datetime_usec, %NaiveDateTime{} = naive_datetime, _loader) do
-     DateTime.from_naive(naive_datetime, "Etc/UTC")
+    DateTime.from_naive(naive_datetime, "Etc/UTC")
+  end
+
+  def load(:utc_datetime_usec, %DateTime{} = datetime, _loader) do
+    {:ok, datetime}
   end
 
   def load(type, value, _loader) do
