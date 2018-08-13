@@ -115,5 +115,25 @@ defmodule Ecto.Integration.Migration do
       add :published_at, :naive_datetime_usec
       add :submitted_at, :utc_datetime_usec
     end
+
+    if Mix.env == :pg do
+      # Simulating a table created externally (not using ecto regular migrations)
+      execute("CREATE SEQUENCE external_entities_id_seq")
+      execute("""
+      CREATE TABLE external_entities(
+        id bigint NOT NULL DEFAULT nextval('external_entities_id_seq'::regclass),
+        timestamp_tz timestamp with time zone,
+        timestamp_tz_usec timestamp with time zone
+      )
+      """)
+      execute("""
+      ALTER TABLE external_entities ADD CONSTRAINT external_entities_pkey PRIMARY KEY (id)
+      """)
+      execute("""
+      INSERT INTO external_entities(timestamp_tz, timestamp_tz_usec) VALUES(
+        '2014-01-16 20:26:51Z', '2014-01-16 20:26:51.322937Z'
+      )
+      """)
+    end
   end
 end
