@@ -58,8 +58,8 @@ defmodule Ecto.MixProject do
       {:inch_ex, ">= 0.0.0", only: :docs},
 
       # Benchmarks
-      {:benchee, "~> 0.11.0"},
-      {:benchee_json, "~> 0.4.0"}
+      {:benchee, "~> 0.11.0", only: :bench},
+      {:benchee_json, "~> 0.4.0", only: :bench}
     ]
   end
 
