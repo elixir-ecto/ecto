@@ -661,14 +661,14 @@ defmodule Ecto.Type do
   end
 
   def cast(:utc_datetime, term) do
-    case cast_utc_datetime(term) do
+    case cast_utc_datetime(:utc_datetime, term) do
       {:ok, utc_datetime} -> {:ok, zerofy_microsecond(utc_datetime)}
       :error -> :error
     end
   end
 
   def cast(:utc_datetime_usec, term) do
-    cast_utc_datetime(term)
+    cast_utc_datetime(:utc_datetime_usec, term)
   end
 
   def cast(type, term) when type in [:id, :integer] and is_binary(term) do
@@ -860,7 +860,13 @@ defmodule Ecto.Type do
 
   ## UTC datetime
 
-  defp cast_utc_datetime(binary) when is_binary(binary) do
+  defp cast_utc_datetime(type, term) do
+    term
+    |> do_cast_utc_datetime()
+    |> maybe_pad_usec(type)
+  end
+
+  defp do_cast_utc_datetime(binary) when is_binary(binary) do
     case DateTime.from_iso8601(binary) do
       {:ok, datetime, _offset} -> {:ok, datetime}
       {:error, :missing_offset} ->
@@ -871,14 +877,14 @@ defmodule Ecto.Type do
       {:error, _} -> :error
     end
   end
-  defp cast_utc_datetime(%DateTime{time_zone: "Etc/UTC"} = datetime), do: {:ok, datetime}
-  defp cast_utc_datetime(%DateTime{} = datetime) do
+  defp do_cast_utc_datetime(%DateTime{time_zone: "Etc/UTC"} = datetime), do: {:ok, datetime}
+  defp do_cast_utc_datetime(%DateTime{} = datetime) do
     case (datetime |> DateTime.to_unix() |> DateTime.from_unix()) do
       {:ok, _} = ok -> ok
       {:error, _} -> :error
     end
   end
-  defp cast_utc_datetime(value) do
+  defp do_cast_utc_datetime(value) do
     case do_cast_naive_datetime(value) do
       {:ok, %NaiveDateTime{} = naive_datetime} ->
         {:ok, DateTime.from_naive!(naive_datetime, "Etc/UTC")}
