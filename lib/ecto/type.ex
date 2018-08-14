@@ -469,9 +469,7 @@ defmodule Ecto.Type do
   end
 
   def load(:utc_datetime_usec, %NaiveDateTime{} = naive_datetime, _loader) do
-    with {:ok, %DateTime{} = datetime} <- DateTime.from_naive(naive_datetime, "Etc/UTC") do
-      {:ok, pad_usec(datetime)}
-    end
+    naive_datetime |> pad_usec() |> DateTime.from_naive("Etc/UTC")
   end
 
   def load(type, value, _loader) do
