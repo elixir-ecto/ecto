@@ -337,7 +337,7 @@ defmodule Ecto.Type do
   end
 
   def dump(:time, %Time{microsecond: {0, 0}} = time, _dumper) do
-    {:ok, normalize_time(time, :sec)}
+    {:ok, time}
   end
 
   def dump(:time_usec, %Time{microsecond: {_, 6}} = time, _dumper) do
@@ -345,7 +345,7 @@ defmodule Ecto.Type do
   end
 
   def dump(:naive_datetime, %NaiveDateTime{microsecond: {0, 0}} = naive_datetime, _dumper) do
-    {:ok, normalize_time(naive_datetime, :sec)}
+    {:ok, naive_datetime}
   end
 
   def dump(:naive_datetime_usec, %NaiveDateTime{microsecond: {_, 6}} = naive_datetime, _dumper) do
@@ -357,7 +357,7 @@ defmodule Ecto.Type do
       message = ":utc_datetime expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
       raise ArgumentError, message
     end
-    {:ok, datetime |> DateTime.to_naive() |> normalize_time(:sec)}
+    {:ok, DateTime.to_naive(datetime)}
   end
 
   def dump(:utc_datetime_usec, %DateTime{time_zone: time_zone, microsecond: {_, 6}} = datetime, _dumper) do
@@ -449,28 +449,28 @@ defmodule Ecto.Type do
   end
 
   def load(:time, %Time{} = time, _loader) do
-    {:ok, normalize_time(time, :sec)}
+    {:ok, truncate_usec(time)}
   end
 
   def load(:time_usec, %Time{} = time, _loader) do
-    {:ok, normalize_time(time, :usec)}
+    {:ok, pad_usec(time)}
   end
 
   def load(:naive_datetime, %NaiveDateTime{} = naive_datetime, _loader) do
-    {:ok, normalize_time(naive_datetime, :sec)}
+    {:ok, truncate_usec(naive_datetime)}
   end
 
   def load(:naive_datetime_usec, %NaiveDateTime{} = naive_datetime, _loader) do
-    {:ok, normalize_time(naive_datetime, :usec)}
+    {:ok, pad_usec(naive_datetime)}
   end
 
   def load(:utc_datetime, %NaiveDateTime{} = naive_datetime, _loader) do
-    naive_datetime |> normalize_time(:sec) |> DateTime.from_naive("Etc/UTC")
+    naive_datetime |> truncate_usec() |> DateTime.from_naive("Etc/UTC")
   end
 
   def load(:utc_datetime_usec, %NaiveDateTime{} = naive_datetime, _loader) do
     with {:ok, %DateTime{} = datetime} <- DateTime.from_naive(naive_datetime, "Etc/UTC") do
-      {:ok, normalize_time(datetime, :usec)}
+      {:ok, pad_usec(datetime)}
     end
   end
 
@@ -640,42 +640,42 @@ defmodule Ecto.Type do
 
   def cast(:time, term) do
     case cast_time(term) do
-      {:ok, time} -> {:ok, normalize_time(time, :sec)}
+      {:ok, time} -> {:ok, truncate_usec(time)}
       :error -> :error
     end
   end
 
   def cast(:time_usec, term) do
     case cast_time(term) do
-      {:ok, time} -> {:ok, normalize_time(time, :usec)}
+      {:ok, time} -> {:ok, pad_usec(time)}
       :error -> :error
     end
   end
 
   def cast(:naive_datetime, term) do
     case cast_naive_datetime(term) do
-      {:ok, naive_datetime} -> {:ok, normalize_time(naive_datetime, :sec)}
+      {:ok, naive_datetime} -> {:ok, truncate_usec(naive_datetime)}
       :error -> :error
     end
   end
 
   def cast(:naive_datetime_usec, term) do
     case cast_naive_datetime(term) do
-      {:ok, naive_datetime} -> {:ok, normalize_time(naive_datetime, :usec)}
+      {:ok, naive_datetime} -> {:ok, pad_usec(naive_datetime)}
       :error -> :error
     end
   end
 
   def cast(:utc_datetime, term) do
     case cast_utc_datetime(term) do
-      {:ok, utc_datetime} -> {:ok, normalize_time(utc_datetime, :sec)}
+      {:ok, utc_datetime} -> {:ok, truncate_usec(utc_datetime)}
       :error -> :error
     end
   end
 
   def cast(:utc_datetime_usec, term) do
     case cast_utc_datetime(term) do
-      {:ok, utc_datetime} -> {:ok, normalize_time(utc_datetime, :usec)}
+      {:ok, utc_datetime} -> {:ok, pad_usec(utc_datetime)}
       :error -> :error
     end
   end
@@ -941,10 +941,9 @@ defmodule Ecto.Type do
   defp validate_decimal(other),
     do: other
 
-  defp normalize_time(nil, _),
-    do: nil
-  defp normalize_time(struct, :sec),
-    do: %{struct | microsecond: {0, 0}}
-  defp normalize_time(%{microsecond: {microsecond, _}} = struct, :usec),
-    do: %{struct | microsecond: {microsecond, 6}}
+  defp truncate_usec(nil), do: nil
+  defp truncate_usec(struct), do: %{struct | microsecond: {0, 0}}
+
+  defp pad_usec(nil), do: nil
+  defp pad_usec(%{microsecond: {microsecond, _}} = struct), do: %{struct | microsecond: {microsecond, 6}}
 end
