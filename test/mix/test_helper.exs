@@ -1,6 +1,5 @@
 # For tasks/generators testing
 Mix.start()
-Mix.shell(Mix.Shell.Process)
 System.put_env("ECTO_EDITOR", "")
 Logger.configure(level: :info)
 

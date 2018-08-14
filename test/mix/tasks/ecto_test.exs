@@ -1,5 +1,5 @@
 defmodule Mix.Tasks.EctoTest do
-  use ExUnit.Case
+  use Ecto.MixTaskCase
 
   test "provide a list of available ecto mix tasks" do
     Mix.Tasks.Ecto.run []
