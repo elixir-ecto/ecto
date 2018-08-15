@@ -1049,8 +1049,10 @@ defmodule Ecto.Type do
     do: other
 
   defp truncate_usec(nil), do: nil
+  defp truncate_usec(%{microsecond: {0, 0}} = struct), do: struct
   defp truncate_usec(struct), do: %{struct | microsecond: {0, 0}}
 
   defp pad_usec(nil), do: nil
+  defp pad_usec(%{microsecond: {_, 6}} = struct), do: struct
   defp pad_usec(%{microsecond: {microsecond, _}} = struct), do: %{struct | microsecond: {microsecond, 6}}
 end
