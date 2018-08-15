@@ -666,13 +666,12 @@ defmodule Ecto.TypeTest do
     end
 
     test "load :utc_datetime_usec" do
+      assert Ecto.Type.load(:utc_datetime_usec, @datetime_usec) == {:ok, @datetime_usec}
       assert Ecto.Type.load(:utc_datetime_usec, ~N[2015-01-23 23:50:07.008000]) == {:ok, @datetime_usec}
       assert Ecto.Type.load(:utc_datetime_usec, ~N[2000-02-29 23:50:07.008000]) == {:ok, @datetime_leapyear_usec}
-      assert Ecto.Type.load(:utc_datetime_usec, ~N[2000-02-29 23:50:07]) == {:ok, @datetime_leapyear}
-      assert Ecto.Type.load(:utc_datetime_usec, @datetime) == {:ok, @datetime}
-      assert Ecto.Type.load(:utc_datetime_usec, @datetime_zero) == {:ok, @datetime_zero}
-      assert Ecto.Type.load(:utc_datetime_usec, @datetime_usec) == {:ok, @datetime_usec}
-      assert Ecto.Type.load(:utc_datetime_usec, @datetime_leapyear) == {:ok, @datetime_leapyear}
+      assert Ecto.Type.load(:utc_datetime_usec, @datetime_leapyear_usec) == {:ok, @datetime_leapyear_usec}
+      assert Ecto.Type.load(:utc_datetime_usec, @datetime_zero) == {:ok, @datetime_zero_usec}
+      assert Ecto.Type.load(:utc_datetime_usec, ~D[2018-01-01]) == :error
     end
   end
 
