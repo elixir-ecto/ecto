@@ -3,16 +3,18 @@ Code.require_file "../support/types.exs", __DIR__
 defmodule Ecto.Integration.TypeTest do
   use Ecto.Integration.Case, async: Application.get_env(:ecto, :async_integration_tests, true)
 
-  alias Ecto.Integration.{Custom, Item, Order, Post, User, Tag}
+  alias Ecto.Integration.{Custom, ExternalEntity, Item, Order, Post, User, Tag}
   alias Ecto.Integration.TestRepo
   import Ecto.Query
 
   test "primitive types" do
-    integer  = 1
-    float    = 0.1
-    text     = <<0, 1>>
-    uuid     = "00010203-0405-4607-8809-0a0b0c0d0e0f"
-    datetime = ~N[2014-01-16 20:26:51]
+    integer           = 1
+    float             = 0.1
+    text              = <<0, 1>>
+    uuid              = "00010203-0405-4607-8809-0a0b0c0d0e0f"
+    datetime          = ~N[2014-01-16 20:26:51]
+    utc_datetime      = DateTime.from_naive!(datetime, "Etc/UTC")
+    utc_datetime_usec = %{utc_datetime | microsecond: {322937, 6}}
 
     TestRepo.insert!(%Post{text: text, public: true, visits: integer, uuid: uuid,
                            counter: integer, inserted_at: datetime, intensity: float})
@@ -52,6 +54,12 @@ defmodule Ecto.Integration.TypeTest do
     datetime = DateTime.from_unix!(System.system_time(:second), :second)
     TestRepo.insert!(%User{inserted_at: datetime})
     assert [^datetime] = TestRepo.all(from u in User, where: u.inserted_at == ^datetime, select: u.inserted_at)
+
+    if Mix.env == :pg do
+      # Datetime from timestamp with time zone
+      assert [[^utc_datetime, ^utc_datetime_usec]] =
+        TestRepo.all(from e in ExternalEntity, select: [e.timestamp_tz, e.timestamp_tz_usec])
+    end
   end
 
   test "aggregate types" do

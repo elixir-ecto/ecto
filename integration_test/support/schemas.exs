@@ -297,3 +297,22 @@ defmodule Ecto.Integration.Article do
     field :submitted_at, :utc_datetime_usec
   end
 end
+
+defmodule Ecto.Integration.ExternalEntity do
+  @moduledoc """
+  This module is used to test:
+
+    * Loading of entities created outside of Ecto into Ecto Schema
+
+  """
+  use Ecto.Integration.Schema
+
+  schema "external_entities" do
+    field :timestamp_tz, :utc_datetime
+    field :timestamp_tz_usec, :utc_datetime_usec
+  end
+
+  def changeset(schema, params) do
+    Ecto.Changeset.cast(schema, params, [:timestamp_tz, :timestamp_tz_usec])
+  end
+end
