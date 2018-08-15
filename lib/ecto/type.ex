@@ -918,9 +918,8 @@ defmodule Ecto.Type do
     do: requires_semantic_comparison?(type)
   defp requires_semantic_comparison?({:map, type}),
     do: requires_semantic_comparison?(type)
-  defp requires_semantic_comparison?(module) when is_atom(module) do
-    function_exported?(module, :equal?, 2)
-  end
+  defp requires_semantic_comparison?(module) when is_atom(module),
+    do: loaded_and_exported?(module, :equal?, 2)
 
   defp do_equal?(:decimal, %Decimal{} = term1, %Decimal{} = term2) do
     Decimal.equal?(term1, term2)
@@ -1023,6 +1022,11 @@ defmodule Ecto.Type do
       {int, ""} -> int
       _ -> nil
     end
+  end
+
+  defp loaded_and_exported?(module, fun, arity) do
+    # TODO: Rely only on Code.ensure_loaded? when targetting Erlang/OTP 21+
+    (:erlang.module_loaded(module) or Code.ensure_loaded?(module)) and function_exported?(module, fun, arity)
   end
 
   defp validate_decimal({:ok, %Decimal{coef: coef}}) when coef in [:inf, :qNaN, :sNaN],
