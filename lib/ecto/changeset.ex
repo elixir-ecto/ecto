@@ -176,10 +176,10 @@ defmodule Ecto.Changeset do
   In the changeset examples so far, we have always used changesets to validate
   and cast data contained in a struct defined by an Ecto schema, such as the `%User{}`
   struct defined by the `User` module.
-  
+
   However, changesets can also be used with "regular" structs too by passing a tuple
   with the data and its types:
-  
+
       user = %User{}
       types = %{first_name: :string, last_name: :string, email: :string}
       changeset =
@@ -187,13 +187,13 @@ defmodule Ecto.Changeset do
         |> Ecto.Changeset.cast(params["name"], Map.keys(types))      
         |> Ecto.Changeset.validate_required(...)
         |> Ecto.Changeset.validate_length(...)
-                
+
   where the user struct refers to the definition in the following module:
-  
+
       defmodule User do
         defstruct [:name, :age]
       end 
-        
+
   Changesets can also be used with data in a plain map, by following the same API:
 
       data  = %{}
@@ -204,7 +204,7 @@ defmodule Ecto.Changeset do
         |> Ecto.Changeset.cast(params, Map.keys(types))
         |> Ecto.Changeset.validate_required(...)
         |> Ecto.Changeset.validate_length(...)
-        
+
   Such functionality makes Ecto extremely useful to cast, validate and prune data even
   if it is not meant to be persisted to the database.
 
