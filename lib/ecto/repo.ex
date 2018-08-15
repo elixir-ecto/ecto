@@ -566,10 +566,10 @@ defmodule Ecto.Repo do
     * `:conflict_target` - Which columns to verify for conflicts. If
       none is specified, the conflict target is left up to the database
       and is usually made of primary keys and/or unique/exclusion constraints.
-      May also be `{:constraint, constraint_name_as_atom}` in databases
-      that support the "ON CONSTRAINT" expression or `{:unsafe_fragment, binary_fragment}`
-      for targets that require expressions on columns rather than raw column names,
-      e.g. `ON CONFLICT (coalesce(firstname, ""), coalesce(lastname, ""))`.
+      It may also be `{:constraint, constraint_name_as_atom}` in databases
+      that support the "ON CONSTRAINT" expression, or `{:unsafe_fragment, binary_fragment}`
+      to pass any expression to the database without any sanitization, such as
+      `ON CONFLICT (coalesce(firstname, ""), coalesce(lastname, ""))`.
 
   See the "Shared options" section at the module documentation for
   remaining options.
