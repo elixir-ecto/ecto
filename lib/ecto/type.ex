@@ -345,31 +345,31 @@ defmodule Ecto.Type do
     {:ok, Decimal.from_float(term)}
   end
 
-  def dump(:time, %Time{} = time, _dumper) do
-    {:ok, zerofy_microsecond(time)}
-  end
-
-  def dump(:time_usec, %Time{} = time, _dumper) do
+  def dump(:time, %Time{microsecond: {0, 0}} = time, _dumper) do
     {:ok, time}
   end
 
-  def dump(:naive_datetime, %NaiveDateTime{} = naive_datetime, _dumper) do
-    {:ok, zerofy_microsecond(naive_datetime)}
+  def dump(:time_usec, %Time{microsecond: {_, 6}} = time, _dumper) do
+    {:ok, time}
   end
 
-  def dump(:naive_datetime_usec, %NaiveDateTime{} = naive_datetime, _dumper) do
+  def dump(:naive_datetime, %NaiveDateTime{microsecond: {0, 0}} = naive_datetime, _dumper) do
     {:ok, naive_datetime}
   end
 
-  def dump(:utc_datetime, %DateTime{time_zone: time_zone} = datetime, _dumper) do
+  def dump(:naive_datetime_usec, %NaiveDateTime{microsecond: {_, 6}} = naive_datetime, _dumper) do
+    {:ok, naive_datetime}
+  end
+
+  def dump(:utc_datetime, %DateTime{time_zone: time_zone, microsecond: {0, 0}} = datetime, _dumper) do
     if time_zone != "Etc/UTC" do
       message = ":utc_datetime expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
       raise ArgumentError, message
     end
-    {:ok, datetime |> DateTime.to_naive() |> zerofy_microsecond()}
+    {:ok, DateTime.to_naive(datetime)}
   end
 
-  def dump(:utc_datetime_usec, %DateTime{time_zone: time_zone} = datetime, _dumper) do
+  def dump(:utc_datetime_usec, %DateTime{time_zone: time_zone, microsecond: {_, 6}} = datetime, _dumper) do
     if time_zone != "Etc/UTC" do
       message = ":utc_datetime_usec expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
       raise ArgumentError, message
@@ -458,35 +458,35 @@ defmodule Ecto.Type do
   end
 
   def load(:time, %Time{} = time, _loader) do
-    {:ok, zerofy_microsecond(time)}
+    {:ok, truncate_usec(time)}
   end
 
   def load(:time_usec, %Time{} = time, _loader) do
-    {:ok, time}
+    {:ok, pad_usec(time)}
   end
 
   def load(:naive_datetime, %NaiveDateTime{} = naive_datetime, _loader) do
-    {:ok, zerofy_microsecond(naive_datetime)}
+    {:ok, truncate_usec(naive_datetime)}
   end
 
   def load(:naive_datetime_usec, %NaiveDateTime{} = naive_datetime, _loader) do
-    {:ok, naive_datetime}
+    {:ok, pad_usec(naive_datetime)}
   end
 
   def load(:utc_datetime, %NaiveDateTime{} = naive_datetime, _loader) do
-    naive_datetime |> zerofy_microsecond |> DateTime.from_naive("Etc/UTC")
+    naive_datetime |> truncate_usec() |> DateTime.from_naive("Etc/UTC")
   end
 
   def load(:utc_datetime, %DateTime{} = datetime, _loader) do
-    {:ok, zerofy_microsecond(datetime)}
+    {:ok, truncate_usec(datetime)}
   end
 
   def load(:utc_datetime_usec, %NaiveDateTime{} = naive_datetime, _loader) do
-    DateTime.from_naive(naive_datetime, "Etc/UTC")
+    naive_datetime |> pad_usec() |> DateTime.from_naive("Etc/UTC")
   end
 
   def load(:utc_datetime_usec, %DateTime{} = datetime, _loader) do
-    {:ok, datetime}
+    {:ok, pad_usec(datetime)}
   end
 
   def load(type, value, _loader) do
@@ -655,35 +655,44 @@ defmodule Ecto.Type do
 
   def cast(:time, term) do
     case cast_time(term) do
-      {:ok, time} -> {:ok, zerofy_microsecond(time)}
+      {:ok, time} -> {:ok, truncate_usec(time)}
       :error -> :error
     end
   end
 
   def cast(:time_usec, term) do
-    cast_time(term)
+    case cast_time(term) do
+      {:ok, time} -> {:ok, pad_usec(time)}
+      :error -> :error
+    end
   end
 
   def cast(:naive_datetime, term) do
     case cast_naive_datetime(term) do
-      {:ok, naive_datetime} -> {:ok, zerofy_microsecond(naive_datetime)}
+      {:ok, naive_datetime} -> {:ok, truncate_usec(naive_datetime)}
       :error -> :error
     end
   end
 
   def cast(:naive_datetime_usec, term) do
-    cast_naive_datetime(term)
+    case cast_naive_datetime(term) do
+      {:ok, naive_datetime} -> {:ok, pad_usec(naive_datetime)}
+      :error -> :error
+    end
   end
 
   def cast(:utc_datetime, term) do
     case cast_utc_datetime(term) do
-      {:ok, utc_datetime} -> {:ok, zerofy_microsecond(utc_datetime)}
+      {:ok, utc_datetime} -> {:ok, truncate_usec(utc_datetime)}
       :error -> :error
     end
   end
 
   def cast(:utc_datetime_usec, term) do
-    cast_utc_datetime(term)
+    case cast_utc_datetime(term) do
+      {:ok, utc_datetime} -> {:ok, pad_usec(utc_datetime)}
+      :error -> :error
+    end
   end
 
   def cast(type, term) when type in [:id, :integer] and is_binary(term) do
@@ -1020,9 +1029,6 @@ defmodule Ecto.Type do
     :error
   end
 
-  defp zerofy_microsecond(nil), do: nil
-  defp zerofy_microsecond(map), do: %{map | microsecond: {0, 0}}
-
   defp to_i(nil), do: nil
   defp to_i(int) when is_integer(int), do: int
   defp to_i(bin) when is_binary(bin) do
@@ -1041,4 +1047,12 @@ defmodule Ecto.Type do
     do: :error
   defp validate_decimal(other),
     do: other
+
+  defp truncate_usec(nil), do: nil
+  defp truncate_usec(%{microsecond: {0, 0}} = struct), do: struct
+  defp truncate_usec(struct), do: %{struct | microsecond: {0, 0}}
+
+  defp pad_usec(nil), do: nil
+  defp pad_usec(%{microsecond: {_, 6}} = struct), do: struct
+  defp pad_usec(%{microsecond: {microsecond, _}} = struct), do: %{struct | microsecond: {microsecond, 6}}
 end
