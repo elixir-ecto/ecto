@@ -287,6 +287,19 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
+  test "cast/4: semantic comparison" do
+    changeset = cast(%Post{decimal: Decimal.new(1)}, %{decimal: "1.0"}, ~w(decimal)a)
+    assert changeset.changes == %{}
+    changeset = cast(%Post{decimal: Decimal.new(1)}, %{decimal: "1.1"}, ~w(decimal)a)
+    assert changeset.changes == %{decimal: Decimal.new("1.1")}
+
+    {data, types} = {%{x: [Decimal.new(1)]}, %{x: {:array, :decimal}}}
+    changeset = cast({data, types}, %{x: [Decimal.new("1.0")]}, ~w(x)a)
+    assert changeset.changes == %{}
+    changeset = cast({data, types}, %{x: [Decimal.new("1.1")]}, ~w(x)a)
+    assert changeset.changes == %{x: [Decimal.new("1.1")]}
+  end
+
   ## Changeset functions
 
   test "merge/2: merges changes" do
@@ -475,6 +488,12 @@ defmodule Ecto.ChangesetTest do
 
     changeset = change(base_changeset, %{title: "new title", upvotes: 5})
     assert changeset.changes == %{title: "new title"}
+  end
+
+  test "change/2 semantic comparison" do
+    post = %Post{decimal: Decimal.new("1.0")}
+    changeset = change(post, decimal: Decimal.new(1))
+    assert changeset.changes == %{}
   end
 
   test "fetch_field/2" do

@@ -546,13 +546,17 @@ defmodule Ecto.Changeset do
       %{^param_key => value} ->
         value = if value in empty_values, do: Map.get(defaults, key), else: value
         case Ecto.Type.cast(type, value) do
-          {:ok, ^current} ->
-            :missing
           {:ok, value} ->
-            {:ok, value, valid?}
+            if Ecto.Type.equal?(type, current, value) do
+              :missing
+            else
+              {:ok, value, valid?}
+            end
+
           :error ->
             :invalid
         end
+
       _ ->
         :missing
     end
@@ -1120,12 +1124,14 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp put_change(data, changes, errors, valid?, key, value, _type) do
+  defp put_change(data, changes, errors, valid?, key, value, type) do
     cond do
-      Map.get(data, key) != value ->
+      not Ecto.Type.equal?(type, Map.get(data, key), value) ->
         {Map.put(changes, key, value), errors, valid?}
+
       Map.has_key?(changes, key) ->
         {Map.delete(changes, key), errors, valid?}
+
       true ->
         {changes, errors, valid?}
     end
