@@ -567,7 +567,7 @@ defmodule Ecto.Repo do
       none is specified, the conflict target is left up to the database
       and is usually made of primary keys and/or unique/exclusion constraints.
       May also be `{:constraint, constraint_name_as_atom}` in databases
-      that support the "ON CONSTRAINT" expression or `{:fragment, binary_fragment}`
+      that support the "ON CONSTRAINT" expression or `{:unsafe_fragment, binary_fragment}`
       for targets that require expressions on columns rather than raw column names,
       e.g. `ON CONFLICT (coalesce(firstname, ""), coalesce(lastname, ""))`.
 

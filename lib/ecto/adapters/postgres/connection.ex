@@ -187,7 +187,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp conflict_target({:constraint, constraint}),
       do: ["ON CONSTRAINT ", quote_name(constraint), ?\s]
-    defp conflict_target({:fragment, fragment}), 
+    defp conflict_target({:unsafe_fragment, fragment}), 
       do: [fragment, ?\s]
     defp conflict_target([]),
       do: []

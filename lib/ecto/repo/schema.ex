@@ -482,8 +482,8 @@ defmodule Ecto.Repo.Schema do
   defp conflict_target({:constraint, constraint}, _dumper) when is_atom(constraint) do
     {:constraint, constraint}
   end
-  defp conflict_target({:fragment, fragment}, _dumper) when is_binary(fragment) do
-    {:fragment, fragment}
+  defp conflict_target({:unsafe_fragment, fragment}, _dumper) when is_binary(fragment) do
+    {:unsafe_fragment, fragment}
   end
   defp conflict_target(conflict_target, dumper) do
     for target <- List.wrap(conflict_target) do
