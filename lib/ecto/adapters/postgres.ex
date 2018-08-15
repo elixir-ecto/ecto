@@ -1,4 +1,6 @@
 defmodule Ecto.Adapters.Postgres do
+  @default_maintenance_database "postgres"
+
   @moduledoc """
   Adapter module for PostgreSQL.
 
@@ -18,7 +20,7 @@ defmodule Ecto.Adapters.Postgres do
   Postgres options split in different categories described
   below. All options can be given via the repository
   configuration:
-  
+
       config :your_app, YourApp.Repo,
         ...
 
@@ -41,6 +43,8 @@ defmodule Ecto.Adapters.Postgres do
     * `:port` - Server port (default: 5432)
     * `:username` - Username
     * `:password` - User password
+    * `:maintenance_database` - Specifies the name of the database to connect to when
+      creating or dropping the database. Defaults to `"postgres"`
     * `:ssl` - Set to true if ssl should be used (default: false)
     * `:ssl_opts` - A list of ssl options, see Erlang's `ssl` docs
     * `:parameters` - Keyword list of connection parameters
@@ -124,7 +128,8 @@ defmodule Ecto.Adapters.Postgres do
   def storage_up(opts) do
     database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
     encoding = opts[:encoding] || "UTF8"
-    opts     = Keyword.put(opts, :database, "postgres")
+    maintenance_database = Keyword.get(opts, :maintenance_database, @default_maintenance_database)
+    opts = Keyword.put(opts, :database, maintenance_database)
 
     command =
       ~s(CREATE DATABASE "#{database}" ENCODING '#{encoding}')
@@ -149,7 +154,8 @@ defmodule Ecto.Adapters.Postgres do
   def storage_down(opts) do
     database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
     command  = "DROP DATABASE \"#{database}\""
-    opts     = Keyword.put(opts, :database, "postgres")
+    maintenance_database = Keyword.get(opts, :maintenance_database, @default_maintenance_database)
+    opts = Keyword.put(opts, :database, maintenance_database)
 
     case run_query(command, opts) do
       {:ok, _} ->
