@@ -94,14 +94,12 @@ defmodule Ecto.Type do
                       :utc_datetime_usec | :naive_datetime_usec | :time_usec
   @typep composite :: {:array, t} | {:map, t} | {:embed, Ecto.Embedded.t} | {:in, t}
 
-  @calendar ~w(
-    utc_datetime naive_datetime date time
-    utc_datetime_usec naive_datetime_usec time_usec
-  )a
   @base ~w(
     integer float boolean string map
     binary decimal id binary_id any
-  )a ++ @calendar
+    utc_datetime naive_datetime date time
+    utc_datetime_usec naive_datetime_usec time_usec
+  )a
   @composite ~w(array map in embed)a
 
   @doc """
@@ -916,75 +914,78 @@ defmodule Ecto.Type do
   """
   @spec equal?(t, term, term) :: boolean
   def equal?(type, term1, term2) do
-    if requires_semantic_comparison?(type) do
-      do_equal?(type, term1, term2)
+    if fun = equal_fun(type) do
+      fun.(term1, term2)
     else
       term1 == term2
     end
   end
 
-  defp requires_semantic_comparison?(:decimal),
-    do: true
-  defp requires_semantic_comparison?(:date),
-    do: false
-  defp requires_semantic_comparison?(type) when type in @calendar,
-    do: true
-  defp requires_semantic_comparison?(type) when type in @base,
-    do: false
-  defp requires_semantic_comparison?({:array, type}),
-    do: requires_semantic_comparison?(type)
-  defp requires_semantic_comparison?({:map, type}),
-    do: requires_semantic_comparison?(type)
-  defp requires_semantic_comparison?(module) when is_atom(module),
-    do: loaded_and_exported?(module, :equal?, 2)
+  defp equal_fun(:decimal), do: &equal_decimal?/2
+  defp equal_fun(t) when t in [:time, :time_usec], do: &equal_time?/2
+  defp equal_fun(t) when t in [:utc_datetime, :utc_datetime_usec], do: &equal_utc_datetime?/2
+  defp equal_fun(t) when t in [:naive_datetime, :naive_datetime_usec], do: &equal_naive_datetime?/2
+  defp equal_fun(t) when t in @base, do: nil
 
-  defp do_equal?(:decimal, %Decimal{} = term1, %Decimal{} = term2) do
-    Decimal.equal?(term1, term2)
-  end
-  defp do_equal?(type, %Time{} = term1, %Time{} = term2) when type in [:time, :time_usec] do
-    Time.compare(term1, term2) == :eq
-  end
-  defp do_equal?(type, %NaiveDateTime{} = term1, %NaiveDateTime{} = term2)
-       when type in [:naive_datetime, :naive_datetime_usec] do
-    NaiveDateTime.compare(term1, term2) == :eq
-  end
-  defp do_equal?(type, %DateTime{} = term1, %DateTime{} = term2)
-       when type in [:utc_datetime, :utc_datetime_usec] do
-    DateTime.compare(term1, term2) == :eq
-  end
-  defp do_equal?(type, term1, term2) when type in @base do
-    term1 == term2
-  end
-  defp do_equal?(module, term1, term2) when is_atom(module) do
-    module.equal?(term1, term2)
-  end
-  defp do_equal?({:array, type}, xs, ys) do
-    equal_list?(type, xs, ys)
-  end
-  defp do_equal?({:map, _}, map1, map2) when map_size(map1) != map_size(map2) do
-    false
-  end
-  defp do_equal?({:map, type}, map1, map2) do
-    equal_map?(type, Map.to_list(map1), Map.to_list(map2))
+  defp equal_fun({:array, type}) do
+    if fun = equal_fun(type) do
+      &equal_list?(fun, &1, &2)
+    end
   end
 
-  defp equal_list?(type, [x | xs], [y | ys]) do
-    do_equal?(type, x, y) and equal_list?(type, xs, ys)
+  defp equal_fun({:map, type}) do
+    if fun = equal_fun(type) do
+      &equal_map?(fun, &1, &2)
+    end
   end
-  defp equal_list?(_type, [], []) do
-    true
+
+  defp equal_fun(mod) when is_atom(mod) do
+    if loaded_and_exported?(mod, :equal?, 2) do
+      &mod.equal?/2
+    end
   end
-  defp equal_list?(_type, _, _) do
+
+  defp equal_decimal?(%Decimal{} = a, %Decimal{} = b), do: Decimal.equal?(a, b)
+  defp equal_decimal?(_, _), do: false
+
+  defp equal_time?(%Time{} = a, %Time{} = b), do: Time.compare(a, b) == :eq
+  defp equal_time?(_, _), do: false
+
+  defp equal_utc_datetime?(%DateTime{} = a, %DateTime{} = b), do: DateTime.compare(a, b) == :eq
+  defp equal_utc_datetime?(_, _), do: false
+
+  defp equal_naive_datetime?(%NaiveDateTime{} = a, %NaiveDateTime{} = b),
+    do: NaiveDateTime.compare(a, b) == :eq
+  defp equal_naive_datetime?(_, _),
+    do: false
+
+  defp equal_list?(fun, [x | xs], [y | ys]), do: fun.(x, y) and equal_list?(fun, xs, ys)
+  defp equal_list?(_fun, [], []), do: true
+  defp equal_list?(_fun, _, _), do: false
+
+  defp equal_map?(_fun, map1, map2) when map_size(map1) != map_size(map2) do
     false
   end
 
-  defp equal_map?(type, [{key, val1} | tail1], [{key, val2} | tail2]) do
-    do_equal?(type, val1, val2) and equal_map?(type, tail1, tail2)
+  defp equal_map?(fun, %{} = map1, %{} = map2) do
+    equal_map?(fun, Map.to_list(map1), map2)
   end
-  defp equal_map?(_type, [], []) do
+
+  defp equal_map?(fun, [{key, val} | tail], other_map) do
+    case Map.fetch(other_map, key) do
+      {:ok, other_val} ->
+        fun.(val, other_val) and equal_map?(fun, tail, other_map)
+
+      :error ->
+        false
+    end
+  end
+
+  defp equal_map?(_fun, [], _) do
     true
   end
-  defp equal_map?(_type, _, _) do
+
+  defp equal_map?(_fun, _, _) do
     false
   end
 
@@ -1040,7 +1041,8 @@ defmodule Ecto.Type do
 
   defp loaded_and_exported?(module, fun, arity) do
     # TODO: Rely only on Code.ensure_loaded? when targetting Erlang/OTP 21+
-    (:erlang.module_loaded(module) or Code.ensure_loaded?(module)) and function_exported?(module, fun, arity)
+    (:erlang.module_loaded(module) or Code.ensure_loaded?(module)) and
+      function_exported?(module, fun, arity)
   end
 
   defp validate_decimal({:ok, %Decimal{coef: coef}}) when coef in [:inf, :qNaN, :sNaN],
@@ -1054,5 +1056,7 @@ defmodule Ecto.Type do
 
   defp pad_usec(nil), do: nil
   defp pad_usec(%{microsecond: {_, 6}} = struct), do: struct
-  defp pad_usec(%{microsecond: {microsecond, _}} = struct), do: %{struct | microsecond: {microsecond, 6}}
+
+  defp pad_usec(%{microsecond: {microsecond, _}} = struct),
+    do: %{struct | microsecond: {microsecond, 6}}
 end

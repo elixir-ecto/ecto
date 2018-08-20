@@ -679,6 +679,8 @@ defmodule Ecto.TypeTest do
     test "primitive" do
       assert Ecto.Type.equal?(:integer, 1, 1)
       refute Ecto.Type.equal?(:integer, 1, 2)
+      refute Ecto.Type.equal?(:integer, 1, "1")
+      refute Ecto.Type.equal?(:integer, 1, nil)
     end
 
     test "composite primitive" do
@@ -690,7 +692,9 @@ defmodule Ecto.TypeTest do
 
     test "semantical comparison" do
       assert Ecto.Type.equal?(:decimal, d(1), d("1.0"))
+      refute Ecto.Type.equal?(:decimal, d(1), 1)
       refute Ecto.Type.equal?(:decimal, d(1), d("1.1"))
+      refute Ecto.Type.equal?(:decimal, d(1), nil)
 
       assert Ecto.Type.equal?(:time, ~T[09:00:00], ~T[09:00:00.000000])
       refute Ecto.Type.equal?(:time, ~T[09:00:00], ~T[09:00:00.999999])
