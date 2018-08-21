@@ -271,7 +271,11 @@ defmodule Ecto.Repo.Preloader do
             children = struct |> Map.fetch!(field) |> List.wrap
 
             Enum.reduce children, acc, fn child, {fresh, set} ->
-              keys = through_pks(child, pks, assoc)
+              keys =
+                child
+                |> through_pks(pks, assoc)
+                |> validate_non_null_pk!(child, pks, assoc)
+
               case set do
                 %{^keys => true} ->
                   {fresh, set}
@@ -288,14 +292,30 @@ defmodule Ecto.Repo.Preloader do
   end
 
   defp through_pks(map, pks, assoc) do
-    Enum.map pks, fn pk ->
+    Enum.map(pks, fn pk ->
       case map do
-        %{^pk => value} -> value
+        %{^pk => value} ->
+          value
+
         _ ->
           raise ArgumentError,
-            "cannot preload through association `#{assoc.field}` on `#{inspect assoc.owner}`. " <>
-            "Ecto expected a map/struct with the key `#{pk}` but got: #{inspect map}"
+               "cannot preload through association `#{assoc.field}` on " <>
+                 "`#{inspect assoc.owner}`. Ecto expected a map/struct with " <>
+                 "the key `#{pk}` but got: #{inspect map}"
       end
+    end)
+  end
+
+  defp validate_non_null_pk!(values, map, pks, assoc) do
+    case values do
+      [nil | _] ->
+        raise ArgumentError,
+              "cannot preload through association `#{assoc.field}` on " <>
+                "`#{inspect assoc.owner}` because the primary key `#{hd(pks)}` " <>
+                "is nil for map/struct: #{inspect map}"
+
+      _ ->
+        values
     end
   end
 
