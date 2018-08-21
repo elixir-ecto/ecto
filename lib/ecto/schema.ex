@@ -639,9 +639,10 @@ defmodule Ecto.Schema do
     * `:on_delete` - The action taken on associations when parent record
       is deleted. May be `:nothing` (default), `:nilify_all` and `:delete_all`.
       Notice `:on_delete` may also be set in migrations when creating a
-      reference. If supported, relying on the database via migrations
-      is preferred. `:nilify_all` and `:delete_all` will not cascade to child
-      records unless set via database migrations.
+      reference. If your database supports it, setting the `:on_delete` in the
+      migration is preferred as the database can effectively guarantee integrity,
+      it is more efficient, and it also allows `:nilify_all` and `:delete_all`
+      to cascade.
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
@@ -848,9 +849,10 @@ defmodule Ecto.Schema do
     * `:on_delete` - The action taken on associations when parent record
       is deleted. May be `:nothing` (default), `:nilify_all` and `:delete_all`.
       Notice `:on_delete` may also be set in migrations when creating a
-      reference. If supported, relying on the database via migrations
-      is preferred. `:nilify_all` and `:delete_all` will not cascade to child
-      records unless set via database migrations.
+      reference. If your database supports it, setting the `:on_delete` in the
+      migration is preferred as the database can effectively guarantee integrity,
+      it is more efficient, and it also allows `:nilify_all` and `:delete_all`
+      to cascade.
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
@@ -1166,9 +1168,10 @@ defmodule Ecto.Schema do
       is deleted. May be `:nothing` (default) or `:delete_all`.
       `:delete_all` will only remove data from the join source, never the
       associated records. Notice `:on_delete` may also be set in migrations
-      when creating a reference. If supported, relying on the database via
-      migrations is preferred. `:nilify_all` and `:delete_all` will not cascade
-      to child records unless set via database migrations.
+      when creating a reference. If your database supports it, setting the
+      `:on_delete` in the migration is preferred as the database can effectively
+      guarantee integrity, it is more efficient, and it also allows `:nilify_all`
+      and `:delete_all` to cascade.
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
