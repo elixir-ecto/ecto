@@ -16,6 +16,7 @@ defmodule Ecto.Integration.Migration do
       add :uuid, :uuid
       add :meta, :map
       add :links, {:map, :string}
+      add :intensities, {:map, :float}
       add :public, :boolean
       add :cost, :decimal, precision: 2, scale: 1
       add :visits, :integer

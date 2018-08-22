@@ -193,7 +193,7 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   @tag :map_type
-  test "typed map" do
+  test "typed string map" do
     post1 = TestRepo.insert!(%Post{links: %{"foo" => "http://foo.com", "bar" => "http://bar.com"}})
     post2 = TestRepo.insert!(%Post{links: %{foo: "http://foo.com", bar: "http://bar.com"}})
 
@@ -201,6 +201,14 @@ defmodule Ecto.Integration.TypeTest do
            [%{"foo" => "http://foo.com", "bar" => "http://bar.com"}]
     assert TestRepo.all(from p in Post, where: p.id == ^post2.id, select: p.links) ==
            [%{"foo" => "http://foo.com", "bar" => "http://bar.com"}]
+  end
+
+  @tag :map_type
+  test "typed float map" do
+    post = TestRepo.insert!(%Post{intensities: %{"foo" => 1.0, "bar" => 416500.0}})
+
+    assert TestRepo.all(from p in Post, where: p.id == ^post.id, select: p.intensities) ==
+           [%{"foo" => 1.0, "bar" => 416500}]
   end
 
   @tag :map_type

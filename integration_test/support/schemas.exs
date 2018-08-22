@@ -38,6 +38,7 @@ defmodule Ecto.Integration.Post do
     field :uuid, Ecto.UUID, autogenerate: true
     field :meta, :map
     field :links, {:map, :string}
+    field :intensities, {:map, :float}
     field :posted, :date
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
     has_one :permalink, Ecto.Integration.Permalink, on_delete: :delete_all, on_replace: :delete
