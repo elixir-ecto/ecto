@@ -303,7 +303,10 @@ defmodule Ecto.Integration.MigrationTest do
   import Ecto.Query, only: [from: 2]
   import Ecto.Migrator, only: [up: 4, down: 4]
 
-  defp unique_migration, do: System.unique_integer([:positive, :monotonic])
+  setup do
+    PoolRepo.delete_all(Ecto.Migration.SchemaMigration)
+    :ok
+  end
 
   test "create and drop table and indexes" do
     assert :ok == up(PoolRepo, 20050906120000, CreateMigration, log: false)
@@ -337,18 +340,17 @@ defmodule Ecto.Integration.MigrationTest do
   end
 
   test "rolls back references in change/1" do
-    migration = unique_migration()
-    assert :ok == up(PoolRepo, migration, ReferencesRollbackMigration, log: false)
-    assert :ok == down(PoolRepo, migration, ReferencesRollbackMigration, log: false)
+    assert :ok == up(PoolRepo, 20050906120000, ReferencesRollbackMigration, log: false)
+    assert :ok == down(PoolRepo, 20050906120000, ReferencesRollbackMigration, log: false)
   end
 
   test "create table if not exists and drop table if exists does not raise on failure" do
-    assert :ok == up(PoolRepo, unique_migration(), NoErrorTableMigration, log: false)
+    assert :ok == up(PoolRepo, 20050906120000, NoErrorTableMigration, log: false)
   end
 
   @tag :create_index_if_not_exists
   test "create index if not exists and drop index if exists does not raise on failure" do
-    assert :ok == up(PoolRepo, unique_migration(), NoErrorIndexMigration, log: false)
+    assert :ok == up(PoolRepo, 20050906120000, NoErrorIndexMigration, log: false)
   end
 
   test "raises on NoSQL migrations" do
