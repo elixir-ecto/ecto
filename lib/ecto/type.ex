@@ -679,8 +679,10 @@ defmodule Ecto.Type do
   def cast_decimal(term) when is_float(term) do
     {:ok, Decimal.from_float(term)}
   end
-  def cast_decimal(%Decimal{coef: coef} = decimal)
-      when coef not in [:inf, :qNaN, :sNaN] do
+  def cast_decimal(%Decimal{coef: coef}) when coef in [:inf, :qNaN, :sNaN] do
+    :error
+  end
+  def cast_decimal(%Decimal{} = decimal) do
     {:ok, decimal}
   end
   def cast_decimal(_) do
