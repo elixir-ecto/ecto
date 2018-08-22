@@ -338,7 +338,8 @@ defmodule Ecto.Query.Builder do
   end
 
   # Raise nice error messages for fun calls.
-  def escape({fun, _, args} = other, _type, _params_acc, _vars, _env) when is_atom(fun) and is_list(args) do
+  def escape({fun, _, args} = other, _type, _params_acc, _vars, _env)
+      when is_atom(fun) and is_list(args) do
     error! """
     `#{Macro.to_string(other)}` is not a valid query expression. \
     If you are trying to invoke a function that is not supported by Ecto, \
@@ -348,6 +349,19 @@ defmodule Ecto.Query.Builder do
 
     See Ecto.Query.API to learn more about the supported functions and \
     Ecto.Query.API.fragment/1 to learn more about fragments.
+    """
+  end
+
+  # Raise nice error message for remote calls
+  def escape({{:., _, [mod, fun]}, _, args} = other, _type, _params_acc, _vars, _env)
+      when is_atom(fun) do
+    fun_arity = "#{fun}/#{length(args)}"
+
+    error! """
+    `#{Macro.to_string(other)}` is not a valid query expression. \
+    If you want to invoke #{Macro.to_string(mod)}.#{fun_arity} in \
+    a query, make sure that the module #{Macro.to_string(mod)} \
+    is required and that #{fun_arity} is a macro
     """
   end
 

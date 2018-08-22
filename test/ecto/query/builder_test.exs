@@ -113,6 +113,12 @@ defmodule Ecto.Query.BuilderTest do
     assert_raise Ecto.Query.CompileError, ~r"expected literal atom or interpolated value", fn ->
       escape(quote(do: field(x, 123)), [x: 0], __ENV__) |> elem(0) |> Code.eval_quoted([], __ENV__)
     end
+
+    assert_raise Ecto.Query.CompileError,
+                 ~r"make sure that the module Foo is required and that bar/1 is a macro",
+                 fn ->
+      escape(quote(do: Foo.bar(x)), [x: 0], __ENV__) |> elem(0) |> Code.eval_quoted([], __ENV__)
+    end
   end
 
   test "doesn't escape interpolation" do
