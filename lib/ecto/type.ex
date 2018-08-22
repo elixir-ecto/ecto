@@ -1068,7 +1068,7 @@ defmodule Ecto.Type do
     if :erlang.module_loaded(module) or Code.ensure_loaded?(module) do
       function_exported?(module, fun, arity)
     else
-      raise ArgumentError, "module #{inspect(module)} is not available"
+      raise ArgumentError, "cannot use #{inspect(module)} as Ecto.Type, module is not available"
     end
   end
 

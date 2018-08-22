@@ -54,7 +54,7 @@ defmodule Ecto.TypeTest do
 
     assert cast(CustomDefault, "foo") == {:ok, "foo"}
 
-    assert_raise ArgumentError, "module :foo is not available", fn ->
+    assert_raise ArgumentError, ~r"module is not available", fn ->
       cast(:foo, "foo")
     end
 
@@ -764,9 +764,15 @@ defmodule Ecto.TypeTest do
       refute Ecto.Type.equal?(Custom, false, false)
     end
 
-    test "unknown type" do
+    test "nil type" do
       assert Ecto.Type.equal?(nil, 1, 1.0)
       refute Ecto.Type.equal?(nil, 1, 2)
+    end
+
+    test "bad type" do
+      assert_raise ArgumentError, ~r"cannot use :foo as Ecto.Type", fn ->
+        Ecto.Type.equal?(:foo, 1, 1.0)
+      end
     end
   end
 
