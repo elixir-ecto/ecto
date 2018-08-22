@@ -219,18 +219,19 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
       09:56:43.081 [error] Postgrex.Protocol (#PID<>) disconnected:
           ** (DBConnection.ConnectionError) owner #PID<> timed out
-          because it owned the connection for longer than 15000ms
+          because it owned the connection for longer than 60000ms
 
-  If you have a long running test (or you're debugging with IEx.pry), the timeout for the connection ownership may
-  be too short.  You can increase the timeout by setting the
-  `:ownership_timeout` options for your repo config in `config/config.exs` (or preferably in `config/test.exs`):
+  If you have a long running test (or you're debugging with IEx.pry),
+  the timeout for the connection ownership may be too short.  You can
+  increase the timeout by setting the `:ownership_timeout` options for
+  your repo config in `config/config.exs` (or preferably in `config/test.exs`):
 
       config :my_app, MyApp.Repo,
         ownership_timeout: NEW_TIMEOUT_IN_MILLISECONDS
 
   The `:ownership_timeout` option is part of
   [`DBConnection.Ownership`](https://hexdocs.pm/db_connection/DBConnection.Ownership.html)
-  and defaults to 15000ms. Timeouts are given as integers in milliseconds.
+  and defaults to 60000ms. Timeouts are given as integers in milliseconds.
 
   Alternately, if this is an issue for only a handful of long-running tests,
   you can pass an `:ownership_timeout` option when calling
@@ -461,12 +462,14 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     * `:sandbox` - when true the connection is wrapped in
       a transaction. Defaults to true.
 
-    * `:isolation` - set the query to the given isolation level
+    * `:isolation` - set the query to the given isolation level.
 
     * `:ownership_timeout` - limits how long the connection can be
-      owned. Defaults to the compiled value from your repo config in
+      owned. Defaults to the value in your repo config in
       `config/config.exs` (or preferably in `config/test.exs`), or
-      15000 ms if not set.
+      60000 ms if not set. The timeout exists for sanity checking
+      purposes, to ensure there is no connection leakage, and can
+      be bumped whenever necessary.
 
   """
   def checkout(repo, opts \\ []) when is_atom(repo) do
