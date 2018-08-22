@@ -78,10 +78,6 @@ defmodule Ecto.Query.BuilderTest do
   end
 
   test "escape raise" do
-    assert_raise Ecto.Query.CompileError, ~r"variable `x` is not a valid query expression", fn ->
-      escape(quote(do: x), [], __ENV__)
-    end
-
     assert_raise Ecto.Query.CompileError, ~r"is not a valid query expression. Only literal binaries and strings are allowed", fn ->
       escape(quote(do: "#{x}"), [], __ENV__)
     end

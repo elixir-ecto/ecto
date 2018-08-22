@@ -38,7 +38,7 @@ defmodule Ecto.Query.Builder.OrderByTest do
     end
 
     test "raises on unbound variables" do
-      assert_raise Ecto.Query.CompileError, "unbound variable `x` in query", fn ->
+      assert_raise Ecto.Query.CompileError, ~r"unbound variable `x` in query", fn ->
         escape(:order_by, quote do x.y end, [], __ENV__)
       end
     end

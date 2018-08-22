@@ -20,7 +20,7 @@ defmodule Ecto.Query.Builder.GroupByTest do
     end
 
     test "raises on unbound variables" do
-      message = "unbound variable `x` in query"
+      message = ~r"unbound variable `x` in query"
       assert_raise Ecto.Query.CompileError, message, fn ->
         escape(quote do x.y end, [], __ENV__)
       end
