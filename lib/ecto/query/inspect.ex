@@ -48,7 +48,7 @@ defimpl Inspect, for: Ecto.Query do
       |> generate_names
       |> List.to_tuple
 
-    from      = bound_from(query.from, elem(names, 0))
+    from      = bound_from(query.from, binding(names, 0))
     joins     = joins(query.joins, names)
     preloads  = preloads(query.preloads)
     assocs    = assocs(query.assocs, names)
@@ -85,11 +85,11 @@ defimpl Inspect, for: Ecto.Query do
   defp joins(joins, names) do
     joins
     |> Enum.with_index
-    |> Enum.flat_map(fn {expr, ix} -> join(expr, elem(names, expr.ix || ix + 1), names) end)
+    |> Enum.flat_map(fn {expr, ix} -> join(expr, binding(names, expr.ix || ix + 1), names) end)
   end
 
   defp join(%JoinExpr{qual: qual, assoc: {ix, right}, on: on} = join, name, names) do
-    string = "#{name} in assoc(#{elem(names, ix)}, #{inspect right})"
+    string = "#{name} in assoc(#{binding(names, ix)}, #{inspect right})"
     [{join_qual(qual), string}] ++ kw_as_and_prefix(join) ++ maybe_on(on, names)
   end
 
@@ -161,18 +161,14 @@ defimpl Inspect, for: Ecto.Query do
       %{^ix => {:any, fields}} when ix == 0 ->
         Kernel.inspect(fields)
       %{^ix => {tag, fields}} ->
-        "#{tag}(" <> elem(names, ix) <> ", " <> Kernel.inspect(fields) <> ")"
+        "#{tag}(" <> binding(names, ix) <> ", " <> Kernel.inspect(fields) <> ")"
       _ ->
-        elem(names, ix)
+        binding(names, ix)
     end
   end
 
   defp expr_to_string({:&, _, [ix]}, _, names, _) do
-    try do
-      elem(names, ix)
-    rescue
-      ArgumentError -> "unknown_binding!"
-    end
+    binding(names, ix)
   end
 
   # Inject the interpolated value
@@ -294,6 +290,14 @@ defimpl Inspect, for: Ecto.Query do
 
   defp generate_names([], acc, _found) do
     acc
+  end
+
+  defp binding(names, pos) do
+    try do
+      elem(names, pos)
+    rescue
+      ArgumentError -> "unknown_binding_#{pos}!"
+    end
   end
 
   defp normalize_source("Elixir." <> _ = source),

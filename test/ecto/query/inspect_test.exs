@@ -47,6 +47,11 @@ defmodule Ecto.Query.InspectTest do
            "dynamic([o, b], o.type == ^2 and (b.user_id == ^1 or ^false))"
   end
 
+  test "invalid query" do
+    assert i(select("posts", [a, b], {a.foo, b.bar})) ==
+           "from p in \"posts\", select: {p.foo, unknown_binding_1!.bar}"
+  end
+
   test "from" do
     assert i(from(Post, [])) ==
            ~s{from p in Inspect.Post}
