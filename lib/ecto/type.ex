@@ -633,9 +633,10 @@ defmodule Ecto.Type do
   def cast(:boolean, term) when term in ~w(false 0), do: {:ok, false}
 
   def cast(:decimal, term) when is_binary(term) do
-    term
-    |> Decimal.parse()
-    |> validate_decimal()
+    case Decimal.parse(term) do
+      {:ok, decimal} -> cast(:decimal, decimal)
+      :error -> :error
+    end
   end
   def cast(:decimal, term) when is_integer(term) do
     {:ok, Decimal.new(term)}
@@ -643,8 +644,12 @@ defmodule Ecto.Type do
   def cast(:decimal, term) when is_float(term) do
     {:ok, Decimal.from_float(term)}
   end
-  def cast(:decimal, %Decimal{} = term) do
-    validate_decimal({:ok, term})
+  def cast(:decimal, %Decimal{coef: coef} = decimal)
+      when coef not in [:inf, :qNaN, :sNaN] do
+    {:ok, decimal}
+  end
+  def cast(:decimal, _) do
+    :error
   end
 
   def cast(:date, term) do
@@ -1044,11 +1049,6 @@ defmodule Ecto.Type do
     (:erlang.module_loaded(module) or Code.ensure_loaded?(module)) and
       function_exported?(module, fun, arity)
   end
-
-  defp validate_decimal({:ok, %Decimal{coef: coef}}) when coef in [:inf, :qNaN, :sNaN],
-    do: :error
-  defp validate_decimal(other),
-    do: other
 
   defp truncate_usec(nil), do: nil
   defp truncate_usec(%{microsecond: {0, 0}} = struct), do: struct
