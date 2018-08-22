@@ -79,7 +79,7 @@ defmodule Ecto.Migrator do
       else
         result = do_up(repo, version, module, opts)
 
-        if version < Enum.max(versions) do
+        if version != Enum.max([version | versions]) do
           latest = Enum.max(versions)
 
           Logger.warn """
