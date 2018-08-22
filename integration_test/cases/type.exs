@@ -207,8 +207,9 @@ defmodule Ecto.Integration.TypeTest do
   test "typed float map" do
     post = TestRepo.insert!(%Post{intensities: %{"foo" => 1.0, "bar" => 416500.0}})
 
-    assert TestRepo.all(from p in Post, where: p.id == ^post.id, select: p.intensities) ==
-           [%{"foo" => 1.0, "bar" => 416500}]
+    # Note we are using === since we want to check integer vs float
+    assert TestRepo.all(from p in Post, where: p.id == ^post.id, select: p.intensities) ===
+           [%{"foo" => 1.0, "bar" => 416500.0}]
   end
 
   @tag :map_type
