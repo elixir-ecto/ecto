@@ -527,6 +527,11 @@ defmodule Ecto.RepoTest do
           end)
     end
 
+    test "does not run transaction without prepare" do
+      TestRepo.insert!(%MySchema{id: 1})
+      refute_received {:transaction, _}
+    end
+
     test "insert runs prepare callbacks in transaction" do
       changeset = prepare_changeset()
       TestRepo.insert!(changeset)
@@ -550,33 +555,33 @@ defmodule Ecto.RepoTest do
       assert Process.get(:ecto_repo) == TestRepo
       assert Process.get(:ecto_counter) == 2
     end
-  end
 
-  test "prepare_changes on embeds" do
-    embed_changeset =
-      %MyEmbed{}
-      |> Ecto.Changeset.cast(%{x: "one"}, [:x])
-      |> Ecto.Changeset.prepare_changes(fn %{repo: repo} = changeset ->
-        Process.put(:ecto_repo, repo)
-        Process.put(:ecto_counter, 1)
-        changeset
-      end)
-      |> Ecto.Changeset.prepare_changes(fn changeset ->
-        1 = Process.get(:ecto_counter)
-        Process.put(:ecto_counter, 2)
-        Ecto.Changeset.update_change(changeset, :x, &String.upcase/1)
-      end)
+    test "on embeds" do
+      embed_changeset =
+        %MyEmbed{}
+        |> Ecto.Changeset.cast(%{x: "one"}, [:x])
+        |> Ecto.Changeset.prepare_changes(fn %{repo: repo} = changeset ->
+          Process.put(:ecto_repo, repo)
+          Process.put(:ecto_counter, 1)
+          changeset
+        end)
+        |> Ecto.Changeset.prepare_changes(fn changeset ->
+          1 = Process.get(:ecto_counter)
+          Process.put(:ecto_counter, 2)
+          Ecto.Changeset.update_change(changeset, :x, &String.upcase/1)
+        end)
 
-    changeset =
-      %MySchema{id: 1}
-      |> Ecto.Changeset.cast(%{x: "one"}, [:x])
-      |> Ecto.Changeset.put_embed(:embeds, [embed_changeset])
+      changeset =
+        %MySchema{id: 1}
+        |> Ecto.Changeset.cast(%{x: "one"}, [:x])
+        |> Ecto.Changeset.put_embed(:embeds, [embed_changeset])
 
-    %MySchema{embeds: [embed]} = TestRepo.insert!(changeset)
-    assert embed.x == "ONE"
-    assert_received {:transaction, _}
-    assert Process.get(:ecto_repo) == TestRepo
-    assert Process.get(:ecto_counter) == 2
+      %MySchema{embeds: [embed]} = TestRepo.insert!(changeset)
+      assert embed.x == "ONE"
+      assert_received {:transaction, _}
+      assert Process.get(:ecto_repo) == TestRepo
+      assert Process.get(:ecto_counter) == 2
+    end
   end
 
   describe "changeset constraints" do

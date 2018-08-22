@@ -181,6 +181,7 @@ defmodule Ecto.Repo.Schema do
     dumper = schema.__schema__(:dump)
     fields = schema.__schema__(:fields)
     assocs = schema.__schema__(:associations)
+    embeds = schema.__schema__(:embeds)
 
     {return_types, return_sources} =
       schema
@@ -197,7 +198,7 @@ defmodule Ecto.Repo.Schema do
     changeset = put_repo_and_action(changeset, :insert, name)
     changeset = surface_changes(changeset, struct, fields ++ assocs)
 
-    wrap_in_transaction(adapter, adapter_meta, opts, assocs, prepare, fn ->
+    wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
       opts = Keyword.put(opts, :skip_transaction, true)
       user_changeset = run_prepare(changeset, prepare)
 
@@ -205,7 +206,7 @@ defmodule Ecto.Repo.Schema do
       changeset = process_parents(changeset, parents, adapter, opts)
 
       if changeset.valid? do
-        embeds = Ecto.Embedded.prepare(changeset, adapter, :insert)
+        embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :insert)
 
         autogen_id = schema.__schema__(:autogenerate_id)
         schema_meta = metadata(struct, autogen_id, opts)
@@ -270,6 +271,8 @@ defmodule Ecto.Repo.Schema do
     dumper = schema.__schema__(:dump)
     fields = schema.__schema__(:fields)
     assocs = schema.__schema__(:associations)
+    embeds = schema.__schema__(:embeds)
+
     force? = !!opts[:force]
     filters = add_pk_filter!(changeset.filters, struct)
 
@@ -283,7 +286,7 @@ defmodule Ecto.Repo.Schema do
     changeset = put_repo_and_action(changeset, :update, name)
 
     if changeset.changes != %{} or force? do
-      wrap_in_transaction(adapter, adapter_meta, opts, assocs, prepare, fn ->
+      wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
         opts = Keyword.put(opts, :skip_transaction, true)
         user_changeset = run_prepare(changeset, prepare)
 
@@ -291,7 +294,7 @@ defmodule Ecto.Repo.Schema do
         changeset = process_parents(changeset, parents, adapter, opts)
 
         if changeset.valid? do
-          embeds = Ecto.Embedded.prepare(changeset, adapter, :update)
+          embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
 
           original = changeset.changes |> Map.merge(embeds) |> Map.take(fields)
           {changes, autogen} = dump_changes!(:update, original, schema, [], dumper, adapter)
@@ -381,19 +384,23 @@ defmodule Ecto.Repo.Schema do
 
     struct = struct_from_changeset!(:delete, changeset)
     schema = struct.__struct__
-    assocs = schema.__schema__(:associations)
+    assocs = to_delete_assocs(schema)
     dumper = schema.__schema__(:dump)
 
     changeset = put_repo_and_action(changeset, :delete, name)
     changeset = %{changeset | changes: %{}}
 
-    wrap_in_transaction(adapter, adapter_meta, opts, assocs, prepare, fn ->
+    wrap_in_transaction(adapter, adapter_meta, opts, assocs != [], prepare, fn ->
       changeset = run_prepare(changeset, prepare)
 
       filters = add_pk_filter!(changeset.filters, struct)
       filters = dump_fields!(:delete, schema, filters, dumper, adapter)
 
-      delete_assocs(changeset, name, schema, assocs, opts)
+      # Delete related associations
+      for %{__struct__: mod, on_delete: on_delete} = reflection <- assocs do
+        apply(mod, on_delete, [reflection, changeset.data, name, opts])
+      end
+
       schema_meta = metadata(struct, schema.__schema__(:autogenerate_id), opts)
       args = [adapter_meta, schema_meta, filters, opts]
 
@@ -745,18 +752,11 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp delete_assocs(%{data: struct}, repo_name, schema, assocs, opts) do
-    for assoc_name <- assocs do
-      case schema.__schema__(:association, assoc_name) do
-        %{__struct__: mod, on_delete: on_delete} = reflection when on_delete != :nothing ->
-          apply(mod, on_delete, [reflection, struct, repo_name, opts])
-
-        _ ->
-          :ok
-      end
-    end
-
-    :ok
+  defp to_delete_assocs(schema) do
+    for assoc <- schema.__schema__(:associations),
+        reflection = schema.__schema__(:association, assoc),
+        match?(%{on_delete: on_delete} when on_delete != :nothing, reflection),
+        do: reflection
   end
 
   defp autogenerate_id(nil, changes, return_types, return_sources, _adapter) do
@@ -801,8 +801,15 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp wrap_in_transaction(adapter, adapter_meta, opts, assocs, prepare, fun) do
-    if (assocs != [] or prepare != []) and
+  defp wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fun) do
+    %{changes: changes} = changeset
+    changed = &Map.has_key?(changes, &1)
+    relations_changed? = Enum.any?(assocs, changed) or Enum.any?(embeds, changed)
+    wrap_in_transaction(adapter, adapter_meta, opts, relations_changed?, prepare, fun)
+  end
+
+  defp wrap_in_transaction(adapter, adapter_meta, opts, relations_changed?, prepare, fun) do
+    if (relations_changed? or prepare != []) and
        Keyword.get(opts, :skip_transaction) != true and
        function_exported?(adapter, :transaction, 3) do
       adapter.transaction(adapter_meta, opts, fn ->

@@ -47,9 +47,9 @@ defmodule Ecto.Embedded do
   by actual structs so it can be dumped by adapters and
   loaded into the schema struct afterwards.
   """
-  def prepare(changeset, adapter, repo_action) do
-    %{changes: changes, data: %{__struct__: schema}, types: types, repo: repo} = changeset
-    prepare(Map.take(changes, schema.__schema__(:embeds)), types, adapter, repo, repo_action)
+  def prepare(changeset, embeds, adapter, repo_action) do
+    %{changes: changes, types: types, repo: repo} = changeset
+    prepare(Map.take(changes, embeds), types, adapter, repo, repo_action)
   end
 
   defp prepare(embeds, _types, _adapter, _repo, _repo_action) when embeds == %{} do
@@ -104,7 +104,7 @@ defmodule Ecto.Embedded do
 
   defp to_struct(%Changeset{} = changeset, action, %{related: schema}, adapter) do
     %{data: struct, changes: changes} = changeset
-    embeds = prepare(changeset, adapter, action)
+    embeds = prepare(changeset, schema.__schema__(:embeds), adapter, action)
 
     changes
     |> Map.merge(embeds)
