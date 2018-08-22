@@ -94,8 +94,8 @@ defmodule Ecto.Type do
                       :utc_datetime_usec | :naive_datetime_usec | :time_usec
   @typep composite :: {:array, t} | {:map, t} | {:embed, Ecto.Embedded.t} | {:in, t}
 
-  @basic ~w(integer float boolean string map binary id binary_id any)a
-  @base @basic ++ ~w(
+  @base ~w(
+    integer float boolean string map binary id binary_id any
     decimal
     utc_datetime naive_datetime date time
     utc_datetime_usec naive_datetime_usec time_usec
@@ -606,7 +606,15 @@ defmodule Ecto.Type do
     caster(type).(value)
   end
 
-  defp caster(type) when type in @basic, do: &cast_basic(type, &1)
+  defp caster(:integer), do: &cast_integer/1
+  defp caster(:float), do: &cast_float/1
+  defp caster(:boolean), do: &cast_boolean/1
+  defp caster(:map), do: &cast_map/1
+  defp caster(:string), do: &cast_binary/1
+  defp caster(:binary), do: &cast_binary/1
+  defp caster(:id), do: &cast_integer/1
+  defp caster(:binary_id), do: &cast_binary/1
+  defp caster(:any), do: &{:ok, &1}
   defp caster(:decimal), do: &cast_decimal/1
   defp caster(:date), do: &cast_date/1
   defp caster(:time), do: &maybe_truncate_usec(cast_time(&1))
@@ -632,36 +640,37 @@ defmodule Ecto.Type do
     &mod.cast(&1)
   end
 
-  defp cast_basic(:float, term) when is_binary(term) do
-    case Float.parse(term) do
-      {float, ""} -> {:ok, float}
-      _ -> :error
-    end
-  end
-
-  defp cast_basic(:float, term) when is_integer(term), do: {:ok, :erlang.float(term)}
-
-  defp cast_basic(:boolean, term) when term in ~w(true 1),  do: {:ok, true}
-  defp cast_basic(:boolean, term) when term in ~w(false 0), do: {:ok, false}
-
-  defp cast_basic(:binary_id, term) when is_binary(term) do
-    {:ok, term}
-  end
-
-  defp cast_basic(type, term) when type in [:id, :integer] and is_binary(term) do
+  defp cast_integer(term) when is_binary(term) do
     case Integer.parse(term) do
       {integer, ""} -> {:ok, integer}
       _ -> :error
     end
   end
 
-  defp cast_basic(type, term) do
-    if of_base_type?(type, term) do
-      {:ok, term}
-    else
-      :error
+  defp cast_integer(term) when is_integer(term), do: {:ok, term}
+  defp cast_integer(_), do: :error
+
+  defp cast_float(term) when is_binary(term) do
+    case Float.parse(term) do
+      {float, ""} -> {:ok, float}
+      _ -> :error
     end
   end
+
+  defp cast_float(term) when is_float(term), do: {:ok, term}
+  defp cast_float(term) when is_integer(term), do: {:ok, :erlang.float(term)}
+  defp cast_float(_), do: :error
+
+  defp cast_boolean(term) when term in ~w(true 1),  do: {:ok, true}
+  defp cast_boolean(term) when term in ~w(false 0), do: {:ok, false}
+  defp cast_boolean(term) when is_boolean(term), do: {:ok, term}
+  defp cast_boolean(_), do: :error
+
+  defp cast_binary(term) when is_binary(term), do: {:ok, term}
+  defp cast_binary(_), do: :error
+
+  defp cast_map(term) when is_map(term), do: {:ok, term}
+  defp cast_map(_), do: :error
 
   def cast_decimal(term) when is_binary(term) do
     case Decimal.parse(term) do
