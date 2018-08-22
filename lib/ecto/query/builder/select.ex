@@ -84,16 +84,9 @@ defmodule Ecto.Query.Builder.Select do
   defp escape({tag, _, [{var, _, context}, fields]}, {params, take}, vars, env)
        when tag in [:map, :struct] and is_atom(var) and is_atom(context) do
     taken = escape_fields(fields, tag, env)
-    expr = Builder.escape_var(var, vars)
+    expr = Builder.escape_var!(var, vars)
     take = add_take(take, Builder.find_var!(var, vars), {tag, taken})
     {expr, {params, take}}
-  end
-
-  # var
-  defp escape({var, _, context}, params_take, vars, _env)
-      when is_atom(var) and is_atom(context) do
-    expr = Builder.escape_var(var, vars)
-    {expr, params_take}
   end
 
   defp escape(expr, params_take, vars, env) do

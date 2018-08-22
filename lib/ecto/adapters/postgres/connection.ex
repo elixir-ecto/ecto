@@ -449,10 +449,9 @@ if Code.ensure_loaded?(Postgrex) do
       quote_qualified_name(field, sources, idx)
     end
 
-    defp expr({:&, _, [idx]}, sources, query) do
-      {source, _name, _schema} = elem(sources, idx)
-      error!(query, "PostgreSQL does not support selecting all fields from #{source} without a schema. " <>
-                    "Please specify a schema or specify exactly which fields you want to select")
+    defp expr({:&, _, [idx]}, sources, _query) do
+      {_, source, _} = elem(sources, idx)
+      source
     end
 
     defp expr({:in, _, [_left, []]}, _sources, _query) do

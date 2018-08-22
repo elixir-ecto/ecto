@@ -88,10 +88,6 @@ defmodule Ecto.Adapters.PostgresTest do
 
     query = "0posts" |> select([:x]) |> plan()
     assert all(query) == ~s{SELECT t0."x" FROM "0posts" AS t0}
-
-    assert_raise Ecto.QueryError, ~r"PostgreSQL does not support selecting all fields from \"posts\" without a schema", fn ->
-      all from(p in "posts", select: p) |> plan()
-    end
   end
 
   test "from with subquery" do
@@ -274,6 +270,9 @@ defmodule Ecto.Adapters.PostgresTest do
   test "fragments" do
     query = Schema |> select([r], fragment("now")) |> plan()
     assert all(query) == ~s{SELECT now FROM "schema" AS s0}
+
+    query = Schema |> select([r], fragment("fun(?)", r)) |> plan()
+    assert all(query) == ~s{SELECT fun(s0) FROM "schema" AS s0}
 
     query = Schema |> select([r], fragment("downcase(?)", r.x)) |> plan()
     assert all(query) == ~s{SELECT downcase(s0."x") FROM "schema" AS s0}

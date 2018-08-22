@@ -30,13 +30,13 @@ defmodule Ecto.Query.Builder do
   # var.x - where var is bound
   def escape({{:., _, [{var, _, context}, field]}, _, []}, _type, {params, acc}, vars, _env)
       when is_atom(var) and is_atom(context) and is_atom(field) do
-    {escape_field(var, field, vars), {params, acc}}
+    {escape_field!(var, field, vars), {params, acc}}
   end
 
   # field macro
   def escape({:field, _, [{var, _, context}, field]}, _type, {params, acc}, vars, _env)
       when is_atom(var) and is_atom(context) do
-    {escape_field(var, field, vars), {params, acc}}
+    {escape_field!(var, field, vars), {params, acc}}
   end
 
   # param interpolation
@@ -330,11 +330,9 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  # Vars are not allowed
-  def escape({name, _, context} = var, _type, _params_acc, _vars, _env) when is_atom(name) and is_atom(context) do
-    error! "variable `#{Macro.to_string(var)}` is not a valid query expression. " <>
-           "If you wanted to inject a variable, you have to explicitly interpolate it " <>
-           "with ^. If you wanted to refer to a field, use the source.field syntax"
+  # Finally handle vars
+  def escape({var, _, context}, _type, params_acc, vars, _env) when is_atom(var) and is_atom(context) do
+    {escape_var!(var, vars), params_acc}
   end
 
   # Raise nice error messages for fun calls.
@@ -439,8 +437,8 @@ defmodule Ecto.Query.Builder do
     {expr, params}
   end
 
-  defp escape_field(var, field, vars) do
-    var   = escape_var(var, vars)
+  defp escape_field!(var, field, vars) do
+    var   = escape_var!(var, vars)
     field = quoted_field!(field)
     dot   = {:{}, [], [:., [], [var, field]]}
     {:{}, [], [dot, [], []]}
@@ -550,8 +548,8 @@ defmodule Ecto.Query.Builder do
   A escaped variable is represented internally as
   `&0`, `&1` and so on.
   """
-  @spec escape_var(atom, Keyword.t) :: Macro.t
-  def escape_var(var, vars) do
+  @spec escape_var!(atom, Keyword.t) :: Macro.t
+  def escape_var!(var, vars) do
     {:{}, [], [:&, [], [find_var!(var, vars)]]}
   end
 
@@ -701,7 +699,7 @@ defmodule Ecto.Query.Builder do
   Finds the index value for the given var in vars or raises.
   """
   def find_var!(var, vars) do
-    vars[var] || error! "unbound variable `#{var}` in query"
+    vars[var] || error! "unbound variable `#{var}` in query. If you are attempting to interpolate a value, use ^var"
   end
 
   @doc """
