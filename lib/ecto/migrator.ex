@@ -77,7 +77,25 @@ defmodule Ecto.Migrator do
       if version in versions do
         :already_up
       else
-        do_up(repo, version, module, opts)
+        result = do_up(repo, version, module, opts)
+
+        if version < Enum.max(versions) do
+          latest = Enum.max(versions)
+
+          Logger.warn """
+          You are running migration #{version} but an older \
+          migration with version #{latest} has already run.
+
+          This can be an issue if you have already ran #{latest} in production \
+          because a new deployment may migrate #{version} but a rollback command \
+          would revert #{latest} instead of #{version}.
+
+          If this can be an issue, we recommend to rollback #{version} and change \
+          it to a version later than #{latest}.
+          """
+        end
+
+        result
       end
     end
   end

@@ -153,7 +153,10 @@ defmodule Ecto.MigratorTest do
   end
 
   test "up invokes the repository adapter with up commands" do
-    assert up(TestRepo, 0, Migration, log: false) == :ok
+    assert capture_log(fn ->
+      assert up(TestRepo, 0, Migration, log: false) == :ok
+    end) =~ "You are running migration 0 but an older migration with version 3 has already run"
+
     assert up(TestRepo, 1, Migration, log: false) == :already_up
     assert up(TestRepo, 10, ChangeMigration, log: false) == :ok
   end
@@ -166,7 +169,7 @@ defmodule Ecto.MigratorTest do
 
   test "up raises error when missing up/0 and change/0" do
     assert_raise Ecto.MigrationError, fn ->
-      Ecto.Migrator.up(TestRepo, 0, InvalidMigration, log: false)
+      Ecto.Migrator.up(TestRepo, 10, InvalidMigration, log: false)
     end
   end
 
