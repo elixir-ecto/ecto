@@ -45,11 +45,13 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def loaders({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.load_embed(type, &1)]
+      def loaders({:map, _} = type, _),   do: [&Ecto.Adapters.SQL.load_embed(type, &1)]
       def loaders(:binary_id, type),      do: [Ecto.UUID, type]
       def loaders(_, type),               do: [type]
 
       @doc false
       def dumpers({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
+      def dumpers({:map, _} = type, _),   do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
       def dumpers(:binary_id, type),      do: [type, Ecto.UUID]
       def dumpers(_, type),               do: [type]
 
