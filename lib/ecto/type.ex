@@ -1062,8 +1062,11 @@ defmodule Ecto.Type do
 
   defp loaded_and_exported?(module, fun, arity) do
     # TODO: Rely only on Code.ensure_loaded? when targetting Erlang/OTP 21+
-    (:erlang.module_loaded(module) or Code.ensure_loaded?(module)) and
+    if :erlang.module_loaded(module) or Code.ensure_loaded?(module) do
       function_exported?(module, fun, arity)
+    else
+      raise ArgumentError, "module #{inspect(module)} is not available"
+    end
   end
 
   defp maybe_truncate_usec({:ok, struct}), do: {:ok, truncate_usec(struct)}

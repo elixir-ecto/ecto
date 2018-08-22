@@ -54,6 +54,10 @@ defmodule Ecto.TypeTest do
 
     assert cast(CustomDefault, "foo") == {:ok, "foo"}
 
+    assert_raise ArgumentError, "module :foo is not available", fn ->
+      cast(:foo, "foo")
+    end
+
     assert match?(Custom, :any)
     assert match?(:any, Custom)
 
