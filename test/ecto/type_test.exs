@@ -763,6 +763,11 @@ defmodule Ecto.TypeTest do
       assert Ecto.Type.equal?(Custom, true, false)
       refute Ecto.Type.equal?(Custom, false, false)
     end
+
+    test "unknown type" do
+      assert Ecto.Type.equal?(nil, 1, 1.0)
+      refute Ecto.Type.equal?(nil, 1, 2)
+    end
   end
 
   defp d(decimal), do: Decimal.new(decimal)

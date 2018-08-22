@@ -899,6 +899,7 @@ defmodule Ecto.Type do
     end
   end
 
+  defp equal_fun(nil), do: nil
   defp equal_fun(:decimal), do: &equal_decimal?/2
   defp equal_fun(t) when t in [:time, :time_usec], do: &equal_time?/2
   defp equal_fun(t) when t in [:utc_datetime, :utc_datetime_usec], do: &equal_utc_datetime?/2
