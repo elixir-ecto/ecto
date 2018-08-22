@@ -603,40 +603,40 @@ defmodule Ecto.Type do
   def cast(_type, nil), do: {:ok, nil}
 
   def cast(type, value) do
-    caster(type).(value)
+    cast_fun(type).(value)
   end
 
-  defp caster(:integer), do: &cast_integer/1
-  defp caster(:float), do: &cast_float/1
-  defp caster(:boolean), do: &cast_boolean/1
-  defp caster(:map), do: &cast_map/1
-  defp caster(:string), do: &cast_binary/1
-  defp caster(:binary), do: &cast_binary/1
-  defp caster(:id), do: &cast_integer/1
-  defp caster(:binary_id), do: &cast_binary/1
-  defp caster(:any), do: &{:ok, &1}
-  defp caster(:decimal), do: &cast_decimal/1
-  defp caster(:date), do: &cast_date/1
-  defp caster(:time), do: &maybe_truncate_usec(cast_time(&1))
-  defp caster(:time_usec), do: &maybe_pad_usec(cast_time(&1))
-  defp caster(:naive_datetime), do: &maybe_truncate_usec(cast_naive_datetime(&1))
-  defp caster(:naive_datetime_usec), do: &maybe_pad_usec(cast_naive_datetime(&1))
-  defp caster(:utc_datetime), do: &maybe_truncate_usec(cast_utc_datetime(&1))
-  defp caster(:utc_datetime_usec), do: &maybe_pad_usec(cast_utc_datetime(&1))
+  defp cast_fun(:integer), do: &cast_integer/1
+  defp cast_fun(:float), do: &cast_float/1
+  defp cast_fun(:boolean), do: &cast_boolean/1
+  defp cast_fun(:map), do: &cast_map/1
+  defp cast_fun(:string), do: &cast_binary/1
+  defp cast_fun(:binary), do: &cast_binary/1
+  defp cast_fun(:id), do: &cast_integer/1
+  defp cast_fun(:binary_id), do: &cast_binary/1
+  defp cast_fun(:any), do: &{:ok, &1}
+  defp cast_fun(:decimal), do: &cast_decimal/1
+  defp cast_fun(:date), do: &cast_date/1
+  defp cast_fun(:time), do: &maybe_truncate_usec(cast_time(&1))
+  defp cast_fun(:time_usec), do: &maybe_pad_usec(cast_time(&1))
+  defp cast_fun(:naive_datetime), do: &maybe_truncate_usec(cast_naive_datetime(&1))
+  defp cast_fun(:naive_datetime_usec), do: &maybe_pad_usec(cast_naive_datetime(&1))
+  defp cast_fun(:utc_datetime), do: &maybe_truncate_usec(cast_utc_datetime(&1))
+  defp cast_fun(:utc_datetime_usec), do: &maybe_pad_usec(cast_utc_datetime(&1))
 
-  defp caster({:in, type}) do
-    &cast_array(&1, caster(type), [])
+  defp cast_fun({:in, type}) do
+    &cast_array(&1, cast_fun(type), [])
   end
 
-  defp caster({:array, type}) do
-    &cast_array(&1, caster(type), [])
+  defp cast_fun({:array, type}) do
+    &cast_array(&1, cast_fun(type), [])
   end
 
-  defp caster({:map, type}) do
-    &cast_map(&1, caster(type), %{})
+  defp cast_fun({:map, type}) do
+    &cast_map(&1, cast_fun(type), %{})
   end
 
-  defp caster(mod) when is_atom(mod) do
+  defp cast_fun(mod) when is_atom(mod) do
     &mod.cast(&1)
   end
 
