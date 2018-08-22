@@ -19,6 +19,11 @@ defmodule Ecto.TypeTest do
     def cast(_),   do: {:ok, :cast}
   end
 
+  defmodule CustomDefault do
+    @behaviour Ecto.Type
+    def type, do: :any
+  end
+
   defmodule Schema do
     use Ecto.Schema
 
@@ -46,6 +51,8 @@ defmodule Ecto.TypeTest do
     assert load(Custom, nil) == {:ok, nil}
     assert dump(Custom, nil) == {:ok, nil}
     assert cast(Custom, nil) == {:ok, nil}
+
+    assert cast(CustomDefault, "foo") == {:ok, "foo"}
 
     assert match?(Custom, :any)
     assert match?(:any, Custom)

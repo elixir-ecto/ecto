@@ -94,9 +94,9 @@ defmodule Ecto.Type do
                       :utc_datetime_usec | :naive_datetime_usec | :time_usec
   @typep composite :: {:array, t} | {:map, t} | {:embed, Ecto.Embedded.t} | {:in, t}
 
-  @base ~w(
-    integer float boolean string map
-    binary decimal id binary_id any
+  @basic ~w(integer float boolean string map binary id binary_id any)a
+  @base @basic ++ ~w(
+    decimal
     utc_datetime naive_datetime date time
     utc_datetime_usec naive_datetime_usec time_usec
   )a
@@ -150,7 +150,7 @@ defmodule Ecto.Type do
   """
   @callback equal?(term, term) :: boolean
 
-  @optional_callbacks [equal?: 2]
+  @optional_callbacks [cast: 1, dump: 1, load: 1, equal?: 2]
 
   ## Functions
 
@@ -598,122 +598,93 @@ defmodule Ecto.Type do
 
   """
   @spec cast(t, term) :: {:ok, term} | :error
-  def cast({:embed, type}, value) do
-    cast_embed(type, value)
-  end
-
+  def cast({:embed, type}, value), do: cast_embed(type, value)
   def cast({:in, _type}, nil), do: :error
   def cast(_type, nil), do: {:ok, nil}
 
-  def cast(:binary_id, value) when is_binary(value) do
-    {:ok, value}
+  def cast(type, value) do
+    caster(type).(value)
   end
 
-  def cast({:array, type}, term) when is_list(term) do
-    array(term, type, &cast/2, [])
+  defp caster(type) when type in @basic, do: &cast_basic(type, &1)
+  defp caster(:decimal), do: &cast_decimal/1
+  defp caster(:date), do: &cast_date/1
+  defp caster(:time), do: &maybe_truncate_usec(cast_time(&1))
+  defp caster(:time_usec), do: &maybe_pad_usec(cast_time(&1))
+  defp caster(:naive_datetime), do: &maybe_truncate_usec(cast_naive_datetime(&1))
+  defp caster(:naive_datetime_usec), do: &maybe_pad_usec(cast_naive_datetime(&1))
+  defp caster(:utc_datetime), do: &maybe_truncate_usec(cast_utc_datetime(&1))
+  defp caster(:utc_datetime_usec), do: &maybe_pad_usec(cast_utc_datetime(&1))
+
+  defp caster({:in, type}) do
+    &cast_array(&1, caster(type), [])
   end
 
-  def cast({:map, type}, term) when is_map(term) do
-    map(Map.to_list(term), type, &cast/2, %{})
+  defp caster({:array, type}) do
+    &cast_array(&1, caster(type), [])
   end
 
-  def cast({:in, type}, term) when is_list(term) do
-    array(term, type, &cast/2, [])
+  defp caster({:map, type}) do
+    &cast_map(&1, caster(type), %{})
   end
 
-  def cast(:float, term) when is_binary(term) do
-    case Float.parse(term) do
-      {float, ""} -> {:ok, float}
-      _           -> :error
+  defp caster(mod) when is_atom(mod) do
+    if loaded_and_exported?(mod, :cast, 1) do
+      &mod.cast(&1)
+    else
+      &{:ok, &1}
     end
   end
-  def cast(:float, term) when is_integer(term), do: {:ok, :erlang.float(term)}
 
-  def cast(:boolean, term) when term in ~w(true 1),  do: {:ok, true}
-  def cast(:boolean, term) when term in ~w(false 0), do: {:ok, false}
+  defp cast_basic(:float, term) when is_binary(term) do
+    case Float.parse(term) do
+      {float, ""} -> {:ok, float}
+      _ -> :error
+    end
+  end
 
-  def cast(:decimal, term) when is_binary(term) do
+  defp cast_basic(:float, term) when is_integer(term), do: {:ok, :erlang.float(term)}
+
+  defp cast_basic(:boolean, term) when term in ~w(true 1),  do: {:ok, true}
+  defp cast_basic(:boolean, term) when term in ~w(false 0), do: {:ok, false}
+
+  defp cast_basic(:binary_id, term) when is_binary(term) do
+    {:ok, term}
+  end
+
+  defp cast_basic(type, term) when type in [:id, :integer] and is_binary(term) do
+    case Integer.parse(term) do
+      {integer, ""} -> {:ok, integer}
+      _ -> :error
+    end
+  end
+
+  defp cast_basic(type, term) do
+    if of_base_type?(type, term) do
+      {:ok, term}
+    else
+      :error
+    end
+  end
+
+  def cast_decimal(term) when is_binary(term) do
     case Decimal.parse(term) do
-      {:ok, decimal} -> cast(:decimal, decimal)
+      {:ok, decimal} -> cast_decimal(decimal)
       :error -> :error
     end
   end
-  def cast(:decimal, term) when is_integer(term) do
+  def cast_decimal(term) when is_integer(term) do
     {:ok, Decimal.new(term)}
   end
-  def cast(:decimal, term) when is_float(term) do
+  def cast_decimal(term) when is_float(term) do
     {:ok, Decimal.from_float(term)}
   end
-  def cast(:decimal, %Decimal{coef: coef} = decimal)
+  def cast_decimal(%Decimal{coef: coef} = decimal)
       when coef not in [:inf, :qNaN, :sNaN] do
     {:ok, decimal}
   end
-  def cast(:decimal, _) do
+  def cast_decimal(_) do
     :error
-  end
-
-  def cast(:date, term) do
-    cast_date(term)
-  end
-
-  def cast(:time, term) do
-    case cast_time(term) do
-      {:ok, time} -> {:ok, truncate_usec(time)}
-      :error -> :error
-    end
-  end
-
-  def cast(:time_usec, term) do
-    case cast_time(term) do
-      {:ok, time} -> {:ok, pad_usec(time)}
-      :error -> :error
-    end
-  end
-
-  def cast(:naive_datetime, term) do
-    case cast_naive_datetime(term) do
-      {:ok, naive_datetime} -> {:ok, truncate_usec(naive_datetime)}
-      :error -> :error
-    end
-  end
-
-  def cast(:naive_datetime_usec, term) do
-    case cast_naive_datetime(term) do
-      {:ok, naive_datetime} -> {:ok, pad_usec(naive_datetime)}
-      :error -> :error
-    end
-  end
-
-  def cast(:utc_datetime, term) do
-    case cast_utc_datetime(term) do
-      {:ok, utc_datetime} -> {:ok, truncate_usec(utc_datetime)}
-      :error -> :error
-    end
-  end
-
-  def cast(:utc_datetime_usec, term) do
-    case cast_utc_datetime(term) do
-      {:ok, utc_datetime} -> {:ok, pad_usec(utc_datetime)}
-      :error -> :error
-    end
-  end
-
-  def cast(type, term) when type in [:id, :integer] and is_binary(term) do
-    case Integer.parse(term) do
-      {int, ""} -> {:ok, int}
-      _         -> :error
-    end
-  end
-
-  def cast(type, term) do
-    cond do
-      not primitive?(type) ->
-        type.cast(term)
-      of_base_type?(type, term) ->
-        {:ok, term}
-      true ->
-        :error
-    end
   end
 
   defp cast_embed(%{cardinality: :one}, nil), do: {:ok, nil}
@@ -997,17 +968,62 @@ defmodule Ecto.Type do
   ## Helpers
 
   # Checks if a value is of the given primitive type.
-  defp of_base_type?(:any, _),         do: true
-  defp of_base_type?(:id, term),       do: is_integer(term)
-  defp of_base_type?(:float, term),    do: is_float(term)
-  defp of_base_type?(:integer, term),  do: is_integer(term)
-  defp of_base_type?(:boolean, term),  do: is_boolean(term)
-  defp of_base_type?(:binary, term),   do: is_binary(term)
-  defp of_base_type?(:string, term),   do: is_binary(term)
-  defp of_base_type?(:map, term),      do: is_map(term) and not Map.has_key?(term, :__struct__)
+  defp of_base_type?(:any, _), do: true
+  defp of_base_type?(:id, term), do: is_integer(term)
+  defp of_base_type?(:float, term), do: is_float(term)
+  defp of_base_type?(:integer, term), do: is_integer(term)
+  defp of_base_type?(:boolean, term), do: is_boolean(term)
+  defp of_base_type?(:binary, term), do: is_binary(term)
+  defp of_base_type?(:string, term), do: is_binary(term)
+  defp of_base_type?(:map, term), do: is_map(term) and not Map.has_key?(term, :__struct__)
   defp of_base_type?(:decimal, value), do: Kernel.match?(%Decimal{}, value)
-  defp of_base_type?(:date, value),    do: Kernel.match?(%Date{}, value)
-  defp of_base_type?(_, _),            do: false
+  defp of_base_type?(:date, value), do: Kernel.match?(%Date{}, value)
+  defp of_base_type?(_, _), do: false
+
+  # TODO: pasted from array/4, remove after changing dump/1 and load/1
+
+  # nil always passes through cast
+  defp cast_array([nil | t], fun, acc) do
+    cast_array(t, fun, [nil | acc])
+  end
+
+  defp cast_array([h | t], fun, acc) do
+    case fun.(h) do
+      {:ok, h} -> cast_array(t, fun, [h | acc])
+      :error -> :error
+    end
+  end
+
+  defp cast_array([], _fun, acc) do
+    {:ok, Enum.reverse(acc)}
+  end
+
+  defp cast_array(_, _, _) do
+    :error
+  end
+
+  defp cast_map(map, fun, acc) when is_map(map) do
+    cast_map(Map.to_list(map), fun, acc)
+  end
+
+  # nil always passes through cast
+  defp cast_map([{key, nil} | t], fun, acc) do
+    cast_map(t, fun, Map.put(acc, key, nil))
+  end
+  defp cast_map([{key, value} | t], fun, acc) do
+    case fun.(value) do
+      {:ok, value} -> cast_map(t, fun, Map.put(acc, key, value))
+      :error -> :error
+    end
+  end
+
+  defp cast_map([], _fun, acc) do
+    {:ok, acc}
+  end
+
+  defp cast_map(_, _, _) do
+    :error
+  end
 
   defp array([h|t], type, fun, acc) do
     case fun.(type, h) do
@@ -1049,6 +1065,12 @@ defmodule Ecto.Type do
     (:erlang.module_loaded(module) or Code.ensure_loaded?(module)) and
       function_exported?(module, fun, arity)
   end
+
+  defp maybe_truncate_usec({:ok, struct}), do: {:ok, truncate_usec(struct)}
+  defp maybe_truncate_usec(:error), do: :error
+
+  defp maybe_pad_usec({:ok, struct}), do: {:ok, pad_usec(struct)}
+  defp maybe_pad_usec(:error), do: :error
 
   defp truncate_usec(nil), do: nil
   defp truncate_usec(%{microsecond: {0, 0}} = struct), do: struct
