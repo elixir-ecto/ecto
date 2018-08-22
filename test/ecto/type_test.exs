@@ -97,6 +97,24 @@ defmodule Ecto.TypeTest do
     assert cast({:array, Custom}, 1) == :error
   end
 
+  test "custom types with map" do
+    assert load({:map, Custom}, %{"x" => "foo"}) == {:ok, %{"x" => :load}}
+    assert dump({:map, Custom}, %{"x" => "foo"}) == {:ok, %{"x" => :dump}}
+    assert cast({:map, Custom}, %{"x" => "foo"}) == {:ok, %{"x" => :cast}}
+
+    assert load({:map, Custom}, %{"x" => nil}) == {:ok, %{"x" => nil}}
+    assert dump({:map, Custom}, %{"x" => nil}) == {:ok, %{"x" => nil}}
+    assert cast({:map, Custom}, %{"x" => nil}) == {:ok, %{"x" => nil}}
+
+    assert load({:map, Custom}, nil) == {:ok, nil}
+    assert dump({:map, Custom}, nil) == {:ok, nil}
+    assert cast({:map, Custom}, nil) == {:ok, nil}
+
+    assert load({:map, Custom}, 1) == :error
+    assert dump({:map, Custom}, 1) == :error
+    assert cast({:map, Custom}, 1) == :error
+  end
+
   test "in" do
     assert cast({:in, :integer}, ["1", "2", "3"]) == {:ok, [1, 2, 3]}
     assert cast({:in, :integer}, nil) == :error
