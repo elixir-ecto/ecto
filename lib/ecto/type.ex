@@ -150,7 +150,7 @@ defmodule Ecto.Type do
   """
   @callback equal?(term, term) :: boolean
 
-  @optional_callbacks [cast: 1, dump: 1, load: 1, equal?: 2]
+  @optional_callbacks [equal?: 2]
 
   ## Functions
 
@@ -629,11 +629,7 @@ defmodule Ecto.Type do
   end
 
   defp caster(mod) when is_atom(mod) do
-    if loaded_and_exported?(mod, :cast, 1) do
-      &mod.cast(&1)
-    else
-      &{:ok, &1}
-    end
+    &mod.cast(&1)
   end
 
   defp cast_basic(:float, term) when is_binary(term) do
