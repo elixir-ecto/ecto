@@ -530,12 +530,12 @@ defmodule Ecto.Query.PlannerTest do
     query = from(Post, []) |> select([p], {p, p.title}) |> normalize()
     assert query.select.fields ==
            select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0) ++
-           [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
+           [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query = from(Post, []) |> select([p], {p.title, p}) |> normalize()
     assert query.select.fields ==
            select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0) ++
-           [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
+           [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query =
       from(Post, [])
@@ -546,7 +546,7 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.fields ==
            select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0) ++
            select_fields([:id, :text, :posted, :uuid, :special, :crazy_comment, :post_id, :crazy_post_id], 1) ++
-           [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
+           [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
   end
 
   test "normalize: select with struct/2" do
@@ -561,7 +561,7 @@ defmodule Ecto.Query.PlannerTest do
     query = Post |> select([p], {struct(p, [:id, :title]), p.title}) |> normalize()
     assert query.select.fields ==
            select_fields([:id, :post_title], 0) ++
-           [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
+           [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query =
       Post
@@ -607,7 +607,7 @@ defmodule Ecto.Query.PlannerTest do
     query = Post |> select([p], {map(p, [:id, :title]), p.title}) |> normalize()
     assert query.select.fields ==
            select_fields([:id, :post_title], 0) ++
-           [{{:., [], [{:&, [], [0]}, :post_title]}, [], []}]
+           [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query =
       Post

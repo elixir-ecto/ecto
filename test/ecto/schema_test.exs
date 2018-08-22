@@ -105,13 +105,14 @@ defmodule Ecto.SchemaTest do
 
     @primary_key {:perm, Custom.Permalink, autogenerate: true}
     @foreign_key_type :string
-    @field_source_mapper fn field -> field |> Atom.to_string |> String.upcase |> String.to_atom() end
+    @field_source_mapper &(&1 |> Atom.to_string |> String.upcase |> String.to_atom())
 
     schema "users" do
       field :name
       capture_io :stderr, fn ->
         belongs_to :comment, Comment
       end
+      field :same_name, :string, source: :NAME
       timestamps()
     end
   end
@@ -129,6 +130,8 @@ defmodule Ecto.SchemaTest do
 
   test "custom field source mapper" do
     assert CustomSchema.__schema__(:field_source, :perm) == :PERM
+    assert CustomSchema.__schema__(:field_source, :name) == :NAME
+    assert CustomSchema.__schema__(:field_source, :same_name) == :NAME
     assert CustomSchema.__schema__(:field_source, :comment_id) == :COMMENT_ID
     assert CustomSchema.__schema__(:field_source, :inserted_at) == :INSERTED_AT
     assert CustomSchema.__schema__(:field_source, :updated_at) == :UPDATED_AT

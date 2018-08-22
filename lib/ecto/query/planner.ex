@@ -840,9 +840,10 @@ defmodule Ecto.Query.Planner do
   end
 
   defp prewalk({{:., dot_meta, [{:&, amp_meta, [ix]}, field]}, meta, []},
-               kind, query, _expr, acc, _adapter) do
+               kind, query, expr, acc, _adapter) do
+    extra = if kind == :select, do: [type: type!(kind, query, expr, ix, field)], else: []
     field = field_source(get_source!(kind, query, ix), field)
-    {{{:., dot_meta, [{:&, amp_meta, [ix]}, field]}, meta, []}, acc}
+    {{{:., extra ++ dot_meta, [{:&, amp_meta, [ix]}, field]}, meta, []}, acc}
   end
 
   defp prewalk({:^, meta, [ix]}, _kind, _query, _expr, acc, _adapter) when is_integer(ix) do
@@ -989,15 +990,15 @@ defmodule Ecto.Query.Planner do
 
   # Expression handling
 
-  defp collect_fields({agg, _, [{{:., _, [{:&, _, [ix]}, field]}, _, []} | _]} = expr,
-                      fields, from, %{select: select} = query, _take)
+  defp collect_fields({agg, _, [{{:., dot_meta, [{:&, _, [_]}, _]}, _, []} | _]} = expr,
+                      fields, from, _query, _take)
        when agg in ~w(count avg min max sum)a do
     type =
       case agg do
         :count -> :integer
         :avg -> :any
         :sum -> :any
-        _ -> source_type!(:select, query, select, ix, field)
+        _ -> Keyword.fetch!(dot_meta, :type)
       end
 
     {{:value, type}, [expr | fields], from}
@@ -1022,10 +1023,9 @@ defmodule Ecto.Query.Planner do
     {type, [expr | fields], from}
   end
 
-  defp collect_fields({{:., _, [{:&, _, [ix]}, field]}, _, []} = expr,
-                      fields, from, %{select: select} = query, _take) do
-    type = source_type!(:select, query, select, ix, field)
-    {{:value, type}, [expr | fields], from}
+  defp collect_fields({{:., dot_meta, [{:&, _, [_]}, _]}, _, []} = expr,
+                      fields, from, _query, _take) do
+    {{:value, Keyword.fetch!(dot_meta, :type)}, [expr | fields], from}
   end
 
   defp collect_fields({left, right}, fields, from, query, take) do
@@ -1232,27 +1232,23 @@ defmodule Ecto.Query.Planner do
   end
 
   defp field_type!(kind, query, expr, {composite, {ix, field}}) when is_integer(ix) do
-    {composite, type!(kind, :type, query, expr, ix, field)}
+    {composite, type!(kind, query, expr, ix, field)}
   end
   defp field_type!(kind, query, expr, {ix, field}) when is_integer(ix) do
-    type!(kind, :type, query, expr, ix, field)
+    type!(kind, query, expr, ix, field)
   end
   defp field_type!(_kind, _query, _expr, type) do
     type
   end
 
-  defp source_type!(kind, query, expr, ix, field) do
-    type!(kind, :source_type, query, expr, ix, field)
-  end
-
-  defp type!(_kind, _lookup, _query, _expr, nil, _field), do: :any
-  defp type!(kind, lookup, query, expr, ix, field) when is_integer(ix) do
+  defp type!(_kind, _query, _expr, nil, _field), do: :any
+  defp type!(kind, query, expr, ix, field) when is_integer(ix) do
     case get_source!(kind, query, ix) do
       {:fragment, _, _} ->
         :any
 
       {_, schema, _} ->
-        type!(kind, lookup, query, expr, schema, field)
+        type!(kind, query, expr, schema, field)
 
       %Ecto.SubQuery{} = subquery ->
         case Keyword.fetch(subquery_types(subquery), field) do
@@ -1265,9 +1261,9 @@ defmodule Ecto.Query.Planner do
         end
     end
   end
-  defp type!(kind, lookup, query, expr, schema, field) when is_atom(schema) do
+  defp type!(kind, query, expr, schema, field) when is_atom(schema) do
     cond do
-      type = schema.__schema__(lookup, field) ->
+      type = schema.__schema__(:type, field) ->
         type
       Map.has_key?(schema.__struct__, field) ->
         error! query, expr, "field `#{field}` in `#{kind}` is a virtual field in schema #{inspect schema}"

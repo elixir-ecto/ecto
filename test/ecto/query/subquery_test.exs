@@ -258,13 +258,13 @@ defmodule Ecto.Query.SubqueryTest do
     assert query.select.fields == select_fields([:id, :title], 0)
 
     query = normalize(from(p in subquery(subquery), select: p.title))
-    assert query.select.fields == [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
+    assert query.select.fields == [{{:., [type: :string], [{:&, [], [0]}, :title]}, [], []}]
 
     query = normalize(from(c in Comment, join: p in subquery(subquery), select: p))
     assert query.select.fields == select_fields([:id, :title], 1)
 
     query = normalize(from(c in Comment, join: p in subquery(subquery), select: p.title))
-    assert query.select.fields == [{{:., [], [{:&, [], [1]}, :title]}, [], []}]
+    assert query.select.fields == [{{:., [type: :string], [{:&, [], [1]}, :title]}, [], []}]
 
     subquery = from p in Post, select: %{id: p.id, title: p.title}
     assert_raise Ecto.QueryError, ~r/it is not possible to return a map\/struct subset of a subquery/, fn ->

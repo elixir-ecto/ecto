@@ -2005,11 +2005,6 @@ defmodule Ecto.Schema do
         {[:type, name], Macro.escape(type)}
       end
 
-    source_types_quoted =
-      for {name, type} <- fields do
-        {[:source_type, field_sources[name] || name], Macro.escape(type)}
-      end
-
     assoc_quoted =
       for {name, refl} <- assocs do
         {[:association, name], Macro.escape(refl)}
@@ -2034,7 +2029,6 @@ defmodule Ecto.Schema do
     catch_all = [
       {[:field_source, quote(do: _)], nil},
       {[:type, quote(do: _)], nil},
-      {[:source_type, quote(do: _)], nil},
       {[:association, quote(do: _)], nil},
       {[:embed, quote(do: _)], nil}
     ]
@@ -2043,7 +2037,6 @@ defmodule Ecto.Schema do
       single_arg,
       field_sources_quoted,
       types_quoted,
-      source_types_quoted,
       assoc_quoted,
       embed_quoted,
       catch_all
