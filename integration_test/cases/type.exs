@@ -3,7 +3,7 @@ Code.require_file "../support/types.exs", __DIR__
 defmodule Ecto.Integration.TypeTest do
   use Ecto.Integration.Case, async: Application.get_env(:ecto, :async_integration_tests, true)
 
-  alias Ecto.Integration.{Custom, Item, Order, Post, User, Tag, Article}
+  alias Ecto.Integration.{Custom, Item, ItemColor, Order, Post, User, Tag, Article}
   alias Ecto.Integration.TestRepo
   import Ecto.Query
 
@@ -269,6 +269,32 @@ defmodule Ecto.Integration.TypeTest do
 
     {1, _} = TestRepo.update_all(Tag, set: [items: [%{dbitem | price: 456}]])
     assert (TestRepo.get!(Tag, tag.id).items |> hd).price == 456
+  end
+
+  @tag :map_type
+  @tag :array_type
+  test "nested embeds" do
+    red = %ItemColor{name: "red"}
+    blue = %ItemColor{name: "blue"}
+    item = %Item{
+      primary_color: red,
+      secondary_colors: [blue]
+    }
+
+    order =
+      %Order{}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_embed(:item, item)
+    order = TestRepo.insert!(order)
+    dbitem = TestRepo.get!(Order, order.id).item
+    assert item.primary_color == dbitem.primary_color
+    assert item.secondary_colors == dbitem.secondary_colors
+    assert dbitem.id
+
+    [dbitem] = TestRepo.all(from o in Order, select: o.item)
+    assert item.primary_color == dbitem.primary_color
+    assert item.secondary_colors == dbitem.secondary_colors
+    assert dbitem.id
   end
 
   @tag :decimal_type
