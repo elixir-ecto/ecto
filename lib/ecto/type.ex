@@ -299,10 +299,23 @@ defmodule Ecto.Type do
       iex> dump({:array, :binary}, ["1", "2", "3"])
       {:ok, ["1", "2", "3"]}
 
-  A `dumper` function may be given for handling recursive types.
+  A `dumper` function may be given for handling recursive types, see: `dump/3`.
   """
-  # @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
+  @spec dump(t, term) :: {:ok, term} | :error
+  def dump(_type, nil) do
+    {:ok, nil}
+  end
 
+  def dump(type, value) do
+    dump_fun(type).(value)
+  end
+
+  @doc """
+  Dumps a value to the given type using a custom function.
+
+  See `dump/2` for more information.
+  """
+  @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
   def dump(_type, nil, _dumper) do
     {:ok, nil}
   end
@@ -322,22 +335,11 @@ defmodule Ecto.Type do
     map(Map.to_list(value), type, dumper, %{})
   end
 
-  # TODO: this head is required to pass `dumper`, see
-  # the head below ignroes dumper. Maybe return 2-arity
-  # function from `dump_fun` and always pass dumper instead?
   def dump({:array, type}, value, dumper) do
     array(value, type, dumper, [])
   end
 
   def dump(type, value, _) do
-    dump_fun(type).(value)
-  end
-
-  def dump(_type, nil) do
-    {:ok, nil}
-  end
-
-  def dump(type, value) do
     dump_fun(type).(value)
   end
 
