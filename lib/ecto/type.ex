@@ -301,90 +301,130 @@ defmodule Ecto.Type do
 
   A `dumper` function may be given for handling recursive types.
   """
-  @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
-  def dump(type, value, dumper \\ &dump/2)
+  # @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
 
   def dump(_type, nil, _dumper) do
     {:ok, nil}
-  end
-
-  def dump(:binary_id, value, _dumper) when is_binary(value) do
-    {:ok, value}
-  end
-
-  def dump(:any, value, _dumper) do
-    {:ok, value}
   end
 
   def dump({:embed, embed}, value, dumper) do
     dump_embed(embed, value, dumper)
   end
 
-  def dump({:array, type}, value, dumper) when is_list(value) do
-    array(value, type, dumper, [])
+  def dump({:in, type}, value, dumper) do
+    case dump({:array, type}, value, dumper) do
+      {:ok, value} -> {:ok, {:in, value}}
+      :error -> :error
+    end
   end
 
   def dump({:map, type}, value, dumper) when is_map(value) do
     map(Map.to_list(value), type, dumper, %{})
   end
 
-  def dump({:in, type}, value, dumper) do
-    case dump({:array, type}, value, dumper) do
-      {:ok, v} -> {:ok, {:in, v}}
-      :error -> :error
-    end
+  # TODO: this head is required to pass `dumper`, see
+  # the head below ignroes dumper. Maybe return 2-arity
+  # function from `dump_fun` and always pass dumper instead?
+  def dump({:array, type}, value, dumper) do
+    array(value, type, dumper, [])
   end
 
-  def dump(:decimal, term, _dumper) when is_integer(term) do
-    {:ok, Decimal.new(term)}
+  def dump(type, value, _) do
+    dump_fun(type).(value)
   end
 
-  def dump(:decimal, term, _dumper) when is_float(term) do
-    {:ok, Decimal.from_float(term)}
+  def dump(_type, nil) do
+    {:ok, nil}
   end
 
-  def dump(:time, %Time{microsecond: {0, 0}} = time, _dumper) do
-    {:ok, time}
+  def dump(type, value) do
+    dump_fun(type).(value)
   end
 
-  def dump(:time_usec, %Time{microsecond: {_, 6}} = time, _dumper) do
-    {:ok, time}
+  defp dump_fun(:integer), do: &dump_integer/1
+  defp dump_fun(:float), do: &dump_float/1
+  defp dump_fun(:boolean), do: &dump_boolean/1
+  defp dump_fun(:map), do: &dump_map/1
+  defp dump_fun(:string), do: &dump_binary/1
+  defp dump_fun(:binary), do: &dump_binary/1
+  defp dump_fun(:id), do: &dump_integer/1
+  defp dump_fun(:binary_id), do: &dump_binary/1
+  defp dump_fun(:any), do: &{:ok, &1}
+  defp dump_fun(:decimal), do: &dump_decimal/1
+  defp dump_fun(:date), do: &dump_date/1
+  defp dump_fun(:time), do: &dump_time/1
+  defp dump_fun(:time_usec), do: &dump_time_usec/1
+  defp dump_fun(:naive_datetime), do: &dump_naive_datetime/1
+  defp dump_fun(:naive_datetime_usec), do: &dump_naive_datetime_usec/1
+  defp dump_fun(:utc_datetime), do: &dump_utc_datetime/1
+  defp dump_fun(:utc_datetime_usec), do: &dump_utc_datetime_usec/1
+
+  # TODO: this is similar to `def dump({:array, type}` above, see if can be removed
+  defp dump_fun({:array, type}) do
+    &array(&1, dump_fun(type), [])
   end
 
-  def dump(:naive_datetime, %NaiveDateTime{microsecond: {0, 0}} = naive_datetime, _dumper) do
-    {:ok, naive_datetime}
+  defp dump_fun({:map, type}) do
+    &map(&1, dump_fun(type), %{})
   end
 
-  def dump(:naive_datetime_usec, %NaiveDateTime{microsecond: {_, 6}} = naive_datetime, _dumper) do
-    {:ok, naive_datetime}
+  defp dump_fun(mod) when is_atom(mod) do
+    &mod.dump(&1)
   end
 
-  def dump(:utc_datetime, %DateTime{time_zone: time_zone, microsecond: {0, 0}} = datetime, _dumper) do
+  defp dump_integer(term) when is_integer(term), do: {:ok, term}
+  defp dump_integer(_), do: :error
+
+  defp dump_float(term) when is_float(term), do: {:ok, term}
+  defp dump_float(_), do: :error
+
+  defp dump_boolean(term) when is_boolean(term), do: {:ok, term}
+  defp dump_boolean(_), do: :error
+
+  defp dump_binary(term) when is_binary(term), do: {:ok, term}
+  defp dump_binary(_), do: :error
+
+  defp dump_map(term) when is_map(term), do: {:ok, term}
+  defp dump_map(_), do: :error
+
+  defp dump_decimal(term) when is_integer(term), do: {:ok, Decimal.new(term)}
+  defp dump_decimal(term) when is_float(term), do: {:ok, Decimal.from_float(term)}
+  defp dump_decimal(%Decimal{} = term), do: {:ok, term}
+  defp dump_decimal(_), do: :error
+
+  defp dump_date(%Date{} = term), do: {:ok, term}
+  defp dump_date(_), do: :error
+
+  defp dump_time(%Time{microsecond: {0, 0}} = term), do: {:ok, term}
+  defp dump_time(_), do: :error
+
+  defp dump_time_usec(%Time{microsecond: {_, 6}} = term), do: {:ok, term}
+  defp dump_time_usec(_), do: :error
+
+  defp dump_naive_datetime(%NaiveDateTime{microsecond: {0, 0}} = term), do: {:ok, term}
+  defp dump_naive_datetime(_), do: :error
+
+  defp dump_naive_datetime_usec(%NaiveDateTime{microsecond: {_, 6}} = term), do: {:ok, term}
+  defp dump_naive_datetime_usec(_), do: :error
+
+  defp dump_utc_datetime(%DateTime{time_zone: time_zone, microsecond: {0, 0}} = term) do
     if time_zone != "Etc/UTC" do
-      message = ":utc_datetime expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
+      message = ":utc_datetime expects the time zone to be \"Etc/UTC\", got `#{inspect(term)}`"
       raise ArgumentError, message
     end
-    {:ok, DateTime.to_naive(datetime)}
-  end
 
-  def dump(:utc_datetime_usec, %DateTime{time_zone: time_zone, microsecond: {_, 6}} = datetime, _dumper) do
+    {:ok, DateTime.to_naive(term)}
+  end
+  defp dump_utc_datetime(_), do: :error
+
+  defp dump_utc_datetime_usec(%DateTime{time_zone: time_zone, microsecond: {_, 6}} = datetime) do
     if time_zone != "Etc/UTC" do
       message = ":utc_datetime_usec expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
       raise ArgumentError, message
     end
     {:ok, DateTime.to_naive(datetime)}
   end
-
-  def dump(type, value, _dumper) do
-    cond do
-      not primitive?(type) ->
-        type.dump(value)
-      of_base_type?(type, value) ->
-        {:ok, value}
-      true ->
-        :error
-    end
-  end
+  defp dump_utc_datetime_usec(_), do: :error
 
   defp dump_embed(%{cardinality: :one, related: schema, field: field},
                   value, fun) when is_map(value) do
@@ -625,15 +665,15 @@ defmodule Ecto.Type do
   defp cast_fun(:utc_datetime_usec), do: &maybe_pad_usec(cast_utc_datetime(&1))
 
   defp cast_fun({:in, type}) do
-    &cast_array(&1, cast_fun(type), [])
+    &array(&1, cast_fun(type), [])
   end
 
   defp cast_fun({:array, type}) do
-    &cast_array(&1, cast_fun(type), [])
+    &array(&1, cast_fun(type), [])
   end
 
   defp cast_fun({:map, type}) do
-    &cast_map(&1, cast_fun(type), %{})
+    &map(&1, cast_fun(type), %{})
   end
 
   defp cast_fun(mod) when is_atom(mod) do
@@ -990,46 +1030,46 @@ defmodule Ecto.Type do
 
   # TODO: pasted from array/4, remove after changing dump/1 and load/1
 
-  # nil always passes through cast
-  defp cast_array([nil | t], fun, acc) do
-    cast_array(t, fun, [nil | acc])
+  # nil always passes through
+  defp array([nil | t], fun, acc) do
+    array(t, fun, [nil | acc])
   end
 
-  defp cast_array([h | t], fun, acc) do
+  defp array([h | t], fun, acc) do
     case fun.(h) do
-      {:ok, h} -> cast_array(t, fun, [h | acc])
+      {:ok, h} -> array(t, fun, [h | acc])
       :error -> :error
     end
   end
 
-  defp cast_array([], _fun, acc) do
+  defp array([], _fun, acc) do
     {:ok, Enum.reverse(acc)}
   end
 
-  defp cast_array(_, _, _) do
+  defp array(_, _, _) do
     :error
   end
 
-  defp cast_map(map, fun, acc) when is_map(map) do
-    cast_map(Map.to_list(map), fun, acc)
+  defp map(map, fun, acc) when is_map(map) do
+    map(Map.to_list(map), fun, acc)
   end
 
-  # nil always passes through cast
-  defp cast_map([{key, nil} | t], fun, acc) do
-    cast_map(t, fun, Map.put(acc, key, nil))
+  # nil always passes through
+  defp map([{key, nil} | t], fun, acc) do
+    map(t, fun, Map.put(acc, key, nil))
   end
-  defp cast_map([{key, value} | t], fun, acc) do
+  defp map([{key, value} | t], fun, acc) do
     case fun.(value) do
-      {:ok, value} -> cast_map(t, fun, Map.put(acc, key, value))
+      {:ok, value} -> map(t, fun, Map.put(acc, key, value))
       :error -> :error
     end
   end
 
-  defp cast_map([], _fun, acc) do
+  defp map([], _fun, acc) do
     {:ok, acc}
   end
 
-  defp cast_map(_, _, _) do
+  defp map(_, _, _) do
     :error
   end
 
@@ -1042,6 +1082,10 @@ defmodule Ecto.Type do
 
   defp array([], _type, _fun, acc) do
     {:ok, Enum.reverse(acc)}
+  end
+
+  defp array(_, _, _, _) do
+    :error
   end
 
   defp map([{key, value} | t], type, fun, acc) do

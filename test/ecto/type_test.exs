@@ -115,6 +115,12 @@ defmodule Ecto.TypeTest do
     assert cast({:map, Custom}, 1) == :error
   end
 
+  test "dump with custom function" do
+    dumper = fn :integer, term -> {:ok, term * 2} end
+    assert dump({:array, :integer}, [1, 2], dumper) == {:ok, [2, 4]}
+    assert dump({:map, :integer}, %{x: 1, y: 2}, dumper) == {:ok, %{x: 2, y: 4}}
+  end
+
   test "in" do
     assert cast({:in, :integer}, ["1", "2", "3"]) == {:ok, [1, 2, 3]}
     assert cast({:in, :integer}, nil) == :error
