@@ -151,11 +151,13 @@ defmodule Ecto.TypeTest do
 
     assert {:ok, %Schema{id: @uuid_string, a: 1, c: 0}} =
            adapter_load(Ecto.TestAdapter, type, %{"id" => @uuid_binary, "abc" => 1})
-    assert {:ok, nil} == adapter_load(Ecto.TestAdapter,type, nil)
+    assert {:ok, nil} == adapter_load(Ecto.TestAdapter, type, nil)
     assert :error == adapter_load(Ecto.TestAdapter, type, 1)
 
     assert {:ok, %{abc: 1, c: 0, id: @uuid_binary}} ==
            adapter_dump(Ecto.TestAdapter, type, %Schema{id: @uuid_string, a: 1})
+    assert {:ok, nil} = adapter_dump(Ecto.TestAdapter, type, nil)
+    assert :error = adapter_dump(Ecto.TestAdapter, type, 1)
 
     assert :error == cast(type, %{"a" => 1})
     assert cast(type, %Schema{}) == {:ok, %Schema{}}
@@ -175,6 +177,8 @@ defmodule Ecto.TypeTest do
 
     assert {:ok, [%{id: @uuid_binary, abc: 1, c: 0}]} ==
            adapter_dump(Ecto.TestAdapter, type, [%Schema{id: @uuid_string, a: 1}])
+    assert {:ok, nil} = adapter_dump(Ecto.TestAdapter, type, nil)
+    assert :error = adapter_dump(Ecto.TestAdapter, type, 1)
 
     assert cast(type, [%{"abc" => 1}]) == :error
     assert cast(type, [%Schema{}]) == {:ok, [%Schema{}]}

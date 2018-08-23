@@ -361,7 +361,6 @@ defmodule Ecto.Type do
   defp dump_fun(:utc_datetime), do: &dump_utc_datetime/1
   defp dump_fun(:utc_datetime_usec), do: &dump_utc_datetime_usec/1
 
-  # TODO: this is similar to `def dump({:array, type}` above, see if can be removed
   defp dump_fun({:array, type}) do
     &array(&1, dump_fun(type), [])
   end
@@ -474,71 +473,98 @@ defmodule Ecto.Type do
       iex> load(:integer, "10")
       :error
 
-  A `loader` function may be given for handling recursive types.
+  A `loader` function may be given for handling recursive types, see: `load/3`.
+  """
+  @spec load(t, term) :: {:ok, term} | :error
+  def load({:embed, embed}, value) do
+    load_embed(embed, value, &load/2)
+  end
+
+  def load(_type, nil) do
+    {:ok, nil}
+  end
+
+  def load(type, value) do
+    load_fun(type).(value)
+  end
+
+  @doc """
+  Dumps a value to the given type using a custom function.
+
+  See `dump/2` for more information.
   """
   @spec load(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
-  def load(type, value, loader \\ &load/2)
-
   def load({:embed, embed}, value, loader) do
     load_embed(embed, value, loader)
   end
 
-  def load(_type, nil, _loader), do: {:ok, nil}
-
-  def load(:binary_id, value, _loader) when is_binary(value) do
-    {:ok, value}
-  end
-
-  def load({:array, type}, value, loader) when is_list(value) do
-    array(value, type, loader, [])
-  end
-
-  def load({:map, type}, value, loader) when is_map(value) do
-    map(Map.to_list(value), type, loader, %{})
-  end
-
-  def load(:time, %Time{} = time, _loader) do
-    {:ok, truncate_usec(time)}
-  end
-
-  def load(:time_usec, %Time{} = time, _loader) do
-    {:ok, pad_usec(time)}
-  end
-
-  def load(:naive_datetime, %NaiveDateTime{} = naive_datetime, _loader) do
-    {:ok, truncate_usec(naive_datetime)}
-  end
-
-  def load(:naive_datetime_usec, %NaiveDateTime{} = naive_datetime, _loader) do
-    {:ok, pad_usec(naive_datetime)}
-  end
-
-  def load(:utc_datetime, %NaiveDateTime{} = naive_datetime, _loader) do
-    naive_datetime |> truncate_usec() |> DateTime.from_naive("Etc/UTC")
-  end
-
-  def load(:utc_datetime, %DateTime{} = datetime, _loader) do
-    {:ok, truncate_usec(datetime)}
-  end
-
-  def load(:utc_datetime_usec, %NaiveDateTime{} = naive_datetime, _loader) do
-    naive_datetime |> pad_usec() |> DateTime.from_naive("Etc/UTC")
-  end
-
-  def load(:utc_datetime_usec, %DateTime{} = datetime, _loader) do
-    {:ok, pad_usec(datetime)}
+  def load(_type, nil, _loader) do
+    {:ok, nil}
   end
 
   def load(type, value, _loader) do
-    cond do
-      not primitive?(type) ->
-        type.load(value)
-      of_base_type?(type, value) ->
-        {:ok, value}
-      true ->
-        :error
-    end
+    load_fun(type).(value)
   end
+
+  defp load_fun(:integer), do: &dump_integer/1
+  defp load_fun(:float), do: &load_float/1
+  defp load_fun(:boolean), do: &dump_boolean/1
+  defp load_fun(:map), do: &dump_map/1
+  defp load_fun(:string), do: &dump_binary/1
+  defp load_fun(:binary), do: &dump_binary/1
+  defp load_fun(:id), do: &dump_integer/1
+  defp load_fun(:binary_id), do: &dump_binary/1
+  defp load_fun(:any), do: &{:ok, &1}
+  defp load_fun(:decimal), do: &dump_decimal/1
+  defp load_fun(:date), do: &dump_date/1
+  defp load_fun(:time), do: &load_time/1
+  defp load_fun(:time_usec), do: &load_time_usec/1
+  defp load_fun(:naive_datetime), do: &load_naive_datetime/1
+  defp load_fun(:naive_datetime_usec), do: &load_naive_datetime_usec/1
+  defp load_fun(:utc_datetime), do: &load_utc_datetime/1
+  defp load_fun(:utc_datetime_usec), do: &load_utc_datetime_usec/1
+
+  defp load_fun({:array, type}) do
+    &array(&1, load_fun(type), [])
+  end
+
+  defp load_fun({:map, type}) do
+    &map(&1, load_fun(type), %{})
+  end
+
+  defp load_fun(mod) when is_atom(mod) do
+    &mod.load(&1)
+  end
+
+  defp load_float(term) when is_float(term), do: {:ok, term}
+  defp load_float(term) when is_integer(term), do: {:ok, :erlang.float(term)}
+  defp load_float(_), do: :error
+
+  defp load_time(%Time{} = time), do: {:ok, truncate_usec(time)}
+  defp load_time(_), do: :error
+
+  defp load_time_usec(%Time{} = time), do: {:ok, pad_usec(time)}
+  defp load_time_usec(_), do: :error
+
+  defp load_naive_datetime(%NaiveDateTime{} = naive_datetime), do: {:ok, truncate_usec(naive_datetime)}
+  defp load_naive_datetime(_), do: :error
+
+  defp load_naive_datetime_usec(%NaiveDateTime{} = naive_datetime), do: {:ok, pad_usec(naive_datetime)}
+  defp load_naive_datetime_usec(_), do: :error
+
+  defp load_utc_datetime(%DateTime{} = datetime),
+    do: {:ok, truncate_usec(datetime)}
+  defp load_utc_datetime(%NaiveDateTime{} = naive_datetime),
+    do: naive_datetime |> truncate_usec() |> DateTime.from_naive("Etc/UTC")
+  defp load_utc_datetime(_),
+    do: :error
+
+  defp load_utc_datetime_usec(%DateTime{} = datetime),
+    do: {:ok, pad_usec(datetime)}
+  defp load_utc_datetime_usec(%NaiveDateTime{} = naive_datetime),
+    do: naive_datetime |> pad_usec() |> DateTime.from_naive("Etc/UTC")
+  defp load_utc_datetime_usec(_),
+    do: :error
 
   defp load_embed(%{cardinality: :one}, nil, _fun), do: {:ok, nil}
 
