@@ -95,8 +95,7 @@ defmodule Ecto.Type do
   @typep composite :: {:array, t} | {:map, t} | {:embed, Ecto.Embedded.t} | {:in, t}
 
   @base ~w(
-    integer float boolean string map binary id binary_id any
-    decimal
+    integer float decimal boolean string map binary id binary_id any
     utc_datetime naive_datetime date time
     utc_datetime_usec naive_datetime_usec time_usec
   )a
