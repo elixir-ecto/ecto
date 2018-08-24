@@ -217,9 +217,7 @@ defmodule Ecto.Type do
   """
   @spec type(t) :: t
   def type(type)
-
   def type({:array, type}), do: {:array, type(type)}
-
   def type({:map, type}), do: {:map, type(type)}
 
   def type(type) do
@@ -359,18 +357,9 @@ defmodule Ecto.Type do
   defp dump_fun(:naive_datetime_usec), do: &dump_naive_datetime_usec/1
   defp dump_fun(:utc_datetime), do: &dump_utc_datetime/1
   defp dump_fun(:utc_datetime_usec), do: &dump_utc_datetime_usec/1
-
-  defp dump_fun({:array, type}) do
-    &array(&1, dump_fun(type), [])
-  end
-
-  defp dump_fun({:map, type}) do
-    &map(&1, dump_fun(type), %{})
-  end
-
-  defp dump_fun(mod) when is_atom(mod) do
-    &mod.dump(&1)
-  end
+  defp dump_fun({:array, type}), do: &array(&1, dump_fun(type), [])
+  defp dump_fun({:map, type}), do: &map(&1, dump_fun(type), %{})
+  defp dump_fun(mod) when is_atom(mod), do: &mod.dump(&1)
 
   defp dump_integer(term) when is_integer(term), do: {:ok, term}
   defp dump_integer(_), do: :error
@@ -522,18 +511,9 @@ defmodule Ecto.Type do
   defp load_fun(:naive_datetime_usec), do: &load_naive_datetime_usec/1
   defp load_fun(:utc_datetime), do: &load_utc_datetime/1
   defp load_fun(:utc_datetime_usec), do: &load_utc_datetime_usec/1
-
-  defp load_fun({:array, type}) do
-    &array(&1, load_fun(type), [])
-  end
-
-  defp load_fun({:map, type}) do
-    &map(&1, load_fun(type), %{})
-  end
-
-  defp load_fun(mod) when is_atom(mod) do
-    &mod.load(&1)
-  end
+  defp load_fun({:array, type}), do: &array(&1, load_fun(type), [])
+  defp load_fun({:map, type}), do: &map(&1, load_fun(type), %{})
+  defp load_fun(mod) when is_atom(mod), do: &mod.load(&1)
 
   defp load_float(term) when is_float(term), do: {:ok, term}
   defp load_float(term) when is_integer(term), do: {:ok, :erlang.float(term)}
@@ -690,22 +670,10 @@ defmodule Ecto.Type do
   defp cast_fun(:naive_datetime_usec), do: &maybe_pad_usec(cast_naive_datetime(&1))
   defp cast_fun(:utc_datetime), do: &maybe_truncate_usec(cast_utc_datetime(&1))
   defp cast_fun(:utc_datetime_usec), do: &maybe_pad_usec(cast_utc_datetime(&1))
-
-  defp cast_fun({:in, type}) do
-    &array(&1, cast_fun(type), [])
-  end
-
-  defp cast_fun({:array, type}) do
-    &array(&1, cast_fun(type), [])
-  end
-
-  defp cast_fun({:map, type}) do
-    &map(&1, cast_fun(type), %{})
-  end
-
-  defp cast_fun(mod) when is_atom(mod) do
-    &mod.cast(&1)
-  end
+  defp cast_fun({:in, type}), do: &array(&1, cast_fun(type), [])
+  defp cast_fun({:array, type}), do: &array(&1, cast_fun(type), [])
+  defp cast_fun({:map, type}), do: &map(&1, cast_fun(type), %{})
+  defp cast_fun(mod) when is_atom(mod), do: &mod.cast(&1)
 
   defp cast_integer(term) when is_binary(term) do
     case Integer.parse(term) do
