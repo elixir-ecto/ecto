@@ -1023,8 +1023,6 @@ defmodule Ecto.Type do
   defp of_base_type?(:date, value), do: Kernel.match?(%Date{}, value)
   defp of_base_type?(_, _), do: false
 
-  # TODO: pasted from array/4, remove after changing dump/1 and load/1
-
   # nil always passes through
   defp array([nil | t], fun, acc) do
     array(t, fun, [nil | acc])
@@ -1068,10 +1066,10 @@ defmodule Ecto.Type do
     :error
   end
 
-  defp array([h|t], type, fun, acc) do
+  defp array([h | t], type, fun, acc) do
     case fun.(type, h) do
-      {:ok, h} -> array(t, type, fun, [h|acc])
-      :error   -> :error
+      {:ok, h} -> array(t, type, fun, [h | acc])
+      :error -> :error
     end
   end
 
