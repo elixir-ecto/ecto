@@ -97,6 +97,30 @@ defmodule Ecto.TypeTest do
     assert cast({:array, Custom}, 1) == :error
   end
 
+  test "custom types with map" do
+    assert load({:map, Custom}, %{"x" => "foo"}) == {:ok, %{"x" => :load}}
+    assert dump({:map, Custom}, %{"x" => "foo"}) == {:ok, %{"x" => :dump}}
+    assert cast({:map, Custom}, %{"x" => "foo"}) == {:ok, %{"x" => :cast}}
+
+    assert load({:map, Custom}, %{"x" => nil}) == {:ok, %{"x" => nil}}
+    assert dump({:map, Custom}, %{"x" => nil}) == {:ok, %{"x" => nil}}
+    assert cast({:map, Custom}, %{"x" => nil}) == {:ok, %{"x" => nil}}
+
+    assert load({:map, Custom}, nil) == {:ok, nil}
+    assert dump({:map, Custom}, nil) == {:ok, nil}
+    assert cast({:map, Custom}, nil) == {:ok, nil}
+
+    assert load({:map, Custom}, 1) == :error
+    assert dump({:map, Custom}, 1) == :error
+    assert cast({:map, Custom}, 1) == :error
+  end
+
+  test "dump with custom function" do
+    dumper = fn :integer, term -> {:ok, term * 2} end
+    assert dump({:array, :integer}, [1, 2], dumper) == {:ok, [2, 4]}
+    assert dump({:map, :integer}, %{x: 1, y: 2}, dumper) == {:ok, %{x: 2, y: 4}}
+  end
+
   test "in" do
     assert cast({:in, :integer}, ["1", "2", "3"]) == {:ok, [1, 2, 3]}
     assert cast({:in, :integer}, nil) == :error
@@ -127,11 +151,13 @@ defmodule Ecto.TypeTest do
 
     assert {:ok, %Schema{id: @uuid_string, a: 1, c: 0}} =
            adapter_load(Ecto.TestAdapter, type, %{"id" => @uuid_binary, "abc" => 1})
-    assert {:ok, nil} == adapter_load(Ecto.TestAdapter,type, nil)
+    assert {:ok, nil} == adapter_load(Ecto.TestAdapter, type, nil)
     assert :error == adapter_load(Ecto.TestAdapter, type, 1)
 
     assert {:ok, %{abc: 1, c: 0, id: @uuid_binary}} ==
            adapter_dump(Ecto.TestAdapter, type, %Schema{id: @uuid_string, a: 1})
+    assert {:ok, nil} = adapter_dump(Ecto.TestAdapter, type, nil)
+    assert :error = adapter_dump(Ecto.TestAdapter, type, 1)
 
     assert :error == cast(type, %{"a" => 1})
     assert cast(type, %Schema{}) == {:ok, %Schema{}}
@@ -151,6 +177,8 @@ defmodule Ecto.TypeTest do
 
     assert {:ok, [%{id: @uuid_binary, abc: 1, c: 0}]} ==
            adapter_dump(Ecto.TestAdapter, type, [%Schema{id: @uuid_string, a: 1}])
+    assert {:ok, nil} = adapter_dump(Ecto.TestAdapter, type, nil)
+    assert :error = adapter_dump(Ecto.TestAdapter, type, 1)
 
     assert cast(type, [%{"abc" => 1}]) == :error
     assert cast(type, [%Schema{}]) == {:ok, [%Schema{}]}
@@ -679,6 +707,8 @@ defmodule Ecto.TypeTest do
     test "primitive" do
       assert Ecto.Type.equal?(:integer, 1, 1)
       refute Ecto.Type.equal?(:integer, 1, 2)
+      refute Ecto.Type.equal?(:integer, 1, "1")
+      refute Ecto.Type.equal?(:integer, 1, nil)
     end
 
     test "composite primitive" do
@@ -690,7 +720,9 @@ defmodule Ecto.TypeTest do
 
     test "semantical comparison" do
       assert Ecto.Type.equal?(:decimal, d(1), d("1.0"))
+      refute Ecto.Type.equal?(:decimal, d(1), 1)
       refute Ecto.Type.equal?(:decimal, d(1), d("1.1"))
+      refute Ecto.Type.equal?(:decimal, d(1), nil)
 
       assert Ecto.Type.equal?(:time, ~T[09:00:00], ~T[09:00:00.000000])
       refute Ecto.Type.equal?(:time, ~T[09:00:00], ~T[09:00:00.999999])
@@ -729,6 +761,17 @@ defmodule Ecto.TypeTest do
     test "custom semantical comparison" do
       assert Ecto.Type.equal?(Custom, true, false)
       refute Ecto.Type.equal?(Custom, false, false)
+    end
+
+    test "nil type" do
+      assert Ecto.Type.equal?(nil, 1, 1.0)
+      refute Ecto.Type.equal?(nil, 1, 2)
+    end
+
+    test "bad type" do
+      assert_raise ArgumentError, ~r"cannot use :foo as Ecto.Type", fn ->
+        Ecto.Type.equal?(:foo, 1, 1.0)
+      end
     end
   end
 

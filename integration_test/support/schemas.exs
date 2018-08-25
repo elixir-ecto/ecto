@@ -214,6 +214,23 @@ defmodule Ecto.Integration.Item do
   embedded_schema do
     field :price, :integer
     field :valid_at, :date
+
+    embeds_one :primary_color, Ecto.Integration.ItemColor
+    embeds_many :secondary_colors, Ecto.Integration.ItemColor
+  end
+end
+
+defmodule Ecto.Integration.ItemColor do
+  @moduledoc """
+  This module is used to test:
+
+    * Nested embeds
+
+  """
+  use Ecto.Schema
+
+  embedded_schema do
+    field :name, :string
   end
 end
 
