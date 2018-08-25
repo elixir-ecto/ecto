@@ -96,7 +96,7 @@ defmodule Ecto.Schema do
   The `SignUp` schema can be cast and validated with the help of the
   `Ecto.Changeset` module, and afterwards, you can copy its data to
   the `Profile` and `Account` structs that will be persisted to the
-  database with the help of `Ecto.Repository`.
+  database with the help of `Ecto.Repo`.
 
   ## Schema attributes
 
