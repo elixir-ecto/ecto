@@ -296,7 +296,6 @@ defmodule Ecto.Type do
       iex> dump({:array, :binary}, ["1", "2", "3"])
       {:ok, ["1", "2", "3"]}
 
-  A `dumper` function may be given for handling recursive types, see: `dump/3`.
   """
   @spec dump(t, term) :: {:ok, term} | :error
   def dump(_type, nil) do
@@ -308,9 +307,10 @@ defmodule Ecto.Type do
   end
 
   @doc """
-  Dumps a value to the given type using a custom function.
+  Dumps a value to the given type.
 
-  See `dump/2` for more information.
+  This function behaves the same as `dump/2`, except for composite types
+  the given `dumper` function is used.
   """
   @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
   def dump(_type, nil, _dumper) do
@@ -461,7 +461,6 @@ defmodule Ecto.Type do
       iex> load(:integer, "10")
       :error
 
-  A `loader` function may be given for handling recursive types, see: `load/3`.
   """
   @spec load(t, term) :: {:ok, term} | :error
   def load({:embed, embed}, value) do
@@ -477,9 +476,10 @@ defmodule Ecto.Type do
   end
 
   @doc """
-  Dumps a value to the given type using a custom function.
+  Loads a value with the given type.
 
-  See `dump/2` for more information.
+  This function behaves the same as `load/2`, except for composite types
+  the given `loader` function is used.
   """
   @spec load(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
   def load({:embed, embed}, value, loader) do
