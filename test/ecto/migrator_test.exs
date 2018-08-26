@@ -152,6 +152,12 @@ defmodule Ecto.MigratorTest do
     assert output =~ ~r"== Migrated in \d.\ds"
   end
 
+  test "up raises error in strict mode" do
+    assert_raise Ecto.MigrationError, fn ->
+      up(TestRepo, 0, Migration, log: false, strict_version_order: true)
+    end
+  end
+
   test "up invokes the repository adapter with up commands" do
     assert capture_log(fn ->
       assert up(TestRepo, 0, Migration, log: false) == :ok

@@ -66,6 +66,7 @@ defmodule Ecto.Migrator do
     * `:log` - the level to use for logging. Defaults to `:info`.
       Can be any of `Logger.level/0` values or `false`.
     * `:prefix` - the prefix to run the migrations on
+    * `:strict_version_order` - abort when applying a migration with old timestamp
   """
   @spec up(Ecto.Repo.t, integer, module, Keyword.t) :: :ok | :already_up
   def up(repo, version, module, opts \\ []) do
@@ -82,7 +83,7 @@ defmodule Ecto.Migrator do
         if version != Enum.max([version | versions]) do
           latest = Enum.max(versions)
 
-          Logger.warn """
+          message = """
           You are running migration #{version} but an older \
           migration with version #{latest} has already run.
 
@@ -93,6 +94,12 @@ defmodule Ecto.Migrator do
           If this can be an issue, we recommend to rollback #{version} and change \
           it to a version later than #{latest}.
           """
+
+          if opts[:strict_version_order] do
+            raise Ecto.MigrationError, message
+          else
+            Logger.warn message
+          end
         end
 
         result
