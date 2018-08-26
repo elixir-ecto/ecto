@@ -165,6 +165,19 @@ defmodule Ecto.AssociationTest do
     end
   end
 
+  defmodule AssociationKeyExample do
+    use Ecto.Schema
+
+    @find_a_better_name "should_be_this"
+    schema "association" do
+      field :name
+    end
+  end
+
+  test "association_key/2 should use the module attribute" do
+    assert "should_be_this_id" == Ecto.Association.association_key(AssociationKeyExample, "_id")
+  end
+
   test "has many" do
     assoc = Post.__schema__(:association, :comments)
 

@@ -155,8 +155,20 @@ defmodule Ecto.Association do
 
   """
   def association_key(module, suffix) do
-    prefix = module |> Module.split |> List.last |> Macro.underscore
+    prefix =
+      module
+      |> Module.get_attribute(:find_a_better_name)
+      |> association_prefix(module)
+
     :"#{prefix}_#{suffix}"
+  end
+
+  defp association_prefix(nil, module) do
+    module |> Module.split |> List.last |> Macro.underscore
+  end
+
+  defp association_prefix(prefix, _module) do
+    prefix
   end
 
   @doc """
