@@ -184,7 +184,7 @@ defmodule Ecto.Changeset do
       types = %{first_name: :string, last_name: :string, email: :string}
       changeset =
         {user, types}
-        |> Ecto.Changeset.cast(params["name"], Map.keys(types))      
+        |> Ecto.Changeset.cast(params["name"], Map.keys(types))
         |> Ecto.Changeset.validate_required(...)
         |> Ecto.Changeset.validate_length(...)
 
@@ -192,7 +192,7 @@ defmodule Ecto.Changeset do
 
       defmodule User do
         defstruct [:name, :age]
-      end 
+      end
 
   Changesets can also be used with data in a plain map, by following the same API:
 
@@ -973,12 +973,16 @@ defmodule Ecto.Changeset do
   For relations, these functions will return the changeset data
   with changes applied. To retrieve raw changesets, please use `get_change/3`.
 
+  ## Examples
+
       iex> post = %Post{title: "A title", body: "My body is a cage"}
       iex> changeset = change(post, %{title: "A new title"})
       iex> get_field(changeset, :title)
       "A new title"
       iex> get_field(changeset, :not_a_field, "Told you, not a field!")
       "Told you, not a field!"
+      iex> get_field(changeset, :not_a_field, fn -> "Function resolved!" end)
+      "Function resolved!"
 
   """
   @spec get_field(t, atom, term) :: term
@@ -989,7 +993,7 @@ defmodule Ecto.Changeset do
       :error ->
         case Map.fetch(data, key) do
           {:ok, value} -> data_as_field(data, types, key, value)
-          :error       -> default
+          :error       -> resolve_default_value(default)
         end
     end
   end
@@ -1011,6 +1015,9 @@ defmodule Ecto.Changeset do
         value
     end
   end
+
+  defp resolve_default_value(value) when is_function(value), do: value.()
+  defp resolve_default_value(value), do: value
 
   @doc """
   Fetches a change from the given changeset.

@@ -512,6 +512,7 @@ defmodule Ecto.ChangesetTest do
     assert get_field(changeset, :body, "other") == "bar"
     assert get_field(changeset, :other) == nil
     assert get_field(changeset, :other, "other") == "other"
+    assert get_field(changeset, :other, fn -> "other" end) == "other"
   end
 
   test "get_field/3 with associations" do
