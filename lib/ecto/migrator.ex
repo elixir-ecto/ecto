@@ -30,10 +30,19 @@ defmodule Ecto.Migrator do
   """
   @spec migrations_path(Ecto.Repo.t) :: String.t
   def migrations_path(repo) do
+    hd(List.first(migrations_paths(repo)))
+  end
+
+  @doc """
+  Gets the migrations paths from a repository.
+  """
+  @spec migrations_paths(Ecto.Repo.t) :: [String.t]
+  def migrations_paths(repo) do
     config = repo.config()
     priv = config[:priv] || "priv/#{repo |> Module.split |> List.last |> Macro.underscore}"
     app = Keyword.fetch!(config, :otp_app)
-    Application.app_dir(app, Path.join(priv, "migrations"))
+    paths = config[:migrations_paths] || [Application.app_dir(app)]
+    Enum.map(paths, &(Path.join(&1, priv)))
   end
 
   @doc """
@@ -202,12 +211,12 @@ defmodule Ecto.Migrator do
 
   Equivalent to:
 
-      Ecto.Migrator.run(repo, Ecto.Migrator.migrations_path(repo), direction, opts)
+      Ecto.Migrator.run(repo, Ecto.Migrator.migrations_paths(repo), direction, opts)
 
   """
   @spec run(Ecto.Repo.t, atom, Keyword.t) :: [integer]
   def run(repo, direction, opts) do
-    run(repo, migrations_path(repo), direction, opts)
+    run(repo, migrations_paths(repo), direction, opts)
   end
 
   @doc """
@@ -258,12 +267,12 @@ defmodule Ecto.Migrator do
 
   Equivalent to:
 
-      Ecto.Migrator.migrations(repo, Ecto.Migrator.migrations_path(repo))
+      Ecto.Migrator.migrations(repo, Ecto.Migrator.migrations_paths(repo))
 
   """
   @spec migrations(Ecto.Repo.t) :: [{:up | :down, id :: integer(), name :: String.t}]
   def migrations(repo) do
-    migrations(repo, migrations_path(repo))
+    migrations(repo, migrations_paths(repo))
   end
 
   @doc """
