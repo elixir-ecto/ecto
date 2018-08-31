@@ -39,10 +39,15 @@ defmodule Ecto.Migrator do
   @spec migrations_paths(Ecto.Repo.t) :: [String.t]
   def migrations_paths(repo) do
     config = repo.config()
-    priv = config[:priv] || "priv/#{repo |> Module.split |> List.last |> Macro.underscore}"
+    config[:migrations_paths] || [default_migration_path(repo)]
+  end
+
+  defp default_migration_path(repo) do
+    config = repo.config()
     app = Keyword.fetch!(config, :otp_app)
-    paths = config[:migrations_paths] || [Application.app_dir(app)]
-    Enum.map(paths, &(Path.join(&1, priv)))
+    priv = "priv/#{repo |> Module.split |> List.last |> Macro.underscore}"
+
+    Path.join(Application.app_dir(app), priv)
   end
 
   @doc """
