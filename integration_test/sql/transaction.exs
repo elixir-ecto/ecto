@@ -4,6 +4,7 @@ defmodule Ecto.Integration.TransactionTest do
   use Ecto.Integration.Case, async: true
 
   import Ecto.Query
+  import ExUnit.CaptureLog
   alias Ecto.Integration.PoolRepo # Used for writes
   alias Ecto.Integration.TestRepo # Used for reads
 
@@ -224,20 +225,6 @@ defmodule Ecto.Integration.TransactionTest do
     catch_error(PoolRepo.query!("savepoint foobar"))
   end
 
-  test "log raises after begin, drops the whole transaction" do
-    try do
-      PoolRepo.transaction(fn ->
-        PoolRepo.insert!(%Trans{text: "8"})
-        Process.put(:on_log, fn _ -> raise UniqueError end)
-        PoolRepo.transaction(fn -> flunk "log did not raise" end)
-      end)
-    rescue
-      UniqueError -> :ok
-    end
-
-    assert [] = PoolRepo.all(Trans)
-  end
-
   test "log raises after commit, does commit" do
     try do
       PoolRepo.transaction(fn ->
@@ -263,5 +250,20 @@ defmodule Ecto.Integration.TransactionTest do
     end
 
     assert [] = PoolRepo.all(Trans)
+  end
+
+  test "log raises on nested transaction, does not drop the transaction" do
+    PoolRepo.transaction(fn ->
+      PoolRepo.insert!(%Trans{text: "8"})
+      Process.put(:on_log, fn _ -> raise UniqueError end)
+
+      assert capture_log(fn ->
+               PoolRepo.transaction(fn ->
+                 assert [_] = PoolRepo.all(Trans)
+               end)
+             end) =~ "** (Ecto.Integration.TransactionTest.UniqueError) unique error"
+    end)
+
+    assert [_] = PoolRepo.all(Trans)
   end
 end
