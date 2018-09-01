@@ -356,8 +356,6 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       do: proxy(:handle_fetch, state, [query, cursor, maybe_savepoint(opts, state)])
     def handle_deallocate(query, cursor, opts, state),
       do: proxy(:handle_deallocate, state, [query, cursor, maybe_savepoint(opts, state)])
-    def handle_info(msg, state),
-      do: proxy(:handle_info, state, [msg])
 
     def handle_status(_opts, _state),
       do: raise "should never be invoked"
