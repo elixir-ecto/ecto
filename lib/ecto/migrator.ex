@@ -30,7 +30,7 @@ defmodule Ecto.Migrator do
   """
   @spec migrations_path(Ecto.Repo.t) :: String.t
   def migrations_path(repo) do
-    hd(List.first(migrations_paths(repo)))
+    hd(migrations_paths(repo))
   end
 
   @doc """
