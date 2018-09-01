@@ -170,6 +170,8 @@ defmodule Ecto.Adapters.MySQL do
         {:error, :already_up}
       {:error, error} ->
         {:error, Exception.message(error)}
+      {:exit, exit} ->
+        {:error, exit_to_exception(exit)}
     end
   end
 
@@ -188,8 +190,10 @@ defmodule Ecto.Adapters.MySQL do
         {:error, :already_down}
       {:error, %{mariadb: %{code: 1049}}} ->
         {:error, :already_down}
-      {:error, error} ->
-        {:error, Exception.message(error)}
+      {:exit, :killed} ->
+        {:error, :already_down}
+      {:exit, exit} ->
+        {:error, exit_to_exception(exit)}
     end
   end
 
@@ -252,6 +256,7 @@ defmodule Ecto.Adapters.MySQL do
       {:ok, %{rows: rows}} -> {:ok, Enum.map(rows, &hd/1)}
       {:error, %{mariadb: %{code: 1146}}} -> {:ok, []}
       {:error, _} = error -> error
+      {:exit, exit} -> {:error, exit_to_exception(exit)}
     end
   end
 
@@ -316,15 +321,18 @@ defmodule Ecto.Adapters.MySQL do
         {:ok, result}
       {:ok, {:error, error}} ->
         {:error, error}
-      {:exit, {%{__struct__: struct} = error, _}}
-          when struct in [Mariaex.Error, DBConnection.Error] ->
-        {:error, error}
-      {:exit, reason}  ->
-        {:error, RuntimeError.exception(Exception.format_exit(reason))}
+      {:exit, exit} ->
+        {:exit, exit}
       nil ->
         {:error, RuntimeError.exception("command timed out")}
     end
   end
+
+  defp exit_to_exception({%{__struct__: struct} = error, _})
+       when struct in [Mariaex.Error, DBConnection.Error],
+       do: error
+
+  defp exit_to_exception(reason), do: RuntimeError.exception(Exception.format_exit(reason))
 
   defp run_with_cmd(cmd, opts, opt_args) do
     unless System.find_executable(cmd) do
