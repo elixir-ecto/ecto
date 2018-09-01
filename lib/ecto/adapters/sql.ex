@@ -169,7 +169,7 @@ defmodule Ecto.Adapters.SQL do
                {String.t, [term]}
   def to_sql(kind, repo, queryable) do
     case Ecto.Adapter.prepare_query(kind, repo, queryable) do
-      {{:cached, _reset, {_id, cached}}, params} ->
+      {{:cached, _update, _reset, {_id, cached}}, params} ->
         {String.Chars.to_string(cached), params}
 
       {{:cache, _update, {_id, prepared}}, params} ->
@@ -229,7 +229,7 @@ defmodule Ecto.Adapters.SQL do
   def query!(repo, sql, params \\ [], opts \\ []) do
     case query(repo, sql, params, opts) do
       {:ok, result} -> result
-      {:error, err} -> raise err
+      {:error, err} -> raise_sql_call_error err
     end
   end
 
@@ -278,21 +278,18 @@ defmodule Ecto.Adapters.SQL do
   end
 
   def query(adapter_meta, sql, params, opts) do
-    sql_call(adapter_meta, :execute, [sql], params, opts)
+    case sql_call(adapter_meta, :execute, [sql], params, opts) do
+      {:ok, _} = ok -> ok
+      {:ok, _, res} -> {:ok, res}
+      {:error, _} = error -> error
+    end
   end
 
   defp sql_call({pool, {loggers, sql, default_opts}}, callback, args, params, opts) do
     conn = get_conn(pool) || pool
     opts = with_log(loggers, params, opts ++ default_opts)
     args = args ++ [params, opts]
-
-    try do
-      apply(sql, callback, [conn | args])
-    rescue
-      err in DBConnection.OwnershipError ->
-        message = err.message <> "\nSee Ecto.Adapters.SQL.Sandbox docs for more information."
-        reraise %{err | message: message}, System.stacktrace
-    end
+    apply(sql, callback, [conn | args])
   end
 
   defp put_source(opts, %{sources: sources}) when is_binary(elem(elem(sources, 0), 0)) do
@@ -457,21 +454,6 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp do_execute(adapter_meta, {:cache, update, {id, prepared}}, params, opts) do
-    execute_and_cache(adapter_meta, id, update, prepared, params, opts)
-  end
-
-  defp do_execute(adapter_meta, {:cached, reset, {id, cached}}, params, opts) do
-    execute_or_reset(adapter_meta, id, reset, cached, params, opts)
-  end
-
-  defp do_execute(adapter_meta, {:nocache, {_id, prepared}}, params, opts) do
-    case sql_call(adapter_meta, :execute, [prepared], params, opts) do
-      {:ok, res}    -> res
-      {:error, err} -> raise err
-    end
-  end
-
-  defp execute_and_cache(adapter_meta, id, update, prepared, params, opts) do
     name = "ecto_" <> Integer.to_string(id)
 
     case sql_call(adapter_meta, :prepare_execute, [name, prepared], params, opts) do
@@ -479,19 +461,30 @@ defmodule Ecto.Adapters.SQL do
         update.({id, query})
         result
       {:error, err} ->
-        raise err
+        raise_sql_call_error err
     end
   end
 
-  defp execute_or_reset(adapter_meta, id, reset, cached, params, opts) do
+  defp do_execute(adapter_meta, {:cached, update, reset, {id, cached}}, params, opts) do
     case sql_call(adapter_meta, :execute, [cached], params, opts) do
+      {:ok, query, result} ->
+        update.({id, query})
+        result
       {:ok, result} ->
         result
       {:error, err} ->
-        raise err
+        raise_sql_call_error err
       {:reset, err} ->
         reset.({id, String.Chars.to_string(cached)})
-        raise err
+        raise_sql_call_error err
+    end
+  end
+
+  defp do_execute(adapter_meta, {:nocache, {_id, prepared}}, params, opts) do
+    case sql_call(adapter_meta, :execute, [prepared], params, opts) do
+      {:ok, res} -> res
+      {:ok, _, res} -> res
+      {:error, err} -> raise_sql_call_error err
     end
   end
 
@@ -504,7 +497,7 @@ defmodule Ecto.Adapters.SQL do
     prepare_stream(adapter_meta, prepared, params, opts)
   end
 
-  defp do_stream(adapter_meta, {:cached, _, {_, cached}}, params, opts) do
+  defp do_stream(adapter_meta, {:cached, _, _, {_, cached}}, params, opts) do
     prepare_stream(adapter_meta, String.Chars.to_string(cached), params, opts)
   end
 
@@ -517,6 +510,13 @@ defmodule Ecto.Adapters.SQL do
     |> Ecto.Adapters.SQL.Stream.build(prepared, params, opts)
     |> Stream.map(fn(%{num_rows: nrows, rows: rows}) -> {nrows, rows} end)
   end
+
+  defp raise_sql_call_error(%DBConnection.OwnershipError{} = err) do
+    message = err.message <> "\nSee Ecto.Adapters.SQL.Sandbox docs for more information."
+    raise %{err | message: message}
+  end
+
+  defp raise_sql_call_error(err), do: raise err
 
   @doc false
   def reduce({pool, {loggers, sql, default_opts}}, statement, params, opts, acc, fun) do
@@ -567,7 +567,7 @@ defmodule Ecto.Adapters.SQL do
 
       {:error, err} ->
         case conn.to_constraints(err) do
-          [] -> raise err
+          [] -> raise_sql_call_error err
           constraints -> {:invalid, constraints}
         end
     end
