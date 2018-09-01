@@ -352,14 +352,15 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       do: proxy(:handle_close, state, [query, maybe_savepoint(opts, state)])
     def handle_declare(query, params, opts, state),
       do: proxy(:handle_declare, state, [query, params, maybe_savepoint(opts, state)])
-    def handle_first(query, cursor, opts, state),
-      do: proxy(:handle_first, state, [query, cursor, maybe_savepoint(opts, state)])
-    def handle_next(query, cursor, opts, state),
-      do: proxy(:handle_next, state, [query, cursor, maybe_savepoint(opts, state)])
+    def handle_fetch(query, cursor, opts, state),
+      do: proxy(:handle_fetch, state, [query, cursor, maybe_savepoint(opts, state)])
     def handle_deallocate(query, cursor, opts, state),
       do: proxy(:handle_deallocate, state, [query, cursor, maybe_savepoint(opts, state)])
     def handle_info(msg, state),
       do: proxy(:handle_info, state, [msg])
+
+    def handle_status(_opts, _state),
+      do: raise "should never be invoked"
 
     defp maybe_savepoint(opts, {_, _, in_transaction?}) do
       if not in_transaction? and Keyword.get(opts, :sandbox_subtransaction, true) do
@@ -438,15 +439,6 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       when is_atom(repo) and mode in [:auto, :manual]
       when is_atom(repo) and elem(mode, 0) == :shared and is_pid(elem(mode, 1)) do
     {pool, {_loggers, _sql, opts}} = proxy_pool(repo)
-
-    # If the mode is set to anything but shared, let's
-    # automatically checkin the current connection to
-    # force it to act according to the chosen mode.
-    # TODO: This is may no longer be necessary on latest DBConnection
-    if mode in [:auto, :manual] do
-      checkin(repo, [])
-    end
-
     DBConnection.Ownership.ownership_mode(pool, mode, opts)
   end
 
@@ -551,7 +543,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       """
     end
 
-    {sandbox_pool, opts} = Keyword.pop(opts, :ownership_pool, DBConnection.Poolboy)
+    {sandbox_pool, opts} = Keyword.pop(opts, :ownership_pool, DBConnection.ConnectionPool)
     {pool, {loggers, sql, [repo: repo, sandbox_pool: sandbox_pool, ownership_pool: Pool] ++ opts}}
   end
 end

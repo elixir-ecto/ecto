@@ -36,7 +36,7 @@ defmodule Ecto.Adapters.Postgres do
 
   ### Connection options
 
-    * `:pool` - The connection pool module, defaults to `DBConnection.Poolboy`
+    * `:pool` - The connection pool module, defaults to `DBConnection.ConnectionPool`
     * `:pool_timeout` - The default timeout to use on pool calls, defaults to `5000`
     * `:timeout` - The default timeout to use on queries, defaults to `15000`
     * `:hostname` - Server hostname
@@ -236,9 +236,9 @@ defmodule Ecto.Adapters.Postgres do
 
     opts =
       opts
-      |> Keyword.drop([:name, :log])
-      |> Keyword.put(:pool, DBConnection.Connection)
+      |> Keyword.drop([:name, :log, :pool, :pool_size])
       |> Keyword.put(:backoff_type, :stop)
+      |> Keyword.put(:max_restarts, 0)
 
     {:ok, pid} = Task.Supervisor.start_link
 

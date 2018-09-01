@@ -363,13 +363,10 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def ensure_all_started(adapter, config, type) do
-    pool_config = pool_config(config)
-
-    with {:ok, from_pool} <- DBConnection.ensure_all_started(pool_config, type),
-         {:ok, from_adapter} <- Application.ensure_all_started(adapter, type),
+  def ensure_all_started(adapter, _config, type) do
+    with {:ok, from_adapter} <- Application.ensure_all_started(adapter, type),
          # We always return the adapter to force it to be restarted if necessary
-         do: {:ok, from_pool ++ List.delete(from_adapter, adapter) ++ [adapter]}
+         do: {:ok, List.delete(from_adapter, adapter) ++ [adapter]}
   end
 
   @doc false
@@ -396,7 +393,7 @@ defmodule Ecto.Adapters.SQL do
   defp pool_config(config) do
     config
     |> Keyword.drop([:loggers, :priv, :url, :name])
-    |> Keyword.update(:pool, DBConnection.Poolboy, &normalize_pool/1)
+    |> Keyword.update(:pool, DBConnection.ConnectionPool, &normalize_pool/1)
   end
 
   defp normalize_pool(pool) do

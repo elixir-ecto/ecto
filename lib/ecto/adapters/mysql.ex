@@ -20,7 +20,7 @@ defmodule Ecto.Adapters.MySQL do
   recompilation in order to make an effect.
 
     * `:adapter` - The adapter name, in this case, `Ecto.Adapters.MySQL`
-    * `:pool` - The connection pool module, defaults to `DBConnection.Poolboy`
+    * `:pool` - The connection pool module, defaults to `DBConnection.ConnectionPool`
     * `:pool_timeout` - The default timeout to use on pool calls, defaults to `5000`
     * `:timeout` - The default timeout to use on queries, defaults to `15000`
 
@@ -295,9 +295,9 @@ defmodule Ecto.Adapters.MySQL do
 
     opts =
       opts
-      |> Keyword.drop([:name, :log])
-      |> Keyword.put(:pool, DBConnection.Connection)
+      |> Keyword.drop([:name, :log, :pool, :pool_size])
       |> Keyword.put(:backoff_type, :stop)
+      |> Keyword.put(:max_restarts, 0)
 
     {:ok, pid} = Task.Supervisor.start_link
 

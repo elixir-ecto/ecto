@@ -15,19 +15,12 @@ Code.require_file "../support/repo.exs", __DIR__
 Code.require_file "../support/schemas.exs", __DIR__
 Code.require_file "../support/migration.exs", __DIR__
 
-pool =
-  case System.get_env("ECTO_POOL") || "poolboy" do
-    "poolboy" -> DBConnection.Poolboy
-    "sbroker" -> DBConnection.Sojourn
-  end
-
 # Pool repo for async, safe tests
 alias Ecto.Integration.TestRepo
 
 Application.put_env(:ecto, TestRepo,
   url: Application.get_env(:ecto, :pg_test_url) <> "/ecto_test",
-  pool: Ecto.Adapters.SQL.Sandbox,
-  ownership_pool: pool)
+  pool: Ecto.Adapters.SQL.Sandbox)
 
 defmodule Ecto.Integration.TestRepo do
   use Ecto.Integration.Repo, otp_app: :ecto, adapter: Ecto.Adapters.Postgres
@@ -37,7 +30,6 @@ end
 alias Ecto.Integration.PoolRepo
 
 Application.put_env(:ecto, PoolRepo,
-  pool: pool,
   url: Application.get_env(:ecto, :pg_test_url) <> "/ecto_test",
   pool_size: 10,
   max_restarts: 20,
