@@ -1,12 +1,12 @@
 %{
   "connection": {:hex, :connection, "1.0.4", "a1cae72211f0eef17705aaededacac3eb30e6625b04a6117c1b2db6ace7d5976", [:mix], [], "hexpm"},
-  "db_connection": {:git, "https://github.com/elixir-ecto/db_connection.git", "1263d733b76f4b55ceb7cf31a74996db9b986303", [ref: "1263d733"]},
+  "db_connection": {:git, "https://github.com/elixir-ecto/db_connection.git", "854d917721b820576da4b74b3620bf359c61179f", [ref: "854d917"]},
   "decimal": {:hex, :decimal, "1.5.0", "b0433a36d0e2430e3d50291b1c65f53c37d56f83665b43d79963684865beab68", [:mix], [], "hexpm"},
   "earmark": {:hex, :earmark, "1.2.4", "99b637c62a4d65a20a9fb674b8cffb8baa771c04605a80c911c4418c69b75439", [:mix], [], "hexpm"},
   "ex_doc": {:hex, :ex_doc, "0.18.2", "993e0a95e9fbb790ac54ea58e700b45b299bd48bc44b4ae0404f28161f37a83e", [:mix], [{:earmark, "~> 1.1", [hex: :earmark, repo: "hexpm", optional: false]}], "hexpm"},
   "inch_ex": {:hex, :inch_ex, "0.5.5", "b63f57e281467bd3456461525fdbc9e158c8edbe603da6e3e4671befde796a3d", [:mix], [{:poison, "~> 1.5 or ~> 2.0 or ~> 3.0", [hex: :poison, repo: "hexpm", optional: false]}], "hexpm"},
   "jason": {:hex, :jason, "1.0.0", "0f7cfa9bdb23fed721ec05419bcee2b2c21a77e926bce0deda029b5adc716fe2", [:mix], [{:decimal, "~> 1.0", [hex: :decimal, repo: "hexpm", optional: true]}], "hexpm"},
-  "mariaex": {:git, "https://github.com/josevalim/mariaex.git", "02bc0fb030e2da695c43846e39defa89d6021b75", [branch: "jv-db-connection-20"]},
+  "mariaex": {:git, "https://github.com/josevalim/mariaex.git", "e319241538b49ac643d3201db379d0d070304478", [ref: "e319241"]},
   "poison": {:hex, :poison, "3.1.0", "d9eb636610e096f86f25d9a46f35a9facac35609a7591b3be3326e99a0484665", [:mix], [], "hexpm"},
-  "postgrex": {:git, "https://github.com/elixir-ecto/postgrex.git", "c90898c2cb146f52a9ed7ba3eac60f4a95c53431", [branch: "master"]},
+  "postgrex": {:git, "https://github.com/elixir-ecto/postgrex.git", "e5676c749ea439832878673f1fb79011934584d9", [ref: "e5676c7"]},
 }

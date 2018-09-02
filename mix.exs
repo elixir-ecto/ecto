@@ -43,9 +43,9 @@ defmodule Ecto.MixProject do
       {:decimal, "~> 1.5"},
 
       # Drivers
-      {:db_connection, "~> 2.0.0-dev", github: "elixir-ecto/db_connection", ref: "1263d733", override: true},
-      {:postgrex, "~> 0.14.0-dev", optional: true, github: "elixir-ecto/postgrex", branch: "master"},
-      {:mariaex, "~> 0.9.0-dev", optional: true, github: "josevalim/mariaex", branch: "jv-db-connection-20"},
+      {:db_connection, "~> 2.0.0-dev", github: "elixir-ecto/db_connection", ref: "854d917"},
+      {:postgrex, "~> 0.14.0-dev", optional: true, github: "elixir-ecto/postgrex", ref: "e5676c7"},
+      {:mariaex, "~> 0.9.0-dev", optional: true, github: "josevalim/mariaex", ref: "e319241"},
 
       # Optional
       {:poison, "~> 2.2 or ~> 3.0", optional: true},
