@@ -51,7 +51,7 @@ if Code.ensure_loaded?(Postgrex) do
       end
     end
 
-    def to_constraints(%Postgrex.Error{}),
+    def to_constraints(_),
       do: []
 
     defp strip_quotes(quoted) do
@@ -65,26 +65,24 @@ if Code.ensure_loaded?(Postgrex) do
     def prepare_execute(conn, name, sql, params, opts) do
       query = %Postgrex.Query{name: name, statement: sql}
       opts  = [function: :prepare_execute] ++ opts
+
       case DBConnection.prepare_execute(conn, query, params, opts) do
         {:ok, _, _} = ok ->
           ok
-        {:error, %Postgrex.Error{}} = error ->
+        {:error, _} = error ->
           error
-        {:error, err} ->
-          raise err
       end
     end
 
     def execute(conn, sql, params, opts) when is_binary(sql) or is_list(sql) do
       query = %Postgrex.Query{name: "", statement: sql}
       opts  = [function: :prepare_execute] ++ opts
+
       case DBConnection.prepare_execute(conn, query, params, opts) do
         {:ok, _, result}  ->
           {:ok, result}
-        {:error, %Postgrex.Error{}} = error ->
+        {:error, _} = error ->
           error
-        {:error, err} ->
-          raise err
       end
     end
 
@@ -93,14 +91,12 @@ if Code.ensure_loaded?(Postgrex) do
       case DBConnection.execute(conn, query, params, opts) do
         {:ok, _} = ok ->
           ok
-        {:error, %ArgumentError{} = err} ->
-          {:reset, err}
+        {:ok, _, _} = ok ->
+          ok
         {:error, %Postgrex.Error{postgres: %{code: :feature_not_supported}} = err} ->
           {:reset, err}
-        {:error, %Postgrex.Error{}} = error ->
+        {:error, _} = error ->
           error
-        {:error, err} ->
-          raise err
       end
     end
 

@@ -59,7 +59,7 @@ if Code.ensure_loaded?(Mariaex) do
         _ -> []
       end
     end
-    def to_constraints(%Mariaex.Error{}),
+    def to_constraints(_),
       do: []
 
     defp strip_quotes(quoted) do
