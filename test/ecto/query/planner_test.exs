@@ -412,6 +412,12 @@ defmodule Ecto.Query.PlannerTest do
     assert query.sources == {{"comments", Comment, "global"}, {"posts", Post, "local"}}
   end
 
+  test "prepare: prepare combination queries" do
+    {%{combinations: [{_, query}]}, _, _} = from(c in Comment, union: from(c in Comment)) |> plan()
+    assert query.sources == {{"comments", Comment, nil}}
+    assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
+  end
+
   test "normalize: tagged types" do
     {query, params} = from(Post, []) |> select([p], type(^"1", :integer))
                                      |> normalize_with_params
