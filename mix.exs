@@ -109,6 +109,7 @@ defmodule Ecto.MixProject do
         # Ecto.Schema.Metadata,
         # Ecto.Type,
         # Ecto.UUID,
+        # Mix.Ecto,
 
         "Repo and Queries": [
           Ecto.LogEntry,
@@ -130,6 +131,8 @@ defmodule Ecto.MixProject do
         "Adapter specification": [
           Ecto.Adapter,
           Ecto.Adapter.Migration,
+          Ecto.Adapter.Queryable,
+          Ecto.Adapter.Schema,
           Ecto.Adapter.Storage,
           Ecto.Adapter.Structure,
           Ecto.Adapter.Transaction,

@@ -26,8 +26,10 @@ Add `ecto` and `postgrex` as dependencies to `mix.exs`
 ```elixir
 # mix.exs
 defp deps do
-  [{:ecto, "~> 2.0"},
-   {:postgrex, "~> 0.11"}]
+  [
+    {:ecto_sql, "~> 3.0"},
+    {:postgrex, ">= 0.0.0"}
+  ]
 end
 ```
 

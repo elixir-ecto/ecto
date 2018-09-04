@@ -1,14 +1,65 @@
 defmodule Ecto.Adapters.SQL do
   @moduledoc """
-  Behaviour and implementation for SQL adapters.
+  This application provides functionality for working with
+  SQL databases.
 
-  The implementation for SQL adapter relies on `DBConnection`
-  to provide pooling, prepare, execute and more.
+  ## Built-in adapters
 
-  Developers that use `Ecto.Adapters.SQL` should implement
-  the callbacks required both by this module and the ones
-  from `Ecto.Adapters.SQL.Connection` for handling connections
-  and performing queries.
+  By default, we support the following adapters:
+
+    * `Ecto.Adapters.Postgres`
+    * `Ecto.Adapters.MySQL`
+
+  ## Migrations
+
+  Ecto supports database migrations. You can generate a migration
+  with:
+
+      $ mix ecto.gen.migration create_posts
+
+  This will create a new file inside `priv/repo/migrations` with the
+  `change` function. Check `Ecto.Migration` for more information.
+
+  To interface with migrations, developers typically use mix tasks:
+
+    * [`mix ecto.migrations`](`Mix.Tasks.Ecto.Migrations`) -
+      lists all available migrations and their status
+    * [`mix ecto.migrate`](`Mix.Tasks.Ecto.Migrate`) -
+      runs a migration
+    * [`mix ecto.rollback`](`Mix.Tasks.Ecto.Rollback`) -
+      rolls back a previously run migration
+
+  If you want to run migrations programatically, see `Ecto.Migrator`.
+
+  ## SQL sandbox
+
+  `ecto_sql` provides a sandbox for testing. The sandbox wraps each
+  test in a transaction, making sure the tests are isolated and can
+  run concurrently. See `Ecto.Adapters.SQL.Sandbox` for more information.
+
+  ## Structure load and dumping
+
+  If you have an existing database, you may want to dump its existing
+  structure and make it reproducible from within Ecto. This can be
+  achieved with two Mix tasks:
+
+    * [`mix ecto.load`](`Mix.Tasks.Ecto.Load`) -
+      loads an existing structure into the database
+    * [`mix ecto.rollback`](`Mix.Tasks.Ecto.Rollback`) -
+      dumps the existing database structure to the filesystem
+
+  For creating and dropping databases, see [`mix ecto.create`](`Mix.Tasks.Ecto.Create`)
+  and [`mix ecto.drop`](`Mix.Tasks.Ecto.Drop`) that are included as part
+  of Ecto.
+
+  ## Custom adapters
+
+  Developers can implement their own SQL adapters by using
+  `Ecto.Adapters.SQL` and implementing the callbacks required
+  by this module and the ones from `Ecto.Adapters.SQL.Connection`
+  for handling connections and performing queries. The connection
+  handling and pooling for SQL adapter should be built using the
+  `DBConnection` library.
   """
 
   @doc false

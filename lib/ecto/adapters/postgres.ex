@@ -1,11 +1,8 @@
 defmodule Ecto.Adapters.Postgres do
-  @default_maintenance_database "postgres"
-
   @moduledoc """
   Adapter module for PostgreSQL.
 
-  It uses `postgrex` for communicating to the database
-  and a connection pool, such as `poolboy`.
+  It uses `postgrex` for communicating to the database.
 
   ## Features
 
@@ -23,16 +20,6 @@ defmodule Ecto.Adapters.Postgres do
 
       config :your_app, YourApp.Repo,
         ...
-
-  Non-compile time options can also be returned from the
-  repository `init/2` callback.
-
-  ### Compile time options
-
-  Those options should be set in the config file and require
-  recompilation in order to make an effect.
-
-    * `:adapter` - The adapter name, in this case, `Ecto.Adapters.Postgres`
 
   ### Connection options
 
@@ -107,6 +94,8 @@ defmodule Ecto.Adapters.Postgres do
   # And provide a custom storage implementation
   @behaviour Ecto.Adapter.Storage
   @behaviour Ecto.Adapter.Structure
+
+  @default_maintenance_database "postgres"
 
   @doc """
   All Ecto extensions for Postgrex.

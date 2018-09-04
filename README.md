@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/elixir-ecto/ecto.svg?branch=master)](https://travis-ci.org/elixir-ecto/ecto)
 [![Inline docs](http://inch-ci.org/github/elixir-ecto/ecto.svg?branch=master&style=flat)](http://inch-ci.org/github/elixir-ecto/ecto)
 
-Ecto is a domain specific language for writing queries and interacting with databases in Elixir. Here is an example:
+Ecto is a toolkit for data mapping and language integrated query for Elixir. Here is an example:
 
 ```elixir
 # In your config/config.exs file
@@ -56,6 +56,8 @@ defmodule Sample.App do
 end
 ```
 
+Ecto is commonly used to interact with databases, such as Postgres and MySQL via [Ecto.Adapters.SQL](http://hexdocs.pm/ecto_sql). Ecto is also commonly used to map data from any source into Elixir structs, regardless if they are backed by a database or not.
+
 See the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and the [online documentation](http://hexdocs.pm/ecto).
 
 Also checkout the ["What's new in Ecto 2.1"](http://pages.plataformatec.com.br/ebook-whats-new-in-ecto-2-0) free ebook to learn more about many features since Ecto 2.1 such as `many_to_many`, schemaless queries, concurrent testing, upsert and more. Note the book still largely applies to Ecto 3.0 as the major change in Ecto 3.0 was the removal of the outdated Ecto datetime types in favor of Elixir's Calendar types.
@@ -64,16 +66,17 @@ Also checkout the ["What's new in Ecto 2.1"](http://pages.plataformatec.com.br/e
 
 You need to add both Ecto and the database adapter as a dependency to your `mix.exs` file. The supported databases and their adapters are:
 
-Database   | Ecto Adapter           | Dependency                   | Ecto 2.0 compatible?
-:----------| :--------------------- | :----------------------------| :-------------------
-PostgreSQL | Ecto.Adapters.Postgres | [postgrex][postgrex]         | Yes
-MySQL      | Ecto.Adapters.MySQL    | [mariaex][mariaex]           | Yes
-MSSQL      | MssqlEcto              | [mssql_ecto][mssql_ecto]     | Yes
-MSSQL      | Tds.Ecto               | [tds_ecto][tds_ecto]         | Yes
-SQLite     | Sqlite.Ecto2           | [sqlite_ecto2][sqlite_ecto2] | Yes
-Mnesia     | EctoMnesia.Adapter     | [ecto_mnesia][ecto_mnesia]   | Yes
+Database   | Ecto Adapter           | Dependencies                                    | Ecto 3.0 compatible?
+:----------| :--------------------- | :-----------------------------------------------| :----
+PostgreSQL | Ecto.Adapters.Postgres | [ecto_sql][ecto_sql] + [postgrex][postgrex]     | Yes
+MySQL      | Ecto.Adapters.MySQL    | [ecto_sql][ecto_sql] + [mariaex][mariaex]       | Yes
+MSSQL      | MssqlEcto              | [ecto_sql][ecto_sql] + [mssql_ecto][mssql_ecto] | No
+MSSQL      | Tds.Ecto               | [ecto_sql][ecto_sql] + [tds_ecto][tds_ecto]     | No
+SQLite     | Sqlite.Ecto2           | [ecto][ecto] + [sqlite_ecto2][sqlite_ecto2]     | No
+Mnesia     | EctoMnesia.Adapter     | [ecto][ecto] + [ecto_mnesia][ecto_mnesia]       | No
 
-[postgrex]: http://github.com/ericmj/postgrex
+[ecto_sql]: http://github.com/elixir-ecto/ecto_sql
+[postgrex]: http://github.com/elixir-ecto/postgrex
 [mariaex]: http://github.com/xerions/mariaex
 [mssql_ecto]: https://github.com/findmypast-oss/mssql_ecto
 [tds_ecto]: https://github.com/livehelpnow/tds_ecto
@@ -85,8 +88,8 @@ For example, if you want to use PostgreSQL, add to your `mix.exs` file:
 ```elixir
 defp deps do
   [
-    {:postgrex, ">= 0.0.0"},
-    {:ecto, "~> 2.1"}
+    {:ecto_sql, "~> 3.0"},
+    {:postgrex, ">= 0.0.0"}
   ]
 end
 ```
@@ -140,16 +143,6 @@ $ git clone https://github.com/elixir-ecto/ecto.git
 $ cd ecto
 $ mix deps.get
 $ mix test
-```
-
-Besides the unit tests above, it is recommended to run the adapter integration tests too:
-
-```
-# Run only PostgreSQL tests (PostgreSQL >= 9.5 is preferred for testing all Postgres features)
-MIX_ENV=pg mix test
-
-# Run all tests (unit and all adapters)
-mix test.all
 ```
 
 ### Building docs

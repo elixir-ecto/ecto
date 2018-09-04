@@ -26,8 +26,10 @@ To add Ecto to this application, there are a few steps that we need to take. The
 
 ```elixir
 defp deps do
-  [{:ecto, "~> 2.0"},
-   {:postgrex, "~> 0.11"}]
+  [
+    {:ecto_sql, "~> 3.0"},
+    {:postgrex, ">= 0.0.0"}
+  ]
 end
 ```
 

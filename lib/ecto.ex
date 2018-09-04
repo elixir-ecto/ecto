@@ -272,6 +272,13 @@ defmodule Ecto do
 
   ## Other topics
 
+  ### Ecto and SQL
+
+  One of the most common ways to use Ecto is to interact with databases,
+  such as Postgres and MySQL via [`Ecto.Adapters.SQL`](http://hexdocs.pm/ecto_sql).
+  `Ecto.Adapters.SQL` provides many conveniences for working with SQL
+  databases, including support for database migrations.
+
   ### Associations
 
   Ecto supports defining associations on schemas:
@@ -376,19 +383,11 @@ defmodule Ecto do
   Ecto generators will automatically open the generated files if you have
   `ECTO_EDITOR` set in your environment variable.
 
-  #### Migrations
-
-  Ecto supports database migrations. You can generate a migration with:
-
-      $ mix ecto.gen.migration create_posts
-
-  This will create a new file inside `priv/repo/migrations` with the `change`
-  function. Check `Ecto.Migration` for more information.
-
   #### Repo resolution
 
-  Ecto requires developers to specify the key `:ecto_repos` in their application
-  configuration before using tasks like `ecto.create` and `ecto.migrate`. For example:
+  Ecto requires developers to specify the key `:ecto_repos` in their
+  application configuration before using tasks like `ecto.create` and
+  `ecto.migrate`. For example:
 
       config :my_app, :ecto_repos, [MyApp.Repo]
 

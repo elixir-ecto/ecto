@@ -2,30 +2,21 @@ defmodule Ecto.Adapters.MySQL do
   @moduledoc """
   Adapter module for MySQL.
 
-  It handles and pools the connections to the MySQL
-  database using `mariaex` and a connection pool,
-  such as `poolboy`.
+  It uses `mariaex` for communicating to the database.
+  Currently it supports old MySQL versions but upcoming
+  Ecto releases will require 5.7+.
 
   ## Options
 
   MySQL options split in different categories described
-  below. All options should be given via the repository
-  configuration. These options are also passed to the module
-  specified in the `:pool` option, so check that module's
-  documentation for more options.
-
-  ### Compile time options
-
-  Those options should be set in the config file and require
-  recompilation in order to make an effect.
-
-    * `:adapter` - The adapter name, in this case, `Ecto.Adapters.MySQL`
-    * `:pool` - The connection pool module, defaults to `DBConnection.ConnectionPool`
-    * `:pool_timeout` - The default timeout to use on pool calls, defaults to `5000`
-    * `:timeout` - The default timeout to use on queries, defaults to `15000`
+  below. All options can be given via the repository
+  configuration:
 
   ### Connection options
 
+    * `:pool` - The connection pool module, defaults to `DBConnection.ConnectionPool`
+    * `:pool_timeout` - The default timeout to use on pool calls, defaults to `5000`
+    * `:timeout` - The default timeout to use on queries, defaults to `15000`
     * `:hostname` - Server hostname
     * `:port` - Server port (default: 3306)
     * `:username` - Username
@@ -112,9 +103,7 @@ defmodule Ecto.Adapters.MySQL do
   version.
 
   If your version of MySQL supports microsecond precision, you
-  will be able to utilize Ecto's usec types. The precision for a
-  usec type will default to 6 but can be explicitly declared by
-  using the `precision` option.
+  will be able to utilize Ecto's usec types.
   """
 
   # Inherit all behaviour from Ecto.Adapters.SQL
