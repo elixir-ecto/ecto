@@ -139,8 +139,9 @@ defmodule Ecto.Query.Planner do
       {:nocache, select, prepared} ->
         {build_meta(query, select), {:nocache, prepared}, params}
       {_, :cached, select, cached} ->
+        update = &cache_update(name, key, &1)
         reset = &cache_reset(name, key, &1)
-        {build_meta(query, select), {:cached, reset, cached}, params}
+        {build_meta(query, select), {:cached, update, reset, cached}, params}
       {_, :cache, select, prepared} ->
         update = &cache_update(name, key, &1)
         {build_meta(query, select), {:cache, update, prepared}, params}

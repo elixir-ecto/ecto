@@ -20,7 +20,7 @@ defmodule Ecto.Adapters.MySQL do
   recompilation in order to make an effect.
 
     * `:adapter` - The adapter name, in this case, `Ecto.Adapters.MySQL`
-    * `:pool` - The connection pool module, defaults to `DBConnection.Poolboy`
+    * `:pool` - The connection pool module, defaults to `DBConnection.ConnectionPool`
     * `:pool_timeout` - The default timeout to use on pool calls, defaults to `5000`
     * `:timeout` - The default timeout to use on queries, defaults to `15000`
 
@@ -170,6 +170,8 @@ defmodule Ecto.Adapters.MySQL do
         {:error, :already_up}
       {:error, error} ->
         {:error, Exception.message(error)}
+      {:exit, exit} ->
+        {:error, exit_to_exception(exit)}
     end
   end
 
@@ -188,8 +190,10 @@ defmodule Ecto.Adapters.MySQL do
         {:error, :already_down}
       {:error, %{mariadb: %{code: 1049}}} ->
         {:error, :already_down}
-      {:error, error} ->
-        {:error, Exception.message(error)}
+      {:exit, :killed} ->
+        {:error, :already_down}
+      {:exit, exit} ->
+        {:error, exit_to_exception(exit)}
     end
   end
 
@@ -252,6 +256,7 @@ defmodule Ecto.Adapters.MySQL do
       {:ok, %{rows: rows}} -> {:ok, Enum.map(rows, &hd/1)}
       {:error, %{mariadb: %{code: 1146}}} -> {:ok, []}
       {:error, _} = error -> error
+      {:exit, exit} -> {:error, exit_to_exception(exit)}
     end
   end
 
@@ -295,9 +300,9 @@ defmodule Ecto.Adapters.MySQL do
 
     opts =
       opts
-      |> Keyword.drop([:name, :log])
-      |> Keyword.put(:pool, DBConnection.Connection)
+      |> Keyword.drop([:name, :log, :pool, :pool_size])
       |> Keyword.put(:backoff_type, :stop)
+      |> Keyword.put(:max_restarts, 0)
 
     {:ok, pid} = Task.Supervisor.start_link
 
@@ -316,15 +321,18 @@ defmodule Ecto.Adapters.MySQL do
         {:ok, result}
       {:ok, {:error, error}} ->
         {:error, error}
-      {:exit, {%{__struct__: struct} = error, _}}
-          when struct in [Mariaex.Error, DBConnection.Error] ->
-        {:error, error}
-      {:exit, reason}  ->
-        {:error, RuntimeError.exception(Exception.format_exit(reason))}
+      {:exit, exit} ->
+        {:exit, exit}
       nil ->
         {:error, RuntimeError.exception("command timed out")}
     end
   end
+
+  defp exit_to_exception({%{__struct__: struct} = error, _})
+       when struct in [Mariaex.Error, DBConnection.Error],
+       do: error
+
+  defp exit_to_exception(reason), do: RuntimeError.exception(Exception.format_exit(reason))
 
   defp run_with_cmd(cmd, opts, opt_args) do
     unless System.find_executable(cmd) do

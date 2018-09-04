@@ -48,31 +48,18 @@ defmodule Ecto.Integration.AlterTest do
     assert PoolRepo.all(values) == [1]
 
     assert :ok == run(:up, PoolRepo, AlterMigrationTwo)
-
-    # optionally fail once with ArgumentError when preparing query prepared on
-    # another connection (and clear cache)
-    try do
-      PoolRepo.all(values)
-    rescue
-      err in [ArgumentError] ->
-        assert Exception.message(err) =~ "stale type"
-        assert [%Decimal{}] = PoolRepo.all(values)
-    else
-      result ->
-        assert [%Decimal{}] = result
-    end
+    [%Decimal{}] = PoolRepo.all(values)
 
     PoolRepo.transaction(fn() ->
       assert [%Decimal{}] = PoolRepo.all(values)
-
       assert :ok == run(:down, PoolRepo, AlterMigrationTwo)
 
-      # optionally fail once with database error when already prepared on
-      # connection (and clear cache)
+      # Optionally fail once with database error when
+      # already prepared on connection (and clear cache)
       try do
         PoolRepo.all(values, [mode: :savepoint])
-      catch
-        :error, _ ->
+      rescue
+        _ ->
           assert PoolRepo.all(values) == [1]
       else
         result ->
@@ -90,25 +77,11 @@ defmodule Ecto.Integration.AlterTest do
     assert PoolRepo.update_all(values, [set: [value: 2]]) == {1, nil}
 
     assert :ok == run(:up, PoolRepo, AlterMigrationTwo)
-
-    # optionally fail once with ArgumentError when preparing query prepared on
-    # another connection (and clear cache)
-    try do
-      PoolRepo.update_all(values, [set: [value: 3]])
-    rescue
-      err in [ArgumentError] ->
-        assert Exception.message(err) =~ "stale type"
-        assert PoolRepo.update_all(values, [set: [value: 4]]) == {1, nil}
-    else
-      result ->
-        assert result == {1, nil}
-    end
+    assert PoolRepo.update_all(values, [set: [value: 3]]) == {1, nil}
 
     PoolRepo.transaction(fn() ->
       assert PoolRepo.update_all(values, [set: [value: Decimal.new(5)]]) == {1, nil}
-
       assert :ok == run(:down, PoolRepo, AlterMigrationTwo)
-
       assert PoolRepo.update_all(values, [set: [value: 6]]) == {1, nil}
     end)
   after
