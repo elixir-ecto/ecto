@@ -477,6 +477,8 @@ defmodule Ecto.QueryTest do
                    where: p.id == 0 and b.id == 0,
                    or_where: c.id == 0,
                    order_by: p.title,
+                   union: from(p in "posts"),
+                   union_all: from(p in "posts"),
                    limit: 2,
                    offset: 10,
                    group_by: p.author,
@@ -493,6 +495,7 @@ defmodule Ecto.QueryTest do
       refute query.havings == base.havings
       refute query.distinct == base.distinct
       refute query.select == base.select
+      refute query.unions == base.unions
       refute query.limit == base.limit
       refute query.offset == base.offset
       refute query.lock == base.lock
@@ -505,6 +508,7 @@ defmodule Ecto.QueryTest do
       |> exclude(:having)
       |> exclude(:distinct)
       |> exclude(:select)
+      |> exclude(:union)
       |> exclude(:limit)
       |> exclude(:offset)
       |> exclude(:lock)
@@ -517,6 +521,7 @@ defmodule Ecto.QueryTest do
       assert excluded_query.havings == base.havings
       assert excluded_query.distinct == base.distinct
       assert excluded_query.select == base.select
+      assert excluded_query.unions == base.unions
       assert excluded_query.limit == base.limit
       assert excluded_query.offset == base.offset
       assert excluded_query.lock == base.lock

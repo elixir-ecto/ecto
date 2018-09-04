@@ -52,6 +52,7 @@ defimpl Inspect, for: Ecto.Query do
     joins     = joins(query.joins, names)
     preloads  = preloads(query.preloads)
     assocs    = assocs(query.assocs, names)
+    unions    = unions(query.unions)
 
     wheres    = bool_exprs(%{and: :where, or: :or_where}, query.wheres, names)
     group_bys = kw_exprs(:group_by, query.group_bys, names)
@@ -65,7 +66,7 @@ defimpl Inspect, for: Ecto.Query do
     select    = kw_expr(:select, query.select, names)
     distinct  = kw_expr(:distinct, query.distinct, names)
 
-    Enum.concat [from, joins, wheres, group_bys, havings, order_bys,
+    Enum.concat [from, joins, wheres, group_bys, havings, order_bys, unions,
                  limit, offset, lock, distinct, updates, select, preloads, assocs]
   end
 
@@ -120,6 +121,9 @@ defimpl Inspect, for: Ecto.Query do
         {field, {{:&, [], [idx]}, assocs(children)}}
     end
   end
+
+  defp unions([]), do: []
+  defp unions(unions), do: Enum.map(unions, fn {key, val} -> {key, to_string(val)} end)
 
   defp bool_exprs(keys, exprs, names) do
     Enum.map exprs, fn %{expr: expr, op: op} = part ->

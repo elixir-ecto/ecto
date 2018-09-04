@@ -412,6 +412,12 @@ defmodule Ecto.Query.PlannerTest do
     assert query.sources == {{"comments", Comment, "global"}, {"posts", Post, "local"}}
   end
 
+  test "prepare: prepare union queries" do
+    {%{unions: [{_, query}]}, _, _} = from(c in Comment, union: from(c in Comment)) |> prepare()
+    assert query.sources == {{"comments", Comment, nil}}
+    assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
+  end
+
   test "normalize: tagged types" do
     {query, params} = from(Post, []) |> select([p], type(^"1", :integer))
                                      |> normalize_with_params
@@ -643,6 +649,11 @@ defmodule Ecto.Query.PlannerTest do
            select_fields([:id], 1) ++
            select_fields([:id, :text], 1) ++
            select_fields([:id], 0)
+  end
+
+  test "normalize: union queries" do
+    query = Post |> union(from(p in Post)) |> normalize()
+    assert query.select.fields
   end
 
   test "normalize: preload" do

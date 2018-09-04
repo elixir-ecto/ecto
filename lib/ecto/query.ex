@@ -353,7 +353,7 @@ defmodule Ecto.Query do
   """
 
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], aliases: %{}, wheres: [], select: nil,
-             order_bys: [], limit: nil, offset: nil, group_bys: [], updates: [],
+             order_bys: [], limit: nil, offset: nil, group_bys: [], unions: [], updates: [],
              havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
 
   defmodule FromExpr do
@@ -399,7 +399,7 @@ defmodule Ecto.Query do
 
   alias Ecto.Query.Builder
   alias Ecto.Query.Builder.{Distinct, Dynamic, Filter, From, GroupBy, Join,
-                            LimitOffset, Lock, OrderBy, Preload, Select, Update}
+                            LimitOffset, Lock, OrderBy, Union, Preload, Select, Update}
 
   @doc """
   Builds a dynamic query expression.
@@ -545,6 +545,7 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :having)
       Ecto.Query.exclude(query, :distinct)
       Ecto.Query.exclude(query, :select)
+      Ecto.Query.exclude(query, :union)
       Ecto.Query.exclude(query, :limit)
       Ecto.Query.exclude(query, :offset)
       Ecto.Query.exclude(query, :lock)
@@ -573,6 +574,7 @@ defmodule Ecto.Query do
   defp do_exclude(%Ecto.Query{} = query, :where), do: %{query | wheres: []}
   defp do_exclude(%Ecto.Query{} = query, :order_by), do: %{query | order_bys: []}
   defp do_exclude(%Ecto.Query{} = query, :group_by), do: %{query | group_bys: []}
+  defp do_exclude(%Ecto.Query{} = query, :union), do: %{query | unions: []}
   defp do_exclude(%Ecto.Query{} = query, :having), do: %{query | havings: []}
   defp do_exclude(%Ecto.Query{} = query, :distinct), do: %{query | distinct: nil}
   defp do_exclude(%Ecto.Query{} = query, :select), do: %{query | select: nil}
@@ -647,7 +649,7 @@ defmodule Ecto.Query do
   end
 
   @from_join_opts [:as, :prefix, :hints]
-  @no_binds [:lock]
+  @no_binds [:lock, :union, :union_all]
   @binds [:where, :or_where, :select, :distinct, :order_by, :group_by] ++
            [:having, :or_having, :limit, :offset, :preload, :update, :select_merge]
 
@@ -1164,6 +1166,50 @@ defmodule Ecto.Query do
   """
   defmacro order_by(query, binding \\ [], expr)  do
     OrderBy.build(query, binding, expr, __CALLER__)
+  end
+
+  @doc """
+  A union query expression.
+
+  Combines result sets of multiple queries.
+  Each query must have the same number of columns with the same types in the same order.
+
+  Union expression returns only unique rows as if each query had a select distinct expression.
+  This may cause performance penalty. If you need just to combine multiple result sets without
+  removing duplicate rows consider using `union_all/2`.
+
+  ## Keywords example
+
+    supplier_query = from s in Supplier, select: s.city
+    from c in Customer, select: c.city, union: supplier_query
+
+  ## Expressions example
+
+    supplier_query = Supplier |> select([s], s.city)
+    Customer |> select([c], c.city) |> union(supplier_query)
+  """
+  defmacro union(query, other_query) do
+    Union.build(:union, query, other_query, __CALLER__)
+  end
+
+  @doc """
+  A union all query expression.
+
+  Combines result sets of multiple queries.
+  Each query must have the same number of columns with the same types in the same order.
+
+  ## Keywords example
+
+    supplier_query = from s in Supplier, select: s.city
+    from c in Customer, select: c.city, union_all: supplier_query
+
+  ## Expressions example
+
+    supplier_query = Supplier |> select([s], s.city)
+    Customer |> select([c], c.city) |> union_all(supplier_query)
+  """
+  defmacro union_all(query, other_query) do
+    Union.build(:union_all, query, other_query, __CALLER__)
   end
 
   @doc """

@@ -212,6 +212,16 @@ defmodule Ecto.Adapters.PostgresTest do
     assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0}
   end
 
+  test "union" do
+    other_query = Schema |> select([r], r.y)
+
+    query = Schema |> select([r], r.x) |> union(other_query) |> plan()
+    assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 UNION SELECT s0."y" FROM "schema" AS s0}
+
+    query = Schema |> select([r], r.x) |> union_all(other_query) |> plan()
+    assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 UNION ALL SELECT s0."y" FROM "schema" AS s0}
+  end
+
   test "limit and offset" do
     query = Schema |> limit([r], 3) |> select([], true) |> plan()
     assert all(query) == ~s{SELECT TRUE FROM "schema" AS s0 LIMIT 3}

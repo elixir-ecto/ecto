@@ -149,6 +149,11 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p in Inspect.Post, order_by: [asc: p.foo, desc: p.bar], order_by: [asc: p.foobar]}
   end
 
+  test "union" do
+    assert i(from(x in Post, union: from(y in Post), union_all: from(z in Post))) ==
+           ~s{from p in Inspect.Post, union: from p in Inspect.Post, union_all: from p in Inspect.Post}
+  end
+
   test "limit" do
     assert i(from(x in Post, limit: 123)) ==
            ~s{from p in Inspect.Post, limit: 123}
@@ -224,6 +229,7 @@ defmodule Ecto.Query.InspectTest do
       having: true,
       or_having: true,
       order_by: [asc: p.id],
+      union_all: from p in Inspect.Post,
       limit: 1,
       offset: 1,
       lock: "FOO",
@@ -238,7 +244,8 @@ defmodule Ecto.Query.InspectTest do
     assert Inspect.Ecto.Query.to_string(
       from(x in Post, join: y in assoc(x, :comments), where: true, or_where: true, group_by: x.id,
                       having: true, or_having: true, order_by: x.id, limit: 1, offset: 1, update: [set: [id: 3]],
-                      lock: "FOO", distinct: 1, select: 1, preload: [:likes, comments: y])
+                      lock: "FOO", distinct: 1, select: 1, preload: [:likes, comments: y],
+                      union_all: from(y in Post))
     ) == string
   end
 

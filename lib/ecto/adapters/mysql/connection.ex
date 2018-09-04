@@ -83,11 +83,12 @@ if Code.ensure_loaded?(Mariaex) do
       group_by = group_by(query, sources)
       having   = having(query, sources)
       order_by = order_by(query, sources)
+      union    = union(query)
       limit    = limit(query, sources)
       offset   = offset(query, sources)
       lock     = lock(query.lock)
 
-      [select, from, join, where, group_by, having, order_by, limit, offset | lock]
+      [select, from, join, where, group_by, having, order_by, union, limit, offset | lock]
     end
 
     def update_all(query, prefix \\ nil) do
@@ -347,6 +348,14 @@ if Code.ensure_loaded?(Mariaex) do
     defp offset(%Query{offset: nil}, _sources), do: []
     defp offset(%Query{offset: %QueryExpr{expr: expr}} = query, sources) do
       [" OFFSET " | expr(expr, sources, query)]
+    end
+
+    defp union(%Query{unions: []}), do: []
+    defp union(%Query{unions: unions}) do
+      Enum.map(unions, fn
+        {:union, query} -> [" UNION " | all(query)]
+        {:union_all, query} -> [" UNION ALL " | all(query)]
+      end)
     end
 
     defp lock(nil), do: []

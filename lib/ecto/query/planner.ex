@@ -4,7 +4,7 @@ defmodule Ecto.Query.Planner do
 
   alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, QueryExpr, SelectExpr}
 
-  if map_size(%Ecto.Query{}) != 18 do
+  if map_size(%Ecto.Query{}) != 19 do
     raise "Ecto.Query match out of date in builder"
   end
 
@@ -214,6 +214,7 @@ defmodule Ecto.Query.Planner do
     query
     |> prepare_sources(adapter)
     |> prepare_assocs
+    |> prepare_unions(operation, adapter, counter)
     |> prepare_cache(operation, adapter, counter)
   rescue
     e ->
@@ -694,6 +695,20 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  @doc """
+  Prepare unions.
+  """
+  def prepare_unions(query, operation, adapter, counter) do
+    unions =
+      Enum.map query.unions, fn {union_type, union_query} ->
+        {prepared_union_query, _params, _key} = prepare(union_query, operation, adapter, counter)
+        prepared_union_query = prepared_union_query |> ensure_select(true)
+        {union_type, prepared_union_query}
+      end
+
+    Map.put(query, :unions, unions)
+  end
+
   defp find_source_expr(query, 0) do
     query.from
   end
@@ -733,6 +748,7 @@ defmodule Ecto.Query.Planner do
     query
     |> normalize_query(operation, adapter, counter)
     |> elem(0)
+    |> normalize_unions(operation, adapter, counter)
     |> normalize_select()
   rescue
     e ->
@@ -754,6 +770,16 @@ defmodule Ecto.Query.Planner do
 
     traverse_exprs(query, operation, counter,
                    &validate_and_increment(&1, &2, &3, &4, operation, adapter))
+  end
+
+  defp normalize_unions(query, operation, adapter, counter) do
+    unions =
+      Enum.map query.unions, fn {union_type, union_query} ->
+        {normalized_union_query, _} = normalize(union_query, operation, adapter, counter)
+        {union_type, normalized_union_query}
+      end
+
+    Map.put(query, :unions, unions)
   end
 
   defp validate_and_increment(:from, query, %{source: %Ecto.SubQuery{}}, _counter, kind, _adapter) when kind != :all do
@@ -1342,7 +1368,7 @@ defmodule Ecto.Query.Planner do
 
   defp assert_only_filter_expressions!(query, operation) do
     case query do
-      %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [],
+      %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [], unions: [],
                   havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
         query
       _ ->
