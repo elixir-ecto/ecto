@@ -24,7 +24,7 @@ defmodule Mix.Tasks.Ecto do
   defp general() do
     Application.ensure_all_started(:ecto)
     Mix.shell.info "Ecto v#{Application.spec(:ecto, :vsn)}"
-    Mix.shell.info "A database wrapper and language integrated query for Elixir."
+    Mix.shell.info "A toolkit for data mapping and language integrated query for Elixir."
     Mix.shell.info "\nAvailable tasks:\n"
     Mix.Tasks.Help.run(["--search", "ecto."])
   end

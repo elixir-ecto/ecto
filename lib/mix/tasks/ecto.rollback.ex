@@ -1,6 +1,7 @@
 defmodule Mix.Tasks.Ecto.Rollback do
   use Mix.Task
   import Mix.Ecto
+  import Mix.EctoSQL
 
   @shortdoc "Rolls back the repository migrations"
 

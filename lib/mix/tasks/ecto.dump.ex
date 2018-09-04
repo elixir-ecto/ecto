@@ -1,6 +1,7 @@
 defmodule Mix.Tasks.Ecto.Dump do
   use Mix.Task
   import Mix.Ecto
+  import Mix.EctoSQL
 
   @shortdoc "Dumps the repository database structure"
   @default_opts [quiet: false]

@@ -1,6 +1,7 @@
 defmodule Mix.Tasks.Ecto.Load do
   use Mix.Task
   import Mix.Ecto
+  import Mix.EctoSQL
 
   @shortdoc "Loads previously dumped database structure"
   @default_opts [force: false, quiet: false]

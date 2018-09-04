@@ -1,6 +1,7 @@
 defmodule Mix.Tasks.Ecto.Migrations do
   use Mix.Task
   import Mix.Ecto
+  import Mix.EctoSQL
 
   @shortdoc "Displays the repository migration status"
 
