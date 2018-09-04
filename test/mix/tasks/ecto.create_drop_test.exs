@@ -6,14 +6,26 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
   # Mocked adapters
 
   defmodule Adapter do
+    @behaviour Ecto.Adapter
     @behaviour Ecto.Adapter.Storage
+
     defmacro __before_compile__(_), do: :ok
+    def dumpers(_, _), do: raise "not implemented"
+    def loaders(_, _), do: raise "not implemented"
+    def init(_), do: raise "not implemented"
+    def ensure_all_started(_, _), do: raise "not implemented"
+
     def storage_up(_), do: Process.get(:storage_up) || raise "no storage_up"
     def storage_down(_), do: Process.get(:storage_down) || raise "no storage_down"
   end
 
   defmodule NoStorageAdapter do
+    @behaviour Ecto.Adapter
     defmacro __before_compile__(_), do: :ok
+    def dumpers(_, _), do: raise "not implemented"
+    def loaders(_, _), do: raise "not implemented"
+    def init(_), do: raise "not implemented"
+    def ensure_all_started(_, _), do: raise "not implemented"
   end
 
   # Mocked repos

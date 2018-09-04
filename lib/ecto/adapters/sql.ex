@@ -16,6 +16,8 @@ defmodule Ecto.Adapters.SQL do
     quote do
       @behaviour Ecto.Adapter
       @behaviour Ecto.Adapter.Migration
+      @behaviour Ecto.Adapter.Queryable
+      @behaviour Ecto.Adapter.Schema
       @behaviour Ecto.Adapter.Transaction
 
       @conn __MODULE__.Connection
@@ -35,13 +37,6 @@ defmodule Ecto.Adapters.SQL do
       def init(config) do
         Ecto.Adapters.SQL.init(@conn, @adapter, config)
       end
-
-      ## Types
-
-      @doc false
-      def autogenerate(:id),        do: nil
-      def autogenerate(:embed_id),  do: Ecto.UUID.generate()
-      def autogenerate(:binary_id), do: Ecto.UUID.bingenerate()
 
       @doc false
       def loaders({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.load_embed(type, &1)]
@@ -79,6 +74,13 @@ defmodule Ecto.Adapters.SQL do
       def stream(adapter_meta, query_meta, query, params, opts) do
         Ecto.Adapters.SQL.stream(adapter_meta, query_meta, query, params, opts)
       end
+
+      ## Schema
+
+      @doc false
+      def autogenerate(:id),        do: nil
+      def autogenerate(:embed_id),  do: Ecto.UUID.generate()
+      def autogenerate(:binary_id), do: Ecto.UUID.bingenerate()
 
       @doc false
       def insert_all(adapter_meta, schema_meta, header, rows, on_conflict, returning, opts) do
@@ -168,7 +170,7 @@ defmodule Ecto.Adapters.SQL do
   @spec to_sql(:all | :update_all | :delete_all, Ecto.Repo.t, Ecto.Queryable.t) ::
                {String.t, [term]}
   def to_sql(kind, repo, queryable) do
-    case Ecto.Adapter.prepare_query(kind, repo, queryable) do
+    case Ecto.Adapter.Queryable.prepare_query(kind, repo, queryable) do
       {{:cached, _update, _reset, {_id, cached}}, params} ->
         {String.Chars.to_string(cached), params}
 

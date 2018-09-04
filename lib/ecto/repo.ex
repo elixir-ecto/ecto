@@ -95,12 +95,10 @@ defmodule Ecto.Repo do
     quote bind_quoted: [opts: opts] do
       @behaviour Ecto.Repo
 
-      {otp_app, adapter} = Ecto.Repo.Supervisor.compile_config(__MODULE__, opts)
+      {otp_app, adapter, behaviours} = Ecto.Repo.Supervisor.compile_config(__MODULE__, opts)
       @otp_app otp_app
       @adapter adapter
       @before_compile adapter
-
-      # Config and metadata
 
       def config do
         {:ok, config} = Ecto.Repo.Supervisor.runtime_config(:runtime, __MODULE__, @otp_app, [])
@@ -110,8 +108,6 @@ defmodule Ecto.Repo do
       def __adapter__ do
         @adapter
       end
-
-      ## Process lifecycle
 
       def child_spec(opts) do
         %{
@@ -129,9 +125,13 @@ defmodule Ecto.Repo do
         Supervisor.stop(__MODULE__, :normal, timeout)
       end
 
+      def load(schema_or_types, data) do
+        Ecto.Repo.Schema.load(@adapter, schema_or_types, data)
+      end
+
       ## Transactions
 
-      if function_exported?(@adapter, :transaction, 3) do
+      if Ecto.Adapter.Transaction in behaviours do
         def transaction(fun_or_multi, opts \\ []) do
           Ecto.Repo.Transaction.transaction(__MODULE__, fun_or_multi, opts)
         end
@@ -148,104 +148,122 @@ defmodule Ecto.Repo do
 
       ## Schemas
 
-      def load(schema_or_types, data) do
-        Ecto.Repo.Schema.load(@adapter, schema_or_types, data)
-      end
+      if Ecto.Adapter.Schema in behaviours do
+        def insert(struct, opts \\ []) do
+          Ecto.Repo.Schema.insert(__MODULE__, struct, opts)
+        end
 
-      def insert(struct, opts \\ []) do
-        Ecto.Repo.Schema.insert(__MODULE__, struct, opts)
-      end
+        def update(struct, opts \\ []) do
+          Ecto.Repo.Schema.update(__MODULE__, struct, opts)
+        end
 
-      def update(struct, opts \\ []) do
-        Ecto.Repo.Schema.update(__MODULE__, struct, opts)
-      end
+        def insert_or_update(changeset, opts \\ []) do
+          Ecto.Repo.Schema.insert_or_update(__MODULE__, changeset, opts)
+        end
 
-      def insert_or_update(changeset, opts \\ []) do
-        Ecto.Repo.Schema.insert_or_update(__MODULE__, changeset, opts)
-      end
+        def delete(struct, opts \\ []) do
+          Ecto.Repo.Schema.delete(__MODULE__, struct, opts)
+        end
 
-      def delete(struct, opts \\ []) do
-        Ecto.Repo.Schema.delete(__MODULE__, struct, opts)
-      end
+        def insert!(struct, opts \\ []) do
+          Ecto.Repo.Schema.insert!(__MODULE__, struct, opts)
+        end
 
-      def insert!(struct, opts \\ []) do
-        Ecto.Repo.Schema.insert!(__MODULE__, struct, opts)
-      end
+        def update!(struct, opts \\ []) do
+          Ecto.Repo.Schema.update!(__MODULE__, struct, opts)
+        end
 
-      def update!(struct, opts \\ []) do
-        Ecto.Repo.Schema.update!(__MODULE__, struct, opts)
-      end
+        def insert_or_update!(changeset, opts \\ []) do
+          Ecto.Repo.Schema.insert_or_update!(__MODULE__, changeset, opts)
+        end
 
-      def insert_or_update!(changeset, opts \\ []) do
-        Ecto.Repo.Schema.insert_or_update!(__MODULE__, changeset, opts)
-      end
+        def delete!(struct, opts \\ []) do
+          Ecto.Repo.Schema.delete!(__MODULE__, struct, opts)
+        end
 
-      def delete!(struct, opts \\ []) do
-        Ecto.Repo.Schema.delete!(__MODULE__, struct, opts)
-      end
-
-      def insert_all(schema_or_source, entries, opts \\ []) do
-        Ecto.Repo.Schema.insert_all(__MODULE__, schema_or_source, entries, opts)
+        def insert_all(schema_or_source, entries, opts \\ []) do
+          Ecto.Repo.Schema.insert_all(__MODULE__, schema_or_source, entries, opts)
+        end
       end
 
       ## Queryable
 
-      def update_all(queryable, updates, opts \\ []) do
-        Ecto.Repo.Queryable.update_all(__MODULE__, queryable, updates, opts)
-      end
+      if Ecto.Adapter.Queryable in behaviours do
+        def update_all(queryable, updates, opts \\ []) do
+          Ecto.Repo.Queryable.update_all(__MODULE__, queryable, updates, opts)
+        end
 
-      def delete_all(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.delete_all(__MODULE__, queryable, opts)
-      end
+        def delete_all(queryable, opts \\ []) do
+          Ecto.Repo.Queryable.delete_all(__MODULE__, queryable, opts)
+        end
 
-      def all(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.all(__MODULE__, queryable, opts)
-      end
+        def all(queryable, opts \\ []) do
+          Ecto.Repo.Queryable.all(__MODULE__, queryable, opts)
+        end
 
-      def stream(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.stream(__MODULE__, queryable, opts)
-      end
+        def stream(queryable, opts \\ []) do
+          Ecto.Repo.Queryable.stream(__MODULE__, queryable, opts)
+        end
 
-      def get(queryable, id, opts \\ []) do
-        Ecto.Repo.Queryable.get(__MODULE__, queryable, id, opts)
-      end
+        def get(queryable, id, opts \\ []) do
+          Ecto.Repo.Queryable.get(__MODULE__, queryable, id, opts)
+        end
 
-      def get!(queryable, id, opts \\ []) do
-        Ecto.Repo.Queryable.get!(__MODULE__, queryable, id, opts)
-      end
+        def get!(queryable, id, opts \\ []) do
+          Ecto.Repo.Queryable.get!(__MODULE__, queryable, id, opts)
+        end
 
-      def get_by(queryable, clauses, opts \\ []) do
-        Ecto.Repo.Queryable.get_by(__MODULE__, queryable, clauses, opts)
-      end
+        def get_by(queryable, clauses, opts \\ []) do
+          Ecto.Repo.Queryable.get_by(__MODULE__, queryable, clauses, opts)
+        end
 
-      def get_by!(queryable, clauses, opts \\ []) do
-        Ecto.Repo.Queryable.get_by!(__MODULE__, queryable, clauses, opts)
-      end
+        def get_by!(queryable, clauses, opts \\ []) do
+          Ecto.Repo.Queryable.get_by!(__MODULE__, queryable, clauses, opts)
+        end
 
-      def one(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.one(__MODULE__, queryable, opts)
-      end
+        def one(queryable, opts \\ []) do
+          Ecto.Repo.Queryable.one(__MODULE__, queryable, opts)
+        end
 
-      def one!(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.one!(__MODULE__, queryable, opts)
-      end
+        def one!(queryable, opts \\ []) do
+          Ecto.Repo.Queryable.one!(__MODULE__, queryable, opts)
+        end
 
-      def aggregate(queryable, aggregate, field, opts \\ [])
-          when aggregate in [:count, :avg, :max, :min, :sum] and is_atom(field) do
-        Ecto.Repo.Queryable.aggregate(__MODULE__, queryable, aggregate, field, opts)
-      end
+        def aggregate(queryable, aggregate, field, opts \\ [])
+            when aggregate in [:count, :avg, :max, :min, :sum] and is_atom(field) do
+          Ecto.Repo.Queryable.aggregate(__MODULE__, queryable, aggregate, field, opts)
+        end
 
-      def exists?(queryable, opts \\ []) do
-        Ecto.Repo.Queryable.exists?(__MODULE__, queryable, opts)
-      end
+        def exists?(queryable, opts \\ []) do
+          Ecto.Repo.Queryable.exists?(__MODULE__, queryable, opts)
+        end
 
-      def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
-        Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, __MODULE__, preloads, opts)
+        def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
+          Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, __MODULE__, preloads, opts)
+        end
       end
     end
   end
 
+  ## User callbacks
+
   @optional_callbacks init: 2
+
+  @doc """
+  A callback executed when the repo starts or when configuration is read.
+
+  The first argument is the context the callback is being invoked. If it
+  is called because the Repo supervisor is starting, it will be `:supervisor`.
+  It will be `:runtime` if it is called for reading configuration without
+  actually starting a process.
+
+  The second argument is the repository configuration as stored in the
+  application environment. It must return `{:ok, keyword}` with the updated
+  list of configuration or `:ignore` (only in the `:supervisor` case).
+  """
+  @callback init(:supervisor | :runtime, config :: Keyword.t()) :: {:ok, Keyword.t()} | :ignore
+
+  ## Ecto.Adapter
 
   @doc """
   Returns the adapter tied to the repository.
@@ -278,23 +296,59 @@ defmodule Ecto.Repo do
               | {:error, term}
 
   @doc """
-  A callback executed when the repo starts or when configuration is read.
-
-  The first argument is the context the callback is being invoked. If it
-  is called because the Repo supervisor is starting, it will be `:supervisor`.
-  It will be `:runtime` if it is called for reading configuration without
-  actually starting a process.
-
-  The second argument is the repository configuration as stored in the
-  application environment. It must return `{:ok, keyword}` with the updated
-  list of configuration or `:ignore` (only in the `:supervisor` case).
-  """
-  @callback init(:supervisor | :runtime, config :: Keyword.t()) :: {:ok, Keyword.t()} | :ignore
-
-  @doc """
   Shuts down the repository.
   """
   @callback stop(timeout) :: :ok
+
+  @doc """
+  Loads `data` into a struct or a map.
+
+  The first argument can be a a schema module, or a
+  map (of types) and determines the return value:
+  a struct or a map, respectively.
+
+  The second argument `data` specifies fields and values that are to be loaded.
+  It can be a map, a keyword list, or a `{fields, values}` tuple.
+  Fields can be atoms or strings.
+
+  Fields that are not present in the schema (or `types` map) are ignored.
+  If any of the values has invalid type, an error is raised.
+
+  ## Examples
+
+      iex> MyRepo.load(User, %{name: "Alice", age: 25})
+      %User{name: "Alice", age: 25}
+
+      iex> MyRepo.load(User, [name: "Alice", age: 25])
+      %User{name: "Alice", age: 25}
+
+  `data` can also take form of `{fields, values}`:
+
+      iex> MyRepo.load(User, {[:name, :age], ["Alice", 25]})
+      %User{name: "Alice", age: 25, ...}
+
+  The first argument can also be a `types` map:
+
+      iex> types = %{name: :string, age: :integer}
+      iex> MyRepo.load(types, %{name: "Alice", age: 25})
+      %{name: "Alice", age: 25}
+
+  This function is especially useful when parsing raw query results:
+
+      iex> result = Ecto.Adapters.SQL.query!(MyRepo, "SELECT * FROM users", [])
+      iex> Enum.map(result.rows, &MyRepo.load(User, {result.columns, &1}))
+      [%User{...}, ...]
+
+  """
+  @callback load(
+              module_or_map :: module | map(),
+              data :: map() | Keyword.t() | {list, list}
+            ) :: Ecto.Schema.t() | map()
+
+  ## Ecto.Adapter.Queryable
+
+  @optional_callbacks get: 3, get!: 3, get_by: 3, get_by!: 3, aggregate: 4, one: 2, one!: 2,
+                      preload: 3, all: 2, stream: 2, update_all: 3, delete_all: 2
 
   @doc """
   Fetches a single struct from the data store where the primary key matches the
@@ -530,6 +584,87 @@ defmodule Ecto.Repo do
   @callback stream(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: Enum.t()
 
   @doc """
+  Updates all entries matching the given query with the given values.
+
+  It returns a tuple containing the number of entries and any returned
+  result as second element. The second element is `nil` by default
+  unless a `select` is supplied in the update query. Note, however,
+  not all databases support returning data from UPDATEs.
+
+  Keep in mind this `update_all` will not update autogenerated
+  fields like the `updated_at` columns.
+
+  See `Ecto.Query.update/3` for update operations that can be
+  performed on fields.
+
+  ## Options
+
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This overrides the prefix set
+      in the query.
+
+  See the "Shared options" section at the module documentation for
+  remaining options.
+
+  ## Examples
+
+      MyRepo.update_all(Post, set: [title: "New title"])
+
+      MyRepo.update_all(Post, inc: [visits: 1])
+
+      MyRepo.update_all(Post, [inc: [visits: 1]], [returning: [:visits]])
+
+      from(p in Post, where: p.id < 10)
+      |> MyRepo.update_all(set: [title: "New title"])
+
+      from(p in Post, where: p.id < 10, update: [set: [title: "New title"]])
+      |> MyRepo.update_all([])
+
+      from(p in Post, where: p.id < 10, update: [set: [title: ^new_title]])
+      |> MyRepo.update_all([])
+
+      from(p in Post, where: p.id < 10, update: [set: [title: fragment("upper(?)", ^new_title)]])
+      |> MyRepo.update_all([])
+
+  """
+  @callback update_all(
+              queryable :: Ecto.Queryable.t(),
+              updates :: Keyword.t(),
+              opts :: Keyword.t()
+            ) :: {integer, nil | [term]}
+
+  @doc """
+  Deletes all entries matching the given query.
+
+  It returns a tuple containing the number of entries and any returned
+  result as second element. The second element is `nil` by default
+  unless a `select` is supplied in the update query. Note, however,
+  not all databases support returning data from DELETEs.
+
+  ## Options
+
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This overrides the prefix set
+      in the query.
+
+  See the "Shared options" section at the module documentation for
+  remaining options.
+
+  ## Examples
+
+      MyRepo.delete_all(Post)
+
+      from(p in Post, where: p.id < 10) |> MyRepo.delete_all
+  """
+  @callback delete_all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
+              {integer, nil | [term]}
+
+  ## Ecto.Adapter.Schema
+
+  @optional_callbacks insert_all: 3, insert: 2, insert!: 2, update: 2, update!: 2,
+                      delete: 2, delete!: 2, insert_or_update: 2, insert_or_update!: 2
+
+  @doc """
   Inserts all entries into the repository.
 
   It expects a schema module (`MyApp.User`) or a source (`"users"`) or
@@ -628,82 +763,6 @@ defmodule Ecto.Repo do
               entries :: [map | Keyword.t()],
               opts :: Keyword.t()
             ) :: {integer, nil | [term]}
-
-  @doc """
-  Updates all entries matching the given query with the given values.
-
-  It returns a tuple containing the number of entries and any returned
-  result as second element. The second element is `nil` by default
-  unless a `select` is supplied in the update query. Note, however,
-  not all databases support returning data from UPDATEs.
-
-  Keep in mind this `update_all` will not update autogenerated
-  fields like the `updated_at` columns.
-
-  See `Ecto.Query.update/3` for update operations that can be
-  performed on fields.
-
-  ## Options
-
-    * `:prefix` - The prefix to run the query on (such as the schema path
-      in Postgres or the database in MySQL). This overrides the prefix set
-      in the query.
-
-  See the "Shared options" section at the module documentation for
-  remaining options.
-
-  ## Examples
-
-      MyRepo.update_all(Post, set: [title: "New title"])
-
-      MyRepo.update_all(Post, inc: [visits: 1])
-
-      MyRepo.update_all(Post, [inc: [visits: 1]], [returning: [:visits]])
-
-      from(p in Post, where: p.id < 10)
-      |> MyRepo.update_all(set: [title: "New title"])
-
-      from(p in Post, where: p.id < 10, update: [set: [title: "New title"]])
-      |> MyRepo.update_all([])
-
-      from(p in Post, where: p.id < 10, update: [set: [title: ^new_title]])
-      |> MyRepo.update_all([])
-
-      from(p in Post, where: p.id < 10, update: [set: [title: fragment("upper(?)", ^new_title)]])
-      |> MyRepo.update_all([])
-
-  """
-  @callback update_all(
-              queryable :: Ecto.Queryable.t(),
-              updates :: Keyword.t(),
-              opts :: Keyword.t()
-            ) :: {integer, nil | [term]}
-
-  @doc """
-  Deletes all entries matching the given query.
-
-  It returns a tuple containing the number of entries and any returned
-  result as second element. The second element is `nil` by default
-  unless a `select` is supplied in the update query. Note, however,
-  not all databases support returning data from DELETEs.
-
-  ## Options
-
-    * `:prefix` - The prefix to run the query on (such as the schema path
-      in Postgres or the database in MySQL). This overrides the prefix set
-      in the query.
-
-  See the "Shared options" section at the module documentation for
-  remaining options.
-
-  ## Examples
-
-      MyRepo.delete_all(Post)
-
-      from(p in Post, where: p.id < 10) |> MyRepo.delete_all
-  """
-  @callback delete_all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
-              {integer, nil | [term]}
 
   @doc """
   Inserts a struct defined via `Ecto.Schema` or a changeset.
@@ -991,6 +1050,10 @@ defmodule Ecto.Repo do
               opts :: Keyword.t()
             ) :: Ecto.Schema.t()
 
+  ## Ecto.Adapter.Transaction
+
+  @optional_callbacks transaction: 2, in_transaction?: 0, rollback: 1
+
   @doc """
   Runs the given function or `Ecto.Multi` inside a transaction.
 
@@ -1055,7 +1118,6 @@ defmodule Ecto.Repo do
               {:ok, any}
               | {:error, any}
               | {:error, Ecto.Multi.name(), any, %{Ecto.Multi.name() => any}}
-  @optional_callbacks [transaction: 2]
 
   @doc """
   Returns true if the current process is inside a transaction.
@@ -1080,7 +1142,6 @@ defmodule Ecto.Repo do
 
   """
   @callback in_transaction?() :: boolean
-  @optional_callbacks [in_transaction?: 0]
 
   @doc """
   Rolls back the current transaction.
@@ -1088,50 +1149,4 @@ defmodule Ecto.Repo do
   The transaction will return the value given as `{:error, value}`.
   """
   @callback rollback(value :: any) :: no_return
-  @optional_callbacks [rollback: 1]
-
-  @doc """
-  Loads `data` into a struct or a map.
-
-  The first argument can be a a schema module, or a
-  map (of types) and determines the return value:
-  a struct or a map, respectively.
-
-  The second argument `data` specifies fields and values that are to be loaded.
-  It can be a map, a keyword list, or a `{fields, values}` tuple.
-  Fields can be atoms or strings.
-
-  Fields that are not present in the schema (or `types` map) are ignored.
-  If any of the values has invalid type, an error is raised.
-
-  ## Examples
-
-      iex> MyRepo.load(User, %{name: "Alice", age: 25})
-      %User{name: "Alice", age: 25}
-
-      iex> MyRepo.load(User, [name: "Alice", age: 25])
-      %User{name: "Alice", age: 25}
-
-  `data` can also take form of `{fields, values}`:
-
-      iex> MyRepo.load(User, {[:name, :age], ["Alice", 25]})
-      %User{name: "Alice", age: 25, ...}
-
-  The first argument can also be a `types` map:
-
-      iex> types = %{name: :string, age: :integer}
-      iex> MyRepo.load(types, %{name: "Alice", age: 25})
-      %{name: "Alice", age: 25}
-
-  This function is especially useful when parsing raw query results:
-
-      iex> result = Ecto.Adapters.SQL.query!(MyRepo, "SELECT * FROM users", [])
-      iex> Enum.map(result.rows, &MyRepo.load(User, {result.columns, &1}))
-      [%User{...}, ...]
-
-  """
-  @callback load(
-              module_or_map :: module | map(),
-              data :: map() | Keyword.t() | {list, list}
-            ) :: Ecto.Schema.t() | map()
 end

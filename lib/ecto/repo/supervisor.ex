@@ -47,8 +47,7 @@ defmodule Ecto.Repo.Supervisor do
     adapter = opts[:adapter] || deprecated_adapter(otp_app, repo, config)
 
     unless adapter do
-      raise ArgumentError, "missing :adapter configuration in " <>
-                           "config #{inspect otp_app}, #{inspect repo}"
+      raise ArgumentError, "missing :adapter option on use Ecto.Repo"
     end
 
     unless Code.ensure_loaded?(adapter) do
@@ -56,7 +55,17 @@ defmodule Ecto.Repo.Supervisor do
                            "ensure it is correct and it is included as a project dependency"
     end
 
-    {otp_app, adapter}
+    behaviours =
+      for {:behaviour, behaviours} <- adapter.__info__(:attributes),
+          behaviour <- behaviours,
+          do: behaviour
+
+    unless Ecto.Adapter in behaviours do
+      raise ArgumentError,
+            "expected :adapter option given to Ecto.Repo to list Ecto.Adapter as a behaviour"
+    end
+
+    {otp_app, adapter, behaviours}
   end
 
   defp deprecated_adapter(otp_app, repo, config) do

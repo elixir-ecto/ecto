@@ -673,14 +673,20 @@ defmodule Ecto.RepoTest do
 
   describe "transactions" do
     defmodule NoTransactionAdapter do
+      @behaviour Ecto.Adapter
       defmacro __before_compile__(_opts), do: :ok
+      def dumpers(_, _), do: raise "not implemented"
+      def loaders(_, _), do: raise "not implemented"
+      def init(_), do: raise "not implemented"
+      def ensure_all_started(_, _), do: raise "not implemented"
     end
 
     defmodule NoTransactionRepo do
       use Ecto.Repo, otp_app: :ecto, adapter: NoTransactionAdapter
     end
 
-    test "no transaction functions generated on repo, without adapter support" do
+    test "no transaction functions generated on repo without adapter support" do
+      assert function_exported?(NoTransactionRepo, :config, 0)
       refute function_exported?(NoTransactionRepo, :transaction, 2)
       refute function_exported?(NoTransactionRepo, :in_transaction?, 2)
       refute function_exported?(NoTransactionRepo, :rollback, 1)

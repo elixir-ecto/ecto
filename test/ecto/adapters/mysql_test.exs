@@ -45,7 +45,7 @@ defmodule Ecto.Adapters.MySQLTest do
   end
 
   defp plan(query, operation \\ :all) do
-    {query, _params} = Ecto.Adapter.plan_query(operation, Ecto.Adapters.MySQL, query)
+    {query, _params} = Ecto.Adapter.Queryable.plan_query(operation, Ecto.Adapters.MySQL, query)
     query
   end
 

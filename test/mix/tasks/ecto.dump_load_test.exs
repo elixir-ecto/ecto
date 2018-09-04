@@ -6,14 +6,26 @@ defmodule Mix.Tasks.Ecto.DumpLoadTest do
   # Mocked adapters
 
   defmodule Adapter do
+    @behaviour Ecto.Adapter
     @behaviour Ecto.Adapter.Structure
+
     defmacro __before_compile__(_), do: :ok
+    def dumpers(_, _), do: raise "not implemented"
+    def loaders(_, _), do: raise "not implemented"
+    def init(_), do: raise "not implemented"
+    def ensure_all_started(_, _), do: raise "not implemented"
+
     def structure_dump(_, _), do: Process.get(:structure_dump) || raise "no structure_dump"
     def structure_load(_, _), do: Process.get(:structure_load) || raise "no structure_load"
   end
 
   defmodule NoStructureAdapter do
+    @behaviour Ecto.Adapter
     defmacro __before_compile__(_), do: :ok
+    def dumpers(_, _), do: raise "not implemented"
+    def loaders(_, _), do: raise "not implemented"
+    def init(_), do: raise "not implemented"
+    def ensure_all_started(_, _), do: raise "not implemented"
   end
 
   # Mocked repos

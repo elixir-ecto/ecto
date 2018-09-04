@@ -1,5 +1,8 @@
 defmodule Ecto.TestAdapter do
   @behaviour Ecto.Adapter
+  @behaviour Ecto.Adapter.Queryable
+  @behaviour Ecto.Adapter.Schema
+  @behaviour Ecto.Adapter.Transaction
 
   alias Ecto.Migration.SchemaMigration
 
@@ -117,15 +120,22 @@ defmodule Ecto.TestAdapter do
 
   ## Transactions
 
-  def transaction(_, _opts, fun) do
+  def transaction(mod, _opts, fun) do
     # Makes transactions "trackable" in tests
+    Process.put({mod, :in_transaction?}, true)
     send test_process(), {:transaction, fun}
     try do
       {:ok, fun.()}
     catch
       :throw, {:ecto_rollback, value} ->
         {:error, value}
+    after
+      Process.delete({mod, :in_transaction?})
     end
+  end
+
+  def in_transaction?(mod) do
+    Process.get({mod, :in_transaction?}) || false
   end
 
   def rollback(_, value) do

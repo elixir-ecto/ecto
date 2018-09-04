@@ -302,7 +302,7 @@ defmodule Ecto.Query.InspectTest do
   end
 
   def plan(query) do
-    {query, _} = Ecto.Adapter.plan_query(:all, Ecto.TestAdapter, query)
+    {query, _} = Ecto.Adapter.Queryable.plan_query(:all, Ecto.TestAdapter, query)
     query
   end
 
