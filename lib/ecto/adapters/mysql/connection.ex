@@ -353,8 +353,8 @@ if Code.ensure_loaded?(Mariaex) do
     defp combinations(%Query{combinations: []}), do: []
     defp combinations(%Query{combinations: combinations}) do
       Enum.map(combinations, fn
-        {:union, query} -> [" UNION " | all(query)]
-        {:union_all, query} -> [" UNION ALL " | all(query)]
+        {:union, query} -> [" UNION (", all(query), ")"]
+        {:union_all, query} -> [" UNION ALL (", all(query), ")"]
       end)
     end
 

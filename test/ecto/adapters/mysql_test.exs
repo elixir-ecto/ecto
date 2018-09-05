@@ -161,14 +161,26 @@ defmodule Ecto.Adapters.MySQLTest do
     end
   end
 
-  test "union" do
-    other_query = Schema |> select([r], r.y)
+  test "union and union all" do
+    base_query = Schema |> select([r], r.x) |> order_by([r], r.x) |> offset(10) |> limit(5)
+    union_query1 = Schema |> select([r], r.y) |> order_by([r], r.y) |> offset(20) |> limit(40)
+    union_query2 = Schema |> select([r], r.z) |> order_by([r], r.z) |> offset(30) |> limit(60)
 
-    query = Schema |> select([r], r.x) |> union(other_query) |> plan()
-    assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 UNION SELECT s0.`y` FROM `schema` AS s0}
+    query = base_query |> union(union_query1) |> union(union_query2) |> plan()
 
-    query = Schema |> select([r], r.x) |> union_all(other_query) |> plan()
-    assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 UNION ALL SELECT s0.`y` FROM `schema` AS s0}
+    assert all(query) ==
+      ~s{SELECT s0.`x` FROM `schema` AS s0 } <>
+      ~s{UNION (SELECT s0.`y` FROM `schema` AS s0 ORDER BY s0.`y` LIMIT 40 OFFSET 20) } <>
+      ~s{UNION (SELECT s0.`z` FROM `schema` AS s0 ORDER BY s0.`z` LIMIT 60 OFFSET 30) } <>
+      ~s{ORDER BY s0.`x` LIMIT 5 OFFSET 10}
+
+    query = base_query |> union_all(union_query1) |> union_all(union_query2) |> plan()
+
+    assert all(query) ==
+      ~s{SELECT s0.`x` FROM `schema` AS s0 } <>
+      ~s{UNION ALL (SELECT s0.`y` FROM `schema` AS s0 ORDER BY s0.`y` LIMIT 40 OFFSET 20) } <>
+      ~s{UNION ALL (SELECT s0.`z` FROM `schema` AS s0 ORDER BY s0.`z` LIMIT 60 OFFSET 30) } <>
+      ~s{ORDER BY s0.`x` LIMIT 5 OFFSET 10}
   end
 
   test "limit and offset" do
@@ -368,16 +380,20 @@ defmodule Ecto.Adapters.MySQLTest do
             |> having([], fragment("?", ^false))
             |> group_by([], fragment("?", ^1))
             |> group_by([], fragment("?", ^2))
-            |> order_by([], fragment("?", ^3))
+            |> union("schema1" |> select([m], {m.id, ^true}) |> where([], fragment("?", ^3)))
+            |> union_all("schema2" |> select([m], {m.id, ^false}) |> where([], fragment("?", ^4)))
+            |> order_by([], fragment("?", ^5))
             |> order_by([], ^:x)
-            |> limit([], ^4)
-            |> offset([], ^5)
+            |> limit([], ^6)
+            |> offset([], ^7)
             |> plan()
 
     result =
       "SELECT s0.`id`, ? FROM `schema` AS s0 INNER JOIN `schema2` AS s1 ON ? " <>
       "INNER JOIN `schema2` AS s2 ON ? WHERE (?) AND (?) " <>
       "GROUP BY ?, ? HAVING (?) AND (?) " <>
+      "UNION (SELECT s0.`id`, ? FROM `schema1` AS s0 WHERE (?)) " <>
+      "UNION ALL (SELECT s0.`id`, ? FROM `schema2` AS s0 WHERE (?)) " <>
       "ORDER BY ?, s0.`x` LIMIT ? OFFSET ?"
 
     assert all(query) == String.trim(result)

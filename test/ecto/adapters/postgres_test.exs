@@ -212,14 +212,26 @@ defmodule Ecto.Adapters.PostgresTest do
     assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0}
   end
 
-  test "union" do
-    other_query = Schema |> select([r], r.y)
+  test "union and union all" do
+    base_query = Schema |> select([r], r.x) |> order_by([r], r.x) |> offset(10) |> limit(5)
+    union_query1 = Schema |> select([r], r.y) |> order_by([r], r.y) |> offset(20) |> limit(40)
+    union_query2 = Schema |> select([r], r.z) |> order_by([r], r.z) |> offset(30) |> limit(60)
 
-    query = Schema |> select([r], r.x) |> union(other_query) |> plan()
-    assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 UNION SELECT s0."y" FROM "schema" AS s0}
+    query = base_query |> union(union_query1) |> union(union_query2) |> plan()
 
-    query = Schema |> select([r], r.x) |> union_all(other_query) |> plan()
-    assert all(query) == ~s{SELECT s0."x" FROM "schema" AS s0 UNION ALL SELECT s0."y" FROM "schema" AS s0}
+    assert all(query) ==
+      ~s{SELECT s0."x" FROM "schema" AS s0 } <>
+      ~s{UNION (SELECT s0."y" FROM "schema" AS s0 ORDER BY s0."y" LIMIT 40 OFFSET 20) } <>
+      ~s{UNION (SELECT s0."z" FROM "schema" AS s0 ORDER BY s0."z" LIMIT 60 OFFSET 30) } <>
+      ~s{ORDER BY s0."x" LIMIT 5 OFFSET 10}
+
+    query = base_query |> union_all(union_query1) |> union_all(union_query2) |> plan()
+
+    assert all(query) ==
+      ~s{SELECT s0."x" FROM "schema" AS s0 } <>
+      ~s{UNION ALL (SELECT s0."y" FROM "schema" AS s0 ORDER BY s0."y" LIMIT 40 OFFSET 20) } <>
+      ~s{UNION ALL (SELECT s0."z" FROM "schema" AS s0 ORDER BY s0."z" LIMIT 60 OFFSET 30) } <>
+      ~s{ORDER BY s0."x" LIMIT 5 OFFSET 10}
   end
 
   test "limit and offset" do
@@ -427,8 +439,8 @@ defmodule Ecto.Adapters.PostgresTest do
       "SELECT s0.\"id\", $1 FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON $2 " <>
       "INNER JOIN \"schema2\" AS s2 ON $3 WHERE ($4) AND ($5) " <>
       "GROUP BY $6, $7 HAVING ($8) AND ($9) " <>
-      "UNION SELECT s0.\"id\", $10 FROM \"schema1\" AS s0 WHERE ($11) " <>
-      "UNION ALL SELECT s0.\"id\", $12 FROM \"schema2\" AS s0 WHERE ($13) " <>
+      "UNION (SELECT s0.\"id\", $10 FROM \"schema1\" AS s0 WHERE ($11)) " <>
+      "UNION ALL (SELECT s0.\"id\", $12 FROM \"schema2\" AS s0 WHERE ($13)) " <>
       "ORDER BY $14, s0.\"x\" LIMIT $15 OFFSET $16"
 
     assert all(query) == String.trim(result)
