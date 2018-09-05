@@ -66,7 +66,7 @@ defimpl Inspect, for: Ecto.Query do
     select    = kw_expr(:select, query.select, names)
     distinct  = kw_expr(:distinct, query.distinct, names)
 
-    Enum.concat [from, joins, wheres, group_bys, havings, order_bys, unions,
+    Enum.concat [from, joins, wheres, group_bys, havings, unions, order_bys,
                  limit, offset, lock, distinct, updates, select, preloads, assocs]
   end
 

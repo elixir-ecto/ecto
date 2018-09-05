@@ -527,17 +527,17 @@ defmodule Ecto.Query.Planner do
   """
   def prepare_cache(query, operation, adapter, counter) do
     {query, {cache, params}} =
-      traverse_exprs(query, operation, {[], []}, &{&3, merge_cache(&1, &2, &3, &4, adapter)})
+      traverse_exprs(query, operation, {[], []}, &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)})
 
     {query, Enum.reverse(params), finalize_cache(query, operation, cache, counter)}
   end
 
-  defp merge_cache(:from, _query, from, {cache, params}, _adapter) do
+  defp merge_cache(:from, _query, from, {cache, params}, _operation, _adapter) do
     {key, params} = source_cache(from, params)
     {merge_cache(key, cache, key != :nocache), params}
   end
 
-  defp merge_cache(kind, query, expr, {cache, params}, adapter)
+  defp merge_cache(kind, query, expr, {cache, params}, _operation, adapter)
       when kind in ~w(select distinct limit offset)a do
     if expr do
       {params, cacheable?} = cast_and_merge_params(kind, query, expr, params, adapter)
@@ -547,7 +547,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp merge_cache(kind, query, exprs, {cache, params}, adapter)
+  defp merge_cache(kind, query, exprs, {cache, params}, _operation, adapter)
       when kind in ~w(where update group_by having order_by)a do
     {expr_cache, {params, cacheable?}} =
       Enum.map_reduce exprs, {params, true}, fn expr, {params, cacheable?} ->
@@ -561,7 +561,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp merge_cache(:join, query, exprs, {cache, params}, adapter) do
+  defp merge_cache(:join, query, exprs, {cache, params}, _operation, adapter) do
     {expr_cache, {params, cacheable?}} =
       Enum.map_reduce exprs, {params, true}, fn
         %JoinExpr{on: on, qual: qual} = join, {params, cacheable?} ->
@@ -575,6 +575,15 @@ defmodule Ecto.Query.Planner do
     case expr_cache do
       [] -> {cache, params}
       _  -> {merge_cache({:join, expr_cache}, cache, cacheable?), params}
+    end
+  end
+
+  defp merge_cache(:union, _query, unions, cache_and_params, operation, adapter) do
+    fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
+
+    Enum.reduce unions, cache_and_params, fn {_, union_query}, acc ->
+      {_, acc} = traverse_exprs(union_query, operation, acc, fun)
+      acc
     end
   end
 
@@ -748,7 +757,6 @@ defmodule Ecto.Query.Planner do
     query
     |> normalize_query(operation, adapter, counter)
     |> elem(0)
-    |> normalize_unions(operation, adapter, counter)
     |> normalize_select()
   rescue
     e ->
@@ -772,16 +780,6 @@ defmodule Ecto.Query.Planner do
                    &validate_and_increment(&1, &2, &3, &4, operation, adapter))
   end
 
-  defp normalize_unions(query, operation, adapter, counter) do
-    unions =
-      Enum.map query.unions, fn {union_type, union_query} ->
-        {normalized_union_query, _} = normalize(union_query, operation, adapter, counter)
-        {union_type, normalized_union_query}
-      end
-
-    Map.put(query, :unions, unions)
-  end
-
   defp validate_and_increment(:from, query, %{source: %Ecto.SubQuery{}}, _counter, kind, _adapter) when kind != :all do
     error! query, "`#{kind}` does not allow subqueries in `from`"
   end
@@ -801,6 +799,7 @@ defmodule Ecto.Query.Planner do
 
   defp validate_and_increment(kind, query, exprs, counter, _operation, adapter)
        when kind in ~w(where group_by having order_by update)a do
+
     {exprs, counter} =
       Enum.reduce(exprs, {[], counter}, fn
         %{expr: []}, {list, acc} ->
@@ -818,6 +817,18 @@ defmodule Ecto.Query.Planner do
       {on, acc} = prewalk(:join, query, join.on, acc, adapter)
       {%{join | on: on, source: source, params: nil}, acc}
     end
+  end
+
+  defp validate_and_increment(:union, query, unions, counter, operation, adapter) do
+    fun = &validate_and_increment(&1, &2, &3, &4, operation, adapter)
+
+    {unions, counter} =
+      Enum.reduce unions, {[], counter}, fn {union_type, union_query}, {unions, counter} ->
+        {union_query, counter} = traverse_exprs(union_query, operation, counter, fun)
+        {[{union_type, union_query} | unions], counter}
+      end
+
+    {Enum.reverse(unions), counter}
   end
 
   defp prewalk_source({:fragment, meta, fragments}, kind, query, expr, acc, adapter) do
@@ -985,6 +996,13 @@ defmodule Ecto.Query.Planner do
       from: from
     }
 
+    unions =
+      Enum.map query.unions, fn {union_type, union_query} ->
+        {union_query, _} = normalize_select(union_query)
+        {union_type, union_query}
+      end
+
+    query = %{query | unions: unions}
     {put_in(query.select.fields, fields), select}
   end
 
@@ -1239,7 +1257,7 @@ defmodule Ecto.Query.Planner do
   ## Helpers
 
   @exprs [distinct: :distinct, select: :select, from: :from, join: :joins,
-          where: :wheres, group_by: :group_bys, having: :havings,
+          where: :wheres, group_by: :group_bys, having: :havings, union: :unions,
           order_by: :order_bys, limit: :limit, offset: :offset]
 
   # Traverse all query components with expressions.

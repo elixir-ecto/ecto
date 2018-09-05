@@ -97,6 +97,17 @@ defmodule Ecto.QueryTest do
     end
   end
 
+  describe "unions" do
+    test "adds union expressions" do
+      union_query1 = from p in "posts1"
+      union_query2 = from p in "posts2"
+      query = "posts" |> union(union_query1) |> union_all(union_query2)
+
+      assert {:union, ^union_query1} = query.unions |> Enum.at(0)
+      assert {:union_all, ^union_query2} = query.unions |> Enum.at(1)
+    end
+  end
+
   describe "bindings" do
     test "are not required by macros" do
       _ = from(p in "posts") |> limit(1)

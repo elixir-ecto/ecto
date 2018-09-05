@@ -121,13 +121,13 @@ if Code.ensure_loaded?(Postgrex) do
       where    = where(query, sources)
       group_by = group_by(query, sources)
       having   = having(query, sources)
-      order_by = order_by(query, order_by_distinct, sources)
       union    = union(query)
+      order_by = order_by(query, order_by_distinct, sources)
       limit    = limit(query, sources)
       offset   = offset(query, sources)
       lock     = lock(query.lock)
 
-      [select, from, join, where, group_by, having, order_by, union, limit, offset | lock]
+      [select, from, join, where, group_by, having, union, order_by, limit, offset | lock]
     end
 
     def update_all(%{from: %{source: source}} = query, prefix \\ nil) do

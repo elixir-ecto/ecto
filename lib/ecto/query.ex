@@ -399,7 +399,7 @@ defmodule Ecto.Query do
 
   alias Ecto.Query.Builder
   alias Ecto.Query.Builder.{Distinct, Dynamic, Filter, From, GroupBy, Join,
-                            LimitOffset, Lock, OrderBy, Union, Preload, Select, Update}
+                            LimitOffset, Lock, OrderBy, Preload, Select, Update}
 
   @doc """
   Builds a dynamic query expression.
@@ -1188,8 +1188,12 @@ defmodule Ecto.Query do
     supplier_query = Supplier |> select([s], s.city)
     Customer |> select([c], c.city) |> union(supplier_query)
   """
-  defmacro union(query, other_query) do
-    Union.build(:union, query, other_query, __CALLER__)
+  def union(%Ecto.Query{unions: unions} = query, %Ecto.Query{} = other_query) do
+    %{query | unions: unions ++ [{:union, other_query}]}
+  end
+
+  def union(query, other_query) do
+    union(Ecto.Queryable.to_query(query), Ecto.Queryable.to_query(other_query))
   end
 
   @doc """
@@ -1208,8 +1212,12 @@ defmodule Ecto.Query do
     supplier_query = Supplier |> select([s], s.city)
     Customer |> select([c], c.city) |> union_all(supplier_query)
   """
-  defmacro union_all(query, other_query) do
-    Union.build(:union_all, query, other_query, __CALLER__)
+  def union_all(%Ecto.Query{unions: unions} = query, %Ecto.Query{} = other_query) do
+    %{query | unions: unions ++ [{:union_all, other_query}]}
+  end
+
+  def union_all(query, other_query) do
+    union(Ecto.Queryable.to_query(query), Ecto.Queryable.to_query(other_query))
   end
 
   @doc """

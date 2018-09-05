@@ -415,17 +415,21 @@ defmodule Ecto.Adapters.PostgresTest do
             |> having([], fragment("?", ^false))
             |> group_by([], fragment("?", ^1))
             |> group_by([], fragment("?", ^2))
-            |> order_by([], fragment("?", ^3))
+            |> union("schema1" |> select([m], {m.id, ^true}) |> where([], fragment("?", ^3)))
+            |> union_all("schema2" |> select([m], {m.id, ^false}) |> where([], fragment("?", ^4)))
+            |> order_by([], fragment("?", ^5))
             |> order_by([], ^:x)
-            |> limit([], ^4)
-            |> offset([], ^5)
+            |> limit([], ^6)
+            |> offset([], ^7)
             |> plan()
 
     result =
       "SELECT s0.\"id\", $1 FROM \"schema\" AS s0 INNER JOIN \"schema2\" AS s1 ON $2 " <>
       "INNER JOIN \"schema2\" AS s2 ON $3 WHERE ($4) AND ($5) " <>
       "GROUP BY $6, $7 HAVING ($8) AND ($9) " <>
-      "ORDER BY $10, s0.\"x\" LIMIT $11 OFFSET $12"
+      "UNION SELECT s0.\"id\", $10 FROM \"schema1\" AS s0 WHERE ($11) " <>
+      "UNION ALL SELECT s0.\"id\", $12 FROM \"schema2\" AS s0 WHERE ($13) " <>
+      "ORDER BY $14, s0.\"x\" LIMIT $15 OFFSET $16"
 
     assert all(query) == String.trim(result)
   end

@@ -651,11 +651,6 @@ defmodule Ecto.Query.PlannerTest do
            select_fields([:id], 0)
   end
 
-  test "normalize: union queries" do
-    query = Post |> union(from(p in Post)) |> normalize()
-    assert query.select.fields
-  end
-
   test "normalize: preload" do
     message = ~r"the binding used in `from` must be selected in `select` when using `preload`"
     assert_raise Ecto.QueryError, message, fn ->
