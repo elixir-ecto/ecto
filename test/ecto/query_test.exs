@@ -97,14 +97,14 @@ defmodule Ecto.QueryTest do
     end
   end
 
-  describe "unions" do
+  describe "combinations" do
     test "adds union expressions" do
       union_query1 = from p in "posts1"
       union_query2 = from p in "posts2"
       query = "posts" |> union(union_query1) |> union_all(union_query2)
 
-      assert {:union, ^union_query1} = query.unions |> Enum.at(0)
-      assert {:union_all, ^union_query2} = query.unions |> Enum.at(1)
+      assert {:union, ^union_query1} = query.combinations |> Enum.at(0)
+      assert {:union_all, ^union_query2} = query.combinations |> Enum.at(1)
     end
   end
 
@@ -506,7 +506,7 @@ defmodule Ecto.QueryTest do
       refute query.havings == base.havings
       refute query.distinct == base.distinct
       refute query.select == base.select
-      refute query.unions == base.unions
+      refute query.combinations == base.combinations
       refute query.limit == base.limit
       refute query.offset == base.offset
       refute query.lock == base.lock
@@ -519,7 +519,7 @@ defmodule Ecto.QueryTest do
       |> exclude(:having)
       |> exclude(:distinct)
       |> exclude(:select)
-      |> exclude(:union)
+      |> exclude(:combinations)
       |> exclude(:limit)
       |> exclude(:offset)
       |> exclude(:lock)
@@ -532,7 +532,7 @@ defmodule Ecto.QueryTest do
       assert excluded_query.havings == base.havings
       assert excluded_query.distinct == base.distinct
       assert excluded_query.select == base.select
-      assert excluded_query.unions == base.unions
+      assert excluded_query.combinations == base.combinations
       assert excluded_query.limit == base.limit
       assert excluded_query.offset == base.offset
       assert excluded_query.lock == base.lock

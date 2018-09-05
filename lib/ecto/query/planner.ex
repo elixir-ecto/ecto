@@ -214,7 +214,7 @@ defmodule Ecto.Query.Planner do
     query
     |> prepare_sources(adapter)
     |> prepare_assocs
-    |> prepare_unions(operation, adapter, counter)
+    |> prepare_combinations(operation, adapter, counter)
     |> prepare_cache(operation, adapter, counter)
   rescue
     e ->
@@ -578,11 +578,11 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp merge_cache(:union, _query, unions, cache_and_params, operation, adapter) do
+  defp merge_cache(:combination, _query, combinations, cache_and_params, operation, adapter) do
     fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
 
-    Enum.reduce unions, cache_and_params, fn {_, union_query}, acc ->
-      {_, acc} = traverse_exprs(union_query, operation, acc, fun)
+    Enum.reduce combinations, cache_and_params, fn {_, combination_query}, acc ->
+      {_, acc} = traverse_exprs(combination_query, operation, acc, fun)
       acc
     end
   end
@@ -705,17 +705,17 @@ defmodule Ecto.Query.Planner do
   end
 
   @doc """
-  Prepare unions.
+  Prepare combinations.
   """
-  def prepare_unions(query, operation, adapter, counter) do
-    unions =
-      Enum.map query.unions, fn {union_type, union_query} ->
-        {prepared_union_query, _params, _key} = prepare(union_query, operation, adapter, counter)
-        prepared_union_query = prepared_union_query |> ensure_select(true)
-        {union_type, prepared_union_query}
+  def prepare_combinations(query, operation, adapter, counter) do
+    combinations =
+      Enum.map query.combinations, fn {type, combination_query} ->
+        {prepared_query, _params, _key} = prepare(combination_query, operation, adapter, counter)
+        prepared_query = prepared_query |> ensure_select(true)
+        {type, prepared_query}
       end
 
-    Map.put(query, :unions, unions)
+    Map.put(query, :combinations, combinations)
   end
 
   defp find_source_expr(query, 0) do
@@ -819,16 +819,16 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp validate_and_increment(:union, query, unions, counter, operation, adapter) do
+  defp validate_and_increment(:combination, _query, combinations, counter, operation, adapter) do
     fun = &validate_and_increment(&1, &2, &3, &4, operation, adapter)
 
-    {unions, counter} =
-      Enum.reduce unions, {[], counter}, fn {union_type, union_query}, {unions, counter} ->
-        {union_query, counter} = traverse_exprs(union_query, operation, counter, fun)
-        {[{union_type, union_query} | unions], counter}
+    {combinations, counter} =
+      Enum.reduce combinations, {[], counter}, fn {type, combination_query}, {combinations, counter} ->
+        {combination_query, counter} = traverse_exprs(combination_query, operation, counter, fun)
+        {[{type, combination_query} | combinations], counter}
       end
 
-    {Enum.reverse(unions), counter}
+    {Enum.reverse(combinations), counter}
   end
 
   defp prewalk_source({:fragment, meta, fragments}, kind, query, expr, acc, adapter) do
@@ -996,13 +996,13 @@ defmodule Ecto.Query.Planner do
       from: from
     }
 
-    unions =
-      Enum.map query.unions, fn {union_type, union_query} ->
-        {union_query, _} = normalize_select(union_query)
-        {union_type, union_query}
+    combinations =
+      Enum.map query.combinations, fn {type, combination_query} ->
+        {combination_query, _} = normalize_select(combination_query)
+        {type, combination_query}
       end
 
-    query = %{query | unions: unions}
+    query = %{query | combinations: combinations}
     {put_in(query.select.fields, fields), select}
   end
 
@@ -1257,7 +1257,7 @@ defmodule Ecto.Query.Planner do
   ## Helpers
 
   @exprs [distinct: :distinct, select: :select, from: :from, join: :joins,
-          where: :wheres, group_by: :group_bys, having: :havings, union: :unions,
+          where: :wheres, group_by: :group_bys, having: :havings, combination: :combinations,
           order_by: :order_bys, limit: :limit, offset: :offset]
 
   # Traverse all query components with expressions.
@@ -1386,7 +1386,7 @@ defmodule Ecto.Query.Planner do
 
   defp assert_only_filter_expressions!(query, operation) do
     case query do
-      %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [], unions: [],
+      %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [], combinations: [],
                   havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
         query
       _ ->

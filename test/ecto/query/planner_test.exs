@@ -412,8 +412,8 @@ defmodule Ecto.Query.PlannerTest do
     assert query.sources == {{"comments", Comment, "global"}, {"posts", Post, "local"}}
   end
 
-  test "prepare: prepare union queries" do
-    {%{unions: [{_, query}]}, _, _} = from(c in Comment, union: from(c in Comment)) |> prepare()
+  test "prepare: prepare combination queries" do
+    {%{combinations: [{_, query}]}, _, _} = from(c in Comment, union: from(c in Comment)) |> prepare()
     assert query.sources == {{"comments", Comment, nil}}
     assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
   end

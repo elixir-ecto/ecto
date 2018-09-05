@@ -353,7 +353,7 @@ defmodule Ecto.Query do
   """
 
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], aliases: %{}, wheres: [], select: nil,
-             order_bys: [], limit: nil, offset: nil, group_bys: [], unions: [], updates: [],
+             order_bys: [], limit: nil, offset: nil, group_bys: [], combinations: [], updates: [],
              havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
 
   defmodule FromExpr do
@@ -545,7 +545,7 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :having)
       Ecto.Query.exclude(query, :distinct)
       Ecto.Query.exclude(query, :select)
-      Ecto.Query.exclude(query, :union)
+      Ecto.Query.exclude(query, :combinations)
       Ecto.Query.exclude(query, :limit)
       Ecto.Query.exclude(query, :offset)
       Ecto.Query.exclude(query, :lock)
@@ -574,7 +574,7 @@ defmodule Ecto.Query do
   defp do_exclude(%Ecto.Query{} = query, :where), do: %{query | wheres: []}
   defp do_exclude(%Ecto.Query{} = query, :order_by), do: %{query | order_bys: []}
   defp do_exclude(%Ecto.Query{} = query, :group_by), do: %{query | group_bys: []}
-  defp do_exclude(%Ecto.Query{} = query, :union), do: %{query | unions: []}
+  defp do_exclude(%Ecto.Query{} = query, :combinations), do: %{query | combinations: []}
   defp do_exclude(%Ecto.Query{} = query, :having), do: %{query | havings: []}
   defp do_exclude(%Ecto.Query{} = query, :distinct), do: %{query | distinct: nil}
   defp do_exclude(%Ecto.Query{} = query, :select), do: %{query | select: nil}
@@ -1188,8 +1188,8 @@ defmodule Ecto.Query do
     supplier_query = Supplier |> select([s], s.city)
     Customer |> select([c], c.city) |> union(supplier_query)
   """
-  def union(%Ecto.Query{unions: unions} = query, %Ecto.Query{} = other_query) do
-    %{query | unions: unions ++ [{:union, other_query}]}
+  def union(%Ecto.Query{combinations: combinations} = query, %Ecto.Query{} = other_query) do
+    %{query | combinations: combinations ++ [{:union, other_query}]}
   end
 
   def union(query, other_query) do
@@ -1212,8 +1212,8 @@ defmodule Ecto.Query do
     supplier_query = Supplier |> select([s], s.city)
     Customer |> select([c], c.city) |> union_all(supplier_query)
   """
-  def union_all(%Ecto.Query{unions: unions} = query, %Ecto.Query{} = other_query) do
-    %{query | unions: unions ++ [{:union_all, other_query}]}
+  def union_all(%Ecto.Query{combinations: combinations} = query, %Ecto.Query{} = other_query) do
+    %{query | combinations: combinations ++ [{:union_all, other_query}]}
   end
 
   def union_all(query, other_query) do
