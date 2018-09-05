@@ -41,6 +41,7 @@ defmodule Mix.Tasks.Ecto.MigrationsTest do
 
     migrations = fn _ ->
       [
+        {:up,   0,              "up_migration_0"},
         {:up,   20160000000001, "up_migration_1"},
         {:up,   20160000000002, "up_migration_2"},
         {:up,   20160000000003, "up_migration_3"},
@@ -55,6 +56,7 @@ defmodule Mix.Tasks.Ecto.MigrationsTest do
 
         Status    Migration ID    Migration Name
       --------------------------------------------------
+        up        0               up_migration_0
         up        20160000000001  up_migration_1
         up        20160000000002  up_migration_2
         up        20160000000003  up_migration_3
