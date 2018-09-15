@@ -1065,6 +1065,9 @@ defmodule Ecto.Adapters.PostgresTest do
               {:modify, :price, :numeric, [precision: 8, scale: 2, null: true]},
               {:modify, :cost, :integer, [null: false, default: nil]},
               {:modify, :permalink_id, %Reference{table: :permalinks}, null: false},
+              {:modify, :status, :string, from: :integer},
+              {:modify, :user_id, :integer, from: %Reference{table: :users}},
+              {:modify, :group_id, %Reference{table: :groups, column: :gid}, from: %Reference{table: :groups}},
               {:remove, :summary}]}
 
     assert execute_ddl(alter) == ["""
@@ -1079,6 +1082,12 @@ defmodule Ecto.Adapters.PostgresTest do
     ALTER COLUMN "permalink_id" TYPE bigint,
     ADD CONSTRAINT "posts_permalink_id_fkey" FOREIGN KEY ("permalink_id") REFERENCES "permalinks"("id"),
     ALTER COLUMN "permalink_id" SET NOT NULL,
+    ALTER COLUMN "status" TYPE varchar(255),
+    DROP CONSTRAINT IF EXISTS "posts_user_id_fkey",
+    ALTER COLUMN "user_id" TYPE integer,
+    DROP CONSTRAINT IF EXISTS "posts_group_id_fkey",
+    ALTER COLUMN "group_id" TYPE bigint,
+    ADD CONSTRAINT "posts_group_id_fkey" FOREIGN KEY ("group_id") REFERENCES "groups"("gid"),
     DROP COLUMN "summary"
     """ |> remove_newlines]
   end
