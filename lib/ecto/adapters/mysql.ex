@@ -298,7 +298,7 @@ defmodule Ecto.Adapters.MySQL do
     task = Task.Supervisor.async_nolink(pid, fn ->
       {:ok, conn} = Mariaex.start_link(opts)
 
-      value = Ecto.Adapters.MySQL.Connection.execute(conn, sql, [], opts)
+      value = Mariaex.query(conn, sql, [], opts)
       GenServer.stop(conn)
       value
     end)
