@@ -580,6 +580,8 @@ defmodule Ecto.Multi do
         {Map.put(acc, name, value), names}
       {:error, value} ->
         return.({name, value, acc})
+      other ->
+        raise "expect multi to return either {:ok, value} or {:error, value}, got #{inspect(other)} in #{inspect(name)}"
     end
   end
 
