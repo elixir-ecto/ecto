@@ -581,7 +581,7 @@ defmodule Ecto.Multi do
       {:error, value} ->
         return.({name, value, acc})
       other ->
-        raise "expect multi to return either {:ok, value} or {:error, value}, got #{inspect(other)} in #{inspect(name)}"
+        raise "expected Ecto.Multi callback named `#{inspect(name)}` to return either {:ok, value} or {:error, value}, got: #{inspect(other)}"
     end
   end
 
