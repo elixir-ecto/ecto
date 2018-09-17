@@ -469,21 +469,19 @@ defmodule Ecto.MultiTest do
       assert changes.run == TestRepo
     end
 
-    test "with functions returning invalidly" do
-      fun = fn _repo, _changes -> :invalid end
-      multi = Multi.new |> Multi.run(:run, fun)
-
-      assert_raise(
-        RuntimeError,
-        "expect multi to return either {:ok, value} or {:error, value}, got :invalid in :run",
-        fn -> TestRepo.transaction(multi) end
-      )
-    end
-
     test "with mfa functions" do
       multi = Multi.new |> Multi.run(:run, __MODULE__, :run_ok, [])
       assert {:ok, changes} = TestRepo.transaction(multi)
       assert changes.run == TestRepo
+    end
+
+    test "raises on invalid return" do
+      fun = fn _repo, _changes -> :invalid end
+      multi = Multi.new |> Multi.run(:run, fun)
+
+      assert_raise RuntimeError, ~r"to return either {:ok, value} or {:error, value}", fn ->
+        TestRepo.transaction(multi)
+      end
     end
   end
 end
