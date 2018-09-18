@@ -845,6 +845,9 @@ defmodule Ecto.Adapters.MySQLTest do
                 {:modify, :price, :numeric, [precision: 8, scale: 2, null: true]},
                 {:modify, :cost, :integer, [null: false, default: nil]},
                 {:modify, :permalink_id, %Reference{table: :permalinks}, null: false},
+                {:modify, :status, :string, from: :integer},
+                {:modify, :user_id, :integer, from: %Reference{table: :users}},
+                {:modify, :group_id, %Reference{table: :groups, column: :gid}, from: %Reference{table: :groups}},
                 {:remove, :summary}]}
 
     assert execute_ddl(alter) == ["""
@@ -854,6 +857,12 @@ defmodule Ecto.Adapters.MySQLTest do
     MODIFY `price` numeric(8,2) NULL, MODIFY `cost` integer DEFAULT NULL NOT NULL,
     MODIFY `permalink_id` BIGINT UNSIGNED NOT NULL,
     ADD CONSTRAINT `posts_permalink_id_fkey` FOREIGN KEY (`permalink_id`) REFERENCES `permalinks`(`id`),
+    MODIFY `status` varchar(255),
+    DROP FOREIGN KEY `posts_user_id_fkey`,
+    MODIFY `user_id` integer,
+    DROP FOREIGN KEY `posts_group_id_fkey`,
+    MODIFY `group_id` BIGINT UNSIGNED,
+    ADD CONSTRAINT `posts_group_id_fkey` FOREIGN KEY (`group_id`) REFERENCES `groups`(`gid`),
     DROP `summary`
     """ |> remove_newlines]
   end
