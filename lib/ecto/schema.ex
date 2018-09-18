@@ -235,17 +235,21 @@ defmodule Ecto.Schema do
 
   **Notes:**
 
-  - For the `{:array, inner_type}` and `{:map, inner_type}` type,
-    replace `inner_type` with one of the valid types, such as `:string`.
+    * For the `{:array, inner_type}` and `{:map, inner_type}` type,
+      replace `inner_type` with one of the valid types, such as `:string`.
 
-  - For the `:decimal` type, `+Infinity`, `-Infinity`, and `NaN` values are not supported,
-    even though the `Decimal` library handles them. To support them, create a custom type.
+    * For the `:decimal` type, `+Infinity`, `-Infinity`, and `NaN` values
+      are not supported, even though the `Decimal` library handles them.
+      To support them, you can create a custom type.
 
-  - For calendar types with and without microseconds, the correct type is enforced
-    when persisting to the DB. For example, casting `~T[09:00:00]` as `:time_usec`
-    will succeed and result in `~T[09:00:00.000000]`, but persiting to the DB will fail.
-    Similarly, casting `~T[09:00:00.000000]` as `:time` will succeed, but
-    persisting will not.
+    * For calendar types with and without microseconds, the precision is
+      enforced when persisting to the DB. For example, casting `~T[09:00:00]`
+      as `:time_usec` will succeed and result in `~T[09:00:00.000000]`, but
+      persisting a type without microseconds as `:time_usec` will fail.
+      Similarly, casting `~T[09:00:00.000000]` as `:time` will succeed, but
+      persisting will not. This is the same behaviour as seen in other types,
+      where casting has to be done explicitly and is never performed
+      implicitly when loading from or dumping to the database.
 
   ### Custom types
 
