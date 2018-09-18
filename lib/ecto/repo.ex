@@ -797,6 +797,9 @@ defmodule Ecto.Repo do
       If none is specified, the conflict target is left up to the database.
       May also be `{:constraint, constraint_name_as_atom}` in databases
       that support the "ON CONSTRAINT" expression, such as PostgreSQL.
+    * `:stale_error_field` - The field where stale errors will be added in
+      the returning changeset. This option can be used to avoid raising
+      `Ecto.StaleEntryError`.
 
   See the "Shared options" section at the module documentation.
 
@@ -934,6 +937,9 @@ defmodule Ecto.Repo do
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
       in the struct.
+    * `:stale_error_field` - The field where stale errors will be added in
+      the returning changeset. This option can be used to avoid raising
+      `Ecto.StaleEntryError`.
 
   ## Example
 
@@ -1004,6 +1010,9 @@ defmodule Ecto.Repo do
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
       in the struct.
+    * `:stale_error_field` - The field where stale errors will be added in
+      the returning changeset. This option can be used to avoid raising
+      `Ecto.StaleEntryError`.
 
   See the "Shared options" section at the module documentation.
 
