@@ -378,6 +378,7 @@ defmodule Ecto.Type do
 
   defp dump_decimal(term) when is_integer(term), do: {:ok, Decimal.new(term)}
   defp dump_decimal(term) when is_float(term), do: {:ok, Decimal.from_float(term)}
+  defp dump_decimal(%Decimal{coef: coef}) when coef in [:inf, :qNaN, :sNaN], do: :error
   defp dump_decimal(%Decimal{} = term), do: {:ok, term}
   defp dump_decimal(_), do: :error
 
@@ -709,24 +710,12 @@ defmodule Ecto.Type do
 
   def cast_decimal(term) when is_binary(term) do
     case Decimal.parse(term) do
-      {:ok, decimal} -> cast_decimal(decimal)
+      {:ok, decimal} -> dump_decimal(decimal)
       :error -> :error
     end
   end
-  def cast_decimal(term) when is_integer(term) do
-    {:ok, Decimal.new(term)}
-  end
-  def cast_decimal(term) when is_float(term) do
-    {:ok, Decimal.from_float(term)}
-  end
-  def cast_decimal(%Decimal{coef: coef}) when coef in [:inf, :qNaN, :sNaN] do
-    :error
-  end
-  def cast_decimal(%Decimal{} = decimal) do
-    {:ok, decimal}
-  end
-  def cast_decimal(_) do
-    :error
+  def cast_decimal(term) do
+    dump_decimal(term)
   end
 
   defp cast_embed(%{cardinality: :one}, nil), do: {:ok, nil}
