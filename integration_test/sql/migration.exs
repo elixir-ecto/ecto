@@ -71,6 +71,37 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule AlterColumnFromMigration do
+    use Ecto.Migration
+
+    def change do
+      create table(:modify_from_authors, primary_key: false) do
+        add :id, :integer, primary_key: true
+      end
+      create table(:modify_from_posts) do
+        add :author, references(:modify_from_authors, type: :integer)
+      end
+
+      if direction() == :up do
+        execute "INSERT INTO modify_from_authors (id) VALUES (1)"
+        execute "INSERT INTO modify_from_posts (author) VALUES (1)"
+      end
+
+      alter table(:modify_from_posts) do
+        # remove the constraints modify_from_posts_author_fkey
+        modify :author, :integer, from: references(:modify_from_authors, type: :integer)
+      end
+      alter table(:modify_from_authors) do
+        modify :id, :bigint, from: :integer
+      end
+      rename table(:modify_from_posts), :author, to: :author_id
+      alter table(:modify_from_posts) do
+        # add the constraints modify_from_posts_author_id_fkey
+        modify :author_id, references(:modify_from_authors, type: :bigint), from: :integer
+      end
+    end
+  end
+
   defmodule AlterForeignKeyOnDeleteMigration do
     use Ecto.Migration
 
@@ -383,6 +414,16 @@ defmodule Ecto.Integration.MigrationTest do
     assert catch_error(PoolRepo.query!(query))
 
     :ok = down(PoolRepo, 20080906120000, AlterColumnMigration, log: false)
+  end
+
+  @tag :modify_column_with_from
+  test "modify column with from" do
+    assert :ok == up(PoolRepo, 20180918120000, AlterColumnFromMigration, log: false)
+
+    assert [1] ==
+           PoolRepo.all from p in "modify_from_posts", select: p.author_id
+
+    :ok = down(PoolRepo, 20180918120000, AlterColumnFromMigration, log: false)
   end
 
   @tag :modify_foreign_key_on_delete
