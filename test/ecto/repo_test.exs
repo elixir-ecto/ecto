@@ -351,11 +351,21 @@ defmodule Ecto.RepoTest do
 
   describe "changeset operations" do
     test "insert, update, insert_or_update and delete" do
-      valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{}, [])
+      valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{x: "foo"}, [:x])
       assert {:ok, %MySchema{}} = TestRepo.insert(valid)
       assert {:ok, %MySchema{}} = TestRepo.update(valid)
       assert {:ok, %MySchema{}} = TestRepo.insert_or_update(valid)
       assert {:ok, %MySchema{}} = TestRepo.delete(valid)
+    end
+
+    test "insert, update, and delete raises on stale entries" do
+      my_schema = %MySchema{id: 1}
+      my_schema = put_in(my_schema.__meta__.context, {:error, :stale})
+      stale = Ecto.Changeset.cast(my_schema, %{x: "foo"}, [:x])
+
+      assert_raise Ecto.StaleEntryError, fn -> TestRepo.insert(stale) end
+      assert_raise Ecto.StaleEntryError, fn -> TestRepo.update(stale) end
+      assert_raise Ecto.StaleEntryError, fn -> TestRepo.delete(stale) end
     end
 
     test "insert, update, insert_or_update and delete sets schema prefix" do

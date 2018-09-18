@@ -97,8 +97,8 @@ defmodule Ecto.TestAdapter do
     {:ok, Enum.zip(return, 1..length(return))}
   end
 
-  def insert(_, %{context: {:invalid, invalid}}, _fields, _on_conflict, _return, _opts) do
-    {:invalid, invalid}
+  def insert(_, %{context: context}, _fields, _on_conflict, _return, _opts) do
+    context
   end
 
   # Notice the list of changes is never empty.
@@ -108,14 +108,18 @@ defmodule Ecto.TestAdapter do
     {:ok, Enum.zip(return, 1..length(return))}
   end
 
-  def update(_, %{context: {:invalid, invalid}}, [_|_], _filters, _return, _opts) do
-    {:invalid, invalid}
+  def update(_, %{context: context}, [_ | _], _filters, _return, _opts) do
+    context
   end
 
-  def delete(_, schema_meta, _filter, _opts) do
+  def delete(_, %{context: nil} = schema_meta, _filter, _opts) do
     %{source: source, prefix: prefix} = schema_meta
     send(test_process(), {:delete, {prefix, source}})
     {:ok, []}
+  end
+
+  def delete(_, %{context: context}, _filter, _opts) do
+    context
   end
 
   ## Transactions
