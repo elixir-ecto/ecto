@@ -135,10 +135,11 @@ defmodule Ecto.TypeTest do
     assert cast(:decimal, Decimal.new("NaN")) == :error
     assert cast(:decimal, Decimal.new("Infinity")) == :error
 
+    assert dump(:decimal, Decimal.new("1")) == {:ok, Decimal.new("1")}
+    assert dump(:decimal, Decimal.new("nan")) == :error
     assert dump(:decimal, "1.0") == :error
     assert dump(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
     assert dump(:decimal, 1) == {:ok, Decimal.new("1")}
-    assert dump(:decimal, Decimal.new("1")) == {:ok, Decimal.new("1")}
   end
 
   @uuid_string "bfe0888c-5c59-4bb3-adfd-71f0b85d3db7"
