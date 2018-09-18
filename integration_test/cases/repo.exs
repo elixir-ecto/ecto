@@ -1447,6 +1447,25 @@ defmodule Ecto.Integration.RepoTest do
       assert TestRepo.get!(Post, inserted.id).title == "second"
     end
 
+    @tag :with_conflict_target
+    test "on conflict query having condition" do
+      post = %Post{title: "first", counter: 1, uuid: Ecto.UUID.generate()}
+      {:ok, inserted} = TestRepo.insert(post)
+
+      on_conflict = from Post, where: [counter: 2], update: [set: [title: "second"]]
+
+      insert_options = [
+        on_conflict: on_conflict,
+        conflict_target: [:uuid],
+        stale_error_field: :counter
+      ]
+
+      assert {:error, changeset} = TestRepo.insert(post, insert_options)
+      assert changeset.errors == [counter: {"stale", []}]
+
+      assert TestRepo.get!(Post, inserted.id).title == "first"
+    end
+
     @tag :without_conflict_target
     test "on conflict replace_all" do
       post = %Post{title: "first", text: "text", uuid: Ecto.UUID.generate()}

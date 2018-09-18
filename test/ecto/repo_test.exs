@@ -368,6 +368,21 @@ defmodule Ecto.RepoTest do
       assert_raise Ecto.StaleEntryError, fn -> TestRepo.delete(stale) end
     end
 
+    test "insert, update, and delete adds error to stale error field" do
+      my_schema = %MySchema{id: 1}
+      my_schema = put_in(my_schema.__meta__.context, {:error, :stale})
+      stale = Ecto.Changeset.cast(my_schema, %{x: "foo"}, [:x])
+
+      assert {:error, changeset} = TestRepo.insert(stale, [stale_error_field: :id])
+      assert changeset.errors == [id: {"stale", []}]
+
+      assert {:error, changeset} = TestRepo.update(stale, [stale_error_field: :id])
+      assert changeset.errors == [id: {"stale", []}]
+
+      assert {:error, changeset} = TestRepo.delete(stale, [stale_error_field: :id])
+      assert changeset.errors == [id: {"stale", []}]
+    end
+
     test "insert, update, insert_or_update and delete sets schema prefix" do
       valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{x: "foo"}, [:x])
 

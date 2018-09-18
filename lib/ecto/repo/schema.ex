@@ -591,7 +591,16 @@ defmodule Ecto.Repo.Schema do
       {:invalid, _} = constraints ->
         constraints
       {:error, :stale} ->
-        raise Ecto.StaleEntryError, struct: changeset.data, action: action
+        opts = List.last(args)
+
+        case Keyword.fetch(opts, :stale_error_field) do
+          {:ok, stale_error_field} ->
+            changeset = Ecto.Changeset.add_error(changeset, stale_error_field, "stale")
+            {:error, changeset}
+
+          :error ->
+            raise Ecto.StaleEntryError, struct: changeset.data, action: action
+        end
     end
   end
 
