@@ -1461,7 +1461,7 @@ defmodule Ecto.Integration.RepoTest do
       ]
 
       assert {:error, changeset} = TestRepo.insert(post, insert_options)
-      assert changeset.errors == [counter: {"stale", []}]
+      assert changeset.errors == [counter: {"is stale", [stale: true]}]
 
       assert TestRepo.get!(Post, inserted.id).title == "first"
     end

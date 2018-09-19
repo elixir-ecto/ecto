@@ -595,7 +595,9 @@ defmodule Ecto.Repo.Schema do
 
         case Keyword.fetch(opts, :stale_error_field) do
           {:ok, stale_error_field} ->
-            changeset = Ecto.Changeset.add_error(changeset, stale_error_field, "stale")
+            stale_message = Keyword.get(opts, :stale_error_message, "is stale")
+            changeset = Changeset.add_error(changeset, stale_error_field, stale_message, [stale: true])
+
             {:error, changeset}
 
           :error ->
