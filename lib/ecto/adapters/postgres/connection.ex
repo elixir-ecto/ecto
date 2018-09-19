@@ -914,7 +914,7 @@ if Code.ensure_loaded?(Postgrex) do
            reference_on_delete(ref.on_delete), reference_on_update(ref.on_update)]
 
     defp drop_constraint_expr(%Reference{} = ref, table, name),
-      do: ["DROP CONSTRAINT IF EXISTS ", reference_name(ref, table, name), ", "]
+      do: ["DROP CONSTRAINT ", reference_name(ref, table, name), ", "]
     defp drop_constraint_expr(_, _, _),
       do: []
 

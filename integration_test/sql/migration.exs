@@ -79,27 +79,21 @@ defmodule Ecto.Integration.MigrationTest do
         add :id, :integer, primary_key: true
       end
       create table(:modify_from_posts) do
-        add :author, references(:modify_from_authors, type: :integer)
+        add :author_id, references(:modify_from_authors, type: :integer)
       end
 
       if direction() == :up do
-        execute "INSERT INTO modify_from_authors (id) VALUES (1)"
-        execute "INSERT INTO modify_from_posts (author) VALUES (1)"
+        flush()
+        PoolRepo.insert_all "modify_from_authors", [[id: 1]]
+        PoolRepo.insert_all "modify_from_posts", [[author_id: 1]]
       end
 
       alter table(:modify_from_posts) do
-        # remove the constraints modify_from_posts_author_fkey
-        modify :author, :integer, from: references(:modify_from_authors, type: :integer)
+        # remove the constraints modify_from_posts_author_id_fkey
+        modify :author_id, :integer, from: references(:modify_from_authors, type: :integer)
       end
       alter table(:modify_from_authors) do
         modify :id, :bigint, from: :integer
-      end
-      case PoolRepo.__adapter__ do
-        Ecto.Adapters.MySQL ->
-          execute ~s{ALTER TABLE modify_from_posts CHANGE author author_id BIGINT UNSIGNED},
-                  ~s{ALTER TABLE modify_from_posts CHANGE author_id author BIGINT UNSIGNED}
-        _ ->
-          rename table(:modify_from_posts), :author, to: :author_id
       end
       alter table(:modify_from_posts) do
         # add the constraints modify_from_posts_author_id_fkey

@@ -1083,9 +1083,9 @@ defmodule Ecto.Adapters.PostgresTest do
     ADD CONSTRAINT "posts_permalink_id_fkey" FOREIGN KEY ("permalink_id") REFERENCES "permalinks"("id"),
     ALTER COLUMN "permalink_id" SET NOT NULL,
     ALTER COLUMN "status" TYPE varchar(255),
-    DROP CONSTRAINT IF EXISTS "posts_user_id_fkey",
+    DROP CONSTRAINT "posts_user_id_fkey",
     ALTER COLUMN "user_id" TYPE integer,
-    DROP CONSTRAINT IF EXISTS "posts_group_id_fkey",
+    DROP CONSTRAINT "posts_group_id_fkey",
     ALTER COLUMN "group_id" TYPE bigint,
     ADD CONSTRAINT "posts_group_id_fkey" FOREIGN KEY ("group_id") REFERENCES "groups"("gid"),
     DROP COLUMN "summary"
