@@ -374,13 +374,35 @@ defmodule Ecto.RepoTest do
       stale = Ecto.Changeset.cast(my_schema, %{x: "foo"}, [:x])
 
       assert {:error, changeset} = TestRepo.insert(stale, [stale_error_field: :id])
-      assert changeset.errors == [id: {"stale", []}]
+      assert changeset.errors == [id: {"is stale", [stale: true]}]
 
       assert {:error, changeset} = TestRepo.update(stale, [stale_error_field: :id])
-      assert changeset.errors == [id: {"stale", []}]
+      assert changeset.errors == [id: {"is stale", [stale: true]}]
 
       assert {:error, changeset} = TestRepo.delete(stale, [stale_error_field: :id])
-      assert changeset.errors == [id: {"stale", []}]
+      assert changeset.errors == [id: {"is stale", [stale: true]}]
+
+      assert_raise Ecto.StaleEntryError, fn -> TestRepo.insert(stale, [stale_error_field: "id"]) end
+    end
+
+    test "insert, update, and delete adds custom stale error message" do
+      my_schema = %MySchema{id: 1}
+      my_schema = put_in(my_schema.__meta__.context, {:error, :stale})
+      stale = Ecto.Changeset.cast(my_schema, %{x: "foo"}, [:x])
+
+      options = [
+        stale_error_field: :id,
+        stale_error_message: "is old"
+      ]
+
+      assert {:error, changeset} = TestRepo.insert(stale, options)
+      assert changeset.errors == [id: {"is old", [stale: true]}]
+
+      assert {:error, changeset} = TestRepo.update(stale, options)
+      assert changeset.errors == [id: {"is old", [stale: true]}]
+
+      assert {:error, changeset} = TestRepo.delete(stale, options)
+      assert changeset.errors == [id: {"is old", [stale: true]}]
     end
 
     test "insert, update, insert_or_update and delete sets schema prefix" do

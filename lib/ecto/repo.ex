@@ -800,6 +800,8 @@ defmodule Ecto.Repo do
     * `:stale_error_field` - The field where stale errors will be added in
       the returning changeset. This option can be used to avoid raising
       `Ecto.StaleEntryError`.
+    * `:stale_error_message` - The message to add to the configured
+      `:stale_error_field` when stale errors happen, defaults to "is stale".
 
   See the "Shared options" section at the module documentation.
 
@@ -940,6 +942,8 @@ defmodule Ecto.Repo do
     * `:stale_error_field` - The field where stale errors will be added in
       the returning changeset. This option can be used to avoid raising
       `Ecto.StaleEntryError`.
+    * `:stale_error_message` - The message to add to the configured
+      `:stale_error_field` when stale errors happen, defaults to "is stale".
 
   ## Example
 
@@ -1013,6 +1017,8 @@ defmodule Ecto.Repo do
     * `:stale_error_field` - The field where stale errors will be added in
       the returning changeset. This option can be used to avoid raising
       `Ecto.StaleEntryError`.
+    * `:stale_error_message` - The message to add to the configured
+      `:stale_error_field` when stale errors happen, defaults to "is stale".
 
   See the "Shared options" section at the module documentation.
 
