@@ -381,6 +381,8 @@ defmodule Ecto.RepoTest do
 
       assert {:error, changeset} = TestRepo.delete(stale, [stale_error_field: :id])
       assert changeset.errors == [id: {"is stale", [stale: true]}]
+
+      assert_raise Ecto.StaleEntryError, fn -> TestRepo.insert(stale, [stale_error_field: "id"]) end
     end
 
     test "insert, update, and delete adds custom stale error message" do

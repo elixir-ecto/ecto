@@ -594,13 +594,13 @@ defmodule Ecto.Repo.Schema do
         opts = List.last(args)
 
         case Keyword.fetch(opts, :stale_error_field) do
-          {:ok, stale_error_field} ->
+          {:ok, stale_error_field} when is_atom(stale_error_field) ->
             stale_message = Keyword.get(opts, :stale_error_message, "is stale")
             changeset = Changeset.add_error(changeset, stale_error_field, stale_message, [stale: true])
 
             {:error, changeset}
 
-          :error ->
+          _other ->
             raise Ecto.StaleEntryError, struct: changeset.data, action: action
         end
     end
