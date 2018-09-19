@@ -684,12 +684,12 @@ if Code.ensure_loaded?(Mariaex) do
     end
 
     defp column_change(table, {:modify, name, %Reference{} = ref, opts}) do
-      ["MODIFY ", quote_name(name), ?\s, reference_column_type(ref.type, opts),
+      [drop_constraint_expr(opts[:from], table, name), "MODIFY ", quote_name(name), ?\s, reference_column_type(ref.type, opts),
        column_options(opts), constraint_expr(ref, table, name)]
     end
 
-    defp column_change(_table, {:modify, name, type, opts}) do
-      ["MODIFY ", quote_name(name), ?\s, column_type(type, opts), column_options(opts)]
+    defp column_change(table, {:modify, name, type, opts}) do
+      [drop_constraint_expr(opts[:from], table, name), "MODIFY ", quote_name(name), ?\s, column_type(type, opts), column_options(opts)]
     end
 
     defp column_change(_table, {:remove, name}), do: ["DROP ", quote_name(name)]
@@ -770,6 +770,11 @@ if Code.ensure_loaded?(Mariaex) do
            " REFERENCES ", quote_table(table.prefix, ref.table),
            ?(, quote_name(ref.column), ?),
            reference_on_delete(ref.on_delete), reference_on_update(ref.on_update)]
+
+    defp drop_constraint_expr(%Reference{} = ref, table, name),
+      do: ["DROP FOREIGN KEY ", reference_name(ref, table, name), ", "]
+    defp drop_constraint_expr(_, _, _),
+      do: []
 
     defp reference_name(%Reference{name: nil}, table, column),
       do: quote_name("#{table.name}_#{column}_fkey")

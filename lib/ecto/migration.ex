@@ -781,8 +781,9 @@ defmodule Ecto.Migration do
   @doc """
   Modifies the type of column when altering a table.
 
-  This command is not reversible as Ecto does not know what
-  is the current type to revert it back to.
+  This command is not reversible unless option `:from` is provided.
+  If the given `:from` is a %Reference{}, the adapter would try to drop
+  the corresponding foreign key constraints before modifies the type.
 
   See `add/3` for more information on supported types.
 
@@ -796,6 +797,7 @@ defmodule Ecto.Migration do
 
     * `:null` - sets to null or not null
     * `:default` - changes the default
+    * `:from` - provide the current type
     * `:size` - the size of the type (for example the numbers of characters). Default is no size.
     * `:precision` - the precision for a numeric type. Required when `scale` is specified.
     * `:scale` - the scale of a numeric type. Default is 0 scale.
