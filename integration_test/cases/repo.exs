@@ -864,6 +864,12 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{title: nil} = TestRepo.get(Post, id1)
     assert %Post{title: nil} = TestRepo.get(Post, id2)
     assert %Post{title: nil} = TestRepo.get(Post, id3)
+
+    assert TestRepo.update_all("posts", [set: %{title: "y"}])
+
+    assert %Post{title: "y"} = TestRepo.get(Post, id1)
+    assert %Post{title: "y"} = TestRepo.get(Post, id2)
+    assert %Post{title: "y"} = TestRepo.get(Post, id3)
   end
 
   @tag :invalid_prefix
@@ -950,6 +956,13 @@ defmodule Ecto.Integration.RepoTest do
 
     assert %Post{visits: 1} = TestRepo.get(Post, id1)
     assert %Post{visits: 2} = TestRepo.get(Post, id2)
+
+    # With map
+    query = from p in Post, where: not is_nil(p.id), update: [inc: %{visits: -1}]
+    assert {2, nil} = TestRepo.update_all(query, [])
+
+    assert %Post{visits: 0} = TestRepo.get(Post, id1)
+    assert %Post{visits: 1} = TestRepo.get(Post, id2)
   end
 
   @tag :id_type
