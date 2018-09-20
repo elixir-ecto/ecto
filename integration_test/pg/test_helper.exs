@@ -73,7 +73,7 @@ version =
     _other -> version
   end
 
-if Version.match?(version, "~> 9.5") do
+if Version.match?(version, ">= 9.5.0") do
   ExUnit.configure(exclude: [:without_conflict_target])
 else
   Application.put_env(:ecto, :postgres_map_type, "json")
