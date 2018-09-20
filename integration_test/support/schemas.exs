@@ -168,6 +168,10 @@ defmodule Ecto.Integration.Custom do
       join_through: "customs_customs", join_keys: [custom_id1: :bid, custom_id2: :bid],
       on_delete: :delete_all, on_replace: :delete
   end
+
+  def changeset(schema, params) do
+    Ecto.Changeset.cast(schema, params, [:uuid])
+  end
 end
 
 defmodule Ecto.Integration.Barebone do
