@@ -67,8 +67,9 @@ _   = Ecto.Adapters.Postgres.storage_down(TestRepo.config)
 %{rows: [[version]]} = TestRepo.query!("SHOW server_version", [])
 
 version =
-  case String.split(version, ".") do
-    [x, y] -> "#{x}.#{y}.0"
+  case Regex.named_captures(~r/(?<major>[0-9]*)\.(?<minor>[0-9]*)?.*/, version) do
+    %{"major" => major, "minor" => minor} -> "#{major}.#{minor}.0"
+    %{"major" => major} -> "#{major}.0.0"
     _other -> version
   end
 
