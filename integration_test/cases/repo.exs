@@ -1418,6 +1418,17 @@ defmodule Ecto.Integration.RepoTest do
       assert not_inserted.id == nil
     end
 
+    @tag :returning
+    @tag :with_conflict_target
+    test "on conflict ignore and returning (changeset)" do
+      custom_changeset = Custom.changeset(%Custom{}, %{uuid: Ecto.UUID.generate()})
+      {:ok, inserted} = TestRepo.insert(custom_changeset, on_conflict: :nothing, conflict_target: [:uuid])
+      assert inserted.bid
+
+      {:ok, not_inserted} = TestRepo.insert(custom_changeset, on_conflict: :nothing, conflict_target: [:uuid], returning: true)
+      assert not_inserted.bid == inserted.bid
+    end
+
     @tag :without_conflict_target
     test "on conflict query" do
       on_conflict = from Post, update: [set: [title: "second"]]
