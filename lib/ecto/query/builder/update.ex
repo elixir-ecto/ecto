@@ -48,6 +48,17 @@ defmodule Ecto.Query.Builder.Update do
     escape_op(t, compile, runtime, params, vars, env)
   end
 
+  defp escape_op([{k, {:%{}, _, v}}|t] = expr, compile, runtime, params, vars, env) when is_atom(k) do
+    # TODO: Shall we DRY this up with the above?
+    validate_op!(k)
+    {compile_values, runtime_values, params} = escape_kw(k, v, params, vars, env)
+    compile =
+      if compile_values == [], do: compile, else: [{k, Enum.reverse(compile_values)} | compile]
+    runtime =
+      if runtime_values == [], do: runtime, else: [{k, Enum.reverse(runtime_values)} | runtime]
+    escape_op(t, compile, runtime, params, vars, env)
+  end
+
   defp escape_op([{k, {:^, _, [v]}}|t], compile, runtime, params, vars, env) when is_atom(k) do
     validate_op!(k)
     escape_op(t, compile, [{k, v}|runtime], params, vars, env)
@@ -92,7 +103,7 @@ defmodule Ecto.Query.Builder.Update do
 
   defp compile_error!(expr) do
     Builder.error! "malformed update `#{Macro.to_string(expr)}` in query expression, " <>
-                   "expected a keyword list with lists or interpolated expressions as values"
+                   "expected a keyword list with lists, atom-keys maps or interpolated expressions as values"
   end
 
   @doc """
@@ -150,7 +161,7 @@ defmodule Ecto.Query.Builder.Update do
   def update!(query, runtime, file, line) when is_list(runtime) do
     {runtime, {params, _count}} =
       Enum.map_reduce runtime, {[], 0}, fn
-        {k, v}, acc when is_atom(k) and is_list(v) ->
+        {k, v}, acc when is_atom(k) and (is_list(v) or is_map(v)) ->
           validate_op!(k)
           {v, params} = runtime_field!(query, k, v, acc)
           {{k, v}, params}
@@ -185,7 +196,7 @@ defmodule Ecto.Query.Builder.Update do
   defp runtime_error!(value) do
     raise ArgumentError,
       "malformed update `#{inspect(value)}` in query expression, " <>
-      "expected a keyword list with lists or interpolated expressions as values"
+      "expected a keyword list with lists, atom-keys maps, or interpolated expressions as values"
   end
 
   defp validate_op!(key) when key in @keys, do: :ok
