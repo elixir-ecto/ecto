@@ -76,7 +76,14 @@ _   = Ecto.Adapters.Postgres.storage_down(TestRepo.config)
 
 %{rows: [[version]]} = TestRepo.query!("SHOW server_version", [])
 
-if Version.match?(version, "~> 9.5") do
+version =
+  case Regex.named_captures(~r/(?<major>[0-9]*)(\.(?<minor>[0-9]*))?.*/, version) do
+    %{"major" => major, "minor" => minor} -> "#{major}.#{minor}.0"
+    %{"major" => major} -> "#{major}.0.0"
+    _other -> version
+  end
+
+if Version.match?(version, ">= 9.5.0") do
   ExUnit.configure(exclude: [:without_conflict_target])
 else
   Application.put_env(:ecto, :postgres_map_type, "json")
