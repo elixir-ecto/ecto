@@ -963,7 +963,9 @@ defmodule Ecto.Migration do
         raise ArgumentError,
               "only one `where` keyword is supported when declaring a partial index. " <>
                 "To specify multiple conditions, write a single WHERE clause using AND between them"
-      _ -> :ok
+
+      _ ->
+        :ok
     end
   end
 
