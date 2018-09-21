@@ -960,8 +960,9 @@ defmodule Ecto.Migration do
   defp validate_index_opts!(opts) when is_list(opts) do
     case Keyword.get_values(opts, :where) do
       [_, _ | _] ->
-        raise ArgumentError, message:
-       "only one 'where' keyword is supported when declaring a partial index. To specify multiple conditions, write a single WHERE clause using AND between them."
+        raise ArgumentError,
+              "only one `where` keyword is supported when declaring a partial index. " <>
+                "To specify multiple conditions, write a single WHERE clause using AND between them"
       _ -> :ok
     end
   end
