@@ -582,6 +582,7 @@ defmodule Ecto.Migration do
   end
 
   def index(table, columns, opts) when is_binary(table) and is_list(columns) and is_list(opts) do
+    validate_index_opts!(opts)
     index = struct(%Index{table: table, columns: columns}, opts)
     %{index | name: index.name || default_index_name(index)}
   end
@@ -955,6 +956,17 @@ defmodule Ecto.Migration do
   defp validate_type!(%Reference{} = reference) do
     reference
   end
+
+  defp validate_index_opts!(opts) when is_list(opts) do
+    case Keyword.get_values(opts, :where) do
+      [_, _ | _] ->
+        raise ArgumentError, message:
+       "only one 'where' keyword is supported when declaring a partial index. To specify multiple conditions, write a single WHERE clause using AND between them."
+      _ -> :ok
+    end
+  end
+
+  defp validate_index_opts!(opts), do: opts
 
   @doc false
   def __prefix__(%{prefix: prefix} = index_or_table) do

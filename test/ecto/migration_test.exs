@@ -64,6 +64,12 @@ defmodule Ecto.MigrationTest do
            %Index{table: "table_one__table_two", unique: true, name: :table_one__table_two_title_index, columns: [:title]}
   end
 
+  test "raises if given multiple 'where' clauses for an index" do
+    assert_raise(ArgumentError, fn ->
+      index(:posts, [:title], where: "status = 'published'", where: "deleted = 'false'")
+    end)
+  end
+
   test "creates a reference" do
     assert references(:posts) ==
            %Reference{table: "posts", column: :id, type: :bigserial}
