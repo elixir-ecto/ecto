@@ -491,7 +491,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
     callbacks = [
       post_checkout: &post_checkout(&1, &2, opts),
-      pre_checkin: &pre_checkin(&1, &2, opts)
+      pre_checkin: &pre_checkin(&1, &2, &3, opts)
     ]
 
     {pool, {loggers, sql, callbacks ++ opts}}
@@ -507,7 +507,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     end
   end
 
-  defp pre_checkin(Connection, {conn_mod, conn_state, _in_transaction?}, opts) do
+  defp pre_checkin(:checkin, Connection, {conn_mod, conn_state, _in_transaction?}, opts) do
     case conn_mod.handle_rollback([mode: :transaction] ++ opts, conn_state) do
       {:ok, _, conn_state} ->
         {:ok, conn_mod, conn_state}
@@ -515,5 +515,9 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       {_error_or_disconnect, err, conn_state} ->
         {:error, err, conn_mod, conn_state}
     end
+  end
+
+  defp pre_checkin(_, Connection, {conn_mod, conn_state, _in_transaction?}, _opts) do
+    {:ok, conn_mod, conn_state}
   end
 end
