@@ -111,18 +111,19 @@ if Code.ensure_loaded?(Postgrex) do
       sources = create_names(query)
       {select_distinct, order_by_distinct} = distinct(query.distinct, sources, query)
 
-      from     = from(query, sources)
-      select   = select(query, select_distinct, sources)
-      join     = join(query, sources)
-      where    = where(query, sources)
-      group_by = group_by(query, sources)
-      having   = having(query, sources)
-      order_by = order_by(query, order_by_distinct, sources)
-      limit    = limit(query, sources)
-      offset   = offset(query, sources)
-      lock     = lock(query.lock)
+      from         = from(query, sources)
+      select       = select(query, select_distinct, sources)
+      join         = join(query, sources)
+      where        = where(query, sources)
+      group_by     = group_by(query, sources)
+      having       = having(query, sources)
+      combinations = combinations(query)
+      order_by     = order_by(query, order_by_distinct, sources)
+      limit        = limit(query, sources)
+      offset       = offset(query, sources)
+      lock         = lock(query.lock)
 
-      [select, from, join, where, group_by, having, order_by, limit, offset | lock]
+      [select, from, join, where, group_by, having, combinations, order_by, limit, offset | lock]
     end
 
     def update_all(%{from: %{source: source}} = query, prefix \\ nil) do
@@ -406,6 +407,14 @@ if Code.ensure_loaded?(Postgrex) do
     defp offset(%Query{offset: nil}, _sources), do: []
     defp offset(%Query{offset: %QueryExpr{expr: expr}} = query, sources) do
       [" OFFSET " | expr(expr, sources, query)]
+    end
+
+    defp combinations(%Query{combinations: []}), do: []
+    defp combinations(%Query{combinations: combinations}) do
+      Enum.map(combinations, fn
+        {:union, query} -> [" UNION (", all(query), ")"]
+        {:union_all, query} -> [" UNION ALL (", all(query), ")"]
+      end)
     end
 
     defp lock(nil), do: []

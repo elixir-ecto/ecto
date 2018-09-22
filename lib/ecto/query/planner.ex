@@ -4,7 +4,7 @@ defmodule Ecto.Query.Planner do
 
   alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, QueryExpr, SelectExpr}
 
-  if map_size(%Ecto.Query{}) != 18 do
+  if map_size(%Ecto.Query{}) != 19 do
     raise "Ecto.Query match out of date in builder"
   end
 
@@ -215,6 +215,7 @@ defmodule Ecto.Query.Planner do
     query
     |> prepare_sources(adapter)
     |> prepare_assocs
+    |> prepare_combinations(operation, adapter, counter)
     |> prepare_cache(operation, adapter, counter)
   rescue
     e ->
@@ -527,17 +528,17 @@ defmodule Ecto.Query.Planner do
   """
   def prepare_cache(query, operation, adapter, counter) do
     {query, {cache, params}} =
-      traverse_exprs(query, operation, {[], []}, &{&3, merge_cache(&1, &2, &3, &4, adapter)})
+      traverse_exprs(query, operation, {[], []}, &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)})
 
     {query, Enum.reverse(params), finalize_cache(query, operation, cache, counter)}
   end
 
-  defp merge_cache(:from, _query, from, {cache, params}, _adapter) do
+  defp merge_cache(:from, _query, from, {cache, params}, _operation, _adapter) do
     {key, params} = source_cache(from, params)
     {merge_cache(key, cache, key != :nocache), params}
   end
 
-  defp merge_cache(kind, query, expr, {cache, params}, adapter)
+  defp merge_cache(kind, query, expr, {cache, params}, _operation, adapter)
       when kind in ~w(select distinct limit offset)a do
     if expr do
       {params, cacheable?} = cast_and_merge_params(kind, query, expr, params, adapter)
@@ -547,7 +548,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp merge_cache(kind, query, exprs, {cache, params}, adapter)
+  defp merge_cache(kind, query, exprs, {cache, params}, _operation, adapter)
       when kind in ~w(where update group_by having order_by)a do
     {expr_cache, {params, cacheable?}} =
       Enum.map_reduce exprs, {params, true}, fn expr, {params, cacheable?} ->
@@ -561,7 +562,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp merge_cache(:join, query, exprs, {cache, params}, adapter) do
+  defp merge_cache(:join, query, exprs, {cache, params}, _operation, adapter) do
     {expr_cache, {params, cacheable?}} =
       Enum.map_reduce exprs, {params, true}, fn
         %JoinExpr{on: on, qual: qual} = join, {params, cacheable?} ->
@@ -575,6 +576,15 @@ defmodule Ecto.Query.Planner do
     case expr_cache do
       [] -> {cache, params}
       _  -> {merge_cache({:join, expr_cache}, cache, cacheable?), params}
+    end
+  end
+
+  defp merge_cache(:combination, _query, combinations, cache_and_params, operation, adapter) do
+    fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
+
+    Enum.reduce combinations, cache_and_params, fn {_, combination_query}, acc ->
+      {_, acc} = traverse_exprs(combination_query, operation, acc, fun)
+      acc
     end
   end
 
@@ -695,6 +705,20 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  @doc """
+  Prepare combinations.
+  """
+  def prepare_combinations(query, operation, adapter, counter) do
+    combinations =
+      Enum.map query.combinations, fn {type, combination_query} ->
+        {prepared_query, _params, _key} = prepare(combination_query, operation, adapter, counter)
+        prepared_query = prepared_query |> ensure_select(true)
+        {type, prepared_query}
+      end
+
+    Map.put(query, :combinations, combinations)
+  end
+
   defp find_source_expr(query, 0) do
     query.from
   end
@@ -776,6 +800,7 @@ defmodule Ecto.Query.Planner do
 
   defp validate_and_increment(kind, query, exprs, counter, _operation, adapter)
        when kind in ~w(where group_by having order_by update)a do
+
     {exprs, counter} =
       Enum.reduce(exprs, {[], counter}, fn
         %{expr: []}, {list, acc} ->
@@ -793,6 +818,18 @@ defmodule Ecto.Query.Planner do
       {on, acc} = prewalk(:join, query, join.on, acc, adapter)
       {%{join | on: on, source: source, params: nil}, acc}
     end
+  end
+
+  defp validate_and_increment(:combination, _query, combinations, counter, operation, adapter) do
+    fun = &validate_and_increment(&1, &2, &3, &4, operation, adapter)
+
+    {combinations, counter} =
+      Enum.reduce combinations, {[], counter}, fn {type, combination_query}, {combinations, counter} ->
+        {combination_query, counter} = traverse_exprs(combination_query, operation, counter, fun)
+        {[{type, combination_query} | combinations], counter}
+      end
+
+    {Enum.reverse(combinations), counter}
   end
 
   defp prewalk_source({:fragment, meta, fragments}, kind, query, expr, acc, adapter) do
@@ -960,6 +997,13 @@ defmodule Ecto.Query.Planner do
       from: from
     }
 
+    combinations =
+      Enum.map query.combinations, fn {type, combination_query} ->
+        {combination_query, _} = normalize_select(combination_query)
+        {type, combination_query}
+      end
+
+    query = %{query | combinations: combinations}
     {put_in(query.select.fields, fields), select}
   end
 
@@ -1214,7 +1258,7 @@ defmodule Ecto.Query.Planner do
   ## Helpers
 
   @exprs [distinct: :distinct, select: :select, from: :from, join: :joins,
-          where: :wheres, group_by: :group_bys, having: :havings,
+          where: :wheres, group_by: :group_bys, having: :havings, combination: :combinations,
           order_by: :order_bys, limit: :limit, offset: :offset]
 
   # Traverse all query components with expressions.
@@ -1343,7 +1387,7 @@ defmodule Ecto.Query.Planner do
 
   defp assert_only_filter_expressions!(query, operation) do
     case query do
-      %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [],
+      %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [], combinations: [],
                   havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
         query
       _ ->

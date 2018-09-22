@@ -48,24 +48,25 @@ defimpl Inspect, for: Ecto.Query do
       |> generate_names
       |> List.to_tuple
 
-    from      = bound_from(query.from, binding(names, 0))
-    joins     = joins(query.joins, names)
-    preloads  = preloads(query.preloads)
-    assocs    = assocs(query.assocs, names)
+    from         = bound_from(query.from, binding(names, 0))
+    joins        = joins(query.joins, names)
+    preloads     = preloads(query.preloads)
+    assocs       = assocs(query.assocs, names)
+    combinations = combinations(query.combinations)
 
-    wheres    = bool_exprs(%{and: :where, or: :or_where}, query.wheres, names)
-    group_bys = kw_exprs(:group_by, query.group_bys, names)
-    havings   = bool_exprs(%{and: :having, or: :or_having}, query.havings, names)
-    order_bys = kw_exprs(:order_by, query.order_bys, names)
-    updates   = kw_exprs(:update, query.updates, names)
+    wheres       = bool_exprs(%{and: :where, or: :or_where}, query.wheres, names)
+    group_bys    = kw_exprs(:group_by, query.group_bys, names)
+    havings      = bool_exprs(%{and: :having, or: :or_having}, query.havings, names)
+    order_bys    = kw_exprs(:order_by, query.order_bys, names)
+    updates      = kw_exprs(:update, query.updates, names)
 
-    lock      = kw_inspect(:lock, query.lock)
-    limit     = kw_expr(:limit, query.limit, names)
-    offset    = kw_expr(:offset, query.offset, names)
-    select    = kw_expr(:select, query.select, names)
-    distinct  = kw_expr(:distinct, query.distinct, names)
+    lock         = kw_inspect(:lock, query.lock)
+    limit        = kw_expr(:limit, query.limit, names)
+    offset       = kw_expr(:offset, query.offset, names)
+    select       = kw_expr(:select, query.select, names)
+    distinct     = kw_expr(:distinct, query.distinct, names)
 
-    Enum.concat [from, joins, wheres, group_bys, havings, order_bys,
+    Enum.concat [from, joins, wheres, group_bys, havings, combinations, order_bys,
                  limit, offset, lock, distinct, updates, select, preloads, assocs]
   end
 
@@ -118,6 +119,13 @@ defimpl Inspect, for: Ecto.Query do
         {field, {:&, [], [idx]}}
       {field, {idx, children}} ->
         {field, {{:&, [], [idx]}, assocs(children)}}
+    end
+  end
+
+  defp combinations([]), do: []
+  defp combinations(combinations) do
+    Enum.map combinations, fn {key, val} ->
+      {key, to_string(val)}
     end
   end
 
