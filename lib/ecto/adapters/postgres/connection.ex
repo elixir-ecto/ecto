@@ -63,38 +63,24 @@ if Code.ensure_loaded?(Postgrex) do
     ## Query
 
     def prepare_execute(conn, name, sql, params, opts) do
-      query = %Postgrex.Query{name: name, statement: sql}
-      opts  = [function: :prepare_execute] ++ opts
-
-      case DBConnection.prepare_execute(conn, query, params, opts) do
-        {:ok, _, _} = ok ->
-          ok
-        {:error, _} = error ->
-          error
-      end
+      Postgrex.prepare_execute(conn, name, sql, params, opts)
     end
 
     def execute(conn, sql, params, opts) when is_binary(sql) or is_list(sql) do
-      query = %Postgrex.Query{name: "", statement: sql}
-      opts  = [function: :prepare_execute] ++ opts
-
-      case DBConnection.prepare_execute(conn, query, params, opts) do
-        {:ok, _, result}  ->
-          {:ok, result}
-        {:error, _} = error ->
-          error
-      end
+      Postgrex.prepare_execute(conn, "", sql, params, opts)
     end
 
-    def execute(conn, %{} = query, params, opts) do
-      opts = [function: :execute] ++ opts
-      case DBConnection.execute(conn, query, params, opts) do
-        {:ok, _} = ok ->
-          ok
+    def execute(conn, %{ref: ref} = query, params, opts) do
+      case Postgrex.execute(conn, query, params, opts) do
+        {:ok, %{ref: ^ref}, result} ->
+          {:ok, result}
+
         {:ok, _, _} = ok ->
           ok
+
         {:error, %Postgrex.Error{postgres: %{code: :feature_not_supported}} = err} ->
           {:reset, err}
+
         {:error, _} = error ->
           error
       end

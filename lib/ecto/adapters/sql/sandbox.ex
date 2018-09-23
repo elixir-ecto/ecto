@@ -376,59 +376,6 @@ defmodule Ecto.Adapters.SQL.Sandbox do
     end
   end
 
-  defmodule Pool do
-    @moduledoc false
-    if Code.ensure_loaded?(DBConnection) do
-      @behaviour DBConnection.Pool
-    end
-
-    def ensure_all_started(_opts, _type) do
-      raise "should never be invoked"
-    end
-
-    def start_link(_module, _opts) do
-      raise "should never be invoked"
-    end
-
-    def child_spec(_module, _opts, _child_opts) do
-      raise "should never be invoked"
-    end
-
-    def checkout(pool, opts) do
-      pool_mod = opts[:sandbox_pool]
-
-      case pool_mod.checkout(pool, opts) do
-        {:ok, pool_ref, conn_mod, conn_state} ->
-          case conn_mod.handle_begin([mode: :transaction] ++ opts, conn_state) do
-            {:ok, _, conn_state} ->
-              {:ok, pool_ref, Connection, {conn_mod, conn_state, false}}
-            {_error_or_disconnect, err, conn_state} ->
-              pool_mod.disconnect(pool_ref, err, conn_state, opts)
-          end
-        error ->
-          error
-      end
-    end
-
-    def checkin(pool_ref, {conn_mod, conn_state, _in_transaction?}, opts) do
-      pool_mod = opts[:sandbox_pool]
-      case conn_mod.handle_rollback([mode: :transaction] ++ opts, conn_state) do
-        {:ok, _, conn_state} ->
-          pool_mod.checkin(pool_ref, conn_state, opts)
-        {_error_or_disconnect, err, conn_state} ->
-          pool_mod.disconnect(pool_ref, err, conn_state, opts)
-      end
-    end
-
-    def disconnect(owner, exception, {_conn_mod, conn_state, _in_transaction?}, opts) do
-      opts[:sandbox_pool].disconnect(owner, exception, conn_state, opts)
-    end
-
-    def stop(owner, reason, {_conn_mod, conn_state, _in_transaction?}, opts) do
-      opts[:sandbox_pool].stop(owner, reason, conn_state, opts)
-    end
-  end
-
   @doc """
   Sets the mode for the `repo` pool.
 
@@ -542,7 +489,35 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       """
     end
 
-    {sandbox_pool, opts} = Keyword.pop(opts, :ownership_pool, DBConnection.ConnectionPool)
-    {pool, {loggers, sql, [repo: repo, sandbox_pool: sandbox_pool, ownership_pool: Pool] ++ opts}}
+    callbacks = [
+      post_checkout: &post_checkout(&1, &2, opts),
+      pre_checkin: &pre_checkin(&1, &2, &3, opts)
+    ]
+
+    {pool, {loggers, sql, callbacks ++ opts}}
+  end
+
+  defp post_checkout(conn_mod, conn_state, opts) do
+    case conn_mod.handle_begin([mode: :transaction] ++ opts, conn_state) do
+      {:ok, _, conn_state} ->
+        {:ok, Connection, {conn_mod, conn_state, false}}
+
+      {_error_or_disconnect, err, conn_state} ->
+        {:error, err, conn_mod, conn_state}
+    end
+  end
+
+  defp pre_checkin(:checkin, Connection, {conn_mod, conn_state, _in_transaction?}, opts) do
+    case conn_mod.handle_rollback([mode: :transaction] ++ opts, conn_state) do
+      {:ok, _, conn_state} ->
+        {:ok, conn_mod, conn_state}
+
+      {_error_or_disconnect, err, conn_state} ->
+        {:error, err, conn_mod, conn_state}
+    end
+  end
+
+  defp pre_checkin(_, Connection, {conn_mod, conn_state, _in_transaction?}, _opts) do
+    {:ok, conn_mod, conn_state}
   end
 end
