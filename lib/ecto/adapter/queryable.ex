@@ -56,7 +56,7 @@ defmodule Ecto.Adapter.Queryable do
   This operation uses the query cache if one is available.
   """
   def prepare_query(operation, repo_name_or_pid, queryable) do
-    {adapter, cache, _meta} = Ecto.Repo.Registry.lookup(repo_name_or_pid)
+    {adapter, %{cache: cache}} = Ecto.Repo.Registry.lookup(repo_name_or_pid)
 
     {_meta, prepared, params} =
       queryable

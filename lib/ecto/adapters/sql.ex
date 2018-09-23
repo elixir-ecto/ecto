@@ -331,14 +331,11 @@ defmodule Ecto.Adapters.SQL do
   end
 
   def query(adapter_meta, sql, params, opts) do
-    case sql_call(adapter_meta, :execute, [sql], params, opts) do
-      {:ok, _} = ok -> ok
-      {:ok, _, res} -> {:ok, res}
-      {:error, _} = error -> error
-    end
+    sql_call(adapter_meta, :query, [sql], params, opts)
   end
 
-  defp sql_call({pool, {loggers, sql, default_opts}}, callback, args, params, opts) do
+  defp sql_call(adapter_meta, callback, args, params, opts) do
+    %{pid: pool, loggers: loggers, sql: sql, opts: default_opts} = adapter_meta
     conn = get_conn(pool) || pool
     opts = with_log(loggers, params, opts ++ default_opts)
     args = args ++ [params, opts]
@@ -436,13 +433,15 @@ defmodule Ecto.Adapters.SQL do
     end
 
     loggers = Keyword.fetch!(config, :loggers)
-    pool_config = pool_config(config)
-    {:ok, connection.child_spec(pool_config), {loggers, connection, pool_config}}
+    config = adapter_config(config)
+    opts = Keyword.take(config, [:timeout, :pool, :pool_size, :pool_timeout])
+    meta = %{loggers: loggers, sql: connection, opts: opts}
+    {:ok, connection.child_spec(config), meta}
   end
 
-  defp pool_config(config) do
+  defp adapter_config(config) do
     config
-    |> Keyword.drop([:loggers, :priv, :url, :name])
+    |> Keyword.delete(:name)
     |> Keyword.update(:pool, DBConnection.ConnectionPool, &normalize_pool/1)
   end
 
@@ -534,9 +533,8 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp do_execute(adapter_meta, {:nocache, {_id, prepared}}, params, opts) do
-    case sql_call(adapter_meta, :execute, [prepared], params, opts) do
+    case sql_call(adapter_meta, :query, [prepared], params, opts) do
       {:ok, res} -> res
-      {:ok, _, res} -> res
       {:error, err} -> raise_sql_call_error err
     end
   end
@@ -572,7 +570,8 @@ defmodule Ecto.Adapters.SQL do
   defp raise_sql_call_error(err), do: raise err
 
   @doc false
-  def reduce({pool, {loggers, sql, default_opts}}, statement, params, opts, acc, fun) do
+  def reduce(adapter_meta, statement, params, opts, acc, fun) do
+    %{pid: pool, loggers: loggers, sql: sql, opts: default_opts} = adapter_meta
     opts = with_log(loggers, params, opts ++ default_opts)
 
     case get_conn(pool) do
@@ -587,7 +586,8 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def into({pool, {loggers, sql, default_opts}}, statement, params, opts) do
+  def into(adapter_meta, statement, params, opts) do
+    %{pid: pool, loggers: loggers, sql: sql, opts: default_opts} = adapter_meta
     opts = with_log(loggers, params, opts ++ default_opts)
 
     case get_conn(pool) do
@@ -629,7 +629,8 @@ defmodule Ecto.Adapters.SQL do
   ## Transactions
 
   @doc false
-  def transaction({pool, {loggers, _sql, default_opts}}, opts, fun) do
+  def transaction(adapter_meta, opts, fun) do
+    %{pid: pool, loggers: loggers, opts: default_opts} = adapter_meta
     opts = with_log(loggers, [], opts ++ default_opts)
 
     case get_conn(pool) do
@@ -652,12 +653,12 @@ defmodule Ecto.Adapters.SQL do
   end
 
   @doc false
-  def in_transaction?({pool, _}) do
+  def in_transaction?(%{pid: pool}) do
     !!get_conn(pool)
   end
 
   @doc false
-  def rollback({pool, _}, value) do
+  def rollback(%{pid: pool}, value) do
     case get_conn(pool) do
       nil  -> raise "cannot call rollback outside of transaction"
       conn -> DBConnection.rollback(conn, value)
@@ -677,7 +678,7 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def lock_for_migrations(meta, query, opts, fun) do
-    {_pool, {_loggers, _sql, default_opts}} = meta
+    %{opts: default_opts} = meta
 
     if Keyword.fetch(default_opts, :pool_size) == {:ok, 1} do
       raise_pool_size_error()

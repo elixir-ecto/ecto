@@ -19,7 +19,7 @@ defmodule Ecto.TestAdapter do
     "hello" = opts[:database]
     "local" = opts[:hostname]
 
-    {:ok, Supervisor.Spec.worker(Task, [fn -> :timer.sleep(:infinity) end]), :meta}
+    {:ok, Supervisor.Spec.worker(Task, [fn -> :timer.sleep(:infinity) end]), %{meta: :meta}}
   end
 
   ## Types

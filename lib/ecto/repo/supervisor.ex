@@ -172,7 +172,8 @@ defmodule Ecto.Repo.Supervisor do
   def start_child({mod, fun, args}, adapter, cache, meta) do
     case apply(mod, fun, args) do
       {:ok, pid} ->
-        Ecto.Repo.Registry.associate(self(), {adapter, cache, {pid, meta}})
+        meta = Map.merge(meta, %{pid: pid, cache: cache})
+        Ecto.Repo.Registry.associate(self(), {adapter, meta})
         {:ok, pid}
 
       other ->

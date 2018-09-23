@@ -18,8 +18,8 @@ if Code.ensure_loaded?(Mariaex) do
       Mariaex.prepare_execute(conn, name, sql, map_params(params), opts)
     end
 
-    def execute(conn, sql, params, opts) when is_binary(sql) or is_list(sql) do
-      Mariaex.prepare_execute(conn, "", sql, map_params(params), opts)
+    def query(conn, sql, params, opts) do
+      Mariaex.query(conn, sql, map_params(params), opts)
     end
 
     def execute(conn, %{ref: ref} = query, params, opts) do

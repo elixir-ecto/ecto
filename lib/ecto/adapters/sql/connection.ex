@@ -3,11 +3,17 @@ defmodule Ecto.Adapters.SQL.Connection do
   Specifies the behaviour to be implemented by all SQL connections.
   """
 
-  @typedoc "The prepared query which is an SQL command"
-  @type prepared :: String.t
+  @typedoc "The query name"
+  @type name :: String.t
 
-  @typedoc "The cache query which is a DBConnection Query"
+  @typedoc "The SQL statement"
+  @type statement :: String.t
+
+  @typedoc "The cached query which is a DBConnection Query"
   @type cached :: map
+
+  @type connection :: DBConnection.conn()
+  @type params :: [term]
 
   @doc """
   Receives options and returns `DBConnection` supervisor child
@@ -18,23 +24,27 @@ defmodule Ecto.Adapters.SQL.Connection do
   @doc """
   Prepares and executes the given query with `DBConnection`.
   """
-  @callback prepare_execute(connection :: DBConnection.t, name :: String.t, prepared, params :: [term], options :: Keyword.t) ::
-            {:ok, query :: map, term} | {:error, Exception.t}
+  @callback prepare_execute(connection, name, statement, params, options :: Keyword.t) ::
+              {:ok, cached, term} | {:error, Exception.t}
 
   @doc """
-  Executes the given prepared query with `DBConnection`.
+  Executes a cached query.
   """
-  @callback execute(connection :: DBConnection.t, prepared_query :: prepared, params :: [term], options :: Keyword.t) ::
-            {:ok, query :: map, term} | {:error, Exception.t}
-  @callback execute(connection :: DBConnection.t, prepared_query :: cached, params :: [term], options :: Keyword.t) ::
-            {:ok, query :: map, term} | {:ok, term} | {:error | :reset, Exception.t}
+  @callback execute(connection, cached, params, options :: Keyword.t) ::
+              {:ok, cached, term} | {:ok, term} | {:error | :reset, Exception.t}
+
+  @doc """
+  Runs the given statement as query.
+  """
+  @callback query(connection, statement, params, options :: Keyword.t) ::
+              {:ok, term} | {:error, Exception.t}
 
   @doc """
   Returns a stream that prepares and executes the given query with
   `DBConnection`.
   """
-  @callback stream(connection :: DBConnection.conn, prepared_query :: prepared, params :: [term], options :: Keyword.t) ::
-            Enum.t
+  @callback stream(connection, statement, params, options :: Keyword.t) ::
+              Enum.t
 
   @doc """
   Receives the exception returned by `query/4`.

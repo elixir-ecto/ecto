@@ -66,8 +66,8 @@ if Code.ensure_loaded?(Postgrex) do
       Postgrex.prepare_execute(conn, name, sql, params, opts)
     end
 
-    def execute(conn, sql, params, opts) when is_binary(sql) or is_list(sql) do
-      Postgrex.prepare_execute(conn, "", sql, params, opts)
+    def query(conn, sql, params, opts) do
+      Postgrex.query(conn, sql, params, opts)
     end
 
     def execute(conn, %{ref: ref} = query, params, opts) do

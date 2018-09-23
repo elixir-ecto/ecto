@@ -5,8 +5,17 @@ defmodule Ecto.Adapter do
 
   @type t :: module
 
-  @typedoc "The metadata returned by the adapter init/1"
-  @type adapter_meta :: term
+  @typedoc """
+  The metadata returned by the adapter init/1.
+
+  It must be a map and Ecto itself will always inject
+  two keys into the meta:
+
+    * the `:cache` key, which as ETS table that can be used as a cache (if available)
+    * the `:pid` key, which is the pid returned by the child spec returned in `c:init/1`
+
+  """
+  @type adapter_meta :: map
 
   @doc """
   The callback invoked in case the adapter needs to inject code.
@@ -88,7 +97,7 @@ defmodule Ecto.Adapter do
   It expects a name or a pid representing a repo.
   """
   def lookup_meta(repo_name_or_pid) do
-    {_, _, meta} = Ecto.Repo.Registry.lookup(repo_name_or_pid)
+    {_, meta} = Ecto.Repo.Registry.lookup(repo_name_or_pid)
     meta
   end
 end

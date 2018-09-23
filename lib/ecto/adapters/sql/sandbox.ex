@@ -384,7 +384,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   def mode(repo, mode)
       when is_atom(repo) and mode in [:auto, :manual]
       when is_atom(repo) and elem(mode, 0) == :shared and is_pid(elem(mode, 1)) do
-    {pool, {_loggers, _sql, opts}} = proxy_pool(repo)
+    %{pid: pool, opts: opts} = proxy_pool(repo)
     DBConnection.Ownership.ownership_mode(pool, mode, opts)
   end
 
@@ -411,7 +411,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
 
   """
   def checkout(repo, opts \\ []) when is_atom(repo) do
-    {pool, {_loggers, _sql, pool_opts}} =
+    %{pid: pool, opts: pool_opts} =
       if Keyword.get(opts, :sandbox, true) do
         proxy_pool(repo)
       else
@@ -451,7 +451,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   Checks in the connection back into the sandbox pool.
   """
   def checkin(repo, _opts \\ []) when is_atom(repo) do
-    {pool, {_loggers, _sql, opts}} = Ecto.Adapter.lookup_meta(repo)
+    %{pid: pool, opts: opts} = Ecto.Adapter.lookup_meta(repo)
     DBConnection.Ownership.ownership_checkin(pool, opts)
   end
 
@@ -459,7 +459,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   Allows the `allow` process to use the same connection as `parent`.
   """
   def allow(repo, parent, allow, _opts \\ []) when is_atom(repo) do
-    {pool, {_loggers, _sql, opts}} = Ecto.Adapter.lookup_meta(repo)
+    %{pid: pool, opts: opts} = Ecto.Adapter.lookup_meta(repo)
     DBConnection.Ownership.ownership_allow(pool, parent, allow, opts)
   end
 
@@ -478,7 +478,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
   end
 
   defp proxy_pool(repo) do
-    {pool, {loggers, sql, opts}} = Ecto.Adapter.lookup_meta(repo)
+    %{opts: opts} = adapter_meta = Ecto.Adapter.lookup_meta(repo)
 
     if opts[:pool] != DBConnection.Ownership do
       raise """
@@ -494,7 +494,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       pre_checkin: &pre_checkin(&1, &2, &3, opts)
     ]
 
-    {pool, {loggers, sql, callbacks ++ opts}}
+    %{adapter_meta | opts: callbacks ++ opts}
   end
 
   defp post_checkout(conn_mod, conn_state, opts) do
