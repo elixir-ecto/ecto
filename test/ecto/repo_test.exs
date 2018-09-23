@@ -27,6 +27,7 @@ defmodule Ecto.RepoTest do
       field :x, :string
       field :y, :binary, source: :yyy
       field :z, :string, default: "z"
+      field :w, :string, virtual: true
       field :array, {:array, :string}
       field :map, {:map, :string}
       belongs_to :parent, MyParent
@@ -356,6 +357,14 @@ defmodule Ecto.RepoTest do
       assert {:ok, %MySchema{}} = TestRepo.update(valid)
       assert {:ok, %MySchema{}} = TestRepo.insert_or_update(valid)
       assert {:ok, %MySchema{}} = TestRepo.delete(valid)
+    end
+
+    test "insert, update, insert_or_update and delete with virtual field" do
+      valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{w: "foo"}, [:w])
+      assert {:ok, %MySchema{w: "foo"}} = TestRepo.insert(valid)
+      assert {:ok, %MySchema{w: "foo"}} = TestRepo.update(valid)
+      assert {:ok, %MySchema{w: "foo"}} = TestRepo.insert_or_update(valid)
+      assert {:ok, %MySchema{w: "foo"}} = TestRepo.delete(valid)
     end
 
     test "insert, update, insert_or_update and delete filters out unknown field" do

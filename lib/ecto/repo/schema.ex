@@ -386,9 +386,7 @@ defmodule Ecto.Repo.Schema do
     schema = struct.__struct__
     assocs = to_delete_assocs(schema)
     dumper = schema.__schema__(:dump)
-
     changeset = put_repo_and_action(changeset, :delete, name)
-    changeset = %{changeset | changes: %{}}
 
     wrap_in_transaction(adapter, adapter_meta, opts, assocs != [], prepare, fn ->
       changeset = run_prepare(changeset, prepare)
@@ -671,17 +669,16 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp load_changes(changeset, state, types, values, embeds, autogen, adapter, schema_meta) do
-    %{changes: changes} = changeset
+    %{data: data, changes: changes} = changeset
 
-    # It is ok to use types from changeset because we have
-    # already filtered the results to be only about fields.
     data =
-      changeset.data
+      data
       |> merge_changes(changes)
       |> Map.merge(embeds)
       |> merge_autogen(autogen)
       |> apply_metadata(state, schema_meta)
       |> load_each(values, types, adapter)
+
     Map.put(changeset, :data, data)
   end
 
