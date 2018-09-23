@@ -562,8 +562,7 @@ defmodule Ecto.Repo.Schema do
     counter = counter_fun.()
 
     {query, params, _} =
-      %{query | prefix: prefix}
-      |> Ecto.Query.Planner.prepare(:update_all, adapter, counter)
+      Ecto.Query.Planner.plan(%{query | prefix: prefix}, :update_all, adapter, counter)
 
     unless query.from.source == from do
       raise ArgumentError, "cannot run on_conflict: query because the query " <>

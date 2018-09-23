@@ -104,7 +104,7 @@ defmodule Ecto.Query.Planner do
 
   Planning happens in multiple steps:
 
-    1. First the query is prepared by retrieving
+    1. First the query is planned by retrieving
        its cache key, casting and merging parameters
 
     2. Then a cache lookup is done, if the query is
@@ -125,7 +125,7 @@ defmodule Ecto.Query.Planner do
   along-side the select expression.
   """
   def query(query, operation, name, adapter, counter) do
-    {query, params, key} = prepare(query, operation, adapter, counter)
+    {query, params, key} = plan(query, operation, adapter, counter)
     if key == :nocache do
       {_, select, prepared} = query_without_cache(query, operation, adapter, counter)
       {build_meta(query, select), {:nocache, prepared}, params}
@@ -211,11 +211,11 @@ defmodule Ecto.Query.Planner do
   This function is called by the backend before invoking
   any cache mechanism.
   """
-  def prepare(query, operation, adapter, counter) do
+  def plan(query, operation, adapter, counter) do
     query
-    |> prepare_sources(adapter)
-    |> prepare_assocs
-    |> prepare_cache(operation, adapter, counter)
+    |> plan_sources(adapter)
+    |> plan_assocs
+    |> plan_cache(operation, adapter, counter)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -225,26 +225,26 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare all sources, by traversing and expanding joins.
   """
-  def prepare_sources(query, adapter) do
-    {from, sources} = prepare_from(query, adapter)
-    {joins, sources, tail_sources} = prepare_joins(query, sources, length(query.joins), adapter)
+  def plan_sources(query, adapter) do
+    {from, sources} = plan_from(query, adapter)
+    {joins, sources, tail_sources} = plan_joins(query, sources, length(query.joins), adapter)
     %{query | from: from, joins: joins |> Enum.reverse,
               sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple()}
   end
 
-  defp prepare_from(%{from: nil} = query, _adapter) do
+  defp plan_from(%{from: nil} = query, _adapter) do
     error!(query, "query must have a from expression")
   end
 
-  defp prepare_from(%{from: from} = query, adapter) do
-    {from, source} = prepare_source(query, from, adapter)
+  defp plan_from(%{from: from} = query, adapter) do
+    {from, source} = plan_source(query, from, adapter)
     {from, [source]}
   end
 
-  defp prepare_source(query, %{source: %Ecto.SubQuery{} = subquery} = expr, adapter) do
+  defp plan_source(query, %{source: %Ecto.SubQuery{} = subquery} = expr, adapter) do
     try do
       %{query: inner_query} = subquery
-      {inner_query, params, key} = prepare(inner_query, :all, adapter, 0)
+      {inner_query, params, key} = plan(inner_query, :all, adapter, 0)
       assert_no_subquery_assocs!(inner_query)
       {inner_query, select} = inner_query |> ensure_select(true) |> subquery_select(adapter)
       subquery = %{subquery | query: inner_query, params: params, cache: key, select: select}
@@ -254,17 +254,17 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp prepare_source(query, %{source: {nil, schema}, prefix: prefix} = expr, _adapter)
+  defp plan_source(query, %{source: {nil, schema}, prefix: prefix} = expr, _adapter)
        when is_atom(schema) and schema != nil do
     source = schema.__schema__(:source)
     {%{expr | source: {source, schema}}, {source, schema, prefix || query.prefix}}
   end
 
-  defp prepare_source(query, %{source: {source, schema}, prefix: prefix} = expr, _adapter)
+  defp plan_source(query, %{source: {source, schema}, prefix: prefix} = expr, _adapter)
        when is_binary(source) and is_atom(schema),
        do: {expr, {source, schema, prefix || query.prefix}}
 
-  defp prepare_source(_query, %{source: {:fragment, _, _} = source} = expr, _adapter),
+  defp plan_source(_query, %{source: {:fragment, _, _} = source} = expr, _adapter),
        do: {expr, source}
 
   defp assert_no_subquery_assocs!(%{assocs: assocs, preloads: preloads} = query)
@@ -373,11 +373,11 @@ defmodule Ecto.Query.Planner do
        when container in [:{}, :%{}, :&] and is_list(args), do: false
   defp valid_subquery_value?(_), do: true
 
-  defp prepare_joins(query, sources, offset, adapter) do
-    prepare_joins(query.joins, query, [], sources, [], 1, offset, adapter)
+  defp plan_joins(query, sources, offset, adapter) do
+    plan_joins(query.joins, query, [], sources, [], 1, offset, adapter)
   end
 
-  defp prepare_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual, on: on, prefix: prefix} = join|t],
+  defp plan_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual, on: on, prefix: prefix} = join|t],
                      query, joins, sources, tail_sources, counter, offset, adapter) do
     schema = schema_for_association_join!(query, join, Enum.fetch!(Enum.reverse(sources), ix))
     refl = schema.__schema__(:association, assoc)
@@ -409,10 +409,10 @@ defmodule Ecto.Query.Planner do
     last_ix = length(child.joins)
     source_ix = counter
 
-    {_, child_from_source} = prepare_source(child, child.from, adapter)
+    {_, child_from_source} = plan_source(child, child.from, adapter)
 
     {child_joins, child_sources, child_tail} =
-      prepare_joins(child, [child_from_source], offset + last_ix - 1, adapter)
+      plan_joins(child, [child_from_source], offset + last_ix - 1, adapter)
 
     # Rewrite joins indexes as mentioned above
     child_joins = Enum.map(child_joins, &rewrite_join(&1, qual, ix, last_ix, source_ix, offset))
@@ -423,30 +423,30 @@ defmodule Ecto.Query.Planner do
     [current_source|child_sources] = child_sources
     child_sources = child_tail ++ child_sources
 
-    prepare_joins(t, query, attach_on(child_joins, on) ++ joins, [current_source|sources],
+    plan_joins(t, query, attach_on(child_joins, on) ++ joins, [current_source|sources],
                   child_sources ++ tail_sources, counter + 1, offset + length(child_sources), adapter)
   end
 
-  defp prepare_joins([%JoinExpr{source: %Ecto.Query{} = join_query, qual: qual, on: on} = join|t],
+  defp plan_joins([%JoinExpr{source: %Ecto.Query{} = join_query, qual: qual, on: on} = join|t],
                       query, joins, sources, tail_sources, counter, offset, adapter) do
     case join_query do
       %{order_bys: [], limit: nil, offset: nil, group_bys: [], joins: [],
         havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
-        {from, source} = prepare_source(join_query, join_query.from, adapter)
+        {from, source} = plan_source(join_query, join_query.from, adapter)
         [join] = attach_on(query_to_joins(qual, from.source, join_query, counter), on)
-        prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
+        plan_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
       _ ->
         error! query, join, "queries in joins can only have `where` conditions"
     end
   end
 
-  defp prepare_joins([%JoinExpr{} = join|t],
+  defp plan_joins([%JoinExpr{} = join|t],
                       query, joins, sources, tail_sources, counter, offset, adapter) do
-    {join, source} = prepare_source(query, %{join | ix: counter}, adapter)
-    prepare_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
+    {join, source} = plan_source(query, %{join | ix: counter}, adapter)
+    plan_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
   end
 
-  defp prepare_joins([], _query, joins, sources, tail_sources, _counter, _offset, _adapter) do
+  defp plan_joins([], _query, joins, sources, tail_sources, _counter, _offset, _adapter) do
     {joins, sources, tail_sources}
   end
 
@@ -525,7 +525,7 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
-  def prepare_cache(query, operation, adapter, counter) do
+  def plan_cache(query, operation, adapter, counter) do
     {query, {cache, params}} =
       traverse_exprs(query, operation, {[], []}, &{&3, merge_cache(&1, &2, &3, &4, adapter)})
 
@@ -663,13 +663,13 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare association fields found in the query.
   """
-  def prepare_assocs(query) do
-    prepare_assocs(query, 0, query.assocs)
+  def plan_assocs(query) do
+    plan_assocs(query, 0, query.assocs)
     query
   end
 
-  defp prepare_assocs(_query, _ix, []), do: :ok
-  defp prepare_assocs(query, ix, assocs) do
+  defp plan_assocs(_query, _ix, []), do: :ok
+  defp plan_assocs(query, ix, assocs) do
     # We validate the schema exists when preparing joins above
     {_, parent_schema, _} = get_source!(:preload, query, ix)
 
@@ -691,7 +691,7 @@ defmodule Ecto.Query.Planner do
           :ok
       end
 
-      prepare_assocs(query, child_ix, child_assocs)
+      plan_assocs(query, child_ix, child_assocs)
     end
   end
 
@@ -724,9 +724,9 @@ defmodule Ecto.Query.Planner do
   end
 
   @doc """
-  Normalizes the query.
+  Normalizes and validates the query.
 
-  After the query was prepared and there is no cache
+  After the query was planned and there is no cache
   entry, we need to update its interpolations and check
   its fields and associations exist and are valid.
   """
@@ -1206,9 +1206,8 @@ defmodule Ecto.Query.Planner do
     elem(sources, ix)
   rescue
     ArgumentError ->
-      error! query, "cannot prepare query because it has specified more bindings than " <>
-                    "bindings available in `#{where}` (look for `unknown_binding!` in " <>
-                    "the printed query below)"
+      error! query, "invalid query has specified more bindings than bindings available " <>
+                    "in `#{where}` (look for `unknown_binding!` in the printed query below)"
   end
 
   ## Helpers

@@ -203,7 +203,7 @@ defmodule Ecto.Association do
     query =
       %{query | joins: query.joins ++ joins}
       |> joins_query(t, position + length(joins) - 1)
-      |> Ecto.Query.Planner.prepare_sources(:adapter_wont_be_needed)
+      |> Ecto.Query.Planner.plan_sources(:adapter_wont_be_needed)
 
     # Our source is going to be the last join after
     # traversing them all.

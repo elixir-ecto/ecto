@@ -30,8 +30,8 @@ defmodule Ecto.Query.SubqueryTest do
     end
   end
 
-  defp prepare(query, operation \\ :all) do
-    Planner.prepare(query, operation, Ecto.TestAdapter, 0)
+  defp plan(query, operation \\ :all) do
+    Planner.plan(query, operation, Ecto.TestAdapter, 0)
   end
 
   defp normalize(query, operation \\ :all) do
@@ -39,7 +39,7 @@ defmodule Ecto.Query.SubqueryTest do
   end
 
   defp normalize_with_params(query, operation \\ :all) do
-    {query, params, _key} = prepare(query, operation)
+    {query, params, _key} = plan(query, operation)
 
     {query, _} =
       query
@@ -55,38 +55,38 @@ defmodule Ecto.Query.SubqueryTest do
     end
   end
 
-  test "prepare: subqueries" do
-    {query, params, key} = prepare(from(subquery(Post), []))
+  test "plan: subqueries" do
+    {query, params, key} = plan(from(subquery(Post), []))
     assert %{query: %Ecto.Query{}, params: []} = query.from.source
     assert params == []
     assert key == [:all, 0, [:all, 0, {"posts", Post, 127044068, nil}]]
 
     posts = from(p in Post, where: p.title == ^"hello")
     query = from(c in Comment, join: p in subquery(posts), on: c.post_id == p.id)
-    {query, params, key} = prepare(query, [])
+    {query, params, key} = plan(query, [])
     assert {"comments", Comment} = query.from.source
     assert [%{source: %{query: %Ecto.Query{}, params: ["hello"]}}] = query.joins
     assert params == ["hello"]
     assert [[], 0, {:join, [{:inner, [:all | _], _}]}, {"comments", _, _, _}] = key
   end
 
-  test "prepare: subqueries with association joins" do
-    {query, _, _} = prepare(from(p in subquery(Post), join: c in assoc(p, :comments)))
+  test "plan: subqueries with association joins" do
+    {query, _, _} = plan(from(p in subquery(Post), join: c in assoc(p, :comments)))
     assert [%{source: {"comments", Comment}}] = query.joins
 
     message = ~r/can only perform association joins on subqueries that return a source with schema in select/
     assert_raise Ecto.QueryError, message, fn ->
-      prepare(from(p in subquery(from p in Post, select: p.title), join: c in assoc(p, :comments)))
+      plan(from(p in subquery(from p in Post, select: p.title), join: c in assoc(p, :comments)))
     end
   end
 
-  test "prepare: subqueries with map updates in select can be used with assoc" do
+  test "plan: subqueries with map updates in select can be used with assoc" do
     query =
       Post
       |> select([post], %{post | title: ^"hello"})
       |> subquery()
       |> join(:left, [subquery_post], comment in assoc(subquery_post, :comments))
-      |> prepare()
+      |> plan()
       |> elem(0)
 
     assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
@@ -94,16 +94,16 @@ defmodule Ecto.Query.SubqueryTest do
     assert Macro.to_string(on.expr) == "&1.post_id() == &0.id()"
   end
 
-  test "prepare: subqueries do not support preloads" do
+  test "plan: subqueries do not support preloads" do
     query = from p in Post, join: c in assoc(p, :comments), preload: [comments: c]
     assert_raise Ecto.SubQueryError, ~r/cannot preload associations in subquery/, fn ->
-      prepare(from(subquery(query), []))
+      plan(from(subquery(query), []))
     end
   end
 
-  describe "prepare: subqueries select" do
+  describe "plan: subqueries select" do
     test "supports implicit select" do
-      query = prepare(from(subquery(Post), [])) |> elem(0)
+      query = plan(from(subquery(Post), [])) |> elem(0)
       assert "%Ecto.Query.SubqueryTest.Post{id: &0.id(), title: &0.title(), " <>
              "text: &0.text()}" =
              Macro.to_string(query.from.source.query.select.expr)
@@ -111,91 +111,91 @@ defmodule Ecto.Query.SubqueryTest do
 
     test "supports field selector" do
       query = from p in "posts", select: p.text
-      query = prepare(from(subquery(query), [])) |> elem(0)
+      query = plan(from(subquery(query), [])) |> elem(0)
       assert "%{text: &0.text()}" =
              Macro.to_string(query.from.source.query.select.expr)
 
       query = from p in Post, select: p.text
-      query = prepare(from(subquery(query), [])) |> elem(0)
+      query = plan(from(subquery(query), [])) |> elem(0)
       assert "%{text: &0.text()}" =
              Macro.to_string(query.from.source.query.select.expr)
     end
 
     test "supports maps" do
       query = from p in Post, select: %{text: p.text}
-      query = prepare(from(subquery(query), [])) |> elem(0)
+      query = plan(from(subquery(query), [])) |> elem(0)
       assert "%{text: &0.text()}" =
              Macro.to_string(query.from.source.query.select.expr)
     end
 
     test "supports structs" do
       query = from p in Post, select: %Post{text: p.text}
-      query = prepare(from(subquery(query), [])) |> elem(0)
+      query = plan(from(subquery(query), [])) |> elem(0)
       assert "%Ecto.Query.SubqueryTest.Post{text: &0.text()}" =
              Macro.to_string(query.from.source.query.select.expr)
     end
 
     test "supports update in maps" do
       query = from p in Post, select: %{p | text: p.title}
-      query = prepare(from(subquery(query), [])) |> elem(0)
+      query = plan(from(subquery(query), [])) |> elem(0)
       assert "%Ecto.Query.SubqueryTest.Post{id: &0.id(), title: &0.title(), " <>
              "text: &0.title()}" =
              Macro.to_string(query.from.source.query.select.expr)
 
       query = from p in Post, select: %{p | unknown: p.title}
       assert_raise Ecto.SubQueryError, ~r/invalid key `:unknown` on map update in subquery/, fn ->
-        prepare(from(subquery(query), []))
+        plan(from(subquery(query), []))
       end
     end
 
     test "supports merge" do
       query = from p in Post, select: merge(p, %{text: p.title})
-      query = prepare(from(subquery(query), [])) |> elem(0)
+      query = plan(from(subquery(query), [])) |> elem(0)
       assert "%Ecto.Query.SubqueryTest.Post{id: &0.id(), title: &0.title(), " <>
              "text: &0.title()}" =
              Macro.to_string(query.from.source.query.select.expr)
 
       query = from p in Post, select: merge(%{}, %{})
-      query = prepare(from(subquery(query), [])) |> elem(0)
+      query = plan(from(subquery(query), [])) |> elem(0)
       assert "%{}" = Macro.to_string(query.from.source.query.select.expr)
     end
 
     test "requires atom keys for maps" do
       query = from p in Post, select: %{p.id => p.title}
       assert_raise Ecto.SubQueryError, ~r/only atom keys are allowed/, fn ->
-        prepare(from(subquery(query), []))
+        plan(from(subquery(query), []))
       end
     end
 
     test "raises on custom expressions" do
       query = from p in Post, select: fragment("? + ?", p.id, p.id)
       assert_raise Ecto.SubQueryError, ~r/subquery must select a source \(t\), a field \(t\.field\) or a map/, fn ->
-        prepare(from(subquery(query), []))
+        plan(from(subquery(query), []))
       end
     end
   end
 
-  test "prepare: allows type casting from subquery types" do
+  test "plan: allows type casting from subquery types" do
     query = subquery(from p in Post, join: c in assoc(p, :comments),
                                      select: %{id: p.id, title: p.title})
 
     permalink = "1-hello-world"
-    {_query, params, _key} = prepare(query |> where([p], p.id == ^permalink))
+    {_query, params, _key} = plan(query |> where([p], p.id == ^permalink))
     assert params == [1]
 
     assert_raise Ecto.Query.CastError, ~r/value `1` in `where` cannot be cast to type :string in query/, fn ->
-      prepare(query |> where([p], p.title == ^1))
+      plan(query |> where([p], p.title == ^1))
     end
 
     assert_raise Ecto.QueryError, ~r/field `unknown` does not exist in subquery in query/, fn ->
-      prepare(query |> where([p], p.unknown == ^1))
+      plan(query |> where([p], p.unknown == ^1))
     end
   end
 
-  test "prepare: wraps subquery errors" do
+  test "plan: wraps subquery errors" do
     exception = assert_raise Ecto.SubQueryError, fn ->
       query = Post |> where([p], p.title == ^1)
-      prepare(from(subquery(query), []))
+      plan(from(subquery(query), []))
     end
 
     assert %Ecto.Query.CastError{} = exception.exception
