@@ -358,6 +358,22 @@ defmodule Ecto.RepoTest do
       assert {:ok, %MySchema{}} = TestRepo.delete(valid)
     end
 
+    test "insert, update, insert_or_update and delete filters out unknown field" do
+      valid = Ecto.Changeset.change(%MySchema{id: 1}, %{unknown: "foo"})
+
+      assert {:ok, %MySchema{} = inserted} = TestRepo.insert(valid)
+      refute Map.has_key?(inserted, :unknown)
+
+      assert {:ok, %MySchema{} = updated} = TestRepo.update(valid)
+      refute Map.has_key?(updated, :unknown)
+
+      assert {:ok, %MySchema{} = upserted} = TestRepo.insert_or_update(valid)
+      refute Map.has_key?(upserted, :unknown)
+
+      assert {:ok, %MySchema{} = deleted} = TestRepo.delete(valid)
+      refute Map.has_key?(deleted, :unknown)
+    end
+
     test "insert, update, and delete raises on stale entries" do
       my_schema = %MySchema{id: 1}
       my_schema = put_in(my_schema.__meta__.context, {:error, :stale})

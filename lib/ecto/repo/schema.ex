@@ -677,12 +677,21 @@ defmodule Ecto.Repo.Schema do
     # already filtered the results to be only about fields.
     data =
       changeset.data
-      |> Map.merge(changes)
+      |> merge_changes(changes)
       |> Map.merge(embeds)
       |> merge_autogen(autogen)
       |> apply_metadata(state, schema_meta)
       |> load_each(values, types, adapter)
     Map.put(changeset, :data, data)
+  end
+
+  defp merge_changes(data, changes) do
+    changes =
+      Enum.reduce(changes, changes, fn {key, _value}, changes ->
+        if Map.has_key?(data, key), do: changes, else: Map.delete(changes, key)
+      end)
+
+    Map.merge(data, changes)
   end
 
   defp merge_autogen(data, autogen) do
