@@ -10,7 +10,7 @@ defmodule Ecto.Adapters.SQL.Connection do
   @type statement :: String.t
 
   @typedoc "The cached query which is a DBConnection Query"
-  @type cached :: map
+  @type cached :: %{:statement => iodata, optional(any) => any}
 
   @type connection :: DBConnection.conn()
   @type params :: [term]
