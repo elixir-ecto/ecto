@@ -156,4 +156,30 @@ defmodule Ecto.Integration.SandboxTest do
       assert_receive {:DOWN, ^ref, _, ^pid, _}, 1000
     end) =~ "it owned the connection for longer than 200ms"
   end
+
+  describe "with checkouts" do
+    test "transaction inside checkout" do
+      Sandbox.checkout(TestRepo)
+
+      TestRepo.checkout(fn ->
+        refute TestRepo.in_transaction?
+        TestRepo.transaction(fn ->
+          assert TestRepo.in_transaction?
+        end)
+        refute TestRepo.in_transaction?
+      end)
+    end
+
+    test "checkout inside transaction" do
+      Sandbox.checkout(TestRepo)
+
+      TestRepo.transaction(fn ->
+        assert TestRepo.in_transaction?
+        TestRepo.checkout(fn ->
+          assert TestRepo.in_transaction?
+        end)
+        assert TestRepo.in_transaction?
+      end)
+    end
+  end
 end

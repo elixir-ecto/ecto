@@ -22,6 +22,11 @@ defmodule Ecto.TestAdapter do
     {:ok, Supervisor.Spec.worker(Task, [fn -> :timer.sleep(:infinity) end]), %{meta: :meta}}
   end
 
+  def checkout(_mod, _opts, fun) do
+    send test_process(), {:checkout, fun}
+    fun.()
+  end
+
   ## Types
 
   def loaders(:binary_id, type), do: [Ecto.UUID, type]

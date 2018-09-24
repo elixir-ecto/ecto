@@ -317,10 +317,6 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       raise "should never be invoked"
     end
 
-    def handle_status(_opts, _state) do
-      raise "should never be invoked"
-    end
-
     def disconnect(err, {conn_mod, state, _in_transaction?}) do
       conn_mod.disconnect(err, state)
     end
@@ -348,6 +344,8 @@ defmodule Ecto.Adapters.SQL.Sandbox do
       proxy(:handle_rollback, {conn_mod, state, false}, [opts])
     end
 
+    def handle_status(opts, state),
+      do: proxy(:handle_status, state, [maybe_savepoint(opts, state)])
     def handle_prepare(query, opts, state),
       do: proxy(:handle_prepare, state, [query, maybe_savepoint(opts, state)])
     def handle_execute(query, params, opts, state),

@@ -173,6 +173,36 @@ defmodule Ecto.Integration.TransactionTest do
     assert [%Trans{text: "7"}] = PoolRepo.all(Trans)
   end
 
+  ## Checkout
+
+  describe "with checkouts" do
+    test "transaction inside checkout" do
+      PoolRepo.checkout(fn ->
+        refute PoolRepo.in_transaction?
+        PoolRepo.transaction(fn ->
+          assert PoolRepo.in_transaction?
+        end)
+        refute PoolRepo.in_transaction?
+      end)
+    end
+
+    test "checkout inside transaction" do
+      PoolRepo.transaction(fn ->
+        assert PoolRepo.in_transaction?
+        PoolRepo.checkout(fn ->
+          assert PoolRepo.in_transaction?
+        end)
+        assert PoolRepo.in_transaction?
+      end)
+    end
+
+    test "checkout raises on transaction attempt" do
+      assert_raise DBConnection.ConnectionError, ~r"connection was checked out with status", fn ->
+        PoolRepo.checkout(fn -> PoolRepo.query!("BEGIN") end)
+      end
+    end
+  end
+
   ## Logging
 
   test "log begin, commit and rollback" do
