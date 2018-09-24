@@ -62,6 +62,12 @@ defmodule Ecto.Adapters.SQL do
   `DBConnection` library.
   """
 
+  @type result_set :: %{
+    :rows => nil | [[term] | binary],
+    :num_rows => non_neg_integer,
+    optional(atom) => any
+  }
+
   @doc false
   defmacro __using__(adapter) do
     quote do
@@ -301,11 +307,15 @@ defmodule Ecto.Adapters.SQL do
 
   ## Options
 
+    * `:cache_statement` - Caches the given query under the given name,
+      avoiding future roundtrips to the server for preparing the query.
+      Note the cache is never garbage collected, so you are responsible
+      to give only known and bound names. Defaults to `nil`, as there is
+      no name to cache the query under.
     * `:timeout` - The time in milliseconds to wait for a query to finish,
       `:infinity` will wait indefinitely. (default: 15_000)
     * `:pool_timeout` - The time in milliseconds to wait for a call to the pool
       to finish, `:infinity` will wait indefinitely. (default: 5_000)
-
     * `:log` - When false, does not log the query
 
   ## Examples
@@ -320,10 +330,7 @@ defmodule Ecto.Adapters.SQL do
 
   """
   @spec query(Ecto.Repo.t | Ecto.Adapter.adapter_meta, String.t, [term], Keyword.t) ::
-              {:ok, %{:rows => nil | [[term] | binary],
-                      :num_rows => non_neg_integer,
-                      optional(atom) => any}}
-              | {:error, Exception.t}
+              {:ok, result_set} | {:error, Exception.t}
   def query(repo, sql, params \\ [], opts \\ [])
 
   def query(repo, sql, params, opts) when is_atom(repo) do
@@ -331,7 +338,33 @@ defmodule Ecto.Adapters.SQL do
   end
 
   def query(adapter_meta, sql, params, opts) do
-    sql_call(adapter_meta, :query, [sql], params, opts)
+    if name = Keyword.get(opts, :cache_statement, nil) do
+      cached_query(adapter_meta, name, sql, params, opts)
+    else
+      sql_call(adapter_meta, :query, [sql], params, opts)
+    end
+  end
+
+  defp cached_query(adapter_meta, name, sql, params, opts) do
+    %{cache: cache} = adapter_meta
+
+    {op, args} =
+      case :ets.lookup(cache, name) do
+        [{_name, %{statement: ^sql} = query}] -> {:execute, [query]}
+        _ -> {:prepare_execute, [name, sql]}
+      end
+
+    case sql_call(adapter_meta, op, args, params, opts) do
+      {:ok, query, result} ->
+        :ets.insert(cache, {name, query})
+        {:ok, result}
+
+      {:ok, _} = ok ->
+        ok
+
+      {:error, _} = error ->
+        error
+    end
   end
 
   defp sql_call(adapter_meta, callback, args, params, opts) do
@@ -500,12 +533,12 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def execute(adapter_meta, query_meta, prepared, params, opts) do
     %{num_rows: num, rows: rows} =
-      do_execute(adapter_meta, prepared, params, put_source(opts, query_meta))
+      execute!(adapter_meta, prepared, params, put_source(opts, query_meta))
 
     {num, rows}
   end
 
-  defp do_execute(adapter_meta, {:cache, update, {id, prepared}}, params, opts) do
+  defp execute!(adapter_meta, {:cache, update, {id, prepared}}, params, opts) do
     name = "ecto_" <> Integer.to_string(id)
 
     case sql_call(adapter_meta, :prepare_execute, [name, prepared], params, opts) do
@@ -517,7 +550,7 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp do_execute(adapter_meta, {:cached, update, reset, {id, cached}}, params, opts) do
+  defp execute!(adapter_meta, {:cached, update, reset, {id, cached}}, params, opts) do
     case sql_call(adapter_meta, :execute, [cached], params, opts) do
       {:ok, query, result} ->
         update.({id, query})
@@ -532,7 +565,7 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp do_execute(adapter_meta, {:nocache, {_id, prepared}}, params, opts) do
+  defp execute!(adapter_meta, {:nocache, {_id, prepared}}, params, opts) do
     case sql_call(adapter_meta, :query, [prepared], params, opts) do
       {:ok, res} -> res
       {:error, err} -> raise_sql_call_error err
@@ -603,8 +636,9 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def struct(adapter_meta, conn, sql, info, values, on_conflict, returning, opts) do
     {operation, source, params} = info
+    name = "ecto_#{operation}_#{source}"
 
-    case query(adapter_meta, sql, values, opts) do
+    case cached_query(adapter_meta, name, sql, values, opts) do
       {:ok, %{rows: nil, num_rows: 1}} ->
         {:ok, []}
 
