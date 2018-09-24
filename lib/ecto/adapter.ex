@@ -6,13 +6,13 @@ defmodule Ecto.Adapter do
   @type t :: module
 
   @typedoc """
-  The metadata returned by the adapter init/1.
+  The metadata returned by the adapter `c:init/1`.
 
   It must be a map and Ecto itself will always inject
   two keys into the meta:
 
     * the `:cache` key, which as ETS table that can be used as a cache (if available)
-    * the `:pid` key, which is the pid returned by the child spec returned in `c:init/1`
+    * the `:pid` key, which is the PID returned by the child spec returned in `c:init/1`
 
   """
   @type adapter_meta :: map
@@ -53,7 +53,7 @@ defmodule Ecto.Adapter do
 
   All adapters are required to implement a clause for `:binary_id` types,
   since they are adapter specific. If your adapter does not provide binary
-  ids, you may simply use Ecto.UUID:
+  ids, you may simply use `Ecto.UUID`:
 
       def loaders(:binary_id, type), do: [Ecto.UUID, type]
       def loaders(_primitive, type), do: [type]
@@ -82,7 +82,7 @@ defmodule Ecto.Adapter do
 
   All adapters are required to implement a clause for :binary_id types,
   since they are adapter specific. If your adapter does not provide
-  binary ids, you may simply use Ecto.UUID:
+  binary ids, you may simply use `Ecto.UUID`:
 
       def dumpers(:binary_id, type), do: [type, Ecto.UUID]
       def dumpers(_primitive, type), do: [type]
@@ -92,9 +92,9 @@ defmodule Ecto.Adapter do
               [(term -> {:ok, term} | :error) | Ecto.Type.t()]
 
   @doc """
-  Returns the adapter metadata from the `init/2` callback.
+  Returns the adapter metadata from the `c:init/1` callback.
 
-  It expects a name or a pid representing a repo.
+  It expects a name or a PID representing a repo.
   """
   def lookup_meta(repo_name_or_pid) do
     {_, meta} = Ecto.Repo.Registry.lookup(repo_name_or_pid)
