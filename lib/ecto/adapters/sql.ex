@@ -347,6 +347,7 @@ defmodule Ecto.Adapters.SQL do
 
   defp cached_query(adapter_meta, name, sql, params, opts) do
     %{cache: cache} = adapter_meta
+    sql = IO.iodata_to_binary(sql)
 
     {op, args} =
       case :ets.lookup(cache, name) do
