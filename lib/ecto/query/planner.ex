@@ -124,70 +124,62 @@ defmodule Ecto.Query.Planner do
   The cache value is the compiled query by the adapter
   along-side the select expression.
   """
-  def query(query, operation, name, adapter, counter) do
+  def query(query, operation, cache, adapter, counter) do
     {query, params, key} = plan(query, operation, adapter, counter)
-    if key == :nocache do
-      {_, select, prepared} = query_without_cache(query, operation, adapter, counter)
-      {build_meta(query, select), {:nocache, prepared}, params}
-    else
-      query_with_cache(query, operation, name, adapter, counter, key, params)
-    end
+    query_with_cache(key, query, operation, cache, adapter, counter, params)
   end
 
-  defp query_with_cache(query, operation, name, adapter, counter, key, params) do
-    case query_lookup(query, operation, name, adapter, counter, key) do
-      {:nocache, select, prepared} ->
+  defp query_with_cache(key, query, operation, cache, adapter, counter, params) do
+    case query_lookup(key, query, operation, cache, adapter, counter) do
+      {_, select, prepared} ->
         {build_meta(query, select), {:nocache, prepared}, params}
-      {_, :cached, select, cached} ->
-        update = &cache_update(name, key, &1)
-        reset = &cache_reset(name, key, &1)
+      {_key, :cached, select, cached} ->
+        update = &cache_update(cache, key, &1)
+        reset = &cache_reset(cache, key, &1)
         {build_meta(query, select), {:cached, update, reset, cached}, params}
-      {_, :cache, select, prepared} ->
-        update = &cache_update(name, key, &1)
+      {_key, :cache, select, prepared} ->
+        update = &cache_update(cache, key, &1)
         {build_meta(query, select), {:cache, update, prepared}, params}
     end
   end
 
-  defp query_lookup(query, operation, name, adapter, counter, key) do
-    try do
-      :ets.lookup(name, key)
-    rescue
-      ArgumentError ->
-        raise ArgumentError,
-          "repository named #{inspect name} is not started, please ensure it is part of your supervision tree"
-    else
+  defp query_lookup(:nocache, query, operation, _cache, adapter, counter) do
+    query_without_cache(query, operation, adapter, counter)
+  end
+
+  defp query_lookup(key, query, operation, cache, adapter, counter) do
+    case :ets.lookup(cache, key) do
       [term] -> term
-      [] -> query_prepare(query, operation, adapter, counter, name, key)
+      [] -> query_prepare(query, operation, adapter, counter, cache, key)
     end
   end
 
-  defp query_prepare(query, operation, adapter, counter, name, key) do
+  defp query_prepare(query, operation, adapter, counter, cache, key) do
     case query_without_cache(query, operation, adapter, counter) do
       {:cache, select, prepared} ->
-        elem = {key, :cache, select, prepared}
-        cache_insert(name, key, elem)
+        cache_insert(cache, key, {key, :cache, select, prepared})
       {:nocache, _, _} = nocache ->
         nocache
     end
   end
 
-  defp cache_insert(name, key, elem) do
-    case :ets.insert_new(name, elem) do
+  defp cache_insert(cache, key, elem) do
+    case :ets.insert_new(cache, elem) do
       true ->
         elem
       false ->
-        [elem] = :ets.lookup(name, key)
+        [elem] = :ets.lookup(cache, key)
         elem
     end
   end
 
-  defp cache_update(name, key, cached) do
-    _ = :ets.update_element(name, key, [{2, :cached}, {4, cached}])
+  defp cache_update(cache, key, cached) do
+    _ = :ets.update_element(cache, key, [{2, :cached}, {4, cached}])
     :ok
   end
 
-  defp cache_reset(name, key, prepared) do
-    _ = :ets.update_element(name, key, [{2, :cache}, {4, prepared}])
+  defp cache_reset(cache, key, prepared) do
+    _ = :ets.update_element(cache, key, [{2, :cache}, {4, prepared}])
     :ok
   end
 
