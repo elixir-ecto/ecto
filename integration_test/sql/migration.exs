@@ -310,6 +310,19 @@ defmodule Ecto.Integration.MigrationTest do
     end
   end
 
+  defmodule ConcurrentIndexMigration do
+    use Ecto.Migration
+    @disable_ddl_transaction true
+
+    def change do
+      create_if_not_exists index(:posts, [:title], concurrently: true)
+      drop_if_exists index(:posts, [:title])
+
+      create index(:posts, [:title], concurrently: true)
+      drop index(:posts, [:title])
+    end
+  end
+
   defmodule InferredDropIndexMigration do
     use Ecto.Migration
 
@@ -382,6 +395,11 @@ defmodule Ecto.Integration.MigrationTest do
   @tag :create_index_if_not_exists
   test "create index if not exists and drop index if exists does not raise on failure" do
     assert :ok == up(PoolRepo, 20050906120000, NoErrorIndexMigration, log: false)
+  end
+
+  @tag :create_index_if_not_exists
+  test "create index concurrently and create index if not exists concurrently" do
+    assert :ok == up(PoolRepo, 20050906120000, ConcurrentIndexMigration, log: false)
   end
 
   test "raises on NoSQL migrations" do
