@@ -1,6 +1,6 @@
 %{
   "connection": {:hex, :connection, "1.0.4", "a1cae72211f0eef17705aaededacac3eb30e6625b04a6117c1b2db6ace7d5976", [:mix], [], "hexpm"},
-  "db_connection": {:git, "https://github.com/elixir-ecto/db_connection.git", "684ffcd453a6240cdb7d36cebcd64c58640d191d", [ref: "684ffcd"]},
+  "db_connection": {:git, "https://github.com/elixir-ecto/db_connection.git", "bb29b5cdd2b6759d5253b316fc907aa62077cce1", [ref: "bb29b5c"]},
   "decimal": {:hex, :decimal, "1.5.0", "b0433a36d0e2430e3d50291b1c65f53c37d56f83665b43d79963684865beab68", [:mix], [], "hexpm"},
   "earmark": {:hex, :earmark, "1.2.4", "99b637c62a4d65a20a9fb674b8cffb8baa771c04605a80c911c4418c69b75439", [:mix], [], "hexpm"},
   "ex_doc": {:hex, :ex_doc, "0.18.2", "993e0a95e9fbb790ac54ea58e700b45b299bd48bc44b4ae0404f28161f37a83e", [:mix], [{:earmark, "~> 1.1", [hex: :earmark, repo: "hexpm", optional: false]}], "hexpm"},

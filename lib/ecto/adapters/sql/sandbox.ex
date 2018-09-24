@@ -503,7 +503,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
         {:ok, Connection, {conn_mod, conn_state, false}}
 
       {_error_or_disconnect, err, conn_state} ->
-        {:error, err, conn_mod, conn_state}
+        {:disconnect, err, conn_mod, conn_state}
     end
   end
 
@@ -513,7 +513,7 @@ defmodule Ecto.Adapters.SQL.Sandbox do
         {:ok, conn_mod, conn_state}
 
       {_error_or_disconnect, err, conn_state} ->
-        {:error, err, conn_mod, conn_state}
+        {:disconnect, err, conn_mod, conn_state}
     end
   end
 
