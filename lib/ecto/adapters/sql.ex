@@ -364,6 +364,7 @@ defmodule Ecto.Adapters.SQL do
         ok
 
       {:error, _} = error ->
+        :ets.delete(cache, name)
         error
     end
   end
