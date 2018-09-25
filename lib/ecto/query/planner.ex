@@ -4,7 +4,7 @@ defmodule Ecto.Query.Planner do
 
   alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, QueryExpr, SelectExpr}
 
-  if map_size(%Ecto.Query{}) != 18 do
+  if map_size(%Ecto.Query{}) != 19 do
     raise "Ecto.Query match out of date in builder"
   end
 
@@ -570,6 +570,20 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  defp merge_cache(:windows, query, exprs, {cache, params}, adapter) do
+    {expr_cache, {params, cacheable?}} =
+      Enum.map_reduce exprs, {params, true}, fn {_, expr}, {params, cacheable?} ->
+        {params, current_cacheable?} = cast_and_merge_params(:windows, query, expr, params, adapter)
+        {expr_to_cache(expr), {params, cacheable? and current_cacheable?}}
+      end
+
+    case expr_cache do
+      [] -> {cache, params}
+      _  -> {merge_cache({:windows, expr_cache}, cache, cacheable?), params}
+    end
+  end
+
+
   defp expr_to_cache(%BooleanExpr{op: op, expr: expr}), do: {op, expr}
   defp expr_to_cache(%QueryExpr{expr: expr}), do: expr
   defp expr_to_cache(%SelectExpr{expr: expr}), do: expr
@@ -785,6 +799,18 @@ defmodule Ecto.Query.Planner do
       {on, acc} = prewalk(:join, query, join.on, acc, adapter)
       {%{join | on: on, source: source, params: nil}, acc}
     end
+  end
+
+  defp validate_and_increment(:windows, query, exprs, counter, _operation, adapter) do
+    {exprs, counter} =
+      Enum.reduce(exprs, {[], counter}, fn
+        {_, %{expr: []}}, {list, acc} ->
+          {list, acc}
+        {name, expr}, {list, acc} ->
+          {expr, acc} = prewalk(:windows, query, expr, acc, adapter)
+          {[{name, expr}|list], acc}
+      end)
+    {Enum.reverse(exprs), counter}
   end
 
   defp prewalk_source({:fragment, meta, fragments}, kind, query, expr, acc, adapter) do
@@ -1016,6 +1042,29 @@ defmodule Ecto.Query.Planner do
     {type, [expr | fields], from}
   end
 
+  # OVER ()
+  defp collect_fields({:over, _, [call, nil]} = expr, fields, from, query, take) do
+    {type, _, _} = collect_fields(call, fields, from, query, take)
+    {type, [expr | fields], from}
+  end
+
+  # OVER named_window
+  defp collect_fields({:over, _, [call, window_name]} = expr,
+                      fields, from, %Ecto.Query{ windows: windows } = query, take) when is_atom(window_name) do
+    if Keyword.has_key?(windows, window_name) do
+      {type, _, _} = collect_fields(call, fields, from, query, take)
+      {type, [expr | fields], from}
+    else
+      error!(query, "the window :#{window_name} must be defined in `windows`")
+    end
+  end
+
+  # OVER (PARTITION BY ...)
+  defp collect_fields({:over, _, [call, _]} = expr, fields, from, query, take) do
+    {type, _, _} = collect_fields(call, fields, from, query, take)
+    {type, [expr | fields], from}
+  end
+
   defp collect_fields({{:., dot_meta, [{:&, _, [_]}, _]}, _, []} = expr,
                       fields, from, _query, _take) do
     {{:value, Keyword.fetch!(dot_meta, :type)}, [expr | fields], from}
@@ -1205,7 +1254,7 @@ defmodule Ecto.Query.Planner do
   ## Helpers
 
   @exprs [distinct: :distinct, select: :select, from: :from, join: :joins,
-          where: :wheres, group_by: :group_bys, having: :havings,
+          where: :wheres, group_by: :group_bys, having: :havings, windows: :windows,
           order_by: :order_bys, limit: :limit, offset: :offset]
 
   # Traverse all query components with expressions.

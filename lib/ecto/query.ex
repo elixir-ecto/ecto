@@ -354,7 +354,7 @@ defmodule Ecto.Query do
 
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], aliases: %{}, wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [], updates: [],
-             havings: [], preloads: [], assocs: [], distinct: nil, lock: nil]
+             havings: [], preloads: [], assocs: [], distinct: nil, lock: nil, windows: []]
 
   defmodule FromExpr do
     @moduledoc false
@@ -398,7 +398,7 @@ defmodule Ecto.Query do
   @opaque dynamic :: %DynamicExpr{}
 
   alias Ecto.Query.Builder
-  alias Ecto.Query.Builder.{Distinct, Dynamic, Filter, From, GroupBy, Join,
+  alias Ecto.Query.Builder.{Distinct, Dynamic, Filter, From, GroupBy, Join, Windows,
                             LimitOffset, Lock, OrderBy, Preload, Select, Update}
 
   @doc """
@@ -462,6 +462,26 @@ defmodule Ecto.Query do
   """
   defmacro dynamic(binding \\ [], expr) do
     Dynamic.build(binding, expr, __CALLER__)
+  end
+
+  @doc """
+  Defines windows which can be used with `Ecto.Query.API.over/2`.
+
+  Receives a keyword list where keys are names of the windows
+  and values are `Ecto.Query.API.partition_by/2` expression.
+
+  ## Examples
+
+      # Compare each employee's salary with the average salary in his or her department
+      from e in Employee,
+        select: {e.depname, e.empno, e.salary, avg(e.salary) |> over(:department)},
+        windows: [department: partition_by(e.depname)]
+
+  Note: MySQL older than 8.0 doesn't support window functions,
+  so you can use it only with MySQL newer than 8.0 or with any version of PostgreSQL.
+  """
+  defmacro windows(query, binding \\ [], expr) do
+    Windows.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -648,7 +668,7 @@ defmodule Ecto.Query do
 
   @from_join_opts [:as, :prefix, :hints]
   @no_binds [:lock]
-  @binds [:where, :or_where, :select, :distinct, :order_by, :group_by] ++
+  @binds [:where, :or_where, :select, :distinct, :order_by, :group_by, :windows] ++
            [:having, :or_having, :limit, :offset, :preload, :update, :select_merge]
 
   defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do

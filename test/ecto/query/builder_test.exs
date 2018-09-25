@@ -67,6 +67,17 @@ defmodule Ecto.Query.BuilderTest do
     end
   end
 
+  test "escape over" do
+    assert {Macro.escape(quote(do: over(row_number(), nil))), %{}}  ==
+           escape(quote(do: over(row_number())), [], __ENV__)
+
+    assert {Macro.escape(quote(do: over(nth_value(&0.id, 1), :w))), %{}}  ==
+           escape(quote(do: nth_value(x.id, 1) |> over(:w)), [x: 0], __ENV__)
+
+    assert {Macro.escape(quote(do: over(count(&0.id), :w))), %{}}  ==
+           escape(quote(do: count(x.id) |> over(:w)), [x: 0], __ENV__)
+  end
+
   test "escape type checks" do
     assert_raise Ecto.Query.CompileError, ~r"It returns a value of type :boolean but a value of type :integer is expected", fn ->
       escape(quote(do: ^1 == ^2), :integer, %{}, [], __ENV__)
@@ -114,6 +125,14 @@ defmodule Ecto.Query.BuilderTest do
                  ~r"make sure that the module Foo is required and that bar/1 is a macro",
                  fn ->
       escape(quote(do: Foo.bar(x)), [x: 0], __ENV__) |> elem(0) |> Code.eval_quoted([], __ENV__)
+    end
+
+    assert_raise Ecto.Query.CompileError, ~r"lag/2 must be invoked using window function syntax", fn ->
+      escape(quote(do: lag(:a, 1)), [], __ENV__)
+    end
+
+    assert_raise Ecto.Query.CompileError, ~r"window function lag/0 is undefined.", fn ->
+      escape(quote(do: over(lag())), [], __ENV__)
     end
   end
 
