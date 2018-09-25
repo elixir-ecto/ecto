@@ -110,7 +110,7 @@ defmodule Ecto.Integration.SandboxTest do
 
     assert capture_log(fn ->
       {:error, :rollback} =
-        TestRepo.transaction(fn -> Process.sleep(1000) end, timeout: 0)
+        TestRepo.transaction(fn -> Process.sleep(1000) end, timeout: 100)
     end) =~ "timed out"
 
     Sandbox.checkin(TestRepo)
