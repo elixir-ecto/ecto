@@ -7,6 +7,7 @@ defmodule Ecto.Integration.WindowsTest do
   alias Ecto.Integration.Comment
   alias Ecto.Integration.User
 
+  # TODO: Improve coverage
   test "count over partition" do
     u1 = TestRepo.insert!(%User{name: "Tester"})
     u2 = TestRepo.insert!(%User{name: "Developer"})
@@ -15,7 +16,7 @@ defmodule Ecto.Integration.WindowsTest do
     c3 = TestRepo.insert!(%Comment{text: "3", author_id: u1.id})
     c4 = TestRepo.insert!(%Comment{text: "4", author_id: u2.id})
 
-    query = from(c in Comment, select: [c, count(c.id) |> over(partition_by(c.author_id))])
+    query = from(c in Comment, select: [c, count(c.id) |> over(partition_by: c.author_id)])
 
     assert [[^c1, 3], [^c2, 3], [^c3, 3], [^c4, 1]] = TestRepo.all(query)
   end
@@ -29,11 +30,11 @@ defmodule Ecto.Integration.WindowsTest do
     TestRepo.insert!(%Comment{text: "4", author_id: u2.id})
 
     subquery = from(c in Comment,
-      windows: [rw: partition_by(c.author_id, order_by: :id)],
+      windows: [rw: [partition_by: c.author_id, order_by: :id]],
       select: %{
         comment: c.text,
         row: row_number() |> over(:rw),
-        total: count(c.id) |> over(partition_by(c.author_id))
+        total: count(c.id) |> over(partition_by: c.author_id)
       },
       where: c.author_id in [^u1.id, ^u2.id]
     )

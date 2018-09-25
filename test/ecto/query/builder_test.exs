@@ -68,7 +68,7 @@ defmodule Ecto.Query.BuilderTest do
   end
 
   test "escape over" do
-    assert {Macro.escape(quote(do: over(row_number(), nil))), %{}}  ==
+    assert {Macro.escape(quote(do: over(row_number(), []))), %{}}  ==
            escape(quote(do: over(row_number())), [], __ENV__)
 
     assert {Macro.escape(quote(do: over(nth_value(&0.id, 1), :w))), %{}}  ==
@@ -127,11 +127,7 @@ defmodule Ecto.Query.BuilderTest do
       escape(quote(do: Foo.bar(x)), [x: 0], __ENV__) |> elem(0) |> Code.eval_quoted([], __ENV__)
     end
 
-    assert_raise Ecto.Query.CompileError, ~r"lag/2 must be invoked using window function syntax", fn ->
-      escape(quote(do: lag(:a, 1)), [], __ENV__)
-    end
-
-    assert_raise Ecto.Query.CompileError, ~r"window function lag/0 is undefined.", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"unknown window function lag/0", fn ->
       escape(quote(do: over(lag())), [], __ENV__)
     end
   end

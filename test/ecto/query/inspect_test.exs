@@ -145,31 +145,28 @@ defmodule Ecto.Query.InspectTest do
   end
 
   test "window" do
-    assert i(from(x in Post, windows: [a: partition_by x.foo])) ==
-           ~s{from p in Inspect.Post, windows: [a: partition_by([p.foo])]}
+    assert i(from(x in Post, windows: [a: [partition_by: x.foo]])) ==
+           "from p in Inspect.Post, windows: [a: [partition_by: [p.foo]]]"
 
-    assert i(from(x in Post, windows: [a: partition_by(x.foo), b: partition_by(x.bar)])) ==
-           ~s{from p in Inspect.Post, windows: [a: partition_by([p.foo])], windows: [b: partition_by([p.bar])]}
+    assert i(from(x in Post, windows: [a: [partition_by: x.foo], b: [partition_by: x.bar]])) ==
+           "from p in Inspect.Post, windows: [a: [partition_by: [p.foo]]], windows: [b: [partition_by: [p.bar]]]"
 
-    assert i(from(x in Post, windows: [a: partition_by(x.foo)], windows: [b: partition_by(x.bar)])) ==
-           ~s{from p in Inspect.Post, windows: [a: partition_by([p.foo])], windows: [b: partition_by([p.bar])]}
+    assert i(from(x in Post, windows: [a: [partition_by: x.foo]], windows: [b: [partition_by: x.bar]])) ==
+           "from p in Inspect.Post, windows: [a: [partition_by: [p.foo]]], windows: [b: [partition_by: [p.bar]]]"
 
-    assert i(from(x in Post, windows: [a: partition_by(x.foo, order_by: x.bar)])) ==
-             ~s{from p in Inspect.Post, windows: [a: partition_by([p.foo], order_by: [asc: p.bar])]}
-
-    assert i(from(x in Post, windows: [a: partition_by([x.foo, x.bar], order_by: x.bar)])) ==
-             ~s{from p in Inspect.Post, windows: [a: partition_by([p.foo, p.bar], order_by: [asc: p.bar])]}
+    assert i(from(x in Post, windows: [a: [partition_by: [x.foo, x.bar]]])) ==
+           "from p in Inspect.Post, windows: [a: [partition_by: [p.foo, p.bar]]]"
   end
 
   test "over" do
+    assert i(from(x in Post, select: count(x.x) |> over(:x))) ==
+           "from p in Inspect.Post, select: over(count(p.x), :x)"
+
     assert i(from(x in Post, select: count(x.x) |> over)) ==
-           ~s{from p in Inspect.Post, select: over(count(p.x))}
+           ~s{from p in Inspect.Post, select: over(count(p.x), [])}
 
-    assert i(from(x in Post, select: count(x.x) |> over(partition_by(x.bar)))) ==
-           ~s{from p in Inspect.Post, select: over(count(p.x), partition_by([p.bar]))}
-
-    assert i(from(x in Post, select: count(x.x) |> over(partition_by([x.foo, x.bar], order_by: x.bar)))) ==
-           ~s{from p in Inspect.Post, select: over(count(p.x), partition_by([p.foo, p.bar], order_by: [asc: p.bar]))}
+    assert i(from(x in Post, select: count(x.x) |> over(partition_by: x.bar))) ==
+           ~s{from p in Inspect.Post, select: over(count(p.x), partition_by: [p.bar])}
   end
 
   test "order by" do

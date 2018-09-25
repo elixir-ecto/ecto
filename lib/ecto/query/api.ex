@@ -1,6 +1,6 @@
 defmodule Ecto.Query.API do
   @moduledoc """
-  This module lists all functions allowed in the query API.
+  Lists all functions allowed in the query API.
 
     * Comparison operators: `==`, `!=`, `<=`, `>=`, `<`, `>`
     * Arithmetic operators: `+`, `-`, `*`, `/`
@@ -17,6 +17,12 @@ defmodule Ecto.Query.API do
   purposes and one should never need to invoke them directly.
   Furthermore, it is possible to define your own macros and
   use them in Ecto queries (see docs for `fragment/1`).
+
+  ## Window API
+
+  Ecto also supports many of the windows functions found
+  in SQL databases. See `Ecto.Query.API.Windows` for more
+  information.
 
   ## About the arithmetic operators
 
@@ -145,6 +151,13 @@ defmodule Ecto.Query.API do
   def is_nil(value), do: doc! [value]
 
   @doc """
+  Counts the entries in the table.
+
+      from p in Post, select: count()
+  """
+  def count, do: doc! []
+
+  @doc """
   Counts the given entry.
 
       from p in Post, select: count(p.id)
@@ -159,13 +172,6 @@ defmodule Ecto.Query.API do
   def count(value, :distinct), do: doc! [value, :distinct]
 
   @doc """
-  Counts the entries in the table.
-
-      from p in Post, select: count()
-  """
-  def count, do: doc! []
-
-  @doc """
   Takes whichever value is not null, or null if they both are.
 
   In SQL, COALESCE takes any number of arguments, but in ecto
@@ -175,168 +181,6 @@ defmodule Ecto.Query.API do
       from p in Payment, select: p.value |> coalesce(p.backup_value) |> coalesce(0)
   """
   def coalesce(value, expr), do: doc! [value, expr]
-
-  @doc """
-  Invokes specified aggregation function in context of window.
-
-  Accepts any built-in or user-defined aggregate function as well as window functions.
-
-  `window` can be either existing window name or `partition_by/2` expression.
-  """
-  def over(agg_fun, window), do: doc! [agg_fun, window]
-
-  @doc """
-  Defines a partition for `over` or `window` clause.
-
-  `fields` can be either atom or a list of atoms and refers
-  fields in the source which will be used for grouping rows.
-
-  You can also specify an `:order_by` option which syntax and behaviour
-  are similar to `Ecto.Query.order_by/2` except the fact that it affects
-  rows only inside the window.
-
-      from e in Employee,
-           select: {
-             e.depname,
-             e.empno,
-             row_number() |> over(partition_by(e.depname, order_by: e.name))
-           }
-  """
-  def partition_by(fields, opts), do: doc! [fields, opts]
-
-  @doc """
-  Returns number of the current row within its partition, counting from 1.
-
-      from p in Post,
-           select: row_number() |> over(partition_by(p.category_id, order_by: p.date))
-
-  Note that this function must be invoked using window function syntax.
-  """
-  def row_number(), do: doc! []
-
-  @doc """
-  Returns rank of the current row with gaps; same as `row_number/0` of its first peer.
-
-      from p in Post,
-           select: rank() |> over(partition_by(p.category_id, order_by: p.date))
-
-  Note that this function must be invoked using window function syntax.
-  """
-  def rank(), do: doc! []
-
-  @doc """
-  Returns rank of the current row without gaps; this function counts peer groups.
-
-      from p in Post,
-           select: dense_rank() |> over(partition_by(p.category_id, order_by: p.date))
-
-  Note that this function must be invoked using window function syntax.
-  """
-  def dense_rank(), do: doc! []
-
-  @doc """
-  Returns relative rank of the current row: (rank - 1) / (total rows - 1).
-
-      from p in Post,
-           select: percent_rank() |> over(partition_by(p.category_id, order_by: p.date))
-
-  Note that this function must be invoked using window function syntax.
-  """
-  def percent_rank(), do: doc! []
-
-  @doc """
-  Returns relative rank of the current row:
-  (number of rows preceding or peer with current row) / (total rows).
-
-      from p in Post,
-           select: cume_dist() |> over(partition_by(p.category_id, order_by: p.date))
-
-  Note that this function must be invoked using window function syntax.
-  """
-  def cume_dist(), do: doc! []
-
-  @doc """
-  Returns integer ranging from 1 to the argument value, dividing the partition as equally as possible.
-
-      from p in Post,
-           select: ntile(10) |> over(partition_by(p.category_id, order_by: p.date))
-
-  Note that this function must be invoked using window function syntax.
-  """
-  def ntile(num_buckets), do: doc! [num_buckets]
-
-  @doc """
-  Returns value evaluated at the row that is the first row of the window frame.
-
-      from p in Post,
-           select: first_value(p.id) |> over(partition_by(p.category_id, order_by: p.date))
-
-  Note that this function must be invoked using window function syntax.
-  """
-  def first_value(value), do: doc! [value]
-
-  @doc """
-  Returns value evaluated at the row that is the last row of the window frame.
-
-      from p in Post,
-           select: last_value(p.id) |> over(partition_by(p.category_id, order_by: p.date))
-
-  Note that this function must be invoked using window function syntax.
-  """
-  def last_value(value), do: doc! [value]
-
-  @doc """
-  Returns value evaluated at the row that is the nth row of the window
-  frame (counting from 1); null if no such row.
-
-      from p in Post,
-           select: nth_value(p.id, 4) |> over(partition_by(p.category_id, order_by: p.date))
-
-  Note that this function must be invoked using window function syntax.
-  """
-  def nth_value(value, nth), do: doc! [value, nth]
-
-  @doc """
-  Returns value evaluated at the row that is offset rows before
-  the current row within the partition; if there is no such row,
-  instead return default (which must be of the same type as value).
-  Both offset and default are evaluated with respect to the current row.
-  If omitted, offset defaults to 1 and default to null.
-
-      from e in Events,
-           windows: [w: partition_by(e.name, order_by: e.tick)],
-           select: {
-             e.tick,
-             e.action,
-             e.name,
-             lag(e.action) |> over(:w), # previous_action
-             lead(e.action) |> over(:w) # next_action
-           }
-
-  Note that this function must be invoked using window function syntax.
-  """
-  def lag(value, offset, default), do: doc! [value, offset, default]
-
-  @doc """
-  Returns value evaluated at the row that is offset rows after
-  the current row within the partition; if there is no such row,
-  instead return default (which must be of the same type as value).
-  Both offset and default are evaluated with respect to the current row.
-  If omitted, offset defaults to 1 and default to null.
-
-      from e in Events,
-           windows: [w: partition_by(e.name, order_by: e.tick)],
-           select: {
-             e.tick,
-             e.action,
-             e.name,
-             lag(e.action) |> over(:w), # previous_action
-             lead(e.action) |> over(:w) # next_action
-           }
-
-  Note that this function must be invoked using window function syntax.
-  """
-  def lead(value, offset, default), do: doc! [value, offset, default]
 
   @doc """
   Applies the given expression as a FILTER clause against an

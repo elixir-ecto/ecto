@@ -3,6 +3,44 @@ defmodule Ecto.Query.Builder do
 
   alias Ecto.Query
 
+  @comparisons [
+    is_nil: 1,
+    ==: 2,
+    !=: 2,
+    <: 2,
+    >: 2,
+    <=: 2,
+    >=: 2
+  ]
+
+  @dynamic_aggregates [
+    max: 1,
+    min: 1,
+    first_value: 1,
+    last_value: 1,
+    nth_value: 2,
+    lag: 3,
+    lead: 3,
+    lag: 2,
+    lead: 2,
+    lag: 1,
+    lead: 1
+  ]
+
+  @static_aggregates [
+    count: {0, :integer},
+    count: {1, :integer},
+    count: {2, :integer},
+    avg: {1, :any},
+    sum: {1, :any},
+    row_number: {0, :integer},
+    rank: {0, :integer},
+    dense_rank: {0, :integer},
+    percent_rank: {0, :any},
+    cume_dist: {0, :any},
+    ntile: {1, :integer}
+  ]
+
   @typedoc """
   Quoted types store primitive types and types in the format
   {source, quoted}. The latter are handled directly in the planner,
@@ -261,40 +299,6 @@ defmodule Ecto.Query.Builder do
     {expr, params_acc}
   end
 
-  def escape({:count, _, []}, _type, params_acc, _vars, _env) do
-    expr = {:{}, [], [:count, [], []]}
-    {expr, params_acc}
-  end
-
-  @over_aggs [
-    row_number: {[], :integer},
-    rank: {[], :integer},
-    dense_rank: {[], :integer},
-    percent_rank: {[], :float},
-    cume_dist: {[], :float},
-    ntile: {[:integer], :integer},
-    first_value: {[:any], :any},
-    last_value: {[:any], :any},
-    nth_value: {[:any, :integer], :any},
-    lag: {[:any, :integer, :any], :any},
-    lead: {[:any, :integer, :any], :any},
-    lag: {[:any, :integer], :any},
-    lead: {[:any, :integer], :any},
-    lag: {[:any], :any},
-    lead: {[:any], :any},
-  ]
-  @over_agg_names Enum.uniq(Keyword.keys(@over_aggs))
-  @over_agg_names_with_arity Enum.map(@over_aggs, fn {name, {in_types, _}} -> {name, length(in_types)} end)
-
-  def escape({agg, _, nil}, _type, _params_acc, _vars, _env) when {agg, 0} in @over_agg_names_with_arity do
-    error! "#{agg}/#{0} must be invoked using window function syntax"
-  end
-
-  def escape({agg, _, args}, _type, _params_acc, _vars, _env) when {agg, length(args)} in @over_agg_names_with_arity do
-    arity = length(args || [])
-    error! "#{agg}/#{arity} must be invoked using window function syntax"
-  end
-
   def escape({:filter, _, [aggregate]}, type, params_acc, vars, env) do
     escape(aggregate, type, params_acc, vars, env)
   end
@@ -314,7 +318,7 @@ defmodule Ecto.Query.Builder do
   def escape({:over, _, [{agg_name, _, agg_args} | over_args]}, type, params_acc, vars, env) do
     aggregate = {agg_name, [], agg_args || []}
     {aggregate, params_acc} = escape_window_function(aggregate, type, params_acc, vars, env)
-    {window, params_acc} = escape_window(over_args, type, params_acc, vars, env)
+    {window, params_acc} = escape_window_description(over_args, params_acc, vars, env)
     {{:{}, [], [:over, [], [aggregate, window]]}, params_acc}
   end
 
@@ -467,40 +471,34 @@ defmodule Ecto.Query.Builder do
   defp split_fragment(<<first :: utf8, rest :: binary>>, consumed),
     do: split_fragment(rest, consumed <> <<first :: utf8>>)
 
-  defp escape_window([], _type, params_acc, _vars, _env),
-    do: {nil, params_acc}
-  defp escape_window([window_name], _type, params_acc, _vars, _env) when is_atom(window_name),
+  defp escape_window_description([], params_acc, _vars, _env),
+    do: {[], params_acc}
+  defp escape_window_description([window_name], params_acc, _vars, _env) when is_atom(window_name),
     do: {window_name, params_acc}
-  defp escape_window([{:partition_by, _, expr}], _type, params_acc, vars, env) do
-    Ecto.Query.Builder.Windows.escape_window(expr, params_acc, vars, env)
+  defp escape_window_description([kw], params_acc, vars, env),
+    do: Ecto.Query.Builder.Windows.escape(kw, params_acc, vars, env)
+
+  defp escape_window_function(expr, type, params_acc, vars, env) do
+    expr
+    |> validate_window_function!()
+    |> escape(type, params_acc, vars, env)
   end
 
-  defp escape_window_function({agg, _, nil} = expr, type, params_acc, vars, env)
-      when {agg, 0} in @over_agg_names_with_arity do
-    escape_window_function(expr, type, params_acc, vars, env)
+  defp validate_window_function!({:unsafe_fragment, _, _} = expr), do: expr
+  defp validate_window_function!({:fragment, _, _} = expr), do: expr
+
+  defp validate_window_function!({agg, _, args} = expr) when is_atom(agg) and is_list(args) do
+    if Code.ensure_loaded?(Ecto.Query.API.Windows) and
+         not function_exported?(Ecto.Query.API.Windows, agg, length(args)) do
+      error! "unknown window function #{agg}/#{length(args)}. " <>
+               "See Ecto.Query.API.Windows for all available functions"
+    end
+
+    expr
   end
 
-  defp escape_window_function({agg, _, args} = expr, type, params_acc, vars, env)
-       when {agg, length(args)} in @over_agg_names_with_arity do
-    {in_types, out_type} = window_function_call_type(agg, length(args))
-    assert_type!(expr, type, out_type)
-
-    {args, params} = args
-                     |> Enum.zip(in_types)
-                     |> Enum.map_reduce(params_acc, fn {arg, type}, acc -> escape(arg, type, acc, vars, env) end)
-    {{:{}, [], [agg, [], args]}, params}
-  end
-
-  defp escape_window_function({agg, _, args}, _type, _params, _vars, _env) when agg in @over_agg_names do
-    variants = @over_aggs
-    |> Keyword.get_values(agg)
-    |> Enum.map(fn {in_types, _} -> "\t* #{agg}/#{length(in_types)}" end)
-    |> Enum.join("\n")
-    error! "window function #{agg}/#{length(args)} is undefined. Did you mean one of: \n" <> variants
-  end
-
-  defp escape_window_function(expr, type, params, vars, env) do
-    escape(expr, type, params, vars, env)
+  defp validate_window_function!(expr) do
+    expr
   end
 
   defp escape_call({name, _, args}, type, params, vars, env) do
@@ -547,17 +545,24 @@ defmodule Ecto.Query.Builder do
   defp merge_fragments([h1], []),
     do: [{:raw, h1}]
 
-  for {agg, {in_types, out_type}} <- @over_aggs do
-    defp window_function_call_type(unquote(agg), unquote(length(in_types))), do: unquote({in_types, out_type})
+  for {agg, arity} <- @dynamic_aggregates do
+    defp call_type(unquote(agg), unquote(arity)), do: {:any, :any}
   end
 
-  defp call_type(agg, 1)  when agg in ~w(avg count max min sum)a, do: {:any, :any}
-  defp call_type(comp, 2) when comp in ~w(== != < > <= >=)a,      do: {:any, :boolean}
-  defp call_type(like, 2) when like in ~w(like ilike)a,           do: {:string, :boolean}
-  defp call_type(bool, 2) when bool in ~w(and or)a,               do: {:boolean, :boolean}
-  defp call_type(:not, 1),                                        do: {:boolean, :boolean}
-  defp call_type(:is_nil, 1),                                     do: {:any, :boolean}
-  defp call_type(_, _),                                           do: nil
+  for {agg, {arity, return}} <- @static_aggregates do
+    defp call_type(unquote(agg), unquote(arity)), do: {:any, unquote(return)}
+  end
+
+  for {comp, arity} <- @comparisons do
+    defp call_type(unquote(comp), unquote(arity)), do: {:any, :boolean}
+  end
+
+  defp call_type(:or, 2), do: {:boolean, :boolean}
+  defp call_type(:and, 2), do: {:boolean, :boolean}
+  defp call_type(:not, 1), do: {:boolean, :boolean}
+  defp call_type(:like, 2), do: {:string, :boolean}
+  defp call_type(:ilike, 2), do: {:string, :boolean}
+  defp call_type(_, _), do: nil
 
   defp assert_type!(_expr, {int, _field}, _actual) when is_integer(int) do
     :ok
@@ -911,13 +916,13 @@ defmodule Ecto.Query.Builder do
   def quoted_type({:-, _, [number]}, _vars) when is_integer(number), do: :integer
   def quoted_type({:-, _, [number]}, _vars) when is_float(number), do: :float
 
-  # Aggregates
-  def quoted_type({:count, _, [_, _]}, _vars), do: :integer
-  def quoted_type({:count, _, [_]}, _vars), do: :integer
-  def quoted_type({:count, _, []}, _vars), do: :integer
-  def quoted_type({agg, _, [_]}, _vars) when agg in [:avg, :sum], do: :any
-  def quoted_type({agg, _, [expr]}, vars) when agg in [:max, :min, :sum] do
-    quoted_type(expr, vars)
+  # Dynamic aggregates
+  for {agg, arity} <- @dynamic_aggregates do
+    args = 1..arity |> Enum.map(fn _ -> Macro.var(:_, __MODULE__) end) |> tl()
+
+    def quoted_type({unquote(agg), _, [expr, unquote_splicing(args)]}, vars) do
+      quoted_type(expr, vars)
+    end
   end
 
   # Literals

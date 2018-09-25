@@ -465,20 +465,45 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Defines windows which can be used with `Ecto.Query.API.over/2`.
+  Defines windows which can be used with `Ecto.Query.API.Windows`.
 
   Receives a keyword list where keys are names of the windows
-  and values are `Ecto.Query.API.partition_by/2` expression.
+  and values are a keyword list with window expressions.
 
   ## Examples
 
       # Compare each employee's salary with the average salary in his or her department
       from e in Employee,
-        select: {e.depname, e.empno, e.salary, avg(e.salary) |> over(:department)},
-        windows: [department: partition_by(e.depname)]
+        select: {e.depname, e.empno, e.salary, over(avg(e.salary), :department)},
+        windows: [department: [partition_by: e.depname]]
 
-  Note: MySQL older than 8.0 doesn't support window functions,
-  so you can use it only with MySQL newer than 8.0 or with any version of PostgreSQL.
+  In the example above, we get the average salary per department.
+  `:department` is the window name, partitioned by `e.depname`
+  and `avg/1` is the window function. For more information
+  on windows functions, see `Ecto.Query.API.Windows`.
+
+  ## Window expressions
+
+  The following keys are allowed when specifying a window.
+
+  ### :partition_by
+
+  A list of fields to partition the window by, for example:
+
+      windows: [department: [partition_by: e.depname]]
+
+  A list of atoms can also be interpolated for dynamic partitioning:
+
+      fields = [:depname, :year]
+      windows: [dynamic_window: [partition_by: ^fields]]
+
+  ### :order_by
+
+  A list of fields to order the window by, for example:
+
+      windows: [ordered_names: [order_by: e.name]]
+
+  It works exactly as the keyword query version of `order_by/3`.
   """
   defmacro windows(query, binding \\ [], expr) do
     Windows.build(query, binding, expr, __CALLER__)

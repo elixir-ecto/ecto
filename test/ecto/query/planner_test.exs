@@ -645,6 +645,15 @@ defmodule Ecto.Query.PlannerTest do
            select_fields([:id], 0)
   end
 
+  test "normalize: windows" do
+    assert_raise Ecto.QueryError, ~r"unknown window :v given to over/2", fn ->
+      Comment
+      |> windows([c], w: [partition_by: c.id])
+      |> select([c], count(c.id) |> over(:v))
+      |> normalize()
+    end
+  end
+
   test "normalize: preload" do
     message = ~r"the binding used in `from` must be selected in `select` when using `preload`"
     assert_raise Ecto.QueryError, message, fn ->

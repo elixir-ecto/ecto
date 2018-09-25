@@ -440,108 +440,82 @@ defmodule Ecto.Adapters.MySQLTest do
 
   ## Partitions and windows
 
-  test "one window" do
-    query = Schema
-            |> select([r], r.x)
-            |> windows([r], w: partition_by r.x)
-            |> plan
+  describe "windows" do
+    test "one window" do
+      query = Schema
+              |> select([r], r.x)
+              |> windows([r], w: [partition_by: r.x])
+              |> plan
 
-    assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 WINDOW `w` AS (PARTITION BY s0.`x`)}
-  end
-
-  test "two windows" do
-    query = Schema
-            |> select([r], r.x)
-            |> windows([r], w1: partition_by(r.x), w2: partition_by(r.y))
-            |> plan()
-    assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 WINDOW `w1` AS (PARTITION BY s0.`x`), `w2` AS (PARTITION BY s0.`y`)}
-  end
-
-  test "multifiled partition by" do
-    query = Schema
-            |> windows([r], w: partition_by [r.x, r.z])
-            |> select([r], r.x)
-            |> plan()
-    assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 WINDOW `w` AS (PARTITION BY s0.`x`, s0.`z`)}
-  end
-
-  test "count over all" do
-    query = Schema
-            |> select([r], count(r.x) |> over)
-            |> plan()
-    assert all(query) == ~s{SELECT count(s0.`x`) OVER () FROM `schema` AS s0}
-  end
-
-  test "row_number over all" do
-    query = Schema
-            |> select(row_number |> over)
-            |> plan()
-    assert all(query) == ~s{SELECT row_number() OVER () FROM `schema` AS s0}
-  end
-
-  test "nth_value over all" do
-    query = Schema
-            |> select([r], nth_value(r.x, 42) |> over)
-            |> plan()
-    assert all(query) == ~s{SELECT nth_value(s0.`x`, 42) OVER () FROM `schema` AS s0}
-  end
-
-  test "lag/2 over all" do
-    query = Schema
-            |> select([r], lag(r.x, 42) |> over)
-            |> plan()
-    assert all(query) == ~s{SELECT lag(s0.`x`, 42) OVER () FROM `schema` AS s0}
-  end
-
-  test "custom aggregation over all" do
-    query = Schema
-            |> select([r], fragment("custom_function(?)", r.x) |> over)
-            |> plan()
-    assert all(query) == ~s{SELECT custom_function(s0.`x`) OVER () FROM `schema` AS s0}
-  end
-
-  test "count over partition by (inline)" do
-    query = Schema
-            |> select([r], count(r.x) |> over(partition_by [r.x, r.z]))
-
-    query = query |> plan()
-    assert all(query) == ~s{SELECT count(s0.`x`) OVER (PARTITION BY s0.`x`, s0.`z`) FROM `schema` AS s0}
-  end
-
-  test "count over window" do
-    query = Schema
-            |> windows([r], w: partition_by r.x)
-            |> select([r], count(r.x) |> over(:w))
-            |> plan()
-    assert all(query) == ~s{SELECT count(s0.`x`) OVER `w` FROM `schema` AS s0 WINDOW `w` AS (PARTITION BY s0.`x`)}
-  end
-
-  test "count over ordered window (keywords)" do
-    param = :b
-    query = from s in Schema,
-                 windows: [w1: partition_by(s.a)],
-                 windows: [w2: partition_by(s.x, order_by: s.a, order_by: [desc: ^param])],
-                 select: (count(s.x) |> over(:w2))
-
-    query = query |> plan()
-    assert all(query) == ~s{SELECT count(s0.`x`) OVER `w2` FROM `schema` AS s0 WINDOW `w1` AS (PARTITION BY s0.`a`), `w2` AS (PARTITION BY s0.`x` ORDER BY s0.`a`, s0.`b` DESC)}
-  end
-
-  test "count over unknown window" do
-    query = Schema
-            |> windows([r], w: partition_by r.x)
-            |> select([r], count(r.x) |> over(:v))
-    assert_raise Ecto.QueryError, fn ->
-      plan(query)
+      assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 WINDOW `w` AS (PARTITION BY s0.`x`)}
     end
-  end
 
-  test "count over ordered partition" do
-    fields = [:y]
-    query = Schema
-            |> select([r], count(r.x) |> over(partition_by(r.x, order_by: ^fields, order_by: r.z)))
-            |> plan()
-    assert all(query) == ~s{SELECT count(s0.`x`) OVER (PARTITION BY s0.`x` ORDER BY s0.`y`, s0.`z`) FROM `schema` AS s0}
+    test "two windows" do
+      query = Schema
+              |> select([r], r.x)
+              |> windows([r], w1: [partition_by: r.x], w2: [partition_by: r.y])
+              |> plan()
+      assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 WINDOW `w1` AS (PARTITION BY s0.`x`), `w2` AS (PARTITION BY s0.`y`)}
+    end
+
+    test "count over window" do
+      query = Schema
+              |> windows([r], w: [partition_by: r.x])
+              |> select([r], count(r.x) |> over(:w))
+              |> plan()
+      assert all(query) == ~s{SELECT count(s0.`x`) OVER `w` FROM `schema` AS s0 WINDOW `w` AS (PARTITION BY s0.`x`)}
+    end
+
+    test "count over all" do
+      query = Schema
+              |> select([r], count(r.x) |> over)
+              |> plan()
+      assert all(query) == ~s{SELECT count(s0.`x`) OVER () FROM `schema` AS s0}
+    end
+
+    test "row_number over all" do
+      query = Schema
+              |> select(row_number |> over)
+              |> plan()
+      assert all(query) == ~s{SELECT row_number() OVER () FROM `schema` AS s0}
+    end
+
+    test "nth_value over all" do
+      query = Schema
+              |> select([r], nth_value(r.x, 42) |> over)
+              |> plan()
+      assert all(query) == ~s{SELECT nth_value(s0.`x`, 42) OVER () FROM `schema` AS s0}
+    end
+
+    test "lag/2 over all" do
+      query = Schema
+              |> select([r], lag(r.x, 42) |> over)
+              |> plan()
+      assert all(query) == ~s{SELECT lag(s0.`x`, 42) OVER () FROM `schema` AS s0}
+    end
+
+    test "custom aggregation over all" do
+      query = Schema
+              |> select([r], fragment("custom_function(?)", r.x) |> over)
+              |> plan()
+      assert all(query) == ~s{SELECT custom_function(s0.`x`) OVER () FROM `schema` AS s0}
+    end
+
+    test "partition by and order by on window" do
+      query = Schema
+              |> windows([r], w: [partition_by: [r.x, r.z], order_by: r.x])
+              |> select([r], r.x)
+              |> plan()
+      assert all(query) == ~s{SELECT s0.`x` FROM `schema` AS s0 WINDOW `w` AS (PARTITION BY s0.`x`, s0.`z` ORDER BY s0.`x`)}
+    end
+
+    test "partition by and order by on over" do
+      query = Schema
+              |> select([r], count(r.x) |> over(partition_by: [r.x, r.z], order_by: r.x))
+
+      query = query |> plan()
+      assert all(query) == ~s{SELECT count(s0.`x`) OVER (PARTITION BY s0.`x`, s0.`z` ORDER BY s0.`x`) FROM `schema` AS s0}
+    end
   end
 
   ## Joins

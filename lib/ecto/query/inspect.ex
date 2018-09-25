@@ -126,25 +126,8 @@ defimpl Inspect, for: Ecto.Query do
     Enum.map(windows, &window(&1, names))
   end
 
-  defp window({name, definition}, names) do
-    {:windows, "[#{name}: " <> partition_by(definition, names) <> "]"}
-  end
-
-  defp partition_by(%{ expr: opts } = part, names) do
-    fields = Keyword.get(opts, :fields) |> expr(names, part)
-    order_bys = Keyword.get_values(opts, :order_by) |> Enum.concat
-    partition_by(fields, order_bys, names, part)
-  end
-
-  defp partition_by(fields, [], _names, _part) do
-    "partition_by(#{fields})"
-  end
-
-  defp partition_by(fields, order_bys, names, part) do
-    order_string = order_bys
-    |> Enum.map(fn {key, value} -> "#{key}: #{expr(value, names, part)}" end)
-    |> Enum.join(", ")
-    "partition_by(#{fields}, order_by: [#{order_string}])"
+  defp window({name, %{expr: definition} = part}, names) do
+    {:windows, "[#{name}: " <> expr(definition, names, part) <> "]"}
   end
 
   defp bool_exprs(keys, exprs, names) do
@@ -230,18 +213,6 @@ defimpl Inspect, for: Ecto.Query do
 
   defp expr_to_string(%Ecto.Query.Tagged{value: value, tag: tag}, _, names, part) do
     {:type, [], [value, tag]} |> expr(names, part)
-  end
-
-  defp expr_to_string({:over, _, [agg, nil]}, _string, names, part) do
-    "over(#{expr(agg, names, part)})"
-  end
-
-  defp expr_to_string({:over, _, [agg, window]}, _string, names, part) when is_atom(window) do
-    "over(#{expr(agg, names, part)}, :#{window})"
-  end
-
-  defp expr_to_string({:over, _, [agg, window]}, _string, names, part) do
-    "over(#{expr(agg, names, part)}, #{partition_by(window, names)})"
   end
 
   defp expr_to_string(_expr, string, _, _) do

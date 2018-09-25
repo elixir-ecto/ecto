@@ -90,7 +90,6 @@ if Code.ensure_loaded?(Postgrex) do
       Postgrex.stream(conn, sql, params, opts)
     end
 
-    alias Ecto.Query
     alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr}
 
     def all(query) do
@@ -241,7 +240,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp handle_call(fun, _arity), do: {:fun, Atom.to_string(fun)}
 
-    defp select(%Query{select: %{fields: fields}} = query, select_distinct, sources) do
+    defp select(%{select: %{fields: fields}} = query, select_distinct, sources) do
       ["SELECT", select_distinct, ?\s | select_fields(fields, sources, query)]
     end
 
@@ -275,7 +274,7 @@ if Code.ensure_loaded?(Postgrex) do
       [" FROM ", from, " AS " | name]
     end
 
-    defp update_fields(%Query{updates: updates} = query, sources) do
+    defp update_fields(%{updates: updates} = query, sources) do
       for(%{expr: expr} <- updates,
           {op, kw} <- expr,
           {key, value} <- kw,
@@ -305,8 +304,8 @@ if Code.ensure_loaded?(Postgrex) do
       error!(query, "unknown update operation #{inspect command} for PostgreSQL")
     end
 
-    defp using_join(%Query{joins: []}, _kind, _prefix, _sources), do: {[], []}
-    defp using_join(%Query{joins: joins} = query, kind, prefix, sources) do
+    defp using_join(%{joins: []}, _kind, _prefix, _sources), do: {[], []}
+    defp using_join(%{joins: joins} = query, kind, prefix, sources) do
       froms =
         intersperse_map(joins, ", ", fn
           %JoinExpr{qual: :inner, ix: ix, source: source} ->
@@ -324,8 +323,8 @@ if Code.ensure_loaded?(Postgrex) do
       {[?\s, prefix, ?\s | froms], wheres}
     end
 
-    defp join(%Query{joins: []}, _sources), do: []
-    defp join(%Query{joins: joins} = query, sources) do
+    defp join(%{joins: []}, _sources), do: []
+    defp join(%{joins: joins} = query, sources) do
       [?\s | intersperse_map(joins, ?\s, fn
         %JoinExpr{on: %QueryExpr{expr: expr}, qual: qual, ix: ix, source: source, hints: hints} ->
           if hints != [] do
@@ -348,16 +347,16 @@ if Code.ensure_loaded?(Postgrex) do
     defp join_qual(:full),  do: "FULL OUTER JOIN "
     defp join_qual(:cross), do: "CROSS JOIN "
 
-    defp where(%Query{wheres: wheres} = query, sources) do
+    defp where(%{wheres: wheres} = query, sources) do
       boolean(" WHERE ", wheres, sources, query)
     end
 
-    defp having(%Query{havings: havings} = query, sources) do
+    defp having(%{havings: havings} = query, sources) do
       boolean(" HAVING ", havings, sources, query)
     end
 
-    defp group_by(%Query{group_bys: []}, _sources), do: []
-    defp group_by(%Query{group_bys: group_bys} = query, sources) do
+    defp group_by(%{group_bys: []}, _sources), do: []
+    defp group_by(%{group_bys: group_bys} = query, sources) do
       [" GROUP BY " |
        intersperse_map(group_bys, ", ", fn
          %QueryExpr{expr: expr} ->
@@ -365,32 +364,29 @@ if Code.ensure_loaded?(Postgrex) do
        end)]
     end
 
-    defp window(%Query{windows: []}, _sources), do: []
-    defp window(%Query{windows: windows} = query, sources) do
+    defp window(%{windows: []}, _sources), do: []
+    defp window(%{windows: windows} = query, sources) do
       [" WINDOW " |
-       intersperse_map(windows, ", ", fn
-         {name, definition} ->
-           [quote_name(name), " AS ", partition_by(definition, sources, query)] end)]
+       intersperse_map(windows, ", ", fn {name, %{expr: kw}} ->
+         [quote_name(name), " AS " | window_exprs(kw, sources, query)]
+       end)]
     end
 
-    defp partition_by(%QueryExpr{expr: opts}, sources, %Query{} = query) do
-      fields = Keyword.get(opts, :fields)
-      order_bys = Keyword.get_values(opts, :order_by) |> Enum.concat
-      fields = fields |> intersperse_map(", ", &expr(&1, sources, query))
-      ["(PARTITION BY ",
-        fields,
-        order_by(order_bys, query, [], sources),
-        ?)]
+    defp window_exprs(kw, sources, query) do
+      [?(, intersperse_map(kw, ?\s, &window_expr(&1, sources, query)), ?)]
     end
 
-    defp order_by(%Query{order_bys: []}, _distinct, _sources), do: []
-    defp order_by(%Query{order_bys: order_bys} = query, distinct, sources) do
+    defp window_expr({:partition_by, fields}, sources, query) do
+      ["PARTITION BY " | intersperse_map(fields, ", ", &expr(&1, sources, query))]
+    end
+
+    defp window_expr({:order_by, fields}, sources, query) do
+      ["ORDER BY " | intersperse_map(fields, ", ", &order_by_expr(&1, sources, query))]
+    end
+
+    defp order_by(%{order_bys: []}, _distinct, _sources), do: []
+    defp order_by(%{order_bys: order_bys} = query, distinct, sources) do
       order_bys = Enum.flat_map(order_bys, & &1.expr)
-      order_by(order_bys, query, distinct, sources)
-    end
-
-    defp order_by([], _query, _distinct, _sources), do: []
-    defp order_by(order_bys, query, distinct, sources) do
       [" ORDER BY " |
        intersperse_map(distinct ++ order_bys, ", ", &order_by_expr(&1, sources, query))]
     end
@@ -408,13 +404,13 @@ if Code.ensure_loaded?(Postgrex) do
       end
     end
 
-    defp limit(%Query{limit: nil}, _sources), do: []
-    defp limit(%Query{limit: %QueryExpr{expr: expr}} = query, sources) do
+    defp limit(%{limit: nil}, _sources), do: []
+    defp limit(%{limit: %QueryExpr{expr: expr}} = query, sources) do
       [" LIMIT " | expr(expr, sources, query)]
     end
 
-    defp offset(%Query{offset: nil}, _sources), do: []
-    defp offset(%Query{offset: %QueryExpr{expr: expr}} = query, sources) do
+    defp offset(%{offset: nil}, _sources), do: []
+    defp offset(%{offset: %QueryExpr{expr: expr}} = query, sources) do
       [" OFFSET " | expr(expr, sources, query)]
     end
 
@@ -516,19 +512,14 @@ if Code.ensure_loaded?(Postgrex) do
       [aggregate, " FILTER (WHERE ", expr(filter, sources, query), ?)]
     end
 
-    defp expr({:over, _, [agg, %QueryExpr{} = window]}, sources, query) do
-      aggregate = expr(agg, sources, query)
-      [aggregate, " OVER ", partition_by(window, sources, query)]
-    end
-
-    defp expr({:over, _, [agg, nil]}, sources, query) do
-      aggregate = expr(agg, sources, query)
-      [aggregate, " OVER ()"]
-    end
-
     defp expr({:over, _, [agg, name]}, sources, query) when is_atom(name) do
       aggregate = expr(agg, sources, query)
-      [aggregate, " OVER ", quote_name(name)]
+      [aggregate, " OVER " | quote_name(name)]
+    end
+
+    defp expr({:over, _, [agg, kw]}, sources, query) do
+      aggregate = expr(agg, sources, query)
+      [aggregate, " OVER ", window_exprs(kw, sources, query)]
     end
 
     defp expr({:{}, _, elems}, sources, query) do
@@ -614,9 +605,9 @@ if Code.ensure_loaded?(Postgrex) do
       expr(expr, sources, query)
     end
 
-    defp returning(%Query{select: nil}, _sources),
+    defp returning(%{select: nil}, _sources),
       do: []
-    defp returning(%Query{select: %{fields: fields}} = query, sources),
+    defp returning(%{select: %{fields: fields}} = query, sources),
       do: [" RETURNING " | select_fields(fields, sources, query)]
 
     defp returning([]),

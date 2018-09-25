@@ -572,9 +572,9 @@ defmodule Ecto.Query.Planner do
 
   defp merge_cache(:windows, query, exprs, {cache, params}, adapter) do
     {expr_cache, {params, cacheable?}} =
-      Enum.map_reduce exprs, {params, true}, fn {_, expr}, {params, cacheable?} ->
+      Enum.map_reduce exprs, {params, true}, fn {key, expr}, {params, cacheable?} ->
         {params, current_cacheable?} = cast_and_merge_params(:windows, query, expr, params, adapter)
-        {expr_to_cache(expr), {params, cacheable? and current_cacheable?}}
+        {{key, expr_to_cache(expr)}, {params, cacheable? and current_cacheable?}}
       end
 
     case expr_cache do
@@ -582,7 +582,6 @@ defmodule Ecto.Query.Planner do
       _  -> {merge_cache({:windows, expr_cache}, cache, cacheable?), params}
     end
   end
-
 
   defp expr_to_cache(%BooleanExpr{op: op, expr: expr}), do: {op, expr}
   defp expr_to_cache(%QueryExpr{expr: expr}), do: expr
@@ -803,13 +802,11 @@ defmodule Ecto.Query.Planner do
 
   defp validate_and_increment(:windows, query, exprs, counter, _operation, adapter) do
     {exprs, counter} =
-      Enum.reduce(exprs, {[], counter}, fn
-        {_, %{expr: []}}, {list, acc} ->
-          {list, acc}
-        {name, expr}, {list, acc} ->
-          {expr, acc} = prewalk(:windows, query, expr, acc, adapter)
-          {[{name, expr}|list], acc}
+      Enum.reduce(exprs, {[], counter}, fn {name, expr}, {list, acc} ->
+        {expr, acc} = prewalk(:windows, query, expr, acc, adapter)
+        {[{name, expr}|list], acc}
       end)
+
     {Enum.reverse(exprs), counter}
   end
 
@@ -1009,14 +1006,22 @@ defmodule Ecto.Query.Planner do
 
   # Expression handling
 
+  @aggs ~w(count avg min max sum row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value)a
+
   defp collect_fields({agg, _, [{{:., dot_meta, [{:&, _, [_]}, _]}, _, []} | _]} = expr,
                       fields, from, _query, _take)
-       when agg in ~w(count avg min max sum)a do
+       when agg in @aggs do
     type =
       case agg do
         :count -> :integer
+        :row_number -> :integer
+        :rank -> :integer
+        :dense_rank -> :integer
+        :ntile -> :integer
         :avg -> :any
         :sum -> :any
+        :percent_rank -> :any
+        :cume_dist -> :any
         _ -> Keyword.fetch!(dot_meta, :type)
       end
 
@@ -1042,25 +1047,11 @@ defmodule Ecto.Query.Planner do
     {type, [expr | fields], from}
   end
 
-  # OVER ()
-  defp collect_fields({:over, _, [call, nil]} = expr, fields, from, query, take) do
-    {type, _, _} = collect_fields(call, fields, from, query, take)
-    {type, [expr | fields], from}
-  end
-
-  # OVER named_window
-  defp collect_fields({:over, _, [call, window_name]} = expr,
-                      fields, from, %Ecto.Query{ windows: windows } = query, take) when is_atom(window_name) do
-    if Keyword.has_key?(windows, window_name) do
-      {type, _, _} = collect_fields(call, fields, from, query, take)
-      {type, [expr | fields], from}
-    else
-      error!(query, "the window :#{window_name} must be defined in `windows`")
+  defp collect_fields({:over, _, [call, window]} = expr, fields, from, query, take) do
+    if is_atom(window) and not Keyword.has_key?(query.windows, window) do
+      error!(query, "unknown window #{inspect window} given to over/2")
     end
-  end
 
-  # OVER (PARTITION BY ...)
-  defp collect_fields({:over, _, [call, _]} = expr, fields, from, query, take) do
     {type, _, _} = collect_fields(call, fields, from, query, take)
     {type, [expr | fields], from}
   end
