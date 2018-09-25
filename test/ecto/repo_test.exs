@@ -743,6 +743,14 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  describe "checkout" do
+    test "checks out a connection" do
+      fun = fn -> :done end
+      assert TestRepo.checkout(fun) == :done
+      assert_received {:checkout, ^fun}
+    end
+  end
+
   describe "transactions" do
     defmodule NoTransactionAdapter do
       @behaviour Ecto.Adapter
@@ -750,6 +758,7 @@ defmodule Ecto.RepoTest do
       def dumpers(_, _), do: raise "not implemented"
       def loaders(_, _), do: raise "not implemented"
       def init(_), do: raise "not implemented"
+      def checkout(_, _, _), do: raise "not implemented"
       def ensure_all_started(_, _), do: raise "not implemented"
     end
 

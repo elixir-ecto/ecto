@@ -34,6 +34,14 @@ defmodule Ecto.Adapter do
   @callback init(config :: Keyword.t()) :: {:ok, :supervisor.child_spec(), adapter_meta}
 
   @doc """
+  Checks out a connection for the duration of the given function.
+
+  In case the adapter provides a pool, this guarantees all of the code
+  inside the given `fun` runs against the same connection.
+  """
+  @callback checkout(adapter_meta, options :: Keyword.t(), (() -> result)) :: result when result: var
+
+  @doc """
   Returns the loaders for a given type.
 
   It receives the primitive type and the Ecto type (which may be

@@ -129,6 +129,11 @@ defmodule Ecto.Repo do
         Ecto.Repo.Schema.load(@adapter, schema_or_types, data)
       end
 
+      def checkout(fun, opts \\ []) when is_function(fun) do
+        {adapter, meta} = Ecto.Repo.Registry.lookup(__MODULE__)
+        adapter.checkout(meta, opts, fun)
+      end
+
       ## Transactions
 
       if Ecto.Adapter.Transaction in behaviours do
@@ -299,6 +304,20 @@ defmodule Ecto.Repo do
   Shuts down the repository.
   """
   @callback stop(timeout) :: :ok
+
+  @doc """
+  Checks out a connection for the duration of the function.
+
+  It returns the result of the function. This is useful when
+  you need to perform multiple operations against the repository
+  in a row and you want to avoid checking out the connection
+  multiple times.
+
+  ## Options
+
+  See the "Shared options" section at the module documentation.
+  """
+  @callback checkout((() -> result), opts :: Keyword.t()) :: result when result: var
 
   @doc """
   Loads `data` into a struct or a map.

@@ -13,6 +13,7 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
     def dumpers(_, _), do: raise "not implemented"
     def loaders(_, _), do: raise "not implemented"
     def init(_), do: raise "not implemented"
+    def checkout(_, _, _), do: raise "not implemented"
     def ensure_all_started(_, _), do: raise "not implemented"
 
     def storage_up(_), do: Process.get(:storage_up) || raise "no storage_up"
@@ -25,6 +26,7 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
     def dumpers(_, _), do: raise "not implemented"
     def loaders(_, _), do: raise "not implemented"
     def init(_), do: raise "not implemented"
+    def checkout(_, _, _), do: raise "not implemented"
     def ensure_all_started(_, _), do: raise "not implemented"
   end
 

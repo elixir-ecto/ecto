@@ -90,6 +90,11 @@ defmodule Ecto.Adapters.SQL do
       end
 
       @doc false
+      def checkout(meta, opts, fun) do
+        Ecto.Adapters.SQL.checkout(meta, opts, fun)
+      end
+
+      @doc false
       def loaders({:embed, _} = type, _), do: [&Ecto.Adapters.SQL.load_embed(type, &1)]
       def loaders({:map, _} = type, _),   do: [&Ecto.Adapters.SQL.load_embed(type, &1)]
       def loaders(:binary_id, type),      do: [Ecto.UUID, type]
@@ -336,7 +341,7 @@ defmodule Ecto.Adapters.SQL do
 
   defp sql_call(adapter_meta, callback, args, params, opts) do
     %{pid: pool, loggers: loggers, sql: sql, opts: default_opts} = adapter_meta
-    conn = get_conn(pool) || pool
+    conn = get_conn_or_pool(pool)
     opts = with_log(loggers, params, opts ++ default_opts)
     args = args ++ [params, opts]
     apply(sql, callback, [conn | args])
@@ -453,6 +458,11 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
+  @doc false
+  def checkout(adapter_meta, opts, callback) do
+    checkout_or_transaction(:run, adapter_meta, opts, callback)
+  end
+
   ## Types
 
   @doc false
@@ -500,12 +510,12 @@ defmodule Ecto.Adapters.SQL do
   @doc false
   def execute(adapter_meta, query_meta, prepared, params, opts) do
     %{num_rows: num, rows: rows} =
-      do_execute(adapter_meta, prepared, params, put_source(opts, query_meta))
+      execute!(adapter_meta, prepared, params, put_source(opts, query_meta))
 
     {num, rows}
   end
 
-  defp do_execute(adapter_meta, {:cache, update, {id, prepared}}, params, opts) do
+  defp execute!(adapter_meta, {:cache, update, {id, prepared}}, params, opts) do
     name = "ecto_" <> Integer.to_string(id)
 
     case sql_call(adapter_meta, :prepare_execute, [name, prepared], params, opts) do
@@ -517,7 +527,7 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp do_execute(adapter_meta, {:cached, update, reset, {id, cached}}, params, opts) do
+  defp execute!(adapter_meta, {:cached, update, reset, {id, cached}}, params, opts) do
     case sql_call(adapter_meta, :execute, [cached], params, opts) do
       {:ok, query, result} ->
         update.({id, query})
@@ -532,7 +542,7 @@ defmodule Ecto.Adapters.SQL do
     end
   end
 
-  defp do_execute(adapter_meta, {:nocache, {_id, prepared}}, params, opts) do
+  defp execute!(adapter_meta, {:nocache, {_id, prepared}}, params, opts) do
     case sql_call(adapter_meta, :query, [prepared], params, opts) do
       {:ok, res} -> res
       {:error, err} -> raise_sql_call_error err
@@ -629,39 +639,20 @@ defmodule Ecto.Adapters.SQL do
   ## Transactions
 
   @doc false
-  def transaction(adapter_meta, opts, fun) do
-    %{pid: pool, loggers: loggers, opts: default_opts} = adapter_meta
-    opts = with_log(loggers, [], opts ++ default_opts)
-
-    case get_conn(pool) do
-      nil  -> do_transaction(pool, opts, fun)
-      conn -> DBConnection.transaction(conn, fn(_) -> fun.() end, opts)
-    end
-  end
-
-  defp do_transaction(pool, opts, fun) do
-    run = fn conn ->
-      try do
-        put_conn(pool, conn)
-        fun.()
-      after
-        delete_conn(pool)
-      end
-    end
-
-    DBConnection.transaction(pool, run, opts)
+  def transaction(adapter_meta, opts, callback) do
+    checkout_or_transaction(:transaction, adapter_meta, opts, callback)
   end
 
   @doc false
   def in_transaction?(%{pid: pool}) do
-    !!get_conn(pool)
+    match?(%DBConnection{conn_mode: :transaction}, get_conn(pool))
   end
 
   @doc false
   def rollback(%{pid: pool}, value) do
     case get_conn(pool) do
-      nil  -> raise "cannot call rollback outside of transaction"
-      conn -> DBConnection.rollback(conn, value)
+      %DBConnection{conn_mode: :transaction} = conn -> DBConnection.rollback(conn, value)
+      _ -> raise "cannot call rollback outside of transaction"
     end
   end
 
@@ -758,18 +749,41 @@ defmodule Ecto.Adapters.SQL do
 
   ## Connection helpers
 
-  defp put_conn(pool, conn) do
-    _ = Process.put(key(pool), conn)
-    :ok
+  defp checkout_or_transaction(fun, adapter_meta, opts, callback) do
+    %{pid: pool, loggers: loggers, opts: default_opts} = adapter_meta
+    opts = with_log(loggers, [], opts ++ default_opts)
+
+    callback = fn conn ->
+      previous_conn = put_conn(pool, conn)
+
+      try do
+        callback.()
+      after
+        reset_conn(pool, previous_conn)
+      end
+    end
+
+    apply(DBConnection, fun, [get_conn_or_pool(pool), callback, opts])
+  end
+
+  defp get_conn_or_pool(pool) do
+    Process.get(key(pool), pool)
   end
 
   defp get_conn(pool) do
     Process.get(key(pool))
   end
 
-  defp delete_conn(pool) do
-    _ = Process.delete(key(pool))
-    :ok
+  defp put_conn(pool, conn) do
+    Process.put(key(pool), conn)
+  end
+
+  defp reset_conn(pool, conn) do
+    if conn do
+      Process.put(key(pool), conn)
+    else
+      Process.delete(key(pool))
+    end
   end
 
   defp key(pool), do: {__MODULE__, pool}
