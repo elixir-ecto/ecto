@@ -43,7 +43,7 @@ defmodule Ecto.MixProject do
       {:decimal, "~> 1.5"},
 
       # Drivers
-      {:db_connection, "~> 2.0.0-dev", github: "elixir-ecto/db_connection", ref: "bb29b5c", override: true},
+      {:db_connection, "~> 2.0.0-dev", github: "elixir-ecto/db_connection", ref: "7aa17de", override: true},
       {:postgrex, "~> 0.14.0-dev", optional: true, github: "elixir-ecto/postgrex", ref: "2874de4"},
       {:mariaex, "~> 0.9.0-dev", optional: true, github: "xerions/mariaex", ref: "eac3104"},
 
