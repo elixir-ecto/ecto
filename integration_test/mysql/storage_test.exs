@@ -3,6 +3,8 @@ Code.require_file "../support/file_helpers.exs", __DIR__
 defmodule Ecto.Integration.StorageTest do
   use ExUnit.Case, async: true
 
+  @moduletag :capture_log
+
   import Support.FileHelpers
   alias Ecto.Adapters.MySQL
   alias Ecto.Integration.TestRepo
