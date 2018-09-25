@@ -313,6 +313,11 @@ defmodule Ecto.Repo do
   in a row and you want to avoid checking out the connection
   multiple times.
 
+  `checkout/2` and `transaction/2` can be combined and nested 
+  multiple times. If `checkout/2` is called inside the function
+  of another `checkout/2` call, the function is simply executed,
+  without checking out a new connection.
+
   ## Options
 
   See the "Shared options" section at the module documentation.
