@@ -683,15 +683,30 @@ defmodule Ecto.Schema do
       type = Keyword.fetch!(timestamps, :type)
       autogen = timestamps[:autogenerate] || {Ecto.Schema, :__timestamps__, [type]}
 
-      if inserted_at = Keyword.fetch!(timestamps, :inserted_at) do
+      inserted_at = Keyword.fetch!(timestamps, :inserted_at)
+      updated_at = Keyword.fetch!(timestamps, :updated_at)
+
+      if inserted_at do
         Ecto.Schema.field(inserted_at, type, [])
-        Module.put_attribute(__MODULE__, :ecto_autogenerate, {inserted_at, autogen})
       end
 
-      if updated_at = Keyword.fetch!(timestamps, :updated_at) do
+      if updated_at do
         Ecto.Schema.field(updated_at, type, [])
-        Module.put_attribute(__MODULE__, :ecto_autogenerate, {updated_at, autogen})
-        Module.put_attribute(__MODULE__, :ecto_autoupdate, {updated_at, autogen})
+        Module.put_attribute(__MODULE__, :ecto_autoupdate, {[updated_at], autogen})
+      end
+
+      cond do
+        inserted_at && updated_at ->
+          Module.put_attribute(__MODULE__, :ecto_autogenerate, {[inserted_at, updated_at], autogen})
+
+        inserted_at ->
+          Module.put_attribute(__MODULE__, :ecto_autogenerate, {[inserted_at], autogen})
+
+        updated_at ->
+          Module.put_attribute(__MODULE__, :ecto_autogenerate, {[updated_at], autogen})
+
+        true ->
+          :ok
       end
     end
   end
@@ -2184,7 +2199,7 @@ defmodule Ecto.Schema do
     if autogenerate_id(type) do
       raise ArgumentError, ":autogenerate with {m, f, a} not supported by ID types"
     else
-      Module.put_attribute(mod, :ecto_autogenerate, {name, mfa})
+      Module.put_attribute(mod, :ecto_autogenerate, {[name], mfa})
     end
   end
 
@@ -2211,7 +2226,7 @@ defmodule Ecto.Schema do
                              "custom type #{inspect type} that does not define autogenerate/0"
 
       true ->
-        Module.put_attribute(mod, :ecto_autogenerate, {name, {type, :autogenerate, []}})
+        Module.put_attribute(mod, :ecto_autogenerate, {[name], {type, :autogenerate, []}})
     end
   end
 
