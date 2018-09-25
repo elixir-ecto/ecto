@@ -147,10 +147,10 @@ defmodule Ecto.Integration.SandboxTest do
 
     assert capture_log(fn ->
       {:ok, pid} =
-        Task.start_link fn ->
+        Task.start(fn ->
           Sandbox.allow(TestRepo, parent, self())
           TestRepo.transaction(fn -> Process.sleep(500) end)
-        end
+        end)
 
       ref = Process.monitor(pid)
       assert_receive {:DOWN, ^ref, _, ^pid, _}, 1000
