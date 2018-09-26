@@ -1,6 +1,8 @@
 defmodule Ecto.TypeTest do
   use ExUnit.Case, async: true
 
+  alias Ecto.TestRepo
+
   defmodule Custom do
     @behaviour Ecto.Type
     def type,      do: :custom
@@ -19,6 +21,21 @@ defmodule Ecto.TypeTest do
     def cast(_),   do: {:ok, :cast}
   end
 
+  defmodule PrefixedID do
+    @behaviour Ecto.Type
+
+    def type(), do: :binary_id
+
+    def cast(id), do: {:ok, "foo-" <> id}
+
+    def load(uuid) do
+      {:ok, "foo-" <> uuid}
+    end
+
+    def dump("foo-" <> uuid), do: {:ok, uuid}
+    def dump(_uuid), do: :error
+  end
+
   defmodule Schema do
     use Ecto.Schema
 
@@ -31,6 +48,15 @@ defmodule Ecto.TypeTest do
 
     def changeset(params, schema) do
       Ecto.Changeset.cast(schema, params, ~w(a))
+    end
+  end
+
+  defmodule PrefixedSchema do
+    use Ecto.Schema
+
+    @primary_key {:id, PrefixedID, autogenerate: true}
+
+    schema "" do
     end
   end
 
@@ -774,6 +800,11 @@ defmodule Ecto.TypeTest do
         Ecto.Type.equal?(:foo, 1, 1.0)
       end
     end
+  end
+
+  test "#2615 case" do
+    inserted = %PrefixedSchema{} |> TestRepo.insert!()
+    assert "foo" <> _uuid = inserted.id
   end
 
   defp d(decimal), do: Decimal.new(decimal)
