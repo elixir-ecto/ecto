@@ -176,7 +176,17 @@ defmodule Ecto.Query.InspectTest do
 
   test "union" do
     assert i(from(x in Post, union: from(y in Post), union_all: from(z in Post))) ==
-           ~s{from p in Inspect.Post, union: from p in Inspect.Post, union_all: from p in Inspect.Post}
+             ~s{from p in Inspect.Post, union: from p in Inspect.Post, union_all: from p in Inspect.Post}
+  end
+
+  test "except" do
+    assert i(from(x in Post, except: from(y in Post), except_all: from(y in Post))) ==
+             ~s{from p in Inspect.Post, except: from p in Inspect.Post, except_all: from p in Inspect.Post}
+  end
+
+  test "intersect" do
+    assert i(from(x in Post, intersect: from(y in Post), intersect_all: from(y in Post))) ==
+             ~s{from p in Inspect.Post, intersect: from p in Inspect.Post, intersect_all: from p in Inspect.Post}
   end
 
   test "limit" do

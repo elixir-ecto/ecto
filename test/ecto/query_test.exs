@@ -99,12 +99,42 @@ defmodule Ecto.QueryTest do
 
   describe "combinations" do
     test "adds union expressions" do
-      union_query1 = from p in "posts1"
-      union_query2 = from p in "posts2"
-      query = "posts" |> union(union_query1) |> union_all(union_query2)
+      union_query1 = from(p in "posts1")
+      union_query2 = from(p in "posts2")
+
+      query =
+        "posts"
+        |> union(union_query1)
+        |> union_all(union_query2)
 
       assert {:union, ^union_query1} = query.combinations |> Enum.at(0)
       assert {:union_all, ^union_query2} = query.combinations |> Enum.at(1)
+    end
+
+    test "adds except expressions" do
+      except_query1 = from(p in "posts1")
+      except_query2 = from(p in "posts2")
+
+      query =
+        "posts"
+        |> except(except_query1)
+        |> except_all(except_query2)
+
+      assert {:except, ^except_query1} = query.combinations |> Enum.at(0)
+      assert {:except_all, ^except_query2} = query.combinations |> Enum.at(1)
+    end
+
+    test "adds intersect expressions" do
+      intersect_query1 = from(p in "posts1")
+      intersect_query2 = from(p in "posts2")
+
+      query =
+        "posts"
+        |> intersect(intersect_query1)
+        |> intersect_all(intersect_query2)
+
+      assert {:intersect, ^intersect_query1} = query.combinations |> Enum.at(0)
+      assert {:intersect_all, ^intersect_query2} = query.combinations |> Enum.at(1)
     end
   end
 
@@ -482,21 +512,25 @@ defmodule Ecto.QueryTest do
     test "removes the given field" do
       base = %Ecto.Query{}
 
-      query = from(p in "posts",
-                   join: b in "blogs",
-                   join: c in "comments",
-                   where: p.id == 0 and b.id == 0,
-                   or_where: c.id == 0,
-                   order_by: p.title,
-                   union: from(p in "posts"),
-                   union_all: from(p in "posts"),
-                   limit: 2,
-                   offset: 10,
-                   group_by: p.author,
-                   having: p.comments > 10,
-                   distinct: p.category,
-                   lock: "FOO",
-                   select: p)
+      query =
+        from(p in "posts",
+          join: b in "blogs",
+          join: c in "comments",
+          where: p.id == 0 and b.id == 0,
+          or_where: c.id == 0,
+          order_by: p.title,
+          union: from(p in "posts"),
+          union_all: from(p in "posts"),
+          except: from(p in "posts"),
+          intersect: from(p in "posts"),
+          limit: 2,
+          offset: 10,
+          group_by: p.author,
+          having: p.comments > 10,
+          distinct: p.category,
+          lock: "FOO",
+          select: p
+        )
 
       # Pre-exclusion assertions
       refute query.joins == base.joins
@@ -511,18 +545,19 @@ defmodule Ecto.QueryTest do
       refute query.offset == base.offset
       refute query.lock == base.lock
 
-      excluded_query = query
-      |> exclude(:join)
-      |> exclude(:where)
-      |> exclude(:order_by)
-      |> exclude(:group_by)
-      |> exclude(:having)
-      |> exclude(:distinct)
-      |> exclude(:select)
-      |> exclude(:combinations)
-      |> exclude(:limit)
-      |> exclude(:offset)
-      |> exclude(:lock)
+      excluded_query =
+        query
+        |> exclude(:join)
+        |> exclude(:where)
+        |> exclude(:order_by)
+        |> exclude(:group_by)
+        |> exclude(:having)
+        |> exclude(:distinct)
+        |> exclude(:select)
+        |> exclude(:combinations)
+        |> exclude(:limit)
+        |> exclude(:offset)
+        |> exclude(:lock)
 
       # Post-exclusion assertions
       assert excluded_query.joins == base.joins
