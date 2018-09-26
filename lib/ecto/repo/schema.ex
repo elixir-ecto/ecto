@@ -227,11 +227,9 @@ defmodule Ecto.Repo.Schema do
           {:ok, values} ->
             values = extra ++ values
 
-            children_opts = Keyword.drop(opts, [:returning])
-
             changeset
             |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, schema_meta)
-            |> process_children(children, user_changeset, adapter, children_opts)
+            |> process_children(children, user_changeset, adapter, opts)
 
           {:error, _} = error ->
             error
@@ -312,11 +310,9 @@ defmodule Ecto.Repo.Schema do
 
           case apply(changeset, adapter, action, args) do
             {:ok, values} ->
-              children_opts = Keyword.drop(opts, [:returning])
-
               changeset
               |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, schema_meta)
-              |> process_children(children, user_changeset, adapter, children_opts)
+              |> process_children(children, user_changeset, adapter, opts)
 
             {:error, _} = error ->
               error
@@ -780,10 +776,20 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp process_children(changeset, assocs, user_changeset, adapter, opts) do
+    opts = process_children_opts(opts)
+
     case Ecto.Association.on_repo_change(changeset, assocs, adapter, opts) do
       {:ok, struct} -> {:ok, struct}
       {:error, changes} ->
         {:error, %{user_changeset | valid?: false, changes: changes}}
+    end
+  end
+
+  defp process_children_opts(opts) do
+    if is_list(Keyword.get(opts, :returning)) do
+      Keyword.delete(opts, :returning)
+    else
+      opts
     end
   end
 
