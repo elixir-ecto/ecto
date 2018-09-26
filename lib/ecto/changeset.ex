@@ -1117,7 +1117,7 @@ defmodule Ecto.Changeset do
   Puts the given association entry or entries as a change in the changeset.
 
   This function is used to work with associations as a whole. For example,
-  if a Post has many Comments, it allows you to replace, change or move all
+  if a Post has many Comments, it allows you to add, remove or change all
   comments at once. If your goal is to simply add a new comment to a post,
   then it is preferred to do so manually, as we will describe later in the
   "Example: Adding a comment to a post" section.
@@ -1137,13 +1137,24 @@ defmodule Ecto.Changeset do
   The associated data may be given in different formats:
 
     * a map or a keyword list representing changes to be applied to the
-      associated data. A map or keyword list can be given to update an
-      existing association as long as they have matching primary keys.
+      associated data. A map or keyword list can be given to update the
+      associated data as long as they have matching primary keys.
       For example, `put_assoc(changeset, :comments, [%{id: 1, title: "changed"}])`
       will locate the comment with `:id` of 1 and update its title.
-      If a map or keyword list are given and there is no association,
-      one will be created. On all cases, it is expected the keys to be
-      atoms.
+      If no comment with such id exists, one is created on the fly.
+      Since only a single comment was given, any other associated comment
+      will be replaced. On all cases, it is expected the keys to be atoms.
+      This API is mostly used in scripts and tests, to make it straight-
+      forward to create schemas with associations at once, such as:
+
+          Ecto.Changeset.change(
+            %Post{},
+            title: "foo",
+            comments: [
+              %{body: "first"},
+              %{body: "second"}
+            ]
+          )
 
     * changesets or structs - when a changeset or struct is given, they
       are treated as the canonical data and the associated data currently
@@ -1156,12 +1167,12 @@ defmodule Ecto.Changeset do
       This extremely useful when associating existing data, as we will see
       in the "Example: Adding tags to a post" section.
 
-  Note, however, that `put_assoc/4` always expected all associated data to be
-  given. So in both examples above, if the changeset has any other comment besides
+  Note, however, that `put_assoc/4` always expects all data currently associated to
+  be given. In both examples above, if the changeset has any other comment besides
   the comment with `id` equal to 1, all of them will be considered as replaced,
   invoking the relevant `:on_replace` callback which may potentially remove the
-  data. Since only the comment with a id equal to 1 is given, it will be the
-  only one kept. Therefore, `put_assoc/4` always works with the whole data,
+  data. In other words, if only a comment with a id equal to 1 is given, it will
+  be the only one kept. Therefore, `put_assoc/4` always works with the whole data,
   which may be undesired in some cases. Let's see an example.
 
   ## Example: Adding a comment to a post
