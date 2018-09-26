@@ -694,7 +694,7 @@ defmodule Ecto.Query do
   end
 
   @from_join_opts [:as, :prefix, :hints]
-  @no_binds [:lock, :union, :union_all]
+  @no_binds [:lock, :union, :union_all, :except, :except_all, :intersect, :intersect_all]
   @binds [:where, :or_where, :select, :distinct, :order_by, :group_by, :windows] ++
            [:having, :or_having, :limit, :offset, :preload, :update, :select_merge]
 
@@ -1271,6 +1271,128 @@ defmodule Ecto.Query do
 
   def union_all(query, other_query) do
     union(Ecto.Queryable.to_query(query), Ecto.Queryable.to_query(other_query))
+  end
+
+  @doc """
+  An except (set difference) query expression.
+
+  Takes the difference of the result sets of multiple queries. The
+  `select` of each query must be exactly the same, with the same
+  types in the same order.
+
+  Except expression returns only unique rows as if each query returned
+  distinct results. This may cause performance penalty. If you need
+  just to take the difference of multiple result sets without
+  removing duplicate rows consider using `except_all/2`.
+
+  Note that the operations `order_by`, `limit` and `offset` of the
+  current `query` apply to the result of the set difference.
+
+  ## Keywords example
+
+      supplier_query = from s in Supplier, select: s.city
+      from c in Customer, select: c.city, except: supplier_query
+
+  ## Expressions example
+
+      supplier_query = Supplier |> select([s], s.city)
+      Customer |> select([c], c.city) |> except(supplier_query)
+  """
+  def except(%Ecto.Query{combinations: combinations} = query, %Ecto.Query{} = other_query) do
+    %{query | combinations: combinations ++ [{:except, other_query}]}
+  end
+
+  def except(query, other_query) do
+    except(Ecto.Queryable.to_query(query), Ecto.Queryable.to_query(other_query))
+  end
+
+  @doc """
+  An except (set difference) query expression.
+
+  Takes the difference of the result sets of multiple queries. The
+  `select` of each query must be exactly the same, with the same
+  types in the same order.
+
+  Note that the operations `order_by`, `limit` and `offset` of the
+  current `query` apply to the result of the set difference.
+
+  ## Keywords example
+
+      supplier_query = from s in Supplier, select: s.city
+      from c in Customer, select: c.city, except_all: supplier_query
+
+  ## Expressions example
+
+      supplier_query = Supplier |> select([s], s.city)
+      Customer |> select([c], c.city) |> except_all(supplier_query)
+  """
+  def except_all(%Ecto.Query{combinations: combinations} = query, %Ecto.Query{} = other_query) do
+    %{query | combinations: combinations ++ [{:except_all, other_query}]}
+  end
+
+  def except_all(query, other_query) do
+    except_all(Ecto.Queryable.to_query(query), Ecto.Queryable.to_query(other_query))
+  end
+
+  @doc """
+  An intersect query expression.
+
+  Takes the overlap of the result sets of multiple queries. The
+  `select` of each query must be exactly the same, with the same
+  types in the same order.
+
+  Intersect expression returns only unique rows as if each query returned
+  distinct results. This may cause performance penalty. If you need
+  just to take the intersection of multiple result sets without
+  removing duplicate rows consider using `intersect_all/2`.
+
+  Note that the operations `order_by`, `limit` and `offset` of the
+  current `query` apply to the result of the set difference.
+
+  ## Keywords example
+
+      supplier_query = from s in Supplier, select: s.city
+      from c in Customer, select: c.city, intersect: supplier_query
+
+  ## Expressions example
+
+      supplier_query = Supplier |> select([s], s.city)
+      Customer |> select([c], c.city) |> intersect(supplier_query)
+  """
+  def intersect(%Ecto.Query{combinations: combinations} = query, %Ecto.Query{} = other_query) do
+    %{query | combinations: combinations ++ [{:intersect, other_query}]}
+  end
+
+  def intersect(query, other_query) do
+    intersect(Ecto.Queryable.to_query(query), Ecto.Queryable.to_query(other_query))
+  end
+
+  @doc """
+  An intersect query expression.
+
+  Takes the overlap of the result sets of multiple queries. The
+  `select` of each query must be exactly the same, with the same
+  types in the same order.
+
+  Note that the operations `order_by`, `limit` and `offset` of the
+  current `query` apply to the result of the set difference.
+
+  ## Keywords example
+
+      supplier_query = from s in Supplier, select: s.city
+      from c in Customer, select: c.city, intersect_all: supplier_query
+
+  ## Expressions example
+
+      supplier_query = Supplier |> select([s], s.city)
+      Customer |> select([c], c.city) |> intersect_all(supplier_query)
+  """
+  def intersect_all(%Ecto.Query{combinations: combinations} = query, %Ecto.Query{} = other_query) do
+    %{query | combinations: combinations ++ [{:intersect_all, other_query}]}
+  end
+
+  def intersect_all(query, other_query) do
+    intersect_all(Ecto.Queryable.to_query(query), Ecto.Queryable.to_query(other_query))
   end
 
   @doc """

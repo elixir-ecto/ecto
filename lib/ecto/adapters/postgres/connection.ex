@@ -419,6 +419,10 @@ if Code.ensure_loaded?(Postgrex) do
       Enum.map(combinations, fn
         {:union, query} -> [" UNION (", all(query), ")"]
         {:union_all, query} -> [" UNION ALL (", all(query), ")"]
+        {:except, query} -> [" EXCEPT (", all(query), ")"]
+        {:except_all, query} -> [" EXCEPT ALL (", all(query), ")"]
+        {:intersect, query} -> [" INTERSECT (", all(query), ")"]
+        {:intersect_all, query} -> [" INTERSECT ALL (", all(query), ")"]
       end)
     end
 
