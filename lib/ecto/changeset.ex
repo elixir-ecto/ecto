@@ -313,8 +313,14 @@ defmodule Ecto.Changeset do
   @doc """
   Wraps the given data in a changeset or adds changes to a changeset.
 
-  Changed attributes will only be added if the change does not have the
-  same value as the field in the data.
+  `changes` is a map or keyword where the key is an atom representing a
+  field, association or embed and the value is a term. Note the `value` is
+  directly stored in the changeset with no validation whatsoever. For this
+  reason, this function is meant for working with data internal to the
+  application.
+
+  When changing embeds and associations, see `put_assoc/4` for a complete
+  reference on the accepted values.
 
   This function is useful for:
 
@@ -322,14 +328,12 @@ defmodule Ecto.Changeset do
     * directly changing a struct without performing castings nor validations
     * directly bulk-adding changes to a changeset
 
-  The function is meant for working with data internal to the application.
-  Because of that neither validation nor casting is performed. This means
-  `change/2` expects the keys in the `changes` map or keyword to be atoms.
+  Changed attributes will only be added if the change does not have the
+  same value as the field in the data.
 
   When a changeset is passed as the first argument, the changes passed as the
   second argument are merged over the changes already in the changeset if they
-  differ from the values in the struct. If `changes` is an empty map, this
-  function is a no-op.
+  differ from the values in the struct.
 
   When a `{data, types}` is passed as the first argument, a changeset is
   created with the given data and types and marked as valid.
@@ -1054,11 +1058,18 @@ defmodule Ecto.Changeset do
   @doc """
   Puts a change on the given `key` with `value`.
 
-  If the change is already present, it is overridden with
-  the new value, also, if the change has the same value as
-  in the changeset data, it is not added to the list of changes.
+  `key` is an atom that represents any field, embed or
+  association in the changeset. Note the `value` is directly
+  stored in the changeset with no validation whatsoever.
+  For this reason, this function is meant for working with
+  data internal to the application.
 
-  The function is meant for working with data internal to the application.
+  If the change is already present, it is overridden with
+  the new value. If the change has the same value as in the
+  changeset data, it is not added to the list of changes.
+
+  When changing embeds and associations, see `put_assoc/4`
+  for a complete reference on the accepted values.
 
   ## Examples
 
