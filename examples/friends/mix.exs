@@ -5,9 +5,8 @@ defmodule Friends.Mixfile do
     [
       app: :friends,
       version: "0.1.0",
-      elixir: "~> 1.2",
+      elixir: "~> 1.4",
       build_embedded: Mix.env() == :prod,
-      start_permanent: Mix.env() == :prod,
       deps: deps(),
       aliases: aliases()
     ]
@@ -15,7 +14,7 @@ defmodule Friends.Mixfile do
 
   def application do
     [
-      applications: [:logger, :ecto, :postgrex],
+      extra_applications: [:logger],
       mod: {Friends.Application, []}
     ]
   end
@@ -33,8 +32,8 @@ defmodule Friends.Mixfile do
     #
     # It is not done in this instance because we want to refer to the local Ecto.
     [
-      {:ecto, path: "../.."},
-      {:postgrex, ">= 0.0.0", override: true}
+      {:ecto, path: "../..", override: true},
+      {:postgrex, ">= 0.0.0"}
     ]
   end
 end
