@@ -1375,7 +1375,8 @@ defmodule Ecto.Query.Planner do
   defp assert_only_filter_expressions!(query, operation) do
     case query do
       %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [],
-                  havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
+                  havings: [], preloads: [], assocs: [], distinct: nil, lock: nil,
+                  windows: []} ->
         query
       _ ->
         error! query, "`#{operation}` allows only `where` and `join` expressions. " <>
