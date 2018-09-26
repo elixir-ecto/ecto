@@ -129,8 +129,10 @@ defmodule Ecto.Multi do
                       {:update_all, Ecto.Query.t, Keyword.t} |
                       {:delete_all, Ecto.Query.t, Keyword.t} |
                       {:insert_all, schema_or_source, [map | Keyword.t], Keyword.t}
+  @typep operations :: [{name, operation}]
+  @typep names :: MapSet.t
   @type name :: any
-  @opaque t :: %__MODULE__{operations: [{name, operation}], names: MapSet.t}
+  @type t :: %__MODULE__{operations: operations, names: names}
 
   @doc """
   Returns an empty `Ecto.Multi` struct.
