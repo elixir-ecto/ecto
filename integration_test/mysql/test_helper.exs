@@ -1,6 +1,7 @@
 Logger.configure(level: :info)
 
 # :modify_column is supported on MySQL 5.7
+# windows.exs is supported on MySQL 8.0
 # but that is not yet supported in travis.
 ExUnit.start exclude: [:array_type, :read_after_writes, :returning, :modify_column,
                        :strict_savepoint, :create_index_if_not_exists, :aggregate_filters,
