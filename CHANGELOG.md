@@ -2,11 +2,33 @@
 
 ## Highlights
 
-This is a new major release for Ecto v3.0. Despite the major number, this is a small release with the main goal of removing the previously deprecated Ecto datetime types in favor of the Calendar types that ship as part of Elixir and updating to the latest JSON handling best practices.
+This is a new major release for Ecto v3.0. Despite the major version change, we have kept the number of user-facing breaking changes to a minimum, mostly around three areas:
+
+  * Split the Ecto repository apart
+  * Remove the previously deprecated Ecto datetime types in favor of the Calendar types that ship as part of Elixir
+  * Update to the latest JSON handling best practices
+
+Besides those changes, there are many exciting new features. We will explore all of those changes and more below.
+
+### Split the Ecto into `ecto` and `ecto_sql`
+
+Ecto is broken in two repositories: `ecto` and `ecto_sql`. Since Ecto v2.0, an increased number of developers and teams have been using Ecto for data mapping and validation, without a need for a database. However, adding Ecto to your application would still bring a lot of the SQL baggage, such as adapters, sandboxes and migrations. In Ecto 3.0, we have moved all of the SQL adapters to a separate repository and Ecto now mostly focuses on the four Ecto building blocks: schemas, changesets, queries and repos.
+
+If you are using Ecto with a SQL database, migrating to Ecto 3.0 is very striaght-forward. Instead of:
+
+    {:ecto, "~> 2.2"}
+
+You should now list:
+
+    {:ecto_sql, "~> 3.0"}
+
+And that's it!
 
 ### Calendar types
 
-`Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` no longer exist. Instead developers should use `Date`, `Time`, `DateTime` and `NaiveDateTime` that ship as part of Elixir and are the preferred types since Ecto 2.1. Database adapters have also been standardized to work with Elixir types and they no longer return tuples when developers perform raw queries.
+`Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` no longer exist. Instead developers should use `Date`, `Time`, `DateTime` and `NaiveDateTime` that ship as part of Elixir and are the preferred types since Ecto 2.1. Odds that you are already using the new types and not the deprecated ones.
+
+Note that database adapters have also been standardized to work with Elixir types and they no longer return tuples when developers perform raw queries.
 
 To uniformly support microseconds across all databases, the types `:time`, `:naive_datetime`, `:utc_datetime` will now discard any microseconds information. Ecto v3.0 introduces the types `:time_usec`, `:naive_datetime_usec` and `:utc_datetime_usec` as an alternative for those interested in keeping microseconds. If you want to keep microseconds in your migrations and schemas, you need to configure your repository:
 
@@ -57,7 +79,7 @@ One of the exciting additions in Ecto v3.0 is the addition of named bindings to 
     query = from [p, comments: c] in query,
               select: {p.title, c.body}
 
-`Ecto.Query` got many other exciting features. Such as pairwise comparisons, as in `where: {p.foo, p.bar} > {^foo, ^bar}`, built-in support for `coalesce` and arithmetic operators, `unsafe_fragment` for the rare cases where you really need to generate a SQL expression dynamically, the ability to filter aggregators, as in `select: filter(count(p.id), p.public == true)`, table specific hints in databases like MySQL and MSSQL, and many more.
+`Ecto.Query` got many other exciting features. Such as pairwise comparisons, as in `where: {p.foo, p.bar} > {^foo, ^bar}`, built-in support for `coalesce` and arithmetic operators, `unsafe_fragment` for the rare cases where you really need to generate a SQL expression dynamically, the ability to filter aggregators, as in `select: filter(count(p.id), p.public == true)`, table specific hints in databases like MySQL and MSSQL, unions, windows, and many more.
 
 ### Locked migrations
 
@@ -88,7 +110,9 @@ Running migrations will now lock the migrations table, allowing you to concurren
   * [Ecto.Query] Support `filter/2` in queries, such as `select: filter(count(p.id), p.public == true)`
   * [Ecto.Query] The `:prefix` and `:hints` options are now supported on both `from` and `join` expressions
   * [Ecto.Query] Support `:asc_nulls_last`, `:asc_nulls_first`, `:desc_nulls_last`, and `:desc_nulls_first` in `order_by`
-  * [Ecto.Query] Allow variables (sources) to be given in queries
+  * [Ecto.Query] Allow variables (sources) to be given in queries, for example, useful for invoking functins, such as `fragment("some_function(?)", p)`
+  * [Ecto.Query] Add support for `union` and `union_all`
+  * [Ecto.Query] Add support for `windows` and `over`
   * [Ecto.Repo] Only start transactions if an association or embed has changed, this reduces the overhead during repository operations
   * [Ecto.Repo] Support `:replace_all_except_primary_key` as `:on_conflict` strategy
   * [Ecto.Repo] Support `{:replace, fields}` as `:on_conflict` strategy
