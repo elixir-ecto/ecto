@@ -673,10 +673,11 @@ if Code.ensure_loaded?(Postgrex) do
 
     alias Ecto.Migration.{Table, Index, Reference, Constraint}
 
+    @creates [:create, :create_if_not_exists]
     @drops [:drop, :drop_if_exists]
 
     @impl true
-    def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
+    def execute_ddl({command, %Table{} = table, columns}) when command in @creates do
       table_name = quote_table(table.prefix, table.name)
       query = ["CREATE TABLE ",
                if_do(command == :create_if_not_exists, "IF NOT EXISTS "),
@@ -722,17 +723,20 @@ if Code.ensure_loaded?(Postgrex) do
     end
 
     def execute_ddl({:create_if_not_exists, %Index{} = index}) do
+      if index.concurrently do
+        raise ArgumentError,
+              "concurrent index and create_if_not_exists is not supported by the Postgres adapter"
+      end
+
       [["DO $$ BEGIN ",
         execute_ddl({:create, index}), ";",
         "EXCEPTION WHEN duplicate_table THEN END; $$;"]]
     end
 
     def execute_ddl({command, %Index{} = index}) when command in @drops do
-      if_exists = if command == :drop_if_exists, do: "IF EXISTS ", else: []
-
       [["DROP INDEX ",
         if_do(index.concurrently, "CONCURRENTLY "),
-        if_exists,
+        if_do(command == :drop_if_exists, "IF EXISTS "),
         quote_table(index.prefix, index.name)]]
     end
 

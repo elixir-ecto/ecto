@@ -1313,6 +1313,14 @@ defmodule Ecto.Adapters.PostgresTest do
       [~s|CREATE UNIQUE INDEX CONCURRENTLY "posts_permalink_index" ON "posts" ("permalink")|]
   end
 
+  test "create index if not exists concurrently" do
+    create = {:create_if_not_exists, index(:posts, [:permalink], concurrently: true)}
+
+    assert_raise ArgumentError,
+                 "concurrent index and create_if_not_exists is not supported by the Postgres adapter",
+                 fn -> execute_ddl(create) end
+  end
+
   test "create an index using a different type" do
     create = {:create, index(:posts, [:permalink], using: :hash)}
     assert execute_ddl(create) ==
