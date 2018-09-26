@@ -128,6 +128,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     default = TestRepo.insert!(%Manager{})
     assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.created_on
     assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.updated_on
+    assert default.created_on == default.updated_on
 
     default = TestRepo.update!(%Manager{id: 1} |> Ecto.Changeset.change, force: true)
     refute default.created_on
@@ -138,6 +139,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     default = TestRepo.insert!(%NaiveMod{})
     assert %NaiveDateTime{microsecond: {0, 0}} = default.inserted_at
     assert %NaiveDateTime{microsecond: {0, 0}} = default.updated_at
+    assert default.inserted_at == default.updated_at
 
     default = TestRepo.update!(%NaiveMod{id: 1} |> Ecto.Changeset.change, force: true)
     refute default.inserted_at
@@ -148,6 +150,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     default = TestRepo.insert!(%NaiveUsecMod{})
     assert %NaiveDateTime{microsecond: {_, 6}} = default.inserted_at
     assert %NaiveDateTime{microsecond: {_, 6}} = default.updated_at
+    assert default.inserted_at == default.updated_at
 
     default = TestRepo.update!(%NaiveUsecMod{id: 1} |> Ecto.Changeset.change, force: true)
     refute default.inserted_at
@@ -158,6 +161,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     default = TestRepo.insert!(%UtcMod{})
     assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.inserted_at
     assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.updated_at
+    assert default.inserted_at == default.updated_at
 
     default = TestRepo.update!(%UtcMod{id: 1} |> Ecto.Changeset.change, force: true)
     refute default.inserted_at
@@ -168,6 +172,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     default = TestRepo.insert!(%UtcUsecMod{})
     assert %DateTime{time_zone: "Etc/UTC", microsecond: {_, 6}} = default.inserted_at
     assert %DateTime{time_zone: "Etc/UTC", microsecond: {_, 6}} = default.updated_at
+    assert default.inserted_at == default.updated_at
 
     default = TestRepo.update!(%UtcUsecMod{id: 1} |> Ecto.Changeset.change, force: true)
     refute default.inserted_at

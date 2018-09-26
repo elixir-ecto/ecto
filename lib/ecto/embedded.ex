@@ -162,9 +162,14 @@ defmodule Ecto.Embedded do
     autogen_fields = action |> action_to_auto() |> schema.__schema__()
 
     Enum.reduce(autogen_fields, changes, fn {fields, {mod, fun, args}}, acc ->
-      fields
-      |> Enum.reject(&Map.has_key?(changes, &1))
-      |> Enum.reduce(acc, &Map.put(&2, &1, apply(mod, fun, args)))
+      case Enum.reject(fields, &Map.has_key?(changes, &1)) do
+        [] ->
+          acc
+
+        fields ->
+          generated = apply(mod, fun, args)
+          Enum.reduce(fields, acc, &Map.put(&2, &1, generated))
+      end
     end)
   end
 

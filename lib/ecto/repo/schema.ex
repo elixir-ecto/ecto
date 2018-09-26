@@ -803,9 +803,14 @@ defmodule Ecto.Repo.Schema do
     autogen_fields = action |> action_to_auto() |> schema.__schema__()
 
     Enum.flat_map(autogen_fields, fn {fields, {mod, fun, args}} ->
-      fields
-      |> Enum.reject(&Map.has_key?(changes, &1))
-      |> Enum.map(&{&1, apply(mod, fun, args)})
+      case Enum.reject(fields, &Map.has_key?(changes, &1)) do
+        [] ->
+          []
+
+        fields ->
+          generated = apply(mod, fun, args)
+          Enum.map(fields, &{&1, generated})
+      end
     end)
   end
 
