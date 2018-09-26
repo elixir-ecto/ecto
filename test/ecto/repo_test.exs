@@ -24,6 +24,9 @@ defmodule Ecto.RepoTest do
     use Ecto.Schema
 
     schema "my_schema" do
+      field :d, :decimal
+      field :t, :time
+      field :t_usec, :time_usec
       field :x, :string
       field :y, :binary, source: :yyy
       field :z, :string, default: "z"
@@ -344,7 +347,31 @@ defmodule Ecto.RepoTest do
     test "validates schema types" do
       schema = %MySchema{x: 123}
 
-      assert_raise Ecto.ChangeError, fn ->
+      assert_raise Ecto.ChangeError, ~r"does not match type :string$", fn ->
+        TestRepo.insert!(schema)
+      end
+
+      schema = %MySchema{d: Decimal.new("NaN")}
+
+      assert_raise Ecto.ChangeError, ~r"and `NaN` values are not supported", fn ->
+        TestRepo.insert!(schema)
+      end
+
+      schema = %MySchema{d: Decimal.new("NaN")}
+
+      assert_raise Ecto.ChangeError, ~r"and `NaN` values are not supported", fn ->
+        TestRepo.insert!(schema)
+      end
+
+      schema = %MySchema{t: ~T[09:00:00.000000]}
+
+      assert_raise Ecto.ChangeError, ~r"Microseconds must be empty.", fn ->
+        TestRepo.insert!(schema)
+      end
+
+      schema = %MySchema{t_usec: ~T[09:00:00]}
+
+      assert_raise Ecto.ChangeError, ~r"Microsecond precision is required.", fn ->
         TestRepo.insert!(schema)
       end
     end
