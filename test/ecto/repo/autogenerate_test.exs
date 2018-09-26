@@ -85,6 +85,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     default = TestRepo.insert!(%Company{})
     assert %NaiveDateTime{microsecond: {0, 0}} = default.inserted_at
     assert %NaiveDateTime{microsecond: {0, 0}} = default.updated_at
+    assert default.inserted_at == default.updated_at
     assert_received {:insert, _}
 
     # No change
