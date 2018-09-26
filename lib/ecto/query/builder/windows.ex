@@ -4,7 +4,7 @@ defmodule Ecto.Query.Builder.Windows do
   @moduledoc false
 
   alias Ecto.Query.Builder
-  alias Ecto.Query.Builder.OrderBy
+  alias Ecto.Query.Builder.{GroupBy, OrderBy}
 
   @doc """
   Escapes a window params.
@@ -24,11 +24,8 @@ defmodule Ecto.Query.Builder.Windows do
     error!(kw)
   end
 
-  # TODO: Test and allow field interpolation
   defp do_escape({:partition_by, fields}, params_acc, vars, env) do
-    {fields, params_acc} =
-      Enum.map_reduce(List.wrap(fields), params_acc, &Builder.escape(&1, :any, &2, vars, env))
-
+    {fields, params_acc} = GroupBy.escape(:partition_by, fields, params_acc, vars, env)
     {{:partition_by, fields}, params_acc}
   end
 

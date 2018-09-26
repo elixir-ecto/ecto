@@ -66,15 +66,15 @@ defmodule Ecto.Query.Builder do
   def escape(expr, type, params_acc, vars, env)
 
   # var.x - where var is bound
-  def escape({{:., _, [{var, _, context}, field]}, _, []}, _type, {params, acc}, vars, _env)
+  def escape({{:., _, [{var, _, context}, field]}, _, []}, _type, params_acc, vars, _env)
       when is_atom(var) and is_atom(context) and is_atom(field) do
-    {escape_field!(var, field, vars), {params, acc}}
+    {escape_field!(var, field, vars), params_acc}
   end
 
   # field macro
-  def escape({:field, _, [{var, _, context}, field]}, _type, {params, acc}, vars, _env)
+  def escape({:field, _, [{var, _, context}, field]}, _type, params_acc, vars, _env)
       when is_atom(var) and is_atom(context) do
-    {escape_field!(var, field, vars), {params, acc}}
+    {escape_field!(var, field, vars), params_acc}
   end
 
   # param interpolation
@@ -408,10 +408,10 @@ defmodule Ecto.Query.Builder do
     error! "`#{Macro.to_string(other)}` is not a valid query expression"
   end
 
-  defp escape_with_type(expr, type, params_take, vars, env) do
+  defp escape_with_type(expr, type, params_acc, vars, env) do
     type = validate_type!(type, vars)
-    {expr, params_take} = escape(expr, type, params_take, vars, env)
-    {{:{}, [], [:type, [], [expr, type]]}, params_take}
+    {expr, params_acc} = escape(expr, type, params_acc, vars, env)
+    {{:{}, [], [:type, [], [expr, type]]}, params_acc}
   end
 
   defp wrap_nil(params, {:{}, _, [:^, _, [ix]]}) do
@@ -501,10 +501,10 @@ defmodule Ecto.Query.Builder do
     expr
   end
 
-  defp escape_call({name, _, args}, type, params, vars, env) do
-    {args, params} = Enum.map_reduce(args, params, &escape(&1, type, &2, vars, env))
+  defp escape_call({name, _, args}, type, params_acc, vars, env) do
+    {args, params_acc} = Enum.map_reduce(args, params_acc, &escape(&1, type, &2, vars, env))
     expr = {:{}, [], [name, [], args]}
-    {expr, params}
+    {expr, params_acc}
   end
 
   defp escape_field!(var, field, vars) do
