@@ -1293,6 +1293,18 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert!(%Post{title: "1"}, [log: false])
   end
 
+  @tag :returning
+  test "update/2 and insert/2 on associations with returning" do
+    post = %Post{uuid: Ecto.UUID.generate(), title: "first", comments: [%Comment{}]}
+    {:ok, inserted} = TestRepo.insert(post, returning: [:uuid])
+
+    post =
+      Post.changeset(inserted, %{uuid: Ecto.UUID.generate(), title: "first"})
+      |> Ecto.Changeset.put_assoc(:comments, [%Comment{}])
+
+    {:ok, _updated} = TestRepo.update(post, returning: [:uuid])
+  end
+
   describe "upsert via insert" do
     @describetag :upsert
 
