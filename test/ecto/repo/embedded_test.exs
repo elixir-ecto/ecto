@@ -18,7 +18,7 @@ defmodule Ecto.Repo.EmbeddedTest do
     embedded_schema do
       field :x, :string
       embeds_one :sub_embed, SubEmbed, on_replace: :delete
-      timestamps()
+      timestamps(type: :naive_datetime_usec)
     end
   end
 
@@ -61,6 +61,7 @@ defmodule Ecto.Repo.EmbeddedTest do
     assert embed.id
     assert embed.x == "xyz"
     assert embed.inserted_at
+    assert embed.inserted_at == embed.updated_at
 
     changeset =
       %MySchema{}
@@ -71,6 +72,7 @@ defmodule Ecto.Repo.EmbeddedTest do
     assert embed.id
     assert embed.x == "xyz"
     assert embed.inserted_at
+    assert embed.inserted_at == embed.updated_at
   end
 
   test "handles embeds from struct on insert" do
@@ -79,12 +81,14 @@ defmodule Ecto.Repo.EmbeddedTest do
     assert embed.id
     assert embed.x == "xyz"
     assert embed.inserted_at
+    assert embed.inserted_at == embed.updated_at
 
     schema = TestRepo.insert!(%MySchema{embeds: [%MyEmbed{x: "xyz"}]})
     [embed] = schema.embeds
     assert embed.id
     assert embed.x == "xyz"
     assert embed.inserted_at
+    assert embed.inserted_at == embed.updated_at
   end
 
   test "handles invalid embeds from struct on insert" do
