@@ -105,7 +105,7 @@ defmodule Ecto.Adapters.Postgres do
   end
 
   # Support arrays in place of IN
-  @doc false
+  @impl true
   def dumpers({:embed, _} = type, _),  do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
   def dumpers({:map, _} = type, _),    do: [&Ecto.Adapters.SQL.dump_embed(type, &1)]
   def dumpers({:in, sub}, {:in, sub}), do: [{:array, sub}]
@@ -114,7 +114,7 @@ defmodule Ecto.Adapters.Postgres do
 
   ## Storage API
 
-  @doc false
+  @impl true
   def storage_up(opts) do
     database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
     encoding = opts[:encoding] || "UTF8"
@@ -140,7 +140,7 @@ defmodule Ecto.Adapters.Postgres do
   defp concat_if(content, nil, _fun),  do: content
   defp concat_if(content, value, fun), do: content <> " " <> fun.(value)
 
-  @doc false
+  @impl true
   def storage_down(opts) do
     database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
     command  = "DROP DATABASE \"#{database}\""
@@ -157,12 +157,12 @@ defmodule Ecto.Adapters.Postgres do
     end
   end
 
-  @doc false
+  @impl true
   def supports_ddl_transaction? do
     true
   end
 
-  @doc false
+  @impl true
   def structure_dump(default, config) do
     table = config[:migration_source] || "schema_migrations"
     with {:ok, versions} <- select_versions(table, config),
@@ -207,7 +207,7 @@ defmodule Ecto.Adapters.Postgres do
     {:ok, path}
   end
 
-  @doc false
+  @impl true
   def structure_load(default, config) do
     path = config[:dump_path] || Path.join(default, "structure.sql")
     args = ["--quiet", "--file", path, "-vON_ERROR_STOP=1",

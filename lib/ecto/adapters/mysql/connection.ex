@@ -6,6 +6,7 @@ if Code.ensure_loaded?(Mariaex) do
 
     ## Connection
 
+    @impl true
     def child_spec(opts) do
       opts
       |> Keyword.put_new(:datetime, :structs)
@@ -14,14 +15,17 @@ if Code.ensure_loaded?(Mariaex) do
 
     ## Query
 
+    @impl true
     def prepare_execute(conn, name, sql, params, opts) do
       Mariaex.prepare_execute(conn, name, sql, map_params(params), opts)
     end
 
+    @impl true
     def query(conn, sql, params, opts) do
       Mariaex.query(conn, sql, map_params(params), opts)
     end
 
+    @impl true
     def execute(conn, %{ref: ref} = query, params, opts) do
       case Mariaex.execute(conn, query, map_params(params), opts) do
         {:ok, %{ref: ^ref}, result} ->
@@ -35,6 +39,7 @@ if Code.ensure_loaded?(Mariaex) do
       end
     end
 
+    @impl true
     def stream(conn, sql, params, opts) do
       Mariaex.stream(conn, sql, params, opts)
     end
@@ -50,6 +55,7 @@ if Code.ensure_loaded?(Mariaex) do
       end
     end
 
+    @impl true
     def to_constraints(%Mariaex.Error{mariadb: %{code: 1062, message: message}}) do
       case :binary.split(message, " for key ") do
         [_, quoted] -> [unique: strip_quotes(quoted)]
@@ -76,6 +82,7 @@ if Code.ensure_loaded?(Mariaex) do
 
     alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr}
 
+    @impl true
     def all(query) do
       sources = create_names(query)
 
@@ -95,6 +102,7 @@ if Code.ensure_loaded?(Mariaex) do
       [select, from, join, where, group_by, having, window, combinations, order_by, limit, offset | lock]
     end
 
+    @impl true
     def update_all(query, prefix \\ nil) do
       %{from: %{source: source}, select: select} = query
 
@@ -118,6 +126,7 @@ if Code.ensure_loaded?(Mariaex) do
       [prefix, fields | where]
     end
 
+    @impl true
     def delete_all(%{select: nil} = query) do
       if query.select do
         error!(nil, ":select is not supported in delete_all by MySQL")
@@ -133,6 +142,7 @@ if Code.ensure_loaded?(Mariaex) do
       ["DELETE ", name, ".*", from, join | where]
     end
 
+    @impl true
     def insert(prefix, table, header, rows, on_conflict, []) do
       fields = intersperse_map(header, ?,, &quote_name/1)
       ["INSERT INTO ", quote_table(prefix, table), " (", fields, ") VALUES ",
@@ -175,6 +185,7 @@ if Code.ensure_loaded?(Mariaex) do
     defp insert_all_value(nil), do: "DEFAULT"
     defp insert_all_value(_),   do: '?'
 
+    @impl true
     def update(prefix, table, fields, filters, _returning) do
       fields = intersperse_map(fields, ", ", &[quote_name(&1), " = ?"])
       filters = intersperse_map(filters, " AND ", fn
@@ -187,6 +198,7 @@ if Code.ensure_loaded?(Mariaex) do
       ["UPDATE ", quote_table(prefix, table), " SET ", fields, " WHERE " | filters]
     end
 
+    @impl true
     def delete(prefix, table, filters, _returning) do
       filters = intersperse_map(filters, " AND ", fn
         {field, nil} ->
@@ -612,6 +624,7 @@ if Code.ensure_loaded?(Mariaex) do
 
     alias Ecto.Migration.{Table, Index, Reference, Constraint}
 
+    @impl true
     def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
       table_structure =
         case column_definitions(table, columns) ++ pk_definitions(columns, ", ") do
