@@ -1299,7 +1299,8 @@ defmodule Ecto.Integration.RepoTest do
     {:ok, inserted} = TestRepo.insert(post, returning: [:uuid])
 
     post =
-      Post.changeset(inserted, %{uuid: Ecto.UUID.generate(), title: "first"})
+      inserted
+      |> Ecto.Changeset.change(%{})
       |> Ecto.Changeset.put_assoc(:comments, [%Comment{}])
 
     {:ok, _updated} = TestRepo.update(post, returning: [:uuid])
@@ -1339,8 +1340,12 @@ defmodule Ecto.Integration.RepoTest do
       on_conflict = [set: [title: "second"]]
       post = %Post{uuid: Ecto.UUID.generate(),
                    title: "first", comments: [%Comment{}]}
-      {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:uuid], returning: [:uuid])
-      assert inserted.id
+      {:ok, _inserted} =
+        TestRepo.insert(post,
+          on_conflict: on_conflict,
+          conflict_target: [:uuid],
+          returning: [:uuid]
+        )
     end
 
     @tag :with_conflict_target
