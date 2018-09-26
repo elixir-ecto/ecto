@@ -227,9 +227,11 @@ defmodule Ecto.Repo.Schema do
           {:ok, values} ->
             values = extra ++ values
 
+            children_opts = Keyword.drop(opts, [:returning])
+
             changeset
             |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, schema_meta)
-            |> process_children(children, user_changeset, adapter, opts)
+            |> process_children(children, user_changeset, adapter, children_opts)
 
           {:error, _} = error ->
             error
@@ -310,9 +312,11 @@ defmodule Ecto.Repo.Schema do
 
           case apply(changeset, adapter, action, args) do
             {:ok, values} ->
+              children_opts = Keyword.drop(opts, [:returning])
+
               changeset
               |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, schema_meta)
-              |> process_children(children, user_changeset, adapter, opts)
+              |> process_children(children, user_changeset, adapter, children_opts)
 
             {:error, _} = error ->
               error
