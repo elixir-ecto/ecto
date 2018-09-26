@@ -7,12 +7,14 @@ if Code.ensure_loaded?(Postgrex) do
 
     ## Module and Options
 
+    @impl true
     def child_spec(opts) do
       opts
       |> Keyword.put_new(:port, @default_port)
       |> Postgrex.child_spec()
     end
 
+    @impl true
     def to_constraints(%Postgrex.Error{postgres: %{code: :unique_violation, constraint: constraint}}),
       do: [unique: constraint]
     def to_constraints(%Postgrex.Error{postgres: %{code: :foreign_key_violation, constraint: constraint}}),
@@ -23,6 +25,7 @@ if Code.ensure_loaded?(Postgrex) do
       do: [check: constraint]
 
     # Postgres 9.2 and earlier does not provide the constraint field
+    @impl true
     def to_constraints(%Postgrex.Error{postgres: %{code: :unique_violation, message: message}}) do
       case :binary.split(message, " unique constraint ") do
         [_, quoted] -> [unique: strip_quotes(quoted)]
@@ -62,14 +65,17 @@ if Code.ensure_loaded?(Postgrex) do
 
     ## Query
 
+    @impl true
     def prepare_execute(conn, name, sql, params, opts) do
       Postgrex.prepare_execute(conn, name, sql, params, opts)
     end
 
+    @impl true
     def query(conn, sql, params, opts) do
       Postgrex.query(conn, sql, params, opts)
     end
 
+    @impl true
     def execute(conn, %{ref: ref} = query, params, opts) do
       case Postgrex.execute(conn, query, params, opts) do
         {:ok, %{ref: ^ref}, result} ->
@@ -86,12 +92,14 @@ if Code.ensure_loaded?(Postgrex) do
       end
     end
 
+    @impl true
     def stream(conn, sql, params, opts) do
       Postgrex.stream(conn, sql, params, opts)
     end
 
     alias Ecto.Query.{BooleanExpr, JoinExpr, QueryExpr}
 
+    @impl true
     def all(query) do
       sources = create_names(query)
       {select_distinct, order_by_distinct} = distinct(query.distinct, sources, query)
@@ -111,6 +119,7 @@ if Code.ensure_loaded?(Postgrex) do
       [select, from, join, where, group_by, having, window, order_by, limit, offset | lock]
     end
 
+    @impl true
     def update_all(%{from: %{source: source}} = query, prefix \\ nil) do
       sources = create_names(query)
       {from, name} = get_source(query, sources, 0, source)
@@ -123,6 +132,7 @@ if Code.ensure_loaded?(Postgrex) do
       [prefix, fields, join, where | returning(query, sources)]
     end
 
+    @impl true
     def delete_all(%{from: from} = query) do
       sources = create_names(query)
       {from, name} = get_source(query, sources, 0, from)
@@ -133,6 +143,7 @@ if Code.ensure_loaded?(Postgrex) do
       ["DELETE FROM ", from, " AS ", name, join, where | returning(query, sources)]
     end
 
+    @impl true
     def insert(prefix, table, header, rows, on_conflict, returning) do
       values =
         if header == [] do
@@ -196,6 +207,7 @@ if Code.ensure_loaded?(Postgrex) do
       end)
     end
 
+    @impl true
     def update(prefix, table, fields, filters, returning) do
       {fields, count} = intersperse_reduce(fields, ", ", 1, fn field, acc ->
         {[quote_name(field), " = $" | Integer.to_string(acc)], acc + 1}
@@ -213,6 +225,7 @@ if Code.ensure_loaded?(Postgrex) do
        fields, " WHERE ", filters | returning(returning)]
     end
 
+    @impl true
     def delete(prefix, table, filters, returning) do
       {filters, _} = intersperse_reduce(filters, " AND ", 1, fn
         {field, nil}, acc ->
@@ -654,6 +667,7 @@ if Code.ensure_loaded?(Postgrex) do
 
     @drops [:drop, :drop_if_exists]
 
+    @impl true
     def execute_ddl({command, %Table{} = table, columns}) when command in [:create, :create_if_not_exists] do
       table_name = quote_table(table.prefix, table.name)
       query = ["CREATE TABLE ",

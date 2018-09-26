@@ -117,7 +117,7 @@ defmodule Ecto.Adapters.MySQL do
 
   # TODO: Remove json encoding/decoding when maps are supported in the adapter
 
-  @doc false
+  @impl true
   def loaders({:embed, _} = type, _), do: [&json_decode/1, &Ecto.Adapters.SQL.load_embed(type, &1)]
   def loaders({:map, _}, type),       do: [&json_decode/1, &Ecto.Adapters.SQL.load_embed(type, &1)]
   def loaders(:map, type),            do: [&json_decode/1, type]
@@ -142,7 +142,7 @@ defmodule Ecto.Adapters.MySQL do
 
   ## Storage API
 
-  @doc false
+  @impl true
   def storage_up(opts) do
     database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
     charset  = opts[:charset] || "utf8"
@@ -167,7 +167,7 @@ defmodule Ecto.Adapters.MySQL do
   defp concat_if(content, nil, _fun),  do: content
   defp concat_if(content, value, fun), do: content <> " " <> fun.(value)
 
-  @doc false
+  @impl true
   def storage_down(opts) do
     database = Keyword.fetch!(opts, :database) || raise ":database is nil in repository configuration"
     command = "DROP DATABASE `#{database}`"
@@ -186,12 +186,12 @@ defmodule Ecto.Adapters.MySQL do
     end
   end
 
-  @doc false
+  @impl true
   def supports_ddl_transaction? do
     false
   end
 
-  @doc false
+  @impl true
   def insert(adapter_meta, schema_meta, params, on_conflict, returning, opts) do
     %{source: source, prefix: prefix} = schema_meta
     {_, query_params, _} = on_conflict
@@ -226,7 +226,7 @@ defmodule Ecto.Adapters.MySQL do
   defp last_insert_id(_key, 0), do: []
   defp last_insert_id(key, last_insert_id), do: [{key, last_insert_id}]
 
-  @doc false
+  @impl true
   def structure_dump(default, config) do
     table = config[:migration_source] || "schema_migrations"
     path  = config[:dump_path] || Path.join(default, "structure.sql")
@@ -267,7 +267,7 @@ defmodule Ecto.Adapters.MySQL do
       ~s[;\n\n]}
   end
 
-  @doc false
+  @impl true
   def structure_load(default, config) do
     path = config[:dump_path] || Path.join(default, "structure.sql")
 
