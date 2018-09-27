@@ -24,12 +24,12 @@ defmodule Ecto.Integration.RepoTest do
     assert Ecto.Repo.Queryable.all(pid, Post, []) == []
   end
 
-  test "fetch empty" do
+  test "all empty" do
     assert TestRepo.all(Post) == []
     assert TestRepo.all(from p in Post) == []
   end
 
-  test "fetch with in" do
+  test "all with in" do
     TestRepo.insert!(%Post{title: "hello"})
 
     # Works without the query cache.
@@ -52,7 +52,7 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
-  test "fetch using named from" do
+  test "all using named from" do
     TestRepo.insert!(%Post{title: "hello"})
 
     query =
@@ -62,7 +62,7 @@ defmodule Ecto.Integration.RepoTest do
     assert [_] = TestRepo.all query
   end
 
-  test "fetch without schema" do
+  test "all without schema" do
     %Post{} = TestRepo.insert!(%Post{title: "title1"})
     %Post{} = TestRepo.insert!(%Post{title: "title2"})
 
@@ -73,8 +73,20 @@ defmodule Ecto.Integration.RepoTest do
       TestRepo.all(from(p in "posts", where: p.title == "title1", select: p.id))
   end
 
+  test "all shares metadata" do
+    TestRepo.insert!(%Post{title: "title1"})
+    TestRepo.insert!(%Post{title: "title2"})
+
+    [post1, post2] = TestRepo.all(Post)
+    assert :erts_debug.same(post1.__meta__, post2.__meta__)
+
+    [new_post1, new_post2] = TestRepo.all(Post)
+    assert :erts_debug.same(post1.__meta__, new_post1.__meta__)
+    assert :erts_debug.same(post2.__meta__, new_post2.__meta__)
+  end
+
   @tag :invalid_prefix
-  test "fetch with invalid prefix" do
+  test "all with invalid prefix" do
     assert catch_error(TestRepo.all("posts", prefix: "oops"))
   end
 
