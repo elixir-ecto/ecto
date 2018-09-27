@@ -8,15 +8,15 @@ To run the benchmarks tests just type in the console:
 
 ```
 # POSIX-compatible shells
-$ BENCHMARKS_OUTPUT_PATH=bench/results MIX_ENV=bench mix run bench/bench_helper.exs
+$ MIX_ENV=bench mix run bench/bench_helper.exs
 ```
 
 ```
 # other shells
-$ env BENCHMARKS_OUTPUT_PATH=bench/results MIX_ENV=bench mix run bench/bench_helper.exs
+$ env MIX_ENV=bench mix run bench/bench_helper.exs
 ```
 
-Benchmarks are inside the `benchmarks/` directory and are divided into two
+Benchmarks are inside the `scripts/` directory and are divided into two
 categories:
 
 * `micro benchmarks`: Operations that don't actually interface with the database,
@@ -24,3 +24,6 @@ but might need it up and running to start the Ecto agents and processes.
 
 * `macro benchmarks`: Operations that are actually run in the database. This are
 more likely to integration tests.
+
+You can also run a benchmark individually by giving the path to the benchmark
+script instead of `bench/bench_helper.exs`.

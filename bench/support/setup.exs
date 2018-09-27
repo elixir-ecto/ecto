@@ -1,6 +1,6 @@
 Code.require_file("repo.exs", __DIR__)
 Code.require_file("migrations.exs", __DIR__)
-Code.require_file("models.exs", __DIR__)
+Code.require_file("schemas.exs", __DIR__)
 
 alias Ecto.Bench.{PgRepo, MySQLRepo, CreateUser}
 

@@ -1,14 +1,17 @@
+pg_bench_url = System.get_env("PG_URL") || "postgres:postgres@localhost"
+mysql_bench_url = System.get_env("MYSQL_URL") || "root@localhost"
+
 Application.put_env(
   :ecto,
   Ecto.Bench.PgRepo,
-  url: Application.get_env(:ecto, :pg_bench_url) <> "/ecto_test",
+  url: "ecto://" <> pg_bench_url <> "/ecto_test",
   adapter: Ecto.Adapters.Postgres
 )
 
 Application.put_env(
   :ecto,
   Ecto.Bench.MySQLRepo,
-  url: Application.get_env(:ecto, :mysql_bench_url) <> "/ecto_test",
+  url: "ecto://" <> mysql_bench_url <> "/ecto_test",
   adapter: Ecto.Adapters.MySQL
 )
 

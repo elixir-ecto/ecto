@@ -18,6 +18,8 @@
 # Different query objects (select, delete, update) to be translated into pure SQL
 # strings.
 
+Code.require_file("../../support/setup.exs", __DIR__)
+
 import Ecto.Query
 
 alias Ecto.Bench.{User, Game}
@@ -51,7 +53,7 @@ jobs = %{
   "MySQL Query Builder" => fn {type, query} -> Ecto.Bench.MySQLRepo.to_sql(type, query) end
 }
 
-path = System.get_env("BENCHMARKS_OUTPUT_PATH") || raise "I DON'T KNOW WHERE TO WRITE!!!"
+path = System.get_env("BENCHMARKS_OUTPUT_PATH") || "bench/results"
 file = Path.join(path, "to_sql.json")
 
 Benchee.run(

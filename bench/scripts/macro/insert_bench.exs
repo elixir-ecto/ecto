@@ -15,6 +15,8 @@
 # ----------------------------Parameters(change)-------------------------------
 # Different inputs to be inserted, aka Changesets and Structs
 
+Code.require_file("../../support/setup.exs", __DIR__)
+
 alias Ecto.Bench.User
 
 inputs = %{
@@ -27,7 +29,7 @@ jobs = %{
   "MySQL Insert" => fn entry -> Ecto.Bench.MySQLRepo.insert!(entry) end
 }
 
-path = System.get_env("BENCHMARKS_OUTPUT_PATH") || raise "I DON'T KNOW WHERE TO WRITE!!!"
+path = System.get_env("BENCHMARKS_OUTPUT_PATH") || "bench/results"
 file = Path.join(path, "insert.json")
 
 Benchee.run(

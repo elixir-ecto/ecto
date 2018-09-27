@@ -17,6 +17,8 @@
 # such as UUID, Date and Time fetched from the database and needs to be
 # loaded into Ecto structures.
 
+Code.require_file("../../support/setup.exs", __DIR__)
+
 alias Ecto.Bench.User
 
 inputs = %{
@@ -42,12 +44,12 @@ jobs = %{
   "MySQL Loader" => fn data -> Enum.map(data, &Ecto.Bench.MySQLRepo.load(User, &1)) end
 }
 
-path = System.get_env("BENCHMARKS_OUTPUT_PATH") || raise "I DON'T KNOW WHERE TO WRITE!!!"
+path = System.get_env("BENCHMARKS_OUTPUT_PATH") || "bench/results"
 file = Path.join(path, "load.json")
 
 Benchee.run(
   jobs,
   inputs: inputs,
-  formatters: [Benchee.Formatters.JSON],
+  formatters: [Benchee.Formatters.JSON, Benchee.Formatters.Console],
   formatter_options: [json: [file: file]]
 )
