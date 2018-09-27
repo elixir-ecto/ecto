@@ -32,7 +32,7 @@ defmodule Ecto.MixProject do
 
   def application do
     [
-      applications: [:decimal, :logger, :crypto],
+      extra_applications: [:logger, :crypto],
       env: [postgres_map_type: "jsonb"],
       mod: {Ecto.Application, []}
     ]
