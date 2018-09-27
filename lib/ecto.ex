@@ -558,36 +558,45 @@ defmodule Ecto do
   @spec put_meta(Ecto.Schema.schema, meta) :: Ecto.Schema.schema
         when meta: [source: Ecto.Schema.source, prefix: Ecto.Schema.prefix,
                     context: Ecto.Schema.Metadata.context, state: Ecto.Schema.Metadata.state]
-  def put_meta(struct, opts) do
-    update_in struct.__meta__, &update_meta(opts, &1)
+  def put_meta(%{__meta__: meta} = struct, opts) do
+    case put_or_noop_meta(opts, meta, false) do
+      :noop -> struct
+      meta -> %{struct | __meta__: meta}
+    end
   end
 
-  defp update_meta([{:state, state}|t], meta) do
+  defp put_or_noop_meta([{key, value}|t], meta, updated?) do
+    case meta do
+      %{^key => ^value} -> put_or_noop_meta(t, meta, updated?)
+      _ -> put_or_noop_meta(t, put_meta(meta, key, value), true)
+    end
+  end
+
+  defp put_or_noop_meta([], meta, true), do: meta
+  defp put_or_noop_meta([], _meta, false), do: :noop
+
+  defp put_meta(meta, :state, state) do
     if state in [:built, :loaded, :deleted] do
-      update_meta t, %{meta | state: state}
+      %{meta | state: state}
     else
       raise ArgumentError, "invalid state #{inspect state}"
     end
   end
 
-  defp update_meta([{:source, source} | t], meta) do
-    update_meta t, %{meta | source: source}
+  defp put_meta(meta, :source, source) do
+    %{meta | source: source}
   end
 
-  defp update_meta([{:prefix, prefix} | t], meta) do
-    update_meta t, %{meta | prefix: prefix}
+  defp put_meta(meta, :prefix, prefix) do
+    %{meta | prefix: prefix}
   end
 
-  defp update_meta([{:context, context} | t], meta) do
-    update_meta t, %{meta | context: context}
+  defp put_meta(meta, :context, context) do
+    %{meta | context: context}
   end
 
-  defp update_meta([], meta) do
-    meta
-  end
-
-  defp update_meta([{k, _}], _meta) do
-    raise ArgumentError, "unknown meta key #{inspect k}"
+  defp put_meta(_meta, key, _value) do
+    raise ArgumentError, "unknown meta key #{inspect key}"
   end
 
   defp assert_struct!(module, %{__struct__: struct}) do

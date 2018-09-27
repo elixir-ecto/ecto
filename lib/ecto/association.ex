@@ -308,6 +308,10 @@ defmodule Ecto.Association do
   """
   def merge_source(schema, query)
 
+  def merge_source(%{__meta__: %{source: source}} = struct, {source, _}) do
+    struct
+  end
+
   def merge_source(struct, {source, _}) do
     Ecto.put_meta(struct, source: source)
   end
@@ -317,14 +321,17 @@ defmodule Ecto.Association do
   end
 
   @doc false
-  def update_parent_prefix(changeset, parent) do
-    case parent do
-      %{__meta__: %{prefix: prefix}} ->
-        update_in changeset.data, &Ecto.put_meta(&1, prefix: prefix)
-      _ ->
-        changeset
-    end
-  end
+  def update_parent_prefix(
+        %{data: %{__meta__: %{prefix: prefix}}} = changeset,
+        %{__meta__: %{prefix: prefix}}
+      ),
+      do: changeset
+
+  def update_parent_prefix(changeset, %{__meta__: %{prefix: prefix}}),
+    do: update_in(changeset.data, &Ecto.put_meta(&1, prefix: prefix))
+
+  def update_parent_prefix(changeset, _),
+    do: changeset
 
   @doc """
   Performs the repository action in the related changeset,
