@@ -195,7 +195,7 @@ defmodule Ecto.ChangeError do
       when type in [:time, :naive_datetime, :utc_datetime] and microsecond != {0, 0} do
 
     common_message(exception) <>
-      "\n\nMicroseconds must be empty. Use `#{inspect schema}.truncate/2` (available in Elixir v1.6+) to remove microseconds."
+      "\n\nMicroseconds must be empty. Use `#{inspect schema}.truncate(#{type}, :second)` (available in Elixir v1.6+) to remove microseconds."
   end
 
   def message(%{type: type, value: %{microsecond: {_, precision}}} = exception)

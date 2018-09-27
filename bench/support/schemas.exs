@@ -34,9 +34,9 @@ defmodule Ecto.Bench.User do
       name: "Lorem ipsum dolor sit amet, consectetur adipiscing elit.",
       email: "foobar@email.com",
       password: "mypass",
-      time_attr: Time.utc_now(),
+      time_attr: Time.utc_now() |> Time.truncate(:second),
       date_attr: Date.utc_today(),
-      naive_datetime_attr: NaiveDateTime.utc_now(),
+      naive_datetime_attr: NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second),
       uuid: Ecto.UUID.generate()
     }
   end
