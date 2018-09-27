@@ -215,7 +215,7 @@ defmodule Ecto.Adapters.MySQL do
     end
   end
 
-  defp primary_key!(%{autogenerate_id: {key, _type}}, [key]), do: key
+  defp primary_key!(%{autogenerate_id: {_, key, _type}}, [key]), do: key
   defp primary_key!(_, []), do: nil
   defp primary_key!(%{schema: schema}, returning) do
     raise ArgumentError, "MySQL does not support :read_after_writes in schemas for non-primary keys. " <>

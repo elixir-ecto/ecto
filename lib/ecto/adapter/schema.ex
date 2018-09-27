@@ -8,13 +8,13 @@ defmodule Ecto.Adapter.Schema do
 
   @typedoc "Ecto.Schema metadata fields"
   @type schema_meta :: %{
-          source: source,
-          schema: atom,
+          autogenerate_id: {schema_field :: atom, source_field :: atom, Ecto.Type.t()},
           context: term,
-          autogenerate_id: {atom, :id | :binary_id}
+          prefix: binary | nil,
+          schema: atom,
+          source: binary
         }
 
-  @type source :: {prefix :: binary | nil, table :: binary}
   @type fields :: Keyword.t()
   @type filters :: Keyword.t()
   @type constraints :: Keyword.t()

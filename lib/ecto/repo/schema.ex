@@ -114,7 +114,7 @@ defmodule Ecto.Repo.Schema do
         {fields, header}
 
       false ->
-        if value = adapter.autogenerate(type) do
+        if value = Ecto.Type.adapter_autogenerate(adapter, type) do
           {[{source, value} | fields], Map.put(header, source, true)}
         else
           {fields, header}
@@ -497,7 +497,7 @@ defmodule Ecto.Repo.Schema do
 
   defp metadata(schema, prefix, source, autogen_id, context, opts) do
     %{
-      autogenerate_id: case autogen_id do nil -> nil; {_, source, type} -> {source, type} end,
+      autogenerate_id: autogen_id,
       context: context,
       schema: schema,
       source: source,
