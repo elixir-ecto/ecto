@@ -2,16 +2,15 @@ defmodule Ecto.MixProject do
   use Mix.Project
 
   @version "3.0.0-dev"
-  @adapters [:pg, :mysql]
+  @adapters ~w(pg mysql)
 
   def project do
     [app: :ecto,
      version: @version,
      elixir: "~> 1.4",
      deps: deps(),
-     build_per_environment: false,
-     consolidate_protocols: false,
-     test_paths: test_paths(Mix.env),
+     consolidate_protocols: Mix.env() != :test,
+     test_paths: test_paths(System.get_env("ECTO_ADAPTER")),
      xref: [exclude: [Mariaex, Ecto.Adapters.MySQL.Connection,
                       Postgrex, Ecto.Adapters.Postgres.Connection,
                       DBConnection, DBConnection.Ownership]],
@@ -19,7 +18,7 @@ defmodule Ecto.MixProject do
      # Custom testing
      aliases: ["test.all": ["test", "test.adapters"],
                "test.adapters": &test_adapters/1],
-     preferred_cli_env: ["test.all": :test],
+     preferred_cli_env: ["test.all": :test, "test.adapters": :test],
 
      # Hex
      description: "A database wrapper and language integrated query for Elixir",
@@ -32,7 +31,7 @@ defmodule Ecto.MixProject do
 
   def application do
     [
-      applications: [:decimal, :logger, :crypto],
+      extra_applications: [:logger, :crypto],
       env: [postgres_map_type: "jsonb"],
       mod: {Ecto.Application, []}
     ]
@@ -75,16 +74,16 @@ defmodule Ecto.MixProject do
   end
 
   defp test_adapters(args) do
-    for env <- @adapters, do: env_run(env, args)
+    for adapter <- @adapters, do: env_run(adapter, args)
   end
 
-  defp env_run(env, args) do
+  defp env_run(adapter, args) do
     args = if IO.ANSI.enabled?, do: ["--color"|args], else: ["--no-color"|args]
 
-    IO.puts "==> Running tests for MIX_ENV=#{env} mix test"
+    IO.puts "==> Running tests for ECTO_ADAPTER=#{adapter} mix test"
     {_, res} = System.cmd "mix", ["test"|args],
                           into: IO.binstream(:stdio, :line),
-                          env: [{"MIX_ENV", to_string(env)}]
+                          env: [{"ECTO_ADAPTER", adapter}]
 
     if res > 0 do
       System.at_exit(fn _ -> exit({:shutdown, 1}) end)

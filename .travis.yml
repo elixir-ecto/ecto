@@ -30,10 +30,10 @@ env:
   global:
     - PGVERSION=9.6
   matrix:
-    - MIX_ENV=test
-    - MIX_ENV=pg PGVERSION=9.2
-    - MIX_ENV=pg
-    - MIX_ENV=mysql
+    - ECTO_ADAPTER=none
+    - ECTO_ADAPTER=pg PGVERSION=9.2
+    - ECTO_ADAPTER=pg
+    - ECTO_ADAPTER=mysql
 install:
   - mix local.hex --force
   - mix local.rebar --force
