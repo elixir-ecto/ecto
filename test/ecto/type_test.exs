@@ -23,15 +23,9 @@ defmodule Ecto.TypeTest do
 
   defmodule PrefixedID do
     @behaviour Ecto.Type
-
     def type(), do: :binary_id
-
     def cast(id), do: {:ok, "foo-" <> id}
-
-    def load(uuid) do
-      {:ok, "foo-" <> uuid}
-    end
-
+    def load(uuid), do: {:ok, "foo-" <> uuid}
     def dump("foo-" <> uuid), do: {:ok, uuid}
     def dump(_uuid), do: :error
   end
