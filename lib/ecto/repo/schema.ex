@@ -69,9 +69,10 @@ defmodule Ecto.Repo.Schema do
 
   defp postprocess(rows, types, adapter, schema, %{source: source, prefix: prefix}) do
     struct = schema.__struct__()
+
     for row <- rows do
-      Ecto.Schema.__safe_load__(struct, types, row, prefix, source,
-                                &Ecto.Type.adapter_load(adapter, &1, &2))
+      {loaded, _} = Ecto.Schema.__adapter_load__(struct, types, row, adapter, prefix, source, false)
+      loaded
     end
   end
 

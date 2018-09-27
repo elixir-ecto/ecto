@@ -739,8 +739,11 @@ defmodule Ecto.Type do
   ## Adapter related
 
   @doc false
-  def adapter_load(_adapter, type, nil) do
-    load(type, nil)
+  def adapter_load(_adapter, {:embed, embed}, nil) do
+    load_embed(embed, nil, &load/2)
+  end
+  def adapter_load(_adapter, _type, nil) do
+    {:ok, nil}
   end
   def adapter_load(adapter, type, value) do
     if of_base_type?(type, value) do

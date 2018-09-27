@@ -1822,24 +1822,33 @@ defmodule Ecto.Schema do
   # Loads data into struct by assumes fields are properly
   # named and belongs to the struct. Types and values are
   # zipped together in one pass as they are loaded.
-  def __safe_load__(struct, types, values, prefix, source, loader) do
-    zipped = safe_load_zip(types, values, struct, loader)
+  def __adapter_load__(struct, types, values, adapter, prefix, source, all_nil?) do
+    case adapter_load_zip(types, values, [], all_nil?, struct, adapter) do
+      {nil, rest} ->
+        {nil, rest}
 
-    case Map.merge(struct, Map.new(zipped)) do
-      %{__meta__: %Metadata{} = metadata} = struct ->
-        metadata = %{metadata | state: :loaded, source: source, prefix: prefix}
-        Map.put(struct, :__meta__, metadata)
-      map ->
-        map
+      {zipped, rest} ->
+        case Map.merge(struct, zipped) do
+          %{__meta__: %Metadata{} = metadata} = struct ->
+            metadata = %{metadata | state: :loaded, source: source, prefix: prefix}
+            {Map.put(struct, :__meta__, metadata), rest}
+
+          map ->
+            {map, rest}
+        end
     end
   end
 
-  defp safe_load_zip([{field, type} | fields], [value | values], struct, loader) do
-    [{field, load!(struct, field, type, value, loader)} |
-     safe_load_zip(fields, values, struct, loader)]
+  defp adapter_load_zip([{field, type} | types], [value | values], acc, all_nil?, struct, adapter) do
+    all_nil? = all_nil? and value == nil
+    value = adapter_load!(struct, field, type, value, adapter)
+    adapter_load_zip(types, values, [{field, value} | acc], all_nil?, struct, adapter)
   end
-  defp safe_load_zip([], [], _struct, _loader) do
-    []
+  defp adapter_load_zip([], values, _acc, true, _struct, _adapter) do
+    {nil, values}
+  end
+  defp adapter_load_zip([], values, acc, false, _struct, _adapter) do
+    {Map.new(acc), values}
   end
 
   @doc false
@@ -1882,14 +1891,23 @@ defmodule Ecto.Schema do
     end
   end
 
+  defp adapter_load!(struct, field, type, value, adapter) do
+    case Ecto.Type.adapter_load(adapter, type, value) do
+      {:ok, value} -> value
+      :error -> bad_load!(field, type, value, struct)
+    end
+  end
+
   defp load!(struct, field, type, value, loader) do
     case loader.(type, value) do
-      {:ok, value} ->
-        value
-      :error ->
-        raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type} " <>
-                             "for field `#{field}`#{error_data(struct)}"
+      {:ok, value} -> value
+      :error -> bad_load!(field, type, value, struct)
     end
+  end
+
+  defp bad_load!(field, type, value, struct) do
+    raise ArgumentError, "cannot load `#{inspect value}` as type #{inspect type} " <>
+                             "for field `#{field}`#{error_data(struct)}"
   end
 
   defp error_data(%{__struct__: atom}) do

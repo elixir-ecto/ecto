@@ -307,27 +307,8 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp process_source({source, schema}, types, row, all_nil?, prefix, adapter) do
-    case split_values(types, row, [], all_nil?) do
-      {nil, row} ->
-        {nil, row}
-      {values, row} ->
-        struct = if schema, do: schema.__struct__(), else: %{}
-        loader = &Ecto.Type.adapter_load(adapter, &1, &2)
-        {Ecto.Schema.__safe_load__(struct, types, values, prefix, source, loader), row}
-    end
-  end
-
-  defp split_values([_ | types], [nil | values], acc, all_nil?) do
-    split_values(types, values, [nil | acc], all_nil?)
-  end
-  defp split_values([_ | types], [value | values], acc, _all_nil?) do
-    split_values(types, values, [value | acc], false)
-  end
-  defp split_values([], values, _acc, true) do
-    {nil, values}
-  end
-  defp split_values([], values, acc, false) do
-    {Enum.reverse(acc), values}
+    struct = if schema, do: schema.__struct__(), else: %{}
+    Ecto.Schema.__adapter_load__(struct, types, row, adapter, prefix, source, all_nil?)
   end
 
   defp process_args(args, row, from, adapter) do
