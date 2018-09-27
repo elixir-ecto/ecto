@@ -186,9 +186,11 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  defp preprocessor({_, {:source, source_schema, prefix, fields}}, preprocess, adapter) do
+  defp preprocessor({_, {:source, {source, schema}, prefix, types}}, preprocess, adapter) do
+    struct = Ecto.Schema.Loader.load_struct(schema, prefix, source)
+
     fn row ->
-      {entry, rest} = process_source(source_schema, fields, row, false, prefix, adapter)
+      {entry, rest} = Ecto.Schema.Loader.adapter_load(struct, types, row, false, adapter)
       preprocess(rest, preprocess, entry, adapter)
     end
   end
@@ -229,8 +231,9 @@ defmodule Ecto.Repo.Queryable do
   defp process(row, {:source, :from}, from, _adapter) do
     {from, row}
   end
-  defp process(row, {:source, source_schema, prefix, fields}, _from, adapter) do
-    process_source(source_schema, fields, row, true, prefix, adapter)
+  defp process(row, {:source, {source, schema}, prefix, types}, _from, adapter) do
+    struct = Ecto.Schema.Loader.load_struct(schema, prefix, source)
+    Ecto.Schema.Loader.adapter_load(struct, types, row, true, adapter)
   end
   defp process(row, {:merge, left, right}, from, adapter) do
     {left, row} = process(row, left, from, adapter)
@@ -304,11 +307,6 @@ defmodule Ecto.Repo.Queryable do
     {args, row} = process_kv(args, row, from, adapter)
     data = Enum.reduce(args, data, fn {key, value}, acc -> %{acc | key => value} end)
     {data, row}
-  end
-
-  defp process_source({source, schema}, types, row, all_nil?, prefix, adapter) do
-    struct = if schema, do: schema.__struct__(), else: %{}
-    Ecto.Schema.__adapter_load__(struct, types, row, adapter, prefix, source, all_nil?)
   end
 
   defp process_args(args, row, from, adapter) do

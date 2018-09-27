@@ -565,7 +565,7 @@ defmodule Ecto.Type do
   end
 
   defp load_embed(_field, schema, value, loader) when is_map(value) do
-    Ecto.Schema.__unsafe_load__(schema, value, loader)
+    Ecto.Schema.Loader.unsafe_load(schema, value, loader)
   end
 
   defp load_embed(field, _schema, value, _fun) do

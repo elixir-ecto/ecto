@@ -67,11 +67,11 @@ defmodule Ecto.Repo.Schema do
     for row <- rows, do: Map.new(Enum.zip(fields, row))
   end
 
-  defp postprocess(rows, types, adapter, schema, %{source: source, prefix: prefix}) do
-    struct = schema.__struct__()
+  defp postprocess(rows, types, adapter, schema, %{prefix: prefix, source: source}) do
+    struct = Ecto.Schema.Loader.load_struct(schema, prefix, source)
 
     for row <- rows do
-      {loaded, _} = Ecto.Schema.__adapter_load__(struct, types, row, adapter, prefix, source, false)
+      {loaded, _} = Ecto.Schema.Loader.adapter_load(struct, types, row, false, adapter)
       loaded
     end
   end
@@ -430,9 +430,9 @@ defmodule Ecto.Repo.Schema do
   defp do_load(schema, {fields, values}, loader) when is_list(fields) and is_list(values),
     do: do_load(schema, Enum.zip(fields, values), loader)
   defp do_load(schema, data, loader) when is_atom(schema),
-    do: Ecto.Schema.__unsafe_load__(schema, data, loader)
+    do: Ecto.Schema.Loader.unsafe_load(schema, data, loader)
   defp do_load(types, data, loader) when is_map(types),
-    do: Ecto.Schema.__unsafe_load__(%{}, types, data, loader)
+    do: Ecto.Schema.Loader.unsafe_load(%{}, types, data, loader)
 
   ## Helpers
 
