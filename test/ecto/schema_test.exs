@@ -125,7 +125,7 @@ defmodule Ecto.SchemaTest do
 
   test "custom schema attributes" do
     assert %CustomSchema{perm: "abc"}.perm == "abc"
-    assert CustomSchema.__schema__(:autogenerate_id) == {:perm, :PERM, :id}
+    assert CustomSchema.__schema__(:autogenerate_id) == {:perm, :PERM, Custom.Permalink}
     assert CustomSchema.__schema__(:type, :comment_id) == :string
   end
 

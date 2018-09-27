@@ -37,7 +37,7 @@ defmodule Ecto.TestAdapter do
 
   def autogenerate(:id), do: nil
   def autogenerate(:embed_id), do: Ecto.UUID.autogenerate
-  def autogenerate(:binary_id), do: Ecto.UUID.autogenerate
+  def autogenerate(:binary_id), do: Ecto.UUID.bingenerate
 
   ## Queryable
 

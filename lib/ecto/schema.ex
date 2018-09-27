@@ -2102,7 +2102,7 @@ defmodule Ecto.Schema do
 
   defp autogenerate_id(type) do
     id = if Ecto.Type.primitive?(type), do: type, else: type.type
-    if id in [:id, :binary_id], do: id, else: nil
+    if id in [:id, :binary_id], do: type, else: nil
   end
 
   defp expand_alias({:__aliases__, _, _} = ast, env),

@@ -1,6 +1,8 @@
 defmodule Ecto.TypeTest do
   use ExUnit.Case, async: true
 
+  alias Ecto.TestRepo
+
   defmodule Custom do
     @behaviour Ecto.Type
     def type,      do: :custom
@@ -19,6 +21,16 @@ defmodule Ecto.TypeTest do
     def cast(_),   do: {:ok, :cast}
   end
 
+  defmodule PrefixedID do
+    @behaviour Ecto.Type
+    def type(), do: :binary_id
+    def cast("foo-" <> _ = id), do: {:ok, id}
+    def cast(id), do: {:ok, "foo-" <> id}
+    def load(uuid), do: {:ok, "foo-" <> uuid}
+    def dump("foo-" <> uuid), do: {:ok, uuid}
+    def dump(_uuid), do: :error
+  end
+
   defmodule Schema do
     use Ecto.Schema
 
@@ -31,6 +43,14 @@ defmodule Ecto.TypeTest do
 
     def changeset(params, schema) do
       Ecto.Changeset.cast(schema, params, ~w(a))
+    end
+  end
+
+  defmodule PrefixedIDSchema do
+    use Ecto.Schema
+
+    @primary_key {:id, PrefixedID, autogenerate: true}
+    schema "" do
     end
   end
 
@@ -773,6 +793,21 @@ defmodule Ecto.TypeTest do
       assert_raise ArgumentError, ~r"cannot use :foo as Ecto.Type", fn ->
         Ecto.Type.equal?(:foo, 1, 1.0)
       end
+    end
+  end
+
+  describe "custom type as primary key" do
+    test "autogenerates value" do
+      assert {:ok, inserted} = TestRepo.insert(%PrefixedIDSchema{})
+      assert "foo-" <> _uuid = inserted.id
+    end
+
+    test "custom value" do
+      id = "a92f6d0e-52ef-4df8-808b-32d8ef037d48"
+      changeset = Ecto.Changeset.cast(%PrefixedIDSchema{}, %{id: id}, [:id])
+
+      assert {:ok, inserted} = TestRepo.insert(changeset)
+      assert inserted.id == "foo-" <> id
     end
   end
 
