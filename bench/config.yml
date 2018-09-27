@@ -1,0 +1,13 @@
+elixir: 1.5.2
+erlang: 20.1.2
+environment:
+  PG_URL: postgres:postgres@localhost
+  MYSQL_URL: root@localhost
+deps:
+  docker:
+    - container_name: postgres
+      image: postgres:9.6.6-alpine
+    - container_name: mysql
+      image: mysql:5.7.20
+      environment:
+        MYSQL_ALLOW_EMPTY_PASSWORD: "true"
