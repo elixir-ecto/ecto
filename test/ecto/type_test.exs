@@ -24,6 +24,7 @@ defmodule Ecto.TypeTest do
   defmodule PrefixedID do
     @behaviour Ecto.Type
     def type(), do: :binary_id
+    def cast("foo-" <> _ = id), do: {:ok, id}
     def cast(id), do: {:ok, "foo-" <> id}
     def load(uuid), do: {:ok, "foo-" <> uuid}
     def dump("foo-" <> uuid), do: {:ok, uuid}
@@ -45,11 +46,10 @@ defmodule Ecto.TypeTest do
     end
   end
 
-  defmodule PrefixedSchema do
+  defmodule PrefixedIDSchema do
     use Ecto.Schema
 
     @primary_key {:id, PrefixedID, autogenerate: true}
-
     schema "" do
     end
   end
@@ -796,9 +796,19 @@ defmodule Ecto.TypeTest do
     end
   end
 
-  test "#2615 case" do
-    inserted = %PrefixedSchema{} |> TestRepo.insert!()
-    assert "foo" <> _uuid = inserted.id
+  describe "custom type as primary key" do
+    test "autogenerates value" do
+      assert {:ok, inserted} = TestRepo.insert(%PrefixedIDSchema{})
+      assert "foo-" <> _uuid = inserted.id
+    end
+
+    test "custom value" do
+      id = "a92f6d0e-52ef-4df8-808b-32d8ef037d48"
+      changeset = Ecto.Changeset.cast(%PrefixedIDSchema{}, %{id: id}, [:id])
+
+      assert {:ok, inserted} = TestRepo.insert(changeset)
+      assert inserted.id == "foo-" <> id
+    end
   end
 
   defp d(decimal), do: Decimal.new(decimal)
