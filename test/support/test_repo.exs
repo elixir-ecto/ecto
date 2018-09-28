@@ -84,9 +84,9 @@ defmodule Ecto.TestAdapter do
 
   ## Schema
 
-  def insert_all(_, meta, _header, rows, _on_conflict, _returning, _opts) do
-    %{source: source, prefix: prefix} = meta
-    send test_process(), {:insert_all, {prefix, source}, rows}
+  def insert_all(_, meta, header, rows, on_conflict, returning, _opts) do
+    meta = Map.merge(meta, %{header: header, on_conflict: on_conflict, returning: returning})
+    send test_process(), {:insert_all, meta, rows}
     {1, nil}
   end
 
@@ -96,34 +96,34 @@ defmodule Ecto.TestAdapter do
     {:ok, []}
   end
 
-  def insert(_, %{context: nil} = meta, _fields, _on_conflict, return, _opts) do
-    %{source: source, prefix: prefix} = meta
-    send(test_process(), {:insert, {prefix, source}})
-    {:ok, Enum.zip(return, 1..length(return))}
+  def insert(_, %{context: nil} = meta, fields, on_conflict, returning, _opts) do
+    meta = Map.merge(meta, %{fields: fields, on_conflict: on_conflict, returning: returning})
+    send(test_process(), {:insert, meta})
+    {:ok, Enum.zip(returning, 1..length(returning))}
   end
 
-  def insert(_, %{context: context}, _fields, _on_conflict, _return, _opts) do
+  def insert(_, %{context: context}, _fields, _on_conflict, _returning, _opts) do
     context
   end
 
   # Notice the list of changes is never empty.
-  def update(_, %{context: nil} = schema_meta, [_ | _], _filters, return, _opts) do
-    %{source: source, prefix: prefix} = schema_meta
-    send(test_process(), {:update, {prefix, source}})
-    {:ok, Enum.zip(return, 1..length(return))}
+  def update(_, %{context: nil} = meta, [_ | _] = changes, filters, returning, _opts) do
+    meta = Map.merge(meta, %{changes: changes, filters: filters, returning: returning})
+    send(test_process(), {:update, meta})
+    {:ok, Enum.zip(returning, 1..length(returning))}
   end
 
-  def update(_, %{context: context}, [_ | _], _filters, _return, _opts) do
+  def update(_, %{context: context}, [_ | _], _filters, _returning, _opts) do
     context
   end
 
-  def delete(_, %{context: nil} = schema_meta, _filter, _opts) do
-    %{source: source, prefix: prefix} = schema_meta
-    send(test_process(), {:delete, {prefix, source}})
+  def delete(_, %{context: nil} = meta, filters, _opts) do
+    meta = Map.merge(meta, %{filters: filters})
+    send(test_process(), {:delete, meta})
     {:ok, []}
   end
 
-  def delete(_, %{context: context}, _filter, _opts) do
+  def delete(_, %{context: context}, _filters, _opts) do
     context
   end
 

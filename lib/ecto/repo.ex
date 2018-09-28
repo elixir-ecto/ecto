@@ -754,8 +754,9 @@ defmodule Ecto.Repo do
 
     * `:raise` - raises if there is a conflicting primary key or unique index
     * `:nothing` - ignores the error in case of conflicts
-    * `:replace_all` - replace all values on the existing row with the values
-      in sent by Ecto
+    * `:replace_all` - replace all values on the existing row by the new entry,
+      including values not sent explicitly by Ecto, such as database defaults.
+      This option requires a schema
     * `:replace_all_except_primary_key` - same as above except primary keys are
       not replaced. This option requires a schema
     * `{:replace, fields}` - replace only specific columns. This option requires

@@ -57,7 +57,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert assoc.x == "xyz"
     assert assoc.inserted_at
     assert_received {:insert, _}
-    assert_received {:insert_all, {nil, "schemas_assocs"}, [[my_schema_id: 1, my_assoc_id: 1]]}
+    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_schema_id: 1, my_assoc_id: 1]]}
   end
 
   test "handles assocs on insert preserving parent schema prefix" do
@@ -96,7 +96,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert assoc.x == "xyz"
     assert assoc.inserted_at
     assert_received {:insert, _}
-    assert_received {:insert_all, {nil, "schemas_assocs"}, [[my_schema_id: 1, my_assoc_id: 1]]}
+    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_schema_id: 1, my_assoc_id: 1]]}
   end
 
   test "handles invalid assocs from struct on insert" do
@@ -187,7 +187,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     # Just one transaction was used
     assert_received {:transaction, _}
     refute_received {:rollback, _}
-    assert_received {:insert_all, {nil, "schemas_assocs"}, [[my_schema_id: 1, my_assoc_id: 1]]}
+    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_schema_id: 1, my_assoc_id: 1]]}
   end
 
   test "handles valid nested assocs on insert preserving parent schema prefix" do
@@ -252,7 +252,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert assoc.x == "xyz"
     assert assoc.updated_at
     assert_received {:update, _}
-    assert_received {:insert_all, {nil, "schemas_assocs"}, [[my_schema_id: 3, my_assoc_id: 1]]}
+    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_schema_id: 3, my_assoc_id: 1]]}
   end
 
   test "inserting assocs on update preserving parent schema prefix" do
@@ -300,8 +300,8 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert_received {:update, _} # Parent
     assert_received {:insert, _} # New assoc
     refute_received {:delete, _} # Old assoc
-    assert_received {:insert_all, {nil, "schemas_assocs"}, [[my_schema_id: 3, my_assoc_id: 1]]}
-    assert_received {:delete_all, %{prefix: nil, from: %{source: {"schemas_assocs", _}}}}
+    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_schema_id: 3, my_assoc_id: 1]]}
+    assert_received {:delete_all, %{from: %{source: {"schemas_assocs", _}}}}
 
     # Replacing assoc with nil
     changeset =

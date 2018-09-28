@@ -738,6 +738,24 @@ defmodule Ecto.RepoTest do
   end
 
   describe "on conflict" do
+    test "passes all fields+embeds on replace_all" do
+      fields = MySchema.__schema__(:fields) ++ MySchema.__schema__(:embeds)
+      TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all)
+      assert_receive {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
+    end
+
+    test "passes all fields+embeds except primary keys on replace_all_except_primary_keys" do
+      fields = (MySchema.__schema__(:fields) ++ MySchema.__schema__(:embeds)) -- [:id]
+      TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all_except_primary_key)
+      assert_receive {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
+    end
+
+    test "does not pass on_conflict to children" do
+      TestRepo.insert(%MySchema{id: 1, parent: %MyParent{}}, on_conflict: :replace_all)
+      assert_receive {:insert, %{source: "my_schema", on_conflict: {_, _, _}}}
+      assert_receive {:insert, %{source: "my_parent", on_conflict: {:raise, _, _}}}
+    end
+
     test "raises on unknown on_conflict value" do
       assert_raise ArgumentError, "unknown value for :on_conflict, got: :who_knows", fn ->
         TestRepo.insert(%MySchema{id: 1}, on_conflict: :who_knows)

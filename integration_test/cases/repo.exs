@@ -1486,12 +1486,12 @@ defmodule Ecto.Integration.RepoTest do
 
       post = %Post{title: "updated", text: "updated", uuid: post.uuid}
       post = TestRepo.insert!(post, on_conflict: :replace_all)
-      assert post.id == inserted.id
+      assert post.id != inserted.id
       assert post.title == "updated"
       assert post.text == "updated"
 
       assert TestRepo.all(from p in Post, select: {p.id, p.title, p.text}) ==
-             [{inserted.id, "updated", "updated"}]
+             [{post.id, "updated", "updated"}]
       assert TestRepo.all(from p in Post, select: count(p.id)) == [1]
     end
 
@@ -1503,12 +1503,12 @@ defmodule Ecto.Integration.RepoTest do
 
       post = %Post{title: "updated", text: "updated", uuid: post.uuid}
       post = TestRepo.insert!(post, on_conflict: :replace_all, conflict_target: :uuid)
-      assert post.id == inserted.id
+      assert post.id != inserted.id
       assert post.title == "updated"
       assert post.text == "updated"
 
       assert TestRepo.all(from p in Post, select: {p.id, p.title, p.text}) ==
-             [{inserted.id, "updated", "updated"}]
+             [{post.id, "updated", "updated"}]
       assert TestRepo.all(from p in Post, select: count(p.id)) == [1]
     end
   end

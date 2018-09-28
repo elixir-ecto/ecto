@@ -400,7 +400,7 @@ defmodule Ecto.Repo.BelongsToTest do
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:assoc, nil)
     TestRepo.update!(changeset)
-    assert_received {:delete, {"prefix", "my_assoc"}}
+    assert_received {:delete, %{prefix: "prefix", source: "my_assoc"}}
   end
 
   test "returns untouched changeset on invalid children on update" do

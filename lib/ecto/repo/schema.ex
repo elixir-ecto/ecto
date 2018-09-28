@@ -48,13 +48,12 @@ defmodule Ecto.Repo.Schema do
     {on_conflict, opts} = Keyword.pop(opts, :on_conflict, :raise)
     {conflict_target, opts} = Keyword.pop(opts, :conflict_target, [])
     conflict_target = conflict_target(conflict_target, dumper)
-    keys = Map.keys(header)
 
     on_conflict =
-      on_conflict(on_conflict, conflict_target, schema_meta, keys, counter, adapter)
+      on_conflict(on_conflict, conflict_target, schema_meta, counter, adapter)
 
     {count, rows} =
-      adapter.insert_all(adapter_meta, schema_meta, keys, rows, on_conflict, return_sources, opts)
+      adapter.insert_all(adapter_meta, schema_meta, Map.keys(header), rows, on_conflict, return_sources, opts)
 
     {count, postprocess(rows, return_fields_or_types, adapter, schema, schema_meta)}
   end
@@ -220,8 +219,7 @@ defmodule Ecto.Repo.Schema do
           dump_changes!(:insert, Map.take(changes, fields), schema, extra, dumper, adapter)
 
         on_conflict =
-          on_conflict(on_conflict, conflict_target, schema_meta, Keyword.keys(changes),
-                      fn -> length(changes) end, adapter)
+          on_conflict(on_conflict, conflict_target, schema_meta, fn -> length(changes) end, adapter)
 
         args = [adapter_meta, schema_meta, changes, on_conflict, return_sources, opts]
 
@@ -528,7 +526,7 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp on_conflict(on_conflict, conflict_target, schema_meta, header, counter_fun, adapter) do
+  defp on_conflict(on_conflict, conflict_target, schema_meta, counter_fun, adapter) do
     %{source: source, schema: schema, prefix: prefix} = schema_meta
 
     case on_conflict do
@@ -536,27 +534,42 @@ defmodule Ecto.Repo.Schema do
         {:raise, [], []}
       :raise ->
         raise ArgumentError, ":conflict_target option is forbidden when :on_conflict is :raise"
+
       :nothing ->
         {:nothing, [], conflict_target}
+
       :replace_all ->
-        {header, [], conflict_target}
+        {replace_all_fields!(:replace_all, schema), [], conflict_target}
+
       {:replace, keys} when is_list(keys) and conflict_target == [] ->
         raise ArgumentError, ":conflict_target option is required when :on_conflict is replace"
+
       {:replace, keys} when is_list(keys) ->
         {keys, [], conflict_target}
-      :replace_all_except_primary_key when is_nil(schema) ->
-        raise ArgumentError, "cannot use :replace_all_except_primary_key on operations without a schema"
+
       :replace_all_except_primary_key ->
-        {header -- schema.__schema__(:primary_key), [], conflict_target}
+        fields = replace_all_fields!(:replace_all_except_primary_key, schema)
+        {fields -- schema.__schema__(:primary_key), [], conflict_target}
+
       [_ | _] = on_conflict ->
         from = if schema, do: {source, schema}, else: source
         query = Ecto.Query.from from, update: ^on_conflict
         on_conflict_query(query, {source, schema}, prefix, counter_fun, adapter, conflict_target)
+
       %Ecto.Query{} = query ->
         on_conflict_query(query, {source, schema}, prefix, counter_fun, adapter, conflict_target)
+
       other ->
         raise ArgumentError, "unknown value for :on_conflict, got: #{inspect other}"
     end
+  end
+
+  defp replace_all_fields!(kind, nil) do
+    raise ArgumentError, "cannot use #{inspect(kind)} on operations without a schema"
+  end
+
+  defp replace_all_fields!(_kind, schema) do
+    schema.__schema__(:fields) ++ schema.__schema__(:embeds)
   end
 
   defp on_conflict_query(query, from, prefix, counter_fun, adapter, conflict_target) do

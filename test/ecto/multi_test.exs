@@ -378,13 +378,13 @@ defmodule Ecto.MultiTest do
       assert {:ok, changes} = TestRepo.transaction(multi)
       assert_received {:transaction, _}
       assert {:messages, [
-        {:insert, {nil, "comments"}},
-        {:update, {nil, "comments"}},
-        {:update, {nil, "comments"}},
-        {:delete, {nil, "comments"}},
-        {:insert_all, {nil, "comments"}, [[x: 1]]},
-        {:update_all, %{prefix: nil, from: %{source: {"comments", _}}}},
-        {:delete_all, %{prefix: nil, from: %{source: {"comments", _}}}}
+        {:insert, %{source: "comments"}},
+        {:update, %{source: "comments"}},
+        {:update, %{source: "comments"}},
+        {:delete, %{source: "comments"}},
+        {:insert_all, %{source: "comments"}, [[x: 1]]},
+        {:update_all, %{from: %{source: {"comments", _}}}},
+        {:delete_all, %{from: %{source: {"comments", _}}}}
       ]} = Process.info(self(), :messages)
 
       assert %Comment{} = changes.insert
@@ -416,7 +416,7 @@ defmodule Ecto.MultiTest do
       assert {:error, :run, "error from run", changes} = TestRepo.transaction(multi)
       assert_received {:transaction, _}
       assert_received {:rollback, _}
-      assert {:messages, [{:insert, {nil, "comments"}}]} == Process.info(self(), :messages)
+      assert {:messages, [{:insert, %{source: "comments"}}]} = Process.info(self(), :messages)
       assert %Comment{} = changes.insert
       refute Map.has_key?(changes, :run)
       refute Map.has_key?(changes, :update)
@@ -437,7 +437,7 @@ defmodule Ecto.MultiTest do
       assert {:error, :update, error, changes} = TestRepo.transaction(multi)
       assert_received {:transaction, _}
       assert_received {:rollback, _}
-      assert {:messages, [{:insert, {nil, "comments"}}]} == Process.info(self(), :messages)
+      assert {:messages, [{:insert, %{source: "comments"}}]} = Process.info(self(), :messages)
       assert %Comment{} = changes.insert
       assert "ok" == changes.run
       assert error.errors == [x: {"has already been taken", [constraint: :unique, constraint_name: "comments_x_index"]}]
