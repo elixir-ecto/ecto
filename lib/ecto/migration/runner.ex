@@ -181,7 +181,6 @@ defmodule Ecto.Migration.Runner do
   end
 
   ## Execute
-  @creates [:create, :create_if_not_exists]
 
   defp execute_in_direction(repo, :forward, log, %Command{up: up}) do
     log_and_execute_ddl(repo, log, up)
@@ -205,25 +204,32 @@ defmodule Ecto.Migration.Runner do
     end
   end
 
-  defp reverse({command, %Index{} = index}) when command in @creates,
+  defp reverse({:create, %Index{} = index}),
     do: {:drop, index}
+  defp reverse({:create_if_not_exists, %Index{} = index}),
+    do: {:drop_if_exists, index}
   defp reverse({:drop, %Index{} = index}),
     do: {:create, index}
 
-  defp reverse({command, %Table{} = table, _columns}) when command in @creates,
+  defp reverse({:create, %Table{} = table, _columns}),
     do: {:drop, table}
+  defp reverse({:create_if_not_exists, %Table{} = table, _columns}),
+    do: {:drop_if_exists, table}
+  defp reverse({:rename, %Table{} = table_current, %Table{} = table_new}),
+    do: {:rename, table_new, table_current}
+  defp reverse({:rename, %Table{} = table, current_column, new_column}),
+    do: {:rename, table, new_column, current_column}
   defp reverse({:alter,  %Table{} = table, changes}) do
     if reversed = table_reverse(changes, []) do
       {:alter, table, reversed}
     end
   end
-  defp reverse({:rename, %Table{} = table_current, %Table{} = table_new}),
-    do: {:rename, table_new, table_current}
-  defp reverse({:rename, %Table{} = table, current_column, new_column}),
-    do: {:rename, table, new_column, current_column}
 
-  defp reverse({command, %Constraint{} = constraint}) when command in @creates,
+  defp reverse({:create_if_not_exists, %Constraint{} = constraint}),
+    do: {:drop_if_exists, constraint}
+  defp reverse({:create, %Constraint{} = constraint}),
     do: {:drop, constraint}
+
   defp reverse(_command), do: false
 
   defp table_reverse([{:remove, name, type, opts}| t], acc) do

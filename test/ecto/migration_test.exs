@@ -546,6 +546,16 @@ defmodule Ecto.MigrationTest do
     assert last_command() == {:drop, table}
   end
 
+  test "backward: creates a table if not exists" do
+    create_if_not_exists table = table(:posts) do
+      add :title, :string
+      add :cost, :decimal, precision: 3
+    end
+    flush()
+
+    assert last_command() == {:drop_if_exists, table}
+  end
+
   test "backward: creates an empty table" do
     create table = table(:posts)
     flush()
@@ -615,6 +625,12 @@ defmodule Ecto.MigrationTest do
     create index(:posts, [:title])
     flush()
     assert {:drop, %Index{}} = last_command()
+  end
+
+  test "backward: creates an index if not exists" do
+    create_if_not_exists index(:posts, [:title])
+    flush()
+    assert {:drop_if_exists, %Index{}} = last_command()
   end
 
   test "backward: drops an index" do
