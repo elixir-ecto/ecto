@@ -532,6 +532,7 @@ defmodule Ecto.Repo.Schema do
     case on_conflict do
       :raise when conflict_target == [] ->
         {:raise, [], []}
+
       :raise ->
         raise ArgumentError, ":conflict_target option is forbidden when :on_conflict is :raise"
 

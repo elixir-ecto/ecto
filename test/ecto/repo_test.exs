@@ -741,19 +741,26 @@ defmodule Ecto.RepoTest do
     test "passes all fields+embeds on replace_all" do
       fields = MySchema.__schema__(:fields) ++ MySchema.__schema__(:embeds)
       TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all)
-      assert_receive {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
     end
 
     test "passes all fields+embeds except primary keys on replace_all_except_primary_keys" do
       fields = (MySchema.__schema__(:fields) ++ MySchema.__schema__(:embeds)) -- [:id]
       TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all_except_primary_key)
-      assert_receive {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
+    end
+
+    test "converts keyword list into query" do
+      TestRepo.insert(%MySchema{id: 1}, on_conflict: [set: [x: "123", y: "456"]])
+      assert_received {:insert, %{source: "my_schema", on_conflict: {query, ["123", "456"], []}}}
+      assert %Ecto.Query{} = query
+      assert hd(query.updates).expr == [set: [x: {:^, [], [2]}, yyy: {:^, [], [3]}]]
     end
 
     test "does not pass on_conflict to children" do
       TestRepo.insert(%MySchema{id: 1, parent: %MyParent{}}, on_conflict: :replace_all)
-      assert_receive {:insert, %{source: "my_schema", on_conflict: {_, _, _}}}
-      assert_receive {:insert, %{source: "my_parent", on_conflict: {:raise, _, _}}}
+      assert_received {:insert, %{source: "my_schema", on_conflict: {_, _, _}}}
+      assert_received {:insert, %{source: "my_parent", on_conflict: {:raise, _, _}}}
     end
 
     test "raises on unknown on_conflict value" do

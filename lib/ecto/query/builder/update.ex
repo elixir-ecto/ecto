@@ -92,7 +92,8 @@ defmodule Ecto.Query.Builder.Update do
 
   defp compile_error!(expr) do
     Builder.error! "malformed update `#{Macro.to_string(expr)}` in query expression, " <>
-                   "expected a keyword list with lists or interpolated expressions as values"
+                   "expected a keyword list with set/push/pop as keys with field-value " <>
+                   "pairs as values"
   end
 
   @doc """
@@ -184,8 +185,8 @@ defmodule Ecto.Query.Builder.Update do
 
   defp runtime_error!(value) do
     raise ArgumentError,
-      "malformed update `#{inspect(value)}` in query expression, " <>
-      "expected a keyword list with lists or interpolated expressions as values"
+          "malformed update `#{inspect(value)}` in query expression, " <>
+          "expected a keyword list with set/push/pop as keys with field-value pairs as values"
   end
 
   defp validate_op!(key) when key in @keys, do: :ok
