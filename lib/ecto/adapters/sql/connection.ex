@@ -104,4 +104,9 @@ defmodule Ecto.Adapters.SQL.Connection do
   Receives a DDL command and returns a query that executes it.
   """
   @callback execute_ddl(command :: Ecto.Adapter.Migration.command) :: String.t | [iodata]
+
+  @doc """
+  Receives a DDL command and returns a query that executes it.
+  """
+  @callback ddl_logs(result :: term) :: [{Logger.level, Logger.message, Logger.metadata}]
 end

@@ -339,6 +339,8 @@ defmodule Ecto.Integration.MigrationTest do
     :ok
   end
 
+  @moduletag capture_log: true
+
   test "create and drop table and indexes" do
     assert :ok == up(PoolRepo, 20050906120000, CreateMigration, log: false)
     assert :ok == down(PoolRepo, 20050906120000, CreateMigration, log: false)

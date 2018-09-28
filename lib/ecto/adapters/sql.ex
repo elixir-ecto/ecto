@@ -187,7 +187,9 @@ defmodule Ecto.Adapters.SQL do
 
       @doc false
       def execute_ddl(meta, definition, opts) do
-        Ecto.Adapters.SQL.execute_ddl(meta, @conn.execute_ddl(definition), opts)
+        meta
+        |> Ecto.Adapters.SQL.execute_ddl(@conn.execute_ddl(definition), opts)
+        |> Enum.flat_map(&@conn.ddl_logs/1)
       end
 
       @doc false
@@ -663,8 +665,6 @@ defmodule Ecto.Adapters.SQL do
     for sql <- List.wrap(sqls) do
       query!(meta, sql, [], opts)
     end
-
-    {:ok, []}
   end
 
   @doc false

@@ -1,7 +1,6 @@
 defmodule Ecto.Integration.ConstraintsTest do
-  # We can keep this test async as long as it
-  # is the only one access the constraints table
-  use ExUnit.Case, async: true
+  # Cannot be async as other tests may migrate
+  use ExUnit.Case
 
   alias Ecto.Integration.PoolRepo
   import Ecto.Migrator, only: [up: 4]
@@ -33,6 +32,7 @@ defmodule Ecto.Integration.ConstraintsTest do
   end
 
   setup_all do
+    PoolRepo.delete_all(Ecto.Migration.SchemaMigration)
     up(PoolRepo, 20040906120000, ConstraintMigration, log: false)
   end
 
