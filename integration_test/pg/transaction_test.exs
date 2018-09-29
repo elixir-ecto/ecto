@@ -1,27 +1,62 @@
-defmodule Ecto.Integration.DeadlockTest do
-  # We can keep this test async as long as it
-  # is the only one accessing advisory locks
-  use ExUnit.Case, async: true
-  require Logger
+defmodule Ecto.Integration.TransactionTest do
+  use Ecto.Integration.Case, async: true
 
-  @timeout 500
   alias Ecto.Integration.PoolRepo
+  alias Ecto.Integration.TestRepo
+  alias Ecto.Integration.Post
 
-  test "deadlocks reset worker" do
-    tx1 = self()
+  require Logger
+  @timeout 500
 
-    %Task{pid: tx2} = tx2_task = Task.async fn ->
+  describe "aborts on corrupted transactions" do
+    test "outside sandbox" do
       PoolRepo.transaction fn ->
-        acquire_deadlock(tx1, [2, 1])
+        {:error, _} = PoolRepo.query("INVALID")
+      end
+
+      PoolRepo.transaction fn ->
+        # This will taint the whole inner transaction
+        {:error, _} = PoolRepo.query("INVALID")
+
+        assert_raise Postgrex.Error, ~r/current transaction is aborted/, fn ->
+          PoolRepo.insert(%Post{}, skip_transaction: true)
+        end
       end
     end
 
-    tx1_result = PoolRepo.transaction fn ->
-      acquire_deadlock(tx2, [1, 2])
-    end
+    test "inside sandbox" do
+      TestRepo.transaction fn ->
+        {:error, _} = TestRepo.query("INVALID")
+      end
 
-    tx2_result = Task.await(tx2_task)
-    assert Enum.sort([tx1_result, tx2_result]) == [{:error, :deadlocked}, {:ok, :acquired}]
+      TestRepo.transaction fn ->
+        # This will taint the whole inner transaction
+        {:error, _} = TestRepo.query("INVALID")
+
+        assert_raise Postgrex.Error, ~r/current transaction is aborted/, fn ->
+          TestRepo.insert(%Post{}, skip_transaction: true)
+        end
+      end
+    end
+  end
+
+  describe "deadlocks" do
+    test "reset worker" do
+      tx1 = self()
+
+      %Task{pid: tx2} = tx2_task = Task.async fn ->
+        PoolRepo.transaction fn ->
+          acquire_deadlock(tx1, [2, 1])
+        end
+      end
+
+      tx1_result = PoolRepo.transaction fn ->
+        acquire_deadlock(tx2, [1, 2])
+      end
+
+      tx2_result = Task.await(tx2_task)
+      assert Enum.sort([tx1_result, tx2_result]) == [{:error, :deadlocked}, {:ok, :acquired}]
+    end
   end
 
   defp acquire_deadlock(other_tx, [key1, key2] = _locks) do
