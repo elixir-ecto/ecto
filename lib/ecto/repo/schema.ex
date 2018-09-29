@@ -570,7 +570,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp replace_all_fields!(_kind, schema) do
-    schema.__schema__(:fields) ++ schema.__schema__(:embeds)
+    schema.__schema__(:fields)
   end
 
   defp on_conflict_query(query, from, prefix, counter_fun, adapter, conflict_target) do

@@ -25,9 +25,6 @@ defmodule Ecto.RepoTest do
     use Ecto.Schema
 
     schema "my_schema" do
-      field :d, :decimal
-      field :t, :time
-      field :t_usec, :time_usec
       field :x, :string
       field :y, :binary, source: :yyy
       field :z, :string, default: "z"
@@ -41,9 +38,7 @@ defmodule Ecto.RepoTest do
     use Ecto.Schema
 
     schema "my_schema" do
-      field :i, :integer
       field :n, :integer
-
       belongs_to :parent, MyParent
     end
   end
@@ -53,7 +48,6 @@ defmodule Ecto.RepoTest do
 
     schema "my_schema" do
       field :x, :string
-
       embeds_many :embeds, MyEmbed
     end
   end
@@ -284,7 +278,7 @@ defmodule Ecto.RepoTest do
       TestRepo.insert(%MySchemaWithAssoc{}, returning: [:id])
       assert_received {:insert, %{source: "my_schema", returning: [:id]}}
       TestRepo.insert(%MySchemaWithAssoc{}, returning: true)
-      assert_received {:insert, %{source: "my_schema", returning: [:id, :parent_id, :n, :i]}}
+      assert_received {:insert, %{source: "my_schema", returning: [:id, :parent_id, :n]}}
       TestRepo.insert(%MySchemaWithAssoc{}, returning: false)
       assert_received {:insert, %{source: "my_schema", returning: [:id]}}
     end
@@ -304,7 +298,7 @@ defmodule Ecto.RepoTest do
 
   describe "update" do
     test "passes returning" do
-      changeset = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{i: 2})
+      changeset = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{n: 2})
       TestRepo.update(changeset, returning: [])
       assert_received {:update, %{source: "my_schema", returning: []}}
       TestRepo.update(changeset, returning: true)
@@ -314,7 +308,7 @@ defmodule Ecto.RepoTest do
     end
 
     test "passes returning to children when it's value is a boolean" do
-      changeset = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{i: 2, parent: %MyParent{}})
+      changeset = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{n: 2, parent: %MyParent{}})
       TestRepo.update!(changeset, returning: true)
       assert_receive {:insert, %{source: "my_parent", returning: [:id, :n]}}
       TestRepo.update(changeset, returning: false)
@@ -322,7 +316,7 @@ defmodule Ecto.RepoTest do
     end
 
     test "does not pass returning to children when value is a list" do
-      schema = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{i: 2, parent: %MyParent{}})
+      schema = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{n: 2, parent: %MyParent{}})
       TestRepo.update(schema, returning: [:id])
       assert_receive {:insert, %{source: "my_parent", returning: [:id]}}
     end
@@ -412,32 +406,43 @@ defmodule Ecto.RepoTest do
       TestRepo.insert!(to_insert)
     end
 
-    test "validates schema types" do
-      schema = %MySchema{x: 123}
+    test "provides meaningful error messages on dump error" do
+      defmodule DumpSchema do
+        use Ecto.Schema
+
+        schema "my_schema" do
+          field :d, :decimal
+          field :t, :time
+          field :t_usec, :time_usec
+          field :x, :string
+        end
+      end
+
+      schema = struct(DumpSchema, x: 123)
 
       assert_raise Ecto.ChangeError, ~r"does not match type :string$", fn ->
         TestRepo.insert!(schema)
       end
 
-      schema = %MySchema{d: Decimal.new("NaN")}
+      schema = struct(DumpSchema, d: Decimal.new("NaN"))
 
       assert_raise Ecto.ChangeError, ~r"and `NaN` values are not supported", fn ->
         TestRepo.insert!(schema)
       end
 
-      schema = %MySchema{d: Decimal.new("NaN")}
+      schema = struct(DumpSchema, d: Decimal.new("NaN"))
 
       assert_raise Ecto.ChangeError, ~r"and `NaN` values are not supported", fn ->
         TestRepo.insert!(schema)
       end
 
-      schema = %MySchema{t: ~T[09:00:00.000000]}
+      schema = struct(DumpSchema, t: ~T[09:00:00.000000])
 
       assert_raise Ecto.ChangeError, ~r"Microseconds must be empty.", fn ->
         TestRepo.insert!(schema)
       end
 
-      schema = %MySchema{t_usec: ~T[09:00:00]}
+      schema = struct(DumpSchema, t_usec: ~T[09:00:00])
 
       assert_raise Ecto.ChangeError, ~r"Microsecond precision is required.", fn ->
         TestRepo.insert!(schema)
@@ -806,14 +811,20 @@ defmodule Ecto.RepoTest do
   end
 
   describe "on conflict" do
-    test "passes all fields+embeds on replace_all" do
-      fields = MySchema.__schema__(:fields) ++ MySchema.__schema__(:embeds)
+    test "passes all fields on replace_all" do
+      fields = [:id, :x, :y, :z, :array, :map]
       TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all)
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
     end
 
-    test "passes all fields+embeds except primary keys on replace_all_except_primary_keys" do
-      fields = (MySchema.__schema__(:fields) ++ MySchema.__schema__(:embeds)) -- [:id]
+    test "passes all fields+embeds on replace_all" do
+      fields = [:id, :x, :embeds]
+      TestRepo.insert(%MySchemaWithEmbed{id: 1}, on_conflict: :replace_all)
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
+    end
+
+    test "passes all fields except primary keys on replace_all_except_primary_keys" do
+      fields = [:x, :y, :z, :array, :map]
       TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all_except_primary_key)
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
     end
