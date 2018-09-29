@@ -776,10 +776,20 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp process_children(changeset, assocs, user_changeset, adapter, opts) do
+    opts = process_children_opts(opts)
+
     case Ecto.Association.on_repo_change(changeset, assocs, adapter, opts) do
       {:ok, struct} -> {:ok, struct}
       {:error, changes} ->
         {:error, %{user_changeset | valid?: false, changes: changes}}
+    end
+  end
+
+  defp process_children_opts(opts) do
+    if is_list(Keyword.get(opts, :returning)) do
+      Keyword.delete(opts, :returning)
+    else
+      opts
     end
   end
 

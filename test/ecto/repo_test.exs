@@ -9,6 +9,7 @@ defmodule Ecto.RepoTest do
     use Ecto.Schema
 
     schema "my_parent" do
+      field :n, :integer
     end
   end
 
@@ -33,7 +34,25 @@ defmodule Ecto.RepoTest do
       field :w, :string, virtual: true
       field :array, {:array, :string}
       field :map, {:map, :string}
+    end
+  end
+
+  defmodule MySchemaWithAssoc do
+    use Ecto.Schema
+
+    schema "my_schema" do
+      field :i, :integer
+      field :n, :integer
+
       belongs_to :parent, MyParent
+    end
+  end
+
+  defmodule MySchemaWithEmbed do
+    use Ecto.Schema
+
+    schema "my_schema" do
+      field :x, :string
 
       embeds_many :embeds, MyEmbed
     end
@@ -172,9 +191,9 @@ defmodule Ecto.RepoTest do
     end
 
     test "removes any preload from query" do
-      from(MySchema, preload: :parent) |> TestRepo.aggregate(:count, :id)
+      from(MySchemaWithAssoc, preload: :parent) |> TestRepo.aggregate(:count, :id)
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: count(m.id)>"
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchemaWithAssoc, select: count(m.id)>"
     end
 
     test "removes order by from query without distinct/limit/offset" do
@@ -217,9 +236,9 @@ defmodule Ecto.RepoTest do
     end
 
     test "removes any preload from query" do
-      from(MySchema, preload: :parent) |> TestRepo.exists?
+      from(MySchemaWithAssoc, preload: :parent) |> TestRepo.exists?
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchemaWithAssoc, limit: 1, select: 1>"
     end
 
     test "removes distinct from query" do
@@ -252,11 +271,60 @@ defmodule Ecto.RepoTest do
     end
 
     test "does not work with preloads" do
-      query = from m in MySchema, preload: [:parent]
+      query = from m in MySchemaWithAssoc, preload: [:parent]
 
       assert_raise Ecto.QueryError, ~r"preloads are not supported on streams", fn ->
         TestRepo.stream(query)
       end
+    end
+  end
+
+  describe "insert" do
+    test "passes returning" do
+      TestRepo.insert(%MySchemaWithAssoc{}, returning: [:id])
+      assert_received {:insert, %{source: "my_schema", returning: [:id]}}
+      TestRepo.insert(%MySchemaWithAssoc{}, returning: true)
+      assert_received {:insert, %{source: "my_schema", returning: [:id, :parent_id, :n, :i]}}
+      TestRepo.insert(%MySchemaWithAssoc{}, returning: false)
+      assert_received {:insert, %{source: "my_schema", returning: [:id]}}
+    end
+
+    test "passes returning to children when it's value is a boolean" do
+      TestRepo.insert(%MySchemaWithAssoc{id: 1, parent: %MyParent{}}, returning: true)
+      assert_receive {:insert, %{source: "my_parent", returning: [:id, :n]}}
+      TestRepo.insert(%MySchemaWithAssoc{id: 1, parent: %MyParent{}}, returning: false)
+      assert_receive {:insert, %{source: "my_parent", returning: [:id]}}
+    end
+
+    test "does not pass returning to children when value is a list" do
+      TestRepo.insert(%MySchemaWithAssoc{id: 1, parent: %MyParent{}}, returning: [:id])
+      assert_receive {:insert, %{source: "my_parent", returning: [:id]}}
+    end
+  end
+
+  describe "update" do
+    test "passes returning" do
+      changeset = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{i: 2})
+      TestRepo.update(changeset, returning: [])
+      assert_received {:update, %{source: "my_schema", returning: []}}
+      TestRepo.update(changeset, returning: true)
+      assert_received {:update, %{source: "my_schema", returning: []}}
+      TestRepo.update(changeset, returning: false)
+      assert_received {:update, %{source: "my_schema", returning: []}}
+    end
+
+    test "passes returning to children when it's value is a boolean" do
+      changeset = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{i: 2, parent: %MyParent{}})
+      TestRepo.update!(changeset, returning: true)
+      assert_receive {:insert, %{source: "my_parent", returning: [:id, :n]}}
+      TestRepo.update(changeset, returning: false)
+      assert_receive {:insert, %{source: "my_parent", returning: [:id]}}
+    end
+
+    test "does not pass returning to children when value is a list" do
+      schema = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{i: 2, parent: %MyParent{}})
+      TestRepo.update(schema, returning: [:id])
+      assert_receive {:insert, %{source: "my_parent", returning: [:id]}}
     end
   end
 
@@ -671,11 +739,11 @@ defmodule Ecto.RepoTest do
         end)
 
       changeset =
-        %MySchema{id: 1}
+        %MySchemaWithEmbed{id: 1}
         |> Ecto.Changeset.cast(%{x: "one"}, [:x])
         |> Ecto.Changeset.put_embed(:embeds, [embed_changeset])
 
-      %MySchema{embeds: [embed]} = TestRepo.insert!(changeset)
+      %MySchemaWithEmbed{embeds: [embed]} = TestRepo.insert!(changeset)
       assert embed.x == "ONE"
       assert_received {:transaction, _}
       assert Process.get(:ecto_repo) == TestRepo
@@ -758,7 +826,7 @@ defmodule Ecto.RepoTest do
     end
 
     test "does not pass on_conflict to children" do
-      TestRepo.insert(%MySchema{id: 1, parent: %MyParent{}}, on_conflict: :replace_all)
+      TestRepo.insert(%MySchemaWithAssoc{id: 1, parent: %MyParent{}}, on_conflict: :replace_all)
       assert_received {:insert, %{source: "my_schema", on_conflict: {_, _, _}}}
       assert_received {:insert, %{source: "my_parent", on_conflict: {:raise, _, _}}}
     end
