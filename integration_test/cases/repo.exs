@@ -1293,19 +1293,6 @@ defmodule Ecto.Integration.RepoTest do
     TestRepo.insert!(%Post{title: "1"}, [log: false])
   end
 
-  @tag :returning
-  test "update/2 and insert/2 on associations with returning" do
-    post = %Post{uuid: Ecto.UUID.generate(), title: "first", comments: [%Comment{}]}
-    {:ok, inserted} = TestRepo.insert(post, returning: [:uuid])
-
-    post =
-      inserted
-      |> Ecto.Changeset.change(%{})
-      |> Ecto.Changeset.put_assoc(:comments, [%Comment{}])
-
-    {:ok, _updated} = TestRepo.update(post, returning: [:uuid])
-  end
-
   describe "upsert via insert" do
     @describetag :upsert
 
@@ -1332,20 +1319,6 @@ defmodule Ecto.Integration.RepoTest do
                    title: "first", comments: [%Comment{}]}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict, conflict_target: [:uuid])
       assert inserted.id
-    end
-
-    @tag :returning
-    @tag :with_conflict_target
-    test "on conflict and associations with returning" do
-      on_conflict = [set: [title: "second"]]
-      post = %Post{uuid: Ecto.UUID.generate(),
-                   title: "first", comments: [%Comment{}]}
-      {:ok, _inserted} =
-        TestRepo.insert(post,
-          on_conflict: on_conflict,
-          conflict_target: [:uuid],
-          returning: [:uuid]
-        )
     end
 
     @tag :with_conflict_target
