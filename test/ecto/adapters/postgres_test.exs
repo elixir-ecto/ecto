@@ -1441,6 +1441,28 @@ defmodule Ecto.Adapters.PostgresTest do
     assert execute_ddl(rename) == [~s|ALTER TABLE "foo"."posts" RENAME "given_name" TO "first_name"|]
   end
 
+  test "logs DDL notices" do
+    result = make_result("INFO")
+    assert SQL.ddl_logs(result) == [{:info, ~s(table "foo" exists, skipping), []}]
+
+    result = make_result("WARNING")
+    assert SQL.ddl_logs(result) == [{:warn, ~s(table "foo" exists, skipping), []}]
+
+    result = make_result("ERROR")
+    assert SQL.ddl_logs(result) == [{:error, ~s(table "foo" exists, skipping), []}]
+  end
+
+  defp make_result(level) do
+    %Postgrex.Result{
+      messages: [
+        %{
+          message: ~s(table "foo" exists, skipping),
+          severity: level
+        }
+      ]
+    }
+  end
+
   defp remove_newlines(string) do
     string |> String.trim |> String.replace("\n", " ")
   end

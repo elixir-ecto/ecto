@@ -702,6 +702,9 @@ if Code.ensure_loaded?(Mariaex) do
     def execute_ddl(keyword) when is_list(keyword),
       do: error!(nil, "MySQL adapter does not support keyword lists in execute")
 
+    @impl true
+    def ddl_logs(_), do: []
+
     defp pk_definitions(columns, prefix) do
       pks =
         for {_, name, _, opts} <- columns,
