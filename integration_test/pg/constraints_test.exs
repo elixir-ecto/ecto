@@ -32,7 +32,6 @@ defmodule Ecto.Integration.ConstraintsTest do
   end
 
   setup_all do
-    PoolRepo.delete_all(Ecto.Migration.SchemaMigration)
     up(PoolRepo, 20040906120000, ConstraintMigration, log: false)
   end
 
