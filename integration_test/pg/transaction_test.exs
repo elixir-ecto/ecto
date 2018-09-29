@@ -1,4 +1,4 @@
-defmodule Ecto.Integration.TransactionTest do
+defmodule Ecto.Integration.PGTransactionTest do
   use Ecto.Integration.Case, async: true
 
   alias Ecto.Integration.PoolRepo

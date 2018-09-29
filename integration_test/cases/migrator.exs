@@ -37,28 +37,28 @@ defmodule Ecto.Integration.MigratorTest do
   import Ecto.Migrator
 
   test "schema migration" do
-    up(PoolRepo, 20100906120000, GoodMigration, log: false)
+    up(PoolRepo, 30, GoodMigration, log: false)
 
     [migration] = PoolRepo.all(SchemaMigration)
-    assert migration.version == 20100906120000
+    assert migration.version == 30
     assert migration.inserted_at
   end
 
   test "migrations up and down" do
     assert migrated_versions(PoolRepo) == []
-    assert up(PoolRepo, 20100906120000, GoodMigration, log: false) == :ok
+    assert up(PoolRepo, 31, GoodMigration, log: false) == :ok
 
-    assert migrated_versions(PoolRepo) == [20100906120000]
-    assert up(PoolRepo, 20100906120000, GoodMigration, log: false) == :already_up
-    assert migrated_versions(PoolRepo) == [20100906120000]
-    assert down(PoolRepo, 21100906120000, GoodMigration, log: false) == :already_down
-    assert migrated_versions(PoolRepo) == [20100906120000]
-    assert down(PoolRepo, 20100906120000, GoodMigration, log: false) == :ok
+    assert migrated_versions(PoolRepo) == [31]
+    assert up(PoolRepo, 31, GoodMigration, log: false) == :already_up
+    assert migrated_versions(PoolRepo) == [31]
+    assert down(PoolRepo, 32, GoodMigration, log: false) == :already_down
+    assert migrated_versions(PoolRepo) == [31]
+    assert down(PoolRepo, 31, GoodMigration, log: false) == :ok
     assert migrated_versions(PoolRepo) == []
   end
 
   test "bad migration" do
-    assert catch_error(up(PoolRepo, 20100906120000, BadMigration, log: false))
+    assert catch_error(up(PoolRepo, 31, BadMigration, log: false))
   end
 
   test "run up to/step migration" do

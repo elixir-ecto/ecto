@@ -1,6 +1,5 @@
 defmodule Ecto.Integration.MigrationTest do
-  # Cannot be async as other tests may migrate
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   alias Ecto.Integration.PoolRepo
 
@@ -334,23 +333,26 @@ defmodule Ecto.Integration.MigrationTest do
   import Ecto.Query, only: [from: 2]
   import Ecto.Migrator, only: [up: 4, down: 4]
 
+  # Avoid migration out of order warnings
+  @moduletag :capture_log
+  @base_migration 1_000_000
+
   setup do
-    PoolRepo.delete_all(Ecto.Migration.SchemaMigration)
-    :ok
+    {:ok, migration_number: System.unique_integer([:positive]) + @base_migration}
   end
 
-  test "create and drop table and indexes" do
-    assert :ok == up(PoolRepo, 20050906120000, CreateMigration, log: false)
-    assert :ok == down(PoolRepo, 20050906120000, CreateMigration, log: false)
+  test "create and drop table and indexes", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, CreateMigration, log: false)
+    assert :ok == down(PoolRepo, num, CreateMigration, log: false)
   end
 
-  test "correctly infers how to drop index" do
-    assert :ok == up(PoolRepo, 20050906120000, InferredDropIndexMigration, log: false)
-    assert :ok == down(PoolRepo, 20050906120000, InferredDropIndexMigration, log: false)
+  test "correctly infers how to drop index", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, InferredDropIndexMigration, log: false)
+    assert :ok == down(PoolRepo, num, InferredDropIndexMigration, log: false)
   end
 
-  test "supports references" do
-    assert :ok == up(PoolRepo, 20050906120000, OnDeleteMigration, log: false)
+  test "supports references", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, OnDeleteMigration, log: false)
 
     parent1 = PoolRepo.insert! Ecto.put_meta(%Parent{}, source: "parent1")
     parent2 = PoolRepo.insert! Ecto.put_meta(%Parent{}, source: "parent2")
@@ -367,41 +369,39 @@ defmodule Ecto.Integration.MigrationTest do
     PoolRepo.delete!(parent2)
     assert PoolRepo.all(reader) == []
 
-    assert :ok == down(PoolRepo, 20050906120000, OnDeleteMigration, log: false)
+    assert :ok == down(PoolRepo, num, OnDeleteMigration, log: false)
   end
 
-  test "rolls back references in change/1" do
-    assert :ok == up(PoolRepo, 20050906120000, ReferencesRollbackMigration, log: false)
-    assert :ok == down(PoolRepo, 20050906120000, ReferencesRollbackMigration, log: false)
+  test "rolls back references in change/1", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, ReferencesRollbackMigration, log: false)
+    assert :ok == down(PoolRepo, num, ReferencesRollbackMigration, log: false)
   end
 
-  @tag capture_log: true
-  test "create table if not exists and drop table if exists does not raise on failure" do
-    assert :ok == up(PoolRepo, 20050906120000, NoErrorTableMigration, log: false)
+  test "create table if not exists and drop table if exists does not raise on failure", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, NoErrorTableMigration, log: false)
   end
 
-  @tag capture_log: true
   @tag :create_index_if_not_exists
-  test "create index if not exists and drop index if exists does not raise on failure" do
-    assert :ok == up(PoolRepo, 20050906120000, NoErrorIndexMigration, log: false)
+  test "create index if not exists and drop index if exists does not raise on failure", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, NoErrorIndexMigration, log: false)
   end
 
-  test "raises on NoSQL migrations" do
+  test "raises on NoSQL migrations", %{migration_number: num} do
     assert_raise ArgumentError, ~r"does not support keyword lists in :options", fn ->
-      up(PoolRepo, 20150704120000, NoSQLMigration, log: false)
+      up(PoolRepo, num, NoSQLMigration, log: false)
     end
   end
 
   @tag :add_column
-  test "add column" do
-    assert :ok == up(PoolRepo, 20070906120000, AddColumnMigration, log: false)
+  test "add column", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, AddColumnMigration, log: false)
     assert [2] == PoolRepo.all from p in "add_col_migration", select: p.to_be_added
-    :ok = down(PoolRepo, 20070906120000, AddColumnMigration, log: false)
+    :ok = down(PoolRepo, num, AddColumnMigration, log: false)
   end
 
   @tag :modify_column
-  test "modify column" do
-    assert :ok == up(PoolRepo, 20080906120000, AlterColumnMigration, log: false)
+  test "modify column", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, AlterColumnMigration, log: false)
 
     assert ["foo"] ==
            PoolRepo.all from p in "alter_col_migration", select: p.from_null_to_not_null
@@ -415,62 +415,62 @@ defmodule Ecto.Integration.MigrationTest do
     query = "INSERT INTO alter_col_migration (from_not_null_to_null) VALUES ('foo')"
     assert catch_error(PoolRepo.query!(query))
 
-    :ok = down(PoolRepo, 20080906120000, AlterColumnMigration, log: false)
+    :ok = down(PoolRepo, num, AlterColumnMigration, log: false)
   end
 
   @tag :modify_column_with_from
-  test "modify column with from" do
-    assert :ok == up(PoolRepo, 20180918120000, AlterColumnFromMigration, log: false)
+  test "modify column with from", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, AlterColumnFromMigration, log: false)
 
     assert [1] ==
            PoolRepo.all from p in "modify_from_posts", select: p.author_id
 
-    :ok = down(PoolRepo, 20180918120000, AlterColumnFromMigration, log: false)
+    :ok = down(PoolRepo, num, AlterColumnFromMigration, log: false)
   end
 
   @tag :modify_foreign_key_on_delete
-  test "modify foreign key's on_delete constraint" do
-    assert :ok == up(PoolRepo, 20130802170000, AlterForeignKeyOnDeleteMigration, log: false)
+  test "modify foreign key's on_delete constraint", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, AlterForeignKeyOnDeleteMigration, log: false)
     assert [nil] == PoolRepo.all from p in "alter_fk_posts", select: p.alter_fk_user_id
-    :ok = down(PoolRepo, 20130802170000, AlterForeignKeyOnDeleteMigration, log: false)
+    :ok = down(PoolRepo, num, AlterForeignKeyOnDeleteMigration, log: false)
   end
 
   @tag :modify_foreign_key_on_update
-  test "modify foreign key's on_update constraint" do
-    assert :ok == up(PoolRepo, 20130802170000, AlterForeignKeyOnUpdateMigration, log: false)
+  test "modify foreign key's on_update constraint", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, AlterForeignKeyOnUpdateMigration, log: false)
     assert [2] == PoolRepo.all from p in "alter_fk_posts", select: p.alter_fk_user_id
-    :ok = down(PoolRepo, 20130802170000, AlterForeignKeyOnUpdateMigration, log: false)
+    :ok = down(PoolRepo, num, AlterForeignKeyOnUpdateMigration, log: false)
   end
 
   @tag :remove_column
-  test "remove column" do
-    assert :ok == up(PoolRepo, 20090906120000, DropColumnMigration, log: false)
+  test "remove column", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, DropColumnMigration, log: false)
     assert catch_error(PoolRepo.all from p in "drop_col_migration", select: p.to_be_removed)
-    :ok = down(PoolRepo, 20090906120000, DropColumnMigration, log: false)
+    :ok = down(PoolRepo, num, DropColumnMigration, log: false)
   end
 
   @tag :rename_column
-  test "rename column" do
-    assert :ok == up(PoolRepo, 20150718120000, RenameColumnMigration, log: false)
+  test "rename column", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, RenameColumnMigration, log: false)
     assert [1] == PoolRepo.all from p in "rename_col_migration", select: p.was_renamed
-    :ok = down(PoolRepo, 20150718120000, RenameColumnMigration, log: false)
+    :ok = down(PoolRepo, num, RenameColumnMigration, log: false)
   end
 
   @tag :rename_table
-  test "rename table" do
-    assert :ok == up(PoolRepo, 20150712120000, RenameMigration, log: false)
-    assert :ok == down(PoolRepo, 20150712120000, RenameMigration, log: false)
+  test "rename table", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, RenameMigration, log: false)
+    assert :ok == down(PoolRepo, num, RenameMigration, log: false)
   end
 
   @tag :prefix
-  test "prefix" do
-    assert :ok == up(PoolRepo, 20151012120000, PrefixMigration, log: false)
-    assert :ok == down(PoolRepo, 20151012120000, PrefixMigration, log: false)
+  test "prefix", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, PrefixMigration, log: false)
+    assert :ok == down(PoolRepo, num, PrefixMigration, log: false)
   end
 
   @tag :alter_primary_key
-  test "alter primary key" do
-    assert :ok == up(PoolRepo, 20151012120000, AlterPrimaryKeyMigration, log: false)
-    assert :ok == down(PoolRepo, 20151012120000, AlterPrimaryKeyMigration, log: false)
+  test "alter primary key", %{migration_number: num} do
+    assert :ok == up(PoolRepo, num, AlterPrimaryKeyMigration, log: false)
+    assert :ok == down(PoolRepo, num, AlterPrimaryKeyMigration, log: false)
   end
 end

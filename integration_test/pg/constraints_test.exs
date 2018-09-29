@@ -1,9 +1,8 @@
 defmodule Ecto.Integration.ConstraintsTest do
-  # Cannot be async as other tests may migrate
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
-  alias Ecto.Integration.PoolRepo
   import Ecto.Migrator, only: [up: 4]
+  alias Ecto.Integration.PoolRepo
 
   defmodule ConstraintMigration do
     use Ecto.Migration
@@ -31,8 +30,15 @@ defmodule Ecto.Integration.ConstraintsTest do
     end
   end
 
+  @base_migration 2_000_000
+
   setup_all do
-    up(PoolRepo, 20040906120000, ConstraintMigration, log: false)
+    ExUnit.CaptureLog.capture_log(fn ->
+      num = @base_migration + System.unique_integer([:positive])
+      up(PoolRepo, num, ConstraintMigration, log: false)
+    end)
+
+    :ok
   end
 
   test "creating, using, and dropping an exclusion constraint" do

@@ -1,13 +1,14 @@
 Code.require_file "../support/file_helpers.exs", __DIR__
 
 defmodule Ecto.Integration.StorageTest do
-  use ExUnit.Case, async: true
+  use ExUnit.Case
 
   @moduletag :capture_log
+  @base_migration 5_000_000
 
   import Support.FileHelpers
   alias Ecto.Adapters.Postgres
-  alias Ecto.Integration.TestRepo
+  alias Ecto.Integration.{PoolRepo, TestRepo}
 
   def params do
     # Pass log false to ensure we can still create/drop.
@@ -96,9 +97,16 @@ defmodule Ecto.Integration.StorageTest do
     assert message =~ ~r/ERROR.*failing SQL/
   end
 
+  defmodule Migration do
+    use Ecto.Migration
+    def change, do: :ok
+  end
+
   test "structure dump and load with migrations table" do
+    num = @base_migration + System.unique_integer([:positive])
+    :ok = Ecto.Migrator.up(PoolRepo, num, Migration, log: false)
     {:ok, path} = Postgres.structure_dump(tmp_path(), TestRepo.config())
     contents = File.read!(path)
-    assert contents =~ ~s[INSERT INTO public."schema_migrations" (version) VALUES (0)]
+    assert contents =~ ~s[INSERT INTO public."schema_migrations" (version) VALUES]
   end
 end
