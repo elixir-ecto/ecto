@@ -27,11 +27,11 @@ defmodule Ecto.Migration do
         end
       end
 
-  Note migrations have an `up/0` and `down/0` instructions, where
-  `up/0` is used to update your database and `down/0` rolls back
-  the prompted changes.
+  Note that migrations have `up/0` and `down/0` instructions, where
+  `up/0` applies changes to the database and `down/0` rolls back
+  changes, returning the database schema to a previous state.
 
-  Ecto creates a table (see the `:migration_source` configuration)
+  Ecto creates a table (see the `:migration_source` configuration option)
   in the database in order to keep track of migrations and will add
   an entry to this table for each migration you define. Ecto also
   locks the table when adding/removing entries, guaranteeing two
@@ -44,13 +44,13 @@ defmodule Ecto.Migration do
     * `mix ecto.migrate` - migrates a repository
     * `mix ecto.rollback` - rolls back a particular migration
 
-  Run the `mix help COMMAND` for more information.
+  Run `mix help COMMAND` for more information on a particular command.
 
   ## Change
 
-  Migrations can also be automatically reversible by implementing
-  `change/0` instead of `up/0` and `down/0`. For example, the
-  migration above can be written as:
+  `change/0` is an abstraction that wraps both `up/0` and `down/0` for
+  automatically-reversible migrations. For example, the migration above
+  can be written as:
 
       defmodule MyRepo.Migrations.AddWeatherTable do
         use Ecto.Migration
@@ -67,14 +67,14 @@ defmodule Ecto.Migration do
         end
       end
 
-  Notice not all commands are reversible though. Trying to rollback
+  However, note that not all commands are reversible. Trying to rollback
   a non-reversible command will raise an `Ecto.MigrationError`.
 
-  A notable command in this regard is `execute/2`, which makes
-  plain SQL migrations steps reversible. The first string argument is run on
-  forward migration, and the second on reverse.
+  A notable command in this regard is `execute/2`, which accepts a pair
+  of plain SQL strings, the first to run on forward migrations (`up/0`)
+  and the second when rolling back (`down/0`).
 
-  If `up/0` and `down/0` are implemented they take precedence, and
+  If `up/0` and `down/0` are implemented in a migration, they take precedence, and
   `change/0` isn't invoked.
 
   ## Field Types
@@ -85,19 +85,19 @@ defmodule Ecto.Migration do
 
   Similarly, you can pass any field type supported by your database
   as long as it maps to an Ecto type. For instance, you can use `:text`,
-  `:varchar` or `:char` in your migrations as `add :field_name, :text`.
+  `:varchar`, or `:char` in your migrations as `add :field_name, :text`.
   In your Ecto schema, they will all map to the same `:string` type.
 
   Remember, atoms can contain arbitrary characters by enclosing in
-  double quotes the characters following the colon. So, if you want to use
-  field type with your database specific options, you can pass atoms containing
-  these options like `:"int unsigned"`, `:"time without time zone"`.
+  double quotes the characters following the colon. So, if you want to use a
+  field type with database-specific options, you can pass atoms containing
+  these options like `:"int unsigned"`, `:"time without time zone"`, etc.
 
   ## Prefixes
 
   Migrations support specifying a table prefix or index prefix which will
-  target either a schema if using Postgres, or a different database if using
-  MySQL. If no prefix is provided, the default schema or database is used.
+  target either a schema (if using PostgreSQL) or a different database (if using
+  MySQL). If no prefix is provided, the default schema or database is used.
 
   Any reference declared in the table migration refers by default to the table
   with the same declared prefix. The prefix is specified in the table options:
@@ -117,10 +117,11 @@ defmodule Ecto.Migration do
       end
 
   Note: if using MySQL with a prefixed table, you must use the same prefix
-  for the references since cross database references are not supported.
+  for the references since cross-database references are not supported.
 
-  For both MySQL and Postgres with a prefixed table, you must use the same
-  prefix for the index field to ensure you index the prefix qualified table.
+  When using a prefixed table with either MySQL or PostgreSQL, you must use the
+  same prefix for the index field to ensure that you index the prefix-qualified
+  table.
 
   ## Transactions
 
@@ -150,7 +151,7 @@ defmodule Ecto.Migration do
 
   Migrations where you create or alter a table support specifying table
   and column comments, the same can be done when creating constraints
-  and indexes. At the moment there is support only for Postgres.
+  and indexes. At the moment there is support only for PostgreSQL.
 
       def up do
         create index("posts", [:name], comment: "Index Comment")
@@ -163,11 +164,11 @@ defmodule Ecto.Migration do
 
   ## Repo configuration
 
-  The following migration configurations are available for under
-  a given repository.
+  The following migration configurations are available for a given repository:
 
-    * `:migration_source` - Version numbers of migrations will be saved in
-      `schema_migrations` table but you can configure the table via:
+    * `:migration_source` - Version numbers of migrations will be saved in a
+      table named `schema_migrations` by default. You can configure the name of
+      the table via:
 
           config :app, App.Repo, migration_source: "my_migrations"
 
@@ -567,7 +568,7 @@ defmodule Ecto.Migration do
       # Create an index on custom expressions
       create index("products", ["(lower(name))"], name: :products_lower_name_index)
 
-      # To create a tsvector index with GIN on Postgres
+      # To create a tsvector index with GIN on PostgreSQL
       create index("products", ["(to_tsvector('english', name))"],
                    name: :products_name_vector, using: "GIN")
   """
