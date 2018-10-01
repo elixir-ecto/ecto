@@ -1102,9 +1102,8 @@ defmodule Ecto.Changeset do
         {Map.put(changes, key, change), errors, valid? and relation_valid?}
       :ignore ->
         {changes, errors, valid?}
-      {:error, reason} ->
-        error = {key, reason}
-        {changes, [error | errors], false}
+      {:error, error} ->
+        {changes, [{key, error} | errors], false}
     end
   end
 

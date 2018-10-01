@@ -661,8 +661,8 @@ defmodule Ecto.Repo.Schema do
             case Relation.change(embed_or_assoc, value, empty) do
               {:ok, change, _} when change != empty ->
                 {Map.put(changes, field, change), errors}
-              {:error, reason} ->
-                {changes, [{field, reason}]}
+              {:error, error} ->
+                {changes, [{field, error}]}
               _ -> # :ignore or ok with change == empty
                 {changes, errors}
             end
