@@ -886,7 +886,7 @@ defmodule Ecto.Repo do
 
       # In Postgres (it requires the conflict target for updates):
       on_conflict = [set: [body: "updated"]]
-      {:ok, updated} = MyRepo.insert(%Post{title: "this is unique"},
+      {:ok, inserted} = MyRepo.insert(%Post{title: "this is unique"},
                                      on_conflict: on_conflict, conflict_target: :title)
 
       # In MySQL (conflict target is not supported):
