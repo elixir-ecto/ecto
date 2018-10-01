@@ -426,20 +426,30 @@ defmodule Ecto.Migration do
   @doc """
   Drops one of the following:
 
-    * an index
     * a table
+    * an index
     * a constraint
 
   ## Examples
 
-      drop index("posts", [:name])
       drop table("posts")
+      drop index("posts", [:name])
       drop constraint("products", "price_must_be_positive")
 
   """
-  def drop(%{} = index_or_table_or_constraint) do
-    Runner.execute {:drop, __prefix__(index_or_table_or_constraint)}
-    index_or_table_or_constraint
+  def drop(%Table{} = table) do
+    Runner.execute {:drop, __prefix__(table)}
+    table
+  end
+
+  def drop(%Index{} = index) do
+    Runner.execute {:drop, __prefix__(index)}
+    index
+  end
+
+  def drop(%Constraint{} = constraint) do
+    Runner.execute {:drop, __prefix__(constraint)}
+    constraint
   end
 
   @doc """
@@ -449,13 +459,18 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      drop_if_exists index("posts", [:name])
       drop_if_exists table("posts")
+      drop_if_exists index("posts", [:name])
 
   """
-  def drop_if_exists(%{} = index_or_table) do
-    Runner.execute {:drop_if_exists, __prefix__(index_or_table)}
-    index_or_table
+  def drop_if_exists(%Table{} = table) do
+    Runner.execute {:drop_if_exists, __prefix__(table)}
+    table
+  end
+
+  def drop_if_exists(%Index{} = index) do
+    Runner.execute {:drop_if_exists, __prefix__(index)}
+    index
   end
 
   @doc """
@@ -593,6 +608,16 @@ defmodule Ecto.Migration do
     %{index | name: index.name || default_index_name(index)}
   end
 
+  defp default_index_name(index) do
+    [index.table, index.columns, "index"]
+    |> List.flatten
+    |> Enum.map(&to_string(&1))
+    |> Enum.map(&String.replace(&1, ~r"[^\w_]", "_"))
+    |> Enum.map(&String.replace_trailing(&1, "_", ""))
+    |> Enum.join("_")
+    |> String.to_atom
+  end
+
   @doc """
   Shortcut for creating a unique index.
 
@@ -602,16 +627,6 @@ defmodule Ecto.Migration do
 
   def unique_index(table, columns, opts) when is_list(opts) do
     index(table, columns, [unique: true] ++ opts)
-  end
-
-  defp default_index_name(index) do
-    [index.table, index.columns, "index"]
-    |> List.flatten
-    |> Enum.map(&to_string(&1))
-    |> Enum.map(&String.replace(&1, ~r"[^\w_]", "_"))
-    |> Enum.map(&String.replace_trailing(&1, "_", ""))
-    |> Enum.join("_")
-    |> String.to_atom
   end
 
   @doc """
@@ -828,6 +843,7 @@ defmodule Ecto.Migration do
       raise ArgumentError, "column #{Atom.to_string(column)} is missing precision option"
     end
 
+    validate_type!(type)
     Runner.subcommand {:modify, column, type, opts}
   end
 
@@ -984,17 +1000,49 @@ defmodule Ecto.Migration do
   defp validate_index_opts!(opts), do: opts
 
   @doc false
-  def __prefix__(%{prefix: prefix} = index_or_table) do
+  def __prefix__(%Table{prefix: prefix} = table) do
     runner_prefix = Runner.prefix()
 
     cond do
       is_nil(prefix) ->
         prefix = runner_prefix || Runner.repo_config(:migration_default_prefix, nil)
-        %{index_or_table | prefix: prefix}
+        %{table | prefix: prefix}
       is_nil(runner_prefix) or runner_prefix == to_string(prefix) ->
-        index_or_table
+        table
       true ->
-        raise Ecto.MigrationError,  message:
+        raise Ecto.MigrationError, message:
+          "the :prefix option `#{prefix}` does match the migrator prefix `#{runner_prefix}`"
+    end
+  end
+
+  @doc false
+  def __prefix__(%Index{prefix: prefix} = index) do
+    runner_prefix = Runner.prefix()
+
+    cond do
+      is_nil(prefix) ->
+        prefix = runner_prefix || Runner.repo_config(:migration_default_prefix, nil)
+        %{index | prefix: prefix}
+      is_nil(runner_prefix) or runner_prefix == to_string(prefix) ->
+        index
+      true ->
+        raise Ecto.MigrationError, message:
+          "the :prefix option `#{prefix}` does match the migrator prefix `#{runner_prefix}`"
+    end
+  end
+
+  @doc false
+  def __prefix__(%Constraint{prefix: prefix} = constraint) do
+    runner_prefix = Runner.prefix()
+
+    cond do
+      is_nil(prefix) ->
+        prefix = runner_prefix || Runner.repo_config(:migration_default_prefix, nil)
+        %{constraint | prefix: prefix}
+      is_nil(runner_prefix) or runner_prefix == to_string(prefix) ->
+        constraint
+      true ->
+        raise Ecto.MigrationError, message:
           "the :prefix option `#{prefix}` does match the migrator prefix `#{runner_prefix}`"
     end
   end
