@@ -843,6 +843,7 @@ defmodule Ecto.Migration do
       raise ArgumentError, "column #{Atom.to_string(column)} is missing precision option"
     end
 
+    validate_type!(type)
     Runner.subcommand {:modify, column, type, opts}
   end
 
