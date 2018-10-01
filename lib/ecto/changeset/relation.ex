@@ -86,7 +86,7 @@ defmodule Ecto.Changeset.Relation do
   """
   def cast(%{cardinality: :one} = relation, nil, current, _on_cast) do
     case current && on_replace(relation, current) do
-      :error -> :error
+      :error -> {:error, {"is invalid", [type: expected_type(relation)]}}
       _ -> {:ok, nil, true}
     end
   end
@@ -102,8 +102,10 @@ defmodule Ecto.Changeset.Relation do
 
   def cast(%{related: mod} = relation, params, current, on_cast) do
     pks = mod.__schema__(:primary_key)
-    cast_or_change(relation, params, current, data_pk(pks),
-                   param_pk(mod, pks), &do_cast(relation, &1, &2, &3, on_cast))
+    with :error <- cast_or_change(relation, params, current, data_pk(pks),
+                                  param_pk(mod, pks), &do_cast(relation, &1, &2, &3, on_cast)) do
+      {:error, {"is invalid", [type: expected_type(relation)]}}
+    end
   end
 
   defp do_cast(meta, params, nil, allowed_actions, on_cast) do
@@ -129,15 +131,17 @@ defmodule Ecto.Changeset.Relation do
   """
   def change(%{cardinality: :one} = relation, nil, current) do
     case current && on_replace(relation, current) do
-      :error -> :error
+      :error -> {:error, {"is invalid", [type: expected_type(relation)]}}
       _ -> {:ok, nil, true}
     end
   end
 
   def change(%{related: mod} = relation, value, current) do
     get_pks = data_pk(mod.__schema__(:primary_key))
-    cast_or_change(relation, value, current, get_pks, get_pks,
-                   &do_change(relation, &1, &2, &3))
+    with :error <- cast_or_change(relation, value, current, get_pks, get_pks,
+                                  &do_change(relation, &1, &2, &3)) do
+      {:error, {"is invalid", [type: expected_type(relation)]}}
+    end
   end
 
   # This may be an insert or an update, get all fields.
@@ -451,4 +455,7 @@ defmodule Ecto.Changeset.Relation do
     do: true
   defp skip?(_changeset),
     do: false
+
+  defp expected_type(%{cardinality: :one}), do: :map
+  defp expected_type(%{cardinality: :many}), do: {:array, :map}
 end

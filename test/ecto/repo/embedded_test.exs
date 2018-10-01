@@ -93,7 +93,7 @@ defmodule Ecto.Repo.EmbeddedTest do
 
   test "handles invalid embeds from struct on insert" do
     {:error, changeset} = TestRepo.insert(%MySchema{embed: 1})
-    assert changeset.errors == [embed: "is invalid"]
+    assert changeset.errors == [embed: {"is invalid", type: :map}]
   end
 
   test "returns untouched changeset on constraint mismatch on insert" do

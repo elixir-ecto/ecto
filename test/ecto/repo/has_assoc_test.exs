@@ -114,7 +114,7 @@ defmodule Ecto.Repo.HasAssocTest do
 
   test "handles invalid assocs from struct on insert" do
     {:error, changeset} = TestRepo.insert(%MySchema{assoc: 1})
-    assert changeset.errors == [assoc: "is invalid"]
+    assert changeset.errors == [assoc: {"is invalid", type: :map}]
   end
 
   test "raises on action mismatch on insert" do
