@@ -101,7 +101,7 @@ defmodule Ecto.Repo.ManyToManyTest do
 
   test "handles invalid assocs from struct on insert" do
     {:error, changeset} = TestRepo.insert(%MySchema{assocs: [1]})
-    assert changeset.errors == [assocs: "is invalid"]
+    assert changeset.errors == [assocs: {"is invalid", type: {:array, :map}}]
   end
 
   test "raises on action mismatch on insert" do

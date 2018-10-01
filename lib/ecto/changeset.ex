@@ -750,9 +750,9 @@ defmodule Ecto.Changeset do
               changeset = %{force_update(changeset, opts) | changes: changes, valid?: valid?}
               missing_relation(changeset, key, current, required?, relation, opts)
 
-            :error ->
-              meta = [validation: type, type: expected_relation_type(relation)]
-              error = {key, {message(opts, :invalid_message, "is invalid"), meta}}
+            {:error, {message, meta}} ->
+              meta = [validation: type] ++ meta
+              error = {key, {message(opts, :invalid_message, message), meta}}
               %{changeset | errors: [error | changeset.errors], valid?: false}
 
             # ignore or ok with change == original
@@ -793,9 +793,6 @@ defmodule Ecto.Changeset do
       end
     end
   end
-
-  defp expected_relation_type(%{cardinality: :one}), do: :map
-  defp expected_relation_type(%{cardinality: :many}), do: {:array, :map}
 
   defp missing_relation(%{changes: changes, errors: errors} = changeset,
                         name, current, required?, relation, opts) do
@@ -1105,8 +1102,8 @@ defmodule Ecto.Changeset do
         {Map.put(changes, key, change), errors, valid? and relation_valid?}
       :ignore ->
         {changes, errors, valid?}
-      :error ->
-        error = {key, {"is invalid", [type: expected_relation_type(relation)]}}
+      {:error, reason} ->
+        error = {key, reason}
         {changes, [error | errors], false}
     end
   end
