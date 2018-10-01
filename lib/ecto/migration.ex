@@ -151,7 +151,7 @@ defmodule Ecto.Migration do
 
   Migrations where you create or alter a table support specifying table
   and column comments. The same can be done when creating constraints
-  and indexes. At the moment, only PostgreSQL supports this feature.
+  and indexes. Not all databases support this feature.
 
       def up do
         create index("posts", [:name], comment: "Index Comment")
