@@ -27,11 +27,11 @@ defmodule Ecto.Migration do
         end
       end
 
-  Note migrations have an `up/0` and `down/0` instructions, where
-  `up/0` is used to update your database and `down/0` rolls back
-  the prompted changes.
+  Note that migrations have `up/0` and `down/0` instructions, where
+  `up/0` applies changes to the database and `down/0` rolls back
+  changes, returning the database schema to a previous state.
 
-  Ecto creates a table (see the `:migration_source` configuration)
+  Ecto creates a table (see the `:migration_source` configuration option)
   in the database in order to keep track of migrations and will add
   an entry to this table for each migration you define. Ecto also
   locks the table when adding/removing entries, guaranteeing two
@@ -44,13 +44,13 @@ defmodule Ecto.Migration do
     * `mix ecto.migrate` - migrates a repository
     * `mix ecto.rollback` - rolls back a particular migration
 
-  Run the `mix help COMMAND` for more information.
+  Run `mix help COMMAND` for more information on a particular command.
 
   ## Change
 
-  Migrations can also be automatically reversible by implementing
-  `change/0` instead of `up/0` and `down/0`. For example, the
-  migration above can be written as:
+  `change/0` is an abstraction that wraps both `up/0` and `down/0` for
+  automatically-reversible migrations. For example, the migration above
+  can be written as:
 
       defmodule MyRepo.Migrations.AddWeatherTable do
         use Ecto.Migration
@@ -67,14 +67,14 @@ defmodule Ecto.Migration do
         end
       end
 
-  Notice not all commands are reversible though. Trying to rollback
+  However, note that not all commands are reversible. Trying to rollback
   a non-reversible command will raise an `Ecto.MigrationError`.
 
-  A notable command in this regard is `execute/2`, which makes
-  plain SQL migrations steps reversible. The first string argument is run on
-  forward migration, and the second on reverse.
+  A notable command in this regard is `execute/2`, which accepts a pair
+  of plain SQL strings, the first to run on forward migrations (`up/0`)
+  and the second when rolling back (`down/0`).
 
-  If `up/0` and `down/0` are implemented they take precedence, and
+  If `up/0` and `down/0` are implemented in a migration, they take precedence, and
   `change/0` isn't invoked.
 
   ## Field Types
@@ -85,19 +85,19 @@ defmodule Ecto.Migration do
 
   Similarly, you can pass any field type supported by your database
   as long as it maps to an Ecto type. For instance, you can use `:text`,
-  `:varchar` or `:char` in your migrations as `add :field_name, :text`.
+  `:varchar`, or `:char` in your migrations as `add :field_name, :text`.
   In your Ecto schema, they will all map to the same `:string` type.
 
   Remember, atoms can contain arbitrary characters by enclosing in
-  double quotes the characters following the colon. So, if you want to use
-  field type with your database specific options, you can pass atoms containing
-  these options like `:"int unsigned"`, `:"time without time zone"`.
+  double quotes the characters following the colon. So, if you want to use a
+  field type with database-specific options, you can pass atoms containing
+  these options like `:"int unsigned"`, `:"time without time zone"`, etc.
 
   ## Prefixes
 
   Migrations support specifying a table prefix or index prefix which will
-  target either a schema if using Postgres, or a different database if using
-  MySQL. If no prefix is provided, the default schema or database is used.
+  target either a schema (if using PostgreSQL) or a different database (if using
+  MySQL). If no prefix is provided, the default schema or database is used.
 
   Any reference declared in the table migration refers by default to the table
   with the same declared prefix. The prefix is specified in the table options:
@@ -117,10 +117,11 @@ defmodule Ecto.Migration do
       end
 
   Note: if using MySQL with a prefixed table, you must use the same prefix
-  for the references since cross database references are not supported.
+  for the references since cross-database references are not supported.
 
-  For both MySQL and Postgres with a prefixed table, you must use the same
-  prefix for the index field to ensure you index the prefix qualified table.
+  When using a prefixed table with either MySQL or PostgreSQL, you must use the
+  same prefix for the index field to ensure that you index the prefix-qualified
+  table.
 
   ## Transactions
 
@@ -149,8 +150,8 @@ defmodule Ecto.Migration do
   ## Comments
 
   Migrations where you create or alter a table support specifying table
-  and column comments, the same can be done when creating constraints
-  and indexes. At the moment there is support only for Postgres.
+  and column comments. The same can be done when creating constraints
+  and indexes. Not all databases support this feature.
 
       def up do
         create index("posts", [:name], comment: "Index Comment")
@@ -163,33 +164,33 @@ defmodule Ecto.Migration do
 
   ## Repo configuration
 
-  The following migration configurations are available for under
-  a given repository.
+  The following migration configuration options are available for a given repository:
 
-    * `:migration_source` - Version numbers of migrations will be saved in
-      `schema_migrations` table but you can configure the table via:
+    * `:migration_source` - Version numbers of migrations will be saved in a
+      table named `schema_migrations` by default. You can configure the name of
+      the table via:
 
           config :app, App.Repo, migration_source: "my_migrations"
 
-    * `:migration_primary_key` - Ecto uses the `:id` column with type
-      `:bigserial` but you can configure it via:
+    * `:migration_primary_key` - By default, Ecto uses the `:id` column with type
+      `:bigserial`, but you can configure it via:
 
           config :app, App.Repo, migration_primary_key: [name: :uuid, type: :binary_id]
 
-    * `:migration_timestamps` - Ecto uses type `:naive_datetime` but you
-      can configure it via:
+    * `:migration_timestamps` - By default, Ecto uses the `:naive_datetime` type, but
+      you can configure it via:
 
           config :app, App.Repo, migration_timestamps: [type: :utc_datetime]
 
-    * `:migration_lock` - Ecto will lock the migration table to handle concurrent
-      migrators using `FOR UPDATE` by default but you can configure it via:
+    * `:migration_lock` - By default, Ecto will lock the migration table to handle
+      concurrent migrators using `FOR UPDATE`, but you can configure it via:
 
           config :app, App.Repo, migration_lock: nil
 
     * `:migration_default_prefix` - Ecto defaults to `nil` for the database prefix for
-      migrations but you can configure it via:
+      migrations, but you can configure it via:
 
-          config :app, App.Repo, migration_default_prefix: "kewl"
+          config :app, App.Repo, migration_default_prefix: "my_prefix"
 
   """
 
@@ -197,7 +198,7 @@ defmodule Ecto.Migration do
     @moduledoc """
     Used internally by adapters.
 
-    To define an index in a migration, see `Ecto.Migration.index/3`
+    To define an index in a migration, see `Ecto.Migration.index/3`.
     """
     defstruct table: nil,
               prefix: nil,
@@ -228,7 +229,7 @@ defmodule Ecto.Migration do
     @moduledoc """
     Used internally by adapters.
 
-    To define a table in a migration, see `Ecto.Migration.table/2`
+    To define a table in a migration, see `Ecto.Migration.table/2`.
     """
     defstruct name: nil, prefix: nil, comment: nil, primary_key: true, engine: nil, options: nil
     @type t :: %__MODULE__{name: String.t, prefix: atom | nil, comment: String.t | nil, primary_key: boolean,
@@ -239,7 +240,7 @@ defmodule Ecto.Migration do
     @moduledoc """
     Used internally by adapters.
 
-    To define a reference in a migration, see `Ecto.Migration.references/2`
+    To define a reference in a migration, see `Ecto.Migration.references/2`.
     """
     defstruct name: nil, table: nil, column: :id, type: :bigserial, on_delete: :nothing, on_update: :nothing
     @type t :: %__MODULE__{table: String.t, column: atom, type: atom, on_delete: atom, on_update: atom}
@@ -249,7 +250,7 @@ defmodule Ecto.Migration do
     @moduledoc """
     Used internally by adapters.
 
-    To define a constraint in a migration, see `Ecto.Migration.constraint/3`
+    To define a constraint in a migration, see `Ecto.Migration.constraint/3`.
     """
     defstruct name: nil, table: nil, check: nil, exclude: nil, prefix: nil, comment: nil
     @type t :: %__MODULE__{name: atom, table: String.t, prefix: atom | nil,
@@ -261,9 +262,9 @@ defmodule Ecto.Migration do
     Used internally by adapters.
 
     This represents the up and down legs of a reversible raw command
-    that is usually define with `Ecto.Migration.execute/1`.
+    that is usually defined with `Ecto.Migration.execute/1`.
 
-    To define a reversible command in a migration, see `Ecto.Migration.execute/2`
+    To define a reversible command in a migration, see `Ecto.Migration.execute/2`.
     """
     defstruct up: nil, down: nil
     @type t :: %__MODULE__{up: String.t, down: String.t}
@@ -291,8 +292,8 @@ defmodule Ecto.Migration do
   @doc """
   Creates a table.
 
-  By default, the table will also include a primary_key of name `:id`
-  and type `:bigserial`. Check `table/2` docs for more information.
+  By default, the table will also include an `:id` primary key field that
+  has a type of `:bigserial`. Check the `table/2` docs for more information.
 
   ## Examples
 
@@ -311,7 +312,7 @@ defmodule Ecto.Migration do
   @doc """
   Creates a table if it does not exist.
 
-  Works just like `create/2` but does not raise an error when table
+  Works just like `create/2` but does not raise an error when the table
   already exists.
   """
   defmacro create_if_not_exists(object, do: block) do
@@ -367,8 +368,9 @@ defmodule Ecto.Migration do
     * a table with only an `:id` field
     * a constraint
 
-  When reversing (in `change` running backward) indexes are only dropped if they
-  exist and no errors are raised. To enforce dropping an index use `drop/1`.
+  When reversing (in a `change/0` running backwards), indexes are only dropped
+  if they exist, and no errors are raised. To enforce dropping an index, use
+  `drop/1`.
 
   ## Examples
 
@@ -443,7 +445,7 @@ defmodule Ecto.Migration do
   @doc """
   Drops a table or index if it exists.
 
-  Does not raise an error if table or index does not exist.
+  Does not raise an error if the specified table or index does not exist.
 
   ## Examples
 
@@ -457,7 +459,8 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Returns a table struct that can be given on create, alter, etc.
+  Returns a table struct that can be given to `create/2`, `alter/2`, `drop/1`,
+  etc.
 
   ## Examples
 
@@ -475,12 +478,13 @@ defmodule Ecto.Migration do
 
   ## Options
 
-    * `:primary_key` - when false, does not generate primary key on table creation
+    * `:primary_key` - when `false`, a primary key field is not generated on table
+      creation.
     * `:engine` - customizes the table storage for supported databases. For MySQL,
-      the default is InnoDB
-    * `:prefix` - the prefix for the table
-    * `:options` - provide custom options that will be appended after generated
-      statement, for example "WITH", "INHERITS" or "ON COMMIT" clauses
+      the default is InnoDB.
+    * `:prefix` - the prefix for the table.
+    * `:options` - provide custom options that will be appended after the generated
+      statement. For example, "WITH", "INHERITS", or "ON COMMIT" clauses.
 
   """
   def table(name, opts \\ [])
@@ -494,22 +498,22 @@ defmodule Ecto.Migration do
   end
 
   @doc ~S"""
-  Returns an index struct that can be used on `create`, `drop`, etc.
+  Returns an index struct that can be given to `create/1`, `drop/1`, etc.
 
-  Expects the table name as first argument and the index fields as
-  second. The field can be an atom, representing a column, or a
-  string representing an expression that is sent as is to the database.
-
-  Indexes are non-unique by default.
+  Expects the table name as the first argument and the index field(s) as
+  the second. The fields can be atoms, representing columns, or strings,
+  representing expressions that are sent as-is to the database.
 
   ## Options
 
-    * `:name` - the name of the index. Defaults to "#{table}_#{column}_index"
-    * `:unique` - if the column(s) is unique or not
-    * `:concurrently` - if the index should be created/dropped concurrently
-    * `:using` - configures the index type
-    * `:prefix` - prefix for the index
-    * `:where` - the conditions for a partial index
+    * `:name` - the name of the index. Defaults to "#{table}_#{column}_index".
+    * `:unique` - indicates whether the index should be unique. Defaults to
+      `false`.
+    * `:concurrently` - indicates whether the index should be created/dropped
+      concurrently.
+    * `:using` - configures the index type.
+    * `:prefix` - specify an optional prefix for the index.
+    * `:where` - specify conditions for a partial index.
 
   ## Adding/dropping indexes concurrently
 
@@ -524,32 +528,34 @@ defmodule Ecto.Migration do
 
   ## Index types
 
-  PostgreSQL supports several index types like B-tree, Hash or GiST. When
-  creating an index, the index type defaults to B-tree, but it can be specified
-  with the `:using` option. The `:using` option can be an atom or a string; its
-  value is passed to the `USING` clause as is.
+  When creating an index, the index type can be specified with the `:using`
+  option. The `:using` option can be an atom or a string, and its value is
+  passed to the generated `USING` clause as-is.
 
-  More information on index types can be found in the [PostgreSQL
-  docs](http://www.postgresql.org/docs/9.4/static/indexes-types.html).
+  For example, PostgreSQL supports several index types like B-tree (the
+  default), Hash, GIN, and GiST. More information on index types can be found
+  in the [PostgreSQL docs]
+  (http://www.postgresql.org/docs/9.4/static/indexes-types.html).
 
   ## Partial indexes
 
-  Databases like PostgreSQL and MSSQL supports partial indexes.
+  Databases like PostgreSQL and MSSQL support partial indexes.
 
   A partial index is an index built over a subset of a table. The subset
   is defined by a conditional expression using the `:where` option.
   The `:where` option can be an atom or a string; its value is passed
-  to the `WHERE` clause as is.
+  to the generated `WHERE` clause as-is.
 
   More information on partial indexes can be found in the [PostgreSQL
   docs](http://www.postgresql.org/docs/9.4/static/indexes-partial.html).
 
   ## Examples
 
-      # Without a name, index defaults to products_category_id_sku_index
+      # With no name provided, the name of the below index defaults to
+      # products_category_id_sku_index
       create index("products", [:category_id, :sku], unique: true)
 
-      # Name can be given explicitly though
+      # The name can also be set explicitly
       drop index("products", [:category_id, :sku], name: :my_special_name)
 
       # Indexes can be added concurrently
@@ -558,16 +564,16 @@ defmodule Ecto.Migration do
       # The index type can be specified
       create index("products", [:name], using: :hash)
 
-      # Create a partial index
+      # Partial indexes are created by specifying a :where option
       create index("products", [:user_id], where: "price = 0", name: :free_products_index)
 
   Indexes also support custom expressions. Some databases may require the
-  index expression to be written between parens:
+  index expression to be written between parentheses:
 
-      # Create an index on custom expressions
+      # Create an index on a custom expression
       create index("products", ["(lower(name))"], name: :products_lower_name_index)
 
-      # To create a tsvector index with GIN on Postgres
+      # Create a tsvector GIN index on PostgreSQL
       create index("products", ["(to_tsvector('english', name))"],
                    name: :products_name_vector, using: "GIN")
   """
@@ -629,7 +635,9 @@ defmodule Ecto.Migration do
 
   This is useful for database-specific functionality that does not
   warrant special support in Ecto, for example, creating and dropping
-  a PostgreSQL extension, and avoids having to define up/down blocks.
+  a PostgreSQL extension. The `execute/2` form avoids having to define
+  separate `up/0` and `down/0` blocks that each contain an `execute/1`
+  expression.
 
   ## Examples
 
@@ -660,22 +668,21 @@ defmodule Ecto.Migration do
   Adds a column when creating or altering a table.
 
   This function also accepts Ecto primitive types as column types
-  and they are normalized by the database adapter. For example,
+  that are normalized by the database adapter. For example,
   `:string` is converted to `:varchar`, `:binary` to `:bits` or `:blob`,
   and so on.
 
   However, the column type is not always the same as the type used in your
-  schema. For example, a schema that has a `:string` field,
-  can be supported by columns of types `:char`, `:varchar`, `:text` and others.
-  For this reason, this function also accepts `:text` and other columns,
-  which are sent as is to the underlying database.
+  schema. For example, a schema that has a `:string` field can be supported by
+  columns of type `:char`, `:varchar`, `:text`, and others. For this reason,
+  this function also accepts `:text` and other type annotations that are native
+  to the database. These are passed to the database as-is.
 
   To sum up, the column type may be either an Ecto primitive type,
-  which is normalized in cases the database does not understand it,
-  like `:string` or `:binary`, or a database type which is passed as is.
-  Custom Ecto types, like `Ecto.UUID`, are not supported because
-  they are application level concern and may not always map to the
-  database.
+  which is normalized in cases where the database does not understand it,
+  such as `:string` or `:binary`, or a database type which is passed as-is.
+  Custom Ecto types like `Ecto.UUID` are not supported because
+  they are application-level concerns and may not always map to the database.
 
   ## Examples
 
@@ -690,14 +697,16 @@ defmodule Ecto.Migration do
 
   ## Options
 
-    * `:primary_key` - when true, marks this field as the primary key
-    * `:default` - the column's default value. can be a string, number, empty list,
-      list of strings, list of numbers or a fragment generated by `fragment/1`
-    * `:null` - when `false`, the column does not allow null values
-    * `:size` - the size of the type (for example the numbers of characters).
-      Default is no size, except for `:string` that defaults to 255.
-    * `:precision` - the precision for a numeric type. Required when `scale` is specified.
-    * `:scale` - the scale of a numeric type. Default is 0 scale
+    * `:primary_key` - when `true`, marks this field as the primary key.
+    * `:default` - the column's default value. It can be a string, number, empty
+      list, list of strings, list of numbers, or a fragment generated by
+      `fragment/1`.
+    * `:null` - when `false`, the column does not allow null values.
+    * `:size` - the size of the type (for example, the number of characters).
+      The default is no size, except for `:string`, which defaults to `255`.
+    * `:precision` - the precision for a numeric type. Required when `:scale` is
+      specified.
+    * `:scale` - the scale of a numeric type. Defaults to `0`.
 
   """
   def add(column, type, opts \\ [])
@@ -741,7 +750,7 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Generates a fragment to be used as default value.
+  Generates a fragment to be used as a default value.
 
   ## Examples
 
@@ -754,17 +763,19 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Adds `:inserted_at` and `:updated_at` timestamps columns.
+  Adds `:inserted_at` and `:updated_at` timestamp columns.
 
-  Those columns are of `:naive_datetime` type, and by default
-  cannot be null. `opts` can be given to customize the generated
-  fields.
+  Those columns are of `:naive_datetime` type and by default cannot be null. A
+  list of `opts` can be given to customize the generated fields.
 
   ## Options
 
-    * `:inserted_at` -  the name of the column for insertion times, providing `false` disables column
-    * `:updated_at` - the name of the column for update times, providing `false` disables column
-    * `:type` - column type, defaults to `:naive_datetime`
+    * `:inserted_at` - the name of the column for storing insertion times.
+      Setting it to `false` disables the column.
+    * `:updated_at` - the name of the column for storing last-updated-at times.
+      Setting it to `false` disables the column.
+    * `:type` - the type of the `:inserted_at` and `:updated_at` columns.
+      Defaults to `:naive_datetime`.
 
   """
   def timestamps(opts \\ []) when is_list(opts) do
@@ -780,11 +791,11 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Modifies the type of column when altering a table.
+  Modifies the type of a column when altering a table.
 
-  This command is not reversible unless option `:from` is provided.
-  If the given `:from` is a %Reference{}, the adapter would try to drop
-  the corresponding foreign key constraints before modifies the type.
+  This command is not reversible unless the `:from` option is provided.
+  If the `:from` value is a `%Reference{}`, the adapter will try to drop
+  the corresponding foreign key constraints before modifying the type.
 
   See `add/3` for more information on supported types.
 
@@ -796,12 +807,14 @@ defmodule Ecto.Migration do
 
   ## Options
 
-    * `:null` - sets to null or not null
-    * `:default` - changes the default
-    * `:from` - provide the current type
-    * `:size` - the size of the type (for example the numbers of characters). Default is no size.
-    * `:precision` - the precision for a numeric type. Required when `scale` is specified.
-    * `:scale` - the scale of a numeric type. Default is 0 scale.
+    * `:null` - determines whether the column accepts null values.
+    * `:default` - changes the default value of the column.
+    * `:from` - specifies the current type of the column.
+    * `:size` - specifies the size of the type (for example, the number of characters).
+      The default is no size.
+    * `:precision` - the precision for a numeric type. Required when `:scale` is
+      specified.
+    * `:scale` - the scale of a numeric type. Defaults to `0`.
   """
   def modify(column, type, opts \\ [])
 
@@ -821,9 +834,8 @@ defmodule Ecto.Migration do
   @doc """
   Removes a column when altering a table.
 
-  This command is not reversible as Ecto does not know what
-  is the current type to add the column back as. See
-  `remove/3` as a reversible alternative.
+  This command is not reversible as Ecto does not know what type it should add
+  the column back as. See `remove/3` as a reversible alternative.
 
   ## Examples
 
@@ -837,9 +849,9 @@ defmodule Ecto.Migration do
   end
 
   @doc """
-  Removes a column when altering a table in a reversible way.
+  Removes a column in a reversible way when altering a table.
 
-  `type` and `opts` are exactly the same as in `add/3` and
+  `type` and `opts` are exactly the same as in `add/3`, and
   they are only used when the command is reversed.
 
   ## Examples
@@ -864,16 +876,14 @@ defmodule Ecto.Migration do
 
   ## Options
 
-    * `:name` - The name of the underlying reference,
-      defaults to "#{table}_#{column}_fkey"
-    * `:column` - The foreign key column, default is `:id`
-    * `:type`   - The foreign key type, default is `:bigserial`
-    * `:on_delete` - What to perform if the referenced entry
-       is deleted. May be `:nothing`, `:delete_all`,
-       `:nilify_all` or `:restrict`. Defaults to `:nothing`.
-    * `:on_update` - What to perform if the referenced entry
-       is updated. May be `:nothing`, `:update_all`,
-       `:nilify_all` or `:restrict`. Defaults to `:nothing`.
+    * `:name` - The name of the underlying reference, which defaults to
+      "#{table}_#{column}_fkey".
+    * `:column` - The foreign key column name, which defaults to `:id`.
+    * `:type` - The foreign key type, which defaults to `:bigserial`.
+    * `:on_delete` - What to do if the referenced entry is deleted. May be
+      `:nothing` (default), `:delete_all`, `:nilify_all`, or `:restrict`.
+    * `:on_update` - What to do if the referenced entry is updated. May be
+      `:nothing` (default), `:update_all`, `:nilify_all`, or `:restrict`.
 
   """
   def references(table, opts \\ [])
@@ -899,7 +909,8 @@ defmodule Ecto.Migration do
   end
 
   @doc ~S"""
-  Defines a constraint (either a check constraint or an exclusion constraint) to be evaluated by the database when a row is inserted or updated.
+  Defines a constraint (either a check constraint or an exclusion constraint)
+  to be evaluated by the database when a row is inserted or updated.
 
   ## Examples
 
@@ -927,13 +938,14 @@ defmodule Ecto.Migration do
   @doc """
   Executes queue migration commands.
 
-  Reverses the order commands are executed when doing a rollback
-  on a change/0 function and resets commands queue.
+  Reverses the order in which commands are executed when doing a rollback
+  on a `change/0` function and resets the commands queue.
   """
   def flush do
     Runner.flush
   end
 
+  # Validation helpers
   defp validate_type!(type) when is_atom(type) do
     case Atom.to_string(type) do
       "Elixir." <> _ ->

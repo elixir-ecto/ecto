@@ -1,5 +1,6 @@
 defmodule Ecto.Migration.SchemaMigration do
-  # Define a schema that works with the a table, which is schema_migrations by default
+  # Defines a schema that works with a table that tracks schema migrations.
+  # The table name defaults to `schema_migrations`.
   @moduledoc false
   use Ecto.Schema
 
