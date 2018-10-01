@@ -97,9 +97,7 @@ defmodule Ecto.Changeset.Relation do
       |> Enum.map(&key_as_int/1)
       |> Enum.sort
       |> Enum.map(&elem(&1, 1))
-
-    with :error <- cast(relation, params, current, on_cast),
-         do: {:error, {"is invalid", [type: expected_type(relation)]}}
+    cast(relation, params, current, on_cast)
   end
 
   def cast(%{related: mod} = relation, params, current, on_cast) do
