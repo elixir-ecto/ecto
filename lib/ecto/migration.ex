@@ -608,6 +608,16 @@ defmodule Ecto.Migration do
     %{index | name: index.name || default_index_name(index)}
   end
 
+  defp default_index_name(index) do
+    [index.table, index.columns, "index"]
+    |> List.flatten
+    |> Enum.map(&to_string(&1))
+    |> Enum.map(&String.replace(&1, ~r"[^\w_]", "_"))
+    |> Enum.map(&String.replace_trailing(&1, "_", ""))
+    |> Enum.join("_")
+    |> String.to_atom
+  end
+
   @doc """
   Shortcut for creating a unique index.
 
@@ -617,16 +627,6 @@ defmodule Ecto.Migration do
 
   def unique_index(table, columns, opts) when is_list(opts) do
     index(table, columns, [unique: true] ++ opts)
-  end
-
-  defp default_index_name(index) do
-    [index.table, index.columns, "index"]
-    |> List.flatten
-    |> Enum.map(&to_string(&1))
-    |> Enum.map(&String.replace(&1, ~r"[^\w_]", "_"))
-    |> Enum.map(&String.replace_trailing(&1, "_", ""))
-    |> Enum.join("_")
-    |> String.to_atom
   end
 
   @doc """
