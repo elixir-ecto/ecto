@@ -999,17 +999,49 @@ defmodule Ecto.Migration do
   defp validate_index_opts!(opts), do: opts
 
   @doc false
-  def __prefix__(%{prefix: prefix} = index_or_table) do
+  def __prefix__(%Table{prefix: prefix} = table) do
     runner_prefix = Runner.prefix()
 
     cond do
       is_nil(prefix) ->
         prefix = runner_prefix || Runner.repo_config(:migration_default_prefix, nil)
-        %{index_or_table | prefix: prefix}
+        %{table | prefix: prefix}
       is_nil(runner_prefix) or runner_prefix == to_string(prefix) ->
-        index_or_table
+        table
       true ->
-        raise Ecto.MigrationError,  message:
+        raise Ecto.MigrationError, message:
+          "the :prefix option `#{prefix}` does match the migrator prefix `#{runner_prefix}`"
+    end
+  end
+
+  @doc false
+  def __prefix__(%Index{prefix: prefix} = index) do
+    runner_prefix = Runner.prefix()
+
+    cond do
+      is_nil(prefix) ->
+        prefix = runner_prefix || Runner.repo_config(:migration_default_prefix, nil)
+        %{index | prefix: prefix}
+      is_nil(runner_prefix) or runner_prefix == to_string(prefix) ->
+        index
+      true ->
+        raise Ecto.MigrationError, message:
+          "the :prefix option `#{prefix}` does match the migrator prefix `#{runner_prefix}`"
+    end
+  end
+
+  @doc false
+  def __prefix__(%Constraint{prefix: prefix} = constraint) do
+    runner_prefix = Runner.prefix()
+
+    cond do
+      is_nil(prefix) ->
+        prefix = runner_prefix || Runner.repo_config(:migration_default_prefix, nil)
+        %{constraint | prefix: prefix}
+      is_nil(runner_prefix) or runner_prefix == to_string(prefix) ->
+        constraint
+      true ->
+        raise Ecto.MigrationError, message:
           "the :prefix option `#{prefix}` does match the migrator prefix `#{runner_prefix}`"
     end
   end
