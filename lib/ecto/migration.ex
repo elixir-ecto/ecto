@@ -426,20 +426,30 @@ defmodule Ecto.Migration do
   @doc """
   Drops one of the following:
 
-    * an index
     * a table
+    * an index
     * a constraint
 
   ## Examples
 
-      drop index("posts", [:name])
       drop table("posts")
+      drop index("posts", [:name])
       drop constraint("products", "price_must_be_positive")
 
   """
-  def drop(%{} = index_or_table_or_constraint) do
-    Runner.execute {:drop, __prefix__(index_or_table_or_constraint)}
-    index_or_table_or_constraint
+  def drop(%Table{} = table) do
+    Runner.execute {:drop, __prefix__(table)}
+    table
+  end
+
+  def drop(%Index{} = index) do
+    Runner.execute {:drop, __prefix__(index)}
+    index
+  end
+
+  def drop(%Constraint{} = constraint) do
+    Runner.execute {:drop, __prefix__(constraint)}
+    constraint
   end
 
   @doc """
@@ -449,13 +459,18 @@ defmodule Ecto.Migration do
 
   ## Examples
 
-      drop_if_exists index("posts", [:name])
       drop_if_exists table("posts")
+      drop_if_exists index("posts", [:name])
 
   """
-  def drop_if_exists(%{} = index_or_table) do
-    Runner.execute {:drop_if_exists, __prefix__(index_or_table)}
-    index_or_table
+  def drop_if_exists(%Table{} = table) do
+    Runner.execute {:drop_if_exists, __prefix__(table)}
+    table
+  end
+
+  def drop_if_exists(%Index{} = index) do
+    Runner.execute {:drop_if_exists, __prefix__(index)}
+    index
   end
 
   @doc """
