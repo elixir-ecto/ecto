@@ -26,6 +26,21 @@ The query syntax also seen some improvements: map updates are supported in subqu
 
 Finally, the UPSERT support added on Ecto v2.1 is getting more improvements: the `{:constraint, constraint}` is now supported as conflict target and the `:returning` option was added to `Ecto.Repo.insert/2`, mirroring the behaviour of `insert_all`.
 
+## v2.2.11 (2018-10-03)
+
+### Enhancements
+
+  * [Ecto] Fix warnings on Elixir v1.7
+  * [Ecto.Query] Allow field interpolation in update
+
+### Bug fixes
+
+  * [Ecto.Query] Properly expand the right side of `in` in joins
+  * [Ecto.Repo] Warn when using preloads with `Ecto.Repo.stream/2`
+  * [Ecto.Repo.Preloader] Only sort by the relationship key and not the whole struct
+  * [Ecto.Schema] Raise proper error message when any is used with non-virtual field
+  * [Ecto.Schema] Do not track many-to-many relationships as compile time dependencies
+
 ## v2.2.10 (2018-04-08)
 
 ### Enhancements
