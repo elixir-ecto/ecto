@@ -1,7 +1,6 @@
 ![Ecto](https://github.com/elixir-ecto/ecto/raw/master/guides/images/logo.png)
 =========
 [![Build Status](https://travis-ci.org/elixir-ecto/ecto.svg?branch=master)](https://travis-ci.org/elixir-ecto/ecto)
-[![Inline docs](http://inch-ci.org/github/elixir-ecto/ecto.svg?branch=master&style=flat)](http://inch-ci.org/github/elixir-ecto/ecto)
 
 Ecto is a toolkit for data mapping and language integrated query for Elixir. Here is an example:
 
@@ -107,8 +106,6 @@ defmodule MyApp.Repo do
   ...
 ```
 
-We are currently looking for contributions to add support for other SQL databases and folks interested in exploring non-relational databases too.
-
 ## Supported Versions
 
 | Branch | Support                  |
@@ -126,31 +123,14 @@ We are currently looking for contributions to add support for other SQL database
   * [Mailing list](https://groups.google.com/forum/#!forum/elixir-ecto)
   * [Examples](https://github.com/elixir-ecto/ecto/tree/master/examples)
 
-## Contributing
-
-Contributions are welcome! In particular, remember to:
-
-* Do not use the issues tracker for help or support requests (try Stack Overflow, IRC or mailing lists, etc).
-* For proposing a new feature, please start a discussion on [elixir-ecto](https://groups.google.com/forum/#!forum/elixir-ecto).
-* For bugs, do a quick search in the issues tracker and make sure the bug has not yet been reported.
-* Finally, be nice and have fun! Remember all interactions in this project follow the same [Code of Conduct as Elixir](https://github.com/elixir-lang/elixir/blob/master/CODE_OF_CONDUCT.md).
-
 ### Running tests
 
 Clone the repo and fetch its dependencies:
 
-```
-$ git clone https://github.com/elixir-ecto/ecto.git
-$ cd ecto
-$ mix deps.get
-$ mix test
-```
-
-### Building docs
-
-```
-$ MIX_ENV=docs mix docs
-```
+    $ git clone https://github.com/elixir-ecto/ecto.git
+    $ cd ecto
+    $ mix deps.get
+    $ mix test
 
 ## Copyright and License
 
