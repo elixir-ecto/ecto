@@ -90,7 +90,7 @@ defmodule Ecto.Repo do
 
   We recommend adapters to publish certain `Telemetry` events listed below.
   Those events will use the `:telemetry_prefix` outlined above. See the
-  `Telemetry` library for information on how to handle such events. ALl
+  `Telemetry` library for information on how to handle such events. All
   examples below consider a repository named `MyApp.Repo`:
 
     * `[:my_app, :repo, :query]` - should be invoked on every query send
