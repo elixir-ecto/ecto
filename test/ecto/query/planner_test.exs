@@ -418,6 +418,16 @@ defmodule Ecto.Query.PlannerTest do
     assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
   end
 
+  test "normalize: validates literal types" do
+    assert_raise Ecto.QueryError, fn ->
+      Comment |> where([c], c.text == 123) |> normalize()
+    end
+
+    assert_raise Ecto.QueryError, fn ->
+      Comment |> where([c], c.text == '123') |> normalize()
+    end
+  end
+
   test "normalize: tagged types" do
     {query, params} = from(Post, []) |> select([p], type(^"1", :integer))
                                      |> normalize_with_params
@@ -484,7 +494,7 @@ defmodule Ecto.Query.PlannerTest do
     query = from(Post, []) |> where([p], p.id in [1, 2, 3])
     normalize(query)
 
-    message = ~r"value `1` cannot be dumped to type :string"
+    message = ~r"value `\[1, 2, 3\]` cannot be dumped to type \{:array, :string\}"
     assert_raise Ecto.QueryError, message, fn ->
       query = from(Comment, []) |> where([c], c.text in [1, 2, 3])
       normalize(query)

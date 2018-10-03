@@ -198,10 +198,25 @@ defmodule Ecto.Query.Builder do
   end
 
   # lists
-  def escape(list, {:array, type}, params_acc, vars, env) when is_list(list),
-    do: Enum.map_reduce(list, params_acc, &escape(&1, type, &2, vars, env))
-  def escape(list, _type, params_acc, vars, env) when is_list(list),
-    do: Enum.map_reduce(list, params_acc, &escape(&1, :any, &2, vars, env))
+  def escape(list, type, params_acc, vars, env) when is_list(list) do
+    if Enum.all?(list, &is_binary(&1) or is_number(&1) or is_boolean(&1)) do
+      {literal(list, type, vars), params_acc}
+    else
+      fun =
+        case type do
+          {:array, inner_type} ->
+            &escape(&1, inner_type, &2, vars, env)
+
+          _ ->
+            # In case we don't have an array nor a literal at compile-time,
+            # such as p.links == [^value], we don't do any casting nor validation.
+            # We may want to tackle this if the expression above is ever used.
+            &escape(&1, :any, &2, vars, env)
+        end
+
+      Enum.map_reduce(list, params_acc, fun)
+    end
+  end
 
   # literals
   def escape({:<<>>, _, args} = expr, type, params_acc, vars, _env) do
@@ -906,9 +921,9 @@ defmodule Ecto.Query.Builder do
 
   # Lists
   def quoted_type(list, vars) when is_list(list) do
-    case Enum.uniq(Enum.map(list, &quoted_type(&1, vars))) do
+    case list |> Enum.map(&quoted_type(&1, vars)) |> Enum.uniq() do
       [type] -> {:array, type}
-      _      -> {:array, :any}
+      _ -> {:array, :any}
     end
   end
 
