@@ -152,13 +152,13 @@ defmodule Ecto.Repo.Preloader do
     {[], []}
   end
 
-  defp fetch_query(ids, _assoc, _repo_name, query, _prefix, {_, key}, _take, _opts) when is_function(query, 1) do
+  defp fetch_query(ids, assoc, _repo_name, query, _prefix, related_key, _take, _opts) when is_function(query, 1) do
     # Note we use an explicit sort because we don't want
     # to reorder based on the struct. Only the ID.
     ids
     |> Enum.uniq
     |> query.()
-    |> Enum.map(&{Map.fetch!(&1, key), &1})
+    |> fetched_records_to_tuple_ids(assoc, related_key)
     |> Enum.sort(fn {id1, _}, {id2, _} -> id1 <= id2 end)
     |> unzip_ids([], [])
   end
@@ -187,6 +187,49 @@ defmodule Ecto.Repo.Preloader do
 
     unzip_ids Ecto.Repo.Queryable.all(repo_name, query, opts), [], []
   end
+
+  defp fetched_records_to_tuple_ids([], _assoc, _related_key),
+    do: []
+
+  defp fetched_records_to_tuple_ids([%{} | _] = entries, _assoc, {0, key}),
+    do: Enum.map(entries, &{Map.fetch!(&1, key), &1})
+
+  defp fetched_records_to_tuple_ids([{_, %{}} | _] = entries, _assoc, _related_key),
+    do: entries
+
+  defp fetched_records_to_tuple_ids([entry | _], assoc, _),
+    do: raise """
+    invalid custom preload for `#{assoc.field}` on `#{inspect assoc.owner}`.
+
+    For many_to_many associations, the custom function given to preload should \
+    return a tuple with the associated key as first element and the record as \
+    second element.
+
+    For example, imagine posts has many to many tags through a posts_tags table. \
+    When preloading the tags, you may write:
+
+        custom_tags = fn post_ids ->
+          Repo.all(
+            from t in Tag,
+                 join: pt in "posts_tags",
+                 where: t.custom and pt.post_id in ^post_ids and pt.tag_id == t.id
+          )
+        end
+
+        from Post, preload: [tags: ^custom_tags]
+
+    Unfortunately the query above is not enough because Ecto won't know how to \
+    associte the posts with the tags. In those cases, you need to return a tuple \
+    with the `post_id` as first element and the tag record as second. The new query \
+    will have a select field as follows:
+
+        from t in Tag,
+             join: pt in "posts_tags",
+             where: t.custom and pt.post_id in ^post_ids and pt.tag_id == t.id,
+             select: {pt.post_id, t}
+
+    We expected a tuple but we got: #{inspect(entry)}
+    """
 
   defp related_key_to_field(query, {pos, key}) do
     {{:., [], [{:&, [], [related_key_pos(query, pos)]}, key]}, [], []}

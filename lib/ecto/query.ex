@@ -1666,14 +1666,42 @@ defmodule Ecto.Query do
   ## Preload functions
 
   Preload also allows functions to be given. In such cases, the function
-  receives the IDs to be fetched and it must return the associated data.
-  Ecto then will map this data and sort it by the relationship key:
+  receives the IDs of the parent association and it must return the associated
+  data. Ecto then will map this data and sort it by the relationship key:
 
       comment_preloader = fn post_ids -> fetch_comments_by_post_ids(post_ids) end
       Repo.all from p in Post, preload: [comments: ^comment_preloader]
 
   This is useful when the whole dataset was already loaded or must be
-  explicitly fetched from elsewhere.
+  explicitly fetched from elsewhere. The IDs received by the preloading
+  function and the result returned depends on the association type:
+
+    * For `has_many` and `belongs_to` - the function receives the IDs of
+      the parent association and it must return a list of maps or structs
+      with the associated entries. The associated map/struct must contain
+      the "foreign_key" field. For example, if a post has many comments,
+      when preloading the comments with a custom function, the function
+      will receive a list of "post_ids" as argument and it must return
+      maps or structs representing the comments. The maps/structs must
+      include the `:post_id` field
+
+    * For `has_many :through` - it behaves similarly to a regular `has_many`
+      but note that the IDs received are the ones from the closest
+      parent and not the furthest one. Imagine for example a post has
+      many comments and each comment has an author. Therefore, a post
+      may have many comments_authors, written as
+      `has_many :comments_authors, through: [:comments, :author]`. When
+      preloading authors with a custom function via `:comments_authors`,
+      the function will receive the IDs of the comments and not of the
+      posts. That's because through associations are still loaded step
+      by step
+
+    * For `many_to_many` -  the function receives the IDs of the parent
+      association and it must return a tuple with the parent id as first
+      element and the association map or struct as second. For example,
+      if a post has many tags, when preloading the tags with a custom
+      function, the function will receive a list of "post_ids" as argument
+      and it must return a tuple in the format of `{post_id, tag}`
 
   ## Keywords example
 
