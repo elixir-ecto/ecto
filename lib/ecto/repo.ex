@@ -94,7 +94,7 @@ defmodule Ecto.Repo do
   examples below consider a repository named `MyApp.Repo`:
 
     * `[:my_app, :repo, :query]` - should be invoked on every query send
-      to the aadapter, including queries that are related to the transaction
+      to the adapter, including queries that are related to the transaction
       management. The payload will be an `Ecto.LogEntry` struct
 
   """
