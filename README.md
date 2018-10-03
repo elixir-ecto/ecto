@@ -1,5 +1,7 @@
-![Ecto](https://github.com/elixir-ecto/ecto/raw/master/guides/images/logo.png)
-=========
+<img width="250" src="https://github.com/elixir-ecto/ecto/raw/master/guides/images/logo.png" alt="Ecto">
+
+---
+
 [![Build Status](https://travis-ci.org/elixir-ecto/ecto.svg?branch=master)](https://travis-ci.org/elixir-ecto/ecto)
 
 Ecto is a toolkit for data mapping and language integrated query for Elixir. Here is an example:
