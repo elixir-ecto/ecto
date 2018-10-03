@@ -2,7 +2,7 @@ defmodule Ecto.Repo.Supervisor do
   @moduledoc false
   use Supervisor
 
-  @defaults [timeout: 15000, pool_timeout: 5000, pool_size: 10, loggers: [Ecto.LogEntry]]
+  @defaults [timeout: 15000, pool_timeout: 5000, pool_size: 10]
   @integer_url_query_params ["timeout", "pool_size", "pool_timeout"]
 
   @doc """
@@ -19,6 +19,7 @@ defmodule Ecto.Repo.Supervisor do
   def runtime_config(type, repo, otp_app, opts) do
     config = Application.get_env(otp_app, repo, [])
     config = [otp_app: otp_app] ++ (@defaults |> Keyword.merge(config) |> Keyword.merge(opts))
+    config = Keyword.put_new_lazy(config, :telemetry_prefix, fn -> telemetry_prefix(repo) end)
 
     case repo_init(type, repo, config) do
       {:ok, config} ->
@@ -28,6 +29,12 @@ defmodule Ecto.Repo.Supervisor do
       :ignore ->
         :ignore
     end
+  end
+
+  defp telemetry_prefix(repo) do
+    repo
+    |> Module.split()
+    |> Enum.map(& &1 |> Macro.underscore() |> String.to_atom())
   end
 
   defp repo_init(type, repo, config) do
@@ -158,8 +165,7 @@ defmodule Ecto.Repo.Supervisor do
   def init({name, repo, otp_app, adapter, opts}) do
     case runtime_config(:supervisor, repo, otp_app, opts) do
       {:ok, opts} ->
-        Ecto.LogEntry.validate!(opts[:loggers])
-        {:ok, child, meta} = adapter.init(opts)
+        {:ok, child, meta} = adapter.init([repo: repo] ++ opts)
         cache = Ecto.Query.Planner.new_query_cache(name)
         child = wrap_start(child, [adapter, cache, meta])
         supervise([child], strategy: :one_for_one, max_restarts: 0)

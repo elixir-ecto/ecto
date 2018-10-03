@@ -340,9 +340,9 @@ defmodule Ecto.Adapters.SQL do
   end
 
   defp sql_call(adapter_meta, callback, args, params, opts) do
-    %{pid: pool, loggers: loggers, sql: sql, opts: default_opts} = adapter_meta
+    %{pid: pool, telemetry: telemetry, sql: sql, opts: default_opts} = adapter_meta
     conn = get_conn_or_pool(pool)
-    opts = with_log(loggers, params, opts ++ default_opts)
+    opts = with_log(telemetry, params, opts ++ default_opts)
     args = args ++ [params, opts]
     apply(sql, callback, [conn | args])
   end
@@ -437,10 +437,13 @@ defmodule Ecto.Adapters.SQL do
       """
     end
 
-    loggers = Keyword.fetch!(config, :loggers)
+    log = Keyword.get(config, :log, :debug)
+    telemetry_prefix = Keyword.fetch!(config, :telemetry_prefix)
+    telemetry = {log, telemetry_prefix ++ [:query]}
+
     config = adapter_config(config)
     opts = Keyword.take(config, [:timeout, :pool, :pool_size, :pool_timeout])
-    meta = %{loggers: loggers, sql: connection, opts: opts}
+    meta = %{telemetry: telemetry, sql: connection, opts: opts}
     {:ok, connection.child_spec(config), meta}
   end
 
@@ -581,8 +584,8 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def reduce(adapter_meta, statement, params, opts, acc, fun) do
-    %{pid: pool, loggers: loggers, sql: sql, opts: default_opts} = adapter_meta
-    opts = with_log(loggers, params, opts ++ default_opts)
+    %{pid: pool, telemetry: telemetry, sql: sql, opts: default_opts} = adapter_meta
+    opts = with_log(telemetry, params, opts ++ default_opts)
 
     case get_conn(pool) do
       nil  ->
@@ -597,8 +600,8 @@ defmodule Ecto.Adapters.SQL do
 
   @doc false
   def into(adapter_meta, statement, params, opts) do
-    %{pid: pool, loggers: loggers, sql: sql, opts: default_opts} = adapter_meta
-    opts = with_log(loggers, params, opts ++ default_opts)
+    %{pid: pool, telemetry: telemetry, sql: sql, opts: default_opts} = adapter_meta
+    opts = with_log(telemetry, params, opts ++ default_opts)
 
     case get_conn(pool) do
       nil ->
@@ -712,14 +715,11 @@ defmodule Ecto.Adapters.SQL do
 
   ## Log
 
-  defp with_log(loggers, params, opts) do
-    case Keyword.pop(opts, :log, true) do
-      {true, opts}  -> [log: &log(loggers, params, &1, opts)] ++ opts
-      {false, opts} -> opts
-    end
+  defp with_log(telemetry, params, opts) do
+    [log: &log(telemetry, params, &1, opts)] ++ opts
   end
 
-  defp log(loggers, params, entry, opts) do
+  defp log({log, event_name}, params, entry, opts) do
     %{
       connection_time: query_time,
       decode_time: decode_time,
@@ -744,7 +744,14 @@ defmodule Ecto.Adapters.SQL do
       caller_pid: caller_pid
     }
 
-    Ecto.LogEntry.apply(entry, loggers)
+    total = (query_time || 0) + (decode_time || 0) + (queue_time || 0)
+    Telemetry.execute(event_name, total, entry)
+
+    if level = Keyword.get(opts, :log, log) do
+      Ecto.LogEntry.log(entry, level)
+    end
+
+    entry
   end
 
   defp log_result({:ok, _query, res}), do: {:ok, res}
@@ -753,8 +760,8 @@ defmodule Ecto.Adapters.SQL do
   ## Connection helpers
 
   defp checkout_or_transaction(fun, adapter_meta, opts, callback) do
-    %{pid: pool, loggers: loggers, opts: default_opts} = adapter_meta
-    opts = with_log(loggers, [], opts ++ default_opts)
+    %{pid: pool, telemetry: telemetry, opts: default_opts} = adapter_meta
+    opts = with_log(telemetry, [], opts ++ default_opts)
 
     callback = fn conn ->
       previous_conn = put_conn(pool, conn)

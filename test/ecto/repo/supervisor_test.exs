@@ -8,7 +8,7 @@ defmodule Ecto.Repo.SupervisorTest do
   end
 
   defp normalize(config) do
-    config |> Keyword.drop([:timeout, :pool_timeout, :pool_size, :loggers]) |> Enum.sort()
+    config |> Keyword.drop([:timeout, :pool_timeout, :pool_size, :telemetry_prefix]) |> Enum.sort()
   end
 
   test "invokes the init/2 callback on start", context do

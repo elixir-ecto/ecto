@@ -38,16 +38,15 @@ defmodule Ecto.Repo do
     * `:url` - an URL that specifies storage information. Read below
       for more information
 
-    * `:loggers` - a list of `{mod, fun, args}` tuples that are
-      invoked by adapters for logging queries and other events.
-      The given module and function will be called with a log
-      entry (see `Ecto.LogEntry`) and the given arguments. The
-      invoked function must return the `Ecto.LogEntry` as result.
-      The default value is: `[{Ecto.LogEntry, :log, []}]`, which
-      will call `Ecto.LogEntry.log/1` that will use Elixir's `Logger`
-      in `:debug` mode. You may pass any desired mod-fun-args
-      triplet or `[{Ecto.LogEntry, :log, [:info]}]` if you want to
-      keep the current behaviour but use another log level.
+    * `:log` - the log used when logging the query with Elixir's
+      Logger. If false, disables logging for that repository.
+
+    * `:telemetry_prefix` - we recommend adapters to publish events
+      using the `Telemetry` library. By default, the telemetry prefix
+      is based on the module name, so if your module is called
+      `MyApp.Repo`, the prefix will be `[:my_app, :repo]`. See the
+      "Telemetry Events" section to see which events we recommend
+      adapters to publish
 
   ## URLs
 
@@ -86,6 +85,18 @@ defmodule Ecto.Repo do
     * `:log` - When false, does not log the query
 
   Such cases will be explicitly documented as well as any extra option.
+
+  ## Telemetry events
+
+  We recommend adapters to publish certain `Telemetry` events listed below.
+  Those events will use the `:telemetry_prefix` outlined above. See the
+  `Telemetry` library for information on how to handle such events. ALl
+  examples below consider a repository named `MyApp.Repo`:
+
+    * `[:my_app, :repo, :query]` - should be invoked on every query send
+      to the aadapter, including queries that are related to the transaction
+      management. The payload will be an `Ecto.LogEntry` struct
+
   """
 
   @type t :: module
@@ -313,7 +324,7 @@ defmodule Ecto.Repo do
   in a row and you want to avoid checking out the connection
   multiple times.
 
-  `checkout/2` and `transaction/2` can be combined and nested 
+  `checkout/2` and `transaction/2` can be combined and nested
   multiple times. If `checkout/2` is called inside the function
   of another `checkout/2` call, the function is simply executed,
   without checking out a new connection.

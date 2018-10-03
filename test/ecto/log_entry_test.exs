@@ -43,6 +43,6 @@ defmodule Ecto.LogEntryTest do
   end
 
   defp to_binary(entry) do
-    entry |> to_iodata |> elem(1) |> IO.iodata_to_binary
+    entry |> to_iodata() |> IO.iodata_to_binary()
   end
 end

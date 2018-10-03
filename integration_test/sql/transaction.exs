@@ -4,7 +4,6 @@ defmodule Ecto.Integration.TransactionTest do
   use Ecto.Integration.Case, async: true
 
   import Ecto.Query
-  import ExUnit.CaptureLog
   alias Ecto.Integration.PoolRepo # Used for writes
   alias Ecto.Integration.TestRepo # Used for reads
 
@@ -205,15 +204,19 @@ defmodule Ecto.Integration.TransactionTest do
 
   ## Logging
 
+  defp register_telemetry() do
+    Process.put(:telemetry, fn _, event -> send(self(), event) end)
+  end
+
   test "log begin, commit and rollback" do
-    Process.put(:on_log, &send(self(), &1))
+    register_telemetry()
     PoolRepo.transaction(fn ->
       assert_received %Ecto.LogEntry{params: [], result: {:ok, _}} = entry
       assert is_integer(entry.query_time) and entry.query_time >= 0
       assert is_integer(entry.queue_time) and entry.queue_time >= 0
 
       refute_received %Ecto.LogEntry{}
-      Process.put(:on_log, &send(self(), &1))
+      register_telemetry()
     end)
 
     assert_received %Ecto.LogEntry{params: [], result: {:ok, _}} = entry
@@ -222,7 +225,7 @@ defmodule Ecto.Integration.TransactionTest do
 
     assert PoolRepo.transaction(fn ->
       refute_received %Ecto.LogEntry{}
-      Process.put(:on_log, &send(self(), &1))
+      register_telemetry()
       PoolRepo.rollback(:log_rollback)
     end) == {:error, :log_rollback}
     assert_received %Ecto.LogEntry{params: [], result: {:ok, _}} = entry
@@ -232,7 +235,7 @@ defmodule Ecto.Integration.TransactionTest do
 
   test "log queries inside transactions" do
     PoolRepo.transaction(fn ->
-      Process.put(:on_log, &send(self(), &1))
+      register_telemetry()
       assert [] = PoolRepo.all(Trans)
 
       assert_received %Ecto.LogEntry{params: [], result: {:ok, _}} = entry
@@ -240,60 +243,5 @@ defmodule Ecto.Integration.TransactionTest do
       assert is_integer(entry.decode_time) and entry.query_time >= 0
       assert is_nil(entry.queue_time)
     end)
-  end
-
-  @tag :strict_savepoint
-  test "log raises after begin, drops transaction" do
-    try do
-      Process.put(:on_log, fn _ -> raise UniqueError end)
-      PoolRepo.transaction(fn -> :ok end)
-    rescue
-      UniqueError -> :ok
-    end
-
-    # If it doesn't fail, the transaction was not closed properly.
-    catch_error(PoolRepo.query!("savepoint foobar"))
-  end
-
-  test "log raises after commit, does commit" do
-    try do
-      PoolRepo.transaction(fn ->
-        PoolRepo.insert!(%Trans{text: "10"})
-        Process.put(:on_log, fn _ -> raise UniqueError end)
-      end)
-    rescue
-      UniqueError -> :ok
-    end
-
-    assert [%Trans{text: "10"}] = PoolRepo.all(Trans)
-  end
-
-  test "log raises after rollback, does rollback" do
-    try do
-      PoolRepo.transaction(fn ->
-        PoolRepo.insert!(%Trans{text: "11"})
-        Process.put(:on_log, fn _ -> raise UniqueError end)
-        PoolRepo.rollback(:rollback)
-      end)
-    rescue
-      UniqueError -> :ok
-    end
-
-    assert [] = PoolRepo.all(Trans)
-  end
-
-  test "log raises on nested transaction, does not drop the transaction" do
-    PoolRepo.transaction(fn ->
-      PoolRepo.insert!(%Trans{text: "8"})
-      Process.put(:on_log, fn _ -> raise UniqueError end)
-
-      assert capture_log(fn ->
-               PoolRepo.transaction(fn ->
-                 assert [_] = PoolRepo.all(Trans)
-               end)
-             end) =~ "** (Ecto.Integration.TransactionTest.UniqueError) unique error"
-    end)
-
-    assert [_] = PoolRepo.all(Trans)
   end
 end

@@ -1275,22 +1275,21 @@ defmodule Ecto.Integration.RepoTest do
   ## Logging
 
   test "log entry logged on query" do
-    log = fn entry ->
+    log = fn latency, entry ->
       assert %Ecto.LogEntry{result: {:ok, _}} = entry
-      assert is_integer(entry.query_time) and entry.query_time >= 0
-      assert is_integer(entry.decode_time) and entry.query_time >= 0
-      assert is_integer(entry.queue_time) and entry.queue_time >= 0
+      assert latency == entry.query_time + entry.decode_time + entry.queue_time
       send(self(), :logged)
     end
-    Process.put(:on_log, log)
 
+    Process.put(:telemetry, log)
     _ = TestRepo.all(Post)
     assert_received :logged
   end
 
-  test "log entry not logged when log is false" do
-    Process.put(:on_log, fn _ -> flunk("logged") end)
-    TestRepo.insert!(%Post{title: "1"}, [log: false])
+  test "log entry with custom log level" do
+    assert ExUnit.CaptureLog.capture_log(fn ->
+             TestRepo.insert!(%Post{title: "1"}, [log: :error])
+           end) != ""
   end
 
   describe "upsert via insert" do

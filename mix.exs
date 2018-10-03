@@ -40,6 +40,7 @@ defmodule Ecto.MixProject do
   defp deps do
     [
       {:decimal, "~> 1.5"},
+      {:telemetry, "~> 0.1.0"},
 
       # Drivers
       {:db_connection, "~> 2.0.0-dev", github: "elixir-ecto/db_connection", ref: "90501f2", override: true},

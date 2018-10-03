@@ -16,9 +16,9 @@ Application.put_env(
 )
 
 defmodule Ecto.Bench.PgRepo do
-  use Ecto.Repo, otp_app: :ecto, adapter: Ecto.Adapters.Postgres, loggers: []
+  use Ecto.Repo, otp_app: :ecto, adapter: Ecto.Adapters.Postgres, log: false
 end
 
 defmodule Ecto.Bench.MySQLRepo do
-  use Ecto.Repo, otp_app: :ecto, adapter: Ecto.Adapters.MySQL, loggers: []
+  use Ecto.Repo, otp_app: :ecto, adapter: Ecto.Adapters.MySQL, log: false
 end
