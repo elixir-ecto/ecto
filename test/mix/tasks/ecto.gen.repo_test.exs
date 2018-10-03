@@ -1,11 +1,10 @@
 defmodule Mix.Tasks.Ecto.Gen.RepoTest do
   use ExUnit.Case
 
-  import Support.FileHelpers
   import Mix.Tasks.Ecto.Gen.Repo, only: [run: 1]
 
   test "generates a new repo" do
-    in_tmp fn _ ->
+    in_tmp "new_repo", fn ->
       run ["-r", "Repo"]
 
       assert_file "lib/repo.ex", """
@@ -29,7 +28,7 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
   end
 
   test "generates a new repo with existing config file" do
-    in_tmp fn _ ->
+    in_tmp "existing_config", fn ->
       File.mkdir_p! "config"
       File.write! "config/config.exs", """
       # Hello
@@ -53,11 +52,23 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
     end
   end
 
-
   test "generates a new namespaced repo" do
-    in_tmp fn _ ->
+    in_tmp "namespaced", fn ->
       run ["-r", "My.AppRepo"]
       assert_file "lib/my/app_repo.ex", "defmodule My.AppRepo do"
     end
+  end
+
+  @tmp_path Path.expand("../../../tmp", __DIR__)
+
+  defp in_tmp(path, fun) do
+    path = Path.join(@tmp_path, path)
+    File.rm_rf!(path)
+    File.mkdir_p!(path)
+    File.cd!(path, fun)
+  end
+
+  defp assert_file(file, match) do
+    assert File.read!(file) =~ match
   end
 end

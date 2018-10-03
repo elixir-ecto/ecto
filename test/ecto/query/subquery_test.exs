@@ -1,4 +1,4 @@
-Code.require_file "../../../integration_test/support/types.exs", __DIR__
+Code.require_file "../../support/types.exs", __DIR__
 
 defmodule Ecto.Query.SubqueryTest do
   use ExUnit.Case, async: true

@@ -36,13 +36,14 @@ end
 
 defmodule Sample.App do
   import Ecto.Query
-  alias Sample.Weather
-  alias Sample.Repo
+  alias Sample.{Weather, Repo}
 
   def keyword_query do
-    query = from w in Weather,
-         where: w.prcp > 0 or is_nil(w.prcp),
-         select: w
+    query =
+      from w in Weather,
+           where: w.prcp > 0 or is_nil(w.prcp),
+           select: w
+
     Repo.all(query)
   end
 
@@ -56,11 +57,11 @@ defmodule Sample.App do
 end
 ```
 
-Ecto is commonly used to interact with databases, such as Postgres and MySQL via [Ecto.Adapters.SQL](http://hexdocs.pm/ecto_sql). Ecto is also commonly used to map data from any source into Elixir structs, regardless if they are backed by a database or not.
+Ecto is commonly used to interact with databases, such as Postgres and MySQL via [Ecto.Adapters.SQL](http://hexdocs.pm/ecto_sql) ([source code](https://github.com/elixir-ecto/ecto_sql)). Ecto is also commonly used to map data from any source into Elixir structs, regardless if they are backed by a database or not.
 
 See the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and the [online documentation](http://hexdocs.pm/ecto).
 
-Also checkout the ["What's new in Ecto 2.1"](http://pages.plataformatec.com.br/ebook-whats-new-in-ecto-2-0) free ebook to learn more about many features since Ecto 2.1 such as `many_to_many`, schemaless queries, concurrent testing, upsert and more. Note the book still largely applies to Ecto 3.0 as the major change in Ecto 3.0 was the removal of the outdated Ecto datetime types in favor of Elixir's Calendar types.
+Also checkout the ["What's new in Ecto 2.1"](http://pages.plataformatec.com.br/ebook-whats-new-in-ecto-2-0) free ebook to learn more about many features since Ecto 2.1 such as `many_to_many`, schemaless queries, concurrent testing, upsert and more. Note the book still largely applies to Ecto 3.0 as the major change in Ecto 3.0 was the split of Ecto in two repositories (`ecto` and `ecto_sql`) and the removal of the outdated Ecto datetime types in favor of Elixir's Calendar types.
 
 ## Usage
 
@@ -116,7 +117,7 @@ We are currently looking for contributions to add support for other SQL database
 | v2.2   | Bug fixes                |
 | v2.1   | Security patches only    |
 | v2.0   | Unsupported from 08/2017 |
-| v1.1   | Security patches only    |
+| v1.1   | Unsupported from 10/2018 |
 | v1.0   | Unsupported from 05/2017 |
 
 ## Important links

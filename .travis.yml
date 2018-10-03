@@ -3,50 +3,12 @@ elixir:
   - 1.6.1
 otp_release:
   - 20.2
-addons:
-  apt:
-    packages:
-      - mysql-server-5.6
-      - mysql-client-core-5.6
-      - mysql-client-5.6
-before_install:
-  - sudo service postgresql stop
-  - sudo apt-get -y -qq --purge remove postgresql libpq-dev libpq5 postgresql-client-common postgresql-common
-  - sudo rm -rf /var/lib/postgresql
-  - sudo sh -c "echo deb http://apt.postgresql.org/pub/repos/apt/ precise-pgdg main $PGVERSION >> /etc/apt/sources.list.d/pgdg.list"
-  - wget --quiet -O - http://apt.postgresql.org/pub/repos/apt/ACCC4CF8.asc | sudo apt-key add -
-  - sudo apt-get update -qq
-  - sudo apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::="--force-confnew" install postgresql-$PGVERSION postgresql-contrib-$PGVERSION
-sudo: required
-dist: trusty
-cache: apt
 matrix:
   include:
   - otp_release: 18.3
     elixir: 1.4.5
   - otp_release: 19.3
     elixir: 1.5.3
-env:
-  global:
-    - PGVERSION=9.6
-  matrix:
-    - ECTO_ADAPTER=none
-    - ECTO_ADAPTER=pg PGVERSION=9.2
-    - ECTO_ADAPTER=pg
-    - ECTO_ADAPTER=mysql
-install:
-  - mix local.hex --force
-  - mix local.rebar --force
-  - mix deps.get
-before_script:
-  - echo "local all postgres trust" | sudo tee /etc/postgresql/$PGVERSION/main/pg_hba.conf
-  - echo "host all postgres 127.0.0.1/32 trust" | sudo tee -a /etc/postgresql/$PGVERSION/main/pg_hba.conf
-  - echo "host all postgrex_md5_pw 127.0.0.1/32 md5" | sudo tee -a /etc/postgresql/$PGVERSION/main/pg_hba.conf
-  - echo "host all postgrex_cleartext_pw 127.0.0.1/32 password" | sudo tee -a /etc/postgresql/$PGVERSION/main/pg_hba.conf
-  - sudo service postgresql restart
-after_script:
-  - mix deps.get --only docs
-  - MIX_ENV=docs mix inch.report
 notifications:
   recipients:
     - jose.valim@plataformatec.com.br

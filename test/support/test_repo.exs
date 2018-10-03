@@ -4,8 +4,6 @@ defmodule Ecto.TestAdapter do
   @behaviour Ecto.Adapter.Schema
   @behaviour Ecto.Adapter.Transaction
 
-  alias Ecto.Migration.SchemaMigration
-
   defmacro __before_compile__(_opts), do: :ok
 
   def ensure_all_started(_, _) do
@@ -23,7 +21,7 @@ defmodule Ecto.TestAdapter do
   end
 
   def checkout(_mod, _opts, fun) do
-    send test_process(), {:checkout, fun}
+    send self(), {:checkout, fun}
     fun.()
   end
 
@@ -43,32 +41,19 @@ defmodule Ecto.TestAdapter do
 
   def prepare(operation, query), do: {:nocache, {operation, query}}
 
-  # Migration emulation
-
-  def execute(_, _, {:nocache, {:all, %{from: %{source: {"schema_migrations", _}}}}}, _, _) do
-    {length(migrated_versions()), Enum.map(migrated_versions(), &List.wrap/1)}
-  end
-
-  def execute(_, _meta, {:nocache, {:delete_all, %{from: %{source: {_, SchemaMigration}}}}}, [version], _) do
-    Process.put(:migrated_versions, List.delete(migrated_versions(), version))
-    {1, nil}
-  end
-
-  # Regular operations
-
   def execute(_, _, {:nocache, {:all, query}}, _, _) do
-    send test_process(), {:all, query}
+    send self(), {:all, query}
     Process.get(:test_repo_all_results) || results_for_all_query(query)
   end
 
   def execute(_, _meta, {:nocache, {op, query}}, _params, _opts) do
-    send test_process(), {op, query}
+    send self(), {op, query}
     {1, nil}
   end
 
   def stream(_, _meta, {:nocache, {:all, query}}, _params, _opts) do
     Stream.map([:execute], fn :execute ->
-      send test_process(), {:stream, query}
+      send self(), {:stream, query}
       results_for_all_query(query)
     end)
   end
@@ -86,19 +71,13 @@ defmodule Ecto.TestAdapter do
 
   def insert_all(_, meta, header, rows, on_conflict, returning, _opts) do
     meta = Map.merge(meta, %{header: header, on_conflict: on_conflict, returning: returning})
-    send test_process(), {:insert_all, meta, rows}
+    send(self(), {:insert_all, meta, rows})
     {1, nil}
-  end
-
-  def insert(_, %{source: "schema_migrations"}, val, _, _, _) do
-    version = Keyword.fetch!(val, :version)
-    Process.put(:migrated_versions, [version | migrated_versions()])
-    {:ok, []}
   end
 
   def insert(_, %{context: nil} = meta, fields, on_conflict, returning, _opts) do
     meta = Map.merge(meta, %{fields: fields, on_conflict: on_conflict, returning: returning})
-    send(test_process(), {:insert, meta})
+    send(self(), {:insert, meta})
     {:ok, Enum.zip(returning, 1..length(returning))}
   end
 
@@ -109,7 +88,7 @@ defmodule Ecto.TestAdapter do
   # Notice the list of changes is never empty.
   def update(_, %{context: nil} = meta, [_ | _] = changes, filters, returning, _opts) do
     meta = Map.merge(meta, %{changes: changes, filters: filters, returning: returning})
-    send(test_process(), {:update, meta})
+    send(self(), {:update, meta})
     {:ok, Enum.zip(returning, 1..length(returning))}
   end
 
@@ -119,7 +98,7 @@ defmodule Ecto.TestAdapter do
 
   def delete(_, %{context: nil} = meta, filters, _opts) do
     meta = Map.merge(meta, %{filters: filters})
-    send(test_process(), {:delete, meta})
+    send(self(), {:delete, meta})
     {:ok, []}
   end
 
@@ -132,7 +111,7 @@ defmodule Ecto.TestAdapter do
   def transaction(mod, _opts, fun) do
     # Makes transactions "trackable" in tests
     Process.put({mod, :in_transaction?}, true)
-    send test_process(), {:transaction, fun}
+    send self(), {:transaction, fun}
     try do
       {:ok, fun.()}
     catch
@@ -148,38 +127,8 @@ defmodule Ecto.TestAdapter do
   end
 
   def rollback(_, value) do
-    send test_process(), {:rollback, value}
+    send self(), {:rollback, value}
     throw {:ecto_rollback, value}
-  end
-
-  ## Migrations
-
-  def lock_for_migrations(_, query, _opts, fun) do
-    send test_process(), {:lock_for_migrations, fun}
-    fun.(query)
-  end
-
-  def execute_ddl(_, command, _) do
-    Process.put(:last_command, command)
-    {:ok, []}
-  end
-
-  defp migrated_versions do
-    Process.get(:migrated_versions, [])
-  end
-
-  def supports_ddl_transaction? do
-    get_config(:supports_ddl_transaction?, false)
-  end
-
-  defp test_process do
-    get_config(:test_process, self())
-  end
-
-  defp get_config(name, default) do
-    :ecto
-    |> Application.get_env(__MODULE__, [])
-    |> Keyword.get(name, default)
   end
 end
 

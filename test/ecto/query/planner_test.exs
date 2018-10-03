@@ -1,4 +1,4 @@
-Code.require_file "../../../integration_test/support/types.exs", __DIR__
+Code.require_file "../../support/types.exs", __DIR__
 
 defmodule Ecto.Query.PlannerTest do
   use ExUnit.Case, async: true
@@ -372,12 +372,8 @@ defmodule Ecto.Query.PlannerTest do
 
   test "plan: generates a cache key for in based on the adapter" do
     query = from(p in Post, where: p.id in ^[1, 2, 3])
-
     {_query, _params, key} = Planner.plan(query, :all, Ecto.TestAdapter, 0)
     assert key == :nocache
-
-    {_query, _params, key} = Planner.plan(query, :all, Ecto.Adapters.Postgres, 0)
-    assert key != :nocache
   end
 
   test "plan: normalizes prefixes" do
