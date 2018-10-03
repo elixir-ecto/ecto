@@ -624,7 +624,7 @@ defmodule Ecto.DateTime do
   end
 
   def from_unix!(integer, unit) do
-    total = System.convert_time_unit(integer, unit, :microseconds)
+    total = System.convert_time_unit(integer, unit, :microsecond)
     microsecond = rem(total, 1_000_000)
     {{year, month, day}, {hour, minute, second}} =
       :calendar.gregorian_seconds_to_datetime(@unix_epoch + div(total, 1_000_000))

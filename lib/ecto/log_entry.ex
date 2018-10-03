@@ -89,7 +89,7 @@ defmodule Ecto.LogEntry do
 
   defp time(_label, nil, _force), do: []
   defp time(label, time, force) do
-    us = System.convert_time_unit(time, :native, :micro_seconds)
+    us = System.convert_time_unit(time, :native, :microsecond)
     ms = div(us, 100) / 10
     if force or ms > 0 do
       [?\s, label, ?=, :io_lib_format.fwrite_g(ms), ?m, ?s]

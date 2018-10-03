@@ -325,8 +325,8 @@ defmodule Ecto.DateTimeTest do
   end
 
   test "from_unix!" do
-    assert Ecto.DateTime.from_unix!(1422057007, :seconds) == @datetime
-    assert Ecto.DateTime.from_unix!(1422057007008000, :microseconds) == @datetime_usec
+    assert Ecto.DateTime.from_unix!(1422057007, :second) == @datetime
+    assert Ecto.DateTime.from_unix!(1422057007008000, :microsecond) == @datetime_usec
   end
 
   test "precision" do
