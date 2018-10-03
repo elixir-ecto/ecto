@@ -438,8 +438,9 @@ defmodule Ecto.Adapters.SQL do
     end
 
     log = Keyword.get(config, :log, :debug)
+    loggers = Keyword.get(config, :loggers, [])
     telemetry_prefix = Keyword.fetch!(config, :telemetry_prefix)
-    telemetry = {log, telemetry_prefix ++ [:query]}
+    telemetry = {log, loggers, telemetry_prefix ++ [:query]}
 
     config = adapter_config(config)
     opts = Keyword.take(config, [:timeout, :pool, :pool_size, :pool_timeout])
@@ -719,7 +720,7 @@ defmodule Ecto.Adapters.SQL do
     [log: &log(telemetry, params, &1, opts)] ++ opts
   end
 
-  defp log({log, event_name}, params, entry, opts) do
+  defp log({log, loggers, event_name}, params, entry, opts) do
     %{
       connection_time: query_time,
       decode_time: decode_time,
@@ -751,7 +752,10 @@ defmodule Ecto.Adapters.SQL do
       Ecto.LogEntry.log(entry, level)
     end
 
-    entry
+    Enum.reduce(loggers, entry, fn
+      mod, acc when is_atom(mod) -> mod.log(acc)
+      {mod, fun, args}, acc -> apply(mod, fun, [acc | args])
+    end)
   end
 
   defp log_result({:ok, _query, res}), do: {:ok, res}

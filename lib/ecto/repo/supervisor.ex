@@ -62,6 +62,16 @@ defmodule Ecto.Repo.Supervisor do
                            "ensure it is correct and it is included as a project dependency"
     end
 
+    if opts[:loggers] || config[:loggers] do
+      IO.warn """
+      the :loggers configuration for #{inspect(repo)} is deprecated.
+
+        * To customize the log level, set log: :debug | :info | :warn | :error instead
+        * To disable logging, set log: false instead
+        * To hook into logging events, see the \"Telemetry Events\" section in Ecto.Repo docs
+      """
+    end
+
     behaviours =
       for {:behaviour, behaviours} <- adapter.__info__(:attributes),
           behaviour <- behaviours,
