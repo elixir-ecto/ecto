@@ -219,7 +219,7 @@ defmodule Ecto.Repo.Preloader do
         from Post, preload: [tags: ^custom_tags]
 
     Unfortunately the query above is not enough because Ecto won't know how to \
-    associte the posts with the tags. In those cases, you need to return a tuple \
+    associate the posts with the tags. In those cases, you need to return a tuple \
     with the `post_id` as first element and the tag record as second. The new query \
     will have a select field as follows:
 
