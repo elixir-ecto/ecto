@@ -819,6 +819,7 @@ defmodule Ecto.Query do
     * `:on` - a query expression or keyword list to filter the join
     * `:as` - a named binding for the join
     * `:prefix` - the prefix to be used for the join when issuing a database query
+    * `:hints` - a string or a list of strings to be used as database hints
 
   In the keyword query syntax, those options must be given immediately
   after the join. In the expression syntax, the options are given as
@@ -900,6 +901,22 @@ defmodule Ecto.Query do
       |> join(:inner_lateral, [g], gs in fragment("SELECT * FROM games_sold AS gs WHERE gs.game_id = ? ORDER BY gs.sold_on LIMIT 2", g.id))
       |> select([g, gs], {g.name, gs.sold_on})
 
+  ## Hints
+
+  `from` and `join` also support index hints, as found in databases such as
+  [MySQL](https://dev.mysql.com/doc/refman/8.0/en/index-hints.html) and
+  [MSSQL](https://docs.microsoft.com/en-us/sql/t-sql/queries/hints-transact-sql-table?view=sql-server-2017).
+
+  For example, a developer using MySQL may write:
+
+      from p in Post,
+        join: c in Comment,
+        hints: ["USE INDEX FOO", "USE INDEX BAR"],
+        where: p.id == c.post_id,
+        select: c
+
+  Keep in mind you want to use hints rarely, so don't forget to read the database
+  disclaimers about such functionality.
   """
   @join_opts [:on | @from_join_opts]
 
