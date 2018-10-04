@@ -109,10 +109,6 @@ defmodule Ecto.Query.Builder do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
-  def escape({:type, _, [{:unsafe_fragment, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env) do
-    escape_with_type(expr, type, params_acc, vars, env)
-  end
-
   def escape({:type, _, [{agg, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env)
       when agg in ~w(avg count max min sum)a do
     escape_with_type(expr, type, params_acc, vars, env)
@@ -141,20 +137,6 @@ defmodule Ecto.Query.Builder do
 
     {frags, params_acc} = Enum.map_reduce(frags, params_acc, &escape(&1, :any, &2, vars, env))
     {{:{}, [], [:fragment, [], merge_fragments(pieces, frags)]}, params_acc}
-  end
-
-  def escape({:unsafe_fragment, _, [{:^, _, [var]} | frags]}, _type, params_acc, vars, env) do
-    {frags, params_acc} = Enum.map_reduce(frags, params_acc, &escape(&1, :any, &2, vars, env))
-
-    expr = quote do
-      Ecto.Query.Builder.unsafe_fragment!(unquote(var), unquote(frags))
-    end
-
-    {{:{}, [], [:fragment, [], expr]}, params_acc}
-  end
-
-  def escape({:unsafe_fragment, _, [_ | _]} = expr, _type, _params_acc, _vars, _env) do
-    error! bad_unsafe_fragment_message(Macro.to_string(expr))
   end
 
   # interval
@@ -453,28 +435,8 @@ defmodule Ecto.Query.Builder do
   end
 
   defp bad_fragment_message(arg) do
-    """
-    to prevent SQL injection attacks, fragment(...) allows only keyword lists to be
-    interpolated as the first argument via the `^` operator.
-
-    If you are in a rare situation where the string that must be sent to the database
-    is defined dynamically, you can use unsafe_fragment(...) to bypass Ecto checks
-    and send the string as is. Use unsafe_fragment(...) only as last resort and wisely.
-
-    Got: `#{arg}`
-    """
-  end
-
-  defp bad_unsafe_fragment_message(arg) do
-    """
-    unsafe_fragment(...) expects the first argument to be interpolated as ^argument
-
-    The interpolated argument should be a string that will be sent to the database
-    as is. For this reason, use this feature with extreme care and instead prefer
-    to use fragment(...) as much  as possible.
-
-    Got: `#{arg}`
-    """
+    "to prevent SQL injection attacks, fragment(...) does not allow strings " <>
+      "to be interpolated as the first argument via the `^` operator, got: `#{arg}`"
   end
 
   defp split_fragment(<<>>, consumed),
@@ -499,7 +461,6 @@ defmodule Ecto.Query.Builder do
     |> escape(type, params_acc, vars, env)
   end
 
-  defp validate_window_function!({:unsafe_fragment, _, _} = expr), do: expr
   defp validate_window_function!({:fragment, _, _} = expr), do: expr
 
   defp validate_window_function!({agg, _, args} = expr) when is_atom(agg) and is_list(args) do
@@ -845,24 +806,6 @@ defmodule Ecto.Query.Builder do
       kw
     else
       raise ArgumentError, bad_fragment_message(inspect(kw))
-    end
-  end
-
-  @doc """
-  Called by escaper at runtime to verify binaries.
-  """
-  def unsafe_fragment!(string, fragments) do
-    if is_binary(string) do
-      pieces = split_fragment(string, "")
-
-      if length(pieces) != length(fragments) + 1 do
-        raise ArgumentError,
-              "unsafe_fragment(...) expects extra arguments in the same amount of question marks in string"
-      end
-
-      merge_fragments(pieces, fragments)
-    else
-      raise ArgumentError, bad_unsafe_fragment_message(inspect(string))
     end
   end
 

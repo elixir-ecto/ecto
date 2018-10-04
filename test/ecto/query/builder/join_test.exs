@@ -72,32 +72,6 @@ defmodule Ecto.Query.Builder.JoinTest do
     join("posts", :left, [p], c in subquery(subquery, prefix: "sample"), on: true)
   end
 
-  test "accepts interpolated binary as unsafe fragment" do
-    join("posts", :left, [p], c in unsafe_fragment(^"comments"), on: true)
-    join("posts", :left, [p], c in unsafe_fragment(^"?", 1), on: true)
-  end
-
-  test "raises on non interpolated argument" do
-    assert_raise Ecto.Query.CompileError, ~r/unsafe_fragment\(...\) expects the first argument/, fn ->
-      escape(quote do
-        join("posts", :left, [p], c in unsafe_fragment("comments"), on: true)
-      end, [], __ENV__)
-    end
-
-    assert_raise Ecto.Query.CompileError, ~r/unsafe_fragment\(...\) expects the first argument/, fn ->
-      escape(quote do
-        join("posts", :left, [p], c in unsafe_fragment(["$eq": "foo"]), on: true)
-      end, [], __ENV__)
-    end
-  end
-
-  test "raises on invalid interpolated unsafe fragments" do
-    frag = [comments: "authors"]
-    assert_raise ArgumentError, ~r/unsafe_fragment\(...\) expects the first argument/, fn ->
-      join("posts", :left, [p], c in unsafe_fragment(^frag), on: true)
-    end
-  end
-
   test "raises on invalid qualifier" do
     assert_raise ArgumentError,
                  ~r/invalid join qualifier `:whatever`/, fn ->

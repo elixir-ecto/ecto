@@ -62,11 +62,6 @@ defmodule Ecto.Query.Builder.Join do
     {:_, expr, nil, params}
   end
 
-  def escape({:unsafe_fragment, _, [_ | _]} = expr, vars, env) do
-    {expr, {params, :acc}} = Builder.escape(expr, :any, {%{}, :acc}, vars, env)
-    {:_, expr, nil, params}
-  end
-
   def escape({string, schema} = join, _vars, env) when is_binary(string) do
     case Macro.expand(schema, env) do
       schema when is_atom(schema) ->

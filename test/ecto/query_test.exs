@@ -655,14 +655,14 @@ defmodule Ecto.QueryTest do
 
   describe "fragment/1" do
     test "raises at runtime when interpolation is not a keyword list" do
-      assert_raise ArgumentError, ~r/fragment\(...\) allows only keyword lists/s, fn ->
+      assert_raise ArgumentError, ~r/fragment\(...\) does not allow strings to be interpolated/s, fn ->
         clause = ["1 = ?"]
         from p in "posts", where: fragment(^clause)
       end
     end
 
     test "raises at runtime when interpolation is a binary string" do
-      assert_raise ArgumentError, ~r/fragment\(...\) allows only keyword lists/, fn ->
+      assert_raise ArgumentError, ~r/fragment\(...\) does not allow strings to be interpolated/, fn ->
         clause = "1 = ?"
         from p in "posts", where: fragment(^clause)
       end
@@ -670,53 +670,6 @@ defmodule Ecto.QueryTest do
 
     test "keeps UTF-8 encoding" do
       assert inspect(from p in "posts", where: fragment("héllò")) ==
-             ~s[#Ecto.Query<from p in \"posts\", where: fragment("héllò")>]
-    end
-  end
-
-  describe "unsafe_fragment/1" do
-    test "raises with non interpolated binary fragment" do
-      message = ~r"unsafe_fragment\(...\) expects the first argument"
-      assert_raise Ecto.Query.CompileError, message, fn ->
-        quote_and_eval(
-          from p in "posts", where: unsafe_fragment("1 = 1")
-        )
-      end
-    end
-
-    test "raises at runtime when interpolation is not a string" do
-      assert_raise ArgumentError, ~r"unsafe_fragment\(...\) expects the first argument", fn ->
-        clause = [foo: "bar"]
-        from p in "posts", where: unsafe_fragment(^clause)
-      end
-    end
-
-    test "raises at runtime on parameter mismatch" do
-      assert_raise ArgumentError, ~r"unsafe_fragment\(...\) expects extra arguments", fn ->
-        from p in "posts", where: unsafe_fragment(^"foo = bar", 1)
-      end
-    end
-
-    test "works with interpolated binary fragment" do
-      val = 1
-      clause = "1 = #{val}"
-      query = from p in "posts", where: unsafe_fragment(^clause)
-
-      assert inspect(query) ==
-            ~s[#Ecto.Query<from p in \"posts\", where: fragment(\"1 = 1\")>]
-    end
-
-    test "works with interpolated binary fragment and question marks" do
-      clause = "? = ?"
-      query = from p in "posts", where: unsafe_fragment(^clause, 1, 2)
-
-      assert inspect(query) ==
-            ~s[#Ecto.Query<from p in \"posts\", where: fragment(\"? = ?\", 1, 2)>]
-    end
-
-    test "keeps UTF-8 encoding" do
-      clause = "héllò"
-      assert inspect(from p in "posts", where: unsafe_fragment(^clause)) ==
              ~s[#Ecto.Query<from p in \"posts\", where: fragment("héllò")>]
     end
   end

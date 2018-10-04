@@ -58,7 +58,7 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do fragment(title: [foo: ^0]) end), %{0 => {0, :any}}} ==
       escape(quote do fragment(title: [foo: ^0]) end, [], __ENV__)
 
-    assert_raise Ecto.Query.CompileError, ~r"fragment\(...\) allows only keyword lists", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"fragment\(...\) does not allow strings to be interpolated", fn ->
       escape(quote do fragment(:invalid) end, [], __ENV__)
     end
 

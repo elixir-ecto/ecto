@@ -79,7 +79,7 @@ One of the exciting additions in Ecto v3.0 is the addition of named bindings to 
     query = from [p, comments: c] in query,
               select: {p.title, c.body}
 
-`Ecto.Query` got many other exciting features. Such as pairwise comparisons, as in `where: {p.foo, p.bar} > {^foo, ^bar}`, built-in support for `coalesce` and arithmetic operators, `unsafe_fragment` for the rare cases where you really need to generate a SQL expression dynamically, the ability to filter aggregators, as in `select: filter(count(p.id), p.public == true)`, table specific hints in databases like MySQL and MSSQL, unions, intersections, windows, and many more.
+`Ecto.Query` got many other exciting features. Such as pairwise comparisons, as in `where: {p.foo, p.bar} > {^foo, ^bar}`, built-in support for `coalesce` and arithmetic operators, the ability to filter aggregators, as in `select: filter(count(p.id), p.public == true)`, table specific hints in databases like MySQL and MSSQL, unions, intersections, windows, and many more.
 
 ### Locked migrations
 
@@ -101,7 +101,6 @@ Running migrations will now lock the migrations table, allowing you to concurren
   * [Ecto.Migration] Add support for logging notices/alerts/warnings when running migrations (only supported by Postgres currently)
   * [Ecto.Migrator] Warn when migrating and there is a higher version already migrated in the database
   * [Ecto.Multi] Add support for anonymous functions in `insert/4`, `update/4`, `insert_or_update/4`, and `delete/4`
-  * [Ecto.Query] Add `unsafe_fragment` to queries which allow developers to send dynamically generated fragments to the database that are not checked (and therefore unsafe)
   * [Ecto.Query] Support tuples in `where` and `having`, allowing queries such as `where: {p.foo, p.bar} > {^foo, ^bar}`
   * [Ecto.Query] Support arithmetic operators in queries as a thin layer around the DB functionality
   * [Ecto.Query] Allow joins in queries to be named via `:as` and allow named bindings
