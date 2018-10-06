@@ -901,6 +901,12 @@ defmodule Ecto.Query do
       |> join(:inner_lateral, [g], gs in fragment("SELECT * FROM games_sold AS gs WHERE gs.game_id = ? ORDER BY gs.sold_on LIMIT 2", g.id))
       |> select([g, gs], {g.name, gs.sold_on})
 
+  Note that the `join` does not automatically wrap the fragment in
+  in parentheses, since some expressions require parens and others
+  require no parens. Therefore, in cases such as common table
+  expressions, you will have to explicitly wrap the fragment content
+  in parens.
+
   ## Hints
 
   `from` and `join` also support index hints, as found in databases such as
