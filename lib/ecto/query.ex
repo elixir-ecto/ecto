@@ -556,7 +556,7 @@ defmodule Ecto.Query do
       Repo.update_all(
         from(p in Post, join: s in subquery(subset_query), on: s.id == p.id),
         set: [sync_started_at: NaiveDateTime.utc_now()]
-      end)
+      )
 
   """
   def subquery(query, opts \\ []) do
