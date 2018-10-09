@@ -21,7 +21,7 @@ defmodule Ecto.Query.API do
   ## Window API
 
   Ecto also supports many of the windows functions found
-  in SQL databases. See `Ecto.Query.API.Windows` for more
+  in SQL databases. See `Ecto.Query.WindowAPI` for more
   information.
 
   ## About the arithmetic operators

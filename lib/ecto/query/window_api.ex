@@ -1,4 +1,4 @@
-defmodule Ecto.Query.API.Windows do
+defmodule Ecto.Query.WindowAPI do
   @moduledoc """
   Lists all windows functions.
 
@@ -206,7 +206,7 @@ defmodule Ecto.Query.API.Windows do
   def lead(value, offset \\ 1, default \\ nil), do: doc! [value, offset, default]
 
   defp doc!(_) do
-    raise "the functions in Ecto.Query.API.Windows should not be invoked directly, " <>
+    raise "the functions in Ecto.Query.WindowAPI should not be invoked directly, " <>
           "they serve for documentation purposes only"
   end
 end

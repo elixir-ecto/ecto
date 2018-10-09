@@ -63,18 +63,19 @@ defmodule Ecto.MixProject do
       groups_for_modules: [
         # Ecto,
         # Ecto.Changeset,
+        # Ecto.LogEntry,
         # Ecto.Multi,
+        # Ecto.Query,
+        # Ecto.Repo,
         # Ecto.Schema,
         # Ecto.Schema.Metadata,
         # Ecto.Type,
         # Ecto.UUID,
         # Mix.Ecto,
 
-        "Repo and Queries": [
-          Ecto.LogEntry,
-          Ecto.Repo,
-          Ecto.Query,
+        "Query APIs": [
           Ecto.Query.API,
+          Ecto.Query.WindowAPI,
           Ecto.Queryable,
           Ecto.SubQuery
         ],

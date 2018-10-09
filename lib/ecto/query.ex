@@ -465,7 +465,7 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Defines windows which can be used with `Ecto.Query.API.Windows`.
+  Defines windows which can be used with `Ecto.Query.WindowAPI`.
 
   Receives a keyword list where keys are names of the windows
   and values are a keyword list with window expressions.
@@ -480,7 +480,7 @@ defmodule Ecto.Query do
   In the example above, we get the average salary per department.
   `:department` is the window name, partitioned by `e.depname`
   and `avg/1` is the window function. For more information
-  on windows functions, see `Ecto.Query.API.Windows`.
+  on windows functions, see `Ecto.Query.WindowAPI`.
 
   ## Window expressions
 

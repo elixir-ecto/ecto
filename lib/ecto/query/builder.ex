@@ -464,10 +464,10 @@ defmodule Ecto.Query.Builder do
   defp validate_window_function!({:fragment, _, _} = expr), do: expr
 
   defp validate_window_function!({agg, _, args} = expr) when is_atom(agg) and is_list(args) do
-    if Code.ensure_loaded?(Ecto.Query.API.Windows) and
-         not function_exported?(Ecto.Query.API.Windows, agg, length(args)) do
+    if Code.ensure_loaded?(Ecto.Query.WindowAPI) and
+         not function_exported?(Ecto.Query.WindowAPI, agg, length(args)) do
       error! "unknown window function #{agg}/#{length(args)}. " <>
-               "See Ecto.Query.API.Windows for all available functions"
+               "See Ecto.Query.WindowAPI for all available functions"
     end
 
     expr
