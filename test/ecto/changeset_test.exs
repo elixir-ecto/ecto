@@ -873,25 +873,25 @@ defmodule Ecto.ChangesetTest do
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, min: 6)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be at least %{count} character(s)", count: 6, validation: :length, kind: :min}]
+    assert changeset.errors == [title: {"should be at least 6 character(s)", count: 5, validation: :length, kind: :min}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, max: 4)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be at most %{count} character(s)", count: 4, validation: :length, kind: :max}]
+    assert changeset.errors == [title: {"should be at most 4 character(s)", count: 5, validation: :length, kind: :max}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 10)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be %{count} character(s)", count: 10, validation: :length, kind: :is}]
+    assert changeset.errors == [title: {"should be 10 character(s)", count: 5, validation: :length, kind: :is}]
 
     changeset = changeset(%{"title" => "world"}) |> validate_length(:title, is: 10, message: "yada")
-    assert changeset.errors == [title: {"yada", count: 10, validation: :length, kind: :is}]
+    assert changeset.errors == [title: {"yada", count: 5, validation: :length, kind: :is}]
 
     changeset = changeset(%{"title" => "\u0065\u0301"}) |> validate_length(:title, max: 1)
     assert changeset.valid?
 
     changeset = changeset(%{"title" => "\u0065\u0301"}) |> validate_length(:title, max: 1, count: :codepoints)
     refute changeset.valid?
-    assert changeset.errors == [title: {"should be at most %{count} character(s)", count: 1, validation: :length, kind: :max}]
+    assert changeset.errors == [title: {"should be at most 1 character(s)", count: 2, validation: :length, kind: :max}]
   end
 
   test "validate_length/3 with list" do
@@ -908,24 +908,24 @@ defmodule Ecto.ChangesetTest do
 
     changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, min: 6, foo: true)
     refute changeset.valid?
-    assert changeset.errors == [topics: {"should have at least %{count} item(s)", count: 6, validation: :length, kind: :min}]
+    assert changeset.errors == [topics: {"should have at least 6 item(s)", count: 2, validation: :length, kind: :min}]
 
     changeset = changeset(%{"topics" => ["Politics", "Security", "Economy"]}) |> validate_length(:topics, max: 2)
     refute changeset.valid?
-    assert changeset.errors == [topics: {"should have at most %{count} item(s)", count: 2, validation: :length, kind: :max}]
+    assert changeset.errors == [topics: {"should have at most 2 item(s)", count: 3, validation: :length, kind: :max}]
 
     changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, is: 10)
     refute changeset.valid?
-    assert changeset.errors == [topics: {"should have %{count} item(s)", count: 10, validation: :length, kind: :is}]
+    assert changeset.errors == [topics: {"should have 10 item(s)", count: 2, validation: :length, kind: :is}]
 
     changeset = changeset(%{"topics" => ["Politics", "Security"]}) |> validate_length(:topics, is: 10, message: "yada")
-    assert changeset.errors == [topics: {"yada", count: 10, validation: :length, kind: :is}]
+    assert changeset.errors == [topics: {"yada", count: 2, validation: :length, kind: :is}]
   end
 
   test "validate_length/3 with associations" do
     post = %Post{comments: [%Comment{id: 1}]}
     changeset = change(post) |> put_assoc(:comments, []) |> validate_length(:comments, min: 1)
-    assert changeset.errors == [comments: {"should have at least %{count} item(s)", count: 1, validation: :length, kind: :min}]
+    assert changeset.errors == [comments: {"should have at least 1 item(s)", count: 0, validation: :length, kind: :min}]
 
     changeset = change(post) |> put_assoc(:comments, [%Comment{id: 2}, %Comment{id: 3}]) |> validate_length(:comments, max: 2)
     assert changeset.valid?
@@ -1406,8 +1406,8 @@ defmodule Ecto.ChangesetTest do
       %Ecto.Changeset{}, field, {_, [name: "your title"]} ->
         "value in #{field} is taken"
         |> String.upcase()
-      %Ecto.Changeset{}, field, {_, [count: 3, validation: :length, kind: :min] = keys} ->
-        "should be at least #{keys[:count]} character(s) in field #{field}"
+      %Ecto.Changeset{}, field, {reason, [count: 2, validation: :length, kind: :min]} ->
+        "#{reason} in field #{field}"
         |> String.upcase()
       %Ecto.Changeset{validations: validations}, field, {_, [validation: :format]} ->
         validation = Keyword.get_values(validations, field)

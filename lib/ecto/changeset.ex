@@ -1891,22 +1891,22 @@ defmodule Ecto.Changeset do
   end
 
   defp wrong_length(_type, value, value, _opts), do: nil
-  defp wrong_length(:string, _length, value, opts), do:
-    {message(opts, "should be %{count} character(s)"), count: value, validation: :length, kind: :is}
-  defp wrong_length(:list, _length, value, opts), do:
-    {message(opts, "should have %{count} item(s)"), count: value, validation: :length, kind: :is}
+  defp wrong_length(:string, length, value, opts), do:
+    {message(opts, "should be #{value} character(s)"), count: length, validation: :length, kind: :is}
+  defp wrong_length(:list, length, value, opts), do:
+    {message(opts, "should have #{value} item(s)"), count: length, validation: :length, kind: :is}
 
   defp too_short(_type, length, value, _opts) when length >= value, do: nil
-  defp too_short(:string, _length, value, opts), do:
-    {message(opts, "should be at least %{count} character(s)"), count: value, validation: :length, kind: :min}
-  defp too_short(:list, _length, value, opts), do:
-    {message(opts, "should have at least %{count} item(s)"), count: value, validation: :length, kind: :min}
+  defp too_short(:string, length, value, opts), do:
+    {message(opts, "should be at least #{value} character(s)"), count: length, validation: :length, kind: :min}
+  defp too_short(:list, length, value, opts), do:
+    {message(opts, "should have at least #{value} item(s)"), count: length, validation: :length, kind: :min}
 
   defp too_long(_type, length, value, _opts) when length <= value, do: nil
-  defp too_long(:string, _length, value, opts), do:
-    {message(opts, "should be at most %{count} character(s)"), count: value, validation: :length, kind: :max}
-  defp too_long(:list, _length, value, opts), do:
-    {message(opts, "should have at most %{count} item(s)"), count: value, validation: :length, kind: :max}
+  defp too_long(:string, length, value, opts), do:
+    {message(opts, "should be at most #{value} character(s)"), count: length, validation: :length, kind: :max}
+  defp too_long(:list, length, value, opts), do:
+    {message(opts, "should have at most #{value} item(s)"), count: length, validation: :length, kind: :max}
 
   @doc """
   Validates the properties of a number.
