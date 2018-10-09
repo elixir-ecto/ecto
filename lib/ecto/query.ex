@@ -902,7 +902,7 @@ defmodule Ecto.Query do
       |> select([g, gs], {g.name, gs.sold_on})
 
   Note that the `join` does not automatically wrap the fragment in
-  in parentheses, since some expressions require parens and others
+  parentheses, since some expressions require parens and others
   require no parens. Therefore, in cases such as common table
   expressions, you will have to explicitly wrap the fragment content
   in parens.
