@@ -673,4 +673,35 @@ defmodule Ecto.QueryTest do
              ~s[#Ecto.Query<from p in \"posts\", where: fragment("héllò")>]
     end
   end
+
+  describe "has_named_binding?/1" do
+    test "returns true if query has a named binding" do
+      query =
+        from(p in "posts", as: :posts,
+          join: b in "blogs",
+          join: c in "comments", as: :comment,
+          join: l in "links", on: l.valid, as: :link)
+
+      assert has_named_binding?(query, :posts)
+      assert has_named_binding?(query, :comment)
+      assert has_named_binding?(query, :link)
+    end
+
+    test "returns false if query does not have a named binding" do
+      query = from(p in "posts")
+      refute has_named_binding?(query, :posts)
+    end
+
+    test "returns false when query is a tuple, atom or binary" do
+      refute has_named_binding?({:foo, :bar}, :posts)
+      refute has_named_binding?(:foo, :posts)
+      refute has_named_binding?("foo", :posts)
+    end
+
+    test "casts queryable to query" do
+      assert_raise Protocol.UndefinedError, "protocol Ecto.Queryable not implemented for []", fn ->
+        has_named_binding?([], :posts)
+      end
+    end
+  end
 end

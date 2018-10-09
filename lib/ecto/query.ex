@@ -1830,4 +1830,22 @@ defmodule Ecto.Query do
   defp assert_schema!(query) do
     raise Ecto.QueryError, query: query, message: "expected a from expression with a schema"
   end
+
+  @doc """
+  Returns `true` if query has binding with a given name, otherwise `false`.
+
+  For more information on named bindings see "Named bindings" in this module doc.
+  """
+  def has_named_binding?(%Ecto.Query{aliases: aliases}, key) do
+    Map.has_key?(aliases, key)
+  end
+
+  def has_named_binding?(queryable, _key)
+      when is_atom(queryable) or is_binary(queryable) or is_tuple(queryable) do
+    false
+  end
+
+  def has_named_binding?(queryable, key) do
+    has_named_binding?(Ecto.Queryable.to_query(queryable), key)
+  end
 end
