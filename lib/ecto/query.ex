@@ -1832,7 +1832,7 @@ defmodule Ecto.Query do
   end
 
   @doc """
-  Returns `true` if query has binding with a given name, otherwise - `false`.
+  Returns `true` if query has binding with a given name, otherwise `false`.
 
   For more information on named bindings see "Named bindings" in this module doc.
   """
