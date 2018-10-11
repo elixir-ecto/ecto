@@ -156,8 +156,8 @@ defmodule Ecto.Query.Builder.Join do
     validate_bind(join_bind, binding)
 
     {count_bind, query} =
-      if join_bind != :_ and !count_bind do
-        # If count_bind is not available,
+      if (join_bind != :_ or as != nil) and !count_bind do
+        # If we have a join or alias and count_bind is not available,
         # we need to compute the amount of binds at runtime
         query =
           quote do
@@ -234,25 +234,43 @@ defmodule Ecto.Query.Builder.Join do
   @doc """
   Applies the join expression to the query.
   """
+  def apply(%Ecto.Query{joins: joins} = query, expr, nil, _count_bind) do
+    %{query | joins: joins ++ [expr]}
+  end
   def apply(%Ecto.Query{joins: joins, aliases: aliases} = query, expr, as, count_bind) do
-    aliases = apply_aliases(aliases, as, count_bind)
+    aliases =
+      case aliases do
+        %{} -> runtime_aliases(aliases, as, count_bind)
+        _ -> compile_aliases(aliases, as, count_bind)
+      end
+
     %{query | joins: joins ++ [expr], aliases: aliases}
   end
   def apply(query, expr, as, count_bind) do
     apply(Ecto.Queryable.to_query(query), expr, as, count_bind)
   end
 
-  def apply_aliases(aliases, nil, _), do: aliases
-  def apply_aliases(aliases = %{}, name, join_count) when is_atom(name) and is_integer(join_count) do
+  @doc """
+  Called at runtime to build aliases.
+  """
+  def runtime_aliases(aliases, nil, _), do: aliases
+
+  def runtime_aliases(aliases, name, join_count) when is_atom(name) and is_integer(join_count) do
     if Map.has_key?(aliases, name) do
       Builder.error! "alias `#{inspect name}` already exists"
     else
       Map.put(aliases, name, join_count)
     end
   end
-  def apply_aliases(aliases, name, join_count) do
+
+  defp compile_aliases({:%{}, meta, aliases}, name, join_count)
+       when is_atom(name) and is_integer(join_count) do
+    {:%{}, meta, aliases |> Map.new |> runtime_aliases(name, join_count) |> Map.to_list}
+  end
+
+  defp compile_aliases(aliases, name, join_count) do
     quote do
-      Ecto.Query.Builder.Join.apply_aliases(unquote(Macro.escape(aliases)), unquote(name), unquote(join_count))
+      Ecto.Query.Builder.Join.runtime_aliases(unquote(aliases), unquote(name), unquote(join_count))
     end
   end
 

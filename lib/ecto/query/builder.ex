@@ -632,7 +632,7 @@ defmodule Ecto.Query.Builder do
 
   """
   @spec escape_binding(Macro.t, list, Macro.Env.t) :: {Macro.t, Keyword.t}
-  def escape_binding(query, binding, env) when is_list(binding) do
+  def escape_binding(query, binding, _env) when is_list(binding) do
     vars = binding |> Enum.with_index |> Enum.map(&escape_bind/1)
     assert_no_duplicate_binding!(vars)
 
@@ -640,7 +640,7 @@ defmodule Ecto.Query.Builder do
     assert_named_binds_in_tail!(named_vars, binding)
 
     {query, positional_binds} = calculate_positional_binds(query, positional_vars)
-    {query, named_binds} = calculate_named_binds(query, named_vars, env)
+    {query, named_binds} = calculate_named_binds(query, named_vars)
     {query, positional_binds ++ named_binds}
   end
   def escape_binding(_query, bind, _env) do
@@ -691,34 +691,35 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  def calculate_named_binds(query, [], _env), do: {query, []}
-  def calculate_named_binds(query, vars, env) do
+  def calculate_named_binds(query, []), do: {query, []}
+  def calculate_named_binds(query, vars) do
     query =
       quote do
-        %{aliases: aliases} = query = Ecto.Queryable.to_query(unquote(query))
+        query = Ecto.Queryable.to_query(unquote(query))
       end
 
     vars =
       for {:named, key, name} <- vars do
-        ix =
-          quote do
-            case Map.fetch(aliases, unquote(name)) do
-              {:ok, ix} ->
-                ix
-
-              :error ->
-                raise Ecto.QueryError,
-                  message: "unknown bind name `#{inspect unquote(name)}`",
-                  query: query,
-                  file: unquote(env.file),
-                  line: unquote(env.line)
-            end
-          end
-
-        {key, ix}
+        {key,
+         quote do
+           Ecto.Query.Builder.count_alias!(query, unquote(name))
+         end}
       end
 
     {query, vars}
+  end
+
+  @doc """
+  Count the alias for the given query.
+  """
+  def count_alias!(%{aliases: aliases} = query, name) do
+    case aliases do
+      %{^name => ix} ->
+        ix
+
+      %{} ->
+        raise Ecto.QueryError, message: "unknown bind name `#{inspect name}`", query: query
+    end
   end
 
   defp escape_bind({{{var, _, context}, ix}, _}) when is_atom(var) and is_atom(context),
@@ -988,11 +989,11 @@ defmodule Ecto.Query.Builder do
 
   # Unescapes an `Ecto.Query` struct.
   defp unescape_query({:%, _, [Query, {:%{}, _, list}]}) do
-    struct(Query, unescape_aliases(list))
+    struct(Query, list)
   end
   defp unescape_query({:%{}, _, list} = ast) do
     if List.keyfind(list, :__struct__, 0) == {:__struct__, Query} do
-      Enum.into(unescape_aliases(list), %{})
+      Map.new(list)
     else
       ast
     end
@@ -1001,25 +1002,9 @@ defmodule Ecto.Query.Builder do
     other
   end
 
-  defp unescape_aliases(query) do
-    case List.keytake(query, :aliases, 0) do
-      {{:aliases, {:%{}, _, aliases}}, query} -> [aliases: Map.new(aliases)] ++ query
-      _ -> query
-    end
-  end
-
   # Escapes an `Ecto.Query` and associated structs.
   defp escape_query(%Query{} = query),
-    do: {:%{}, [], escape_aliases(query)}
+    do: {:%{}, [], Map.to_list(query)}
   defp escape_query(other),
     do: other
-
-  defp escape_aliases(%{aliases: aliases} = query) do
-    query = Map.to_list(Map.delete(query, :aliases))
-
-    case aliases do
-      %{} -> [aliases: {:%{}, [], Map.to_list(aliases)}] ++ query
-      aliases -> [aliases: aliases] ++ query
-    end
-  end
 end

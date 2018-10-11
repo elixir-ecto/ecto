@@ -357,6 +357,17 @@ defmodule Ecto.QueryTest do
         ~s[#Ecto.Query<from p in \"posts\", as: :post, where: p.id == 0>]
     end
 
+    test "match on binding by name for source and join" do
+      query =
+        "posts"
+        |> from(as: :post)
+        |> join(:inner, [post: p], "comments", as: :comment)
+        |> update([comment: c], set: [id: c.id + 1])
+
+      assert inspect(query) ==
+        ~s{#Ecto.Query<from p in "posts", as: :post, join: c in "comments", as: :comment, on: true, update: [set: [id: c.id + 1]]>}
+    end
+
     test "match on binding by name with ... in the middle" do
       query =
         "posts"
