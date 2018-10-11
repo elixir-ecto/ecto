@@ -38,8 +38,9 @@ defmodule Ecto.Repo do
     * `:url` - an URL that specifies storage information. Read below
       for more information
 
-    * `:log` - the log used when logging the query with Elixir's
+    * `:log` - the log level used when logging the query with Elixir's
       Logger. If false, disables logging for that repository.
+      Defaults to `:debug`.
 
     * `:telemetry_prefix` - we recommend adapters to publish events
       using the `Telemetry` library. By default, the telemetry prefix
