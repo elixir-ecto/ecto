@@ -45,7 +45,10 @@ defmodule Ecto.MixProject do
     [
       maintainers: ["Eric Meadows-Jönsson", "José Valim", "James Fish", "Michał Muskała"],
       licenses: ["Apache 2.0"],
-      links: %{"GitHub" => "https://github.com/elixir-ecto/ecto"}
+      links: %{"GitHub" => "https://github.com/elixir-ecto/ecto"},
+      files:
+        ~w(.formatter.exs mix.exs README.md CHANGELOG.md lib) ++
+          ~w(integration_test/cases integration_test/support)
     ]
   end
 
