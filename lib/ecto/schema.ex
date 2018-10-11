@@ -1498,7 +1498,7 @@ defmodule Ecto.Schema do
   Defining embedded schema in such a way will define a `Parent.Child` module
   with the appropriate struct. In order to properly cast the embedded schema.
   When casting the inline-defined embedded schemas you need to use the `:with`
-  option of `cast_embed/3` to provide the proper function to do the casting.
+  option of `Ecto.Changeset.cast_embed/3` to provide the proper function to do the casting.
   For example:
 
       def changeset(schema, params) do
