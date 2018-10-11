@@ -929,6 +929,8 @@ defmodule Ecto.Type do
 
   """
   @spec equal?(t, term, term) :: boolean
+  def equal?(_, nil, nil), do: true
+
   def equal?(type, term1, term2) do
     if fun = equal_fun(type) do
       fun.(term1, term2)
@@ -976,6 +978,7 @@ defmodule Ecto.Type do
   defp equal_naive_datetime?(_, _),
     do: false
 
+  defp equal_list?(fun, [nil | xs], [nil | ys]), do: equal_list?(fun, xs, ys)
   defp equal_list?(fun, [x | xs], [y | ys]), do: fun.(x, y) and equal_list?(fun, xs, ys)
   defp equal_list?(_fun, [], []), do: true
   defp equal_list?(_fun, _, _), do: false
@@ -988,13 +991,17 @@ defmodule Ecto.Type do
     equal_map?(fun, Map.to_list(map1), map2)
   end
 
-  defp equal_map?(fun, [{key, val} | tail], other_map) do
-    case Map.fetch(other_map, key) do
-      {:ok, other_val} ->
-        fun.(val, other_val) and equal_map?(fun, tail, other_map)
+  defp equal_map?(fun, [{key, nil} | tail], other_map) do
+    case other_map do
+      %{^key => nil} -> equal_map?(fun, tail, other_map)
+      _ -> false
+    end
+  end
 
-      :error ->
-        false
+  defp equal_map?(fun, [{key, val} | tail], other_map) do
+    case other_map do
+      %{^key => other_val} -> fun.(val, other_val) and equal_map?(fun, tail, other_map)
+      _ -> false
     end
   end
 

@@ -789,6 +789,34 @@ defmodule Ecto.TypeTest do
       refute Ecto.Type.equal?(nil, 1, 2)
     end
 
+    test "nil values" do
+      assert Ecto.Type.equal?(:any, nil, nil)
+      assert Ecto.Type.equal?(:boolean, nil, nil)
+      assert Ecto.Type.equal?(:binary, nil, nil)
+      assert Ecto.Type.equal?(:binary_id, nil, nil)
+      assert Ecto.Type.equal?(:date, nil, nil)
+      assert Ecto.Type.equal?(:decimal, nil, nil)
+      assert Ecto.Type.equal?(:float, nil, nil)
+      assert Ecto.Type.equal?(:id, nil, nil)
+      assert Ecto.Type.equal?(:integer, nil, nil)
+      assert Ecto.Type.equal?(:map, nil, nil)
+      assert Ecto.Type.equal?(:naive_datetime, nil, nil)
+      assert Ecto.Type.equal?(:naive_datetime_usec, nil, nil)
+      assert Ecto.Type.equal?(:string, nil, nil)
+      assert Ecto.Type.equal?(:time, nil, nil)
+      assert Ecto.Type.equal?(:time_usec, nil, nil)
+      assert Ecto.Type.equal?(:utc_datetime, nil, nil)
+      assert Ecto.Type.equal?(:utc_datetime_usec, nil, nil)
+
+      term = [~T[10:10:10], nil]
+      assert Ecto.Type.equal?({:array, :time}, term, term)
+
+      term = %{one: nil, two: ~T[10:10:10]}
+      assert Ecto.Type.equal?({:map, :time}, term, term)
+
+      assert Ecto.Type.equal?(Custom, nil, nil)
+    end
+
     test "bad type" do
       assert_raise ArgumentError, ~r"cannot use :foo as Ecto.Type", fn ->
         Ecto.Type.equal?(:foo, 1, 1.0)

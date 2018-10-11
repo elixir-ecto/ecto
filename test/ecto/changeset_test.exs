@@ -292,12 +292,20 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{}
     changeset = cast(%Post{decimal: Decimal.new(1)}, %{decimal: "1.1"}, ~w(decimal)a)
     assert changeset.changes == %{decimal: Decimal.new("1.1")}
+    changeset = cast(%Post{decimal: nil}, %{decimal: nil}, ~w(decimal)a)
+    assert changeset.changes == %{}
 
     {data, types} = {%{x: [Decimal.new(1)]}, %{x: {:array, :decimal}}}
     changeset = cast({data, types}, %{x: [Decimal.new("1.0")]}, ~w(x)a)
     assert changeset.changes == %{}
     changeset = cast({data, types}, %{x: [Decimal.new("1.1")]}, ~w(x)a)
     assert changeset.changes == %{x: [Decimal.new("1.1")]}
+    changeset = cast({%{x: [nil]}, types}, %{x: [nil]}, ~w(x)a)
+    assert changeset.changes == %{}
+
+    {data, types} = {%{x: %{decimal: nil}}, %{x: {:map, :decimal}}}
+    changeset = cast({data, types}, data, ~w(x)a)
+    assert changeset.changes == %{}
   end
 
   ## Changeset functions
