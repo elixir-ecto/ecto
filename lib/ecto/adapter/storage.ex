@@ -1,4 +1,4 @@
-defmodule Ecto.Adapter.Storage  do
+defmodule Ecto.Adapter.Storage do
   @moduledoc """
   Specifies the adapter storage API.
   """
