@@ -59,8 +59,32 @@ defmodule Ecto.ChangesetTest do
     cast(schema, params, ~w(id token title body upvotes decimal color topics virtual)a)
   end
 
-  ## cast/4
+  defmodule CustomError do
+    @behaviour Ecto.Type
+    def type,      do: :any
+    def cast(_),   do: {:error, message: "custom error message", reason: :foobar}
+    def load(_),   do: :error
+    def dump(_),   do: :error
+  end
 
+  defmodule CustomError2 do
+    @behaviour Ecto.Type
+    def type,      do: :any
+    def cast(_),   do: {:error, reason: :foobar}
+    def load(_),   do: :error
+    def dump(_),   do: :error
+  end
+
+  defmodule CustomErrorTest do
+    use Ecto.Schema
+
+    schema "custom_error" do
+      field :custom_error, CustomError
+      field :custom_error_2, CustomError2
+    end
+  end
+
+  ## cast/4
   test "cast/4: with valid string keys" do
     params = %{"title" => "hello", "body" => "world"}
     struct = %Post{}
@@ -224,6 +248,24 @@ defmodule Ecto.ChangesetTest do
     changeset = cast(struct, params, ~w(body)a)
     assert changeset.changes == %{}
     assert changeset.errors == [body: {"is invalid", [type: :string, validation: :cast]}]
+    refute changeset.valid?
+  end
+
+  test "cast/4: field has a custom invalid error message" do
+    params = %{"custom_error" => :error}
+    struct = %CustomErrorTest{}
+
+    changeset = cast(struct, params, ~w(custom_error)a)
+    assert changeset.errors == [custom_error: {"custom error message", [type: Ecto.ChangesetTest.CustomError, validation: :cast, reason: :foobar]}]
+    refute changeset.valid?
+  end
+
+  test "cast/4: field has a custom invalid error message without message" do
+    params = %{"custom_error_2" => :error}
+    struct = %CustomErrorTest{}
+
+    changeset = cast(struct, params, ~w(custom_error_2)a)
+    assert changeset.errors == [custom_error_2: {"is invalid", [type: Ecto.ChangesetTest.CustomError2, validation: :cast, reason: :foobar]}]
     refute changeset.valid?
   end
 

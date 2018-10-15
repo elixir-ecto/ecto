@@ -124,7 +124,7 @@ defmodule Ecto.Type do
     2. When passing arguments to `Ecto.Query`
 
   """
-  @callback cast(term) :: {:ok, term} | :error
+  @callback cast(term) :: {:ok, term} | {:error, keyword()} | :error
 
   @doc """
   Loads the given term into a custom type.
