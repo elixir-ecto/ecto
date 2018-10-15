@@ -77,6 +77,7 @@ MSSQL      | Tds.Ecto               | [ecto_sql][ecto_sql] + [tds_ecto][tds_ecto
 SQLite     | Sqlite.Ecto2           | [ecto][ecto] + [sqlite_ecto2][sqlite_ecto2]     | No
 Mnesia     | EctoMnesia.Adapter     | [ecto][ecto] + [ecto_mnesia][ecto_mnesia]       | No
 
+[ecto]: http://github.com/elixir-ecto/ecto
 [ecto_sql]: http://github.com/elixir-ecto/ecto_sql
 [postgrex]: http://github.com/elixir-ecto/postgrex
 [mariaex]: http://github.com/xerions/mariaex
