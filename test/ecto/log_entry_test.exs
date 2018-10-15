@@ -1,4 +1,4 @@
-Logger.configure_backend(:console, metadata: :all)
+Logger.configure_backend(:console, metadata: [:sample])
 
 defmodule Ecto.LogEntryTest do
   use ExUnit.Case, async: true
