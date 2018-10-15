@@ -440,7 +440,7 @@ defmodule Ecto.Changeset.Relation do
         original = Map.get(params, string_key) || Map.get(params, atom_key)
         case Ecto.Type.cast(type, original) do
           {:ok, value} -> value
-          :error       -> original
+          _ -> original
         end
       end
     end
