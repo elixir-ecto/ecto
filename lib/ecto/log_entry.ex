@@ -50,7 +50,7 @@ defmodule Ecto.LogEntry do
   custom level is given.
   """
   def log(entry, level, metadata \\ []) do
-    Logger.log(level, fn -> Ecto.LogEntry.to_iodata(entry) end, metadata)
+    Logger.log(level, fn -> to_iodata(entry) end, metadata)
   end
 
   @doc """
