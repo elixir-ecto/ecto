@@ -85,7 +85,7 @@ One of the exciting additions in Ecto v3.0 is the addition of named bindings to 
 
 Running migrations will now lock the migrations table, allowing you to concurrently run migrations in a cluster without worrying that two servers will race each other or without running migrations twice.
 
-## v3.0.0-dev (In Progress)
+## v3.0.0-rc.0
 
 ### Enhancements
 
@@ -141,6 +141,8 @@ Running migrations will now lock the migrations table, allowing you to concurren
   * [mix ecto.load] The task now fails on SQL errors on Postgres
 
 ### Deprecations
+
+Although Ecto 3.0 is a major bump version, the functionality below emits deprecation warnings to ease the migration process. The functionality below will be removed in future Ecto 3.1+ releases.
 
   * [Ecto.Changeset] Passing a list of binaries to `cast/3` is deprecated, please pass a list of atoms instead
   * [Ecto.Multi] `Ecto.Multi.run/3` now receives the repo in which the transaction is executing as the first argument to functions, and the changes so far as the second argument
