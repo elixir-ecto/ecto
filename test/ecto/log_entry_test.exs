@@ -1,3 +1,5 @@
+Logger.configure_backend(:console, metadata: :all)
+
 defmodule Ecto.LogEntryTest do
   use ExUnit.Case, async: true
 
@@ -40,6 +42,22 @@ defmodule Ecto.LogEntryTest do
 
     entry = %{entry | source: "test"}
     assert to_binary(entry) == "QUERY ERROR source=\"test\" db=210.0ms decode=50.0ms queue=10.0ms\ndone [1, 2, 3]"
+  end
+
+  test "converts from struct entry to iodata" do
+    entry = %LogEntry{query: "done", result: {:ok, []}}
+    assert to_binary(Map.from_struct(entry)) == "QUERY OK\ndone []"
+  end
+
+  test "logs metadata" do
+    message =
+      ExUnit.CaptureLog.capture_log(fn ->
+        entry = %LogEntry{query: "done", result: {:ok, []}}
+        assert Ecto.LogEntry.log(entry, :error, sample: "metadata")
+      end)
+
+    assert message =~ "[error] QUERY OK\ndone []"
+    assert message =~ "sample=metadata"
   end
 
   defp to_binary(entry) do

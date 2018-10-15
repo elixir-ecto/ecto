@@ -28,10 +28,8 @@ defmodule Ecto.LogEntry do
           query_time: integer | nil,
           decode_time: integer | nil,
           queue_time: integer | nil,
-          connection_pid: pid | nil,
           result: {:ok, term} | {:error, Exception.t()},
-          ansi_color: IO.ANSI.ansicode() | nil,
-          caller_pid: pid | nil
+          caller_pid: pid
         }
 
   defstruct query: nil,
@@ -41,9 +39,7 @@ defmodule Ecto.LogEntry do
             decode_time: nil,
             queue_time: nil,
             result: nil,
-            connection_pid: nil,
-            caller_pid: nil,
-            ansi_color: nil
+            caller_pid: nil
 
   require Logger
 
@@ -53,13 +49,8 @@ defmodule Ecto.LogEntry do
   The logger call won't be removed at compile time as
   custom level is given.
   """
-  def log(%{connection_pid: connection_pid, ansi_color: ansi_color} = entry, level) do
-    Logger.log(
-      level,
-      fn -> Ecto.LogEntry.to_iodata(entry) end,
-      ecto_conn_pid: connection_pid,
-      ansi_color: ansi_color
-    )
+  def log(entry, level, metadata \\ []) do
+    Logger.log(level, fn -> Ecto.LogEntry.to_iodata(entry) end, metadata)
   end
 
   @doc """
