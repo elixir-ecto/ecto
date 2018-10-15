@@ -96,7 +96,10 @@ defmodule Ecto.Repo do
 
     * `[:my_app, :repo, :query]` - should be invoked on every query send
       to the adapter, including queries that are related to the transaction
-      management. The payload will be an `Ecto.LogEntry` struct
+      management. The measurement will be the time necessary to run the query
+      including queue and encoding time. The metadata is a map where we recommend
+      developers to pass at least the same keys as found in the `Ecto.LogEntry`
+      struct
 
   """
 
