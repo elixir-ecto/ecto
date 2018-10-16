@@ -28,7 +28,15 @@ And that's it!
 
 `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` no longer exist. Instead developers should use `Date`, `Time`, `DateTime` and `NaiveDateTime` that ship as part of Elixir and are the preferred types since Ecto 2.1. Odds that you are already using the new types and not the deprecated ones.
 
-Note that database adapters have also been standardized to work with Elixir types and they no longer return tuples when developers perform raw queries.
+Note that database adapters have also been standardized to work with Elixir types and they no longer return tuples when developers perform raw queries or use `Ecto.Query` fragments. For example, in Ecto 2.x:
+
+    iex> Repo.one from u in User, select: fragment("?", u.created_at), limit: 1
+    {{2018, 10, 8}, {15, 15, 42, 501011}}
+
+And now in Ecto 3.0:
+
+    iex> Repo.one from u in User, select: fragment("?", u.created_at), limit: 1
+    ~N[2018-10-08 15:15:42.501011]
 
 To uniformly support microseconds across all databases, the types `:time`, `:naive_datetime`, `:utc_datetime` will now discard any microseconds information. Ecto v3.0 introduces the types `:time_usec`, `:naive_datetime_usec` and `:utc_datetime_usec` as an alternative for those interested in keeping microseconds. If you want to keep microseconds in your migrations and schemas, you need to configure your repository:
 
