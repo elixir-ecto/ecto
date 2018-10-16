@@ -607,6 +607,9 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :inner_lateral_join)
       Ecto.Query.exclude(query, :left_lateral_join)
 
+  However, keep in mind that if a join is removed and its bindings
+  were referenced elsewhere, the bindings won't be removed, leading
+  to a query that won't compile.
   """
   def exclude(%Ecto.Query{} = query, field), do: do_exclude(query, field)
   def exclude(query, field), do: do_exclude(Ecto.Queryable.to_query(query), field)
