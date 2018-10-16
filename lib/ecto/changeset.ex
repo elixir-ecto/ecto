@@ -570,9 +570,9 @@ defmodule Ecto.Changeset do
             end
 
           :error ->
-            {:invalid, message: "is invalid"}
+            {:invalid, []}
 
-          {:error, custom_errors} ->
+          {:error, custom_errors} when is_list(custom_errors) ->
             {:invalid, custom_errors}
         end
 
