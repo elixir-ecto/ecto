@@ -526,13 +526,10 @@ defmodule Ecto.Changeset do
         {Map.put(changes, key, value), errors, valid?}
       :missing ->
         {changes, errors, valid?}
-      :invalid ->
-        {changes, [{key, {"is invalid", [type: type, validation: :cast]}} | errors], false}
       {:invalid, custom_errors} ->
-        {msg, custom_errors} = Keyword.pop(custom_errors, :message)
-        msg = msg || "is invalid"
-        new_errors = Keyword.merge([type: type, validation: :cast], custom_errors)
-        {changes, [{key, {msg, new_errors}} | errors], false}
+        {message, custom_errors} = Keyword.pop(custom_errors, :message, "is invalid")
+        new_errors = [type: type] ++ Keyword.put_new(custom_errors, :validation, :cast)
+        {changes, [{key, {message, new_errors}} | errors], false}
     end
   end
 
@@ -573,7 +570,7 @@ defmodule Ecto.Changeset do
             end
 
           :error ->
-            :invalid
+            {:invalid, message: "is invalid"}
 
           {:error, custom_errors} ->
             {:invalid, custom_errors}
