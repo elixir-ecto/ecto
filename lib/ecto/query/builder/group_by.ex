@@ -15,7 +15,7 @@ defmodule Ecto.Query.Builder.GroupBy do
         13],
        {%{}, :acc}}
   """
-  @spec escape(:group_by | :partition_by, {map, term}, Macro.t, Keyword.t, Macro.Env.t) ::
+  @spec escape(:group_by | :partition_by, Macro.t, {map, term}, Keyword.t, Macro.Env.t) ::
           {Macro.t, {map, term}}
   def escape(kind, {:^, _, [expr]}, params_acc, _vars, _env) do
     {quote(do: Ecto.Query.Builder.GroupBy.group_by!(unquote(kind), unquote(expr))), params_acc}

@@ -73,7 +73,7 @@ defmodule Ecto.Query.WindowAPI do
   Returns number of the current row within its partition, counting from 1.
 
       from p in Post,
-           select: row_number() |> over(partition_by(p.category_id, order_by: p.date))
+           select: row_number() |> over(partition_by: p.category_id, order_by: p.date)
 
   Note that this function must be invoked using window function syntax.
   """
@@ -83,7 +83,7 @@ defmodule Ecto.Query.WindowAPI do
   Returns rank of the current row with gaps; same as `row_number/0` of its first peer.
 
       from p in Post,
-           select: rank() |> over(partition_by(p.category_id, order_by: p.date))
+           select: rank() |> over(partition_by: p.category_id, order_by: p.date)
 
   Note that this function must be invoked using window function syntax.
   """
@@ -93,7 +93,7 @@ defmodule Ecto.Query.WindowAPI do
   Returns rank of the current row without gaps; this function counts peer groups.
 
       from p in Post,
-           select: dense_rank() |> over(partition_by(p.category_id, order_by: p.date))
+           select: dense_rank() |> over(partition_by: p.category_id, order_by: p.date)
 
   Note that this function must be invoked using window function syntax.
   """
@@ -103,7 +103,7 @@ defmodule Ecto.Query.WindowAPI do
   Returns relative rank of the current row: (rank - 1) / (total rows - 1).
 
       from p in Post,
-           select: percent_rank() |> over(partition_by(p.category_id, order_by: p.date))
+           select: percent_rank() |> over(partition_by: p.category_id, order_by: p.date)
 
   Note that this function must be invoked using window function syntax.
   """
@@ -114,7 +114,7 @@ defmodule Ecto.Query.WindowAPI do
   (number of rows preceding or peer with current row) / (total rows).
 
       from p in Post,
-           select: cume_dist() |> over(partition_by(p.category_id, order_by: p.date))
+           select: cume_dist() |> over(partition_by: p.category_id, order_by: p.date)
 
   Note that this function must be invoked using window function syntax.
   """
@@ -124,7 +124,7 @@ defmodule Ecto.Query.WindowAPI do
   Returns integer ranging from 1 to the argument value, dividing the partition as equally as possible.
 
       from p in Post,
-           select: ntile(10) |> over(partition_by(p.category_id, order_by: p.date))
+           select: ntile(10) |> over(partition_by: p.category_id, order_by: p.date)
 
   Note that this function must be invoked using window function syntax.
   """
@@ -134,7 +134,7 @@ defmodule Ecto.Query.WindowAPI do
   Returns value evaluated at the row that is the first row of the window frame.
 
       from p in Post,
-           select: first_value(p.id) |> over(partition_by(p.category_id, order_by: p.date))
+           select: first_value(p.id) |> over(partition_by: p.category_id, order_by: p.date)
 
   Note that this function must be invoked using window function syntax.
   """
@@ -144,7 +144,7 @@ defmodule Ecto.Query.WindowAPI do
   Returns value evaluated at the row that is the last row of the window frame.
 
       from p in Post,
-           select: last_value(p.id) |> over(partition_by(p.category_id, order_by: p.date))
+           select: last_value(p.id) |> over(partition_by: p.category_id, order_by: p.date)
 
   Note that this function must be invoked using window function syntax.
   """
@@ -155,7 +155,7 @@ defmodule Ecto.Query.WindowAPI do
   frame (counting from 1); null if no such row.
 
       from p in Post,
-           select: nth_value(p.id, 4) |> over(partition_by(p.category_id, order_by: p.date))
+           select: nth_value(p.id, 4) |> over(partition_by: p.category_id, order_by: p.date)
 
   Note that this function must be invoked using window function syntax.
   """
@@ -170,7 +170,7 @@ defmodule Ecto.Query.WindowAPI do
   to the current row. If omitted, offset defaults to 1 and default to null.
 
       from e in Events,
-           windows: [w: partition_by(e.name, order_by: e.tick)],
+           windows: [w: [partition_by: e.name, order_by: e.tick]],
            select: {
              e.tick,
              e.action,
@@ -192,7 +192,7 @@ defmodule Ecto.Query.WindowAPI do
   to the current row. If omitted, offset defaults to 1 and default to null.
 
       from e in Events,
-           windows: [w: partition_by(e.name, order_by: e.tick)],
+           windows: [w: [partition_by: e.name, order_by: e.tick],
            select: {
              e.tick,
              e.action,

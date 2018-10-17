@@ -504,6 +504,18 @@ defmodule Ecto.Query do
       windows: [ordered_names: [order_by: e.name]]
 
   It works exactly as the keyword query version of `order_by/3`.
+
+  ### :frame
+
+  A fragment which defines the frame for window functions.
+
+  ## Examples
+
+      # compare each employee's salary for each month with his average salary for previous 3 months
+      from p in Payroll,
+        select: {p.empno, p.date, p.salary, over(avg(p.salary), :prev_months)},
+        windows: [prev_months: [partition_by: p.empno, order_by: p.date, frame: fragment("ROWS 3 PRECEDING EXCLUDE CURRENT ROW")]]
+
   """
   defmacro windows(query, binding \\ [], expr) do
     Windows.build(query, binding, expr, __CALLER__)
