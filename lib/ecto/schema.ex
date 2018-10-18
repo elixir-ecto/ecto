@@ -674,11 +674,14 @@ defmodule Ecto.Schema do
 
     * `:on_delete` - The action taken on associations when parent record
       is deleted. May be `:nothing` (default), `:nilify_all` and `:delete_all`.
-      Notice `:on_delete` may also be set in migrations when creating a
-      reference. If your database supports it, setting the `:on_delete` in the
-      migration is preferred as the database can effectively guarantee integrity,
-      it is more efficient, and it also allows `:nilify_all` and `:delete_all`
-      to cascade.
+      Using this option is DISCOURAGED for most relational databases. Instead,
+      in your migration, set `references(:parent_id, on_delete: :delete_all)`.
+      Opposite to the migration option, this option cannot guarantee integrity
+      and it is only triggered for `c:Ecto.Repo.delete/2` (and not on
+      `c:Ecto.Repo.delete_all/2`) and it never cascades. If posts has many comments,
+      which has many tags, and you delete a post, only comments will be deleted.
+      If your database does not support references, cascading can be manually
+      implemented by using `Ecto.Multi` or `Ecto.Changeset.prepare_changes/2`.
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
@@ -884,11 +887,14 @@ defmodule Ecto.Schema do
 
     * `:on_delete` - The action taken on associations when parent record
       is deleted. May be `:nothing` (default), `:nilify_all` and `:delete_all`.
-      Notice `:on_delete` may also be set in migrations when creating a
-      reference. If your database supports it, setting the `:on_delete` in the
-      migration is preferred as the database can effectively guarantee integrity,
-      it is more efficient, and it also allows `:nilify_all` and `:delete_all`
-      to cascade.
+      Using this option is DISCOURAGED for most relational databases. Instead,
+      in your migration, set `references(:parent_id, on_delete: :delete_all)`.
+      Opposite to the migration option, this option cannot guarantee integrity
+      and it is only triggered for `c:Ecto.Repo.delete/2` (and not on
+      `c:Ecto.Repo.delete_all/2`) and it never cascades. If posts has many comments,
+      which has many tags, and you delete a post, only comments will be deleted.
+      If your database does not support references, cascading can be manually
+      implemented by using `Ecto.Multi` or `Ecto.Changeset.prepare_changes/2`
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
@@ -1202,12 +1208,12 @@ defmodule Ecto.Schema do
 
     * `:on_delete` - The action taken on associations when the parent record
       is deleted. May be `:nothing` (default) or `:delete_all`.
-      `:delete_all` will only remove data from the join source, never the
-      associated records. Notice `:on_delete` may also be set in migrations
-      when creating a reference. If your database supports it, setting the
-      `:on_delete` in the migration is preferred as the database can effectively
-      guarantee integrity, it is more efficient, and it also allows `:nilify_all`
-      and `:delete_all` to cascade.
+      Using this option is DISCOURAGED for most relational databases. Instead,
+      in your migration, set `references(:parent_id, on_delete: :delete_all)`.
+      Opposite to the migration option, this option cannot guarantee integrity
+      and it is only triggered for `c:Ecto.Repo.delete/2` (and not on
+      `c:Ecto.Repo.delete_all/2`). This option can only remove data from the
+      join source, never the associated records, and it never cascades.
 
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
