@@ -819,8 +819,7 @@ defmodule Ecto.Query.Builder do
   def interval!(other_string) when is_binary(other_string),
     do: error!("invalid interval: `#{inspect other_string}` (expected one of #{Enum.join(@interval, ", ")})")
   def interval!(not_string),
-    do: error!("invalid interval: `#{inspect not_string}` expected a string.")
-
+    do: error!("invalid interval: `#{inspect not_string}` (expected a string)")
 
   @doc """
   Negates the given number.
