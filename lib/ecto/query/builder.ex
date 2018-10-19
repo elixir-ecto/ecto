@@ -811,13 +811,15 @@ defmodule Ecto.Query.Builder do
   end
 
   @doc """
-  Called by escaper at runtime to verify that value is an atom.
+  Called by escaper at runtime to verify that value is a valid interval.
   """
   @interval ~w(year month week day hour minute second millisecond microsecond)
   def interval!(interval) when interval in @interval,
     do: interval
-  def interval!(other),
-    do: error!("invalid interval: `#{inspect other}` (expected one of #{Enum.join(@interval, ", ")})")
+  def interval!(other_string) when is_binary(other_string),
+    do: error!("invalid interval: `#{inspect other_string}` (expected one of #{Enum.join(@interval, ", ")})")
+  def interval!(not_string),
+    do: error!("invalid interval: `#{inspect not_string}` (expected a string)")
 
   @doc """
   Negates the given number.
