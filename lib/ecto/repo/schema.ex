@@ -506,6 +506,9 @@ defmodule Ecto.Repo.Schema do
                 autogen_id, opts) do
     metadata(schema, prefix, source, autogen_id, context, opts)
   end
+  defp metadata(%{__struct__: schema}, _, _) do
+    raise ArgumentError, "#{inspect(schema)} needs to be a schema with source"
+  end
 
   defp conflict_target({:constraint, constraint}, _dumper) when is_atom(constraint) do
     {:constraint, constraint}
