@@ -139,7 +139,7 @@ defmodule Ecto.Schema do
 
   For example, if your database does not support autoincrementing
   primary keys and requires something like UUID or a RecordID, you
-  can configure and use`:binary_id` as your primary key type as follows:
+  can configure and use `:binary_id` as your primary key type as follows:
 
       # Define a module to be used as base
       defmodule MyApp.Schema do
