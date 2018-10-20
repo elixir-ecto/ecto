@@ -613,8 +613,8 @@ defmodule Ecto.Changeset do
   once (and not a single element of a many-style association) and using data
   external to the application.
 
-  `cast_assoc/3` works matching the records extracted form the database (preload)
-  and compares it with the parameters provided form an external source.
+  `cast_assoc/3` works matching the records extracted from the database (preload)
+  and compares it with the parameters provided from an external source.
 
   For example, imagine a user has many addresses relationship where
   post data is sent as follows
