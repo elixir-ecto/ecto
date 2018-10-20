@@ -680,6 +680,32 @@ defmodule Ecto.Changeset do
         end
       end
 
+  ## Partial changes for many-style associations
+
+  While the introductionary sentences for this function talk about `cast_assoc/3`
+  being used for working with "the entire association" this has to be taken with
+  a grain of salt. That phrase does not necessarily refer to all the associations
+  stored in the database, but can also refer to a know subset of them. Which items
+  are selected to be created, updated or deleted is based on the data preloaded
+  for the assocation and not on all the data present in the database.
+
+  Taking the initial example of users having addresses imagine those addresses
+  are set up to belong to a country. When editing a country it is probably not a
+  good idea to show all addresses for editing at once, but they should be displayed
+  paginated over multiple pages. A page of addresses is a subset `cast_assoc/3`
+  can work with:
+
+      query = from a in MyApp.Address, where: a.id in ^ids_of_page
+
+      country
+      |> Repo.preload(addresses: query)
+      |> Ecto.Changeset.cast(params, [])
+      |> Ecto.Changeset.cast_assoc(:addresses)
+
+  This will update the association like described previously. The important point
+  for partial changes is that any addresses, which were not preloaded won't be
+  changed.
+
   ## Options
 
     * `:with` - the function to build the changeset from params.
