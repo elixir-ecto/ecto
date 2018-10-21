@@ -693,7 +693,8 @@ defmodule Ecto.Changeset do
 
       query = from MyApp.Address, where: [country: ^edit_country]
 
-      country
+      User
+      |> Repo.get!(id)
       |> Repo.preload(addresses: query)
       |> Ecto.Changeset.cast(params, [])
       |> Ecto.Changeset.cast_assoc(:addresses)
