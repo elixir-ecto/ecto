@@ -688,7 +688,7 @@ defmodule Ecto.Changeset do
 
   Taking the initial example of users having addresses imagine those addresses
   are set up to belong to a country. If you want to allow users to bulk edit all
-  addresses that belong to a single counry, you can do so by changing the preload
+  addresses that belong to a single country, you can do so by changing the preload
   query:
 
       query = from MyApp.Address, where: [country: ^edit_country]
