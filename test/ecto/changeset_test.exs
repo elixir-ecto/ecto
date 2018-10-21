@@ -67,6 +67,14 @@ defmodule Ecto.ChangesetTest do
     def dump(_),   do: :error
   end
 
+  defmodule CustomErrorWithType do
+    @behaviour Ecto.Type
+    def type,      do: :any
+    def cast(_),   do: {:error, message: "custom error message", reason: :foobar, type: :some_type}
+    def load(_),   do: :error
+    def dump(_),   do: :error
+  end
+
   defmodule CustomErrorWithoutMessage do
     @behaviour Ecto.Type
     def type,      do: :any
@@ -81,6 +89,7 @@ defmodule Ecto.ChangesetTest do
     schema "custom_error" do
       field :custom_error, CustomError
       field :custom_error_without_message, CustomErrorWithoutMessage
+      field :custom_error_with_type, CustomErrorWithType
       field :array_custom_error, {:array, CustomError}
       field :map_custom_error, {:map, CustomError}
     end
@@ -259,6 +268,15 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(custom_error)a)
     assert changeset.errors == [custom_error: {"custom error message", [type: Ecto.ChangesetTest.CustomError, validation: :cast, reason: :foobar]}]
+    refute changeset.valid?
+  end
+
+  test "cast/4: ignores the :type parameter in custom errors" do
+    params = %{"custom_error_with_type" => :error}
+    struct = %CustomErrorTest{}
+
+    changeset = cast(struct, params, ~w(custom_error_with_type)a)
+    assert changeset.errors == [custom_error_with_type: {"custom error message", [type: Ecto.ChangesetTest.CustomErrorWithType, validation: :cast, reason: :foobar]}]
     refute changeset.valid?
   end
 
