@@ -271,7 +271,7 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
   end
 
-  test "cast/4: field has a custom invalid error message with a type parameter will be erased" do
+  test "cast/4: ignores the :type parameter in custom errors" do
     params = %{"custom_error_with_type" => :error}
     struct = %CustomErrorTest{}
 
