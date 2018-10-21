@@ -616,8 +616,8 @@ defmodule Ecto.Changeset do
   once (and not a single element of a many-style association) and using data
   external to the application.
 
-  `cast_assoc/3` works matching the records extracted form the database (preload)
-  and compares it with the parameters provided form an external source.
+  `cast_assoc/3` works matching the records extracted from the database (preload)
+  and compares it with the parameters provided from an external source.
 
   For example, imagine a user has many addresses relationship where
   post data is sent as follows
@@ -682,6 +682,29 @@ defmodule Ecto.Changeset do
             changeset
         end
       end
+
+  ## Partial changes for many-style associations
+
+  By preloading an association using a custom query you can confine the behavior
+  of `cast_assoc/3`. This opens up the possibility to work on a subset of the data,
+  instead of all associations in the database.
+
+  Taking the initial example of users having addresses imagine those addresses
+  are set up to belong to a country. If you want to allow users to bulk edit all
+  addresses that belong to a single country, you can do so by changing the preload
+  query:
+
+      query = from MyApp.Address, where: [country: ^edit_country]
+
+      User
+      |> Repo.get!(id)
+      |> Repo.preload(addresses: query)
+      |> Ecto.Changeset.cast(params, [])
+      |> Ecto.Changeset.cast_assoc(:addresses)
+
+  This will allow you to cast and update only the association for the given country.
+  The important point for partial changes is that any addresses, which were not
+  preloaded won't be changed.
 
   ## Options
 
