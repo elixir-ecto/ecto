@@ -682,18 +682,15 @@ defmodule Ecto.Changeset do
 
   ## Partial changes for many-style associations
 
-  While the introductionary sentences for this function talk about `cast_assoc/3`
-  being used for working with "the entire association" this has to be taken with
-  a grain of salt. That phrase does not necessarily refer to all the associations
-  stored in the database, but can also refer to a know subset of them. Which items
-  are selected to be created, updated or deleted is based on the data preloaded
-  for the assocation and not on all the data present in the database.
+  By preloading an association using a custom query you can confine the behavior
+  of `cast_assoc/3`. This opens up the possibility to not only work on all
+  associations which are in the database, but also on subsets of them.
 
   Taking the initial example of users having addresses imagine those addresses
   are set up to belong to a country. When editing a country it is probably not a
   good idea to show all addresses for editing at once, but they should be displayed
-  paginated over multiple pages. A page of addresses is a subset `cast_assoc/3`
-  can work with:
+  paginated over multiple pages. Here's how to limit `cast_assoc/3` to just a single
+  page of addresses:
 
       query = from a in MyApp.Address, where: a.id in ^ids_of_page
 
