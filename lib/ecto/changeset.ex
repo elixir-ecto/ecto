@@ -683,25 +683,24 @@ defmodule Ecto.Changeset do
   ## Partial changes for many-style associations
 
   By preloading an association using a custom query you can confine the behavior
-  of `cast_assoc/3`. This opens up the possibility to not only work on all
-  associations which are in the database, but also on subsets of them.
+  of `cast_assoc/3`. This opens up the possibility to work on a subset of the data,
+  instead of all associations in the database.
 
   Taking the initial example of users having addresses imagine those addresses
-  are set up to belong to a country. When editing a country it is probably not a
-  good idea to show all addresses for editing at once, but they should be displayed
-  paginated over multiple pages. Here's how to limit `cast_assoc/3` to just a single
-  page of addresses:
+  are set up to belong to a country. If you want to allow users to bulk edit all
+  addresses that belong to a single counry, you can do so by changing the preload
+  query:
 
-      query = from a in MyApp.Address, where: a.id in ^ids_of_page
+      query = from MyApp.Address, where: [country: ^edit_country]
 
       country
       |> Repo.preload(addresses: query)
       |> Ecto.Changeset.cast(params, [])
       |> Ecto.Changeset.cast_assoc(:addresses)
 
-  This will update the association like described previously. The important point
-  for partial changes is that any addresses, which were not preloaded won't be
-  changed.
+  This will allow you to cast and update only the association for the given country.
+  The important point for partial changes is that any addresses, which were not
+  preloaded won't be changed.
 
   ## Options
 
