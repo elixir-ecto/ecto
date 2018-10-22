@@ -38,7 +38,7 @@ And now in Ecto 3.0:
     iex> Repo.one from u in User, select: fragment("?", u.created_at), limit: 1
     ~N[2018-10-08 15:15:42.501011]
 
-To uniformly support microseconds across all databases, the types `:time`, `:naive_datetime`, `:utc_datetime` will now discard any microseconds information. Ecto v3.0 introduces the types `:time_usec`, `:naive_datetime_usec` and `:utc_datetime_usec` as an alternative for those interested in keeping microseconds. If you want to keep microseconds in your migrations and schemas, you need to configure your repository:
+To uniformly support microseconds across all databases, the types `:time`, `:naive_datetime`, `:utc_datetime` will now discard any microseconds information on `Ecto.Changeset.cast/4`. Any manipulations which skip casting the value like `Ecto.Changeset.change/2` do raise if microseconds are not truncated. Ecto v3.0 introduces the types `:time_usec`, `:naive_datetime_usec` and `:utc_datetime_usec` as an alternative for those interested in keeping microseconds. If you want to keep microseconds in your migrations and schemas, you need to configure your repository:
 
     config :my_app, MyApp.Repo,
       migration_timestamps: [type: :naive_datetime_usec]
