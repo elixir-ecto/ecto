@@ -1299,7 +1299,7 @@ defmodule Ecto.Query do
 
   """
   defmacro union(query, other_query) do
-    Builder.Combination.build(:union, query, other_query, __ENV__)
+    Builder.Combination.build(:union, query, other_query, __CALLER__)
   end
 
   @doc """
@@ -1322,7 +1322,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> union_all(^supplier_query)
   """
   defmacro union_all(query, other_query) do
-    Builder.Combination.build(:union_all, query, other_query, __ENV__)
+    Builder.Combination.build(:union_all, query, other_query, __CALLER__)
   end
 
   @doc """
@@ -1351,7 +1351,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> except(^supplier_query)
   """
   defmacro except(query, other_query) do
-    Builder.Combination.build(:except, query, other_query, __ENV__)
+    Builder.Combination.build(:except, query, other_query, __CALLER__)
   end
 
   @doc """
@@ -1375,7 +1375,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> except_all(^supplier_query)
   """
   defmacro except_all(query, other_query) do
-    Builder.Combination.build(:except_all, query, other_query, __ENV__)
+    Builder.Combination.build(:except_all, query, other_query, __CALLER__)
   end
 
   @doc """
@@ -1404,7 +1404,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> intersect(^supplier_query)
   """
   defmacro intersect(query, other_query) do
-    Builder.Combination.build(:intersect, query, other_query, __ENV__)
+    Builder.Combination.build(:intersect, query, other_query, __CALLER__)
   end
 
   @doc """
@@ -1428,7 +1428,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> intersect_all(^supplier_query)
   """
   defmacro intersect_all(query, other_query) do
-    Builder.Combination.build(:intersect_all, query, other_query, __ENV__)
+    Builder.Combination.build(:intersect_all, query, other_query, __CALLER__)
   end
 
   @doc """
