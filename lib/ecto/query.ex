@@ -808,8 +808,8 @@ defmodule Ecto.Query do
   Currently it is possible to join on:
 
     * an `Ecto.Schema`, such as `p in Post`
-    * an Ecto query with zero or more where clauses,
-      such as `from "posts", where: [public: true]`
+    * an interpolated Ecto query with zero or more where clauses,
+      such as `c in ^(from "posts", where: [public: true])`
     * an association, such as `c in assoc(post, :comments)`
     * a subquery, such as `c in subquery(another_query)`
     * a query fragment, such as `c in fragment("SOME COMPLEX QUERY")`,
@@ -858,8 +858,9 @@ defmodule Ecto.Query do
         select: {p.title, c.text}
 
   The above is specially useful to dynamically join on existing
-  queries, for example, choosing between public posts or posts
-  that have been recently published:
+  queries, for example, to dynamically choose a source, or by
+  choosing between public posts or posts that have been recently
+  published:
 
       posts =
         if params["drafts"] do
