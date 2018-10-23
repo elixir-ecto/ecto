@@ -59,7 +59,8 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   # Merge
-  defp escape({:merge, _, [left, {:%{}, _, _} = right]}, params_take, vars, env) do
+  defp escape({:merge, _, [left, {kind, _, _} = right]}, params_take, vars, env)
+       when kind in [:%{}, :map] do
     {left, params_take} = escape(left, params_take, vars, env)
     {right, params_take} = escape(right, params_take, vars, env)
     {{:{}, [], [:merge, [], [left, right]]}, params_take}

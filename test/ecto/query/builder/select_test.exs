@@ -115,6 +115,34 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert query.select.take == %{0 => {:map, [:title]}}
     end
 
+    test "merges at the root with interpolated fields" do
+      fields = [:title]
+
+      query =
+        "posts"
+        |> select([], %{})
+        |> select_merge([p], map(p, ^fields))
+        |> select_merge([p], %{body: ^"body"})
+
+      assert Macro.to_string(query.select.expr) == "merge(&0, %{body: ^0})"
+      assert query.select.params == [{"body", :any}]
+      assert query.select.take == %{0 => {:map, [:title]}}
+    end
+
+    test "merges at the root with interpolated fields with explicit merge" do
+      fields = [:title]
+
+      query = select("posts", [p], merge(map(p, ^fields), %{body: ^"body"}))
+      assert Macro.to_string(query.select.expr) == "merge(&0, %{body: ^0})"
+      assert query.select.params == [{"body", :any}]
+      assert query.select.take == %{0 => {:map, [:title]}}
+
+      query = select("posts", [p], merge(%{body: ^"body"}, map(p, ^fields)))
+      assert Macro.to_string(query.select.expr) == "merge(%{body: ^0}, &0)"
+      assert query.select.params == [{"body", :any}]
+      assert query.select.take == %{0 => {:map, [:title]}}
+    end
+
     test "supports '...' in binding list with no prior select" do
       query =
         "posts"
