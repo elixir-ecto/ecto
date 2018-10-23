@@ -175,18 +175,18 @@ defmodule Ecto.Query.InspectTest do
   end
 
   test "union" do
-    assert i(from(x in Post, union: from(y in Post), union_all: from(z in Post))) ==
-             ~s{from p in Inspect.Post, union: from p in Inspect.Post, union_all: from p in Inspect.Post}
+    assert i(from(x in Post, union: ^from(y in Post), union_all: ^from(z in Post))) ==
+             ~s{from p in Inspect.Post, union: (from p in Inspect.Post), union_all: (from p in Inspect.Post)}
   end
 
   test "except" do
-    assert i(from(x in Post, except: from(y in Post), except_all: from(y in Post))) ==
-             ~s{from p in Inspect.Post, except: from p in Inspect.Post, except_all: from p in Inspect.Post}
+    assert i(from(x in Post, except: ^from(y in Post), except_all: ^from(y in Post))) ==
+             ~s{from p in Inspect.Post, except: (from p in Inspect.Post), except_all: (from p in Inspect.Post)}
   end
 
   test "intersect" do
-    assert i(from(x in Post, intersect: from(y in Post), intersect_all: from(y in Post))) ==
-             ~s{from p in Inspect.Post, intersect: from p in Inspect.Post, intersect_all: from p in Inspect.Post}
+    assert i(from(x in Post, intersect: ^from(y in Post), intersect_all: ^from(y in Post))) ==
+             ~s{from p in Inspect.Post, intersect: (from p in Inspect.Post), intersect_all: (from p in Inspect.Post)}
   end
 
   test "limit" do
@@ -263,7 +263,7 @@ defmodule Ecto.Query.InspectTest do
       group_by: [p.id],
       having: true,
       or_having: true,
-      union_all: from p in Inspect.Post,
+      union_all: (from p in Inspect.Post),
       order_by: [asc: p.id],
       limit: 1,
       offset: 1,
@@ -280,7 +280,7 @@ defmodule Ecto.Query.InspectTest do
       from(x in Post, join: y in assoc(x, :comments), where: true, or_where: true, group_by: x.id,
                       having: true, or_having: true, order_by: x.id, limit: 1, offset: 1, update: [set: [id: 3]],
                       lock: "FOO", distinct: 1, select: 1, preload: [:likes, comments: y],
-                      union_all: from(y in Post))
+                      union_all: ^from(y in Post))
     ) == string
   end
 

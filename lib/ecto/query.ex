@@ -1290,20 +1290,16 @@ defmodule Ecto.Query do
   ## Keywords example
 
       supplier_query = from s in Supplier, select: s.city
-      from c in Customer, select: c.city, union: supplier_query
+      from c in Customer, select: c.city, union: ^supplier_query
 
   ## Expressions example
 
       supplier_query = Supplier |> select([s], s.city)
-      Customer |> select([c], c.city) |> union(supplier_query)
+      Customer |> select([c], c.city) |> union(^supplier_query)
 
   """
-  def union(%Ecto.Query{combinations: combinations} = query, %Ecto.Query{} = other_query) do
-    %{query | combinations: combinations ++ [{:union, other_query}]}
-  end
-
-  def union(query, other_query) do
-    union(Ecto.Queryable.to_query(query), Ecto.Queryable.to_query(other_query))
+  defmacro union(query, other_query) do
+    Builder.Combination.build(:union, query, other_query, __ENV__)
   end
 
   @doc """
@@ -1318,19 +1314,15 @@ defmodule Ecto.Query do
   ## Keywords example
 
       supplier_query = from s in Supplier, select: s.city
-      from c in Customer, select: c.city, union_all: supplier_query
+      from c in Customer, select: c.city, union_all: ^supplier_query
 
   ## Expressions example
 
       supplier_query = Supplier |> select([s], s.city)
-      Customer |> select([c], c.city) |> union_all(supplier_query)
+      Customer |> select([c], c.city) |> union_all(^supplier_query)
   """
-  def union_all(%Ecto.Query{combinations: combinations} = query, %Ecto.Query{} = other_query) do
-    %{query | combinations: combinations ++ [{:union_all, other_query}]}
-  end
-
-  def union_all(query, other_query) do
-    union(Ecto.Queryable.to_query(query), Ecto.Queryable.to_query(other_query))
+  defmacro union_all(query, other_query) do
+    Builder.Combination.build(:union_all, query, other_query, __ENV__)
   end
 
   @doc """
@@ -1351,19 +1343,15 @@ defmodule Ecto.Query do
   ## Keywords example
 
       supplier_query = from s in Supplier, select: s.city
-      from c in Customer, select: c.city, except: supplier_query
+      from c in Customer, select: c.city, except: ^supplier_query
 
   ## Expressions example
 
       supplier_query = Supplier |> select([s], s.city)
-      Customer |> select([c], c.city) |> except(supplier_query)
+      Customer |> select([c], c.city) |> except(^supplier_query)
   """
-  def except(%Ecto.Query{combinations: combinations} = query, %Ecto.Query{} = other_query) do
-    %{query | combinations: combinations ++ [{:except, other_query}]}
-  end
-
-  def except(query, other_query) do
-    except(Ecto.Queryable.to_query(query), Ecto.Queryable.to_query(other_query))
+  defmacro except(query, other_query) do
+    Builder.Combination.build(:except, query, other_query, __ENV__)
   end
 
   @doc """
@@ -1379,19 +1367,15 @@ defmodule Ecto.Query do
   ## Keywords example
 
       supplier_query = from s in Supplier, select: s.city
-      from c in Customer, select: c.city, except_all: supplier_query
+      from c in Customer, select: c.city, except_all: ^supplier_query
 
   ## Expressions example
 
       supplier_query = Supplier |> select([s], s.city)
-      Customer |> select([c], c.city) |> except_all(supplier_query)
+      Customer |> select([c], c.city) |> except_all(^supplier_query)
   """
-  def except_all(%Ecto.Query{combinations: combinations} = query, %Ecto.Query{} = other_query) do
-    %{query | combinations: combinations ++ [{:except_all, other_query}]}
-  end
-
-  def except_all(query, other_query) do
-    except_all(Ecto.Queryable.to_query(query), Ecto.Queryable.to_query(other_query))
+  defmacro except_all(query, other_query) do
+    Builder.Combination.build(:except_all, query, other_query, __ENV__)
   end
 
   @doc """
@@ -1412,19 +1396,15 @@ defmodule Ecto.Query do
   ## Keywords example
 
       supplier_query = from s in Supplier, select: s.city
-      from c in Customer, select: c.city, intersect: supplier_query
+      from c in Customer, select: c.city, intersect: ^supplier_query
 
   ## Expressions example
 
       supplier_query = Supplier |> select([s], s.city)
-      Customer |> select([c], c.city) |> intersect(supplier_query)
+      Customer |> select([c], c.city) |> intersect(^supplier_query)
   """
-  def intersect(%Ecto.Query{combinations: combinations} = query, %Ecto.Query{} = other_query) do
-    %{query | combinations: combinations ++ [{:intersect, other_query}]}
-  end
-
-  def intersect(query, other_query) do
-    intersect(Ecto.Queryable.to_query(query), Ecto.Queryable.to_query(other_query))
+  defmacro intersect(query, other_query) do
+    Builder.Combination.build(:intersect, query, other_query, __ENV__)
   end
 
   @doc """
@@ -1440,19 +1420,15 @@ defmodule Ecto.Query do
   ## Keywords example
 
       supplier_query = from s in Supplier, select: s.city
-      from c in Customer, select: c.city, intersect_all: supplier_query
+      from c in Customer, select: c.city, intersect_all: ^supplier_query
 
   ## Expressions example
 
       supplier_query = Supplier |> select([s], s.city)
-      Customer |> select([c], c.city) |> intersect_all(supplier_query)
+      Customer |> select([c], c.city) |> intersect_all(^supplier_query)
   """
-  def intersect_all(%Ecto.Query{combinations: combinations} = query, %Ecto.Query{} = other_query) do
-    %{query | combinations: combinations ++ [{:intersect_all, other_query}]}
-  end
-
-  def intersect_all(query, other_query) do
-    intersect_all(Ecto.Queryable.to_query(query), Ecto.Queryable.to_query(other_query))
+  defmacro intersect_all(query, other_query) do
+    Builder.Combination.build(:intersect_all, query, other_query, __ENV__)
   end
 
   @doc """

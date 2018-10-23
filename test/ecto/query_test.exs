@@ -104,8 +104,8 @@ defmodule Ecto.QueryTest do
 
       query =
         "posts"
-        |> union(union_query1)
-        |> union_all(union_query2)
+        |> union(^union_query1)
+        |> union_all(^union_query2)
 
       assert {:union, ^union_query1} = query.combinations |> Enum.at(0)
       assert {:union_all, ^union_query2} = query.combinations |> Enum.at(1)
@@ -117,8 +117,8 @@ defmodule Ecto.QueryTest do
 
       query =
         "posts"
-        |> except(except_query1)
-        |> except_all(except_query2)
+        |> except(^except_query1)
+        |> except_all(^except_query2)
 
       assert {:except, ^except_query1} = query.combinations |> Enum.at(0)
       assert {:except_all, ^except_query2} = query.combinations |> Enum.at(1)
@@ -130,8 +130,8 @@ defmodule Ecto.QueryTest do
 
       query =
         "posts"
-        |> intersect(intersect_query1)
-        |> intersect_all(intersect_query2)
+        |> intersect(^intersect_query1)
+        |> intersect_all(^intersect_query2)
 
       assert {:intersect, ^intersect_query1} = query.combinations |> Enum.at(0)
       assert {:intersect_all, ^intersect_query2} = query.combinations |> Enum.at(1)
@@ -530,10 +530,10 @@ defmodule Ecto.QueryTest do
           where: p.id == 0 and b.id == 0,
           or_where: c.id == 0,
           order_by: p.title,
-          union: from(p in "posts"),
-          union_all: from(p in "posts"),
-          except: from(p in "posts"),
-          intersect: from(p in "posts"),
+          union: ^from(p in "posts"),
+          union_all: ^from(p in "posts"),
+          except: ^from(p in "posts"),
+          intersect: ^from(p in "posts"),
           limit: 2,
           offset: 10,
           group_by: p.author,

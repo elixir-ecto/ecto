@@ -132,7 +132,7 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp combinations(combinations) do
-    Enum.map(combinations, fn {key, val} -> {key, to_string(val)} end)
+    Enum.map(combinations, fn {key, val} -> {key, "(" <> to_string(val) <> ")"} end)
   end
 
   defp bool_exprs(keys, exprs, names) do
