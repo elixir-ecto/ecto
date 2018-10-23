@@ -34,14 +34,26 @@ defmodule Ecto.Query.Builder.Windows do
     {{:order_by, fields}, params_acc}
   end
 
+  defp do_escape({:frame, frame_clause}, params_acc, vars, env) do
+    {frame_clause, params_acc} = escape_frame(frame_clause, params_acc, vars, env)
+    {{:frame, frame_clause}, params_acc}
+  end
+
   defp do_escape(other, _params_acc, _vars, _env) do
     error!(other)
+  end
+
+  defp escape_frame({:fragment, _, _} = fragment, params_acc, vars, env) do
+    Builder.escape(fragment, :any, params_acc, vars, env)
+  end
+  defp escape_frame(other, _, _, _) do
+    Builder.error!("expected a fragment in `:frame`, got: `#{inspect other}`")
   end
 
   defp error!(other) do
     Builder.error!(
       "expected window definition to be a keyword list " <>
-        "with partition_by and order_by as keys, got: `#{inspect other}`"
+        "with partition_by, order_by or frame as keys, got: `#{inspect other}`"
     )
   end
 

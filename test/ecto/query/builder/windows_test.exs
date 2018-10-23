@@ -20,6 +20,20 @@ defmodule Ecto.Query.Builder.WindowsTest do
       assert {Macro.escape(quote do [order_by: [asc: &0.y]] end), {%{}, :acc}} ==
              escape(quote do [order_by: :y] end, {%{}, :acc}, [x: 0], __ENV__)
     end
+
+    test "supports frames" do
+      assert {Macro.escape(quote(do: [frame: fragment({:raw, "ROWS 3 PRECEDING EXCLUDE CURRENT ROW"})])), {%{}, :acc}} ==
+               escape(quote do [frame: fragment("ROWS 3 PRECEDING EXCLUDE CURRENT ROW")] end, {%{}, :acc}, [], __ENV__)
+
+      start_frame = 3
+      assert {Macro.escape(quote(do: [frame: fragment({:raw, "ROWS "}, {:expr, ^0}, {:raw, " PRECEDING"})])),
+               {%{0 => {quote(do: start_frame), :any}}, :acc}} ==
+               escape(quote do [frame: fragment("ROWS ? PRECEDING", ^start_frame)] end, {%{}, :acc}, [], __ENV__)
+
+      assert_raise Ecto.Query.CompileError, ~r"expected a fragment in `:frame`", fn ->
+        escape(quote do [frame: [rows: -3, exclude: :current]] end, {%{}, :acc}, [], __ENV__)
+      end
+    end
   end
 
   describe "at runtime" do
@@ -53,6 +67,19 @@ defmodule Ecto.Query.Builder.WindowsTest do
       assert_raise ArgumentError, ~r"expected a field as an atom, a list or keyword list in `order_by`", fn ->
         windows("q", w: [order_by: ^[1]])
       end
+    end
+
+    test "allows interpolation on frame" do
+      bound = 3
+      query = "q" |> windows([p], w: [frame: fragment("ROWS ? PRECEDING EXCLUDE CURRENT ROW", ^bound)])
+      assert query.windows[:w].expr[:frame] ==
+               {:fragment, [], [raw: "ROWS ", expr: {:^, [], [0]}, raw: " PRECEDING EXCLUDE CURRENT ROW"]}
+    end
+
+    test "frame works with over clause" do
+      query = "q" |> select([p], over(avg(p.field), [frame: fragment("ROWS 3 PRECEDING")]))
+      {:over, [], [_, frame]} = query.select.expr
+      assert frame == [frame: {:fragment, [], [raw: "ROWS 3 PRECEDING"]}]
     end
   end
 end
