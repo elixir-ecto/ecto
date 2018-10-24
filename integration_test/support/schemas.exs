@@ -53,8 +53,8 @@ defmodule Ecto.Integration.Post do
       join_through: Ecto.Integration.PostUserCompositePk
     has_many :users_comments, through: [:users, :comments]
     has_many :comments_authors_permalinks, through: [:comments_authors, :permalink]
-    timestamps()
     has_one :post_user_composite_pk, Ecto.Integration.PostUserCompositePk
+    timestamps()
   end
 
   def changeset(schema, params) do
@@ -301,7 +301,7 @@ defmodule Ecto.Integration.PostUserCompositePk do
   end
 end
 
-defmodule Ecto.Integration.Article do
+defmodule Ecto.Integration.Usec do
   @moduledoc """
   This module is used to test:
 
@@ -310,8 +310,8 @@ defmodule Ecto.Integration.Article do
   """
   use Ecto.Integration.Schema
 
-  schema "articles" do
-    field :published_at, :naive_datetime_usec
-    field :submitted_at, :utc_datetime_usec
+  schema "usecs" do
+    field :naive_datetime_usec, :naive_datetime_usec
+    field :utc_datetime_usec, :utc_datetime_usec
   end
 end

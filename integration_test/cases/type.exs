@@ -3,7 +3,7 @@ Code.require_file "../support/types.exs", __DIR__
 defmodule Ecto.Integration.TypeTest do
   use Ecto.Integration.Case, async: Application.get_env(:ecto, :async_integration_tests, true)
 
-  alias Ecto.Integration.{Custom, Item, ItemColor, Order, Post, User, Tag, Article}
+  alias Ecto.Integration.{Custom, Item, ItemColor, Order, Post, User, Tag, Usec}
   alias Ecto.Integration.TestRepo
   import Ecto.Query
 
@@ -56,15 +56,15 @@ defmodule Ecto.Integration.TypeTest do
     # usec
     naive_datetime = ~N[2014-01-16 20:26:51.000000]
     datetime = DateTime.from_naive!(~N[2014-01-16 20:26:51.000000], "Etc/UTC")
-    TestRepo.insert!(%Article{published_at: naive_datetime, submitted_at: datetime})
-    assert [^naive_datetime] = TestRepo.all(from u in Article, where: u.published_at == ^naive_datetime, select: u.published_at)
-    assert [^datetime] = TestRepo.all(from u in Article, where: u.submitted_at == ^datetime, select: u.submitted_at)
+    TestRepo.insert!(%Usec{naive_datetime_usec: naive_datetime, utc_datetime_usec: datetime})
+    assert [^naive_datetime] = TestRepo.all(from u in Usec, where: u.naive_datetime_usec == ^naive_datetime, select: u.naive_datetime_usec)
+    assert [^datetime] = TestRepo.all(from u in Usec, where: u.utc_datetime_usec == ^datetime, select: u.utc_datetime_usec)
 
     naive_datetime = ~N[2014-01-16 20:26:51.123000]
     datetime = DateTime.from_naive!(~N[2014-01-16 20:26:51.123000], "Etc/UTC")
-    TestRepo.insert!(%Article{published_at: naive_datetime, submitted_at: datetime})
-    assert [^naive_datetime] = TestRepo.all(from u in Article, where: u.published_at == ^naive_datetime, select: u.published_at)
-    assert [^datetime] = TestRepo.all(from u in Article, where: u.submitted_at == ^datetime, select: u.submitted_at)
+    TestRepo.insert!(%Usec{naive_datetime_usec: naive_datetime, utc_datetime_usec: datetime})
+    assert [^naive_datetime] = TestRepo.all(from u in Usec, where: u.naive_datetime_usec == ^naive_datetime, select: u.naive_datetime_usec)
+    assert [^datetime] = TestRepo.all(from u in Usec, where: u.utc_datetime_usec == ^datetime, select: u.utc_datetime_usec)
   end
 
   test "aggregate types" do
