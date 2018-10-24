@@ -1,8 +1,7 @@
 defmodule Ecto.Integration.IntervalTest do
   use Ecto.Integration.Case, async: Application.get_env(:ecto, :async_integration_tests, true)
 
-  alias Ecto.Integration.Article
-  alias Ecto.Integration.{Post, User}
+  alias Ecto.Integration.{Post, User, Usec}
   alias Ecto.Integration.TestRepo
   import Ecto.Query
 
@@ -302,42 +301,42 @@ defmodule Ecto.Integration.IntervalTest do
   end
 
   test "datetime_add with naive_datetime_usec" do
-    TestRepo.insert!(%Article{published_at: ~N[2014-01-01 02:00:00.000001]})
+    TestRepo.insert!(%Usec{naive_datetime_usec: ~N[2014-01-01 02:00:00.000001]})
     dec = Decimal.new(1500)
     datetime = ~N[2014-01-01 02:00:00.001501]
 
     assert [^datetime] =
-           TestRepo.all(from p in Article, select: datetime_add(type(^datetime, :naive_datetime_usec), 0, "microsecond"))
+           TestRepo.all(from u in Usec, select: datetime_add(type(^datetime, :naive_datetime_usec), 0, "microsecond"))
     assert [^datetime] =
-           TestRepo.all(from p in Article, select: datetime_add(p.published_at, 1500, "microsecond"))
+           TestRepo.all(from u in Usec, select: datetime_add(u.naive_datetime_usec, 1500, "microsecond"))
     assert [^datetime] =
-           TestRepo.all(from p in Article, select: datetime_add(p.published_at, 1500.0, "microsecond"))
+           TestRepo.all(from u in Usec, select: datetime_add(u.naive_datetime_usec, 1500.0, "microsecond"))
     assert [^datetime] =
-           TestRepo.all(from p in Article, select: datetime_add(p.published_at, ^1500, "microsecond"))
+           TestRepo.all(from u in Usec, select: datetime_add(u.naive_datetime_usec, ^1500, "microsecond"))
     assert [^datetime] =
-           TestRepo.all(from p in Article, select: datetime_add(p.published_at, ^1500.0, "microsecond"))
+           TestRepo.all(from u in Usec, select: datetime_add(u.naive_datetime_usec, ^1500.0, "microsecond"))
     assert [^datetime] =
-           TestRepo.all(from p in Article, select: datetime_add(p.published_at, ^dec, "microsecond"))
+           TestRepo.all(from u in Usec, select: datetime_add(u.naive_datetime_usec, ^dec, "microsecond"))
   end
 
   test "datetime_add with utc_datetime_usec" do
     {:ok, datetime} = DateTime.from_naive(~N[2014-01-01 02:00:00.000001], "Etc/UTC")
-    TestRepo.insert!(%Article{submitted_at: datetime})
+    TestRepo.insert!(%Usec{utc_datetime_usec: datetime})
 
     {:ok, datetime} = DateTime.from_naive(~N[2014-01-01 02:00:00.001501], "Etc/UTC")
     dec = Decimal.new(1500)
 
     assert [^datetime] =
-           TestRepo.all(from p in Article, select: datetime_add(type(^datetime, :utc_datetime_usec), 0, "microsecond"))
+           TestRepo.all(from u in Usec, select: datetime_add(type(^datetime, :utc_datetime_usec), 0, "microsecond"))
     assert [^datetime] =
-           TestRepo.all(from p in Article, select: datetime_add(p.submitted_at, 1500, "microsecond"))
+           TestRepo.all(from u in Usec, select: datetime_add(u.utc_datetime_usec, 1500, "microsecond"))
     assert [^datetime] =
-           TestRepo.all(from p in Article, select: datetime_add(p.submitted_at, 1500.0, "microsecond"))
+           TestRepo.all(from u in Usec, select: datetime_add(u.utc_datetime_usec, 1500.0, "microsecond"))
     assert [^datetime] =
-           TestRepo.all(from p in Article, select: datetime_add(p.submitted_at, ^1500, "microsecond"))
+           TestRepo.all(from u in Usec, select: datetime_add(u.utc_datetime_usec, ^1500, "microsecond"))
     assert [^datetime] =
-           TestRepo.all(from p in Article, select: datetime_add(p.submitted_at, ^1500.0, "microsecond"))
+           TestRepo.all(from u in Usec, select: datetime_add(u.utc_datetime_usec, ^1500.0, "microsecond"))
     assert [^datetime] =
-           TestRepo.all(from p in Article, select: datetime_add(p.submitted_at, ^dec, "microsecond"))
+           TestRepo.all(from u in Usec, select: datetime_add(u.utc_datetime_usec, ^dec, "microsecond"))
   end
 end
