@@ -33,7 +33,7 @@ defmodule Ecto.MixProject do
       {:decimal, "~> 1.5"},
 
       # Optional
-      {:poison, "~> 2.2 or ~> 3.0", optional: true},
+      {:poison, "~> 2.2 or ~> 3.0 or ~> 4.0", optional: true},
       {:jason, "~> 1.0", optional: true},
 
       # Docs
