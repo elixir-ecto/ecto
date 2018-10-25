@@ -293,7 +293,7 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.insert(:post, %Post{title: "first"})
-      |> Ecto.Multi.update(:fun, %{post: post} ->
+      |> Ecto.Multi.update(:fun, fn %{post: post} ->
            Ecto.Changeset.change(post, title: "New title")
          end)
       |> MyApp.Repo.transaction()
