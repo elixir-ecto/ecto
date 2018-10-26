@@ -12,7 +12,6 @@ defmodule Ecto.LogEntry do
     * decode_time - the time spent decoding the result in native units (it may be nil);
     * queue_time - the time spent to check the connection out in native units (it may be nil);
     * connection_pid - the connection process that executed the query;
-    * caller_pid - the application process that executed the query;
     * ansi_color - the color that should be used when logging the entry.
 
   Notice all times are stored in native unit. You must convert them to
@@ -28,8 +27,7 @@ defmodule Ecto.LogEntry do
           query_time: integer | nil,
           decode_time: integer | nil,
           queue_time: integer | nil,
-          result: {:ok, term} | {:error, Exception.t()},
-          caller_pid: pid
+          result: {:ok, term} | {:error, Exception.t()}
         }
 
   defstruct query: nil,
@@ -38,8 +36,7 @@ defmodule Ecto.LogEntry do
             query_time: nil,
             decode_time: nil,
             queue_time: nil,
-            result: nil,
-            caller_pid: nil
+            result: nil
 
   require Logger
 
