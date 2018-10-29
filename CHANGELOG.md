@@ -10,7 +10,7 @@ This is a new major release for Ecto v3.0. Despite the major version change, we 
 
 Besides those changes, there are many exciting new features. We will explore all of those changes and more below.
 
-### Split the Ecto into `ecto` and `ecto_sql`
+### Split Ecto into `ecto` and `ecto_sql`
 
 Ecto is broken in two repositories: `ecto` and `ecto_sql`. Since Ecto v2.0, an increased number of developers and teams have been using Ecto for data mapping and validation, without a need for a database. However, adding Ecto to your application would still bring a lot of the SQL baggage, such as adapters, sandboxes and migrations. In Ecto 3.0, we have moved all of the SQL adapters to a separate repository and Ecto now mostly focuses on the four Ecto building blocks: schemas, changesets, queries and repos.
 
@@ -93,7 +93,7 @@ One of the exciting additions in Ecto v3.0 is the addition of named bindings to 
 
 Running migrations will now lock the migrations table, allowing you to concurrently run migrations in a cluster without worrying that two servers will race each other or without running migrations twice.
 
-## v3.0.0-rc.1 (2018-10-15)
+## v3.0.0 (2018-10-29)
 
 ### Enhancements
 

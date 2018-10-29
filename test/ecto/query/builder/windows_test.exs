@@ -25,7 +25,6 @@ defmodule Ecto.Query.Builder.WindowsTest do
       assert {Macro.escape(quote(do: [frame: fragment({:raw, "ROWS 3 PRECEDING EXCLUDE CURRENT ROW"})])), {%{}, :acc}} ==
                escape(quote do [frame: fragment("ROWS 3 PRECEDING EXCLUDE CURRENT ROW")] end, {%{}, :acc}, [], __ENV__)
 
-      start_frame = 3
       assert {Macro.escape(quote(do: [frame: fragment({:raw, "ROWS "}, {:expr, ^0}, {:raw, " PRECEDING"})])),
                {%{0 => {quote(do: start_frame), :any}}, :acc}} ==
                escape(quote do [frame: fragment("ROWS ? PRECEDING", ^start_frame)] end, {%{}, :acc}, [], __ENV__)
