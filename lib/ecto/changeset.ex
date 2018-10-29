@@ -131,7 +131,7 @@ defmodule Ecto.Changeset do
 
   When using any of those APIs, you may run into situations where Ecto sees
   data is being replaced. For example, imagine a Post has many Comments where
-  the commends have IDs 1, 2 and 3. If you call `cast_assoc/3` passing only
+  the comments have IDs 1, 2 and 3. If you call `cast_assoc/3` passing only
   the IDs 1 and 2, Ecto will consider 3 is being "replaced" and it will raise
   by default. Such behaviour can be changed when defining the relation by
   setting `:on_replace` option when defining your association/embed according
