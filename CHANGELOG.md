@@ -167,6 +167,7 @@ Although Ecto 3.0 is a major bump version, the functionality below emits depreca
   * [Ecto.Query] A `join` no longer wraps `fragment` in parentheses. In some cases, such as common table expressions, you will have to explicitly wrap the fragment in parens.
   * [Ecto.Schema] `:time`, `:naive_datetime` and `:utc_datetime` no longer keep microseconds information. If you want to keep microseconds, use `:time_usec`, `:naive_datetime_usec`, `:utc_datetime_usec`
   * [Ecto.Schema] The `@schema_prefix` option now only affects the `from`/`join` of where the schema is used and no longer the whole query
+  * [Ecto.Schema.Metadata] The `source` key no longer returns a tuple of the schema_prefix and the table/collection name. It now returns just the table/collection string. You can now access the schema_prefix via the `prefix` key.
 
 ### Adapter changes
 
