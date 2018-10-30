@@ -404,6 +404,16 @@ defmodule Ecto.Query.PlannerTest do
     {query, _, _} = from(Post, prefix: "local", select: 1) |> Map.put(:prefix, "global") |> plan()
     assert query.sources == {{"posts", Post, "local"}}
 
+    # No schema prefix in join
+    {query, _, _} = from(c in Comment, join: assoc(c, :comment_posts)) |> plan()
+    assert query.sources == {{"comments", Comment, nil}, {"comment_posts", CommentPost, nil}}
+
+    {query, _, _} = from(c in Comment, join: assoc(c, :comment_posts)) |> Map.put(:prefix, "global") |> plan()
+    assert query.sources == {{"comments", Comment, "global"}, {"comment_posts", CommentPost, "global"}}
+
+    {query, _, _} = from(c in Comment, join: assoc(c, :comment_posts), prefix: "local") |> Map.put(:prefix, "global") |> plan()
+    assert query.sources == {{"comments", Comment, "global"}, {"comment_posts", CommentPost, "local"}}
+
     # Schema prefix in join
     {query, _, _} = from(c in Comment, join: assoc(c, :post)) |> plan()
     assert query.sources == {{"comments", Comment, nil}, {"posts", Post, "my_prefix"}}

@@ -397,7 +397,7 @@ defmodule Ecto.Query.Planner do
     # All values in the middle should be shifted by offset,
     # all values after join are already correct.
     child = refl.__struct__.joins_query(refl)
-    child = update_in child.joins, &Enum.map(&1, fn join -> rewrite_join_prefix(join, prefix) end)
+    child = update_in child.joins, &Enum.map(&1, fn join -> rewrite_join_prefix(join, prefix, query) end)
 
     last_ix = length(child.joins)
     source_ix = counter
@@ -447,15 +447,15 @@ defmodule Ecto.Query.Planner do
     [%{h | on: merge_expr_and_params(:and, on, expr, params)} | t]
   end
 
-  defp rewrite_join_prefix(%{prefix: nil, source: {_, schema}} = join, nil)
+  defp rewrite_join_prefix(%{prefix: nil, source: {_, schema}} = join, nil, query)
        when schema != nil,
-       do: %{join | prefix: schema.__schema__(:prefix)}
+       do: %{join | prefix: schema.__schema__(:prefix) || query.prefix}
 
-  defp rewrite_join_prefix(%{prefix: nil} = join, prefix)
+  defp rewrite_join_prefix(%{prefix: nil} = join, prefix, _query)
        when prefix != nil,
        do: %{join | prefix: prefix}
 
-  defp rewrite_join_prefix(join, _prefix), do: join
+  defp rewrite_join_prefix(join, _prefix, _query), do: join
 
   defp rewrite_join(%{on: on, ix: join_ix} = join, qual, ix, last_ix, source_ix, inc_ix) do
     expr = Macro.prewalk on.expr, fn
