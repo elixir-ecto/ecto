@@ -119,21 +119,28 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "plan: merges all parameters" do
+    union = from p in Post, select: {p.title, ^"union"}
+    subquery = from Comment, where: [text: ^"subquery"]
+
     query =
       from p in Post,
-        select: {p.title, ^"0"},
-        join: c in Comment,
-        on: c.text == ^"1",
+        select: {p.title, ^"select"},
+        join: c in subquery(subquery),
+        on: c.text == ^"join",
         left_join: d in assoc(p, :comments),
-        where: p.title == ^"2",
-        group_by: p.title == ^"3",
-        having: p.title == ^"4",
-        order_by: [asc: fragment("?", ^"5")],
-        limit: ^6,
-        offset: ^7
+        union_all: ^union,
+        windows: [foo: [partition_by: fragment("?", ^"windows")]],
+        where: p.title == ^"where",
+        group_by: p.title == ^"group_by",
+        having: p.title == ^"having",
+        order_by: [asc: fragment("?", ^"order_by")],
+        limit: ^0,
+        offset: ^1
 
     {_query, params, _key} = plan(query)
-    assert params == ["0", "1", "2", "3", "4", "5", 6, 7]
+    assert params ==
+             ["select", "subquery", "join", "where", "group_by", "having", "windows"] ++
+               ["union", "order_by", 0, 1]
   end
 
   test "plan: checks from" do
