@@ -22,6 +22,8 @@ You should now list:
 
     {:ecto_sql, "~> 3.0"}
 
+If the application function in your `mix.exs` file includes an `:applications` key, you will need to add `:ecto_sql` to your list of applications. *This does not apply to the `:extra_applications` key.*
+
 And that's it!
 
 ### Calendar types
