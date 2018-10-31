@@ -22,7 +22,7 @@ You should now list:
 
     {:ecto_sql, "~> 3.0"}
 
-If the application function in your `mix.exs` file includes an `:applications` key, you will need to add `:ecto_sql` to your list of applications. *This does not apply to the `:extra_applications` key.*
+If the `application` function in your `mix.exs` file includes an `:applications` key, you will need to add `:ecto_sql` to your list of applications. This does not apply if you are using the `:extra_applications` key.
 
 And that's it!
 
@@ -93,7 +93,11 @@ One of the exciting additions in Ecto v3.0 is the addition of named bindings to 
 
 ### Locked migrations
 
-Running migrations will now lock the migrations table, allowing you to concurrently run migrations in a cluster without worrying that two servers will race each other or without running migrations twice.
+Running migrations will now lock the migrations table, allowing you to concurrently run migrations in a cluster without worrying that two servers will race each other and run migrations twice.
+
+In order for this safer migration mechanism to work, at least two database connections are necessary when migrating. One is used to lock the "schema_migrations" table and the other one to effectively run the migrations.
+
+A downside of this approach is that migrations cannot run dynamically during test under the `Ecto.Adapters.SQL.Sandbox`, as the sandbox is unable to share a single connection across processes to guarantee the changes can be reverted.
 
 ## v3.0.0 (2018-10-29)
 
