@@ -79,7 +79,7 @@ defmodule Ecto.Query.Builder do
 
   # param interpolation
   def escape({:^, _, [arg]}, type, {params, acc}, _vars, _env) do
-    index  = Map.size(params)
+    index  = map_size(params)
     params = Map.put(params, index, {arg, type})
     expr   = {:{}, [], [:^, [], [index]]}
     {expr, {params, acc}}
@@ -88,7 +88,7 @@ defmodule Ecto.Query.Builder do
   # tagged types
   def escape({:type, _, [{:^, _, [arg]}, type]}, _type, {params, acc}, vars, _env) do
     type = validate_type!(type, vars)
-    index = Map.size(params)
+    index = map_size(params)
     params = Map.put(params, index, {arg, type})
 
     expr = {:{}, [], [:type, [], [{:{}, [], [:^, [], [index]]}, type]]}
@@ -596,7 +596,10 @@ defmodule Ecto.Query.Builder do
   """
   @spec escape_params(map()) :: Macro.t
   def escape_params(map) do
-    Map.values(map)
+    case map_size(map) do
+      0 -> []
+      size -> for i <- 0..size-1, do: Map.fetch!(map, i)
+    end
   end
 
   @doc """
