@@ -8,16 +8,16 @@ defmodule Ecto.Query.Builder.Distinct do
   @doc """
   Escapes a list of quoted expressions.
 
-      iex> escape(quote do true end, {%{}, :acc}, [], __ENV__)
-      {true, {%{}, :acc}}
+      iex> escape(quote do true end, {[], :acc}, [], __ENV__)
+      {true, {[], :acc}}
 
-      iex> escape(quote do [x.x, 13] end, {%{}, :acc}, [x: 0], __ENV__)
+      iex> escape(quote do [x.x, 13] end, {[], :acc}, [x: 0], __ENV__)
       {[asc: {:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
         asc: 13],
-       {%{}, :acc}}
+       {[], :acc}}
 
   """
-  @spec escape(Macro.t, {map, term}, Keyword.t, Macro.Env.t) :: {Macro.t, {map, term}}
+  @spec escape(Macro.t, {list, term}, Keyword.t, Macro.Env.t) :: {Macro.t, {list, term}}
   def escape(expr, params_acc, _vars, _env) when is_boolean(expr) do
     {expr, params_acc}
   end
@@ -50,7 +50,7 @@ defmodule Ecto.Query.Builder.Distinct do
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    {expr, {params, _}} = escape(expr, {%{}, :acc}, binding, env)
+    {expr, {params, _}} = escape(expr, {[], :acc}, binding, env)
     params = Builder.escape_params(params)
 
     distinct = quote do: %Ecto.Query.QueryExpr{

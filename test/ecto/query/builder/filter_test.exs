@@ -11,18 +11,18 @@ defmodule Ecto.Query.Builder.FilterTest do
       import Kernel, except: [==: 2, and: 2]
 
       assert escape(:where, quote do [] end, 0, [x: 0], __ENV__) ===
-             {true, %{}}
+             {true, []}
 
       assert escape(:where, quote do [x: ^"foo"] end, 0, [x: 0], __ENV__) ===
-             {Macro.escape(quote do &0.x == ^0 end), %{0 => {"foo", {0, :x}}}}
+             {Macro.escape(quote do &0.x == ^0 end), [{"foo", {0, :x}}]}
 
       assert escape(:where, quote do [x: ^"foo", y: ^"bar"] end, 0, [x: 0], __ENV__) ===
              {Macro.escape(quote do &0.x == ^0 and &0.y == ^1 end),
-              %{0 => {"foo", {0, :x}}, 1 => {"bar", {0, :y}}}}
+              [{"bar", {0, :y}}, {"foo", {0, :x}}]}
 
       assert escape(:where, quote do {x.x} == {^"foo"} end, 0, [x: 0], __ENV__) ===
              {Macro.escape(quote do {&0.x} == {^0} end),
-              %{0 => {"foo", {0, :x}}}}
+              [{"foo", {0, :x}}]}
     end
 
     test "raises on invalid expressions" do

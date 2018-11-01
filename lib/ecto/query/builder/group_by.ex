@@ -10,13 +10,13 @@ defmodule Ecto.Query.Builder.GroupBy do
 
   See `Ecto.Builder.escape/2`.
 
-      iex> escape(:group_by, quote do [x.x, 13] end, {%{}, :acc}, [x: 0], __ENV__)
+      iex> escape(:group_by, quote do [x.x, 13] end, {[], :acc}, [x: 0], __ENV__)
       {[{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
         13],
-       {%{}, :acc}}
+       {[], :acc}}
   """
-  @spec escape(:group_by | :partition_by, Macro.t, {map, term}, Keyword.t, Macro.Env.t) ::
-          {Macro.t, {map, term}}
+  @spec escape(:group_by | :partition_by, Macro.t, {list, term}, Keyword.t, Macro.Env.t) ::
+          {Macro.t, {list, term}}
   def escape(kind, {:^, _, [expr]}, params_acc, _vars, _env) do
     {quote(do: Ecto.Query.Builder.GroupBy.group_by!(unquote(kind), unquote(expr))), params_acc}
   end
@@ -74,7 +74,7 @@ defmodule Ecto.Query.Builder.GroupBy do
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    {expr, {params, _}} = escape(:group_by, expr, {%{}, :acc}, binding, env)
+    {expr, {params, _}} = escape(:group_by, expr, {[], :acc}, binding, env)
     params = Builder.escape_params(params)
 
     group_by = quote do: %Ecto.Query.QueryExpr{

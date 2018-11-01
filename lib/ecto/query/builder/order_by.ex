@@ -24,14 +24,14 @@ defmodule Ecto.Query.Builder.OrderBy do
 
   ## Examples
 
-      iex> escape(:order_by, quote do [x.x, desc: 13] end, {%{}, :acc}, [x: 0], __ENV__)
+      iex> escape(:order_by, quote do [x.x, desc: 13] end, {[], :acc}, [x: 0], __ENV__)
       {[asc: {:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
         desc: 13],
-       {%{}, :acc}}
+       {[], :acc}}
 
   """
-  @spec escape(:order_by | :distinct, Macro.t, {map, term}, Keyword.t, Macro.Env.t) ::
-          {Macro.t, {map, term}}
+  @spec escape(:order_by | :distinct, Macro.t, {list, term}, Keyword.t, Macro.Env.t) ::
+          {Macro.t, {list, term}}
   def escape(kind, {:^, _, [expr]}, params_acc, _vars, _env) do
     {quote(do: Ecto.Query.Builder.OrderBy.order_by!(unquote(kind), unquote(expr))), params_acc}
   end
@@ -130,7 +130,7 @@ defmodule Ecto.Query.Builder.OrderBy do
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    {expr, {params, _}} = escape(:order_by, expr, {%{}, :acc}, binding, env)
+    {expr, {params, _}} = escape(:order_by, expr, {[], :acc}, binding, env)
     params = Builder.escape_params(params)
 
     order_by = quote do: %Ecto.Query.QueryExpr{

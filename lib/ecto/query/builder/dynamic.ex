@@ -11,7 +11,7 @@ defmodule Ecto.Query.Builder.Dynamic do
   @spec build([Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(binding, expr, env) do
     {query, vars} = Builder.escape_binding(quote(do: query), binding, env)
-    {expr, {params, :acc}} = Builder.escape(expr, :any, {%{}, :acc}, vars, env)
+    {expr, {params, :acc}} = Builder.escape(expr, :any, {[], :acc}, vars, env)
     params = Builder.escape_params(params)
 
     quote do

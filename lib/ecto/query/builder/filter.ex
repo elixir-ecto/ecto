@@ -12,14 +12,14 @@ defmodule Ecto.Query.Builder.Filter do
   or a keyword list of field names and values. In a keyword
   list multiple key value pairs will be joined with "and".
   """
-  @spec escape(:where | :having, Macro.t, non_neg_integer, Keyword.t, Macro.Env.t) :: {Macro.t, %{}}
+  @spec escape(:where | :having, Macro.t, non_neg_integer, Keyword.t, Macro.Env.t) :: {Macro.t, []}
   def escape(_kind, [], _binding, _vars, _env) do
-    {true, %{}}
+    {true, []}
   end
 
   def escape(kind, expr, binding, vars, env) when is_list(expr) do
     {parts, params} =
-      Enum.map_reduce(expr, %{}, fn
+      Enum.map_reduce(expr, [], fn
         {field, nil}, _params ->
           Builder.error! "nil given for #{inspect field}. Comparison with nil is forbidden as it is unsafe. " <>
                          "Instead write a query with is_nil/1, for example: is_nil(s.#{field})"
@@ -37,7 +37,7 @@ defmodule Ecto.Query.Builder.Filter do
   end
 
   def escape(_kind, expr, _binding, vars, env) do
-    {expr, {params, :acc}} = Builder.escape(expr, :boolean, {%{}, :acc}, vars, env)
+    {expr, {params, :acc}} = Builder.escape(expr, :boolean, {[], :acc}, vars, env)
     {expr, params}
   end
 

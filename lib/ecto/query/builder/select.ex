@@ -14,21 +14,21 @@ defmodule Ecto.Query.Builder.Select do
   ## Examples
 
       iex> escape({1, 2}, [], __ENV__)
-      {{:{}, [], [:{}, [], [1, 2]]}, {%{}, %{}}}
+      {{:{}, [], [:{}, [], [1, 2]]}, {[], %{}}}
 
       iex> escape([1, 2], [], __ENV__)
-      {[1, 2], {%{}, %{}}}
+      {[1, 2], {[], %{}}}
 
       iex> escape(quote(do: x), [x: 0], __ENV__)
-      {{:{}, [], [:&, [], [0]]}, {%{}, %{}}}
+      {{:{}, [], [:&, [], [0]]}, {[], %{}}}
 
   """
-  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {%{}, %{}}}
+  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {list, %{}}}
   def escape(other, vars, env) do
     if take?(other) do
-      {{:{}, [], [:&, [], [0]]}, {%{}, %{0 => {:any, other}}}}
+      {{:{}, [], [:&, [], [0]]}, {[], %{0 => {:any, other}}}}
     else
-      escape(other, {%{}, %{}}, vars, env)
+      escape(other, {[], %{}}, vars, env)
     end
   end
 

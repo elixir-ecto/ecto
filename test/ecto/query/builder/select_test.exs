@@ -7,43 +7,43 @@ defmodule Ecto.Query.Builder.SelectTest do
 
   describe "escape" do
     test "handles expressions and params" do
-      assert {Macro.escape(quote do &0 end), {%{}, %{}}} ==
+      assert {Macro.escape(quote do &0 end), {[], %{}}} ==
              escape(quote do x end, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do &0.y end), {%{}, %{}}} ==
+      assert {Macro.escape(quote do &0.y end), {[], %{}}} ==
              escape(quote do x.y end, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do &0 end), {%{}, %{0 => {:any, [:foo, :bar, baz: :bat]}}}} ==
+      assert {Macro.escape(quote do &0 end), {[], %{0 => {:any, [:foo, :bar, baz: :bat]}}}} ==
              escape(quote do [:foo, :bar, baz: :bat] end, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do &0 end), {%{}, %{0 => {:struct, [:foo, :bar, baz: :bat]}}}} ==
+      assert {Macro.escape(quote do &0 end), {[], %{0 => {:struct, [:foo, :bar, baz: :bat]}}}} ==
              escape(quote do struct(x, [:foo, :bar, baz: :bat]) end, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do &0 end), {%{}, %{0 => {:map, [:foo, :bar, baz: :bat]}}}} ==
+      assert {Macro.escape(quote do &0 end), {[], %{0 => {:map, [:foo, :bar, baz: :bat]}}}} ==
              escape(quote do map(x, [:foo, :bar, baz: :bat]) end, [x: 0], __ENV__)
 
-      assert {{:{}, [], [:{}, [], [0, 1, 2]]}, {%{}, %{}}} ==
+      assert {{:{}, [], [:{}, [], [0, 1, 2]]}, {[], %{}}} ==
              escape(quote do {0, 1, 2} end, [], __ENV__)
 
-      assert {{:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}, {%{}, %{}}} ==
+      assert {{:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}, {[], %{}}} ==
              escape(quote do %{a: a} end, [a: 0], __ENV__)
 
-      assert {{:{}, [], [:%{}, [], [{{:{}, [], [:&, [], [0]]}, {:{}, [], [:&, [], [1]]}}]]}, {%{}, %{}}} ==
+      assert {{:{}, [], [:%{}, [], [{{:{}, [], [:&, [], [0]]}, {:{}, [], [:&, [], [1]]}}]]}, {[], %{}}} ==
              escape(quote do %{a => b} end, [a: 0, b: 1], __ENV__)
 
-      assert {[Macro.escape(quote do &0.y end), Macro.escape(quote do &0.z end)], {%{}, %{}}} ==
+      assert {[Macro.escape(quote do &0.y end), Macro.escape(quote do &0.z end)], {[], %{}}} ==
              escape(quote do [x.y, x.z] end, [x: 0], __ENV__)
 
       assert {[{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :y]]}, [], []]},
-               {:{}, [], [:^, [], [0]]}], {%{0 => {1, :any}}, %{}}} ==
+               {:{}, [], [:^, [], [0]]}], {[{1, :any}], %{}}} ==
               escape(quote do [x.y, ^1] end, [x: 0], __ENV__)
 
-      assert {{:{}, [], [:%, [], [Foo, {:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}]]}, {%{}, %{}}} ==
+      assert {{:{}, [], [:%, [], [Foo, {:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}]]}, {[], %{}}} ==
              escape(quote do %Foo{a: a} end, [a: 0], __ENV__)
     end
 
     test "on conflicting take" do
-      assert {_, {%{}, %{0 => {:map, [:foo, :bar, baz: :bat]}}}} =
+      assert {_, {[], %{0 => {:map, [:foo, :bar, baz: :bat]}}}} =
              escape(quote do {map(x, [:foo, :bar]), map(x, [baz: :bat])} end, [x: 0], __ENV__)
 
       assert_raise Ecto.Query.CompileError,

@@ -61,7 +61,7 @@ defmodule Ecto.Query.Builder do
   with `^index` in the query where index is a number indexing into the
   map.
   """
-  @spec escape(Macro.t, quoted_type, {map, term}, Keyword.t,
+  @spec escape(Macro.t, quoted_type, {list, term}, Keyword.t,
                Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {map, term}}
   def escape(expr, type, params_acc, vars, env)
 
@@ -79,19 +79,16 @@ defmodule Ecto.Query.Builder do
 
   # param interpolation
   def escape({:^, _, [arg]}, type, {params, acc}, _vars, _env) do
-    index  = map_size(params)
-    params = Map.put(params, index, {arg, type})
-    expr   = {:{}, [], [:^, [], [index]]}
+    expr = {:{}, [], [:^, [], [length(params)]]}
+    params = [{arg, type} | params]
     {expr, {params, acc}}
   end
 
   # tagged types
   def escape({:type, _, [{:^, _, [arg]}, type]}, _type, {params, acc}, vars, _env) do
     type = validate_type!(type, vars)
-    index = map_size(params)
-    params = Map.put(params, index, {arg, type})
-
-    expr = {:{}, [], [:type, [], [{:{}, [], [:^, [], [index]]}, type]]}
+    expr = {:{}, [], [:type, [], [{:{}, [], [:^, [], [length(params)]]}, type]]}
+    params = [{arg, type} | params]
     {expr, {params, acc}}
   end
 
@@ -411,15 +408,16 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:type, [], [expr, type]]}, params_acc}
   end
 
-  defp wrap_nil(params, {:{}, _, [:^, _, [ix]]}) do
-    Map.update!(params, ix, fn {val, type} ->
-      quote do
-        {Ecto.Query.Builder.not_nil!(unquote(val)), unquote(type)}
-      end
-    end)
+  defp wrap_nil(params, {:{}, _, [:^, _, [ix]]}), do: wrap_nil(params, ix, [])
+  defp wrap_nil(params, _other), do: params
+
+  defp wrap_nil([{val, type} | params], 0, acc) do
+    val = quote do: Ecto.Query.Builder.not_nil!(unquote(val))
+    Enum.reverse(acc, [{val, type} | params])
   end
-  defp wrap_nil(params, _other) do
-    params
+
+  defp wrap_nil([pair | params], i, acc) do
+    wrap_nil(params, i - 1, [pair | acc])
   end
 
   defp expand_and_split_fragment(query, {env, _}) do
@@ -592,15 +590,10 @@ defmodule Ecto.Query.Builder do
     do: {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: value, type: expected]}]}
 
   @doc """
-  Escape the params entries map.
+  Escape the params entries list.
   """
-  @spec escape_params(map()) :: Macro.t
-  def escape_params(map) do
-    case map_size(map) do
-      0 -> []
-      size -> for i <- 0..size-1, do: Map.fetch!(map, i)
-    end
-  end
+  @spec escape_params(list()) :: list()
+  def escape_params(list), do: Enum.reverse(list)
 
   @doc """
   Escapes a variable according to the given binds.

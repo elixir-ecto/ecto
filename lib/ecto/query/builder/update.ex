@@ -10,28 +10,28 @@ defmodule Ecto.Query.Builder.Update do
   Escapes a list of quoted expressions.
 
       iex> escape([], [], __ENV__)
-      {[], [], %{}}
+      {[], [], []}
 
       iex> escape([set: []], [], __ENV__)
-      {[], [], %{}}
+      {[], [], []}
 
       iex> escape(quote(do: ^[set: []]), [], __ENV__)
-      {[], [set: []], %{}}
+      {[], [set: []], []}
 
       iex> escape(quote(do: [set: ^[foo: 1]]), [], __ENV__)
-      {[], [set: [foo: 1]], %{}}
+      {[], [set: [foo: 1]], []}
 
       iex> escape(quote(do: [set: [foo: ^1]]), [], __ENV__)
-      {[], [set: [foo: 1]], %{}}
+      {[], [set: [foo: 1]], []}
 
   """
-  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, Macro.t, %{}}
+  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, Macro.t, list}
   def escape(expr, vars, env) when is_list(expr) do
-    escape_op(expr, [], [], %{}, vars, env)
+    escape_op(expr, [], [], [], vars, env)
   end
 
   def escape({:^, _, [v]}, _vars, _env) do
-    {[], v, %{}}
+    {[], v, []}
   end
 
   def escape(expr, _vars, _env) do

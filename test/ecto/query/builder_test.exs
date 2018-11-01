@@ -5,35 +5,35 @@ defmodule Ecto.Query.BuilderTest do
   doctest Ecto.Query.Builder
 
   defp escape(quoted, vars, env) do
-    {escaped, {params, :acc}} = escape(quoted, :any, {%{}, :acc}, vars, env)
+    {escaped, {params, :acc}} = escape(quoted, :any, {[], :acc}, vars, env)
     {escaped, params}
   end
 
   test "escape" do
-    assert {Macro.escape(quote do &0.y end), %{}} ==
+    assert {Macro.escape(quote do &0.y end), []} ==
            escape(quote do x.y end, [x: 0], __ENV__)
 
     import Kernel, except: [>: 2]
-    assert {Macro.escape(quote do &0.y > &0.z end), %{}} ==
+    assert {Macro.escape(quote do &0.y > &0.z end), []} ==
            escape(quote do x.y > x.z end, [x: 0], __ENV__)
 
-    assert {Macro.escape(quote do &0.y > &1.z end), %{}} ==
+    assert {Macro.escape(quote do &0.y > &1.z end), []} ==
            escape(quote do x.y > y.z end, [x: 0, y: 1], __ENV__)
 
     import Kernel, except: [+: 2]
-    assert {Macro.escape(quote do &0.y + &1.z end), %{}} ==
+    assert {Macro.escape(quote do &0.y + &1.z end), []} ==
            escape(quote do x.y + y.z end, [x: 0, y: 1], __ENV__)
 
-    assert {Macro.escape(quote do type(&0.y + &1.z, :decimal) end), %{}} ==
+    assert {Macro.escape(quote do type(&0.y + &1.z, :decimal) end), []} ==
            escape(quote do type(x.y + y.z, :decimal) end, [x: 0, y: 1], __ENV__)
 
-    assert {Macro.escape(quote do avg(0) end), %{}} ==
+    assert {Macro.escape(quote do avg(0) end), []} ==
            escape(quote do avg(0) end, [], __ENV__)
 
-    assert {quote(do: ~s"123"), %{}} ==
+    assert {quote(do: ~s"123"), []} ==
            escape(quote do ~s"123" end, [], __ENV__)
 
-    assert {{:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: {:<<>>, [], [0, 1, 2]}, type: :binary]}]}, %{}} ==
+    assert {{:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: {:<<>>, [], [0, 1, 2]}, type: :binary]}]}, []} ==
            escape(quote do <<0,1,2>> end, [], __ENV__)
 
     assert quote(do: &0.z) ==
@@ -45,17 +45,17 @@ defmodule Ecto.Query.BuilderTest do
 
   test "escape fragments" do
     assert {Macro.escape(quote do fragment({:raw, "date_add("}, {:expr, &0.created_at},
-                                           {:raw, ", "}, {:expr, ^0}, {:raw, ")"}) end), %{0 => {0, :any}}} ==
+                                           {:raw, ", "}, {:expr, ^0}, {:raw, ")"}) end), [{0, :any}]} ==
       escape(quote do fragment("date_add(?, ?)", p.created_at, ^0) end, [p: 0], __ENV__)
 
-    assert {Macro.escape(quote do fragment({:raw, ""}, {:expr, ^0}, {:raw, "::text"}) end), %{0 => {0, :any}}} ==
+    assert {Macro.escape(quote do fragment({:raw, ""}, {:expr, ^0}, {:raw, "::text"}) end), [{0, :any}]} ==
       escape(quote do fragment(~S"?::text", ^0) end, [p: 0], __ENV__)
 
     assert {Macro.escape(quote do fragment({:raw, "query?("}, {:expr, &0.created_at},
-                                           {:raw, ")"}) end), %{}} ==
+                                           {:raw, ")"}) end), []} ==
       escape(quote do fragment("query\\?(?)", p.created_at) end, [p: 0], __ENV__)
 
-    assert {Macro.escape(quote do fragment(title: [foo: ^0]) end), %{0 => {0, :any}}} ==
+    assert {Macro.escape(quote do fragment(title: [foo: ^0]) end), [{0, :any}]} ==
       escape(quote do fragment(title: [foo: ^0]) end, [], __ENV__)
 
     assert_raise Ecto.Query.CompileError, ~r"fragment\(...\) does not allow strings to be interpolated", fn ->
@@ -68,13 +68,13 @@ defmodule Ecto.Query.BuilderTest do
   end
 
   test "escape over" do
-    assert {Macro.escape(quote(do: over(row_number(), []))), %{}}  ==
+    assert {Macro.escape(quote(do: over(row_number(), []))), []}  ==
            escape(quote(do: over(row_number())), [], __ENV__)
 
-    assert {Macro.escape(quote(do: over(nth_value(&0.id, 1), :w))), %{}}  ==
+    assert {Macro.escape(quote(do: over(nth_value(&0.id, 1), :w))), []}  ==
            escape(quote(do: nth_value(x.id, 1) |> over(:w)), [x: 0], __ENV__)
 
-    assert {Macro.escape(quote(do: over(count(&0.id), :w))), %{}}  ==
+    assert {Macro.escape(quote(do: over(count(&0.id), :w))), []}  ==
            escape(quote(do: count(x.id) |> over(:w)), [x: 0], __ENV__)
   end
 
@@ -134,35 +134,35 @@ defmodule Ecto.Query.BuilderTest do
 
   test "doesn't escape interpolation" do
     import Kernel, except: [>: 2, ++: 2]
-    assert {Macro.escape(quote(do: ^0)), %{0 => {quote(do: 1 > 2), :any}}} ==
+    assert {Macro.escape(quote(do: ^0)), [{quote(do: 1 > 2), :any}]} ==
            escape(quote(do: ^(1 > 2)), [], __ENV__)
 
-    assert {Macro.escape(quote(do: ^0)), %{0 => {quote(do: [] ++ []), :any}}} ==
+    assert {Macro.escape(quote(do: ^0)), [{quote(do: [] ++ []), :any}]} ==
            escape(quote(do: ^([] ++ [])), [], __ENV__)
   end
 
   defp params(quoted, type, vars \\ []) do
-    {_, {params, :acc}} = escape(quoted, type, {%{}, :acc}, vars, __ENV__)
+    {_, {params, :acc}} = escape(quoted, type, {[], :acc}, vars, __ENV__)
     params
   end
 
   test "infers the type for parameter" do
-    assert %{0 => {_, :integer}} =
+    assert [{_, :integer}] =
            params(quote(do: ^1 == 2), :any)
 
-    assert %{0 => {_, :integer}} =
+    assert [{_, :integer}] =
            params(quote(do: 2 == ^1), :any)
 
-    assert %{0 => {_, :any}, 1 => {_, :any}} =
+    assert [{_, :any}, {_, :any}] =
            params(quote(do: ^1 == ^2), :any)
 
-    assert %{0 => {_, {0, :title}}} =
+    assert [{_, {0, :title}}] =
            params(quote(do: ^1 == p.title), :any, [p: 0])
 
-    assert %{0 => {_, :boolean}} =
+    assert [{_, :boolean}] =
            params(quote(do: ^1 and true), :any)
 
-    assert %{0 => {_, :boolean}} =
+    assert [{_, :boolean}] =
            params(quote(do: ^1), :boolean)
   end
 

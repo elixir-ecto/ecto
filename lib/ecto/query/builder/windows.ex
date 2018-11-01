@@ -11,11 +11,11 @@ defmodule Ecto.Query.Builder.Windows do
 
   ## Examples
 
-      iex> escape(quote do [order_by: [desc: 13]] end, {%{}, :acc}, [x: 0], __ENV__)
-      {[order_by: [desc: 13]], {%{}, :acc}}
+      iex> escape(quote do [order_by: [desc: 13]] end, {[], :acc}, [x: 0], __ENV__)
+      {[order_by: [desc: 13]], {[], :acc}}
 
   """
-  @spec escape([Macro.t], {map, term}, Keyword.t, Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {map, term}}
+  @spec escape([Macro.t], {list, term}, Keyword.t, Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, term}}
   def escape(kw, params_acc, vars, env) when is_list(kw) do
     Enum.map_reduce(kw, params_acc, &do_escape(&1, &2, vars, env))
   end
@@ -79,7 +79,7 @@ defmodule Ecto.Query.Builder.Windows do
   end
 
   defp build_window(vars, {name, expr}, env) do
-    {expr, {params, _}} = escape(expr, {%{}, :acc}, vars, env)
+    {expr, {params, _}} = escape(expr, {[], :acc}, vars, env)
     params = Builder.escape_params(params)
 
     window = quote do
