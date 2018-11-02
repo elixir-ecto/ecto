@@ -387,8 +387,8 @@ defmodule Ecto.Repo do
 
   ## Ecto.Adapter.Queryable
 
-  @optional_callbacks get: 3, get!: 3, get_by: 3, get_by!: 3, aggregate: 4, one: 2, one!: 2,
-                      preload: 3, all: 2, stream: 2, update_all: 3, delete_all: 2
+  @optional_callbacks get: 3, get!: 3, get_by: 3, get_by!: 3, aggregate: 4, exists?: 2,
+                      one: 2, one!: 2, preload: 3, all: 2, stream: 2, update_all: 3, delete_all: 2
 
   @doc """
   Fetches a single struct from the data store where the primary key matches the
@@ -495,6 +495,17 @@ defmodule Ecto.Repo do
               field :: atom,
               opts :: Keyword.t()
             ) :: term | nil
+
+  @doc """
+  Checks if there exists an entry that matches the given query.
+
+  Returns a boolean.
+
+  ## Options
+
+  See the "Shared options" section at the module documentation.
+  """
+  @callback exists?(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: boolean()
 
   @doc """
   Fetches a single result from the query.
