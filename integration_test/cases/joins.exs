@@ -497,6 +497,28 @@ defmodule Ecto.Integration.JoinsTest do
     assert c2.id == cid2
   end
 
+  test "mixing regular join and assoc selector" do
+    p1 = TestRepo.insert!(%Post{title: "1"})
+    p2 = TestRepo.insert!(%Post{title: "2"})
+
+    c1 = TestRepo.insert!(%Comment{text: "1", post_id: p1.id})
+    c2 = TestRepo.insert!(%Comment{text: "2", post_id: p1.id})
+    c3 = TestRepo.insert!(%Comment{text: "3", post_id: p2.id})
+
+    pl1 = TestRepo.insert!(%Permalink{url: "1", post_id: p1.id})
+    _pl = TestRepo.insert!(%Permalink{url: "2"})
+    pl3 = TestRepo.insert!(%Permalink{url: "3", post_id: p2.id})
+
+    # Without on
+    query = from(p in Post, join: pl in assoc(p, :permalink),
+                            join: c in assoc(p, :comments),
+                            preload: [permalink: pl],
+                            select: {p, c})
+    [{p1, ^c1}, {p1, ^c2}, {p2, ^c3}] = TestRepo.all(query)
+    assert p1.permalink == pl1
+    assert p2.permalink == pl3
+  end
+
   test "association with composite pk join" do
     post = TestRepo.insert!(%Post{title: "1", text: "hi"})
     user = TestRepo.insert!(%User{name: "1"})

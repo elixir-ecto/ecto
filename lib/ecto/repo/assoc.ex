@@ -51,7 +51,7 @@ defmodule Ecto.Repo.Assoc do
 
     # Now if we have a struct and its parent key, we store the current
     # data unless we have already processed it.
-    cache_key = {parent_key, child_key}
+    cache_key = {parent_key, child_key, sub_structs}
 
     if struct && parent_key && not Map.get(cache, cache_key, false) do
       cache = Map.put(cache, cache_key, true)
