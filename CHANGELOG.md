@@ -2,10 +2,10 @@
 
 ## Highlights
 
-This is a new major release for Ecto v3.0. Despite the major version change, we have kept the number of user-facing breaking changes to a minimum, mostly around three areas:
+This is a new major release for Ecto v3.0. Despite the major version change, we have kept the number of user-facing breaking changes to a minimum, the three main ones being:
 
   * Split the Ecto repository apart
-  * Remove the previously deprecated Ecto datetime types in favor of the Calendar types that ship as part of Elixir
+  * Remove the previously deprecated Ecto datetime types in favor of the Calendar types with explicit microsecond prescision that ship as part of Elixir
   * Update to the latest JSON handling best practices
 
 Besides those changes, there are many exciting new features. We will explore all of those changes and more below.
@@ -97,9 +97,19 @@ Running migrations will now lock the migrations table, allowing you to concurren
 
 In order for this safer migration mechanism to work, at least two database connections are necessary when migrating. One is used to lock the "schema_migrations" table and the other one to effectively run the migrations.
 
-A downside of this approach is that migrations cannot run dynamically during test under the `Ecto.Adapters.SQL.Sandbox`, as the sandbox is unable to share a single connection across processes to guarantee the changes can be reverted.
+A downside of this approach is that migrations cannot run dynamically during test under the `Ecto.Adapters.SQL.Sandbox`, as the sandbox is unable to share a single connection across processes at the exact same time.
+
+## v3.0.1 (2018-11-03)
+
+### Bug fixes
+
+  * [Ecto.Query] Ensure parameter order is preserved when using more than 32 parameters
+  * [Ecto.Query] Consider query prefix when planning association joins
+  * [Ecto.Repo] Consider non-joined fields as unique parameters when merging preloaded query assocs
 
 ## v3.0.0 (2018-10-29)
+
+Note this version includes changes from `ecto` and `ecto_sql` but in future releases all `ecto_sql` entries will be listed in their own CHANGELOG.
 
 ### Enhancements
 

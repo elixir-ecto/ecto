@@ -549,7 +549,8 @@ defmodule Ecto.Changeset do
   end
 
   defp cast_key(key) when is_binary(key) do
-    IO.warn("expected keys given to cast/3 to be atoms, got: `#{inspect key}`")
+    IO.warn("non-atom keys in cast/3 is deprecated. All keys must be atoms, got: `#{inspect key}`")
+
     try do
       {String.to_existing_atom(key), key}
     rescue
