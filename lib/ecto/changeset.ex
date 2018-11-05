@@ -1299,6 +1299,9 @@ defmodule Ecto.Changeset do
   from the database, Ecto will treat the data as correct and only do the
   minimum necessary to guarantee that posts and tags are associated,
   without trying to update or diff any of the fields in the tag struct.
+
+  Although it accepts an `opts` argument, there are no options currently
+  supported by `put_assoc/4`.
   """
   def put_assoc(%Changeset{} = changeset, name, value, opts \\ []) do
     put_relation(:assoc, changeset, name, value, opts)
