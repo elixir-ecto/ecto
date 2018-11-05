@@ -884,7 +884,8 @@ defmodule Ecto.Repo do
     * a keyword list of update instructions - such as the one given to
       `c:update_all/3`, for example: `[set: [title: "new title"]]`
     * an `Ecto.Query` that will act as an `UPDATE` statement, such as the
-      one given to `c:update_all/3`
+      one given to `c:update_all/3`. If the struct cannot be found, `Ecto.StaleEntryError`
+      will be raised.
 
   Upserts map to "ON CONFLICT" on databases like Postgres and "ON DUPLICATE KEY"
   on databases such as MySQL.
@@ -974,6 +975,8 @@ defmodule Ecto.Repo do
 
   If the struct has no primary key, `Ecto.NoPrimaryKeyFieldError`
   will be raised.
+  
+  If the struct cannot be found, `Ecto.StaleEntryError` will be raised.
 
   It returns `{:ok, struct}` if the struct has been successfully
   updated or `{:error, changeset}` if there was a validation
