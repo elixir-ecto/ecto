@@ -143,7 +143,7 @@ Clone the repo and fetch its dependencies:
 
 The Ecto logo was designed by [Dane Wesolko](http://www.danewesolko.com).
 
-The source code is under Apache License 2.0.
+The source code is under the Apache 2 License.
 
 Copyright (c) 2012 Plataformatec
 
