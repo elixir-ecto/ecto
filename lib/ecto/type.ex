@@ -404,23 +404,14 @@ defmodule Ecto.Type do
   defp dump_naive_datetime_usec(%NaiveDateTime{microsecond: {_, 6}} = term), do: {:ok, term}
   defp dump_naive_datetime_usec(_), do: :error
 
-  defp dump_utc_datetime(%DateTime{time_zone: time_zone, microsecond: {0, 0}} = term) do
-    if time_zone != "Etc/UTC" do
-      message = ":utc_datetime expects the time zone to be \"Etc/UTC\", got `#{inspect(term)}`"
-      raise ArgumentError, message
-    end
+  defp dump_utc_datetime(%DateTime{microsecond: {0, 0}} = datetime),
+    do: {:ok, datetime |> check_utc_timezone!(:utc_datetime)}
 
-    {:ok, DateTime.to_naive(term)}
-  end
   defp dump_utc_datetime(_), do: :error
 
-  defp dump_utc_datetime_usec(%DateTime{time_zone: time_zone, microsecond: {_, 6}} = datetime) do
-    if time_zone != "Etc/UTC" do
-      message = ":utc_datetime_usec expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
-      raise ArgumentError, message
-    end
-    {:ok, DateTime.to_naive(datetime)}
-  end
+  defp dump_utc_datetime_usec(%DateTime{microsecond: {_, 6}} = datetime),
+    do: {:ok, datetime |> check_utc_timezone!(:utc_datetime_usec)}
+
   defp dump_utc_datetime_usec(_), do: :error
 
   defp dump_embed(%{cardinality: :one, related: schema, field: field},
@@ -533,23 +524,43 @@ defmodule Ecto.Type do
   defp load_time_usec(%Time{} = time), do: {:ok, pad_usec(time)}
   defp load_time_usec(_), do: :error
 
-  defp load_naive_datetime(%NaiveDateTime{} = naive_datetime), do: {:ok, truncate_usec(naive_datetime)}
+  # This is a downcast, which is always fine, and in case
+  # we try to send a naive datetime where a datetime is expected,
+  # the adapter will either explicitly error (Postgres) or it will
+  # accept the data (MySQL), which is fine as we always assume UTC
+  defp load_naive_datetime(%DateTime{} = datetime),
+    do: {:ok, datetime |> check_utc_timezone!(:naive_datetime) |> DateTime.to_naive() |> truncate_usec()}
+
+  defp load_naive_datetime(%NaiveDateTime{} = naive_datetime),
+    do: {:ok, truncate_usec(naive_datetime)}
+
   defp load_naive_datetime(_), do: :error
 
-  defp load_naive_datetime_usec(%NaiveDateTime{} = naive_datetime), do: {:ok, pad_usec(naive_datetime)}
+  defp load_naive_datetime_usec(%DateTime{} = datetime),
+    do: {:ok, datetime |> check_utc_timezone!(:naive_datetime_usec) |> DateTime.to_naive() |> pad_usec()}
+
+  defp load_naive_datetime_usec(%NaiveDateTime{} = naive_datetime),
+    do: {:ok, pad_usec(naive_datetime)}
+
   defp load_naive_datetime_usec(_), do: :error
 
-  defp load_utc_datetime(%DateTime{} = datetime),
-    do: {:ok, truncate_usec(datetime)}
+  # This is an upcast but because we assume the database
+  # is always in UTC, we can perform it.
   defp load_utc_datetime(%NaiveDateTime{} = naive_datetime),
-    do: naive_datetime |> truncate_usec() |> DateTime.from_naive("Etc/UTC")
+    do: {:ok, naive_datetime |> truncate_usec() |> DateTime.from_naive!("Etc/UTC")}
+
+  defp load_utc_datetime(%DateTime{} = datetime),
+    do: {:ok, datetime |> check_utc_timezone!(:utc_datetime) |> truncate_usec()}
+
   defp load_utc_datetime(_),
     do: :error
 
-  defp load_utc_datetime_usec(%DateTime{} = datetime),
-    do: {:ok, pad_usec(datetime)}
   defp load_utc_datetime_usec(%NaiveDateTime{} = naive_datetime),
-    do: naive_datetime |> pad_usec() |> DateTime.from_naive("Etc/UTC")
+    do: {:ok, naive_datetime |> pad_usec() |> DateTime.from_naive!("Etc/UTC")}
+
+  defp load_utc_datetime_usec(%DateTime{} = datetime),
+    do: {:ok, datetime |> check_utc_timezone!(:utc_datetime_usec) |> pad_usec()}
+
   defp load_utc_datetime_usec(_),
     do: :error
 
@@ -1143,4 +1154,11 @@ defmodule Ecto.Type do
 
   defp pad_usec(%{microsecond: {microsecond, _}} = struct),
     do: %{struct | microsecond: {microsecond, 6}}
+
+  defp check_utc_timezone!(%{time_zone: "Etc/UTC"} = datetime, _kind), do: datetime
+
+  defp check_utc_timezone!(%{time_zone: time_zone} = datetime, kind) do
+    raise ArgumentError,
+          "#{inspect kind} expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
+  end
 end

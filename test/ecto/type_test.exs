@@ -465,6 +465,15 @@ defmodule Ecto.TypeTest do
     assert Ecto.Type.load(:naive_datetime, @datetime_zero) == {:ok, @datetime_zero}
     assert Ecto.Type.load(:naive_datetime, @datetime_usec) == {:ok, @datetime}
     assert Ecto.Type.load(:naive_datetime, @datetime_leapyear) == {:ok, @datetime_leapyear}
+
+    assert Ecto.Type.load(:naive_datetime, DateTime.from_naive!(@datetime, "Etc/UTC")) ==
+           {:ok, @datetime}
+    assert Ecto.Type.load(:naive_datetime, DateTime.from_naive!(@datetime_zero, "Etc/UTC")) ==
+           {:ok, @datetime_zero}
+    assert Ecto.Type.load(:naive_datetime, DateTime.from_naive!(@datetime_usec, "Etc/UTC")) ==
+           {:ok, @datetime}
+    assert Ecto.Type.load(:naive_datetime, DateTime.from_naive!(@datetime_leapyear, "Etc/UTC")) ==
+           {:ok, @datetime_leapyear}
   end
 
   describe "naive_datetime_usec type" do
@@ -619,9 +628,9 @@ defmodule Ecto.TypeTest do
   end
 
   test "dump :utc_datetime" do
-    assert Ecto.Type.dump(:utc_datetime, @datetime) == {:ok, ~N[2015-01-23 23:50:07]}
-    assert Ecto.Type.dump(:utc_datetime, @datetime_zero) == {:ok, ~N[2015-01-23 23:50:00]}
-    assert Ecto.Type.dump(:utc_datetime, @datetime_leapyear) == {:ok, ~N[2000-02-29 23:50:07]}
+    assert Ecto.Type.dump(:utc_datetime, @datetime) == DateTime.from_naive(~N[2015-01-23 23:50:07], "Etc/UTC")
+    assert Ecto.Type.dump(:utc_datetime, @datetime_zero) == DateTime.from_naive(~N[2015-01-23 23:50:00], "Etc/UTC")
+    assert Ecto.Type.dump(:utc_datetime, @datetime_leapyear) == DateTime.from_naive(~N[2000-02-29 23:50:07], "Etc/UTC")
     assert Ecto.Type.dump(:utc_datetime, @datetime_usec) == :error
   end
 
@@ -710,8 +719,8 @@ defmodule Ecto.TypeTest do
     end
 
     test "dump :utc_datetime_usec" do
+      assert Ecto.Type.dump(:utc_datetime_usec, @datetime_usec) == DateTime.from_naive(~N[2015-01-23 23:50:07.008000], "Etc/UTC")
       assert Ecto.Type.dump(:utc_datetime_usec, @datetime) == :error
-      assert Ecto.Type.dump(:utc_datetime_usec, @datetime_usec) == {:ok, ~N[2015-01-23 23:50:07.008000]}
     end
 
     test "load :utc_datetime_usec" do
