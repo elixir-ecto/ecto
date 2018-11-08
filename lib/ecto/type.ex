@@ -1157,7 +1157,7 @@ defmodule Ecto.Type do
 
   defp check_utc_timezone!(%{time_zone: "Etc/UTC"} = datetime, _kind), do: datetime
 
-  defp check_utc_timezone!(%{time_zone: time_zone} = datetime, kind) do
+  defp check_utc_timezone!(datetime, kind) do
     raise ArgumentError,
           "#{inspect kind} expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
   end
