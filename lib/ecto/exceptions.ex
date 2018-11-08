@@ -180,10 +180,6 @@ defmodule Ecto.NoPrimaryKeyValueError do
   end
 end
 
-defmodule Ecto.ChangeError do
-  defexception [:message]
-end
-
 defmodule Ecto.NoResultsError do
   defexception [:message]
 

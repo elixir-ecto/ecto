@@ -420,7 +420,7 @@ defmodule Ecto.RepoTest do
 
       schema = struct(DumpSchema, x: 123)
 
-      assert_raise Ecto.ChangeError, ~r"does not match type :string$", fn ->
+      assert_raise ArgumentError, ~r"does not match type :string$", fn ->
         TestRepo.insert!(schema)
       end
     end

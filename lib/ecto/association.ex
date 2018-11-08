@@ -1149,7 +1149,7 @@ defmodule Ecto.Association.ManyToMany do
       {:ok, value} ->
         value
       :error ->
-        raise Ecto.ChangeError,
+        raise ArgumentError,
           "value `#{inspect value}` for `#{inspect struct.__struct__}.#{field}` " <>
             "in `#{action}` does not match type #{inspect type}"
     end

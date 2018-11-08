@@ -881,9 +881,9 @@ defmodule Ecto.Repo.Schema do
       {:ok, value} ->
         value
       :error ->
-        raise Ecto.ChangeError,
+        raise ArgumentError,
               "value `#{inspect(value)}` for `#{inspect(schema)}.#{field}` " <>
-              "in `#{action}` does not match type #{inspect type}"
+                "in `#{action}` does not match type #{inspect(type)}"
     end
   end
 
