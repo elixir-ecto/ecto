@@ -414,8 +414,10 @@ defmodule Ecto.Type do
 
   defp dump_utc_datetime(_), do: :error
 
-  defp dump_utc_datetime_usec(%DateTime{} = datetime),
-    do: {:ok, datetime |> check_utc_timezone!(:utc_datetime_usec) |> check_usec!(:utc_datetime_usec)}
+  defp dump_utc_datetime_usec(%DateTime{} = datetime) do
+    kind = :utc_datetime_usec
+    {:ok, datetime |> check_utc_timezone!(kind) |> check_usec!(kind)}
+  end
 
   defp dump_utc_datetime_usec(_), do: :error
 
