@@ -181,37 +181,7 @@ defmodule Ecto.NoPrimaryKeyValueError do
 end
 
 defmodule Ecto.ChangeError do
-  defexception [:action, :schema, :field, :type, :value]
-
-  def message(%{type: :decimal, value: %Decimal{coef: coef}} = exception) when coef in [:inf, :qNaN, :sNaN] do
-    common_message(exception) <>
-      """
-      \n\n`+Infinity`, `-Infinity`, and `NaN` values are not supported, even though the `Decimal` library handles them. \
-      To support them, you can create a custom type.
-      """
-  end
-
-  def message(%{type: type, value: %schema{microsecond: microsecond}} = exception)
-      when type in [:time, :naive_datetime, :utc_datetime] and microsecond != {0, 0} do
-
-    common_message(exception) <>
-      "\n\nMicroseconds must be empty. Use `#{inspect schema}.truncate(#{type}, :second)` (available in Elixir v1.6+) to remove microseconds."
-  end
-
-  def message(%{type: type, value: %{microsecond: {_, precision}}} = exception)
-      when type in [:time_usec, :naive_datetime_usec, :utc_datetime_usec] and precision != 6 do
-
-    common_message(exception) <> "\n\nMicrosecond precision is required."
-  end
-
-  def message(exception) do
-    common_message(exception)
-  end
-
-  defp common_message(%{action: action, schema: schema, field: field, type: type, value: value}) do
-    "value `#{inspect value}` for `#{inspect schema}.#{field}` " <>
-      "in `#{action}` does not match type #{inspect type}"
-  end
+  defexception [:message]
 end
 
 defmodule Ecto.NoResultsError do

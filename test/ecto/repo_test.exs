@@ -423,30 +423,6 @@ defmodule Ecto.RepoTest do
       assert_raise Ecto.ChangeError, ~r"does not match type :string$", fn ->
         TestRepo.insert!(schema)
       end
-
-      schema = struct(DumpSchema, d: Decimal.new("NaN"))
-
-      assert_raise Ecto.ChangeError, ~r"and `NaN` values are not supported", fn ->
-        TestRepo.insert!(schema)
-      end
-
-      schema = struct(DumpSchema, d: Decimal.new("NaN"))
-
-      assert_raise Ecto.ChangeError, ~r"and `NaN` values are not supported", fn ->
-        TestRepo.insert!(schema)
-      end
-
-      schema = struct(DumpSchema, t: ~T[09:00:00.000000])
-
-      assert_raise Ecto.ChangeError, ~r"Microseconds must be empty.", fn ->
-        TestRepo.insert!(schema)
-      end
-
-      schema = struct(DumpSchema, t_usec: ~T[09:00:00])
-
-      assert_raise Ecto.ChangeError, ~r"Microsecond precision is required.", fn ->
-        TestRepo.insert!(schema)
-      end
     end
   end
 

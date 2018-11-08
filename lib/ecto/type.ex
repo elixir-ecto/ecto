@@ -385,32 +385,37 @@ defmodule Ecto.Type do
 
   defp dump_decimal(term) when is_integer(term), do: {:ok, Decimal.new(term)}
   defp dump_decimal(term) when is_float(term), do: {:ok, Decimal.from_float(term)}
-  defp dump_decimal(%Decimal{coef: coef}) when coef in [:inf, :qNaN, :sNaN], do: :error
-  defp dump_decimal(%Decimal{} = term), do: {:ok, term}
+  defp dump_decimal(%Decimal{} = term), do: {:ok, check_decimal!(term)}
   defp dump_decimal(_), do: :error
 
   defp dump_date(%Date{} = term), do: {:ok, term}
   defp dump_date(_), do: :error
 
-  defp dump_time(%Time{microsecond: {0, 0}} = term), do: {:ok, term}
+  defp dump_time(%Time{} = term), do: {:ok, check_no_usec!(term, :time)}
   defp dump_time(_), do: :error
 
-  defp dump_time_usec(%Time{microsecond: {_, 6}} = term), do: {:ok, term}
+  defp dump_time_usec(%Time{} = term), do: {:ok, check_usec!(term, :time_usec)}
   defp dump_time_usec(_), do: :error
 
-  defp dump_naive_datetime(%NaiveDateTime{microsecond: {0, 0}} = term), do: {:ok, term}
+  defp dump_naive_datetime(%NaiveDateTime{} = term), do:
+    {:ok, check_no_usec!(term, :naive_datetime)}
+
   defp dump_naive_datetime(_), do: :error
 
-  defp dump_naive_datetime_usec(%NaiveDateTime{microsecond: {_, 6}} = term), do: {:ok, term}
+  defp dump_naive_datetime_usec(%NaiveDateTime{} = term),
+    do: {:ok, check_usec!(term, :naive_datetime_usec)}
+
   defp dump_naive_datetime_usec(_), do: :error
 
-  defp dump_utc_datetime(%DateTime{microsecond: {0, 0}} = datetime),
-    do: {:ok, datetime |> check_utc_timezone!(:utc_datetime)}
+  defp dump_utc_datetime(%DateTime{} = datetime) do
+    kind = :utc_datetime
+    {:ok, datetime |> check_utc_timezone!(kind) |> check_no_usec!(kind)}
+  end
 
   defp dump_utc_datetime(_), do: :error
 
-  defp dump_utc_datetime_usec(%DateTime{microsecond: {_, 6}} = datetime),
-    do: {:ok, datetime |> check_utc_timezone!(:utc_datetime_usec)}
+  defp dump_utc_datetime_usec(%DateTime{} = datetime),
+    do: {:ok, datetime |> check_utc_timezone!(:utc_datetime_usec) |> check_usec!(:utc_datetime_usec)}
 
   defp dump_utc_datetime_usec(_), do: :error
 
@@ -728,10 +733,11 @@ defmodule Ecto.Type do
 
   def cast_decimal(term) when is_binary(term) do
     case Decimal.parse(term) do
-      {:ok, decimal} -> dump_decimal(decimal)
+      {:ok, decimal} -> check_decimal(decimal)
       :error -> :error
     end
   end
+
   def cast_decimal(term) do
     dump_decimal(term)
   end
@@ -1160,5 +1166,40 @@ defmodule Ecto.Type do
   defp check_utc_timezone!(datetime, kind) do
     raise ArgumentError,
           "#{inspect kind} expects the time zone to be \"Etc/UTC\", got `#{inspect(datetime)}`"
+  end
+
+  defp check_usec!(%{microsecond: {_, 6}} = datetime, _kind), do: datetime
+
+  defp check_usec!(datetime, kind) do
+    raise ArgumentError,
+          "#{inspect(kind)} expects microsecond precision, got: #{inspect(datetime)}"
+  end
+
+  defp check_no_usec!(%{microsecond: {0, 0}} = datetime, _kind), do: datetime
+
+  defp check_no_usec!(%struct{} = datetime, kind) do
+    raise ArgumentError, """
+    #{inspect(kind)} expects microseconds to be empty, got: #{inspect(datetime)}
+
+    Use `#{inspect(struct)}.truncate(#{kind}, :second)` (available in Elixir v1.6+) to remove microseconds.
+    """
+  end
+
+  defp check_decimal(%Decimal{coef: coef}) when coef in [:inf, :qNaN, :sNaN], do: :error
+  defp check_decimal(%Decimal{} = decimal), do: {:ok, decimal}
+
+  defp check_decimal!(decimal) do
+    case check_decimal(decimal) do
+      {:ok, decimal} ->
+        decimal
+
+      :error ->
+        raise ArgumentError, """
+        #{inspect(decimal)} is not allowed for type :decimal
+
+        `+Infinity`, `-Infinity`, and `NaN` values are not supported, even though the `Decimal` library handles them. \
+        To support them, you can create a custom type.
+        """
+    end
   end
 end
