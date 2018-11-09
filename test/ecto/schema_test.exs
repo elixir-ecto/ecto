@@ -3,8 +3,6 @@ Code.require_file "../../integration_test/support/types.exs", __DIR__
 defmodule Ecto.SchemaTest do
   use ExUnit.Case, async: true
 
-  import ExUnit.CaptureIO
-
   defmodule Schema do
     use Ecto.Schema
 
@@ -115,9 +113,7 @@ defmodule Ecto.SchemaTest do
 
     schema "users" do
       field :name
-      capture_io :stderr, fn ->
-        belongs_to :comment, Comment
-      end
+      belongs_to :comment, Comment
       field :same_name, :string, source: :NAME
       timestamps()
     end
