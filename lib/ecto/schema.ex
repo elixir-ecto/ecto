@@ -281,7 +281,7 @@ defmodule Ecto.Schema do
       also casts values to `NaiveDateTime` with no timezone information.
 
     * `utc_datetime` - has a precision of seconds and casts values to
-      to Elixir's `DateTime` struct and expects the time zone to be set to UTC.
+      Elixir's `DateTime` struct and expects the time zone to be set to UTC.
 
     * `utc_datetime_usec` has a default precision of microseconds and also
       casts values to `DateTime` expecting the time zone be set to UTC.
