@@ -100,7 +100,9 @@ defmodule Ecto.Schema do
 
   ## Schema attributes
 
-  Supported attributes, to be set beforehand, for configuring the defined schema.
+  Supported attributes for configuring the defined schema. They must
+  be set after the `use Ecto.Schema` call and before the `schema/2`
+  definition.
 
   These attributes are:
 
@@ -119,7 +121,8 @@ defmodule Ecto.Schema do
       In MySQL the prefix points to databases.
 
     * `@foreign_key_type` - configures the default foreign key type
-      used by `belongs_to` associations. Defaults to `:id`;
+      used by `belongs_to` associations. It must be set in the same
+      module that defines the `belongs_to`. Defaults to `:id`;
 
     * `@timestamps_opts` - configures the default timestamps type
       used by `timestamps`. Defaults to `[type: :naive_datetime]`;
