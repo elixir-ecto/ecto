@@ -605,7 +605,7 @@ defmodule Ecto.Association.Has do
     changeset = update_parent_key(changeset, action, key, value)
     changeset = Ecto.Association.update_parent_prefix(changeset, parent)
 
-    case apply(Ecto.Repo.Schema, action, [repo, changeset, opts]) do
+    case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
         if action == :delete, do: {:ok, nil}, else: ok
       {:error, changeset} ->
@@ -641,14 +641,14 @@ defmodule Ecto.Association.Has do
   @doc false
   def delete_all(refl, parent, repo_name, opts) do
     if query = on_delete_query(refl, parent) do
-      Ecto.Repo.Queryable.delete_all repo_name, query, opts
+      repo_name.delete_all query, opts
     end
   end
 
   @doc false
   def nilify_all(%{related_key: related_key} = refl, parent, repo_name, opts) do
     if query = on_delete_query(refl, parent) do
-      Ecto.Repo.Queryable.update_all repo_name, query, [set: [{related_key, nil}]], opts
+      repo_name.update_all query, [set: [{related_key, nil}]], opts
     end
   end
 
@@ -862,7 +862,7 @@ defmodule Ecto.Association.BelongsTo do
   def on_repo_change(_refl, %{data: parent, repo: repo}, %{action: action} = changeset, _adapter, opts) do
     changeset = Ecto.Association.update_parent_prefix(changeset, parent)
 
-    case apply(Ecto.Repo.Schema, action, [repo, changeset, opts]) do
+    case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
         if action == :delete, do: {:ok, nil}, else: ok
       {:error, changeset} ->
@@ -1069,7 +1069,7 @@ defmodule Ecto.Association.ManyToMany do
                field(j, ^join_related_key) == ^related_value
 
     query = Map.put(query, :prefix, owner.__meta__.prefix)
-    Ecto.Repo.Queryable.delete_all repo, query, opts
+    repo.delete_all query, opts
     {:ok, nil}
   end
 
@@ -1125,7 +1125,7 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   defp insert_join(repo, join_through, data, opts, _constraints) when is_binary(join_through) do
-    Ecto.Repo.Schema.insert_all(repo, join_through, [data], opts)
+    repo.insert_all(join_through, [data], opts)
   end
 
   defp insert_join(repo, join_through, data, opts, constraints) when is_atom(join_through) do
@@ -1134,7 +1134,7 @@ defmodule Ecto.Association.ManyToMany do
       |> Ecto.Changeset.change
       |> Map.put(:constraints, constraints)
 
-    Ecto.Repo.Schema.insert(repo, changeset, opts)
+    repo.insert(changeset, opts)
   end
 
   defp field!(op, struct, field) do
@@ -1179,7 +1179,7 @@ defmodule Ecto.Association.ManyToMany do
     if value = Map.get(parent, owner_key) do
       owner_type = owner.__schema__(:type, owner_key)
       query = from j in join_through, where: field(j, ^join_owner_key) == type(^value, ^owner_type)
-      Ecto.Repo.Queryable.delete_all repo_name, query, opts
+      repo_name.delete_all query, opts
     end
   end
 end
