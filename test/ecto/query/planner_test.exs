@@ -431,6 +431,26 @@ defmodule Ecto.Query.PlannerTest do
     assert :nocache = cache
   end
 
+  test "prepare: prepare CTEs" do
+    {%{with_ctes: with_expr}, _, cache} = Comment |> with_cte("cte", as: ^from(c in Comment)) |> plan()
+    %{queries: [{"cte", query}]} = with_expr
+    assert query.sources == {{"comments", Comment, nil}}
+    assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
+    assert [:all, _, {"comments", Comment, _, nil}, {"comments", Comment, _, nil}, _] = cache
+
+    {%{with_ctes: with_expr}, _, cache} = Comment |> with_cte("cte", as: ^from(c in Comment, where: c in ^[1, 2, 3])) |> plan()
+    %{queries: [{"cte", query}]} = with_expr
+    assert query.sources == {{"comments", Comment, nil}}
+    assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
+    assert :nocache = cache
+
+    {%{with_ctes: with_expr}, _, cache} = Comment |> with_cte("cte", as: fragment("SELECT * FROM comments WHERE id = ?", ^123)) |> plan()
+    %{queries: [{"cte", query_expr}]} = with_expr
+    expr = {:fragment, [], [raw: "SELECT * FROM comments WHERE id = ", expr: {:^, [], [0]}, raw: ""]}
+    assert expr == query_expr.expr
+    assert [:all, _, {"comments", Comment, _, nil}, {:with_cte, ^expr}] = cache
+  end
+
   test "normalize: validates literal types" do
     assert_raise Ecto.QueryError, fn ->
       Comment |> where([c], c.text == 123) |> normalize()
