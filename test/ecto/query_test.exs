@@ -98,6 +98,26 @@ defmodule Ecto.QueryTest do
     end
   end
 
+  describe "common table expressions" do
+    test "recursive CTE" do
+      initial = "categories" |> where([c], is_nil(c.parent_id))
+      recursion = "categories" |> join(:inner, [c], ct in "tree", on: c.parent_id == ct.id)
+      tree = initial |> union_all(^recursion)
+      query = "products" |> recursive_ctes(true) |> with_cte("tree", as: ^tree)
+
+      assert [{"tree", ^tree}] = query.with_ctes.queries
+      assert query.with_ctes.recursive
+    end
+
+    test "fragment CTE" do
+      query = "products" |> with_cte("categories", as: fragment("SELECT * FROM categories"))
+
+      assert [{"categories", %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
+      assert {:fragment, [], [raw: "SELECT * FROM categories"]} = expr
+      refute query.with_ctes.recursive
+    end
+  end
+
   describe "combinations" do
     test "adds union expressions" do
       union_query1 = from(p in "posts1")
@@ -561,7 +581,10 @@ defmodule Ecto.QueryTest do
           select: p
         )
 
+      query = query |> with_cte("cte", as: ^from(p in "posts"))
+
       # Pre-exclusion assertions
+      refute query.with_ctes == base.with_ctes
       refute query.joins == base.joins
       refute query.wheres == base.wheres
       refute query.order_bys == base.order_bys
@@ -576,6 +599,7 @@ defmodule Ecto.QueryTest do
 
       excluded_query =
         query
+        |> exclude(:with_ctes)
         |> exclude(:join)
         |> exclude(:where)
         |> exclude(:order_by)
@@ -589,6 +613,7 @@ defmodule Ecto.QueryTest do
         |> exclude(:lock)
 
       # Post-exclusion assertions
+      assert excluded_query.with_ctes == base.with_ctes
       assert excluded_query.joins == base.joins
       assert excluded_query.wheres == base.wheres
       assert excluded_query.order_bys == base.order_bys

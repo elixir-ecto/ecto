@@ -4,7 +4,7 @@ defmodule Ecto.Query.Planner do
 
   alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, QueryExpr, SelectExpr}
 
-  if map_size(%Ecto.Query{}) != 20 do
+  if map_size(%Ecto.Query{}) != 21 do
     raise "Ecto.Query match out of date in builder"
   end
 
@@ -198,6 +198,7 @@ defmodule Ecto.Query.Planner do
     |> plan_sources(adapter)
     |> plan_assocs
     |> plan_combinations(operation, adapter, counter)
+    |> plan_ctes(operation, adapter, counter)
     |> plan_cache(operation, adapter, counter)
   rescue
     e ->
@@ -597,6 +598,24 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  defp merge_cache(:with_cte, _query, nil, cache_and_params, _operation, _adapter) do
+    cache_and_params
+  end
+
+  defp merge_cache(:with_cte, query, with_expr, cache_and_params, operation, adapter) do
+    fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
+
+    Enum.reduce with_expr.queries, cache_and_params, fn
+      {_, %Ecto.Query{} = query}, acc ->
+        {_, acc} = traverse_exprs(query, operation, acc, fun)
+        acc
+
+      {_, %Ecto.Query.QueryExpr{} = query_expr}, {cache, params} ->
+        {params, cacheable?} = cast_and_merge_params(:with_cte, query, query_expr, params, adapter)
+        {merge_cache({:with_cte, expr_to_cache(query_expr)}, cache, cacheable?), params}
+    end
+  end
+
   defp expr_to_cache(%BooleanExpr{op: op, expr: expr}), do: {op, expr}
   defp expr_to_cache(%QueryExpr{expr: expr}), do: expr
   defp expr_to_cache(%SelectExpr{expr: expr}), do: expr
@@ -725,6 +744,23 @@ defmodule Ecto.Query.Planner do
     Map.put(query, :combinations, combinations)
   end
 
+  defp plan_ctes(%Ecto.Query{with_ctes: nil} = query, _operation, _adapter, _counter), do: query
+
+  defp plan_ctes(%Ecto.Query{with_ctes: %{queries: queries}} = query, operation, adapter, counter) do
+    queries =
+      Enum.map queries, fn
+        {name, %Ecto.Query{} = query} ->
+          {planned_query, _params, _key} = plan(query, operation, adapter, counter)
+          planned_query = planned_query |> ensure_select(true)
+          {name, planned_query}
+
+        {name, other} ->
+          {name, other}
+      end
+
+    put_in(query.with_ctes.queries, queries)
+  end
+
   defp find_source_expr(query, 0) do
     query.from
   end
@@ -832,6 +868,32 @@ defmodule Ecto.Query.Planner do
           {[expr|list], acc}
       end)
     {Enum.reverse(exprs), counter}
+  end
+
+  defp validate_and_increment(:with_cte, _query, nil, counter, _operation, _adapter) do
+    {nil, counter}
+  end
+
+  defp validate_and_increment(:with_cte, query, with_expr, counter, operation, adapter) do
+    fun = &validate_and_increment(&1, &2, &3, &4, operation, adapter)
+
+    {queries, counter} =
+      Enum.reduce with_expr.queries, {[], counter}, fn
+        {name, %Ecto.Query{} = query}, {queries, counter} ->
+          {query, counter} = traverse_exprs(query, operation, counter, fun)
+          {query, _} = normalize_select(query)
+          {_, select} = query |> subquery_select(adapter)
+          keys = %{select: select} |> subquery_types() |> Keyword.keys()
+          query = query.select.fields |> update_in(&Enum.zip(keys, &1))
+          {[{name, query} | queries], counter}
+
+        {name, %QueryExpr{expr: {:fragment, _, _} = fragment} = query_expr}, {queries, counter} ->
+          {fragment, counter} = prewalk_source(fragment, :with_cte, query, with_expr, counter, adapter)
+          query_expr = %{query_expr | expr: fragment}
+          {[{name, query_expr} | queries], counter}
+      end
+
+    {%{with_expr | queries: Enum.reverse(queries)}, counter}
   end
 
   defp validate_and_increment(:join, query, exprs, counter, _operation, adapter) do
@@ -1340,7 +1402,7 @@ defmodule Ecto.Query.Planner do
 
   ## Helpers
 
-  @exprs [distinct: :distinct, select: :select, from: :from, join: :joins,
+  @exprs [with_cte: :with_ctes, distinct: :distinct, select: :select, from: :from, join: :joins,
           where: :wheres, group_by: :group_bys, having: :havings, windows: :windows,
           combination: :combinations, order_by: :order_bys, limit: :limit, offset: :offset]
 
@@ -1470,7 +1532,7 @@ defmodule Ecto.Query.Planner do
     case query do
       %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [],
                   havings: [], preloads: [], assocs: [], distinct: nil, lock: nil,
-                  windows: [], combinations: [],} ->
+                  windows: [], combinations: [], with_ctes: nil} ->
         query
       _ ->
         error! query, "`#{operation}` allows only `where` and `join` expressions. " <>

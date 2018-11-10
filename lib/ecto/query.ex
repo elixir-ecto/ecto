@@ -356,7 +356,8 @@ defmodule Ecto.Query do
 
   defstruct [prefix: nil, sources: nil, from: nil, joins: [], aliases: %{}, wheres: [], select: nil,
              order_bys: [], limit: nil, offset: nil, group_bys: [], combinations: [], updates: [],
-             havings: [], preloads: [], assocs: [], distinct: nil, lock: nil, windows: []]
+             havings: [], preloads: [], assocs: [], distinct: nil, lock: nil, windows: [],
+             with_ctes: nil]
 
   defmodule FromExpr do
     @moduledoc false
@@ -388,6 +389,11 @@ defmodule Ecto.Query do
     defstruct [:qual, :source, :on, :file, :line, :assoc, :as, :ix, :prefix, params: [], hints: []]
   end
 
+  defmodule WithExpr do
+    @moduledoc false
+    defstruct [recursive: false, queries: []]
+  end
+
   defmodule Tagged do
     @moduledoc false
     # * value is the tagged value
@@ -401,7 +407,7 @@ defmodule Ecto.Query do
 
   alias Ecto.Query.Builder
   alias Ecto.Query.Builder.{Distinct, Dynamic, Filter, From, GroupBy, Join, Windows,
-                            LimitOffset, Lock, OrderBy, Preload, Select, Update}
+                            LimitOffset, Lock, OrderBy, Preload, Select, Update, CTE}
 
   @doc """
   Builds a dynamic query expression.
@@ -606,6 +612,7 @@ defmodule Ecto.Query do
       Ecto.Query.exclude(query, :distinct)
       Ecto.Query.exclude(query, :select)
       Ecto.Query.exclude(query, :combinations)
+      Ecto.Query.exclude(query, :with_ctes)
       Ecto.Query.exclude(query, :limit)
       Ecto.Query.exclude(query, :offset)
       Ecto.Query.exclude(query, :lock)
@@ -638,6 +645,7 @@ defmodule Ecto.Query do
   defp do_exclude(%Ecto.Query{} = query, :order_by), do: %{query | order_bys: []}
   defp do_exclude(%Ecto.Query{} = query, :group_by), do: %{query | group_bys: []}
   defp do_exclude(%Ecto.Query{} = query, :combinations), do: %{query | combinations: []}
+  defp do_exclude(%Ecto.Query{} = query, :with_ctes), do: %{query | with_ctes: nil}
   defp do_exclude(%Ecto.Query{} = query, :having), do: %{query | havings: []}
   defp do_exclude(%Ecto.Query{} = query, :distinct), do: %{query | distinct: nil}
   defp do_exclude(%Ecto.Query{} = query, :select), do: %{query | select: nil}
@@ -714,7 +722,7 @@ defmodule Ecto.Query do
   @from_join_opts [:as, :prefix, :hints]
   @no_binds [:lock, :union, :union_all, :except, :except_all, :intersect, :intersect_all]
   @binds [:where, :or_where, :select, :distinct, :order_by, :group_by, :windows] ++
-           [:having, :or_having, :limit, :offset, :preload, :update, :select_merge]
+           [:having, :or_having, :limit, :offset, :preload, :update, :select_merge, :with_ctes]
 
   defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
     # If all bindings are integer indexes keep AST Macro expandable to %Query{},
@@ -957,6 +965,98 @@ defmodule Ecto.Query do
     query
     |> Join.build(qual, binding, expr, nil, on, as, prefix, hints, __CALLER__)
     |> elem(0)
+  end
+
+  @doc """
+  A common table expression (CTE) also known as WITH expression.
+
+  `name` must be a compile-time literal string that is being used as the table name to join
+  the CTE in the main query or in the recursive CTE.
+
+  ## Options
+
+    * `:as` – the CTE query itself or a fragment
+
+  ## Recursive CTEs
+
+  Use `recursive_ctes/2` to enable recursive mode for CTEs.
+
+  In the CTE query itself use the same table name to leverage recursion that has been passed
+  to `name` argument. Make sure to write a stop condition to avoid infinite recursion loop.
+
+  ## Non-recursive CTEs
+
+  By default recursive mode for CTEs is off.
+
+  Keep in mind that from the performance perspective usually queries with non-recursive CTEs
+  can be rewritten to more optimal ones that leverage joins or subqueries instead.
+
+  ## Expression examples
+
+  Products and their category names for breadcrumbs:
+
+      category_tree_initial_query =
+        Category
+        |> where([c], is_nil(c.parent_id))
+
+      category_tree_recursion_query =
+        Category
+        |> join(:inner, [c], ct in "category_tree", on: c.parent_id == ct.id)
+
+      category_tree_query =
+        category_tree_initial_query
+        |> union_all(^category_tree_recursion_query)
+
+      Product
+      |> recursive_ctes(true)
+      |> with_cte("category_tree", as: ^category_tree_query)
+      |> join(:left, [p], c in "category_tree", on: c.id == p.category_id)
+      |> group_by([p], p.id)
+      |> select([p, c], %{p | category_names: fragment("ARRAY_AGG(?)", c.name)})
+
+  It's possible to cast CTE result rows as Ecto structs:
+
+      {"category_tree", Category}
+      |> recursive_ctes(true)
+      |> with_cte("category_tree", as: ^category_tree_query)
+      |> join(:left, [c], p in assoc(c, :products))
+      |> group_by([c], c.id)
+      |> select:([c, p], %{c | products_count: count(p.id)})
+
+  It's also possible to pass a raw SQL fragment:
+
+      @raw_sql_category_tree \"""
+      SELECT * FROM categories WHERE c.parent_id IS NULL
+      UNION ALL
+      SELECT * FROM categories AS c, category_tree AS ct WHERE ct.id = c.parent_id
+      \"""
+
+      Product
+      |> recursive_ctes(true)
+      |> with_cte("category_tree", as: fragment(@raw_sql_category_tree))
+      |> join(:inner, [p], c in "category_tree", on: c.id == p.category_id)
+
+  Keyword syntax is not supported for this feature.
+  """
+  defmacro with_cte(query, name, as: with_query) do
+    CTE.build(query, name, with_query, __CALLER__)
+  end
+
+  @doc """
+  Enables or disables recursive mode for CTEs.
+
+  According to the SQL standard it affects all CTEs in the query, not individual ones.
+
+  See `with_cte/3` on example of how to build a query with a recursive CTE.
+  """
+  def recursive_ctes(%__MODULE__{with_ctes: with_expr} = query, value) when is_boolean(value) do
+    with_expr = with_expr || %WithExpr{}
+    with_expr = %{with_expr | recursive: value}
+    %{query | with_ctes: with_expr}
+  end
+
+  def recursive_ctes(queryable, value) do
+    recursive_ctes(Ecto.Queryable.to_query(queryable), value)
   end
 
   @doc """
