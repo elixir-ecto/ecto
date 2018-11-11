@@ -578,13 +578,8 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp field_source!(schema, field) do
-    case schema.__schema__(:field_source, field) do
-      nil ->
-        raise ArgumentError, "unknown field for :on_conflict, got: #{inspect(field)}"
-
-      field ->
-        field
-    end
+    schema.__schema__(:field_source, field) ||
+      raise ArgumentError, "unknown field for :on_conflict, got: #{inspect(field)}"
   end
 
   defp on_conflict_query(query, from, prefix, counter_fun, adapter, conflict_target) do
