@@ -740,7 +740,7 @@ defmodule Ecto.Schema do
             where: [public: true]
 
           has_many :deleted_comments, Comment,
-            where: dynamic([comment], not(is_nil(comment.deleted_at)))
+            where: dynamic([c], not(is_nil(c.deleted_at)))
         end
       end
 
