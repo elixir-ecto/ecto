@@ -812,7 +812,7 @@ defmodule Ecto.RepoTest do
 
   describe "on conflict" do
     test "passes all fields on replace_all" do
-      fields = [:id, :x, :y, :z, :array, :map]
+      fields = [:id, :x, :yyy, :z, :array, :map]
       TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all)
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
     end
@@ -823,8 +823,28 @@ defmodule Ecto.RepoTest do
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
     end
 
+    test "replaces specified fields on replace" do
+      fields = [:x, :yyy]
+      TestRepo.insert(
+        %MySchema{id: 1},
+        on_conflict: {:replace, [:x, :y]},
+        conflict_target: [:id]
+      )
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
+    end
+
+    test "raises on non-existent fields on replace" do
+      assert_raise ArgumentError, "unknown field for :on_conflict, got: :unknown", fn ->
+        TestRepo.insert(
+          %MySchema{id: 1},
+          on_conflict: {:replace, [:unknown]},
+          conflict_target: [:id]
+        )
+      end
+    end
+
     test "passes all fields except primary keys on replace_all_except_primary_keys" do
-      fields = [:x, :y, :z, :array, :map]
+      fields = [:x, :yyy, :z, :array, :map]
       TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all_except_primary_key)
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
     end

@@ -549,7 +549,8 @@ defmodule Ecto.Repo.Schema do
         raise ArgumentError, ":conflict_target option is required when :on_conflict is replace"
 
       {:replace, keys} when is_list(keys) ->
-        {keys, [], conflict_target}
+        fields = Enum.map(keys, &field_source!(schema, &1))
+        {fields, [], conflict_target}
 
       :replace_all_except_primary_key ->
         fields = replace_all_fields!(:replace_all_except_primary_key, schema)
@@ -573,7 +574,12 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp replace_all_fields!(_kind, schema) do
-    schema.__schema__(:fields)
+    Enum.map(schema.__schema__(:fields), &field_source!(schema, &1))
+  end
+
+  defp field_source!(schema, field) do
+    schema.__schema__(:field_source, field) ||
+      raise ArgumentError, "unknown field for :on_conflict, got: #{inspect(field)}"
   end
 
   defp on_conflict_query(query, from, prefix, counter_fun, adapter, conflict_target) do
