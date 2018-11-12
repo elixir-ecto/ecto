@@ -423,7 +423,7 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      Ecto.Multi.run(multi, fn _repo, %{image: image} ->
+      Ecto.Multi.run(multi, :write, fn _repo, %{image: image} ->
         File.write!(image.name, image.contents)
       end)
   """
