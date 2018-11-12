@@ -370,11 +370,11 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp order_by(%Query{order_bys: []}, _distinct, _sources), do: []
     defp order_by(%Query{order_bys: order_bys} = query, distinct, sources) do
-      order_bys = Enum.flat_map(order_bys, & &1.expr)
-      distinct =
-        distinct
-        |> Enum.reject(fn {direction, expr} ->
-          order_bys |> Enum.any?(fn by -> match?({^direction,^expr}, by) end)
+      selected = distinct |> Keyword.values()
+      order_bys =
+        order_bys
+        |> Enum.flat_map(fn %{expr: order=[{_direction, expr}]} ->
+          if expr in selected, do: [], else: order
         end)
 
       [" ORDER BY " |
