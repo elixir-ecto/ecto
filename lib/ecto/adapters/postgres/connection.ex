@@ -370,7 +370,20 @@ if Code.ensure_loaded?(Postgrex) do
 
     defp order_by(%Query{order_bys: []}, _distinct, _sources), do: []
     defp order_by(%Query{order_bys: order_bys} = query, distinct, sources) do
+      # {:distinct, distinct} |> IO.inspect
+      # {:order_bys, order_bys} |> IO.inspect
       order_bys = Enum.flat_map(order_bys, & &1.expr)
+      # NOTE: all distincts seem to have :asc order direction
+      distinct =
+        distinct
+        |> Enum.reject(fn {:asc, expr} ->
+          order_bys |> Enum.any?(fn by ->
+            # {expr, by} |> IO.inspect
+            # match?(%Ecto.Query.QueryExpr{expr: {_,^expr}}, by)
+            match?({_,^expr}, by)
+          end)
+        end)
+      # {:distinct, distinct} |> IO.inspect
       [" ORDER BY " |
        intersperse_map(distinct ++ order_bys, ", ", &order_by_expr(&1, sources, query))]
     end
