@@ -323,6 +323,26 @@ defmodule Ecto.RepoTest do
   end
 
   describe "insert_all" do
+    test "takes query" do
+      import Ecto.Query
+
+      value = "foo"
+      query = from(s in MySchema, select: s.x, where: s.y == ^value)
+
+      TestRepo.insert_all(MySchema, [
+        [y: "y1", x: "x1"],
+        [x: query, id: 2],
+        [id: 3, x: query],
+        [y: query, x: query]
+      ])
+
+      assert_received {:insert_all, %{source: "my_schema"}, rows}
+      assert [[x: "x1", yyy: "y1"],
+              [id: 2, x: {%Ecto.Query{}, [^value]}],
+              [id: 3, x: {%Ecto.Query{}, [^value]}],
+              [x: {%Ecto.Query{}, [^value]}, yyy: {%Ecto.Query{}, [^value]}]] = rows
+    end
+
     test "raises when on associations" do
       assert_raise ArgumentError, fn ->
         TestRepo.insert_all MySchema, [%{another: nil}]

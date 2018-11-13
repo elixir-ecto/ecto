@@ -78,29 +78,67 @@ defmodule Ecto.Repo.Schema do
   defp extract_header_and_fields(rows, schema, dumper, autogen_id, adapter) do
     mapper = init_mapper(schema, dumper, adapter)
 
-    Enum.map_reduce(rows, %{}, fn fields, header ->
-      {fields, header} = Enum.map_reduce(fields, header, mapper)
-      autogenerate_id(autogen_id, fields, header, adapter)
-    end)
+    {rows, {header, has_query?}} =
+      Enum.map_reduce(rows, {%{}, false}, fn fields, acc ->
+        {fields, {header, has_query?}} = Enum.map_reduce(fields, acc, mapper)
+        {fields, header} = autogenerate_id(autogen_id, fields, header, adapter)
+        {fields, {header, has_query?}}
+      end)
+
+    if has_query? do
+      rows = plan_query_in_rows(rows, header, adapter)
+      {rows, header}
+    else
+      {rows, header}
+    end
   end
 
   defp init_mapper(nil, _dumper, _adapter) do
-    fn {field, _} = tuple, acc ->
-      {tuple, Map.put(acc, field, true)}
+    fn {field, _} = tuple, {header, has_query?} ->
+      {tuple, {Map.put(header, field, true), has_query?}}
     end
   end
 
   defp init_mapper(schema, dumper, adapter) do
-    fn {field, value}, acc ->
-      case dumper do
-        %{^field => {source, type}} ->
-          value = dump_field!(:insert_all, schema, field, type, value, adapter)
-          {{source, value}, Map.put(acc, source, true)}
-        %{} ->
-          raise ArgumentError, "unknown field `#{field}` in schema #{inspect schema} given to " <>
-                               "insert_all. Note virtual fields and associations are not supported"
-      end
+    fn {field, value}, {header, has_query?} ->
+        case dumper do
+          %{^field => {source, type}} ->
+            case value do
+              %Ecto.Query{} = query ->
+                {{source, query}, {Map.put(header, source, true), true}}
+
+              value ->
+                value = dump_field!(:insert_all, schema, field, type, value, adapter)
+                {{source, value}, {Map.put(header, source, true), has_query?}}
+            end
+          %{} ->
+            raise ArgumentError, "unknown field `#{field}` in schema #{inspect schema} given to " <>
+                                 "insert_all. Note virtual fields and associations are not supported"
+        end
     end
+  end
+
+  defp plan_query_in_rows(rows, header, adapter) do
+    {rows, _counter} =
+      Enum.map_reduce(rows, 0, fn fields, counter ->
+        Enum.flat_map_reduce(header, counter, fn {key, _}, counter ->
+          case :lists.keyfind(key, 1, fields) do
+            {^key, %Ecto.Query{} = query} ->
+              {query, params, _} = Ecto.Query.Planner.plan(query, :all, adapter, counter)
+              {query, _} = Ecto.Query.Planner.normalize(query, :all, adapter, counter)
+
+              {[{key, {query, params}}], counter + length(params)}
+
+            {^key, value} ->
+              {[{key, value}], counter + 1}
+
+            false ->
+              {[], counter}
+          end
+        end)
+      end)
+
+    rows
   end
 
   defp autogenerate_id(nil, fields, header, _adapter) do
