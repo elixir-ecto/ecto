@@ -197,6 +197,53 @@ defmodule Ecto.Integration.JoinsTest do
     assert [{^p1, ^u2}, {^p1, ^u1}, {^p1, ^u1}, {^p2, ^u2}] = TestRepo.all(query)
   end
 
+  test "has_many through nested association joins" do
+    u1 = TestRepo.insert!(%User{name: "Alice"})
+    u2 = TestRepo.insert!(%User{name: "John"})
+
+    p1 = TestRepo.insert!(%Post{title: "p1", author_id: u1.id})
+    p2 = TestRepo.insert!(%Post{title: "p2", author_id: u1.id})
+
+    TestRepo.insert!(%Comment{text: "c1", author_id: u1.id, post_id: p1.id})
+    TestRepo.insert!(%Comment{text: "c2", author_id: u2.id, post_id: p1.id})
+    TestRepo.insert!(%Comment{text: "c3", author_id: u2.id, post_id: p2.id})
+    TestRepo.insert!(%Comment{text: "c4", post_id: p2.id})
+    TestRepo.insert!(%Comment{text: "c5", author_id: u1.id, post_id: p2.id})
+
+    assert %{
+             comments: [
+               %{text: "c1"},
+               %{text: "c5"}
+             ],
+             posts:
+               [
+                 %{title: "p1"} = p1,
+                 %{title: "p2"} = p2
+               ] = posts
+           } =
+             from(u in User)
+             |> join(:left, [u], p in assoc(u, :posts))
+             |> join(:left, [u], c in assoc(u, :comments))
+             |> join(:left, [_, p], c in assoc(p, :comments))
+             |> preload(
+               [user, posts, comments, post_comments],
+               comments: comments,
+               posts: {posts, comments: {post_comments, :author}}
+             )
+             |> TestRepo.get(u1.id)
+
+    assert [
+             %{text: "c1", author: %{name: "Alice"}},
+             %{text: "c2", author: %{name: "John"}}
+           ] = p1.comments
+
+    assert [
+             %{text: "c3", author: %{name: "John"}},
+             %{text: "c4", author: nil},
+             %{text: "c5", author: %{name: "Alice"}}
+           ] = p2.comments
+  end
+
   test "many_to_many association join" do
     p1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
     p2 = TestRepo.insert!(%Post{title: "2", text: "ola"})

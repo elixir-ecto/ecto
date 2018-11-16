@@ -46,30 +46,37 @@ defmodule Ecto.Repo.Assoc do
     # Traverse sub_structs adding one by one to the tree.
     # Note we need to traverse even if we don't have a child_key
     # due to nested associations.
-    {sub_dicts, sub_structs} =
-      Enum.map_reduce sub_dicts, sub_structs, &merge(&2, &1, child_key)
+    {sub_dicts, sub_structs} = Enum.map_reduce(sub_dicts, sub_structs, &merge(&2, &1, child_key))
 
-    # Now if we have a struct and its parent key, we store the current
-    # data unless we have already processed it.
-    cache_key = {parent_key, child_key, sub_structs}
+    cache_key = cache_key(parent_key, child_key, sub_structs, dict)
 
     if struct && parent_key && not Map.get(cache, cache_key, false) do
       cache = Map.put(cache, cache_key, true)
       item = {child_key, struct}
 
-      # If we have a list, we are at the root,
-      # so we also store the sub structs
-      dict =
-        if is_list(dict) do
-          [{item, sub_structs}|dict]
-        else
-          Map.update(dict, parent_key, [item], &[item|&1])
-        end
+      # If we have a list, we are at the root, so we also store the sub structs
+      dict = update_dict(dict, parent_key, item, sub_structs)
 
       {{primary_keys, cache, dict, sub_dicts}, sub_structs}
     else
       {{primary_keys, cache, dict, sub_dicts}, sub_structs}
     end
+  end
+
+  defp cache_key(parent_key, child_key, sub_structs, dict) when is_list(dict) do
+    {parent_key, child_key, sub_structs}
+  end
+
+  defp cache_key(parent_key, child_key, _sub_structs, dict) when is_map(dict) do
+    {parent_key, child_key}
+  end
+
+  defp update_dict(dict, _parent_key, item, sub_structs) when is_list(dict) do
+    [{item, sub_structs} | dict]
+  end
+
+  defp update_dict(dict, parent_key, item, _sub_structs) when is_map(dict) do
+    Map.update(dict, parent_key, [item], &[item | &1])
   end
 
   defp load_assocs({child_key, struct}, refls) do
