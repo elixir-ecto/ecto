@@ -152,14 +152,20 @@ defmodule Ecto.TypeTest do
     assert cast(:decimal, 1) == {:ok, Decimal.new("1")}
     assert cast(:decimal, Decimal.new("1")) == {:ok, Decimal.new("1")}
     assert cast(:decimal, "nan") == :error
-    assert cast(:decimal, Decimal.new("NaN")) == :error
-    assert cast(:decimal, Decimal.new("Infinity")) == :error
+
+    assert_raise ArgumentError, ~r"#Decimal<NaN> is not allowed for type :decimal", fn ->
+      cast(:decimal, Decimal.new("NaN"))
+    end
 
     assert dump(:decimal, Decimal.new("1")) == {:ok, Decimal.new("1")}
-    assert dump(:decimal, Decimal.new("nan")) == :error
-    assert dump(:decimal, "1.0") == :error
     assert dump(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
     assert dump(:decimal, 1) == {:ok, Decimal.new("1")}
+    assert dump(:decimal, "1.0") == :error
+    assert dump(:decimal, "bad") == :error
+
+    assert_raise ArgumentError, ~r"#Decimal<NaN> is not allowed for type :decimal", fn ->
+      dump(:decimal, Decimal.new("nan"))
+    end
   end
 
   @uuid_string "bfe0888c-5c59-4bb3-adfd-71f0b85d3db7"
@@ -321,7 +327,10 @@ defmodule Ecto.TypeTest do
   test "dump :time" do
     assert Ecto.Type.dump(:time, @time) == {:ok, @time}
     assert Ecto.Type.dump(:time, @time_zero) ==  {:ok, @time_zero}
-    assert Ecto.Type.dump(:time, @time_usec) == :error
+
+    assert_raise ArgumentError, ~r":time expects microseconds to be empty", fn ->
+      Ecto.Type.dump(:time, @time_usec)
+    end
   end
 
   test "load :time" do
@@ -379,7 +388,10 @@ defmodule Ecto.TypeTest do
 
     test "dump :time_usec" do
       assert Ecto.Type.dump(:time_usec, @time_usec) == {:ok, @time_usec}
-      assert Ecto.Type.dump(:time_usec, @time) == :error
+
+      assert_raise ArgumentError, ~r":time_usec expects microsecond precision", fn ->
+        Ecto.Type.dump(:time_usec, @time)
+      end
     end
 
     test "load :time_usec" do
@@ -457,7 +469,10 @@ defmodule Ecto.TypeTest do
     assert Ecto.Type.dump(:naive_datetime, @datetime) == {:ok, @datetime}
     assert Ecto.Type.dump(:naive_datetime, @datetime_zero) == {:ok, @datetime_zero}
     assert Ecto.Type.dump(:naive_datetime, @datetime_leapyear) == {:ok, @datetime_leapyear}
-    assert Ecto.Type.dump(:naive_datetime, @datetime_usec) == :error
+
+    assert_raise ArgumentError, ~r":naive_datetime expects microseconds to be empty", fn ->
+      Ecto.Type.dump(:naive_datetime, @datetime_usec)
+    end
   end
 
   test "load :naive_datetime" do
@@ -545,10 +560,12 @@ defmodule Ecto.TypeTest do
     end
 
     test "dump :naive_datetime_usec" do
-      assert Ecto.Type.dump(:naive_datetime_usec, @datetime) == :error
-      assert Ecto.Type.dump(:naive_datetime_usec, @datetime_zero) == :error
       assert Ecto.Type.dump(:naive_datetime_usec, @datetime_usec) == {:ok, @datetime_usec}
       assert Ecto.Type.dump(:naive_datetime_usec, @datetime_leapyear_usec) == {:ok, @datetime_leapyear_usec}
+
+      assert_raise ArgumentError, ~r":naive_datetime_usec expects microsecond precision", fn ->
+        Ecto.Type.dump(:naive_datetime_usec, @datetime)
+      end
     end
 
     test "load :naive_datetime_usec" do
@@ -631,7 +648,10 @@ defmodule Ecto.TypeTest do
     assert Ecto.Type.dump(:utc_datetime, @datetime) == DateTime.from_naive(~N[2015-01-23 23:50:07], "Etc/UTC")
     assert Ecto.Type.dump(:utc_datetime, @datetime_zero) == DateTime.from_naive(~N[2015-01-23 23:50:00], "Etc/UTC")
     assert Ecto.Type.dump(:utc_datetime, @datetime_leapyear) == DateTime.from_naive(~N[2000-02-29 23:50:07], "Etc/UTC")
-    assert Ecto.Type.dump(:utc_datetime, @datetime_usec) == :error
+
+    assert_raise ArgumentError, ~r":utc_datetime expects microseconds to be empty", fn ->
+      Ecto.Type.dump(:utc_datetime, @datetime_usec)
+    end
   end
 
   test "load :utc_datetime" do
@@ -720,7 +740,10 @@ defmodule Ecto.TypeTest do
 
     test "dump :utc_datetime_usec" do
       assert Ecto.Type.dump(:utc_datetime_usec, @datetime_usec) == DateTime.from_naive(~N[2015-01-23 23:50:07.008000], "Etc/UTC")
-      assert Ecto.Type.dump(:utc_datetime_usec, @datetime) == :error
+
+      assert_raise ArgumentError, ~r":utc_datetime_usec expects microsecond precision", fn ->
+        Ecto.Type.dump(:utc_datetime_usec, @datetime)
+      end
     end
 
     test "load :utc_datetime_usec" do
