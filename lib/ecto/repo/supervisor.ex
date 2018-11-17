@@ -181,17 +181,32 @@ defmodule Ecto.Repo.Supervisor do
   end
 
   ## Callbacks
-
+  
+  @impl true
   def init({name, repo, otp_app, adapter, opts}) do
     case runtime_config(:supervisor, repo, otp_app, opts) do
       {:ok, opts} ->
         {:ok, child, meta} = adapter.init([repo: repo] ++ opts)
         cache = Ecto.Query.Planner.new_query_cache(name)
         child = wrap_start(child, [adapter, cache, meta])
-        supervise([child], strategy: :one_for_one, max_restarts: 0)
-
+        perform_start(child)
       :ignore ->
         :ignore
+    end
+  end
+  
+  #
+  # FIXME: use new child spec if present but due to Ecto still supporting older
+  # versions of Elxir, we need to keep the old Supervisor.Spec.supervise/2 call
+  #
+  @compile {:inline, perform_start: 1}
+  if :erlang.function_exported(Supervisor, :init, 2) do
+    defp perform_start(child) do
+      Supervisor.init([child], strategy: :one_for_one, max_restarts: 0)
+    end
+  else
+    defp perform_start(child) do
+      Supervisor.Spec.supervise([child], strategy: :one_for_one, max_restarts: 0)
     end
   end
 
