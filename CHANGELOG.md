@@ -99,6 +99,15 @@ In order for this safer migration mechanism to work, at least two database conne
 
 A downside of this approach is that migrations cannot run dynamically during test under the `Ecto.Adapters.SQL.Sandbox`, as the sandbox is unable to share a single connection across processes at the exact same time.
 
+## v3.0.2 (2018-11-17)
+
+### Bug fixes
+
+  * [Ecto.LogEntry] Bring old Ecto.LogEntry APIs back for compatibility
+  * [Ecto.Repo] Consider non-joined fields when merging preloaded assocs only at root
+  * [Ecto.Repo] Take field sources into account in :replace_all_fields upsert option
+  * [Ecto.Type] Convert `:utc_datetime` to `DateTime` when sending it to adapters
+
 ## v3.0.1 (2018-11-03)
 
 ### Bug fixes
