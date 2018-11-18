@@ -188,45 +188,33 @@ defmodule Ecto.Repo.Supervisor do
       {:ok, opts} ->
         {:ok, child, meta} = adapter.init([repo: repo] ++ opts)
         cache = Ecto.Query.Planner.new_query_cache(name)
-        child = wrap_start(child, [adapter, cache, meta])
-        perform_start(child)
+        child_spec = wrapped_child_spec(child, [adapter, cache, meta])
+        supervisor_init([child_spec], strategy: :one_for_one, max_restarts: 0)
       :ignore ->
         :ignore
     end
   end
   
-  #
-  # FIXME: use new child spec if present but due to Ecto still supporting older
-  # versions of Elxir, we need to keep the old Supervisor.Spec.supervise/2 call
-  #
-  @compile {:inline, perform_start: 1}
-  if :erlang.function_exported(Supervisor, :init, 2) do
-    defp perform_start(child) do
-      Supervisor.init([child], strategy: :one_for_one, max_restarts: 0)
-    end
-  else
-    defp perform_start(child) do
-      Supervisor.Spec.supervise([child], strategy: :one_for_one, max_restarts: 0)
+  defp supervisor_init(specs, options) do
+    if function_exported?(Supervisor, :init, 2) do
+      Supervisor.init(specs, options)
+    else
+      Supervisor.Spec.supervise(specs, options)
     end
   end
-
+  
   def start_child({mod, fun, args}, adapter, cache, meta) do
-    case apply(mod, fun, args) do
-      {:ok, pid} ->
-        meta = Map.merge(meta, %{pid: pid, cache: cache})
-        Ecto.Repo.Registry.associate(self(), {adapter, meta})
-        {:ok, pid}
-
-      other ->
-        other
+    with {:ok, pid} <- apply(mod, fun, args) do
+      meta = Map.merge(meta, %{pid: pid, cache: cache})
+      Ecto.Repo.Registry.associate(self(), {adapter, meta})
+      {:ok, pid}
     end
   end
 
-  defp wrap_start({id, start, restart, shutdown, type, mods}, args) do
+  defp wrapped_child_spec({id, start, restart, shutdown, type, mods}, args) do
     {id, {__MODULE__, :start_child, [start | args]}, restart, shutdown, type, mods}
   end
-
-  defp wrap_start(%{start: start} = spec, args) do
+  defp wrapped_child_spec(%{start: start} = spec, args) do
     %{spec | start: {__MODULE__, :start_child, [start | args]}}
   end
 end
