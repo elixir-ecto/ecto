@@ -215,11 +215,10 @@ defmodule Ecto.Integration.JoinsTest do
                %{text: "c1"},
                %{text: "c5"}
              ],
-             posts:
-               [
-                 %{title: "p1"} = p1,
-                 %{title: "p2"} = p2
-               ] = posts
+             posts: [
+               %{title: "p1"} = p1,
+               %{title: "p2"} = p2
+             ]
            } =
              from(u in User)
              |> join(:left, [u], p in assoc(u, :posts))
