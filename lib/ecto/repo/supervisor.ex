@@ -181,20 +181,22 @@ defmodule Ecto.Repo.Supervisor do
   end
 
   ## Callbacks
-  
+
   @impl true
   def init({name, repo, otp_app, adapter, opts}) do
     case runtime_config(:supervisor, repo, otp_app, opts) do
       {:ok, opts} ->
         {:ok, child, meta} = adapter.init([repo: repo] ++ opts)
         cache = Ecto.Query.Planner.new_query_cache(name)
-        child_spec = wrapped_child_spec(child, [adapter, cache, meta])
+        child_spec = wrap_child_spec(child, [adapter, cache, meta])
         supervisor_init([child_spec], strategy: :one_for_one, max_restarts: 0)
+
       :ignore ->
         :ignore
     end
   end
-  
+
+  # TODO: Remove function_exported? check when requiring Elixir v1.5+ 
   defp supervisor_init(specs, options) do
     if function_exported?(Supervisor, :init, 2) do
       Supervisor.init(specs, options)
@@ -204,17 +206,22 @@ defmodule Ecto.Repo.Supervisor do
   end
   
   def start_child({mod, fun, args}, adapter, cache, meta) do
-    with {:ok, pid} <- apply(mod, fun, args) do
-      meta = Map.merge(meta, %{pid: pid, cache: cache})
-      Ecto.Repo.Registry.associate(self(), {adapter, meta})
-      {:ok, pid}
+    case apply(mod, fun, args) do
+      {:ok, pid} ->
+        meta = Map.merge(meta, %{pid: pid, cache: cache})
+        Ecto.Repo.Registry.associate(self(), {adapter, meta})
+        {:ok, pid}
+
+      other ->
+        other
     end
   end
 
-  defp wrapped_child_spec({id, start, restart, shutdown, type, mods}, args) do
+  defp wrap_child_spec({id, start, restart, shutdown, type, mods}, args) do
     {id, {__MODULE__, :start_child, [start | args]}, restart, shutdown, type, mods}
   end
-  defp wrapped_child_spec(%{start: start} = spec, args) do
+
+  defp wrap_child_spec(%{start: start} = spec, args) do
     %{spec | start: {__MODULE__, :start_child, [start | args]}}
   end
 end
