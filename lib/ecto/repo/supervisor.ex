@@ -67,7 +67,7 @@ defmodule Ecto.Repo.Supervisor do
       raise ArgumentError, "missing :adapter option on use Ecto.Repo"
     end
 
-    unless Code.ensure_loaded?(adapter) do
+    unless Code.ensure_compiled?(adapter) do
       raise ArgumentError, "adapter #{inspect adapter} was not compiled, " <>
                            "ensure it is correct and it is included as a project dependency"
     end
