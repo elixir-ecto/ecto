@@ -802,7 +802,7 @@ defmodule Ecto.Integration.RepoTest do
     lock_version_query = from(c in Comment, select: c.lock_version, where: [id: ^comment.id])
 
     rows = [
-      [lock_version: lock_version_query],
+      [text: "2", lock_version: lock_version_query],
       [lock_version: lock_version_query, text: "3"],
       [text: text_query],
       [text: text_query, lock_version: lock_version_query],
@@ -814,7 +814,7 @@ defmodule Ecto.Integration.RepoTest do
                     |> where([c], c.id != ^comment.id)
                     |> TestRepo.all()
 
-    assert [%Comment{lock_version: 1},
+    assert [%Comment{text: "2", lock_version: 1},
             %Comment{text: "3", lock_version: 1},
             %Comment{text: "1"},
             %Comment{text: "1", lock_version: 1},

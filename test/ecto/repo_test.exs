@@ -331,16 +331,21 @@ defmodule Ecto.RepoTest do
 
       TestRepo.insert_all(MySchema, [
         [y: "y1", x: "x1"],
-        [x: query, id: 2],
-        [id: 3, x: query],
-        [y: query, x: query]
+        [x: query, z: "z2"],
+        [z: "z3", x: query],
+        [y: query, z: query]
       ])
 
       assert_received {:insert_all, %{source: "my_schema"}, rows}
       assert [[x: "x1", yyy: "y1"],
-              [id: 2, x: {%Ecto.Query{}, [^value]}],
-              [id: 3, x: {%Ecto.Query{}, [^value]}],
-              [x: {%Ecto.Query{}, [^value]}, yyy: {%Ecto.Query{}, [^value]}]] = rows
+              [x: {%Ecto.Query{} = query2, [^value]}, z: "z2"],
+              [x: {%Ecto.Query{} = query3, [^value]}, z: "z3"],
+              [yyy: {%Ecto.Query{} = query4y, [^value]}, z: {%Ecto.Query{} = query4x, [^value]}]] = rows
+
+      assert [%{expr: {:==, _, [_, {:^, [], [2]}]}}] = query2.wheres
+      assert [%{expr: {:==, _, [_, {:^, [], [4]}]}}] = query3.wheres
+      assert [%{expr: {:==, _, [_, {:^, [], [6]}]}}] = query4y.wheres
+      assert [%{expr: {:==, _, [_, {:^, [], [7]}]}}] = query4x.wheres
     end
 
     test "raises when on associations" do
