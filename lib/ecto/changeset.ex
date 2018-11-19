@@ -1863,23 +1863,27 @@ defmodule Ecto.Changeset do
   @doc """
   Validates a change is a string or list of the given length.
 
-  Note that the length of a string is counted in graphemes. If using
+  Note that the length of a string is counted in graphemes by default. If using
   this validation to match a character limit of a database backend,
   it's likely that the limit ignores graphemes and limits the number
   of unicode characters. Then consider using the `:count` option to
-  limit the number of codepoints.
+  limit the number of codepoints (`:codepoints`), or limit the number of bytes (`:bytes`).
 
   ## Options
 
     * `:is` - the length must be exactly this value
     * `:min` - the length must be greater than or equal to this value
     * `:max` - the length must be less than or equal to this value
-    * `:count` - what length to count for string, `:graphemes` (default) or `:codepoints`
+    * `:count` - what length to count for string, `:graphemes` (default), `:codepoints` or `:bytes`
     * `:message` - the message on failure, depending on the validation, is one of:
       * for strings:
         * "should be %{count} character(s)"
         * "should be at least %{count} character(s)"
         * "should be at most %{count} character(s)"
+      * for binary:
+        * "should be %{count} byte(s)"
+        * "should be at least %{count} byte(s)"
+        * "should be at most %{count} byte(s)"
       * for lists:
         * "should have %{count} item(s)"
         * "should have at least %{count} item(s)"
@@ -1892,6 +1896,7 @@ defmodule Ecto.Changeset do
       validate_length(changeset, :title, min: 3, max: 100)
       validate_length(changeset, :code, is: 9)
       validate_length(changeset, :topics, is: 2)
+      validate_length(changeset, :icon, count: :bytes, max: 1024 * 16)
 
   """
   @spec validate_length(t, atom, Keyword.t) :: t
@@ -1904,6 +1909,8 @@ defmodule Ecto.Changeset do
             {:string, codepoints_length(value, 0)}
           {value, :graphemes} when is_binary(value) ->
             {:string, String.length(value)}
+          {value, :bytes} when is_binary(value) ->
+            {:binary, byte_size(value)}
           {value, _} when is_list(value) ->
             {:list, list_length(changeset, field, value)}
         end
@@ -1932,18 +1939,24 @@ defmodule Ecto.Changeset do
   defp wrong_length(_type, value, value, _opts), do: nil
   defp wrong_length(:string, _length, value, opts), do:
     {message(opts, "should be %{count} character(s)"), count: value, validation: :length, kind: :is}
+  defp wrong_length(:binary, _length, value, opts), do:
+    {message(opts, "should be %{count} byte(s)"), count: value, validation: :length, kind: :is}
   defp wrong_length(:list, _length, value, opts), do:
     {message(opts, "should have %{count} item(s)"), count: value, validation: :length, kind: :is}
 
   defp too_short(_type, length, value, _opts) when length >= value, do: nil
   defp too_short(:string, _length, value, opts), do:
     {message(opts, "should be at least %{count} character(s)"), count: value, validation: :length, kind: :min}
+  defp too_short(:binary, _length, value, opts), do:
+    {message(opts, "should be at least %{count} byte(s)"), count: value, validation: :length, kind: :min}
   defp too_short(:list, _length, value, opts), do:
     {message(opts, "should have at least %{count} item(s)"), count: value, validation: :length, kind: :min}
 
   defp too_long(_type, length, value, _opts) when length <= value, do: nil
   defp too_long(:string, _length, value, opts), do:
     {message(opts, "should be at most %{count} character(s)"), count: value, validation: :length, kind: :max}
+  defp too_long(:binary, _length, value, opts), do:
+    {message(opts, "should be at most %{count} byte(s)"), count: value, validation: :length, kind: :max}
   defp too_long(:list, _length, value, opts), do:
     {message(opts, "should have at most %{count} item(s)"), count: value, validation: :length, kind: :max}
 

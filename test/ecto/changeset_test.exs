@@ -982,6 +982,61 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [title: {"should be at most %{count} character(s)", count: 1, validation: :length, kind: :max}]
   end
 
+  test "validate_length/3 with binary" do
+    changeset =
+      changeset(%{"body" => <<0, 1, 2, 3>>})
+      |> validate_length(:body, count: :bytes, min: 3, max: 7)
+
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert validations(changeset) == [body: {:length, [count: :bytes, min: 3, max: 7]}]
+
+    changeset =
+      changeset(%{"body" => <<0, 1, 2, 3, 4>>})
+      |> validate_length(:body, count: :bytes, min: 5, max: 5)
+
+    assert changeset.valid?
+
+    changeset =
+      changeset(%{"body" => <<0, 1, 2, 3, 4>>}) |> validate_length(:body, count: :bytes, is: 5)
+
+    assert changeset.valid?
+
+    changeset =
+      changeset(%{"body" => <<0, 1, 2, 3, 4>>}) |> validate_length(:body, count: :bytes, min: 6)
+
+    refute changeset.valid?
+
+    assert changeset.errors == [
+             body:
+               {"should be at least %{count} byte(s)", count: 6, validation: :length, kind: :min}
+           ]
+
+    changeset =
+      changeset(%{"body" => <<0, 1, 2, 3, 4>>}) |> validate_length(:body, count: :bytes, max: 4)
+
+    refute changeset.valid?
+
+    assert changeset.errors == [
+             body: {"should be at most %{count} byte(s)", count: 4, validation: :length, kind: :max}
+           ]
+
+    changeset =
+      changeset(%{"body" => <<0, 1, 2, 3, 4>>}) |> validate_length(:body, count: :bytes, is: 10)
+
+    refute changeset.valid?
+
+    assert changeset.errors == [
+             body: {"should be %{count} byte(s)", count: 10, validation: :length, kind: :is}
+           ]
+
+    changeset =
+      changeset(%{"body" => <<0, 1, 2, 3, 4>>})
+      |> validate_length(:body, count: :bytes, is: 10, message: "yada")
+
+    assert changeset.errors == [body: {"yada", count: 10, validation: :length, kind: :is}]
+  end
+
   test "validate_length/3 with list" do
     changeset = changeset(%{"topics" => ["Politics", "Security", "Economy", "Elections"]}) |> validate_length(:topics, min: 3, max: 7)
     assert changeset.valid?
