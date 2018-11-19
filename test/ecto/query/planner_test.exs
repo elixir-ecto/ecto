@@ -726,6 +726,17 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "normalize: all does not allow bindings in order bys when having combinations" do
+    message = ~r"`all` does not allow bindings in `order_by` when using `union` or `union_all`"
+    assert_raise Ecto.QueryError, message, fn ->
+      posts_query = from(post in Post, select: post.id)
+      posts_query
+      |> union_all(^posts_query)
+      |> order_by([post], post.id)
+      |> normalize(:all)
+    end
+  end
+
   test "normalize: update all only allow filters and checks updates" do
     message = ~r"`update_all` requires at least one field to be updated"
     assert_raise Ecto.QueryError, message, fn ->

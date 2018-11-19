@@ -771,6 +771,7 @@ defmodule Ecto.Query.Planner do
     case operation do
       :all ->
         assert_no_update!(query, operation)
+        assert_valid_combinations!(query, operation)
       :update_all ->
         assert_update!(query, operation)
         assert_only_filter_expressions!(query, operation)
@@ -1421,6 +1422,19 @@ defmodule Ecto.Query.Planner do
         error! query, "`#{operation}` allows only `where` and `join` expressions. " <>
                       "You can exclude unwanted expressions from a query by using " <>
                       "Ecto.Query.exclude/2. Error found"
+    end
+  end
+
+  defp assert_valid_combinations!(query, operation) do
+    if query.combinations != [] do
+      has_bindings? =
+        Enum.any?(query.order_bys, fn order_by ->
+          Enum.any?(order_by.expr, &match?({_dir, {{:., [], [{:&, [], [0]}, :id]}, [], []}}, &1))
+        end)
+
+      if has_bindings? do
+        error! query, "`#{operation}` does not allow bindings in `order_by` when using `union` or `union_all`"
+      end
     end
   end
 
