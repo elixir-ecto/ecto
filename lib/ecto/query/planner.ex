@@ -1429,7 +1429,7 @@ defmodule Ecto.Query.Planner do
     if query.combinations != [] do
       has_bindings? =
         Enum.any?(query.order_bys, fn order_by ->
-          Enum.any?(order_by.expr, &match?({_dir, {{:., [], [{:&, [], [0]}, :id]}, [], []}}, &1))
+          Enum.any?(order_by.expr, &match?({_dir, {{:., [], [{:&, [], [_]}, _]}, [], []}}, &1))
         end)
 
       if has_bindings? do
