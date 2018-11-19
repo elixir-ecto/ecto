@@ -727,7 +727,13 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: all does not allow bindings in order bys when having combinations" do
-    message = ~r"`all` does not allow bindings in `order_by` when using `union` or `union_all`"
+    message = ~r"""
+    cannot use bindings in `order_by` when using `union_all`.
+
+    That's because the `order_by` applies to the whole `union_all` and not \
+    an individual query. If you really want to order the results, you can wrap \
+    the existing query in a subquery and then order it:
+    """
     assert_raise Ecto.QueryError, message, fn ->
       posts_query = from(post in Post, select: post.id)
       posts_query
