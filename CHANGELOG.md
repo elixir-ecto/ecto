@@ -195,7 +195,7 @@ Although Ecto 3.0 is a major bump version, the functionality below emits depreca
   * [Ecto.Schema] `:time`, `:naive_datetime` and `:utc_datetime` no longer keep microseconds information. If you want to keep microseconds, use `:time_usec`, `:naive_datetime_usec`, `:utc_datetime_usec`
   * [Ecto.Schema] The `@schema_prefix` option now only affects the `from`/`join` of where the schema is used and no longer the whole query
   * [Ecto.Schema.Metadata] The `source` key no longer returns a tuple of the schema_prefix and the table/collection name. It now returns just the table/collection string. You can now access the schema_prefix via the `prefix` key.
-  * [Mix.Ecto] `Mix.Ecto.ensure_started/2` has been removed. However, in Ecto 2.2 the  `Mix.Ecto` module was not considered part of the public API and should not have been used but we are listing this as a backwards incompatible change to help with users relying on this function.
+  * [Mix.Ecto] `Mix.Ecto.ensure_started/2` has been removed. However, in Ecto 2.2 the  `Mix.Ecto` module was not considered part of the public API and should not have been used but we are listing this for guidance.
 
 ### Adapter changes
 
