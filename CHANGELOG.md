@@ -99,6 +99,20 @@ In order for this safer migration mechanism to work, at least two database conne
 
 A downside of this approach is that migrations cannot run dynamically during test under the `Ecto.Adapters.SQL.Sandbox`, as the sandbox is unable to share a single connection across processes at the exact same time.
 
+## v3.0.3 (2018-11-26)
+
+### Enhancements
+
+  * [Ecto.Changeset] Add `count: :bytes` option in `validate_length/3`
+  * [Ecto.Query] Support passing `Ecto.Query` in `Ecto.Repo.insert_all`
+
+### Bug fixes
+
+  * [Ecto.Type] Respect adapter types when loading/dumping arrays and maps
+  * [Ecto.Query] Ensure no bindings in order_by when using combinations in `Ecto.Query`
+  * [Ecto.Repo] Ensure adapter is compiled (instead of only loaded) before invoking it
+  * [Ecto.Repo] Support new style child spec from adapters
+
 ## v3.0.2 (2018-11-17)
 
 ### Bug fixes
