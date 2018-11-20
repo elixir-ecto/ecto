@@ -347,17 +347,17 @@ defmodule Ecto.Type do
     dump_fun(type).(value)
   end
 
-  defp dump_fun(:integer), do: &dump_integer/1
+  defp dump_fun(:integer), do: &same_integer/1
   defp dump_fun(:float), do: &dump_float/1
-  defp dump_fun(:boolean), do: &dump_boolean/1
-  defp dump_fun(:map), do: &dump_map/1
-  defp dump_fun(:string), do: &dump_binary/1
-  defp dump_fun(:binary), do: &dump_binary/1
-  defp dump_fun(:id), do: &dump_integer/1
-  defp dump_fun(:binary_id), do: &dump_binary/1
+  defp dump_fun(:boolean), do: &same_boolean/1
+  defp dump_fun(:map), do: &same_map/1
+  defp dump_fun(:string), do: &same_binary/1
+  defp dump_fun(:binary), do: &same_binary/1
+  defp dump_fun(:id), do: &same_integer/1
+  defp dump_fun(:binary_id), do: &same_binary/1
   defp dump_fun(:any), do: &{:ok, &1}
-  defp dump_fun(:decimal), do: &dump_decimal/1
-  defp dump_fun(:date), do: &dump_date/1
+  defp dump_fun(:decimal), do: &same_decimal/1
+  defp dump_fun(:date), do: &same_date/1
   defp dump_fun(:time), do: &dump_time/1
   defp dump_fun(:time_usec), do: &dump_time_usec/1
   defp dump_fun(:naive_datetime), do: &dump_naive_datetime/1
@@ -368,28 +368,28 @@ defmodule Ecto.Type do
   defp dump_fun({:map, type}), do: &map(&1, dump_fun(type), %{})
   defp dump_fun(mod) when is_atom(mod), do: &mod.dump(&1)
 
-  defp dump_integer(term) when is_integer(term), do: {:ok, term}
-  defp dump_integer(_), do: :error
+  defp same_integer(term) when is_integer(term), do: {:ok, term}
+  defp same_integer(_), do: :error
 
   defp dump_float(term) when is_float(term), do: {:ok, term}
   defp dump_float(_), do: :error
 
-  defp dump_boolean(term) when is_boolean(term), do: {:ok, term}
-  defp dump_boolean(_), do: :error
+  defp same_boolean(term) when is_boolean(term), do: {:ok, term}
+  defp same_boolean(_), do: :error
 
-  defp dump_binary(term) when is_binary(term), do: {:ok, term}
-  defp dump_binary(_), do: :error
+  defp same_binary(term) when is_binary(term), do: {:ok, term}
+  defp same_binary(_), do: :error
 
-  defp dump_map(term) when is_map(term), do: {:ok, term}
-  defp dump_map(_), do: :error
+  defp same_map(term) when is_map(term), do: {:ok, term}
+  defp same_map(_), do: :error
 
-  defp dump_decimal(term) when is_integer(term), do: {:ok, Decimal.new(term)}
-  defp dump_decimal(term) when is_float(term), do: {:ok, Decimal.from_float(term)}
-  defp dump_decimal(%Decimal{} = term), do: {:ok, check_decimal!(term)}
-  defp dump_decimal(_), do: :error
+  defp same_decimal(term) when is_integer(term), do: {:ok, Decimal.new(term)}
+  defp same_decimal(term) when is_float(term), do: {:ok, Decimal.from_float(term)}
+  defp same_decimal(%Decimal{} = term), do: {:ok, check_decimal!(term)}
+  defp same_decimal(_), do: :error
 
-  defp dump_date(%Date{} = term), do: {:ok, term}
-  defp dump_date(_), do: :error
+  defp same_date(%Date{} = term), do: {:ok, term}
+  defp same_date(_), do: :error
 
   defp dump_time(%Time{} = term), do: {:ok, check_no_usec!(term, :time)}
   defp dump_time(_), do: :error
@@ -500,17 +500,17 @@ defmodule Ecto.Type do
     load_fun(type).(value)
   end
 
-  defp load_fun(:integer), do: &dump_integer/1
+  defp load_fun(:integer), do: &same_integer/1
   defp load_fun(:float), do: &load_float/1
-  defp load_fun(:boolean), do: &dump_boolean/1
-  defp load_fun(:map), do: &dump_map/1
-  defp load_fun(:string), do: &dump_binary/1
-  defp load_fun(:binary), do: &dump_binary/1
-  defp load_fun(:id), do: &dump_integer/1
-  defp load_fun(:binary_id), do: &dump_binary/1
+  defp load_fun(:boolean), do: &same_boolean/1
+  defp load_fun(:map), do: &same_map/1
+  defp load_fun(:string), do: &same_binary/1
+  defp load_fun(:binary), do: &same_binary/1
+  defp load_fun(:id), do: &same_integer/1
+  defp load_fun(:binary_id), do: &same_binary/1
   defp load_fun(:any), do: &{:ok, &1}
-  defp load_fun(:decimal), do: &dump_decimal/1
-  defp load_fun(:date), do: &dump_date/1
+  defp load_fun(:decimal), do: &same_decimal/1
+  defp load_fun(:date), do: &same_date/1
   defp load_fun(:time), do: &load_time/1
   defp load_fun(:time_usec), do: &load_time_usec/1
   defp load_fun(:naive_datetime), do: &load_naive_datetime/1
@@ -741,7 +741,7 @@ defmodule Ecto.Type do
   end
 
   def cast_decimal(term) do
-    dump_decimal(term)
+    same_decimal(term)
   end
 
   defp cast_embed(%{cardinality: :one}, nil), do: {:ok, nil}
