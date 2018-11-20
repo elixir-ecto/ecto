@@ -188,24 +188,13 @@ defmodule Ecto.Schema do
   auto-generation of the id. This is often the case for primary keys
   in relational databases which are auto-incremented.
 
-  Similarly, the `:binary_id` type may be generated in the adapter
-  for cases like UUID but it may also be handled by the database if
-  required. In any case, both scenarios are handled transparently by
-  Ecto.
-
   Besides `:id` and `:binary_id`, which are often used by primary
   and foreign keys, Ecto provides a huge variety of types to be used
   by any column.
 
-  Ecto also supports composite primary keys.
-
-  If your primary key is not named "id" (e.g. if you are working with a
-  legacy database), you can use the `@primary_key` attribute to configure
-  your key name using the `source` option.  For example, the following
-  attribute defines an integer primary key named `legacy_id` which is
-  automatically incremented by the database:
-
-      @primary_key {:id, :integer, autogenerate: false, source: :legacy_id}
+  Ecto also supports composite primary keys. THis is achieved by declaring
+  a `@primary_key`, as usual, and then passing the `primary_key: true` option
+  to any of the composite fields.
 
   ## Types and casting
 
