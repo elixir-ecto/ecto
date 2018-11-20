@@ -15,12 +15,7 @@ defmodule Ecto.Adapter.Schema do
           source: binary
         }
 
-  @type fields ::
-          Keyword.t(
-            value ::
-              Keyword.value()
-              | {Ecto.Query.t(), list()}
-          )
+  @type fields :: Keyword.t()
   @type filters :: Keyword.t()
   @type constraints :: Keyword.t()
   @type returning :: [atom]
@@ -42,12 +37,16 @@ defmodule Ecto.Adapter.Schema do
 
   @doc """
   Inserts multiple entries into the data store.
+
+  In case an `Ecto.Query` given as any of the field values by the user,
+  it will be sent to the adapter as a tuple with in the shape of
+  `{query, params}`.
   """
   @callback insert_all(
               adapter_meta,
               schema_meta,
               header :: [atom],
-              [fields],
+              [[{atom, term | {Ecto.Query.t(), list()}}]],
               on_conflict,
               returning,
               options

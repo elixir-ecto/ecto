@@ -721,7 +721,10 @@ defmodule Ecto.Repo do
   It expects a schema module (`MyApp.User`) or a source (`"users"`) or
   both (`{"users", MyApp.User}`) as the first argument. The second
   argument is a list of entries to be inserted, either as keyword
-  lists or as maps.
+  lists or as maps. The keys of the entries are the field names as
+  atoms and the value should be the respective value for the field
+  type or, optionally, an `Ecto.Query` that returns a single entry
+  with a single value.
 
   It returns a tuple containing the number of entries
   and any returned result as second element. If the database
@@ -812,7 +815,7 @@ defmodule Ecto.Repo do
   """
   @callback insert_all(
               schema_or_source :: binary | {binary, module} | module,
-              entries :: [map | Keyword.t()],
+              entries :: [map | [{atom, term | Ecto.Query.t}]],
               opts :: Keyword.t()
             ) :: {integer, nil | [term]}
 
