@@ -171,6 +171,14 @@ defmodule Ecto.TypeTest do
   @uuid_string "bfe0888c-5c59-4bb3-adfd-71f0b85d3db7"
   @uuid_binary <<191, 224, 136, 140, 92, 89, 75, 179, 173, 253, 113, 240, 184, 93, 61, 183>>
 
+  test "binary_id with array" do
+    assert adapter_load(Ecto.TestAdapter, {:array, :binary_id}, [@uuid_binary]) ==
+             {:ok, [@uuid_string]}
+
+    assert adapter_dump(Ecto.TestAdapter, {:array, :binary_id}, [@uuid_string]) ==
+             {:ok, [@uuid_binary]}
+  end
+
   test "embeds_one" do
     embed = %Ecto.Embedded{field: :embed, cardinality: :one,
                            owner: __MODULE__, related: Schema}
