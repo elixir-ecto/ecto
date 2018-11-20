@@ -496,6 +496,10 @@ defmodule Ecto.Type do
     {:ok, nil}
   end
 
+  def load({:array, :binary_id}, value, loader) do
+    array(value, &loader.(:binary_id, &1), [])
+  end
+
   def load(type, value, _loader) do
     load_fun(type).(value)
   end
