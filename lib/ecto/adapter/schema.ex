@@ -15,7 +15,12 @@ defmodule Ecto.Adapter.Schema do
           source: binary
         }
 
-  @type fields :: Keyword.t()
+  @type fields ::
+          Keyword.t(
+            value ::
+              Keyword.value()
+              | {Ecto.Query.t(), list()}
+          )
   @type filters :: Keyword.t()
   @type constraints :: Keyword.t()
   @type returning :: [atom]

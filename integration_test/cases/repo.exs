@@ -793,6 +793,34 @@ defmodule Ecto.Integration.RepoTest do
     assert {0, nil} = TestRepo.insert_all({"posts", Post}, [])
   end
 
+  @tag :insert_select
+  test "insert all with query" do
+    comment = TestRepo.insert!(%Comment{text: "1", lock_version: 1})
+
+    text_query = from(c in Comment, select: c.text, where: [id: ^comment.id, lock_version: 1])
+
+    lock_version_query = from(c in Comment, select: c.lock_version, where: [id: ^comment.id])
+
+    rows = [
+      [text: "2", lock_version: lock_version_query],
+      [lock_version: lock_version_query, text: "3"],
+      [text: text_query],
+      [text: text_query, lock_version: lock_version_query],
+      [lock_version: 6, text: "6"]
+    ]
+    assert {5, nil} = TestRepo.insert_all(Comment, rows, [])
+
+    inserted_rows = Comment
+                    |> where([c], c.id != ^comment.id)
+                    |> TestRepo.all()
+
+    assert [%Comment{text: "2", lock_version: 1},
+            %Comment{text: "3", lock_version: 1},
+            %Comment{text: "1"},
+            %Comment{text: "1", lock_version: 1},
+            %Comment{text: "6", lock_version: 6}] = inserted_rows
+  end
+
   @tag :invalid_prefix
   @tag :insert_cell_wise_defaults
   test "insert all with invalid prefix" do
