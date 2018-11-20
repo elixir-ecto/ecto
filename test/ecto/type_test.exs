@@ -115,6 +115,9 @@ defmodule Ecto.TypeTest do
     assert load({:array, Custom}, 1) == :error
     assert dump({:array, Custom}, 1) == :error
     assert cast({:array, Custom}, 1) == :error
+
+    assert load({:array, Custom}, [:unused], fn Custom, _ -> {:ok, :used} end) == {:ok, [:used]}
+    assert dump({:array, Custom}, [:unused], fn Custom, _ -> {:ok, :used} end) == {:ok, [:used]}
   end
 
   test "custom types with map" do
@@ -133,6 +136,9 @@ defmodule Ecto.TypeTest do
     assert load({:map, Custom}, 1) == :error
     assert dump({:map, Custom}, 1) == :error
     assert cast({:map, Custom}, 1) == :error
+
+    assert load({:map, Custom}, %{"a" => :unused}, fn Custom, _ -> {:ok, :used} end) == {:ok, %{"a" => :used}}
+    assert dump({:map, Custom}, %{"a" => :unused}, fn Custom, _ -> {:ok, :used} end) == {:ok, %{"a" => :used}}
   end
 
   test "dump with custom function" do

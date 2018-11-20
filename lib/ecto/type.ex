@@ -496,6 +496,14 @@ defmodule Ecto.Type do
     {:ok, nil}
   end
 
+  def load({:map, type}, value, loader) when is_map(value) do
+    map(Map.to_list(value), type, loader, %{})
+  end
+
+  def load({:array, type}, value, loader) do
+    array(value, type, loader, [])
+  end
+
   def load(type, value, _loader) do
     load_fun(type).(value)
   end
