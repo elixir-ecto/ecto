@@ -2,8 +2,8 @@ defmodule Ecto.Repo.Supervisor do
   @moduledoc false
   use Supervisor
 
-  @defaults [timeout: 15000, pool_timeout: 5000, pool_size: 10]
-  @integer_url_query_params ["timeout", "pool_size", "pool_timeout"]
+  @defaults [timeout: 15000, pool_size: 10]
+  @integer_url_query_params ["timeout", "pool_size"]
 
   @doc """
   Starts the repo supervisor.

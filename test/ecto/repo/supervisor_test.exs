@@ -8,7 +8,7 @@ defmodule Ecto.Repo.SupervisorTest do
   end
 
   defp normalize(config) do
-    config |> Keyword.drop([:timeout, :pool_timeout, :pool_size, :telemetry_prefix]) |> Enum.sort()
+    config |> Keyword.drop([:timeout, :pool_size, :telemetry_prefix]) |> Enum.sort()
   end
 
   test "invokes the init/2 callback on start", context do
@@ -66,7 +66,7 @@ defmodule Ecto.Repo.SupervisorTest do
   end
 
   test "parse_url query string" do
-    encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb?ssl=true&pool_timeout=1000&timeout=1000&pool_size=42")
+    encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb?ssl=true&timeout=1000&pool_size=42")
     url = parse_url(encoded_url)
     assert {:password, "it+й"} in url
     assert {:username, "eric"} in url
@@ -75,7 +75,6 @@ defmodule Ecto.Repo.SupervisorTest do
     assert {:port, 12345} in url
     assert {:ssl, true} in url
     assert {:timeout, 1000} in url
-    assert {:pool_timeout, 1000} in url
     assert {:pool_size, 42} in url
   end
 
@@ -114,7 +113,7 @@ defmodule Ecto.Repo.SupervisorTest do
       parse_url("ecto://eric:it+й@host:12345/mydb?unknown_param=value")
     end
 
-    for key <- ["timeout", "pool_size", "pool_timeout"] do
+    for key <- ["timeout", "pool_size"] do
       assert_raise Ecto.InvalidURLError, ~r"can not parse value `not_an_int` for parameter `#{key}` as an integer", fn ->
         parse_url("ecto://eric:it+й@host:12345/mydb?#{key}=not_an_int")
       end
