@@ -110,6 +110,18 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
+  test "cast/4: force option" do
+    params = %{upvotes: 0}
+
+    struct = %Post{}
+    changeset = cast(struct, params, ~w(upvotes)a, force?: true)
+    assert changeset.changes == %{upvotes: 0}
+
+    struct = %Post{upvotes: 0}
+    changeset = cast(struct, params, ~w(upvotes)a, force?: true)
+    assert changeset.changes == %{upvotes: 0}
+  end
+
   test "cast/4: with valid atom keys" do
     params = %{title: "hello", body: "world"}
     struct = %Post{}

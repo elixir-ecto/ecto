@@ -420,6 +420,8 @@ defmodule Ecto.Changeset do
 
     * `:empty_values` - a list of values to be considered as empty when casting.
       Defaults to the changeset value, which defaults to `[""]`
+    * `:force?` - a boolean flag to enforce putting casted value to changes even
+      if the field has not been changed. Defaults to `false`.
 
   ## Examples
 
@@ -490,6 +492,7 @@ defmodule Ecto.Changeset do
 
   defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, permitted, opts) when is_list(permitted) do
     {empty_values, _opts} = Keyword.pop(opts, :empty_values, @empty_values)
+    {force?, _opts} = Keyword.pop(opts, :force?, false)
     params = convert_params(params)
 
     defaults = case data do
@@ -499,7 +502,7 @@ defmodule Ecto.Changeset do
 
     {changes, errors, valid?} =
       Enum.reduce(permitted, {changes, [], true},
-                  &process_param(&1, params, types, data, empty_values, defaults, &2))
+                  &process_param(&1, params, types, data, empty_values, defaults, force?, &2))
 
     %Changeset{params: params, data: data, valid?: valid?,
                errors: Enum.reverse(errors), changes: changes,
@@ -511,7 +514,7 @@ defmodule Ecto.Changeset do
                           message: "expected params to be a :map, got: `#{inspect params}`"
   end
 
-  defp process_param(key, params, types, data, empty_values, defaults, {changes, errors, valid?}) do
+  defp process_param(key, params, types, data, empty_values, defaults, force?, {changes, errors, valid?}) do
     {key, param_key} = cast_key(key)
     type = type!(types, key)
 
@@ -521,7 +524,7 @@ defmodule Ecto.Changeset do
         _ -> Map.get(data, key)
       end
 
-    case cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
+    case cast_field(key, param_key, type, params, current, empty_values, defaults, valid?, force?) do
       {:ok, value, valid?} ->
         {Map.put(changes, key, value), errors, valid?}
       :missing ->
@@ -561,13 +564,13 @@ defmodule Ecto.Changeset do
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
 
-  defp cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
+  defp cast_field(key, param_key, type, params, current, empty_values, defaults, valid?, force?) do
     case params do
       %{^param_key => value} ->
         value = if value in empty_values, do: Map.get(defaults, key), else: value
         case Ecto.Type.cast(type, value) do
           {:ok, value} ->
-            if Ecto.Type.equal?(type, current, value) do
+            if !force? and Ecto.Type.equal?(type, current, value) do
               :missing
             else
               {:ok, value, valid?}
