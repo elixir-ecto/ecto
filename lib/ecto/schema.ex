@@ -398,6 +398,10 @@ defmodule Ecto.Schema do
   @type schema :: %{optional(atom) => any, __struct__: atom, __meta__: Metadata.t}
   @type embedded_schema :: %{optional(atom) => any, __struct__: atom}
   @type t :: schema | embedded_schema
+  @type belongs_to(t) :: t | Ecto.Association.NotLoaded.t()
+  @type has_one(t) :: t | Ecto.Association.NotLoaded.t()
+  @type has_many(t) :: [t] | Ecto.Association.NotLoaded.t()
+  @type many_to_many(t) :: [t] | Ecto.Association.NotLoaded.t()
 
   @doc false
   defmacro __using__(_) do
