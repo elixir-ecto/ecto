@@ -89,9 +89,24 @@ defmodule Ecto.Repo do
   ## Telemetry events
 
   We recommend adapters to publish certain `Telemetry` events listed below.
-  Those events will use the `:telemetry_prefix` outlined above. See the
-  `Telemetry` library for information on how to handle such events. All
-  examples below consider a repository named `MyApp.Repo`:
+  Those events will use the `:telemetry_prefix` outlined above which defaults
+  to `[:my_app, :repo]`.
+
+  For instance, to receive all query events published by a repository called
+  `MyApp.Repo`, one would define a module:
+
+      defmodule MyApp.Telemetry do
+        def handle_event([:my_app, :repo, :query], time, metadata, config) do
+          IO.inspect binding()
+        end
+      end
+
+  and then attach this module to each event on your Application start callback:
+
+      Telemetry.attach("my-app-handler", [:my_app, :repo, :query], MyApp.Telemetry, :handle_event,%{})
+
+  Below we list all events developers should expect. All examples below consider
+  a repository named `MyApp.Repo`:
 
     * `[:my_app, :repo, :query]` - should be invoked on every query send
       to the adapter, including queries that are related to the transaction
@@ -976,7 +991,7 @@ defmodule Ecto.Repo do
 
   If the struct has no primary key, `Ecto.NoPrimaryKeyFieldError`
   will be raised.
-  
+
   If the struct cannot be found, `Ecto.StaleEntryError` will be raised.
 
   It returns `{:ok, struct}` if the struct has been successfully
