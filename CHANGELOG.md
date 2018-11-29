@@ -99,7 +99,14 @@ In order for this safer migration mechanism to work, at least two database conne
 
 A downside of this approach is that migrations cannot run dynamically during test under the `Ecto.Adapters.SQL.Sandbox`, as the sandbox is unable to share a single connection across processes at the exact same time.
 
-## v3.0.3 (2018-11-26)
+## v3.0.4 (2018-11-29)
+
+### Enhancements
+
+  * [Decimal] Bump decimal dependency
+  * [Ecto.Repo] Remove unused `:pool_timeout`
+
+## v3.0.3 (2018-11-20)
 
 ### Enhancements
 
