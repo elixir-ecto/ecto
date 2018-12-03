@@ -572,6 +572,20 @@ defmodule Ecto.TypeTest do
   @datetime_zero DateTime.from_unix!(1422057000, :second)
   @datetime_zero_usec DateTime.from_unix!(1422057000000000, :microsecond)
   @datetime_usec DateTime.from_unix!(1422057007008000, :microsecond)
+  @datetime_usec_tz %DateTime{
+    calendar: Calendar.ISO,
+    day: 24,
+    hour: 0,
+    microsecond: {8000, 6},
+    minute: 50,
+    month: 1,
+    second: 7,
+    std_offset: 0,
+    time_zone: "Europe/Berlin",
+    utc_offset: 3600,
+    year: 2015,
+    zone_abbr: "CET"
+  }
   @datetime_leapyear DateTime.from_unix!(951868207, :second)
   @datetime_leapyear_usec DateTime.from_unix!(951868207008000, :microsecond)
 
@@ -665,6 +679,7 @@ defmodule Ecto.TypeTest do
     test "cast from DateTime" do
       assert Ecto.Type.cast(:utc_datetime_usec, @datetime_zero) == {:ok, @datetime_zero_usec}
       assert Ecto.Type.cast(:utc_datetime_usec, @datetime_usec) == {:ok, @datetime_usec}
+      assert Ecto.Type.cast(:utc_datetime_usec, @datetime_usec_tz) == {:ok, @datetime_usec}
     end
 
     test "cast from binary" do
@@ -697,6 +712,14 @@ defmodule Ecto.TypeTest do
         time_zone: "Etc/GMT-10", zone_abbr: "+10"
       }
       assert Ecto.Type.cast(:utc_datetime_usec, term) == {:ok, @datetime_zero_usec}
+
+      term = %DateTime{
+        calendar: Calendar.ISO, year: 2015, month: 1, day: 24,
+        hour: 9, minute: 50, second: 7, microsecond: {8000, 6},
+        std_offset: 0, utc_offset: 36000,
+        time_zone: "Etc/GMT-10", zone_abbr: "+10"
+      }
+      assert Ecto.Type.cast(:utc_datetime_usec, term) == {:ok, @datetime_usec}
 
       term = %{"year" => "", "month" => "", "day" => "", "hour" => "", "minute" => ""}
       assert Ecto.Type.cast(:utc_datetime_usec, term) == {:ok, nil}
