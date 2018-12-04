@@ -79,10 +79,10 @@ defmodule Ecto.Changeset do
 
   In this case, we haven't checked the unique constraint in the
   e-mail field because the data did not validate. Let's fix the
-  age and assume, however, that the e-mail already exists in the
+  age and the name, and assume that the e-mail already exists in the
   database:
 
-      changeset = User.changeset(%User{}, %{age: 42, email: "mary@example.com"})
+      changeset = User.changeset(%User{}, %{age: 42, name: "Mary", email: "mary@example.com"})
       {:error, changeset} = Repo.insert(changeset)
       changeset.errors #=> [email: {"has already been taken", []}]
 
