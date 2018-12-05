@@ -1816,7 +1816,7 @@ defmodule Ecto.Schema do
     end
   end
 
-  @valid_has_options [:foreign_key, :references, :through, :on_delete, :defaults, :on_replace, :where]
+  @valid_has_options [:foreign_key, :references, :through, :on_delete, :defaults, :on_replace, :where, :order_by]
 
   @doc false
   def __has_many__(mod, name, queryable, opts) do

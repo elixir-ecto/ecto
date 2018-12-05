@@ -474,7 +474,8 @@ defmodule Ecto.Association.Has do
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
   @has_one_on_replace_opts @on_replace_opts ++ [:update]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
-             :queryable, :on_delete, :on_replace, :where, unique: true, defaults: [], relationship: :child]
+             :queryable, :on_delete, :on_replace, :where, :order_by, unique: true,
+             defaults: [], relationship: :child]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
@@ -540,7 +541,8 @@ defmodule Ecto.Association.Has do
       on_delete: on_delete,
       on_replace: on_replace,
       defaults: opts[:defaults] || [],
-      where: opts[:where]
+      where: opts[:where],
+      order_by: opts[:order_by]
     }
   end
 
@@ -566,13 +568,15 @@ defmodule Ecto.Association.Has do
   @doc false
   def assoc_query(%{related_key: related_key} = assoc, query, [value]) do
     from x in Ecto.Association.combine_assoc_query(assoc, query),
-      where: field(x, ^related_key) == ^value
+      where: field(x, ^related_key) == ^value,
+      order_by: ^assoc.order_by
   end
 
   @doc false
   def assoc_query(%{related_key: related_key} = assoc, query, values) do
     from x in Ecto.Association.combine_assoc_query(assoc, query),
-      where: field(x, ^related_key) in ^values
+      where: field(x, ^related_key) in ^values,
+      order_by: ^assoc.order_by
   end
 
   @doc false
