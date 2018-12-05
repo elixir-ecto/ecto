@@ -1612,13 +1612,25 @@ defmodule Ecto.Changeset do
   @doc """
   Validates that one or more fields are present in the changeset.
 
-  If the value of a field is `nil` or a string made only of whitespace,
-  the changeset is marked as invalid, the field is removed from the changeset's
-  changes, and an error is added. Note the error won't be added though if the
-  field already has an error.
-
   You can pass a single field name or a list of field names that
   are required.
+
+  If the value of a field is `nil` or a string made only of whitespace,
+  the changeset is marked as invalid, the field is removed from the
+  changeset's changes, and an error is added. An error won't be added if
+  the field already has an error.
+
+  If a field is given to `validate_required/3` but it has not been passed
+  as parameter during `cast/3` (i.e. it has not been changed), then
+  `validate_required/3` will check for its current value in the data.
+  If the data contains an non-empty value for the field, then no error is
+  added. This allows developers to use `validate_required/3` to perform
+  partial updates. For example, on `insert` all fields would be required,
+  because their default values on the data are all `nil`, but on `update`,
+  if you don't want to change a field that has been previously set,
+  you are not required to pass it as a paramater, since `validate_required/3`
+  won't add an error for missing changes as long as the value in the
+  data given to the `changeset` is not empty.
 
   Do not use this function to validate associations are required,
   instead pass the `:required` option to `cast_assoc/3`.
