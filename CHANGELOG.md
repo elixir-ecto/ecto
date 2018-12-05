@@ -99,6 +99,13 @@ In order for this safer migration mechanism to work, at least two database conne
 
 A downside of this approach is that migrations cannot run dynamically during test under the `Ecto.Adapters.SQL.Sandbox`, as the sandbox is unable to share a single connection across processes at the exact same time.
 
+## v3.0.5
+
+### Bug fixes
+
+  * [Ecto.Query] Do not raise on lists of tuples that are not keywords. Instead, let custom Ecto.Type handle them
+  * [Ecto.Type] Do not lose precision when casting `utc_datetime_usec` with a time zone different than Etc/UTC
+
 ## v3.0.4 (2018-11-29)
 
 ### Enhancements
