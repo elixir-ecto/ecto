@@ -231,17 +231,48 @@ defmodule Ecto.Association do
   def combine_assoc_query(%{queryable: queryable} = assoc, nil),
     do: combine_assoc_query(assoc, queryable)
 
-  def combine_assoc_query(%{where: nil}, queryable), do: queryable
-  def combine_assoc_query(%{where: []}, queryable), do: queryable
+  def combine_assoc_query(assoc, queryable) do
+    do_combine_assoc_query(Map.to_list(assoc), queryable)
+  end
 
-  def combine_assoc_query(%{where: {module, function, args}}, queryable) do
+  def do_combine_assoc_query([], queryable), do: queryable
+
+  def do_combine_assoc_query([{:where, nil} | rest], queryable) do
+    do_combine_assoc_query(rest, queryable)
+  end
+
+  def do_combine_assoc_query([{:where, []} | rest], queryable) do
+    do_combine_assoc_query(rest, queryable)
+  end
+
+  def do_combine_assoc_query([{:where, {module, function, args}} | rest], queryable) do
     where = apply(module, function, args)
-    Ecto.Query.where(queryable, _, ^where)
+    queryable = Ecto.Query.where(queryable, _, ^where)
+
+    do_combine_assoc_query(rest, queryable)
   end
 
-  def combine_assoc_query(%{where: where}, queryable) do
-    Ecto.Query.where(queryable, _, ^where)
+  def do_combine_assoc_query([{:where, where} | rest], queryable) do
+    queryable = Ecto.Query.where(queryable, _, ^where)
+
+    do_combine_assoc_query(rest, queryable)
   end
+
+  def do_combine_assoc_query([{:order_by, nil} | rest], queryable) do
+    do_combine_assoc_query(rest, queryable)
+  end
+
+  def do_combine_assoc_query([{:order_by, []} | rest], queryable) do
+    do_combine_assoc_query(rest, queryable)
+  end
+
+  def do_combine_assoc_query([{:order_by, order_by} | rest], queryable) do
+    queryable = Ecto.Query.order_by(queryable, [], ^order_by)
+
+    do_combine_assoc_query(rest, queryable)
+  end
+
+  def do_combine_assoc_query([_ | rest], queryable), do: do_combine_assoc_query(rest, queryable)
 
   defp assoc_to_where(%{on: %QueryExpr{} = on}) do
     on
@@ -568,15 +599,13 @@ defmodule Ecto.Association.Has do
   @doc false
   def assoc_query(%{related_key: related_key} = assoc, query, [value]) do
     from x in Ecto.Association.combine_assoc_query(assoc, query),
-      where: field(x, ^related_key) == ^value,
-      order_by: ^assoc.order_by
+      where: field(x, ^related_key) == ^value
   end
 
   @doc false
   def assoc_query(%{related_key: related_key} = assoc, query, values) do
     from x in Ecto.Association.combine_assoc_query(assoc, query),
-      where: field(x, ^related_key) in ^values,
-      order_by: ^assoc.order_by
+      where: field(x, ^related_key) in ^values
   end
 
   @doc false
