@@ -295,6 +295,7 @@ defmodule Ecto.Association do
   """
   def related_from_query(atom, _name) when is_atom(atom), do: atom
   def related_from_query({source, schema}, _name) when is_binary(source) and is_atom(schema), do: schema
+  def related_from_query(%Ecto.Query{} = queryable, _name), do: queryable
   def related_from_query(queryable, name) do
     raise ArgumentError, "association #{inspect name} queryable must be a schema or " <>
       "a {source, schema}. got: #{inspect queryable}"
