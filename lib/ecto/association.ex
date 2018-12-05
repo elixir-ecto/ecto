@@ -232,47 +232,27 @@ defmodule Ecto.Association do
     do: combine_assoc_query(assoc, queryable)
 
   def combine_assoc_query(assoc, queryable) do
-    do_combine_assoc_query(Map.to_list(assoc), queryable)
+    queryable
+    |> where_assoc_query(assoc)
+    |> order_by_assoc_query(assoc)
   end
 
-  def do_combine_assoc_query([], queryable), do: queryable
+  def where_assoc_query(queryable, %{where: nil}), do: queryable
+  def where_assoc_query(queryable, %{where: []}), do: queryable
 
-  def do_combine_assoc_query([{:where, nil} | rest], queryable) do
-    do_combine_assoc_query(rest, queryable)
-  end
-
-  def do_combine_assoc_query([{:where, []} | rest], queryable) do
-    do_combine_assoc_query(rest, queryable)
-  end
-
-  def do_combine_assoc_query([{:where, {module, function, args}} | rest], queryable) do
+  def where_assoc_query(queryable, %{where: {module, function, args}}) do
     where = apply(module, function, args)
-    queryable = Ecto.Query.where(queryable, _, ^where)
-
-    do_combine_assoc_query(rest, queryable)
+    Ecto.Query.where(queryable, _, ^where)
   end
 
-  def do_combine_assoc_query([{:where, where} | rest], queryable) do
-    queryable = Ecto.Query.where(queryable, _, ^where)
+  def order_by_assoc_query(queryable, %{order_by: nil}), do: queryable
+  def order_by_assoc_query(queryable, %{order_by: []}), do: queryable
 
-    do_combine_assoc_query(rest, queryable)
+  def order_by_assoc_query(queryable, %{order_by: order_by}) do
+    Ecto.Query.order_by(queryable, [], ^order_by)
   end
 
-  def do_combine_assoc_query([{:order_by, nil} | rest], queryable) do
-    do_combine_assoc_query(rest, queryable)
-  end
-
-  def do_combine_assoc_query([{:order_by, []} | rest], queryable) do
-    do_combine_assoc_query(rest, queryable)
-  end
-
-  def do_combine_assoc_query([{:order_by, order_by} | rest], queryable) do
-    queryable = Ecto.Query.order_by(queryable, [], ^order_by)
-
-    do_combine_assoc_query(rest, queryable)
-  end
-
-  def do_combine_assoc_query([_ | rest], queryable), do: do_combine_assoc_query(rest, queryable)
+  def order_by_assoc_query(queryable, _), do: queryable
 
   defp assoc_to_where(%{on: %QueryExpr{} = on}) do
     on
