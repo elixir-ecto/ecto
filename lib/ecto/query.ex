@@ -412,23 +412,23 @@ defmodule Ecto.Query do
   For example, imagine you have a set of conditions you want to
   build your query on:
 
-      dynamic = false
+      conditions = false
 
-      dynamic =
+      conditions =
         if params["is_public"] do
-          dynamic([p], p.is_public or ^dynamic)
+          dynamic([p], p.is_public or ^conditions)
         else
-          dynamic
+          conditions
         end
 
-      dynamic =
+      conditions =
         if params["allow_reviewers"] do
-          dynamic([p, a], a.reviewer == true or ^dynamic)
+          dynamic([p, a], a.reviewer == true or ^conditions)
         else
-          dynamic
+          conditions
         end
 
-      from query, where: ^dynamic
+      from query, where: ^conditions
 
   In the example above, we were able to build the query expressions
   bit by bit, using different bindings, and later interpolate it all
@@ -439,18 +439,18 @@ defmodule Ecto.Query do
 
   ## `where`, `having` and a `join`'s `on'
 
-  `dynamic` can be interpolated at the root of a `where`, `having` or
+  `conditions` can be interpolated at the root of a `where`, `having` or
   a `join`'s `on`.
 
   For example, the following is forbidden because it is not at the
   root of a `where`:
 
-      from q in query, where: q.some_condition and ^dynamic
+      from q in query, where: q.some_condition and ^conditions
 
   Fortunately that's easily solvable by simply rewriting it to:
 
-      dynamic = dynamic([q], q.some_condition and ^dynamic)
-      from query, where: ^dynamic
+      conditions = dynamic([q], q.some_condition and ^conditions)
+      from query, where: ^conditions
 
   ## Updates
 
