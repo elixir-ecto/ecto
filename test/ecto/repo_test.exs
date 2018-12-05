@@ -834,6 +834,18 @@ defmodule Ecto.RepoTest do
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
     end
 
+    test "replaces specified fields on replace without a schema" do
+      fields = [:x, :yyy]
+      rows = [[id: 1, x: "x", yyy: "yyy"]]
+      TestRepo.insert_all(
+        "my_schema",
+        rows,
+        on_conflict: {:replace, [:x, :yyy]},
+        conflict_target: [:id]
+      )
+      assert_received {:insert_all, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}, ^rows}
+    end
+
     test "raises on non-existent fields on replace" do
       assert_raise ArgumentError, "unknown field for :on_conflict, got: :unknown", fn ->
         TestRepo.insert(
