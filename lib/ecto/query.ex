@@ -574,7 +574,7 @@ defmodule Ecto.Query do
   def subquery(query, opts \\ []) do
     subquery = wrap_in_subquery(query)
     case Keyword.fetch(opts, :prefix) do
-      {:ok, prefix} when is_binary(prefix) -> put_in(subquery.query.prefix, prefix)
+      {:ok, prefix} when is_binary(prefix) or is_nil(prefix) -> put_in(subquery.query.prefix, prefix)
       :error -> subquery
     end
   end
