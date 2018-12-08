@@ -589,7 +589,7 @@ defmodule Ecto.Query.Planner do
 
     Enum.reduce combinations, cache_and_params, fn {modifier, combination_query}, {cache, params} ->
       case traverse_exprs(combination_query, operation, {[], params}, fun) do
-        {_, {:nocache, params} = acc} -> acc
+        {_, {:nocache, _} = acc} -> acc
         {_, {inner_cache, params}} -> {[{modifier, inner_cache} | cache], params}
       end
     end
