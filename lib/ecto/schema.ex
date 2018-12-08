@@ -722,7 +722,7 @@ defmodule Ecto.Schema do
   ## Filtering associations
 
   It is possible to specify a `:where` option that will filter the records
-  returned by an associations. Querying, joining or preloading the associatio
+  returned by the association. Querying, joining or preloading the association
   will use the given conditions as shown next:
 
       defmodule Post do
