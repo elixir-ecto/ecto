@@ -587,9 +587,11 @@ defmodule Ecto.Query.Planner do
   defp merge_cache(:combination, _query, combinations, cache_and_params, operation, adapter) do
     fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
 
-    Enum.reduce combinations, cache_and_params, fn {_, combination_query}, acc ->
-      {_, acc} = traverse_exprs(combination_query, operation, acc, fun)
-      acc
+    Enum.reduce combinations, cache_and_params, fn {modifier, combination_query}, {cache, params} ->
+      case traverse_exprs(combination_query, operation, {[], params}, fun) do
+        {_, {:nocache, params} = acc} -> acc
+        {_, {inner_cache, params}} -> {[{modifier, inner_cache} | cache], params}
+      end
     end
   end
 

@@ -426,9 +426,15 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "prepare: prepare combination queries" do
-    {%{combinations: [{_, query}]}, _, _} = from(c in Comment, union: ^from(c in Comment)) |> plan()
+    {%{combinations: [{_, query}]}, _, cache} = from(c in Comment, union: ^from(c in Comment)) |> plan()
     assert query.sources == {{"comments", Comment, nil}}
     assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
+    assert [:all, _, {:union, _}, _] = cache
+
+    {%{combinations: [{_, query}]}, _, cache} = from(c in Comment, union: ^from(c in Comment, where: c in ^[1, 2, 3])) |> plan()
+    assert query.sources == {{"comments", Comment, nil}}
+    assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
+    assert :nocache = cache
   end
 
   test "normalize: validates literal types" do
