@@ -439,11 +439,12 @@ defmodule Ecto.Query do
 
   ## `where`, `having` and a `join`'s `on'
 
-  `conditions` can be interpolated at the root of a `where`, `having` or
-  a `join`'s `on`.
+  The `dynamic` macro can be interpolated at the root of a `where`,
+  `having` or a `join`'s `on`.
 
-  For example, the following is forbidden because it is not at the
-  root of a `where`:
+  For example, assuming the `conditions` variable defined in the
+  previous section, the following is forbidden because it is not
+  at the root of a `where`:
 
       from q in query, where: q.some_condition and ^conditions
 
