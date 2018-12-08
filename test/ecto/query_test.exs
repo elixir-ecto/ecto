@@ -91,6 +91,7 @@ defmodule Ecto.QueryTest do
     end
 
     test "applies prefix to the subquery's query if provided" do
+      assert subquery("posts", prefix: nil).query.prefix == nil
       assert subquery("posts", prefix: "my_prefix").query.prefix == "my_prefix"
       assert subquery(subquery("posts", prefix: "my_prefix")).query.prefix == "my_prefix"
       assert subquery(subquery("posts", prefix: "my_prefix").query).query.prefix == "my_prefix"
