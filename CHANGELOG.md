@@ -99,11 +99,18 @@ In order for this safer migration mechanism to work, at least two database conne
 
 A downside of this approach is that migrations cannot run dynamically during test under the `Ecto.Adapters.SQL.Sandbox`, as the sandbox is unable to share a single connection across processes at the exact same time.
 
-## v3.0.5
+## v3.0.5 (2018-12-08)
+
+### Backwards incompatible changes
+
+  * [Ecto.Schema] The `:where` option added in Ecto 3.0.0 had a major flaw and it has been reworked in this version. This means a tuple of three elements can no longer be passed to `:where`, instead a keyword list must be given. Check the "Filtering associations" section in `has_many/3` docs for more information
 
 ### Bug fixes
 
   * [Ecto.Query] Do not raise on lists of tuples that are not keywords. Instead, let custom Ecto.Type handle them
+  * [Ecto.Query] Allow `prefix: nil` to be given to subqueries
+  * [Ecto.Query] Use different cache keys for unions/intersections/excepts
+  * [Ecto.Repo] Fix support for upserts with `:replace` without a schema
   * [Ecto.Type] Do not lose precision when casting `utc_datetime_usec` with a time zone different than Etc/UTC
 
 ## v3.0.4 (2018-11-29)
