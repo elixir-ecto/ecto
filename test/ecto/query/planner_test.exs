@@ -16,33 +16,20 @@ defmodule Ecto.Query.PlannerTest do
       field :temp, :string, virtual: true
       field :posted, :naive_datetime
       field :uuid, :binary_id
-      field :special, :boolean
       field :crazy_comment, :string
 
       belongs_to :post, Ecto.Query.PlannerTest.Post
 
       belongs_to :crazy_post, Ecto.Query.PlannerTest.Post,
-        where: {Ecto.Query.PlannerTest.Post, :crazy, []}
+        where: [title: "crazypost"]
 
-      belongs_to :crazy_post_by_parameter, Ecto.Query.PlannerTest.Post,
-        where: {Ecto.Query.PlannerTest.Post, :crazy_by_parameter, []},
+      belongs_to :crazy_post_with_list, Ecto.Query.PlannerTest.Post,
+        where: [title: {:in, ["crazypost1", "crazypost2"]}],
         foreign_key: :crazy_post_id,
         define_field: false
 
       has_many :post_comments, through: [:post, :comments]
       has_many :comment_posts, Ecto.Query.PlannerTest.CommentPost
-    end
-
-    def crazy() do
-      dynamic([row], row.crazy_comment == "crazy")
-    end
-
-    def crazy_by_parameter() do
-      dynamic([row], row.crazy_comment == ^"crazy")
-    end
-
-    def special() do
-      dynamic([row], row.special)
     end
   end
 
@@ -52,7 +39,7 @@ defmodule Ecto.Query.PlannerTest do
     schema "comment_posts" do
       belongs_to :comment, Comment
       belongs_to :post, Post
-      belongs_to :special_comment, Comment, where: {Comment, :special, []}
+      belongs_to :special_comment, Comment, where: [text: nil]
 
       field :deleted, :boolean
     end
@@ -74,22 +61,11 @@ defmodule Ecto.Query.PlannerTest do
       field :posted, :naive_datetime
       field :visits, :integer
       field :links, {:array, Custom.Permalink}
-      field :crazy_post, :string
       has_many :comments, Ecto.Query.PlannerTest.Comment
       has_many :extra_comments, Ecto.Query.PlannerTest.Comment
-      has_many :special_comments, Ecto.Query.PlannerTest.Comment, where: {Ecto.Query.PlannerTest.Comment, :special, []}
-      many_to_many :crazy_comments, Comment, join_through: CommentPost, where: {Comment, :crazy, []}
-      many_to_many :crazy_comments_by_parameter, Comment, join_through: CommentPost, where: {Comment, :crazy_by_parameter, []}
-
-      many_to_many :shared_special_comments, Comment, join_through: CommentPost, where: {Comment, :special, []}, join_through_where: {CommentPost, :inactive, []}
-    end
-
-    def crazy() do
-      Ecto.Query.dynamic([row], row.crazy_post == "crazy")
-    end
-
-    def crazy_by_parameter() do
-      Ecto.Query.dynamic([row], row.crazy_post == ^"crazy")
+      has_many :special_comments, Ecto.Query.PlannerTest.Comment, where: [text: {:not, nil}]
+      many_to_many :crazy_comments, Comment, join_through: CommentPost, where: [text: "crazycomment"]
+      many_to_many :crazy_comments_with_list, Comment, join_through: CommentPost, where: [text: {:in, ["crazycomment1", "crazycomment2"]}]
     end
   end
 
@@ -158,7 +134,7 @@ defmodule Ecto.Query.PlannerTest do
     end
 
     assert Exception.message(exception) =~ "value `1` in `where` cannot be cast to type :string"
-    assert Exception.message(exception) =~ "where: p.title == ^1"
+    assert Exception.message(exception) =~ "where: p0.title == ^1"
   end
 
   test "plan: raises readable error on dynamic expressions/keyword lists" do
@@ -300,37 +276,26 @@ defmodule Ecto.Query.PlannerTest do
     assert {{"posts", _, _}, {"comments", _, _}} = query.sources
     assert [join] = query.joins
     assert join.ix == 1
-    assert Macro.to_string(join.on.expr) == "&1.special() and &1.post_id() == &0.id()"
-
-    query = from(p in Post, left_join: assoc(p, :shared_special_comments)) |> plan |> elem(0)
-
-    assert {{"posts", _, _}, {"comments", _, _}, {"comment_posts", _, _}} = query.sources
-    assert [join1, join2] = query.joins
-    assert Enum.map(query.joins, & &1.ix) == [2, 1]
-    assert Macro.to_string(join1.on.expr) == "&2.deleted() and &2.post_id() == &0.id()"
-    assert Macro.to_string(join2.on.expr) == "&1.special() and &2.comment_id() == &1.id()"
+    assert Macro.to_string(join.on.expr) == "not(is_nil(&1.text())) and &1.post_id() == &0.id()"
   end
 
   test "plan: nested joins associations with custom queries" do
     query = from(p in Post,
-                   join: c in assoc(p, :special_comments),
-                   join: p2 in assoc(c, :post),
-                   join: c1 in assoc(p, :shared_special_comments),
+                   join: c1 in assoc(p, :special_comments),
+                   join: p2 in assoc(c1, :post),
                    join: cp in assoc(c1, :comment_posts),
                    join: c2 in assoc(cp, :special_comment))
                    |> plan
                    |> elem(0)
 
-    assert [join1, join2, join3, join4, join5, join6] = query.joins
-    assert {{"posts", _, _}, {"comments", _, _}, {"posts", _, _}, {"comments", _, _},
-            {"comment_posts", _, _}, {"comments", _, _}, {"comment_posts", _, _}} = query.sources
+    assert [join1, join2, join3, join4] = query.joins
+    assert {{"posts", _, _}, {"comments", _, _}, {"posts", _, _},
+            {"comment_posts", _, _}, {"comments", _, _}} = query.sources
 
-    assert Macro.to_string(join1.on.expr) == "&1.special() and &1.post_id() == &0.id()"
+    assert Macro.to_string(join1.on.expr) == "not(is_nil(&1.text())) and &1.post_id() == &0.id()"
     assert Macro.to_string(join2.on.expr) == "&2.id() == &1.post_id()"
-    assert Macro.to_string(join3.on.expr) == "&6.deleted() and &6.post_id() == &0.id()"
-    assert Macro.to_string(join4.on.expr) == "&3.special() and &6.comment_id() == &3.id()"
-    assert Macro.to_string(join5.on.expr) == "&4.comment_id() == &3.id()"
-    assert Macro.to_string(join6.on.expr) == "&5.special() and &5.id() == &4.special_comment_id()"
+    assert Macro.to_string(join3.on.expr) == "&3.comment_id() == &1.id()"
+    assert Macro.to_string(join4.on.expr) == "is_nil(&4.text()) and &4.id() == &3.special_comment_id()"
   end
 
   test "plan: cannot associate without schema" do
@@ -352,7 +317,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "plan: generates a cache key" do
     {_query, _params, key} = plan(from(Post, []))
-    assert key == [:all, 0, {"posts", Post, 11832799, "my_prefix"}]
+    assert key == [:all, 0, {"posts", Post, 27727487, "my_prefix"}]
 
     query =
       from(
@@ -372,8 +337,8 @@ defmodule Ecto.Query.PlannerTest do
                    {:lock, "foo"},
                    {:prefix, "foo"},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
-                   {:join, [{:inner, {"comments", Comment, 47313942, "world"}, true}]},
-                   {"posts", Post, 11832799, "hello"},
+                   {:join, [{:inner, {"comments", Comment, 38292156, "world"}, true}]},
+                   {"posts", Post, 27727487, "hello"},
                    {:select, 1}]
   end
 
@@ -477,16 +442,16 @@ defmodule Ecto.Query.PlannerTest do
         join: comment in assoc(post, :crazy_comments),
         join: post in assoc(comment, :crazy_post)) |> normalize_with_params()
 
-    assert(params == [])
+    assert(params == ["crazycomment", "crazypost"])
   end
 
   test "normalize: assoc join with wheres that have parameters" do
     {_query, params} =
       from(post in Post,
-        join: comment in assoc(post, :crazy_comments_by_parameter),
-        join: post in assoc(comment, :crazy_post_by_parameter)) |> normalize_with_params()
+        join: comment in assoc(post, :crazy_comments_with_list),
+        join: post in assoc(comment, :crazy_post_with_list)) |> normalize_with_params()
 
-    assert(params == ["crazy", "crazy"])
+    assert(params == ["crazycomment1", "crazycomment2", "crazypost1", "crazypost2"])
   end
 
   test "normalize: dumps in query expressions" do
@@ -560,16 +525,16 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.expr ==
              {:&, [], [0]}
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0)
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0)
 
     query = from(Post, []) |> select([p], {p, p.title}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query = from(Post, []) |> select([p], {p.title, p}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query =
@@ -579,8 +544,8 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, _], {p.title, p})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0) ++
-           select_fields([:id, :text, :posted, :uuid, :special, :crazy_comment, :post_id, :crazy_post_id], 1) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
+           select_fields([:id, :text, :posted, :uuid, :crazy_comment, :post_id, :crazy_post_id], 1) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
   end
 
@@ -604,7 +569,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, struct(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
            select_fields([:id, :text], 1)
   end
 
@@ -650,7 +615,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, map(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :crazy_post], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
            select_fields([:id, :text], 1)
   end
 

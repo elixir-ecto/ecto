@@ -184,7 +184,7 @@ Note this version includes changes from `ecto` and `ecto_sql` but in future rele
   * [Ecto.Repo] Add `Repo.checkout/2` - useful when performing multiple operations in short-time to interval, allowing the pool to be bypassed
   * [Ecto.Repo] Add `:stale_error_field` to `Repo.insert/update/delete` that converts `Ecto.StaleEntryError` into a changeset error. The message can also be set with `:stale_error_message`
   * [Ecto.Repo] Preloading now only sorts results by the relationship key instead of sorting by the whole struct
-  * [Ecto.Schema] Allow `:where` option to be given to `has_many`/`has_one`/`belongs_to`/`many_to_many`. `many_to_many` also supports `:join_through_where`
+  * [Ecto.Schema] Allow `:where` option to be given to `has_many`/`has_one`/`belongs_to`/`many_to_many`
 
 ### Bug fixes
 

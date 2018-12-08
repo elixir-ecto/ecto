@@ -721,9 +721,9 @@ defmodule Ecto.Schema do
 
   ## Filtering associations
 
-  A query can also be given instead of a schema. Querying, joining or preloading
-  the association will use the given query. Currently only where clauses can be
-  provided in queries. Let's see some examples:
+  It is possible to specify a `:where` option that will filter the records
+  returned by an associations. Querying, joining or preloading the associatio
+  will use the given conditions as shown next:
 
       defmodule Post do
         use Ecto.Schema
@@ -731,30 +731,28 @@ defmodule Ecto.Schema do
         schema "posts" do
           has_many :public_comments, Comment,
             where: [public: true]
-
-          has_many :deleted_comments, Comment,
-            where: dynamic([c], not(is_nil(c.deleted_at)))
         end
       end
 
-  The `:where` option may receive a dynamic query, a keyword list or a MFA
-  (a tuple with a module, function and args to invoke). The MFA is especially
-  useful to avoid duplication in those definitions:
+  The `:where` option expects a keyword list where the key is an atom
+  and the value is either:
 
-      defmodule Comment do
-        def deleted_filter do
-          dynamic([comment], not(is_nil(comment.deleted_at)))
-        end
-      end
+    * `nil` - which specifies the field must be nil
+    * `{:not, nil}` - which specifies the field must not be nil
+    * `{:in, list}` - which specifies the field must be one of the values in a list
+    * or any other value which the field is compared directly against
 
-      defmodule Post do
-        use Ecto.Schema
+  Note the values above are distinctly different from the values you
+  would pass to `where` when building a query. For example, if you
+  attempt to build a query such as
 
-        schema "posts" do
-          has_many :deleted_comments, Comment,
-            where: {Comment, :deleted_filter, []}
-        end
-      end
+      from Post, where: [id: nil]
+
+  it will emit an error. This is because queries can be built dynamically,
+  and therefore passing `nil` can lead to security errors. However, the
+  `:where` values for an association are given at compile-time, which is
+  less dynamic and cannot leverage the full power of Ecto queries, which
+  explains why they have different APIs.
 
   **Important!** Please use this feature only when strictly necessary,
   otherwise it is very easy to end-up with large schemas with dozens of
@@ -1180,9 +1178,6 @@ defmodule Ecto.Schema do
 
     * `:where` - A filter for the association. See "Filtering associations"
       in `has_many/3`
-
-    * `:join_through_where` - A filter for the join through association.
-      See "Filtering associations" in `has_many/3`
 
   ## Removing data
 
@@ -1771,8 +1766,7 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_many_to_many_options [:join_through, :join_keys, :on_delete, :defaults, :on_replace,
-                               :unique, :where, :join_through_where]
+  @valid_many_to_many_options [:join_through, :join_keys, :on_delete, :defaults, :on_replace, :unique, :where]
 
   @doc false
   def __many_to_many__(mod, name, queryable, opts) do
