@@ -276,7 +276,8 @@ defmodule Ecto.Query.PlannerTest do
     assert {{"posts", _, _}, {"comments", _, _}} = query.sources
     assert [join] = query.joins
     assert join.ix == 1
-    assert Macro.to_string(join.on.expr) == "not(is_nil(&1.text())) and &1.post_id() == &0.id()"
+    assert Macro.to_string(join.on.expr) =~
+             ~r"not[\s\(]is_nil\(&1.text\(\)\)\)? and &1.post_id\(\) == &0.id\(\)"
   end
 
   test "plan: nested joins associations with custom queries" do
@@ -292,7 +293,8 @@ defmodule Ecto.Query.PlannerTest do
     assert {{"posts", _, _}, {"comments", _, _}, {"posts", _, _},
             {"comment_posts", _, _}, {"comments", _, _}} = query.sources
 
-    assert Macro.to_string(join1.on.expr) == "not(is_nil(&1.text())) and &1.post_id() == &0.id()"
+    assert Macro.to_string(join1.on.expr) =~
+           ~r"not[\s\(]is_nil\(&1.text\(\)\)\)? and &1.post_id\(\) == &0.id\(\)"
     assert Macro.to_string(join2.on.expr) == "&2.id() == &1.post_id()"
     assert Macro.to_string(join3.on.expr) == "&3.comment_id() == &1.id()"
     assert Macro.to_string(join4.on.expr) == "is_nil(&4.text()) and &4.id() == &3.special_comment_id()"
