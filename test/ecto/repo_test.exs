@@ -165,50 +165,50 @@ defmodule Ecto.RepoTest do
     test "aggregates on the given field" do
       TestRepo.aggregate(MySchema, :min, :id)
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: min(m.id)>"
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, select: min(m0.id)>"
 
       TestRepo.aggregate(MySchema, :max, :id)
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: max(m.id)>"
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, select: max(m0.id)>"
 
       TestRepo.aggregate(MySchema, :sum, :id)
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: sum(m.id)>"
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, select: sum(m0.id)>"
 
       TestRepo.aggregate(MySchema, :avg, :id)
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: avg(m.id)>"
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, select: avg(m0.id)>"
 
       TestRepo.aggregate(MySchema, :count, :id)
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: count(m.id)>"
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, select: count(m0.id)>"
     end
 
     test "removes any preload from query" do
       from(MySchemaWithAssoc, preload: :parent) |> TestRepo.aggregate(:count, :id)
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchemaWithAssoc, select: count(m.id)>"
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchemaWithAssoc, select: count(m0.id)>"
     end
 
     test "removes order by from query without distinct/limit/offset" do
       from(MySchema, order_by: :id) |> TestRepo.aggregate(:count, :id)
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: count(m.id)>"
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, select: count(m0.id)>"
     end
 
     test "overrides any select" do
       from(MySchema, select: true) |> TestRepo.aggregate(:count, :id)
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, select: count(m.id)>"
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, select: count(m0.id)>"
     end
 
     test "uses subqueries with distinct/limit/offset" do
       from(MySchema, limit: 5) |> TestRepo.aggregate(:count, :id)
       assert_received {:all, query}
       assert inspect(query) ==
-               "#Ecto.Query<from m in subquery(from m in Ecto.RepoTest.MySchema,\n" <>
+               "#Ecto.Query<from m0 in subquery(from m0 in Ecto.RepoTest.MySchema,\n" <>
                 "  limit: 5,\n" <>
-                "  select: %{id: m.id}), select: count(m.id)>"
+                "  select: %{id: m0.id}), select: count(m0.id)>"
     end
 
     test "raises when aggregating with group_by" do
@@ -222,35 +222,35 @@ defmodule Ecto.RepoTest do
     test "selects 1 and sets limit to 1" do
       TestRepo.exists?(MySchema)
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
 
       from(MySchema, select: [:id], limit: 10) |> TestRepo.exists?
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
     end
 
     test "removes any preload from query" do
       from(MySchemaWithAssoc, preload: :parent) |> TestRepo.exists?
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchemaWithAssoc, limit: 1, select: 1>"
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchemaWithAssoc, limit: 1, select: 1>"
     end
 
     test "removes distinct from query" do
       from(MySchema, select: [:id], distinct: true) |> TestRepo.exists?
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
     end
 
     test "removes order by from query without distinct/limit/offset" do
       from(MySchema, order_by: :id) |> TestRepo.exists?
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
     end
 
     test "overrides any select" do
       from(MySchema, select: true) |> TestRepo.exists?
       assert_received {:all, query}
-      assert inspect(query) == "#Ecto.Query<from m in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
     end
   end
 

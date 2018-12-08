@@ -252,11 +252,10 @@ defmodule Ecto.QueryTest do
 
     test "dynamic in :on takes new binding when ... is used" do
       join_on = dynamic([p, ..., c], c.text == "Test Comment")
-
       query = from p in "posts", join: c in "comments", on: ^join_on
 
       assert inspect(query) ==
-        ~s[#Ecto.Query<from p in \"posts\", join: c in \"comments\", on: c.text == \"Test Comment\">]
+        ~s[#Ecto.Query<from p0 in \"posts\", join: c1 in \"comments\", on: c1.text == \"Test Comment\">]
     end
   end
 
@@ -346,7 +345,7 @@ defmodule Ecto.QueryTest do
         |> where([comment: c], c.id == 0)
 
       assert inspect(query) ==
-        ~s[#Ecto.Query<from p in \"posts\", join: c in \"comments\", as: :comment, on: true, where: c.id == 0>]
+        ~s[#Ecto.Query<from p0 in \"posts\", join: c1 in \"comments\", as: :comment, on: true, where: c1.id == 0>]
     end
 
     test "match on binding by name for source" do
@@ -355,7 +354,7 @@ defmodule Ecto.QueryTest do
         |> where([post: p], p.id == 0)
 
       assert inspect(query) ==
-        ~s[#Ecto.Query<from p in \"posts\", as: :post, where: p.id == 0>]
+        ~s[#Ecto.Query<from p0 in \"posts\", as: :post, where: p0.id == 0>]
     end
 
     test "match on binding by name for source and join" do
@@ -366,7 +365,7 @@ defmodule Ecto.QueryTest do
         |> update([comment: c], set: [id: c.id + 1])
 
       assert inspect(query) ==
-        ~s{#Ecto.Query<from p in "posts", as: :post, join: c in "comments", as: :comment, on: true, update: [set: [id: c.id + 1]]>}
+        ~s{#Ecto.Query<from p0 in "posts", as: :post, join: c1 in "comments", as: :comment, on: true, update: [set: [id: c1.id + 1]]>}
     end
 
     test "match on binding by name with ... in the middle" do
@@ -377,7 +376,7 @@ defmodule Ecto.QueryTest do
         |> where([p, ..., authors: a], a.id == 0)
 
       assert inspect(query) ==
-        ~s[#Ecto.Query<from p in \"posts\", join: c in \"comments\", on: true, join: a in \"authors\", as: :authors, on: true, where: a.id == 0>]
+        ~s[#Ecto.Query<from p0 in \"posts\", join: c1 in \"comments\", on: true, join: a2 in \"authors\", as: :authors, on: true, where: a2.id == 0>]
     end
 
     test "referring to non-existing binding" do
@@ -404,7 +403,7 @@ defmodule Ecto.QueryTest do
       query = from p in "posts", join: c in "comments", as: :comment, on: ^join_on
 
       assert inspect(query) ==
-        ~s[#Ecto.Query<from p in \"posts\", join: c in \"comments\", as: :comment, on: c.text == \"Test Comment\">]
+        ~s[#Ecto.Query<from p0 in \"posts\", join: c1 in \"comments\", as: :comment, on: c1.text == \"Test Comment\">]
     end
   end
 
@@ -682,7 +681,7 @@ defmodule Ecto.QueryTest do
 
     test "keeps UTF-8 encoding" do
       assert inspect(from p in "posts", where: fragment("héllò")) ==
-             ~s[#Ecto.Query<from p in \"posts\", where: fragment("héllò")>]
+             ~s[#Ecto.Query<from p0 in \"posts\", where: fragment("héllò")>]
     end
   end
 

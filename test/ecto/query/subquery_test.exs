@@ -201,8 +201,8 @@ defmodule Ecto.Query.SubqueryTest do
     assert %Ecto.Query.CastError{} = exception.exception
     assert Exception.message(exception) =~ "the following exception happened when compiling a subquery."
     assert Exception.message(exception) =~ "value `1` in `where` cannot be cast to type :string"
-    assert Exception.message(exception) =~ "where: p.title == ^1"
-    assert Exception.message(exception) =~ "from p in subquery(from p in Ecto.Query.SubqueryTest.Post"
+    assert Exception.message(exception) =~ "where: p0.title == ^1"
+    assert Exception.message(exception) =~ "from p0 in subquery(from p0 in Ecto.Query.SubqueryTest.Post"
   end
 
   test "normalize: subqueries" do

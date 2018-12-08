@@ -263,7 +263,9 @@ defimpl Inspect, for: Ecto.Query do
   defp from_sources(nil), do: "query"
 
   defp join_sources(joins) do
-    Enum.map(joins, fn
+    joins
+    |> Enum.sort_by(& &1.ix)
+    |> Enum.map(fn
       %JoinExpr{assoc: {_var, assoc}} ->
         assoc
       %JoinExpr{source: {:fragment, _, _}} ->
@@ -286,24 +288,8 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp generate_names(letters) do
-    generate_names(Enum.reverse(letters), [], [])
-  end
-
-  defp generate_names([letter|rest], acc, found) do
-    index = Enum.count(rest, & &1 == letter)
-
-    cond do
-      index > 0 ->
-        generate_names(rest, ["#{letter}#{index}"|acc], [letter|found])
-      letter in found ->
-        generate_names(rest, ["#{letter}0"|acc], [letter|found])
-      true ->
-        generate_names(rest, [letter|acc], found)
-    end
-  end
-
-  defp generate_names([], acc, _found) do
-    acc
+    {names, _} = Enum.map_reduce(letters, 0, &{"#{&1}#{&2}", &2 + 1})
+    names
   end
 
   defp binding(names, pos) do
