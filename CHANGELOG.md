@@ -97,7 +97,9 @@ Running migrations will now lock the migrations table, allowing you to concurren
 
 In order for this safer migration mechanism to work, at least two database connections are necessary when migrating. One is used to lock the "schema_migrations" table and the other one to effectively run the migrations.
 
-A downside of this approach is that migrations cannot run dynamically during test under the `Ecto.Adapters.SQL.Sandbox`, as the sandbox is unable to share a single connection across processes at the exact same time.
+A downside of this approach is that migrations cannot run dynamically during test under the `Ecto.Adapters.SQL.Sandbox`, as the sandbox is unable to share a single connection across processes at the exact same time. This approach also conflicts with concurrent indexes, found in PostgreSQL. If you want to run concurrent indexes, you will have to disable the `migration_lock`:
+
+    config :my_app, MyApp.Repo, migration_lock: nil
 
 ## v3.0.5 (2018-12-08)
 
