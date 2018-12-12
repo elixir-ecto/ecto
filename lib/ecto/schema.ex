@@ -1713,7 +1713,8 @@ defmodule Ecto.Schema do
     end
   end
 
-  @valid_has_options [:foreign_key, :references, :through, :on_delete, :defaults, :on_replace, :where]
+  @valid_has_options [:foreign_key, :references, :through, :on_delete, :defaults, :on_replace,
+                      :where, :order_by]
 
   @doc false
   def __has_many__(mod, name, queryable, opts) do
@@ -1744,7 +1745,7 @@ defmodule Ecto.Schema do
   # :primary_key is valid here to support associative entity
   # https://en.wikipedia.org/wiki/Associative_entity
   @valid_belongs_to_options [:foreign_key, :references, :define_field, :type,
-                             :on_replace, :defaults, :primary_key, :source, :where]
+                             :on_replace, :defaults, :primary_key, :source, :where, :order_by]
 
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
@@ -1766,7 +1767,8 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_many_to_many_options [:join_through, :join_keys, :on_delete, :defaults, :on_replace, :unique, :where]
+  @valid_many_to_many_options [:join_through, :join_keys, :on_delete, :defaults, :on_replace,
+                               :unique, :where, :order_by]
 
   @doc false
   def __many_to_many__(mod, name, queryable, opts) do

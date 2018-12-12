@@ -271,6 +271,7 @@ defmodule Ecto.Association do
   def combine_assoc_query(query, assoc) do
     query
     |> combine_assoc_where(assoc)
+    |> combine_assoc_order_by(assoc)
   end
 
   def combine_assoc_where(query, %{where: []}), do: query
@@ -307,6 +308,11 @@ defmodule Ecto.Association do
 
   defp to_field(binding, field),
     do: {{:., [], [{:&, [], [binding]}, field]}, [], []}
+
+  def combine_assoc_order_by(query, %{order_by: []}), do: query
+
+  def combine_assoc_order_by(query, %{order_by: order_by}), do:
+    Ecto.Query.order_by(query, [], ^order_by)
 
   @doc """
   Build a join query with the given `through` associations starting at `counter`.
@@ -513,7 +519,8 @@ defmodule Ecto.Association.Has do
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
   @has_one_on_replace_opts @on_replace_opts ++ [:update]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
-             :queryable, :on_delete, :on_replace, where: [], unique: true, defaults: [], relationship: :child]
+             :queryable, :on_delete, :on_replace, where: [], order_by: [], unique: true, defaults: [],
+             relationship: :child]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
@@ -570,6 +577,7 @@ defmodule Ecto.Association.Has do
 
     defaults = opts[:defaults] || []
     where = opts[:where] || []
+    order_by = opts[:order_by] || []
 
     unless is_list(defaults) do
       raise ArgumentError, "expected `:defaults` for #{inspect name} to be a keyword list, got: `#{inspect defaults}`"
@@ -577,6 +585,10 @@ defmodule Ecto.Association.Has do
 
     unless is_list(where) do
       raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
+    end
+
+    unless is_list(order_by) do
+      raise ArgumentError, "expected `:order_by` for #{inspect name} to be a keyword list, got: `#{inspect order_by}`"
     end
 
     %__MODULE__{
@@ -590,7 +602,8 @@ defmodule Ecto.Association.Has do
       on_delete: on_delete,
       on_replace: on_replace,
       defaults: defaults,
-      where: where
+      where: where,
+      order_by: order_by
     }
   end
 
@@ -810,7 +823,7 @@ defmodule Ecto.Association.BelongsTo do
   @behaviour Ecto.Association
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify, :update]
   defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast, :on_replace,
-             where: [], defaults: [], cardinality: :one, relationship: :parent, unique: true]
+             where: [], order_by: [], defaults: [], cardinality: :one, relationship: :parent, unique: true]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
@@ -848,6 +861,7 @@ defmodule Ecto.Association.BelongsTo do
 
     defaults = opts[:defaults] || []
     where = opts[:where] || []
+    order_by = opts[:order_by] || []
 
     unless is_list(defaults) do
       raise ArgumentError, "expected `:defaults` for #{inspect name} to be a keyword list, got: `#{inspect defaults}`"
@@ -855,6 +869,10 @@ defmodule Ecto.Association.BelongsTo do
 
     unless is_list(where) do
       raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
+    end
+
+    unless is_list(order_by) do
+      raise ArgumentError, "expected `:order_by` for #{inspect name} to be a keyword list, got: `#{inspect order_by}`"
     end
 
     %__MODULE__{
@@ -866,7 +884,8 @@ defmodule Ecto.Association.BelongsTo do
       queryable: queryable,
       on_replace: on_replace,
       defaults: defaults,
-      where: where
+      where: where,
+      order_by: order_by
     }
   end
 
@@ -963,7 +982,7 @@ defmodule Ecto.Association.ManyToMany do
   @on_delete_opts [:nothing, :delete_all]
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
-             :on_replace, :join_keys, :join_through, :on_cast, where: [],
+             :on_replace, :join_keys, :join_through, :on_cast, where: [], order_by: [],
              defaults: [], relationship: :child, cardinality: :many, unique: false]
 
   @doc false
@@ -1034,6 +1053,7 @@ defmodule Ecto.Association.ManyToMany do
 
     defaults = opts[:defaults] || []
     where = opts[:where] || []
+    order_by = opts[:order_by] || []
 
     unless is_list(defaults) do
       raise ArgumentError, "expected `:defaults` for #{inspect name} to be a keyword list, got: `#{inspect defaults}`"
@@ -1041,6 +1061,10 @@ defmodule Ecto.Association.ManyToMany do
 
     unless is_list(where) do
       raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
+    end
+
+    unless is_list(order_by) do
+      raise ArgumentError, "expected `:order_by` for #{inspect name} to be a keyword list, got: `#{inspect order_by}`"
     end
 
     %__MODULE__{
@@ -1056,7 +1080,8 @@ defmodule Ecto.Association.ManyToMany do
       on_replace: on_replace,
       unique: Keyword.get(opts, :unique, false),
       defaults: defaults,
-      where: where
+      where: where,
+      order_by: order_by
     }
   end
 
