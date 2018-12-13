@@ -19,9 +19,12 @@ defmodule Ecto do
       common problems like SQL Injection, while still being composable, allowing
       developers to build queries piece by piece instead of all at once
 
-  In the following sections, we will provide an overview of those components and
-  how they interact with each other. Feel free to access their respective module
-  documentation for more specific examples, options and configuration.
+  Besides the four components above, most developers use Ecto to interact
+  with SQL databases, such as Postgres and MySQL via the
+  [`ecto_sql`](http://hexdocs.pm/ecto_sql) project. `ecto_sql` provides many
+  conveniences for working with SQL databases as well as the ability to version
+  how your database changes through time via
+  [database migrations](https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.html#module-migrations).
 
   If you want to quickly check a sample application using Ecto, please check
   the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and
@@ -30,9 +33,12 @@ defmodule Ecto do
   After exploring the documentation and guides, consider checking out the
   ["What's new in Ecto 2.1"](http://pages.plataformatec.com.br/ebook-whats-new-in-ecto-2-0)
   free ebook to learn more about many features in Ecto 2.1 such as `many_to_many`,
-  schemaless queries, concurrent testing and more. Note the book still largely applies
-  to Ecto 3.0 as the major change in Ecto 3.0 was the removal of the outdated
-  Ecto datetime types in favor of Elixir's Calendar types.
+  schemaless queries, concurrent testing and more. Note the book still applies
+  to Ecto 3.0 as a whole, as the new features in Ecto 2.1 still exist in Ecto 3.0.
+
+  In the following sections, we will provide an overview of those components and
+  how they interact with each other. Feel free to access their respective module
+  documentation for more specific examples, options and configuration.
 
   ## Repositories
 
@@ -271,13 +277,6 @@ defmodule Ecto do
   developers to completely bypass Ecto queries.
 
   ## Other topics
-
-  ### Ecto and SQL
-
-  One of the most common ways to use Ecto is to interact with databases,
-  such as Postgres and MySQL via [`Ecto.Adapters.SQL`](http://hexdocs.pm/ecto_sql).
-  `Ecto.Adapters.SQL` provides many conveniences for working with SQL
-  databases, including support for database migrations.
 
   ### Associations
 
