@@ -977,6 +977,7 @@ defmodule Ecto.Query.Planner do
     %{take: take, expr: expr} = select
     {tag, from_take} = Map.get(take, 0, {:any, []})
     source = get_source!(:select, query, 0)
+    assocs = merge_assocs(assocs, query)
 
     # In from, if there is a schema and we have a map tag with preloads,
     # it needs to be converted to a map in a later pass.
@@ -1195,6 +1196,22 @@ defmodule Ecto.Query.Planner do
   end
   defp collect_args([], fields, from, _query, _take, acc) do
     {Enum.reverse(acc), fields, from}
+  end
+
+  defp merge_assocs(assocs, query) do
+    assocs
+    |> Enum.reduce(%{}, fn {field, {index, children}}, acc ->
+      children = merge_assocs(children, query)
+
+      Map.update(acc, field, {index, children}, fn
+        {^index, current_children} ->
+          {index, merge_assocs(children ++ current_children, query)}
+        {other_index, _} ->
+          error! query, "association `#{field}` is being set to binding at position #{index} " <>
+                        "and at position #{other_index} at the same time"
+      end)
+    end)
+    |> Map.to_list()
   end
 
   defp collect_assocs(exprs, fields, query, tag, take, [{assoc, {ix, children}}|tail]) do
