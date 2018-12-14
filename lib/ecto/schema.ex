@@ -1611,17 +1611,16 @@ defmodule Ecto.Schema do
     end
   end
 
-  @doc """
-  Internal function for integrating associations into schemas.
-
-  This function exists as an extension point for libraries to
-  add new types of associations to Ecto. For the existing APIs,
-  see `belongs_to/3`, `has_many/3`, `has_one/3` and `many_to_many/3`.
-
-  This function expects the current schema, the association cardinality,
-  the association name, the association module (that implements
-  `Ecto.Association` callbacks) and a keyword list of options.
-  """
+  # Internal function for integrating associations into schemas.
+  #
+  # This function exists as an extension point for libraries to
+  # experiment new types of associations to Ecto, although it may
+  # break at any time (as with any of the association callbacks).
+  #
+  # This function expects the current schema, the association cardinality,
+  # the association name, the association module (that implements
+  # `Ecto.Association` callbacks) and a keyword list of options.
+  @doc false
   @spec association(module, :one | :many, atom(), module, Keyword.t) :: Ecto.Association.t
   def association(schema, cardinality, name, association, opts) do
     not_loaded = %Ecto.Association.NotLoaded{
