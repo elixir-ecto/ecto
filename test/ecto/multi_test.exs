@@ -336,6 +336,16 @@ defmodule Ecto.MultiTest do
       assert :ok == data.inside_ok
     end
 
+    test "rollbacks on errors in nested function" do
+      multi =
+        Ecto.Multi.new()
+        |> Ecto.Multi.run(:foo, fn repo, _ ->
+          repo.rollback(:bar)
+        end)
+
+      assert {:error, :bar} = TestRepo.transaction(multi)
+    end
+
     test "does not allow repeated operations" do
       fun = fn _, _ -> {:ok, :ok} end
 
