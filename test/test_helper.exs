@@ -6,7 +6,7 @@ Logger.configure(level: :info)
 
 defmodule Ecto.Integration.AdapterTypes do
   # Builtin uuid type is Ecto.UUID, many adapters will use it, but some may use
-  # it own implmentation.
+  # it own implementation.
   def uuid, do: Ecto.UUID
 end
 
