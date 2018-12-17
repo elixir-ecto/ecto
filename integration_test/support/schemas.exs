@@ -2,7 +2,6 @@ defmodule Ecto.Integration.Schema do
   defmacro __using__(_) do
     quote do
       use Ecto.Schema
-      alias Ecto.Integration.AdapterTypes
       type =
         Application.get_env(:ecto, :primary_key_type) ||
         raise ":primary_key_type not set in :ecto application"
@@ -36,7 +35,7 @@ defmodule Ecto.Integration.Post do
     field :visits, :integer
     field :intensity, :float
     field :bid, :binary_id
-    field :uuid, AdapterTypes.uuid(), autogenerate: true
+    field :uuid, Ecto.Integration.TestRepo.uuid(), autogenerate: true
     field :meta, :map
     field :links, {:map, :string}
     field :intensities, {:map, :float}
@@ -164,7 +163,7 @@ defmodule Ecto.Integration.Custom do
 
   @primary_key {:bid, :binary_id, autogenerate: true}
   schema "customs" do
-    field :uuid, AdapterTypes.uuid()
+    field :uuid, Ecto.Integration.TestRepo.uuid()
     many_to_many :customs, Ecto.Integration.Custom,
       join_through: "customs_customs", join_keys: [custom_id1: :bid, custom_id2: :bid],
       on_delete: :delete_all, on_replace: :delete
@@ -198,7 +197,7 @@ defmodule Ecto.Integration.Tag do
 
   schema "tags" do
     field :ints, {:array, :integer}
-    field :uuids, {:array, AdapterTypes.uuid()}
+    field :uuids, {:array, Ecto.Integration.TestRepo.uuid()}
     embeds_many :items, Ecto.Integration.Item
   end
 end
