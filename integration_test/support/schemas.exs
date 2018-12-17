@@ -35,7 +35,7 @@ defmodule Ecto.Integration.Post do
     field :visits, :integer
     field :intensity, :float
     field :bid, :binary_id
-    field :uuid, Ecto.UUID, autogenerate: true
+    field :uuid, Ecto.Integration.TestRepo.uuid(), autogenerate: true
     field :meta, :map
     field :links, {:map, :string}
     field :intensities, {:map, :float}
@@ -163,7 +163,7 @@ defmodule Ecto.Integration.Custom do
 
   @primary_key {:bid, :binary_id, autogenerate: true}
   schema "customs" do
-    field :uuid, Ecto.UUID
+    field :uuid, Ecto.Integration.TestRepo.uuid()
     many_to_many :customs, Ecto.Integration.Custom,
       join_through: "customs_customs", join_keys: [custom_id1: :bid, custom_id2: :bid],
       on_delete: :delete_all, on_replace: :delete
@@ -197,7 +197,7 @@ defmodule Ecto.Integration.Tag do
 
   schema "tags" do
     field :ints, {:array, :integer}
-    field :uuids, {:array, Ecto.UUID}
+    field :uuids, {:array, Ecto.Integration.TestRepo.uuid()}
     embeds_many :items, Ecto.Integration.Item
   end
 end
