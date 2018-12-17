@@ -7,6 +7,7 @@ defmodule Ecto.Integration.RepoTest do
   import Ecto.Query
 
   alias Ecto.Integration.Post
+  alias Ecto.Integration.Order
   alias Ecto.Integration.User
   alias Ecto.Integration.Comment
   alias Ecto.Integration.Permalink
@@ -569,52 +570,45 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :foreign_key_constraint
-  test "insert and update with failing child foreign key" do
-    defmodule Order do
-      use Ecto.Integration.Schema
-      import Ecto.Changeset
-
-      schema "orders" do
-        embeds_one :item, Ecto.Integration.Item
-        belongs_to :comment, Ecto.Integration.Comment
-      end
-
-      def changeset(order, params) do
-        order
-        |> cast(params, [:comment_id])
-        |> cast_embed(:item, with: &item_changeset/2)
-        |> cast_assoc(:comment, with: &comment_changeset/2)
-      end
-
-      def item_changeset(item, params) do
-        item
-        |> cast(params, [:price])
-      end
-
-      def comment_changeset(comment, params) do
-        comment
-        |> cast(params, [:post_id, :text])
-        |> cast_assoc(:post)
-        |> assoc_constraint(:post)
-      end
-    end
-
-    changeset = Order.changeset(struct(Order, %{}), %{item: %{price: 10}, comment: %{text: "1", post_id: 0}})
-
-    assert %Ecto.Changeset{} = changeset.changes.item
+  test "insert and update with embeds during failing child foreign key" do
+    changeset =
+      Order
+      |> struct(%{})
+      |> order_changeset(%{item: %{price: 10}, permalink: %{post_id: 0}})
 
     {:error, changeset} = TestRepo.insert(changeset)
     assert %Ecto.Changeset{} = changeset.changes.item
 
-    order = TestRepo.insert!(Order.changeset(struct(Order, %{}), %{}))
-    |> TestRepo.preload([:comment])
+    order =
+      Order
+      |> struct(%{})
+      |> order_changeset(%{})
+      |> TestRepo.insert!()
+      |> TestRepo.preload([:permalink])
 
-    changeset = Order.changeset(order, %{item: %{price: 10}, comment: %{text: "1", post_id: 0}})
-
+    changeset = order_changeset(order, %{item: %{price: 10}, permalink: %{post_id: 0}})
     assert %Ecto.Changeset{} = changeset.changes.item
 
     {:error, changeset} = TestRepo.update(changeset)
     assert %Ecto.Changeset{} = changeset.changes.item
+  end
+
+  def order_changeset(order, params) do
+    order
+    |> Ecto.Changeset.cast(params, [:permalink_id])
+    |> Ecto.Changeset.cast_embed(:item, with: &item_changeset/2)
+    |> Ecto.Changeset.cast_assoc(:permalink, with: &permalink_changeset/2)
+  end
+
+  def item_changeset(item, params) do
+    item
+    |> Ecto.Changeset.cast(params, [:price])
+  end
+
+  def permalink_changeset(comment, params) do
+    comment
+    |> Ecto.Changeset.cast(params, [:post_id])
+    |> Ecto.Changeset.assoc_constraint(:post)
   end
 
   test "unsafe_validate_unique/3" do

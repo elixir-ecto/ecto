@@ -127,6 +127,13 @@ defmodule Ecto.Integration.TypeTest do
     assert [^bid] = TestRepo.all(from c in Custom, select: type(^bid, :binary_id))
   end
 
+  test "text type" do
+    assert %Order{} = order = TestRepo.insert!(%Order{instructions: "hello"})
+    id = order.id
+    assert order.instructions == "hello"
+    assert [^id] = TestRepo.all(from o in Order, where: o.instructions == ^"hello", select: o.id)
+  end
+
   @tag :array_type
   test "array type" do
     ints = [1, 2, 3]

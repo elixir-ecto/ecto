@@ -238,13 +238,16 @@ defmodule Ecto.Integration.Order do
   @moduledoc """
   This module is used to test:
 
+    * Text columns
     * Embedding one schema
 
   """
   use Ecto.Integration.Schema
 
   schema "orders" do
+    field :instructions, :string
     embeds_one :item, Ecto.Integration.Item
+    belongs_to :permalink, Ecto.Integration.Permalink
   end
 end
 
