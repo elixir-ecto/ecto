@@ -241,6 +241,19 @@ defmodule Ecto.MultiplePrimaryKeyError do
   end
 end
 
+defmodule Ecto.LocalReturnsNotSupportedOnMulti do
+  defexception [:message]
+
+  def exception(operation) do
+    msg = """
+    operation #{inspect operation} is trying to do a local return not supported in Multi.
+
+    Avoid the use of local returns eg: :rollback.
+    """
+    %__MODULE__{message: msg}
+  end
+end
+
 defmodule Ecto.MigrationError do
   defexception [:message]
 end
