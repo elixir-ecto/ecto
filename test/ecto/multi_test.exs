@@ -343,7 +343,7 @@ defmodule Ecto.MultiTest do
           repo.rollback(:bar)
         end)
 
-      assert_raise RuntimeError, ~r"operation :bar is manually rolling back, which is not supported Ecto.Multi", fn ->
+      assert_raise RuntimeError, ~r"operation :bar is manually rolling back, which is not supported by Ecto.Multi", fn ->
         TestRepo.transaction(multi)
       end
     end
