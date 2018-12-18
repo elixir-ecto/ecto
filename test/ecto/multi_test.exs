@@ -343,7 +343,7 @@ defmodule Ecto.MultiTest do
           repo.rollback(:bar)
         end)
 
-      assert_raise Ecto.LocalReturnsNotSupportedOnMulti, ~r"operation :bar is trying to do a local return not supported in Multi.", fn ->
+      assert_raise RuntimeError, ~r"operation :bar is manually rolling back, which is not supported Ecto.Multi", fn ->
         TestRepo.transaction(multi)
       end
     end

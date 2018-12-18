@@ -16,7 +16,7 @@ defmodule Ecto.Repo.Transaction do
     case Ecto.Multi.__apply__(multi, name, wrap, return) do
       {:ok, values} -> {:ok, values}
       {:error, {key, error_value, values}} -> {:error, key, error_value, values}
-      {:error, operation} -> raise Ecto.LocalReturnsNotSupportedOnMulti, operation
+      {:error, operation} -> raise "operation #{inspect operation} is manually rolling back, which is not supported Ecto.Multi"
     end
   end
 
