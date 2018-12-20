@@ -551,6 +551,12 @@ defmodule Ecto.Query.PlannerTest do
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
   end
 
+  test "normalize: select on schemaless" do
+    assert_raise Ecto.QueryError, ~r"need to explicitly pass a :select clause in query", fn ->
+      from("posts", []) |> normalize()
+    end
+  end
+
   test "normalize: select with struct/2" do
     assert_raise Ecto.QueryError, ~r"struct/2 in select expects a source with a schema", fn ->
       "posts" |> select([p], struct(p, [:id, :title])) |> normalize()

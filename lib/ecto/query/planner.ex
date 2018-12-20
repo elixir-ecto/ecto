@@ -748,6 +748,9 @@ defmodule Ecto.Query.Planner do
     %{query | select: %SelectExpr{expr: {:&, [], [0]}, take: %{0 => {:any, fields}},
                                   line: __ENV__.line, file: __ENV__.file}}
   end
+  def ensure_select(%{select: nil, from: %{source: {_, nil}}} = query, true) do
+    error! query, "queries that do not have a schema need to explicitly pass a :select clause"
+  end
   def ensure_select(%{select: nil} = query, true) do
     %{query | select: %SelectExpr{expr: {:&, [], [0]}, line: __ENV__.line, file: __ENV__.file}}
   end
