@@ -4,6 +4,18 @@ defmodule Mix.Tasks.Ecto.Create do
 
   @shortdoc "Creates the repository storage"
 
+  @switches [
+    quiet: :boolean,
+    repo: [:string, :keep],
+    no_compile: :boolean,
+    no_deps_check: :boolean
+  ]
+
+  @aliases [
+    r: :repo,
+    q: :quiet
+  ]
+
   @moduledoc """
   Create the storage for the given repository.
 
@@ -23,15 +35,16 @@ defmodule Mix.Tasks.Ecto.Create do
   ## Command line options
 
     * `-r`, `--repo` - the repo to create
-    * `--no-compile` - do not compile before creating
     * `--quiet` - do not log output
+    * `--no-compile` - do not compile before dropping
+    * `--no-deps-check` - do not compile before dropping
 
   """
 
   @doc false
   def run(args) do
     repos = parse_repo(args)
-    {opts, _, _} = OptionParser.parse args, switches: [quiet: :boolean]
+    {opts, _} = OptionParser.parse! args, strict: @switches, aliases: @aliases
 
     Enum.each repos, fn repo ->
       ensure_repo(repo, args)

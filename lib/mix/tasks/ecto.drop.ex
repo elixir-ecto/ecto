@@ -7,12 +7,16 @@ defmodule Mix.Tasks.Ecto.Drop do
 
   @aliases [
     f: :force,
-    q: :quiet
+    q: :quiet,
+    r: :repo
   ]
 
   @switches [
     force: :boolean,
-    quiet: :boolean
+    quiet: :boolean,
+    repo: [:keep, :string],
+    no_compile: :boolean,
+    no_deps_check: :boolean,
   ]
 
   @moduledoc """
@@ -33,19 +37,20 @@ defmodule Mix.Tasks.Ecto.Drop do
 
   ## Command line options
 
-    * `--no-compile` - do not compile before stopping
     * `-r`, `--repo` - the repo to drop
     * `-q`, `--quiet` - run the command quietly
     * `-f`, `--force` - do not ask for confirmation when dropping the database.
       Configuration is asked only when `:start_permanent` is set to true
       (typically in production)
+    * `--no-compile` - do not compile before dropping
+    * `--no-deps-check` - do not compile before dropping
 
   """
 
   @doc false
   def run(args) do
     repos = parse_repo(args)
-    {opts, _, _} = OptionParser.parse args, switches: @switches, aliases: @aliases
+    {opts, _} = OptionParser.parse! args, strict: @switches, aliases: @aliases
     opts = Keyword.merge(@default_opts, opts)
 
     Enum.each repos, fn repo ->
