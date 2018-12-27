@@ -2297,6 +2297,24 @@ defmodule Ecto.Changeset do
   if the check constraint has been violated or not and, if so,
   Ecto converts it into a changeset error.
 
+  In order to use the check constraint, the first step is
+  to define the check constraint in a migration:
+
+      create constraint("users", :price_must_be_positive, check: "price > 0")
+
+  Now that a constraint exists, when modifying users, we could
+  annotate the changeset with a check constraint so Ecto knows
+  how to convert it into an error message:
+
+      cast(user, params, [:price])
+      |> check_constraint(:price_must_be_positive)
+
+  Now, when invoking `Repo.insert/2` or `Repo.update/2`, if the
+  price is not positive, it will be converted into an error and
+  `{:error, changeset}` returned by the repository. Note that the error
+  will occur only after hitting the database so it will not be visible
+  until all other validations pass.
+
   ## Options
 
     * `:message` - the message in case the constraint check fails.
@@ -2328,7 +2346,7 @@ defmodule Ecto.Changeset do
       create unique_index(:users, [:email])
 
   Now that a constraint exists, when modifying users, we could
-  annotate the changeset with unique constraint so Ecto knows
+  annotate the changeset with a unique constraint so Ecto knows
   how to convert it into an error message:
 
       cast(user, params, [:email])
