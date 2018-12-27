@@ -2346,7 +2346,7 @@ defmodule Ecto.Changeset do
       create unique_index(:users, [:email])
 
   Now that a constraint exists, when modifying users, we could
-  annotate the changeset with unique constraint so Ecto knows
+  annotate the changeset with a unique constraint so Ecto knows
   how to convert it into an error message:
 
       cast(user, params, [:email])
