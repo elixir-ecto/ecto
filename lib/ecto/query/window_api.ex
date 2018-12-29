@@ -3,7 +3,7 @@ defmodule Ecto.Query.WindowAPI do
   Lists all windows functions.
 
   Windows functions must always be used as the first argument
-  of `over/2` where the second argument is the name of an window:
+  of `over/2` where the second argument is the name of a window:
 
       from e in Employee,
         select: {e.depname, e.empno, e.salary, over(avg(e.salary), :department)},
