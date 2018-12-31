@@ -1805,22 +1805,10 @@ defmodule Ecto.Query do
 
   def last(%Ecto.Query{} = query, nil) do
     query = %{query | limit: limit()}
-    update_in query.order_bys, fn
-      [] ->
-        [order_by_pk(query, :desc)]
-      order_bys ->
-        for %{expr: expr} = order_by <- order_bys do
-          %{order_by | expr:
-              Enum.map(expr, fn
-                {:desc, ast} -> {:asc, ast}
-                {:desc_nulls_last, ast} -> {:asc_nulls_first, ast}
-                {:desc_nulls_first, ast} -> {:asc_nulls_last, ast}
-                {:asc, ast} -> {:desc, ast}
-                {:asc_nulls_last, ast} -> {:desc_nulls_first, ast}
-                {:asc_nulls_first, ast} -> {:desc_nulls_last, ast}
-              end)}
-        end
-    end
+    update_in(query.order_bys, fn
+      [] -> [order_by_pk(query, :desc)]
+      order_bys -> Enum.map(order_bys, &reverse_order_by/1)
+    end)
   end
   def last(queryable, nil), do: last(Ecto.Queryable.to_query(queryable), nil)
   def last(queryable, key), do: last(order_by(queryable, ^key), nil)
@@ -1861,5 +1849,37 @@ defmodule Ecto.Query do
 
   def has_named_binding?(queryable, key) do
     has_named_binding?(Ecto.Queryable.to_query(queryable), key)
+  end
+
+  @doc """
+  Reverses the ordering of the query.
+  
+  ASC columns become DESC columns (and vice-versa). If the query
+  has no order_bys, this is a no-op.
+
+  ## Examples
+
+      query |> reverse_order |> Repo.one
+      Post |> order(asc: :id) |> reverse_order == Post |> order(desc: :id)
+  """
+  def reverse_order(%Ecto.Query{} = query) do
+    update_in(query.order_bys, fn order_bys -> Enum.map(order_bys, &reverse_order_by/1) end)
+  end
+
+  def reverse_order(queryable), do: reverse_order(Ecto.Queryable.to_query(queryable))
+
+  defp reverse_order_by(%{expr: expr} = order_by) do
+    %{
+      order_by
+      | expr:
+          Enum.map(expr, fn
+            {:desc, ast} -> {:asc, ast}
+            {:desc_nulls_last, ast} -> {:asc_nulls_first, ast}
+            {:desc_nulls_first, ast} -> {:asc_nulls_last, ast}
+            {:asc, ast} -> {:desc, ast}
+            {:asc_nulls_last, ast} -> {:desc_nulls_first, ast}
+            {:asc_nulls_first, ast} -> {:desc_nulls_last, ast}
+          end)
+    }
   end
 end
