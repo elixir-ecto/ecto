@@ -717,14 +717,14 @@ defmodule Ecto.QueryTest do
   end
 
   describe "reverse_order/1" do
-    test "it reverses the order of a simple query" do
+    test "reverses the order of a simple query" do
       order_bys = [asc: :inserted_at, desc: :id]
       reversed_order_bys = [desc: :inserted_at, asc: :id]
       q = from(p in "posts")
       assert reverse_order(order_by(q, ^order_bys)) == order_by(q, ^reversed_order_bys)
     end
 
-    test "it is a no-op on a query with no order" do
+    test "is a no-op on a query with no order" do
       q = from(p in "posts")
       assert reverse_order(q) == q
     end
