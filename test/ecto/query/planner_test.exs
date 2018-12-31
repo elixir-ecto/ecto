@@ -604,7 +604,7 @@ defmodule Ecto.Query.PlannerTest do
            select_fields([:id, :post_title], 0) ++
            select_fields([:id, :text], 1) ++
            select_fields([:id], 0) ++
-           select_fields([:id], 1)           
+           select_fields([:id], 1)
   end
 
   test "normalize: select with map/2" do

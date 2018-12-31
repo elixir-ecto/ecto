@@ -1853,7 +1853,7 @@ defmodule Ecto.Query do
 
   @doc """
   Reverses the ordering of the query.
-  
+
   ASC columns become DESC columns (and vice-versa). If the query
   has no order_bys, this is a no-op.
 

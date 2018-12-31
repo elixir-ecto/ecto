@@ -101,6 +101,18 @@ A downside of this approach is that migrations cannot run dynamically during tes
 
     config :my_app, MyApp.Repo, migration_lock: nil
 
+## v3.0.6 (2018-12-31)
+
+### Enhancements
+
+  * [Ecto.Query] Add `reverse_order/1`
+
+### Bug fixes
+
+  * [Ecto.Multi] Raise better error message on accidental rollback inside `Ecto.Multi`
+  * [Ecto.Query] Properly merge deeply nested preloaded joins
+  * [Ecto.Query] Raise better error message on missing select on schemaless queries
+
 ## v3.0.5 (2018-12-08)
 
 ### Backwards incompatible changes
