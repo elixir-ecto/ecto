@@ -112,6 +112,7 @@ A downside of this approach is that migrations cannot run dynamically during tes
   * [Ecto.Multi] Raise better error message on accidental rollback inside `Ecto.Multi`
   * [Ecto.Query] Properly merge deeply nested preloaded joins
   * [Ecto.Query] Raise better error message on missing select on schemaless queries
+  * [Ecto.Schema] Fix parameter ordering in assoc `:where`
 
 ## v3.0.5 (2018-12-08)
 
