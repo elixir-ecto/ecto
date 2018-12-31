@@ -286,19 +286,19 @@ defmodule Ecto.Association do
     {expr, params, _counter} =
       Enum.reduce(conditions, {expr, params, counter}, fn
         {key, nil}, {expr, params, counter} ->
-          expr = {:and, [], [{:is_nil, [], [to_field(binding, key)]}, expr]}
+          expr = {:and, [], [expr, {:is_nil, [], [to_field(binding, key)]}]}
           {expr, params, counter}
 
         {key, {:not, nil}}, {expr, params, counter} ->
-          expr = {:and, [], [{:not, [], [{:is_nil, [], [to_field(binding, key)]}]}, expr]}
+          expr = {:and, [], [expr, {:not, [], [{:is_nil, [], [to_field(binding, key)]}]}]}
           {expr, params, counter}
 
         {key, {:in, value}}, {expr, params, counter} when is_list(value) ->
-          expr = {:and, [], [{:in, [], [to_field(binding, key), {:^, [], [counter]}]}, expr]}
+          expr = {:and, [], [expr, {:in, [], [to_field(binding, key), {:^, [], [counter]}]}]}
           {expr, [{value, {:in, {binding, key}}} | params], counter + 1}
 
         {key, value}, {expr, params, counter} ->
-          expr = {:and, [], [{:==, [], [to_field(binding, key), {:^, [], [counter]}]}, expr]}
+          expr = {:and, [], [expr, {:==, [], [to_field(binding, key), {:^, [], [counter]}]}]}
           {expr, [{value, {binding, key}} | params], counter + 1}
       end)
 

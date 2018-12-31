@@ -277,7 +277,7 @@ defmodule Ecto.Query.PlannerTest do
     assert [join] = query.joins
     assert join.ix == 1
     assert Macro.to_string(join.on.expr) =~
-             ~r"not[\s\(]is_nil\(&1.text\(\)\)\)? and &1.post_id\(\) == &0.id\(\)"
+             ~r"&1.post_id\(\) == &0.id\(\) and not[\s\(]is_nil\(&1.text\(\)\)\)?"
   end
 
   test "plan: nested joins associations with custom queries" do
@@ -294,10 +294,10 @@ defmodule Ecto.Query.PlannerTest do
             {"comment_posts", _, _}, {"comments", _, _}} = query.sources
 
     assert Macro.to_string(join1.on.expr) =~
-           ~r"not[\s\(]is_nil\(&1.text\(\)\)\)? and &1.post_id\(\) == &0.id\(\)"
+           ~r"&1.post_id\(\) == &0.id\(\) and not[\s\(]is_nil\(&1.text\(\)\)\)?"
     assert Macro.to_string(join2.on.expr) == "&2.id() == &1.post_id()"
     assert Macro.to_string(join3.on.expr) == "&3.comment_id() == &1.id()"
-    assert Macro.to_string(join4.on.expr) == "is_nil(&4.text()) and &4.id() == &3.special_comment_id()"
+    assert Macro.to_string(join4.on.expr) == "&4.id() == &3.special_comment_id() and is_nil(&4.text())"
   end
 
   test "plan: cannot associate without schema" do
@@ -438,22 +438,29 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  test "normalize: assoc join with wheres that have tagged types" do
+  test "normalize: assoc join with wheres that have regular filters" do
     {_query, params, _select} =
       from(post in Post,
         join: comment in assoc(post, :crazy_comments),
         join: post in assoc(comment, :crazy_post)) |> normalize_with_params()
 
-    assert(params == ["crazycomment", "crazypost"])
+    assert params == ["crazycomment", "crazypost"]
   end
 
-  test "normalize: assoc join with wheres that have parameters" do
+  test "normalize: assoc join with wheres that have in filters" do
     {_query, params, _select} =
       from(post in Post,
         join: comment in assoc(post, :crazy_comments_with_list),
         join: post in assoc(comment, :crazy_post_with_list)) |> normalize_with_params()
 
-    assert(params == ["crazycomment1", "crazycomment2", "crazypost1", "crazypost2"])
+    assert params == ["crazycomment1", "crazycomment2", "crazypost1", "crazypost2"]
+
+    {query, params, _} =
+      Ecto.assoc(%Comment{crazy_post_id: 1}, :crazy_post_with_list)
+      |> normalize_with_params()
+
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.id() == ^0 and &0.post_title() in ^(1, 2)"
+    assert params == [1, "crazypost1", "crazypost2"]
   end
 
   test "normalize: dumps in query expressions" do
