@@ -1802,15 +1802,7 @@ defmodule Ecto.Query do
       query |> last(:inserted_at) |> Repo.one
   """
   def last(queryable, order_by \\ nil)
-
-  def last(%Ecto.Query{} = query, nil) do
-    query = %{query | limit: limit()}
-    update_in(query.order_bys, fn
-      [] -> [order_by_pk(query, :desc)]
-      order_bys -> Enum.map(order_bys, &reverse_order_by/1)
-    end)
-  end
-  def last(queryable, nil), do: last(Ecto.Queryable.to_query(queryable), nil)
+  def last(queryable, nil), do: %{reverse_order(queryable) | limit: limit()}
   def last(queryable, key), do: last(order_by(queryable, ^key), nil)
 
   defp limit do
@@ -1855,7 +1847,7 @@ defmodule Ecto.Query do
   Reverses the ordering of the query.
 
   ASC columns become DESC columns (and vice-versa). If the query
-  has no order_bys, this is a no-op.
+  has no order_bys, it orders by the inverse of the primary key.
 
   ## Examples
 
@@ -1863,10 +1855,15 @@ defmodule Ecto.Query do
       Post |> order(asc: :id) |> reverse_order == Post |> order(desc: :id)
   """
   def reverse_order(%Ecto.Query{} = query) do
-    update_in(query.order_bys, fn order_bys -> Enum.map(order_bys, &reverse_order_by/1) end)
+    update_in(query.order_bys, fn
+      [] -> [order_by_pk(query, :desc)]
+      order_bys -> Enum.map(order_bys, &reverse_order_by/1)
+    end)
   end
 
-  def reverse_order(queryable), do: reverse_order(Ecto.Queryable.to_query(queryable))
+  def reverse_order(queryable) do
+    reverse_order(Ecto.Queryable.to_query(queryable))
+  end
 
   defp reverse_order_by(%{expr: expr} = order_by) do
     %{
