@@ -710,9 +710,9 @@ defmodule Ecto.QueryTest do
     end
 
     test "casts queryable to query" do
-      assert_raise Protocol.UndefinedError, "protocol Ecto.Queryable not implemented for []", fn ->
-        has_named_binding?([], :posts)
-      end
+      assert_raise Protocol.UndefinedError,
+                   ~r"protocol Ecto.Queryable not implemented for \[\]",
+                   fn -> has_named_binding?([], :posts) end
     end
   end
 
