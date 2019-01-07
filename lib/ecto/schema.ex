@@ -1341,12 +1341,6 @@ defmodule Ecto.Schema do
       `:raise` (default), `:mark_as_invalid`, `:update`, or `:delete`.
       See `Ecto.Changeset`'s section on related data for more info.
 
-    * `:primary_key`  -  Primary  keys   are  automatically  set  up
-      for  embedded  schemas  as  well, defaulting  to  `{:id,  :id,
-      autogenerate:   true}`.   Accepts   the  same   arguments   as
-      `@primary_key` (See [Schema attributes](https://hexdocs.pm/ecto/Ecto.Schema.html#module-schema-attributes)
-      section for more info.)
-
   ## Examples
 
       defmodule Order do
@@ -1406,15 +1400,18 @@ defmodule Ecto.Schema do
         end
       end
 
-  When defining an inline embed, the `:primary_key` option may be given to
-  customize the embed primary key type.
-
   Options should be passed before the `do` block like this:
 
       embeds_one :child, Child, on_replace: :delete do
         field :name, :string
         field :age,  :integer
       end
+
+   Primary keys are automatically set up for  embedded  schemas as well,
+   defaulting  to  `{:id,  :binary_id, autogenerate:   true}`. You can
+   customize it by passing a `:primary_key` option with the same arguments
+   as `@primary_key` (see the [Schema attributes](https://hexdocs.pm/ecto/Ecto.Schema.html#module-schema-attributes)
+   section for more info).
 
   Defining embedded schema in such a way will define a `Parent.Child` module
   with the appropriate struct. In order to properly cast the embedded schema.
@@ -1499,12 +1496,6 @@ defmodule Ecto.Schema do
       `:raise` (default), `:mark_as_invalid`, or `:delete`.
       See `Ecto.Changeset`'s section on related data for more info.
 
-    * `:primary_key`  -  Primary  keys   are  automatically  set  up
-      for  embedded  schemas  as  well, defaulting  to  `{:id,  :id,
-      autogenerate:   true}`.   Accepts   the  same   arguments   as
-      `@primary_key` (See [Schema attributes](https://hexdocs.pm/ecto/Ecto.Schema.html#module-schema-attributes)
-      section for more info.)
-
   ## Examples
 
       defmodule Order do
@@ -1572,7 +1563,6 @@ defmodule Ecto.Schema do
       items
       # => [%Item{id: "20a97d94-f79b-4e63-a875-85deed7719b7", title: "Mujju's Soap"}]
 
-
   ## Inline embedded schema
 
   The schema module can be defined inline in the parent schema in simple
@@ -1591,8 +1581,11 @@ defmodule Ecto.Schema do
         end
       end
 
-  When defining an inline embed, the `:primary_key` option may be given to
-  customize the embed primary key type.
+  Primary keys are automatically set up for  embedded  schemas as well,
+  defaulting  to  `{:id,  :binary_id, autogenerate:   true}`. You can
+  customize it by passing a `:primary_key` option with the same arguments
+  as `@primary_key` (see the [Schema attributes](https://hexdocs.pm/ecto/Ecto.Schema.html#module-schema-attributes)
+  section for more info).
 
   Defining embedded schema in such a way will define a `Parent.Child` module
   with the appropriate struct. In order to properly cast the embedded schema.
