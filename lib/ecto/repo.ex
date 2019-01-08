@@ -1046,6 +1046,12 @@ defmodule Ecto.Repo do
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
       in the struct.
+    * `:stale_error_field` - The field where stale errors will be added in
+      the returning changeset. This option can be used to avoid raising
+      `Ecto.StaleEntryError`. Only applies to updates.
+    * `:stale_error_message` - The message to add to the configured
+      `:stale_error_field` when stale errors happen, defaults to "is stale".
+      Only applies to updates.
 
   See the "Shared options" section at the module documentation.
 
