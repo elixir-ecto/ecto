@@ -192,7 +192,7 @@ defmodule Ecto.Schema do
   and foreign keys, Ecto provides a huge variety of types to be used
   by any column.
 
-  Ecto also supports composite primary keys. THis is achieved by declaring
+  Ecto also supports composite primary keys. This is achieved by declaring
   a `@primary_key`, as usual, and then passing the `primary_key: true` option
   to any of the composite fields.
 
