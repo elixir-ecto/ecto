@@ -3,6 +3,8 @@ import Kernel, except: [to_string: 1]
 
 alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr}
 
+container_doc = if(Version.match?(System.version(), ">= 1.8.0"), do: :container_doc, else: :surround_many)
+
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
     {expr, binding, params, _, _} =
@@ -14,12 +16,7 @@ defimpl Inspect, for: Ecto.Query.DynamicExpr do
       Inspect.Ecto.Query.expr(expr, List.to_tuple(names), %{expr: expr, params: params})
 
     # TODO: Replace unquote with just `container_doc` when Elixir < 1.8.0 is no longer supported
-    unquote(
-      if(Version.match?(System.version(), "~> 1.8.0-dev"),
-        do: quote(do: :container_doc),
-        else: quote(do: :surround_many)
-      )
-    )("dynamic(", [Macro.to_string(binding), inspected], ")", opts, fn str, _ -> str end)
+    unquote(container_doc)("dynamic(", [Macro.to_string(binding), inspected], ")", opts, fn str, _ -> str end)
   end
 end
 
@@ -34,12 +31,7 @@ defimpl Inspect, for: Ecto.Query do
     end)
 
     # TODO: Replace unquote with just `container_doc` when Elixir < 1.8.0 is no longer supported
-    unquote(
-      if(Version.match?(System.version(), "~> 1.8.0-dev"),
-        do: quote(do: :container_doc),
-        else: quote(do: :surround_many)
-      )
-    )("#Ecto.Query<", list, ">", opts, fn str, _ -> str end)
+    unquote(container_doc)("#Ecto.Query<", list, ">", opts, fn str, _ -> str end)
   end
 
   @doc false
