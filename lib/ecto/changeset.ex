@@ -2752,7 +2752,13 @@ defimpl Inspect, for: Ecto.Changeset do
       {attr, Map.get(changeset, attr)}
     end
 
-    surround_many("#Ecto.Changeset<", list, ">", opts, fn
+    # TODO: Replace unquote with just `container_doc` when Elixir < 1.8.0 is no longer supported
+    unquote(
+      if(Version.match?(System.version(), "~> 1.8.0-dev"),
+        do: quote(do: :container_doc),
+        else: quote(do: :surround_many)
+      )
+    )("#Ecto.Changeset<", list, ">", opts, fn
       {:action, action}, opts   -> concat("action: ", to_doc(action, opts))
       {:changes, changes}, opts -> concat("changes: ", to_doc(changes, opts))
       {:data, data}, _opts      -> concat("data: ", to_struct(data, opts))

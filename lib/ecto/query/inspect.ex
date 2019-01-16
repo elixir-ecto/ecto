@@ -13,7 +13,13 @@ defimpl Inspect, for: Ecto.Query.DynamicExpr do
     inspected =
       Inspect.Ecto.Query.expr(expr, List.to_tuple(names), %{expr: expr, params: params})
 
-    surround_many("dynamic(", [Macro.to_string(binding), inspected], ")", opts, fn str, _ -> str end)
+    # TODO: Replace unquote with just `container_doc` when Elixir < 1.8.0 is no longer supported
+    unquote(
+      if(Version.match?(System.version(), "~> 1.8.0-dev"),
+        do: quote(do: :container_doc),
+        else: quote(do: :surround_many)
+      )
+    )("dynamic(", [Macro.to_string(binding), inspected], ")", opts, fn str, _ -> str end)
   end
 end
 
@@ -27,7 +33,13 @@ defimpl Inspect, for: Ecto.Query do
         string
     end)
 
-    surround_many("#Ecto.Query<", list, ">", opts, fn str, _ -> str end)
+    # TODO: Replace unquote with just `container_doc` when Elixir < 1.8.0 is no longer supported
+    unquote(
+      if(Version.match?(System.version(), "~> 1.8.0-dev"),
+        do: quote(do: :container_doc),
+        else: quote(do: :surround_many)
+      )
+    )("#Ecto.Query<", list, ">", opts, fn str, _ -> str end)
   end
 
   @doc false
