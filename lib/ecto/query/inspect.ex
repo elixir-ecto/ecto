@@ -3,7 +3,7 @@ import Kernel, except: [to_string: 1]
 
 alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr}
 
-container_doc = if(Version.match?(System.version(), ">= 1.8.0"), do: :container_doc, else: :surround_many)
+container_doc = if(Version.match?(System.version(), ">= 1.6.0"), do: :container_doc, else: :surround_many)
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do

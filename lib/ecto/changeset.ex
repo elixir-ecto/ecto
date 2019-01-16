@@ -2747,7 +2747,7 @@ end
 defimpl Inspect, for: Ecto.Changeset do
   import Inspect.Algebra
 
-  container_doc = if(Version.match?(System.version(), ">= 1.8.0"), do: :container_doc, else: :surround_many)
+  container_doc = if(Version.match?(System.version(), ">= 1.6.0"), do: :container_doc, else: :surround_many)
 
   def inspect(changeset, opts) do
     list = for attr <- [:action, :changes, :errors, :data, :valid?] do
