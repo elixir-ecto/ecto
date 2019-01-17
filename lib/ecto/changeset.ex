@@ -2747,14 +2747,14 @@ end
 defimpl Inspect, for: Ecto.Changeset do
   import Inspect.Algebra
 
-  container_doc = if(Version.match?(System.version(), ">= 1.6.0"), do: :container_doc, else: :surround_many)
+  container_doc = if Version.match?(System.version(), ">= 1.6.0"), do: :container_doc, else: :surround_many
 
   def inspect(changeset, opts) do
     list = for attr <- [:action, :changes, :errors, :data, :valid?] do
       {attr, Map.get(changeset, attr)}
     end
 
-    # TODO: Replace unquote with just `container_doc` when Elixir < 1.8.0 is no longer supported
+    # TODO: Replace unquote with just `container_doc` when Elixir < 1.6.0 is no longer supported
     unquote(container_doc)("#Ecto.Changeset<", list, ">", opts, fn
       {:action, action}, opts   -> concat("action: ", to_doc(action, opts))
       {:changes, changes}, opts -> concat("changes: ", to_doc(changes, opts))
