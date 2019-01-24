@@ -43,7 +43,7 @@ defmodule Ecto.Repo do
       Defaults to `:debug`
 
     * `:pool_size` - the size of the pool used by the connection module.
-    Defaults to `10`
+      Defaults to `10`
 
     * `:telemetry_prefix` - we recommend adapters to publish events
       using the `Telemetry` library. By default, the telemetry prefix
