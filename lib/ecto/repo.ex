@@ -42,6 +42,9 @@ defmodule Ecto.Repo do
       Logger. If false, disables logging for that repository.
       Defaults to `:debug`.
 
+    * `:pool_size` - the size of pool used by the connection module.
+    Defaults to `10`.
+
     * `:telemetry_prefix` - we recommend adapters to publish events
       using the `Telemetry` library. By default, the telemetry prefix
       is based on the module name, so if your module is called
