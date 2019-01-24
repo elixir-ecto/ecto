@@ -323,7 +323,7 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
       Ecto.Multi.new()
-      |> Ecto.Multi.run(:post, fn _repo ->
+      |> Ecto.Multi.run(:post, fn _repo, _changes ->
            MyApp.Repo.get!(Post, 1)
          end)
       |> Ecto.Multi.insert_or_update(:update, fn %{post: post} ->
@@ -360,7 +360,7 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
       Ecto.Multi.new()
-      |> Ecto.Multi.run(:post, fn _repo ->
+      |> Ecto.Multi.run(:post, fn _repo, _changes ->
            MyApp.Repo.get!(Post, 1)
          end)
       |> Ecto.Multi.delete(:delete, fn %{post: post} ->
