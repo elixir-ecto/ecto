@@ -409,7 +409,7 @@ defmodule Ecto.Query.Builder do
   defp escape_with_type(expr, type, params_acc, vars, env) do
     type = validate_type!(type, vars, env)
     {expr, params_acc} = escape(expr, type, params_acc, vars, env)
-    {{:{}, [], [:type, [], [expr, type]]}, params_acc}
+    {{:{}, [], [:type, [], [expr, Macro.escape(type)]]}, params_acc}
   end
 
   defp wrap_nil(params, {:{}, _, [:^, _, [ix]]}), do: wrap_nil(params, ix, [])
