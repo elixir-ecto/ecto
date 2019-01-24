@@ -33,17 +33,17 @@ defmodule Ecto.Repo do
 
     * `:priv` - the directory where to keep repository data, like
       migrations, schema and more. Defaults to "priv/YOUR_REPO".
-      It must always point to a subdirectory inside the priv directory.
+      It must always point to a subdirectory inside the priv directory
 
     * `:url` - an URL that specifies storage information. Read below
       for more information
 
     * `:log` - the log level used when logging the query with Elixir's
       Logger. If false, disables logging for that repository.
-      Defaults to `:debug`.
+      Defaults to `:debug`
 
-    * `:pool_size` - the size of pool used by the connection module.
-    Defaults to `10`.
+    * `:pool_size` - the size of the pool used by the connection module.
+    Defaults to `10`
 
     * `:telemetry_prefix` - we recommend adapters to publish events
       using the `Telemetry` library. By default, the telemetry prefix
