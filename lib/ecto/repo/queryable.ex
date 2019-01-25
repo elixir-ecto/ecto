@@ -292,7 +292,7 @@ defmodule Ecto.Repo.Queryable do
     {args, row} = process_args(args, row, from, adapter)
     {List.to_tuple(args), row}
   end
-  defp process([value | row], {:value, :any}, _from, __adapter) do
+  defp process([value | row], {:value, :any}, _from, _adapter) do
     {value, row}
   end
   defp process([value | row], {:value, type}, _from, adapter) do
