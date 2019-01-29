@@ -1265,7 +1265,20 @@ defmodule Ecto.Schema do
   decoupled nature of Ecto allows us to create a "join" struct which
   `belongs_to` both sides of the many to many association.
 
-  In our example, a User has and belongs to many Organizations
+  In our example, a `User` has and belongs to many `Organization`s:
+
+      defmodule MyApp.Repo.Migrations.CreateUserOrganization do
+        use Ecto.Migration
+
+        def change do
+          create table(:users_organizations) do
+            add :user_id, references(:users)
+            add :organization_id, references(:organizations)
+
+            timestamps()
+          end
+        end
+      end
 
       defmodule UserOrganization do
         use Ecto.Schema
