@@ -1267,6 +1267,19 @@ defmodule Ecto.Schema do
 
   In our example, a User has and belongs to many Organizations
 
+      defmodule MyApp.Repo.Migrations.CreateUserOrganization do
+        use Ecto.Migration
+
+        def change do
+          create table(:users_organizations) do
+            add :user_id, references(:users)
+            add :organization_id, references(:organizations)
+
+            timestamps()
+          end
+        end
+      end
+
       defmodule UserOrganization do
         use Ecto.Schema
 
