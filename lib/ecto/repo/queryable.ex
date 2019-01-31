@@ -110,11 +110,7 @@ defmodule Ecto.Repo.Queryable do
   defp maybe_returning(query, kind, opts) do
     case Keyword.fetch(opts, :returning) do
       {:ok, value} ->
-        IO.warn("""
-        :returning option for #{inspect(kind)} is deprecated, please specify a
-        select using `Ecto.Query.select/3` instead.
-        """)
-
+        IO.warn(":returning option for #{inspect(kind)} is deprecated, please specify a select using `Ecto.Query.select/3` instead")
         Ecto.Query.Planner.ensure_select(query, value)
 
       :error ->
