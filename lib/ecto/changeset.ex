@@ -393,7 +393,8 @@ defmodule Ecto.Changeset do
   defp get_changed(data, types, old_changes, new_changes, errors, valid?) do
     Enum.reduce(new_changes, {old_changes, errors, valid?}, fn
       {key, value}, {changes, errors, valid?} ->
-        put_change(data, changes, errors, valid?, key, value, Map.get(types, key))
+        type = Map.get(types, key) || raise ArgumentError, "unknown field `#{key}` in #{inspect(data)}"
+        put_change(data, changes, errors, valid?, key, value, type)
     end)
   end
 
@@ -1117,11 +1118,10 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "changeset does not have types information"
   end
 
-  def put_change(%Changeset{types: types} = changeset, key, value) do
-    type = Map.get(types, key)
+  def put_change(%Changeset{data: data, types: types} = changeset, key, value) do
+    type = Map.get(types, key) || raise ArgumentError, "unknown field `#{key}` in #{inspect(data)}"
     {changes, errors, valid?} =
-      put_change(changeset.data, changeset.changes, changeset.errors,
-                 changeset.valid?, key, value, type)
+      put_change(data, changeset.changes, changeset.errors, changeset.valid?, key, value, type)
     %{changeset | changes: changes, errors: errors, valid?: valid?}
   end
 
@@ -1368,6 +1368,8 @@ defmodule Ecto.Changeset do
       {tag, _} when tag in @relations ->
         raise "changing #{tag}s with force_change/3 is not supported, " <>
               "please use put_#{tag}/4 instead"
+      nil ->
+        raise "unknown field `#{key}` in #{inspect(changeset.data)}"
       _ ->
         put_in changeset.changes[key], value
     end

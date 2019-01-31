@@ -584,6 +584,13 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{}
   end
 
+  test "change/2 with unknown field" do
+    post = %Post{decimal: Decimal.new("1.0")}
+    assert_raise ArgumentError, ~r"unknown field `unknown`", fn ->
+      change(post, unknown: Decimal.new(1))
+    end
+  end
+
   test "fetch_field/2" do
     changeset = changeset(%Post{body: "bar"}, %{"title" => "foo"})
 

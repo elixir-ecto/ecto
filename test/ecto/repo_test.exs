@@ -469,7 +469,8 @@ defmodule Ecto.RepoTest do
     end
 
     test "insert, update, insert_or_update and delete filters out unknown field" do
-      valid = Ecto.Changeset.change(%MySchema{id: 1}, %{unknown: "foo"})
+      valid = Ecto.Changeset.change(%MySchema{id: 1})
+      valid = put_in valid.changes[:unknown], "foo"
 
       assert {:ok, %MySchema{} = inserted} = TestRepo.insert(valid)
       refute Map.has_key?(inserted, :unknown)

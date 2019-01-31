@@ -27,7 +27,7 @@ defmodule Ecto.Repo.EmbeddedTest do
 
     schema "my_assocs" do
       field :x
-      field :my_assoc_id
+      field :my_schema_id, :integer
     end
   end
 
@@ -35,6 +35,7 @@ defmodule Ecto.Repo.EmbeddedTest do
     use Ecto.Schema
 
     schema "my_schema" do
+      field :x
       embeds_one :embed, MyEmbed, on_replace: :delete
       embeds_many :embeds, MyEmbed, on_replace: :delete
       has_one :assoc, MyAssoc

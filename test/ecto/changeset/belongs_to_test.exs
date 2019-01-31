@@ -493,7 +493,7 @@ defmodule Ecto.Changeset.BelongsToTest do
     changeset = Changeset.change(%Profile{}, name: "michal")
     assert Relation.apply_changes(embed, changeset) == %Profile{name: "michal"}
 
-    changeset = Changeset.change(%Profile{}, title: "hello")
+    changeset = Changeset.change(%Profile{}, name: "hello")
     changeset2 = %{changeset | action: :delete}
     assert Relation.apply_changes(embed, changeset2) == nil
   end

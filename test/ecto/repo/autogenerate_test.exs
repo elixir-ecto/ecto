@@ -8,6 +8,7 @@ defmodule Ecto.Repo.AutogenerateTest do
 
     @timestamps_opts [inserted_at: :created_on]
     schema "manager" do
+      field :company_id, :integer
       timestamps updated_at: :updated_on, type: :utc_datetime
     end
   end
