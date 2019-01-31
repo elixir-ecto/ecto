@@ -393,8 +393,7 @@ defmodule Ecto.Changeset do
   defp get_changed(data, types, old_changes, new_changes, errors, valid?) do
     Enum.reduce(new_changes, {old_changes, errors, valid?}, fn
       {key, value}, {changes, errors, valid?} ->
-        type = Map.get(types, key) || raise ArgumentError, "unknown field `#{key}` in #{inspect(data)}"
-        put_change(data, changes, errors, valid?, key, value, type)
+        put_change(data, changes, errors, valid?, key, value, Map.get(types, key))
     end)
   end
 
@@ -1119,7 +1118,7 @@ defmodule Ecto.Changeset do
   end
 
   def put_change(%Changeset{data: data, types: types} = changeset, key, value) do
-    type = Map.get(types, key) || raise ArgumentError, "unknown field `#{key}` in #{inspect(data)}"
+    type = Map.get(types, key)
     {changes, errors, valid?} =
       put_change(data, changeset.changes, changeset.errors, changeset.valid?, key, value, type)
     %{changeset | changes: changes, errors: errors, valid?: valid?}
@@ -1137,6 +1136,10 @@ defmodule Ecto.Changeset do
       {:error, error} ->
         {changes, [{key, error} | errors], false}
     end
+  end
+
+  defp put_change(data, _changes, _errors, _valid?, key, _value, nil) do
+    raise ArgumentError, "unknown field `#{key}` in #{inspect(data)}"
   end
 
   defp put_change(data, changes, errors, valid?, key, value, type) do
