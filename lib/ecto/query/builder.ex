@@ -566,6 +566,8 @@ defmodule Ecto.Query.Builder do
     do: type
   def validate_type!({:__aliases__, _, _} = type, _vars, {env, _}),
     do: Macro.expand(type, env)
+  def validate_type!({:__aliases__, _, _} = type, _vars, env),
+    do: Macro.expand(type, env)
   def validate_type!(type, _vars, _env) when is_atom(type),
     do: type
   def validate_type!({{:., _, [{var, _, context}, field]}, _, []}, vars, _env)

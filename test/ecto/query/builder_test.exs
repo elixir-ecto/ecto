@@ -30,8 +30,11 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do type(&0.y, :decimal) end), []} ==
           escape(quote do type(field(x, :y), :decimal) end, [x: 0], __ENV__)
 
-    assert {Macro.escape(quote do type(&0.y, Ecto.UUID) end), []} ==
-          escape(quote do type(field(x, :y), ^Ecto.UUID) end, [x: 0], __ENV__)
+    assert {Macro.escape(quote do type(&0.y, :"Elixir.Ecto.UUID") end), []} ==
+          escape(quote do type(field(x, :y), Ecto.UUID) end, [x: 0], __ENV__)
+
+    assert {Macro.escape(quote do type(&0.y, :"Elixir.Ecto.UUID") end), []} ==
+          escape(quote do type(field(x, :y), Ecto.UUID) end, [x: 0], {__ENV__, %{}})
 
     assert {Macro.escape(quote do avg(0) end), []} ==
            escape(quote do avg(0) end, [], __ENV__)
