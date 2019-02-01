@@ -1316,6 +1316,22 @@ defmodule Ecto.ChangesetTest do
     Process.put(:test_repo_all_results, no_dup_result)
     changeset = unsafe_validate_unique(base_changeset, :title, TestRepo, prefix: "public")
     assert changeset.valid?
+
+    # The validation runs a query only when the changes are relevant to it
+    defmodule DetectionRepo do
+      def one(query) do
+        send(self(), [function: :one, query: query])
+      end
+    end
+    body_change = changeset(%Post{title: "Hello World", body: "hi"}, %{body: "ho"})
+    unsafe_validate_unique(body_change, :body, DetectionRepo)
+    assert_receive [function: :one, query: %Ecto.Query{}]
+
+    unsafe_validate_unique(body_change, [:body, :title], DetectionRepo)
+    assert_receive [function: :one, query: %Ecto.Query{}]
+
+    unsafe_validate_unique(body_change, :title, DetectionRepo)
+    refute_receive [function: :one, query: %Ecto.Query{}]
   end
 
   ## Locks

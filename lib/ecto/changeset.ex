@@ -1719,8 +1719,13 @@ defmodule Ecto.Changeset do
       {field, get_field(changeset, field)}
     end
 
+    # No need to query if we haven't changed any of the fields in question
+    unrelated_changes? = fields -- Map.keys(changeset.changes) == fields
+
     # If we don't have values for all fields, we can't query for uniqueness
-    if Enum.any?(where_clause, &(&1 |> elem(1) |> is_nil())) do
+    any_nil_values_for_fields? = Enum.any?(where_clause, &(&1 |> elem(1) |> is_nil()))
+
+    if unrelated_changes? || any_nil_values_for_fields? do
       changeset
     else
       pk_pairs = pk_fields_and_values(changeset, struct)
