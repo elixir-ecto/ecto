@@ -102,6 +102,7 @@ defmodule Ecto.Repo.Preloader do
       # We pass caller: self() so pools like the ownership
       # pool knows where to fetch the connection from and
       # set the proper timeouts.
+      # TODO: Remove this when we require Elixir v1.8+
       opts = Keyword.put_new(opts, :caller, self())
       assocs
       |> Task.async_stream(&fun.(&1, opts), timeout: :infinity)
