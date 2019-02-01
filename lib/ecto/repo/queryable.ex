@@ -246,7 +246,10 @@ defmodule Ecto.Repo.Queryable do
         {%{__struct__: _}, %{__struct__: _}} ->
           raise ArgumentError, "cannot merge structs of different types, got: #{inspect left} and #{inspect right}"
         {%{__struct__: _}, %{}} ->
-          Enum.reduce(right, left, fn {key, value}, acc -> %{acc | key => value} end)
+          for {key, _} <- right, not Map.has_key?(left, key) do
+            raise ArgumentError, "struct #{inspect left} does not have the key #{inspect key}"
+          end
+          Map.merge(left, right)
         {%{}, %{}} ->
           Map.merge(left, right)
         {_, %{}} ->
