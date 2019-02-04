@@ -21,28 +21,27 @@ defmodule Mix.Ecto do
   end
 
   defp parse_repo([], []) do
-    app = Mix.Project.config[:app]
+    apps =
+      if apps_paths = Mix.Project.apps_paths do
+        Map.keys(apps_paths)
+      else
+        [Mix.Project.config[:app]]
+      end
 
-    cond do
-      repos = Application.get_env(app, :ecto_repos) ->
-        repos
-
-      Map.has_key?(Mix.Project.deps_paths, :ecto) ->
+    apps
+    |> Enum.flat_map(&Application.get_env(&1, :ecto_repos, []))
+    |> Enum.uniq()
+    |> case do
+      [] ->
         Mix.shell.error """
-        warning: could not find repositories for application #{inspect app}.
-
+        warning: could not find Ecto repos in any of the apps: #{inspect apps}.
         You can avoid this warning by passing the -r flag or by setting the
-        repositories managed by this application in your config/config.exs:
-
-            config #{inspect app}, ecto_repos: [...]
-
-        The configuration may be an empty list if it does not define any repo.
+        repositories managed by those applications in your config/config.exs:
+            config #{inspect hd(apps)}, ecto_repos: [...]
         """
         []
-
-      true ->
-        []
-
+      repos ->
+        repos
     end
   end
 
