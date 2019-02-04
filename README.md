@@ -137,6 +137,8 @@ Clone the repo and fetch its dependencies:
     $ mix deps.get
     $ mix test
 
+Note that `mix test` does not run the tests in `integration_test` folder, because Ecto does not ship with any adapters to run them against. Adapter libraries like `ecto_sql` can run these tests as part of their suites.
+
 ## Copyright and License
 
 "Ecto" and the Ecto logo are Copyright (c) 2012 Plataformatec.
