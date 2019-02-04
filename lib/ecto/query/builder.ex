@@ -133,7 +133,8 @@ defmodule Ecto.Query.Builder do
     pieces = expand_and_split_fragment(query, env)
 
     if length(pieces) != length(frags) + 1 do
-      error! "fragment(...) expects extra arguments in the same amount of question marks in string"
+      error! "fragment(...) expects extra arguments in the same amount of question marks in string. " <>
+               "It received #{length(frags)} extra argument(s) but expected #{length(pieces) - 1}"
     end
 
     {frags, params_acc} = Enum.map_reduce(frags, params_acc, &escape(&1, :any, &2, vars, env))

@@ -71,9 +71,13 @@ defmodule Ecto.Query.BuilderTest do
       escape(quote do fragment(:invalid) end, [], __ENV__)
     end
 
-    assert_raise Ecto.Query.CompileError, ~r"expects extra arguments in the same amount of question marks in string", fn ->
-      escape(quote do fragment("?") end, [], __ENV__)
-    end
+    assert_raise Ecto.Query.CompileError,
+                 ~r"expects extra arguments in the same amount of question marks in string. It received 0 extra argument\(s\) but expected 1",
+                 fn -> escape(quote do fragment("?") end, [], __ENV__) end
+
+    assert_raise Ecto.Query.CompileError,
+                 ~r"expects extra arguments in the same amount of question marks in string. It received 1 extra argument\(s\) but expected 0",
+                 fn -> escape(quote do fragment("", 1) end, [], __ENV__) end
   end
 
   test "escape over" do
