@@ -1276,62 +1276,90 @@ defmodule Ecto.ChangesetTest do
 
   alias Ecto.TestRepo
 
-  test "unsafe_validate_unique/3" do
-    dup_result = {1, [true]}
-    no_dup_result = {0, []}
-    base_changeset = changeset(%Post{}, %{"title" => "Hello World", "body" => "hi"})
+  describe "unsafe_validate_unique/3" do
+    setup do
+      dup_result = {1, [true]}
+      no_dup_result = {0, []}
+      base_changeset = changeset(%Post{}, %{"title" => "Hello World", "body" => "hi"})
+      [dup_result: dup_result, no_dup_result: no_dup_result, base_changeset: base_changeset]
+    end
 
-    # validate uniqueness of one field
-    Process.put(:test_repo_all_results, dup_result)
-    changeset = unsafe_validate_unique(base_changeset, :title, TestRepo)
-    assert changeset.errors ==
-           [title: {"has already been taken", validation: :unsafe_unique, fields: [:title]}]
+    defmodule MockRepo do
+      @moduledoc """
+      Allows tests to verify or refute that a query was run.
+      """
 
-    Process.put(:test_repo_all_results, no_dup_result)
-    changeset = unsafe_validate_unique(base_changeset, :title, TestRepo)
-    assert changeset.valid?
-
-    # validate uniqueness of multiple fields
-    Process.put(:test_repo_all_results, dup_result)
-    changeset = unsafe_validate_unique(base_changeset, [:title, :body], TestRepo)
-    assert changeset.errors ==
-           [title: {"has already been taken", validation: :unsafe_unique, fields: [:title, :body]}]
-
-    Process.put(:test_repo_all_results, no_dup_result)
-    changeset = unsafe_validate_unique(base_changeset, [:title, :body], TestRepo)
-    assert changeset.valid?
-
-    # custom error message
-    Process.put(:test_repo_all_results, dup_result)
-    changeset = unsafe_validate_unique(base_changeset, [:title], TestRepo, message: "is taken")
-    assert changeset.errors ==
-           [title: {"is taken", validation: :unsafe_unique, fields: [:title]}]
-
-    # with prefix option
-    Process.put(:test_repo_all_results, dup_result)
-    changeset = unsafe_validate_unique(base_changeset, :title, TestRepo, prefix: "public")
-    assert changeset.errors ==
-           [title: {"has already been taken", validation: :unsafe_unique, fields: [:title]}]
-
-    Process.put(:test_repo_all_results, no_dup_result)
-    changeset = unsafe_validate_unique(base_changeset, :title, TestRepo, prefix: "public")
-    assert changeset.valid?
-
-    # The validation runs a query only when the changes are relevant to it
-    defmodule DetectionRepo do
-      def one(query) do
-        send(self(), [function: :one, query: query])
+      def one(query, opts \\ []) do
+        send(self(), [__MODULE__, function: :one, query: query, opts: opts])
       end
     end
-    body_change = changeset(%Post{title: "Hello World", body: "hi"}, %{body: "ho"})
-    unsafe_validate_unique(body_change, :body, DetectionRepo)
-    assert_receive [function: :one, query: %Ecto.Query{}]
 
-    unsafe_validate_unique(body_change, [:body, :title], DetectionRepo)
-    assert_receive [function: :one, query: %Ecto.Query{}]
+    test "validates the uniqueness of a single field", context do
+      Process.put(:test_repo_all_results, context.dup_result)
+      changeset = unsafe_validate_unique(context.base_changeset, :title, TestRepo)
 
-    unsafe_validate_unique(body_change, :title, DetectionRepo)
-    refute_receive [function: :one, query: %Ecto.Query{}]
+      assert changeset.errors ==
+               [title: {"has already been taken", validation: :unsafe_unique, fields: [:title]}]
+
+      Process.put(:test_repo_all_results, context.no_dup_result)
+      changeset = unsafe_validate_unique(context.base_changeset, :title, TestRepo)
+      assert changeset.valid?
+    end
+
+    test "validates the uniqueness of a combination of fields", context do
+      Process.put(:test_repo_all_results, context.dup_result)
+      changeset = unsafe_validate_unique(context.base_changeset, [:title, :body], TestRepo)
+
+      assert changeset.errors ==
+               [
+                 title:
+                   {"has already been taken", validation: :unsafe_unique, fields: [:title, :body]}
+               ]
+
+      Process.put(:test_repo_all_results, context.no_dup_result)
+      changeset = unsafe_validate_unique(context.base_changeset, [:title, :body], TestRepo)
+      assert changeset.valid?
+    end
+
+    test "allows setting a custom error message", context do
+      Process.put(:test_repo_all_results, context.dup_result)
+
+      changeset =
+        unsafe_validate_unique(context.base_changeset, [:title], TestRepo, message: "is taken")
+
+      assert changeset.errors ==
+               [title: {"is taken", validation: :unsafe_unique, fields: [:title]}]
+    end
+
+    test "accepts a prefix option", context do
+      Process.put(:test_repo_all_results, context.dup_result)
+
+      changeset =
+        unsafe_validate_unique(context.base_changeset, :title, TestRepo, prefix: "public")
+
+      assert changeset.errors ==
+               [title: {"has already been taken", validation: :unsafe_unique, fields: [:title]}]
+
+      Process.put(:test_repo_all_results, context.no_dup_result)
+
+      changeset =
+        unsafe_validate_unique(context.base_changeset, :title, TestRepo, prefix: "public")
+
+      assert changeset.valid?
+    end
+
+    test "only queries the db when necessary" do
+      body_change = changeset(%Post{title: "Hello World", body: "hi"}, %{body: "ho"})
+      unsafe_validate_unique(body_change, :body, MockRepo)
+      assert_receive [MockRepo, function: :one, query: %Ecto.Query{}, opts: []]
+
+      unsafe_validate_unique(body_change, [:body, :title], MockRepo)
+      assert_receive [MockRepo, function: :one, query: %Ecto.Query{}, opts: []]
+
+      unsafe_validate_unique(body_change, :title, MockRepo)
+      # no overlap between changed fields and those required to be unique
+      refute_receive [MockRepo, function: :one, query: %Ecto.Query{}, opts: []]
+    end
   end
 
   ## Locks
