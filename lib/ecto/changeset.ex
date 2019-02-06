@@ -581,7 +581,7 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp strip_empty_values_from_list?(value, {:array, _}, empty_values) do
+  defp strip_empty_values_from_list?(value, {:array, _}, empty_values) when is_list(value) do
     Enum.reject(value, &Enum.member?(empty_values, &1))
   end
 
