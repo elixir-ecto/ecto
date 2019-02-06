@@ -2324,8 +2324,10 @@ defmodule Ecto.Changeset do
       Defaults to "is invalid"
     * `:name` - the name of the constraint. Required.
     * `:match` - how the changeset constraint name is matched against the
-      repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
+      repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to `:exact`.
       `:suffix` matches any repo constraint which `ends_with?` `:name`
+       to this changeset constraint. 
+      `:prefix` matches any repo constraint which `starts_with?` `:name`
        to this changeset constraint.
 
   """
