@@ -590,11 +590,7 @@ defmodule Ecto.Changeset do
   end
 
   defp get_default_if_empty(value, key, empty_values, defaults) do
-    if value in empty_values do
-      Map.get(defaults, key)
-    else
-      value
-    end
+    if value in empty_values, do: Map.get(defaults, key), else: value
   end
 
   defp convert_params(params) do
