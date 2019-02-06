@@ -153,7 +153,7 @@ defmodule Ecto.ChangesetTest do
     params = %{"topics" => [""]}
     struct = %Post{topics: []}
 
-    changeset = cast(struct, params, ~w(topics)a) |> IO.inspect()
+    changeset = cast(struct, params, ~w(topics)a)
     assert changeset.changes == %{}
   end
 
