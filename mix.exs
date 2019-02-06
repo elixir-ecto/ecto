@@ -1,13 +1,13 @@
 defmodule Ecto.MixProject do
   use Mix.Project
 
-  @version "3.0.6"
+  @version "3.1.0-dev"
 
   def project do
     [
       app: :ecto,
       version: @version,
-      elixir: "~> 1.4",
+      elixir: "~> 1.5",
       deps: deps(),
       consolidate_protocols: Mix.env() != :test,
 
@@ -31,12 +31,7 @@ defmodule Ecto.MixProject do
   defp deps do
     [
       {:decimal, "~> 1.6"},
-
-      # Optional
-      {:poison, "~> 2.2 or ~> 3.0", optional: true},
       {:jason, "~> 1.0", optional: true},
-
-      # Docs
       {:ex_doc, "~> 0.19", only: :docs}
     ]
   end

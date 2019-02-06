@@ -945,8 +945,9 @@ defmodule Ecto.Query do
   """
   @join_opts [:on | @from_join_opts]
 
-  defmacro join(query, qual, binding \\ [], expr, opts \\ []) do
-    {t, on, as, prefix, hints} = opts |> parse_join_opts(__CALLER__) |> collect_on(nil, nil, nil, nil)
+  defmacro join(query, qual, binding \\ [], expr, opts \\ [])
+           when is_list(binding) and is_list(opts) do
+    {t, on, as, prefix, hints} = collect_on(opts, nil, nil, nil, nil)
 
     with [{key, _} | _] <- t do
       raise ArgumentError, "invalid option `#{key}` passed to Ecto.Query.join/5, " <>
@@ -956,44 +957,6 @@ defmodule Ecto.Query do
     query
     |> Join.build(qual, binding, expr, nil, on, as, prefix, hints, __CALLER__)
     |> elem(0)
-  end
-
-  defp parse_join_opts([], _caller), do: []
-  defp parse_join_opts(list, caller) when is_list(list) do
-    case Keyword.split(list, @join_opts) do
-      {opts, []} ->
-        opts
-
-      {[], expr} ->
-        IO.warn """
-        passing the `on` expression as the last argument to Ecto.Query.join/5 is deprecated.
-        Please use the :on keyword option instead. For example, instead of:
-
-            join(..., key: :value)
-
-        do:
-
-            join(..., on: [key: value])
-        """, Macro.Env.stacktrace(caller)
-
-        [on: expr]
-
-      {_, _} ->
-        list
-    end
-  end
-  defp parse_join_opts(expr, caller) do
-    IO.warn """
-    passing the `on` expression as the last argument to Ecto.Query.join/5 is deprecated.
-    Please use the :on keyword option instead. For example, instead of:
-
-        join(..., p.id == c.post_id)
-
-    do:
-
-        join(..., on: p.id == c.post_id)
-    """, Macro.Env.stacktrace(caller)
-    [on: expr]
   end
 
   @doc """

@@ -428,12 +428,6 @@ defmodule Ecto.Multi do
       end)
   """
   @spec run(t, name, run) :: t
-  def run(multi, name, run) when is_function(run, 1) do
-    IO.warn "Giving an anonymous function with 1 argument to Ecto.Multi.run/3 is deprecated. " <>
-              "Please pass an anonymous function that receives the repository and the changes so far"
-    run(multi, name, fn _repo, changes -> run.(changes) end)
-  end
-
   def run(multi, name, run) when is_function(run, 2) do
     add_operation(multi, name, {:run, run})
   end

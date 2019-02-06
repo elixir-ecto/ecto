@@ -1,105 +1,20 @@
-# Changelog for v3.0
+# Changelog for v3.x
 
-## Highlights
+## v3.1.0-dev
 
-This is a new major release for Ecto v3.0. Despite the major version change, we have kept the number of user-facing breaking changes to a minimum, the three main ones being:
+v3.1 requires Elixir v1.5+.
 
-  * Split the Ecto repository apart
-  * Remove the previously deprecated Ecto datetime types in favor of the Calendar types with explicit microsecond prescision that ship as part of Elixir
-  * Update to the latest JSON handling best practices
+### Bug fixes
 
-Besides those changes, there are many exciting new features. We will explore all of those changes and more below.
+  * [Ecto.Changeset] Do not run `unsafe_validate_unique` query unless relevant fields were changed
+  * [Ecto.Changeset] Raise if an unknown field is given on `Ecto.Changeset.change/2`
+  * [Ecto.Query] Add support for `field/2` as first element of `type/2` and alias as second element of type/2
 
-### Split Ecto into `ecto` and `ecto_sql`
+## v3.0.7 (2018-02-06)
 
-Ecto is broken in two repositories: `ecto` and `ecto_sql`. Since Ecto v2.0, an increased number of developers and teams have been using Ecto for data mapping and validation, without a need for a database. However, adding Ecto to your application would still bring a lot of the SQL baggage, such as adapters, sandboxes and migrations. In Ecto 3.0, we have moved all of the SQL adapters to a separate repository and Ecto now mostly focuses on the four Ecto building blocks: schemas, changesets, queries and repos.
+### Bug fixes
 
-If you are using Ecto with a SQL database, migrating to Ecto 3.0 is very striaght-forward. Instead of:
-
-    {:ecto, "~> 2.2"}
-
-You should now list:
-
-    {:ecto_sql, "~> 3.0"}
-
-If the `application` function in your `mix.exs` file includes an `:applications` key, you will need to add `:ecto_sql` to your list of applications. This does not apply if you are using the `:extra_applications` key.
-
-And that's it!
-
-### Calendar types
-
-`Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` no longer exist. Instead developers should use `Date`, `Time`, `DateTime` and `NaiveDateTime` that ship as part of Elixir and are the preferred types since Ecto 2.1. Odds that you are already using the new types and not the deprecated ones.
-
-Note that database adapters have also been standardized to work with Elixir types and they no longer return tuples when developers perform raw queries or use `Ecto.Query` fragments. For example, in Ecto 2.x:
-
-    iex> Repo.one from u in User, select: fragment("?", u.created_at), limit: 1
-    {{2018, 10, 8}, {15, 15, 42, 501011}}
-
-And now in Ecto 3.0:
-
-    iex> Repo.one from u in User, select: fragment("?", u.created_at), limit: 1
-    ~N[2018-10-08 15:15:42.501011]
-
-To uniformly support microseconds across all databases, the types `:time`, `:naive_datetime`, `:utc_datetime` will now discard any microseconds information on `Ecto.Changeset.cast/4`. Setting the value directly, either in the struct or via `Ecto.Changeset.change/2` will raise if microseconds are not truncated. Ecto v3.0 introduces the types `:time_usec`, `:naive_datetime_usec` and `:utc_datetime_usec` as an alternative for those interested in keeping microseconds. If you want to keep microseconds in your migrations and schemas, you need to configure your repository:
-
-    config :my_app, MyApp.Repo,
-      migration_timestamps: [type: :naive_datetime_usec]
-
-And then in your schema:
-
-    @timestamps_opts [type: :naive_datetime_usec]
-
-### JSON handling
-
-Ecto v3.0 moved the management of the JSON library to adapters. All adapters should default to [`Jason`](https://github.com/michalmuskala/jason).
-
-The following configuration will emit a warning:
-
-    config :ecto, :json_library, CustomJSONLib
-
-And should be rewritten as:
-
-    # For Postgres
-    config :postgrex, :json_library, CustomJSONLib
-
-    # For MySQL
-    config :mariaex, :json_library, CustomJSONLib
-
-If you want to rollback to Poison, you need to configure your adapter accordingly:
-
-    # For Postgres
-    config :postgrex, :json_library, Poison
-
-    # For MySQL
-    config :mariaex, :json_library, Poison
-
-We recommend everyone to migrate to Jason. Built-in support for Poison will be removed in future Ecto 3.x releases.
-
-### Named bindings
-
-One of the exciting additions in Ecto v3.0 is the addition of named bindings to make the query composition even more flexible:
-
-    query = Post
-
-    # Filter by the join
-    query = from p in query,
-              join: c in Comment, as: :comments, where: c.post_id == p.id
-
-    # Extend the query
-    query = from [p, comments: c] in query,
-              select: {p.title, c.body}
-
-`Ecto.Query` got many other exciting features. Such as pairwise comparisons, as in `where: {p.foo, p.bar} > {^foo, ^bar}`, built-in support for `coalesce` and arithmetic operators, the ability to filter aggregators, as in `select: filter(count(p.id), p.public == true)`, table specific hints in databases like MySQL and MSSQL, unions, intersections, windows, and many more.
-
-### Locked migrations
-
-Running migrations will now lock the migrations table, allowing you to concurrently run migrations in a cluster without worrying that two servers will race each other and run migrations twice.
-
-In order for this safer migration mechanism to work, at least two database connections are necessary when migrating. One is used to lock the "schema_migrations" table and the other one to effectively run the migrations.
-
-A downside of this approach is that migrations cannot run dynamically during test under the `Ecto.Adapters.SQL.Sandbox`, as the sandbox is unable to share a single connection across processes at the exact same time. This approach also conflicts with concurrent indexes, found in PostgreSQL. If you want to run concurrent indexes, you will have to disable the `migration_lock`:
-
-    config :my_app, MyApp.Repo, migration_lock: nil
+  * [Ecto.Query] `reverse_order` reverses by primary key if no order is given
 
 ## v3.0.6 (2018-12-31)
 

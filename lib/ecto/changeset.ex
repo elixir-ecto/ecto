@@ -548,18 +548,11 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp cast_key(key) when is_binary(key) do
-    IO.warn("non-atom keys in cast/3 is deprecated. All keys must be atoms, got: `#{inspect key}`")
-
-    try do
-      {String.to_existing_atom(key), key}
-    rescue
-      ArgumentError ->
-        raise ArgumentError, "could not convert the parameter `#{key}` into an atom, `#{key}` is not a schema field"
-    end
-  end
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
+
+  defp cast_key(key),
+    do: raise ArgumentError, "cast/3 expects a list of atom keys,, got: `#{inspect key}`"
 
   defp cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
     case params do
