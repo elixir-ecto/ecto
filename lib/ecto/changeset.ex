@@ -557,7 +557,10 @@ defmodule Ecto.Changeset do
   defp cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
     case params do
       %{^param_key => value} ->
-        value = if value in empty_values, do: Map.get(defaults, key), else: value
+        value =
+          value
+          |> strip_empty_values_from_list?(type, empty_values)
+          |> get_default_if_empty(key, empty_values, defaults)
         case Ecto.Type.cast(type, value) do
           {:ok, value} ->
             if Ecto.Type.equal?(type, current, value) do
@@ -575,6 +578,22 @@ defmodule Ecto.Changeset do
 
       _ ->
         :missing
+    end
+  end
+
+  defp strip_empty_values_from_list?(value, {:array, _}, empty_values) do
+    Enum.reject(value, &Enum.member?(empty_values, &1))
+  end
+
+  defp strip_empty_values_from_list?(value, _type, _empty_values) do
+    value
+  end
+
+  defp get_default_if_empty(value, key, empty_values, defaults) do
+    if value in empty_values do
+      Map.get(defaults, key)
+    else
+      value
     end
   end
 
@@ -2326,7 +2345,7 @@ defmodule Ecto.Changeset do
     * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to `:exact`.
       `:suffix` matches any repo constraint which `ends_with?` `:name`
-       to this changeset constraint. 
+       to this changeset constraint.
       `:prefix` matches any repo constraint which `starts_with?` `:name`
        to this changeset constraint.
 

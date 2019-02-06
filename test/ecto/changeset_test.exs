@@ -149,6 +149,14 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{}
   end
 
+  test "cast/4: with empty values in a list" do
+    params = %{"topics" => [""]}
+    struct = %Post{topics: []}
+
+    changeset = cast(struct, params, ~w(topics)a) |> IO.inspect()
+    assert changeset.changes == %{}
+  end
+
   test "cast/4: with data and types" do
     data   = {%{title: "hello"}, %{title: :string, upvotes: :integer}}
     params = %{"title" => "world", "upvotes" => "0"}
