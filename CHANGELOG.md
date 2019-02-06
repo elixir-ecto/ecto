@@ -101,6 +101,12 @@ A downside of this approach is that migrations cannot run dynamically during tes
 
     config :my_app, MyApp.Repo, migration_lock: nil
 
+## v3.0.7 (2018-02-06)
+
+### Bug fixes
+
+  * [Ecto.Query] `reverse_order` reverses by primary key if no order is given
+
 ## v3.0.6 (2018-12-31)
 
 ### Enhancements
