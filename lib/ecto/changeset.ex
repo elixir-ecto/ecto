@@ -1953,27 +1953,27 @@ defmodule Ecto.Changeset do
 
   defp wrong_length(_type, value, value, _opts), do: nil
   defp wrong_length(:string, _length, value, opts), do:
-    {message(opts, "should be %{count} character(s)"), count: value, validation: :length, kind: :is}
+    {message(opts, "should be %{count} character(s)"), count: value, validation: :length, kind: :is, type: :string}
   defp wrong_length(:binary, _length, value, opts), do:
-    {message(opts, "should be %{count} byte(s)"), count: value, validation: :length, kind: :is}
+    {message(opts, "should be %{count} byte(s)"), count: value, validation: :length, kind: :is, type: :binary}
   defp wrong_length(:list, _length, value, opts), do:
-    {message(opts, "should have %{count} item(s)"), count: value, validation: :length, kind: :is}
+    {message(opts, "should have %{count} item(s)"), count: value, validation: :length, kind: :is, type: :list}
 
   defp too_short(_type, length, value, _opts) when length >= value, do: nil
   defp too_short(:string, _length, value, opts), do:
-    {message(opts, "should be at least %{count} character(s)"), count: value, validation: :length, kind: :min}
+    {message(opts, "should be at least %{count} character(s)"), count: value, validation: :length, kind: :min, type: :string}
   defp too_short(:binary, _length, value, opts), do:
-    {message(opts, "should be at least %{count} byte(s)"), count: value, validation: :length, kind: :min}
+    {message(opts, "should be at least %{count} byte(s)"), count: value, validation: :length, kind: :min, type: :binary}
   defp too_short(:list, _length, value, opts), do:
-    {message(opts, "should have at least %{count} item(s)"), count: value, validation: :length, kind: :min}
+    {message(opts, "should have at least %{count} item(s)"), count: value, validation: :length, kind: :min, type: :list}
 
   defp too_long(_type, length, value, _opts) when length <= value, do: nil
   defp too_long(:string, _length, value, opts), do:
-    {message(opts, "should be at most %{count} character(s)"), count: value, validation: :length, kind: :max}
+    {message(opts, "should be at most %{count} character(s)"), count: value, validation: :length, kind: :max, type: :string}
   defp too_long(:binary, _length, value, opts), do:
-    {message(opts, "should be at most %{count} byte(s)"), count: value, validation: :length, kind: :max}
+    {message(opts, "should be at most %{count} byte(s)"), count: value, validation: :length, kind: :max, type: :binary}
   defp too_long(:list, _length, value, opts), do:
-    {message(opts, "should have at most %{count} item(s)"), count: value, validation: :length, kind: :max}
+    {message(opts, "should have at most %{count} item(s)"), count: value, validation: :length, kind: :max, type: :list}
 
   @doc """
   Validates the properties of a number.
@@ -2326,7 +2326,7 @@ defmodule Ecto.Changeset do
     * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to `:exact`.
       `:suffix` matches any repo constraint which `ends_with?` `:name`
-       to this changeset constraint. 
+       to this changeset constraint.
       `:prefix` matches any repo constraint which `starts_with?` `:name`
        to this changeset constraint.
 
