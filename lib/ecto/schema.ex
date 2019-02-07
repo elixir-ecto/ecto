@@ -1490,8 +1490,9 @@ defmodule Ecto.Schema do
   inside of it. Embeds have all the things regular schemas have.
 
   It is recommended to declare your `embeds_many/3` field with type `:map`
-  and a default of `"[]"` (although Ecto will also automatically translate
-  `nil` values from the database into empty lists).
+  and a default of `"[]"` in your migrations, instead of using `{:array, :map}`.
+  `:map` will generally be more efficient and it also works across multiple
+  databases.
 
   The embedded may or may not have a primary key. Ecto use the primary keys
   to detect if an embed is being updated or not. If a primary is not present
