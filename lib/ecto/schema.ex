@@ -1491,8 +1491,8 @@ defmodule Ecto.Schema do
 
   It is recommended to declare your `embeds_many/3` field with type `:map`
   and a default of `"[]"` in your migrations, instead of using `{:array, :map}`.
-  `:map` will generally be more efficient and it also works across multiple
-  databases.
+  Since `:map` is represented as JSON in most databases, `:map` will generally
+  be more efficient and it also works across multiple databases.
 
   The embedded may or may not have a primary key. Ecto use the primary keys
   to detect if an embed is being updated or not. If a primary is not present
