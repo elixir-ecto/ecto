@@ -141,9 +141,9 @@ defmodule Ecto.Query do
 
       query = from u in User, where: u.age > 18
 
-  Bindings are not exposed from the query.  When composing queries you
-  must specify bindings again for each refinement query.  For example
-  to further narrow-down above query we again need to tell Ecto what
+  Bindings are not exposed from the query.  When composing queries, you
+  must specify bindings again for each refinement query.  For example,
+  to further narrow down the above query, we again need to tell Ecto what
   bindings to expect:
 
       query = from u in query, select: u.city
