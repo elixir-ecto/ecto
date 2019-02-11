@@ -61,7 +61,6 @@ defmodule Ecto.MixProject do
       groups_for_modules: [
         # Ecto,
         # Ecto.Changeset,
-        # Ecto.LogEntry,
         # Ecto.Multi,
         # Ecto.Query,
         # Ecto.Repo,
