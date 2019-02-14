@@ -259,6 +259,7 @@ defmodule Ecto.Changeset do
     * `validations`
     * `constraints`
     * `filters`
+    * `prepare`
 
   """
 
