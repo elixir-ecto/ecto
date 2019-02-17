@@ -272,7 +272,7 @@ defmodule Ecto.RepoTest do
       end
 
       query =
-        from(m in MySchemaWithAssoc)
+        MySchemaWithAssoc
         |> join(:inner, [m], p in assoc(m, :parent))
         |> preload([_m, p], parent: p)
 
