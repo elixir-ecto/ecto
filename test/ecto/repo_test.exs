@@ -270,6 +270,15 @@ defmodule Ecto.RepoTest do
       assert_raise Ecto.QueryError, ~r"preloads are not supported on streams", fn ->
         TestRepo.stream(query)
       end
+
+      query =
+        from(m in MySchemaWithAssoc)
+        |> join(:inner, [m], p in assoc(m, :parent))
+        |> preload([m, p], parent: p)
+
+      assert_raise Ecto.QueryError, ~r"preloads are not supported on streams", fn ->
+        TestRepo.stream(query)
+      end
     end
   end
 

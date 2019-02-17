@@ -163,15 +163,17 @@ defmodule Ecto.Repo.Queryable do
         adapter_meta
         |> adapter.stream(query_meta, prepared, params, opts)
         |> Stream.flat_map(fn {_, nil} -> [] end)
+
       %{select: select, preloads: preloads} ->
         %{
+          assocs: assocs,
           preprocess: preprocess,
           postprocess: postprocess,
           take: take,
           from: from
         } = select
 
-        if preloads != [] do
+        if preloads != [] or assocs != [] do
           raise Ecto.QueryError, query: query, message: "preloads are not supported on streams"
         end
 
