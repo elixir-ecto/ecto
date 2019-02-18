@@ -771,7 +771,7 @@ defmodule Ecto.Repo do
       in Postgres or the database in MySQL).
     * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
       `:replace_all`, `:replace_all_except_primary_key`, `{:replace, fields}`,
-      a keyword list of update instructions, `{:replace, fields}` or an `Ecto.Query`
+      a keyword list of update instructions or an `Ecto.Query`
       query for updates. See the "Upserts" section for more information.
     * `:conflict_target` - A list of column names to verify for conflicts.
       It is expected those columns to have unique indexes on them that may conflict.
