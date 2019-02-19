@@ -414,11 +414,20 @@ defmodule Ecto.Repo do
 
   ## Options
 
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the "Query Prefix" section of the
+      `Ecto.Query` documentation.
+
   See the "Shared options" section at the module documentation.
 
   ## Example
 
       MyRepo.get(Post, 42)
+
+      MyRepo.get(Post, 42, prefix: "public")
 
   """
   @callback get(queryable :: Ecto.Queryable.t(), id :: term, opts :: Keyword.t()) ::
@@ -429,11 +438,20 @@ defmodule Ecto.Repo do
 
   ## Options
 
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the "Query Prefix" section of the
+      `Ecto.Query` documentation.
+
   See the "Shared options" section at the module documentation.
 
   ## Example
 
       MyRepo.get!(Post, 42)
+
+      MyRepo.get!(Post, 42, prefix: "public")
 
   """
   @callback get!(queryable :: Ecto.Queryable.t(), id :: term, opts :: Keyword.t()) ::
@@ -446,11 +464,20 @@ defmodule Ecto.Repo do
 
   ## Options
 
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the "Query Prefix" section of the
+      `Ecto.Query` documentation.
+
   See the "Shared options" section at the module documentation.
 
   ## Example
 
       MyRepo.get_by(Post, title: "My post")
+
+      MyRepo.get_by(Post, [title: "My post"], prefix: "public")
 
   """
   @callback get_by(
@@ -466,11 +493,21 @@ defmodule Ecto.Repo do
 
   ## Options
 
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the "Query Prefix" section of the
+      `Ecto.Query` documentation.
+
+
   See the "Shared options" section at the module documentation.
 
   ## Example
 
       MyRepo.get_by!(Post, title: "My post")
+
+      MyRepo.get_by!(Post, [title: "My post"], prefix: "public")
 
   """
   @callback get_by!(
@@ -493,12 +530,23 @@ defmodule Ecto.Repo do
 
   ## Options
 
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the "Query Prefix" section of the
+      `Ecto.Query` documentation.
+
   See the "Shared options" section at the module documentation.
 
   ## Examples
 
       # Returns the number of visits per blog post
       Repo.aggregate(Post, :count, :visits)
+
+      # Returns the number of visits per blog post in the "private" schema path
+      # (in Postgres) or database (in MySQL)
+      Repo.aggregate(Post, :count, :visits, prefix: "private")
 
       # Returns the average number of visits for the top 10
       query = from Post, limit: 10
@@ -518,7 +566,27 @@ defmodule Ecto.Repo do
 
   ## Options
 
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the "Query Prefix" section of the
+      `Ecto.Query` documentation.
+
   See the "Shared options" section at the module documentation.
+
+  ## Examples
+
+      # checks if any posts exist
+      Repo.exists?(Post)
+
+      # checks if any posts exist in the "private" schema path (in Postgres) or
+      # database (in MySQL)
+      Repo.exists?(Post, schema: "private")
+
+      # checks if any post with a like count greater than 10 exists
+      query = from p in Post, where: p.like_count > 10
+      Repo.exists?(query)
   """
   @callback exists?(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: boolean()
 
@@ -529,7 +597,23 @@ defmodule Ecto.Repo do
 
   ## Options
 
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the "Query Prefix" section of the
+      `Ecto.Query` documentation.
+
   See the "Shared options" section at the module documentation.
+
+  ## Examples
+
+      Repo.one(Post)
+
+      Repo.one(from p in Post, where: p.like_count > 10)
+
+      query = from p in Post, where: p.like_count > 10
+      Repo.one(query, prefix: "private")
   """
   @callback one(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
               Ecto.Schema.t() | nil
@@ -540,6 +624,13 @@ defmodule Ecto.Repo do
   Raises if more than one entry.
 
   ## Options
+
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the "Query Prefix" section of the
+      `Ecto.Query` documentation.
 
   See the "Shared options" section at the module documentation.
   """
@@ -603,8 +694,11 @@ defmodule Ecto.Repo do
   ## Options
 
     * `:prefix` - The prefix to run the query on (such as the schema path
-      in Postgres or the database in MySQL). This overrides the prefix set
-      in the query.
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the "Query Prefix" section of the
+      `Ecto.Query` documentation.
 
   See the "Shared options" section at the module documentation.
 
@@ -629,8 +723,11 @@ defmodule Ecto.Repo do
   ## Options
 
     * `:prefix` - The prefix to run the query on (such as the schema path
-      in Postgres or the database in MySQL). This overrides the prefix set
-      in the query
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the "Query Prefix" section of the
+      `Ecto.Query` documentation.
 
     * `:max_rows` - The number of rows to load from the database as we stream.
       It is supported at least by Postgres and MySQL and defaults to 500.
@@ -667,7 +764,7 @@ defmodule Ecto.Repo do
 
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
-      in the query.
+      in the query and any `@schema_prefix` set in the schema.
 
   See the "Shared options" section at the module documentation for
   remaining options.
@@ -709,7 +806,7 @@ defmodule Ecto.Repo do
 
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
-      in the query.
+      in the query and any `@schema_prefix` set in the schema.
 
   See the "Shared options" section at the module documentation for
   remaining options.
@@ -768,7 +865,8 @@ defmodule Ecto.Repo do
       given fields. Or `false`, where nothing is returned (the default).
       This option is not supported by all databases.
     * `:prefix` - The prefix to run the query on (such as the schema path
-      in Postgres or the database in MySQL).
+      in Postgres or the database in MySQL). This overrides the prefix set
+      in the query and any `@schema_prefix` set in the schema.
     * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
       `:replace_all`, `:replace_all_except_primary_key`, `{:replace, fields}`,
       a keyword list of update instructions or an `Ecto.Query`
@@ -788,6 +886,7 @@ defmodule Ecto.Repo do
   ## Examples
 
       MyRepo.insert_all(Post, [[title: "My first post"], [title: "My second post"]])
+
       MyRepo.insert_all(Post, [%{title: "My first post"}, %{title: "My second post"}])
 
   ## Upserts
@@ -855,7 +954,9 @@ defmodule Ecto.Repo do
       Not all databases support this option.
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
-      in the struct.
+      in the query and any `@schema_prefix` set any schemas. Also, the
+      `@schema_prefix` for the parent record will override all default
+      `@schema_prefix`s set in any child schemas for associations.
     * `:on_conflict` - It may be one of `:raise` (the default), `:nothing`,
       `:replace_all`, `:replace_all_except_primary_key`, `{:replace, fields}`,
       a keyword list of update instructions or an `Ecto.Query` query for updates.
@@ -1009,7 +1110,9 @@ defmodule Ecto.Repo do
       (including timestamps).
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
-      in the struct.
+      in the query and any `@schema_prefix` set any schemas. Also, the
+      `@schema_prefix` for the parent record will override all default
+      `@schema_prefix`s set in any child schemas for associations.
     * `:stale_error_field` - The field where stale errors will be added in
       the returning changeset. This option can be used to avoid raising
       `Ecto.StaleEntryError`.
@@ -1047,7 +1150,9 @@ defmodule Ecto.Repo do
 
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
-      in the struct.
+      in the query and any `@schema_prefix` set any schemas. Also, the
+      `@schema_prefix` for the parent record will override all default
+      `@schema_prefix`s set in any child schemas for associations.
     * `:stale_error_field` - The field where stale errors will be added in
       the returning changeset. This option can be used to avoid raising
       `Ecto.StaleEntryError`. Only applies to updates.
@@ -1090,7 +1195,7 @@ defmodule Ecto.Repo do
 
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
-      in the struct.
+      in the query and any `@schema_prefix` set in the schema.
     * `:stale_error_field` - The field where stale errors will be added in
       the returning changeset. This option can be used to avoid raising
       `Ecto.StaleEntryError`.
