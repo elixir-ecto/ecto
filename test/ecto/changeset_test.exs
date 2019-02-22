@@ -1127,6 +1127,10 @@ defmodule Ecto.ChangesetTest do
                 |> validate_number(:decimal, equal_to: Decimal.new(-1))
     assert changeset.valid?
 
+    changeset = changeset(%{"decimal" => Decimal.new(0)})
+                |> validate_number(:decimal, not_equal_to: Decimal.new(-1))
+    assert changeset.valid?
+
     changeset = changeset(%{"decimal" => Decimal.new(-3)})
                 |> validate_number(:decimal, less_than_or_equal_to: Decimal.new(-1))
     assert changeset.valid?
