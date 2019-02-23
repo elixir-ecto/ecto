@@ -8,8 +8,14 @@ defmodule Ecto.RepoTest do
   defmodule MyParent do
     use Ecto.Schema
 
+    @schema_prefix "private"
+
     schema "my_parent" do
       field :n, :integer
+    end
+
+    def changeset(struct, params) do
+      Ecto.Changeset.cast(struct, params, [:n])
     end
   end
 
@@ -31,6 +37,16 @@ defmodule Ecto.RepoTest do
       field :w, :string, virtual: true
       field :array, {:array, :string}
       field :map, {:map, :string}
+    end
+  end
+
+  defmodule MySchemaWithPrefix do
+    use Ecto.Schema
+
+    @schema_prefix "private"
+
+    schema "my_schema" do
+      field :x, :string
     end
   end
 
@@ -182,6 +198,12 @@ defmodule Ecto.RepoTest do
       TestRepo.aggregate(MySchema, :count, :id)
       assert_received {:all, query}
       assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, select: count(m0.id)>"
+    end
+
+    test "aggregates handle a prefix option" do
+      TestRepo.aggregate(MySchema, :min, :id, prefix: "public")
+      assert_received {:all, query}
+      assert query.prefix == "public"
     end
 
     test "removes any preload from query" do
@@ -541,10 +563,80 @@ defmodule Ecto.RepoTest do
       assert changeset.errors == [id: {"is old", [stale: true]}]
     end
 
-    test "insert, update, insert_or_update and delete sets schema prefix" do
+    test "get, get_by, one and all sets schema prefix" do
+      assert schema = TestRepo.get(MySchema, 123, prefix: "public")
+      assert schema.__meta__.prefix == "public"
+
+      assert schema = TestRepo.get_by(MySchema, [id: 123], prefix: "public")
+      assert schema.__meta__.prefix == "public"
+
+      assert schema = TestRepo.one(MySchema, prefix: "public")
+      assert schema.__meta__.prefix == "public"
+
+      assert [schema] = TestRepo.all(MySchema, prefix: "public")
+      assert schema.__meta__.prefix == "public"
+    end
+
+    test "get, get_by, one and all ignores prefix if schema_prefix set" do
+      assert schema = TestRepo.get(MySchemaWithPrefix, 123, prefix: "public")
+      assert schema.__meta__.prefix == "private"
+
+      assert schema = TestRepo.get_by(MySchemaWithPrefix, [id: 123], prefix: "public")
+      assert schema.__meta__.prefix == "private"
+
+      assert schema = TestRepo.one(MySchemaWithPrefix, prefix: "public")
+      assert schema.__meta__.prefix == "private"
+
+      assert [schema] = TestRepo.all(MySchemaWithPrefix, prefix: "public")
+      assert schema.__meta__.prefix == "private"
+    end
+
+    test "insert and delete sets schema prefix with struct" do
+      valid = %MySchema{id: 1}
+
+      assert {:ok, schema} = TestRepo.insert(valid, prefix: "public")
+      assert schema.__meta__.prefix == "public"
+
+      assert {:ok, schema} = TestRepo.delete(valid, prefix: "public")
+      assert schema.__meta__.prefix == "public"
+    end
+
+    test "insert and delete prefix overrides schema_prefix with struct" do
+      valid = %MySchemaWithPrefix{id: 1}
+
+      assert {:ok, schema} = TestRepo.insert(valid, prefix: "public")
+      assert schema.__meta__.prefix == "public"
+
+      assert {:ok, schema} = TestRepo.delete(valid, prefix: "public")
+      assert schema.__meta__.prefix == "public"
+    end
+
+    test "insert, update, insert_or_update and delete sets schema prefix with changeset" do
       valid = Ecto.Changeset.cast(%MySchema{id: 1}, %{x: "foo"}, [:x])
 
       assert {:ok, schema} = TestRepo.insert(valid, prefix: "public")
+      assert schema.__meta__.prefix == "public"
+
+      assert {:ok, schema} = TestRepo.insert_or_update(valid, prefix: "public")
+      assert schema.__meta__.prefix == "public"
+
+      assert {:ok, schema} = TestRepo.update(valid, prefix: "public")
+      assert schema.__meta__.prefix == "public"
+
+      assert {:ok, schema} = TestRepo.delete(valid, prefix: "public")
+      assert schema.__meta__.prefix == "public"
+    end
+
+    test "insert, update, insert_or_update and delete prefix overrides schema_prefix" do
+      valid = Ecto.Changeset.cast(%MySchemaWithPrefix{id: 1}, %{x: "foo"}, [:x])
+
+      assert {:ok, schema} = TestRepo.insert(valid)
+      assert schema.__meta__.prefix == "private"
+
+      assert {:ok, schema} = TestRepo.insert(valid, prefix: "public")
+      assert schema.__meta__.prefix == "public"
+
+      assert {:ok, schema} = TestRepo.insert_or_update(valid, prefix: "public")
       assert schema.__meta__.prefix == "public"
 
       assert {:ok, schema} = TestRepo.update(valid, prefix: "public")
@@ -560,14 +652,83 @@ defmodule Ecto.RepoTest do
         |> Ecto.Changeset.cast(%{x: "foo"}, [:x])
         |> Map.put(:repo_opts, [prefix: "public"])
 
-      assert {:ok, schema} = TestRepo.insert(valid, prefix: "public")
+      assert {:ok, schema} = TestRepo.insert(valid)
       assert schema.__meta__.prefix == "public"
+
+      assert {:ok, schema} = TestRepo.update(valid)
+      assert schema.__meta__.prefix == "public"
+
+      assert {:ok, schema} = TestRepo.delete(valid)
+      assert schema.__meta__.prefix == "public"
+    end
+
+    test "insert, update, and delete prefix option overrides repo opts" do
+      valid =
+        %MySchema{id: 1}
+        |> Ecto.Changeset.cast(%{x: "foo"}, [:x])
+        |> Map.put(:repo_opts, [prefix: "public"])
+
+      assert {:ok, schema} = TestRepo.insert(valid, prefix: "private")
+      assert schema.__meta__.prefix == "private"
+
+      assert {:ok, schema} = TestRepo.update(valid, prefix: "private")
+      assert schema.__meta__.prefix == "private"
+
+      assert {:ok, schema} = TestRepo.delete(valid, prefix: "private")
+      assert schema.__meta__.prefix == "private"
+    end
+
+    test "insert, update and insert_or_update parent schema_prefix overrides children schema_prefix" do
+      assert {:ok, schema} = TestRepo.insert(%MyParent{id: 1})
+      assert schema.__meta__.prefix == "private"
+
+      valid =
+        %MySchemaWithAssoc{id: 1}
+        |> TestRepo.preload(:parent)
+        |> Ecto.Changeset.cast(%{parent: %{id: 1}}, [])
+        |> Ecto.Changeset.cast_assoc(:parent)
+
+      assert {:ok, schema} = TestRepo.insert(valid)
+      assert schema.parent.__meta__.prefix == nil
+
+      assert {:ok, schema} = TestRepo.insert_or_update(valid)
+      assert schema.parent.__meta__.prefix == nil
+
+      assert {:ok, schema} = TestRepo.update(valid)
+      assert schema.parent.__meta__.prefix == nil
+    end
+
+    test "insert, update and insert_or_update prefix overrides schema_prefix in associations" do
+      valid =
+        %MySchemaWithAssoc{id: 1}
+        |> TestRepo.preload(:parent)
+        |> Ecto.Changeset.cast(%{parent: %{id: 1}}, [])
+        |> Ecto.Changeset.cast_assoc(:parent)
+
+      assert {:ok, schema} = TestRepo.insert(valid, prefix: "public")
+      assert schema.parent.__meta__.prefix == "public"
+
+      assert {:ok, schema} = TestRepo.insert_or_update(valid, prefix: "public")
+      assert schema.parent.__meta__.prefix == "public"
 
       assert {:ok, schema} = TestRepo.update(valid, prefix: "public")
-      assert schema.__meta__.prefix == "public"
+      assert schema.parent.__meta__.prefix == "public"
+    end
 
-      assert {:ok, schema} = TestRepo.delete(valid, prefix: "public")
-      assert schema.__meta__.prefix == "public"
+    test "insert, and update prefix option overrides repo opts in associations" do
+      valid =
+        %MySchemaWithAssoc{id: 1}
+        |> TestRepo.preload(:parent)
+        |> Ecto.Changeset.cast(%{parent: %{n: 1}}, [])
+        |> Ecto.Changeset.cast_assoc(:parent)
+
+      valid = put_in(valid.changes.parent.repo_opts, [prefix: "public"])
+
+      assert {:ok, schema} = TestRepo.insert(valid, prefix: "other")
+      assert schema.parent.__meta__.prefix == "other"
+
+      assert {:ok, schema} = TestRepo.update(valid, prefix: "other")
+      assert schema.parent.__meta__.prefix == "other"
     end
 
     test "insert, update, insert_or_update and delete errors on invalid changeset" do
