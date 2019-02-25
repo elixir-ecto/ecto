@@ -305,6 +305,7 @@ defmodule Ecto.Changeset do
     less_than_or_equal_to:    {&<=/2, "must be less than or equal to %{number}"},
     greater_than_or_equal_to: {&>=/2, "must be greater than or equal to %{number}"},
     equal_to:                 {&==/2, "must be equal to %{number}"},
+    not_equal_to:             {&!=/2, "must be not equal to %{number}"},
   }
 
   @relations [:embed, :assoc]
@@ -1986,12 +1987,14 @@ defmodule Ecto.Changeset do
     * `:less_than_or_equal_to`
     * `:greater_than_or_equal_to`
     * `:equal_to`
+    * `:not_equal_to`
     * `:message` - the message on failure, defaults to one of:
       * "must be less than %{number}"
       * "must be greater than %{number}"
       * "must be less than or equal to %{number}"
       * "must be greater than or equal to %{number}"
       * "must be equal to %{number}"
+      * "must be not equal to %{number}"
 
   ## Examples
 
@@ -2043,8 +2046,8 @@ defmodule Ecto.Changeset do
   defp decimal_new(term) when is_float(term), do: Decimal.from_float(term)
   defp decimal_new(term), do: Decimal.new(term)
 
-  defp decimal_compare(:lt, spec), do: spec in [:less_than, :less_than_or_equal_to]
-  defp decimal_compare(:gt, spec), do: spec in [:greater_than, :greater_than_or_equal_to]
+  defp decimal_compare(:lt, spec), do: spec in [:less_than, :less_than_or_equal_to, :not_equal_to]
+  defp decimal_compare(:gt, spec), do: spec in [:greater_than, :greater_than_or_equal_to, :not_equal_to]
   defp decimal_compare(:eq, spec), do: spec in [:equal_to, :less_than_or_equal_to, :greater_than_or_equal_to]
 
   @doc """
