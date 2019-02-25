@@ -1095,6 +1095,13 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [upvotes: {"must be greater than %{number}", validation: :number, kind: :greater_than, number: 0}]
     assert validations(changeset) == [upvotes: {:number, [greater_than: 0]}]
 
+    # Non equality error
+    changeset = changeset(%{"upvotes" => 1})
+                |> validate_number(:upvotes, not_equal_to: 1)
+    refute changeset.valid?
+    assert changeset.errors == [upvotes: {"must be not equal to %{number}", validation: :number, kind: :not_equal_to, number: 1}]
+    assert validations(changeset) == [upvotes: {:number, [not_equal_to: 1]}]
+
     # Multiple validations
     changeset = changeset(%{"upvotes" => 3})
                 |> validate_number(:upvotes, greater_than: 0, less_than: 100)
