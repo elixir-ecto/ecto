@@ -152,7 +152,7 @@ defmodule Ecto.Query.WindowAPI do
 
   @doc """
   Returns value evaluated at the row that is the nth row of the window
-  frame (counting from 1); null if no such row.
+  frame (counting from 1); `nil` if no such row.
 
       from p in Post,
            select: nth_value(p.id, 4) |> over(partition_by: p.category_id, order_by: p.date)
@@ -165,9 +165,9 @@ defmodule Ecto.Query.WindowAPI do
   Returns value evaluated at the row that is offset rows before
   the current row within the partition.
 
-  Ff there is no such row, instead return default (which must be of the
+  If there is no such row, instead return default (which must be of the
   same type as value). Both offset and default are evaluated with respect
-  to the current row. If omitted, offset defaults to 1 and default to null.
+  to the current row. If omitted, offset defaults to 1 and default to `nil`.
 
       from e in Events,
            windows: [w: [partition_by: e.name, order_by: e.tick]],
@@ -187,9 +187,9 @@ defmodule Ecto.Query.WindowAPI do
   Returns value evaluated at the row that is offset rows after
   the current row within the partition.
 
-  Ff there is no such row, instead return default (which must be of the
+  If there is no such row, instead return default (which must be of the
   same type as value). Both offset and default are evaluated with respect
-  to the current row. If omitted, offset defaults to 1 and default to null.
+  to the current row. If omitted, offset defaults to 1 and default to `nil`.
 
       from e in Events,
            windows: [w: [partition_by: e.name, order_by: e.tick],
