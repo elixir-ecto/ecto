@@ -487,7 +487,7 @@ defmodule Ecto.Repo do
             ) :: Ecto.Schema.t() | nil
 
   @doc """
-  Similar to `get_by/3` but raises `Ecto.NoResultsError` if no record was found.
+  Similar to `c:get_by/3` but raises `Ecto.NoResultsError` if no record was found.
 
   Raises if more than one entry.
 
