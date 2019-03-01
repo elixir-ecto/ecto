@@ -16,6 +16,10 @@ defmodule Ecto.LogEntry do
 
   Notice all times are stored in native unit. You must convert them to
   the proper unit by using `System.convert_time_unit/3` before logging.
+
+  Note: `Ecto.LogEntry` is currently soft-deprecated and will be hard-deprecated
+  in 3.1.x. Instead you should use "Telemetry Events" (as documented in the
+  `Ecto.Repo` docs)
   """
 
   alias Ecto.LogEntry

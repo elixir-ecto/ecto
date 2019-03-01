@@ -238,7 +238,7 @@ Although Ecto 3.0 is a major bump version, the functionality below emits depreca
   * [Ecto.Query] `join/5` now expects `on: expr` as last argument instead of simply `expr`. This was done in order to properly support the `:as`, `:hints` and `:prefix` options
   * [Ecto.Repo] The `:returning` option for `update_all` and `delete_all` has been deprecated as those statements now support `select` clauses
   * [Ecto.Repo] Passing `:adapter` via config is deprecated in favor of passing it on `use Ecto.Repo`
-  * [Ecto.Repo] The `:loggers` configuration is deprecated in favor of "Telemetry Events"
+  * [Ecto.Repo] The `:loggers` configuration (and `Ecto.LogEntry`) is deprecated in favor of "Telemetry Events"
 
 ### Backwards incompatible changes
 
