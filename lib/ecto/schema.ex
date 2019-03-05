@@ -1342,7 +1342,7 @@ defmodule Ecto.Schema do
   You must declare your `embeds_one/3` field with type `:map` at the
   database level.
 
-  The embedded may or may not have a primary key. Ecto use the primary keys
+  The embedded may or may not have a primary key. Ecto uses the primary keys
   to detect if an embed is being updated or not. If a primary is not present,
   `:on_replace` should be set to either `:update` or `:delete` if there is a
   desire to either update or delete the current embed when a new one is set.
@@ -1494,7 +1494,7 @@ defmodule Ecto.Schema do
   both maps and arrays as the container for embeds (and in most databases
   map are represented as JSON which allows Ecto to choose what works best).
 
-  The embedded may or may not have a primary key. Ecto use the primary keys
+  The embedded may or may not have a primary key. Ecto uses the primary keys
   to detect if an embed is being updated or not. If a primary is not present
   and you still want the list of embeds to be updated, `:on_replace` must be
   set to `:delete`, forcing all current embeds to be deleted and replaced by
