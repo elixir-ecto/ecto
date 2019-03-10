@@ -137,7 +137,7 @@ defmodule Ecto.Type do
   Loads the given term into a custom type.
 
   This callback is called when loading data from the database and
-  receive an Ecto native type. It can return any type, as long as
+  receives an Ecto native type. It can return any type, as long as
   the `dump/1` function is able to convert the returned value back
   into an Ecto native type.
   """
