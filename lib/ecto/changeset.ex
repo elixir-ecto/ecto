@@ -1489,11 +1489,11 @@ defmodule Ecto.Changeset do
 
     * `{:number,  [option]}`
 
-     * `equal_to: n`
-     * `greater_than: n`
-     * `greater_than_or_equal_to: n`
-     * `less_than: n`
-     * `less_than_or_equal_to: n`
+      * `equal_to: n`
+      * `greater_than: n`
+      * `greater_than_or_equal_to: n`
+      * `less_than: n`
+      * `less_than_or_equal_to: n`
 
   The other validators simply take a value:
 
