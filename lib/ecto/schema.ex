@@ -1836,6 +1836,8 @@ defmodule Ecto.Schema do
 
     block =
       quote do
+        @moduledoc false
+
         use Ecto.Schema
 
         @primary_key unquote(Macro.escape(pk))
