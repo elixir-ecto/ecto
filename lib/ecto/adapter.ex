@@ -52,8 +52,9 @@ defmodule Ecto.Adapter do
 
   If the adapter provides a pool, it is supposed to 'check out'
   one of the pool connections for the duration of the function call.
-  Which connections is checked out is not passed to the calling function, so it should be done
-  using a stateful method like the calling process' pdict (Process Dictionary),
+  Which connections is checked out is not passed to the calling function,
+  so it should be done using a stateful method like using
+  the current process' pdict (Process Dictionary),
   Process Tracking, or some kind of other lookup method.
   (Of course, make sure that this stored connection is then used
   in the implementations of e.g. `Ecto.Adapter.Queryable` and `Ecto.Adapter.Schema`.)
