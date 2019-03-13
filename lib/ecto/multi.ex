@@ -324,7 +324,7 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.run(:post, fn _repo, _changes ->
-           MyApp.Repo.get!(Post, 1)
+           {:ok, MyApp.Repo.get(Post, 1) || %Post{}}
          end)
       |> Ecto.Multi.insert_or_update(:update, fn %{post: post} ->
            Ecto.Changeset.change(post, title: "New title")
@@ -361,7 +361,10 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.run(:post, fn _repo, _changes ->
-           MyApp.Repo.get!(Post, 1)
+           case MyApp.Repo.get(Post, 1) do
+             nil -> {:error, :not_found}
+             post -> {:ok, post}
+           end
          end)
       |> Ecto.Multi.delete(:delete, fn %{post: post} ->
            # Others validations
@@ -424,7 +427,9 @@ defmodule Ecto.Multi do
   ## Example
 
       Ecto.Multi.run(multi, :write, fn _repo, %{image: image} ->
-        File.write!(image.name, image.contents)
+        with :ok <- File.write(image.name, image.contents) do
+          {:ok, nil}
+        end
       end)
   """
   @spec run(t, name, run) :: t
