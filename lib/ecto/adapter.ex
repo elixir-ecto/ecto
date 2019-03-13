@@ -50,14 +50,13 @@ defmodule Ecto.Adapter do
   If the adapter does not provide a pool, just calling the passed function
   and returning its result are enough.
 
-  If the adapter provides a pool, it is supposed to 'check out'
-  one of the pool connections for the duration of the function call.
-  Which connections is checked out is not passed to the calling function,
-  so it should be done using a stateful method like using
-  the current process' pdict (Process Dictionary),
-  Process Tracking, or some kind of other lookup method.
-  (Of course, make sure that this stored connection is then used
-  in the implementations of e.g. `Ecto.Adapter.Queryable` and `Ecto.Adapter.Schema`.)
+  If the adapter provides a pool, it is supposed to "check out" one of the
+  pool connections for the duration of the function call. Which connection
+  is checked out is not passed to the calling function, so it should be done
+  using a stateful method like using the current process' dictionary, process
+  tracking, or some kind of other lookup method. Make sure that this stored
+  connection is then used in the other callbacks implementations, such as
+  `Ecto.Adapter.Queryable` and `Ecto.Adapter.Schema`.
   """
   @callback checkout(adapter_meta, config :: Keyword.t(), (() -> result)) :: result when result: var
 
