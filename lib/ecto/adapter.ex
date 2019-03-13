@@ -37,9 +37,28 @@ defmodule Ecto.Adapter do
   Checks out a connection for the duration of the given function.
 
   In case the adapter provides a pool, this guarantees all of the code
-  inside the given `fun` runs against the same connection.
+  inside the given `fun` runs against the same connection, which
+  might improve performance by for instance allowing multiple related
+  calls to the datastore to share cache information:
+
+      Repo.checkout(fn ->
+        for _ <- 100 do
+          Repo.insert!(%Post{})
+        end
+      end)
+
+  If the adapter does not provide a pool, just calling the passed function
+  and returning its result are enough.
+
+  If the adapter provides a pool, it is supposed to "check out" one of the
+  pool connections for the duration of the function call. Which connection
+  is checked out is not passed to the calling function, so it should be done
+  using a stateful method like using the current process' dictionary, process
+  tracking, or some kind of other lookup method. Make sure that this stored
+  connection is then used in the other callbacks implementations, such as
+  `Ecto.Adapter.Queryable` and `Ecto.Adapter.Schema`.
   """
-  @callback checkout(adapter_meta, options :: Keyword.t(), (() -> result)) :: result when result: var
+  @callback checkout(adapter_meta, config :: Keyword.t(), (() -> result)) :: result when result: var
 
   @doc """
   Returns the loaders for a given type.

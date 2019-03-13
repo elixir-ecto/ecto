@@ -1,6 +1,10 @@
 defmodule Ecto.Adapter.Queryable do
   @moduledoc """
   Specifies the query API required from adapters.
+
+  If your adapter is only able to respond to one or a couple of the query functions,
+  add custom implementations of those functions directly to the Repo
+  by using `Ecto.Adapter.__before_compile__/1` instead.
   """
 
   @typedoc "Proxy type to the adapter meta"
