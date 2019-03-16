@@ -311,8 +311,8 @@ defmodule Ecto.Schema do
 
   In order to support maps, different databases may employ different
   techniques. For example, PostgreSQL will store those values in jsonb
-  fields, allowing you to just query parts of it. MySQL and MSSQL, on
-  the other hand, do not yet provide a JSON type, so the value will be
+  fields, allowing you to just query parts of it. MSSQL, on
+  the other hand, does not yet provide a JSON type, so the value will be
   stored in a text field.
 
   For maps to work in such databases, Ecto will need a JSON library.
