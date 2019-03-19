@@ -1141,4 +1141,21 @@ defmodule Ecto.RepoTest do
       refute function_exported?(NoTransactionRepo, :rollback, 1)
     end
   end
+
+  describe "dynamic repo" do
+    require Ecto.TestDynamicRepo, as: TestDynamicRepo
+
+    setup do
+      TestDynamicRepo.put_dynamic_repo(:tenant_db2)
+      :ok
+    end
+
+    test "works with primary key value" do
+      schema = %MySchema{id: 1, x: "abc"}
+      TestDynamicRepo.get(MySchema, 123)
+      TestDynamicRepo.get_by(MySchema, x: "abc")
+      TestDynamicRepo.update!(schema |> Ecto.Changeset.change, force: true)
+      TestDynamicRepo.delete!(schema)
+    end
+  end
 end

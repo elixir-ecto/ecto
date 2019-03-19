@@ -145,3 +145,15 @@ defmodule Ecto.TestRepo do
 end
 
 Ecto.TestRepo.start_link()
+
+defmodule Ecto.TestDynamicRepo do
+  use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
+
+  def init(type, opts) do
+    opts = [url: "ecto://user:pass@local/hello"] ++ opts
+    {:ok, opts}
+  end
+end
+
+Ecto.TestDynamicRepo.start_link(name: :tenant_db1)
+Ecto.TestDynamicRepo.start_link(name: :tenant_db2)
