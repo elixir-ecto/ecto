@@ -554,7 +554,7 @@ defmodule Ecto.Changeset do
     do: {key, Atom.to_string(key)}
 
   defp cast_key(key),
-    do: raise ArgumentError, "cast/3 expects a list of atom keys,, got: `#{inspect key}`"
+    do: raise ArgumentError, "cast/3 expects a list of atom keys, got: `#{inspect key}`"
 
   defp cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
     case params do
