@@ -779,6 +779,7 @@ defmodule Ecto.Type do
     |> adapter.autogenerate()
   end
 
+  @doc false
   def adapter_load(_adapter, {:embed, embed}, nil) do
     load_embed(embed, nil, &load/2)
   end
