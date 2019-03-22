@@ -2314,7 +2314,7 @@ defmodule Ecto.Changeset do
   how to convert it into an error message:
 
       cast(user, params, [:price])
-      |> check_constraint(:price_must_be_positive)
+      |> check_constraint(:price, name: :price_must_be_positive)
 
   Now, when invoking `Repo.insert/2` or `Repo.update/2`, if the
   price is not positive, it will be converted into an error and
