@@ -30,7 +30,10 @@ defmodule Mix.Ecto do
       end
 
     apps
-    |> Enum.flat_map(&Application.get_env(&1, :ecto_repos, []))
+    |> Enum.flat_map(fn app ->
+      Application.load(app)
+      Application.get_env(app, :ecto_repos, [])
+    end)
     |> Enum.uniq()
     |> case do
       [] ->
