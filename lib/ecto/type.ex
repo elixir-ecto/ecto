@@ -894,18 +894,35 @@ defmodule Ecto.Type do
 
   ## Naive datetime
 
+  defp cast_naive_datetime("-" <> rest) do
+    with {:ok, naive_datetime} <- cast_naive_datetime(rest) do
+      {:ok, %{naive_datetime | year: naive_datetime.year * -1}}
+    end
+  end
+
+  defp cast_naive_datetime(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes, sep, hour::2-bytes, ?:, minute::2-bytes>>)
+       when sep in [?\s, ?T] do
+    case NaiveDateTime.new(to_i(year), to_i(month), to_i(day), to_i(hour), to_i(minute), 0) do
+      {:ok, _} = ok -> ok
+      _ -> :error
+    end
+  end
+
   defp cast_naive_datetime(binary) when is_binary(binary) do
     case NaiveDateTime.from_iso8601(binary) do
       {:ok, _} = ok -> ok
       {:error, _} -> :error
     end
   end
+
   defp cast_naive_datetime(%{"year" => empty, "month" => empty, "day" => empty,
                              "hour" => empty, "minute" => empty}) when empty in ["", nil],
     do: {:ok, nil}
+
   defp cast_naive_datetime(%{year: empty, month: empty, day: empty,
                              hour: empty, minute: empty}) when empty in ["", nil],
     do: {:ok, nil}
+
   defp cast_naive_datetime(%{} = map) do
     with {:ok, date} <- cast_date(map),
          {:ok, time} <- cast_time(map) do
@@ -915,11 +932,26 @@ defmodule Ecto.Type do
       end
     end
   end
+
   defp cast_naive_datetime(_) do
     :error
   end
 
   ## UTC datetime
+
+  defp cast_utc_datetime("-" <> rest) do
+    with {:ok, utc_datetime} <- cast_utc_datetime(rest) do
+      {:ok, %{utc_datetime | year: utc_datetime.year * -1}}
+    end
+  end
+
+  defp cast_utc_datetime(<<year::4-bytes, ?-, month::2-bytes, ?-, day::2-bytes, sep, hour::2-bytes, ?:, minute::2-bytes>>)
+       when sep in [?\s, ?T] do
+    case NaiveDateTime.new(to_i(year), to_i(month), to_i(day), to_i(hour), to_i(minute), 0) do
+      {:ok, naive_datetime} -> {:ok, DateTime.from_naive!(naive_datetime, "Etc/UTC")}
+      _ -> :error
+    end
+  end
 
   defp cast_utc_datetime(binary) when is_binary(binary) do
     case DateTime.from_iso8601(binary) do
