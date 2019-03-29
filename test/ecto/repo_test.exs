@@ -304,53 +304,23 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  describe "insert" do
-    test "passes returning" do
-      TestRepo.insert(%MySchemaWithAssoc{}, returning: [:id])
-      assert_received {:insert, %{source: "my_schema", returning: [:id]}}
-      TestRepo.insert(%MySchemaWithAssoc{}, returning: true)
-      assert_received {:insert, %{source: "my_schema", returning: [:id, :parent_id, :n]}}
-      TestRepo.insert(%MySchemaWithAssoc{}, returning: false)
-      assert_received {:insert, %{source: "my_schema", returning: [:id]}}
-    end
-
-    test "passes returning to children when it's value is a boolean" do
-      TestRepo.insert(%MySchemaWithAssoc{id: 1, parent: %MyParent{}}, returning: true)
-      assert_receive {:insert, %{source: "my_parent", returning: [:id, :n]}}
-      TestRepo.insert(%MySchemaWithAssoc{id: 1, parent: %MyParent{}}, returning: false)
-      assert_receive {:insert, %{source: "my_parent", returning: [:id]}}
-    end
-
-    test "does not pass returning to children when value is a list" do
-      TestRepo.insert(%MySchemaWithAssoc{id: 1, parent: %MyParent{}}, returning: [:id])
-      assert_receive {:insert, %{source: "my_parent", returning: [:id]}}
-    end
+  test "insert with returning" do
+    TestRepo.insert(%MySchemaWithAssoc{}, returning: [:id])
+    assert_received {:insert, %{source: "my_schema", returning: [:id]}}
+    TestRepo.insert(%MySchemaWithAssoc{}, returning: true)
+    assert_received {:insert, %{source: "my_schema", returning: [:id, :parent_id, :n]}}
+    TestRepo.insert(%MySchemaWithAssoc{}, returning: false)
+    assert_received {:insert, %{source: "my_schema", returning: [:id]}}
   end
 
-  describe "update" do
-    test "passes returning" do
-      changeset = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{n: 2})
-      TestRepo.update(changeset, returning: [])
-      assert_received {:update, %{source: "my_schema", returning: []}}
-      TestRepo.update(changeset, returning: true)
-      assert_received {:update, %{source: "my_schema", returning: []}}
-      TestRepo.update(changeset, returning: false)
-      assert_received {:update, %{source: "my_schema", returning: []}}
-    end
-
-    test "passes returning to children when it's value is a boolean" do
-      changeset = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{n: 2, parent: %MyParent{}})
-      TestRepo.update!(changeset, returning: true)
-      assert_receive {:insert, %{source: "my_parent", returning: [:id, :n]}}
-      TestRepo.update(changeset, returning: false)
-      assert_receive {:insert, %{source: "my_parent", returning: [:id]}}
-    end
-
-    test "does not pass returning to children when value is a list" do
-      schema = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{n: 2, parent: %MyParent{}})
-      TestRepo.update(schema, returning: [:id])
-      assert_receive {:insert, %{source: "my_parent", returning: [:id]}}
-    end
+  test "update with returning" do
+    changeset = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{n: 2})
+    TestRepo.update(changeset, returning: [])
+    assert_received {:update, %{source: "my_schema", returning: []}}
+    TestRepo.update(changeset, returning: true)
+    assert_received {:update, %{source: "my_schema", returning: []}}
+    TestRepo.update(changeset, returning: false)
+    assert_received {:update, %{source: "my_schema", returning: []}}
   end
 
   describe "insert_all" do

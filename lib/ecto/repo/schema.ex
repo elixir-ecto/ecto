@@ -45,12 +45,10 @@ defmodule Ecto.Repo.Schema do
     counter = fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
     schema_meta = metadata(schema, prefix, source, autogen_id, nil, opts)
 
-    {on_conflict, opts} = Keyword.pop(opts, :on_conflict, :raise)
-    {conflict_target, opts} = Keyword.pop(opts, :conflict_target, [])
+    on_conflict = Keyword.get(opts, :on_conflict, :raise)
+    conflict_target = Keyword.get(opts, :conflict_target, [])
     conflict_target = conflict_target(conflict_target, dumper)
-
-    on_conflict =
-      on_conflict(on_conflict, conflict_target, schema_meta, counter, adapter)
+    on_conflict = on_conflict(on_conflict, conflict_target, schema_meta, counter, adapter)
 
     {count, rows} =
       adapter.insert_all(adapter_meta, schema_meta, Map.keys(header), rows, on_conflict, return_sources, opts)
@@ -227,8 +225,8 @@ defmodule Ecto.Repo.Schema do
       |> add_read_after_writes(schema)
       |> fields_to_sources(dumper)
 
-    {on_conflict, opts} = Keyword.pop(opts, :on_conflict, :raise)
-    {conflict_target, opts} = Keyword.pop(opts, :conflict_target, [])
+    on_conflict = Keyword.get(opts, :on_conflict, :raise)
+    conflict_target = Keyword.get(opts, :conflict_target, [])
     conflict_target = conflict_target(conflict_target, dumper)
 
     # On insert, we always merge the whole struct into the
@@ -237,11 +235,11 @@ defmodule Ecto.Repo.Schema do
     changeset = surface_changes(changeset, struct, fields ++ assocs)
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
-      opts = Keyword.put(opts, :skip_transaction, true)
+      assoc_opts = assoc_opts(assocs, opts)
       user_changeset = run_prepare(changeset, prepare)
 
       {changeset, parents, children} = pop_assocs(user_changeset, assocs)
-      changeset = process_parents(changeset, parents, adapter, opts)
+      changeset = process_parents(changeset, parents, adapter, assoc_opts)
 
       if changeset.valid? do
         embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :insert)
@@ -267,7 +265,7 @@ defmodule Ecto.Repo.Schema do
 
             changeset
             |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, schema_meta)
-            |> process_children(children, user_changeset, adapter, opts)
+            |> process_children(children, user_changeset, adapter, assoc_opts)
 
           {:error, _} = error ->
             error
@@ -302,7 +300,6 @@ defmodule Ecto.Repo.Schema do
   defp do_update(name, %Changeset{valid?: true} = changeset, opts) do
     {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     %{prepare: prepare, repo_opts: repo_opts} = changeset
-    {force?, repo_opts} = Keyword.pop(repo_opts, :force, false)
     opts = Keyword.merge(repo_opts, opts)
 
     struct = struct_from_changeset!(:update, changeset)
@@ -312,7 +309,7 @@ defmodule Ecto.Repo.Schema do
     assocs = schema.__schema__(:associations)
     embeds = schema.__schema__(:embeds)
 
-    force? = !!(force? || opts[:force])
+    force? = !!opts[:force]
     filters = add_pk_filter!(changeset.filters, struct)
 
     {return_types, return_sources} =
@@ -326,11 +323,11 @@ defmodule Ecto.Repo.Schema do
 
     if changeset.changes != %{} or force? do
       wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
-        opts = Keyword.put(opts, :skip_transaction, true)
+        assoc_opts = assoc_opts(assocs, opts)
         user_changeset = run_prepare(changeset, prepare)
 
         {changeset, parents, children} = pop_assocs(user_changeset, assocs)
-        changeset = process_parents(changeset, parents, adapter, opts)
+        changeset = process_parents(changeset, parents, adapter, assoc_opts)
 
         if changeset.valid? do
           embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
@@ -352,7 +349,7 @@ defmodule Ecto.Repo.Schema do
             {:ok, values} ->
               changeset
               |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, schema_meta)
-              |> process_children(children, user_changeset, adapter, opts)
+              |> process_children(children, user_changeset, adapter, assoc_opts)
 
             {:error, _} = error ->
               error
@@ -804,6 +801,15 @@ defmodule Ecto.Repo.Schema do
     {%{changeset | changes: changes}, parent, child}
   end
 
+  # Don't mind computing options if there are no assocs
+  defp assoc_opts([], _opts), do: []
+
+  defp assoc_opts(_assocs, opts) do
+    opts
+    |> Keyword.take([:timeout, :log, :telemetry_event, :prefix])
+    |> Keyword.put(:skip_transaction, true)
+  end
+
   defp process_parents(%{changes: changes} = changeset, assocs, adapter, opts) do
     case Ecto.Association.on_repo_change(changeset, assocs, adapter, opts) do
       {:ok, struct} ->
@@ -831,20 +837,10 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp process_children(changeset, assocs, user_changeset, adapter, opts) do
-    opts = process_children_opts(opts)
-
     case Ecto.Association.on_repo_change(changeset, assocs, adapter, opts) do
       {:ok, struct} -> {:ok, struct}
       {:error, changes} ->
         {:error, %{user_changeset | valid?: false, changes: changes}}
-    end
-  end
-
-  defp process_children_opts(opts) do
-    if is_list(Keyword.get(opts, :returning)) do
-      Keyword.delete(opts, :returning)
-    else
-      opts
     end
   end
 
