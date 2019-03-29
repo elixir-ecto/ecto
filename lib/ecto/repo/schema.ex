@@ -301,6 +301,7 @@ defmodule Ecto.Repo.Schema do
   defp do_update(name, %Changeset{valid?: true} = changeset, opts) do
     {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     %{prepare: prepare, repo_opts: repo_opts} = changeset
+    {force?, repo_opts} = Keyword.pop(repo_opts, :force, false)
     opts = Keyword.merge(repo_opts, opts)
 
     struct = struct_from_changeset!(:update, changeset)
@@ -310,7 +311,7 @@ defmodule Ecto.Repo.Schema do
     assocs = schema.__schema__(:associations)
     embeds = schema.__schema__(:embeds)
 
-    force? = !!opts[:force]
+    force? = !!(force? || opts[:force])
     filters = add_pk_filter!(changeset.filters, struct)
 
     {return_types, return_sources} =
