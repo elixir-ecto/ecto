@@ -278,7 +278,11 @@ defmodule Ecto.Schema do
     * `utc_datetime_usec` has a default precision of microseconds and also
       casts values to `DateTime` expecting the time zone be set to UTC.
 
-  Having these different types allows developers to choose a type that will
+  All of those types are represented by the same timestamp/datetime in the
+  underlying data storage, the difference are in their precision and how the
+  data is loaded into Elixir.
+
+  Having different precisions allows developers to choose a type that will
   be compatible with the database and your project's precision requirements.
   For example, some older versions of MySQL do not support microseconds in
   datetime fields.
