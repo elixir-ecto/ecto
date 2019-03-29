@@ -1141,4 +1141,21 @@ defmodule Ecto.RepoTest do
       refute function_exported?(NoTransactionRepo, :rollback, 1)
     end
   end
+
+  describe "dynamic repo" do
+    test "insert runs prepare callbacks in transaction" do
+      changeset =
+        %MySchema{id: 1}
+        |> Ecto.Changeset.cast(%{x: "one"}, [:x])
+        |> Ecto.Changeset.prepare_changes(fn %{repo: repo} = changeset ->
+          Process.put(:ecto_repo, repo)
+          changeset
+        end)
+
+      pid = Process.whereis(:tenant_db)
+      Ecto.TestRepo.insert!(changeset, [], pid)
+      assert_received {:transaction, _}
+      assert Process.get(:ecto_repo) == Ecto.TestRepo
+    end
+  end
 end

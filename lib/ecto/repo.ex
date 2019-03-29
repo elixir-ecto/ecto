@@ -201,8 +201,8 @@ defmodule Ecto.Repo do
           Ecto.Repo.Schema.delete(__MODULE__, struct, opts)
         end
 
-        def insert!(struct, opts \\ []) do
-          Ecto.Repo.Schema.insert!(__MODULE__, struct, opts)
+        def insert!(struct, opts \\ [], repo_name_or_pid \\ __MODULE__) do
+          Ecto.Repo.Schema.insert!(repo_name_or_pid, struct, opts)
         end
 
         def update!(struct, opts \\ []) do
