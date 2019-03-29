@@ -233,7 +233,7 @@ defmodule Ecto.Repo.Schema do
 
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
-    changeset = put_repo_and_action(changeset, :insert, name)
+    changeset = put_repo_and_action(changeset, :insert, adapter_meta)
     changeset = surface_changes(changeset, struct, fields ++ assocs)
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
@@ -282,7 +282,8 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_insert(name, %Changeset{valid?: false} = changeset, _opts) do
-    {:error, put_repo_and_action(changeset, :insert, name)}
+    {_, adapter_meta} = Ecto.Repo.Registry.lookup(name)
+    {:error, put_repo_and_action(changeset, :insert, adapter_meta)}
   end
 
   @doc """
@@ -320,7 +321,7 @@ defmodule Ecto.Repo.Schema do
     # Differently from insert, update does not copy the struct
     # fields into the changeset. All changes must be in the
     # changeset before hand.
-    changeset = put_repo_and_action(changeset, :update, name)
+    changeset = put_repo_and_action(changeset, :update, adapter_meta)
 
     if changeset.changes != %{} or force? do
       wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
@@ -368,7 +369,8 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_update(name, %Changeset{valid?: false} = changeset, _opts) do
-    {:error, put_repo_and_action(changeset, :update, name)}
+    {_, adapter_meta} = Ecto.Repo.Registry.lookup(name)
+    {:error, put_repo_and_action(changeset, :update, adapter_meta)}
   end
 
   @doc """
@@ -423,7 +425,7 @@ defmodule Ecto.Repo.Schema do
     schema = struct.__struct__
     assocs = to_delete_assocs(schema)
     dumper = schema.__schema__(:dump)
-    changeset = put_repo_and_action(changeset, :delete, name)
+    changeset = put_repo_and_action(changeset, :delete, adapter_meta)
 
     wrap_in_transaction(adapter, adapter_meta, opts, assocs != [], prepare, fn ->
       changeset = run_prepare(changeset, prepare)
@@ -454,7 +456,8 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_delete(name, %Changeset{valid?: false} = changeset, _opts) do
-    {:error, put_repo_and_action(changeset, :delete, name)}
+    {_, adapter_meta} = Ecto.Repo.Registry.lookup(name)
+    {:error, put_repo_and_action(changeset, :delete, adapter_meta)}
   end
 
   def load(adapter, schema_or_types, data) do
@@ -506,7 +509,7 @@ defmodule Ecto.Repo.Schema do
   defp struct_from_changeset!(_action, %{data: struct}),
     do: struct
 
-  defp put_repo_and_action(%{action: :ignore, valid?: valid?} = changeset, action, repo) do
+  defp put_repo_and_action(%{action: :ignore, valid?: valid?} = changeset, action, %{repo: repo}) do
     if valid? do
       raise ArgumentError, "a valid changeset with action :ignore was given to " <>
                            "#{inspect repo}.#{action}/2. Changesets can only be ignored " <>
@@ -515,9 +518,9 @@ defmodule Ecto.Repo.Schema do
       %{changeset | action: action, repo: repo}
     end
   end
-  defp put_repo_and_action(%{action: given}, action, repo) when given != nil and given != action,
+  defp put_repo_and_action(%{action: given}, action, %{repo: repo}) when given != nil and given != action,
     do: raise ArgumentError, "a changeset with action #{inspect given} was given to #{inspect repo}.#{action}/2"
-  defp put_repo_and_action(changeset, action, repo),
+  defp put_repo_and_action(changeset, action, %{repo: repo}),
     do: %{changeset | action: action, repo: repo}
 
   defp run_prepare(changeset, prepare) do
