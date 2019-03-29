@@ -1,7 +1,7 @@
 defmodule Ecto.MixProject do
   use Mix.Project
 
-  @version "3.0.7"
+  @version "3.0.8"
 
   def project do
     [
