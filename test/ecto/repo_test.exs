@@ -1153,7 +1153,7 @@ defmodule Ecto.RepoTest do
         end)
 
       pid = Process.whereis(:tenant_db)
-      Ecto.TestRepo.insert!(changeset, [], pid)
+      Ecto.TestRepo.insert!(changeset, [repo_name_or_pid: pid])
       assert_received {:transaction, _}
       assert Process.get(:ecto_repo) == Ecto.TestRepo
     end
