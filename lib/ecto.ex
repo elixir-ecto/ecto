@@ -82,7 +82,7 @@ defmodule Ecto do
 
   ## Schema
 
-  Schemas allows developers to define the shape of their data.
+  Schemas allow developers to define the shape of their data.
   Let's see an example:
 
       defmodule Weather do
