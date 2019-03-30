@@ -300,6 +300,12 @@ defmodule Ecto.QueryTest do
       end
     end
 
+    test "is not type checked but emits typed params" do
+      query = from "addresses", as: :address
+      query = where(query, [address: q], field(q, ^:foo) == ago(^1, "year"))
+      assert hd(query.wheres).params != []
+    end
+
     test "crashes on duplicate as for keyword query" do
       message = ~r"`as` keyword was given more than once"
       assert_raise Ecto.Query.CompileError, message, fn ->

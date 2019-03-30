@@ -543,17 +543,18 @@ defmodule Ecto.Query.Builder do
   defp call_type(:ilike, 2), do: {:string, :boolean}
   defp call_type(_, _), do: nil
 
-  defp assert_type!(_expr, {int, _field}, _actual) when is_integer(int) do
-    :ok
-  end
-
   defp assert_type!(expr, type, actual) do
-    if Ecto.Type.match?(type, actual) do
-      :ok
-    else
-      error! "expression `#{Macro.to_string(expr)}` does not type check. " <>
-             "It returns a value of type #{inspect actual} but a value of " <>
-             "type #{inspect type} is expected"
+    cond do
+      not is_atom(type) and not Ecto.Type.primitive?(type) ->
+        :ok
+
+      Ecto.Type.match?(type, actual) ->
+        :ok
+
+      true ->
+        error! "expression `#{Macro.to_string(expr)}` does not type check. " <>
+               "It returns a value of type #{inspect actual} but a value of " <>
+               "type #{inspect type} is expected"
     end
   end
 
