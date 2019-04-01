@@ -23,6 +23,8 @@ defmodule Ecto.Repo.Registry do
     :ets.lookup_element(__MODULE__, pid, 3)
   end
 
+  def lookup(repo, opts), do: lookup(Keyword.get(opts, :repo_name_or_pid, repo))
+
   ## Callbacks
 
   @impl true

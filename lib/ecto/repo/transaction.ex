@@ -4,14 +4,12 @@ defmodule Ecto.Repo.Transaction do
   @dialyzer {:no_opaque, transaction: 3}
 
   def transaction(name, fun, opts) when is_function(fun, 0) do
-    repo_name_or_pid = Keyword.get(opts, :repo_name_or_pid, name)
-    {adapter, meta} = Ecto.Repo.Registry.lookup(repo_name_or_pid)
+    {adapter, meta} = Ecto.Repo.Registry.lookup(name, opts)
     adapter.transaction(meta, opts, fun)
   end
 
   def transaction(name, %Ecto.Multi{} = multi, opts) do
-    repo_name_or_pid = Keyword.get(opts, :repo_name_or_pid, name)
-    {adapter, meta} = Ecto.Repo.Registry.lookup(repo_name_or_pid)
+    {adapter, meta} = Ecto.Repo.Registry.lookup(name, opts)
     wrap = &adapter.transaction(meta, opts, &1)
     return = &adapter.rollback(meta, &1)
 
@@ -23,14 +21,12 @@ defmodule Ecto.Repo.Transaction do
   end
 
   def in_transaction?(name, opts) do
-    repo_name_or_pid = Keyword.get(opts, :repo_name_or_pid, name)
-    {adapter, meta} = Ecto.Repo.Registry.lookup(repo_name_or_pid)
+    {adapter, meta} = Ecto.Repo.Registry.lookup(name, opts)
     adapter.in_transaction?(meta)
   end
 
   def rollback(name, value, opts) do
-    repo_name_or_pid = Keyword.get(opts, :repo_name_or_pid, name)
-    {adapter, meta} = Ecto.Repo.Registry.lookup(repo_name_or_pid)
+    {adapter, meta} = Ecto.Repo.Registry.lookup(name, opts)
     adapter.rollback(meta, value)
   end
 end
