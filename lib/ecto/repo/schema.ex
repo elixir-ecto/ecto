@@ -210,7 +210,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_insert(name, %Changeset{valid?: true} = changeset, opts) do
-    {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
+    {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(Keyword.get(opts, :repo_name_or_pid, name))
     %{prepare: prepare, repo_opts: repo_opts} = changeset
     opts = Keyword.merge(repo_opts, opts)
 

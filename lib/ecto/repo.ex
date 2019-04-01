@@ -202,7 +202,7 @@ defmodule Ecto.Repo do
         end
 
         def insert!(struct, opts \\ []) do
-          Ecto.Repo.Schema.insert!(Keyword.get(opts, :repo_name_or_pid, __MODULE__), struct, opts)
+          Ecto.Repo.Schema.insert!(__MODULE__, struct, opts)
         end
 
         def update!(struct, opts \\ []) do
