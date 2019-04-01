@@ -16,7 +16,6 @@ defmodule Ecto.Repo.AutogenerateTest do
   defmodule Office do
     use Ecto.Schema
 
-    @timestamps_opts [inserted_at: :created_on]
     schema "offices" do
       field :name, :string
       belongs_to :company, Company
