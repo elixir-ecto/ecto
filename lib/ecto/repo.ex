@@ -161,7 +161,7 @@ defmodule Ecto.Repo do
       end
 
       def checkout(fun, opts \\ []) when is_function(fun) do
-        {adapter, meta} = Ecto.Repo.Registry.lookup(__MODULE__)
+        {adapter, meta} = Ecto.Repo.Registry.lookup(Keyword.get(opts, :repo_name_or_pid, __MODULE__))
         adapter.checkout(meta, opts, fun)
       end
 
