@@ -97,7 +97,7 @@ defmodule Ecto.Repo.Preloader do
   ## Association preloading
 
   defp maybe_pmap(assocs, repo_name, opts, fun) do
-    if match?([_,_|_], assocs) and not Ecto.Repo.Transaction.in_transaction?(repo_name, opts) and
+    if match?([_,_|_], assocs) and not Ecto.Repo.Transaction.in_transaction?(repo_name) and
          Keyword.get(opts, :in_parallel, true) do
       # We pass caller: self() so pools like the ownership
       # pool knows where to fetch the connection from and

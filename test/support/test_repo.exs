@@ -145,4 +145,3 @@ defmodule Ecto.TestRepo do
 end
 
 Ecto.TestRepo.start_link()
-Ecto.TestRepo.start_link(name: :tenant_db)

@@ -4,12 +4,12 @@ defmodule Ecto.Repo.Transaction do
   @dialyzer {:no_opaque, transaction: 3}
 
   def transaction(name, fun, opts) when is_function(fun, 0) do
-    {adapter, meta} = Ecto.Repo.Registry.lookup(name, opts)
+    {adapter, meta} = Ecto.Repo.Registry.lookup(name)
     adapter.transaction(meta, opts, fun)
   end
 
   def transaction(name, %Ecto.Multi{} = multi, opts) do
-    {adapter, meta} = Ecto.Repo.Registry.lookup(name, opts)
+    {adapter, meta} = Ecto.Repo.Registry.lookup(name)
     wrap = &adapter.transaction(meta, opts, &1)
     return = &adapter.rollback(meta, &1)
 
@@ -20,13 +20,13 @@ defmodule Ecto.Repo.Transaction do
     end
   end
 
-  def in_transaction?(name, opts) do
-    {adapter, meta} = Ecto.Repo.Registry.lookup(name, opts)
+  def in_transaction?(name) do
+    {adapter, meta} = Ecto.Repo.Registry.lookup(name)
     adapter.in_transaction?(meta)
   end
 
-  def rollback(name, value, opts) do
-    {adapter, meta} = Ecto.Repo.Registry.lookup(name, opts)
+  def rollback(name, value) do
+    {adapter, meta} = Ecto.Repo.Registry.lookup(name)
     adapter.rollback(meta, value)
   end
 end

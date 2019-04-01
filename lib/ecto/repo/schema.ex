@@ -32,7 +32,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_insert_all(name, schema, prefix, source, rows, opts) when is_list(rows) do
-    {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name, opts)
+    {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     autogen_id = schema && schema.__schema__(:autogenerate_id)
     dumper = schema && schema.__schema__(:dump)
 
@@ -210,7 +210,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_insert(name, %Changeset{valid?: true} = changeset, opts) do
-    {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name, opts)
+    {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     %{prepare: prepare, repo_opts: repo_opts} = changeset
     opts = Keyword.merge(repo_opts, opts)
 
@@ -281,8 +281,8 @@ defmodule Ecto.Repo.Schema do
     end)
   end
 
-  defp do_insert(name, %Changeset{valid?: false} = changeset, opts) do
-    {_, adapter_meta} = Ecto.Repo.Registry.lookup(name, opts)
+  defp do_insert(name, %Changeset{valid?: false} = changeset, _opts) do
+    {_, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     {:error, put_repo_and_action(changeset, :insert, adapter_meta)}
   end
 
@@ -300,7 +300,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_update(name, %Changeset{valid?: true} = changeset, opts) do
-    {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name, opts)
+    {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     %{prepare: prepare, repo_opts: repo_opts} = changeset
     opts = Keyword.merge(repo_opts, opts)
 
@@ -368,8 +368,8 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp do_update(name, %Changeset{valid?: false} = changeset, opts) do
-    {_, adapter_meta} = Ecto.Repo.Registry.lookup(name, opts)
+  defp do_update(name, %Changeset{valid?: false} = changeset, _opts) do
+    {_, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     {:error, put_repo_and_action(changeset, :update, adapter_meta)}
   end
 
@@ -417,7 +417,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp do_delete(name, %Changeset{valid?: true} = changeset, opts) do
-    {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name, opts)
+    {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     %{prepare: prepare, repo_opts: repo_opts} = changeset
     opts = Keyword.merge(repo_opts, opts)
 
@@ -455,8 +455,8 @@ defmodule Ecto.Repo.Schema do
     end)
   end
 
-  defp do_delete(name, %Changeset{valid?: false} = changeset, opts) do
-    {_, adapter_meta} = Ecto.Repo.Registry.lookup(name, opts)
+  defp do_delete(name, %Changeset{valid?: false} = changeset, _opts) do
+    {_, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     {:error, put_repo_and_action(changeset, :delete, adapter_meta)}
   end
 

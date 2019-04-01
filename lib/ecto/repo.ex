@@ -161,7 +161,7 @@ defmodule Ecto.Repo do
       end
 
       def checkout(fun, opts \\ []) when is_function(fun) do
-        {adapter, meta} = Ecto.Repo.Registry.lookup(__MODULE__, opts)
+        {adapter, meta} = Ecto.Repo.Registry.lookup(__MODULE__)
         adapter.checkout(meta, opts, fun)
       end
 
@@ -172,13 +172,13 @@ defmodule Ecto.Repo do
           Ecto.Repo.Transaction.transaction(__MODULE__, fun_or_multi, opts)
         end
 
-        def in_transaction?(opts \\ []) do
-          Ecto.Repo.Transaction.in_transaction?(__MODULE__, opts)
+        def in_transaction? do
+          Ecto.Repo.Transaction.in_transaction?(__MODULE__)
         end
 
-        @spec rollback(term, opts :: Keyword.t()) :: no_return
-        def rollback(value, opts \\ []) do
-          Ecto.Repo.Transaction.rollback(__MODULE__, value, opts)
+        @spec rollback(term) :: no_return
+        def rollback(value) do
+          Ecto.Repo.Transaction.rollback(__MODULE__, value)
         end
       end
 
@@ -1249,7 +1249,7 @@ defmodule Ecto.Repo do
 
   ## Ecto.Adapter.Transaction
 
-  @optional_callbacks transaction: 2, in_transaction?: 1, rollback: 2
+  @optional_callbacks transaction: 2, in_transaction?: 0, rollback: 1
 
   @doc """
   Runs the given function or `Ecto.Multi` inside a transaction.
@@ -1338,12 +1338,12 @@ defmodule Ecto.Repo do
       end)
 
   """
-  @callback in_transaction?(opts :: Keyword.t()) :: boolean
+  @callback in_transaction?() :: boolean
 
   @doc """
   Rolls back the current transaction.
 
   The transaction will return the value given as `{:error, value}`.
   """
-  @callback rollback(value :: any, opts :: Keyword.t()) :: no_return
+  @callback rollback(value :: any) :: no_return
 end
