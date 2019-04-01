@@ -71,7 +71,7 @@ You need to add both Ecto and the database adapter as a dependency to your `mix.
 Database   | Ecto Adapter           | Dependencies                                    | Ecto 3.0 compatible?
 :----------| :--------------------- | :-----------------------------------------------| :----
 PostgreSQL | Ecto.Adapters.Postgres | [ecto_sql][ecto_sql] + [postgrex][postgrex]     | Yes
-MySQL      | Ecto.Adapters.MySQL    | [ecto_sql][ecto_sql] + [mariaex][mariaex]       | Yes
+MySQL      | Ecto.Adapters.MyXQL    | [ecto_sql][ecto_sql] + [myxql][myxql]           | Yes
 MSSQL      | MssqlEcto              | [ecto_sql][ecto_sql] + [mssql_ecto][mssql_ecto] | No
 MSSQL      | Tds.Ecto               | [ecto_sql][ecto_sql] + [tds_ecto][tds_ecto]     | No
 SQLite     | Sqlite.Ecto2           | [ecto][ecto] + [sqlite_ecto2][sqlite_ecto2]     | No
@@ -80,7 +80,7 @@ Mnesia     | EctoMnesia.Adapter     | [ecto][ecto] + [ecto_mnesia][ecto_mnesi
 [ecto]: http://github.com/elixir-ecto/ecto
 [ecto_sql]: http://github.com/elixir-ecto/ecto_sql
 [postgrex]: http://github.com/elixir-ecto/postgrex
-[mariaex]: http://github.com/xerions/mariaex
+[myxql]: http://github.com/elixir-ecto/myxql
 [mssql_ecto]: https://github.com/findmypast-oss/mssql_ecto
 [tds_ecto]: https://github.com/livehelpnow/tds_ecto
 [sqlite_ecto2]: https://github.com/scouten/sqlite_ecto2
