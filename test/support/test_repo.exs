@@ -142,6 +142,16 @@ defmodule Ecto.TestRepo do
     opts[:parent] && send(opts[:parent], {__MODULE__, type, opts})
     {:ok, opts}
   end
+
+  def checkout(fun, opts \\ []) when is_function(fun) do
+    {adapter, meta} = Ecto.Repo.Registry.lookup(Process.get(:repo_name, __MODULE__))
+    adapter.checkout(meta, opts, fun)
+  end
+
+  def insert!(struct, opts \\ []) do
+    Ecto.Repo.Schema.insert!(Process.get(:repo_name, __MODULE__), struct, opts)
+  end
 end
 
 Ecto.TestRepo.start_link()
+Ecto.TestRepo.start_link(name: :tenant_db)

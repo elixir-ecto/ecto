@@ -220,6 +220,9 @@ defmodule Ecto.Repo do
         def insert_all(schema_or_source, entries, opts \\ []) do
           Ecto.Repo.Schema.insert_all(__MODULE__, schema_or_source, entries, opts)
         end
+
+        defoverridable insert!: 1,
+                       insert!: 2
       end
 
       ## Queryable
@@ -278,6 +281,9 @@ defmodule Ecto.Repo do
           Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, __MODULE__, preloads, opts)
         end
       end
+
+      defoverridable checkout: 1,
+                     checkout: 2
     end
   end
 
