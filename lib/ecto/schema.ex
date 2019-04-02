@@ -1085,12 +1085,12 @@ defmodule Ecto.Schema do
       Repo.insert!(build_assoc(post, :comments))
 
   leveraging the `Ecto.build_assoc/3` function. You can also
-  use `Ecto.assoc/2` and `Ecto.Query.assoc/2` in the query syntax
+  use `Ecto.assoc/2` or pass a tuple in the query syntax
   to easily retrieve associated comments to a given post or
   task:
 
       # Fetch all comments associated with the given task
-      Repo.all(assoc(task, :comments))
+      Repo.all(Ecto.assoc(task, :comments))
 
   Or all comments in a given table:
 
