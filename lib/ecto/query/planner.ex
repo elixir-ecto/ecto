@@ -692,7 +692,7 @@ defmodule Ecto.Query.Planner do
   defp plan_assocs(_query, _ix, []), do: :ok
   defp plan_assocs(query, ix, assocs) do
     # We validate the schema exists when preparing joins above
-    {_, parent_schema, _} = get_source!(:preload, query, ix)
+    {_, parent_schema, _} = get_preload_source!(query, ix)
 
     Enum.each assocs, fn {assoc, {child_ix, child_assocs}} ->
       refl = parent_schema.__schema__(:association, assoc)
@@ -1228,19 +1228,14 @@ defmodule Ecto.Query.Planner do
   end
 
   defp collect_assocs(exprs, fields, query, tag, take, [{assoc, {ix, children}}|tail]) do
-    case get_source!(:preload, query, ix) do
-      {source, schema, _} = to_take when is_binary(source) and schema != nil ->
-        {fetch, take_children} = fetch_assoc(tag, take, assoc)
-        {expr, taken} = take!(to_take, query, fetch, assoc, ix)
-        exprs = [expr | exprs]
-        fields = Enum.reverse(taken, fields)
-        {exprs, fields} = collect_assocs(exprs, fields, query, tag, take_children, children)
-        {exprs, fields} = collect_assocs(exprs, fields, query, tag, take, tail)
-        {exprs, fields}
-      _ ->
-        error! query, "can only preload sources with a schema " <>
-                      "(fragments, binary and subqueries are not supported)"
-    end
+    to_take = get_preload_source!(query, ix)
+    {fetch, take_children} = fetch_assoc(tag, take, assoc)
+    {expr, taken} = take!(to_take, query, fetch, assoc, ix)
+    exprs = [expr | exprs]
+    fields = Enum.reverse(taken, fields)
+    {exprs, fields} = collect_assocs(exprs, fields, query, tag, take_children, children)
+    {exprs, fields} = collect_assocs(exprs, fields, query, tag, take, tail)
+    {exprs, fields}
   end
   defp collect_assocs(exprs, fields, _query, _tag, _take, []) do
     {exprs, fields}
@@ -1318,6 +1313,16 @@ defmodule Ecto.Query.Planner do
     ArgumentError ->
       error! query, "invalid query has specified more bindings than bindings available " <>
                     "in `#{where}` (look for `unknown_binding!` in the printed query below)"
+  end
+
+  defp get_preload_source!(query, ix) do
+    case get_source!(:preload, query, ix) do
+      {source, schema, _} = all when is_binary(source) and schema != nil ->
+        all
+      _ ->
+        error! query, "can only preload sources with a schema " <>
+                      "(fragments, binary and subqueries are not supported)"
+    end
   end
 
   ## Helpers
@@ -1489,7 +1494,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp filter_and_reraise(exception, stacktrace) do
-    reraise exception, Enum.reject(stacktrace, &match?({__MODULE__, _, _, _}, &1))
+    reraise exception, stacktrace # Enum.reject(stacktrace, &match?({__MODULE__, _, _, _}, &1))
   end
 
   defp error!(query, message) do
