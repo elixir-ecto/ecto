@@ -1494,7 +1494,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp filter_and_reraise(exception, stacktrace) do
-    reraise exception, stacktrace # Enum.reject(stacktrace, &match?({__MODULE__, _, _, _}, &1))
+    reraise exception, Enum.reject(stacktrace, &match?({__MODULE__, _, _, _}, &1))
   end
 
   defp error!(query, message) do
