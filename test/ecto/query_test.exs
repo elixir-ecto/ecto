@@ -385,7 +385,7 @@ defmodule Ecto.QueryTest do
         ~s[#Ecto.Query<from p0 in \"posts\", join: c1 in \"comments\", on: true, join: a2 in \"authors\", as: :authors, on: true, where: a2.id == 0>]
     end
 
-    test "referring to non-existing binding" do
+    test "crashes on non-existing binding" do
       assert_raise Ecto.QueryError, ~r"unknown bind name `:nope`", fn ->
         "posts"
         |> join(:inner, [p], c in "comments", as: :comment)
@@ -393,7 +393,7 @@ defmodule Ecto.QueryTest do
       end
     end
 
-    test "named bind not in tail of the list" do
+    test "crashes on bind not in tail of the list" do
       message = ~r"tuples must be at the end of the binding list"
       assert_raise Ecto.Query.CompileError, message, fn ->
       quote_and_eval(
@@ -402,6 +402,18 @@ defmodule Ecto.QueryTest do
         |> where([{:comment, c}, p], c.id == 0)
       )
       end
+    end
+
+    test "dynamic bind" do
+      assoc = :comment
+
+      query =
+        "posts"
+        |> join(:inner, [p], c in "comments", as: :comment)
+        |> where([{^assoc, c}], c.id == 0)
+
+      assert inspect(query) ==
+        ~s[#Ecto.Query<from p0 in \"posts\", join: c1 in \"comments\", as: :comment, on: true, where: c1.id == 0>]
     end
 
     test "dynamic in :on takes new binding when alias is used" do
