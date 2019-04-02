@@ -168,7 +168,7 @@ defmodule Ecto.Repo.Supervisor do
         :ignore
     end
   end
-  
+
   def start_child({mod, fun, args}, repo, adapter, cache, meta) do
     case apply(mod, fun, args) do
       {:ok, pid} ->

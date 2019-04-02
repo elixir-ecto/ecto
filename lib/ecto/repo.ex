@@ -153,7 +153,7 @@ defmodule Ecto.Repo do
       end
 
       def stop(timeout \\ 5000) do
-        Supervisor.stop(__MODULE__, :normal, timeout)
+        Supervisor.stop(repo_name_or_pid(), :normal, timeout)
       end
 
       def load(schema_or_types, data) do
@@ -161,24 +161,32 @@ defmodule Ecto.Repo do
       end
 
       def checkout(fun, opts \\ []) when is_function(fun) do
-        {adapter, meta} = Ecto.Repo.Registry.lookup(__MODULE__)
+        {adapter, meta} = Ecto.Repo.Registry.lookup(repo_name_or_pid())
         adapter.checkout(meta, opts, fun)
+      end
+
+      def put_dynamic_repo(repo_name_or_pid) do
+        Process.put(:repo_name_or_pid, repo_name_or_pid)
+      end
+
+      def repo_name_or_pid() do
+        Process.get(:repo_name_or_pid, __MODULE__)
       end
 
       ## Transactions
 
       if Ecto.Adapter.Transaction in behaviours do
         def transaction(fun_or_multi, opts \\ []) do
-          Ecto.Repo.Transaction.transaction(__MODULE__, fun_or_multi, opts)
+          Ecto.Repo.Transaction.transaction(repo_name_or_pid(), fun_or_multi, opts)
         end
 
         def in_transaction? do
-          Ecto.Repo.Transaction.in_transaction?(__MODULE__)
+          Ecto.Repo.Transaction.in_transaction?(repo_name_or_pid())
         end
 
         @spec rollback(term) :: no_return
         def rollback(value) do
-          Ecto.Repo.Transaction.rollback(__MODULE__, value)
+          Ecto.Repo.Transaction.rollback(repo_name_or_pid(), value)
         end
       end
 
@@ -186,104 +194,98 @@ defmodule Ecto.Repo do
 
       if Ecto.Adapter.Schema in behaviours do
         def insert(struct, opts \\ []) do
-          Ecto.Repo.Schema.insert(__MODULE__, struct, opts)
+          Ecto.Repo.Schema.insert(repo_name_or_pid(), struct, opts)
         end
 
         def update(struct, opts \\ []) do
-          Ecto.Repo.Schema.update(__MODULE__, struct, opts)
+          Ecto.Repo.Schema.update(repo_name_or_pid(), struct, opts)
         end
 
         def insert_or_update(changeset, opts \\ []) do
-          Ecto.Repo.Schema.insert_or_update(__MODULE__, changeset, opts)
+          Ecto.Repo.Schema.insert_or_update(repo_name_or_pid(), changeset, opts)
         end
 
         def delete(struct, opts \\ []) do
-          Ecto.Repo.Schema.delete(__MODULE__, struct, opts)
+          Ecto.Repo.Schema.delete(repo_name_or_pid(), struct, opts)
         end
 
         def insert!(struct, opts \\ []) do
-          Ecto.Repo.Schema.insert!(__MODULE__, struct, opts)
+          Ecto.Repo.Schema.insert!(repo_name_or_pid(), struct, opts)
         end
 
         def update!(struct, opts \\ []) do
-          Ecto.Repo.Schema.update!(__MODULE__, struct, opts)
+          Ecto.Repo.Schema.update!(repo_name_or_pid(), struct, opts)
         end
 
         def insert_or_update!(changeset, opts \\ []) do
-          Ecto.Repo.Schema.insert_or_update!(__MODULE__, changeset, opts)
+          Ecto.Repo.Schema.insert_or_update!(repo_name_or_pid(), changeset, opts)
         end
 
         def delete!(struct, opts \\ []) do
-          Ecto.Repo.Schema.delete!(__MODULE__, struct, opts)
+          Ecto.Repo.Schema.delete!(repo_name_or_pid(), struct, opts)
         end
 
         def insert_all(schema_or_source, entries, opts \\ []) do
-          Ecto.Repo.Schema.insert_all(__MODULE__, schema_or_source, entries, opts)
+          Ecto.Repo.Schema.insert_all(repo_name_or_pid(), schema_or_source, entries, opts)
         end
-
-        defoverridable insert!: 1,
-                       insert!: 2
       end
 
       ## Queryable
 
       if Ecto.Adapter.Queryable in behaviours do
         def update_all(queryable, updates, opts \\ []) do
-          Ecto.Repo.Queryable.update_all(__MODULE__, queryable, updates, opts)
+          Ecto.Repo.Queryable.update_all(repo_name_or_pid(), queryable, updates, opts)
         end
 
         def delete_all(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.delete_all(__MODULE__, queryable, opts)
+          Ecto.Repo.Queryable.delete_all(repo_name_or_pid(), queryable, opts)
         end
 
         def all(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.all(__MODULE__, queryable, opts)
+          Ecto.Repo.Queryable.all(repo_name_or_pid(), queryable, opts)
         end
 
         def stream(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.stream(__MODULE__, queryable, opts)
+          Ecto.Repo.Queryable.stream(repo_name_or_pid(), queryable, opts)
         end
 
         def get(queryable, id, opts \\ []) do
-          Ecto.Repo.Queryable.get(__MODULE__, queryable, id, opts)
+          Ecto.Repo.Queryable.get(repo_name_or_pid(), queryable, id, opts)
         end
 
         def get!(queryable, id, opts \\ []) do
-          Ecto.Repo.Queryable.get!(__MODULE__, queryable, id, opts)
+          Ecto.Repo.Queryable.get!(repo_name_or_pid(), queryable, id, opts)
         end
 
         def get_by(queryable, clauses, opts \\ []) do
-          Ecto.Repo.Queryable.get_by(__MODULE__, queryable, clauses, opts)
+          Ecto.Repo.Queryable.get_by(repo_name_or_pid(), queryable, clauses, opts)
         end
 
         def get_by!(queryable, clauses, opts \\ []) do
-          Ecto.Repo.Queryable.get_by!(__MODULE__, queryable, clauses, opts)
+          Ecto.Repo.Queryable.get_by!(repo_name_or_pid(), queryable, clauses, opts)
         end
 
         def one(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.one(__MODULE__, queryable, opts)
+          Ecto.Repo.Queryable.one(repo_name_or_pid(), queryable, opts)
         end
 
         def one!(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.one!(__MODULE__, queryable, opts)
+          Ecto.Repo.Queryable.one!(repo_name_or_pid(), queryable, opts)
         end
 
         def aggregate(queryable, aggregate, field, opts \\ [])
             when aggregate in [:count, :avg, :max, :min, :sum] and is_atom(field) do
-          Ecto.Repo.Queryable.aggregate(__MODULE__, queryable, aggregate, field, opts)
+          Ecto.Repo.Queryable.aggregate(repo_name_or_pid(), queryable, aggregate, field, opts)
         end
 
         def exists?(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.exists?(__MODULE__, queryable, opts)
+          Ecto.Repo.Queryable.exists?(repo_name_or_pid(), queryable, opts)
         end
 
         def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
-          Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, __MODULE__, preloads, opts)
+          Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, repo_name_or_pid(), preloads, opts)
         end
       end
-
-      defoverridable checkout: 1,
-                     checkout: 2
     end
   end
 
@@ -341,6 +343,19 @@ defmodule Ecto.Repo do
   Shuts down the repository.
   """
   @callback stop(timeout) :: :ok
+
+  @doc """
+  Put the name of the Repo supervisor process. This is useful when you need to
+  setup dynamical multi tenant databases under one Repo and lookup for right
+  proccess.
+  """
+  @callback put_dynamic_repo(repo_name_or_pid :: pid() | atom()) :: nil
+
+  @doc """
+  Returns `repo_name_or_pid` process set up in `put_dynamic_repo/1`.
+  Defaults to `__MODULE__`.
+  """
+  @callback repo_name_or_pid() :: pid() | atom()
 
   @doc """
   Checks out a connection for the duration of the function.

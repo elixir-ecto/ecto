@@ -1142,30 +1142,15 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  describe "repo name or pid" do
-    test "insert runs prepare callbacks in transaction" do
-      changeset =
-        %MySchema{id: 1}
-        |> Ecto.Changeset.cast(%{x: "one"}, [:x])
-        |> Ecto.Changeset.prepare_changes(fn %{repo: repo} = changeset ->
-          Process.put(:ecto_repo, repo)
-          changeset
-        end)
+  describe "dynamic repo" do
+    test "put_dynamic_repo" do
+      TestRepo.start_link(name: :tenant_db)
 
-      Process.put(:repo_name, :tenant_db)
-
-      Ecto.TestRepo.insert!(changeset)
-      assert_received {:transaction, _}
-      assert Process.get(:ecto_repo) == Ecto.TestRepo
-    end
-
-    test "checks out a connection" do
-      fun = fn -> :done end
-
-      Process.put(:repo_name, :tenant_db)
-
-      assert TestRepo.checkout(fun) == :done
-      assert_received {:checkout, ^fun}
+      assert TestRepo == TestRepo.repo_name_or_pid()
+      TestRepo.put_dynamic_repo(:tenant_db)
+      assert :tenant_db == TestRepo.repo_name_or_pid()
+      TestRepo.stop()
+      assert :tenant_db == TestRepo.repo_name_or_pid()
     end
   end
 end
