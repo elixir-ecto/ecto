@@ -37,6 +37,8 @@ defmodule Ecto.Integration.TypeTest do
     # Booleans
     assert [true] = TestRepo.all(from p in Post, where: p.public == ^true, select: p.public)
     assert [true] = TestRepo.all(from p in Post, where: p.public == true, select: p.public)
+    assert [false] = TestRepo.all(from p in Post, where: p.public == true, select: not p.public)
+    assert [true] = TestRepo.all(from p in Post, where: p.public == true, select: not not p.public)
 
     # Binaries
     assert [^text] = TestRepo.all(from p in Post, where: p.text == <<0, 1>>, select: p.text)

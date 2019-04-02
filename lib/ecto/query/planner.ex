@@ -1180,6 +1180,16 @@ defmodule Ecto.Query.Planner do
     {{:value, tag}, [expr | fields], from}
   end
 
+  defp collect_fields({op, _, [_]} = expr, fields, from, _query, _take)
+       when op in ~w(not is_nil)a do
+    {{:value, :boolean}, [expr | fields], from}
+  end
+
+  defp collect_fields({op, _, [_, _]} = expr, fields, from, _query, _take)
+       when op in ~w(< > <= >= == != and or like ilike)a do
+    {{:value, :boolean}, [expr | fields], from}
+  end
+
   defp collect_fields(expr, fields, from, _query, _take) do
     {{:value, :any}, [expr | fields], from}
   end
