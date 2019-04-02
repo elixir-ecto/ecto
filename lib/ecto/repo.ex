@@ -168,12 +168,11 @@ defmodule Ecto.Repo do
       @compile {:inline, get_dynamic_repo: 0}
 
       def get_dynamic_repo() do
-        Process.get({__MODULE__, :dynamic}, __MODULE__)
+        Process.get({__MODULE__, :dynamic_repo}, __MODULE__)
       end
 
       def put_dynamic_repo(dynamic) when is_atom(dynamic) or is_pid(dynamic) do
-        Process.put({__MODULE__, :dynamic}, dynamic)
-        :ok
+        Process.put({__MODULE__, :dynamic_repo}, dynamic) || __MODULE__
       end
 
       ## Transactions

@@ -1115,7 +1115,7 @@ defmodule Ecto.RepoTest do
   describe "dynamic repo" do
     setup do
       {:ok, pid} = Ecto.TestRepo.start_link(name: nil)
-      :ok = Ecto.TestRepo.put_dynamic_repo(pid)
+      Ecto.TestRepo = Ecto.TestRepo.put_dynamic_repo(pid)
       :ok
     end
 
