@@ -654,7 +654,7 @@ defmodule Ecto.Association.Has do
     changeset = update_parent_key(changeset, action, key, value)
     changeset = Ecto.Association.update_parent_prefix(changeset, parent)
 
-    case apply(Ecto.Repo.Schema, action, [repo, changeset, opts]) do
+    case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
         if action == :delete, do: {:ok, nil}, else: ok
       {:error, changeset} ->
@@ -919,7 +919,7 @@ defmodule Ecto.Association.BelongsTo do
   def on_repo_change(_refl, %{data: parent, repo: repo}, %{action: action} = changeset, _adapter, opts) do
     changeset = Ecto.Association.update_parent_prefix(changeset, parent)
 
-    case apply(Ecto.Repo.Schema, action, [repo, changeset, opts]) do
+    case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
         if action == :delete, do: {:ok, nil}, else: ok
       {:error, changeset} ->
@@ -1182,7 +1182,7 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   defp insert_join(repo, join_through, data, opts, _constraints) when is_binary(join_through) do
-    Ecto.Repo.Schema.insert_all(repo, join_through, [data], opts)
+    repo.insert_all(join_through, [data], opts)
   end
 
   defp insert_join(repo, join_through, data, opts, constraints) when is_atom(join_through) do
@@ -1191,7 +1191,7 @@ defmodule Ecto.Association.ManyToMany do
       |> Ecto.Changeset.change
       |> Map.put(:constraints, constraints)
 
-    Ecto.Repo.Schema.insert(repo, changeset, opts)
+    repo.insert(changeset, opts)
   end
 
   defp field!(op, struct, field) do

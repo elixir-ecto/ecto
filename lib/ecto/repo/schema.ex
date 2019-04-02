@@ -10,16 +10,16 @@ defmodule Ecto.Repo.Schema do
   @doc """
   Implementation for `Ecto.Repo.insert_all/3`.
   """
-  def insert_all(name, schema, rows, opts) when is_atom(schema) do
+  def insert_all(_repo, name, schema, rows, opts) when is_atom(schema) do
     do_insert_all(name, schema, schema.__schema__(:prefix),
                   schema.__schema__(:source), rows, opts)
   end
 
-  def insert_all(name, table, rows, opts) when is_binary(table) do
+  def insert_all(_repo, name, table, rows, opts) when is_binary(table) do
     do_insert_all(name, nil, nil, table, rows, opts)
   end
 
-  def insert_all(name, {source, schema}, rows, opts) when is_atom(schema) do
+  def insert_all(_repo, name, {source, schema}, rows, opts) when is_atom(schema) do
     do_insert_all(name, schema, schema.__schema__(:prefix), source, rows, opts)
   end
 
@@ -160,8 +160,8 @@ defmodule Ecto.Repo.Schema do
   @doc """
   Implementation for `Ecto.Repo.insert!/2`.
   """
-  def insert!(name, struct_or_changeset, opts) do
-    case insert(name, struct_or_changeset, opts) do
+  def insert!(repo, name, struct_or_changeset, opts) do
+    case insert(repo, name, struct_or_changeset, opts) do
       {:ok, struct} ->
         struct
 
@@ -173,8 +173,8 @@ defmodule Ecto.Repo.Schema do
   @doc """
   Implementation for `Ecto.Repo.update!/2`.
   """
-  def update!(name, struct_or_changeset, opts) do
-    case update(name, struct_or_changeset, opts) do
+  def update!(repo, name, struct_or_changeset, opts) do
+    case update(repo, name, struct_or_changeset, opts) do
       {:ok, struct} ->
         struct
 
@@ -186,8 +186,8 @@ defmodule Ecto.Repo.Schema do
   @doc """
   Implementation for `Ecto.Repo.delete!/2`.
   """
-  def delete!(name, struct_or_changeset, opts) do
-    case delete(name, struct_or_changeset, opts) do
+  def delete!(repo, name, struct_or_changeset, opts) do
+    case delete(repo, name, struct_or_changeset, opts) do
       {:ok, struct} ->
         struct
 
@@ -199,15 +199,15 @@ defmodule Ecto.Repo.Schema do
   @doc """
   Implementation for `Ecto.Repo.insert/2`.
   """
-  def insert(name, %Changeset{} = changeset, opts) when is_list(opts) do
-    do_insert(name, changeset, opts)
+  def insert(repo, name, %Changeset{} = changeset, opts) when is_list(opts) do
+    do_insert(repo, name, changeset, opts)
   end
 
-  def insert(name, %{__struct__: _} = struct, opts) when is_list(opts) do
-    do_insert(name, Ecto.Changeset.change(struct), opts)
+  def insert(repo, name, %{__struct__: _} = struct, opts) when is_list(opts) do
+    do_insert(repo, name, Ecto.Changeset.change(struct), opts)
   end
 
-  defp do_insert(name, %Changeset{valid?: true} = changeset, opts) do
+  defp do_insert(repo, name, %Changeset{valid?: true} = changeset, opts) do
     {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     %{prepare: prepare, repo_opts: repo_opts} = changeset
     opts = Keyword.merge(repo_opts, opts)
@@ -231,7 +231,7 @@ defmodule Ecto.Repo.Schema do
 
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
-    changeset = put_repo_and_action(changeset, :insert, adapter_meta)
+    changeset = put_repo_and_action(changeset, :insert, repo)
     changeset = surface_changes(changeset, struct, fields ++ assocs)
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
@@ -279,25 +279,24 @@ defmodule Ecto.Repo.Schema do
     end)
   end
 
-  defp do_insert(name, %Changeset{valid?: false} = changeset, _opts) do
-    {_, adapter_meta} = Ecto.Repo.Registry.lookup(name)
-    {:error, put_repo_and_action(changeset, :insert, adapter_meta)}
+  defp do_insert(repo, _name, %Changeset{valid?: false} = changeset, _opts) do
+    {:error, put_repo_and_action(changeset, :insert, repo)}
   end
 
   @doc """
   Implementation for `Ecto.Repo.update/2`.
   """
-  def update(name, %Changeset{} = changeset, opts) when is_list(opts) do
-    do_update(name, changeset, opts)
+  def update(repo, name, %Changeset{} = changeset, opts) when is_list(opts) do
+    do_update(repo, name, changeset, opts)
   end
 
-  def update(_name, %{__struct__: _}, opts) when is_list(opts) do
+  def update(_repo, _name, %{__struct__: _}, opts) when is_list(opts) do
     raise ArgumentError, "giving a struct to Ecto.Repo.update/2 is not supported. " <>
                          "Ecto is unable to properly track changes when a struct is given, " <>
                          "an Ecto.Changeset must be given instead"
   end
 
-  defp do_update(name, %Changeset{valid?: true} = changeset, opts) do
+  defp do_update(repo, name, %Changeset{valid?: true} = changeset, opts) do
     {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     %{prepare: prepare, repo_opts: repo_opts} = changeset
     opts = Keyword.merge(repo_opts, opts)
@@ -319,7 +318,7 @@ defmodule Ecto.Repo.Schema do
     # Differently from insert, update does not copy the struct
     # fields into the changeset. All changes must be in the
     # changeset before hand.
-    changeset = put_repo_and_action(changeset, :update, adapter_meta)
+    changeset = put_repo_and_action(changeset, :update, repo)
 
     if changeset.changes != %{} or force? do
       wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
@@ -366,18 +365,17 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp do_update(name, %Changeset{valid?: false} = changeset, _opts) do
-    {_, adapter_meta} = Ecto.Repo.Registry.lookup(name)
-    {:error, put_repo_and_action(changeset, :update, adapter_meta)}
+  defp do_update(repo, _name, %Changeset{valid?: false} = changeset, _opts) do
+    {:error, put_repo_and_action(changeset, :update, repo)}
   end
 
   @doc """
   Implementation for `Ecto.Repo.insert_or_update/2`.
   """
-  def insert_or_update(name, changeset, opts) do
+  def insert_or_update(repo, name, changeset, opts) do
     case get_state(changeset) do
-      :built  -> insert(name, changeset, opts)
-      :loaded -> update(name, changeset, opts)
+      :built  -> insert(repo, name, changeset, opts)
+      :loaded -> update(repo, name, changeset, opts)
       state   -> raise ArgumentError, "the changeset has an invalid state " <>
                                       "for Repo.insert_or_update/2: #{state}"
     end
@@ -386,10 +384,10 @@ defmodule Ecto.Repo.Schema do
   @doc """
   Implementation for `Ecto.Repo.insert_or_update!/2`.
   """
-  def insert_or_update!(name, changeset, opts) do
+  def insert_or_update!(repo, name, changeset, opts) do
     case get_state(changeset) do
-      :built  -> insert!(name, changeset, opts)
-      :loaded -> update!(name, changeset, opts)
+      :built  -> insert!(repo, name, changeset, opts)
+      :loaded -> update!(repo, name, changeset, opts)
       state   -> raise ArgumentError, "the changeset has an invalid state " <>
                                       "for Repo.insert_or_update!/2: #{state}"
     end
@@ -405,16 +403,16 @@ defmodule Ecto.Repo.Schema do
   @doc """
   Implementation for `Ecto.Repo.delete/2`.
   """
-  def delete(name, %Changeset{} = changeset, opts) when is_list(opts) do
-    do_delete(name, changeset, opts)
+  def delete(repo, name, %Changeset{} = changeset, opts) when is_list(opts) do
+    do_delete(repo, name, changeset, opts)
   end
 
-  def delete(name, %{__struct__: _} = struct, opts) when is_list(opts) do
+  def delete(repo, name, %{__struct__: _} = struct, opts) when is_list(opts) do
     changeset = Ecto.Changeset.change(struct)
-    do_delete(name, changeset, opts)
+    do_delete(repo, name, changeset, opts)
   end
 
-  defp do_delete(name, %Changeset{valid?: true} = changeset, opts) do
+  defp do_delete(repo, name, %Changeset{valid?: true} = changeset, opts) do
     {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     %{prepare: prepare, repo_opts: repo_opts} = changeset
     opts = Keyword.merge(repo_opts, opts)
@@ -423,7 +421,7 @@ defmodule Ecto.Repo.Schema do
     schema = struct.__struct__
     assocs = to_delete_assocs(schema)
     dumper = schema.__schema__(:dump)
-    changeset = put_repo_and_action(changeset, :delete, adapter_meta)
+    changeset = put_repo_and_action(changeset, :delete, repo)
 
     wrap_in_transaction(adapter, adapter_meta, opts, assocs != [], prepare, fn ->
       changeset = run_prepare(changeset, prepare)
@@ -453,9 +451,8 @@ defmodule Ecto.Repo.Schema do
     end)
   end
 
-  defp do_delete(name, %Changeset{valid?: false} = changeset, _opts) do
-    {_, adapter_meta} = Ecto.Repo.Registry.lookup(name)
-    {:error, put_repo_and_action(changeset, :delete, adapter_meta)}
+  defp do_delete(repo, _name, %Changeset{valid?: false} = changeset, _opts) do
+    {:error, put_repo_and_action(changeset, :delete, repo)}
   end
 
   def load(adapter, schema_or_types, data) do
@@ -507,7 +504,7 @@ defmodule Ecto.Repo.Schema do
   defp struct_from_changeset!(_action, %{data: struct}),
     do: struct
 
-  defp put_repo_and_action(%{action: :ignore, valid?: valid?} = changeset, action, %{repo: repo}) do
+  defp put_repo_and_action(%{action: :ignore, valid?: valid?} = changeset, action, repo) do
     if valid? do
       raise ArgumentError, "a valid changeset with action :ignore was given to " <>
                            "#{inspect repo}.#{action}/2. Changesets can only be ignored " <>
@@ -516,9 +513,9 @@ defmodule Ecto.Repo.Schema do
       %{changeset | action: action, repo: repo}
     end
   end
-  defp put_repo_and_action(%{action: given}, action, %{repo: repo}) when given != nil and given != action,
+  defp put_repo_and_action(%{action: given}, action, repo) when given != nil and given != action,
     do: raise ArgumentError, "a changeset with action #{inspect given} was given to #{inspect repo}.#{action}/2"
-  defp put_repo_and_action(changeset, action, %{repo: repo}),
+  defp put_repo_and_action(changeset, action, repo),
     do: %{changeset | action: action, repo: repo}
 
   defp run_prepare(changeset, prepare) do

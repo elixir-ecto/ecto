@@ -153,7 +153,7 @@ defmodule Ecto.Repo do
       end
 
       def stop(timeout \\ 5000) do
-        Supervisor.stop(__MODULE__, :normal, timeout)
+        Supervisor.stop(get_dynamic_repo(), :normal, timeout)
       end
 
       def load(schema_or_types, data) do
@@ -161,24 +161,35 @@ defmodule Ecto.Repo do
       end
 
       def checkout(fun, opts \\ []) when is_function(fun) do
-        {adapter, meta} = Ecto.Repo.Registry.lookup(__MODULE__)
+        {adapter, meta} = Ecto.Repo.Registry.lookup(get_dynamic_repo())
         adapter.checkout(meta, opts, fun)
+      end
+
+      @compile {:inline, get_dynamic_repo: 0}
+
+      def get_dynamic_repo() do
+        Process.get({__MODULE__, :dynamic}, __MODULE__)
+      end
+
+      def put_dynamic_repo(dynamic) when is_atom(dynamic) or is_pid(dynamic) do
+        Process.put({__MODULE__, :dynamic}, dynamic)
+        :ok
       end
 
       ## Transactions
 
       if Ecto.Adapter.Transaction in behaviours do
         def transaction(fun_or_multi, opts \\ []) do
-          Ecto.Repo.Transaction.transaction(__MODULE__, fun_or_multi, opts)
+          Ecto.Repo.Transaction.transaction(get_dynamic_repo(), fun_or_multi, opts)
         end
 
         def in_transaction? do
-          Ecto.Repo.Transaction.in_transaction?(__MODULE__)
+          Ecto.Repo.Transaction.in_transaction?(get_dynamic_repo())
         end
 
         @spec rollback(term) :: no_return
         def rollback(value) do
-          Ecto.Repo.Transaction.rollback(__MODULE__, value)
+          Ecto.Repo.Transaction.rollback(get_dynamic_repo(), value)
         end
       end
 
@@ -186,39 +197,39 @@ defmodule Ecto.Repo do
 
       if Ecto.Adapter.Schema in behaviours do
         def insert(struct, opts \\ []) do
-          Ecto.Repo.Schema.insert(__MODULE__, struct, opts)
+          Ecto.Repo.Schema.insert(__MODULE__, get_dynamic_repo(), struct, opts)
         end
 
         def update(struct, opts \\ []) do
-          Ecto.Repo.Schema.update(__MODULE__, struct, opts)
+          Ecto.Repo.Schema.update(__MODULE__, get_dynamic_repo(), struct, opts)
         end
 
         def insert_or_update(changeset, opts \\ []) do
-          Ecto.Repo.Schema.insert_or_update(__MODULE__, changeset, opts)
+          Ecto.Repo.Schema.insert_or_update(__MODULE__, get_dynamic_repo(), changeset, opts)
         end
 
         def delete(struct, opts \\ []) do
-          Ecto.Repo.Schema.delete(__MODULE__, struct, opts)
+          Ecto.Repo.Schema.delete(__MODULE__, get_dynamic_repo(), struct, opts)
         end
 
         def insert!(struct, opts \\ []) do
-          Ecto.Repo.Schema.insert!(__MODULE__, struct, opts)
+          Ecto.Repo.Schema.insert!(__MODULE__, get_dynamic_repo(), struct, opts)
         end
 
         def update!(struct, opts \\ []) do
-          Ecto.Repo.Schema.update!(__MODULE__, struct, opts)
+          Ecto.Repo.Schema.update!(__MODULE__, get_dynamic_repo(), struct, opts)
         end
 
         def insert_or_update!(changeset, opts \\ []) do
-          Ecto.Repo.Schema.insert_or_update!(__MODULE__, changeset, opts)
+          Ecto.Repo.Schema.insert_or_update!(__MODULE__, get_dynamic_repo(), changeset, opts)
         end
 
         def delete!(struct, opts \\ []) do
-          Ecto.Repo.Schema.delete!(__MODULE__, struct, opts)
+          Ecto.Repo.Schema.delete!(__MODULE__, get_dynamic_repo(), struct, opts)
         end
 
         def insert_all(schema_or_source, entries, opts \\ []) do
-          Ecto.Repo.Schema.insert_all(__MODULE__, schema_or_source, entries, opts)
+          Ecto.Repo.Schema.insert_all(__MODULE__, get_dynamic_repo(), schema_or_source, entries, opts)
         end
       end
 
@@ -226,56 +237,56 @@ defmodule Ecto.Repo do
 
       if Ecto.Adapter.Queryable in behaviours do
         def update_all(queryable, updates, opts \\ []) do
-          Ecto.Repo.Queryable.update_all(__MODULE__, queryable, updates, opts)
+          Ecto.Repo.Queryable.update_all(get_dynamic_repo(), queryable, updates, opts)
         end
 
         def delete_all(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.delete_all(__MODULE__, queryable, opts)
+          Ecto.Repo.Queryable.delete_all(get_dynamic_repo(), queryable, opts)
         end
 
         def all(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.all(__MODULE__, queryable, opts)
+          Ecto.Repo.Queryable.all(get_dynamic_repo(), queryable, opts)
         end
 
         def stream(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.stream(__MODULE__, queryable, opts)
+          Ecto.Repo.Queryable.stream(get_dynamic_repo(), queryable, opts)
         end
 
         def get(queryable, id, opts \\ []) do
-          Ecto.Repo.Queryable.get(__MODULE__, queryable, id, opts)
+          Ecto.Repo.Queryable.get(get_dynamic_repo(), queryable, id, opts)
         end
 
         def get!(queryable, id, opts \\ []) do
-          Ecto.Repo.Queryable.get!(__MODULE__, queryable, id, opts)
+          Ecto.Repo.Queryable.get!(get_dynamic_repo(), queryable, id, opts)
         end
 
         def get_by(queryable, clauses, opts \\ []) do
-          Ecto.Repo.Queryable.get_by(__MODULE__, queryable, clauses, opts)
+          Ecto.Repo.Queryable.get_by(get_dynamic_repo(), queryable, clauses, opts)
         end
 
         def get_by!(queryable, clauses, opts \\ []) do
-          Ecto.Repo.Queryable.get_by!(__MODULE__, queryable, clauses, opts)
+          Ecto.Repo.Queryable.get_by!(get_dynamic_repo(), queryable, clauses, opts)
         end
 
         def one(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.one(__MODULE__, queryable, opts)
+          Ecto.Repo.Queryable.one(get_dynamic_repo(), queryable, opts)
         end
 
         def one!(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.one!(__MODULE__, queryable, opts)
+          Ecto.Repo.Queryable.one!(get_dynamic_repo(), queryable, opts)
         end
 
         def aggregate(queryable, aggregate, field, opts \\ [])
             when aggregate in [:count, :avg, :max, :min, :sum] and is_atom(field) do
-          Ecto.Repo.Queryable.aggregate(__MODULE__, queryable, aggregate, field, opts)
+          Ecto.Repo.Queryable.aggregate(get_dynamic_repo(), queryable, aggregate, field, opts)
         end
 
         def exists?(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.exists?(__MODULE__, queryable, opts)
+          Ecto.Repo.Queryable.exists?(get_dynamic_repo(), queryable, opts)
         end
 
         def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
-          Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, __MODULE__, preloads, opts)
+          Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, get_dynamic_repo(), preloads, opts)
         end
       end
     end
@@ -399,6 +410,42 @@ defmodule Ecto.Repo do
               module_or_map :: module | map(),
               data :: map() | Keyword.t() | {list, list}
             ) :: Ecto.Schema.t() | map()
+
+  @doc """
+  Returns the atom name or pid of the current repository.
+
+  See `c:put_dynamic_repo/1` for more information.
+  """
+  @callback get_dynamic_repo() :: atom() | pid()
+
+  @doc """
+  Sets the dynamic repository to be used in further iteractions.
+
+  Sometimes, you may want a single Ecto repository to talk to
+  many different database instances. By default, when you call
+  `MyApp.Repo.start_link/1`, it will start a repository with
+  name `MyApp.Repo`. But if you want to start multiple repositories,
+  you can give each of them a different name:
+
+      MyApp.Repo.start_link(name: :tenant_foo, hostname: "foo.example.com")
+      MyApp.Repo.start_link(name: :tenant_bar, hostname: "bar.example.com")
+
+  You can also start repositories without names by explicitly
+  setting the name to nil:
+
+      MyApp.Repo.start_link(name: nil, hostname: "temp.example.com")
+
+  However, once the repository is started, you can't directly interact with
+  it, since all operations in `MyApp.Repo` are sent to the repository named
+  `MyApp.Repo`. With `put_dynamic_repo/1`, we can tell Ecto exactly which
+  instance to use:
+
+      MyApp.Repo.put_dynamic_repo(:tenant_foo)
+
+  **Note this feature is experimental and may be changed or removed in future
+  releases.**
+  """
+  @callback put_dynamic_repo(atom() | pid()) :: :ok
 
   ## Ecto.Adapter.Queryable
 

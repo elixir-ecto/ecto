@@ -1111,4 +1111,32 @@ defmodule Ecto.RepoTest do
       refute function_exported?(NoTransactionRepo, :rollback, 1)
     end
   end
+
+  describe "dynamic repo" do
+    setup do
+      {:ok, pid} = Ecto.TestRepo.start_link(name: nil)
+      :ok = Ecto.TestRepo.put_dynamic_repo(pid)
+      :ok
+    end
+
+    test "puts the dynamic repo in pdict" do
+      assert is_pid Ecto.TestRepo.get_dynamic_repo()
+
+      assert Task.async(fn -> Ecto.TestRepo.get_dynamic_repo() end) |> Task.await() ==
+               Ecto.TestRepo
+    end
+
+    test "keeps the proper repo in prepare_changes callback" do
+      %MySchema{id: 1}
+      |> Ecto.Changeset.cast(%{x: "one"}, [:x])
+      |> Ecto.Changeset.prepare_changes(fn changeset ->
+        Process.put(:ecto_prepared, true)
+        assert changeset.repo == Ecto.TestRepo
+        changeset
+      end)
+      |> Ecto.TestRepo.insert!()
+
+      assert Process.get(:ecto_prepared)
+    end
+  end
 end

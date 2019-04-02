@@ -161,7 +161,7 @@ defmodule Ecto.Repo.Supervisor do
       {:ok, opts} ->
         {:ok, child, meta} = adapter.init([repo: repo] ++ opts)
         cache = Ecto.Query.Planner.new_query_cache(name)
-        child_spec = wrap_child_spec(child, [repo, adapter, cache, meta])
+        child_spec = wrap_child_spec(child, [adapter, cache, meta])
         Supervisor.init([child_spec], strategy: :one_for_one, max_restarts: 0)
 
       :ignore ->
@@ -169,10 +169,10 @@ defmodule Ecto.Repo.Supervisor do
     end
   end
   
-  def start_child({mod, fun, args}, repo, adapter, cache, meta) do
+  def start_child({mod, fun, args}, adapter, cache, meta) do
     case apply(mod, fun, args) do
       {:ok, pid} ->
-        meta = Map.merge(meta, %{pid: pid, cache: cache, repo: repo})
+        meta = Map.merge(meta, %{pid: pid, cache: cache})
         Ecto.Repo.Registry.associate(self(), {adapter, meta})
         {:ok, pid}
 
