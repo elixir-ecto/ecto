@@ -4,7 +4,6 @@ defmodule Ecto.Repo.Supervisor do
 
   @defaults [timeout: 15000, pool_size: 10]
   @integer_url_query_params ["timeout", "pool_size"]
-  @binary_url_query_params ["currentSchema"]
 
   @doc """
   Starts the repo supervisor.
@@ -134,14 +133,11 @@ defmodule Ecto.Repo.Supervisor do
       {"ssl", "false"}, acc ->
         [{:ssl, false}] ++ acc
 
-      {key, value}, acc when key in @binary_url_query_params ->
-        [{String.to_atom(key), value}] ++ acc
-
       {key, value}, acc when key in @integer_url_query_params ->
         [{String.to_atom(key), parse_integer!(key, value, url)}] ++ acc
 
-      {key, _value}, _acc ->
-        raise Ecto.InvalidURLError, url: url, message: "unsupported query parameter `#{key}`"
+      {key, value}, acc ->
+        [{String.to_atom(key), value}] ++ acc
     end)
   end
 

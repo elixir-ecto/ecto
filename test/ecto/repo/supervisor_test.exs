@@ -110,10 +110,6 @@ defmodule Ecto.Repo.SupervisorTest do
       parse_url("ecto://eric:hunter2@host:123")
     end
 
-    assert_raise Ecto.InvalidURLError, ~r"unsupported query parameter `unknown_param`", fn ->
-      parse_url("ecto://eric:it+й@host:12345/mydb?unknown_param=value")
-    end
-
     for key <- ["timeout", "pool_size"] do
       assert_raise Ecto.InvalidURLError, ~r"can not parse value `not_an_int` for parameter `#{key}` as an integer", fn ->
         parse_url("ecto://eric:it+й@host:12345/mydb?#{key}=not_an_int")
