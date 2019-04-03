@@ -170,6 +170,7 @@ Although Ecto 3.0 is a major bump version, the functionality below emits depreca
 
   * [Ecto.DateTime] `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` were previously deprecated and have now been removed
   * [Ecto.DataType] `Ecto.DataType` protocol has been removed
+  * [Ecto.Migration] Automatically inferred index names may differ in Ecto v3.0 for indexes on complex column names
   * [Ecto.Multi] `Ecto.Multi.run/5` now receives the repo in which the transaction is executing as the first argument to functions, and the changes so far as the second argument
   * [Ecto.Query] A `join` no longer wraps `fragment` in parentheses. In some cases, such as common table expressions, you will have to explicitly wrap the fragment in parens.
   * [Ecto.Repo] The `on_conflict: :replace_all` option now will also send fields with default values to the database. If you prefer the old behaviour that only sends the changes in the changeset, you can set it to `on_conflict: {:replace, Map.keys(changeset.changes)}` (this change is also listed as a bug fix)
