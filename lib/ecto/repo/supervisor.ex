@@ -4,6 +4,7 @@ defmodule Ecto.Repo.Supervisor do
 
   @defaults [timeout: 15000, pool_size: 10]
   @integer_url_query_params ["timeout", "pool_size"]
+  @binary_url_query_params ["currentSchema"]
 
   @doc """
   Starts the repo supervisor.
@@ -133,6 +134,9 @@ defmodule Ecto.Repo.Supervisor do
       {"ssl", "false"}, acc ->
         [{:ssl, false}] ++ acc
 
+      {key, value}, acc when key in @binary_url_query_params ->
+        [{String.to_atom(key), value}] ++ acc
+
       {key, value}, acc when key in @integer_url_query_params ->
         [{String.to_atom(key), parse_integer!(key, value, url)}] ++ acc
 
@@ -168,7 +172,7 @@ defmodule Ecto.Repo.Supervisor do
         :ignore
     end
   end
-  
+
   def start_child({mod, fun, args}, adapter, cache, meta) do
     case apply(mod, fun, args) do
       {:ok, pid} ->

@@ -66,7 +66,7 @@ defmodule Ecto.Repo.SupervisorTest do
   end
 
   test "parse_url query string" do
-    encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb?ssl=true&timeout=1000&pool_size=42")
+    encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb?ssl=true&timeout=1000&pool_size=42&currentSchema=my_schema")
     url = parse_url(encoded_url)
     assert {:password, "it+й"} in url
     assert {:username, "eric"} in url
@@ -76,6 +76,7 @@ defmodule Ecto.Repo.SupervisorTest do
     assert {:ssl, true} in url
     assert {:timeout, 1000} in url
     assert {:pool_size, 42} in url
+    assert {:currentSchema, "my_schema"} in url
   end
 
   test "parse_url returns no config when blank" do
