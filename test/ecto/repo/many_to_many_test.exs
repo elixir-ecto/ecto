@@ -514,4 +514,20 @@ defmodule Ecto.Repo.ManyToManyTest do
     refute_received {:rollback, _}
     refute_received {:insert_all, _, _}
   end
+
+  describe "dynamic repo" do
+    test "removing assocs on update preserving parent schema prefix" do
+      {:ok, pid} = TestRepo.start_link(name: :dynamic_repo)
+      TestRepo.put_dynamic_repo(pid)
+
+      assoc = %MyAssoc{x: "xyz", id: 1}
+      changeset =
+        %MySchema{id: 1, assocs: [assoc]}
+        |> Ecto.put_meta(prefix: "prefix")
+        |> Ecto.Changeset.change
+        |> Ecto.Changeset.put_assoc(:assocs, [])
+      TestRepo.update!(changeset)
+      assert_received {:delete_all, %{prefix: "prefix", from: %{source: {"schemas_assocs", _}}}}
+    end
+  end
 end
