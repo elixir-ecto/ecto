@@ -3,7 +3,7 @@ defmodule Ecto.Repo.Transaction do
 
   @dialyzer {:no_opaque, transaction: 3}
 
-  def transaction(name, fun, opts) when is_function(fun, 0) do
+  def transaction(_repo, name, fun, opts) when is_function(fun, 0) do
     {adapter, meta} = Ecto.Repo.Registry.lookup(name)
     adapter.transaction(meta, opts, fun)
   end
