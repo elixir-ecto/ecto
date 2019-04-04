@@ -501,7 +501,7 @@ defmodule Ecto.Repo do
 
   """
   @callback get!(queryable :: Ecto.Queryable.t(), id :: term, opts :: Keyword.t()) ::
-              Ecto.Schema.t() | nil
+              Ecto.Schema.t()
 
   @doc """
   Fetches a single result from the query.
@@ -560,7 +560,7 @@ defmodule Ecto.Repo do
               queryable :: Ecto.Queryable.t(),
               clauses :: Keyword.t() | map,
               opts :: Keyword.t()
-            ) :: Ecto.Schema.t() | nil
+            ) :: Ecto.Schema.t()
 
   @doc """
   Calculate the given `aggregate` over the given `field`.
