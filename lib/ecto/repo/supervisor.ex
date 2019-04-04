@@ -155,7 +155,7 @@ defmodule Ecto.Repo.Supervisor do
 
   ## Callbacks
 
-  @impl true
+  @doc false
   def init({name, repo, otp_app, adapter, opts}) do
     case runtime_config(:supervisor, repo, otp_app, opts) do
       {:ok, opts} ->
