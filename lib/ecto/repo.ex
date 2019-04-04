@@ -179,7 +179,7 @@ defmodule Ecto.Repo do
 
       if Ecto.Adapter.Transaction in behaviours do
         def transaction(fun_or_multi, opts \\ []) do
-          Ecto.Repo.Transaction.transaction(get_dynamic_repo(), fun_or_multi, opts)
+          Ecto.Repo.Transaction.transaction(__MODULE__, get_dynamic_repo(), fun_or_multi, opts)
         end
 
         def in_transaction? do
@@ -444,7 +444,7 @@ defmodule Ecto.Repo do
   **Note this feature is experimental and may be changed or removed in future
   releases.**
   """
-  @callback put_dynamic_repo(atom() | pid()) :: :ok
+  @callback put_dynamic_repo(atom() | pid()) :: atom() | pid()
 
   ## Ecto.Adapter.Queryable
 

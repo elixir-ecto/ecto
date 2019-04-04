@@ -1114,16 +1114,16 @@ defmodule Ecto.RepoTest do
 
   describe "dynamic repo" do
     setup do
-      {:ok, pid} = Ecto.TestRepo.start_link(name: nil)
-      Ecto.TestRepo = Ecto.TestRepo.put_dynamic_repo(pid)
+      {:ok, pid} = TestRepo.start_link(name: nil)
+      TestRepo = TestRepo.put_dynamic_repo(pid)
       :ok
     end
 
     test "puts the dynamic repo in pdict" do
-      assert is_pid Ecto.TestRepo.get_dynamic_repo()
+      assert is_pid TestRepo.get_dynamic_repo()
 
-      assert Task.async(fn -> Ecto.TestRepo.get_dynamic_repo() end) |> Task.await() ==
-               Ecto.TestRepo
+      assert Task.async(fn -> TestRepo.get_dynamic_repo() end) |> Task.await() ==
+               TestRepo
     end
 
     test "keeps the proper repo in prepare_changes callback" do
@@ -1131,10 +1131,10 @@ defmodule Ecto.RepoTest do
       |> Ecto.Changeset.cast(%{x: "one"}, [:x])
       |> Ecto.Changeset.prepare_changes(fn changeset ->
         Process.put(:ecto_prepared, true)
-        assert changeset.repo == Ecto.TestRepo
+        assert changeset.repo == TestRepo
         changeset
       end)
-      |> Ecto.TestRepo.insert!()
+      |> TestRepo.insert!()
 
       assert Process.get(:ecto_prepared)
     end
