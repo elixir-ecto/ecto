@@ -1126,7 +1126,7 @@ defmodule Ecto.Association.ManyToMany do
                field(j, ^join_related_key) == ^related_value
 
     query = Map.put(query, :prefix, owner.__meta__.prefix)
-    Ecto.Repo.Queryable.delete_all repo, query, opts
+    repo.delete_all(query, opts)
     {:ok, nil}
   end
 
