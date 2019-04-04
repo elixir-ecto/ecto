@@ -101,13 +101,13 @@ A downside of this approach is that migrations cannot run dynamically during tes
 
     config :my_app, MyApp.Repo, migration_lock: nil
 
-## v3.0.8 (2018-03-29)
+## v3.0.8 (2019-03-29)
 
 ### Bug fixes
 
   * [Ecto.Repop] Do not forward :force behavior to children on `Repo.update`
 
-## v3.0.7 (2018-02-06)
+## v3.0.7 (2019-02-06)
 
 ### Bug fixes
 
