@@ -444,7 +444,7 @@ defmodule Ecto.Repo do
   **Note this feature is experimental and may be changed or removed in future
   releases.**
   """
-  @callback put_dynamic_repo(atom() | pid()) :: :ok
+  @callback put_dynamic_repo(atom() | pid()) :: atom() | pid()
 
   ## Ecto.Adapter.Queryable
 
