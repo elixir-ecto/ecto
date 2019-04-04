@@ -1,5 +1,12 @@
 # Changelog for v3.x
 
+## v3.1.1 (2019-04-04)
+
+### Bug fixes
+
+  * [Ecto] Do not require Jason (i.e. it should continue to be an optional dependency)
+  * [Ecto.Repo] Make sure `many_to_many` and `Ecto.Multi` work with dynamic repos
+
 ## v3.1.0 (2019-04-02)
 
 v3.1 requires Elixir v1.5+.

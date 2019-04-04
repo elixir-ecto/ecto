@@ -496,19 +496,4 @@ defmodule Ecto.MultiTest do
       end
     end
   end
-
-  describe "dynamic repo" do
-    setup do
-      {:ok, pid} = Ecto.TestRepo.start_link(name: nil)
-      Ecto.TestRepo = Ecto.TestRepo.put_dynamic_repo(pid)
-      :ok
-    end
-
-    test "with anonymous functions" do
-      fun = fn repo, _changes -> {:ok, repo} end
-      multi = Multi.new |> Multi.run(:run, fun)
-      assert {:ok, changes} = TestRepo.transaction(multi)
-      assert changes.run == TestRepo
-    end
-  end
 end
