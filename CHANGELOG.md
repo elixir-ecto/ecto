@@ -27,7 +27,7 @@ v3.1 requires Elixir v1.5+.
 
   * [Ecto.LogEntry] Fully deprecate previously soft deprecated API
 
-## v3.0.7 (2018-02-06)
+## v3.0.7 (2019-02-06)
 
 ### Bug fixes
 
