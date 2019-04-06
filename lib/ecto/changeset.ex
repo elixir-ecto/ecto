@@ -1072,8 +1072,7 @@ defmodule Ecto.Changeset do
   def update_change(%Changeset{changes: changes} = changeset, key, function) when is_atom(key) do
     case Map.fetch(changes, key) do
       {:ok, value} ->
-        changes = Map.put(changes, key, function.(value))
-        %{changeset | changes: changes}
+        put_change(changeset, key, function.(value))
       :error ->
         changeset
     end

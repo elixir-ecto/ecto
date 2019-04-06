@@ -649,6 +649,11 @@ defmodule Ecto.ChangesetTest do
       changeset(%{})
       |> update_change(:title, & &1 || "bar")
     assert changeset.changes == %{}
+
+    changeset =
+      changeset(%Post{title: "mytitle"}, %{title: "MyTitle"})
+      |> update_change(:title, &String.downcase/1)
+    assert changeset.changes == %{}
   end
 
   test "put_change/3 and delete_change/2" do
