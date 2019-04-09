@@ -2057,6 +2057,11 @@ defmodule Ecto.Changeset do
   By calling `validate_confirmation(changeset, :email)`, this
   validation will check if both "email" and "email_confirmation"
   in the parameter map matches.
+  
+  Note that when the field is optional, it makes sure that field 
+  is present to validate the confirmation field. Incase the field is 
+  not present and confirmation field is required it will not add error.
+  It will add the error only when the field is present. 
 
   Note that if the confirmation field is nil or missing, by default this does
   not add a validation error. You can specify that the confirmation field is
@@ -2084,11 +2089,11 @@ defmodule Ecto.Changeset do
     param = Atom.to_string(field)
     error_param = "#{param}_confirmation"
     error_field = String.to_atom(error_param)
-    value = Map.get(params, param)
+    value = Map.fetch(params, param)
 
     errors =
       case Map.fetch(params, error_param) do
-        {:ok, ^value} ->
+        ^value ->
           []
         {:ok, _} ->
           [{error_field,
