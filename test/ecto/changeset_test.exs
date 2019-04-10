@@ -1235,6 +1235,13 @@ defmodule Ecto.ChangesetTest do
     refute changeset.valid?
     assert changeset.errors == [password_confirmation: {"does not match confirmation", [validation: :confirmation]}]
 
+    # With missing change and password_confirmation where password_confirmation is required
+    # This verifiies that if field itself is optional, the confirmation field ignores even if its required
+    # So we check that the confirmation comes into action only if the field is present
+    changeset = changeset(%{})
+                |> validate_confirmation(:password, required: true)
+    assert changeset.valid?
+
     # invalid params
     changeset = changeset(:invalid)
                 |> validate_confirmation(:password)
