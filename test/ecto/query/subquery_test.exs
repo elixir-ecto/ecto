@@ -80,6 +80,18 @@ defmodule Ecto.Query.SubqueryTest do
     end
   end
 
+  test "plan: subqueries with literals" do
+    subquery = select(Post, [p], %{t: p.title, l: "literal"})
+    query = normalize(from(p in subquery(subquery), select: %{x: p.t, y: p.l, z: "otherliteral"}))
+
+    assert query.select.fields == [
+      {{:., [type: :string], [{:&, [], [0]}, :t]}, [], []},
+      {{:., [type: :any], [{:&, [], [0]}, :l]}, [], []}
+    ]
+
+    assert [{:t, _}, {:l, "literal"}] = query.from.source.query.select.fields
+  end
+
   test "plan: subqueries with map updates in select can be used with assoc" do
     query =
       Post

@@ -770,10 +770,21 @@ defmodule Ecto.Query.Planner do
     |> normalize_query(operation, adapter, counter)
     |> elem(0)
     |> normalize_select()
+    |> remove_literals()
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
       filter_and_reraise e, System.stacktrace
+  end
+
+  defp remove_literals({%{select: %{fields: fields}} = query, params})
+    when is_list(fields) do
+    {update_in(query.select.fields, &do_remove_literals/1), params}
+  end
+  defp remove_literals(input), do: input
+
+  defp do_remove_literals(list) do
+    Enum.reject(list, &is_binary/1)
   end
 
   defp normalize_query(query, operation, adapter, counter) do
@@ -1172,7 +1183,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp collect_fields(expr, fields, from, _query, _take)
-       when is_atom(expr) or is_binary(expr) or is_number(expr) do
+       when is_atom(expr) or is_number(expr) do
     {expr, fields, from}
   end
 
