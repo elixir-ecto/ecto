@@ -777,14 +777,15 @@ defmodule Ecto.Query.Planner do
       filter_and_reraise e, System.stacktrace
   end
 
-  defp remove_literals({%{select: %{fields: fields}} = query, params})
-    when is_list(fields) do
-    {update_in(query.select.fields, &do_remove_literals/1), params}
+  defmacrop is_literal(val) do
+    quote do: is_binary(unquote(val)) or is_number(unquote(val))
   end
-  defp remove_literals(input), do: input
 
-  defp do_remove_literals(list) do
-    Enum.reject(list, &is_binary/1)
+  defp remove_literals({%{select: nil} = query, params}), do: {query, params}
+
+  defp remove_literals({query, params}) do
+    query = update_in(query.select.fields, &Enum.reject(&1, fn f -> is_literal(f) end))
+    {query, params}
   end
 
   defp normalize_query(query, operation, adapter, counter) do
@@ -1182,9 +1183,12 @@ defmodule Ecto.Query.Planner do
     {{:list, args}, fields, from}
   end
 
-  defp collect_fields(expr, fields, from, _query, _take)
-       when is_atom(expr) or is_number(expr) do
+  defp collect_fields(expr, fields, from, _query, _take) when is_atom(expr) do
     {expr, fields, from}
+  end
+
+  defp collect_fields(expr, fields, from, _query, _take) when is_literal(expr) do
+    {expr, [expr | fields], from}
   end
 
   defp collect_fields(%Ecto.Query.Tagged{tag: tag} = expr, fields, from, _query, _take) do
