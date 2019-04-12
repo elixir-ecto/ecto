@@ -92,17 +92,8 @@ defmodule Ecto.Query.Builder do
     {expr, {params, acc}}
   end
 
-  def escape({:type, _, [{math_op, _, [_, _]} = op_expr, type]}, _type, params_acc, vars, env)
-      when math_op in ~w(+ - * /)a do
-    escape_with_type(op_expr, type, params_acc, vars, env)
-  end
-
   def escape({:type, _, [{{:., _, [{var, _, context}, field]}, _, []} = expr, type]}, _type, params_acc, vars, env)
       when is_atom(var) and is_atom(context) and is_atom(field) do
-    escape_with_type(expr, type, params_acc, vars, env)
-  end
-
-  def escape({:type, _, [{:fragment, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env) do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
@@ -110,13 +101,28 @@ defmodule Ecto.Query.Builder do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
-  def escape({:type, _, [{:over, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env) do
+  def escape({:type, _, [{math_op, _, [_, _]} = op_expr, type]}, _type, params_acc, vars, env)
+      when math_op in ~w(+ - * /)a do
+    escape_with_type(op_expr, type, params_acc, vars, env)
+  end
+
+  def escape({:type, _, [{fun, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env)
+      when fun in ~w(fragment avg count max min sum over)a do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
-  def escape({:type, _, [{agg, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env)
-      when agg in ~w(avg count max min sum)a do
-    escape_with_type(expr, type, params_acc, vars, env)
+  def escape({:type, _, [expr, _]}, _type, _params_acc, _vars, _env) do
+    error! """
+    the first argument of type/2 must be one of:
+
+      * interpolations, such as ^value
+      * fields, such as p.foo or field(p)
+      * fragments, such fragment("foo(?)", value)
+      * an arithmetic expression (+, -, *, /)
+      * an aggregation or window expression (avg, count, min, max, sum, over)
+
+    Got: #{Macro.to_string(expr)}
+    """
   end
 
   # fragments
