@@ -110,6 +110,10 @@ defmodule Ecto.Query.Builder do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
+  def escape({:type, _, [{:over, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env) do
+    escape_with_type(expr, type, params_acc, vars, env)
+  end
+
   def escape({:type, _, [{agg, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env)
       when agg in ~w(avg count max min sum)a do
     escape_with_type(expr, type, params_acc, vars, env)

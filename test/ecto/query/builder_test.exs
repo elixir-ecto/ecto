@@ -36,6 +36,9 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do type(&0.y, :"Elixir.Ecto.UUID") end), []} ==
           escape(quote do type(field(x, :y), Ecto.UUID) end, [x: 0], {__ENV__, %{}})
 
+    assert {Macro.escape(quote do type(over(fragment({:raw, "array_agg("},{:expr, &0.id}, {:raw, ")"}), :y), {:array, :"Elixir.Ecto.UUID"}) end), []} ==
+      escape(quote do type(over(fragment("array_agg(?)", x.id), :y), {:array, Ecto.UUID}) end, [x: 0], {__ENV__, %{}})
+
     assert {Macro.escape(quote do avg(0) end), []} ==
            escape(quote do avg(0) end, [], __ENV__)
 
