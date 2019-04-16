@@ -28,7 +28,7 @@ end
 defimpl Ecto.Queryable, for: Atom do
   def to_query(module) do
     try do
-      module.__schema__(:query)
+      module.__schema__(:scoped_query)
     rescue
       UndefinedFunctionError ->
         message = if :code.is_loaded(module) do
