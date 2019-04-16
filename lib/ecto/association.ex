@@ -614,13 +614,41 @@ defmodule Ecto.Association.Has do
 
   @doc false
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, [value]) do
-    from(x in (query || queryable), where: field(x, ^related_key) == ^value)
+    related_type = assoc.related.__schema__(:type, related_key)
+    if Ecto.Type.base?(related_type) do
+      from(x in (query || queryable), where: field(x, ^related_key) == ^value)
+    else
+      from(x in (query || queryable), where: field(x, ^related_key) == type(^value, ^related_type))
+    end
     |> Ecto.Association.combine_assoc_query(assoc)
   end
 
   @doc false
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, values) do
-    from(x in (query || queryable), where: field(x, ^related_key) in ^values)
+    related_type = assoc.related.__schema__(:type, related_key)
+    if Ecto.Type.base?(related_type) do
+      from(x in (query || queryable), where: field(x, ^related_key) in ^values)
+    else
+      typed_in_operands =
+        for {_, idx} <- Enum.with_index(values) do
+          {:type, [], [{:^, [], [idx]}, related_type]}
+        end
+
+      expr = %Ecto.Query.BooleanExpr{
+        op: :and,
+        expr: {:in, [],
+        [
+          {{:., [], [{:&, [], [0]}, related_key]}, [], []},
+          typed_in_operands
+        ]},
+        file: __ENV__.file,
+        line: __ENV__.line,
+        params: Enum.zip(values, Stream.cycle([related_type]))
+      }
+
+      query = from(query || queryable, [])
+      %{query | wheres: [expr | query.wheres]}
+    end
     |> Ecto.Association.combine_assoc_query(assoc)
   end
 

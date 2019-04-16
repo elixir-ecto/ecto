@@ -363,7 +363,12 @@ defmodule Ecto.Repo.Queryable do
     schema = assert_schema!(query)
     case schema.__schema__(:primary_key) do
       [pk] ->
-        Query.from(x in query, where: field(x, ^pk) == ^id)
+        pk_type = schema.__schema__(:type, pk)
+        if Ecto.Type.base?(pk_type) do
+          Query.from(x in query, where: field(x, ^pk) == ^id)
+        else
+          Query.from(x in query, where: field(x, ^pk) == type(^id, ^pk_type))
+        end
       pks ->
         raise ArgumentError,
           "Ecto.Repo.get/2 requires the schema #{inspect schema} " <>

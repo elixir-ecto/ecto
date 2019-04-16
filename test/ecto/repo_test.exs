@@ -1089,6 +1089,82 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  describe "custom type requiring tagging as primary key" do
+    defmodule UrnID do
+      @moduledoc "Represents a URN. See https://tools.ietf.org/html/rfc8141"
+      @behaviour Ecto.Type
+      defstruct [:nid, :nss]
+
+      def type, do: :urn
+      def new(nid, nss), do: {:ok, %__MODULE__{nid: nid, nss: nss}}
+      def cast(%__MODULE__{} = urn ), do: {:ok, urn}
+      def cast({nid, nss}), do: new(nid, nss)
+      def load({nid, nss}), do: new(nid, nss)
+      def load(1), do: new("test_repo", "1")
+      def dump(urn), do: {:ok, {urn.nid, urn.nss}}
+    end
+
+    defmodule MySchemaUrnID do
+      use Ecto.Schema
+
+      @primary_key {:id, UrnID, autogenerate: false}
+      @foreign_key_type UrnID
+      schema "" do
+        field :name
+        belongs_to(:parent, __MODULE__)
+        has_many(:children, __MODULE__, foreign_key: :parent_id)
+      end
+    end
+
+    test "casts correctly when inserting" do
+      id = {"isbn", "123"}
+      changeset = Ecto.Changeset.cast(%MySchemaUrnID{}, %{id: id}, [:id])
+      assert {:ok, inserted} = TestRepo.insert(changeset)
+      assert inserted.id == %UrnID{nid: "isbn", nss: "123"}
+    end
+
+    test "tags correctly when querying" do
+      assert %{id: returned_id} = TestRepo.get(MySchemaUrnID, {"isbn", "123"})
+      assert returned_id == %UrnID{nid: "test_repo", nss: "1"}
+      assert_receive {:all, query}
+      assert inspect(query) ==
+        "#Ecto.Query<from m0 in Ecto.RepoTest.MySchemaUrnID, where: m0.id == type(^..., Ecto.RepoTest.UrnID), select: m0>"
+    end
+
+    test "tags correctly when updating" do
+      schema = %MySchemaUrnID{id: %UrnID{nid: "test_repo", nss: "1"}}
+      changeset = Ecto.Changeset.cast(schema, %{name: "new"}, [:name])
+      TestRepo.update!(changeset)
+      assert_receive {:update, %{filters: [{:id, {"test_repo", "1"}, :urn}]}}
+    end
+
+    test "tags correctly when deleting" do
+      schema = %MySchemaUrnID{id: %UrnID{nid: "test_repo", nss: "1"}}
+      TestRepo.delete!(schema)
+      assert_receive {:delete, %{filters: [{:id, {"test_repo", "1"}, :urn}]}}
+    end
+
+    test "correctly preloads" do
+      %MySchemaUrnID{id: %UrnID{nid: "test_repo", nss: "1"}}
+      |> TestRepo.preload([:children])
+
+      assert_receive {:all, query}
+      assert inspect(query) ==
+        "#Ecto.Query<from m0 in Ecto.RepoTest.MySchemaUrnID, where: m0.parent_id == type(^..., Ecto.RepoTest.UrnID), order_by: [asc: m0.parent_id], select: {m0.parent_id, m0}>"
+
+      [
+        %MySchemaUrnID{id: %UrnID{nid: "test_repo", nss: "1"}},
+        %MySchemaUrnID{id: %UrnID{nid: "test_repo", nss: "2"}},
+      ]
+      |> TestRepo.preload([:children])
+
+      assert_receive {:all, query}
+      assert inspect(query) ==
+        "#Ecto.Query<from m0 in Ecto.RepoTest.MySchemaUrnID, where: m0.parent_id in [type(^..., Ecto.RepoTest.UrnID), type(^..., Ecto.RepoTest.UrnID)], order_by: [asc: m0.parent_id], select: {m0.parent_id, m0}>"
+    end
+
+  end
+
   describe "transactions" do
     defmodule NoTransactionAdapter do
       @behaviour Ecto.Adapter
