@@ -115,6 +115,22 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert query.select.take == %{0 => {:map, [:title]}}
     end
 
+    test "merges at the root with pinned field names" do
+      query =
+        "posts"
+        |> select([p], map(p, [:title, :body]))
+        |> select_merge([p], %{^"title" => p.title})
+        |> select_merge([p], %{^"body" => p.body})
+
+      assert Macro.to_string(query.select.expr) ==
+        "merge(merge(&0, %{^0 => &0.title()}), %{^1 => &0.body()})"
+      assert query.select.params == [{"title", :any}, {"body", :any}]
+      assert query.select.take == %{0 => {:map, [:title, :body]}}
+
+      assert inspect(query) =~ "%{^\"title\" => map(p0, [:title, :body]).title}), %{^\"body\" => map(p0, [:title, :body]).body})"
+    end
+
+
     test "merges at the root with interpolated fields" do
       fields = [:title]
 
