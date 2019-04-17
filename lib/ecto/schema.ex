@@ -420,6 +420,7 @@ defmodule Ecto.Schema do
 
       Module.register_attribute(__MODULE__, :ecto_primary_keys, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_query_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_field_sources, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_embeds, accumulate: true)
@@ -507,13 +508,14 @@ defmodule Ecto.Schema do
 
     postlude =
       quote unquote: false do
-        primary_key_fields = @ecto_primary_keys |> Enum.reverse
-        autogenerate = @ecto_autogenerate |> Enum.reverse
-        autoupdate = @ecto_autoupdate |> Enum.reverse
-        fields = @ecto_fields |> Enum.reverse
-        field_sources = @ecto_field_sources |> Enum.reverse
-        assocs = @ecto_assocs |> Enum.reverse
-        embeds = @ecto_embeds |> Enum.reverse
+        primary_key_fields = @ecto_primary_keys |> Enum.reverse()
+        autogenerate = @ecto_autogenerate |> Enum.reverse()
+        autoupdate = @ecto_autoupdate |> Enum.reverse()
+        fields = @ecto_fields |> Enum.reverse()
+        query_fields = @ecto_query_fields |> Enum.reverse()
+        field_sources = @ecto_field_sources |> Enum.reverse()
+        assocs = @ecto_assocs |> Enum.reverse()
+        embeds = @ecto_embeds |> Enum.reverse()
         loaded = Ecto.Schema.__loaded__(__MODULE__, @struct_fields)
 
         defstruct @struct_fields
@@ -525,8 +527,9 @@ defmodule Ecto.Schema do
         def __schema__(:prefix), do: unquote(prefix)
         def __schema__(:source), do: unquote(source)
         def __schema__(:fields), do: unquote(Enum.map(fields, &elem(&1, 0)))
+        def __schema__(:query_fields), do: unquote(Enum.map(query_fields, &elem(&1, 0)))
         def __schema__(:primary_key), do: unquote(primary_key_fields)
-        def __schema__(:hash), do: unquote(:erlang.phash2({primary_key_fields, fields}))
+        def __schema__(:hash), do: unquote(:erlang.phash2({primary_key_fields, query_fields}))
         def __schema__(:read_after_writes), do: unquote(Enum.reverse(@ecto_raw))
         def __schema__(:autogenerate_id), do: unquote(Macro.escape(@ecto_autogenerate_id))
         def __schema__(:autogenerate), do: unquote(Macro.escape(autogenerate))
@@ -1749,11 +1752,23 @@ defmodule Ecto.Schema do
         Module.put_attribute(mod, :ecto_primary_keys, name)
       end
 
+      unless opts[:query_exclude] do
+        Module.put_attribute(mod, :ecto_query_fields, {name, type})
+      end
+
       Module.put_attribute(mod, :ecto_fields, {name, type})
     end
   end
 
-  @valid_has_options [:foreign_key, :references, :through, :on_delete, :defaults, :on_replace, :where]
+  @valid_has_options [
+    :foreign_key,
+    :references,
+    :through,
+    :on_delete,
+    :defaults,
+    :on_replace,
+    :where
+  ]
 
   @doc false
   def __has_many__(mod, name, queryable, opts) do
