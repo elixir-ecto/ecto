@@ -952,6 +952,20 @@ defmodule Ecto.Query.Builder do
   end
 
   @doc """
+  Bump interpolations by the length of parameters.
+  """
+  def bump_interpolations(expr, []), do: expr
+
+  def bump_interpolations(expr, params) do
+    len = length(params)
+
+    Macro.prewalk(expr, fn
+      {:^, meta, [counter]} when is_integer(counter) -> {:^, meta, [len + counter]}
+      other -> other
+    end)
+  end
+
+  @doc """
   Applies a query at compilation time or at runtime.
 
   This function is responsible for checking if a given query is an

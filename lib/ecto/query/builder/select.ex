@@ -230,6 +230,7 @@ defmodule Ecto.Query.Builder.Select do
 
   defp merge(query, select, old_expr, old_params, old_take, new_select) do
     %{expr: new_expr, params: new_params, take: new_take} = new_select
+    new_expr = Ecto.Query.Builder.bump_interpolations(new_expr, old_params)
 
     expr =
       case {classify_merge(old_expr, old_take), classify_merge(new_expr, new_take)} do

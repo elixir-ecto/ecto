@@ -37,17 +37,7 @@ defmodule Ecto.Query.Planner do
 
   defp merge_expr_and_params(op, %QueryExpr{expr: left_expr, params: left_params} = struct,
                              right_expr, right_params) do
-    right_expr =
-      case length(left_params) do
-        0 ->
-          right_expr
-        prefix ->
-          Macro.prewalk(right_expr, fn
-            {:^, meta, [counter]} when is_integer(counter) -> {:^, meta, [prefix + counter]}
-            other -> other
-          end)
-      end
-
+    right_expr = Ecto.Query.Builder.bump_interpolations(right_expr, left_params)
     %{struct | expr: merge_expr(op, left_expr, right_expr), params: left_params ++ right_params}
   end
 

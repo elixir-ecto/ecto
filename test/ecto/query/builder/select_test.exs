@@ -86,7 +86,7 @@ defmodule Ecto.Query.Builder.SelectTest do
           select_merge: %{a: map(p, [:title]), b: ^0},
           select_merge: %{c: map(p, [:title, :body]), d: ^1}
 
-      assert Macro.to_string(query.select.expr) == "merge(%{a: &0, b: ^0}, %{c: &0, d: ^0})"
+      assert Macro.to_string(query.select.expr) == "merge(%{a: &0, b: ^0}, %{c: &0, d: ^1})"
       assert query.select.params == [{0, :any}, {1, :any}]
       assert query.select.take == %{0 => {:map, [:title, :body]}}
     end
@@ -98,7 +98,7 @@ defmodule Ecto.Query.Builder.SelectTest do
         |> select_merge([p], %{a: map(p, [:title]), b: ^0})
         |> select_merge([p], %{c: map(p, [:title, :body]), d: ^1})
 
-      assert Macro.to_string(query.select.expr) == "merge(%{a: &0, b: ^0}, %{c: &0, d: ^0})"
+      assert Macro.to_string(query.select.expr) == "merge(%{a: &0, b: ^0}, %{c: &0, d: ^1})"
       assert query.select.params == [{0, :any}, {1, :any}]
       assert query.select.take == %{0 => {:map, [:title, :body]}}
     end
