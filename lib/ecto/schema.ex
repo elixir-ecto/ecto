@@ -1754,7 +1754,7 @@ defmodule Ecto.Schema do
         Module.put_attribute(mod, :ecto_primary_keys, name)
       end
 
-      unless opts[:load_in_query] do
+      if Keyword.get(opts, :load_in_query, true) do
         Module.put_attribute(mod, :ecto_query_fields, {name, type})
       end
 

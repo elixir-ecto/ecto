@@ -61,7 +61,7 @@ defmodule Ecto.Query.PlannerTest do
       field :posted, :naive_datetime
       field :visits, :integer
       field :links, {:array, Custom.Permalink}
-      field :payload, :map, load_in_query: true
+      field :payload, :map, load_in_query: false
 
       has_many :comments, Ecto.Query.PlannerTest.Comment
       has_many :extra_comments, Ecto.Query.PlannerTest.Comment
