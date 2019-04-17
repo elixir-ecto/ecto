@@ -13,7 +13,7 @@ defmodule Ecto.SchemaTest do
       field :count, :decimal, read_after_writes: true, source: :cnt
       field :array, {:array, :string}
       field :uuid, Ecto.UUID, autogenerate: true
-      field :query_excluded_field, :string, query_exclude: true
+      field :query_excluded_field, :string, load_in_query: true
       belongs_to :comment, Comment
       belongs_to :permalink, Permalink, define_field: false
     end
