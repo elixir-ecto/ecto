@@ -596,7 +596,7 @@ defmodule Ecto.Schema do
     * `:primary_key` - When true, the field is used as part of the
       composite primary key
 
-    * `load_in_query` - When true, the field will not be selected in query.
+    * `load_in_query` - When false, the field will not be selected in query. default to: `true`.
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
