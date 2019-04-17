@@ -508,14 +508,14 @@ defmodule Ecto.Schema do
 
     postlude =
       quote unquote: false do
-        primary_key_fields = @ecto_primary_keys |> Enum.reverse()
-        autogenerate = @ecto_autogenerate |> Enum.reverse()
-        autoupdate = @ecto_autoupdate |> Enum.reverse()
-        fields = @ecto_fields |> Enum.reverse()
-        query_fields = @ecto_query_fields |> Enum.reverse()
-        field_sources = @ecto_field_sources |> Enum.reverse()
-        assocs = @ecto_assocs |> Enum.reverse()
-        embeds = @ecto_embeds |> Enum.reverse()
+        primary_key_fields = @ecto_primary_keys |> Enum.reverse
+        autogenerate = @ecto_autogenerate |> Enum.reverse
+        autoupdate = @ecto_autoupdate |> Enum.reverse
+        fields = @ecto_fields |> Enum.reverse
+        query_fields = @ecto_query_fields |> Enum.reverse
+        field_sources = @ecto_field_sources |> Enum.reverse
+        assocs = @ecto_assocs |> Enum.reverse
+        embeds = @ecto_embeds |> Enum.reverse
         loaded = Ecto.Schema.__loaded__(__MODULE__, @struct_fields)
 
         defstruct @struct_fields
@@ -1762,15 +1762,7 @@ defmodule Ecto.Schema do
     end
   end
 
-  @valid_has_options [
-    :foreign_key,
-    :references,
-    :through,
-    :on_delete,
-    :defaults,
-    :on_replace,
-    :where
-  ]
+  @valid_has_options [:foreign_key, :references, :through, :on_delete, :defaults, :on_replace, :where]
 
   @doc false
   def __has_many__(mod, name, queryable, opts) do
