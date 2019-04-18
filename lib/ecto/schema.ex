@@ -594,9 +594,11 @@ defmodule Ecto.Schema do
       `:read_after_writes`.
 
     * `:primary_key` - When true, the field is used as part of the
-      composite primary key
+      composite primary key.
 
-    * `load_in_query` - When false, the field will not be selected in query. default to: `true`.
+    * `:load_in_query` - When false, the field will not be loaded when
+      selecting the whole struct in a query, such as `from p in Post, select: p`.
+      Defaults to `true`.
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
