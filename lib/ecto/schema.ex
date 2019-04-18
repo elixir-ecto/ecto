@@ -420,6 +420,7 @@ defmodule Ecto.Schema do
 
       Module.register_attribute(__MODULE__, :ecto_primary_keys, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_query_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_field_sources, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_embeds, accumulate: true)
@@ -511,6 +512,7 @@ defmodule Ecto.Schema do
         autogenerate = @ecto_autogenerate |> Enum.reverse
         autoupdate = @ecto_autoupdate |> Enum.reverse
         fields = @ecto_fields |> Enum.reverse
+        query_fields = @ecto_query_fields |> Enum.reverse
         field_sources = @ecto_field_sources |> Enum.reverse
         assocs = @ecto_assocs |> Enum.reverse
         embeds = @ecto_embeds |> Enum.reverse
@@ -525,8 +527,9 @@ defmodule Ecto.Schema do
         def __schema__(:prefix), do: unquote(prefix)
         def __schema__(:source), do: unquote(source)
         def __schema__(:fields), do: unquote(Enum.map(fields, &elem(&1, 0)))
+        def __schema__(:query_fields), do: unquote(Enum.map(query_fields, &elem(&1, 0)))
         def __schema__(:primary_key), do: unquote(primary_key_fields)
-        def __schema__(:hash), do: unquote(:erlang.phash2({primary_key_fields, fields}))
+        def __schema__(:hash), do: unquote(:erlang.phash2({primary_key_fields, query_fields}))
         def __schema__(:read_after_writes), do: unquote(Enum.reverse(@ecto_raw))
         def __schema__(:autogenerate_id), do: unquote(Macro.escape(@ecto_autogenerate_id))
         def __schema__(:autogenerate), do: unquote(Macro.escape(autogenerate))
@@ -591,7 +594,11 @@ defmodule Ecto.Schema do
       `:read_after_writes`.
 
     * `:primary_key` - When true, the field is used as part of the
-      composite primary key
+      composite primary key.
+
+    * `:load_in_query` - When false, the field will not be loaded when
+      selecting the whole struct in a query, such as `from p in Post, select: p`.
+      Defaults to `true`.
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
@@ -1747,6 +1754,10 @@ defmodule Ecto.Schema do
 
       if pk? do
         Module.put_attribute(mod, :ecto_primary_keys, name)
+      end
+
+      if Keyword.get(opts, :load_in_query, true) do
+        Module.put_attribute(mod, :ecto_query_fields, {name, type})
       end
 
       Module.put_attribute(mod, :ecto_fields, {name, type})
