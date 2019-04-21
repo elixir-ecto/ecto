@@ -132,7 +132,7 @@ Note this version includes changes from `ecto` and `ecto_sql` but in future rele
   * [Ecto.Query] Support `filter/2` in queries, such as `select: filter(count(p.id), p.public == true)`
   * [Ecto.Query] The `:prefix` and `:hints` options are now supported on both `from` and `join` expressions
   * [Ecto.Query] Support `:asc_nulls_last`, `:asc_nulls_first`, `:desc_nulls_last`, and `:desc_nulls_first` in `order_by`
-  * [Ecto.Query] Allow variables (sources) to be given in queries, for example, useful for invoking functins, such as `fragment("some_function(?)", p)`
+  * [Ecto.Query] Allow variables (sources) to be given in queries, for example, useful for invoking functions, such as `fragment("some_function(?)", p)`
   * [Ecto.Query] Add support for `union`, `union_all`, `intersection`, `intersection_all`, `except` and `except_all`
   * [Ecto.Query] Add support for `windows` and `over`
   * [Ecto.Query] Raise when comparing a string with a charlist during planning
