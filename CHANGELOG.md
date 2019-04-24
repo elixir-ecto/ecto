@@ -1,5 +1,19 @@
 # Changelog for v3.x
 
+## v3.1.2 (2019-04-24)
+
+### Enhancements
+
+  * [Ecto.Query] Add support for `type+over`
+  * [Ecto.Schema] Allow schema fields to be excluded from queries
+
+### Bug fixes
+
+  * [Ecto.Changeset] Do not list a field as changed if it is updated to its original value
+  * [Ecto.Query] Keep literal numbers and bitstring in subqueries and unions
+  * [Ecto.Query] Improve error message for invalid `type/2` expression
+  * [Ecto.Query] Properly count interpolations in `select_merge/2`
+
 ## v3.1.1 (2019-04-04)
 
 ### Bug fixes
