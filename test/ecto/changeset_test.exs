@@ -950,13 +950,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "world"})
       |> validate_exclusion(:title, ~w(world))
     refute changeset.valid?
-    assert changeset.errors == [title: {"is reserved", [validation: :exclusion]}]
+    assert changeset.errors == [title: {"is reserved", [validation: :exclusion, enum: ~w(world)]}]
     assert validations(changeset) == [title: {:exclusion, ~w(world)}]
 
     changeset =
       changeset(%{"title" => "world"})
       |> validate_exclusion(:title, ~w(world), message: "yada")
-    assert changeset.errors == [title: {"yada", [validation: :exclusion]}]
+    assert changeset.errors == [title: {"yada", [validation: :exclusion, enum: ~w(world)]}]
   end
 
   test "validate_length/3 with string" do

@@ -1872,7 +1872,7 @@ defmodule Ecto.Changeset do
   def validate_exclusion(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:exclusion, data}, fn _, value ->
       if value in data, do:
-        [{field, {message(opts, "is reserved"), [validation: :exclusion]}}], else: []
+        [{field, {message(opts, "is reserved"), [validation: :exclusion, enum: data]}}], else: []
     end
   end
 
