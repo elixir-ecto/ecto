@@ -1850,7 +1850,7 @@ defmodule Ecto.Changeset do
   def validate_subset(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:subset, data}, fn _, value ->
       case Enum.any?(value, fn(x) -> not(x in data) end) do
-        true -> [{field, {message(opts, "has an invalid entry"), [validation: :subset]}}]
+        true -> [{field, {message(opts, "has an invalid entry"), [validation: :subset, enum: data]}}]
         false -> []
       end
     end

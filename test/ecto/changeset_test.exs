@@ -929,13 +929,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"topics" => ["cat", "laptop"]})
       |> validate_subset(:topics, ~w(cat dog))
     refute changeset.valid?
-    assert changeset.errors == [topics: {"has an invalid entry", [validation: :subset]}]
+    assert changeset.errors == [topics: {"has an invalid entry", [validation: :subset, enum: ~w(cat dog)]}]
     assert validations(changeset) == [topics: {:subset, ~w(cat dog)}]
 
     changeset =
       changeset(%{"topics" => ["laptop"]})
       |> validate_subset(:topics, ~w(cat dog), message: "yada")
-    assert changeset.errors == [topics: {"yada", [validation: :subset]}]
+    assert changeset.errors == [topics: {"yada", [validation: :subset, enum: ~w(cat dog)]}]
   end
 
   test "validate_exclusion/3" do
