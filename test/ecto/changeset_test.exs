@@ -908,13 +908,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(world))
     refute changeset.valid?
-    assert changeset.errors == [title: {"is invalid", [validation: :inclusion]}]
+    assert changeset.errors == [title: {"is invalid", [validation: :inclusion, enum: ~w(world)]}]
     assert validations(changeset) == [title: {:inclusion, ~w(world)}]
 
     changeset =
       changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(world), message: "yada")
-    assert changeset.errors == [title: {"yada", [validation: :inclusion]}]
+    assert changeset.errors == [title: {"yada", [validation: :inclusion, enum: ~w(world)]}]
   end
 
   test "validate_subset/3" do
@@ -1622,7 +1622,7 @@ defmodule Ecto.ChangesetTest do
       %Ecto.Changeset{validations: validations}, field, {_, [validation: :format]} ->
         validation = Keyword.get_values(validations, field)
         "field #{field} should match format #{inspect validation[:format]}"
-      %Ecto.Changeset{validations: validations}, field, {_, [validation: :inclusion]} ->
+      %Ecto.Changeset{validations: validations}, field, {_, [validation: :inclusion, enum: _]} ->
         validation = Keyword.get_values(validations, field)
         values = Enum.join(validation[:inclusion], ", ")
         "#{field} value should be in #{values}"

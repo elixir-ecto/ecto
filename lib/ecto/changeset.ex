@@ -1828,7 +1828,7 @@ defmodule Ecto.Changeset do
     validate_change changeset, field, {:inclusion, data}, fn _, value ->
       if value in data,
         do: [],
-        else: [{field, {message(opts, "is invalid"), [validation: :inclusion]}}]
+        else: [{field, {message(opts, "is invalid"), [validation: :inclusion, enum: data]}}]
     end
   end
 
