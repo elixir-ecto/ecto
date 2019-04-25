@@ -908,13 +908,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(world))
     refute changeset.valid?
-    assert changeset.errors == [title: {"is invalid", [validation: :inclusion]}]
+    assert changeset.errors == [title: {"is invalid", [validation: :inclusion, enum: ~w(world)]}]
     assert validations(changeset) == [title: {:inclusion, ~w(world)}]
 
     changeset =
       changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(world), message: "yada")
-    assert changeset.errors == [title: {"yada", [validation: :inclusion]}]
+    assert changeset.errors == [title: {"yada", [validation: :inclusion, enum: ~w(world)]}]
   end
 
   test "validate_subset/3" do
@@ -929,13 +929,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"topics" => ["cat", "laptop"]})
       |> validate_subset(:topics, ~w(cat dog))
     refute changeset.valid?
-    assert changeset.errors == [topics: {"has an invalid entry", [validation: :subset]}]
+    assert changeset.errors == [topics: {"has an invalid entry", [validation: :subset, enum: ~w(cat dog)]}]
     assert validations(changeset) == [topics: {:subset, ~w(cat dog)}]
 
     changeset =
       changeset(%{"topics" => ["laptop"]})
       |> validate_subset(:topics, ~w(cat dog), message: "yada")
-    assert changeset.errors == [topics: {"yada", [validation: :subset]}]
+    assert changeset.errors == [topics: {"yada", [validation: :subset, enum: ~w(cat dog)]}]
   end
 
   test "validate_exclusion/3" do
@@ -950,13 +950,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "world"})
       |> validate_exclusion(:title, ~w(world))
     refute changeset.valid?
-    assert changeset.errors == [title: {"is reserved", [validation: :exclusion]}]
+    assert changeset.errors == [title: {"is reserved", [validation: :exclusion, enum: ~w(world)]}]
     assert validations(changeset) == [title: {:exclusion, ~w(world)}]
 
     changeset =
       changeset(%{"title" => "world"})
       |> validate_exclusion(:title, ~w(world), message: "yada")
-    assert changeset.errors == [title: {"yada", [validation: :exclusion]}]
+    assert changeset.errors == [title: {"yada", [validation: :exclusion, enum: ~w(world)]}]
   end
 
   test "validate_length/3 with string" do
@@ -1622,7 +1622,7 @@ defmodule Ecto.ChangesetTest do
       %Ecto.Changeset{validations: validations}, field, {_, [validation: :format]} ->
         validation = Keyword.get_values(validations, field)
         "field #{field} should match format #{inspect validation[:format]}"
-      %Ecto.Changeset{validations: validations}, field, {_, [validation: :inclusion]} ->
+      %Ecto.Changeset{validations: validations}, field, {_, [validation: :inclusion, enum: _]} ->
         validation = Keyword.get_values(validations, field)
         values = Enum.join(validation[:inclusion], ", ")
         "#{field} value should be in #{values}"

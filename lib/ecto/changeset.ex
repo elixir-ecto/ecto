@@ -1828,7 +1828,7 @@ defmodule Ecto.Changeset do
     validate_change changeset, field, {:inclusion, data}, fn _, value ->
       if value in data,
         do: [],
-        else: [{field, {message(opts, "is invalid"), [validation: :inclusion]}}]
+        else: [{field, {message(opts, "is invalid"), [validation: :inclusion, enum: data]}}]
     end
   end
 
@@ -1850,7 +1850,7 @@ defmodule Ecto.Changeset do
   def validate_subset(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:subset, data}, fn _, value ->
       case Enum.any?(value, fn(x) -> not(x in data) end) do
-        true -> [{field, {message(opts, "has an invalid entry"), [validation: :subset]}}]
+        true -> [{field, {message(opts, "has an invalid entry"), [validation: :subset, enum: data]}}]
         false -> []
       end
     end
@@ -1872,7 +1872,7 @@ defmodule Ecto.Changeset do
   def validate_exclusion(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:exclusion, data}, fn _, value ->
       if value in data, do:
-        [{field, {message(opts, "is reserved"), [validation: :exclusion]}}], else: []
+        [{field, {message(opts, "is reserved"), [validation: :exclusion, enum: data]}}], else: []
     end
   end
 
