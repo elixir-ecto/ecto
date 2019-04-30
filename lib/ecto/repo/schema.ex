@@ -68,7 +68,7 @@ defmodule Ecto.Repo.Schema do
     struct = Ecto.Schema.Loader.load_struct(schema, prefix, source)
 
     for row <- rows do
-      {loaded, _} = Ecto.Schema.Loader.adapter_load(struct, types, row, false, adapter)
+      {loaded, _} = Ecto.Repo.Queryable.struct_load!(types, row, [], false, struct, adapter)
       loaded
     end
   end

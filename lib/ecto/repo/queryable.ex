@@ -49,12 +49,13 @@ defmodule Ecto.Repo.Queryable do
   end
 
   def exists?(name, queryable, opts) do
-    queryable = Query.exclude(queryable, :select)
-                |> Query.exclude(:preload)
-                |> Query.exclude(:order_by)
-                |> Query.exclude(:distinct)
-                |> Query.select(1)
-                |> Query.limit(1)
+    queryable =
+      Query.exclude(queryable, :select)
+      |> Query.exclude(:preload)
+      |> Query.exclude(:order_by)
+      |> Query.exclude(:distinct)
+      |> Query.select(1)
+      |> Query.limit(1)
 
     case all(name, queryable, opts) do
       [1] -> true
@@ -91,7 +92,6 @@ defmodule Ecto.Repo.Queryable do
     query =
       queryable
       |> Ecto.Queryable.to_query
-      |> maybe_returning(:update_all, opts)
       |> attach_prefix(opts)
 
     execute(:update_all, name, query, opts)
@@ -101,22 +101,28 @@ defmodule Ecto.Repo.Queryable do
     query =
       queryable
       |> Ecto.Queryable.to_query
-      |> maybe_returning(:delete_all, opts)
       |> attach_prefix(opts)
 
     execute(:delete_all, name, query, opts)
   end
 
-  defp maybe_returning(query, kind, opts) do
-    case Keyword.fetch(opts, :returning) do
-      {:ok, value} ->
-        IO.warn(":returning option for #{inspect(kind)} is deprecated, please specify a select using `Ecto.Query.select/3` instead")
-        Ecto.Query.Planner.ensure_select(query, value)
-
-      :error ->
-        query
-    end
+  @doc """
+  Load structs from query.
+  """
+  def struct_load!([{field, type} | types], [value | values], acc, all_nil?, struct, adapter) do
+    all_nil? = all_nil? and value == nil
+    value = load!(type, value, field, struct, adapter)
+    struct_load!(types, values, [{field, value} | acc], all_nil?, struct, adapter)
   end
+
+  def struct_load!([], values, _acc, true, _struct, _adapter) do
+    {nil, values}
+  end
+
+  def struct_load!([], values, acc, false, struct, _adapter) do
+    {Map.merge(struct, Map.new(acc)), values}
+  end
+
 
   ## Helpers
 
@@ -192,7 +198,7 @@ defmodule Ecto.Repo.Queryable do
     struct = Ecto.Schema.Loader.load_struct(schema, prefix, source)
 
     fn row ->
-      {entry, rest} = Ecto.Schema.Loader.adapter_load(struct, types, row, false, adapter)
+      {entry, rest} = struct_load!(types, row, [], false, struct, adapter)
       preprocess(rest, preprocess, entry, adapter)
     end
   end
@@ -235,7 +241,7 @@ defmodule Ecto.Repo.Queryable do
   end
   defp process(row, {:source, {source, schema}, prefix, types}, _from, adapter) do
     struct = Ecto.Schema.Loader.load_struct(schema, prefix, source)
-    Ecto.Schema.Loader.adapter_load(struct, types, row, true, adapter)
+    struct_load!(types, row, [], true, struct, adapter)
   end
   defp process(row, {:merge, left, right}, from, adapter) do
     {left, row} = process(row, left, from, adapter)
@@ -328,6 +334,7 @@ defmodule Ecto.Repo.Queryable do
     end)
   end
 
+  @compile {:inline, load!: 5}
   defp load!(type, value, field, struct, adapter) do
     case Ecto.Type.adapter_load(adapter, type, value) do
       {:ok, value} ->

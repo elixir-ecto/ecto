@@ -22,29 +22,6 @@ defmodule Ecto.Schema.Loader do
   end
 
   @doc """
-  Loads data into struct by assumes fields are properly
-  named and belongs to the struct. Types and values are
-  zipped together in one pass as they are loaded.
-  """
-  def adapter_load(struct, types, values, all_nil?, adapter) do
-    adapter_load(types, values, [], all_nil?, struct, adapter)
-  end
-
-  defp adapter_load([{field, type} | types], [value | values], acc, all_nil?, struct, adapter) do
-    all_nil? = all_nil? and value == nil
-    value = adapter_load!(struct, field, type, value, adapter)
-    adapter_load(types, values, [{field, value} | acc], all_nil?, struct, adapter)
-  end
-
-  defp adapter_load([], values, _acc, true, _struct, _adapter) do
-    {nil, values}
-  end
-
-  defp adapter_load([], values, acc, false, struct, _adapter) do
-    {Map.merge(struct, Map.new(acc)), values}
-  end
-
-  @doc """
   Loads data coming from the user/embeds into schema.
 
   Assumes data does not all belongs to schema/struct
@@ -89,25 +66,17 @@ defmodule Ecto.Schema.Loader do
     end
   end
 
-  @compile {:inline, load!: 5, adapter_load!: 5}
-  defp adapter_load!(struct, field, type, value, adapter) do
-    case Ecto.Type.adapter_load(adapter, type, value) do
-      {:ok, value} -> value
-      :error -> bad_load!(field, type, value, struct)
-    end
-  end
-
+  @compile {:inline, load!: 5}
   defp load!(struct, field, type, value, loader) do
     case loader.(type, value) do
-      {:ok, value} -> value
-      :error -> bad_load!(field, type, value, struct)
-    end
-  end
+      {:ok, value} ->
+        value
 
-  defp bad_load!(field, type, value, struct) do
-    raise ArgumentError,
-          "cannot load `#{inspect(value)}` as type #{inspect(type)} " <>
-            "for field `#{field}`#{error_data(struct)}"
+      :error ->
+        raise ArgumentError,
+              "cannot load `#{inspect(value)}` as type #{inspect(type)} " <>
+                "for field `#{field}`#{error_data(struct)}"
+    end
   end
 
   defp error_data(%{__struct__: atom}) do
