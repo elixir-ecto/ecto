@@ -1,5 +1,15 @@
 # Changelog for v3.x
 
+## v3.1.3 (2019-04-30)
+
+### Enhancements
+
+  * [Ecto.Changeset] Expose the enum that was validated against in errors from enum-based validations
+
+### Bug fixes
+
+  * [Ecto.Schema] Avoid false positive warnings when checking dependencies
+
 ## v3.1.2 (2019-04-24)
 
 ### Enhancements
