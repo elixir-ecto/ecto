@@ -634,10 +634,6 @@ defmodule Ecto.AssociationTest do
              :ok
 
       assert after_compile_validation(Ecto.Association.Has, :post,
-                                      cardinality: :one, queryable: Unknown) ==
-             {:error, "associated schema Unknown does not exist"}
-
-      assert after_compile_validation(Ecto.Association.Has, :post,
                                       cardinality: :one, queryable: Ecto.Changeset) ==
              {:error, "associated module Ecto.Changeset is not an Ecto schema"}
 
@@ -656,10 +652,6 @@ defmodule Ecto.AssociationTest do
              :ok
 
       assert after_compile_validation(Ecto.Association.BelongsTo, :sample,
-                                      foreign_key: :post_id, queryable: Unknown) ==
-             {:error, "associated schema Unknown does not exist"}
-
-      assert after_compile_validation(Ecto.Association.BelongsTo, :sample,
                                       foreign_key: :post_id, queryable: Ecto.Changeset) ==
              {:error, "associated module Ecto.Changeset is not an Ecto schema"}
 
@@ -676,10 +668,6 @@ defmodule Ecto.AssociationTest do
       assert after_compile_validation(Ecto.Association.ManyToMany, :sample,
                                       join_through: "join", queryable: __MODULE__) ==
              :ok
-
-      assert after_compile_validation(Ecto.Association.ManyToMany, :sample,
-                                      join_through: "join", queryable: Unknown) ==
-             {:error, "associated schema Unknown does not exist"}
 
       assert after_compile_validation(Ecto.Association.ManyToMany, :sample,
                                       join_through: "join", queryable: Ecto.Changeset) ==

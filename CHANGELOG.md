@@ -26,6 +26,12 @@ The query syntax also seen some improvements: map updates are supported in subqu
 
 Finally, the UPSERT support added on Ecto v2.1 is getting more improvements: the `{:constraint, constraint}` is now supported as conflict target and the `:returning` option was added to `Ecto.Repo.insert/2`, mirroring the behaviour of `insert_all`.
 
+## v2.2.12 (2019-04-30)
+
+### Bug fixes
+
+  * [Ecto.Schema] Avoid false positive warnings
+
 ## v2.2.11 (2018-10-03)
 
 ### Enhancements
