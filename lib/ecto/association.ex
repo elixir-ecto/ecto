@@ -518,8 +518,10 @@ defmodule Ecto.Association.Has do
   @doc false
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
     cond do
-      not is_atom(queryable) or queryable in env.context_modules or not Code.ensure_compiled?(queryable) ->
+      not is_atom(queryable) or queryable in env.context_modules ->
         :ok
+      not Code.ensure_compiled?(queryable) ->
+        {:error, "associated schema #{inspect queryable} does not exist"}
       not function_exported?(queryable, :__schema__, 2) ->
         {:error, "associated module #{inspect queryable} is not an Ecto schema"}
       is_nil queryable.__schema__(:type, related_key) ->
@@ -813,8 +815,10 @@ defmodule Ecto.Association.BelongsTo do
   @doc false
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
     cond do
-      not is_atom(queryable) or queryable in env.context_modules or not Code.ensure_compiled?(queryable) ->
+      not is_atom(queryable) or queryable in env.context_modules ->
         :ok
+      not Code.ensure_compiled?(queryable) ->
+        {:error, "associated schema #{inspect queryable} does not exist"}
       not function_exported?(queryable, :__schema__, 2) ->
         {:error, "associated module #{inspect queryable} is not an Ecto schema"}
       is_nil queryable.__schema__(:type, related_key) ->
@@ -965,12 +969,16 @@ defmodule Ecto.Association.ManyToMany do
   @doc false
   def after_compile_validation(%{queryable: queryable, join_through: join_through}, env) do
     cond do
-      not is_atom(queryable) or queryable in env.context_modules or not Code.ensure_compiled?(queryable) ->
+      not is_atom(queryable) or queryable in env.context_modules ->
         :ok
+      not Code.ensure_compiled?(queryable) ->
+        {:error, "associated schema #{inspect queryable} does not exist"}
       not function_exported?(queryable, :__schema__, 2) ->
         {:error, "associated module #{inspect queryable} is not an Ecto schema"}
-      not is_atom(join_through) or not Code.ensure_compiled?(join_through) ->
+      not is_atom(join_through) ->
         :ok
+      not Code.ensure_compiled?(join_through) ->
+        {:error, ":join_through schema #{inspect join_through} does not exist"}
       not function_exported?(join_through, :__schema__, 2) ->
         {:error, ":join_through module #{inspect join_through} is not an Ecto schema"}
       true ->
