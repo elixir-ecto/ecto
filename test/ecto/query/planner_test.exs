@@ -68,6 +68,7 @@ defmodule Ecto.Query.PlannerTest do
       has_many :special_comments, Ecto.Query.PlannerTest.Comment, where: [text: {:not, nil}]
       many_to_many :crazy_comments, Comment, join_through: CommentPost, where: [text: "crazycomment"]
       many_to_many :crazy_comments_with_list, Comment, join_through: CommentPost, where: [text: {:in, ["crazycomment1", "crazycomment2"]}]
+      many_to_many :crazy_comments_without_schema, Comment, join_through: "comment_posts"
     end
   end
 
@@ -392,6 +393,26 @@ defmodule Ecto.Query.PlannerTest do
 
     {query, _, _} = from(c in Comment, join: assoc(c, :post), prefix: "local") |> Map.put(:prefix, "global") |> plan()
     assert query.sources == {{"comments", Comment, "global"}, {"posts", Post, "local"}}
+
+    # Schema prefix for many-to-many joins
+    {query, _, _} = from(c in Post, join: assoc(c, :crazy_comments)) |> plan()
+    assert query.sources == {{"posts", Post, "my_prefix"}, {"comments", Comment, nil}, {"comment_posts", CommentPost, nil}}
+
+    {query, _, _} = from(c in Post, join: assoc(c, :crazy_comments)) |> Map.put(:prefix, "global") |> plan()
+    assert query.sources == {{"posts", Post, "my_prefix"}, {"comments", Comment, "global"}, {"comment_posts", CommentPost, "global"}}
+
+    {query, _, _} = from(c in Post, join: assoc(c, :crazy_comments), prefix: "local") |> Map.put(:prefix, "global") |> plan()
+    assert query.sources == {{"posts", Post, "my_prefix"}, {"comments", Comment, "local"}, {"comment_posts", CommentPost, "local"}}
+
+    # Schema prefix for many-to-many joins (when join_through is a table name)
+    {query, _, _} = from(c in Post, join: assoc(c, :crazy_comments_without_schema)) |> plan()
+    assert query.sources == {{"posts", Post, "my_prefix"}, {"comments", Comment, nil}, {"comment_posts", nil, nil}}
+
+    {query, _, _} = from(c in Post, join: assoc(c, :crazy_comments_without_schema)) |> Map.put(:prefix, "global") |> plan()
+    assert query.sources == {{"posts", Post, "my_prefix"}, {"comments", Comment, "global"}, {"comment_posts", nil, "global"}}
+
+    {query, _, _} = from(c in Post, join: assoc(c, :crazy_comments_without_schema), prefix: "local") |> Map.put(:prefix, "global") |> plan()
+    assert query.sources == {{"posts", Post, "my_prefix"}, {"comments", Comment, "local"}, {"comment_posts", nil, "local"}}
   end
 
   test "prepare: prepare combination queries" do
