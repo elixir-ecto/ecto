@@ -1224,6 +1224,7 @@ defmodule Ecto.Changeset do
   The following approach is **wrong**:
 
       post
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:comments, [%Comment{body: "bad example!"}])
       |> Repo.update!()
 
@@ -1233,6 +1234,7 @@ defmodule Ecto.Changeset do
   Instead, you could try:
 
       post
+      |> Ecto.Changeset.change()
       |> Ecto.Changeset.put_assoc(:comments, [%Comment{body: "so-so example!"} | post.comments])
       |> Repo.update!()
 
