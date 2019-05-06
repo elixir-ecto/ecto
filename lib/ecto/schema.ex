@@ -220,6 +220,7 @@ defmodule Ecto.Schema do
   `:decimal`              | [`Decimal`](https://github.com/ericmj/decimal) |
   `:date`                 | `Date` |
   `:time`                 | `Time` |
+  `:time_usec`            | `Time` |
   `:naive_datetime`       | `NaiveDateTime` |
   `:naive_datetime_usec`  | `NaiveDateTime` |
   `:utc_datetime`         | `DateTime` |
