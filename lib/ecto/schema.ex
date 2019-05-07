@@ -187,22 +187,22 @@ defmodule Ecto.Schema do
   auto-generation of the id. This is often the case for primary keys
   in relational databases which are auto-incremented.
 
-  Besides `:id` and `:binary_id`, which are often used by primary
-  and foreign keys, Ecto provides a huge variety of types to be used
-  by any column.
-  
-  There are two ways to define primary keys in ecto: Using the `@primary_key`
+  There are two ways to define primary keys in Ecto: using the `@primary_key`
   module attribute and using `primary_key: true` as option for `field/3` in
   your schema definition. They are not mutually exclusive and can be used
   together.
   
   Using `@primary_key` should be prefered for single field primary keys and
-  sharing primary key defintions between multiple schemas using macros.
+  sharing primary key definitions between multiple schemas using macros.
 
   Ecto also supports composite primary keys, which is where you need to use
   `primary_key: true` for the fields in your schema. This usually goes along 
   with setting `@primary_key false` to disable generation of additional 
   primary key fields.
+
+  Besides `:id` and `:binary_id`, which are often used by primary
+  and foreign keys, Ecto provides a huge variety of types to be used
+  by any field.
 
   ## Types and casting
 
