@@ -7,7 +7,6 @@
   * [Ecto.Changeset] Convert validation enums to lists before adding them as validation metadata
   * [Ecto.Schema] Properly propragate prefix to join_through source in many_to_many associations
 
-
 ## v3.1.3 (2019-04-30)
 
 ### Enhancements
