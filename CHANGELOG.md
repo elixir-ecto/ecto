@@ -1,14 +1,18 @@
 # Changelog for v3.x
 
+## v3.1.4 (2019-05-07)
+
+### Bug fixes
+
+  * [Ecto.Changeset] Convert validation enums to lists before adding them as validation metadata
+  * [Ecto.Schema] Properly propragate prefix to join_through source in many_to_many associations
+
+
 ## v3.1.3 (2019-04-30)
 
 ### Enhancements
 
   * [Ecto.Changeset] Expose the enum that was validated against in errors from enum-based validations
-
-### Bug fixes
-
-  * [Ecto.Schema] Avoid false positive warnings when checking dependencies
 
 ## v3.1.2 (2019-04-24)
 
