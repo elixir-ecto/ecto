@@ -109,9 +109,8 @@ defmodule Ecto.Schema do
     * `@primary_key` - configures the schema primary key. It expects
       a tuple `{field_name, type, options}` with the primary key field
       name, type (typically `:id` or `:binary_id`, but can be any type) and
-      options. Defaults to `{:id, :id, autogenerate: true}`. When set
-      to `false`, does not define a primary key in the schema unless
-      composite keys are defined using the options of `field`.
+      options. It also accepts `false` to disable the generation of a primary
+      key field. Defaults to `{:id, :id, autogenerate: true}`. 
 
     * `@schema_prefix` - configures the schema prefix. Defaults to `nil`,
       which generates structs and queries without prefix. When set, the
@@ -188,13 +187,22 @@ defmodule Ecto.Schema do
   auto-generation of the id. This is often the case for primary keys
   in relational databases which are auto-incremented.
 
+  There are two ways to define primary keys in Ecto: using the `@primary_key`
+  module attribute and using `primary_key: true` as option for `field/3` in
+  your schema definition. They are not mutually exclusive and can be used
+  together.
+  
+  Using `@primary_key` should be prefered for single field primary keys and
+  sharing primary key definitions between multiple schemas using macros.
+
+  Ecto also supports composite primary keys, which is where you need to use
+  `primary_key: true` for the fields in your schema. This usually goes along 
+  with setting `@primary_key false` to disable generation of additional 
+  primary key fields.
+
   Besides `:id` and `:binary_id`, which are often used by primary
   and foreign keys, Ecto provides a huge variety of types to be used
-  by any column.
-
-  Ecto also supports composite primary keys. This is achieved by declaring
-  a `@primary_key`, as usual, and then passing the `primary_key: true` option
-  to any of the composite fields.
+  by any field.
 
   ## Types and casting
 
