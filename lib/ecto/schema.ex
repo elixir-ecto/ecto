@@ -1206,11 +1206,13 @@ defmodule Ecto.Schema do
       `Ecto.build_assoc(post, :comments)` that comment will have
       `comment.public == true`.
 
-    * `:unique` - When true, checks if the associated entries are unique.
-      This is done by checking the primary key of the associated entries during
-      repository operations. Keep in mind this does not guarantee uniqueness at the
-      database level. For such it is preferred to set a unique index in the database.
-      For example: `create unique_index(:posts_tags, [:post_id, :tag_id])`
+    * `:unique` - When true, checks if the associated entries are unique
+      whenever the association is cast or changed via the parent record.
+      For instance, it would verify that a given tag cannot be attached to
+      the same post more than once. This exists mostly as a quick check
+      for user feedback, as it does not guarantee uniqueness at the database
+      level. Therefore, you should also set a unique index in the database
+      join table, such as: `create unique_index(:posts_tags, [:post_id, :tag_id])`
 
     * `:where` - A filter for the association. See "Filtering associations"
       in `has_many/3`
