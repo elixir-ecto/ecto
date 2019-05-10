@@ -569,6 +569,12 @@ defmodule Ecto.Query.PlannerTest do
            select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
+    union_query = from(Post, []) |> select([p], %{title: p.title, category: "Post"})
+    query = from(Post, []) |> select([p], %{title: p.title, category: "Post"}) |> union(^union_query) |>  normalize()
+
+    union_query = query.combinations |> List.first() |> elem(1)
+    assert query.select.fields == union_query.select.fields
+
     query =
       from(Post, [])
       |> join(:inner, [_], c in Comment)

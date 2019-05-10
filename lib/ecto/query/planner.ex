@@ -1026,7 +1026,7 @@ defmodule Ecto.Query.Planner do
 
     combinations =
       Enum.map query.combinations, fn {type, combination_query} ->
-        {combination_query, _} = normalize_select(combination_query)
+        {combination_query, _} = combination_query |> normalize_select() |> remove_literals()
         {type, combination_query}
       end
 
