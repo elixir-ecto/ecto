@@ -741,14 +741,14 @@ defmodule Ecto.Type do
   defp cast_map(term) when is_map(term), do: {:ok, term}
   defp cast_map(_), do: :error
 
-  def cast_decimal(term) when is_binary(term) do
+  defp cast_decimal(term) when is_binary(term) do
     case Decimal.parse(term) do
       {:ok, decimal} -> check_decimal(decimal)
       :error -> :error
     end
   end
 
-  def cast_decimal(term) do
+  defp cast_decimal(term) do
     same_decimal(term)
   end
 
