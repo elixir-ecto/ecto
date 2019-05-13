@@ -19,6 +19,18 @@ defmodule Ecto.TypeTest do
     def cast(_),   do: {:ok, :cast}
   end
 
+  defmodule CustomMaybe do
+    @behaviour Ecto.Type
+
+    def type, do: :any
+    def load(nil), do: {:ok, {:nothing}}
+    def cast(nil), do: {:ok, {:nothing}}
+    def dump({:nothing}), do: {:ok, nil}
+
+    def handle_nil, do: true
+  end
+
+
   defmodule Schema do
     use Ecto.Schema
 
@@ -119,6 +131,12 @@ defmodule Ecto.TypeTest do
 
     assert load({:map, Custom}, %{"a" => :unused}, fn Custom, _ -> {:ok, :used} end) == {:ok, %{"a" => :used}}
     assert dump({:map, Custom}, %{"a" => :unused}, fn Custom, _ -> {:ok, :used} end) == {:ok, %{"a" => :used}}
+  end
+
+  test "custom types that can handle nil" do
+    assert load(CustomMaybe, nil) == {:ok, {:nothing}}
+    assert cast(CustomMaybe, nil) == {:ok, {:nothing}}
+    assert dump(CustomMaybe, {:nothing}) == {:ok, nil}
   end
 
   test "dump with custom function" do

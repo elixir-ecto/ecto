@@ -473,6 +473,10 @@ defmodule Ecto.Type do
     load_embed(embed, value, &load/2)
   end
 
+  def load(mod, nil) when is_atom(mod) do
+    if can_handle_nil?(mod), do: mod.load(nil), else: {:ok, nil}
+  end
+
   def load(_type, nil) do
     {:ok, nil}
   end
@@ -681,6 +685,11 @@ defmodule Ecto.Type do
   @spec cast(t, term) :: {:ok, term} | {:error, keyword()} | :error
   def cast({:embed, type}, value), do: cast_embed(type, value)
   def cast({:in, _type}, nil), do: :error
+
+  def cast(mod, nil) when is_atom(mod) do
+    if can_handle_nil?(mod), do: mod.cast(nil), else: {:ok, nil}
+  end
+
   def cast(_type, nil), do: {:ok, nil}
 
   def cast(type, value) do
@@ -1245,4 +1254,10 @@ defmodule Ecto.Type do
         """
     end
   end
+
+  @spec can_handle_nil?(atom) :: boolean
+  defp can_handle_nil?(mod) do
+    function_exported?(mod, :handle_nil, 0) and mod.handle_nil()
+  end
+
 end
