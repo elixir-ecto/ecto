@@ -293,6 +293,11 @@ defmodule Ecto.Association do
           expr = {:and, [], [expr, {:not, [], [{:is_nil, [], [to_field(binding, key)]}]}]}
           {expr, params, counter}
 
+        {key, {:fragment, frag}}, {expr, params, counter} when is_binary(frag) ->
+          pieces = Ecto.Query.Builder.fragment_pieces(frag, [to_field(binding, key)])
+          expr = {:and, [], [expr, {:fragment, [], pieces}]}
+          {expr, params, counter}
+
         {key, {:in, value}}, {expr, params, counter} when is_list(value) ->
           expr = {:and, [], [expr, {:in, [], [to_field(binding, key), {:^, [], [counter]}]}]}
           {expr, [{value, {:in, {binding, key}}} | params], counter + 1}

@@ -461,6 +461,13 @@ defmodule Ecto.Query.Builder do
   defp split_fragment(<<first :: utf8, rest :: binary>>, consumed),
     do: split_fragment(rest, consumed <> <<first :: utf8>>)
 
+  @doc "Returns fragment pieces, given a fragment string and arguments."
+  def fragment_pieces(frag, args) do
+    frag
+    |> split_fragment("")
+    |> merge_fragments(args)
+  end
+
   defp escape_window_description([], params_acc, _vars, _env),
     do: {[], params_acc}
   defp escape_window_description([window_name], params_acc, _vars, _env) when is_atom(window_name),

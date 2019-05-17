@@ -764,6 +764,9 @@ defmodule Ecto.Schema do
     * `nil` - which specifies the field must be nil
     * `{:not, nil}` - which specifies the field must not be nil
     * `{:in, list}` - which specifies the field must be one of the values in a list
+    * `{:fragment, expr}` - which specifies a fragment string as the filter
+      (see `Ecto.Query.API.fragment/1`) with the field's value given to it
+      as the only argument
     * or any other value which the field is compared directly against
 
   Note the values above are distinctly different from the values you
