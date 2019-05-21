@@ -423,6 +423,36 @@ defmodule Ecto.QueryTest do
       assert inspect(query) ==
         ~s[#Ecto.Query<from p0 in \"posts\", join: c1 in \"comments\", as: :comment, on: c1.text == \"Test Comment\">]
     end
+
+    test "tuple dynamic position" do
+      query = from(p in "posts", as: :post)
+      position = Map.get(query.aliases, :post)
+      query = where(query, [{p, position}], p.id == 0)
+
+      assert inspect(query) ==
+        ~s[#Ecto.Query<from p0 in \"posts\", as: :post, where: p0.id == 0>]
+    end
+
+    test "named bind with pinned name" do
+      name = :post
+      query =
+        from(p in "posts", as: :post)
+        |> where([{^name, p}], p.id == 0)
+
+      assert inspect(query) ==
+        ~s[#Ecto.Query<from p0 in \"posts\", as: :post, where: p0.id == 0>]
+    end
+
+    test "named bind with pinned name of joined binding" do
+      name = :comment
+      query =
+        "posts"
+        |> join(:inner, [p], c in "comments", as: :comment)
+        |> where([{^name, c}], c.id == 0)
+
+      assert inspect(query) ==
+        ~s[#Ecto.Query<from p0 in \"posts\", join: c1 in \"comments\", as: :comment, on: true, where: c1.id == 0>]
+    end
   end
 
   describe "prefixes" do

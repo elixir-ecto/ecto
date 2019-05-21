@@ -743,6 +743,9 @@ defmodule Ecto.Query.Builder do
     end
   end
 
+  defp escape_bind({{{:^, _, [{var_name, _, context_name} = name_var]}, {var, _, context}}, _})
+    when is_atom(var_name) and is_atom(context_name) and is_atom(var) and is_atom(context),
+    do: {:named, var, name_var}
   defp escape_bind({{{var, _, context}, ix}, _}) when is_atom(var) and is_atom(context),
     do: {:pos, var, ix}
   defp escape_bind({{var, _, context}, ix}) when is_atom(var) and is_atom(context),
