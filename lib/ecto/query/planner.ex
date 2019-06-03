@@ -419,7 +419,13 @@ defmodule Ecto.Query.Planner do
         [join] = attach_on(query_to_joins(qual, from.source, join_query, counter), on)
         plan_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
       _ ->
-        error! query, join, "queries in joins can only have `where` conditions"
+        error! query, join, """
+        invalid query was interpolated in a join.
+        If you want to pass a query to a join, you must either:
+
+          1. Make sure the query only has `where` conditions (which will be converted to ON clauses)
+          2. Or wrap the query in a subquery by calling subquery(query)
+        """
     end
   end
 
