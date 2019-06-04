@@ -97,7 +97,7 @@ defmodule Ecto.MixProject do
     [
       "guides/introduction/Getting Started.md",
       "guides/introduction/Testing with Ecto.md",
-      "guides/howtos/Schemas and changesets.md",
+      "guides/howtos/Data mapping and validation.md",
       "guides/howtos/Schemaless queries.md",
       "guides/howtos/Dynamic queries.md",
       "guides/howtos/Aggregates and subqueries.md",
@@ -109,7 +109,7 @@ defmodule Ecto.MixProject do
   defp groups_for_extras do
     [
       "Introduction": ~r/guides\/introduction\/.?/,
-      "HOW-TO'S": ~r/guides\/howtos\/.?/
+      "How-To's": ~r/guides\/howtos\/.?/
     ]
   end
 end

@@ -1,4 +1,4 @@
-# Schemas and changesets
+# Data mapping and validation
 
 We will take a look at the role schemas play when validating and casting data through changesets. As we will see, sometimes the best solution is not to completely avoid schemas, but break a large schema into smaller ones. Maybe one for reading data, another for writing. Maybe one for your database, another for your forms.
 
