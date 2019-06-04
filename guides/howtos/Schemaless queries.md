@@ -31,7 +31,7 @@ def update_title(post, new_title) do
 end
 ```
 
-The [`update`](https://hexdocs.pm/ecto/Ecto.Query.html#update/3) construct supports four commands:
+The `Ecto.Query.update/3` construct supports four commands:
 
   * `:set` - sets the given column to the given values
   * `:inc` - increments the given column by the given value
@@ -71,22 +71,16 @@ By allowing regular data structures to be given to most query operations, Ecto m
 
 ## insert_all, update_all and delete_all
 
-Ecto allows all database operations to be expressed without a schema. One of the functions provided is [`Ecto.Repo.insert_all/3`](https://hexdocs.pm/ecto/Ecto.Repo.html#c:insert_all/3). With `insert_all`, developers can insert multiple entries at once into a repository:
+Ecto allows all database operations to be expressed without a schema. One of the functions provided is `c:Ecto.Repo.insert_all/3`. With `insert_all`, developers can insert multiple entries at once into a repository:
 
 ```elixir
 MyApp.Repo.insert_all(Post, [[title: "hello", body: "world"],
                              [title: "another", body: "post"]])
 ```
 
-Although `insert_all` is just a regular Elixir function, it plays an important role in Ecto as it allows developers to read, create, update and delete entries without a schema. `insert_all` was the last piece of the puzzle. Let's see some examples.
-
-Inserts, updates and deletes can also be done without schemas via `insert_all`, `update_all` and `delete_all` respectively:
+Updates and deletes can also be done without schemas via `c:Ecto.Repo.update_all/3` and `c:Ecto.Repo.delete_all/2` respectively:
 
 ```elixir
-# Insert data into posts and return its ID
-[%{id: id}] =
-  MyApp.Repo.insert_all "posts", [[title: "hello"]], returning: [:id]
-
 # Use the ID to trigger updates
 post = from p in "posts", where: [id: ^id]
 {1, _} = MyApp.Repo.update_all post, set: [title: "new title"]

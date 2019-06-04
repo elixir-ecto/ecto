@@ -4,7 +4,7 @@ We will take a look at the role schemas play when validating and casting data th
 
 ## Schemas are mappers
 
-[The Ecto documentation](https://hexdocs.pm/ecto/Ecto.Schema.html) says:
+The `Ecto.Schema` moduledoc says:
 
 > An Ecto schema is used to map *any* data source into an Elixir struct.
 

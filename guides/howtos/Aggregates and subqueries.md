@@ -19,9 +19,9 @@ Behind the scenes, the query above translates to:
 MyApp.Repo.one(from p in MyApp.Post, select: avg(p.visits))
 ```
 
-The `aggregate/3` function supports any of the aggregate operations listed in the [Ecto Query API](https://hexdocs.pm/ecto/Ecto.Query.API.html).
+The `c:Ecto.Repo.aggregate/4` function supports any of the aggregate operations listed in the `Ecto.Query.API` module.
 
-At first, it looks like the implementation of `aggregate/3` is quite straight-forward. You could even start to wonder why it was added to Ecto in the first place. However, complexities start to arise on queries that rely on `limit`, `offset` or `distinct` clauses.
+At first, it looks like the implementation of `aggregate/4` is quite straight-forward. You could even start to wonder why it was added to Ecto in the first place. However, complexities start to arise on queries that rely on `limit`, `offset` or `distinct` clauses.
 
 Imagine that instead of calculating the average of all posts, you want the average of only the top 10. Your first try may be:
 
@@ -33,14 +33,14 @@ MyApp.Repo.one(from p in MyApp.Post,
 #=> #Decimal<1743>
 ```
 
-Oops. The query above returned the same value as the queries before. The option `limit: 10` has no effect here since it is limiting the aggregated result and queries with aggregates return only a single row anyway. In order to retrieve the correct result, we would need to first find the top 10 posts and only then aggregate. That's exactly what `aggregate/3` does:
+Oops. The query above returned the same value as the queries before. The option `limit: 10` has no effect here since it is limiting the aggregated result and queries with aggregates return only a single row anyway. In order to retrieve the correct result, we would need to first find the top 10 posts and only then aggregate. That's exactly what `aggregate/4` does:
 
 ```elixir
 query = from MyApp.Post, order_by: [desc: :visits], limit: 10
 MyApp.Repo.aggregate(query, :avg, :visits) #=> #Decimal<4682>
 ```
 
-When `limit`, `offset` or `distinct` is specified in the query, `aggregate/3` automatically wraps the given query in a subquery. Therefore the query executed by `aggregate/3` above is rather equivalent to:
+When `limit`, `offset` or `distinct` is specified in the query, `aggregate/4` automatically wraps the given query in a subquery. Therefore the query executed by `aggregate/4` above is rather equivalent to:
 
 ```elixir
 query = from MyApp.Post, order_by: [desc: :visits], limit: 10
