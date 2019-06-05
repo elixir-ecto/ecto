@@ -213,12 +213,12 @@ from p in Post, prefix: "foo",
   join: c in Comment, prefix: "bar"
 ```
 
-For each join/from in the query, the prefix used will be determined by the following order:
+Those will take precedence over all other prefixes we have defined so far. For each join/from in the query, the prefix used will be determined by the following order:
 
   1. If the prefix option is given exclusively to join/from
-  1. If the `@schema_prefix` is set in the related schema
-  1. If the `:prefix` field is set on the query (i.e. `%{query | prefix: prefix}`) or to the repo operation (i.e. `Repo.all query, prefix: prefix`)
-  1. The connection prefix
+  2. If the `@schema_prefix` is set in the related schema
+  3. If the `:prefix` field is set on the query (i.e. `%{query | prefix: prefix}`) or to the repo operation (i.e. `Repo.all query, prefix: prefix`)
+  4. The connection prefix
 
 ## Migration prefixes
 
@@ -262,6 +262,6 @@ end
 
 Ecto provides many conveniences for working with querying prefixes. Those conveniences allow developers to configure prefix with different level of granularity:
 
-    connection prefixes > schema prefix > query/struct prefixes > from/join prefixes
+    connection prefixes < schema prefix < query/struct prefixes < from/join prefixes
 
 This way developers can tackle different scenarios, from production requirements to multi-tenant applications.
