@@ -53,11 +53,10 @@ defmodule Ecto.MixProject do
       source_ref: "v#{@version}",
       canonical: "http://hexdocs.pm/ecto",
       logo: "guides/images/e.png",
+      extra_section: "GUIDES",
       source_url: "https://github.com/elixir-ecto/ecto",
-      extras: [
-        "guides/Getting Started.md",
-        "guides/Testing with Ecto.md"
-      ],
+      extras: extras(),
+      groups_for_extras: groups_for_extras(),
       groups_for_modules: [
         # Ecto,
         # Ecto.Changeset,
@@ -91,6 +90,26 @@ defmodule Ecto.MixProject do
           Ecto.Association.NotLoaded
         ]
       ]
+    ]
+  end
+
+  def extras() do
+    [
+      "guides/introduction/Getting Started.md",
+      "guides/introduction/Testing with Ecto.md",
+      "guides/howtos/Data mapping and validation.md",
+      "guides/howtos/Schemaless queries.md",
+      "guides/howtos/Dynamic queries.md",
+      "guides/howtos/Aggregates and subqueries.md",
+      "guides/howtos/Multi tenancy with query prefixes.md",
+      "guides/howtos/Test factories.md"
+    ]
+  end
+
+  defp groups_for_extras do
+    [
+      "Introduction": ~r/guides\/introduction\/.?/,
+      "How-To's": ~r/guides\/howtos\/.?/
     ]
   end
 end
