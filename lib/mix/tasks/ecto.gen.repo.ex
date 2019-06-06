@@ -62,11 +62,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
     Don't forget to add your new repo to your supervision tree
     (typically in lib/#{app}/application.ex):
 
-        # For Elixir v1.5 and later
         {#{inspect repo}, []}
-
-        # For Elixir v1.4 and earlier
-        supervisor(#{inspect repo}, [])
 
     And to add it to the list of ecto repositories in your
     configuration files (so Ecto tasks work as expected):

@@ -58,7 +58,7 @@ defmodule Ecto.Repo.Supervisor do
   @doc """
   Retrieves the compile time configuration.
   """
-  def compile_config(repo, opts) do
+  def compile_config(_repo, opts) do
     otp_app = Keyword.fetch!(opts, :otp_app)
     adapter = opts[:adapter]
 
@@ -81,7 +81,7 @@ defmodule Ecto.Repo.Supervisor do
             "expected :adapter option given to Ecto.Repo to list Ecto.Adapter as a behaviour"
     end
 
-    {otp_app, adapter, opts[:default_dynamic_repo] || repo, behaviours}
+    {otp_app, adapter, behaviours}
   end
 
   @doc """
