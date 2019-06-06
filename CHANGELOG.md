@@ -1,5 +1,16 @@
 # Changelog for v3.x
 
+## v3.1.5 (2019-06-06)
+
+### Enhancements
+
+  * [Ecto.Repo] Allow `:default_dynamic_repo` option on `use Ecto.Repo`
+  * [Ecto.Schema] Support `{:fragment, ...}` in the `:where` option for associations
+
+### Bug fixes
+
+  * [Ecto.Query] Fix handling of literals in combinators (union, except, intersection)
+
 ## v3.1.4 (2019-05-07)
 
 ### Bug fixes

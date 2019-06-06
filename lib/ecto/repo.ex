@@ -423,7 +423,7 @@ defmodule Ecto.Repo do
   @doc """
   Sets the dynamic repository to be used in further iteractions.
 
-  Sometimes, you may want a single Ecto repository to talk to
+  Sometimes you may want a single Ecto repository to talk to
   many different database instances. By default, when you call
   `MyApp.Repo.start_link/1`, it will start a repository with
   name `MyApp.Repo`. But if you want to start multiple repositories,
@@ -438,11 +438,17 @@ defmodule Ecto.Repo do
       MyApp.Repo.start_link(name: nil, hostname: "temp.example.com")
 
   However, once the repository is started, you can't directly interact with
-  it, since all operations in `MyApp.Repo` are sent to the repository named
-  `MyApp.Repo`. With `put_dynamic_repo/1`, we can tell Ecto exactly which
-  instance to use:
+  it, since all operations in `MyApp.Repo` are sent by default to the repository
+  named `MyApp.Repo`. You can change the default repo at compile time with:
+
+      use Ecto.Repo, default_dynamic_repo: :name_of_repo
+
+  Or you can change it anytime at runtime by calling `put_dynamic_repo/1`:
 
       MyApp.Repo.put_dynamic_repo(:tenant_foo)
+
+  From this moment on, all future queries done by the current process will
+  run on `:tenant_foo`.
 
   **Note this feature is experimental and may be changed or removed in future
   releases.**
