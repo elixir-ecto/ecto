@@ -126,9 +126,12 @@ defmodule Ecto.Repo do
     quote bind_quoted: [opts: opts] do
       @behaviour Ecto.Repo
 
-      {otp_app, adapter, behaviours} = Ecto.Repo.Supervisor.compile_config(__MODULE__, opts)
+      {otp_app, adapter, default_dynamic_repo, behaviours} =
+        Ecto.Repo.Supervisor.compile_config(__MODULE__, opts)
+
       @otp_app otp_app
       @adapter adapter
+      @default_dynamic_repo default_dynamic_repo
       @before_compile adapter
 
       def config do
@@ -168,11 +171,11 @@ defmodule Ecto.Repo do
       @compile {:inline, get_dynamic_repo: 0}
 
       def get_dynamic_repo() do
-        Process.get({__MODULE__, :dynamic_repo}, __MODULE__)
+        Process.get({__MODULE__, :dynamic_repo}, @default_dynamic_repo)
       end
 
       def put_dynamic_repo(dynamic) when is_atom(dynamic) or is_pid(dynamic) do
-        Process.put({__MODULE__, :dynamic_repo}, dynamic) || __MODULE__
+        Process.put({__MODULE__, :dynamic_repo}, dynamic) || @default_dynamic_repo
       end
 
       ## Transactions

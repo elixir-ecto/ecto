@@ -1145,5 +1145,13 @@ defmodule Ecto.RepoTest do
       assert {:ok, changes} = TestRepo.transaction(multi)
       assert changes.run == TestRepo
     end
+
+    test "accepts a default dynamic repo compile-time option" do
+      defmodule CustomDynamicRepo do
+        use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter, default_dynamic_repo: :other
+      end
+
+      assert CustomDynamicRepo.get_dynamic_repo() == :other
+    end
   end
 end
