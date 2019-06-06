@@ -102,6 +102,7 @@ defmodule Ecto.MixProject do
       "guides/howtos/Dynamic queries.md",
       "guides/howtos/Aggregates and subqueries.md",
       "guides/howtos/Multi tenancy with query prefixes.md",
+      "guides/howtos/Replicas and dynamic repositories.md",
       "guides/howtos/Test factories.md"
     ]
   end
