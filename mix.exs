@@ -101,6 +101,8 @@ defmodule Ecto.MixProject do
       "guides/howtos/Schemaless queries.md",
       "guides/howtos/Dynamic queries.md",
       "guides/howtos/Aggregates and subqueries.md",
+      "guides/howtos/Many to many and casting.md",
+      "guides/howtos/Many to many and upserts.md",
       "guides/howtos/Multi tenancy with query prefixes.md",
       "guides/howtos/Test factories.md"
     ]
