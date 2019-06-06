@@ -17,7 +17,7 @@ Let's define a repository and a schema to get started:
 ```elixir
 # lib/repo.ex
 defmodule MyApp.Repo do
-  use Ecto.Repo, otp_app: :my_app
+  use Ecto.Repo, otp_app: :my_app, adapter: Ecto.Adapters.Postgres
 end
 
 # lib/sample.ex
@@ -36,7 +36,6 @@ Now let's configure the repository:
 ```elixir
 # config/config.exs
 config :my_app, MyApp.Repo,
-  adapter: Ecto.Adapters.Postgres,
   username: "postgres",
   password: "postgres",
   database: "demo",
@@ -81,7 +80,6 @@ To do so, let's change our database configuration in "config/config.exs" and spe
 
 ```elixir
 config :my_app, MyApp.Repo,
-  adapter: Ecto.Adapters.Postgres,
   username: "postgres",
   password: "postgres",
   database: "demo_dev",
