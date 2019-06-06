@@ -1,8 +1,6 @@
 # Many to many and upserts
 
-In the [Many to many and casting](many-to-many-and-casting.html) guide we follow the rules imposed by `Ecto.Changeset.cast_assoc/3`, however, doing so is not always possible nor desired.
-
-In this guide, we are going to look at `Ecto.Changeset.put_assoc/4` in contrast to `cast_assoc/3` and explore some examples. Finally, we will learn how to use the upsert feature.
+In this guide we will learn how to use constraints and upserts. To showcase those features, we will work on a practical scenario: which is by studying a many to many relationship between posts and tags.
 
 ## put_assoc vs cast_assoc
 
@@ -32,7 +30,7 @@ Note we added a unique index to the tag name because we don't want to have dupli
 
 Now let's also imagine we want the user to input such tags as a list of words split by comma, such as: "elixir, erlang, ecto". Once this data is received in the server, we will break it apart into multiple tags and associate them to the post, creating any tag that does not yet exist in the database.
 
-While the constraints above sound reasonable, that's exactly what put us in trouble with `cast_assoc/3`. Remember the `cast_assoc/3` changeset function was designed to receive external parameters and compare them with the associated data in our structs. To do so correctly, Ecto requires tags to be sent as a list of maps. However here we expect tags to be sent in a string separated by comma.
+While the constraints above sound reasonable, that's exactly what put us in trouble with `cast_assoc/3`. The `cast_assoc/3` changeset function was designed to receive external parameters and compare them with the associated data in our structs.To do so correctly, Ecto requires tags to be sent as a list of maps. We saw an example of this in the [Many to many and casting guide](many-to-many-and-casting.html). However here we expect tags to be sent in a string separated by comma.
 
 Furthermore, `cast_assoc/3` relies on the primary key field for each tag sent in order to decide if it should be inserted, updated or deleted. Again, because the user is simply passing a string, we don't have the ID information at hand.
 
@@ -83,14 +81,6 @@ However, our code is not yet ready for production. Let's see why.
 Remember we added a unique index to the tag `:name` column when creating the tags table. We did so to protect us from having duplicate tags in the database.
 
 By adding the unique index and then using `get_by`  with a `insert!` to get or insert a tag, we introduced a potential error in our application. If two posts are submitted at the same time with a similar tag, there is a chance we will check if the tag exists at the same time, leading both submissions to believe there is no such tag in the database. When that happens, only one of the submissions will succeed while the other one will fail. That's a race condition: your code will error from time to time, only when certain conditions are met. And those conditions are time sensitive.
-
-Many developers have a tendency to think such errors won't happen in practice or, if they happened, they would be irrelevant. But in practice they often lead to very frustrating user experiences. I have heard a first-hand example coming from a mobile game company. In the game, a player is able to play quests and on every quest you have to choose a guest character from another player out of a short list to go on the quest with you. At the end of the quest, you have the option to add the guest character as a friend.
-
-Originally the whole guest list was random but, as time passed, players started to complain sometimes old accounts, often inactive, were being shown in the guests options list. To improve the situation, the game developers started to sort the guest list by most recently active. This means that, if you have just played recently, there is a higher chance of you to be on someone's guest lists.
-
-However, when they did such change, many errors started to show up and users were suddenly furious in the game forum. That's because when they sorted players by activity, as soon as two players logged in, their characters would likely appear on each other's guest list. If those players picked each other's characters, the first to add the other as friend at the end of a quest would be able to succeed but an error would appear when the second player tried to add the other as a friend since the relationship already existed in the database! When that happened, all the progress done in the quest would be lost, because the server was unable to properly persist the quest results to the database. Understandably, players started to file complaints.
-
-Long story short: we must address the race condition.
 
 Luckily Ecto gives us a mechanism to handle constraint errors from the database.
 
