@@ -5,8 +5,8 @@ defmodule Ecto.Repo.Registry do
 
   ## Public interface
 
-  def start_link() do
-    GenServer.start_link(__MODULE__, :ok, [name: __MODULE__])
+  def start_link(_opts) do
+    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
   def associate(pid, value) when is_pid(pid) do
