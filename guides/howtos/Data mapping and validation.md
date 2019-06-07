@@ -118,4 +118,4 @@ changeset =
 
 You can use this technique to validate API endpoints, search forms, and other sources of data. The choice of using schemas depends mostly if you want to use the same mapping in different places or if you desire the compile-time guarantees Elixir structs gives you. Otherwise, you can bypass schemas altogether, be it when using changesets or interacting with the repository.
 
-However, the most important lesson in this chapter is not when to use or not to use schemas, but rather understand when a big problem can be broken into smaller problems that can be solved independently leading to an overall cleaner solution. The choice of using schemas or not above didn't affect the solution as much as the choice of breaking the registration problem apart.
+However, the most important lesson in this guide is not when to use or not to use schemas, but rather understand when a big problem can be broken into smaller problems that can be solved independently leading to an overall cleaner solution. The choice of using schemas or not above didn't affect the solution as much as the choice of breaking the registration problem apart.
