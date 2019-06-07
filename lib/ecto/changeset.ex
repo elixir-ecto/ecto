@@ -1162,7 +1162,7 @@ defmodule Ecto.Changeset do
   "Example: Adding a comment to a post" section.
 
   This function requires the associated data to have been preloaded, except
-  when the parent changeset has been newly build and not yet persisted.
+  when the parent changeset has been newly built and not yet persisted.
   Missing data will invoke the `:on_replace` behaviour defined on the
   association.
 
