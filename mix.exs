@@ -97,13 +97,13 @@ defmodule Ecto.MixProject do
     [
       "guides/introduction/Getting Started.md",
       "guides/introduction/Testing with Ecto.md",
-      "guides/howtos/Data mapping and validation.md",
-      "guides/howtos/Schemaless queries.md",
-      "guides/howtos/Dynamic queries.md",
       "guides/howtos/Aggregates and subqueries.md",
-      "guides/howtos/Many to many and casting.md",
-      "guides/howtos/Many to many and upserts.md",
+      "guides/howtos/Constraints and Upserts.md",
+      "guides/howtos/Data mapping and validation.md",
+      "guides/howtos/Dynamic queries.md",
       "guides/howtos/Multi tenancy with query prefixes.md",
+      "guides/howtos/Polymorphic associations with many to many.md",
+      "guides/howtos/Schemaless queries.md",
       "guides/howtos/Test factories.md"
     ]
   end

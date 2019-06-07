@@ -1,6 +1,6 @@
-# Many to many and casting
+# Polymorphic associations with many to many
 
-Besides `belong_to`, `has_many`, `has_one` and `:through` associations, Ecto also includes `many_to_many`. `many_to_many` relationships, as the name says, allows a record from table X to have many associated entries from table Y and vice-versa. Although `many_to_many` associations can be written as `has_many :through`, using `many_to_many` may considerably simplify some workflows.
+Besides `belongs_to`, `has_many`, `has_one` and `:through` associations, Ecto also includes `many_to_many`. `many_to_many` relationships, as the name says, allows a record from table X to have many associated entries from table Y and vice-versa. Although `many_to_many` associations can be written as `has_many :through`, using `many_to_many` may considerably simplify some workflows.
 
 In this guide, we will talk about polymorphic associations and how `many_to_many` can remove boilerplate from certain approaches compared to `has_many :through`.
 
@@ -47,13 +47,15 @@ One of the ways to introduce a todo list with multiple items into the database i
 When such a form is submitted in Phoenix, it will send parameters with the following shape:
 
 ```elixir
-%{"todo_list" => %{
-  "title" => "shipping list",
-  "todo_items" => %{
-    0 => %{"description" => "bread"},
-    1 => %{"description" => "eggs"},
+%{
+  "todo_list" => %{
+    "title" => "shipping list",
+    "todo_items" => %{
+      0 => %{"description" => "bread"},
+      1 => %{"description" => "eggs"}
+    }
   }
-}}
+}
 ```
 
 We could then retrieve those parameters and pass it to an Ecto changeset and Ecto would automatically figure out what to do:
@@ -380,4 +382,4 @@ end
 
 Overall our code looks structurally the same as `has_many` would, although at the database level our relationships are expressed with join tables.
 
-While in this guide we changed our code to cope with the parameter format required by `cast_assoc`, in the [Many to many and upserts](many-to-many-and-upserts.html) guide we drop `cast_assoc` altogether and use `put_assoc` which brings more flexibilities when working with associations.
+While in this guide we changed our code to cope with the parameter format required by `cast_assoc`, in the [Constraints and Upserts](constraints-and-upserts.html) guide we drop `cast_assoc` altogether and use `put_assoc` which brings more flexibilities when working with associations.
