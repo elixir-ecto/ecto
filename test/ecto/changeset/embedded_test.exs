@@ -517,10 +517,8 @@ defmodule Ecto.Changeset.EmbeddedTest do
   test "change embeds_one" do
     embed = Author.__schema__(:embed, :profile)
 
-    assert {:ok, nil, true} =
-      Relation.change(embed, nil, %Profile{})
-    assert {:ok, nil, true} =
-      Relation.change(embed, nil, nil)
+    assert :ignore = Relation.change(embed, nil, nil)
+    assert {:ok, nil, true} = Relation.change(embed, nil, %Profile{})
 
     embed_schema = %Profile{}
     embed_schema_changeset = Changeset.change(embed_schema, name: "michal")
@@ -637,6 +635,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
   test "change embeds_many" do
     embed = Author.__schema__(:embed, :posts)
+    assert :ignore = Relation.change(embed, [], [])
 
     assert {:ok, [old_changeset, new_changeset], true} =
       Relation.change(embed, [%Post{id: 1}], [%Post{id: 2}])

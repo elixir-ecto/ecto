@@ -571,10 +571,8 @@ defmodule Ecto.Changeset.HasAssocTest do
   test "change has_one" do
     assoc = Author.__schema__(:association, :profile)
 
-    assert {:ok, nil, true} =
-      Relation.change(assoc, nil, %Profile{})
-    assert {:ok, nil, true} =
-      Relation.change(assoc, nil, nil)
+    assert :ignore = Relation.change(assoc, nil, nil)
+    assert {:ok, nil, true} = Relation.change(assoc, nil, %Profile{})
 
     assoc_schema = %Profile{}
     assoc_schema_changeset = Changeset.change(assoc_schema, name: "michal")
@@ -718,6 +716,8 @@ defmodule Ecto.Changeset.HasAssocTest do
 
   test "change has_many" do
     assoc = Author.__schema__(:association, :posts)
+
+    assert :ignore = Relation.change(assoc, [], [])
 
     assert {:ok, [old_changeset, new_changeset], true} =
       Relation.change(assoc, [%Post{id: 1}], [%Post{id: 2}])
