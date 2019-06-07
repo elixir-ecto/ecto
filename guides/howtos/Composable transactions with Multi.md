@@ -80,12 +80,12 @@ transfer_money(mary, john, 10)
 |> case do
   {:ok, %{transfer: transfer}} ->
     # Handle success case
-  {:error, name, value, rolled_back_changes} ->
+  {:error, name, value, changes_so_far} ->
     # Handle failure case
 end
 ```
 
-If all operations in the multi succeed, it returns `{:ok, map}` where the map contains the name of all operations as keys and their success value. If any operation in the multi fails, the transaction is rolled back and `Repo.transaction` returns `{:error, name, value, rolled_back_changes}`, where `name` is the name of the failed operation, `value` is the failure value and `rolled_back_changes` is a map of the previously successful multi operations that have been rolled back due to the failure.
+If all operations in the multi succeed, it returns `{:ok, map}` where the map contains the name of all operations as keys and their success value. If any operation in the multi fails, the transaction is rolled back and `Repo.transaction` returns `{:error, name, value, changes_so_far}`, where `name` is the name of the failed operation, `value` is the failure value and `changes_so_far` is a map of the previously successful multi operations that have been rolled back due to the failure.
 
 In other words, `Ecto.Multi` takes care of all the flow control boilerplate while decoupling the transaction definition from its execution, allowing us to compose operations as needed.
 
