@@ -6,8 +6,8 @@ defmodule Ecto.Repo do
   adapter. For example, Ecto ships with a Postgres adapter that
   stores data into a PostgreSQL database.
 
-  When used, the repository expects the `:otp_app` as option.
-  The `:otp_app` should point to an OTP application that has
+  When used, the repository expects the `:otp_app` and `:adapter` as
+  option. The `:otp_app` should point to an OTP application that has
   the repository configuration. For example, the repository:
 
       defmodule Repo do
@@ -25,7 +25,8 @@ defmodule Ecto.Repo do
         hostname: "localhost"
 
   Most of the configuration that goes into the `config` is specific
-  to the adapter, so check `Ecto.Adapters.Postgres` documentation
+  to the adapter, so in this particular example, you check
+  [`Ecto.Adapters.Postgres`](https://hexdocs.pm/ecto_sql/Ecto.Adapters.Postgres.html)
   for more information. However, some configuration is shared across
   all adapters, they are:
 
@@ -77,19 +78,18 @@ defmodule Ecto.Repo do
         {:ok, Keyword.put(config, :url, System.get_env("DATABASE_URL"))}
       end
 
-  ## Shared options
+  ## The Repository API
 
-  Almost all of the repository operations below accept the following
+  Almost all of the repository outlined in this module accept the following
   options:
 
     * `:timeout` - The time in milliseconds to wait for the query call to
       finish, `:infinity` will wait indefinitely (default: 15000);
     * `:log` - When false, does not log the query
-    * `:telemetry_event` - The telemetry event name to dispatch the event under
+    * `:telemetry_event` - The telemetry event name to dispatch the event under./
+      See the next section for more information
 
-  Such cases will be explicitly documented as well as any extra option.
-
-  ## Telemetry events
+  ### Telemetry events
 
   We recommend adapters to publish certain `Telemetry` events listed below.
   Those events will use the `:telemetry_prefix` outlined above which defaults
@@ -117,6 +117,16 @@ defmodule Ecto.Repo do
       relevant subtime, such as decode and queue time. The metadata is a map
       with parameters, source, result and other relevant information
 
+  ## Read-only repositories
+
+  You can mark a repository as read-only by passing the `:read_only`
+  flag on use:
+
+      use Ecto.Repo, otp_app: ..., adapter: ..., read_only: true
+
+  By passing the `:read_only` option, none of the functions that perform
+  write operations, such as `c:insert/2`, `c:insert_all/3`, `c:update_all/3`,
+  and friends will be defined.
   """
 
   @type t :: module
@@ -126,9 +136,13 @@ defmodule Ecto.Repo do
     quote bind_quoted: [opts: opts] do
       @behaviour Ecto.Repo
 
-      {otp_app, adapter, behaviours} = Ecto.Repo.Supervisor.compile_config(__MODULE__, opts)
+      {otp_app, adapter, behaviours} =
+        Ecto.Repo.Supervisor.compile_config(__MODULE__, opts)
+
       @otp_app otp_app
       @adapter adapter
+      @default_dynamic_repo opts[:default_dynamic_repo] || __MODULE__
+      @read_only opts[:read_only] || false
       @before_compile adapter
 
       def config do
@@ -168,11 +182,11 @@ defmodule Ecto.Repo do
       @compile {:inline, get_dynamic_repo: 0}
 
       def get_dynamic_repo() do
-        Process.get({__MODULE__, :dynamic_repo}, __MODULE__)
+        Process.get({__MODULE__, :dynamic_repo}, @default_dynamic_repo)
       end
 
       def put_dynamic_repo(dynamic) when is_atom(dynamic) or is_pid(dynamic) do
-        Process.put({__MODULE__, :dynamic_repo}, dynamic) || __MODULE__
+        Process.put({__MODULE__, :dynamic_repo}, dynamic) || @default_dynamic_repo
       end
 
       ## Transactions
@@ -194,7 +208,7 @@ defmodule Ecto.Repo do
 
       ## Schemas
 
-      if Ecto.Adapter.Schema in behaviours do
+      if Ecto.Adapter.Schema in behaviours and not @read_only do
         def insert(struct, opts \\ []) do
           Ecto.Repo.Schema.insert(__MODULE__, get_dynamic_repo(), struct, opts)
         end
@@ -235,12 +249,14 @@ defmodule Ecto.Repo do
       ## Queryable
 
       if Ecto.Adapter.Queryable in behaviours do
-        def update_all(queryable, updates, opts \\ []) do
-          Ecto.Repo.Queryable.update_all(get_dynamic_repo(), queryable, updates, opts)
-        end
+        if not @read_only do
+          def update_all(queryable, updates, opts \\ []) do
+            Ecto.Repo.Queryable.update_all(get_dynamic_repo(), queryable, updates, opts)
+          end
 
-        def delete_all(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.delete_all(get_dynamic_repo(), queryable, opts)
+          def delete_all(queryable, opts \\ []) do
+            Ecto.Repo.Queryable.delete_all(get_dynamic_repo(), queryable, opts)
+          end
         end
 
         def all(queryable, opts \\ []) do
@@ -420,7 +436,7 @@ defmodule Ecto.Repo do
   @doc """
   Sets the dynamic repository to be used in further iteractions.
 
-  Sometimes, you may want a single Ecto repository to talk to
+  Sometimes you may want a single Ecto repository to talk to
   many different database instances. By default, when you call
   `MyApp.Repo.start_link/1`, it will start a repository with
   name `MyApp.Repo`. But if you want to start multiple repositories,
@@ -435,11 +451,17 @@ defmodule Ecto.Repo do
       MyApp.Repo.start_link(name: nil, hostname: "temp.example.com")
 
   However, once the repository is started, you can't directly interact with
-  it, since all operations in `MyApp.Repo` are sent to the repository named
-  `MyApp.Repo`. With `put_dynamic_repo/1`, we can tell Ecto exactly which
-  instance to use:
+  it, since all operations in `MyApp.Repo` are sent by default to the repository
+  named `MyApp.Repo`. You can change the default repo at compile time with:
+
+      use Ecto.Repo, default_dynamic_repo: :name_of_repo
+
+  Or you can change it anytime at runtime by calling `put_dynamic_repo/1`:
 
       MyApp.Repo.put_dynamic_repo(:tenant_foo)
+
+  From this moment on, all future queries done by the current process will
+  run on `:tenant_foo`.
 
   **Note this feature is experimental and may be changed or removed in future
   releases.**

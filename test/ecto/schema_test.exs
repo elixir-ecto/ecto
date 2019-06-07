@@ -598,6 +598,28 @@ defmodule Ecto.SchemaTest do
     end
   end
 
+  test "has_* through validates option" do
+    assert_raise ArgumentError, "invalid option :unknown for has_many/3", fn ->
+      defmodule InvalidHasOption do
+        use Ecto.Schema
+
+        schema "assoc" do
+          has_many :posts, through: [:another], unknown: :option
+        end
+      end
+    end
+
+    assert_raise ArgumentError, "invalid option :unknown for has_one/3", fn ->
+      defmodule InvalidHasOption do
+        use Ecto.Schema
+
+        schema "assoc" do
+          has_one :post, through: [:another], unknown: :option
+        end
+      end
+    end
+  end
+
   test "has_* through has to match an association on schema" do
     message = ~r"schema does not have the association :whatever used by association :posts"
     assert_raise ArgumentError, message, fn ->

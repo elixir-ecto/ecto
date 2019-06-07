@@ -238,6 +238,8 @@ defmodule Ecto.Changeset.ManyToManyTest do
   test "change many_to_many" do
     assoc = Author.__schema__(:association, :posts)
 
+    assert :ignore = Relation.change(assoc, [], [])
+
     assert {:ok, [old_changeset, new_changeset], true} =
       Relation.change(assoc, [%Post{id: 1}], [%Post{id: 2}])
     assert old_changeset.action == :replace

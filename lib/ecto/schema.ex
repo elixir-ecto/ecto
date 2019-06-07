@@ -702,7 +702,7 @@ defmodule Ecto.Schema do
     * `:on_replace` - The action taken on associations when the record is
       replaced when casting or manipulating parent changeset. May be
       `:raise` (default), `:mark_as_invalid`, `:nilify`, or `:delete`.
-      See `Ecto.Changeset`'s section on related data for more info.
+      See `Ecto.Changeset`'s section about ":on_replace" for more info.
 
     * `:defaults` - Default values to use when building the association. This
       overrides any default set on the association schema. For example, imagine
@@ -1782,26 +1782,24 @@ defmodule Ecto.Schema do
 
   @doc false
   def __has_many__(mod, name, queryable, opts) do
-    check_options!(opts, @valid_has_options, "has_many/3")
-
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
+      check_options!(queryable, @valid_has_options, "has_many/3")
       association(mod, :many, name, Ecto.Association.HasThrough, queryable)
     else
-      struct =
-        association(mod, :many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+      check_options!(opts, @valid_has_options, "has_many/3")
+      struct = association(mod, :many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
       Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
     end
   end
 
   @doc false
   def __has_one__(mod, name, queryable, opts) do
-    check_options!(opts, @valid_has_options, "has_one/3")
-
     if is_list(queryable) and Keyword.has_key?(queryable, :through) do
+      check_options!(queryable, @valid_has_options, "has_one/3")
       association(mod, :one, name, Ecto.Association.HasThrough, queryable)
     else
-      struct =
-        association(mod, :one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
+      check_options!(opts, @valid_has_options, "has_one/3")
+      struct = association(mod, :one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
       Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
     end
   end

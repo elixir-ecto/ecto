@@ -294,10 +294,9 @@ defmodule Ecto.Changeset.BelongsToTest do
 
   test "change belongs_to" do
     assoc = Author.__schema__(:association, :profile)
-    assert {:ok, nil, true} =
-      Relation.change(assoc, nil, %Profile{})
-    assert {:ok, nil, true} =
-      Relation.change(assoc, nil, nil)
+
+    assert :ignore = Relation.change(assoc, nil, nil)
+    assert {:ok, nil, true} = Relation.change(assoc, nil, %Profile{})
 
     assoc_schema = %Profile{}
     assoc_schema_changeset = Changeset.change(assoc_schema, name: "michal")

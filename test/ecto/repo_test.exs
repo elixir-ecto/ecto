@@ -1145,5 +1145,28 @@ defmodule Ecto.RepoTest do
       assert {:ok, changes} = TestRepo.transaction(multi)
       assert changes.run == TestRepo
     end
+
+    test "accepts a default dynamic repo compile-time option" do
+      defmodule CustomDynamicRepo do
+        use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter, default_dynamic_repo: :other
+      end
+
+      assert CustomDynamicRepo.get_dynamic_repo() == :other
+    end
+  end
+
+  describe "read-only repo" do
+    test "accepts a read-only compile-time option" do
+      defmodule ReadOnlyRepo do
+        use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter, read_only: true
+      end
+
+      refute function_exported?(ReadOnlyRepo, :insert, 2)
+      refute function_exported?(ReadOnlyRepo, :update, 2)
+      refute function_exported?(ReadOnlyRepo, :delete, 2)
+      refute function_exported?(ReadOnlyRepo, :insert_all, 3)
+      refute function_exported?(ReadOnlyRepo, :update_all, 3)
+      refute function_exported?(ReadOnlyRepo, :delete_all, 2)
+    end
   end
 end
