@@ -183,7 +183,7 @@ iex(9)> Ecto.get_meta(sample, :prefix)
 nil
 ```
 
-The example above returned nil, which means no prefix was specified by Ecto, and therefore the database connection default will be used. In this case, "connection_prefix" will be used because of the `:after_connect` callback we added at the beginning of this chapter.
+The example above returned nil, which means no prefix was specified by Ecto, and therefore the database connection default will be used. In this case, "connection_prefix" will be used because of the `:after_connect` callback we added at the beginning of this guide.
 
 Since the prefix data is carried in the struct, we can use such to copy data from one prefix to the other. Let's copy the sample above from the "connection_prefix" to the "public" one:
 
