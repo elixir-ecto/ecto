@@ -1,6 +1,8 @@
 defmodule Ecto.EmbedOneTest do
   use ExUnit.Case, async: true
 
+  alias Ecto.TestRepo, as: TestRepo
+
   defmodule Supplier do
     use Ecto.Schema
     import Ecto.Changeset
@@ -30,9 +32,16 @@ defmodule Ecto.EmbedOneTest do
     }
 
     changeset =
-      %Supplier{info: %Supplier.Info{account: "some"}}
+      %Supplier{
+        id: 1,
+        info: %Supplier.Info{
+          account: "1234",
+          id: nil
+        }
+      }
+      |> Ecto.put_meta(state: :loaded)
+      |> Ecto.put_meta(source: "suppliers")
       |> Supplier.changeset(params)
-
-    assert Ecto.Embedded.prepare(changeset, [:info], nil, :update)
+      |> TestRepo.update()
   end
 end
