@@ -2013,7 +2013,10 @@ defmodule Ecto.Schema do
       Ecto.Type.primitive?(type) ->
         type
 
-      is_atom(type) and Code.ensure_compiled?(type) and function_exported?(type, :type, 0) ->
+      custom_type?(type) ->
+        type
+
+      composite_type?(type) ->
         type
 
       is_atom(type) and function_exported?(type, :__schema__, 1) ->
@@ -2024,6 +2027,16 @@ defmodule Ecto.Schema do
       true ->
         raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}"
     end
+  end
+
+  defp composite_type?({wrapper, type}) do
+    custom_type?(wrapper) || custom_type?(type)
+  end
+
+  defp composite_type?(_), do: false
+
+  defp custom_type?(type) do
+    is_atom(type) and Code.ensure_compiled?(type) and function_exported?(type, :type, 0)
   end
 
   defp store_mfa_autogenerate!(mod, name, type, mfa) do

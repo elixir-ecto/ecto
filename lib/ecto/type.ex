@@ -305,6 +305,14 @@ defmodule Ecto.Type do
 
   """
   @spec dump(t, term) :: {:ok, term} | :error
+
+  def dump({custom_composite, type}, value) when custom_composite not in @composite do
+    case dump_fun(custom_composite).(value) do
+      {:ok, term} -> dump(type, term)
+      :error -> :error
+    end
+  end
+
   def dump(_type, nil) do
     {:ok, nil}
   end
@@ -471,6 +479,13 @@ defmodule Ecto.Type do
   @spec load(t, term) :: {:ok, term} | :error
   def load({:embed, embed}, value) do
     load_embed(embed, value, &load/2)
+  end
+
+  def load({custom_composite, type}, value) when custom_composite not in @composite do
+    case load(type, value) do
+      {:ok, term} -> load_fun(custom_composite).(term)
+      :error -> :error
+    end
   end
 
   def load(_type, nil) do
@@ -681,6 +696,14 @@ defmodule Ecto.Type do
   @spec cast(t, term) :: {:ok, term} | {:error, keyword()} | :error
   def cast({:embed, type}, value), do: cast_embed(type, value)
   def cast({:in, _type}, nil), do: :error
+
+  def cast({custom_composite, type}, value) when custom_composite not in @composite do
+    case cast(type, value) do
+      {:ok, term} -> cast_fun(custom_composite).(term)
+      :error -> :error
+    end
+  end
+
   def cast(_type, nil), do: {:ok, nil}
 
   def cast(type, value) do

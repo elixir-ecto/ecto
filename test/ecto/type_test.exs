@@ -11,6 +11,18 @@ defmodule Ecto.TypeTest do
     def equal?(_, _), do: false
   end
 
+  defmodule CustomComposite do
+    def type, do: :any
+
+    def cast(nil), do: {:ok, :none}
+    def cast(value), do: {:ok, {:some, value}}
+
+    def load(nil), do: {:ok, :none}
+    def load(value), do: {:ok, {:some, value}}
+    def dump({:some, value}), do: {:ok, value}
+    def dump(:none), do: {:ok, nil}
+  end
+
   defmodule CustomAny do
     @behaviour Ecto.Type
     def type,      do: :any
@@ -119,6 +131,16 @@ defmodule Ecto.TypeTest do
 
     assert load({:map, Custom}, %{"a" => :unused}, fn Custom, _ -> {:ok, :used} end) == {:ok, %{"a" => :used}}
     assert dump({:map, Custom}, %{"a" => :unused}, fn Custom, _ -> {:ok, :used} end) == {:ok, %{"a" => :used}}
+  end
+
+  test "custom composite types" do
+    assert load({CustomComposite, :string}, "foo") == {:ok, {:some, "foo"}}
+    assert dump({CustomComposite, :string}, {:some, "foo"}) == {:ok, "foo"}
+    assert cast({CustomComposite, :string}, "foo") == {:ok, {:some, "foo"}}
+
+    assert load({CustomComposite, :string}, nil) == {:ok, :none}
+    assert dump({CustomComposite, :string}, :none) == {:ok, nil}
+    assert cast({CustomComposite, :string}, nil) == {:ok, :none}
   end
 
   test "dump with custom function" do

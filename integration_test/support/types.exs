@@ -14,3 +14,15 @@ defmodule Custom.Permalink do
   def load(integer) when is_integer(integer), do: {:ok, integer}
   def dump(integer) when is_integer(integer), do: {:ok, integer}
 end
+
+defmodule Custom.Composite do
+  def type, do: :any
+
+  def cast(nil), do: {:ok, :none}
+  def cast(value), do: {:ok, {:some, value}}
+
+  def load(nil), do: {:ok, :none}
+  def load(value), do: {:ok, {:some, value}}
+  def dump({:some, value}), do: {:ok, value}
+  def dump(:none), do: {:ok, nil}
+end
