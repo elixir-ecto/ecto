@@ -46,8 +46,9 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
     create_directory Path.dirname(file)
     create_file file, repo_template(opts)
+    config_path = config[:config_path] || "config/config.exs"
 
-    case File.read "config/config.exs" do
+    case File.read(config_path) do
       {:ok, contents} ->
         Mix.shell.info [:green, "* updating ", :reset, "config/config.exs"]
         File.write! "config/config.exs",
