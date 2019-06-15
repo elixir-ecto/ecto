@@ -629,10 +629,14 @@ defmodule Ecto.Query do
   def exclude(%Ecto.Query{} = query, field), do: do_exclude(query, field)
   def exclude(query, field), do: do_exclude(Ecto.Queryable.to_query(query), field)
 
-  defp do_exclude(%Ecto.Query{} = query, :join), do: %{query | joins: []}
+  defp do_exclude(%Ecto.Query{} = query, :join) do
+    %{query | joins: [], aliases: Map.take(query.aliases, [query.from.as])}
+  end
   defp do_exclude(%Ecto.Query{} = query, join_keyword) when join_keyword in @joins do
     qual = join_qual(join_keyword)
-    %{query | joins: Enum.reject(query.joins, &(&1.qual == qual))}
+    {excluded, remaining} = Enum.split_with(query.joins, &(&1.qual == qual))
+    aliases =  Map.drop(query.aliases, Enum.map(excluded, & &1.as))
+    %{query | joins: remaining, aliases: aliases}
   end
   defp do_exclude(%Ecto.Query{} = query, :where), do: %{query | wheres: []}
   defp do_exclude(%Ecto.Query{} = query, :order_by), do: %{query | order_bys: []}
