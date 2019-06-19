@@ -1130,7 +1130,7 @@ defmodule Ecto.Association.ManyToMany do
         where: field(j, ^join_owner_key) == ^owner_value and
                field(j, ^join_related_key) == ^related_value
 
-    query = Map.put(query, :prefix, owner.__meta__.prefix)
+    query = %{query | prefix: owner.__meta__.prefix}
     repo.delete_all(query, opts)
     {:ok, nil}
   end
