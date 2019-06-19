@@ -1,7 +1,7 @@
 defmodule Ecto.MixProject do
   use Mix.Project
 
-  @version "3.1.6"
+  @version "3.2.0-dev"
 
   def project do
     [
@@ -32,7 +32,7 @@ defmodule Ecto.MixProject do
     [
       {:decimal, "~> 1.6"},
       {:jason, "~> 1.0", optional: true},
-      {:ex_doc, "~> 0.19", only: :docs}
+      {:ex_doc, "~> 0.20", only: :docs}
     ]
   end
 
