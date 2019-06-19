@@ -1,5 +1,18 @@
 # Changelog for v3.x
 
+## v3.1.6 (2019-06-19)
+
+### Enhancements
+
+  * [Ecto.Repo] Add `:read_only` repositories
+  * [Ecto.Schema] Also validate options given to `:through` associations
+
+### Bug fixes
+
+  * [Ecto.Changeset] Do not mark `put_assoc` from `[]` to `[]` or from `nil` to `nil` as change
+  * [Ecto.Query] Remove named binding when exluding joins
+  * [mix ecto.gen.repo] Use `:config_path` instead of hardcoding to `config/config.exs`
+
 ## v3.1.5 (2019-06-06)
 
 ### Enhancements
