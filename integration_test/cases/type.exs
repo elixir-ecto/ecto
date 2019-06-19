@@ -257,6 +257,13 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   @tag :map_type
+  test "empty embeds one" do
+    order = TestRepo.insert!(%Order{})
+    assert order.item == nil
+    assert TestRepo.get!(Order, order.id).item == nil
+  end
+
+  @tag :map_type
   @tag :array_type
   test "embeds many" do
     item = %Item{price: 123, valid_at: ~D[2014-01-16]}
@@ -278,6 +285,14 @@ defmodule Ecto.Integration.TypeTest do
 
     {1, _} = TestRepo.update_all(Tag, set: [items: [%{dbitem | price: 456}]])
     assert (TestRepo.get!(Tag, tag.id).items |> hd).price == 456
+  end
+
+  @tag :map_type
+  @tag :array_type
+  test "empty embeds many" do
+    tag = TestRepo.insert!(%Tag{})
+    assert tag.items == []
+    assert TestRepo.get!(Tag, tag.id).items == []
   end
 
   @tag :map_type
