@@ -78,6 +78,11 @@ defmodule Ecto.Query.Builder do
   end
 
   # param interpolation
+  def escape({:^, _, [nil]}, _type, {_params, _acc}, _vars, _env) do
+    error! "comparison with nil is forbidden as it is unsafe. " <>
+             "If you want to check if a value is nil, use is_nil/1 instead"
+  end
+
   def escape({:^, _, [arg]}, type, {params, acc}, _vars, _env) do
     expr = {:{}, [], [:^, [], [length(params)]]}
     params = [{arg, type} | params]
