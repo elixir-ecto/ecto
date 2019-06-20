@@ -181,7 +181,7 @@ defmodule Ecto.Query.SubqueryTest do
 
     test "raises on custom expressions" do
       query = from p in Post, select: fragment("? + ?", p.id, p.id)
-      assert_raise Ecto.SubQueryError, ~r/subquery must select a source \(t\), a field \(t\.field\) or a map/, fn ->
+      assert_raise Ecto.SubQueryError, ~r/subquery\/cte must select a source \(t\), a field \(t\.field\) or a map/, fn ->
         plan(from(subquery(query), []))
       end
     end

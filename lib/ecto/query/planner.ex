@@ -294,7 +294,7 @@ defmodule Ecto.Query.Planner do
 
     case update_keys -- valid_keys do
       [] -> :ok
-      [key | _] -> error!(query, "invalid key `#{inspect key}` on map update in subquery")
+      [key | _] -> error!(query, "invalid key `#{inspect key}` on map update in subquery/cte")
     end
 
     # In case of map updates, we need to remove duplicated fields
@@ -316,7 +316,7 @@ defmodule Ecto.Query.Planner do
     {nil, subquery_fields([field], ix)}
   end
   defp subquery_select(expr, _take, query) do
-    error!(query, "subquery must select a source (t), a field (t.field) or a map, got: `#{Macro.to_string(expr)}`")
+    error!(query, "subquery/cte must select a source (t), a field (t.field) or a map, got: `#{Macro.to_string(expr)}`")
   end
 
   defp subquery_struct_and_fields({:source, {_, schema}, _, types}) do
@@ -335,8 +335,8 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp subquery_types(%{select: {:map, types}}), do: types
-  defp subquery_types(%{select: {:struct, _name, types}}), do: types
+  defp subquery_types({:map, types}), do: types
+  defp subquery_types({:struct, _name, types}), do: types
 
   defp assert_subquery_fields!(query, expr, pairs) do
     Enum.each(pairs, fn
@@ -590,6 +590,8 @@ defmodule Ecto.Query.Planner do
   defp merge_cache(:combination, _query, combinations, cache_and_params, operation, adapter) do
     fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
 
+    # In here we add each combination as its own entry in the cache key.
+    # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
     Enum.reduce combinations, cache_and_params, fn {modifier, combination_query}, {cache, params} ->
       case traverse_exprs(combination_query, operation, {[], params}, fun) do
         {_, {:nocache, _} = acc} -> acc
@@ -603,16 +605,22 @@ defmodule Ecto.Query.Planner do
   end
 
   defp merge_cache(:with_cte, query, with_expr, cache_and_params, operation, adapter) do
+    %{queries: queries, recursive: recursive} = with_expr
+    key = if recursive, do: :recursive_cte, else: :non_recursive_cte
     fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
 
-    Enum.reduce with_expr.queries, cache_and_params, fn
-      {_, %Ecto.Query{} = query}, acc ->
-        {_, acc} = traverse_exprs(query, operation, acc, fun)
-        acc
+    # In here we add each cte as its own entry in the cache key.
+    # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
+    Enum.reduce queries, cache_and_params, fn
+      {name, %Ecto.Query{} = query}, {cache, params} ->
+        case traverse_exprs(query, operation, {[], params}, fun) do
+          {_, {:nocache, _} = acc} -> acc
+          {_, {inner_cache, params}} -> {[{key, name, inner_cache} | cache], params}
+        end
 
-      {_, %Ecto.Query.QueryExpr{} = query_expr}, {cache, params} ->
+      {name, %Ecto.Query.QueryExpr{} = query_expr}, {cache, params} ->
         {params, cacheable?} = cast_and_merge_params(:with_cte, query, query_expr, params, adapter)
-        {merge_cache({:with_cte, expr_to_cache(query_expr)}, cache, cacheable?), params}
+        {merge_cache({key, name, expr_to_cache(query_expr)}, cache, cacheable?), params}
     end
   end
 
@@ -749,8 +757,8 @@ defmodule Ecto.Query.Planner do
   defp plan_ctes(%Ecto.Query{with_ctes: %{queries: queries}} = query, operation, adapter, counter) do
     queries =
       Enum.map queries, fn
-        {name, %Ecto.Query{} = query} ->
-          {planned_query, _params, _key} = plan(query, operation, adapter, counter)
+        {name, %Ecto.Query{} = cte_query} ->
+          {planned_query, _params, _key} = plan(cte_query, operation, adapter, counter)
           planned_query = planned_query |> ensure_select(true)
           {name, planned_query}
 
@@ -881,6 +889,10 @@ defmodule Ecto.Query.Planner do
       Enum.reduce with_expr.queries, {[], counter}, fn
         {name, %Ecto.Query{} = query}, {queries, counter} ->
           {query, counter} = traverse_exprs(query, operation, counter, fun)
+          {query, _} = normalize_select(query) |> remove_literals()
+          {_, select} = subquery_select(query, adapter)
+          keys = select |> subquery_types() |> Keyword.keys()
+          query = update_in(query.select.fields, &Enum.zip(keys, &1))
           {[{name, query} | queries], counter}
 
         {name, %QueryExpr{expr: {:fragment, _, _} = fragment} = query_expr}, {queries, counter} ->
@@ -916,6 +928,7 @@ defmodule Ecto.Query.Planner do
     {combinations, counter} =
       Enum.reduce combinations, {[], counter}, fn {type, combination_query}, {combinations, counter} ->
         {combination_query, counter} = traverse_exprs(combination_query, operation, counter, fun)
+        {combination_query, _} = combination_query |> normalize_select() |> remove_literals()
         {[{type, combination_query} | combinations], counter}
       end
 
@@ -930,7 +943,7 @@ defmodule Ecto.Query.Planner do
     try do
       {inner_query, counter} = normalize_query(inner_query, :all, adapter, counter)
       {inner_query, _} = normalize_select(inner_query)
-      keys = subquery |> subquery_types() |> Keyword.keys()
+      keys = subquery.select |> subquery_types() |> Keyword.keys()
       inner_query = update_in(inner_query.select.fields, &Enum.zip(keys, &1))
       {%{subquery | query: inner_query}, counter}
     rescue
@@ -1088,13 +1101,6 @@ defmodule Ecto.Query.Planner do
       from: from
     }
 
-    combinations =
-      Enum.map query.combinations, fn {type, combination_query} ->
-        {combination_query, _} = combination_query |> normalize_select() |> remove_literals()
-        {type, combination_query}
-      end
-
-    query = %{query | combinations: combinations}
     {put_in(query.select.fields, fields), select}
   end
 
@@ -1356,8 +1362,8 @@ defmodule Ecto.Query.Planner do
         {types, fields} = select_dump(schema.__schema__(:query_fields), schema.__schema__(:dump), ix)
         {{:source, {source, schema}, prefix || query.prefix, types}, fields}
 
-      {:error, %Ecto.SubQuery{select: select} = subquery} ->
-        fields = for {field, _} <- subquery_types(subquery), do: select_field(field, ix)
+      {:error, %Ecto.SubQuery{select: select}} ->
+        fields = for {field, _} <- subquery_types(select), do: select_field(field, ix)
         {select, fields}
     end
   end
@@ -1436,8 +1442,8 @@ defmodule Ecto.Query.Planner do
       {_, schema, _} ->
         type!(kind, query, expr, schema, field)
 
-      %Ecto.SubQuery{} = subquery ->
-        case Keyword.fetch(subquery_types(subquery), field) do
+      %Ecto.SubQuery{select: select} ->
+        case Keyword.fetch(subquery_types(select), field) do
           {:ok, {:value, type}} ->
             type
           {:ok, _} ->

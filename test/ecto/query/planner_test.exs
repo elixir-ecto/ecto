@@ -432,23 +432,38 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "prepare: prepare CTEs" do
-    {%{with_ctes: with_expr}, _, cache} = Comment |> with_cte("cte", as: ^from(c in Comment)) |> plan()
+    {%{with_ctes: with_expr}, _, cache} =
+      Comment
+      |> with_cte("cte", as: ^from(c in Comment))
+      |> plan()
     %{queries: [{"cte", query}]} = with_expr
     assert query.sources == {{"comments", Comment, nil}}
     assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
-    assert [:all, _, {"comments", Comment, _, nil}, {"comments", Comment, _, nil}, _] = cache
+    assert [
+      :all,
+      _,
+      {"comments", Comment, _, nil},
+      {:non_recursive_cte, "cte", [{"comments", Comment, _, nil}, {:select, {:&, _, [0]}}]}
+    ] = cache
 
-    {%{with_ctes: with_expr}, _, cache} = Comment |> with_cte("cte", as: ^from(c in Comment, where: c in ^[1, 2, 3])) |> plan()
+    {%{with_ctes: with_expr}, _, cache} =
+      Comment
+      |> with_cte("cte", as: ^from(c in Comment, where: c in ^[1, 2, 3]))
+      |> plan()
     %{queries: [{"cte", query}]} = with_expr
     assert query.sources == {{"comments", Comment, nil}}
     assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
     assert :nocache = cache
 
-    {%{with_ctes: with_expr}, _, cache} = Comment |> with_cte("cte", as: fragment("SELECT * FROM comments WHERE id = ?", ^123)) |> plan()
+    {%{with_ctes: with_expr}, _, cache} =
+      Comment
+      |> recursive_ctes(true)
+      |> with_cte("cte", as: fragment("SELECT * FROM comments WHERE id = ?", ^123))
+      |> plan()
     %{queries: [{"cte", query_expr}]} = with_expr
     expr = {:fragment, [], [raw: "SELECT * FROM comments WHERE id = ", expr: {:^, [], [0]}, raw: ""]}
     assert expr == query_expr.expr
-    assert [:all, _, {"comments", Comment, _, nil}, {:with_cte, ^expr}] = cache
+    assert [:all, _, {"comments", Comment, _, nil}, {:recursive_cte, "cte", ^expr}] = cache
   end
 
   test "normalize: validates literal types" do
