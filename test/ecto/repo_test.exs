@@ -704,20 +704,20 @@ defmodule Ecto.RepoTest do
     test "insert, update, insert_or_update and delete errors on invalid changeset" do
       invalid = %Ecto.Changeset{valid?: false, data: %MySchema{}}
 
-      insert = %{invalid | action: :insert, repo: TestRepo}
-      assert {:error, ^insert} = TestRepo.insert(invalid)
-      assert {:error, ^insert} = TestRepo.insert_or_update(invalid)
+      insert = %{invalid | action: :insert, repo: TestRepo, repo_opts: [prefix: "prefix"]}
+      assert {:error, ^insert} = TestRepo.insert(invalid, prefix: "prefix")
+      assert {:error, ^insert} = TestRepo.insert_or_update(invalid, prefix: "prefix")
 
-      update = %{invalid | action: :update, repo: TestRepo}
-      assert {:error, ^update} = TestRepo.update(invalid)
+      update = %{invalid | action: :update, repo: TestRepo, repo_opts: [prefix: "prefix"]}
+      assert {:error, ^update} = TestRepo.update(invalid, prefix: "prefix")
 
-      delete = %{invalid | action: :delete, repo: TestRepo}
-      assert {:error, ^delete} = TestRepo.delete(invalid)
+      delete = %{invalid | action: :delete, repo: TestRepo, repo_opts: [prefix: "prefix"]}
+      assert {:error, ^delete} = TestRepo.delete(invalid, prefix: "prefix")
 
-      ignore = %{invalid | action: :ignore, repo: TestRepo}
-      assert {:error, ^insert} = TestRepo.insert(ignore)
-      assert {:error, ^update} = TestRepo.update(ignore)
-      assert {:error, ^delete} = TestRepo.delete(ignore)
+      ignore = %{invalid | action: :ignore, repo: TestRepo, repo_opts: [prefix: "prefix"]}
+      assert {:error, ^insert} = TestRepo.insert(ignore, prefix: "prefix")
+      assert {:error, ^update} = TestRepo.update(ignore, prefix: "prefix")
+      assert {:error, ^delete} = TestRepo.delete(ignore, prefix: "prefix")
 
       assert_raise ArgumentError, ~r"a valid changeset with action :ignore was given to Ecto.TestRepo.insert/2", fn ->
         TestRepo.insert(%{ignore | valid?: true})
