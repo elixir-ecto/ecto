@@ -988,12 +988,8 @@ defmodule Ecto.Query do
   In the CTE query itself use the same table name to leverage recursion that has been passed
   to `name` argument. Make sure to write a stop condition to avoid infinite recursion loop.
 
-  ## Non-recursive CTEs
-
-  By default recursive mode for CTEs is off.
-
-  Keep in mind that from the performance perspective usually queries with non-recursive CTEs
-  can be rewritten to more optimal ones that leverage joins or subqueries instead.
+  Generally speaking, you should only use CTEs for writing recursive queries. Non-recursive
+  CTEs can often be written as joins or subqueries, which provide better performance.
 
   ## Expression examples
 
