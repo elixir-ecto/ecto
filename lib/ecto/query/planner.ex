@@ -1413,7 +1413,7 @@ defmodule Ecto.Query.Planner do
 
     Enum.reduce extra ++ @exprs, {query, acc}, fn {kind, key}, {query, acc} ->
       {traversed, acc} = fun.(kind, query, Map.fetch!(query, key), acc)
-      {Map.put(query, key, traversed), acc}
+      {%{query | key => traversed}, acc}
     end
   end
 

@@ -406,8 +406,6 @@ defmodule Ecto.Query do
   @opaque dynamic :: %DynamicExpr{}
 
   alias Ecto.Query.Builder
-  alias Ecto.Query.Builder.{Distinct, Dynamic, Filter, From, GroupBy, Join, Windows,
-                            LimitOffset, Lock, OrderBy, Preload, Select, Update, CTE}
 
   @doc """
   Builds a dynamic query expression.
@@ -470,7 +468,7 @@ defmodule Ecto.Query do
 
   """
   defmacro dynamic(binding \\ [], expr) do
-    Dynamic.build(binding, expr, __CALLER__)
+    Builder.Dynamic.build(binding, expr, __CALLER__)
   end
 
   @doc """
@@ -527,7 +525,7 @@ defmodule Ecto.Query do
 
   """
   defmacro windows(query, binding \\ [], expr) do
-    Windows.build(query, binding, expr, __CALLER__)
+    Builder.Windows.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -719,7 +717,7 @@ defmodule Ecto.Query do
     end
 
     {kw, as, prefix, hints} = collect_as_and_prefix_and_hints(kw, nil, nil, nil)
-    {quoted, binds, count_bind} = From.build(expr, __CALLER__, as, prefix, hints)
+    {quoted, binds, count_bind} = Builder.From.build(expr, __CALLER__, as, prefix, hints)
     from(kw, __CALLER__, count_bind, quoted, to_query_binds(binds))
   end
 
@@ -760,7 +758,7 @@ defmodule Ecto.Query do
     {t, on, as, prefix, hints} = collect_on(t, nil, nil, nil, nil)
 
     {quoted, binds, count_bind} =
-      Join.build(quoted, qual, binds, expr, count_bind, on, as, prefix, hints, env)
+      Builder.Join.build(quoted, qual, binds, expr, count_bind, on, as, prefix, hints, env)
 
     from(t, env, count_bind, quoted, to_query_binds(binds))
   end
@@ -967,7 +965,7 @@ defmodule Ecto.Query do
     end
 
     query
-    |> Join.build(qual, binding, expr, nil, on, as, prefix, hints, __CALLER__)
+    |> Builder.Join.build(qual, binding, expr, nil, on, as, prefix, hints, __CALLER__)
     |> elem(0)
   end
 
@@ -1039,7 +1037,7 @@ defmodule Ecto.Query do
   Keyword syntax is not supported for this feature.
   """
   defmacro with_cte(query, name, as: with_query) do
-    CTE.build(query, name, with_query, __CALLER__)
+    Builder.CTE.build(query, name, with_query, __CALLER__)
   end
 
   @doc """
@@ -1116,7 +1114,7 @@ defmodule Ecto.Query do
 
   """
   defmacro select(query, binding \\ [], expr) do
-    Select.build(:select, query, binding, expr, __CALLER__)
+    Builder.Select.build(:select, query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -1156,7 +1154,7 @@ defmodule Ecto.Query do
   merged later on must be part of the struct, otherwise an error is raised.
   """
   defmacro select_merge(query, binding \\ [], expr) do
-    Select.build(:merge, query, binding, expr, __CALLER__)
+    Builder.Select.build(:merge, query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -1198,7 +1196,7 @@ defmodule Ecto.Query do
 
   """
   defmacro distinct(query, binding \\ [], expr) do
-    Distinct.build(query, binding, expr, __CALLER__)
+    Builder.Distinct.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -1230,7 +1228,7 @@ defmodule Ecto.Query do
 
   """
   defmacro where(query, binding \\ [], expr) do
-    Filter.build(:where, :and, query, binding, expr, __CALLER__)
+    Builder.Filter.build(:where, :and, query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -1279,7 +1277,7 @@ defmodule Ecto.Query do
 
   """
   defmacro or_where(query, binding \\ [], expr) do
-    Filter.build(:where, :or, query, binding, expr, __CALLER__)
+    Builder.Filter.build(:where, :or, query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -1336,7 +1334,7 @@ defmodule Ecto.Query do
 
   """
   defmacro order_by(query, binding \\ [], expr)  do
-    OrderBy.build(query, binding, expr, __CALLER__)
+    Builder.OrderBy.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -1515,7 +1513,7 @@ defmodule Ecto.Query do
 
   """
   defmacro limit(query, binding \\ [], expr) do
-    LimitOffset.build(:limit, query, binding, expr, __CALLER__)
+    Builder.LimitOffset.build(:limit, query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -1537,7 +1535,7 @@ defmodule Ecto.Query do
 
   """
   defmacro offset(query, binding \\ [], expr) do
-    LimitOffset.build(:offset, query, binding, expr, __CALLER__)
+    Builder.LimitOffset.build(:offset, query, binding, expr, __CALLER__)
   end
 
   @doc ~S"""
@@ -1565,7 +1563,7 @@ defmodule Ecto.Query do
 
   """
   defmacro lock(query, expr) do
-    Lock.build(query, expr, __CALLER__)
+    Builder.Lock.build(query, expr, __CALLER__)
   end
 
   @doc ~S"""
@@ -1613,7 +1611,7 @@ defmodule Ecto.Query do
 
   """
   defmacro update(query, binding \\ [], expr) do
-    Update.build(query, binding, expr, __CALLER__)
+    Builder.Update.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -1650,7 +1648,7 @@ defmodule Ecto.Query do
 
   """
   defmacro group_by(query, binding \\ [], expr) do
-    GroupBy.build(query, binding, expr, __CALLER__)
+    Builder.GroupBy.build(query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -1678,7 +1676,7 @@ defmodule Ecto.Query do
       |> select([p], count(p.id))
   """
   defmacro having(query, binding \\ [], expr) do
-    Filter.build(:having, :and, query, binding, expr, __CALLER__)
+    Builder.Filter.build(:having, :and, query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -1700,7 +1698,7 @@ defmodule Ecto.Query do
 
   """
   defmacro or_having(query, binding \\ [], expr) do
-    Filter.build(:having, :or, query, binding, expr, __CALLER__)
+    Builder.Filter.build(:having, :or, query, binding, expr, __CALLER__)
   end
 
   @doc """
@@ -1824,7 +1822,7 @@ defmodule Ecto.Query do
 
   """
   defmacro preload(query, bindings \\ [], expr) do
-    Preload.build(query, bindings, expr, __CALLER__)
+    Builder.Preload.build(query, bindings, expr, __CALLER__)
   end
 
   @doc """
