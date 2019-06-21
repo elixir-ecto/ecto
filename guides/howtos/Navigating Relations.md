@@ -46,13 +46,15 @@ defmodule Garden.Plant do
 end
 ```
 
-> Actually, the `bought_from` should be also a `belongs_to` relation, pointing to a table with nurseries, or contacts.
-But there's more to come, so let's keep it like this for the time being.
+> Actually, the `bought_from` should be also a `belongs_to` relation, pointing to a table with nurseries, or contacts. But
+> there's more to come, so let's keep it like this for the time being.
 
 What does the `belongs_to` macro really do?  Let's have a look by letting Ecto create our database according to this schema.
 
 You came here after doing the more introductiory how-tos and tutorials, so you know how to set up an Elixir project, how to
 configure your Ecto-DBMS connection, how to have Ecto create a database, and you know how to handle migrations.
+
+
 
 ## Life is complex, but we can model it
 
@@ -63,9 +65,11 @@ provide no fruit nor carry any particularly showy flowers. They are all related:
 Origanum genus, while all bananas, heliconias, ginger, and bihao belong to the Zingiberales order.
 
 If you think this is a complex example, well, we are using this example precisely because it's a complex one, coming from real
-life, and not the rather tedious *Library* example. We will not need to invent stories here, and you will be able to find
-background information, to make sense of the complexity we are modelling, by checking reference sources, like the Wikipedia, or
-sites like https://atlasoflife.org.au/, or http://tropicos.org/. Enjoy reading, and enjoy nature!
+life, and not the rather tedious and far too simplistic *Library* example. We will not need to invent stories here, and you will
+be able to find background information, to make sense of the complexity we are modelling, by checking reference sources, like the
+Wikipedia, or sites like https://atlasoflife.org.au/, or http://tropicos.org/. Enjoy reading, and enjoy nature!
+
+Oh, and back to Zingiberales, Ginger is also one of them.
 
 ## Modelling taxonomic information
 
