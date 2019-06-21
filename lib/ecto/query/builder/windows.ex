@@ -25,7 +25,7 @@ defmodule Ecto.Query.Builder.Windows do
   end
 
   defp escape([{key, {:^, _, [var]}} | kw], params_acc, vars, env, compile_acc, runtime_acc)
-       when key in [:partition_by, :order_by] do
+       when key in [:partition_by, :order_by, :frame] do
     escape(kw, params_acc, vars, env, compile_acc, [{key, var} | runtime_acc])
   end
 
@@ -56,7 +56,7 @@ defmodule Ecto.Query.Builder.Windows do
     Builder.escape(fragment, :any, params_acc, vars, env)
   end
   defp escape_frame(other, _, _, _) do
-    Builder.error!("expected a fragment in `:frame`, got: `#{inspect other}`")
+    Builder.error!("expected a dynamic or fragment in `:frame`, got: `#{inspect other}`")
   end
 
   defp error!(other) do
@@ -147,9 +147,21 @@ defmodule Ecto.Query.Builder.Windows do
     do_runtime_window!(kw, query, [{:order_by, order_by} | acc], params)
   end
 
-    defp do_runtime_window!([{:partition_by, partition_by} | kw], query, acc, params) do
+  defp do_runtime_window!([{:partition_by, partition_by} | kw], query, acc, params) do
     {partition_by, params} = GroupBy.group_or_partition_by!(:partition_by, query, partition_by, params)
     do_runtime_window!(kw, query, [{:partition_by, partition_by} | acc], params)
+  end
+
+  defp do_runtime_window!([{:frame, frame} | kw], query, acc, params) do
+    case frame do
+      %Ecto.Query.DynamicExpr{} ->
+        {frame, params, _count} = Builder.Dynamic.partially_expand(query, frame, params, length(params))
+        do_runtime_window!(kw, query, [{:frame, frame} | acc], params)
+
+      _ ->
+        raise ArgumentError,
+                "expected a dynamic or fragment in `:frame`, got: `#{inspect frame}`"
+    end
   end
 
   defp do_runtime_window!([], _query, acc, params), do: {acc, params}

@@ -29,7 +29,7 @@ defmodule Ecto.Query.Builder.WindowsTest do
                [], {[{quote(do: start_frame), :any}], :acc}} ==
                escape(quote do [frame: fragment("ROWS ? PRECEDING", ^start_frame)] end, {[], :acc}, [], __ENV__)
 
-      assert_raise Ecto.Query.CompileError, ~r"expected a fragment in `:frame`", fn ->
+      assert_raise Ecto.Query.CompileError, ~r"expected a dynamic or fragment in `:frame`", fn ->
         escape(quote do [frame: [rows: -3, exclude: :current]] end, {[], :acc}, [], __ENV__)
       end
     end
@@ -112,11 +112,42 @@ defmodule Ecto.Query.Builder.WindowsTest do
       end
     end
 
-    test "allows interpolation on frame" do
-      bound = 3
-      query = "q" |> windows([p], w: [frame: fragment("ROWS ? PRECEDING EXCLUDE CURRENT ROW", ^bound)])
+    test "allows dynamic on frame" do
+      frame = dynamic(fragment("ROWS ? PRECEDING EXCLUDE CURRENT ROW", ^"foo"))
+      query = "q" |> windows([p], w: [partition_by: [p.bar == ^"bar"], frame: ^frame])
+
+      assert query.windows[:w].expr[:partition_by] ==
+               [{:==, [], [{{:., [], [{:&, [], [0]}, :bar]}, [], []}, {:^, [], [0]}]}]
+
+      assert query.windows[:w].expr[:frame] ==
+               {:fragment, [], [raw: "ROWS ", expr: {:^, [], [1]}, raw: " PRECEDING EXCLUDE CURRENT ROW"]}
+
+      assert query.windows[:w].params == [{"bar", {0, :bar}}, {"foo", :any}]
+    end
+
+    test "raises on invalid dynamic" do
+      assert_raise ArgumentError, "expected a dynamic or fragment in `:frame`, got: `[1]`", fn ->
+        windows("q", w: [frame: ^[1]])
+      end
+    end
+
+    test "dynamic on all" do
+      partition_by = [dynamic([p], p.foo == ^"foo")]
+      order_by = [asc: dynamic([p], p.bar == ^"bar")]
+      frame = dynamic(fragment("ROWS ? PRECEDING EXCLUDE CURRENT ROW", ^"baz"))
+
+      query = "q" |> windows([p], w: [partition_by: ^partition_by, order_by: ^order_by, frame: ^frame])
+
+      assert query.windows[:w].expr[:partition_by] ==
+               [{:==, [], [{{:., [], [{:&, [], [0]}, :foo]}, [], []}, {:^, [], [2]}]}]
+
+      assert query.windows[:w].expr[:order_by] ==
+               [{:asc, {:==, [], [{{:., [], [{:&, [], [0]}, :bar]}, [], []}, {:^, [], [1]}]}}]
+
       assert query.windows[:w].expr[:frame] ==
                {:fragment, [], [raw: "ROWS ", expr: {:^, [], [0]}, raw: " PRECEDING EXCLUDE CURRENT ROW"]}
+
+      assert query.windows[:w].params == [{"baz", :any}, {"bar", {0, :bar}}, {"foo", {0, :foo}}]
     end
   end
 end
