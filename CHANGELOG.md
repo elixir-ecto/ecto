@@ -1,5 +1,13 @@
 # Changelog for v3.x
 
+## v3.2.0-dev
+
+### Enhancements
+
+  * [Ecto.Query] Add common table expressions support `with_cte/3` and `recursive_ctes/2`
+  * [Ecto.Query] Allow `dynamic/3` to be used in `order_by`, `distinct`, `group_by`, as well as in `partition_by`, `order_by`, and `frame` inside `windows`
+  * [Ecto.Repo] Assign `repo_opts` to changeset to make it available down the chain
+
 ## v3.1.6 (2019-06-19)
 
 ### Enhancements
