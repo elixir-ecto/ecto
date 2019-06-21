@@ -17,10 +17,6 @@ defmodule Ecto.Query.Builder.GroupBy do
   """
   @spec escape(:group_by | :partition_by, Macro.t, {list, term}, Keyword.t, Macro.Env.t) ::
           {Macro.t, {list, term}}
-  def escape(kind, {:^, _, [expr]}, params_acc, _vars, _env) do
-    {quote(do: Ecto.Query.Builder.GroupBy.group_by!(unquote(kind), unquote(expr))), params_acc}
-  end
-
   def escape(kind, expr, params_acc, vars, env) do
     expr
     |> List.wrap
@@ -50,19 +46,37 @@ defmodule Ecto.Query.Builder.GroupBy do
   end
 
   @doc """
-  Called at runtime to verify group_by.
+  Shared between group_by and partition_by.
   """
-  def group_by!(kind, group_by) do
-    Enum.map List.wrap(group_by), fn
-      field when is_atom(field) ->
-        to_field(field)
-      _ ->
-        raise ArgumentError,
-          "expected a list of fields in `#{kind}`, got: `#{inspect group_by}`"
-    end
+  def group_or_partition_by!(kind, query, exprs, params) do
+    {expr, {params, _}} =
+      Enum.map_reduce(List.wrap(exprs), {params, length(params)}, fn
+        field, params_count when is_atom(field) ->
+          {to_field(field), params_count}
+
+        %Ecto.Query.DynamicExpr{} = dynamic, {params, count} ->
+          {expr, params, count} = Builder.Dynamic.partially_expand(query, dynamic, params, count)
+          {expr, {params, count}}
+
+
+        other, _params_count ->
+          raise ArgumentError,
+                "expected a list of fields and dynamics in `#{kind}`, got: `#{inspect other}`"
+      end)
+
+    {expr, params}
   end
 
   defp to_field(field), do: {{:., [], [{:&, [], [0]}, field]}, [], []}
+
+  @doc """
+  Called at runtime to assemble group_by.
+  """
+  def group_by!(query, group_by, file, line) do
+    {expr, params} = group_or_partition_by!(:group_by, query, group_by, [])
+    expr = %Ecto.Query.QueryExpr{expr: expr, params: Enum.reverse(params), line: line, file: file}
+    apply(query, expr)
+  end
 
   @doc """
   Builds a quoted expression.
@@ -72,6 +86,12 @@ defmodule Ecto.Query.Builder.GroupBy do
   runtime work.
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
+  def build(query, _binding, {:^, _, [var]}, env) do
+    quote do
+      Ecto.Query.Builder.GroupBy.group_by!(unquote(query), unquote(var), unquote(env.file), unquote(env.line))
+    end
+  end
+
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, {params, _}} = escape(:group_by, expr, {[], :acc}, binding, env)

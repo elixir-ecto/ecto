@@ -34,6 +34,12 @@ defmodule Ecto.Query.Builder.GroupByTest do
       assert group_by("q", [q], [^key]).group_bys == group_by("q", [q], [q.title]).group_bys
     end
 
+    test "accepts dynamics" do
+      key = dynamic([p], p.title)
+      assert group_by("q", [q], ^key).group_bys == group_by("q", [q], [q.title]).group_bys
+      assert group_by("q", [q], ^[key]).group_bys == group_by("q", [q], [q.title]).group_bys
+    end
+
     test "raises when no a field or a list of fields" do
       message = "expected a field as an atom in `group_by`, got: `\"temp\"`"
       assert_raise ArgumentError, message, fn ->
@@ -41,7 +47,7 @@ defmodule Ecto.Query.Builder.GroupByTest do
         group_by("posts", [p], [^temp])
       end
 
-      message = "expected a list of fields in `group_by`, got: `\"temp\"`"
+      message = "expected a list of fields and dynamics in `group_by`, got: `\"temp\"`"
       assert_raise ArgumentError, message, fn ->
         temp = "temp"
         group_by("posts", [p], ^temp)

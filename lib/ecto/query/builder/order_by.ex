@@ -121,7 +121,7 @@ defmodule Ecto.Query.Builder.OrderBy do
   end
 
   @doc """
-  Called at runtime to verify order_by.
+  Called at runtime to assemble order_by.
   """
   def order_by!(query, exprs, file, line) do
     {expr, params} = order_by_or_distinct!(:order_by, query, exprs, [])
@@ -130,9 +130,7 @@ defmodule Ecto.Query.Builder.OrderBy do
   end
 
   defp dynamic_or_field!(_kind, %Ecto.Query.DynamicExpr{} = dynamic, query, {params, count}) do
-    {expr, params, count} =
-      Ecto.Query.Builder.Dynamic.partially_expand(query, dynamic, params, count)
-
+    {expr, params, count} = Builder.Dynamic.partially_expand(query, dynamic, params, count)
     {expr, {params, count}}
   end
 

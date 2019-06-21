@@ -24,13 +24,14 @@ defmodule Ecto.Query.Builder.Windows do
     error!(kw)
   end
 
+  defp escape([{key, {:^, _, [var]}} | kw], params_acc, vars, env, compile_acc, runtime_acc)
+       when key in [:partition_by, :order_by] do
+    escape(kw, params_acc, vars, env, compile_acc, [{key, var} | runtime_acc])
+  end
+
   defp escape([{:partition_by, fields} | kw], params_acc, vars, env, compile_acc, runtime_acc) do
     {fields, params_acc} = GroupBy.escape(:partition_by, fields, params_acc, vars, env)
     escape(kw, params_acc, vars, env, [{:partition_by, fields} | compile_acc], runtime_acc)
-  end
-
-  defp escape([{:order_by, {:^, _, [var]}} | kw], params_acc, vars, env, compile_acc, runtime_acc) do
-    escape(kw, params_acc, vars, env, compile_acc, [{:order_by, var} | runtime_acc])
   end
 
   defp escape([{:order_by, fields} | kw], params_acc, vars, env, compile_acc, runtime_acc) do
@@ -144,6 +145,11 @@ defmodule Ecto.Query.Builder.Windows do
   defp do_runtime_window!([{:order_by, order_by} | kw], query, acc, params) do
     {order_by, params} = OrderBy.order_by_or_distinct!(:order_by, query, order_by, params)
     do_runtime_window!(kw, query, [{:order_by, order_by} | acc], params)
+  end
+
+    defp do_runtime_window!([{:partition_by, partition_by} | kw], query, acc, params) do
+    {partition_by, params} = GroupBy.group_or_partition_by!(:partition_by, query, partition_by, params)
+    do_runtime_window!(kw, query, [{:partition_by, partition_by} | acc], params)
   end
 
   defp do_runtime_window!([], _query, acc, params), do: {acc, params}

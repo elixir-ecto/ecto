@@ -67,8 +67,22 @@ defmodule Ecto.Query.Builder.WindowsTest do
       assert query.windows[:w].expr[:partition_by] == [{{:., [], [{:&, [], [0]}, :x]}, [], []}]
     end
 
+    test "allows dynamic on partition by" do
+      partition_by = [dynamic([p], p.foo == ^"foo")]
+      query = "q" |> windows([p], w: [partition_by: ^partition_by, order_by: [asc: p.bar == ^"bar"]])
+
+      assert query.windows[:w].expr[:partition_by] ==
+               [{:==, [], [{{:., [], [{:&, [], [0]}, :foo]}, [], []}, {:^, [], [1]}]}]
+
+      assert query.windows[:w].expr[:order_by] ==
+               [{:asc, {:==, [], [{{:., [], [{:&, [], [0]}, :bar]}, [], []}, {:^, [], [0]}]}}]
+
+      assert query.windows[:w].params == [{"bar", {0, :bar}}, {"foo", {0, :foo}}]
+    end
+
+
     test "raises on invalid partition by" do
-      assert_raise ArgumentError, ~r"expected a list of fields in `partition_by`", fn ->
+      assert_raise ArgumentError, ~r"expected a list of fields and dynamics in `partition_by`", fn ->
         windows("q", w: [partition_by: ^[1]])
       end
     end

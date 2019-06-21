@@ -471,6 +471,8 @@ defmodule Ecto.Query do
 
       from query, order_by: ^order_by
 
+  Dynamics are also supported in `order_by/2` clauses inside `windows/2`.
+
   As with `where` and friends, it is not possible to pass dynamics
   outside of a root. For example, this won't work:
 
@@ -480,13 +482,38 @@ defmodule Ecto.Query do
 
       from query, order_by: ^[asc: dynamic(...)]
 
+  ## `group_by`
+
+  Dynamics can be interpolated inside keyword lists at the root of
+  `group_by`. For example, you can write:
+
+      group_by = [
+        :some_field,
+        dynamic([p], fragment("?>>?", p.another_field, "json_key"))
+      ]
+
+      from query, group_by: ^group_by
+
+  Dynamics are also supported in `partition_by/2` clauses inside `windows/2`.
+
+  As with `where` and friends, it is not possible to pass dynamics
+  outside of a root. For example, this won't work:
+
+      from query, group_by: [:some_field, ^dynamic(...)]
+
+  But this will:
+
+      from query, order_by: ^[:some_field, dynamic(...)]
+
   ## Updates
 
-  Dynamic is also supported as each field in an update, for example:
+  Dynamic is also supported inside updates, for example:
 
-      update_to = dynamic([p], p.sum / p.count)
-      from query, update: [set: [average: ^update_to]]
+      updates = [
+        set: [average: dynamic([p], p.sum / p.count)]
+      ]
 
+      from query, update: ^updates
   """
   defmacro dynamic(binding \\ [], expr) do
     Builder.Dynamic.build(binding, expr, __CALLER__)
