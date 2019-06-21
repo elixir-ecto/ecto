@@ -12,35 +12,43 @@ defmodule Ecto.Query.Builder.Windows do
   ## Examples
 
       iex> escape(quote do [order_by: [desc: 13]] end, {[], :acc}, [x: 0], __ENV__)
-      {[order_by: [desc: 13]], {[], :acc}}
+      {[order_by: [desc: 13]], [], {[], :acc}}
 
   """
   @spec escape([Macro.t], {list, term}, Keyword.t, Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, term}}
   def escape(kw, params_acc, vars, env) when is_list(kw) do
-    Enum.map_reduce(kw, params_acc, &do_escape(&1, &2, vars, env))
+    escape(kw, params_acc, vars, env, [], [])
   end
 
   def escape(kw, _params_acc, _vars, _env) do
     error!(kw)
   end
 
-  defp do_escape({:partition_by, fields}, params_acc, vars, env) do
+  defp escape([{:partition_by, fields} | kw], params_acc, vars, env, compile_acc, runtime_acc) do
     {fields, params_acc} = GroupBy.escape(:partition_by, fields, params_acc, vars, env)
-    {{:partition_by, fields}, params_acc}
+    escape(kw, params_acc, vars, env, [{:partition_by, fields} | compile_acc], runtime_acc)
   end
 
-  defp do_escape({:order_by, fields}, params_acc, vars, env) do
+  defp escape([{:order_by, {:^, _, [var]}} | kw], params_acc, vars, env, compile_acc, runtime_acc) do
+    escape(kw, params_acc, vars, env, compile_acc, [{:order_by, var} | runtime_acc])
+  end
+
+  defp escape([{:order_by, fields} | kw], params_acc, vars, env, compile_acc, runtime_acc) do
     {fields, params_acc} = OrderBy.escape(:order_by, fields, params_acc, vars, env)
-    {{:order_by, fields}, params_acc}
+    escape(kw, params_acc, vars, env, [{:order_by, fields} | compile_acc], runtime_acc)
   end
 
-  defp do_escape({:frame, frame_clause}, params_acc, vars, env) do
+  defp escape([{:frame, frame_clause} | kw], params_acc, vars, env, compile_acc, runtime_acc) do
     {frame_clause, params_acc} = escape_frame(frame_clause, params_acc, vars, env)
-    {{:frame, frame_clause}, params_acc}
+    escape(kw, params_acc, vars, env, [{:frame, frame_clause} | compile_acc], runtime_acc)
   end
 
-  defp do_escape(other, _params_acc, _vars, _env) do
+  defp escape([other | _], _params_acc, _vars, _env, _compile_acc, _runtime_acc) do
     error!(other)
+  end
+
+  defp escape([], params_acc, _vars, _env, compile_acc, runtime_acc) do
+    {compile_acc, runtime_acc, params_acc}
   end
 
   defp escape_frame({:fragment, _, _} = fragment, params_acc, vars, env) do
@@ -67,8 +75,28 @@ defmodule Ecto.Query.Builder.Windows do
   @spec build(Macro.t, [Macro.t], Keyword.t, Macro.Env.t) :: Macro.t
   def build(query, binding, windows, env) when is_list(windows) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    windows = Enum.map(windows, &build_window(binding, &1, env))
-    Builder.apply_query(query, __MODULE__, [windows], env)
+
+    {compile, runtime} =
+      windows
+      |> Enum.map(&escape_window(binding, &1, env))
+      |> Enum.split_with(&elem(&1, 2) == [])
+
+    compile = Enum.map(compile, &build_compile_window(&1, env))
+    runtime = Enum.map(runtime, &build_runtime_window(&1, env))
+    query = Builder.apply_query(query, __MODULE__, [compile], env)
+
+    if runtime == [] do
+      query
+    else
+      quote do
+        Ecto.Query.Builder.Windows.runtime!(
+          unquote(query),
+          unquote(runtime),
+          unquote(env.file),
+          unquote(env.line)
+        )
+      end
+    end
   end
 
   def build(_, _, windows, _) do
@@ -78,21 +106,47 @@ defmodule Ecto.Query.Builder.Windows do
     )
   end
 
-  defp build_window(vars, {name, expr}, env) do
-    {expr, {params, _}} = escape(expr, {[], :acc}, vars, env)
-    params = Builder.escape_params(params)
-
-    window = quote do
-      %Ecto.Query.QueryExpr{
-        expr: unquote(expr),
-        params: unquote(params),
-        file: unquote(env.file),
-        line: unquote(env.line)
-      }
-    end
-
-    {name, window}
+  defp escape_window(vars, {name, expr}, env) do
+    {compile_acc, runtime_acc, {params, _}} = escape(expr, {[], :acc}, vars, env)
+    {name, compile_acc, runtime_acc, Builder.escape_params(params)}
   end
+
+  defp build_compile_window({name, compile_acc, _, params}, env) do
+    {name,
+     quote do
+       %Ecto.Query.QueryExpr{
+         expr: unquote(compile_acc),
+         params: unquote(params),
+         file: unquote(env.file),
+         line: unquote(env.line)
+       }
+     end}
+  end
+
+  defp build_runtime_window({name, compile_acc, runtime_acc, params}, _env) do
+    {:{}, [], [name, compile_acc, runtime_acc, Enum.reverse(params)]}
+  end
+
+  @doc """
+  Invoked for runtime windows.
+  """
+  def runtime!(query, runtime, file, line) do
+    windows =
+      Enum.map(runtime, fn {name, compile_acc, runtime_acc, params} ->
+        {acc, params} = do_runtime_window!(runtime_acc, query, compile_acc, params)
+        expr = %Ecto.Query.QueryExpr{expr: acc, params: Enum.reverse(params), file: file, line: line}
+        {name, expr}
+      end)
+
+    apply(query, windows)
+  end
+
+  defp do_runtime_window!([{:order_by, order_by} | kw], query, acc, params) do
+    {order_by, params} = OrderBy.order_by_or_distinct!(:order_by, query, order_by, params)
+    do_runtime_window!(kw, query, [{:order_by, order_by} | acc], params)
+  end
+
+  defp do_runtime_window!([], _query, acc, params), do: {acc, params}
 
   @doc """
   The callback applied by `build/4` to build the query.

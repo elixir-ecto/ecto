@@ -61,6 +61,20 @@ defmodule Ecto.Query.Builder.OrderByTest do
       assert order_by("q", [q], [{^dir, ^key}]).order_bys == order_by("q", [q], [desc: q.title]).order_bys
     end
 
+    test "supports dynamic expressions" do
+      order_by = [
+        asc: dynamic([p], p.foo == ^1 and p.bar == ^"bar"),
+        desc: :bar,
+        asc: dynamic([p], p.baz == ^2 and p.bat == ^"bat")
+      ]
+
+      %{order_bys: [order_by]} = order_by("posts", ^order_by)
+      assert Macro.to_string(order_by.expr) ==
+             "[asc: &0.foo() == ^0 and &0.bar() == ^1, desc: &0.bar(), asc: &0.baz() == ^2 and &0.bat() == ^3]"
+      assert order_by.params ==
+             [{1, {0, :foo}}, {"bar", {0, :bar}}, {2, {0, :baz}}, {"bat", {0, :bat}}]
+    end
+
     test "raises on invalid direction" do
       assert_raise ArgumentError, ~r"expected one of :asc,", fn ->
         temp = :temp
@@ -69,7 +83,7 @@ defmodule Ecto.Query.Builder.OrderByTest do
     end
 
     test "raises on invalid field" do
-      message = "expected a field as an atom, a list or keyword list in `order_by`, got: `\"temp\"`"
+      message = "expected a field as an atom in `order_by`, got: `\"temp\"`"
       assert_raise ArgumentError, message, fn ->
         temp = "temp"
         order_by("posts", [p], [asc: ^temp])
@@ -77,7 +91,7 @@ defmodule Ecto.Query.Builder.OrderByTest do
     end
 
     test "raises on invalid interpolation" do
-      message = "expected a field as an atom, a list or keyword list in `order_by`, got: `\"temp\"`"
+      message = ~r"`order_by` interpolated on root expects a field or a keyword list"
       assert_raise ArgumentError, message, fn ->
         temp = "temp"
         order_by("posts", [p], ^temp)

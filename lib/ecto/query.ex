@@ -459,6 +459,27 @@ defmodule Ecto.Query do
       conditions = dynamic([q], q.some_condition and ^conditions)
       from query, where: ^conditions
 
+  ## `order_by`
+
+  Dynamics can be interpolated inside keyword lists at the root of
+  `order_by`. For example, you can write:
+
+      order_by = [
+        asc: :some_field,
+        desc: dynamic([p], fragment("?>>?", p.another_field, "json_key"))
+      ]
+
+      from query, order_by: ^order_by
+
+  As with `where` and friends, it is not possible to pass dynamics
+  outside of a root. For example, this won't work:
+
+      from query, order_by: [asc: ^dynamic(...)]
+
+  But this will:
+
+      from query, order_by: ^[asc: dynamic(...)]
+
   ## Updates
 
   Dynamic is also supported as each field in an update, for example:

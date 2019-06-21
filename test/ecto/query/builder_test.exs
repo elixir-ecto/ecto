@@ -83,15 +83,33 @@ defmodule Ecto.Query.BuilderTest do
                  fn -> escape(quote do fragment("", 1) end, [], __ENV__) end
   end
 
-  test "escape over" do
-    assert {Macro.escape(quote(do: over(row_number(), []))), []}  ==
-           escape(quote(do: over(row_number())), [], __ENV__)
+  test "escape over with window name" do
 
     assert {Macro.escape(quote(do: over(nth_value(&0.id, 1), :w))), []}  ==
            escape(quote(do: nth_value(x.id, 1) |> over(:w)), [x: 0], __ENV__)
 
     assert {Macro.escape(quote(do: over(count(&0.id), :w))), []}  ==
            escape(quote(do: count(x.id) |> over(:w)), [x: 0], __ENV__)
+  end
+
+  test "escape over with window parts" do
+    assert {Macro.escape(quote(do: over(row_number(), []))), []}  ==
+           escape(quote(do: over(row_number())), [], __ENV__)
+
+    assert {Macro.escape(quote(do: over(nth_value(&0.id, 1), order_by: [asc: &0.id]))), []} ==
+           escape(quote(do: nth_value(x.id, 1) |> over(order_by: x.id)), [x: 0], __ENV__)
+
+    assert {Macro.escape(quote(do: over(nth_value(&0.id, 1), partition_by: [&0.id]))), []} ==
+           escape(quote(do: nth_value(x.id, 1) |> over(partition_by: x.id)), [x: 0], __ENV__)
+
+    assert {Macro.escape(quote(do: over(nth_value(&0.id, 1), frame: fragment({:raw, "ROWS"})))), []} ==
+           escape(quote(do: nth_value(x.id, 1) |> over(frame: fragment("ROWS"))), [x: 0], __ENV__)
+
+    assert_raise Ecto.Query.CompileError,
+                 ~r"windows definitions given to over/2 do not allow interpolations at the root",
+                 fn ->
+      escape(quote(do: nth_value(x.id, 1) |> over(order_by: ^foo)), [x: 0], __ENV__)
+    end
   end
 
   test "escape type checks" do

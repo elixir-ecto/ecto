@@ -472,8 +472,16 @@ defmodule Ecto.Query.Builder do
     do: {[], params_acc}
   defp escape_window_description([window_name], params_acc, _vars, _env) when is_atom(window_name),
     do: {window_name, params_acc}
-  defp escape_window_description([kw], params_acc, vars, env),
-    do: Ecto.Query.Builder.Windows.escape(kw, params_acc, vars, env)
+  defp escape_window_description([kw], params_acc, vars, env) do
+    case Ecto.Query.Builder.Windows.escape(kw, params_acc, vars, env) do
+      {runtime, [], params_acc} ->
+        {runtime, params_acc}
+
+      {_, [{key, _} | _], _} ->
+        error! "windows definitions given to over/2 do not allow interpolations at the root of " <>
+                 "`#{key}`. Please use Ecto.Query.windows/3 to explicitly define a window instead"
+    end
+  end
 
   defp escape_window_function(expr, type, params_acc, vars, env) do
     expr
