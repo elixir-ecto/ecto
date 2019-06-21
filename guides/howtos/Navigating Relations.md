@@ -50,3 +50,53 @@ end
 But there's more to come, so let's keep it like this for the time being.
 
 What does the `belongs_to` macro really do?  Let's have a look by letting Ecto create our database according to this schema.
+
+You came here after doing the more introductiory how-tos and tutorials, so you know how to set up an Elixir project, how to
+configure your Ecto-DBMS connection, how to have Ecto create a database, and you know how to handle migrations.
+
+## Life is complex, but we can model it
+
+You must have heard of those funny names biologists use, like saying Canis lupus familiaris when all they mean is "dog", or when
+they confuse you with Origanum majorana and what is the reason that common oregano should be vulgar? If you have been in the
+Tropics, you surely noticed how easy it is to confuse a banana plant with a flowerless heliconia, and with other plants that
+provide no fruit nor carry any particularly showy flowers. They are all related: common oregano and marjoram both belong to the
+Origanum genus, while all bananas, heliconias, ginger, and bihao belong to the Zingiberales order.
+
+If you think this is a complex example, well, we are using this example precisely because it's a complex one, coming from real
+life, and not the rather tedious *Library* example. We will not need to invent stories here, and you will be able to find
+background information, to make sense of the complexity we are modelling, by checking reference sources, like the Wikipedia, or
+sites like https://atlasoflife.org.au/, or http://tropicos.org/. Enjoy reading, and enjoy nature!
+
+## Modelling taxonomic information
+
+The above lengthy explanation is to introduce the need for self-relations. Taxonomists speak of a `Taxon`, which is a concept
+that encompasses Reigns, Genera, Species, Varieties, and several more.  Each of these names is a `Rank`, and a taxon has a rank
+(or, in Ecto terms, it `belongs_to` a rank), and also belongs to one taxon at a higher rank. A `Rank` has a name, and we could
+add an integer value to represent depth in the taxonomy tree of life, but let's forget about that for the time being.
+
+
+```iex
+defmodule Taxonomy.Rank do
+  use Ecto.Schema
+
+  schema "ranks" do
+    field :name, string
+  end
+end
+
+defmodule Taxonomy.taxon do
+  use Ecto.Schema
+
+  schema "taxa" do
+    field :epithet, string
+    field :authorship, string
+    field :publication_year, integer
+    belongs_to :parent, Taxonomy.taxon
+    belongs_to :rank, Taxonomy.Rank
+  end
+end
+```
+
+
+
+## Modelling a garden
