@@ -456,7 +456,7 @@ defmodule Ecto.Changeset do
   """
   @spec cast(Ecto.Schema.t | t | {data, types},
              %{binary => term} | %{atom => term} | :invalid,
-             [String.t | atom],
+             [atom],
              Keyword.t) :: t
   def cast(data, params, permitted, opts \\ [])
 
