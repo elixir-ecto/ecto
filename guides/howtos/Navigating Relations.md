@@ -108,7 +108,7 @@ configure your Ecto-DBMS connection, how to have Ecto create a database, and you
 > again in migration files.
 
 So let's get to work and write our first migration, relative to moving from an empty database to one with the above schema
-definitions. We create a boilerplate named migration,
+definitions. We create a boilerplate named migration, and call it `initial_migration`,
 
 ```
 mix ecto.gen.migration initial_migration
@@ -138,11 +138,12 @@ defmodule Botany.Repo.Migrations.InitialMigration do
 end
 ```
 
-We've added all fields, respecting their definition, and we've added a `location_id` field to the `plants` table, referring to
-the `locations` table, by its default primary key, `id`. Obviously, the migration works if we first create the `locations` table,
-which we then refer from `plants`.
+For every `field`, we just copied the definition, and replaced the word `field` with `add`, while for the `belongs_to` line,
+we've written a `location_id` line in the `plants` table, referring to the `locations` table. This implies we use its default
+primary key, `id`. Obviously, for the migration to work, we need first create the `locations` table, which we then refer from
+`plants`.
 
-With the initial migration in place, let's apply it, so that we can finally have a look at the database tables.
+With this `initial_migration` in place, let's apply it, so that we can finally have a look at the database tables.
 
 ```
 mix ecto.migrate
