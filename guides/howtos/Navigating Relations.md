@@ -117,9 +117,8 @@ mix ecto.migrate
 Fine, it took time, but we now have our updated schema, where we can check the meaning of `belongs_to`. To have a look, we need
 to connect directly to the database, not through Elixir.
 
-Let's connect to the database from the `psql` prompt (if you commonly use something else, you should know the commands
-corresponding to what we show here). our database is called `botany_repo` and you know your user and password. From inside the
-`psql` prompt, give:
+Let's use the `psql` prompt (if you commonly use something else, you should know the commands corresponding to what we show
+here). Our database is called `botany_repo` and you know your user and password. From inside the `psql` prompt, give:
 
 ```
 \dt
@@ -127,9 +126,11 @@ corresponding to what we show here). our database is called `botany_repo` and yo
 \d locations
 ```
 
+**TODO - review the tables, and comment on what we see.**
+
 Now some real work: with this database, we can add a few locations and some plants.
 
-**TODO - among others, location var matched to location structure code:GH1**
+**TODO - start iex and among others, matched a variable to location structure code:GH1**
 
 Notice how we can go up the links, by this I mean that we can get the `location` from a plant, but it would also be nice to move
 in the other direction, for example once we matched a `location` variable to a structure represeting location `GH1`, it would be
