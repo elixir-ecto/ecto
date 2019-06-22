@@ -76,7 +76,7 @@ Oh, and if you wonder why on earth not give manual instructions? This way you ca
 this tutorial page by simply copy-pasting the above lines into your bash prompt. Works equally well on OSX and GNU/Linux. If
 you're on Windows, what a pity.
 
-## The first two schemas
+### The first two schemas
 
 Now that we have a complete project structure, and a database, we can put the above `Garden.Location` module in the
 `lib/garden/location.ex` file, and create a `plant.ex` file next to it, defining the `Garden.Plant` module:
@@ -101,7 +101,7 @@ end
 What does the `belongs_to` macro really do?  How does impact our physical database structure?  It would be nice if it was the
 system telling us, but in reality, it's us who need to tell the system, by writing the corresponding migration.
 
-## The initial migration
+### The initial migration
 
 You came here after doing the more introductiory how-tos and tutorials, so you know how to set up an Elixir project, how to
 configure your Ecto-DBMS connection, how to have Ecto create a database, and you know how to handle migrations.
@@ -163,7 +163,7 @@ git add lib/botany/*.ex mix.lock priv config/config.exs
 git commit -m "first migration"
 ```
 
-## Looking at it from SQL
+### Looking at it from SQL
 
 Fine, it took time, but we now have our updated schema, where we can check the meaning of `belongs_to`. To have a look, we need
 to connect directly to the database, not through Elixir.
@@ -235,7 +235,7 @@ insert into plants (id, location_id, name, species) values
     (40,3,'2018.0064.1','Viola odorata');
 ```
 
-## Navigating, forward
+### Navigating, forward
 
 This is nice, now we can switch to iex, which we start as `iex -S mix`, and have a look.
 
@@ -247,11 +247,13 @@ iex> Garden.Plant |> Ecto.Query.first
 ```
 
 We gave two instructions, we are not yet there.  With `Garden.Plant`, we mentioned our module, which is just our module,
-*duh!*. With `Garden.Plant |> Ecto.Query.first`, we built a query on the schema in our module, and this is a query, we still did
-not hit the database.
+*duh!*. With `Garden.Plant |> Ecto.Query.first`, we built a query on the schema in our module, and while this is the query we
+meant, we still did not hit the database.
 
-To hit the database, we have to execute the query, something we can do by `Garden.Plant |> Ecto.Query.first |> Botany.Repo.one`.
-This handles the query to `Botany.Repo.one`, which executes it, asserting it should return one or zero records.
+To hit the database, we have to evaluate the query, something we can do by `Garden.Plant |> Ecto.Query.first |> Botany.Repo.all`.
+The last pipe handles the query to `Botany.Repo.all`, which evaluates the query and returns a list of structures, corresponding
+to the records satisfying the query.  Or maybe better pipe the query through `Botany.Repo.one`, since `Ecto.Query.first` is
+anyway guaranteed to contain no more than one records.
 
 ```iex
 iex> Garden.Plant |> Ecto.Query.first |> Botany.Repo.one
@@ -270,12 +272,15 @@ SELECT p0."id", p0."location_id", p0."name", p0."species", p0."bought_on", p0."b
 }
 ```
 
-What happens here is finally *almost* what we are aiming at. We got everything from the `plants` table, including obviously the
-`location_id` (hey, but isn't it funny? We added it in the `create table` block, but did not define it in the schema), and
-there's a curious `NotLoaded` association in the `location` field (which, heck, think of it, we never saw in the database table).
+Now we are finally *almost* where we were aiming at. We got everything from the `plants` table, including obviously the
+`location_id` (hey, but isn't it funny? We added this field in the `create table` block, but did not define it in the schema),
+and there's a curious `NotLoaded` value in the `location` field (heck, think of it, we never saw a `location` field in the
+`plants` database table).
 
 Apart from the `NotLoaded` which we will explore shortly, all the above is precisely the effect of that `belongs_to` macro in our
 schema and that `references` in the migration.
+
+### Preloading associations
 
 Let's `preload` the relation! (and by the way let's type a few aliases for our tables.)
 
@@ -343,21 +348,25 @@ iex> p1 = p1 |> Botany.Repo.preload(:location)
 
 It does no harm evaluating a `preload` on a preloaded field, it's an idempotent function.
 
-## Navigating, backwards
+### Navigating, backwards
 
-Let's choose a location, and let's say we want to have all its plants. For ease of typing, let's import the `Ecto.Query` module.
+Let's find an answer to a most obvious question: what plants are there at a given location?
+
+Say we're interested in Greenhouse 1, `GH1`, let's select it, match it to a variable, and look up all the plants at that
+location. (For ease of typing, let's first import the `Ecto.Query` module.)
 
 ```iex
 iex> import Ecto.Query
 iex> gh1 = (from l in Location, where: l.code=="GH1") |> Botany.Repo.one
 ```
 
-How do we do that… I would like to just type `gh1.plants`, doesn't it make sense, possibly after a `preload`… As of now, all I
-can think of is to type a complete query!
+How do we do that… I would like to just type `gh1.plants`, doesn't it make sense, and I don't mind if I first need to pipe
+through a `preload`… But, as of now, all I can think of is to type a complete query!
 
 ```iex
 iex> q = from p in Plant, where: p.location_id==^gh1.id
 iex> q |> Botany.Repo.all
+iex> q |> Botany.Repo.all |> length
 ```
 
 With what we have, we can go up the links, by this I mean that we can get the `location` from a plant, but Ecto can help us move
@@ -377,9 +386,9 @@ defmodule Garden.Location do
 end
 ```
 
-`recompile`, and reload the structure for location `gh1`.  You will notice, it holds the new `plants` field, again in need of
-`preload`. You know how to do that, and you will get a nicely populated `gh1.plants` field, with a list of `%Plant` structures.
-You should be surprised, or maybe not, for we did not need any migration.
+`recompile`, and reload the structure for location `gh1`.  You will notice, it holds the new `plants` field, indeed as expected
+in need of `preload`. You know how to do that, and you will get a nicely populated `gh1.plants` field, with a list of `%Plant`
+structures.  You should be surprised, or maybe not, for we did not need any migration.
 
 Other than `belongs_to`, `has_many` does not cause any change on the physical database schema, it just informs Ecto that there is
 already a link leading here, where to find its definition, and that we want to navigate it in the opposite direction.
