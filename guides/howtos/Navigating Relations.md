@@ -76,10 +76,10 @@ Oh, and if you wonder why on earth not give manual instructions? This way you ca
 this tutorial page by simply copy-pasting the above lines into your bash prompt. Works equally well on OSX and GNU/Linux. If
 you're on Windows, what a pity.
 
-## Back to work
+## The first two tables
 
-Now that we have a complete structure, and a database, we can put the above Location module in the `lib/garden/location.ex` file,
-and create a `plant.ex` file next to it, with this content.
+Now that we have a complete project structure, and a database, we can put the above Location module in the
+`lib/garden/location.ex` file, and create a `plant.ex` file next to it, with this content.
 
 ```iex
 defmodule Garden.Plant do
@@ -100,6 +100,8 @@ end
 
 What does the `belongs_to` macro really do?  How does impact our physical database structure?  It would be nice if it was the
 system telling us, but in reality, it's us who need to tell the system, by writing the corresponding migration.
+
+## The initial migration
 
 You came here after doing the more introductiory how-tos and tutorials, so you know how to set up an Elixir project, how to
 configure your Ecto-DBMS connection, how to have Ecto create a database, and you know how to handle migrations.
@@ -152,12 +154,16 @@ With this `initial_migration` in place, let's apply it, so that we can finally h
 mix ecto.migrate
 ```
 
+If all is well, the output is just four `[info]` lines.
+
 We have added quite a few files to our project, and altered others, let's do some housekeeping,
 
 ```
 git add lib/botany/*.ex mix.lock priv config/config.exs
 git commit -m "first migration"
 ```
+
+## Looking at it from SQL
 
 Fine, it took time, but we now have our updated schema, where we can check the meaning of `belongs_to`. To have a look, we need
 to connect directly to the database, not through Elixir.
@@ -227,6 +233,8 @@ insert into plants (id, location_id, name, species) values
     (39,3,'2018.0063.1','Melissa officinalis'),
     (40,3,'2018.0064.1','Viola odorata');
 ```
+
+## Navigating, forward
 
 This is nice, now we can switch to iex, which we start as `iex -S mix`, and have a look.
 
@@ -333,6 +341,8 @@ iex> p1 = p1 |> Botany.Repo.preload(:location)
 ```
 
 It does no harm evaluating a `preload` on a preloaded field, it's an idempotent function.
+
+## Navigating, backwards
 
 Let's choose a location, and let's say we want to have all its plants. For ease of typing, let's import the `Ecto.Query` module.
 
