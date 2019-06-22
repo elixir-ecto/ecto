@@ -142,9 +142,9 @@ end
 
 For every `field`, we just copied the definition, and replaced the word `field` with `add`.
 
-For the `belongs_to` line, we've written a `location_id` line in the `plants` table, referring to the `locations` table. This
-implies we use its default primary key, `id`. Obviously, for the migration to work, the `create table(:locations)` must precede
-the creation of the `plants` table, since we're referring the first from the second.
+For the `belongs_to` line from the plants schema, we've written a `location_id` line in the `plants` create table, referring to
+the `locations` table. This implies we use its default primary key, `id`. Obviously, for the migration to work, the `create
+table(:locations)` must precede the creation of the `plants` table, since we're referring the first from the second.
 
 With this `initial_migration` in place, let's apply it, so that we can finally have a look at the database tables.
 
@@ -262,12 +262,13 @@ SELECT p0."id", p0."location_id", p0."name", p0."species", p0."bought_on", p0."b
 ```
 
 What happens here is finally *almost* what we are aiming at. We got everything from the `plants` table, including obviously the
-`location_id` (hey, I did not remember defining that one in my schema), and missing the `location` field (which, heck, now that I
-think of it, I never saw that in the database table).
+`location_id` (hey, but isn't it funny? We added it in the `create table` block, but did not define it in the schema), and
+there's a curious `NotLoaded` association in the `location` field (which, heck, think of it, we never saw in the database table).
 
-That's exactly what it means, that `belongs_to` macro in our schema.
+Apart from the `NotLoaded` which we will explore shortly, all the above is precisely the effect of that `belongs_to` macro in our
+schema and that `references` in the migration.
 
-Let's `preload` the relation! (and by the way let's type a few aliases for our table)
+Let's `preload` the relation! (and by the way let's type a few aliases for our tables.)
 
 ```iex
 iex> alias Garden.Plant
