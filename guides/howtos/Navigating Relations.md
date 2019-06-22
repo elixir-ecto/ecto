@@ -55,11 +55,23 @@ git add .
 git commit -m "initial commit"
 mix deps.get
 mix ecto.gen.repo -r Botany.Repo
-sed -i -e '/username/s/postgres/'$USERNAME'/' -e '/password/s/postgres/'$PASSWORD'/' config/dev.exs
-mix test
+sed config/config.exs -i -e '/username/s/".*"/"'$USERNAME'"/' -e '/password/s/".*"/"'$PASSWORD'"/'
+(echo; echo "    config :botany,"; echo "      ecto_repos: [Botany.Repo]") >> config/config.exs
+sed lib/botany/application.ex -i -e '/def start/,/end/s/\(# {Botany.Worker, arg}\)/\1\n      {Botany.Repo, []},/'
+mix ecto.create
 ```
 
-**TODO complete database initialization**
+The above commands should lead to this last output line:
+
+```
+The database for Botany.Repo has been created
+```
+
+If so, fine, and continue, otherwise please go back to more basic documentation, and come back with your homework done.
+
+Oh, and if you wonder why on earth not give manual instructions? This way you can any time safely drop your database, restart
+this tutorial page by simply copy-pasting the above lines into your bash prompt. Works equally well on OSX and GNU/Linux. If
+you're on Windows, what a pity.
 
 ## Back to work
 
@@ -79,10 +91,11 @@ defmodule Garden.Plant do
 end
 ```
 
-> Actually, the `bought_from` should be also a `belongs_to` relation, pointing to a table with nurseries, or contacts. But
-> there's more to come, so let's keep it like this for the time being.
+> Actually, the `bought_from` should be also a `belongs_to` relation, pointing to a table with contacts, like friends, other
+> gardens, commercial nurseries. But since there's so much more to come, let's keep it like this for the time being.
 
-What does the `belongs_to` macro really do?  Let's have a look by letting Ecto create our database according to this schema.
+What does the `belongs_to` macro really do?  How does impact our physical database structure?  For this, we need to update the
+database structure with the new definitions, that is, we need a migration.
 
 You came here after doing the more introductiory how-tos and tutorials, so you know how to set up an Elixir project, how to
 configure your Ecto-DBMS connection, how to have Ecto create a database, and you know how to handle migrations.
@@ -95,9 +108,24 @@ definitions.
 
 **TODO**
 
-With the initial migration in place, we can apply it, and have a look at the database tables.
+With the initial migration in place, let's apply it, so that we can finally have a look at the database tables.
 
-**TODO**
+```
+mix ecto.migrate
+```
+
+Fine, it took time, but we now have our updated schema, where we can check the meaning of `belongs_to`. To have a look, we need
+to connect directly to the database, not through Elixir.
+
+Let's connect to the database from the `psql` prompt (if you commonly use something else, you should know the commands
+corresponding to what we show here). our database is called `botany_repo` and you know your user and password. From inside the
+`psql` prompt, give:
+
+```
+\dt
+\d plants
+\d locations
+```
 
 Now some real work: with this database, we can add a few locations and some plants.
 
