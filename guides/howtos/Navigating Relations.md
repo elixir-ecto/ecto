@@ -107,12 +107,12 @@ You came here after doing the more introductiory how-tos and tutorials, so you k
 configure your Ecto-DBMS connection, how to have Ecto create a database, and you know how to handle migrations.
 
 > Remember that Ecto does keep track of database changes through migrations, yet it is not particularly helpful when it comes to
-> writing the migration corresponding to what we change in the schemas. Until there is a `mix` recipe for computing migrations
-> (**TODO** anybody interested in reverse engineer django's migrations?), we need to write things twice: once in the schemas, and
-> again in migration files.
+> writing the migration corresponding to what we change in the schemas. There has been discussion in the Ecto project about this,
+> and the bottom line is that programmers need to know what they mean, and it's programmers who should tell Ecto, not the
+> opposite way: we need to maintain both the schemas, and the migration files, and make sure they are consistent with each other.
 
 So let's get to work and write our first migration, relative to moving from an empty database to one with the above schema
-definitions. We create a boilerplate named migration, and call it `initial_migration`,
+definitions. We use the `ecto.gen.migration` rule to create a boilerplate named migration, we call it `initial_migration`,
 
 ```
 mix ecto.gen.migration initial_migration
@@ -182,9 +182,10 @@ here). Our database is called `botany_repo` and you know your user and password.
 What is relevant to us here is the `CONSTRAINT` block at the end of each table. Ecto not only created the columns, it also made
 our database aware of the meaning of the `location_id` in `plants`, and that it impacts the `locations` table as well.
 
-Since we're here in the database, let's create a few database records, so we save time in the `iex` session.  More than a few in
-reality, because we're out to navigating information with real data. (If there's botanists among you, please be assured we are on
-our way to do some proper work, I know this is *not* how to model botanic data.)
+Since we're here in the database, let's create a few database records, so we save time in the `iex` session, and can focus on
+navigation rather than data insertion.  More than a few in reality, because we're out to navigating information with real
+data. (If there's botanists among you, please be assured we are on our way to do some proper work, I know this is *not* how to
+model botanic data.)
 
 ```sql
 insert into locations (id, code, name) values (1, 'GH1', 'tropical greenhouse'),
