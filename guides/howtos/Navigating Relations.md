@@ -5,8 +5,9 @@ real-life database structure with several related tables, modelling taxonomic in
 
 Speaking in SQL terms, we have a relation wherever a field in a table is marked as a `Foreign Key`, so that it `References` a
 `Primary Key` in an other table.  We have a self-relation where the target table coincides with the origin table. We will explore
-both. When more objects in one table may be linked with more objects in the target table, we speak of a many-to-many, and we need
-an intermediate table, we will learn this too.
+both. When more objects in one table may be linked with more objects in the target table, we speak of a many-to-many relation,
+and we need an intermediate table, we will learn this too. Such an intermediate table may contain information by its own right,
+and this too we're going to explore, stepwise.
 
 Ecto has several macros letting us define SQL relations, and navigate them, mostly allowing us to focus
 on meaning rather than the technical details.  We will introduce them as we go, here we merely mention them,
@@ -16,7 +17,7 @@ so you know what to expect from reading this page: `belongs_to`, `has_many`, `ha
 
 Let's start from describing the data we want to represent.
 
-Say we have a rather large garden, that we keep plants in it, and we want software that helsp us to find them back.  So we do
+Say we have a rather large garden, that we keep plants in it, and we want software that helps us to find them back.  So we do
 some paperwork, draw a map of the garden, and we define beds, or locations, in the garden. These have a name (humans need names)
 and a code (for in the map).  Let's also add a description, for more verbose needs.  **TODO: we will add length limit to `name`
 and a much larger to `description`**
