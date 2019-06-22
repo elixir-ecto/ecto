@@ -3,9 +3,10 @@
 In this guide we will learn how to work with relations between tables. We will do so, building a small
 real-life database structure with several related tables, modelling taxonomic information, and a plant collection.
 
-Speaking in SQL terms, we have a relation wherever a field in a table is marked as a `Foreign Key`,
-so that it `References` a `Primary Key` in an other table.  We have a self-relation where the target table
-coincides with the origin table.
+Speaking in SQL terms, we have a relation wherever a field in a table is marked as a `Foreign Key`, so that it `References` a
+`Primary Key` in an other table.  We have a self-relation where the target table coincides with the origin table. We will explore
+both. When more objects in one table may be linked with more objects in the target table, we speak of a many-to-many, and we need
+an intermediate table, we will learn this too.
 
 Ecto has several macros letting us define SQL relations, and navigate them, mostly allowing us to focus
 on meaning rather than the technical details.  We will introduce them as we go, here we merely mention them,
@@ -321,7 +322,8 @@ Whatever looks easier, or clearer to you in the context. I like the first one be
 If we had matched the `p1` variable to the expression without the `preload` trailing pipe, we could still add that part, at any
 intermediate moment before matching the field to the `loc8` variable. Do remember that we are still in an environment where
 objects are immutable, so matching `p1` to the expression missing the `preload` part will be just that, a match to an immutable
-expression. If you later add the `preload` pipe to it, you should match a variable to it, like this:
+expression. If you later add the `preload` pipe to it, you should match a variable to it, like this, where we're reusing the same
+variable:
 
 ```iex
 iex> p1 = p1 |> Botany.Repo.preload(:location)
