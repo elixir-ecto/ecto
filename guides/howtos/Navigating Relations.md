@@ -362,11 +362,14 @@ end
 ```
 
 `recompile`, and reload the structure for location `gh1`.  You will notice, it holds the new `plants` field, again in need of
-`preload`. You know how to do that, and you will get a nicely populated `gh1.plants` field.  You should be surprised, or maybe
-not, for we did not need any migration.
+`preload`. You know how to do that, and you will get a nicely populated `gh1.plants` field, with a list of `%Plant` structures.
+You should be surprised, or maybe not, for we did not need any migration.
 
 Other than `belongs_to`, `has_many` does not cause any change on the physical database schema, it just informs Ecto that there is
 already a link leading here, where to find its definition, and that we want to navigate it in the opposite direction.
+
+Have fun with the project and the data, explore, learn, understand, and take a well deserved pause: There's much more to come,
+and it's not going to be easy.
 
 ## Life is complex, but we can model it
 
