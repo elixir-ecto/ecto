@@ -202,45 +202,42 @@ insert into locations (id, code, name) values (1, 'GH1', 'tropical greenhouse'),
     (8, 'B05', 'right of main path-2'), (9, 'B07', 'right of main path-3');
 insert into plants (id, location_id, name, species) values
     ( 1,8,'2018.0002.1','Allium ursinum'),
-    ( 2,5,'2018.0003.1','Arctostaphylos uva-ursi'),
-    ( 3,1,'2018.0004.1','Aquilegia vulgaris'),
-    ( 4,1,'2018.0005.1','Pulsatilla vulgaris'),
-    ( 5,6,'2018.0006.1','Armoracia rusticana'),
-    ( 6,9,'2018.0007.1','Artemisia abrotanum'),
-    ( 7,2,'2018.0008.1','Chelidonium majus'),
-    ( 8,1,'2018.0010.1','Digitalis purpurea'),
-    ( 9,5,'2018.0011.1','Convallaria majalis'),
-    (10,5,'2018.0014.1','Stachys officinalis'),
-    (11,5,'2018.0016.1','Artemisia absinthium'),
-    (12,8,'2018.0004.2','Aquilegia vulgaris'),
-    (13,7,'2018.0017.1','Angelica archangelica'),
-    (14,6,'2018.0019.1','Allium schoenoprasum'),
-    (15,5,'2018.0020.1','Alchemilla xanthochlora'),
-    (16,8,'2018.0021.1','Agrimonia eupatoria'),
-    (17,3,'2018.0001.2','Achillea millefolium'),
-    (18,3,'2018.0018.2','Althaea officinalis'),
-    (19,8,'2018.0027.1','Salvia officinalis'),
-    (20,4,'2018.0028.1','Ruta graveolens'),
-    (21,2,'2018.0031.1','Paeonia officinalis'),
-    (22,2,'2018.0032.1','Leonurus cardiaca'),
-    (23,2,'2018.0033.1','Inula helenium'),
-    (24,2,'2018.0034.1','Valeriana officinalis'),
-    (25,2,'2018.0035.1','Tanacetum vulgare'),
-    (26,2,'2018.0036.1','Symphytum officinale'),
-    (27,6,'2018.0037.1','Iris germanica'),
-    (28,5,'2018.0038.1','Ononis spinosa'),
-    (29,4,'2018.0040.1','Pulmonaria officinalis'),
-    (30,7,'2018.0041.1','Myrica gale'),
-    (31,9,'2018.0044.1','Sanguisorba officinalis'),
-    (32,9,'2018.0045.1','Sanguisorba minor'),
-    (33,1,'2018.0053.1','Borago officinalis'),
-    (34,1,'2018.0054.1','Dryopteris filix-mas'),
-    (35,6,'2018.0057.1','Foeniculum vulgare'),
-    (36,1,'2018.0060.1','Helleborus niger'),
-    (37,8,'2018.0034.2','Valeriana officinalis'),
-    (38,5,'2018.0062.1','Sinapis alba'),
-    (39,3,'2018.0063.1','Melissa officinalis'),
-    (40,3,'2018.0064.1','Viola odorata');
+    ( 2,5,'2018.0014.1','Stachys officinalis'),
+    ( 3,7,'2018.0017.1','Angelica archangelica'),
+    ( 4,6,'2018.0019.1','Allium schoenoprasum'),
+    ( 5,5,'2018.0020.1','Alchemilla xanthochlora'),
+    ( 6,8,'2018.0021.1','Agrimonia eupatoria'),
+    ( 7,1,'2018.0025.1','Lavandula angustifolia'),
+    ( 8,8,'2018.0027.1','Salvia officinalis'),
+    ( 9,1,'2018.0029.1','Myrrhis odorata'),
+    (10,2,'2018.0032.1','Leonurus cardiaca'),
+    (11,9,'2018.0044.1','Sanguisorba officinalis'),
+    (12,9,'2018.0045.1','Sanguisorba minor'),
+    (13,2,'2018.0047.1','Geum urbanum'),
+    (14,3,'2018.0049.1','Satureja hortensis'),
+    (15,3,'2018.0051.1','Filipendula ulmaria'),
+    (16,6,'2018.0057.1','Foeniculum vulgare'),
+    (17,3,'2018.0058.1','Hyssopus officinalis'),
+    (18,3,'2018.0063.1','Melissa officinalis'),
+    (19,1,'2018.0066.1','Mentha ×piperita'),
+    (20,1,'2018.0067.1','Origanum vulgare'),
+    (21,2,'2018.0068.1','Lycopus europaeus'),
+    (22,1,'2018.0069.1','Levisticum officinale'),
+    (23,6,'2018.0070.1','Teucrium chamaedrys'),
+    (24,1,'2018.0073.1','Thymus vulgaris'),
+    (25,3,'2018.0077.1','Rosa gallica'),
+    (26,1,'2018.0081.1','Prunella vulgaris'),
+    (27,3,'2018.0083.1','Ajuga reptans'),
+    (28,1,'2018.0084.1','Fragaria vesca'),
+    (29,4,'2019.0002.1','Prunella vulgaris'),
+    (30,1,'2018.0072.1','Rosmarinus officinalis'),
+    (31,4,'2018.0028.1','Ruta graveolens'),
+    (32,8,'2019.0004.1','Pimpinella anisum'),
+    (33,2,'2019.0005.1','Anethum graveolens'),
+    (34,3,'2019.0006.1','Ocimum basilicum'),
+    (35,1,'2019.0007.1','Coriandrum sativum'),
+    (36,5,'2018.0019.2','Allium schoenoprasum'),
+    (37,2,'2018.0044.2','Sanguisorba officinalis');
 ```
 
 ### Navigating, forward
@@ -458,7 +455,7 @@ in the *Origanum* genus. The plant species in our sample database are more varie
 
 As above, we first write the schemas, then the migration, then run it. The two tables corresponding to the two above concepts are
 not complicated after all, and allow us represent the above information.
- 
+
 ```iex
 defmodule Taxonomy.Rank do
   use Ecto.Schema
@@ -516,7 +513,7 @@ end
 
 (The authorship field is a hard requirement by botanists. Without that, they'll never believe we're serious about their subject.)
 
-And let's write a wild guess for the migration, as if all would just work.  And you know what?  It does!
+And let's write a wild guess for the migration, as if all would just work.
 
 ```iex
 defmodule Botany.Repo.Migrations.CreateTaxonomy do
@@ -537,25 +534,186 @@ defmodule Botany.Repo.Migrations.CreateTaxonomy do
 end
 ```
 
-Let's now add the few taxa we introduced above.
+Let's see what error we get from running this migration:
 
-**TODO**
+```bash
+mix ecto.migrate
+```
+
+Wow, really, just the four `[info]` lines? No errors? Since neither you nor I believe it, let's check in the SQL shell: go back
+to it, and give the command `\d taxa`.
+
+```
+Foreign-key constraints:
+    "taxa_parent_id_fkey" FOREIGN KEY (parent_id) REFERENCES taxa(id)
+    "taxa_rank_id_fkey" FOREIGN KEY (rank_id) REFERENCES ranks(id)
+```
+
+Neat, cool, nice, maybe "pretty".
+
+Since we're here in the SQL shell, and since as said it is not our goal here learning how to insert data, but how to navigate it,
+let's add some ranks and taxa, from a real life somewhat simplified example, where we only have the three major ranks familia,
+genus, and species:
+
+```sql
+insert into ranks (id,name) values (1,'familia'), (2,'genus'), (3,'species');
+insert into taxa (id,rank_id,epithet) values (1,1,'Alliaceae'),(2,1,'Apiaceae'),
+    (3,1,'Lamiaceae'),(4,1,'Rosaceae'),(5,1,'Rutaceae');
+insert into taxa (id,rank_id,epithet,authorship,parent_id) values
+    ( 6,2,'Agrimonia','L.',4),
+    ( 7,2,'Ajuga','L.',3),
+    ( 8,2,'Alchemilla','L.',4),
+    ( 9,2,'Allium','L.',1),
+    (10,2,'Anethum','L.',2),
+    (11,2,'Angelica','L.',2),
+    (12,2,'Coriandrum','L.',2),
+    (13,2,'Filipendula','Mill.',4),
+    (14,2,'Foeniculum','Mill.',2),
+    (15,2,'Fragaria','L.',4),
+    (16,2,'Geum','L.',4),
+    (17,2,'Hyssopus','L.',3),
+    (18,2,'Lavandula','L.',3),
+    (19,2,'Leonurus','L.',3),
+    (20,2,'Levisticum','Hill',2),
+    (21,2,'Lycopus','L.',3),
+    (22,2,'Melissa','L.',3),
+    (23,2,'Mentha','L.',3),
+    (24,2,'Myrrhis','Mill.',2),
+    (25,2,'Ocimum','L.',3),
+    (26,2,'Origanum','L.',3),
+    (27,2,'Pimpinella','L.',2),
+    (28,2,'Prunella','L.',3),
+    (29,2,'Rosa','L.',4),
+    (30,2,'Rosmarinus','L.',3),
+    (31,2,'Ruta','L.',5),
+    (32,2,'Salvia','L.',3),
+    (33,2,'Sanguisorba','L.',4),
+    (34,2,'Satureja','L.',3),
+    (35,2,'Stachys','L.',3),
+    (36,2,'Teucrium','L.',3),
+    (37,2,'Thymus','L.',3);
+insert into taxa (id,rank_id,epithet,authorship,parent_id) values
+    (38,3,'ursinum','L.',9),
+    (39,3,'officinalis','(L.) Trevis.',35),
+    (40,3,'archangelica','L.',11),
+    (41,3,'schoenoprasum','L.',9),
+    (42,3,'xanthochlora','Rothm.',8),
+    (43,3,'eupatoria','L.',6),
+    (44,3,'angustifolia','Mill.',18),
+    (45,3,'officinalis','L.',32),
+    (46,3,'odorata','(L.) Scop.',24),
+    (47,3,'cardiaca','L.',19),
+    (48,3,'officinalis','L.',33),
+    (49,3,'minor','Scop.',33),
+    (50,3,'urbanum','L.',16),
+    (51,3,'hortensis','L.',34),
+    (52,3,'ulmaria','(L.) Maxim. ',13),
+    (53,3,'vulgare','Mill.',14),
+    (54,3,'officinalis','L.',17),
+    (55,3,'officinalis','L.',22),
+    (56,3,'×piperita','L.',23),
+    (57,3,'vulgare','L.',26),
+    (58,3,'europaeus','L.',21),
+    (59,3,'officinale','W.D.J. Koch',20),
+    (60,3,'chamaedrys','L.',36),
+    (61,3,'vulgaris','L.',37),
+    (62,3,'gallica','L.',29),
+    (63,3,'vulgaris','L.',28),
+    (64,3,'reptans','L.',7),
+    (65,3,'vesca','L.',15),
+    (66,3,'vulgaris','L.',28),
+    (67,3,'officinalis','L.',30),
+    (68,3,'graveolens','L.',31),
+    (69,3,'anisum','L.',27),
+    (70,3,'graveolens','L.',10),
+    (71,3,'basilicum','L.',25),
+    (72,3,'sativum','L.',12),
+    (73,3,'schoenoprasum','L.',9);
+```
+
+It's probably useful if we stop here again, and do some data navigation, like we write a query for the taxon named *Sanguisorba*,
+match the query to a variable `q`, and then evaluate `q` and extract the information for the taxon rank, its epithet, and its
+parent taxon epithet.
+
+A piece of cake, or isn't it?
+
+```
+q = from t in Taxon, where: t.epithet=="Sanguisorba"
+```
+
+Next part is evaluation, and preloading fields:
+```
+matched_taxon = q |> Botany.Repo.one |> Botany.Repo.preload(:rank) |> Botany.Repo.preload(:parent)
+```
+
+Then there's the matching part, which looks like this, for the rank name:
+
+```
+%Taxon{rank: %Rank{name: rank_name}} = matched_taxon
+```
+
+or, if you only need one field, you can extract it from the other end:
+
+```
+rank_name = matched_taxon.rank.name
+```
+
+### Collecting taxon children
+
+We should know how to do this part, adding a `has_many` for a new `children` field. It's mostly a repetition of what we did
+before with plants at a location, with the important difference that the self linking key is not called as the collection name
+(with `plants`, it was `location_id`.  Here it would be `taxon_id`, which is obviously not the case), but it is `parent_id`.
+
+The field to add to the `taxa` schema is:
+
+```
+    has_many :children, Botany.Taxon, foreign_key: :parent_id  # backward link
+```
+
+And as before, there's no impact on the database, just `recompile`, execute the same query, taking care to `preload(:children)`.
 
 ### Writing a second self referring migration
 
-As said in the introduction, we're happy with this example because it's a complex one.  Now one extra complexity comes from
-scientific advances, where new plant species are discovered and described, and some new genetic studies suggest a complete
-reorganization of the previous taxonomic structures.  This is complex enough, but it gets worse when they add the requirement
-that old names must be kept, in fact not suprisingly, as you cannot require that all literature since Linneus gets rewritten
-every 10 or so years, in the light of new science.
+As said in the introduction, we're doing this example because it's a complex one.  Now one extra complexity comes from scientific
+advances, where new plant species are discovered and described, or some new genetic studies suggest a complete reorganization of
+previous taxonomic structures.  This is complex enough, but it gets worse when they add the requirement that old names must be
+kept, in fact unsuprisingly as you cannot require that all literature since Linneus gets rewritten every 10 or so years, in the
+light of new science.
 
 The above paragraph introduces the concept of botanic synonyms.
 
 What does it imply to our case?
 
-We need to let users add new taxa, and let them lay synonymy links among taxa, where each taxon is either an accepted name, or it
-links to the corresponding accepted taxon. (Actually, things are much more complex than this, for the concept of "accepted taxon"
-is an opinion, but let's do as if life was easy for this one time once.)
+We need to represent synonymy links among taxa, where each taxon either links to its accepted taxon, or the link is `NULL`,
+meaning that the taxon is itself an accepted name. (Actually, things are much more complex than this, for the concept of
+"accepted taxon" is an opinion, but let's do as if life was easy for this one time once.)
+
+In a way, this is also some sort of `belongs_to`, as when a taxon S points to a taxon A as its accepted name, it is saying that
+it belongs to the set of synonyms for A.  The back link is just as obvious by now.
+
+```
+    belongs_to :accepted, Botany.Taxon
+    has_many :synonyms, Botany.Taxon, foreign_key: :accepted_id  # backward link
+```
+
+Let's not forget the migration, which is now of a different type, since we're altering an existing table:
+
+```
+mix ecto.gen.migration adding_synonymies
+```
+
+```
+defmodule Botany.Repo.Migrations.AddingSynonymies do
+  use Ecto.Migration
+
+  def change do
+    alter table("taxa") do
+      add :accepted_id, references(:taxa)
+    end
+  end
+end
+```
+
 
 ## A more proper way to organize a botanical collection
 *day 3*
