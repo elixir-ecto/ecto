@@ -76,10 +76,10 @@ Oh, and if you wonder why on earth not give manual instructions? This way you ca
 this tutorial page by simply copy-pasting the above lines into your bash prompt. Works equally well on OSX and GNU/Linux. If
 you're on Windows, what a pity.
 
-## The first two tables
+## The first two schemas
 
-Now that we have a complete project structure, and a database, we can put the above Location module in the
-`lib/garden/location.ex` file, and create a `plant.ex` file next to it, with this content.
+Now that we have a complete project structure, and a database, we can put the above `Garden.Location` module in the
+`lib/garden/location.ex` file, and create a `plant.ex` file next to it, defining the `Garden.Plant` module:
 
 ```iex
 defmodule Garden.Plant do
@@ -95,7 +95,7 @@ defmodule Garden.Plant do
 end
 ```
 
-> Actually, the `bought_from` should be also a `belongs_to` relation, pointing to a table with contacts, like friends, other
+> To be true, the `bought_from` should be also a `belongs_to` relation, pointing to a table with contacts, like friends, other
 > gardens, commercial nurseries. But since there's so much more to come, let's keep it like this for the time being.
 
 What does the `belongs_to` macro really do?  How does impact our physical database structure?  It would be nice if it was the
