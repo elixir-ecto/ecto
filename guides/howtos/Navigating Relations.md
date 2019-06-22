@@ -59,21 +59,12 @@ sed -i -e '/username/s/postgres/'$USERNAME'/' -e '/password/s/postgres/'$PASSWOR
 mix test
 ```
 
-Remember that Ecto does keep track of database changes through migrations, yet it is not particularly helpful when it comes to
-writing such migrations. Until there is a `mix` recipe for computing migrations (it could do so, from the current schemas and the
-cumulative effect of all existing migrations), we need to write things twice: once in the schemas, and again in migration
-files. So let's get to work and write our first migration, relative to moving from an empty database to one with the above schema
-definitions.
-
-**TODO**
-
-With the migration in place, we can apply it, and have a look at the database tables.
-
-**TODO**
+**TODO complete database initialization**
 
 ## Back to work
 
-Put the Location file in the `decide me.ex` file, and create a `plant.ex` file next to it.
+Now that we have a complete structure, and a database, we can put the above Location module in the `lib/garden/location.ex` file,
+and create a `plant.ex` file next to it, with this content.
 
 ```iex
 defmodule Garden.Plant do
@@ -96,9 +87,21 @@ What does the `belongs_to` macro really do?  Let's have a look by letting Ecto c
 You came here after doing the more introductiory how-tos and tutorials, so you know how to set up an Elixir project, how to
 configure your Ecto-DBMS connection, how to have Ecto create a database, and you know how to handle migrations.
 
-Now some real work: with this database, we can add a few locations and some plants.
+Remember that Ecto does keep track of database changes through migrations, yet it is not particularly helpful when it comes to
+writing such migrations. Until there is a `mix` recipe for computing migrations (it could do so, from the current schemas and the
+cumulative effect of all existing migrations), we need to write things twice: once in the schemas, and again in migration
+files. So let's get to work and write our first migration, relative to moving from an empty database to one with the above schema
+definitions.
 
 **TODO**
+
+With the initial migration in place, we can apply it, and have a look at the database tables.
+
+**TODO**
+
+Now some real work: with this database, we can add a few locations and some plants.
+
+**TODO - among others, location var matched to location structure code:GH1**
 
 Notice how we can go up the links, by this I mean that we can get the `location` from a plant, but it would also be nice to move
 in the other direction, for example once we matched a `location` variable to a structure represeting location `GH1`, it would be
@@ -128,8 +131,7 @@ end
 maybe not, for we did not need any migration.
 
 Other than `belongs_to`, `has_many` does not cause any change on the physical database schema, it just informs Ecto that there is
-already a link, and that we want to navigate it in the opposite direction.
-
+already a link leading here, where to find its definition, and that we want to navigate it in the opposite direction.
 
 ## Life is complex, but we can model it
 
