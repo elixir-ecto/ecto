@@ -13,7 +13,15 @@ Ecto has several macros letting us define SQL relations, and navigate them, most
 on meaning rather than the technical details.  We will introduce them as we go, here we merely mention them,
 so you know what to expect from reading this page: `belongs_to`, `has_many`, `has_one`, `many_to_many`.
 
+The *stepwise* approach will require us that we write migrations. While we assume you know all about them, we are anyway going to
+be quite specific about that part too, for we are going to migrate relational links.
+
+If you opt to use this text as a tutorial, try to dedicate between 2 and 4 hours for each section, and take some time between
+them. Each has a subtitle "*day i*", as if you were working 3 hours a day, possibly the healthiest thing you can do. Ancient
+Romans conquered the world at this pace.
+
 ## Modelling a garden
+*day 1*
 
 Let's start from describing the data we want to represent.
 
@@ -396,27 +404,31 @@ already a link leading here, where to find its definition, and that we want to n
 Have fun with the project and the data, explore, learn, understand, and take a well deserved pause: There's much more to come,
 and it's not going to be easy.
 
-## Life is complex, but we can model it
+## Life is complex, and information scientists think they can model it
+*day 2*
 
-You must have heard of those funny names biologists use, like they say Canis lupus familiaris when all they mean is "dog", or
-when they confuse you with Origanum majorana and what is the reason that common oregano should be vulgar? Also, if you have been
-in the Tropics, you surely noticed how easy it is to confuse a banana plant with larger flowerless heliconia, and with other
-plants that provide no fruit nor carry any particularly showy flowers. They are all related: common oregano and marjoram both
-belong to the Origanum genus, while bananas, heliconias, and bihao belong to the Zingiberales order, and all are vascular plants.
+You must have heard of those funny names biologists use, like they say *Canis lupus familiaris* when all they mean is "dog", or
+when they confuse you with *Origanum majorana* (is it oregano, or marjoram?) and what is the reason that common oregano should be
+considered vulgar? Also, if you have been in the Tropics, you surely noticed how easy it is to confuse a banana plant with larger
+flowerless heliconia, and with other plants that provide no fruit nor carry any particularly showy flowers. The answer is in
+**taxonomy** : common oregano and marjoram both belong to the *Origanum* genus, while bananas, heliconias, and bihao belong to
+the *Zingiberales* order, and all are vascular plants, or *Tracheophyta*.
 
-If you think this is a complex example, well, we are using this example precisely because it's a complex one, coming from real
-life, and not the rather tedious and far too simplistic *Library* example. We will not need to invent stories here, and you will
-be able to find background information, to make sense of the complexity we are modelling, by checking reference sources, like the
-Wikipedia, or sites like https://atlasoflife.org.au/, or http://tropicos.org/. Enjoy reading, and enjoy nature!
+If you think we chose a too complex example, well, we are using this example precisely because it's a complex one, coming from
+real life, and not the rather tedious and far too simplistic *Library* example.  We will not need to invent stories here, and you
+will be able to find background information, to make sense of the complexity we are modelling, by checking reference sources,
+like the Wikipedia, or sites like https://atlasoflife.org.au/, or http://tropicos.org/. Enjoy reading, and enjoy nature!  If you
+really need Library science, we will use some here too.
 
-Oh, and back to Zingiberales, Ginger —Zingiber— is also one of them.
+Oh, and back to *Zingiberales*, Ginger —*Zingiber*— is also one of them.
 
-## Modelling taxonomic information
+### Modelling taxonomic information
 
 The above lengthy explanation is to introduce the need for self-relations. Taxonomists speak of a `Taxon`, which is a concept
-that encompasses Orders, Genera, Species, and several more.  Each of these names identifies a `Rank`, and a taxon has a rank (or,
-in Ecto terms, it `belongs_to` a rank), and also belongs to one taxon at a higher rank. A `Rank` has a name, and we could add an
-integer value to represent depth in the taxonomy tree of life, but let's forget about that for the time being.
+that encompasses Orders, Genera, Species, as well as several more.  Each of these names identifies a `Rank`, and a `Taxon` has a
+rank (or, in Ecto terms, it `belongs_to` a rank), and also belongs to one taxon at a higher rank. A `Rank` has nothing more than
+a name. We could add an integer value to represent its depth in the taxonomy tree of life, but let's forget about that for the
+time being.
 
 The above mentioned taxa ('taxa' is the Greek plural form for taxon) are so organized:
 
@@ -440,8 +452,13 @@ Tracheophyta
 ```
 
 Here we have one "Division", two "Orders", four "Families" and we only mentioned one genus per family, plus we have two species
-in the Origanum genus. The two corresponding tables are not complicated after all, and allow us represent the above information.
+in the *Origanum* genus. The plant species in our sample database are more varied than this.
 
+### Schemas for Taxon and Rank
+
+As above, we first write the schemas, then the migration, then run it. The two tables corresponding to the two above concepts are
+not complicated after all, and allow us represent the above information.
+ 
 ```iex
 defmodule Taxonomy.Rank do
   use Ecto.Schema
@@ -451,7 +468,7 @@ defmodule Taxonomy.Rank do
   end
 end
 
-defmodule Taxonomy.taxon do
+defmodule Taxonomy.Taxon do
   use Ecto.Schema
 
   schema "taxa" do
@@ -461,6 +478,12 @@ defmodule Taxonomy.taxon do
   end
 end
 ```
+
+Trouble is: how do we write the migration for the self-reference in `Taxonomy.Taxon`? As you recall, we could not use a schema
+which had not yet been defined, and here we're referring to one while we're busy defining it, and not quite yet done.
+
+### Writing a self referring migration
+
 Let's now add the few taxa we introduced above.
 
 **TODO**
@@ -478,13 +501,15 @@ defmodule Taxonomy.taxon do
 end
 ```
 
-## Modelling a garden
+## A more proper way to organize a botanical collection
+*day 3*
 
-When a gardener acquires a plant, they seldom acquire just one for each species, it's often in batches, all same source, same
-time, and then these plants may end in different locations in the garden. To make sure that the physical plants are kept together
-conceptually, we introduce a library science concept into our botanical collection: an "Accession". This allow us keeping
-together plants of the same species, which were acquired together. It also simplifies connecting plants to taxa: if a taxonomist
-tells you that some individual plant belongs to some species, this opinion will apply to all plants in the same accession.
+When a gardener acquires a plant, they seldom acquire just one for each species, it's often in batches, where a batch is plants
+from the same species, same source, time, and then these plants may end in different locations in the garden. To make sure that
+the physical plants are kept together conceptually, we introduce a library science concept into our botanical collection: an
+"Accession". This allow us keeping together plants of the same species, which were acquired together. It also simplifies
+connecting plants to taxa: if a taxonomist tells you that some individual plant belongs to some species, this opinion will apply
+to all plants in the same accession.
 
 Let's correct the `Garden.Plant` module, and create a new `Garden.Accession` module.
 
