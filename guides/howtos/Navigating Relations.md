@@ -174,7 +174,8 @@ What is relevant to us here is the `CONSTRAINT` block at the end of each table. 
 our database aware of the meaning of the `location_id` in `plants`, and that it impacts the `locations` table as well.
 
 Since we're here in the database, let's create a few database records, so we save time in the `iex` session.  More than a few in
-reality, because we're out to navigating information with real data.
+reality, because we're out to navigating information with real data. (If there's botanists among you, please be assured we are on
+our way to do some proper work, I know this is *not* how to model botanic data.)
 
 ```sql
 insert into locations (id, code, name) values (1, 'GH1', 'tropical greenhouse'),
