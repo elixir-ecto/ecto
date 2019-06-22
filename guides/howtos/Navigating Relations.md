@@ -140,10 +140,11 @@ defmodule Botany.Repo.Migrations.InitialMigration do
 end
 ```
 
-For every `field`, we just copied the definition, and replaced the word `field` with `add`, while for the `belongs_to` line,
-we've written a `location_id` line in the `plants` table, referring to the `locations` table. This implies we use its default
-primary key, `id`. Obviously, for the migration to work, we need first create the `locations` table, which we then refer from
-`plants`.
+For every `field`, we just copied the definition, and replaced the word `field` with `add`.
+
+For the `belongs_to` line, we've written a `location_id` line in the `plants` table, referring to the `locations` table. This
+implies we use its default primary key, `id`. Obviously, for the migration to work, the `create table(:locations)` must precede
+the creation of the `plants` table, since we're referring the first from the second.
 
 With this `initial_migration` in place, let's apply it, so that we can finally have a look at the database tables.
 
