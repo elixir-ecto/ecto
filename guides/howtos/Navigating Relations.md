@@ -40,7 +40,7 @@ when we need to look for it.
 But wait, where should I put these files? Don't we first need an Ecto project? Oh, you mean you need help with that, too? Ok, no
 problem, let's do that first.
 
-## Create the project, and the database
+### Create the project, and the database
 
 The following steps, you should know what they mean and why they're necessary. The two `sed` instructions are for the laziest
 among us, who do not want to edit text files. Make sure you have a postgres user with the create database privilege, and `export`
