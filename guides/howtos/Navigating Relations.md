@@ -484,22 +484,78 @@ which had not yet been defined, and here we're referring to one while we're busy
 
 ### Writing a self referring migration
 
-Let's now add the few taxa we introduced above.
+To `mix`, it makes no difference what we do first, whether the schema modules, or request creation of the boilerplate migration.
+Let's this time do the migration first.
 
-**TODO**
+```bash
+mix ecto.gen.migration create_taxonomy
+```
+
+Now create the two files `botany/rank.ex` and `botany/taxon.ex`, with the content as discussed:
 
 ```iex
-defmodule Taxonomy.taxon do
+defmodule Botany.Rank do
+  use Ecto.Schema
+
+  schema "ranks" do
+    field :name, :string
+  end
+end
+
+defmodule Botany.Taxon do
   use Ecto.Schema
 
   schema "taxa" do
     field :epithet, :string
-    has_many :children, Taxonomy.Taxon
-    belongs_to :parent, Taxonomy.Taxon
-    belongs_to :rank, Taxonomy.Rank
+    field :authorship, :string
+    belongs_to :parent, Botany.Taxon
+    belongs_to :rank, Botany.Rank
   end
 end
 ```
+
+(The authorship field is a hard requirement by botanists. Without that, they'll never believe we're serious about their subject.)
+
+And let's write a wild guess for the migration, as if all would just work.  And you know what?  It does!
+
+```iex
+defmodule Botany.Repo.Migrations.CreateTaxonomy do
+  use Ecto.Migration
+
+  def change do
+    create table(:ranks) do
+      add :name, :string
+    end
+
+    create table(:taxa) do
+      add :epithet, :string
+      add :authorship, :string
+      add :rank_id, references(:ranks)
+      add :parent_id, references(:taxa)
+    end
+  end
+end
+```
+
+Let's now add the few taxa we introduced above.
+
+**TODO**
+
+### Writing a second self referring migration
+
+As said in the introduction, we're happy with this example because it's a complex one.  Now one extra complexity comes from
+scientific advances, where new plant species are discovered and described, and some new genetic studies suggest a complete
+reorganization of the previous taxonomic structures.  This is complex enough, but it gets worse when they add the requirement
+that old names must be kept, in fact not suprisingly, as you cannot require that all literature since Linneus gets rewritten
+every 10 or so years, in the light of new science.
+
+The above paragraph introduces the concept of botanic synonyms.
+
+What does it imply to our case?
+
+We need to let users add new taxa, and let them lay synonymy links among taxa, where each taxon is either an accepted name, or it
+links to the corresponding accepted taxon. (Actually, things are much more complex than this, for the concept of "accepted taxon"
+is an opinion, but let's do as if life was easy for this one time once.)
 
 ## A more proper way to organize a botanical collection
 *day 3*
