@@ -97,7 +97,7 @@ defmodule Garden.Plant do
     belongs_to :location, Garden.Location
     field :name, :string
     field :species, :string
-    field :bought_on, utc_datetime
+    field :bought_on, :utc_datetime
     field :bought_from, :string
   end
 end
@@ -387,9 +387,9 @@ defmodule Garden.Location do
 
   schema "locations" do
     has_many :plants, Garden.Plant  # backward link
-    field :code, string
-    field :name, string
-    field :description, string
+    field :code, :string
+    field :name, :string
+    field :description, :string
   end
 end
 ```
@@ -464,7 +464,7 @@ defmodule Taxonomy.Rank do
   use Ecto.Schema
 
   schema "ranks" do
-    field :name, string
+    field :name, :string
   end
 end
 
@@ -472,7 +472,7 @@ defmodule Taxonomy.Taxon do
   use Ecto.Schema
 
   schema "taxa" do
-    field :epithet, string
+    field :epithet, :string
     belongs_to :parent, Taxonomy.taxon
     belongs_to :rank, Taxonomy.Rank
   end
@@ -493,7 +493,7 @@ defmodule Taxonomy.taxon do
   use Ecto.Schema
 
   schema "taxa" do
-    field :epithet, string
+    field :epithet, :string
     has_many :children, Taxonomy.Taxon
     belongs_to :parent, Taxonomy.Taxon
     belongs_to :rank, Taxonomy.Rank
@@ -521,7 +521,7 @@ defmodule Garden.Accession do
     belongs_to :taxon, Taxonomy.Taxon
     field :code, :string
     field :orig_quantity, :integer
-    field :bought_on, utc_datetime
+    field :bought_on, :utc_datetime
     field :bought_from, :string
   end
 end
