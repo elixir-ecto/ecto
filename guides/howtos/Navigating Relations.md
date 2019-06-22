@@ -451,35 +451,13 @@ Tracheophyta
 Here we have one "Division", two "Orders", four "Families" and we only mentioned one genus per family, plus we have two species
 in the *Origanum* genus. The plant species in our sample database are more varied than this.
 
-### Schemas for Taxon and Rank
+### New schema with self-reference
 
 As above, we first write the schemas, then the migration, then run it. The two tables corresponding to the two above concepts are
 not complicated after all, and allow us represent the above information.
 
-```iex
-defmodule Taxonomy.Rank do
-  use Ecto.Schema
-
-  schema "ranks" do
-    field :name, :string
-  end
-end
-
-defmodule Taxonomy.Taxon do
-  use Ecto.Schema
-
-  schema "taxa" do
-    field :epithet, :string
-    belongs_to :parent, Taxonomy.taxon
-    belongs_to :rank, Taxonomy.Rank
-  end
-end
-```
-
 Trouble is: how do we write the migration for the self-reference in `Taxonomy.Taxon`? As you recall, we could not use a schema
 which had not yet been defined, and here we're referring to one while we're busy defining it, and not quite yet done.
-
-### Writing a self referring migration
 
 To `mix`, it makes no difference what we do first, whether the schema modules, or request creation of the boilerplate migration.
 Let's this time do the migration first.
@@ -595,47 +573,33 @@ insert into taxa (id,rank_id,epithet,authorship,parent_id) values
 insert into taxa (id,rank_id,epithet,authorship,parent_id) values
     (38,3,'ursinum','L.',9),
     (39,3,'officinalis','(L.) Trevis.',35),
-    (40,3,'archangelica','L.',11),
-    (41,3,'schoenoprasum','L.',9),
-    (42,3,'xanthochlora','Rothm.',8),
-    (43,3,'eupatoria','L.',6),
-    (44,3,'angustifolia','Mill.',18),
-    (45,3,'officinalis','L.',32),
-    (46,3,'odorata','(L.) Scop.',24),
-    (47,3,'cardiaca','L.',19),
-    (48,3,'officinalis','L.',33),
-    (49,3,'minor','Scop.',33),
-    (50,3,'urbanum','L.',16),
-    (51,3,'hortensis','L.',34),
-    (52,3,'ulmaria','(L.) Maxim. ',13),
-    (53,3,'vulgare','Mill.',14),
-    (54,3,'officinalis','L.',17),
-    (55,3,'officinalis','L.',22),
-    (56,3,'×piperita','L.',23),
-    (57,3,'vulgare','L.',26),
-    (58,3,'europaeus','L.',21),
-    (59,3,'officinale','W.D.J. Koch',20),
-    (60,3,'chamaedrys','L.',36),
-    (61,3,'vulgaris','L.',37),
-    (62,3,'gallica','L.',29),
-    (63,3,'vulgaris','L.',28),
-    (64,3,'reptans','L.',7),
-    (65,3,'vesca','L.',15),
-    (66,3,'vulgaris','L.',28),
-    (67,3,'officinalis','L.',30),
-    (68,3,'graveolens','L.',31),
-    (69,3,'anisum','L.',27),
-    (70,3,'graveolens','L.',10),
-    (71,3,'basilicum','L.',25),
-    (72,3,'sativum','L.',12),
-    (73,3,'schoenoprasum','L.',9);
+    (40,3,'schoenoprasum','L.',9),
+    (41,3,'officinalis','L.',32),
+    (42,3,'officinalis','L.',33),
+    (43,3,'minor','Scop.',33),
+    (44,3,'ulmaria','(L.) Maxim. ',13),
+    (45,3,'officinalis','L.',17),
+    (46,3,'officinalis','L.',22),
+    (47,3,'×piperita','L.',23),
+    (48,3,'vulgare','L.',26),
+    (49,3,'majorana','L.',26),
+    (50,3,'officinale','W.D.J. Koch',20),
+    (51,3,'vulgaris','L.',37),
+    (52,3,'vulgaris','L.',28),
+    (53,3,'vulgaris','L.',28),
+    (54,3,'officinalis','L.',30),
+    (55,3,'graveolens','L.',31),
+    (56,3,'graveolens','L.',10),
+    (57,3,'basilicum','L.',25),
+    (58,3,'sativum','L.',12),
 ```
 
 It's probably useful if we stop here again, and do some data navigation, like we write a query for the taxon named *Sanguisorba*,
 match the query to a variable `q`, and then evaluate `q` and extract the information for the taxon rank, its epithet, and its
 parent taxon epithet.
 
-A piece of cake, or isn't it?
+A piece of cake, or isn't it? (remember to `recompile` when necessary, and remember that values are immutable, and know nothing
+of recompiled modules.)
 
 ```
 q = from t in Taxon, where: t.epithet=="Sanguisorba"
