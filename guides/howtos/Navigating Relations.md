@@ -35,7 +35,8 @@ end
 Now, when we put a plant in the garden, we want it to refer to a location, so the database will help us
 when we need to look for it.
 
-But wait, where should I put these files? Don't we first need an Ecto project?
+But wait, where should I put these files? Don't we first need an Ecto project? Oh, you mean you need help with that, too? Ok, no
+problem, let's do that first.
 
 ## Create the project, and the database
 
@@ -45,8 +46,8 @@ its name and password into the environment variables `USERNAME` and `PASSWORD`, 
 forward slashes in name or password, no spaces, nor other things that will be interpreted by the `bash`, thank you.
 
 ```bash
-export USERNAME=<fill in the blanks>
-export PASSWORD=<fill in the blanks>
+export USERNAME=/fill in the blanks/
+export PASSWORD=/fill in the blanks/
 mix new botany --sup
 cd botany
 sed mix.exs -i -e '/defp deps do/,/end/s/\[/\[\n      {:ecto_sql, "~> 3.0"},\n      {:postgrex, ">= 0.0.0"},/'
