@@ -25,9 +25,9 @@ defmodule Garden.Location do
   use Ecto.Schema
 
   schema "locations" do
-    field :code, string
-    field :name, string
-    field :description, string
+    field :code, :string
+    field :name, :string
+    field :description, :string
   end
 end
 ```
@@ -84,9 +84,9 @@ defmodule Garden.Plant do
 
   schema "plants" do
     belongs_to :location, Garden.Location
-    field :name, string
+    field :name, :string
     field :bought_on, utc_datetime
-    field :bought_from, string
+    field :bought_from, :string
   end
 end
 ```
@@ -94,24 +94,62 @@ end
 > Actually, the `bought_from` should be also a `belongs_to` relation, pointing to a table with contacts, like friends, other
 > gardens, commercial nurseries. But since there's so much more to come, let's keep it like this for the time being.
 
-What does the `belongs_to` macro really do?  How does impact our physical database structure?  For this, we need to update the
-database structure with the new definitions, that is, we need a migration.
+What does the `belongs_to` macro really do?  How does impact our physical database structure?  It would be nice if it was the
+system telling us, but in reality, it's us who need to tell the system, by writing the corresponding migration.
 
 You came here after doing the more introductiory how-tos and tutorials, so you know how to set up an Elixir project, how to
 configure your Ecto-DBMS connection, how to have Ecto create a database, and you know how to handle migrations.
 
-Remember that Ecto does keep track of database changes through migrations, yet it is not particularly helpful when it comes to
-writing such migrations. Until there is a `mix` recipe for computing migrations (it could do so, from the current schemas and the
-cumulative effect of all existing migrations), we need to write things twice: once in the schemas, and again in migration
-files. So let's get to work and write our first migration, relative to moving from an empty database to one with the above schema
-definitions.
+> Remember that Ecto does keep track of database changes through migrations, yet it is not particularly helpful when it comes to
+> writing the migration corresponding to what we change in the schemas. Until there is a `mix` recipe for computing migrations
+> (**TODO** anybody interested in reverse engineer django's migrations?), we need to write things twice: once in the schemas, and
+> again in migration files. 
 
-**TODO**
+So let's get to work and write our first migration, relative to moving from an empty database to one with the above schema
+definitions. We create a boilerplate named migration, 
+
+```
+mix ecto.gen.migration initial_migration
+```
+
+and we fill in the blanks in the newly created file:
+
+```iex
+defmodule Botany.Repo.Migrations.InitialMigration do
+  use Ecto.Migration
+
+  def change do
+    create table(:locations) do
+      add :code, :string
+      add :name, :string
+      add :description, :string
+    end
+
+    create table(:plants) do
+      add :location_id, references(:locations)
+      add :name, :string
+      add :bought_on, :utc_datetime
+      add :bought_from, :string
+    end
+  end
+end
+```
+
+We've added all fields, respecting their definition, and we've added a `location_id` field to the `plants` table, referring to
+the `locations` table, by its default primary key, `id`. Obviously, the migration works if we first create the `locations` table,
+which we then refer from `plants`.
 
 With the initial migration in place, let's apply it, so that we can finally have a look at the database tables.
 
 ```
 mix ecto.migrate
+```
+
+We have added quite a few files to our project, and altered others, let's do some housekeeping,
+
+```
+git add lib/botany/*.ex mix.lock priv config/config.exs
+git commit -m "first migration"
 ```
 
 Fine, it took time, but we now have our updated schema, where we can check the meaning of `belongs_to`. To have a look, we need
@@ -260,10 +298,10 @@ defmodule Garden.Accession do
 
   schema "accessions" do
     belongs_to :taxon, Taxonomy.Taxon
-    field :code, string
-    field :orig_quantity, integer
+    field :code, :string
+    field :orig_quantity, :integer
     field :bought_on, utc_datetime
-    field :bought_from, string
+    field :bought_from, :string
   end
 end
 
@@ -273,8 +311,8 @@ defmodule Garden.Plant do
   schema "plants" do
     belongs_to :location, Garden.Location
     belongs_to :accession, Garden.Accession
-    field :code, string
-    field :quantity, integer
+    field :code, :string
+    field :quantity, :integer
   end
 end
 ```
