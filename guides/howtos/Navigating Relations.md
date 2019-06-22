@@ -235,7 +235,7 @@ iex> Garden.Plant |> Ecto.Query.first
 ```
 
 We gave two instructions, we are not yet there.  With `Garden.Plant`, we mentioned our module, which is just our module,
-*duh!*. With `Garden.Plant |. Ecto.Query.first`, we built a query on the schema in our module, and this is a query, we still did
+*duh!*. With `Garden.Plant |> Ecto.Query.first`, we built a query on the schema in our module, and this is a query, we still did
 not hit the database.
 
 To hit the database, we have to execute the query, something we can do by `Garden.Plant |> Ecto.Query.first |> Botany.Repo.one`.
