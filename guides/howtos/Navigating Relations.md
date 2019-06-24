@@ -229,8 +229,8 @@ insert into locations (id, code, name) values (1, 'GH1', 'tropical greenhouse'),
 insert into plants (id, location_id, name, species) values
     ( 1,4,'2018.0002.1','Salvia fruticosa'),
     ( 2,2,'2018.0019.1','Origanum majorana'),
-    ( 3,7,'2018.0027.1','Salvia officinalis'),
-    ( 4,4,'2018.0027.1','Salvia fruticosa'),
+    ( 3,7,'2018.0025.1','Salvia officinalis'),
+    ( 4,4,'2018.0026.1','Salvia fruticosa'),
     ( 5,2,'2018.0027.1','Salvia sclarea'),
     ( 6,1,'2018.0029.1','Musa sp.'),
     ( 7,1,'2018.0032.1','Heliconia sp.'),
@@ -700,8 +700,11 @@ batches, where a batch contains several groups of plants from the same source, a
 time, of the same species, and then these plants may end in different locations in the garden.
 To make sure that the physical plants are kept together conceptually, we introduce a library
 science concept into our botanical collection: an "Accession", grouping the plants sharing the
-same core information.  This allow us keeping together plants of the same species, which were
-acquired together.  It also streamlines connecting plants to taxa: if a taxonomist tells you
+same core information.  This allow us keeping together plants which belong together.
+
+In our above sample data, we had 
+
+It also streamlines connecting plants to taxa: if a taxonomist tells you
 that some individual plant belongs to some species, this opinion will apply to all plants in
 the same accession.
 
@@ -745,6 +748,18 @@ defmodule Botany.Plant do
   end
 end
 ```
+
+Here we have two types of migrations, one is the schema migration, which we have seen how to
+handle, but what about the data we already have in the database?  Our `Plant` had a `species`
+field, no more than a `:string`.  It was a very rude implementation of the link to a `Taxon`,
+which now goes through `Accession` and `Verification`.  Same question about plant.code, now 
+
+Do we just forget about it, or can we
+migrate that information?  
+
+In this tutorial we will split the plant.code information in the two fields
+accession.code and the new shorter plant.code, but we will forget about the species
+identification.
 
 ### Contacts management (one-to-one)
 
