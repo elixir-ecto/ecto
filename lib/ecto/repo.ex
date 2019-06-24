@@ -111,11 +111,24 @@ defmodule Ecto.Repo do
   Below we list all events developers should expect. All examples below consider
   a repository named `MyApp.Repo`:
 
-    * `[:my_app, :repo, :query]` - should be invoked on every query send
-      to the adapter, including queries that are related to the transaction
-      management. The measurements will include a `total_time` and any other
-      relevant subtime, such as decode and queue time. The metadata is a map
-      with parameters, source, result and other relevant information
+  #### `[:my_app, :repo, :query]`
+
+  This event should be invoked on every query sent to the adapter, including
+  queries that are related to the transaction management.
+
+  The `:measurements` map will include the following, all given in the
+  `:native` time unit:
+
+    - `:queue_time` - the time spent waiting to check out a database connection
+    - `:query_time` - the time spent executing the query
+    - `:decode_time` - the time spent decoding the data received from the database
+    - `:total_time` - the sum of the other measurements
+
+  All measurements are given in the `:native` time unit. You can read more
+  about it in the docs for `System.convert_time_unit/3`.
+
+  A `:metadata` map is also sent, including parameters, source, the query
+  string, the repo it was run by, and the query result.
 
   ## Read-only repositories
 
