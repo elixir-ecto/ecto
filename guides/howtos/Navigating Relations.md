@@ -295,8 +295,8 @@ value in the `location` field (heck, think of it, we never saw a `location` fiel
 Apart from the `NotLoaded` which we will explore shortly, all the above is precisely the effect
 of that `belongs_to` macro in our schema and that `references` in the migration.
 
-**TODO**: some more explicit comments on the effects of the `belongs_to` macro, using the terms
-in the documentation, namely `belongs_to(name, queryable, opts \\ [])`.
+Let's refer back to the documentation for `belongs_to(name, queryable, opts \\ [])`.
+In our case, `name` is `:location`, and `queryable` is `Botany.Location`.  **TODO**
 
 ### Preloading associations
 
@@ -332,9 +332,10 @@ SELECT l0."id", l0."code", l0."name", l0."description", l0."id" FROM "locations"
 }
 ```
 
-Now we hit the database twice, and got a `%Location` structure within our `%Plant` structure,
-associated, as we expected, to the `location` field.  Let's do it better, matching it to a `p1`
-variable.
+Now we hit the database twice (side effect was the two `SELECT` logging records on our
+terminal), and we got a `%Location` structure within our `%Plant` structure, associated, as we
+expected, to the `location` field.  Let's match this value to a `p1` variable, so we can reuse
+it.
 
 ```iex
 iex> p1 = Plant |> Ecto.Query.first |> Botany.Repo.one |> Botany.Repo.preload(:location)
@@ -356,12 +357,11 @@ Whatever looks easier, or clearer to you in the context.  I like the first one b
 we also assert that `p1` is a `Plant` structure.  In both cases, we're using the effects of the
 `belongs_to` macro.
 
-If we had matched the `p1` variable to the expression without the `preload` trailing pipe, we
-could still add that part, at any intermediate moment before matching the field to the `loc8`
-variable.  Do remember that we are still in an environment where objects are immutable, so
-matching `p1` to the expression missing the `preload` part will be just that, a match to an
-immutable expression.  If you later add the `preload` pipe to it, you should match a variable to
-it, like this, where we're reusing the same variable:
+Consider the situation in which we had matched the `p1` variable to the expression without the
+`preload` trailing pipe.  Never forget we are in an environment where objects are immutable, so
+in this case `p1` would just be what you defined it to be, a match to a specific immutable
+value.  If you later add the `preload` pipe to it, this would not alter your `p1` value, unless
+you re-match `p1` to the new value, like this:
 
 ```iex
 iex> p1 = p1 |> Botany.Repo.preload(:location)
@@ -373,9 +373,9 @@ It does no harm evaluating a `preload` on a preloaded field, it's an idempotent 
 
 Let's find an answer to a most obvious question: what plants are there at a given location?
 
-Say we're interested in Greenhouse 1, `GH1`, let's select it, match it to a variable, and look
-up all the plants at that location.  (For ease of typing, let's first import the `Ecto.Query`
-module.)
+Say we want to explore the content of Greenhouse 1, `GH1`.  Let's select it, match it to a
+variable, and look up all the plants at that location.  (For ease of typing, let's first import
+the `Ecto.Query` module.)
 
 ```iex
 iex> import Ecto.Query
@@ -384,7 +384,8 @@ iex> gh1 = (from l in Location, where: l.code=="GH1") |> Botany.Repo.one
 
 How do we do that… I would like to just type `gh1.plants`, doesn't it make sense, and I don't
 mind if I first need to pipe through a `preload`… But, as of now, all I can think of is to type
-a complete query!
+a complete query!  After all, `gh1` is just a value, a structure, it has no `plants` field, and
+the module does not define how to compute that.
 
 ```iex
 iex> q = from p in Plant, where: p.location_id==^gh1.id
@@ -415,9 +416,11 @@ end
 get a nicely populated `gh1.plants` field, with a list of `%Plant` structures.  You should be
 surprised, or maybe not, for we did not need any migration.
 
-Other than `belongs_to`, `has_many` does not cause any change on the physical database schema,
-it just informs Ecto that there is already a link leading here, where to find its definition,
-and that we want to navigate it in the opposite direction.
+The `belongs_to` macro defines a field in the schema containing it, and implies the presence of
+a foreign key in the database table corresponding to our schema, pointing to the `queryable`
+given as second argument.  The `has_many` macro also defines a field in the schema containing
+it, but it implies the presence of a foreign key in the target table, pointing back to the
+database table corresponding to our schema.
 
 Have fun with the project and the data, explore, learn, understand, and take a well deserved
 pause: There's much more to come, and it's not going to be easy.
@@ -429,10 +432,10 @@ You must have heard of those funny names biologists use, like they say *Canis lu
 when all they mean is "dog", or when they confuse you with *Origanum majorana* (is it oregano,
 or marjoram?) and what is the reason that common oregano should be considered vulgar? Also, if
 you have been in the Tropics, you surely noticed how easy it is to confuse a banana plant with
-larger flowerless heliconia, and with other plants that provide no fruit nor carry any
-particularly showy flowers.  The answer is in **taxonomy** : common oregano and marjoram both
-belong to the *Origanum* genus, while bananas, heliconias, and bihao belong to the
-*Zingiberales* order, and all are vascular plants, or *Tracheophyta*.
+larger flowerless heliconia, and with other plants used in *tamales*, which provide no fruit
+nor carry any particularly showy flowers.  The answer is in **taxonomy** : common oregano and
+marjoram both belong to the *Origanum* genus, while bananas, heliconias, and bihao belong to
+the *Zingiberales* order, and all are vascular plants, or *Tracheophyta*.
 
 If you think we chose a too complex example, well, we are using this example precisely because
 it's a complex one, coming from real life, and not the rather tedious and far too simplistic
@@ -446,12 +449,12 @@ Oh, and back to *Zingiberales*, Ginger —*Zingiber*— is also one of them.
 
 ### Modelling taxonomic information
 
-The above lengthy explanation is to introduce the need for self-relations.  Taxonomists speak of
-a `Taxon`, which is a concept that encompasses Orders, Genera, Species, as well as several more.
-Each of these names identifies a `Rank`, and a `Taxon` has a rank (or, in Ecto terms, it
-`belongs_to` a rank), and also belongs to one taxon at a higher rank.  A `Rank` has nothing more
-than a name.  We could add an integer value to represent its depth in the taxonomy tree of life,
-but let's forget about that for the time being.
+Modelling taxonomic information is a typical example where we need self-relations.  Taxonomists
+speak of a `Taxon`, which is a concept that encompasses Divisions, Orders, Families, as well as
+several more.  Each of these names identifies a `Rank`, and a `Taxon` has a rank (or, in Ecto
+terms, it `belongs_to` a rank), and also belongs to one taxon at a higher rank.  A `Rank` has
+nothing more than a name.  We could add an integer value to represent its depth in the taxonomy
+tree of life, but let's forget about that for the time being.
 
 The above mentioned taxa ('taxa' is the Greek plural form for taxon) are so organized:
 
@@ -492,12 +495,12 @@ As above, we first write the schemas, then the migration, then run it.  The two 
 corresponding to the two above concepts are not complicated after all, and allow us represent
 the above information.
 
-Trouble is: how do we write the migration for the self-reference in `Botany.Taxon`? As you
+Question is: how do we write the migration for the self-reference in `Botany.Taxon`? As you
 recall, we could not use a schema which had not yet been defined, and here we're referring to
 one while we're busy defining it, and not quite yet done.
 
 To `mix`, it makes no difference what we do first, whether the schema modules, or request
-creation of the boilerplate migration.  Let's this time do the migration first.
+creation of the boilerplate migration.  Let's this time generate the migration first.
 
 ```bash
 mix ecto.gen.migration create_taxonomy
@@ -594,14 +597,14 @@ insert into taxa (id,rank_id,epithet,authorship,parent_id) values
 ```
 
 It's probably useful if we stop here again, and do some data navigation, like we write a query
-for the taxon named *Sanguisorba*, match the query to a variable `q`, and then evaluate `q` and
+for the taxon named *Salvia*, match the query to a variable `q`, and then evaluate `q` and
 extract the information for the taxon rank, its epithet, and its parent taxon epithet.
 
 A piece of cake, or isn't it? (remember to `recompile` when necessary, and remember that values
 are immutable, and that reloading a module does not impact existing values.)
 
 ```
-q = from t in Taxon, where: t.epithet=="Sanguisorba"
+q = from t in Taxon, where: t.epithet=="Salvia"
 ```
 
 Next part is evaluation, and preloading fields:
@@ -650,10 +653,10 @@ The above paragraph introduces the concept of botanic synonyms.
 
 What does it imply to our case?
 
-We need to represent synonymy links among taxa, where each taxon either links to its accepted
-taxon, or the link is `NULL`, meaning that the taxon is itself an accepted name.  (Actually,
-things are much more complex than this, for the concept of "accepted taxon" is an opinion, but
-let's do as if life was easy for this one time once.)
+We can represent synonymy among taxa, where each taxon either links to its accepted taxon, or
+the link is `NULL`, meaning that the taxon is itself an accepted name.  (Actually, things are
+much more complex than this, for the concept of "accepted taxon" is an opinion, but let's do as
+if life were easy for this one time once.)
 
 In a way, this is also some sort of `belongs_to`, as when a taxon S points to a taxon A as its
 accepted name, it is saying that it belongs to the set of synonyms for A.  The back link is just
@@ -683,18 +686,24 @@ defmodule Botany.Repo.Migrations.AddingSynonymies do
 end
 ```
 
+The more alert reader noticed this from the start: migrations closely describe the database
+table and fields, while the two macros we met add fields to our schemas, and use the effects of
+the migrations.
 
 ## A more proper way to organize a botanical collection
 *day 3*
 
+### The garden as a library: the Accession
+
 When a gardener acquires a plant, they seldom acquire just one for each species, it is often in
-batches, where a batch is plants from the same species, same source, time, and then these plants
-may end in different locations in the garden.  To make sure that the physical plants are kept
-together conceptually, we introduce a library science concept into our botanical collection: an
-"Accession".  This allow us keeping together plants of the same species, which were acquired
-together.  It also streamlines connecting plants to taxa: if a taxonomist tells you that some
-individual plant belongs to some species, this opinion will apply to all plants in the same
-accession.
+batches, where a batch contains several groups of plants from the same source, at the same
+time, of the same species, and then these plants may end in different locations in the garden.
+To make sure that the physical plants are kept together conceptually, we introduce a library
+science concept into our botanical collection: an "Accession", grouping the plants sharing the
+same core information.  This allow us keeping together plants of the same species, which were
+acquired together.  It also streamlines connecting plants to taxa: if a taxonomist tells you
+that some individual plant belongs to some species, this opinion will apply to all plants in
+the same accession.
 
 But what if an other taxonomist has a different opinion? This happens regularly, and one
 generally notes all opinions, which in botany jargon are called "Verifications", in an
@@ -736,3 +745,7 @@ defmodule Botany.Plant do
   end
 end
 ```
+
+### Contacts management (one-to-one)
+
+finally, `one_to_one`: contacts, sources, verifiers, gardners, visitors.
