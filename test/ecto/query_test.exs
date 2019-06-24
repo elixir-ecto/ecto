@@ -7,6 +7,13 @@ defmodule Ecto.QueryTest do
   import Ecto.Query
   alias Ecto.Query
 
+  defmodule Post do
+    use Ecto.Schema
+
+    schema "posts" do
+    end
+  end
+
   defmacrop macro_equal(column, value) do
     quote do
       unquote(column) == unquote(value)
@@ -53,6 +60,14 @@ defmodule Ecto.QueryTest do
       assert_raise Ecto.Query.CompileError,
                    ~r"comparison with nil is forbidden as it is unsafe", fn ->
         quote_and_eval Post |> where([p], p.title == ^nil)
+      end
+    end
+
+    test "does not allow interpolated nils at runtime" do
+      assert_raise ArgumentError,
+                   ~r"comparison with nil is forbidden as it is unsafe", fn ->
+        id = nil
+        from p in Post, where: [id: ^id]
       end
     end
   end

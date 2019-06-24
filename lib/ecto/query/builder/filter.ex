@@ -23,8 +23,9 @@ defmodule Ecto.Query.Builder.Filter do
         {field, nil}, _params ->
           Builder.error! "nil given for #{inspect field}. Comparison with nil is forbidden as it is unsafe. " <>
                          "Instead write a query with is_nil/1, for example: is_nil(s.#{field})"
-        {field, value}, params when is_atom(field) ->
-          {value, {params, :acc}} = Builder.escape(value, {binding, field}, {params, :acc}, vars, env)
+        {field, in_value}, params when is_atom(field) ->
+          {out_value, {params, :acc}} = Builder.escape(in_value, {binding, field}, {params, :acc}, vars, env)
+          value = check_for_nils(in_value, out_value, field, params)
           {{:{}, [], [:==, [], [to_escaped_field(binding, field), value]]}, params}
         _, _params ->
           Builder.error! "expected a keyword list at compile time in #{kind}, " <>
@@ -145,4 +146,25 @@ defmodule Ecto.Query.Builder.Filter do
     do: {{:., [], [{:&, [], [binding]}, field]}, [], []}
   defp to_escaped_field(binding, field),
     do: {:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [binding]]}, field]]}, [], []]}
+
+  defp check_for_nils({:^, _, [_]} = _in_value, out_value, field, params) do
+    quote do
+      Ecto.Query.Builder.Filter.not_nil!(unquote(out_value), unquote(field), unquote(params))
+    end
+  end
+
+  defp check_for_nils(_in_value, out_value, _field, _params), do: out_value
+
+  def not_nil!({:^, [], [_ix]} = out_value, field, params) do
+    val = Enum.find_value(params, fn {val, {_ix, params_field}} ->
+      if params_field == field, do: val
+    end)
+
+    if is_nil(val) do
+      raise ArgumentError, "comparison with nil is forbidden as it is unsafe. " <>
+                     "If you want to check if a value is nil, use is_nil/1 instead"
+    else
+      out_value
+    end
+  end
 end
