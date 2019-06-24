@@ -1,6 +1,7 @@
 defmodule Ecto.Repo.Registry do
   @moduledoc false
 
+  # TODO: Use persistent_term when depending on Erlang/OTP 22+
   use GenServer
 
   ## Public interface
