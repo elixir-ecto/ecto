@@ -225,7 +225,7 @@ model botanic data.)
 insert into locations (id, code, name) values (1, 'GH1', 'tropical greenhouse'),
     (2, 'GH2', 'mediterranean'), (3, 'B01', 'entrance front'),
     (4, 'B02', 'left of main path-1'), (5, 'B04', 'left of main path-2'),
-    (6, 'B06', right of main path-1'), (7, 'B03', 'right of main path-2');
+    (6, 'B06', 'right of main path-1'), (7, 'B03', 'right of main path-2');
 insert into plants (id, location_id, name, species) values
     ( 1,4,'2018.0002.1','Salvia fruticosa'),
     ( 2,2,'2018.0019.1','Origanum majorana'),
@@ -240,8 +240,8 @@ insert into plants (id, location_id, name, species) values
     (11,1,'2018.0047.2','Musa sp.'),
     (12,1,'2018.0057.3','Musa sp.'),
     (13,6,'2018.0057.1','Zingiber sp.'),
-    (14,3,'2018.0058.1','Zingiber sp.'),
-    (15,3,'2018.0063.1','Zingiber sp.'),
+    (14,3,'2018.0058.1','Calathea sp.'),
+    (15,3,'2018.0063.1','Calathea sp.'),
     (16,3,'2018.0067.1','Origanum vulgare'),
     (17,3,'2018.0068.1','Origanum Majorana'),
     (18,2,'2018.0044.2','Salvia officinalis');
@@ -470,8 +470,8 @@ Tracheophyta
  |  |--Heliconiaceae
  |  |  |--Heliconia  (heliconias)
  |  |
- |  |--Heliconiaceae
- |     |--Heliconia  (bihao)
+ |  |--Marantaceae
+ |     |--Calathea  (bihao)
  |
  |--Lamiales
     |--Lamiaceae
@@ -485,7 +485,7 @@ Tracheophyta
           |--Salvia sclarea
 ```
 
-Here we have one "Division", two "Orders", four "Families" and then genera and species.  To keep
+Here we have one "Division", two "Orders", five "Families" and then genera and species.  To keep
 things as simple as possible, but still meaningful, we will work with a real life collection,
 but limited to the above taxa.
 
@@ -583,18 +583,20 @@ insert into taxon (id,rank_id,epithet,authorship,parent_id) values
     (3,3,'Musaceae','Juss.',2),
     (4,7,'Musa','L.',3),
     (5,3,'Zingiberaceae','Martinov',2),
-    (6,7,'Zingiber','Mill.',5),
-    (7,3,'Heliconiaceae','Vines',2),
-    (8,7,'Heliconia','L.',7),
-    (9,2,'Lamiales','Bromhead',1),
-    (10,3,'Lamiaceae','Martinov',9),
-    (11,7,'Origanum','L.',10),
-    (12,8,'vulgare','L.',11),
-    (13,8,'majorana','L.',11),
-    (14,7,'Salvia','L.',10),
-    (15,8,'fruticosa','Mill.',14),
-    (16,8,'oficinalis','L.',14),
-    (17,8,'sclarea','L.',14);
+    (6,3,'Marantaceae','R.Br.',2),
+    (7,7,'Zingiber','Mill.',6),
+    (8,3,'Heliconiaceae','Vines',2),
+    (9,7,'Heliconia','L.',8),
+    (10,2,'Lamiales','Bromhead',1),
+    (11,3,'Lamiaceae','Martinov',10),
+    (12,7,'Origanum','L.',11),
+    (13,8,'vulgare','L.',12),
+    (14,8,'majorana','L.',12),
+    (15,7,'Salvia','L.',11),
+    (16,8,'fruticosa','Mill.',15),
+    (17,8,'oficinalis','L.',15),
+    (18,8,'sclarea','L.',15),
+    (19,7,'Calathea','G.Mey.',6);
 ```
 
 It's probably useful if we stop here again, and do some data navigation, like we write a query
