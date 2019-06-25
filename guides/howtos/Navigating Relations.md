@@ -520,7 +520,7 @@ end
 defmodule Botany.Taxon do
   use Ecto.Schema
 
-  schema "taxa" do
+  schema "taxon" do
     field :epithet, :string
     field :authorship, :string
     belongs_to :parent, Botany.Taxon
@@ -530,7 +530,8 @@ end
 ```
 
 (The authorship field is a hard requirement by botanists.  Without that, they'll never believe
-we're serious about their subject.)
+we're serious about their subject.  Also, we leave the table name in its singular form, because
+the correct Greek plural looks so weird.)
 
 And let's write a wild guess for the migration, as if all would just work.
 
@@ -543,11 +544,11 @@ defmodule Botany.Repo.Migrations.CreateTaxonomy do
       add :name, :string
     end
 
-    create table(:taxa) do
+    create table(:taxon) do
       add :epithet, :string
       add :authorship, :string
       add :rank_id, references(:ranks)
-      add :parent_id, references(:taxa)
+      add :parent_id, references(:taxon)
     end
   end
 end
@@ -560,12 +561,12 @@ mix ecto.migrate
 ```
 
 Wow, really, just the four `[info]` lines? No errors? Since neither you nor I believe it, let's
-check in the SQL shell: go back to it, and give the command `\d taxa`.
+check in the SQL shell: go back to it, and give the command `\d taxon`.
 
 ```
 Foreign-key constraints:
-    "taxa_parent_id_fkey" FOREIGN KEY (parent_id) REFERENCES taxa(id)
-    "taxa_rank_id_fkey" FOREIGN KEY (rank_id) REFERENCES ranks(id)
+    "taxon_parent_id_fkey" FOREIGN KEY (parent_id) REFERENCES taxon(id)
+    "taxon_rank_id_fkey" FOREIGN KEY (rank_id) REFERENCES ranks(id)
 ```
 
 Neat, cool, nice.
@@ -575,9 +576,9 @@ insert data, but how to navigate it, let's add some ranks and taxa, from the sam
 
 ```sql
 insert into ranks (id,name) values (1,'divisio'), (2,'ordo'), (3,'familia'), (7,'genus'), (8,'species');
-insert into taxa (id,rank_id,epithet,authorship) values
+insert into taxon (id,rank_id,epithet,authorship) values
     (1,1,'Tracheophyta','Sinnott, ex Cavalier-Smith');
-insert into taxa (id,rank_id,epithet,authorship,parent_id) values
+insert into taxon (id,rank_id,epithet,authorship,parent_id) values
     (2,2,'Zingiberales','Grieseb.',1),
     (3,3,'Musaceae','Juss.',2),
     (4,7,'Musa','L.',3),
@@ -631,7 +632,7 @@ a repetition of what we did before with plants at a location, with the important
 the self linking key is not called as the collection name (with `plants`, it was `location_id`.
 Here it would be `taxon_id`, which is obviously not the case), but it is `parent_id`.
 
-The field to add to the `taxa` schema is:
+The field to add to the `taxon` schema is:
 
 ```
     has_many :children, Botany.Taxon, foreign_key: :parent_id  # backward link
@@ -679,8 +680,8 @@ defmodule Botany.Repo.Migrations.AddingSynonymies do
   use Ecto.Migration
 
   def change do
-    alter table("taxa") do
-      add :accepted_id, references(:taxa)
+    alter table("taxon") do
+      add :accepted_id, references(:taxon)
     end
   end
 end
@@ -693,7 +694,7 @@ the migrations.
 ## A more proper way to organize a botanical collection
 *day 3*
 
-### The garden as a library: the Accession
+### The garden as a library: the Accession (data migration - question)
 
 When a gardener acquires a plant, they seldom acquire just one for each species, it is often in
 batches, where a batch contains several groups of plants from the same source, at the same
@@ -702,18 +703,15 @@ To make sure that the physical plants are kept together conceptually, we introdu
 science concept into our botanical collection: an "Accession", grouping the plants sharing the
 same core information.  This allow us keeping together plants which belong together.
 
-In our above sample data, we had 
+In our above sample data, we had a `Plant.name` field, composed of a year, a sequential number,
+and a second sequential number.  By now you may have guessed: the first two components were
+indeed the Accession code, while the trailing number identified the plant within the accession.
 
-It also streamlines connecting plants to taxa: if a taxonomist tells you
-that some individual plant belongs to some species, this opinion will apply to all plants in
-the same accession.
+The intermediation of the accession concept also streamlines connecting plants to taxa: if a
+taxonomist tells you that some individual plant belongs to some species, this opinion will
+apply to all plants in the same accession.
 
-But what if an other taxonomist has a different opinion? This happens regularly, and one
-generally notes all opinions, which in botany jargon are called "Verifications", in an
-intermediate table that defines a many-to-many relation, between accessions and taxa.
-
-Let's correct the `Botany.Plant` module, and create two new `Botany.Accession` and
-`Botany.Verification` module.
+We correct the `Botany.Plant` module, and create new `Botany.Accession` module, like this:
 
 ```iex
 defmodule Botany.Accession do
@@ -721,19 +719,10 @@ defmodule Botany.Accession do
 
   schema "accessions" do
     field :code, :string
+    belongs_to :taxon, Botany.Taxon
     field :orig_quantity, :integer
     field :bought_on, :utc_datetime
     field :bought_from, :string
-  end
-end
-
-defmodule Botany.Verification do
-  use Ecto.Schema
-
-  schema "verifications" do
-    belongs_to :accession, Botany.Accession
-    belongs_to :taxon, Botany.Taxon
-    field :verifier, :string
   end
 end
 
@@ -749,17 +738,67 @@ defmodule Botany.Plant do
 end
 ```
 
-Here we have two types of migrations, one is the schema migration, which we have seen how to
-handle, but what about the data we already have in the database?  Our `Plant` had a `species`
-field, no more than a `:string`.  It was a very rude implementation of the link to a `Taxon`,
-which now goes through `Accession` and `Verification`.  Same question about plant.code, now 
+But if we do this in one shot, we will drop all the information we have in the `name` and
+`species` columns of the `plants` table.  On the other hand, we do intend to drop those columns
+in the end.
 
-Do we just forget about it, or can we
-migrate that information?  
+The point to make here is that we have two types of migrations, one is the schema migration,
+which we have seen how to handle, but how to handle data migration, in particular when across
+relations?  This is what we will walk through in the next section.
 
-In this tutorial we will split the plant.code information in the two fields
-accession.code and the new shorter plant.code, but we will forget about the species
-identification.
+### A two steps data migration
+
+Let's begin with the more simple case: `Plant.name`.  Migrating it means splitting the
+information among the plant record and its corresponding accession.
+
+> Our `Plant` also had a `species` field, no more than a `:string`.  It was a very rude way to
+> link a plant to its taxon.  We now defined the link much more formally, through the
+> intermediate `Accession`.  In this tutorial we will split the plant.name information in the
+> two fields accession.code and the new shorter plant.code, but we will forget about the
+> species identification.  **TODO Any volunteer?**
+
+Let's start by collecting accession data now contained in the plants table, by creating an
+intermediate accession.
+
+How do we define migrations, relying on schema definitions as of a specific situation in
+history, not the latest module contents?  Before applying a migration, the tables have a form,
+and after the migration, they have an other form.  if we're looking at an older migration,
+chances are that the current table has yet an other definition.  It might have been dropped
+altogether.
+
+One thing that will guaranteed work is to include one or more intermediate structure
+definitions, on the same table.
+
+### Verifications (many-to-many)
+
+But what if an other taxonomist has a different opinion? This happens regularly, and one
+generally notes all opinions, which in botany jargon are called "Verifications", in an
+intermediate table that defines a many-to-many relation, between accessions and taxa.
+
+We remove the taxon_id foreign key from accessions and move it into verifications.
+
+```iex
+defmodule Botany.Verification do
+  use Ecto.Schema
+
+  schema "verifications" do
+    belongs_to :accession, Botany.Accession
+    belongs_to :taxon, Botany.Taxon
+    field :verifier, :string
+  end
+end
+
+defmodule Botany.Accession do
+  use Ecto.Schema
+
+  schema "accessions" do
+    field :code, :string
+    field :orig_quantity, :integer
+    field :bought_on, :utc_datetime
+    field :bought_from, :string
+  end
+end
+```
 
 ### Contacts management (one-to-one)
 
