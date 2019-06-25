@@ -78,7 +78,7 @@ defmodule Ecto.Repo do
         {:ok, Keyword.put(config, :url, System.get_env("DATABASE_URL"))}
       end
 
-  ## The Repository API
+  ## Shared options
 
   Almost all of the repository outlined in this module accept the following
   options:
