@@ -643,6 +643,22 @@ The field to add to the `taxon` schema is:
 And as before, there's no impact on the database, just `recompile`, execute the same query,
 taking care to `preload(:children)`.
 
+Time for a bit of taxonomic navigation?  Experiment on your own, moving up the tree (match the
+`.parent`) and then down (match the `.children` and choose one).  For example from Calathea to
+Musa:
+
+```iex
+import Ecto.Query
+q = from t in Botany.Taxon, where: t.epithet=="Calathea"
+origin = q |> Botany.Repo.one |> Botany.Repo.preload(:parent)
+family1 = origin.parent |> Botany.Repo.preload(:parent)
+ordo = family1.parent |> Botany.Repo.preload(:children)
+family2 = Enum.find(ordo.children, fn x -> x.epithet=="Musaceae" end) |> Botany.Repo.preload(:children)
+target = Enum.find(family2.children, fn x -> x.epithet=="Musa" end) |> Botany.Repo.preload(:children)
+```
+
+How would you do the same, but using pattern matching?
+
 ### Writing a second self referring migration
 
 As said in the introduction, we're doing this example because it's a complex one.  Now one extra
