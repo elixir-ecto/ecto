@@ -706,8 +706,9 @@ end
 ```
 
 The more alert reader noticed this from the start: migrations closely describe the database
-table and fields, while the two macros we met add fields to our schemas, and use the effects of
-the migrations.
+table and fields, using terms very recognizable from a SQL point of view. The two `belongs_to`
+and `has_many` macros on the other hand add fields to our schemas, and use the effects of the
+migrations.
 
 ## A more proper way to organize a botanical collection
 *day 3*
