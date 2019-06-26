@@ -726,14 +726,11 @@ In our above sample data, we had a `Plant.name` field, composed of a year, a seq
 and a second sequential number.  By now you may have guessed: the first two components were
 indeed the Accession code, while the trailing number identified the plant within the accession.
 
-The `Plant.species` field, a name of a taxon, can now become a foreign key to a taxon record,
-and can be moved to the `Accession` structure.
+All common information for all plants in the same accession, we just move that to the
+Accession.
 
-The intermediation of the accession concept also streamlines connecting plants to taxa: if a
-taxonomist tells you that some individual plant belongs to some species, this opinion will
-apply to all plants in the same accession.
-
-We correct the `Botany.Plant` module, and create new `Botany.Accession` module, like this:
+Let's summarize this, showing the somewhat simplified `Botany.Plant` module, and the new
+`Botany.Accession` module:
 
 ```iex
 defmodule Botany.Accession do
@@ -741,7 +738,7 @@ defmodule Botany.Accession do
 
   schema "accession" do
     field :code, :string
-    belongs_to :taxon, Botany.Taxon
+    field :species, :string
     field :orig_quantity, :integer
     field :bought_on, :utc_datetime
     field :bought_from, :string
@@ -785,7 +782,6 @@ reverting it).
     create table(:accession) do
       add :code, :string
       add :species, :string
-      add :taxon_id, references(:taxon)
       add :orig_quantity, :integer
       add :bought_on, :utc_datetime
       add :bought_from, :string
@@ -800,7 +796,7 @@ reverting it).
 
     from("plant", select: [:id, :bought_on, :bought_from, :name, :species, :accession_id, :code]) |>
       Botany.Repo.all |>
-      Enum.each( %% TODO fill in the blanks TODO%% )
+      Enum.each( TODO <%%> FILL IN THE BLANKS )
 
     alter table(:plant) do
       remove :name
@@ -881,11 +877,58 @@ table in the right order.  **any volunteer**?
   end
 ```
 
-> As mentioned above, before this migration our `Plant` also has a `species` field, no more
-> than a `:string`.  It is a very rude way to link a plant to its taxon.  With this migration
-> we defined the link more formally, through the intermediate `Accession`.  We just showed how
-> to split the plant.name in the two fields accession.code and the new shorter plant.code,
-> preserving information, **any volunteer** to do the same for the species identification?
+### Multi-tables search and association
+
+As mentioned above, before this migration our `Plant` also has a `species` field, no more than
+a `:string`.  This is a very rude way to link a plant to its taxon.  With the above migration
+we moved the `species` field to the new `Accession` module, but did not translate it into a
+proper link to the `Taxon`.  Let's do it now.
+
+This migration amounts to replacing the `Accession.species` string field with an association to
+the `taxon` table.  As in the previous migration, we add one column and drop an other.  Since
+dropping a column does not indicate its previous definition, also this migration is not
+automatically reversible, and we need to define both the `up` and the `down` functions.
+
+```
+  def up do
+    alter table(:accession) do
+      add :taxon_id, references(:taxon)
+    end
+
+    flush()
+
+    ## do something
+
+    alter table(:accession) do
+      remove :species
+    end
+  end
+
+  def down do
+    alter table(:accession) do
+      add :species, :string
+    end
+
+    flush()
+
+    # do the opposite of something
+
+    alter table(:accession) do
+      remove :taxon_id
+    end
+  end
+```
+
+```
+  schema "accession" do
+    field :code, :string
+    belongs_to :taxon, Botany.Taxon
+    has_many :plants, Botany.Plant
+    field :orig_quantity, :integer
+    field :bought_on, :utc_datetime
+    field :bought_from, :string
+  end
+```
 
 ### Verifications (many-to-many)
 
