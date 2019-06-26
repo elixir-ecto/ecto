@@ -206,6 +206,30 @@ defmodule Ecto.RepoTest do
       assert query.prefix == "public"
     end
 
+    test "union supports a prefix option" do
+      query = from(MySchema, union: ^from(MySchemaNoPK))
+
+      TestRepo.all(query, prefix: "public")
+
+      assert_received {:all, query}
+      assert query.prefix == "public"
+
+      assert [union: union_query] = query.combinations
+      assert union_query.prefix == "public"
+    end
+
+    test "union_all supports a prefix option" do
+      query = from(MySchema, union_all: ^from(MySchemaNoPK))
+
+      TestRepo.all(query, prefix: "public")
+
+      assert_received {:all, query}
+      assert query.prefix == "public"
+
+      assert [union_all: union_query] = query.combinations
+      assert union_query.prefix == "public"
+    end
+
     test "removes any preload from query" do
       from(MySchemaWithAssoc, preload: :parent) |> TestRepo.aggregate(:count, :id)
       assert_received {:all, query}
