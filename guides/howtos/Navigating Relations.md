@@ -771,21 +771,93 @@ relations?  This is what we will walk through in the next section.
 ### A two steps data migration
 
 Let's begin with the more simple case: `Plant.name`.  Migrating it means splitting the
-information among the plant record and its corresponding accession.
+information among the plant record and its corresponding accession.  What we do here is to
+first add tables and columns to the database, make sure that the changes are reflected in the
+database, leave temporarily in place all the old structure, which we use while migrating the
+data, finally drop the now obsolete columns.
 
-Let's start by collecting accession data now contained in the plants table, by creating an
-intermediate accession.
+Such a migration cannot be automatically reverted, meaning we do not use the simplified form
+`change` but write two separate functions `up` (for applying the migration) and `down` (for
+reverting it).
 
-How do we define migrations, relying on schema definitions as of a specific situation in
-history, not the latest module contents?  Before applying a migration, the tables have a form,
-and after the migration, they have an other form.  if we're looking at an older migration,
-chances are that the current table has yet an other definition.  It might have been dropped
-altogether.
+```
+  def up do
+    create table(:accession) do
+      add :code, :string
+      add :species, :string
+      add :taxon_id, references(:taxon)
+      add :orig_quantity, :integer
+      add :bought_on, :utc_datetime
+      add :bought_from, :string
+    end
 
-**TODO**
+    alter table(:plant) do
+      add :code, :string
+      add :accession_id, references(:accession)
+    end
 
-One thing that will guaranteed work is to include one or more intermediate structure
-definitions, on the same table.
+    flush()
+
+    from("plant", select: [:id, :bought_on, :bought_from, :name, :species, :accession_id, :code]) |>
+      Botany.Repo.all |>
+      Enum.each( %% TODO fill in the blanks TODO%% )
+
+    alter table(:plant) do
+      remove :name
+      remove :species
+    end
+  end
+```
+
+As said: adding tables and columns, flushing the changes to the database, migrating the data
+—one record at a time—, cleaning up the obsolete structure.
+
+And the function which we left as TODO, might look like this.
+
+```
+    import Ecto.Query
+    split_plant_create_accession = fn(plant) ->
+      [_, acc_code, plt_code] = Regex.run(~r{(.*)\.([^\.]*)}, plant.name)
+      query = from(a in "accession", select: [:id, :code], where: a.code==^acc_code)
+      accession = case (query |> Botany.Repo.one()) do
+                    nil -> (accession = %{id:         plant.id,
+                                         bought_on:   plant.bought_on,
+                                         bought_from: plant.bought_from,
+                                         code:        acc_code,
+                                         species:     plant.species,
+                                         };
+                      Botany.Repo.insert_all("accession", [accession]);
+                      accession)
+                    x -> x
+                  end
+      from(p in "plant", where: p.id==^plant.id, select: p.id) |>
+        Botany.Repo.update_all(set: [accession_id: accession.id, code: plt_code])
+    end
+```
+
+What it does is quite linear: 
+
+- it accepts a structure, as `plant` (we might pattern-match it, for clarity),
+- splits `plant.name` in accession code and plant code,
+- defines a query on the `"accession"` table, based on the value of the accession code,
+- matches `accession` to either the result of the query, or to a new structure,
+- defines a query on the `"plant"` table, and finally
+- handles the query to the `update_all` function, setting the new fields for `"plant"`.
+
+There is one possibly subtle detail here which should not go unnoticed.  In the description and
+in the code above we never used our modules `Botany.Plant` nor `Botany.Accession`.  We worked
+the whole migration with schemaless queries, be they `select`, `insert` or `update`, straight
+on the database.
+
+Before applying a migration, the tables have a form, and after the migration, they have an
+other form.  At each moment in the history of our program, its modules match a database
+definition.  If we're looking at an older migration, chances are that the current table has an
+different definition.  It might even have been dropped altogether.
+
+Since modules reflect the latest situation, they cannot be relied upon while reconstructing
+history, as we do in migrations.
+
+We just showed the `up` migration, and we also need its `down` equivalent.  **any volunteer**?
 
 > As mentioned above, before this migration our `Plant` also has a `species` field, no more
 > than a `:string`.  It is a very rude way to link a plant to its taxon.  With this migration
