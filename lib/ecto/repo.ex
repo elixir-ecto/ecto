@@ -104,11 +104,13 @@ defmodule Ecto.Repo do
         end
       end
 
-  and then attach this module to each event on your Application start callback:
+  ...then, in the `Application.start/2` callback, attach the handler to this event using a unique handler id:
 
-      :telemetry.attach("my-app-handler", [:my_app, :repo, :query], &MyApp.Telemetry.handle_event/4, %{})
+      :ok = :telemetry.attach("my-app-handler-id", [:my_app, :repo, :query], &MyApp.Telemetry.handle_event/4, %{})
 
-  Below we list all events developers should expect. All examples below consider
+  For details, see [the telemetry documentation](https://hexdocs.pm/telemetry/).
+
+  Below we list all events developers should expect from Ecto. All examples below consider
   a repository named `MyApp.Repo`:
 
   #### `[:my_app, :repo, :query]`
