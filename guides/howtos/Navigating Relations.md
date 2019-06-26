@@ -724,7 +724,7 @@ same core information.  This allow us keeping together plants which belong toget
 
 In our above sample data, we had a `Plant.name` field, composed of a year, a sequential number,
 and a second sequential number.  By now you may have guessed: the first two components were
-indeed the Accession code, while the trailing number identified the plant within the accession.  
+indeed the Accession code, while the trailing number identified the plant within the accession.
 
 The `Plant.species` field, a name of a taxon, can now become a foreign key to a taxon record,
 and can be moved to the `Accession` structure.
@@ -760,7 +760,7 @@ defmodule Botany.Plant do
 end
 ```
 
-But if we do this in one shot, we will drop all the information we have in the `name` and
+But if we do this in one shot, we would drop all the information we have in the `name` and
 `species` columns of the `plants` table.  On the other hand, we do intend to drop those columns
 in the end.
 
@@ -835,7 +835,7 @@ And the function which we left as TODO, might look like this.
     end
 ```
 
-What it does is quite linear: 
+What it does is quite linear:
 
 - it accepts a structure, as `plant` (we might pattern-match it, for clarity),
 - splits `plant.name` in accession code and plant code,
@@ -857,7 +857,29 @@ different definition.  It might even have been dropped altogether.
 Since modules reflect the latest situation, they cannot be relied upon while reconstructing
 history, as we do in migrations.
 
-We just showed the `up` migration, and we also need its `down` equivalent.  **any volunteer**?
+We just showed the `up` migration, and we also need its `down` equivalent.  The structure is
+similar to the `up` migration, adding columns, flushing, migrating data, removing columns and
+table in the right order.  **any volunteer**?
+
+```
+  def down do
+    alter table(:plant) do
+      add :name, :string
+      add :species, :string
+    end
+
+    flush()
+
+    # we should migrate data back
+
+    alter table(:plant) do
+      remove :code
+      remove :accession_id
+    end
+
+    drop table(:accession)
+  end
+```
 
 > As mentioned above, before this migration our `Plant` also has a `species` field, no more
 > than a `:string`.  It is a very rude way to link a plant to its taxon.  With this migration
