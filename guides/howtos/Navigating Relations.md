@@ -716,21 +716,18 @@ migrations.
 ### The garden as a library: the Accession (data migration - question)
 
 When a gardener acquires a plant, they seldom acquire just one for each species, it is often in
-batches, where a batch contains several groups of plants from the same source, at the same
-time, of the same species, and then these plants may end in different locations in the garden.
-To make sure that the physical plants are kept together conceptually, we introduce a library
-science concept into our botanical collection: an "Accession", grouping the plants sharing the
-same core information.  This allow us keeping together plants which belong together.
+batches, where a batch contains several groups of plants from the same source, of the same
+species, and obviously being acquired at the same time.  Each of these plants may end in
+different locations in the garden, and to make sure that they are kept together conceptually in
+our database, we introduce a library science concept into our botanical collection: the
+"Accession", grouping the plants sharing the same core information.
 
 In our above sample data, we had a `Plant.name` field, composed of a year, a sequential number,
 and a second sequential number.  By now you may have guessed: the first two components were
 indeed the Accession code, while the trailing number identified the plant within the accession.
 
-All common information for all plants in the same accession, we just move that to the
-Accession.
-
 Let's summarize this, showing the somewhat simplified `Botany.Plant` module, and the new
-`Botany.Accession` module:
+`Botany.Accession` module, where we can move all the above mentioned common information:
 
 ```iex
 defmodule Botany.Accession do
@@ -761,9 +758,9 @@ But if we do this in one shot, we would drop all the information we have in the 
 `species` columns of the `plants` table.  On the other hand, we do intend to drop those columns
 in the end.
 
-The point to make here is that we have two types of migrations, one is the schema migration,
-which we have seen how to handle, but how to handle data migration, in particular when across
-relations?  This is what we will walk through in the next section.
+The point to make here is that we are in front of a new type of migration.  This one is not
+only a schema migration, which we know how to handle, this one also has an aspect of data
+migration, in particular across relations.  Let's walk through it.
 
 ### A two steps data migration
 
