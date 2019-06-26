@@ -850,6 +850,16 @@ different definition.  It might even have been dropped altogether.
 Since modules reflect the latest situation, they cannot be relied upon while reconstructing
 history, as we do in migrations.
 
+### Things that would not work, or other approaches
+
+The readers concerned with efficiency will complain about the loop which we have hidden in
+`Enum.each`.  Could we do what we just did with only one query?  Why did we not simply run this
+query:
+
+**TODO**
+
+### The down migration
+
 We just showed the `up` migration, and we also need its `down` equivalent.  The structure is
 similar to the `up` migration, adding columns, flushing, migrating data, removing columns and
 table in the right order.  **any volunteer**?
