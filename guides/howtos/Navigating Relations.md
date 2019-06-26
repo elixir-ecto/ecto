@@ -222,11 +222,11 @@ you, please be assured we are on our way to do some proper work, I know this is 
 model botanic data.)
 
 ```sql
-insert into locations (id, code, name) values (1, 'GH1', 'tropical greenhouse'),
+insert into location (id, code, name) values (1, 'GH1', 'tropical greenhouse'),
     (2, 'GH2', 'mediterranean'), (3, 'B01', 'entrance front'),
     (4, 'B02', 'left of main path-1'), (5, 'B04', 'left of main path-2'),
     (6, 'B06', 'right of main path-1'), (7, 'B03', 'right of main path-2');
-insert into plants (id, location_id, name, species) values
+insert into plant (id, location_id, name, species) values
     ( 1,4,'2018.0002.1','Salvia fruticosa'),
     ( 2,2,'2018.0019.1','Origanum majorana'),
     ( 3,7,'2018.0025.1','Salvia officinalis'),
@@ -575,7 +575,7 @@ Since we're here in the SQL shell, and since as said it is not our goal here lea
 insert data, but how to navigate it, let's add some ranks and taxa, from the same above example:
 
 ```sql
-insert into ranks (id,name) values (1,'divisio'), (2,'ordo'), (3,'familia'), (7,'genus'), (8,'species');
+insert into rank (id,name) values (1,'divisio'), (2,'ordo'), (3,'familia'), (7,'genus'), (8,'species');
 insert into taxon (id,rank_id,epithet,authorship) values
     (1,1,'Tracheophyta','Sinnott, ex Cavalier-Smith');
 insert into taxon (id,rank_id,epithet,authorship,parent_id) values
