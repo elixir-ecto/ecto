@@ -41,7 +41,7 @@ Let's also add a description, for more verbose needs.  **TODO: we will add lengt
 defmodule Botany.Location do
   use Ecto.Schema
 
-  schema "locations" do
+  schema "location" do
     field :code, :string
     field :name, :string
     field :description, :string
@@ -105,7 +105,7 @@ next to it, defining the `Botany.Plant` module:
 defmodule Botany.Plant do
   use Ecto.Schema
 
-  schema "plants" do
+  schema "plant" do
     belongs_to :location, Botany.Location
     field :name, :string
     field :species, :string
@@ -272,10 +272,10 @@ satisfying the query.  Or maybe better pipe the query through `Botany.Repo.one`,
 ```iex
 iex> Botany.Plant |> Ecto.Query.first |> Botany.Repo.one
 
-09:54:00.985 [debug] QUERY OK source="plants" db=0.7ms
-SELECT p0."id", p0."location_id", p0."name", p0."species", p0."bought_on", p0."bought_from" FROM "plants" AS p0 ORDER BY p0."id" LIMIT 1 []
+09:54:00.985 [debug] QUERY OK source="plant" db=0.7ms
+SELECT p0."id", p0."location_id", p0."name", p0."specie", p0."bought_on", p0."bought_from" FROM "plant" AS p0 ORDER BY p0."id" LIMIT 1 []
 %Botany.Plant{
-  __meta__: #Ecto.Schema.Metadata<:loaded, "plants">,
+  __meta__: #Ecto.Schema.Metadata<:loaded, "plant">,
   bought_from: nil,
   bought_on: nil,
   id: 1,
@@ -309,18 +309,18 @@ iex> alias Botany.Location
 Botany.Location
 iex> Plant |> Ecto.Query.first |> Botany.Repo.one |> Botany.Repo.preload(:location)
 
-10:05:47.533 [debug] QUERY OK source="plants" db=2.3ms queue=0.1ms
-SELECT p0."id", p0."location_id", p0."name", p0."species", p0."bought_on", p0."bought_from" FROM "plants" AS p0 ORDER BY p0."id" LIMIT 1 []
+10:05:47.533 [debug] QUERY OK source="plant" db=2.3ms queue=0.1ms
+SELECT p0."id", p0."location_id", p0."name", p0."specie", p0."bought_on", p0."bought_from" FROM "plant" AS p0 ORDER BY p0."id" LIMIT 1 []
 
-10:05:47.536 [debug] QUERY OK source="locations" db=2.2ms queue=0.1ms
-SELECT l0."id", l0."code", l0."name", l0."description", l0."id" FROM "locations" AS l0 WHERE (l0."id" = $1) [8]
+10:05:47.536 [debug] QUERY OK source="location" db=2.2ms queue=0.1ms
+SELECT l0."id", l0."code", l0."name", l0."description", l0."id" FROM "location" AS l0 WHERE (l0."id" = $1) [8]
 %Botany.Plant{
-  __meta__: #Ecto.Schema.Metadata<:loaded, "plants">,
+  __meta__: #Ecto.Schema.Metadata<:loaded, "plant">,
   bought_from: nil,
   bought_on: nil,
   id: 1,
   location: %Botany.Location{
-    __meta__: #Ecto.Schema.Metadata<:loaded, "locations">,
+    __meta__: #Ecto.Schema.Metadata<:loaded, "location">,
     code: "B05",
     description: nil,
     id: 8,
@@ -402,7 +402,7 @@ in the schema.
 defmodule Botany.Location do
   use Ecto.Schema
 
-  schema "locations" do
+  schema "location" do
     has_many :plants, Botany.Plant  # backward link
     field :code, :string
     field :name, :string
@@ -512,7 +512,7 @@ Now create the two files `botany/rank.ex` and `botany/taxon.ex`, with the conten
 defmodule Botany.Rank do
   use Ecto.Schema
 
-  schema "ranks" do
+  schema "rank" do
     field :name, :string
   end
 end
@@ -724,7 +724,10 @@ same core information.  This allow us keeping together plants which belong toget
 
 In our above sample data, we had a `Plant.name` field, composed of a year, a sequential number,
 and a second sequential number.  By now you may have guessed: the first two components were
-indeed the Accession code, while the trailing number identified the plant within the accession.
+indeed the Accession code, while the trailing number identified the plant within the accession.  
+
+The `Plant.species` field, a name of a taxon, can now become a foreign key to a taxon record,
+and can be moved to the `Accession` structure.
 
 The intermediation of the accession concept also streamlines connecting plants to taxa: if a
 taxonomist tells you that some individual plant belongs to some species, this opinion will
@@ -736,7 +739,7 @@ We correct the `Botany.Plant` module, and create new `Botany.Accession` module, 
 defmodule Botany.Accession do
   use Ecto.Schema
 
-  schema "accessions" do
+  schema "accession" do
     field :code, :string
     belongs_to :taxon, Botany.Taxon
     field :orig_quantity, :integer
@@ -748,7 +751,7 @@ end
 defmodule Botany.Plant do
   use Ecto.Schema
 
-  schema "plants" do
+  schema "plant" do
     belongs_to :location, Botany.Location
     belongs_to :accession, Botany.Accession
     field :code, :string
@@ -770,12 +773,6 @@ relations?  This is what we will walk through in the next section.
 Let's begin with the more simple case: `Plant.name`.  Migrating it means splitting the
 information among the plant record and its corresponding accession.
 
-> Our `Plant` also had a `species` field, no more than a `:string`.  It was a very rude way to
-> link a plant to its taxon.  We now defined the link much more formally, through the
-> intermediate `Accession`.  In this tutorial we will split the plant.name information in the
-> two fields accession.code and the new shorter plant.code, but we will forget about the
-> species identification.  **TODO Any volunteer?**
-
 Let's start by collecting accession data now contained in the plants table, by creating an
 intermediate accession.
 
@@ -785,8 +782,16 @@ and after the migration, they have an other form.  if we're looking at an older 
 chances are that the current table has yet an other definition.  It might have been dropped
 altogether.
 
+**TODO**
+
 One thing that will guaranteed work is to include one or more intermediate structure
 definitions, on the same table.
+
+> As mentioned above, before this migration our `Plant` also has a `species` field, no more
+> than a `:string`.  It is a very rude way to link a plant to its taxon.  With this migration
+> we defined the link more formally, through the intermediate `Accession`.  We just showed how
+> to split the plant.name in the two fields accession.code and the new shorter plant.code,
+> preserving information, **any volunteer** to do the same for the species identification?
 
 ### Verifications (many-to-many)
 
@@ -800,7 +805,7 @@ We remove the taxon_id foreign key from accessions and move it into verification
 defmodule Botany.Verification do
   use Ecto.Schema
 
-  schema "verifications" do
+  schema "verification" do
     belongs_to :accession, Botany.Accession
     belongs_to :taxon, Botany.Taxon
     field :verifier, :string
@@ -810,7 +815,7 @@ end
 defmodule Botany.Accession do
   use Ecto.Schema
 
-  schema "accessions" do
+  schema "accession" do
     field :code, :string
     field :orig_quantity, :integer
     field :bought_on, :utc_datetime
