@@ -5,6 +5,7 @@ defmodule Ecto.Query.Builder.Windows do
 
   alias Ecto.Query.Builder
   alias Ecto.Query.Builder.{GroupBy, OrderBy}
+  @sort_order [:partition_by, :order_by, :frame]
 
   @doc """
   Escapes a window params.
@@ -17,39 +18,54 @@ defmodule Ecto.Query.Builder.Windows do
   """
   @spec escape([Macro.t], {list, term}, Keyword.t, Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, term}}
   def escape(kw, params_acc, vars, env) when is_list(kw) do
-    escape(kw, params_acc, vars, env, [], [])
+    {compile, runtime} = sort(@sort_order, kw, :compile, [], [])
+    {compile, params_acc} = Enum.map_reduce(compile, params_acc, &escape_compile(&1, &2, vars, env))
+    {compile, runtime, params_acc}
   end
 
   def escape(kw, _params_acc, _vars, _env) do
     error!(kw)
   end
 
-  defp escape([{key, {:^, _, [var]}} | kw], params_acc, vars, env, compile_acc, runtime_acc)
-       when key in [:partition_by, :order_by, :frame] do
-    escape(kw, params_acc, vars, env, compile_acc, [{key, var} | runtime_acc])
+  defp sort([key | keys], kw, mode, compile, runtime) do
+    case Keyword.pop(kw, key) do
+      {nil, kw} ->
+        sort(keys, kw, mode, compile, runtime)
+
+      {{:^, _, [var]}, kw} ->
+        sort(keys, kw, :runtime, compile, [{key, var} | runtime])
+
+      {_, _} when mode == :runtime ->
+        [{runtime_key, _} | _] = runtime
+        raise ArgumentError, "window has an interpolated value under `#{runtime_key}` " <>
+                             "and therefore `#{key}` must also be interpolated"
+
+      {expr, kw} ->
+        sort(keys, kw, mode, [{key, expr} | compile], runtime)
+    end
   end
 
-  defp escape([{:partition_by, fields} | kw], params_acc, vars, env, compile_acc, runtime_acc) do
+  defp sort([], [], _mode, compile, runtime) do
+    {Enum.reverse(compile), Enum.reverse(runtime)}
+  end
+
+  defp sort([], kw, _mode, _compile, _runtime) do
+    error!(kw)
+  end
+
+  defp escape_compile({:partition_by, fields}, params_acc, vars, env) do
     {fields, params_acc} = GroupBy.escape(:partition_by, fields, params_acc, vars, env)
-    escape(kw, params_acc, vars, env, [{:partition_by, fields} | compile_acc], runtime_acc)
+    {{:partition_by, fields}, params_acc}
   end
 
-  defp escape([{:order_by, fields} | kw], params_acc, vars, env, compile_acc, runtime_acc) do
+  defp escape_compile({:order_by, fields}, params_acc, vars, env) do
     {fields, params_acc} = OrderBy.escape(:order_by, fields, params_acc, vars, env)
-    escape(kw, params_acc, vars, env, [{:order_by, fields} | compile_acc], runtime_acc)
+    {{:order_by, fields}, params_acc}
   end
 
-  defp escape([{:frame, frame_clause} | kw], params_acc, vars, env, compile_acc, runtime_acc) do
+  defp escape_compile({:frame, frame_clause}, params_acc, vars, env) do
     {frame_clause, params_acc} = escape_frame(frame_clause, params_acc, vars, env)
-    escape(kw, params_acc, vars, env, [{:frame, frame_clause} | compile_acc], runtime_acc)
-  end
-
-  defp escape([other | _], _params_acc, _vars, _env, _compile_acc, _runtime_acc) do
-    error!(other)
-  end
-
-  defp escape([], params_acc, _vars, _env, compile_acc, runtime_acc) do
-    {compile_acc, runtime_acc, params_acc}
+    {{:frame, frame_clause}, params_acc}
   end
 
   defp escape_frame({:fragment, _, _} = fragment, params_acc, vars, env) do
@@ -125,7 +141,7 @@ defmodule Ecto.Query.Builder.Windows do
   end
 
   defp build_runtime_window({name, compile_acc, runtime_acc, params}, _env) do
-    {:{}, [], [name, compile_acc, runtime_acc, Enum.reverse(params)]}
+    {:{}, [], [name, Enum.reverse(compile_acc), runtime_acc, Enum.reverse(params)]}
   end
 
   @doc """
@@ -135,7 +151,7 @@ defmodule Ecto.Query.Builder.Windows do
     windows =
       Enum.map(runtime, fn {name, compile_acc, runtime_acc, params} ->
         {acc, params} = do_runtime_window!(runtime_acc, query, compile_acc, params)
-        expr = %Ecto.Query.QueryExpr{expr: acc, params: Enum.reverse(params), file: file, line: line}
+        expr = %Ecto.Query.QueryExpr{expr: Enum.reverse(acc), params: Enum.reverse(params), file: file, line: line}
         {name, expr}
       end)
 
