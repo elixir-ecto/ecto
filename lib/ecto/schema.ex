@@ -972,7 +972,9 @@ defmodule Ecto.Schema do
 
     * `:foreign_key` - Sets the foreign key field name, defaults to the name
       of the association suffixed by `_id`. For example, `belongs_to :company`
-      will define foreign key of `:company_id`
+      will define foreign key of `:company_id`. The associated `has_one` or `has_many`
+      field in the other schema should also have its `:foreign_key` option set
+      with the same value.
 
     * `:references` - Sets the key on the other schema to be used for the
       association, defaults to: `:id`
@@ -996,7 +998,7 @@ defmodule Ecto.Schema do
 
     * `:primary_key` - If the underlying belongs_to field is a primary key
 
-    * `:source` - The source for the underlying field
+    * `:source` - Defines the name that is to be used in database for this field
 
     * `:where` - A filter for the association. See "Filtering associations"
       in `has_many/3`.
