@@ -853,8 +853,15 @@ history, as we do in migrations.
 ### Things that would not work, or other approaches
 
 The readers concerned with efficiency will complain about the loop which we have hidden in
-`Enum.each`.  Could we do what we just did with only one query?  Why did we not simply run this
-query:
+`Enum.each`.  Could we do that with a couple of queries?  That is, at a constant cost, instead
+of linear?
+
+To achieve the goal, we need to delegate more to SQL and do less in Elixir, so for a start, we
+need to separate the initially glued `accession-code . plant-code` from within SQL, something
+that Ecto handles with _fragments_.
+
+A
+
 
 **TODO**
 
@@ -873,7 +880,8 @@ table in the right order.  **any volunteer**?
 
     flush()
 
-    # we should migrate data back
+    # we should execute this one:
+    # update plant p set name=concat((select code from accession a where a.id=p.accession_id),'.',p.code);
 
     alter table(:plant) do
       remove :code
@@ -924,6 +932,20 @@ automatically reversible, and we need to define both the `up` and the `down` fun
       remove :taxon_id
     end
   end
+```
+
+The "do something" part, we could split in two, for this particular case at least.  We have
+some `species` ending with `sp.`, and these are relative to accessions identified at rank
+genus.  Then we have the others.
+
+```
+from(t in "accession",
+  where: fragment("substring(? from '\\w+\.$') = 'sp.'", t.species),
+  select: %{id: t.id, genus: fragment("substring(? from '^\\w+')", t.species)})
+
+from(t in "accession",
+  where: fragment("substring(? from '\\w+\.$') != 'sp.'", t.species),
+  select: %{id: t.id, binomial: t.species})
 ```
 
 ```
