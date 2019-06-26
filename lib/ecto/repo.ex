@@ -104,7 +104,8 @@ defmodule Ecto.Repo do
         end
       end
 
-  ...then, in the `Application.start/2` callback, attach the handler to this event using a unique handler id:
+  Then, in the `Application.start/2` callback, attach the handler to this event using
+  a unique handler id:
 
       :ok = :telemetry.attach("my-app-handler-id", [:my_app, :repo, :query], &MyApp.Telemetry.handle_event/4, %{})
 
