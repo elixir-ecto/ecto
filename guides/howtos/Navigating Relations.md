@@ -484,7 +484,7 @@ Tracheophyta
        |
        |--Salvia
           |--Salvia fruticosa
-          |--Salvia oficinalis
+          |--Salvia officinalis
           |--Salvia sclarea
 ```
 
@@ -597,7 +597,7 @@ insert into taxon (id,rank_id,epithet,authorship,parent_id) values
     (14,8,'majorana','L.',12),
     (15,7,'Salvia','L.',11),
     (16,8,'fruticosa','Mill.',15),
-    (17,8,'oficinalis','L.',15),
+    (17,8,'officinalis','L.',15),
     (18,8,'sclarea','L.',15),
     (19,7,'Calathea','G.Mey.',6);
 ```
@@ -981,27 +981,41 @@ automatically reversible, and we need to define both the `up` and the `down` fun
 
 The "do something" part, we could split in two, for this particular case at least.  We have
 some `species` ending with `sp.`, and these are relative to accessions identified at rank
-genus.  Then we have the others.
+genus.  Then we have the others.  The ones to be matched to taxon at rank genus, would go
+through the query:
 
 ```
 from(t in "accession",
   where: fragment("substring(? from '\\w+\.$') = 'sp.'", t.species),
   select: %{id: t.id, genus: fragment("substring(? from '^\\w+')", t.species)})
-
-from(t in "accession",
-  where: fragment("substring(? from '\\w+\.$') != 'sp.'", t.species),
-  select: %{id: t.id, binomial: t.species})
 ```
 
+So if we again misuse the fragment concept, we could extract the `taxon_id` in one shot:
+
 ```
-  schema "accession" do
-    field :code, :string
-    belongs_to :taxon, Botany.Taxon
-    has_many :plants, Botany.Plant
-    field :orig_quantity, :integer
-    field :bought_on, :utc_datetime
-    field :bought_from, :string
-  end
+q = from(a in "accession",
+  where: fragment(~S"substring(? from '\w+\.$') = 'sp.'", a.species),
+  update: [set: [taxon_id:
+    fragment(~S"(select id from taxon where epithet=substring(? from '^\w+'))", a.species)]])
+```
+
+The ones to be associated to taxon at rank species will require us to do a search on two
+tables.  Here again we will be even more heavily misusing `fragment`, placing a nested query in
+it:
+
+```
+q = from(a in "accession",
+  where: fragment("substring(? from '\\w+\.$') != 'sp.'", a.species),
+  update: [set: [taxon_id:
+    fragment(~S"(select id from taxon where epithet=substring(? from '\w+$') and parent_id=(select id from taxon where epithet=substring(? from '^\w+')))",
+           a.species, a.species)]])
+```
+
+An update query has no result set, so all we need to do is to feed them to the `update_all` for
+our Repo:
+
+```
+Botany.Repo.update_all(q, [])
 ```
 
 ### Verifications (many-to-many)
