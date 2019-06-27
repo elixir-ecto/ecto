@@ -379,7 +379,7 @@ the `Ecto.Query` module.)
 
 ```iex
 iex> import Ecto.Query
-iex> gh1 = (from l in Location, where: l.code=="GH1") |> Botany.Repo.one
+iex> gh1 = Botany.Repo.one(from(l in Location, where: l.code=="GH1"))
 ```
 
 How do we do that… I would like to just type `gh1.plants`, doesn't it make sense, and I don't
@@ -387,10 +387,12 @@ mind if I first need to pipe through a `preload`… But, as of now, all I can th
 a complete query!  After all, `gh1` is just a value, a structure, it has no `plants` field, and
 the module does not define how to compute that.
 
+Let's have a look, defining a query `q` and playing with it.
+
 ```iex
-iex> q = from p in Plant, where: p.location_id==^gh1.id
-iex> q |> Botany.Repo.all
-iex> q |> Botany.Repo.all |> length
+q = from(p in Plant, where: p.location_id==^gh1.id)
+q |> Botany.Repo.all
+q |> Botany.Repo.all |> length
 ```
 
 With what we have, we can go up the links, by this I mean that we can get the `location` from a
@@ -411,10 +413,11 @@ defmodule Botany.Location do
 end
 ```
 
-`recompile`, and reload the structure for location `gh1`.  You will notice, it holds the new
-`plants` field, indeed as expected in need of `preload`.  You know how to do that, and you will
-get a nicely populated `gh1.plants` field, with a list of `%Plant` structures.  You should be
-surprised, or maybe not, for we did not need any migration.
+`recompile`, and repeat the evaluation of the query for `"GH1"`, and again match the resulting
+value as the `gh1` variable.  You will notice, it now holds the new `plants` field, indeed as
+expected in need of `preload`.  You know how to do that, and you will get a nicely populated
+`gh1.plants` field, with a list of `%Plant` structures.  You should be surprised, or maybe not,
+for we did not need any migration.
 
 The `belongs_to` macro defines a field in the schema containing it, and implies the presence of
 a foreign key in the database table corresponding to our schema, pointing to the `queryable`
@@ -710,6 +713,8 @@ table and fields, using terms very recognizable from a SQL point of view. The tw
 and `has_many` macros on the other hand add fields to our schemas, and use the effects of the
 migrations.
 
+**TODO** need some use of this new field.
+
 ## A more proper way to organize a botanical collection
 *day 3*
 
@@ -877,9 +882,9 @@ Repo.insert_all("accession", q)
 
 The evaluation of the above lines splits the `plant.code` field in SQL, not any more in Elixir
 as we were doing.  The `fragment` clause lets us write SQL, and pass it to Ecto.  Notice how we
-are protecting it with `~S`, to avoid interpretation of `\` which we need in our SQL query.
-Also notice how we are now assuming that our SQL engine provides that `substring` function,
-which can, or can not be the case.
+are prepending our string fragment with `~S`, to avoid interpretation of `\` which we need in
+our SQL query.  Also notice how we are now assuming that our SQL engine provides that
+`substring` function, which is most likely the case but who knows maybe also not.
 
 An other consecuence is that we now need to join the two tables to retrieve the `accession_id`
 value corresponding to an `accession.code`.  With our naïve approach, we found this information
