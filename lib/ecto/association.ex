@@ -538,6 +538,10 @@ defmodule Ecto.Association.Has do
 
   @doc false
   def struct(module, name, opts) do
+    queryable = Keyword.fetch!(opts, :queryable)
+    cardinality = Keyword.fetch!(opts, :cardinality)
+    related = Ecto.Association.related_from_query(queryable, name)
+
     ref =
       module
       |> Module.get_attribute(:primary_key)
@@ -547,10 +551,6 @@ defmodule Ecto.Association.Has do
       raise ArgumentError, "schema does not have the field #{inspect ref} used by " <>
         "association #{inspect name}, please set the :references option accordingly"
     end
-
-    queryable = Keyword.fetch!(opts, :queryable)
-    cardinality = Keyword.fetch!(opts, :cardinality)
-    related = Ecto.Association.related_from_query(queryable, name)
 
     if opts[:through] do
       raise ArgumentError, "invalid association #{inspect name}. When using the :through " <>
@@ -993,13 +993,12 @@ defmodule Ecto.Association.ManyToMany do
 
   @doc false
   def struct(module, name, opts) do
-    join_through = opts[:join_through]
-
-    validate_join_through(name, join_through)
+    queryable = Keyword.fetch!(opts, :queryable)
+    related = Ecto.Association.related_from_query(queryable, name)
 
     join_keys = opts[:join_keys]
-    queryable = Keyword.fetch!(opts, :queryable)
-    related   = Ecto.Association.related_from_query(queryable, name)
+    join_through = opts[:join_through]
+    validate_join_through(name, join_through)
 
     {owner_key, join_keys} =
       case join_keys do
