@@ -1010,7 +1010,13 @@ But what if an other taxonomist has a different opinion? This happens regularly,
 generally notes all opinions, which in botany jargon are called "Verifications", in an
 intermediate table that defines a many-to-many relation, between accessions and taxa.
 
-We remove the taxon_id foreign key from accessions and move it into verifications.
+We remove the taxon_id foreign key from accessions and move it into verifications, and a
+verification also has a foreign key back to the accession table.  This will provide the base to
+place a `taxa` field in `Accession` and an `accessions` field in `Taxon`.  Moreover, both
+`Taxon` and `Accession` will have their verifications lists.
+
+The `up` migration will place the single verification as unsigned, and `down` will necessarily
+have to destroy some information.
 
 ```iex
 defmodule Botany.Verification do
@@ -1027,10 +1033,24 @@ defmodule Botany.Accession do
   use Ecto.Schema
 
   schema "accession" do
+    many_to_many :taxa, through: Botany.Verification
+    one_to_many :verifications, Botany.Verification
     field :code, :string
     field :orig_quantity, :integer
     field :bought_on, :utc_datetime
     field :bought_from, :string
+  end
+end
+
+defmodule Botany.Taxon do
+  use Ecto.Schema
+
+  schema "taxon" do
+    many_to_many :accessions, through: Botany.Verification
+    field :epithet, :string
+    field :authorship, :string
+    belongs_to :parent, Botany.Taxon
+    belongs_to :rank, Botany.Rank
   end
 end
 ```
