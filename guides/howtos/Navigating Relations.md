@@ -856,14 +856,54 @@ The readers concerned with efficiency will complain about the loop which we have
 `Enum.each`.  Could we do that with a couple of queries?  That is, at a constant cost, instead
 of linear?
 
-To achieve the goal, we need to delegate more to SQL and do less in Elixir, so for a start, we
-need to separate the initially glued `accession-code . plant-code` from within SQL, something
-that Ecto handles with _fragments_.
+Indeed, the proposed migration is not the most efficient: it iterates over the plants
+collection from Elixir, then issues one query at a time to the SQL engine.  And as an extra
+minus point, it messes up the `accession.id` field, leaving holes in the sequence.
 
-A
+To do better with such issues, we need to get a tighter grip on the SQL produced by Ecto, in
+practice, we might want to first write the SQL we need Ecto to produce, then work back to
+Elixir code.  This goes beyond the scope of this text, so decide for yourself if you skip to
+the following paragraph, or continue reading.
 
+Let's start by addressing that second minus point first!  All we need is to insert accessions
+without specifying the id field.
 
-**TODO**
+```
+q = from(t in "plant",
+  select: %{code: fragment(~S"substring(? from '^\d+\.\d+')", t.name)},
+  distinct: fragment(~S"substring(? from '^\d+\.\d+')", t.name))
+Repo.insert_all("accession", q)
+```
+
+The evaluation of the above lines splits the `plant.code` field in SQL, not any more in Elixir
+as we were doing.  The `fragment` clause lets us write SQL, and pass it to Ecto.  Notice how we
+are protecting it with `~S`, to avoid interpretation of `\` which we need in our SQL query.
+Also notice how we are now assuming that our SQL engine provides that `substring` function,
+which can, or can not be the case.
+
+An other consecuence is that we now need to join the two tables to retrieve the `accession_id`
+value corresponding to an `accession.code`.  With our naïve approach, we found this information
+from the `"plant"` table.  This is again a task we can accomplish by `fragment`:
+
+```
+q = from(p in "plant",
+  update: [set: [
+    accession_id: fragment(~S"(select id from accession where code=substring(? from '^\d+\.\d+'))",
+                           p.name)]])
+Botany.Repo.update_all(q, [])
+```
+
+This approach contains a complete select fragment, and this is very questionable for at least
+two reasons.  For one, being a complete fragment, it means more assumptions on the SQL back
+end.  Next, it executes that select statement for each plant, the loop being hidden in SQL.
+
+If we went further down the way writing SQL ourselves, we could write the complete query, have
+it executed by the remote engine, collect the result and process it through a schemaless
+`Botany.Repo.insert_all` or `update_all` as seen before.
+
+When working at a software with very strict performance requirements, you would definitely
+evaluate and refine such points.  Here, after all, we're just doing a migration, so paying so
+much care to efficiency is possibly not such a crucial issue.
 
 ### The down migration
 
@@ -881,7 +921,7 @@ table in the right order.  **any volunteer**?
     flush()
 
     # we should execute this one:
-    # update plant p set name=concat((select code from accession a where a.id=p.accession_id),'.',p.code);
+    # UPDATE plant p SET name=CONCAT((SELECT code FROM accession a WHERE a.id=p.accession_id),'.',p.code);
 
     alter table(:plant) do
       remove :code
