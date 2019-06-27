@@ -1007,16 +1007,21 @@ from(t in "accession",
 ### Verifications (many-to-many)
 
 But what if an other taxonomist has a different opinion? This happens regularly, and one
-generally notes all opinions, which in botany jargon are called "Verifications", in an
-intermediate table that defines a many-to-many relation, between accessions and taxa.
+generally notes all opinions —the jargon for it is "Verifications"— in an intermediate table
+that defines a many-to-many relation, between accessions and taxa.  Besides being signed, a
+verification has a level, say the confidence that the verifier places on the identification,
+it's an integer ranking from 0 to 4, and let's also timestamp them.
 
-We remove the taxon_id foreign key from accessions and move it into verifications, and a
-verification also has a foreign key back to the accession table.  This will provide the base to
-place a `taxa` field in `Accession` and an `accessions` field in `Taxon`.  Moreover, both
-`Taxon` and `Accession` will have their verifications lists.
+We remove the taxon_id foreign key from accessions and move it into verifications, and place a
+foreign key back to the accession table.  This will provide the base for a `taxa` field in
+`Accession` and an `accessions` field in `Taxon`.  Moreover, both `Taxon` and `Accession` will
+have their `verifications` list fields.
 
-The `up` migration will place the single verification as unsigned, and `down` will necessarily
-have to destroy some information.
+Our database model before the migration has space for one 'verification', which the `up`
+migration will isolate as the single initial unsigned verification record, at the lowest level
+of confidence.  Conversely, our `down` migration will necessarily have to destroy some
+information, and the approach we take here is to select the latest verification among those at
+the highest level.
 
 ```iex
 defmodule Botany.Verification do
@@ -1026,6 +1031,8 @@ defmodule Botany.Verification do
     belongs_to :accession, Botany.Accession
     belongs_to :taxon, Botany.Taxon
     field :verifier, :string
+    field :level, :integer
+    field :timestamp, :utc_datetime
   end
 end
 
