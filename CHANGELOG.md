@@ -1,5 +1,11 @@
 # Changelog for v3.x
 
+## v3.1.7 (2019-06-27)
+
+### Bug fixes
+
+  * [Ecto.Changeset] Make sure `put_assoc` with empty changeset propagates on insert
+
 ## v3.1.6 (2019-06-19)
 
 ### Enhancements
