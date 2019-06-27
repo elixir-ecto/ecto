@@ -243,7 +243,7 @@ insert into plant (id, location_id, name, species) values
     (14,3,'2018.0058.1','Calathea sp.'),
     (15,3,'2018.0063.1','Calathea sp.'),
     (16,3,'2018.0067.1','Origanum vulgare'),
-    (17,3,'2018.0068.1','Origanum Majorana'),
+    (17,3,'2018.0068.1','Origanum majorana'),
     (18,2,'2018.0044.2','Salvia officinalis');
 ```
 
