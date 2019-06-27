@@ -338,19 +338,19 @@ expected, to the `location` field.  Let's match this value to a `p1` variable, s
 it.
 
 ```iex
-iex> p1 = Plant |> Ecto.Query.first |> Botany.Repo.one |> Botany.Repo.preload(:location)
+p1 = Plant |> Ecto.Query.first |> Botany.Repo.one |> Botany.Repo.preload(:location)
 ```
 
 And let's now match `loc8` to our plant location:
 
 ```iex
-iex> %Plant{location: loc8} = p1
+%Plant{location: loc8} = p1
 ```
 
 Right, we could have done it differently:
 
 ```iex
-iex> loc8 = p1.location
+loc8 = p1.location
 ```
 
 Whatever looks easier, or clearer to you in the context.  I like the first one better, because
@@ -364,7 +364,7 @@ value.  If you later add the `preload` pipe to it, this would not alter your `p1
 you re-match `p1` to the new value, like this:
 
 ```iex
-iex> p1 = p1 |> Botany.Repo.preload(:location)
+p1 = p1 |> Botany.Repo.preload(:location)
 ```
 
 It does no harm evaluating a `preload` on a preloaded field, it's an idempotent function.
@@ -378,8 +378,8 @@ variable, and look up all the plants at that location.  (For ease of typing, let
 the `Ecto.Query` module.)
 
 ```iex
-iex> import Ecto.Query
-iex> gh1 = Botany.Repo.one(from(l in Location, where: l.code=="GH1"))
+import Ecto.Query
+gh1 = Botany.Repo.one(from(l in Location, where: l.code=="GH1"))
 ```
 
 How do we do that… I would like to just type `gh1.plants`, doesn't it make sense, and I don't
@@ -1023,6 +1023,8 @@ of confidence.  Conversely, our `down` migration will necessarily have to destro
 information, and the approach we take here is to select the latest verification among those at
 the highest level.
 
+Let's start by defining our target models:
+
 ```iex
 defmodule Botany.Verification do
   use Ecto.Schema
@@ -1040,9 +1042,10 @@ defmodule Botany.Accession do
   use Ecto.Schema
 
   schema "accession" do
-    many_to_many :taxa, through: Botany.Verification
-    one_to_many :verifications, Botany.Verification
     field :code, :string
+    many_to_many :taxa, Botany.Taxon, through: "verification"
+    has_many :verifications, Botany.Verification
+    has_many :plants, Botany.Plant
     field :orig_quantity, :integer
     field :bought_on, :utc_datetime
     field :bought_from, :string
@@ -1053,11 +1056,14 @@ defmodule Botany.Taxon do
   use Ecto.Schema
 
   schema "taxon" do
-    many_to_many :accessions, through: Botany.Verification
+    has_many :children, Botany.Taxon, foreign_key: :parent_id  # backward link
+    many_to_many :accessions, Botany.Accession, through: "verification"
     field :epithet, :string
     field :authorship, :string
     belongs_to :parent, Botany.Taxon
     belongs_to :rank, Botany.Rank
+    belongs_to :accepted, Botany.Taxon
+    has_many :synonyms, Botany.Taxon, foreign_key: :accepted_id  # backward link
   end
 end
 ```
