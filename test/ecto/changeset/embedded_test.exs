@@ -517,7 +517,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
   test "change embeds_one" do
     embed = Author.__schema__(:embed, :profile)
 
-    assert :ignore = Relation.change(embed, nil, nil)
+    assert {:ok, nil, true} = Relation.change(embed, nil, nil)
     assert {:ok, nil, true} = Relation.change(embed, nil, %Profile{})
 
     embed_schema = %Profile{}
@@ -635,7 +635,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
   test "change embeds_many" do
     embed = Author.__schema__(:embed, :posts)
-    assert :ignore = Relation.change(embed, [], [])
+    assert {:ok, [], true} = Relation.change(embed, [], [])
 
     assert {:ok, [old_changeset, new_changeset], true} =
       Relation.change(embed, [%Post{id: 1}], [%Post{id: 2}])
@@ -746,7 +746,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute changeset.valid?
   end
 
-  test "put_embed/4" do
+  test "put_embed/4 with embeds_one" do
     base_changeset = Changeset.change(%Author{})
 
     changeset = Changeset.put_embed(base_changeset, :profile, %Profile{name: "michal"})
@@ -759,7 +759,16 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute Map.has_key?(changeset.changes, :profile)
   end
 
-  test "put_change/4" do
+  test "put_embed/4 with embeds_one and empty" do
+    changeset =
+      %Author{profile: nil}
+      |> Changeset.change()
+      |> Changeset.put_embed(:profile, nil)
+
+    refute Map.has_key?(changeset.changes, :profile)
+  end
+
+  test "put_change/4 with embeds one" do
     changeset = Changeset.change(%Author{}, profile: %Profile{name: "michal"})
     assert %Ecto.Changeset{} = changeset.changes.profile
 
@@ -768,6 +777,58 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = Changeset.put_change(base_changeset, :profile, empty_update_changeset)
     refute Map.has_key?(changeset.changes, :profile)
+  end
+
+  test "put_embed/4 with embeds_many" do
+    base_changeset = Changeset.change(%Author{})
+
+    changeset = Changeset.put_embed(base_changeset, :posts, [%{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    changeset = Changeset.put_embed(base_changeset, :posts, [[title: "hello"]])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    changeset = Changeset.put_embed(base_changeset, :posts, [%Post{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    base_changeset = Changeset.change(%Author{posts: [%Post{title: "hello"}]})
+    empty_update_changeset = Changeset.change(%Post{title: "hello"})
+
+    changeset = Changeset.put_embed(base_changeset, :posts, [empty_update_changeset])
+    refute Map.has_key?(changeset.changes, :posts)
+  end
+
+  test "put_embed/4 with embeds_many and empty" do
+    changeset =
+      %Author{posts: []}
+      |> Changeset.change()
+      |> Changeset.put_embed(:posts, [])
+
+    refute Map.has_key?(changeset.changes, :posts)
+  end
+
+  test "put_change/3 with embeds_many" do
+    changeset = Changeset.change(%Author{}, posts: [%{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    base_changeset = Changeset.change(%Author{})
+    changeset = Changeset.put_change(base_changeset, :posts, [[title: "hello"]])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    changeset = Changeset.put_change(base_changeset, :posts, [%Post{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    base_changeset = Changeset.change(%Author{posts: [%Post{title: "hello"}]})
+    empty_update_changeset = Changeset.change(%Post{title: "hello"})
+
+    changeset = Changeset.put_change(base_changeset, :posts, [empty_update_changeset])
+    refute Map.has_key?(changeset.changes, :posts)
   end
 
   test "get_field/3, fetch_field/2 with embeds" do

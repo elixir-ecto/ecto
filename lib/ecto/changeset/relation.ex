@@ -129,19 +129,11 @@ defmodule Ecto.Changeset.Relation do
   @doc """
   Wraps related structs in changesets.
   """
-  def change(%{cardinality: :one}, nil, nil) do
-    :ignore
-  end
-
   def change(%{cardinality: :one} = relation, nil, current) do
-    case on_replace(relation, current) do
-      {:ok, _} -> {:ok, nil, true}
+    case current && on_replace(relation, current) do
       :error -> {:error, {"is invalid", [type: expected_type(relation)]}}
+      _ -> {:ok, nil, true}
     end
-  end
-
-  def change(%{cardinality: :many}, [], []) do
-    :ignore
   end
 
   def change(%{related: mod} = relation, value, current) do
