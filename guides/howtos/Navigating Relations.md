@@ -238,7 +238,7 @@ insert into plant (id, location_id, name, species) values
     ( 9,1,'2018.0045.1','Heliconia sp.'),
     (10,1,'2018.0047.1','Musa sp.'),
     (11,1,'2018.0047.2','Musa sp.'),
-    (12,1,'2018.0057.3','Musa sp.'),
+    (12,1,'2018.0047.3','Musa sp.'),
     (13,6,'2018.0057.1','Zingiber sp.'),
     (14,3,'2018.0058.1','Calathea sp.'),
     (15,3,'2018.0063.1','Calathea sp.'),
