@@ -1123,15 +1123,17 @@ defmodule Ecto.Changeset do
 
   defp put_change(data, changes, errors, valid?, key, value, {tag, relation})
        when tag in @relations do
-    current = Relation.load!(data, Map.get(data, key))
+    original = Map.get(data, key)
+    current = Relation.load!(data, original)
 
     case Relation.change(relation, value, current) do
-      {:ok, change, relation_valid?} ->
+      {:ok, change, relation_valid?} when change != original ->
         {Map.put(changes, key, change), errors, valid? and relation_valid?}
-      :ignore ->
-        {changes, errors, valid?}
       {:error, error} ->
         {changes, [{key, error} | errors], false}
+      # ignore or ok with change == original
+      _ ->
+        {changes, errors, valid?}
     end
   end
 

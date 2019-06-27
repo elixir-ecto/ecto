@@ -622,7 +622,7 @@ defmodule Ecto.Integration.AssocTest do
     assert post.comments == []
   end
 
-  test "inserting changeset with empty associations" do
+  test "inserting changeset with empty cast associations" do
     changeset =
       %Permalink{}
       |> Ecto.Changeset.cast(%{url: "root", post: nil}, [:url])
@@ -634,6 +634,22 @@ defmodule Ecto.Integration.AssocTest do
       %Post{}
       |> Ecto.Changeset.cast(%{title: "root", comments: []}, [:title])
       |> Ecto.Changeset.cast_assoc(:comments)
+    post = TestRepo.insert!(changeset)
+    assert post.comments == []
+  end
+
+  test "inserting changeset with empty put associations" do
+    changeset =
+      %Permalink{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:post, nil)
+    permalink = TestRepo.insert!(changeset)
+    assert permalink.post == nil
+
+    changeset =
+      %Post{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:comments, [])
     post = TestRepo.insert!(changeset)
     assert post.comments == []
   end
