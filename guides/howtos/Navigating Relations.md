@@ -1011,8 +1011,8 @@ q = from(a in "accession",
            a.species, a.species)]])
 ```
 
-An update query has no result set, so all we need to do is to feed them to the `update_all` for
-our Repo:
+An update query has no result set, so all we need to do is to feed each of them to the
+`update_all` for our Repo:
 
 ```
 Botany.Repo.update_all(q, [])
@@ -1081,6 +1081,15 @@ defmodule Botany.Taxon do
   end
 end
 ```
+
+And let's write the new migration, by now you know what's the structure: use
+`ecto.gen.migration` to create an empty migration, replace the emtpy `change` function with
+`up` and `down`, write the code for both functions, and the structure is in both cases: add
+tables and/or columns to the database, flush the changes, migrate the data, remove the obsolete
+structure if need be.
+
+You also by now know: the target structure is what you use from your application, while in the
+migrations you work schema-less and you hold complete control of the SQL.
 
 ### Contacts management (one-to-one)
 
