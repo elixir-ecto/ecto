@@ -730,6 +730,7 @@ defmodule Ecto.Type do
   defp cast_fun({:in, type}), do: &array(&1, cast_fun(type), [])
   defp cast_fun({:array, type}), do: &array(&1, cast_fun(type), [])
   defp cast_fun({:map, type}), do: &map(&1, cast_fun(type), %{})
+  defp cast_fun(:uuid), do: &Ecto.UUID.cast(&1)
   defp cast_fun(mod) when is_atom(mod), do: &mod.cast(&1)
 
   defp cast_integer(term) when is_binary(term) do
