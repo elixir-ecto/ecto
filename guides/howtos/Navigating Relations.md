@@ -191,26 +191,27 @@ precede the creation of the `plants` table, since we're referring the first from
 Compare this to the schema definition, and you should be perplex about how we approached the
 `belongs_to` line.  Keep that for a couple of paragraphs, we will come to it.
 
-With this `initial_migration` in place, let's apply it, so that we can finally have a look at
-the database tables.
-
-```
-mix ecto.migrate
-```
-
-If all is well, the output is just four `[info]` lines.
-
-We have added quite a few files to our project, and altered others, let's do some housekeeping,
+Since we have added a few files to our project, and altered others, let's pause a moment, for
+some housekeeping,
 
 ```
 git add lib/botany/*.ex mix.lock priv config/config.exs
 git commit -m "first migration"
 ```
 
+Good, now with this `initial_migration` in place, let's apply it,
+
+```
+mix ecto.migrate
+```
+
+If all is well, the output is just four `[info]` lines, and let's have a look at the database
+tables.
+
 ### Looking at it from SQL
 
 Fine, it took time, but we now have our updated schema, where we can check the meaning of
-`belongs_to`.  To have a look, we need to connect directly to the database, not through Elixir.
+`belongs_to`.  We connect directly to the database, not through Elixir.
 
 Let's use the `psql` prompt (if you commonly use something else, you should know the commands
 corresponding to what we show here).  Our database is called `botany_repo` and you know your user
@@ -227,6 +228,41 @@ and password.  From inside the `psql` prompt, give:
 What is relevant to us here is the `CONSTRAINT` block at the end of each table.  Ecto not only
 created the columns, it also made our database aware of the meaning of the `location_id` in
 `plants`, and that it impacts the `locations` table as well.
+
+### Migrate/rollback
+
+On second thought, this is not precisely what we needed.  I want to have a short `code`, a
+somewhat longer `name` -255 characters is definitely far too long-, and let's say that the
+lenght of the description is fine.
+
+Let's undo the migration, correct it, redo, and review what we just did:
+
+```
+mix ecto.rollback
+```
+
+Edit the migration, changing the fields in `location` to:
+```
+      add :code, :string, size: 20
+      add :name, :string, size: 120
+```
+
+Redo the migration
+```
+mix ecto.migrate
+```
+
+Move back to the database and check the definition of the columns.
+
+Shall we review what just happened?
+
+The initial migration is a very simple one, creating two new tables.  A table creation is
+particularly easy to undo: simply drop the table.  Redoing the migration again created the
+table, adding the slightly altered columns.
+
+It is possibly interesting to keep a connection to the database, undo and redo our migration,
+checking how this is reflected in that `schema_migrations` table, which Ecto uses to keep track
+of the alignment between the migration files, and the database definition.
 
 Since we're here in the database, let's create a few database records, so we save time in the
 `iex` session, and can focus on navigation rather than data insertion.  More than a few in
@@ -280,7 +316,7 @@ To hit the database, we have to evaluate the query, something we can do by `Bota
 Ecto.Query.first |> Botany.Repo.all`.  The last pipe handles the query to `Botany.Repo.all`,
 which evaluates the query and returns a list of structures, corresponding to the records
 satisfying the query.  Or maybe better pipe the query through `Botany.Repo.one`, since
-`Ecto.Query.first` is anyway guaranteed to contain no more than one records.
+`Ecto.Query.first` is anyway guaranteed to contain no more than one record.
 
 ```iex
 iex> Botany.Plant |> Ecto.Query.first |> Botany.Repo.one
@@ -345,10 +381,10 @@ SELECT l0."id", l0."code", l0."name", l0."description", l0."id" FROM "location" 
 }
 ```
 
-Now we hit the database twice (side effect was the two `SELECT` logging records on our
-terminal), and we got a `%Location` structure within our `%Plant` structure, associated, as we
-expected, to the `location` field.  Let's match this value to a `p1` variable, so we can reuse
-it.
+Now we hit the database twice (each had the side effect of logging the `SELECT` instruction on
+our terminal), and we got a `%Location` structure within our `%Plant` structure, associated, as
+we expected, to the `location` field.  Let's match this value to a `p1` variable, so we can
+reuse it.
 
 ```iex
 p1 = Plant |> Ecto.Query.first |> Botany.Repo.one |> Botany.Repo.preload(:location)
@@ -587,8 +623,9 @@ Foreign-key constraints:
 
 Neat, cool, nice.
 
-Since we're here in the SQL shell, and since as said it is not our goal here learning how to
-insert data, but how to navigate it, let's add some ranks and taxa, from the same above example:
+Since we're again here in the SQL shell, and since as said it is not our goal here learning how
+to insert data, but how to navigate it, let's add some ranks and taxa, from the same above
+example:
 
 ```sql
 insert into rank (id,name) values (1,'divisio'), (2,'ordo'), (3,'familia'), (7,'genus'), (8,'species');
@@ -922,6 +959,20 @@ it executed by the remote engine, collect the result and process it through a sc
 When working at a software with very strict performance requirements, you would definitely
 evaluate and refine such points.  Here, after all, we're just doing a migration, so paying so
 much care to efficiency is possibly not such a crucial issue.
+
+### Out-of-the-box thoughts
+
+As said, we work all migrations schemaless.  And what we wrote, this *migration file*, it's a
+script.
+
+Said in the opposite order, it might sound funny: to alter our database schema, we wrote a
+script in Elixir which makes no use of our Elixir schemas.  So what's the point?
+
+Portability.  The whole point is portability, and integration with `mix`.
+
+Obviously, if we exceed in the use of non-portable `fragment` SQL strings, we only keep the
+integration with `mix`.  After all, a script that alters a database schema, in which we write
+large chunks of non-portable SQL, you can just as well write in plain SQL.
 
 ### The down migration
 
