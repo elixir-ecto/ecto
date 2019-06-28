@@ -117,27 +117,37 @@ end
 
 > To be true, the `bought_from` should be also a `belongs_to` relation, pointing to a table with
 > contacts, like friends, other gardens, commercial nurseries.  But since there's so much more to
-> come, let's keep it like this for the time being.
+> come, let's keep it as our very last point.
 
 What does the `belongs_to/3` macro really do?  How does impact our physical database structure?
-It would be nice if it was the system telling us, but in reality, it's us who need to tell the
-system, by writing the corresponding migration.
 
 A sentence from `h(Ecto.Schema.belongs_to/3)` contains the best clue: *"when you invoke this
 macro, a field with the name of foreign key is automatically defined in the schema for you."*
 
+The above phrase, "automatically defined" does however only apply to the schema definition.
+There's more work to do, to have our schema reflected into the database, and that's called
+**migrations**, and we have to do that manually.
+
 ### The initial migration
 
-You came here after doing the more introductiory how-tos and tutorials, so you know how to set
-up an Elixir project, how to configure your Ecto-DBMS connection, how to have Ecto create a
-database, and you know how to handle migrations.
+You came here after doing all the more introductiory how-tos and tutorials, so you know: (i)
+how to set up an Elixir project, (ii) how to configure your Ecto-DBMS connection, (iii) how to
+have Ecto create a database, but (iiii) chances are that you, as myself a week ago, have no
+clear idea how to handle migrations.
 
-> Remember that Ecto does keep track of database changes through migrations, yet it is not
-> particularly helpful when it comes to writing the migration corresponding to what we change in
-> the schemas.  There has been discussion in the Ecto project about this, and the bottom line is
+In this tutorial we are going to examine each subsequent migration in detail, and comment on
+what all migrations have in common, and what makes one migration easier to write than another.
+
+> Ecto keeps track of database changes through migrations, yet it is not particularly helpful
+> when it comes to writing the migration corresponding to what we change in the schemas.
+> Different views have been discussion in the Ecto project about this, and the bottom line is
 > that programmers need to know what they mean, and it's programmers who should tell Ecto, not
-> the opposite way: we need to maintain both the schemas, and the migration files, and make sure
-> they are consistent with each other.
+> the opposite way: we need to maintain both the schemas, and the migration files, and make
+> sure they are consistent with each other.
+
+As of now what we have written is instructions how to connect to a database, a schema referring
+to a database table, and no database table implementing what the schema requires.  What we need
+is steps to create that database table, and this is what we call a migration.
 
 So let's get to work and write our first migration, relative to moving from an empty database to
 one with the above schema definitions.  We use the `ecto.gen.migration` rule to create a
@@ -177,6 +187,9 @@ For the `belongs_to` line from the plants schema, we've written a `location_id` 
 `plants` create table, referring to the `locations` table.  This implies we use its default
 primary key, `id`.  Obviously, for the migration to work, the `create table(:locations)` must
 precede the creation of the `plants` table, since we're referring the first from the second.
+
+Compare this to the schema definition, and you should be perplex about how we approached the
+`belongs_to` line.  Keep that for a couple of paragraphs, we will come to it.
 
 With this `initial_migration` in place, let's apply it, so that we can finally have a look at
 the database tables.
@@ -1140,7 +1153,8 @@ are associated to multiple taxon rows, all descendents of the top taxon.  It wou
 interesting, having a function that retrieves them all, given the top taxon.
 
 The function would collect all accessions associated to the top taxon, and add to it all
-accessions associated to the child taxa.  And do this recursively.
+accessions associated to the child taxa.  And do this recursively.  Once written, you doubt
+whether life can be this easy.
 
 ```
   def get_recursive_accessions(top) do
@@ -1152,12 +1166,14 @@ accessions associated to the child taxa.  And do this recursively.
 
   def get_recursive_accessions_by_name(top_name) do
     import Ecto.Query
-    top = from(t in Botany.Taxon, where: t.epithet==top_name)|> Botany.Repo.one
-    Botany.get_recursive_accessions(top)
+    from(t in Botany.Taxon, where: t.epithet==^top_name) |>
+      Botany.Repo.one |>
+      Botany.get_recursive_accessions
   end
 ```
 
-Which you would 
+If you did not alter the provided sample data, you can easily verify we have 8 *Zingiberales*,
+4 *Salvia* and 3 *Origanum* accessions.  What about the number of plants?
 
 ### Contacts management (one-to-one)
 
