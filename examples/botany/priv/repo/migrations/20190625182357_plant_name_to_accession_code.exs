@@ -24,7 +24,6 @@ defmodule Botany.Repo.Migrations.PlantNameToAccessionCode do
     create table(:accession) do
       add :code, :string
       add :species, :string
-      add :taxon_id, references(:taxon)
       add :orig_quantity, :integer
       add :bought_on, :utc_datetime
       add :bought_from, :string

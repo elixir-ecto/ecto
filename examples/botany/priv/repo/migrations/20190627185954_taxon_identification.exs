@@ -24,4 +24,15 @@ defmodule Botany.Repo.Migrations.TaxonIdentification do
       remove :species
     end
   end
+
+  def down do
+    alter table(:accession) do
+      add :species, :string
+    end
+    flush()
+    ## retrieve the name from the taxon and put it in the new column
+    alter table(:accession) do
+      remove :taxon_id
+    end
+  end
 end

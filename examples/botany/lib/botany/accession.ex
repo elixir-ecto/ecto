@@ -3,7 +3,7 @@ defmodule Botany.Accession do
 
   schema "accession" do
     field :code, :string
-    many_to_many :taxa, Botany.Accession, join_through: "verification"
+    many_to_many :taxa, Botany.Taxon, join_through: "verification"
     has_many :verifications, Botany.Verification
     has_many :plants, Botany.Plant
     field :orig_quantity, :integer

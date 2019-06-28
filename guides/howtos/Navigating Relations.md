@@ -1086,10 +1086,78 @@ And let's write the new migration, by now you know what's the structure: use
 `ecto.gen.migration` to create an empty migration, replace the emtpy `change` function with
 `up` and `down`, write the code for both functions, and the structure is in both cases: add
 tables and/or columns to the database, flush the changes, migrate the data, remove the obsolete
-structure if need be.
+structure if need be.  And, you most likely want to `import Ecto.Query`.
 
-You also by now know: the target structure is what you use from your application, while in the
-migrations you work schema-less and you hold complete control of the SQL.
+You also by now know: the data model (the above target structure) is what we use in the
+application, but in the migrations we work schema-less and we have complete control and
+responsibility of the SQL sent to the database server.
+
+Try to write it yourself, it's really not that difficult.  Here is a possible solution, running
+with a single query on the database.
+
+```
+  def up do
+    import Ecto.Query
+    create table(:verification) do
+      add :accession_id, references(:accession)
+      add :taxon_id, references(:taxon)
+      add :verifier, :string
+      add :level, :integer
+      add :timestamp, :utc_datetime
+    end
+
+    flush()
+
+    utc_now = DateTime.utc_now()
+    veris = from(a in "accession", select: %{accession_id: a.id, taxon_id: a.taxon_id}) |>
+      Botany.Repo.all |>
+      Enum.map(&(&1 |>
+            Map.put(:verifier, "Elixir") |>
+            Map.put(:level, 0) |>
+            Map.put(:timestamp, utc_now)))
+    Botany.Repo.insert_all("verification", veris)
+    
+    alter table(:accession) do
+      remove :taxon_id
+    end
+  end
+```
+
+The `down` migration, let's leave it for an other time.
+
+After successfully migrated the data, you should be able to grab any of our taxa, and request
+the associated accessions.  For example as this:
+
+```
+Botany.Taxon |> Ecto.Query.last |> Botany.Repo.one |> Botany.Repo.preload(:accessions)
+from(t in Botany.Taxon, where: t.epithet=="Musa")|> Botany.Repo.one |> Botany.Repo.preload(:accessions)
+```
+
+### Recursive associations
+
+Now imagine you wanted to know all *Zingiberales*, or all *Lamiaceae* in your collection.  They
+are associated to multiple taxon rows, all descendents of the top taxon.  It would be
+interesting, having a function that retrieves them all, given the top taxon.
+
+The function would collect all accessions associated to the top taxon, and add to it all
+accessions associated to the child taxa.  And do this recursively.
+
+```
+  def get_recursive_accessions(top) do
+    top = top |> Botany.Repo.preload(:children) |> Botany.Repo.preload(:accessions)
+    Enum.reduce(Enum.map(top.children, &(Botany.get_recursive_accessions(&1))), 
+                top.accessions, 
+                fn x, acc -> x ++ acc end)
+  end
+
+  def get_recursive_accessions_by_name(top_name) do
+    import Ecto.Query
+    top = from(t in Botany.Taxon, where: t.epithet==top_name)|> Botany.Repo.one
+    Botany.get_recursive_accessions(top)
+  end
+```
+
+Which you would 
 
 ### Contacts management (one-to-one)
 
