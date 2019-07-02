@@ -22,7 +22,7 @@ defmodule MyApp.Repo do
     Enum.random(@replicas)
   end
 
-  for repo <- @replica do
+  for repo <- @replicas do
     defmodule repo do
       use Ecto.Repo, otp_app: :my_app, adapter: Ecto.Adapters.Postgres, read_only: true
     end
@@ -166,7 +166,7 @@ end
 There is even a better way! We can pass a `:default_dynamic_repo` option when we define the repository. In this case, we want to set the `:default_dynamic_repo` to `MyApp.Repo` only during the test environment, like this:
 
 ```elixir
-  for repo <- @replica do
+  for repo <- @replicas do
     defmodule repo do
       use Ecto.Repo,
         otp_app: :my_app,
