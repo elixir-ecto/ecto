@@ -167,6 +167,16 @@ defmodule Ecto.Repo.AutogenerateTest do
     assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.updated_on
   end
 
+  test "does not override custom updated_on value" do
+    default = TestRepo.insert!(%Manager{company_id: 1})
+
+    :timer.sleep(1000)
+
+    changeset = Ecto.Changeset.change(default, updated_on: default.updated_on, company_id: 2)
+    updated_default = TestRepo.update!(changeset)
+    assert updated_default.updated_on == default.updated_on
+  end
+
   test "sets the timestamps type to naive_datetime" do
     default = TestRepo.insert!(%NaiveMod{})
     assert %NaiveDateTime{microsecond: {0, 0}} = default.inserted_at

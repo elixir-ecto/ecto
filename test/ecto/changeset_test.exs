@@ -52,6 +52,8 @@ defmodule Ecto.ChangesetTest do
       belongs_to :category, Ecto.ChangesetTest.Category, source: :cat_id
       has_many :comments, Ecto.ChangesetTest.Comment, on_replace: :delete
       has_one :comment, Ecto.ChangesetTest.Comment
+
+      timestamps()
     end
   end
 
@@ -657,7 +659,8 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "put_change/3 and delete_change/2" do
-    base_changeset = change(%Post{upvotes: 5})
+    naive_datetime = ~N[2000-01-01 00:00:00]
+    base_changeset = change(%Post{upvotes: 5, updated_at: naive_datetime})
 
     changeset = put_change(base_changeset, :title, "foo")
     assert changeset.changes.title == "foo"
@@ -679,6 +682,9 @@ defmodule Ecto.ChangesetTest do
 
     changeset = put_change(base_changeset, :upvotes, nil)
     assert changeset.changes.upvotes == nil
+
+    changeset = put_change(base_changeset, :updated_at, naive_datetime)
+    assert changeset.changes.updated_at == naive_datetime
   end
 
   test "force_change/3" do

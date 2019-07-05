@@ -1143,7 +1143,7 @@ defmodule Ecto.Changeset do
 
   defp put_change(data, changes, errors, valid?, key, value, type) do
     cond do
-      not Ecto.Type.equal?(type, Map.get(data, key), value) ->
+      not Ecto.Type.equal?(type, Map.get(data, key), value) || autoupdate_field?(data, key) ->
         {Map.put(changes, key, value), errors, valid?}
 
       Map.has_key?(changes, key) ->
@@ -1152,6 +1152,18 @@ defmodule Ecto.Changeset do
       true ->
         {changes, errors, valid?}
     end
+  end
+
+  defp autoupdate_field?(%{__struct__: struct}, key) do
+    autoupdate_fields =
+      struct.__schema__(:autoupdate)
+      |> Enum.flat_map(&elem(&1, 0))
+
+    Enum.member?(autoupdate_fields, key)
+  end
+
+  defp autoupdate_field?(_, _key) do
+    false
   end
 
   @doc """
