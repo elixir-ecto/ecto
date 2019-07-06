@@ -122,7 +122,7 @@ defmodule Ecto.Repo.Schema do
         Enum.flat_map_reduce(header, counter, fn {key, _}, counter ->
           case :lists.keyfind(key, 1, fields) do
             {^key, %Ecto.Query{} = query} ->
-              {query, params, _} = Ecto.Query.Planner.plan(query, :all, adapter, counter)
+              {query, params, _} = Ecto.Query.Planner.plan(query, :all, adapter)
               {query, _} = Ecto.Query.Planner.normalize(query, :all, adapter, counter)
 
               {[{key, {query, params}}], counter + length(params)}
@@ -623,10 +623,8 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp on_conflict_query(query, from, prefix, counter_fun, adapter, conflict_target) do
-    counter = counter_fun.()
-
     {query, params, _} =
-      Ecto.Query.Planner.plan(%{query | prefix: prefix}, :update_all, adapter, counter)
+      Ecto.Query.Planner.plan(%{query | prefix: prefix}, :update_all, adapter)
 
     unless query.from.source == from do
       raise ArgumentError, "cannot run on_conflict: query because the query " <>
@@ -635,7 +633,7 @@ defmodule Ecto.Repo.Schema do
                            "and #{inspect from} respectively"
     end
 
-    {query, _} = Ecto.Query.Planner.normalize(query, :update_all, adapter, counter)
+    {query, _} = Ecto.Query.Planner.normalize(query, :update_all, adapter, counter_fun.())
     {query, params, conflict_target}
   end
 

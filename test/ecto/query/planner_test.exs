@@ -74,7 +74,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   defp plan(query, operation \\ :all) do
-    Planner.plan(query, operation, Ecto.TestAdapter, 0)
+    Planner.plan(query, operation, Ecto.TestAdapter)
   end
 
   defp normalize(query, operation \\ :all) do
@@ -326,7 +326,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "plan: generates a cache key" do
     {_query, _params, key} = plan(from(Post, []))
-    assert key == [:all, 0, {"posts", Post, 27727487, "my_prefix"}]
+    assert key == [:all, {"posts", Post, 27727487, "my_prefix"}]
 
     query =
       from(
@@ -342,7 +342,7 @@ defmodule Ecto.Query.PlannerTest do
       )
 
     {_query, _params, key} = plan(%{query | prefix: "foo"})
-    assert key == [:all, 0,
+    assert key == [:all,
                    {:lock, "foo"},
                    {:prefix, "foo"},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
@@ -353,7 +353,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "plan: generates a cache key for in based on the adapter" do
     query = from(p in Post, where: p.id in ^[1, 2, 3])
-    {_query, _params, key} = Planner.plan(query, :all, Ecto.TestAdapter, 0)
+    {_query, _params, key} = Planner.plan(query, :all, Ecto.TestAdapter)
     assert key == :nocache
   end
 
@@ -423,7 +423,7 @@ defmodule Ecto.Query.PlannerTest do
     {%{combinations: [{_, query}]}, _, cache} = from(c in Comment, union: ^from(c in Comment)) |> plan()
     assert query.sources == {{"comments", Comment, nil}}
     assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
-    assert [:all, _, {:union, _}, _] = cache
+    assert [:all, {:union, _}, _] = cache
 
     {%{combinations: [{_, query}]}, _, cache} = from(c in Comment, union: ^from(c in Comment, where: c in ^[1, 2, 3])) |> plan()
     assert query.sources == {{"comments", Comment, nil}}
@@ -441,7 +441,6 @@ defmodule Ecto.Query.PlannerTest do
     assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
     assert [
       :all,
-      _,
       {"comments", Comment, _, nil},
       {:non_recursive_cte, "cte", [{"comments", Comment, _, nil}, {:select, {:&, _, [0]}}]}
     ] = cache
@@ -463,7 +462,7 @@ defmodule Ecto.Query.PlannerTest do
     %{queries: [{"cte", query_expr}]} = with_expr
     expr = {:fragment, [], [raw: "SELECT * FROM comments WHERE id = ", expr: {:^, [], [0]}, raw: ""]}
     assert expr == query_expr.expr
-    assert [:all, _, {"comments", Comment, _, nil}, {:recursive_cte, "cte", ^expr}] = cache
+    assert [:all, {"comments", Comment, _, nil}, {:recursive_cte, "cte", ^expr}] = cache
   end
 
   test "normalize: validates literal types" do
