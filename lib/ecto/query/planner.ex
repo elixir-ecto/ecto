@@ -1419,7 +1419,7 @@ defmodule Ecto.Query.Planner do
     exprs =
       case operation do
         :all -> @all_exprs
-        :update_all -> @update_all_exprs
+        :update_all -> (@update_all_exprs ++ @all_exprs) |> Enum.uniq()
         :delete_all -> @delete_all_exprs
       end
 
@@ -1540,10 +1540,10 @@ defmodule Ecto.Query.Planner do
     case query do
       %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [],
                   havings: [], preloads: [], assocs: [], distinct: nil, lock: nil,
-                  windows: [], combinations: [], with_ctes: nil} ->
+                  windows: [], combinations: []} ->
         query
       _ ->
-        error! query, "`#{operation}` allows only `where` and `join` expressions. " <>
+        error! query, "`#{operation}` allows only `with_cte`, `where` and `join` expressions. " <>
                       "You can exclude unwanted expressions from a query by using " <>
                       "Ecto.Query.exclude/2. Error found"
     end
