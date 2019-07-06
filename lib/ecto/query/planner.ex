@@ -1404,20 +1404,27 @@ defmodule Ecto.Query.Planner do
 
   ## Helpers
 
-  @exprs [with_cte: :with_ctes, distinct: :distinct, select: :select, from: :from, join: :joins,
-          where: :wheres, group_by: :group_bys, having: :havings, windows: :windows,
-          combination: :combinations, order_by: :order_bys, limit: :limit, offset: :offset]
+  @all_exprs [with_cte: :with_ctes, distinct: :distinct, select: :select, from: :from, join: :joins,
+              where: :wheres, group_by: :group_bys, having: :havings, windows: :windows,
+              combination: :combinations, order_by: :order_bys, limit: :limit, offset: :offset]
+
+  @update_all_exprs [with_cte: :with_ctes, update: :updates, from: :from,
+                     join: :joins, where: :wheres, select: :select]
+
+  @delete_all_exprs [with_cte: :with_ctes, from: :from, join: :joins,
+                     where: :wheres, select: :select]
 
   # Traverse all query components with expressions.
   # Therefore from, preload, assocs and lock are not traversed.
   defp traverse_exprs(query, operation, acc, fun) do
-    extra =
+    exprs =
       case operation do
-        :update_all -> [update: :updates]
-        _ -> []
+        :all -> @all_exprs
+        :update_all -> @update_all_exprs
+        :delete_all -> @delete_all_exprs
       end
 
-    Enum.reduce extra ++ @exprs, {query, acc}, fn {kind, key}, {query, acc} ->
+    Enum.reduce exprs, {query, acc}, fn {kind, key}, {query, acc} ->
       {traversed, acc} = fun.(kind, query, Map.fetch!(query, key), acc)
       {%{query | key => traversed}, acc}
     end
