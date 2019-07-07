@@ -59,7 +59,7 @@ Post
 |> order_by(^order_by)
 ```
 
-Note however not all expressions can be converted to data structures. Since `where` converts a key-value to a `key == value` comparison, order-based comparisons such as `p.published_at > ^minimum_date` still need to be written as part of the query as before.
+While using data-structures already brings a good amount of flexibility to Ecto queries, not all expressions can be converted to data structures. For example, `where` converts a key-value to a `key == value` comparison, and therefore order-based comparisons such as `p.published_at > ^minimum_date` need to be written as before.
 
 ## Dynamic fragments
 
@@ -102,7 +102,7 @@ Post
 
 The `dynamic` macro allows us to build dynamic expressions that are later interpolated into the query. `dynamic` expressions can also be interpolated into dynamic expressions, allowing developers to build complex expressions dynamically without hassle.
 
-By interpolating data structures and dynamic fragments, we can decouple the processing of parameters from the query generation. Let's see a more complex example.
+By using dynamic fragments, we can decouple the processing of parameters from the query generation. Let's see a more complex example.
 
 ## Building dynamic queries
 
@@ -115,35 +115,81 @@ def filter(params) do
   Post
   |> order_by(^filter_order_by(params["order_by"]))
   |> where(^filter_where(params))
-  |> where(^filter_published_at(params["published_at"]))
 end
 
-def filter_order_by("published_at_desc"), do: [desc: :published_at]
-def filter_order_by("published_at"),      do: [asc: :published_at]
+def filter_order_by("published_at_desc"), do: dynamic([p], desc: p.published_at)
+def filter_order_by("published_at"),      do: dynamic([p], p.published_at)
 def filter_order_by(_),                   do: []
 
 def filter_where(params) do
-  for key <- [:author, :category],
-      value = params[Atom.to_string(key)],
-      do: {key, value}
-end
+  Enum.reduce(params, dynamic(true), fn
+    {"author", value}, dynamic ->
+      dynamic([p], ^dynamic and p.author == ^value)
 
-def filter_published_at(date) when is_binary(date),
-  do: dynamic([p], p.published_at > ^date)
-def filter_published_at(_date),
-  do: true
+    {"category", value}, dynamic ->
+      dynamic([p], ^dynamic and p.category == ^value)
+
+    {"published_at", value}, dynamic ->
+      dynamic([p], ^dynamic and p.published_at > ^value)
+
+    {_, _}, dynamic ->
+      # Not a where parameter
+      dynamic
+  end)
+end
 ```
 
-
-Because we were able to break our problem into smaller functions that receive regular data structures, we can use all the tools available in Elixir to work with data. For handling the `order_by` parameter, it may be best to simply pattern match on the `order_by` parameter. For building the `where` clause, we can traverse the list of known keys and convert them to the format expected by Ecto. For complex conditions, we use the `dynamic` macro.
+Because we were able to break our problem into smaller functions that receive regular data structures, we can use all the tools available in Elixir to work with data. For handling the `order_by` parameter, it may be best to simply pattern match on the `order_by` parameter. For building the `where` clause, we can use `reduce` to start with an empty dynamic (that always returns true) and refine it with new conditions as we traverse the parameters.
 
 Testing also becomes simpler as we can test each function in isolation, even when using dynamic queries:
 
 ```elixir
 test "filter published at based on the given date" do
-  assert inspect(filter_published_at("2010-04-17")) ==
-         "dynamic([p], p.published_at > ^\"2010-04-17\")"
-  assert inspect(filter_published_at(nil)) ==
-         "true"
+  assert inspect(filter_where(%{"published_at" => "2010-04-17"})) ==
+         "dynamic([q], true and q.published_at > ^\"2010-04-17\")"
+  assert inspect(filter_where(%{})) ==
+         "dynamic([q], true)"
 end
 ```
+
+## Dynamic and joins
+
+Even query joins can be tackled dynamically. For example, let's do two modifications to the example above. Let's say we can also sort by author name ("author_name" and "author_name_desc") and at the same time let's say that authors are in a separate table, which means our authors filter in `filter_where` now need to go through the join table.
+
+Our final solution would look like this:
+
+```elixir
+def filter(params) do
+  Post
+  |> join([p], assoc(p, :authors), as: :authors) # 1. Add named join binding
+  |> order_by(^filter_order_by(params["order_by"]))
+  |> where(^filter_where(params))
+end
+
+# 2. Returned dynamic with join binding
+def filter_order_by("published_at_desc"), do: dynamic([p], desc: p.published_at)
+def filter_order_by("published_at"),      do: dynamic([p], p.published_at)
+def filter_order_by("author_name_desc"),  do: dynamic([authors: a], desc: a.name)
+def filter_order_by("author_name"),       do: dynamic([authors: a], a.name)
+def filter_order_by(_),                   do: []
+
+# 3. Change the authors clause inside reduce
+def filter_where(params) do
+  Enum.reduce(params, dynamic(true), fn
+    {"author", value}, dynamic ->
+      dynamic([authors: a], ^dynamic and a.name == ^value)
+
+    {"category", value}, dynamic ->
+      dynamic([p], ^dynamic and p.category == ^value)
+
+    {"published_at", value}, dynamic ->
+      dynamic([p], ^dynamic and p.published_at > ^value)
+
+    {_, _}, dynamic ->
+      # Not a where parameter
+      dynamic
+  end)
+end
+```
+
+Adding more filters in the future is simply a matter of adding more clauses to the `Enum.reduce/3` call in `filter_where`.
