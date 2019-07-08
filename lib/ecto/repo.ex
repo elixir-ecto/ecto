@@ -86,7 +86,7 @@ defmodule Ecto.Repo do
     * `:timeout` - The time in milliseconds to wait for the query call to
       finish, `:infinity` will wait indefinitely (default: 15000);
     * `:log` - When false, does not log the query
-    * `:telemetry_event` - The telemetry event name to dispatch the event under./
+    * `:telemetry_event` - The telemetry event name to dispatch the event under.
       See the next section for more information
 
   ### Telemetry events
