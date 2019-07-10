@@ -30,7 +30,7 @@ Note we added a unique index to the tag name because we don't want to have dupli
 
 Now let's also imagine we want the user to input such tags as a list of words split by comma, such as: "elixir, erlang, ecto". Once this data is received in the server, we will break it apart into multiple tags and associate them to the post, creating any tag that does not yet exist in the database.
 
-While the constraints above sound reasonable, that's exactly what put us in trouble with `cast_assoc/3`. The `cast_assoc/3` changeset function was designed to receive external parameters and compare them with the associated data in our structs.To do so correctly, Ecto requires tags to be sent as a list of maps. We can see an example of this in the [Polymorphic associations with many to many](polymorphic-associations-with-many-to-many.html) guide. However, here we expect tags to be sent in a string separated by comma.
+While the constraints above sound reasonable, that's exactly what put us in trouble with `cast_assoc/3`. The `cast_assoc/3` changeset function was designed to receive external parameters and compare them with the associated data in our structs.To do so correctly, Ecto requires tags to be sent as a list of maps. We can see an example of this in [Polymorphic associations with many to many](polymorphic-associations-with-many-to-many.html). However, here we expect tags to be sent in a string separated by comma.
 
 Furthermore, `cast_assoc/3` relies on the primary key field for each tag sent in order to decide if it should be inserted, updated or deleted. Again, because the user is simply passing a string, we don't have the ID information at hand.
 

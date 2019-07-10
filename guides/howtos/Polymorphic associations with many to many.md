@@ -382,4 +382,4 @@ end
 
 Overall our code looks structurally the same as `has_many` would, although at the database level our relationships are expressed with join tables.
 
-While in this guide we changed our code to cope with the parameter format required by `cast_assoc`, in the [Constraints and Upserts](constraints-and-upserts.html) guide we drop `cast_assoc` altogether and use `put_assoc` which brings more flexibilities when working with associations.
+While in this guide we changed our code to cope with the parameter format required by `cast_assoc`, in [Constraints and Upserts](constraints-and-upserts.html) we drop `cast_assoc` altogether and use `put_assoc` which brings more flexibilities when working with associations.
