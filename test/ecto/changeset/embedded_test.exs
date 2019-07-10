@@ -659,6 +659,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
       Relation.change(embed, [], [embed_schema_changeset])
     assert changeset.action == :replace
 
+    embed_schemas = [%Post{id: 1}, %Post{id: 2}]
+    assert {:ok, [changeset1, changeset2], true} =
+      Relation.change(embed, Enum.reverse(embed_schemas), embed_schemas)
+    assert changeset1.action == :update
+    assert changeset2.action == :update
+
     assert :ignore =
       Relation.change(embed, [%{embed_schema_changeset | action: :ignore}], [embed_schema])
     assert :ignore =
