@@ -141,13 +141,13 @@ Note that `mix test` does not run the tests in `integration_test` folder, becaus
 
 ## Copyright and License
 
-"Ecto" and the Ecto logo are Copyright (c) 2012 Plataformatec.
+"Ecto" and the Ecto logo are Copyright (c) 2013 Plataformatec.
 
 The Ecto logo was designed by [Dane Wesolko](http://www.danewesolko.com).
 
 The source code is under the Apache 2 License.
 
-Copyright (c) 2012 Plataformatec
+Copyright (c) 2013 Plataformatec
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
