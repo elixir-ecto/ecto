@@ -881,13 +881,13 @@ defmodule Ecto.Query.Planner do
     {nil, counter}
   end
 
-  defp validate_and_increment(:with_cte, query, with_expr, counter, operation, adapter) do
-    fun = &validate_and_increment(&1, &2, &3, &4, operation, adapter)
+  defp validate_and_increment(:with_cte, query, with_expr, counter, _operation, adapter) do
+    fun = &validate_and_increment(&1, &2, &3, &4, :all, adapter)
 
     {queries, counter} =
       Enum.reduce with_expr.queries, {[], counter}, fn
         {name, %Ecto.Query{} = query}, {queries, counter} ->
-          {query, counter} = traverse_exprs(query, operation, counter, fun)
+          {query, counter} = traverse_exprs(query, :all, counter, fun)
           {query, _} = normalize_select(query) |> remove_literals()
           {_, select} = subquery_select(query, adapter)
           keys = select |> subquery_types() |> Keyword.keys()
