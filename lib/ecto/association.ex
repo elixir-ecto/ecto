@@ -518,7 +518,8 @@ defmodule Ecto.Association.Has do
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
   @has_one_on_replace_opts @on_replace_opts ++ [:update]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
-             :queryable, :on_delete, :on_replace, where: [], unique: true, defaults: [], relationship: :child]
+             :queryable, :on_delete, :on_replace, where: [], unique: true, defaults: [],
+             relationship: :child, ordered: false]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
@@ -730,7 +731,7 @@ defmodule Ecto.Association.HasThrough do
 
   @behaviour Ecto.Association
   defstruct [:cardinality, :field, :owner, :owner_key, :through, :on_cast,
-             relationship: :child, unique: true]
+             relationship: :child, unique: true, ordered: false]
 
   @doc false
   def after_compile_validation(_, _) do
@@ -814,8 +815,9 @@ defmodule Ecto.Association.BelongsTo do
 
   @behaviour Ecto.Association
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify, :update]
-  defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast, :on_replace,
-             where: [], defaults: [], cardinality: :one, relationship: :parent, unique: true]
+  defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast,
+             :on_replace, where: [], defaults: [], cardinality: :one, relationship: :parent,
+             unique: true, ordered: false]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
@@ -969,7 +971,8 @@ defmodule Ecto.Association.ManyToMany do
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
              :on_replace, :join_keys, :join_through, :on_cast, where: [],
-             defaults: [], relationship: :child, cardinality: :many, unique: false]
+             defaults: [], relationship: :child, cardinality: :many,
+             unique: false, ordered: false]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, join_through: join_through}, env) do
