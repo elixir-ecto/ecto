@@ -604,16 +604,16 @@ defmodule Ecto.Query.Planner do
     cache_and_params
   end
 
-  defp merge_cache(:with_cte, query, with_expr, cache_and_params, operation, adapter) do
+  defp merge_cache(:with_cte, query, with_expr, cache_and_params, _operation, adapter) do
     %{queries: queries, recursive: recursive} = with_expr
     key = if recursive, do: :recursive_cte, else: :non_recursive_cte
-    fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
+    fun = &{&3, merge_cache(&1, &2, &3, &4, :all, adapter)}
 
     # In here we add each cte as its own entry in the cache key.
     # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
     Enum.reduce queries, cache_and_params, fn
       {name, %Ecto.Query{} = query}, {cache, params} ->
-        case traverse_exprs(query, operation, {[], params}, fun) do
+        case traverse_exprs(query, :all, {[], params}, fun) do
           {_, {:nocache, _} = acc} -> acc
           {_, {inner_cache, params}} -> {[{key, name, inner_cache} | cache], params}
         end
@@ -1419,7 +1419,7 @@ defmodule Ecto.Query.Planner do
     exprs =
       case operation do
         :all -> @all_exprs
-        :update_all -> (@update_all_exprs ++ @all_exprs) |> Enum.uniq()
+        :update_all -> @update_all_exprs
         :delete_all -> @delete_all_exprs
       end
 

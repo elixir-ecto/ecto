@@ -465,6 +465,27 @@ defmodule Ecto.Query.PlannerTest do
     assert [:all, {"comments", Comment, _, nil}, {:recursive_cte, "cte", ^expr}] = cache
   end
 
+  test "prepare: Prepare Update CTE" do
+    n = 500
+    recent_comments =
+      from(c in Comment,
+        order_by: [desc: c.posted],
+        limit: ^n,
+        select: %{id: c.id}
+      )
+
+    new_text = "***"
+    {_query, params, _key} =
+      Comment
+      |> with_cte("recent_comments", as: ^recent_comments)
+      |> join(:inner, [c], r in "recent_comments", on: c.id == r.id)
+      |> update(set: [text: ^new_text])
+      |> select([c, r], c)
+      |> plan(:update_all)
+
+    assert [500, "***"] = params
+  end
+
   test "normalize: validates literal types" do
     assert_raise Ecto.QueryError, fn ->
       Comment |> where([c], c.text == 123) |> normalize()
