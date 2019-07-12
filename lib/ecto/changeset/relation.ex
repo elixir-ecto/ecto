@@ -264,11 +264,26 @@ defmodule Ecto.Changeset.Relation do
     {:ok, [], true}
   end
 
-  defp cast_or_change(%{cardinality: :many, unique: unique}, value, current, current_pks, new_pks, fun) when is_list(value) do
-    map_changes(value, new_pks, fun, process_current(current, current_pks), [], true, true, unique && %{})
+  defp cast_or_change(%relation{cardinality: :many, unique: unique}, value, current, current_pks, new_pks, fun) when is_list(value) do
+    skip? = not embedded_and_reordered?(relation, valid_new_pks(value, new_pks, []), Enum.map(current, current_pks))
+    map_changes(value, new_pks, fun, process_current(current, current_pks), [], true, skip?, unique && %{})
   end
 
   defp cast_or_change(_, _, _, _, _, _), do: :error
+
+  defp embedded_and_reordered?(Ecto.Embedded, new_pks, current_pks) when new_pks != [],
+    do: new_pks != current_pks
+  defp embedded_and_reordered?(_relation, _new_pks, _current_pks),
+    do: false
+
+  defp valid_new_pks([%{action: :ignore} | rest], new_pks, acc),
+    do: valid_new_pks(rest, new_pks, acc)
+  defp valid_new_pks([changes | rest], new_pks, acc) when is_map(changes) or is_list(changes),
+    do: valid_new_pks(rest, new_pks, [new_pks.(changes) | acc])
+  defp valid_new_pks([_changes | rest], new_pks, acc),
+    do: valid_new_pks(rest, new_pks, acc)
+  defp valid_new_pks([], _new_pks, acc),
+    do: Enum.reverse(acc)
 
   # single change
 
