@@ -431,7 +431,7 @@ defmodule Ecto.Query.PlannerTest do
     assert :nocache = cache
   end
 
-  test "prepare: prepare CTEs" do
+  test "prepare: prepare CTEs on all" do
     {%{with_ctes: with_expr}, _, cache} =
       Comment
       |> with_cte("cte", as: ^from(c in Comment))
@@ -465,78 +465,61 @@ defmodule Ecto.Query.PlannerTest do
     assert [:all, {"comments", Comment, _, nil}, {:recursive_cte, "cte", ^expr}] = cache
   end
 
-  test "prepare: prepare update CTEs" do
-    n = 500
+  test "prepare: prepare CTEs on update_all" do
     recent_comments =
       from(c in Comment,
         order_by: [desc: c.posted],
-        limit: ^n,
+        limit: ^500,
         select: [:id]
       )
 
-    new_text = "***"
-    {query, params, cache} =
+    {%{with_ctes: with_expr}, [500, "text"], cache} =
       Comment
       |> with_cte("recent_comments", as: ^recent_comments)
       |> join(:inner, [c], r in "recent_comments", on: c.id == r.id)
-      |> update(set: [text: ^new_text])
+      |> update(set: [text: ^"text"])
       |> select([c, r], c)
       |> plan(:update_all)
 
-    assert %{
-      from: %{source: {"comments", Comment}},
-      with_ctes: %{queries: [{"recent_comments", cte}]},
-      sources: {
-        {"comments", Comment, nil},
-        {"recent_comments", nil, nil}
-      },
-      joins: [
-        %{
-          qual: :inner,
-          on: %{expr: {:==, [], _}},
-          source: {"recent_comments", nil}
-        }
-      ],
-      updates: [
-        %{
-          expr: [set: [text: {:^, [], [0]}]],
-          params: [{"***", {0, :text}}]
-        }
-      ],
-      select: %{expr: {:&, [], [0]}}
-    } = query
+    %{queries: [{"recent_comments", cte}]} = with_expr
+    assert {{"comments", Comment, nil}} = cte.sources
+    assert %{expr: {:^, [], [0]}, params: [{500, :integer}]} = cte.limit
 
-    assert %{
-      from: %{source: {"comments", Comment}},
-      limit: %{
-        expr: {:^, [], [0]},
-        params: [{500, :integer}]
-      },
-      order_bys: [%{ expr: [desc: _]}],
-      select: %{
-        expr: {:&, [], [0]},
-        take: %{0 => {:any, [:id]}}
-      },
-      sources: {{"comments", Comment, nil}},
-    } = cte
-
-    assert [500, "***"] == params
-
+    assert [:update_all, _, _, _, _, {:non_recursive_cte, "recent_comments", cte_cache}] = cache
     assert [
-      :update_all,
-      {:select, {:&, [], [0]}},
-      {:join, [{:inner, {{"recent_comments", nil}, nil}, {:==, [], _}}]},
-      {"comments", Comment, _, nil},
-      {:update, [[set: [text: {:^, [], [0]}]]]},
-      {:non_recursive_cte, "recent_comments",
-        [
-          {:limit, {:^, [], [0]}},
-          {:order_by, [[desc: _]]},
-          {"comments", Comment, _, nil},
-          {:select, {:&, [], [0]}}
-        ]
-      }
-    ] = cache
+             {:limit, {:^, [], [0]}},
+             {:order_by, [[desc: _]]},
+             {"comments", Comment, _, nil},
+             {:select, {:&, [], [0]}}
+           ] = cte_cache
+  end
+
+test "prepare: prepare CTEs on delete_all" do
+    recent_comments =
+      from(c in Comment,
+        order_by: [desc: c.posted],
+        limit: ^500,
+        select: [:id]
+      )
+
+    {%{with_ctes: with_expr}, [500, "text"], cache} =
+      Comment
+      |> with_cte("recent_comments", as: ^recent_comments)
+      |> join(:inner, [c], r in "recent_comments", on: c.id == r.id and c.text == ^"text")
+      |> select([c, r], c)
+      |> plan(:delete_all)
+
+    %{queries: [{"recent_comments", cte}]} = with_expr
+    assert {{"comments", Comment, nil}} = cte.sources
+    assert %{expr: {:^, [], [0]}, params: [{500, :integer}]} = cte.limit
+
+    assert [:delete_all, _, _, _, {:non_recursive_cte, "recent_comments", cte_cache}] = cache
+    assert [
+             {:limit, {:^, [], [0]}},
+             {:order_by, [[desc: _]]},
+             {"comments", Comment, _, nil},
+             {:select, {:&, [], [0]}}
+           ] = cte_cache
   end
 
   test "normalize: validates literal types" do
