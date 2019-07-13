@@ -465,17 +465,17 @@ defmodule Ecto.Query.PlannerTest do
     assert [:all, {"comments", Comment, _, nil}, {:recursive_cte, "cte", ^expr}] = cache
   end
 
-  test "prepare: Prepare Update CTE" do
+  test "prepare: prepare update CTEs" do
     n = 500
     recent_comments =
       from(c in Comment,
         order_by: [desc: c.posted],
         limit: ^n,
-        select: %{id: c.id}
+        select: [:id]
       )
 
     new_text = "***"
-    {_query, params, _key} =
+    {query, params, cache} =
       Comment
       |> with_cte("recent_comments", as: ^recent_comments)
       |> join(:inner, [c], r in "recent_comments", on: c.id == r.id)
@@ -483,7 +483,60 @@ defmodule Ecto.Query.PlannerTest do
       |> select([c, r], c)
       |> plan(:update_all)
 
-    assert [500, "***"] = params
+    assert %{
+      from: %{source: {"comments", Comment}},
+      with_ctes: %{queries: [{"recent_comments", cte}]},
+      sources: {
+        {"comments", Comment, nil},
+        {"recent_comments", nil, nil}
+      },
+      joins: [
+        %{
+          qual: :inner,
+          on: %{expr: {:==, [], _}},
+          source: {"recent_comments", nil}
+        }
+      ],
+      updates: [
+        %{
+          expr: [set: [text: {:^, [], [0]}]],
+          params: [{"***", {0, :text}}]
+        }
+      ],
+      select: %{expr: {:&, [], [0]}}
+    } = query
+
+    assert %{
+      from: %{source: {"comments", Comment}},
+      limit: %{
+        expr: {:^, [], [0]},
+        params: [{500, :integer}]
+      },
+      order_bys: [%{ expr: [desc: _]}],
+      select: %{
+        expr: {:&, [], [0]},
+        take: %{0 => {:any, [:id]}}
+      },
+      sources: {{"comments", Comment, nil}},
+    } = cte
+
+    assert [500, "***"] == params
+
+    assert [
+      :update_all,
+      {:select, {:&, [], [0]}},
+      {:join, [{:inner, {{"recent_comments", nil}, nil}, {:==, [], _}}]},
+      {"comments", Comment, _, nil},
+      {:update, [[set: [text: {:^, [], [0]}]]]},
+      {:non_recursive_cte, "recent_comments",
+        [
+          {:limit, {:^, [], [0]}},
+          {:order_by, [[desc: _]]},
+          {"comments", Comment, _, nil},
+          {:select, {:&, [], [0]}}
+        ]
+      }
+    ] = cache
   end
 
   test "normalize: validates literal types" do
