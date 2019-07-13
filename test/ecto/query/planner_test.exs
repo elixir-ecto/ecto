@@ -465,6 +465,80 @@ defmodule Ecto.Query.PlannerTest do
     assert [:all, {"comments", Comment, _, nil}, {:recursive_cte, "cte", ^expr}] = cache
   end
 
+  test "prepare: prepare update CTEs" do
+    n = 500
+    recent_comments =
+      from(c in Comment,
+        order_by: [desc: c.posted],
+        limit: ^n,
+        select: [:id]
+      )
+
+    new_text = "***"
+    {query, params, cache} =
+      Comment
+      |> with_cte("recent_comments", as: ^recent_comments)
+      |> join(:inner, [c], r in "recent_comments", on: c.id == r.id)
+      |> update(set: [text: ^new_text])
+      |> select([c, r], c)
+      |> plan(:update_all)
+
+    assert %{
+      from: %{source: {"comments", Comment}},
+      with_ctes: %{queries: [{"recent_comments", cte}]},
+      sources: {
+        {"comments", Comment, nil},
+        {"recent_comments", nil, nil}
+      },
+      joins: [
+        %{
+          qual: :inner,
+          on: %{expr: {:==, [], _}},
+          source: {"recent_comments", nil}
+        }
+      ],
+      updates: [
+        %{
+          expr: [set: [text: {:^, [], [0]}]],
+          params: [{"***", {0, :text}}]
+        }
+      ],
+      select: %{expr: {:&, [], [0]}}
+    } = query
+
+    assert %{
+      from: %{source: {"comments", Comment}},
+      limit: %{
+        expr: {:^, [], [0]},
+        params: [{500, :integer}]
+      },
+      order_bys: [%{ expr: [desc: _]}],
+      select: %{
+        expr: {:&, [], [0]},
+        take: %{0 => {:any, [:id]}}
+      },
+      sources: {{"comments", Comment, nil}},
+    } = cte
+
+    assert [500, "***"] == params
+
+    assert [
+      :update_all,
+      {:select, {:&, [], [0]}},
+      {:join, [{:inner, {{"recent_comments", nil}, nil}, {:==, [], _}}]},
+      {"comments", Comment, _, nil},
+      {:update, [[set: [text: {:^, [], [0]}]]]},
+      {:non_recursive_cte, "recent_comments",
+        [
+          {:limit, {:^, [], [0]}},
+          {:order_by, [[desc: _]]},
+          {"comments", Comment, _, nil},
+          {:select, {:&, [], [0]}}
+        ]
+      }
+    ] = cache
+  end
+
   test "normalize: validates literal types" do
     assert_raise Ecto.QueryError, fn ->
       Comment |> where([c], c.text == 123) |> normalize()
@@ -811,7 +885,7 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize(:update_all)
     end
 
-    message = ~r"`update_all` allows only `where` and `join` expressions"
+    message = ~r"`update_all` allows only `with_cte`, `where` and `join` expressions"
     assert_raise Ecto.QueryError, message, fn ->
       from(p in Post, order_by: p.title, update: [set: [title: "foo"]]) |> normalize(:update_all)
     end
@@ -823,7 +897,7 @@ defmodule Ecto.Query.PlannerTest do
       from(p in Post, update: [set: [name: "foo"]]) |> normalize(:delete_all)
     end
 
-    message = ~r"`delete_all` allows only `where` and `join` expressions"
+    message = ~r"`delete_all` allows only `with_cte`, `where` and `join` expressions"
     assert_raise Ecto.QueryError, message, fn ->
       from(p in Post, order_by: p.title) |> normalize(:delete_all)
     end

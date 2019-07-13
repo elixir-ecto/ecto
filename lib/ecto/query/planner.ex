@@ -604,16 +604,16 @@ defmodule Ecto.Query.Planner do
     cache_and_params
   end
 
-  defp merge_cache(:with_cte, query, with_expr, cache_and_params, operation, adapter) do
+  defp merge_cache(:with_cte, query, with_expr, cache_and_params, _operation, adapter) do
     %{queries: queries, recursive: recursive} = with_expr
     key = if recursive, do: :recursive_cte, else: :non_recursive_cte
-    fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
+    fun = &{&3, merge_cache(&1, &2, &3, &4, :all, adapter)}
 
     # In here we add each cte as its own entry in the cache key.
     # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
     Enum.reduce queries, cache_and_params, fn
       {name, %Ecto.Query{} = query}, {cache, params} ->
-        case traverse_exprs(query, operation, {[], params}, fun) do
+        case traverse_exprs(query, :all, {[], params}, fun) do
           {_, {:nocache, _} = acc} -> acc
           {_, {inner_cache, params}} -> {[{key, name, inner_cache} | cache], params}
         end
@@ -881,13 +881,13 @@ defmodule Ecto.Query.Planner do
     {nil, counter}
   end
 
-  defp validate_and_increment(:with_cte, query, with_expr, counter, operation, adapter) do
-    fun = &validate_and_increment(&1, &2, &3, &4, operation, adapter)
+  defp validate_and_increment(:with_cte, query, with_expr, counter, _operation, adapter) do
+    fun = &validate_and_increment(&1, &2, &3, &4, :all, adapter)
 
     {queries, counter} =
       Enum.reduce with_expr.queries, {[], counter}, fn
         {name, %Ecto.Query{} = query}, {queries, counter} ->
-          {query, counter} = traverse_exprs(query, operation, counter, fun)
+          {query, counter} = traverse_exprs(query, :all, counter, fun)
           {query, _} = normalize_select(query) |> remove_literals()
           {_, select} = subquery_select(query, adapter)
           keys = select |> subquery_types() |> Keyword.keys()
@@ -1540,10 +1540,10 @@ defmodule Ecto.Query.Planner do
     case query do
       %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [],
                   havings: [], preloads: [], assocs: [], distinct: nil, lock: nil,
-                  windows: [], combinations: [], with_ctes: nil} ->
+                  windows: [], combinations: []} ->
         query
       _ ->
-        error! query, "`#{operation}` allows only `where` and `join` expressions. " <>
+        error! query, "`#{operation}` allows only `with_cte`, `where` and `join` expressions. " <>
                       "You can exclude unwanted expressions from a query by using " <>
                       "Ecto.Query.exclude/2. Error found"
     end
