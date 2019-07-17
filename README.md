@@ -60,9 +60,11 @@ end
 
 Ecto is commonly used to interact with databases, such as Postgres and MySQL via [Ecto.Adapters.SQL](http://hexdocs.pm/ecto_sql) ([source code](https://github.com/elixir-ecto/ecto_sql)). Ecto is also commonly used to map data from any source into Elixir structs, regardless if they are backed by a database or not.
 
-See the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and the [online documentation](http://hexdocs.pm/ecto).
+See the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and the [online documentation](http://hexdocs.pm/ecto) for more information. Other resources available are:
 
-Also checkout the ["What's new in Ecto 2.1"](http://pages.plataformatec.com.br/ebook-whats-new-in-ecto-2-0) free ebook to learn more about many features since Ecto 2.1 such as `many_to_many`, schemaless queries, concurrent testing, upsert and more. Note the book still largely applies to Ecto 3.0 as the major change in Ecto 3.0 was the split of Ecto in two repositories (`ecto` and `ecto_sql`) and the removal of the outdated Ecto datetime types in favor of Elixir's Calendar types.
+  * [Programming Ecto](https://pragprog.com/book/wmecto/programming-ecto), by Darin Wilson and Eric Meadows-Jönsson, which guides you from fundamentals up to advanced concepts
+
+  * [The Little Ecto Cookbook](https://pages.plataformatec.com.br/the-little-ecto-cookbook), a free ebook by Plataformatec, which is a curation of the existing Ecto guides with some extra contents
 
 ## Usage
 
