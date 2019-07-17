@@ -266,8 +266,11 @@ end
 
 ## Summing up
 
-Ecto provides many conveniences for working with querying prefixes. Those conveniences allow developers to configure prefix with different level of granularity:
+Ecto provides many conveniences for working with querying prefixes. Those conveniences allow developers to configure prefixes with different precedence, starting with the highest one:
 
-    connection prefixes < schema prefix < query/struct prefixes < from/join prefixes
+  1. from/join prefixes
+  2. query/struct prefixes
+  3. schema prefixes
+  4. connection prefixes
 
 This way developers can tackle different scenarios, from production requirements to multi-tenant applications.

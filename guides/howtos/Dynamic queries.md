@@ -106,7 +106,7 @@ By using dynamic fragments, we can decouple the processing of parameters from th
 
 ## Building dynamic queries
 
-Let's go back to the original problem. We want to build a search functionality where the user can configure how to traverse all posts in many different ways. For example, the user may choose how to order the data, filter by author and category, as well as select posts published after a certain daate.
+Let's go back to the original problem. We want to build a search functionality where the user can configure how to traverse all posts in many different ways. For example, the user may choose how to order the data, filter by author and category, as well as select posts published after a certain date.
 
 To tackle this in Ecto, we can break our problem into a bunch of small functions, that build either data structures or dynamic fragments, and then we interpolate it into the query:
 
