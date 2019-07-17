@@ -117,9 +117,14 @@ def filter(params) do
   |> where(^filter_where(params))
 end
 
-def filter_order_by("published_at_desc"), do: dynamic([p], desc: p.published_at)
-def filter_order_by("published_at"),      do: dynamic([p], p.published_at)
-def filter_order_by(_),                   do: []
+def filter_order_by("published_at_desc"),
+  do: dynamic([p], desc: p.published_at)
+
+def filter_order_by("published_at"),
+  do: dynamic([p], p.published_at)
+
+def filter_order_by(_),
+  do: []
 
 def filter_where(params) do
   Enum.reduce(params, dynamic(true), fn
@@ -145,12 +150,23 @@ Testing also becomes simpler as we can test each function in isolation, even whe
 
 ```elixir
 test "filter published at based on the given date" do
-  assert inspect(filter_where(%{"published_at" => "2010-04-17"})) ==
-         "dynamic([q], true and q.published_at > ^\"2010-04-17\")"
-  assert inspect(filter_where(%{})) ==
-         "dynamic([q], true)"
+  assert dynamic_match?(
+           filter_where(%{}),
+           "true"
+         )
+
+  assert dynamic_match?(
+           filter_where(%{"published_at" => "2010-04-17"}),
+           "true and q.published_at > ^\"2010-04-17\""
+         )
+end
+
+defp dynamic_match?(dynamic, string) do
+  inspect(dynamic) == "dynamic([q], #{string})"
 end
 ```
+
+In the example above, we created a small helper that allows us to assert on the dynamic contents by matching on the results of `inspect(dynamic)`.
 
 ## Dynamic and joins
 
@@ -161,17 +177,27 @@ Our final solution would look like this:
 ```elixir
 def filter(params) do
   Post
-  |> join([p], assoc(p, :authors), as: :authors) # 1. Add named join binding
+  # 1. Add named join binding
+  |> join([p], assoc(p, :authors), as: :authors)
   |> order_by(^filter_order_by(params["order_by"]))
   |> where(^filter_where(params))
 end
 
 # 2. Returned dynamic with join binding
-def filter_order_by("published_at_desc"), do: dynamic([p], desc: p.published_at)
-def filter_order_by("published_at"),      do: dynamic([p], p.published_at)
-def filter_order_by("author_name_desc"),  do: dynamic([authors: a], desc: a.name)
-def filter_order_by("author_name"),       do: dynamic([authors: a], a.name)
-def filter_order_by(_),                   do: []
+def filter_order_by("published_at_desc"),
+  do: dynamic([p], desc: p.published_at)
+
+def filter_order_by("published_at"),
+  do: dynamic([p], p.published_at)
+
+def filter_order_by("author_name_desc"),
+  do: dynamic([authors: a], desc: a.name)
+
+def filter_order_by("author_name"),
+  do: dynamic([authors: a], a.name)
+
+def filter_order_by(_),
+  do: []
 
 # 3. Change the authors clause inside reduce
 def filter_where(params) do

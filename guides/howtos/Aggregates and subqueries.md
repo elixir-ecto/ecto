@@ -26,25 +26,40 @@ At first, it looks like the implementation of `aggregate/4` is quite straight-fo
 Imagine that instead of calculating the average of all posts, you want the average of only the top 10. Your first try may be:
 
 ```elixir
-MyApp.Repo.one(from p in MyApp.Post,
-                order_by: [desc: :visits],
-                limit: 10,
-                select: avg(p.visits))
+MyApp.Repo.one(
+  from p in MyApp.Post,
+    order_by: [desc: :visits],
+    limit: 10,
+    select: avg(p.visits)
+)
 #=> #Decimal<1743>
 ```
 
 Oops. The query above returned the same value as the queries before. The option `limit: 10` has no effect here since it is limiting the aggregated result and queries with aggregates return only a single row anyway. In order to retrieve the correct result, we would need to first find the top 10 posts and only then aggregate. That's exactly what `aggregate/4` does:
 
 ```elixir
-query = from MyApp.Post, order_by: [desc: :visits], limit: 10
-MyApp.Repo.aggregate(query, :avg, :visits) #=> #Decimal<4682>
+query =
+  from MyApp.Post,
+    order_by: [desc: :visits],
+    limit: 10
+
+MyApp.Repo.aggregate(query, :avg, :visits)
+#=> #Decimal<4682>
 ```
 
 When `limit`, `offset` or `distinct` is specified in the query, `aggregate/4` automatically wraps the given query in a subquery. Therefore the query executed by `aggregate/4` above is rather equivalent to:
 
 ```elixir
-query = from MyApp.Post, order_by: [desc: :visits], limit: 10
-MyApp.Repo.one(from q in subquery(query), select: avg(q.visits))
+inner_query =
+  from MyApp.Post,
+    order_by: [desc: :visits],
+    limit: 10
+
+query =
+  from q in subquery(inner_query),
+  select: avg(q.visits)
+
+MyApp.Repo.one(query)
 ```
 
 Let's take a closer look at subqueries.
@@ -58,8 +73,16 @@ Subqueries in Ecto are created by calling `Ecto.Query.subquery/1`. This function
 In Ecto, it is allowed for a subquery to select a whole table (`p`) or a field (`p.field`). All fields selected in a subquery can be accessed from the parent query. Let's revisit the aggregate query we saw in the previous section:
 
 ```elixir
-query = from MyApp.Post, order_by: [desc: :visits], limit: 10
-MyApp.Repo.one(from q in subquery(query), select: avg(q.visits))
+inner_query =
+  from MyApp.Post,
+    order_by: [desc: :visits],
+    limit: 10
+
+query =
+  from q in subquery(query),
+    select: avg(q.visits)
+
+MyApp.Repo.one(query)
 ```
 
 Because the query does not specify a `:select` clause, it will return `select: p` where `p` is controlled by `MyApp.Post` schema. Since the query will return all fields in `MyApp.Post`, when we convert it to a subquery, all of the fields from `MyApp.Post` will be available on the parent query, such as `q.visits`. In fact, Ecto will keep the schema properties across queries. For example, if you write `q.field_that_does_not_exist`, your Ecto query won't compile.
@@ -85,11 +108,14 @@ Now consider we want to retrieve the name of every book alongside the name of th
 last_lendings =
   from l in MyApp.Lending,
     group_by: l.book_id,
-    select: %{book_id: l.book_id, last_lending_id: max(l.id)}
+    select: %{
+      book_id: l.book_id,
+      last_lending_id: max(l.id)
+    }
 
 from l in Lending,
   join: last in subquery(last_lendings),
-    on: last.last_lending_id == l.id,
+  on: last.last_lending_id == l.id,
   join: b in assoc(l, :book),
   join: v in assoc(l, :visitor),
   select: {b.name, v.name}

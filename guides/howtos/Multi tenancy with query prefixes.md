@@ -17,7 +17,9 @@ Let's define a repository and a schema to get started:
 ```elixir
 # lib/repo.ex
 defmodule MyApp.Repo do
-  use Ecto.Repo, otp_app: :my_app, adapter: Ecto.Adapters.Postgres
+  use Ecto.Repo,
+    otp_app: :my_app,
+    adapter: Ecto.Adapters.Postgres
 end
 
 # lib/sample.ex
@@ -65,7 +67,7 @@ Now let's create the database, migrate it and then start an IEx session:
 $ mix ecto.create
 $ mix ecto.migrate
 $ iex -S mix
-Interactive Elixir (1.4.0-dev) - press Ctrl+C to exit (type h() ENTER for help)
+Interactive Elixir - press Ctrl+C to exit
 iex(1)> MyApp.Repo.all MyApp.Sample
 []
 ```
@@ -79,29 +81,33 @@ Luckily Postgres allows us to change the prefix our database connections run on 
 To do so, let's change our database configuration in "config/config.exs" and specify an `:after_connect` option. `:after_connect` expects a tuple with module, function and arguments it will invoke with the connection process, as soon as a database connection is established:
 
 ```elixir
+query_args = ["SET search_path TO connection_prefix", []]
+
 config :my_app, MyApp.Repo,
   username: "postgres",
   password: "postgres",
   database: "demo_dev",
   hostname: "localhost",
   pool_size: 10,
-  after_connect: {Postgrex, :query!, ["SET search_path TO connection_prefix", []]}
+  after_connect: {Postgrex, :query!, query_args}
 ```
 
 Now let's try to run the same query as before:
 
 ```bash
 $ iex -S mix
-Interactive Elixir (1.4.0-dev) - press Ctrl+C to exit (type h() ENTER for help)
+Interactive Elixir - press Ctrl+C to exit
 iex(1)> MyApp.Repo.all MyApp.Sample
-** (Postgrex.Error) ERROR (undefined_table): relation "samples" does not exist
+** (Postgrex.Error) ERROR (undefined_table):
+   relation "samples" does not exist
 ```
 
 Our previously successful query now fails because there is no table "samples" under the new prefix. Let's try to fix that by running migrations:
 
 ```bash
 $ mix ecto.migrate
-** (Postgrex.Error) ERROR (invalid_schema_name): no schema has been selected to create in
+** (Postgrex.Error) ERROR (invalid_schema_name):
+   no schema has been selected to create in
 ```
 
 Oops. Now migration says there is no such schema name. That's because Postgres automatically creates the "public" prefix every time we create a new database. If we want to use a different prefix, we must explicitly create it on the database we are running on:
@@ -115,7 +121,7 @@ Now we are ready to migrate and run our queries:
 ```bash
 $ mix ecto.migrate
 $ iex -S mix
-Interactive Elixir (1.4.0-dev) - press Ctrl+C to exit (type h() ENTER for help)
+Interactive Elixir - press Ctrl+C to exit
 iex(1)> MyApp.Repo.all MyApp.Sample
 []
 ```
@@ -146,20 +152,22 @@ Now running `MyApp.Repo.all MyApp.Mapping` will by default run on the "main" pre
 Now, suppose that while still configured to connect to the "connection_prefix" on `:after_connect`, we run the following queries:
 
 ```iex
-iex(1) MyApp.Repo.all MyApp.Sample
+iex(1) alias MyApp.Sample
+MyApp.Sample
+iex(2) MyApp.Repo.all Sample
 []
-iex(2) MyApp.Repo.insert %MyApp.Sample{name: "mary"}
+iex(3) MyApp.Repo.insert %Sample{name: "mary"}
 {:ok, %MyApp.Sample{...}}
-iex(3) MyApp.Repo.all MyApp.Sample
+iex(4) MyApp.Repo.all Sample
 [%MyApp.Sample{...}]
 ```
 
 The operations above ran on the "connection_prefix". So what happens if we try to run the sample query on the "public" prefix? To do so, let's build a query struct and set the prefix field manually:
 
 ```iex
-iex(4)> query = Ecto.Queryable.to_query MyApp.Sample
+iex(5)> query = Ecto.Queryable.to_query Sample
 #Ecto.Query<from s in MyApp.Sample>
-iex(5)>  MyApp.Repo.all %{query | prefix: "public"}
+iex(6)>  MyApp.Repo.all %{query | prefix: "public"}
 []
 ```
 
@@ -168,18 +176,18 @@ Notice how we were able to change the prefix the query runs on. Back in the defa
 Ecto also supports the `:prefix` option on all relevant repository operations:
 
 ```iex
-iex(6)> MyApp.Repo.all MyApp.Sample
+iex(7)> MyApp.Repo.all Sample
 [%MyApp.Sample{...}]
-iex(7)> MyApp.Repo.all MyApp.Sample, prefix: "public"
+iex(8)> MyApp.Repo.all Sample, prefix: "public"
 []
 ```
 
 One interesting aspect of prefixes in Ecto is that the prefix information is carried along each struct returned by a query:
 
 ```iex
-iex(8) [sample] = MyApp.Repo.all MyApp.Sample
+iex(9) [sample] = MyApp.Repo.all Sample
 [%MyApp.Sample{}]
-iex(9)> Ecto.get_meta(sample, :prefix)
+iex(10)> Ecto.get_meta(sample, :prefix)
 nil
 ```
 
@@ -188,13 +196,13 @@ The example above returned nil, which means no prefix was specified by Ecto, and
 Since the prefix data is carried in the struct, we can use such to copy data from one prefix to the other. Let's copy the sample above from the "connection_prefix" to the "public" one:
 
 ```iex
-iex(10)> public_sample = Ecto.put_meta(sample, prefix: "public")
+iex(11)> new_sample = Ecto.put_meta(sample, prefix: "public")
 %MyApp.Sample{}
-iex(11)> MyApp.Repo.insert public_sample
+iex(12)> MyApp.Repo.insert new_sample
 {:ok, %MyApp.Sample{}}
-iex(12)> [sample] = MyApp.Repo.all MyApp.Sample, prefix: "public"
+iex(13)> [sample] = MyApp.Repo.all Sample, prefix: "public"
 [%MyApp.Sample{}]
-iex(13)> Ecto.get_meta(sample, :prefix)
+iex(14)> Ecto.get_meta(sample, :prefix)
 "public"
 ```
 

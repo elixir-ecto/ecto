@@ -43,7 +43,11 @@ defmodule MyApp.Post do
   schema "posts" do
     field :title
     field :body
-    many_to_many :tags, MyApp.Tag, join_through: "posts_tags", on_replace: :delete
+
+    many_to_many :tags, MyApp.Tag,
+      join_through: "posts_tags",
+      on_replace: :delete
+
     timestamps()
   end
 
@@ -107,7 +111,8 @@ While the mechanism above fixes the race condition, it is a quite expensive one:
 
 ```elixir
 defp get_or_insert_tag(name) do
-  Repo.get_by(MyApp.Tag, name: name) || maybe_insert_tag(name)
+  Repo.get_by(MyApp.Tag, name: name) ||
+    maybe_insert_tag(name)
 end
 
 defp maybe_insert_tag(name) do
@@ -134,7 +139,10 @@ Your first try in using `:on_conflict` may be by setting it to `:nothing`, as be
 
 ```elixir
 defp get_or_insert_tag(name) do
-  Repo.insert!(%MyApp.Tag{name: name}, on_conflict: :nothing)
+  Repo.insert!(
+    %MyApp.Tag{name: name},
+    on_conflict: :nothing
+  )
 end
 ```
 
@@ -142,8 +150,11 @@ While the above won't raise an error in case of conflicts, it also won't update 
 
 ```elixir
 defp get_or_insert_tag(name) do
-  Repo.insert!(%MyApp.Tag{name: name},
-               on_conflict: [set: [name: name]], conflict_target: :name)
+  Repo.insert!(
+    %MyApp.Tag{name: name},
+    on_conflict: [set: [name: name]],
+    conflict_target: :name
+  )
 end
 ```
 
@@ -161,7 +172,11 @@ defmodule MyApp.Post do
   schema "posts" do
     add :title
     add :body
-    many_to_many :tags, MyApp.Tag, join_through: "posts_tags", on_replace: :delete
+
+    many_to_many :tags, MyApp.Tag,
+      join_through: "posts_tags",
+      on_replace: :delete
+
     timestamps()
   end
 
