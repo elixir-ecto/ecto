@@ -106,7 +106,7 @@ And now you are ready to work with primary and replicas, no hacks or complex dep
 
 ## Testing replicas
 
-While all of the work we have done os far should fully work in development and production, it may not be enough for tests. Most developers testing Ecto applications are using a sandbox, such as the [Ecto SQL Sandbox](https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.Sandbox.html).
+While all of the work we have done so far should fully work in development and production, it may not be enough for tests. Most developers testing Ecto applications are using a sandbox, such as the [Ecto SQL Sandbox](https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.Sandbox.html).
 
 When using a sandbox, each of your tests run in an isolated and independent transaction. Once the test is done, the transaction is rolled back. Which means we can trivially revert all of the changes done in a test in a very performant way.
 
@@ -126,7 +126,7 @@ There are two options to tackle this problem: one is to change replicas and the 
 One simple solution to the problem above is to use a custom `replica` implementation during tests that always return the primary repository, like this:
 
 ```elixir
-if Mix.env == :test do
+if Mix.env() == :test do
   def replica, do: __MODULE__
 else
   def replica, do: Enum.random(@replicas)
@@ -193,14 +193,14 @@ end
 There is even a better way! We can pass a `:default_dynamic_repo` option when we define the repository. In this case, we want to set the `:default_dynamic_repo` to `MyApp.Repo` only during the test environment. In your `lib/my_app/repo.ex`, do this:
 
 ```elixir
-  dynamic_default_repo =
-    if Mix.env() == :test do
-      MyApp.Repo
-    else
-      __MODULE__
-    end
-
   for repo <- @replicas do
+    dynamic_default_repo =
+      if Mix.env() == :test do
+        MyApp.Repo
+      else
+        repo
+      end
+
     defmodule repo do
       use Ecto.Repo,
         otp_app: :my_app,
