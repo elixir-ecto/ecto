@@ -450,7 +450,7 @@ defmodule Ecto.Repo do
   @callback get_dynamic_repo() :: atom() | pid()
 
   @doc """
-  Sets the dynamic repository to be used in further iteractions.
+  Sets the dynamic repository to be used in further interactions.
 
   Sometimes you may want a single Ecto repository to talk to
   many different database instances. By default, when you call
