@@ -743,7 +743,7 @@ defmodule Ecto.Query.Planner do
   defp plan_combinations(query, adapter) do
     combinations =
       Enum.map query.combinations, fn {type, combination_query} ->
-        {prepared_query, _params, _key} = plan(combination_query, :all, adapter)
+        {prepared_query, _params, _key} = plan(%{combination_query | prefix: query.prefix}, :all, adapter)
         prepared_query = prepared_query |> ensure_select(true)
         {type, prepared_query}
       end
