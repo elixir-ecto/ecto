@@ -339,7 +339,8 @@ defmodule Ecto.Repo do
   application environment. It must return `{:ok, keyword}` with the updated
   list of configuration or `:ignore` (only in the `:supervisor` case).
   """
-  @callback init(:supervisor | :runtime, config :: Keyword.t()) :: {:ok, Keyword.t()} | :ignore
+  @callback init(context :: :supervisor | :runtime, config :: Keyword.t()) ::
+              {:ok, Keyword.t()} | :ignore
 
   ## Ecto.Adapter
 
