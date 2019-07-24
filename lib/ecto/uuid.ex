@@ -15,10 +15,10 @@ defmodule Ecto.UUID do
   """
   @type raw :: <<_::128>>
 
-  @impl true
+  @doc false
   def type, do: :uuid
 
-  @impl true
+  @doc false
   def embed_as(_), do: :self
 
   @doc """
