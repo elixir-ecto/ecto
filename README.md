@@ -115,7 +115,8 @@ defmodule MyApp.Repo do
 
 | Branch | Support                  |
 | ------ | ------------------------ |
-| v3.0   | Bug fixes                |
+| v3.1   | Bug fixes                |
+| v3.0   | Security patches only    |
 | v2.2   | Security patches only    |
 | v2.1   | Unsupported from 10/2018 |
 | v2.0   | Unsupported from 08/2017 |
@@ -139,7 +140,12 @@ Clone the repo and fetch its dependencies:
     $ mix deps.get
     $ mix test
 
-Note that `mix test` does not run the tests in `integration_test` folder, because Ecto does not ship with any adapters to run them against. Adapter libraries like `ecto_sql` can run these tests as part of their suites.
+Note that `mix test` does not run the tests in the `integration_test` folder. To run integration tests, you can clone `ecto_sql` in a sibling directory and then run its integration tests with the `ECTO_PATH` environment variable pointing to your Ecto checkout:
+
+    $ cd ..
+    $ git clone https://github.com/elixir-ecto/ecto_sql.git
+    $ cd ecto_sql
+    $ ECTO_PATH=../ecto mix test.all
 
 ## Copyright and License
 
