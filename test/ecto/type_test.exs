@@ -132,6 +132,29 @@ defmodule Ecto.TypeTest do
     assert cast({:in, :integer}, nil) == :error
   end
 
+  test "{:param, :any_datetime}" do
+    value = ~N[2010-04-17 14:00:00]
+    assert cast({:param, :any_datetime}, value) == {:ok, value}
+
+    value = ~N[2010-04-17 14:00:00.123]
+    assert cast({:param, :any_datetime}, value) == {:ok, value}
+
+    value = DateTime.utc_now
+    assert cast({:param, :any_datetime}, value) == {:ok, value}
+
+    value = "2010-04-17 14:00:00"
+    assert cast({:param, :any_datetime}, value) == {:ok, ~N[2010-04-17 14:00:00]}
+
+    value = Map.from_struct(~N[2010-04-17 14:00:00])
+    assert cast({:param, :any_datetime}, value) == {:ok, ~N[2010-04-17 14:00:00]}
+
+    assert match?(:naive_datetime, {:param, :any_datetime})
+    assert match?(:naive_datetime_usec, {:param, :any_datetime})
+    assert match?(:utc_datetime, {:param, :any_datetime})
+    assert match?(:utc_datetime_usec, {:param, :any_datetime})
+    refute match?(:string, {:param, :any_datetime})
+  end
+
   test "decimal" do
     assert cast(:decimal, "1.0") == {:ok, Decimal.new("1.0")}
     assert cast(:decimal, 1.0) == {:ok, Decimal.new("1.0")}

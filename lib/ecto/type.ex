@@ -99,7 +99,7 @@ defmodule Ecto.Type do
     utc_datetime naive_datetime date time
     utc_datetime_usec naive_datetime_usec time_usec
   )a
-  @composite ~w(array map in embed)a
+  @composite ~w(array map in embed param)a
 
   @doc """
   Returns the underlying schema type for the custom type.
@@ -272,6 +272,10 @@ defmodule Ecto.Type do
   defp do_match?(:binary_id, :binary), do: true
   defp do_match?(:id, :integer), do: true
   defp do_match?(type, type), do: true
+  defp do_match?(:naive_datetime, {:param, :any_datetime}), do: true
+  defp do_match?(:naive_datetime_usec, {:param, :any_datetime}), do: true
+  defp do_match?(:utc_datetime, {:param, :any_datetime}), do: true
+  defp do_match?(:utc_datetime_usec, {:param, :any_datetime}), do: true
   defp do_match?(_, _), do: false
 
   @doc """
@@ -364,6 +368,7 @@ defmodule Ecto.Type do
   defp dump_fun(:naive_datetime_usec), do: &dump_naive_datetime_usec/1
   defp dump_fun(:utc_datetime), do: &dump_utc_datetime/1
   defp dump_fun(:utc_datetime_usec), do: &dump_utc_datetime_usec/1
+  defp dump_fun({:param, :any_datetime}), do: &dump_any_datetime/1
   defp dump_fun({:array, type}), do: &array(&1, dump_fun(type), [])
   defp dump_fun({:map, type}), do: &map(&1, dump_fun(type), %{})
   defp dump_fun(mod) when is_atom(mod), do: &mod.dump(&1)
@@ -396,6 +401,10 @@ defmodule Ecto.Type do
 
   defp dump_time_usec(%Time{} = term), do: {:ok, check_usec!(term, :time_usec)}
   defp dump_time_usec(_), do: :error
+
+  defp dump_any_datetime(%NaiveDateTime{} = term), do: {:ok, term}
+  defp dump_any_datetime(%DateTime{} = term), do: {:ok, term}
+  defp dump_any_datetime(_), do: :error
 
   defp dump_naive_datetime(%NaiveDateTime{} = term), do:
     {:ok, check_no_usec!(term, :naive_datetime)}
@@ -704,6 +713,7 @@ defmodule Ecto.Type do
   defp cast_fun(:naive_datetime_usec), do: &maybe_pad_usec(cast_naive_datetime(&1))
   defp cast_fun(:utc_datetime), do: &maybe_truncate_usec(cast_utc_datetime(&1))
   defp cast_fun(:utc_datetime_usec), do: &maybe_pad_usec(cast_utc_datetime(&1))
+  defp cast_fun({:param, :any_datetime}), do: &cast_any_datetime(&1)
   defp cast_fun({:in, type}), do: &array(&1, cast_fun(type), [])
   defp cast_fun({:array, type}), do: &array(&1, cast_fun(type), [])
   defp cast_fun({:map, type}), do: &map(&1, cast_fun(type), %{})
@@ -891,6 +901,9 @@ defmodule Ecto.Type do
   defp cast_time(_, _, _, _) do
     :error
   end
+
+  defp cast_any_datetime(%DateTime{} = datetime), do: cast_utc_datetime(datetime)
+  defp cast_any_datetime(other), do: cast_naive_datetime(other)
 
   ## Naive datetime
 

@@ -324,6 +324,21 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "plan: handles specific param type-casting" do
+    value = NaiveDateTime.utc_now
+    {_, params, _} = from(p in Post, where: p.posted > datetime_add(^value, 1, "second")) |> plan()
+    assert params == [value]
+
+    value = DateTime.utc_now
+    {_, params, _} = from(p in Post, where: p.posted > datetime_add(^value, 1, "second")) |> plan()
+    assert params == [value]
+
+    value = ~N[2010-04-17 14:00:00]
+    {_, params, _} =
+      from(p in Post, where: p.posted > datetime_add(^"2010-04-17 14:00:00", 1, "second")) |> plan()
+    assert params == [value]
+  end
+
   test "plan: generates a cache key" do
     {_query, _params, key} = plan(from(Post, []))
     assert key == [:all, {"posts", Post, 27727487, "my_prefix"}]
@@ -419,7 +434,7 @@ defmodule Ecto.Query.PlannerTest do
     assert query.sources == {{"posts", Post, "my_prefix"}, {"comments", Comment, "local"}, {"comment_posts", nil, "local"}}
   end
 
-  test "prepare: prepare combination queries" do
+  test "plan: combination queries" do
     {%{combinations: [{_, query}]}, _, cache} = from(c in Comment, union: ^from(c in Comment)) |> plan()
     assert query.sources == {{"comments", Comment, nil}}
     assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
@@ -431,7 +446,7 @@ defmodule Ecto.Query.PlannerTest do
     assert :nocache = cache
   end
 
-  test "prepare: prepare CTEs on all" do
+  test "plan: CTEs on all" do
     {%{with_ctes: with_expr}, _, cache} =
       Comment
       |> with_cte("cte", as: ^from(c in Comment))
@@ -465,7 +480,7 @@ defmodule Ecto.Query.PlannerTest do
     assert [:all, {"comments", Comment, _, nil}, {:recursive_cte, "cte", ^expr}] = cache
   end
 
-  test "prepare: prepare CTEs on update_all" do
+  test "plan: CTEs on update_all" do
     recent_comments =
       from(c in Comment,
         order_by: [desc: c.posted],
@@ -494,7 +509,7 @@ defmodule Ecto.Query.PlannerTest do
            ] = cte_cache
   end
 
-test "prepare: prepare CTEs on delete_all" do
+  test "plan: CTEs on delete_all" do
     recent_comments =
       from(c in Comment,
         order_by: [desc: c.posted],
