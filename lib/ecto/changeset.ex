@@ -1133,7 +1133,7 @@ defmodule Ecto.Changeset do
         {changes, [{key, error} | errors], false}
       # ignore or ok with change == original
       _ ->
-        {changes, errors, valid?}
+        {Map.delete(changes, key), errors, valid?}
     end
   end
 
@@ -1142,15 +1142,10 @@ defmodule Ecto.Changeset do
   end
 
   defp put_change(data, changes, errors, valid?, key, value, type) do
-    cond do
-      not Ecto.Type.equal?(type, Map.get(data, key), value) ->
-        {Map.put(changes, key, value), errors, valid?}
-
-      Map.has_key?(changes, key) ->
-        {Map.delete(changes, key), errors, valid?}
-
-      true ->
-        {changes, errors, valid?}
+    if not Ecto.Type.equal?(type, Map.get(data, key), value) do
+      {Map.put(changes, key, value), errors, valid?}
+    else
+      {Map.delete(changes, key), errors, valid?}
     end
   end
 

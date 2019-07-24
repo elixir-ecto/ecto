@@ -468,6 +468,22 @@ defmodule Ecto.Changeset.BelongsToTest do
       |> Changeset.put_assoc(:profile, nil)
 
     refute Map.has_key?(changeset.changes, :profile)
+
+    # On unloaded with change
+    changeset =
+      %Author{}
+      |> Changeset.change(profile: %Profile{})
+      |> Changeset.put_assoc(:profile, nil)
+
+    assert Map.has_key?(changeset.changes, :profile)
+
+    # On emptuy with change
+    changeset =
+      %Author{profile: nil}
+      |> Changeset.change(profile: %Profile{})
+      |> Changeset.put_assoc(:profile, nil)
+
+    refute Map.has_key?(changeset.changes, :profile)
   end
 
   test "put_change/3" do

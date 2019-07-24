@@ -761,8 +761,30 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
   test "put_embed/4 with embeds_one and empty" do
     changeset =
+      %Author{}
+      |> Changeset.change()
+      |> Changeset.put_embed(:profile, nil)
+
+    refute Map.has_key?(changeset.changes, :profile)
+
+    changeset =
       %Author{profile: nil}
       |> Changeset.change()
+      |> Changeset.put_embed(:profile, nil)
+
+    refute Map.has_key?(changeset.changes, :profile)
+
+    changeset =
+      %Author{profile: %Profile{}}
+      |> Changeset.change()
+      |> Changeset.put_embed(:profile, nil)
+
+    assert Map.has_key?(changeset.changes, :profile)
+    assert changeset.changes[:profile] == nil
+
+    changeset =
+      %Author{}
+      |> Changeset.change(profile: %Profile{})
       |> Changeset.put_embed(:profile, nil)
 
     refute Map.has_key?(changeset.changes, :profile)
