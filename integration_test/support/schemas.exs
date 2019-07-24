@@ -41,6 +41,7 @@ defmodule Ecto.Integration.Post do
     field :intensities, {:map, :float}
     field :posted, :date
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
+    # The post<->permalink relationship should be marked as uniq
     has_one :permalink, Ecto.Integration.Permalink, on_delete: :delete_all, on_replace: :delete
     has_one :update_permalink, Ecto.Integration.Permalink, foreign_key: :post_id, on_delete: :delete_all, on_replace: :update
     has_many :comments_authors, through: [:comments, :author]

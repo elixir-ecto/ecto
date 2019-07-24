@@ -406,13 +406,13 @@ defmodule Ecto.Association do
   end
 
   defp on_repo_change(%{cardinality: :one, field: field, __struct__: mod} = meta,
-                      %{action: action} = changeset, parent_changeset,
+                      %{action: action, data: current} = changeset, parent_changeset,
                       repo_action, adapter, opts, {parent, changes, halt, valid?}) do
     check_action!(meta, action, repo_action)
+    if not halt, do: maybe_replace_one!(meta, current, parent, parent_changeset, adapter, opts)
 
     case on_repo_change_unless_halted(halt, mod, meta, parent_changeset, changeset, adapter, opts) do
       {:ok, struct} ->
-        struct && maybe_replace_one!(meta, struct, parent, parent_changeset, adapter, opts)
         {Map.put(parent, field, struct), Map.put(changes, field, changeset), halt, valid?}
 
       {:error, error_changeset} ->
