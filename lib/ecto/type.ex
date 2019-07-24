@@ -31,7 +31,7 @@ defmodule Ecto.Type do
   back (`c:dump/1` and `c:load/1`).
 
       defmodule EctoURI do
-        @behaviour Ecto.Type
+        use Ecto.Type
         def type, do: :map
 
         # Provide custom casting rules.
@@ -78,6 +78,16 @@ defmodule Ecto.Type do
   """
 
   import Kernel, except: [match?: 2]
+
+  @doc false
+  defmacro __using__(_opts) do
+    quote location: :keep do
+      @behaviour Ecto.Type
+      def embed_as(_), do: :self
+      def equal?(term1, term2), do: term1 == term2
+      defoverridable [embed_as: 1, equal?: 2]
+    end
+  end
 
   @typedoc "An Ecto type, primitive or custom."
   @type t         :: primitive | custom
@@ -164,8 +174,6 @@ defmodule Ecto.Type do
   it can be set to `:dump` to it is dumped before encoded.
   """
   @callback embed_as(format :: atom) :: :self | :dump
-
-  @optional_callbacks [equal?: 2, embed_as: 1]
 
   ## Functions
 
@@ -1217,8 +1225,8 @@ defmodule Ecto.Type do
   end
 
   @compile {:inline, loaded_and_exported?: 3}
+  # TODO: Remove this function when all Ecto types have been updated.
   defp loaded_and_exported?(module, fun, arity) do
-    # TODO: Rely only on Code.ensure_loaded? when targetting Erlang/OTP 21+
     if :erlang.module_loaded(module) or Code.ensure_loaded?(module) do
       function_exported?(module, fun, arity)
     else

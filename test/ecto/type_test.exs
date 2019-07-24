@@ -2,7 +2,7 @@ defmodule Ecto.TypeTest do
   use ExUnit.Case, async: true
 
   defmodule Custom do
-    @behaviour Ecto.Type
+    use Ecto.Type
     def type,      do: :custom
     def load(_),   do: {:ok, :load}
     def dump(_),   do: {:ok, :dump}
@@ -13,7 +13,7 @@ defmodule Ecto.TypeTest do
   end
 
   defmodule CustomAny do
-    @behaviour Ecto.Type
+    use Ecto.Type
     def type,      do: :any
     def load(_),   do: {:ok, :load}
     def dump(_),   do: {:ok, :dump}

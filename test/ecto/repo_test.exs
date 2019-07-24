@@ -1058,7 +1058,7 @@ defmodule Ecto.RepoTest do
 
   describe "custom type as primary key" do
     defmodule PrefixedID do
-      @behaviour Ecto.Type
+      use Ecto.Type
       def type(), do: :binary_id
       def cast("foo-" <> _ = id), do: {:ok, id}
       def cast(id), do: {:ok, "foo-" <> id}

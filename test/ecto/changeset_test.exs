@@ -60,7 +60,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defmodule CustomError do
-    @behaviour Ecto.Type
+    use Ecto.Type
     def type,      do: :any
     def cast(_),   do: {:error, message: "custom error message", reason: :foobar}
     def load(_),   do: :error
@@ -68,7 +68,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defmodule CustomErrorWithType do
-    @behaviour Ecto.Type
+    use Ecto.Type
     def type,      do: :any
     def cast(_),   do: {:error, message: "custom error message", reason: :foobar, type: :some_type}
     def load(_),   do: :error
@@ -76,7 +76,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defmodule CustomErrorWithoutMessage do
-    @behaviour Ecto.Type
+    use Ecto.Type
     def type,      do: :any
     def cast(_),   do: {:error, reason: :foobar}
     def load(_),   do: :error

@@ -12,7 +12,7 @@ defmodule Ecto.Integration.Schema do
 end
 
 defmodule PrefixedString do
-  @behaviour Ecto.Type
+  use Ecto.Type
   def type(), do: :string
   def cast("PREFIX-" <> _ = string), do: {:ok, string}
   def cast(string), do: {:ok, "PREFIX-" <> string}

@@ -3,7 +3,7 @@ defmodule Ecto.UUID do
   An Ecto type for UUIDs strings.
   """
 
-  @behaviour Ecto.Type
+  use Ecto.Type
 
   @typedoc """
   A hex-encoded UUID string.
@@ -17,9 +17,6 @@ defmodule Ecto.UUID do
 
   @doc false
   def type, do: :uuid
-
-  @doc false
-  def embed_as(_), do: :self
 
   @doc """
   Casts to UUID.
