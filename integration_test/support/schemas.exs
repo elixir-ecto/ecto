@@ -11,6 +11,17 @@ defmodule Ecto.Integration.Schema do
   end
 end
 
+defmodule PrefixedString do
+  @behaviour Ecto.Type
+  def type(), do: :string
+  def cast("PREFIX-" <> _ = string), do: {:ok, string}
+  def cast(string), do: {:ok, "PREFIX-" <> string}
+  def load(string), do: {:ok, "PREFIX-" <> string}
+  def dump("PREFIX-" <> string), do: {:ok, string}
+  def dump(_string), do: :error
+  def embed_as(_), do: :dump
+end
+
 defmodule Ecto.Integration.Post do
   @moduledoc """
   This module is used to test:
@@ -213,6 +224,7 @@ defmodule Ecto.Integration.Item do
   use Ecto.Schema
 
   embedded_schema do
+    field :reference, PrefixedString
     field :price, :integer
     field :valid_at, :date
 

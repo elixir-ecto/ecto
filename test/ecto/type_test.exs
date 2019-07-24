@@ -9,6 +9,7 @@ defmodule Ecto.TypeTest do
     def cast(_),   do: {:ok, :cast}
     def equal?(true, _), do: true
     def equal?(_, _), do: false
+    def embed_as(_), do: :dump
   end
 
   defmodule CustomAny do
@@ -38,6 +39,13 @@ defmodule Ecto.TypeTest do
   import Ecto.Type
   doctest Ecto.Type
 
+  test "embed_as" do
+    assert embed_as(:string, :json) == :self
+    assert embed_as(:integer, :json) == :self
+    assert embed_as(Custom, :json) == :dump
+    assert embed_as(CustomAny, :json) == :self
+  end
+
   test "custom types" do
     assert load(Custom, "foo") == {:ok, :load}
     assert dump(Custom, "foo") == {:ok, :dump}
@@ -49,7 +57,6 @@ defmodule Ecto.TypeTest do
 
     assert match?(Custom, :any)
     assert match?(:any, Custom)
-
     assert match?(CustomAny, :boolean)
   end
 

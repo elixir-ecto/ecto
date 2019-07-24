@@ -237,23 +237,42 @@ defmodule Ecto.Integration.TypeTest do
   @tag :map_type
   test "embeds one" do
     item = %Item{price: 123, valid_at: ~D[2014-01-16]}
+
     order =
       %Order{}
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_embed(:item, item)
-    order = TestRepo.insert!(order)
+      |> TestRepo.insert!()
+
     dbitem = TestRepo.get!(Order, order.id).item
+    assert item.reference == dbitem.reference
     assert item.price == dbitem.price
     assert item.valid_at == dbitem.valid_at
     assert dbitem.id
 
     [dbitem] = TestRepo.all(from o in Order, select: o.item)
+    assert item.reference == dbitem.reference
     assert item.price == dbitem.price
     assert item.valid_at == dbitem.valid_at
     assert dbitem.id
 
     {1, _} = TestRepo.update_all(Order, set: [item: %{dbitem | price: 456}])
     assert TestRepo.get!(Order, order.id).item.price == 456
+  end
+
+  @tag :map_type
+  test "embeds one with custom type" do
+    item = %Item{price: 123, reference: "PREFIX-EXAMPLE"}
+
+    order =
+      %Order{}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_embed(:item, item)
+      |> TestRepo.insert!()
+
+    dbitem = TestRepo.get!(Order, order.id).item
+    assert dbitem.reference == "PREFIX-EXAMPLE"
+    assert [%{"reference" => "EXAMPLE"}] = TestRepo.all(from o in "orders", select: o.item)
   end
 
   @tag :map_type

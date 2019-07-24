@@ -156,7 +156,16 @@ defmodule Ecto.Type do
   """
   @callback equal?(term, term) :: boolean
 
-  @optional_callbacks [equal?: 2]
+  @doc """
+  Dictates how the type should be treated inside embeds.
+
+  By default, the type is sent as itself, without calling
+  dumping to keep the higher level representation. But
+  it can be set to `:dump` to it is dumped before encoded.
+  """
+  @callback embed_as(format :: atom) :: :self | :dump
+
+  @optional_callbacks [equal?: 2, embed_as: 1]
 
   ## Functions
 
@@ -204,6 +213,21 @@ defmodule Ecto.Type do
   """
   @spec base?(atom) :: boolean
   def base?(atom), do: atom in @base
+
+  @doc """
+  Gets how the type is treated inside embeds for the given format.
+
+  See `c:embed_as/2`.
+  """
+  def embed_as({composite, _}, _format) when composite in @composite, do: :self
+  def embed_as(base, _format) when base in @base, do: :self
+  def embed_as(mod, format) do
+    if loaded_and_exported?(mod, :embed_as, 1) do
+      mod.embed_as(format)
+    else
+      :self
+    end
+  end
 
   @doc """
   Retrieves the underlying schema type for the given, possibly custom, type.
@@ -1192,6 +1216,7 @@ defmodule Ecto.Type do
     end
   end
 
+  @compile {:inline, loaded_and_exported?: 3}
   defp loaded_and_exported?(module, fun, arity) do
     # TODO: Rely only on Code.ensure_loaded? when targetting Erlang/OTP 21+
     if :erlang.module_loaded(module) or Code.ensure_loaded?(module) do

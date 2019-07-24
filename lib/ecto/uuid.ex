@@ -15,10 +15,11 @@ defmodule Ecto.UUID do
   """
   @type raw :: <<_::128>>
 
-  @doc """
-  The Ecto type.
-  """
+  @impl true
   def type, do: :uuid
+
+  @impl true
+  def embed_as(_), do: :self
 
   @doc """
   Casts to UUID.
