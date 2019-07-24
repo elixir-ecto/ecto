@@ -8,13 +8,13 @@ Imagine we are building an application that has blog posts and such posts may ha
 
 ```elixir
 create table(:posts) do
-  add :title
-  add :body
+  add :title, :string
+  add :body, :text
   timestamps()
 end
 
 create table(:tags) do
-  add :name
+  add :name, :string
   timestamps()
 end
 
