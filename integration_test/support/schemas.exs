@@ -14,8 +14,7 @@ end
 defmodule PrefixedString do
   use Ecto.Type
   def type(), do: :string
-  def cast("PREFIX-" <> _ = string), do: {:ok, string}
-  def cast(string), do: {:ok, "PREFIX-" <> string}
+  def cast(string), do: {:ok, string}
   def load(string), do: {:ok, "PREFIX-" <> string}
   def dump("PREFIX-" <> string), do: {:ok, string}
   def dump(_string), do: :error
