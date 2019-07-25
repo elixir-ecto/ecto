@@ -464,6 +464,10 @@ defmodule Ecto.Query.PlannerTest do
     assert query.sources == {{"comments", Comment, "local"}}
     assert union_query.sources == {{"comments", Comment, "global"}}
 
+    assert {%{combinations: [{_, union_query}]} = query, _, _} = from(Comment, prefix: "local", union: ^(from(Comment) |> Map.put(:prefix, "union"))) |> Map.put(:prefix, "global") |> plan()
+    assert query.sources == {{"comments", Comment, "local"}}
+    assert union_query.sources == {{"comments", Comment, "union"}}
+
     # With schema prefix
     assert {%{combinations: [{_, union_query}]} = query, _, _} = from(Post, union: ^from(p in Post)) |> plan()
     assert query.sources == {{"posts", Post, "my_prefix"}}
