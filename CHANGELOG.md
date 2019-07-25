@@ -7,6 +7,21 @@
   * [Ecto.Query] Add common table expressions support `with_cte/3` and `recursive_ctes/2`
   * [Ecto.Query] Allow `dynamic/3` to be used in `order_by`, `distinct`, `group_by`, as well as in `partition_by`, `order_by`, and `frame` inside `windows`
   * [Ecto.Repo] Assign `repo_opts` to changeset to make it available down the chain
+  * [Ecto.Type] Add a new `embed_as/1` callback to `Ecto.Type` that allows adapters to control embedding behaviour
+  * [Ecto.Type] Add `use Ecto.Type` for convenience that implements the new required callbacks
+
+### Bug fixes
+
+  * [Ecto.Association] Ensure we delete an association before inserting when replacing on `has_one`
+  * [Ecto.Query] Do not allow interpolated `nil` in literal keyword list when building query
+  * [Ecto.Repo] Do not override `:through` associations on preload unless forcing
+  * [Ecto.Type] Allow any datetime in `datetime_add`
+
+## v3.1.7 (2019-06-27)
+
+### Bug fixes
+
+  * [Ecto.Changeset] Make sure `put_assoc` with empty changeset propagates on insert
 
 ## v3.1.6 (2019-06-19)
 
