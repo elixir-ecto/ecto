@@ -153,7 +153,7 @@ Note that `mix test` does not run the tests in the `integration_test` folder. To
 
 The Ecto logo was designed by [Dane Wesolko](http://www.danewesolko.com).
 
-The source code is under the Apache 2 License.
+The source code is under the Apache License 2.0.
 
 Copyright (c) 2013 Plataformatec
 
