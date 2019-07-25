@@ -446,6 +446,71 @@ defmodule Ecto.Query.PlannerTest do
     assert :nocache = cache
   end
 
+  test "plan: normalizes prefixes for combinations" do
+    # No schema prefix in from
+    assert {%{combinations: [{_, union_query}]} = query, _, _} = from(Comment,  union: ^from(Comment)) |> plan()
+    assert query.sources == {{"comments", Comment, nil}}
+    assert union_query.sources == {{"comments", Comment, nil}}
+
+    assert {%{combinations: [{_, union_query}]} = query, _, _} = from(Comment, union: ^from(Comment)) |> Map.put(:prefix, "global") |> plan()
+    assert query.sources == {{"comments", Comment, "global"}}
+    assert union_query.sources == {{"comments", Comment, "global"}}
+
+    assert {%{combinations: [{_, union_query}]} = query, _, _} = from(Comment, prefix: "local", union: ^from(Comment)) |> plan()
+    assert query.sources == {{"comments", Comment, "local"}}
+    assert union_query.sources == {{"comments", Comment, nil}}
+
+    assert {%{combinations: [{_, union_query}]} = query, _, _} = from(Comment, prefix: "local", union: ^from(Comment)) |> Map.put(:prefix, "global") |> plan()
+    assert query.sources == {{"comments", Comment, "local"}}
+    assert union_query.sources == {{"comments", Comment, "global"}}
+
+    assert {%{combinations: [{_, union_query}]} = query, _, _} = from(Comment, prefix: "local", union: ^(from(Comment) |> Map.put(:prefix, "union"))) |> Map.put(:prefix, "global") |> plan()
+    assert query.sources == {{"comments", Comment, "local"}}
+    assert union_query.sources == {{"comments", Comment, "union"}}
+
+    # With schema prefix
+    assert {%{combinations: [{_, union_query}]} = query, _, _} = from(Post, union: ^from(p in Post)) |> plan()
+    assert query.sources == {{"posts", Post, "my_prefix"}}
+    assert union_query.sources == {{"posts", Post, "my_prefix"}}
+
+    assert {%{combinations: [{_, union_query}]} = query, _, _} = from(Post, union: ^from(Post)) |> Map.put(:prefix, "global") |> plan()
+    assert query.sources == {{"posts", Post, "my_prefix"}}
+    assert union_query.sources == {{"posts", Post, "my_prefix"}}
+
+    assert {%{combinations: [{_, union_query}]} = query, _, _} = from(Post, prefix: "local", union: ^from(Post)) |> plan()
+    assert query.sources == {{"posts", Post, "local"}}
+    assert union_query.sources == {{"posts", Post, "my_prefix"}}
+
+    assert {%{combinations: [{_, union_query}]} = query, _, _} = from(Post, prefix: "local", union: ^from(Post)) |> Map.put(:prefix, "global") |> plan()
+    assert query.sources == {{"posts", Post, "local"}}
+    assert union_query.sources == {{"posts", Post, "my_prefix"}}
+
+    # Deep-nested unions
+    assert {%{combinations: [{_, upper_level_union_query}]} = query, _, _} = from(Comment, union: ^from(Comment, union: ^from(Comment))) |> plan()
+    assert %{combinations: [{_, deeper_level_union_query}]} = upper_level_union_query
+    assert query.sources == {{"comments", Comment, nil}}
+    assert upper_level_union_query.sources == {{"comments", Comment, nil}}
+    assert deeper_level_union_query.sources == {{"comments", Comment, nil}}
+
+    assert {%{combinations: [{_, upper_level_union_query}]} = query, _, _} = from(Comment, union: ^from(Comment, union: ^from(Comment))) |> Map.put(:prefix, "global") |> plan()
+    assert %{combinations: [{_, deeper_level_union_query}]} = upper_level_union_query
+    assert query.sources == {{"comments", Comment, "global"}}
+    assert upper_level_union_query.sources == {{"comments", Comment, "global"}}
+    assert deeper_level_union_query.sources == {{"comments", Comment, "global"}}
+
+    assert {%{combinations: [{_, upper_level_union_query}]} = query, _, _} = from(Comment, prefix: "local", union: ^from(Comment, union: ^from(Comment))) |> plan()
+    assert %{combinations: [{_, deeper_level_union_query}]} = upper_level_union_query
+    assert query.sources == {{"comments", Comment, "local"}}
+    assert upper_level_union_query.sources == {{"comments", Comment, nil}}
+    assert deeper_level_union_query.sources == {{"comments", Comment, nil}}
+
+    assert {%{combinations: [{_, upper_level_union_query}]} = query, _, _} = from(Comment, prefix: "local", union: ^from(Comment, union: ^from(Comment))) |> Map.put(:prefix, "global") |> plan()
+    assert %{combinations: [{_, deeper_level_union_query}]} = upper_level_union_query
+    assert query.sources == {{"comments", Comment, "local"}}
+    assert upper_level_union_query.sources == {{"comments", Comment, "global"}}
+    assert deeper_level_union_query.sources == {{"comments", Comment, "global"}}
+  end
+
   test "plan: CTEs on all" do
     {%{with_ctes: with_expr}, _, cache} =
       Comment

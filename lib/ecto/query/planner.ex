@@ -743,13 +743,16 @@ defmodule Ecto.Query.Planner do
   defp plan_combinations(query, adapter) do
     combinations =
       Enum.map query.combinations, fn {type, combination_query} ->
-        {prepared_query, _params, _key} = plan(combination_query, :all, adapter)
+        {prepared_query, _params, _key} = combination_query |> attach_prefix(query) |> plan(:all, adapter)
         prepared_query = prepared_query |> ensure_select(true)
         {type, prepared_query}
       end
 
     %{query | combinations: combinations}
   end
+
+  defp attach_prefix(%{prefix: nil} = query, %{prefix: prefix}), do: %{query | prefix: prefix}
+  defp attach_prefix(query, _), do: query
 
   defp plan_ctes(%Ecto.Query{with_ctes: nil} = query, _adapter), do: query
 
