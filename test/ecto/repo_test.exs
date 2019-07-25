@@ -206,67 +206,6 @@ defmodule Ecto.RepoTest do
       assert query.prefix == "public"
     end
 
-    test "union supports a prefix option" do
-      TestRepo.all(
-        from(MySchema, union: ^from(MySchema)),
-        prefix: "public"
-      )
-
-      assert_received {:all, query}
-      assert query.prefix == "public"
-      assert [union: union_query] = query.combinations
-      assert union_query.prefix == "public"
-    end
-
-    test "union_all supports a prefix option" do
-      TestRepo.all(
-        from(MySchema, union_all: ^from(MySchema)),
-        prefix: "public"
-      )
-
-      assert_received {:all, query}
-      assert query.prefix == "public"
-      assert [union_all: union_query] = query.combinations
-      assert union_query.prefix == "public"
-    end
-
-    test "a combination of union and union_all supports a prefix option" do
-      TestRepo.all(
-        from(
-          MySchema,
-          union: ^from(MySchema),
-          union_all: ^from(MySchema)
-        ),
-        prefix: "public"
-      )
-
-      assert_received {:all, query}
-      assert query.prefix == "public"
-      assert [union: union_query, union_all: union_all_query] = query.combinations
-      assert union_query.prefix == "public"
-      assert union_all_query.prefix == "public"
-    end
-
-    test "allows to reuse query several times" do
-      shared_query = from(MySchema, union: ^from(MySchema), union_all: ^from(MySchema))
-
-      TestRepo.all(shared_query, prefix: "public")
-
-      assert_received {:all, query}
-      assert query.prefix == "public"
-      Enum.each(query.combinations, fn {_key, sub_query} ->
-        assert sub_query.prefix == "public"
-      end)
-
-      TestRepo.all(shared_query, prefix: "private")
-
-      assert_received {:all, query}
-      assert query.prefix == "private"
-      Enum.each(query.combinations, fn {_key, sub_query} ->
-        assert sub_query.prefix == "private"
-      end)
-    end
-
     test "removes any preload from query" do
       from(MySchemaWithAssoc, preload: :parent) |> TestRepo.aggregate(:count, :id)
       assert_received {:all, query}
