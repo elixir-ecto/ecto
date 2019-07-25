@@ -826,6 +826,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp remove_literals({%{select: nil} = query, params}), do: {query, params}
+  defp remove_literals({%{combinations: [_ | _]} = query, params}), do: {query, params}
 
   defp remove_literals({query, params}) do
     query = update_in(query.select.fields, &Enum.reject(&1, fn f -> is_literal(f) end))
@@ -930,7 +931,7 @@ defmodule Ecto.Query.Planner do
     {combinations, counter} =
       Enum.reduce combinations, {[], counter}, fn {type, combination_query}, {combinations, counter} ->
         {combination_query, counter} = traverse_exprs(combination_query, operation, counter, fun)
-        {combination_query, _} = combination_query |> normalize_select() |> remove_literals()
+        {combination_query, _} = combination_query |> normalize_select()
         {[{type, combination_query} | combinations], counter}
       end
 

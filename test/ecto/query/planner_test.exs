@@ -734,21 +734,15 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.fields ==
            select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0)
 
-    query = from(Post, []) |> select([p], {p, p.title}) |> normalize()
+    query = from(Post, []) |> select([p], {p, p.title, "Post"}) |> normalize()
     assert query.select.fields ==
            select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
-    query = from(Post, []) |> select([p], {p.title, p}) |> normalize()
+    query = from(Post, []) |> select([p], {p.title, p, "Post"}) |> normalize()
     assert query.select.fields ==
            select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
-
-    union_query = from(Post, []) |> select([p], %{title: p.title, category: "Post"})
-    query = from(Post, []) |> select([p], %{title: p.title, category: "Post"}) |> union(^union_query) |>  normalize()
-
-    union_query = query.combinations |> List.first() |> elem(1)
-    assert query.select.fields == union_query.select.fields
 
     query =
       from(Post, [])
@@ -760,6 +754,15 @@ defmodule Ecto.Query.PlannerTest do
            select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
            select_fields([:id, :text, :posted, :uuid, :crazy_comment, :post_id, :crazy_post_id], 1) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
+  end
+
+  test "normalize: select with unions" do
+    union_query = from(Post, []) |> select([p], %{title: p.title, category: "Post"})
+    query = from(Post, []) |> select([p], %{title: p.title, category: "Post"}) |> union(^union_query) |>  normalize()
+
+    union_query = query.combinations |> List.first() |> elem(1)
+    assert "Post" in query.select.fields
+    assert query.select.fields == union_query.select.fields
   end
 
   test "normalize: select on schemaless" do
