@@ -1200,6 +1200,9 @@ defmodule Ecto.Query do
   The argument given to `:select_merge` must always be a map. The value
   being merged on must be a struct or a map. If it is a struct, the fields
   merged later on must be part of the struct, otherwise an error is raised.
+
+  `select_merge` cannot be used to set fields in associations, as
+  associations are always loaded later, overriding any previous value.
   """
   defmacro select_merge(query, binding \\ [], expr) do
     Builder.Select.build(:merge, query, binding, expr, __CALLER__)
