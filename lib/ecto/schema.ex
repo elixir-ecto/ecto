@@ -1710,11 +1710,11 @@ defmodule Ecto.Schema do
   end
 
   def __timestamps__(:utc_datetime) do
-    DateTime.from_unix!(System.system_time(:second), :second)
+    %{DateTime.utc_now() | microsecond: {0, 0}}
   end
 
   def __timestamps__(:utc_datetime_usec) do
-    DateTime.from_unix!(System.system_time(:microsecond), :microsecond)
+    DateTime.utc_now()
   end
 
   def __timestamps__(type) do
