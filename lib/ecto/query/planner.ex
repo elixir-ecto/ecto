@@ -751,16 +751,12 @@ defmodule Ecto.Query.Planner do
     %{query | combinations: combinations}
   end
 
-  defp attach_prefix(%{prefix: nil} = query, %{prefix: prefix}), do: %{query | prefix: prefix}
-  defp attach_prefix(query, _), do: query
-
   defp plan_ctes(%Ecto.Query{with_ctes: nil} = query, _adapter), do: query
-
   defp plan_ctes(%Ecto.Query{with_ctes: %{queries: queries}} = query, adapter) do
     queries =
       Enum.map queries, fn
         {name, %Ecto.Query{} = cte_query} ->
-          {planned_query, _params, _key} = plan(cte_query, :all, adapter)
+          {planned_query, _params, _key} = cte_query |> attach_prefix(query) |> plan(:all, adapter)
           planned_query = planned_query |> ensure_select(true)
           {name, planned_query}
 
@@ -770,6 +766,9 @@ defmodule Ecto.Query.Planner do
 
     put_in(query.with_ctes.queries, queries)
   end
+
+  defp attach_prefix(%{prefix: nil} = query, %{prefix: prefix}), do: %{query | prefix: prefix}
+  defp attach_prefix(query, _), do: query
 
   defp find_source_expr(query, 0) do
     query.from
