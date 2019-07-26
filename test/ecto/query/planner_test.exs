@@ -602,6 +602,23 @@ defmodule Ecto.Query.PlannerTest do
            ] = cte_cache
   end
 
+  test "plan: CTE prefixes" do
+    {%{with_ctes: with_expr} = query, _, _} = Comment |> with_cte("cte", as: ^from(c in Comment)) |> plan()
+    %{queries: [{"cte", cte_query}]} = with_expr
+    assert query.sources == {{"comments", Comment, nil}}
+    assert cte_query.sources == {{"comments", Comment, nil}}
+
+    {%{with_ctes: with_expr} = query, _, _} = Comment |> with_cte("cte", as: ^from(c in Comment)) |> Map.put(:prefix, "global") |> plan()
+    %{queries: [{"cte", cte_query}]} = with_expr
+    assert query.sources == {{"comments", Comment, "global"}}
+    assert cte_query.sources == {{"comments", Comment, "global"}}
+
+    {%{with_ctes: with_expr} = query, _, _} = Comment |> with_cte("cte", as: ^(from(c in Comment) |> Map.put(:prefix, "cte"))) |> Map.put(:prefix, "global") |> plan()
+    %{queries: [{"cte", cte_query}]} = with_expr
+    assert query.sources == {{"comments", Comment, "global"}}
+    assert cte_query.sources == {{"comments", Comment, "cte"}}
+  end
+
   test "normalize: validates literal types" do
     assert_raise Ecto.QueryError, fn ->
       Comment |> where([c], c.text == 123) |> normalize()
