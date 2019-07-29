@@ -654,6 +654,23 @@ defmodule Ecto.Integration.AssocTest do
     assert post.comments == []
   end
 
+  test "updating changeset with empty cast associations" do
+    post = TestRepo.insert!(%Post{})
+    c1 = TestRepo.insert!(%Comment{post_id: post.id})
+    c2 = TestRepo.insert!(%Comment{post_id: post.id})
+
+    assert TestRepo.all(Comment) == [c1, c2]
+
+    post = TestRepo.get!(from(Post, preload: [:comments]), post.id)
+
+    post
+    |> Ecto.Changeset.change
+    |> Ecto.Changeset.put_assoc(:comments, [])
+    |> TestRepo.update!()
+
+    assert TestRepo.all(Comment) == []
+  end
+
   ## Dependent
 
   test "has_many assoc on delete deletes all" do
