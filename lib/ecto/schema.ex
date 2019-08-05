@@ -624,18 +624,29 @@ defmodule Ecto.Schema do
 
   ## Options
 
+    * `:inserted_at` - the ecto schema name of the field for insertion times or `false`
+    * `:updated_at` - the ecto schema name of the field for update times or `false`
+    * `:inserted_at_source` - the name of the database column for insertion times or `false`
+    * `:updated_at_source` - the name of the database column for update times or `false`
     * `:type` - the timestamps type, defaults to `:naive_datetime`.
-    * `:inserted_at` - the name of the column for insertion times or `false`
-    * `:updated_at` - the name of the column for update times or `false`
     * `:autogenerate` - a module-function-args tuple used for generating
       both `inserted_at` and `updated_at` timestamps
 
   All options can be pre-configured by setting `@timestamps_opts`.
+
+  # Usages:
+  # iex> timestamps(inserted_at: :created_at, inserted_at_source: :createddate)
   """
   defmacro timestamps(opts \\ []) do
     quote bind_quoted: binding() do
       timestamps =
-        [inserted_at: :inserted_at, updated_at: :updated_at, type: :naive_datetime]
+        [
+          inserted_at: :inserted_at,
+          inserted_at_source: nil,
+          updated_at: :updated_at,
+          updated_at_source: nil,
+          type: :naive_datetime,
+        ]
         |> Keyword.merge(@timestamps_opts)
         |> Keyword.merge(opts)
 
@@ -643,30 +654,28 @@ defmodule Ecto.Schema do
       autogen = timestamps[:autogenerate] || {Ecto.Schema, :__timestamps__, [type]}
 
       inserted_at = Keyword.fetch!(timestamps, :inserted_at)
+      inserted_at_source = Keyword.fetch!(timestamps, :inserted_at_source)
+
       updated_at = Keyword.fetch!(timestamps, :updated_at)
+      updated_at_source = Keyword.fetch!(timestamps, :updated_at_source)
 
-      if inserted_at do
-        Ecto.Schema.field(inserted_at, type, [])
+      insert_field = fn (type, schema_name, db_name) ->
+        Ecto.Schema.field(schema_name, type, if(db_name, do: [source: db_name], else: []))
+        type
       end
 
-      if updated_at do
-        Ecto.Schema.field(updated_at, type, [])
-        Module.put_attribute(__MODULE__, :ecto_autoupdate, {[updated_at], autogen})
+      update_field = fn (type, autogen, schema_name, db_name) ->
+        Ecto.Schema.field(schema_name, type, if(db_name, do: [source: db_name], else: []))
+        Module.put_attribute(__MODULE__, :ecto_autoupdate, {[schema_name], autogen})
       end
 
-      cond do
-        inserted_at && updated_at ->
-          Module.put_attribute(__MODULE__, :ecto_autogenerate, {[inserted_at, updated_at], autogen})
-
-        inserted_at ->
-          Module.put_attribute(__MODULE__, :ecto_autogenerate, {[inserted_at], autogen})
-
-        updated_at ->
-          Module.put_attribute(__MODULE__, :ecto_autogenerate, {[updated_at], autogen})
-
-        true ->
-          :ok
+      timestamp_fields = fn (autogen, inserted_at, updated_at) ->
+        Module.put_attribute(__MODULE__, :ecto_autogenerate, {[inserted_at, updated_at] |> Enum.reject(& !&1), autogen})
       end
+
+      insert_field.(type, inserted_at, inserted_at_source)
+      update_field.(type, autogen, updated_at, updated_at_source)
+      timestamp_fields.(autogen, inserted_at, updated_at)
     end
   end
 

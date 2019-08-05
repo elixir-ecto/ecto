@@ -199,20 +199,41 @@ defmodule Ecto.SchemaTest do
     assert InlineEmbeddedSchema.Many.__schema__(:fields) == [:id, :y]
   end
 
-  defmodule Timestamps do
+  defmodule TimestampsAutoGen do
     use Ecto.Schema
 
-    schema "timestamps" do
+    schema "timestamps_autogen" do
       timestamps autogenerate: {:m, :f, [:a]}
     end
   end
 
   test "timestamps autogenerate metadata (private)" do
-    assert Timestamps.__schema__(:autogenerate) ==
+    assert TimestampsAutoGen.__schema__(:autogenerate) ==
            [{[:inserted_at, :updated_at], {:m, :f, [:a]}}]
-    assert Timestamps.__schema__(:autoupdate) ==
+    assert TimestampsAutoGen.__schema__(:autoupdate) ==
            [{[:updated_at], {:m, :f, [:a]}}]
   end
+
+  defmodule Timestamps do
+    use Ecto.Schema
+
+    schema "timestamps" do
+      timestamps(
+        type: :naive_datetime_usec,
+        inserted_at: :created_at,
+        inserted_at_source: :createddate,
+        updated_at: :modified_at,
+        updated_at_source: :modifieddate)
+    end
+  end
+
+  test "timestamps with alternate source metadata (private)" do
+    assert Timestamps.__schema__(:autogenerate) ==
+           [{[:created_at, :modified_at], {Ecto.Schema, :__timestamps__, [:naive_datetime_usec]}}]
+    assert Timestamps.__schema__(:autoupdate) ==
+           [{[:modified_at], {Ecto.Schema, :__timestamps__, [:naive_datetime_usec]}}]
+  end
+
 
   ## Schema prefix
 
