@@ -25,10 +25,10 @@ defmodule Ecto.Repo do
         hostname: "localhost"
 
   Most of the configuration that goes into the `config` is specific
-  to the adapter, so in this particular example, you check
+  to the adapter. For this particular example, you can check
   [`Ecto.Adapters.Postgres`](https://hexdocs.pm/ecto_sql/Ecto.Adapters.Postgres.html)
-  for more information. However, some configuration is shared across
-  all adapters, they are:
+  for more information. In spite of this, the following configuration values
+  are shared across all adapters:
 
     * `:name`- The name of the Repo supervisor process
 
@@ -65,7 +65,8 @@ defmodule Ecto.Repo do
   while options are simply merged in.
 
   URL can include query parameters to override shared and adapter-specific
-  options `ssl`, `timeout`, `pool_size`:
+  options, like `ssl`, `timeout` and `pool_size`. The following example
+  shows how to pass these configuration values:
 
       config :my_app, Repo,
         url: "ecto://postgres:postgres@localhost/ecto_simple?ssl=true&pool_size=10"
@@ -80,11 +81,11 @@ defmodule Ecto.Repo do
 
   ## Shared options
 
-  Almost all of the repository outlined in this module accept the following
+  Almost all of the repository functions outlined in this module accept the following
   options:
 
     * `:timeout` - The time in milliseconds to wait for the query call to
-      finish, `:infinity` will wait indefinitely (default: 15000);
+      finish. `:infinity` will wait indefinitely (default: 15000)
     * `:log` - When false, does not log the query
     * `:telemetry_event` - The telemetry event name to dispatch the event under.
       See the next section for more information
@@ -136,7 +137,7 @@ defmodule Ecto.Repo do
   ## Read-only repositories
 
   You can mark a repository as read-only by passing the `:read_only`
-  flag on use:
+  flag on `use`:
 
       use Ecto.Repo, otp_app: ..., adapter: ..., read_only: true
 
