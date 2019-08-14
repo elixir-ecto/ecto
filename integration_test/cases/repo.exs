@@ -261,7 +261,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "insert and fetch a schema with utc timestamps" do
-    datetime = DateTime.from_unix!(System.system_time(:second), :second)
+    datetime = DateTime.from_unix!(System.os_time(:second), :second)
     TestRepo.insert!(%User{inserted_at: datetime})
     assert [%{inserted_at: ^datetime}] = TestRepo.all(User)
   end

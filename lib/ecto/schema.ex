@@ -1711,7 +1711,7 @@ defmodule Ecto.Schema do
   end
 
   def __timestamps__(type) do
-    type.from_unix!(System.system_time(:microsecond), :microsecond)
+    type.from_unix!(System.os_time(:microsecond), :microsecond)
   end
 
   @doc false
