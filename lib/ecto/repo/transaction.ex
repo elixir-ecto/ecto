@@ -6,6 +6,11 @@ defmodule Ecto.Repo.Transaction do
     {adapter, meta} = Ecto.Repo.Registry.lookup(name)
     adapter.transaction(meta, opts, fun)
   end
+  
+  def transaction(repo, name, fun, opts) when is_function(fun, 1) do
+    {adapter, meta} = Ecto.Repo.Registry.lookup(name)
+    adapter.transaction(meta, opts, fn -> fun.(repo) end)
+  end
 
   def transaction(repo, name, %Ecto.Multi{} = multi, opts) do
     {adapter, meta} = Ecto.Repo.Registry.lookup(name)
