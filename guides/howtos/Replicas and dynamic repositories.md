@@ -1,6 +1,6 @@
 # Replicas and dynamic repositories
 
-When applications reach a certain scale, a single database may not be enough to sustain the required throughout. In such scenarios, it is very common to introduce read replicas: all write operations are sent to primary database and most of the read operations are performed against the replicas. The credentials of the primary and replica databases are typically known upfront by the time the code is compiled.
+When applications reach a certain scale, a single database may not be enough to sustain the required throughput. In such scenarios, it is very common to introduce read replicas: all write operations are sent to primary database and most of the read operations are performed against the replicas. The credentials of the primary and replica databases are typically known upfront by the time the code is compiled.
 
 In other cases, you may need a single Ecto repository to interact with different database instances which are not known upfront. For instance, you may need to communicate with hundreds of database very sporadically, so instead of opening up a connection to each of those hundreds of database when your application starts, you want to quickly start connection, perform some queries, and then shut down, while still leveraging Ecto's APIs as a whole.
 
