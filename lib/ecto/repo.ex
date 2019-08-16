@@ -1340,6 +1340,11 @@ defmodule Ecto.Repo do
 
   ## Use with function
 
+  `c:transaction/2` can be called with both a function of arity
+  zero or one. The arity zero function will just be executed as is,
+  while the arity one function will receive the repo of the transaction
+  as it's first argument, similar to `Ecto.Multi.run`.
+
   If an unhandled error occurs the transaction will be rolled back
   and the error will bubble up from the transaction function.
   If no error occurred the transaction will be committed when the
@@ -1376,9 +1381,9 @@ defmodule Ecto.Repo do
 
       import Ecto.Changeset, only: [change: 2]
 
-      MyRepo.transaction(fn ->
-        MyRepo.update!(change(alice, balance: alice.balance - 10))
-        MyRepo.update!(change(bob, balance: bob.balance + 10))
+      MyRepo.transaction(fn repo ->
+        repo.update!(change(alice, balance: alice.balance - 10))
+        repo.update!(change(bob, balance: bob.balance + 10))
       end)
 
       # Roll back a transaction explicitly
