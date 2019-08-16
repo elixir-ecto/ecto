@@ -1381,7 +1381,7 @@ defmodule Ecto.Repo do
 
       import Ecto.Changeset, only: [change: 2]
 
-      MyRepo.transaction(fn repo ->
+      MyRepo.transaction(fn ->
         MyRepo.update!(change(alice, balance: alice.balance - 10))
         MyRepo.update!(change(bob, balance: bob.balance + 10))
       end)
