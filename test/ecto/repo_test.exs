@@ -1169,4 +1169,19 @@ defmodule Ecto.RepoTest do
       refute function_exported?(ReadOnlyRepo, :delete_all, 2)
     end
   end
+
+  describe "transaction" do
+    test "an arity zero function will be executed any it's value returned" do
+      fun = fn -> :ok end
+      assert {:ok, :ok} = TestRepo.transaction(fun)
+      assert_received {:transaction, _}
+    end
+
+    test "an arity one function will be passed the repo as first argument" do
+      fun = fn repo -> repo end
+
+      assert {:ok, TestRepo} = TestRepo.transaction(fun)
+      assert_received {:transaction, _}
+    end
+  end
 end
