@@ -312,7 +312,9 @@ defmodule Ecto.Repo.Schema do
     filters = add_pk_filter!(changeset.filters, struct)
 
     {return_types, return_sources} =
-      schema.__schema__(:read_after_writes)
+      schema
+      |> returning(opts)
+      |> add_read_after_writes(schema)
       |> fields_to_sources(dumper)
 
     # Differently from insert, update does not copy the struct
@@ -485,9 +487,11 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp add_read_after_writes(return, schema) do
-    Enum.uniq(return ++ schema.__schema__(:read_after_writes))
-  end
+  defp add_read_after_writes([], schema),
+    do: schema.__schema__(:read_after_writes)
+
+  defp add_read_after_writes(return, schema),
+    do: Enum.uniq(return ++ schema.__schema__(:read_after_writes))
 
   defp fields_to_sources(fields, nil) do
     {fields, fields}

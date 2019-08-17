@@ -395,7 +395,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
   """
   @callback checkout((() -> result), opts :: Keyword.t()) :: result when result: var
 
@@ -507,7 +507,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -531,7 +531,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -557,7 +557,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -587,7 +587,7 @@ defmodule Ecto.Repo do
       `Ecto.Query` documentation.
 
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -623,7 +623,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Examples
 
@@ -659,7 +659,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Examples
 
@@ -690,7 +690,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Examples
 
@@ -718,7 +718,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
   """
   @callback one!(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
               Ecto.Schema.t()
@@ -735,9 +735,6 @@ defmodule Ecto.Repo do
 
   ## Options
 
-  Besides the "Shared options" section at the module documentation,
-  it accepts:
-
     * `:force` - By default, Ecto won't preload associations that
       are already loaded. By setting this option to true, any existing
       association will be discarded and reloaded.
@@ -747,6 +744,8 @@ defmodule Ecto.Repo do
     * `:prefix` - the prefix to fetch preloads from. By default, queries
       will use the same prefix as the one in the given collection. This
       option allows the prefix to be changed.
+
+  See the "Shared options" section at the module documentation for more options.
 
   ## Examples
 
@@ -786,7 +785,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -818,7 +817,7 @@ defmodule Ecto.Repo do
     * `:max_rows` - The number of rows to load from the database as we stream.
       It is supported at least by Postgres and MySQL and defaults to 500.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -1033,11 +1032,11 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:returning` - selects which fields to return. When `true`, returns
-      all fields in the given struct. May be a list of fields, where a
-      struct is still returned but only with the given fields. In any case,
-      it will include fields with `read_after_writes` set to true.
-      Not all databases support this option.
+    * `:returning` - selects which fields to return. It accepts a list
+      of fields to be returned from the database. When `true`, returns
+      all fields. When `false`, no extra fields are returned. It will
+      always include all fields in `read_after_writes` as well as any
+      autogenerated id. Not all databases support this option.
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
       in the query and any `@schema_prefix` set any schemas. Also, the
@@ -1058,7 +1057,7 @@ defmodule Ecto.Repo do
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Examples
 
@@ -1185,9 +1184,11 @@ defmodule Ecto.Repo do
 
   ## Options
 
-  Besides the "Shared options" section at the module documentation,
-  it accepts:
-
+    * `:returning` - selects which fields to return. It accepts a list
+      of fields to be returned from the database. When `true`, returns
+      all fields. When `false`, no extra fields are returned. It will
+      always include all fields in `read_after_writes`. Not all
+      databases support this option.
     * `:force` - By default, if there are no changes in the changeset,
       `c:update/2` is a no-op. By setting this option to true, update
       callbacks will always be executed, even if there are no changes
@@ -1202,6 +1203,8 @@ defmodule Ecto.Repo do
       `Ecto.StaleEntryError`.
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
+
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -1244,7 +1247,7 @@ defmodule Ecto.Repo do
       `:stale_error_field` when stale errors happen, defaults to "is stale".
       Only applies to updates.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -1286,7 +1289,7 @@ defmodule Ecto.Repo do
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -1375,7 +1378,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Examples
 

@@ -307,6 +307,8 @@ defmodule Ecto.RepoTest do
   test "insert with returning" do
     TestRepo.insert(%MySchemaWithAssoc{}, returning: [:id])
     assert_received {:insert, %{source: "my_schema", returning: [:id]}}
+    TestRepo.insert(%MySchemaWithAssoc{}, returning: [:parent_id])
+    assert_received {:insert, %{source: "my_schema", returning: [:id, :parent_id]}}
     TestRepo.insert(%MySchemaWithAssoc{}, returning: true)
     assert_received {:insert, %{source: "my_schema", returning: [:id, :parent_id, :n]}}
     TestRepo.insert(%MySchemaWithAssoc{}, returning: false)
@@ -315,10 +317,12 @@ defmodule Ecto.RepoTest do
 
   test "update with returning" do
     changeset = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{n: 2})
-    TestRepo.update(changeset, returning: [])
-    assert_received {:update, %{source: "my_schema", returning: []}}
+    TestRepo.update(changeset, returning: [:id])
+    assert_received {:update, %{source: "my_schema", returning: [:id]}}
+    TestRepo.update(changeset, returning: [:parent_id])
+    assert_received {:update, %{source: "my_schema", returning: [:parent_id]}}
     TestRepo.update(changeset, returning: true)
-    assert_received {:update, %{source: "my_schema", returning: []}}
+    assert_received {:update, %{source: "my_schema", returning: [:parent_id, :n, :id]}}
     TestRepo.update(changeset, returning: false)
     assert_received {:update, %{source: "my_schema", returning: []}}
   end
