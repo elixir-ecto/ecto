@@ -1171,7 +1171,7 @@ defmodule Ecto.RepoTest do
   end
 
   describe "transaction" do
-    test "a arity zero function will be executed any it's value returned" do
+    test "an arity zero function will be executed any it's value returned" do
       fun = fn -> :ok end
       assert {:ok, :ok} = TestRepo.transaction(fun)
       assert_received {:transaction, _}
