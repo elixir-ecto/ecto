@@ -1268,6 +1268,17 @@ defmodule Ecto.Integration.RepoTest do
       assert [%Post{title: "1", counter: 2}] =
         Post |> select([p], p) |> select_merge([p], %{p | counter: 2}) |> TestRepo.all()
     end
+
+    test "merge within subquery" do
+      %Post{} = TestRepo.insert!(%Post{title: "1", counter: 1})
+
+      subquery =
+        Post
+        |> select_merge([p], %{p | counter: 2})
+        |> subquery()
+
+      assert [%Post{title: "1", counter: 2}] = TestRepo.all(subquery)
+    end
   end
 
   test "query count distinct" do

@@ -155,7 +155,7 @@ defmodule Ecto.Query.SubqueryTest do
              Macro.to_string(query.from.source.query.select.expr)
 
       query = from p in Post, select: %{p | unknown: p.title}
-      assert_raise Ecto.SubQueryError, ~r/invalid key `:unknown` on map update in subquery/, fn ->
+      assert_raise Ecto.SubQueryError, ~r/invalid key `:unknown`/, fn ->
         plan(from(subquery(query), []))
       end
     end

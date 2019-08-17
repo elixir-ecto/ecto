@@ -255,6 +255,7 @@ defmodule Ecto.Query.Planner do
        when assocs != [] or preloads != [] do
     error!(query, "cannot preload associations in subquery")
   end
+
   defp assert_no_subquery_assocs!(query) do
     query
   end
@@ -276,8 +277,13 @@ defmodule Ecto.Query.Planner do
 
   defp subquery_select({:merge, _, [left, right]}, take, query) do
     {left_struct, left_fields} = subquery_select(left, take, query)
-    {nil, right_fields} = subquery_select(right, take, query)
-    {left_struct, Keyword.merge(left_fields, right_fields)}
+    {right_struct, right_fields} = subquery_select(right, take, query)
+
+    unless is_nil(left_struct) or is_nil(right_struct) or left_struct == right_struct do
+      error!(query, "cannot merge #{inspect(left_struct)} and #{inspect(right_struct)} because they are different structs")
+    end
+
+    {left_struct || right_struct, Keyword.merge(left_fields, right_fields)}
   end
   defp subquery_select({:%, _, [name, map]}, take, query) do
     {_, fields} = subquery_select(map, take, query)
@@ -294,7 +300,7 @@ defmodule Ecto.Query.Planner do
 
     case update_keys -- valid_keys do
       [] -> :ok
-      [key | _] -> error!(query, "invalid key `#{inspect key}` on map update in subquery/cte")
+      [key | _] -> error!(query, "invalid key `#{inspect key}` for `#{inspect struct}` on map update in subquery/cte")
     end
 
     # In case of map updates, we need to remove duplicated fields

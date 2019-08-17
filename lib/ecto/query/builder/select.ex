@@ -252,11 +252,15 @@ defmodule Ecto.Query.Builder.Select do
         {_, _} ->
           message = """
           cannot select_merge #{merge_argument_to_error(new_expr, query)} into \
-          #{merge_argument_to_error(old_expr, query)}, those select expressions are incompatible. \
-          You can only select_merge:
+          #{merge_argument_to_error(old_expr, query)}, those select expressions \
+          are incompatible. You can only select_merge:
 
-            * a map into another map, struct or source
-            * a source (such as post) into the same source
+            * a source (such as post) with another source (of the same type)
+            * a source (such as post) with a map
+            * a struct with a map
+            * a map with a map
+
+          Incompatible merge found
           """
 
           raise Ecto.QueryError, query: query, message: message
