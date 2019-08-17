@@ -1386,6 +1386,7 @@ defmodule Ecto.Repo do
         MyRepo.update!(change(bob, balance: bob.balance + 10))
       end)
       
+      # When passing a function of arity 1, it receives the repository itself
       MyRepo.transaction(fn repo -> 
         repo.insert!(%Post{})
       end)
