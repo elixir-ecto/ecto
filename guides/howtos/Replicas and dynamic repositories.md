@@ -194,7 +194,7 @@ There is even a better way! We can pass a `:default_dynamic_repo` option when we
 
 ```elixir
   for repo <- @replicas do
-    dynamic_default_repo =
+    default_dynamic_repo =
       if Mix.env() == :test do
         MyApp.Repo
       else
@@ -206,7 +206,7 @@ There is even a better way! We can pass a `:default_dynamic_repo` option when we
         otp_app: :my_app,
         adapter: Ecto.Adapters.Postgres,
         read_only: true,
-        dynamic_default_repo: dynamic_default_repo
+        default_dynamic_repo: default_dynamic_repo
     end
   end
 ```
