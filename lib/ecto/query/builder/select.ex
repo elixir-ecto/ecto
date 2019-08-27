@@ -313,7 +313,9 @@ defmodule Ecto.Query.Builder.Select do
     if Keyword.keyword?(left) && Keyword.keyword?(right) do
       Keyword.merge(left, right)
     else
-      right ++ left
+      Enum.reject(left, fn {left_key, _value} ->
+        Enum.any?(right, fn {right_key, _value} -> right_key == left_key end)
+      end) ++ right
     end
   end
 
