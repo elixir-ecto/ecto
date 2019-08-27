@@ -304,10 +304,18 @@ defmodule Ecto.Query.Builder.Select do
   defp map_compile_merge(_meta, _old_fields, old_expr, [], _new_expr), do: old_expr
 
   defp map_compile_merge(meta, [_ | _] = old_fields, _, [_ | _] = new_fields, _),
-    do: {:%{}, meta, Keyword.merge(old_fields, new_fields)}
+    do: {:%{}, meta, list_merge(old_fields, new_fields)}
 
   defp map_compile_merge(meta, _, old_expr, _, new_expr),
     do: {:merge, meta, [old_expr, new_expr]}
+
+  defp list_merge(left, right) do
+    if Keyword.keyword?(left) && Keyword.keyword?(right) do
+      Keyword.merge(left, right)
+    else
+      right ++ left
+    end
+  end
 
   defp merge_argument_to_error({:&, _, [0]}, %{from: %{source: {source, alias}}}) do
     "source #{inspect(source || alias)}"
