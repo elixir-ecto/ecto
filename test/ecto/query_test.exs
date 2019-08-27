@@ -292,6 +292,26 @@ defmodule Ecto.QueryTest do
       assert %{comment: 2, link: 3} == query.aliases
     end
 
+    test "selects can be merged dynamically" do
+      query =
+        from(b in "blogs",
+          as: :blog,
+          join: p in "posts",
+          as: :post,
+          on: p.blog_id == b.id,
+          join: c in "comments",
+          as: :comment,
+          on: c.post_id == p.id,
+          select: %{comments: count(c.id)}
+        )
+
+      Enum.reduce([{:blog, :name}, {:post, :author}], query, fn {binding, field}, query ->
+        query
+        |> select_merge([{^binding, bound}], %{^field => field(bound, ^field)})
+        |> group_by([{^binding, bound}], field(bound, ^field))
+      end)
+    end
+
     test "assigns a name to query source" do
       query = from p in "posts", as: :post
 
