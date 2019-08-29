@@ -682,6 +682,30 @@ defmodule Ecto.SchemaTest do
     end
   end
 
+  # @tag :focuss
+  # test "has_* throught with cycle dependency" do
+  #   message = ~r"associated schema is in cycle assoc with"
+  #   assert_raise ArgumentError, message, fn ->
+  #     defmodule ThroughCycleAssocA do
+  #       use Ecto.Schema
+
+  #       schema "assoc_a" do
+  #         belongs_to :assoc_b, ThroughCycleAssocB
+  #         has_many :posts, through: [:assoc_b, :works]
+  #       end
+  #     end
+
+  #     defmodule ThroughCycleAssocB do
+  #       use Ecto.Schema
+
+  #       schema "assoc_b" do
+  #         has_many :assoc_a, ThroughCycleAssocA
+  #         has_many :comments, through: [:assoc_a, :h]
+  #       end
+  #     end
+  #   end
+  # end
+
   test "belongs_to raises helpful error with redundant foreign key name" do
     name = :author
     message = ~r"foreign_key :#{name} must be distinct from corresponding association name"
