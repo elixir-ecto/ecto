@@ -62,7 +62,7 @@ defmodule Ecto.Query.Builder do
   map.
   """
   @spec escape(Macro.t, quoted_type, {list, term}, Keyword.t,
-               Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {map, term}}
+               Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, term}}
   def escape(expr, type, params_acc, vars, env)
 
   # var.x - where var is bound
