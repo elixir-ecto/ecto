@@ -314,7 +314,7 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   defp ensure_field!({var, _, _}) when var != :^ do
-    Builder.error! "you passed the variable `#{var}` to `assoc/2`. Did you mean to pass the atom `:#{var}?`"
+    Builder.error! "you passed the variable `#{var}` to `assoc/2`. Did you mean to pass the atom `:#{var}`?"
   end
   defp ensure_field!(_), do: true
 end
