@@ -163,7 +163,7 @@ defmodule Ecto.Query do
 
       # Create a query
       query = from p in Post,
-                join: c in Comment, where: c.post_id == p.id
+                join: c in Comment, on: c.post_id == p.id
 
       # Extend the query
       query = from [p, c] in query,
@@ -188,7 +188,7 @@ defmodule Ecto.Query do
   For instance, imagine you wrote:
 
       posts_with_comments =
-        from p in query, join: c in Comment, where: c.post_id == p.id
+        from p in query, join: c in Comment, on: c.post_id == p.id
 
   And now we want to make sure to return both the post title
   and the comment body. Although we may not know how many
@@ -208,7 +208,7 @@ defmodule Ecto.Query do
 
       posts_with_comments =
         from p in query,
-          join: c in Comment, as: :comment, where: c.post_id == p.id
+          join: c in Comment, as: :comment, on: c.post_id == p.id
 
   We can refer to it by that name using a following form of
   bindings list:
