@@ -107,7 +107,7 @@ defmodule Ecto.Query.Builder do
   end
 
   def escape({:type, _, [{fun, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env)
-      when fun in ~w(fragment avg count max min sum over)a do
+      when fun in ~w(fragment avg count max min sum over filter)a do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
@@ -119,7 +119,7 @@ defmodule Ecto.Query.Builder do
       * fields, such as p.foo or field(p)
       * fragments, such fragment("foo(?)", value)
       * an arithmetic expression (+, -, *, /)
-      * an aggregation or window expression (avg, count, min, max, sum, over)
+      * an aggregation or window expression (avg, count, min, max, sum, over, filter)
 
     Got: #{Macro.to_string(expr)}
     """
@@ -314,7 +314,7 @@ defmodule Ecto.Query.Builder do
 
   def escape({:filter, _, [aggregate, filter_expr]}, type, params_acc, vars, env) do
     {aggregate, params_acc} = escape(aggregate, type, params_acc, vars, env)
-    {filter_expr, params_acc} = escape(filter_expr, type, params_acc, vars, env)
+    {filter_expr, params_acc} = escape(filter_expr, :boolean, params_acc, vars, env)
     {{:{}, [], [:filter, [], [aggregate, filter_expr]]}, params_acc}
   end
 

@@ -24,21 +24,6 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do &0.y + &1.z end), []} ==
            escape(quote do x.y + y.z end, [x: 0, y: 1], __ENV__)
 
-    assert {Macro.escape(quote do type(&0.y + &1.z, :decimal) end), []} ==
-           escape(quote do type(x.y + y.z, :decimal) end, [x: 0, y: 1], __ENV__)
-
-    assert {Macro.escape(quote do type(&0.y, :decimal) end), []} ==
-          escape(quote do type(field(x, :y), :decimal) end, [x: 0], __ENV__)
-
-    assert {Macro.escape(quote do type(&0.y, :"Elixir.Ecto.UUID") end), []} ==
-          escape(quote do type(field(x, :y), Ecto.UUID) end, [x: 0], __ENV__)
-
-    assert {Macro.escape(quote do type(&0.y, :"Elixir.Ecto.UUID") end), []} ==
-          escape(quote do type(field(x, :y), Ecto.UUID) end, [x: 0], {__ENV__, %{}})
-
-    assert {Macro.escape(quote do type(over(fragment({:raw, "array_agg("},{:expr, &0.id}, {:raw, ")"}), :y), {:array, :"Elixir.Ecto.UUID"}) end), []} ==
-      escape(quote do type(over(fragment("array_agg(?)", x.id), :y), {:array, Ecto.UUID}) end, [x: 0], {__ENV__, %{}})
-
     assert {Macro.escape(quote do avg(0) end), []} ==
            escape(quote do avg(0) end, [], __ENV__)
 
@@ -84,7 +69,6 @@ defmodule Ecto.Query.BuilderTest do
   end
 
   test "escape over with window name" do
-
     assert {Macro.escape(quote(do: over(nth_value(&0.id, 1), :w))), []}  ==
            escape(quote(do: nth_value(x.id, 1) |> over(:w)), [x: 0], __ENV__)
 
@@ -110,6 +94,31 @@ defmodule Ecto.Query.BuilderTest do
                  fn ->
       escape(quote(do: nth_value(x.id, 1) |> over(order_by: ^foo)), [x: 0], __ENV__)
     end
+  end
+
+  test "escape cast" do
+    import Kernel, except: [+: 2]
+    assert {Macro.escape(quote do type(&0.y + &1.z, :decimal) end), []} ==
+           escape(quote do type(x.y + y.z, :decimal) end, [x: 0, y: 1], __ENV__)
+
+    assert {Macro.escape(quote do type(&0.y, :decimal) end), []} ==
+          escape(quote do type(field(x, :y), :decimal) end, [x: 0], __ENV__)
+
+    assert {Macro.escape(quote do type(&0.y, :"Elixir.Ecto.UUID") end), []} ==
+          escape(quote do type(field(x, :y), Ecto.UUID) end, [x: 0], __ENV__)
+
+    assert {Macro.escape(quote do type(&0.y, :"Elixir.Ecto.UUID") end), []} ==
+          escape(quote do type(field(x, :y), Ecto.UUID) end, [x: 0], {__ENV__, %{}})
+
+    assert {Macro.escape(quote do type(sum(&0.y), :decimal) end), []} ==
+          escape(quote do type(sum(x.y), :decimal) end, [x: 0], {__ENV__, %{}})
+
+    import Kernel, except: [>: 2]
+    assert {Macro.escape(quote do type(filter(sum(&0.y), &0.y > &0.z), :decimal) end), []} ==
+          escape(quote do type(filter(sum(x.y), x.y > x.z), :decimal) end, [x: 0], {__ENV__, %{}})
+
+    assert {Macro.escape(quote do type(over(fragment({:raw, "array_agg("},{:expr, &0.id}, {:raw, ")"}), :y), {:array, :"Elixir.Ecto.UUID"}) end), []} ==
+      escape(quote do type(over(fragment("array_agg(?)", x.id), :y), {:array, Ecto.UUID}) end, [x: 0], {__ENV__, %{}})
   end
 
   test "escape type checks" do
