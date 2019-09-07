@@ -135,8 +135,6 @@ defmodule Ecto.Embedded do
     do: check_action!(:delete, action, embed)
   defp check_action!(:update, :insert, %{related: schema}),
     do: raise(ArgumentError, "got action :update in changeset for embedded #{inspect schema} while inserting")
-  defp check_action!(:delete, :insert, %{related: schema}),
-    do: raise(ArgumentError, "got action :delete in changeset for embedded #{inspect schema} while inserting")
   defp check_action!(action, _, _), do: action
 
   defp autogenerate_id(changes, _struct, :insert, schema, adapter) do

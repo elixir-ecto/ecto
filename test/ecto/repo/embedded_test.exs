@@ -140,6 +140,16 @@ defmodule Ecto.Repo.EmbeddedTest do
     assert schema.embed.sub_embed.y == "xyz"
   end
 
+  test "handles replaced embeds on insert" do
+    changeset =
+      %MySchema{embeds: [%MyEmbed{x: "xyz"}]}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embeds, [])
+
+    schema = TestRepo.insert!(changeset)
+    assert schema.embeds == []
+  end
+
   test "duplicate pk on insert" do
     embeds = [%MyEmbed{x: "xyz", id: @uuid} |> Ecto.Changeset.change,
               %MyEmbed{x: "abc", id: @uuid} |> Ecto.Changeset.change]
