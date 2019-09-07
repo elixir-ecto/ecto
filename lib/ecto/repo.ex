@@ -320,6 +320,9 @@ defmodule Ecto.Repo do
         def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
           Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, get_dynamic_repo(), preloads, opts)
         end
+
+        def prepare_query(operation, query, opts), do: {query, opts}
+        defoverridable prepare_query: 3
       end
     end
   end
@@ -772,6 +775,20 @@ defmodule Ecto.Repo do
             when structs_or_struct_or_nil: [Ecto.Schema.t()] | Ecto.Schema.t() | nil
 
   @doc """
+  A user customizable callback invoked for query-based operations.
+
+  This callback can be used to further modify the query and options
+  before it is transformed and sent to the database.
+
+  This callback is invoked for all query APIs, including the `stream`
+  function, but it is not invoked for `insert_all` nor any of the
+  schema functions.
+  """
+  @callback prepare_query(operation, Ecto.Query.t(), Keyword.t()) ::
+              {Ecto.Query.t(), Keyword.t()}
+            when operation: :all | :update_all | :delete_all | :stream
+
+  @doc """
   Fetches all entries from the data store matching the given query.
 
   May raise `Ecto.QueryError` if query validation fails.
@@ -908,7 +925,8 @@ defmodule Ecto.Repo do
   ## Ecto.Adapter.Schema
 
   @optional_callbacks insert_all: 3, insert: 2, insert!: 2, update: 2, update!: 2,
-                      delete: 2, delete!: 2, insert_or_update: 2, insert_or_update!: 2
+                      delete: 2, delete!: 2, insert_or_update: 2, insert_or_update!: 2,
+                      prepare_query: 3
 
   @doc """
   Inserts all entries into the repository.

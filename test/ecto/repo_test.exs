@@ -1174,6 +1174,55 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  describe "prepare_for_query" do
+    defmodule PrepareRepo do
+      use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
+
+      def prepare_query(op, query, opts) do
+        send(self(), {op, query, opts})
+        {%{query | prefix: "rewritten"}, opts}
+      end
+    end
+
+    setup do
+      _ = PrepareRepo.start_link(url: "ecto://user:pass@local/hello")
+      :ok
+    end
+
+    test "all" do
+      query = from p in MyParent, select: p
+
+      PrepareRepo.all(query, [hello: :world])
+      assert_received {:all, ^query, [hello: :world]}
+      assert_received {:all, %{prefix: "rewritten"}}
+
+      PrepareRepo.one(query, [hello: :world])
+      assert_received {:all, ^query, [hello: :world]}
+      assert_received {:all, %{prefix: "rewritten"}}
+    end
+
+    test "update_all" do
+      query = from p in MyParent, update: [set: [n: 1]]
+      PrepareRepo.update_all(query, [], [hello: :world])
+      assert_received {:update_all, ^query, [hello: :world]}
+      assert_received {:update_all, %{prefix: "rewritten"}}
+    end
+
+    test "delete_all" do
+      query = from p in MyParent
+      PrepareRepo.delete_all(query, [hello: :world])
+      assert_received {:delete_all, ^query, [hello: :world]}
+      assert_received {:delete_all, %{prefix: "rewritten"}}
+    end
+
+    test "stream" do
+      query = from p in MyParent, select: p
+      PrepareRepo.stream(query, [hello: :world]) |> Enum.to_list()
+      assert_received {:stream, ^query, [hello: :world]}
+      assert_received {:stream, %{prefix: "rewritten"}}
+    end
+  end
+
   describe "transaction" do
     test "an arity zero function will be executed any it's value returned" do
       fun = fn -> :ok end
