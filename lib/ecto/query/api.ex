@@ -486,6 +486,7 @@ defmodule Ecto.Query.API do
   Or to type aggregation results:
 
       from p in Post, select: type(avg(p.cost), :integer)
+      from p in Post, select: type(filter(avg(p.cost), p.cost > 0), :integer)
 
   """
   def type(interpolated_value, type), do: doc! [interpolated_value, type]

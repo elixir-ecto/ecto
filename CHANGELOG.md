@@ -1,12 +1,17 @@
 # Changelog for v3.x
 
-## v3.2.0-dev
+## v3.2.0 (2019-09-07)
+
+v3.2 requires Elixir v1.6+.
 
 ### Enhancements
 
   * [Ecto.Query] Add common table expressions support `with_cte/3` and `recursive_ctes/2`
   * [Ecto.Query] Allow `dynamic/3` to be used in `order_by`, `distinct`, `group_by`, as well as in `partition_by`, `order_by`, and `frame` inside `windows`
-  * [Ecto.Repo] Assign `repo_opts` to changeset to make it available down the chain
+  * [Ecto.Query] Allow filters in `type/2` expressions
+  * [Ecto.Repo] Merge options given to the repository into the changeset `repo_opts` and assign it back to make it available down the chain
+  * [Ecto.Repo] Add `prepare_query/3` callback that is invoked before query operations
+  * [Ecto.Repo] Support `:returning` option in `Ecto.Repo.update/2`
   * [Ecto.Type] Add a new `embed_as/1` callback to `Ecto.Type` that allows adapters to control embedding behaviour
   * [Ecto.Type] Add `use Ecto.Type` for convenience that implements the new required callbacks
 
@@ -14,7 +19,11 @@
 
   * [Ecto.Association] Ensure we delete an association before inserting when replacing on `has_one`
   * [Ecto.Query] Do not allow interpolated `nil` in literal keyword list when building query
+  * [Ecto.Query] Do not remove literals from combinations, otherwise UNION/INTERSECTION queries may not match the nummber of values in `select`
+  * [Ecto.Query] Do not attempt to merge at compile-time non-keyword lists given to `select_merge`
   * [Ecto.Repo] Do not override `:through` associations on preload unless forcing
+  * [Ecto.Repo] Make sure prefix option cascades to combinations and recursive queries
+  * [Ecto.Schema] Use OS time without drift when generating timestamps
   * [Ecto.Type] Allow any datetime in `datetime_add`
 
 ## v3.1.7 (2019-06-27)
