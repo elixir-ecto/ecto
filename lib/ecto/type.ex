@@ -225,7 +225,7 @@ defmodule Ecto.Type do
   @doc """
   Gets how the type is treated inside embeds for the given format.
 
-  See `c:embed_as/2`.
+  See `c:embed_as/1`.
   """
   def embed_as({composite, _}, _format) when composite in @composite, do: :self
   def embed_as(base, _format) when base in @base, do: :self
