@@ -1020,8 +1020,20 @@ defmodule Ecto.Query do
   @doc """
   A common table expression (CTE) also known as WITH expression.
 
-  `name` must be a compile-time literal string that is being used as the table name to join
-  the CTE in the main query or in the recursive CTE.
+  `name` must be a compile-time literal string that is being used
+  as the table name to join the CTE in the main query or in the
+  recursive CTE.
+
+  **IMPORTANT!** Beware of using CTEs. In raw SQL, CTEs can be
+  used as a mechanisim to organize queries, but said mechanism
+  has no purpose in Ecto since Ecto queries are composable by
+  definition. In other words, if you need to break a large query
+  into parts, use all of the functionality in Elixir and in this
+  module to struture your code. Furthermore, breaking a query
+  into CTEs can negatively impact performance, as the database
+  may not optimize efficiently across CTEs. The main use case
+  for CTEs in Ecto is to provide recursive definitions, which
+  we outline in the following section.
 
   ## Options
 
@@ -1031,11 +1043,13 @@ defmodule Ecto.Query do
 
   Use `recursive_ctes/2` to enable recursive mode for CTEs.
 
-  In the CTE query itself use the same table name to leverage recursion that has been passed
-  to `name` argument. Make sure to write a stop condition to avoid infinite recursion loop.
+  In the CTE query itself use the same table name to leverage
+  recursion that has been passed to the `name` argument. Make sure
+  to write a stop condition to avoid infinite recursion loop.
 
-  Generally speaking, you should only use CTEs for writing recursive queries. Non-recursive
-  CTEs can often be written as joins or subqueries, which provide better performance.
+  Generally speaking, you should only use CTEs for writing recursive
+  queries. Non-recursive CTEs can often be written as joins or
+  subqueries, which provide better performance.
 
   ## Expression examples
 
