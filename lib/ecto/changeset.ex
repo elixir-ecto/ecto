@@ -2232,12 +2232,22 @@ defmodule Ecto.Changeset do
 
   """
   @spec optimistic_lock(Ecto.Schema.t | t, atom, (term -> term)) :: t
-  def optimistic_lock(data_or_changeset, field, incrementer \\ &(&1 + 1)) do
+  def optimistic_lock(data_or_changeset, field, incrementer \\ &increment_with_rollover/1) do
     changeset = change(data_or_changeset, %{})
     current = get_field(changeset, field)
     changeset.filters[field]
     |> put_in(current)
     |> force_change(field, incrementer.(current))
+  end
+
+  # increment_with_rollover expect to be used with lock_version set as :integer in db schema
+  # 2_147_483_647 is upper limit for signed integer for both PostgreSQL and MySQL
+  defp increment_with_rollover(val) when val >= 2_147_483_647 do
+    1
+  end
+
+  defp increment_with_rollover(val) when is_integer(val) do
+    val + 1
   end
 
   @doc """
