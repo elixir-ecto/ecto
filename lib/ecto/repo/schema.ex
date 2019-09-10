@@ -804,9 +804,7 @@ defmodule Ecto.Repo.Schema do
   defp assoc_opts([], _opts), do: []
 
   defp assoc_opts(_assocs, opts) do
-    opts
-    |> Keyword.take([:timeout, :log, :telemetry_event, :prefix])
-    |> Keyword.put(:skip_transaction, true)
+    Keyword.take(opts, [:timeout, :log, :telemetry_event, :prefix])
   end
 
   defp process_parents(%{changes: changes} = changeset, assocs, adapter, opts) do
@@ -910,7 +908,6 @@ defmodule Ecto.Repo.Schema do
 
   defp wrap_in_transaction(adapter, adapter_meta, opts, relations_changed?, prepare, fun) do
     if (relations_changed? or prepare != []) and
-       Keyword.get(opts, :skip_transaction) != true and
        function_exported?(adapter, :transaction, 3) and
        not adapter.in_transaction?(adapter_meta) do
       adapter.transaction(adapter_meta, opts, fn ->
