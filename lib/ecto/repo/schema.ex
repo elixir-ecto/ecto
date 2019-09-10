@@ -912,7 +912,6 @@ defmodule Ecto.Repo.Schema do
     if (relations_changed? or prepare != []) and
        Keyword.get(opts, :skip_transaction) != true and
        function_exported?(adapter, :transaction, 3) and
-       function_exported?(adapter, :in_transaction?, 1) and
        not adapter.in_transaction?(adapter_meta) do
       adapter.transaction(adapter_meta, opts, fn ->
         case fun.() do
