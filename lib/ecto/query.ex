@@ -1033,7 +1033,9 @@ defmodule Ecto.Query do
   into CTEs can negatively impact performance, as the database
   may not optimize efficiently across CTEs. The main use case
   for CTEs in Ecto is to provide recursive definitions, which
-  we outline in the following section.
+  we outline in the following section. Non-recursive CTEs can
+  often be written as joins or subqueries, which provide better
+  performance.
 
   ## Options
 
@@ -1046,10 +1048,8 @@ defmodule Ecto.Query do
   In the CTE query itself use the same table name to leverage
   recursion that has been passed to the `name` argument. Make sure
   to write a stop condition to avoid infinite recursion loop.
-
-  Generally speaking, you should only use CTEs for writing recursive
-  queries. Non-recursive CTEs can often be written as joins or
-  subqueries, which provide better performance.
+  Generally speaking, you should only use CTEs in Ecto for
+  writing recursive queries.
 
   ## Expression examples
 
