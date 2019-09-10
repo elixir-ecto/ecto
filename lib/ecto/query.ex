@@ -1081,7 +1081,7 @@ defmodule Ecto.Query do
       |> with_cte("category_tree", as: ^category_tree_query)
       |> join(:left, [c], p in assoc(c, :products))
       |> group_by([c], c.id)
-      |> select:([c, p], %{c | products_count: count(p.id)})
+      |> select([c, p], %{c | products_count: count(p.id)})
 
   It's also possible to pass a raw SQL fragment:
 
