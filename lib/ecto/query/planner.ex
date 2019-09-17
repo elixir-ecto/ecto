@@ -528,10 +528,13 @@ defmodule Ecto.Query.Planner do
   Prepare the parameters by merging and casting them according to sources.
   """
   def plan_cache(query, operation, adapter) do
-    {query, {cache, params}} =
-      traverse_exprs(query, operation, {[], []}, &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)})
-
+    {query, {cache, params}} = traverse_cache(query, operation, {[], []}, adapter)
     {query, Enum.reverse(params), finalize_cache(query, operation, cache)}
+  end
+
+  defp traverse_cache(query, operation, cache_params, adapter) do
+    fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
+    traverse_exprs(query, operation, cache_params, fun)
   end
 
   defp merge_cache(:from, _query, from, {cache, params}, _operation, _adapter) do
@@ -594,15 +597,11 @@ defmodule Ecto.Query.Planner do
   end
 
   defp merge_cache(:combination, _query, combinations, cache_and_params, operation, adapter) do
-    fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
-
     # In here we add each combination as its own entry in the cache key.
     # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
-    Enum.reduce combinations, cache_and_params, fn {modifier, combination_query}, {cache, params} ->
-      case traverse_exprs(combination_query, operation, {[], params}, fun) do
-        {_, {:nocache, _} = acc} -> acc
-        {_, {inner_cache, params}} -> {[{modifier, inner_cache} | cache], params}
-      end
+    Enum.reduce combinations, cache_and_params, fn {modifier, query}, {cache, params} ->
+      {_, {inner_cache, params}} = traverse_cache(query, operation, {[], params}, adapter)
+      {merge_cache({modifier, inner_cache}, cache, inner_cache != :nocache), params}
     end
   end
 
@@ -613,16 +612,13 @@ defmodule Ecto.Query.Planner do
   defp merge_cache(:with_cte, query, with_expr, cache_and_params, _operation, adapter) do
     %{queries: queries, recursive: recursive} = with_expr
     key = if recursive, do: :recursive_cte, else: :non_recursive_cte
-    fun = &{&3, merge_cache(&1, &2, &3, &4, :all, adapter)}
 
     # In here we add each cte as its own entry in the cache key.
     # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
     Enum.reduce queries, cache_and_params, fn
       {name, %Ecto.Query{} = query}, {cache, params} ->
-        case traverse_exprs(query, :all, {[], params}, fun) do
-          {_, {:nocache, _} = acc} -> acc
-          {_, {inner_cache, params}} -> {[{key, name, inner_cache} | cache], params}
-        end
+        {_, {inner_cache, params}} = traverse_cache(query, :all, {[], params}, adapter)
+        {merge_cache({key, name, inner_cache}, cache, inner_cache != :nocache), params}
 
       {name, %Ecto.Query.QueryExpr{} = query_expr}, {cache, params} ->
         {params, cacheable?} = cast_and_merge_params(:with_cte, query, query_expr, params, adapter)
