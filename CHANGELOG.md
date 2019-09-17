@@ -1,5 +1,16 @@
 # Changelog for v3.x
 
+## v3.2.1 (2019-09-17)
+
+### Enhancements
+
+  * [Ecto.Changeset] Add rollover logic for default incremeter in `optimistic_lock`
+  * [Ecto.Query] Also expand macros when used inside `type/2`
+
+### Bug fixes
+
+  * [Ecto.Query] Ensure queries with non-cacheable queries in CTEs/combinations are also not-cacheable
+
 ## v3.2.0 (2019-09-07)
 
 v3.2 requires Elixir v1.6+.
