@@ -372,6 +372,31 @@ defmodule Ecto.Query.PlannerTest do
     assert key == :nocache
   end
 
+  test "plan: combination with uncacheable queries are uncacheable" do
+    query1 =
+      Post
+      |> where([p], p.id in ^[1, 2, 3])
+      |> select([p], p.id)
+
+    query2 =
+      Post
+      |> where([p], p.id in [1, 2])
+      |> select([p], p.id)
+      |> distinct(true)
+
+    {_, _, key} = query1 |> union_all(^query2) |> Planner.plan(:all, Ecto.TestAdapter)
+    assert key == :nocache
+  end
+
+  test "plan: ctes with uncacheable queries are uncacheable" do
+    {_, _, cache} =
+      Comment
+      |> with_cte("cte", as: ^from(c in Comment, where: c.id in ^[1, 2, 3]))
+      |> plan()
+
+    assert cache == :nocache
+  end
+
   test "plan: normalizes prefixes" do
     # No schema prefix in from
     {query, _, _} = from(Comment, select: 1) |> plan()
@@ -775,7 +800,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "normalize: select with unions" do
     union_query = from(Post, []) |> select([p], %{title: p.title, category: "Post"})
-    query = from(Post, []) |> select([p], %{title: p.title, category: "Post"}) |> union(^union_query) |>  normalize()
+    query = from(Post, []) |> select([p], %{title: p.title, category: "Post"}) |> union(^union_query) |> normalize()
 
     union_query = query.combinations |> List.first() |> elem(1)
     assert "Post" in query.select.fields
