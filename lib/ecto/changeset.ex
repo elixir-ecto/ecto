@@ -2260,6 +2260,9 @@ defmodule Ecto.Changeset do
   The given function is guaranteed to run inside the same transaction
   as the changeset operation for databases that do support transactions.
 
+  Note that `prepare_changes/2` will run the function only if the given
+  changeset is valid.
+
   ## Example
 
   A common use case is updating a counter cache, in this case updating a post's
