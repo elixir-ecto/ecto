@@ -536,7 +536,12 @@ defmodule Ecto.Query.Planner do
 
   defp merge_cache(:from, _query, from, {cache, params}, _operation, _adapter) do
     {key, params} = source_cache(from, params)
-    {merge_cache(key, cache, key != :nocache), params}
+    cacheable? =
+    case is_list(key) do
+      true -> !has_nocache?(key)
+      false -> key != :nocache
+  end
+  {merge_cache(key, cache, cacheable?), params}
   end
 
   defp merge_cache(kind, query, expr, {cache, params}, _operation, adapter)
@@ -648,6 +653,21 @@ defmodule Ecto.Query.Planner do
   defp merge_cache(_left, _right, false),  do: :nocache
   defp merge_cache(_left, :nocache, true), do: :nocache
   defp merge_cache(left, right, true),     do: [left|right]
+
+  defp has_nocache?([head | tail]) do
+    case head == :nocache do
+      true -> true
+      false -> has_nocache?(tail)
+    end
+  end
+
+  defp has_nocache?([]) do
+    false
+  end
+
+  defp has_nocache?(cache) do
+    cache == :nocache
+  end
 
   defp finalize_cache(_query, _operation, :nocache) do
     :nocache
