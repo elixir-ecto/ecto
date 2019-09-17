@@ -2241,11 +2241,15 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Provides a function to run before emitting changes to the repository.
+  Provides a function executed by the repository on insert/update/delete.
 
-  Such function receives the changeset and must return a changeset,
-  allowing developers to do final adjustments to the changeset or to
-  issue data consistency commands.
+  If the changeset given to the repository is valid, the function given to
+  `prepare_changes/2` will be called with the changeset and must return a
+  changeset, allowing developers to do final adjustments to the changeset or
+  to issue data consistency commands. The repository itself can be accessed
+  inside the function under the `repo` field in the changesett. If the
+  changeset given to the repository is invalid, the function will not be
+  invoked.
 
   The given function is guaranteed to run inside the same transaction
   as the changeset operation for databases that do support transactions.
