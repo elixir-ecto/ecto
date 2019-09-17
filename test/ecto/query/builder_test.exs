@@ -96,7 +96,7 @@ defmodule Ecto.Query.BuilderTest do
     end
   end
 
-  test "escape cast" do
+  test "escape type cast" do
     import Kernel, except: [+: 2]
     assert {Macro.escape(quote do type(&0.y + &1.z, :decimal) end), []} ==
            escape(quote do type(x.y + y.z, :decimal) end, [x: 0, y: 1], __ENV__)
@@ -117,8 +117,17 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do type(filter(sum(&0.y), &0.y > &0.z), :decimal) end), []} ==
           escape(quote do type(filter(sum(x.y), x.y > x.z), :decimal) end, [x: 0], {__ENV__, %{}})
 
-    assert {Macro.escape(quote do type(over(fragment({:raw, "array_agg("},{:expr, &0.id}, {:raw, ")"}), :y), {:array, :"Elixir.Ecto.UUID"}) end), []} ==
+    assert {Macro.escape(quote do type(over(fragment({:raw, "array_agg("}, {:expr, &0.id}, {:raw, ")"}), :y), {:array, :"Elixir.Ecto.UUID"}) end), []} ==
       escape(quote do type(over(fragment("array_agg(?)", x.id), :y), {:array, Ecto.UUID}) end, [x: 0], {__ENV__, %{}})
+  end
+
+  defmacro wrapped_sum(a) do
+    quote do: sum(unquote(a))
+  end
+
+  test "escape type cast with macro" do
+    assert {Macro.escape(quote do type(sum(&0.y), :integer) end), []} ==
+          escape(quote do type(wrapped_sum(x.y), :integer) end, [x: 0], __ENV__)
   end
 
   test "escape type checks" do
