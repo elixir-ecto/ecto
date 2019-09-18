@@ -978,7 +978,7 @@ defmodule Ecto.Changeset do
       iex> changeset = change(post, %{title: "New title"})
       iex> fetch_field!(changeset, :title)
       "New title"
-      iex> fetch_field!(changeset, :not_a_field)
+      iex> fetch_field!(changeset, :other)
       ** (KeyError) key :other not found in: %Post{...}
   """
   @spec fetch_field!(t, atom) :: term
