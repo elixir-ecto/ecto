@@ -957,7 +957,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec fetch_field(t, atom) :: {:changes, term} | {:data, term} | :error
-  def fetch_field(%Changeset{changes: changes, data: data, types: types}, key) do
+  def fetch_field(%Changeset{changes: changes, data: data, types: types}, key) when is_atom(key) do
     case Map.fetch(changes, key) do
       {:ok, value} ->
         {:changes, change_as_field(types, key, value)}
@@ -966,6 +966,29 @@ defmodule Ecto.Changeset do
           {:ok, value} -> {:data, data_as_field(data, types, key, value)}
           :error       -> :error
         end
+    end
+  end
+
+  @doc """
+  Same as `fetch_field/2` but returns the value or raises if the given key was not found.
+
+  ## Examples
+
+      iex> post = %Post{title: "Foo", body: "Bar baz bong"}
+      iex> changeset = change(post, %{title: "New title"})
+      iex> fetch_field!(changeset, :title)
+      "New title"
+      iex> fetch_field!(changeset, :not_a_field)
+      ** (KeyError) key :other not found in: %Post{...}
+  """
+  @spec fetch_field!(t, atom) :: term
+  def fetch_field!(changeset, key) do
+    case fetch_field(changeset, key) do
+      {_, value} ->
+        value
+
+      :error ->
+        raise KeyError, key: key, term: changeset.data
     end
   end
 
@@ -1037,6 +1060,28 @@ defmodule Ecto.Changeset do
   @spec fetch_change(t, atom) :: {:ok, term} | :error
   def fetch_change(%Changeset{changes: changes} = _changeset, key) when is_atom(key) do
     Map.fetch(changes, key)
+  end
+
+  @doc """
+  Same as `fetch_change/2` but returns the value or raises if the given key was not found.
+
+  ## Examples
+
+      iex> changeset = change(%Post{body: "foo"}, %{title: "bar"})
+      iex> fetch_change!(changeset, :title)
+      "bar"
+      iex> fetch_change!(changeset, :body)
+      ** (KeyError) key :body not found in: %{title: "bar"}
+  """
+  @spec fetch_change!(t, atom) :: term
+  def fetch_change!(changeset, key) do
+    case fetch_change(changeset, key) do
+      {_, value} ->
+        value
+
+      :error ->
+        raise KeyError, key: key, term: changeset.changes
+    end
   end
 
   @doc """

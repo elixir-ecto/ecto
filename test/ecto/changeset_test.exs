@@ -599,6 +599,17 @@ defmodule Ecto.ChangesetTest do
     assert fetch_field(changeset, :other) == :error
   end
 
+  test "fetch_field!/2" do
+    changeset = changeset(%Post{body: "bar"}, %{"title" => "foo"})
+
+    assert fetch_field!(changeset, :title) == "foo"
+    assert fetch_field!(changeset, :body) == "bar"
+
+    assert_raise KeyError, ~r/key :other not found in/, fn ->
+      fetch_field!(changeset, :other)
+    end
+  end
+
   test "get_field/3" do
     changeset = changeset(%Post{body: "bar"}, %{"title" => "foo"})
 
@@ -622,6 +633,18 @@ defmodule Ecto.ChangesetTest do
     assert fetch_change(changeset, :title) == {:ok, "foo"}
     assert fetch_change(changeset, :body) == :error
     assert fetch_change(changeset, :upvotes) == {:ok, nil}
+  end
+
+  test "fetch_change!/2" do
+    changeset = changeset(%{"title" => "foo", "body" => nil, "upvotes" => nil})
+
+    assert fetch_change!(changeset, :title) == "foo"
+
+    assert_raise KeyError, "key :body not found in: %{title: \"foo\", upvotes: nil}", fn ->
+      fetch_change!(changeset, :body)
+    end
+
+    assert fetch_change!(changeset, :upvotes) == nil
   end
 
   test "get_change/3" do
