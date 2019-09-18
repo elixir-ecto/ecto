@@ -970,6 +970,20 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
+  Same as `c:fetch_field/2` but returns the value or raises if the given key was not found.
+
+  """
+  @spec fetch_field!(t, atom) :: term
+  def fetch_field!(changeset, key) do
+    case fetch_field(changeset, key) do
+      :error ->
+        raise ArgumentError, "unknown field `#{key}` in #{inspect(changeset.data)}"
+      {_, value} ->
+        value
+    end
+  end
+
+  @doc """
   Gets a field from changes or from the data.
 
   While `get_change/3` only looks at the current `changes`
@@ -1037,6 +1051,20 @@ defmodule Ecto.Changeset do
   @spec fetch_change(t, atom) :: {:ok, term} | :error
   def fetch_change(%Changeset{changes: changes} = _changeset, key) when is_atom(key) do
     Map.fetch(changes, key)
+  end
+
+  @doc """
+  Same as `c:fetch_change/2` but returns the value or raises if the given key was not found.
+
+  """
+  @spec fetch_change!(t, atom) :: term
+  def fetch_change!(changeset, key) do
+    case fetch_change(changeset, key) do
+      :error ->
+        raise ArgumentError, "unknown field `#{key}` in #{inspect(changeset.changes)}"
+      {_, value} ->
+        value
+    end
   end
 
   @doc """
