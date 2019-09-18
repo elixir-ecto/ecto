@@ -604,7 +604,8 @@ defmodule Ecto.ChangesetTest do
 
     assert fetch_field!(changeset, :title) == "foo"
     assert fetch_field!(changeset, :body) == "bar"
-    assert_raise ArgumentError, ~r/unknown field `other` in .*/, fn ->
+
+    assert_raise KeyError, ~r/key :other not found in/, fn ->
       fetch_field!(changeset, :other)
     end
   end
@@ -638,9 +639,11 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"title" => "foo", "body" => nil, "upvotes" => nil})
 
     assert fetch_change!(changeset, :title) == "foo"
-    assert_raise ArgumentError, ~r/unknown field `body` in %{title: \"foo\", upvotes: nil}/, fn ->
+
+    assert_raise KeyError, "key :body not found in: %{title: \"foo\", upvotes: nil}", fn ->
       fetch_change!(changeset, :body)
     end
+
     assert fetch_change!(changeset, :upvotes) == nil
   end
 

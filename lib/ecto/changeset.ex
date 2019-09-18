@@ -970,16 +970,25 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Same as `c:fetch_field/2` but returns the value or raises if the given key was not found.
+  Same as `fetch_field/2` but returns the value or raises if the given key was not found.
 
+  ## Examples
+
+      iex> post = %Post{title: "Foo", body: "Bar baz bong"}
+      iex> changeset = change(post, %{title: "New title"})
+      iex> fetch_field!(changeset, :title)
+      "New title"
+      iex> fetch_field!(changeset, :not_a_field)
+      ** (KeyError) key :other not found in: %Post{...}
   """
   @spec fetch_field!(t, atom) :: term
   def fetch_field!(changeset, key) do
     case fetch_field(changeset, key) do
-      :error ->
-        raise ArgumentError, "unknown field `#{key}` in #{inspect(changeset.data)}"
       {_, value} ->
         value
+
+      :error ->
+        raise KeyError, key: key, term: changeset.data
     end
   end
 
@@ -1054,16 +1063,24 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Same as `c:fetch_change/2` but returns the value or raises if the given key was not found.
+  Same as `fetch_change/2` but returns the value or raises if the given key was not found.
 
+  ## Examples
+
+      iex> changeset = change(%Post{body: "foo"}, %{title: "bar"})
+      iex> fetch_change!(changeset, :title)
+      "bar"
+      iex> fetch_change!(changeset, :body)
+      ** (KeyError) key :body not found in: %{title: "bar"}
   """
   @spec fetch_change!(t, atom) :: term
   def fetch_change!(changeset, key) do
     case fetch_change(changeset, key) do
-      :error ->
-        raise ArgumentError, "unknown field `#{key}` in #{inspect(changeset.changes)}"
       {_, value} ->
         value
+
+      :error ->
+        raise KeyError, key: key, term: changeset.changes
     end
   end
 
