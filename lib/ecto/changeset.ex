@@ -957,7 +957,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec fetch_field(t, atom) :: {:changes, term} | {:data, term} | :error
-  def fetch_field(%Changeset{changes: changes, data: data, types: types}, key) do
+  def fetch_field(%Changeset{changes: changes, data: data, types: types}, key) when is_atom(key) do
     case Map.fetch(changes, key) do
       {:ok, value} ->
         {:changes, change_as_field(types, key, value)}
