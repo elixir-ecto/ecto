@@ -1,7 +1,7 @@
 defmodule Ecto.MixProject do
   use Mix.Project
 
-  @version "3.2.0-dev"
+  @version "3.3.0-dev"
 
   def project do
     [
@@ -39,7 +39,7 @@ defmodule Ecto.MixProject do
   defp package do
     [
       maintainers: ["Eric Meadows-Jönsson", "José Valim", "James Fish", "Michał Muskała"],
-      licenses: ["Apache 2.0"],
+      licenses: ["Apache-2.0"],
       links: %{"GitHub" => "https://github.com/elixir-ecto/ecto"},
       files:
         ~w(.formatter.exs mix.exs README.md CHANGELOG.md lib) ++

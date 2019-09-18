@@ -25,10 +25,10 @@ defmodule Ecto.Repo do
         hostname: "localhost"
 
   Most of the configuration that goes into the `config` is specific
-  to the adapter, so in this particular example, you check
+  to the adapter. For this particular example, you can check
   [`Ecto.Adapters.Postgres`](https://hexdocs.pm/ecto_sql/Ecto.Adapters.Postgres.html)
-  for more information. However, some configuration is shared across
-  all adapters, they are:
+  for more information. In spite of this, the following configuration values
+  are shared across all adapters:
 
     * `:name`- The name of the Repo supervisor process
 
@@ -65,7 +65,8 @@ defmodule Ecto.Repo do
   while options are simply merged in.
 
   URL can include query parameters to override shared and adapter-specific
-  options `ssl`, `timeout`, `pool_size`:
+  options, like `ssl`, `timeout` and `pool_size`. The following example
+  shows how to pass these configuration values:
 
       config :my_app, Repo,
         url: "ecto://postgres:postgres@localhost/ecto_simple?ssl=true&pool_size=10"
@@ -78,15 +79,15 @@ defmodule Ecto.Repo do
         {:ok, Keyword.put(config, :url, System.get_env("DATABASE_URL"))}
       end
 
-  ## The Repository API
+  ## Shared options
 
-  Almost all of the repository outlined in this module accept the following
+  Almost all of the repository functions outlined in this module accept the following
   options:
 
     * `:timeout` - The time in milliseconds to wait for the query call to
-      finish, `:infinity` will wait indefinitely (default: 15000);
+      finish. `:infinity` will wait indefinitely (default: 15000)
     * `:log` - When false, does not log the query
-    * `:telemetry_event` - The telemetry event name to dispatch the event under./
+    * `:telemetry_event` - The telemetry event name to dispatch the event under.
       See the next section for more information
 
   ### Telemetry events
@@ -104,23 +105,39 @@ defmodule Ecto.Repo do
         end
       end
 
-  and then attach this module to each event on your Application start callback:
+  Then, in the `Application.start/2` callback, attach the handler to this event using
+  a unique handler id:
 
-      :telemetry.attach("my-app-handler", [:my_app, :repo, :query], &MyApp.Telemetry.handle_event/4, %{})
+      :ok = :telemetry.attach("my-app-handler-id", [:my_app, :repo, :query], &MyApp.Telemetry.handle_event/4, %{})
 
-  Below we list all events developers should expect. All examples below consider
+  For details, see [the telemetry documentation](https://hexdocs.pm/telemetry/).
+
+  Below we list all events developers should expect from Ecto. All examples below consider
   a repository named `MyApp.Repo`:
 
-    * `[:my_app, :repo, :query]` - should be invoked on every query send
-      to the adapter, including queries that are related to the transaction
-      management. The measurements will include a `total_time` and any other
-      relevant subtime, such as decode and queue time. The metadata is a map
-      with parameters, source, result and other relevant information
+  #### `[:my_app, :repo, :query]`
+
+  This event should be invoked on every query sent to the adapter, including
+  queries that are related to the transaction management.
+
+  The `:measurements` map will include the following, all given in the
+  `:native` time unit:
+
+    - `:queue_time` - the time spent waiting to check out a database connection
+    - `:query_time` - the time spent executing the query
+    - `:decode_time` - the time spent decoding the data received from the database
+    - `:total_time` - the sum of the other measurements
+
+  All measurements are given in the `:native` time unit. You can read more
+  about it in the docs for `System.convert_time_unit/3`.
+
+  A `:metadata` map is also sent, including parameters, source, the query
+  string, the repo it was run by, and the query result.
 
   ## Read-only repositories
 
   You can mark a repository as read-only by passing the `:read_only`
-  flag on use:
+  flag on `use`:
 
       use Ecto.Repo, otp_app: ..., adapter: ..., read_only: true
 
@@ -303,6 +320,9 @@ defmodule Ecto.Repo do
         def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
           Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, get_dynamic_repo(), preloads, opts)
         end
+
+        def prepare_query(operation, query, opts), do: {query, opts}
+        defoverridable prepare_query: 3
       end
     end
   end
@@ -323,7 +343,8 @@ defmodule Ecto.Repo do
   application environment. It must return `{:ok, keyword}` with the updated
   list of configuration or `:ignore` (only in the `:supervisor` case).
   """
-  @callback init(:supervisor | :runtime, config :: Keyword.t()) :: {:ok, Keyword.t()} | :ignore
+  @callback init(context :: :supervisor | :runtime, config :: Keyword.t()) ::
+              {:ok, Keyword.t()} | :ignore
 
   ## Ecto.Adapter
 
@@ -377,7 +398,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
   """
   @callback checkout((() -> result), opts :: Keyword.t()) :: result when result: var
 
@@ -434,7 +455,7 @@ defmodule Ecto.Repo do
   @callback get_dynamic_repo() :: atom() | pid()
 
   @doc """
-  Sets the dynamic repository to be used in further iteractions.
+  Sets the dynamic repository to be used in further interactions.
 
   Sometimes you may want a single Ecto repository to talk to
   many different database instances. By default, when you call
@@ -489,7 +510,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -513,7 +534,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -539,7 +560,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -569,7 +590,7 @@ defmodule Ecto.Repo do
       `Ecto.Query` documentation.
 
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -605,7 +626,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Examples
 
@@ -641,7 +662,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Examples
 
@@ -672,7 +693,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Examples
 
@@ -700,7 +721,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
   """
   @callback one!(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
               Ecto.Schema.t()
@@ -717,9 +738,6 @@ defmodule Ecto.Repo do
 
   ## Options
 
-  Besides the "Shared options" section at the module documentation,
-  it accepts:
-
     * `:force` - By default, Ecto won't preload associations that
       are already loaded. By setting this option to true, any existing
       association will be discarded and reloaded.
@@ -729,6 +747,8 @@ defmodule Ecto.Repo do
     * `:prefix` - the prefix to fetch preloads from. By default, queries
       will use the same prefix as the one in the given collection. This
       option allows the prefix to be changed.
+
+  See the "Shared options" section at the module documentation for more options.
 
   ## Examples
 
@@ -755,6 +775,20 @@ defmodule Ecto.Repo do
             when structs_or_struct_or_nil: [Ecto.Schema.t()] | Ecto.Schema.t() | nil
 
   @doc """
+  A user customizable callback invoked for query-based operations.
+
+  This callback can be used to further modify the query and options
+  before it is transformed and sent to the database.
+
+  This callback is invoked for all query APIs, including the `stream`
+  function, but it is not invoked for `insert_all` nor any of the
+  schema functions.
+  """
+  @callback prepare_query(operation, Ecto.Query.t(), Keyword.t()) ::
+              {Ecto.Query.t(), Keyword.t()}
+            when operation: :all | :update_all | :delete_all | :stream
+
+  @doc """
   Fetches all entries from the data store matching the given query.
 
   May raise `Ecto.QueryError` if query validation fails.
@@ -768,7 +802,7 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -800,7 +834,7 @@ defmodule Ecto.Repo do
     * `:max_rows` - The number of rows to load from the database as we stream.
       It is supported at least by Postgres and MySQL and defaults to 500.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -891,7 +925,8 @@ defmodule Ecto.Repo do
   ## Ecto.Adapter.Schema
 
   @optional_callbacks insert_all: 3, insert: 2, insert!: 2, update: 2, update!: 2,
-                      delete: 2, delete!: 2, insert_or_update: 2, insert_or_update!: 2
+                      delete: 2, delete!: 2, insert_or_update: 2, insert_or_update!: 2,
+                      prepare_query: 3
 
   @doc """
   Inserts all entries into the repository.
@@ -1015,11 +1050,11 @@ defmodule Ecto.Repo do
 
   ## Options
 
-    * `:returning` - selects which fields to return. When `true`, returns
-      all fields in the given struct. May be a list of fields, where a
-      struct is still returned but only with the given fields. In any case,
-      it will include fields with `read_after_writes` set to true.
-      Not all databases support this option.
+    * `:returning` - selects which fields to return. It accepts a list
+      of fields to be returned from the database. When `true`, returns
+      all fields. When `false`, no extra fields are returned. It will
+      always include all fields in `read_after_writes` as well as any
+      autogenerated id. Not all databases support this option.
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). This overrides the prefix set
       in the query and any `@schema_prefix` set any schemas. Also, the
@@ -1040,7 +1075,7 @@ defmodule Ecto.Repo do
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Examples
 
@@ -1167,9 +1202,11 @@ defmodule Ecto.Repo do
 
   ## Options
 
-  Besides the "Shared options" section at the module documentation,
-  it accepts:
-
+    * `:returning` - selects which fields to return. It accepts a list
+      of fields to be returned from the database. When `true`, returns
+      all fields. When `false`, no extra fields are returned. It will
+      always include all fields in `read_after_writes`. Not all
+      databases support this option.
     * `:force` - By default, if there are no changes in the changeset,
       `c:update/2` is a no-op. By setting this option to true, update
       callbacks will always be executed, even if there are no changes
@@ -1184,6 +1221,8 @@ defmodule Ecto.Repo do
       `Ecto.StaleEntryError`.
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
+
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -1226,7 +1265,7 @@ defmodule Ecto.Repo do
       `:stale_error_field` when stale errors happen, defaults to "is stale".
       Only applies to updates.
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -1268,7 +1307,7 @@ defmodule Ecto.Repo do
     * `:stale_error_message` - The message to add to the configured
       `:stale_error_field` when stale errors happen, defaults to "is stale".
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -1322,6 +1361,11 @@ defmodule Ecto.Repo do
 
   ## Use with function
 
+  `c:transaction/2` can be called with both a function of arity
+  zero or one. The arity zero function will just be executed as is,
+  while the arity one function will receive the repo of the transaction
+  as its first argument, similar to `Ecto.Multi.run`.
+
   If an unhandled error occurs the transaction will be rolled back
   and the error will bubble up from the transaction function.
   If no error occurred the transaction will be committed when the
@@ -1352,7 +1396,7 @@ defmodule Ecto.Repo do
 
   ## Options
 
-  See the "Shared options" section at the module documentation.
+  See the "Shared options" section at the module documentation for more options.
 
   ## Examples
 
@@ -1361,6 +1405,11 @@ defmodule Ecto.Repo do
       MyRepo.transaction(fn ->
         MyRepo.update!(change(alice, balance: alice.balance - 10))
         MyRepo.update!(change(bob, balance: bob.balance + 10))
+      end)
+      
+      # When passing a function of arity 1, it receives the repository itself
+      MyRepo.transaction(fn repo -> 
+        repo.insert!(%Post{})
       end)
 
       # Roll back a transaction explicitly

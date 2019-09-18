@@ -307,6 +307,8 @@ defmodule Ecto.RepoTest do
   test "insert with returning" do
     TestRepo.insert(%MySchemaWithAssoc{}, returning: [:id])
     assert_received {:insert, %{source: "my_schema", returning: [:id]}}
+    TestRepo.insert(%MySchemaWithAssoc{}, returning: [:parent_id])
+    assert_received {:insert, %{source: "my_schema", returning: [:id, :parent_id]}}
     TestRepo.insert(%MySchemaWithAssoc{}, returning: true)
     assert_received {:insert, %{source: "my_schema", returning: [:id, :parent_id, :n]}}
     TestRepo.insert(%MySchemaWithAssoc{}, returning: false)
@@ -315,10 +317,12 @@ defmodule Ecto.RepoTest do
 
   test "update with returning" do
     changeset = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{n: 2})
-    TestRepo.update(changeset, returning: [])
-    assert_received {:update, %{source: "my_schema", returning: []}}
+    TestRepo.update(changeset, returning: [:id])
+    assert_received {:update, %{source: "my_schema", returning: [:id]}}
+    TestRepo.update(changeset, returning: [:parent_id])
+    assert_received {:update, %{source: "my_schema", returning: [:parent_id]}}
     TestRepo.update(changeset, returning: true)
-    assert_received {:update, %{source: "my_schema", returning: []}}
+    assert_received {:update, %{source: "my_schema", returning: [:parent_id, :n, :id]}}
     TestRepo.update(changeset, returning: false)
     assert_received {:update, %{source: "my_schema", returning: []}}
   end
@@ -1058,7 +1062,7 @@ defmodule Ecto.RepoTest do
 
   describe "custom type as primary key" do
     defmodule PrefixedID do
-      @behaviour Ecto.Type
+      use Ecto.Type
       def type(), do: :binary_id
       def cast("foo-" <> _ = id), do: {:ok, id}
       def cast(id), do: {:ok, "foo-" <> id}
@@ -1167,6 +1171,70 @@ defmodule Ecto.RepoTest do
       refute function_exported?(ReadOnlyRepo, :insert_all, 3)
       refute function_exported?(ReadOnlyRepo, :update_all, 3)
       refute function_exported?(ReadOnlyRepo, :delete_all, 2)
+    end
+  end
+
+  describe "prepare_for_query" do
+    defmodule PrepareRepo do
+      use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
+
+      def prepare_query(op, query, opts) do
+        send(self(), {op, query, opts})
+        {%{query | prefix: "rewritten"}, opts}
+      end
+    end
+
+    setup do
+      _ = PrepareRepo.start_link(url: "ecto://user:pass@local/hello")
+      :ok
+    end
+
+    test "all" do
+      query = from p in MyParent, select: p
+
+      PrepareRepo.all(query, [hello: :world])
+      assert_received {:all, ^query, [hello: :world]}
+      assert_received {:all, %{prefix: "rewritten"}}
+
+      PrepareRepo.one(query, [hello: :world])
+      assert_received {:all, ^query, [hello: :world]}
+      assert_received {:all, %{prefix: "rewritten"}}
+    end
+
+    test "update_all" do
+      query = from p in MyParent, update: [set: [n: 1]]
+      PrepareRepo.update_all(query, [], [hello: :world])
+      assert_received {:update_all, ^query, [hello: :world]}
+      assert_received {:update_all, %{prefix: "rewritten"}}
+    end
+
+    test "delete_all" do
+      query = from p in MyParent
+      PrepareRepo.delete_all(query, [hello: :world])
+      assert_received {:delete_all, ^query, [hello: :world]}
+      assert_received {:delete_all, %{prefix: "rewritten"}}
+    end
+
+    test "stream" do
+      query = from p in MyParent, select: p
+      PrepareRepo.stream(query, [hello: :world]) |> Enum.to_list()
+      assert_received {:stream, ^query, [hello: :world]}
+      assert_received {:stream, %{prefix: "rewritten"}}
+    end
+  end
+
+  describe "transaction" do
+    test "an arity zero function will be executed any it's value returned" do
+      fun = fn -> :ok end
+      assert {:ok, :ok} = TestRepo.transaction(fun)
+      assert_received {:transaction, _}
+    end
+
+    test "an arity one function will be passed the repo as first argument" do
+      fun = fn repo -> repo end
+
+      assert {:ok, TestRepo} = TestRepo.transaction(fun)
+      assert_received {:transaction, _}
     end
   end
 end

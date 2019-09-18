@@ -122,7 +122,7 @@ defmodule Ecto.Repo.Schema do
         Enum.flat_map_reduce(header, counter, fn {key, _}, counter ->
           case :lists.keyfind(key, 1, fields) do
             {^key, %Ecto.Query{} = query} ->
-              {query, params, _} = Ecto.Query.Planner.plan(query, :all, adapter, counter)
+              {query, params, _} = Ecto.Query.Planner.plan(query, :all, adapter)
               {query, _} = Ecto.Query.Planner.normalize(query, :all, adapter, counter)
 
               {[{key, {query, params}}], counter + length(params)}
@@ -312,7 +312,9 @@ defmodule Ecto.Repo.Schema do
     filters = add_pk_filter!(changeset.filters, struct)
 
     {return_types, return_sources} =
-      schema.__schema__(:read_after_writes)
+      schema
+      |> returning(opts)
+      |> add_read_after_writes(schema)
       |> fields_to_sources(dumper)
 
     # Differently from insert, update does not copy the struct
@@ -485,9 +487,11 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp add_read_after_writes(return, schema) do
-    Enum.uniq(return ++ schema.__schema__(:read_after_writes))
-  end
+  defp add_read_after_writes([], schema),
+    do: schema.__schema__(:read_after_writes)
+
+  defp add_read_after_writes(return, schema),
+    do: Enum.uniq(return ++ schema.__schema__(:read_after_writes))
 
   defp fields_to_sources(fields, nil) do
     {fields, fields}
@@ -623,10 +627,8 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp on_conflict_query(query, from, prefix, counter_fun, adapter, conflict_target) do
-    counter = counter_fun.()
-
     {query, params, _} =
-      Ecto.Query.Planner.plan(%{query | prefix: prefix}, :update_all, adapter, counter)
+      Ecto.Query.Planner.plan(%{query | prefix: prefix}, :update_all, adapter)
 
     unless query.from.source == from do
       raise ArgumentError, "cannot run on_conflict: query because the query " <>
@@ -635,7 +637,7 @@ defmodule Ecto.Repo.Schema do
                            "and #{inspect from} respectively"
     end
 
-    {query, _} = Ecto.Query.Planner.normalize(query, :update_all, adapter, counter)
+    {query, _} = Ecto.Query.Planner.normalize(query, :update_all, adapter, counter_fun.())
     {query, params, conflict_target}
   end
 
@@ -802,9 +804,7 @@ defmodule Ecto.Repo.Schema do
   defp assoc_opts([], _opts), do: []
 
   defp assoc_opts(_assocs, opts) do
-    opts
-    |> Keyword.take([:timeout, :log, :telemetry_event, :prefix])
-    |> Keyword.put(:skip_transaction, true)
+    Keyword.take(opts, [:timeout, :log, :telemetry_event, :prefix])
   end
 
   defp process_parents(%{changes: changes} = changeset, assocs, adapter, opts) do
@@ -908,8 +908,8 @@ defmodule Ecto.Repo.Schema do
 
   defp wrap_in_transaction(adapter, adapter_meta, opts, relations_changed?, prepare, fun) do
     if (relations_changed? or prepare != []) and
-       Keyword.get(opts, :skip_transaction) != true and
-       function_exported?(adapter, :transaction, 3) do
+       function_exported?(adapter, :transaction, 3) and
+       not adapter.in_transaction?(adapter_meta) do
       adapter.transaction(adapter_meta, opts, fn ->
         case fun.() do
           {:ok, struct} -> struct

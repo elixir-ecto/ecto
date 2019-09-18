@@ -2,17 +2,18 @@ defmodule Ecto.TypeTest do
   use ExUnit.Case, async: true
 
   defmodule Custom do
-    @behaviour Ecto.Type
+    use Ecto.Type
     def type,      do: :custom
     def load(_),   do: {:ok, :load}
     def dump(_),   do: {:ok, :dump}
     def cast(_),   do: {:ok, :cast}
     def equal?(true, _), do: true
     def equal?(_, _), do: false
+    def embed_as(_), do: :dump
   end
 
   defmodule CustomAny do
-    @behaviour Ecto.Type
+    use Ecto.Type
     def type,      do: :any
     def load(_),   do: {:ok, :load}
     def dump(_),   do: {:ok, :dump}
@@ -38,6 +39,13 @@ defmodule Ecto.TypeTest do
   import Ecto.Type
   doctest Ecto.Type
 
+  test "embed_as" do
+    assert embed_as(:string, :json) == :self
+    assert embed_as(:integer, :json) == :self
+    assert embed_as(Custom, :json) == :dump
+    assert embed_as(CustomAny, :json) == :self
+  end
+
   test "custom types" do
     assert load(Custom, "foo") == {:ok, :load}
     assert dump(Custom, "foo") == {:ok, :dump}
@@ -49,7 +57,6 @@ defmodule Ecto.TypeTest do
 
     assert match?(Custom, :any)
     assert match?(:any, Custom)
-
     assert match?(CustomAny, :boolean)
   end
 
@@ -130,6 +137,29 @@ defmodule Ecto.TypeTest do
   test "in" do
     assert cast({:in, :integer}, ["1", "2", "3"]) == {:ok, [1, 2, 3]}
     assert cast({:in, :integer}, nil) == :error
+  end
+
+  test "{:param, :any_datetime}" do
+    value = ~N[2010-04-17 14:00:00]
+    assert cast({:param, :any_datetime}, value) == {:ok, value}
+
+    value = ~N[2010-04-17 14:00:00.123]
+    assert cast({:param, :any_datetime}, value) == {:ok, value}
+
+    value = DateTime.utc_now
+    assert cast({:param, :any_datetime}, value) == {:ok, value}
+
+    value = "2010-04-17 14:00:00"
+    assert cast({:param, :any_datetime}, value) == {:ok, ~N[2010-04-17 14:00:00]}
+
+    value = Map.from_struct(~N[2010-04-17 14:00:00])
+    assert cast({:param, :any_datetime}, value) == {:ok, ~N[2010-04-17 14:00:00]}
+
+    assert match?(:naive_datetime, {:param, :any_datetime})
+    assert match?(:naive_datetime_usec, {:param, :any_datetime})
+    assert match?(:utc_datetime, {:param, :any_datetime})
+    assert match?(:utc_datetime_usec, {:param, :any_datetime})
+    refute match?(:string, {:param, :any_datetime})
   end
 
   test "decimal" do

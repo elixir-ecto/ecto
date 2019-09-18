@@ -69,17 +69,19 @@ Now that the registration changes are mapped and validated, we can check if the 
 
 ```elixir
 if changeset.valid? do
-  # Get the modified registration struct out of the changeset
+  # Get the modified registration struct from changeset
   registration = Ecto.Changeset.apply_changes(changeset)
+  account = Registration.to_account(registration)
+  profile = Registration.to_profile(registration)
 
   MyApp.Repo.transaction fn ->
-    MyApp.Repo.insert_all "accounts", [Registration.to_account(registration)]
-    MyApp.Repo.insert_all "profiles", [Registration.to_profile(registration)]
+    MyApp.Repo.insert_all "accounts", [account]
+    MyApp.Repo.insert_all "profiles", [profile]
   end
 
   {:ok, registration}
 else
-  # Annotate the action we tried to perform so the UI shows errors
+  # Annotate the action so the UI shows errors
   changeset = %{changeset | action: :registration}
   {:error, changeset}
 end
@@ -106,11 +108,12 @@ Note we have used `MyApp.Repo.insert_all/2` to add data to both "accounts" and "
 Although we chose to define a `Registration` schema to use in the changeset, Ecto also allows developers to use changesets without schemas. We can dynamically define the data and their types. Let's rewrite the registration changeset above to bypass schemas:
 
 ```elixir
-data  = %{}
-types = %{first_name: :string, last_name: :string, email: :string}
+data = %{}
+types = %{name: :string, email: :string}
 
+# The data+types tuple is equivalent to %Registration{}
 changeset =
-  {data, types} # The data+types tuple is equivalent to %Registration{}
+  {data, types}
   |> Ecto.Changeset.cast(params["sign_up"], Map.keys(types))
   |> validate_required(...)
   |> validate_length(...)

@@ -295,7 +295,7 @@ defmodule Ecto.Changeset.BelongsToTest do
   test "change belongs_to" do
     assoc = Author.__schema__(:association, :profile)
 
-    assert :ignore = Relation.change(assoc, nil, nil)
+    assert {:ok, nil, true} = Relation.change(assoc, nil, nil)
     assert {:ok, nil, true} = Relation.change(assoc, nil, %Profile{})
 
     assoc_schema = %Profile{}
@@ -449,6 +449,40 @@ defmodule Ecto.Changeset.BelongsToTest do
     empty_update_changeset = Changeset.change(%Profile{name: "michal"})
 
     changeset = Changeset.put_assoc(base_changeset, :profile, empty_update_changeset)
+    refute Map.has_key?(changeset.changes, :profile)
+  end
+
+  test "put_assoc/4 with empty" do
+    # On unloaded
+    changeset =
+      %Author{}
+      |> Changeset.change()
+      |> Changeset.put_assoc(:profile, nil)
+
+    assert Map.has_key?(changeset.changes, :profile)
+
+    # On empty
+    changeset =
+      %Author{profile: nil}
+      |> Changeset.change()
+      |> Changeset.put_assoc(:profile, nil)
+
+    refute Map.has_key?(changeset.changes, :profile)
+
+    # On unloaded with change
+    changeset =
+      %Author{}
+      |> Changeset.change(profile: %Profile{})
+      |> Changeset.put_assoc(:profile, nil)
+
+    assert Map.has_key?(changeset.changes, :profile)
+
+    # On emptuy with change
+    changeset =
+      %Author{profile: nil}
+      |> Changeset.change(profile: %Profile{})
+      |> Changeset.put_assoc(:profile, nil)
+
     refute Map.has_key?(changeset.changes, :profile)
   end
 

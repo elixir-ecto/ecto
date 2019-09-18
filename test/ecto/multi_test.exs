@@ -251,21 +251,29 @@ defmodule Ecto.MultiTest do
     multi =
       Multi.new
       |> Multi.insert(:insert, changeset)
+      |> Multi.insert({:insert, 1}, changeset)
+      |> Multi.insert({:insert, 2}, changeset)
       |> Multi.run(:run, fn _repo, changes -> {:ok, changes} end)
       |> Multi.update(:update, changeset)
       |> Multi.delete(:delete, changeset)
       |> Multi.insert_all(:insert_all, Comment, [[x: 1]])
       |> Multi.update_all(:update_all, Comment, set: [x: 1])
       |> Multi.delete_all(:delete_all, Comment)
+      |> Multi.delete_all({:delete_all, 1}, Comment)
+      |> Multi.delete_all({:delete_all, 2}, Comment)
 
     assert [
-      {:insert,     {:insert, _, []}},
-      {:run,        {:run, _}},
-      {:update,     {:update, _, []}},
-      {:delete,     {:delete, _, []}},
-      {:insert_all, {:insert_all, _, _, []}},
-      {:update_all, {:update_all, _, _, []}},
-      {:delete_all, {:delete_all, _, []}},
+      {:insert,          {:insert, _, []}},
+      {{:insert, 1},     {:insert, _, []}},
+      {{:insert, 2},     {:insert, _, []}},
+      {:run,             {:run, _}},
+      {:update,          {:update, _, []}},
+      {:delete,          {:delete, _, []}},
+      {:insert_all,      {:insert_all, _, _, []}},
+      {:update_all,      {:update_all, _, _, []}},
+      {:delete_all,      {:delete_all, _, []}},
+      {{:delete_all, 1}, {:delete_all, _, []}},
+      {{:delete_all, 2}, {:delete_all, _, []}},
     ] = Ecto.Multi.to_list(multi)
   end
 

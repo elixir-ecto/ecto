@@ -115,7 +115,7 @@ defmodule Ecto.Query.Planner do
   along-side the select expression.
   """
   def query(query, operation, cache, adapter, counter) do
-    {query, params, key} = plan(query, operation, adapter, counter)
+    {query, params, key} = plan(query, operation, adapter)
     query_with_cache(key, query, operation, cache, adapter, counter, params)
   end
 
@@ -193,13 +193,13 @@ defmodule Ecto.Query.Planner do
   This function is called by the backend before invoking
   any cache mechanism.
   """
-  def plan(query, operation, adapter, counter) do
+  def plan(query, operation, adapter) do
     query
     |> plan_sources(adapter)
     |> plan_assocs
-    |> plan_combinations(operation, adapter, counter)
-    |> plan_ctes(operation, adapter, counter)
-    |> plan_cache(operation, adapter, counter)
+    |> plan_combinations(adapter)
+    |> plan_ctes(adapter)
+    |> plan_cache(operation, adapter)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -228,7 +228,7 @@ defmodule Ecto.Query.Planner do
   defp plan_source(query, %{source: %Ecto.SubQuery{} = subquery} = expr, adapter) do
     try do
       %{query: inner_query} = subquery
-      {inner_query, params, key} = plan(inner_query, :all, adapter, 0)
+      {inner_query, params, key} = plan(inner_query, :all, adapter)
       assert_no_subquery_assocs!(inner_query)
       {inner_query, select} = inner_query |> ensure_select(true) |> subquery_select(adapter)
       subquery = %{subquery | query: inner_query, params: params, cache: key, select: select}
@@ -255,6 +255,7 @@ defmodule Ecto.Query.Planner do
        when assocs != [] or preloads != [] do
     error!(query, "cannot preload associations in subquery")
   end
+
   defp assert_no_subquery_assocs!(query) do
     query
   end
@@ -276,8 +277,13 @@ defmodule Ecto.Query.Planner do
 
   defp subquery_select({:merge, _, [left, right]}, take, query) do
     {left_struct, left_fields} = subquery_select(left, take, query)
-    {nil, right_fields} = subquery_select(right, take, query)
-    {left_struct, Keyword.merge(left_fields, right_fields)}
+    {right_struct, right_fields} = subquery_select(right, take, query)
+
+    unless is_nil(left_struct) or is_nil(right_struct) or left_struct == right_struct do
+      error!(query, "cannot merge #{inspect(left_struct)} and #{inspect(right_struct)} because they are different structs")
+    end
+
+    {left_struct || right_struct, Keyword.merge(left_fields, right_fields)}
   end
   defp subquery_select({:%, _, [name, map]}, take, query) do
     {_, fields} = subquery_select(map, take, query)
@@ -294,7 +300,7 @@ defmodule Ecto.Query.Planner do
 
     case update_keys -- valid_keys do
       [] -> :ok
-      [key | _] -> error!(query, "invalid key `#{inspect key}` on map update in subquery/cte")
+      [key | _] -> error!(query, "invalid key `#{inspect key}` for `#{inspect struct}` on map update in subquery/cte")
     end
 
     # In case of map updates, we need to remove duplicated fields
@@ -521,11 +527,14 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
-  def plan_cache(query, operation, adapter, counter) do
-    {query, {cache, params}} =
-      traverse_exprs(query, operation, {[], []}, &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)})
+  def plan_cache(query, operation, adapter) do
+    {query, {cache, params}} = traverse_cache(query, operation, {[], []}, adapter)
+    {query, Enum.reverse(params), finalize_cache(query, operation, cache)}
+  end
 
-    {query, Enum.reverse(params), finalize_cache(query, operation, cache, counter)}
+  defp traverse_cache(query, operation, cache_params, adapter) do
+    fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
+    traverse_exprs(query, operation, cache_params, fun)
   end
 
   defp merge_cache(:from, _query, from, {cache, params}, _operation, _adapter) do
@@ -588,15 +597,11 @@ defmodule Ecto.Query.Planner do
   end
 
   defp merge_cache(:combination, _query, combinations, cache_and_params, operation, adapter) do
-    fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
-
     # In here we add each combination as its own entry in the cache key.
     # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
-    Enum.reduce combinations, cache_and_params, fn {modifier, combination_query}, {cache, params} ->
-      case traverse_exprs(combination_query, operation, {[], params}, fun) do
-        {_, {:nocache, _} = acc} -> acc
-        {_, {inner_cache, params}} -> {[{modifier, inner_cache} | cache], params}
-      end
+    Enum.reduce combinations, cache_and_params, fn {modifier, query}, {cache, params} ->
+      {_, {inner_cache, params}} = traverse_cache(query, operation, {[], params}, adapter)
+      {merge_cache({modifier, inner_cache}, cache, inner_cache != :nocache), params}
     end
   end
 
@@ -604,19 +609,16 @@ defmodule Ecto.Query.Planner do
     cache_and_params
   end
 
-  defp merge_cache(:with_cte, query, with_expr, cache_and_params, operation, adapter) do
+  defp merge_cache(:with_cte, query, with_expr, cache_and_params, _operation, adapter) do
     %{queries: queries, recursive: recursive} = with_expr
     key = if recursive, do: :recursive_cte, else: :non_recursive_cte
-    fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
 
     # In here we add each cte as its own entry in the cache key.
     # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
     Enum.reduce queries, cache_and_params, fn
       {name, %Ecto.Query{} = query}, {cache, params} ->
-        case traverse_exprs(query, operation, {[], params}, fun) do
-          {_, {:nocache, _} = acc} -> acc
-          {_, {inner_cache, params}} -> {[{key, name, inner_cache} | cache], params}
-        end
+        {_, {inner_cache, params}} = traverse_cache(query, :all, {[], params}, adapter)
+        {merge_cache({key, name, inner_cache}, cache, inner_cache != :nocache), params}
 
       {name, %Ecto.Query.QueryExpr{} = query_expr}, {cache, params} ->
         {params, cacheable?} = cast_and_merge_params(:with_cte, query, query_expr, params, adapter)
@@ -643,12 +645,11 @@ defmodule Ecto.Query.Planner do
   defp merge_cache(_left, :nocache, true), do: :nocache
   defp merge_cache(left, right, true),     do: [left|right]
 
-  defp finalize_cache(_query, _operation, :nocache, _counter) do
+  defp finalize_cache(_query, _operation, :nocache) do
     :nocache
   end
 
-  defp finalize_cache(%{assocs: assocs, prefix: prefix, lock: lock, select: select},
-                      operation, cache, counter) do
+  defp finalize_cache(%{assocs: assocs, prefix: prefix, lock: lock, select: select}, operation, cache) do
     cache =
       case select do
         %{take: take} when take != %{} ->
@@ -663,7 +664,7 @@ defmodule Ecto.Query.Planner do
       |> prepend_if(prefix != nil, [prefix: prefix])
       |> prepend_if(lock != nil,   [lock: lock])
 
-    [operation, counter | cache]
+    [operation | cache]
   end
 
   defp prepend_if(cache, true, prepend), do: prepend ++ cache
@@ -741,10 +742,10 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp plan_combinations(query, operation, adapter, counter) do
+  defp plan_combinations(query, adapter) do
     combinations =
       Enum.map query.combinations, fn {type, combination_query} ->
-        {prepared_query, _params, _key} = plan(combination_query, operation, adapter, counter)
+        {prepared_query, _params, _key} = combination_query |> attach_prefix(query) |> plan(:all, adapter)
         prepared_query = prepared_query |> ensure_select(true)
         {type, prepared_query}
       end
@@ -752,13 +753,12 @@ defmodule Ecto.Query.Planner do
     %{query | combinations: combinations}
   end
 
-  defp plan_ctes(%Ecto.Query{with_ctes: nil} = query, _operation, _adapter, _counter), do: query
-
-  defp plan_ctes(%Ecto.Query{with_ctes: %{queries: queries}} = query, operation, adapter, counter) do
+  defp plan_ctes(%Ecto.Query{with_ctes: nil} = query, _adapter), do: query
+  defp plan_ctes(%Ecto.Query{with_ctes: %{queries: queries}} = query, adapter) do
     queries =
       Enum.map queries, fn
         {name, %Ecto.Query{} = cte_query} ->
-          {planned_query, _params, _key} = plan(cte_query, operation, adapter, counter)
+          {planned_query, _params, _key} = cte_query |> attach_prefix(query) |> plan(:all, adapter)
           planned_query = planned_query |> ensure_select(true)
           {name, planned_query}
 
@@ -768,6 +768,9 @@ defmodule Ecto.Query.Planner do
 
     put_in(query.with_ctes.queries, queries)
   end
+
+  defp attach_prefix(%{prefix: nil} = query, %{prefix: prefix}), do: %{query | prefix: prefix}
+  defp attach_prefix(query, _), do: query
 
   defp find_source_expr(query, 0) do
     query.from
@@ -824,6 +827,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp remove_literals({%{select: nil} = query, params}), do: {query, params}
+  defp remove_literals({%{combinations: [_ | _]} = query, params}), do: {query, params}
 
   defp remove_literals({query, params}) do
     query = update_in(query.select.fields, &Enum.reject(&1, fn f -> is_literal(f) end))
@@ -882,13 +886,13 @@ defmodule Ecto.Query.Planner do
     {nil, counter}
   end
 
-  defp validate_and_increment(:with_cte, query, with_expr, counter, operation, adapter) do
-    fun = &validate_and_increment(&1, &2, &3, &4, operation, adapter)
+  defp validate_and_increment(:with_cte, query, with_expr, counter, _operation, adapter) do
+    fun = &validate_and_increment(&1, &2, &3, &4, :all, adapter)
 
     {queries, counter} =
       Enum.reduce with_expr.queries, {[], counter}, fn
         {name, %Ecto.Query{} = query}, {queries, counter} ->
-          {query, counter} = traverse_exprs(query, operation, counter, fun)
+          {query, counter} = traverse_exprs(query, :all, counter, fun)
           {query, _} = normalize_select(query) |> remove_literals()
           {_, select} = subquery_select(query, adapter)
           keys = select |> subquery_types() |> Keyword.keys()
@@ -928,7 +932,7 @@ defmodule Ecto.Query.Planner do
     {combinations, counter} =
       Enum.reduce combinations, {[], counter}, fn {type, combination_query}, {combinations, counter} ->
         {combination_query, counter} = traverse_exprs(combination_query, operation, counter, fun)
-        {combination_query, _} = combination_query |> normalize_select() |> remove_literals()
+        {combination_query, _} = combination_query |> normalize_select()
         {[{type, combination_query} | combinations], counter}
       end
 
@@ -1404,20 +1408,27 @@ defmodule Ecto.Query.Planner do
 
   ## Helpers
 
-  @exprs [with_cte: :with_ctes, distinct: :distinct, select: :select, from: :from, join: :joins,
-          where: :wheres, group_by: :group_bys, having: :havings, windows: :windows,
-          combination: :combinations, order_by: :order_bys, limit: :limit, offset: :offset]
+  @all_exprs [with_cte: :with_ctes, distinct: :distinct, select: :select, from: :from, join: :joins,
+              where: :wheres, group_by: :group_bys, having: :havings, windows: :windows,
+              combination: :combinations, order_by: :order_bys, limit: :limit, offset: :offset]
+
+  @update_all_exprs [with_cte: :with_ctes, update: :updates, from: :from,
+                     join: :joins, where: :wheres, select: :select]
+
+  @delete_all_exprs [with_cte: :with_ctes, from: :from, join: :joins,
+                     where: :wheres, select: :select]
 
   # Traverse all query components with expressions.
   # Therefore from, preload, assocs and lock are not traversed.
   defp traverse_exprs(query, operation, acc, fun) do
-    extra =
+    exprs =
       case operation do
-        :update_all -> [update: :updates]
-        _ -> []
+        :all -> @all_exprs
+        :update_all -> @update_all_exprs
+        :delete_all -> @delete_all_exprs
       end
 
-    Enum.reduce extra ++ @exprs, {query, acc}, fn {kind, key}, {query, acc} ->
+    Enum.reduce exprs, {query, acc}, fn {kind, key}, {query, acc} ->
       {traversed, acc} = fun.(kind, query, Map.fetch!(query, key), acc)
       {%{query | key => traversed}, acc}
     end
@@ -1534,10 +1545,10 @@ defmodule Ecto.Query.Planner do
     case query do
       %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [],
                   havings: [], preloads: [], assocs: [], distinct: nil, lock: nil,
-                  windows: [], combinations: [], with_ctes: nil} ->
+                  windows: [], combinations: []} ->
         query
       _ ->
-        error! query, "`#{operation}` allows only `where` and `join` expressions. " <>
+        error! query, "`#{operation}` allows only `with_cte`, `where` and `join` expressions. " <>
                       "You can exclude unwanted expressions from a query by using " <>
                       "Ecto.Query.exclude/2. Error found"
     end

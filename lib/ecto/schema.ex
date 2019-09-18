@@ -624,9 +624,11 @@ defmodule Ecto.Schema do
 
   ## Options
 
+    * `:inserted_at` - the ecto schema name of the field for insertion times or `false`
+    * `:updated_at` - the ecto schema name of the field for update times or `false`
+    * `:inserted_at_source` - the name of the database column for insertion times or `false`
+    * `:updated_at_source` - the name of the database column for update times or `false`
     * `:type` - the timestamps type, defaults to `:naive_datetime`.
-    * `:inserted_at` - the name of the column for insertion times or `false`
-    * `:updated_at` - the name of the column for update times or `false`
     * `:autogenerate` - a module-function-args tuple used for generating
       both `inserted_at` and `updated_at` timestamps
 
@@ -634,39 +636,30 @@ defmodule Ecto.Schema do
   """
   defmacro timestamps(opts \\ []) do
     quote bind_quoted: binding() do
-      timestamps =
-        [inserted_at: :inserted_at, updated_at: :updated_at, type: :naive_datetime]
-        |> Keyword.merge(@timestamps_opts)
-        |> Keyword.merge(opts)
+      timestamps = Keyword.merge(@timestamps_opts, opts)
 
-      type = Keyword.fetch!(timestamps, :type)
+      type = Keyword.get(timestamps, :type, :naive_datetime)
       autogen = timestamps[:autogenerate] || {Ecto.Schema, :__timestamps__, [type]}
 
-      inserted_at = Keyword.fetch!(timestamps, :inserted_at)
-      updated_at = Keyword.fetch!(timestamps, :updated_at)
+      inserted_at = Keyword.get(timestamps, :inserted_at, :inserted_at)
+      updated_at = Keyword.get(timestamps, :updated_at, :updated_at)
 
       if inserted_at do
-        Ecto.Schema.field(inserted_at, type, [])
+        opts = if source = timestamps[:inserted_at_source], do: [source: source], else: []
+        Ecto.Schema.field(inserted_at, type, opts)
       end
 
       if updated_at do
-        Ecto.Schema.field(updated_at, type, [])
+        opts = if source = timestamps[:updated_at_source], do: [source: source], else: []
+        Ecto.Schema.field(updated_at, type, opts)
         Module.put_attribute(__MODULE__, :ecto_autoupdate, {[updated_at], autogen})
       end
 
-      cond do
-        inserted_at && updated_at ->
-          Module.put_attribute(__MODULE__, :ecto_autogenerate, {[inserted_at, updated_at], autogen})
-
-        inserted_at ->
-          Module.put_attribute(__MODULE__, :ecto_autogenerate, {[inserted_at], autogen})
-
-        updated_at ->
-          Module.put_attribute(__MODULE__, :ecto_autogenerate, {[updated_at], autogen})
-
-        true ->
-          :ok
+      with [_ | _] = fields <- Enum.filter([inserted_at, updated_at], & &1) do
+        Module.put_attribute(__MODULE__, :ecto_autogenerate, {fields, autogen})
       end
+
+      :ok
     end
   end
 
@@ -972,7 +965,9 @@ defmodule Ecto.Schema do
 
     * `:foreign_key` - Sets the foreign key field name, defaults to the name
       of the association suffixed by `_id`. For example, `belongs_to :company`
-      will define foreign key of `:company_id`
+      will define foreign key of `:company_id`. The associated `has_one` or `has_many`
+      field in the other schema should also have its `:foreign_key` option set
+      with the same value.
 
     * `:references` - Sets the key on the other schema to be used for the
       association, defaults to: `:id`
@@ -996,7 +991,7 @@ defmodule Ecto.Schema do
 
     * `:primary_key` - If the underlying belongs_to field is a primary key
 
-    * `:source` - The source for the underlying field
+    * `:source` - Defines the name that is to be used in database for this field
 
     * `:where` - A filter for the association. See "Filtering associations"
       in `has_many/3`.
@@ -1708,15 +1703,15 @@ defmodule Ecto.Schema do
   end
 
   def __timestamps__(:utc_datetime) do
-    DateTime.from_unix!(System.system_time(:second), :second)
+    %{DateTime.utc_now() | microsecond: {0, 0}}
   end
 
   def __timestamps__(:utc_datetime_usec) do
-    DateTime.from_unix!(System.system_time(:microsecond), :microsecond)
+    DateTime.utc_now()
   end
 
   def __timestamps__(type) do
-    type.from_unix!(System.system_time(:microsecond), :microsecond)
+    type.from_unix!(System.os_time(:microsecond), :microsecond)
   end
 
   @doc false

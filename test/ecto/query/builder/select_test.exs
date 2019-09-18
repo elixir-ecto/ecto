@@ -143,6 +143,30 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert query.select.take == %{0 => {:map, [:title]}}
     end
 
+    test "merges dynamically" do
+      query =
+        from(b in "blogs",
+          as: :blog,
+          join: p in "posts",
+          as: :post,
+          on: p.blog_id == b.id,
+          join: c in "comments",
+          as: :comment,
+          on: c.post_id == p.id,
+          select: %{comments: count(c.id)}
+        )
+
+      query =
+        Enum.reduce([blog: :name, post: :author], query, fn {binding, field}, query ->
+          query
+          |> select_merge([{^binding, bound}], %{^field => field(bound, ^field)})
+          |> group_by([{^binding, bound}], field(bound, ^field))
+        end)
+
+      assert Macro.to_string(query.select.expr) ==
+               "merge(merge(%{comments: count(&2.id())}, %{^0 => &0.name()}), %{^1 => &1.author()})"
+    end
+
     test "supports '...' in binding list with no prior select" do
       query =
         "posts"

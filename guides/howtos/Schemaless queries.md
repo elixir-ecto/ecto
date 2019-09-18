@@ -9,7 +9,11 @@ MyApp.Repo.all(Post)
 In the construct above, Ecto knows all fields and their types in the schema, rewriting the query above to:
 
 ```elixir
-MyApp.Repo.all(from p in Post, select: %Post{title: p.title, body: p.body, ...})
+query =
+  from p in Post,
+    select: %Post{title: p.title, body: p.body, ...}
+
+MyApp.Repo.all(query)
 ```
 
 Although you might use schemas for most of your queries, Ecto also adds the ability to write regular schemaless queries when prefered.
@@ -26,7 +30,11 @@ Support for passing a list of fields or keyword lists is available to almost all
 
 ```elixir
 def update_title(post, new_title) do
-  query = from "posts", where: [id: ^post.id], update: [set: [title: ^new_title]]
+  query =
+    from "posts",
+      where: [id: ^post.id],
+      update: [set: [title: ^new_title]]
+
   MyApp.Repo.update_all(query)
 end
 ```
@@ -42,7 +50,11 @@ For example, we can increment a column atomically by using the `:inc` command, w
 
 ```elixir
 def increment_page_views(post) do
-  query = from "posts", where: [id: ^post.id], update: [inc: [page_views: 1]]
+  query =
+    from "posts",
+      where: [id: ^post.id],
+      update: [inc: [page_views: 1]]
+
   MyApp.Repo.update_all(query)
 end
 ```
@@ -53,15 +65,21 @@ Let's take a look at another example. Imagine you are writing a reporting view, 
 import Ecto.Query
 
 def running_activities(start_at, end_at)
-  MyApp.Repo.all(
+  query =
     from u in "users",
       join: a in "activities",
       on: a.user_id == u.id,
-      where: a.start_at > type(^start_at, :naive_datetime) and
-             a.end_at < type(^end_at, :naive_datetime),
+      where:
+        a.start_at > type(^start_at, :naive_datetime) and
+          a.end_at < type(^end_at, :naive_datetime),
       group_by: a.user_id,
-      select: %{user_id: a.user_id, interval: a.end_at - a.start_at, count: count(u.id)}
-  )
+      select: %{
+        user_id: a.user_id,
+        interval: a.end_at - a.start_at,
+        count: count(u.id)
+      }
+
+  MyApp.Repo.all(query)
 end
 ```
 
@@ -74,8 +92,13 @@ By allowing regular data structures to be given to most query operations, Ecto m
 Ecto allows all database operations to be expressed without a schema. One of the functions provided is `c:Ecto.Repo.insert_all/3`. With `insert_all`, developers can insert multiple entries at once into a repository:
 
 ```elixir
-MyApp.Repo.insert_all(Post, [[title: "hello", body: "world"],
-                             [title: "another", body: "post"]])
+MyApp.Repo.insert_all(
+  Post,
+  [
+    [title: "hello", body: "world"],
+    [title: "another", body: "post"]
+  ]
+)
 ```
 
 Updates and deletes can also be done without schemas via `c:Ecto.Repo.update_all/3` and `c:Ecto.Repo.delete_all/2` respectively:
@@ -83,10 +106,14 @@ Updates and deletes can also be done without schemas via `c:Ecto.Repo.update_all
 ```elixir
 # Use the ID to trigger updates
 post = from p in "posts", where: [id: ^id]
-{1, _} = MyApp.Repo.update_all post, set: [title: "new title"]
 
-# As well as for deletes
-{1, _} = MyApp.Repo.delete_all post
+# Update the title for all matchihg posts
+{1, _} =
+  MyApp.Repo.update_all post, set: [title: "new title"]
+
+# Delete all matching posts
+{1, _} =
+  MyApp.Repo.delete_all post
 ```
 
 It is not hard to see how these operations directly map to their SQL variants, keeping the database at your fingertips without the need to intermediate all operations through schemas.

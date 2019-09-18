@@ -31,7 +31,7 @@ defmodule Ecto.Query.SubqueryTest do
   end
 
   defp plan(query, operation \\ :all) do
-    Planner.plan(query, operation, Ecto.TestAdapter, 0)
+    Planner.plan(query, operation, Ecto.TestAdapter)
   end
 
   defp normalize(query, operation \\ :all) do
@@ -59,15 +59,15 @@ defmodule Ecto.Query.SubqueryTest do
     {query, params, key} = plan(from(subquery(Post), []))
     assert %{query: %Ecto.Query{}, params: []} = query.from.source
     assert params == []
-    assert key == [:all, 0, [:all, 0, {"posts", Post, 127044068, nil}]]
+    assert key == [:all, [:all, {"posts", Post, 127044068, nil}]]
 
     posts = from(p in Post, where: p.title == ^"hello")
     query = from(c in Comment, join: p in subquery(posts), on: c.post_id == p.id)
-    {query, params, key} = plan(query, [])
+    {query, params, key} = plan(query)
     assert {"comments", Comment} = query.from.source
     assert [%{source: %{query: %Ecto.Query{}, params: ["hello"]}}] = query.joins
     assert params == ["hello"]
-    assert [[], 0, {:join, [{:inner, [:all | _], _}]}, {"comments", _, _, _}] = key
+    assert [:all, {:join, [{:inner, [:all | _], _}]}, {"comments", _, _, _}] = key
   end
 
   test "plan: subqueries with association joins" do
@@ -155,7 +155,7 @@ defmodule Ecto.Query.SubqueryTest do
              Macro.to_string(query.from.source.query.select.expr)
 
       query = from p in Post, select: %{p | unknown: p.title}
-      assert_raise Ecto.SubQueryError, ~r/invalid key `:unknown` on map update in subquery/, fn ->
+      assert_raise Ecto.SubQueryError, ~r/invalid key `:unknown`/, fn ->
         plan(from(subquery(query), []))
       end
     end

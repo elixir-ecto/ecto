@@ -434,9 +434,9 @@ defmodule Ecto.Changeset do
   Passing a changeset as the first argument:
 
       iex> changeset = cast(post, %{title: "Hello"}, [:title])
-      iex> new_changeset = cast(changeset, %{title: "Foo", body: "Bar"}, [:body])
+      iex> new_changeset = cast(changeset, %{title: "Foo", body: "World"}, [:body])
       iex> new_changeset.params
-      %{"title" => "Foo", "body" => "Bar"}
+      %{"title" => "Hello", "body" => "World"}
 
   Or creating a changeset from a simple map with types:
 
@@ -1151,15 +1151,17 @@ defmodule Ecto.Changeset do
 
   defp put_change(data, changes, errors, valid?, key, value, {tag, relation})
        when tag in @relations do
-    current = Relation.load!(data, Map.get(data, key))
+    original = Map.get(data, key)
+    current = Relation.load!(data, original)
 
     case Relation.change(relation, value, current) do
-      {:ok, change, relation_valid?} ->
+      {:ok, change, relation_valid?} when change != original ->
         {Map.put(changes, key, change), errors, valid? and relation_valid?}
-      :ignore ->
-        {changes, errors, valid?}
       {:error, error} ->
         {changes, [{key, error} | errors], false}
+      # ignore or ok with change == original
+      _ ->
+        {Map.delete(changes, key), errors, valid?}
     end
   end
 
@@ -1168,15 +1170,10 @@ defmodule Ecto.Changeset do
   end
 
   defp put_change(data, changes, errors, valid?, key, value, type) do
-    cond do
-      not Ecto.Type.equal?(type, Map.get(data, key), value) ->
-        {Map.put(changes, key, value), errors, valid?}
-
-      Map.has_key?(changes, key) ->
-        {Map.delete(changes, key), errors, valid?}
-
-      true ->
-        {changes, errors, valid?}
+    if not Ecto.Type.equal?(type, Map.get(data, key), value) do
+      {Map.put(changes, key, value), errors, valid?}
+    else
+      {Map.delete(changes, key), errors, valid?}
     end
   end
 
@@ -2263,7 +2260,7 @@ defmodule Ecto.Changeset do
 
   """
   @spec optimistic_lock(Ecto.Schema.t | t, atom, (term -> term)) :: t
-  def optimistic_lock(data_or_changeset, field, incrementer \\ &(&1 + 1)) do
+  def optimistic_lock(data_or_changeset, field, incrementer \\ &increment_with_rollover/1) do
     changeset = change(data_or_changeset, %{})
     current = get_field(changeset, field)
     changeset.filters[field]
@@ -2271,12 +2268,26 @@ defmodule Ecto.Changeset do
     |> force_change(field, incrementer.(current))
   end
 
-  @doc """
-  Provides a function to run before emitting changes to the repository.
+  # increment_with_rollover expect to be used with lock_version set as :integer in db schema
+  # 2_147_483_647 is upper limit for signed integer for both PostgreSQL and MySQL
+  defp increment_with_rollover(val) when val >= 2_147_483_647 do
+    1
+  end
 
-  Such function receives the changeset and must return a changeset,
-  allowing developers to do final adjustments to the changeset or to
-  issue data consistency commands.
+  defp increment_with_rollover(val) when is_integer(val) do
+    val + 1
+  end
+
+  @doc """
+  Provides a function executed by the repository on insert/update/delete.
+
+  If the changeset given to the repository is valid, the function given to
+  `prepare_changes/2` will be called with the changeset and must return a
+  changeset, allowing developers to do final adjustments to the changeset or
+  to issue data consistency commands. The repository itself can be accessed
+  inside the function under the `repo` field in the changesett. If the
+  changeset given to the repository is invalid, the function will not be
+  invoked.
 
   The given function is guaranteed to run inside the same transaction
   as the changeset operation for databases that do support transactions.

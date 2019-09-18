@@ -1,6 +1,6 @@
 # Replicas and dynamic repositories
 
-When applications reach a certain scale, a single database may not be enough to sustain the required throughout. In such scenarios, it is very common to introduce read replicas: all write operations are sent to primary database and most of the read operations are performed against the replicas. The credentials of the primary and replica databases are typically known upfront by the time the code is compiled.
+When applications reach a certain scale, a single database may not be enough to sustain the required throughput. In such scenarios, it is very common to introduce read replicas: all write operations are sent to primary database and most of the read operations are performed against the replicas. The credentials of the primary and replica databases are typically known upfront by the time the code is compiled.
 
 In other cases, you may need a single Ecto repository to interact with different database instances which are not known upfront. For instance, you may need to communicate with hundreds of database very sporadically, so instead of opening up a connection to each of those hundreds of database when your application starts, you want to quickly start connection, perform some queries, and then shut down, while still leveraging Ecto's APIs as a whole.
 
@@ -14,17 +14,27 @@ First, define the primary and replicas repositories in `lib/my_app/repo.ex`:
 
 ```elixir
 defmodule MyApp.Repo do
-  use Ecto.Repo, otp_app: :my_app, adapter: Ecto.Adapters.Postgres
+  use Ecto.Repo,
+    otp_app: :my_app,
+    adapter: Ecto.Adapters.Postgres
 
-  @replicas [MyApp.Repo.Replica1, MyApp.Repo.Replica2, MyApp.Repo.Replica3, MyApp.Repo.Replica4]
+  @replicas [
+    MyApp.Repo.Replica1,
+    MyApp.Repo.Replica2,
+    MyApp.Repo.Replica3,
+    MyApp.Repo.Replica4
+  ]
 
   def replica do
     Enum.random(@replicas)
   end
 
-  for repo <- @replica do
+  for repo <- @replicas do
     defmodule repo do
-      use Ecto.Repo, otp_app: :my_app, adapter: Ecto.Adapters.Postgres, read_only: true
+      use Ecto.Repo,
+        otp_app: :my_app,
+        adapter: Ecto.Adapters.Postgres,
+        read_only: true
     end
   end
 end
@@ -35,7 +45,15 @@ The code above defines a regular `MyApp.Repo` and four replicas, called `MyApp.R
 Next we need to make sure both primary and replicas are configured properly in your `config/config.exs` files. In development and test, you can likely use the same database credentials for all repositories, all pointing to the same database address:
 
 ```elixir
-for repo <- [MyApp.Repo, MyApp.Repo.Replica1, MyApp.Repo.Replica2, MyApp.Repo.Replica3, MyApp.Repo.Replica4] do
+replicas = [
+  MyApp.Repo,
+  MyApp.Repo.Replica1,
+  MyApp.Repo.Replica2,
+  MyApp.Repo.Replica3,
+  MyApp.Repo.Replica4
+]
+
+for repo <- replicas do
   config :my_app, repo,
     username: "postgres",
     password: "postgres",
@@ -88,14 +106,16 @@ And now you are ready to work with primary and replicas, no hacks or complex dep
 
 ## Testing replicas
 
-While all of the work we have done os far should fully work in development and production, it may not be enough for tests. Most developers testing Ecto applications are using a sandbox, such as the [Ecto SQL Sandbox](https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.Sandbox.html).
+While all of the work we have done so far should fully work in development and production, it may not be enough for tests. Most developers testing Ecto applications are using a sandbox, such as the [Ecto SQL Sandbox](https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.Sandbox.html).
 
 When using a sandbox, each of your tests run in an isolated and independent transaction. Once the test is done, the transaction is rolled back. Which means we can trivially revert all of the changes done in a test in a very performant way.
 
 Unfortunately, even if you configure your primary and replicas to have the same credentials and point to the same hostname, each Ecto repository will open up their own pool of database connections. This means that, once you move to a primary + replicas setup, a simple test like this one won't pass:
 
-    user = Repo.insert!(%User{name: "jane doe"})
-    assert Repo.replica().get!(User, user.id)
+```elixir
+user = Repo.insert!(%User{name: "jane doe"})
+assert Repo.replica().get!(User, user.id)
+```
 
 That's because `Repo.insert!` will write to one database connection and the repository returned by `Repo.replica()` will perform the read in another connection. Since the write is done in transaction, its contents won't be available to other connections until the transaction commits, which will never happen for test connections.
 
@@ -106,11 +126,11 @@ There are two options to tackle this problem: one is to change replicas and the 
 One simple solution to the problem above is to use a custom `replica` implementation during tests that always return the primary repository, like this:
 
 ```elixir
-  if Mix.env == :test do
-    def replica, do: __MODULE__
-  else
-    def replica, do: Enum.random(@replicas)
-  end
+if Mix.env() == :test do
+  def replica, do: __MODULE__
+else
+  def replica, do: Enum.random(@replicas)
+end
 ```
 
 Now during tests, the replica will always return the repository primary repository itself. While this approach works fine, it has the downside that, if you accidentally invoke a write function in in a replica, the test will pass, since the `replica` function is returning the primary repo, while the code will fail in production.
@@ -126,15 +146,15 @@ From v3.0, Ecto has the ability to start multiple processes from the same reposi
 ```elixir
 children = [
   MyApp.Repo,
-  {MyApp.Repo, name: :another_instance_of_my_app_repo}
+  {MyApp.Repo, name: :another_instance_of_repo}
 ]
 ```
 
-While the particular example doesn't make much sense (we will cover an actual use case for this feature next), the idea is that now you have two repositories running: one is named `MyApp.Repo` and the other one is named `:another_instance_of_my_app_repo`. Each of those processes have their own connection pool. You can tell Ecto which process you want to use in your repo operations by calling:
+While the particular example doesn't make much sense (we will cover an actual use case for this feature next), the idea is that now you have two repositories running: one is named `MyApp.Repo` and the other one is named `:another_instance_of_repo`. Each of those processes have their own connection pool. You can tell Ecto which process you want to use in your repo operations by calling:
 
 ```elixir
 MyApp.Repo.put_dynamic_repo(MyApp.Repo)
-MyApp.Repo.put_dynamic_repo(:another_instance_of_my_app_repo)
+MyApp.Repo.put_dynamic_repo(:another_instance_of_repo)
 ```
 
 Once you call `MyApp.Repo.put_dynamic_repo(name)`, all invocations made on `MyApp.Repo` will use the connection pool denoted by `name`.
@@ -154,8 +174,15 @@ children = [
 We are starting five different repositories and five different connection pools. Since we want the replica repositories to use the `MyApp.Repo`, we can achieve this by doing the following on the setup of each test:
 
 ```elixir
+@replicas [
+  MyApp.Repo.Replica1,
+  MyApp.Repo.Replica2,
+  MyApp.Repo.Replica3,
+  MyApp.Repo.Replica4
+]
+
 setup do
-  for replica <- [MyApp.Repo.Replica1, MyApp.Repo.Replica2, MyApp.Repo.Replica3, MyApp.Repo.Replica4] do
+  for replica <- @replicas do
     replica.put_dynamic_repo(MyApp.Repo)
   end
 
@@ -163,16 +190,23 @@ setup do
 end
 ```
 
-There is even a better way! We can pass a `:default_dynamic_repo` option when we define the repository. In this case, we want to set the `:default_dynamic_repo` to `MyApp.Repo` only during the test environment, like this:
+There is even a better way! We can pass a `:default_dynamic_repo` option when we define the repository. In this case, we want to set the `:default_dynamic_repo` to `MyApp.Repo` only during the test environment. In your `lib/my_app/repo.ex`, do this:
 
 ```elixir
-  for repo <- @replica do
+  for repo <- @replicas do
+    default_dynamic_repo =
+      if Mix.env() == :test do
+        MyApp.Repo
+      else
+        repo
+      end
+
     defmodule repo do
       use Ecto.Repo,
         otp_app: :my_app,
         adapter: Ecto.Adapters.Postgres,
         read_only: true,
-        dynamic_default_repo: if(Mix.env() == :test, do: MyApp.Repo, else: __MODULE__)
+        default_dynamic_repo: default_dynamic_repo
     end
   end
 ```
@@ -231,9 +265,10 @@ We can encapsulate all of this in a function too, which you could define in your
 defmodule MyApp.Repo do
   use Ecto.Repo, ...
 
-  def with_dynamic_repo(credentails, callback) do
+  def with_dynamic_repo(credentials, callback) do
     default_dynamic_repo = get_dynamic_repo()
-    {:ok, repo} = MyApp.Repo.start_link([name: nil, pool_size: 1] ++ credentials)
+    start_opts = [name: nil, pool_size: 1] ++ credentials
+    {:ok, repo} = MyApp.Repo.start_link(start_opts)
 
     try do
       MyApp.Repo.put_dynamic_repo(repo)

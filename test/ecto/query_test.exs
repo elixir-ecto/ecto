@@ -46,9 +46,11 @@ defmodule Ecto.QueryTest do
       end
     end
 
-    test "does not allow nils in comparison at runtime" do
-      assert_raise ArgumentError, ~r"comparison with nil is forbidden as it is unsafe", fn ->
-        Post |> where([p], p.title == ^nil)
+    test "does not allow interpolated nils at runtime" do
+      assert_raise ArgumentError,
+                   ~r"comparison with nil is forbidden as it is unsafe", fn ->
+        id = nil
+        from p in "posts", where: [id: ^id]
       end
     end
   end

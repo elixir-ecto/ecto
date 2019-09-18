@@ -36,7 +36,9 @@ end
 One of the ways to introduce a todo list with multiple items into the database is to couple our UI representation to our schemas. That's the approach we took in the blog post with Phoenix. Roughly:
 
 ```eex
-<%= form_for @todo_list_changeset, todo_list_path(@conn, :create), fn f -> %>
+<%= form_for @todo_list_changeset,
+             todo_list_path(@conn, :create),
+             fn f -> %>
   <%= text_input f, :title %>
   <%= inputs_for f, :todo_items, fn i -> %>
     ...
@@ -139,7 +141,8 @@ defmodule MyApp.TodoList do
   schema "todo_lists" do
     field :title
     has_many :todo_list_items, MyApp.TodoListItem
-    has_many :todo_items, through: [:todo_list_items, :todo_item]
+    has_many :todo_items,
+      through: [:todo_list_items, :todo_item]
     timestamps()
   end
 end
@@ -177,7 +180,10 @@ The trouble is that `:through` associations are **read-only** since Ecto does no
 def changeset(struct, params \\ %{}) do
   struct
   |> Ecto.Changeset.cast(params, [:title])
-  |> Ecto.Changeset.cast_assoc(:todo_list_items, required: true)
+  |> Ecto.Changeset.cast_assoc(
+    :todo_list_items,
+    required: true
+  )
 end
 
 # And then in the MyApp.TodoListItem
@@ -219,7 +225,8 @@ defmodule MyApp.TodoList do
 
   schema "todo_lists" do
     field :title
-    many_to_many :todo_items, MyApp.TodoItem, join_through: MyApp.TodoListItem
+    many_to_many :todo_items, MyApp.TodoItem,
+      join_through: MyApp.TodoListItem
     timestamps()
   end
 end
@@ -285,7 +292,8 @@ defmodule MyApp.TodoList do
 
   schema "todo_lists" do
     field :title
-    many_to_many :todo_items, MyApp.TodoItem, join_through: "todo_list_items"
+    many_to_many :todo_items, MyApp.TodoItem,
+      join_through: "todo_list_items"
     timestamps()
   end
 end
@@ -305,14 +313,18 @@ defmodule MyApp.TodoList do
 
   schema "todo_lists" do
     field :title
-    many_to_many :todo_items, MyApp.TodoItem, join_through: "todo_list_items"
+    many_to_many :todo_items, MyApp.TodoItem,
+      join_through: "todo_list_items"
     timestamps()
   end
 
   def changeset(struct, params \\ %{}) do
     struct
     |> Ecto.Changeset.cast(params, [:title])
-    |> Ecto.Changeset.cast_assoc(:todo_items, required: true)
+    |> Ecto.Changeset.cast_assoc(
+      :todo_items,
+      required: true
+    )
   end
 end
 
@@ -321,14 +333,18 @@ defmodule MyApp.Project do
 
   schema "todo_lists" do
     field :name
-    many_to_many :todo_items, MyApp.TodoItem, join_through: "project_items"
+    many_to_many :todo_items, MyApp.TodoItem,
+      join_through: "project_items"
     timestamps()
   end
 
   def changeset(struct, params \\ %{}) do
     struct
     |> Ecto.Changeset.cast(params, [:name])
-    |> Ecto.Changeset.cast_assoc(:todo_items, required: true)
+    |> Ecto.Changeset.cast_assoc(
+      :todo_items,
+      required: true
+    )
   end
 end
 
@@ -365,14 +381,16 @@ create table("todo_items")  do
   timestamps()
 end
 
-# Primary key and timestamps are not required if using many_to_many without schemas
+# Primary key and timestamps are not required if
+# using many_to_many without schemas
 create table("todo_lists_items", primary_key: false) do
   add :todo_item_id, references(:todo_items)
   add :todo_list_id, references(:todo_lists)
   # timestamps()
 end
 
-# Primary key and timestamps are not required if using many_to_many without schemas
+# Primary key and timestamps are not required if
+# using many_to_many without schemas
 create table("projects_items", primary_key: false) do
   add :todo_item_id, references(:todo_items)
   add :project_id, references(:projects)
@@ -382,4 +400,4 @@ end
 
 Overall our code looks structurally the same as `has_many` would, although at the database level our relationships are expressed with join tables.
 
-While in this guide we changed our code to cope with the parameter format required by `cast_assoc`, in the [Constraints and Upserts](constraints-and-upserts.html) guide we drop `cast_assoc` altogether and use `put_assoc` which brings more flexibilities when working with associations.
+While in this guide we changed our code to cope with the parameter format required by `cast_assoc`, in [Constraints and Upserts](constraints-and-upserts.html) we drop `cast_assoc` altogether and use `put_assoc` which brings more flexibilities when working with associations.

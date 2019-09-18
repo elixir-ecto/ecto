@@ -373,7 +373,7 @@ defmodule Ecto.Changeset.EmbeddedNoPkTest do
   test "change embeds_one" do
     embed = Author.__schema__(:embed, :profile)
 
-    assert :ignore = Relation.change(embed, nil, nil)
+    assert {:ok, nil, true} = Relation.change(embed, nil, nil)
     assert {:ok, nil, true} = Relation.change(embed, nil, %Profile{})
 
     embed_schema = %Profile{}
@@ -485,7 +485,7 @@ defmodule Ecto.Changeset.EmbeddedNoPkTest do
   test "change embeds_many" do
     embed = Author.__schema__(:embed, :posts)
 
-    assert :ignore = Relation.change(embed, [], [])
+    assert {:ok, [], true} = Relation.change(embed, [], [])
 
     assert {:ok, [old_changeset, new_changeset], true} =
       Relation.change(embed, [%Post{}], [%Post{}])

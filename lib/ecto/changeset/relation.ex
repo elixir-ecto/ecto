@@ -7,6 +7,7 @@ defmodule Ecto.Changeset.Relation do
   @type t :: %{cardinality: :one | :many,
                on_replace: :raise | :mark_as_invalid | atom,
                relationship: :parent | :child,
+               ordered: boolean,
                owner: atom,
                related: atom,
                field: atom}
@@ -129,19 +130,11 @@ defmodule Ecto.Changeset.Relation do
   @doc """
   Wraps related structs in changesets.
   """
-  def change(%{cardinality: :one}, nil, nil) do
-    :ignore
-  end
-
   def change(%{cardinality: :one} = relation, nil, current) do
-    case on_replace(relation, current) do
-      {:ok, _} -> {:ok, nil, true}
+    case current && on_replace(relation, current) do
       :error -> {:error, {"is invalid", [type: expected_type(relation)]}}
+      _ -> {:ok, nil, true}
     end
-  end
-
-  def change(%{cardinality: :many}, [], []) do
-    :ignore
   end
 
   def change(%{related: mod} = relation, value, current) do
@@ -263,34 +256,39 @@ defmodule Ecto.Changeset.Relation do
     true
   end
 
-  defp cast_or_change(%{cardinality: :one} = relation, value, current, current_pks,
-                      new_pks, fun) when is_map(value) or is_list(value) or is_nil(value) do
-    single_change(relation, value, current_pks, new_pks, fun, current)
+  defp cast_or_change(%{cardinality: :one} = relation, value, current, current_pks_fun, new_pks_fun, fun)
+       when is_map(value) or is_list(value) or is_nil(value) do
+    single_change(relation, value, current_pks_fun, new_pks_fun, fun, current)
   end
 
   defp cast_or_change(%{cardinality: :many}, [], [], _current_pks, _new_pks, _fun) do
     {:ok, [], true}
   end
 
-  defp cast_or_change(%{cardinality: :many, unique: unique}, value, current, current_pks, new_pks, fun) when is_list(value) do
-    map_changes(value, new_pks, fun, process_current(current, current_pks), [], true, true, unique && %{})
+  defp cast_or_change(%{cardinality: :many} = relation, value, current, current_pks_fun, new_pks_fun, fun)
+       when is_list(value) do
+    {current_pks, current_map} = process_current(current, current_pks_fun)
+    %{unique: unique, ordered: ordered} = relation
+    ordered = if ordered, do: current_pks, else: []
+    map_changes(value, new_pks_fun, fun, current_map, [], true, true, unique && %{}, ordered)
   end
 
   defp cast_or_change(_, _, _, _, _, _), do: :error
 
   # single change
 
-  defp single_change(_relation, nil, _current_pks, _new_pks, fun, current) do
+  defp single_change(_relation, nil, _current_pks_fun, _new_pks_fun, fun, current) do
     single_change(nil, current, fun, [:update, :delete], false)
   end
 
-  defp single_change(_relation, new, _current_pks, _new_pks, fun, nil) do
+  defp single_change(_relation, new, _current_pks_fun, _new_pks_fun, fun, nil) do
     single_change(new, nil, fun, [:insert], false)
   end
 
-  defp single_change(%{on_replace: on_replace} = relation, new, current_pks, new_pks, fun, current) do
-    pk_values = new_pks.(new)
-    if (pk_values == current_pks.(current) and pk_values != []) or
+  defp single_change(%{on_replace: on_replace} = relation, new, current_pks_fun, new_pks_fun, fun, current) do
+    pk_values = new_pks_fun.(new)
+
+    if (pk_values == current_pks_fun.(current) and pk_values != []) or
          (on_replace == :update and raise_if_updating_with_struct!(relation, new)) do
       single_change(new, current, fun, allowed_actions(pk_values), true)
     else
@@ -318,35 +316,43 @@ defmodule Ecto.Changeset.Relation do
 
   # map changes
 
-  defp map_changes([changes | rest], new_pks, fun, current, acc, valid?, skip?, acc_pk_values)
+  defp map_changes([changes | rest], new_pks, fun, current, acc, valid?, skip?, unique, ordered)
       when is_map(changes) or is_list(changes) do
     pk_values = new_pks.(changes)
     {struct, current, allowed_actions} = pop_current(current, pk_values)
+
     case fun.(changes, struct, allowed_actions) do
       {:ok, %{action: :ignore}} ->
-        map_changes(rest, new_pks, fun, current, acc, valid?, skip?, acc_pk_values)
+        ordered = pop_ordered(pk_values, ordered)
+        map_changes(rest, new_pks, fun, current, acc, valid?, skip?, unique, ordered)
       {:ok, changeset} ->
-        changeset = maybe_add_error_on_pk(changeset, pk_values, acc_pk_values)
-        map_changes(rest, new_pks, fun, current, [changeset | acc],
-                    valid? and changeset.valid?, (struct != nil) and skip? and skip?(changeset),
-                    acc_pk_values && Map.put(acc_pk_values, pk_values, true))
+        changeset = maybe_add_error_on_pk(changeset, pk_values, unique)
+        acc = [changeset | acc]
+        valid? = valid? and changeset.valid?
+        skip? = (struct != nil) and skip? and skip?(changeset)
+        unique = unique && Map.put(unique, pk_values, true)
+        ordered = pop_ordered(pk_values, ordered)
+        map_changes(rest, new_pks, fun, current, acc, valid?, skip?, unique, ordered)
       :error ->
         :error
     end
   end
 
-  defp map_changes([], _new_pks, fun, current, acc, valid?, skip?, _acc_pk_values) do
+  defp map_changes([], _new_pks, fun, current, acc, valid?, skip?, _unique, ordered) do
     current_structs = Enum.map(current, &elem(&1, 1))
+    skip? = skip? and ordered == []
     reduce_delete_changesets(current_structs, fun, Enum.reverse(acc), valid?, skip?)
   end
 
-  defp map_changes(_params, _new_pks, _fun, _current, _acc, _valid?, _skip?, _acc_pk_values) do
+  defp map_changes(_params, _new_pks, _fun, _current, _acc, _valid?, _skip?, _unique, _ordered) do
     :error
   end
 
-  defp maybe_add_error_on_pk(%{data: %{__struct__: schema}} = changeset, pk_values, acc_pk_values) do
-    if is_map(acc_pk_values) and not missing_pks?(pk_values) and
-       Map.has_key?(acc_pk_values, pk_values) do
+  defp pop_ordered(pk_values, [pk_values | tail]), do: tail
+  defp pop_ordered(_pk_values, tail), do: tail
+
+  defp maybe_add_error_on_pk(%{data: %{__struct__: schema}} = changeset, pk_values, unique) do
+    if is_map(unique) and not missing_pks?(pk_values) and Map.has_key?(unique, pk_values) do
       Enum.reduce(schema.__schema__(:primary_key), changeset, fn pk, acc ->
         Changeset.add_error(acc, pk, "has already been taken")
       end)
@@ -370,18 +376,16 @@ defmodule Ecto.Changeset.Relation do
   defp reduce_delete_changesets([struct | rest], fun, acc, valid?, _skip?) do
     case fun.(nil, struct, [:update, :delete]) do
       {:ok, changeset} ->
-        reduce_delete_changesets(rest, fun, [changeset | acc],
-                                 valid? and changeset.valid?, false)
+        valid? = valid? and changeset.valid?
+        reduce_delete_changesets(rest, fun, [changeset | acc], valid?, false)
+
       :error ->
         :error
     end
   end
-  defp reduce_delete_changesets([], _fun, _acc, _valid?, true) do
-    :ignore
-  end
-  defp reduce_delete_changesets([], _fun, acc, valid?, false) do
-    {:ok, acc, valid?}
-  end
+
+  defp reduce_delete_changesets([], _fun, _acc, _valid?, true), do: :ignore
+  defp reduce_delete_changesets([], _fun, acc, valid?, false), do: {:ok, acc, valid?}
 
   # helpers
 
@@ -414,22 +418,19 @@ defmodule Ecto.Changeset.Relation do
   defp key_as_int(key_val), do: key_val
 
   defp process_current(nil, _get_pks),
-    do: %{}
+    do: {[], %{}}
   defp process_current(current, get_pks) do
-    Enum.reduce(current, {%{}, 0}, fn struct, {acc, index} ->
-      case get_pks.(struct) do
-        []  -> {Map.put(acc, index, struct), index + 1}
-        pks -> {Map.put(acc, pks, struct), index}
-      end
-    end) |> elem(0)
+    Enum.map_reduce(current, %{}, fn struct, acc ->
+      pks = get_pks.(struct)
+      key = if pks == [], do: map_size(acc), else: pks
+      {pks, Map.put(acc, key, struct)}
+    end)
   end
 
   defp pop_current(current, pk_values) do
-    case Map.fetch(current, pk_values) do
-      {:ok, struct} ->
-        {struct, Map.delete(current, pk_values), allowed_actions(pk_values)}
-      :error ->
-        {nil, current, [:insert]}
+    case Map.pop(current, pk_values) do
+      {nil, current} -> {nil, current, [:insert]}
+      {struct, current} -> {struct, current, allowed_actions(pk_values)}
     end
   end
 

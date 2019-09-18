@@ -1,29 +1,44 @@
 # Composable transactions with Multi
 
-Ecto relies on database transactions when multiple operations must be performed atomically. Transactions can be performed via the `Repo.transaction` function:
+Ecto relies on database transactions when multiple operations must be performed atomically. The most common example used for transaction are bank transfers between two people:
 
 ```elixir
 Repo.transaction(fn ->
-  mary_update = from Account, where: [id: ^mary.id], update: [inc: [balance: +10]]
+  mary_update =
+    from Account,
+      where: [id: ^mary.id],
+      update: [inc: [balance: +10]]
+
   {1, _} = Repo.update_all(mary_update)
-  john_update = from Account, where: [id: ^john.id], update: [inc: [balance: -10]]
+
+  john_update =
+    from Account,
+      where: [id: ^john.id],
+      update: [inc: [balance: -10]]
+
   {1, _} = Repo.update_all(john_update)
 end)
 ```
 
-When we expect both operations to succeed, as above, transactions are quite straight-forward. However, transactions get more complicated if we need to check the status of each operation along the way:
+In Ecto, transactions can be performed via the `Repo.transaction` function. When we expect both operations to succeed, as above, transactions are quite straight-forward. However, transactions get more complicated if we need to check the status of each operation along the way:
 
 ```elixir
 Repo.transaction(fn ->
-  mary_update = from Account, where: [id: ^mary.id], update: [inc: [balance: +10]]
+  mary_update =
+    from Account,
+      where: [id: ^mary.id],
+      update: [inc: [balance: +10]]
+
   case Repo.update_all query do
     {1, _} ->
-      john_update = from Account, where: [id: ^john.id], update: [inc: [balance: -10]]
+      john_update =
+        from Account,
+          where: [id: ^john.id],
+          update: [inc: [balance: -10]]
+
       case Repo.update_all query do
-        {1, _} ->
-          {mary, john}
-        {_, _} ->
-          Repo.rollback({:failed_transfer, john})
+        {1, _} -> {mary, john}
+        {_, _} -> Repo.rollback({:failed_transfer, john})
       end
     {_, _} ->
       Repo.rollback({:failed_transfer, mary})
@@ -37,7 +52,14 @@ Transactions in Ecto can also be nested arbitrarily. For example, imagine the tr
 Repo.transaction(fn ->
   case transfer_money(mary, john, 10) do
     {:ok, {mary, john}} ->
-      Repo.insert!(%Transfer{from: mary.id, to: john.id, amount: 10})
+      transfer = %Transfer{
+        from: mary.id,
+        to: john.id,
+        amount: 10
+      }
+
+      Repo.insert!(transfer)
+
     {:error, error} ->
       Repo.rollback(error)
   end
@@ -55,8 +77,16 @@ A more declarative approach when working with transactions would be to define al
 Let's rewrite the snippets above using `Ecto.Multi`. The first snippet that transfers money between mary and john can rewritten to:
 
 ```elixir
-mary_update = from Account, where: [id: ^mary.id], update: [inc: [balance: +10]]
-john_update = from Account, where: [id: ^john.id], update: [inc: [balance: -10]]
+mary_update =
+  from Account,
+    where: [id: ^mary.id],
+    update: [inc: [balance: +10]]
+
+john_update =
+  from Account,
+    where: [id: ^john.id],
+    update: [inc: [balance: -10]]
+
 Ecto.Multi.new
 |> Ecto.Multi.update_all(:mary, mary_update)
 |> Ecto.Multi.update_all(:john, john_update)
@@ -67,15 +97,27 @@ Ecto.Multi.new
 Since `Ecto.Multi` is just a data structure, we can pass it as argument to other functions, as well as return it. Assuming the multi above is moved into its own function, defined as `transfer_money(mary, john, value)`,  we can add a new operation to the multi that logs the transfer as follows:
 
 ```elixir
+transfer = %Transfer{
+  from: mary.id,
+  to: john.id,
+  amount: 10
+}
+
 transfer_money(mary, john, 10)
-|> Ecto.Multi.insert(:transfer, %Transfer{from: mary.id, to: john.id, amount: 10})
+|> Ecto.Multi.insert(:transfer, transfer)
 ```
 
 This is considerably simpler than the nested transaction approach we have seen earlier. Once all operations are defined in the multi, we can finally call `Repo.transaction`, this time passing the multi:
 
 ```elixir
+transfer = %Transfer{
+  from: mary.id,
+  to: john.id,
+  amount: 10
+}
+
 transfer_money(mary, john, 10)
-|> Ecto.Multi.insert(:transfer, %Transfer{from: mary.id, to: john.id, amount: 10})
+|> Ecto.Multi.insert(:transfer, transfer)
 |> Repo.transaction()
 |> case do
   {:ok, %{transfer: transfer}} ->
@@ -93,7 +135,7 @@ In other words, `Ecto.Multi` takes care of all the flow control boilerplate whil
 
 Besides operations such as `insert`, `update` and `delete`, `Ecto.Multi` also provides functions for handling more complex scenarios. For example, `prepend` and `append` can be used to merge multis together. And more generally, the `Ecto.Multi.run/3` and `Ecto.Multi.run/5` can be used to define any operation that depends on the results of a previous multi operation.
 
-Let's study a more practical example. In the [Constraints and Upserts](constraints-and-upserts.html) guide, we want to modify a post while possibly giving it a list of tags as a string separated by commas. At the end of the guide, we present a solution that insert any missing tag and then fetch all of them using only two queries:
+Let's study a more practical example. In [Constraints and Upserts](constraints-and-upserts.html), we want to modify a post while possibly giving it a list of tags as a string separated by commas. At the end of the guide, we present a solution that insert any missing tag and then fetch all of them using only two queries:
 
 ```elixir
 defmodule MyApp.Post do
@@ -103,7 +145,9 @@ defmodule MyApp.Post do
   schema "posts" do
     field :title
     field :body
-    many_to_many :tags, MyApp.Tag, join_through: "posts_tags", on_replace: :delete
+    many_to_many :tags, MyApp.Tag,
+      join_through: "posts_tags",
+      on_replace: :delete
     timestamps()
   end
 
@@ -145,7 +189,9 @@ defmodule MyApp.Post do
   schema "posts" do
     field :title
     field :body
-    many_to_many :tags, MyApp.Tag, join_through: "posts_tags", on_replace: :delete
+    many_to_many :tags, MyApp.Tag,
+      join_through: "posts_tags",
+      on_replace: :delete
     timestamps()
   end
 
@@ -176,10 +222,16 @@ end
 Now, whenever we need to introduce a post with tags, we can create a multi that wraps all operations and the repository access:
 
 ```elixir
+alias MyApp.Tag
+
 def insert_or_update_post_with_tags(post, params) do
   Ecto.Multi.new
-  |> Ecto.Multi.run(:tags, fn _, changes -> insert_and_get_all_tags(changes, params) end)
-  |> Ecto.Multi.run(:post, fn _, changes -> insert_or_update_post(changes, post, params) end)
+  |> Ecto.Multi.run(:tags, fn _, changes ->
+    insert_and_get_all_tags(changes, params)
+  end)
+  |> Ecto.Multi.run(:post, fn _, changes ->
+    insert_or_update_post(changes, post, params)
+  end)
   |> Repo.transaction()
 end
 
@@ -189,13 +241,15 @@ defp insert_and_get_all_tags(_changes, params) do
       {:ok, []}
     tags ->
       maps = Enum.map(names, &%{name: &1})
-      Repo.insert_all(MyApp.Tag, maps, on_conflict: :nothing)
-      {:ok, Repo.all(from t in MyApp.Tag, where: t.name in ^names)}
+      Repo.insert_all(Tag, maps, on_conflict: :nothing)
+      query = from t in Tag, where: t.name in ^names
+      {:ok, Repo.all(query)}
   end
 end
 
 defp insert_or_update_post(%{tags: tags}, post, params) do
-  Repo.insert_or_update MyApp.Post.changeset(post, tags, params)
+  post = MyApp.Post.changeset(post, tags, params)
+  Repo.insert_or_update post
 end
 ```
 

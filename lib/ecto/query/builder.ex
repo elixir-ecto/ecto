@@ -62,7 +62,7 @@ defmodule Ecto.Query.Builder do
   map.
   """
   @spec escape(Macro.t, quoted_type, {list, term}, Keyword.t,
-               Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {map, term}}
+               Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, term}}
   def escape(expr, type, params_acc, vars, env)
 
   # var.x - where var is bound
@@ -107,22 +107,28 @@ defmodule Ecto.Query.Builder do
   end
 
   def escape({:type, _, [{fun, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env)
-      when fun in ~w(fragment avg count max min sum over)a do
+      when fun in ~w(fragment avg count max min sum over filter)a do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
-  def escape({:type, _, [expr, _]}, _type, _params_acc, _vars, _env) do
-    error! """
-    the first argument of type/2 must be one of:
+  def escape({:type, meta, [expr, type]}, given_type, params_acc, vars, env) do
+    case Macro.expand_once(expr, get_env(env)) do
+      ^expr ->
+        error! """
+        the first argument of type/2 must be one of:
 
-      * interpolations, such as ^value
-      * fields, such as p.foo or field(p)
-      * fragments, such fragment("foo(?)", value)
-      * an arithmetic expression (+, -, *, /)
-      * an aggregation or window expression (avg, count, min, max, sum, over)
+          * interpolations, such as ^value
+          * fields, such as p.foo or field(p)
+          * fragments, such fragment("foo(?)", value)
+          * an arithmetic expression (+, -, *, /)
+          * an aggregation or window expression (avg, count, min, max, sum, over, filter)
 
-    Got: #{Macro.to_string(expr)}
-    """
+        Got: #{Macro.to_string(expr)}
+        """
+
+      expanded ->
+        escape({:type, meta, [expanded, type]}, given_type, params_acc, vars, env)
+    end
   end
 
   # fragments
@@ -172,8 +178,8 @@ defmodule Ecto.Query.Builder do
   end
 
   def escape({:datetime_add, _, [datetime, count, interval]} = expr, type, params_acc, vars, env) do
-    assert_type!(expr, type, :naive_datetime)
-    {datetime, params_acc} = escape(datetime, :naive_datetime, params_acc, vars, env)
+    assert_type!(expr, type, {:param, :any_datetime})
+    {datetime, params_acc} = escape(datetime, {:param, :any_datetime}, params_acc, vars, env)
     {count, interval, params_acc} = escape_interval(count, interval, params_acc, vars, env)
     {{:{}, [], [:datetime_add, [], [datetime, count, interval]]}, params_acc}
   end
@@ -314,7 +320,7 @@ defmodule Ecto.Query.Builder do
 
   def escape({:filter, _, [aggregate, filter_expr]}, type, params_acc, vars, env) do
     {aggregate, params_acc} = escape(aggregate, type, params_acc, vars, env)
-    {filter_expr, params_acc} = escape(filter_expr, type, params_acc, vars, env)
+    {filter_expr, params_acc} = escape(filter_expr, :boolean, params_acc, vars, env)
     {{:{}, [], [:filter, [], [aggregate, filter_expr]]}, params_acc}
   end
 
@@ -435,11 +441,8 @@ defmodule Ecto.Query.Builder do
     wrap_nil(params, i - 1, [pair | acc])
   end
 
-  defp expand_and_split_fragment(query, {env, _}) do
-    expand_and_split_fragment(query, env)
-  end
   defp expand_and_split_fragment(query, env) do
-    case Macro.expand(query, env) do
+    case Macro.expand(query, get_env(env)) do
       binary when is_binary(binary) ->
         split_fragment(binary, "")
       _ ->
@@ -591,10 +594,8 @@ defmodule Ecto.Query.Builder do
   end
   def validate_type!({:^, _, [type]}, _vars, _env),
     do: type
-  def validate_type!({:__aliases__, _, _} = type, _vars, {env, _}),
-    do: Macro.expand(type, env)
   def validate_type!({:__aliases__, _, _} = type, _vars, env),
-    do: Macro.expand(type, env)
+    do: Macro.expand(type, get_env(env))
   def validate_type!(type, _vars, _env) when is_atom(type),
     do: type
   def validate_type!({{:., _, [{var, _, context}, field]}, _, []}, vars, _env)
@@ -935,6 +936,9 @@ defmodule Ecto.Query.Builder do
   end
 
   def quoted_type(_, _vars), do: :any
+
+  defp get_env({env, _}), do: env
+  defp get_env(env), do: env
 
   @doc """
   Raises a query building error.

@@ -163,7 +163,7 @@ defmodule Ecto.Query do
 
       # Create a query
       query = from p in Post,
-                join: c in Comment, where: c.post_id == p.id
+                join: c in Comment, on: c.post_id == p.id
 
       # Extend the query
       query = from [p, c] in query,
@@ -188,7 +188,7 @@ defmodule Ecto.Query do
   For instance, imagine you wrote:
 
       posts_with_comments =
-        from p in query, join: c in Comment, where: c.post_id == p.id
+        from p in query, join: c in Comment, on: c.post_id == p.id
 
   And now we want to make sure to return both the post title
   and the comment body. Although we may not know how many
@@ -208,7 +208,7 @@ defmodule Ecto.Query do
 
       posts_with_comments =
         from p in query,
-          join: c in Comment, as: :comment, where: c.post_id == p.id
+          join: c in Comment, as: :comment, on: c.post_id == p.id
 
   We can refer to it by that name using a following form of
   bindings list:
@@ -1020,8 +1020,22 @@ defmodule Ecto.Query do
   @doc """
   A common table expression (CTE) also known as WITH expression.
 
-  `name` must be a compile-time literal string that is being used as the table name to join
-  the CTE in the main query or in the recursive CTE.
+  `name` must be a compile-time literal string that is being used
+  as the table name to join the CTE in the main query or in the
+  recursive CTE.
+
+  **IMPORTANT!** Beware of using CTEs. In raw SQL, CTEs can be
+  used as a mechanisim to organize queries, but said mechanism
+  has no purpose in Ecto since Ecto queries are composable by
+  definition. In other words, if you need to break a large query
+  into parts, use all of the functionality in Elixir and in this
+  module to struture your code. Furthermore, breaking a query
+  into CTEs can negatively impact performance, as the database
+  may not optimize efficiently across CTEs. The main use case
+  for CTEs in Ecto is to provide recursive definitions, which
+  we outline in the following section. Non-recursive CTEs can
+  often be written as joins or subqueries, which provide better
+  performance.
 
   ## Options
 
@@ -1031,11 +1045,11 @@ defmodule Ecto.Query do
 
   Use `recursive_ctes/2` to enable recursive mode for CTEs.
 
-  In the CTE query itself use the same table name to leverage recursion that has been passed
-  to `name` argument. Make sure to write a stop condition to avoid infinite recursion loop.
-
-  Generally speaking, you should only use CTEs for writing recursive queries. Non-recursive
-  CTEs can often be written as joins or subqueries, which provide better performance.
+  In the CTE query itself use the same table name to leverage
+  recursion that has been passed to the `name` argument. Make sure
+  to write a stop condition to avoid infinite recursion loop.
+  Generally speaking, you should only use CTEs in Ecto for
+  writing recursive queries.
 
   ## Expression examples
 
@@ -1067,7 +1081,7 @@ defmodule Ecto.Query do
       |> with_cte("category_tree", as: ^category_tree_query)
       |> join(:left, [c], p in assoc(c, :products))
       |> group_by([c], c.id)
-      |> select:([c, p], %{c | products_count: count(p.id)})
+      |> select([c, p], %{c | products_count: count(p.id)})
 
   It's also possible to pass a raw SQL fragment:
 
@@ -1200,6 +1214,9 @@ defmodule Ecto.Query do
   The argument given to `:select_merge` must always be a map. The value
   being merged on must be a struct or a map. If it is a struct, the fields
   merged later on must be part of the struct, otherwise an error is raised.
+
+  `select_merge` cannot be used to set fields in associations, as
+  associations are always loaded later, overriding any previous value.
   """
   defmacro select_merge(query, binding \\ [], expr) do
     Builder.Select.build(:merge, query, binding, expr, __CALLER__)

@@ -78,7 +78,7 @@ defmodule Ecto.Adapter.Queryable do
   """
   def plan_query(operation, adapter, queryable) do
     query = Ecto.Queryable.to_query(queryable)
-    {query, params, _key} = Ecto.Query.Planner.plan(query, operation, adapter, 0)
+    {query, params, _key} = Ecto.Query.Planner.plan(query, operation, adapter)
     {query, _} = Ecto.Query.Planner.normalize(query, operation, adapter, 0)
     {query, params}
   end

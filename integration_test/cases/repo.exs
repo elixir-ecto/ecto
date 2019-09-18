@@ -261,7 +261,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "insert and fetch a schema with utc timestamps" do
-    datetime = DateTime.from_unix!(System.system_time(:second), :second)
+    datetime = DateTime.from_unix!(System.os_time(:second), :second)
     TestRepo.insert!(%User{inserted_at: datetime})
     assert [%{inserted_at: ^datetime}] = TestRepo.all(User)
   end
@@ -1267,6 +1267,17 @@ defmodule Ecto.Integration.RepoTest do
         Post |> select([p], merge(p, %{p | counter: 2})) |> TestRepo.all()
       assert [%Post{title: "1", counter: 2}] =
         Post |> select([p], p) |> select_merge([p], %{p | counter: 2}) |> TestRepo.all()
+    end
+
+    test "merge within subquery" do
+      %Post{} = TestRepo.insert!(%Post{title: "1", counter: 1})
+
+      subquery =
+        Post
+        |> select_merge([p], %{p | counter: 2})
+        |> subquery()
+
+      assert [%Post{title: "1", counter: 2}] = TestRepo.all(subquery)
     end
   end
 

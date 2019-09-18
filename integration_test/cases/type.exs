@@ -51,7 +51,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [^datetime] = TestRepo.all(from p in Post, where: p.inserted_at == ^datetime, select: p.inserted_at)
 
     # Datetime
-    datetime = DateTime.from_unix!(System.system_time(:second), :second)
+    datetime = DateTime.from_unix!(System.os_time(:second), :second)
     TestRepo.insert!(%User{inserted_at: datetime})
     assert [^datetime] = TestRepo.all(from u in User, where: u.inserted_at == ^datetime, select: u.inserted_at)
 
@@ -237,23 +237,42 @@ defmodule Ecto.Integration.TypeTest do
   @tag :map_type
   test "embeds one" do
     item = %Item{price: 123, valid_at: ~D[2014-01-16]}
+
     order =
       %Order{}
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_embed(:item, item)
-    order = TestRepo.insert!(order)
+      |> TestRepo.insert!()
+
     dbitem = TestRepo.get!(Order, order.id).item
+    assert item.reference == dbitem.reference
     assert item.price == dbitem.price
     assert item.valid_at == dbitem.valid_at
     assert dbitem.id
 
     [dbitem] = TestRepo.all(from o in Order, select: o.item)
+    assert item.reference == dbitem.reference
     assert item.price == dbitem.price
     assert item.valid_at == dbitem.valid_at
     assert dbitem.id
 
     {1, _} = TestRepo.update_all(Order, set: [item: %{dbitem | price: 456}])
     assert TestRepo.get!(Order, order.id).item.price == 456
+  end
+
+  @tag :map_type
+  test "embeds one with custom type" do
+    item = %Item{price: 123, reference: "PREFIX-EXAMPLE"}
+
+    order =
+      %Order{}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_embed(:item, item)
+      |> TestRepo.insert!()
+
+    dbitem = TestRepo.get!(Order, order.id).item
+    assert dbitem.reference == "PREFIX-EXAMPLE"
+    assert [%{"reference" => "EXAMPLE"}] = TestRepo.all(from o in "orders", select: o.item)
   end
 
   @tag :map_type

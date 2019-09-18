@@ -406,13 +406,13 @@ defmodule Ecto.Association do
   end
 
   defp on_repo_change(%{cardinality: :one, field: field, __struct__: mod} = meta,
-                      %{action: action} = changeset, parent_changeset,
+                      %{action: action, data: current} = changeset, parent_changeset,
                       repo_action, adapter, opts, {parent, changes, halt, valid?}) do
     check_action!(meta, action, repo_action)
+    if not halt, do: maybe_replace_one!(meta, current, parent, parent_changeset, adapter, opts)
 
     case on_repo_change_unless_halted(halt, mod, meta, parent_changeset, changeset, adapter, opts) do
       {:ok, struct} ->
-        struct && maybe_replace_one!(meta, struct, parent, parent_changeset, adapter, opts)
         {Map.put(parent, field, struct), Map.put(changes, field, changeset), halt, valid?}
 
       {:error, error_changeset} ->
@@ -518,7 +518,8 @@ defmodule Ecto.Association.Has do
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
   @has_one_on_replace_opts @on_replace_opts ++ [:update]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
-             :queryable, :on_delete, :on_replace, where: [], unique: true, defaults: [], relationship: :child]
+             :queryable, :on_delete, :on_replace, where: [], unique: true, defaults: [],
+             relationship: :child, ordered: false]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
@@ -538,6 +539,10 @@ defmodule Ecto.Association.Has do
 
   @doc false
   def struct(module, name, opts) do
+    queryable = Keyword.fetch!(opts, :queryable)
+    cardinality = Keyword.fetch!(opts, :cardinality)
+    related = Ecto.Association.related_from_query(queryable, name)
+
     ref =
       module
       |> Module.get_attribute(:primary_key)
@@ -547,10 +552,6 @@ defmodule Ecto.Association.Has do
       raise ArgumentError, "schema does not have the field #{inspect ref} used by " <>
         "association #{inspect name}, please set the :references option accordingly"
     end
-
-    queryable = Keyword.fetch!(opts, :queryable)
-    cardinality = Keyword.fetch!(opts, :cardinality)
-    related = Ecto.Association.related_from_query(queryable, name)
 
     if opts[:through] do
       raise ArgumentError, "invalid association #{inspect name}. When using the :through " <>
@@ -730,7 +731,7 @@ defmodule Ecto.Association.HasThrough do
 
   @behaviour Ecto.Association
   defstruct [:cardinality, :field, :owner, :owner_key, :through, :on_cast,
-             relationship: :child, unique: true]
+             relationship: :child, unique: true, ordered: false]
 
   @doc false
   def after_compile_validation(_, _) do
@@ -814,8 +815,9 @@ defmodule Ecto.Association.BelongsTo do
 
   @behaviour Ecto.Association
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify, :update]
-  defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast, :on_replace,
-             where: [], defaults: [], cardinality: :one, relationship: :parent, unique: true]
+  defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast,
+             :on_replace, where: [], defaults: [], cardinality: :one, relationship: :parent,
+             unique: true, ordered: false]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
@@ -969,7 +971,8 @@ defmodule Ecto.Association.ManyToMany do
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
              :on_replace, :join_keys, :join_through, :on_cast, where: [],
-             defaults: [], relationship: :child, cardinality: :many, unique: false]
+             defaults: [], relationship: :child, cardinality: :many,
+             unique: false, ordered: false]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, join_through: join_through}, env) do
@@ -993,13 +996,12 @@ defmodule Ecto.Association.ManyToMany do
 
   @doc false
   def struct(module, name, opts) do
-    join_through = opts[:join_through]
-
-    validate_join_through(name, join_through)
+    queryable = Keyword.fetch!(opts, :queryable)
+    related = Ecto.Association.related_from_query(queryable, name)
 
     join_keys = opts[:join_keys]
-    queryable = Keyword.fetch!(opts, :queryable)
-    related   = Ecto.Association.related_from_query(queryable, name)
+    join_through = opts[:join_through]
+    validate_join_through(name, join_through)
 
     {owner_key, join_keys} =
       case join_keys do
