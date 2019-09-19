@@ -2097,17 +2097,18 @@ defmodule Ecto.Changeset do
   defp decimal_compare(:eq, spec), do: spec in [:equal_to, :less_than_or_equal_to, :greater_than_or_equal_to]
 
   @doc """
-  Validates that the given field matches the confirmation
-  parameter of that field.
+  Validates that the given parameter matches its confirmation.
 
   By calling `validate_confirmation(changeset, :email)`, this
   validation will check if both "email" and "email_confirmation"
-  in the parameter map matches.
+  in the parameter map matches. Note this validation only looks
+  at the parameters themselves, never the fields in the schema.
+  As such as, the "email_confirmation" field does not need to be
+  added as a virtual field in your schema.
 
-  Note that if the confirmation field is nil or missing, by default this does
-  not add a validation error. You can specify that the confirmation field is
-  required in the options (see below). Note "email_confirmation" does not need
-  to be added as a virtual field in your schema.
+  Note that if the confirmation field is nil or missing, this does
+  not add a validation error. You can specify that the confirmation
+  parameter is required in the options (see below).
 
   ## Options
 
@@ -2161,11 +2162,11 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Validates the given parameter was given as true.
+  Validates the given parameter is true.
 
-  This validation is used to check for one specific parameter being true
-  and as such does not require the field to effectively exist in the schema
-  or the data being validated.
+  Note this validation only checks the parameter itself is true, never
+  the field in the schema. That's because acceptance parameters do not need
+  to be persisted, as by definition they would always be stored as `true`.
 
   ## Options
 
