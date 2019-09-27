@@ -109,6 +109,15 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
+  defp do_cast(meta, params, struct, allowed_actions, {module, fun, args})
+       when is_atom(module) and is_atom(fun) and is_list(args) do
+    on_cast = fn changeset, attrs ->
+      apply(module, fun, [changeset, attrs | args])
+    end
+
+    do_cast(meta, params, struct, allowed_actions, on_cast)
+  end
+
   defp do_cast(meta, params, nil, allowed_actions, on_cast) do
     {:ok,
       on_cast.(meta.__struct__.build(meta), params)

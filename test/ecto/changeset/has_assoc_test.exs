@@ -62,6 +62,11 @@ defmodule Ecto.Changeset.HasAssocTest do
     def optional_changeset(schema, params) do
       Changeset.cast(schema, params, ~w(name)a)
     end
+    
+    def failing_changeset(schema, params, error_string) do
+      Changeset.cast(schema, params, ~w(name)a)
+      |> Changeset.add_error(:name, error_string)
+    end
 
     def set_action(schema, params) do
       changeset(schema, params)
@@ -245,6 +250,13 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert profile.action  == :insert
     assert profile.valid?
     assert changeset.valid?
+  end
+  
+  test "cast has_one with custom changeset specified with mfa" do
+    changeset = cast(%Author{}, %{"profile" => %{}}, :profile, with: {Profile, :failing_changeset, ["test"]})
+
+    assert changeset.changes.profile.errors == [name: {"test", []}]
+    refute changeset.valid?
   end
 
   test "cast has_one keeps appropriate action from changeset" do
