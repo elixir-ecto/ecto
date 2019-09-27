@@ -707,17 +707,18 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:with` - the function to build the changeset from params.
-      Defaults to the changeset/2 function in the association module.
-      This can either be an anonymous function, or an MFA.  If using an MFA, the
-      passed arguments are added to the default changeset and parameters arguments
-      (so for example, using `with: {Author, :special_changeset, ["hello"]` will
-      expect a function `Author.special_changeset/3` to exist.
     * `:required` - if the association is a required field
     * `:required_message` - the message on failure, defaults to "can't be blank"
     * `:invalid_message` - the message on failure, defaults to "is invalid"
-    * `:force_update_on_change` - force the parent record to be updated in the repository if
-      there is a change, defaults to true
+    * `:force_update_on_change` - force the parent record to be updated in the
+      repository if there is a change, defaults to `true`
+    * `:with` - the function to build the changeset from params. Defaults to the
+      `changeset/2` function of the associated module. It can be changed by passing
+      an anonymous function or an MFA tuple.  If using an MFA, the default changeset
+      and parameters arguments will be prepended to the given args. For example,
+      using `with: {Author, :special_changeset, ["hello"]}` will be invoked as
+      `Author.special_changeset(changeset, params, "hello")`
+
   """
   def cast_assoc(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:assoc, changeset, name, opts)
