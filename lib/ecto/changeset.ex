@@ -709,8 +709,10 @@ defmodule Ecto.Changeset do
 
     * `:with` - the function to build the changeset from params.
       Defaults to the changeset/2 function in the association module.
-      This can either be an anonymous function, or a `{module, function}`
-      tuple.
+      This can either be an anonymous function, or an MFA.  If using an MFA, the
+      passed arguments are added to the default changeset and parameters arguments
+      (so for example, using `with: {Author, :special_changeset, ["hello"]` will
+      expect a function `Author.special_changeset/3` to exist.
     * `:required` - if the association is a required field
     * `:required_message` - the message on failure, defaults to "can't be blank"
     * `:invalid_message` - the message on failure, defaults to "is invalid"
@@ -739,8 +741,10 @@ defmodule Ecto.Changeset do
 
     * `:with` - the function to build the changeset from params.
       Defaults to the changeset/2 function in the embed module.
-      This can either be an anonymous function, or a `{module, function}`
-      tuple.
+      This can either be an anonymous function, or an MFA.  If using an MFA, the
+      passed arguments are added to the default changeset and parameters arguments
+      (so for example, using `with: {Author, :special_changeset, ["hello"]` will
+      expect a function `Author.special_changeset/3` to exist.
     * `:required` - if the embed is a required field
     * `:required_message` - the message on failure, defaults to "can't be blank"
     * `:invalid_message` - the message on failure, defaults to "is invalid"
@@ -818,7 +822,7 @@ defmodule Ecto.Changeset do
 
                 1. implement the #{type}.changeset/2 function
                 2. pass the :with option to cast_#{type}/3 with an anonymous function that expects 2 args
-                   or a {module, function} tuple.
+                   or an MFA.
 
               When using an inline embed, the :with option must be given
               """
