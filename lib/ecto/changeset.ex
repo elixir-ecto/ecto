@@ -707,13 +707,18 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:with` - the function to build the changeset from params.
-      Defaults to the changeset/2 function in the association module
     * `:required` - if the association is a required field
     * `:required_message` - the message on failure, defaults to "can't be blank"
     * `:invalid_message` - the message on failure, defaults to "is invalid"
-    * `:force_update_on_change` - force the parent record to be updated in the repository if
-      there is a change, defaults to true
+    * `:force_update_on_change` - force the parent record to be updated in the
+      repository if there is a change, defaults to `true`
+    * `:with` - the function to build the changeset from params. Defaults to the
+      `changeset/2` function of the associated module. It can be changed by passing
+      an anonymous function or an MFA tuple.  If using an MFA, the default changeset
+      and parameters arguments will be prepended to the given args. For example,
+      using `with: {Author, :special_changeset, ["hello"]}` will be invoked as
+      `Author.special_changeset(changeset, params, "hello")`
+
   """
   def cast_assoc(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:assoc, changeset, name, opts)
@@ -735,13 +740,17 @@ defmodule Ecto.Changeset do
 
   ## Options
 
-    * `:with` - the function to build the changeset from params.
-      Defaults to the changeset/2 function in the embed module
     * `:required` - if the embed is a required field
     * `:required_message` - the message on failure, defaults to "can't be blank"
     * `:invalid_message` - the message on failure, defaults to "is invalid"
-    * `:force_update_on_change` - force the parent record to be updated in the repository if
-      there is a change, defaults to true
+    * `:force_update_on_change` - force the parent record to be updated in the
+      repository if there is a change, defaults to `true`
+    * `:with` - the function to build the changeset from params. Defaults to the
+      `changeset/2` function of the embedded module. It can be changed by passing
+      an anonymous function or an MFA tuple.  If using an MFA, the default changeset
+      and parameters arguments will be prepended to the given args. For example,
+      using `with: {Author, :special_changeset, ["hello"]}` will be invoked as
+      `Author.special_changeset(changeset, params, "hello")`
   """
   def cast_embed(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:embed, changeset, name, opts)
@@ -813,7 +822,8 @@ defmodule Ecto.Changeset do
               which is used by cast_#{type}/3. You need to either:
 
                 1. implement the #{type}.changeset/2 function
-                2. pass the :with option to cast_#{type}/3 with an anonymous function that expects 2 args
+                2. pass the :with option to cast_#{type}/3 with an anonymous
+                   function that expects 2 args or an MFA tuple
 
               When using an inline embed, the :with option must be given
               """
