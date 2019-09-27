@@ -256,7 +256,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = cast(%Author{}, %{"profile" => %{}}, :profile, with: {Profile, :failing_changeset, ["test"]})
 
     assert changeset.changes.profile.errors == [name: {"test", []}]
-    assert not changeset.valid?
+    refute changeset.valid?
   end
 
   test "cast has_one keeps appropriate action from changeset" do
