@@ -822,8 +822,8 @@ defmodule Ecto.Changeset do
               which is used by cast_#{type}/3. You need to either:
 
                 1. implement the #{type}.changeset/2 function
-                2. pass the :with option to cast_#{type}/3 with an anonymous function that expects 2 args
-                   or an MFA.
+                2. pass the :with option to cast_#{type}/3 with an anonymous
+                   function that expects 2 args or an MFA tuple
 
               When using an inline embed, the :with option must be given
               """
