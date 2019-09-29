@@ -156,9 +156,7 @@ defmodule Ecto.Query.Builder.Join do
     validate_bind(join_bind, binding)
 
     {count_bind, query} =
-      if (join_bind != :_ or as != nil) and !count_bind do
-        # If we have a join or alias and count_bind is not available,
-        # we need to compute the amount of binds at runtime
+      if is_nil(count_bind) do
         query =
           quote do
             query = Ecto.Queryable.to_query(unquote(query))
