@@ -283,4 +283,12 @@ defmodule Ecto.Query.SubqueryTest do
       normalize(from(p in subquery(subquery), select: [:title]))
     end
   end
+
+  test "normalize: merges subqueries schema fields with map fields" do
+    subquery =
+      from(p in Post)
+      |> select_merge([p], %{ extra_field: p.title + p.text })
+    query = normalize(from(subquery(subquery), []))
+    assert query.select.fields == select_fields([:id, :title, :text, :extra_field], 0)
+  end
 end
