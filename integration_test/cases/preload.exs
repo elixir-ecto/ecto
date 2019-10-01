@@ -618,55 +618,6 @@ defmodule Ecto.Integration.PreloadTest do
     assert [%Comment{id: ^cid2, text: "0", post: %Ecto.Association.NotLoaded{}}] = p2.comments
   end
 
-  test "preload skips already loaded for cardinality many through" do
-    %Post{id: pid1} = p1 = TestRepo.insert!(%Post{})
-    %Post{id: pid2} = p2 = TestRepo.insert!(%Post{})
-
-    %User{id: uid1} = TestRepo.insert!(%User{name: "foo"})
-    %User{id: uid2} = TestRepo.insert!(%User{name: "bar"})
-
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid1})
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid1})
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid1, author_id: uid2})
-    %Comment{} = TestRepo.insert!(%Comment{post_id: pid2, author_id: uid2})
-
-    [p1, p2] = TestRepo.preload([p1, p2], :comments_authors)
-    TestRepo.update_all User, set: [name: "0"]
-    [p1, p2] = TestRepo.preload([p1, p2], :comments_authors)
-
-    # Through was preloaded
-    [u1, u2] = p1.comments_authors |> sort_by_id
-    assert u1.id == uid1
-    assert u1.name == "foo"
-    assert u2.id == uid2
-    assert u2.name == "bar"
-
-    [u2] = p2.comments_authors
-    assert u2.id == uid2
-    assert u2.name == "bar"
-
-    # Even directly changing it preserves it
-    comments_authors =
-      for user <- p1.comments_authors do
-        update_in user.name, &String.upcase/1
-      end
-
-    p1 = TestRepo.preload(%{p1 | comments_authors: comments_authors}, :comments_authors)
-    [u1, u2] = p1.comments_authors |> sort_by_id
-    assert u1.id == uid1
-    assert u1.name == "FOO"
-    assert u2.id == uid2
-    assert u2.name == "BAR"
-
-    # Unless we force it
-    p1 = TestRepo.preload(p1, :comments_authors, force: true)
-    [u1, u2] = p1.comments_authors |> sort_by_id
-    assert u1.id == uid1
-    assert u1.name == "0"
-    assert u2.id == uid2
-    assert u2.name == "0"
-  end
-
   test "preload keyword query" do
     p1 = TestRepo.insert!(%Post{title: "1"})
     p2 = TestRepo.insert!(%Post{title: "2"})

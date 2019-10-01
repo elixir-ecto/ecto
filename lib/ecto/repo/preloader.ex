@@ -74,11 +74,9 @@ defmodule Ecto.Repo.Preloader do
       throughs =
         Map.values(throughs)
 
-      force? = Keyword.get(opts, :force, false)
-
       for struct <- structs do
         struct = Enum.reduce assocs, struct, &load_assoc/2
-        struct = Enum.reduce throughs, struct, &load_through(&1, &2, force?)
+        struct = Enum.reduce throughs, struct, &load_through/2
         struct
       end
     else
@@ -137,19 +135,14 @@ defmodule Ecto.Repo.Preloader do
         %{^owner_key => id, ^field => value} = struct
 
         cond do
-          Ecto.assoc_loaded?(value) and not force? ->
-            case card do
-              :one ->
-                {fetch_ids, [id|loaded_ids], [value|loaded_structs]}
-              :many ->
-                {fetch_ids,
-                 List.duplicate(id, length(value)) ++ loaded_ids,
-                 value ++ loaded_structs}
-            end
-
+          card == :one and Ecto.assoc_loaded?(value) and not force? ->
+            {fetch_ids, [id|loaded_ids], [value|loaded_structs]}
+          card == :many and Ecto.assoc_loaded?(value) and not force? ->
+            {fetch_ids,
+             List.duplicate(id, length(value)) ++ loaded_ids,
+             value ++ loaded_structs}
           is_nil(id) ->
             {fetch_ids, loaded_ids, loaded_structs}
-
           true ->
             {[id|fetch_ids], loaded_ids, loaded_structs}
         end
@@ -302,15 +295,10 @@ defmodule Ecto.Repo.Preloader do
     Map.put(struct, field, loaded)
   end
 
-  defp load_through({:through, assoc, throughs}, struct, force?) do
+  defp load_through({:through, assoc, throughs}, struct) do
     %{cardinality: cardinality, field: field, owner: owner} = assoc
-
-    if Ecto.assoc_loaded?(Map.get(struct, field)) and not force? do
-      struct
-    else
-      {loaded, _} = Enum.reduce(throughs, {[struct], owner}, &recur_through/2)
-      Map.put(struct, field, maybe_first(loaded, cardinality))
-    end
+    {loaded, _} = Enum.reduce(throughs, {[struct], owner}, &recur_through/2)
+    Map.put(struct, field, maybe_first(loaded, cardinality))
   end
 
   defp maybe_first(list, :one), do: List.first(list)
