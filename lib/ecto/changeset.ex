@@ -2313,7 +2313,7 @@ defmodule Ecto.Changeset do
   `prepare_changes/2` will be called with the changeset and must return a
   changeset, allowing developers to do final adjustments to the changeset or
   to issue data consistency commands. The repository itself can be accessed
-  inside the function under the `repo` field in the changesett. If the
+  inside the function under the `repo` field in the changeset. If the
   changeset given to the repository is invalid, the function will not be
   invoked.
 
