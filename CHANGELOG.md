@@ -1,5 +1,23 @@
 # Changelog for v3.x
 
+## v3.2.2 (2019-10-01)
+
+### Bug fixes
+
+  * [Ecto.Query] Fix keyword arguments given to `:on` when a bind is not given to join
+  * [Ecto.Repo] Make sure a preload given to an already preloaded has_many :through is loaded
+
+## v3.2.1 (2019-09-17)
+
+### Enhancements
+
+  * [Ecto.Changeset] Add rollover logic for default incremeter in `optimistic_lock`
+  * [Ecto.Query] Also expand macros when used inside `type/2`
+
+### Bug fixes
+
+  * [Ecto.Query] Ensure queries with non-cacheable queries in CTEs/combinations are also not-cacheable
+
 ## v3.2.0 (2019-09-07)
 
 v3.2 requires Elixir v1.6+.
