@@ -1,5 +1,11 @@
 # Changelog for v3.x
 
+## v3.3.0-dev
+
+### Enhancements
+
+  * [Ecto.Repo] Do not wrap schema operations in a transaction if already inside a transaction. We have also removed the **private** option called `:skip_transaction`.
+
 ## v3.2.2 (2019-10-01)
 
 ### Bug fixes
