@@ -13,6 +13,7 @@ defmodule Ecto.SchemaTest do
       field :count, :decimal, read_after_writes: true, source: :cnt
       field :array, {:array, :string}
       field :uuid, Ecto.UUID, autogenerate: true
+      field :another_temp, :any, default: "another_temp", virtual: true
       field :query_excluded_field, :string, load_in_query: false
       belongs_to :comment, Comment
       belongs_to :permalink, Permalink, define_field: false
@@ -24,6 +25,7 @@ defmodule Ecto.SchemaTest do
     assert Schema.__schema__(:prefix)             == nil
     assert Schema.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :query_excluded_field, :comment_id]
     assert Schema.__schema__(:query_fields)       == [:id, :name, :email, :count, :array, :uuid, :comment_id]
+    assert Schema.__schema__(:virtual_fields)     == [:temp, :another_temp]
     assert Schema.__schema__(:read_after_writes)  == [:email, :count]
     assert Schema.__schema__(:primary_key)        == [:id]
     assert Schema.__schema__(:autogenerate_id)    == {:id, :id, :id}
@@ -50,7 +52,7 @@ defmodule Ecto.SchemaTest do
   test "changeset metadata" do
     assert Schema.__changeset__ |> Map.drop([:comment, :permalink]) ==
            %{name: :string, email: :string, count: :decimal, array: {:array, :string},
-             comment_id: :id, temp: :any, id: :id, uuid: Ecto.UUID, query_excluded_field: :string}
+             comment_id: :id, temp: :any, another_temp: :any, id: :id, uuid: Ecto.UUID, query_excluded_field: :string}
   end
 
   test "autogenerate metadata (private)" do

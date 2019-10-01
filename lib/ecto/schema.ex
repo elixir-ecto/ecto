@@ -385,6 +385,7 @@ defmodule Ecto.Schema do
   * `__schema__(:primary_key)` - Returns a list of primary key fields (empty if there is none);
 
   * `__schema__(:fields)` - Returns a list of all non-virtual field names;
+  * `__schema__(:virtual_fields)` - Returns a list of all virtual field names;
   * `__schema__(:field_source, field)` - Returns the alias of the given field;
 
   * `__schema__(:type, field)` - Returns the type of the given non-virtual field;
@@ -429,6 +430,7 @@ defmodule Ecto.Schema do
 
       Module.register_attribute(__MODULE__, :ecto_primary_keys, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_virtual_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_query_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_field_sources, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
@@ -521,6 +523,7 @@ defmodule Ecto.Schema do
         autogenerate = @ecto_autogenerate |> Enum.reverse
         autoupdate = @ecto_autoupdate |> Enum.reverse
         fields = @ecto_fields |> Enum.reverse
+        virtual_fields = @ecto_virtual_fields |> Enum.reverse
         query_fields = @ecto_query_fields |> Enum.reverse
         field_sources = @ecto_field_sources |> Enum.reverse
         assocs = @ecto_assocs |> Enum.reverse
@@ -536,6 +539,7 @@ defmodule Ecto.Schema do
         def __schema__(:prefix), do: unquote(prefix)
         def __schema__(:source), do: unquote(source)
         def __schema__(:fields), do: unquote(Enum.map(fields, &elem(&1, 0)))
+        def __schema__(:virtual_fields), do: unquote(Enum.map(virtual_fields, &elem(&1, 0)))
         def __schema__(:query_fields), do: unquote(Enum.map(query_fields, &elem(&1, 0)))
         def __schema__(:primary_key), do: unquote(primary_key_fields)
         def __schema__(:hash), do: unquote(:erlang.phash2({primary_key_fields, query_fields}))
@@ -1730,47 +1734,57 @@ defmodule Ecto.Schema do
 
   defp define_field(mod, name, type, opts) do
     virtual? = opts[:virtual] || false
-    pk? = opts[:primary_key] || false
 
     Module.put_attribute(mod, :changeset_fields, {name, type})
     put_struct_field(mod, name, Keyword.get(opts, :default))
 
-    unless virtual? do
-      source = opts[:source] || Module.get_attribute(mod, :field_source_mapper).(name)
-
-      if name != source do
-        Module.put_attribute(mod, :ecto_field_sources, {name, source})
-      end
-
-      if raw = opts[:read_after_writes] do
-        Module.put_attribute(mod, :ecto_raw, name)
-      end
-
-      case gen = opts[:autogenerate] do
-        {_, _, _} ->
-          store_mfa_autogenerate!(mod, name, type, gen)
-
-        true ->
-          store_type_autogenerate!(mod, name, source || name, type, pk?)
-
-        _ ->
-          :ok
-      end
-
-      if raw && gen do
-        raise ArgumentError, "cannot mark the same field as autogenerate and read_after_writes"
-      end
-
-      if pk? do
-        Module.put_attribute(mod, :ecto_primary_keys, name)
-      end
-
-      if Keyword.get(opts, :load_in_query, true) do
-        Module.put_attribute(mod, :ecto_query_fields, {name, type})
-      end
-
-      Module.put_attribute(mod, :ecto_fields, {name, type})
+    if virtual? do
+      define_virtual_field(mod, name, type, opts)
+    else
+      define_nonvirtual_field(mod, name, type, opts)
     end
+  end
+
+  defp define_virtual_field(mod, name, type, _opts) do
+    Module.put_attribute(mod, :ecto_virtual_fields, {name, type})
+  end
+
+  defp define_nonvirtual_field(mod, name, type, opts) do
+    pk? = opts[:primary_key] || false
+    source = opts[:source] || Module.get_attribute(mod, :field_source_mapper).(name)
+
+    if name != source do
+      Module.put_attribute(mod, :ecto_field_sources, {name, source})
+    end
+
+    if raw = opts[:read_after_writes] do
+      Module.put_attribute(mod, :ecto_raw, name)
+    end
+
+    case gen = opts[:autogenerate] do
+      {_, _, _} ->
+        store_mfa_autogenerate!(mod, name, type, gen)
+
+      true ->
+        store_type_autogenerate!(mod, name, source || name, type, pk?)
+
+      _ ->
+        :ok
+    end
+
+    if raw && gen do
+      raise ArgumentError, "cannot mark the same field as autogenerate and read_after_writes"
+    end
+
+    if pk? do
+      Module.put_attribute(mod, :ecto_primary_keys, name)
+    end
+
+    if Keyword.get(opts, :load_in_query, true) do
+      Module.put_attribute(mod, :ecto_query_fields, {name, type})
+    end
+
+    Module.put_attribute(mod, :ecto_fields, {name, type})
   end
 
   @valid_has_options [:foreign_key, :references, :through, :on_delete, :defaults, :on_replace, :where]
