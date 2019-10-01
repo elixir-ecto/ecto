@@ -1,5 +1,12 @@
 # Changelog for v3.x
 
+## v3.2.2 (2019-10-01)
+
+### Bug fixes
+
+  * [Ecto.Query] Fix keyword arguments given to `:on` when a bind is not given to join
+  * [Ecto.Repo] Make sure a preload given to an already preloaded has_many :through is loaded
+
 ## v3.2.1 (2019-09-17)
 
 ### Enhancements
