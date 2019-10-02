@@ -546,7 +546,7 @@ defmodule Ecto.Changeset do
       %{^key => type} ->
         type
       _ ->
-        known_fields = types |> Map.keys() |> Enum.join(", ")
+        known_fields = types |> Map.keys() |> Enum.map_join(", ", &inspect/1)
         raise ArgumentError,
               "unknown field `#{inspect(key)}` given to cast. Either the field does not exist or it is a " <>
                 ":through association (which are read-only). The known fields are: #{known_fields}"
