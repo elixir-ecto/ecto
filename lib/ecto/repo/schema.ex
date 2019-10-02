@@ -110,7 +110,7 @@ defmodule Ecto.Repo.Schema do
                 {{source, value}, {Map.put(header, source, true), has_query?}}
             end
           %{} ->
-            raise ArgumentError, "unknown field `#{field}` in schema #{inspect schema} given to " <>
+            raise ArgumentError, "unknown field `#{inspect(field)}` in schema #{inspect(schema)} given to " <>
                                  "insert_all. Note virtual fields and associations are not supported"
         end
     end
@@ -562,7 +562,7 @@ defmodule Ecto.Repo.Schema do
         %{^target => {alias, _}} ->
           alias
         %{} when is_atom(target) ->
-          raise ArgumentError, "unknown field `#{target}` in conflict_target"
+          raise ArgumentError, "unknown field `#{inspect(target)}` in conflict_target"
         _ ->
           target
       end

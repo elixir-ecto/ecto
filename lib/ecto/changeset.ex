@@ -548,7 +548,7 @@ defmodule Ecto.Changeset do
       _ ->
         known_fields = types |> Map.keys() |> Enum.join(", ")
         raise ArgumentError,
-              "unknown field `#{key}` given to cast. Either the field does not exist or it is a " <>
+              "unknown field `#{inspect(key)}` given to cast. Either the field does not exist or it is a " <>
                 ":through association (which are read-only). The known fields are: #{known_fields}"
     end
   end
@@ -1193,7 +1193,7 @@ defmodule Ecto.Changeset do
   end
 
   defp put_change(data, _changes, _errors, _valid?, key, _value, nil) do
-    raise ArgumentError, "unknown field `#{key}` in #{inspect(data)}"
+    raise ArgumentError, "unknown field `#{inspect(key)}` in #{inspect(data)}"
   end
 
   defp put_change(data, changes, errors, valid?, key, value, type) do
@@ -1423,7 +1423,7 @@ defmodule Ecto.Changeset do
         raise "changing #{tag}s with force_change/3 is not supported, " <>
               "please use put_#{tag}/4 instead"
       nil ->
-        raise ArgumentError, "unknown field `#{key}` in #{inspect(changeset.data)}"
+        raise ArgumentError, "unknown field `#{inspect(key)}` in #{inspect(changeset.data)}"
       _ ->
         put_in changeset.changes[key], value
     end
@@ -1823,7 +1823,7 @@ defmodule Ecto.Changeset do
 
   defp ensure_field_exists!(%Changeset{types: types, data: data}, field) do
     unless Map.has_key?(types, field) do
-      raise ArgumentError, "unknown field #{inspect field} in #{inspect data}"
+      raise ArgumentError, "unknown field #{inspect(field)} in #{inspect(data)}"
     end
     true
   end

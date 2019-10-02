@@ -308,7 +308,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "cast/4: fails on invalid field" do
-    assert_raise ArgumentError, ~r"unknown field `unknown`", fn ->
+    assert_raise ArgumentError, ~r"unknown field `:unknown`", fn ->
       cast(%Post{}, %{}, ~w(unknown)a)
     end
   end
@@ -586,7 +586,7 @@ defmodule Ecto.ChangesetTest do
 
   test "change/2 with unknown field" do
     post = %Post{decimal: Decimal.new("1.0")}
-    assert_raise ArgumentError, ~r"unknown field `unknown`", fn ->
+    assert_raise ArgumentError, ~r"unknown field `:unknown`", fn ->
       change(post, unknown: Decimal.new(1))
     end
   end
