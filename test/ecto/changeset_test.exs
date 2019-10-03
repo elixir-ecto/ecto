@@ -585,9 +585,18 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "change/2 with unknown field" do
-    post = %Post{decimal: Decimal.new("1.0")}
+    post = %Post{}
+
     assert_raise ArgumentError, ~r"unknown field `:unknown`", fn ->
       change(post, unknown: Decimal.new(1))
+    end
+  end
+
+  test "change/2 with non-atom field" do
+    post = %Post{}
+
+    assert_raise ArgumentError, ~r"must be atoms, got: `\"bad\"`", fn ->
+      change(post, %{"bad" => 42})
     end
   end
 
