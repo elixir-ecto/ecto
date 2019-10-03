@@ -1192,8 +1192,12 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp put_change(data, _changes, _errors, _valid?, key, _value, nil) do
+  defp put_change(data, _changes, _errors, _valid?, key, _value, nil) when is_atom(key) do
     raise ArgumentError, "unknown field `#{inspect(key)}` in #{inspect(data)}"
+  end
+
+  defp put_change(_data, _changes, _errors, _valid?, key, _value, nil) when not is_atom(key) do
+    raise ArgumentError, "field names given to change/put_change must be atoms, got: `#{inspect(key)}`"
   end
 
   defp put_change(data, changes, errors, valid?, key, value, type) do
