@@ -2,7 +2,7 @@
 
 ---
 
-[![Build Status](https://travis-ci.org/elixir-ecto/ecto.svg?branch=master)](https://travis-ci.org/elixir-ecto/ecto)
+[![Build Status](https://github.com/elixir-ecto/ecto/workflows/CI/badge.svg)](https://github.com/elixir-ecto/ecto/actions)
 
 Ecto is a toolkit for data mapping and language integrated query for Elixir. Here is an example:
 
