@@ -1,17 +1,12 @@
 name: CI
-on:
-  pull_request:
-  push:
-    branches:
-      - master
+on: [push, pull_request]
 jobs:
   build:
     strategy:
       matrix:
-        elixir_version: [1.6-otp-19, 1.9-otp-22]
-    name: mix test (${{ matrix.elixir_version }})
+        elixir_version: [1.6, 1.9]
     runs-on: ubuntu-18.04
-    container: wojtekmach/elixir:${{ matrix.elixir_version }}-alpine
+    container: elixir:${{ matrix.elixir_version }}-slim
     steps:
     - uses: actions/checkout@v1
     - name: Install Dependencies
