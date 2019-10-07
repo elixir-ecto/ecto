@@ -784,7 +784,7 @@ defmodule Ecto.Repo do
   function, but it is not invoked for `insert_all` nor any of the
   schema functions.
   """
-  @callback prepare_query(operation, Ecto.Query.t(), Keyword.t()) ::
+  @callback prepare_query(operation, query :: Ecto.Query.t(), opts :: Keyword.t()) ::
               {Ecto.Query.t(), Keyword.t()}
             when operation: :all | :update_all | :delete_all | :stream
 
