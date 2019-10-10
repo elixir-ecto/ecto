@@ -219,10 +219,16 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      Ecto.Multi.merge(multi, fn %{post: post} ->
+      multi =
+        Ecto.Multi.new()
+        |> Ecto.Multi.insert(:post, %Post{title: "first"})
+
+      multi
+      |> Ecto.Multi.merge(fn %{post: post} ->
         Ecto.Multi.new()
         |> Ecto.Multi.insert(:comment, Ecto.build_assoc(post, :comments))
       end)
+      |> MyApp.Repo.transaction()
   """
   @spec merge(t, (changes -> t)) :: t
   def merge(%Multi{} = multi, merge) when is_function(merge, 1) do
