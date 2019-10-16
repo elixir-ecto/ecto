@@ -79,7 +79,7 @@ inner_query =
     limit: 10
 
 query =
-  from q in subquery(query),
+  from q in subquery(inner_query),
     select: avg(q.visits)
 
 MyApp.Repo.one(query)
