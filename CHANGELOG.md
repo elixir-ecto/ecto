@@ -6,6 +6,18 @@
 
   * [Ecto.Repo] Do not wrap schema operations in a transaction if already inside a transaction. We have also removed the **private** option called `:skip_transaction`.
 
+## v3.2.3 (2019-10-17)
+
+### Bug fixes
+
+  * [Ecto.Changeset] Do not convert enums given to `validate_inclusion` to a list
+
+### Enhancements
+
+  * [Ecto.Changeset] Improve error message on non-atom keys to change/put_change
+  * [Ecto.Changeset] Allow :with to be given as a `{module, function, args}` tuple on `cast_association/cast_embed`
+  * [Ecto.Changeset] Add `fetch_change!/2` and `fetch_field!/2`
+
 ## v3.2.2 (2019-10-01)
 
 ### Bug fixes
