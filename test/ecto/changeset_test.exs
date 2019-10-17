@@ -947,13 +947,6 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(world), message: "yada")
     assert changeset.errors == [title: {"yada", [validation: :inclusion, enum: ~w(world)]}]
-
-    changeset =
-      changeset(%{"title" => "hello"})
-      |> validate_inclusion(:title, MapSet.new(["world"]))
-    refute changeset.valid?
-    assert changeset.errors == [title: {"is invalid", [validation: :inclusion, enum: ~w(world)]}]
-    assert validations(changeset) == [title: {:inclusion, MapSet.new(["world"])}]
   end
 
   test "validate_subset/3" do
@@ -975,13 +968,6 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"topics" => ["laptop"]})
       |> validate_subset(:topics, ~w(cat dog), message: "yada")
     assert changeset.errors == [topics: {"yada", [validation: :subset, enum: ~w(cat dog)]}]
-
-    changeset =
-      changeset(%{"topics" => ["cat", "laptop"]})
-      |> validate_subset(:topics, MapSet.new(["cat", "dog"]))
-    refute changeset.valid?
-    assert changeset.errors == [topics: {"has an invalid entry", [validation: :subset, enum: ~w(cat dog)]}]
-    assert validations(changeset) == [topics: {:subset, MapSet.new(["cat", "dog"])}]
   end
 
   test "validate_exclusion/3" do
@@ -1003,13 +989,6 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "world"})
       |> validate_exclusion(:title, ~w(world), message: "yada")
     assert changeset.errors == [title: {"yada", [validation: :exclusion, enum: ~w(world)]}]
-
-    changeset =
-      changeset(%{"title" => "world"})
-      |> validate_exclusion(:title, MapSet.new(["world"]))
-    refute changeset.valid?
-    assert changeset.errors == [title: {"is reserved", [validation: :exclusion, enum: ~w(world)]}]
-    assert validations(changeset) == [title: {:exclusion, MapSet.new(["world"])}]
   end
 
   test "validate_length/3 with string" do
