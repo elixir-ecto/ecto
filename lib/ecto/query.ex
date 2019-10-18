@@ -1004,6 +1004,7 @@ defmodule Ecto.Query do
   @join_opts [:on | @from_join_opts]
 
   defmacro join(query, qual, binding \\ [], expr, opts \\ [])
+  defmacro join(query, qual, binding, expr, opts)
            when is_list(binding) and is_list(opts) do
     {t, on, as, prefix, hints} = collect_on(opts, nil, nil, nil, nil)
 
@@ -1015,6 +1016,11 @@ defmodule Ecto.Query do
     query
     |> Builder.Join.build(qual, binding, expr, nil, on, as, prefix, hints, __CALLER__)
     |> elem(0)
+  end
+
+  defmacro join(_query, _qual, binding, _expr, opts) when is_list(opts) do
+    raise ArgumentError, "invalid binding passed to Ecto.Query.join/5, should be " <>
+                           "list of variables, got: #{Macro.to_string(binding)}"
   end
 
   @doc """
