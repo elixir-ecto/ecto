@@ -107,6 +107,14 @@ defmodule Ecto.Query.Builder.JoinTest do
     end
   end
 
+  test "raises on invalid binding passed to join/5" do
+    assert_raise ArgumentError, ~r/invalid binding passed/, fn ->
+      escape(quote do
+        join("posts", :inner, [o, p] in subquery(some_subquery), on: o.id == p.org_id)
+      end, [], __ENV__)
+    end
+  end
+
   test "raises on non-atom as" do
     assert_raise Ecto.Query.CompileError, ~r/`as` must be a compile time atom/, fn ->
       escape(quote do
