@@ -331,7 +331,7 @@ end
 defmodule MyApp.Project do
   use Ecto.Schema
 
-  schema "todo_lists" do
+  schema "projects" do
     field :name
     many_to_many :todo_items, MyApp.TodoItem,
       join_through: "project_items"
