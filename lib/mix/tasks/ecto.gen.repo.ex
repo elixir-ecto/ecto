@@ -50,11 +50,14 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
     case File.read(config_path) do
       {:ok, contents} ->
+        check = String.contains?(contents, "import Config")
+        config_first_line = get_first_config_line(check) <> "\n"
+        new_contents = config_first_line <> "\n" <> config_template(opts)
         Mix.shell.info [:green, "* updating ", :reset, "config/config.exs"]
-        File.write! "config/config.exs",
-                    String.replace(contents, "use Mix.Config\n", config_template(opts))
+        File.write! "config/config.exs", String.replace(contents, config_first_line, new_contents)
       {:error, _} ->
-        create_file "config/config.exs", config_template(opts)
+        config_first_line = Config |> Code.ensure_loaded?() |> get_first_config_line()
+        create_file "config/config.exs", config_first_line <> "\n\n" <> config_template(opts)
     end
 
     open?("config/config.exs")
@@ -74,6 +77,9 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
     """
   end
 
+  defp get_first_config_line(true), do: "import Config"
+  defp get_first_config_line(false), do: "use Mix.Config"
+
   embed_template :repo, """
   defmodule <%= inspect @mod %> do
     use Ecto.Repo,
@@ -83,8 +89,6 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
   """
 
   embed_template :config, """
-  use Mix.Config
-
   config <%= inspect @app %>, <%= inspect @mod %>,
     database: "<%= @app %>_<%= @base %>",
     username: "user",
