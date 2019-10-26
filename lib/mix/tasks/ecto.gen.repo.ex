@@ -51,12 +51,12 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
     case File.read(config_path) do
       {:ok, contents} ->
         check = String.contains?(contents, "import Config")
-        config_first_line = get_first_config_line(check)
-        new_contents = config_first_line <> "\n\n" <> config_template(opts)
+        config_first_line = get_first_config_line(check) <> "\n"
+        new_contents = config_first_line <> "\n" <> config_template(opts)
         Mix.shell.info [:green, "* updating ", :reset, "config/config.exs"]
         File.write! "config/config.exs", String.replace(contents, config_first_line, new_contents)
       {:error, _} ->
-        config_first_line = "1.9.0" |> Version.match?(config[:elixir]) |> get_first_config_line()
+        config_first_line = Config |> Code.ensure_loaded?() |> get_first_config_line()
         create_file "config/config.exs", config_first_line <> "\n\n" <> config_template(opts)
     end
 
