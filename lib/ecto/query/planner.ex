@@ -453,6 +453,9 @@ defmodule Ecto.Query.Planner do
   defp rewrite_join_prefix(%{prefix: nil, source: {_, nil}} = join, nil, query),
     do: %{join | prefix: query.prefix}
 
+  defp rewrite_join_prefix(%{prefix: nil, source: nil} = join, nil, query),
+    do: %{join | prefix: query.prefix}
+
   defp rewrite_join_prefix(%{prefix: nil, source: {_, schema}} = join, nil, query),
     do: %{join | prefix: schema.__schema__(:prefix) || query.prefix}
 
