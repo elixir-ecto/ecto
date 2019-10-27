@@ -254,8 +254,8 @@ try do
   MyApp.Repo.put_dynamic_repo(repo)
   MyApp.Repo.all(Post)
 after
-  MyApp.Repo.stop()
   MyApp.Repo.put_dynamic_repo(default_dynamic_repo)
+  Supervisor.stop(repo)
 end
 ```
 
@@ -274,8 +274,8 @@ defmodule MyApp.Repo do
       MyApp.Repo.put_dynamic_repo(repo)
       callback.()
     after
-      MyApp.Repo.stop()
       MyApp.Repo.put_dynamic_repo(default_dynamic_repo)
+      Supervisor.stop(repo)
     end
   end
 end
