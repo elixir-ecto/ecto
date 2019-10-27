@@ -250,12 +250,13 @@ default_dynamic_repo = MyApp.Repo.get_dynamic_repo()
     pool_size: 1
   )
 
+MyApp.Repo.put_dynamic_repo(repo)
+
 try do
-  MyApp.Repo.put_dynamic_repo(repo)
   MyApp.Repo.all(Post)
 after
-  MyApp.Repo.put_dynamic_repo(default_dynamic_repo)
   MyApp.Repo.stop()
+  MyApp.Repo.put_dynamic_repo(default_dynamic_repo)
 end
 ```
 
@@ -269,13 +270,13 @@ defmodule MyApp.Repo do
     default_dynamic_repo = get_dynamic_repo()
     start_opts = [name: nil, pool_size: 1] ++ credentials
     {:ok, repo} = MyApp.Repo.start_link(start_opts)
+    MyApp.Repo.put_dynamic_repo(repo)
 
     try do
-      MyApp.Repo.put_dynamic_repo(repo)
       callback.()
     after
-      MyApp.Repo.put_dynamic_repo(default_dynamic_repo)
       MyApp.Repo.stop()
+      MyApp.Repo.put_dynamic_repo(default_dynamic_repo)
     end
   end
 end
