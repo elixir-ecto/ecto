@@ -457,6 +457,13 @@ defmodule Ecto.Query.PlannerTest do
 
     {query, _, _} = from(c in Post, join: assoc(c, :crazy_comments_without_schema), prefix: "local") |> Map.put(:prefix, "global") |> plan()
     assert query.sources == {{"posts", Post, "my_prefix"}, {"comments", Comment, "local"}, {"comment_posts", nil, "local"}}
+
+    # Schema prefix for has through
+    {query, _, _} = from(c in Comment, join: assoc(c, :post_comments)) |> Map.put(:prefix, "global") |> plan()
+    assert query.sources == {{"comments", Comment, "global"}, {"comments", Comment, "global"}, {"posts", Ecto.Query.PlannerTest.Post, "my_prefix"}}
+
+    {query, _, _} = from(c in Comment, join: assoc(c, :post_comments), prefix: "local") |> Map.put(:prefix, "global") |> plan()
+    assert query.sources == {{"comments", Comment, "global"}, {"comments", Comment, "local"}, {"posts", Ecto.Query.PlannerTest.Post, "local"}}
   end
 
   test "plan: combination queries" do
