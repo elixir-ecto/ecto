@@ -162,18 +162,7 @@ iex(4) MyApp.Repo.all Sample
 [%MyApp.Sample{...}]
 ```
 
-The operations above ran on the "connection_prefix". So what happens if we try to run the sample query on the "public" prefix? To do so, let's build a query struct and set the prefix field manually:
-
-```iex
-iex(5)> query = Ecto.Queryable.to_query Sample
-#Ecto.Query<from s in MyApp.Sample>
-iex(6)>  MyApp.Repo.all %{query | prefix: "public"}
-[]
-```
-
-Notice how we were able to change the prefix the query runs on. Back in the default "public" prefix, there is no data.
-
-Ecto also supports the `:prefix` option on all relevant repository operations:
+The operations above ran on the "connection_prefix". So what happens if we try to run the sample query on the "public" prefix? All Ecto repository operations support the `:prefix` option. So let's set it to public.
 
 ```iex
 iex(7)> MyApp.Repo.all Sample
@@ -181,6 +170,8 @@ iex(7)> MyApp.Repo.all Sample
 iex(8)> MyApp.Repo.all Sample, prefix: "public"
 []
 ```
+
+Notice how we were able to change the prefix the query runs on. Back in the default "public" prefix, there is no data.
 
 One interesting aspect of prefixes in Ecto is that the prefix information is carried along each struct returned by a query:
 
@@ -208,7 +199,7 @@ iex(14)> Ecto.get_meta(sample, :prefix)
 
 Now we have data inserted in both prefixes.
 
-Prefixes in queries and structs always cascade. For example, if you run `MyApp.Repo.preload(sample, [:some_association])`, the association will be queried for and loaded in the same prefix as the `sample` struct. If `sample` has associations and you call `MyApp.Repo.insert(sample)` or `MyApp.Repo.update(sample)`, the associated data will also be inserted/updated in the same prefix as `sample`. That's by design to facilitate working with groups of data in the same prefix, and especially because **data in different prefixes must be kept isolated**.
+Prefixes in queries and structs always cascade. For example, if you run `MyApp.Repo.preload(post, [:comments])`, the association will be queried for and loaded in the same prefix as the `post` struct. If `post` has associations and you call `MyApp.Repo.insert(post)` or `MyApp.Repo.update(post)`, the associated data will also be inserted/updated in the same prefix as `post`. That's by design to facilitate working with groups of data in the same prefix, and especially because **data in different prefixes must be kept isolated**.
 
 ## Per from/join prefixes
 
@@ -223,7 +214,7 @@ Those will take precedence over all other prefixes we have defined so far. For e
 
   1. If the prefix option is given exclusively to join/from
   2. If the `@schema_prefix` is set in the related schema
-  3. If the `:prefix` field is set on the query (i.e. `%{query | prefix: prefix}`) or to the repo operation (i.e. `Repo.all query, prefix: prefix`)
+  3. If the `:prefix` field given to the repo operation (i.e. `Repo.all query, prefix: prefix`)
   4. The connection prefix
 
 ## Migration prefixes

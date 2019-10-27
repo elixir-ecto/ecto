@@ -225,9 +225,10 @@ defmodule Ecto.Query.Planner do
     {from, [source]}
   end
 
-  defp plan_source(query, %{source: %Ecto.SubQuery{} = subquery} = expr, adapter) do
+  defp plan_source(query, %{source: %Ecto.SubQuery{} = subquery, prefix: prefix} = expr, adapter) do
     try do
       %{query: inner_query} = subquery
+      inner_query = update_in inner_query.prefix, &(prefix || &1 || query.prefix)
       {inner_query, params, key} = plan(inner_query, :all, adapter)
       assert_no_subquery_assocs!(inner_query)
       {inner_query, select} = inner_query |> ensure_select(true) |> subquery_select(adapter)
@@ -241,7 +242,7 @@ defmodule Ecto.Query.Planner do
   defp plan_source(query, %{source: {nil, schema}} = expr, _adapter)
        when is_atom(schema) and schema != nil do
     source = schema.__schema__(:source)
-    prefix = plan_source_prefix(expr, schema) || query.prefix
+    prefix = plan_source_schema_prefix(expr, schema) || query.prefix
     {%{expr | source: {source, schema}}, {source, schema, prefix}}
   end
 
@@ -249,14 +250,17 @@ defmodule Ecto.Query.Planner do
        when is_binary(source) and is_atom(schema),
        do: {expr, {source, schema, prefix || query.prefix}}
 
-  defp plan_source(_query, %{source: {:fragment, _, _} = source} = expr, _adapter),
+  defp plan_source(_query, %{source: {:fragment, _, _} = source, prefix: nil} = expr, _adapter),
        do: {expr, source}
 
+  defp plan_source(query, %{source: {:fragment, _, _}, prefix: prefix} = expr, _adapter),
+       do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment joins")
+
   # The prefix for form are computed upfront, but not for joins
-  defp plan_source_prefix(%FromExpr{prefix: prefix}, _schema),
+  defp plan_source_schema_prefix(%FromExpr{prefix: prefix}, _schema),
     do: prefix
 
-  defp plan_source_prefix(%JoinExpr{prefix: prefix}, schema),
+  defp plan_source_schema_prefix(%JoinExpr{prefix: prefix}, schema),
     do: prefix || schema.__schema__(:prefix)
 
   defp assert_no_subquery_assocs!(%{assocs: assocs, preloads: preloads} = query)

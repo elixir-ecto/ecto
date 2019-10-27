@@ -4,7 +4,12 @@
 
 ### Enhancements
 
-  * [Ecto.Repo] Do not wrap schema operations in a transaction if already inside a transaction. We have also removed the **private** option called `:skip_transaction`.
+  * [Ecto.Repo] Do not wrap schema operations in a transaction if already inside a transaction. We have also removed the **private** option called `:skip_transaction`
+
+### Bug fixes
+
+  * [Ecto.Query] Make sure the `:prefix` option in `:join` also applies to through associations
+  * [Ecto.Query] Make sure the `:prefix` option in `:from`/`:join` also cascades to subqueries
 
 ## v3.2.3 (2019-10-17)
 
