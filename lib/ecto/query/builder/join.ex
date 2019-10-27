@@ -144,14 +144,6 @@ defmodule Ecto.Query.Builder.Join do
     {join_bind, join_source, join_assoc, join_params} = escape(expr, binding, env)
     join_params = Builder.escape_params(join_params)
 
-    prefix =
-      case join_source do
-        {_, schema} when prefix == nil and schema != nil ->
-          quote(do: unquote(schema).__schema__(:prefix))
-        _ ->
-          prefix
-      end
-
     join_qual = validate_qual(qual)
     validate_bind(join_bind, binding)
 

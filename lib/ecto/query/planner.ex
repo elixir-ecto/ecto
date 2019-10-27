@@ -2,7 +2,7 @@ defmodule Ecto.Query.Planner do
   # Normalizes a query and its parameters.
   @moduledoc false
 
-  alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, QueryExpr, SelectExpr}
+  alias Ecto.Query.{BooleanExpr, DynamicExpr, FromExpr, JoinExpr, QueryExpr, SelectExpr}
 
   if map_size(%Ecto.Query{}) != 21 do
     raise "Ecto.Query match out of date in builder"
@@ -238,10 +238,11 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp plan_source(query, %{source: {nil, schema}, prefix: prefix} = expr, _adapter)
+  defp plan_source(query, %{source: {nil, schema}} = expr, _adapter)
        when is_atom(schema) and schema != nil do
     source = schema.__schema__(:source)
-    {%{expr | source: {source, schema}}, {source, schema, prefix || query.prefix}}
+    prefix = plan_source_prefix(expr, schema) || query.prefix
+    {%{expr | source: {source, schema}}, {source, schema, prefix}}
   end
 
   defp plan_source(query, %{source: {source, schema}, prefix: prefix} = expr, _adapter)
@@ -250,6 +251,13 @@ defmodule Ecto.Query.Planner do
 
   defp plan_source(_query, %{source: {:fragment, _, _} = source} = expr, _adapter),
        do: {expr, source}
+
+  # The prefix for form are computed upfront, but not for joins
+  defp plan_source_prefix(%FromExpr{prefix: prefix}, _schema),
+    do: prefix
+
+  defp plan_source_prefix(%JoinExpr{prefix: prefix}, schema),
+    do: prefix || schema.__schema__(:prefix)
 
   defp assert_no_subquery_assocs!(%{assocs: assocs, preloads: preloads} = query)
        when assocs != [] or preloads != [] do
@@ -394,7 +402,15 @@ defmodule Ecto.Query.Planner do
     # All values in the middle should be shifted by offset,
     # all values after join are already correct.
     child = refl.__struct__.joins_query(refl)
-    child = update_in child.joins, &Enum.map(&1, fn join -> rewrite_join_prefix(join, prefix, query) end)
+
+    # Rewrite prefixes:
+    # 1. the child query has the parent query prefix
+    #    (note the child query should NEVER have a prefix)
+    # 2. from and joins can have their prefixes explicitly
+    #    overwritten by the join prefix
+    child = rewrite_prefix(child, query.prefix)
+    child = update_in child.from, &rewrite_prefix(&1, prefix)
+    child = update_in child.joins, &Enum.map(&1, fn join -> rewrite_prefix(join, prefix) end)
 
     last_ix = length(child.joins)
     source_ix = counter
@@ -450,17 +466,9 @@ defmodule Ecto.Query.Planner do
     [%{h | on: merge_expr_and_params(:and, on, expr, params)} | t]
   end
 
-  defp rewrite_join_prefix(%{prefix: nil, source: {_, nil}} = join, nil, query),
-    do: %{join | prefix: query.prefix}
-
-  defp rewrite_join_prefix(%{prefix: nil, source: {_, schema}} = join, nil, query),
-    do: %{join | prefix: schema.__schema__(:prefix) || query.prefix}
-
-  defp rewrite_join_prefix(%{prefix: nil} = join, prefix, _query)
-       when prefix != nil,
-       do: %{join | prefix: prefix}
-
-  defp rewrite_join_prefix(join, _prefix, _query), do: join
+  defp rewrite_prefix(expr, nil), do: expr
+  defp rewrite_prefix(%{prefix: nil} = expr, prefix), do: %{expr | prefix: prefix}
+  defp rewrite_prefix(expr, _prefix), do: expr
 
   defp rewrite_join(%{on: on, ix: join_ix} = join, qual, ix, last_ix, source_ix, inc_ix) do
     expr = Macro.prewalk on.expr, fn
