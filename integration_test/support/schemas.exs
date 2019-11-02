@@ -1,3 +1,5 @@
+Code.require_file "types.exs", __DIR__
+
 defmodule Ecto.Integration.Schema do
   defmacro __using__(_) do
     quote do
@@ -9,16 +11,6 @@ defmodule Ecto.Integration.Schema do
       @foreign_key_type type
     end
   end
-end
-
-defmodule PrefixedString do
-  use Ecto.Type
-  def type(), do: :string
-  def cast(string), do: {:ok, string}
-  def load(string), do: {:ok, "PREFIX-" <> string}
-  def dump("PREFIX-" <> string), do: {:ok, string}
-  def dump(_string), do: :error
-  def embed_as(_), do: :dump
 end
 
 defmodule Ecto.Integration.Post do
@@ -43,6 +35,7 @@ defmodule Ecto.Integration.Post do
     field :public, :boolean, default: true
     field :cost, :decimal
     field :visits, :integer
+    field :wrapped_visits, WrappedInteger
     field :intensity, :float
     field :bid, :binary_id
     field :uuid, Ecto.Integration.TestRepo.uuid(), autogenerate: true

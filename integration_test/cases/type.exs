@@ -1,5 +1,3 @@
-Code.require_file "../support/types.exs", __DIR__
-
 defmodule Ecto.Integration.TypeTest do
   use Ecto.Integration.Case, async: Application.get_env(:ecto, :async_integration_tests, true)
 
@@ -76,6 +74,15 @@ defmodule Ecto.Integration.TypeTest do
     assert [^datetime] = TestRepo.all(query)
   end
 
+  # We don't specifically assert on the tuple content because
+  # some databases would return integer, others decimal.
+  # The important is that the type has been invoked for wrapping.
+  test "aggregate custom types" do
+    TestRepo.insert!(%Post{wrapped_visits: {:int, 10}})
+    query = from p in Post, select: sum(p.wrapped_visits)
+    assert [{:int, _}] = TestRepo.all(query)
+  end
+
   @tag :aggregate_filters
   test "aggregate filter types" do
     datetime = ~N[2014-01-16 20:26:51]
@@ -109,7 +116,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [1.0] = TestRepo.all(from p in Post, select: type(^"1", p.intensity))
 
     # Custom wrappers
-    assert [1] = TestRepo.all(from Post, select: type(^"1", Elixir.Custom.Permalink))
+    assert [1] = TestRepo.all(from Post, select: type(^"1", CustomPermalink))
 
     # Custom types
     uuid = Ecto.UUID.generate()
