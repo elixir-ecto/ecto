@@ -53,7 +53,7 @@ defmodule Ecto.Query.PlannerTest do
   defmodule Post do
     use Ecto.Schema
 
-    @primary_key {:id, Custom.Permalink, []}
+    @primary_key {:id, CustomPermalink, []}
     @schema_prefix "my_prefix"
     schema "posts" do
       field :title, :string, source: :post_title
@@ -61,7 +61,7 @@ defmodule Ecto.Query.PlannerTest do
       field :code, :binary
       field :posted, :naive_datetime
       field :visits, :integer
-      field :links, {:array, Custom.Permalink}
+      field :links, {:array, CustomPermalink}
       field :payload, :map, load_in_query: false
 
       has_many :comments, Ecto.Query.PlannerTest.Comment
@@ -341,7 +341,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "plan: generates a cache key" do
     {_query, _params, key} = plan(from(Post, []))
-    assert key == [:all, {"posts", Post, 27727487, "my_prefix"}]
+    assert key == [:all, {"posts", Post, 36606244, "my_prefix"}]
 
     query =
       from(
@@ -362,7 +362,7 @@ defmodule Ecto.Query.PlannerTest do
                    {:prefix, "foo"},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
                    {:join, [{:inner, {"comments", Comment, 38292156, "world"}, true}]},
-                   {"posts", Post, 27727487, "hello"},
+                   {"posts", Post, 36606244, "hello"},
                    {:select, 1}]
   end
 
@@ -661,10 +661,10 @@ defmodule Ecto.Query.PlannerTest do
            %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: :integer}
     assert params == [1]
 
-    {query, params, _select} = from(Post, []) |> select([p], type(^"1", Custom.Permalink))
+    {query, params, _select} = from(Post, []) |> select([p], type(^"1", CustomPermalink))
                                               |> normalize_with_params
     assert query.select.expr ==
-           %Ecto.Query.Tagged{type: :id, value: {:^, [], [0]}, tag: Custom.Permalink}
+           %Ecto.Query.Tagged{type: :id, value: {:^, [], [0]}, tag: CustomPermalink}
     assert params == [1]
 
     {query, params, _select} = from(Post, []) |> select([p], type(^"1", p.visits))

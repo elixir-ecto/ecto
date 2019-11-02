@@ -109,7 +109,7 @@ defmodule Ecto.SchemaTest do
   defmodule CustomSchema do
     use Ecto.Schema
 
-    @primary_key {:perm, Custom.Permalink, autogenerate: true}
+    @primary_key {:perm, CustomPermalink, autogenerate: true}
     @foreign_key_type :string
     @field_source_mapper &(&1 |> Atom.to_string |> String.upcase |> String.to_atom())
 
@@ -123,7 +123,7 @@ defmodule Ecto.SchemaTest do
 
   test "custom schema attributes" do
     assert %CustomSchema{perm: "abc"}.perm == "abc"
-    assert CustomSchema.__schema__(:autogenerate_id) == {:perm, :PERM, Custom.Permalink}
+    assert CustomSchema.__schema__(:autogenerate_id) == {:perm, :PERM, CustomPermalink}
     assert CustomSchema.__schema__(:type, :comment_id) == :string
   end
 

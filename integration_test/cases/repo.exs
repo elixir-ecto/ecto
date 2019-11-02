@@ -1,5 +1,3 @@
-Code.require_file "../support/types.exs", __DIR__
-
 defmodule Ecto.Integration.RepoTest do
   use Ecto.Integration.Case, async: Application.get_env(:ecto, :async_integration_tests, true)
 
@@ -234,7 +232,7 @@ defmodule Ecto.Integration.RepoTest do
     defmodule ID do
       use Ecto.Schema
 
-      @primary_key {:id, Elixir.Custom.Permalink, autogenerate: true}
+      @primary_key {:id, CustomPermalink, autogenerate: true}
       schema "posts" do
       end
     end
