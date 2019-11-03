@@ -682,29 +682,6 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  # @tag :focuss
-  # test "has_* throught with cycle dependency" do
-  #   message = ~r"associated schema is in cycle assoc with"
-  #   assert_raise ArgumentError, message, fn ->
-  #     defmodule ThroughCycleAssocA do
-  #       use Ecto.Schema
-
-  #       schema "assoc_a" do
-  #         belongs_to :assoc_b, ThroughCycleAssocB
-  #         has_many :posts, through: [:assoc_b, :works]
-  #       end
-  #     end
-
-  #     defmodule ThroughCycleAssocB do
-  #       use Ecto.Schema
-
-  #       schema "assoc_b" do
-  #         has_many :assoc_a, ThroughCycleAssocA
-  #         has_many :comments, through: [:assoc_a, :h]
-  #       end
-  #     end
-  #   end
-  # end
 
   test "belongs_to raises helpful error with redundant foreign key name" do
     name = :author
@@ -718,5 +695,51 @@ defmodule Ecto.SchemaTest do
         end
       end
     end
+  end
+
+  test "has_* throught with cycle dependency" do
+    defmodule ThroughCycleAssocA do
+      use Ecto.Schema
+
+      schema "assoc_a" do
+        belongs_to :assoc_b, Ecto.SchemaTest.ThroughCycleAssocB
+        has_many :posts, through: [:assoc_b, :a]
+      end
+    end
+
+    defmodule ThroughCycleAssocB do
+      use Ecto.Schema
+
+      schema "assoc_b" do
+        has_many :assoc_a, Ecto.SchemaTest.ThroughCycleAssocA
+        has_many :comments, through: [:assoc_a, :b]
+      end
+    end
+
+    modules = 
+      [ThroughCycleAssocB, ThroughCycleAssocA]
+
+    validation_results =
+      modules
+      |> Enum.reduce([], fn(module, acc) ->
+           res =
+             for name <- module.__schema__(:associations) do
+               assoc = module.__schema__(:association, name)
+               assoc.__struct__.after_compile_validation(assoc, __ENV__)
+             end
+           acc ++ res
+      end)
+
+    Enum.each(modules, fn(module) -> 
+      module_name_stripped =
+        module
+        |> to_string
+        |> String.replace("Elixir.", "")
+
+      error_message = 
+        Enum.join(["have cycle association with", module_name_stripped, "schema"], " ")
+
+      assert {:error, error_message} in validation_results == true
+    end)
   end
 end
