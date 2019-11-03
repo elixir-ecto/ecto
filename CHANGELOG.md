@@ -1,5 +1,11 @@
 # Changelog for v3.x
 
+## v3.2.5 (2019-11-03)
+
+### Bug fixes
+
+  * [Ecto.Query] Fix a bug where executing some queries would leak the `{:maybe, ...}` type
+
 ## v3.2.4 (2019-11-02)
 
 ### Bug fixes
