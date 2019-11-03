@@ -90,19 +90,22 @@ defmodule Ecto.Type do
   end
 
   @typedoc "An Ecto type, primitive or custom."
-  @type t         :: primitive | custom
+  @type t :: primitive | custom
 
   @typedoc "Primitive Ecto types (handled by Ecto)."
   @type primitive :: base | composite
 
   @typedoc "Custom types are represented by user-defined modules."
-  @type custom    :: module
+  @type custom :: module
 
-  @typep base      :: :integer | :float | :boolean | :string | :map |
-                      :binary | :decimal | :id | :binary_id |
-                      :utc_datetime | :naive_datetime | :date | :time | :any |
-                      :utc_datetime_usec | :naive_datetime_usec | :time_usec
-  @typep composite :: {:array, t} | {:map, t} | {:embed, Ecto.Embedded.t} | {:in, t}
+  @type base :: :integer | :float | :boolean | :string | :map |
+                 :binary | :decimal | :id | :binary_id |
+                 :utc_datetime | :naive_datetime | :date | :time | :any |
+                 :utc_datetime_usec | :naive_datetime_usec | :time_usec
+
+  @type composite :: {:array, t} | {:map, t} | private_composite
+
+  @typep private_composite :: {:maybe, t} | {:embed, Ecto.Embedded.t} | {:in, t}
 
   @base ~w(
     integer float decimal boolean string map binary id binary_id any
@@ -345,6 +348,13 @@ defmodule Ecto.Type do
     {:ok, nil}
   end
 
+  def dump({:maybe, type}, value) do
+    case dump(type, value) do
+      {:ok, _} = ok -> ok
+      :error -> {:ok, value}
+    end
+  end
+
   def dump(type, value) do
     dump_fun(type).(value)
   end
@@ -358,6 +368,13 @@ defmodule Ecto.Type do
   @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
   def dump(_type, nil, _dumper) do
     {:ok, nil}
+  end
+
+  def dump({:maybe, type}, value, dumper) do
+    case dump(type, value, dumper) do
+      {:ok, _} = ok -> ok
+      :error -> {:ok, value}
+    end
   end
 
   def dump({:embed, embed}, value, dumper) do
@@ -518,6 +535,13 @@ defmodule Ecto.Type do
     {:ok, nil}
   end
 
+  def load({:maybe, type}, value) do
+    case load(type, value) do
+      {:ok, _} = ok -> ok
+      :error -> {:ok, value}
+    end
+  end
+
   def load(type, value) do
     load_fun(type).(value)
   end
@@ -535,6 +559,13 @@ defmodule Ecto.Type do
 
   def load(_type, nil, _loader) do
     {:ok, nil}
+  end
+
+  def load({:maybe, type}, value, loader) do
+    case load(type, value, loader) do
+      {:ok, _} = ok -> ok
+      :error -> {:ok, value}
+    end
   end
 
   def load({:map, type}, value, loader) when is_map(value) do
@@ -724,6 +755,13 @@ defmodule Ecto.Type do
   def cast({:in, _type}, nil), do: :error
   def cast(_type, nil), do: {:ok, nil}
 
+  def cast({:maybe, type}, value) do
+    case cast(type, value) do
+      {:ok, _} = ok -> ok
+      _ -> {:ok, value}
+    end
+  end
+
   def cast(type, value) do
     cast_fun(type).(value)
   end
@@ -828,6 +866,12 @@ defmodule Ecto.Type do
   def adapter_load(_adapter, _type, nil) do
     {:ok, nil}
   end
+  def adapter_load(adapter, {:maybe, type}, value) do
+    case adapter_load(adapter, type, value) do
+      {:ok, _} = ok -> ok
+      :error -> {:ok, value}
+    end
+  end
   def adapter_load(adapter, type, value) do
     if of_base_type?(type, value) do
       {:ok, value}
@@ -848,6 +892,12 @@ defmodule Ecto.Type do
   @doc false
   def adapter_dump(_adapter, type, nil),
     do: dump(type, nil)
+  def adapter_dump(adapter, {:maybe, type}, value) do
+    case adapter_dump(adapter, type, value) do
+      {:ok, _} = ok -> ok
+      :error -> {:ok, value}
+    end
+  end
   def adapter_dump(adapter, type, value),
     do: process_dumpers(adapter.dumpers(type(type), type), {:ok, value}, adapter)
 

@@ -322,10 +322,6 @@ defmodule Ecto.Repo.Queryable do
     {value, row}
   end
 
-  defp process([value | row], {:value, {:maybe, type}}, _from, adapter) do
-    {maybe_load(type, value, adapter), row}
-  end
-
   defp process([value | row], {:value, type}, _from, adapter) do
     {load!(type, value, nil, nil, adapter), row}
   end
@@ -355,14 +351,7 @@ defmodule Ecto.Repo.Queryable do
     end)
   end
 
-  @compile {:inline, maybe_load: 3, load!: 5}
-  defp maybe_load(type, value, adapter) do
-    case Ecto.Type.adapter_load(adapter, type, value) do
-      {:ok, value} -> value
-      :error -> value
-    end
-  end
-
+  @compile {:inline, load!: 5}
   defp load!(type, value, field, struct, adapter) do
     case Ecto.Type.adapter_load(adapter, type, value) do
       {:ok, value} ->
