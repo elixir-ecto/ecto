@@ -734,39 +734,9 @@ defmodule Ecto.Association.HasThrough do
              relationship: :child, unique: true, ordered: false]
 
   @doc false
-  def after_compile_validation(%{through: [assoc_source | _], owner: owner}, _) do
-    assoc_module =
-      Ecto.Association.association_from_schema!(owner, assoc_source)
-      |> Map.get(:queryable)
-
-    cond do
-      in_cycle_assoc_with?(assoc_module, owner) ->
-        {:error, "have cycle association with #{inspect assoc_module} schema"}
-
-      true ->
-        :ok
-    end
+  def after_compile_validation(_, _) do
+    :ok
   end
-
-  defp in_cycle_assoc_with?(assoc_mod, owner_mod) do
-    assoc_mod.__schema__(:associations)
-    |> Enum.reduce(nil, fn(assoc, _) ->
-         Ecto.Association.association_from_schema!(assoc_mod, assoc)
-         |> reduce(assoc_mod, owner_mod)
-       end)
-  end
-
-  defp reduce(%Ecto.Association.HasThrough{through: [h|_]}, assoc_mod, owner_mod) do
-    assoc_module =
-      Ecto.Association.association_from_schema!(assoc_mod, h)
-      |> Map.get(:queryable)
-
-    case assoc_module == owner_mod do
-      true -> {:halted, true}
-      false -> {:cont, false}
-    end
-  end
-  defp reduce(_, _, _), do: {:cont, false}
 
   @doc false
   def struct(module, name, opts) do
