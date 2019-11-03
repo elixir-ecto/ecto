@@ -184,6 +184,17 @@ defmodule Ecto.TypeTest do
     end
   end
 
+  test "maybe" do
+    assert dump({:maybe, :decimal}, 1) == {:ok, Decimal.new(1)}
+    assert dump({:maybe, :decimal}, "not decimal") == {:ok, "not decimal"}
+
+    assert load({:maybe, :decimal}, 1) == {:ok, Decimal.new(1)}
+    assert load({:maybe, :decimal}, "not decimal") == {:ok, "not decimal"}
+
+    assert cast({:maybe, :decimal}, 1) == {:ok, Decimal.new(1)}
+    assert cast({:maybe, :decimal}, "not decimal") == {:ok, "not decimal"}
+  end
+
   describe "embeds" do
     @uuid_string "bfe0888c-5c59-4bb3-adfd-71f0b85d3db7"
     @uuid_binary <<191, 224, 136, 140, 92, 89, 75, 179, 173, 253, 113, 240, 184, 93, 61, 183>>
