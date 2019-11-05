@@ -1103,6 +1103,17 @@ defmodule Ecto.Query do
       |> join(:inner, [p], c in "category_tree", on: c.id == p.category_id)
 
   Keyword syntax is not supported for this feature.
+
+  ## Limitation: CTEs on schemas wth source fields
+
+  Ecto allows developers to say that a table in their Ecto schema
+  map to a different column in their database:
+
+      field :group_id, :integer, source: :iGroupId
+
+  At the moment, using a schema with source fields in CTE may emit
+  invalid queries. If you are running into such scenarios, your best
+  option is to use a fragment as your CTE.
   """
   defmacro with_cte(query, name, as: with_query) do
     Builder.CTE.build(query, name, with_query, __CALLER__)
