@@ -761,10 +761,10 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "apply_action/2 with invalid action" do
-    assert_raise ArgumentError, ~r/unknown action/, fn ->
+    assert_raise ArgumentError, ~r/expected action to be an atom/, fn ->
       %Post{}
       |> changeset(%{})
-      |> apply_action(:invalid_action)
+      |> apply_action("invalid_action")
     end
   end
 

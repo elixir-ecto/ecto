@@ -293,7 +293,7 @@ defmodule Ecto.Changeset do
 
   @type t :: t(Ecto.Schema.t | map | nil)
   @type error :: {String.t, Keyword.t}
-  @type action :: nil | :insert | :update | :delete | :replace | :ignore
+  @type action :: nil | :insert | :update | :delete | :replace | :ignore | atom
   @type constraint :: %{type: :check | :exclusion | :foreign_key | :unique,
                         constraint: String.t, match: :exact | :suffix | :prefix,
                         field: atom, error_message: String.t, error_type: atom}
@@ -311,7 +311,6 @@ defmodule Ecto.Changeset do
 
   @relations [:embed, :assoc]
   @match_types [:exact, :suffix, :prefix]
-  @actions [:insert, :update, :delete, :replace]
 
   @doc """
   Wraps the given data in a changeset or adds changes to a changeset.
@@ -1489,7 +1488,7 @@ defmodule Ecto.Changeset do
   is returned with the changeset containing the action that was attempted
   to be applied.
 
-  The action may be one of #{Enum.map_join(@actions, ", ", &"`#{inspect &1}`")}.
+  The action may be any atom.
 
   ## Examples
 
@@ -1498,9 +1497,8 @@ defmodule Ecto.Changeset do
       iex> {:error, changeset} = apply_action(changeset, :update)
       %Ecto.Changeset{action: :update}
   """
-  @spec apply_action(t, :insert | :update | :delete | :replace) ::
-          {:ok, Ecto.Schema.t() | data} | {:error, t}
-  def apply_action(%Changeset{} = changeset, action) when action in @actions do
+  @spec apply_action(t, atom) :: {:ok, Ecto.Schema.t() | data} | {:error, t}
+  def apply_action(%Changeset{} = changeset, action) when is_atom(action) do
     if changeset.valid? do
       {:ok, apply_changes(changeset)}
     else
@@ -1508,7 +1506,7 @@ defmodule Ecto.Changeset do
     end
   end
   def apply_action(%Changeset{}, action) do
-    raise ArgumentError, "unknown action #{inspect action}. The following values are allowed: #{inspect @actions}"
+    raise ArgumentError, "expected action to be an atom, got: #{inspect action}"
   end
 
   ## Validations
