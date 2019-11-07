@@ -23,9 +23,10 @@ defmodule Ecto.Adapter.Queryable do
   @type options :: Keyword.t()
 
   @doc """
-  Commands invoked to prepare a query for `all`, `update_all` and `delete_all`.
+  Commands invoked to prepare a query for `c:Ecto.Repo.all/2`, `c:Ecto.Repo.update_all/3`,
+  and `c:Ecto.Repo.delete_all/2`.
 
-  The returned result is given to `execute/6`.
+  The returned result is given to `c:execute/5`.
   """
   @callback prepare(atom :: :all | :update_all | :delete_all, query :: Ecto.Query.t()) ::
               {:cache, prepared} | {:nocache, prepared}
