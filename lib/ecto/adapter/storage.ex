@@ -36,4 +36,11 @@ defmodule Ecto.Adapter.Storage do
 
   """
   @callback storage_down(options :: Keyword.t) :: :ok | {:error, :already_down} | {:error, term}
+  
+  @doc """
+  Returns the status of a storage given by options.
+
+  Can return `:up`, `:down` or `{:error, term}` in case anything goes wrong.
+  """
+  @callback storage_status(options :: Keyword.t()) :: :up | :down | {:error, term()}
 end
