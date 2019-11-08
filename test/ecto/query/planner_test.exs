@@ -325,11 +325,11 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "plan: handles specific param type-casting" do
-    value = NaiveDateTime.utc_now
+    value = NaiveDateTime.utc_now()
     {_, params, _} = from(p in Post, where: p.posted > datetime_add(^value, 1, "second")) |> plan()
     assert params == [value]
 
-    value = DateTime.utc_now
+    value = DateTime.utc_now()
     {_, params, _} = from(p in Post, where: p.posted > datetime_add(^value, 1, "second")) |> plan()
     assert params == [value]
 

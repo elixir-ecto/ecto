@@ -146,7 +146,7 @@ defmodule Ecto.TypeTest do
     value = ~N[2010-04-17 14:00:00.123]
     assert cast({:param, :any_datetime}, value) == {:ok, value}
 
-    value = DateTime.utc_now
+    value = DateTime.utc_now()
     assert cast({:param, :any_datetime}, value) == {:ok, value}
 
     value = "2010-04-17 14:00:00"

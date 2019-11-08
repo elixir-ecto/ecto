@@ -365,7 +365,7 @@ defmodule Ecto.Integration.RepoTest do
       TestRepo.insert %User{
         comments: [%Comment{}],
         permalink: %Permalink{},
-        posts: [post.(uuid), post.(uuid), post.(Ecto.UUID.generate)]
+        posts: [post.(uuid), post.(uuid), post.(Ecto.UUID.generate())]
       }
 
     [_, p2, _] = changeset.changes.posts
@@ -863,7 +863,7 @@ defmodule Ecto.Integration.RepoTest do
 
   @tag :insert_cell_wise_defaults
   test "insert all with dumping" do
-    uuid = Ecto.UUID.generate
+    uuid = Ecto.UUID.generate()
     assert {1, nil} = TestRepo.insert_all(Post, [%{uuid: uuid}])
     assert [%Post{uuid: ^uuid, title: nil}] = TestRepo.all(Post)
   end
@@ -876,7 +876,7 @@ defmodule Ecto.Integration.RepoTest do
     assert TestRepo.delete!(custom)
     refute TestRepo.get(Custom, custom.bid)
 
-    uuid = Ecto.UUID.generate
+    uuid = Ecto.UUID.generate()
     assert {2, nil} = TestRepo.insert_all(Custom, [%{uuid: uuid}, %{bid: custom.bid}])
     assert [%Custom{bid: bid2, uuid: nil},
             %Custom{bid: bid1, uuid: ^uuid}] = Enum.sort_by(TestRepo.all(Custom), & &1.uuid)
@@ -1645,8 +1645,8 @@ defmodule Ecto.Integration.RepoTest do
 
     @tag :without_conflict_target
     test "on conflict replace_all" do
-      post_first = %Post{title: "first", public: true, uuid: Ecto.UUID.generate}
-      post_second = %Post{title: "second", public: false, uuid: Ecto.UUID.generate}
+      post_first = %Post{title: "first", public: true, uuid: Ecto.UUID.generate()}
+      post_second = %Post{title: "second", public: false, uuid: Ecto.UUID.generate()}
 
       {:ok, post_first} = TestRepo.insert(post_first, on_conflict: :replace_all)
       {:ok, post_second} = TestRepo.insert(post_second, on_conflict: :replace_all)
@@ -1705,8 +1705,8 @@ defmodule Ecto.Integration.RepoTest do
 
     @tag :without_conflict_target
     test "on conflict replace_all_except_primary_key" do
-      post_first = %Post{title: "first", public: true, uuid: Ecto.UUID.generate}
-      post_second = %Post{title: "second", public: false, uuid: Ecto.UUID.generate}
+      post_first = %Post{title: "first", public: true, uuid: Ecto.UUID.generate()}
+      post_second = %Post{title: "second", public: false, uuid: Ecto.UUID.generate()}
 
       {:ok, post_first} = TestRepo.insert(post_first, on_conflict: :replace_all_except_primary_key)
       {:ok, post_second} = TestRepo.insert(post_second, on_conflict: :replace_all_except_primary_key)
@@ -1765,8 +1765,8 @@ defmodule Ecto.Integration.RepoTest do
 
     @tag :with_conflict_target
     test "on conflict replace and conflict_target" do
-      post_first = %Post{title: "first", visits: 10, public: true, uuid: Ecto.UUID.generate}
-      post_second = %Post{title: "second", visits: 20, public: false, uuid: Ecto.UUID.generate}
+      post_first = %Post{title: "first", visits: 10, public: true, uuid: Ecto.UUID.generate()}
+      post_second = %Post{title: "second", visits: 20, public: false, uuid: Ecto.UUID.generate()}
 
       {:ok, post_first} = TestRepo.insert(post_first, on_conflict: {:replace, [:title, :visits]}, conflict_target: :uuid)
       {:ok, post_second} = TestRepo.insert(post_second, on_conflict: {:replace, [:title, :visits]}, conflict_target: :uuid)
