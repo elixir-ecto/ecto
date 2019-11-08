@@ -13,11 +13,11 @@ defmodule Ecto.Query.Builder.FilterTest do
       assert escape(:where, quote do [] end, 0, [x: 0], __ENV__) ===
              {true, []}
 
-      assert escape(:where, quote do {x.x} == {^"foo"} end, 0, [x: 0], __ENV__) ===
-             {Macro.escape(quote do {&0.x} == {^0} end),
+      assert escape(:where, quote do {x.x()} == {^"foo"} end, 0, [x: 0], __ENV__) ===
+             {Macro.escape(quote do {&0.x()} == {^0} end),
               [{"foo", {0, :x}}]}
 
-      escaped = Macro.escape(quote do &0.x == ^0 and &0.y == ^1 end)
+      escaped = Macro.escape(quote do &0.x() == ^0 and &0.y() == ^1 end)
       assert {^escaped, [{{_, _, ["bar", :y]}, {0, :y}}, {{_, _, ["foo", :x]}, {0, :x}}]} =
               escape(:where, quote do [x: ^"foo", y: ^"bar"] end, 0, [x: 0], __ENV__)
     end

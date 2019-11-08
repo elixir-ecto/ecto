@@ -60,25 +60,25 @@ defmodule Mix.Tasks.Ecto.Drop do
 
       if skip_safety_warnings?() or
          opts[:force] or
-         Mix.shell.yes?("Are you sure you want to drop the database for repo #{inspect repo}?") do
+         Mix.shell().yes?("Are you sure you want to drop the database for repo #{inspect repo}?") do
         drop_database(repo, opts)
       end
     end
   end
 
   defp skip_safety_warnings? do
-    Mix.Project.config[:start_permanent] != true
+    Mix.Project.config()[:start_permanent] != true
   end
 
   defp drop_database(repo, opts) do
     case repo.__adapter__.storage_down(repo.config) do
       :ok ->
         unless opts[:quiet] do
-          Mix.shell.info "The database for #{inspect repo} has been dropped"
+          Mix.shell().info "The database for #{inspect repo} has been dropped"
         end
       {:error, :already_down} ->
         unless opts[:quiet] do
-          Mix.shell.info "The database for #{inspect repo} has already been dropped"
+          Mix.shell().info "The database for #{inspect repo} has already been dropped"
         end
       {:error, term} when is_binary(term) ->
         Mix.raise "The database for #{inspect repo} couldn't be dropped: #{term}"

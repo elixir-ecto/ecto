@@ -11,14 +11,14 @@ defmodule Ecto.Query.Builder.DistinctTest do
       assert {true, {[], :acc}} ==
              escape(true, {[], :acc}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.y] end), {[], :acc}} ==
-             escape(quote do x.y end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.y()] end), {[], :acc}} ==
+             escape(quote do x.y() end, {[], :acc}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.x, asc: &1.y] end), {[], :acc}} ==
-             escape(quote do [x.x, y.y] end, {[], :acc}, [x: 0, y: 1], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.x(), asc: &1.y()] end), {[], :acc}} ==
+             escape(quote do [x.x(), y.y()] end, {[], :acc}, [x: 0, y: 1], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.x, desc: &1.y] end), {[], :acc}} ==
-             escape(quote do [x.x, desc: y.y] end, {[], :acc}, [x: 0, y: 1], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.x(), desc: &1.y()] end), {[], :acc}} ==
+             escape(quote do [x.x(), desc: y.y()] end, {[], :acc}, [x: 0, y: 1], __ENV__)
 
       import Kernel, except: [>: 2]
       assert {Macro.escape(quote do [asc: 1 > 2] end), {[], :acc}} ==

@@ -8,16 +8,16 @@ defmodule Ecto.Query.Builder.WindowsTest do
 
   describe "escape" do
     test "handles expressions and params" do
-      assert {Macro.escape(quote do [partition_by: [&0.y]] end), [], {[], :acc}} ==
-             escape(quote do [partition_by: x.y] end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [partition_by: [&0.y()]] end), [], {[], :acc}} ==
+             escape(quote do [partition_by: x.y()] end, {[], :acc}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [partition_by: [&0.y]] end), [], {[], :acc}} ==
+      assert {Macro.escape(quote do [partition_by: [&0.y()]] end), [], {[], :acc}} ==
              escape(quote do [partition_by: :y] end, {[], :acc}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [order_by: [asc: &0.y]] end), [], {[], :acc}} ==
-             escape(quote do [order_by: x.y] end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [order_by: [asc: &0.y()]] end), [], {[], :acc}} ==
+             escape(quote do [order_by: x.y()] end, {[], :acc}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [order_by: [asc: &0.y]] end), [], {[], :acc}} ==
+      assert {Macro.escape(quote do [order_by: [asc: &0.y()]] end), [], {[], :acc}} ==
              escape(quote do [order_by: :y] end, {[], :acc}, [x: 0], __ENV__)
     end
 

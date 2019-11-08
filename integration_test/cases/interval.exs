@@ -250,7 +250,7 @@ defmodule Ecto.Integration.IntervalTest do
   end
 
   test "from_now" do
-    current = DateTime.utc_now.year
+    current = DateTime.utc_now().year
     dec = Decimal.new(5)
     assert [%{year: year}] = TestRepo.all(from p in Post, select: from_now(5, "year"))
     assert year > current
@@ -265,7 +265,7 @@ defmodule Ecto.Integration.IntervalTest do
   end
 
   test "ago" do
-    current = DateTime.utc_now.year
+    current = DateTime.utc_now().year
     dec = Decimal.new(5)
     assert [%{year: year}] = TestRepo.all(from p in Post, select: ago(5, "year"))
     assert year < current

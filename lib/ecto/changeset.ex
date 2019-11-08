@@ -386,7 +386,7 @@ defmodule Ecto.Changeset do
   end
 
   def change(%{__struct__: struct} = data, changes) when is_map(changes) or is_list(changes) do
-    types = struct.__changeset__
+    types = struct.__changeset__()
     {changes, errors, valid?} = get_changed(data, types, %{}, changes, [], true)
     %Changeset{valid?: valid?, data: data, changes: changes,
                errors: errors, types: types}
@@ -480,7 +480,7 @@ defmodule Ecto.Changeset do
   end
 
   def cast(%{__struct__: module} = data, params, permitted, opts) do
-    cast(data, module.__changeset__, %{}, params, permitted, opts)
+    cast(data, module.__changeset__(), %{}, params, permitted, opts)
   end
 
   defp cast(%{} = data, %{} = types, %{} = changes, :invalid, permitted, opts) when is_list(permitted) do
@@ -813,7 +813,7 @@ defmodule Ecto.Changeset do
         module.changeset(struct, params)
       rescue
         e in UndefinedFunctionError ->
-          case System.stacktrace do
+          case System.stacktrace() do
             [{^module, :changeset, args_or_arity, _}] when args_or_arity == 2
                                                       when length(args_or_arity) == 2 ->
               raise ArgumentError, """

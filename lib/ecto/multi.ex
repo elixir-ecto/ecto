@@ -51,7 +51,7 @@ defmodule Ecto.Multi do
         alias Ecto.Multi
 
         def reset(account, params) do
-          Multi.new
+          Multi.new()
           |> Multi.update(:account, Account.password_reset_changeset(account, params))
           |> Multi.insert(:log, Log.password_reset_changeset(account, params))
           |> Multi.delete_all(:sessions, Ecto.assoc(account, :sessions))
@@ -116,7 +116,7 @@ defmodule Ecto.Multi do
   alias __MODULE__
   alias Ecto.Changeset
 
-  defstruct operations: [], names: MapSet.new
+  defstruct operations: [], names: MapSet.new()
 
   @type changes :: map
   @type run :: ((Ecto.Repo.t, changes) -> {:ok | :error, any}) | {module, atom, [any]}
@@ -139,7 +139,7 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> Ecto.Multi.new |> Ecto.Multi.to_list
+      iex> Ecto.Multi.new() |> Ecto.Multi.to_list()
       []
 
   """
@@ -155,8 +155,8 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> lhs = Ecto.Multi.new |> Ecto.Multi.run(:left, fn _, changes -> {:ok, changes} end)
-      iex> rhs = Ecto.Multi.new |> Ecto.Multi.run(:right, fn _, changes -> {:error, changes} end)
+      iex> lhs = Ecto.Multi.new() |> Ecto.Multi.run(:left, fn _, changes -> {:ok, changes} end)
+      iex> rhs = Ecto.Multi.new() |> Ecto.Multi.run(:right, fn _, changes -> {:error, changes} end)
       iex> Ecto.Multi.append(lhs, rhs) |> Ecto.Multi.to_list |> Keyword.keys
       [:left, :right]
 
@@ -173,8 +173,8 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> lhs = Ecto.Multi.new |> Ecto.Multi.run(:left, fn _, changes -> {:ok, changes} end)
-      iex> rhs = Ecto.Multi.new |> Ecto.Multi.run(:right, fn _, changes -> {:error, changes} end)
+      iex> lhs = Ecto.Multi.new() |> Ecto.Multi.run(:left, fn _, changes -> {:ok, changes} end)
+      iex> rhs = Ecto.Multi.new() |> Ecto.Multi.run(:right, fn _, changes -> {:error, changes} end)
       iex> Ecto.Multi.prepend(lhs, rhs) |> Ecto.Multi.to_list |> Keyword.keys
       [:right, :left]
 
@@ -612,7 +612,7 @@ defmodule Ecto.Multi do
   defp apply_run_fun(fun, repo, acc), do: apply(fun, [repo, acc])
 
   defp merge_results(changes, new_changes, names) do
-    new_names = new_changes |> Map.keys |> MapSet.new
+    new_names = new_changes |> Map.keys |> MapSet.new()
     case MapSet.intersection(names, new_names) |> MapSet.to_list do
       [] ->
         {Map.merge(changes, new_changes), MapSet.union(names, new_names)}

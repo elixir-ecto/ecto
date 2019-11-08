@@ -8,11 +8,11 @@ defmodule Ecto.Query.Builder.GroupByTest do
 
   describe "escape" do
     test "handles expressions and params" do
-      assert {Macro.escape(quote do [&0.y] end), {[], :acc}} ==
-             escape(:group_by, quote do x.y end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [&0.y()] end), {[], :acc}} ==
+             escape(:group_by, quote do x.y() end, {[], :acc}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [&0.x, &1.y] end), {[], :acc}} ==
-             escape(:group_by, quote do [x.x, y.y] end, {[], :acc}, [x: 0, y: 1], __ENV__)
+      assert {Macro.escape(quote do [&0.x(), &1.y()] end), {[], :acc}} ==
+             escape(:group_by, quote do [x.x(), y.y()] end, {[], :acc}, [x: 0, y: 1], __ENV__)
 
       import Kernel, except: [>: 2]
       assert {Macro.escape(quote do [1 > 2] end), {[], :acc}} ==

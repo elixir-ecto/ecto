@@ -36,7 +36,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
         [_ | _] -> Mix.raise "ecto.gen.repo expects a single repository to be given"
       end
 
-    config      = Mix.Project.config
+    config      = Mix.Project.config()
     underscored = Macro.underscore(inspect(repo))
 
     base = Path.basename(underscored)
@@ -53,7 +53,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
         check = String.contains?(contents, "import Config")
         config_first_line = get_first_config_line(check) <> "\n"
         new_contents = config_first_line <> "\n" <> config_template(opts)
-        Mix.shell.info [:green, "* updating ", :reset, "config/config.exs"]
+        Mix.shell().info [:green, "* updating ", :reset, "config/config.exs"]
         File.write! "config/config.exs", String.replace(contents, config_first_line, new_contents)
       {:error, _} ->
         config_first_line = Config |> Code.ensure_loaded?() |> get_first_config_line()
@@ -62,7 +62,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
     open?("config/config.exs")
 
-    Mix.shell.info """
+    Mix.shell().info """
     Don't forget to add your new repo to your supervision tree
     (typically in lib/#{app}/application.ex):
 

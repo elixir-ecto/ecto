@@ -1145,7 +1145,7 @@ defmodule Ecto.RepoTest do
 
     test "keeps the proper repo in  multi" do
       fun = fn repo, _changes -> {:ok, repo} end
-      multi = Ecto.Multi.new |> Ecto.Multi.run(:run, fun)
+      multi = Ecto.Multi.new() |> Ecto.Multi.run(:run, fun)
       assert {:ok, changes} = TestRepo.transaction(multi)
       assert changes.run == TestRepo
     end

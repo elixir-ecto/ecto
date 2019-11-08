@@ -10,8 +10,8 @@ defmodule Ecto.Query.Builder.UpdateTest do
       assert escape(quote do [set: [foo: 1]] end, [x: 0], __ENV__) |> elem(0) ==
              [set: [foo: {:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: 1, type: {0, :foo}]}]}]]
 
-      assert escape(quote do [set: [foo: x.bar]] end, [x: 0], __ENV__) |> elem(0) ==
-             Macro.escape(quote do [set: [foo: &0.bar]] end)
+      assert escape(quote do [set: [foo: x.bar()]] end, [x: 0], __ENV__) |> elem(0) ==
+             Macro.escape(quote do [set: [foo: &0.bar()]] end)
     end
 
     test "performs compile time interpolation" do

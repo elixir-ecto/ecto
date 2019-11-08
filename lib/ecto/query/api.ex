@@ -229,7 +229,7 @@ defmodule Ecto.Query.API do
 
       # Get all items published since the last month
       from p in Post, where: p.published_at >
-                             datetime_add(^NaiveDateTime.utc_now, -1, "month")
+                             datetime_add(^NaiveDateTime.utc_now(), -1, "month")
 
   In the example above, we used `datetime_add/3` to subtract one month
   from the current datetime and compared it with the `p.published_at`.

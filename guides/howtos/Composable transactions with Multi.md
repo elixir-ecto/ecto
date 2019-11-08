@@ -87,7 +87,7 @@ john_update =
     where: [id: ^john.id],
     update: [inc: [balance: -10]]
 
-Ecto.Multi.new
+Ecto.Multi.new()
 |> Ecto.Multi.update_all(:mary, mary_update)
 |> Ecto.Multi.update_all(:john, john_update)
 ```
@@ -226,7 +226,7 @@ Now, whenever we need to introduce a post with tags, we can create a multi that 
 alias MyApp.Tag
 
 def insert_or_update_post_with_tags(post, params) do
-  Ecto.Multi.new
+  Ecto.Multi.new()
   |> Ecto.Multi.run(:tags, fn _, changes ->
     insert_and_get_all_tags(changes, params)
   end)

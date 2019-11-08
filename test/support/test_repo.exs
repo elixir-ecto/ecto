@@ -34,8 +34,8 @@ defmodule Ecto.TestAdapter do
   def dumpers(_primitive, type), do: [type]
 
   def autogenerate(:id), do: nil
-  def autogenerate(:embed_id), do: Ecto.UUID.autogenerate
-  def autogenerate(:binary_id), do: Ecto.UUID.bingenerate
+  def autogenerate(:embed_id), do: Ecto.UUID.autogenerate()
+  def autogenerate(:binary_id), do: Ecto.UUID.bingenerate()
 
   ## Queryable
 
