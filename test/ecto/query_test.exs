@@ -56,6 +56,8 @@ defmodule Ecto.QueryTest do
   end
 
   describe "from" do
+    @compile {:no_warn_undefined, NotASchema}
+
     test "does not allow non-queryable" do
       assert_raise Protocol.UndefinedError, fn ->
         from(p in 123, []) |> select([p], p.title)
