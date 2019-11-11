@@ -86,7 +86,7 @@ defmodule Ecto.Query.SubqueryTest do
 
     assert query.select.fields == [
       {{:., [type: :string], [{:&, [], [0]}, :t]}, [], []},
-      {{:., [type: :any], [{:&, [], [0]}, :l]}, [], []}
+      {{:., [type: :binary], [{:&, [], [0]}, :l]}, [], []}
     ]
 
     assert [{:t, _}, {:l, "literal"}] = query.from.source.query.select.fields

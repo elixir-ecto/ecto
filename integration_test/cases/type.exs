@@ -374,6 +374,29 @@ defmodule Ecto.Integration.TypeTest do
     assert [^decimal] = TestRepo.all(from p in Post, select: type(sum(p.cost), :decimal))
   end
 
+  test "unions with literals" do
+    TestRepo.insert!(%Post{})
+    TestRepo.insert!(%Post{})
+
+    query1 = from(p in Post, select: %{n: 1})
+    query2 = from(p in Post, select: %{n: 2})
+
+    assert TestRepo.all(union_all(query1, ^query2)) ==
+            [%{n: 1}, %{n: 1}, %{n: 2}, %{n: 2}]
+
+    query1 = from(p in Post, select: %{n: 1.0})
+    query2 = from(p in Post, select: %{n: 2.0})
+
+    assert TestRepo.all(union_all(query1, ^query2)) ==
+            [%{n: 1.0}, %{n: 1.0}, %{n: 2.0}, %{n: 2.0}]
+
+    query1 = from(p in Post, select: %{n: "foo"})
+    query2 = from(p in Post, select: %{n: "bar"})
+
+    assert TestRepo.all(union_all(query1, ^query2)) ==
+            [%{n: "foo"}, %{n: "foo"}, %{n: "bar"}, %{n: "bar"}]
+  end
+
   test "schemaless types" do
     TestRepo.insert!(%Post{visits: 123})
     assert [123] = TestRepo.all(from p in "posts", select: type(p.visits, :integer))
