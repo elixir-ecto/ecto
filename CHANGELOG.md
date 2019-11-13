@@ -58,6 +58,7 @@ v3.2 requires Elixir v1.6+.
   * [Ecto.Repo] Merge options given to the repository into the changeset `repo_opts` and assign it back to make it available down the chain
   * [Ecto.Repo] Add `prepare_query/3` callback that is invoked before query operations
   * [Ecto.Repo] Support `:returning` option in `Ecto.Repo.update/2`
+  * [Ecto.Repo] Support passing a one arity function to `Ecto.Repo.transaction/2`, where the argument is the current repo
   * [Ecto.Type] Add a new `embed_as/1` callback to `Ecto.Type` that allows adapters to control embedding behaviour
   * [Ecto.Type] Add `use Ecto.Type` for convenience that implements the new required callbacks
 
