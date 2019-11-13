@@ -1509,6 +1509,32 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "expected action to be an atom, got: #{inspect action}"
   end
 
+  @doc """
+  Applies the changeset action if the changes are valid or raises an error.
+
+  ## Examples
+
+      iex> changeset = change(%Post{author: "bar"}, %{title: "foo"})
+      iex> apply_action!(changeset, :update)
+      %Post{author: "bar", title: "foo"}
+
+      iex> changeset = change(%Post{author: "bar"}, %{title: :bad})
+      iex> apply_action!(changeset, :update)
+      ** (Ecto.InvalidChangesetError) could not perform update because changeset is invalid.
+
+  See `apply_action/2` for more information.
+  """
+  @spec apply_action!(t, atom) :: Ecto.Schema.t() | data
+  def apply_action!(%Changeset{} = changeset, action) do
+    case apply_action(changeset, action) do
+      {:ok, data} ->
+        data
+
+      {:error, changeset} ->
+        raise Ecto.InvalidChangesetError, action: action, changeset: changeset
+    end
+  end
+
   ## Validations
 
   @doc ~S"""
