@@ -737,34 +737,55 @@ defmodule Ecto.ChangesetTest do
     assert changed_post.title == "foo"
   end
 
-  test "apply_action/2 with valid changeset" do
-    post = %Post{}
-    assert post.title == ""
+  describe "apply_action/2" do
+    test "valid changeset" do
+      post = %Post{}
+      assert post.title == ""
 
-    changeset = changeset(post, %{"title" => "foo"})
-    assert changeset.valid?
-    assert {:ok, changed_post} = apply_action(changeset, :update)
+      changeset = changeset(post, %{"title" => "foo"})
+      assert changeset.valid?
+      assert {:ok, changed_post} = apply_action(changeset, :update)
 
-    assert changed_post.__struct__ == post.__struct__
-    assert changed_post.title == "foo"
+      assert changed_post.__struct__ == post.__struct__
+      assert changed_post.title == "foo"
+    end
+
+    test "invalid changeset" do
+      changeset =
+        %Post{}
+        |> changeset(%{"title" => "foo"})
+        |> validate_length(:title, min: 10)
+
+      refute changeset.valid?
+      changeset_new_action = %Ecto.Changeset{changeset | action: :update}
+      assert {:error, ^changeset_new_action} = apply_action(changeset, :update)
+    end
+
+    test "invalid action" do
+      assert_raise ArgumentError, ~r/expected action to be an atom/, fn ->
+        %Post{}
+        |> changeset(%{})
+        |> apply_action("invalid_action")
+      end
+    end
   end
 
-  test "apply_action/2 with invalid changeset" do
-    changeset =
-      %Post{}
-      |> changeset(%{"title" => "foo"})
-      |> validate_length(:title, min: 10)
+  describe "apply_action!/2" do
+    test "valid changeset" do
+      changeset = changeset(%Post{}, %{"title" => "foo"})
+      post = apply_action!(changeset, :update)
+      assert post.title == "foo"
+    end
 
-    refute changeset.valid?
-    changeset_new_action = %Ecto.Changeset{changeset | action: :update}
-    assert {:error, ^changeset_new_action} = apply_action(changeset, :update)
-  end
+    test "invalid changeset" do
+      changeset =
+        %Post{}
+        |> changeset(%{"title" => "foo"})
+        |> validate_length(:title, min: 10)
 
-  test "apply_action/2 with invalid action" do
-    assert_raise ArgumentError, ~r/expected action to be an atom/, fn ->
-      %Post{}
-      |> changeset(%{})
-      |> apply_action("invalid_action")
+      assert_raise Ecto.InvalidChangesetError, fn ->
+        apply_action!(changeset, :update)
+      end
     end
   end
 
