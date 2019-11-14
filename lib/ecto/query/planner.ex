@@ -437,12 +437,14 @@ defmodule Ecto.Query.Planner do
                   child_sources ++ tail_sources, counter + 1, offset + length(child_sources), adapter)
   end
 
-  defp plan_joins([%JoinExpr{source: %Ecto.Query{} = join_query, qual: qual, on: on} = join|t],
+  defp plan_joins([%JoinExpr{source: %Ecto.Query{} = join_query, qual: qual, on: on, prefix: prefix} = join|t],
                       query, joins, sources, tail_sources, counter, offset, adapter) do
     case join_query do
       %{order_bys: [], limit: nil, offset: nil, group_bys: [], joins: [],
         havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
-        {from, source} = plan_source(join_query, join_query.from, adapter)
+        join_query = rewrite_prefix(join_query, query.prefix)
+        from = rewrite_prefix(join_query.from, prefix)
+        {from, source} = plan_source(join_query, from, adapter)
         [join] = attach_on(query_to_joins(qual, from.source, join_query, counter), on)
         plan_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
       _ ->
