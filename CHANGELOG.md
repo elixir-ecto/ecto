@@ -6,13 +6,18 @@
 
   * [Ecto.Repo] Do not wrap schema operations in a transaction if already inside a transaction. We have also removed the **private** option called `:skip_transaction`
 
+## v3.2.5 (2019-11-03)
+
+### Bug fixes
+
+  * [Ecto.Query] Fix a bug where executing some queries would leak the `{:maybe, ...}` type
+
 ## v3.2.4 (2019-11-02)
 
 ### Bug fixes
 
   * [Ecto.Query] Improve error message on invalid join binding
   * [Ecto.Query] Make sure the `:prefix` option in `:join` also applies to through associations
-  * [Ecto.Query] Make sure the `:prefix` option in `:from`/`:join` also cascades to subqueries
   * [Ecto.Query] Invoke custom type when loading aggregations from the database (but fallback to database value if it can't be cast)
   * [mix ecto.gen.repo] Support Elixir v1.9 style configs
 
