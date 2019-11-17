@@ -42,6 +42,21 @@ defmodule Ecto.Association do
   alias Ecto.Query.{BooleanExpr, QueryExpr, FromExpr}
 
   @doc """
+  Helper to check if a queryable is compiled.
+  """
+  def ensure_compiled(queryable, env) do
+    if not is_atom(queryable) or queryable in env.context_modules do
+      :skip
+    else
+      case Code.ensure_compiled(queryable) do
+        {:module, _} -> :compiled
+        {:error, :unavailable} -> :skip
+        {:error, _} -> :not_found
+      end
+    end
+  end
+
+  @doc """
   Builds the association struct.
 
   The struct must be defined in the module that implements the
@@ -523,10 +538,12 @@ defmodule Ecto.Association.Has do
 
   @doc false
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
+    compiled = Ecto.Association.ensure_compiled(queryable, env)
+
     cond do
-      not is_atom(queryable) or queryable in env.context_modules ->
+      compiled == :skip ->
         :ok
-      not Code.ensure_compiled?(queryable) ->
+      compiled == :not_found ->
         {:error, "associated schema #{inspect queryable} does not exist"}
       not function_exported?(queryable, :__schema__, 2) ->
         {:error, "associated module #{inspect queryable} is not an Ecto schema"}
@@ -821,10 +838,12 @@ defmodule Ecto.Association.BelongsTo do
 
   @doc false
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
+    compiled = Ecto.Association.ensure_compiled(queryable, env)
+
     cond do
-      not is_atom(queryable) or queryable in env.context_modules ->
+      compiled == :skip ->
         :ok
-      not Code.ensure_compiled?(queryable) ->
+      compiled == :not_found ->
         {:error, "associated schema #{inspect queryable} does not exist"}
       not function_exported?(queryable, :__schema__, 2) ->
         {:error, "associated module #{inspect queryable} is not an Ecto schema"}
@@ -976,16 +995,19 @@ defmodule Ecto.Association.ManyToMany do
 
   @doc false
   def after_compile_validation(%{queryable: queryable, join_through: join_through}, env) do
+    compiled = Ecto.Association.ensure_compiled(queryable, env)
+    join_compiled = Ecto.Association.ensure_compiled(join_through, env)
+
     cond do
-      not is_atom(queryable) or queryable in env.context_modules ->
+      compiled == :skip ->
         :ok
-      not Code.ensure_compiled?(queryable) ->
+      compiled == :not_found ->
         {:error, "associated schema #{inspect queryable} does not exist"}
       not function_exported?(queryable, :__schema__, 2) ->
         {:error, "associated module #{inspect queryable} is not an Ecto schema"}
-      not is_atom(join_through) ->
+      join_compiled == :skip ->
         :ok
-      not Code.ensure_compiled?(join_through) ->
+      join_compiled == :not_found ->
         {:error, ":join_through schema #{inspect join_through} does not exist"}
       not function_exported?(join_through, :__schema__, 2) ->
         {:error, ":join_through module #{inspect join_through} is not an Ecto schema"}
