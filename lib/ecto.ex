@@ -28,13 +28,8 @@ defmodule Ecto do
 
   If you want to quickly check a sample application using Ecto, please check
   the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and
-  the accompanying sample application.
-
-  After exploring the documentation and guides, consider checking out the
-  ["The Little Ecto CookBook"](https://pages.plataformatec.com.br/the-little-ecto-cookbook)
-  free ebook to learn more about many features in Ecto 2.1 such as `many_to_many`,
-  schemaless queries, concurrent testing and more. Note the book still applies
-  to Ecto 3.0 as a whole, as the new features in Ecto 2.1 still exist in Ecto 3.0.
+  the accompanying sample application. [Ecto's README](https://github.com/elixir-ecto/ecto)
+  also links to other resources.
 
   In the following sections, we will provide an overview of those components and
   how they interact with each other. Feel free to access their respective module
