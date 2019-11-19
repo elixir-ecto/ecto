@@ -31,7 +31,7 @@ defmodule Ecto do
   the accompanying sample application.
 
   After exploring the documentation and guides, consider checking out the
-  ["The Little Ecto CookBook](https://pages.plataformatec.com.br/the-little-ecto-cookbook)
+  ["The Little Ecto CookBook"](https://pages.plataformatec.com.br/the-little-ecto-cookbook)
   free ebook to learn more about many features in Ecto 2.1 such as `many_to_many`,
   schemaless queries, concurrent testing and more. Note the book still applies
   to Ecto 3.0 as a whole, as the new features in Ecto 2.1 still exist in Ecto 3.0.
