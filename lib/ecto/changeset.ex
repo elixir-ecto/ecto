@@ -2512,6 +2512,21 @@ defmodule Ecto.Changeset do
       # In the changeset function
       cast(user, params, [:email])
       |> unique_constraint(:email, name: :users_email_company_id_index)
+  
+  ### Partitioning
+  If your table is partitioned, then your unique index might look different
+  per partition - Postgres adds p<number> to the middle of your key, like:
+  
+      users_p0_email_key
+      users_p1_email_key
+      ...
+      users_p99_email_key
+      
+  In this case you can use the name and suffix options together to match on
+  these dynamic indexes, like:
+      
+      cast(user, params, [:email])
+      |> unique_constraint(:email, name: :email_key, match: :suffix)
 
   ## Case sensitivity
 
