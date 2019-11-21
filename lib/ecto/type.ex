@@ -46,10 +46,9 @@ defmodule Ecto.Type do
         # Everything else is a failure though
         def cast(_), do: :error
 
-        # When loading data from the database, we are guaranteed to
-        # receive a map (as databases are strict) and we will
-        # just put the data back into an URI struct to be stored
-        # in the loaded schema struct.
+        # When loading data from the database, as long as it's a map,
+        # we just put the data back into an URI struct to be stored in
+        # the loaded schema struct.
         def load(data) when is_map(data) do
           data =
             for {key, val} <- data do
