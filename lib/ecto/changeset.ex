@@ -2514,6 +2514,7 @@ defmodule Ecto.Changeset do
       |> unique_constraint(:email, name: :users_email_company_id_index)
   
   ### Partitioning
+
   If your table is partitioned, then your unique index might look different
   per partition - Postgres adds p<number> to the middle of your key, like:
   
