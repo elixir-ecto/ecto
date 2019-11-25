@@ -1031,7 +1031,7 @@ defmodule Ecto.Query do
   recursive CTE.
 
   **IMPORTANT!** Beware of using CTEs. In raw SQL, CTEs can be
-  used as a mechanisim to organize queries, but said mechanism
+  used as a mechanism to organize queries, but said mechanism
   has no purpose in Ecto since Ecto queries are composable by
   definition. In other words, if you need to break a large query
   into parts, use all of the functionality in Elixir and in this
