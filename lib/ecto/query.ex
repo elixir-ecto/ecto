@@ -749,7 +749,7 @@ defmodule Ecto.Query do
   Notice we have created a `p` variable to reference the query's
   original data source. This assumes that the original query
   only had one source. When the given query has more than one source,
-  positonal or named bindings may be used to access the additional sources.
+  positional or named bindings may be used to access the additional sources.
 
       def published_multi(query) do
         from [p,o] in query,
