@@ -161,6 +161,7 @@ defmodule Ecto.Repo do
       @default_dynamic_repo opts[:default_dynamic_repo] || __MODULE__
       @read_only opts[:read_only] || false
       @before_compile adapter
+      @aggregates [:count, :avg, :max, :min, :sum]
 
       def config do
         {:ok, config} = Ecto.Repo.Supervisor.runtime_config(:runtime, __MODULE__, @otp_app, [])
@@ -308,8 +309,20 @@ defmodule Ecto.Repo do
           Ecto.Repo.Queryable.one!(get_dynamic_repo(), queryable, opts)
         end
 
-        def aggregate(queryable, aggregate, field, opts \\ [])
-            when aggregate in [:count, :avg, :max, :min, :sum] and is_atom(field) do
+        def aggregate(queryable, aggregate, opts \\ [])
+
+        def aggregate(queryable, aggregate, opts)
+            when aggregate in [:count] and is_list(opts) do
+          Ecto.Repo.Queryable.aggregate(get_dynamic_repo(), queryable, aggregate, opts)
+        end
+
+        def aggregate(queryable, aggregate, field)
+            when aggregate in @aggregates and is_atom(field) do
+          Ecto.Repo.Queryable.aggregate(get_dynamic_repo(), queryable, aggregate, field, [])
+        end
+
+        def aggregate(queryable, aggregate, field, opts)
+            when aggregate in @aggregates and is_atom(field) and is_list(opts) do
           Ecto.Repo.Queryable.aggregate(get_dynamic_repo(), queryable, aggregate, field, opts)
         end
 
@@ -491,7 +504,7 @@ defmodule Ecto.Repo do
 
   ## Ecto.Adapter.Queryable
 
-  @optional_callbacks get: 3, get!: 3, get_by: 3, get_by!: 3, aggregate: 4, exists?: 2,
+  @optional_callbacks get: 3, get!: 3, get_by: 3, get_by!: 3, aggregate: 3, aggregate: 4, exists?: 2,
                       one: 2, one!: 2, preload: 3, all: 2, stream: 2, update_all: 3, delete_all: 2
 
   @doc """
@@ -606,12 +619,11 @@ defmodule Ecto.Repo do
             ) :: Ecto.Schema.t()
 
   @doc """
-  Calculate the given `aggregate` over the given `field`.
+  Calculate the given `aggregate`.
 
   If the query has a limit, offset or distinct set, it will be
   automatically wrapped in a subquery in order to return the
-  proper result. The `field` may be set to `:*`, to select on
-  entries overall instead of a given field.
+  proper result.
 
   Any preload or select in the query will be ignored in favor of
   the column being aggregated.
@@ -628,6 +640,27 @@ defmodule Ecto.Repo do
       `Ecto.Query` documentation.
 
   See the "Shared options" section at the module documentation for more options.
+
+  ## Examples
+
+      # Returns the number of visits per blog post
+      Repo.aggregate(Post, :count)
+
+      # Returns the number of visits per blog post in the "private" schema path
+      # (in Postgres) or database (in MySQL)
+      Repo.aggregate(Post, :count, prefix: "private")
+
+  """
+  @callback aggregate(
+              queryable :: Ecto.Queryable.t(),
+              aggregate :: :count,
+              opts :: Keyword.t()
+            ) :: term | nil
+
+  @doc """
+  Calculate the given `aggregate` over the given `field`.
+
+  See `aggregate/2` for general considerations and options.
 
   ## Examples
 

@@ -74,6 +74,10 @@ defmodule Ecto.Repo.Queryable do
     one!(name, query_for_get_by(queryable, clauses), opts)
   end
 
+  def aggregate(name, queryable, aggregate, opts) do
+    one!(name, query_for_aggregate(queryable, aggregate), opts)
+  end
+
   def aggregate(name, queryable, aggregate, field, opts) do
     one!(name, query_for_aggregate(queryable, aggregate, field), opts)
   end
@@ -406,7 +410,7 @@ defmodule Ecto.Repo.Queryable do
     Query.where(queryable, [], ^Enum.to_list(clauses))
   end
 
-  defp query_for_aggregate(queryable, aggregate, :*) do
+  defp query_for_aggregate(queryable, aggregate) do
     query =
       case prepare_for_aggregate(queryable) do
         %{distinct: nil, limit: nil, offset: nil} = query ->
