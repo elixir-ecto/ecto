@@ -2008,7 +2008,7 @@ defmodule Ecto.Schema do
       Ecto.Type.primitive?(type) ->
         type
 
-      is_atom(type) and Code.ensure_compiled?(type) and function_exported?(type, :type, 0) ->
+      is_atom(type) and Code.ensure_compiled(type) == {:module, type} and function_exported?(type, :type, 0) ->
         type
 
       is_atom(type) and function_exported?(type, :__schema__, 1) ->
