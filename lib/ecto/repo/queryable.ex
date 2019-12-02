@@ -407,16 +407,12 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp query_for_aggregate(queryable, aggregate, :*) do
-    query = %{Queryable.to_query(queryable) | preloads: [], assocs: []}
     query =
-      case query do
-        %{group_bys: [_ | _]} ->
-          raise Ecto.QueryError, message: "cannot aggregate on query with group_by", query: query
-
-        %{distinct: nil, limit: nil, offset: nil} ->
+      case prepare_for_aggregate(queryable) do
+        %{distinct: nil, limit: nil, offset: nil} = query ->
           %{query | order_bys: []}
 
-        _ ->
+        query ->
           query
           |> Query.subquery()
           |> Queryable.Ecto.SubQuery.to_query()
@@ -427,18 +423,14 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp query_for_aggregate(queryable, aggregate, field) do
-    query = %{Queryable.to_query(queryable) | preloads: [], assocs: []}
     ast = field(0, field)
 
     query =
-      case query do
-        %{group_bys: [_ | _]} ->
-          raise Ecto.QueryError, message: "cannot aggregate on query with group_by", query: query
-
-        %{distinct: nil, limit: nil, offset: nil} ->
+      case prepare_for_aggregate(queryable) do
+        %{distinct: nil, limit: nil, offset: nil} = query ->
           %{query | order_bys: []}
 
-        _ ->
+        query ->
           select = %SelectExpr{expr: ast, file: __ENV__.file, line: __ENV__.line}
 
           %{query | select: select}
@@ -448,6 +440,16 @@ defmodule Ecto.Repo.Queryable do
 
     select = %SelectExpr{expr: {aggregate, [], [ast]}, file: __ENV__.file, line: __ENV__.line}
     %{query | select: select}
+  end
+
+  defp prepare_for_aggregate(queryable) do
+    case %{Queryable.to_query(queryable) | preloads: [], assocs: []} do
+      %{group_bys: [_ | _]} = query ->
+        raise Ecto.QueryError, message: "cannot aggregate on query with group_by", query: query
+
+      %{} = query ->
+        query
+    end
   end
 
   defp field(ix, field) when is_integer(ix) and is_atom(field) do

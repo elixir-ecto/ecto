@@ -610,7 +610,8 @@ defmodule Ecto.Repo do
 
   If the query has a limit, offset or distinct set, it will be
   automatically wrapped in a subquery in order to return the
-  proper result.
+  proper result. The `field` may be set to `:*`, to select on
+  entries overall instead of a given field.
 
   Any preload or select in the query will be ignored in favor of
   the column being aggregated.
