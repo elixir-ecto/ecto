@@ -198,6 +198,10 @@ defmodule Ecto.RepoTest do
       TestRepo.aggregate(MySchema, :count, :id)
       assert_received {:all, query}
       assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, select: count(m0.id)>"
+
+      TestRepo.aggregate(MySchema, :count, :*)
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, select: count()>"
     end
 
     test "aggregates handle a prefix option" do

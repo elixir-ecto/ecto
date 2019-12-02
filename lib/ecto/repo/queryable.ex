@@ -406,6 +406,26 @@ defmodule Ecto.Repo.Queryable do
     Query.where(queryable, [], ^Enum.to_list(clauses))
   end
 
+  defp query_for_aggregate(queryable, aggregate, :*) do
+    query = %{Queryable.to_query(queryable) | preloads: [], assocs: []}
+    query =
+      case query do
+        %{group_bys: [_ | _]} ->
+          raise Ecto.QueryError, message: "cannot aggregate on query with group_by", query: query
+
+        %{distinct: nil, limit: nil, offset: nil} ->
+          %{query | order_bys: []}
+
+        _ ->
+          query
+          |> Query.subquery()
+          |> Queryable.Ecto.SubQuery.to_query()
+      end
+
+    select = %SelectExpr{expr: {aggregate, [], []}, file: __ENV__.file, line: __ENV__.line}
+    %{query | select: select}
+  end
+
   defp query_for_aggregate(queryable, aggregate, field) do
     query = %{Queryable.to_query(queryable) | preloads: [], assocs: []}
     ast = field(0, field)
