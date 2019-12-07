@@ -343,8 +343,8 @@ defmodule Ecto.Query.API do
   Allows a field to be dynamically accessed.
 
       def at_least_four(doors_or_tires) do
-          from c in Car,
-        where: field(c, ^doors_or_tires) >= 4
+        from c in Car,
+          where: field(c, ^doors_or_tires) >= 4
       end
 
   In the example above, both `at_least_four(:doors)` and `at_least_four(:tires)`
