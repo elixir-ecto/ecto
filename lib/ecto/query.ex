@@ -1786,7 +1786,7 @@ defmodule Ecto.Query do
   @doc """
   Preloads the associations into the result set.
 
-  Imagine you have an schema `Post` with a `has_many :comments`
+  Imagine you have a schema `Post` with a `has_many :comments`
   association and you execute the following query:
 
       Repo.all from p in Post, preload: [:comments]
