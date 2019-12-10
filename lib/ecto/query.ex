@@ -1035,7 +1035,7 @@ defmodule Ecto.Query do
   has no purpose in Ecto since Ecto queries are composable by
   definition. In other words, if you need to break a large query
   into parts, use all of the functionality in Elixir and in this
-  module to struture your code. Furthermore, breaking a query
+  module to structure your code. Furthermore, breaking a query
   into CTEs can negatively impact performance, as the database
   may not optimize efficiently across CTEs. The main use case
   for CTEs in Ecto is to provide recursive definitions, which
