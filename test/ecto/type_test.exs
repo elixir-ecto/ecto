@@ -498,6 +498,20 @@ defmodule Ecto.TypeTest do
       assert Ecto.Type.cast(:naive_datetime, %{year: 2015, month: 1, day: 23, hour: 23, minute: nil}) ==
              :error
 
+      assert Ecto.Type.cast(:naive_datetime, %{"year" => "", "month" => "", "day" => "",
+                                               "hour" => "23", "minute" => "50", "second" => "07"}) ==
+             :error
+
+      assert Ecto.Type.cast(:naive_datetime, %{year: nil, month: nil, day: nil, hour: 23, minute: 50, second: 07}) ==
+             :error
+
+      assert Ecto.Type.cast(:naive_datetime, %{"year" => "2015", "month" => "1", "day" => "23",
+                                               "hour" => "", "minute" => ""}) ==
+             :error
+
+      assert Ecto.Type.cast(:naive_datetime, %{year: 2015, month: 1, day: 23, hour: nil, minute: nil}) ==
+             :error
+
       assert Ecto.Type.cast(:naive_datetime, DateTime.from_unix!(10, :second)) ==
              {:ok, ~N[1970-01-01 00:00:10]}
 
