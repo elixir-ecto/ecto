@@ -818,6 +818,20 @@ defmodule Ecto.Repo do
   This callback is invoked for all query APIs, including the `stream`
   function, but it is not invoked for `insert_all` nor any of the
   schema functions.
+
+  ## Example
+      defmodule Repo do
+        use Ecto.Repo, otp_app: my_app, adapter: Ecto.Adapters.Postgres
+
+        require Ecto.Query
+
+        def prepare_query(op, %{from: %{source: {"posts", _}}} = query, opts) do
+          ammended_query = Ecto.Query.from(s in query, where: s.deleted == true)
+          {ammended_query, opts}
+        end
+
+        def prepare_query(op, query, opts), do: {query, opts}
+      end
   """
   @callback prepare_query(operation, query :: Ecto.Query.t(), opts :: Keyword.t()) ::
               {Ecto.Query.t(), Keyword.t()}
