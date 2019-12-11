@@ -123,10 +123,11 @@ defmodule Ecto.Repo do
   The `:measurements` map will include the following, all given in the
   `:native` time unit:
 
-    - `:queue_time` - the time spent waiting to check out a database connection
-    - `:query_time` - the time spent executing the query
-    - `:decode_time` - the time spent decoding the data received from the database
-    - `:total_time` - the sum of the other measurements
+    * `:idle_time` - the time the connection spent waiting before being checked out for the query
+    * `:queue_time` - the time spent waiting to check out a database connection
+    * `:query_time` - the time spent executing the query
+    * `:decode_time` - the time spent decoding the data received from the database
+    * `:total_time` - the sum of the other measurements
 
   All measurements are given in the `:native` time unit. You can read more
   about it in the docs for `System.convert_time_unit/3`.

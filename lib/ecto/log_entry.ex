@@ -1,5 +1,6 @@
 defmodule Ecto.LogEntry do
   @moduledoc false
+  # TODO: Remove me in future versions
   alias Ecto.LogEntry
 
   @type t :: %LogEntry{
