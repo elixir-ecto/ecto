@@ -1,12 +1,13 @@
 # Changelog for v3.x
 
-## v3.3.0-dev
+## v3.3.0 (2019-12-11)
 
 ### Enhancements
 
   * [Ecto.Adapter] Add `storage_status/1` callback to `Ecto.Adapters.Storage` behaviour
   * [Ecto.Changeset] Add `Ecto.Changeset.apply_action!/2`
   * [Ecto.Changeset] Remove actions restriction in `Ecto.Changeset.apply_action/2`
+  * [Ecto.Repo] Introduce `c:Ecto.Repo.aggregate/2`
   * [Ecto.Repo] Support `{:replace_all_except, fields}` in `:on_conflict`
 
 ### Bug fixes
