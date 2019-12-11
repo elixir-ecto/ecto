@@ -1890,7 +1890,7 @@ defmodule Ecto.Query do
       # Returns all posts, their associated comments, and the associated
       # likes for those comments.
       from(p in Post,
-        preload: [:comments, comments: :likes],
+        preload: [comments: :likes],
         select: p)
 
   ## Expressions examples
