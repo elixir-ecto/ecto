@@ -7,6 +7,7 @@
   * [Ecto.Adapter] Add `storage_status/1` callback to `Ecto.Adapters.Storage` behaviour
   * [Ecto.Changeset] Add `Ecto.Changeset.apply_action!/2`
   * [Ecto.Changeset] Remove actions restriction in `Ecto.Changeset.apply_action/2`
+  * [Ecto.Repo] Support `{:replace_all_except, fields}` in `:on_conflict`
 
 ### Bug fixes
 
@@ -14,6 +15,10 @@
   * [Ecto.Query] Make sure the `:prefix` option in `:join` also cascades to queries
   * [Ecto.Query] Use database returned values for literals. Previous Ecto versions knew literals from queries should not be discarded for combinations but, even if they were not discarded, we would ignore the values returned by the database
   * [Ecto.Repo] Do not wrap schema operations in a transaction if already inside a transaction. We have also removed the **private** option called `:skip_transaction`
+
+### Deprecations
+
+  * [Ecto.Repo] `:replace_all_except_primary_keys` is deprecated in favor of `{:replace_all_except, fields}` in `:on_conflict`
 
 ## v3.2.5 (2019-11-03)
 

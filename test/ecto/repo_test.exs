@@ -1005,9 +1005,9 @@ defmodule Ecto.RepoTest do
       end
     end
 
-    test "passes all fields except primary keys on replace_all_except_primary_keys" do
-      fields = [:x, :yyy, :z, :array, :map]
-      TestRepo.insert(%MySchema{id: 1}, on_conflict: :replace_all_except_primary_key)
+    test "passes all fields except given fields" do
+      fields = [:x, :yyy, :z, :map]
+      TestRepo.insert(%MySchema{id: 1}, on_conflict: {:replace_all_except, [:id, :array]})
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
     end
 

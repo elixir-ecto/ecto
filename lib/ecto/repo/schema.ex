@@ -582,9 +582,6 @@ defmodule Ecto.Repo.Schema do
       :nothing ->
         {:nothing, [], conflict_target}
 
-      :replace_all ->
-        {replace_all_fields!(:replace_all, schema), [], conflict_target}
-
       {:replace, keys} when is_list(keys) and conflict_target == [] ->
         raise ArgumentError, ":conflict_target option is required when :on_conflict is replace"
 
@@ -592,9 +589,16 @@ defmodule Ecto.Repo.Schema do
         fields = Enum.map(keys, &field_source!(schema, &1))
         {fields, [], conflict_target}
 
+      :replace_all ->
+        {replace_all_fields!(:replace_all, schema, []), [], conflict_target}
+
+      {:replace_all_except, fields} ->
+        {replace_all_fields!(:replace_all_except, schema, fields), [], conflict_target}
+
       :replace_all_except_primary_key ->
-        fields = replace_all_fields!(:replace_all_except_primary_key, schema)
-        {fields -- schema.__schema__(:primary_key), [], conflict_target}
+        IO.warn ":replace_all_except_primary_key is deprecated, please use {:replace_all_except, [...]} instead"
+        fields = replace_all_fields!(:replace_all_except_primary_key, schema, schema && schema.__schema__(:primary_key))
+        {fields, [], conflict_target}
 
       [_ | _] = on_conflict ->
         from = if schema, do: {source, schema}, else: source
@@ -609,12 +613,12 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp replace_all_fields!(kind, nil) do
+  defp replace_all_fields!(kind, nil, _to_remove) do
     raise ArgumentError, "cannot use #{inspect(kind)} on operations without a schema"
   end
 
-  defp replace_all_fields!(_kind, schema) do
-    Enum.map(schema.__schema__(:fields), &field_source!(schema, &1))
+  defp replace_all_fields!(_kind, schema, to_remove) do
+    Enum.map(schema.__schema__(:fields) -- to_remove, &field_source!(schema, &1))
   end
 
   defp field_source!(nil, field) do
