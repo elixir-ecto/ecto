@@ -819,19 +819,27 @@ defmodule Ecto.Repo do
   function, but it is not invoked for `insert_all` nor any of the
   schema functions.
 
-  ## Example
-      defmodule Repo do
-        use Ecto.Repo, otp_app: my_app, adapter: Ecto.Adapters.Postgres
+  ## Examples
 
-        require Ecto.Query
+  Let's say you want to filter out records that were "soft-deleted" (have `deleted_at`
+  column set) from all operations unless an admin is running the query; you can define
+  the callback like this:
 
-        def prepare_query(op, %{from: %{source: {"posts", _}}} = query, opts) do
-          ammended_query = Ecto.Query.from(s in query, where: s.deleted == true)
-          {ammended_query, opts}
+      @impl true
+      def prepare_query(_operation, query, opts) do
+        if opts[:admin] do
+          {query, opts}
+        else
+          query = from(x in query, where: is_nil(x.deleted_at))
+          {query, opts}
         end
-
-        def prepare_query(op, query, opts), do: {query, opts}
       end
+
+  And then execute the query:
+
+      Repo.all(query)              # only non-deleted records are returned
+      Repo.all(query, admin: true) # all records are returned
+
   """
   @callback prepare_query(operation, query :: Ecto.Query.t(), opts :: Keyword.t()) ::
               {Ecto.Query.t(), Keyword.t()}
