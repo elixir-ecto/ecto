@@ -818,6 +818,28 @@ defmodule Ecto.Repo do
   This callback is invoked for all query APIs, including the `stream`
   function, but it is not invoked for `insert_all` nor any of the
   schema functions.
+
+  ## Examples
+
+  Let's say you want to filter out records that were "soft-deleted" (have `deleted_at`
+  column set) from all operations unless an admin is running the query; you can define
+  the callback like this:
+
+      @impl true
+      def prepare_query(_operation, query, opts) do
+        if opts[:admin] do
+          {query, opts}
+        else
+          query = from(x in query, where: is_nil(x.deleted_at))
+          {query, opts}
+        end
+      end
+
+  And then execute the query:
+
+      Repo.all(query)              # only non-deleted records are returned
+      Repo.all(query, admin: true) # all records are returned
+
   """
   @callback prepare_query(operation, query :: Ecto.Query.t(), opts :: Keyword.t()) ::
               {Ecto.Query.t(), Keyword.t()}
