@@ -245,7 +245,6 @@ defmodule Ecto.Repo.Schema do
         embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :insert)
 
         autogen_id = schema.__schema__(:autogenerate_id)
-        schema_meta = metadata(struct, autogen_id, opts)
         changes = Map.merge(changeset.changes, embeds)
 
         {changes, extra, return_types, return_sources} =
@@ -253,6 +252,8 @@ defmodule Ecto.Repo.Schema do
 
         {changes, autogen} =
           dump_changes!(:insert, Map.take(changes, fields), schema, extra, dumper, adapter)
+
+        schema_meta = metadata(struct, autogen_id, Keyword.put_new(opts, :data, changeset.data))
 
         on_conflict =
           on_conflict(on_conflict, conflict_target, schema_meta, fn -> length(changes) end, adapter)
@@ -336,7 +337,7 @@ defmodule Ecto.Repo.Schema do
           original = changeset.changes |> Map.merge(embeds) |> Map.take(fields)
           {changes, autogen} = dump_changes!(:update, original, schema, [], dumper, adapter)
 
-          schema_meta = metadata(struct, schema.__schema__(:autogenerate_id), opts)
+          schema_meta = metadata(struct, schema.__schema__(:autogenerate_id), Keyword.put_new(opts, :data, changeset.data))
           filters = dump_fields!(:update, schema, filters, dumper, adapter)
           args = [adapter_meta, schema_meta, changes, filters, return_sources, opts]
 
@@ -436,7 +437,7 @@ defmodule Ecto.Repo.Schema do
         apply(mod, on_delete, [reflection, changeset.data, name, opts])
       end
 
-      schema_meta = metadata(struct, schema.__schema__(:autogenerate_id), opts)
+      schema_meta = metadata(struct, schema.__schema__(:autogenerate_id), Keyword.put_new(opts, :data, changeset.data))
       args = [adapter_meta, schema_meta, filters, opts]
 
       case apply(changeset, adapter, :delete, args) do
@@ -538,7 +539,7 @@ defmodule Ecto.Repo.Schema do
       autogenerate_id: autogen_id,
       context: context,
       schema: schema,
-      source: source,
+      source: if(is_function(source), do: source.(Keyword.get(opts, :data)), else: source),
       prefix: Keyword.get(opts, :prefix, prefix)
     }
   end

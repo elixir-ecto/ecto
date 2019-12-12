@@ -2760,6 +2760,8 @@ defmodule Ecto.Changeset do
 
   defp get_source(%{data: %{__meta__: %{source: source}}}) when is_binary(source),
     do: source
+  defp get_source(%{data: %{__meta__: %{source: source}} = data}) when is_function(source),
+    do: source.(data)
   defp get_source(%{data: data}), do:
     raise ArgumentError, "cannot add constraint to changeset because it does not have a source, got: #{inspect data}"
 
