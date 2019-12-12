@@ -349,11 +349,15 @@ defmodule Ecto.Association do
       iex> Ecto.Association.related_from_query(Schema, :comments_v1)
       Schema
 
+      iex> Ecto.Association.related_from_query({&Kernel.inspect/1, Schema}, :comments_v1)
+      Schema
+
       iex> Ecto.Association.related_from_query("wrong", :comments_v1)
       ** (ArgumentError) association :comments_v1 queryable must be a schema or a {source, schema}. got: "wrong"
   """
   def related_from_query(atom, _name) when is_atom(atom), do: atom
   def related_from_query({source, schema}, _name) when is_binary(source) and is_atom(schema), do: schema
+  def related_from_query({source_generator, schema}, _name) when is_function(source_generator) and is_atom(schema), do: schema
   def related_from_query(queryable, name) do
     raise ArgumentError, "association #{inspect name} queryable must be a schema or " <>
       "a {source, schema}. got: #{inspect queryable}"
