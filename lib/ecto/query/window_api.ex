@@ -150,6 +150,19 @@ defmodule Ecto.Query.WindowAPI do
   """
   def last_value(value), do: doc! [value]
 
+
+  @doc """
+  Applies the given expression as a FILTER clause against an
+  aggregate. This is currently only supported by Postgres.
+
+      from p in Post,
+           select: avg(p.value)
+                   |> filter(p.value > 0 and p.value < 100)
+                   |> over(partition_by: p.category_id, order_by: p.date)
+  """
+
+  def filter(value, filter), do: doc! [value, filter]
+
   @doc """
   Returns value evaluated at the row that is the nth row of the window
   frame (counting from 1); `nil` if no such row.
