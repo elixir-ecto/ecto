@@ -94,6 +94,10 @@ defmodule Ecto.Query.BuilderTest do
                  fn ->
       escape(quote(do: nth_value(x.id(), 1) |> over(order_by: ^foo)), [x: 0], __ENV__)
     end
+
+    import Kernel, except: [is_nil: 1]
+    assert {Macro.escape(quote(do: over(filter(avg(&0.value()), is_nil(&0.flag())), []))), []}  ==
+      escape(quote(do: avg(x.value()) |> filter(is_nil(x.flag())) |> over([])), [x: 0], __ENV__)
   end
 
   test "escape type cast" do
