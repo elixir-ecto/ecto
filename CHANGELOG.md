@@ -1,5 +1,15 @@
 # Changelog for v3.x
 
+## v3.3.1 (2019-12-27)
+
+### Enhancements
+
+  * [Ecto.Query.WindowAPI] Support `filter/2`
+
+### Bug fixes
+
+  * [Ecto.Query.API] Fix `coalesce/2` usage with mixed types
+
 ## v3.3.0 (2019-12-11)
 
 ### Enhancements
