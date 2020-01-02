@@ -18,7 +18,7 @@ defmodule Ecto.Adapter.Storage do
                  hostname: "localhost")
 
   """
-  @callback storage_up(options :: Keyword.t) :: :ok | {:error, :already_up} | {:error, term}
+  @callback storage_up(options :: Keyword.t()) :: :ok | {:error, :already_up} | {:error, term}
 
   @doc """
   Drops the storage given by options.
@@ -35,8 +35,8 @@ defmodule Ecto.Adapter.Storage do
                    hostname: "localhost")
 
   """
-  @callback storage_down(options :: Keyword.t) :: :ok | {:error, :already_down} | {:error, term}
-  
+  @callback storage_down(options :: Keyword.t()) :: :ok | {:error, :already_down} | {:error, term}
+
   @doc """
   Returns the status of a storage given by options.
 

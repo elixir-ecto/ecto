@@ -4,7 +4,7 @@ defmodule CustomPermalink do
   def cast(string) when is_binary(string) do
     case Integer.parse(string) do
       {int, _} -> {:ok, int}
-      :error   -> :error
+      :error -> :error
     end
   end
 

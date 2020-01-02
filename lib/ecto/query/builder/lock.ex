@@ -12,12 +12,14 @@ defmodule Ecto.Query.Builder.Lock do
       "FOO"
 
   """
-  @spec escape(Macro.t) :: Macro.t
+  @spec escape(Macro.t()) :: Macro.t()
   def escape(lock) when is_binary(lock), do: lock
 
   def escape(other) do
-    Builder.error! "`#{Macro.to_string(other)}` is not a valid lock. " <>
-                   "For security reasons, a lock must always be a literal string"
+    Builder.error!(
+      "`#{Macro.to_string(other)}` is not a valid lock. " <>
+        "For security reasons, a lock must always be a literal string"
+    )
   end
 
   @doc """
@@ -27,7 +29,7 @@ defmodule Ecto.Query.Builder.Lock do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, Macro.t, Macro.Env.t) :: Macro.t
+  @spec build(Macro.t(), Macro.t(), Macro.Env.t()) :: Macro.t()
   def build(query, expr, env) do
     Builder.apply_query(query, __MODULE__, [escape(expr)], env)
   end
@@ -35,10 +37,11 @@ defmodule Ecto.Query.Builder.Lock do
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, term) :: Ecto.Query.t
+  @spec apply(Ecto.Queryable.t(), term) :: Ecto.Query.t()
   def apply(%Ecto.Query{} = query, value) do
     %{query | lock: value}
   end
+
   def apply(query, value) do
     apply(Ecto.Queryable.to_query(query), value)
   end

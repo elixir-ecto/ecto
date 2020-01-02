@@ -1,4 +1,4 @@
-Code.require_file "../../integration_test/support/types.exs", __DIR__
+Code.require_file("../../integration_test/support/types.exs", __DIR__)
 
 defmodule Ecto.SchemaTest do
   use ExUnit.Case, async: true
@@ -7,9 +7,9 @@ defmodule Ecto.SchemaTest do
     use Ecto.Schema
 
     schema "my schema" do
-      field :name,  :string, default: "eric", autogenerate: {String, :upcase, ["eric"]}
+      field :name, :string, default: "eric", autogenerate: {String, :upcase, ["eric"]}
       field :email, :string, uniq: true, read_after_writes: true
-      field :temp,  :any, default: "temp", virtual: true
+      field :temp, :any, default: "temp", virtual: true
       field :count, :decimal, read_after_writes: true, source: :cnt
       field :array, {:array, :string}
       field :uuid, Ecto.UUID, autogenerate: true
@@ -20,42 +20,72 @@ defmodule Ecto.SchemaTest do
   end
 
   test "schema metadata" do
-    assert Schema.__schema__(:source)             == "my schema"
-    assert Schema.__schema__(:prefix)             == nil
-    assert Schema.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :query_excluded_field, :comment_id]
-    assert Schema.__schema__(:query_fields)       == [:id, :name, :email, :count, :array, :uuid, :comment_id]
-    assert Schema.__schema__(:read_after_writes)  == [:email, :count]
-    assert Schema.__schema__(:primary_key)        == [:id]
-    assert Schema.__schema__(:autogenerate_id)    == {:id, :id, :id}
+    assert Schema.__schema__(:source) == "my schema"
+    assert Schema.__schema__(:prefix) == nil
+
+    assert Schema.__schema__(:fields) == [
+             :id,
+             :name,
+             :email,
+             :count,
+             :array,
+             :uuid,
+             :query_excluded_field,
+             :comment_id
+           ]
+
+    assert Schema.__schema__(:query_fields) == [
+             :id,
+             :name,
+             :email,
+             :count,
+             :array,
+             :uuid,
+             :comment_id
+           ]
+
+    assert Schema.__schema__(:read_after_writes) == [:email, :count]
+    assert Schema.__schema__(:primary_key) == [:id]
+    assert Schema.__schema__(:autogenerate_id) == {:id, :id, :id}
   end
 
   test "types metadata" do
-    assert Schema.__schema__(:type, :id)         == :id
-    assert Schema.__schema__(:type, :name)       == :string
-    assert Schema.__schema__(:type, :email)      == :string
-    assert Schema.__schema__(:type, :array)      == {:array, :string}
+    assert Schema.__schema__(:type, :id) == :id
+    assert Schema.__schema__(:type, :name) == :string
+    assert Schema.__schema__(:type, :email) == :string
+    assert Schema.__schema__(:type, :array) == {:array, :string}
     assert Schema.__schema__(:type, :comment_id) == :id
   end
 
   test "sources metadata" do
-    assert Schema.__schema__(:field_source, :id)         == :id
-    assert Schema.__schema__(:field_source, :name)       == :name
-    assert Schema.__schema__(:field_source, :email)      == :email
-    assert Schema.__schema__(:field_source, :array)      == :array
+    assert Schema.__schema__(:field_source, :id) == :id
+    assert Schema.__schema__(:field_source, :name) == :name
+    assert Schema.__schema__(:field_source, :email) == :email
+    assert Schema.__schema__(:field_source, :array) == :array
     assert Schema.__schema__(:field_source, :comment_id) == :comment_id
-    assert Schema.__schema__(:field_source, :count)      == :cnt
-    assert Schema.__schema__(:field_source, :xyz)        == nil
+    assert Schema.__schema__(:field_source, :count) == :cnt
+    assert Schema.__schema__(:field_source, :xyz) == nil
   end
 
   test "changeset metadata" do
     assert Schema.__changeset__() |> Map.drop([:comment, :permalink]) ==
-           %{name: :string, email: :string, count: :decimal, array: {:array, :string},
-             comment_id: :id, temp: :any, id: :id, uuid: Ecto.UUID, query_excluded_field: :string}
+             %{
+               name: :string,
+               email: :string,
+               count: :decimal,
+               array: {:array, :string},
+               comment_id: :id,
+               temp: :any,
+               id: :id,
+               uuid: Ecto.UUID,
+               query_excluded_field: :string
+             }
   end
 
   test "autogenerate metadata (private)" do
     assert Schema.__schema__(:autogenerate) ==
-           [{[:name], {String, :upcase, ["eric"]}}, {[:uuid], {Ecto.UUID, :autogenerate, []}}]
+             [{[:name], {String, :upcase, ["eric"]}}, {[:uuid], {Ecto.UUID, :autogenerate, []}}]
+
     assert Schema.__schema__(:autoupdate) == []
   end
 
@@ -97,7 +127,7 @@ defmodule Ecto.SchemaTest do
     schema = %Schema{}
     assert inspect(schema.__meta__) == "#Ecto.Schema.Metadata<:built, \"my schema\">"
 
-    schema = Ecto.put_meta %Schema{}, context: <<0>>
+    schema = Ecto.put_meta(%Schema{}, context: <<0>>)
     assert inspect(schema.__meta__) == "#Ecto.Schema.Metadata<:built, \"my schema\", <<0>>>"
   end
 
@@ -111,7 +141,7 @@ defmodule Ecto.SchemaTest do
 
     @primary_key {:perm, CustomPermalink, autogenerate: true}
     @foreign_key_type :string
-    @field_source_mapper &(&1 |> Atom.to_string |> String.upcase |> String.to_atom())
+    @field_source_mapper &(&1 |> Atom.to_string() |> String.upcase() |> String.to_atom())
 
     schema "users" do
       field :name
@@ -145,15 +175,15 @@ defmodule Ecto.SchemaTest do
     use Ecto.Schema
 
     embedded_schema do
-      field :name,  :string, default: "eric"
+      field :name, :string, default: "eric"
     end
   end
 
   test "embedded schema" do
-    assert EmbeddedSchema.__schema__(:source)          == nil
-    assert EmbeddedSchema.__schema__(:prefix)          == nil
-    assert EmbeddedSchema.__schema__(:fields)          == [:id, :name]
-    assert EmbeddedSchema.__schema__(:primary_key)     == [:id]
+    assert EmbeddedSchema.__schema__(:source) == nil
+    assert EmbeddedSchema.__schema__(:prefix) == nil
+    assert EmbeddedSchema.__schema__(:fields) == [:id, :name]
+    assert EmbeddedSchema.__schema__(:primary_key) == [:id]
     assert EmbeddedSchema.__schema__(:autogenerate_id) == {:id, :id, :binary_id}
   end
 
@@ -171,9 +201,9 @@ defmodule Ecto.SchemaTest do
   end
 
   test "custom embedded schema" do
-    assert CustomEmbeddedSchema.__schema__(:source)      == nil
-    assert CustomEmbeddedSchema.__schema__(:prefix)      == nil
-    assert CustomEmbeddedSchema.__schema__(:fields)      == [:name]
+    assert CustomEmbeddedSchema.__schema__(:source) == nil
+    assert CustomEmbeddedSchema.__schema__(:prefix) == nil
+    assert CustomEmbeddedSchema.__schema__(:fields) == [:name]
     assert CustomEmbeddedSchema.__schema__(:primary_key) == []
   end
 
@@ -184,6 +214,7 @@ defmodule Ecto.SchemaTest do
       embeds_one :one, One, primary_key: false do
         field :x
       end
+
       embeds_many :many, Many do
         field :y
       end
@@ -192,10 +223,12 @@ defmodule Ecto.SchemaTest do
 
   test "inline embedded schema" do
     assert %Ecto.Embedded{related: InlineEmbeddedSchema.One} =
-      InlineEmbeddedSchema.__schema__(:embed, :one)
+             InlineEmbeddedSchema.__schema__(:embed, :one)
+
     assert %Ecto.Embedded{related: InlineEmbeddedSchema.Many} =
-      InlineEmbeddedSchema.__schema__(:embed, :many)
-    assert InlineEmbeddedSchema.One.__schema__(:fields)  == [:x]
+             InlineEmbeddedSchema.__schema__(:embed, :many)
+
+    assert InlineEmbeddedSchema.One.__schema__(:fields) == [:x]
     assert InlineEmbeddedSchema.Many.__schema__(:fields) == [:id, :y]
   end
 
@@ -209,9 +242,10 @@ defmodule Ecto.SchemaTest do
 
   test "timestamps autogenerate metadata (private)" do
     assert TimestampsAutoGen.__schema__(:autogenerate) ==
-           [{[:inserted_at, :updated_at], {:m, :f, [:a]}}]
+             [{[:inserted_at, :updated_at], {:m, :f, [:a]}}]
+
     assert TimestampsAutoGen.__schema__(:autoupdate) ==
-           [{[:updated_at], {:m, :f, [:a]}}]
+             [{[:updated_at], {:m, :f, [:a]}}]
   end
 
   defmodule TimestampsCustom do
@@ -358,15 +392,17 @@ defmodule Ecto.SchemaTest do
       end
     end
 
-    assert_raise ArgumentError, ~r/schema Ecto.SchemaTest.Schema is not a valid type for field :name/, fn ->
-      defmodule SchemaInvalidFieldType do
-        use Ecto.Schema
+    assert_raise ArgumentError,
+                 ~r/schema Ecto.SchemaTest.Schema is not a valid type for field :name/,
+                 fn ->
+                   defmodule SchemaInvalidFieldType do
+                     use Ecto.Schema
 
-        schema "invalidtype" do
-          field :name, Schema
-        end
-      end
-    end
+                     schema "invalidtype" do
+                       field :name, Schema
+                     end
+                   end
+                 end
   end
 
   test "fail invalid schema" do
@@ -384,38 +420,41 @@ defmodule Ecto.SchemaTest do
 
   test "fail invalid autogenerate" do
     assert_raise ArgumentError,
-                 "field :x does not support :autogenerate because it uses a primitive type :string", fn ->
-      defmodule AutogenerateFail do
-        use Ecto.Schema
+                 "field :x does not support :autogenerate because it uses a primitive type :string",
+                 fn ->
+                   defmodule AutogenerateFail do
+                     use Ecto.Schema
 
-        schema "hello" do
-          field :x, :string, autogenerate: true
-        end
-      end
-    end
+                     schema "hello" do
+                       field :x, :string, autogenerate: true
+                     end
+                   end
+                 end
 
     assert_raise ArgumentError,
                  "only primary keys allow :autogenerate for type :id, " <>
-                 "field :x is not a primary key", fn ->
-      defmodule AutogenerateFail do
-        use Ecto.Schema
+                   "field :x is not a primary key",
+                 fn ->
+                   defmodule AutogenerateFail do
+                     use Ecto.Schema
 
-        schema "hello" do
-          field :x, :id, autogenerate: true
-        end
-      end
-    end
+                     schema "hello" do
+                       field :x, :id, autogenerate: true
+                     end
+                   end
+                 end
 
     assert_raise ArgumentError,
-                 "cannot mark the same field as autogenerate and read_after_writes", fn ->
-      defmodule AutogenerateFail do
-        use Ecto.Schema
+                 "cannot mark the same field as autogenerate and read_after_writes",
+                 fn ->
+                   defmodule AutogenerateFail do
+                     use Ecto.Schema
 
-        schema "hello" do
-          field :x, Ecto.UUID, autogenerate: true, read_after_writes: true
-        end
-      end
-    end
+                     schema "hello" do
+                       field :x, Ecto.UUID, autogenerate: true, read_after_writes: true
+                     end
+                   end
+                 end
   end
 
   ## Associations
@@ -441,109 +480,165 @@ defmodule Ecto.SchemaTest do
   end
 
   test "has_many association" do
-    struct =
-      %Ecto.Association.Has{field: :posts, owner: AssocSchema, cardinality: :many, on_delete: :nothing,
-                            related: Post, owner_key: :id, related_key: :assoc_schema_id, queryable: Post,
-                            on_replace: :raise}
+    struct = %Ecto.Association.Has{
+      field: :posts,
+      owner: AssocSchema,
+      cardinality: :many,
+      on_delete: :nothing,
+      related: Post,
+      owner_key: :id,
+      related_key: :assoc_schema_id,
+      queryable: Post,
+      on_replace: :raise
+    }
 
     assert AssocSchema.__schema__(:association, :posts) == struct
     assert AssocSchema.__changeset__().posts == {:assoc, struct}
 
-    posts = (%AssocSchema{}).posts
+    posts = %AssocSchema{}.posts
     assert %Ecto.Association.NotLoaded{} = posts
     assert inspect(posts) == "#Ecto.Association.NotLoaded<association :posts is not loaded>"
   end
 
   test "has_many association via {source schema}" do
-    struct =
-      %Ecto.Association.Has{field: :emails, owner: AssocSchema, cardinality: :many, on_delete: :nothing,
-                            related: Email, owner_key: :id, related_key: :assoc_schema_id,
-                            queryable: {"users_emails", Email}, on_replace: :delete}
+    struct = %Ecto.Association.Has{
+      field: :emails,
+      owner: AssocSchema,
+      cardinality: :many,
+      on_delete: :nothing,
+      related: Email,
+      owner_key: :id,
+      related_key: :assoc_schema_id,
+      queryable: {"users_emails", Email},
+      on_replace: :delete
+    }
 
     assert AssocSchema.__schema__(:association, :emails) == struct
     assert AssocSchema.__changeset__().emails == {:assoc, struct}
 
-    posts = (%AssocSchema{}).posts
+    posts = %AssocSchema{}.posts
     assert %Ecto.Association.NotLoaded{__cardinality__: :many} = posts
     assert inspect(posts) == "#Ecto.Association.NotLoaded<association :posts is not loaded>"
   end
 
   test "has_many through association" do
     assert AssocSchema.__schema__(:association, :comment_authors) ==
-           %Ecto.Association.HasThrough{field: :comment_authors, owner: AssocSchema, cardinality: :many,
-                                         through: [:comment, :authors], owner_key: :comment_id}
+             %Ecto.Association.HasThrough{
+               field: :comment_authors,
+               owner: AssocSchema,
+               cardinality: :many,
+               through: [:comment, :authors],
+               owner_key: :comment_id
+             }
 
     refute Map.has_key?(AssocSchema.__changeset__(), :comment_authors)
 
-    authors = (%AssocSchema{}).comment_authors
+    authors = %AssocSchema{}.comment_authors
     assert %Ecto.Association.NotLoaded{} = authors
-    assert inspect(authors) == "#Ecto.Association.NotLoaded<association :comment_authors is not loaded>"
+
+    assert inspect(authors) ==
+             "#Ecto.Association.NotLoaded<association :comment_authors is not loaded>"
   end
 
   test "has_one association" do
-    struct =
-      %Ecto.Association.Has{field: :author, owner: AssocSchema, cardinality: :one, on_delete: :nothing,
-                            related: User, owner_key: :id, related_key: :assoc_schema_id, queryable: User,
-                            on_replace: :raise}
+    struct = %Ecto.Association.Has{
+      field: :author,
+      owner: AssocSchema,
+      cardinality: :one,
+      on_delete: :nothing,
+      related: User,
+      owner_key: :id,
+      related_key: :assoc_schema_id,
+      queryable: User,
+      on_replace: :raise
+    }
 
     assert AssocSchema.__schema__(:association, :author) == struct
     assert AssocSchema.__changeset__().author == {:assoc, struct}
 
-    author = (%AssocSchema{}).author
+    author = %AssocSchema{}.author
     assert %Ecto.Association.NotLoaded{} = author
     assert inspect(author) == "#Ecto.Association.NotLoaded<association :author is not loaded>"
   end
 
   test "has_one association via {source, schema}" do
-    struct =
-      %Ecto.Association.Has{field: :profile, owner: AssocSchema, cardinality: :one, on_delete: :nothing,
-                            related: Profile, owner_key: :id, related_key: :assoc_schema_id,
-                            queryable: {"users_profiles", Profile}, on_replace: :raise}
+    struct = %Ecto.Association.Has{
+      field: :profile,
+      owner: AssocSchema,
+      cardinality: :one,
+      on_delete: :nothing,
+      related: Profile,
+      owner_key: :id,
+      related_key: :assoc_schema_id,
+      queryable: {"users_profiles", Profile},
+      on_replace: :raise
+    }
 
     assert AssocSchema.__schema__(:association, :profile) == struct
     assert AssocSchema.__changeset__().profile == {:assoc, struct}
 
-    author = (%AssocSchema{}).author
+    author = %AssocSchema{}.author
     assert %Ecto.Association.NotLoaded{__cardinality__: :one} = author
     assert inspect(author) == "#Ecto.Association.NotLoaded<association :author is not loaded>"
   end
 
   test "has_one through association" do
     assert AssocSchema.__schema__(:association, :comment_main_author) ==
-           %Ecto.Association.HasThrough{field: :comment_main_author, owner: AssocSchema, cardinality: :one,
-                                         through: [:comment, :main_author], owner_key: :comment_id}
+             %Ecto.Association.HasThrough{
+               field: :comment_main_author,
+               owner: AssocSchema,
+               cardinality: :one,
+               through: [:comment, :main_author],
+               owner_key: :comment_id
+             }
 
     refute Map.has_key?(AssocSchema.__changeset__(), :comment_main_author)
 
-    author = (%AssocSchema{}).comment_main_author
+    author = %AssocSchema{}.comment_main_author
     assert %Ecto.Association.NotLoaded{} = author
-    assert inspect(author) == "#Ecto.Association.NotLoaded<association :comment_main_author is not loaded>"
+
+    assert inspect(author) ==
+             "#Ecto.Association.NotLoaded<association :comment_main_author is not loaded>"
   end
 
   test "belongs_to association" do
-    struct =
-      %Ecto.Association.BelongsTo{field: :comment, owner: AssocSchema, cardinality: :one,
-       related: Comment, owner_key: :comment_id, related_key: :id, queryable: Comment,
-       on_replace: :raise, defaults: []}
+    struct = %Ecto.Association.BelongsTo{
+      field: :comment,
+      owner: AssocSchema,
+      cardinality: :one,
+      related: Comment,
+      owner_key: :comment_id,
+      related_key: :id,
+      queryable: Comment,
+      on_replace: :raise,
+      defaults: []
+    }
 
     assert AssocSchema.__schema__(:association, :comment) == struct
     assert AssocSchema.__changeset__().comment == {:assoc, struct}
 
-    comment = (%AssocSchema{}).comment
+    comment = %AssocSchema{}.comment
     assert %Ecto.Association.NotLoaded{} = comment
     assert inspect(comment) == "#Ecto.Association.NotLoaded<association :comment is not loaded>"
   end
 
   test "belongs_to association via {source, schema}" do
-    struct =
-      %Ecto.Association.BelongsTo{field: :summary, owner: AssocSchema, cardinality: :one,
-       related: Summary, owner_key: :summary_id, related_key: :id,
-       queryable: {"post_summary", Summary}, on_replace: :raise, defaults: []}
+    struct = %Ecto.Association.BelongsTo{
+      field: :summary,
+      owner: AssocSchema,
+      cardinality: :one,
+      related: Summary,
+      owner_key: :summary_id,
+      related_key: :id,
+      queryable: {"post_summary", Summary},
+      on_replace: :raise,
+      defaults: []
+    }
 
     assert AssocSchema.__schema__(:association, :summary) == struct
     assert AssocSchema.__changeset__().summary == {:assoc, struct}
 
-    comment = (%AssocSchema{}).comment
+    comment = %AssocSchema{}.comment
     assert %Ecto.Association.NotLoaded{} = comment
     assert inspect(comment) == "#Ecto.Association.NotLoaded<association :comment is not loaded>"
   end
@@ -600,6 +695,7 @@ defmodule Ecto.SchemaTest do
 
   test "has_* references option has to match a field on schema" do
     message = ~r"schema does not have the field :pk used by association :posts"
+
     assert_raise ArgumentError, message, fn ->
       defmodule PkAssocMisMatch do
         use Ecto.Schema
@@ -613,6 +709,7 @@ defmodule Ecto.SchemaTest do
 
   test "has_* expects a queryable" do
     message = ~r"association :posts queryable must be a schema or a {source, schema}. got: 123"
+
     assert_raise ArgumentError, message, fn ->
       defmodule QueryableMisMatch do
         use Ecto.Schema
@@ -648,6 +745,7 @@ defmodule Ecto.SchemaTest do
 
   test "has_* through has to match an association on schema" do
     message = ~r"schema does not have the association :whatever used by association :posts"
+
     assert_raise ArgumentError, message, fn ->
       defmodule PkAssocMisMatch do
         use Ecto.Schema
@@ -660,7 +758,9 @@ defmodule Ecto.SchemaTest do
   end
 
   test "has_* through with schema" do
-    message = ~r"When using the :through option, the schema should not be passed as second argument"
+    message =
+      ~r"When using the :through option, the schema should not be passed as second argument"
+
     assert_raise ArgumentError, message, fn ->
       defmodule ThroughMatch do
         use Ecto.Schema
@@ -675,6 +775,7 @@ defmodule Ecto.SchemaTest do
   test "belongs_to raises helpful error with redundant foreign key name" do
     name = :author
     message = ~r"foreign_key :#{name} must be distinct from corresponding association name"
+
     assert_raise ArgumentError, message, fn ->
       defmodule SchemaBadForeignKey do
         use Ecto.Schema

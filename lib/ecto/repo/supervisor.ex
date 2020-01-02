@@ -35,7 +35,7 @@ defmodule Ecto.Repo.Supervisor do
   defp telemetry_prefix(repo) do
     repo
     |> Module.split()
-    |> Enum.map(& &1 |> Macro.underscore() |> String.to_atom())
+    |> Enum.map(&(&1 |> Macro.underscore() |> String.to_atom()))
   end
 
   defp repo_init(type, repo, config) do
@@ -50,8 +50,9 @@ defmodule Ecto.Repo.Supervisor do
     log = Keyword.get(config, :log, :debug)
 
     unless log in [false, :debug, :info, :warn, :error] do
-      raise ArgumentError, "invalid :log configuration for #{inspect(repo)}, it should be " <>
-                             "false, :debug, :info, :warn or :error, got: #{inspect(log)}"
+      raise ArgumentError,
+            "invalid :log configuration for #{inspect(repo)}, it should be " <>
+              "false, :debug, :info, :warn or :error, got: #{inspect(log)}"
     end
   end
 
@@ -67,8 +68,9 @@ defmodule Ecto.Repo.Supervisor do
     end
 
     if Code.ensure_compiled(adapter) != {:module, adapter} do
-      raise ArgumentError, "adapter #{inspect adapter} was not compiled, " <>
-                           "ensure it is correct and it is included as a project dependency"
+      raise ArgumentError,
+            "adapter #{inspect(adapter)} was not compiled, " <>
+              "ensure it is correct and it is included as a project dependency"
     end
 
     behaviours =
@@ -108,11 +110,13 @@ defmodule Ecto.Repo.Supervisor do
     destructure [username, password], info.userinfo && String.split(info.userinfo, ":")
     "/" <> database = info.path
 
-    url_opts = [username: username,
-                password: password,
-                database: database,
-                hostname: info.host,
-                port:     info.port]
+    url_opts = [
+      username: username,
+      password: password,
+      database: database,
+      hostname: info.host,
+      port: info.port
+    ]
 
     query_opts = parse_uri_query(info)
 
@@ -123,6 +127,7 @@ defmodule Ecto.Repo.Supervisor do
 
   defp parse_uri_query(%URI{query: nil}),
     do: []
+
   defp parse_uri_query(%URI{query: query} = url) do
     query
     |> URI.query_decoder()
@@ -148,8 +153,8 @@ defmodule Ecto.Repo.Supervisor do
 
       _ ->
         raise Ecto.InvalidURLError,
-              url: url,
-              message: "can not parse value `#{value}` for parameter `#{key}` as an integer"
+          url: url,
+          message: "can not parse value `#{value}` for parameter `#{key}` as an integer"
     end
   end
 

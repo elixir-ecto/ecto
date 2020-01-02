@@ -17,12 +17,24 @@ defmodule Ecto.EmbeddedTest do
 
   test "__schema__" do
     assert Author.__schema__(:embeds) ==
-      [:profile, :post, :posts]
+             [:profile, :post, :posts]
 
     assert Author.__schema__(:embed, :profile) ==
-      %Embedded{field: :profile, cardinality: :one, owner: Author, on_replace: :delete, related: Profile}
+             %Embedded{
+               field: :profile,
+               cardinality: :one,
+               owner: Author,
+               on_replace: :delete,
+               related: Profile
+             }
 
     assert Author.__schema__(:embed, :posts) ==
-      %Embedded{field: :posts, cardinality: :many, owner: Author, on_replace: :delete, related: Post}
+             %Embedded{
+               field: :posts,
+               cardinality: :many,
+               owner: Author,
+               on_replace: :delete,
+               related: Post
+             }
   end
 end

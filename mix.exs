@@ -112,7 +112,7 @@ defmodule Ecto.MixProject do
 
   defp groups_for_extras do
     [
-      "Introduction": ~r/guides\/introduction\/.?/,
+      Introduction: ~r/guides\/introduction\/.?/,
       "How-To's": ~r/guides\/howtos\/.?/
     ]
   end

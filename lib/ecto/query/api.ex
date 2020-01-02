@@ -38,67 +38,67 @@ defmodule Ecto.Query.API do
   @doc """
   Binary `==` operation.
   """
-  def left == right, do: doc! [left, right]
+  def left == right, do: doc!([left, right])
 
   @doc """
   Binary `!=` operation.
   """
-  def left != right, do: doc! [left, right]
+  def left != right, do: doc!([left, right])
 
   @doc """
   Binary `<=` operation.
   """
-  def left <= right, do: doc! [left, right]
+  def left <= right, do: doc!([left, right])
 
   @doc """
   Binary `>=` operation.
   """
-  def left >= right, do: doc! [left, right]
+  def left >= right, do: doc!([left, right])
 
   @doc """
   Binary `<` operation.
   """
-  def left < right, do: doc! [left, right]
+  def left < right, do: doc!([left, right])
 
   @doc """
   Binary `>` operation.
   """
-  def left > right, do: doc! [left, right]
+  def left > right, do: doc!([left, right])
 
   @doc """
   Binary `+` operation.
   """
-  def left + right, do: doc! [left, right]
+  def left + right, do: doc!([left, right])
 
   @doc """
   Binary `-` operation.
   """
-  def left - right, do: doc! [left, right]
+  def left - right, do: doc!([left, right])
 
   @doc """
   Binary `*` operation.
   """
-  def left * right, do: doc! [left, right]
+  def left * right, do: doc!([left, right])
 
   @doc """
   Binary `/` operation.
   """
-  def left / right, do: doc! [left, right]
+  def left / right, do: doc!([left, right])
 
   @doc """
   Binary `and` operation.
   """
-  def left and right, do: doc! [left, right]
+  def left and right, do: doc!([left, right])
 
   @doc """
   Binary `or` operation.
   """
-  def left or right, do: doc! [left, right]
+  def left or right, do: doc!([left, right])
 
   @doc """
   Unary `not` operation.
   """
-  def not(value), do: doc! [value]
+  def not value, do: doc!([value])
 
   @doc """
   Checks if the left-value is included in the right one.
@@ -110,7 +110,7 @@ defmodule Ecto.Query.API do
 
       from p in Post, where: "elixir" in p.tags
   """
-  def left in right, do: doc! [left, right]
+  def left in right, do: doc!([left, right])
 
   @doc """
   Searches for `search` in `string`.
@@ -127,7 +127,7 @@ defmodule Ecto.Query.API do
   as part of LIKE query, since they allow to perform
   [LIKE-injections](https://githubengineering.com/like-injection/).
   """
-  def like(string, search), do: doc! [string, search]
+  def like(string, search), do: doc!([string, search])
 
   @doc """
   Searches for `search` in `string` in a case insensitive fashion.
@@ -137,7 +137,7 @@ defmodule Ecto.Query.API do
   Translates to the underlying SQL ILIKE query. This operation is
   only available on PostgreSQL.
   """
-  def ilike(string, search), do: doc! [string, search]
+  def ilike(string, search), do: doc!([string, search])
 
   @doc """
   Checks if the given value is nil.
@@ -148,28 +148,28 @@ defmodule Ecto.Query.API do
 
       from p in Post, where: not is_nil(p.published_at)
   """
-  def is_nil(value), do: doc! [value]
+  def is_nil(value), do: doc!([value])
 
   @doc """
   Counts the entries in the table.
 
       from p in Post, select: count()
   """
-  def count, do: doc! []
+  def count, do: doc!([])
 
   @doc """
   Counts the given entry.
 
       from p in Post, select: count(p.id)
   """
-  def count(value), do: doc! [value]
+  def count(value), do: doc!([value])
 
   @doc """
   Counts the distinct values in given entry.
 
       from p in Post, select: count(p.id, :distinct)
   """
-  def count(value, :distinct), do: doc! [value, :distinct]
+  def count(value, :distinct), do: doc!([value, :distinct])
 
   @doc """
   Takes whichever value is not null, or null if they both are.
@@ -180,7 +180,7 @@ defmodule Ecto.Query.API do
 
       from p in Payment, select: p.value |> coalesce(p.backup_value) |> coalesce(0)
   """
-  def coalesce(value, expr), do: doc! [value, expr]
+  def coalesce(value, expr), do: doc!([value, expr])
 
   @doc """
   Applies the given expression as a FILTER clause against an
@@ -190,35 +190,35 @@ defmodule Ecto.Query.API do
 
       from p in Payment, select: avg(p.value) |> filter(p.value < 0)
   """
-  def filter(value, filter), do: doc! [value, filter]
+  def filter(value, filter), do: doc!([value, filter])
 
   @doc """
   Calculates the average for the given entry.
 
       from p in Payment, select: avg(p.value)
   """
-  def avg(value), do: doc! [value]
+  def avg(value), do: doc!([value])
 
   @doc """
   Calculates the sum for the given entry.
 
       from p in Payment, select: sum(p.value)
   """
-  def sum(value), do: doc! [value]
+  def sum(value), do: doc!([value])
 
   @doc """
   Calculates the minimum for the given entry.
 
       from p in Payment, select: min(p.value)
   """
-  def min(value), do: doc! [value]
+  def min(value), do: doc!([value])
 
   @doc """
   Calculates the maximum for the given entry.
 
       from p in Payment, select: max(p.value)
   """
-  def max(value), do: doc! [value]
+  def max(value), do: doc!([value])
 
   @doc """
   Adds a given interval to a datetime.
@@ -238,14 +238,14 @@ defmodule Ecto.Query.API do
   The following intervals are supported: year, month, week, day, hour,
   minute, second, millisecond and microsecond.
   """
-  def datetime_add(datetime, count, interval), do: doc! [datetime, count, interval]
+  def datetime_add(datetime, count, interval), do: doc!([datetime, count, interval])
 
   @doc """
   Adds a given interval to a date.
 
   See `datetime_add/3` for more information.
   """
-  def date_add(date, count, interval), do: doc! [date, count, interval]
+  def date_add(date, count, interval), do: doc!([date, count, interval])
 
   @doc """
   Adds the given interval to the current time in UTC.
@@ -258,7 +258,7 @@ defmodule Ecto.Query.API do
       from a in Account, where: a.expires_at < from_now(3, "month")
 
   """
-  def from_now(count, interval), do: doc! [count, interval]
+  def from_now(count, interval), do: doc!([count, interval])
 
   @doc """
   Subtracts the given interval from the current time in UTC.
@@ -270,7 +270,7 @@ defmodule Ecto.Query.API do
 
       from p in Post, where: p.published_at > ago(3, "month")
   """
-  def ago(count, interval), do: doc! [count, interval]
+  def ago(count, interval), do: doc!([count, interval])
 
   @doc """
   Send fragments directly to the database.
@@ -337,7 +337,7 @@ defmodule Ecto.Query.API do
   inspecting the Elixir query.  Other than that, it should be
   equivalent to a built-in Ecto query function.
   """
-  def fragment(fragments), do: doc! [fragments]
+  def fragment(fragments), do: doc!([fragments])
 
   @doc """
   Allows a field to be dynamically accessed.
@@ -350,7 +350,7 @@ defmodule Ecto.Query.API do
   In the example above, both `at_least_four(:doors)` and `at_least_four(:tires)`
   would be valid calls as the field is dynamically generated.
   """
-  def field(source, field), do: doc! [source, field]
+  def field(source, field), do: doc!([source, field])
 
   @doc """
   Used in `select` to specify which struct fields should be returned.
@@ -398,7 +398,7 @@ defmodule Ecto.Query.API do
   MUST include the foreign keys used in the relationship,
   otherwise Ecto will be unable to find associated records.
   """
-  def struct(source, fields), do: doc! [source, fields]
+  def struct(source, fields), do: doc!([source, fields])
 
   @doc """
   Used in `select` to specify which fields should be returned as a map.
@@ -435,7 +435,7 @@ defmodule Ecto.Query.API do
   MUST include the foreign keys used in the relationship,
   otherwise Ecto will be unable to find associated records.
   """
-  def map(source, fields), do: doc! [source, fields]
+  def map(source, fields), do: doc!([source, fields])
 
   @doc """
   Merges the map on the right over the map on the left.
@@ -449,7 +449,7 @@ defmodule Ecto.Query.API do
   This function is primarily used by `Ecto.Query.select_merge/3`
   to merge different select clauses.
   """
-  def merge(left_map, right_map), do: doc! [left_map, right_map]
+  def merge(left_map, right_map), do: doc!([left_map, right_map])
 
   @doc """
   Casts the given value to the given type at the database level.
@@ -489,10 +489,10 @@ defmodule Ecto.Query.API do
       from p in Post, select: type(filter(avg(p.cost), p.cost > 0), :integer)
 
   """
-  def type(interpolated_value, type), do: doc! [interpolated_value, type]
+  def type(interpolated_value, type), do: doc!([interpolated_value, type])
 
   defp doc!(_) do
     raise "the functions in Ecto.Query.API should not be invoked directly, " <>
-          "they serve for documentation purposes only"
+            "they serve for documentation purposes only"
   end
 end

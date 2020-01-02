@@ -14,9 +14,10 @@ defmodule Ecto.Adapter.Queryable do
   @type query_meta :: %{sources: tuple, preloads: term, select: map}
 
   @typedoc "Cache query metadata"
-  @type query_cache :: {:nocache, prepared}
-                       | {:cache, (cached -> :ok), prepared}
-                       | {:cached, (cached -> :ok), (prepared -> :ok), cached}
+  @type query_cache ::
+          {:nocache, prepared}
+          | {:cache, (cached -> :ok), prepared}
+          | {:cached, (cached -> :ok), (prepared -> :ok), cached}
 
   @type prepared :: term
   @type cached :: term
@@ -53,7 +54,7 @@ defmodule Ecto.Adapter.Queryable do
   in the `Ecto.Query` struct.
   """
   @callback stream(adapter_meta, query_meta, query_cache, params :: list(), options) ::
-              Enumerable.t
+              Enumerable.t()
 
   @doc """
   Plans and prepares a query for the given repo, leveraging its query cache.

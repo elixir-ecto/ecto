@@ -12,41 +12,60 @@ defmodule Ecto.Repo.SupervisorTest do
   end
 
   test "invokes the init/2 callback on start", context do
-    {:ok, _} = Ecto.TestRepo.start_link(parent: self(), name: context.test, query_cache_owner: false)
+    {:ok, _} =
+      Ecto.TestRepo.start_link(parent: self(), name: context.test, query_cache_owner: false)
+
     assert_receive {Ecto.TestRepo, :supervisor, _}
   end
 
   test "invokes the init/2 callback on config" do
     assert Ecto.TestRepo.config() |> normalize() ==
-           [database: "hello", hostname: "local", otp_app: :ecto, password: "pass",
-            user: "invalid", username: "user"]
+             [
+               database: "hello",
+               hostname: "local",
+               otp_app: :ecto,
+               password: "pass",
+               user: "invalid",
+               username: "user"
+             ]
   end
 
   test "reads otp app configuration" do
     put_env(database: "hello")
     {:ok, config} = runtime_config(:runtime, __MODULE__, :ecto, [])
+
     assert normalize(config) ==
-           [database: "hello", otp_app: :ecto]
+             [database: "hello", otp_app: :ecto]
   end
 
   test "merges url into configuration" do
     put_env(database: "hello", url: "ecto://eric:hunter2@host:12345/mydb")
-    {:ok, config} = runtime_config(:runtime, __MODULE__, :ecto, [extra: "extra"])
+    {:ok, config} = runtime_config(:runtime, __MODULE__, :ecto, extra: "extra")
+
     assert normalize(config) ==
-           [database: "mydb", extra: "extra", hostname: "host",
-            otp_app: :ecto, password: "hunter2", port: 12345, username: "eric"]
+             [
+               database: "mydb",
+               extra: "extra",
+               hostname: "host",
+               otp_app: :ecto,
+               password: "hunter2",
+               port: 12345,
+               username: "eric"
+             ]
   end
 
   test "is no-op for nil or empty URL" do
     put_env(database: "hello", url: nil)
     {:ok, config} = runtime_config(:runtime, __MODULE__, :ecto, [])
+
     assert normalize(config) ==
-           [database: "hello", otp_app: :ecto]
+             [database: "hello", otp_app: :ecto]
 
     put_env(database: "hello", url: "")
     {:ok, config} = runtime_config(:runtime, __MODULE__, :ecto, [])
+
     assert normalize(config) ==
-           [database: "hello", otp_app: :ecto]
+             [database: "hello", otp_app: :ecto]
   end
 
   test "works without an environment" do
@@ -66,7 +85,11 @@ defmodule Ecto.Repo.SupervisorTest do
   end
 
   test "parse_url query string" do
-    encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb?ssl=true&timeout=1000&pool_size=42&currentSchema=my_schema")
+    encoded_url =
+      URI.encode(
+        "ecto://eric:it+й@host:12345/mydb?ssl=true&timeout=1000&pool_size=42&currentSchema=my_schema"
+      )
+
     url = parse_url(encoded_url)
     assert {:password, "it+й"} in url
     assert {:username, "eric"} in url
@@ -111,9 +134,11 @@ defmodule Ecto.Repo.SupervisorTest do
     end
 
     for key <- ["timeout", "pool_size"] do
-      assert_raise Ecto.InvalidURLError, ~r"can not parse value `not_an_int` for parameter `#{key}` as an integer", fn ->
-        parse_url("ecto://eric:it+й@host:12345/mydb?#{key}=not_an_int")
-      end
+      assert_raise Ecto.InvalidURLError,
+                   ~r"can not parse value `not_an_int` for parameter `#{key}` as an integer",
+                   fn ->
+                     parse_url("ecto://eric:it+й@host:12345/mydb?#{key}=not_an_int")
+                   end
     end
   end
 end

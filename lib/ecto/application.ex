@@ -4,7 +4,7 @@ defmodule Ecto.Application do
 
   def start(_type, _args) do
     children = [
-      Ecto.Repo.Registry,
+      Ecto.Repo.Registry
     ]
 
     opts = [strategy: :one_for_one, name: Ecto.Supervisor]

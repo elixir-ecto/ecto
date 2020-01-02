@@ -31,21 +31,21 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
     repo =
       case parse_repo(args) do
-        [] -> Mix.raise "ecto.gen.repo expects the repository to be given as -r MyApp.Repo"
+        [] -> Mix.raise("ecto.gen.repo expects the repository to be given as -r MyApp.Repo")
         [repo] -> repo
-        [_ | _] -> Mix.raise "ecto.gen.repo expects a single repository to be given"
+        [_ | _] -> Mix.raise("ecto.gen.repo expects a single repository to be given")
       end
 
-    config      = Mix.Project.config()
+    config = Mix.Project.config()
     underscored = Macro.underscore(inspect(repo))
 
     base = Path.basename(underscored)
     file = Path.join("lib", underscored) <> ".ex"
-    app  = config[:app] || :YOUR_APP_NAME
+    app = config[:app] || :YOUR_APP_NAME
     opts = [mod: repo, app: app, base: base]
 
-    create_directory Path.dirname(file)
-    create_file file, repo_template(opts)
+    create_directory(Path.dirname(file))
+    create_file(file, repo_template(opts))
     config_path = config[:config_path] || "config/config.exs"
 
     case File.read(config_path) do
@@ -53,46 +53,51 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
         check = String.contains?(contents, "import Config")
         config_first_line = get_first_config_line(check) <> "\n"
         new_contents = config_first_line <> "\n" <> config_template(opts)
-        Mix.shell().info [:green, "* updating ", :reset, "config/config.exs"]
-        File.write! "config/config.exs", String.replace(contents, config_first_line, new_contents)
+        Mix.shell().info([:green, "* updating ", :reset, "config/config.exs"])
+
+        File.write!(
+          "config/config.exs",
+          String.replace(contents, config_first_line, new_contents)
+        )
+
       {:error, _} ->
         config_first_line = Config |> Code.ensure_loaded?() |> get_first_config_line()
-        create_file "config/config.exs", config_first_line <> "\n\n" <> config_template(opts)
+        create_file("config/config.exs", config_first_line <> "\n\n" <> config_template(opts))
     end
 
     open?("config/config.exs")
 
-    Mix.shell().info """
+    Mix.shell().info("""
     Don't forget to add your new repo to your supervision tree
     (typically in lib/#{app}/application.ex):
 
-        {#{inspect repo}, []}
+        {#{inspect(repo)}, []}
 
     And to add it to the list of ecto repositories in your
     configuration files (so Ecto tasks work as expected):
 
-        config #{inspect app},
-          ecto_repos: [#{inspect repo}]
+        config #{inspect(app)},
+          ecto_repos: [#{inspect(repo)}]
 
-    """
+    """)
   end
 
   defp get_first_config_line(true), do: "import Config"
   defp get_first_config_line(false), do: "use Mix.Config"
 
-  embed_template :repo, """
+  embed_template(:repo, """
   defmodule <%= inspect @mod %> do
     use Ecto.Repo,
       otp_app: <%= inspect @app %>,
       adapter: Ecto.Adapters.Postgres
   end
-  """
+  """)
 
-  embed_template :config, """
+  embed_template(:config, """
   config <%= inspect @app %>, <%= inspect @mod %>,
     database: "<%= @app %>_<%= @base %>",
     username: "user",
     password: "pass",
     hostname: "localhost"
-  """
+  """)
 end

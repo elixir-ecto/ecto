@@ -7,50 +7,170 @@ defmodule Ecto.Query.Builder.SelectTest do
 
   describe "escape" do
     test "handles expressions and params" do
-      assert {Macro.escape(quote do &0 end), {[], %{}}} ==
-             escape(quote do x end, [x: 0], __ENV__)
+      assert {Macro.escape(
+                quote do
+                  &0
+                end
+              ),
+              {[], %{}}} ==
+               escape(
+                 quote do
+                   x
+                 end,
+                 [x: 0],
+                 __ENV__
+               )
 
-      assert {Macro.escape(quote do &0.y() end), {[], %{}}} ==
-             escape(quote do x.y() end, [x: 0], __ENV__)
+      assert {Macro.escape(
+                quote do
+                  &0.y()
+                end
+              ),
+              {[], %{}}} ==
+               escape(
+                 quote do
+                   x.y()
+                 end,
+                 [x: 0],
+                 __ENV__
+               )
 
-      assert {Macro.escape(quote do &0 end), {[], %{0 => {:any, [:foo, :bar, baz: :bat]}}}} ==
-             escape(quote do [:foo, :bar, baz: :bat] end, [x: 0], __ENV__)
+      assert {Macro.escape(
+                quote do
+                  &0
+                end
+              ),
+              {[], %{0 => {:any, [:foo, :bar, baz: :bat]}}}} ==
+               escape(
+                 quote do
+                   [:foo, :bar, baz: :bat]
+                 end,
+                 [x: 0],
+                 __ENV__
+               )
 
-      assert {Macro.escape(quote do &0 end), {[], %{0 => {:struct, [:foo, :bar, baz: :bat]}}}} ==
-             escape(quote do struct(x, [:foo, :bar, baz: :bat]) end, [x: 0], __ENV__)
+      assert {Macro.escape(
+                quote do
+                  &0
+                end
+              ),
+              {[], %{0 => {:struct, [:foo, :bar, baz: :bat]}}}} ==
+               escape(
+                 quote do
+                   struct(x, [:foo, :bar, baz: :bat])
+                 end,
+                 [x: 0],
+                 __ENV__
+               )
 
-      assert {Macro.escape(quote do &0 end), {[], %{0 => {:map, [:foo, :bar, baz: :bat]}}}} ==
-             escape(quote do map(x, [:foo, :bar, baz: :bat]) end, [x: 0], __ENV__)
+      assert {Macro.escape(
+                quote do
+                  &0
+                end
+              ),
+              {[], %{0 => {:map, [:foo, :bar, baz: :bat]}}}} ==
+               escape(
+                 quote do
+                   map(x, [:foo, :bar, baz: :bat])
+                 end,
+                 [x: 0],
+                 __ENV__
+               )
 
       assert {{:{}, [], [:{}, [], [0, 1, 2]]}, {[], %{}}} ==
-             escape(quote do {0, 1, 2} end, [], __ENV__)
+               escape(
+                 quote do
+                   {0, 1, 2}
+                 end,
+                 [],
+                 __ENV__
+               )
 
       assert {{:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}, {[], %{}}} ==
-             escape(quote do %{a: a} end, [a: 0], __ENV__)
+               escape(
+                 quote do
+                   %{a: a}
+                 end,
+                 [a: 0],
+                 __ENV__
+               )
 
-      assert {{:{}, [], [:%{}, [], [{{:{}, [], [:&, [], [0]]}, {:{}, [], [:&, [], [1]]}}]]}, {[], %{}}} ==
-             escape(quote do %{a => b} end, [a: 0, b: 1], __ENV__)
+      assert {{:{}, [], [:%{}, [], [{{:{}, [], [:&, [], [0]]}, {:{}, [], [:&, [], [1]]}}]]},
+              {[], %{}}} ==
+               escape(
+                 quote do
+                   %{a => b}
+                 end,
+                 [a: 0, b: 1],
+                 __ENV__
+               )
 
-      assert {[Macro.escape(quote do &0.y() end), Macro.escape(quote do &0.z() end)], {[], %{}}} ==
-             escape(quote do [x.y(), x.z()] end, [x: 0], __ENV__)
+      assert {[
+                Macro.escape(
+                  quote do
+                    &0.y()
+                  end
+                ),
+                Macro.escape(
+                  quote do
+                    &0.z()
+                  end
+                )
+              ],
+              {[], %{}}} ==
+               escape(
+                 quote do
+                   [x.y(), x.z()]
+                 end,
+                 [x: 0],
+                 __ENV__
+               )
 
-      assert {[{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :y]]}, [], []]},
-               {:{}, [], [:^, [], [0]]}], {[{1, :any}], %{}}} ==
-              escape(quote do [x.y(), ^1] end, [x: 0], __ENV__)
+      assert {[
+                {:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :y]]}, [], []]},
+                {:{}, [], [:^, [], [0]]}
+              ],
+              {[{1, :any}], %{}}} ==
+               escape(
+                 quote do
+                   [x.y(), ^1]
+                 end,
+                 [x: 0],
+                 __ENV__
+               )
 
-      assert {{:{}, [], [:%, [], [Foo, {:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}]]}, {[], %{}}} ==
-             escape(quote do %Foo{a: a} end, [a: 0], __ENV__)
+      assert {{:{}, [], [:%, [], [Foo, {:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}]]},
+              {[], %{}}} ==
+               escape(
+                 quote do
+                   %Foo{a: a}
+                 end,
+                 [a: 0],
+                 __ENV__
+               )
     end
 
     test "on conflicting take" do
       assert {_, {[], %{0 => {:map, [:foo, :bar, baz: :bat]}}}} =
-             escape(quote do {map(x, [:foo, :bar]), map(x, [baz: :bat])} end, [x: 0], __ENV__)
+               escape(
+                 quote do
+                   {map(x, [:foo, :bar]), map(x, baz: :bat)}
+                 end,
+                 [x: 0],
+                 __ENV__
+               )
 
       assert_raise Ecto.Query.CompileError,
                    ~r"cannot select_merge because the binding at position 0",
                    fn ->
-        escape(quote do {map(x, [:foo, :bar]), struct(x, [baz: :bat])} end, [x: 0], __ENV__)
-      end
+                     escape(
+                       quote do
+                         {map(x, [:foo, :bar]), struct(x, baz: :bat)}
+                       end,
+                       [x: 0],
+                       __ENV__
+                     )
+                   end
     end
 
     @fields [:field]
@@ -72,6 +192,7 @@ defmodule Ecto.Query.Builder.SelectTest do
 
     test "raises on multiple selects" do
       message = "only one select expression is allowed in query"
+
       assert_raise Ecto.Query.CompileError, message, fn ->
         %Ecto.Query{} |> select([], 1) |> select([], 2)
       end
@@ -210,17 +331,30 @@ defmodule Ecto.Query.Builder.SelectTest do
 
     test "on conflicting take" do
       _ = from p in "posts", select: p, select_merge: map(p, [:title]), select_merge: [:body]
-      _ = from p in "posts", select: p, select_merge: map(p, [:title]), select_merge: map(p, [:body])
+
+      _ =
+        from p in "posts",
+          select: p,
+          select_merge: map(p, [:title]),
+          select_merge: map(p, [:body])
+
       _ = from p in "posts", select: p, select_merge: [:title], select_merge: map(p, [:body])
       _ = from p in "posts", select: p, select_merge: [:title], select_merge: struct(p, [:body])
       _ = from p in "posts", select: p, select_merge: struct(p, [:title]), select_merge: [:body]
-      _ = from p in "posts", select: p, select_merge: struct(p, [:title]), select_merge: struct(p, [:body])
+
+      _ =
+        from p in "posts",
+          select: p,
+          select_merge: struct(p, [:title]),
+          select_merge: struct(p, [:body])
 
       assert_raise Ecto.Query.CompileError,
                    ~r"cannot select_merge because the binding at position 0",
                    fn ->
-        from p in "posts", select: map(p, [:title]), select_merge: struct(p, [:title])
-      end
+                     from p in "posts",
+                       select: map(p, [:title]),
+                       select_merge: struct(p, [:title])
+                   end
     end
 
     test "optimizes map/struct merges" do
@@ -228,18 +362,21 @@ defmodule Ecto.Query.Builder.SelectTest do
         from p in "posts",
           select: %{t: {p.title, p.body}},
           select_merge: %{t: p.title, b: p.body}
+
       assert Macro.to_string(query.select.expr) == "%{t: &0.title(), b: &0.body()}"
 
       query =
         from p in "posts",
           select: %Post{title: p.title},
           select_merge: %{title: nil}
+
       assert Macro.to_string(query.select.expr) == "%Post{title: nil}"
 
       query =
         from p in "posts",
           select: %{t: {p.title, ^0}},
           select_merge: %{t: p.title, b: p.body}
+
       assert Macro.to_string(query.select.expr) =~ "merge"
     end
   end
@@ -256,9 +393,12 @@ defmodule Ecto.Query.Builder.SelectTest do
 
     test "raises at runtime on invalid interpolation" do
       foo = "cost"
-      assert_raise ArgumentError, ~r/fragment\(...\) does not allow strings to be interpolated/, fn ->
-        from p in "posts", select: type(fragment(^foo), :decimal)
-      end
+
+      assert_raise ArgumentError,
+                   ~r/fragment\(...\) does not allow strings to be interpolated/,
+                   fn ->
+                     from p in "posts", select: type(fragment(^foo), :decimal)
+                   end
     end
   end
 end

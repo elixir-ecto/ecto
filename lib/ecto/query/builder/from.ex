@@ -49,7 +49,7 @@ defmodule Ecto.Query.Builder.From do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t(), Macro.Env.t(), atom, String.t | nil, nil | String.t | [String.t]) ::
+  @spec build(Macro.t(), Macro.Env.t(), atom, String.t() | nil, nil | String.t() | [String.t()]) ::
           {Macro.t(), Keyword.t(), non_neg_integer | nil}
   def build(query, env, as, prefix, maybe_hints) do
     hints = List.wrap(maybe_hints)
@@ -88,9 +88,16 @@ defmodule Ecto.Query.Builder.From do
         {query(prefix, source, schema, as, hints), binds, 1}
 
       _other ->
-        quoted = quote do
-          Ecto.Query.Builder.From.apply(unquote(query), unquote(length(binds)), unquote(as), unquote(prefix), unquote(hints))
-        end
+        quoted =
+          quote do
+            Ecto.Query.Builder.From.apply(
+              unquote(query),
+              unquote(length(binds)),
+              unquote(as),
+              unquote(prefix),
+              unquote(hints)
+            )
+          end
 
         {quoted, binds, nil}
     end
@@ -119,7 +126,8 @@ defmodule Ecto.Query.Builder.From do
   @doc """
   The callback applied by `build/2` to build the query.
   """
-  @spec apply(Ecto.Queryable.t(), non_neg_integer, atom, String.t | nil, [String.t]) :: Ecto.Query.t()
+  @spec apply(Ecto.Queryable.t(), non_neg_integer, atom, String.t() | nil, [String.t()]) ::
+          Ecto.Query.t()
   def apply(query, binds, as, prefix, hints) do
     query =
       query
@@ -136,7 +144,9 @@ defmodule Ecto.Query.Builder.From do
 
   defp maybe_apply_as(%{from: %{as: from_as}}, as) when not is_nil(from_as) do
     Builder.error!(
-      "can't apply alias `#{inspect(as)}`, binding in `from` is already aliased to `#{inspect(from_as)}`"
+      "can't apply alias `#{inspect(as)}`, binding in `from` is already aliased to `#{
+        inspect(from_as)
+      }`"
     )
   end
 
@@ -151,15 +161,17 @@ defmodule Ecto.Query.Builder.From do
   defp maybe_apply_prefix(query, nil), do: query
 
   defp maybe_apply_prefix(query, prefix) do
-    update_in query.from.prefix, fn
+    update_in(query.from.prefix, fn
       nil ->
         prefix
 
       from_prefix ->
         Builder.error!(
-          "can't apply prefix `#{inspect(prefix)}`, `from` is already prefixed to `#{inspect(from_prefix)}`"
+          "can't apply prefix `#{inspect(prefix)}`, `from` is already prefixed to `#{
+            inspect(from_prefix)
+          }`"
         )
-    end
+    end)
   end
 
   defp maybe_apply_hints(query, []), do: query

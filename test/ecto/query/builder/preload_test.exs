@@ -1,4 +1,4 @@
-Code.require_file "../../../support/eval_helpers.exs", __DIR__
+Code.require_file("../../../support/eval_helpers.exs", __DIR__)
 
 defmodule Ecto.Query.Builder.PreloadTest do
   use ExUnit.Case, async: true
@@ -15,6 +15,7 @@ defmodule Ecto.Query.Builder.PreloadTest do
     end
 
     message = "expected key in preload to be an atom, got: `1`"
+
     assert_raise ArgumentError, message, fn ->
       temp = 1
       preload(%Ecto.Query{}, [{^temp, :foo}])
@@ -30,18 +31,18 @@ defmodule Ecto.Query.Builder.PreloadTest do
     comments = :comments
     assert preload("posts", ^comments).preloads == [:comments]
     assert preload("posts", ^[comments]).preloads == [[:comments]]
-    assert preload("posts", [users: ^comments]).preloads == [users: :comments]
-    assert preload("posts", [users: ^[comments]]).preloads == [users: [:comments]]
+    assert preload("posts", users: ^comments).preloads == [users: :comments]
+    assert preload("posts", users: ^[comments]).preloads == [users: [:comments]]
     assert preload("posts", [{^:users, ^comments}]).preloads == [users: :comments]
 
     query = from u in "users", limit: 10
-    assert preload("posts", [users: ^query]).preloads == [users: query]
+    assert preload("posts", users: ^query).preloads == [users: query]
     assert preload("posts", [{^:users, ^query}]).preloads == [users: query]
-    assert preload("posts", [users: ^{query, :comments}]).preloads == [users: {query, :comments}]
+    assert preload("posts", users: ^{query, :comments}).preloads == [users: {query, :comments}]
 
     fun = fn _ -> [] end
-    assert preload("posts", [users: ^fun]).preloads == [users: fun]
+    assert preload("posts", users: ^fun).preloads == [users: fun]
     assert preload("posts", [{^:users, ^fun}]).preloads == [users: fun]
-    assert preload("posts", [users: ^{fun, :comments}]).preloads == [users: {fun, :comments}]
+    assert preload("posts", users: ^{fun, :comments}).preloads == [users: {fun, :comments}]
   end
 end

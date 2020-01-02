@@ -10,35 +10,95 @@ defmodule Ecto.Query.Builder.FilterTest do
     test "handles expressions and params" do
       import Kernel, except: [==: 2, and: 2]
 
-      assert escape(:where, quote do [] end, 0, [x: 0], __ENV__) ===
-             {true, []}
+      assert escape(
+               :where,
+               quote do
+                 []
+               end,
+               0,
+               [x: 0],
+               __ENV__
+             ) ===
+               {true, []}
 
-      assert escape(:where, quote do {x.x()} == {^"foo"} end, 0, [x: 0], __ENV__) ===
-             {Macro.escape(quote do {&0.x()} == {^0} end),
-              [{"foo", {0, :x}}]}
+      assert escape(
+               :where,
+               quote do
+                 {x.x()} == {^"foo"}
+               end,
+               0,
+               [x: 0],
+               __ENV__
+             ) ===
+               {Macro.escape(
+                  quote do
+                    {&0.x()} == {^0}
+                  end
+                ), [{"foo", {0, :x}}]}
 
-      escaped = Macro.escape(quote do &0.x() == ^0 and &0.y() == ^1 end)
+      escaped =
+        Macro.escape(
+          quote do
+            &0.x() == ^0 and &0.y() == ^1
+          end
+        )
+
       assert {^escaped, [{{_, _, ["bar", :y]}, {0, :y}}, {{_, _, ["foo", :x]}, {0, :x}}]} =
-              escape(:where, quote do [x: ^"foo", y: ^"bar"] end, 0, [x: 0], __ENV__)
+               escape(
+                 :where,
+                 quote do
+                   [x: ^"foo", y: ^"bar"]
+                 end,
+                 0,
+                 [x: 0],
+                 __ENV__
+               )
     end
 
     test "raises on invalid expressions" do
       assert_raise Ecto.Query.CompileError,
-                   ~r"expected a keyword list at compile time in where, got: `\[\{1, 2\}\]`", fn ->
-        escape(:where, quote do [{1, 2}] end, 0, [], __ENV__)
-      end
+                   ~r"expected a keyword list at compile time in where, got: `\[\{1, 2\}\]`",
+                   fn ->
+                     escape(
+                       :where,
+                       quote do
+                         [{1, 2}]
+                       end,
+                       0,
+                       [],
+                       __ENV__
+                     )
+                   end
 
       assert_raise Ecto.Query.CompileError,
-                   ~r"Tuples can only be used in comparisons with literal tuples of the same size", fn ->
-        escape(:where, quote do {1, 2} > ^foo end, 0, [], __ENV__)
-      end
+                   ~r"Tuples can only be used in comparisons with literal tuples of the same size",
+                   fn ->
+                     escape(
+                       :where,
+                       quote do
+                         {1, 2} > ^foo
+                       end,
+                       0,
+                       [],
+                       __ENV__
+                     )
+                   end
     end
 
     test "raises on nils" do
       assert_raise Ecto.Query.CompileError,
-                   ~r"nil given for `x`. Comparison with nil is forbidden as it is unsafe.", fn ->
-        escape(:where, quote do [x: nil] end, 0, [], __ENV__)
-      end
+                   ~r"nil given for `x`. Comparison with nil is forbidden as it is unsafe.",
+                   fn ->
+                     escape(
+                       :where,
+                       quote do
+                         [x: nil]
+                       end,
+                       0,
+                       [],
+                       __ENV__
+                     )
+                   end
     end
   end
 
@@ -50,19 +110,23 @@ defmodule Ecto.Query.Builder.FilterTest do
 
     test "accepts keyword lists" do
       %{wheres: [where]} = where(from(p in "posts"), [p], ^[foo: 1, bar: "baz"])
+
       assert Macro.to_string(where.expr) ==
-             "&0.foo() == ^0 and &0.bar() == ^1"
+               "&0.foo() == ^0 and &0.bar() == ^1"
+
       assert where.params ==
-             [{1, {0, :foo}}, {"baz", {0, :bar}}]
+               [{1, {0, :foo}}, {"baz", {0, :bar}}]
     end
 
     test "supports dynamic expressions" do
       dynamic = dynamic([p], p.foo == ^1 and p.bar == ^"baz")
       %{wheres: [where]} = where("posts", ^dynamic)
+
       assert Macro.to_string(where.expr) ==
-             "&0.foo() == ^0 and &0.bar() == ^1"
+               "&0.foo() == ^0 and &0.bar() == ^1"
+
       assert where.params ==
-             [{1, {0, :foo}}, {"baz", {0, :bar}}]
+               [{1, {0, :foo}}, {"baz", {0, :bar}}]
     end
 
     test "raises on invalid keywords" do

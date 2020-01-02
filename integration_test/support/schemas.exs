@@ -1,12 +1,14 @@
-Code.require_file "types.exs", __DIR__
+Code.require_file("types.exs", __DIR__)
 
 defmodule Ecto.Integration.Schema do
   defmacro __using__(_) do
     quote do
       use Ecto.Schema
+
       type =
         Application.get_env(:ecto, :primary_key_type) ||
-        raise ":primary_key_type not set in :ecto application"
+          raise ":primary_key_type not set in :ecto application"
+
       @primary_key {:id, type, autogenerate: true}
       @foreign_key_type type
     end
@@ -28,7 +30,8 @@ defmodule Ecto.Integration.Post do
   import Ecto.Changeset
 
   schema "posts" do
-    field :counter, :id # Same as integer
+    # Same as integer
+    field :counter, :id
     field :title, :string
     field :text, :binary
     field :temp, :string, default: "temp", virtual: true
@@ -46,15 +49,25 @@ defmodule Ecto.Integration.Post do
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
     # The post<->permalink relationship should be marked as uniq
     has_one :permalink, Ecto.Integration.Permalink, on_delete: :delete_all, on_replace: :delete
-    has_one :update_permalink, Ecto.Integration.Permalink, foreign_key: :post_id, on_delete: :delete_all, on_replace: :update
+
+    has_one :update_permalink, Ecto.Integration.Permalink,
+      foreign_key: :post_id,
+      on_delete: :delete_all,
+      on_replace: :update
+
     has_many :comments_authors, through: [:comments, :author]
     belongs_to :author, Ecto.Integration.User
+
     many_to_many :users, Ecto.Integration.User,
-      join_through: "posts_users", on_delete: :delete_all, on_replace: :delete
-    many_to_many :unique_users, Ecto.Integration.User,
-      join_through: "posts_users", unique: true
+      join_through: "posts_users",
+      on_delete: :delete_all,
+      on_replace: :delete
+
+    many_to_many :unique_users, Ecto.Integration.User, join_through: "posts_users", unique: true
+
     many_to_many :constraint_users, Ecto.Integration.User,
       join_through: Ecto.Integration.PostUserCompositePk
+
     has_many :users_comments, through: [:users, :comments]
     has_many :comments_authors_permalinks, through: [:comments_authors, :permalink]
     has_one :post_user_composite_pk, Ecto.Integration.PostUserCompositePk
@@ -105,7 +118,12 @@ defmodule Ecto.Integration.Permalink do
   schema "permalinks" do
     field :url, :string, source: :uniform_resource_locator
     belongs_to :post, Ecto.Integration.Post, on_replace: :nilify
-    belongs_to :update_post, Ecto.Integration.Post, on_replace: :update, foreign_key: :post_id, define_field: false
+
+    belongs_to :update_post, Ecto.Integration.Post,
+      on_replace: :update,
+      foreign_key: :post_id,
+      define_field: false
+
     belongs_to :user, Ecto.Integration.User
     has_many :post_comments_authors, through: [:post, :comments_authors]
   end
@@ -144,12 +162,25 @@ defmodule Ecto.Integration.User do
 
   schema "users" do
     field :name, :string
-    has_many :comments, Ecto.Integration.Comment, foreign_key: :author_id, on_delete: :nilify_all, on_replace: :nilify
+
+    has_many :comments, Ecto.Integration.Comment,
+      foreign_key: :author_id,
+      on_delete: :nilify_all,
+      on_replace: :nilify
+
     has_one :permalink, Ecto.Integration.Permalink, on_replace: :nilify
-    has_many :posts, Ecto.Integration.Post, foreign_key: :author_id, on_delete: :nothing, on_replace: :delete
+
+    has_many :posts, Ecto.Integration.Post,
+      foreign_key: :author_id,
+      on_delete: :nothing,
+      on_replace: :delete
+
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
     many_to_many :schema_posts, Ecto.Integration.Post, join_through: Ecto.Integration.PostUser
-    many_to_many :unique_posts, Ecto.Integration.Post, join_through: Ecto.Integration.PostUserCompositePk
+
+    many_to_many :unique_posts, Ecto.Integration.Post,
+      join_through: Ecto.Integration.PostUserCompositePk
+
     timestamps(type: :utc_datetime)
   end
 end
@@ -168,9 +199,12 @@ defmodule Ecto.Integration.Custom do
   @primary_key {:bid, :binary_id, autogenerate: true}
   schema "customs" do
     field :uuid, Ecto.Integration.TestRepo.uuid()
+
     many_to_many :customs, Ecto.Integration.Custom,
-      join_through: "customs_customs", join_keys: [custom_id1: :bid, custom_id2: :bid],
-      on_delete: :delete_all, on_replace: :delete
+      join_through: "customs_customs",
+      join_keys: [custom_id1: :bid, custom_id2: :bid],
+      on_delete: :delete_all,
+      on_replace: :delete
   end
 end
 
@@ -272,6 +306,7 @@ defmodule Ecto.Integration.CompositePk do
     field :b, :integer, primary_key: true
     field :name, :string
   end
+
   def changeset(schema, params) do
     cast(schema, params, ~w(a b name)a)
   end
