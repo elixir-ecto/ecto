@@ -386,8 +386,12 @@ defmodule Ecto.Association do
       ),
       do: changeset
 
-  def update_parent_prefix(changeset, %{__meta__: %{prefix: prefix}}),
-    do: update_in(changeset.data, &Ecto.put_meta(&1, prefix: prefix))
+  def update_parent_prefix(
+        %{data: %{__meta__: %{prefix: nil}}} = changeset,
+        %{__meta__: %{prefix: prefix}}
+      ),
+      do: update_in(changeset.data, &Ecto.put_meta(&1, prefix: prefix))
+
 
   def update_parent_prefix(changeset, _),
     do: changeset
