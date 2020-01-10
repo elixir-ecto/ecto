@@ -8,28 +8,28 @@ defmodule Ecto.Query.Builder.OrderByTest do
 
   describe "escape" do
     test "handles expressions and params" do
-      assert {Macro.escape(quote do [asc: &0.y] end), {[], :acc}} ==
-             escape(:order_by, quote do x.y end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.y()] end), {[], :acc}} ==
+             escape(:order_by, quote do x.y() end, {[], :acc}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.x, asc: &1.y] end), {[], :acc}} ==
-             escape(:order_by, quote do [x.x, y.y] end, {[], :acc}, [x: 0, y: 1], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.x(), asc: &1.y()] end), {[], :acc}} ==
+             escape(:order_by, quote do [x.x(), y.y()] end, {[], :acc}, [x: 0, y: 1], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.x, desc: &1.y] end), {[], :acc}} ==
-             escape(:order_by, quote do [asc: x.x, desc: y.y] end, {[], :acc}, [x: 0, y: 1], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.x(), desc: &1.y()] end), {[], :acc}} ==
+             escape(:order_by, quote do [asc: x.x(), desc: y.y()] end, {[], :acc}, [x: 0, y: 1], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.x, desc: &1.y] end), {[], :acc}} ==
-             escape(:order_by, quote do [x.x, desc: y.y] end, {[], :acc}, [x: 0, y: 1], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.x(), desc: &1.y()] end), {[], :acc}} ==
+             escape(:order_by, quote do [x.x(), desc: y.y()] end, {[], :acc}, [x: 0, y: 1], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.x] end), {[], :acc}} ==
+      assert {Macro.escape(quote do [asc: &0.x()] end), {[], :acc}} ==
              escape(:order_by, quote do :x end, {[], :acc}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.x, desc: &0.y] end), {[], :acc}} ==
+      assert {Macro.escape(quote do [asc: &0.x(), desc: &0.y()] end), {[], :acc}} ==
              escape(:order_by, quote do [:x, desc: :y] end, {[], :acc}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [asc_nulls_first: &0.x, desc_nulls_first: &0.y] end), {[], :acc}} ==
+      assert {Macro.escape(quote do [asc_nulls_first: &0.x(), desc_nulls_first: &0.y()] end), {[], :acc}} ==
              escape(:order_by, quote do [asc_nulls_first: :x, desc_nulls_first: :y] end, {[], :acc}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [asc_nulls_last: &0.x, desc_nulls_last: &0.y] end), {[], :acc}} ==
+      assert {Macro.escape(quote do [asc_nulls_last: &0.x(), desc_nulls_last: &0.y()] end), {[], :acc}} ==
              escape(:order_by, quote do [asc_nulls_last: :x, desc_nulls_last: :y] end, {[], :acc}, [x: 0], __ENV__)
 
       import Kernel, except: [>: 2]
@@ -61,6 +61,20 @@ defmodule Ecto.Query.Builder.OrderByTest do
       assert order_by("q", [q], [{^dir, ^key}]).order_bys == order_by("q", [q], [desc: q.title]).order_bys
     end
 
+    test "supports dynamic expressions" do
+      order_by = [
+        asc: dynamic([p], p.foo == ^1 and p.bar == ^"bar"),
+        desc: :bar,
+        asc: dynamic([p], p.baz == ^2 and p.bat == ^"bat")
+      ]
+
+      %{order_bys: [order_by]} = order_by("posts", ^order_by)
+      assert Macro.to_string(order_by.expr) ==
+             "[asc: &0.foo() == ^0 and &0.bar() == ^1, desc: &0.bar(), asc: &0.baz() == ^2 and &0.bat() == ^3]"
+      assert order_by.params ==
+             [{1, {0, :foo}}, {"bar", {0, :bar}}, {2, {0, :baz}}, {"bat", {0, :bat}}]
+    end
+
     test "raises on invalid direction" do
       assert_raise ArgumentError, ~r"expected one of :asc,", fn ->
         temp = :temp
@@ -69,7 +83,7 @@ defmodule Ecto.Query.Builder.OrderByTest do
     end
 
     test "raises on invalid field" do
-      message = "expected a field as an atom, a list or keyword list in `order_by`, got: `\"temp\"`"
+      message = "expected a field as an atom in `order_by`, got: `\"temp\"`"
       assert_raise ArgumentError, message, fn ->
         temp = "temp"
         order_by("posts", [p], [asc: ^temp])
@@ -77,7 +91,7 @@ defmodule Ecto.Query.Builder.OrderByTest do
     end
 
     test "raises on invalid interpolation" do
-      message = "expected a field as an atom, a list or keyword list in `order_by`, got: `\"temp\"`"
+      message = ~r"`order_by` interpolated on root expects a field or a keyword list"
       assert_raise ArgumentError, message, fn ->
         temp = "temp"
         order_by("posts", [p], ^temp)

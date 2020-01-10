@@ -51,7 +51,7 @@ defmodule Ecto.Multi do
         alias Ecto.Multi
 
         def reset(account, params) do
-          Multi.new
+          Multi.new()
           |> Multi.update(:account, Account.password_reset_changeset(account, params))
           |> Multi.insert(:log, Log.password_reset_changeset(account, params))
           |> Multi.delete_all(:sessions, Ecto.assoc(account, :sessions))
@@ -116,7 +116,7 @@ defmodule Ecto.Multi do
   alias __MODULE__
   alias Ecto.Changeset
 
-  defstruct operations: [], names: MapSet.new
+  defstruct operations: [], names: MapSet.new()
 
   @type changes :: map
   @type run :: ((Ecto.Repo.t, changes) -> {:ok | :error, any}) | {module, atom, [any]}
@@ -139,7 +139,7 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> Ecto.Multi.new |> Ecto.Multi.to_list
+      iex> Ecto.Multi.new() |> Ecto.Multi.to_list()
       []
 
   """
@@ -155,8 +155,8 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> lhs = Ecto.Multi.new |> Ecto.Multi.run(:left, fn _, changes -> {:ok, changes} end)
-      iex> rhs = Ecto.Multi.new |> Ecto.Multi.run(:right, fn _, changes -> {:error, changes} end)
+      iex> lhs = Ecto.Multi.new() |> Ecto.Multi.run(:left, fn _, changes -> {:ok, changes} end)
+      iex> rhs = Ecto.Multi.new() |> Ecto.Multi.run(:right, fn _, changes -> {:error, changes} end)
       iex> Ecto.Multi.append(lhs, rhs) |> Ecto.Multi.to_list |> Keyword.keys
       [:left, :right]
 
@@ -173,8 +173,8 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      iex> lhs = Ecto.Multi.new |> Ecto.Multi.run(:left, fn _, changes -> {:ok, changes} end)
-      iex> rhs = Ecto.Multi.new |> Ecto.Multi.run(:right, fn _, changes -> {:error, changes} end)
+      iex> lhs = Ecto.Multi.new() |> Ecto.Multi.run(:left, fn _, changes -> {:ok, changes} end)
+      iex> rhs = Ecto.Multi.new() |> Ecto.Multi.run(:right, fn _, changes -> {:error, changes} end)
       iex> Ecto.Multi.prepend(lhs, rhs) |> Ecto.Multi.to_list |> Keyword.keys
       [:right, :left]
 
@@ -219,10 +219,16 @@ defmodule Ecto.Multi do
 
   ## Example
 
-      Ecto.Multi.merge(multi, fn %{post: post} ->
+      multi =
+        Ecto.Multi.new()
+        |> Ecto.Multi.insert(:post, %Post{title: "first"})
+
+      multi
+      |> Ecto.Multi.merge(fn %{post: post} ->
         Ecto.Multi.new()
         |> Ecto.Multi.insert(:comment, Ecto.build_assoc(post, :comments))
       end)
+      |> MyApp.Repo.transaction()
   """
   @spec merge(t, (changes -> t)) :: t
   def merge(%Multi{} = multi, merge) when is_function(merge, 1) do
@@ -323,8 +329,8 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
       Ecto.Multi.new()
-      |> Ecto.Multi.run(:post, fn _repo ->
-           MyApp.Repo.get!(Post, 1)
+      |> Ecto.Multi.run(:post, fn repo, _changes ->
+           {:ok, repo.get(Post, 1) || %Post{}}
          end)
       |> Ecto.Multi.insert_or_update(:update, fn %{post: post} ->
            Ecto.Changeset.change(post, title: "New title")
@@ -360,8 +366,11 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
       Ecto.Multi.new()
-      |> Ecto.Multi.run(:post, fn _repo ->
-           MyApp.Repo.get!(Post, 1)
+      |> Ecto.Multi.run(:post, fn repo, _changes ->
+           case repo.get(Post, 1) do
+             nil -> {:error, :not_found}
+             post -> {:ok, post}
+           end
          end)
       |> Ecto.Multi.delete(:delete, fn %{post: post} ->
            # Others validations
@@ -424,16 +433,12 @@ defmodule Ecto.Multi do
   ## Example
 
       Ecto.Multi.run(multi, :write, fn _repo, %{image: image} ->
-        File.write!(image.name, image.contents)
+        with :ok <- File.write(image.name, image.contents) do
+          {:ok, nil}
+        end
       end)
   """
   @spec run(t, name, run) :: t
-  def run(multi, name, run) when is_function(run, 1) do
-    IO.warn "Giving an anonymous function with 1 argument to Ecto.Multi.run/3 is deprecated. " <>
-              "Please pass an anonymous function that receives the repository and the changes so far"
-    run(multi, name, fn _repo, changes -> run.(changes) end)
-  end
-
   def run(multi, name, run) when is_function(run, 2) do
     add_operation(multi, name, {:run, run})
   end
@@ -594,11 +599,11 @@ defmodule Ecto.Multi do
   defp apply_operation({:error, value}, _acc, _apply_args, _repo),
     do: {:error, value}
   defp apply_operation({:insert_all, source, entries, opts}, _acc, _apply_args, repo),
-    do: {:ok, Ecto.Repo.Schema.insert_all(repo, source, entries, opts)}
+    do: {:ok, repo.insert_all(source, entries, opts)}
   defp apply_operation({:update_all, query, updates, opts}, _acc, _apply_args, repo),
-    do: {:ok, Ecto.Repo.Queryable.update_all(repo, query, updates, opts)}
+    do: {:ok, repo.update_all(query, updates, opts)}
   defp apply_operation({:delete_all, query, opts}, _acc, _apply_args, repo),
-    do: {:ok, Ecto.Repo.Queryable.delete_all(repo, query, opts)}
+    do: {:ok, repo.delete_all(query, opts)}
 
   defp apply_merge_fun({mod, fun, args}, acc), do: apply(mod, fun, [acc | args])
   defp apply_merge_fun(fun, acc), do: apply(fun, [acc])
@@ -607,7 +612,7 @@ defmodule Ecto.Multi do
   defp apply_run_fun(fun, repo, acc), do: apply(fun, [repo, acc])
 
   defp merge_results(changes, new_changes, names) do
-    new_names = new_changes |> Map.keys |> MapSet.new
+    new_names = new_changes |> Map.keys |> MapSet.new()
     case MapSet.intersection(names, new_names) |> MapSet.to_list do
       [] ->
         {Map.merge(changes, new_changes), MapSet.union(names, new_names)}

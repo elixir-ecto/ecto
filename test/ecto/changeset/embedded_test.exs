@@ -517,10 +517,8 @@ defmodule Ecto.Changeset.EmbeddedTest do
   test "change embeds_one" do
     embed = Author.__schema__(:embed, :profile)
 
-    assert {:ok, nil, true} =
-      Relation.change(embed, nil, %Profile{})
-    assert {:ok, nil, true} =
-      Relation.change(embed, nil, nil)
+    assert {:ok, nil, true} = Relation.change(embed, nil, nil)
+    assert {:ok, nil, true} = Relation.change(embed, nil, %Profile{})
 
     embed_schema = %Profile{}
     embed_schema_changeset = Changeset.change(embed_schema, name: "michal")
@@ -637,6 +635,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
   test "change embeds_many" do
     embed = Author.__schema__(:embed, :posts)
+    assert {:ok, [], true} = Relation.change(embed, [], [])
 
     assert {:ok, [old_changeset, new_changeset], true} =
       Relation.change(embed, [%Post{id: 1}], [%Post{id: 2}])
@@ -659,6 +658,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert {:ok, [changeset], true} =
       Relation.change(embed, [], [embed_schema_changeset])
     assert changeset.action == :replace
+
+    embed_schemas = [%Post{id: 1}, %Post{id: 2}]
+    assert {:ok, [changeset1, changeset2], true} =
+      Relation.change(embed, Enum.reverse(embed_schemas), embed_schemas)
+    assert changeset1.action == :update
+    assert changeset2.action == :update
 
     assert :ignore =
       Relation.change(embed, [%{embed_schema_changeset | action: :ignore}], [embed_schema])
@@ -747,7 +752,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute changeset.valid?
   end
 
-  test "put_embed/4" do
+  test "put_embed/4 with embeds_one" do
     base_changeset = Changeset.change(%Author{})
 
     changeset = Changeset.put_embed(base_changeset, :profile, %Profile{name: "michal"})
@@ -760,7 +765,38 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute Map.has_key?(changeset.changes, :profile)
   end
 
-  test "put_change/4" do
+  test "put_embed/4 with embeds_one and empty" do
+    changeset =
+      %Author{}
+      |> Changeset.change()
+      |> Changeset.put_embed(:profile, nil)
+
+    refute Map.has_key?(changeset.changes, :profile)
+
+    changeset =
+      %Author{profile: nil}
+      |> Changeset.change()
+      |> Changeset.put_embed(:profile, nil)
+
+    refute Map.has_key?(changeset.changes, :profile)
+
+    changeset =
+      %Author{profile: %Profile{}}
+      |> Changeset.change()
+      |> Changeset.put_embed(:profile, nil)
+
+    assert Map.has_key?(changeset.changes, :profile)
+    assert changeset.changes[:profile] == nil
+
+    changeset =
+      %Author{}
+      |> Changeset.change(profile: %Profile{})
+      |> Changeset.put_embed(:profile, nil)
+
+    refute Map.has_key?(changeset.changes, :profile)
+  end
+
+  test "put_change/4 with embeds one" do
     changeset = Changeset.change(%Author{}, profile: %Profile{name: "michal"})
     assert %Ecto.Changeset{} = changeset.changes.profile
 
@@ -769,6 +805,58 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = Changeset.put_change(base_changeset, :profile, empty_update_changeset)
     refute Map.has_key?(changeset.changes, :profile)
+  end
+
+  test "put_embed/4 with embeds_many" do
+    base_changeset = Changeset.change(%Author{})
+
+    changeset = Changeset.put_embed(base_changeset, :posts, [%{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    changeset = Changeset.put_embed(base_changeset, :posts, [[title: "hello"]])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    changeset = Changeset.put_embed(base_changeset, :posts, [%Post{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    base_changeset = Changeset.change(%Author{posts: [%Post{title: "hello"}]})
+    empty_update_changeset = Changeset.change(%Post{title: "hello"})
+
+    changeset = Changeset.put_embed(base_changeset, :posts, [empty_update_changeset])
+    refute Map.has_key?(changeset.changes, :posts)
+  end
+
+  test "put_embed/4 with embeds_many and empty" do
+    changeset =
+      %Author{posts: []}
+      |> Changeset.change()
+      |> Changeset.put_embed(:posts, [])
+
+    refute Map.has_key?(changeset.changes, :posts)
+  end
+
+  test "put_change/3 with embeds_many" do
+    changeset = Changeset.change(%Author{}, posts: [%{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    base_changeset = Changeset.change(%Author{})
+    changeset = Changeset.put_change(base_changeset, :posts, [[title: "hello"]])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    changeset = Changeset.put_change(base_changeset, :posts, [%Post{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    base_changeset = Changeset.change(%Author{posts: [%Post{title: "hello"}]})
+    empty_update_changeset = Changeset.change(%Post{title: "hello"})
+
+    changeset = Changeset.put_change(base_changeset, :posts, [empty_update_changeset])
+    refute Map.has_key?(changeset.changes, :posts)
   end
 
   test "get_field/3, fetch_field/2 with embeds" do

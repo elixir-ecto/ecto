@@ -150,14 +150,16 @@ defmodule Ecto.Query.Builder.From do
 
   defp maybe_apply_prefix(query, nil), do: query
 
-  defp maybe_apply_prefix(%{from: %{prefix: from_prefix}}, prefix) when not is_nil(from_prefix) do
-    Builder.error!(
-      "can't apply prefix `#{inspect(prefix)}`, `from` is already prefixed to `#{inspect(from_prefix)}`"
-    )
-  end
-
   defp maybe_apply_prefix(query, prefix) do
-    put_in query.from.prefix, prefix
+    update_in query.from.prefix, fn
+      nil ->
+        prefix
+
+      from_prefix ->
+        Builder.error!(
+          "can't apply prefix `#{inspect(prefix)}`, `from` is already prefixed to `#{inspect(from_prefix)}`"
+        )
+    end
   end
 
   defp maybe_apply_hints(query, []), do: query

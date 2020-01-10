@@ -27,7 +27,7 @@ defmodule Ecto.Repo.EmbeddedTest do
 
     schema "my_assocs" do
       field :x
-      field :my_assoc_id
+      field :my_schema_id, :integer
     end
   end
 
@@ -35,6 +35,7 @@ defmodule Ecto.Repo.EmbeddedTest do
     use Ecto.Schema
 
     schema "my_schema" do
+      field :x
       embeds_one :embed, MyEmbed, on_replace: :delete
       embeds_many :embeds, MyEmbed, on_replace: :delete
       has_one :assoc, MyAssoc
@@ -137,6 +138,16 @@ defmodule Ecto.Repo.EmbeddedTest do
       |> Ecto.Changeset.put_embed(:embed, embed)
     schema = TestRepo.insert!(changeset)
     assert schema.embed.sub_embed.y == "xyz"
+  end
+
+  test "handles replaced embeds on insert" do
+    changeset =
+      %MySchema{embeds: [%MyEmbed{x: "xyz"}]}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_embed(:embeds, [])
+
+    schema = TestRepo.insert!(changeset)
+    assert schema.embeds == []
   end
 
   test "duplicate pk on insert" do

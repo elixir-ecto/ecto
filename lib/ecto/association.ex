@@ -42,6 +42,21 @@ defmodule Ecto.Association do
   alias Ecto.Query.{BooleanExpr, QueryExpr, FromExpr}
 
   @doc """
+  Helper to check if a queryable is compiled.
+  """
+  def ensure_compiled(queryable, env) do
+    if not is_atom(queryable) or queryable in env.context_modules do
+      :skip
+    else
+      case Code.ensure_compiled(queryable) do
+        {:module, _} -> :compiled
+        {:error, :unavailable} -> :skip
+        {:error, _} -> :not_found
+      end
+    end
+  end
+
+  @doc """
   Builds the association struct.
 
   The struct must be defined in the module that implements the
@@ -286,19 +301,24 @@ defmodule Ecto.Association do
     {expr, params, _counter} =
       Enum.reduce(conditions, {expr, params, counter}, fn
         {key, nil}, {expr, params, counter} ->
-          expr = {:and, [], [{:is_nil, [], [to_field(binding, key)]}, expr]}
+          expr = {:and, [], [expr, {:is_nil, [], [to_field(binding, key)]}]}
           {expr, params, counter}
 
         {key, {:not, nil}}, {expr, params, counter} ->
-          expr = {:and, [], [{:not, [], [{:is_nil, [], [to_field(binding, key)]}]}, expr]}
+          expr = {:and, [], [expr, {:not, [], [{:is_nil, [], [to_field(binding, key)]}]}]}
+          {expr, params, counter}
+
+        {key, {:fragment, frag}}, {expr, params, counter} when is_binary(frag) ->
+          pieces = Ecto.Query.Builder.fragment_pieces(frag, [to_field(binding, key)])
+          expr = {:and, [], [expr, {:fragment, [], pieces}]}
           {expr, params, counter}
 
         {key, {:in, value}}, {expr, params, counter} when is_list(value) ->
-          expr = {:and, [], [{:in, [], [to_field(binding, key), {:^, [], [counter]}]}, expr]}
+          expr = {:and, [], [expr, {:in, [], [to_field(binding, key), {:^, [], [counter]}]}]}
           {expr, [{value, {:in, {binding, key}}} | params], counter + 1}
 
         {key, value}, {expr, params, counter} ->
-          expr = {:and, [], [{:==, [], [to_field(binding, key), {:^, [], [counter]}]}, expr]}
+          expr = {:and, [], [expr, {:==, [], [to_field(binding, key), {:^, [], [counter]}]}]}
           {expr, [{value, {binding, key}} | params], counter + 1}
       end)
 
@@ -401,13 +421,13 @@ defmodule Ecto.Association do
   end
 
   defp on_repo_change(%{cardinality: :one, field: field, __struct__: mod} = meta,
-                      %{action: action} = changeset, parent_changeset,
+                      %{action: action, data: current} = changeset, parent_changeset,
                       repo_action, adapter, opts, {parent, changes, halt, valid?}) do
     check_action!(meta, action, repo_action)
+    if not halt, do: maybe_replace_one!(meta, current, parent, parent_changeset, adapter, opts)
 
     case on_repo_change_unless_halted(halt, mod, meta, parent_changeset, changeset, adapter, opts) do
       {:ok, struct} ->
-        struct && maybe_replace_one!(meta, struct, parent, parent_changeset, adapter, opts)
         {Map.put(parent, field, struct), Map.put(changes, field, changeset), halt, valid?}
 
       {:error, error_changeset} ->
@@ -513,14 +533,17 @@ defmodule Ecto.Association.Has do
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
   @has_one_on_replace_opts @on_replace_opts ++ [:update]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
-             :queryable, :on_delete, :on_replace, where: [], unique: true, defaults: [], relationship: :child]
+             :queryable, :on_delete, :on_replace, where: [], unique: true, defaults: [],
+             relationship: :child, ordered: false]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
+    compiled = Ecto.Association.ensure_compiled(queryable, env)
+
     cond do
-      not is_atom(queryable) or queryable in env.context_modules ->
+      compiled == :skip ->
         :ok
-      not Code.ensure_compiled?(queryable) ->
+      compiled == :not_found ->
         {:error, "associated schema #{inspect queryable} does not exist"}
       not function_exported?(queryable, :__schema__, 2) ->
         {:error, "associated module #{inspect queryable} is not an Ecto schema"}
@@ -533,6 +556,10 @@ defmodule Ecto.Association.Has do
 
   @doc false
   def struct(module, name, opts) do
+    queryable = Keyword.fetch!(opts, :queryable)
+    cardinality = Keyword.fetch!(opts, :cardinality)
+    related = Ecto.Association.related_from_query(queryable, name)
+
     ref =
       module
       |> Module.get_attribute(:primary_key)
@@ -542,10 +569,6 @@ defmodule Ecto.Association.Has do
       raise ArgumentError, "schema does not have the field #{inspect ref} used by " <>
         "association #{inspect name}, please set the :references option accordingly"
     end
-
-    queryable = Keyword.fetch!(opts, :queryable)
-    cardinality = Keyword.fetch!(opts, :cardinality)
-    related = Ecto.Association.related_from_query(queryable, name)
 
     if opts[:through] do
       raise ArgumentError, "invalid association #{inspect name}. When using the :through " <>
@@ -654,7 +677,7 @@ defmodule Ecto.Association.Has do
     changeset = update_parent_key(changeset, action, key, value)
     changeset = Ecto.Association.update_parent_prefix(changeset, parent)
 
-    case apply(Ecto.Repo.Schema, action, [repo, changeset, opts]) do
+    case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
         if action == :delete, do: {:ok, nil}, else: ok
       {:error, changeset} ->
@@ -725,7 +748,7 @@ defmodule Ecto.Association.HasThrough do
 
   @behaviour Ecto.Association
   defstruct [:cardinality, :field, :owner, :owner_key, :through, :on_cast,
-             relationship: :child, unique: true]
+             relationship: :child, unique: true, ordered: false]
 
   @doc false
   def after_compile_validation(_, _) do
@@ -809,15 +832,18 @@ defmodule Ecto.Association.BelongsTo do
 
   @behaviour Ecto.Association
   @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify, :update]
-  defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast, :on_replace,
-             where: [], defaults: [], cardinality: :one, relationship: :parent, unique: true]
+  defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast,
+             :on_replace, where: [], defaults: [], cardinality: :one, relationship: :parent,
+             unique: true, ordered: false]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
+    compiled = Ecto.Association.ensure_compiled(queryable, env)
+
     cond do
-      not is_atom(queryable) or queryable in env.context_modules ->
+      compiled == :skip ->
         :ok
-      not Code.ensure_compiled?(queryable) ->
+      compiled == :not_found ->
         {:error, "associated schema #{inspect queryable} does not exist"}
       not function_exported?(queryable, :__schema__, 2) ->
         {:error, "associated module #{inspect queryable} is not an Ecto schema"}
@@ -919,7 +945,7 @@ defmodule Ecto.Association.BelongsTo do
   def on_repo_change(_refl, %{data: parent, repo: repo}, %{action: action} = changeset, _adapter, opts) do
     changeset = Ecto.Association.update_parent_prefix(changeset, parent)
 
-    case apply(Ecto.Repo.Schema, action, [repo, changeset, opts]) do
+    case apply(repo, action, [changeset, opts]) do
       {:ok, _} = ok ->
         if action == :delete, do: {:ok, nil}, else: ok
       {:error, changeset} ->
@@ -964,20 +990,24 @@ defmodule Ecto.Association.ManyToMany do
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
              :on_replace, :join_keys, :join_through, :on_cast, where: [],
-             defaults: [], relationship: :child, cardinality: :many, unique: false]
+             defaults: [], relationship: :child, cardinality: :many,
+             unique: false, ordered: false]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, join_through: join_through}, env) do
+    compiled = Ecto.Association.ensure_compiled(queryable, env)
+    join_compiled = Ecto.Association.ensure_compiled(join_through, env)
+
     cond do
-      not is_atom(queryable) or queryable in env.context_modules ->
+      compiled == :skip ->
         :ok
-      not Code.ensure_compiled?(queryable) ->
+      compiled == :not_found ->
         {:error, "associated schema #{inspect queryable} does not exist"}
       not function_exported?(queryable, :__schema__, 2) ->
         {:error, "associated module #{inspect queryable} is not an Ecto schema"}
-      not is_atom(join_through) ->
+      join_compiled == :skip ->
         :ok
-      not Code.ensure_compiled?(join_through) ->
+      join_compiled == :not_found ->
         {:error, ":join_through schema #{inspect join_through} does not exist"}
       not function_exported?(join_through, :__schema__, 2) ->
         {:error, ":join_through module #{inspect join_through} is not an Ecto schema"}
@@ -988,13 +1018,12 @@ defmodule Ecto.Association.ManyToMany do
 
   @doc false
   def struct(module, name, opts) do
-    join_through = opts[:join_through]
-
-    validate_join_through(name, join_through)
+    queryable = Keyword.fetch!(opts, :queryable)
+    related = Ecto.Association.related_from_query(queryable, name)
 
     join_keys = opts[:join_keys]
-    queryable = Keyword.fetch!(opts, :queryable)
-    related   = Ecto.Association.related_from_query(queryable, name)
+    join_through = opts[:join_through]
+    validate_join_through(name, join_through)
 
     {owner_key, join_keys} =
       case join_keys do
@@ -1125,8 +1154,8 @@ defmodule Ecto.Association.ManyToMany do
         where: field(j, ^join_owner_key) == ^owner_value and
                field(j, ^join_related_key) == ^related_value
 
-    query = Map.put(query, :prefix, owner.__meta__.prefix)
-    Ecto.Repo.Queryable.delete_all repo, query, opts
+    query = %{query | prefix: owner.__meta__.prefix}
+    repo.delete_all(query, opts)
     {:ok, nil}
   end
 
@@ -1182,7 +1211,7 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   defp insert_join(repo, join_through, data, opts, _constraints) when is_binary(join_through) do
-    Ecto.Repo.Schema.insert_all(repo, join_through, [data], opts)
+    repo.insert_all(join_through, [data], opts)
   end
 
   defp insert_join(repo, join_through, data, opts, constraints) when is_atom(join_through) do
@@ -1191,7 +1220,7 @@ defmodule Ecto.Association.ManyToMany do
       |> Ecto.Changeset.change
       |> Map.put(:constraints, constraints)
 
-    Ecto.Repo.Schema.insert(repo, changeset, opts)
+    repo.insert(changeset, opts)
   end
 
   defp field!(op, struct, field) do

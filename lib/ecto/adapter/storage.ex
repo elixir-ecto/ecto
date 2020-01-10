@@ -13,9 +13,9 @@ defmodule Ecto.Adapter.Storage do
 
   ## Examples
 
-      storage_up(username: postgres,
-                 database: 'ecto_test',
-                 hostname: 'localhost')
+      storage_up(username: "postgres",
+                 database: "ecto_test",
+                 hostname: "localhost")
 
   """
   @callback storage_up(options :: Keyword.t) :: :ok | {:error, :already_up} | {:error, term}
@@ -30,10 +30,24 @@ defmodule Ecto.Adapter.Storage do
 
   ## Examples
 
-      storage_down(username: postgres,
-                   database: 'ecto_test',
-                   hostname: 'localhost')
+      storage_down(username: "postgres",
+                   database: "ecto_test",
+                   hostname: "localhost")
 
   """
   @callback storage_down(options :: Keyword.t) :: :ok | {:error, :already_down} | {:error, term}
+  
+  @doc """
+  Returns the status of a storage given by options.
+
+  Can return `:up`, `:down` or `{:error, term}` in case anything goes wrong.
+
+  ## Examples
+
+      storage_status(username: "postgres",
+                     database: "ecto_test",
+                     hostname: "localhost")
+
+  """
+  @callback storage_status(options :: Keyword.t()) :: :up | :down | {:error, term()}
 end

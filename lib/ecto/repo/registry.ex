@@ -1,12 +1,13 @@
 defmodule Ecto.Repo.Registry do
   @moduledoc false
 
+  # TODO: Use persistent_term when depending on Erlang/OTP 22+
   use GenServer
 
   ## Public interface
 
-  def start_link() do
-    GenServer.start_link(__MODULE__, :ok, [name: __MODULE__])
+  def start_link(_opts) do
+    GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
   def associate(pid, value) when is_pid(pid) do
@@ -15,7 +16,7 @@ defmodule Ecto.Repo.Registry do
 
   def lookup(repo) when is_atom(repo) do
     GenServer.whereis(repo)
-    |> Kernel.||(raise "could not lookup #{inspect repo} because it was not started or it does not exist")
+    |> Kernel.||(raise "could not lookup Ecto repo #{inspect repo} because it was not started or it does not exist")
     |> lookup()
   end
 

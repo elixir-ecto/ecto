@@ -9,7 +9,7 @@ defmodule Friends.Person do
 
   def changeset(person, params \\ %{}) do
     person
-    |> Ecto.Changeset.cast(params, ~w(first_name last_name age))
+    |> Ecto.Changeset.cast(params, [:first_name, :last_name, :age])
     |> Ecto.Changeset.validate_required([:first_name, :last_name])
   end
 end

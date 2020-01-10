@@ -50,6 +50,11 @@ defmodule Ecto.Query.Builder.JoinTest do
 
   test "accepts interpolation on :on" do
     assert %{joins: [join]} =
+            join("posts", :inner, [p], "comments", on: [post_id: ^1])
+    assert Macro.to_string(join.on.expr) == "&1.post_id() == ^0"
+    assert join.on.params == [{1, {1, :post_id}}]
+
+    assert %{joins: [join]} =
             join("posts", :inner, [p], c in "comments", on: ^[post_id: 1, public: true])
     assert Macro.to_string(join.on.expr) == "&1.post_id() == ^0 and &1.public() == ^1"
     assert join.on.params == [{1, {1, :post_id}}, {true, {1, :public}}]
@@ -98,6 +103,14 @@ defmodule Ecto.Query.Builder.JoinTest do
     assert_raise ArgumentError, ~r/invalid option `foo` passed/, fn ->
       escape(quote do
         join("posts", :left, [p], c in "comments", on: true, foo: :bar)
+      end, [], __ENV__)
+    end
+  end
+
+  test "raises on invalid binding passed to join/5" do
+    assert_raise ArgumentError, ~r/invalid binding passed/, fn ->
+      escape(quote do
+        join("posts", :inner, [o, p] in subquery(some_subquery), on: o.id == p.org_id)
       end, [], __ENV__)
     end
   end

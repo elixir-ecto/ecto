@@ -51,7 +51,7 @@ defmodule Ecto.Repo.Preloader do
   rescue
     e ->
       # Reraise errors so we ignore the preload inner stacktrace
-      filter_and_reraise e, System.stacktrace
+      filter_and_reraise e, System.stacktrace()
   end
 
   ## Preloading
@@ -102,6 +102,7 @@ defmodule Ecto.Repo.Preloader do
       # We pass caller: self() so pools like the ownership
       # pool knows where to fetch the connection from and
       # set the proper timeouts.
+      # TODO: Remove this when we require Elixir v1.8+
       opts = Keyword.put_new(opts, :caller, self())
       assocs
       |> Task.async_stream(&fun.(&1, opts), timeout: :infinity)
@@ -307,32 +308,45 @@ defmodule Ecto.Repo.Preloader do
     assoc = owner.__schema__(:association, field)
     case assoc.__struct__.preload_info(assoc) do
       {:assoc, %{related: related}, _} ->
-        pks = related.__schema__(:primary_key)
+        pk_fields =
+          related.__schema__(:primary_key)
+          |> validate_has_pk_field!(related, assoc)
 
         {children, _} =
           Enum.reduce(structs, {[], %{}}, fn struct, acc ->
-            children = struct |> Map.fetch!(field) |> List.wrap
-
-            Enum.reduce children, acc, fn child, {fresh, set} ->
-              keys =
+            struct
+            |> Map.fetch!(field)
+            |> List.wrap()
+            |> Enum.reduce(acc, fn child, {fresh, set} ->
+              pk_values =
                 child
-                |> through_pks(pks, assoc)
-                |> validate_non_null_pk!(child, pks, assoc)
+                |> through_pks(pk_fields, assoc)
+                |> validate_non_null_pk!(child, pk_fields, assoc)
 
               case set do
-                %{^keys => true} ->
+                %{^pk_values => true} ->
                   {fresh, set}
                 _ ->
-                  {[child|fresh], Map.put(set, keys, true)}
+                  {[child|fresh], Map.put(set, pk_values, true)}
               end
-            end
+            end)
           end)
 
         {Enum.reverse(children), related}
+
       {:through, _, through} ->
         Enum.reduce(through, {structs, owner}, &recur_through/2)
     end
   end
+
+  defp validate_has_pk_field!([], related, assoc) do
+    raise ArgumentError,
+          "cannot preload through association `#{assoc.field}` on " <>
+            "`#{inspect assoc.owner}`. Ecto expected the #{inspect related} schema " <>
+            "to have at least one primary key field"
+  end
+
+  defp validate_has_pk_field!(pk_fields, _related, _assoc), do: pk_fields
 
   defp through_pks(map, pks, assoc) do
     Enum.map(pks, fn pk ->

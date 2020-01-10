@@ -1,3 +1,5 @@
+Code.require_file "types.exs", __DIR__
+
 defmodule Ecto.Integration.Schema do
   defmacro __using__(_) do
     quote do
@@ -33,6 +35,7 @@ defmodule Ecto.Integration.Post do
     field :public, :boolean, default: true
     field :cost, :decimal
     field :visits, :integer
+    field :wrapped_visits, WrappedInteger
     field :intensity, :float
     field :bid, :binary_id
     field :uuid, Ecto.Integration.TestRepo.uuid(), autogenerate: true
@@ -41,6 +44,7 @@ defmodule Ecto.Integration.Post do
     field :intensities, {:map, :float}
     field :posted, :date
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
+    # The post<->permalink relationship should be marked as uniq
     has_one :permalink, Ecto.Integration.Permalink, on_delete: :delete_all, on_replace: :delete
     has_one :update_permalink, Ecto.Integration.Permalink, foreign_key: :post_id, on_delete: :delete_all, on_replace: :update
     has_many :comments_authors, through: [:comments, :author]
@@ -212,6 +216,7 @@ defmodule Ecto.Integration.Item do
   use Ecto.Schema
 
   embedded_schema do
+    field :reference, PrefixedString
     field :price, :integer
     field :valid_at, :date
 

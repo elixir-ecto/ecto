@@ -22,22 +22,20 @@ defmodule Ecto.Query.Builder.Distinct do
     {expr, params_acc}
   end
 
-  def escape({:^, _, [expr]}, params_acc, _vars, _env) do
-    {quote(do: Ecto.Query.Builder.Distinct.distinct!(unquote(expr))), params_acc}
-  end
-
   def escape(expr, params_acc, vars, env) do
-    Ecto.Query.Builder.OrderBy.escape(:distinct, expr, params_acc, vars, env)
+    Builder.OrderBy.escape(:distinct, expr, params_acc, vars, env)
   end
 
   @doc """
   Called at runtime to verify distinct.
   """
-  def distinct!(distinct) when is_boolean(distinct) do
-    distinct
+  def distinct!(query, distinct, file, line) when is_boolean(distinct) do
+    apply(query, %Ecto.Query.QueryExpr{expr: distinct, params: [], line: line, file: file})
   end
-  def distinct!(distinct) do
-    Ecto.Query.Builder.OrderBy.order_by!(:distinct, distinct)
+  def distinct!(query, distinct, file, line) do
+    {expr, params} = Builder.OrderBy.order_by_or_distinct!(:distinct, query, distinct, [])
+    expr = %Ecto.Query.QueryExpr{expr: expr, params: Enum.reverse(params), line: line, file: file}
+    apply(query, expr)
   end
 
   @doc """
@@ -48,6 +46,12 @@ defmodule Ecto.Query.Builder.Distinct do
   runtime work.
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
+  def build(query, _binding, {:^, _, [var]}, env) do
+    quote do
+      Ecto.Query.Builder.Distinct.distinct!(unquote(query), unquote(var), unquote(env.file), unquote(env.line))
+    end
+  end
+
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, {params, _}} = escape(expr, {[], :acc}, binding, env)

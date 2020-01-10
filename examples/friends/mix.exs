@@ -28,12 +28,14 @@ defmodule Friends.Mixfile do
   defp deps do
     # Normally you would specify a version of Ecto, like this:
     #
-    # {:ecto, "~> 2.0"}
+    # {:ecto, "~> 3.0"}
     #
     # It is not done in this instance because we want to refer to the local Ecto.
     [
       {:ecto, path: "../..", override: true},
-      {:postgrex, ">= 0.0.0"}
+      {:postgrex, ">= 0.0.0"},
+      {:ecto_sql, "~> 3.0"},
+      {:jason, "~> 1.0"}
     ]
   end
 end

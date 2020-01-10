@@ -1,105 +1,217 @@
-# Changelog for v3.0
+# Changelog for v3.x
 
-## Highlights
+## v3.3.1 (2019-12-27)
 
-This is a new major release for Ecto v3.0. Despite the major version change, we have kept the number of user-facing breaking changes to a minimum, the three main ones being:
+### Enhancements
 
-  * Split the Ecto repository apart
-  * Remove the previously deprecated Ecto datetime types in favor of the Calendar types with explicit microsecond prescision that ship as part of Elixir
-  * Update to the latest JSON handling best practices
+  * [Ecto.Query.WindowAPI] Support `filter/2`
 
-Besides those changes, there are many exciting new features. We will explore all of those changes and more below.
+### Bug fixes
 
-### Split Ecto into `ecto` and `ecto_sql`
+  * [Ecto.Query.API] Fix `coalesce/2` usage with mixed types
 
-Ecto is broken in two repositories: `ecto` and `ecto_sql`. Since Ecto v2.0, an increased number of developers and teams have been using Ecto for data mapping and validation, without a need for a database. However, adding Ecto to your application would still bring a lot of the SQL baggage, such as adapters, sandboxes and migrations. In Ecto 3.0, we have moved all of the SQL adapters to a separate repository and Ecto now mostly focuses on the four Ecto building blocks: schemas, changesets, queries and repos.
+## v3.3.0 (2019-12-11)
 
-If you are using Ecto with a SQL database, migrating to Ecto 3.0 is very striaght-forward. Instead of:
+### Enhancements
 
-    {:ecto, "~> 2.2"}
+  * [Ecto.Adapter] Add `storage_status/1` callback to `Ecto.Adapters.Storage` behaviour
+  * [Ecto.Changeset] Add `Ecto.Changeset.apply_action!/2`
+  * [Ecto.Changeset] Remove actions restriction in `Ecto.Changeset.apply_action/2`
+  * [Ecto.Repo] Introduce `c:Ecto.Repo.aggregate/2`
+  * [Ecto.Repo] Support `{:replace_all_except, fields}` in `:on_conflict`
 
-You should now list:
+### Bug fixes
 
-    {:ecto_sql, "~> 3.0"}
+  * [Ecto.Query] Make sure the `:prefix` option in `:from`/`:join` also cascades to subqueries
+  * [Ecto.Query] Make sure the `:prefix` option in `:join` also cascades to queries
+  * [Ecto.Query] Use database returned values for literals. Previous Ecto versions knew literals from queries should not be discarded for combinations but, even if they were not discarded, we would ignore the values returned by the database
+  * [Ecto.Repo] Do not wrap schema operations in a transaction if already inside a transaction. We have also removed the **private** option called `:skip_transaction`
 
-If the `application` function in your `mix.exs` file includes an `:applications` key, you will need to add `:ecto_sql` to your list of applications. This does not apply if you are using the `:extra_applications` key.
+### Deprecations
 
-And that's it!
+  * [Ecto.Repo] `:replace_all_except_primary_keys` is deprecated in favor of `{:replace_all_except, fields}` in `:on_conflict`
 
-### Calendar types
+## v3.2.5 (2019-11-03)
 
-`Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` no longer exist. Instead developers should use `Date`, `Time`, `DateTime` and `NaiveDateTime` that ship as part of Elixir and are the preferred types since Ecto 2.1. Odds that you are already using the new types and not the deprecated ones.
+### Bug fixes
 
-Note that database adapters have also been standardized to work with Elixir types and they no longer return tuples when developers perform raw queries or use `Ecto.Query` fragments. For example, in Ecto 2.x:
+  * [Ecto.Query] Fix a bug where executing some queries would leak the `{:maybe, ...}` type
 
-    iex> Repo.one from u in User, select: fragment("?", u.created_at), limit: 1
-    {{2018, 10, 8}, {15, 15, 42, 501011}}
+## v3.2.4 (2019-11-02)
 
-And now in Ecto 3.0:
+### Bug fixes
 
-    iex> Repo.one from u in User, select: fragment("?", u.created_at), limit: 1
-    ~N[2018-10-08 15:15:42.501011]
+  * [Ecto.Query] Improve error message on invalid join binding
+  * [Ecto.Query] Make sure the `:prefix` option in `:join` also applies to through associations
+  * [Ecto.Query] Invoke custom type when loading aggregations from the database (but fallback to database value if it can't be cast)
+  * [mix ecto.gen.repo] Support Elixir v1.9 style configs
 
-To uniformly support microseconds across all databases, the types `:time`, `:naive_datetime`, `:utc_datetime` will now discard any microseconds information on `Ecto.Changeset.cast/4`. Setting the value directly, either in the struct or via `Ecto.Changeset.change/2` will raise if microseconds are not truncated. Ecto v3.0 introduces the types `:time_usec`, `:naive_datetime_usec` and `:utc_datetime_usec` as an alternative for those interested in keeping microseconds. If you want to keep microseconds in your migrations and schemas, you need to configure your repository:
+## v3.2.3 (2019-10-17)
 
-    config :my_app, MyApp.Repo,
-      migration_timestamps: [type: :naive_datetime_usec]
+### Bug fixes
 
-And then in your schema:
+  * [Ecto.Changeset] Do not convert enums given to `validate_inclusion` to a list
 
-    @timestamps_opts [type: :naive_datetime_usec]
+### Enhancements
 
-### JSON handling
+  * [Ecto.Changeset] Improve error message on non-atom keys to change/put_change
+  * [Ecto.Changeset] Allow :with to be given as a `{module, function, args}` tuple on `cast_association/cast_embed`
+  * [Ecto.Changeset] Add `fetch_change!/2` and `fetch_field!/2`
 
-Ecto v3.0 moved the management of the JSON library to adapters. All adapters should default to [`Jason`](https://github.com/michalmuskala/jason).
+## v3.2.2 (2019-10-01)
 
-The following configuration will emit a warning:
+### Bug fixes
 
-    config :ecto, :json_library, CustomJSONLib
+  * [Ecto.Query] Fix keyword arguments given to `:on` when a bind is not given to join
+  * [Ecto.Repo] Make sure a preload given to an already preloaded has_many :through is loaded
 
-And should be rewritten as:
+## v3.2.1 (2019-09-17)
 
-    # For Postgres
-    config :postgrex, :json_library, CustomJSONLib
+### Enhancements
 
-    # For MySQL
-    config :mariaex, :json_library, CustomJSONLib
+  * [Ecto.Changeset] Add rollover logic for default incremeter in `optimistic_lock`
+  * [Ecto.Query] Also expand macros when used inside `type/2`
 
-If you want to rollback to Poison, you need to configure your adapter accordingly:
+### Bug fixes
 
-    # For Postgres
-    config :postgrex, :json_library, Poison
+  * [Ecto.Query] Ensure queries with non-cacheable queries in CTEs/combinations are also not-cacheable
 
-    # For MySQL
-    config :mariaex, :json_library, Poison
+## v3.2.0 (2019-09-07)
 
-We recommend everyone to migrate to Jason. Built-in support for Poison will be removed in future Ecto 3.x releases.
+v3.2 requires Elixir v1.6+.
 
-### Named bindings
+### Enhancements
 
-One of the exciting additions in Ecto v3.0 is the addition of named bindings to make the query composition even more flexible:
+  * [Ecto.Query] Add common table expressions support `with_cte/3` and `recursive_ctes/2`
+  * [Ecto.Query] Allow `dynamic/3` to be used in `order_by`, `distinct`, `group_by`, as well as in `partition_by`, `order_by`, and `frame` inside `windows`
+  * [Ecto.Query] Allow filters in `type/2` expressions
+  * [Ecto.Repo] Merge options given to the repository into the changeset `repo_opts` and assign it back to make it available down the chain
+  * [Ecto.Repo] Add `prepare_query/3` callback that is invoked before query operations
+  * [Ecto.Repo] Support `:returning` option in `Ecto.Repo.update/2`
+  * [Ecto.Repo] Support passing a one arity function to `Ecto.Repo.transaction/2`, where the argument is the current repo
+  * [Ecto.Type] Add a new `embed_as/1` callback to `Ecto.Type` that allows adapters to control embedding behaviour
+  * [Ecto.Type] Add `use Ecto.Type` for convenience that implements the new required callbacks
 
-    query = Post
+### Bug fixes
 
-    # Filter by the join
-    query = from p in query,
-              join: c in Comment, as: :comments, where: c.post_id == p.id
+  * [Ecto.Association] Ensure we delete an association before inserting when replacing on `has_one`
+  * [Ecto.Query] Do not allow interpolated `nil` in literal keyword list when building query
+  * [Ecto.Query] Do not remove literals from combinations, otherwise UNION/INTERSECTION queries may not match the nummber of values in `select`
+  * [Ecto.Query] Do not attempt to merge at compile-time non-keyword lists given to `select_merge`
+  * [Ecto.Repo] Do not override `:through` associations on preload unless forcing
+  * [Ecto.Repo] Make sure prefix option cascades to combinations and recursive queries
+  * [Ecto.Schema] Use OS time without drift when generating timestamps
+  * [Ecto.Type] Allow any datetime in `datetime_add`
 
-    # Extend the query
-    query = from [p, comments: c] in query,
-              select: {p.title, c.body}
+## v3.1.7 (2019-06-27)
 
-`Ecto.Query` got many other exciting features. Such as pairwise comparisons, as in `where: {p.foo, p.bar} > {^foo, ^bar}`, built-in support for `coalesce` and arithmetic operators, the ability to filter aggregators, as in `select: filter(count(p.id), p.public == true)`, table specific hints in databases like MySQL and MSSQL, unions, intersections, windows, and many more.
+### Bug fixes
 
-### Locked migrations
+  * [Ecto.Changeset] Make sure `put_assoc` with empty changeset propagates on insert
 
-Running migrations will now lock the migrations table, allowing you to concurrently run migrations in a cluster without worrying that two servers will race each other and run migrations twice.
+## v3.1.6 (2019-06-19)
 
-In order for this safer migration mechanism to work, at least two database connections are necessary when migrating. One is used to lock the "schema_migrations" table and the other one to effectively run the migrations.
+### Enhancements
 
-A downside of this approach is that migrations cannot run dynamically during test under the `Ecto.Adapters.SQL.Sandbox`, as the sandbox is unable to share a single connection across processes at the exact same time. This approach also conflicts with concurrent indexes, found in PostgreSQL. If you want to run concurrent indexes, you will have to disable the `migration_lock`:
+  * [Ecto.Repo] Add `:read_only` repositories
+  * [Ecto.Schema] Also validate options given to `:through` associations
 
-    config :my_app, MyApp.Repo, migration_lock: nil
+### Bug fixes
+
+  * [Ecto.Changeset] Do not mark `put_assoc` from `[]` to `[]` or from `nil` to `nil` as change
+  * [Ecto.Query] Remove named binding when exluding joins
+  * [mix ecto.gen.repo] Use `:config_path` instead of hardcoding to `config/config.exs`
+
+## v3.1.5 (2019-06-06)
+
+### Enhancements
+
+  * [Ecto.Repo] Allow `:default_dynamic_repo` option on `use Ecto.Repo`
+  * [Ecto.Schema] Support `{:fragment, ...}` in the `:where` option for associations
+
+### Bug fixes
+
+  * [Ecto.Query] Fix handling of literals in combinators (union, except, intersection)
+
+## v3.1.4 (2019-05-07)
+
+### Bug fixes
+
+  * [Ecto.Changeset] Convert validation enums to lists before adding them as validation metadata
+  * [Ecto.Schema] Properly propragate prefix to join_through source in many_to_many associations
+
+## v3.1.3 (2019-04-30)
+
+### Enhancements
+
+  * [Ecto.Changeset] Expose the enum that was validated against in errors from enum-based validations
+
+## v3.1.2 (2019-04-24)
+
+### Enhancements
+
+  * [Ecto.Query] Add support for `type+over`
+  * [Ecto.Schema] Allow schema fields to be excluded from queries
+
+### Bug fixes
+
+  * [Ecto.Changeset] Do not list a field as changed if it is updated to its original value
+  * [Ecto.Query] Keep literal numbers and bitstring in subqueries and unions
+  * [Ecto.Query] Improve error message for invalid `type/2` expression
+  * [Ecto.Query] Properly count interpolations in `select_merge/2`
+
+## v3.1.1 (2019-04-04)
+
+### Bug fixes
+
+  * [Ecto] Do not require Jason (i.e. it should continue to be an optional dependency)
+  * [Ecto.Repo] Make sure `many_to_many` and `Ecto.Multi` work with dynamic repos
+
+## v3.1.0 (2019-04-02)
+
+v3.1 requires Elixir v1.5+.
+
+### Enhancements
+
+  * [Ecto.Changeset] Add `not_equal_to` option for `validate_number`
+  * [Ecto.Query] Improve error message for missing `fragment` arguments
+  * [Ecto.Query] Improve error message on missing struct key for structs built in `select`
+  * [Ecto.Query] Allow dynamic named bindings
+  * [Ecto.Repo] Add dynamic repository support with `Ecto.Repo.put_dynamic_repo/1` and `Ecto.Repo.get_dynamic_repo/0` (experimental)
+  * [Ecto.Type] Cast naive_datetime/utc_datetime strings without seconds
+
+### Bug fixes
+
+  * [Ecto.Changeset] Do not run `unsafe_validate_unique` query unless relevant fields were changed
+  * [Ecto.Changeset] Raise if an unknown field is given on `Ecto.Changeset.change/2`
+  * [Ecto.Changeset] Expose the type that was validated in errors generated by `validate_length/3`
+  * [Ecto.Query] Add support for `field/2` as first element of `type/2` and alias as second element of `type/2`
+  * [Ecto.Query] Do not attempt to assert types of named bindings that are not known at compile time
+  * [Ecto.Query] Properly cast boolean expressions in select
+  * [Mix.Ecto] Load applications during repo lookup so their app environment is available
+
+### Deprecations
+
+  * [Ecto.LogEntry] Fully deprecate previously soft deprecated API
+
+## v3.0.7 (2019-02-06)
+
+### Bug fixes
+
+  * [Ecto.Query] `reverse_order` reverses by primary key if no order is given
+
+## v3.0.6 (2018-12-31)
+
+### Enhancements
+
+  * [Ecto.Query] Add `reverse_order/1`
+
+### Bug fixes
+
+  * [Ecto.Multi] Raise better error message on accidental rollback inside `Ecto.Multi`
+  * [Ecto.Query] Properly merge deeply nested preloaded joins
+  * [Ecto.Query] Raise better error message on missing select on schemaless queries
+  * [Ecto.Schema] Fix parameter ordering in assoc `:where`
 
 ## v3.0.5 (2018-12-08)
 
@@ -180,7 +292,7 @@ Note this version includes changes from `ecto` and `ecto_sql` but in future rele
   * [Ecto.Query] Support `filter/2` in queries, such as `select: filter(count(p.id), p.public == true)`
   * [Ecto.Query] The `:prefix` and `:hints` options are now supported on both `from` and `join` expressions
   * [Ecto.Query] Support `:asc_nulls_last`, `:asc_nulls_first`, `:desc_nulls_last`, and `:desc_nulls_first` in `order_by`
-  * [Ecto.Query] Allow variables (sources) to be given in queries, for example, useful for invoking functins, such as `fragment("some_function(?)", p)`
+  * [Ecto.Query] Allow variables (sources) to be given in queries, for example, useful for invoking functions, such as `fragment("some_function(?)", p)`
   * [Ecto.Query] Add support for `union`, `union_all`, `intersection`, `intersection_all`, `except` and `except_all`
   * [Ecto.Query] Add support for `windows` and `over`
   * [Ecto.Query] Raise when comparing a string with a charlist during planning
@@ -225,6 +337,7 @@ Although Ecto 3.0 is a major bump version, the functionality below emits depreca
 
   * [Ecto.DateTime] `Ecto.Date`, `Ecto.Time` and `Ecto.DateTime` were previously deprecated and have now been removed
   * [Ecto.DataType] `Ecto.DataType` protocol has been removed
+  * [Ecto.Migration] Automatically inferred index names may differ in Ecto v3.0 for indexes on complex column names
   * [Ecto.Multi] `Ecto.Multi.run/5` now receives the repo in which the transaction is executing as the first argument to functions, and the changes so far as the second argument
   * [Ecto.Query] A `join` no longer wraps `fragment` in parentheses. In some cases, such as common table expressions, you will have to explicitly wrap the fragment in parens.
   * [Ecto.Repo] The `on_conflict: :replace_all` option now will also send fields with default values to the database. If you prefer the old behaviour that only sends the changes in the changeset, you can set it to `on_conflict: {:replace, Map.keys(changeset.changes)}` (this change is also listed as a bug fix)

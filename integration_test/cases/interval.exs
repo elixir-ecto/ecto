@@ -250,7 +250,7 @@ defmodule Ecto.Integration.IntervalTest do
   end
 
   test "from_now" do
-    current = DateTime.utc_now.year
+    current = DateTime.utc_now().year
     dec = Decimal.new(5)
     assert [%{year: year}] = TestRepo.all(from p in Post, select: from_now(5, "year"))
     assert year > current
@@ -265,7 +265,7 @@ defmodule Ecto.Integration.IntervalTest do
   end
 
   test "ago" do
-    current = DateTime.utc_now.year
+    current = DateTime.utc_now().year
     dec = Decimal.new(5)
     assert [%{year: year}] = TestRepo.all(from p in Post, select: ago(5, "year"))
     assert year < current
@@ -300,6 +300,7 @@ defmodule Ecto.Integration.IntervalTest do
            TestRepo.all(from p in User, select: datetime_add(p.inserted_at, ^dec, "year"))
   end
 
+  @tag :uses_usec
   test "datetime_add with naive_datetime_usec" do
     TestRepo.insert!(%Usec{naive_datetime_usec: ~N[2014-01-01 02:00:00.000001]})
     dec = Decimal.new(1500)
@@ -319,6 +320,7 @@ defmodule Ecto.Integration.IntervalTest do
            TestRepo.all(from u in Usec, select: datetime_add(u.naive_datetime_usec, ^dec, "microsecond"))
   end
 
+  @tag :uses_usec
   test "datetime_add with utc_datetime_usec" do
     {:ok, datetime} = DateTime.from_naive(~N[2014-01-01 02:00:00.000001], "Etc/UTC")
     TestRepo.insert!(%Usec{utc_datetime_usec: datetime})

@@ -2,9 +2,9 @@ defmodule Ecto.Query.Planner do
   # Normalizes a query and its parameters.
   @moduledoc false
 
-  alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, QueryExpr, SelectExpr}
+  alias Ecto.Query.{BooleanExpr, DynamicExpr, FromExpr, JoinExpr, QueryExpr, SelectExpr}
 
-  if map_size(%Ecto.Query{}) != 20 do
+  if map_size(%Ecto.Query{}) != 21 do
     raise "Ecto.Query match out of date in builder"
   end
 
@@ -37,17 +37,7 @@ defmodule Ecto.Query.Planner do
 
   defp merge_expr_and_params(op, %QueryExpr{expr: left_expr, params: left_params} = struct,
                              right_expr, right_params) do
-    right_expr =
-      case length(left_params) do
-        0 ->
-          right_expr
-        prefix ->
-          Macro.prewalk(right_expr, fn
-            {:^, meta, [counter]} when is_integer(counter) -> {:^, meta, [prefix + counter]}
-            other -> other
-          end)
-      end
-
+    right_expr = Ecto.Query.Builder.bump_interpolations(right_expr, left_params)
     %{struct | expr: merge_expr(op, left_expr, right_expr), params: left_params ++ right_params}
   end
 
@@ -125,7 +115,7 @@ defmodule Ecto.Query.Planner do
   along-side the select expression.
   """
   def query(query, operation, cache, adapter, counter) do
-    {query, params, key} = plan(query, operation, adapter, counter)
+    {query, params, key} = plan(query, operation, adapter)
     query_with_cache(key, query, operation, cache, adapter, counter, params)
   end
 
@@ -203,16 +193,17 @@ defmodule Ecto.Query.Planner do
   This function is called by the backend before invoking
   any cache mechanism.
   """
-  def plan(query, operation, adapter, counter) do
+  def plan(query, operation, adapter) do
     query
     |> plan_sources(adapter)
     |> plan_assocs
-    |> plan_combinations(operation, adapter, counter)
-    |> plan_cache(operation, adapter, counter)
+    |> plan_combinations(adapter)
+    |> plan_ctes(adapter)
+    |> plan_cache(operation, adapter)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
-      filter_and_reraise e, System.stacktrace
+      filter_and_reraise e, System.stacktrace()
   end
 
   @doc """
@@ -234,10 +225,11 @@ defmodule Ecto.Query.Planner do
     {from, [source]}
   end
 
-  defp plan_source(query, %{source: %Ecto.SubQuery{} = subquery} = expr, adapter) do
+  defp plan_source(query, %{source: %Ecto.SubQuery{} = subquery, prefix: prefix} = expr, adapter) do
     try do
       %{query: inner_query} = subquery
-      {inner_query, params, key} = plan(inner_query, :all, adapter, 0)
+      inner_query = update_in inner_query.prefix, &(prefix || &1 || query.prefix)
+      {inner_query, params, key} = plan(inner_query, :all, adapter)
       assert_no_subquery_assocs!(inner_query)
       {inner_query, select} = inner_query |> ensure_select(true) |> subquery_select(adapter)
       subquery = %{subquery | query: inner_query, params: params, cache: key, select: select}
@@ -247,23 +239,35 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp plan_source(query, %{source: {nil, schema}, prefix: prefix} = expr, _adapter)
+  defp plan_source(query, %{source: {nil, schema}} = expr, _adapter)
        when is_atom(schema) and schema != nil do
     source = schema.__schema__(:source)
-    {%{expr | source: {source, schema}}, {source, schema, prefix || query.prefix}}
+    prefix = plan_source_schema_prefix(expr, schema) || query.prefix
+    {%{expr | source: {source, schema}}, {source, schema, prefix}}
   end
 
   defp plan_source(query, %{source: {source, schema}, prefix: prefix} = expr, _adapter)
        when is_binary(source) and is_atom(schema),
        do: {expr, {source, schema, prefix || query.prefix}}
 
-  defp plan_source(_query, %{source: {:fragment, _, _} = source} = expr, _adapter),
+  defp plan_source(_query, %{source: {:fragment, _, _} = source, prefix: nil} = expr, _adapter),
        do: {expr, source}
+
+  defp plan_source(query, %{source: {:fragment, _, _}, prefix: prefix} = expr, _adapter),
+       do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment joins")
+
+  # The prefix for form are computed upfront, but not for joins
+  defp plan_source_schema_prefix(%FromExpr{prefix: prefix}, _schema),
+    do: prefix
+
+  defp plan_source_schema_prefix(%JoinExpr{prefix: prefix}, schema),
+    do: prefix || schema.__schema__(:prefix)
 
   defp assert_no_subquery_assocs!(%{assocs: assocs, preloads: preloads} = query)
        when assocs != [] or preloads != [] do
     error!(query, "cannot preload associations in subquery")
   end
+
   defp assert_no_subquery_assocs!(query) do
     query
   end
@@ -279,14 +283,19 @@ defmodule Ecto.Query.Planner do
 
     query = put_in(query.select.expr, expr)
     {expr, _} = prewalk(expr, :select, query, select, 0, adapter)
-    {meta, _fields, _from} = collect_fields(expr, [], :error, query, take)
+    {meta, _fields, _from} = collect_fields(expr, [], :error, query, take, true)
     {query, meta}
   end
 
   defp subquery_select({:merge, _, [left, right]}, take, query) do
     {left_struct, left_fields} = subquery_select(left, take, query)
-    {nil, right_fields} = subquery_select(right, take, query)
-    {left_struct, Keyword.merge(left_fields, right_fields)}
+    {right_struct, right_fields} = subquery_select(right, take, query)
+
+    unless is_nil(left_struct) or is_nil(right_struct) or left_struct == right_struct do
+      error!(query, "cannot merge #{inspect(left_struct)} and #{inspect(right_struct)} because they are different structs")
+    end
+
+    {left_struct || right_struct, Keyword.merge(left_fields, right_fields)}
   end
   defp subquery_select({:%, _, [name, map]}, take, query) do
     {_, fields} = subquery_select(map, take, query)
@@ -303,7 +312,7 @@ defmodule Ecto.Query.Planner do
 
     case update_keys -- valid_keys do
       [] -> :ok
-      [key | _] -> error!(query, "invalid key `#{inspect key}` on map update in subquery")
+      [key | _] -> error!(query, "invalid key `#{inspect key}` for `#{inspect struct}` on map update in subquery/cte")
     end
 
     # In case of map updates, we need to remove duplicated fields
@@ -325,7 +334,7 @@ defmodule Ecto.Query.Planner do
     {nil, subquery_fields([field], ix)}
   end
   defp subquery_select(expr, _take, query) do
-    error!(query, "subquery must select a source (t), a field (t.field) or a map, got: `#{Macro.to_string(expr)}`")
+    error!(query, "subquery/cte must select a source (t), a field (t.field) or a map, got: `#{Macro.to_string(expr)}`")
   end
 
   defp subquery_struct_and_fields({:source, {_, schema}, _, types}) do
@@ -344,8 +353,8 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp subquery_types(%{select: {:map, types}}), do: types
-  defp subquery_types(%{select: {:struct, _name, types}}), do: types
+  defp subquery_types({:map, types}), do: types
+  defp subquery_types({:struct, _name, types}), do: types
 
   defp assert_subquery_fields!(query, expr, pairs) do
     Enum.each(pairs, fn
@@ -397,7 +406,15 @@ defmodule Ecto.Query.Planner do
     # All values in the middle should be shifted by offset,
     # all values after join are already correct.
     child = refl.__struct__.joins_query(refl)
-    child = update_in child.joins, &Enum.map(&1, fn join -> rewrite_join_prefix(join, prefix, query) end)
+
+    # Rewrite prefixes:
+    # 1. the child query has the parent query prefix
+    #    (note the child query should NEVER have a prefix)
+    # 2. from and joins can have their prefixes explicitly
+    #    overwritten by the join prefix
+    child = rewrite_prefix(child, query.prefix)
+    child = update_in child.from, &rewrite_prefix(&1, prefix)
+    child = update_in child.joins, &Enum.map(&1, fn join -> rewrite_prefix(join, prefix) end)
 
     last_ix = length(child.joins)
     source_ix = counter
@@ -420,16 +437,24 @@ defmodule Ecto.Query.Planner do
                   child_sources ++ tail_sources, counter + 1, offset + length(child_sources), adapter)
   end
 
-  defp plan_joins([%JoinExpr{source: %Ecto.Query{} = join_query, qual: qual, on: on} = join|t],
+  defp plan_joins([%JoinExpr{source: %Ecto.Query{} = join_query, qual: qual, on: on, prefix: prefix} = join|t],
                       query, joins, sources, tail_sources, counter, offset, adapter) do
     case join_query do
       %{order_bys: [], limit: nil, offset: nil, group_bys: [], joins: [],
         havings: [], preloads: [], assocs: [], distinct: nil, lock: nil} ->
-        {from, source} = plan_source(join_query, join_query.from, adapter)
+        join_query = rewrite_prefix(join_query, query.prefix)
+        from = rewrite_prefix(join_query.from, prefix)
+        {from, source} = plan_source(join_query, from, adapter)
         [join] = attach_on(query_to_joins(qual, from.source, join_query, counter), on)
         plan_joins(t, query, [join|joins], [source|sources], tail_sources, counter + 1, offset, adapter)
       _ ->
-        error! query, join, "queries in joins can only have `where` conditions"
+        error! query, join, """
+        invalid query was interpolated in a join.
+        If you want to pass a query to a join, you must either:
+
+          1. Make sure the query only has `where` conditions (which will be converted to ON clauses)
+          2. Or wrap the query in a subquery by calling subquery(query)
+        """
     end
   end
 
@@ -447,15 +472,9 @@ defmodule Ecto.Query.Planner do
     [%{h | on: merge_expr_and_params(:and, on, expr, params)} | t]
   end
 
-  defp rewrite_join_prefix(%{prefix: nil, source: {_, schema}} = join, nil, query)
-       when schema != nil,
-       do: %{join | prefix: schema.__schema__(:prefix) || query.prefix}
-
-  defp rewrite_join_prefix(%{prefix: nil} = join, prefix, _query)
-       when prefix != nil,
-       do: %{join | prefix: prefix}
-
-  defp rewrite_join_prefix(join, _prefix, _query), do: join
+  defp rewrite_prefix(expr, nil), do: expr
+  defp rewrite_prefix(%{prefix: nil} = expr, prefix), do: %{expr | prefix: prefix}
+  defp rewrite_prefix(expr, _prefix), do: expr
 
   defp rewrite_join(%{on: on, ix: join_ix} = join, qual, ix, last_ix, source_ix, inc_ix) do
     expr = Macro.prewalk on.expr, fn
@@ -522,11 +541,14 @@ defmodule Ecto.Query.Planner do
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
-  def plan_cache(query, operation, adapter, counter) do
-    {query, {cache, params}} =
-      traverse_exprs(query, operation, {[], []}, &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)})
+  def plan_cache(query, operation, adapter) do
+    {query, {cache, params}} = traverse_cache(query, operation, {[], []}, adapter)
+    {query, Enum.reverse(params), finalize_cache(query, operation, cache)}
+  end
 
-    {query, Enum.reverse(params), finalize_cache(query, operation, cache, counter)}
+  defp traverse_cache(query, operation, cache_params, adapter) do
+    fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
+    traverse_exprs(query, operation, cache_params, fun)
   end
 
   defp merge_cache(:from, _query, from, {cache, params}, _operation, _adapter) do
@@ -589,13 +611,32 @@ defmodule Ecto.Query.Planner do
   end
 
   defp merge_cache(:combination, _query, combinations, cache_and_params, operation, adapter) do
-    fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
+    # In here we add each combination as its own entry in the cache key.
+    # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
+    Enum.reduce combinations, cache_and_params, fn {modifier, query}, {cache, params} ->
+      {_, {inner_cache, params}} = traverse_cache(query, operation, {[], params}, adapter)
+      {merge_cache({modifier, inner_cache}, cache, inner_cache != :nocache), params}
+    end
+  end
 
-    Enum.reduce combinations, cache_and_params, fn {modifier, combination_query}, {cache, params} ->
-      case traverse_exprs(combination_query, operation, {[], params}, fun) do
-        {_, {:nocache, _} = acc} -> acc
-        {_, {inner_cache, params}} -> {[{modifier, inner_cache} | cache], params}
-      end
+  defp merge_cache(:with_cte, _query, nil, cache_and_params, _operation, _adapter) do
+    cache_and_params
+  end
+
+  defp merge_cache(:with_cte, query, with_expr, cache_and_params, _operation, adapter) do
+    %{queries: queries, recursive: recursive} = with_expr
+    key = if recursive, do: :recursive_cte, else: :non_recursive_cte
+
+    # In here we add each cte as its own entry in the cache key.
+    # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
+    Enum.reduce queries, cache_and_params, fn
+      {name, %Ecto.Query{} = query}, {cache, params} ->
+        {_, {inner_cache, params}} = traverse_cache(query, :all, {[], params}, adapter)
+        {merge_cache({key, name, inner_cache}, cache, inner_cache != :nocache), params}
+
+      {name, %Ecto.Query.QueryExpr{} = query_expr}, {cache, params} ->
+        {params, cacheable?} = cast_and_merge_params(:with_cte, query, query_expr, params, adapter)
+        {merge_cache({key, name, expr_to_cache(query_expr)}, cache, cacheable?), params}
     end
   end
 
@@ -618,12 +659,11 @@ defmodule Ecto.Query.Planner do
   defp merge_cache(_left, :nocache, true), do: :nocache
   defp merge_cache(left, right, true),     do: [left|right]
 
-  defp finalize_cache(_query, _operation, :nocache, _counter) do
+  defp finalize_cache(_query, _operation, :nocache) do
     :nocache
   end
 
-  defp finalize_cache(%{assocs: assocs, prefix: prefix, lock: lock, select: select},
-                      operation, cache, counter) do
+  defp finalize_cache(%{assocs: assocs, prefix: prefix, lock: lock, select: select}, operation, cache) do
     cache =
       case select do
         %{take: take} when take != %{} ->
@@ -638,7 +678,7 @@ defmodule Ecto.Query.Planner do
       |> prepend_if(prefix != nil, [prefix: prefix])
       |> prepend_if(lock != nil,   [lock: lock])
 
-    [operation, counter | cache]
+    [operation | cache]
   end
 
   defp prepend_if(cache, true, prepend), do: prepend ++ cache
@@ -692,7 +732,7 @@ defmodule Ecto.Query.Planner do
   defp plan_assocs(_query, _ix, []), do: :ok
   defp plan_assocs(query, ix, assocs) do
     # We validate the schema exists when preparing joins above
-    {_, parent_schema, _} = get_source!(:preload, query, ix)
+    {_, parent_schema, _} = get_preload_source!(query, ix)
 
     Enum.each assocs, fn {assoc, {child_ix, child_assocs}} ->
       refl = parent_schema.__schema__(:association, assoc)
@@ -716,16 +756,35 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp plan_combinations(query, operation, adapter, counter) do
+  defp plan_combinations(query, adapter) do
     combinations =
       Enum.map query.combinations, fn {type, combination_query} ->
-        {prepared_query, _params, _key} = plan(combination_query, operation, adapter, counter)
+        {prepared_query, _params, _key} = combination_query |> attach_prefix(query) |> plan(:all, adapter)
         prepared_query = prepared_query |> ensure_select(true)
         {type, prepared_query}
       end
 
-    Map.put(query, :combinations, combinations)
+    %{query | combinations: combinations}
   end
+
+  defp plan_ctes(%Ecto.Query{with_ctes: nil} = query, _adapter), do: query
+  defp plan_ctes(%Ecto.Query{with_ctes: %{queries: queries}} = query, adapter) do
+    queries =
+      Enum.map queries, fn
+        {name, %Ecto.Query{} = cte_query} ->
+          {planned_query, _params, _key} = cte_query |> attach_prefix(query) |> plan(:all, adapter)
+          planned_query = planned_query |> ensure_select(true)
+          {name, planned_query}
+
+        {name, other} ->
+          {name, other}
+      end
+
+    put_in(query.with_ctes.queries, queries)
+  end
+
+  defp attach_prefix(%{prefix: nil} = query, %{prefix: prefix}), do: %{query | prefix: prefix}
+  defp attach_prefix(query, _), do: query
 
   defp find_source_expr(query, 0) do
     query.from
@@ -748,6 +807,9 @@ defmodule Ecto.Query.Planner do
     %{query | select: %SelectExpr{expr: {:&, [], [0]}, take: %{0 => {:any, fields}},
                                   line: __ENV__.line, file: __ENV__.file}}
   end
+  def ensure_select(%{select: nil, from: %{source: {_, nil}}} = query, true) do
+    error! query, "queries that do not have a schema need to explicitly pass a :select clause"
+  end
   def ensure_select(%{select: nil} = query, true) do
     %{query | select: %SelectExpr{expr: {:&, [], [0]}, line: __ENV__.line, file: __ENV__.file}}
   end
@@ -766,12 +828,14 @@ defmodule Ecto.Query.Planner do
     query
     |> normalize_query(operation, adapter, counter)
     |> elem(0)
-    |> normalize_select()
+    |> normalize_select(keep_literals?(query))
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
-      filter_and_reraise e, System.stacktrace
+      filter_and_reraise e, System.stacktrace()
   end
+
+  defp keep_literals?(%{combinations: combinations}), do: combinations != []
 
   defp normalize_query(query, operation, adapter, counter) do
     case operation do
@@ -821,6 +885,32 @@ defmodule Ecto.Query.Planner do
     {Enum.reverse(exprs), counter}
   end
 
+  defp validate_and_increment(:with_cte, _query, nil, counter, _operation, _adapter) do
+    {nil, counter}
+  end
+
+  defp validate_and_increment(:with_cte, query, with_expr, counter, _operation, adapter) do
+    fun = &validate_and_increment(&1, &2, &3, &4, :all, adapter)
+
+    {queries, counter} =
+      Enum.reduce with_expr.queries, {[], counter}, fn
+        {name, %Ecto.Query{} = query}, {queries, counter} ->
+          {query, counter} = traverse_exprs(query, :all, counter, fun)
+          {query, _} = normalize_select(query, true)
+          {_, select} = subquery_select(query, adapter)
+          keys = select |> subquery_types() |> Keyword.keys()
+          query = update_in(query.select.fields, &Enum.zip(keys, &1))
+          {[{name, query} | queries], counter}
+
+        {name, %QueryExpr{expr: {:fragment, _, _} = fragment} = query_expr}, {queries, counter} ->
+          {fragment, counter} = prewalk_source(fragment, :with_cte, query, with_expr, counter, adapter)
+          query_expr = %{query_expr | expr: fragment}
+          {[{name, query_expr} | queries], counter}
+      end
+
+    {%{with_expr | queries: Enum.reverse(queries)}, counter}
+  end
+
   defp validate_and_increment(:join, query, exprs, counter, _operation, adapter) do
     Enum.map_reduce exprs, counter, fn join, acc ->
       {source, acc} = prewalk_source(join.source, :join, query, join, acc, adapter)
@@ -845,6 +935,7 @@ defmodule Ecto.Query.Planner do
     {combinations, counter} =
       Enum.reduce combinations, {[], counter}, fn {type, combination_query}, {combinations, counter} ->
         {combination_query, counter} = traverse_exprs(combination_query, operation, counter, fun)
+        {combination_query, _} = combination_query |> normalize_select(true)
         {[{type, combination_query} | combinations], counter}
       end
 
@@ -858,8 +949,8 @@ defmodule Ecto.Query.Planner do
   defp prewalk_source(%Ecto.SubQuery{query: inner_query} = subquery, _kind, query, _expr, counter, adapter) do
     try do
       {inner_query, counter} = normalize_query(inner_query, :all, adapter, counter)
-      {inner_query, _} = normalize_select(inner_query)
-      keys = subquery |> subquery_types() |> Keyword.keys()
+      {inner_query, _} = normalize_select(inner_query, true)
+      keys = subquery.select |> subquery_types() |> Keyword.keys()
       inner_query = update_in(inner_query.select.fields, &Enum.zip(keys, &1))
       {%{subquery | query: inner_query}, counter}
     rescue
@@ -969,10 +1060,10 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp normalize_select(%{select: nil} = query) do
+  defp normalize_select(%{select: nil} = query, _keep_literals?) do
     {query, nil}
   end
-  defp normalize_select(query) do
+  defp normalize_select(query, keep_literals?) do
     %{assocs: assocs, preloads: preloads, select: select} = query
     %{take: take, expr: expr} = select
     {tag, from_take} = Map.get(take, 0, {:any, []})
@@ -992,7 +1083,7 @@ defmodule Ecto.Query.Planner do
       end
 
     {postprocess, fields, from} =
-      collect_fields(expr, [], :error, query, take)
+      collect_fields(expr, [], :error, query, take, keep_literals?)
 
     {fields, preprocess, from} =
       case from do
@@ -1017,38 +1108,31 @@ defmodule Ecto.Query.Planner do
       from: from
     }
 
-    combinations =
-      Enum.map query.combinations, fn {type, combination_query} ->
-        {combination_query, _} = normalize_select(combination_query)
-        {type, combination_query}
-      end
-
-    query = %{query | combinations: combinations}
     {put_in(query.select.fields, fields), select}
   end
 
   # Handling of source
 
-  defp collect_fields({:merge, _, [{:&, _, [0]}, right]}, fields, :error, query, take) do
+  defp collect_fields({:merge, _, [{:&, _, [0]}, right]}, fields, :error, query, take, keep_literals?) do
     {expr, taken} = source_take!(:select, query, take, 0, 0)
     from = {:ok, {:source, :from}, expr, taken}
 
-    {right, right_fields, _from} = collect_fields(right, [], from, query, take)
+    {right, right_fields, _from} = collect_fields(right, [], from, query, take, keep_literals?)
     from = {:ok, {:merge, {:source, :from}, right}, expr, taken ++ Enum.reverse(right_fields)}
 
     {{:source, :from}, fields, from}
   end
 
-  defp collect_fields({:&, _, [0]}, fields, :error, query, take) do
+  defp collect_fields({:&, _, [0]}, fields, :error, query, take, _keep_literals?) do
     {expr, taken} = source_take!(:select, query, take, 0, 0)
     {{:source, :from}, fields, {:ok, {:source, :from}, expr, taken}}
   end
 
-  defp collect_fields({:&, _, [0]}, fields, from, _query, _take) do
+  defp collect_fields({:&, _, [0]}, fields, from, _query, _take, _keep_literals?) do
     {{:source, :from}, fields, from}
   end
 
-  defp collect_fields({:&, _, [ix]}, fields, from, query, take) do
+  defp collect_fields({:&, _, [ix]}, fields, from, query, take, _keep_literals?) do
     {expr, taken} = source_take!(:select, query, take, ix, ix)
     {expr, Enum.reverse(taken, fields), from}
   end
@@ -1058,7 +1142,7 @@ defmodule Ecto.Query.Planner do
   @aggs ~w(count avg min max sum row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value)a
 
   defp collect_fields({agg, _, [{{:., dot_meta, [{:&, _, [_]}, _]}, _, []} | _]} = expr,
-                      fields, from, _query, _take)
+                      fields, from, _query, _take, _keep_literals?)
        when agg in @aggs do
     type =
       case agg do
@@ -1067,134 +1151,154 @@ defmodule Ecto.Query.Planner do
         :rank -> :integer
         :dense_rank -> :integer
         :ntile -> :integer
-        :avg -> :any
-        :sum -> :any
-        :percent_rank -> :any
-        :cume_dist -> :any
-        _ -> Keyword.fetch!(dot_meta, :type)
+        # If it is possible to upcast, we do it, otherwise keep the DB value.
+        # For example, an average of integers will return a decimal, which can't be cast
+        # as an integer. But an average of "moneys" should be upcast.
+        _ -> {:maybe, Keyword.fetch!(dot_meta, :type)}
       end
 
     {{:value, type}, [expr | fields], from}
   end
 
-  defp collect_fields({:filter, _, [call, _]} = expr, fields, from, query, take) do
-    {type, _, _} = collect_fields(call, fields, from, query, take)
+  defp collect_fields({:filter, _, [call, _]} = expr, fields, from, query, take, keep_literals?) do
+    {type, _, _} = collect_fields(call, fields, from, query, take, keep_literals?)
     {type, [expr | fields], from}
   end
 
-  defp collect_fields({:coalesce, _, [left, right]} = expr, fields, from, query, take) do
-    {left_type, _, _} = collect_fields(left, fields, from, query, take)
-    {right_type, _, _} = collect_fields(right, fields, from, query, take)
+  defp collect_fields({:coalesce, _, [left, right]} = expr, fields, from, query, take, _keep_literals?) do
+    {left_type, _, _} = collect_fields(left, fields, from, query, take, true)
+    {right_type, _, _} = collect_fields(right, fields, from, query, take, true)
 
-    type =
-      case {left_type, right_type} do
-        {_, {:value, type}} when type != :any -> {:value, type}
-        {{:value, type}, _} when type != :any -> {:value, type}
-        _ -> {:value, :any}
-      end
-
+    type = if left_type == right_type, do: left_type, else: {:value, :any}
     {type, [expr | fields], from}
   end
 
-  defp collect_fields({:over, _, [call, window]} = expr, fields, from, query, take) do
+  defp collect_fields({:over, _, [call, window]} = expr, fields, from, query, take, keep_literals?) do
     if is_atom(window) and not Keyword.has_key?(query.windows, window) do
       error!(query, "unknown window #{inspect window} given to over/2")
     end
 
-    {type, _, _} = collect_fields(call, fields, from, query, take)
+    {type, _, _} = collect_fields(call, fields, from, query, take, keep_literals?)
     {type, [expr | fields], from}
   end
 
   defp collect_fields({{:., dot_meta, [{:&, _, [_]}, _]}, _, []} = expr,
-                      fields, from, _query, _take) do
+                      fields, from, _query, _take, _keep_literals?) do
     {{:value, Keyword.fetch!(dot_meta, :type)}, [expr | fields], from}
   end
 
-  defp collect_fields({left, right}, fields, from, query, take) do
-    {args, fields, from} = collect_args([left, right], fields, from, query, take, [])
+  defp collect_fields({left, right}, fields, from, query, take, keep_literals?) do
+    {args, fields, from} = collect_args([left, right], fields, from, query, take, keep_literals?, [])
     {{:tuple, args}, fields, from}
   end
 
-  defp collect_fields({:{}, _, args}, fields, from, query, take) do
-    {args, fields, from} = collect_args(args, fields, from, query, take, [])
+  defp collect_fields({:{}, _, args}, fields, from, query, take, keep_literals?) do
+    {args, fields, from} = collect_args(args, fields, from, query, take, keep_literals?, [])
     {{:tuple, args}, fields, from}
   end
 
-  defp collect_fields({:%{}, _, [{:|, _, [data, args]}]}, fields, from, query, take) do
-    {data, fields, from} = collect_fields(data, fields, from, query, take)
-    {args, fields, from} = collect_kv(args, fields, from, query, take, [])
+  defp collect_fields({:%{}, _, [{:|, _, [data, args]}]}, fields, from, query, take, keep_literals?) do
+    {data, fields, from} = collect_fields(data, fields, from, query, take, keep_literals?)
+    {args, fields, from} = collect_kv(args, fields, from, query, take, keep_literals?, [])
     {{:map, data, args}, fields, from}
   end
 
-  defp collect_fields({:%{}, _, args}, fields, from, query, take) do
-    {args, fields, from} = collect_kv(args, fields, from, query, take, [])
+  defp collect_fields({:%{}, _, args}, fields, from, query, take, keep_literals?) do
+    {args, fields, from} = collect_kv(args, fields, from, query, take, keep_literals?, [])
     {{:map, args}, fields, from}
   end
 
-  defp collect_fields({:%, _, [name, {:%{}, _, [{:|, _, [data, args]}]}]}, fields, from, query, take) do
-    {data, fields, from} = collect_fields(data, fields, from, query, take)
-    {args, fields, from} = collect_kv(args, fields, from, query, take, [])
+  defp collect_fields({:%, _, [name, {:%{}, _, [{:|, _, [data, args]}]}]},
+                      fields, from, query, take, keep_literals?) do
+    {data, fields, from} = collect_fields(data, fields, from, query, take, keep_literals?)
+    {args, fields, from} = collect_kv(args, fields, from, query, take, keep_literals?, [])
     struct!(name, args)
     {{:struct, name, data, args}, fields, from}
   end
 
-  defp collect_fields({:%, _, [name, {:%{}, _, args}]}, fields, from, query, take) do
-    {args, fields, from} = collect_kv(args, fields, from, query, take, [])
+  defp collect_fields({:%, _, [name, {:%{}, _, args}]}, fields, from, query, take, keep_literals?) do
+    {args, fields, from} = collect_kv(args, fields, from, query, take, keep_literals?, [])
     struct!(name, args)
     {{:struct, name, args}, fields, from}
   end
 
-  defp collect_fields({:merge, _, args}, fields, from, query, take) do
-    {[left, right], fields, from} = collect_args(args, fields, from, query, take, [])
+  defp collect_fields({:merge, _, args}, fields, from, query, take, keep_literals?) do
+    {[left, right], fields, from} = collect_args(args, fields, from, query, take, keep_literals?, [])
     {{:merge, left, right}, fields, from}
   end
 
-  defp collect_fields({:date_add, _, [arg | _]} = expr, fields, from, query, take) do
-    case collect_fields(arg, fields, from, query, take) do
+  defp collect_fields({:date_add, _, [arg | _]} = expr, fields, from, query, take, keep_literals?) do
+    case collect_fields(arg, fields, from, query, take, keep_literals?) do
       {{:value, :any}, _, _} -> {{:value, :date}, [expr | fields], from}
       {type, _, _} -> {type, [expr | fields], from}
     end
   end
 
-  defp collect_fields({:datetime_add, _, [arg | _]} = expr, fields, from, query, take) do
-    case collect_fields(arg, fields, from, query, take) do
+  defp collect_fields({:datetime_add, _, [arg | _]} = expr, fields, from, query, take, keep_literals?) do
+    case collect_fields(arg, fields, from, query, take, keep_literals?) do
       {{:value, :any}, _, _} -> {{:value, :naive_datetime}, [expr | fields], from}
       {type, _, _} -> {type, [expr | fields], from}
     end
   end
 
-  defp collect_fields(args, fields, from, query, take) when is_list(args) do
-    {args, fields, from} = collect_args(args, fields, from, query, take, [])
+  defp collect_fields(args, fields, from, query, take, keep_literals?) when is_list(args) do
+    {args, fields, from} = collect_args(args, fields, from, query, take, keep_literals?, [])
     {{:list, args}, fields, from}
   end
 
-  defp collect_fields(expr, fields, from, _query, _take)
-       when is_atom(expr) or is_binary(expr) or is_number(expr) do
+  defp collect_fields(expr, fields, from, _query, _take, _keep_literals?) when is_atom(expr) do
     {expr, fields, from}
   end
 
-  defp collect_fields(%Ecto.Query.Tagged{tag: tag} = expr, fields, from, _query, _take) do
+  defp collect_fields(expr, fields, from, _query, _take, true) when is_binary(expr) do
+    {{:value, :binary}, [expr | fields], from}
+  end
+
+  defp collect_fields(expr, fields, from, _query, _take, true) when is_integer(expr) do
+    {{:value, :integer}, [expr | fields], from}
+  end
+
+  defp collect_fields(expr, fields, from, _query, _take, true) when is_float(expr) do
+    {{:value, :float}, [expr | fields], from}
+  end
+
+  defp collect_fields(expr, fields, from, _query, _take, false)
+       when is_binary(expr) or is_number(expr) do
+    {expr, fields, from}
+  end
+
+  defp collect_fields(%Ecto.Query.Tagged{tag: tag} = expr, fields, from, _query, _take, _keep_literals?) do
     {{:value, tag}, [expr | fields], from}
   end
 
-  defp collect_fields(expr, fields, from, _query, _take) do
+  defp collect_fields({op, _, [_]} = expr, fields, from, _query, _take, _keep_literals?)
+       when op in ~w(not is_nil)a do
+    {{:value, :boolean}, [expr | fields], from}
+  end
+
+  defp collect_fields({op, _, [_, _]} = expr, fields, from, _query, _take, _keep_literals?)
+       when op in ~w(< > <= >= == != and or like ilike)a do
+    {{:value, :boolean}, [expr | fields], from}
+  end
+
+  defp collect_fields(expr, fields, from, _query, _take, _keep_literals?) do
     {{:value, :any}, [expr | fields], from}
   end
 
-  defp collect_kv([{key, value} | elems], fields, from, query, take, acc) do
-    {key, fields, from} = collect_fields(key, fields, from, query, take)
-    {value, fields, from} = collect_fields(value, fields, from, query, take)
-    collect_kv(elems, fields, from, query, take, [{key, value} | acc])
+  defp collect_kv([{key, value} | elems], fields, from, query, take, keep_literals?, acc) do
+    {key, fields, from} = collect_fields(key, fields, from, query, take, keep_literals?)
+    {value, fields, from} = collect_fields(value, fields, from, query, take, keep_literals?)
+    collect_kv(elems, fields, from, query, take, keep_literals?, [{key, value} | acc])
   end
-  defp collect_kv([], fields, from, _query, _take, acc) do
+  defp collect_kv([], fields, from, _query, _take, _keep_literals?, acc) do
     {Enum.reverse(acc), fields, from}
   end
 
-  defp collect_args([elem | elems], fields, from, query, take, acc) do
-    {elem, fields, from} = collect_fields(elem, fields, from, query, take)
-    collect_args(elems, fields, from, query, take, [elem | acc])
+  defp collect_args([elem | elems], fields, from, query, take, keep_literals?, acc) do
+    {elem, fields, from} = collect_fields(elem, fields, from, query, take, keep_literals?)
+    collect_args(elems, fields, from, query, take, keep_literals?, [elem | acc])
   end
-  defp collect_args([], fields, from, _query, _take, acc) do
+  defp collect_args([], fields, from, _query, _take, _keep_literals?, acc) do
     {Enum.reverse(acc), fields, from}
   end
 
@@ -1215,19 +1319,14 @@ defmodule Ecto.Query.Planner do
   end
 
   defp collect_assocs(exprs, fields, query, tag, take, [{assoc, {ix, children}}|tail]) do
-    case get_source!(:preload, query, ix) do
-      {source, schema, _} = to_take when is_binary(source) and schema != nil ->
-        {fetch, take_children} = fetch_assoc(tag, take, assoc)
-        {expr, taken} = take!(to_take, query, fetch, assoc, ix)
-        exprs = [expr | exprs]
-        fields = Enum.reverse(taken, fields)
-        {exprs, fields} = collect_assocs(exprs, fields, query, tag, take_children, children)
-        {exprs, fields} = collect_assocs(exprs, fields, query, tag, take, tail)
-        {exprs, fields}
-      _ ->
-        error! query, "can only preload sources with a schema " <>
-                      "(fragments, binary and subqueries are not supported)"
-    end
+    to_take = get_preload_source!(query, ix)
+    {fetch, take_children} = fetch_assoc(tag, take, assoc)
+    {expr, taken} = take!(to_take, query, fetch, assoc, ix)
+    exprs = [expr | exprs]
+    fields = Enum.reverse(taken, fields)
+    {exprs, fields} = collect_assocs(exprs, fields, query, tag, take_children, children)
+    {exprs, fields} = collect_assocs(exprs, fields, query, tag, take, tail)
+    {exprs, fields}
   end
   defp collect_assocs(exprs, fields, _query, _tag, _take, []) do
     {exprs, fields}
@@ -1274,11 +1373,11 @@ defmodule Ecto.Query.Planner do
         {{:value, :map}, [{:&, [], [ix]}]}
 
       {:error, {source, schema, prefix}} ->
-        {types, fields} = select_dump(schema.__schema__(:fields), schema.__schema__(:dump), ix)
+        {types, fields} = select_dump(schema.__schema__(:query_fields), schema.__schema__(:dump), ix)
         {{:source, {source, schema}, prefix || query.prefix, types}, fields}
 
-      {:error, %Ecto.SubQuery{select: select} = subquery} ->
-        fields = for {field, _} <- subquery_types(subquery), do: select_field(field, ix)
+      {:error, %Ecto.SubQuery{select: select}} ->
+        fields = for {field, _} <- subquery_types(select), do: select_field(field, ix)
         {select, fields}
     end
   end
@@ -1307,24 +1406,41 @@ defmodule Ecto.Query.Planner do
                     "in `#{where}` (look for `unknown_binding!` in the printed query below)"
   end
 
+  defp get_preload_source!(query, ix) do
+    case get_source!(:preload, query, ix) do
+      {source, schema, _} = all when is_binary(source) and schema != nil ->
+        all
+      _ ->
+        error! query, "can only preload sources with a schema " <>
+                      "(fragments, binary and subqueries are not supported)"
+    end
+  end
+
   ## Helpers
 
-  @exprs [distinct: :distinct, select: :select, from: :from, join: :joins,
-          where: :wheres, group_by: :group_bys, having: :havings, windows: :windows,
-          combination: :combinations, order_by: :order_bys, limit: :limit, offset: :offset]
+  @all_exprs [with_cte: :with_ctes, distinct: :distinct, select: :select, from: :from, join: :joins,
+              where: :wheres, group_by: :group_bys, having: :havings, windows: :windows,
+              combination: :combinations, order_by: :order_bys, limit: :limit, offset: :offset]
+
+  @update_all_exprs [with_cte: :with_ctes, update: :updates, from: :from,
+                     join: :joins, where: :wheres, select: :select]
+
+  @delete_all_exprs [with_cte: :with_ctes, from: :from, join: :joins,
+                     where: :wheres, select: :select]
 
   # Traverse all query components with expressions.
   # Therefore from, preload, assocs and lock are not traversed.
   defp traverse_exprs(query, operation, acc, fun) do
-    extra =
+    exprs =
       case operation do
-        :update_all -> [update: :updates]
-        _ -> []
+        :all -> @all_exprs
+        :update_all -> @update_all_exprs
+        :delete_all -> @delete_all_exprs
       end
 
-    Enum.reduce extra ++ @exprs, {query, acc}, fn {kind, key}, {query, acc} ->
+    Enum.reduce exprs, {query, acc}, fn {kind, key}, {query, acc} ->
       {traversed, acc} = fun.(kind, query, Map.fetch!(query, key), acc)
-      {Map.put(query, key, traversed), acc}
+      {%{query | key => traversed}, acc}
     end
   end
 
@@ -1347,8 +1463,8 @@ defmodule Ecto.Query.Planner do
       {_, schema, _} ->
         type!(kind, query, expr, schema, field)
 
-      %Ecto.SubQuery{} = subquery ->
-        case Keyword.fetch(subquery_types(subquery), field) do
+      %Ecto.SubQuery{select: select} ->
+        case Keyword.fetch(subquery_types(select), field) do
           {:ok, {:value, type}} ->
             type
           {:ok, _} ->
@@ -1439,10 +1555,10 @@ defmodule Ecto.Query.Planner do
     case query do
       %Ecto.Query{order_bys: [], limit: nil, offset: nil, group_bys: [],
                   havings: [], preloads: [], assocs: [], distinct: nil, lock: nil,
-                  windows: [], combinations: [],} ->
+                  windows: [], combinations: []} ->
         query
       _ ->
-        error! query, "`#{operation}` allows only `where` and `join` expressions. " <>
+        error! query, "`#{operation}` allows only `with_cte`, `where` and `join` expressions. " <>
                       "You can exclude unwanted expressions from a query by using " <>
                       "Ecto.Query.exclude/2. Error found"
     end

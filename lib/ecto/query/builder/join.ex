@@ -144,21 +144,11 @@ defmodule Ecto.Query.Builder.Join do
     {join_bind, join_source, join_assoc, join_params} = escape(expr, binding, env)
     join_params = Builder.escape_params(join_params)
 
-    prefix =
-      case join_source do
-        {_, schema} when prefix == nil and schema != nil ->
-          quote(do: unquote(schema).__schema__(:prefix))
-        _ ->
-          prefix
-      end
-
     join_qual = validate_qual(qual)
     validate_bind(join_bind, binding)
 
     {count_bind, query} =
-      if (join_bind != :_ or as != nil) and !count_bind do
-        # If we have a join or alias and count_bind is not available,
-        # we need to compute the amount of binds at runtime
+      if is_nil(count_bind) do
         query =
           quote do
             query = Ecto.Queryable.to_query(unquote(query))
@@ -314,7 +304,7 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   defp ensure_field!({var, _, _}) when var != :^ do
-    Builder.error! "you passed the variable `#{var}` to `assoc/2`. Did you mean to pass the atom `:#{var}?`"
+    Builder.error! "you passed the variable `#{var}` to `assoc/2`. Did you mean to pass the atom `:#{var}`?"
   end
   defp ensure_field!(_), do: true
 end

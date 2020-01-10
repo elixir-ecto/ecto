@@ -62,6 +62,11 @@ defmodule Ecto.Changeset.HasAssocTest do
     def optional_changeset(schema, params) do
       Changeset.cast(schema, params, ~w(name)a)
     end
+    
+    def failing_changeset(schema, params, error_string) do
+      Changeset.cast(schema, params, ~w(name)a)
+      |> Changeset.add_error(:name, error_string)
+    end
 
     def set_action(schema, params) do
       changeset(schema, params)
@@ -245,6 +250,13 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert profile.action  == :insert
     assert profile.valid?
     assert changeset.valid?
+  end
+  
+  test "cast has_one with custom changeset specified with mfa" do
+    changeset = cast(%Author{}, %{"profile" => %{}}, :profile, with: {Profile, :failing_changeset, ["test"]})
+
+    assert changeset.changes.profile.errors == [name: {"test", []}]
+    refute changeset.valid?
   end
 
   test "cast has_one keeps appropriate action from changeset" do
@@ -571,10 +583,8 @@ defmodule Ecto.Changeset.HasAssocTest do
   test "change has_one" do
     assoc = Author.__schema__(:association, :profile)
 
-    assert {:ok, nil, true} =
-      Relation.change(assoc, nil, %Profile{})
-    assert {:ok, nil, true} =
-      Relation.change(assoc, nil, nil)
+    assert {:ok, nil, true} = Relation.change(assoc, nil, nil)
+    assert {:ok, nil, true} = Relation.change(assoc, nil, %Profile{})
 
     assoc_schema = %Profile{}
     assoc_schema_changeset = Changeset.change(assoc_schema, name: "michal")
@@ -718,6 +728,8 @@ defmodule Ecto.Changeset.HasAssocTest do
 
   test "change has_many" do
     assoc = Author.__schema__(:association, :posts)
+
+    assert {:ok, [], true} = Relation.change(assoc, [], [])
 
     assert {:ok, [old_changeset, new_changeset], true} =
       Relation.change(assoc, [%Post{id: 1}], [%Post{id: 2}])
@@ -871,6 +883,24 @@ defmodule Ecto.Changeset.HasAssocTest do
     refute Map.has_key?(changeset.changes, :profile)
   end
 
+  test "put_assoc/4 with has_one and empty" do
+    # On unloaded
+    changeset =
+      %Author{}
+      |> Changeset.change()
+      |> Changeset.put_assoc(:profile, nil)
+
+    assert Map.has_key?(changeset.changes, :profile)
+
+    # On empty
+    changeset =
+      %Author{profile: nil}
+      |> Changeset.change()
+      |> Changeset.put_assoc(:profile, nil)
+
+    refute Map.has_key?(changeset.changes, :profile)
+  end
+
   test "put_change/3 with has_one" do
     changeset = Changeset.change(%Author{}, profile: %{name: "michal"})
     assert %Ecto.Changeset{} = changeset.changes.profile
@@ -911,6 +941,24 @@ defmodule Ecto.Changeset.HasAssocTest do
     empty_update_changeset = Changeset.change(%Post{title: "hello"})
 
     changeset = Changeset.put_assoc(base_changeset, :posts, [empty_update_changeset])
+    refute Map.has_key?(changeset.changes, :posts)
+  end
+
+  test "put_assoc/4 with has_many and empty" do
+    # On unloaded
+    changeset =
+      %Author{}
+      |> Changeset.change()
+      |> Changeset.put_assoc(:posts, [])
+
+    assert Map.has_key?(changeset.changes, :posts)
+
+    # On empty
+    changeset =
+      %Author{posts: []}
+      |> Changeset.change()
+      |> Changeset.put_assoc(:posts, [])
+
     refute Map.has_key?(changeset.changes, :posts)
   end
 

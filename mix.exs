@@ -1,13 +1,13 @@
 defmodule Ecto.MixProject do
   use Mix.Project
 
-  @version "3.0.6-dev"
+  @version "3.3.1"
 
   def project do
     [
       app: :ecto,
       version: @version,
-      elixir: "~> 1.4",
+      elixir: "~> 1.6",
       deps: deps(),
       consolidate_protocols: Mix.env() != :test,
 
@@ -31,20 +31,15 @@ defmodule Ecto.MixProject do
   defp deps do
     [
       {:decimal, "~> 1.6"},
-
-      # Optional
-      {:poison, "~> 2.2 or ~> 3.0", optional: true},
       {:jason, "~> 1.0", optional: true},
-
-      # Docs
-      {:ex_doc, "~> 0.19", only: :docs}
+      {:ex_doc, "~> 0.20", only: :docs}
     ]
   end
 
   defp package do
     [
       maintainers: ["Eric Meadows-Jönsson", "José Valim", "James Fish", "Michał Muskała"],
-      licenses: ["Apache 2.0"],
+      licenses: ["Apache-2.0"],
       links: %{"GitHub" => "https://github.com/elixir-ecto/ecto"},
       files:
         ~w(.formatter.exs mix.exs README.md CHANGELOG.md lib) ++
@@ -58,15 +53,13 @@ defmodule Ecto.MixProject do
       source_ref: "v#{@version}",
       canonical: "http://hexdocs.pm/ecto",
       logo: "guides/images/e.png",
+      extra_section: "GUIDES",
       source_url: "https://github.com/elixir-ecto/ecto",
-      extras: [
-        "guides/Getting Started.md",
-        "guides/Testing with Ecto.md"
-      ],
+      extras: extras(),
+      groups_for_extras: groups_for_extras(),
       groups_for_modules: [
         # Ecto,
         # Ecto.Changeset,
-        # Ecto.LogEntry,
         # Ecto.Multi,
         # Ecto.Query,
         # Ecto.Repo,
@@ -97,6 +90,30 @@ defmodule Ecto.MixProject do
           Ecto.Association.NotLoaded
         ]
       ]
+    ]
+  end
+
+  def extras() do
+    [
+      "guides/introduction/Getting Started.md",
+      "guides/introduction/Testing with Ecto.md",
+      "guides/howtos/Aggregates and subqueries.md",
+      "guides/howtos/Composable transactions with Multi.md",
+      "guides/howtos/Constraints and Upserts.md",
+      "guides/howtos/Data mapping and validation.md",
+      "guides/howtos/Dynamic queries.md",
+      "guides/howtos/Multi tenancy with query prefixes.md",
+      "guides/howtos/Polymorphic associations with many to many.md",
+      "guides/howtos/Replicas and dynamic repositories.md",
+      "guides/howtos/Schemaless queries.md",
+      "guides/howtos/Test factories.md"
+    ]
+  end
+
+  defp groups_for_extras do
+    [
+      "Introduction": ~r/guides\/introduction\/.?/,
+      "How-To's": ~r/guides\/howtos\/.?/
     ]
   end
 end

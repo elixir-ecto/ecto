@@ -7,12 +7,16 @@ defmodule Mix.Tasks.Ecto.Drop do
 
   @aliases [
     f: :force,
-    q: :quiet
+    q: :quiet,
+    r: :repo
   ]
 
   @switches [
     force: :boolean,
-    quiet: :boolean
+    quiet: :boolean,
+    repo: [:keep, :string],
+    no_compile: :boolean,
+    no_deps_check: :boolean,
   ]
 
   @moduledoc """
@@ -33,19 +37,20 @@ defmodule Mix.Tasks.Ecto.Drop do
 
   ## Command line options
 
-    * `--no-compile` - do not compile before stopping
     * `-r`, `--repo` - the repo to drop
     * `-q`, `--quiet` - run the command quietly
     * `-f`, `--force` - do not ask for confirmation when dropping the database.
       Configuration is asked only when `:start_permanent` is set to true
       (typically in production)
+    * `--no-compile` - do not compile before dropping
+    * `--no-deps-check` - do not compile before dropping
 
   """
 
   @doc false
   def run(args) do
     repos = parse_repo(args)
-    {opts, _, _} = OptionParser.parse args, switches: @switches, aliases: @aliases
+    {opts, _} = OptionParser.parse! args, strict: @switches, aliases: @aliases
     opts = Keyword.merge(@default_opts, opts)
 
     Enum.each repos, fn repo ->
@@ -55,25 +60,25 @@ defmodule Mix.Tasks.Ecto.Drop do
 
       if skip_safety_warnings?() or
          opts[:force] or
-         Mix.shell.yes?("Are you sure you want to drop the database for repo #{inspect repo}?") do
+         Mix.shell().yes?("Are you sure you want to drop the database for repo #{inspect repo}?") do
         drop_database(repo, opts)
       end
     end
   end
 
   defp skip_safety_warnings? do
-    Mix.Project.config[:start_permanent] != true
+    Mix.Project.config()[:start_permanent] != true
   end
 
   defp drop_database(repo, opts) do
     case repo.__adapter__.storage_down(repo.config) do
       :ok ->
         unless opts[:quiet] do
-          Mix.shell.info "The database for #{inspect repo} has been dropped"
+          Mix.shell().info "The database for #{inspect repo} has been dropped"
         end
       {:error, :already_down} ->
         unless opts[:quiet] do
-          Mix.shell.info "The database for #{inspect repo} has already been dropped"
+          Mix.shell().info "The database for #{inspect repo} has already been dropped"
         end
       {:error, term} when is_binary(term) ->
         Mix.raise "The database for #{inspect repo} couldn't be dropped: #{term}"

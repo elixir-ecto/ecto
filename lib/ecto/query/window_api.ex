@@ -3,7 +3,7 @@ defmodule Ecto.Query.WindowAPI do
   Lists all windows functions.
 
   Windows functions must always be used as the first argument
-  of `over/2` where the second argument is the name of an window:
+  of `over/2` where the second argument is the name of a window:
 
       from e in Employee,
         select: {e.depname, e.empno, e.salary, over(avg(e.salary), :department)},
@@ -150,9 +150,22 @@ defmodule Ecto.Query.WindowAPI do
   """
   def last_value(value), do: doc! [value]
 
+
+  @doc """
+  Applies the given expression as a FILTER clause against an
+  aggregate. This is currently only supported by Postgres.
+
+      from p in Post,
+           select: avg(p.value)
+                   |> filter(p.value > 0 and p.value < 100)
+                   |> over(partition_by: p.category_id, order_by: p.date)
+  """
+
+  def filter(value, filter), do: doc! [value, filter]
+
   @doc """
   Returns value evaluated at the row that is the nth row of the window
-  frame (counting from 1); null if no such row.
+  frame (counting from 1); `nil` if no such row.
 
       from p in Post,
            select: nth_value(p.id, 4) |> over(partition_by: p.category_id, order_by: p.date)
@@ -165,9 +178,9 @@ defmodule Ecto.Query.WindowAPI do
   Returns value evaluated at the row that is offset rows before
   the current row within the partition.
 
-  Ff there is no such row, instead return default (which must be of the
+  If there is no such row, instead return default (which must be of the
   same type as value). Both offset and default are evaluated with respect
-  to the current row. If omitted, offset defaults to 1 and default to null.
+  to the current row. If omitted, offset defaults to 1 and default to `nil`.
 
       from e in Events,
            windows: [w: [partition_by: e.name, order_by: e.tick]],
@@ -187,9 +200,9 @@ defmodule Ecto.Query.WindowAPI do
   Returns value evaluated at the row that is offset rows after
   the current row within the partition.
 
-  Ff there is no such row, instead return default (which must be of the
+  If there is no such row, instead return default (which must be of the
   same type as value). Both offset and default are evaluated with respect
-  to the current row. If omitted, offset defaults to 1 and default to null.
+  to the current row. If omitted, offset defaults to 1 and default to `nil`.
 
       from e in Events,
            windows: [w: [partition_by: e.name, order_by: e.tick],

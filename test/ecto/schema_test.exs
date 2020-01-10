@@ -13,6 +13,7 @@ defmodule Ecto.SchemaTest do
       field :count, :decimal, read_after_writes: true, source: :cnt
       field :array, {:array, :string}
       field :uuid, Ecto.UUID, autogenerate: true
+      field :query_excluded_field, :string, load_in_query: false
       belongs_to :comment, Comment
       belongs_to :permalink, Permalink, define_field: false
     end
@@ -21,7 +22,8 @@ defmodule Ecto.SchemaTest do
   test "schema metadata" do
     assert Schema.__schema__(:source)             == "my schema"
     assert Schema.__schema__(:prefix)             == nil
-    assert Schema.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :comment_id]
+    assert Schema.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :query_excluded_field, :comment_id]
+    assert Schema.__schema__(:query_fields)       == [:id, :name, :email, :count, :array, :uuid, :comment_id]
     assert Schema.__schema__(:read_after_writes)  == [:email, :count]
     assert Schema.__schema__(:primary_key)        == [:id]
     assert Schema.__schema__(:autogenerate_id)    == {:id, :id, :id}
@@ -46,9 +48,9 @@ defmodule Ecto.SchemaTest do
   end
 
   test "changeset metadata" do
-    assert Schema.__changeset__ |> Map.drop([:comment, :permalink]) ==
+    assert Schema.__changeset__() |> Map.drop([:comment, :permalink]) ==
            %{name: :string, email: :string, count: :decimal, array: {:array, :string},
-             comment_id: :id, temp: :any, id: :id, uuid: Ecto.UUID}
+             comment_id: :id, temp: :any, id: :id, uuid: Ecto.UUID, query_excluded_field: :string}
   end
 
   test "autogenerate metadata (private)" do
@@ -107,7 +109,7 @@ defmodule Ecto.SchemaTest do
   defmodule CustomSchema do
     use Ecto.Schema
 
-    @primary_key {:perm, Custom.Permalink, autogenerate: true}
+    @primary_key {:perm, CustomPermalink, autogenerate: true}
     @foreign_key_type :string
     @field_source_mapper &(&1 |> Atom.to_string |> String.upcase |> String.to_atom())
 
@@ -121,7 +123,7 @@ defmodule Ecto.SchemaTest do
 
   test "custom schema attributes" do
     assert %CustomSchema{perm: "abc"}.perm == "abc"
-    assert CustomSchema.__schema__(:autogenerate_id) == {:perm, :PERM, Custom.Permalink}
+    assert CustomSchema.__schema__(:autogenerate_id) == {:perm, :PERM, CustomPermalink}
     assert CustomSchema.__schema__(:type, :comment_id) == :string
   end
 
@@ -197,19 +199,55 @@ defmodule Ecto.SchemaTest do
     assert InlineEmbeddedSchema.Many.__schema__(:fields) == [:id, :y]
   end
 
-  defmodule Timestamps do
+  defmodule TimestampsAutoGen do
     use Ecto.Schema
 
-    schema "timestamps" do
+    schema "timestamps_autogen" do
       timestamps autogenerate: {:m, :f, [:a]}
     end
   end
 
   test "timestamps autogenerate metadata (private)" do
-    assert Timestamps.__schema__(:autogenerate) ==
+    assert TimestampsAutoGen.__schema__(:autogenerate) ==
            [{[:inserted_at, :updated_at], {:m, :f, [:a]}}]
-    assert Timestamps.__schema__(:autoupdate) ==
+    assert TimestampsAutoGen.__schema__(:autoupdate) ==
            [{[:updated_at], {:m, :f, [:a]}}]
+  end
+
+  defmodule TimestampsCustom do
+    use Ecto.Schema
+
+    schema "timestamps" do
+      timestamps(
+        type: :naive_datetime_usec,
+        inserted_at: :created_at,
+        inserted_at_source: :createddate,
+        updated_at: :modified_at,
+        updated_at_source: :modifieddate
+      )
+    end
+  end
+
+  test "timestamps with alternate sources" do
+    assert TimestampsCustom.__schema__(:field_source, :created_at) == :createddate
+    assert TimestampsCustom.__schema__(:field_source, :modified_at) == :modifieddate
+  end
+
+  defmodule TimestampsFalse do
+    use Ecto.Schema
+
+    schema "timestamps" do
+      timestamps(
+        inserted_at: false,
+        updated_at: false
+      )
+    end
+  end
+
+  test "timestamps set to false" do
+    assert TimestampsFalse.__schema__(:fields) == [:id]
+    assert TimestampsFalse.__schema__(:autogenerate) == []
+    assert TimestampsFalse.__schema__(:autoupdate) == []
   end
 
   ## Schema prefix
@@ -246,16 +284,6 @@ defmodule Ecto.SchemaTest do
     from = {"another_company", SchemaWithPrefix}
     query = from(from, select: 1)
     assert query.from.prefix == "tenant"
-  end
-
-  test "schema prefix in queries join" do
-    import Ecto.Query
-
-    query = from("query", join: _ in SchemaWithPrefix, select: 1)
-    assert hd(query.joins).prefix == "tenant"
-
-    query = from("query", join: _ in {"another_company", SchemaWithPrefix}, select: 1)
-    assert hd(query.joins).prefix == "tenant"
   end
 
   ## Composite primary keys
@@ -419,7 +447,7 @@ defmodule Ecto.SchemaTest do
                             on_replace: :raise}
 
     assert AssocSchema.__schema__(:association, :posts) == struct
-    assert AssocSchema.__changeset__.posts == {:assoc, struct}
+    assert AssocSchema.__changeset__().posts == {:assoc, struct}
 
     posts = (%AssocSchema{}).posts
     assert %Ecto.Association.NotLoaded{} = posts
@@ -433,7 +461,7 @@ defmodule Ecto.SchemaTest do
                             queryable: {"users_emails", Email}, on_replace: :delete}
 
     assert AssocSchema.__schema__(:association, :emails) == struct
-    assert AssocSchema.__changeset__.emails == {:assoc, struct}
+    assert AssocSchema.__changeset__().emails == {:assoc, struct}
 
     posts = (%AssocSchema{}).posts
     assert %Ecto.Association.NotLoaded{__cardinality__: :many} = posts
@@ -445,7 +473,7 @@ defmodule Ecto.SchemaTest do
            %Ecto.Association.HasThrough{field: :comment_authors, owner: AssocSchema, cardinality: :many,
                                          through: [:comment, :authors], owner_key: :comment_id}
 
-    refute Map.has_key?(AssocSchema.__changeset__, :comment_authors)
+    refute Map.has_key?(AssocSchema.__changeset__(), :comment_authors)
 
     authors = (%AssocSchema{}).comment_authors
     assert %Ecto.Association.NotLoaded{} = authors
@@ -459,7 +487,7 @@ defmodule Ecto.SchemaTest do
                             on_replace: :raise}
 
     assert AssocSchema.__schema__(:association, :author) == struct
-    assert AssocSchema.__changeset__.author == {:assoc, struct}
+    assert AssocSchema.__changeset__().author == {:assoc, struct}
 
     author = (%AssocSchema{}).author
     assert %Ecto.Association.NotLoaded{} = author
@@ -473,7 +501,7 @@ defmodule Ecto.SchemaTest do
                             queryable: {"users_profiles", Profile}, on_replace: :raise}
 
     assert AssocSchema.__schema__(:association, :profile) == struct
-    assert AssocSchema.__changeset__.profile == {:assoc, struct}
+    assert AssocSchema.__changeset__().profile == {:assoc, struct}
 
     author = (%AssocSchema{}).author
     assert %Ecto.Association.NotLoaded{__cardinality__: :one} = author
@@ -485,7 +513,7 @@ defmodule Ecto.SchemaTest do
            %Ecto.Association.HasThrough{field: :comment_main_author, owner: AssocSchema, cardinality: :one,
                                          through: [:comment, :main_author], owner_key: :comment_id}
 
-    refute Map.has_key?(AssocSchema.__changeset__, :comment_main_author)
+    refute Map.has_key?(AssocSchema.__changeset__(), :comment_main_author)
 
     author = (%AssocSchema{}).comment_main_author
     assert %Ecto.Association.NotLoaded{} = author
@@ -499,7 +527,7 @@ defmodule Ecto.SchemaTest do
        on_replace: :raise, defaults: []}
 
     assert AssocSchema.__schema__(:association, :comment) == struct
-    assert AssocSchema.__changeset__.comment == {:assoc, struct}
+    assert AssocSchema.__changeset__().comment == {:assoc, struct}
 
     comment = (%AssocSchema{}).comment
     assert %Ecto.Association.NotLoaded{} = comment
@@ -513,7 +541,7 @@ defmodule Ecto.SchemaTest do
        queryable: {"post_summary", Summary}, on_replace: :raise, defaults: []}
 
     assert AssocSchema.__schema__(:association, :summary) == struct
-    assert AssocSchema.__changeset__.summary == {:assoc, struct}
+    assert AssocSchema.__changeset__().summary == {:assoc, struct}
 
     comment = (%AssocSchema{}).comment
     assert %Ecto.Association.NotLoaded{} = comment
@@ -591,6 +619,28 @@ defmodule Ecto.SchemaTest do
 
         schema "assoc" do
           has_many :posts, 123
+        end
+      end
+    end
+  end
+
+  test "has_* through validates option" do
+    assert_raise ArgumentError, "invalid option :unknown for has_many/3", fn ->
+      defmodule InvalidHasOption do
+        use Ecto.Schema
+
+        schema "assoc" do
+          has_many :posts, through: [:another], unknown: :option
+        end
+      end
+    end
+
+    assert_raise ArgumentError, "invalid option :unknown for has_one/3", fn ->
+      defmodule InvalidHasOption do
+        use Ecto.Schema
+
+        schema "assoc" do
+          has_one :post, through: [:another], unknown: :option
         end
       end
     end

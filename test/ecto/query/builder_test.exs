@@ -10,22 +10,19 @@ defmodule Ecto.Query.BuilderTest do
   end
 
   test "escape" do
-    assert {Macro.escape(quote do &0.y end), []} ==
-           escape(quote do x.y end, [x: 0], __ENV__)
+    assert {Macro.escape(quote do &0.y() end), []} ==
+           escape(quote do x.y() end, [x: 0], __ENV__)
 
     import Kernel, except: [>: 2]
-    assert {Macro.escape(quote do &0.y > &0.z end), []} ==
-           escape(quote do x.y > x.z end, [x: 0], __ENV__)
+    assert {Macro.escape(quote do &0.y() > &0.z() end), []} ==
+           escape(quote do x.y() > x.z() end, [x: 0], __ENV__)
 
-    assert {Macro.escape(quote do &0.y > &1.z end), []} ==
-           escape(quote do x.y > y.z end, [x: 0, y: 1], __ENV__)
+    assert {Macro.escape(quote do &0.y() > &1.z() end), []} ==
+           escape(quote do x.y() > y.z() end, [x: 0, y: 1], __ENV__)
 
     import Kernel, except: [+: 2]
-    assert {Macro.escape(quote do &0.y + &1.z end), []} ==
-           escape(quote do x.y + y.z end, [x: 0, y: 1], __ENV__)
-
-    assert {Macro.escape(quote do type(&0.y + &1.z, :decimal) end), []} ==
-           escape(quote do type(x.y + y.z, :decimal) end, [x: 0, y: 1], __ENV__)
+    assert {Macro.escape(quote do &0.y() + &1.z() end), []} ==
+           escape(quote do x.y() + y.z() end, [x: 0, y: 1], __ENV__)
 
     assert {Macro.escape(quote do avg(0) end), []} ==
            escape(quote do avg(0) end, [], __ENV__)
@@ -36,7 +33,7 @@ defmodule Ecto.Query.BuilderTest do
     assert {{:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: {:<<>>, [], [0, 1, 2]}, type: :binary]}]}, []} ==
            escape(quote do <<0,1,2>> end, [], __ENV__)
 
-    assert quote(do: &0.z) ==
+    assert quote(do: &0.z()) ==
            escape(quote do field(x, :z) end, [x: 0], __ENV__)
            |> elem(0)
            |> Code.eval_quoted([], __ENV__)
@@ -44,16 +41,16 @@ defmodule Ecto.Query.BuilderTest do
   end
 
   test "escape fragments" do
-    assert {Macro.escape(quote do fragment({:raw, "date_add("}, {:expr, &0.created_at},
+    assert {Macro.escape(quote do fragment({:raw, "date_add("}, {:expr, &0.created_at()},
                                            {:raw, ", "}, {:expr, ^0}, {:raw, ")"}) end), [{0, :any}]} ==
-      escape(quote do fragment("date_add(?, ?)", p.created_at, ^0) end, [p: 0], __ENV__)
+      escape(quote do fragment("date_add(?, ?)", p.created_at(), ^0) end, [p: 0], __ENV__)
 
     assert {Macro.escape(quote do fragment({:raw, ""}, {:expr, ^0}, {:raw, "::text"}) end), [{0, :any}]} ==
       escape(quote do fragment(~S"?::text", ^0) end, [p: 0], __ENV__)
 
-    assert {Macro.escape(quote do fragment({:raw, "query?("}, {:expr, &0.created_at},
+    assert {Macro.escape(quote do fragment({:raw, "query?("}, {:expr, &0.created_at()},
                                            {:raw, ")"}) end), []} ==
-      escape(quote do fragment("query\\?(?)", p.created_at) end, [p: 0], __ENV__)
+      escape(quote do fragment("query\\?(?)", p.created_at()) end, [p: 0], __ENV__)
 
     assert {Macro.escape(quote do fragment(title: [foo: ^0]) end), [{0, :any}]} ==
       escape(quote do fragment(title: [foo: ^0]) end, [], __ENV__)
@@ -62,20 +59,79 @@ defmodule Ecto.Query.BuilderTest do
       escape(quote do fragment(:invalid) end, [], __ENV__)
     end
 
-    assert_raise Ecto.Query.CompileError, ~r"expects extra arguments in the same amount of question marks in string", fn ->
-      escape(quote do fragment("?") end, [], __ENV__)
-    end
+    assert_raise Ecto.Query.CompileError,
+                 ~r"expects extra arguments in the same amount of question marks in string. It received 0 extra argument\(s\) but expected 1",
+                 fn -> escape(quote do fragment("?") end, [], __ENV__) end
+
+    assert_raise Ecto.Query.CompileError,
+                 ~r"expects extra arguments in the same amount of question marks in string. It received 1 extra argument\(s\) but expected 0",
+                 fn -> escape(quote do fragment("", 1) end, [], __ENV__) end
   end
 
-  test "escape over" do
+  test "escape over with window name" do
+    assert {Macro.escape(quote(do: over(nth_value(&0.id(), 1), :w))), []}  ==
+           escape(quote(do: nth_value(x.id(), 1) |> over(:w)), [x: 0], __ENV__)
+
+    assert {Macro.escape(quote(do: over(count(&0.id()), :w))), []}  ==
+           escape(quote(do: count(x.id()) |> over(:w)), [x: 0], __ENV__)
+  end
+
+  test "escape over with window parts" do
     assert {Macro.escape(quote(do: over(row_number(), []))), []}  ==
            escape(quote(do: over(row_number())), [], __ENV__)
 
-    assert {Macro.escape(quote(do: over(nth_value(&0.id, 1), :w))), []}  ==
-           escape(quote(do: nth_value(x.id, 1) |> over(:w)), [x: 0], __ENV__)
+    assert {Macro.escape(quote(do: over(nth_value(&0.id(), 1), order_by: [asc: &0.id()]))), []} ==
+           escape(quote(do: nth_value(x.id(), 1) |> over(order_by: x.id())), [x: 0], __ENV__)
 
-    assert {Macro.escape(quote(do: over(count(&0.id), :w))), []}  ==
-           escape(quote(do: count(x.id) |> over(:w)), [x: 0], __ENV__)
+    assert {Macro.escape(quote(do: over(nth_value(&0.id(), 1), partition_by: [&0.id()]))), []} ==
+           escape(quote(do: nth_value(x.id(), 1) |> over(partition_by: x.id())), [x: 0], __ENV__)
+
+    assert {Macro.escape(quote(do: over(nth_value(&0.id(), 1), frame: fragment({:raw, "ROWS"})))), []} ==
+           escape(quote(do: nth_value(x.id(), 1) |> over(frame: fragment("ROWS"))), [x: 0], __ENV__)
+
+    assert_raise Ecto.Query.CompileError,
+                 ~r"windows definitions given to over/2 do not allow interpolations at the root",
+                 fn ->
+      escape(quote(do: nth_value(x.id(), 1) |> over(order_by: ^foo)), [x: 0], __ENV__)
+    end
+
+    import Kernel, except: [is_nil: 1]
+    assert {Macro.escape(quote(do: over(filter(avg(&0.value()), is_nil(&0.flag())), []))), []}  ==
+      escape(quote(do: avg(x.value()) |> filter(is_nil(x.flag())) |> over([])), [x: 0], __ENV__)
+  end
+
+  test "escape type cast" do
+    import Kernel, except: [+: 2]
+    assert {Macro.escape(quote do type(&0.y() + &1.z(), :decimal) end), []} ==
+           escape(quote do type(x.y() + y.z(), :decimal) end, [x: 0, y: 1], __ENV__)
+
+    assert {Macro.escape(quote do type(&0.y(), :decimal) end), []} ==
+          escape(quote do type(field(x, :y), :decimal) end, [x: 0], __ENV__)
+
+    assert {Macro.escape(quote do type(&0.y(), :"Elixir.Ecto.UUID") end), []} ==
+          escape(quote do type(field(x, :y), Ecto.UUID) end, [x: 0], __ENV__)
+
+    assert {Macro.escape(quote do type(&0.y(), :"Elixir.Ecto.UUID") end), []} ==
+          escape(quote do type(field(x, :y), Ecto.UUID) end, [x: 0], {__ENV__, %{}})
+
+    assert {Macro.escape(quote do type(sum(&0.y()), :decimal) end), []} ==
+          escape(quote do type(sum(x.y()), :decimal) end, [x: 0], {__ENV__, %{}})
+
+    import Kernel, except: [>: 2]
+    assert {Macro.escape(quote do type(filter(sum(&0.y()), &0.y() > &0.z()), :decimal) end), []} ==
+          escape(quote do type(filter(sum(x.y()), x.y() > x.z()), :decimal) end, [x: 0], {__ENV__, %{}})
+
+    assert {Macro.escape(quote do type(over(fragment({:raw, "array_agg("}, {:expr, &0.id()}, {:raw, ")"}), :y), {:array, :"Elixir.Ecto.UUID"}) end), []} ==
+      escape(quote do type(over(fragment("array_agg(?)", x.id()), :y), {:array, Ecto.UUID}) end, [x: 0], {__ENV__, %{}})
+  end
+
+  defmacro wrapped_sum(a) do
+    quote do: sum(unquote(a))
+  end
+
+  test "escape type cast with macro" do
+    assert {Macro.escape(quote do type(sum(&0.y()), :integer) end), []} ==
+          escape(quote do type(wrapped_sum(x.y()), :integer) end, [x: 0], __ENV__)
   end
 
   test "escape type checks" do
@@ -197,5 +253,20 @@ defmodule Ecto.Query.BuilderTest do
     assert quoted_type({:field, [], [{:p, [], Elixir}, {:^, [], [:title]}]}, [p: 0]) == {0, :title}
 
     assert quoted_type({:unknown, [], []}, []) == :any
+  end
+
+  test "validate_type!" do
+    env = {__ENV__, :ok}
+
+    assert validate_type!({:array, :string}, [], env) == {:array, :string}
+    assert validate_type!(quote do ^:string end, [], env) == :string
+    assert validate_type!(quote do Ecto.UUID end, [], env) == Ecto.UUID
+    assert validate_type!(quote do :string end, [], env) == :string
+    assert validate_type!(quote do x.title end, [x: 0], env) == {0, :title}
+    assert validate_type!(quote do field(x, :title) end, [x: 0], env) == {0, :title}
+
+    assert_raise Ecto.Query.CompileError, ~r"^type/2 expects an alias, atom or source.field as second argument, got: ", fn ->
+      validate_type!(quote do "string" end, [x: 0], env)
+    end
   end
 end

@@ -11,14 +11,14 @@ defmodule Ecto.Query.Builder.DistinctTest do
       assert {true, {[], :acc}} ==
              escape(true, {[], :acc}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.y] end), {[], :acc}} ==
-             escape(quote do x.y end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.y()] end), {[], :acc}} ==
+             escape(quote do x.y() end, {[], :acc}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.x, asc: &1.y] end), {[], :acc}} ==
-             escape(quote do [x.x, y.y] end, {[], :acc}, [x: 0, y: 1], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.x(), asc: &1.y()] end), {[], :acc}} ==
+             escape(quote do [x.x(), y.y()] end, {[], :acc}, [x: 0, y: 1], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.x, desc: &1.y] end), {[], :acc}} ==
-             escape(quote do [x.x, desc: y.y] end, {[], :acc}, [x: 0, y: 1], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.x(), desc: &1.y()] end), {[], :acc}} ==
+             escape(quote do [x.x(), desc: y.y()] end, {[], :acc}, [x: 0, y: 1], __ENV__)
 
       import Kernel, except: [>: 2]
       assert {Macro.escape(quote do [asc: 1 > 2] end), {[], :acc}} ==
@@ -49,8 +49,22 @@ defmodule Ecto.Query.Builder.DistinctTest do
       assert distinct("q", [q], ^bool).distinct == distinct("q", [q], true).distinct
     end
 
+    test "supports dynamic expressions" do
+      order_by = [
+        asc: dynamic([p], p.foo == ^1 and p.bar == ^"bar"),
+        desc: :bar,
+        asc: dynamic([p], p.baz == ^2 and p.bat == ^"bat")
+      ]
+
+      %{distinct: distinct} = distinct("posts", ^order_by)
+      assert Macro.to_string(distinct.expr) ==
+             "[asc: &0.foo() == ^0 and &0.bar() == ^1, desc: &0.bar(), asc: &0.baz() == ^2 and &0.bat() == ^3]"
+      assert distinct.params ==
+             [{1, {0, :foo}}, {"bar", {0, :bar}}, {2, {0, :baz}}, {"bat", {0, :bat}}]
+    end
+
     test "raises on non-atoms" do
-      message = "expected a field as an atom, a list or keyword list in `distinct`, got: `\"temp\"`"
+      message = "expected a field as an atom in `distinct`, got: `\"temp\"`"
       assert_raise ArgumentError, message, fn ->
         temp = "temp"
         distinct("posts", [p], [^temp])
@@ -58,7 +72,7 @@ defmodule Ecto.Query.Builder.DistinctTest do
     end
 
     test "raises non-lists" do
-      message = "expected a field as an atom, a list or keyword list in `distinct`, got: `\"temp\"`"
+      message = ~r"`distinct` interpolated on root expects a field or a keyword list"
       assert_raise ArgumentError, message, fn ->
         temp = "temp"
         distinct("posts", [p], ^temp)

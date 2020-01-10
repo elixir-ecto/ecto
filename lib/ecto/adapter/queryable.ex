@@ -1,6 +1,10 @@
 defmodule Ecto.Adapter.Queryable do
   @moduledoc """
   Specifies the query API required from adapters.
+
+  If your adapter is only able to respond to one or a couple of the query functions,
+  add custom implementations of those functions directly to the Repo
+  by using `c:Ecto.Adapter.__before_compile__/1` instead.
   """
 
   @typedoc "Proxy type to the adapter meta"
@@ -19,9 +23,10 @@ defmodule Ecto.Adapter.Queryable do
   @type options :: Keyword.t()
 
   @doc """
-  Commands invoked to prepare a query for `all`, `update_all` and `delete_all`.
+  Commands invoked to prepare a query for `c:Ecto.Repo.all/2`, `c:Ecto.Repo.update_all/3`,
+  and `c:Ecto.Repo.delete_all/2`.
 
-  The returned result is given to `execute/6`.
+  The returned result is given to `c:execute/5`.
   """
   @callback prepare(atom :: :all | :update_all | :delete_all, query :: Ecto.Query.t()) ::
               {:cache, prepared} | {:nocache, prepared}
@@ -74,7 +79,7 @@ defmodule Ecto.Adapter.Queryable do
   """
   def plan_query(operation, adapter, queryable) do
     query = Ecto.Queryable.to_query(queryable)
-    {query, params, _key} = Ecto.Query.Planner.plan(query, operation, adapter, 0)
+    {query, params, _key} = Ecto.Query.Planner.plan(query, operation, adapter)
     {query, _} = Ecto.Query.Planner.normalize(query, operation, adapter, 0)
     {query, params}
   end

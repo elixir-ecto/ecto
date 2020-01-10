@@ -1,5 +1,3 @@
-Code.require_file "../support/types.exs", __DIR__
-
 defmodule Ecto.Integration.AssocTest do
   use Ecto.Integration.Case, async: Application.get_env(:ecto, :async_integration_tests, true)
 
@@ -622,7 +620,7 @@ defmodule Ecto.Integration.AssocTest do
     assert post.comments == []
   end
 
-  test "inserting changeset with empty associations" do
+  test "inserting changeset with empty cast associations" do
     changeset =
       %Permalink{}
       |> Ecto.Changeset.cast(%{url: "root", post: nil}, [:url])
@@ -636,6 +634,39 @@ defmodule Ecto.Integration.AssocTest do
       |> Ecto.Changeset.cast_assoc(:comments)
     post = TestRepo.insert!(changeset)
     assert post.comments == []
+  end
+
+  test "inserting changeset with empty put associations" do
+    changeset =
+      %Permalink{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:post, nil)
+    permalink = TestRepo.insert!(changeset)
+    assert permalink.post == nil
+
+    changeset =
+      %Post{}
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:comments, [])
+    post = TestRepo.insert!(changeset)
+    assert post.comments == []
+  end
+
+  test "updating changeset with empty cast associations" do
+    post = TestRepo.insert!(%Post{})
+    c1 = TestRepo.insert!(%Comment{post_id: post.id})
+    c2 = TestRepo.insert!(%Comment{post_id: post.id})
+
+    assert TestRepo.all(Comment) == [c1, c2]
+
+    post = TestRepo.get!(from(Post, preload: [:comments]), post.id)
+
+    post
+    |> Ecto.Changeset.change
+    |> Ecto.Changeset.put_assoc(:comments, [])
+    |> TestRepo.update!()
+
+    assert TestRepo.all(Comment) == []
   end
 
   ## Dependent

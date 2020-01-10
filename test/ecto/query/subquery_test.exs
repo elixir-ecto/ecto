@@ -22,7 +22,7 @@ defmodule Ecto.Query.SubqueryTest do
   defmodule Post do
     use Ecto.Schema
 
-    @primary_key {:id, Custom.Permalink, []}
+    @primary_key {:id, CustomPermalink, []}
     schema "posts" do
       field :title, :string, source: :post_title
       field :text, :string
@@ -31,7 +31,7 @@ defmodule Ecto.Query.SubqueryTest do
   end
 
   defp plan(query, operation \\ :all) do
-    Planner.plan(query, operation, Ecto.TestAdapter, 0)
+    Planner.plan(query, operation, Ecto.TestAdapter)
   end
 
   defp normalize(query, operation \\ :all) do
@@ -59,15 +59,15 @@ defmodule Ecto.Query.SubqueryTest do
     {query, params, key} = plan(from(subquery(Post), []))
     assert %{query: %Ecto.Query{}, params: []} = query.from.source
     assert params == []
-    assert key == [:all, 0, [:all, 0, {"posts", Post, 127044068, nil}]]
+    assert key == [:all, [:all, {"posts", Post, 52805476, nil}]]
 
     posts = from(p in Post, where: p.title == ^"hello")
     query = from(c in Comment, join: p in subquery(posts), on: c.post_id == p.id)
-    {query, params, key} = plan(query, [])
+    {query, params, key} = plan(query)
     assert {"comments", Comment} = query.from.source
     assert [%{source: %{query: %Ecto.Query{}, params: ["hello"]}}] = query.joins
     assert params == ["hello"]
-    assert [[], 0, {:join, [{:inner, [:all | _], _}]}, {"comments", _, _, _}] = key
+    assert [:all, {:join, [{:inner, [:all | _], _}]}, {"comments", _, _, _}] = key
   end
 
   test "plan: subqueries with association joins" do
@@ -78,6 +78,18 @@ defmodule Ecto.Query.SubqueryTest do
     assert_raise Ecto.QueryError, message, fn ->
       plan(from(p in subquery(from p in Post, select: p.title), join: c in assoc(p, :comments)))
     end
+  end
+
+  test "plan: subqueries with literals" do
+    subquery = select(Post, [p], %{t: p.title, l: "literal"})
+    query = normalize(from(p in subquery(subquery), select: %{x: p.t, y: p.l, z: "otherliteral"}))
+
+    assert query.select.fields == [
+      {{:., [type: :string], [{:&, [], [0]}, :t]}, [], []},
+      {{:., [type: :binary], [{:&, [], [0]}, :l]}, [], []}
+    ]
+
+    assert [{:t, _}, {:l, "literal"}] = query.from.source.query.select.fields
   end
 
   test "plan: subqueries with map updates in select can be used with assoc" do
@@ -143,7 +155,7 @@ defmodule Ecto.Query.SubqueryTest do
              Macro.to_string(query.from.source.query.select.expr)
 
       query = from p in Post, select: %{p | unknown: p.title}
-      assert_raise Ecto.SubQueryError, ~r/invalid key `:unknown` on map update in subquery/, fn ->
+      assert_raise Ecto.SubQueryError, ~r/invalid key `:unknown`/, fn ->
         plan(from(subquery(query), []))
       end
     end
@@ -169,7 +181,7 @@ defmodule Ecto.Query.SubqueryTest do
 
     test "raises on custom expressions" do
       query = from p in Post, select: fragment("? + ?", p.id, p.id)
-      assert_raise Ecto.SubQueryError, ~r/subquery must select a source \(t\), a field \(t\.field\) or a map/, fn ->
+      assert_raise Ecto.SubQueryError, ~r/subquery\/cte must select a source \(t\), a field \(t\.field\) or a map/, fn ->
         plan(from(subquery(query), []))
       end
     end

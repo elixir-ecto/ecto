@@ -58,28 +58,17 @@ defmodule Ecto.Repo.Supervisor do
   @doc """
   Retrieves the compile time configuration.
   """
-  def compile_config(repo, opts) do
+  def compile_config(_repo, opts) do
     otp_app = Keyword.fetch!(opts, :otp_app)
-    config  = Application.get_env(otp_app, repo, [])
-    adapter = opts[:adapter] || deprecated_adapter(otp_app, repo, config)
+    adapter = opts[:adapter]
 
     unless adapter do
       raise ArgumentError, "missing :adapter option on use Ecto.Repo"
     end
 
-    unless Code.ensure_compiled?(adapter) do
+    if Code.ensure_compiled(adapter) != {:module, adapter} do
       raise ArgumentError, "adapter #{inspect adapter} was not compiled, " <>
                            "ensure it is correct and it is included as a project dependency"
-    end
-
-    if opts[:loggers] || config[:loggers] do
-      IO.warn """
-      the :loggers configuration for #{inspect(repo)} is deprecated.
-
-        * To customize the log level, set log: :debug | :info | :warn | :error instead
-        * To disable logging, set log: false instead
-        * To hook into logging events, see the \"Telemetry Events\" section in Ecto.Repo docs
-      """
     end
 
     behaviours =
@@ -93,22 +82,6 @@ defmodule Ecto.Repo.Supervisor do
     end
 
     {otp_app, adapter, behaviours}
-  end
-
-  defp deprecated_adapter(otp_app, repo, config) do
-    if adapter = config[:adapter] do
-      IO.warn """
-      retrieving the :adapter from config files for #{inspect repo} is deprecated.
-      Instead pass the adapter configuration when defining the module:
-
-          defmodule #{inspect repo} do
-            use Ecto.Repo,
-              otp_app: #{inspect otp_app},
-              adapter: #{inspect adapter}
-      """
-
-      adapter
-    end
   end
 
   @doc """
@@ -163,8 +136,8 @@ defmodule Ecto.Repo.Supervisor do
       {key, value}, acc when key in @integer_url_query_params ->
         [{String.to_atom(key), parse_integer!(key, value, url)}] ++ acc
 
-      {key, _value}, _acc ->
-        raise Ecto.InvalidURLError, url: url, message: "unsupported query parameter `#{key}`"
+      {key, value}, acc ->
+        [{String.to_atom(key), value}] ++ acc
     end)
   end
 
@@ -182,33 +155,25 @@ defmodule Ecto.Repo.Supervisor do
 
   ## Callbacks
 
-  @impl true
+  @doc false
   def init({name, repo, otp_app, adapter, opts}) do
     case runtime_config(:supervisor, repo, otp_app, opts) do
       {:ok, opts} ->
         {:ok, child, meta} = adapter.init([repo: repo] ++ opts)
         cache = Ecto.Query.Planner.new_query_cache(name)
-        child_spec = wrap_child_spec(child, [adapter, cache, meta])
-        supervisor_init([child_spec], strategy: :one_for_one, max_restarts: 0)
+        meta = Map.merge(meta, %{repo: repo, cache: cache})
+        child_spec = wrap_child_spec(child, [adapter, meta])
+        Supervisor.init([child_spec], strategy: :one_for_one, max_restarts: 0)
 
       :ignore ->
         :ignore
     end
   end
 
-  # TODO: Remove function_exported? check when requiring Elixir v1.5+ 
-  defp supervisor_init(specs, options) do
-    if function_exported?(Supervisor, :init, 2) do
-      Supervisor.init(specs, options)
-    else
-      Supervisor.Spec.supervise(specs, options)
-    end
-  end
-  
-  def start_child({mod, fun, args}, adapter, cache, meta) do
+  def start_child({mod, fun, args}, adapter, meta) do
     case apply(mod, fun, args) do
       {:ok, pid} ->
-        meta = Map.merge(meta, %{pid: pid, cache: cache})
+        meta = Map.put(meta, :pid, pid)
         Ecto.Repo.Registry.associate(self(), {adapter, meta})
         {:ok, pid}
 

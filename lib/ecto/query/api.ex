@@ -229,7 +229,7 @@ defmodule Ecto.Query.API do
 
       # Get all items published since the last month
       from p in Post, where: p.published_at >
-                             datetime_add(^NaiveDateTime.utc_now, -1, "month")
+                             datetime_add(^NaiveDateTime.utc_now(), -1, "month")
 
   In the example above, we used `datetime_add/3` to subtract one month
   from the current datetime and compared it with the `p.published_at`.
@@ -343,8 +343,8 @@ defmodule Ecto.Query.API do
   Allows a field to be dynamically accessed.
 
       def at_least_four(doors_or_tires) do
-          from c in Car,
-        where: field(c, ^doors_or_tires) >= 4
+        from c in Car,
+          where: field(c, ^doors_or_tires) >= 4
       end
 
   In the example above, both `at_least_four(:doors)` and `at_least_four(:tires)`
@@ -486,6 +486,7 @@ defmodule Ecto.Query.API do
   Or to type aggregation results:
 
       from p in Post, select: type(avg(p.cost), :integer)
+      from p in Post, select: type(filter(avg(p.cost), p.cost > 0), :integer)
 
   """
   def type(interpolated_value, type), do: doc! [interpolated_value, type]

@@ -17,7 +17,7 @@ defmodule Ecto.TestAdapter do
     "hello" = opts[:database]
     "local" = opts[:hostname]
 
-    {:ok, Supervisor.Spec.worker(Task, [fn -> :timer.sleep(:infinity) end]), %{meta: :meta}}
+    {:ok, Supervisor.child_spec({Task, fn -> :timer.sleep(:infinity) end}, []), %{meta: :meta}}
   end
 
   def checkout(_mod, _opts, fun) do
@@ -34,8 +34,8 @@ defmodule Ecto.TestAdapter do
   def dumpers(_primitive, type), do: [type]
 
   def autogenerate(:id), do: nil
-  def autogenerate(:embed_id), do: Ecto.UUID.autogenerate
-  def autogenerate(:binary_id), do: Ecto.UUID.bingenerate
+  def autogenerate(:embed_id), do: Ecto.UUID.autogenerate()
+  def autogenerate(:binary_id), do: Ecto.UUID.bingenerate()
 
   ## Queryable
 

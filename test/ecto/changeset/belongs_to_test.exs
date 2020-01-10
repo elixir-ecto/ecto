@@ -294,10 +294,9 @@ defmodule Ecto.Changeset.BelongsToTest do
 
   test "change belongs_to" do
     assoc = Author.__schema__(:association, :profile)
-    assert {:ok, nil, true} =
-      Relation.change(assoc, nil, %Profile{})
-    assert {:ok, nil, true} =
-      Relation.change(assoc, nil, nil)
+
+    assert {:ok, nil, true} = Relation.change(assoc, nil, nil)
+    assert {:ok, nil, true} = Relation.change(assoc, nil, %Profile{})
 
     assoc_schema = %Profile{}
     assoc_schema_changeset = Changeset.change(assoc_schema, name: "michal")
@@ -453,6 +452,40 @@ defmodule Ecto.Changeset.BelongsToTest do
     refute Map.has_key?(changeset.changes, :profile)
   end
 
+  test "put_assoc/4 with empty" do
+    # On unloaded
+    changeset =
+      %Author{}
+      |> Changeset.change()
+      |> Changeset.put_assoc(:profile, nil)
+
+    assert Map.has_key?(changeset.changes, :profile)
+
+    # On empty
+    changeset =
+      %Author{profile: nil}
+      |> Changeset.change()
+      |> Changeset.put_assoc(:profile, nil)
+
+    refute Map.has_key?(changeset.changes, :profile)
+
+    # On unloaded with change
+    changeset =
+      %Author{}
+      |> Changeset.change(profile: %Profile{})
+      |> Changeset.put_assoc(:profile, nil)
+
+    assert Map.has_key?(changeset.changes, :profile)
+
+    # On emptuy with change
+    changeset =
+      %Author{profile: nil}
+      |> Changeset.change(profile: %Profile{})
+      |> Changeset.put_assoc(:profile, nil)
+
+    refute Map.has_key?(changeset.changes, :profile)
+  end
+
   test "put_change/3" do
     changeset = Changeset.change(%Author{}, profile: %Profile{name: "michal"})
     assert %Ecto.Changeset{} = changeset.changes.profile
@@ -493,7 +526,7 @@ defmodule Ecto.Changeset.BelongsToTest do
     changeset = Changeset.change(%Profile{}, name: "michal")
     assert Relation.apply_changes(embed, changeset) == %Profile{name: "michal"}
 
-    changeset = Changeset.change(%Profile{}, title: "hello")
+    changeset = Changeset.change(%Profile{}, name: "hello")
     changeset2 = %{changeset | action: :delete}
     assert Relation.apply_changes(embed, changeset2) == nil
   end

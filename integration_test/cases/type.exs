@@ -1,5 +1,3 @@
-Code.require_file "../support/types.exs", __DIR__
-
 defmodule Ecto.Integration.TypeTest do
   use Ecto.Integration.Case, async: Application.get_env(:ecto, :async_integration_tests, true)
 
@@ -37,6 +35,8 @@ defmodule Ecto.Integration.TypeTest do
     # Booleans
     assert [true] = TestRepo.all(from p in Post, where: p.public == ^true, select: p.public)
     assert [true] = TestRepo.all(from p in Post, where: p.public == true, select: p.public)
+    assert [false] = TestRepo.all(from p in Post, where: p.public == true, select: not p.public)
+    assert [true] = TestRepo.all(from p in Post, where: p.public == true, select: not not p.public)
 
     # Binaries
     assert [^text] = TestRepo.all(from p in Post, where: p.text == <<0, 1>>, select: p.text)
@@ -49,7 +49,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [^datetime] = TestRepo.all(from p in Post, where: p.inserted_at == ^datetime, select: p.inserted_at)
 
     # Datetime
-    datetime = DateTime.from_unix!(System.system_time(:second), :second)
+    datetime = DateTime.from_unix!(System.os_time(:second), :second)
     TestRepo.insert!(%User{inserted_at: datetime})
     assert [^datetime] = TestRepo.all(from u in User, where: u.inserted_at == ^datetime, select: u.inserted_at)
 
@@ -72,6 +72,15 @@ defmodule Ecto.Integration.TypeTest do
     TestRepo.insert!(%Post{inserted_at: datetime})
     query = from p in Post, select: max(p.inserted_at)
     assert [^datetime] = TestRepo.all(query)
+  end
+
+  # We don't specifically assert on the tuple content because
+  # some databases would return integer, others decimal.
+  # The important is that the type has been invoked for wrapping.
+  test "aggregate custom types" do
+    TestRepo.insert!(%Post{wrapped_visits: {:int, 10}})
+    query = from p in Post, select: sum(p.wrapped_visits)
+    assert [{:int, _}] = TestRepo.all(query)
   end
 
   @tag :aggregate_filters
@@ -107,7 +116,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [1.0] = TestRepo.all(from p in Post, select: type(^"1", p.intensity))
 
     # Custom wrappers
-    assert [1] = TestRepo.all(from Post, select: type(^"1", Elixir.Custom.Permalink))
+    assert [1] = TestRepo.all(from Post, select: type(^"1", CustomPermalink))
 
     # Custom types
     uuid = Ecto.UUID.generate()
@@ -235,23 +244,49 @@ defmodule Ecto.Integration.TypeTest do
   @tag :map_type
   test "embeds one" do
     item = %Item{price: 123, valid_at: ~D[2014-01-16]}
+
     order =
       %Order{}
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_embed(:item, item)
-    order = TestRepo.insert!(order)
+      |> TestRepo.insert!()
+
     dbitem = TestRepo.get!(Order, order.id).item
+    assert item.reference == dbitem.reference
     assert item.price == dbitem.price
     assert item.valid_at == dbitem.valid_at
     assert dbitem.id
 
     [dbitem] = TestRepo.all(from o in Order, select: o.item)
+    assert item.reference == dbitem.reference
     assert item.price == dbitem.price
     assert item.valid_at == dbitem.valid_at
     assert dbitem.id
 
     {1, _} = TestRepo.update_all(Order, set: [item: %{dbitem | price: 456}])
     assert TestRepo.get!(Order, order.id).item.price == 456
+  end
+
+  @tag :map_type
+  test "embeds one with custom type" do
+    item = %Item{price: 123, reference: "PREFIX-EXAMPLE"}
+
+    order =
+      %Order{}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_embed(:item, item)
+      |> TestRepo.insert!()
+
+    dbitem = TestRepo.get!(Order, order.id).item
+    assert dbitem.reference == "PREFIX-EXAMPLE"
+    assert [%{"reference" => "EXAMPLE"}] = TestRepo.all(from o in "orders", select: o.item)
+  end
+
+  @tag :map_type
+  test "empty embeds one" do
+    order = TestRepo.insert!(%Order{})
+    assert order.item == nil
+    assert TestRepo.get!(Order, order.id).item == nil
   end
 
   @tag :map_type
@@ -276,6 +311,14 @@ defmodule Ecto.Integration.TypeTest do
 
     {1, _} = TestRepo.update_all(Tag, set: [items: [%{dbitem | price: 456}]])
     assert (TestRepo.get!(Tag, tag.id).items |> hd).price == 456
+  end
+
+  @tag :map_type
+  @tag :array_type
+  test "empty embeds many" do
+    tag = TestRepo.insert!(%Tag{})
+    assert tag.items == []
+    assert TestRepo.get!(Tag, tag.id).items == []
   end
 
   @tag :map_type
@@ -329,6 +372,36 @@ defmodule Ecto.Integration.TypeTest do
     assert [1] = TestRepo.all(from p in Post, select: type(sum(p.cost), :integer))
     assert [1.0] = TestRepo.all(from p in Post, select: type(sum(p.cost), :float))
     assert [^decimal] = TestRepo.all(from p in Post, select: type(sum(p.cost), :decimal))
+  end
+
+  @tag :decimal_type
+  test "on coalesce with mixed types" do
+    decimal = Decimal.new("1.0")
+    TestRepo.insert!(%Post{cost: decimal})
+    assert [^decimal] = TestRepo.all(from p in Post, select: coalesce(p.cost, 0))
+  end
+
+  test "unions with literals" do
+    TestRepo.insert!(%Post{})
+    TestRepo.insert!(%Post{})
+
+    query1 = from(p in Post, select: %{n: 1})
+    query2 = from(p in Post, select: %{n: 2})
+
+    assert TestRepo.all(union_all(query1, ^query2)) ==
+            [%{n: 1}, %{n: 1}, %{n: 2}, %{n: 2}]
+
+    query1 = from(p in Post, select: %{n: 1.0})
+    query2 = from(p in Post, select: %{n: 2.0})
+
+    assert TestRepo.all(union_all(query1, ^query2)) ==
+            [%{n: 1.0}, %{n: 1.0}, %{n: 2.0}, %{n: 2.0}]
+
+    query1 = from(p in Post, select: %{n: "foo"})
+    query2 = from(p in Post, select: %{n: "bar"})
+
+    assert TestRepo.all(union_all(query1, ^query2)) ==
+            [%{n: "foo"}, %{n: "foo"}, %{n: "bar"}, %{n: "bar"}]
   end
 
   test "schemaless types" do

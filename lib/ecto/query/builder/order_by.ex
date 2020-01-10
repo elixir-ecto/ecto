@@ -32,10 +32,6 @@ defmodule Ecto.Query.Builder.OrderBy do
   """
   @spec escape(:order_by | :distinct, Macro.t, {list, term}, Keyword.t, Macro.Env.t) ::
           {Macro.t, {list, term}}
-  def escape(kind, {:^, _, [expr]}, params_acc, _vars, _env) do
-    {quote(do: Ecto.Query.Builder.OrderBy.order_by!(unquote(kind), unquote(expr))), params_acc}
-  end
-
   def escape(kind, expr, params_acc, vars, env) do
     expr
     |> List.wrap
@@ -102,23 +98,51 @@ defmodule Ecto.Query.Builder.OrderBy do
     to_field(field)
   end
   def field!(kind, other) do
-    raise ArgumentError,
-      "expected a field as an atom, a list or keyword list in `#{kind}`, got: `#{inspect other}`"
-  end
-
-  @doc """
-  Called at runtime to verify order_by.
-  """
-  def order_by!(kind, exprs) do
-    Enum.map List.wrap(exprs), fn
-      {dir, field} when dir in @directions ->
-        {dir, field!(kind, field)}
-      field ->
-        {:asc, field!(kind, field)}
-    end
+    raise ArgumentError, "expected a field as an atom in `#{kind}`, got: `#{inspect other}`"
   end
 
   defp to_field(field), do: {{:., [], [{:&, [], [0]}, field]}, [], []}
+
+  @doc """
+  Shared between order_by and distinct.
+  """
+  def order_by_or_distinct!(kind, query, exprs, params) do
+    {expr, {params, _}} =
+      Enum.map_reduce(List.wrap(exprs), {params, length(params)}, fn
+        {dir, expr}, params_count when dir in @directions ->
+          {expr, params} = dynamic_or_field!(kind, expr, query, params_count)
+          {{dir, expr}, params}
+        expr, params_count ->
+          {expr, params} = dynamic_or_field!(kind, expr, query, params_count)
+          {{:asc, expr}, params}
+      end)
+
+    {expr, params}
+  end
+
+  @doc """
+  Called at runtime to assemble order_by.
+  """
+  def order_by!(query, exprs, file, line) do
+    {expr, params} = order_by_or_distinct!(:order_by, query, exprs, [])
+    expr = %Ecto.Query.QueryExpr{expr: expr, params: Enum.reverse(params), line: line, file: file}
+    apply(query, expr)
+  end
+
+  defp dynamic_or_field!(_kind, %Ecto.Query.DynamicExpr{} = dynamic, query, {params, count}) do
+    {expr, params, count} = Builder.Dynamic.partially_expand(query, dynamic, params, count)
+    {expr, {params, count}}
+  end
+
+  defp dynamic_or_field!(_kind, field, _query, params_count) when is_atom(field) do
+    {to_field(field), params_count}
+  end
+
+  defp dynamic_or_field!(kind, other, _query, _params_count) do
+    raise ArgumentError,
+          "`#{kind}` interpolated on root expects a field or a keyword list " <>
+            "with the direction as keys and fields or dynamics as values, got: `#{inspect other}`"
+  end
 
   @doc """
   Builds a quoted expression.
@@ -128,6 +152,12 @@ defmodule Ecto.Query.Builder.OrderBy do
   runtime work.
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
+  def build(query, _binding, {:^, _, [var]}, env) do
+    quote do
+      Ecto.Query.Builder.OrderBy.order_by!(unquote(query), unquote(var), unquote(env.file), unquote(env.line))
+    end
+  end
+
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, {params, _}} = escape(:order_by, expr, {[], :acc}, binding, env)

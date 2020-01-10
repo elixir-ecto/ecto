@@ -69,6 +69,38 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p0 in subquery(from p0 in Inspect.Post)}
   end
 
+  test "CTE" do
+    initial_query =
+      "categories"
+      |> where([c], is_nil(c.parent_id))
+      |> select([c], %{id: c.id, depth: fragment("1")})
+
+    iteration_query =
+      "categories"
+      |> join(:inner, [c], t in "tree", on: t.id == c.parent_id)
+      |> select([c, t], %{id: c.id, depth: fragment("? + 1", t.depth)})
+
+    cte_query = initial_query |> union_all(^iteration_query)
+
+    query =
+      "products"
+      |> recursive_ctes(true)
+      |> with_cte("tree", as: ^cte_query)
+      |> join(:inner, [r], t in "tree", on: t.id == r.category_id)
+
+    assert query |> inspect() |> Inspect.Algebra.format(80) |> to_string() ==
+      ~s{#Ecto.Query<from p0 in "products", join: t1 in "tree", on: t1.id == p0.category_id>\n} <>
+      ~s{|> recursive_ctes(true)\n} <>
+      ~s{|> with_cte("tree", as: } <>
+      ~s{#Ecto.Query<from c0 in "categories", } <>
+      ~s{where: is_nil(c0.parent_id), } <>
+      ~s{union_all: (from c0 in "categories",\n  } <>
+      ~s{join: t1 in "tree",\n  } <>
+      ~s{on: t1.id == c0.parent_id,\n  } <>
+      ~s{select: %\{id: c0.id, depth: fragment("? + 1", t1.depth)\}), } <>
+      ~s{select: %\{id: c0.id, depth: fragment("1")\}>)}
+  end
+
   test "join" do
     assert i(from(x in Post, join: y in Comment)) ==
            ~s{from p0 in Inspect.Post, join: c1 in Inspect.Comment, on: true}

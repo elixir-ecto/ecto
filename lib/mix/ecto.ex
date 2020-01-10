@@ -23,18 +23,21 @@ defmodule Mix.Ecto do
 
   defp parse_repo([], []) do
     apps =
-      if apps_paths = Mix.Project.apps_paths do
+      if apps_paths = Mix.Project.apps_paths() do
         Map.keys(apps_paths)
       else
-        [Mix.Project.config[:app]]
+        [Mix.Project.config()[:app]]
       end
 
     apps
-    |> Enum.flat_map(&Application.get_env(&1, :ecto_repos, []))
+    |> Enum.flat_map(fn app ->
+      Application.load(app)
+      Application.get_env(app, :ecto_repos, [])
+    end)
     |> Enum.uniq()
     |> case do
       [] ->
-        Mix.shell.error """
+        Mix.shell().error """
         warning: could not find Ecto repos in any of the apps: #{inspect apps}.
 
         You can avoid this warning by passing the -r flag or by setting the
@@ -97,7 +100,7 @@ defmodule Mix.Ecto do
   Raises on umbrella application.
   """
   def no_umbrella!(task) do
-    if Mix.Project.umbrella? do
+    if Mix.Project.umbrella?() do
       Mix.raise "Cannot run task #{inspect task} from umbrella application"
     end
   end

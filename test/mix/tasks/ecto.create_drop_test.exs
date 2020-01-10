@@ -18,6 +18,7 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
 
     def storage_up(_), do: Process.get(:storage_up) || raise "no storage_up"
     def storage_down(_), do: Process.get(:storage_down) || raise "no storage_down"
+    def storage_status(_), do: raise "no storage_status"
   end
 
   defmodule NoStorageAdapter do

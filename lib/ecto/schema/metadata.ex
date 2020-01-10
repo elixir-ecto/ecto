@@ -27,7 +27,7 @@ defmodule Ecto.Schema.Metadata do
 
   The `:context` field represents additional state some databases require
   for proper updates of data. It is not used by the built-in adapters of
-  `Ecto.Adapters.Postres` and `Ecto.Adapters.MySQL`.
+  `Ecto.Adapters.Postgres` and `Ecto.Adapters.MySQL`.
 
   ## Schema
 

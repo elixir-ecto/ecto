@@ -8,7 +8,23 @@ defmodule Ecto.Repo.AutogenerateTest do
 
     @timestamps_opts [inserted_at: :created_on]
     schema "manager" do
+      field :company_id, :integer
       timestamps updated_at: :updated_on, type: :utc_datetime
+    end
+  end
+
+  defmodule Office do
+    use Ecto.Schema
+
+    schema "offices" do
+      field :name, :string
+      belongs_to :company, Company
+      timestamps type: :utc_datetime_usec
+    end
+
+    def changeset(module, changes) do
+      module
+      |> Ecto.Changeset.cast(changes, [:id, :name])
     end
   end
 
@@ -18,6 +34,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     schema "default" do
       field :code, Ecto.UUID, autogenerate: true
       has_one :manager, Manager
+      has_many :offices, Office
       timestamps()
     end
   end
@@ -109,6 +126,21 @@ defmodule Ecto.Repo.AutogenerateTest do
     refute default.inserted_at
     assert %NaiveDateTime{microsecond: {0, 0}} = default.updated_at
     assert_received {:update, _}
+  end
+
+  test "does not update updated_at when the associated record did not change" do
+    company = TestRepo.insert!(%Company{offices: [%Office{id: 1, name: "1"}, %Office{id: 2, name: "2"}]})
+    [office_one, office_two] = company.offices
+
+    changes = %{offices: [%{id: 1, name: "updated"}, %{id: 2, name: "2"}]}
+    updated_company =
+      company
+      |> Ecto.Changeset.cast(changes, [])
+      |> Ecto.Changeset.cast_assoc(:offices)
+      |> TestRepo.update!()
+    [updated_office_one, updated_office_two] = updated_company.offices
+    assert updated_office_one.updated_at != office_one.updated_at
+    assert updated_office_two.updated_at == office_two.updated_at
   end
 
   test "does not set inserted_at and updated_at values if they were previously set" do
