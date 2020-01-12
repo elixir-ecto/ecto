@@ -53,14 +53,14 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
         check = String.contains?(contents, "import Config")
         config_first_line = get_first_config_line(check) <> "\n"
         new_contents = config_first_line <> "\n" <> config_template(opts)
-        Mix.shell().info [:green, "* updating ", :reset, "config/config.exs"]
-        File.write! "config/config.exs", String.replace(contents, config_first_line, new_contents)
+        Mix.shell().info [:green, "* updating ", :reset, config_path]
+        File.write! config_path, String.replace(contents, config_first_line, new_contents)
       {:error, _} ->
         config_first_line = Config |> Code.ensure_loaded?() |> get_first_config_line()
-        create_file "config/config.exs", config_first_line <> "\n\n" <> config_template(opts)
+        create_file config_path, config_first_line <> "\n\n" <> config_template(opts)
     end
 
-    open?("config/config.exs")
+    open?(config_path)
 
     Mix.shell().info """
     Don't forget to add your new repo to your supervision tree
