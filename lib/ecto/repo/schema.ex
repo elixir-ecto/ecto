@@ -677,6 +677,8 @@ defmodule Ecto.Repo.Schema do
   defp constraints_to_errors(%{constraints: user_constraints, errors: errors} = changeset, action, constraints) do
     constraint_errors =
       Enum.map constraints, fn {type, constraint} ->
+        constraint = constraint |> String.split(".") |> Enum.at(-1)
+
         user_constraint =
           Enum.find(user_constraints, fn c ->
             case {c.type, c.constraint,  c.match} do
