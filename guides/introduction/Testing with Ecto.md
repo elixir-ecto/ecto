@@ -21,7 +21,7 @@ config :my_app, MyApp.Repo,
 Thereby, we configure the database connection for our test setup.
 In this case, we use a Postgres database and set it up to use the sandbox pool that will wrap each test in a transaction.
 
-Make sure we import the configuration for the test environment at the very bottom of `config.exs`:
+Make sure we import the configuration for the test environment at the very bottom of `config/config.exs`:
 
 ```elixir
 import_config "#{Mix.env()}.exs"
