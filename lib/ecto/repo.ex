@@ -644,10 +644,10 @@ defmodule Ecto.Repo do
 
   ## Examples
 
-      # Returns the number of visits per blog post
+      # Returns the number of blog posts
       Repo.aggregate(Post, :count)
 
-      # Returns the number of visits per blog post in the "private" schema path
+      # Returns the number of blog posts in the "private" schema path
       # (in Postgres) or database (in MySQL)
       Repo.aggregate(Post, :count, prefix: "private")
 
