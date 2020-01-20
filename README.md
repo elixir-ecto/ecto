@@ -155,7 +155,7 @@ The Ecto logo was designed by [Dane Wesolko](http://www.danewesolko.com).
 
 ## License
 
-Copyright (c) 2013 Plataformatec
+Copyright (c) 2013 Plataformatec \
 Copyright (c) 2020 Dashbit
 
 Licensed under the Apache License, Version 2.0 (the "License");
