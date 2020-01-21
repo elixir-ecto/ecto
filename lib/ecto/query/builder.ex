@@ -856,12 +856,14 @@ defmodule Ecto.Query.Builder do
   @doc """
   Negates the given number.
   """
-  def negate!(%Decimal{} = decimal) do
-    Decimal.minus(decimal)
+  # TODO: remove check when we depend on decimal v2.0
+  if Code.ensure_loaded?(Decimal) and function_exported?(Decimal, :negate, 1) do
+    def negate!(%Decimal{} = decimal), do: Decimal.negate(decimal)
+  else
+    def negate!(%Decimal{} = decimal), do: Decimal.minus(decimal)
   end
-  def negate!(number) when is_number(number) do
-    -number
-  end
+
+  def negate!(number) when is_number(number), do: -number
 
   @doc """
   Returns the type of an expression at build time.
