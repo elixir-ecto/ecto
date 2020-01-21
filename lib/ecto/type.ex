@@ -823,7 +823,8 @@ defmodule Ecto.Type do
   defp cast_decimal(term) when is_binary(term) do
     case Decimal.parse(term) do
       {:ok, decimal} -> check_decimal(decimal)
-      :error -> :error
+      {decimal, ""} -> check_decimal(decimal)
+      _ -> :error
     end
   end
 
@@ -1325,8 +1326,8 @@ defmodule Ecto.Type do
     """
   end
 
-  defp check_decimal(%Decimal{coef: coef}) when coef in [:inf, :qNaN, :sNaN], do: :error
-  defp check_decimal(%Decimal{} = decimal), do: {:ok, decimal}
+  defp check_decimal(%Decimal{coef: coef} = decimal) when is_integer(coef), do: {:ok, decimal}
+  defp check_decimal(%Decimal{}), do: :error
 
   defp check_decimal!(decimal) do
     case check_decimal(decimal) do
