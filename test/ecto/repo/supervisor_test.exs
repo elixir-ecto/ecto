@@ -37,6 +37,12 @@ defmodule Ecto.Repo.SupervisorTest do
             otp_app: :ecto, password: "hunter2", port: 12345, username: "eric"]
   end
 
+  test "ignores empty hostname" do
+    put_env(database: "hello", url: "ecto:///mydb")
+    {:ok, config} = runtime_config(:runtime, __MODULE__, :ecto, extra: "extra")
+    assert normalize(config) == [database: "mydb", extra: "extra", otp_app: :ecto]
+  end
+
   test "is no-op for nil or empty URL" do
     put_env(database: "hello", url: nil)
     {:ok, config} = runtime_config(:runtime, __MODULE__, :ecto, [])
