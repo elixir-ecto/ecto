@@ -360,6 +360,24 @@ defmodule Ecto.Association do
   end
 
   @doc """
+  Applies default values into the struct.
+  """
+  def apply_defaults(struct, defaults) do
+    struct(struct, defaults)
+  end
+
+  @doc """
+  Validates `defaults` for association named `name`.
+  """
+  def validate_defaults!(name, defaults) do
+    unless is_list(defaults) do
+      raise ArgumentError, "expected `:defaults` for #{inspect name} to be a keyword list, got: `#{inspect defaults}`"
+    end
+
+    defaults
+  end
+
+  @doc """
   Merges source from query into to the given schema.
 
   In case the query does not have a source, returns
@@ -595,12 +613,8 @@ defmodule Ecto.Association.Has do
         Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
     end
 
-    defaults = opts[:defaults] || []
+    defaults = Ecto.Association.validate_defaults!(name, opts[:defaults] || [])
     where = opts[:where] || []
-
-    unless is_list(defaults) do
-      raise ArgumentError, "expected `:defaults` for #{inspect name} to be a keyword list, got: `#{inspect defaults}`"
-    end
 
     unless is_list(where) do
       raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
@@ -708,7 +722,7 @@ defmodule Ecto.Association.Has do
   @doc false
   def build(%{related: related, queryable: queryable, defaults: defaults}) do
     related
-    |> struct(defaults)
+    |> Ecto.Association.apply_defaults(defaults)
     |> Ecto.Association.merge_source(queryable)
   end
 
@@ -876,12 +890,8 @@ defmodule Ecto.Association.BelongsTo do
         Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
     end
 
-    defaults = opts[:defaults] || []
+    defaults = Ecto.Association.validate_defaults!(name, opts[:defaults] || [])
     where = opts[:where] || []
-
-    unless is_list(defaults) do
-      raise ArgumentError, "expected `:defaults` for #{inspect name} to be a keyword list, got: `#{inspect defaults}`"
-    end
 
     unless is_list(where) do
       raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
@@ -963,7 +973,7 @@ defmodule Ecto.Association.BelongsTo do
   @doc false
   def build(%{related: related, queryable: queryable, defaults: defaults}) do
     related
-    |> struct(defaults)
+    |> Ecto.Association.apply_defaults(defaults)
     |> Ecto.Association.merge_source(queryable)
   end
 end
@@ -1065,12 +1075,8 @@ defmodule Ecto.Association.ManyToMany do
         Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
     end
 
-    defaults = opts[:defaults] || []
+    defaults = Ecto.Association.validate_defaults!(name, opts[:defaults] || [])
     where = opts[:where] || []
-
-    unless is_list(defaults) do
-      raise ArgumentError, "expected `:defaults` for #{inspect name} to be a keyword list, got: `#{inspect defaults}`"
-    end
 
     unless is_list(where) do
       raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
@@ -1255,7 +1261,7 @@ defmodule Ecto.Association.ManyToMany do
   @doc false
   def build(%{related: related, queryable: queryable, defaults: defaults}) do
     related
-    |> struct(defaults)
+    |> Ecto.Association.apply_defaults(defaults)
     |> Ecto.Association.merge_source(queryable)
   end
 
