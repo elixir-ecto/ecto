@@ -371,7 +371,7 @@ defmodule Ecto.Association do
   """
   def validate_defaults!(name, defaults) do
     unless is_list(defaults) do
-      raise ArgumentError, "expected `:defaults` for #{inspect name} to be a keyword list, got: `#{inspect defaults}`"
+      raise ArgumentError, "expected defaults for #{inspect name} to be a keyword list, got: `#{inspect defaults}`"
     end
 
     defaults
@@ -997,6 +997,7 @@ defmodule Ecto.Association.ManyToMany do
     * `join_keys` - The keyword list with many to many join keys
     * `join_through` - Atom (representing a schema) or a string (representing a table)
       for many to many associations
+    * `join_defaults` - A list of defaults for join associations
   """
 
   @behaviour Ecto.Association
@@ -1004,8 +1005,8 @@ defmodule Ecto.Association.ManyToMany do
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
              :on_replace, :join_keys, :join_through, :on_cast, where: [],
-             defaults: [], relationship: :child, cardinality: :many,
-             unique: false, ordered: false]
+             defaults: [], join_defaults: [], relationship: :child,
+             cardinality: :many, unique: false, ordered: false]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, join_through: join_through}, env) do
@@ -1076,10 +1077,15 @@ defmodule Ecto.Association.ManyToMany do
     end
 
     defaults = Ecto.Association.validate_defaults!(name, opts[:defaults] || [])
+    join_defaults = Ecto.Association.validate_defaults!(name, opts[:join_defaults] || [])
     where = opts[:where] || []
 
     unless is_list(where) do
       raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
+    end
+
+    if opts[:join_defaults] && is_binary(join_through) do
+      raise ArgumentError, ":join_defaults has no effect for a :join_through without a schema"
     end
 
     %__MODULE__{
@@ -1090,6 +1096,7 @@ defmodule Ecto.Association.ManyToMany do
       owner_key: owner_key,
       join_keys: join_keys,
       join_through: join_through,
+      join_defaults: join_defaults,
       queryable: queryable,
       on_delete: on_delete,
       on_replace: on_replace,
@@ -1169,8 +1176,8 @@ defmodule Ecto.Association.ManyToMany do
     {:ok, nil}
   end
 
-  def on_repo_change(%{field: field, join_through: join_through, join_keys: join_keys},
-                     %{repo: repo, data: owner, constraints: constraints} = parent_changeset,
+  def on_repo_change(%{field: field, join_through: join_through, join_keys: join_keys} = refl,
+                     %{repo: repo, data: owner} = parent_changeset,
                      %{action: action} = changeset, adapter, opts) do
     changeset = Ecto.Association.update_parent_prefix(changeset, owner)
 
@@ -1181,9 +1188,9 @@ defmodule Ecto.Association.ManyToMany do
         if insert_join?(parent_changeset, changeset, field, related_key) do
           owner_value = dump! :insert, join_through, owner, owner_key, adapter
           related_value = dump! :insert, join_through, related, related_key, adapter
-          data = [{join_owner_key, owner_value}, {join_related_key, related_value}]
+          data = %{join_owner_key => owner_value, join_related_key => related_value}
 
-          case insert_join(repo, join_through, data, opts, constraints) do
+          case insert_join(join_through, refl, parent_changeset, data, opts) do
             {:error, join_changeset} ->
               {:error, %{changeset | errors: join_changeset.errors ++ changeset.errors,
                                      valid?: join_changeset.valid? and changeset.valid?}}
@@ -1220,14 +1227,18 @@ defmodule Ecto.Association.ManyToMany do
     end
   end
 
-  defp insert_join(repo, join_through, data, opts, _constraints) when is_binary(join_through) do
+  defp insert_join(join_through, _refl, %{repo: repo}, data, opts) when is_binary(join_through) do
     repo.insert_all(join_through, [data], opts)
   end
 
-  defp insert_join(repo, join_through, data, opts, constraints) when is_atom(join_through) do
+  defp insert_join(join_through, refl, parent_changeset, data, opts) when is_atom(join_through) do
+    %{repo: repo, constraints: constraints} = parent_changeset
+
     changeset =
-      struct(join_through, data)
-      |> Ecto.Changeset.change
+      join_through
+      |> Ecto.Association.apply_defaults(refl.join_defaults)
+      |> Map.merge(data)
+      |> Ecto.Changeset.change()
       |> Map.put(:constraints, constraints)
 
     repo.insert(changeset, opts)

@@ -1204,6 +1204,9 @@ defmodule Ecto.Schema do
       `Ecto.build_assoc(post, :comments)` that comment will have
       `comment.public == true`.
 
+    * `:join_defaults` - Default values to use when building the join association.
+      It only applies if the join association is a schema.
+
     * `:unique` - When true, checks if the associated entries are unique
       whenever the association is cast or changed via the parent record.
       For instance, it would verify that a given tag cannot be attached to
@@ -1824,7 +1827,7 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_many_to_many_options [:join_through, :join_keys, :on_delete, :defaults, :on_replace, :unique, :where]
+  @valid_many_to_many_options [:join_through, :join_defaults, :join_keys, :on_delete, :defaults, :on_replace, :unique, :where]
 
   @doc false
   def __many_to_many__(mod, name, queryable, opts) do
