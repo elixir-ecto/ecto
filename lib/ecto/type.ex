@@ -256,7 +256,7 @@ defmodule Ecto.Type do
   end
 
   @doc """
-  Loaads the `value` for `type` considering it was embedded in `format`.
+  Loads the `value` for `type` considering it was embedded in `format`.
 
   ## Examples
 
