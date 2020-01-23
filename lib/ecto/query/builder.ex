@@ -488,25 +488,29 @@ defmodule Ecto.Query.Builder do
 
   defp escape_window_function(expr, type, params_acc, vars, env) do
     expr
-    |> validate_window_function!()
+    |> validate_window_function!(env)
     |> escape(type, params_acc, vars, env)
   end
 
-  defp validate_window_function!({:fragment, _, _} = expr), do: expr
+  defp validate_window_function!({:fragment, _, _} = expr, _env), do: expr
 
-  defp validate_window_function!({agg, _, args} = expr) when is_atom(agg) and is_list(args) do
+  defp validate_window_function!({agg, _, args} = expr, env)
+       when is_atom(agg) and is_list(args) do
     if Code.ensure_loaded?(Ecto.Query.WindowAPI) and
-         not function_exported?(Ecto.Query.WindowAPI, agg, length(args)) do
-      error! "unknown window function #{agg}/#{length(args)}. " <>
-               "See Ecto.Query.WindowAPI for all available functions"
+         function_exported?(Ecto.Query.WindowAPI, agg, length(args)) do
+      expr
+    else
+      case Macro.expand_once(expr, get_env(env)) do
+        ^expr ->
+          error! "unknown window function #{agg}/#{length(args)}. " <>
+                   "See Ecto.Query.WindowAPI for all available functions"
+        expr ->
+          validate_window_function!(expr, env)
+      end
     end
-
-    expr
   end
 
-  defp validate_window_function!(expr) do
-    expr
-  end
+  defp validate_window_function!(expr, _), do: expr
 
   defp escape_call({name, _, args}, type, params_acc, vars, env) do
     {args, params_acc} = Enum.map_reduce(args, params_acc, &escape(&1, type, &2, vars, env))
