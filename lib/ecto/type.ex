@@ -438,6 +438,13 @@ defmodule Ecto.Type do
 
   defp same_decimal(term) when is_integer(term), do: {:ok, Decimal.new(term)}
   defp same_decimal(term) when is_float(term), do: {:ok, Decimal.from_float(term)}
+  defp same_decimal(term) when is_binary(term) do
+    case Decimal.parse(term) do
+      {:ok, decimal} -> {:ok, check_decimal!(decimal)}
+      {decimal, ""} -> {:ok, check_decimal!(decimal)}
+      :error -> :error
+    end
+  end
   defp same_decimal(%Decimal{} = term), do: {:ok, check_decimal!(term)}
   defp same_decimal(_), do: :error
 
