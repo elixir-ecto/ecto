@@ -320,6 +320,10 @@ defmodule Ecto.RepoTest do
       from(MySchema, select: true) |> TestRepo.exists?
       assert_received {:all, query}
       assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, limit: 1, select: 1>"
+
+      from(MySchema, union: ^from(MySchema, select: true)) |> TestRepo.exists?
+      assert_received {:all, query}
+      assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, union: (from m0 in Ecto.RepoTest.MySchema,\n  select: 1), limit: 1, select: 1>"
     end
   end
 

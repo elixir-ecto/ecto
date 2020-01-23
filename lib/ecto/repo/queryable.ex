@@ -90,11 +90,22 @@ defmodule Ecto.Repo.Queryable do
       |> Query.exclude(:distinct)
       |> Query.select(1)
       |> Query.limit(1)
+      |> rewrite_combinations()
 
     case all(name, queryable, opts) do
       [1] -> true
       [] -> false
     end
+  end
+
+  defp rewrite_combinations(%{combinations: []} = query), do: query
+
+  defp rewrite_combinations(%{combinations: combinations} = query) do
+    combinations = Enum.map(combinations, fn {type, query} ->
+      {type, query |> Query.exclude(:select) |> Query.select(1)}
+    end)
+
+    %{query | combinations: combinations}
   end
 
   def one(name, queryable, opts) do
