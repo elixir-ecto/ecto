@@ -462,9 +462,6 @@ defmodule Ecto.Type do
   defp dump_float(term) when is_float(term), do: {:ok, term}
   defp dump_float(_), do: :error
 
-  defp dump_decimal(%Decimal{} = decimal), do: check_decimal(decimal, true)
-  defp dump_decimal(_), do: :error
-
   defp dump_time(%Time{} = term), do: {:ok, check_no_usec!(term, :time)}
   defp dump_time(_), do: :error
 
