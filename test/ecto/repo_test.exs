@@ -355,27 +355,29 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  test "insert with returning" do
-    TestRepo.insert(%MySchemaWithAssoc{}, returning: [:id])
-    assert_received {:insert, %{source: "my_schema", returning: [:id]}}
-    TestRepo.insert(%MySchemaWithAssoc{}, returning: [:parent_id])
-    assert_received {:insert, %{source: "my_schema", returning: [:id, :parent_id]}}
-    TestRepo.insert(%MySchemaWithAssoc{}, returning: true)
-    assert_received {:insert, %{source: "my_schema", returning: [:id, :parent_id, :n]}}
-    TestRepo.insert(%MySchemaWithAssoc{}, returning: false)
-    assert_received {:insert, %{source: "my_schema", returning: [:id]}}
-  end
+  describe "returning" do
+    test "on insert" do
+      TestRepo.insert(%MySchemaWithAssoc{}, returning: [:id])
+      assert_received {:insert, %{source: "my_schema", returning: [:id]}}
+      TestRepo.insert(%MySchemaWithAssoc{}, returning: [:parent_id])
+      assert_received {:insert, %{source: "my_schema", returning: [:id, :parent_id]}}
+      TestRepo.insert(%MySchemaWithAssoc{}, returning: true)
+      assert_received {:insert, %{source: "my_schema", returning: [:id, :parent_id, :n]}}
+      TestRepo.insert(%MySchemaWithAssoc{}, returning: false)
+      assert_received {:insert, %{source: "my_schema", returning: [:id]}}
+    end
 
-  test "update with returning" do
-    changeset = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{n: 2})
-    TestRepo.update(changeset, returning: [:id])
-    assert_received {:update, %{source: "my_schema", returning: [:id]}}
-    TestRepo.update(changeset, returning: [:parent_id])
-    assert_received {:update, %{source: "my_schema", returning: [:parent_id]}}
-    TestRepo.update(changeset, returning: true)
-    assert_received {:update, %{source: "my_schema", returning: [:parent_id, :n, :id]}}
-    TestRepo.update(changeset, returning: false)
-    assert_received {:update, %{source: "my_schema", returning: []}}
+    test "on update" do
+      changeset = Ecto.Changeset.change(%MySchemaWithAssoc{id: 1}, %{n: 2})
+      TestRepo.update(changeset, returning: [:id])
+      assert_received {:update, %{source: "my_schema", returning: [:id]}}
+      TestRepo.update(changeset, returning: [:parent_id])
+      assert_received {:update, %{source: "my_schema", returning: [:parent_id]}}
+      TestRepo.update(changeset, returning: true)
+      assert_received {:update, %{source: "my_schema", returning: [:parent_id, :n, :id]}}
+      TestRepo.update(changeset, returning: false)
+      assert_received {:update, %{source: "my_schema", returning: []}}
+    end
   end
 
   describe "insert_all" do
@@ -588,34 +590,6 @@ defmodule Ecto.RepoTest do
       assert changeset.errors == [id: {"is old", [stale: true]}]
     end
 
-    test "get, get_by, one and all sets schema prefix" do
-      assert schema = TestRepo.get(MySchema, 123, prefix: "public")
-      assert schema.__meta__.prefix == "public"
-
-      assert schema = TestRepo.get_by(MySchema, [id: 123], prefix: "public")
-      assert schema.__meta__.prefix == "public"
-
-      assert schema = TestRepo.one(MySchema, prefix: "public")
-      assert schema.__meta__.prefix == "public"
-
-      assert [schema] = TestRepo.all(MySchema, prefix: "public")
-      assert schema.__meta__.prefix == "public"
-    end
-
-    test "get, get_by, one and all ignores prefix if schema_prefix set" do
-      assert schema = TestRepo.get(MySchemaWithPrefix, 123, prefix: "public")
-      assert schema.__meta__.prefix == "private"
-
-      assert schema = TestRepo.get_by(MySchemaWithPrefix, [id: 123], prefix: "public")
-      assert schema.__meta__.prefix == "private"
-
-      assert schema = TestRepo.one(MySchemaWithPrefix, prefix: "public")
-      assert schema.__meta__.prefix == "private"
-
-      assert [schema] = TestRepo.all(MySchemaWithPrefix, prefix: "public")
-      assert schema.__meta__.prefix == "private"
-    end
-
     test "insert and delete sets schema prefix with struct" do
       valid = %MySchema{id: 1}
 
@@ -701,6 +675,29 @@ defmodule Ecto.RepoTest do
 
       assert {:ok, schema} = TestRepo.delete(valid, prefix: "private")
       assert schema.__meta__.prefix == "private"
+    end
+
+    test "insert and update with repo_changes" do
+      valid =
+        %MySchema{id: 1}
+        |> Ecto.Changeset.change()
+        |> Map.put(:repo_changes, %{x: "repo change"})
+
+      assert {:ok, schema} = TestRepo.insert(valid)
+      assert schema.x == "repo change"
+
+      assert {:ok, schema} = TestRepo.update(valid)
+      assert schema.x == "repo change"
+
+      invalid = %{valid | valid?: false}
+
+      assert {:error, changeset} = TestRepo.insert(invalid)
+      refute changeset.data.x
+      refute changeset.changes[:x]
+
+      assert {:error, changeset} = TestRepo.update(invalid)
+      refute changeset.data.x
+      refute changeset.changes[:x]
     end
 
     test "insert, update and insert_or_update parent schema_prefix does not override `nil` children schema_prefix" do
@@ -928,6 +925,34 @@ defmodule Ecto.RepoTest do
         TestRepo.insert_or_update %MySchema{}
       end
     end
+  end
+
+  test "get, get_by, one and all sets schema prefix" do
+    assert schema = TestRepo.get(MySchema, 123, prefix: "public")
+    assert schema.__meta__.prefix == "public"
+
+    assert schema = TestRepo.get_by(MySchema, [id: 123], prefix: "public")
+    assert schema.__meta__.prefix == "public"
+
+    assert schema = TestRepo.one(MySchema, prefix: "public")
+    assert schema.__meta__.prefix == "public"
+
+    assert [schema] = TestRepo.all(MySchema, prefix: "public")
+    assert schema.__meta__.prefix == "public"
+  end
+
+  test "get, get_by, one and all ignores prefix if schema_prefix set" do
+    assert schema = TestRepo.get(MySchemaWithPrefix, 123, prefix: "public")
+    assert schema.__meta__.prefix == "private"
+
+    assert schema = TestRepo.get_by(MySchemaWithPrefix, [id: 123], prefix: "public")
+    assert schema.__meta__.prefix == "private"
+
+    assert schema = TestRepo.one(MySchemaWithPrefix, prefix: "public")
+    assert schema.__meta__.prefix == "private"
+
+    assert [schema] = TestRepo.all(MySchemaWithPrefix, prefix: "public")
+    assert schema.__meta__.prefix == "private"
   end
 
   describe "changeset prepare" do

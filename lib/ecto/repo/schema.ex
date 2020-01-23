@@ -240,6 +240,7 @@ defmodule Ecto.Repo.Schema do
 
       {changeset, parents, children} = pop_assocs(user_changeset, assocs)
       changeset = process_parents(changeset, parents, adapter, assoc_opts)
+      changeset = repo_changes(changeset)
 
       if changeset.valid? do
         embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :insert)
@@ -319,13 +320,14 @@ defmodule Ecto.Repo.Schema do
     # changeset before hand.
     changeset = put_repo_and_action(changeset, :update, repo, opts)
 
-    if changeset.changes != %{} or force? do
+    if changeset.changes != %{} or changeset.repo_changes != %{} or force? do
       wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
         assoc_opts = assoc_opts(assocs, opts)
         user_changeset = run_prepare(changeset, prepare)
 
         {changeset, parents, children} = pop_assocs(user_changeset, assocs)
         changeset = process_parents(changeset, parents, adapter, assoc_opts)
+        changeset = repo_changes(changeset)
 
         if changeset.valid? do
           embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
@@ -492,6 +494,14 @@ defmodule Ecto.Repo.Schema do
       {source, type} = Map.fetch!(dumper, field)
       {[{field, type} | types], [source | sources]}
     end)
+  end
+
+  defp repo_changes(%{repo_changes: repo_changes} = changeset) do
+    if repo_changes == %{} do
+      changeset
+    else
+      update_in(changeset.changes, &Map.merge(&1, repo_changes))
+    end
   end
 
   defp struct_from_changeset!(action, %{data: nil}),
