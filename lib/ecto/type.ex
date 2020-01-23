@@ -609,7 +609,7 @@ defmodule Ecto.Type do
   defp load_fun(:id), do: &same_integer/1
   defp load_fun(:binary_id), do: &same_binary/1
   defp load_fun(:any), do: &{:ok, &1}
-  defp load_fun(:decimal), do: &same_decimal(&1, true)
+  defp load_fun(:decimal), do: &same_decimal/1
   defp load_fun(:date), do: &same_date/1
   defp load_fun(:time), do: &load_time/1
   defp load_fun(:time_usec), do: &load_time_usec/1
@@ -795,7 +795,7 @@ defmodule Ecto.Type do
   defp cast_fun(:id), do: &cast_integer/1
   defp cast_fun(:binary_id), do: &cast_binary/1
   defp cast_fun(:any), do: &{:ok, &1}
-  defp cast_fun(:decimal), do: &same_decimal(&1, false)
+  defp cast_fun(:decimal), do: &cast_decimal/1
   defp cast_fun(:date), do: &cast_date/1
   defp cast_fun(:time), do: &maybe_truncate_usec(cast_time(&1))
   defp cast_fun(:time_usec), do: &maybe_pad_usec(cast_time(&1))
@@ -829,6 +829,15 @@ defmodule Ecto.Type do
   defp cast_float(term) when is_float(term), do: {:ok, term}
   defp cast_float(term) when is_integer(term), do: {:ok, :erlang.float(term)}
   defp cast_float(_), do: :error
+
+  defp cast_decimal(term) when is_binary(term) do
+    case Decimal.parse(term) do
+      {:ok, decimal} -> check_decimal(decimal, false)
+      {decimal, ""} -> check_decimal(decimal, false)
+      :error -> :error
+    end
+  end
+  defp cast_decimal(term), do: same_decimal(term)
 
   defp cast_boolean(term) when term in ~w(true 1),  do: {:ok, true}
   defp cast_boolean(term) when term in ~w(false 0), do: {:ok, false}
@@ -873,17 +882,10 @@ defmodule Ecto.Type do
   defp same_map(term) when is_map(term), do: {:ok, term}
   defp same_map(_), do: :error
 
-  defp same_decimal(term, _raise) when is_integer(term), do: {:ok, Decimal.new(term)}
-  defp same_decimal(term, _raise) when is_float(term), do: {:ok, Decimal.from_float(term)}
-  defp same_decimal(term, raise) when is_binary(term) do
-    case Decimal.parse(term) do
-      {:ok, decimal} -> check_decimal(decimal, raise)
-      {decimal, ""} -> check_decimal(decimal, raise)
-      :error -> :error
-    end
-  end
-  defp same_decimal(%Decimal{} = term, _raise), do: check_decimal(term, true)
-  defp same_decimal(_, _), do: :error
+  defp same_decimal(term) when is_integer(term), do: {:ok, Decimal.new(term)}
+  defp same_decimal(term) when is_float(term), do: {:ok, Decimal.from_float(term)}
+  defp same_decimal(%Decimal{} = term), do: check_decimal(term, true)
+  defp same_decimal(_), do: :error
 
   defp same_date(%Date{} = term), do: {:ok, term}
   defp same_date(_), do: :error

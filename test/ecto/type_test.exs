@@ -196,8 +196,8 @@ defmodule Ecto.TypeTest do
 
     assert load(:decimal, 1) == {:ok, Decimal.new(1)}
     assert load(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
-    assert load(:decimal, "1.0") == {:ok, Decimal.new("1.0")}
     assert load(:decimal, Decimal.new("1.0")) == {:ok, Decimal.new("1.0")}
+    assert load(:decimal, "1.0") == :error
   end
 
   test "maybe" do
