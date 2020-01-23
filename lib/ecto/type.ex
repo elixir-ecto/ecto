@@ -446,7 +446,7 @@ defmodule Ecto.Type do
   defp dump_fun(:id), do: &same_integer/1
   defp dump_fun(:binary_id), do: &same_binary/1
   defp dump_fun(:any), do: &{:ok, &1}
-  defp dump_fun(:decimal), do: &dump_decimal/1
+  defp dump_fun(:decimal), do: &same_decimal/1
   defp dump_fun(:date), do: &same_date/1
   defp dump_fun(:time), do: &dump_time/1
   defp dump_fun(:time_usec), do: &dump_time_usec/1

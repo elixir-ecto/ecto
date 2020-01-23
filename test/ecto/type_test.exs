@@ -185,8 +185,8 @@ defmodule Ecto.TypeTest do
     end
 
     assert dump(:decimal, Decimal.new("1")) == {:ok, Decimal.new("1")}
-    assert dump(:decimal, 1.0) == :error
-    assert dump(:decimal, 1) == :error
+    assert dump(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
+    assert dump(:decimal, 1) == {:ok, Decimal.new("1")}
     assert dump(:decimal, "1.0") == :error
     assert dump(:decimal, "bad") == :error
 
