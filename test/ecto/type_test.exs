@@ -174,9 +174,9 @@ defmodule Ecto.TypeTest do
     end
 
     assert dump(:decimal, Decimal.new("1")) == {:ok, Decimal.new("1")}
-    assert dump(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
-    assert dump(:decimal, 1) == {:ok, Decimal.new("1")}
-    assert dump(:decimal, "1.0") == {:ok, Decimal.new("1.0")}
+    assert dump(:decimal, 1.0) == :error
+    assert dump(:decimal, 1) == :error
+    assert dump(:decimal, "1.0") == :error
     assert dump(:decimal, "bad") == :error
 
     assert_raise ArgumentError, ~r"#Decimal<NaN> is not allowed for type :decimal", fn ->
@@ -190,7 +190,7 @@ defmodule Ecto.TypeTest do
   end
 
   test "maybe" do
-    assert dump({:maybe, :decimal}, 1) == {:ok, Decimal.new(1)}
+    assert dump({:maybe, :decimal}, Decimal.new(1)) == {:ok, Decimal.new(1)}
     assert dump({:maybe, :decimal}, "not decimal") == {:ok, "not decimal"}
 
     assert load({:maybe, :decimal}, 1) == {:ok, Decimal.new(1)}
