@@ -240,6 +240,44 @@ defmodule Ecto.Type do
   end
 
   @doc """
+  Dumps the `value` for `type` considering it will be embedded in `format`.
+
+  ## Examples
+
+      iex> Ecto.Type.embedded_dump(:decimal, Decimal.new("1"), :json)
+      {:ok, Decimal.new("1")}
+
+  """
+  def embedded_dump(type, value, format) do
+    case embed_as(type, format) do
+      :self -> {:ok, value}
+      :dump -> dump(type, value)
+    end
+  end
+
+  @doc """
+  Loaads the `value` for `type` considering it was embedded in `format`.
+
+  ## Examples
+
+      iex> Ecto.Type.embedded_load(:decimal, "1", :json)
+      {:ok, Decimal.new("1")}
+
+  """
+  def embedded_load(type, value, format) do
+    case embed_as(type, format) do
+      :self ->
+        case cast(type, value) do
+          {:ok, _} = ok -> ok
+          _ -> :error
+        end
+
+      :dump ->
+        load(type, value)
+    end
+  end
+
+  @doc """
   Retrieves the underlying schema type for the given, possibly custom, type.
 
       iex> type(:string)

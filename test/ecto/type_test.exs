@@ -46,6 +46,17 @@ defmodule Ecto.TypeTest do
     assert embed_as(CustomAny, :json) == :self
   end
 
+  test "embedded_load" do
+    assert embedded_load(:decimal, "1", :json) == {:ok, Decimal.new("1")}
+    assert embedded_load(:decimal, "oops", :json) == :error
+    assert embedded_load(Custom, :value, :json) == {:ok, :load}
+  end
+
+  test "embedded_dump" do
+    assert embedded_dump(:decimal, Decimal.new("1"), :json) == {:ok, Decimal.new("1")}
+    assert embedded_dump(Custom, :value, :json) == {:ok, :dump}
+  end
+
   test "custom types" do
     assert load(Custom, "foo") == {:ok, :load}
     assert dump(Custom, "foo") == {:ok, :dump}
