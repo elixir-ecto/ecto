@@ -697,11 +697,14 @@ defmodule Ecto.Schema do
       `:raise` (default), `:mark_as_invalid`, `:nilify`, or `:delete`.
       See `Ecto.Changeset`'s section about ":on_replace" for more info.
 
-    * `:defaults` - Default values to use when building the association. This
-      overrides any default set on the association schema. For example, imagine
-      `Post.has_many :comments, defaults: [public: true]`. Then when using
-      `Ecto.build_assoc(post, :comments)` that comment will have
-      `comment.public == true`.
+    * `:defaults` - Default values to use when building the association.
+      It may be a keyword list of options that override the association schema
+      or a `{module, function, args}` that receive the struct and the owner as
+      arguments. For example, if you set `Post.has_many :comments, defaults: [public: true]`,
+      then when using `Ecto.build_assoc(post, :comments)` that comment will have
+      `comment.public == true`. Alternatively, you can set it to
+      `Post.has_many :comments, defaults: {__MODULE__, :update_comment, []}`
+      and `Post.update_comment(comment, post)` will be invoked.
 
     * `:where` - A filter for the association. See "Filtering associations" below.
       It does not apply to `:through` associations.
@@ -915,11 +918,14 @@ defmodule Ecto.Schema do
       `:raise` (default), `:mark_as_invalid`, `:nilify`, `:update`, or
       `:delete`. See `Ecto.Changeset`'s section on related data for more info.
 
-    * `:defaults` - Default values to use when building the association. This
-      overrides any default set on the association schema. For example, imagine
-      `Post.has_many :comments, defaults: [public: true]`. Then when using
-      `Ecto.build_assoc(post, :comments)` that comment will have
-      `comment.public == true`.
+    * `:defaults` - Default values to use when building the association.
+      It may be a keyword list of options that override the association schema
+      or a `{module, function, args}` that receive the struct and the owner as
+      arguments. For example, if you set `Post.has_many :comments, defaults: [public: true]`,
+      then when using `Ecto.build_assoc(post, :comments)` that comment will have
+      `comment.public == true`. Alternatively, you can set it to
+      `Post.has_many :comments, defaults: {__MODULE__, :update_comment, []}`
+      and `Post.update_comment(comment, post)` will be invoked.
 
     * `:where` - A filter for the association. See "Filtering associations"
       in `has_many/3`. It does not apply to `:through` associations.
@@ -983,11 +989,14 @@ defmodule Ecto.Schema do
       `:raise` (default), `:mark_as_invalid`, `:nilify`, `:update`, or `:delete`.
       See `Ecto.Changeset`'s section on related data for more info.
 
-    * `:defaults` - Default values to use when building the association. This
-      overrides any default set on the association schema. For example, imagine
-      `Post.has_many :comments, defaults: [public: true]`. Then when using
-      `Ecto.build_assoc(post, :comments)` that comment will have
-      `comment.public == true`.
+    * `:defaults` - Default values to use when building the association.
+      It may be a keyword list of options that override the association schema
+      or a `{module, function, args}` that receive the struct and the owner as
+      arguments. For example, if you set `Post.has_many :comments, defaults: [public: true]`,
+      then when using `Ecto.build_assoc(post, :comments)` that comment will have
+      `comment.public == true`. Alternatively, you can set it to
+      `Post.has_many :comments, defaults: {__MODULE__, :update_comment, []}`
+      and `Post.update_comment(comment, post)` will be invoked.
 
     * `:primary_key` - If the underlying belongs_to field is a primary key
 
@@ -1198,14 +1207,18 @@ defmodule Ecto.Schema do
       associated records. See `Ecto.Changeset`'s section on related data
       for more info.
 
-    * `:defaults` - Default values to use when building the association. This
-      overrides any default set on the association schema. For example, imagine
-      `Post.has_many :comments, defaults: [public: true]`. Then when using
-      `Ecto.build_assoc(post, :comments)` that comment will have
-      `comment.public == true`.
+    * `:defaults` - Default values to use when building the association.
+      It may be a keyword list of options that override the association schema
+      or a `{module, function, args}` that receive the struct and the owner as
+      arguments. For example, if you set `Post.has_many :comments, defaults: [public: true]`,
+      then when using `Ecto.build_assoc(post, :comments)` that comment will have
+      `comment.public == true`. Alternatively, you can set it to
+      `Post.has_many :comments, defaults: {__MODULE__, :update_comment, []}`
+      and `Post.update_comment(comment, post)` will be invoked.
 
-    * `:join_defaults` - Default values to use when building the join association.
-      It only applies if the join association is a schema.
+    * `:join_defaults` - The same as `:defaults` but it applies to the join schema
+      instead. This option will raise if it is given and the `:join_through` value
+      is not a schema.
 
     * `:unique` - When true, checks if the associated entries are unique
       whenever the association is cast or changed via the parent record.

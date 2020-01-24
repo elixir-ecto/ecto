@@ -33,16 +33,24 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     schema "authors" do
       field :title, :string
-      has_many :posts, Post, on_replace: :delete
+      has_many :posts, Post, on_replace: :delete,
+        defaults: [title: "default"]
       has_many :raise_posts, Post, on_replace: :raise
-      has_many :nilify_posts, Post, on_replace: :nilify
+      has_many :nilify_posts, Post, on_replace: :nilify,
+        defaults: {__MODULE__, :send_to_self, [:extra]}
       has_many :invalid_posts, Post, on_replace: :mark_as_invalid
       has_one :profile, {"users_profiles", Profile},
         defaults: [name: "default"], on_replace: :delete
       has_one :raise_profile, Profile, on_replace: :raise
       has_one :nilify_profile, Profile, on_replace: :nilify
       has_one :invalid_profile, Profile, on_replace: :mark_as_invalid
-      has_one :update_profile, Profile, on_replace: :update
+      has_one :update_profile, Profile, on_replace: :update,
+        defaults: {__MODULE__, :send_to_self, [:extra]}
+    end
+
+    def send_to_self(struct, owner, extra) do
+      send(self(), {:defaults, struct, owner, extra})
+      %{struct | id: 13}
     end
   end
 
@@ -243,7 +251,6 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = cast(%Author{}, %{"profile" => %{}}, :profile, with: &Profile.optional_changeset/2)
     assert (changeset.types.profile |> elem(1)).on_cast == &Profile.optional_changeset/2
     profile = changeset.changes.profile
-    assert profile.data.name == "default"
     assert profile.data.__meta__.source == "users_profiles"
     assert profile.changes == %{}
     assert profile.errors  == []
@@ -325,6 +332,23 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert changeset.changes == %{}
     assert changeset.errors == [invalid_profile: {"a custom message", [validation: :assoc, type: :map]}]
     refute changeset.valid?
+  end
+
+  test "cast has_one with keyword defaults" do
+    {:ok, schema} = TestRepo.insert(%Author{title: "Title", profile: nil})
+
+    changeset = cast(schema, %{"profile" => %{id: 2}}, :profile)
+    assert changeset.changes.profile.data.name == "default"
+    assert changeset.changes.profile.changes == %{id: 2}
+  end
+
+  test "cast has_one with MFA defaults" do
+    {:ok, schema} = TestRepo.insert(%Author{title: "Title", update_profile: nil})
+
+    changeset = cast(schema, %{"update_profile" => %{name: "Jose"}}, :update_profile)
+    assert_received {:defaults, %Profile{id: nil}, %Author{title: "Title"}, :extra}
+    assert changeset.changes.update_profile.data.id == 13
+    assert changeset.changes.update_profile.changes == %{name: "Jose"}
   end
 
   test "cast has_one with on_replace: :update" do
@@ -534,6 +558,22 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     changeset = cast(%Author{posts: [%Post{}]}, %{}, :posts)
     assert changeset.changes == %{}
+  end
+
+  test "cast has_many with keyword defaults" do
+    {:ok, schema} = TestRepo.insert(%Author{title: "Title", posts: []})
+
+    changeset = cast(schema, %{"posts" => [%{id: 2}]}, :posts)
+    assert hd(changeset.changes.posts).data.title == "default"
+    assert hd(changeset.changes.posts).changes == %{}
+  end
+
+  test "cast has_many with MFA defaults" do
+    {:ok, schema} = TestRepo.insert(%Author{title: "Title", nilify_posts: []})
+
+    changeset = cast(schema, %{"nilify_posts" => [%{title: "Title"}]}, :nilify_posts)
+    assert hd(changeset.changes.nilify_posts).data.id == 13
+    assert hd(changeset.changes.nilify_posts).changes == %{title: "Title"}
   end
 
   test "cast has_many with on_replace: :raise" do

@@ -782,7 +782,7 @@ defmodule Ecto.Changeset do
       case Map.fetch(params, param_key) do
         {:ok, value} ->
           current  = Relation.load!(data, original)
-          case Relation.cast(relation, value, current, on_cast) do
+          case Relation.cast(relation, data, value, current, on_cast) do
             {:ok, change, relation_valid?} when change != original ->
               valid? = changeset.valid? and relation_valid?
               changes = Map.put(changes, key, change)

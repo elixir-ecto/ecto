@@ -42,6 +42,12 @@ defmodule Ecto.Repo.ManyToManyTest do
       field :y, :binary
       many_to_many :assocs, MyAssoc, join_through: "schemas_assocs", on_replace: :delete
       many_to_many :schema_assocs, MyAssoc, join_through: MySchemaAssoc, join_defaults: [public: true]
+      many_to_many :mfa_schema_assocs, MyAssoc, join_through: MySchemaAssoc, join_defaults: {__MODULE__, :send_to_self, [:extra]}
+    end
+
+    def send_to_self(struct, owner, extra) do
+      send(self(), {:defaults, struct, owner, extra})
+      %{struct | public: true}
     end
   end
 
@@ -74,7 +80,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert assoc.__meta__.prefix == "prefix"
   end
 
-  test "handles assocs on insert with schema" do
+  test "handles assocs on insert with schema and keyword defaults" do
     sample = %MyAssoc{x: "xyz"}
 
     changeset =
@@ -84,6 +90,29 @@ defmodule Ecto.Repo.ManyToManyTest do
 
     schema = TestRepo.insert!(changeset)
     [assoc] = schema.schema_assocs
+    assert assoc.id
+    assert assoc.x == "xyz"
+    assert assoc.inserted_at
+    assert_received {:insert, _child}
+    assert_received {:insert, _parent}
+    assert_received {:insert, join}
+
+    # Available from defaults
+    assert join.fields[:my_schema_id] == schema.id
+    assert join.fields[:my_assoc_id] == assoc.id
+    assert join.fields[:public]
+  end
+
+  test "handles assocs on insert with schema and MFA defaults" do
+    sample = %MyAssoc{x: "xyz"}
+
+    changeset =
+      %MySchema{}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:mfa_schema_assocs, [sample])
+
+    schema = TestRepo.insert!(changeset)
+    [assoc] = schema.mfa_schema_assocs
     assert assoc.id
     assert assoc.x == "xyz"
     assert assoc.inserted_at

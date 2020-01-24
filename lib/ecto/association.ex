@@ -94,7 +94,7 @@ defmodule Ecto.Association do
 
   Invoked by `Ecto.build_assoc/3`.
   """
-  @callback build(t, Ecto.Schema.t, %{atom => term} | [Keyword.t]) :: Ecto.Schema.t
+  @callback build(t, owner :: Ecto.Schema.t, %{atom => term} | [Keyword.t]) :: Ecto.Schema.t
 
   @doc """
   Returns an association join query.
@@ -362,20 +362,28 @@ defmodule Ecto.Association do
   @doc """
   Applies default values into the struct.
   """
-  def apply_defaults(struct, defaults) do
+  def apply_defaults(struct, defaults, _owner) when is_list(defaults) do
     struct(struct, defaults)
+  end
+
+  def apply_defaults(struct, {mod, fun, args}, owner) do
+    apply(mod, fun, [struct.__struct__, owner | args])
   end
 
   @doc """
   Validates `defaults` for association named `name`.
   """
-  def validate_defaults!(name, defaults) do
-    unless is_list(defaults) do
-      raise ArgumentError, "expected defaults for #{inspect name} to be a keyword list, got: `#{inspect defaults}`"
-    end
+  def validate_defaults!(_name, {mod, fun, args} = defaults)
+      when is_atom(mod) and is_atom(fun) and is_list(args),
+      do: defaults
 
-    defaults
-  end
+  def validate_defaults!(_name, defaults) when is_list(defaults),
+    do: defaults
+
+  def validate_defaults!(name, defaults),
+    do: raise ArgumentError,
+              "expected defaults for #{inspect name} to be a keyword list " <>
+                "or a {module, fun, args} tuple, got: `#{inspect defaults}`"
 
   @doc """
   Merges source from query into to the given schema.
@@ -643,8 +651,9 @@ defmodule Ecto.Association.Has do
   defp get_ref(_primary_key, references, _name), do: references
 
   @doc false
-  def build(%{owner_key: owner_key, related_key: related_key} = refl, struct, attributes) do
-    %{refl |> build() |> struct(attributes) | related_key => Map.get(struct, owner_key)}
+  def build(%{owner_key: owner_key, related_key: related_key} = refl, owner, attributes) do
+    data = refl |> build(owner) |> struct(attributes)
+    %{data | related_key => Map.get(owner, owner_key)}
   end
 
   @doc false
@@ -720,9 +729,9 @@ defmodule Ecto.Association.Has do
   @behaviour Ecto.Changeset.Relation
 
   @doc false
-  def build(%{related: related, queryable: queryable, defaults: defaults}) do
+  def build(%{related: related, queryable: queryable, defaults: defaults}, owner) do
     related
-    |> Ecto.Association.apply_defaults(defaults)
+    |> Ecto.Association.apply_defaults(defaults, owner)
     |> Ecto.Association.merge_source(queryable)
   end
 
@@ -802,9 +811,9 @@ defmodule Ecto.Association.HasThrough do
   end
 
   @doc false
-  def build(%{field: name}, %{__struct__: struct}, _attributes) do
+  def build(%{field: name}, %{__struct__: owner}, _attributes) do
     raise ArgumentError,
-      "cannot build through association `#{inspect name}` for #{inspect struct}. " <>
+      "cannot build through association `#{inspect name}` for #{inspect owner}. " <>
       "Instead build the intermediate steps explicitly."
   end
 
@@ -911,9 +920,9 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @doc false
-  def build(refl, _, attributes) do
+  def build(refl, owner, attributes) do
     refl
-    |> build()
+    |> build(owner)
     |> struct(attributes)
   end
 
@@ -971,9 +980,9 @@ defmodule Ecto.Association.BelongsTo do
   @behaviour Ecto.Changeset.Relation
 
   @doc false
-  def build(%{related: related, queryable: queryable, defaults: defaults}) do
+  def build(%{related: related, queryable: queryable, defaults: defaults}, owner) do
     related
-    |> Ecto.Association.apply_defaults(defaults)
+    |> Ecto.Association.apply_defaults(defaults, owner)
     |> Ecto.Association.merge_source(queryable)
   end
 end
@@ -1143,9 +1152,9 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   @doc false
-  def build(refl, _, attributes) do
+  def build(refl, owner, attributes) do
     refl
-    |> build()
+    |> build(owner)
     |> struct(attributes)
   end
 
@@ -1232,11 +1241,11 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   defp insert_join(join_through, refl, parent_changeset, data, opts) when is_atom(join_through) do
-    %{repo: repo, constraints: constraints} = parent_changeset
+    %{repo: repo, constraints: constraints, data: owner} = parent_changeset
 
     changeset =
       join_through
-      |> Ecto.Association.apply_defaults(refl.join_defaults)
+      |> Ecto.Association.apply_defaults(refl.join_defaults, owner)
       |> Map.merge(data)
       |> Ecto.Changeset.change()
       |> Map.put(:constraints, constraints)
@@ -1270,9 +1279,9 @@ defmodule Ecto.Association.ManyToMany do
   @behaviour Ecto.Changeset.Relation
 
   @doc false
-  def build(%{related: related, queryable: queryable, defaults: defaults}) do
+  def build(%{related: related, queryable: queryable, defaults: defaults}, owner) do
     related
-    |> Ecto.Association.apply_defaults(defaults)
+    |> Ecto.Association.apply_defaults(defaults, owner)
     |> Ecto.Association.merge_source(queryable)
   end
 

@@ -176,7 +176,7 @@ defmodule Ecto.Embedded do
   defp action_to_auto(:update), do: :autoupdate
 
   @impl true
-  def build(%Embedded{related: related}) do
+  def build(%Embedded{related: related}, _owner) do
     related.__struct__
   end
 end
