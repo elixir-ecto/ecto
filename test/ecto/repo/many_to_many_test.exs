@@ -107,7 +107,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     sample = %MyAssoc{x: "xyz"}
 
     changeset =
-      %MySchema{}
+      %MySchema{x: "abc"}
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:mfa_schema_assocs, [sample])
 
@@ -124,6 +124,8 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert join.fields[:my_schema_id] == schema.id
     assert join.fields[:my_assoc_id] == assoc.id
     assert join.fields[:public]
+
+    assert_received {:defaults, %MySchemaAssoc{}, %MySchema{x: "abc"}, :extra}
   end
 
   test "handles assocs from struct on insert" do
