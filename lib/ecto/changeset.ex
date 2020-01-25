@@ -271,7 +271,7 @@ defmodule Ecto.Changeset do
   @empty_values [""]
 
   # If a new field is added here, def merge must be adapted
-  defstruct valid?: false, data: nil, params: nil, changes: %{},
+  defstruct valid?: false, data: nil, params: nil, changes: %{}, repo_changes: %{},
             errors: [], validations: [], required: [], prepare: [],
             constraints: [], filters: %{}, action: nil, types: nil,
             empty_values: @empty_values, repo: nil, repo_opts: []
@@ -282,6 +282,7 @@ defmodule Ecto.Changeset do
                         data: data_type,
                         params: %{String.t => term} | nil,
                         changes: %{atom => term},
+                        repo_changes: %{atom => term},
                         required: [atom],
                         prepare: [(t -> t)],
                         errors: [{atom, error}],
@@ -781,7 +782,7 @@ defmodule Ecto.Changeset do
       case Map.fetch(params, param_key) do
         {:ok, value} ->
           current  = Relation.load!(data, original)
-          case Relation.cast(relation, value, current, on_cast) do
+          case Relation.cast(relation, data, value, current, on_cast) do
             {:ok, change, relation_valid?} when change != original ->
               valid? = changeset.valid? and relation_valid?
               changes = Map.put(changes, key, change)
@@ -2319,9 +2320,12 @@ defmodule Ecto.Changeset do
   def optimistic_lock(data_or_changeset, field, incrementer \\ &increment_with_rollover/1) do
     changeset = change(data_or_changeset, %{})
     current = get_field(changeset, field)
-    changeset.filters[field]
-    |> put_in(current)
-    |> force_change(field, incrementer.(current))
+
+    # repo_changes are applied only inside the repo and merged in case of success.
+    # This is important because we don't want to permanently track the lock change.
+    changeset = put_in(changeset.repo_changes[field], incrementer.(current))
+    changeset = put_in(changeset.filters[field], current)
+    changeset
   end
 
   # increment_with_rollover expect to be used with lock_version set as :integer in db schema
@@ -2512,20 +2516,20 @@ defmodule Ecto.Changeset do
       # In the changeset function
       cast(user, params, [:email])
       |> unique_constraint(:email, name: :users_email_company_id_index)
-  
+
   ### Partitioning
 
   If your table is partitioned, then your unique index might look different
   per partition - Postgres adds p<number> to the middle of your key, like:
-  
+
       users_p0_email_key
       users_p1_email_key
       ...
       users_p99_email_key
-      
+
   In this case you can use the name and suffix options together to match on
   these dynamic indexes, like:
-      
+
       cast(user, params, [:email])
       |> unique_constraint(:email, name: :email_key, match: :suffix)
 

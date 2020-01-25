@@ -240,6 +240,44 @@ defmodule Ecto.Type do
   end
 
   @doc """
+  Dumps the `value` for `type` considering it will be embedded in `format`.
+
+  ## Examples
+
+      iex> Ecto.Type.embedded_dump(:decimal, Decimal.new("1"), :json)
+      {:ok, Decimal.new("1")}
+
+  """
+  def embedded_dump(type, value, format) do
+    case embed_as(type, format) do
+      :self -> {:ok, value}
+      :dump -> dump(type, value)
+    end
+  end
+
+  @doc """
+  Loads the `value` for `type` considering it was embedded in `format`.
+
+  ## Examples
+
+      iex> Ecto.Type.embedded_load(:decimal, "1", :json)
+      {:ok, Decimal.new("1")}
+
+  """
+  def embedded_load(type, value, format) do
+    case embed_as(type, format) do
+      :self ->
+        case cast(type, value) do
+          {:ok, _} = ok -> ok
+          _ -> :error
+        end
+
+      :dump ->
+        load(type, value)
+    end
+  end
+
+  @doc """
   Retrieves the underlying schema type for the given, possibly custom, type.
 
       iex> type(:string)
@@ -421,28 +459,8 @@ defmodule Ecto.Type do
   defp dump_fun({:map, type}), do: &map(&1, dump_fun(type), %{})
   defp dump_fun(mod) when is_atom(mod), do: &mod.dump(&1)
 
-  defp same_integer(term) when is_integer(term), do: {:ok, term}
-  defp same_integer(_), do: :error
-
   defp dump_float(term) when is_float(term), do: {:ok, term}
   defp dump_float(_), do: :error
-
-  defp same_boolean(term) when is_boolean(term), do: {:ok, term}
-  defp same_boolean(_), do: :error
-
-  defp same_binary(term) when is_binary(term), do: {:ok, term}
-  defp same_binary(_), do: :error
-
-  defp same_map(term) when is_map(term), do: {:ok, term}
-  defp same_map(_), do: :error
-
-  defp same_decimal(term) when is_integer(term), do: {:ok, Decimal.new(term)}
-  defp same_decimal(term) when is_float(term), do: {:ok, Decimal.from_float(term)}
-  defp same_decimal(%Decimal{} = term), do: {:ok, check_decimal!(term)}
-  defp same_decimal(_), do: :error
-
-  defp same_date(%Date{} = term), do: {:ok, term}
-  defp same_date(_), do: :error
 
   defp dump_time(%Time{} = term), do: {:ok, check_no_usec!(term, :time)}
   defp dump_time(_), do: :error
@@ -809,6 +827,15 @@ defmodule Ecto.Type do
   defp cast_float(term) when is_integer(term), do: {:ok, :erlang.float(term)}
   defp cast_float(_), do: :error
 
+  defp cast_decimal(term) when is_binary(term) do
+    case Decimal.parse(term) do
+      {:ok, decimal} -> check_decimal(decimal, false)
+      {decimal, ""} -> check_decimal(decimal, false)
+      :error -> :error
+    end
+  end
+  defp cast_decimal(term), do: same_decimal(term)
+
   defp cast_boolean(term) when term in ~w(true 1),  do: {:ok, true}
   defp cast_boolean(term) when term in ~w(false 0), do: {:ok, false}
   defp cast_boolean(term) when is_boolean(term), do: {:ok, term}
@@ -819,17 +846,6 @@ defmodule Ecto.Type do
 
   defp cast_map(term) when is_map(term), do: {:ok, term}
   defp cast_map(_), do: :error
-
-  defp cast_decimal(term) when is_binary(term) do
-    case Decimal.parse(term) do
-      {:ok, decimal} -> check_decimal(decimal)
-      :error -> :error
-    end
-  end
-
-  defp cast_decimal(term) do
-    same_decimal(term)
-  end
 
   defp cast_embed(%{cardinality: :one}, nil), do: {:ok, nil}
   defp cast_embed(%{cardinality: :one, related: schema}, %{__struct__: schema} = struct) do
@@ -848,6 +864,28 @@ defmodule Ecto.Type do
   defp cast_embed(_embed, _value) do
     :error
   end
+
+  ## Shared helpers
+
+  defp same_integer(term) when is_integer(term), do: {:ok, term}
+  defp same_integer(_), do: :error
+
+  defp same_boolean(term) when is_boolean(term), do: {:ok, term}
+  defp same_boolean(_), do: :error
+
+  defp same_binary(term) when is_binary(term), do: {:ok, term}
+  defp same_binary(_), do: :error
+
+  defp same_map(term) when is_map(term), do: {:ok, term}
+  defp same_map(_), do: :error
+
+  defp same_decimal(term) when is_integer(term), do: {:ok, Decimal.new(term)}
+  defp same_decimal(term) when is_float(term), do: {:ok, Decimal.from_float(term)}
+  defp same_decimal(%Decimal{} = term), do: check_decimal(term, true)
+  defp same_decimal(_), do: :error
+
+  defp same_date(%Date{} = term), do: {:ok, term}
+  defp same_date(_), do: :error
 
   ## Adapter related
 
@@ -1325,21 +1363,14 @@ defmodule Ecto.Type do
     """
   end
 
-  defp check_decimal(%Decimal{coef: coef}) when coef in [:inf, :qNaN, :sNaN], do: :error
-  defp check_decimal(%Decimal{} = decimal), do: {:ok, decimal}
+  defp check_decimal(%Decimal{coef: coef} = decimal, _) when is_integer(coef), do: {:ok, decimal}
+  defp check_decimal(_decimal, false), do: :error
+  defp check_decimal(decimal, true) do
+    raise ArgumentError, """
+    #{inspect(decimal)} is not allowed for type :decimal
 
-  defp check_decimal!(decimal) do
-    case check_decimal(decimal) do
-      {:ok, decimal} ->
-        decimal
-
-      :error ->
-        raise ArgumentError, """
-        #{inspect(decimal)} is not allowed for type :decimal
-
-        `+Infinity`, `-Infinity`, and `NaN` values are not supported, even though the `Decimal` library handles them. \
-        To support them, you can create a custom type.
-        """
-    end
+    `+Infinity`, `-Infinity`, and `NaN` values are not supported, even though the `Decimal` library handles them. \
+    To support them, you can create a custom type.
+    """
   end
 end

@@ -46,6 +46,17 @@ defmodule Ecto.TypeTest do
     assert embed_as(CustomAny, :json) == :self
   end
 
+  test "embedded_load" do
+    assert embedded_load(:decimal, "1", :json) == {:ok, Decimal.new("1")}
+    assert embedded_load(:decimal, "oops", :json) == :error
+    assert embedded_load(Custom, :value, :json) == {:ok, :load}
+  end
+
+  test "embedded_dump" do
+    assert embedded_dump(:decimal, Decimal.new("1"), :json) == {:ok, Decimal.new("1")}
+    assert embedded_dump(Custom, :value, :json) == {:ok, :dump}
+  end
+
   test "custom types" do
     assert load(Custom, "foo") == {:ok, :load}
     assert dump(Custom, "foo") == {:ok, :dump}
@@ -182,10 +193,15 @@ defmodule Ecto.TypeTest do
     assert_raise ArgumentError, ~r"#Decimal<NaN> is not allowed for type :decimal", fn ->
       dump(:decimal, Decimal.new("nan"))
     end
+
+    assert load(:decimal, 1) == {:ok, Decimal.new(1)}
+    assert load(:decimal, 1.0) == {:ok, Decimal.new("1.0")}
+    assert load(:decimal, Decimal.new("1.0")) == {:ok, Decimal.new("1.0")}
+    assert load(:decimal, "1.0") == :error
   end
 
   test "maybe" do
-    assert dump({:maybe, :decimal}, 1) == {:ok, Decimal.new(1)}
+    assert dump({:maybe, :decimal}, Decimal.new(1)) == {:ok, Decimal.new(1)}
     assert dump({:maybe, :decimal}, "not decimal") == {:ok, "not decimal"}
 
     assert load({:maybe, :decimal}, 1) == {:ok, Decimal.new(1)}

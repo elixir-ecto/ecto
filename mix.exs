@@ -30,7 +30,7 @@ defmodule Ecto.MixProject do
 
   defp deps do
     [
-      {:decimal, "~> 1.6"},
+      {:decimal, "~> 1.6 or ~> 2.0"},
       {:jason, "~> 1.0", optional: true},
       {:ex_doc, "~> 0.20", only: :docs}
     ]

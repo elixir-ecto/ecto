@@ -108,17 +108,27 @@ defmodule Ecto.Repo.Supervisor do
     destructure [username, password], info.userinfo && String.split(info.userinfo, ":")
     "/" <> database = info.path
 
-    url_opts = [username: username,
-                password: password,
-                database: database,
-                hostname: info.host,
-                port:     info.port]
+    url_opts = [
+      username: username,
+      password: password,
+      database: database,
+      port: info.port
+    ]
 
+    url_opts = put_hostname_if_present(url_opts, info.host)
     query_opts = parse_uri_query(info)
 
     for {k, v} <- url_opts ++ query_opts,
         not is_nil(v),
         do: {k, if(is_binary(v), do: URI.decode(v), else: v)}
+  end
+
+  defp put_hostname_if_present(keyword, "") do
+    keyword
+  end
+
+  defp put_hostname_if_present(keyword, hostname) when is_binary(hostname) do
+    Keyword.put(keyword, :hostname, hostname)
   end
 
   defp parse_uri_query(%URI{query: nil}),

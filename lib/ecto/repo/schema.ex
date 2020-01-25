@@ -240,6 +240,7 @@ defmodule Ecto.Repo.Schema do
 
       {changeset, parents, children} = pop_assocs(user_changeset, assocs)
       changeset = process_parents(changeset, parents, adapter, assoc_opts)
+      changeset = repo_changes(changeset)
 
       if changeset.valid? do
         embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :insert)
@@ -259,7 +260,7 @@ defmodule Ecto.Repo.Schema do
 
         args = [adapter_meta, schema_meta, changes, on_conflict, return_sources, opts]
 
-        case apply(changeset, adapter, :insert, args) do
+        case apply(user_changeset, adapter, :insert, args) do
           {:ok, values} ->
             values = extra ++ values
 
@@ -269,9 +270,6 @@ defmodule Ecto.Repo.Schema do
 
           {:error, _} = error ->
             error
-
-          {:invalid, constraints} ->
-            {:error, constraints_to_errors(user_changeset, :insert, constraints)}
         end
       else
         {:error, changeset}
@@ -322,13 +320,14 @@ defmodule Ecto.Repo.Schema do
     # changeset before hand.
     changeset = put_repo_and_action(changeset, :update, repo, opts)
 
-    if changeset.changes != %{} or force? do
+    if changeset.changes != %{} or changeset.repo_changes != %{} or force? do
       wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
         assoc_opts = assoc_opts(assocs, opts)
         user_changeset = run_prepare(changeset, prepare)
 
         {changeset, parents, children} = pop_assocs(user_changeset, assocs)
         changeset = process_parents(changeset, parents, adapter, assoc_opts)
+        changeset = repo_changes(changeset)
 
         if changeset.valid? do
           embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
@@ -346,7 +345,7 @@ defmodule Ecto.Repo.Schema do
                do: {:update, autogen},
                else: {:noop, []}
 
-          case apply(changeset, adapter, action, args) do
+          case apply(user_changeset, adapter, action, args) do
             {:ok, values} ->
               changeset
               |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, schema_meta)
@@ -354,9 +353,6 @@ defmodule Ecto.Repo.Schema do
 
             {:error, _} = error ->
               error
-
-            {:invalid, constraints} ->
-              {:error, constraints_to_errors(user_changeset, :update, constraints)}
           end
         else
           {:error, changeset}
@@ -446,9 +442,6 @@ defmodule Ecto.Repo.Schema do
 
         {:error, _} = error ->
           error
-
-        {:invalid, constraints} ->
-          {:error, constraints_to_errors(changeset, :delete, constraints)}
       end
     end)
   end
@@ -501,6 +494,14 @@ defmodule Ecto.Repo.Schema do
       {source, type} = Map.fetch!(dumper, field)
       {[{field, type} | types], [source | sources]}
     end)
+  end
+
+  defp repo_changes(%{repo_changes: repo_changes} = changeset) do
+    if repo_changes == %{} do
+      changeset
+    else
+      update_in(changeset.changes, &Map.merge(&1, repo_changes))
+    end
   end
 
   defp struct_from_changeset!(action, %{data: nil}),
@@ -646,30 +647,29 @@ defmodule Ecto.Repo.Schema do
     {query, params, conflict_target}
   end
 
-  defp apply(%{valid?: false} = changeset, _adapter, _action, _args) do
-    {:error, changeset}
-  end
-  defp apply(_changeset, _adapter, :noop, _args) do
+  defp apply(_user_changeset, _adapter, :noop, _args) do
     {:ok, []}
   end
-  defp apply(changeset, adapter, action, args) do
+
+  defp apply(user_changeset, adapter, action, args) do
     case apply(adapter, action, args) do
       {:ok, values} ->
         {:ok, values}
-      {:invalid, _} = constraints ->
-        constraints
+
+      {:invalid, constraints} ->
+        {:error, constraints_to_errors(user_changeset, action, constraints)}
+
       {:error, :stale} ->
         opts = List.last(args)
 
         case Keyword.fetch(opts, :stale_error_field) do
           {:ok, stale_error_field} when is_atom(stale_error_field) ->
             stale_message = Keyword.get(opts, :stale_error_message, "is stale")
-            changeset = Changeset.add_error(changeset, stale_error_field, stale_message, [stale: true])
-
-            {:error, changeset}
+            user_changeset = Changeset.add_error(user_changeset, stale_error_field, stale_message, [stale: true])
+            {:error, user_changeset}
 
           _other ->
-            raise Ecto.StaleEntryError, struct: changeset.data, action: action
+            raise Ecto.StaleEntryError, struct: user_changeset.data, action: action
         end
     end
   end

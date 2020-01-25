@@ -147,15 +147,16 @@ Note that `mix test` does not run the tests in the `integration_test` folder. To
     $ cd ecto_sql
     $ ECTO_PATH=../ecto mix test.all
 
-## Copyright and License
+## Logo
 
-"Ecto" and the Ecto logo are Copyright (c) 2013 Plataformatec.
+"Ecto" and the Ecto logo are Copyright (c) 2020 Dashbit.
 
 The Ecto logo was designed by [Dane Wesolko](http://www.danewesolko.com).
 
-The source code is under the Apache License 2.0.
+## License
 
-Copyright (c) 2013 Plataformatec
+Copyright (c) 2013 Plataformatec \
+Copyright (c) 2020 Dashbit
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

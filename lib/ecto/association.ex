@@ -94,7 +94,7 @@ defmodule Ecto.Association do
 
   Invoked by `Ecto.build_assoc/3`.
   """
-  @callback build(t, Ecto.Schema.t, %{atom => term} | [Keyword.t]) :: Ecto.Schema.t
+  @callback build(t, owner :: Ecto.Schema.t, %{atom => term} | [Keyword.t]) :: Ecto.Schema.t
 
   @doc """
   Returns an association join query.
@@ -360,6 +360,32 @@ defmodule Ecto.Association do
   end
 
   @doc """
+  Applies default values into the struct.
+  """
+  def apply_defaults(struct, defaults, _owner) when is_list(defaults) do
+    struct(struct, defaults)
+  end
+
+  def apply_defaults(struct, {mod, fun, args}, owner) do
+    apply(mod, fun, [struct.__struct__, owner | args])
+  end
+
+  @doc """
+  Validates `defaults` for association named `name`.
+  """
+  def validate_defaults!(_name, {mod, fun, args} = defaults)
+      when is_atom(mod) and is_atom(fun) and is_list(args),
+      do: defaults
+
+  def validate_defaults!(_name, defaults) when is_list(defaults),
+    do: defaults
+
+  def validate_defaults!(name, defaults),
+    do: raise ArgumentError,
+              "expected defaults for #{inspect name} to be a keyword list " <>
+                "or a {module, fun, args} tuple, got: `#{inspect defaults}`"
+
+  @doc """
   Merges source from query into to the given schema.
 
   In case the query does not have a source, returns
@@ -386,8 +412,12 @@ defmodule Ecto.Association do
       ),
       do: changeset
 
-  def update_parent_prefix(changeset, %{__meta__: %{prefix: prefix}}),
-    do: update_in(changeset.data, &Ecto.put_meta(&1, prefix: prefix))
+  def update_parent_prefix(
+        %{data: %{__meta__: %{prefix: nil}}} = changeset,
+        %{__meta__: %{prefix: prefix}}
+      ),
+      do: update_in(changeset.data, &Ecto.put_meta(&1, prefix: prefix))
+
 
   def update_parent_prefix(changeset, _),
     do: changeset
@@ -591,12 +621,8 @@ defmodule Ecto.Association.Has do
         Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
     end
 
-    defaults = opts[:defaults] || []
+    defaults = Ecto.Association.validate_defaults!(name, opts[:defaults] || [])
     where = opts[:where] || []
-
-    unless is_list(defaults) do
-      raise ArgumentError, "expected `:defaults` for #{inspect name} to be a keyword list, got: `#{inspect defaults}`"
-    end
 
     unless is_list(where) do
       raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
@@ -625,8 +651,9 @@ defmodule Ecto.Association.Has do
   defp get_ref(_primary_key, references, _name), do: references
 
   @doc false
-  def build(%{owner_key: owner_key, related_key: related_key} = refl, struct, attributes) do
-    %{refl |> build() |> struct(attributes) | related_key => Map.get(struct, owner_key)}
+  def build(%{owner_key: owner_key, related_key: related_key} = refl, owner, attributes) do
+    data = refl |> build(owner) |> struct(attributes)
+    %{data | related_key => Map.get(owner, owner_key)}
   end
 
   @doc false
@@ -702,9 +729,9 @@ defmodule Ecto.Association.Has do
   @behaviour Ecto.Changeset.Relation
 
   @doc false
-  def build(%{related: related, queryable: queryable, defaults: defaults}) do
+  def build(%{related: related, queryable: queryable, defaults: defaults}, owner) do
     related
-    |> struct(defaults)
+    |> Ecto.Association.apply_defaults(defaults, owner)
     |> Ecto.Association.merge_source(queryable)
   end
 
@@ -784,9 +811,9 @@ defmodule Ecto.Association.HasThrough do
   end
 
   @doc false
-  def build(%{field: name}, %{__struct__: struct}, _attributes) do
+  def build(%{field: name}, %{__struct__: owner}, _attributes) do
     raise ArgumentError,
-      "cannot build through association `#{inspect name}` for #{inspect struct}. " <>
+      "cannot build through association `#{inspect name}` for #{inspect owner}. " <>
       "Instead build the intermediate steps explicitly."
   end
 
@@ -872,12 +899,8 @@ defmodule Ecto.Association.BelongsTo do
         Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
     end
 
-    defaults = opts[:defaults] || []
+    defaults = Ecto.Association.validate_defaults!(name, opts[:defaults] || [])
     where = opts[:where] || []
-
-    unless is_list(defaults) do
-      raise ArgumentError, "expected `:defaults` for #{inspect name} to be a keyword list, got: `#{inspect defaults}`"
-    end
 
     unless is_list(where) do
       raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
@@ -897,9 +920,9 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @doc false
-  def build(refl, _, attributes) do
+  def build(refl, owner, attributes) do
     refl
-    |> build()
+    |> build(owner)
     |> struct(attributes)
   end
 
@@ -957,9 +980,9 @@ defmodule Ecto.Association.BelongsTo do
   @behaviour Ecto.Changeset.Relation
 
   @doc false
-  def build(%{related: related, queryable: queryable, defaults: defaults}) do
+  def build(%{related: related, queryable: queryable, defaults: defaults}, owner) do
     related
-    |> struct(defaults)
+    |> Ecto.Association.apply_defaults(defaults, owner)
     |> Ecto.Association.merge_source(queryable)
   end
 end
@@ -983,6 +1006,7 @@ defmodule Ecto.Association.ManyToMany do
     * `join_keys` - The keyword list with many to many join keys
     * `join_through` - Atom (representing a schema) or a string (representing a table)
       for many to many associations
+    * `join_defaults` - A list of defaults for join associations
   """
 
   @behaviour Ecto.Association
@@ -990,8 +1014,8 @@ defmodule Ecto.Association.ManyToMany do
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
              :on_replace, :join_keys, :join_through, :on_cast, where: [],
-             defaults: [], relationship: :child, cardinality: :many,
-             unique: false, ordered: false]
+             defaults: [], join_defaults: [], relationship: :child,
+             cardinality: :many, unique: false, ordered: false]
 
   @doc false
   def after_compile_validation(%{queryable: queryable, join_through: join_through}, env) do
@@ -1061,15 +1085,16 @@ defmodule Ecto.Association.ManyToMany do
         Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
     end
 
-    defaults = opts[:defaults] || []
+    defaults = Ecto.Association.validate_defaults!(name, opts[:defaults] || [])
+    join_defaults = Ecto.Association.validate_defaults!(name, opts[:join_defaults] || [])
     where = opts[:where] || []
-
-    unless is_list(defaults) do
-      raise ArgumentError, "expected `:defaults` for #{inspect name} to be a keyword list, got: `#{inspect defaults}`"
-    end
 
     unless is_list(where) do
       raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
+    end
+
+    if opts[:join_defaults] && is_binary(join_through) do
+      raise ArgumentError, ":join_defaults has no effect for a :join_through without a schema"
     end
 
     %__MODULE__{
@@ -1080,6 +1105,7 @@ defmodule Ecto.Association.ManyToMany do
       owner_key: owner_key,
       join_keys: join_keys,
       join_through: join_through,
+      join_defaults: join_defaults,
       queryable: queryable,
       on_delete: on_delete,
       on_replace: on_replace,
@@ -1126,9 +1152,9 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   @doc false
-  def build(refl, _, attributes) do
+  def build(refl, owner, attributes) do
     refl
-    |> build()
+    |> build(owner)
     |> struct(attributes)
   end
 
@@ -1159,8 +1185,8 @@ defmodule Ecto.Association.ManyToMany do
     {:ok, nil}
   end
 
-  def on_repo_change(%{field: field, join_through: join_through, join_keys: join_keys},
-                     %{repo: repo, data: owner, constraints: constraints} = parent_changeset,
+  def on_repo_change(%{field: field, join_through: join_through, join_keys: join_keys} = refl,
+                     %{repo: repo, data: owner} = parent_changeset,
                      %{action: action} = changeset, adapter, opts) do
     changeset = Ecto.Association.update_parent_prefix(changeset, owner)
 
@@ -1171,9 +1197,9 @@ defmodule Ecto.Association.ManyToMany do
         if insert_join?(parent_changeset, changeset, field, related_key) do
           owner_value = dump! :insert, join_through, owner, owner_key, adapter
           related_value = dump! :insert, join_through, related, related_key, adapter
-          data = [{join_owner_key, owner_value}, {join_related_key, related_value}]
+          data = %{join_owner_key => owner_value, join_related_key => related_value}
 
-          case insert_join(repo, join_through, data, opts, constraints) do
+          case insert_join(join_through, refl, parent_changeset, data, opts) do
             {:error, join_changeset} ->
               {:error, %{changeset | errors: join_changeset.errors ++ changeset.errors,
                                      valid?: join_changeset.valid? and changeset.valid?}}
@@ -1210,14 +1236,18 @@ defmodule Ecto.Association.ManyToMany do
     end
   end
 
-  defp insert_join(repo, join_through, data, opts, _constraints) when is_binary(join_through) do
+  defp insert_join(join_through, _refl, %{repo: repo}, data, opts) when is_binary(join_through) do
     repo.insert_all(join_through, [data], opts)
   end
 
-  defp insert_join(repo, join_through, data, opts, constraints) when is_atom(join_through) do
+  defp insert_join(join_through, refl, parent_changeset, data, opts) when is_atom(join_through) do
+    %{repo: repo, constraints: constraints, data: owner} = parent_changeset
+
     changeset =
-      struct(join_through, data)
-      |> Ecto.Changeset.change
+      join_through
+      |> Ecto.Association.apply_defaults(refl.join_defaults, owner)
+      |> Map.merge(data)
+      |> Ecto.Changeset.change()
       |> Map.put(:constraints, constraints)
 
     repo.insert(changeset, opts)
@@ -1249,9 +1279,9 @@ defmodule Ecto.Association.ManyToMany do
   @behaviour Ecto.Changeset.Relation
 
   @doc false
-  def build(%{related: related, queryable: queryable, defaults: defaults}) do
+  def build(%{related: related, queryable: queryable, defaults: defaults}, owner) do
     related
-    |> struct(defaults)
+    |> Ecto.Association.apply_defaults(defaults, owner)
     |> Ecto.Association.merge_source(queryable)
   end
 

@@ -30,9 +30,14 @@ defmodule Ecto.Changeset.ManyToManyTest do
 
     schema "authors" do
       field :title, :string
-      many_to_many :posts, Post, join_through: "authors_posts", on_replace: :delete
-      many_to_many :raise_posts, Post, join_through: "authors_posts", on_replace: :raise
+      many_to_many :posts, Post, join_through: "authors_posts", on_replace: :delete, defaults: [title: "default"]
+      many_to_many :raise_posts, Post, join_through: "authors_posts", on_replace: :raise, defaults: {__MODULE__, :send_to_self, [:extra]}
       many_to_many :invalid_posts, Post, join_through: "authors_posts", on_replace: :mark_as_invalid
+    end
+
+    def send_to_self(struct, owner, extra) do
+      send(self(), {:defaults, struct, owner, extra})
+      %{struct | id: 13}
     end
   end
 
@@ -40,6 +45,24 @@ defmodule Ecto.Changeset.ManyToManyTest do
     schema
     |> Changeset.cast(params, ~w())
     |> Changeset.cast_assoc(assoc, opts)
+  end
+
+  test "cast many_to_many with keyword defaults" do
+    changeset = cast(%Author{}, %{"posts" => [%{}]}, :posts)
+    [post_change] = changeset.changes.posts
+    assert post_change.data.title == "default"
+    assert post_change.valid?
+    assert changeset.valid?
+  end
+
+  test "cast many_to_many with MFA defaults" do
+    changeset = cast(%Author{title: "Title"}, %{"raise_posts" => [%{title: "Title"}]}, :raise_posts)
+    assert_received {:defaults, %Post{id: nil}, %Author{title: "Title"}, :extra}
+    [post_change] = changeset.changes.raise_posts
+    assert post_change.data.id == 13
+    assert post_change.changes == %{title: "Title"}
+    assert post_change.valid?
+    assert changeset.valid?
   end
 
   test "cast many_to_many with only new schemas" do

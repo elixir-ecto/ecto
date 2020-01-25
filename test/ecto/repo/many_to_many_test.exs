@@ -27,6 +27,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     use Ecto.Schema
 
     schema "schemas_assocs" do
+      field :public, :boolean, default: false
       belongs_to :my_schema, MySchema
       belongs_to :my_assoc, MyAssoc
       timestamps()
@@ -40,7 +41,13 @@ defmodule Ecto.Repo.ManyToManyTest do
       field :x, :string
       field :y, :binary
       many_to_many :assocs, MyAssoc, join_through: "schemas_assocs", on_replace: :delete
-      many_to_many :schema_assocs, MyAssoc, join_through: MySchemaAssoc
+      many_to_many :schema_assocs, MyAssoc, join_through: MySchemaAssoc, join_defaults: [public: true]
+      many_to_many :mfa_schema_assocs, MyAssoc, join_through: MySchemaAssoc, join_defaults: {__MODULE__, :send_to_self, [:extra]}
+    end
+
+    def send_to_self(struct, owner, extra) do
+      send(self(), {:defaults, struct, owner, extra})
+      %{struct | public: true}
     end
   end
 
@@ -57,7 +64,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert assoc.x == "xyz"
     assert assoc.inserted_at
     assert_received {:insert, _}
-    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_schema_id: 1, my_assoc_id: 1]]}
+    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_assoc_id: 1, my_schema_id: 1]]}
   end
 
   test "handles assocs on insert preserving parent schema prefix" do
@@ -73,20 +80,52 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert assoc.__meta__.prefix == "prefix"
   end
 
-  test "handles assocs on insert with schema" do
+  test "handles assocs on insert with schema and keyword defaults" do
     sample = %MyAssoc{x: "xyz"}
 
     changeset =
       %MySchema{}
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:schema_assocs, [sample])
+
     schema = TestRepo.insert!(changeset)
     [assoc] = schema.schema_assocs
     assert assoc.id
     assert assoc.x == "xyz"
     assert assoc.inserted_at
-    assert_received {:insert, _}
-    assert_received {:insert, _}
+    assert_received {:insert, _child}
+    assert_received {:insert, _parent}
+    assert_received {:insert, join}
+
+    # Available from defaults
+    assert join.fields[:my_schema_id] == schema.id
+    assert join.fields[:my_assoc_id] == assoc.id
+    assert join.fields[:public]
+  end
+
+  test "handles assocs on insert with schema and MFA defaults" do
+    sample = %MyAssoc{x: "xyz"}
+
+    changeset =
+      %MySchema{x: "abc"}
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:mfa_schema_assocs, [sample])
+
+    schema = TestRepo.insert!(changeset)
+    [assoc] = schema.mfa_schema_assocs
+    assert assoc.id
+    assert assoc.x == "xyz"
+    assert assoc.inserted_at
+    assert_received {:insert, _child}
+    assert_received {:insert, _parent}
+    assert_received {:insert, join}
+
+    # Available from defaults
+    assert join.fields[:my_schema_id] == schema.id
+    assert join.fields[:my_assoc_id] == assoc.id
+    assert join.fields[:public]
+
+    assert_received {:defaults, %MySchemaAssoc{}, %MySchema{x: "abc"}, :extra}
   end
 
   test "handles assocs from struct on insert" do
@@ -96,7 +135,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert assoc.x == "xyz"
     assert assoc.inserted_at
     assert_received {:insert, _}
-    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_schema_id: 1, my_assoc_id: 1]]}
+    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_assoc_id: 1, my_schema_id: 1]]}
   end
 
   test "handles invalid assocs from struct on insert" do
@@ -187,7 +226,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     # Just one transaction was used
     assert_received {:transaction, _}
     refute_received {:rollback, _}
-    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_schema_id: 1, my_assoc_id: 1]]}
+    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_assoc_id: 1, my_schema_id: 1]]}
   end
 
   test "handles valid nested assocs on insert preserving parent schema prefix" do
@@ -252,7 +291,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert assoc.x == "xyz"
     assert assoc.updated_at
     assert_received {:update, _}
-    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_schema_id: 3, my_assoc_id: 1]]}
+    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_assoc_id: 1, my_schema_id: 3]]}
   end
 
   test "inserting assocs on update preserving parent schema prefix" do
@@ -300,7 +339,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert_received {:update, _} # Parent
     assert_received {:insert, _} # New assoc
     refute_received {:delete, _} # Old assoc
-    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_schema_id: 3, my_assoc_id: 1]]}
+    assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_assoc_id: 1, my_schema_id: 3]]}
     assert_received {:delete_all, %{from: %{source: {"schemas_assocs", _}}}}
 
     # Replacing assoc with nil

@@ -15,7 +15,7 @@ defmodule Ecto.Changeset.Relation do
   @doc """
   Builds the related data.
   """
-  @callback build(t) :: Ecto.Schema.t
+  @callback build(t, owner :: Ecto.Schema.t) :: Ecto.Schema.t
 
   @doc """
   Returns empty container for relation.
@@ -85,51 +85,54 @@ defmodule Ecto.Changeset.Relation do
   @doc """
   Casts related according to the `on_cast` function.
   """
-  def cast(%{cardinality: :one} = relation, nil, current, _on_cast) do
+  def cast(%{cardinality: :one} = relation, _owner, nil, current, _on_cast) do
     case current && on_replace(relation, current) do
       :error -> {:error, {"is invalid", [type: expected_type(relation)]}}
       _ -> {:ok, nil, true}
     end
   end
 
-  def cast(%{cardinality: :many} = relation, params, current, on_cast) when is_map(params) do
+  def cast(%{cardinality: :many} = relation, owner, params, current, on_cast) when is_map(params) do
     params =
       params
       |> Enum.map(&key_as_int/1)
       |> Enum.sort
       |> Enum.map(&elem(&1, 1))
-    cast(relation, params, current, on_cast)
+    cast(relation, owner, params, current, on_cast)
   end
 
-  def cast(%{related: mod} = relation, params, current, on_cast) do
+  def cast(%{related: mod} = relation, owner, params, current, on_cast) do
     pks = mod.__schema__(:primary_key)
-    with :error <- cast_or_change(relation, params, current, data_pk(pks),
-                                  param_pk(mod, pks), &do_cast(relation, &1, &2, &3, on_cast)) do
+    fun = &do_cast(relation, owner, &1, &2, &3, on_cast)
+    data_pk = data_pk(pks)
+    param_pk = param_pk(mod, pks)
+
+    with :error <- cast_or_change(relation, params, current, data_pk, param_pk, fun) do
       {:error, {"is invalid", [type: expected_type(relation)]}}
     end
   end
 
-  defp do_cast(meta, params, struct, allowed_actions, {module, fun, args})
+  defp do_cast(meta, owner, params, struct, allowed_actions, {module, fun, args})
        when is_atom(module) and is_atom(fun) and is_list(args) do
     on_cast = fn changeset, attrs ->
       apply(module, fun, [changeset, attrs | args])
     end
 
-    do_cast(meta, params, struct, allowed_actions, on_cast)
+    do_cast(meta, owner, params, struct, allowed_actions, on_cast)
   end
 
-  defp do_cast(meta, params, nil, allowed_actions, on_cast) do
+  defp do_cast(meta, owner, params, nil = _struct, allowed_actions, on_cast) do
     {:ok,
-      on_cast.(meta.__struct__.build(meta), params)
+      on_cast.(meta.__struct__.build(meta, owner), params)
       |> put_new_action(:insert)
       |> check_action!(allowed_actions)}
   end
 
-  defp do_cast(relation, nil, current, _allowed_actions, _on_cast) do
+  defp do_cast(relation, _owner, nil = _params, current, _allowed_actions, _on_cast) do
     on_replace(relation, current)
   end
 
-  defp do_cast(_meta, params, struct, allowed_actions, on_cast) do
+  defp do_cast(_meta, _owner, params, struct, allowed_actions, on_cast) do
     {:ok,
       on_cast.(struct, params)
       |> put_new_action(:update)
