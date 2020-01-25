@@ -111,6 +111,10 @@ defmodule Ecto.Query.Builder do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
+  def escape({:type, _, [{{:., _, [Access, :get]}, _, _} = expr, type]}, _type, params_acc, vars, env) do
+    escape_with_type(expr, type, params_acc, vars, env)
+  end
+
   def escape({:type, meta, [expr, type]}, given_type, params_acc, vars, env) do
     case Macro.expand_once(expr, get_env(env)) do
       ^expr ->
@@ -189,6 +193,18 @@ defmodule Ecto.Query.Builder do
     {date, params_acc} = escape(date, :date, params_acc, vars, env)
     {count, interval, params_acc} = escape_interval(count, interval, params_acc, vars, env)
     {{:{}, [], [:date_add, [], [date, count, interval]]}, params_acc}
+  end
+
+  # json
+  def escape({:json_extract_path, _, [expr, path]}, type, params_acc, vars, env) do
+    path = escape_json_path(path)
+    {expr, params_acc} = escape(expr, type, params_acc, vars, env)
+    {{:{}, [], [:json_extract_path, [], [expr, path]]}, params_acc}
+  end
+
+  def escape({{:., meta, [Access, :get]}, _, _} = expr, type, params_acc, vars, env) do
+    {expr, path} = parse_access_get(expr, [])
+    escape({:json_extract_path, meta, [expr, path]}, type, params_acc, vars, env)
   end
 
   # sigils
@@ -805,7 +821,7 @@ defmodule Ecto.Query.Builder do
   def quoted_field!(atom) when is_atom(atom),
     do: atom
   def quoted_field!(other),
-    do: error!("expected literal atom or interpolated value in field/2, got: `#{inspect other}`")
+    do: error!("expected literal atom or interpolated value in field/2, got: `#{Macro.to_string(other)}`")
 
   @doc """
   Called by escaper at runtime to verify that value is an atom.
@@ -814,6 +830,40 @@ defmodule Ecto.Query.Builder do
     do: atom
   def field!(other),
     do: error!("expected atom in field/2, got: `#{inspect other}`")
+
+  defp escape_json_path(path) when is_list(path) do
+    Enum.map(path, &quoted_json_path_element!/1)
+  end
+
+  defp escape_json_path(other) do
+    error!("expected JSON path to be compile-time list, got: `#{Macro.to_string(other)}`")
+  end
+
+  defp quoted_json_path_element!({:^, _, [expr]}),
+    do: quote(do: Ecto.Query.Builder.json_path_element!(unquote(expr)))
+
+  defp quoted_json_path_element!(binary) when is_binary(binary),
+    do: binary
+
+  defp quoted_json_path_element!(integer) when is_integer(integer),
+    do: integer
+
+  defp quoted_json_path_element!(other),
+    do:
+      error!(
+        "expected JSON path to contain literal strings, literal integers, or interpolated values, got: " <>
+        "`#{Macro.to_string(other)}`"
+      )
+
+  @doc """
+  Called by escaper at runtime to verify that value is a string or an integer.
+  """
+  def json_path_element!(binary) when is_binary(binary),
+    do: binary
+  def json_path_element!(integer) when is_integer(integer),
+    do: integer
+  def json_path_element!(other),
+    do: error!("expected string or integer in json_extract_path/2, got: `#{inspect other}`")
 
   @doc """
   Called by escaper at runtime to verify that a value is not nil.
@@ -1033,6 +1083,7 @@ defmodule Ecto.Query.Builder do
   """
   def apply_query(query, module, args, env) do
     query = Macro.expand(query, env)
+
     case unescape_query(query) do
       %Query{} = unescaped ->
         apply(module, :apply, [unescaped|args]) |> escape_query
@@ -1064,4 +1115,13 @@ defmodule Ecto.Query.Builder do
     do: {:%{}, [], Map.to_list(query)}
   defp escape_query(other),
     do: other
+
+  defp parse_access_get({{:., _, [Access, :get]}, _, [left, right]}, acc) do
+    parse_access_get(left, [right | acc])
+  end
+
+  defp parse_access_get({{:., _, [{var, _, context}, field]}, _, []} = expr, acc)
+       when is_atom(var) and is_atom(context) and is_atom(field) do
+    {expr, acc}
+  end
 end

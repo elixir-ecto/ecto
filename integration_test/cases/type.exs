@@ -281,6 +281,43 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   @tag :map_type
+  @tag :json_extract_path
+  test "json_extract_path with primitive values" do
+    post = %Post{meta: %{:id => 123, :time => ~T[09:00:00], "'single quoted'" => "bar", "\"double quoted\"" => "baz"}}
+    TestRepo.insert!(post)
+
+    assert TestRepo.one(from p in Post, select: p.meta["id"]) == 123
+
+    assert TestRepo.one(from p in Post, select: p.meta["bad"]) == nil
+    assert TestRepo.one(from p in Post, select: p.meta["bad"]["bad"]) == nil
+
+    assert TestRepo.one(from p in Post, select: type(p.meta["id"], :string)) == "123"
+
+    field = "id"
+    assert TestRepo.one(from p in Post, select: p.meta[^field]) == 123
+
+    assert TestRepo.one(from p in Post, select: p.meta["time"]) == "09:00:00"
+
+    assert TestRepo.one(from p in Post, select: p.meta["'single quoted'"]) == "bar"
+    assert TestRepo.one(from p in Post, select: p.meta["';"]) == nil
+    assert TestRepo.one(from p in Post, select: p.meta["\"double quoted\""]) == "baz"
+  end
+
+  @tag :map_type
+  @tag :json_extract_path
+  test "json_extract_path with arrays and objects" do
+    post = %Post{meta: %{tags: [%{name: "red"}, %{name: "green"}]}}
+    TestRepo.insert!(post)
+
+    assert TestRepo.one(from p in Post, select: p.meta["tags"][0]["name"]) == "red"
+
+    index = 1
+    assert TestRepo.one(from p in Post, select: p.meta["tags"][^index]["name"]) == "green"
+
+    assert TestRepo.one(from p in Post, select: p.meta["tags"][99]["name"]) == nil
+  end
+
+  @tag :map_type
   @tag :map_type_schemaless
   test "embeds one with custom type" do
     item = %Item{price: 123, reference: "PREFIX-EXAMPLE"}

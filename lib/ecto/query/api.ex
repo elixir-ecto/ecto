@@ -452,6 +452,27 @@ defmodule Ecto.Query.API do
   def merge(left_map, right_map), do: doc! [left_map, right_map]
 
   @doc """
+  Returns value from the `json_field` pointed to by `path`.
+
+      from(post in Post, select: json_extract_path(post.meta, ["author", "name"]))
+
+  The query can be also rewritten as:
+
+      from(post in Post, select: post.meta["author"]["name"])
+
+  Path elements can be integers to access values in JSON arrays:
+
+      from(post in Post, select: post.meta["tags"][0]["name"])
+
+  Any element of the path can be dynamic:
+
+      field = "name"
+      from(post in Post, select: post.meta["author"][^field])
+
+  """
+  def json_extract_path(json_field, path), do: doc! [json_field, path]
+
+  @doc """
   Casts the given value to the given type at the database level.
 
   Most of the times, Ecto is able to proper cast interpolated
