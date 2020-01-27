@@ -4,7 +4,7 @@
 
 ### Enhancements
 
-  * [Ecto.Schema] Support `:join_through` on `many_to_many` associations
+  * [Ecto.Schema] Support `:join_defaults` on `many_to_many` associations
 
 ### Bug fixes
 
