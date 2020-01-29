@@ -22,7 +22,7 @@ First of all, not everyone has a first and last name. Although your client is de
 
 Given the requirements above, how would we implement the Sign Up feature in the backend?
 
-One approach would be to have two schemas, Account and Profile, with virtual fields such as `first_name` and `last_name`, and [use associations along side nested forms](http://blog.plataformatec.com.br/2015/08/working-with-ecto-associations-and-embeds/) to tie the schemas to your UI. One of such schemas would be:
+One approach would be to have two schemas, Account and Profile, with virtual fields such as `first_name` and `last_name`, and [use associations along side nested forms](https://dashbit.co/blog/working-with-ecto-associations-and-embeds) to tie the schemas to your UI. One of such schemas would be:
 
 ```elixir
 defmodule Profile do
