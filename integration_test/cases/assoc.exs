@@ -71,7 +71,7 @@ defmodule Ecto.Integration.AssocTest do
     assert [^u2, ^u1] = TestRepo.all(query)
 
     # Dynamic through
-    Ecto.assoc([p1, p2], [:comments, :author]) |> order_by([a], a.name)
+    query = Ecto.assoc([p1, p2], [:comments, :author]) |> order_by([a], a.name)
     assert [^u2, ^u1] = TestRepo.all(query)
   end
 
