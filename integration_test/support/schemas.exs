@@ -1,12 +1,14 @@
-Code.require_file "types.exs", __DIR__
+Code.require_file("types.exs", __DIR__)
 
 defmodule Ecto.Integration.Schema do
   defmacro __using__(_) do
     quote do
       use Ecto.Schema
+
       type =
         Application.get_env(:ecto, :primary_key_type) ||
-        raise ":primary_key_type not set in :ecto application"
+          raise ":primary_key_type not set in :ecto application"
+
       @primary_key {:id, type, autogenerate: true}
       @foreign_key_type type
     end
@@ -32,6 +34,7 @@ defmodule Ecto.Integration.Post do
     field :title, :string
     field :text, :binary
     field :temp, :string, default: "temp", virtual: true
+    field :summary, :string, virtual: true
     field :public, :boolean, default: true
     field :cost, :decimal
     field :visits, :integer
@@ -44,6 +47,7 @@ defmodule Ecto.Integration.Post do
     field :intensities, {:map, :float}
     field :posted, :date
     has_many :comments, Ecto.Integration.Comment, on_delete: :delete_all, on_replace: :delete
+    has_many :translations, Ecto.Integration.Post.Translation
     # The post<->permalink relationship should be marked as uniq
     has_one :permalink, Ecto.Integration.Permalink, on_delete: :delete_all, on_replace: :delete
     has_one :update_permalink, Ecto.Integration.Permalink, foreign_key: :post_id, on_delete: :delete_all, on_replace: :update
@@ -64,6 +68,44 @@ defmodule Ecto.Integration.Post do
   def changeset(schema, params) do
     cast(schema, params, ~w(counter title text temp public cost visits
                            intensity bid uuid meta posted)a)
+  end
+end
+
+defmodule Ecto.Integration.Post.Translation do
+  @moduledoc """
+  This module is used to test:
+
+    * Select Merge with outer joins and dynamic maps.
+
+  """
+  use Ecto.Integration.Schema
+  import Ecto.Changeset
+
+  @primary_key false
+
+  schema "post_translations" do
+    field :locale, :string, primary_key: true
+    belongs_to :post, Post, primary_key: true
+
+    field :title, :string
+    field :summary, :string
+
+    timestamps()
+
+    def changeset(schema, params) do
+      cast(schema, params, ~w(post_id locale title summary)a)
+    end
+  end
+
+  def with_translations(query, locale, options \\ []) do
+    import Ecto.Query
+
+    type = Keyword.get(options, :join_type, :left)
+    fields = Keyword.get(options, :fields, ~w(title)a)
+
+    query
+    |> join(type, [p], t in __MODULE__, on: t.post_id == p.id and t.locale == ^locale)
+    |> select_merge([_p, t], map(t, ^fields))
   end
 end
 
