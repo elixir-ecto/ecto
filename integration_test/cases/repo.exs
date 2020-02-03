@@ -1237,7 +1237,8 @@ defmodule Ecto.Integration.RepoTest do
     end
 
     test "merge" do
-      %Post{} = TestRepo.insert!(%Post{title: "1", counter: nil})
+      date = Date.utc_today()
+      %Post{id: post_id} = TestRepo.insert!(%Post{title: "1", counter: nil, posted: date, public: false})
 
       # Merge on source
       assert [%Post{title: "2"}] =
@@ -1256,6 +1257,35 @@ defmodule Ecto.Integration.RepoTest do
              Post |> select([p], merge(%{title: p.title}, %{title: "2"})) |> TestRepo.all()
       assert [%{title: "2"}] =
              Post |> select([p], %{title: p.title}) |> select_merge([p], %{title: "2"}) |> TestRepo.all()
+
+      # Merge on outer join with map
+      %Permalink{} = TestRepo.insert!(%Permalink{post_id: post_id, url: "Q", title: "Z"})
+
+      # left join record is present
+      assert [%{url: "Q", title: "1", posted: date}] =
+               Permalink
+               |> join(:left, [l], p in Post, on: l.post_id == p.id)
+               |> select([l, p], merge(l, map(p, ^~w(title posted)a)))
+               |> TestRepo.all()
+
+      assert [%{url: "Q", title: "1", posted: date}] =
+               Permalink
+               |> join(:left, [l], p in Post, on: l.post_id == p.id)
+               |> select_merge([_l, p], map(p, ^~w(title posted)a))
+               |> TestRepo.all()
+
+      # left join record is not present
+      assert [%{url: "Q", title: "Z", posted: nil}] =
+               Permalink
+               |> join(:left, [l], p in Post, on: l.post_id == p.id and p.public)
+               |> select([l, p], merge(l, map(p, ^~w(title posted)a)))
+               |> TestRepo.all()
+
+      assert [%{url: "Q", title: "Z", posted: nil}] =
+               Permalink
+               |> join(:left, [l], p in Post, on: l.post_id == p.id and p.public)
+               |> select_merge([_l, p], map(p, ^~w(title posted)a))
+               |> TestRepo.all()
     end
 
     test "merge with update on self" do
