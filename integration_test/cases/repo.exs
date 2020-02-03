@@ -5,7 +5,6 @@ defmodule Ecto.Integration.RepoTest do
   import Ecto.Query
 
   alias Ecto.Integration.Post
-  alias Ecto.Integration.Post.Translation
   alias Ecto.Integration.Order
   alias Ecto.Integration.User
   alias Ecto.Integration.Comment
@@ -1238,7 +1237,8 @@ defmodule Ecto.Integration.RepoTest do
     end
 
     test "merge" do
-      %Post{id: post_id} = TestRepo.insert!(%Post{title: "1", counter: nil})
+      date = Date.utc_today()
+      %Post{id: post_id} = TestRepo.insert!(%Post{title: "1", counter: nil, posted: date, public: false})
 
       # Merge on source
       assert [%Post{title: "2"}] =
@@ -1259,31 +1259,32 @@ defmodule Ecto.Integration.RepoTest do
              Post |> select([p], %{title: p.title}) |> select_merge([p], %{title: "2"}) |> TestRepo.all()
 
       # Merge on outer join with map
-      %Translation{} =
-        TestRepo.insert!(%Translation{locale: "en", post_id: post_id, title: "Q", summary: "Z"})
+      %Permalink{} = TestRepo.insert!(%Permalink{post_id: post_id, url: "Q", title: "Z"})
 
       # left join record is present
-      assert [%{title: "Q", summary: "Z"}] =
-               Post
-               |> Translation.with_translations("en", fields: ~w(title summary)a)
+      assert [%{url: "Q", title: "1", posted: date}] =
+               Permalink
+               |> join(:left, [l], p in Post, on: l.post_id == p.id)
+               |> select([l, p], merge(l, map(p, ^~w(title posted)a)))
                |> TestRepo.all()
 
-      assert [%{title: "Q", summary: "Z"}] =
-               Post
-               |> join(:left, [p], t in Translation, on: t.post_id == p.id and t.locale == ^"en")
-               |> select([p, t], merge(p, map(t, ^~w(title summary)a)))
+      assert [%{url: "Q", title: "1", posted: date}] =
+               Permalink
+               |> join(:left, [l], p in Post, on: l.post_id == p.id)
+               |> select_merge([_l, p], map(p, ^~w(title posted)a))
                |> TestRepo.all()
 
       # left join record is not present
-      assert [%{title: "1", summary: nil}] =
-               Post
-               |> Translation.with_translations("pt", fields: ~w(title summary)a)
+      assert [%{url: "Q", title: "Z", posted: nil}] =
+               Permalink
+               |> join(:left, [l], p in Post, on: l.post_id == p.id and p.public)
+               |> select([l, p], merge(l, map(p, ^~w(title posted)a)))
                |> TestRepo.all()
 
-      assert [%{title: "1", summary: nil}] =
-               Post
-               |> join(:left, [p], t in Translation, on: t.post_id == p.id and t.locale == ^"pt")
-               |> select([p, t], merge(p, map(t, ^~w(title summary)a)))
+      assert [%{url: "Q", title: "Z", posted: nil}] =
+               Permalink
+               |> join(:left, [l], p in Post, on: l.post_id == p.id and p.public)
+               |> select_merge([_l, p], map(p, ^~w(title posted)a))
                |> TestRepo.all()
     end
 
