@@ -279,6 +279,9 @@ defmodule Ecto.Repo.Queryable do
         {%{}, %{}} ->
           Map.merge(left, right)
 
+        {%{}, nil} ->
+          left
+
         {_, %{}} ->
           raise ArgumentError,
                 "cannot merge because the left side is not a map, got: #{inspect(left)}"
