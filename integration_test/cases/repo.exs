@@ -1023,9 +1023,9 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "delete all" do
-    assert %Post{} = TestRepo.insert!(%Post{title: "1", text: <<0, 1>>})
-    assert %Post{} = TestRepo.insert!(%Post{title: "2", text: <<0, 1>>})
-    assert %Post{} = TestRepo.insert!(%Post{title: "3", text: <<0, 1>>})
+    assert %Post{} = TestRepo.insert!(%Post{title: "1", text: "hai"})
+    assert %Post{} = TestRepo.insert!(%Post{title: "2", text: "hai"})
+    assert %Post{} = TestRepo.insert!(%Post{title: "3", text: "hai"})
 
     assert {3, nil} = TestRepo.delete_all(Post)
     assert [] = TestRepo.all(Post)
