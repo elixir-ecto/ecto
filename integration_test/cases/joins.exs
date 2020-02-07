@@ -164,18 +164,22 @@ defmodule Ecto.Integration.JoinsTest do
   end
 
   test "has_one association join" do
+    post1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
+    post2 = TestRepo.insert!(%Post{title: "1", text: "hi"})
     user = TestRepo.insert!(%User{})
-    p1 = TestRepo.insert!(%Permalink{url: "hey", user_id: user.id})
-    p2 = TestRepo.insert!(%Permalink{url: "heya", user_id: user.id})
+    p1 = TestRepo.insert!(%Permalink{url: "hey", user_id: user.id, post_id: post1.id})
+    p2 = TestRepo.insert!(%Permalink{url: "heya", user_id: user.id, post_id: post2.id})
 
     query = from(p in User, join: c in assoc(p, :permalink), select: {p, c}, order_by: c.id)
     [{^user, ^p1}, {^user, ^p2}] = TestRepo.all(query)
   end
 
   test "belongs_to association join" do
+    post1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
+    post2 = TestRepo.insert!(%Post{title: "1", text: "hi"})
     user = TestRepo.insert!(%User{})
-    p1 = TestRepo.insert!(%Permalink{url: "hey", user_id: user.id})
-    p2 = TestRepo.insert!(%Permalink{url: "heya", user_id: user.id})
+    p1 = TestRepo.insert!(%Permalink{url: "hey", user_id: user.id, post_id: post1.id})
+    p2 = TestRepo.insert!(%Permalink{url: "heya", user_id: user.id, post_id: post2.id})
 
     query = from(p in Permalink, join: c in assoc(p, :user), select: {p, c}, order_by: p.id)
     [{^p1, ^user}, {^p2, ^user}] = TestRepo.all(query)
@@ -371,8 +375,8 @@ defmodule Ecto.Integration.JoinsTest do
     %Post{id: pid1} = TestRepo.insert!(%Post{})
     %Post{id: pid2} = TestRepo.insert!(%Post{})
 
-    %Permalink{} = TestRepo.insert!(%Permalink{post_id: pid1})
-    %Permalink{} = TestRepo.insert!(%Permalink{post_id: pid2})
+    %Permalink{} = TestRepo.insert!(%Permalink{post_id: pid1, url: "1"})
+    %Permalink{} = TestRepo.insert!(%Permalink{post_id: pid2, url: "2"})
 
     %User{id: uid1} = TestRepo.insert!(%User{})
     %User{id: uid2} = TestRepo.insert!(%User{})

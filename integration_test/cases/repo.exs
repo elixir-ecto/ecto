@@ -324,6 +324,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :unique_constraint
+  @tag :unique_constraint_conflict
   test "unique constraint" do
     changeset = Ecto.Changeset.change(%Post{}, uuid: Ecto.UUID.generate())
     {:ok, _}  = TestRepo.insert(changeset)
@@ -754,7 +755,6 @@ defmodule Ecto.Integration.RepoTest do
     assert TestRepo.aggregate(Post, :min, :visits) == 10
     assert TestRepo.aggregate(Post, :count, :visits) == 4
     assert "50" = to_string(TestRepo.aggregate(Post, :sum, :visits))
-    assert "12.5" <> _ = to_string(TestRepo.aggregate(Post, :avg, :visits))
 
     # With order_by
     query = from Post, order_by: [asc: :visits]
@@ -763,8 +763,25 @@ defmodule Ecto.Integration.RepoTest do
     # With order_by and limit
     query = from Post, order_by: [asc: :visits], limit: 2
     assert TestRepo.aggregate(query, :max, :visits) == 12
+  end
 
-    # With distinct
+  @tag :db_engine_can_maintain_precision
+  test "aggregate avg" do
+    TestRepo.insert!(%Post{visits: 10})
+    TestRepo.insert!(%Post{visits: 12})
+    TestRepo.insert!(%Post{visits: 14})
+    TestRepo.insert!(%Post{visits: 14})
+
+    assert "12.5" <> _ = to_string(TestRepo.aggregate(Post, :avg, :visits))
+  end
+
+  @tag :inline_order_by
+  test "aggregate with distinct" do
+    TestRepo.insert!(%Post{visits: 10})
+    TestRepo.insert!(%Post{visits: 12})
+    TestRepo.insert!(%Post{visits: 14})
+    TestRepo.insert!(%Post{visits: 14})
+
     query = from Post, order_by: [asc: :visits], distinct: true
     assert TestRepo.aggregate(query, :count, :visits) == 3
   end
@@ -1006,9 +1023,9 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "delete all" do
-    assert %Post{} = TestRepo.insert!(%Post{title: "1", text: "hai"})
-    assert %Post{} = TestRepo.insert!(%Post{title: "2", text: "hai"})
-    assert %Post{} = TestRepo.insert!(%Post{title: "3", text: "hai"})
+    assert %Post{} = TestRepo.insert!(%Post{title: "1", text: <<0, 1>>})
+    assert %Post{} = TestRepo.insert!(%Post{title: "2", text: <<0, 1>>})
+    assert %Post{} = TestRepo.insert!(%Post{title: "3", text: <<0, 1>>})
 
     assert {3, nil} = TestRepo.delete_all(Post)
     assert [] = TestRepo.all(Post)

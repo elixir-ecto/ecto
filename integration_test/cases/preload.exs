@@ -152,8 +152,8 @@ defmodule Ecto.Integration.PreloadTest do
     %Post{id: pid1} = TestRepo.insert!(%Post{})
     %Post{id: pid2} = TestRepo.insert!(%Post{})
 
-    %Permalink{id: lid1} = TestRepo.insert!(%Permalink{post_id: pid1})
-    %Permalink{id: lid2} = TestRepo.insert!(%Permalink{post_id: pid2})
+    %Permalink{id: lid1} = TestRepo.insert!(%Permalink{post_id: pid1, url: "1"})
+    %Permalink{id: lid2} = TestRepo.insert!(%Permalink{post_id: pid2, url: "2"})
 
     %Comment{} = c1 = TestRepo.insert!(%Comment{post_id: pid1})
     %Comment{} = c2 = TestRepo.insert!(%Comment{post_id: pid1})
@@ -191,8 +191,8 @@ defmodule Ecto.Integration.PreloadTest do
     %Post{id: pid1} = TestRepo.insert!(%Post{})
     %Post{id: pid2} = TestRepo.insert!(%Post{})
 
-    %Permalink{} = l1 = TestRepo.insert!(%Permalink{post_id: pid1})
-    %Permalink{} = l2 = TestRepo.insert!(%Permalink{post_id: pid2})
+    %Permalink{} = l1 = TestRepo.insert!(%Permalink{post_id: pid1, url: "1"})
+    %Permalink{} = l2 = TestRepo.insert!(%Permalink{post_id: pid2, url: "2"})
 
     %User{id: uid1} = TestRepo.insert!(%User{name: "foo"})
     %User{id: uid2} = TestRepo.insert!(%User{name: "bar"})
@@ -387,7 +387,7 @@ defmodule Ecto.Integration.PreloadTest do
 
     # With custom select
     assert [pe3, pe1, pe2] = TestRepo.preload([p3, p1, p2],
-                                              comments: from(c in Comment, select: c.id))
+                                              comments: from(c in Comment, select: c.id, order_by: c.id))
     assert [^cid1, ^cid2] = pe1.comments
     assert [^cid3, ^cid4] = pe2.comments
     assert [] = pe3.comments
