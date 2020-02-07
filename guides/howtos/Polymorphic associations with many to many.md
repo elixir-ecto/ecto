@@ -6,9 +6,9 @@ In this guide, we will talk about polymorphic associations and how `many_to_many
 
 ## Todo lists v65131
 
-The web has seen its share of todo list applications. But that won't stop us from creating our own!
+The internet has seen its share of todo list applications. But that won't stop us from creating our own!
 
-In our case, there is one aspect of todo list applications we are interested in, which is the relationship where the todo list has many todo items. We have explored this exact scenario in detail in an article we posted on Plataformatec's blog about [nested associations and embeds](http://blog.plataformatec.com.br/2015/08/working-with-ecto-associations-and-embeds/). Let's recap the important points.
+In our case, there is one aspect of todo list applications we are interested in, which is the relationship where the todo list has many todo items. This exact scenario is explored in detail in a post about [nested associations and embeds](https://dashbit.co/blog/working-with-ecto-associations-and-embeds) from Dashbit's blog. Let's recap the important points.
 
 Our todo list app has two schemas, `Todo.List` and `Todo.Item`:
 

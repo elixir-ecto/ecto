@@ -1,16 +1,21 @@
 # Changelog for v3.x
 
-## v3.3.2-dev
+## v3.3.2 (2020-01-28)
 
 ### Enhancements
 
-  * [Ecto.Schema] Support `:join_through` on `many_to_many` associations
+  * [Ecto.Changeset] Only bump optimistic lock in case of success
+  * [Ecto.Query] Allow macros in Ecto window expressions
+  * [Ecto.Schema] Support `:join_defaults` on `many_to_many` associations
+  * [Ecto.Schema] Allow MFargs to be given to association `:defaults`
+  * [Ecto.Type] Add `Ecto.Type.embedded_load` and `Ecto.Type.embedded_dump`
 
 ### Bug fixes
 
-  * [Ecto.Schema] Respect child schema prefix in `cast_assoc`
   * [Ecto.Repo] Ignore empty hostname when parsing database url (Elixir v1.10 support)
-  * [mix ecto.gen.repo] Use `config_path` when writing new config in ecto.gen.repo
+  * [Ecto.Repo] Rewrite combinations on Repo.exists? queries
+  * [Ecto.Schema] Respect child `@schema_prefix` in `cast_assoc`
+  * [mix ecto.gen.repo] Use `config_path` when writing new config in `mix ecto.gen.repo`
 
 ## v3.3.1 (2019-12-27)
 

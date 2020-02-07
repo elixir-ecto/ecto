@@ -1232,6 +1232,21 @@ defmodule Ecto.Query do
   being merged on must be a struct or a map. If it is a struct, the fields
   merged later on must be part of the struct, otherwise an error is raised.
 
+  If the argument to `:select_merge` is a constructed struct (`struct/2`) or
+  map (`map/2`) where the source to `struct/2` or `map/2` may be a `nil` value
+  (as in an outer join), the source will be returned unmodified.
+
+      query =
+        Post
+        |> join(:left, [p], t in Post.Translation,
+          on: t.post_id == p.id and t.locale == ^"en"
+        )
+        |> select_merge([_p, t], map(t, ^~w(title summary)a))
+
+  If there is no English translation for the post, the untranslated post
+  `title` will be returned and `summary` will be `nil`. If there is, both
+  `title` and `summary` will be the value from `Post.Translation`.
+
   `select_merge` cannot be used to set fields in associations, as
   associations are always loaded later, overriding any previous value.
   """

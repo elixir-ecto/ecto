@@ -1,12 +1,14 @@
-Code.require_file "types.exs", __DIR__
+Code.require_file("types.exs", __DIR__)
 
 defmodule Ecto.Integration.Schema do
   defmacro __using__(_) do
     quote do
       use Ecto.Schema
+
       type =
         Application.get_env(:ecto, :primary_key_type) ||
-        raise ":primary_key_type not set in :ecto application"
+          raise ":primary_key_type not set in :ecto application"
+
       @primary_key {:id, type, autogenerate: true}
       @foreign_key_type type
     end
@@ -104,6 +106,8 @@ defmodule Ecto.Integration.Permalink do
 
   schema "permalinks" do
     field :url, :string, source: :uniform_resource_locator
+    field :title, :string
+    field :posted, :date, virtual: true
     belongs_to :post, Ecto.Integration.Post, on_replace: :nilify
     belongs_to :update_post, Ecto.Integration.Post, on_replace: :update, foreign_key: :post_id, define_field: false
     belongs_to :user, Ecto.Integration.User
@@ -111,7 +115,7 @@ defmodule Ecto.Integration.Permalink do
   end
 
   def changeset(schema, params) do
-    Ecto.Changeset.cast(schema, params, [:url])
+    Ecto.Changeset.cast(schema, params, [:url, :title])
   end
 end
 
