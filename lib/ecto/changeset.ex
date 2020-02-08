@@ -1086,7 +1086,7 @@ defmodule Ecto.Changeset do
   @spec fetch_change!(t, atom) :: term
   def fetch_change!(changeset, key) do
     case fetch_change(changeset, key) do
-      {_, value} ->
+      {:ok, value} ->
         value
 
       :error ->
