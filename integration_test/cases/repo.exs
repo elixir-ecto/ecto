@@ -1293,13 +1293,13 @@ defmodule Ecto.Integration.RepoTest do
       # left join record is not present
       assert [%{url: "Q", title: "Z", posted: nil}] =
                Permalink
-               |> join(:left, [l], p in Post, on: l.post_id == p.id and p.public)
+               |> join(:left, [l], p in Post, on: l.post_id == p.id and p.public == true)
                |> select([l, p], merge(l, map(p, ^~w(title posted)a)))
                |> TestRepo.all()
 
       assert [%{url: "Q", title: "Z", posted: nil}] =
                Permalink
-               |> join(:left, [l], p in Post, on: l.post_id == p.id and p.public)
+               |> join(:left, [l], p in Post, on: l.post_id == p.id and p.public == true)
                |> select_merge([_l, p], map(p, ^~w(title posted)a))
                |> TestRepo.all()
     end
