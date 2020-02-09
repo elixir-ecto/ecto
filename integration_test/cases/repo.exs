@@ -324,7 +324,6 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :unique_constraint
-  @tag :unique_constraint_conflict
   test "unique constraint" do
     changeset = Ecto.Changeset.change(%Post{}, uuid: Ecto.UUID.generate())
     {:ok, _}  = TestRepo.insert(changeset)
@@ -765,7 +764,7 @@ defmodule Ecto.Integration.RepoTest do
     assert TestRepo.aggregate(query, :max, :visits) == 12
   end
 
-  @tag :db_engine_can_maintain_precision
+  @tag :average_with_precision
   test "aggregate avg" do
     TestRepo.insert!(%Post{visits: 10})
     TestRepo.insert!(%Post{visits: 12})

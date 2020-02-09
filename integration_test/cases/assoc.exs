@@ -75,7 +75,7 @@ defmodule Ecto.Integration.AssocTest do
     assert [^u2, ^u1] = TestRepo.all(query)
   end
 
-  @tag :on_replace_nulify
+  @tag :on_replace_nilify
   test "has_many through-through assoc leading" do
     p1 = TestRepo.insert!(%Post{})
     p2 = TestRepo.insert!(%Post{})
@@ -192,7 +192,7 @@ defmodule Ecto.Integration.AssocTest do
     assert [0] == TestRepo.all(from(p in Permalink, select: count(p.id)))
   end
 
-  @tag :on_replace_nulify
+  @tag :on_replace_nilify
   test "has_one changeset assoc (on_replace: :nilify)" do
     # Insert new
     changeset =
