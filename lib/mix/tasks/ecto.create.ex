@@ -36,8 +36,8 @@ defmodule Mix.Tasks.Ecto.Create do
 
     * `-r`, `--repo` - the repo to create
     * `--quiet` - do not log output
-    * `--no-compile` - do not compile before dropping
-    * `--no-deps-check` - do not compile before dropping
+    * `--no-compile` - do not compile before creating
+    * `--no-deps-check` - do not compile before creating
 
   """
 
