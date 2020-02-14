@@ -1,5 +1,12 @@
 # Changelog for v3.x
 
+## v3.3.3 (2020-02-14)
+
+### Enhancements
+
+  * [Ecto.Query] Support fragments in `lock`
+  * [Ecto.Query] Handle `nil` in `select_merge` with similar semantics to SQL databases (i.e. it simply returns `nil` itself)
+
 ## v3.3.2 (2020-01-28)
 
 ### Enhancements
