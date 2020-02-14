@@ -770,8 +770,8 @@ defmodule Ecto.Query do
   end
 
   @from_join_opts [:as, :prefix, :hints]
-  @no_binds [:lock, :union, :union_all, :except, :except_all, :intersect, :intersect_all]
-  @binds [:where, :or_where, :select, :distinct, :order_by, :group_by, :windows] ++
+  @no_binds [:union, :union_all, :except, :except_all, :intersect, :intersect_all]
+  @binds [:lock, :where, :or_where, :select, :distinct, :order_by, :group_by, :windows] ++
            [:having, :or_having, :limit, :offset, :preload, :update, :select_merge, :with_ctes]
 
   defp from([{type, expr}|t], env, count_bind, quoted, binds) when type in @binds do
@@ -1659,8 +1659,8 @@ defmodule Ecto.Query do
       User |> where(u.id == ^current_user) |> lock("FOR SHARE NOWAIT")
 
   """
-  defmacro lock(query, expr) do
-    Builder.Lock.build(query, expr, __CALLER__)
+  defmacro lock(query, binding \\ [], expr) do
+    Builder.Lock.build(query, binding, expr, __CALLER__)
   end
 
   @doc ~S"""

@@ -15,6 +15,16 @@ defmodule Ecto.Query.Builder.LockTest do
     end
   end
 
+  test "lock with string" do
+    query = %Ecto.Query{} |> lock("FOO")
+    assert query.lock == "FOO"
+  end
+
+  test "lock with fragment" do
+    query = "posts" |> lock([p], fragment("update on ?", p))
+    assert query.lock == {:fragment, [], [raw: "update on ", expr: {:&, [], [0]}, raw: ""]}
+  end
+
   test "overrides on duplicated lock" do
     query = %Ecto.Query{} |> lock("FOO") |> lock("BAR")
     assert query.lock == "BAR"

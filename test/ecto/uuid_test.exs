@@ -38,6 +38,6 @@ defmodule Ecto.UUIDTest do
   end
 
   test "generate" do
-    assert << _::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96 >> = Ecto.UUID.generate
+    assert << _::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96 >> = Ecto.UUID.generate()
   end
 end
