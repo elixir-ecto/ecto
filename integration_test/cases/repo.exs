@@ -15,7 +15,7 @@ defmodule Ecto.Integration.RepoTest do
   alias Ecto.Integration.PostUserCompositePk
 
   test "returns already started for started repos" do
-    assert {:error, {:already_started, _}} = TestRepo.start_link
+    assert {:error, {:already_started, _}} = TestRepo.start_link()
   end
 
   test "supports unnamed repos" do
@@ -1262,13 +1262,13 @@ defmodule Ecto.Integration.RepoTest do
       %Permalink{} = TestRepo.insert!(%Permalink{post_id: post_id, url: "Q", title: "Z"})
 
       # left join record is present
-      assert [%{url: "Q", title: "1", posted: date}] =
+      assert [%{url: "Q", title: "1", posted: _date}] =
                Permalink
                |> join(:left, [l], p in Post, on: l.post_id == p.id)
                |> select([l, p], merge(l, map(p, ^~w(title posted)a)))
                |> TestRepo.all()
 
-      assert [%{url: "Q", title: "1", posted: date}] =
+      assert [%{url: "Q", title: "1", posted: _date}] =
                Permalink
                |> join(:left, [l], p in Post, on: l.post_id == p.id)
                |> select_merge([_l, p], map(p, ^~w(title posted)a))
