@@ -70,23 +70,19 @@ See the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and
 
 You need to add both Ecto and the database adapter as a dependency to your `mix.exs` file. The supported databases and their adapters are:
 
-Database   | Ecto Adapter           | Dependencies                                    | Ecto 3.0 compatible?
-:----------| :--------------------- | :-----------------------------------------------| :----
-PostgreSQL | Ecto.Adapters.Postgres | [ecto_sql][ecto_sql] + [postgrex][postgrex]     | Yes
-MySQL      | Ecto.Adapters.MyXQL    | [ecto_sql][ecto_sql] + [myxql][myxql]           | Yes
-MSSQL      | MssqlEcto              | [ecto_sql][ecto_sql] + [mssql_ecto][mssql_ecto] | No
-MSSQL      | Tds.Ecto               | [ecto_sql][ecto_sql] + [tds_ecto][tds_ecto]     | No
-SQLite     | Sqlite.Ecto2           | [ecto][ecto] + [sqlite_ecto2][sqlite_ecto2]     | No
-Mnesia     | EctoMnesia.Adapter     | [ecto][ecto] + [ecto_mnesia][ecto_mnesia]       | No
+Database   | Ecto Adapter           | Dependencies
+:----------| :--------------------- | :-----------------------------------------------
+PostgreSQL | Ecto.Adapters.Postgres | [ecto_sql][ecto_sql] + [postgrex][postgrex]
+MySQL      | Ecto.Adapters.MyXQL    | [ecto_sql][ecto_sql] + [myxql][myxql]
+MSSQL      | Ecto.Adapters.MSSQL (coming soon) | [ecto_sql][ecto_sql] + [tds][tds]
+ETS        | Etso                   | [ecto][ecto] + [etso][etso]
 
 [ecto]: http://github.com/elixir-ecto/ecto
 [ecto_sql]: http://github.com/elixir-ecto/ecto_sql
 [postgrex]: http://github.com/elixir-ecto/postgrex
 [myxql]: http://github.com/elixir-ecto/myxql
-[mssql_ecto]: https://github.com/findmypast-oss/mssql_ecto
-[tds_ecto]: https://github.com/livehelpnow/tds_ecto
-[sqlite_ecto2]: https://github.com/scouten/sqlite_ecto2
-[ecto_mnesia]: https://github.com/Nebo15/ecto_mnesia
+[tds]: https://github.com/livehelpnow/tds
+[etso]: https://github.com/evadne/etso
 
 For example, if you want to use PostgreSQL, add to your `mix.exs` file:
 
@@ -115,15 +111,17 @@ defmodule MyApp.Repo do
 
 | Branch | Support                  |
 | ------ | ------------------------ |
-| v3.1   | Bug fixes                |
-| v3.0   | Security patches only    |
+| v3.3   | Bug fixes                |
+| v3.2   | Security patches only    |
+| v3.1   | Unsupported from 02/2020 |
+| v3.0   | Unsupported from 02/2020 |
 | v2.2   | Security patches only    |
 | v2.1   | Unsupported from 10/2018 |
 | v2.0   | Unsupported from 08/2017 |
 | v1.1   | Unsupported from 03/2018 |
 | v1.0   | Unsupported from 05/2017 |
 
-With the version 3.0, Ecto has become API stable. This means no more new features, although we will continue providing bug fixes and updates. For everyone running Ecto in production, rest assured that Ecto will continue to be a well maintained project with the same production quality and polish that our users are familiar with.
+With the version 3.0, Ecto has become API stable. This means our main focus is on providing bug fixes and updates.
 
 ## Important links
 
