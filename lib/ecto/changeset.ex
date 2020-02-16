@@ -1786,10 +1786,10 @@ defmodule Ecto.Changeset do
   """
   def unsafe_validate_unique(changeset, fields, repo, opts \\ []) when is_list(opts) do
     fields = List.wrap(fields)
-    {validations, struct} =
+    {validations, schema} =
       case changeset do
-        %Ecto.Changeset{validations: validations, data: %{__struct__: struct}} ->
-          {validations, struct}
+        %Ecto.Changeset{validations: validations, data: %schema{}} ->
+          {validations, schema}
         %Ecto.Changeset{} ->
           raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets"
       end
@@ -1800,7 +1800,7 @@ defmodule Ecto.Changeset do
     end
 
     # No need to query if we haven't changed any of the fields in question
-    unrelated_changes? = fields -- Map.keys(changeset.changes) == fields
+    unrelated_changes? = Enum.all?(fields, &not Map.has_key?(changeset.changes, &1))
 
     # If we don't have values for all fields, we can't query for uniqueness
     any_nil_values_for_fields? = Enum.any?(where_clause, &(&1 |> elem(1) |> is_nil()))
@@ -1808,20 +1808,9 @@ defmodule Ecto.Changeset do
     if unrelated_changes? || any_nil_values_for_fields? do
       changeset
     else
-      pk_pairs = pk_fields_and_values(changeset, struct)
-
-      pk_query =
-        # It should not conflict with itself for updates
-        if Enum.any?(pk_pairs, &(&1 |> elem(1) |> is_nil())) do
-          struct
-        else
-          Enum.reduce(pk_pairs, struct, fn {field, value}, acc ->
-            Ecto.Query.or_where(acc, [q], field(q, ^field) != ^value)
-          end)
-        end
-
       query =
-        pk_query
+        schema
+        |> maybe_exclude_itself(changeset)
         |> Ecto.Query.where(^where_clause)
         |> Ecto.Query.select(true)
         |> Ecto.Query.limit(1)
@@ -1844,10 +1833,18 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp pk_fields_and_values(changeset, struct) do
-    for field <- struct.__schema__(:primary_key) do
-      {field, get_field(changeset, field)}
-    end
+  defp maybe_exclude_itself(schema, changeset) do
+    :primary_key
+    |> schema.__schema__()
+    |> Enum.reduce_while(schema, fn field, query ->
+      case get_field(changeset, field) do
+        nil ->
+          {:halt, schema}
+
+        value ->
+          {:cont, Ecto.Query.or_where(query, [q], field(q, ^field) != ^value)}
+      end
+    end)
   end
 
   defp ensure_field_exists!(%Changeset{types: types, data: data}, field) do
