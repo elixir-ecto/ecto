@@ -137,7 +137,7 @@ defmodule Ecto.Type do
 
   When returning `{:error, keyword()}`, the returned keyword list
   will be preserved in the changeset errors, similar to
-  `Changeset.add_error/4`. Passing a `:message` key, will override
+  `Ecto.Changeset.add_error/4`. Passing a `:message` key, will override
   the default message. It is not possible to override the `:type` key.
 
   For `{:array, CustomType}` or `{:map, CustomType}` the returned
