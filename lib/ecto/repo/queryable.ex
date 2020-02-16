@@ -310,7 +310,7 @@ defmodule Ecto.Repo.Queryable do
     case Map.merge(struct.__struct__(), Map.new(fields)) do
       %{__meta__: %Ecto.Schema.Metadata{state: state} = metadata} = struct
       when state != :loaded ->
-        {Map.put(struct, :__meta__, %{metadata | state: :loaded}), row}
+        {Map.replace!(struct, :__meta__, %{metadata | state: :loaded}), row}
 
       map ->
         {map, row}
