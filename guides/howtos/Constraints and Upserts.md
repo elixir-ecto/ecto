@@ -67,7 +67,7 @@ defmodule MyApp.Post do
 
   defp get_or_insert_tag(name) do
     Repo.get_by(MyApp.Tag, name: name) ||
-      Repo.insert!(MyApp.Tag, %Tag{name: name})
+      Repo.insert!(%Tag{name: name})
   end
 end
 ```
