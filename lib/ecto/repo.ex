@@ -1062,7 +1062,7 @@ defmodule Ecto.Repo do
     * `{:replace_all_except, fields}` - same as above except the given fields
       are not replaced. This option requires a schema
     * `{:replace, fields}` - replace only specific columns. This option requires
-      conflict_target
+      `conflict_target`
     * a keyword list of update instructions - such as the one given to
       `c:update_all/3`, for example: `[set: [title: "new title"]]`
     * an `Ecto.Query` that will act as an `UPDATE` statement, such as the
