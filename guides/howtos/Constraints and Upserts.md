@@ -168,6 +168,9 @@ Ecto accepts the `:on_conflict` option not only in `c:Ecto.Repo.insert/2` but al
 defmodule MyApp.Post do
   use Ecto.Schema
 
+  # We need to import Ecto.Query
+  import Ecto.Query
+
   # Schema is the same
   schema "posts" do
     add :title
