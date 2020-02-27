@@ -1,5 +1,10 @@
 # Changelog for v3.x
 
+## v3.3.4 (2020-02-27)
+
+  * [mix ecto] Do not rely on map ordering when parsing repos
+  * [mix ecto.gen.repo] Improve error message when a repo is not given
+
 ## v3.3.3 (2020-02-14)
 
 ### Enhancements
