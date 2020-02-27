@@ -24,7 +24,9 @@ defmodule Mix.Ecto do
   defp parse_repo([], []) do
     apps =
       if apps_paths = Mix.Project.apps_paths() do
-        Map.keys(apps_paths)
+        # TODO: Use the proper ordering from Mix.Project.deps_apps
+        # when we depend on Elixir v1.11+.
+        apps_paths |> Map.keys() |> Enum.sort()
       else
         [Mix.Project.config()[:app]]
       end
