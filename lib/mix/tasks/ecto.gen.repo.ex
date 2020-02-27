@@ -6,6 +6,14 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
   @shortdoc "Generates a new repository"
 
+  @switches [
+    repo: [:string, :keep],
+  ]
+
+  @aliases [
+    r: :repo,
+  ]
+
   @moduledoc """
   Generates a new repository.
 
@@ -28,11 +36,12 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
   @doc false
   def run(args) do
     no_umbrella!("ecto.gen.repo")
+    {opts, _} = OptionParser.parse!(args, strict: @switches, aliases: @aliases)
 
     repo =
-      case parse_repo(args) do
+      case Keyword.get_values(opts, :repo) do
         [] -> Mix.raise "ecto.gen.repo expects the repository to be given as -r MyApp.Repo"
-        [repo] -> repo
+        [repo] -> Module.concat([repo])
         [_ | _] -> Mix.raise "ecto.gen.repo expects a single repository to be given"
       end
 
