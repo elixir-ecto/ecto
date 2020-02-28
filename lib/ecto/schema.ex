@@ -453,7 +453,7 @@ defmodule Ecto.Schema do
   `@primary_key` attribute.
   """
   defmacro embedded_schema([do: block]) do
-    schema(__ENV__, nil, false, :binary_id, block)
+    schema(__CALLER__, nil, false, :binary_id, block)
   end
 
   @doc """
@@ -464,7 +464,7 @@ defmodule Ecto.Schema do
   as value and can be manipulated with the `Ecto.put_meta/2` function.
   """
   defmacro schema(source, [do: block]) do
-    schema(__ENV__, source, true, :id, block)
+    schema(__CALLER__, source, true, :id, block)
   end
 
   defp schema(caller, source, meta?, type, block) do
