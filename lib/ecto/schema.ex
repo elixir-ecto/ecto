@@ -470,10 +470,8 @@ defmodule Ecto.Schema do
   defp schema(caller, source, meta?, type, block) do
     prelude =
       quote do
-        if Module.get_attribute(__MODULE__, :ecto_schema_defined) do
-          raise """
-          Schema already defined for #{inspect(__MODULE__)} on line #{@ecto_schema_defined}
-          """
+        if line = Module.get_attribute(__MODULE__, :ecto_schema_defined) do
+          raise "schema already defined for #{inspect(__MODULE__)} on line #{line}"
         end
 
         @ecto_schema_defined unquote(caller.line)
