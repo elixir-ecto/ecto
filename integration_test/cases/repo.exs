@@ -764,7 +764,7 @@ defmodule Ecto.Integration.RepoTest do
     assert TestRepo.aggregate(query, :max, :visits) == 12
   end
 
-  @tag :average_with_precision
+  @tag :decimal_precision
   test "aggregate avg" do
     TestRepo.insert!(%Post{visits: 10})
     TestRepo.insert!(%Post{visits: 12})

@@ -364,7 +364,6 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   @tag :decimal_type
-  @tag :decimal_type_cast
   test "decimal type" do
     decimal = Decimal.new("1.0")
     TestRepo.insert!(%Post{cost: decimal})
@@ -377,13 +376,18 @@ defmodule Ecto.Integration.TypeTest do
 
     assert TestRepo.all(from p in Post, select: p.cost * 2) == [Decimal.new("2.0")]
     assert TestRepo.all(from p in Post, select: p.cost - p.cost) == [Decimal.new("0.0")]
+  end
+
+  @tag :decimal_type
+  @tag :decimal_precision
+  test "decimal type cast" do
     assert TestRepo.all(from p in Post, select: type(2 + ^"2", p.cost)) == [Decimal.new("4")]
     assert TestRepo.all(from p in Post, select: type(2.0 + ^"2", p.cost)) == [Decimal.new("4.0")]
   end
 
   @tag :decimal_type
-  @tag :decimal_type_cast
-  test "typed aggregations" do
+  @tag :decimal_precision
+  test "decimal typed aggregations" do
     decimal = Decimal.new("1.0")
     TestRepo.insert!(%Post{cost: decimal})
 
