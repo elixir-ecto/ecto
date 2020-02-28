@@ -685,4 +685,25 @@ defmodule Ecto.SchemaTest do
       end
     end
   end
+
+  test "defining schema twice will result with meaningfull error" do
+    quoted = """
+    defmodule DoubleSchema do
+      use Ecto.Schema
+
+      schema "my schema" do
+        field :name, :string
+      end
+
+      schema "my schema" do
+        field :name, :string
+      end
+    end
+    """
+    message = "schema already defined for DoubleSchema on line 4"
+
+    assert_raise RuntimeError, message, fn ->
+      Code.compile_string(quoted, "example.ex")
+    end
+  end
 end
