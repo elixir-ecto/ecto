@@ -300,10 +300,8 @@ defmodule Ecto.Integration.IntervalTest do
            TestRepo.all(from p in User, select: datetime_add(p.inserted_at, ^dec, "year"))
   end
 
-  @tag :uses_usec
   test "datetime_add with naive_datetime_usec" do
     TestRepo.insert!(%Usec{naive_datetime_usec: ~N[2014-01-01 02:00:00.000001]})
-    dec = Decimal.new(1500)
     datetime = ~N[2014-01-01 02:00:00.001501]
 
     assert [^datetime] =
@@ -314,19 +312,25 @@ defmodule Ecto.Integration.IntervalTest do
            TestRepo.all(from u in Usec, select: datetime_add(u.naive_datetime_usec, 1500.0, "microsecond"))
     assert [^datetime] =
            TestRepo.all(from u in Usec, select: datetime_add(u.naive_datetime_usec, ^1500, "microsecond"))
+  end
+
+  @tag :decimal_precision
+  test "datetime_add with naive_datetime_usec and decimal increment" do
+    TestRepo.insert!(%Usec{naive_datetime_usec: ~N[2014-01-01 02:00:00.000001]})
+    dec = Decimal.new(1500)
+    datetime = ~N[2014-01-01 02:00:00.001501]
+
     assert [^datetime] =
            TestRepo.all(from u in Usec, select: datetime_add(u.naive_datetime_usec, ^1500.0, "microsecond"))
     assert [^datetime] =
            TestRepo.all(from u in Usec, select: datetime_add(u.naive_datetime_usec, ^dec, "microsecond"))
   end
 
-  @tag :uses_usec
   test "datetime_add with utc_datetime_usec" do
     {:ok, datetime} = DateTime.from_naive(~N[2014-01-01 02:00:00.000001], "Etc/UTC")
     TestRepo.insert!(%Usec{utc_datetime_usec: datetime})
 
     {:ok, datetime} = DateTime.from_naive(~N[2014-01-01 02:00:00.001501], "Etc/UTC")
-    dec = Decimal.new(1500)
 
     assert [^datetime] =
            TestRepo.all(from u in Usec, select: datetime_add(type(^datetime, :utc_datetime_usec), 0, "microsecond"))
@@ -336,6 +340,16 @@ defmodule Ecto.Integration.IntervalTest do
            TestRepo.all(from u in Usec, select: datetime_add(u.utc_datetime_usec, 1500.0, "microsecond"))
     assert [^datetime] =
            TestRepo.all(from u in Usec, select: datetime_add(u.utc_datetime_usec, ^1500, "microsecond"))
+  end
+
+  @tag :decimal_precision
+  test "datetime_add uses utc_datetime_usec with decimal increment" do
+    {:ok, datetime} = DateTime.from_naive(~N[2014-01-01 02:00:00.000001], "Etc/UTC")
+    TestRepo.insert!(%Usec{utc_datetime_usec: datetime})
+
+    {:ok, datetime} = DateTime.from_naive(~N[2014-01-01 02:00:00.001501], "Etc/UTC")
+    dec = Decimal.new(1500)
+
     assert [^datetime] =
            TestRepo.all(from u in Usec, select: datetime_add(u.utc_datetime_usec, ^1500.0, "microsecond"))
     assert [^datetime] =

@@ -35,12 +35,6 @@ defmodule Ecto.Integration.TypeTest do
     # Booleans
     assert [true] = TestRepo.all(from p in Post, where: p.public == ^true, select: p.public)
     assert [true] = TestRepo.all(from p in Post, where: p.public == true, select: p.public)
-    assert [false] = TestRepo.all(from p in Post, where: p.public == true, select: not p.public)
-    assert [true] = TestRepo.all(from p in Post, where: p.public == true, select: not not p.public)
-
-    # Binaries
-    assert [^text] = TestRepo.all(from p in Post, where: p.text == <<0, 1>>, select: p.text)
-    assert [^text] = TestRepo.all(from p in Post, where: p.text == ^text, select: p.text)
 
     # UUID
     assert [^uuid] = TestRepo.all(from p in Post, where: p.uuid == ^uuid, select: p.uuid)
@@ -67,6 +61,25 @@ defmodule Ecto.Integration.TypeTest do
     assert [^datetime] = TestRepo.all(from u in Usec, where: u.utc_datetime_usec == ^datetime, select: u.utc_datetime_usec)
   end
 
+  @tag :select_not
+  test "primitive types boolean negate" do
+    integer  = 1
+    float    = 0.1
+    text     = <<0, 1>>
+    uuid     = "00010203-0405-4607-8809-0a0b0c0d0e0f"
+    datetime = ~N[2014-01-16 20:26:51]
+
+    TestRepo.insert!(%Post{text: text, public: true, visits: integer, uuid: uuid,
+      counter: integer, inserted_at: datetime, intensity: float})
+
+    assert [false] = TestRepo.all(from p in Post, where: p.public == true, select: not p.public)
+    assert [true] = TestRepo.all(from p in Post, where: p.public == true, select: not not p.public)
+
+    # Binaries
+    assert [^text] = TestRepo.all(from p in Post, where: p.text == <<0, 1>>, select: p.text)
+    assert [^text] = TestRepo.all(from p in Post, where: p.text == ^text, select: p.text)
+  end
+
   test "aggregate types" do
     datetime = ~N[2014-01-16 20:26:51]
     TestRepo.insert!(%Post{inserted_at: datetime})
@@ -91,6 +104,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [^datetime] = TestRepo.all(query)
   end
 
+  @tag :coalesce_type
   test "coalesce type when default" do
     TestRepo.insert!(%Post{text: nil})
     text = <<0, 1>>
@@ -98,6 +112,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [^text] = TestRepo.all(query)
   end
 
+  @tag :coalesce_type
   test "coalesce type when value" do
     text = <<0, 2>>
     default_text = <<0, 1>>
@@ -140,7 +155,7 @@ defmodule Ecto.Integration.TypeTest do
     assert %Order{} = order = TestRepo.insert!(%Order{instructions: "hello"})
     id = order.id
     assert order.instructions == "hello"
-    assert [^id] = TestRepo.all(from o in Order, where: o.instructions == ^"hello", select: o.id)
+    assert [^id] = TestRepo.all(from o in Order, where: like(o.instructions, ^"hello"), select: o.id)
   end
 
   @tag :array_type
@@ -268,6 +283,7 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   @tag :map_type
+  @tag :map_type_schemaless
   test "embeds one with custom type" do
     item = %Item{price: 123, reference: "PREFIX-EXAMPLE"}
 
@@ -360,12 +376,18 @@ defmodule Ecto.Integration.TypeTest do
 
     assert TestRepo.all(from p in Post, select: p.cost * 2) == [Decimal.new("2.0")]
     assert TestRepo.all(from p in Post, select: p.cost - p.cost) == [Decimal.new("0.0")]
+  end
+
+  @tag :decimal_type
+  @tag :decimal_precision
+  test "decimal type cast" do
     assert TestRepo.all(from p in Post, select: type(2 + ^"2", p.cost)) == [Decimal.new("4")]
     assert TestRepo.all(from p in Post, select: type(2.0 + ^"2", p.cost)) == [Decimal.new("4.0")]
   end
 
   @tag :decimal_type
-  test "typed aggregations" do
+  @tag :decimal_precision
+  test "decimal typed aggregations" do
     decimal = Decimal.new("1.0")
     TestRepo.insert!(%Post{cost: decimal})
 
@@ -381,6 +403,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [^decimal] = TestRepo.all(from p in Post, select: coalesce(p.cost, 0))
   end
 
+  @tag :union_with_literals
   test "unions with literals" do
     TestRepo.insert!(%Post{})
     TestRepo.insert!(%Post{})
