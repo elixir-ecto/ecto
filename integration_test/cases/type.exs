@@ -381,6 +381,9 @@ defmodule Ecto.Integration.TypeTest do
   @tag :decimal_type
   @tag :decimal_precision
   test "decimal type cast" do
+    decimal = Decimal.new("1.0")
+    TestRepo.insert!(%Post{cost: decimal})
+
     assert TestRepo.all(from p in Post, select: type(2 + ^"2", p.cost)) == [Decimal.new("4")]
     assert TestRepo.all(from p in Post, select: type(2.0 + ^"2", p.cost)) == [Decimal.new("4.0")]
   end
