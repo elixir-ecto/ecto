@@ -11,13 +11,14 @@ defmodule Ecto.Query.Builder.CTE do
       iex> escape(quote do: "FOO")
       "FOO"
   """
-
   @spec escape(Macro.t) :: Macro.t
-  def escape(name) when is_binary(name), do: name
+  def escape(name) when is_bitstring(name), do: name
+
+  def escape({:^, _, [{var, _, _} = name]}) when is_atom(var), do: name
 
   def escape(other) do
     Builder.error! "`#{Macro.to_string(other)}` is not a valid CTE name. " <>
-                   "It must be a literal string"
+                   "It must be a literal string or an interpolated variable."
   end
 
   @doc """
@@ -28,16 +29,20 @@ defmodule Ecto.Query.Builder.CTE do
   runtime work.
   """
   @spec build(Macro.t, Macro.t, Macro.t, Macro.Env.t) :: Macro.t
-  def build(query, name, {:^, _, [expr]}, env) when is_bitstring(name) do
-    expr = quote do: Ecto.Queryable.to_query(unquote(expr))
-    Builder.apply_query(query, __MODULE__, [escape(name), expr], env)
+  def build(query, name, cte, env) do
+    Builder.apply_query(query, __MODULE__, [escape(name), build_cte(name, cte, env)], env)
   end
 
-  def build(query, name, {:fragment, _, _} = fragment, env) do
+  @spec build_cte(Macro.t, Macro.t, Macro.t) :: Macro.t
+  def build_cte(_name, {:^, _, [expr]}, _env) do
+    quote do: Ecto.Queryable.to_query(unquote(expr))
+  end
+
+  def build_cte(_name, {:fragment, _, _} = fragment, env) do
     {expr, {params, :acc}} = Builder.escape(fragment, :any, {[], :acc}, [], env)
     params = Builder.escape_params(params)
 
-    query_expr = quote do
+    quote do
       %Ecto.Query.QueryExpr{
         expr: unquote(expr),
         params: unquote(params),
@@ -45,13 +50,11 @@ defmodule Ecto.Query.Builder.CTE do
         line: unquote(env.line)
       }
     end
-
-    Builder.apply_query(query, __MODULE__, [escape(name), query_expr], env)
   end
 
-  def build(_query, name, other, _env) do
-    Builder.error! "`#{Macro.to_string(other)}` is not a valid CTE (#{Macro.to_string(name)}). " <>
-                   "CTE must be an interpolated query, such as ^existing_query or a fragment"
+  def build_cte(name, cte, _env) do
+    Builder.error! "`#{Macro.to_string(cte)}` is not a valid CTE (named: #{Macro.to_string(name)}). " <>
+                   "The CTE must be an interpolated query, such as ^existing_query or a fragment."
   end
 
   @doc """
@@ -64,6 +67,7 @@ defmodule Ecto.Query.Builder.CTE do
     with_expr = %{with_expr | queries: queries}
     %{query | with_ctes: with_expr}
   end
+
   def apply(query, name, with_query) do
     apply(Ecto.Queryable.to_query(query), name, with_query)
   end
