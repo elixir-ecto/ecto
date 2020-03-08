@@ -48,4 +48,18 @@ defmodule Ecto.Query.Builder.CTETest do
     query = query |> recursive_ctes(false)
     refute query.with_ctes.recursive
   end
+
+  test "uses an interpolated CTE name" do
+    cte1_name = "cte1"
+    cte2_name = "cte2"
+    cte1 = from(p in "tbl1")
+
+    query =
+      %Ecto.Query{}
+      |> with_cte(^cte1_name, as: ^cte1)
+      |> with_cte(^cte2_name, as: fragment("SELECT * FROM tbl2"))
+
+    assert [{^cte1_name, ^cte1}, {^cte2_name, %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
+    assert {:fragment, [], [raw: "SELECT * FROM tbl2"]} = expr
+  end
 end
