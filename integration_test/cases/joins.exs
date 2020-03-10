@@ -155,7 +155,7 @@ defmodule Ecto.Integration.JoinsTest do
   ## Associations joins
 
   test "has_many association join" do
-    post = TestRepo.insert!(%Post{title: "1", text: "hi"})
+    post = TestRepo.insert!(%Post{title: "1"})
     c1 = TestRepo.insert!(%Comment{text: "hey", post_id: post.id})
     c2 = TestRepo.insert!(%Comment{text: "heya", post_id: post.id})
 
@@ -164,8 +164,8 @@ defmodule Ecto.Integration.JoinsTest do
   end
 
   test "has_one association join" do
-    post1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
-    post2 = TestRepo.insert!(%Post{title: "1", text: "hi"})
+    post1 = TestRepo.insert!(%Post{title: "1"})
+    post2 = TestRepo.insert!(%Post{title: "1"})
     user = TestRepo.insert!(%User{})
     p1 = TestRepo.insert!(%Permalink{url: "hey", user_id: user.id, post_id: post1.id})
     p2 = TestRepo.insert!(%Permalink{url: "heya", user_id: user.id, post_id: post2.id})
@@ -175,8 +175,8 @@ defmodule Ecto.Integration.JoinsTest do
   end
 
   test "belongs_to association join" do
-    post1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
-    post2 = TestRepo.insert!(%Post{title: "1", text: "hi"})
+    post1 = TestRepo.insert!(%Post{title: "1"})
+    post2 = TestRepo.insert!(%Post{title: "1"})
     user = TestRepo.insert!(%User{})
     p1 = TestRepo.insert!(%Permalink{url: "hey", user_id: user.id, post_id: post1.id})
     p2 = TestRepo.insert!(%Permalink{url: "heya", user_id: user.id, post_id: post2.id})
@@ -248,9 +248,9 @@ defmodule Ecto.Integration.JoinsTest do
   end
 
   test "many_to_many association join" do
-    p1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
-    p2 = TestRepo.insert!(%Post{title: "2", text: "ola"})
-    _p = TestRepo.insert!(%Post{title: "3", text: "hello"})
+    p1 = TestRepo.insert!(%Post{title: "1"})
+    p2 = TestRepo.insert!(%Post{title: "2"})
+    _p = TestRepo.insert!(%Post{title: "3"})
     u1 = TestRepo.insert!(%User{name: "john"})
     u2 = TestRepo.insert!(%User{name: "mary"})
 
@@ -570,7 +570,7 @@ defmodule Ecto.Integration.JoinsTest do
   end
 
   test "association with composite pk join" do
-    post = TestRepo.insert!(%Post{title: "1", text: "hi"})
+    post = TestRepo.insert!(%Post{title: "1"})
     user = TestRepo.insert!(%User{name: "1"})
     TestRepo.insert!(%PostUserCompositePk{post_id: post.id, user_id: user.id})
 

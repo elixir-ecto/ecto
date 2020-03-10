@@ -8,11 +8,11 @@ defmodule Ecto.Integration.TypeTest do
   test "primitive types" do
     integer  = 1
     float    = 0.1
-    text     = <<0, 1>>
+    blob     = <<0, 1>>
     uuid     = "00010203-0405-4607-8809-0a0b0c0d0e0f"
     datetime = ~N[2014-01-16 20:26:51]
 
-    TestRepo.insert!(%Post{text: text, public: true, visits: integer, uuid: uuid,
+    TestRepo.insert!(%Post{blob: blob, public: true, visits: integer, uuid: uuid,
                            counter: integer, inserted_at: datetime, intensity: float})
 
     # nil
@@ -35,6 +35,10 @@ defmodule Ecto.Integration.TypeTest do
     # Booleans
     assert [true] = TestRepo.all(from p in Post, where: p.public == ^true, select: p.public)
     assert [true] = TestRepo.all(from p in Post, where: p.public == true, select: p.public)
+
+    # Binaries
+    assert [^blob] = TestRepo.all(from p in Post, where: p.blob == <<0, 1>>, select: p.blob)
+    assert [^blob] = TestRepo.all(from p in Post, where: p.blob == ^blob, select: p.blob)
 
     # UUID
     assert [^uuid] = TestRepo.all(from p in Post, where: p.uuid == ^uuid, select: p.uuid)
@@ -63,21 +67,9 @@ defmodule Ecto.Integration.TypeTest do
 
   @tag :select_not
   test "primitive types boolean negate" do
-    integer  = 1
-    float    = 0.1
-    text     = <<0, 1>>
-    uuid     = "00010203-0405-4607-8809-0a0b0c0d0e0f"
-    datetime = ~N[2014-01-16 20:26:51]
-
-    TestRepo.insert!(%Post{text: text, public: true, visits: integer, uuid: uuid,
-      counter: integer, inserted_at: datetime, intensity: float})
-
+    TestRepo.insert!(%Post{public: true})
     assert [false] = TestRepo.all(from p in Post, where: p.public == true, select: not p.public)
     assert [true] = TestRepo.all(from p in Post, where: p.public == true, select: not not p.public)
-
-    # Binaries
-    assert [^text] = TestRepo.all(from p in Post, where: p.text == <<0, 1>>, select: p.text)
-    assert [^text] = TestRepo.all(from p in Post, where: p.text == ^text, select: p.text)
   end
 
   test "aggregate types" do
@@ -104,21 +96,19 @@ defmodule Ecto.Integration.TypeTest do
     assert [^datetime] = TestRepo.all(query)
   end
 
-  @tag :coalesce_type
-  test "coalesce type when default" do
-    TestRepo.insert!(%Post{text: nil})
-    text = <<0, 1>>
-    query = from p in Post, select: coalesce(p.text, ^text)
-    assert [^text] = TestRepo.all(query)
+  test "coalesce text type when default" do
+    TestRepo.insert!(%Post{blob: nil})
+    blob = <<0, 1>>
+    query = from p in Post, select: coalesce(p.blob, ^blob)
+    assert [^blob] = TestRepo.all(query)
   end
 
-  @tag :coalesce_type
-  test "coalesce type when value" do
-    text = <<0, 2>>
-    default_text = <<0, 1>>
-    TestRepo.insert!(%Post{text: text})
-    query = from p in Post, select: coalesce(p.text, ^default_text)
-    assert [^text] = TestRepo.all(query)
+  test "coalesce text type when value" do
+    blob = <<0, 2>>
+    default_blob = <<0, 1>>
+    TestRepo.insert!(%Post{blob: blob})
+    query = from p in Post, select: coalesce(p.blob, ^default_blob)
+    assert [^blob] = TestRepo.all(query)
   end
 
   test "tagged types" do
@@ -151,11 +141,19 @@ defmodule Ecto.Integration.TypeTest do
     assert [^bid] = TestRepo.all(from c in Custom, select: type(^bid, :binary_id))
   end
 
-  test "text type" do
-    assert %Order{} = order = TestRepo.insert!(%Order{instructions: "hello"})
-    id = order.id
-    assert order.instructions == "hello"
-    assert [^id] = TestRepo.all(from o in Order, where: like(o.instructions, ^"hello"), select: o.id)
+  test "text type as blob" do
+    assert %Post{} = post = TestRepo.insert!(%Post{blob: <<0, 1, 2>>})
+    id = post.id
+    assert post.blob == <<0, 1, 2>>
+    assert [^id] = TestRepo.all(from p in Post, where: like(p.blob, ^<<0, 1, 2>>), select: p.id)
+  end
+
+  @tag :text_type_as_string
+  test "text type as string" do
+    assert %Post{} = post = TestRepo.insert!(%Post{blob: "hello"})
+    id = post.id
+    assert post.blob == "hello"
+    assert [^id] = TestRepo.all(from p in Post, where: like(p.blob, ^"hello"), select: p.id)
   end
 
   @tag :array_type

@@ -32,7 +32,7 @@ defmodule Ecto.Integration.Post do
   schema "posts" do
     field :counter, :id # Same as integer
     field :title, :string
-    field :text, :binary
+    field :blob, :binary
     field :temp, :string, default: "temp", virtual: true
     field :public, :boolean, default: true
     field :cost, :decimal
@@ -64,7 +64,7 @@ defmodule Ecto.Integration.Post do
   end
 
   def changeset(schema, params) do
-    cast(schema, params, ~w(counter title text temp public cost visits
+    cast(schema, params, ~w(counter title blob temp public cost visits
                            intensity bid uuid meta posted)a)
   end
 end
@@ -254,7 +254,6 @@ defmodule Ecto.Integration.Order do
   use Ecto.Integration.Schema
 
   schema "orders" do
-    field :instructions, :string
     embeds_one :item, Ecto.Integration.Item
     belongs_to :permalink, Ecto.Integration.Permalink
   end

@@ -115,9 +115,9 @@ defmodule Ecto.Integration.AssocTest do
   end
 
   test "many_to_many assoc" do
-    p1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
-    p2 = TestRepo.insert!(%Post{title: "2", text: "ola"})
-    p3 = TestRepo.insert!(%Post{title: "3", text: "hello"})
+    p1 = TestRepo.insert!(%Post{title: "1"})
+    p2 = TestRepo.insert!(%Post{title: "2"})
+    p3 = TestRepo.insert!(%Post{title: "3"})
 
     %User{id: uid1} = TestRepo.insert!(%User{name: "john"})
     %User{id: uid2} = TestRepo.insert!(%User{name: "mary"})
@@ -705,8 +705,8 @@ defmodule Ecto.Integration.AssocTest do
   end
 
   test "many_to_many assoc on delete deletes all" do
-    p1 = TestRepo.insert!(%Post{title: "1", text: "hi"})
-    p2 = TestRepo.insert!(%Post{title: "2", text: "hello"})
+    p1 = TestRepo.insert!(%Post{title: "1", visits: 1})
+    p2 = TestRepo.insert!(%Post{title: "2", visits: 2})
 
     u1 = TestRepo.insert!(%User{name: "john"})
     u2 = TestRepo.insert!(%User{name: "mary"})
