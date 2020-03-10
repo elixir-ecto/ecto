@@ -74,7 +74,7 @@ Database   | Ecto Adapter           | Dependencies
 :----------| :--------------------- | :-----------------------------------------------
 PostgreSQL | Ecto.Adapters.Postgres | [ecto_sql][ecto_sql] + [postgrex][postgrex]
 MySQL      | Ecto.Adapters.MyXQL    | [ecto_sql][ecto_sql] + [myxql][myxql]
-MSSQL      | Ecto.Adapters.MSSQL (coming soon) | [ecto_sql][ecto_sql] + [tds][tds]
+MSSQL      | Ecto.Adapters.Tds      | [ecto_sql][ecto_sql] + [tds][tds]
 ETS        | Etso                   | [ecto][ecto] + [etso][etso]
 
 [ecto]: http://github.com/elixir-ecto/ecto
