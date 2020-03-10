@@ -814,7 +814,7 @@ defmodule Ecto.Changeset do
         module.changeset(struct, params)
       rescue
         e in UndefinedFunctionError ->
-          case System.stacktrace() do
+          case __STACKTRACE__ do
             [{^module, :changeset, args_or_arity, _}] when args_or_arity == 2
                                                       when length(args_or_arity) == 2 ->
               raise ArgumentError, """

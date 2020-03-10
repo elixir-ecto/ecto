@@ -7,7 +7,7 @@ defmodule Ecto.MixProject do
     [
       app: :ecto,
       version: @version,
-      elixir: "~> 1.6",
+      elixir: "~> 1.7",
       deps: deps(),
       consolidate_protocols: Mix.env() != :test,
 
@@ -23,7 +23,7 @@ defmodule Ecto.MixProject do
 
   def application do
     [
-      extra_applications: [:logger, :crypto],
+      extra_applications: [:logger, :crypto, :eex],
       mod: {Ecto.Application, []}
     ]
   end

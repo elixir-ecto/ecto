@@ -51,7 +51,7 @@ defmodule Ecto.Repo.Preloader do
   rescue
     e ->
       # Reraise errors so we ignore the preload inner stacktrace
-      filter_and_reraise e, System.stacktrace()
+      filter_and_reraise e, __STACKTRACE__
   end
 
   ## Preloading

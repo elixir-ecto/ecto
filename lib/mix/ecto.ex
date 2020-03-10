@@ -65,7 +65,7 @@ defmodule Mix.Ecto do
     Mix.Task.run "loadpaths", args
 
     unless "--no-compile" in args do
-      Mix.Project.compile(args)
+      Mix.Task.run("compile", args)
     end
 
     case Code.ensure_compiled(repo) do

@@ -203,7 +203,7 @@ defmodule Ecto.Query.Planner do
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
-      filter_and_reraise e, System.stacktrace()
+      filter_and_reraise e, __STACKTRACE__
   end
 
   @doc """
@@ -832,7 +832,7 @@ defmodule Ecto.Query.Planner do
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
-      filter_and_reraise e, System.stacktrace()
+      filter_and_reraise e, __STACKTRACE__
   end
 
   defp keep_literals?(%{combinations: combinations}), do: combinations != []
