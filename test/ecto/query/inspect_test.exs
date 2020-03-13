@@ -270,6 +270,17 @@ defmodule Ecto.Query.InspectTest do
       ~s{from p0 in Inspect.Post, where: fragment(title: [foo: ^"foobar"])}
   end
 
+  test "json_extract_path" do
+    assert i(from(x in Post, select: json_extract_path(x.meta, ["author"]))) ==
+             ~s{from p0 in Inspect.Post, select: p0.meta[\"author\"]}
+
+    assert i(from(x in Post, select: x.meta["author"])) ==
+             ~s{from p0 in Inspect.Post, select: p0.meta[\"author\"]}
+
+    assert i(from(x in Post, select: x.meta["author"]["name"])) ==
+             ~s{from p0 in Inspect.Post, select: p0.meta[\"author\"][\"name\"]}
+  end
+
   test "inspect all" do
     string = """
     from p0 in Inspect.Post, join: c1 in assoc(p0, :comments), where: true, or_where: true,
