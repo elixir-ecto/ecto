@@ -133,11 +133,18 @@ defmodule Ecto.Repo.Preloader do
       struct, {fetch_ids, loaded_ids, loaded_structs} ->
         assert_struct!(module, struct)
         %{^owner_key => id, ^field => value} = struct
+        loaded? = Ecto.assoc_loaded?(value)
+
+        if loaded? and is_nil(id) and not Ecto.Changeset.Relation.empty?(assoc, value) do
+          raise "association `#{field}` for `#{inspect(module)}` has a loaded value but " <>
+                  "its association key `#{owner_key}` is nil. This usually means `#{owner_key}` " <>
+                  "was not selected in a query"
+        end
 
         cond do
-          card == :one and Ecto.assoc_loaded?(value) and not force? ->
+          card == :one and loaded? and not force? ->
             {fetch_ids, [id|loaded_ids], [value|loaded_structs]}
-          card == :many and Ecto.assoc_loaded?(value) and not force? ->
+          card == :many and loaded? and not force? ->
             {fetch_ids,
              List.duplicate(id, length(value)) ++ loaded_ids,
              value ++ loaded_structs}

@@ -553,16 +553,13 @@ defmodule Ecto.Integration.PreloadTest do
     assert u.custom.bid == c.bid
   end
 
-  test "preload skips with association set but without id" do
+  test "preload raises with association set but without id" do
     c1 = TestRepo.insert!(%Comment{text: "1"})
     u1 = TestRepo.insert!(%User{name: "name"})
-    p1 = TestRepo.insert!(%Post{title: "title"})
 
-    c1 = %{c1 | author: u1, author_id: nil, post: p1, post_id: nil}
-
-    c1 = TestRepo.preload(c1, [:author, :post])
-    assert c1.author == u1
-    assert c1.post == p1
+    assert_raise RuntimeError, ~r/its association key `author_id` is nil/, fn ->
+      TestRepo.preload(%{c1 | author: u1, author_id: nil}, [:author])
+    end
   end
 
   test "preload skips already loaded for cardinality one" do
