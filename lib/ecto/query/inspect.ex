@@ -265,7 +265,11 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp expr_to_string({:json_extract_path, _, [expr, path]}, _, names, part) do
-    json_expr_path_to_expr(expr, path) |> expr(names, part)
+    json_extract_path(expr, path) |> expr(names, part)
+  end
+
+  defp expr_to_string({:embed_extract_path, _, [expr, path]}, _, names, part) do
+    embed_extract_path(expr, path) |> expr(names, part)
   end
 
   defp expr_to_string(_expr, string, _, _) do
@@ -284,9 +288,19 @@ defimpl Inspect, for: Ecto.Query do
     type
   end
 
-  defp json_expr_path_to_expr(expr, path) do
+  defp json_extract_path(expr, path) do
     Enum.reduce(path, expr, fn element, acc ->
       {{:., [], [Access, :get]}, [], [acc, element]}
+    end)
+  end
+
+  defp embed_extract_path(expr, path) do
+    Enum.reduce(path, expr, fn
+      element, acc when is_atom(element) ->
+        {{:., [], [acc, element]}, [], []}
+
+      element, acc when is_integer(element) ->
+        {{:., [], [Access, :get]}, [], [acc, element]}
     end)
   end
 

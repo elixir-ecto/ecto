@@ -50,6 +50,23 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  defmodule Author do
+    use Ecto.Schema
+
+    embedded_schema do
+      field :name, :string
+    end
+  end
+
+  defmodule PostMeta do
+    use Ecto.Schema
+
+    embedded_schema do
+      field :slug, :string
+      embeds_one :author, Author
+    end
+  end
+
   defmodule Post do
     use Ecto.Schema
 
@@ -63,6 +80,9 @@ defmodule Ecto.Query.PlannerTest do
       field :visits, :integer
       field :links, {:array, CustomPermalink}
       field :payload, :map, load_in_query: false
+
+      embeds_one :meta, PostMeta
+      embeds_many :metas, PostMeta
 
       has_many :comments, Ecto.Query.PlannerTest.Comment
       has_many :extra_comments, Ecto.Query.PlannerTest.Comment
@@ -341,7 +361,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "plan: generates a cache key" do
     {_query, _params, key} = plan(from(Post, []))
-    assert key == [:all, {"posts", Post, 36606244, "my_prefix"}]
+    assert key == [:all, {"posts", Post, 69631610, "my_prefix"}]
 
     query =
       from(
@@ -362,7 +382,7 @@ defmodule Ecto.Query.PlannerTest do
                    {:prefix, "foo"},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
                    {:join, [{:inner, {"comments", Comment, 38292156, "world"}, true}]},
-                   {"posts", Post, 36606244, "hello"},
+                   {"posts", Post, 69631610, "hello"},
                    {:select, 1}]
   end
 
@@ -786,6 +806,60 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "normalize: validate fields in embed_extract_path/2" do
+    query = from(Post, []) |> where([p], p.meta.slug == "foo")
+    normalize(query)
+
+    assert_raise RuntimeError, "field `bad` does not exist in Ecto.Query.PlannerTest.Post", fn ->
+      query = from(Post, []) |> where([p], p.bad.bad == "foo")
+      normalize(query)
+    end
+
+    assert_raise RuntimeError, "expected field `title` to be of type embed, got: `:string`", fn ->
+      query = from(Post, []) |> where([p], p.title.bad == "foo")
+      normalize(query)
+    end
+
+    assert_raise RuntimeError, "field `bad` does not exist in Ecto.Query.PlannerTest.PostMeta", fn ->
+      query = from(Post, []) |> where([p], p.meta.bad == "foo")
+      normalize(query)
+    end
+
+    query = from(Post, []) |> where([p], p.meta.author.name == "john")
+    normalize(query)
+
+    assert_raise RuntimeError, "field `bad` does not exist in Ecto.Query.PlannerTest.PostMeta", fn ->
+      query = from(Post, []) |> where([p], p.meta.bad.bad2 == "john")
+      normalize(query)
+    end
+
+    assert_raise RuntimeError, "expected field `slug` to be of type embed, got: `:string`", fn ->
+      query = from(Post, []) |> where([p], p.meta.slug.name == "john")
+      normalize(query)
+    end
+
+    assert_raise RuntimeError, "field `bad` does not exist in Ecto.Query.PlannerTest.Author", fn ->
+      query = from(Post, []) |> where([p], p.meta.author.bad == "john")
+      normalize(query)
+    end
+
+    assert_raise RuntimeError, "cannot use `0` to refer to a field on an `embeds_one`", fn ->
+      query = from(Post, []) |> select([p], p.meta[0])
+      normalize(query)
+    end
+
+    query = from(Post, []) |> select([p], p.metas[0])
+    normalize(query)
+
+    query = from(Post, []) |> select([p], p.metas[0].author)
+    normalize(query)
+
+    assert_raise RuntimeError, "cannot use `:author` to refer to an item in `embeds_many`", fn ->
+      query = from(Post, []) |> select([p], p.metas.author)
+      normalize(query)
+    end
+  end
+
   test "normalize: flattens and expands right side of in expressions" do
     {query, params, _select} = where(Post, [p], p.id in [1, 2, 3]) |> normalize_with_params()
     assert Macro.to_string(hd(query.wheres).expr) == "&0.id() in [1, 2, 3]"
@@ -826,16 +900,16 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.expr ==
              {:&, [], [0]}
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0)
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :meta, :metas], 0)
 
     query = from(Post, []) |> select([p], {p, p.title, "Post"}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :meta, :metas], 0) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query = from(Post, []) |> select([p], {p.title, p, "Post"}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :meta, :metas], 0) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query =
@@ -845,7 +919,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, _], {p.title, p})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :meta, :metas], 0) ++
            select_fields([:id, :text, :posted, :uuid, :crazy_comment, :post_id, :crazy_post_id], 1) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
   end
@@ -885,7 +959,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, struct(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :meta, :metas], 0) ++
            select_fields([:id, :text], 1)
   end
 
@@ -931,7 +1005,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, map(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :meta, :metas], 0) ++
            select_fields([:id, :text], 1)
   end
 

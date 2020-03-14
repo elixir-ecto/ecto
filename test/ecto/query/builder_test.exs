@@ -41,20 +41,22 @@ defmodule Ecto.Query.BuilderTest do
   end
 
   test "escape json_extract_path" do
-    expected = {Macro.escape(quote do: json_extract_path(&0.y(), ["a", "b"])), []}
-    actual = escape(quote do json_extract_path(x.y, ["a", "b"]) end, [x: 0], __ENV__)
-    assert actual == expected
+    expected = {Macro.escape(quote do: json_extract_path(&0.y(), ["a"])), []}
+    assert escape(quote do json_extract_path(x.y, ["a"]) end, [x: 0], __ENV__) == expected
+    assert escape(quote do x.y["a"] end, [x: 0], __ENV__) == expected
 
-    actual = escape(quote do x.y["a"]["b"] end, [x: 0], __ENV__)
-    assert actual == expected
+    expected = {Macro.escape(quote do: json_extract_path(&0.y(), [0])), []}
+    assert escape(quote do x.y[0] end, [x: 0], __ENV__) == expected
 
     expected = {Macro.escape(quote do: json_extract_path(&0.y(), ["a", 0])), []}
-    actual = escape(quote do x.y["a"][0] end, [x: 0], __ENV__)
-    assert actual == expected
+    assert escape(quote do x.y["a"][0] end, [x: 0], __ENV__) == expected
 
     expected = {Macro.escape(quote do: json_extract_path(&0.y(), [0, "a"])), []}
-    actual = escape(quote do x.y[0]["a"] end, [x: 0], __ENV__)
-    assert actual == expected
+    assert escape(quote do x.y[0]["a"] end, [x: 0], __ENV__) == expected
+
+    assert_raise Ecto.Query.CompileError, ~r/expected JSON path to contain literal strings.*got: `:a`/, fn ->
+      escape(quote do x.y[:a] end, [x: 0], __ENV__)
+    end
 
     assert_raise Ecto.Query.CompileError, ~r/expected JSON path to contain literal strings.*got: `a`/, fn ->
       escape(quote do x.y[a] end, [x: 0], __ENV__)
@@ -63,6 +65,18 @@ defmodule Ecto.Query.BuilderTest do
     assert_raise Ecto.Query.CompileError, "expected JSON path to be compile-time list, got: `bad`", fn ->
       escape(quote do json_extract_path(x.y, bad) end, [x: 0], __ENV__)
     end
+  end
+
+  test "escape embed_extract_path" do
+    expected = {Macro.escape(quote do: embed_extract_path(&0.y(), [:a])), []}
+    assert escape(quote do embed_extract_path(x.y, [:a]) end, [x: 0], __ENV__)  == expected
+    assert escape(quote do x.y.a end, [x: 0], __ENV__) == expected
+
+    expected = {Macro.escape(quote do: embed_extract_path(&0.y(), [:a, 0])), []}
+    assert escape(quote do x.y.a[0] end, [x: 0], __ENV__)  == expected
+
+    expected = {Macro.escape(quote do: embed_extract_path(&0.y(), [0, :a])), []}
+    assert escape(quote do x.y[0].a end, [x: 0], __ENV__)  == expected
   end
 
   test "escape fragments" do

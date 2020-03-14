@@ -111,7 +111,14 @@ defmodule Ecto.Query.Builder do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
+  # type(p.meta[a], ...)
   def escape({:type, _, [{{:., _, [Access, :get]}, _, _} = expr, type]}, _type, params_acc, vars, env) do
+    escape_with_type(expr, type, params_acc, vars, env)
+  end
+
+  # type(p.meta.a, ...)
+  def escape({:type, _, [{{:., _, [{{:., _, _}, _, _}, field]}, _, []} = expr, type]}, _type, params_acc, vars, env)
+      when is_atom(field) do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
@@ -197,14 +204,23 @@ defmodule Ecto.Query.Builder do
 
   # json
   def escape({:json_extract_path, _, [expr, path]}, type, params_acc, vars, env) do
-    path = escape_json_path(path)
+    path = escape_json_path!(path)
     {expr, params_acc} = escape(expr, type, params_acc, vars, env)
     {{:{}, [], [:json_extract_path, [], [expr, path]]}, params_acc}
   end
 
-  def escape({{:., meta, [Access, :get]}, _, _} = expr, type, params_acc, vars, env) do
-    {expr, path} = parse_access_get(expr, [])
-    escape({:json_extract_path, meta, [expr, path]}, type, params_acc, vars, env)
+  def escape({:embed_extract_path, _, [expr, path]}, type, params_acc, vars, env) do
+    path = escape_embed_path!(path)
+    {expr, params_acc} = escape(expr, type, params_acc, vars, env)
+    {{:{}, [], [:embed_extract_path, [], [expr, path]]}, params_acc}
+  end
+
+  def escape({{:., _, [Access, :get]}, _, _} = expr, type, params_acc, vars, env) do
+    escape_extract_path(expr, type, params_acc, vars, env)
+  end
+
+  def escape({{:., _, [_, atom]}, _, []} = expr, type, params_acc, vars, env) when is_atom(atom) do
+    escape_extract_path(expr, type, params_acc, vars, env)
   end
 
   # sigils
@@ -831,22 +847,19 @@ defmodule Ecto.Query.Builder do
   def field!(other),
     do: error!("expected atom in field/2, got: `#{inspect other}`")
 
-  defp escape_json_path(path) when is_list(path) do
+  defp escape_json_path!(path) when is_list(path) do
     Enum.map(path, &quoted_json_path_element!/1)
   end
 
-  defp escape_json_path(other) do
+  defp escape_json_path!(other) do
     error!("expected JSON path to be compile-time list, got: `#{Macro.to_string(other)}`")
   end
 
   defp quoted_json_path_element!({:^, _, [expr]}),
     do: quote(do: Ecto.Query.Builder.json_path_element!(unquote(expr)))
 
-  defp quoted_json_path_element!(binary) when is_binary(binary),
-    do: binary
-
-  defp quoted_json_path_element!(integer) when is_integer(integer),
-    do: integer
+  defp quoted_json_path_element!(term) when is_binary(term) or is_integer(term),
+    do: term
 
   defp quoted_json_path_element!(other),
     do:
@@ -858,12 +871,32 @@ defmodule Ecto.Query.Builder do
   @doc """
   Called by escaper at runtime to verify that value is a string or an integer.
   """
-  def json_path_element!(binary) when is_binary(binary),
-    do: binary
-  def json_path_element!(integer) when is_integer(integer),
-    do: integer
+  def json_path_element!(term) when is_binary(term) or is_integer(term),
+    do: term
   def json_path_element!(other),
     do: error!("expected string or integer in json_extract_path/2, got: `#{inspect other}`")
+
+  defp escape_embed_path!(path) when is_list(path) do
+    Enum.map(path, &quoted_embed_path_element!/1)
+  end
+
+  defp escape_embed_path!(other) do
+    error!("expected embed path to be compile-time list, got: `#{Macro.to_string(other)}`")
+  end
+
+  defp quoted_embed_path_element!({:^, _, [expr]}),
+    do: quote(do: Ecto.Query.Builder.embed_path_element!(unquote(expr)))
+
+  defp quoted_embed_path_element!(term) when is_atom(term) or is_integer(term),
+    do: term
+
+  @doc """
+  Called by escaper at runtime to verify that value is an atom or an integer.
+  """
+  def embed_path_element!(term) when is_binary(term) or is_integer(term),
+    do: term
+  def embed_path_element!(other),
+    do: error!("expected atom or integer in embed_extract_path/2, got: `#{inspect(other)}`")
 
   @doc """
   Called by escaper at runtime to verify that a value is not nil.
@@ -1116,12 +1149,25 @@ defmodule Ecto.Query.Builder do
   defp escape_query(other),
     do: other
 
-  defp parse_access_get({{:., _, [Access, :get]}, _, [left, right]}, acc) do
-    parse_access_get(left, [right | acc])
+  defp extract_path(expr) do
+    extract_path(expr, [], :json_extract_path)
   end
 
-  defp parse_access_get({{:., _, [{var, _, context}, field]}, _, []} = expr, acc)
+  defp extract_path({{:., _, [{var, _, context}, field]}, _, []} = expr, acc, kind)
        when is_atom(var) and is_atom(context) and is_atom(field) do
-    {expr, acc}
+    {kind, expr, acc}
+  end
+
+  defp extract_path({{:., _, [Access, :get]}, _, [left, right]}, acc, kind) do
+    extract_path(left, [right | acc], kind)
+  end
+
+  defp extract_path({{:., _, [left, right]}, _, []}, acc, _kind) when is_atom(right) do
+    extract_path(left, [right | acc], :embed_extract_path)
+  end
+
+  defp escape_extract_path(expr, type, params_acc, vars, env) do
+    {kind, expr, path} = extract_path(expr)
+    escape({kind, [], [expr, path]}, type, params_acc, vars, env)
   end
 end

@@ -469,8 +469,33 @@ defmodule Ecto.Query.API do
       field = "name"
       from(post in Post, select: post.meta["author"][^field])
 
+  See also `embed_extract_path/2` for working with embeds.
   """
   def json_extract_path(json_field, path), do: doc! [json_field, path]
+
+  @doc """
+  Returns value from the `embed_field` pointed to by `path`.
+
+      from(post in Post, select: json_extract_path(post.meta, [:author]))
+
+  The query can be also rewritten as:
+
+      from(post in Post, select: post.meta.author)
+
+  Path elements can be integers to access values in `embeds_many`:
+
+      from(post in Post, select: post.tags[0].name)
+
+  **Warning**: the underlying data in the JSON column is returned without
+  any additional decoding, e.g. datetimes (which are encoded as strings) are
+  returned as strings. This also means that queries like:
+  `where: post.meta.published_at > from_now(-1, "day")` may return incorrect results
+  as the underlying database may try to compare e.g. `json` with `date` types.
+  Use `type/2` to force the types on the database level.
+
+  See also `json_extract_path/2` for working with JSON fields.
+  """
+  def embed_extract_path(embed_field, path), do: doc! [embed_field, path]
 
   @doc """
   Casts the given value to the given type at the database level.

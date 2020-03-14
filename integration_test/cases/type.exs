@@ -318,6 +318,37 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   @tag :map_type
+  @tag :json_extract_path
+  test "embed_extract_path" do
+    item = %Item{
+      price: 123,
+      valid_at: ~D[2014-01-16],
+      primary_color: %ItemColor{name: "red"},
+      secondary_colors: [%ItemColor{name: "green"}, %ItemColor{name: "blue"}]
+    }
+
+    %Order{}
+    |> Ecto.Changeset.change()
+    |> Ecto.Changeset.put_embed(:item, item)
+    |> TestRepo.insert!()
+
+    assert TestRepo.one(from(o in Order, select: o.item.price)) == item.price
+    assert TestRepo.one(from(o in Order, select: o.item.valid_at)) == "2014-01-16"
+    assert TestRepo.one(from(o in Order, select: o.item.primary_color.name)) == item.primary_color.name
+
+    assert TestRepo.one(from(o in Order, select: type(o.item.price, :string))) == "123"
+
+    assert TestRepo.one(from(o in Order, select: o.item.primary_color)) == %{"id" => nil, "name" => "red"}
+
+    assert TestRepo.one(from(o in Order, select: o.item.secondary_colors)) == [%{"id" => nil, "name" => "green"}, %{"id" => nil, "name" => "blue"}]
+    assert TestRepo.one(from(o in Order, select: o.item.secondary_colors[1])) == %{"id" => nil, "name" => "blue"}
+    assert TestRepo.one(from(o in Order, select: o.item.secondary_colors[1].name)) == "blue"
+
+    index = 1
+    assert TestRepo.one(from(o in Order, select: o.item.secondary_colors[^index].name)) == "blue"
+  end
+
+  @tag :map_type
   @tag :map_type_schemaless
   test "embeds one with custom type" do
     item = %Item{price: 123, reference: "PREFIX-EXAMPLE"}

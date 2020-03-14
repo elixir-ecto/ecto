@@ -942,6 +942,64 @@ defmodule Ecto.Query.Planner do
     {Enum.reverse(combinations), counter}
   end
 
+  def embed_field(embed_field, kind, query) do
+    {{:., _, [{:&, _, [ix]}, field]}, _, []} = embed_field
+    {_, schema, _} = get_source!(kind, query, ix)
+    type = schema.__schema__(:type, field)
+
+    case type do
+      {:embed, _} ->
+        {:ok, {field, type}}
+
+      nil ->
+        {:error, "field `#{field}` does not exist in #{inspect(schema)}"}
+
+      other ->
+        {:error, "expected field `#{field}` to be of type embed, got: `#{inspect(other)}`"}
+    end
+  end
+
+  defp embed_field!(embed_field, kind, query) do
+    case embed_field(embed_field, kind, query) do
+      {:ok, {field, type}} ->
+        {field, type}
+
+      {:error, message} ->
+        raise message
+    end
+  end
+
+  defp embed_extract_path_type!([path_field | rest], field, type) do
+    case type do
+      {:embed, %{related: related, cardinality: :one}} ->
+        unless is_atom(path_field) do
+          raise "cannot use `#{inspect(path_field)}` to refer to a field on an `embeds_one`"
+        end
+
+        path_type = related.__schema__(:type, path_field)
+
+        unless path_type do
+          raise "field `#{path_field}` does not exist in #{inspect(related)}"
+        end
+
+        embed_extract_path_type!(rest, path_field, path_type)
+
+      {:embed, %{related: _, cardinality: :many} = embed} ->
+        unless is_integer(path_field) do
+          raise "cannot use `#{inspect(path_field)}` to refer to an item in `embeds_many`"
+        end
+
+        embed_extract_path_type!(rest, path_field, {:embed, %{embed | cardinality: :one}})
+
+      other ->
+        raise "expected field `#{field}` to be of type embed, got: `#{inspect(other)}`"
+    end
+  end
+
+  defp embed_extract_path_type!([], field, type) do
+    {field, type}
+  end
+
   defp prewalk_source({:fragment, meta, fragments}, kind, query, expr, acc, adapter) do
     {fragments, acc} = prewalk(fragments, kind, query, expr, acc, adapter)
     {{:fragment, meta, fragments}, acc}
@@ -1002,6 +1060,24 @@ defmodule Ecto.Query.Planner do
     {arg, acc} = prewalk(arg, kind, query, expr, acc, adapter)
     type = field_type!(kind, query, expr, type)
     {%Ecto.Query.Tagged{value: arg, tag: type, type: Ecto.Type.type(type)}, acc}
+  end
+
+  # convert `json_extract_path(p.meta, [0])` to `embed_extract_path(p.meta, [0])`
+  defp prewalk({:json_extract_path, meta, [json_field, path]}, kind, query, expr, acc, adapter) do
+    with [int] when is_integer(int) <- path,
+         {:ok, _} <- embed_field(json_field, kind, query) do
+      prewalk({:embed_extract_path, meta, [json_field, path]}, kind, query, expr, acc, adapter)
+    else
+      _ ->
+        {{:json_extract_path, meta, [json_field, path]}, acc}
+    end
+  end
+
+  defp prewalk({:embed_extract_path, meta, [embed_field, path]}, kind, query, _expr, acc, _adapter) do
+    {field, type} = embed_field!(embed_field, kind, query)
+    type = embed_extract_path_type!(path, field, type)
+    meta = Keyword.put(meta, :type, type)
+    {{:embed_extract_path, meta, [embed_field, path]}, acc}
   end
 
   defp prewalk(%Ecto.Query.Tagged{value: v, type: type} = tagged, kind, query, expr, acc, adapter) do
@@ -1455,6 +1531,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp type!(_kind, _query, _expr, nil, _field), do: :any
+
   defp type!(kind, query, expr, ix, field) when is_integer(ix) do
     case get_source!(kind, query, ix) do
       {:fragment, _, _} ->
@@ -1474,12 +1551,15 @@ defmodule Ecto.Query.Planner do
         end
     end
   end
+
   defp type!(kind, query, expr, schema, field) when is_atom(schema) do
     cond do
       type = schema.__schema__(:type, field) ->
         type
+
       Map.has_key?(schema.__struct__, field) ->
         error! query, expr, "field `#{field}` in `#{kind}` is a virtual field in schema #{inspect schema}"
+
       true ->
         error! query, expr, "field `#{field}` in `#{kind}` does not exist in schema #{inspect schema}"
     end
