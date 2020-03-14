@@ -60,6 +60,7 @@ defmodule Ecto.Integration.Post do
     has_many :users_comments, through: [:users, :comments]
     has_many :comments_authors_permalinks, through: [:comments_authors, :permalink]
     has_one :post_user_composite_pk, Ecto.Integration.PostUserCompositePk
+    embeds_many :items, Ecto.Integration.Item
     timestamps()
   end
 

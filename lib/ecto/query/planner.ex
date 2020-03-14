@@ -942,6 +942,32 @@ defmodule Ecto.Query.Planner do
     {Enum.reverse(combinations), counter}
   end
 
+  defp validate_json_path!([path_field | rest], field, type) do
+    case type do
+      {:embed, %{related: related, cardinality: :one}} ->
+        unless path_field in Enum.map(related.__schema__(:fields), &Atom.to_string/1) do
+          raise "field `#{path_field}` does not exist in #{inspect(related)}"
+        end
+
+        path_type = related.__schema__(:type, String.to_atom(path_field))
+        validate_json_path!(rest, path_field, path_type)
+
+      {:embed, %{related: _, cardinality: :many} = embed} ->
+        unless is_integer(path_field) do
+          raise "cannot use `#{path_field}` to refer to an item in `embeds_many`"
+        end
+
+        validate_json_path!(rest, path_field, {:embed, %{embed | cardinality: :one}})
+
+      other ->
+        raise "expected field `#{field}` to be of type embed, got: `#{inspect(other)}`"
+    end
+  end
+
+  defp validate_json_path!([], _field, _type) do
+    :ok
+  end
+
   defp prewalk_source({:fragment, meta, fragments}, kind, query, expr, acc, adapter) do
     {fragments, acc} = prewalk(fragments, kind, query, expr, acc, adapter)
     {{:fragment, meta, fragments}, acc}
@@ -1002,6 +1028,37 @@ defmodule Ecto.Query.Planner do
     {arg, acc} = prewalk(arg, kind, query, expr, acc, adapter)
     type = field_type!(kind, query, expr, type)
     {%Ecto.Query.Tagged{value: arg, tag: type, type: Ecto.Type.type(type)}, acc}
+  end
+
+  defp prewalk({:json_extract_path, meta, [json_field, path]}, kind, query, _expr, acc, _adapter) do
+    {{:., _, [{:&, _, [ix]}, field]}, _, []} = json_field
+
+    case get_source!(kind, query, ix) do
+      {_, nil, _} ->
+        :ok
+
+      {_, schema, _} ->
+        type = schema.__schema__(:type, field)
+
+        case type do
+          {:embed, _} ->
+            validate_json_path!(path, field, type)
+
+          :map ->
+            :ok
+
+          {:map, _} ->
+            :ok
+
+          nil ->
+            raise "field `#{field}` does not exist in #{inspect(schema)}"
+
+          other ->
+            raise "expected field `#{field}` to be an embed or a map, got: `#{inspect(other)}`"
+        end
+    end
+
+    {{:json_extract_path, meta, [json_field, path]}, acc}
   end
 
   defp prewalk(%Ecto.Query.Tagged{value: v, type: type} = tagged, kind, query, expr, acc, adapter) do
@@ -1455,6 +1512,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp type!(_kind, _query, _expr, nil, _field), do: :any
+
   defp type!(kind, query, expr, ix, field) when is_integer(ix) do
     case get_source!(kind, query, ix) do
       {:fragment, _, _} ->
@@ -1474,12 +1532,15 @@ defmodule Ecto.Query.Planner do
         end
     end
   end
+
   defp type!(kind, query, expr, schema, field) when is_atom(schema) do
     cond do
       type = schema.__schema__(:type, field) ->
         type
+
       Map.has_key?(schema.__struct__, field) ->
         error! query, expr, "field `#{field}` in `#{kind}` is a virtual field in schema #{inspect schema}"
+
       true ->
         error! query, expr, "field `#{field}` in `#{kind}` does not exist in schema #{inspect schema}"
     end

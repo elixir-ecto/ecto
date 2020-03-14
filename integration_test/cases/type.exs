@@ -318,6 +318,14 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   @tag :map_type
+  @tag :json_extract_path
+  test "json_extract_path with embeds" do
+    post = %Post{items: [%{valid_at: ~D[2020-01-01]}]}
+    TestRepo.insert!(post)
+    assert TestRepo.one(from p in Post, select: p.items[0]["valid_at"]) == "2020-01-01"
+  end
+
+  @tag :map_type
   @tag :map_type_schemaless
   test "embeds one with custom type" do
     item = %Item{price: 123, reference: "PREFIX-EXAMPLE"}
