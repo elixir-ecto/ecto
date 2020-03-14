@@ -469,6 +469,12 @@ defmodule Ecto.Query.API do
       field = "name"
       from(post in Post, select: post.meta["author"][^field])
 
+  **Warning**: the underlying data in the JSON column is returned without any
+  additional decoding, e.g. datetimes (which are encoded as strings) are
+  returned as strings. This also means that queries like:
+  `where: post.meta["published_at"] > from_now(-1, "day")` may return incorrect
+  results or fail as the underlying database may try to compare e.g. `json` with
+  `date` types. Use `type/2` to force the types on the database level.
   """
   def json_extract_path(json_field, path), do: doc! [json_field, path]
 
