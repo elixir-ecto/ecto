@@ -476,7 +476,7 @@ defmodule Ecto.Query.API do
   @doc """
   Returns value from the `embed_field` pointed to by `path`.
 
-      from(post in Post, select: json_extract_path(post.meta, [:author]))
+      from(post in Post, select: embed_extract_path(post.meta, [:author]))
 
   The query can be also rewritten as:
 
