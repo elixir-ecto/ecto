@@ -171,8 +171,17 @@ defmodule MyApp.Post do
     []
   end
   defp insert_and_get_all(names) do
-    timestamp = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-    maps = Enum.map(names, &%{name: &1, inserted_at: timestamp, updated_at: timestamp})
+    timestamp =
+      NaiveDateTime.utc_now()
+      |> NaiveDateTime.truncate(:second)
+
+    maps =
+      Enum.map(names, &%{
+        name: &1,
+        inserted_at: timestamp,
+        updated_at: timestamp
+      })
+
     Repo.insert_all MyApp.Tag, maps, on_conflict: :nothing
     Repo.all from t in MyApp.Tag, where: t.name in ^names
   end
@@ -240,9 +249,19 @@ defp insert_and_get_all_tags(_changes, params) do
   case MyApp.Tag.parse(params["tags"]) do
     [] ->
       {:ok, []}
+
     names ->
-      timestamp = NaiveDateTime.utc_now() |> NaiveDateTime.truncate(:second)
-      maps = Enum.map(names, &%{name: &1, inserted_at: timestamp, updated_at: timestamp})
+      timestamp =
+        NaiveDateTime.utc_now()
+        |> NaiveDateTime.truncate(:second)
+
+      maps =
+        Enum.map(names, &%{
+          name: &1,
+          inserted_at: timestamp,
+          updated_at: timestamp
+        })
+
       Repo.insert_all(Tag, maps, on_conflict: :nothing)
       query = from t in Tag, where: t.name in ^names
       {:ok, Repo.all(query)}
