@@ -14,7 +14,7 @@ defmodule Ecto.Query.Builder.CTE do
   @spec escape(Macro.t) :: Macro.t
   def escape(name) when is_bitstring(name), do: name
 
-  def escape({:^, _, [{var, _, _} = name]}) when is_atom(var), do: name
+  def escape({:^, _, [expr]}), do: expr
 
   def escape(other) do
     Builder.error! "`#{Macro.to_string(other)}` is not a valid CTE name. " <>

@@ -1,5 +1,17 @@
 # Changelog for v3.x
 
+## v3.4.0-dev
+
+### Enhancements
+
+  * [Ecto.Query] Allow dynamic queries in CTE and improve error message
+  * [Ecto.Query] Add `Ecto.Query.API.json_extract_path/2` and JSON path support to query syntax. For example, `posts.metadata["tags"][0]["name"]` will return the name of the first tag stored in the `:map` metadata field
+
+### Bug fixes
+
+  * [Ecto.Query] Raise if there is loaded non-empty association data without related key when preloading. This typically means not all fields have been loaded in a query
+  * [Ecto.Schema] Show meaningful error in case `schema` is invoked twice in an `Ecto.Schema`
+
 ## v3.3.4 (2020-02-27)
 
   * [mix ecto] Do not rely on map ordering when parsing repos
