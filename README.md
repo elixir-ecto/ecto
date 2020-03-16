@@ -72,9 +72,9 @@ You need to add both Ecto and the database adapter as a dependency to your `mix.
 
 Database   | Ecto Adapter           | Dependencies
 :----------| :--------------------- | :-----------------------------------------------
-PostgreSQL | Ecto.Adapters.Postgres | [ecto_sql][ecto_sql] + [postgrex][postgrex]
-MySQL      | Ecto.Adapters.MyXQL    | [ecto_sql][ecto_sql] + [myxql][myxql]
-MSSQL      | Ecto.Adapters.Tds      | [ecto_sql][ecto_sql] + [tds][tds]
+PostgreSQL | Ecto.Adapters.Postgres | [ecto_sql][ecto_sql] (requires Ecto v3.0+) + [postgrex][postgrex]
+MySQL      | Ecto.Adapters.MyXQL    | [ecto_sql][ecto_sql] (requires Ecto v3.3+) + [myxql][myxql]
+MSSQL      | Ecto.Adapters.Tds      | [ecto_sql][ecto_sql] (requires Ecto v3.4+) + [tds][tds]
 ETS        | Etso                   | [ecto][ecto] + [etso][etso]
 
 [ecto]: http://github.com/elixir-ecto/ecto
