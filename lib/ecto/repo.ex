@@ -112,8 +112,8 @@ defmodule Ecto.Repo do
 
   For details, see [the telemetry documentation](https://hexdocs.pm/telemetry/).
 
-  Below we list all events developers should expect from Ecto. All examples below consider
-  a repository named `MyApp.Repo`:
+  Below we list all events developers should expect from Ecto. All examples
+  below consider a repository named `MyApp.Repo`:
 
   #### `[:my_app, :repo, :query]`
 
@@ -132,8 +132,19 @@ defmodule Ecto.Repo do
   All measurements are given in the `:native` time unit. You can read more
   about it in the docs for `System.convert_time_unit/3`.
 
-  A `:metadata` map is also sent, including parameters, source, the query
-  string, the repo it was run by, and the query result.
+  A telemetry `:metadata` map including the following fields. Each database
+  adapter may emit different information here. For Ecto.SQL databases, it
+  will look like this:
+
+    * `:type` - the type of the Ecto query. For example, for Ecto.SQL
+      databases, it would be `:ecto_sql_query`
+    * `:repo` - the Ecto repository
+    * `:result` - the query result
+    * `:params` - the query parameters
+    * `:query` - the query sent to the database as a string
+    * `:source` - the source the query was made on (may be nil)
+    * `:options` - extra options given to the repo operation as
+      `:telemetry_options`, such as `MyApp.Repo.all(Post, telemetry_options: [organization_id: 123])`
 
   ## Read-only repositories
 
