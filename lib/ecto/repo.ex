@@ -214,7 +214,7 @@ defmodule Ecto.Repo do
 
       def with_default_opts(opts) do
         default_opts = Process.get({__MODULE__, :default_opts}, [])
-        Keyword.merge(opts, default_opts)
+        Keyword.merge(default_opts, opts)
       end
       ## Transactions
 
