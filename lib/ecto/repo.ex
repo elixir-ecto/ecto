@@ -89,6 +89,8 @@ defmodule Ecto.Repo do
     * `:log` - When false, does not log the query
     * `:telemetry_event` - The telemetry event name to dispatch the event under.
       See the next section for more information
+    * `:telemetry_options` - Extra options to attach to telemetry event name.
+      See the next section for more information
 
   ### Telemetry events
 
