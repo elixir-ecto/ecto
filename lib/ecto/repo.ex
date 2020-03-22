@@ -145,7 +145,7 @@ defmodule Ecto.Repo do
     * `:params` - the query parameters
     * `:query` - the query sent to the database as a string
     * `:source` - the source the query was made on (may be nil)
-    * `:options` - extra options given to the repo operation uner
+    * `:options` - extra options given to the repo operation under
       `:telemetry_options`
 
   ## Read-only repositories
