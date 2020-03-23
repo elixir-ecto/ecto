@@ -2811,7 +2811,7 @@ defmodule Ecto.Changeset do
   validations rules from `changeset.validations` to build detailed error
   description.
   """
-  @spec traverse_errors(t, (error -> String.t) | (Changeset.t, atom, error -> String.t)) :: %{atom => [String.t]}
+  @spec traverse_errors(t, (error -> String.t) | (Changeset.t, atom, error -> String.t)) :: %{atom => [String.t | map]}
   def traverse_errors(%Changeset{errors: errors, changes: changes, types: types} = changeset, msg_func)
       when is_function(msg_func, 1) or is_function(msg_func, 3) do
     errors
