@@ -220,16 +220,16 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  defmodule DefaultOptionRepo do
+    use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
+
+    def default_options(:all), do: [prefix: "all_schema"]
+    def default_options(:one), do: [prefix: "one_schema"]
+    def default_options(_), do: [prefix: "fallback_schema"]
+  end
+
   describe "default_options" do
     test "passes a default option for operation" do
-      defmodule DefaultOptionRepo do
-        use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
-
-        def default_options(:all), do: [prefix: "all_schema"]
-        def default_options(:one), do: [prefix: "one_schema"]
-        def default_options(_), do: [prefix: "fallback_schema"]
-      end
-
       {:ok, _pid} = DefaultOptionRepo.start_link(url: "ecto://user:pass@local/hello")
       DefaultOptionRepo.all(MySchema)
       assert_received {:all, query}
@@ -247,12 +247,6 @@ defmodule Ecto.RepoTest do
 
   describe "with_default_options" do
     test "configured option for query overrides default" do
-      defmodule DefaultOptionRepo do
-        use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
-
-        def default_options(_), do: [prefix: "different_schema"]
-      end
-
       {:ok, _pid} = DefaultOptionRepo.start_link(url: "ecto://user:pass@local/hello")
       DefaultOptionRepo.all(MySchema, prefix: "specific_schema")
       assert_received {:all, query}
