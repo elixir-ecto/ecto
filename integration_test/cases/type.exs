@@ -283,46 +283,47 @@ defmodule Ecto.Integration.TypeTest do
   @tag :map_type
   @tag :json_extract_path
   test "json_extract_path with primitive values" do
-    post = %Post{meta: %{:id => 123, :time => ~T[09:00:00], "'single quoted'" => "bar", "\"double quoted\"" => "baz"}}
-    TestRepo.insert!(post)
+    order = %Order{meta: %{:id => 123, :time => ~T[09:00:00], "'single quoted'" => "bar", "\"double quoted\"" => "baz"}}
+    TestRepo.insert!(order)
 
-    assert TestRepo.one(from p in Post, select: p.meta["id"]) == 123
+    assert TestRepo.one(from o in Order, select: o.meta["id"]) == 123
 
-    assert TestRepo.one(from p in Post, select: p.meta["bad"]) == nil
-    assert TestRepo.one(from p in Post, select: p.meta["bad"]["bad"]) == nil
+    assert TestRepo.one(from o in Order, select: o.meta["bad"]) == nil
+    assert TestRepo.one(from o in Order, select: o.meta["bad"]["bad"]) == nil
 
-    assert TestRepo.one(from p in Post, select: type(p.meta["id"], :string)) == "123"
+    assert TestRepo.one(from o in Order, select: type(o.meta["id"], :string)) == "123"
 
     field = "id"
-    assert TestRepo.one(from p in Post, select: p.meta[^field]) == 123
+    assert TestRepo.one(from o in Order, select: o.meta[^field]) == 123
 
-    assert TestRepo.one(from p in Post, select: p.meta["time"]) == "09:00:00"
+    assert TestRepo.one(from o in Order, select: o.meta["time"]) == "09:00:00"
 
-    assert TestRepo.one(from p in Post, select: p.meta["'single quoted'"]) == "bar"
-    assert TestRepo.one(from p in Post, select: p.meta["';"]) == nil
-    assert TestRepo.one(from p in Post, select: p.meta["\"double quoted\""]) == "baz"
+    assert TestRepo.one(from o in Order, select: o.meta["'single quoted'"]) == "bar"
+    assert TestRepo.one(from o in Order, select: o.meta["';"]) == nil
+    assert TestRepo.one(from o in Order, select: o.meta["\"double quoted\""]) == "baz"
   end
 
   @tag :map_type
   @tag :json_extract_path
   test "json_extract_path with arrays and objects" do
-    post = %Post{meta: %{tags: [%{name: "red"}, %{name: "green"}]}}
-    TestRepo.insert!(post)
+    order = %Order{meta: %{tags: [%{name: "red"}, %{name: "green"}]}}
+    TestRepo.insert!(order)
 
-    assert TestRepo.one(from p in Post, select: p.meta["tags"][0]["name"]) == "red"
+    assert TestRepo.one(from o in Order, select: o.meta["tags"][0]["name"]) == "red"
 
     index = 1
-    assert TestRepo.one(from p in Post, select: p.meta["tags"][^index]["name"]) == "green"
+    assert TestRepo.one(from o in Order, select: o.meta["tags"][^index]["name"]) == "green"
 
-    assert TestRepo.one(from p in Post, select: p.meta["tags"][99]["name"]) == nil
+    assert TestRepo.one(from o in Order, select: o.meta["tags"][99]["name"]) == nil
   end
 
   @tag :map_type
   @tag :json_extract_path
   test "json_extract_path with embeds" do
-    post = %Post{items: [%{valid_at: ~D[2020-01-01]}]}
-    TestRepo.insert!(post)
-    assert TestRepo.one(from p in Post, select: p.items[0]["valid_at"]) == "2020-01-01"
+    order = %Order{items: [%{valid_at: ~D[2020-01-01]}]}
+    TestRepo.insert!(order)
+
+    assert TestRepo.one(from o in Order, select: o.items[0]["valid_at"]) == "2020-01-01"
   end
 
   @tag :map_type
