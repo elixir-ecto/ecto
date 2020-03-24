@@ -224,7 +224,7 @@ defmodule Ecto.RepoTest do
     use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
 
     def default_options(:all), do: [prefix: "all_schema"]
-    def default_options(:one), do: [prefix: "one_schema"]
+    def default_options(:update_all), do: [prefix: "update_all_schema"]
     def default_options(_), do: [prefix: "fallback_schema"]
   end
 
@@ -239,12 +239,12 @@ defmodule Ecto.RepoTest do
       assert_received {:all, query}
       assert query.prefix == "overridden_schema"
 
-      DefaultOptionRepo.one(MySchema)
-      assert_received {:all, query}
-      assert query.prefix == "one_schema"
+      DefaultOptionRepo.update_all(MySchema, set: [x: "foo"])
+      assert_received {:update_all, query}
+      assert query.prefix == "update_all_schema"
 
-      DefaultOptionRepo.aggregate(MySchema, :min, :id)
-      assert_received {:all, query}
+      DefaultOptionRepo.delete_all(MySchema)
+      assert_received {:delete_all, query}
       assert query.prefix == "fallback_schema"
     end
   end
