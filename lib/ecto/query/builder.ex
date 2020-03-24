@@ -196,15 +196,27 @@ defmodule Ecto.Query.Builder do
   end
 
   # json
-  def escape({:json_extract_path, _, [expr, path]}, type, params_acc, vars, env) do
-    path = escape_json_path(path)
-    {expr, params_acc} = escape(expr, type, params_acc, vars, env)
-    {{:{}, [], [:json_extract_path, [], [expr, path]]}, params_acc}
+  def escape({:json_extract_path, _, [field, path]} = expr, type, params_acc, vars, env) do
+    case field do
+      {{:., _, _}, _, _} ->
+        path = escape_json_path(path)
+        {field, params_acc} = escape(field, type, params_acc, vars, env)
+        {{:{}, [], [:json_extract_path, [], [field, path]]}, params_acc}
+
+      _ ->
+        error!("`#{Macro.to_string(expr)}` is not a valid query expression")
+    end
   end
 
-  def escape({{:., meta, [Access, :get]}, _, _} = expr, type, params_acc, vars, env) do
-    {expr, path} = parse_access_get(expr, [])
-    escape({:json_extract_path, meta, [expr, path]}, type, params_acc, vars, env)
+  def escape({{:., meta, [Access, :get]}, _, [left, _]} = expr, type, params_acc, vars, env) do
+    case left do
+      {{:., _, _}, _, _} ->
+        {expr, path} = parse_access_get(expr, [])
+        escape({:json_extract_path, meta, [expr, path]}, type, params_acc, vars, env)
+
+      _ ->
+        error!("`#{Macro.to_string(expr)}` is not a valid query expression")
+    end
   end
 
   # sigils

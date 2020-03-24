@@ -56,6 +56,14 @@ defmodule Ecto.Query.BuilderTest do
     actual = escape(quote do x.y[0]["a"] end, [x: 0], __ENV__)
     assert actual == expected
 
+    assert_raise Ecto.Query.CompileError, "`json_extract_path(x, [\"a\"])` is not a valid query expression", fn ->
+      escape(quote do json_extract_path(x, ["a"]) end, [x: 0], __ENV__)
+    end
+
+    assert_raise Ecto.Query.CompileError, "`x[\"a\"]` is not a valid query expression", fn ->
+      escape(quote do x["a"] end, [x: 0], __ENV__)
+    end
+
     assert_raise Ecto.Query.CompileError, ~r/expected JSON path to contain literal strings.*got: `a`/, fn ->
       escape(quote do x.y[a] end, [x: 0], __ENV__)
     end
