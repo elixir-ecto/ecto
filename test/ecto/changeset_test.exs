@@ -1307,40 +1307,41 @@ defmodule Ecto.ChangesetTest do
                 |> validate_acceptance(:terms_of_service)
     assert changeset.valid?
     assert changeset.errors == []
-
-    changeset = changeset(%{"terms_of_service" => "1"})
-                |> validate_acceptance(:terms_of_service, message: "must be abided")
-    assert changeset.valid?
-    assert changeset.errors == []
+    assert validations(changeset) == [terms_of_service: {:acceptance, []}]
 
     # not accepted
     changeset = changeset(%{"terms_of_service" => "false"})
                 |> validate_acceptance(:terms_of_service)
     refute changeset.valid?
     assert changeset.errors == [terms_of_service: {"must be accepted", [validation: :acceptance]}]
+    assert validations(changeset) == [terms_of_service: {:acceptance, []}]
 
     changeset = changeset(%{"terms_of_service" => "other"})
                 |> validate_acceptance(:terms_of_service)
     refute changeset.valid?
     assert changeset.errors == [terms_of_service: {"must be accepted", [validation: :acceptance]}]
+    assert validations(changeset) == [terms_of_service: {:acceptance, []}]
 
     # empty params
     changeset = changeset(%{})
                 |> validate_acceptance(:terms_of_service)
     refute changeset.valid?
     assert changeset.errors == [terms_of_service: {"must be accepted", [validation: :acceptance]}]
+    assert validations(changeset) == [terms_of_service: {:acceptance, []}]
 
     # invalid params
     changeset = changeset(:invalid)
                 |> validate_acceptance(:terms_of_service)
     refute changeset.valid?
     assert changeset.errors == []
+    assert validations(changeset) == [terms_of_service: {:acceptance, []}]
 
     # custom message
     changeset = changeset(%{})
                 |> validate_acceptance(:terms_of_service, message: "must be abided")
     refute changeset.valid?
     assert changeset.errors == [terms_of_service: {"must be abided", [validation: :acceptance]}]
+    assert validations(changeset) == [terms_of_service: {:acceptance, [message: "must be abided"]}]
   end
 
   alias Ecto.TestRepo

@@ -2216,17 +2216,24 @@ defmodule Ecto.Changeset do
   """
   @spec validate_acceptance(t, atom, Keyword.t) :: t
   def validate_acceptance(changeset, field, opts \\ [])
-  def validate_acceptance(%{params: params} = changeset, field, opts) when is_map(params) do
+  def validate_acceptance(%{params: params} = changeset, field, opts) do
+    errors = validate_acceptance_errors(params, field, opts)
+
+    %{changeset | validations: [{field, {:acceptance, opts}} | changeset.validations],
+                  errors: errors ++ changeset.errors,
+                  valid?: changeset.valid? and errors == []}
+  end
+
+  defp validate_acceptance_errors(nil, _field, _opts), do: []
+
+  defp validate_acceptance_errors(params, field, opts) do
     param = Atom.to_string(field)
     value = Map.get(params, param)
 
     case Ecto.Type.cast(:boolean, value) do
-      {:ok, true} -> changeset
-      _ -> add_error(changeset, field, message(opts, "must be accepted"), validation: :acceptance)
+      {:ok, true} -> []
+      _ -> [{field, {message(opts, "must be accepted"), validation: :acceptance}}]
     end
-  end
-  def validate_acceptance(%{params: nil} = changeset, _, _) do
-    changeset
   end
 
   ## Optimistic lock
