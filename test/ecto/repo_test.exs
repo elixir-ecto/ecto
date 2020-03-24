@@ -235,6 +235,10 @@ defmodule Ecto.RepoTest do
       assert_received {:all, query}
       assert query.prefix == "all_schema"
 
+      DefaultOptionRepo.all(MySchema, prefix: "overridden_schema")
+      assert_received {:all, query}
+      assert query.prefix == "overridden_schema"
+
       DefaultOptionRepo.one(MySchema)
       assert_received {:all, query}
       assert query.prefix == "one_schema"
@@ -242,15 +246,6 @@ defmodule Ecto.RepoTest do
       DefaultOptionRepo.aggregate(MySchema, :min, :id)
       assert_received {:all, query}
       assert query.prefix == "fallback_schema"
-    end
-  end
-
-  describe "with_default_options" do
-    test "configured option for query overrides default" do
-      {:ok, _pid} = DefaultOptionRepo.start_link(url: "ecto://user:pass@local/hello")
-      DefaultOptionRepo.all(MySchema, prefix: "specific_schema")
-      assert_received {:all, query}
-      assert query.prefix == "specific_schema"
     end
   end
 

@@ -211,10 +211,7 @@ defmodule Ecto.Repo do
         adapter.checkout(meta, opts, fun)
       end
 
-      @compile {:inline, get_dynamic_repo: 0}
-
-      def default_options(_operation_name), do: []
-      defoverridable default_options: 1
+      @compile {:inline, get_dynamic_repo: 0, with_default_options: 2}
 
       def get_dynamic_repo() do
         Process.get({__MODULE__, :dynamic_repo}, @default_dynamic_repo)
@@ -224,9 +221,13 @@ defmodule Ecto.Repo do
         Process.put({__MODULE__, :dynamic_repo}, dynamic) || @default_dynamic_repo
       end
 
-      def with_default_options(operation_name, opts) do
+      def default_options(_operation), do: []
+      defoverridable default_options: 1
+
+      defp with_default_options(operation_name, opts) do
         Keyword.merge(default_options(operation_name), opts)
       end
+
       ## Transactions
 
       if Ecto.Adapter.Transaction in behaviours do
@@ -338,7 +339,7 @@ defmodule Ecto.Repo do
 
         def aggregate(queryable, aggregate, field)
             when aggregate in @aggregates and is_atom(field) do
-          Ecto.Repo.Queryable.aggregate(get_dynamic_repo(), queryable, aggregate, field, [])
+          Ecto.Repo.Queryable.aggregate(get_dynamic_repo(), queryable, aggregate, field, with_default_options(:aggregate, []))
         end
 
         def aggregate(queryable, aggregate, field, opts)
@@ -347,14 +348,14 @@ defmodule Ecto.Repo do
         end
 
         def exists?(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.exists?(get_dynamic_repo(), queryable, with_default_options(:exists, opts))
+          Ecto.Repo.Queryable.exists?(get_dynamic_repo(), queryable, with_default_options(:exists?, opts))
         end
 
         def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
           Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, get_dynamic_repo(), preloads, with_default_options(:preload, opts))
         end
 
-        def prepare_query(operation, query, opts), do: {query, with_default_options(:prepare_query, opts)}
+        def prepare_query(operation, query, opts), do: {query, opts}
         defoverridable prepare_query: 3
       end
     end
@@ -863,6 +864,17 @@ defmodule Ecto.Repo do
   @callback prepare_query(operation, query :: Ecto.Query.t(), opts :: Keyword.t()) ::
               {Ecto.Query.t(), Keyword.t()}
             when operation: :all | :update_all | :delete_all | :stream
+
+  @doc """
+  A user customizable callback invoked to retrieve default options for operations.
+
+  This can be used to provide default values per operation that
+  have higher precedence than the values given on configuration
+  or when starting the repository.
+
+  This callback is invoked for all repository operations.
+  """
+  @callback default_options(operation :: atom) :: Keyword.t()
 
   @doc """
   Fetches all entries from the data store matching the given query.
