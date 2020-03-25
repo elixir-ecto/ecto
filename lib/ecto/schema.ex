@@ -617,6 +617,7 @@ defmodule Ecto.Schema do
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
+    type = expand_alias(type, __CALLER__)
     quote do
       Ecto.Schema.__field__(__MODULE__, unquote(name), unquote(type), unquote(opts))
     end
