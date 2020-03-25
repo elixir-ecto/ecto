@@ -2770,6 +2770,8 @@ defmodule Ecto.Changeset do
     do: source
   defp get_source(%{data: data}), do:
     raise ArgumentError, "cannot add constraint to changeset because it does not have a source, got: #{inspect data}"
+  defp get_source(item), do:
+    raise ArgumentError, "cannot add constraint because a changeset was not supplied, got: #{inspect item}"
 
   defp get_assoc(%{types: types}, assoc) do
     case Map.fetch(types, assoc) do
