@@ -64,7 +64,7 @@ See the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and
 
   * [Programming Ecto](https://pragprog.com/book/wmecto/programming-ecto), by Darin Wilson and Eric Meadows-Jönsson, which guides you from fundamentals up to advanced concepts
 
-  * [The Little Ecto Cookbook](https://pages.plataformatec.com.br/the-little-ecto-cookbook), a free ebook by Plataformatec, which is a curation of the existing Ecto guides with some extra contents
+  * [The Little Ecto Cookbook](https://dashbit.co/ebooks/the-little-ecto-cookbook), a free ebook by Dashbit, which is a curation of the existing Ecto guides with some extra contents
 
 ## Usage
 
