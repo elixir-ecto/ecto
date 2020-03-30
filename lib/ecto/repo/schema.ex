@@ -552,6 +552,8 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp conflict_target({:constraint, constraint}, _dumper) when is_atom(constraint) do
+    IO.warn "{:constraint, constraint} option for :conflict_target is deprecated, " <>
+              "use {:unsafe_fragment, \"ON CONSTRAINT #{constraint}\" instead"
     {:constraint, constraint}
   end
   defp conflict_target({:unsafe_fragment, fragment}, _dumper) when is_binary(fragment) do

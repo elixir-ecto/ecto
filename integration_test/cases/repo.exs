@@ -1447,20 +1447,6 @@ defmodule Ecto.Integration.RepoTest do
       assert c4.uuid != c1.uuid
     end
 
-    @tag :with_conflict_target
-    @tag :with_conflict_target_on_constraint
-    test "on conflict keyword list and conflict target on constraint" do
-      on_conflict = [set: [title: "new"]]
-      post = %Post{title: "old"}
-      {:ok, inserted} = TestRepo.insert(post, on_conflict: on_conflict, conflict_target: {:constraint, :posts_pkey})
-      assert inserted.id
-
-      {:ok, updated} = TestRepo.insert(%{post | id: inserted.id}, on_conflict: on_conflict, conflict_target: {:constraint, :posts_pkey})
-      assert updated.id == inserted.id
-      assert updated.title != "new"
-      assert TestRepo.get!(Post, inserted.id).title == "new"
-    end
-
     @tag :returning
     @tag :with_conflict_target
     test "on conflict keyword list and conflict target and returning and field source" do

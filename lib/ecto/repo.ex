@@ -1070,10 +1070,9 @@ defmodule Ecto.Repo do
     * `:conflict_target` - A list of column names to verify for conflicts.
       It is expected those columns to have unique indexes on them that may conflict.
       If none is specified, the conflict target is left up to the database.
-      It may also be `{:constraint, constraint_name_as_atom}` in databases
-      that support the "ON CONSTRAINT" expression, such as PostgreSQL, or
-      `{:unsafe_fragment, binary_fragment}` to pass any expression to the
-      database without any sanitization, such as
+      It may also be `{:unsafe_fragment, binary_fragment}` to pass any
+      expression to the database without any sanitization, this is useful
+      for partial index or index with expressions, such as
       `ON CONFLICT (coalesce(firstname, ""), coalesce(lastname, ""))`.
 
   See the "Shared options" section at the module documentation for
@@ -1162,10 +1161,9 @@ defmodule Ecto.Repo do
     * `:conflict_target` - A list of column names to verify for conflicts.
       It is expected those columns to have unique indexes on them that may conflict.
       If none is specified, the conflict target is left up to the database.
-      It may also be `{:constraint, constraint_name_as_atom}` in databases
-      that support the "ON CONSTRAINT" expression, such as PostgreSQL, or
-      `{:unsafe_fragment, binary_fragment}` to pass any expression to the
-      database without any sanitization, such as
+      It may also be `{:unsafe_fragment, binary_fragment}` to pass any
+      expression to the database without any sanitization, this is useful
+      for partial index or index with expressions, such as
       `ON CONFLICT (coalesce(firstname, ""), coalesce(lastname, ""))`.
     * `:stale_error_field` - The field where stale errors will be added in
       the returning changeset. This option can be used to avoid raising
