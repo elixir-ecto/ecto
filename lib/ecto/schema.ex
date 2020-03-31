@@ -110,7 +110,7 @@ defmodule Ecto.Schema do
       a tuple `{field_name, type, options}` with the primary key field
       name, type (typically `:id` or `:binary_id`, but can be any type) and
       options. It also accepts `false` to disable the generation of a primary
-      key field. Defaults to `{:id, :id, autogenerate: true}`. 
+      key field. Defaults to `{:id, :id, autogenerate: true}`.
 
     * `@schema_prefix` - configures the schema prefix. Defaults to `nil`,
       which generates structs and queries without prefix. When set, the
@@ -191,13 +191,13 @@ defmodule Ecto.Schema do
   module attribute and using `primary_key: true` as option for `field/3` in
   your schema definition. They are not mutually exclusive and can be used
   together.
-  
+
   Using `@primary_key` should be prefered for single field primary keys and
   sharing primary key definitions between multiple schemas using macros.
 
   Ecto also supports composite primary keys, which is where you need to use
-  `primary_key: true` for the fields in your schema. This usually goes along 
-  with setting `@primary_key false` to disable generation of additional 
+  `primary_key: true` for the fields in your schema. This usually goes along
+  with setting `@primary_key false` to disable generation of additional
   primary key fields.
 
   Besides `:id` and `:binary_id`, which are often used by primary
@@ -1185,12 +1185,12 @@ defmodule Ecto.Schema do
 
   ## Options
 
-    * `:join_through` - specifies the source of the associated data.
+    * `:join_through` - Specifies the source of the associated data.
       It may be a string, like "posts_tags", representing the
       underlying storage table or an atom, like `MyApp.PostTag`,
       representing a schema. This option is required.
 
-    * `:join_keys` - specifies how the schemas are associated. It
+    * `:join_keys` - Specifies how the schemas are associated. It
       expects a keyword list with two entries, the first being how
       the join table should reach the current schema and the second
       how the join table should reach the associated schema. In the
