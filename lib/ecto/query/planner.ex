@@ -198,9 +198,10 @@ defmodule Ecto.Query.Planner do
   def plan(query, operation, adapter) do
     query
     |> plan_sources(adapter)
-    |> plan_assocs
+    |> plan_assocs()
     |> plan_combinations(adapter)
     |> plan_ctes(adapter)
+    |> plan_wheres(adapter)
     |> plan_cache(operation, adapter)
   rescue
     e ->
@@ -209,12 +210,13 @@ defmodule Ecto.Query.Planner do
   end
 
   @doc """
-  Prepare all sources, by traversing and expanding joins.
+  Prepare all sources, by traversing and expanding from, joins, subqueries.
   """
   def plan_sources(query, adapter) do
     {from, sources} = plan_from(query, adapter)
     {joins, sources, tail_sources} = plan_joins(query, sources, length(query.joins), adapter)
-    %{query | from: from, joins: joins |> Enum.reverse,
+    %{query | from: from,
+              joins: joins |> Enum.reverse,
               sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple()}
   end
 
@@ -229,12 +231,7 @@ defmodule Ecto.Query.Planner do
 
   defp plan_source(query, %{source: %Ecto.SubQuery{} = subquery, prefix: prefix} = expr, adapter) do
     try do
-      %{query: inner_query} = subquery
-      inner_query = update_in inner_query.prefix, &(prefix || &1 || query.prefix)
-      {inner_query, params, key} = plan(inner_query, :all, adapter)
-      {inner_query, select} = inner_query |> ensure_select(true) |> subquery_select(adapter)
-      assert_no_subquery_assocs!(inner_query)
-      subquery = %{subquery | query: inner_query, params: params, cache: key, select: select}
+      subquery = plan_subquery(subquery, prefix || subquery.query.prefix || query.prefix, adapter)
       {%{expr | source: subquery}, subquery}
     rescue
       e -> raise Ecto.SubQueryError, query: query, exception: e
@@ -257,6 +254,16 @@ defmodule Ecto.Query.Planner do
 
   defp plan_source(query, %{source: {:fragment, _, _}, prefix: prefix} = expr, _adapter),
        do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment joins")
+
+  @spec plan_subquery(Ecto.SubQuery.t, String.t, module) :: Ecto.SubQuery.t
+  defp plan_subquery(subquery, prefix, adapter) do
+    %{query: inner_query} = subquery
+    inner_query = %{inner_query | prefix: prefix}
+    {inner_query, params, key} = plan(inner_query, :all, adapter)
+    assert_no_subquery_assocs!(inner_query)
+    {inner_query, select} = inner_query |> ensure_select(true) |> subquery_select(adapter)
+    %{subquery | query: inner_query, params: params, cache: key, select: select}
+  end
 
   # The prefix for form are computed upfront, but not for joins
   defp plan_source_schema_prefix(%FromExpr{prefix: prefix}, _schema),
@@ -540,6 +547,17 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  @spec plan_wheres(Ecto.Query.t, atom) :: Ecto.Query.t
+  defp plan_wheres(q, adapter) do
+    wheres = q.wheres |> Enum.map(fn
+      %BooleanExpr{expr: {:in, [], [left, %Ecto.SubQuery{} = s]}} = where ->
+        %{where | expr: {:in, [], [left, plan_subquery(s, s.query.prefix || q.prefix, adapter)]}}
+
+      where -> where
+    end)
+    %{q | wheres: wheres}
+  end
+
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
@@ -645,6 +663,16 @@ defmodule Ecto.Query.Planner do
   defp expr_to_cache(%BooleanExpr{op: op, expr: expr}), do: {op, expr}
   defp expr_to_cache(%QueryExpr{expr: expr}), do: expr
   defp expr_to_cache(%SelectExpr{expr: expr}), do: expr
+
+  defp cast_and_merge_params(:where, _query, %BooleanExpr{expr: {:in, [], [_left, %Ecto.SubQuery{params: p}]}}, params, _adapter) do
+    # On macro expansion, `where([t], t.id in subquery(s))` has no params.
+    # On a depth first traversal, we could collect params of expressions of t?
+    #
+    # Note that they have shape {"2", {0, :name}}, when s has `where([c], c.name == ^"2")`
+    # %Ecto.SubQuery.params has shape "2" (collected param values), in join on subquery.
+    # ^[1, 2] is treated as two params: 1, 2
+    {Enum.reverse(p, params), true}
+  end
 
   defp cast_and_merge_params(kind, query, expr, params, adapter) do
     Enum.reduce expr.params, {params, true}, fn {v, type}, {acc, cacheable?} ->
@@ -1019,6 +1047,12 @@ defmodule Ecto.Query.Planner do
   defp prewalk({:in, in_meta, [left, {:^, meta, [param]}]}, kind, query, expr, acc, adapter) do
     {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
     {right, acc} = validate_in(meta, expr, param, acc, adapter)
+    {{:in, in_meta, [left, right]}, acc}
+  end
+
+  defp prewalk({:in, in_meta, [left, %Ecto.SubQuery{} = right]}, kind, query, expr, acc, adapter) do
+    {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
+    {right, acc} = prewalk_source(right, kind, query, expr, acc, adapter)
     {{:in, in_meta, [left, right]}, acc}
   end
 

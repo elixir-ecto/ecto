@@ -318,7 +318,7 @@ defmodule Ecto.Query.Builder do
     rtype = {:in, quoted_type(left, vars)}
 
     {left, params_acc} = escape(left, ltype, params_acc, vars, env)
-    {right, params_acc} = escape(right, rtype, params_acc, vars, env)
+    {right, params_acc} = escape_subquery(right, rtype, params_acc, vars, env)
 
     # Remove any type wrapper from the right side
     right =
@@ -449,6 +449,13 @@ defmodule Ecto.Query.Builder do
     type = validate_type!(type, vars, env)
     {expr, params_acc} = escape(expr, type, params_acc, vars, env)
     {{:{}, [], [:type, [], [expr, Macro.escape(type)]]}, params_acc}
+  end
+
+  defp escape_subquery({:subquery, _, [expr]}, _, params, _vars, _env) do
+    {quote(do: Ecto.Query.subquery(unquote(expr))), params}
+  end
+  defp escape_subquery(expr, type, params, vars, env) do
+    escape(expr, type, params, vars, env)
   end
 
   defp wrap_nil(params, {:{}, _, [:^, _, [ix]]}), do: wrap_nil(params, ix, [])

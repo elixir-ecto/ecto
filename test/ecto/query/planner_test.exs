@@ -229,6 +229,25 @@ defmodule Ecto.Query.PlannerTest do
     assert params == ["abcd"]
   end
 
+  test "plan: where in subquery, expr (TODO)" do
+    p = from(p in Post, select: p.id)
+    q = from(c in Comment, where: c.post_id in subquery(p))
+
+    q = q |> plan() |> elem(0)
+
+    assert {{"comments", _, _}} = q.sources
+    assert {:in, [], [{{:., [], [{:&, [], [0]}, :post_id]}, [], []}, %Ecto.SubQuery{}]} = (hd(q.wheres)).expr
+  end
+
+  test "plan: where in subquery, params (TODO)" do
+    p = from(p in Post, select: p.id, where: p.id in ^[2, 3])
+    q = from(c in Comment, where: c.text == ^"1", where: c.post_id in subquery(p), where: c.crazy_comment == ^"4")
+
+    params = q |> plan() |> elem(1)
+
+    assert params == ["1", 2, 3, "4"]
+  end
+
   test "plan: casts values on update_all" do
     {_query, params, _key} = plan(Post |> update([p], set: [id: ^"1"]), :update_all)
     assert params == [1]
@@ -1040,6 +1059,17 @@ defmodule Ecto.Query.PlannerTest do
            select_fields([:id, :text], 1) ++
             select_fields([:id], 0) ++
            select_fields([:id], 1)
+  end
+
+  test "normalize: where in subquery (TODO)" do
+    c = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
+    s = from(p in Post, where: p.id in subquery(c), select: count())
+
+    assert (hd(s.wheres).expr |> elem(2) |> Enum.at(1)).query.select.fields == nil
+
+    q = normalize(s)
+
+    assert [{:post_id, _}] = (hd(q.wheres).expr |> elem(2) |> Enum.at(1)).query.select.fields
   end
 
   test "normalize: windows" do
