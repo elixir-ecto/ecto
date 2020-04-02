@@ -107,7 +107,7 @@ Updates and deletes can also be done without schemas via `c:Ecto.Repo.update_all
 # Use the ID to trigger updates
 post = from p in "posts", where: [id: ^id]
 
-# Update the title for all matchihg posts
+# Update the title for all matching posts
 {1, _} =
   MyApp.Repo.update_all post, set: [title: "new title"]
 
