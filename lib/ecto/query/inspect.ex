@@ -268,6 +268,10 @@ defimpl Inspect, for: Ecto.Query do
     json_expr_path_to_expr(expr, path) |> expr(names, part)
   end
 
+  defp expr_to_string(%Ecto.SubQuery{} = s, _string, _names, _part) do
+    inspect_source(s)
+  end
+
   defp expr_to_string(_expr, string, _, _) do
     string
   end
