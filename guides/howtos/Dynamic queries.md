@@ -185,13 +185,13 @@ end
 
 # 2. Returned dynamic with join binding
 def filter_order_by("published_at_desc"),
-  do: dynamic([p], desc: p.published_at)
+  do: [desc: dynamic([p], p.published_at)]
 
 def filter_order_by("published_at"),
   do: dynamic([p], p.published_at)
 
 def filter_order_by("author_name_desc"),
-  do: dynamic([authors: a], desc: a.name)
+  do: [desc: dynamic([authors: a], a.name)]
 
 def filter_order_by("author_name"),
   do: dynamic([authors: a], a.name)
