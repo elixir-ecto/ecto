@@ -206,10 +206,6 @@ defmodule Ecto.Repo do
         Ecto.Repo.Schema.load(@adapter, schema_or_types, data)
       end
 
-      def embedded_load(schema_or_types, data, format) do
-        Ecto.Repo.Schema.embedded_load(@adapter, schema_or_types, data, format)
-      end
-
       def checkout(fun, opts \\ []) when is_function(fun) do
         {adapter, meta} = Ecto.Repo.Registry.lookup(get_dynamic_repo())
         adapter.checkout(meta, opts, fun)
@@ -454,6 +450,8 @@ defmodule Ecto.Repo do
   Fields that are not present in the schema (or `types` map) are ignored.
   If any of the values has invalid type, an error is raised.
 
+  To load data from non-database sources, use `Ecto.embedded_load/3`.
+
   ## Examples
 
       iex> MyRepo.load(User, %{name: "Alice", age: 25})
@@ -483,38 +481,6 @@ defmodule Ecto.Repo do
   @callback load(
               module_or_map :: module | map(),
               data :: map() | Keyword.t() | {list, list}
-            ) :: Ecto.Schema.t() | map()
-
-  @doc """
-  Loads `data` into a struct or a map using the `Ecto.Type.embedded_load/3`
-  function internally.
-
-  The first argument can be a a schema module, or a
-  map (of types) and determines the return value:
-  a struct or a map, respectively.
-
-  The second argument `data` specifies fields and values that are to be loaded.
-  It can be a map, a keyword list, or a `{fields, values}` tuple.
-  Fields can be atoms or strings.
-
-  The third argument `format` is passed to `Ecto.Type.embedded_load/3`'s
-  `format` argument and decides how the values are loaded from sources other
-  than the database on a per-type basis. For example, if the data comes from a
-  JSON document, `:json` can be passed.
-
-  Fields that are not present in the schema (or `types` map) are ignored.
-  If any of the values has invalid type, an error is raised.
-
-  ## Examples
-
-      iex> result = Ecto.Adapters.SQL.query!(MyRepo, "SELECT row_to_json(users) FROM users", [])
-      iex> Enum.map(result.rows, &MyRepo.embedded_load(User, Jason.decode!(List.first(&1)), :json))
-      [%User{...}, ...]
-  """
-  @callback embedded_load(
-              module_or_map :: module | map(),
-              data :: map() | Keyword.t() | {list, list},
-              format :: atom()
             ) :: Ecto.Schema.t() | map()
 
   @doc """

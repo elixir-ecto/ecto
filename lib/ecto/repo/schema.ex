@@ -454,7 +454,7 @@ defmodule Ecto.Repo.Schema do
     do_load(schema_or_types, data, &Ecto.Type.adapter_load(adapter, &1, &2))
   end
 
-  def embedded_load(_adapter, schema_or_types, data, format) do
+  def embedded_load(schema_or_types, data, format) do
     do_load(schema_or_types, data, &Ecto.Type.embedded_load(&1, &2, format))
   end
 
