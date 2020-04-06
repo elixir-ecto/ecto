@@ -605,8 +605,8 @@ defmodule Ecto do
   @doc """
   Loads previously dumped `data` in the given `format` into a schema.
 
-  The first argument can be a a schema module, or a map (of types) and determines
-  the return value: a struct or a map, respectively.
+  The first argument can be a an embedded schema module, or a map (of types) and
+  determines the return value: a struct or a map, respectively.
 
   The second argument `data` specifies fields and values that are to be loaded.
   It can be a map, a keyword list, or a `{fields, values}` tuple. Fields can be
@@ -618,6 +618,9 @@ defmodule Ecto do
 
   Fields that are not present in the schema (or `types` map) are ignored.
   If any of the values has invalid type, an error is raised.
+
+  Note that if you want to load data into a non-embedded schema that was
+  directly persisted into a given repository, then use `c:Ecto.Repo.load/3`.
 
   ## Examples
 
