@@ -29,14 +29,14 @@ defmodule Ecto.Repo.SupervisorTest do
   test "emits telemetry event upon repo start" do
     :telemetry.attach_many(
       :telemetry_test,
-      [[:ecto, :repo, :start]],
+      [[:ecto, :repo, :init]],
       &__MODULE__.handle_event/4,
       %{pid: self()}
     )
 
     Ecto.TestRepo.start_link(name: :telemetry_test)
 
-    assert_receive {[:ecto, :repo, :start], _, %{repo: Ecto.TestRepo, opts: opts}}
+    assert_receive {[:ecto, :repo, :init], _, %{repo: Ecto.TestRepo, opts: opts}}
     assert opts[:telemetry_prefix] == [:ecto, :test_repo]
     assert opts[:name] == :telemetry_test
 

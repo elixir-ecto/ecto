@@ -170,7 +170,7 @@ defmodule Ecto.Repo.Supervisor do
     case runtime_config(:supervisor, repo, otp_app, opts) do
       {:ok, opts} ->
         :telemetry.execute(
-          [:ecto, :repo, :start],
+          [:ecto, :repo, :init],
           %{system_time: System.system_time()},
           %{repo: repo, opts: opts}
         )
