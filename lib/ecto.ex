@@ -602,7 +602,6 @@ defmodule Ecto do
     end
   end
 
-
   @doc """
   Loads previously dumped `data` in the given `format` into a schema.
 
