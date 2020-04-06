@@ -450,6 +450,8 @@ defmodule Ecto.Repo do
   Fields that are not present in the schema (or `types` map) are ignored.
   If any of the values has invalid type, an error is raised.
 
+  To load data from non-database sources, use `Ecto.embedded_load/3`.
+
   ## Examples
 
       iex> MyRepo.load(User, %{name: "Alice", age: 25})
