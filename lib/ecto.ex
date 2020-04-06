@@ -625,7 +625,7 @@ defmodule Ecto do
   ## Examples
 
       iex> result = Ecto.Adapters.SQL.query!(MyRepo, "SELECT users.settings FROM users", [])
-      iex> Enum.map(result.rows, fn [settings] -> MyRepo.embedded_load(Setting, Jason.decode!(settings), :json) end)
+      iex> Enum.map(result.rows, fn [settings] -> Ecto.embedded_load(Setting, Jason.decode!(settings), :json) end)
       [%Setting{...}, ...]
   """
   @spec embedded_load(
