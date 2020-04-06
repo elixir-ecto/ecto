@@ -52,6 +52,14 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  defmodule MySchemaWithUuid do
+    use Ecto.Schema
+
+    schema "my_schema" do
+      field :uuid, Ecto.UUID
+    end
+  end
+
   defmodule MySchemaWithPrefix do
     use Ecto.Schema
 
@@ -185,6 +193,25 @@ defmodule Ecto.RepoTest do
     # schemaless
     assert TestRepo.load(%{x: :string}, %{x: "abc", bad: "bad"}) ==
            %{x: "abc"}
+  end
+
+  test "embedded_load/3" do
+    uuid = Ecto.UUID.generate()
+
+    assert %MySchemaWithUuid{uuid: ^uuid} =
+             TestRepo.embedded_load(MySchemaWithUuid, %{"uuid" => uuid}, :json)
+
+    assert %MySchemaWithUuid{uuid: ^uuid} =
+             TestRepo.embedded_load(MySchemaWithUuid, %{uuid: uuid}, :json)
+
+    assert %MySchemaWithUuid{uuid: nil} =
+             TestRepo.embedded_load(MySchemaWithUuid, %{"uuid" => nil}, :json)
+
+    assert_raise ArgumentError,
+                 ~s[cannot load `"ABC"` as type Ecto.UUID for field `uuid` in schema Ecto.RepoTest.MySchemaWithUuid],
+                 fn ->
+                   TestRepo.embedded_load(MySchemaWithUuid, %{"uuid" => "ABC"}, :json)
+                 end
   end
 
   describe "get" do
