@@ -52,8 +52,6 @@ defmodule Ecto.RepoTest do
     end
   end
 
-
-
   defmodule MySchemaWithPrefix do
     use Ecto.Schema
 
