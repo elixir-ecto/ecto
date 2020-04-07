@@ -169,6 +169,12 @@ defmodule Ecto.Repo.Supervisor do
   def init({name, repo, otp_app, adapter, opts}) do
     case runtime_config(:supervisor, repo, otp_app, opts) do
       {:ok, opts} ->
+        :telemetry.execute(
+          [:ecto, :repo, :init],
+          %{system_time: System.system_time()},
+          %{repo: repo, opts: opts}
+        )
+
         {:ok, child, meta} = adapter.init([repo: repo] ++ opts)
         cache = Ecto.Query.Planner.new_query_cache(name)
         meta = Map.merge(meta, %{repo: repo, cache: cache})
