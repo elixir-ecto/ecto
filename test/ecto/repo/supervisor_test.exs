@@ -22,6 +22,27 @@ defmodule Ecto.Repo.SupervisorTest do
             user: "invalid", username: "user"]
   end
 
+  def handle_event(event, measurements, metadata, %{pid: pid}) do
+    send(pid, {event, measurements, metadata})
+  end
+
+  test "emits telemetry event upon repo start" do
+    :telemetry.attach_many(
+      :telemetry_test,
+      [[:ecto, :repo, :init]],
+      &__MODULE__.handle_event/4,
+      %{pid: self()}
+    )
+
+    Ecto.TestRepo.start_link(name: :telemetry_test)
+
+    assert_receive {[:ecto, :repo, :init], _, %{repo: Ecto.TestRepo, opts: opts}}
+    assert opts[:telemetry_prefix] == [:ecto, :test_repo]
+    assert opts[:name] == :telemetry_test
+
+    :telemetry.detach(:telemetry_test)
+  end
+
   test "reads otp app configuration" do
     put_env(database: "hello")
     {:ok, config} = runtime_config(:runtime, __MODULE__, :ecto, [])
