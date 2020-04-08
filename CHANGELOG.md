@@ -1,5 +1,21 @@
 # Changelog for v3.x
 
+## v3.4.1 (2020-04-08)
+
+### Enhancements
+
+  * [Ecto] Add `Ecto.embedded_load/3` and `Ecto.embedded_dump/2`
+  * [Ecto.Query] Improve error message on invalid JSON expressions
+  * [Ecto.Repo] Emit `[:ecto, :repo, :init]` telemetry event upon Repo init
+
+### Bug fixes
+
+  * [Ecto.Query] Do not support JSON selectors on `type/2`
+
+### Deprecations
+
+  * [Ecto.Repo] Deprecate `conflict_target: {:constraint, _}`. It is a discouraged approach and `{:unsafe_fragment, _}` is still available if someone definitely needs it
+
 ## v3.4.0 (2020-03-24)
 
 ### Enhancements
