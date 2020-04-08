@@ -111,10 +111,6 @@ defmodule Ecto.Query.Builder do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
-  def escape({:type, _, [{{:., _, [Access, :get]}, _, _} = expr, type]}, _type, params_acc, vars, env) do
-    escape_with_type(expr, type, params_acc, vars, env)
-  end
-
   def escape({:type, meta, [expr, type]}, given_type, params_acc, vars, env) do
     case Macro.expand_once(expr, get_env(env)) do
       ^expr ->
