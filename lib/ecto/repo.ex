@@ -92,7 +92,20 @@ defmodule Ecto.Repo do
     * `:telemetry_options` - Extra options to attach to telemetry event name.
       See the next section for more information
 
-  ### Telemetry events
+  ## Telemetry events
+
+  There are two types of telemetry events. The ones emitted by Ecto and the
+  ones that are adapter specific.
+
+  ### Ecto telemetry events
+
+  The following events are emitted by all Ecto repositories:
+
+    * `[:ecto, :repo, :init]` - it is invoked whenever a repository starts.
+      The measurement is a single `system_time` entry in native unit. The
+      metadata is the `:repo` and all initialization options under `:opts`.
+
+  ### Adapter-specific events
 
   We recommend adapters to publish certain `Telemetry` events listed below.
   Those events will use the `:telemetry_prefix` outlined above which defaults
