@@ -636,4 +636,12 @@ defmodule Ecto do
   def embedded_load(schema_or_types, data, format) do
     Ecto.Repo.Schema.embedded_load(schema_or_types, data, format)
   end
+
+  @spec embedded_dump(
+              Ecto.Schema.t(),
+              format :: atom()
+            ) :: map()
+  def embedded_dump(%{__meta__: %Ecto.Schema.Metadata{schema: schema}} = data, format) do
+    Ecto.Repo.Schema.embedded_dump(schema, data, format)
+  end
 end
