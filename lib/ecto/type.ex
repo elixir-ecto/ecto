@@ -248,6 +248,10 @@ defmodule Ecto.Type do
       {:ok, Decimal.new("1")}
 
   """
+  def embedded_dump({:embed, _} = type, value, format) do
+    dump(type, value, &embedded_dump(&1, &2, format))
+  end
+
   def embedded_dump(type, value, format) do
     case embed_as(type, format) do
       :self -> {:ok, value}
@@ -264,6 +268,10 @@ defmodule Ecto.Type do
       {:ok, Decimal.new("1")}
 
   """
+  def embedded_load({:embed, _} = type, value, format) do
+    load(type, value, &embedded_load(&1, &2, format))
+  end
+
   def embedded_load(type, value, format) do
     case embed_as(type, format) do
       :self ->
@@ -512,17 +520,7 @@ defmodule Ecto.Type do
   end
 
   defp dump_embed(_field, schema, %{__struct__: schema} = struct, types, dumper) do
-    Enum.reduce(types, %{}, fn {field, {source, type}}, acc ->
-      value = Map.get(struct, field)
-
-      case dumper.(type, value) do
-        {:ok, value} ->
-          Map.put(acc, source, value)
-        :error ->
-          raise ArgumentError, "cannot dump `#{inspect value}` as type #{inspect type} " <>
-                               "for field `#{field}` in schema #{inspect schema}"
-      end
-    end)
+    Ecto.Schema.Loader.safe_dump(struct, types, dumper)
   end
 
   defp dump_embed(field, _schema, value, _types, _fun) do

@@ -86,4 +86,21 @@ defmodule Ecto.Schema.Loader do
   defp error_data(other) when is_map(other) do
     ""
   end
+
+  @doc """
+  Dumps the given data.
+  """
+  def safe_dump(struct, types, dumper) do
+    Enum.reduce(types, %{}, fn {field, {source, type}}, acc ->
+      value = Map.get(struct, field)
+
+      case dumper.(type, value) do
+        {:ok, value} ->
+          Map.put(acc, source, value)
+        :error ->
+          raise ArgumentError, "cannot dump `#{inspect value}` as type #{inspect type} " <>
+                               "for field `#{field}` in schema #{inspect struct.__struct__}"
+      end
+    end)
+  end
 end

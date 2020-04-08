@@ -454,16 +454,6 @@ defmodule Ecto.Repo.Schema do
     do_load(schema_or_types, data, &Ecto.Type.adapter_load(adapter, &1, &2))
   end
 
-  def embedded_load(schema_or_types, data, format) do
-    do_load(schema_or_types, data, &do_embedded(&1, &2, format, :embedded_load))
-  end
-
-  def embedded_dump(schema, struct, format) do
-    schema
-    |> do_load(Map.drop(struct, [:__struct__, :__meta__]), &do_embedded(&1, &2, format, :embedded_dump))
-    |> Map.drop([:__struct__, :__meta__])
-  end
-
   defp do_load(schema, data, loader) when is_list(data),
     do: do_load(schema, Map.new(data), loader)
   defp do_load(schema, {fields, values}, loader) when is_list(fields) and is_list(values),
@@ -472,25 +462,6 @@ defmodule Ecto.Repo.Schema do
     do: Ecto.Schema.Loader.unsafe_load(schema, data, loader)
   defp do_load(types, data, loader) when is_map(types),
     do: Ecto.Schema.Loader.unsafe_load(%{}, types, data, loader)
-
-
-  defp do_embedded(_type, nil, _format, _function) do
-    {:ok, nil}
-  end
-  defp do_embedded({:embed, meta}, value, format, function) do
-    loaded = case meta do
-      %{cardinality: :one, related: schema} ->
-        apply(__MODULE__, function, [schema, value, format])
-
-      %{cardinality: :many, related: schema} ->
-        Enum.map(value, &apply(__MODULE__, function, [schema, &1, format]))
-    end
-
-    {:ok, loaded}
-  end
-  defp do_embedded(type, value, format, function) do
-    apply(Ecto.Type, function, [type, value, format])
-  end
 
   ## Helpers
 

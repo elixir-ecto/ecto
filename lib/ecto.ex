@@ -630,18 +630,15 @@ defmodule Ecto do
   """
   @spec embedded_load(
               module_or_map :: module | map(),
-              data :: map() | Keyword.t(),
+              data :: map(),
               format :: atom()
             ) :: Ecto.Schema.t() | map()
   def embedded_load(schema_or_types, data, format) do
-    Ecto.Repo.Schema.embedded_load(schema_or_types, data, format)
+    Ecto.Schema.Loader.unsafe_load(schema_or_types, data, &Ecto.Type.embedded_load(&1, &2, format))
   end
 
-  @spec embedded_dump(
-              Ecto.Schema.t(),
-              format :: atom()
-            ) :: map()
-  def embedded_dump(%{__meta__: %Ecto.Schema.Metadata{schema: schema}} = data, format) do
-    Ecto.Repo.Schema.embedded_dump(schema, data, format)
+  @spec embedded_dump(Ecto.Schema.t(), format :: atom()) :: map()
+  def embedded_dump(%schema{} = data, format) do
+    Ecto.Schema.Loader.safe_dump(data, schema.__schema__(:dump), &Ecto.Type.embedded_dump(&1, &2, format))
   end
 end

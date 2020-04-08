@@ -4,10 +4,18 @@ defmodule Ecto.EmbeddedTest do
   doctest Ecto.Embedded
   alias Ecto.Embedded
 
+  defmodule Post do
+    use Ecto.Schema
+
+    embedded_schema do
+      field :title
+    end
+  end
+
   defmodule Author do
     use Ecto.Schema
 
-    schema "authors" do
+    embedded_schema do
       field :name, :string
       embeds_one :profile, Profile, on_replace: :delete
       embeds_one :post, Post
@@ -15,10 +23,10 @@ defmodule Ecto.EmbeddedTest do
     end
   end
 
-  defmodule MySchemaWithUuid do
+  defmodule UUIDSchema do
     use Ecto.Schema
 
-    schema "my_schema" do
+    embedded_schema do
       field :uuid, Ecto.UUID
 
       embeds_one :author, Ecto.EmbeddedTest.Author
@@ -40,37 +48,38 @@ defmodule Ecto.EmbeddedTest do
   test "embedded_load/3" do
     uuid = Ecto.UUID.generate()
 
-    assert %MySchemaWithUuid{uuid: ^uuid} =
-             Ecto.embedded_load(MySchemaWithUuid, %{"uuid" => uuid}, :json)
+    assert %UUIDSchema{uuid: ^uuid} =
+             Ecto.embedded_load(UUIDSchema, %{"uuid" => uuid}, :json)
 
-    assert %MySchemaWithUuid{uuid: ^uuid} =
-             Ecto.embedded_load(MySchemaWithUuid, %{uuid: uuid}, :json)
+    assert %UUIDSchema{uuid: ^uuid} =
+             Ecto.embedded_load(UUIDSchema, %{uuid: uuid}, :json)
 
-    assert %MySchemaWithUuid{uuid: nil} =
-             Ecto.embedded_load(MySchemaWithUuid, %{"uuid" => nil}, :json)
+    assert %UUIDSchema{uuid: nil} =
+             Ecto.embedded_load(UUIDSchema, %{"uuid" => nil}, :json)
 
-    assert %MySchemaWithUuid{uuid: ^uuid, author: %Author{name: "Bob"}} =
-             Ecto.embedded_load(MySchemaWithUuid, %{"uuid" => uuid, "author" => %{"name" => "Bob"}}, :json)
+    assert %UUIDSchema{uuid: ^uuid, author: %Author{name: "Bob"}} =
+             Ecto.embedded_load(UUIDSchema, %{"uuid" => uuid, "author" => %{"name" => "Bob"}}, :json)
 
-    assert %MySchemaWithUuid{uuid: ^uuid, authors: [%Author{}]} =
-             Ecto.embedded_load(MySchemaWithUuid, %{"uuid" => uuid, "authors" => [%{}]}, :json)
+    assert %UUIDSchema{uuid: ^uuid, authors: [%Author{}]} =
+             Ecto.embedded_load(UUIDSchema, %{"uuid" => uuid, "authors" => [%{}]}, :json)
 
     assert_raise ArgumentError,
-                 ~s[cannot load `"ABC"` as type Ecto.UUID for field `uuid` in schema Ecto.EmbeddedTest.MySchemaWithUuid],
+                 ~s[cannot load `"ABC"` as type Ecto.UUID for field `uuid` in schema Ecto.EmbeddedTest.UUIDSchema],
                  fn ->
-                   Ecto.embedded_load(MySchemaWithUuid, %{"uuid" => "ABC"}, :json)
+                   Ecto.embedded_load(UUIDSchema, %{"uuid" => "ABC"}, :json)
                  end
   end
 
   test "embedded_dump/2" do
     uuid = Ecto.UUID.generate()
 
-    assert %{uuid: ^uuid} = Ecto.embedded_dump(%MySchemaWithUuid{uuid: uuid}, :json)
+    assert %{uuid: ^uuid} = Ecto.embedded_dump(%UUIDSchema{uuid: uuid}, :json)
 
-    struct = %MySchemaWithUuid{uuid: uuid, authors: [
+    struct = %UUIDSchema{uuid: uuid, authors: [
       %Author{name: "Bob"},
       %Author{name: "Alice"}
     ]}
+
     dumped = Ecto.embedded_dump(struct, :json)
     assert not Map.has_key?(dumped, :__struct__)
     assert [author1 | _] = dumped.authors
