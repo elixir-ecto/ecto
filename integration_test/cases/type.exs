@@ -287,17 +287,12 @@ defmodule Ecto.Integration.TypeTest do
     TestRepo.insert!(order)
 
     assert TestRepo.one(from o in Order, select: o.meta["id"]) == 123
-
     assert TestRepo.one(from o in Order, select: o.meta["bad"]) == nil
     assert TestRepo.one(from o in Order, select: o.meta["bad"]["bad"]) == nil
 
-    assert TestRepo.one(from o in Order, select: type(o.meta["id"], :string)) == "123"
-
     field = "id"
     assert TestRepo.one(from o in Order, select: o.meta[^field]) == 123
-
     assert TestRepo.one(from o in Order, select: o.meta["time"]) == "09:00:00"
-
     assert TestRepo.one(from o in Order, select: o.meta["'single quoted'"]) == "bar"
     assert TestRepo.one(from o in Order, select: o.meta["';"]) == nil
     assert TestRepo.one(from o in Order, select: o.meta["\"double quoted\""]) == "baz"
@@ -310,11 +305,10 @@ defmodule Ecto.Integration.TypeTest do
     TestRepo.insert!(order)
 
     assert TestRepo.one(from o in Order, select: o.meta["tags"][0]["name"]) == "red"
+    assert TestRepo.one(from o in Order, select: o.meta["tags"][99]["name"]) == nil
 
     index = 1
     assert TestRepo.one(from o in Order, select: o.meta["tags"][^index]["name"]) == "green"
-
-    assert TestRepo.one(from o in Order, select: o.meta["tags"][99]["name"]) == nil
   end
 
   @tag :map_type
