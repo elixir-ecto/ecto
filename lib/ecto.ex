@@ -620,7 +620,7 @@ defmodule Ecto do
   If any of the values has invalid type, an error is raised.
 
   Note that if you want to load data into a non-embedded schema that was
-  directly persisted into a given repository, then use `c:Ecto.Repo.load/3`.
+  directly persisted into a given repository, then use `c:Ecto.Repo.load/2`.
 
   ## Examples
 
