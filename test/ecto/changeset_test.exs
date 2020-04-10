@@ -1534,6 +1534,14 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  test "unique_constraint/3 with multiple fields" do
+    changeset = change(%Post{}) |> unique_constraint([:permalink, :color])
+
+    assert constraints(changeset) ==
+           [%{type: :unique, field: :permalink, constraint: "posts_url_color_index", match: :exact,
+              error_message: "has already been taken", error_type: :unique}]
+  end
+
   test "foreign_key_constraint/3" do
     changeset = change(%Comment{}) |> foreign_key_constraint(:post_id)
     assert constraints(changeset) ==

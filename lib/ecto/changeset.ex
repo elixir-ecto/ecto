@@ -1776,14 +1776,33 @@ defmodule Ecto.Changeset do
   early feedback to users, since most conflicting data will have been
   inserted prior to the current validation phase.
 
+  If given a list of fields, the first field name will be used as the
+  error key to the changeset errors keyword list.
+
+  ## Options
+
+    * `:message` - the message in case the constraint check fails,
+      defaults to "has already been taken"
+
+
+    * `:match` - how the changeset constraint name is matched against the
+      repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
+      `:suffix` matches any repo constraint which `ends_with?` `:name`
+       to this changeset constraint.
+
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). See `Ecto.Repo` documentation
+      for more information.
+
   ## Examples
 
-      unsafe_validate_unique(changeset, [:email], repo)
+      unsafe_validate_unique(changeset, :city_name, repo)
       unsafe_validate_unique(changeset, [:city_name, :state_name], repo)
       unsafe_validate_unique(changeset, [:city_name, :state_name], repo, message: "city must be unique within state")
       unsafe_validate_unique(changeset, [:city_name, :state_name], repo, prefix: "public")
 
   """
+  @spec unsafe_validate_unique(t, atom | [atom, ...], Ecto.Repo.t, Keyword.t) :: t
   def unsafe_validate_unique(changeset, fields, repo, opts \\ []) when is_list(opts) do
     fields = List.wrap(fields)
     {validations, schema} =
@@ -2450,7 +2469,7 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Checks for a unique constraint in the given field.
+  Checks for a unique constraint in the given field or list of fields.
 
   The unique constraint works by relying on the database to check
   if the unique constraint has been violated or not and, if so,
@@ -2478,9 +2497,11 @@ defmodule Ecto.Changeset do
 
     * `:message` - the message in case the constraint check fails,
       defaults to "has already been taken"
+
     * `:name` - the constraint name. By default, the constraint
-      name is inferred from the table + field. May be required
+      name is inferred from the table + field(s). May be required
       explicitly for complex cases
+
     * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
       `:suffix` matches any repo constraint which `ends_with?` `:name`
@@ -2490,29 +2511,26 @@ defmodule Ecto.Changeset do
 
   Because the constraint logic is in the database, we can leverage
   all the database functionality when defining them. For example,
-  let's suppose the e-mails are scoped by company id. We would write
-  in a migration:
+  let's suppose the e-mails are scoped by company id:
 
+      # In migration
       create unique_index(:users, [:email, :company_id])
 
-  Because such indexes have usually more complex names, we need
-  to explicitly tell the changeset which constraint name to use (here we're
-  using the naming convention that `unique_index` uses):
-
+      # In the changeset function
       cast(user, params, [:email])
-      |> unique_constraint(:email, name: :users_email_company_id_index)
+      |> unique_constraint([:email, :company_id])
 
-  Notice that the first param is just one of the unique index fields, this will
-  be used as the error key to the changeset errors keyword list. For example,
-  the above `unique_constraint/3` would generate something like:
+  The first field name, `:email` in this case, will be used as the error
+  key to the changeset errors keyword list. For example, the above
+  `unique_constraint/3` would generate something like:
 
       Repo.insert!(%User{email: "john@elixir.org", company_id: 1})
       changeset = User.changeset(%User{}, %{email: "john@elixir.org", company_id: 1})
       {:error, changeset} = Repo.insert(changeset)
       changeset.errors #=> [email: {"has already been taken", []}]
 
-  Alternatively, you can give both `unique_index` and `unique_constraint`
-  the same name:
+  In complex cases, instead of relying on name inference, it may be best
+  to set the contraint name explicitly:
 
       # In the migration
       create unique_index(:users, [:email, :company_id], name: :users_email_company_id_index)
@@ -2524,7 +2542,7 @@ defmodule Ecto.Changeset do
   ### Partitioning
 
   If your table is partitioned, then your unique index might look different
-  per partition - Postgres adds p<number> to the middle of your key, like:
+  per partition, e.g. Postgres adds p<number> to the middle of your key, like:
 
       users_p0_email_key
       users_p1_email_key
@@ -2559,12 +2577,23 @@ defmodule Ecto.Changeset do
       |> unique_constraint(:email)
 
   """
-  @spec unique_constraint(t, atom, Keyword.t) :: t
-  def unique_constraint(changeset, field, opts \\ []) do
-    constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_index"
+  @spec unique_constraint(t, atom | [atom, ...], Keyword.t) :: t
+  def unique_constraint(changeset, field_or_fields, opts \\ [])
+
+  def unique_constraint(changeset, field, opts) when is_atom(field) do
+    unique_constraint(changeset, [field], opts)
+  end
+
+  def unique_constraint(changeset, [first_field | _] = fields, opts) do
+    constraint = opts[:name] || unique_index_name(changeset, fields)
     message    = message(opts, "has already been taken")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :unique, to_string(constraint), match_type, field, message)
+    add_constraint(changeset, :unique, to_string(constraint), match_type, first_field, message)
+  end
+
+  defp unique_index_name(changeset, fields) do
+    field_names = Enum.map(fields, &get_field_source(changeset, &1))
+    Enum.join([get_source(changeset)] ++ field_names ++ ["index"], "_")
   end
 
   @doc """
