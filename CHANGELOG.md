@@ -1,5 +1,11 @@
 # Changelog for v3.x
 
+## v3.4.2 (2020-04-10)
+
+### Enhancements
+
+  * [Ecto.Changeset] Support multiple fields in `unique_constraint/3`
+
 ## v3.4.1 (2020-04-08)
 
 ### Enhancements
