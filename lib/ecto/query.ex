@@ -1104,7 +1104,7 @@ defmodule Ecto.Query do
 
   Keyword syntax is not supported for this feature.
 
-  ## Limitation: CTEs on schemas wth source fields
+  ## Limitation: CTEs on schemas with source fields
 
   Ecto allows developers to say that a table in their Ecto schema
   map to a different column in their database:
