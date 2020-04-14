@@ -394,19 +394,29 @@ Friends.Repo.insert! Friends.Person.changeset(%Friends.Person{}, %{first_name: "
 
 ** (Ecto.InvalidChangesetError) could not perform insert because changeset is invalid.
 
-* Changeset changes
+Errors
 
-%{first_name: "Ryan"}
+    %{last_name: [{"can't be blank", [validation: :required]}]}
 
-* Changeset params
+Applied changes
 
-%{"first_name" => "Ryan"}
+    %{first_name: "Ryan"}
 
-* Changeset errors
+Params
 
-[last_name: "can't be blank"]
+    %{"first_name" => "Ryan"}
 
-    lib/ecto/repo/schema.ex:111: Ecto.Repo.Schema.insert!/4
+Changeset
+
+    #Ecto.Changeset<
+      action: :insert,
+      changes: %{first_name: "Ryan"},
+      errors: [last_name: {"can't be blank", [validation: :required]}],
+      data: #Friends.Person<>,
+      valid?: false
+    >
+
+   lib/ecto/repo/schema.ex:169: Ecto.Repo.Schema.insert!/4
 ```
 
 This exception shows us the changes from the changeset, and how the changeset is invalid. This can be useful if you want to insert a bunch of data and then have an exception raised if that data is not inserted correctly at all.
