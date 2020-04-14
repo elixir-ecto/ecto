@@ -728,6 +728,15 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "normalize: late bindings with as" do
+    query = from(Post, as: :posts, where: as(:posts).code == ^123) |> normalize()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.code() == ^0"
+
+    assert_raise Ecto.QueryError, ~r/could not find named binding `as\(:posts\)`/, fn ->
+      from(Post, where: as(:posts).code == ^123) |> normalize()
+    end
+  end
+
   test "normalize: assoc join with wheres that have regular filters" do
     {_query, params, _select} =
       from(post in Post,

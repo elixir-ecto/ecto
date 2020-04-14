@@ -663,7 +663,9 @@ defmodule Ecto.Query.Planner do
     :nocache
   end
 
-  defp finalize_cache(%{assocs: assocs, prefix: prefix, lock: lock, select: select}, operation, cache) do
+  defp finalize_cache(query, operation, cache) do
+    %{assocs: assocs, prefix: prefix, lock: lock, select: select, aliases: aliases} = query
+
     cache =
       case select do
         %{take: take} when take != %{} ->
@@ -674,9 +676,10 @@ defmodule Ecto.Query.Planner do
 
     cache =
       cache
-      |> prepend_if(assocs != [],  [assocs: assocs])
-      |> prepend_if(prefix != nil, [prefix: prefix])
-      |> prepend_if(lock != nil,   [lock: lock])
+      |> prepend_if(assocs != [],   [assocs: assocs])
+      |> prepend_if(prefix != nil,  [prefix: prefix])
+      |> prepend_if(lock != nil,    [lock: lock])
+      |> prepend_if(aliases != %{}, [aliases: aliases])
 
     [operation | cache]
   end
@@ -1013,11 +1016,12 @@ defmodule Ecto.Query.Planner do
     {{:in, in_meta, [left, right]}, acc}
   end
 
-  defp prewalk({{:., dot_meta, [{:&, amp_meta, [ix]}, field]}, meta, []},
+  defp prewalk({{:., dot_meta, [left, field]}, meta, []},
                kind, query, expr, acc, _adapter) do
+    {ix, ix_meta} = get_ix!(left, query)
     extra = if kind == :select, do: [type: type!(kind, query, expr, ix, field)], else: []
     field = field_source(get_source!(kind, query, ix), field)
-    {{{:., extra ++ dot_meta, [{:&, amp_meta, [ix]}, field]}, meta, []}, acc}
+    {{{:., extra ++ dot_meta, [{:&, ix_meta, [ix]}, field]}, meta, []}, acc}
   end
 
   defp prewalk({:^, meta, [ix]}, _kind, _query, _expr, acc, _adapter) when is_integer(ix) do
@@ -1120,6 +1124,7 @@ defmodule Ecto.Query.Planner do
   defp normalize_select(%{select: nil} = query, _keep_literals?) do
     {query, nil}
   end
+
   defp normalize_select(query, keep_literals?) do
     %{assocs: assocs, preloads: preloads, select: select} = query
     %{take: take, expr: expr} = select
@@ -1453,6 +1458,15 @@ defmodule Ecto.Query.Planner do
 
   defp select_field(field, ix) do
     {{:., [], [{:&, [], [ix]}, field]}, [], []}
+  end
+
+  defp get_ix!({:&, meta, [ix]}, _query), do: {ix, meta}
+
+  defp get_ix!({:as, meta, [as]}, query) do
+    case query.aliases do
+      %{^as => ix} -> {ix, meta}
+      %{} -> error!(query, "could not find named binding `as(#{inspect(as)})`")
+    end
   end
 
   defp get_source!(where, %{sources: sources} = query, ix) do
