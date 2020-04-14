@@ -23,6 +23,7 @@ defmodule Ecto.Query.SubqueryTest do
     use Ecto.Schema
 
     @primary_key {:id, CustomPermalink, []}
+    @schema_prefix "my_prefix"
     schema "posts" do
       field :title, :string, source: :post_title
       field :text, :string
@@ -59,7 +60,7 @@ defmodule Ecto.Query.SubqueryTest do
     {query, params, key} = plan(from(subquery(Post), []))
     assert %{query: %Ecto.Query{}, params: []} = query.from.source
     assert params == []
-    assert key == [:all, [:all, {"posts", Post, 52805476, nil}]]
+    assert key == [:all, [:all, {"posts", Post, 52805476, "my_prefix"}]]
 
     posts = from(p in Post, where: p.title == ^"hello")
     query = from(c in Comment, join: p in subquery(posts), on: c.post_id == p.id)
@@ -215,6 +216,32 @@ defmodule Ecto.Query.SubqueryTest do
     assert Exception.message(exception) =~ "value `1` in `where` cannot be cast to type :string"
     assert Exception.message(exception) =~ "where: p0.title == ^1"
     assert Exception.message(exception) =~ "from p0 in subquery(from p0 in Ecto.Query.SubqueryTest.Post"
+  end
+
+  test "plan: subquery prefix" do
+    {query, _, _} = from(subquery(Comment), select: 1) |> plan()
+    assert {%{query: %{sources: {{"comments", Comment, nil}}}}} = query.sources
+
+    {query, _, _} = from(subquery(Comment), select: 1) |> Map.put(:prefix, "global") |> plan()
+    assert {%{query: %{sources: {{"comments", Comment, "global"}}}}} = query.sources
+
+    {query, _, _} = from(subquery(Comment, prefix: "sub"), select: 1) |> Map.put(:prefix, "global") |> plan()
+    assert {%{query: %{sources: {{"comments", Comment, "sub"}}}}} = query.sources
+
+    {query, _, _} = from(subquery(Comment, prefix: "sub"), prefix: "local", select: 1) |> Map.put(:prefix, "global") |> plan()
+    assert {%{query: %{sources: {{"comments", Comment, "local"}}}}} = query.sources
+
+    {query, _, _} = from(subquery(Post), select: 1) |> plan()
+    assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
+
+    {query, _, _} = from(subquery(Post), select: 1) |> Map.put(:prefix, "global") |> plan()
+    assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
+
+    {query, _, _} = from(subquery(Post, prefix: "sub"), select: 1) |> Map.put(:prefix, "global") |> plan()
+    assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
+
+    {query, _, _} = from(subquery(Post, prefix: "sub"), prefix: "local", select: 1) |> Map.put(:prefix, "global") |> plan()
+    assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
   end
 
   test "normalize: subqueries" do

@@ -439,31 +439,6 @@ defmodule Ecto.Query.PlannerTest do
     {query, _, _} = from(Post, prefix: "local", select: 1) |> Map.put(:prefix, "global") |> plan()
     assert query.sources == {{"posts", Post, "local"}}
 
-    # Subquery in from
-    {query, _, _} = from(subquery(Comment), select: 1) |> plan()
-    assert {%{query: %{sources: {{"comments", Comment, nil}}}}} = query.sources
-
-    {query, _, _} = from(subquery(Comment), select: 1) |> Map.put(:prefix, "global") |> plan()
-    assert {%{query: %{sources: {{"comments", Comment, "global"}}}}} = query.sources
-
-    {query, _, _} = from(subquery(Comment, prefix: "sub"), select: 1) |> Map.put(:prefix, "global") |> plan()
-    assert {%{query: %{sources: {{"comments", Comment, "sub"}}}}} = query.sources
-
-    {query, _, _} = from(subquery(Comment, prefix: "sub"), prefix: "local", select: 1) |> Map.put(:prefix, "global") |> plan()
-    assert {%{query: %{sources: {{"comments", Comment, "local"}}}}} = query.sources
-
-    {query, _, _} = from(subquery(Post), select: 1) |> plan()
-    assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
-
-    {query, _, _} = from(subquery(Post), select: 1) |> Map.put(:prefix, "global") |> plan()
-    assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
-
-    {query, _, _} = from(subquery(Post, prefix: "sub"), select: 1) |> Map.put(:prefix, "global") |> plan()
-    assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
-
-    {query, _, _} = from(subquery(Post, prefix: "sub"), prefix: "local", select: 1) |> Map.put(:prefix, "global") |> plan()
-    assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
-
     # Schema prefix in join
     {query, _, _} = from(c in Comment, join: Post) |> plan()
     assert query.sources == {{"comments", Comment, nil}, {"posts", Post, "my_prefix"}}
