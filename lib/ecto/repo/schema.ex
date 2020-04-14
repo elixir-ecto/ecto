@@ -424,24 +424,28 @@ defmodule Ecto.Repo.Schema do
     wrap_in_transaction(adapter, adapter_meta, opts, assocs != [], prepare, fn ->
       changeset = run_prepare(changeset, prepare)
 
-      filters = add_pk_filter!(changeset.filters, struct)
-      filters = dump_fields!(:delete, schema, filters, dumper, adapter)
+      if changeset.valid? do
+        filters = add_pk_filter!(changeset.filters, struct)
+        filters = dump_fields!(:delete, schema, filters, dumper, adapter)
 
-      # Delete related associations
-      for %{__struct__: mod, on_delete: on_delete} = reflection <- assocs do
-        apply(mod, on_delete, [reflection, changeset.data, name, opts])
-      end
+        # Delete related associations
+        for %{__struct__: mod, on_delete: on_delete} = reflection <- assocs do
+          apply(mod, on_delete, [reflection, changeset.data, name, opts])
+        end
 
-      schema_meta = metadata(struct, schema.__schema__(:autogenerate_id), opts)
-      args = [adapter_meta, schema_meta, filters, opts]
+        schema_meta = metadata(struct, schema.__schema__(:autogenerate_id), opts)
+        args = [adapter_meta, schema_meta, filters, opts]
 
-      case apply(changeset, adapter, :delete, args) do
-        {:ok, values} ->
-          changeset = load_changes(changeset, :deleted, [], values, %{}, [], adapter, schema_meta)
-          {:ok, changeset.data}
+        case apply(changeset, adapter, :delete, args) do
+          {:ok, values} ->
+            changeset = load_changes(changeset, :deleted, [], values, %{}, [], adapter, schema_meta)
+            {:ok, changeset.data}
 
-        {:error, _} = error ->
-          error
+          {:error, _} = error ->
+            error
+        end
+      else
+        {:error, changeset}
       end
     end)
   end

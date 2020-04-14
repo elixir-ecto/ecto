@@ -1012,6 +1012,17 @@ defmodule Ecto.RepoTest do
       assert Process.get(:ecto_counter) == 2
     end
 
+    test "insert with prepare_changes that returns invalid changeset" do
+      changeset =
+        prepare_changeset()
+        |> Ecto.Changeset.prepare_changes(fn changeset ->
+          Ecto.Changeset.add_error(changeset, :x, "stop")
+        end)
+
+      assert {:error, %Ecto.Changeset{} = changeset} = TestRepo.insert(changeset)
+      assert {:x, {"stop", []}} in changeset.errors
+    end
+
     test "update runs prepare callbacks in transaction" do
       changeset = prepare_changeset()
       TestRepo.update!(changeset)
@@ -1020,12 +1031,34 @@ defmodule Ecto.RepoTest do
       assert Process.get(:ecto_counter) == 2
     end
 
+    test "update with prepare_changes that returns invalid changeset" do
+      changeset =
+        prepare_changeset()
+        |> Ecto.Changeset.prepare_changes(fn changeset ->
+          Ecto.Changeset.add_error(changeset, :x, "stop")
+        end)
+
+      assert {:error, %Ecto.Changeset{} = changeset} = TestRepo.update(changeset)
+      assert {:x, {"stop", []}} in changeset.errors
+    end
+
     test "delete runs prepare callbacks in transaction" do
       changeset = prepare_changeset()
       TestRepo.delete!(changeset)
       assert_received {:transaction, _}
       assert Process.get(:ecto_repo) == TestRepo
       assert Process.get(:ecto_counter) == 2
+    end
+
+    test "delete with prepare_changes that returns invalid changeset" do
+      changeset =
+        prepare_changeset()
+        |> Ecto.Changeset.prepare_changes(fn changeset ->
+          Ecto.Changeset.add_error(changeset, :x, "stop")
+        end)
+
+      assert {:error, %Ecto.Changeset{} = changeset} = TestRepo.delete(changeset)
+      assert {:x, {"stop", []}} in changeset.errors
     end
 
     test "on embeds" do
