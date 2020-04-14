@@ -8,6 +8,8 @@ defmodule Ecto.Query.Planner do
     raise "Ecto.Query match out of date in builder"
   end
 
+  @parent_as 0
+
   @doc """
   Converts a query to a list of joins.
 
@@ -230,8 +232,8 @@ defmodule Ecto.Query.Planner do
       %{query: inner_query} = subquery
       inner_query = update_in inner_query.prefix, &(prefix || &1 || query.prefix)
       {inner_query, params, key} = plan(inner_query, :all, adapter)
-      assert_no_subquery_assocs!(inner_query)
       {inner_query, select} = inner_query |> ensure_select(true) |> subquery_select(adapter)
+      assert_no_subquery_assocs!(inner_query)
       subquery = %{subquery | query: inner_query, params: params, cache: key, select: select}
       {%{expr | source: subquery}, subquery}
     rescue
@@ -977,10 +979,14 @@ defmodule Ecto.Query.Planner do
   end
   defp prewalk_source(%Ecto.SubQuery{query: inner_query} = subquery, _kind, query, _expr, counter, adapter) do
     try do
+      inner_query = put_in inner_query.aliases[@parent_as], query
       {inner_query, counter} = normalize_query(inner_query, :all, adapter, counter)
       {inner_query, _} = normalize_select(inner_query, true)
+      {_, inner_query} = pop_in inner_query.aliases[@parent_as]
+
       keys = subquery.select |> subquery_types() |> Keyword.keys()
       inner_query = update_in(inner_query.select.fields, &Enum.zip(keys, &1))
+
       {%{subquery | query: inner_query}, counter}
     rescue
       e -> raise Ecto.SubQueryError, query: query, exception: e
@@ -1018,10 +1024,10 @@ defmodule Ecto.Query.Planner do
 
   defp prewalk({{:., dot_meta, [left, field]}, meta, []},
                kind, query, expr, acc, _adapter) do
-    {ix, ix_meta} = get_ix!(left, query)
-    extra = if kind == :select, do: [type: type!(kind, query, expr, ix, field)], else: []
-    field = field_source(get_source!(kind, query, ix), field)
-    {{{:., extra ++ dot_meta, [{:&, ix_meta, [ix]}, field]}, meta, []}, acc}
+    {ix, ix_expr, ix_query} = get_ix!(left, query)
+    extra = if kind == :select, do: [type: type!(kind, ix_query, expr, ix, field)], else: []
+    field = field_source(get_source!(kind, ix_query, ix), field)
+    {{{:., extra ++ dot_meta, [ix_expr, field]}, meta, []}, acc}
   end
 
   defp prewalk({:^, meta, [ix]}, _kind, _query, _expr, acc, _adapter) when is_integer(ix) do
@@ -1460,12 +1466,22 @@ defmodule Ecto.Query.Planner do
     {{:., [], [{:&, [], [ix]}, field]}, [], []}
   end
 
-  defp get_ix!({:&, meta, [ix]}, _query), do: {ix, meta}
+  defp get_ix!({:&, _, [ix]} = expr, query) do
+    {ix, expr, query}
+  end
 
   defp get_ix!({:as, meta, [as]}, query) do
     case query.aliases do
-      %{^as => ix} -> {ix, meta}
+      %{^as => ix} -> {ix, {:&, meta, [ix]}, query}
       %{} -> error!(query, "could not find named binding `as(#{inspect(as)})`")
+    end
+  end
+
+  defp get_ix!({:parent_as, meta, [as]}, query) do
+    case query.aliases[@parent_as] do
+      %{aliases: %{^as => ix}} = query -> {ix, {:parent_as, [], [{:&, meta, [ix]}]}, query}
+      %{} -> error!(query, "could not find named binding `parent_as(#{inspect(as)})`")
+      nil -> error!(query, "`parent_as(#{inspect(as)})` can only be used in subqueries")
     end
   end
 

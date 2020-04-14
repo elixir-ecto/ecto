@@ -540,15 +540,17 @@ defmodule Ecto.Query.Builder do
     {expr, params_acc}
   end
 
-  defp escape_field!({var, _, context}, field, vars) when is_atom(var) and is_atom(context) do
+  defp escape_field!({var, _, context}, field, vars)
+       when is_atom(var) and is_atom(context) do
     var   = escape_var!(var, vars)
     field = quoted_field!(field)
     dot   = {:{}, [], [:., [], [var, field]]}
     {:{}, [], [dot, [], []]}
   end
 
-  defp escape_field!({:as, _, [atom]}, field, _vars) when is_atom(atom) do
-    as    = {:{}, [], [:as, [], [atom]]}
+  defp escape_field!({kind, _, [atom]}, field, _vars)
+       when kind in [:as, :parent_as] and is_atom(atom) do
+    as    = {:{}, [], [kind, [], [atom]]}
     field = quoted_field!(field)
     dot   = {:{}, [], [:., [], [as, field]]}
     {:{}, [], [dot, [], []]}
@@ -560,6 +562,7 @@ defmodule Ecto.Query.Builder do
 
       * sources, such as `p` in `from p in Post`
       * named bindings, such as `as(:post)` in `from Post, as: :post`
+      * parent named bindings, such as `parent_as(:post)` in a subquery
     """)
   end
 

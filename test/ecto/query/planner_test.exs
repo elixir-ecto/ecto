@@ -737,6 +737,20 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "normalize: late parent bindings with as" do
+    child = from(c in Comment, where: parent_as(:posts).posted == c.posted)
+    query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(&0).posted() == &0.posted()"
+
+    assert_raise Ecto.SubQueryError, ~r/could not find named binding `parent_as\(:posts\)`/, fn ->
+      from(Post, join: c in subquery(child)) |> normalize()
+    end
+
+    assert_raise Ecto.QueryError, ~r/`parent_as\(:posts\)` can only be used in subqueries/, fn ->
+      from(Post, where: parent_as(:posts).code == ^123) |> normalize()
+    end
+  end
+
   test "normalize: assoc join with wheres that have regular filters" do
     {_query, params, _select} =
       from(post in Post,

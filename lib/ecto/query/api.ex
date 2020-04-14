@@ -11,7 +11,7 @@ defmodule Ecto.Query.API do
     * Aggregates: `count/0`, `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
     * Date/time intervals: `datetime_add/3`, `date_add/3`, `from_now/2`, `ago/2`
     * Inside select: `struct/2`, `map/2`, `merge/2` and literals (map, tuples, lists, etc)
-    * General: `fragment/1`, `field/2` and `type/2`
+    * General: `fragment/1`, `field/2`, `type/2`, `as/1`, `parent_as/1`
 
   Note the functions in this module exist for documentation
   purposes and one should never need to invoke them directly.
@@ -517,6 +517,22 @@ defmodule Ecto.Query.API do
 
   """
   def type(interpolated_value, type), do: doc! [interpolated_value, type]
+
+  @doc """
+  Refer to a named atom binding.
+
+  See the "Named binding" section in `Ecto.Query` for more information.
+  """
+  def as(binding), do: doc! [binding]
+
+  @doc """
+  Refer to a named atom binding in the parent query.
+
+  This is available only inside subqueries.
+
+  See the "Named binding" section in `Ecto.Query` for more information.
+  """
+  def parent_as(binding), do: doc! [binding]
 
   defp doc!(_) do
     raise "the functions in Ecto.Query.API should not be invoked directly, " <>
