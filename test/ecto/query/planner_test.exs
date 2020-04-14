@@ -409,15 +409,6 @@ defmodule Ecto.Query.PlannerTest do
     assert key == :nocache
   end
 
-  test "plan: ctes with uncacheable queries are uncacheable" do
-    {_, _, cache} =
-      Comment
-      |> with_cte("cte", as: ^from(c in Comment, where: c.id in ^[1, 2, 3]))
-      |> plan()
-
-    assert cache == :nocache
-  end
-
   test "plan: normalizes prefixes" do
     # No schema prefix in from
     {query, _, _} = from(Comment, select: 1) |> plan()
@@ -584,112 +575,123 @@ defmodule Ecto.Query.PlannerTest do
     assert deeper_level_union_query.sources == {{"comments", Comment, "global"}}
   end
 
-  test "plan: CTEs on all" do
-    {%{with_ctes: with_expr}, _, cache} =
-      Comment
-      |> with_cte("cte", as: ^from(c in Comment))
-      |> plan()
-    %{queries: [{"cte", query}]} = with_expr
-    assert query.sources == {{"comments", Comment, nil}}
-    assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
-    assert [
-      :all,
-      {"comments", Comment, _, nil},
-      {:non_recursive_cte, "cte", [{"comments", Comment, _, nil}, {:select, {:&, _, [0]}}]}
-    ] = cache
+  describe "plan: CTEs" do
+    test "with uncacheable queries are uncacheable" do
+      {_, _, cache} =
+        Comment
+        |> with_cte("cte", as: ^from(c in Comment, where: c.id in ^[1, 2, 3]))
+        |> plan()
 
-    {%{with_ctes: with_expr}, _, cache} =
-      Comment
-      |> with_cte("cte", as: ^from(c in Comment, where: c in ^[1, 2, 3]))
-      |> plan()
-    %{queries: [{"cte", query}]} = with_expr
-    assert query.sources == {{"comments", Comment, nil}}
-    assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
-    assert :nocache = cache
+      assert cache == :nocache
+    end
 
-    {%{with_ctes: with_expr}, _, cache} =
-      Comment
-      |> recursive_ctes(true)
-      |> with_cte("cte", as: fragment("SELECT * FROM comments WHERE id = ?", ^123))
-      |> plan()
-    %{queries: [{"cte", query_expr}]} = with_expr
-    expr = {:fragment, [], [raw: "SELECT * FROM comments WHERE id = ", expr: {:^, [], [0]}, raw: ""]}
-    assert expr == query_expr.expr
-    assert [:all, {"comments", Comment, _, nil}, {:recursive_cte, "cte", ^expr}] = cache
-  end
+    test "on all" do
+      {%{with_ctes: with_expr}, _, cache} =
+        Comment
+        |> with_cte("cte", as: ^from(c in Comment))
+        |> plan()
+      %{queries: [{"cte", query}]} = with_expr
+      assert query.sources == {{"comments", Comment, nil}}
+      assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
+      assert [
+        :all,
+        {"comments", Comment, _, nil},
+        {:non_recursive_cte, "cte", [{"comments", Comment, _, nil}, {:select, {:&, _, [0]}}]}
+      ] = cache
 
-  test "plan: CTEs on update_all" do
-    recent_comments =
-      from(c in Comment,
-        order_by: [desc: c.posted],
-        limit: ^500,
-        select: [:id]
-      )
+      {%{with_ctes: with_expr}, _, cache} =
+        Comment
+        |> with_cte("cte", as: ^from(c in Comment, where: c in ^[1, 2, 3]))
+        |> plan()
+      %{queries: [{"cte", query}]} = with_expr
+      assert query.sources == {{"comments", Comment, nil}}
+      assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
+      assert :nocache = cache
 
-    {%{with_ctes: with_expr}, [500, "text"], cache} =
-      Comment
-      |> with_cte("recent_comments", as: ^recent_comments)
-      |> join(:inner, [c], r in "recent_comments", on: c.id == r.id)
-      |> update(set: [text: ^"text"])
-      |> select([c, r], c)
-      |> plan(:update_all)
+      {%{with_ctes: with_expr}, _, cache} =
+        Comment
+        |> recursive_ctes(true)
+        |> with_cte("cte", as: fragment("SELECT * FROM comments WHERE id = ?", ^123))
+        |> plan()
+      %{queries: [{"cte", query_expr}]} = with_expr
+      expr = {:fragment, [], [raw: "SELECT * FROM comments WHERE id = ", expr: {:^, [], [0]}, raw: ""]}
+      assert expr == query_expr.expr
+      assert [:all, {"comments", Comment, _, nil}, {:recursive_cte, "cte", ^expr}] = cache
+    end
 
-    %{queries: [{"recent_comments", cte}]} = with_expr
-    assert {{"comments", Comment, nil}} = cte.sources
-    assert %{expr: {:^, [], [0]}, params: [{500, :integer}]} = cte.limit
+    test "on update_all" do
+      recent_comments =
+        from(c in Comment,
+          order_by: [desc: c.posted],
+          limit: ^500,
+          select: [:id]
+        )
 
-    assert [:update_all, _, _, _, _, {:non_recursive_cte, "recent_comments", cte_cache}] = cache
-    assert [
-             {:limit, {:^, [], [0]}},
-             {:order_by, [[desc: _]]},
-             {"comments", Comment, _, nil},
-             {:select, {:&, [], [0]}}
-           ] = cte_cache
-  end
+      {%{with_ctes: with_expr}, [500, "text"], cache} =
+        Comment
+        |> with_cte("recent_comments", as: ^recent_comments)
+        |> join(:inner, [c], r in "recent_comments", on: c.id == r.id)
+        |> update(set: [text: ^"text"])
+        |> select([c, r], c)
+        |> plan(:update_all)
 
-  test "plan: CTEs on delete_all" do
-    recent_comments =
-      from(c in Comment,
-        order_by: [desc: c.posted],
-        limit: ^500,
-        select: [:id]
-      )
+      %{queries: [{"recent_comments", cte}]} = with_expr
+      assert {{"comments", Comment, nil}} = cte.sources
+      assert %{expr: {:^, [], [0]}, params: [{500, :integer}]} = cte.limit
 
-    {%{with_ctes: with_expr}, [500, "text"], cache} =
-      Comment
-      |> with_cte("recent_comments", as: ^recent_comments)
-      |> join(:inner, [c], r in "recent_comments", on: c.id == r.id and c.text == ^"text")
-      |> select([c, r], c)
-      |> plan(:delete_all)
+      assert [:update_all, _, _, _, _, {:non_recursive_cte, "recent_comments", cte_cache}] = cache
+      assert [
+               {:limit, {:^, [], [0]}},
+               {:order_by, [[desc: _]]},
+               {"comments", Comment, _, nil},
+               {:select, {:&, [], [0]}}
+             ] = cte_cache
+    end
 
-    %{queries: [{"recent_comments", cte}]} = with_expr
-    assert {{"comments", Comment, nil}} = cte.sources
-    assert %{expr: {:^, [], [0]}, params: [{500, :integer}]} = cte.limit
+    test "on delete_all" do
+      recent_comments =
+        from(c in Comment,
+          order_by: [desc: c.posted],
+          limit: ^500,
+          select: [:id]
+        )
 
-    assert [:delete_all, _, _, _, {:non_recursive_cte, "recent_comments", cte_cache}] = cache
-    assert [
-             {:limit, {:^, [], [0]}},
-             {:order_by, [[desc: _]]},
-             {"comments", Comment, _, nil},
-             {:select, {:&, [], [0]}}
-           ] = cte_cache
-  end
+      {%{with_ctes: with_expr}, [500, "text"], cache} =
+        Comment
+        |> with_cte("recent_comments", as: ^recent_comments)
+        |> join(:inner, [c], r in "recent_comments", on: c.id == r.id and c.text == ^"text")
+        |> select([c, r], c)
+        |> plan(:delete_all)
 
-  test "plan: CTE prefixes" do
-    {%{with_ctes: with_expr} = query, _, _} = Comment |> with_cte("cte", as: ^from(c in Comment)) |> plan()
-    %{queries: [{"cte", cte_query}]} = with_expr
-    assert query.sources == {{"comments", Comment, nil}}
-    assert cte_query.sources == {{"comments", Comment, nil}}
+      %{queries: [{"recent_comments", cte}]} = with_expr
+      assert {{"comments", Comment, nil}} = cte.sources
+      assert %{expr: {:^, [], [0]}, params: [{500, :integer}]} = cte.limit
 
-    {%{with_ctes: with_expr} = query, _, _} = Comment |> with_cte("cte", as: ^from(c in Comment)) |> Map.put(:prefix, "global") |> plan()
-    %{queries: [{"cte", cte_query}]} = with_expr
-    assert query.sources == {{"comments", Comment, "global"}}
-    assert cte_query.sources == {{"comments", Comment, "global"}}
+      assert [:delete_all, _, _, _, {:non_recursive_cte, "recent_comments", cte_cache}] = cache
+      assert [
+               {:limit, {:^, [], [0]}},
+               {:order_by, [[desc: _]]},
+               {"comments", Comment, _, nil},
+               {:select, {:&, [], [0]}}
+             ] = cte_cache
+    end
 
-    {%{with_ctes: with_expr} = query, _, _} = Comment |> with_cte("cte", as: ^(from(c in Comment) |> Map.put(:prefix, "cte"))) |> Map.put(:prefix, "global") |> plan()
-    %{queries: [{"cte", cte_query}]} = with_expr
-    assert query.sources == {{"comments", Comment, "global"}}
-    assert cte_query.sources == {{"comments", Comment, "cte"}}
+    test "prefixes" do
+      {%{with_ctes: with_expr} = query, _, _} = Comment |> with_cte("cte", as: ^from(c in Comment)) |> plan()
+      %{queries: [{"cte", cte_query}]} = with_expr
+      assert query.sources == {{"comments", Comment, nil}}
+      assert cte_query.sources == {{"comments", Comment, nil}}
+
+      {%{with_ctes: with_expr} = query, _, _} = Comment |> with_cte("cte", as: ^from(c in Comment)) |> Map.put(:prefix, "global") |> plan()
+      %{queries: [{"cte", cte_query}]} = with_expr
+      assert query.sources == {{"comments", Comment, "global"}}
+      assert cte_query.sources == {{"comments", Comment, "global"}}
+
+      {%{with_ctes: with_expr} = query, _, _} = Comment |> with_cte("cte", as: ^(from(c in Comment) |> Map.put(:prefix, "cte"))) |> Map.put(:prefix, "global") |> plan()
+      %{queries: [{"cte", cte_query}]} = with_expr
+      assert query.sources == {{"comments", Comment, "global"}}
+      assert cte_query.sources == {{"comments", Comment, "cte"}}
+    end
   end
 
   test "normalize: validates literal types" do
