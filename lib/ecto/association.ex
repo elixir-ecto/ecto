@@ -30,14 +30,15 @@ end
 defmodule Ecto.Association do
   @moduledoc false
 
-  @type t :: %{__struct__: atom,
-               on_cast: nil | fun,
-               cardinality: :one | :many,
-               relationship: :parent | :child,
-               owner: atom,
-               owner_key: atom,
-               field: atom,
-               unique: boolean}
+  @type t :: %{required(:__struct__) => atom,
+               required(:on_cast) => nil | fun,
+               required(:cardinality) => :one | :many,
+               required(:relationship) => :parent | :child,
+               required(:owner) => atom,
+               required(:owner_key) => atom,
+               required(:field) => atom,
+               required(:unique) => boolean,
+               optional(atom) => any}
 
   alias Ecto.Query.{BooleanExpr, QueryExpr, FromExpr}
 
