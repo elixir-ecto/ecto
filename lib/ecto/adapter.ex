@@ -25,7 +25,7 @@ defmodule Ecto.Adapter do
   @doc """
   Ensure all applications necessary to run the adapter are started.
   """
-  @callback ensure_all_started(config :: Keyword.t(), type :: :application.restart_type()) ::
+  @callback ensure_all_started(config :: Keyword.t(), type :: :permanent | :transient | :temporary) ::
               {:ok, [atom]} | {:error, atom}
 
   @doc """
