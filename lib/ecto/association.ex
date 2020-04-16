@@ -884,14 +884,9 @@ defmodule Ecto.Association.BelongsTo do
 
   @doc false
   def struct(module, name, opts) do
-    ref       = if ref = opts[:references], do: ref, else: :id
+    ref = if ref = opts[:references], do: ref, else: :id
     queryable = Keyword.fetch!(opts, :queryable)
-    related   = Ecto.Association.related_from_query(queryable, name)
-
-    unless is_atom(related) do
-      raise ArgumentError, "association queryable must be a schema, got: #{inspect related}"
-    end
-
+    related = Ecto.Association.related_from_query(queryable, name)
     on_replace = Keyword.get(opts, :on_replace, :raise)
 
     unless on_replace in @on_replace_opts do
