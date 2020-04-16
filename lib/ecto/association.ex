@@ -30,14 +30,15 @@ end
 defmodule Ecto.Association do
   @moduledoc false
 
-  @type t :: %{__struct__: atom,
-               on_cast: nil | fun,
-               cardinality: :one | :many,
-               relationship: :parent | :child,
-               owner: atom,
-               owner_key: atom,
-               field: atom,
-               unique: boolean}
+  @type t :: %{required(:__struct__) => atom,
+               required(:on_cast) => nil | fun,
+               required(:cardinality) => :one | :many,
+               required(:relationship) => :parent | :child,
+               required(:owner) => atom,
+               required(:owner_key) => atom,
+               required(:field) => atom,
+               required(:unique) => boolean,
+               optional(atom) => any}
 
   alias Ecto.Query.{BooleanExpr, QueryExpr, FromExpr}
 
@@ -883,14 +884,9 @@ defmodule Ecto.Association.BelongsTo do
 
   @doc false
   def struct(module, name, opts) do
-    ref       = if ref = opts[:references], do: ref, else: :id
+    ref = if ref = opts[:references], do: ref, else: :id
     queryable = Keyword.fetch!(opts, :queryable)
-    related   = Ecto.Association.related_from_query(queryable, name)
-
-    unless is_atom(related) do
-      raise ArgumentError, "association queryable must be a schema, got: #{inspect related}"
-    end
-
+    related = Ecto.Association.related_from_query(queryable, name)
     on_replace = Keyword.get(opts, :on_replace, :raise)
 
     unless on_replace in @on_replace_opts do

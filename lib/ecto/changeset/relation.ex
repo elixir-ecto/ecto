@@ -4,13 +4,15 @@ defmodule Ecto.Changeset.Relation do
   alias Ecto.Changeset
   alias Ecto.Association.NotLoaded
 
-  @type t :: %{cardinality: :one | :many,
-               on_replace: :raise | :mark_as_invalid | atom,
-               relationship: :parent | :child,
-               ordered: boolean,
-               owner: atom,
-               related: atom,
-               field: atom}
+  @type t :: %{required(:__struct__) => atom(),
+               required(:cardinality) => :one | :many,
+               required(:on_replace) => :raise | :mark_as_invalid | atom,
+               required(:relationship) => :parent | :child,
+               required(:ordered) => boolean,
+               required(:owner) => atom,
+               required(:related) => atom,
+               required(:field) => atom,
+               optional(atom()) => any()}
 
   @doc """
   Builds the related data.

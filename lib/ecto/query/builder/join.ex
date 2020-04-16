@@ -42,7 +42,7 @@ defmodule Ecto.Query.Builder.Join do
       {:x, {:{}, [], [:fragment, [], [raw: "foo"]]}, nil, []}
 
   """
-  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {[atom], Macro.t | nil, Macro.t | nil, list}
+  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {atom, Macro.t | nil, Macro.t | nil, list}
   def escape({:in, _, [{var, _, context}, expr]}, vars, env)
       when is_atom(var) and is_atom(context) do
     {_, expr, assoc, params} = escape(expr, vars, env)
