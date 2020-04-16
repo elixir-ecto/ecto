@@ -37,8 +37,10 @@ defmodule Ecto.Schema.Metadata do
 
   @type state :: :built | :loaded | :deleted
 
+  @type context :: any
+
   @type t :: %__MODULE__{
-          context: any,
+          context: context,
           prefix: Ecto.Schema.prefix(),
           schema: module,
           source: Ecto.Schema.source(),
