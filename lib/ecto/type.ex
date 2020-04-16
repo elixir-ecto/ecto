@@ -1056,10 +1056,7 @@ defmodule Ecto.Type do
   defp cast_naive_datetime(%{} = map) do
     with {:ok, %Date{} = date} <- cast_date(map),
          {:ok, %Time{} = time} <- cast_time(map) do
-      case NaiveDateTime.new(date, time) do
-        {:ok, _} = ok -> ok
-        {:error, _} -> :error
-      end
+      NaiveDateTime.new(date, time)
     else
       _ -> :error
     end
