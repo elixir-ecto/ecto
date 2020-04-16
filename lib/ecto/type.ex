@@ -104,7 +104,7 @@ defmodule Ecto.Type do
 
   @type composite :: {:array, t} | {:map, t} | private_composite
 
-  @typep private_composite :: {:maybe, t} | {:embed, Ecto.Embedded.t} | {:in, t}
+  @typep private_composite :: {:maybe, t} | {:embed, Ecto.Embedded.t} | {:in, t} | {:param, :any_datetime}
 
   @base ~w(
     integer float decimal boolean string map binary id binary_id any

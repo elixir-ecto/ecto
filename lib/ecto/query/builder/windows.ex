@@ -16,7 +16,8 @@ defmodule Ecto.Query.Builder.Windows do
       {[order_by: [desc: 13]], [], {[], :acc}}
 
   """
-  @spec escape([Macro.t], {list, term}, Keyword.t, Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, term}}
+  @spec escape([Macro.t], {list, term}, Keyword.t, Macro.Env.t | {Macro.Env.t, fun})
+          :: {Macro.t, [{atom, term}], {list, term}}
   def escape(kw, params_acc, vars, env) when is_list(kw) do
     {compile, runtime} = sort(@sort_order, kw, :compile, [], [])
     {compile, params_acc} = Enum.map_reduce(compile, params_acc, &escape_compile(&1, &2, vars, env))

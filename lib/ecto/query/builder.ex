@@ -61,8 +61,8 @@ defmodule Ecto.Query.Builder do
   with `^index` in the query where index is a number indexing into the
   map.
   """
-  @spec escape(Macro.t, quoted_type, {list, term}, Keyword.t,
-               Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, term}}
+  @spec escape(Macro.t, quoted_type | {:in, quoted_type} | {:out, quoted_type}, {list, term},
+               Keyword.t, Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, term}}
   def escape(expr, type, params_acc, vars, env)
 
   # var.x - where var is bound
