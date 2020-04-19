@@ -1,5 +1,16 @@
 # Changelog for v3.x
 
+## v3.4.3-dev (2020-04-19)
+
+### Enhancements
+
+  * [Ecto.Query] Support `as/1` and `parent_as/1` for lazy named bindings and to allow parent references from subqueries
+
+### Bug fixes
+
+  * [Ecto.Query] Do not raise for missing assocs if :force is given to preload
+  * [Ecto.Repo] Return error from `Repo.delete` on invalid changeset from `prepare_changeset`
+
 ## v3.4.2 (2020-04-10)
 
 ### Enhancements
