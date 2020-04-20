@@ -251,6 +251,15 @@ defmodule Ecto.Query.PlannerTest do
     assert params == ["1", 2, 3, "4"]
   end
 
+  test "plan: where something and in subquery, params (TODO)" do
+    p = from(p in Post, select: p.id, where: p.id in ^[2, 3])
+    q = from(c in Comment, where: c.text == ^"1" and c.post_id in subquery(p) and c.crazy_comment == ^"4")
+
+    params = q |> plan() |> elem(1)
+
+    assert params == ["1", 2, 3, "4"]
+  end
+
   test "plan: casts values on update_all" do
     {_query, params, _key} = plan(Post |> update([p], set: [id: ^"1"]), :update_all)
     assert params == [1]
