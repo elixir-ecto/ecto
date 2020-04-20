@@ -119,6 +119,10 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  defp macro_arg_at(m, i) do
+    m |> elem(2) |> Enum.at(i)
+  end
+
   test "plan: merges all parameters" do
     union = from p in Post, select: {p.title, ^"union"}
     subquery = from Comment, where: [text: ^"subquery"]
@@ -235,7 +239,6 @@ defmodule Ecto.Query.PlannerTest do
 
     q = q |> plan() |> elem(0)
 
-    assert {{"comments", _, _}} = q.sources
     assert {:in, [], [{{:., [], [{:&, [], [0]}, :post_id]}, [], []}, %Ecto.SubQuery{}]} = (hd(q.wheres)).expr
   end
 
@@ -1065,11 +1068,22 @@ defmodule Ecto.Query.PlannerTest do
     c = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
     s = from(p in Post, where: p.id in subquery(c), select: count())
 
-    assert (hd(s.wheres).expr |> elem(2) |> Enum.at(1)).query.select.fields == nil
+    assert (hd(s.wheres).expr |> macro_arg_at(1)).query.select.fields == nil
 
     q = normalize(s)
 
-    assert [{:post_id, _}] = (hd(q.wheres).expr |> elem(2) |> Enum.at(1)).query.select.fields
+    assert [{:post_id, _}] = (hd(q.wheres).expr |> macro_arg_at(1)).query.select.fields
+  end
+
+  test "normalize: where and in subquery (TODO)" do
+    c = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
+    s = from(p in Post, where: true and p.id in subquery(c), select: count())
+
+    assert (hd(s.wheres).expr |> macro_arg_at(1) |> macro_arg_at(1)).query.select.fields == nil
+
+    q = normalize(s)
+
+    assert [{:post_id, _}] = (hd(q.wheres).expr |> macro_arg_at(1) |> macro_arg_at(1)).query.select.fields
   end
 
   test "normalize: windows" do
