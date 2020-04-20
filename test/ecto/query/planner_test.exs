@@ -233,13 +233,14 @@ defmodule Ecto.Query.PlannerTest do
     assert params == ["abcd"]
   end
 
-  test "plan: where in subquery, expr (TODO)" do
+  test "plan: where in subquery, expr and subquery (TODO)" do
     p = from(p in Post, select: p.id)
     q = from(c in Comment, where: c.post_id in subquery(p))
 
     q = q |> plan() |> elem(0)
-
-    assert {:in, [], [{{:., [], [{:&, [], [0]}, :post_id]}, [], []}, %Ecto.SubQuery{}]} = (hd(q.wheres)).expr
+    assert [%{expr: expr, subqueries: [subquery]}] = q.wheres
+    assert {:in, [], [{{:., [], [{:&, [], [0]}, :post_id]}, [], []}, {:subquery, 0}]} = expr
+    assert %Ecto.SubQuery{} = subquery
   end
 
   test "plan: where in subquery, params (TODO)" do
@@ -1077,22 +1078,12 @@ defmodule Ecto.Query.PlannerTest do
     c = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
     s = from(p in Post, where: p.id in subquery(c), select: count())
 
-    assert (hd(s.wheres).expr |> macro_arg_at(1)).query.select.fields == nil
+    assert {:subquery, 0} == hd(s.wheres).expr |> macro_arg_at(1)
 
     q = normalize(s)
 
+    # here we put back normalized subquery in expression
     assert [{:post_id, _}] = (hd(q.wheres).expr |> macro_arg_at(1)).query.select.fields
-  end
-
-  test "normalize: where and in subquery (TODO)" do
-    c = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
-    s = from(p in Post, where: true and p.id in subquery(c), select: count())
-
-    assert (hd(s.wheres).expr |> macro_arg_at(1) |> macro_arg_at(1)).query.select.fields == nil
-
-    q = normalize(s)
-
-    assert [{:post_id, _}] = (hd(q.wheres).expr |> macro_arg_at(1) |> macro_arg_at(1)).query.select.fields
   end
 
   test "normalize: windows" do

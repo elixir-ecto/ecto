@@ -549,11 +549,8 @@ defmodule Ecto.Query.Planner do
 
   @spec plan_wheres(Ecto.Query.t, atom) :: Ecto.Query.t
   defp plan_wheres(q, adapter) do
-    wheres = q.wheres |> Enum.map(fn
-      %BooleanExpr{expr: {:in, [], [left, %Ecto.SubQuery{} = s]}} = where ->
-        %{where | expr: {:in, [], [left, plan_subquery(s, s.query.prefix || q.prefix, adapter)]}}
-
-      where -> where
+    wheres = q.wheres |> Enum.map(fn %BooleanExpr{subqueries: subqueries} = where ->
+      %{where | subqueries: Enum.map(subqueries, &plan_subquery(&1, &1.query.prefix || q.prefix, adapter))}
     end)
     %{q | wheres: wheres}
   end
@@ -664,24 +661,27 @@ defmodule Ecto.Query.Planner do
   defp expr_to_cache(%QueryExpr{expr: expr}), do: expr
   defp expr_to_cache(%SelectExpr{expr: expr}), do: expr
 
-  defp cast_and_merge_params(:where, _query, %BooleanExpr{expr: {:in, [], [_left, %Ecto.SubQuery{params: p}]}}, params, _adapter) do
-    # On macro expansion, `where([t], t.id in subquery(s))` has no params.
-    # On a depth first traversal, we could collect params of expressions of t?
-    #
-    # Note that they have shape {"2", {0, :name}}, when s has `where([c], c.name == ^"2")`
-    # %Ecto.SubQuery.params has shape "2" (collected param values), in join on subquery.
-    # ^[1, 2] is treated as two params: 1, 2
-    {Enum.reverse(p, params), true}
+  defp cast_and_merge_params(kind, query, expr, params, adapter) do
+    Enum.reduce expr.params, {params, true}, fn param, {acc, cacheable?} ->
+      case param do
+        {:subquery, i} ->
+          # this is a place holder to intersperse subquery parameters...
+          %Ecto.SubQuery{params: subparams} = Enum.at(expr.subqueries, i)
+          {Enum.reverse(subparams, acc), cacheable?}
+
+        {v, type} ->
+          cast_and_merge_param(kind, query, expr, adapter, v, type, acc, cacheable?) 
+      end
+    end
   end
 
-  defp cast_and_merge_params(kind, query, expr, params, adapter) do
-    Enum.reduce expr.params, {params, true}, fn {v, type}, {acc, cacheable?} ->
-      case cast_param(kind, query, expr, v, type, adapter) do
-        {:in, v} ->
-          {Enum.reverse(v, acc), false}
-        v ->
-          {[v|acc], cacheable?}
-      end
+  defp cast_and_merge_param(kind, query, expr, adapter, v, type, acc, cacheable?) do
+    case cast_param(kind, query, expr, v, type, adapter) do
+      {:in, v} ->
+        {Enum.reverse(v, acc), false}
+
+      v ->
+        {[v | acc], cacheable?}
     end
   end
 
@@ -1050,9 +1050,9 @@ defmodule Ecto.Query.Planner do
     {{:in, in_meta, [left, right]}, acc}
   end
 
-  defp prewalk({:in, in_meta, [left, %Ecto.SubQuery{} = right]}, kind, query, expr, acc, adapter) do
+  defp prewalk({:in, in_meta, [left, {:subquery, i}]}, kind, query, expr, acc, adapter) do
     {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
-    {right, acc} = prewalk_source(right, kind, query, expr, acc, adapter)
+    {right, acc} = prewalk_source(Enum.at(expr.subqueries, i), kind, query, expr, acc, adapter)
     {{:in, in_meta, [left, right]}, acc}
   end
 

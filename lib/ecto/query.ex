@@ -388,7 +388,7 @@ defmodule Ecto.Query do
 
   defmodule BooleanExpr do
     @moduledoc false
-    defstruct [:op, :expr, :file, :line, params: []]
+    defstruct [:op, :expr, :file, :line, params: [], subqueries: []]
   end
 
   defmodule SelectExpr do
