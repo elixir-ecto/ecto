@@ -166,7 +166,6 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p0 in Inspect.Post, where: p0.foo == p0.bar, where: true}
   end
 
-  @tag :skip
   test "where in subquery" do
     s = from(x in Post, where: x.bar == ^"1", select: x.foo)
     assert i(from(x in Post, where: x.foo in subquery(s))) ==

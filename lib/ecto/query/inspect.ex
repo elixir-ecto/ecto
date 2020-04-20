@@ -1,7 +1,7 @@
 import Inspect.Algebra
 import Kernel, except: [to_string: 1]
 
-alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr, WithExpr}
+alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, QueryExpr, WithExpr}
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
@@ -268,8 +268,19 @@ defimpl Inspect, for: Ecto.Query do
     json_expr_path_to_expr(expr, path) |> expr(names, part)
   end
 
-  defp expr_to_string(%Ecto.SubQuery{} = s, _string, _names, _part) do
-    inspect_source(s)
+  defp expr_to_string({:{}, [], [:subquery, i]}, _string, _names, %BooleanExpr{subqueries: subqueries}) do
+    # unprepared, "x in subquery(s)"
+    #
+    # Macro.to_string/2? we do not receive {a, b} in callback but {:{}, [], [a, b]}...
+    #
+    # iex(9)> Macro.to_string({1, 2}, fn ast, s -> IO.inspect(ast); s end)
+    # 1
+    # 2
+    # {:{}, [], [1, 2]}
+    # "{1, 2}"
+    # see https://github.com/elixir-lang/elixir/blob/27bd9ffcc607b74ce56b547cb6ba92c9012c317c/lib/elixir/lib/macro.ex#L932
+    #
+    inspect_source(Enum.at(subqueries, i))
   end
 
   defp expr_to_string(_expr, string, _, _) do
