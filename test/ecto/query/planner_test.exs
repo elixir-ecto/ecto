@@ -271,6 +271,16 @@ defmodule Ecto.Query.PlannerTest do
     assert params == [1, 2, "3"]
   end
 
+  test "plan: where in subqueries (TODO)" do
+    p1 = from(p in Post, select: p.id, where: p.id == ^1)
+    p2 = from(p in Post, select: p.id, where: p.id == ^2)
+    c = from(c in Comment, where: c.post_id in subquery(p1) and c.post_id in subquery(p2))
+
+    params = c |> plan() |> elem(1)
+
+    assert params == [1, 2]
+  end
+
   test "plan: in subquery cache key when subquery has nocache (TODO)" do
     p = from(p in Post, select: p.id, where: p.id in ^[1])
     assert :nocache == p |> plan() |> elem(2)
