@@ -12,7 +12,8 @@ defmodule Ecto.Query.Builder.Filter do
   or a keyword list of field names and values. In a keyword
   list multiple key value pairs will be joined with "and".
 
-  Returned is {expression, {params, subqueries}} which is a valid escaped expression, see Macro.escape/2
+  Returned is {expression, {params, subqueries}} which is a valid escaped expression, see Macro.escape/2.
+  Both params and subqueries are reversed.
   """
   @spec escape(:where | :having | :on, Macro.t, non_neg_integer, Keyword.t, Macro.Env.t) :: {Macro.t, {list, list}}
   def escape(_kind, [], _binding, _vars, _env) do
@@ -61,7 +62,9 @@ defmodule Ecto.Query.Builder.Filter do
   def build(kind, op, query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, {params, subqueries}} = escape(kind, expr, 0, binding, env)
-    params = Builder.escape_params(params)
+
+    params = Enum.reverse(params)
+    subqueries = Enum.reverse(subqueries)
 
     expr = quote do: %Ecto.Query.BooleanExpr{
                         expr: unquote(expr),

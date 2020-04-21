@@ -454,8 +454,8 @@ defmodule Ecto.Query.Builder do
   defp escape_subquery({:subquery, _, [expr]}, _, {params, subqueries}, _vars, _env) do
     subquery = quote(do: Ecto.Query.subquery(unquote(expr)))
     index = length(subqueries)
-    expr = {:subquery, index}
-    {expr, {[expr | params], subqueries ++ [subquery]}}
+    expr = {:subquery, index} # used both in ast and in parameters, as a placeholder.
+    {expr, {[expr | params], [subquery | subqueries]}}
   end
   defp escape_subquery(expr, type, params, vars, env) do
     escape(expr, type, params, vars, env)
