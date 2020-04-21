@@ -271,6 +271,30 @@ defmodule Ecto.Query.PlannerTest do
     assert params == [1, 2, "3"]
   end
 
+  test "plan: in subquery cache key when subquery has nocache (TODO)" do
+    p = from(p in Post, select: p.id, where: p.id in ^[1])
+    assert :nocache == p |> plan() |> elem(2)
+
+    q = from(c in Comment, where: c.post_id in subquery(p))
+    assert :nocache == q |> plan() |> elem(2)
+  end
+
+  test "plan: in subquery cache key when subquery has cache (TODO)" do
+    p1 = from(p in Post, select: p.id, where: p.id == ^1)
+    k = p1 |> plan() |> elem(2)
+
+    c1 = from(c in Comment, where: c.post_id in subquery(p1))
+    cache = c1 |> plan() |> elem(2) 
+    assert [:all, {:where, [{:and, _expr, [sub]}]}, _source] = cache
+    assert {:subquery, 0, ^k} = sub
+
+    # Invariance test.
+    p2 = from(p in Post, select: p.id, where: p.id == ^2)
+    assert ^k = p2 |> plan() |> elem(2)
+    c2 = from(c in Comment, where: c.post_id in subquery(p2))
+    assert ^cache = c2 |> plan() |> elem(2) 
+  end
+
   test "plan: casts values on update_all" do
     {_query, params, _key} = plan(Post |> update([p], set: [id: ^"1"]), :update_all)
     assert params == [1]

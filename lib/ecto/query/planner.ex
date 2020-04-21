@@ -195,6 +195,7 @@ defmodule Ecto.Query.Planner do
   This function is called by the backend before invoking
   any cache mechanism.
   """
+  @spec plan(Query.t, atom, module) :: {planned_query :: Query.t, parameters :: list, cache_key :: any}
   def plan(query, operation, adapter) do
     query
     |> plan_sources(adapter)
@@ -547,11 +548,12 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  @spec plan_wheres(Ecto.Query.t, atom) :: Ecto.Query.t
+  @spec plan_wheres(Ecto.Query.t, module) :: Ecto.Query.t
   defp plan_wheres(q, adapter) do
-    wheres = q.wheres |> Enum.map(fn %BooleanExpr{subqueries: subqueries} = where ->
-      %{where | subqueries: Enum.map(subqueries, &plan_subquery(&1, &1.query.prefix || q.prefix, adapter))}
-    end)
+    wheres =
+      q.wheres |> Enum.map(fn %BooleanExpr{subqueries: subqueries} = where ->
+        %{where | subqueries: Enum.map(subqueries, &plan_subquery(&1, &1.query.prefix || q.prefix, adapter))}
+      end)
     %{q | wheres: wheres}
   end
 
@@ -657,20 +659,26 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp expr_to_cache(%BooleanExpr{op: op, expr: expr}), do: {op, expr}
+  defp expr_to_cache(%BooleanExpr{op: op, expr: expr, subqueries: []}), do: {op, expr}
+  defp expr_to_cache(%BooleanExpr{op: op, expr: expr, subqueries: subqueries}) do
+    # Alternate implementation could be replace {:subquery, i} expression in expr.
+    # Current strategy appends [{:subquery, i, cache}], where cache is the cache key for this subquery.
+    {op, expr, subqueries |> Enum.with_index() |> Enum.map(fn {%{cache: cache}, i} -> {:subquery, i, cache} end)}
+  end
   defp expr_to_cache(%QueryExpr{expr: expr}), do: expr
   defp expr_to_cache(%SelectExpr{expr: expr}), do: expr
 
+  @spec cast_and_merge_params(atom, Query.t, any, list, module) :: {params :: list, cacheable? :: boolean}
   defp cast_and_merge_params(kind, query, expr, params, adapter) do
     Enum.reduce expr.params, {params, true}, fn param, {acc, cacheable?} ->
       case param do
         {:subquery, i} ->
-          # this is a place holder to intersperse subquery parameters...
-          %Ecto.SubQuery{params: subparams} = Enum.at(expr.subqueries, i)
-          {Enum.reverse(subparams, acc), cacheable?}
+          # This is the place holder to intersperse subquery parameters.
+          %Ecto.SubQuery{params: subparams, cache: cache} = Enum.at(expr.subqueries, i)
+          {Enum.reverse(subparams, acc), cacheable? and cache != :nocache}
 
         {v, type} ->
-          cast_and_merge_param(kind, query, expr, adapter, v, type, acc, cacheable?) 
+          cast_and_merge_param(kind, query, expr, adapter, v, type, acc, cacheable?)
       end
     end
   end
