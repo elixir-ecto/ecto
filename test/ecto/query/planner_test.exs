@@ -233,11 +233,12 @@ defmodule Ecto.Query.PlannerTest do
     assert params == ["abcd"]
   end
 
-  test "plan: where in subquery, expr and subquery (TODO)" do
+  test "plan: where in subquery, expr (TODO)" do
     p = from(p in Post, select: p.id)
     q = from(c in Comment, where: c.post_id in subquery(p))
 
     q = q |> plan() |> elem(0)
+
     assert [%{expr: expr, subqueries: [subquery]}] = q.wheres
     assert {:in, [], [{{:., [], [{:&, [], [0]}, :post_id]}, [], []}, {:subquery, 0}]} = expr
     assert %Ecto.SubQuery{} = subquery
@@ -245,20 +246,29 @@ defmodule Ecto.Query.PlannerTest do
 
   test "plan: where in subquery, params (TODO)" do
     p = from(p in Post, select: p.id, where: p.id in ^[2, 3])
-    q = from(c in Comment, where: c.text == ^"1", where: c.post_id in subquery(p), where: c.crazy_comment == ^"4")
+    q = from(c in Comment, where: c.text == ^"1", where: c.post_id in subquery(p))
 
     params = q |> plan() |> elem(1)
 
-    assert params == ["1", 2, 3, "4"]
+    assert params == ["1", 2, 3]
   end
 
-  test "plan: where something and in subquery, params (TODO)" do
+  test "plan: where x and in subquery, params (TODO)" do
     p = from(p in Post, select: p.id, where: p.id in ^[2, 3])
-    q = from(c in Comment, where: c.text == ^"1" and c.post_id in subquery(p) and c.crazy_comment == ^"4")
+    q = from(c in Comment, where: c.text == ^"1" and c.post_id in subquery(p))
 
     params = q |> plan() |> elem(1)
 
-    assert params == ["1", 2, 3, "4"]
+    assert params == ["1", 2, 3]
+  end
+
+  test "plan: where in subquery and x, params (TODO)" do
+    p = from(p in Post, select: p.id, where: p.id in ^[1, 2])
+    q = from(c in Comment, where: c.post_id in subquery(p) and c.text == ^"3")
+
+    params = q |> plan() |> elem(1)
+
+    assert params == [1, 2, "3"]
   end
 
   test "plan: casts values on update_all" do
