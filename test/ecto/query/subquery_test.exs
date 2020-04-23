@@ -255,11 +255,15 @@ defmodule Ecto.Query.SubqueryTest do
     assert %Ecto.SubQuery{} = subquery
   end
 
-  test "plan: where in subquery, params before" do
+  test "plan: where in subquery" do
     p = from(p in Post, select: p.id, where: p.id in ^[2, 3])
     q = from(c in Comment, where: c.text == ^"1", where: c.post_id in subquery(p))
 
-    params = q |> plan() |> elem(1)
+    {q, params, _} = q |> plan()
+
+    assert [_text, %{expr: expr, subqueries: [subquery]}] = q.wheres
+    assert {:in, [], [{{:., [], [{:&, [], [0]}, :post_id]}, [], []}, {:subquery, 0}]} = expr
+    assert %Ecto.SubQuery{} = subquery
 
     assert params == ["1", 2, 3]
   end
@@ -292,7 +296,7 @@ defmodule Ecto.Query.SubqueryTest do
     assert params == [1, 2]
   end
 
-  test "plan: in subquery cache key when subquery has nocache (TODO)" do
+  test "plan: in subquery cache key when subquery has nocache" do
     p = from(p in Post, select: p.id, where: p.id in ^[1])
     assert :nocache == p |> plan() |> elem(2)
 
@@ -300,7 +304,7 @@ defmodule Ecto.Query.SubqueryTest do
     assert :nocache == q |> plan() |> elem(2)
   end
 
-  test "plan: in subquery cache key when subquery has cache (TODO)" do
+  test "plan: in subquery cache key when subquery has cache" do
     p1 = from(p in Post, select: p.id, where: p.id == ^1)
     k = p1 |> plan() |> elem(2)
 
