@@ -245,17 +245,6 @@ defmodule Ecto.Query.SubqueryTest do
   end
 
   test "plan: where in subquery, expression and params" do
-    p = from(p in Post, select: p.id)
-    q = from(c in Comment, where: c.post_id in subquery(p))
-
-    q = q |> plan() |> elem(0)
-
-    assert [%{expr: expr, subqueries: [subquery]}] = q.wheres
-    assert {:in, [], [{{:., [], [{:&, [], [0]}, :post_id]}, [], []}, {:subquery, 0}]} = expr
-    assert %Ecto.SubQuery{} = subquery
-  end
-
-  test "plan: where in subquery" do
     p = from(p in Post, select: p.id, where: p.id in ^[2, 3])
     q = from(c in Comment, where: c.text == ^"1", where: c.post_id in subquery(p))
 
