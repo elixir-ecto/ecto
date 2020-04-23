@@ -663,7 +663,7 @@ defmodule Ecto.Query.Planner do
   defp expr_to_cache(%BooleanExpr{op: op, expr: expr, subqueries: subqueries}) do
     # Alternate implementation could be replace {:subquery, i} expression in expr.
     # Current strategy appends [{:subquery, i, cache}], where cache is the cache key for this subquery.
-    {op, expr, subqueries |> Enum.with_index() |> Enum.map(fn {%{cache: cache}, i} -> {:subquery, i, cache} end)}
+    {op, expr, Enum.map(subqueries, fn %{cache: cache} -> {:subquery, cache} end)}
   end
   defp expr_to_cache(%QueryExpr{expr: expr}), do: expr
   defp expr_to_cache(%SelectExpr{expr: expr}), do: expr
