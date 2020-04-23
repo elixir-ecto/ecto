@@ -280,7 +280,7 @@ defimpl Inspect, for: Ecto.Query do
     # "{1, 2}"
     # see https://github.com/elixir-lang/elixir/blob/27bd9ffcc607b74ce56b547cb6ba92c9012c317c/lib/elixir/lib/macro.ex#L932
     #
-    inspect_source(Enum.at(subqueries, i))
+    inspect_source(Enum.fetch!(subqueries, i))
   end
 
   defp expr_to_string(_expr, string, _, _) do
