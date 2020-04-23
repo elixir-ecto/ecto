@@ -67,7 +67,7 @@ defmodule Ecto.Query.Builder.FilterTest do
     end
 
     test "in subquery" do
-      s = from(p in "posts", select: p.id, where: p.public == ^true) 
+      s = from(p in "posts", select: p.id, where: p.public == ^true)
       %{wheres: [where]} = from(p in "posts", where: p.id in subquery(s))
       assert Macro.to_string(where.expr) ==
              "&0.id() in {:subquery, 0}"

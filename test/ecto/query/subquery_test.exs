@@ -298,7 +298,7 @@ defmodule Ecto.Query.SubqueryTest do
     k = p1 |> plan() |> elem(2)
 
     c1 = from(c in Comment, where: c.post_id in subquery(p1))
-    cache = c1 |> plan() |> elem(2) 
+    cache = c1 |> plan() |> elem(2)
     assert [:all, {:where, [{:and, _expr, [sub]}]}, _source] = cache
     assert {:subquery, ^k} = sub
 
@@ -306,7 +306,7 @@ defmodule Ecto.Query.SubqueryTest do
     p2 = from(p in Post, select: p.id, where: p.id == ^2)
     assert ^k = p2 |> plan() |> elem(2)
     c2 = from(c in Comment, where: c.post_id in subquery(p2))
-    assert ^cache = c2 |> plan() |> elem(2) 
+    assert ^cache = c2 |> plan() |> elem(2)
   end
 
   test "normalize: subqueries" do
