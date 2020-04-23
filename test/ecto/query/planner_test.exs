@@ -296,7 +296,7 @@ defmodule Ecto.Query.PlannerTest do
     c1 = from(c in Comment, where: c.post_id in subquery(p1))
     cache = c1 |> plan() |> elem(2) 
     assert [:all, {:where, [{:and, _expr, [sub]}]}, _source] = cache
-    assert {:subquery, 0, ^k} = sub
+    assert {:subquery, ^k} = sub
 
     # Invariance test.
     p2 = from(p in Post, select: p.id, where: p.id == ^2)
