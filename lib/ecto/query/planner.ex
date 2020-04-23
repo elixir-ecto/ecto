@@ -682,6 +682,7 @@ defmodule Ecto.Query.Planner do
           v -> {[v | acc], cacheable?}
         end
     end
+  end
 
   defp merge_cache(_left, _right, false),  do: :nocache
   defp merge_cache(_left, :nocache, true), do: :nocache
