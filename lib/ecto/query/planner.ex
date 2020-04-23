@@ -670,28 +670,18 @@ defmodule Ecto.Query.Planner do
 
   @spec cast_and_merge_params(atom, Query.t, any, list, module) :: {params :: list, cacheable? :: boolean}
   defp cast_and_merge_params(kind, query, expr, params, adapter) do
-    Enum.reduce expr.params, {params, true}, fn param, {acc, cacheable?} ->
-      case param do
-        {:subquery, i} ->
-          # This is the place holder to intersperse subquery parameters.
-          %Ecto.SubQuery{params: subparams, cache: cache} = Enum.at(expr.subqueries, i)
-          {Enum.reverse(subparams, acc), cacheable? and cache != :nocache}
+    Enum.reduce expr.params, {params, true}, fn
+      {:subquery, i}, {acc, cacheable?} ->
+        # This is the place holder to intersperse subquery parameters.
+        %Ecto.SubQuery{params: subparams, cache: cache} = Enum.fetch!(expr.subqueries, i)
+        {Enum.reverse(subparams, acc), cacheable? and cache != :nocache}
 
-        {v, type} ->
-          cast_and_merge_param(kind, query, expr, adapter, v, type, acc, cacheable?)
-      end
+      {v, type}, {acc, cacheable?} ->
+        case cast_param(kind, query, expr, v, type, adapter) do
+          {:in, v} -> {Enum.reverse(v, acc), false}
+          v -> {[v | acc], cacheable?}
+        end
     end
-  end
-
-  defp cast_and_merge_param(kind, query, expr, adapter, v, type, acc, cacheable?) do
-    case cast_param(kind, query, expr, v, type, adapter) do
-      {:in, v} ->
-        {Enum.reverse(v, acc), false}
-
-      v ->
-        {[v | acc], cacheable?}
-    end
-  end
 
   defp merge_cache(_left, _right, false),  do: :nocache
   defp merge_cache(_left, :nocache, true), do: :nocache
