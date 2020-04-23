@@ -285,6 +285,14 @@ defmodule Ecto.Query.SubqueryTest do
     assert params == [1, 2]
   end
 
+  test "plan: where in subquery" do
+    # ** (Postgrex.Error) ERROR 42601 (syntax_error) subquery has too many columns
+    assert_raise Ecto.QueryError, fn ->
+      p = from(p in Post)
+      from(c in Comment, where: c.id in subquery(p)) |> plan()
+    end
+  end
+
   test "plan: in subquery cache key when subquery has nocache" do
     p = from(p in Post, select: p.id, where: p.id in ^[1])
     assert :nocache == p |> plan() |> elem(2)
@@ -380,7 +388,7 @@ defmodule Ecto.Query.SubqueryTest do
     m |> elem(2) |> Enum.at(i)
   end
 
-  test "normalize: where in subquery (TODO)" do
+  test "normalize: where in subquery" do
     c = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
     s = from(p in Post, where: p.id in subquery(c), select: count())
 
