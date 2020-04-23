@@ -244,6 +244,78 @@ defmodule Ecto.Query.SubqueryTest do
     assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
   end
 
+  test "plan: where in subquery, expression and params" do
+    p = from(p in Post, select: p.id)
+    q = from(c in Comment, where: c.post_id in subquery(p))
+
+    q = q |> plan() |> elem(0)
+
+    assert [%{expr: expr, subqueries: [subquery]}] = q.wheres
+    assert {:in, [], [{{:., [], [{:&, [], [0]}, :post_id]}, [], []}, {:subquery, 0}]} = expr
+    assert %Ecto.SubQuery{} = subquery
+  end
+
+  test "plan: where in subquery, params before" do
+    p = from(p in Post, select: p.id, where: p.id in ^[2, 3])
+    q = from(c in Comment, where: c.text == ^"1", where: c.post_id in subquery(p))
+
+    params = q |> plan() |> elem(1)
+
+    assert params == ["1", 2, 3]
+  end
+
+  test "plan: where expression with param and in subquery" do
+    p = from(p in Post, select: p.id, where: p.id in ^[2, 3])
+    q = from(c in Comment, where: c.text == ^"1" and c.post_id in subquery(p))
+
+    params = q |> plan() |> elem(1)
+
+    assert params == ["1", 2, 3]
+  end
+
+  test "plan: where in subquery and expression with param" do
+    p = from(p in Post, select: p.id, where: p.id in ^[1, 2])
+    q = from(c in Comment, where: c.post_id in subquery(p) and c.text == ^"3")
+
+    params = q |> plan() |> elem(1)
+
+    assert params == [1, 2, "3"]
+  end
+
+  test "plan: where in subqueries" do
+    p1 = from(p in Post, select: p.id, where: p.id == ^1)
+    p2 = from(p in Post, select: p.id, where: p.id == ^2)
+    c = from(c in Comment, where: c.post_id in subquery(p1) and c.post_id in subquery(p2))
+
+    params = c |> plan() |> elem(1)
+
+    assert params == [1, 2]
+  end
+
+  test "plan: in subquery cache key when subquery has nocache (TODO)" do
+    p = from(p in Post, select: p.id, where: p.id in ^[1])
+    assert :nocache == p |> plan() |> elem(2)
+
+    q = from(c in Comment, where: c.post_id in subquery(p))
+    assert :nocache == q |> plan() |> elem(2)
+  end
+
+  test "plan: in subquery cache key when subquery has cache (TODO)" do
+    p1 = from(p in Post, select: p.id, where: p.id == ^1)
+    k = p1 |> plan() |> elem(2)
+
+    c1 = from(c in Comment, where: c.post_id in subquery(p1))
+    cache = c1 |> plan() |> elem(2) 
+    assert [:all, {:where, [{:and, _expr, [sub]}]}, _source] = cache
+    assert {:subquery, ^k} = sub
+
+    # Invariance test.
+    p2 = from(p in Post, select: p.id, where: p.id == ^2)
+    assert ^k = p2 |> plan() |> elem(2)
+    c2 = from(c in Comment, where: c.post_id in subquery(p2))
+    assert ^cache = c2 |> plan() |> elem(2) 
+  end
+
   test "normalize: subqueries" do
     assert_raise Ecto.SubQueryError, ~r/does not allow `update` expressions in query/, fn ->
       query = from p in Post, update: [set: [title: nil]]
@@ -310,4 +382,21 @@ defmodule Ecto.Query.SubqueryTest do
       normalize(from(p in subquery(subquery), select: [:title]))
     end
   end
+
+  defp macro_arg_at(m, i) do
+    m |> elem(2) |> Enum.at(i)
+  end
+
+  test "normalize: where in subquery (TODO)" do
+    c = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
+    s = from(p in Post, where: p.id in subquery(c), select: count())
+
+    assert {:subquery, 0} == hd(s.wheres).expr |> macro_arg_at(1)
+
+    q = normalize(s)
+
+    # here we put back normalized subquery in expression
+    assert [{:post_id, _}] = (hd(q.wheres).expr |> macro_arg_at(1)).query.select.fields
+  end
+
 end
