@@ -136,9 +136,16 @@ defmodule Ecto.Repo.Preloader do
         loaded? = Ecto.assoc_loaded?(value) and not force?
 
         if loaded? and is_nil(id) and not Ecto.Changeset.Relation.empty?(assoc, value) do
-          raise "association `#{field}` for `#{inspect(module)}` has a loaded value but " <>
-                  "its association key `#{owner_key}` is nil. This usually means `#{owner_key}` " <>
-                  "was not selected in a query. If this is intentional, set force: true"
+          # TODO: Convert this to an error in future Ecto versions
+          IO.warn """
+          association `#{field}` for `#{inspect(module)}` has a loaded value but \
+          its association key `#{owner_key}` is nil. This usually means one of:
+
+            * `#{owner_key}` was not selected in a query
+            * the struct was set with default values for `#{field}` which now you want to override
+
+          If this is intentional, set force: true to disable this warning
+          """
         end
 
         cond do

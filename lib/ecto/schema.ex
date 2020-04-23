@@ -1900,8 +1900,7 @@ defmodule Ecto.Schema do
     # If we are compiling code, we can validate associations now,
     # as the Elixir compiler will solve dependencies.
     #
-    # TODO: This is a hack, don't do this at home, it may break any time.
-    # Instead Elixir should provide a proper API to check for compilation.
+    # TODO: Use Code.can_await_module_compilation?/0 from Elixir v1.10+.
     if Process.info(self(), :error_handler) == {:error_handler, Kernel.ErrorHandler} do
       for name <- module.__schema__(:associations) do
         assoc = module.__schema__(:association, name)

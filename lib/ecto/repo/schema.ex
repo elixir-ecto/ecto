@@ -603,7 +603,7 @@ defmodule Ecto.Repo.Schema do
         {replace_all_fields!(:replace_all_except, schema, fields), [], conflict_target}
 
       :replace_all_except_primary_key ->
-        # TODO: Remove me in future versions
+        # TODO: Remove this branch in future versions
         IO.warn ":replace_all_except_primary_key is deprecated, please use {:replace_all_except, [...]} instead"
         fields = replace_all_fields!(:replace_all_except_primary_key, schema, schema && schema.__schema__(:primary_key))
         {fields, [], conflict_target}

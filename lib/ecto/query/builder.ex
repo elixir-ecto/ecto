@@ -935,7 +935,7 @@ defmodule Ecto.Query.Builder do
   @doc """
   Negates the given number.
   """
-  # TODO: remove check when we depend on decimal v2.0
+  # TODO: Remove check when we depend on decimal v2.0
   if Code.ensure_loaded?(Decimal) and function_exported?(Decimal, :negate, 1) do
     def negate!(%Decimal{} = decimal), do: Decimal.negate(decimal)
   else
