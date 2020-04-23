@@ -14,7 +14,7 @@ defmodule Ecto.Query.SubqueryTest do
     schema "comments" do
       field :text, :string
       field :temp, :string, virtual: true
-      belongs_to :post, Ecto.Query.SubqueryTest.Post
+      belongs_to :post, Ecto.Query.SubqueryTest.Post, type: CustomPermalink
       has_many :post_comments, through: [:post, :comments]
     end
   end
@@ -285,14 +285,6 @@ defmodule Ecto.Query.SubqueryTest do
     assert params == [1, 2]
   end
 
-  test "plan: where in subquery" do
-    # ** (Postgrex.Error) ERROR 42601 (syntax_error) subquery has too many columns
-    assert_raise Ecto.QueryError, fn ->
-      p = from(p in Post)
-      from(c in Comment, where: c.id in subquery(p)) |> plan()
-    end
-  end
-
   test "plan: in subquery cache key when subquery has nocache" do
     p = from(p in Post, select: p.id, where: p.id in ^[1])
     assert :nocache == p |> plan() |> elem(2)
@@ -398,6 +390,18 @@ defmodule Ecto.Query.SubqueryTest do
 
     # here we put back normalized subquery in expression
     assert [{:post_id, _}] = (hd(q.wheres).expr |> macro_arg_at(1)).query.select.fields
+  end
+
+  test "normalize: where in subquery with too many selected expressions" do
+    # Otherwise we face database error, such as
+    # (Postgrex.Error) ERROR 42601 (syntax_error) subquery has too many columns
+    #
+    # Alternate design MAY be a expansion time, Ecto.Query.CompileError, such as 
+    # "only one select expression is allowed in query"
+    assert_raise Ecto.QueryError, ~r/^incorrect type of expressions in subquery/, fn ->
+      p = from(p in Post)
+      from(c in Comment, where: c.post_id in subquery(p)) |> normalize()
+    end
   end
 
 end

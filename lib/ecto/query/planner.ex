@@ -1052,6 +1052,9 @@ defmodule Ecto.Query.Planner do
   defp prewalk({:in, in_meta, [left, {:subquery, i}]}, kind, query, expr, acc, adapter) do
     {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
     {right, acc} = prewalk_source(Enum.fetch!(expr.subqueries, i), kind, query, expr, acc, adapter)
+
+    assert_same_types!(query, left, right)
+
     {{:in, in_meta, [left, right]}, acc}
   end
 
@@ -1712,6 +1715,31 @@ defmodule Ecto.Query.Planner do
 
           """
         end
+    end
+  end
+
+  @spec assert_same_types!(Ecto.Query.t, left :: Macro.t, right :: Ecto.SubQuery.t) :: true
+  defp assert_same_types!(query, left, right) do
+    left_types = types!(query, left)
+    right_types = types!(query, right)
+    unless left_types == right_types do
+      error! query, """
+      incorrect type of expressions in subquery.
+      You must append a select clause, with #{length(left_types)} expression(s) of type \
+      #{Enum.map_join(left_types, ", ", &inspect/1)}
+      """
+    end
+    true
+  end
+
+  @spec types!(Ecto.Query.t, expr :: Macro.t | Ecto.SubQuery.t) :: [atom]
+  defp types!(query, {{:., [], [{:&, [], [ix]}, field]}, [], []} = expr) do
+    [type!(:all, query, expr, ix, field)]
+  end
+  defp types!(_query, %Ecto.SubQuery{select: select}) do
+    case select do
+      {:map, fields} -> for {_field, {_kind, type}} <- fields, do: type
+      {:struct, _schema, fields} -> for {_field, {_kind, type}} <- fields, do: type
     end
   end
 
