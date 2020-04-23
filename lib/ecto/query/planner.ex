@@ -1060,7 +1060,7 @@ defmodule Ecto.Query.Planner do
 
   defp prewalk({:in, in_meta, [left, {:subquery, i}]}, kind, query, expr, acc, adapter) do
     {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
-    {right, acc} = prewalk_source(Enum.at(expr.subqueries, i), kind, query, expr, acc, adapter)
+    {right, acc} = prewalk_source(Enum.fetch!(expr.subqueries, i), kind, query, expr, acc, adapter)
     {{:in, in_meta, [left, right]}, acc}
   end
 
