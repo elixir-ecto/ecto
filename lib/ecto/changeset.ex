@@ -1739,7 +1739,6 @@ defmodule Ecto.Changeset do
   @spec validate_required(t, list | atom, Keyword.t) :: t
   def validate_required(%Changeset{} = changeset, fields, opts \\ []) when not is_nil(fields) do
     %{required: required, errors: errors, changes: changes} = changeset
-    message = message(opts, "can't be blank")
     trim = Keyword.get(opts, :trim, true)
     fields = List.wrap(fields)
 
@@ -1751,8 +1750,11 @@ defmodule Ecto.Changeset do
           do: field
 
     case fields_with_errors do
-      [] -> %{changeset | required: fields ++ required}
+      [] ->
+        %{changeset | required: fields ++ required}
+
       _  ->
+        message = message(opts, "can't be blank")
         new_errors = Enum.map(fields_with_errors, &{&1, {message, [validation: :required]}})
         changes = Map.drop(changes, fields_with_errors)
         %{changeset | changes: changes, required: fields ++ required, errors: new_errors ++ errors, valid?: false}
