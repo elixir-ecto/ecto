@@ -202,7 +202,7 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   def build_on(on, join, as, query, binding, count_bind, env) do
-    {on_expr, on_params} = Ecto.Query.Builder.Filter.escape(:on, on, count_bind, binding, env)
+    {on_expr, {on_params, []}} = Ecto.Query.Builder.Filter.escape(:on, on, count_bind, binding, env)
     on_params = Builder.escape_params(on_params)
 
     join =

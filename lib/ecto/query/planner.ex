@@ -195,12 +195,14 @@ defmodule Ecto.Query.Planner do
   This function is called by the backend before invoking
   any cache mechanism.
   """
+  @spec plan(Query.t, atom, module) :: {planned_query :: Query.t, parameters :: list, cache_key :: any}
   def plan(query, operation, adapter) do
     query
     |> plan_sources(adapter)
-    |> plan_assocs
+    |> plan_assocs()
     |> plan_combinations(adapter)
     |> plan_ctes(adapter)
+    |> plan_wheres(adapter)
     |> plan_cache(operation, adapter)
   rescue
     e ->
@@ -209,12 +211,13 @@ defmodule Ecto.Query.Planner do
   end
 
   @doc """
-  Prepare all sources, by traversing and expanding joins.
+  Prepare all sources, by traversing and expanding from, joins, subqueries.
   """
   def plan_sources(query, adapter) do
     {from, sources} = plan_from(query, adapter)
     {joins, sources, tail_sources} = plan_joins(query, sources, length(query.joins), adapter)
-    %{query | from: from, joins: joins |> Enum.reverse,
+    %{query | from: from,
+              joins: joins |> Enum.reverse,
               sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple()}
   end
 
@@ -229,12 +232,7 @@ defmodule Ecto.Query.Planner do
 
   defp plan_source(query, %{source: %Ecto.SubQuery{} = subquery, prefix: prefix} = expr, adapter) do
     try do
-      %{query: inner_query} = subquery
-      inner_query = update_in inner_query.prefix, &(prefix || &1 || query.prefix)
-      {inner_query, params, key} = plan(inner_query, :all, adapter)
-      {inner_query, select} = inner_query |> ensure_select(true) |> subquery_select(adapter)
-      assert_no_subquery_assocs!(inner_query)
-      subquery = %{subquery | query: inner_query, params: params, cache: key, select: select}
+      subquery = plan_subquery(subquery, prefix || subquery.query.prefix || query.prefix, adapter)
       {%{expr | source: subquery}, subquery}
     rescue
       e -> raise Ecto.SubQueryError, query: query, exception: e
@@ -257,6 +255,16 @@ defmodule Ecto.Query.Planner do
 
   defp plan_source(query, %{source: {:fragment, _, _}, prefix: prefix} = expr, _adapter),
        do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment joins")
+
+  @spec plan_subquery(Ecto.SubQuery.t, String.t, module) :: Ecto.SubQuery.t
+  defp plan_subquery(subquery, prefix, adapter) do
+    %{query: inner_query} = subquery
+    inner_query = %{inner_query | prefix: prefix}
+    {inner_query, params, key} = plan(inner_query, :all, adapter)
+    assert_no_subquery_assocs!(inner_query)
+    {inner_query, select} = inner_query |> ensure_select(true) |> subquery_select(adapter)
+    %{subquery | query: inner_query, params: params, cache: key, select: select}
+  end
 
   # The prefix for form are computed upfront, but not for joins
   defp plan_source_schema_prefix(%FromExpr{prefix: prefix}, _schema),
@@ -540,6 +548,15 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  @spec plan_wheres(Ecto.Query.t, module) :: Ecto.Query.t
+  defp plan_wheres(q, adapter) do
+    wheres =
+      q.wheres |> Enum.map(fn %BooleanExpr{subqueries: subqueries} = where ->
+        %{where | subqueries: Enum.map(subqueries, &plan_subquery(&1, &1.query.prefix || q.prefix, adapter))}
+      end)
+    %{q | wheres: wheres}
+  end
+
   @doc """
   Prepare the parameters by merging and casting them according to sources.
   """
@@ -642,18 +659,28 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp expr_to_cache(%BooleanExpr{op: op, expr: expr}), do: {op, expr}
+  defp expr_to_cache(%BooleanExpr{op: op, expr: expr, subqueries: []}), do: {op, expr}
+  defp expr_to_cache(%BooleanExpr{op: op, expr: expr, subqueries: subqueries}) do
+    # Alternate implementation could be replace {:subquery, i} expression in expr.
+    # Current strategy appends [{:subquery, i, cache}], where cache is the cache key for this subquery.
+    {op, expr, Enum.map(subqueries, fn %{cache: cache} -> {:subquery, cache} end)}
+  end
   defp expr_to_cache(%QueryExpr{expr: expr}), do: expr
   defp expr_to_cache(%SelectExpr{expr: expr}), do: expr
 
+  @spec cast_and_merge_params(atom, Query.t, any, list, module) :: {params :: list, cacheable? :: boolean}
   defp cast_and_merge_params(kind, query, expr, params, adapter) do
-    Enum.reduce expr.params, {params, true}, fn {v, type}, {acc, cacheable?} ->
-      case cast_param(kind, query, expr, v, type, adapter) do
-        {:in, v} ->
-          {Enum.reverse(v, acc), false}
-        v ->
-          {[v|acc], cacheable?}
-      end
+    Enum.reduce expr.params, {params, true}, fn
+      {:subquery, i}, {acc, cacheable?} ->
+        # This is the place holder to intersperse subquery parameters.
+        %Ecto.SubQuery{params: subparams, cache: cache} = Enum.fetch!(expr.subqueries, i)
+        {Enum.reverse(subparams, acc), cacheable? and cache != :nocache}
+
+      {v, type}, {acc, cacheable?} ->
+        case cast_param(kind, query, expr, v, type, adapter) do
+          {:in, v} -> {Enum.reverse(v, acc), false}
+          v -> {[v | acc], cacheable?}
+        end
     end
   end
 
@@ -1019,6 +1046,15 @@ defmodule Ecto.Query.Planner do
   defp prewalk({:in, in_meta, [left, {:^, meta, [param]}]}, kind, query, expr, acc, adapter) do
     {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
     {right, acc} = validate_in(meta, expr, param, acc, adapter)
+    {{:in, in_meta, [left, right]}, acc}
+  end
+
+  defp prewalk({:in, in_meta, [left, {:subquery, i}]}, kind, query, expr, acc, adapter) do
+    {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
+    {right, acc} = prewalk_source(Enum.fetch!(expr.subqueries, i), kind, query, expr, acc, adapter)
+
+    assert_same_types!(query, left, right)
+
     {{:in, in_meta, [left, right]}, acc}
   end
 
@@ -1679,6 +1715,31 @@ defmodule Ecto.Query.Planner do
 
           """
         end
+    end
+  end
+
+  @spec assert_same_types!(Ecto.Query.t, left :: Macro.t, right :: Ecto.SubQuery.t) :: true
+  defp assert_same_types!(query, left, right) do
+    left_types = types!(query, left)
+    right_types = types!(query, right)
+    unless left_types == right_types do
+      error! query, """
+      incorrect type of expressions in subquery.
+      You must append a select clause, with #{length(left_types)} expression(s) of type \
+      #{Enum.map_join(left_types, ", ", &inspect/1)}
+      """
+    end
+    true
+  end
+
+  @spec types!(Ecto.Query.t, expr :: Macro.t | Ecto.SubQuery.t) :: [atom]
+  defp types!(query, {{:., [], [{:&, [], [ix]}, field]}, [], []} = expr) do
+    [type!(:all, query, expr, ix, field)]
+  end
+  defp types!(_query, %Ecto.SubQuery{select: select}) do
+    case select do
+      {:map, fields} -> for {_field, {_kind, type}} <- fields, do: type
+      {:struct, _schema, fields} -> for {_field, {_kind, type}} <- fields, do: type
     end
   end
 

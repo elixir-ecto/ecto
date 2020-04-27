@@ -388,7 +388,7 @@ defmodule Ecto.Query do
 
   defmodule BooleanExpr do
     @moduledoc false
-    defstruct [:op, :expr, :file, :line, params: []]
+    defstruct [:op, :expr, :file, :line, params: [], subqueries: []]
   end
 
   defmodule SelectExpr do
@@ -595,8 +595,8 @@ defmodule Ecto.Query do
   If any other value is given, it is converted to a query via
   `Ecto.Queryable` and wrapped in the `Ecto.SubQuery` struct.
 
-  Subqueries are currently only supported in the `from`
-  and `join` fields.
+  `subquery` is supported in `from`, `join`, and `where`, in the
+  form `p.x in subquery(q)`.
 
   ## Examples
 
@@ -609,9 +609,8 @@ defmodule Ecto.Query do
       query = from Employee, order_by: [desc: :salary], limit: 10
       from e in subquery(query, prefix: "my_prefix"), select: avg(e.salary)
 
-  Although subqueries are not allowed in WHERE expressions,
-  most subqueries in WHERE expression can be rewritten as JOINs.
-  Imagine you want to write this query:
+
+  Subquery can also be used in a `join` expression.
 
       UPDATE posts
         SET sync_started_at = $1
@@ -621,22 +620,26 @@ defmodule Ecto.Query do
             LIMIT $2
         )
 
-  If you attempt to write it as `where: p.id in ^subquery(foo)`,
-  Ecto won't accept such query. However, the subquery above can be
-  written as a JOIN, which is supported by Ecto. The final Ecto
-  query will look like this:
+  We can write it as a join expression:
 
-      subset_query = from(p in Post,
+      set = from(p in Post,
         where: p.synced == false and
                  (is_nil(p.sync_started_at) or p.sync_started_at < ^min_sync_started_at),
         limit: ^batch_size
       )
 
       Repo.update_all(
-        from(p in Post, join: s in subquery(subset_query), on: s.id == p.id),
+        from(p in Post, join: s in subquery(set), on: s.id == p.id),
         set: [sync_started_at: NaiveDateTime.utc_now()]
       )
 
+  Or as a where condition:
+
+      subset = from(p in subset, select: p.id)
+      Repo.update_all(
+        from(p in Post, where: p.id in subquery(subset)),
+        set: [sync_started_at: NaiveDateTime.utc_now()]
+      )
   """
   def subquery(query, opts \\ []) do
     subquery = wrap_in_subquery(query)

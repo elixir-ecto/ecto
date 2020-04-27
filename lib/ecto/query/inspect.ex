@@ -1,7 +1,7 @@
 import Inspect.Algebra
 import Kernel, except: [to_string: 1]
 
-alias Ecto.Query.{DynamicExpr, JoinExpr, QueryExpr, WithExpr}
+alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, QueryExpr, WithExpr}
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
@@ -266,6 +266,13 @@ defimpl Inspect, for: Ecto.Query do
 
   defp expr_to_string({:json_extract_path, _, [expr, path]}, _, names, part) do
     json_expr_path_to_expr(expr, path) |> expr(names, part)
+  end
+
+  defp expr_to_string({:{}, [], [:subquery, i]}, _string, _names, %BooleanExpr{subqueries: subqueries}) do
+    # We were supposed to match on {:subquery, i} but Elixir incorrectly
+    # translates those to `:{}` when converting to string.
+    # See https://github.com/elixir-lang/elixir/blob/27bd9ffcc607b74ce56b547cb6ba92c9012c317c/lib/elixir/lib/macro.ex#L932
+    inspect_source(Enum.fetch!(subqueries, i))
   end
 
   defp expr_to_string(_expr, string, _, _) do

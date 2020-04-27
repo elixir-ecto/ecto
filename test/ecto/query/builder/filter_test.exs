@@ -7,19 +7,20 @@ defmodule Ecto.Query.Builder.FilterTest do
   import Ecto.Query
 
   describe "escape" do
-    test "handles expressions and params" do
+    test "handles expressions, params" do
       import Kernel, except: [==: 2, and: 2]
 
       assert escape(:where, quote do [] end, 0, [x: 0], __ENV__) ===
-             {true, []}
+             {true, {[], []}}
 
       assert escape(:where, quote do {x.x()} == {^"foo"} end, 0, [x: 0], __ENV__) ===
              {Macro.escape(quote do {&0.x()} == {^0} end),
-              [{"foo", {0, :x}}]}
+             {[{"foo", {0, :x}}], []}}
 
       escaped = Macro.escape(quote do &0.x() == ^0 and &0.y() == ^1 end)
-      assert {^escaped, [{{_, _, ["bar", :y]}, {0, :y}}, {{_, _, ["foo", :x]}, {0, :x}}]} =
+      assert {^escaped, {params, []}} =
               escape(:where, quote do [x: ^"foo", y: ^"bar"] end, 0, [x: 0], __ENV__)
+      assert [{{_, _, ["bar", :y]}, {0, :y}}, {{_, _, ["foo", :x]}, {0, :x}}] = params
     end
 
     test "raises on invalid expressions" do
@@ -65,6 +66,15 @@ defmodule Ecto.Query.Builder.FilterTest do
              [{1, {0, :foo}}, {"baz", {0, :bar}}]
     end
 
+    test "in subquery" do
+      s = from(p in "posts", select: p.id, where: p.public == ^true)
+      %{wheres: [where]} = from(p in "posts", where: p.id in subquery(s))
+      assert Macro.to_string(where.expr) ==
+             "&0.id() in {:subquery, 0}"
+      assert where.params ==
+        [{:subquery, 0}]
+    end
+
     test "raises on invalid keywords" do
       assert_raise ArgumentError, fn ->
         where(from(p in "posts"), [p], ^[{1, 2}])
@@ -76,5 +86,6 @@ defmodule Ecto.Query.Builder.FilterTest do
         where(from(p in "posts"), [p], ^[foo: nil])
       end
     end
+
   end
 end

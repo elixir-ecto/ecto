@@ -166,6 +166,12 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p0 in Inspect.Post, where: p0.foo == p0.bar, where: true}
   end
 
+  test "where in subquery" do
+    s = from(x in Post, where: x.bar == ^"1", select: x.foo)
+    assert i(from(x in Post, where: x.foo in subquery(s))) ==
+          ~s{from p0 in Inspect.Post, where: p0.foo in subquery(from p0 in Inspect.Post,\n  where: p0.bar == ^"1",\n  select: p0.foo)}
+  end
+
   test "group by" do
     assert i(from(x in Post, group_by: [x.foo, x.bar], group_by: x.foobar)) ==
            ~s{from p0 in Inspect.Post, group_by: [p0.foo, p0.bar], group_by: [p0.foobar]}
