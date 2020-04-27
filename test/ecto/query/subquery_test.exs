@@ -391,5 +391,4 @@ defmodule Ecto.Query.SubqueryTest do
       from(c in Comment, where: c.post_id in subquery(p)) |> normalize()
     end
   end
-
 end
