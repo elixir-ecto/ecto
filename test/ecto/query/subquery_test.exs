@@ -376,29 +376,17 @@ defmodule Ecto.Query.SubqueryTest do
     end
   end
 
-  defp macro_arg_at(m, i) do
-    m |> elem(2) |> Enum.at(i)
-  end
-
   test "normalize: where in subquery" do
     c = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
     s = from(p in Post, where: p.id in subquery(c), select: count())
 
-    assert {:subquery, 0} == hd(s.wheres).expr |> macro_arg_at(1)
-
-    q = normalize(s)
-
-    # here we put back normalized subquery in expression
-    assert [{:post_id, _}] = (hd(q.wheres).expr |> macro_arg_at(1)).query.select.fields
+    assert {:in, _, [_, {:subquery, 0}]} = hd(s.wheres).expr
+    assert {:in, _, [_, %Ecto.SubQuery{} = subquery]} = hd(normalize(s).wheres).expr
+    assert [post_id: _] = subquery.query.select.fields
   end
 
   test "normalize: where in subquery with too many selected expressions" do
-    # Otherwise we face database error, such as
-    # (Postgrex.Error) ERROR 42601 (syntax_error) subquery has too many columns
-    #
-    # Alternate design MAY be a expansion time, Ecto.Query.CompileError, such as 
-    # "only one select expression is allowed in query"
-    assert_raise Ecto.QueryError, ~r/^incorrect type of expressions in subquery/, fn ->
+    assert_raise Ecto.QueryError, ~r/^subquery must return a single field in order to be used on the right-side of `in`/, fn ->
       p = from(p in Post)
       from(c in Comment, where: c.post_id in subquery(p)) |> normalize()
     end

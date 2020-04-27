@@ -347,7 +347,7 @@ defimpl Inspect, for: Ecto.Query do
     Enum.map(sources, fn source ->
       source
       |> Kernel.to_string()
-      |> normalize_source
+      |> normalize_source()
       |> String.first()
       |> String.downcase()
     end)
