@@ -244,6 +244,7 @@ defmodule Ecto.Association do
     on
     |> Map.put(:__struct__, BooleanExpr)
     |> Map.put(:op, :and)
+    |> Map.put(:subqueries, [])
   end
 
   defp merge_from(%FromExpr{source: {"join expression", _}} = from, assoc_source),
