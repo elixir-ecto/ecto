@@ -36,6 +36,8 @@
 
 ## v3.4.0 (2020-03-24)
 
+v3.4 requires Elixir v1.7+.
+
 ### Enhancements
 
   * [Ecto.Query] Allow dynamic queries in CTE and improve error message
