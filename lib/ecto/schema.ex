@@ -1128,7 +1128,7 @@ defmodule Ecto.Schema do
   The third and final option is to use `many_to_many/3` to
   define the relationships between the resources. In this case,
   the comments table won't have the foreign key, instead there
-  is a intermediary table responsible for associating the entries:
+  is an intermediary table responsible for associating the entries:
 
       defmodule Comment do
         use Ecto.Schema
