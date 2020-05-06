@@ -431,6 +431,12 @@ defmodule Ecto.Query.API do
       from(city in City, preload: :country,
            select: map(city, [:country_id, :name, country: [:id, :population]]))
 
+   It's also possible to select a struct from one source but only a subset of
+   fields from one of its associations:
+
+      from(city in City, preload: :country,
+           select: %{city | country: map(country: [:id, :population]))
+
   **IMPORTANT**: When filtering fields for associations, you
   MUST include the foreign keys used in the relationship,
   otherwise Ecto will be unable to find associated records.
