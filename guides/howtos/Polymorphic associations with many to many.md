@@ -113,13 +113,13 @@ create table(:todo_items)  do
   timestamps()
 end
 
-create table(:todo_lists_items) do
+create table(:todo_list_items) do
   add :todo_item_id, references(:todo_items)
   add :todo_list_id, references(:todo_lists)
   timestamps()
 end
 
-create table(:projects_items) do
+create table(:project_items) do
   add :todo_item_id, references(:todo_items)
   add :project_id, references(:projects)
   timestamps()
@@ -383,7 +383,7 @@ end
 
 # Primary key and timestamps are not required if
 # using many_to_many without schemas
-create table("todo_lists_items", primary_key: false) do
+create table("todo_list_items", primary_key: false) do
   add :todo_item_id, references(:todo_items)
   add :todo_list_id, references(:todo_lists)
   # timestamps()
@@ -391,7 +391,7 @@ end
 
 # Primary key and timestamps are not required if
 # using many_to_many without schemas
-create table("projects_items", primary_key: false) do
+create table("project_items", primary_key: false) do
   add :todo_item_id, references(:todo_items)
   add :project_id, references(:projects)
   # timestamps()
