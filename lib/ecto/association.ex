@@ -273,9 +273,9 @@ defmodule Ecto.Association do
   This handles only `where` and converts it to a `join`,
   as that is the only information propagate in join queries.
   """
-  def combine_joins_query(query, %{where: []}, _binding), do: query
+  def combine_joins_query(query, [], _binding), do: query
 
-  def combine_joins_query(%{joins: joins} = query, %{where: conditions}, binding) do
+  def combine_joins_query(%{joins: joins} = query, [_ | _] = conditions, binding) do
     {joins, [join_expr]} = Enum.split(joins, -1)
     %{on: %{params: params, expr: expr} = join_on} = join_expr
     {expr, params} = expand_where(conditions, expr, Enum.reverse(params), length(params), binding)
@@ -285,14 +285,9 @@ defmodule Ecto.Association do
   @doc """
   Add the default assoc query where clauses a provided query.
   """
-  def combine_assoc_query(query, assoc) do
-    query
-    |> combine_assoc_where(assoc)
-  end
+  def combine_assoc_query(query, []), do: query
 
-  def combine_assoc_where(query, %{where: []}), do: query
-
-  def combine_assoc_where(%{wheres: wheres} = query, %{where: conditions}) do
+  def combine_assoc_query(%{wheres: wheres} = query, conditions) do
     {wheres, [where_expr]} = Enum.split(wheres, -1)
     %{params: params, expr: expr} = where_expr
     {expr, params} = expand_where(conditions, expr, Enum.reverse(params), length(params), 0)
@@ -661,19 +656,19 @@ defmodule Ecto.Association.Has do
   @doc false
   def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} = assoc) do
     from(o in owner, join: q in ^queryable, on: field(q, ^related_key) == field(o, ^owner_key))
-    |> Ecto.Association.combine_joins_query(assoc, 1)
+    |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
 
   @doc false
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, [value]) do
     from(x in (query || queryable), where: field(x, ^related_key) == ^value)
-    |> Ecto.Association.combine_assoc_query(assoc)
+    |> Ecto.Association.combine_assoc_query(assoc.where)
   end
 
   @doc false
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, values) do
     from(x in (query || queryable), where: field(x, ^related_key) in ^values)
-    |> Ecto.Association.combine_assoc_query(assoc)
+    |> Ecto.Association.combine_assoc_query(assoc.where)
   end
 
   @doc false
@@ -926,19 +921,19 @@ defmodule Ecto.Association.BelongsTo do
   @doc false
   def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} = assoc) do
     from(o in owner, join: q in ^queryable, on: field(q, ^related_key) == field(o, ^owner_key))
-    |> Ecto.Association.combine_joins_query(assoc, 1)
+    |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
 
   @doc false
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, [value]) do
     from(x in (query || queryable), where: field(x, ^related_key) == ^value)
-    |> Ecto.Association.combine_assoc_query(assoc)
+    |> Ecto.Association.combine_assoc_query(assoc.where)
   end
 
   @doc false
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, values) do
     from(x in (query || queryable), where: field(x, ^related_key) in ^values)
-    |> Ecto.Association.combine_assoc_query(assoc)
+    |> Ecto.Association.combine_assoc_query(assoc.where)
   end
 
   @doc false
@@ -1011,7 +1006,7 @@ defmodule Ecto.Association.ManyToMany do
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
              :on_replace, :join_keys, :join_through, :on_cast, where: [],
-             defaults: [], join_defaults: [], relationship: :child,
+             join_where: [], defaults: [], join_defaults: [], relationship: :child,
              cardinality: :many, unique: false, ordered: false]
 
   @doc false
@@ -1082,12 +1077,17 @@ defmodule Ecto.Association.ManyToMany do
         Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
     end
 
+    where = opts[:where] || []
+    join_where = opts[:join_where] || []
     defaults = Ecto.Association.validate_defaults!(name, opts[:defaults] || [])
     join_defaults = Ecto.Association.validate_defaults!(name, opts[:join_defaults] || [])
-    where = opts[:where] || []
 
     unless is_list(where) do
       raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
+    end
+
+    unless is_list(join_where) do
+      raise ArgumentError, "expected `:join_where` for #{inspect name} to be a keyword list, got: `#{inspect join_where}`"
     end
 
     if opts[:join_defaults] && is_binary(join_through) do
@@ -1101,6 +1101,7 @@ defmodule Ecto.Association.ManyToMany do
       related: related,
       owner_key: owner_key,
       join_keys: join_keys,
+      join_where: join_where,
       join_through: join_through,
       join_defaults: join_defaults,
       queryable: queryable,
@@ -1125,7 +1126,8 @@ defmodule Ecto.Association.ManyToMany do
     from(o in owner,
       join: j in ^join_through, on: field(j, ^join_owner_key) == field(o, ^owner_key),
       join: q in ^queryable, on: field(j, ^join_related_key) == field(q, ^related_key))
-    |> Ecto.Association.combine_joins_query(assoc, 2)
+    |> Ecto.Association.combine_joins_query(assoc.where, 2)
+    |> Ecto.Association.combine_joins_query(assoc.join_where, 1)
   end
 
   @doc false
@@ -1145,7 +1147,8 @@ defmodule Ecto.Association.ManyToMany do
       join: o in ^owner, on: field(o, ^owner_key) in ^values,
       join: j in ^join_through, on: field(j, ^join_owner_key) == field(o, ^owner_key),
       where: field(j, ^join_related_key) == field(q, ^related_key))
-    |> Ecto.Association.combine_assoc_query(assoc)
+    |> Ecto.Association.combine_assoc_query(assoc.where)
+    |> Ecto.Association.combine_joins_query(assoc.join_where, 2)
   end
 
   @doc false

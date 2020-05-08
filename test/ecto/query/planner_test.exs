@@ -89,8 +89,8 @@ defmodule Ecto.Query.PlannerTest do
       has_many :extra_comments, Ecto.Query.PlannerTest.Comment
       has_many :special_comments, Ecto.Query.PlannerTest.Comment, where: [text: {:not, nil}]
       many_to_many :crazy_comments, Comment, join_through: CommentPost, where: [text: "crazycomment"]
-      many_to_many :crazy_comments_with_list, Comment, join_through: CommentPost, where: [text: {:in, ["crazycomment1", "crazycomment2"]}]
-      many_to_many :crazy_comments_without_schema, Comment, join_through: "comment_posts"
+      many_to_many :crazy_comments_with_list, Comment, join_through: CommentPost, where: [text: {:in, ["crazycomment1", "crazycomment2"]}], join_where: [deleted: true]
+      many_to_many :crazy_comments_without_schema, Comment, join_through: "comment_posts", join_where: [deleted: true]
     end
   end
 
@@ -752,6 +752,7 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "normalize: assoc join with wheres that have regular filters" do
+    # Mixing both has_many and many_to_many
     {_query, params, _select} =
       from(post in Post,
         join: comment in assoc(post, :crazy_comments),
@@ -760,20 +761,51 @@ defmodule Ecto.Query.PlannerTest do
     assert params == ["crazycomment", "crazypost"]
   end
 
-  test "normalize: assoc join with wheres that have in filters" do
-    {_query, params, _select} =
-      from(post in Post,
-        join: comment in assoc(post, :crazy_comments_with_list),
-        join: post in assoc(comment, :crazy_post_with_list)) |> normalize_with_params()
+  test "normalize: has_many assoc join with wheres" do
+    {query, params, _select} =
+      from(comment in Comment, join: post in assoc(comment, :crazy_post_with_list)) |> normalize_with_params()
 
-    assert params == ["crazycomment1", "crazycomment2", "crazypost1", "crazypost2"]
+    assert inspect(query) =~ "join: p1 in Ecto.Query.PlannerTest.Post, on: p1.id == c0.crazy_post_id and p1.post_title in ^..."
+    assert params == ["crazypost1", "crazypost2"]
 
     {query, params, _} =
       Ecto.assoc(%Comment{crazy_post_id: 1}, :crazy_post_with_list)
       |> normalize_with_params()
 
-    assert Macro.to_string(hd(query.wheres).expr) == "&0.id() == ^0 and &0.post_title() in ^(1, 2)"
+    assert inspect(query) =~ "where: p0.id == ^... and p0.post_title in ^..."
     assert params == [1, "crazypost1", "crazypost2"]
+  end
+
+  test "normalize: many_to_many assoc join with schema and wheres" do
+    {query, params, _select} =
+      from(post in Post, join: comment in assoc(post, :crazy_comments_with_list)) |> normalize_with_params()
+
+    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.Comment, on: c2.comment_id == c1.id and c1.text in ^... and c2.deleted == ^..."
+    assert params == ["crazycomment1", "crazycomment2", true]
+
+    {query, params, _} =
+      Ecto.assoc(%Post{id: 1}, :crazy_comments_with_list)
+      |> normalize_with_params()
+
+    assert inspect(query) =~ "join: c2 in Ecto.Query.PlannerTest.CommentPost, on: c2.post_id == p1.id and c2.deleted == ^..."
+    assert inspect(query) =~ "where: c2.comment_id == c0.id and c0.text in ^..."
+    assert params ==  [1, true, "crazycomment1", "crazycomment2"]
+  end
+
+  test "normalize: many_to_many assoc join without schema and wheres" do
+    {query, params, _select} =
+      from(post in Post, join: comment in assoc(post, :crazy_comments_without_schema)) |> normalize_with_params()
+
+    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.Comment, on: c2.comment_id == c1.id and c2.deleted == ^..."
+    assert params == [true]
+
+    {query, params, _} =
+      Ecto.assoc(%Post{id: 1}, :crazy_comments_without_schema)
+      |> normalize_with_params()
+
+    assert inspect(query) =~ "join: c2 in \"comment_posts\", on: c2.post_id == p1.id and c2.deleted == ^..."
+    assert inspect(query) =~ "where: c2.comment_id == c0.id"
+    assert params ==  [1, true]
   end
 
   test "normalize: dumps in query expressions" do

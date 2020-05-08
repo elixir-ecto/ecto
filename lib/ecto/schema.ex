@@ -1237,6 +1237,9 @@ defmodule Ecto.Schema do
     * `:where` - A filter for the association. See "Filtering associations"
       in `has_many/3`
 
+    * `:join_where` - A filter for the join table. See "Filtering associations"
+      in `has_many/3`
+
   ## Removing data
 
   If you attempt to remove associated `many_to_many` data, **Ecto will
@@ -1846,7 +1849,7 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_many_to_many_options [:join_through, :join_defaults, :join_keys, :on_delete, :defaults, :on_replace, :unique, :where]
+  @valid_many_to_many_options [:join_through, :join_defaults, :join_keys, :on_delete, :defaults, :on_replace, :unique, :where, :join_where]
 
   @doc false
   def __many_to_many__(mod, name, queryable, opts) do
