@@ -2532,7 +2532,7 @@ defmodule Ecto.Changeset do
       changeset.errors #=> [email: {"has already been taken", []}]
 
   In complex cases, instead of relying on name inference, it may be best
-  to set the contraint name explicitly:
+  to set the constraint name explicitly:
 
       # In the migration
       create unique_index(:users, [:email, :company_id], name: :users_email_company_id_index)
