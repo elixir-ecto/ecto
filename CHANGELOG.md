@@ -1,5 +1,11 @@
 # Changelog for v3.x
 
+## v3.4.4 (2020-05-11)
+
+### Enhancements
+
+  * [Ecto.Schema] Add `join_where` support to `many_to_many`
+
 ## v3.4.3 (2020-04-27)
 
 ### Enhancements
