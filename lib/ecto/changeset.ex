@@ -584,25 +584,20 @@ defmodule Ecto.Changeset do
   end
 
   defp convert_params(params) do
-    params
-    |> Enum.reduce(nil, fn
-      {key, _value}, nil when is_binary(key) ->
-        nil
+    case :maps.next(:maps.iterator(params)) do
+      {key, _, _} when is_atom(key) ->
+        for {key, value} <- params, into: %{} do
+          if is_atom(key) do
+            {Atom.to_string(key), value}
+          else
+            raise Ecto.CastError, type: :map, value: params,
+              message: "expected params to be a map with atoms or string keys, " <>
+                         "got a map with mixed keys: #{inspect params}"
+          end
+        end
 
-      {key, _value}, _ when is_binary(key) ->
-        raise Ecto.CastError, type: :map, value: params,
-                              message: "expected params to be a map with atoms or string keys, " <>
-                                       "got a map with mixed keys: #{inspect params}"
-
-      {key, value}, nil when is_atom(key) ->
-        [{Atom.to_string(key), value}]
-
-      {key, value}, acc when is_atom(key) ->
-        [{Atom.to_string(key), value} | acc]
-    end)
-    |> case do
-      nil -> params
-      list -> :maps.from_list(list)
+      _ ->
+        params
     end
   end
 
