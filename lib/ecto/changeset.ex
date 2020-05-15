@@ -1867,7 +1867,9 @@ defmodule Ecto.Changeset do
         end
 
       if repo.one(query) do
-        add_error(changeset, hd(fields), message(opts, "has already been taken"),
+        error_key = Keyword.get(opts, :error_key, hd(fields))
+
+        add_error(changeset, error_key, message(opts, "has already been taken"),
                   validation: :unsafe_unique, fields: fields)
       else
         changeset

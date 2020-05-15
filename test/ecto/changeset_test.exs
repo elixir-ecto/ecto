@@ -1401,6 +1401,16 @@ defmodule Ecto.ChangesetTest do
                [title: {"is taken", validation: :unsafe_unique, fields: [:title]}]
     end
 
+    test "allows setting a custom error key", context do
+      Process.put(:test_repo_all_results, context.dup_result)
+
+      changeset =
+        unsafe_validate_unique(context.base_changeset, [:title], TestRepo, message: "is taken", error_key: :foo)
+
+      assert changeset.errors ==
+               [foo: {"is taken", validation: :unsafe_unique, fields: [:title]}]
+    end
+
     test "accepts a prefix option", context do
       Process.put(:test_repo_all_results, context.dup_result)
 
