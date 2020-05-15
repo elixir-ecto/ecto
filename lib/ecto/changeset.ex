@@ -1799,19 +1799,19 @@ defmodule Ecto.Changeset do
   early feedback to users, since most conflicting data will have been
   inserted prior to the current validation phase.
 
-  If given a list of fields, the first field name will be used as the
-  error key to the changeset errors keyword list.
-
   ## Options
 
     * `:message` - the message in case the constraint check fails,
-      defaults to "has already been taken"
-
+      defaults to "has already been taken".
 
     * `:match` - how the changeset constraint name is matched against the
       repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
       `:suffix` matches any repo constraint which `ends_with?` `:name`
        to this changeset constraint.
+
+    * `:error_key` - the key to which changeset error will be added when
+      check fails, defaults to the first field name of the given list of
+      fields.
 
     * `:prefix` - The prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). See `Ecto.Repo` documentation
@@ -1867,7 +1867,9 @@ defmodule Ecto.Changeset do
         end
 
       if repo.one(query) do
-        add_error(changeset, hd(fields), message(opts, "has already been taken"),
+        error_key = Keyword.get(opts, :error_key, hd(fields))
+
+        add_error(changeset, error_key, message(opts, "has already been taken"),
                   validation: :unsafe_unique, fields: fields)
       else
         changeset
