@@ -60,6 +60,14 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert select("q", [q], map(q, ~w[field]a)).select.take == %{0 => {:map, fields}}
       assert select("q", [q], struct(q, @fields)).select.take == %{0 => {:struct, fields}}
     end
+
+    test "raises on single atom" do
+      assert_raise Ecto.Query.CompileError,
+                   ~r":foo is not a valid query expression, :select expects a query expression or a list of fields",
+                   fn ->
+        escape(quote do :foo end, [x: 0], __ENV__)
+      end
+    end
   end
 
   describe "at runtime" do
