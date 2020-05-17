@@ -24,7 +24,8 @@ defmodule Ecto.Query.Builder.Select do
 
   """
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {list, %{}}}
-  def escape(atom, _vars, _env) when is_atom(atom) and not is_boolean(atom) do
+  def escape(atom, _vars, _env)
+      when is_atom(atom) and not is_boolean(atom) and atom != nil do
     Builder.error! """
     #{inspect(atom)} is not a valid query expression, :select expects a query expression or a list of fields
     """
