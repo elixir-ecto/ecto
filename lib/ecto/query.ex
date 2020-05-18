@@ -235,7 +235,7 @@ defmodule Ecto.Query do
   not known when writing the subquery:
 
       child_query = from c in Comment, where: parent_as(:posts).id == c.post_id
-      from p in Post, as: :posts, join: c in subquery(child_query)
+      from p in Post, as: :posts, inner_lateral_join: c in subquery(child_query)
 
   ### Bindingless operations
 
