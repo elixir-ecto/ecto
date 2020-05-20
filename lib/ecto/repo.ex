@@ -767,11 +767,9 @@ defmodule Ecto.Repo do
 
   ## Examples
 
-      Repo.one(Post)
+      Repo.one(from p in Post, join: c in assoc(p, :comments), where: p.id == ^post_id)
 
-      Repo.one(from p in Post, where: p.like_count > 10)
-
-      query = from p in Post, where: p.like_count > 10
+      query = from p in Post, join: c in assoc(p, :comments), where: p.id == ^post_id
       Repo.one(query, prefix: "private")
   """
   @callback one(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
