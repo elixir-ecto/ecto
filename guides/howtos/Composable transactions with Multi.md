@@ -29,14 +29,14 @@ Repo.transaction(fn ->
       where: [id: ^mary.id],
       update: [inc: [balance: +10]]
 
-  case Repo.update_all query do
+  case Repo.update_all mary_update do
     {1, _} ->
       john_update =
         from Account,
           where: [id: ^john.id],
           update: [inc: [balance: -10]]
 
-      case Repo.update_all query do
+      case Repo.update_all john_update do
         {1, _} -> {mary, john}
         {_, _} -> Repo.rollback({:failed_transfer, john})
       end
