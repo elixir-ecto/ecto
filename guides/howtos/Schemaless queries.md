@@ -64,7 +64,7 @@ Let's take a look at another example. Imagine you are writing a reporting view, 
 ```elixir
 import Ecto.Query
 
-def running_activities(start_at, end_at)
+def running_activities(start_at, end_at) do
   query =
     from u in "users",
       join: a in "activities",
