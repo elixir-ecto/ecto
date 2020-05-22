@@ -303,11 +303,6 @@ defmodule Ecto.Query.API do
 
       fragment("lower(?)", p.title) == type(^title, p.title)
 
-  It is possible to make use of PostgreSQL's JSON/JSONB data type
-  with fragments, as well:
-
-      fragment("?->>? ILIKE ?", p.map, "key_name", ^some_value)
-
   ## Keyword fragments
 
   In order to support databases that do not have string-based
