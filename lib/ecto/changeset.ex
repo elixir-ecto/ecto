@@ -1295,7 +1295,7 @@ defmodule Ecto.Changeset do
 
   Imagine a relationship where Post has many comments and you want to add a
   new comment to an existing post. While it is possible to use `put_assoc/4`
-  for this, it would be unecessarily complex. Let's see an example.
+  for this, it would be unnecessarily complex. Let's see an example.
 
   First, let's fetch the post with all existing comments:
 
