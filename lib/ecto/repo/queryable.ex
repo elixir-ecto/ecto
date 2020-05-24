@@ -143,6 +143,15 @@ defmodule Ecto.Repo.Queryable do
     execute(:delete_all, name, query, opts)
   end
 
+  def explain(name, queryable, opts) do
+    query =
+      queryable
+      |> Ecto.Queryable.to_query()
+      |> Ecto.Query.Planner.ensure_select(true)
+
+    execute(:explain, name, query, opts)
+  end
+
   @doc """
   Load structs from query.
   """
@@ -167,6 +176,15 @@ defmodule Ecto.Repo.Queryable do
       {:ok, prefix} -> %{query | prefix: prefix}
       :error -> query
     end
+  end
+
+  defp execute(:explain, name, query, opts) when is_list(opts) do
+    {adapter, %{cache: cache, repo: repo} = adapter_meta} = Ecto.Repo.Registry.lookup(name)
+    {query, opts} = prepare_query(:explain, repo, query, opts)
+    query = attach_prefix(query, opts)
+    {query_meta, prepared, params} = Planner.query(query, :explain, cache, adapter, 0)
+    {_count, [[result]]} = adapter.execute(adapter_meta, query_meta, prepared, params, opts)
+    result
   end
 
   defp execute(operation, name, query, opts) when is_list(opts) do

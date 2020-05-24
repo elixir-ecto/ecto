@@ -370,6 +370,10 @@ defmodule Ecto.Repo do
 
         def prepare_query(operation, query, opts), do: {query, opts}
         defoverridable prepare_query: 3
+
+        def explain(queryable, opts \\ []) do
+          Ecto.Repo.Queryable.explain(get_dynamic_repo(), queryable, opts)
+        end
       end
     end
   end
@@ -541,7 +545,7 @@ defmodule Ecto.Repo do
   ## Ecto.Adapter.Queryable
 
   @optional_callbacks get: 3, get!: 3, get_by: 3, get_by!: 3, aggregate: 3, aggregate: 4, exists?: 2,
-                      one: 2, one!: 2, preload: 3, all: 2, stream: 2, update_all: 3, delete_all: 2
+                      one: 2, one!: 2, preload: 3, all: 2, stream: 2, update_all: 3, delete_all: 2, explain: 2
 
   @doc """
   Fetches a single struct from the data store where the primary key matches the
@@ -1515,9 +1519,9 @@ defmodule Ecto.Repo do
         MyRepo.update!(change(alice, balance: alice.balance - 10))
         MyRepo.update!(change(bob, balance: bob.balance + 10))
       end)
-      
+
       # When passing a function of arity 1, it receives the repository itself
-      MyRepo.transaction(fn repo -> 
+      MyRepo.transaction(fn repo ->
         repo.insert!(%Post{})
       end)
 
@@ -1570,4 +1574,6 @@ defmodule Ecto.Repo do
   The transaction will return the value given as `{:error, value}`.
   """
   @callback rollback(value :: any) :: no_return
+
+  @callback explain(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: binary() | nil
 end
