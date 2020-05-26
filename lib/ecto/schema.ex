@@ -1370,6 +1370,8 @@ defmodule Ecto.Schema do
   """
   defmacro many_to_many(name, queryable, opts \\ []) do
     queryable = expand_alias(queryable, __CALLER__)
+    opts = expand_alias_in_key(opts, :join_through, __CALLER__)
+
     quote do
       Ecto.Schema.__many_to_many__(__MODULE__, unquote(name), unquote(queryable), unquote(opts))
     end
@@ -2094,4 +2096,12 @@ defmodule Ecto.Schema do
     do: Macro.expand(ast, %{env | function: {:__schema__, 2}})
   defp expand_alias(ast, _env),
     do: ast
+
+  defp expand_alias_in_key(opts, key, env) do
+    if is_list(opts) and Keyword.has_key?(opts, key) do
+      Keyword.update!(opts, key, &expand_alias(&1, env))
+    else
+      opts
+    end
+  end
 end
