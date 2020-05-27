@@ -1473,7 +1473,7 @@ defmodule Ecto.Repo do
   `c:transaction/2` can be called with both a function of arity
   zero or one. The arity zero function will just be executed as is,
   while the arity one function will receive the repo of the transaction
-  as its first argument, similar to `Ecto.Multi.run`.
+  as its first argument, similar to `Ecto.Multi.run/3`.
 
   If an unhandled error occurs the transaction will be rolled back
   and the error will bubble up from the transaction function.
@@ -1493,7 +1493,7 @@ defmodule Ecto.Repo do
 
   ## Use with Ecto.Multi
 
-  Besides functions, transactions can be used with an Ecto.Multi struct.
+  Besides functions, transactions can be used with an `Ecto.Multi` struct.
   A transaction will be started, all operations applied and in case of
   success committed returning `{:ok, changes}`. In case of any errors
   the transaction will be rolled back and
