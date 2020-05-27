@@ -1493,8 +1493,8 @@ defmodule Ecto.Repo do
 
   ## Use with Ecto.Multi
 
-  Besides functions transaction can be used with an Ecto.Multi struct.
-  Transaction will be started, all operations applied and in case of
+  Besides functions, transactions can be used with an Ecto.Multi struct.
+  A transaction will be started, all operations applied and in case of
   success committed returning `{:ok, changes}`. In case of any errors
   the transaction will be rolled back and
   `{:error, failed_operation, failed_value, changes_so_far}` will be
