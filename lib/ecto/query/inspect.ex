@@ -5,10 +5,25 @@ alias Ecto.Query.{BooleanExpr, DynamicExpr, JoinExpr, QueryExpr, WithExpr}
 
 defimpl Inspect, for: Ecto.Query.DynamicExpr do
   def inspect(%DynamicExpr{binding: binding} = dynamic, opts) do
-    {expr, binding, params, _, _} =
-      Ecto.Query.Builder.Dynamic.fully_expand(%Ecto.Query{joins: Enum.drop(binding, 1)}, dynamic)
+    joins =
+      binding
+      |> Enum.drop(1)
+      |> Enum.with_index()
+      |> Enum.map(&%JoinExpr{ix: &1})
 
-    names = for {name, _, _} <- binding, do: Atom.to_string(name)
+    aliases =
+      for({as, _} when is_atom(as) <- binding, do: as)
+      |> Enum.with_index()
+      |> Map.new
+
+    query = %Ecto.Query{joins: joins, aliases: aliases}
+
+    {expr, binding, params, _, _} = Ecto.Query.Builder.Dynamic.fully_expand(query, dynamic)
+
+    names = Enum.map(binding, fn
+      {_, {name, _, _}} -> Atom.to_string(name)
+      {name, _, _} -> Atom.to_string(name)
+    end)
 
     inspected = Inspect.Ecto.Query.expr(expr, List.to_tuple(names), %{expr: expr, params: params})
 

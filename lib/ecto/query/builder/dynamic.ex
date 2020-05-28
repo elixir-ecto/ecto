@@ -46,8 +46,7 @@ defmodule Ecto.Query.Builder.Dynamic do
   end
 
   defp expand(query, %{fun: fun}, {binding, params, count}) do
-    {dynamic_expr, dynamic_params} =
-      fun.(query)
+    {dynamic_expr, dynamic_params} = fun.(query)
 
     Macro.postwalk(dynamic_expr, {binding, params, count}, fn
       {:^, meta, [ix]}, {binding, params, count} ->

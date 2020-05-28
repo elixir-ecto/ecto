@@ -7,7 +7,7 @@ defmodule Ecto.Query.Builder.DynamicTest do
   import Ecto.Query
 
   defp query do
-    from p in "posts", join: c in "comments", on: p.id == c.post_id
+    from p in "posts", join: c in "comments", as: :comments, on: p.id == c.post_id
   end
 
   describe "fully_expand/2" do
@@ -65,6 +65,13 @@ defmodule Ecto.Query.Builder.DynamicTest do
       assert Macro.to_string(expr) ==
              "&0.foo() == ^0 and &1.bar() == ^1 and &0.baz() == ^2"
       assert params == [{"foo", {0, :foo}}, {"bar", {1, :bar}}, {"baz", {0, :baz}}]
+    end
+
+    test "with join bindings" do
+      dynamic = dynamic([comments: c], c.bar == ^"bar")
+      assert {expr, _, params, _, _} = fully_expand(query(), dynamic)
+      assert Macro.to_string(expr) == "&1.bar() == ^0"
+      assert params ==  [{"bar", {1, :bar}}]
     end
   end
 end
