@@ -143,6 +143,7 @@ Note that `mix test` does not run the tests in the `integration_test` folder. To
     $ cd ..
     $ git clone https://github.com/elixir-ecto/ecto_sql.git
     $ cd ecto_sql
+    $ mix deps.get
     $ ECTO_PATH=../ecto mix test.all
 
 ## Logo
