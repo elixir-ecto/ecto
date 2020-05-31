@@ -155,9 +155,8 @@ defmodule Ecto.Changeset do
 
   The `:delete` option in particular must be used carefully as it would allow
   users to delete any associated data by simply not sending any data for a given
-  field. If you need deletion, it is often preferred to add a separate boolean
-  virtual field to the changeset function that will allow you to manually mark
-  it for deletion, as in the example below:
+  field. If you need deletion, it is often preferred to manually mark the changeset
+  for deletion if a `delete` field is set in the params, as in the example below:
 
       defmodule Comment do
         use Ecto.Schema
@@ -165,20 +164,14 @@ defmodule Ecto.Changeset do
 
         schema "comments" do
           field :body, :string
-          field :delete, :boolean, virtual: true
+        end
+
+        def changeset(comment, %{"delete" => "true"}) do
+          %{Ecto.Changeset.change(comment) | action: :delete}
         end
 
         def changeset(comment, params) do
-          cast(comment, params, [:body, :delete])
-          |> maybe_mark_for_deletion
-        end
-
-        defp maybe_mark_for_deletion(changeset) do
-          if get_change(changeset, :delete) do
-            %{changeset | action: :delete}
-          else
-            changeset
-          end
+          cast(comment, params, [:body])
         end
       end
 
