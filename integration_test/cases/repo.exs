@@ -159,6 +159,9 @@ defmodule Ecto.Integration.RepoTest do
     assert catch_error(TestRepo.insert(%Post{}, prefix: "oops"))
     assert catch_error(TestRepo.update(changeset, prefix: "oops"))
     assert catch_error(TestRepo.delete(changeset, prefix: "oops"))
+
+    # Check we can still insert the post after the invalid prefix attempt
+    assert %Post{id: _} = TestRepo.insert!(%Post{})
   end
 
   test "insert and update with changeset" do
