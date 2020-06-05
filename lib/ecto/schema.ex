@@ -1390,7 +1390,7 @@ defmodule Ecto.Schema do
   database level.
 
   The embedded may or may not have a primary key. Ecto uses the primary keys
-  to detect if an embed is being updated or not. If a primary is not present,
+  to detect if an embed is being updated or not. If a primary key is not present,
   `:on_replace` should be set to either `:update` or `:delete` if there is a
   desire to either update or delete the current embed when a new one is set.
 
