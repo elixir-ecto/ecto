@@ -2019,6 +2019,23 @@ defmodule Ecto.Query do
   end
 
   @doc """
+  Returns the main Ecto.Schema of a query.
+
+  When the input schema is a bitstring `nil` is returned.
+
+  ## Examples
+
+      main_schema(Post) == Post
+
+      User |> join(:inner, [u], p in assoc(u, :posts)) |> main_schema() == User
+
+      main_schema("from u in users") == nil
+  """
+  defp main_schema(%Ecto.Query{from: %{source: {_, module}}}), do: module
+
+  defp main_schema(queryable), do: main_schema(Ecto.Queryable.to_query(queryable))
+
+  @doc """
   Reverses the ordering of the query.
 
   ASC columns become DESC columns (and vice-versa). If the query
