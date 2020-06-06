@@ -42,7 +42,7 @@ defmodule MyApp.Factory do
   end
 
   def insert!(factory_name, attributes \\ []) do
-    Repo.insert! build(factory_name, attributes)
+    factory_name |> build(attributes) |> Repo.insert!()
   end
 end
 ```
