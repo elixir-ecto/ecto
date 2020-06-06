@@ -38,7 +38,7 @@ defmodule MyApp.Factory do
   # Convenience API
 
   def build(factory_name, attributes) do
-    factory_name |> build() |> struct(attributes)
+    factory_name |> build() |> struct!(attributes)
   end
 
   def insert!(factory_name, attributes \\ []) do
