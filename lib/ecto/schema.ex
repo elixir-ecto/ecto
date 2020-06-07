@@ -740,7 +740,7 @@ defmodule Ecto.Schema do
         schema "comments" do
           field :content, :string
           field :parent_id, :integer
-          belongs_to :parent, Comment, foreign_key: :id, references: :parent_id, define_field: false
+          belongs_to :parent, Comment, foreign_key: :parent_id, references: :id, define_field: false
           has_many :children, Comment, foreign_key: :parent_id, references: :id
         end
       end
