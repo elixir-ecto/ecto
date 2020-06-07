@@ -673,8 +673,9 @@ defmodule Ecto.Changeset do
       be invoked (see the "On replace" section on the module documentation)
 
   Every time the `MyApp.Address.changeset/2` function is invoked, it must
-  return a changeset. This changeset will be applied to your Repo with
-  the proper action accordingly.
+  return a changeset. Once the parent changeset is given to an `Ecto.Repo`
+  function, all entries will be inserted/updated/deleted within the same
+  transaction.
 
   Note developers are allowed to explicitly set the `:action` field of a
   changeset to instruct Ecto how to act in certain situations. Let's suppose
@@ -1276,13 +1277,8 @@ defmodule Ecto.Changeset do
       This extremely useful when associating existing data, as we will see
       in the "Example: Adding tags to a post" section.
 
-  Note, however, that `put_assoc/4` always expects all data currently associated to
-  be given. In both examples above, if the changeset has any other comment besides
-  the comment with `id` equal to 1, all of them will be considered as replaced,
-  invoking the relevant `:on_replace` callback which may potentially remove the
-  data. In other words, if only a comment with a id equal to 1 is given, it will
-  be the only one kept. Therefore, `put_assoc/4` always works with the whole data,
-  which may be undesired in some cases. Let's see an example.
+  Once the parent changeset is given to an `Ecto.Repo` function, all entries
+  will be inserted/updated/deleted within the same transaction.
 
   ## Example: Adding a comment to a post
 
