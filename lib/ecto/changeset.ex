@@ -188,7 +188,7 @@ defmodule Ecto.Changeset do
       types = %{first_name: :string, last_name: :string, email: :string}
       changeset =
         {user, types}
-        |> Ecto.Changeset.cast(params["name"], Map.keys(types))
+        |> Ecto.Changeset.cast(params, Map.keys(types))
         |> Ecto.Changeset.validate_required(...)
         |> Ecto.Changeset.validate_length(...)
 
