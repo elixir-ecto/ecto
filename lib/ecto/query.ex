@@ -1853,6 +1853,19 @@ defmodule Ecto.Query do
                  where: l.inserted_at > c.updated_at,
                  preload: [comments: {c, likes: l}]
 
+  Applying a limit to the association can be achieved with `inner_lateral_join`:
+
+      Repo.all from p in Post, as: :post,
+                 join: c in assoc(p, :comments),
+                 inner_lateral_join: top_five in subquery(
+                   from Comment,
+                   where: [post_id: parent_as(:post).id],
+                   order_by: :popularity,
+                   limit: 5,
+                   select: [:id]
+                 ), on: top_five.id == c.id,
+                 preload: [comments: c]
+
   ## Preload queries
 
   Preload also allows queries to be given, allowing you to filter or
