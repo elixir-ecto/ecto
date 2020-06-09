@@ -1853,6 +1853,19 @@ defmodule Ecto.Query do
                  where: l.inserted_at > c.updated_at,
                  preload: [comments: {c, likes: l}]
 
+  Applying a limit to the association can be achieved with `inner_lateral_join`:
+
+      Repo.all from p in Post, as: :post,
+                 join: c in assoc(p, :comments),
+                 inner_lateral_join: top_five in subquery(
+                   from Comment,
+                   where: [post_id: parent_as(:post).id],
+                   order_by: :popularity,
+                   limit: 5,
+                   select: [:id]
+                 ), on: top_five.id == c.id,
+                 preload: [comments: c]
+
   ## Preload queries
 
   Preload also allows queries to be given, allowing you to filter or
@@ -1873,7 +1886,19 @@ defmodule Ecto.Query do
       Repo.all from p in Post, preload: [comments: ^comments_query]
 
   won't bring the top of comments per post. Rather, it will only bring
-  the 5 top comments across all posts.
+  the 5 top comments across all posts. Instead, use a window:
+
+      ranking_query =
+        from c in Comment,
+        select: %{id: c.id, row_number: row_number() |> over(:posts_partition)},
+        windows: [posts_partition: [partition_by: :post_id, order_by: :popularity]]
+
+      comments_query =
+        from c in Comment,
+        join: r in subquery(ranking_query),
+        on: c.id == r.id and r.row_number <= 5
+
+      Repo.all from p in Post, preload: [comments: ^comments_query]
 
   ## Preload functions
 
