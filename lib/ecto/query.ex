@@ -1886,7 +1886,19 @@ defmodule Ecto.Query do
       Repo.all from p in Post, preload: [comments: ^comments_query]
 
   won't bring the top of comments per post. Rather, it will only bring
-  the 5 top comments across all posts.
+  the 5 top comments across all posts. Instead, use a window:
+
+      ranking_query =
+        from c in Comment,
+        select: %{id: c.id, row_number: row_number() |> over(:posts_partition)},
+        windows: [posts_partition: [partition_by: :post_id, order_by: :popularity]]
+
+      comments_query =
+        from c in Comment,
+        join: r in subquery(ranking_query),
+        on: c.id == r.id and r.row_number <= 5
+
+      Repo.all from p in Post, preload: [comments: ^comments_query]
 
   ## Preload functions
 
