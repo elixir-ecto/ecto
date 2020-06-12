@@ -20,9 +20,12 @@ defmodule Ecto.Query.API do
 
   ## Intervals
 
-  Ecto supports following values for `interval` option: `year`, `month`, `week`, `day`, `hour`, `minute`, `second`, `millisecond`, `microsecond`.
+  Ecto supports following values for `interval` option: `"year"`, `"month"`,
+  `"week"`, `"day"`, `"hour"`, `"minute"`, `"second"`, `"millisecond"`, and
+  `"microsecond"`.
 
-  `Date/Time` functions like `datetime_add/3`, `date_add/3`, `from_now/2`, `ago/2` take `interval` as an option.
+  `Date`/`Time` functions like `datetime_add/3`, `date_add/3`, `from_now/2`,
+  `ago/2` take `interval` as an argument.
 
   ## Window API
 
