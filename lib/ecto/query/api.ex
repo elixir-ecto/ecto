@@ -18,6 +18,15 @@ defmodule Ecto.Query.API do
   Furthermore, it is possible to define your own macros and
   use them in Ecto queries (see docs for `fragment/1`).
 
+  ## Intervals
+
+  Ecto supports following values for `interval` option: `"year"`, `"month"`,
+  `"week"`, `"day"`, `"hour"`, `"minute"`, `"second"`, `"millisecond"`, and
+  `"microsecond"`.
+
+  `Date`/`Time` functions like `datetime_add/3`, `date_add/3`, `from_now/2`,
+  `ago/2` take `interval` as an argument.
+
   ## Window API
 
   Ecto also supports many of the windows functions found
@@ -235,8 +244,7 @@ defmodule Ecto.Query.API do
   from the current datetime and compared it with the `p.published_at`.
   If you want to perform operations on date, `date_add/3` could be used.
 
-  The following intervals are supported: year, month, week, day, hour,
-  minute, second, millisecond and microsecond.
+  See [Intervals](#module-intervals) for supported `interval` values.
   """
   def datetime_add(datetime, count, interval), do: doc! [datetime, count, interval]
 
@@ -244,6 +252,8 @@ defmodule Ecto.Query.API do
   Adds a given interval to a date.
 
   See `datetime_add/3` for more information.
+
+  See [Intervals](#module-intervals) for supported `interval` values.
   """
   def date_add(date, count, interval), do: doc! [date, count, interval]
 
@@ -252,6 +262,8 @@ defmodule Ecto.Query.API do
 
   The current time in UTC is retrieved from Elixir and
   not from the database.
+
+  See [Intervals](#module-intervals) for supported `interval` values.
 
   ## Examples
 
@@ -265,6 +277,8 @@ defmodule Ecto.Query.API do
 
   The current time in UTC is retrieved from Elixir and
   not from the database.
+
+  See [Intervals](#module-intervals) for supported `interval` values.
 
   ## Examples
 
