@@ -241,8 +241,7 @@ defmodule Ecto.Query.API do
   from the current datetime and compared it with the `p.published_at`.
   If you want to perform operations on date, `date_add/3` could be used.
 
-  The following intervals are supported: year, month, week, day, hour,
-  minute, second, millisecond and microsecond.
+  See [Intervals](#module-intervals) for supported `interval` values.
   """
   def datetime_add(datetime, count, interval), do: doc! [datetime, count, interval]
 
