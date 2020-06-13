@@ -1751,7 +1751,7 @@ defmodule Ecto.Query do
 
       # Using direct fields access
       from(p in Post,
-        join: c in assoc(p, :category)
+        join: c in assoc(p, :category),
         group_by: [p.id, c.name])
 
   ## Expressions example
