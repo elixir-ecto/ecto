@@ -847,17 +847,6 @@ defmodule Ecto.Schema do
       post = Repo.get(Post, 42)
       authors = Repo.all assoc(post, :comments_authors)
 
-  Although we used the `:through` association in the example above, Ecto
-  also allows developers to dynamically build the through associations using
-  the `Ecto.assoc/2` function:
-
-      assoc(post, [:comments, :author])
-
-  In fact, given `:through` associations are read-only, **using the `Ecto.assoc/2`
-  format is the preferred mechanism for working with through associations**. Use
-  the schema-based one only if you need to store the through data alongside of
-  the parent struct, in specific cases such as preloading.
-
   `:through` associations can also be preloaded. In such cases, not only
   the `:through` association is preloaded but all intermediate steps are
   preloaded too:
@@ -882,6 +871,8 @@ defmodule Ecto.Schema do
       [comment] = Repo.all(Comment) |> Repo.preload(:post_permalink)
       comment.post_permalink #=> %Permalink{...}
 
+  Note `:through` associations are read-only. For example, you cannot use
+  `Ecto.Changeset.cast_assoc/3` to modify through associations.
   """
   defmacro has_many(name, queryable, opts \\ []) do
     queryable = expand_alias(queryable, __CALLER__)

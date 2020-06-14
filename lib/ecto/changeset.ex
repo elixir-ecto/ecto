@@ -862,8 +862,10 @@ defmodule Ecto.Changeset do
 
   defp relation!(_op, type, _name, {type, relation}),
     do: relation
+  defp relation!(op, :assoc, name, nil),
+    do: raise(ArgumentError, "cannot #{op} assoc `#{name}`, assoc `#{name}` not found. Make sure it is spelled correctly and that the association type is not read-only")
   defp relation!(op, type, name, nil),
-    do: raise(ArgumentError, "cannot #{op} #{type} `#{name}`, assoc `#{name}` not found. Make sure it is spelled correctly and properly pluralized (or singularized)")
+    do: raise(ArgumentError, "cannot #{op} #{type} `#{name}`, #{type} `#{name}` not found. Make sure that it exists and is spelled correctly")
   defp relation!(op, type, name, {other, _}) when other in @relations,
     do: raise(ArgumentError, "expected `#{name}` to be an #{type} in `#{op}_#{type}`, got: `#{other}`")
   defp relation!(op, type, name, schema_type),
