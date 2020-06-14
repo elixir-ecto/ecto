@@ -276,7 +276,7 @@ end
 
 In the example above we have used `Ecto.Multi.run/3` twice, albeit for two different reasons.
 
-  1. In `Ecto.Multi.run(:tags, ...)`, we used `run/3` because we need to perform both `insert_all` and `all` operations, and while the multi exposes `Ecto.Multi.insert_all/4`, it does not yet expose a ```Ecto.Multi.all/3```. Whenever we need to perform a repository operation that is not supported by `Ecto.Multi`, we can always fallback to `run/3` or `run/5`.
+  1. In `Ecto.Multi.run(:tags, ...)`, we used `run/3` because we need to perform both `insert_all` and `all` operations, and while the multi exposes `Ecto.Multi.insert_all/4`, it does not have an equivalent to `Ecto.Repo.all`. Whenever we need to perform a repository operation that is not supported by `Ecto.Multi`, we can always fallback to `run/3` or `run/5`.
 
   2. In `Ecto.Multi.run(:post, ...)`, we used `run/3` because we need to access the value of a previous multi operation. The function given to `run/3` receives, as second argument, a map with the results of the operations performed so far. To grab the tags returned in the previous step, we simply pattern match on `%{tags: tags}` on `insert_or_update_post`.
 
