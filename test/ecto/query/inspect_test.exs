@@ -104,6 +104,13 @@ defmodule Ecto.Query.InspectTest do
       ~s{select: %\{id: c0.id, depth: fragment("1")\}>)}
   end
 
+  test "cte with fragments" do
+    assert with_cte("foo", "foo", as: fragment("select 1 as bar"))
+           |> inspect() |> Inspect.Algebra.format(80) |> to_string() ==
+      ~s{#Ecto.Query<from f0 in "foo">\n} <>
+      ~s{|> with_cte("foo", as: fragment("select 1 as bar"))}
+  end
+
   test "join" do
     assert i(from(x in Post, join: y in Comment)) ==
            ~s{from p0 in Inspect.Post, join: c1 in Inspect.Comment, on: true}

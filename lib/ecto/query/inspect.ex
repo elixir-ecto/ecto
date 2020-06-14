@@ -51,12 +51,16 @@ defimpl Inspect, for: Ecto.Query do
       %WithExpr{recursive: recursive, queries: [_ | _] = queries} ->
         with_ctes =
           Enum.map(queries, fn {name, query} ->
-            cte = __MODULE__.inspect(query, opts)
+            cte = case query do
+              %Ecto.Query{} -> __MODULE__.inspect(query, opts)
+              %Ecto.Query.QueryExpr{} -> expr(query, {})
+            end
+
             concat(["|> with_cte(\"" <> name <> "\", as: ", cte, ")"])
           end)
 
-        recursive_ctes = if recursive, do: "|> recursive_ctes(true)", else: ""
-        ([result, recursive_ctes] ++ with_ctes) |> Enum.intersperse(break("\n")) |> concat()
+        result = if recursive, do: glue(result, "\n", "|> recursive_ctes(true)"), else: result
+        [result | with_ctes] |> Enum.intersperse(break("\n")) |> concat()
 
       _ ->
         result
