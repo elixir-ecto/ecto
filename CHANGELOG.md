@@ -1,5 +1,21 @@
 # Changelog for v3.x
 
+## v3.4.5 (2020-06-14)
+
+### Enhancements
+
+  * [Ecto.Changeset] Allow custom error key in `unsafe_validate_unique`
+  * [Ecto.Changeset] Improve performance when casting large params maps
+
+### Bug fixes
+
+  * [Ecto.Changeset] Improve error message for invalid `cast_assoc`
+  * [Ecto.Query] Fix inspecting query with fragment CTE
+  * [Ecto.Query] Fix inspecting dynamics with aliased bindings
+  * [Ecto.Query] Improve error message when selecting a single atom
+  * [Ecto.Repo] Reduce data-copying when preloading multiple associations
+  * [Ecto.Schema] Do not define a compile-time dependency for schema in `:join_through`
+
 ## v3.4.4 (2020-05-11)
 
 ### Enhancements
