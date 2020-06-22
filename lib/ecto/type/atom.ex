@@ -67,8 +67,6 @@ defmodule Ecto.Type.Atom do
   """
   defmacro __using__(opts) do
     values_as_atoms = Keyword.fetch!(opts, :values)
-    Enum.each(values_as_atoms, fn val -> if !is_atom(val), do: raise("values must be atoms") end)
-    values_as_strings = Enum.map(values_as_atoms, &Atom.to_string/1)
 
     load_fun =
       case Keyword.get(opts, :else, :error) do
@@ -100,7 +98,10 @@ defmodule Ecto.Type.Atom do
       use Ecto.Type
 
       @values_as_atoms unquote(values_as_atoms)
-      @values_as_strings unquote(values_as_strings)
+
+      Enum.each(@values_as_atoms, fn val -> if !is_atom(val), do: raise("values must be atoms") end)
+
+      @values_as_strings Enum.map(@values_as_atoms, &Atom.to_string/1)
 
       def type, do: :string
 

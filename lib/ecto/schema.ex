@@ -479,6 +479,7 @@ defmodule Ecto.Schema do
         @after_compile Ecto.Schema
         Module.register_attribute(__MODULE__, :changeset_fields, accumulate: true)
         Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
+        Module.register_attribute(__MODULE__, :enum_fields, accumulate: true)
 
         meta?  = unquote(meta?)
         source = unquote(source)
@@ -563,6 +564,12 @@ defmodule Ecto.Schema do
         for clauses <- Ecto.Schema.__schema__(fields, field_sources, assocs, embeds),
             {args, body} <- clauses do
           def __schema__(unquote_splicing(args)), do: unquote(body)
+        end
+        
+        for {name, values} <- @enum_fields do
+          defmodule name do
+            use Ecto.Type.Atom, values: values
+          end
         end
       end
 
@@ -1746,6 +1753,12 @@ defmodule Ecto.Schema do
     define_field(mod, name, type, opts)
   end
 
+  defp define_field(mod, name, :enum, opts) do
+    camelized_name = Module.concat(mod, Macro.camelize("#{name}" <> "Enum"))
+    Module.put_attribute(mod, :enum_fields, {camelized_name, opts[:values]})
+    define_field(mod, name, camelized_name, Keyword.drop(opts, [:values]))
+  end
+
   defp define_field(mod, name, type, opts) do
     virtual? = opts[:virtual] || false
     pk? = opts[:primary_key] || false
@@ -2014,6 +2027,14 @@ defmodule Ecto.Schema do
 
   defp check_field_type!(name, {:embed, _}, _opts) do
     raise ArgumentError, "cannot declare field #{inspect name} as embed. Use embeds_one/many instead"
+  end
+
+  defp check_field_type!(name, :enum, opts) do
+    if !opts[:values] || !is_list(opts[:values]) || !Enum.all?(opts[:values], &is_atom/1) do
+      raise ArgumentError,
+            "enum #{name} requires values, e.g." <>
+              "`field \"#{name}\", :enum, values: [:one, :two, :three]`"
+    end
   end
 
   defp check_field_type!(name, type, opts) do
