@@ -88,14 +88,17 @@ defmodule Ecto.Type do
     end
   end
 
-  @typedoc "An Ecto type, primitive or custom."
-  @type t :: primitive | custom
+  @typedoc "An Ecto type: primitive, custom, or parameterized."
+  @type t :: primitive | custom | parameterized
 
   @typedoc "Primitive Ecto types (handled by Ecto)."
   @type primitive :: base | composite
 
   @typedoc "Custom types are represented by user-defined modules."
   @type custom :: module
+
+  @typedoc "Parameterized custom types are represented by user-defined modules and options."
+  @type parameterized :: {:parameterized, module, keyword()}
 
   @type base :: :integer | :float | :boolean | :string | :map |
                  :binary | :decimal | :id | :binary_id |
@@ -104,14 +107,14 @@ defmodule Ecto.Type do
 
   @type composite :: {:array, t} | {:map, t} | private_composite
 
-  @typep private_composite :: {:maybe, t} | {:embed, Ecto.Embedded.t} | {:in, t} | {:param, :any_datetime}
+  @typep private_composite :: {:maybe, t} | {:in, t} | {:param, :any_datetime}
 
   @base ~w(
     integer float decimal boolean string map binary id binary_id any
     utc_datetime naive_datetime date time
     utc_datetime_usec naive_datetime_usec time_usec
   )a
-  @composite ~w(array map in embed param)a
+  @composite ~w(array map in param)a
 
   @doc """
   Returns the underlying schema type for the custom type.
@@ -231,6 +234,15 @@ defmodule Ecto.Type do
   """
   def embed_as({composite, _}, _format) when composite in @composite, do: :self
   def embed_as(base, _format) when base in @base, do: :self
+
+  def embed_as({:parameterized_type, mod, opts}, format) do
+    if loaded_and_exported?(mod, :embed_as, 2) do
+      mod.embed_as(format, opts)
+    else
+      :self
+    end
+  end
+
   def embed_as(mod, format) do
     if loaded_and_exported?(mod, :embed_as, 1) do
       mod.embed_as(format)
@@ -239,51 +251,51 @@ defmodule Ecto.Type do
     end
   end
 
-  @doc """
-  Dumps the `value` for `type` considering it will be embedded in `format`.
+  # @doc """
+  # Dumps the `value` for `type` considering it will be embedded in `format`.
 
-  ## Examples
+  # ## Examples
 
-      iex> Ecto.Type.embedded_dump(:decimal, Decimal.new("1"), :json)
-      {:ok, Decimal.new("1")}
+  #     iex> Ecto.Type.embedded_dump(:decimal, Decimal.new("1"), :json)
+  #     {:ok, Decimal.new("1")}
 
-  """
-  def embedded_dump({:embed, _} = type, value, format) do
-    dump(type, value, &embedded_dump(&1, &2, format))
-  end
+  # """
+  # def embedded_dump({:embed, _} = type, value, format) do
+  #   dump(type, value, &embedded_dump(&1, &2, format))
+  # end
 
-  def embedded_dump(type, value, format) do
-    case embed_as(type, format) do
-      :self -> {:ok, value}
-      :dump -> dump(type, value)
-    end
-  end
+  # def embedded_dump(type, value, format) do
+  #   case embed_as(type, format) do
+  #     :self -> {:ok, value}
+  #     :dump -> dump(type, value)
+  #   end
+  # end
 
-  @doc """
-  Loads the `value` for `type` considering it was embedded in `format`.
+  # @doc """
+  # Loads the `value` for `type` considering it was embedded in `format`.
 
-  ## Examples
+  # ## Examples
 
-      iex> Ecto.Type.embedded_load(:decimal, "1", :json)
-      {:ok, Decimal.new("1")}
+  #     iex> Ecto.Type.embedded_load(:decimal, "1", :json)
+  #     {:ok, Decimal.new("1")}
 
-  """
-  def embedded_load({:embed, _} = type, value, format) do
-    load(type, value, &embedded_load(&1, &2, format))
-  end
+  # """
+  # def embedded_load({:embed, _} = type, value, format) do
+  #   load(type, value, &embedded_load(&1, &2, format))
+  # end
 
-  def embedded_load(type, value, format) do
-    case embed_as(type, format) do
-      :self ->
-        case cast(type, value) do
-          {:ok, _} = ok -> ok
-          _ -> :error
-        end
+  # def embedded_load(type, value, format) do
+  #   case embed_as(type, format) do
+  #     :self ->
+  #       case cast(type, value, nil) do
+  #         {:ok, _} = ok -> ok
+  #         _ -> :error
+  #       end
 
-      :dump ->
-        load(type, value)
-    end
-  end
+  #     :dump ->
+  #       load(type, value)
+  #   end
+  # end
 
   @doc """
   Retrieves the underlying schema type for the given, possibly custom, type.
@@ -306,6 +318,7 @@ defmodule Ecto.Type do
   def type(type)
   def type({:array, type}), do: {:array, type(type)}
   def type({:map, type}), do: {:map, type(type)}
+  def type({:parameterized, type, opts}), do: type.type(opts)
 
   def type(type) do
     if primitive?(type) do
@@ -347,11 +360,11 @@ defmodule Ecto.Type do
   defp do_match?(_left, :any),  do: true
   defp do_match?(:any, _right), do: true
   defp do_match?({outer, left}, {outer, right}), do: match?(left, right)
-  defp do_match?({:array, :any}, {:embed, %{cardinality: :many}}), do: true
   defp do_match?(:decimal, type) when type in [:float, :integer], do: true
   defp do_match?(:binary_id, :binary), do: true
   defp do_match?(:id, :integer), do: true
   defp do_match?(type, type), do: true
+  defp do_match?(other, {:parameterized_type, type, opts}), do: type.match?(other, opts)
   defp do_match?(:naive_datetime, {:param, :any_datetime}), do: true
   defp do_match?(:naive_datetime_usec, {:param, :any_datetime}), do: true
   defp do_match?(:utc_datetime, {:param, :any_datetime}), do: true
@@ -422,10 +435,6 @@ defmodule Ecto.Type do
     end
   end
 
-  def dump({:embed, embed}, value, dumper) do
-    dump_embed(embed, value, dumper)
-  end
-
   def dump({:in, type}, value, dumper) do
     case dump({:array, type}, value, dumper) do
       {:ok, value} -> {:ok, {:in, value}}
@@ -439,6 +448,10 @@ defmodule Ecto.Type do
 
   def dump({:array, type}, value, dumper) do
     array(value, type, dumper, [])
+  end
+
+  def dump({:parameterized, type, opts}, value, dumper) do
+    type.dump(value, dumper, opts)
   end
 
   def dump(type, value, _) do
@@ -466,6 +479,7 @@ defmodule Ecto.Type do
   defp dump_fun({:array, type}), do: &array(&1, dump_fun(type), [])
   defp dump_fun({:map, type}), do: &map(&1, dump_fun(type), %{})
   defp dump_fun(mod) when is_atom(mod), do: &mod.dump(&1)
+  defp dump_fun({:parameterized, type, opts}), do: &type.dump(&1, opts)
 
   defp dump_float(term) when is_float(term), do: {:ok, term}
   defp dump_float(_), do: :error
@@ -504,29 +518,6 @@ defmodule Ecto.Type do
 
   defp dump_utc_datetime_usec(_), do: :error
 
-  defp dump_embed(%{cardinality: :one, related: schema, field: field},
-                  value, fun) when is_map(value) do
-    {:ok, dump_embed(field, schema, value, schema.__schema__(:dump), fun)}
-  end
-
-  defp dump_embed(%{cardinality: :many, related: schema, field: field},
-                  value, fun) when is_list(value) do
-    types = schema.__schema__(:dump)
-    {:ok, Enum.map(value, &dump_embed(field, schema, &1, types, fun))}
-  end
-
-  defp dump_embed(_embed, _value, _fun) do
-    :error
-  end
-
-  defp dump_embed(_field, schema, %{__struct__: schema} = struct, types, dumper) do
-    Ecto.Schema.Loader.safe_dump(struct, types, dumper)
-  end
-
-  defp dump_embed(field, _schema, value, _types, _fun) do
-    raise ArgumentError, "cannot dump embed `#{field}`, invalid value: #{inspect value}"
-  end
-
   @doc """
   Loads a value with the given type.
 
@@ -542,10 +533,6 @@ defmodule Ecto.Type do
 
   """
   @spec load(t, term) :: {:ok, term} | :error
-  def load({:embed, embed}, value) do
-    load_embed(embed, value, &load/2)
-  end
-
   def load(_type, nil) do
     {:ok, nil}
   end
@@ -568,10 +555,6 @@ defmodule Ecto.Type do
   the given `loader` function is used.
   """
   @spec load(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
-  def load({:embed, embed}, value, loader) do
-    load_embed(embed, value, loader)
-  end
-
   def load(_type, nil, _loader) do
     {:ok, nil}
   end
@@ -615,6 +598,11 @@ defmodule Ecto.Type do
   defp load_fun({:array, type}), do: &array(&1, load_fun(type), [])
   defp load_fun({:map, type}), do: &map(&1, load_fun(type), %{})
   defp load_fun(mod) when is_atom(mod), do: &mod.load(&1)
+  defp load_fun({:parameterized, type, opts}) do
+    fn val ->
+      type.load(val, opts)
+    end
+  end
 
   defp load_float(term) when is_float(term), do: {:ok, term}
   defp load_float(term) when is_integer(term), do: {:ok, :erlang.float(term)}
@@ -665,32 +653,6 @@ defmodule Ecto.Type do
 
   defp load_utc_datetime_usec(_),
     do: :error
-
-  defp load_embed(%{cardinality: :one}, nil, _fun), do: {:ok, nil}
-
-  defp load_embed(%{cardinality: :one, related: schema, field: field},
-                  value, fun) when is_map(value) do
-    {:ok, load_embed(field, schema, value, fun)}
-  end
-
-  defp load_embed(%{cardinality: :many}, nil, _fun), do: {:ok, []}
-
-  defp load_embed(%{cardinality: :many, related: schema, field: field},
-                  value, fun) when is_list(value) do
-    {:ok, Enum.map(value, &load_embed(field, schema, &1, fun))}
-  end
-
-  defp load_embed(_embed, _value, _fun) do
-    :error
-  end
-
-  defp load_embed(_field, schema, value, loader) when is_map(value) do
-    Ecto.Schema.Loader.unsafe_load(schema, value, loader)
-  end
-
-  defp load_embed(field, _schema, value, _fun) do
-    raise ArgumentError, "cannot load embed `#{field}`, invalid value: #{inspect value}"
-  end
 
   @doc """
   Casts a value to the given type.
@@ -765,19 +727,24 @@ defmodule Ecto.Type do
       :error
 
   """
-  @spec cast(t, term) :: {:ok, term} | {:error, keyword()} | :error
-  def cast({:embed, type}, value), do: cast_embed(type, value)
-  def cast({:in, _type}, nil), do: :error
-  def cast(_type, nil), do: {:ok, nil}
+  @spec cast(t, term, term) :: {:ok, term} | {:error, keyword() | Ecto.Changeset.t()} | :error | :ignore
+  def cast(_, _, current \\ nil)
 
-  def cast({:maybe, type}, value) do
-    case cast(type, value) do
+  def cast({:parameterized, type, opts}, value, current) do
+    type.cast(value, current, opts)
+  end
+
+  def cast({:in, _type}, nil, _current), do: :error
+  def cast(_type, nil, _current), do: {:ok, nil}
+
+  def cast({:maybe, type}, value, current) do
+    case cast(type, value, current) do
       {:ok, _} = ok -> ok
       _ -> {:ok, value}
     end
   end
 
-  def cast(type, value) do
+  def cast(type, value, _current) do
     cast_fun(type).(value)
   end
 
@@ -845,24 +812,6 @@ defmodule Ecto.Type do
   defp cast_map(term) when is_map(term), do: {:ok, term}
   defp cast_map(_), do: :error
 
-  defp cast_embed(%{cardinality: :one}, nil), do: {:ok, nil}
-  defp cast_embed(%{cardinality: :one, related: schema}, %{__struct__: schema} = struct) do
-    {:ok, struct}
-  end
-
-  defp cast_embed(%{cardinality: :many}, nil), do: {:ok, []}
-  defp cast_embed(%{cardinality: :many, related: schema}, value) when is_list(value) do
-    if Enum.all?(value, &Kernel.match?(%{__struct__: ^schema}, &1)) do
-      {:ok, value}
-    else
-      :error
-    end
-  end
-
-  defp cast_embed(_embed, _value) do
-    :error
-  end
-
   ## Shared helpers
 
   defp same_integer(term) when is_integer(term), do: {:ok, term}
@@ -895,9 +844,6 @@ defmodule Ecto.Type do
   end
 
   @doc false
-  def adapter_load(_adapter, {:embed, embed}, nil) do
-    load_embed(embed, nil, &load/2)
-  end
   def adapter_load(_adapter, _type, nil) do
     {:ok, nil}
   end
@@ -1157,6 +1103,14 @@ defmodule Ecto.Type do
   defp equal_fun(mod) when is_atom(mod) do
     if loaded_and_exported?(mod, :equal?, 2) do
       &mod.equal?/2
+    end
+  end
+
+  defp equal_fun({:parameterized, mod, opts}) when is_atom(mod) do
+    if loaded_and_exported?(mod, :equal?, 3) do
+      fn a, b ->
+        mod.equal?(a, b, opts)
+      end
     end
   end
 

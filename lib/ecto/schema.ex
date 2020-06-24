@@ -1510,8 +1510,9 @@ defmodule Ecto.Schema do
 
   defmacro embeds_one(name, schema, opts) do
     schema = expand_alias(schema, __CALLER__)
+    opts = Keyword.put(opts, :type, schema)
     quote do
-      Ecto.Schema.__embeds_one__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
+      field unquote(name), {Ecto.Type.Embed, unquote(opts)}
     end
   end
 
@@ -1523,7 +1524,8 @@ defmodule Ecto.Schema do
   defmacro embeds_one(name, schema, opts, do: block) do
     quote do
       {schema, opts} = Ecto.Schema.__embeds_module__(__ENV__, unquote(schema), unquote(opts), unquote(Macro.escape(block)))
-      Ecto.Schema.__embeds_one__(__MODULE__, unquote(name), schema, opts)
+      opts = Keyword.put(opts, :type, unquote(schema))
+      field unquote(name), {Ecto.Type.Embed, opts}
     end
   end
 
@@ -1677,8 +1679,10 @@ defmodule Ecto.Schema do
 
   defmacro embeds_many(name, schema, opts) do
     schema = expand_alias(schema, __CALLER__)
+
+    opts = Keyword.put(opts, :type, schema)
     quote do
-      Ecto.Schema.__embeds_many__(__MODULE__, unquote(name), unquote(schema), unquote(opts))
+      field unquote(name), {Ecto.Type.EmbedMany, unquote(opts)}
     end
   end
 
@@ -1690,7 +1694,8 @@ defmodule Ecto.Schema do
   defmacro embeds_many(name, schema, opts, do: block) do
     quote do
       {schema, opts} = Ecto.Schema.__embeds_module__(__ENV__, unquote(schema), unquote(opts), unquote(Macro.escape(block)))
-      Ecto.Schema.__embeds_many__(__MODULE__, unquote(name), schema, opts)
+      opts = Keyword.put(opts, :type, unquote(schema))
+      field unquote(name), {Ecto.Type.EmbedMany, opts}
     end
   end
 
@@ -1752,9 +1757,20 @@ defmodule Ecto.Schema do
 
   @doc false
   def __field__(mod, name, type, opts) do
-    check_field_type!(name, type, opts)
+    type = maybe_to_parameterized(type, name, mod)
+    type = check_field_type!(name, type, opts)
     define_field(mod, name, type, opts)
   end
+
+  def maybe_to_parameterized({type, opts}, name, mod) do
+    cond do
+      Ecto.Type.primitive?(type) -> {type, opts}
+      valid_parameterized_type?({type, opts}) -> {:parameterized, type, type.init(Keyword.merge(opts, field: name, schema: mod))}
+      true -> {type, opts}
+    end
+  end
+
+  def maybe_to_parameterized(type, _, _), do: type
 
   defp define_field(mod, name, type, opts) do
     virtual? = opts[:virtual] || false
@@ -1863,24 +1879,6 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_embeds_one_options [:strategy, :on_replace, :source]
-
-  @doc false
-  def __embeds_one__(mod, name, schema, opts) do
-    check_options!(opts, @valid_embeds_one_options, "embeds_one/3")
-    embed(mod, :one, name, schema, opts)
-  end
-
-  @valid_embeds_many_options [:strategy, :on_replace, :source]
-
-  @doc false
-  def __embeds_many__(mod, name, schema, opts) do
-    check_options!(opts, @valid_embeds_many_options, "embeds_many/3")
-    opts = Keyword.put(opts, :default, [])
-    embed(mod, :many, name, schema, opts)
-  end
-
-  @doc false
   def __embeds_module__(env, name, opts, block) do
     {pk, opts} = Keyword.pop(opts, :primary_key, {:id, :binary_id, autogenerate: true})
 
@@ -1991,14 +1989,6 @@ defmodule Ecto.Schema do
 
   ## Private
 
-  defp embed(mod, cardinality, name, schema, opts) do
-    opts   = [cardinality: cardinality, related: schema] ++ opts
-    struct = Ecto.Embedded.struct(mod, name, opts)
-
-    define_field(mod, name, {:embed, struct}, opts)
-    Module.put_attribute(mod, :ecto_embeds, {name, struct})
-  end
-
   defp put_struct_field(mod, name, assoc) do
     fields = Module.get_attribute(mod, :struct_fields)
 
@@ -2022,10 +2012,6 @@ defmodule Ecto.Schema do
                            "(no time zone information) or :utc_datetime (time zone is set to UTC)"
   end
 
-  defp check_field_type!(name, {:embed, _}, _opts) do
-    raise ArgumentError, "cannot declare field #{inspect name} as embed. Use embeds_one/many instead"
-  end
-
   defp check_field_type!(name, type, opts) do
     cond do
       type == :any and !opts[:virtual] ->
@@ -2038,6 +2024,9 @@ defmodule Ecto.Schema do
       is_atom(type) and Code.ensure_compiled(type) == {:module, type} and function_exported?(type, :type, 0) ->
         type
 
+      match?({:parameterized, _type, _opts}, type) ->
+        type
+
       is_atom(type) and function_exported?(type, :__schema__, 1) ->
         raise ArgumentError,
           "schema #{inspect type} is not a valid type for field #{inspect name}." <>
@@ -2047,6 +2036,15 @@ defmodule Ecto.Schema do
         raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}"
     end
   end
+
+  defp valid_parameterized_type?({type, opts}) when is_atom(type) and is_list(opts) do
+    Code.ensure_compiled(type) == {:module, type} &&
+      function_exported?(type, :type, 1) &&
+      function_exported?(type, :init, 1) &&
+      Keyword.keyword?(opts)
+  end
+
+  defp valid_parameterized_type?(_), do: false
 
   defp store_mfa_autogenerate!(mod, name, type, mfa) do
     if autogenerate_id(type) do

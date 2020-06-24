@@ -49,6 +49,7 @@ defmodule Ecto.Changeset.Relation do
   @doc """
   Applies related changeset changes
   """
+
   def apply_changes(%{cardinality: :one}, nil) do
     nil
   end

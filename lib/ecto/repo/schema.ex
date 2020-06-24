@@ -217,7 +217,6 @@ defmodule Ecto.Repo.Schema do
     dumper = schema.__schema__(:dump)
     fields = schema.__schema__(:fields)
     assocs = schema.__schema__(:associations)
-    embeds = schema.__schema__(:embeds)
 
     {return_types, return_sources} =
       schema
@@ -234,7 +233,7 @@ defmodule Ecto.Repo.Schema do
     changeset = put_repo_and_action(changeset, :insert, repo, opts)
     changeset = surface_changes(changeset, struct, fields ++ assocs)
 
-    wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
+    wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, prepare, fn ->
       assoc_opts = assoc_opts(assocs, opts)
       user_changeset = run_prepare(changeset, prepare)
 
@@ -243,11 +242,9 @@ defmodule Ecto.Repo.Schema do
       changeset = repo_changes(changeset)
 
       if changeset.valid? do
-        embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :insert)
-
         autogen_id = schema.__schema__(:autogenerate_id)
         schema_meta = metadata(struct, autogen_id, opts)
-        changes = Map.merge(changeset.changes, embeds)
+        changes = changeset.changes
 
         {changes, extra, return_types, return_sources} =
           autogenerate_id(autogen_id, changes, return_types, return_sources, adapter)
@@ -265,7 +262,7 @@ defmodule Ecto.Repo.Schema do
             values = extra ++ values
 
             changeset
-            |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, schema_meta)
+            |> load_changes(:loaded, return_types, values, autogen, adapter, schema_meta)
             |> process_children(children, user_changeset, adapter, assoc_opts)
 
           {:error, _} = error ->
@@ -304,7 +301,6 @@ defmodule Ecto.Repo.Schema do
     dumper = schema.__schema__(:dump)
     fields = schema.__schema__(:fields)
     assocs = schema.__schema__(:associations)
-    embeds = schema.__schema__(:embeds)
 
     force? = !!opts[:force]
     filters = add_pk_filter!(changeset.filters, struct)
@@ -321,7 +317,7 @@ defmodule Ecto.Repo.Schema do
     changeset = put_repo_and_action(changeset, :update, repo, opts)
 
     if changeset.changes != %{} or changeset.repo_changes != %{} or force? do
-      wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
+      wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, prepare, fn ->
         assoc_opts = assoc_opts(assocs, opts)
         user_changeset = run_prepare(changeset, prepare)
 
@@ -330,9 +326,7 @@ defmodule Ecto.Repo.Schema do
         changeset = repo_changes(changeset)
 
         if changeset.valid? do
-          embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
-
-          original = changeset.changes |> Map.merge(embeds) |> Map.take(fields)
+          original = changeset.changes |> Map.take(fields)
           {changes, autogen} = dump_changes!(:update, original, schema, [], dumper, adapter)
 
           schema_meta = metadata(struct, schema.__schema__(:autogenerate_id), opts)
@@ -348,7 +342,7 @@ defmodule Ecto.Repo.Schema do
           case apply(user_changeset, adapter, action, args) do
             {:ok, values} ->
               changeset
-              |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, schema_meta)
+              |> load_changes(:loaded, return_types, values, autogen, adapter, schema_meta)
               |> process_children(children, user_changeset, adapter, assoc_opts)
 
             {:error, _} = error ->
@@ -438,7 +432,7 @@ defmodule Ecto.Repo.Schema do
 
         case apply(changeset, adapter, :delete, args) do
           {:ok, values} ->
-            changeset = load_changes(changeset, :deleted, [], values, %{}, [], adapter, schema_meta)
+            changeset = load_changes(changeset, :deleted, [], values, [], adapter, schema_meta)
             {:ok, changeset.data}
 
           {:error, _} = error ->
@@ -713,14 +707,26 @@ defmodule Ecto.Repo.Schema do
           {_, %{^field => _}, _} ->
             {changes, errors}
 
-          # Handle associations specially
-          {_, _, %{^field => {tag, embed_or_assoc}}} when tag in [:assoc, :embed] ->
+          {_, _, %{^field => {:parameterized, type, opts}}} ->
+            value = Map.get(struct, field)
+            empty = type.empty(opts)
+            case type.change(value, empty, opts) do
+              {:ok, change, _} when change != empty ->
+                {Map.put(changes, field, change), errors}
+              :error ->
+                {changes, [{field, {"is invalid", type: {:parameterized, type, opts}}}]}
+                _ -> # :ignore or ok with change == empty
+                {changes, errors}
+            end
+
+                # Handle associations specially
+          {_, _, %{^field => {:assoc, assoc}}} ->
             # This is partly reimplementing the logic behind put_relation
             # in Ecto.Changeset but we need to do it in a way where we have
             # control over the current value.
             value = Relation.load!(struct, Map.get(struct, field))
-            empty = Relation.empty(embed_or_assoc)
-            case Relation.change(embed_or_assoc, value, empty) do
+            empty = Relation.empty(assoc)
+            case Relation.change(assoc, value, empty) do
               {:ok, change, _} when change != empty ->
                 {Map.put(changes, field, change), errors}
               {:error, error} ->
@@ -744,13 +750,12 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp load_changes(changeset, state, types, values, embeds, autogen, adapter, schema_meta) do
+  defp load_changes(changeset, state, types, values, autogen, adapter, schema_meta) do
     %{data: data, changes: changes} = changeset
 
     data =
       data
       |> merge_changes(changes)
-      |> Map.merge(embeds)
       |> merge_autogen(autogen)
       |> apply_metadata(state, schema_meta)
       |> load_each(values, types, adapter)
@@ -910,10 +915,10 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fun) do
+  defp wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, prepare, fun) do
     %{changes: changes} = changeset
     changed = &Map.has_key?(changes, &1)
-    relations_changed? = Enum.any?(assocs, changed) or Enum.any?(embeds, changed)
+    relations_changed? = Enum.any?(assocs, changed)
     wrap_in_transaction(adapter, adapter_meta, opts, relations_changed?, prepare, fun)
   end
 

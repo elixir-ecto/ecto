@@ -998,32 +998,6 @@ defmodule Ecto.Query.Planner do
     {Enum.reverse(combinations), counter}
   end
 
-  defp validate_json_path!([path_field | rest], field, type) do
-    case type do
-      {:embed, %{related: related, cardinality: :one}} ->
-        unless path_field in Enum.map(related.__schema__(:fields), &Atom.to_string/1) do
-          raise "field `#{path_field}` does not exist in #{inspect(related)}"
-        end
-
-        path_type = related.__schema__(:type, String.to_atom(path_field))
-        validate_json_path!(rest, path_field, path_type)
-
-      {:embed, %{related: _, cardinality: :many} = embed} ->
-        unless is_integer(path_field) do
-          raise "cannot use `#{path_field}` to refer to an item in `embeds_many`"
-        end
-
-        validate_json_path!(rest, path_field, {:embed, %{embed | cardinality: :one}})
-
-      other ->
-        raise "expected field `#{field}` to be of type embed, got: `#{inspect(other)}`"
-    end
-  end
-
-  defp validate_json_path!([], _field, _type) do
-    :ok
-  end
-
   defp prewalk_source({:fragment, meta, fragments}, kind, query, expr, acc, adapter) do
     {fragments, acc} = prewalk(fragments, kind, query, expr, acc, adapter)
     {{:fragment, meta, fragments}, acc}
@@ -1119,10 +1093,9 @@ defmodule Ecto.Query.Planner do
 
       {_, schema, _} ->
         type = schema.__schema__(:type, field)
-
         case type do
-          {:embed, _} ->
-            validate_json_path!(path, field, type)
+          {:parameterized, type, opts} ->
+            type.validate_json_path!(path, field, opts)
 
           :map ->
             :ok

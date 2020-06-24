@@ -602,53 +602,53 @@ defmodule Ecto do
     end
   end
 
-  @doc """
-  Loads previously dumped `data` in the given `format` into a schema.
+  # @doc """
+  # Loads previously dumped `data` in the given `format` into a schema.
 
-  The first argument can be a an embedded schema module, or a map (of types) and
-  determines the return value: a struct or a map, respectively.
+  # The first argument can be a an embedded schema module, or a map (of types) and
+  # determines the return value: a struct or a map, respectively.
 
-  The second argument `data` specifies fields and values that are to be loaded.
-  It can be a map, a keyword list, or a `{fields, values}` tuple. Fields can be
-  atoms or strings.
+  # The second argument `data` specifies fields and values that are to be loaded.
+  # It can be a map, a keyword list, or a `{fields, values}` tuple. Fields can be
+  # atoms or strings.
 
-  The third argument `format` is the format the data has been dumped as. For
-  example, databases may dump embedded to `:json`, this function allows such
-  dumped data to be put back into the schemas.
+  # The third argument `format` is the format the data has been dumped as. For
+  # example, databases may dump embedded to `:json`, this function allows such
+  # dumped data to be put back into the schemas.
 
-  Fields that are not present in the schema (or `types` map) are ignored.
-  If any of the values has invalid type, an error is raised.
+  # Fields that are not present in the schema (or `types` map) are ignored.
+  # If any of the values has invalid type, an error is raised.
 
-  Note that if you want to load data into a non-embedded schema that was
-  directly persisted into a given repository, then use `c:Ecto.Repo.load/2`.
+  # Note that if you want to load data into a non-embedded schema that was
+  # directly persisted into a given repository, then use `c:Ecto.Repo.load/2`.
 
-  ## Examples
+  # ## Examples
 
-      iex> result = Ecto.Adapters.SQL.query!(MyRepo, "SELECT users.settings FROM users", [])
-      iex> Enum.map(result.rows, fn [settings] -> Ecto.embedded_load(Setting, Jason.decode!(settings), :json) end)
-      [%Setting{...}, ...]
-  """
-  @spec embedded_load(
-              module_or_map :: module | map(),
-              data :: map(),
-              format :: atom()
-            ) :: Ecto.Schema.t() | map()
-  def embedded_load(schema_or_types, data, format) do
-    Ecto.Schema.Loader.unsafe_load(schema_or_types, data, &Ecto.Type.embedded_load(&1, &2, format))
-  end
+  #     iex> result = Ecto.Adapters.SQL.query!(MyRepo, "SELECT users.settings FROM users", [])
+  #     iex> Enum.map(result.rows, fn [settings] -> Ecto.embedded_load(Setting, Jason.decode!(settings), :json) end)
+  #     [%Setting{...}, ...]
+  # """
+  # @spec embedded_load(
+  #             module_or_map :: module | map(),
+  #             data :: map(),
+  #             format :: atom()
+  #           ) :: Ecto.Schema.t() | map()
+  # def embedded_load(schema_or_types, data, format) do
+  #   Ecto.Schema.Loader.unsafe_load(schema_or_types, data, &Ecto.Type.embedded_load(&1, &2, format))
+  # end
 
-  @doc """
-  Dumps the given struct defined by an embedded schema.
+  # @doc """
+  # Dumps the given struct defined by an embedded schema.
 
-  This converts the given embedded schema to a map to be serialized
-  with the given format. For example:
+  # This converts the given embedded schema to a map to be serialized
+  # with the given format. For example:
 
-      iex> Ecto.embedded_dump(%Post{}, :json)
-      %{title: "hello"}
+  #     iex> Ecto.embedded_dump(%Post{}, :json)
+  #     %{title: "hello"}
 
-  """
-  @spec embedded_dump(Ecto.Schema.t(), format :: atom()) :: map()
-  def embedded_dump(%schema{} = data, format) do
-    Ecto.Schema.Loader.safe_dump(data, schema.__schema__(:dump), &Ecto.Type.embedded_dump(&1, &2, format))
-  end
+  # """
+  # @spec embedded_dump(Ecto.Schema.t(), format :: atom()) :: map()
+  # def embedded_dump(%schema{} = data, format) do
+  #   Ecto.Schema.Loader.safe_dump(data, schema.__schema__(:dump), &Ecto.Type.embedded_dump(&1, &2, format))
+  # end
 end

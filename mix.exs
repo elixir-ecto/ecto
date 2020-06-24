@@ -33,7 +33,9 @@ defmodule Ecto.MixProject do
       {:telemetry, "~> 0.4"},
       {:decimal, "~> 1.6 or ~> 2.0"},
       {:jason, "~> 1.0", optional: true},
-      {:ex_doc, "~> 0.20", only: :docs}
+      {:ex_doc, "~> 0.20", only: :docs},
+      {:mix_test_watch, "~> 1.0.2", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.0.0", only: :dev, runtme: false}
     ]
   end
 
@@ -113,7 +115,7 @@ defmodule Ecto.MixProject do
 
   defp groups_for_extras do
     [
-      "Introduction": ~r/guides\/introduction\/.?/,
+      Introduction: ~r/guides\/introduction\/.?/,
       "How-To's": ~r/guides\/howtos\/.?/
     ]
   end
