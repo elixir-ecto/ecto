@@ -50,8 +50,8 @@ defmodule Ecto.ChangesetTest do
       field :source, :map
       field :permalink, :string, source: :url
       belongs_to :category, Ecto.ChangesetTest.Category, source: :cat_id
-      has_many :comments, Ecto.ChangesetTest.Comment, on_replace: :delete
-      has_one :comment, Ecto.ChangesetTest.Comment
+      has_many :comments, Ecto.ChangesetTest.Comment, on_replace: :delete, references: :id
+      has_one :comment, Ecto.ChangesetTest.Comment, references: :id
     end
   end
 

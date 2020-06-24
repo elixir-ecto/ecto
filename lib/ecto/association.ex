@@ -587,15 +587,14 @@ defmodule Ecto.Association.Has do
     cardinality = Keyword.fetch!(opts, :cardinality)
     related = Ecto.Association.related_from_query(queryable, name)
 
-    ref =
-      module
-      |> Module.get_attribute(:primary_key)
-      |> get_ref(opts[:references], name)
+    ref_option = opts[:references]
 
-    unless Module.get_attribute(module, :ecto_fields)[ref] do
-      raise ArgumentError, "schema does not have the field #{inspect ref} used by " <>
+    if ref_option && Module.get_attribute(module, :ecto_fields)[ref_option] == nil do
+      raise ArgumentError, "schema does not have the field #{inspect ref_option} used by " <>
         "association #{inspect name}, please set the :references option accordingly"
     end
+
+    ref = ref_option || get_ref(module, name)
 
     if opts[:through] do
       raise ArgumentError, "invalid association #{inspect name}. When using the :through " <>
@@ -640,12 +639,20 @@ defmodule Ecto.Association.Has do
     }
   end
 
-  defp get_ref(primary_key, nil, name) when primary_key in [nil, false] do
-    raise ArgumentError, "need to set :references option for " <>
-      "association #{inspect name} when schema has no primary key"
+  defp get_ref(module, name) do
+    case Module.get_attribute(module, :ecto_primary_keys) do
+      [] ->
+        raise ArgumentError, "need to set :references option for " <>
+          "association #{inspect name} when schema has no primary key"
+
+      [pk_field_name] ->
+        pk_field_name
+
+      [_ | _] ->
+        raise ArgumentError, "need to set :references option for " <>
+          "association #{inspect name} when schema has more than one primary key"
+    end
   end
-  defp get_ref(primary_key, nil, _name), do: elem(primary_key, 0)
-  defp get_ref(_primary_key, references, _name), do: references
 
   @doc false
   def build(%{owner_key: owner_key, related_key: related_key} = refl, owner, attributes) do
