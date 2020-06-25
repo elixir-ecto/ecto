@@ -1923,15 +1923,12 @@ defmodule Ecto.Query do
       include the `:post_id` field
 
     * For `has_many :through` - it behaves similarly to a regular `has_many`
-      but note that the IDs received are the ones from the closest
-      parent and not the furthest one. Imagine for example a post has
-      many comments and each comment has an author. Therefore, a post
-      may have many comments_authors, written as
+      but note that the IDs received are of the last association. Imagine
+      for example a post has many comments and each comment has an author.
+      Therefore, a post may have many comments_authors, written as
       `has_many :comments_authors, through: [:comments, :author]`. When
       preloading authors with a custom function via `:comments_authors`,
-      the function will receive the IDs of the comments and not of the
-      posts. That's because through associations are still loaded step
-      by step
+      the function will receive the IDs of the authors as the last step
 
     * For `many_to_many` -  the function receives the IDs of the parent
       association and it must return a tuple with the parent id as first
