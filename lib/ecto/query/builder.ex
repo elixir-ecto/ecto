@@ -104,8 +104,8 @@ defmodule Ecto.Query.Builder do
     escape_with_type(op_expr, type, params_acc, vars, env)
   end
 
-  def escape({:type, _, [{fun, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env)
-      when fun in ~w(fragment avg count max min sum over filter)a do
+  def escape({:type, _, [{fun, _, args} = expr, type]}, _type, params_acc, vars, env)
+      when is_list(args) and fun in ~w(fragment avg count max min sum over filter)a do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
