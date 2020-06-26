@@ -601,12 +601,12 @@ defmodule Ecto.Changeset do
       |> Enum.reduce(nil, fn
         {key, _value}, nil when is_binary(key) ->
           nil
-  
+
         {key, _value}, _ when is_binary(key) ->
           raise Ecto.CastError, type: :map, value: params,
                                 message: "expected params to be a map with atoms or string keys, " <>
                                          "got a map with mixed keys: #{inspect params}"
-  
+
         {key, value}, nil when is_atom(key) ->
           [{Atom.to_string(key), value}]
 
@@ -1223,6 +1223,49 @@ defmodule Ecto.Changeset do
     else
       {Map.delete(changes, key), errors, valid?}
     end
+  end
+
+  @doc """
+  Puts a change on `new_key` only if `key` exists in the changeset.
+
+  The change to add can be a raw value, or computed based on the existing value
+  for `key`.
+
+  ## Examples
+
+      iex> changeset = change(%Post{author: "bar"}, %{title: "foo"})
+      iex> changeset = put_change_if_exists(changeset, :title, :description, "new post foo by bar")
+      iex> changeset.changes
+      %{title: "foo", description: "new post foo by bar"}
+
+      iex> changeset = change(%Post{author: "bar"}, %{title: "foo"})
+      iex> changeset = put_change_if_exists(changeset, :tags, :has_tags, true)
+      iex> changeset.changes
+      %{title: "foo"}
+
+      iex> changeset = change(%Post{author: "bar"}, %{upvotes: 1000})
+      iex> changeset =
+      ...>   put_change_if_exists(changeset, :length, :reading_time, fn length ->
+      ...>     if length > 2500 do
+      ...>       "Over one hour"
+      ...>     else
+      ...>       "Less than one hour"
+      ...>     end
+      ...>   end)
+      iex> changeset.changes
+      %{reading_time: "Over one hour"}
+
+  """
+  @spec put_change_if_exists(t, atom, atom, term) :: t
+  def put_change_if_exists(%Changeset{} = changeset, key, new_key, value_or_fun) when is_function(value_or_fun) do
+    case get_change(changeset, key) do
+      nil -> changeset
+      value -> put_change(changeset, new_key, value_or_fun.(value))
+    end
+  end
+
+  def put_change_if_exists(changeset, key, new_key, value_or_fun) do
+    put_change_if_exists(changeset, key, new_key, fn _ -> value_or_fun end)
   end
 
   @doc """

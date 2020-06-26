@@ -713,6 +713,23 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes.upvotes == nil
   end
 
+  test "put_change_if_exists/4" do
+    base_changeset = change(%Post{}, %{title: "foo"})
+
+    changeset = put_change_if_exists(base_changeset, :title, :body, "bar")
+    assert changeset.changes.body == "bar"
+
+    changeset = put_change_if_exists(base_changeset, :upvotes, :body, "bar")
+    assert changeset.changes == %{title: "foo"}
+
+    changeset =
+      put_change_if_exists(base_changeset, :title, :body, fn title ->
+        "#{title}: foo bar baz"
+      end)
+
+    assert changeset.changes.body == "foo: foo bar baz"
+  end
+
   test "force_change/3" do
     changeset = change(%Post{upvotes: 5})
 
