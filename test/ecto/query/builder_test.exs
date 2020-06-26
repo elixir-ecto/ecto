@@ -162,6 +162,9 @@ defmodule Ecto.Query.BuilderTest do
     assert {Macro.escape(quote do type(sum(&0.y()), :decimal) end), []} ==
           escape(quote do type(sum(x.y()), :decimal) end, [x: 0], {__ENV__, %{}})
 
+    assert {Macro.escape(quote do type(count(), :decimal) end), []} ==
+          escape(quote do type(count(), :decimal) end, [x: 0], {__ENV__, %{}})
+
     import Kernel, except: [>: 2]
     assert {Macro.escape(quote do type(filter(sum(&0.y()), &0.y() > &0.z()), :decimal) end), []} ==
           escape(quote do type(filter(sum(x.y()), x.y() > x.z()), :decimal) end, [x: 0], {__ENV__, %{}})
