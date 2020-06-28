@@ -238,13 +238,13 @@ defmodule Ecto.Integration.JoinsTest do
     assert [
              %{text: "c1", author: %{name: "Alice"}},
              %{text: "c2", author: %{name: "John"}}
-           ] = p1.comments
+           ] = Enum.sort_by(p1.comments, & &1.text)
 
     assert [
              %{text: "c3", author: %{name: "John"}},
              %{text: "c4", author: nil},
              %{text: "c5", author: %{name: "Alice"}}
-           ] = p2.comments
+           ] = Enum.sort_by(p2.comments, & &1.text)
   end
 
   test "many_to_many association join" do
