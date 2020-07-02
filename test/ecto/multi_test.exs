@@ -207,7 +207,7 @@ defmodule Ecto.MultiTest do
     assert query   == Ecto.Queryable.to_query(Comment)
   end
 
-  test "delete_all" do
+  test "delete_all schema" do
     multi =
       Multi.new()
       |> Multi.delete_all(:comments, Comment)
@@ -215,6 +215,17 @@ defmodule Ecto.MultiTest do
     assert multi.names == MapSet.new([:comments])
     assert [{:comments, {:delete_all, query, []}}] = multi.operations
     assert query == Ecto.Queryable.to_query(Comment)
+  end
+
+  test "delete_all fun" do
+    fun = fn _changes -> {:ok, Comment} end
+
+    multi =
+      Multi.new()
+      |> Multi.delete_all(:fun, fun)
+
+      assert multi.names == MapSet.new([:fun])
+      assert [{:fun, {:run, _fun}}] = multi.operations
   end
 
   test "append/prepend without repetition" do

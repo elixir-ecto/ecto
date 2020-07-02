@@ -339,7 +339,7 @@ defmodule Ecto.Multi do
 
   """
   @spec insert_or_update(t, name, Changeset.t | fun(Changeset.t), Keyword.t) :: t
-  def insert_or_update(multi, name, changeset, opts \\ [])
+  def insert_or_update(multi, name, changeset_or_fun, opts \\ [])
 
   def insert_or_update(multi, name, %Changeset{data: %{__meta__: %{state: :loaded}}} = changeset, opts) do
     add_changeset(multi, :update, name, changeset, opts)
@@ -505,9 +505,28 @@ defmodule Ecto.Multi do
       |> Ecto.Multi.delete_all(:delete_all, queryable)
       |> MyApp.Repo.transaction()
 
+      Ecto.Multi.new()
+      |> Ecto.Multi.run(:post, fn repo, _changes ->
+        case repo.get(Post, 1) do
+          nil -> {:error, :not_found}
+          post -> {:ok, post}
+        end
+      end)
+      |> Ecto.Multi.delete_all(:delete_all, fn %{post: post} ->
+        # Others validations
+        from(c in Comment, where: c.post_id == ^post.id)
+      end)
+      |> MyApp.Repo.transaction()
+
   """
   @spec delete_all(t, name, Ecto.Queryable.t, Keyword.t) :: t
-  def delete_all(multi, name, queryable, opts \\ []) when is_list(opts) do
+  def delete_all(multi, name, queryable_or_fun, opts \\ [])
+
+  def delete_all(multi, name, fun, opts) when is_function(fun, 1) and is_list(opts) do
+    run(multi, name, operation_fun(:delete_all, opts, fun))
+  end
+
+  def delete_all(multi, name, queryable, opts) when is_list(opts) do
     query = Ecto.Queryable.to_query(queryable)
     add_operation(multi, name, {:delete_all, query, opts})
   end
