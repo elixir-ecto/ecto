@@ -1832,13 +1832,16 @@ defmodule Ecto.Changeset do
       {field, get_field(changeset, field)}
     end
 
+    # No need to query if there is a prior error for the fields
+    any_prior_errors_for_fields? = Enum.any?(changeset.errors, &(elem(&1, 0) in fields))
+
     # No need to query if we haven't changed any of the fields in question
     unrelated_changes? = Enum.all?(fields, &not Map.has_key?(changeset.changes, &1))
 
     # If we don't have values for all fields, we can't query for uniqueness
     any_nil_values_for_fields? = Enum.any?(where_clause, &(&1 |> elem(1) |> is_nil()))
 
-    if unrelated_changes? || any_nil_values_for_fields? do
+    if unrelated_changes? || any_nil_values_for_fields? || any_prior_errors_for_fields? do
       changeset
     else
       query =
