@@ -173,7 +173,7 @@ defmodule Ecto.Type do
 
   By default, the type is sent as itself, without calling
   dumping to keep the higher level representation. But
-  it can be set to `:dump` to it is dumped before encoded.
+  it can be set to `:dump` so that it is dumped before being encoded.
   """
   @callback embed_as(format :: atom) :: :self | :dump
 
