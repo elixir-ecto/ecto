@@ -469,6 +469,23 @@ defmodule Ecto.Multi do
       |> Ecto.Multi.insert_all(:insert_all, Post, posts)
       |> MyApp.Repo.transaction()
 
+      Ecto.Multi.new()
+      |> Ecto.Multi.run(:post, fn repo, _changes ->
+        case repo.get(Post, 1) do
+          nil -> {:error, :not_found}
+          post -> {:ok, post}
+        end
+      end)
+      |> Ecto.Multi.insert_all(:insert_all, Comment, fn %{post: post} ->
+        # Others validations
+
+        entries
+        |> Enum.map(fn comment ->
+          Map.put(comment, :post_id, post.id)
+        end)
+      end, [])
+      |> MyApp.Repo.transaction()
+
   """
   @spec insert_all(t, name, schema_or_source | fun(schema_or_source), [map | Keyword.t] | fun([map | Keyword.t]), Keyword.t) :: t
   def insert_all(multi, name, schema_or_source_or_fun, entries_or_fun, opts \\ [])
@@ -490,6 +507,19 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.update_all(:update_all, Post, set: [title: "New title"])
+      |> MyApp.Repo.transaction()
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.run(:post, fn repo, _changes ->
+        case repo.get(Post, 1) do
+          nil -> {:error, :not_found}
+          post -> {:ok, post}
+        end
+      end)
+      |> Ecto.Multi.update_all(:update_all, fn %{post: post} ->
+        # Others validations
+        from(c in Comment, where: c.post_id == ^post.id, update: [set: [title: "New title"]])
+      end, [])
       |> MyApp.Repo.transaction()
 
   """
