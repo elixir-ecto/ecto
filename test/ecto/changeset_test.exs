@@ -1391,6 +1391,28 @@ defmodule Ecto.ChangesetTest do
       assert changeset.valid?
     end
 
+    test "does not validate uniqueness if there is any prior error on a field", context do
+      Process.put(:test_repo_all_results, context.dup_result)
+      changeset =
+        context.base_changeset
+        |> validate_length(:title, max: 3)
+        |> unsafe_validate_unique(:title, TestRepo)
+
+      refute changeset.valid?
+      assert changeset.errors == [title: {"should be at most %{count} character(s)", [count: 3, validation: :length, kind: :max, type: :string]}]
+    end
+
+    test "does not validate uniqueness if there is any prior error on a combination of fields", context do
+      Process.put(:test_repo_all_results, context.dup_result)
+      changeset =
+        context.base_changeset
+        |> validate_length(:title, max: 3)
+        |> unsafe_validate_unique([:title, :body], TestRepo)
+
+      refute changeset.valid?
+      assert changeset.errors == [title: {"should be at most %{count} character(s)", [count: 3, validation: :length, kind: :max, type: :string]}]
+    end
+
     test "allows setting a custom error message", context do
       Process.put(:test_repo_all_results, context.dup_result)
 
