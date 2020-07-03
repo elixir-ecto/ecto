@@ -196,6 +196,18 @@ defmodule Ecto.MultiTest do
     assert [{:comments, {:insert_all, Comment, [[x: 2]], []}}] = multi.operations
   end
 
+  test "insert_all fun" do
+    fun_schema = fn _changes -> {:ok, Comment} end
+    fun_entries = fn _changes -> {:ok, [[x: 2]]} end
+
+    multi =
+      Multi.new()
+      |> Multi.insert_all(:fun, fun_schema, fun_entries)
+
+    assert multi.names == MapSet.new([:fun])
+    assert [{:fun, {:run, _fun}}] = multi.operations
+  end
+
   test "update_all" do
     multi =
       Multi.new()
@@ -204,7 +216,19 @@ defmodule Ecto.MultiTest do
     assert multi.names == MapSet.new([:comments])
     assert [{:comments, {:update_all, query, updates, []}}] = multi.operations
     assert updates == [set: [x: 2]]
-    assert query   == Ecto.Queryable.to_query(Comment)
+    assert query == Ecto.Queryable.to_query(Comment)
+  end
+
+  test "update_all fun" do
+    fun_queryable = fn _changes -> {:ok, Comment} end
+    fun_updates = fn _changes -> {:ok, set: [x: 2]} end
+
+    multi =
+      Multi.new()
+      |> Multi.update_all(:fun, fun_queryable, fun_updates)
+
+    assert multi.names == MapSet.new([:fun])
+    assert [{:fun, {:run, _fun}}] = multi.operations
   end
 
   test "delete_all schema" do
@@ -224,8 +248,8 @@ defmodule Ecto.MultiTest do
       Multi.new()
       |> Multi.delete_all(:fun, fun)
 
-      assert multi.names == MapSet.new([:fun])
-      assert [{:fun, {:run, _fun}}] = multi.operations
+    assert multi.names == MapSet.new([:fun])
+    assert [{:fun, {:run, _fun}}] = multi.operations
   end
 
   test "append/prepend without repetition" do

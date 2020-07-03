@@ -281,7 +281,7 @@ defmodule Ecto.Multi do
   end
 
   def insert(multi, name, fun, opts) when is_function(fun, 1) do
-    run(multi, name, operation_fun(:insert, opts, fun))
+    run(multi, name, operation_fun({:insert, fun}, opts))
   end
 
   @doc """
@@ -313,7 +313,7 @@ defmodule Ecto.Multi do
   end
 
   def update(multi, name, fun, opts) when is_function(fun, 1) do
-    run(multi, name, operation_fun(:update, opts, fun))
+    run(multi, name, operation_fun({:update, fun}, opts))
   end
 
   @doc """
@@ -350,7 +350,7 @@ defmodule Ecto.Multi do
   end
 
   def insert_or_update(multi, name, fun, opts) when is_function(fun, 1) do
-    run(multi, name, operation_fun(:insert_or_update, opts, fun))
+    run(multi, name, operation_fun({:insert_or_update, fun}, opts))
   end
 
   @doc """
@@ -391,7 +391,7 @@ defmodule Ecto.Multi do
   end
 
   def delete(multi, name, fun, opts) when is_function(fun, 1) do
-    run(multi, name, operation_fun(:delete, opts, fun))
+    run(multi, name, operation_fun({:delete, fun}, opts))
   end
 
   defp add_changeset(multi, action, name, changeset, opts) when is_list(opts) do
@@ -471,7 +471,13 @@ defmodule Ecto.Multi do
 
   """
   @spec insert_all(t, name, schema_or_source, [map | Keyword.t], Keyword.t) :: t
-  def insert_all(multi, name, schema_or_source, entries, opts \\ []) when is_list(opts) do
+  def insert_all(multi, name, schema_or_source, entries_or_fun, opts \\ [])
+
+  def insert_all(multi, name, schema_fun, entries_fun, opts) when (is_function(schema_fun, 1) or is_function(entries_fun, 1)) and is_list(opts) do
+    run(multi, name, operation_fun({:insert_all, schema_fun, entries_fun}, opts))
+  end
+
+  def insert_all(multi, name, schema_or_source, entries, opts) when is_list(opts) do
     add_operation(multi, name, {:insert_all, schema_or_source, entries, opts})
   end
 
@@ -488,7 +494,13 @@ defmodule Ecto.Multi do
 
   """
   @spec update_all(t, name, Ecto.Queryable.t, Keyword.t, Keyword.t) :: t
-  def update_all(multi, name, queryable, updates, opts \\ []) when is_list(opts) do
+  def update_all(multi, name, queryable_or_fun, updates_or_fun, opts \\ [])
+
+  def update_all(multi, name, queryable_fun, updates_fun, opts) when (is_function(queryable_fun, 1) or is_function(updates_fun, 1)) and is_list(opts) do
+    run(multi, name, operation_fun({:update_all, queryable_fun, updates_fun}, opts))
+  end
+
+  def update_all(multi, name, queryable, updates, opts) when is_list(opts) do
     query = Ecto.Queryable.to_query(queryable)
     add_operation(multi, name, {:update_all, query, updates, opts})
   end
@@ -523,7 +535,7 @@ defmodule Ecto.Multi do
   def delete_all(multi, name, queryable_or_fun, opts \\ [])
 
   def delete_all(multi, name, fun, opts) when is_function(fun, 1) and is_list(opts) do
-    run(multi, name, operation_fun(:delete_all, opts, fun))
+    run(multi, name, operation_fun({:delete_all, fun}, opts))
   end
 
   def delete_all(multi, name, queryable, opts) when is_list(opts) do
@@ -641,9 +653,24 @@ defmodule Ecto.Multi do
     end
   end
 
-  defp operation_fun(operation, opts, fun) do
+  defp operation_fun({:update_all, queryable_fun, updates_fun}, opts) do
+    fn repo, changes ->
+      {:ok, repo.update_all(value_or_fun(queryable_fun, changes), value_or_fun(updates_fun, changes), opts)}
+    end
+  end
+
+  defp operation_fun({:insert_all, schema_fun, entries_fun}, opts) do
+    fn repo, changes ->
+      {:ok, repo.insert_all(value_or_fun(schema_fun, changes), value_or_fun(entries_fun, changes), opts)}
+    end
+  end
+
+  defp operation_fun({operation, fun}, opts) do
     fn repo, changes ->
       apply(repo, operation, [fun.(changes), opts])
     end
   end
+
+  def value_or_fun(fun, changes) when is_function(fun, 1), do: fun.(changes)
+  def value_or_fun(value, _changes), do: value
 end
