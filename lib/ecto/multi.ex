@@ -483,7 +483,7 @@ defmodule Ecto.Multi do
         |> Enum.map(fn comment ->
           Map.put(comment, :post_id, post.id)
         end)
-      end, [])
+      end)
       |> MyApp.Repo.transaction()
 
   """
