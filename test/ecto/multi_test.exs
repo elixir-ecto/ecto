@@ -6,6 +6,8 @@ defmodule Ecto.MultiTest do
   alias Ecto.Changeset
   alias Ecto.TestRepo
 
+  require Ecto.Query
+
   defmodule Comment do
     use Ecto.Schema
 
@@ -197,15 +199,19 @@ defmodule Ecto.MultiTest do
   end
 
   test "insert_all fun" do
-    fun_schema = fn _changes -> {:ok, Comment} end
-    fun_entries = fn _changes -> {:ok, [[x: 2]]} end
+    fun_entries = fn _changes -> [[x: 2]] end
 
     multi =
       Multi.new()
-      |> Multi.insert_all(:fun, fun_schema, fun_entries)
+      |> Multi.insert_all(:fun, Comment, fun_entries)
 
     assert multi.names == MapSet.new([:fun])
     assert [{:fun, {:run, _fun}}] = multi.operations
+
+    assert {:ok, changes} = TestRepo.transaction(multi)
+    assert_received {:transaction, _}
+
+    assert changes[:fun] == {1, nil}
   end
 
   test "update_all" do
@@ -220,15 +226,19 @@ defmodule Ecto.MultiTest do
   end
 
   test "update_all fun" do
-    fun_queryable = fn _changes -> {:ok, Comment} end
-    fun_updates = fn _changes -> {:ok, set: [x: 2]} end
+    fun_queryable = fn _changes -> Ecto.Query.from(c in Comment, update: [set: [x: 2]]) end
 
     multi =
       Multi.new()
-      |> Multi.update_all(:fun, fun_queryable, fun_updates)
+      |> Multi.update_all(:fun, fun_queryable, [])
 
     assert multi.names == MapSet.new([:fun])
     assert [{:fun, {:run, _fun}}] = multi.operations
+
+    assert {:ok, changes} = TestRepo.transaction(multi)
+    assert_received {:transaction, _}
+
+    assert changes[:fun] == {1, nil}
   end
 
   test "delete_all schema" do
