@@ -470,8 +470,8 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
   """
-  @spec insert_all(t, name, schema_or_source, [map | Keyword.t], Keyword.t) :: t
-  def insert_all(multi, name, schema_or_source, entries_or_fun, opts \\ [])
+  @spec insert_all(t, name, schema_or_source | fun(schema_or_source), [map | Keyword.t] | fun([map | Keyword.t]), Keyword.t) :: t
+  def insert_all(multi, name, schema_or_source_or_fun, entries_or_fun, opts \\ [])
 
   def insert_all(multi, name, schema_fun, entries_fun, opts) when (is_function(schema_fun, 1) or is_function(entries_fun, 1)) and is_list(opts) do
     run(multi, name, operation_fun({:insert_all, schema_fun, entries_fun}, opts))
@@ -493,7 +493,7 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
   """
-  @spec update_all(t, name, Ecto.Queryable.t, Keyword.t, Keyword.t) :: t
+  @spec update_all(t, name, Ecto.Queryable.t | fun(Ecto.Queryable.t), Keyword.t | fun(Keyword.t), Keyword.t) :: t
   def update_all(multi, name, queryable_or_fun, updates_or_fun, opts \\ [])
 
   def update_all(multi, name, queryable_fun, updates_fun, opts) when (is_function(queryable_fun, 1) or is_function(updates_fun, 1)) and is_list(opts) do
@@ -531,7 +531,7 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
   """
-  @spec delete_all(t, name, Ecto.Queryable.t, Keyword.t) :: t
+  @spec delete_all(t, name, Ecto.Queryable.t | fun(Ecto.Queryable.t), Keyword.t) :: t
   def delete_all(multi, name, queryable_or_fun, opts \\ [])
 
   def delete_all(multi, name, fun, opts) when is_function(fun, 1) and is_list(opts) do
