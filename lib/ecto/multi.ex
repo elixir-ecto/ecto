@@ -487,11 +487,11 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
   """
-  @spec insert_all(t, name, schema_or_source | fun(schema_or_source), [map | Keyword.t] | fun([map | Keyword.t]), Keyword.t) :: t
-  def insert_all(multi, name, schema_or_source_or_fun, entries_or_fun, opts \\ [])
+  @spec insert_all(t, name, schema_or_source, [map | Keyword.t] | fun([map | Keyword.t]), Keyword.t) :: t
+  def insert_all(multi, name, schema_or_source, entries_or_fun, opts \\ [])
 
-  def insert_all(multi, name, schema_fun, entries_fun, opts) when (is_function(schema_fun, 1) or is_function(entries_fun, 1)) and is_list(opts) do
-    run(multi, name, operation_fun({:insert_all, schema_fun, entries_fun}, opts))
+  def insert_all(multi, name, schema_or_source, entries_fun, opts) when is_function(entries_fun, 1) and is_list(opts) do
+    run(multi, name, operation_fun({:insert_all, schema_or_source, entries_fun}, opts))
   end
 
   def insert_all(multi, name, schema_or_source, entries, opts) when is_list(opts) do
@@ -523,11 +523,11 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
   """
-  @spec update_all(t, name, Ecto.Queryable.t | fun(Ecto.Queryable.t), Keyword.t | fun(Keyword.t), Keyword.t) :: t
-  def update_all(multi, name, queryable_or_fun, updates_or_fun, opts \\ [])
+  @spec update_all(t, name, Ecto.Queryable.t | fun(Ecto.Queryable.t), Keyword.t, Keyword.t) :: t
+  def update_all(multi, name, queryable_or_fun, updates, opts \\ [])
 
-  def update_all(multi, name, queryable_fun, updates_fun, opts) when (is_function(queryable_fun, 1) or is_function(updates_fun, 1)) and is_list(opts) do
-    run(multi, name, operation_fun({:update_all, queryable_fun, updates_fun}, opts))
+  def update_all(multi, name, queryable_fun, updates, opts) when is_function(queryable_fun, 1) and is_list(opts) do
+    run(multi, name, operation_fun({:update_all, queryable_fun, updates}, opts))
   end
 
   def update_all(multi, name, queryable, updates, opts) when is_list(opts) do
@@ -683,15 +683,15 @@ defmodule Ecto.Multi do
     end
   end
 
-  defp operation_fun({:update_all, queryable_fun, updates_fun}, opts) do
+  defp operation_fun({:update_all, queryable_fun, updates}, opts) do
     fn repo, changes ->
-      {:ok, repo.update_all(value_or_fun(queryable_fun, changes), value_or_fun(updates_fun, changes), opts)}
+      {:ok, repo.update_all(queryable_fun.(changes), updates, opts)}
     end
   end
 
-  defp operation_fun({:insert_all, schema_fun, entries_fun}, opts) do
+  defp operation_fun({:insert_all, schema_or_source, entries_fun}, opts) do
     fn repo, changes ->
-      {:ok, repo.insert_all(value_or_fun(schema_fun, changes), value_or_fun(entries_fun, changes), opts)}
+      {:ok, repo.insert_all(schema_or_source, entries_fun.(changes), opts)}
     end
   end
 
@@ -706,7 +706,4 @@ defmodule Ecto.Multi do
       apply(repo, operation, [fun.(changes), opts])
     end
   end
-
-  def value_or_fun(fun, changes) when is_function(fun, 1), do: fun.(changes)
-  def value_or_fun(value, _changes), do: value
 end
