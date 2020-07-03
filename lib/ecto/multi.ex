@@ -665,6 +665,12 @@ defmodule Ecto.Multi do
     end
   end
 
+  defp operation_fun({:delete_all, fun}, opts) do
+    fn repo, changes ->
+      {:ok, repo.delete_all(fun.(changes), opts)}
+    end
+  end
+
   defp operation_fun({operation, fun}, opts) do
     fn repo, changes ->
       apply(repo, operation, [fun.(changes), opts])
