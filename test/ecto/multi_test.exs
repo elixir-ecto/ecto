@@ -252,7 +252,7 @@ defmodule Ecto.MultiTest do
   end
 
   test "delete_all fun" do
-    fun = fn _changes -> {:ok, Comment} end
+    fun = fn _changes -> Comment end
 
     multi =
       Multi.new()
@@ -260,6 +260,11 @@ defmodule Ecto.MultiTest do
 
     assert multi.names == MapSet.new([:fun])
     assert [{:fun, {:run, _fun}}] = multi.operations
+
+    assert {:ok, changes} = TestRepo.transaction(multi)
+    assert_received {:transaction, _}
+
+    assert changes[:fun] == {1, nil}
   end
 
   test "append/prepend without repetition" do
