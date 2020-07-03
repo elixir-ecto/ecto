@@ -1413,7 +1413,6 @@ defmodule Ecto.ChangesetTest do
       assert changeset.errors == [title: {"should be at most %{count} character(s)", [count: 3, validation: :length, kind: :max, type: :string]}]
     end
 
-
     test "allows setting a custom error message", context do
       Process.put(:test_repo_all_results, context.dup_result)
 
