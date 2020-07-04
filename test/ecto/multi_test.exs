@@ -6,6 +6,8 @@ defmodule Ecto.MultiTest do
   alias Ecto.Changeset
   alias Ecto.TestRepo
 
+  require Ecto.Query
+
   defmodule Comment do
     use Ecto.Schema
 
@@ -196,6 +198,22 @@ defmodule Ecto.MultiTest do
     assert [{:comments, {:insert_all, Comment, [[x: 2]], []}}] = multi.operations
   end
 
+  test "insert_all fun" do
+    fun_entries = fn _changes -> [[x: 2]] end
+
+    multi =
+      Multi.new()
+      |> Multi.insert_all(:fun, Comment, fun_entries)
+
+    assert multi.names == MapSet.new([:fun])
+    assert [{:fun, {:run, _fun}}] = multi.operations
+
+    assert {:ok, changes} = TestRepo.transaction(multi)
+    assert_received {:transaction, _}
+
+    assert changes[:fun] == {1, nil}
+  end
+
   test "update_all" do
     multi =
       Multi.new()
@@ -204,10 +222,26 @@ defmodule Ecto.MultiTest do
     assert multi.names == MapSet.new([:comments])
     assert [{:comments, {:update_all, query, updates, []}}] = multi.operations
     assert updates == [set: [x: 2]]
-    assert query   == Ecto.Queryable.to_query(Comment)
+    assert query == Ecto.Queryable.to_query(Comment)
   end
 
-  test "delete_all" do
+  test "update_all fun" do
+    fun_queryable = fn _changes -> Ecto.Query.from(c in Comment, update: [set: [x: 2]]) end
+
+    multi =
+      Multi.new()
+      |> Multi.update_all(:fun, fun_queryable, [])
+
+    assert multi.names == MapSet.new([:fun])
+    assert [{:fun, {:run, _fun}}] = multi.operations
+
+    assert {:ok, changes} = TestRepo.transaction(multi)
+    assert_received {:transaction, _}
+
+    assert changes[:fun] == {1, nil}
+  end
+
+  test "delete_all schema" do
     multi =
       Multi.new()
       |> Multi.delete_all(:comments, Comment)
@@ -215,6 +249,22 @@ defmodule Ecto.MultiTest do
     assert multi.names == MapSet.new([:comments])
     assert [{:comments, {:delete_all, query, []}}] = multi.operations
     assert query == Ecto.Queryable.to_query(Comment)
+  end
+
+  test "delete_all fun" do
+    fun = fn _changes -> Comment end
+
+    multi =
+      Multi.new()
+      |> Multi.delete_all(:fun, fun)
+
+    assert multi.names == MapSet.new([:fun])
+    assert [{:fun, {:run, _fun}}] = multi.operations
+
+    assert {:ok, changes} = TestRepo.transaction(multi)
+    assert_received {:transaction, _}
+
+    assert changes[:fun] == {1, nil}
   end
 
   test "append/prepend without repetition" do
