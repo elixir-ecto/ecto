@@ -1394,6 +1394,10 @@ defmodule Ecto.Schema do
       `:raise` (default), `:mark_as_invalid`, `:update`, or `:delete`.
       See `Ecto.Changeset`'s section on related data for more info.
 
+    * `:source` - Defines the name that is to be used in database for this field.
+      This is useful when attaching to an existing database. The value should be
+      an atom.
+
   ## Examples
 
       defmodule Order do
@@ -1549,6 +1553,10 @@ defmodule Ecto.Schema do
       replaced when casting or manipulating parent changeset. May be
       `:raise` (default), `:mark_as_invalid`, or `:delete`.
       See `Ecto.Changeset`'s section on related data for more info.
+
+    * `:source` - Defines the name that is to be used in database for this field.
+      This is useful when attaching to an existing database. The value should be
+      an atom.
 
   ## Examples
 
