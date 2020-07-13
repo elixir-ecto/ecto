@@ -232,7 +232,7 @@ defmodule Ecto.Repo.Schema do
     # On insert, we always merge the whole struct into the
     # changeset as changes, except the primary key if it is nil.
     changeset = put_repo_and_action(changeset, :insert, repo, opts)
-    changeset = surface_changes(changeset, struct, fields ++ assocs)
+    changeset = Relation.surface_changes(changeset, struct, fields ++ assocs)
 
     wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fn ->
       assoc_opts = assoc_opts(assocs, opts)
@@ -703,45 +703,6 @@ defmodule Ecto.Repo.Schema do
       end
 
     %{changeset | errors: constraint_errors ++ errors, valid?: false}
-  end
-
-  defp surface_changes(%{changes: changes, types: types} = changeset, struct, fields) do
-    {changes, errors} =
-      Enum.reduce fields, {changes, []}, fn field, {changes, errors} ->
-        case {struct, changes, types} do
-          # User has explicitly changed it
-          {_, %{^field => _}, _} ->
-            {changes, errors}
-
-          # Handle associations specially
-          {_, _, %{^field => {tag, embed_or_assoc}}} when tag in [:assoc, :embed] ->
-            # This is partly reimplementing the logic behind put_relation
-            # in Ecto.Changeset but we need to do it in a way where we have
-            # control over the current value.
-            value = Relation.load!(struct, Map.get(struct, field))
-            empty = Relation.empty(embed_or_assoc)
-            case Relation.change(embed_or_assoc, value, empty) do
-              {:ok, change, _} when change != empty ->
-                {Map.put(changes, field, change), errors}
-              {:error, error} ->
-                {changes, [{field, error}]}
-              _ -> # :ignore or ok with change == empty
-                {changes, errors}
-            end
-
-          # Struct has a non nil value
-          {%{^field => value}, _, %{^field => _}} when value != nil ->
-            {Map.put(changes, field, value), errors}
-
-          {_, _, _} ->
-            {changes, errors}
-        end
-      end
-
-    case errors do
-      [] -> %{changeset | changes: changes}
-      _  -> %{changeset | errors: errors ++ changeset.errors, valid?: false, changes: changes}
-    end
   end
 
   defp load_changes(changeset, state, types, values, embeds, autogen, adapter, schema_meta) do
