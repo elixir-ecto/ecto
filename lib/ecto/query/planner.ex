@@ -1356,10 +1356,6 @@ defmodule Ecto.Query.Planner do
     {{:list, args}, fields, from}
   end
 
-  defp collect_fields(expr, fields, from, _query, _take, _keep_literals?) when is_atom(expr) do
-    {expr, fields, from}
-  end
-
   defp collect_fields(expr, fields, from, _query, _take, true) when is_binary(expr) do
     {{:value, :binary}, [expr | fields], from}
   end
@@ -1370,6 +1366,14 @@ defmodule Ecto.Query.Planner do
 
   defp collect_fields(expr, fields, from, _query, _take, true) when is_float(expr) do
     {{:value, :float}, [expr | fields], from}
+  end
+
+  defp collect_fields(expr, fields, from, _query, _take, true) when is_boolean(expr) do
+    {{:value, :boolean}, [expr | fields], from}
+  end
+
+  defp collect_fields(expr, fields, from, _query, _take, _keep_literals?) when is_atom(expr) do
+    {expr, fields, from}
   end
 
   defp collect_fields(expr, fields, from, _query, _take, false)
