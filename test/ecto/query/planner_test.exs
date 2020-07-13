@@ -13,7 +13,7 @@ defmodule Ecto.Query.PlannerTest do
 
     schema "comments" do
       field :text, :string
-      field :temp, :string, virtual: true
+      field :temp, :boolean, virtual: true
       field :posted, :naive_datetime
       field :uuid, :binary_id
       field :crazy_comment, :string
@@ -970,6 +970,15 @@ defmodule Ecto.Query.PlannerTest do
     union_query = query.combinations |> List.first() |> elem(1)
     assert "Post" in query.select.fields
     assert query.select.fields == union_query.select.fields
+  end
+
+  test "normalize: select with unions and virtual literal" do
+    union_query = from(Post, []) |> select([p], %{title: p.title, temp: true})
+    query = from(Post, []) |> select([p], %{title: p.title, temp: false}) |> union(^union_query) |> normalize()
+
+    union_query = query.combinations |> List.first() |> elem(1)
+    assert false in query.select.fields
+    assert true in union_query.select.fields
   end
 
   test "normalize: select on schemaless" do
