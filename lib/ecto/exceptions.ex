@@ -48,7 +48,7 @@ defmodule Ecto.QueryError do
 
     message =
       case hint do
-        {:ok, text} -> message <> "\n\n" <> text
+        {:ok, text} -> message <> "\n" <> text
         _ -> message
       end
 

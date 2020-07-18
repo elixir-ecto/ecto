@@ -165,11 +165,11 @@ defmodule Ecto.Query.PlannerTest do
   test "plan: Ecto.Query struct as right-side value of in operator" do
     query = from(Post)
 
-    exception = assert_raise Ecto.Query.CastError, fn ->
+    exception = assert_raise Ecto.QueryError, fn ->
       plan(Post |> where([p], p.id in ^query))
     end
 
-    assert Exception.message(exception) =~ "`%Ecto.Query{}` struct is not supported as right-side value of `in` operator."
+    assert Exception.message(exception) =~ "`%Ecto.Query{}` struct is not supported as right-side value of `in` operator"
     assert Exception.message(exception) =~ "Did you mean to use `subquery(query)` instead?"
   end
 

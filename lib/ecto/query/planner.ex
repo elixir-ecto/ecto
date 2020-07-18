@@ -735,6 +735,10 @@ defmodule Ecto.Query.Planner do
     error! query, expr, "keyword lists can only be interpolated at the top level of " <>
                         "where, having, distinct, order_by, update or a join's on"
   end
+  defp cast_param(_kind, query, expr, %Ecto.Query{}, {:in, _type}, _value) do
+    error! query, expr, "`%Ecto.Query{}` struct is not supported as right-side value of `in` operator on", 
+                        "Did you mean to use `subquery(query)` instead?\n"
+  end
   defp cast_param(kind, query, expr, v, type, adapter) do
     type = field_type!(kind, query, expr, type)
 
@@ -1640,25 +1644,8 @@ defmodule Ecto.Query.Planner do
   defp cast_param(kind, type, v) do
     case Ecto.Type.cast(type, v) do
       {:ok, v} -> {:ok, v}
-      _ -> {:error, cast_error(kind, type, v)}
+      _ -> {:error, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"}
     end
-  end
-
-  defp cast_error(kind, {:in, _} = type, %Ecto.Query{} = v) do
-    hint = """
-    `%Ecto.Query{}` struct is not supported as right-side value of `in` operator.
-    Did you mean to use `subquery(query)` instead?
-    """
-
-    {cast_error_message(kind, type, v), hint}
-  end
-
-  defp cast_error(kind, type, v) do
-    cast_error_message(kind, type, v)
-  end
-
-  defp cast_error_message(kind, type, v) do
-    "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"
   end
 
   defp dump_param(adapter, type, v) do
