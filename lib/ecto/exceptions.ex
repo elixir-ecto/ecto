@@ -28,6 +28,7 @@ defmodule Ecto.QueryError do
   def exception(opts) do
     message = Keyword.fetch!(opts, :message)
     query   = Keyword.fetch!(opts, :query)
+    hint    = Keyword.fetch(opts, :hint)
     message = """
     #{message} in query:
 
@@ -43,6 +44,12 @@ defmodule Ecto.QueryError do
         Exception.format_file_line(relative, line) <> " " <> message
       else
         message
+      end
+
+    message =
+      case hint do
+        {:ok, text} -> message <> "\n" <> text
+        _ -> message
       end
 
     %__MODULE__{message: message}

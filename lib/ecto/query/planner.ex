@@ -735,6 +735,10 @@ defmodule Ecto.Query.Planner do
     error! query, expr, "keyword lists can only be interpolated at the top level of " <>
                         "where, having, distinct, order_by, update or a join's on"
   end
+  defp cast_param(_kind, query, expr, %Ecto.Query{}, {:in, _type}, _value) do
+    error! query, expr, "`%Ecto.Query{}` struct is not supported as right-side value of `in` operator on", 
+                        "Did you mean to use `subquery(query)` instead?\n"
+  end
   defp cast_param(kind, query, expr, v, type, adapter) do
     type = field_type!(kind, query, expr, type)
 
@@ -1738,5 +1742,9 @@ defmodule Ecto.Query.Planner do
 
   defp error!(query, expr, message) do
     raise Ecto.QueryError, message: message, query: query, file: expr.file, line: expr.line
+  end
+
+  defp error!(query, expr, message, hint) do
+    raise Ecto.QueryError, message: message, query: query, file: expr.file, line: expr.line, hint: hint
   end
 end
