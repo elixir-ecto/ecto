@@ -728,16 +728,16 @@ defmodule Ecto.Query.Planner do
     do: {key, Enum.reverse(inner, params)}
 
   defp cast_param(_kind, query, expr, %DynamicExpr{}, _type, _value) do
-    error! query, expr, "dynamic expressions can only be interpolated inside other " <>
-                        "dynamic expressions or at the top level of where, having, update or a join's on"
+    error! query, expr, "invalid dynamic expression",
+                        "dynamic expressions can only be interpolated at the top level of where, having, group_by, order_by, update or a join's on"
   end
   defp cast_param(_kind, query, expr, [{key, _} | _], _type, _value) when is_atom(key) do
-    error! query, expr, "keyword lists can only be interpolated at the top level of " <>
-                        "where, having, distinct, order_by, update or a join's on"
+    error! query, expr, "invalid keyword list",
+                        "keyword lists are only allowed at the top level of where, having, distinct, order_by, update or a join's on"
   end
-  defp cast_param(_kind, query, expr, %Ecto.Query{}, {:in, _type}, _value) do
-    error! query, expr, "`%Ecto.Query{}` struct is not supported as right-side value of `in` operator on", 
-                        "Did you mean to use `subquery(query)` instead?\n"
+  defp cast_param(_kind, query, expr, %x{}, {:in, _type}, _value) when x in [Ecto.Query, Ecto.SubQuery] do
+    error! query, expr, "an #{inspect(x)} struct is not supported as right-side value of `in` operator",
+                        "Did you mean to write `expr in subquery(query)` instead?"
   end
   defp cast_param(kind, query, expr, v, type, adapter) do
     type = field_type!(kind, query, expr, type)

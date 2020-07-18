@@ -29,6 +29,7 @@ defmodule Ecto.QueryError do
     message = Keyword.fetch!(opts, :message)
     query   = Keyword.fetch!(opts, :query)
     hint    = Keyword.fetch(opts, :hint)
+
     message = """
     #{message} in query:
 
@@ -48,7 +49,7 @@ defmodule Ecto.QueryError do
 
     message =
       case hint do
-        {:ok, text} -> message <> "\n" <> text
+        {:ok, text} -> message <> "\n" <> text <> "\n"
         _ -> message
       end
 

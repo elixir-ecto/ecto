@@ -169,8 +169,8 @@ defmodule Ecto.Query.PlannerTest do
       plan(Post |> where([p], p.id in ^query))
     end
 
-    assert Exception.message(exception) =~ "`%Ecto.Query{}` struct is not supported as right-side value of `in` operator"
-    assert Exception.message(exception) =~ "Did you mean to use `subquery(query)` instead?"
+    assert Exception.message(exception) =~ "an Ecto.Query struct is not supported as right-side value of `in` operator"
+    assert Exception.message(exception) =~ "Did you mean to write `expr in subquery(query)` instead?"
   end
 
   test "plan: raises readable error on dynamic expressions/keyword lists" do
@@ -182,7 +182,7 @@ defmodule Ecto.Query.PlannerTest do
       plan(Post |> where([p], p.title == ^dynamic))
     end
 
-    assert_raise Ecto.QueryError, ~r/keyword lists can only be interpolated/, fn ->
+    assert_raise Ecto.QueryError, ~r/keyword lists are only allowed/, fn ->
       plan(Post |> where([p], p.title == ^[foo: 1]))
     end
   end
