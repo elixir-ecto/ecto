@@ -1644,7 +1644,6 @@ defmodule Ecto.Query.Planner do
     case Ecto.Type.cast(type, v) do
       {:ok, v} ->
         {:ok, v}
-
       _ ->
         {:error, "value `#{inspect v}` in `#{kind}` cannot be cast to type #{inspect type}"}
     end
