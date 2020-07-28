@@ -1,7 +1,7 @@
 defmodule Mix.Tasks.EctoTest do
   use ExUnit.Case
 
-  test "provide a list of available ecto mix tasks" do
+  test "provide a list of available Ecto Mix tasks" do
     Mix.Tasks.Ecto.run []
     assert_received {:mix_shell, :info, ["Ecto v" <> _]}
     assert_received {:mix_shell, :info, ["mix ecto.create" <> _]}

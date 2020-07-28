@@ -1662,7 +1662,7 @@ defmodule Ecto.Integration.RepoTest do
     end
 
     @tag :with_conflict_target
-    test "source (without an ecto schema) on conflict query and conflict target" do
+    test "source (without an Ecto schema) on conflict query and conflict target" do
       on_conflict = [set: [title: "second"]]
       {:ok, uuid} = Ecto.UUID.dump(Ecto.UUID.generate())
       post = [title: "first", uuid: uuid]

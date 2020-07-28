@@ -632,8 +632,8 @@ defmodule Ecto.Schema do
 
   ## Options
 
-    * `:inserted_at` - the ecto schema name of the field for insertion times or `false`
-    * `:updated_at` - the ecto schema name of the field for update times or `false`
+    * `:inserted_at` - the Ecto schema name of the field for insertion times or `false`
+    * `:updated_at` - the Ecto schema name of the field for update times or `false`
     * `:inserted_at_source` - the name of the database column for insertion times or `false`
     * `:updated_at_source` - the name of the database column for update times or `false`
     * `:type` - the timestamps type, defaults to `:naive_datetime`.
