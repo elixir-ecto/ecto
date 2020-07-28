@@ -231,7 +231,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp plan_source(query, %{source: %Ecto.SubQuery{} = subquery, prefix: prefix} = expr, adapter) do
-    subquery = plan_subquery(subquery, query, prefix, adapter)
+    subquery = plan_subquery(subquery, query, prefix, adapter, true)
     {%{expr | source: subquery}, subquery}
   end
 
@@ -252,12 +252,17 @@ defmodule Ecto.Query.Planner do
   defp plan_source(query, %{source: {:fragment, _, _}, prefix: prefix} = expr, _adapter),
        do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment joins")
 
-  defp plan_subquery(subquery, query, prefix, adapter) do
+  defp plan_subquery(subquery, query, prefix, adapter, source?) do
     %{query: inner_query} = subquery
     inner_query = %{inner_query | prefix: prefix || subquery.query.prefix || query.prefix}
     {inner_query, params, key} = plan(inner_query, :all, adapter)
     assert_no_subquery_assocs!(inner_query)
-    {inner_query, select} = inner_query |> ensure_select(true) |> subquery_select(adapter)
+
+    {inner_query, select} =
+      inner_query
+      |> ensure_select(true)
+      |> normalize_subquery_select(adapter, source?)
+
     %{subquery | query: inner_query, params: params, cache: key, select: select}
   rescue
     e -> raise Ecto.SubQueryError, query: query, exception: e
@@ -279,13 +284,22 @@ defmodule Ecto.Query.Planner do
     query
   end
 
-  defp subquery_select(%{select: %{expr: expr, take: take} = select} = query, adapter) do
+  defp normalize_subquery_select(%{select: select} = query, adapter, source?) do
+    %{expr: expr, take: take} = select
+
     expr =
       case subquery_select(expr, take, query) do
         {nil, fields} ->
           {:%{}, [], fields}
+
         {struct, fields} ->
           {:%, [], [struct, {:%{}, [], fields}]}
+
+        :error when source? ->
+          error!(query, "subquery/cte must select a source (t), a field (t.field) or a map, got: `#{Macro.to_string(expr)}`")
+
+        :error ->
+          expr
       end
 
     query = put_in(query.select.expr, expr)
@@ -340,8 +354,8 @@ defmodule Ecto.Query.Planner do
   defp subquery_select({{:., _, [{:&, _, [ix]}, field]}, _, []}, _take, _query) do
     {nil, subquery_fields([field], ix)}
   end
-  defp subquery_select(expr, _take, query) do
-    error!(query, "subquery/cte must select a source (t), a field (t.field) or a map, got: `#{Macro.to_string(expr)}`")
+  defp subquery_select(_expr, _take, _query) do
+    :error
   end
 
   defp subquery_struct_and_fields({:source, {_, schema}, _, types}) do
@@ -553,7 +567,7 @@ defmodule Ecto.Query.Planner do
           where
 
         %{subqueries: subqueries} = where ->
-          %{where | subqueries: Enum.map(subqueries, &plan_subquery(&1, query, nil, adapter))}
+          %{where | subqueries: Enum.map(subqueries, &plan_subquery(&1, query, nil, adapter, false))}
       end)
 
     %{query | wheres: wheres}
@@ -934,8 +948,7 @@ defmodule Ecto.Query.Planner do
       Enum.reduce with_expr.queries, {[], counter}, fn
         {name, %Ecto.Query{} = query}, {queries, counter} ->
           {query, counter} = traverse_exprs(query, :all, counter, fun)
-          {query, _} = normalize_select(query, true)
-          {_, select} = subquery_select(query, adapter)
+          {query, select} = normalize_subquery_select(query, adapter, true)
           keys = select |> subquery_types() |> Keyword.keys()
           query = update_in(query.select.fields, &Enum.zip(keys, &1))
           {[{name, query} | queries], counter}
@@ -1010,15 +1023,22 @@ defmodule Ecto.Query.Planner do
     {fragments, acc} = prewalk(fragments, kind, query, expr, acc, adapter)
     {{:fragment, meta, fragments}, acc}
   end
-  defp prewalk_source(%Ecto.SubQuery{query: inner_query} = subquery, _kind, query, _expr, counter, adapter) do
+  defp prewalk_source(%Ecto.SubQuery{query: inner_query} = subquery, kind, query, _expr, counter, adapter) do
     try do
       inner_query = put_in inner_query.aliases[@parent_as], query
       {inner_query, counter} = normalize_query(inner_query, :all, adapter, counter)
       {inner_query, _} = normalize_select(inner_query, true)
-      {_, inner_query} = pop_in inner_query.aliases[@parent_as]
+      {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
 
-      keys = subquery.select |> subquery_types() |> Keyword.keys()
-      inner_query = update_in(inner_query.select.fields, &Enum.zip(keys, &1))
+      inner_query =
+        # If the subquery comes from a select, we are not really interested on the fields
+        if kind == :where do
+          inner_query
+        else
+          update_in(inner_query.select.fields, fn fields ->
+            subquery.select |> subquery_types() |> Keyword.keys() |> Enum.zip(fields)
+          end)
+        end
 
       {%{subquery | query: inner_query}, counter}
     rescue
@@ -1059,9 +1079,8 @@ defmodule Ecto.Query.Planner do
     {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
     {right, acc} = prewalk_source(Enum.fetch!(expr.subqueries, i), kind, query, expr, acc, adapter)
 
-    case right.select do
-      {:map, [_]} -> :ok
-      {:struct, _, [_]} -> :ok
+    case right.query.select.fields do
+      [_] -> :ok
       _ -> error!(query, "subquery must return a single field in order to be used on the right-side of `in`")
     end
 
