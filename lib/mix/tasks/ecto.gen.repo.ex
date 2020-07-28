@@ -77,7 +77,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
         {#{inspect repo}, []}
 
-    And to add it to the list of ecto repositories in your
+    And to add it to the list of Ecto repositories in your
     configuration files (so Ecto tasks work as expected):
 
         config #{inspect app},
