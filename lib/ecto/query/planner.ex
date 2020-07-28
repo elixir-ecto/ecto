@@ -284,7 +284,14 @@ defmodule Ecto.Query.Planner do
     query
   end
 
-  defp normalize_subquery_select(%{select: select} = query, adapter, source?) do
+  defp normalize_subquery_select(query, adapter, source?) do
+    {expr, %{select: select} = query} = rewrite_subquery_select_expr(query, source?)
+    {expr, _} = prewalk(expr, :select, query, select, 0, adapter)
+    {meta, _fields, _from} = collect_fields(expr, [], :error, query, select.take, true)
+    {query, meta}
+  end
+
+  defp rewrite_subquery_select_expr(%{select: select} = query, source?) do
     %{expr: expr, take: take} = select
 
     expr =
@@ -302,10 +309,7 @@ defmodule Ecto.Query.Planner do
           expr
       end
 
-    query = put_in(query.select.expr, expr)
-    {expr, _} = prewalk(expr, :select, query, select, 0, adapter)
-    {meta, _fields, _from} = collect_fields(expr, [], :error, query, take, true)
-    {query, meta}
+    {expr, put_in(query.select.expr, expr)}
   end
 
   defp subquery_select({:merge, _, [left, right]}, take, query) do
@@ -948,8 +952,9 @@ defmodule Ecto.Query.Planner do
       Enum.reduce with_expr.queries, {[], counter}, fn
         {name, %Ecto.Query{} = query}, {queries, counter} ->
           {query, counter} = traverse_exprs(query, :all, counter, fun)
-          {query, select} = normalize_subquery_select(query, adapter, true)
-          keys = select |> subquery_types() |> Keyword.keys()
+          {_expr, query} = rewrite_subquery_select_expr(query, true)
+          {query, select} = normalize_select(query, true)
+          keys = select.postprocess |> subquery_types() |> Keyword.keys()
           query = update_in(query.select.fields, &Enum.zip(keys, &1))
           {[{name, query} | queries], counter}
 
