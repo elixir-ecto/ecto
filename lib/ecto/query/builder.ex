@@ -977,8 +977,8 @@ defmodule Ecto.Query.Builder do
     do: {find_var!(var, vars), code}
 
   # Interval
-  def quoted_type({:datetime_add, _, [_, _, __]}, _vars), do: :naive_datetime
-  def quoted_type({:date_add, _, [_, _, __]}, _vars), do: :date
+  def quoted_type({:datetime_add, _, [_, _, _]}, _vars), do: :naive_datetime
+  def quoted_type({:date_add, _, [_, _, _]}, _vars), do: :date
 
   # Tagged
   def quoted_type({:<<>>, _, _}, _vars), do: :binary
