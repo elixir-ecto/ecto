@@ -86,8 +86,11 @@ defmodule Ecto.Repo.Preloader do
       {:ok, prefix} ->
         prefix
       :error ->
-        %{__meta__: %{prefix: prefix}} = sample
-        prefix
+        case sample do
+          %{__meta__: %{prefix: prefix}} -> prefix
+          # Must be an embedded schema
+          _ -> nil
+        end
     end
   end
 

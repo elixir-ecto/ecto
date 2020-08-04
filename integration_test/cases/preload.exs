@@ -6,6 +6,7 @@ defmodule Ecto.Integration.PreloadTest do
 
   alias Ecto.Integration.Post
   alias Ecto.Integration.Comment
+  alias Ecto.Integration.Item
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.User
   alias Ecto.Integration.Custom
@@ -654,6 +655,19 @@ defmodule Ecto.Integration.PreloadTest do
     assert [%Comment{id: ^cid1}, %Comment{id: ^cid2}] = p1.comments |> sort_by_id
     assert [%Comment{id: ^cid3}, %Comment{id: ^cid4}] = p2.comments |> sort_by_id
     assert [] = p3.comments
+  end
+
+
+  test "preload belongs_to in embedded_schema" do
+    %User{id: uid1} = TestRepo.insert!(%User{name: "1"})
+    item = %Item{user_id: uid1}
+
+    # Starts as not loaded
+    assert %Ecto.Association.NotLoaded{} = item.user
+
+    # Now we preload it
+    item = TestRepo.preload(item, :user)
+    assert %User{id: uid1} = item.user
   end
 
   defp sort_by_id(values) do
