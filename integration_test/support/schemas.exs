@@ -215,6 +215,7 @@ defmodule Ecto.Integration.Item do
   This module is used to test:
 
     * Embedding
+    * Preloading associations in embedded schemas
 
   """
   use Ecto.Schema
@@ -226,6 +227,8 @@ defmodule Ecto.Integration.Item do
 
     embeds_one :primary_color, Ecto.Integration.ItemColor
     embeds_many :secondary_colors, Ecto.Integration.ItemColor
+
+    belongs_to :user, Ecto.Integration.User
   end
 end
 
