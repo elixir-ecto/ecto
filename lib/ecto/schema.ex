@@ -404,6 +404,25 @@ defmodule Ecto.Schema do
 
   Furthermore, both `__struct__` and `__changeset__` functions are
   defined so structs and changeset functionalities are available.
+
+  ## Working with typespecs
+
+  Generating typespecs for schemas is out of the scope of `Ecto.Schema`.
+
+  In order to be able to use types such as `User.t()`, `t/0` has to be defined manually:
+
+      defmodule User do
+        use Ecto.Schema
+
+        @type t :: %__MODULE__{
+          name: String.t(),
+          age: non_neg_integer()
+        }
+
+        # ... schema ...
+      end
+
+  Defining the type of each field is not mandatory, but it is preferable.
   """
 
   alias Ecto.Schema.Metadata
