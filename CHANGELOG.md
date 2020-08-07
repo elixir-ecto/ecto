@@ -1,5 +1,24 @@
 # Changelog for v3.x
 
+## v3.5.0-dev
+
+### Enhancements
+
+  * [Ecto.Query] Do not restrict subqueries in `where` to map/struct types
+  * [Ecto.Schema] Do not validate uniqueness if there is a prior error on the field
+
+## v3.4.6 (2020-08-07)
+
+### Enhancements
+
+  * [Ecto.Query] Allow `count/0` on `type/2`
+  * [Ecto.Multi] Support anonymous functions in multiple functions
+
+### Bug fixes
+
+  * [Ecto.Query] Consider booleans as literals in unions, subqueries, ctes, etc
+  * [Ecto.Schema] Generate IDs for nested embeds
+
 ## v3.4.5 (2020-06-14)
 
 ### Enhancements
