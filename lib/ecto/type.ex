@@ -95,7 +95,7 @@ defmodule Ecto.Type do
   @type primitive :: base | composite
 
   @typedoc "Custom types are represented by user-defined modules."
-  @type custom :: module
+  @type custom :: module | {:parameterized, module, term}
 
   @type base :: :integer | :float | :boolean | :string | :map |
                  :binary | :decimal | :id | :binary_id |
@@ -104,14 +104,14 @@ defmodule Ecto.Type do
 
   @type composite :: {:array, t} | {:map, t} | private_composite
 
-  @typep private_composite :: {:maybe, t} | {:embed, Ecto.Embedded.t} | {:in, t} | {:param, :any_datetime}
+  @typep private_composite :: {:maybe, t} | {:in, t} | {:param, :any_datetime}
 
   @base ~w(
     integer float decimal boolean string map binary id binary_id any
     utc_datetime naive_datetime date time
     utc_datetime_usec naive_datetime_usec time_usec
   )a
-  @composite ~w(array map in embed param)a
+  @composite ~w(array map maybe in param)a
 
   @doc """
   Returns the underlying schema type for the custom type.
@@ -194,6 +194,7 @@ defmodule Ecto.Type do
 
   """
   @spec primitive?(t) :: boolean
+  def primitive?({:parameterized, _, _}), do: true
   def primitive?({composite, _}) when composite in @composite, do: true
   def primitive?(base) when base in @base, do: true
   def primitive?(_), do: false
@@ -229,6 +230,7 @@ defmodule Ecto.Type do
 
   See `c:embed_as/1`.
   """
+  def embed_as({:parameterized, module, config}, format), do: module.embed_as(config, format)
   def embed_as({composite, _}, _format) when composite in @composite, do: :self
   def embed_as(base, _format) when base in @base, do: :self
   def embed_as(mod, format) do
@@ -248,14 +250,10 @@ defmodule Ecto.Type do
       {:ok, Decimal.new("1")}
 
   """
-  def embedded_dump({:embed, _} = type, value, format) do
-    dump(type, value, &embedded_dump(&1, &2, format))
-  end
-
   def embedded_dump(type, value, format) do
     case embed_as(type, format) do
       :self -> {:ok, value}
-      :dump -> dump(type, value)
+      :dump -> dump(type, value, &embedded_dump(&1, &2, format))
     end
   end
 
@@ -268,10 +266,6 @@ defmodule Ecto.Type do
       {:ok, Decimal.new("1")}
 
   """
-  def embedded_load({:embed, _} = type, value, format) do
-    load(type, value, &embedded_load(&1, &2, format))
-  end
-
   def embedded_load(type, value, format) do
     case embed_as(type, format) do
       :self ->
@@ -281,7 +275,7 @@ defmodule Ecto.Type do
         end
 
       :dump ->
-        load(type, value)
+        load(type, value, &embedded_load(&1, &2, format))
     end
   end
 
@@ -304,6 +298,7 @@ defmodule Ecto.Type do
   """
   @spec type(t) :: t
   def type(type)
+  def type({:parameterized, module, config}), do: module.type(config)
   def type({:array, type}), do: {:array, type(type)}
   def type({:map, type}), do: {:map, type(type)}
 
@@ -347,7 +342,6 @@ defmodule Ecto.Type do
   defp do_match?(_left, :any),  do: true
   defp do_match?(:any, _right), do: true
   defp do_match?({outer, left}, {outer, right}), do: match?(left, right)
-  defp do_match?({:array, :any}, {:embed, %{cardinality: :many}}), do: true
   defp do_match?(:decimal, type) when type in [:float, :integer], do: true
   defp do_match?(:binary_id, :binary), do: true
   defp do_match?(:id, :integer), do: true
@@ -389,6 +383,10 @@ defmodule Ecto.Type do
 
   """
   @spec dump(t, term) :: {:ok, term} | :error
+  def dump({:parameterized, module, config}, value) do
+    module.dump(config, value, &dump/2)
+  end
+
   def dump(_type, nil) do
     {:ok, nil}
   end
@@ -411,6 +409,10 @@ defmodule Ecto.Type do
   the given `dumper` function is used.
   """
   @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
+  def dump({:parameterized, module, config}, value, dumper) do
+    module.dump(config, value, dumper)
+  end
+
   def dump(_type, nil, _dumper) do
     {:ok, nil}
   end
@@ -420,10 +422,6 @@ defmodule Ecto.Type do
       {:ok, _} = ok -> ok
       :error -> {:ok, value}
     end
-  end
-
-  def dump({:embed, embed}, value, dumper) do
-    dump_embed(embed, value, dumper)
   end
 
   def dump({:in, type}, value, dumper) do
@@ -504,29 +502,6 @@ defmodule Ecto.Type do
 
   defp dump_utc_datetime_usec(_), do: :error
 
-  defp dump_embed(%{cardinality: :one, related: schema, field: field},
-                  value, fun) when is_map(value) do
-    {:ok, dump_embed(field, schema, value, schema.__schema__(:dump), fun)}
-  end
-
-  defp dump_embed(%{cardinality: :many, related: schema, field: field},
-                  value, fun) when is_list(value) do
-    types = schema.__schema__(:dump)
-    {:ok, Enum.map(value, &dump_embed(field, schema, &1, types, fun))}
-  end
-
-  defp dump_embed(_embed, _value, _fun) do
-    :error
-  end
-
-  defp dump_embed(_field, schema, %{__struct__: schema} = struct, types, dumper) do
-    Ecto.Schema.Loader.safe_dump(struct, types, dumper)
-  end
-
-  defp dump_embed(field, _schema, value, _types, _fun) do
-    raise ArgumentError, "cannot dump embed `#{field}`, invalid value: #{inspect value}"
-  end
-
   @doc """
   Loads a value with the given type.
 
@@ -542,8 +517,8 @@ defmodule Ecto.Type do
 
   """
   @spec load(t, term) :: {:ok, term} | :error
-  def load({:embed, embed}, value) do
-    load_embed(embed, value, &load/2)
+  def load({:parameterized, module, config}, value) do
+    module.load(config, value, &load/2)
   end
 
   def load(_type, nil) do
@@ -568,8 +543,8 @@ defmodule Ecto.Type do
   the given `loader` function is used.
   """
   @spec load(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
-  def load({:embed, embed}, value, loader) do
-    load_embed(embed, value, loader)
+  def load({:parameterized, module, config}, value, loader) do
+    module.load(config, value, loader)
   end
 
   def load(_type, nil, _loader) do
@@ -666,32 +641,6 @@ defmodule Ecto.Type do
   defp load_utc_datetime_usec(_),
     do: :error
 
-  defp load_embed(%{cardinality: :one}, nil, _fun), do: {:ok, nil}
-
-  defp load_embed(%{cardinality: :one, related: schema, field: field},
-                  value, fun) when is_map(value) do
-    {:ok, load_embed(field, schema, value, fun)}
-  end
-
-  defp load_embed(%{cardinality: :many}, nil, _fun), do: {:ok, []}
-
-  defp load_embed(%{cardinality: :many, related: schema, field: field},
-                  value, fun) when is_list(value) do
-    {:ok, Enum.map(value, &load_embed(field, schema, &1, fun))}
-  end
-
-  defp load_embed(_embed, _value, _fun) do
-    :error
-  end
-
-  defp load_embed(_field, schema, value, loader) when is_map(value) do
-    Ecto.Schema.Loader.unsafe_load(schema, value, loader)
-  end
-
-  defp load_embed(field, _schema, value, _fun) do
-    raise ArgumentError, "cannot load embed `#{field}`, invalid value: #{inspect value}"
-  end
-
   @doc """
   Casts a value to the given type.
 
@@ -766,7 +715,7 @@ defmodule Ecto.Type do
 
   """
   @spec cast(t, term) :: {:ok, term} | {:error, keyword()} | :error
-  def cast({:embed, type}, value), do: cast_embed(type, value)
+  def cast({:parameterized, module, config}, value), do: module.cast(config, value)
   def cast({:in, _type}, nil), do: :error
   def cast(_type, nil), do: {:ok, nil}
 
@@ -845,24 +794,6 @@ defmodule Ecto.Type do
   defp cast_map(term) when is_map(term), do: {:ok, term}
   defp cast_map(_), do: :error
 
-  defp cast_embed(%{cardinality: :one}, nil), do: {:ok, nil}
-  defp cast_embed(%{cardinality: :one, related: schema}, %{__struct__: schema} = struct) do
-    {:ok, struct}
-  end
-
-  defp cast_embed(%{cardinality: :many}, nil), do: {:ok, []}
-  defp cast_embed(%{cardinality: :many, related: schema}, value) when is_list(value) do
-    if Enum.all?(value, &Kernel.match?(%{__struct__: ^schema}, &1)) do
-      {:ok, value}
-    else
-      :error
-    end
-  end
-
-  defp cast_embed(_embed, _value) do
-    :error
-  end
-
   ## Shared helpers
 
   defp same_integer(term) when is_integer(term), do: {:ok, term}
@@ -895,8 +826,8 @@ defmodule Ecto.Type do
   end
 
   @doc false
-  def adapter_load(_adapter, {:embed, embed}, nil) do
-    load_embed(embed, nil, &load/2)
+  def adapter_load(adapter, {:parameterized, module, config} = type, value) do
+    process_loaders(adapter.loaders(module.type(config), type), {:ok, value}, adapter)
   end
   def adapter_load(_adapter, _type, nil) do
     {:ok, nil}
@@ -925,6 +856,9 @@ defmodule Ecto.Type do
     do: acc
 
   @doc false
+  def adapter_dump(adapter, {:parameterized, module, config} = type, value) do
+    process_dumpers(adapter.dumpers(module.type(config), type), {:ok, value}, adapter)
+  end
   def adapter_dump(_adapter, type, nil),
     do: dump(type, nil)
   def adapter_dump(adapter, {:maybe, type}, value) do

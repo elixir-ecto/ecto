@@ -17,6 +17,85 @@ defmodule Ecto.Embedded do
   defstruct [:cardinality, :field, :owner, :related, :on_cast, on_replace: :raise,
              unique: true, ordered: true]
 
+  ## Migration
+
+  # We treat even embed_many as maps, as that's often the
+  # most efficient format to encode them in the database.
+  def type(_), do: {:map, :any}
+
+  def load(%{cardinality: :one}, nil, _fun), do: {:ok, nil}
+
+  def load(%{cardinality: :one, related: schema, field: field},
+                  value, fun) when is_map(value) do
+    {:ok, load(field, schema, value, fun)}
+  end
+
+  def load(%{cardinality: :many}, nil, _fun), do: {:ok, []}
+
+  def load(%{cardinality: :many, related: schema, field: field},
+                  value, fun) when is_list(value) do
+    {:ok, Enum.map(value, &load(field, schema, &1, fun))}
+  end
+
+  def load(_embed, _value, _fun) do
+    :error
+  end
+
+  def load(_field, schema, value, loader) when is_map(value) do
+    Ecto.Schema.Loader.unsafe_load(schema, value, loader)
+  end
+
+  def load(field, _schema, value, _fun) do
+    raise ArgumentError, "cannot load embed `#{field}`, invalid value: #{inspect value}"
+  end
+
+  def dump(_, nil, _), do: {:ok, nil}
+
+  def dump(%{cardinality: :one, related: schema, field: field},
+                  value, fun) when is_map(value) do
+    {:ok, dump(field, schema, value, schema.__schema__(:dump), fun)}
+  end
+
+  def dump(%{cardinality: :many, related: schema, field: field},
+                  value, fun) when is_list(value) do
+    types = schema.__schema__(:dump)
+    {:ok, Enum.map(value, &dump(field, schema, &1, types, fun))}
+  end
+
+  def dump(_embed, _value, _fun) do
+    :error
+  end
+
+  def dump(_field, schema, %{__struct__: schema} = struct, types, dumper) do
+    Ecto.Schema.Loader.safe_dump(struct, types, dumper)
+  end
+
+  def dump(field, _schema, value, _types, _fun) do
+    raise ArgumentError, "cannot dump embed `#{field}`, invalid value: #{inspect value}"
+  end
+
+  def cast(%{cardinality: :one}, nil), do: {:ok, nil}
+  def cast(%{cardinality: :one, related: schema}, %{__struct__: schema} = struct) do
+    {:ok, struct}
+  end
+
+  def cast(%{cardinality: :many}, nil), do: {:ok, []}
+  def cast(%{cardinality: :many, related: schema}, value) when is_list(value) do
+    if Enum.all?(value, &Kernel.match?(%{__struct__: ^schema}, &1)) do
+      {:ok, value}
+    else
+      :error
+    end
+  end
+
+  def cast(_embed, _value) do
+    :error
+  end
+
+  def embed_as(_, _), do: :dump
+
+  ## End of migration
+
   @doc """
   Builds the embedded struct.
 

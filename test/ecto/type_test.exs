@@ -218,7 +218,7 @@ defmodule Ecto.TypeTest do
     test "one" do
       embed = %Ecto.Embedded{field: :embed, cardinality: :one,
                              owner: __MODULE__, related: Schema}
-      type  = {:embed, embed}
+      type  = {:parameterized, Ecto.Embedded, embed}
 
       assert {:ok, %Schema{id: @uuid_string, a: 1, c: 0}} =
              adapter_load(Ecto.TestAdapter, type, %{"id" => @uuid_binary, "abc" => 1})
@@ -233,13 +233,12 @@ defmodule Ecto.TypeTest do
       assert :error == cast(type, %{"a" => 1})
       assert cast(type, %Schema{}) == {:ok, %Schema{}}
       assert cast(type, nil) == {:ok, nil}
-      assert match?(:any, type)
     end
 
     test "many" do
       embed = %Ecto.Embedded{field: :embed, cardinality: :many,
                              owner: __MODULE__, related: Schema}
-      type  = {:embed, embed}
+      type  = {:parameterized, Ecto.Embedded, embed}
 
       assert {:ok, [%Schema{id: @uuid_string, a: 1, c: 0}]} =
              adapter_load(Ecto.TestAdapter, type, [%{"id" => @uuid_binary, "abc" => 1}])
@@ -254,7 +253,6 @@ defmodule Ecto.TypeTest do
       assert cast(type, [%{"abc" => 1}]) == :error
       assert cast(type, [%Schema{}]) == {:ok, [%Schema{}]}
       assert cast(type, []) == {:ok, []}
-      assert match?({:array, :any}, type)
     end
   end
 

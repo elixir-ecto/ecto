@@ -998,22 +998,22 @@ defmodule Ecto.Query.Planner do
     {Enum.reverse(combinations), counter}
   end
 
-  defp validate_json_path!([path_field | rest], field, type) do
-    case type do
-      {:embed, %{related: related, cardinality: :one}} ->
-        unless path_field in Enum.map(related.__schema__(:fields), &Atom.to_string/1) do
+  defp validate_json_path!([path_field | rest], field, embed) do
+    case embed do
+      %{related: related, cardinality: :one} ->
+        unless Enum.any?(related.__schema__(:fields), &Atom.to_string(&1) == path_field) do
           raise "field `#{path_field}` does not exist in #{inspect(related)}"
         end
 
-        path_type = related.__schema__(:type, String.to_atom(path_field))
-        validate_json_path!(rest, path_field, path_type)
+        path_embed = related.__schema__(:embed, String.to_atom(path_field))
+        validate_json_path!(rest, path_field, path_embed)
 
-      {:embed, %{related: _, cardinality: :many} = embed} ->
+      %{related: _, cardinality: :many} ->
         unless is_integer(path_field) do
           raise "cannot use `#{path_field}` to refer to an item in `embeds_many`"
         end
 
-        validate_json_path!(rest, path_field, {:embed, %{embed | cardinality: :one}})
+        validate_json_path!(rest, path_field, %{embed | cardinality: :one})
 
       other ->
         raise "expected field `#{field}` to be of type embed, got: `#{inspect(other)}`"
@@ -1114,8 +1114,8 @@ defmodule Ecto.Query.Planner do
     {{:., _, [{:&, _, [ix]}, field]}, _, []} = json_field
 
     case type!(kind, query, expr, ix, field) do
-      {:embed, _} = type ->
-        validate_json_path!(path, field, type)
+      {:parameterized, Ecto.Embedded, embed} ->
+        validate_json_path!(path, field, embed)
 
       type ->
         case Ecto.Type.type(type) do

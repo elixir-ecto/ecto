@@ -2015,7 +2015,7 @@ defmodule Ecto.Schema do
 
     Module.put_attribute(mod, :changeset_fields, {name, {:embed, struct}})
     Module.put_attribute(mod, :ecto_embeds, {name, struct})
-    define_field(mod, name, {:embed, struct}, opts)
+    define_field(mod, name, {:parameterized, Ecto.Embedded, struct}, opts)
   end
 
   defp put_struct_field(mod, name, assoc) do
@@ -2039,10 +2039,6 @@ defmodule Ecto.Schema do
     raise ArgumentError, "invalid type :datetime for field #{inspect name}. " <>
                            "You probably meant to choose one between :naive_datetime " <>
                            "(no time zone information) or :utc_datetime (time zone is set to UTC)"
-  end
-
-  defp check_field_type!(name, {:embed, _}, _opts) do
-    raise ArgumentError, "cannot declare field #{inspect name} as embed. Use embeds_one/many instead"
   end
 
   defp check_field_type!(name, type, opts) do
