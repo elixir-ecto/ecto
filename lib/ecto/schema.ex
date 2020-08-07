@@ -1772,14 +1772,13 @@ defmodule Ecto.Schema do
   @doc false
   def __field__(mod, name, type, opts) do
     check_field_type!(name, type, opts)
+    Module.put_attribute(mod, :changeset_fields, {name, type})
     define_field(mod, name, type, opts)
   end
 
   defp define_field(mod, name, type, opts) do
     virtual? = opts[:virtual] || false
     pk? = opts[:primary_key] || false
-
-    Module.put_attribute(mod, :changeset_fields, {name, type})
     put_struct_field(mod, name, Keyword.get(opts, :default))
 
     unless virtual? do
@@ -2014,8 +2013,9 @@ defmodule Ecto.Schema do
     opts   = [cardinality: cardinality, related: schema] ++ opts
     struct = Ecto.Embedded.struct(mod, name, opts)
 
-    define_field(mod, name, {:embed, struct}, opts)
+    Module.put_attribute(mod, :changeset_fields, {name, {:embed, struct}})
     Module.put_attribute(mod, :ecto_embeds, {name, struct})
+    define_field(mod, name, {:embed, struct}, opts)
   end
 
   defp put_struct_field(mod, name, assoc) do
