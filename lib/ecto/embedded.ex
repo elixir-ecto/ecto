@@ -103,8 +103,10 @@ defmodule Ecto.Embedded do
     nil
   end
 
-  defp to_struct(%Changeset{} = changeset, action, %{related: schema}, adapter) do
-    %{data: struct, changes: changes} = changeset
+  defp to_struct(%Changeset{data: data} = changeset, action, %{related: schema}, adapter) do
+    %{data: struct, changes: changes} = changeset =
+      Ecto.Changeset.Relation.surface_changes(changeset, data, schema.__schema__(:fields))
+
     embeds = prepare(changeset, schema.__schema__(:embeds), adapter, action)
 
     changes

@@ -9,6 +9,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
   alias __MODULE__.Author
   alias __MODULE__.Profile
   alias __MODULE__.Post
+  alias __MODULE__.Nested
 
   defmodule Author do
     use Ecto.Schema
@@ -22,6 +23,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
       embeds_one :inline_profile, Profile do
         field :name, :string
       end
+      embeds_one :nested, Nested
       embeds_many :posts, Post, on_replace: :delete
       embeds_many :raise_posts, Post, on_replace: :raise
       embeds_many :invalid_posts, Post, on_replace: :mark_as_invalid
@@ -76,6 +78,20 @@ defmodule Ecto.Changeset.EmbeddedTest do
     def set_action(schema, params) do
       changeset(schema, params)
       |> Map.put(:action, Map.get(params, :action, :update))
+    end
+  end
+
+  defmodule Nested do
+    use Ecto.Schema
+    import Ecto.Changeset
+
+    embedded_schema do
+      embeds_one :profile, Profile
+    end
+
+    def changeset(schema, params) do
+      cast(schema, params, [])
+      |> cast_embed(:profile)
     end
   end
 
@@ -805,6 +821,16 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = Changeset.put_change(base_changeset, :profile, empty_update_changeset)
     refute Map.has_key?(changeset.changes, :profile)
+  end
+
+  test "put_change/4 with nested embed" do
+    changeset =
+      Changeset.change(%Author{}, %{})
+      |> Changeset.put_change(:nested, %Nested{profile: %Profile{name: "tom"}})
+
+    assert {:ok, author} = TestRepo.insert(changeset)
+    assert author.nested.id
+    assert author.nested.profile.id
   end
 
   test "put_embed/4 with embeds_many" do

@@ -390,15 +390,18 @@ defmodule Ecto.Integration.TypeTest do
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_embed(:item, item)
     order = TestRepo.insert!(order)
+
     dbitem = TestRepo.get!(Order, order.id).item
-    assert item.primary_color == dbitem.primary_color
-    assert item.secondary_colors == dbitem.secondary_colors
+    assert dbitem.primary_color.name == "red"
+    assert Enum.map(dbitem.secondary_colors, & &1.name) == ["blue"]
     assert dbitem.id
+    assert dbitem.primary_color.id
 
     [dbitem] = TestRepo.all(from o in Order, select: o.item)
-    assert item.primary_color == dbitem.primary_color
-    assert item.secondary_colors == dbitem.secondary_colors
+    assert dbitem.primary_color.name == "red"
+    assert Enum.map(dbitem.secondary_colors, & &1.name) == ["blue"]
     assert dbitem.id
+    assert dbitem.primary_color.id
   end
 
   @tag :decimal_type
