@@ -230,7 +230,7 @@ defmodule Ecto.Type do
 
   See `c:embed_as/1`.
   """
-  def embed_as({:parameterized, module, config}, format), do: module.embed_as(config, format)
+  def embed_as({:parameterized, module, params}, format), do: module.embed_as(format, params)
   def embed_as({composite, _}, _format) when composite in @composite, do: :self
   def embed_as(base, _format) when base in @base, do: :self
   def embed_as(mod, format) do
@@ -298,7 +298,7 @@ defmodule Ecto.Type do
   """
   @spec type(t) :: t
   def type(type)
-  def type({:parameterized, module, config}), do: module.type(config)
+  def type({:parameterized, type, params}), do: type.type(params)
   def type({:array, type}), do: {:array, type(type)}
   def type({:map, type}), do: {:map, type(type)}
 
@@ -383,8 +383,8 @@ defmodule Ecto.Type do
 
   """
   @spec dump(t, term) :: {:ok, term} | :error
-  def dump({:parameterized, module, config}, value) do
-    module.dump(config, value, &dump/2)
+  def dump({:parameterized, module, params}, value) do
+    module.dump(value, &dump/2, params)
   end
 
   def dump(_type, nil) do
@@ -409,8 +409,8 @@ defmodule Ecto.Type do
   the given `dumper` function is used.
   """
   @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
-  def dump({:parameterized, module, config}, value, dumper) do
-    module.dump(config, value, dumper)
+  def dump({:parameterized, module, params}, value, dumper) do
+    module.dump(value, dumper, params)
   end
 
   def dump(_type, nil, _dumper) do
@@ -517,8 +517,8 @@ defmodule Ecto.Type do
 
   """
   @spec load(t, term) :: {:ok, term} | :error
-  def load({:parameterized, module, config}, value) do
-    module.load(config, value, &load/2)
+  def load({:parameterized, module, params}, value) do
+    module.load(value, &load/2, params)
   end
 
   def load(_type, nil) do
@@ -543,8 +543,8 @@ defmodule Ecto.Type do
   the given `loader` function is used.
   """
   @spec load(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
-  def load({:parameterized, module, config}, value, loader) do
-    module.load(config, value, loader)
+  def load({:parameterized, module, params}, value, loader) do
+    module.load(value, loader, params)
   end
 
   def load(_type, nil, _loader) do
@@ -715,7 +715,7 @@ defmodule Ecto.Type do
 
   """
   @spec cast(t, term) :: {:ok, term} | {:error, keyword()} | :error
-  def cast({:parameterized, module, config}, value), do: module.cast(config, value)
+  def cast({:parameterized, type, params}, value), do: type.cast(value, params)
   def cast({:in, _type}, nil), do: :error
   def cast(_type, nil), do: {:ok, nil}
 
@@ -826,8 +826,8 @@ defmodule Ecto.Type do
   end
 
   @doc false
-  def adapter_load(adapter, {:parameterized, module, config} = type, value) do
-    process_loaders(adapter.loaders(module.type(config), type), {:ok, value}, adapter)
+  def adapter_load(adapter, {:parameterized, module, params} = type, value) do
+    process_loaders(adapter.loaders(module.type(params), type), {:ok, value}, adapter)
   end
   def adapter_load(_adapter, _type, nil) do
     {:ok, nil}
@@ -856,8 +856,8 @@ defmodule Ecto.Type do
     do: acc
 
   @doc false
-  def adapter_dump(adapter, {:parameterized, module, config} = type, value) do
-    process_dumpers(adapter.dumpers(module.type(config), type), {:ok, value}, adapter)
+  def adapter_dump(adapter, {:parameterized, module, params} = type, value) do
+    process_dumpers(adapter.dumpers(module.type(params), type), {:ok, value}, adapter)
   end
   def adapter_dump(_adapter, type, nil),
     do: dump(type, nil)
@@ -1091,6 +1091,12 @@ defmodule Ecto.Type do
   defp equal_fun(mod) when is_atom(mod) do
     if loaded_and_exported?(mod, :equal?, 2) do
       &mod.equal?/2
+    end
+  end
+
+  defp equal_fun({:parameterized, mod, params}) when is_atom(mod) do
+    fn a, b ->
+      mod.equal?(a, b, params)
     end
   end
 
