@@ -667,7 +667,7 @@ defmodule Ecto.Integration.PreloadTest do
 
     # Now we preload it
     item = TestRepo.preload(item, :user)
-    assert %User{id: uid1} = item.user
+    assert %User{id: ^uid1} = item.user
   end
 
   defp sort_by_id(values) do
