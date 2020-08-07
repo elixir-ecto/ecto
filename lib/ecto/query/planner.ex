@@ -1614,7 +1614,7 @@ defmodule Ecto.Query.Planner do
       type = schema.__schema__(:type, field) ->
         type
 
-      Map.has_key?(schema.__struct__, field) ->
+      Map.has_key?(schema.__struct__(), field) ->
         error! query, expr, "field `#{field}` in `#{kind}` is a virtual field in schema #{inspect schema}"
 
       true ->
