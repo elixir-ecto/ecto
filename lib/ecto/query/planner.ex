@@ -1110,19 +1110,17 @@ defmodule Ecto.Query.Planner do
     {%Ecto.Query.Tagged{value: arg, tag: type, type: Ecto.Type.type(type)}, acc}
   end
 
-  defp prewalk({:json_extract_path, meta, [json_field, path]}, kind, query, _expr, acc, _adapter) do
+  defp prewalk({:json_extract_path, meta, [json_field, path]}, kind, query, expr, acc, _adapter) do
     {{:., _, [{:&, _, [ix]}, field]}, _, []} = json_field
 
-    case get_source!(kind, query, ix) do
-      {_, nil, _} ->
-        :ok
+    case type!(kind, query, expr, ix, field) do
+      {:embed, _} = type ->
+        validate_json_path!(path, field, type)
 
-      {_, schema, _} ->
-        type = schema.__schema__(:type, field)
-
-        case type do
-          {:embed, _} ->
-            validate_json_path!(path, field, type)
+      type ->
+        case Ecto.Type.type(type) do
+          :any ->
+            :ok
 
           :map ->
             :ok
@@ -1130,11 +1128,8 @@ defmodule Ecto.Query.Planner do
           {:map, _} ->
             :ok
 
-          nil ->
-            raise "field `#{field}` does not exist in #{inspect(schema)}"
-
-          other ->
-            raise "expected field `#{field}` to be an embed or a map, got: `#{inspect(other)}`"
+          _ ->
+            raise "expected field `#{field}` to be an embed or a map, got: `#{inspect(type)}`"
         end
     end
 
