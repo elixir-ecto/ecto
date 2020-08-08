@@ -2050,9 +2050,6 @@ defmodule Ecto.Schema do
       inner_type = inner_from_composite(type, name) ->
         check_field_type!(name, inner_type, type, opts)
 
-      parameterized?(type, name) ->
-        type
-
       Ecto.Type.base?(type) ->
         type
 
@@ -2080,16 +2077,6 @@ defmodule Ecto.Schema do
   end
 
   defp inner_from_composite(_type, _name), do: false
-
-  defp parameterized?({:parameterized, module, _opts} = type, name) do
-    if Code.ensure_compiled(module) != {:module, module} do
-      raise ArgumentError, "could not load #{inspect(module)} for parameterized type for field `#{name}`"
-    else
-      true
-    end
-  end
-
-  defp parameterized?(_type, _name), do: false
 
   defp store_mfa_autogenerate!(mod, name, type, mfa) do
     if autogenerate_id(type) do
