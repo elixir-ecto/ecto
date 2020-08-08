@@ -1,24 +1,33 @@
 name: CI
 on: [pull_request, push]
 jobs:
- mix_test:
-   name: mix test (Elixir ${{ matrix.elixir }} OTP ${{ matrix.otp }})
-   strategy:
-     matrix:
-       elixir: ['1.7.4', '1.10.1']
-       include:
-         - elixir: '1.7.4'
-           otp: '19.x'
-         - elixir: '1.10.1'
-           otp: '22.x'
-   runs-on: ubuntu-16.04
-   steps:
-     - uses: actions/checkout@v1
-     - uses: actions/setup-elixir@v1
-       with:
-         otp-version: ${{ matrix.otp }}
-         elixir-version: ${{ matrix.elixir }}
-     - name: Install Dependencies
-       run: mix deps.get
-     - name: Run Tests
-       run: mix test
+  mix_test:
+    name: mix test (Elixir ${{ matrix.elixir }} OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - elixir: 1.7.4
+            otp: 19.3.6.13
+          - elixir: 1.8.2
+            otp: 20.3.8.26
+          - elixir: 1.9.4
+            otp: 20.3.8.26
+          - elixir: 1.10.4
+            otp: 21.3.8.16
+          - elixir: 1.10.4
+            otp: 23.0.3
+    steps:
+      - uses: actions/checkout@v2.3.2
+      - uses: actions/setup-elixir@v1.4.0
+        with:
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
+      - name: Install Dependencies
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get --only test
+      - name: Run tests
+        run: mix test
