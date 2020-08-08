@@ -19,12 +19,15 @@ jobs:
             otp: 21.3.8.16
           - elixir: 1.10.4
             otp: 23.0.3
+            check_formatted: true
     steps:
       - uses: actions/checkout@v2.3.2
       - uses: actions/setup-elixir@v1.4.0
         with:
           otp-version: ${{ matrix.otp }}
           elixir-version: ${{ matrix.elixir }}
+      - run: mix format --check-formatted
+        if: matrix.check_formatted
       - name: Install Dependencies
         run: |
           mix local.hex --force
