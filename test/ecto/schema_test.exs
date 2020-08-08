@@ -367,6 +367,26 @@ defmodule Ecto.SchemaTest do
         end
       end
     end
+
+    assert_raise ArgumentError, "invalid or unknown type :jsonb for field :name", fn ->
+      defmodule SchemaInvalidFieldType do
+        use Ecto.Schema
+
+        schema "invalidtype" do
+          field :name, :jsonb
+        end
+      end
+    end
+
+    assert_raise ArgumentError, "invalid or unknown type {:array, :jsonb} for field :name", fn ->
+      defmodule SchemaInvalidFieldType do
+        use Ecto.Schema
+
+        schema "invalidtype" do
+          field :name, {:array, :jsonb}
+        end
+      end
+    end
   end
 
   test "fail invalid schema" do
