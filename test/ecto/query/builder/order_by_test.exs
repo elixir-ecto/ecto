@@ -193,11 +193,13 @@ defmodule Ecto.Query.Builder.OrderByTest do
       assert order_by("q", [q], ^key).order_bys == order_by("q", [q], asc: q.title).order_bys
       assert order_by("q", [q], [^key]).order_bys == order_by("q", [q], asc: q.title).order_bys
 
-      assert order_by("q", [q], desc: ^key).order_bys ==
-               order_by("q", [q], desc: q.title).order_bys
+      import TestHelper, only: [discard_line_info: 1]
 
-      assert order_by("q", [q], [{^dir, ^key}]).order_bys ==
-               order_by("q", [q], desc: q.title).order_bys
+      assert order_by("q", [q], desc: ^key).order_bys |> discard_line_info ==
+               order_by("q", [q], desc: q.title).order_bys |> discard_line_info
+
+      assert order_by("q", [q], [{^dir, ^key}]).order_bys |> discard_line_info ==
+               order_by("q", [q], desc: q.title).order_bys |> discard_line_info
     end
 
     test "supports dynamic expressions" do
