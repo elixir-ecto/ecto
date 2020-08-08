@@ -2041,11 +2041,17 @@ defmodule Ecto.Schema do
                            "(no time zone information) or :utc_datetime (time zone is set to UTC)"
   end
 
-  defp check_field_type!(name, type, opts) do
+  defp check_field_type!(name, type, opts, full_type \\ nil) do
+    full_type = if is_nil(full_type), do: type, else: full_type
+
     cond do
       type == :any and !opts[:virtual] ->
         raise ArgumentError, "only virtual fields can have type :any, " <>
                              "invalid type for field #{inspect name}"
+
+      is_tuple(type) and tuple_size(type) == 2 and type |> elem(0) |> Ecto.Type.composite?() ->
+        inner_type = elem(type, 1)
+        check_field_type!(name, inner_type, opts, type)
 
       Ecto.Type.primitive?(type) ->
         type
@@ -2055,11 +2061,11 @@ defmodule Ecto.Schema do
 
       is_atom(type) and function_exported?(type, :__schema__, 1) ->
         raise ArgumentError,
-          "schema #{inspect type} is not a valid type for field #{inspect name}." <>
+          "schema #{inspect full_type} is not a valid type for field #{inspect name}." <>
           " Did you mean to use belongs_to, has_one, has_many, embeds_one, or embeds_many instead?"
 
       true ->
-        raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}"
+        raise ArgumentError, "invalid or unknown type #{inspect full_type} for field #{inspect name}"
     end
   end
 
