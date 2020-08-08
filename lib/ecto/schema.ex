@@ -1771,7 +1771,7 @@ defmodule Ecto.Schema do
 
   @doc false
   def __field__(mod, name, type, opts) do
-    check_field_type!(name, type, opts)
+    check_field_type!(name, type, type, opts)
     Module.put_attribute(mod, :changeset_fields, {name, type})
     define_field(mod, name, type, opts)
   end
@@ -2035,15 +2035,13 @@ defmodule Ecto.Schema do
     end
   end
 
-  defp check_field_type!(name, :datetime, _opts) do
+  defp check_field_type!(name, :datetime, _, _opts) do
     raise ArgumentError, "invalid type :datetime for field #{inspect name}. " <>
                            "You probably meant to choose one between :naive_datetime " <>
                            "(no time zone information) or :utc_datetime (time zone is set to UTC)"
   end
 
-  defp check_field_type!(name, type, opts, full_type \\ nil) do
-    full_type = if is_nil(full_type), do: type, else: full_type
-
+  defp check_field_type!(name, type, full_type, opts) do
     cond do
       type == :any and !opts[:virtual] ->
         raise ArgumentError, "only virtual fields can have type :any, " <>
@@ -2051,7 +2049,7 @@ defmodule Ecto.Schema do
 
       is_tuple(type) and tuple_size(type) == 2 and type |> elem(0) |> Ecto.Type.composite?() ->
         inner_type = elem(type, 1)
-        check_field_type!(name, inner_type, opts, type)
+        check_field_type!(name, inner_type, type, opts)
 
       Ecto.Type.primitive?(type) ->
         type
