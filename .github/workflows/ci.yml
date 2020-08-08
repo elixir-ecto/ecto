@@ -13,8 +13,8 @@ jobs:
             otp: '22.x'
     runs-on: ubuntu-16.04
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-elixir@v1
+      - uses: actions/checkout@v2.3.2
+      - uses: actions/setup-elixir@v1.4.0
         with:
           otp-version: ${{ matrix.otp }}
           elixir-version: ${{ matrix.elixir }}
