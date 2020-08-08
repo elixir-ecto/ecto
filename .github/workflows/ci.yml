@@ -25,6 +25,9 @@ jobs:
           otp-version: ${{ matrix.otp }}
           elixir-version: ${{ matrix.elixir }}
       - name: Install Dependencies
-        run: mix deps.get
-      - name: Run Tests
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get --only test
+      - name: Run tests
         run: mix test
