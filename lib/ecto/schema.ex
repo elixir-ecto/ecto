@@ -2082,19 +2082,10 @@ defmodule Ecto.Schema do
   defp inner_from_composite(_type, _name), do: false
 
   defp parameterized?({:parameterized, module, _opts} = type, name) do
-    cond do
-      Code.ensure_compiled(module) != {:module, module} ->
-        raise ArgumentError,
-          "schema #{inspect type} is not a valid parameterized type for field #{inspect name}." <>
-          " Module from parameterized type cannot be compiled."
-
-      not function_exported?(module, :type, 1) ->
-        raise ArgumentError,
-          "schema #{inspect type} is not a valid parameterized type for field #{inspect name}." <>
-          " Module from parameterized type does not implements Ecto.ParameterizedType behaviour."
-
-      true ->
-        type
+    if Code.ensure_compiled(module) != {:module, module} do
+      raise ArgumentError, "could not load #{inspect(module)} for parameterized type for field `#{name}`"
+    else
+      true
     end
   end
 
