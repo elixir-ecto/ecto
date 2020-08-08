@@ -5,6 +5,7 @@ jobs:
     name: mix test (Elixir ${{ matrix.elixir }} OTP ${{ matrix.otp }})
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         elixir: ['1.7.4', '1.10.1']
         include:
