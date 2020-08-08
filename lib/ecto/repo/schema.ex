@@ -556,6 +556,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp conflict_target({:constraint, constraint}, _dumper) when is_atom(constraint) do
+    # TODO: Remove this branch in future versions
     IO.warn "{:constraint, constraint} option for :conflict_target is deprecated, " <>
               "use {:unsafe_fragment, \"ON CONSTRAINT #{constraint}\" instead"
     {:constraint, constraint}

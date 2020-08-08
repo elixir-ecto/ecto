@@ -4,6 +4,7 @@ defmodule Ecto.Repo.Preloader do
   @moduledoc false
 
   require Ecto.Query
+  require Logger
 
   @doc """
   Transforms a result set based on query preloads, loading
@@ -166,8 +167,7 @@ defmodule Ecto.Repo.Preloader do
         loaded? = Ecto.assoc_loaded?(value) and not force?
 
         if loaded? and is_nil(id) and not Ecto.Changeset.Relation.empty?(assoc, value) do
-          # TODO: Convert this to an error in future Ecto versions
-          IO.warn """
+          Logger.warn """
           association `#{field}` for `#{inspect(module)}` has a loaded value but \
           its association key `#{owner_key}` is nil. This usually means one of:
 

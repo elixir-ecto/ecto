@@ -62,10 +62,12 @@ defmodule Mix.Ecto do
   """
   @spec ensure_repo(module, list) :: Ecto.Repo.t
   def ensure_repo(repo, args) do
-    Mix.Task.run "loadpaths", args
-
-    unless "--no-compile" in args do
-      Mix.Task.run("compile", args)
+    # TODO: Use only app.config when we depend on Elixir v1.11+.
+    if Code.ensure_loaded?(Mix.Tasks.App.Config) do
+      Mix.Task.run("app.config", args)
+    else
+      Mix.Task.run "loadpaths", args
+      "--no-compile" not in args && Mix.Task.run("compile", args)
     end
 
     case Code.ensure_compiled(repo) do
