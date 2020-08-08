@@ -14,6 +14,7 @@ jobs:
             otp: 20.3.8.26
           - elixir: 1.9.4
             otp: 20.3.8.26
+            warnings_as_errors: true # not 1.10 as its --warnigs-as-errors has bugs https://github.com/elixir-lang/elixir/issues/10073
           - elixir: 1.10.4
             otp: 21.3.8.16
           - elixir: 1.10.4
@@ -29,5 +30,7 @@ jobs:
           mix local.hex --force
           mix local.rebar --force
           mix deps.get --only test
+      - run: mix compile --warnings-as-errors
+        if: matrix.warnings_as_errors
       - name: Run tests
         run: mix test
