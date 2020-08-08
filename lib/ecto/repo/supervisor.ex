@@ -34,7 +34,7 @@ defmodule Ecto.Repo.Supervisor do
   defp telemetry_prefix(repo) do
     repo
     |> Module.split()
-    |> Enum.map(& &1 |> Macro.underscore() |> String.to_atom())
+    |> Enum.map(&(&1 |> Macro.underscore() |> String.to_atom()))
   end
 
   defp repo_init(type, repo, config) do
@@ -57,8 +57,9 @@ defmodule Ecto.Repo.Supervisor do
     end
 
     if Code.ensure_compiled(adapter) != {:module, adapter} do
-      raise ArgumentError, "adapter #{inspect adapter} was not compiled, " <>
-                           "ensure it is correct and it is included as a project dependency"
+      raise ArgumentError,
+            "adapter #{inspect(adapter)} was not compiled, " <>
+              "ensure it is correct and it is included as a project dependency"
     end
 
     behaviours =
@@ -123,6 +124,7 @@ defmodule Ecto.Repo.Supervisor do
 
   defp parse_uri_query(%URI{query: nil}),
     do: []
+
   defp parse_uri_query(%URI{query: query} = url) do
     query
     |> URI.query_decoder()
@@ -148,8 +150,8 @@ defmodule Ecto.Repo.Supervisor do
 
       _ ->
         raise Ecto.InvalidURLError,
-              url: url,
-              message: "can not parse value `#{value}` for parameter `#{key}` as an integer"
+          url: url,
+          message: "can not parse value `#{value}` for parameter `#{key}` as an integer"
     end
   end
 

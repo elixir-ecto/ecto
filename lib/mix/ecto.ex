@@ -8,17 +8,17 @@ defmodule Mix.Ecto do
 
   If no repo option is given, it is retrieved from the application environment.
   """
-  @spec parse_repo([term]) :: [Ecto.Repo.t]
+  @spec parse_repo([term]) :: [Ecto.Repo.t()]
   def parse_repo(args) do
     parse_repo(args, [])
   end
 
-  defp parse_repo([key, value|t], acc) when key in ~w(--repo -r) do
-    parse_repo t, [Module.concat([value])|acc]
+  defp parse_repo([key, value | t], acc) when key in ~w(--repo -r) do
+    parse_repo(t, [Module.concat([value]) | acc])
   end
 
-  defp parse_repo([_|t], acc) do
-    parse_repo t, acc
+  defp parse_repo([_ | t], acc) do
+    parse_repo(t, acc)
   end
 
   defp parse_repo([], []) do
@@ -39,15 +39,17 @@ defmodule Mix.Ecto do
     |> Enum.uniq()
     |> case do
       [] ->
-        Mix.shell().error """
-        warning: could not find Ecto repos in any of the apps: #{inspect apps}.
+        Mix.shell().error("""
+        warning: could not find Ecto repos in any of the apps: #{inspect(apps)}.
 
         You can avoid this warning by passing the -r flag or by setting the
         repositories managed by those applications in your config/config.exs:
 
-            config #{inspect hd(apps)}, ecto_repos: [...]
-        """
+            config #{inspect(hd(apps))}, ecto_repos: [...]
+        """)
+
         []
+
       repos ->
         repos
     end
@@ -60,13 +62,13 @@ defmodule Mix.Ecto do
   @doc """
   Ensures the given module is an Ecto.Repo.
   """
-  @spec ensure_repo(module, list) :: Ecto.Repo.t
+  @spec ensure_repo(module, list) :: Ecto.Repo.t()
   def ensure_repo(repo, args) do
     # TODO: Use only app.config when we depend on Elixir v1.11+.
     if Code.ensure_loaded?(Mix.Tasks.App.Config) do
       Mix.Task.run("app.config", args)
     else
-      Mix.Task.run "loadpaths", args
+      Mix.Task.run("loadpaths", args)
       "--no-compile" not in args && Mix.Task.run("compile", args)
     end
 
@@ -75,12 +77,17 @@ defmodule Mix.Ecto do
         if function_exported?(repo, :__adapter__, 0) do
           repo
         else
-          Mix.raise "Module #{inspect repo} is not an Ecto.Repo. " <>
-                    "Please configure your app accordingly or pass a repo with the -r option."
+          Mix.raise(
+            "Module #{inspect(repo)} is not an Ecto.Repo. " <>
+              "Please configure your app accordingly or pass a repo with the -r option."
+          )
         end
+
       {:error, error} ->
-        Mix.raise "Could not load #{inspect repo}, error: #{inspect error}. " <>
-                  "Please configure your app accordingly or pass a repo with the -r option."
+        Mix.raise(
+          "Could not load #{inspect(repo)}, error: #{inspect(error)}. " <>
+            "Please configure your app accordingly or pass a repo with the -r option."
+        )
     end
   end
 
@@ -90,6 +97,7 @@ defmodule Mix.Ecto do
   @spec open?(binary) :: boolean
   def open?(file) do
     editor = System.get_env("ECTO_EDITOR") || ""
+
     if editor != "" do
       :os.cmd(to_charlist(editor <> " " <> inspect(file)))
       true
@@ -105,7 +113,7 @@ defmodule Mix.Ecto do
   """
   def no_umbrella!(task) do
     if Mix.Project.umbrella?() do
-      Mix.raise "Cannot run task #{inspect task} from umbrella application"
+      Mix.raise("Cannot run task #{inspect(task)} from umbrella application")
     end
   end
 
@@ -114,9 +122,12 @@ defmodule Mix.Ecto do
   """
   def ensure_implements(module, behaviour, message) do
     all = Keyword.take(module.__info__(:attributes), [:behaviour])
+
     unless [behaviour] in Keyword.values(all) do
-      Mix.raise "Expected #{inspect module} to implement #{inspect behaviour} " <>
-                "in order to #{message}"
+      Mix.raise(
+        "Expected #{inspect(module)} to implement #{inspect(behaviour)} " <>
+          "in order to #{message}"
+      )
     end
   end
 end

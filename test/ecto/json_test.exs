@@ -6,7 +6,7 @@ defmodule Ecto.JsonTest do
 
     @derive Jason.Encoder
     schema "users" do
-      has_many :comments, Ecto.Comment
+      has_many(:comments, Ecto.Comment)
     end
   end
 

@@ -8,8 +8,8 @@ defmodule Ecto.Repo.AutogenerateTest do
 
     @timestamps_opts [inserted_at: :created_on]
     schema "manager" do
-      field :company_id, :integer
-      timestamps updated_at: :updated_on, type: :utc_datetime
+      field(:company_id, :integer)
+      timestamps(updated_at: :updated_on, type: :utc_datetime)
     end
   end
 
@@ -17,9 +17,9 @@ defmodule Ecto.Repo.AutogenerateTest do
     use Ecto.Schema
 
     schema "offices" do
-      field :name, :string
-      belongs_to :company, Company
-      timestamps type: :utc_datetime_usec
+      field(:name, :string)
+      belongs_to(:company, Company)
+      timestamps(type: :utc_datetime_usec)
     end
 
     def changeset(module, changes) do
@@ -32,9 +32,9 @@ defmodule Ecto.Repo.AutogenerateTest do
     use Ecto.Schema
 
     schema "default" do
-      field :code, Ecto.UUID, autogenerate: true
-      has_one :manager, Manager
-      has_many :offices, Office
+      field(:code, Ecto.UUID, autogenerate: true)
+      has_one(:manager, Manager)
+      has_many(:offices, Office)
       timestamps()
     end
   end
@@ -129,15 +129,19 @@ defmodule Ecto.Repo.AutogenerateTest do
   end
 
   test "does not update updated_at when the associated record did not change" do
-    company = TestRepo.insert!(%Company{offices: [%Office{id: 1, name: "1"}, %Office{id: 2, name: "2"}]})
+    company =
+      TestRepo.insert!(%Company{offices: [%Office{id: 1, name: "1"}, %Office{id: 2, name: "2"}]})
+
     [office_one, office_two] = company.offices
 
     changes = %{offices: [%{id: 1, name: "updated"}, %{id: 2, name: "2"}]}
+
     updated_company =
       company
       |> Ecto.Changeset.cast(changes, [])
       |> Ecto.Changeset.cast_assoc(:offices)
       |> TestRepo.update!()
+
     [updated_office_one, updated_office_two] = updated_company.offices
     assert updated_office_one.updated_at != office_one.updated_at
     assert updated_office_two.updated_at == office_two.updated_at
@@ -145,8 +149,7 @@ defmodule Ecto.Repo.AutogenerateTest do
 
   test "does not set inserted_at and updated_at values if they were previously set" do
     naive_datetime = ~N[2000-01-01 00:00:00]
-    default = TestRepo.insert!(%Company{inserted_at: naive_datetime,
-                                        updated_at: naive_datetime})
+    default = TestRepo.insert!(%Company{inserted_at: naive_datetime, updated_at: naive_datetime})
     assert default.inserted_at == naive_datetime
     assert default.updated_at == naive_datetime
 
@@ -162,7 +165,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.updated_on
     assert default.created_on == default.updated_on
 
-    default = TestRepo.update!(%Manager{id: 1} |> Ecto.Changeset.change, force: true)
+    default = TestRepo.update!(%Manager{id: 1} |> Ecto.Changeset.change(), force: true)
     refute default.created_on
     assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.updated_on
   end
@@ -173,7 +176,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     assert %NaiveDateTime{microsecond: {0, 0}} = default.updated_at
     assert default.inserted_at == default.updated_at
 
-    default = TestRepo.update!(%NaiveMod{id: 1} |> Ecto.Changeset.change, force: true)
+    default = TestRepo.update!(%NaiveMod{id: 1} |> Ecto.Changeset.change(), force: true)
     refute default.inserted_at
     assert %NaiveDateTime{microsecond: {0, 0}} = default.updated_at
   end
@@ -184,7 +187,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     assert %NaiveDateTime{microsecond: {_, 6}} = default.updated_at
     assert default.inserted_at == default.updated_at
 
-    default = TestRepo.update!(%NaiveUsecMod{id: 1} |> Ecto.Changeset.change, force: true)
+    default = TestRepo.update!(%NaiveUsecMod{id: 1} |> Ecto.Changeset.change(), force: true)
     refute default.inserted_at
     assert %NaiveDateTime{microsecond: {_, 6}} = default.updated_at
   end
@@ -195,7 +198,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.updated_at
     assert default.inserted_at == default.updated_at
 
-    default = TestRepo.update!(%UtcMod{id: 1} |> Ecto.Changeset.change, force: true)
+    default = TestRepo.update!(%UtcMod{id: 1} |> Ecto.Changeset.change(), force: true)
     refute default.inserted_at
     assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.updated_at
   end
@@ -206,7 +209,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     assert %DateTime{time_zone: "Etc/UTC", microsecond: {_, 6}} = default.updated_at
     assert default.inserted_at == default.updated_at
 
-    default = TestRepo.update!(%UtcUsecMod{id: 1} |> Ecto.Changeset.change, force: true)
+    default = TestRepo.update!(%UtcUsecMod{id: 1} |> Ecto.Changeset.change(), force: true)
     refute default.inserted_at
     assert %DateTime{time_zone: "Etc/UTC", microsecond: {_, 6}} = default.updated_at
   end

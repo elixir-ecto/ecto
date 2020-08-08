@@ -180,8 +180,7 @@ defmodule Ecto.Repo do
     quote bind_quoted: [opts: opts] do
       @behaviour Ecto.Repo
 
-      {otp_app, adapter, behaviours} =
-        Ecto.Repo.Supervisor.compile_config(__MODULE__, opts)
+      {otp_app, adapter, behaviours} = Ecto.Repo.Supervisor.compile_config(__MODULE__, opts)
 
       @otp_app otp_app
       @adapter adapter
@@ -245,7 +244,12 @@ defmodule Ecto.Repo do
 
       if Ecto.Adapter.Transaction in behaviours do
         def transaction(fun_or_multi, opts \\ []) do
-          Ecto.Repo.Transaction.transaction(__MODULE__, get_dynamic_repo(), fun_or_multi, with_default_options(:transaction, opts))
+          Ecto.Repo.Transaction.transaction(
+            __MODULE__,
+            get_dynamic_repo(),
+            fun_or_multi,
+            with_default_options(:transaction, opts)
+          )
         end
 
         def in_transaction? do
@@ -262,39 +266,85 @@ defmodule Ecto.Repo do
 
       if Ecto.Adapter.Schema in behaviours and not @read_only do
         def insert(struct, opts \\ []) do
-          Ecto.Repo.Schema.insert(__MODULE__, get_dynamic_repo(), struct, with_default_options(:insert, opts))
+          Ecto.Repo.Schema.insert(
+            __MODULE__,
+            get_dynamic_repo(),
+            struct,
+            with_default_options(:insert, opts)
+          )
         end
 
         def update(struct, opts \\ []) do
-          Ecto.Repo.Schema.update(__MODULE__, get_dynamic_repo(), struct, with_default_options(:update, opts))
+          Ecto.Repo.Schema.update(
+            __MODULE__,
+            get_dynamic_repo(),
+            struct,
+            with_default_options(:update, opts)
+          )
         end
 
         def insert_or_update(changeset, opts \\ []) do
-          Ecto.Repo.Schema.insert_or_update(__MODULE__, get_dynamic_repo(), changeset, with_default_options(:insert_or_update, opts))
+          Ecto.Repo.Schema.insert_or_update(
+            __MODULE__,
+            get_dynamic_repo(),
+            changeset,
+            with_default_options(:insert_or_update, opts)
+          )
         end
 
         def delete(struct, opts \\ []) do
-          Ecto.Repo.Schema.delete(__MODULE__, get_dynamic_repo(), struct, with_default_options(:delete, opts))
+          Ecto.Repo.Schema.delete(
+            __MODULE__,
+            get_dynamic_repo(),
+            struct,
+            with_default_options(:delete, opts)
+          )
         end
 
         def insert!(struct, opts \\ []) do
-          Ecto.Repo.Schema.insert!(__MODULE__, get_dynamic_repo(), struct, with_default_options(:insert, opts))
+          Ecto.Repo.Schema.insert!(
+            __MODULE__,
+            get_dynamic_repo(),
+            struct,
+            with_default_options(:insert, opts)
+          )
         end
 
         def update!(struct, opts \\ []) do
-          Ecto.Repo.Schema.update!(__MODULE__, get_dynamic_repo(), struct, with_default_options(:update, opts))
+          Ecto.Repo.Schema.update!(
+            __MODULE__,
+            get_dynamic_repo(),
+            struct,
+            with_default_options(:update, opts)
+          )
         end
 
         def insert_or_update!(changeset, opts \\ []) do
-          Ecto.Repo.Schema.insert_or_update!(__MODULE__, get_dynamic_repo(), changeset, with_default_options(:insert_or_update, opts))
+          Ecto.Repo.Schema.insert_or_update!(
+            __MODULE__,
+            get_dynamic_repo(),
+            changeset,
+            with_default_options(:insert_or_update, opts)
+          )
         end
 
         def delete!(struct, opts \\ []) do
-          Ecto.Repo.Schema.delete!(__MODULE__, get_dynamic_repo(), struct, with_default_options(:delete, opts))
+          Ecto.Repo.Schema.delete!(
+            __MODULE__,
+            get_dynamic_repo(),
+            struct,
+            with_default_options(:delete, opts)
+          )
         end
 
         def insert_all(schema_or_source, entries, opts \\ []) do
-          Ecto.Repo.Schema.insert_all(__MODULE__, get_dynamic_repo(), schema_or_source, entries, with_default_options(:insert_all, opts))
+          Ecto.Repo.Schema.insert_all(
+            __MODULE__,
+            get_dynamic_repo(),
+            schema_or_source,
+            entries,
+            with_default_options(:insert_all, opts)
+          )
         end
       end
 
@@ -365,7 +415,12 @@ defmodule Ecto.Repo do
         end
 
         def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
-          Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, get_dynamic_repo(), preloads, opts)
+          Ecto.Repo.Preloader.preload(
+            struct_or_structs_or_nil,
+            get_dynamic_repo(),
+            preloads,
+            opts
+          )
         end
 
         def prepare_query(operation, query, opts), do: {query, opts}
@@ -540,8 +595,20 @@ defmodule Ecto.Repo do
 
   ## Ecto.Adapter.Queryable
 
-  @optional_callbacks get: 3, get!: 3, get_by: 3, get_by!: 3, aggregate: 3, aggregate: 4, exists?: 2,
-                      one: 2, one!: 2, preload: 3, all: 2, stream: 2, update_all: 3, delete_all: 2
+  @optional_callbacks get: 3,
+                      get!: 3,
+                      get_by: 3,
+                      get_by!: 3,
+                      aggregate: 3,
+                      aggregate: 4,
+                      exists?: 2,
+                      one: 2,
+                      one!: 2,
+                      preload: 3,
+                      all: 2,
+                      stream: 2,
+                      update_all: 3,
+                      delete_all: 2
 
   @doc """
   Fetches a single struct from the data store where the primary key matches the
@@ -891,8 +958,17 @@ defmodule Ecto.Repo do
   operations.
   """
   @callback default_options(operation) :: Keyword.t()
-            when operation: :all | :insert_all | :update_all | :delete_all | :stream |
-                              :transaction | :insert | :update | :delete | :insert_or_update
+            when operation:
+                   :all
+                   | :insert_all
+                   | :update_all
+                   | :delete_all
+                   | :stream
+                   | :transaction
+                   | :insert
+                   | :update
+                   | :delete
+                   | :insert_or_update
 
   @doc """
   Fetches all entries from the data store matching the given query.
@@ -1030,8 +1106,15 @@ defmodule Ecto.Repo do
 
   ## Ecto.Adapter.Schema
 
-  @optional_callbacks insert_all: 3, insert: 2, insert!: 2, update: 2, update!: 2,
-                      delete: 2, delete!: 2, insert_or_update: 2, insert_or_update!: 2,
+  @optional_callbacks insert_all: 3,
+                      insert: 2,
+                      insert!: 2,
+                      update: 2,
+                      update!: 2,
+                      delete: 2,
+                      delete!: 2,
+                      insert_or_update: 2,
+                      insert_or_update!: 2,
                       prepare_query: 3
 
   @doc """
@@ -1135,7 +1218,7 @@ defmodule Ecto.Repo do
   """
   @callback insert_all(
               schema_or_source :: binary | {binary, module} | module,
-              entries :: [map | [{atom, term | Ecto.Query.t}]],
+              entries :: [map | [{atom, term | Ecto.Query.t()}]],
               opts :: Keyword.t()
             ) :: {integer, nil | [term]}
 

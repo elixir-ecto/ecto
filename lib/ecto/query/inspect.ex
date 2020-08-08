@@ -14,16 +14,17 @@ defimpl Inspect, for: Ecto.Query.DynamicExpr do
     aliases =
       for({as, _} when is_atom(as) <- binding, do: as)
       |> Enum.with_index()
-      |> Map.new
+      |> Map.new()
 
     query = %Ecto.Query{joins: joins, aliases: aliases}
 
     {expr, binding, params, _, _} = Ecto.Query.Builder.Dynamic.fully_expand(query, dynamic)
 
-    names = Enum.map(binding, fn
-      {_, {name, _, _}} -> Atom.to_string(name)
-      {name, _, _} -> Atom.to_string(name)
-    end)
+    names =
+      Enum.map(binding, fn
+        {_, {name, _, _}} -> Atom.to_string(name)
+        {name, _, _} -> Atom.to_string(name)
+      end)
 
     inspected = Inspect.Ecto.Query.expr(expr, List.to_tuple(names), %{expr: expr, params: params})
 
@@ -51,10 +52,11 @@ defimpl Inspect, for: Ecto.Query do
       %WithExpr{recursive: recursive, queries: [_ | _] = queries} ->
         with_ctes =
           Enum.map(queries, fn {name, query} ->
-            cte = case query do
-              %Ecto.Query{} -> __MODULE__.inspect(query, opts)
-              %Ecto.Query.QueryExpr{} -> expr(query, {})
-            end
+            cte =
+              case query do
+                %Ecto.Query{} -> __MODULE__.inspect(query, opts)
+                %Ecto.Query.QueryExpr{} -> expr(query, {})
+              end
 
             concat(["|> with_cte(\"" <> name <> "\", as: ", cte, ")"])
           end)
@@ -287,7 +289,9 @@ defimpl Inspect, for: Ecto.Query do
     json_expr_path_to_expr(expr, path) |> expr(names, part)
   end
 
-  defp expr_to_string({:{}, [], [:subquery, i]}, _string, _names, %BooleanExpr{subqueries: subqueries}) do
+  defp expr_to_string({:{}, [], [:subquery, i]}, _string, _names, %BooleanExpr{
+         subqueries: subqueries
+       }) do
     # We were supposed to match on {:subquery, i} but Elixir incorrectly
     # translates those to `:{}` when converting to string.
     # See https://github.com/elixir-lang/elixir/blob/27bd9ffcc607b74ce56b547cb6ba92c9012c317c/lib/elixir/lib/macro.ex#L932

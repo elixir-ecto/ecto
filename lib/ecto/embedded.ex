@@ -3,19 +3,29 @@ defmodule Ecto.Embedded do
   alias __MODULE__
   alias Ecto.Changeset
 
-  @type t :: %Embedded{cardinality: :one | :many,
-                       on_replace: :raise | :mark_as_invalid | :delete,
-                       field: atom,
-                       owner: atom,
-                       on_cast: nil | fun,
-                       related: atom,
-                       unique: boolean}
+  @type t :: %Embedded{
+          cardinality: :one | :many,
+          on_replace: :raise | :mark_as_invalid | :delete,
+          field: atom,
+          owner: atom,
+          on_cast: nil | fun,
+          related: atom,
+          unique: boolean
+        }
 
   @behaviour Ecto.Changeset.Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   @embeds_one_on_replace_opts @on_replace_opts ++ [:update]
-  defstruct [:cardinality, :field, :owner, :related, :on_cast, on_replace: :raise,
-             unique: true, ordered: true]
+  defstruct [
+    :cardinality,
+    :field,
+    :owner,
+    :related,
+    :on_cast,
+    on_replace: :raise,
+    unique: true,
+    ordered: true
+  ]
 
   ## Migration
 
@@ -25,15 +35,14 @@ defmodule Ecto.Embedded do
 
   def load(%{cardinality: :one}, nil, _fun), do: {:ok, nil}
 
-  def load(%{cardinality: :one, related: schema, field: field},
-                  value, fun) when is_map(value) do
+  def load(%{cardinality: :one, related: schema, field: field}, value, fun) when is_map(value) do
     {:ok, load(field, schema, value, fun)}
   end
 
   def load(%{cardinality: :many}, nil, _fun), do: {:ok, []}
 
-  def load(%{cardinality: :many, related: schema, field: field},
-                  value, fun) when is_list(value) do
+  def load(%{cardinality: :many, related: schema, field: field}, value, fun)
+      when is_list(value) do
     {:ok, Enum.map(value, &load(field, schema, &1, fun))}
   end
 
@@ -46,18 +55,17 @@ defmodule Ecto.Embedded do
   end
 
   def load(field, _schema, value, _fun) do
-    raise ArgumentError, "cannot load embed `#{field}`, invalid value: #{inspect value}"
+    raise ArgumentError, "cannot load embed `#{field}`, invalid value: #{inspect(value)}"
   end
 
   def dump(_, nil, _), do: {:ok, nil}
 
-  def dump(%{cardinality: :one, related: schema, field: field},
-                  value, fun) when is_map(value) do
+  def dump(%{cardinality: :one, related: schema, field: field}, value, fun) when is_map(value) do
     {:ok, dump(field, schema, value, schema.__schema__(:dump), fun)}
   end
 
-  def dump(%{cardinality: :many, related: schema, field: field},
-                  value, fun) when is_list(value) do
+  def dump(%{cardinality: :many, related: schema, field: field}, value, fun)
+      when is_list(value) do
     types = schema.__schema__(:dump)
     {:ok, Enum.map(value, &dump(field, schema, &1, types, fun))}
   end
@@ -71,15 +79,17 @@ defmodule Ecto.Embedded do
   end
 
   def dump(field, _schema, value, _types, _fun) do
-    raise ArgumentError, "cannot dump embed `#{field}`, invalid value: #{inspect value}"
+    raise ArgumentError, "cannot dump embed `#{field}`, invalid value: #{inspect(value)}"
   end
 
   def cast(%{cardinality: :one}, nil), do: {:ok, nil}
+
   def cast(%{cardinality: :one, related: schema}, %{__struct__: schema} = struct) do
     {:ok, struct}
   end
 
   def cast(%{cardinality: :many}, nil), do: {:ok, []}
+
   def cast(%{cardinality: :many, related: schema}, value) when is_list(value) do
     if Enum.all?(value, &Kernel.match?(%{__struct__: ^schema}, &1)) do
       {:ok, value}
@@ -109,12 +119,15 @@ defmodule Ecto.Embedded do
   def struct(module, name, opts) do
     opts = Keyword.put_new(opts, :on_replace, :raise)
     cardinality = Keyword.fetch!(opts, :cardinality)
-    on_replace_opts = if cardinality == :one, do: @embeds_one_on_replace_opts, else: @on_replace_opts
+
+    on_replace_opts =
+      if cardinality == :one, do: @embeds_one_on_replace_opts, else: @on_replace_opts
 
     unless opts[:on_replace] in on_replace_opts do
-      raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
-        "The only valid options are: " <>
-        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
+      raise ArgumentError,
+            "invalid `:on_replace` option for #{inspect(name)}. " <>
+              "The only valid options are: " <>
+              Enum.map_join(@on_replace_opts, ", ", &"`#{inspect(&1)}`")
     end
 
     struct(%Embedded{field: name, owner: module}, opts)
@@ -137,10 +150,10 @@ defmodule Ecto.Embedded do
   end
 
   defp prepare(embeds, types, adapter, repo, repo_action) do
-    Enum.reduce embeds, embeds, fn {name, changeset_or_changesets}, acc ->
+    Enum.reduce(embeds, embeds, fn {name, changeset_or_changesets}, acc ->
       {:embed, embed} = Map.get(types, name)
       Map.put(acc, name, prepare_each(embed, changeset_or_changesets, adapter, repo, repo_action))
-    end
+    end)
   end
 
   defp prepare_each(%{cardinality: :one}, nil, _adapter, _repo, _repo_action) do
@@ -161,20 +174,21 @@ defmodule Ecto.Embedded do
         do: prepared
   end
 
-  defp to_struct(%Changeset{valid?: false}, _action,
-                 %{related: schema}, _adapter) do
-    raise ArgumentError, "changeset for embedded #{inspect schema} is invalid, " <>
-                         "but the parent changeset was not marked as invalid"
+  defp to_struct(%Changeset{valid?: false}, _action, %{related: schema}, _adapter) do
+    raise ArgumentError,
+          "changeset for embedded #{inspect(schema)} is invalid, " <>
+            "but the parent changeset was not marked as invalid"
   end
 
-  defp to_struct(%Changeset{data: %{__struct__: actual}}, _action,
-                 %{related: expected}, _adapter) when actual != expected do
-    raise ArgumentError, "expected changeset for embedded schema `#{inspect expected}`, " <>
-                         "got: #{inspect actual}"
+  defp to_struct(%Changeset{data: %{__struct__: actual}}, _action, %{related: expected}, _adapter)
+       when actual != expected do
+    raise ArgumentError,
+          "expected changeset for embedded schema `#{inspect(expected)}`, " <>
+            "got: #{inspect(actual)}"
   end
 
-  defp to_struct(%Changeset{changes: changes, data: schema}, :update,
-                 _embed, _adapter) when changes == %{} do
+  defp to_struct(%Changeset{changes: changes, data: schema}, :update, _embed, _adapter)
+       when changes == %{} do
     schema
   end
 
@@ -183,7 +197,8 @@ defmodule Ecto.Embedded do
   end
 
   defp to_struct(%Changeset{data: data} = changeset, action, %{related: schema}, adapter) do
-    %{data: struct, changes: changes} = changeset =
+    %{data: struct, changes: changes} =
+      changeset =
       Ecto.Changeset.Relation.surface_changes(changeset, data, schema.__schema__(:fields))
 
     embeds = prepare(changeset, schema.__schema__(:embeds), adapter, action)
@@ -200,10 +215,12 @@ defmodule Ecto.Embedded do
 
     Enum.reduce(Enum.reverse(changeset.prepare), changeset, fn fun, acc ->
       case fun.(acc) do
-        %Ecto.Changeset{} = acc -> acc
+        %Ecto.Changeset{} = acc ->
+          acc
+
         other ->
-          raise "expected function #{inspect fun} given to Ecto.Changeset.prepare_changes/2 " <>
-                "to return an Ecto.Changeset, got: `#{inspect other}`"
+          raise "expected function #{inspect(fun)} given to Ecto.Changeset.prepare_changes/2 " <>
+                  "to return an Ecto.Changeset, got: `#{inspect(other)}`"
       end
     end)
   end
@@ -214,18 +231,27 @@ defmodule Ecto.Embedded do
 
   defp check_action!(:replace, action, %{on_replace: :delete} = embed),
     do: check_action!(:delete, action, embed)
+
   defp check_action!(:update, :insert, %{related: schema}),
-    do: raise(ArgumentError, "got action :update in changeset for embedded #{inspect schema} while inserting")
+    do:
+      raise(
+        ArgumentError,
+        "got action :update in changeset for embedded #{inspect(schema)} while inserting"
+      )
+
   defp check_action!(action, _, _), do: action
 
   defp autogenerate_id(changes, _struct, :insert, schema, adapter) do
     case schema.__schema__(:autogenerate_id) do
       {key, _source, :binary_id} ->
         Map.put_new_lazy(changes, key, fn -> adapter.autogenerate(:embed_id) end)
+
       {_key, :id} ->
-        raise ArgumentError, "embedded schema `#{inspect schema}` cannot autogenerate `:id` primary keys, " <>
-                             "those are typically used for auto-incrementing constraints. " <>
-                             "Maybe you meant to use `:binary_id` instead?"
+        raise ArgumentError,
+              "embedded schema `#{inspect(schema)}` cannot autogenerate `:id` primary keys, " <>
+                "those are typically used for auto-incrementing constraints. " <>
+                "Maybe you meant to use `:binary_id` instead?"
+
       nil ->
         changes
     end
@@ -235,6 +261,7 @@ defmodule Ecto.Embedded do
     for {_, nil} <- Ecto.primary_key(struct) do
       raise Ecto.NoPrimaryKeyValueError, struct: struct
     end
+
     changes
   end
 

@@ -12,12 +12,20 @@ defmodule Ecto.Changeset.BelongsToTest do
     use Ecto.Schema
 
     schema "authors" do
-      field :title, :string
-      belongs_to :profile, {"authors_profiles", Profile},
-        on_replace: :delete, defaults: [name: "default"]
-      belongs_to :raise_profile, Profile, on_replace: :raise
-      belongs_to :invalid_profile, Profile, on_replace: :mark_as_invalid
-      belongs_to :update_profile, Profile, on_replace: :update, defaults: {__MODULE__, :send_to_self, [:extra]}
+      field(:title, :string)
+
+      belongs_to(:profile, {"authors_profiles", Profile},
+        on_replace: :delete,
+        defaults: [name: "default"]
+      )
+
+      belongs_to(:raise_profile, Profile, on_replace: :raise)
+      belongs_to(:invalid_profile, Profile, on_replace: :mark_as_invalid)
+
+      belongs_to(:update_profile, Profile,
+        on_replace: :update,
+        defaults: {__MODULE__, :send_to_self, [:extra]}
+      )
     end
 
     def send_to_self(struct, owner, extra) do
@@ -30,8 +38,8 @@ defmodule Ecto.Changeset.BelongsToTest do
     use Ecto.Schema
 
     schema "profiles" do
-      field :name
-      has_one :author, Author
+      field(:name)
+      has_one(:author, Author)
     end
 
     def changeset(schema, params) do
@@ -62,7 +70,7 @@ defmodule Ecto.Changeset.BelongsToTest do
     profile = changeset.changes.profile
     assert profile.changes == %{name: "michal"}
     assert profile.errors == []
-    assert profile.action  == :insert
+    assert profile.action == :insert
     assert profile.valid?
     assert changeset.valid?
   end
@@ -70,8 +78,8 @@ defmodule Ecto.Changeset.BelongsToTest do
   test "cast belongs_to with invalid params" do
     changeset = cast(%Author{}, %{"profile" => %{name: nil}}, :profile)
     assert changeset.changes.profile.changes == %{}
-    assert changeset.changes.profile.errors  == [name: {"can't be blank", [validation: :required]}]
-    assert changeset.changes.profile.action  == :insert
+    assert changeset.changes.profile.errors == [name: {"can't be blank", [validation: :required]}]
+    assert changeset.changes.profile.action == :insert
     refute changeset.changes.profile.valid?
     refute changeset.valid?
 
@@ -81,13 +89,17 @@ defmodule Ecto.Changeset.BelongsToTest do
   end
 
   test "cast belongs_to with existing struct updating" do
-    changeset = cast(%Author{profile: %Profile{name: "michal", id: 1}},
-                     %{"profile" => %{"name" => "new", "id" => 1}}, :profile)
+    changeset =
+      cast(
+        %Author{profile: %Profile{name: "michal", id: 1}},
+        %{"profile" => %{"name" => "new", "id" => 1}},
+        :profile
+      )
 
     profile = changeset.changes.profile
     assert profile.changes == %{name: "new"}
-    assert profile.errors  == []
-    assert profile.action  == :update
+    assert profile.errors == []
+    assert profile.action == :update
     assert profile.valid?
     assert changeset.valid?
   end
@@ -99,58 +111,92 @@ defmodule Ecto.Changeset.BelongsToTest do
     assert cast(%Author{}, %{"profile" => ""}, :profile).changes == %{}
     assert cast(%Author{profile: nil}, %{"profile" => ""}, :profile).changes == %{}
 
-    loaded = put_in %Author{}.__meta__.state, :loaded
-    assert_raise RuntimeError, ~r"attempting to cast or change association `profile` .* that was not loaded", fn ->
-      cast(loaded, %{"profile" => nil}, :profile)
-    end
-    assert_raise RuntimeError, ~r"attempting to cast or change association `profile` .* that was not loaded", fn ->
-      cast(loaded, %{"profile" => ""}, :profile)
-    end
+    loaded = put_in(%Author{}.__meta__.state, :loaded)
+
+    assert_raise RuntimeError,
+                 ~r"attempting to cast or change association `profile` .* that was not loaded",
+                 fn ->
+                   cast(loaded, %{"profile" => nil}, :profile)
+                 end
+
+    assert_raise RuntimeError,
+                 ~r"attempting to cast or change association `profile` .* that was not loaded",
+                 fn ->
+                   cast(loaded, %{"profile" => ""}, :profile)
+                 end
+
     assert cast(loaded, %{}, :profile).changes == %{}
   end
 
   test "cast belongs_to discards changesets marked as ignore" do
-    changeset = cast(%Author{},
-                     %{"profile" => %{name: "michal", id: "id", action: :ignore}},
-                     :profile, with: &Profile.set_action/2)
+    changeset =
+      cast(
+        %Author{},
+        %{"profile" => %{name: "michal", id: "id", action: :ignore}},
+        :profile,
+        with: &Profile.set_action/2
+      )
+
     assert changeset.changes == %{}
   end
 
   test "cast belongs_to with existing struct replacing" do
-    changeset = cast(%Author{profile: %Profile{name: "michal", id: 1}},
-                     %{"profile" => %{"name" => "new"}}, :profile)
+    changeset =
+      cast(
+        %Author{profile: %Profile{name: "michal", id: 1}},
+        %{"profile" => %{"name" => "new"}},
+        :profile
+      )
 
     profile = changeset.changes.profile
     assert profile.changes == %{name: "new"}
-    assert profile.errors  == []
-    assert profile.action  == :insert
+    assert profile.errors == []
+    assert profile.action == :insert
     assert profile.valid?
     assert changeset.valid?
 
-    changeset = cast(%Author{profile: %Profile{name: "michal", id: 2}},
-                     %{"profile" => %{"name" => "new", "id" => 5}}, :profile)
+    changeset =
+      cast(
+        %Author{profile: %Profile{name: "michal", id: 2}},
+        %{"profile" => %{"name" => "new", "id" => 5}},
+        :profile
+      )
+
     profile = changeset.changes.profile
     assert profile.changes == %{name: "new", id: 5}
-    assert profile.errors  == []
-    assert profile.action  == :insert
+    assert profile.errors == []
+    assert profile.action == :insert
     assert profile.valid?
     assert changeset.valid?
 
     assert_raise RuntimeError, ~r"cannot update related", fn ->
-      cast(%Author{profile: %Profile{name: "michal", id: "michal"}},
-           %{"profile" => %{"name" => "new", "id" => "new"}},
-           :profile, with: &Profile.set_action/2)
+      cast(
+        %Author{profile: %Profile{name: "michal", id: "michal"}},
+        %{"profile" => %{"name" => "new", "id" => "new"}},
+        :profile,
+        with: &Profile.set_action/2
+      )
     end
   end
 
   test "cast belongs_to without changes skips" do
-    changeset = cast(%Author{profile: %Profile{name: "michal", id: 1}},
-                     %{"profile" => %{"id" => 1}}, :profile)
+    changeset =
+      cast(
+        %Author{profile: %Profile{name: "michal", id: 1}},
+        %{"profile" => %{"id" => 1}},
+        :profile
+      )
+
     assert changeset.changes == %{}
     assert changeset.errors == []
 
-    changeset = cast(%Author{profile: %Profile{name: "michal", id: 1}},
-                     %{"profile" => %{"id" => "1"}}, :profile)
+    changeset =
+      cast(
+        %Author{profile: %Profile{name: "michal", id: 1}},
+        %{"profile" => %{"id" => "1"}},
+        :profile
+      )
+
     assert changeset.changes == %{}
     assert changeset.errors == []
   end
@@ -161,7 +207,9 @@ defmodule Ecto.Changeset.BelongsToTest do
     assert changeset.changes == %{}
     assert changeset.errors == [profile: {"can't be blank", [validation: :required]}]
 
-    changeset = cast(%Author{}, %{}, :profile, required: true, required_message: "a custom message")
+    changeset =
+      cast(%Author{}, %{}, :profile, required: true, required_message: "a custom message")
+
     assert changeset.required == [:profile]
     assert changeset.changes == %{}
     assert changeset.errors == [profile: {"a custom message", [validation: :required]}]
@@ -194,28 +242,38 @@ defmodule Ecto.Changeset.BelongsToTest do
   end
 
   test "cast belongs_to with custom changeset" do
-    changeset = cast(%Author{}, %{"profile" => %{}}, :profile, with: &Profile.optional_changeset/2)
-    assert (changeset.types.profile |> elem(1)).on_cast == &Profile.optional_changeset/2
+    changeset =
+      cast(%Author{}, %{"profile" => %{}}, :profile, with: &Profile.optional_changeset/2)
+
+    assert (changeset.types.profile |> elem(1)).on_cast == (&Profile.optional_changeset/2)
 
     profile = changeset.changes.profile
     assert profile.data.__meta__.source == "authors_profiles"
     assert profile.changes == %{}
-    assert profile.errors  == []
-    assert profile.action  == :insert
+    assert profile.errors == []
+    assert profile.action == :insert
     assert profile.valid?
     assert changeset.valid?
   end
 
   test "cast belongs_to keeps appropriate action from changeset" do
-    changeset = cast(%Author{profile: %Profile{id: "id"}},
-                     %{"profile" => %{"name" => "michal", "id" => "id"}},
-                     :profile, with: &Profile.set_action/2)
+    changeset =
+      cast(
+        %Author{profile: %Profile{id: "id"}},
+        %{"profile" => %{"name" => "michal", "id" => "id"}},
+        :profile,
+        with: &Profile.set_action/2
+      )
+
     assert changeset.changes.profile.action == :update
 
     assert_raise RuntimeError, ~r"cannot update related", fn ->
-      cast(%Author{profile: %Profile{id: "old"}},
-           %{"profile" => %{"name" => "michal", "id" => "new"}},
-           :profile, with: &Profile.set_action/2)
+      cast(
+        %Author{profile: %Profile{id: "old"}},
+        %{"profile" => %{"name" => "michal", "id" => "new"}},
+        :profile,
+        with: &Profile.set_action/2
+      )
     end
   end
 
@@ -238,11 +296,13 @@ defmodule Ecto.Changeset.BelongsToTest do
     assert changeset.changes.raise_profile.action == :update
 
     params = %{"raise_profile" => nil}
+
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
       cast(schema, params, :raise_profile)
     end
 
     params = %{"raise_profile" => %{"name" => "new", "id" => 2}}
+
     assert_raise RuntimeError, ~r"you are attempting to change relation", fn ->
       cast(schema, params, :raise_profile)
     end
@@ -261,9 +321,17 @@ defmodule Ecto.Changeset.BelongsToTest do
     assert changeset.errors == [invalid_profile: {"is invalid", [validation: :assoc, type: :map]}]
     refute changeset.valid?
 
-    changeset = cast(schema, %{"invalid_profile" => nil}, :invalid_profile, invalid_message: "a custom message")
+    changeset =
+      cast(schema, %{"invalid_profile" => nil}, :invalid_profile,
+        invalid_message: "a custom message"
+      )
+
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"a custom message", [validation: :assoc, type: :map]}]
+
+    assert changeset.errors == [
+             invalid_profile: {"a custom message", [validation: :assoc, type: :map]}
+           ]
+
     refute changeset.valid?
   end
 
@@ -285,8 +353,8 @@ defmodule Ecto.Changeset.BelongsToTest do
   end
 
   test "cast belongs_to with on_replace: :update" do
-    {:ok, schema} = TestRepo.insert(%Author{title: "Title",
-      update_profile: %Profile{id: 1, name: "Enio"}})
+    {:ok, schema} =
+      TestRepo.insert(%Author{title: "Title", update_profile: %Profile{id: 1, name: "Enio"}})
 
     changeset = cast(schema, %{"update_profile" => %{id: 2, name: "Jose"}}, :update_profile)
     assert changeset.changes.update_profile.changes == %{name: "Jose", id: 2}
@@ -298,7 +366,7 @@ defmodule Ecto.Changeset.BelongsToTest do
   test "cast belongs_to twice" do
     schema = %Author{}
     params = %{profile: %{name: "Bruce Wayne", id: 1}}
-    schema = cast(schema, params, :profile) |> Changeset.apply_changes
+    schema = cast(schema, params, :profile) |> Changeset.apply_changes()
     params = %{profile: %{name: "Batman", id: 1}}
     changeset = cast(schema, params, :profile)
     changeset = cast(changeset, params, :profile)
@@ -322,13 +390,11 @@ defmodule Ecto.Changeset.BelongsToTest do
     assoc_schema = %Profile{}
     assoc_schema_changeset = Changeset.change(assoc_schema, name: "michal")
 
-    assert {:ok, changeset, true} =
-      Relation.change(assoc, assoc_schema_changeset, nil)
+    assert {:ok, changeset, true} = Relation.change(assoc, assoc_schema_changeset, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
 
-    assert {:ok, changeset, true} =
-      Relation.change(assoc, assoc_schema_changeset, assoc_schema)
+    assert {:ok, changeset, true} = Relation.change(assoc, assoc_schema_changeset, assoc_schema)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
@@ -338,50 +404,42 @@ defmodule Ecto.Changeset.BelongsToTest do
     assert :ignore = Relation.change(assoc, empty_changeset, assoc_schema)
 
     assoc_with_id = %Profile{id: 2}
-    assert {:ok, _, true} =
-      Relation.change(assoc, %Profile{id: 1}, assoc_with_id)
+    assert {:ok, _, true} = Relation.change(assoc, %Profile{id: 1}, assoc_with_id)
   end
 
   test "change belongs_to with attributes" do
     assoc = Author.__schema__(:association, :profile)
 
-    assert {:ok, changeset, true} =
-      Relation.change(assoc, %{name: "michal"}, nil)
+    assert {:ok, changeset, true} = Relation.change(assoc, %{name: "michal"}, nil)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
 
     profile = %Profile{name: "other"} |> Ecto.put_meta(state: :loaded)
 
-    assert {:ok, changeset, true} =
-      Relation.change(assoc, %{name: "michal"}, profile)
+    assert {:ok, changeset, true} = Relation.change(assoc, %{name: "michal"}, profile)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
-    assert {:ok, changeset, true} =
-      Relation.change(assoc, [name: "michal"], profile)
+    assert {:ok, changeset, true} = Relation.change(assoc, [name: "michal"], profile)
     assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
     profile = %Profile{name: "other"}
 
-    assert {:ok, changeset, true} =
-      Relation.change(assoc, %{name: "michal"}, profile)
+    assert {:ok, changeset, true} = Relation.change(assoc, %{name: "michal"}, profile)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
 
-    assert {:ok, changeset, true} =
-      Relation.change(assoc, [name: "michal"], profile)
+    assert {:ok, changeset, true} = Relation.change(assoc, [name: "michal"], profile)
     assert changeset.action == :insert
     assert changeset.changes == %{name: "michal"}
 
     # Empty attributes
-    assert {:ok, changeset, true} =
-      Relation.change(assoc, %{}, profile)
+    assert {:ok, changeset, true} = Relation.change(assoc, %{}, profile)
     assert changeset.action == :insert
     assert changeset.changes == %{}
 
-    assert {:ok, changeset, true} =
-      Relation.change(assoc, [], profile)
+    assert {:ok, changeset, true} = Relation.change(assoc, [], profile)
     assert changeset.action == :insert
     assert changeset.changes == %{}
   end
@@ -390,16 +448,17 @@ defmodule Ecto.Changeset.BelongsToTest do
     assoc = Author.__schema__(:association, :profile)
     profile = %Profile{name: "michal"}
 
-    assert {:ok, changeset, true} =
-      Relation.change(assoc, profile, nil)
+    assert {:ok, changeset, true} = Relation.change(assoc, profile, nil)
     assert changeset.action == :insert
 
     assert {:ok, changeset, true} =
-      Relation.change(assoc, Ecto.put_meta(profile, state: :loaded), nil)
+             Relation.change(assoc, Ecto.put_meta(profile, state: :loaded), nil)
+
     assert changeset.action == :update
 
     assert {:ok, changeset, true} =
-      Relation.change(assoc, Ecto.put_meta(profile, state: :deleted), nil)
+             Relation.change(assoc, Ecto.put_meta(profile, state: :deleted), nil)
+
     assert changeset.action == :delete
   end
 
@@ -422,6 +481,7 @@ defmodule Ecto.Changeset.BelongsToTest do
 
     # Replacing
     changeset = %{Changeset.change(assoc_schema, name: "michal") | action: :insert}
+
     assert_raise RuntimeError, ~r/cannot insert related/, fn ->
       Relation.change(assoc, changeset, assoc_schema)
     end
@@ -524,8 +584,9 @@ defmodule Ecto.Changeset.BelongsToTest do
 
     changeset =
       %Author{}
-      |> Changeset.change
+      |> Changeset.change()
       |> Changeset.put_assoc(:profile, profile_changeset)
+
     assert Changeset.get_field(changeset, :profile) == profile
     assert Changeset.fetch_field(changeset, :profile) == {:changes, profile}
 

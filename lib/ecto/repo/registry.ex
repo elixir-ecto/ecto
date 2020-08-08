@@ -16,7 +16,9 @@ defmodule Ecto.Repo.Registry do
 
   def lookup(repo) when is_atom(repo) do
     GenServer.whereis(repo)
-    |> Kernel.||(raise "could not lookup Ecto repo #{inspect repo} because it was not started or it does not exist")
+    |> Kernel.||(
+      raise "could not lookup Ecto repo #{inspect(repo)} because it was not started or it does not exist"
+    )
     |> lookup()
   end
 

@@ -16,11 +16,14 @@ defmodule Ecto.Query.Builder.Windows do
       {[order_by: [desc: 13]], [], {[], :acc}}
 
   """
-  @spec escape([Macro.t], {list, term}, Keyword.t, Macro.Env.t | {Macro.Env.t, fun})
-          :: {Macro.t, [{atom, term}], {list, term}}
+  @spec escape([Macro.t()], {list, term}, Keyword.t(), Macro.Env.t() | {Macro.Env.t(), fun}) ::
+          {Macro.t(), [{atom, term}], {list, term}}
   def escape(kw, params_acc, vars, env) when is_list(kw) do
     {compile, runtime} = sort(@sort_order, kw, :compile, [], [])
-    {compile, params_acc} = Enum.map_reduce(compile, params_acc, &escape_compile(&1, &2, vars, env))
+
+    {compile, params_acc} =
+      Enum.map_reduce(compile, params_acc, &escape_compile(&1, &2, vars, env))
+
     {compile, runtime, params_acc}
   end
 
@@ -38,8 +41,10 @@ defmodule Ecto.Query.Builder.Windows do
 
       {_, _} when mode == :runtime ->
         [{runtime_key, _} | _] = runtime
-        raise ArgumentError, "window has an interpolated value under `#{runtime_key}` " <>
-                             "and therefore `#{key}` must also be interpolated"
+
+        raise ArgumentError,
+              "window has an interpolated value under `#{runtime_key}` " <>
+                "and therefore `#{key}` must also be interpolated"
 
       {expr, kw} ->
         sort(keys, kw, mode, [{key, expr} | compile], runtime)
@@ -72,14 +77,15 @@ defmodule Ecto.Query.Builder.Windows do
   defp escape_frame({:fragment, _, _} = fragment, params_acc, vars, env) do
     Builder.escape(fragment, :any, params_acc, vars, env)
   end
+
   defp escape_frame(other, _, _, _) do
-    Builder.error!("expected a dynamic or fragment in `:frame`, got: `#{inspect other}`")
+    Builder.error!("expected a dynamic or fragment in `:frame`, got: `#{inspect(other)}`")
   end
 
   defp error!(other) do
     Builder.error!(
       "expected window definition to be a keyword list " <>
-        "with partition_by, order_by or frame as keys, got: `#{inspect other}`"
+        "with partition_by, order_by or frame as keys, got: `#{inspect(other)}`"
     )
   end
 
@@ -90,14 +96,14 @@ defmodule Ecto.Query.Builder.Windows do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, [Macro.t], Keyword.t, Macro.Env.t) :: Macro.t
+  @spec build(Macro.t(), [Macro.t()], Keyword.t(), Macro.Env.t()) :: Macro.t()
   def build(query, binding, windows, env) when is_list(windows) do
     {query, binding} = Builder.escape_binding(query, binding, env)
 
     {compile, runtime} =
       windows
       |> Enum.map(&escape_window(binding, &1, env))
-      |> Enum.split_with(&elem(&1, 2) == [])
+      |> Enum.split_with(&(elem(&1, 2) == []))
 
     compile = Enum.map(compile, &build_compile_window(&1, env))
     runtime = Enum.map(runtime, &build_runtime_window(&1, env))
@@ -120,7 +126,7 @@ defmodule Ecto.Query.Builder.Windows do
   def build(_, _, windows, _) do
     Builder.error!(
       "expected window definitions to be a keyword list with window names as keys and " <>
-        "a keyword list with the window definition as value, got: `#{inspect windows}`"
+        "a keyword list with the window definition as value, got: `#{inspect(windows)}`"
     )
   end
 
@@ -152,7 +158,14 @@ defmodule Ecto.Query.Builder.Windows do
     windows =
       Enum.map(runtime, fn {name, compile_acc, runtime_acc, params} ->
         {acc, params} = do_runtime_window!(runtime_acc, query, compile_acc, params)
-        expr = %Ecto.Query.QueryExpr{expr: Enum.reverse(acc), params: Enum.reverse(params), file: file, line: line}
+
+        expr = %Ecto.Query.QueryExpr{
+          expr: Enum.reverse(acc),
+          params: Enum.reverse(params),
+          file: file,
+          line: line
+        }
+
         {name, expr}
       end)
 
@@ -165,19 +178,23 @@ defmodule Ecto.Query.Builder.Windows do
   end
 
   defp do_runtime_window!([{:partition_by, partition_by} | kw], query, acc, params) do
-    {partition_by, params} = GroupBy.group_or_partition_by!(:partition_by, query, partition_by, params)
+    {partition_by, params} =
+      GroupBy.group_or_partition_by!(:partition_by, query, partition_by, params)
+
     do_runtime_window!(kw, query, [{:partition_by, partition_by} | acc], params)
   end
 
   defp do_runtime_window!([{:frame, frame} | kw], query, acc, params) do
     case frame do
       %Ecto.Query.DynamicExpr{} ->
-        {frame, params, _count} = Builder.Dynamic.partially_expand(query, frame, params, length(params))
+        {frame, params, _count} =
+          Builder.Dynamic.partially_expand(query, frame, params, length(params))
+
         do_runtime_window!(kw, query, [{:frame, frame} | acc], params)
 
       _ ->
         raise ArgumentError,
-                "expected a dynamic or fragment in `:frame`, got: `#{inspect frame}`"
+              "expected a dynamic or fragment in `:frame`, got: `#{inspect(frame)}`"
     end
   end
 
@@ -186,11 +203,12 @@ defmodule Ecto.Query.Builder.Windows do
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, Keyword.t) :: Ecto.Query.t
+  @spec apply(Ecto.Queryable.t(), Keyword.t()) :: Ecto.Query.t()
   def apply(%Ecto.Query{windows: windows} = query, definitions) do
-    merged = Keyword.merge(windows, definitions, fn name, _, _ ->
-      Builder.error! "window with name #{name} is already defined"
-    end)
+    merged =
+      Keyword.merge(windows, definitions, fn name, _, _ ->
+        Builder.error!("window with name #{name} is already defined")
+      end)
 
     %{query | windows: merged}
   end

@@ -4,20 +4,20 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
   import Mix.Tasks.Ecto.Gen.Repo, only: [run: 1]
 
   test "generates a new repo" do
-    in_tmp "new_repo", fn ->
-      run ["-r", "Repo"]
+    in_tmp("new_repo", fn ->
+      run(["-r", "Repo"])
 
-      assert_file "lib/repo.ex", """
+      assert_file("lib/repo.ex", """
       defmodule Repo do
         use Ecto.Repo,
           otp_app: :ecto,
           adapter: Ecto.Adapters.Postgres
       end
-      """
+      """)
 
       first_line = if Code.ensure_loaded?(Config), do: "import Config", else: "use Mix.Config"
 
-      assert_file "config/config.exs", """
+      assert_file("config/config.exs", """
       #{first_line}
 
       config :ecto, Repo,
@@ -25,22 +25,23 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
         username: "user",
         password: "pass",
         hostname: "localhost"
-      """
-    end
+      """)
+    end)
   end
 
   test "generates a new repo with existing config file" do
-    in_tmp "existing_config", fn ->
-      File.mkdir_p! "config"
-      File.write! "config/config.exs", """
+    in_tmp("existing_config", fn ->
+      File.mkdir_p!("config")
+
+      File.write!("config/config.exs", """
       # Hello
       use Mix.Config
       # World
-      """
+      """)
 
-      run ["-r", "Repo"]
+      run(["-r", "Repo"])
 
-      assert_file "config/config.exs", """
+      assert_file("config/config.exs", """
       # Hello
       use Mix.Config
 
@@ -50,15 +51,15 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
         password: "pass",
         hostname: "localhost"
       # World
-      """
-    end
+      """)
+    end)
   end
 
   test "generates a new namespaced repo" do
-    in_tmp "namespaced", fn ->
-      run ["-r", "My.AppRepo"]
-      assert_file "lib/my/app_repo.ex", "defmodule My.AppRepo do"
-    end
+    in_tmp("namespaced", fn ->
+      run(["-r", "My.AppRepo"])
+      assert_file("lib/my/app_repo.ex", "defmodule My.AppRepo do")
+    end)
   end
 
   @tmp_path Path.expand("../../../tmp", __DIR__)

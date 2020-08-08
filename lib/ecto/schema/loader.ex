@@ -97,9 +97,11 @@ defmodule Ecto.Schema.Loader do
       case dumper.(type, value) do
         {:ok, value} ->
           Map.put(acc, source, value)
+
         :error ->
-          raise ArgumentError, "cannot dump `#{inspect value}` as type #{inspect type} " <>
-                               "for field `#{field}` in schema #{inspect struct.__struct__}"
+          raise ArgumentError,
+                "cannot dump `#{inspect(value)}` as type #{inspect(type)} " <>
+                  "for field `#{field}` in schema #{inspect(struct.__struct__)}"
       end
     end)
   end

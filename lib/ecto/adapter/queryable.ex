@@ -37,9 +37,11 @@ defmodule Ecto.Adapter.Queryable do
   is called, the next time the same query is given to
   `c:execute/5`, it will receive the `:cache` tuple.
   """
-  @type query_cache :: {:nocache, prepared}
-                       | {:cache, cache_function :: (cached -> :ok), prepared}
-                       | {:cached, update_function :: (cached -> :ok), reset_function :: (prepared -> :ok), cached}
+  @type query_cache ::
+          {:nocache, prepared}
+          | {:cache, cache_function :: (cached -> :ok), prepared}
+          | {:cached, update_function :: (cached -> :ok), reset_function :: (prepared -> :ok),
+             cached}
 
   @type prepared :: term
   @type cached :: term
@@ -93,7 +95,7 @@ defmodule Ecto.Adapter.Queryable do
   It returns a stream of values.
   """
   @callback stream(adapter_meta, query_meta, query_cache, params :: list(), options) ::
-              Enumerable.t
+              Enumerable.t()
 
   @doc """
   Plans and prepares a query for the given repo, leveraging its query cache.
