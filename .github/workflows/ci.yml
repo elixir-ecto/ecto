@@ -3,6 +3,7 @@ on: [pull_request, push]
 jobs:
   mix_test:
     name: mix test (Elixir ${{ matrix.elixir }} OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         elixir: ['1.7.4', '1.10.1']
@@ -11,7 +12,6 @@ jobs:
             otp: '19.x'
           - elixir: '1.10.1'
             otp: '22.x'
-    runs-on: ubuntu-16.04
     steps:
       - uses: actions/checkout@v2.3.2
       - uses: actions/setup-elixir@v1.4.0
