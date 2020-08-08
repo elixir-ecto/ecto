@@ -23,7 +23,6 @@ defmodule Ecto.Repo.Supervisor do
 
     case repo_init(type, repo, config) do
       {:ok, config} ->
-        validate_config!(repo, config)
         {url, config} = Keyword.pop(config, :url)
         {:ok, Keyword.merge(config, parse_url(url || ""))}
 
@@ -43,15 +42,6 @@ defmodule Ecto.Repo.Supervisor do
       repo.init(type, config)
     else
       {:ok, config}
-    end
-  end
-
-  defp validate_config!(repo, config) do
-    log = Keyword.get(config, :log, :debug)
-
-    unless log in [false, :debug, :info, :warn, :error] do
-      raise ArgumentError, "invalid :log configuration for #{inspect(repo)}, it should be " <>
-                             "false, :debug, :info, :warn or :error, got: #{inspect(log)}"
     end
   end
 
