@@ -936,11 +936,6 @@ defmodule Ecto.TypeTest do
       refute Ecto.Type.equal?(Custom, false, false)
     end
 
-    test "nil type" do
-      assert Ecto.Type.equal?(nil, 1, 1.0)
-      refute Ecto.Type.equal?(nil, 1, 2)
-    end
-
     test "nil values" do
       assert Ecto.Type.equal?(:any, nil, nil)
       assert Ecto.Type.equal?(:boolean, nil, nil)
@@ -967,12 +962,6 @@ defmodule Ecto.TypeTest do
       assert Ecto.Type.equal?({:map, :time}, term, term)
 
       assert Ecto.Type.equal?(Custom, nil, nil)
-    end
-
-    test "bad type" do
-      assert_raise ArgumentError, ~r"cannot use :foo as Ecto.Type", fn ->
-        Ecto.Type.equal?(:foo, 1, 1.0)
-      end
     end
   end
 

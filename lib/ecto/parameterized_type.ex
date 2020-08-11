@@ -61,7 +61,7 @@ defmodule Ecto.ParameterizedType do
   To use this type in a schema field, specify the type and parameters like this:
 
       schema "foo" do
-        field "bar", MyApp.MyType, opt1: :baz, opt2: :boo
+        field :bar, MyApp.MyType, opt1: :baz, opt2: :boo
       end
 
   """
