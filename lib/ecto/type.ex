@@ -379,32 +379,9 @@ defmodule Ecto.Type do
 
   """
   @spec dump(t, term) :: {:ok, term} | :error
-  def dump({:parameterized, module, params}, value) do
-    module.dump(value, &dump/2, params)
-  end
-
-  def dump(_type, nil) do
-    {:ok, nil}
-  end
-
-  def dump({:maybe, type}, value) do
-    case dump(type, value) do
-      {:ok, _} = ok -> ok
-      :error -> {:ok, value}
-    end
-  end
-
-  def dump(type, value) do
-    dump_fun(type, &dump/2).(value)
-  end
-
-  @doc """
-  Dumps a value to the given type.
-
-  This function behaves the same as `dump/2`, except for composite types
-  the given `dumper` function is used.
-  """
   @spec dump(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
+  def dump(type, value, dumper \\ &dump/2)
+
   def dump({:parameterized, module, params}, value, dumper) do
     module.dump(value, dumper, params)
   end
@@ -427,45 +404,29 @@ defmodule Ecto.Type do
     end
   end
 
-  def dump({:map, type}, value, dumper) when is_map(value) do
-    map(Map.to_list(value), type, dumper, %{})
-  end
+  def dump({:array, type}, value, dumper), do: array(value, type, dumper, [])
+  def dump({:map, type}, value, dumper), do: map(value, type, dumper, %{})
+  def dump({:parameterized, mod, params}, value, dumper), do: mod.dump(value, dumper, params)
 
-  def dump({:array, type}, value, dumper) do
-    array(value, type, dumper, [])
-  end
-
-  def dump(type, value, dumper) do
-    dump_fun(type, dumper).(value)
-  end
-
-  defp dump_fun(:integer, _dumper), do: &same_integer/1
-  defp dump_fun(:float, _dumper), do: &dump_float/1
-  defp dump_fun(:boolean, _dumper), do: &same_boolean/1
-  defp dump_fun(:map, _dumper), do: &same_map/1
-  defp dump_fun(:string, _dumper), do: &same_binary/1
-  defp dump_fun(:binary, _dumper), do: &same_binary/1
-  defp dump_fun(:id, _dumper), do: &same_integer/1
-  defp dump_fun(:binary_id, _dumper), do: &same_binary/1
-  defp dump_fun(:any, _dumper), do: &{:ok, &1}
-  defp dump_fun(:decimal, _dumper), do: &same_decimal/1
-  defp dump_fun(:date, _dumper), do: &same_date/1
-  defp dump_fun(:time, _dumper), do: &dump_time/1
-  defp dump_fun(:time_usec, _dumper), do: &dump_time_usec/1
-  defp dump_fun(:naive_datetime, _dumper), do: &dump_naive_datetime/1
-  defp dump_fun(:naive_datetime_usec, _dumper), do: &dump_naive_datetime_usec/1
-  defp dump_fun(:utc_datetime, _dumper), do: &dump_utc_datetime/1
-  defp dump_fun(:utc_datetime_usec, _dumper), do: &dump_utc_datetime_usec/1
-  defp dump_fun({:param, :any_datetime}, _dumper), do: &dump_any_datetime/1
-  defp dump_fun({:array, type}, dumper), do: &array(&1, dump_fun(type, dumper), [])
-  defp dump_fun({:map, type}, dumper), do: &map(&1, dump_fun(type, dumper), %{})
-  defp dump_fun({:parameterized, mod, params}, dumper), do: &mod.dump(&1, dumper, params)
-  defp dump_fun(mod, _dumper) when is_atom(mod) do
-    fn
-      nil -> {:ok, nil}
-      value -> mod.dump(value)
-    end
-  end
+  def dump(:any, value, _dumper), do: {:ok, value}
+  def dump(:integer, value, _dumper), do: same_integer(value)
+  def dump(:float, value, _dumper), do: dump_float(value)
+  def dump(:boolean, value, _dumper), do: same_boolean(value)
+  def dump(:map, value, _dumper), do: same_map(value)
+  def dump(:string, value, _dumper), do: same_binary(value)
+  def dump(:binary, value, _dumper), do: same_binary(value)
+  def dump(:id, value, _dumper), do: same_integer(value)
+  def dump(:binary_id, value, _dumper), do: same_binary(value)
+  def dump(:decimal, value, _dumper), do: same_decimal(value)
+  def dump(:date, value, _dumper), do: same_date(value)
+  def dump(:time, value, _dumper), do: dump_time(value)
+  def dump(:time_usec, value, _dumper), do: dump_time_usec(value)
+  def dump(:naive_datetime, value, _dumper), do: dump_naive_datetime(value)
+  def dump(:naive_datetime_usec, value, _dumper), do: dump_naive_datetime_usec(value)
+  def dump(:utc_datetime, value, _dumper), do: dump_utc_datetime(value)
+  def dump(:utc_datetime_usec, value, _dumper), do: dump_utc_datetime_usec(value)
+  def dump({:param, :any_datetime}, value, _dumper), do: dump_any_datetime(value)
+  def dump(mod, value, _dumper) when is_atom(mod), do: mod.dump(value)
 
   defp dump_float(term) when is_float(term), do: {:ok, term}
   defp dump_float(_), do: :error
@@ -519,32 +480,9 @@ defmodule Ecto.Type do
 
   """
   @spec load(t, term) :: {:ok, term} | :error
-  def load({:parameterized, module, params}, value) do
-    module.load(value, &load/2, params)
-  end
-
-  def load(_type, nil) do
-    {:ok, nil}
-  end
-
-  def load({:maybe, type}, value) do
-    case load(type, value) do
-      {:ok, _} = ok -> ok
-      :error -> {:ok, value}
-    end
-  end
-
-  def load(type, value) do
-    load_fun(type, &load/2).(value)
-  end
-
-  @doc """
-  Loads a value with the given type.
-
-  This function behaves the same as `load/2`, except for composite types
-  the given `loader` function is used.
-  """
   @spec load(t, term, (t, term -> {:ok, term} | :error)) :: {:ok, term} | :error
+  def load(type, value, loader \\ &load/2)
+
   def load({:parameterized, module, params}, value, loader) do
     module.load(value, loader, params)
   end
@@ -560,44 +498,28 @@ defmodule Ecto.Type do
     end
   end
 
-  def load({:map, type}, value, loader) when is_map(value) do
-    map(Map.to_list(value), type, loader, %{})
-  end
+  def load({:array, type}, value, loader), do: array(value, type, loader, [])
+  def load({:map, type}, value, loader), do: map(value, type, loader, %{})
+  def load({:parameterized, mod, params}, value, loader), do: mod.load(value, loader, params)
 
-  def load({:array, type}, value, loader) do
-    array(value, type, loader, [])
-  end
-
-  def load(type, value, loader) do
-    load_fun(type, loader).(value)
-  end
-
-  defp load_fun(:integer, _loader), do: &same_integer/1
-  defp load_fun(:float, _loader), do: &load_float/1
-  defp load_fun(:boolean, _loader), do: &same_boolean/1
-  defp load_fun(:map, _loader), do: &same_map/1
-  defp load_fun(:string, _loader), do: &same_binary/1
-  defp load_fun(:binary, _loader), do: &same_binary/1
-  defp load_fun(:id, _loader), do: &same_integer/1
-  defp load_fun(:binary_id, _loader), do: &same_binary/1
-  defp load_fun(:any, _loader), do: &{:ok, &1}
-  defp load_fun(:decimal, _loader), do: &same_decimal/1
-  defp load_fun(:date, _loader), do: &same_date/1
-  defp load_fun(:time, _loader), do: &load_time/1
-  defp load_fun(:time_usec, _loader), do: &load_time_usec/1
-  defp load_fun(:naive_datetime, _loader), do: &load_naive_datetime/1
-  defp load_fun(:naive_datetime_usec, _loader), do: &load_naive_datetime_usec/1
-  defp load_fun(:utc_datetime, _loader), do: &load_utc_datetime/1
-  defp load_fun(:utc_datetime_usec, _loader), do: &load_utc_datetime_usec/1
-  defp load_fun({:array, type}, loader), do: &array(&1, load_fun(type, loader), [])
-  defp load_fun({:map, type}, loader), do: &map(&1, load_fun(type, loader), %{})
-  defp load_fun({:parameterized, mod, params}, loader), do: &mod.load(&1, loader, params)
-  defp load_fun(mod, _loader) when is_atom(mod) do
-    fn
-      nil -> {:ok, nil}
-      value -> mod.load(value)
-    end
-  end
+  def load(:any, value, _loader), do: {:ok, value}
+  def load(:integer, value, _loader), do: same_integer(value)
+  def load(:float, value, _loader), do: load_float(value)
+  def load(:boolean, value, _loader), do: same_boolean(value)
+  def load(:map, value, _loader), do: same_map(value)
+  def load(:string, value, _loader), do: same_binary(value)
+  def load(:binary, value, _loader), do: same_binary(value)
+  def load(:id, value, _loader), do: same_integer(value)
+  def load(:binary_id, value, _loader), do: same_binary(value)
+  def load(:decimal, value, _loader), do: same_decimal(value)
+  def load(:date, value, _loader), do: same_date(value)
+  def load(:time, value, _loader), do: load_time(value)
+  def load(:time_usec, value, _loader), do: load_time_usec(value)
+  def load(:naive_datetime, value, _loader), do: load_naive_datetime(value)
+  def load(:naive_datetime_usec, value, _loader), do: load_naive_datetime_usec(value)
+  def load(:utc_datetime, value, _loader), do: load_utc_datetime(value)
+  def load(:utc_datetime_usec, value, _loader), do: load_utc_datetime_usec(value)
+  def load(mod, value, _loader), do: mod.load(value)
 
   defp load_float(term) when is_float(term), do: {:ok, term}
   defp load_float(term) when is_integer(term), do: {:ok, :erlang.float(term)}
@@ -810,6 +732,7 @@ defmodule Ecto.Type do
 
   ## Shared helpers
 
+  @compile {:inline, same_integer: 1, same_boolean: 1, same_map: 1, same_decimal: 1, same_date: 1}
   defp same_integer(term) when is_integer(term), do: {:ok, term}
   defp same_integer(_), do: :error
 
@@ -846,12 +769,6 @@ defmodule Ecto.Type do
   def adapter_load(_adapter, _type, nil) do
     {:ok, nil}
   end
-  def adapter_load(adapter, {:maybe, type}, value) do
-    case adapter_load(adapter, type, value) do
-      {:ok, _} = ok -> ok
-      :error -> {:ok, value}
-    end
-  end
   def adapter_load(adapter, type, value) do
     if of_base_type?(type, value) do
       {:ok, value}
@@ -873,16 +790,12 @@ defmodule Ecto.Type do
   def adapter_dump(adapter, {:parameterized, module, params} = type, value) do
     process_dumpers(adapter.dumpers(module.type(params), type), {:ok, value}, adapter)
   end
-  def adapter_dump(_adapter, type, nil),
-    do: dump(type, nil)
-  def adapter_dump(adapter, {:maybe, type}, value) do
-    case adapter_dump(adapter, type, value) do
-      {:ok, _} = ok -> ok
-      :error -> {:ok, value}
-    end
+  def adapter_dump(_adapter, type, nil) do
+    dump(type, nil)
   end
-  def adapter_dump(adapter, type, value),
-    do: process_dumpers(adapter.dumpers(type(type), type), {:ok, value}, adapter)
+  def adapter_dump(adapter, type, value) do
+    process_dumpers(adapter.dumpers(type(type), type), {:ok, value}, adapter)
+  end
 
   defp process_dumpers(_, :error, _adapter),
     do: :error
@@ -1188,23 +1101,23 @@ defmodule Ecto.Type do
   end
 
   defp map(map, fun, acc) when is_map(map) do
-    map(Map.to_list(map), fun, acc)
+    map_each(Map.to_list(map), fun, acc)
   end
 
-  defp map([{key, value} | t], fun, acc) do
+  defp map(_, _, _) do
+    :error
+  end
+
+  defp map_each([{key, value} | t], fun, acc) do
     case fun.(value) do
-      {:ok, value} -> map(t, fun, Map.put(acc, key, value))
+      {:ok, value} -> map_each(t, fun, Map.put(acc, key, value))
       :error -> :error
       {:error, _custom_errors} -> :error
     end
   end
 
-  defp map([], _fun, acc) do
+  defp map_each([], _fun, acc) do
     {:ok, acc}
-  end
-
-  defp map(_, _, _) do
-    :error
   end
 
   defp array([h | t], type, fun, acc) do
@@ -1222,19 +1135,23 @@ defmodule Ecto.Type do
     :error
   end
 
-  defp map([{key, value} | t], type, fun, acc) do
-    case fun.(type, value) do
-      {:ok, value} -> map(t, type, fun, Map.put(acc, key, value))
-      :error -> :error
-    end
-  end
-
-  defp map([], _type, _fun, acc) do
-    {:ok, acc}
+  defp map(map, type, fun, acc) when is_map(map) do
+    map_each(Map.to_list(map), type, fun, acc)
   end
 
   defp map(_, _, _, _) do
     :error
+  end
+
+  defp map_each([{key, value} | t], type, fun, acc) do
+    case fun.(type, value) do
+      {:ok, value} -> map_each(t, type, fun, Map.put(acc, key, value))
+      :error -> :error
+    end
+  end
+
+  defp map_each([], _type, _fun, acc) do
+    {:ok, acc}
   end
 
   defp to_i(nil), do: nil
