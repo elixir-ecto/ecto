@@ -2009,8 +2009,8 @@ defmodule Ecto.Schema do
   ## Private
 
   defp embed(mod, cardinality, name, schema, opts) do
-    opts   = [cardinality: cardinality, related: schema] ++ opts
-    struct = Ecto.Embedded.struct(mod, name, opts)
+    opts   = [cardinality: cardinality, related: schema, owner: mod, field: name] ++ opts
+    struct = Ecto.Embedded.init(opts)
 
     Module.put_attribute(mod, :changeset_fields, {name, {:embed, struct}})
     Module.put_attribute(mod, :ecto_embeds, {name, struct})

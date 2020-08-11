@@ -2,10 +2,9 @@ defmodule Ecto.Embedded do
   @moduledoc false
   alias __MODULE__
   alias Ecto.Changeset
-  alias Ecto.ParameterizedType
   alias Ecto.Changeset.Relation
 
-  use ParameterizedType
+  use Ecto.ParameterizedType
 
   @type t :: %Embedded{cardinality: :one | :many,
                        on_replace: :raise | :mark_as_invalid | :delete,
@@ -18,20 +17,43 @@ defmodule Ecto.Embedded do
   @behaviour Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   @embeds_one_on_replace_opts @on_replace_opts ++ [:update]
-  defstruct [:cardinality, :field, :owner, :related, :on_cast, on_replace: :raise,
-             unique: true, ordered: true]
 
-  ## Migration
+  defstruct [
+    :cardinality,
+    :field,
+    :owner,
+    :related,
+    :on_cast,
+    on_replace: :raise,
+    unique: true,
+    ordered: true
+  ]
+
+  ## Parameterized API
 
   # We treat even embed_many as maps, as that's often the
   # most efficient format to encode them in the database.
-  @impl ParameterizedType
+  @impl Ecto.ParameterizedType
   def type(_), do: {:map, :any}
 
-  @impl ParameterizedType
-  def init(_opts), do: raise "TODO: invoke this directly"
+  @impl Ecto.ParameterizedType
+  def init(opts) do
+    opts = Keyword.put_new(opts, :on_replace, :raise)
+    cardinality = Keyword.fetch!(opts, :cardinality)
 
-  @impl ParameterizedType
+    on_replace_opts =
+      if cardinality == :one, do: @embeds_one_on_replace_opts, else: @on_replace_opts
+
+    unless opts[:on_replace] in on_replace_opts do
+      raise ArgumentError, "invalid `:on_replace` option for #{inspect Keyword.fetch!(opts, :field)}. " <>
+        "The only valid options are: " <>
+        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
+    end
+
+    struct(%Embedded{}, opts)
+  end
+
+  @impl Ecto.ParameterizedType
   def load(nil, _fun, %{cardinality: :one}), do: {:ok, nil}
 
   def load(value, fun, %{cardinality: :one, related: schema, field: field}) when is_map(value) do
@@ -56,7 +78,7 @@ defmodule Ecto.Embedded do
     raise ArgumentError, "cannot load embed `#{field}`, invalid value: #{inspect value}"
   end
 
-  @impl ParameterizedType
+  @impl Ecto.ParameterizedType
   def dump(nil, _, _), do: {:ok, nil}
 
   def dump(value, fun, %{cardinality: :one, related: schema, field: field}) when is_map(value) do
@@ -80,7 +102,7 @@ defmodule Ecto.Embedded do
     raise ArgumentError, "cannot dump embed `#{field}`, invalid value: #{inspect value}"
   end
 
-  @impl ParameterizedType
+  @impl Ecto.ParameterizedType
   def cast(nil, %{cardinality: :one}), do: {:ok, nil}
   def cast(%{__struct__: schema} = struct, %{cardinality: :one, related: schema}) do
     {:ok, struct}
@@ -99,34 +121,10 @@ defmodule Ecto.Embedded do
     :error
   end
 
-  @impl ParameterizedType
+  @impl Ecto.ParameterizedType
   def embed_as(_, _), do: :dump
 
-  ## End of migration
-
-  @doc """
-  Builds the embedded struct.
-
-  ## Options
-
-    * `:cardinality` - tells if there is one embedded schema or many
-    * `:related` - name of the embedded schema
-    * `:on_replace` - the action taken on embeds when the embed is replaced
-
-  """
-  def struct(module, name, opts) do
-    opts = Keyword.put_new(opts, :on_replace, :raise)
-    cardinality = Keyword.fetch!(opts, :cardinality)
-    on_replace_opts = if cardinality == :one, do: @embeds_one_on_replace_opts, else: @on_replace_opts
-
-    unless opts[:on_replace] in on_replace_opts do
-      raise ArgumentError, "invalid `:on_replace` option for #{inspect name}. " <>
-        "The only valid options are: " <>
-        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
-    end
-
-    struct(%Embedded{field: name, owner: module}, opts)
-  end
+  ## End of parameterized API
 
   @doc """
   Callback invoked by repository to prepare embeds.
