@@ -1771,7 +1771,7 @@ defmodule Ecto.Schema do
 
   @doc false
   def __field__(mod, name, type, opts) do
-    check_field_type!(name, type, type, opts)
+    type = check_field_type!(mod, name, type, opts)
     Module.put_attribute(mod, :changeset_fields, {name, type})
     define_field(mod, name, type, opts)
   end
@@ -2035,20 +2035,21 @@ defmodule Ecto.Schema do
     end
   end
 
-  defp check_field_type!(name, :datetime, _, _opts) do
+  defp check_field_type!(_mod, name, :datetime, _opts) do
     raise ArgumentError, "invalid type :datetime for field #{inspect name}. " <>
                            "You probably meant to choose one between :naive_datetime " <>
                            "(no time zone information) or :utc_datetime (time zone is set to UTC)"
   end
 
-  defp check_field_type!(name, type, full_type, opts) do
+  defp check_field_type!(mod, name, type, opts) do
     cond do
       type == :any and !opts[:virtual] ->
         raise ArgumentError, "only virtual fields can have type :any, " <>
                              "invalid type for field #{inspect name}"
 
-      inner_type = inner_from_composite(type, name) ->
-        check_field_type!(name, inner_type, type, opts)
+      composite?(type, name) ->
+        {outer_type, inner_type} = type
+        {outer_type, check_field_type!(mod, name, inner_type, opts)}
 
       Ecto.Type.base?(type) ->
         type
@@ -2056,27 +2057,30 @@ defmodule Ecto.Schema do
       is_atom(type) and Code.ensure_compiled(type) == {:module, type} and function_exported?(type, :type, 0) ->
         type
 
+      is_atom(type) and Code.ensure_compiled(type) == {:module, type} and function_exported?(type, :type, 1) ->
+        {:parameterized, type, type.init(Keyword.merge(opts, field: name, schema: mod))}
+
       is_atom(type) and function_exported?(type, :__schema__, 1) ->
         raise ArgumentError,
-          "schema #{inspect full_type} is not a valid type for field #{inspect name}." <>
+          "schema #{inspect type} is not a valid type for field #{inspect name}." <>
           " Did you mean to use belongs_to, has_one, has_many, embeds_one, or embeds_many instead?"
 
       true ->
-        raise ArgumentError, "invalid or unknown type #{inspect full_type} for field #{inspect name}"
+        raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}"
     end
   end
 
-  defp inner_from_composite({composite, inner_type} = type, name) do
+  defp composite?({composite, _} = type, name) do
     if Ecto.Type.composite?(composite) do
-      inner_type
+      true
     else
       raise ArgumentError,
-        "invalid or unknown composite #{inspect type} for field #{inspect name}" <>
-        " Did you mean to use array or map as first element of tuple instead?"
+        "invalid or unknown composite #{inspect type} for field #{inspect name}. " <>
+        "Did you mean to use array or map as first element of tuple instead?"
     end
   end
 
-  defp inner_from_composite(_type, _name), do: false
+  defp composite?(_type, _name), do: false
 
   defp store_mfa_autogenerate!(mod, name, type, mfa) do
     if autogenerate_id(type) do

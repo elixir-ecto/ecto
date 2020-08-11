@@ -2,6 +2,10 @@ defmodule Ecto.Embedded do
   @moduledoc false
   alias __MODULE__
   alias Ecto.Changeset
+  alias Ecto.ParameterizedType
+  alias Ecto.Changeset.Relation
+
+  use ParameterizedType
 
   @type t :: %Embedded{cardinality: :one | :many,
                        on_replace: :raise | :mark_as_invalid | :delete,
@@ -11,7 +15,7 @@ defmodule Ecto.Embedded do
                        related: atom,
                        unique: boolean}
 
-  @behaviour Ecto.Changeset.Relation
+  @behaviour Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
   @embeds_one_on_replace_opts @on_replace_opts ++ [:update]
   defstruct [:cardinality, :field, :owner, :related, :on_cast, on_replace: :raise,
@@ -21,23 +25,26 @@ defmodule Ecto.Embedded do
 
   # We treat even embed_many as maps, as that's often the
   # most efficient format to encode them in the database.
+  @impl ParameterizedType
   def type(_), do: {:map, :any}
 
-  def load(%{cardinality: :one}, nil, _fun), do: {:ok, nil}
+  @impl ParameterizedType
+  def init(_opts), do: raise "TODO: invoke this directly"
 
-  def load(%{cardinality: :one, related: schema, field: field},
-                  value, fun) when is_map(value) do
+  @impl ParameterizedType
+  def load(nil, _fun, %{cardinality: :one}), do: {:ok, nil}
+
+  def load(value, fun, %{cardinality: :one, related: schema, field: field}) when is_map(value) do
     {:ok, load(field, schema, value, fun)}
   end
 
-  def load(%{cardinality: :many}, nil, _fun), do: {:ok, []}
+  def load(nil, _fun, %{cardinality: :many}), do: {:ok, []}
 
-  def load(%{cardinality: :many, related: schema, field: field},
-                  value, fun) when is_list(value) do
+  def load(value, fun, %{cardinality: :many, related: schema, field: field}) when is_list(value) do
     {:ok, Enum.map(value, &load(field, schema, &1, fun))}
   end
 
-  def load(_embed, _value, _fun) do
+  def load(_value, _fun, _embed) do
     :error
   end
 
@@ -49,20 +56,19 @@ defmodule Ecto.Embedded do
     raise ArgumentError, "cannot load embed `#{field}`, invalid value: #{inspect value}"
   end
 
-  def dump(_, nil, _), do: {:ok, nil}
+  @impl ParameterizedType
+  def dump(nil, _, _), do: {:ok, nil}
 
-  def dump(%{cardinality: :one, related: schema, field: field},
-                  value, fun) when is_map(value) do
+  def dump(value, fun, %{cardinality: :one, related: schema, field: field}) when is_map(value) do
     {:ok, dump(field, schema, value, schema.__schema__(:dump), fun)}
   end
 
-  def dump(%{cardinality: :many, related: schema, field: field},
-                  value, fun) when is_list(value) do
+  def dump(value, fun, %{cardinality: :many, related: schema, field: field}) when is_list(value) do
     types = schema.__schema__(:dump)
     {:ok, Enum.map(value, &dump(field, schema, &1, types, fun))}
   end
 
-  def dump(_embed, _value, _fun) do
+  def dump(_value, _fun, _embed) do
     :error
   end
 
@@ -74,13 +80,14 @@ defmodule Ecto.Embedded do
     raise ArgumentError, "cannot dump embed `#{field}`, invalid value: #{inspect value}"
   end
 
-  def cast(%{cardinality: :one}, nil), do: {:ok, nil}
-  def cast(%{cardinality: :one, related: schema}, %{__struct__: schema} = struct) do
+  @impl ParameterizedType
+  def cast(nil, %{cardinality: :one}), do: {:ok, nil}
+  def cast(%{__struct__: schema} = struct, %{cardinality: :one, related: schema}) do
     {:ok, struct}
   end
 
-  def cast(%{cardinality: :many}, nil), do: {:ok, []}
-  def cast(%{cardinality: :many, related: schema}, value) when is_list(value) do
+  def cast(nil, %{cardinality: :many}), do: {:ok, []}
+  def cast(value, %{cardinality: :many, related: schema}) when is_list(value) do
     if Enum.all?(value, &Kernel.match?(%{__struct__: ^schema}, &1)) do
       {:ok, value}
     else
@@ -88,10 +95,11 @@ defmodule Ecto.Embedded do
     end
   end
 
-  def cast(_embed, _value) do
+  def cast(_value, _embed) do
     :error
   end
 
+  @impl ParameterizedType
   def embed_as(_, _), do: :dump
 
   ## End of migration
@@ -184,7 +192,7 @@ defmodule Ecto.Embedded do
 
   defp to_struct(%Changeset{data: data} = changeset, action, %{related: schema}, adapter) do
     %{data: struct, changes: changes} = changeset =
-      Ecto.Changeset.Relation.surface_changes(changeset, data, schema.__schema__(:fields))
+      Relation.surface_changes(changeset, data, schema.__schema__(:fields))
 
     embeds = prepare(changeset, schema.__schema__(:embeds), adapter, action)
 
@@ -256,7 +264,7 @@ defmodule Ecto.Embedded do
   defp action_to_auto(:insert), do: :autogenerate
   defp action_to_auto(:update), do: :autoupdate
 
-  @impl true
+  @impl Relation
   def build(%Embedded{related: related}, _owner) do
     related.__struct__
   end

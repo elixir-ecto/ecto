@@ -10,6 +10,7 @@ defmodule Ecto.MixProject do
       elixir: "~> 1.7",
       deps: deps(),
       consolidate_protocols: Mix.env() != :test,
+      elixirc_paths: elixirc_paths(Mix.env()),
 
       # Hex
       description: "A toolkit for data mapping and language integrated query for Elixir",
@@ -117,4 +118,7 @@ defmodule Ecto.MixProject do
       "How-To's": ~r/guides\/howtos\/.?/
     ]
   end
+
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
 end
