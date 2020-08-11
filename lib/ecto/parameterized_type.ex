@@ -14,7 +14,7 @@ defmodule Ecto.ParameterizedType do
   convert them to maps inside `c:init/1` for easier pattern matching in
   other callbacks.
 
-  Parameterized types are a superset of regualr types. In other words,
+  Parameterized types are a superset of regular types. In other words,
   with parameterized types you can do everything a regular type does,
   and more. For example, parameterized types can handle `nil` values
   in both `load` and `dump` callbacks, they can customize `cast` behavior
