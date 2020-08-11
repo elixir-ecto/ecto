@@ -559,7 +559,7 @@ defmodule Ecto.Integration.PreloadTest do
     u1 = TestRepo.insert!(%User{name: "name"})
     updated = %{c1 | author: u1, author_id: nil}
 
-    assert ExUnit.CaptureIO.capture_io(:stderr, fn ->
+    assert ExUnit.CaptureLog.capture_log(fn ->
       assert TestRepo.preload(updated, [:author]).author == u1
     end) =~ ~r/its association key `author_id` is nil/
 
