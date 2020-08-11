@@ -259,15 +259,14 @@ defmodule Ecto.Schema do
   Besides providing primitive types, Ecto allows custom types to be
   implemented by developers, allowing Ecto behaviour to be extended.
 
-  A custom type is a module that implements the `Ecto.Type` behaviour.
-  By default, Ecto provides the following custom types:
+  A custom type is a module that implements one of the `Ecto.Type`
+  or `Ecto.ParameterizedType` behaviours. By default, Ecto provides
+  the following custom types:
 
   Custom type             | Database type           | Elixir type
   :---------------------- | :---------------------- | :---------------------
-  `Ecto.UUID`             | `:uuid`                 | `uuid-string`
-
-  Read the `Ecto.Type` documentation for more information on implementing
-  your own types.
+  `Ecto.UUID`             | `:uuid` (as a binary)   | `string()` (as a UUID)
+  `Ecto.Enum`             | `:string`               | `atom()`
 
   Finally, schemas can also have virtual fields by passing the
   `virtual: true` option. These fields are not persisted to the database
