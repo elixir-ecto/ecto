@@ -51,7 +51,7 @@ defmodule Ecto.Repo do
       is based on the module name, so if your module is called
       `MyApp.Repo`, the prefix will be `[:my_app, :repo]`. See the
       "Telemetry Events" section to see which events we recommend
-      adapters to publish. Note that if you multiple databases, you
+      adapters to publish. Note that if you have multiple databases, you
       should keep the `:telemetry_prefix` consistent for each repo and
       use the `:repo` property in the event metadata for distinguishing
       between repos.
