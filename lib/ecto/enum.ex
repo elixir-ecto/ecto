@@ -17,8 +17,10 @@ defmodule Ecto.Enum do
 
   use Ecto.ParameterizedType
 
+  @impl Ecto.ParameterizedType
   def type(_params), do: :string
 
+  @impl Ecto.ParameterizedType
   def init(opts) do
     values = Keyword.get(opts, :values, nil)
 
@@ -35,6 +37,7 @@ defmodule Ecto.Enum do
     %{on_load: on_load, on_dump: on_dump}
   end
 
+  @impl Ecto.ParameterizedType
   def cast(data, params) do
     case params do
       %{on_load: %{^data => as_atom}} -> {:ok, as_atom}
@@ -43,6 +46,7 @@ defmodule Ecto.Enum do
     end
   end
 
+  @impl Ecto.ParameterizedType
   def load(nil, _, _), do: {:ok, nil}
 
   def load(data, _loader, %{on_load: on_load}) do
@@ -52,6 +56,7 @@ defmodule Ecto.Enum do
     end
   end
 
+  @impl Ecto.ParameterizedType
   def dump(nil, _, _), do: {:ok, nil}
 
   def dump(data, _dumper, %{on_dump: on_dump}) do
@@ -61,6 +66,9 @@ defmodule Ecto.Enum do
     end
   end
 
+  @impl Ecto.ParameterizedType
   def equal?(a, b, _params), do: a == b
+
+  @impl Ecto.ParameterizedType
   def embed_as(_, _), do: :self
 end
