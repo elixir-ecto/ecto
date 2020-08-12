@@ -13,6 +13,7 @@ defmodule Ecto.ParameterizedTypeTest do
     def equal?(true, _, _), do: true
     def equal?(_, _, _), do: false
     def embed_as(_, %{embed: embed}), do: embed
+    def change(_old, _new, _params), do: {:ok, :change}
   end
 
   defmodule Schema do
@@ -35,6 +36,7 @@ defmodule Ecto.ParameterizedTypeTest do
     def equal?(true, _, _), do: true
     def equal?(_, _, _), do: false
     def embed_as(_, _), do: :self
+    def change(_old, new, _params), do: {:error, {"error message", value: new}}
   end
 
   test "init" do
@@ -71,6 +73,8 @@ defmodule Ecto.ParameterizedTypeTest do
 
     assert Ecto.Type.cast(@p_self_type, :foo) == {:ok, :cast}
     assert Ecto.Type.cast(@p_self_type, nil) == {:ok, :cast}
+
+    assert Ecto.Type.change(@p_self_type, :old, :new) == {:ok, :change}
   end
 
   test "parameterized type error" do
@@ -92,6 +96,8 @@ defmodule Ecto.ParameterizedTypeTest do
 
     assert Ecto.Type.cast(@p_error_type, :foo) == :error
     assert Ecto.Type.cast(@p_error_type, nil) == :error
+
+    assert Ecto.Type.change(@p_error_type, :old, :new) == {:error, {"error message", value: :new}}
   end
 
   test "parameterized type with array" do

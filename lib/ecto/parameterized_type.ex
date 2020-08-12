@@ -99,6 +99,9 @@ defmodule Ecto.ParameterizedType do
   """
   @callback init(opts :: opts()) :: params()
 
+  @callback change(old_value :: any(), new_value :: any(), params :: params()) ::
+              {:ok, new_value :: any()} | {:error, Ecto.Changeset.error()}
+
   @doc """
   Casts the given input to the ParameterizedType with the given parameters.
 

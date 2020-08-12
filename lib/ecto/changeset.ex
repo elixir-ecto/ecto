@@ -1217,6 +1217,19 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "field names given to change/put_change must be atoms, got: `#{inspect(key)}`"
   end
 
+  defp put_change(data, changes, errors, valid?, key, new_value, {:parameterized, type, params}) do
+    old_value = Map.get(data, key)
+
+    if type.equal?(old_value, new_value, params) do
+      {Map.delete(changes, key), errors, valid?}
+    else
+      case type.change(old_value, new_value, params) do
+        {:ok, change} -> {Map.put(changes, key, change), errors, valid?}
+        {:error, error} -> {changes, [{key, error} | errors], false}
+      end
+    end
+  end
+
   defp put_change(data, changes, errors, valid?, key, value, type) do
     if not Ecto.Type.equal?(type, Map.get(data, key), value) do
       {Map.put(changes, key, value), errors, valid?}

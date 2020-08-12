@@ -38,6 +38,14 @@ defmodule Ecto.Enum do
   end
 
   @impl Ecto.ParameterizedType
+  def change(_old_value, new_value, params) do
+    case params do
+      %{on_dump: %{^new_value => _}} -> {:ok, new_value}
+      _ -> {:error, {"unknown enum value", value: new_value}}
+   end
+  end
+
+  @impl Ecto.ParameterizedType
   def cast(data, params) do
     case params do
       %{on_load: %{^data => as_atom}} -> {:ok, as_atom}
