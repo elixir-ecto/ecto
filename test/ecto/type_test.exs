@@ -229,10 +229,6 @@ defmodule Ecto.TypeTest do
              adapter_dump(Ecto.TestAdapter, type, %Schema{id: @uuid_string, a: 1})
       assert {:ok, nil} = adapter_dump(Ecto.TestAdapter, type, nil)
       assert :error = adapter_dump(Ecto.TestAdapter, type, 1)
-
-      assert :error == cast(type, %{"a" => 1})
-      assert cast(type, %Schema{}) == {:ok, %Schema{}}
-      assert cast(type, nil) == {:ok, nil}
     end
 
     test "many" do
@@ -249,10 +245,6 @@ defmodule Ecto.TypeTest do
              adapter_dump(Ecto.TestAdapter, type, [%Schema{id: @uuid_string, a: 1}])
       assert {:ok, nil} = adapter_dump(Ecto.TestAdapter, type, nil)
       assert :error = adapter_dump(Ecto.TestAdapter, type, 1)
-
-      assert cast(type, [%{"abc" => 1}]) == :error
-      assert cast(type, [%Schema{}]) == {:ok, [%Schema{}]}
-      assert cast(type, []) == {:ok, []}
     end
   end
 

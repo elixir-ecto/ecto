@@ -103,22 +103,8 @@ defmodule Ecto.Embedded do
   end
 
   @impl Ecto.ParameterizedType
-  def cast(nil, %{cardinality: :one}), do: {:ok, nil}
-  def cast(%{__struct__: schema} = struct, %{cardinality: :one, related: schema}) do
-    {:ok, struct}
-  end
-
-  def cast(nil, %{cardinality: :many}), do: {:ok, []}
-  def cast(value, %{cardinality: :many, related: schema}) when is_list(value) do
-    if Enum.all?(value, &Kernel.match?(%{__struct__: ^schema}, &1)) do
-      {:ok, value}
-    else
-      :error
-    end
-  end
-
-  def cast(_value, _embed) do
-    :error
+  def cast(_, %{field: field, owner: owner}) do
+    raise "cannot cast embed `#{field}` from `#{owner}` in queries"
   end
 
   @impl Ecto.ParameterizedType
