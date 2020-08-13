@@ -112,7 +112,7 @@ defmodule Ecto.ParameterizedType do
 
   For more information on casting, see `c:Ecto.Type.cast/1`
   """
-  @callback cast_with_current(data :: term(), current :: term(), params :: params()) ::
+  @callback cast_change(data :: term(), current :: term(), params :: params()) ::
               {:ok, term} | {:error, keyword()} | :error
 
   @doc """

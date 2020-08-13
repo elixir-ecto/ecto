@@ -17,7 +17,6 @@ defmodule Ecto.Changeset.EmbeddedViaCastTest do
     schema "authors" do
       field :name, :string
       embeds_one :profile, Profile, on_replace: :delete
-      embeds_one :profile_with_set_action, Profile, on_replace: :delete, on_cast: &Profile.set_action/2
       embeds_one :raise_profile, Profile, on_replace: :raise
       embeds_one :invalid_profile, Profile, on_replace: :mark_as_invalid
       embeds_one :update_profile, Profile, on_replace: :update
@@ -26,13 +25,9 @@ defmodule Ecto.Changeset.EmbeddedViaCastTest do
       end
       embeds_one :nested, Nested
       embeds_many :posts, Post, on_replace: :delete
-      embeds_many :posts_with_set_action, Post, on_replace: :delete, on_cast: &Post.set_action/2
       embeds_many :raise_posts, Post, on_replace: :raise
       embeds_many :invalid_posts, Post, on_replace: :mark_as_invalid
       embeds_many :inline_posts, Post do
-        field :title, :string
-      end
-      embeds_many :inline_posts_with_changeset, Post2, on_cast: &Post.changeset/2 do
         field :title, :string
       end
     end
@@ -127,7 +122,7 @@ defmodule Ecto.Changeset.EmbeddedViaCastTest do
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"profile" => "value"}, :profile) |> Changeset.validate_required(:profile)
-    assert changeset.errors == [profile: {"is invalid", [type: {:embed, Author.__schema__(:embed, :profile)}, validation: :cast]}]
+    assert changeset.errors == [profile: {"is invalid", [type: Author.__schema__(:type, :profile), validation: :cast]}]
     refute changeset.valid?
   end
 
@@ -225,19 +220,6 @@ defmodule Ecto.Changeset.EmbeddedViaCastTest do
     assert changeset.valid?
   end
 
-  test "cast embeds_one keeps appropriate action from changeset" do
-    changeset = cast(%Author{profile_with_set_action: %Profile{id: "id"}},
-                     %{"profile_with_set_action" => %{"name" => "michal", "id" => "id"}},
-                     :profile_with_set_action)
-    assert changeset.changes.profile_with_set_action.action == :update
-
-    assert_raise RuntimeError, ~r"cannot update related", fn ->
-      cast(%Author{profile_with_set_action: %Profile{id: "old"}},
-           %{"profile_with_set_action" => %{"name" => "michal", "id" => "new"}},
-           :profile_with_set_action)
-    end
-  end
-
   test "cast embeds_one with empty parameters" do
     changeset = cast(%Author{profile: nil}, %{}, :profile)
     assert changeset.changes == %{}
@@ -269,12 +251,12 @@ defmodule Ecto.Changeset.EmbeddedViaCastTest do
 
     changeset = cast(schema, %{"invalid_profile" => nil}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"is invalid", [type: {:embed, Author.__schema__(:embed, :invalid_profile)}, validation: :cast]}]
+    assert changeset.errors == [invalid_profile: {"is invalid", [type: Author.__schema__(:type, :invalid_profile), validation: :cast]}]
     refute changeset.valid?
 
     changeset = cast(schema, %{"invalid_profile" => %{"id" => 2}}, :invalid_profile)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_profile: {"is invalid", [type: {:embed, Author.__schema__(:embed, :invalid_profile)}, validation: :cast]}]
+    assert changeset.errors == [invalid_profile: {"is invalid", [type: Author.__schema__(:type, :invalid_profile), validation: :cast]}]
     refute changeset.valid?
   end
 
@@ -357,28 +339,21 @@ defmodule Ecto.Changeset.EmbeddedViaCastTest do
     refute changeset.valid?
   end
 
-  test "cast embeds_many with invalid operation" do
-    params = %{"posts_with_set_action" => [%{"id" => 1, "title" => "new"}]}
-    assert_raise RuntimeError, ~r"cannot update related", fn ->
-      cast(%Author{posts_with_set_action: []}, params, :posts_with_set_action)
-    end
-  end
-
   test "cast embeds_many with invalid params" do
     changeset = cast(%Author{}, %{"posts" => "value"}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:embed, Author.__schema__(:embed, :posts)}, validation: :cast]}]
+    assert changeset.errors == [posts: {"is invalid", [type: Author.__schema__(:type, :posts), validation: :cast]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => ["value"]}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:embed, Author.__schema__(:embed, :posts)}, validation: :cast]}]
+    assert changeset.errors == [posts: {"is invalid", [type: Author.__schema__(:type, :posts), validation: :cast]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => nil}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:embed, Author.__schema__(:embed, :posts)}, validation: :cast]}]
+    assert changeset.errors == [posts: {"is invalid", [type: Author.__schema__(:type, :posts), validation: :cast]}]
     refute changeset.valid?
 
     changeset = cast(%Author{}, %{"posts" => %{"id" => "invalid"}}, :posts)
-    assert changeset.errors == [posts: {"is invalid", [type: {:embed, Author.__schema__(:embed, :posts)}, validation: :cast]}]
+    assert changeset.errors == [posts: {"is invalid", [type: Author.__schema__(:type, :posts), validation: :cast]}]
     refute changeset.valid?
   end
 
@@ -389,20 +364,6 @@ defmodule Ecto.Changeset.EmbeddedViaCastTest do
     refute Map.has_key?(changeset.changes, :posts)
   end
 
-  test "cast embeds_many discards changesets marked as ignore" do
-    changeset = cast(%Author{}, %{"posts_with_set_action" => [%{title: "oops", action: :ignore}]}, :posts_with_set_action)
-    assert changeset.changes == %{}
-
-    posts = [
-      %{title: "hello", action: :insert},
-      %{title: "oops", action: :ignore},
-      %{title: "world", action: :insert}
-    ]
-    changeset = cast(%Author{}, %{"posts_with_set_action" => posts}, :posts_with_set_action)
-    assert Enum.map(changeset.changes.posts_with_set_action, &Ecto.Changeset.get_change(&1, :title)) ==
-           ["hello", "world"]
-  end
-
   test "cast embeds_many when required" do
     changeset = cast(%Author{posts: []}, %{}, :posts) |> Changeset.validate_required(:posts)
     assert changeset.required == [:posts]
@@ -411,7 +372,7 @@ defmodule Ecto.Changeset.EmbeddedViaCastTest do
 
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts) |> Changeset.validate_required(:posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [posts: {"is invalid", [type: {:embed, Author.__schema__(:embed, :posts)}, validation: :cast]}]
+    assert changeset.errors == [posts: {"is invalid", [type: Author.__schema__(:type, :posts), validation: :cast]}]
   end
 
   test "cast embeds_many with empty parameters" do
@@ -438,23 +399,13 @@ defmodule Ecto.Changeset.EmbeddedViaCastTest do
 
     changeset = cast(schema, %{"invalid_posts" => []}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"is invalid", [type: {:embed, Author.__schema__(:embed, :invalid_posts)}, validation: :cast]}]
+    assert changeset.errors == [invalid_posts: {"is invalid", [type: Author.__schema__(:type, :invalid_posts), validation: :cast]}]
     refute changeset.valid?
 
     changeset = cast(schema, %{"invalid_posts" => [%{"id" => 2}]}, :invalid_posts)
     assert changeset.changes == %{}
-    assert changeset.errors == [invalid_posts: {"is invalid", [type: {:embed, Author.__schema__(:embed, :invalid_posts)}, validation: :cast]}]
+    assert changeset.errors == [invalid_posts: {"is invalid", [type: Author.__schema__(:type, :invalid_posts), validation: :cast]}]
     refute changeset.valid?
-  end
-
-  test "cast inline embeds_many with valid params" do
-    changeset = cast(%Author{}, %{"inline_posts_with_changeset" => [%{"title" => "hello"}]}, :inline_posts_with_changeset)
-    [post] = changeset.changes.inline_posts_with_changeset
-    assert post.changes == %{title: "hello"}
-    assert post.errors == []
-    assert post.action  == :insert
-    assert post.valid?
-    assert changeset.valid?
   end
 
   ## Others
@@ -913,8 +864,8 @@ defmodule Ecto.Changeset.EmbeddedViaCastTest do
     assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"can't be blank", [validation: :required]}]}
 
     changeset = cast(%Author{posts: []}, %{"posts" => nil}, :posts) |> Changeset.validate_required([:posts])
-    assert changeset.errors == [posts: {"is invalid", [type: {:embed, Author.__schema__(:embed, :posts)}, validation: :cast]}]
-    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"is invalid", [type: {:embed, Author.__schema__(:embed, :posts)}, validation: :cast]}]}
+    assert changeset.errors == [posts: {"is invalid", [type: Author.__schema__(:type, :posts), validation: :cast]}]
+    assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"is invalid", [type: Author.__schema__(:type, :posts), validation: :cast]}]}
 
     changeset = cast(%Author{posts: []}, %{"posts" => [%{title: nil}]}, :posts) |> Changeset.validate_required([:posts])
 

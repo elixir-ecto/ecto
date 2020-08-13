@@ -89,7 +89,7 @@ defmodule Ecto.Changeset.Relation do
   """
   def cast(%{cardinality: :one} = relation, _owner, nil, current, _on_cast) do
     case current && on_replace(relation, current) do
-      :error -> {:error, {"is invalid", [type: expected_type(relation)]}}
+      :error -> {:error, [message: "is invalid", type: expected_type(relation)]}
       _ -> {:ok, nil, true}
     end
   end
@@ -110,7 +110,7 @@ defmodule Ecto.Changeset.Relation do
     param_pk = param_pk(mod, pks)
 
     with :error <- cast_or_change(relation, params, current, data_pk, param_pk, fun) do
-      {:error, {"is invalid", [type: expected_type(relation)]}}
+      {:error, [message: "is invalid", type: expected_type(relation)]}
     end
   end
 
@@ -520,6 +520,32 @@ defmodule Ecto.Changeset.Relation do
     case errors do
       [] -> %{changeset | changes: changes}
       _  -> %{changeset | errors: errors ++ changeset.errors, valid?: false, changes: changes}
+    end
+  end
+
+  def on_cast_default(type, module) do
+    fn struct, params ->
+      try do
+        module.changeset(struct, params)
+      rescue
+        e in UndefinedFunctionError ->
+          case __STACKTRACE__ do
+            [{^module, :changeset, args_or_arity, _}] when args_or_arity == 2
+                                                      when length(args_or_arity) == 2 ->
+              raise ArgumentError, """
+              the module #{inspect module} does not define a changeset/2 function,
+              which is used by cast_#{type}/3. You need to either:
+
+                1. implement the #{type}.changeset/2 function
+                2. pass the :with option to cast_#{type}/3 with an anonymous
+                   function that expects 2 args or an MFA tuple
+
+              When using an inline embed, the :with option must be given
+              """
+            stacktrace ->
+              reraise e, stacktrace
+          end
+      end
     end
   end
 end

@@ -1880,7 +1880,7 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_embeds_one_options [:strategy, :on_replace, :source, :on_cast]
+  @valid_embeds_one_options [:strategy, :on_replace, :source]
 
   @doc false
   def __embeds_one__(mod, name, schema, opts) do
@@ -1888,7 +1888,7 @@ defmodule Ecto.Schema do
     embed(mod, :one, name, schema, opts)
   end
 
-  @valid_embeds_many_options [:strategy, :on_replace, :source, :on_cast]
+  @valid_embeds_many_options [:strategy, :on_replace, :source]
 
   @doc false
   def __embeds_many__(mod, name, schema, opts) do

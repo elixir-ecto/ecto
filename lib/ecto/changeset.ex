@@ -536,6 +536,8 @@ defmodule Ecto.Changeset do
     case types do
       %{^key => {:assoc, _}} ->
         raise "casting assocs with cast/4 for #{inspect key} field is not supported, use cast_assoc/3 instead"
+      %{^key => {:embed, embedded}} ->
+        {:parameterized, Ecto.Embedded, embedded}
       %{^key => type} ->
         type
       _ ->
@@ -556,7 +558,7 @@ defmodule Ecto.Changeset do
     case params do
       %{^param_key => value} ->
         value = if value in empty_values, do: Map.get(defaults, key), else: value
-        case Ecto.Type.cast(type, value, current) do
+        case Ecto.Type.cast_change(type, value, current) do
           {:ok, value} ->
             if Ecto.Type.equal?(type, current, value) do
               :missing
@@ -800,7 +802,7 @@ defmodule Ecto.Changeset do
         {changeset, false}
       end
 
-    on_cast  = Keyword.get_lazy(opts, :with, fn -> on_cast_default(type, related) end)
+    on_cast  = Keyword.get_lazy(opts, :with, fn -> Relation.on_cast_default(type, related) end)
     original = Map.get(data, key)
 
     changeset =
@@ -814,7 +816,8 @@ defmodule Ecto.Changeset do
               changeset = %{force_update(changeset, opts) | changes: changes, valid?: valid?}
               missing_relation(changeset, key, current, required?, relation, opts)
 
-            {:error, {message, meta}} ->
+            {:error, message_and_meta} ->
+              {message, meta} = Keyword.pop(message_and_meta, :message)
               meta = [validation: type] ++ meta
               error = {key, {message(opts, :invalid_message, message), meta}}
               %{changeset | errors: [error | changeset.errors], valid?: false}
@@ -830,32 +833,6 @@ defmodule Ecto.Changeset do
 
     update_in changeset.types[key], fn {type, relation} ->
       {type, %{relation | on_cast: on_cast}}
-    end
-  end
-
-  def on_cast_default(type, module) do
-    fn struct, params ->
-      try do
-        module.changeset(struct, params)
-      rescue
-        e in UndefinedFunctionError ->
-          case __STACKTRACE__ do
-            [{^module, :changeset, args_or_arity, _}] when args_or_arity == 2
-                                                      when length(args_or_arity) == 2 ->
-              raise ArgumentError, """
-              the module #{inspect module} does not define a changeset/2 function,
-              which is used by cast_#{type}/3. You need to either:
-
-                1. implement the #{type}.changeset/2 function
-                2. pass the :with option to cast_#{type}/3 with an anonymous
-                   function that expects 2 args or an MFA tuple
-
-              When using an inline embed, the :with option must be given
-              """
-            stacktrace ->
-              reraise e, stacktrace
-          end
-      end
     end
   end
 

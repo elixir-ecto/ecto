@@ -644,48 +644,49 @@ defmodule Ecto.Type do
       :error
 
   """
-  @spec cast(t, term) :: {:ok, term} | {:ok, term, boolean} | {:error, keyword()} | :error
-  def cast(type, value, current \\ nil)
-  def cast({:parameterized, type, params}, value, current), do: type.cast_with_current(value, current, params)
-  def cast({:embed, embedded}, value, current), do: Ecto.Embedded.cast_with_current(value, current, embedded)
-  def cast({:in, _type}, nil, _current), do: :error
-  def cast(_type, nil, _current), do: {:ok, nil}
+  @spec cast(t, term) :: {:ok, term} | {:error, keyword()} | :error
+  def cast({:parameterized, type, params}, value), do: type.cast(value, params)
+  def cast({:in, _type}, nil), do: :error
+  def cast(_type, nil), do: {:ok, nil}
 
-  def cast({:maybe, type}, value, _current) do
+  def cast({:maybe, type}, value) do
     case cast(type, value) do
       {:ok, _} = ok -> ok
       _ -> {:ok, value}
     end
   end
 
-  def cast(type, value, current) do
-    cast_fun(type, current).(value)
+  def cast(type, value) do
+    cast_fun(type).(value)
   end
 
-  defp cast_fun(:integer, _current), do: &cast_integer/1
-  defp cast_fun(:float, _current), do: &cast_float/1
-  defp cast_fun(:boolean, _current), do: &cast_boolean/1
-  defp cast_fun(:map, _current), do: &cast_map/1
-  defp cast_fun(:string, _current), do: &cast_binary/1
-  defp cast_fun(:binary, _current), do: &cast_binary/1
-  defp cast_fun(:id, _current), do: &cast_integer/1
-  defp cast_fun(:binary_id, _current), do: &cast_binary/1
-  defp cast_fun(:any, _current), do: &{:ok, &1}
-  defp cast_fun(:decimal, _current), do: &cast_decimal/1
-  defp cast_fun(:date, _current), do: &cast_date/1
-  defp cast_fun(:time, _current), do: &maybe_truncate_usec(cast_time(&1))
-  defp cast_fun(:time_usec, _current), do: &maybe_pad_usec(cast_time(&1))
-  defp cast_fun(:naive_datetime, _current), do: &maybe_truncate_usec(cast_naive_datetime(&1))
-  defp cast_fun(:naive_datetime_usec, _current), do: &maybe_pad_usec(cast_naive_datetime(&1))
-  defp cast_fun(:utc_datetime, _current), do: &maybe_truncate_usec(cast_utc_datetime(&1))
-  defp cast_fun(:utc_datetime_usec, _current), do: &maybe_pad_usec(cast_utc_datetime(&1))
-  defp cast_fun({:param, :any_datetime}, _current), do: &cast_any_datetime(&1)
-  defp cast_fun({:in, type}, current), do: &array(&1, cast_fun(type, current), [])
-  defp cast_fun({:array, type}, current), do: &array(&1, cast_fun(type, current), [])
-  defp cast_fun({:map, type}, current), do: &map(&1, cast_fun(type, current), %{})
-  defp cast_fun({:embed, embedded}, current), do: cast_fun({:parameterized, Ecto.Embedded, embedded}, current)
-  defp cast_fun({:parameterized, mod, params}, current), do: &mod.cast_with_current(&1, current, params)
-  defp cast_fun(mod, _current) when is_atom(mod) do
+  @spec cast_change(t, term, term) :: {:ok, term} | {:error, keyword()} | :error
+  def cast_change({:parameterized, type, params}, value, current), do: type.cast_change(value, current, params)
+  def cast_change(type, value, _), do: cast(type, value)
+
+  defp cast_fun(:integer), do: &cast_integer/1
+  defp cast_fun(:float), do: &cast_float/1
+  defp cast_fun(:boolean), do: &cast_boolean/1
+  defp cast_fun(:map), do: &cast_map/1
+  defp cast_fun(:string), do: &cast_binary/1
+  defp cast_fun(:binary), do: &cast_binary/1
+  defp cast_fun(:id), do: &cast_integer/1
+  defp cast_fun(:binary_id), do: &cast_binary/1
+  defp cast_fun(:any), do: &{:ok, &1}
+  defp cast_fun(:decimal), do: &cast_decimal/1
+  defp cast_fun(:date), do: &cast_date/1
+  defp cast_fun(:time), do: &maybe_truncate_usec(cast_time(&1))
+  defp cast_fun(:time_usec), do: &maybe_pad_usec(cast_time(&1))
+  defp cast_fun(:naive_datetime), do: &maybe_truncate_usec(cast_naive_datetime(&1))
+  defp cast_fun(:naive_datetime_usec), do: &maybe_pad_usec(cast_naive_datetime(&1))
+  defp cast_fun(:utc_datetime), do: &maybe_truncate_usec(cast_utc_datetime(&1))
+  defp cast_fun(:utc_datetime_usec), do: &maybe_pad_usec(cast_utc_datetime(&1))
+  defp cast_fun({:param, :any_datetime}), do: &cast_any_datetime(&1)
+  defp cast_fun({:in, type}), do: &array(&1, cast_fun(type), [])
+  defp cast_fun({:array, type}), do: &array(&1, cast_fun(type), [])
+  defp cast_fun({:map, type}), do: &map(&1, cast_fun(type), %{})
+  defp cast_fun({:parameterized, mod, params}), do: &mod.cast(&1, params)
+  defp cast_fun(mod) when is_atom(mod) do
     fn
       nil -> {:ok, nil}
       value -> mod.cast(value)
@@ -1019,10 +1020,6 @@ defmodule Ecto.Type do
 
   defp equal_fun({:parameterized, mod, params}) do
     &mod.equal?(&1, &2, params)
-  end
-
-  defp equal_fun({:embed, embedded}) do
-    equal_fun({:parameterized, Ecto.Embedded, embedded})
   end
 
   defp equal_fun(mod) when is_atom(mod), do: &mod.equal?/2
