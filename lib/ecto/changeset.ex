@@ -1220,13 +1220,13 @@ defmodule Ecto.Changeset do
   defp put_change(data, changes, errors, valid?, key, new_value, {:parameterized, type, params}) do
     old_value = Map.get(data, key)
 
-    if type.equal?(old_value, new_value, params) do
-      {Map.delete(changes, key), errors, valid?}
-    else
+    if type.equal?(old_value, new_value, params) in [:skip, false] do
       case type.change(old_value, new_value, params) do
         {:ok, change} -> {Map.put(changes, key, change), errors, valid?}
         {:error, error} -> {changes, [{key, error} | errors], false}
       end
+    else
+      {Map.delete(changes, key), errors, valid?}
     end
   end
 

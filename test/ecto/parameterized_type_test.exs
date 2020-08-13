@@ -1,6 +1,8 @@
 defmodule Ecto.ParameterizedTypeTest do
   use ExUnit.Case, async: true
 
+  alias Ecto.Changeset
+
   defmodule MyParameterizedType do
     use Ecto.ParameterizedType
 
@@ -10,8 +12,8 @@ defmodule Ecto.ParameterizedTypeTest do
     def load(_, _, _), do: {:ok, :load}
     def dump( _, _, _),  do: {:ok, :dump}
     def cast( _, _),  do: {:ok, :cast}
-    def equal?(true, _, _), do: true
-    def equal?(_, _, _), do: false
+    def equal?(:skip, _, _), do: :skip
+    def equal?(_, _, _), do: true
     def embed_as(_, %{embed: embed}), do: embed
     def change(_old, _new, _params), do: {:ok, :change}
   end
@@ -74,7 +76,10 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.cast(@p_self_type, :foo) == {:ok, :cast}
     assert Ecto.Type.cast(@p_self_type, nil) == {:ok, :cast}
 
-    assert Ecto.Type.change(@p_self_type, :old, :new) == {:ok, :change}
+    skipped = Changeset.change(%Schema{my_type: :skip}, my_type: :new)
+    assert skipped.changes == %{my_type: :change}
+    always_equal = Changeset.change(%Schema{my_type: :old}, my_type: :new)
+    assert map_size(always_equal.changes) == 0
   end
 
   test "parameterized type error" do

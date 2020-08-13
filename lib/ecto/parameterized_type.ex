@@ -138,7 +138,7 @@ defmodule Ecto.ParameterizedType do
   @doc """
   Checks if two terms are semantically equal.
   """
-  @callback equal?(value1 :: any(), value2 :: any(), params :: params()) :: boolean()
+  @callback equal?(value1 :: any(), value2 :: any(), params :: params()) :: boolean() | :ignore
 
   @doc """
   Dictates how the type should be treated inside embeds.
