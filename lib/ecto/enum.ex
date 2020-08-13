@@ -35,6 +35,8 @@ defmodule Ecto.Enum do
     %{on_load: on_load, on_dump: on_dump}
   end
 
+  def cast_with_current(data, _current, params), do: cast(data, params)
+
   def cast(data, params) do
     case params do
       %{on_load: %{^data => as_atom}} -> {:ok, as_atom}

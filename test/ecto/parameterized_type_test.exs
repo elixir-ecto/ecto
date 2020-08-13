@@ -8,8 +8,9 @@ defmodule Ecto.ParameterizedTypeTest do
     def init([some_opt: :some_opt_value, field: :my_type, schema: _]), do: :init
     def type(_), do: :custom
     def load(_, _, _), do: {:ok, :load}
-    def dump( _, _, _),  do: {:ok, :dump}
-    def cast( _, _),  do: {:ok, :cast}
+    def dump(_, _, _),  do: {:ok, :dump}
+    def cast(_, _),  do: {:ok, :cast}
+    def cast_with_current(_, _, _), do: {:ok, :cast_with_current}
     def equal?(true, _, _), do: true
     def equal?(_, _, _), do: false
     def embed_as(_, %{embed: embed}), do: embed
@@ -30,8 +31,9 @@ defmodule Ecto.ParameterizedTypeTest do
     def init(_), do: %{}
     def type(_), do: :custom
     def load(_, _, _), do: :error
-    def dump( _, _, _),  do: :error
-    def cast( _, _),  do: :error
+    def dump(_, _, _),  do: :error
+    def cast(_, _),  do: :error
+    def cast_with_current(_, _, _),  do: :error
     def equal?(true, _, _), do: true
     def equal?(_, _, _), do: false
     def embed_as(_, _), do: :self
@@ -53,8 +55,8 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.embed_as(@p_self_type, :foo) == :self
     assert Ecto.Type.embed_as(@p_dump_type, :foo) == :dump
 
-    assert Ecto.Type.embedded_load(@p_self_type, :foo, :json) == {:ok, :cast}
-    assert Ecto.Type.embedded_load(@p_self_type, nil,  :json) == {:ok, :cast}
+    assert Ecto.Type.embedded_load(@p_self_type, :foo, :json) == {:ok, :cast_with_current}
+    assert Ecto.Type.embedded_load(@p_self_type, nil,  :json) == {:ok, :cast_with_current}
     assert Ecto.Type.embedded_load(@p_dump_type, :foo, :json) == {:ok, :load}
     assert Ecto.Type.embedded_load(@p_dump_type, nil,  :json) == {:ok, :load}
 
@@ -69,8 +71,8 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.dump(@p_self_type, :foo) == {:ok, :dump}
     assert Ecto.Type.dump(@p_self_type, nil) == {:ok, :dump}
 
-    assert Ecto.Type.cast(@p_self_type, :foo) == {:ok, :cast}
-    assert Ecto.Type.cast(@p_self_type, nil) == {:ok, :cast}
+    assert Ecto.Type.cast(@p_self_type, :foo) == {:ok, :cast_with_current}
+    assert Ecto.Type.cast(@p_self_type, nil) == {:ok, :cast_with_current}
   end
 
   test "on error" do
@@ -99,8 +101,8 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.embed_as({:array, @p_dump_type}, :foo) == :dump
     assert Ecto.Type.embed_as({:array, @p_error_type}, :foo) == :self
 
-    assert Ecto.Type.embedded_load({:array, @p_self_type}, [:foo], :json) == {:ok, [:cast]}
-    assert Ecto.Type.embedded_load({:array, @p_self_type}, [nil], :json) == {:ok, [:cast]}
+    assert Ecto.Type.embedded_load({:array, @p_self_type}, [:foo], :json) == {:ok, [:cast_with_current]}
+    assert Ecto.Type.embedded_load({:array, @p_self_type}, [nil], :json) == {:ok, [:cast_with_current]}
     assert Ecto.Type.embedded_load({:array, @p_self_type}, nil, :json) == {:ok, nil}
     assert Ecto.Type.embedded_load({:array, @p_dump_type}, [:foo], :json) == {:ok, [:load]}
     assert Ecto.Type.embedded_load({:array, @p_dump_type}, [nil], :json) == {:ok, [:load]}
@@ -121,8 +123,8 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.dump({:array, @p_self_type}, [nil]) == {:ok, [:dump]}
     assert Ecto.Type.dump({:array, @p_self_type}, nil) == {:ok, nil}
 
-    assert Ecto.Type.cast({:array, @p_self_type}, [:foo]) == {:ok, [:cast]}
-    assert Ecto.Type.cast({:array, @p_self_type}, [nil]) == {:ok, [:cast]}
+    assert Ecto.Type.cast({:array, @p_self_type}, [:foo]) == {:ok, [:cast_with_current]}
+    assert Ecto.Type.cast({:array, @p_self_type}, [nil]) == {:ok, [:cast_with_current]}
     assert Ecto.Type.cast({:array, @p_self_type}, nil) == {:ok, nil}
   end
 
@@ -130,8 +132,8 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.embed_as({:map, @p_dump_type}, :foo) == :dump
     assert Ecto.Type.embed_as({:map, @p_error_type}, :foo) == :self
 
-    assert Ecto.Type.embedded_load({:map, @p_self_type}, %{"x" => "foo"}, :json) == {:ok, %{"x" => :cast}}
-    assert Ecto.Type.embedded_load({:map, @p_self_type}, %{"x" => nil}, :json) == {:ok, %{"x" => :cast}}
+    assert Ecto.Type.embedded_load({:map, @p_self_type}, %{"x" => "foo"}, :json) == {:ok, %{"x" => :cast_with_current}}
+    assert Ecto.Type.embedded_load({:map, @p_self_type}, %{"x" => nil}, :json) == {:ok, %{"x" => :cast_with_current}}
     assert Ecto.Type.embedded_load({:map, @p_self_type}, nil, :json) == {:ok, nil}
     assert Ecto.Type.embedded_load({:map, @p_dump_type}, %{"x" => "foo"}, :json) == {:ok, %{"x" => :load}}
     assert Ecto.Type.embedded_load({:map, @p_dump_type}, %{"x" => nil}, :json) == {:ok, %{"x" => :load}}
@@ -152,13 +154,13 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.dump({:map, @p_self_type}, %{"x" => nil}) == {:ok, %{"x" => :dump}}
     assert Ecto.Type.dump({:map, @p_self_type}, nil) == {:ok, nil}
 
-    assert Ecto.Type.cast({:map, @p_self_type}, %{"x" => "foo"}) == {:ok, %{"x" => :cast}}
-    assert Ecto.Type.cast({:map, @p_self_type}, %{"x" => nil}) == {:ok, %{"x" => :cast}}
+    assert Ecto.Type.cast({:map, @p_self_type}, %{"x" => "foo"}) == {:ok, %{"x" => :cast_with_current}}
+    assert Ecto.Type.cast({:map, @p_self_type}, %{"x" => nil}) == {:ok, %{"x" => :cast_with_current}}
     assert Ecto.Type.cast({:map, @p_self_type}, nil) == {:ok, nil}
   end
 
   test "with maybe" do
-    assert Ecto.Type.embedded_load({:maybe, @p_self_type}, :foo, :json) == {:ok, :cast}
+    assert Ecto.Type.embedded_load({:maybe, @p_self_type}, :foo, :json) == {:ok, :cast_with_current}
     assert Ecto.Type.embedded_load({:maybe, @p_dump_type}, :foo, :json) == {:ok, :load}
     assert Ecto.Type.embedded_load({:maybe, @p_error_type}, :foo,  :json) == {:ok, :foo}
 
@@ -172,7 +174,7 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.dump({:maybe, @p_self_type}, :foo) == {:ok, :dump}
     assert Ecto.Type.dump({:maybe, @p_error_type}, :foo) == {:ok, :foo}
 
-    assert Ecto.Type.cast({:maybe, @p_self_type}, :foo) == {:ok, :cast}
+    assert Ecto.Type.cast({:maybe, @p_self_type}, :foo) == {:ok, :cast_with_current}
     assert Ecto.Type.cast({:maybe, @p_error_type}, :foo) == {:ok, :foo}
   end
 end

@@ -108,6 +108,14 @@ defmodule Ecto.ParameterizedType do
               {:ok, term} | {:error, keyword()} | :error
 
   @doc """
+  Casts the given input to the ParameterizedType with the given current value and parameters.
+
+  For more information on casting, see `c:Ecto.Type.cast/1`
+  """
+  @callback cast_with_current(data :: term(), current :: term(), params :: params()) ::
+              {:ok, term} | {:error, keyword()} | :error
+
+  @doc """
   Loads the given term into a ParameterizedType.
 
   For more information on loading, see `c:Ecto.Type.load/1`

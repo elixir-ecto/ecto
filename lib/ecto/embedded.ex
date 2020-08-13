@@ -108,6 +108,51 @@ defmodule Ecto.Embedded do
   end
 
   @impl Ecto.ParameterizedType
+  def cast_with_current(%{action: :ignore}, _, %{cardinality: :one}), do: :ignore
+  def cast_with_current(value, current, %{on_cast: on_cast, related: related, cardinality: cardinality} = embedded) do
+    value = if cardinality == :many and is_list(value) do
+      Enum.reject(value, &match?(%{action: :ignore}, &1))
+    else
+      value
+    end
+    on_cast = case on_cast do
+      nil -> on_cast_default(related)
+      _ -> on_cast
+    end
+    case Relation.cast(embedded, nil, value, current, on_cast) do
+      {:ok, change, valid?} -> {:ok, change, valid?}
+      {:error, {message, _meta}} -> {:error, message: message}
+      :ignore -> :ignore
+    end
+  end
+
+  def on_cast_default(module) do
+    fn struct, params ->
+      try do
+        module.changeset(struct, params)
+      rescue
+        e in UndefinedFunctionError ->
+          case __STACKTRACE__ do
+            [{^module, :changeset, args_or_arity, _}] when args_or_arity == 2
+                                                      when length(args_or_arity) == 2 ->
+              raise ArgumentError, """
+              the module #{inspect module} does not define a changeset/2 function,
+              which is used by cast. You need to either:
+
+                1. implement the #{module}.changeset/2 function
+                2. pass the :cast_with option to the field definition with an anonymous
+                   function that expects 2 args or an MFA tuple
+
+              When using an inline embed, the :cast_with option must be given
+              """
+            stacktrace ->
+              reraise e, stacktrace
+          end
+      end
+    end
+  end
+
+  @impl Ecto.ParameterizedType
   def embed_as(_, _), do: :dump
 
   ## End of parameterized API

@@ -534,8 +534,8 @@ defmodule Ecto.Changeset do
 
   defp type!(types, key) do
     case types do
-      %{^key => {tag, _}} when tag in @relations ->
-        raise "casting #{tag}s with cast/4 for #{inspect key} field is not supported, use cast_#{tag}/3 instead"
+      %{^key => {:assoc, _}} ->
+        raise "casting assocs with cast/4 for #{inspect key} field is not supported, use cast_assoc/3 instead"
       %{^key => type} ->
         type
       _ ->
@@ -556,13 +556,23 @@ defmodule Ecto.Changeset do
     case params do
       %{^param_key => value} ->
         value = if value in empty_values, do: Map.get(defaults, key), else: value
-        case Ecto.Type.cast(type, value) do
+        case Ecto.Type.cast(type, value, current) do
           {:ok, value} ->
             if Ecto.Type.equal?(type, current, value) do
               :missing
             else
               {:ok, value, valid?}
             end
+
+          {:ok, value, valid2?} ->
+            if Ecto.Type.equal?(type, current, value) do
+              :missing
+            else
+              {:ok, value, valid? and valid2?}
+            end
+
+          :ignore ->
+            :missing
 
           :error ->
             {:invalid, []}
@@ -601,12 +611,12 @@ defmodule Ecto.Changeset do
       |> Enum.reduce(nil, fn
         {key, _value}, nil when is_binary(key) ->
           nil
-  
+
         {key, _value}, _ when is_binary(key) ->
           raise Ecto.CastError, type: :map, value: params,
                                 message: "expected params to be a map with atoms or string keys, " <>
                                          "got a map with mixed keys: #{inspect params}"
-  
+
         {key, value}, nil when is_atom(key) ->
           [{Atom.to_string(key), value}]
 
@@ -823,7 +833,7 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp on_cast_default(type, module) do
+  def on_cast_default(type, module) do
     fn struct, params ->
       try do
         module.changeset(struct, params)
@@ -1753,7 +1763,6 @@ defmodule Ecto.Changeset do
     %{required: required, errors: errors, changes: changes} = changeset
     trim = Keyword.get(opts, :trim, true)
     fields = List.wrap(fields)
-
     fields_with_errors =
       for field <- fields,
           missing?(changeset, field, trim),
@@ -1902,6 +1911,7 @@ defmodule Ecto.Changeset do
       value when is_binary(value) and trim -> String.trim_leading(value) == ""
       value when is_binary(value) -> value == ""
       nil -> true
+      [] -> true
       _ -> false
     end
   end
