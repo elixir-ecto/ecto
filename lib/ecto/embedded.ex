@@ -103,6 +103,28 @@ defmodule Ecto.Embedded do
   end
 
   @impl Ecto.ParameterizedType
+  def change(nil, new_value, %{cardinality: :one} = relation) do
+    change(nil, new_value, relation, true)
+  end
+
+  def change([], new_value, %{cardinality: :many} = relation) do
+    change([], new_value, relation, true)
+  end
+
+  def change(old_value, new_value, relation) do
+    change(old_value, new_value, relation, false)
+  end
+
+  def change(old_value, new_value, relation, empty?) do
+    case Relation.change(relation, new_value, old_value) do
+      {:ok, _change, _valid?} = result when not empty? -> result
+      {:ok, change, _valid?} = result when change != old_value -> result
+      {:error, {message, keyword}} -> {:error, Keyword.put(keyword, :message, message)}
+      _ -> :skip
+    end
+  end
+
+  @impl Ecto.ParameterizedType
   def cast(nil, %{cardinality: :one}), do: {:ok, nil}
   def cast(%{__struct__: schema} = struct, %{cardinality: :one, related: schema}) do
     {:ok, struct}

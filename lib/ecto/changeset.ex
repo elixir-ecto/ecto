@@ -1193,8 +1193,11 @@ defmodule Ecto.Changeset do
     %{changeset | changes: changes, errors: errors, valid?: valid?}
   end
 
-  defp put_change(data, changes, errors, valid?, key, value, {tag, relation})
-       when tag in @relations do
+  defp put_change(data, changes, errors, valid?, key, value, {:embed, relation}) do
+    put_change(data, changes, errors, valid?, key, value, {:parameterized, Ecto.Embedded, relation})
+  end
+
+  defp put_change(data, changes, errors, valid?, key, value, {:assoc, relation}) do
     original = Map.get(data, key)
     current = Relation.load!(data, original)
 
@@ -1221,6 +1224,12 @@ defmodule Ecto.Changeset do
     old_value = Map.get(data, key)
 
     case Ecto.Type.change(type, old_value, new_value) do
+      {:ok, change, false} ->
+        {Map.put(changes, key, change), errors, false}
+
+      {:ok, change, true} ->
+        {Map.put(changes, key, change), errors, true}
+
       {:ok, change} ->
         {Map.put(changes, key, change), errors, valid?}
 
