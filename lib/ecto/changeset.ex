@@ -1221,9 +1221,15 @@ defmodule Ecto.Changeset do
     old_value = Map.get(data, key)
 
     case type.change(old_value, new_value, params) do
-      {:ok, change} -> {Map.put(changes, key, change), errors, valid?}
-      {:error, error} -> {changes, [{key, error} | errors], false}
-      :skip -> {Map.delete(changes, key), errors, valid?}
+      {:ok, change} ->
+        {Map.put(changes, key, change), errors, valid?}
+
+      {:error, error} ->
+        {message, opts} = Keyword.pop(error, :message, "cannot be changed")
+        {changes, [{key, {message, opts}} | errors], false}
+
+      :skip ->
+        {Map.delete(changes, key), errors, valid?}
     end
   end
 

@@ -41,7 +41,7 @@ defmodule Ecto.Enum do
   def change(_old_value, new_value, params) do
     case params do
       %{on_dump: %{^new_value => _}} -> {:ok, new_value}
-      _ -> {:error, {"unknown enum value", value: new_value}}
+      _ -> {:error, [message: "unknown enum value", value: new_value]}
    end
   end
 
