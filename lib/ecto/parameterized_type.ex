@@ -100,7 +100,7 @@ defmodule Ecto.ParameterizedType do
   @callback init(opts :: opts()) :: params()
 
   @callback change(old_value :: any(), new_value :: any(), params :: params()) ::
-              {:ok, new_value :: any()} | {:error, Ecto.Changeset.error()}
+              {:ok, new_value :: any()} | {:error, Ecto.Changeset.error()} | :skip
 
   @doc """
   Casts the given input to the ParameterizedType with the given parameters.
@@ -138,7 +138,7 @@ defmodule Ecto.ParameterizedType do
   @doc """
   Checks if two terms are semantically equal.
   """
-  @callback equal?(value1 :: any(), value2 :: any(), params :: params()) :: boolean() | :ignore
+  @callback equal?(value1 :: any(), value2 :: any(), params :: params()) :: boolean()
 
   @doc """
   Dictates how the type should be treated inside embeds.

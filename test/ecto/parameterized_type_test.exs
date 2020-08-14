@@ -12,9 +12,9 @@ defmodule Ecto.ParameterizedTypeTest do
     def load(_, _, _), do: {:ok, :load}
     def dump( _, _, _),  do: {:ok, :dump}
     def cast( _, _),  do: {:ok, :cast}
-    def equal?(:skip, _, _), do: :skip
-    def equal?(_, _, _), do: true
+    def equal?(_, _, _), do: false
     def embed_as(_, %{embed: embed}), do: embed
+    def change(:skip, _new, _params), do: :skip
     def change(_old, _new, _params), do: {:ok, :change}
   end
 
@@ -35,7 +35,6 @@ defmodule Ecto.ParameterizedTypeTest do
     def load(_, _, _), do: :error
     def dump( _, _, _),  do: :error
     def cast( _, _),  do: :error
-    def equal?(true, _, _), do: true
     def equal?(_, _, _), do: false
     def embed_as(_, _), do: :self
     def change(_old, new, _params), do: {:error, {"error message", value: new}}
@@ -77,9 +76,9 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.cast(@p_self_type, nil) == {:ok, :cast}
 
     skipped = Changeset.change(%Schema{my_type: :skip}, my_type: :new)
-    assert skipped.changes == %{my_type: :change}
+    assert skipped.changes == %{}
     always_equal = Changeset.change(%Schema{my_type: :old}, my_type: :new)
-    assert map_size(always_equal.changes) == 0
+    assert always_equal.changes == %{my_type: :change}
   end
 
   test "parameterized type error" do
