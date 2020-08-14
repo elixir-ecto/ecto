@@ -151,11 +151,12 @@ defmodule Ecto.ParameterizedType do
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Ecto.ParameterizedType
+      def change(_old_value, new_value, _params), do: {:ok, new_value}
       # TODO: Make both equal? and embed_as specific only to parameterized types
       def embed_as(_, _), do: :self
       # TODO: evaluate if we should keep this once we add cast/3 and change/3
       def equal?(term1, term2, _params), do: term1 == term2
-      defoverridable embed_as: 2, equal?: 3
+      defoverridable change: 3, embed_as: 2, equal?: 3
     end
   end
 end
