@@ -9,6 +9,7 @@ defmodule Ecto.SchemaTest do
     schema "my schema" do
       field :name,  :string, default: "eric", autogenerate: {String, :upcase, ["eric"]}
       field :email, :string, uniq: true, read_after_writes: true
+      field :password, :string, redacted: true
       field :temp,  :any, default: "temp", virtual: true
       field :count, :decimal, read_after_writes: true, source: :cnt
       field :array, {:array, :string}
@@ -22,8 +23,8 @@ defmodule Ecto.SchemaTest do
   test "schema metadata" do
     assert Schema.__schema__(:source)             == "my schema"
     assert Schema.__schema__(:prefix)             == nil
-    assert Schema.__schema__(:fields)             == [:id, :name, :email, :count, :array, :uuid, :query_excluded_field, :comment_id]
-    assert Schema.__schema__(:query_fields)       == [:id, :name, :email, :count, :array, :uuid, :comment_id]
+    assert Schema.__schema__(:fields)             == [:id, :name, :email, :password, :count, :array, :uuid, :query_excluded_field, :comment_id]
+    assert Schema.__schema__(:query_fields)       == [:id, :name, :email, :password, :count, :array, :uuid, :comment_id]
     assert Schema.__schema__(:read_after_writes)  == [:email, :count]
     assert Schema.__schema__(:primary_key)        == [:id]
     assert Schema.__schema__(:autogenerate_id)    == {:id, :id, :id}
@@ -49,7 +50,7 @@ defmodule Ecto.SchemaTest do
 
   test "changeset metadata" do
     assert Schema.__changeset__() |> Map.drop([:comment, :permalink]) ==
-           %{name: :string, email: :string, count: :decimal, array: {:array, :string},
+           %{name: :string, email: :string, password: :string, count: :decimal, array: {:array, :string},
              comment_id: :id, temp: :any, id: :id, uuid: Ecto.UUID, query_excluded_field: :string}
   end
 
@@ -104,6 +105,30 @@ defmodule Ecto.SchemaTest do
   test "defaults" do
     assert %Schema{}.name == "eric"
     assert %Schema{}.array == nil
+  end
+
+  test "redacted_fields" do
+    assert Schema.__schema__(:redacted_fields) == [:password]
+  end
+
+  if Version.match?(System.version(), ">= 1.8.0") do
+    test "derives inspect" do
+      refute inspect(%Schema{password: "hunter2"}) =~ "hunter2"
+    end
+
+    defmodule SchemaWithoutDeriveInspect do
+      use Ecto.Schema
+
+      @derive_inspect_for_redacted_fields false
+
+      schema "my_schema" do
+        field :password, :string, redacted: true
+      end
+    end
+
+    test "doesn't derive inspect" do
+      assert inspect(%SchemaWithoutDeriveInspect{password: "hunter2"}) =~ "hunter2"
+    end
   end
 
   defmodule CustomSchema do

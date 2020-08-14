@@ -99,8 +99,12 @@ defmodule Ecto.Schema do
   the `Profile` and `Account` structs that will be persisted to the
   database with the help of `Ecto.Repo`.
 
+  ## Redacting fields
+
   A field marked with `redacted: true` will display a value of `**redacted**`
-  when inspected in an `Ecto.Changeset`.
+  when inspected in changes inside a `Ecto.Changeset`, and (in Elixir 1.8+) be
+  excluded from inspect on the schema unless the schema module is tagged with
+  the option `@derive_inspect_for_redacted_fields false`.
 
   ## Schema attributes
 
@@ -463,6 +467,8 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autoupdate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_redacted_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :derive_inspect_for_redacted_fields, accumulate: false)
+      Module.put_attribute(__MODULE__, :derive_inspect_for_redacted_fields, true)
       Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
     end
   end
@@ -559,6 +565,10 @@ defmodule Ecto.Schema do
         assocs = @ecto_assocs |> Enum.reverse
         embeds = @ecto_embeds |> Enum.reverse
         loaded = Ecto.Schema.__loaded__(__MODULE__, @struct_fields)
+
+        if !List.keymember?(@derive, Inspect, 0) and @derive_inspect_for_redacted_fields and @ecto_redacted_fields != [] do
+          @derive {Inspect, except: @ecto_redacted_fields}
+        end
 
         defstruct @struct_fields
 
