@@ -255,6 +255,11 @@ defmodule Ecto.Changeset do
     * `filters`
     * `prepare`
 
+  ### Redacting fields in inspect
+
+  To hide a fields value from the inspect protocol of `Ecto.Changeset`, mark the field as `redacted: true`
+  in the schema, and it will display with the value `**redacted**`.
+
   """
 
   require Ecto.Query
@@ -601,12 +606,12 @@ defmodule Ecto.Changeset do
       |> Enum.reduce(nil, fn
         {key, _value}, nil when is_binary(key) ->
           nil
-  
+
         {key, _value}, _ when is_binary(key) ->
           raise Ecto.CastError, type: :map, value: params,
                                 message: "expected params to be a map with atoms or string keys, " <>
                                          "got a map with mixed keys: #{inspect params}"
-  
+
         {key, value}, nil when is_atom(key) ->
           [{Atom.to_string(key), value}]
 
@@ -2929,14 +2934,19 @@ end
 defimpl Inspect, for: Ecto.Changeset do
   import Inspect.Algebra
 
-  def inspect(changeset, opts) do
+  def inspect(%Ecto.Changeset{data: data} = changeset, opts) do
     list = for attr <- [:action, :changes, :errors, :data, :valid?] do
       {attr, Map.get(changeset, attr)}
     end
 
+    redacted_fields = case data do
+      %type{} -> type.__schema__(:redacted_fields)
+      _ -> []
+    end
+
     container_doc("#Ecto.Changeset<", list, ">", opts, fn
       {:action, action}, opts   -> concat("action: ", to_doc(action, opts))
-      {:changes, changes}, opts -> concat("changes: ", to_doc(changes, opts))
+      {:changes, changes}, opts -> concat("changes: ", changes |> filter(redacted_fields) |> to_doc(opts))
       {:data, data}, _opts      -> concat("data: ", to_struct(data, opts))
       {:errors, errors}, opts   -> concat("errors: ", to_doc(errors, opts))
       {:valid?, valid?}, opts   -> concat("valid?: ", to_doc(valid?, opts))
@@ -2945,4 +2955,14 @@ defimpl Inspect, for: Ecto.Changeset do
 
   defp to_struct(%{__struct__: struct}, _opts), do: "#" <> Kernel.inspect(struct) <> "<>"
   defp to_struct(other, opts), do: to_doc(other, opts)
+
+  defp filter(changes, redacted_fields) do
+    Enum.reduce(redacted_fields, changes, fn redacted_field, changes ->
+      if Map.has_key?(changes, redacted_field) do
+        Map.put(changes, redacted_field, "**redacted**")
+      else
+        changes
+      end
+    end)
+  end
 end

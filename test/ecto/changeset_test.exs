@@ -1746,12 +1746,42 @@ defmodule Ecto.ChangesetTest do
 
   ## inspect
 
-  test "inspects relevant data" do
-    assert inspect(%Ecto.Changeset{}) ==
-           "#Ecto.Changeset<action: nil, changes: %{}, errors: [], data: nil, valid?: false>"
+  defmodule RedactedSchema do
+    use Ecto.Schema
 
-    assert inspect(changeset(%{"title" => "title", "body" => "hi"})) ==
-           "#Ecto.Changeset<action: nil, changes: %{body: \"hi\", title: \"title\"}, " <>
-           "errors: [], data: #Ecto.ChangesetTest.Post<>, valid?: true>"
+    schema "redacted_schema" do
+      field :password, :string, redacted: true
+      field :username, :string
+      field :display_name, :string, redacted: false
+    end
+  end
+
+  describe "inspect" do
+    test "reveals relevant data" do
+      assert inspect(%Ecto.Changeset{}) ==
+            "#Ecto.Changeset<action: nil, changes: %{}, errors: [], data: nil, valid?: false>"
+
+      assert inspect(changeset(%{"title" => "title", "body" => "hi"})) ==
+            "#Ecto.Changeset<action: nil, changes: %{body: \"hi\", title: \"title\"}, " <>
+            "errors: [], data: #Ecto.ChangesetTest.Post<>, valid?: true>"
+    end
+
+    test "redacts fields marked redacted: true" do
+      changeset = Ecto.Changeset.cast(%RedactedSchema{}, %{password: "hunter2"}, [:password])
+      refute inspect(changeset) =~ "hunter2"
+      assert inspect(changeset) =~ "**redacted**"
+    end
+
+    test "doesn't redact fields without redacted (defaults to false)" do
+      changeset = Ecto.Changeset.cast(%RedactedSchema{}, %{username: "hunter2"}, [:username])
+      assert inspect(changeset) =~ "hunter2"
+      refute inspect(changeset) =~ "**redacted**"
+    end
+
+    test "doesn't redact fields marked redacted: false" do
+      changeset = Ecto.Changeset.cast(%RedactedSchema{}, %{display_name: "hunter2"}, [:display_name])
+      assert inspect(changeset) =~ "hunter2"
+      refute inspect(changeset) =~ "**redacted**"
+    end
   end
 end

@@ -31,6 +31,7 @@ defmodule Ecto.Schema do
         schema "users" do
           field :name, :string
           field :age, :integer, default: 0
+          field :password, :string, redacted: true
           has_many :posts, Post
         end
       end
@@ -97,6 +98,9 @@ defmodule Ecto.Schema do
   `Ecto.Changeset` module, and afterwards, you can copy its data to
   the `Profile` and `Account` structs that will be persisted to the
   database with the help of `Ecto.Repo`.
+
+  A field marked with `redacted: true` will display a value of `**redacted**`
+  when inspected in an `Ecto.Changeset`.
 
   ## Schema attributes
 
@@ -401,6 +405,8 @@ defmodule Ecto.Schema do
 
   * `__schema__(:autogenerate_id)` - Primary key that is auto generated on insert;
 
+  * `__schema__(:redacted_fields)` - Returns a list of redacted field names;
+
   Furthermore, both `__struct__` and `__changeset__` functions are
   defined so structs and changeset functionalities are available.
 
@@ -456,6 +462,7 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autoupdate, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_redacted_fields, accumulate: true)
       Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
     end
   end
@@ -570,6 +577,7 @@ defmodule Ecto.Schema do
         def __schema__(:autogenerate), do: unquote(Macro.escape(autogenerate))
         def __schema__(:autoupdate), do: unquote(Macro.escape(autoupdate))
         def __schema__(:loaded), do: unquote(Macro.escape(loaded))
+        def __schema__(:redacted_fields), do: unquote(@ecto_redacted_fields)
 
         def __schema__(:query) do
           %Ecto.Query{
@@ -1789,6 +1797,10 @@ defmodule Ecto.Schema do
 
       if raw = opts[:read_after_writes] do
         Module.put_attribute(mod, :ecto_raw, name)
+      end
+
+      if Keyword.get(opts, :redacted, false) do
+        Module.put_attribute(mod, :ecto_redacted_fields, name)
       end
 
       case gen = opts[:autogenerate] do
