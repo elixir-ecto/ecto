@@ -973,19 +973,21 @@ defmodule Ecto.Type do
   end
 
   @spec change(t, term, term) :: {:ok, term} | {:error, Ecto.Changeset.error()}
-  def change(type, term1, term2) do
-    if fun = change_fun(type) do
-      fun.(term1, term2)
-    else
-      {:ok, term2}
+  def change(type, old_value, new_value) do
+    change_fun(type).(old_value, new_value)
+  end
+
+  defp change_fun({:parameterized, mod, params}), do: &mod.change(&1, &2, params)
+
+  defp change_fun(type) do
+    fn old_value, new_value ->
+      if equal?(type, old_value, new_value) do
+        :skip
+      else
+        {:ok, new_value}
+      end
     end
   end
-
-  defp change_fun({:parameterized, mod, params}) do
-    &mod.change(&1, &2, params)
-  end
-
-  defp change_fun(_t), do: nil
 
   @doc """
   Checks if two terms are equal.
