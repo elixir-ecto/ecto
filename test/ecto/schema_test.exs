@@ -111,24 +111,22 @@ defmodule Ecto.SchemaTest do
     assert Schema.__schema__(:redacted_fields) == [:password]
   end
 
-  if Version.match?(System.version(), ">= 1.8.0") do
-    test "derives inspect" do
-      refute inspect(%Schema{password: "hunter2"}) =~ "hunter2"
+  test "derives inspect" do
+    refute inspect(%Schema{password: "hunter2"}) =~ "hunter2"
+  end
+
+  defmodule SchemaWithoutDeriveInspect do
+    use Ecto.Schema
+
+    @ecto_derive_inspect_for_redacted_fields false
+
+    schema "my_schema" do
+      field :password, :string, redacted: true
     end
+  end
 
-    defmodule SchemaWithoutDeriveInspect do
-      use Ecto.Schema
-
-      @derive_inspect_for_redacted_fields false
-
-      schema "my_schema" do
-        field :password, :string, redacted: true
-      end
-    end
-
-    test "doesn't derive inspect" do
-      assert inspect(%SchemaWithoutDeriveInspect{password: "hunter2"}) =~ "hunter2"
-    end
+  test "doesn't derive inspect" do
+    assert inspect(%SchemaWithoutDeriveInspect{password: "hunter2"}) =~ "hunter2"
   end
 
   defmodule CustomSchema do

@@ -2,10 +2,15 @@
 
 ## v3.5.0-dev
 
+v3.5 requires Elixir v1.8+.
+
 ### Enhancements
 
+  * [Ecto.Enum] Add `Ecto.Enum` as a custom parameterized type
   * [Ecto.Query] Do not restrict subqueries in `where` to map/struct types
   * [Ecto.Schema] Do not validate uniqueness if there is a prior error on the field
+  * [Ecto.Schema] Allow `redacted: true` in `field`
+  * [Ecto.Schema] Support parameterized types via `Ecto.ParameterizedType`
 
 ## v3.4.6 (2020-08-07)
 

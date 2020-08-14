@@ -102,9 +102,9 @@ defmodule Ecto.Schema do
   ## Redacting fields
 
   A field marked with `redacted: true` will display a value of `**redacted**`
-  when inspected in changes inside a `Ecto.Changeset`, and (in Elixir 1.8+) be
-  excluded from inspect on the schema unless the schema module is tagged with
-  the option `@derive_inspect_for_redacted_fields false`.
+  when inspected in changes inside a `Ecto.Changeset` and be excluded from
+  inspect on the schema unless the schema module is tagged with
+  the option `@ecto_derive_inspect_for_redacted_fields false`.
 
   ## Schema attributes
 
@@ -467,8 +467,7 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autoupdate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_redacted_fields, accumulate: true)
-      Module.register_attribute(__MODULE__, :derive_inspect_for_redacted_fields, accumulate: false)
-      Module.put_attribute(__MODULE__, :derive_inspect_for_redacted_fields, true)
+      Module.put_attribute(__MODULE__, :ecto_derive_inspect_for_redacted_fields, true)
       Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
     end
   end
@@ -564,9 +563,11 @@ defmodule Ecto.Schema do
         field_sources = @ecto_field_sources |> Enum.reverse
         assocs = @ecto_assocs |> Enum.reverse
         embeds = @ecto_embeds |> Enum.reverse
+        redacted_fields = @ecto_redacted_fields
         loaded = Ecto.Schema.__loaded__(__MODULE__, @struct_fields)
 
-        if !List.keymember?(@derive, Inspect, 0) and @derive_inspect_for_redacted_fields and @ecto_redacted_fields != [] do
+        if redacted_fields != [] and not List.keymember?(@derive, Inspect, 0) and
+             @ecto_derive_inspect_for_redacted_fields do
           @derive {Inspect, except: @ecto_redacted_fields}
         end
 
@@ -587,7 +588,7 @@ defmodule Ecto.Schema do
         def __schema__(:autogenerate), do: unquote(Macro.escape(autogenerate))
         def __schema__(:autoupdate), do: unquote(Macro.escape(autoupdate))
         def __schema__(:loaded), do: unquote(Macro.escape(loaded))
-        def __schema__(:redacted_fields), do: unquote(@ecto_redacted_fields)
+        def __schema__(:redacted_fields), do: unquote(redacted_fields)
 
         def __schema__(:query) do
           %Ecto.Query{
@@ -652,6 +653,10 @@ defmodule Ecto.Schema do
     * `:load_in_query` - When false, the field will not be loaded when
       selecting the whole struct in a query, such as `from p in Post, select: p`.
       Defaults to `true`.
+
+    * `:redacted` - When true, it will display a value of `**redacted**`
+      when inspected in changes inside a `Ecto.Changeset` and be excluded
+      from inspect on the schema. Defaults to `false`.
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do

@@ -123,11 +123,6 @@ defmodule Ecto.Repo.Preloader do
   defp maybe_pmap(preloaders, repo_name, opts) do
     if match?([_,_|_], preloaders) and not Ecto.Repo.Transaction.in_transaction?(repo_name) and
          Keyword.get(opts, :in_parallel, true) do
-      # We pass caller: self() so pools like the ownership
-      # pool knows where to fetch the connection from and
-      # set the proper timeouts.
-      # TODO: Remove this when we require Elixir v1.8+
-      opts = Keyword.put_new(opts, :caller, self())
       preloaders
       |> Task.async_stream(&(&1.(opts)), timeout: :infinity)
       |> Enum.map(fn {:ok, assoc} -> assoc end)

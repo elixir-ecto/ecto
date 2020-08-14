@@ -7,7 +7,7 @@ defmodule Ecto.MixProject do
     [
       app: :ecto,
       version: @version,
-      elixir: "~> 1.7",
+      elixir: "~> 1.8",
       deps: deps(),
       consolidate_protocols: Mix.env() != :test,
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -67,10 +67,14 @@ defmodule Ecto.MixProject do
         # Ecto.Repo,
         # Ecto.Schema,
         # Ecto.Schema.Metadata,
-        # Ecto.Type,
-        # Ecto.UUID,
         # Mix.Ecto,
 
+        "Types": [
+          Ecto.Enum,
+          Ecto.ParameterizedType,
+          Ecto.Type,
+          Ecto.UUID
+        ],
         "Query APIs": [
           Ecto.Query.API,
           Ecto.Query.WindowAPI,
