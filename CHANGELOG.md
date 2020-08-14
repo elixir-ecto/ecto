@@ -7,6 +7,10 @@
   * [Ecto.Query] Do not restrict subqueries in `where` to map/struct types
   * [Ecto.Schema] Do not validate uniqueness if there is a prior error on the field
 
+### Bug fixes
+
+  * [Ecto.Changeset] Do not return empty values for embeds/associations on get_field/fetch_field when the association has not yet been loaded
+
 ## v3.4.6 (2020-08-07)
 
 ### Enhancements

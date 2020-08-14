@@ -371,13 +371,4 @@ defmodule Ecto.Changeset.ManyToManyTest do
     assert changeset.errors == [invalid_posts: {"is invalid", [type: {:array, :map}]}]
     refute changeset.valid?
   end
-
-  test "apply_changes" do
-    changeset1 = Changeset.change(%Post{}, title: "hello")
-    changeset2 = %{changeset1 | action: :delete}
-
-    assoc = Author.__schema__(:association, :posts)
-    [schema] = Relation.apply_changes(assoc, [changeset1, changeset2])
-    assert schema == %Post{title: "hello"}
-  end
 end

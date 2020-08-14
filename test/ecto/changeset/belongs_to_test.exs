@@ -540,15 +540,4 @@ defmodule Ecto.Changeset.BelongsToTest do
     changeset = cast(%Author{profile: profile}, %{"profile" => nil}, :profile)
     assert changeset.changes.profile == nil
   end
-
-  test "apply_changes" do
-    embed = Author.__schema__(:association, :profile)
-
-    changeset = Changeset.change(%Profile{}, name: "michal")
-    assert Relation.apply_changes(embed, changeset) == %Profile{name: "michal"}
-
-    changeset = Changeset.change(%Profile{}, name: "hello")
-    changeset2 = %{changeset | action: :delete}
-    assert Relation.apply_changes(embed, changeset2) == nil
-  end
 end

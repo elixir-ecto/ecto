@@ -1074,17 +1074,8 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert Changeset.fetch_field(changeset, :profile) == {:data, profile}
 
     changeset = Changeset.change(%Author{})
-    assert Changeset.get_field(changeset, :profile) == nil
-    assert Changeset.fetch_field(changeset, :profile) == {:data, nil}
-
-    schema = put_in(%Author{}.__meta__.state, :loaded)
-    changeset = Changeset.change(schema)
-    assert_raise RuntimeError, ~r"Please preload", fn ->
-      Changeset.get_field(changeset, :profile)
-    end
-    assert_raise RuntimeError, ~r"Please preload", fn ->
-      Changeset.fetch_field(changeset, :profile)
-    end
+    assert %Ecto.Association.NotLoaded{} = Changeset.get_field(changeset, :profile)
+    assert {:data, %Ecto.Association.NotLoaded{}} = Changeset.fetch_field(changeset, :profile)
   end
 
   test "get_field/3, fetch_field/2 with has many" do
@@ -1113,33 +1104,8 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert Changeset.fetch_field(changeset, :posts) == {:changes, []}
 
     changeset = Changeset.change(%Author{})
-    assert Changeset.get_field(changeset, :posts) == []
-    assert Changeset.fetch_field(changeset, :posts) == {:data, []}
-
-    schema = put_in(%Author{}.__meta__.state, :loaded)
-    changeset = Changeset.change(schema)
-    assert_raise RuntimeError, ~r"Please preload", fn ->
-      Changeset.get_field(changeset, :posts)
-    end
-    assert_raise RuntimeError, ~r"Please preload", fn ->
-      Changeset.fetch_field(changeset, :posts)
-    end
-  end
-
-  test "apply_changes" do
-    assoc = Author.__schema__(:association, :profile)
-
-    changeset = Changeset.change(%Profile{}, name: "michal")
-    schema = Relation.apply_changes(assoc, changeset)
-    assert schema == %Profile{name: "michal"}
-
-    changeset1 = Changeset.change(%Post{}, title: "hello")
-    changeset2 = %{changeset1 | action: :delete}
-    assert Relation.apply_changes(assoc, changeset2) == nil
-
-    assoc = Author.__schema__(:association, :posts)
-    [schema] = Relation.apply_changes(assoc, [changeset1, changeset2])
-    assert schema == %Post{title: "hello"}
+    assert %Ecto.Association.NotLoaded{} = Changeset.get_field(changeset, :posts)
+    assert {:data, %Ecto.Association.NotLoaded{}} = Changeset.fetch_field(changeset, :posts)
   end
 
   ## traverse_errors
