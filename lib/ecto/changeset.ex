@@ -1228,7 +1228,7 @@ defmodule Ecto.Changeset do
         {Map.put(changes, key, change), errors, false}
 
       {:ok, change, true} ->
-        {Map.put(changes, key, change), errors, true}
+        {Map.put(changes, key, change), errors, valid?}
 
       {:ok, change} ->
         {Map.put(changes, key, change), errors, valid?}
