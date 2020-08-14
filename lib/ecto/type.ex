@@ -141,15 +141,19 @@ defmodule Ecto.Type do
     1. When casting values by `Ecto.Changeset`
     2. When passing arguments to `Ecto.Query`
 
-  When returning `{:error, keyword()}`, the returned keyword list
-  will be preserved in the changeset errors, similar to
-  `Ecto.Changeset.add_error/4`. Passing a `:message` key, will override
-  the default message. It is not possible to override the `:type` key.
+  You can return `:error` if the given term cannot be cast.
+  A default error message of "is invalid" will be added to the
+  changeset.
+
+  You may also return `{:error, keyword()}` to customize the
+  changeset error message and its metadata. Passing a `:message`
+  key, will override the default message. It is not possible to
+  override the `:type` key.
 
   For `{:array, CustomType}` or `{:map, CustomType}` the returned
   keyword list will be erased and the default error will be shown.
   """
-  @callback cast(term) :: {:ok, term} | {:error, keyword()} | :error
+  @callback cast(term) :: {:ok, term} | :error | {:error, keyword()}
 
   @doc """
   Loads the given term into a custom type.

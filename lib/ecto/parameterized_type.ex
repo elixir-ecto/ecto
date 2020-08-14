@@ -105,7 +105,7 @@ defmodule Ecto.ParameterizedType do
   For more information on casting, see `c:Ecto.Type.cast/1`
   """
   @callback cast(data :: term, params :: params()) ::
-              {:ok, term} | {:error, keyword()} | :error
+              {:ok, term} | :error | {:error, keyword()}
 
   @doc """
   Loads the given term into a ParameterizedType.
@@ -148,9 +148,7 @@ defmodule Ecto.ParameterizedType do
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Ecto.ParameterizedType
-      # TODO: Make both equal? and embed_as specific only to parameterized types
       def embed_as(_, _), do: :self
-      # TODO: evaluate if we should keep this once we add cast/3 and change/3
       def equal?(term1, term2, _params), do: term1 == term2
       defoverridable embed_as: 2, equal?: 3
     end
