@@ -49,7 +49,7 @@ defmodule Ecto.ParameterizedTypeTest do
   @p_self_type {:parameterized, MyParameterizedType, MyParameterizedType.params(:self)}
   @p_error_type {:parameterized, MyErrorParameterizedType, %{}}
 
-  test "parameterized type" do
+  test "operations" do
     assert Ecto.Type.type(@p_self_type) == :custom
     assert Ecto.Type.type(@p_dump_type) == :custom
 
@@ -81,7 +81,7 @@ defmodule Ecto.ParameterizedTypeTest do
     assert always_equal.changes == %{my_type: :change}
   end
 
-  test "parameterized type error" do
+  test "on error" do
     assert Ecto.Type.type(@p_error_type) == :custom
 
     assert Ecto.Type.embed_as(@p_error_type, :foo) == :self
@@ -104,7 +104,7 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.change(@p_error_type, :old, :new) == {:error, {"error message", value: :new}}
   end
 
-  test "parameterized type with array" do
+  test "with array" do
     assert Ecto.Type.embed_as({:array, @p_self_type}, :foo) == :self
     assert Ecto.Type.embed_as({:array, @p_dump_type}, :foo) == :dump
     assert Ecto.Type.embed_as({:array, @p_error_type}, :foo) == :self
@@ -136,7 +136,7 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.cast({:array, @p_self_type}, nil) == {:ok, nil}
   end
 
-  test "parameterized type with map" do
+  test "with map" do
     assert Ecto.Type.embed_as({:map, @p_dump_type}, :foo) == :dump
     assert Ecto.Type.embed_as({:map, @p_error_type}, :foo) == :self
 
@@ -167,7 +167,7 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.cast({:map, @p_self_type}, nil) == {:ok, nil}
   end
 
-  test "parameterized type with maybe" do
+  test "with maybe" do
     assert Ecto.Type.embedded_load({:maybe, @p_self_type}, :foo, :json) == {:ok, :cast}
     assert Ecto.Type.embedded_load({:maybe, @p_dump_type}, :foo, :json) == {:ok, :load}
     assert Ecto.Type.embedded_load({:maybe, @p_error_type}, :foo,  :json) == {:ok, :foo}
