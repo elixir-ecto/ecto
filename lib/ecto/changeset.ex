@@ -509,7 +509,7 @@ defmodule Ecto.Changeset do
 
   defp process_param(key, params, types, data, empty_values, defaults, {changes, errors, valid?}) do
     {key, param_key} = cast_key(key)
-    type = type!(types, key)
+    type = cast_type!(types, key)
 
     current =
       case changes do
@@ -532,7 +532,7 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp type!(types, key) do
+  defp cast_type!(types, key) do
     case types do
       %{^key => {tag, _}} when tag in @relations ->
         raise "casting #{tag}s with cast/4 for #{inspect key} field is not supported, use cast_#{tag}/3 instead"
