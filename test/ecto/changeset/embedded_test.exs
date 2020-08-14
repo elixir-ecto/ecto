@@ -915,6 +915,22 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert Relation.empty(%Embedded{cardinality: :many}) == []
   end
 
+  test "apply_changes" do
+    embed = Author.__schema__(:embed, :profile)
+
+    changeset = Changeset.change(%Profile{}, name: "michal")
+    schema = Relation.apply_changes(embed, changeset)
+    assert schema == %Profile{name: "michal"}
+
+    changeset = Changeset.change(%Post{}, title: "hello")
+    changeset2 = %{changeset | action: :delete}
+    assert Relation.apply_changes(embed, changeset2) == nil
+
+    embed = Author.__schema__(:embed, :posts)
+    [schema] = Relation.apply_changes(embed, [changeset, changeset2])
+    assert schema == %Post{title: "hello"}
+  end
+
   ## traverse_errors
 
   test "traverses changeset errors with embeds_one error" do

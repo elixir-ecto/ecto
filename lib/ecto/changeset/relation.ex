@@ -36,12 +36,36 @@ defmodule Ecto.Changeset.Relation do
   def empty?(%{cardinality: :one}, nil), do: true
   def empty?(%{}, _), do: false
 
-  defp filter_empty(changes) do
+  @doc """
+  Filter empty changes
+  """
+  def filter_empty(changes) do
     Enum.filter(changes, fn
       %Changeset{action: action} when action in [:replace, :delete] -> false
       _ -> true
     end)
   end
+
+  @doc """
+  Applies related changeset changes
+  """
+  def apply_changes(%{cardinality: :one}, nil) do
+    nil
+  end
+
+  def apply_changes(%{cardinality: :one}, changeset) do
+    apply_changes(changeset)
+  end
+
+  def apply_changes(%{cardinality: :many}, changesets) do
+    for changeset <- changesets,
+      struct = apply_changes(changeset),
+      do: struct
+  end
+
+  defp apply_changes(%Changeset{action: :delete}),  do: nil
+  defp apply_changes(%Changeset{action: :replace}), do: nil
+  defp apply_changes(changeset), do: Changeset.apply_changes(changeset)
 
   @doc """
   Loads the relation with the given struct.

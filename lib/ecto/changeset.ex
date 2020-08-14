@@ -601,12 +601,12 @@ defmodule Ecto.Changeset do
       |> Enum.reduce(nil, fn
         {key, _value}, nil when is_binary(key) ->
           nil
-
+  
         {key, _value}, _ when is_binary(key) ->
           raise Ecto.CastError, type: :map, value: params,
                                 message: "expected params to be a map with atoms or string keys, " <>
                                          "got a map with mixed keys: #{inspect params}"
-
+  
         {key, value}, nil when is_atom(key) ->
           [{Atom.to_string(key), value}]
 
@@ -984,15 +984,14 @@ defmodule Ecto.Changeset do
 
   """
   @spec fetch_field(t, atom) :: {:changes, term} | {:data, term} | :error
-  def fetch_field(%Changeset{changes: changes, data: data}, key) when is_atom(key) do
-    case changes do
-      %{^key => value} ->
-        {:changes, apply_nested_changeset(value)}
-
-      %{} ->
-        case data do
-          %{^key => value} -> {:data, value}
-          %{} -> :error
+  def fetch_field(%Changeset{changes: changes, data: data, types: types}, key) when is_atom(key) do
+    case Map.fetch(changes, key) do
+      {:ok, value} ->
+        {:changes, change_as_field(types, key, value)}
+      :error ->
+        case Map.fetch(data, key) do
+          {:ok, value} -> {:data, data_as_field(data, types, key, value)}
+          :error       -> :error
         end
     end
   end
@@ -1012,8 +1011,11 @@ defmodule Ecto.Changeset do
   @spec fetch_field!(t, atom) :: term
   def fetch_field!(changeset, key) do
     case fetch_field(changeset, key) do
-      {_, value} -> value
-      :error -> raise KeyError, key: key, term: changeset.data
+      {_, value} ->
+        value
+
+      :error ->
+        raise KeyError, key: key, term: changeset.data
     end
   end
 
@@ -1037,10 +1039,33 @@ defmodule Ecto.Changeset do
 
   """
   @spec get_field(t, atom, term) :: term
-  def get_field(%Changeset{changes: changes, data: data}, key, default \\ nil) do
-    case changes do
-      %{^key => value} -> apply_nested_changeset(value)
-      %{} -> Map.get(data, key, default)
+  def get_field(%Changeset{changes: changes, data: data, types: types}, key, default \\ nil) do
+    case Map.fetch(changes, key) do
+      {:ok, value} ->
+        change_as_field(types, key, value)
+      :error ->
+        case Map.fetch(data, key) do
+          {:ok, value} -> data_as_field(data, types, key, value)
+          :error       -> default
+        end
+    end
+  end
+
+  defp change_as_field(types, key, value) do
+    case Map.get(types, key) do
+      {tag, relation} when tag in @relations ->
+        Relation.apply_changes(relation, value)
+      _other ->
+        value
+    end
+  end
+
+  defp data_as_field(data, types, key, value) do
+    case Map.get(types, key) do
+      {tag, _relation} when tag in @relations ->
+        Relation.load!(data, value)
+      _other ->
+        value
     end
   end
 
@@ -1457,21 +1482,16 @@ defmodule Ecto.Changeset do
 
   def apply_changes(%Changeset{changes: changes, data: data, types: types}) do
     Enum.reduce(changes, data, fn {key, value}, acc ->
-      case types do
-        %{^key => _} -> Map.put(acc, key, apply_nested_changeset(value))
-        %{} -> acc
+      case Map.fetch(types, key) do
+        {:ok, {tag, relation}} when tag in @relations ->
+          Map.put(acc, key, Relation.apply_changes(relation, value))
+        {:ok, _} ->
+          Map.put(acc, key, value)
+        :error ->
+          acc
       end
     end)
   end
-
-  defp apply_nested_changeset([%Changeset{} | _] = changesets) do
-    for changeset <- changesets, changeset = apply_nested_changeset(changeset), do: changeset
-  end
-
-  defp apply_nested_changeset(%Changeset{action: :delete}),  do: nil
-  defp apply_nested_changeset(%Changeset{action: :replace}), do: nil
-  defp apply_nested_changeset(%Changeset{} = changeset), do: apply_changes(changeset)
-  defp apply_nested_changeset(other), do: other
 
   @doc """
   Applies the changeset action only if the changes are valid.
@@ -2021,18 +2041,16 @@ defmodule Ecto.Changeset do
     validate_change changeset, field, {:length, opts}, fn
       _, value ->
         count_type = opts[:count] || :graphemes
-
-        {type, length} =
-          case {value, count_type} do
-            {value, :codepoints} when is_binary(value) ->
-              {:string, codepoints_length(value, 0)}
-            {value, :graphemes} when is_binary(value) ->
-              {:string, String.length(value)}
-            {value, :bytes} when is_binary(value) ->
-              {:binary, byte_size(value)}
-            {value, _} when is_list(value) ->
-              {:list, list_length(value)}
-          end
+        {type, length} = case {value, count_type} do
+          {value, :codepoints} when is_binary(value) ->
+            {:string, codepoints_length(value, 0)}
+          {value, :graphemes} when is_binary(value) ->
+            {:string, String.length(value)}
+          {value, :bytes} when is_binary(value) ->
+            {:binary, byte_size(value)}
+          {value, _} when is_list(value) ->
+            {:list, list_length(changeset, field, value)}
+        end
 
         error = ((is = opts[:is]) && wrong_length(type, length, is, opts)) ||
                 ((min = opts[:min]) && too_short(type, length, min, opts)) ||
@@ -2046,11 +2064,14 @@ defmodule Ecto.Changeset do
   defp codepoints_length(<<_, rest::binary>>, acc), do: codepoints_length(rest, acc + 1)
   defp codepoints_length(<<>>, acc), do: acc
 
-  defp list_length([%Changeset{} | _] = changesets) do
-    Enum.count(changesets, & &1.action not in [:replace, :delete, :ignore])
+  defp list_length(%{types: types}, field, value) do
+    case Map.fetch(types, field) do
+      {:ok, {tag, _association}} when tag in [:embed, :assoc] ->
+        length(Relation.filter_empty(value))
+      _ ->
+        length(value)
+    end
   end
-
-  defp list_length(value), do: length(value)
 
   defp wrong_length(_type, value, value, _opts), do: nil
   defp wrong_length(:string, _length, value, opts), do:
