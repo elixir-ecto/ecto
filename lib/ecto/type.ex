@@ -985,8 +985,6 @@ defmodule Ecto.Type do
     &mod.change(&1, &2, params)
   end
 
-  defp change_fun(mod) when is_atom(mod), do: &mod.change/2
-
   defp change_fun(_t), do: nil
 
   @doc """
