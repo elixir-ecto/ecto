@@ -1230,9 +1230,6 @@ defmodule Ecto.Changeset do
       {:ok, change, true} ->
         {Map.put(changes, key, change), errors, valid?}
 
-      {:ok, change} ->
-        {Map.put(changes, key, change), errors, valid?}
-
       {:error, error} ->
         {message, opts} = Keyword.pop(error, :message, "is invalid")
         {changes, [{key, {message, opts}} | errors], false}

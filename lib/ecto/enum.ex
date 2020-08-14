@@ -40,7 +40,7 @@ defmodule Ecto.Enum do
   @impl Ecto.ParameterizedType
   def change(_old_value, new_value, params) do
     case params do
-      %{on_dump: %{^new_value => _}} -> {:ok, new_value}
+      %{on_dump: %{^new_value => _}} -> {:ok, new_value, true}
       _ -> {:error, [message: "unknown enum value", value: new_value]}
    end
   end

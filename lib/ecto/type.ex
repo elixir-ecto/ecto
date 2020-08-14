@@ -988,7 +988,7 @@ defmodule Ecto.Type do
       if equal?(type, old_value, new_value) do
         :skip
       else
-        {:ok, new_value}
+        {:ok, new_value, true}
       end
     end
   end

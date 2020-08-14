@@ -100,7 +100,7 @@ defmodule Ecto.ParameterizedType do
   @callback init(opts :: opts()) :: params()
 
   @callback change(old_value :: any(), new_value :: any(), params :: params()) ::
-              {:ok, new_value :: any(), valid? :: boolean()} | {:ok, new_value :: any()} | {:error, keyword()} | :skip
+              {:ok, new_value :: any(), valid? :: boolean()} | {:error, keyword()} | :skip
 
   @doc """
   Casts the given input to the ParameterizedType with the given parameters.
@@ -151,7 +151,7 @@ defmodule Ecto.ParameterizedType do
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Ecto.ParameterizedType
-      def change(_old_value, new_value, _params), do: {:ok, new_value}
+      def change(_old_value, new_value, _params), do: {:ok, new_value, true}
       # TODO: Make both equal? and embed_as specific only to parameterized types
       def embed_as(_, _), do: :self
       def equal?(term1, term2, _params), do: term1 == term2

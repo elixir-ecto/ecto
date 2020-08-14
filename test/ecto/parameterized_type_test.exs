@@ -15,7 +15,7 @@ defmodule Ecto.ParameterizedTypeTest do
     def equal?(_, _, _), do: false
     def embed_as(_, %{embed: embed}), do: embed
     def change(:skip, _new, _params), do: :skip
-    def change(_old, _new, _params), do: {:ok, :change}
+    def change(_old, _new, _params), do: {:ok, :change, true}
   end
 
   defmodule Schema do
