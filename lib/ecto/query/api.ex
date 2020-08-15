@@ -484,12 +484,22 @@ defmodule Ecto.Query.API do
       field = "name"
       from(post in Post, select: post.meta["author"][^field])
 
-  **Warning**: the underlying data in the JSON column is returned without any
-  additional decoding, e.g. datetimes (which are encoded as strings) are
-  returned as strings. This also means that queries like:
-  `where: post.meta["published_at"] > from_now(-1, "day")` may return incorrect
-  results or fail as the underlying database may try to compare e.g. `json` with
-  `date` types. Use `type/2` to force the types on the database level.
+  ## Warning
+  
+  The underlying data in the JSON column is returned without any
+  additional decoding. This means "null" JSON values are not the
+  same as SQL's "null". For example, the `Repo.all` operation below
+  returns an empty list because `p.meta["author"]` returns JSON's
+  null and therefore `is_nil` does not succeed:
+
+      Repo.insert!(%Post{meta: %{author: nil}})
+      Repo.all(from(post in Post, where: is_nil(p.meta["author"])))
+
+  Similarly, other types, such as datetimes, are returned as strings.
+  This means conditions like `post.meta["published_at"] > from_now(-1, "day")`
+  may return incorrect results or fail as the underlying database
+  tries to compare incompatible types. You can, however, use `type/2`
+  to force the types on the database level.
   """
   def json_extract_path(json_field, path), do: doc! [json_field, path]
 
