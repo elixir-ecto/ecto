@@ -342,8 +342,7 @@ defmodule Ecto.Query do
 
       results =
         query # May be User or an Ecto.Query itself
-        |> Ecto.Queryable.to_query
-        |> Map.put(:prefix, "accounts")
+        |> Ecto.Query.put_query_prefix(:prefix, "accounts")
         |> Repo.all()
 
   Setting the prefix in the query changes the default prefix of all `from`
@@ -655,6 +654,17 @@ defmodule Ecto.Query do
 
   @joins [:join, :inner_join, :cross_join, :left_join, :right_join, :full_join,
           :inner_lateral_join, :left_lateral_join]
+
+  @doc """
+  Puts the given prefix in a query.
+  """
+  def put_query_prefix(%Ecto.Query{} = query, prefix) when is_binary(prefix) do
+    %{query | prefix: prefix}
+  end
+
+  def put_query_prefix(other, prefix) do
+    other |> Ecto.Queryable.to_query() |> put_query_prefix(prefix)
+  end
 
   @doc """
   Resets a previously set field on a query.

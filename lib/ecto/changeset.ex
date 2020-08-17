@@ -1858,9 +1858,7 @@ defmodule Ecto.Changeset do
 
       query =
         if prefix = opts[:prefix] do
-          query
-          |> Ecto.Queryable.to_query
-          |> Map.put(:prefix, prefix)
+          Ecto.Query.put_query_prefix(query, prefix)
         else
           query
         end
