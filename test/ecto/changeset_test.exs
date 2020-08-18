@@ -1750,9 +1750,9 @@ defmodule Ecto.ChangesetTest do
     use Ecto.Schema
 
     schema "redacted_schema" do
-      field :password, :string, redacted: true
+      field :password, :string, redact: true
       field :username, :string
-      field :display_name, :string, redacted: false
+      field :display_name, :string, redact: false
     end
   end
 
@@ -1766,7 +1766,7 @@ defmodule Ecto.ChangesetTest do
             "errors: [], data: #Ecto.ChangesetTest.Post<>, valid?: true>"
     end
 
-    test "redacts fields marked redacted: true" do
+    test "redacts fields marked redact: true" do
       changeset = Ecto.Changeset.cast(%RedactedSchema{}, %{password: "hunter2"}, [:password])
       refute inspect(changeset) =~ "hunter2"
       assert inspect(changeset) =~ "**redacted**"
@@ -1778,7 +1778,7 @@ defmodule Ecto.ChangesetTest do
       refute inspect(changeset) =~ "**redacted**"
     end
 
-    test "doesn't redact fields marked redacted: false" do
+    test "doesn't redact fields marked redact: false" do
       changeset = Ecto.Changeset.cast(%RedactedSchema{}, %{display_name: "hunter2"}, [:display_name])
       assert inspect(changeset) =~ "hunter2"
       refute inspect(changeset) =~ "**redacted**"

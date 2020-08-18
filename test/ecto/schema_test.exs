@@ -9,7 +9,7 @@ defmodule Ecto.SchemaTest do
     schema "my schema" do
       field :name,  :string, default: "eric", autogenerate: {String, :upcase, ["eric"]}
       field :email, :string, uniq: true, read_after_writes: true
-      field :password, :string, redacted: true
+      field :password, :string, redact: true
       field :temp,  :any, default: "temp", virtual: true
       field :count, :decimal, read_after_writes: true, source: :cnt
       field :array, {:array, :string}
@@ -108,7 +108,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "redacted_fields" do
-    assert Schema.__schema__(:redacted_fields) == [:password]
+    assert Schema.__schema__(:redact_fields) == [:password]
   end
 
   test "derives inspect" do
@@ -121,7 +121,7 @@ defmodule Ecto.SchemaTest do
     @ecto_derive_inspect_for_redacted_fields false
 
     schema "my_schema" do
-      field :password, :string, redacted: true
+      field :password, :string, redact: true
     end
   end
 

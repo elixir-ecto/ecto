@@ -258,7 +258,7 @@ defmodule Ecto.Changeset do
   ### Redacting fields in inspect
 
   To hide a fields value from the inspect protocol of `Ecto.Changeset`, mark
-  the field as `redacted: true` in the schema, and it will display with the
+  the field as `redact: true` in the schema, and it will display with the
   value `**redacted**`.
   """
 
@@ -2938,7 +2938,7 @@ defimpl Inspect, for: Ecto.Changeset do
     end
 
     redacted_fields = case data do
-      %type{} -> type.__schema__(:redacted_fields)
+      %type{} -> type.__schema__(:redact_fields)
       _ -> []
     end
 

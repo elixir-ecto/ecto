@@ -31,7 +31,7 @@ defmodule Ecto.Schema do
         schema "users" do
           field :name, :string
           field :age, :integer, default: 0
-          field :password, :string, redacted: true
+          field :password, :string, redact: true
           has_many :posts, Post
         end
       end
@@ -101,7 +101,7 @@ defmodule Ecto.Schema do
 
   ## Redacting fields
 
-  A field marked with `redacted: true` will display a value of `**redacted**`
+  A field marked with `redact: true` will display a value of `**redacted**`
   when inspected in changes inside a `Ecto.Changeset` and be excluded from
   inspect on the schema unless the schema module is tagged with
   the option `@ecto_derive_inspect_for_redacted_fields false`.
@@ -409,7 +409,7 @@ defmodule Ecto.Schema do
 
   * `__schema__(:autogenerate_id)` - Primary key that is auto generated on insert;
 
-  * `__schema__(:redacted_fields)` - Returns a list of redacted field names;
+  * `__schema__(:redact_fields)` - Returns a list of redacted field names;
 
   Furthermore, both `__struct__` and `__changeset__` functions are
   defined so structs and changeset functionalities are available.
@@ -466,7 +466,7 @@ defmodule Ecto.Schema do
       Module.register_attribute(__MODULE__, :ecto_raw, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autogenerate, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_autoupdate, accumulate: true)
-      Module.register_attribute(__MODULE__, :ecto_redacted_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_redact_fields, accumulate: true)
       Module.put_attribute(__MODULE__, :ecto_derive_inspect_for_redacted_fields, true)
       Module.put_attribute(__MODULE__, :ecto_autogenerate_id, nil)
     end
@@ -563,12 +563,12 @@ defmodule Ecto.Schema do
         field_sources = @ecto_field_sources |> Enum.reverse
         assocs = @ecto_assocs |> Enum.reverse
         embeds = @ecto_embeds |> Enum.reverse
-        redacted_fields = @ecto_redacted_fields
+        redacted_fields = @ecto_redact_fields
         loaded = Ecto.Schema.__loaded__(__MODULE__, @struct_fields)
 
         if redacted_fields != [] and not List.keymember?(@derive, Inspect, 0) and
              @ecto_derive_inspect_for_redacted_fields do
-          @derive {Inspect, except: @ecto_redacted_fields}
+          @derive {Inspect, except: @ecto_redact_fields}
         end
 
         defstruct @struct_fields
@@ -588,7 +588,7 @@ defmodule Ecto.Schema do
         def __schema__(:autogenerate), do: unquote(Macro.escape(autogenerate))
         def __schema__(:autoupdate), do: unquote(Macro.escape(autoupdate))
         def __schema__(:loaded), do: unquote(Macro.escape(loaded))
-        def __schema__(:redacted_fields), do: unquote(redacted_fields)
+        def __schema__(:redact_fields), do: unquote(redacted_fields)
 
         def __schema__(:query) do
           %Ecto.Query{
@@ -654,7 +654,7 @@ defmodule Ecto.Schema do
       selecting the whole struct in a query, such as `from p in Post, select: p`.
       Defaults to `true`.
 
-    * `:redacted` - When true, it will display a value of `**redacted**`
+    * `:redact` - When true, it will display a value of `**redacted**`
       when inspected in changes inside a `Ecto.Changeset` and be excluded
       from inspect on the schema. Defaults to `false`.
 
@@ -1814,8 +1814,8 @@ defmodule Ecto.Schema do
         Module.put_attribute(mod, :ecto_raw, name)
       end
 
-      if Keyword.get(opts, :redacted, false) do
-        Module.put_attribute(mod, :ecto_redacted_fields, name)
+      if Keyword.get(opts, :redact, false) do
+        Module.put_attribute(mod, :ecto_redact_fields, name)
       end
 
       case gen = opts[:autogenerate] do
