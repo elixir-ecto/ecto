@@ -1127,15 +1127,19 @@ defmodule Ecto.Repo do
 
   ## Return values
 
-  By default, both Postgres and MySQL return the amount of entries
+  By default, both Postgres and MySQL will return the number of entries
   inserted on `c:insert_all/3`. However, when the `:on_conflict` option
-  is specified, Postgres will only return a row if it was affected
-  while MySQL returns at least the number of entries attempted.
-
-  For example, if `:on_conflict` is set to `:nothing`, Postgres will
-  return 0 if no new entry was added while MySQL will still return
-  the amount of entries attempted to be inserted, even if no entry
-  was added. Even worse, if `:on_conflict` is query, MySQL will return
+  is specified, Postgres and MySQL will return different results.
+  
+  Postgres will only count a row if it was affected and will
+  return 0 if no new entry was added.
+  
+  MySQL will return, at a minimum, the number of entries attempted. For example, 
+  if `:on_conflict` is set to `:nothing`, MySQL will return
+  the number of entries attempted to be inserted, even when no entry
+  was added. 
+  
+  Also note that if `:on_conflict` is a query, MySQL will return
   the number of attempted entries plus the number of entries modified
   by the UPDATE query.
   """
