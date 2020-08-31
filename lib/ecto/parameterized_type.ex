@@ -74,7 +74,7 @@ defmodule Ecto.ParameterizedType do
   @typedoc """
   The parameters for the ParameterizedType
 
-  This is thet value passed back from `c:init/1` and subsequently passed as the last argument to all callbacks.
+  This is the value passed back from `c:init/1` and subsequently passed as the last argument to all callbacks.
   Idiomatically it is a map.
   """
   @type params :: term()
