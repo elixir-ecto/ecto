@@ -1,6 +1,6 @@
 # Changelog for v3.x
 
-## v3.5.0-dev
+## v3.5.0-rc.0 (2020-08-31)
 
 v3.5 requires Elixir v1.8+.
 
