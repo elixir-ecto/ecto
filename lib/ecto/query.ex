@@ -1888,6 +1888,13 @@ defmodule Ecto.Query do
   then another for loading the comments associated with the posts.
   Comments will be ordered by `published_at`.
 
+  When specifying a preload query, you can still preload the associations of
+  those records. For instance, you could preload an author's published posts and
+  the comments on those posts:
+
+      posts_query = from p in Post, where: p.state == :published
+      Repo.all from a in Author, preload: [posts: {posts_query, [:comments]}]
+
   Note: keep in mind operations like limit and offset in the preload
   query will affect the whole result set and not each association. For
   example, the query below:
