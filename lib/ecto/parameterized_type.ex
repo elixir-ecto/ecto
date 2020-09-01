@@ -28,7 +28,7 @@ defmodule Ecto.ParameterizedType do
 
   To create a parameterized type, create a module as shown below:
 
-    defmodule MyApp.MyType do
+      defmodule MyApp.MyType do
         use Ecto.ParameterizedType
 
         def type(_params), do: :string
