@@ -236,6 +236,22 @@ defmodule Ecto.Query do
 
       child_query = from c in Comment, where: parent_as(:posts).id == c.post_id
       from p in Post, as: :posts, inner_lateral_join: c in subquery(child_query)
+      
+  ### Dynamic binding selection
+  
+  When composing functions a common requirement is selecting a binding 
+  on the query. Previous sections showed means of hardcoding that selection,
+  but there are also ways of doing it dynamically.
+  
+      # Knowing the position of the binding
+      def sort(query, position, field) do
+        from [{x, position}] in query, order_by: field(x, ^field)
+      end
+      
+      # Knowing the name of the binding
+      def sort(query, name, field) do
+        from [{^name, x}] in query, order_by: field(x, ^field)
+      end
 
   ### Bindingless operations
 
