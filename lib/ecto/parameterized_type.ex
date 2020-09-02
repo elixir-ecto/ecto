@@ -2,7 +2,7 @@ defmodule Ecto.ParameterizedType do
   @moduledoc """
   Parameterized types are Ecto types that can be customized per field.
 
-  Paramterized types allow a set of options to be specified in the schema
+  Parameterized types allow a set of options to be specified in the schema
   which are initialized on compilation and passed to the callback functions
   as the last argument.
 
