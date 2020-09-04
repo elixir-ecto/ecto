@@ -1753,6 +1753,7 @@ defmodule Ecto.ChangesetTest do
       field :password, :string, redact: true
       field :username, :string
       field :display_name, :string, redact: false
+      field :virtual_pass, :string, redact: true, virtual: true
     end
   end
 
@@ -1768,6 +1769,12 @@ defmodule Ecto.ChangesetTest do
 
     test "redacts fields marked redact: true" do
       changeset = Ecto.Changeset.cast(%RedactedSchema{}, %{password: "hunter2"}, [:password])
+      refute inspect(changeset) =~ "hunter2"
+      assert inspect(changeset) =~ "**redacted**"
+    end
+
+    test "redacts virtual fields marked redact: true" do
+      changeset = Ecto.Changeset.cast(%RedactedSchema{}, %{virtual_pass: "hunter2"}, [:virtual_pass])
       refute inspect(changeset) =~ "hunter2"
       assert inspect(changeset) =~ "**redacted**"
     end

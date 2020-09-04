@@ -1803,6 +1803,10 @@ defmodule Ecto.Schema do
     pk? = opts[:primary_key] || false
     put_struct_field(mod, name, Keyword.get(opts, :default))
 
+    if Keyword.get(opts, :redact, false) do
+      Module.put_attribute(mod, :ecto_redact_fields, name)
+    end
+
     unless virtual? do
       source = opts[:source] || Module.get_attribute(mod, :field_source_mapper).(name)
 
@@ -1812,10 +1816,6 @@ defmodule Ecto.Schema do
 
       if raw = opts[:read_after_writes] do
         Module.put_attribute(mod, :ecto_raw, name)
-      end
-
-      if Keyword.get(opts, :redact, false) do
-        Module.put_attribute(mod, :ecto_redact_fields, name)
       end
 
       case gen = opts[:autogenerate] do
