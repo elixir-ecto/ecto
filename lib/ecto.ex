@@ -423,8 +423,8 @@ defmodule Ecto do
   ## Examples
 
   If the relationship is a `has_one` or `has_many` and
-  the key is set in the given struct, the key will automatically
-  be set in the built association:
+  the primary key is set in the parent struct, the key will
+  automatically be set in the built association:
 
       iex> post = Repo.get(Post, 13)
       %Post{id: 13}
@@ -452,6 +452,16 @@ defmodule Ecto do
 
       iex> build_assoc(post, :comments, post_id: 1)
       %Comment{id: nil, post_id: 13}
+
+  The given attributes are expected to be structured data.
+  If you want to build an association with external data,
+  such as a request parameters, you can use `Ecto.Changeset.cast/3`
+  after `build_assoc/3`:
+
+      parent
+      |> Ecto.build_assoc(:child)
+      |> Ecto.Changeset.cast(params, [:field1, :field2])
+
   """
   def build_assoc(%{__struct__: schema} = struct, assoc, attributes \\ %{}) do
     assoc = Ecto.Association.association_from_schema!(schema, assoc)
