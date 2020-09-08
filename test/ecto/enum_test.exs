@@ -19,7 +19,8 @@ defmodule Ecto.EnumTest do
                {:parameterized, Ecto.Enum,
                 %{
                   on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
-                  on_dump: %{bar: "bar", baz: "baz", foo: "foo"}
+                  on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
+                  values: [:foo, :bar, :baz]
                 }}
 
       assert EnumSchema.__schema__(:type, :my_enums) ==
@@ -28,7 +29,8 @@ defmodule Ecto.EnumTest do
                  {:parameterized, Ecto.Enum,
                   %{
                     on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
-                    on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo}
+                    on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
+                    values: [:foo, :bar, :baz]
                   }}
                }
     end
@@ -158,6 +160,25 @@ defmodule Ecto.EnumTest do
 
       assert_raise ArgumentError, ~r/cannot load `\"foo2\"` as type/, fn ->
         TestRepo.all(EnumSchema)
+      end
+    end
+  end
+
+  describe "values/2" do
+    test "returns correct values" do
+      assert Ecto.Enum.values(EnumSchema, :my_enum) == [:foo, :bar, :baz]
+      assert Ecto.Enum.values(EnumSchema, :my_enums) == [:foo, :bar, :baz]
+    end
+
+    test "raises on bad schema" do
+      assert_raise ArgumentError, "NotASchema is not an Ecto schema", fn ->
+        Ecto.Enum.values(NotASchema, :foo)
+      end
+    end
+
+    test "raises on bad field" do
+      assert_raise ArgumentError, "foo is not an Ecto.Enum field", fn ->
+        Ecto.Enum.values(EnumSchema, :foo)
       end
     end
   end
