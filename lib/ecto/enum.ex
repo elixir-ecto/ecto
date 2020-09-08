@@ -13,6 +13,24 @@ defmodule Ecto.Enum do
   and only if the atom exists in the list (otherwise an error will be raised).
   Attempting to load any string not represented by an atom in the list will be
   invalid.
+
+  The helper function `values/2` returns the values for a given schema and
+  field, which can be used in places like form drop-downs. For example,
+  given the following schema:
+
+      defmodule EnumSchema do
+        use Ecto.Schema
+
+        schema "my_schema" do
+          field :my_enum, Ecto.Enum, values: [:foo, :bar, :baz]
+        end
+      end
+
+  you can call `values/2` like this:
+
+      > Ecto.Enum.values(EnumSchema, :my_enum)
+      [:foo, :bar, :baz]
+
   """
 
   use Ecto.ParameterizedType
@@ -34,7 +52,7 @@ defmodule Ecto.Enum do
 
     on_load = Map.new(values, &{Atom.to_string(&1), &1})
     on_dump = Map.new(values, &{&1, Atom.to_string(&1)})
-    %{on_load: on_load, on_dump: on_dump}
+    %{on_load: on_load, on_dump: on_dump, values: values}
   end
 
   @impl true
@@ -71,4 +89,16 @@ defmodule Ecto.Enum do
 
   @impl true
   def embed_as(_, _), do: :self
+
+  def values(schema, field) do
+    try do
+      schema.__schema__(:type, field)
+    rescue
+      _ in UndefinedFunctionError -> raise ArgumentError, "#{inspect schema} is not an Ecto schema"
+    else
+      {:parameterized, Ecto.Enum, %{values: values}} -> values
+      {_, {:parameterized, Ecto.Enum, %{values: values}}} -> values
+      nil -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
+    end
+  end
 end
