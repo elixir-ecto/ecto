@@ -137,9 +137,9 @@ defmodule Ecto.ChangesetTest do
     params = %{"title" => "empty", "body" => nil}
     struct = %Post{title: "foo", body: "bar"}
 
-    changeset = cast(struct, params, ~w(title body)a, empty_values: ["empty"])
+    changeset = cast(struct, params, ~w(title body)a, empty_values: ["", "empty"])
     assert changeset.changes == %{title: "", body: nil}
-    assert changeset.empty_values == ["empty"]
+    assert changeset.empty_values == ["", "empty"]
   end
 
   test "cast/4: with matching empty values" do
@@ -160,7 +160,7 @@ defmodule Ecto.ChangesetTest do
     params = %{"with_default" => ""}
 
     changeset = cast(struct, params, ~w(with_default)a)
-    assert changeset.changes == %{with_default: ""}
+    assert changeset.changes == %{with_default: nil}
   end
 
   test "cast/4: with data and types" do

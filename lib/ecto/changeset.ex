@@ -560,7 +560,14 @@ defmodule Ecto.Changeset do
   defp cast_field(key, param_key, type, params, current, empty_values, defaults, valid?) do
     case params do
       %{^param_key => value} ->
-        value = if value in empty_values, do: Map.get(defaults, key), else: value
+        value =
+          if value in empty_values do
+            default = Map.get(defaults, key)
+            if default in empty_values, do: default, else: nil
+          else
+            value
+          end
+
         case Ecto.Type.cast(type, value) do
           {:ok, value} ->
             if Ecto.Type.equal?(type, current, value) do
