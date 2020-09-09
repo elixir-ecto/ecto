@@ -49,6 +49,7 @@ defmodule Ecto.ChangesetTest do
       field :published_at, :naive_datetime
       field :source, :map
       field :permalink, :string, source: :url
+      field :with_default, :string, default: "default"
       belongs_to :category, Ecto.ChangesetTest.Category, source: :cat_id
       has_many :comments, Ecto.ChangesetTest.Comment, on_replace: :delete
       has_one :comment, Ecto.ChangesetTest.Comment
@@ -147,6 +148,19 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(title body)a)
     assert changeset.changes == %{}
+  end
+
+  test "cast/4: with empty values with default" do
+    params = %{"with_default" => nil}
+    struct = %Post{}
+
+    changeset = cast(struct, params, ~w(with_default)a)
+    assert changeset.changes == %{with_default: nil}
+
+    params = %{"with_default" => ""}
+
+    changeset = cast(struct, params, ~w(with_default)a)
+    assert changeset.changes == %{with_default: ""}
   end
 
   test "cast/4: with data and types" do
