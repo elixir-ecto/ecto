@@ -105,11 +105,13 @@ defmodule Ecto.Changeset do
   Many times, the data given on cast needs to be further pruned, specially
   regarding empty values. For example, if you are gathering data to be
   cast from the command line or through an HTML form or any other text-based
-  format, it is likely those means cannot express nil values. For
+  format, it is likely those means cannot express `nil` values. For
   those reasons, changesets include the concept of empty values, which are
-  values that will be automatically converted to the field's default value
-  on `cast/4`. Those values are stored in the changeset `empty_values` field
-  and default to `[""]`.
+  stored in the changeset `empty_values` field with a default of `[""]`. Empty
+  values are values that will be automatically converted to the field's default
+  empty value on `cast/4`. The default empty value will be the field's default
+  value if that value is included in `empty_values`. Otherwise, it will be
+  `nil`.
 
   ## Associations, embeds and on replace
 
