@@ -150,7 +150,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{}
   end
 
-  test "cast/4: with empty values with default" do
+  test "cast/4: with empty value and non-empty default" do
     params = %{"with_default" => nil}
     struct = %Post{}
 
