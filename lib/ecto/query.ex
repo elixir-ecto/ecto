@@ -1114,15 +1114,6 @@ defmodule Ecto.Query do
       |> group_by([p], p.id)
       |> select([p, c], %{p | category_names: fragment("ARRAY_AGG(?)", c.name)})
 
-  It's possible to cast CTE result rows as Ecto structs:
-
-      {"category_tree", Category}
-      |> recursive_ctes(true)
-      |> with_cte("category_tree", as: ^category_tree_query)
-      |> join(:left, [c], p in assoc(c, :products))
-      |> group_by([c], c.id)
-      |> select([c, p], %{c | products_count: count(p.id)})
-
   It's also possible to pass a raw SQL fragment:
 
       @raw_sql_category_tree \"""
@@ -1135,6 +1126,19 @@ defmodule Ecto.Query do
       |> recursive_ctes(true)
       |> with_cte("category_tree", as: fragment(@raw_sql_category_tree))
       |> join(:inner, [p], c in "category_tree", on: c.id == p.category_id)
+
+  If you don't have any Ecto schema pointing to the CTE table, you can pass a
+  tuple with the CTE table name as first element and an Ecto schema as second
+  element. This will cast the result rows to Ecto structs as long as the Ecto
+  schema maps to the same fields in the CTE table:
+
+      {"category_tree", Category}
+      |> recursive_ctes(true)
+      |> with_cte("category_tree", as: ^category_tree_query)
+      |> join(:left, [c], p in assoc(c, :products))
+      |> group_by([c], c.id)
+      |> select([c, p], %{c | products_count: count(p.id)})
+
 
   Keyword syntax is not supported for this feature.
 
