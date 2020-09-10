@@ -100,17 +100,6 @@ defmodule Ecto.Changeset do
   return `{:error, changeset}`, but rather raise an error at the end of the
   transaction.
 
-  ## Empty values
-
-  Many times, the data given on cast needs to be further pruned, specially
-  regarding empty values. For example, if you are gathering data to be
-  cast from the command line or through an HTML form or any other text-based
-  format, it is likely those means cannot express nil values. For
-  those reasons, changesets include the concept of empty values, which are
-  values that will be automatically converted to the field's default value
-  on `cast/4`. Those values are stored in the changeset `empty_values` field
-  and default to `[""]`.
-
   ## Associations, embeds and on replace
 
   Using changesets you can work with associations as well as with embedded
@@ -244,7 +233,6 @@ defmodule Ecto.Changeset do
     * `required`     - All required fields as a list of atoms
     * `action`       - The action to be performed with the changeset
     * `types`        - Cache of the data's field types
-    * `empty_values` - A list of values to be considered empty
     * `repo`         - The repository applying the changeset (only set after a Repo function is called)
     * `repo_opts`    - A keyword list of options given to the underlying repository operation
 
@@ -272,7 +260,7 @@ defmodule Ecto.Changeset do
   defstruct valid?: false, data: nil, params: nil, changes: %{}, repo_changes: %{},
             errors: [], validations: [], required: [], prepare: [],
             constraints: [], filters: %{}, action: nil, types: nil,
-            empty_values: @empty_values, repo: nil, repo_opts: []
+            repo: nil, repo_opts: []
 
   @type t(data_type) :: %Changeset{valid?: boolean(),
                         repo: atom | nil,
@@ -420,7 +408,7 @@ defmodule Ecto.Changeset do
   ## Options
 
     * `:empty_values` - a list of values to be considered as empty when casting.
-      Defaults to the changeset value, which defaults to `[""]`
+      All empty values are discarded on cast. Defaults to `[""]`
 
   ## Examples
 
@@ -471,9 +459,8 @@ defmodule Ecto.Changeset do
     raise ArgumentError, "changeset does not have types information"
   end
 
-  def cast(%Changeset{changes: changes, data: data, types: types, empty_values: empty_values} = changeset,
+  def cast(%Changeset{changes: changes, data: data, types: types} = changeset,
                       params, permitted, opts) do
-    opts = Keyword.put_new(opts, :empty_values, empty_values)
     new_changeset = cast(data, types, changes, params, permitted, opts)
     cast_merge(changeset, new_changeset)
   end
@@ -482,15 +469,14 @@ defmodule Ecto.Changeset do
     cast(data, module.__changeset__(), %{}, params, permitted, opts)
   end
 
-  defp cast(%{} = data, %{} = types, %{} = changes, :invalid, permitted, opts) when is_list(permitted) do
-    {empty_values, _opts} = Keyword.pop(opts, :empty_values, @empty_values)
+  defp cast(%{} = data, %{} = types, %{} = changes, :invalid, permitted, _opts) when is_list(permitted) do
     _ = Enum.each(permitted, &cast_key/1)
     %Changeset{params: nil, data: data, valid?: false, errors: [],
-               changes: changes, types: types, empty_values: empty_values}
+               changes: changes, types: types}
   end
 
   defp cast(%{} = data, %{} = types, %{} = changes, %{} = params, permitted, opts) when is_list(permitted) do
-    {empty_values, _opts} = Keyword.pop(opts, :empty_values, @empty_values)
+    empty_values = Keyword.get(opts, :empty_values, @empty_values)
     params = convert_params(params)
 
     defaults = case data do
@@ -503,8 +489,7 @@ defmodule Ecto.Changeset do
                   &process_param(&1, params, types, data, empty_values, defaults, &2))
 
     %Changeset{params: params, data: data, valid?: valid?,
-               errors: Enum.reverse(errors), changes: changes,
-               types: types, empty_values: empty_values}
+               errors: Enum.reverse(errors), changes: changes, types: types}
   end
 
   defp cast(%{}, %{}, %{}, params, permitted, _opts) when is_list(permitted) do
@@ -933,11 +918,10 @@ defmodule Ecto.Changeset do
     new_filters     = Map.merge(cs1.filters, cs2.filters)
     new_validations = cs1.validations ++ cs2.validations
     new_constraints = cs1.constraints ++ cs2.constraints
-    new_empty_vals  = Enum.uniq(cs1.empty_values ++ cs2.empty_values)
 
     cast_merge %{cs1 | repo: new_repo, repo_opts: new_repo_opts, filters: new_filters,
                        action: new_action, validations: new_validations,
-                       constraints: new_constraints, empty_values: new_empty_vals}, cs2
+                       constraints: new_constraints}, cs2
   end
 
   def merge(%Changeset{}, %Changeset{}) do
