@@ -706,29 +706,6 @@ defmodule Ecto.RepoTest do
       assert schema.__meta__.prefix == "private"
     end
 
-    test "insert and update with repo_changes" do
-      valid =
-        %MySchema{id: 1}
-        |> Ecto.Changeset.change()
-        |> Map.put(:repo_changes, %{x: "repo change"})
-
-      assert {:ok, schema} = TestRepo.insert(valid)
-      assert schema.x == "repo change"
-
-      assert {:ok, schema} = TestRepo.update(valid)
-      assert schema.x == "repo change"
-
-      invalid = %{valid | valid?: false}
-
-      assert {:error, changeset} = TestRepo.insert(invalid)
-      refute changeset.data.x
-      refute changeset.changes[:x]
-
-      assert {:error, changeset} = TestRepo.update(invalid)
-      refute changeset.data.x
-      refute changeset.changes[:x]
-    end
-
     test "insert, update and insert_or_update parent schema_prefix does not override `nil` children schema_prefix" do
       assert {:ok, schema} = TestRepo.insert(%MyParentWithPrefix{id: 1})
       assert schema.__meta__.prefix == "private"

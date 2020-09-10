@@ -270,7 +270,7 @@ defmodule Ecto.Changeset do
   @empty_values [""]
 
   # If a new field is added here, def merge must be adapted
-  defstruct valid?: false, data: nil, params: nil, changes: %{}, repo_changes: %{},
+  defstruct valid?: false, data: nil, params: nil, changes: %{},
             errors: [], validations: [], required: [], prepare: [],
             constraints: [], filters: %{}, action: nil, types: nil,
             empty_values: @empty_values, repo: nil, repo_opts: []
@@ -281,7 +281,6 @@ defmodule Ecto.Changeset do
                         data: data_type,
                         params: %{String.t => term} | nil,
                         changes: %{atom => term},
-                        repo_changes: %{atom => term},
                         required: [atom],
                         prepare: [(t -> t)],
                         errors: [{atom, error}],
@@ -2364,10 +2363,14 @@ defmodule Ecto.Changeset do
     changeset = change(data_or_changeset, %{})
     current = get_field(changeset, field)
 
-    # repo_changes are applied only inside the repo and merged in case of success.
-    # This is important because we don't want to permanently track the lock change.
-    changeset = put_in(changeset.repo_changes[field], incrementer.(current))
+    # Apply these changes only inside the repo because we
+    # don't want to permanently track the lock change.
+    changeset = prepare_changes(changeset, fn changeset ->
+      put_in(changeset.changes[field], incrementer.(current))
+    end)
+
     changeset = put_in(changeset.filters[field], current)
+    changeset = put_in(changeset.repo_opts[:force], true)
     changeset
   end
 

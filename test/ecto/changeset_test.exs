@@ -1466,39 +1466,57 @@ defmodule Ecto.ChangesetTest do
 
   ## Locks
 
+  defp prepared_changes(changeset) do
+    Enum.reduce(changeset.prepare, changeset, & &1.(&2)).changes
+  end
+
   test "optimistic_lock/3 with changeset with default incremeter" do
     changeset = changeset(%{}) |> optimistic_lock(:upvotes)
     assert changeset.filters == %{upvotes: 0}
-    assert changeset.repo_changes == %{upvotes: 1}
+    assert changeset.changes == %{}
+    assert changeset.repo_opts == [force: true]
+    assert prepared_changes(changeset) == %{upvotes: 1}
 
     changeset = changeset(%Post{upvotes: 2}, %{upvotes: 1}) |> optimistic_lock(:upvotes)
     assert changeset.filters == %{upvotes: 1}
-    assert changeset.repo_changes == %{upvotes: 2}
+    assert changeset.changes == %{upvotes: 1}
+    assert changeset.repo_opts == [force: true]
+    assert prepared_changes(changeset) == %{upvotes: 2}
 
     # Assert default increment will rollover to 1 when the current one is equal or graeter than 2_147_483_647
     changeset = changeset(%Post{upvotes: 2_147_483_647}, %{}) |> optimistic_lock(:upvotes)
     assert changeset.filters == %{upvotes: 2_147_483_647}
-    assert changeset.repo_changes == %{upvotes: 1}
+    assert changeset.changes == %{}
+    assert changeset.repo_opts == [force: true]
+    assert prepared_changes(changeset) == %{upvotes: 1}
 
     changeset = changeset(%Post{upvotes: 3_147_483_647}, %{}) |> optimistic_lock(:upvotes)
     assert changeset.filters == %{upvotes: 3_147_483_647}
-    assert changeset.repo_changes == %{upvotes: 1}
+    assert changeset.changes == %{}
+    assert changeset.repo_opts == [force: true]
+    assert prepared_changes(changeset) == %{upvotes: 1}
 
     changeset = changeset(%Post{upvotes: 2_147_483_647}, %{upvotes: 2_147_483_648}) |> optimistic_lock(:upvotes)
     assert changeset.filters == %{upvotes: 2_147_483_648}
-    assert changeset.repo_changes == %{upvotes: 1}
+    assert changeset.changes == %{upvotes: 2_147_483_648}
+    assert changeset.repo_opts == [force: true]
+    assert prepared_changes(changeset) == %{upvotes: 1}
  end
 
   test "optimistic_lock/3 with struct" do
     changeset = %Post{} |> optimistic_lock(:upvotes)
     assert changeset.filters == %{upvotes: 0}
-    assert changeset.repo_changes == %{upvotes: 1}
+    assert changeset.changes == %{}
+    assert changeset.repo_opts == [force: true]
+    assert prepared_changes(changeset) == %{upvotes: 1}
   end
 
   test "optimistic_lock/3 with custom incrementer" do
     changeset = %Post{} |> optimistic_lock(:upvotes, &(&1 - 1))
     assert changeset.filters == %{upvotes: 0}
-    assert changeset.repo_changes == %{upvotes: -1}
+    assert changeset.changes == %{}
+    assert changeset.repo_opts == [force: true]
+    assert prepared_changes(changeset) == %{upvotes: -1}
   end
 
   ## Constraints
