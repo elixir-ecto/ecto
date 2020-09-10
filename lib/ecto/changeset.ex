@@ -2370,7 +2370,6 @@ defmodule Ecto.Changeset do
     end)
 
     changeset = put_in(changeset.filters[field], current)
-    changeset = put_in(changeset.repo_opts[:force], true)
     changeset
   end
 

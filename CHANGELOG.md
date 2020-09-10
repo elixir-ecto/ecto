@@ -7,6 +7,7 @@ v3.5 requires Elixir v1.8+.
 ### Bug fixes
 
   * [Ecto.Changeset] Ensure `:empty_values` in `cast/4` does not automatically propagate to following cast calls. If you want a given set of `:empty_values` to apply to all `cast/4` calls, change the value stored in `changeset.empty_values` instead
+  * [Ecto.Changeset] Do not force repository updates to happen when using `optimistic_lock`
 
 ### Enhancements
 
