@@ -138,6 +138,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(title body)a, empty_values: ["empty"])
     assert changeset.changes == %{title: "", body: nil}
+    assert changeset.empty_values == [""]
   end
 
   test "cast/4: with matching empty values" do
