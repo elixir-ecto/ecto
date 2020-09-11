@@ -891,7 +891,7 @@ defmodule Ecto.Query do
   defp collect_as_and_prefix_and_hints([{:as, _} | _], _, _, _),
     do: Builder.error! "`as` keyword was given more than once to the same from/join"
   defp collect_as_and_prefix_and_hints([{:prefix, prefix} | t], as, nil, hints),
-    do: collect_as_and_prefix_and_hints(t, as, prefix, hints)
+    do: collect_as_and_prefix_and_hints(t, as, {:ok, prefix}, hints)
   defp collect_as_and_prefix_and_hints([{:prefix, _} | _], _, _, _),
     do: Builder.error! "`prefix` keyword was given more than once to the same from/join"
   defp collect_as_and_prefix_and_hints([{:hints, hints} | t], as, prefix, nil),

@@ -463,10 +463,28 @@ defmodule Ecto.QueryTest do
   end
 
   describe "prefixes" do
+    defmodule Post do
+      use Ecto.Schema
+      @schema_prefix "another"
+      schema "posts" do
+      end
+    end
+
     test "are supported on from and join" do
       query = from "posts", prefix: "hello", join: "comments", prefix: "world"
       assert query.from.prefix == "hello"
       assert hd(query.joins).prefix == "world"
+    end
+
+    test "are supported and overriden from schemas" do
+      query = from(Post)
+      assert query.from.prefix == "another"
+
+      query = from(Post, prefix: "hello")
+      assert query.from.prefix == "hello"
+
+      query = from(Post, prefix: nil)
+      assert query.from.prefix == nil
     end
 
     test "are supported on dynamic from" do

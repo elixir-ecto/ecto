@@ -120,9 +120,10 @@ defmodule Ecto.Query.Builder.Join do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, atom, String.t | nil, nil | String.t | [String.t], Macro.Env.t) ::
+  @spec build(Macro.t, atom, [Macro.t], Macro.t, Macro.t, Macro.t, atom, nil | {:ok, String.t | nil}, nil | String.t | [String.t], Macro.Env.t) ::
               {Macro.t, Keyword.t, non_neg_integer | nil}
   def build(query, qual, binding, expr, count_bind, on, as, prefix, maybe_hints, env) do
+    {:ok, prefix} = prefix || {:ok, nil}
     hints = List.wrap(maybe_hints)
 
     unless Enum.all?(hints, &is_binary/1) do
