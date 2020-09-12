@@ -581,13 +581,14 @@ defmodule Ecto.Query.Planner do
   Prepare the parameters by merging and casting them according to sources.
   """
   def plan_cache(query, operation, adapter) do
-    {query, {cache, params}} = traverse_cache(query, operation, {[], []}, adapter)
-    {query, Enum.reverse(params), finalize_cache(query, operation, cache)}
+    {query, params, cache} = traverse_cache(query, operation, {[], []}, adapter)
+    {query, Enum.reverse(params), cache}
   end
 
   defp traverse_cache(query, operation, cache_params, adapter) do
     fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
-    traverse_exprs(query, operation, cache_params, fun)
+    {query, {cache, params}} = traverse_exprs(query, operation, cache_params, fun)
+    {query, params, finalize_cache(query, operation, cache)}
   end
 
   defp merge_cache(:from, _query, from, {cache, params}, _operation, _adapter) do
@@ -653,7 +654,7 @@ defmodule Ecto.Query.Planner do
     # In here we add each combination as its own entry in the cache key.
     # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
     Enum.reduce combinations, cache_and_params, fn {modifier, query}, {cache, params} ->
-      {_, {inner_cache, params}} = traverse_cache(query, operation, {[], params}, adapter)
+      {_, params, inner_cache} = traverse_cache(query, operation, {[], params}, adapter)
       {merge_cache({modifier, inner_cache}, cache, inner_cache != :nocache), params}
     end
   end
@@ -670,7 +671,7 @@ defmodule Ecto.Query.Planner do
     # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
     Enum.reduce queries, cache_and_params, fn
       {name, %Ecto.Query{} = query}, {cache, params} ->
-        {_, {inner_cache, params}} = traverse_cache(query, :all, {[], params}, adapter)
+        {_, params, inner_cache} = traverse_cache(query, :all, {[], params}, adapter)
         {merge_cache({key, name, inner_cache}, cache, inner_cache != :nocache), params}
 
       {name, %Ecto.Query.QueryExpr{} = query_expr}, {cache, params} ->

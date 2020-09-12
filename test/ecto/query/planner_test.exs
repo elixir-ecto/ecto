@@ -599,20 +599,21 @@ defmodule Ecto.Query.PlannerTest do
     test "on all" do
       {%{with_ctes: with_expr}, _, cache} =
         Comment
-        |> with_cte("cte", as: ^from(c in Comment))
+        |> with_cte("cte", as: ^put_query_prefix(Comment, "another"))
         |> plan()
       %{queries: [{"cte", query}]} = with_expr
-      assert query.sources == {{"comments", Comment, nil}}
+      assert query.sources == {{"comments", Comment, "another"}}
       assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
       assert [
         :all,
         {"comments", Comment, _, nil},
-        {:non_recursive_cte, "cte", [{"comments", Comment, _, nil}, {:select, {:&, _, [0]}}]}
+        {:non_recursive_cte, "cte",
+         [:all, {:prefix, "another"}, {"comments", Comment, _, nil}, {:select, {:&, _, [0]}}]}
       ] = cache
 
       {%{with_ctes: with_expr}, _, cache} =
         Comment
-        |> with_cte("cte", as: ^from(c in Comment, where: c in ^[1, 2, 3]))
+        |> with_cte("cte", as: ^(from(c in Comment, where: c in ^[1, 2, 3])))
         |> plan()
       %{queries: [{"cte", query}]} = with_expr
       assert query.sources == {{"comments", Comment, nil}}
@@ -637,6 +638,7 @@ defmodule Ecto.Query.PlannerTest do
           limit: ^500,
           select: [:id]
         )
+        |> put_query_prefix("another")
 
       {%{with_ctes: with_expr}, [500, "text"], cache} =
         Comment
@@ -647,11 +649,14 @@ defmodule Ecto.Query.PlannerTest do
         |> plan(:update_all)
 
       %{queries: [{"recent_comments", cte}]} = with_expr
-      assert {{"comments", Comment, nil}} = cte.sources
+      assert {{"comments", Comment, "another"}} = cte.sources
       assert %{expr: {:^, [], [0]}, params: [{500, :integer}]} = cte.limit
 
       assert [:update_all, _, _, _, _, {:non_recursive_cte, "recent_comments", cte_cache}] = cache
       assert [
+               :all,
+               {:prefix, "another"},
+               {:take, %{0 => {:any, [:id]}}},
                {:limit, {:^, [], [0]}},
                {:order_by, [[desc: _]]},
                {"comments", Comment, _, nil},
@@ -666,6 +671,7 @@ defmodule Ecto.Query.PlannerTest do
           limit: ^500,
           select: [:id]
         )
+        |> put_query_prefix("another")
 
       {%{with_ctes: with_expr}, [500, "text"], cache} =
         Comment
@@ -675,11 +681,14 @@ defmodule Ecto.Query.PlannerTest do
         |> plan(:delete_all)
 
       %{queries: [{"recent_comments", cte}]} = with_expr
-      assert {{"comments", Comment, nil}} = cte.sources
+      assert {{"comments", Comment, "another"}} = cte.sources
       assert %{expr: {:^, [], [0]}, params: [{500, :integer}]} = cte.limit
 
       assert [:delete_all, _, _, _, {:non_recursive_cte, "recent_comments", cte_cache}] = cache
       assert [
+               :all,
+               {:prefix, "another"},
+               {:take, %{0 => {:any, [:id]}}},
                {:limit, {:^, [], [0]}},
                {:order_by, [[desc: _]]},
                {"comments", Comment, _, nil},
