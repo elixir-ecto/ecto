@@ -2145,6 +2145,14 @@ defmodule Ecto.Schema do
     end
   end
 
+  defp autogenerate_id({:parameterized, type, params} = parameterized_type) do
+    id = type.type(params)
+
+    if id in [:id, :binary_id] do
+      parameterized_type
+    end
+  end
+
   defp autogenerate_id(type) do
     id = if Ecto.Type.primitive?(type), do: type, else: type.type
 
