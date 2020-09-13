@@ -80,85 +80,79 @@ defmodule Ecto.Type do
 
   Note: `nil` values are always bypassed and cannot be handled by
   custom types.
-  
-  ## Custom types and preloads
-  
-  Imagine the id of your schema is an auto incrementing number.
-  Since it's auto incrementing nature could allow them to enumerate
-  the contents of your service, you don't may not want your
-  users to know it, so you send an encoded version of the id to
-  them.
-  
-  An Ecto type could handle the conversion between the encoded
-  version of the id and it's representation in the database.
-  For the sake of simplicity we'll use base64 encoding in this
-  example:
-  
+
+  ## Custom types and primary keys
+
+  Remember that, if you change the type of your primary keys,
+  you will also need to change the type of all associations that
+  point to said primary key.
+
+  Imagine you want to encode the ID so they cannot enumerate the
+  content in your application. An Ecto type could handle the conversion
+  between the encoded version of the id and its representation in the
+  database. For the sake of simplicity we'll use base64 encoding in
+  this example:
+
       defmodule EncodedId do
         use Ecto.Type
-        
+
         def type, do: :id
-        
+
         def cast(id) when is_integer(id) do
           {:ok, encode_id(id)}
         end
         def cast(_), do: :error
-        
+
         def dump(id) when is_binary(id) do
           Base.decode64(id)
         end
-        
+
         def load(id) when is_integer(id) do
           {:ok, encode_id(id)}
         end
-        
+
         defp encode_id(id) do
           id
           |> Integer.to_string()
           |> Base.encode64
         end
       end
-  
+
   To use it as the type for the id in our schema, we can use the
   `@primary_key` module attribute:
-  
+
       defmodule BlogPost do
         use Ecto.Schema
-        
+
         @primary_key {:id, EncodedId, autogenerate: true}
         schema "posts" do
           belongs_to :author, Author, type: EncodedId
           field :content, :string
         end
       end
-      
+
       defmodule Author do
         use Ecto.Schema
-        
+
         @primary_key {:id, EncodedId, autogenerate: true}
         schema "authors" do
           field :name, :string
           has_many :posts, BlogPost
         end
       end
-  
+
   The `@primary_key` attribute will tell ecto which type to
   use for the id.
-  
+
   Note the `type: EncodedId` option given to `belongs_to` in
   the `BlogPost` schema. By default, Ecto will treat
   associations as if their keys were `:integer`s. Our primary
   keys are a custom type, so when Ecto tries to cast those
-  ids, it will fail. So we need to tell it how to handle
-  the types of the foreign keys via the `:type` option in
-  `belongs_to`, or by using the `@foreign_key_type` at the
-  top of the schema to apply it to every `belong_to`
-  association.
-  
-  Now the ids will be represented as encoded strings in
-  our codebase, not leaking to our users, and their
-  auto incremented number representation remains untouched
-  in the database.
+  ids, it will fail.
+
+  Alternatively, you can set `@foreign_key_type EncodedId`
+  after `@primary_key` to automatically configure the type
+  of all `belongs_to` fields.
   """
 
   import Kernel, except: [match?: 2]
@@ -266,6 +260,16 @@ defmodule Ecto.Type do
   being encoded.
   """
   @callback embed_as(format :: atom) :: :self | :dump
+
+  @doc """
+  Generates a loaded version of the data.
+
+  This is callback is invoked when a custom type is given
+  to `field` with the `:autogenerate` flag.
+  """
+  @callback autogenerate() :: term()
+
+  @optional_callbacks autogenerate: 0
 
   ## Functions
 
