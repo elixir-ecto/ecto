@@ -100,7 +100,7 @@ defmodule Ecto.Type do
         def type, do: :id
         
         def cast(id) when is_integer(id) do
-          {:ok, Base.encode64(id)}
+          {:ok, encode_id(id)}
         end
         def cast(_), do: :error
         
@@ -109,7 +109,13 @@ defmodule Ecto.Type do
         end
         
         def load(id) when is_integer(id) do
-          {:ok, Base.encode64(id)}
+          {:ok, encode_id(id)}
+        end
+        
+        defp encode_id(id) do
+          id
+          |> Integer.to_string()
+          |> Base.encode64
         end
       end
   
