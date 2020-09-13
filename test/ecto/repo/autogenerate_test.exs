@@ -71,6 +71,48 @@ defmodule Ecto.Repo.AutogenerateTest do
     end
   end
 
+  defmodule ParameterizedTypePrefixedUUID do
+    use Ecto.ParameterizedType
+
+    @separator "_"
+
+    def init(params), do: Enum.into(params, %{})
+    def type(_), do: :uuid
+    def load(uuid, _, %{prefix: prefix}), do: {:ok, prefix <> @separator <> uuid}
+
+    def dump(code, _, %{prefix: _prefix}),
+      do: {:ok, code |> String.split(@separator) |> List.last()}
+
+    def cast(code, %{prefix: _}), do: {:ok, code |> String.split(@separator) |> List.last()}
+
+    def autogenerate(%{autogenerate: true, prefix: prefix, field: :code, schema: _}),
+      do: prefix <> @separator <> Ecto.UUID.generate()
+  end
+
+  defmodule ParameterizedTypePrefixedID do
+    use Ecto.ParameterizedType
+
+    @separator "_"
+
+    def init(params), do: Enum.into(params, %{})
+    def type(_), do: :id
+    def load(id, _, %{prefix: prefix}), do: {:ok, prefix <> @separator <> to_string(id)}
+
+    def dump(code, _, %{prefix: _prefix}),
+      do: {:ok, code |> String.split(@separator) |> List.last() |> Integer.parse()}
+
+    def cast(code, %{prefix: _}), do: {:ok, code |> String.split(@separator) |> List.last()}
+  end
+
+  defmodule ParameterizedTypeSchema do
+    use Ecto.Schema
+
+    @primary_key {:id, ParameterizedTypePrefixedID, autogenerate: true, prefix: "pk"}
+    schema "paramaeterized_type_schema" do
+      field :code, ParameterizedTypePrefixedUUID, autogenerate: true, prefix: "code"
+    end
+  end
+
   ## Autogenerate
 
   @uuid "30313233-3435-4637-9839-616263646566"
@@ -94,6 +136,11 @@ defmodule Ecto.Repo.AutogenerateTest do
     changeset = Ecto.Changeset.cast(%Company{}, %{code: @uuid}, [:code])
     schema = TestRepo.insert!(changeset)
     assert schema.code == @uuid
+
+    schema = TestRepo.insert!(%ParameterizedTypeSchema{})
+    assert "pk_" <> id = schema.id
+    assert "code_" <> code_uuid = schema.code
+    assert byte_size(code_uuid) == 36
   end
 
   ## Timestamps
