@@ -984,6 +984,8 @@ defmodule Ecto.Repo do
 
       MyRepo.update_all(Post, set: [title: "New title"])
 
+      MyRepo.update_all(Post, set: %{title: "New title"})
+
       MyRepo.update_all(Post, inc: [visits: 1])
 
       from(p in Post, where: p.id < 10, select: p.visits)

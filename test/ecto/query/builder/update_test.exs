@@ -19,9 +19,19 @@ defmodule Ecto.Query.Builder.UpdateTest do
       [compile] = query.updates
       assert compile.expr == [set: [foo: {:==, [], [{{:., [], [{:&, [], [0]}, :foo]}, [], []}, {:^, [], [0]}]}]]
       assert compile.params == [{1, {0, :foo}}]
+
+      query = "foo" |> update([p], set: %{foo: p.foo == ^1})
+      [compile] = query.updates
+      assert compile.expr == [set: [foo: {:==, [], [{{:., [], [{:&, [], [0]}, :foo]}, [], []}, {:^, [], [0]}]}]]
+      assert compile.params == [{1, {0, :foo}}]
+
+      query = "foo" |> update([p], set: %{"foo" => p.foo == ^1})
+      [compile] = query.updates
+      assert compile.expr == [set: [{"foo", {:==, [], [{{:., [], [{:&, [], [0]}, :foo]}, [], []}, {:^, [], [0]}]}}]]
+      assert compile.params == [{1, {0, :foo}}]
     end
 
-    test "raises on non-keyword lists" do
+    test "raises on non keyword/string-key lists" do
       assert_raise Ecto.Query.CompileError,
                    ~r"malformed update `\[1\]` in query expression", fn ->
         escape(quote do [1] end, [], __ENV__)
@@ -51,11 +61,25 @@ defmodule Ecto.Query.Builder.UpdateTest do
       assert runtime.expr == [set: [foo: {:^, [], [0]}, bar: {:^, [], [1]}]]
       assert runtime.params == [{"foo", {0, :foo}}, {"bar", {0, :bar}}]
 
+      query = "foo" |> update([_], ^[set: %{foo: "foo", bar: "bar"}])
+      [runtime] = query.updates
+      assert runtime.expr == [set: [bar: {:^, [], [0]}, foo: {:^, [], [1]}]]
+      assert runtime.params == [{"bar", {0, :bar}}, {"foo", {0, :foo}}]
+
+      query = "foo" |> update([_], ^[set: %{"foo" => "foo", "bar" => "bar"}])
+      [runtime] = query.updates
+      assert runtime.expr == [set: [{"bar", {:^, [], [0]}}, {"foo", {:^, [], [1]}}]]
+      assert runtime.params == [{"bar", {0, "bar"}}, {"foo", {0, "foo"}}]
+
       query = "foo" |> update([_], set: ^[foo: "foo"])
       [runtime] = query.updates
       assert runtime.expr == [set: [foo: {:^, [], [0]}]]
       assert runtime.params == [{"foo", {0, :foo}}]
 
+      query = "foo" |> update([_], set: ^[foo: "foo"], inc: [bar: ^"bar"])
+      [runtime] = query.updates
+      assert runtime.expr == [set: [foo: {:^, [], [0]}], inc: [bar: {:^, [], [1]}]]
+      assert runtime.params == [{"foo", {0, :foo}}, {"bar", {0, :bar}}]
       query = "foo" |> update([_], set: ^[foo: "foo"], inc: [bar: ^"bar"])
       [runtime] = query.updates
       assert runtime.expr == [set: [foo: {:^, [], [0]}], inc: [bar: {:^, [], [1]}]]
@@ -69,6 +93,14 @@ defmodule Ecto.Query.Builder.UpdateTest do
 
     test "accepts dynamic expressions with values" do
       dynamic = dynamic([p], true)
+
+      %{updates: [update]} = update("foo", [_], set: %{foo: ^dynamic})
+      assert Macro.to_string(update.expr) == "[set: [foo: true]]"
+      assert update.params == []
+
+      %{updates: [update]} = update("foo", [_], set: %{"foo" => ^dynamic})
+      assert Macro.to_string(update.expr) == "[set: [{\"foo\", true}]]"
+      assert update.params == []
 
       %{updates: [update]} = update("foo", [_], set: [foo: ^dynamic])
       assert Macro.to_string(update.expr) == "[set: [foo: true]]"
@@ -85,6 +117,16 @@ defmodule Ecto.Query.Builder.UpdateTest do
 
     test "accepts dynamic expressions with parameters" do
       dynamic = dynamic([p], ^false and ^true)
+
+      %{updates: [update]} = update("foo", [_], set: %{foo: ^1, bar: ^dynamic, baz: ^2})
+      assert Macro.to_string(update.expr) == "[set: [foo: ^0, bar: ^1 and ^2, baz: ^3]]"
+      assert update.params == [{1, {0, :foo}}, {false, :boolean},
+                               {true, :boolean}, {2, {0, :baz}}]
+
+      %{updates: [update]} = update("foo", [_], set: %{"foo" => ^1, "bar" => ^dynamic, "baz" => ^2})
+      assert Macro.to_string(update.expr) == "[set: [{\"foo\", ^0}, {\"bar\", ^1 and ^2}, {\"baz\", ^3}]]"
+      assert update.params == [{1, {0, "foo"}}, {false, :boolean},
+                               {true, :boolean}, {2, {0, "baz"}}]
 
       %{updates: [update]} = update("foo", [_], set: [foo: ^1, bar: ^dynamic, baz: ^2])
       assert Macro.to_string(update.expr) == "[set: [foo: ^0, bar: ^1 and ^2, baz: ^3]]"

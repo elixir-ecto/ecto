@@ -924,6 +924,20 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{title: nil} = TestRepo.get(Post, id1)
     assert %Post{title: nil} = TestRepo.get(Post, id2)
     assert %Post{title: nil} = TestRepo.get(Post, id3)
+
+    # supports map with atom keys
+    assert {3, nil} = TestRepo.update_all("posts", set: %{title: "x"})
+
+    assert %Post{title: "x"} = TestRepo.get(Post, id1)
+    assert %Post{title: "x"} = TestRepo.get(Post, id2)
+    assert %Post{title: "x"} = TestRepo.get(Post, id3)
+
+    # supports map with string keys
+    assert {3, nil} = TestRepo.update_all("posts", set: %{"title" => nil})
+
+    assert %Post{title: nil} = TestRepo.get(Post, id1)
+    assert %Post{title: nil} = TestRepo.get(Post, id2)
+    assert %Post{title: nil} = TestRepo.get(Post, id3)
   end
 
   @tag :invalid_prefix
@@ -964,6 +978,35 @@ defmodule Ecto.Integration.RepoTest do
     assert p1 == %{id: id1, title: "x"}
     assert p2 == %{id: id2, title: "x"}
     assert p3 == %{id: id3, title: "x"}
+  end
+
+  test "update all with dynamic input" do
+    assert %Post{id: id1} = TestRepo.insert!(%Post{title: "1", visits: 0})
+    assert %Post{id: id2} = TestRepo.insert!(%Post{title: "2", visits: 1})
+
+    dynamic = dynamic([p], 5)
+
+    query = from p in Post,  update: [set: [visits: ^dynamic]]
+    assert {2, nil} = TestRepo.update_all(query, [])
+
+    assert %Post{visits: 5} = TestRepo.get(Post, id1)
+    assert %Post{visits: 5} = TestRepo.get(Post, id2)
+
+    dynamic = dynamic([p], 6)
+
+    query = from p in Post,  update: [set: %{"visits" => ^dynamic}]
+    assert {2, nil} = TestRepo.update_all(query, [])
+
+    assert %Post{visits: 6} = TestRepo.get(Post, id1)
+    assert %Post{visits: 6} = TestRepo.get(Post, id2)
+
+    dynamic = dynamic([p], p.visits + 1)
+
+    query = from p in Post,  update: [set: %{"visits" => ^dynamic}]
+    assert {2, nil} = TestRepo.update_all(query, [])
+
+    assert %Post{visits: 7} = TestRepo.get(Post, id1)
+    assert %Post{visits: 7} = TestRepo.get(Post, id2)
   end
 
   test "update all with filter" do

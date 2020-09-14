@@ -48,6 +48,10 @@ defmodule Ecto.Query.Builder.Update do
     escape_op(t, compile, runtime, params, vars, env)
   end
 
+  defp escape_op([{k, {:%{}, _, v}}|t], compile, runtime, params, vars, env) when is_atom(k) and is_list(v) do
+    escape_op([{k, v}|t], compile, runtime, params, vars, env)
+  end
+
   defp escape_op([{k, {:^, _, [v]}}|t], compile, runtime, params, vars, env) when is_atom(k) do
     validate_op!(k)
     escape_op(t, compile, [{k, v}|runtime], params, vars, env)
@@ -65,6 +69,8 @@ defmodule Ecto.Query.Builder.Update do
     Enum.reduce kw, {[], [], params}, fn
       {k, {:^, _, [v]}}, {compile, runtime, params} when is_atom(k) ->
         {compile, [{k, v} | runtime], params}
+      {k, {:^, _, [v]}}, {compile, runtime, params} when is_binary(k) ->
+        {compile, [{k, v} | runtime], params}
       {k, v}, {compile, runtime, params} ->
         k = escape_field!(k)
         {v, {params, :acc}} = Builder.escape(v, type_for_key(op, {0, k}), {params, :acc}, vars, env)
@@ -77,6 +83,7 @@ defmodule Ecto.Query.Builder.Update do
 
   defp escape_field!({:^, _, [k]}), do: quote(do: Ecto.Query.Builder.Update.field!(unquote(k)))
   defp escape_field!(k) when is_atom(k), do: k
+  defp escape_field!(k) when is_binary(k), do: k
 
   defp escape_field!(k) do
     Builder.error!(
@@ -151,7 +158,7 @@ defmodule Ecto.Query.Builder.Update do
   def update!(query, runtime, file, line) when is_list(runtime) do
     {runtime, {params, _count}} =
       Enum.map_reduce runtime, {[], 0}, fn
-        {k, v}, acc when is_atom(k) and is_list(v) ->
+        {k, v}, acc when is_atom(k) and (is_list(v) or is_map(v)) ->
           validate_op!(k)
           {v, params} = runtime_field!(query, k, v, acc)
           {{k, v}, params}
@@ -171,10 +178,10 @@ defmodule Ecto.Query.Builder.Update do
 
   defp runtime_field!(query, key, kw, acc) do
     Enum.map_reduce kw, acc, fn
-      {k, %Ecto.Query.DynamicExpr{} = v}, {params, count} when is_atom(k) ->
+      {k, %Ecto.Query.DynamicExpr{} = v}, {params, count} when is_atom(k) or is_binary(k) ->
         {v, params, count} = Ecto.Query.Builder.Dynamic.partially_expand(query, v, params, count)
         {{k, v}, {params, count}}
-      {k, v}, {params, count} when is_atom(k) ->
+      {k, v}, {params, count} when is_atom(k) or is_binary(k) ->
         params = [{v, type_for_key(key, {0, k})} | params]
         {{k, {:^, [], [count]}}, {params, count + 1}}
       _, _acc ->
