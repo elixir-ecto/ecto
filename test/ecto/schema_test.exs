@@ -460,28 +460,6 @@ defmodule Ecto.SchemaTest do
         end
       end
     end
-
-    assert_raise ArgumentError,
-                "field :x does not support :autogenerate because it uses a " <>
-                "parameterized type {:parameterized, Ecto.SchemaTest.MyParameterizedType, :init} that does not define autogenerate/1", fn ->
-      defmodule MyParameterizedType do
-        use Ecto.ParameterizedType
-
-        def init(_), do: :init
-        def type(_), do: :string
-        def load(_, _, _), do: {:ok, :load}
-        def dump(_, _, _), do: {:ok, :dump}
-        def cast(_, _), do: {:ok, :cast}
-      end
-
-      defmodule AutogenerateFail do
-        use Ecto.Schema
-
-        schema "hello" do
-          field :x, MyParameterizedType, autogenerate: true
-        end
-      end
-    end
   end
 
   ## Associations

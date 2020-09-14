@@ -138,7 +138,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     assert schema.code == @uuid
 
     schema = TestRepo.insert!(%ParameterizedTypeSchema{})
-    assert "pk_" <> id = schema.id
+    assert "pk_" <> _id = schema.id
     assert "code_" <> code_uuid = schema.code
     assert byte_size(code_uuid) == 36
   end
