@@ -104,7 +104,7 @@ defmodule Ecto.ParameterizedType do
 
   For more information on casting, see `c:Ecto.Type.cast/1`
   """
-  @callback cast(data :: term, params :: params()) ::
+  @callback cast(data :: term, params()) ::
               {:ok, term} | :error | {:error, keyword()}
 
   @doc """
@@ -114,7 +114,7 @@ defmodule Ecto.ParameterizedType do
 
   Note that this callback *will* be called when loading a `nil` value, unlike `c:Ecto.Type.load/1`.
   """
-  @callback load(value :: any(), loader :: function(), params :: params()) :: {:ok, value :: any()} | :error
+  @callback load(value :: any(), loader :: function(), params()) :: {:ok, value :: any()} | :error
 
   @doc """
   Dumps the given term into an Ecto native type.
@@ -123,26 +123,36 @@ defmodule Ecto.ParameterizedType do
 
   Note that this callback *will* be called when dumping a `nil` value, unlike `c:Ecto.Type.dump/1`.
   """
-  @callback dump(value :: any(), dumper :: function(), params :: params()) :: {:ok, value :: any()} | :error
+  @callback dump(value :: any(), dumper :: function(), params()) :: {:ok, value :: any()} | :error
 
   @doc """
   Returns the underlying schema type for the ParameterizedType.
 
   For more information on schema types, see `c:Ecto.Type.type/0`
   """
-  @callback type(params :: params()) :: Ecto.Type.t()
+  @callback type(params()) :: Ecto.Type.t()
 
   @doc """
   Checks if two terms are semantically equal.
   """
-  @callback equal?(value1 :: any(), value2 :: any(), params :: params()) :: boolean()
+  @callback equal?(value1 :: any(), value2 :: any(), params()) :: boolean()
 
   @doc """
   Dictates how the type should be treated inside embeds.
 
   For more information on embedding, see `c:Ecto.Type.embed_as/1`
   """
-  @callback embed_as(format :: atom(), params :: params()) :: :self | :dump
+  @callback embed_as(format :: atom(), params()) :: :self | :dump
+
+  @doc """
+  Generates a loaded version of the data.
+
+  This is callback is invoked when a parameterized type is given
+  to `field` with the `:autogenerate` flag.
+  """
+  @callback autogenerate(params()) :: term()
+
+  @optional_callbacks autogenerate: 1
 
   @doc false
   defmacro __using__(_) do
