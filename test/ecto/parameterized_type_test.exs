@@ -175,4 +175,37 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.cast({:maybe, @p_self_type}, :foo) == {:ok, :cast}
     assert Ecto.Type.cast({:maybe, @p_error_type}, :foo) == {:ok, :foo}
   end
+
+  defmodule MyParameterizedTypeForPrimaryKey do
+    use Ecto.ParameterizedType
+
+    def init(
+          primary_key: true,
+          autogenerate: true,
+          some_opt: :some_opt_value,
+          field: :id,
+          schema: _
+        ),
+        do: :init
+
+    def type(_), do: :id
+    def load(_, _, _), do: {:ok, :load}
+    def dump(_, _, _), do: {:ok, :dump}
+    def cast(_, _), do: {:ok, :cast}
+  end
+
+  defmodule SchemaWithParameterizedTypeAsPrimaryKey do
+    use Ecto.Schema
+
+    @primary_key {:id, MyParameterizedTypeForPrimaryKey,
+                  autogenerate: true, some_opt: :some_opt_value}
+    schema "" do
+    end
+  end
+
+  test "init primary key field" do
+    assert SchemaWithParameterizedTypeAsPrimaryKey.__schema__(:autogenerate_id) ==
+             {:id, :id,
+              {:parameterized, Ecto.ParameterizedTypeTest.MyParameterizedTypeForPrimaryKey, :init}}
+  end
 end
