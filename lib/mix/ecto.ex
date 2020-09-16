@@ -105,7 +105,8 @@ defmodule Mix.Ecto do
   """
   def no_umbrella!(task) do
     if Mix.Project.umbrella?() do
-      Mix.raise "Cannot run task #{inspect task} from umbrella application"
+      Mix.raise "Cannot run task #{inspect task} from umbrella project root. " <>
+                  "Change directory to one of the umbrella applications and try again"
     end
   end
 
