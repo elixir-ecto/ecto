@@ -81,6 +81,7 @@ defmodule Ecto.Query.PlannerTest do
       field :links, {:array, CustomPermalink}
       field :prefs, {:map, :string}
       field :payload, :map, load_in_query: false
+      field :status, Ecto.Enum, values: [:draft, :published, :deleted]
 
       embeds_one :meta, PostMeta
       embeds_many :metas, PostMeta
@@ -251,6 +252,35 @@ defmodule Ecto.Query.PlannerTest do
     assert params == []
   end
 
+  test "plan: casts atom values" do
+    {_query, params, _key} = plan(Post |> where([p], p.status == :draft))
+    assert params == ["draft"]
+
+    {_query, params, _key} = plan(Post |> where([p], p.status == ^:published))
+    assert params == ["published"]
+
+    exception = assert_raise Ecto.Query.CastError, fn ->
+      plan(Post |> where([p], p.title == :atoms_are_not_strings))
+    end
+
+    assert Exception.message(exception) =~ "value `:atoms_are_not_strings` in `where` cannot be cast to type :string"
+    assert Exception.message(exception) =~ "where: p0.title == :atoms_are_not_strings"
+
+    exception = assert_raise Ecto.Query.CastError, fn ->
+      plan(Post |> where([p], p.status == :unknown_status))
+    end
+
+    assert Exception.message(exception) =~ "value `:unknown_status` in `where` cannot be cast to type"
+    assert Exception.message(exception) =~ "where: p0.status == :unknown_status"
+
+    exception = assert_raise Ecto.Query.CastError, fn ->
+      plan(Post |> where([p], p.status == ^:pinned))
+    end
+
+    assert Exception.message(exception) =~ "value `:pinned` in `where` cannot be cast to type"
+    assert Exception.message(exception) =~ "where: p0.status == ^:pinned"
+  end
+
   test "plan: joins" do
     query = from(p in Post, join: c in "comments") |> plan |> elem(0)
     assert hd(query.joins).source == {"comments", nil}
@@ -373,7 +403,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "plan: generates a cache key" do
     {_query, _params, key} = plan(from(Post, []))
-    assert key == [:all, {"posts", Post, 116318561, "my_prefix"}]
+    assert key == [:all, {"posts", Post, 71478254, "my_prefix"}]
 
     query =
       from(
@@ -394,7 +424,7 @@ defmodule Ecto.Query.PlannerTest do
                    {:prefix, "foo"},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
                    {:join, [{:inner, {"comments", Comment, 38292156, "world"}, true}]},
-                   {"posts", Post, 116318561, "hello"},
+                   {"posts", Post, 71478254, "hello"},
                    {:select, 1}]
   end
 
@@ -959,16 +989,16 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.expr ==
              {:&, [], [0]}
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :meta, :metas], 0)
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0)
 
     query = from(Post, []) |> select([p], {p, p.title, "Post"}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query = from(Post, []) |> select([p], {p.title, p, "Post"}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query =
@@ -978,7 +1008,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, _], {p.title, p})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
            select_fields([:id, :text, :posted, :uuid, :crazy_comment, :post_id, :crazy_post_id], 1) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
   end
@@ -1027,7 +1057,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, struct(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
            select_fields([:id, :text], 1)
   end
 
@@ -1073,7 +1103,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, map(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
            select_fields([:id, :text], 1)
   end
 

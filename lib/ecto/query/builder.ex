@@ -267,6 +267,12 @@ defmodule Ecto.Query.Builder do
   def escape(nil, _type, params_acc, _vars, _env),
     do: {nil, params_acc}
 
+  def escape(atom, type, {params, acc}, vars, _env) when is_atom(atom) do
+    expr = literal(atom, type, vars)
+    params = [{atom, type} | params]
+    {expr, {params, acc}}
+  end
+
   # comparison operators
   def escape({comp_op, _, [left, right]} = expr, type, params_acc, vars, env)
       when comp_op in ~w(== != < > <= >=)a do
@@ -1013,6 +1019,7 @@ defmodule Ecto.Query.Builder do
   def quoted_type(literal, _vars) when is_float(literal),   do: :float
   def quoted_type(literal, _vars) when is_binary(literal),  do: :string
   def quoted_type(literal, _vars) when is_boolean(literal), do: :boolean
+  def quoted_type(literal, _vars) when is_atom(literal) and not is_nil(literal), do: :atom
   def quoted_type(literal, _vars) when is_integer(literal), do: :integer
 
   # Tuples
