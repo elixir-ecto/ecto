@@ -1,5 +1,20 @@
 # Changelog for v3.x
 
+## v3.5.0-rc.1
+
+### Enhancements
+
+  * [Ecto.Enum] Add `Ecto.Enum.values/2` helper
+  * [Ecto.Query] Allow `:prefix` in `from` to be set to nil
+  * [Ecto.Query] Allow atoms in query without interpolation in order to support Ecto.Enum
+
+### Bug fixes
+
+  * [Ecto.ParameterizedType] Add `autogenerate/1` as optional callback
+  * [Ecto.Changeset] Do not automatically share empty values across `cast/3` calls
+  * [Ecto.Query] Consider query prefix in cte/combination query cache
+  * [Ecto.Schema] Also redact virtual fields
+
 ## v3.5.0-rc.0 (2020-08-31)
 
 v3.5 requires Elixir v1.8+.
