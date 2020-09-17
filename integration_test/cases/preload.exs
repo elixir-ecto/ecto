@@ -77,6 +77,17 @@ defmodule Ecto.Integration.PreloadTest do
     assert %Post{id: ^pid3} = pl3.post
   end
 
+  test "preload multiple belongs_to" do
+    %User{id: uid} = TestRepo.insert!(%User{name: "foo"})
+    %Post{id: pid} = TestRepo.insert!(%Post{title: "1"})
+    %Comment{id: cid} = TestRepo.insert!(%Comment{post_id: pid, author_id: uid})
+
+    comment = TestRepo.get!(Comment, cid)
+    comment = TestRepo.preload(comment, [:author, :post])
+    assert comment.author.id == uid
+    assert comment.post.id == pid
+  end
+
   test "preload belongs_to with shared assocs" do
     %Post{id: pid1} = TestRepo.insert!(%Post{title: "1"})
     %Post{id: pid2} = TestRepo.insert!(%Post{title: "2"})
