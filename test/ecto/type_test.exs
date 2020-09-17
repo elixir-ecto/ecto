@@ -97,6 +97,15 @@ defmodule Ecto.TypeTest do
     assert cast({:map, :integer}, 1) == :error
   end
 
+  test "array" do
+    assert load({:array, :integer}, [1]) == {:ok, [1]}
+    assert dump({:array, :integer}, [2]) == {:ok, [2]}
+    assert cast({:array, :integer}, [3]) == {:ok, [3]}
+    assert cast({:array, :integer}, ["3"]) == {:ok, [3]}
+    assert cast({:array, :integer}, [3, nil]) == :error
+    assert cast({:array, :integer}, ["3", nil]) == :error
+  end
+
   test "custom types with array" do
     assert load({:array, Custom}, ["foo"]) == {:ok, [:load]}
     assert dump({:array, Custom}, ["foo"]) == {:ok, [:dump]}
