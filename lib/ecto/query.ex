@@ -49,6 +49,7 @@ defmodule Ecto.Query do
     * Booleans: `true`, `false`
     * Binaries: `<<1, 2, 3>>`
     * Strings: `"foo bar"`, `~s(this is a string)`
+    * Atoms (other than booleans and `nil`): `:foo`, `:bar`
     * Arrays: `[1, 2, 3]`, `~w(interpolate words)`
 
   All other types and dynamic values must be passed as a parameter using

@@ -81,6 +81,7 @@ defmodule Ecto.Query.PlannerTest do
       field :links, {:array, CustomPermalink}
       field :prefs, {:map, :string}
       field :payload, :map, load_in_query: false
+      field :status, Ecto.Enum, values: [:draft, :published, :deleted]
 
       embeds_one :meta, PostMeta
       embeds_many :metas, PostMeta
@@ -373,7 +374,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "plan: generates a cache key" do
     {_query, _params, key} = plan(from(Post, []))
-    assert key == [:all, {"posts", Post, 116318561, "my_prefix"}]
+    assert key == [:all, {"posts", Post, 71478254, "my_prefix"}]
 
     query =
       from(
@@ -394,7 +395,7 @@ defmodule Ecto.Query.PlannerTest do
                    {:prefix, "foo"},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
                    {:join, [{:inner, {"comments", Comment, 38292156, "world"}, true}]},
-                   {"posts", Post, 116318561, "hello"},
+                   {"posts", Post, 71478254, "hello"},
                    {:select, 1}]
   end
 
@@ -724,6 +725,26 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "normalize: casts atom values" do
+    {_query, params, _key} = normalize_with_params(Post |> where([p], p.status == :draft))
+    assert params == []
+
+    {_query, params, _key} = normalize_with_params(Post |> where([p], p.status == ^:published))
+    assert params == ["published"]
+
+    assert_raise Ecto.QueryError, ~r/value `:atoms_are_not_strings` cannot be dumped to type :string/, fn ->
+      normalize(Post |> where([p], p.title == :atoms_are_not_strings))
+    end
+
+    assert_raise Ecto.QueryError, ~r/value `:unknown_status` cannot be dumped to type \{:parameterized, Ecto.Enum/, fn ->
+      normalize(Post |> where([p], p.status == :unknown_status))
+    end
+
+    assert_raise Ecto.Query.CastError, ~r/value `:pinned` in `where` cannot be cast to type {:parameterized, Ecto.Enum/, fn ->
+      normalize(Post |> where([p], p.status == ^:pinned))
+    end
+  end
+
   test "normalize: tagged types" do
     {query, params, _select} = from(Post, []) |> select([p], type(^"1", :integer))
                                               |> normalize_with_params
@@ -959,16 +980,16 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.expr ==
              {:&, [], [0]}
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :meta, :metas], 0)
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0)
 
     query = from(Post, []) |> select([p], {p, p.title, "Post"}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query = from(Post, []) |> select([p], {p.title, p, "Post"}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query =
@@ -978,7 +999,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, _], {p.title, p})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
            select_fields([:id, :text, :posted, :uuid, :crazy_comment, :post_id, :crazy_post_id], 1) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
   end
@@ -1027,7 +1048,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, struct(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
            select_fields([:id, :text], 1)
   end
 
@@ -1073,7 +1094,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, map(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
            select_fields([:id, :text], 1)
   end
 

@@ -33,6 +33,9 @@ defmodule Ecto.Query.BuilderTest do
     assert {{:%, [], [Ecto.Query.Tagged, {:%{}, [], [value: {:<<>>, [], [0, 1, 2]}, type: :binary]}]}, []} ==
            escape(quote do <<0,1,2>> end, [], __ENV__)
 
+    assert {:some_atom, []} ==
+           escape(quote do :some_atom end, [], __ENV__)
+
     assert quote(do: &0.z()) ==
            escape(quote do field(x, :z) end, [x: 0], __ENV__)
            |> elem(0)
@@ -197,10 +200,6 @@ defmodule Ecto.Query.BuilderTest do
       escape(quote(do: "#{x}"), [], __ENV__)
     end
 
-    assert_raise Ecto.Query.CompileError, ~r"`:atom` is not a valid query expression", fn ->
-      escape(quote(do: :atom), [], __ENV__)
-    end
-
     assert_raise Ecto.Query.CompileError, ~r"short-circuit operators are not supported: `&&`", fn ->
       escape(quote(do: true && false), [], __ENV__)
     end
@@ -278,6 +277,8 @@ defmodule Ecto.Query.BuilderTest do
     assert quoted_type("foo", []) == :string
     assert quoted_type(true, []) == :boolean
     assert quoted_type(false, []) == :boolean
+    assert quoted_type(nil, []) == :any
+    assert quoted_type(:some_atom, []) == :atom
 
     assert quoted_type([1, 2, 3], []) == {:array, :integer}
     assert quoted_type([1, 2.0, 3], []) == {:array, :any}
