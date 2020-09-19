@@ -1,6 +1,6 @@
 # Changelog for v3.x
 
-## v3.5.0-rc.1
+## v3.5.0-rc.1 (2020-09-19)
 
 ### Enhancements
 
@@ -10,9 +10,10 @@
 
 ### Bug fixes
 
-  * [Ecto.ParameterizedType] Add `autogenerate/1` as optional callback
   * [Ecto.Changeset] Do not automatically share empty values across `cast/3` calls
+  * [Ecto.ParameterizedType] Add `autogenerate/1` as optional callback
   * [Ecto.Query] Consider query prefix in cte/combination query cache
+  * [Ecto.Repo] Fix preloading when using dynamic repos and the sandbox in automatic mode
   * [Ecto.Schema] Also redact virtual fields
 
 ## v3.5.0-rc.0 (2020-08-31)
