@@ -74,6 +74,37 @@ defmodule Ecto.Repo.Queryable do
     one!(name, query_for_get_by(queryable, clauses), opts)
   end
 
+  def reload(name, structs, opts) when is_list(structs) do
+    all(name, query_for_reload(structs, opts), opts)
+  end
+
+  def reload(name, struct, opts) do
+    one(name, query_for_reload(struct, opts), opts)
+  end
+
+  def reload!(name, structs, opts) when is_list(structs) do
+    query = query_for_reload(structs, opts)
+    result = all(name, query, opts)
+    result_count = Enum.count(result)
+    expected_count = Enum.count(structs)
+
+    if result_count < expected_count do
+      raise Ecto.TooFewResultsError, queryable: query, min: expected_count, count: result_count
+    end
+
+    result
+  end
+
+  def reload!(name, struct, opts) do
+    query = query_for_reload(struct, opts)
+    case one!(name, query, opts) do
+      nil ->
+        raise Ecto.NoResultsError, queryable: query
+      res ->
+        res
+    end
+  end
+
   def aggregate(name, queryable, aggregate, opts) do
     one!(name, query_for_aggregate(queryable, aggregate), opts)
   end
@@ -428,6 +459,26 @@ defmodule Ecto.Repo.Queryable do
     Query.where(queryable, [], ^Enum.to_list(clauses))
   end
 
+  defp query_for_reload([head| _] = structs, opts) do
+    assert_structs!(structs)
+
+    schema = head.__struct__
+
+    case schema.__schema__(:primary_key) do
+      [pk] ->
+        keys = Enum.map(structs, &get_pk!(&1, pk))
+        preloads = Keyword.get(opts, :preload, [])
+        Query.from(x in schema, where: field(x, ^pk) in ^keys, preload: ^preloads)
+
+      pks ->
+        raise ArgumentError,
+              "Ecto.Repo.reload/2 requires the schema #{inspect(schema)} " <>
+                "to have exactly one primary key, got: #{inspect(pks)}"
+    end
+  end
+
+  defp query_for_reload(struct, opts), do: query_for_reload([struct], opts)
+
   defp query_for_aggregate(queryable, aggregate) do
     query =
       case prepare_for_aggregate(queryable) do
@@ -484,5 +535,29 @@ defmodule Ecto.Repo.Queryable do
     raise Ecto.QueryError,
       query: query,
       message: "expected a from expression with a schema"
+  end
+
+  defp assert_structs!(structs) when is_list(structs) do
+    case Enum.reject(structs, &is_struct?/1) do
+      [] ->
+        :ok
+
+      rejected ->
+        raise ArgumentError, "Expected a struct or a list of structs, received #{inspect(rejected)}"
+    end
+  end
+
+  defp is_struct?(%{__struct__: _, __meta__: _}), do: true
+  defp is_struct?(_), do: false
+
+  defp get_pk!(struct, pk) do
+    struct
+    |> Map.fetch!(pk)
+    |> case do
+      nil ->
+        raise ArgumentError, "Ecto.Repo.reload/2 expects existent structs, found a `nil` id"
+      key ->
+        key
+    end
   end
 end

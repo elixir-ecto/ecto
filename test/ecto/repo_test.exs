@@ -220,6 +220,33 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  describe "reload" do
+    test "raises when input have a `nil` pk" do
+      message = "Ecto.Repo.reload/2 expects existent structs, found a `nil` id"
+      assert_raise ArgumentError, message, fn ->
+        TestRepo.reload(%MySchema{})
+      end
+    end
+
+    test "raises when input is not a struct or a list of structs" do
+      message = ~r"Expected a struct or a list of structs,"
+      assert_raise ArgumentError, message, fn ->
+        TestRepo.reload(%{my_key: 1})
+      end
+
+      assert_raise ArgumentError, message, fn ->
+        TestRepo.reload([%{my_key: 1}, %{my_key: 2}])
+      end
+    end
+
+    test "raises when schema doesn't have a primary key" do
+      message = ~r"to have exactly one primary key"
+      assert_raise ArgumentError, message, fn ->
+        TestRepo.reload(%MySchemaNoPK{})
+      end
+    end
+  end
+
   defmodule DefaultOptionRepo do
     use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
 

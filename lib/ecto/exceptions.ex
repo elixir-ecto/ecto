@@ -225,6 +225,25 @@ defmodule Ecto.MultipleResultsError do
   end
 end
 
+defmodule Ecto.TooFewResultsError do
+  defexception [:message]
+
+  def exception(opts) do
+    query = Keyword.fetch!(opts, :queryable) |> Ecto.Queryable.to_query
+    count = Keyword.fetch!(opts, :count)
+    min = Keyword.fetch!(opts, :min)
+
+    msg = """
+    expected at least #{min} result but got #{count} in query:
+
+    #{Inspect.Ecto.Query.to_string(query)}
+    """
+
+    %__MODULE__{message: msg}
+  end
+
+end
+
 defmodule Ecto.MultiplePrimaryKeyError do
   defexception [:message]
 

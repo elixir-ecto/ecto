@@ -338,6 +338,14 @@ defmodule Ecto.Repo do
           Ecto.Repo.Queryable.get_by!(get_dynamic_repo(), queryable, clauses, opts)
         end
 
+        def reload(queryable, opts \\ []) do
+          Ecto.Repo.Queryable.reload(get_dynamic_repo(), queryable, opts)
+        end
+
+        def reload!(queryable, opts \\ []) do
+          Ecto.Repo.Queryable.reload!(get_dynamic_repo(), queryable, opts)
+        end
+
         def one(queryable, opts \\ []) do
           Ecto.Repo.Queryable.one(get_dynamic_repo(), queryable, opts)
         end

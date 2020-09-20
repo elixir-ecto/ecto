@@ -706,6 +706,50 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
+  test "reload" do
+    post1 = TestRepo.insert!(%Post{title: "1", visits: 1})
+    post2 = TestRepo.insert!(%Post{title: "2", visits: 2})
+
+    assert post1 == TestRepo.reload(post1)
+    assert [post1, post2] == TestRepo.reload([post1, post2])
+    assert [post1, post2] == TestRepo.reload([post1, post2, %Post{id: 55}])
+    assert nil == TestRepo.reload(%Post{id: 55})
+
+    TestRepo.update_all(Post, inc: [visits: 1])
+
+    assert [%{visits: 2}, %{visits: 3}] = TestRepo.reload([post1, post2])
+  end
+
+  test "reload with assoc" do
+    post = TestRepo.insert!(%Post{title: "1", visits: 1})
+
+    # allows preloading on reload
+    assert %{comments: []} = post_with_preload = TestRepo.reload(post, preload: [:comments])
+    
+    # by default ignores preloads when reloading
+    assert %{comments: %Ecto.Association.NotLoaded{}} = TestRepo.reload(post_with_preload)
+  end
+
+  test "reload!" do
+    post1 = TestRepo.insert!(%Post{title: "1", visits: 1})
+    post2 = TestRepo.insert!(%Post{title: "2", visits: 2})
+
+    assert post1 == TestRepo.reload!(post1)
+    assert [post1, post2] == TestRepo.reload!([post1, post2])
+
+    assert_raise Ecto.TooFewResultsError, fn ->
+      TestRepo.reload!([post1, post2, %Post{id: 55}])
+    end
+
+    assert_raise Ecto.NoResultsError, fn ->
+      TestRepo.reload!(%Post{id: 55})
+    end
+
+    TestRepo.update_all(Post, inc: [visits: 1])
+
+    assert [%{visits: 2}, %{visits: 3}] = TestRepo.reload!([post1, post2])
+  end
+
   test "first, last and one(!)" do
     post1 = TestRepo.insert!(%Post{title: "1"})
     post2 = TestRepo.insert!(%Post{title: "2"})
@@ -909,21 +953,21 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   test "update all" do
-    assert %Post{id: id1} = TestRepo.insert!(%Post{title: "1"})
-    assert %Post{id: id2} = TestRepo.insert!(%Post{title: "2"})
-    assert %Post{id: id3} = TestRepo.insert!(%Post{title: "3"})
+    assert post1 = TestRepo.insert!(%Post{title: "1"})
+    assert post2 = TestRepo.insert!(%Post{title: "2"})
+    assert post3 = TestRepo.insert!(%Post{title: "3"})
 
     assert {3, nil} = TestRepo.update_all(Post, set: [title: "x"])
 
-    assert %Post{title: "x"} = TestRepo.get(Post, id1)
-    assert %Post{title: "x"} = TestRepo.get(Post, id2)
-    assert %Post{title: "x"} = TestRepo.get(Post, id3)
+    assert %Post{title: "x"} = TestRepo.reload(post1)
+    assert %Post{title: "x"} = TestRepo.reload(post2)
+    assert %Post{title: "x"} = TestRepo.reload(post3)
 
     assert {3, nil} = TestRepo.update_all("posts", [set: [title: nil]])
 
-    assert %Post{title: nil} = TestRepo.get(Post, id1)
-    assert %Post{title: nil} = TestRepo.get(Post, id2)
-    assert %Post{title: nil} = TestRepo.get(Post, id3)
+    assert %Post{title: nil} = TestRepo.reload(post1)
+    assert %Post{title: nil} = TestRepo.reload(post2)
+    assert %Post{title: nil} = TestRepo.reload(post3)
   end
 
   @tag :invalid_prefix
