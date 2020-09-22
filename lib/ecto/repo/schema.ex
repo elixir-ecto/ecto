@@ -467,7 +467,7 @@ defmodule Ecto.Repo.Schema do
 
   ## Helpers
 
-  defp returning(schema, opts) do
+  def returning(schema, opts) do
     case Keyword.get(opts, :returning, false) do
       [_ | _] = fields ->
         fields
@@ -488,10 +488,10 @@ defmodule Ecto.Repo.Schema do
   defp add_read_after_writes(return, schema),
     do: Enum.uniq(return ++ schema.__schema__(:read_after_writes))
 
-  defp fields_to_sources(fields, nil) do
+  def fields_to_sources(fields, nil) do
     {fields, fields}
   end
-  defp fields_to_sources(fields, dumper) do
+  def fields_to_sources(fields, dumper) do
     Enum.reduce(fields, {[], []}, fn field, {types, sources} ->
       {source, type} = Map.fetch!(dumper, field)
       {[{field, type} | types], [source | sources]}
@@ -528,7 +528,7 @@ defmodule Ecto.Repo.Schema do
     end)
   end
 
-  defp metadata(schema, prefix, source, autogen_id, context, opts) do
+  def metadata(schema, prefix, source, autogen_id, context, opts) do
     %{
       autogenerate_id: autogen_id,
       context: context,
@@ -537,24 +537,24 @@ defmodule Ecto.Repo.Schema do
       prefix: Keyword.get(opts, :prefix, prefix)
     }
   end
-  defp metadata(%{__struct__: schema, __meta__: %{context: context, source: source, prefix: prefix}},
+  def metadata(%{__struct__: schema, __meta__: %{context: context, source: source, prefix: prefix}},
                 autogen_id, opts) do
     metadata(schema, prefix, source, autogen_id, context, opts)
   end
-  defp metadata(%{__struct__: schema}, _, _) do
+  def metadata(%{__struct__: schema}, _, _) do
     raise ArgumentError, "#{inspect(schema)} needs to be a schema with source"
   end
 
-  defp conflict_target({:constraint, constraint}, _dumper) when is_atom(constraint) do
+  def conflict_target({:constraint, constraint}, _dumper) when is_atom(constraint) do
     # TODO: Remove this branch in future versions
     IO.warn "{:constraint, constraint} option for :conflict_target is deprecated, " <>
               "use {:unsafe_fragment, \"ON CONSTRAINT #{constraint}\" instead"
     {:constraint, constraint}
   end
-  defp conflict_target({:unsafe_fragment, fragment}, _dumper) when is_binary(fragment) do
+  def conflict_target({:unsafe_fragment, fragment}, _dumper) when is_binary(fragment) do
     {:unsafe_fragment, fragment}
   end
-  defp conflict_target(conflict_target, dumper) do
+  def conflict_target(conflict_target, dumper) do
     for target <- List.wrap(conflict_target) do
       case dumper do
         %{^target => {alias, _}} ->
@@ -567,7 +567,7 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp on_conflict(on_conflict, conflict_target, schema_meta, counter_fun, adapter) do
+  def on_conflict(on_conflict, conflict_target, schema_meta, counter_fun, adapter) do
     %{source: source, schema: schema, prefix: prefix} = schema_meta
 
     case on_conflict do

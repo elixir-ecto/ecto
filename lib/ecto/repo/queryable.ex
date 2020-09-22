@@ -101,9 +101,10 @@ defmodule Ecto.Repo.Queryable do
   defp rewrite_combinations(%{combinations: []} = query), do: query
 
   defp rewrite_combinations(%{combinations: combinations} = query) do
-    combinations = Enum.map(combinations, fn {type, query} ->
-      {type, query |> Query.exclude(:select) |> Query.select(1)}
-    end)
+    combinations =
+      Enum.map(combinations, fn {type, query} ->
+        {type, query |> Query.exclude(:select) |> Query.select(1)}
+      end)
 
     %{query | combinations: combinations}
   end
@@ -121,6 +122,75 @@ defmodule Ecto.Repo.Queryable do
       [one] -> one
       [] -> raise Ecto.NoResultsError, queryable: queryable
       other -> raise Ecto.MultipleResultsError, queryable: queryable, count: length(other)
+    end
+  end
+
+  def insert_all(name, schema, queryable, opts) when is_atom(schema) do
+    do_insert_all(
+      name,
+      schema,
+      schema.__schema__(:prefix),
+      schema.__schema__(:source),
+      queryable,
+      opts
+    )
+  end
+
+  def insert_all(name, table, queryable, opts) when is_binary(table) do
+    do_insert_all(name, nil, nil, table, queryable, opts)
+  end
+
+  def insert_all(name, {source, schema}, queryable, opts) when is_atom(schema) do
+    do_insert_all(name, schema, schema.__schema__(:prefix), source, queryable, opts)
+  end
+
+  defp do_insert_all(name, schema, prefix, source, queryable, opts) when is_list(opts) do
+    query = Ecto.Queryable.to_query(queryable)
+    {adapter, %{cache: cache, repo: repo} = adapter_meta} = Ecto.Repo.Registry.lookup(name)
+    autogen_id = schema && schema.__schema__(:autogenerate_id)
+    dumper = schema && schema.__schema__(:dump)
+
+    {_return_fields_or_types, return_sources} =
+      schema
+      |> Ecto.Repo.Schema.returning(opts)
+      |> Ecto.Repo.Schema.fields_to_sources(dumper)
+
+    schema_meta = Ecto.Repo.Schema.metadata(schema, prefix, source, autogen_id, nil, opts)
+    on_conflict = Keyword.get(opts, :on_conflict, :raise)
+    conflict_target = Keyword.get(opts, :conflict_target, [])
+    conflict_target = Ecto.Repo.Schema.conflict_target(conflict_target, dumper)
+
+    on_conflict =
+      Ecto.Repo.Schema.on_conflict(on_conflict, conflict_target, schema_meta, 0, adapter)
+
+    {query, opts} = prepare_query(:insert_all, repo, query, opts)
+    query = attach_prefix(query, opts)
+    insert_all_tuple = {query, prefix, source, on_conflict, return_sources}
+
+    {query_meta, prepared, params} =
+      Planner.query(insert_all_tuple, :insert_all, cache, adapter, 0)
+
+    case query_meta do
+      %{select: nil} ->
+        adapter.execute(adapter_meta, query_meta, prepared, params, opts)
+
+      %{select: select, sources: sources, preloads: preloads} ->
+        %{
+          preprocess: preprocess,
+          postprocess: postprocess,
+          take: take,
+          assocs: assocs,
+          from: from
+        } = select
+
+        preprocessor = preprocessor(from, preprocess, adapter)
+        {count, rows} = adapter.execute(adapter_meta, query_meta, prepared, params, opts)
+        postprocessor = postprocessor(from, postprocess, take, adapter)
+
+        {count,
+         rows
+         |> Ecto.Repo.Assoc.query(assocs, sources, preprocessor)
+         |> Ecto.Repo.Preloader.query(name, preloads, take, postprocessor, opts)}
     end
   end
 

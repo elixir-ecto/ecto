@@ -295,9 +295,31 @@ defmodule Ecto.Repo do
         def delete!(struct, opts \\ []) do
           Ecto.Repo.Schema.delete!(__MODULE__, get_dynamic_repo(), struct, with_default_options(:delete, opts))
         end
+      end
 
-        def insert_all(schema_or_source, entries, opts \\ []) do
+      ## `insert_all/3` is defined in both Schema and Queryable
+
+      if Ecto.Adapter.Schema in behaviours and Ecto.Adapter.Queryable not in behaviours and not @read_only do
+        def insert_all(schema_or_source, entries, opts \\ []) when is_list(entries) do
           Ecto.Repo.Schema.insert_all(__MODULE__, get_dynamic_repo(), schema_or_source, entries, with_default_options(:insert_all, opts))
+        end
+      end
+
+      if Ecto.Adapter.Schema in behaviours and Ecto.Adapter.Queryable in behaviours and not @read_only do
+        def insert_all(schema_or_source, queryable, opts \\ [])
+
+        def insert_all(schema_or_source, entries, opts) when is_list(entries) do
+          Ecto.Repo.Schema.insert_all(__MODULE__, get_dynamic_repo(), schema_or_source, entries, with_default_options(:insert_all, opts))
+        end
+
+        def insert_all(schema_or_source, queryable, opts) do
+          Ecto.Repo.Queryable.insert_all(get_dynamic_repo(), schema_or_source, queryable, opts)
+        end
+      end
+
+      if Ecto.Adapter.Schema not in behaviours and Ecto.Adapter.Queryable in behaviours and not @read_only do
+        def insert_all(schema_or_source, queryable, opts \\ []) do
+          Ecto.Repo.Queryable.insert_all(get_dynamic_repo(), schema_or_source, queryable, opts)
         end
       end
 
@@ -1130,15 +1152,15 @@ defmodule Ecto.Repo do
   By default, both Postgres and MySQL will return the number of entries
   inserted on `c:insert_all/3`. However, when the `:on_conflict` option
   is specified, Postgres and MySQL will return different results.
-  
+
   Postgres will only count a row if it was affected and will
   return 0 if no new entry was added.
-  
-  MySQL will return, at a minimum, the number of entries attempted. For example, 
+
+  MySQL will return, at a minimum, the number of entries attempted. For example,
   if `:on_conflict` is set to `:nothing`, MySQL will return
   the number of entries attempted to be inserted, even when no entry
-  was added. 
-  
+  was added.
+
   Also note that if `:on_conflict` is a query, MySQL will return
   the number of attempted entries plus the number of entries modified
   by the UPDATE query.
@@ -1528,9 +1550,9 @@ defmodule Ecto.Repo do
         MyRepo.update!(change(alice, balance: alice.balance - 10))
         MyRepo.update!(change(bob, balance: bob.balance + 10))
       end)
-      
+
       # When passing a function of arity 1, it receives the repository itself
-      MyRepo.transaction(fn repo -> 
+      MyRepo.transaction(fn repo ->
         repo.insert!(%Post{})
       end)
 

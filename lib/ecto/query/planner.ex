@@ -116,6 +116,12 @@ defmodule Ecto.Query.Planner do
   The cache value is the compiled query by the adapter
   along-side the select expression.
   """
+  def query({%Ecto.Query{} = query, _prefix, _table, _on_conflict, _return_sources} = tuple, :insert_all, cache, adapter, counter) do
+    {query, params, key} = plan(query, :insert_all, adapter)
+    tuple = put_elem(tuple, 0, query)
+    query_with_cache(key, tuple, :insert_all, cache, adapter, counter, params)
+  end
+
   def query(query, operation, cache, adapter, counter) do
     {query, params, key} = plan(query, operation, adapter)
     query_with_cache(key, query, operation, cache, adapter, counter, params)
@@ -173,6 +179,13 @@ defmodule Ecto.Query.Planner do
   defp cache_reset(cache, key, prepared) do
     _ = :ets.update_element(cache, key, [{2, :cache}, {4, prepared}])
     :ok
+  end
+
+  defp query_without_cache({%Ecto.Query{} = query, _prefix, _table, _on_conflict, _return_sources} = tuple, :insert_all, adapter, counter) do
+    {query, select} = normalize(query, :insert_all, adapter, counter)
+    tuple = put_elem(tuple, 0, query)
+    {cache, prepared} = adapter.prepare(:insert_all, tuple)
+    {cache, select, prepared}
   end
 
   defp query_without_cache(query, operation, adapter, counter) do
@@ -905,6 +918,9 @@ defmodule Ecto.Query.Planner do
       :delete_all ->
         assert_no_update!(query, operation)
         assert_only_filter_expressions!(query, operation)
+      :insert_all ->
+        assert_no_update!(query, operation)
+        assert_only_filter_expressions!(query, operation)
     end
 
     traverse_exprs(query, operation, counter,
@@ -1585,6 +1601,9 @@ defmodule Ecto.Query.Planner do
   @delete_all_exprs [with_cte: :with_ctes, from: :from, join: :joins,
                      where: :wheres, select: :select]
 
+  @insert_all_exprs [with_cte: :with_ctes, from: :from, join: :joins,
+                     where: :wheres, select: :select]
+
   # Traverse all query components with expressions.
   # Therefore from, preload, assocs and lock are not traversed.
   defp traverse_exprs(query, operation, acc, fun) do
@@ -1593,6 +1612,7 @@ defmodule Ecto.Query.Planner do
         :all -> @all_exprs
         :update_all -> @update_all_exprs
         :delete_all -> @delete_all_exprs
+        :insert_all -> @insert_all_exprs
       end
 
     Enum.reduce exprs, {query, acc}, fn {kind, key}, {query, acc} ->
