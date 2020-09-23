@@ -898,7 +898,6 @@ defmodule Ecto.Query.Planner do
     case operation do
       :all ->
         assert_no_update!(query, operation)
-        assert_valid_combinations!(query)
       :update_all ->
         assert_update!(query, operation)
         assert_only_filter_expressions!(query, operation)
@@ -1722,33 +1721,6 @@ defmodule Ecto.Query.Planner do
         error! query, "`#{operation}` allows only `with_cte`, `where` and `join` expressions. " <>
                       "You can exclude unwanted expressions from a query by using " <>
                       "Ecto.Query.exclude/2. Error found"
-    end
-  end
-
-  defp assert_valid_combinations!(query) do
-    case query.combinations do
-      [] ->
-        :ok
-
-      [{kind, _} | _] ->
-        has_bindings? =
-          Enum.any?(query.order_bys, fn order_by ->
-            Enum.any?(order_by.expr, &match?({_dir, {{:., [], [{:&, [], [_]}, _]}, [], []}}, &1))
-          end)
-
-        if has_bindings? do
-          error! query, """
-          cannot use bindings in `order_by` when using `#{kind}`.
-
-          That's because the `order_by` applies to the whole `#{kind}` and not \
-          an individual query. If you really want to order the results, you can wrap \
-          the existing query in a subquery and then order it:
-
-              query = #{kind}(query1, ^query2)
-              from q in subquery(query), order_by: q.field
-
-          """
-        end
     end
   end
 
