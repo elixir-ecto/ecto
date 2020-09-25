@@ -16,7 +16,7 @@ defmodule Ecto.Repo.Preloader do
 
   def query(rows, repo_name, preloads, take, fun, opts) do
     rows
-    |> extract
+    |> extract()
     |> normalize_and_preload_each(repo_name, preloads, take, opts)
     |> unextract(rows, fun)
   end
@@ -182,15 +182,13 @@ defmodule Ecto.Repo.Preloader do
 
         cond do
           card == :one and loaded? ->
-            {fetch_ids, [id|loaded_ids], [value|loaded_structs]}
+            {fetch_ids, [id | loaded_ids], [value | loaded_structs]}
           card == :many and loaded? ->
-            {fetch_ids,
-             List.duplicate(id, length(value)) ++ loaded_ids,
-             value ++ loaded_structs}
+            {fetch_ids, [{id, length(value)} | loaded_ids], value ++ loaded_structs}
           is_nil(id) ->
             {fetch_ids, loaded_ids, loaded_structs}
           true ->
-            {[id|fetch_ids], loaded_ids, loaded_structs}
+            {[id | fetch_ids], loaded_ids, loaded_structs}
         end
     end
   end
@@ -304,6 +302,10 @@ defmodule Ecto.Repo.Preloader do
     map
   end
 
+  defp many_assoc_map([{id, n}|ids], structs, map) do
+    {acc, structs} = split_n(structs, n, [])
+    many_assoc_map(ids, structs, Map.put(map, id, acc))
+  end
   defp many_assoc_map([id|ids], [struct|structs], map) do
     {ids, structs, acc} = split_while(ids, structs, id, [struct])
     many_assoc_map(ids, structs, Map.put(map, id, acc))
@@ -311,6 +313,9 @@ defmodule Ecto.Repo.Preloader do
   defp many_assoc_map([], [], map) do
     map
   end
+
+  defp split_n(structs, 0, acc), do: {acc, structs}
+  defp split_n([struct | structs], n, acc), do: split_n(structs, n - 1, [struct | acc])
 
   defp split_while([id|ids], [struct|structs], id, acc),
     do: split_while(ids, structs, id, [struct|acc])
