@@ -1135,32 +1135,22 @@ defmodule Ecto.RepoTest do
 
     test "replaces specified fields on replace" do
       fields = [:x, :yyy]
-      TestRepo.insert(
-        %MySchema{id: 1},
-        on_conflict: {:replace, [:x, :y]},
-        conflict_target: [:id]
-      )
-      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}}
+      TestRepo.insert(%MySchema{id: 1}, on_conflict: {:replace, [:x, :y]})
+      assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
     end
 
     test "replaces specified fields on replace without a schema" do
       fields = [:x, :yyy]
       rows = [[id: 1, x: "x", yyy: "yyy"]]
-      TestRepo.insert_all(
-        "my_schema",
-        rows,
-        on_conflict: {:replace, [:x, :yyy]},
-        conflict_target: [:id]
-      )
-      assert_received {:insert_all, %{source: "my_schema", on_conflict: {^fields, [], [:id]}}, ^rows}
+      TestRepo.insert_all("my_schema", rows, on_conflict: {:replace, [:x, :yyy]})
+      assert_received {:insert_all, %{source: "my_schema", on_conflict: {^fields, [], []}}, ^rows}
     end
 
     test "raises on non-existent fields on replace" do
       assert_raise ArgumentError, "unknown field for :on_conflict, got: :unknown", fn ->
         TestRepo.insert(
           %MySchema{id: 1},
-          on_conflict: {:replace, [:unknown]},
-          conflict_target: [:id]
+          on_conflict: {:replace, [:unknown]}
         )
       end
     end
@@ -1193,12 +1183,6 @@ defmodule Ecto.RepoTest do
     test "raises on non-empty conflict_target with on_conflict raise" do
       assert_raise ArgumentError, ":conflict_target option is forbidden when :on_conflict is :raise", fn ->
         TestRepo.insert(%MySchema{id: 1}, on_conflict: :raise, conflict_target: [:id])
-      end
-    end
-
-    test "raises on empty conflict_target with on_conflict replace" do
-      assert_raise ArgumentError, ":conflict_target option is required when :on_conflict is replace", fn ->
-        TestRepo.insert(%MySchema{id: 1}, on_conflict: {:replace, []})
       end
     end
 

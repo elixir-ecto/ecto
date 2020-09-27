@@ -580,9 +580,6 @@ defmodule Ecto.Repo.Schema do
       :nothing ->
         {:nothing, [], conflict_target}
 
-      {:replace, keys} when is_list(keys) and conflict_target == [] ->
-        raise ArgumentError, ":conflict_target option is required when :on_conflict is replace"
-
       {:replace, keys} when is_list(keys) ->
         fields = Enum.map(keys, &field_source!(schema, &1))
         {fields, [], conflict_target}
