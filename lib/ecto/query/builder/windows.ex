@@ -172,7 +172,7 @@ defmodule Ecto.Query.Builder.Windows do
   defp do_runtime_window!([{:frame, frame} | kw], query, acc, params) do
     case frame do
       %Ecto.Query.DynamicExpr{} ->
-        {frame, params, _count} = Builder.Dynamic.partially_expand(query, frame, params, length(params))
+        {frame, params, _count} = Builder.Dynamic.partially_expand(:windows, query, frame, params, length(params))
         do_runtime_window!(kw, query, [{:frame, frame} | acc], params)
 
       _ ->

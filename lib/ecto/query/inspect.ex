@@ -18,14 +18,16 @@ defimpl Inspect, for: Ecto.Query.DynamicExpr do
 
     query = %Ecto.Query{joins: joins, aliases: aliases}
 
-    {expr, binding, params, _, _} = Ecto.Query.Builder.Dynamic.fully_expand(query, dynamic)
+    {expr, binding, params, subqueries, _, _} =
+      Ecto.Query.Builder.Dynamic.fully_expand(query, dynamic)
 
     names = Enum.map(binding, fn
       {_, {name, _, _}} -> Atom.to_string(name)
       {name, _, _} -> Atom.to_string(name)
     end)
 
-    inspected = Inspect.Ecto.Query.expr(expr, List.to_tuple(names), %{expr: expr, params: params})
+    query_expr = %{expr: expr, params: params, subqueries: subqueries}
+    inspected = Inspect.Ecto.Query.expr(expr, List.to_tuple(names), query_expr)
 
     container_doc("dynamic(", [Macro.to_string(binding), inspected], ")", opts, fn str, _ ->
       str

@@ -55,9 +55,8 @@ defmodule Ecto.Query.Builder.GroupBy do
           {to_field(field), params_count}
 
         %Ecto.Query.DynamicExpr{} = dynamic, {params, count} ->
-          {expr, params, count} = Builder.Dynamic.partially_expand(query, dynamic, params, count)
+          {expr, params, count} = Builder.Dynamic.partially_expand(kind, query, dynamic, params, count)
           {expr, {params, count}}
-
 
         other, _params_count ->
           raise ArgumentError,

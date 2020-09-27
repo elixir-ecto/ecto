@@ -27,10 +27,12 @@ defmodule Ecto.Query.Builder.Filter do
         {field, nil}, _params_subqueries ->
           Builder.error! "nil given for `#{field}`. Comparison with nil is forbidden as it is unsafe. " <>
                          "Instead write a query with is_nil/1, for example: is_nil(s.#{field})"
+
         {field, value}, params_subqueries when is_atom(field) ->
           value = check_for_nils(value, field)
           {value, params_subqueries} = Builder.escape(value, {binding, field}, params_subqueries, vars, env)
           {{:{}, [], [:==, [], [to_escaped_field(binding, field), value]]}, params_subqueries}
+
         _, _params_subqueries ->
           Builder.error! "expected a keyword list at compile time in #{kind}, " <>
                          "got: `#{Macro.to_string expr}`. If you would like to " <>
@@ -96,9 +98,17 @@ defmodule Ecto.Query.Builder.Filter do
 
   @doc """
   Builds a filter based on the given arguments.
+
+  This is shared by having, where and join's on expressions.
   """
-  def filter!(_kind, query, %Ecto.Query.DynamicExpr{} = dynamic, _binding, _file, _line) do
-    {expr, _binding, params, file, line} = Ecto.Query.Builder.Dynamic.fully_expand(query, dynamic)
+  def filter!(kind, query, %Ecto.Query.DynamicExpr{} = dynamic, _binding, _file, _line) do
+    {expr, _binding, params, subqueries, file, line} =
+      Ecto.Query.Builder.Dynamic.fully_expand(query, dynamic)
+
+    if subqueries != [] do
+      raise ArgumentError, "subqueries are not allowed in `#{kind}` expressions"
+    end
+
     {expr, params, file, line}
   end
 
@@ -118,6 +128,22 @@ defmodule Ecto.Query.Builder.Filter do
   @doc """
   Builds the filter and applies it to the given query as boolean operator.
   """
+  def filter!(:where, op, query, %Ecto.Query.DynamicExpr{} = dynamic, _binding, _file, _line) do
+    {expr, _binding, params, subqueries, file, line} =
+      Ecto.Query.Builder.Dynamic.fully_expand(query, dynamic)
+
+    boolean = %Ecto.Query.BooleanExpr{
+      expr: expr,
+      params: params,
+      line: line,
+      file: file,
+      op: op,
+      subqueries: subqueries
+    }
+
+    apply(query, :where, boolean)
+  end
+
   def filter!(kind, op, query, expr, binding, file, line) do
     {expr, params, file, line} = filter!(kind, query, expr, binding, file, line)
     boolean = %Ecto.Query.BooleanExpr{expr: expr, params: params, line: line, file: file, op: op}

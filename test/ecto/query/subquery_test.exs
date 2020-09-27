@@ -303,18 +303,6 @@ defmodule Ecto.Query.SubqueryTest do
     end
   end
 
-  test "normalize: subqueries" do
-    assert_raise Ecto.SubQueryError, ~r/does not allow `update` expressions in query/, fn ->
-      query = from p in Post, update: [set: [title: nil]]
-      normalize(from(subquery(query), []))
-    end
-
-    assert_raise Ecto.QueryError, ~r/`update_all` does not allow subqueries in `from`/, fn ->
-      query = from p in Post
-      normalize(from(subquery(query), update: [set: [title: nil]]), :update_all)
-    end
-  end
-
   describe "normalize: source subqueries" do
     test "with params in from" do
       query = from p in Post,
@@ -370,6 +358,18 @@ defmodule Ecto.Query.SubqueryTest do
         normalize(from(p in subquery(subquery), select: [:title]))
       end
     end
+
+    test "invalid usage" do
+      assert_raise Ecto.SubQueryError, ~r/does not allow `update` expressions in query/, fn ->
+        query = from p in Post, update: [set: [title: nil]]
+        normalize(from(subquery(query), []))
+      end
+
+      assert_raise Ecto.QueryError, ~r/`update_all` does not allow subqueries in `from`/, fn ->
+        query = from p in Post
+        normalize(from(subquery(query), update: [set: [title: nil]]), :update_all)
+      end
+    end
   end
 
   describe "normalize: where in subquery" do
@@ -380,6 +380,34 @@ defmodule Ecto.Query.SubqueryTest do
       assert {:in, _, [_, {:subquery, 0}]} = hd(s.wheres).expr
       assert {:in, _, [_, %Ecto.SubQuery{} = subquery]} = hd(normalize(s).wheres).expr
       assert [{{:., _, [_, :post_id]}, _, []}] = subquery.query.select.fields
+    end
+
+    test "in dynamic" do
+      c = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
+      d = dynamic([p], p.id in subquery(c))
+      s = from(p in Post, where: ^d, select: count())
+
+      assert {:in, _, [_, {:subquery, 0}]} = hd(s.wheres).expr
+      assert {:in, _, [_, %Ecto.SubQuery{} = subquery]} = hd(normalize(s).wheres).expr
+      assert [{{:., _, [_, :post_id]}, _, []}] = subquery.query.select.fields
+    end
+
+    test "in multiple dynamic" do
+      cbar = from(c in Comment, where: c.text == ^"bar", select: c.post_id)
+      cfoo = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
+      d1 = dynamic([p], p.id not in subquery(cbar))
+      d2 = dynamic([p], p.id in subquery(cfoo) and ^d1)
+      p = from(p in Post, where: ^d2, select: count())
+
+      assert {:and, _, [
+                {:in, _, [_, %Ecto.SubQuery{} = subqueryfoo]},
+                {:not, _, [{:in, _, [_, %Ecto.SubQuery{} = subquerybar]}]},
+              ]} = hd(normalize(p).wheres).expr
+
+      assert Macro.to_string(hd(subqueryfoo.query.wheres).expr) == "&0.text() == ^0"
+      assert Macro.to_string(hd(subquerybar.query.wheres).expr) == "&0.text() == ^1"
+      assert subqueryfoo.params == ["foo"]
+      assert subquerybar.params == ["bar"]
     end
 
     test "with aggregate" do
