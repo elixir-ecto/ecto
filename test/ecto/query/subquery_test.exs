@@ -56,61 +56,121 @@ defmodule Ecto.Query.SubqueryTest do
     end
   end
 
-  test "plan: subqueries" do
-    {query, params, key} = plan(from(subquery(Post), []))
-    assert %{query: %Ecto.Query{}, params: []} = query.from.source
-    assert params == []
-    assert key == [:all, [:all, {"posts", Post, 52805476, "my_prefix"}]]
-
-    posts = from(p in Post, where: p.title == ^"hello")
-    query = from(c in Comment, join: p in subquery(posts), on: c.post_id == p.id)
-    {query, params, key} = plan(query)
-    assert {"comments", Comment} = query.from.source
-    assert [%{source: %{query: %Ecto.Query{}, params: ["hello"]}}] = query.joins
-    assert params == ["hello"]
-    assert [:all, {:join, [{:inner, [:all | _], _}]}, {"comments", _, _, _}] = key
-  end
-
-  test "plan: subqueries with association joins" do
-    {query, _, _} = plan(from(p in subquery(Post), join: c in assoc(p, :comments)))
-    assert [%{source: {"comments", Comment}}] = query.joins
-
-    message = ~r/can only perform association joins on subqueries that return a source with schema in select/
-    assert_raise Ecto.QueryError, message, fn ->
-      plan(from(p in subquery(from p in Post, select: p.title), join: c in assoc(p, :comments)))
+  describe "plan: source subqueries" do
+    test "in from" do
+      {query, params, key} = plan(from(subquery(Post), []))
+      assert %{query: %Ecto.Query{}, params: []} = query.from.source
+      assert params == []
+      assert key == [:all, [:all, {"posts", Post, 52805476, "my_prefix"}]]
     end
-  end
 
-  test "plan: subqueries with literals" do
-    subquery = select(Post, [p], %{t: p.title, l: "literal"})
-    query = normalize(from(p in subquery(subquery), select: %{x: p.t, y: p.l, z: "otherliteral"}))
+    test "in join" do
+      posts = from(p in Post, where: p.title == ^"hello")
+      query = from(c in Comment, join: p in subquery(posts), on: c.post_id == p.id)
+      {query, params, key} = plan(query)
+      assert {"comments", Comment} = query.from.source
+      assert [%{source: %{query: %Ecto.Query{}, params: ["hello"]}}] = query.joins
+      assert params == ["hello"]
+      assert [:all, {:join, [{:inner, [:all | _], _}]}, {"comments", _, _, _}] = key
+    end
 
-    assert query.select.fields == [
-      {{:., [type: :string], [{:&, [], [0]}, :t]}, [], []},
-      {{:., [type: :binary], [{:&, [], [0]}, :l]}, [], []}
-    ]
+    test "with association joins" do
+      {query, _, _} = plan(from(p in subquery(Post), join: c in assoc(p, :comments)))
+      assert [%{source: {"comments", Comment}}] = query.joins
 
-    assert [{:t, _}, {:l, "literal"}] = query.from.source.query.select.fields
-  end
+      message = ~r/can only perform association joins on subqueries that return a source with schema in select/
+      assert_raise Ecto.QueryError, message, fn ->
+        plan(from(p in subquery(from p in Post, select: p.title), join: c in assoc(p, :comments)))
+      end
+    end
 
-  test "plan: subqueries with map updates in select can be used with assoc" do
-    query =
-      Post
-      |> select([post], %{post | title: ^"hello"})
-      |> subquery()
-      |> join(:left, [subquery_post], comment in assoc(subquery_post, :comments))
-      |> plan()
-      |> elem(0)
+    test "with literals" do
+      subquery = select(Post, [p], %{t: p.title, l: "literal"})
+      query = normalize(from(p in subquery(subquery), select: %{x: p.t, y: p.l, z: "otherliteral"}))
 
-    assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
-    assert source == {"comments", Comment}
-    assert Macro.to_string(on.expr) == "&1.post_id() == &0.id()"
-  end
+      assert query.select.fields == [
+        {{:., [type: :string], [{:&, [], [0]}, :t]}, [], []},
+        {{:., [type: :binary], [{:&, [], [0]}, :l]}, [], []}
+      ]
 
-  test "plan: subqueries do not support preloads" do
-    query = from p in Post, join: c in assoc(p, :comments), preload: [comments: c]
-    assert_raise Ecto.SubQueryError, ~r/cannot preload associations in subquery/, fn ->
-      plan(from(subquery(query), []))
+      assert [{:t, _}, {:l, "literal"}] = query.from.source.query.select.fields
+    end
+
+    test "with map updates in select can be used with assoc" do
+      query =
+        Post
+        |> select([post], %{post | title: ^"hello"})
+        |> subquery()
+        |> join(:left, [subquery_post], comment in assoc(subquery_post, :comments))
+        |> plan()
+        |> elem(0)
+
+      assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
+      assert source == {"comments", Comment}
+      assert Macro.to_string(on.expr) == "&1.post_id() == &0.id()"
+    end
+
+    test "do not support preloads" do
+      query = from p in Post, join: c in assoc(p, :comments), preload: [comments: c]
+      assert_raise Ecto.SubQueryError, ~r/cannot preload associations in subquery/, fn ->
+        plan(from(subquery(query), []))
+      end
+    end
+
+    test "allows type casting from subquery types" do
+      query = subquery(from p in Post, join: c in assoc(p, :comments),
+                                       select: %{id: p.id, title: p.title})
+
+      permalink = "1-hello-world"
+      {_query, params, _key} = plan(query |> where([p], p.id == ^permalink))
+      assert params == [1]
+
+      assert_raise Ecto.Query.CastError, ~r/value `1` in `where` cannot be cast to type :string in query/, fn ->
+        plan(query |> where([p], p.title == ^1))
+      end
+
+      assert_raise Ecto.QueryError, ~r/field `unknown` does not exist in subquery in query/, fn ->
+        plan(query |> where([p], p.unknown == ^1))
+      end
+    end
+
+    test "wraps subquery errors" do
+      exception = assert_raise Ecto.SubQueryError, fn ->
+        query = Post |> where([p], p.title == ^1)
+        plan(from(subquery(query), []))
+      end
+
+      assert %Ecto.Query.CastError{} = exception.exception
+      assert Exception.message(exception) =~ "the following exception happened when compiling a subquery."
+      assert Exception.message(exception) =~ "value `1` in `where` cannot be cast to type :string"
+      assert Exception.message(exception) =~ "where: p0.title == ^1"
+      assert Exception.message(exception) =~ "from p0 in subquery(from p0 in Ecto.Query.SubqueryTest.Post"
+    end
+
+    test "prefix" do
+      {query, _, _} = from(subquery(Comment), select: 1) |> plan()
+      assert {%{query: %{sources: {{"comments", Comment, nil}}}}} = query.sources
+
+      {query, _, _} = from(subquery(Comment), select: 1) |> Map.put(:prefix, "global") |> plan()
+      assert {%{query: %{sources: {{"comments", Comment, "global"}}}}} = query.sources
+
+      {query, _, _} = from(subquery(Comment, prefix: "sub"), select: 1) |> Map.put(:prefix, "global") |> plan()
+      assert {%{query: %{sources: {{"comments", Comment, "sub"}}}}} = query.sources
+
+      {query, _, _} = from(subquery(Comment, prefix: "sub"), prefix: "local", select: 1) |> Map.put(:prefix, "global") |> plan()
+      assert {%{query: %{sources: {{"comments", Comment, "local"}}}}} = query.sources
+
+      {query, _, _} = from(subquery(Post), select: 1) |> plan()
+      assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
+
+      {query, _, _} = from(subquery(Post), select: 1) |> Map.put(:prefix, "global") |> plan()
+      assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
+
+      {query, _, _} = from(subquery(Post, prefix: "sub"), select: 1) |> Map.put(:prefix, "global") |> plan()
+      assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
+
+      {query, _, _} = from(subquery(Post, prefix: "sub"), prefix: "local", select: 1) |> Map.put(:prefix, "global") |> plan()
+      assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
     end
   end
 
@@ -188,62 +248,6 @@ defmodule Ecto.Query.SubqueryTest do
     end
   end
 
-  test "plan: allows type casting from subquery types" do
-    query = subquery(from p in Post, join: c in assoc(p, :comments),
-                                     select: %{id: p.id, title: p.title})
-
-    permalink = "1-hello-world"
-    {_query, params, _key} = plan(query |> where([p], p.id == ^permalink))
-    assert params == [1]
-
-    assert_raise Ecto.Query.CastError, ~r/value `1` in `where` cannot be cast to type :string in query/, fn ->
-      plan(query |> where([p], p.title == ^1))
-    end
-
-    assert_raise Ecto.QueryError, ~r/field `unknown` does not exist in subquery in query/, fn ->
-      plan(query |> where([p], p.unknown == ^1))
-    end
-  end
-
-  test "plan: wraps subquery errors" do
-    exception = assert_raise Ecto.SubQueryError, fn ->
-      query = Post |> where([p], p.title == ^1)
-      plan(from(subquery(query), []))
-    end
-
-    assert %Ecto.Query.CastError{} = exception.exception
-    assert Exception.message(exception) =~ "the following exception happened when compiling a subquery."
-    assert Exception.message(exception) =~ "value `1` in `where` cannot be cast to type :string"
-    assert Exception.message(exception) =~ "where: p0.title == ^1"
-    assert Exception.message(exception) =~ "from p0 in subquery(from p0 in Ecto.Query.SubqueryTest.Post"
-  end
-
-  test "plan: subquery prefix" do
-    {query, _, _} = from(subquery(Comment), select: 1) |> plan()
-    assert {%{query: %{sources: {{"comments", Comment, nil}}}}} = query.sources
-
-    {query, _, _} = from(subquery(Comment), select: 1) |> Map.put(:prefix, "global") |> plan()
-    assert {%{query: %{sources: {{"comments", Comment, "global"}}}}} = query.sources
-
-    {query, _, _} = from(subquery(Comment, prefix: "sub"), select: 1) |> Map.put(:prefix, "global") |> plan()
-    assert {%{query: %{sources: {{"comments", Comment, "sub"}}}}} = query.sources
-
-    {query, _, _} = from(subquery(Comment, prefix: "sub"), prefix: "local", select: 1) |> Map.put(:prefix, "global") |> plan()
-    assert {%{query: %{sources: {{"comments", Comment, "local"}}}}} = query.sources
-
-    {query, _, _} = from(subquery(Post), select: 1) |> plan()
-    assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
-
-    {query, _, _} = from(subquery(Post), select: 1) |> Map.put(:prefix, "global") |> plan()
-    assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
-
-    {query, _, _} = from(subquery(Post, prefix: "sub"), select: 1) |> Map.put(:prefix, "global") |> plan()
-    assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
-
-    {query, _, _} = from(subquery(Post, prefix: "sub"), prefix: "local", select: 1) |> Map.put(:prefix, "global") |> plan()
-    assert {%{query: %{sources: {{"posts", Post, "my_prefix"}}}}} = query.sources
-  end
-
   describe "plan: where in subquery" do
     test "with params and then subquery" do
       p = from(p in Post, select: p.id, where: p.id in ^[2, 3])
@@ -311,83 +315,87 @@ defmodule Ecto.Query.SubqueryTest do
     end
   end
 
-  test "normalize: subqueries with params in from" do
-    query = from p in Post,
-              where: [title: ^"hello"],
-              order_by: [asc: p.text == ^"world"]
+  describe "normalize: source subqueries" do
+    test "with params in from" do
+      query = from p in Post,
+                where: [title: ^"hello"],
+                order_by: [asc: p.text == ^"world"]
 
-    query = from p in subquery(query),
-              where: p.text == ^"last",
-              select: [p.title, ^"first"]
+      query = from p in subquery(query),
+                where: p.text == ^"last",
+                select: [p.title, ^"first"]
 
-    {query, params} = normalize_with_params(query)
-    assert [_, {:^, _, [0]}] = query.select.expr
-    assert [%{expr: {:==, [], [_, {:^, [], [1]}]}}] = query.from.source.query.wheres
-    assert [%{expr: [asc: {:==, [], [_, {:^, [], [2]}]}]}] = query.from.source.query.order_bys
-    assert [%{expr: {:==, [], [_, {:^, [], [3]}]}}] = query.wheres
-    assert params == ["first", "hello", "world", "last"]
-  end
+      {query, params} = normalize_with_params(query)
+      assert [_, {:^, _, [0]}] = query.select.expr
+      assert [%{expr: {:==, [], [_, {:^, [], [1]}]}}] = query.from.source.query.wheres
+      assert [%{expr: [asc: {:==, [], [_, {:^, [], [2]}]}]}] = query.from.source.query.order_bys
+      assert [%{expr: {:==, [], [_, {:^, [], [3]}]}}] = query.wheres
+      assert params == ["first", "hello", "world", "last"]
+    end
 
-  test "normalize: subqueries with params in join" do
-    query = from p in Post,
-              where: [title: ^"hello"],
-              order_by: [asc: p.text == ^"world"]
+    test "with params in join" do
+      query = from p in Post,
+                where: [title: ^"hello"],
+                order_by: [asc: p.text == ^"world"]
 
-    query = from c in Comment,
-              join: p in subquery(query),
-              on: p.text == ^"last",
-              select: [p.title, ^"first"]
+      query = from c in Comment,
+                join: p in subquery(query),
+                on: p.text == ^"last",
+                select: [p.title, ^"first"]
 
-    {query, params} = normalize_with_params(query)
-    assert [_, {:^, _, [0]}] = query.select.expr
-    assert [%{expr: {:==, [], [_, {:^, [], [1]}]}}] = hd(query.joins).source.query.wheres
-    assert [%{expr: [asc: {:==, [], [_, {:^, [], [2]}]}]}] = hd(query.joins).source.query.order_bys
-    assert {:==, [], [_, {:^, [], [3]}]} = hd(query.joins).on.expr
-    assert params == ["first", "hello", "world", "last"]
-  end
+      {query, params} = normalize_with_params(query)
+      assert [_, {:^, _, [0]}] = query.select.expr
+      assert [%{expr: {:==, [], [_, {:^, [], [1]}]}}] = hd(query.joins).source.query.wheres
+      assert [%{expr: [asc: {:==, [], [_, {:^, [], [2]}]}]}] = hd(query.joins).source.query.order_bys
+      assert {:==, [], [_, {:^, [], [3]}]} = hd(query.joins).on.expr
+      assert params == ["first", "hello", "world", "last"]
+    end
 
-  test "normalize: merges subqueries fields when requested" do
-    subquery = from p in Post, select: %{id: p.id, title: p.title}
-    query = normalize(from(subquery(subquery), []))
-    assert query.select.fields == select_fields([:id, :title], 0)
+    test "merges fields when requested" do
+      subquery = from p in Post, select: %{id: p.id, title: p.title}
+      query = normalize(from(subquery(subquery), []))
+      assert query.select.fields == select_fields([:id, :title], 0)
 
-    query = normalize(from(p in subquery(subquery), select: p.title))
-    assert query.select.fields == [{{:., [type: :string], [{:&, [], [0]}, :title]}, [], []}]
+      query = normalize(from(p in subquery(subquery), select: p.title))
+      assert query.select.fields == [{{:., [type: :string], [{:&, [], [0]}, :title]}, [], []}]
 
-    query = normalize(from(c in Comment, join: p in subquery(subquery), select: p))
-    assert query.select.fields == select_fields([:id, :title], 1)
+      query = normalize(from(c in Comment, join: p in subquery(subquery), select: p))
+      assert query.select.fields == select_fields([:id, :title], 1)
 
-    query = normalize(from(c in Comment, join: p in subquery(subquery), select: p.title))
-    assert query.select.fields == [{{:., [type: :string], [{:&, [], [1]}, :title]}, [], []}]
+      query = normalize(from(c in Comment, join: p in subquery(subquery), select: p.title))
+      assert query.select.fields == [{{:., [type: :string], [{:&, [], [1]}, :title]}, [], []}]
 
-    subquery = from p in Post, select: %{id: p.id, title: p.title}
-    assert_raise Ecto.QueryError, ~r/it is not possible to return a map\/struct subset of a subquery/, fn ->
-      normalize(from(p in subquery(subquery), select: [:title]))
+      subquery = from p in Post, select: %{id: p.id, title: p.title}
+      assert_raise Ecto.QueryError, ~r/it is not possible to return a map\/struct subset of a subquery/, fn ->
+        normalize(from(p in subquery(subquery), select: [:title]))
+      end
     end
   end
 
-  test "normalize: where in subquery" do
-    c = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
-    s = from(p in Post, where: p.id in subquery(c), select: count())
+  describe "normalize: where in subquery" do
+    test "in query" do
+      c = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
+      s = from(p in Post, where: p.id in subquery(c), select: count())
 
-    assert {:in, _, [_, {:subquery, 0}]} = hd(s.wheres).expr
-    assert {:in, _, [_, %Ecto.SubQuery{} = subquery]} = hd(normalize(s).wheres).expr
-    assert [{{:., _, [_, :post_id]}, _, []}] = subquery.query.select.fields
-  end
+      assert {:in, _, [_, {:subquery, 0}]} = hd(s.wheres).expr
+      assert {:in, _, [_, %Ecto.SubQuery{} = subquery]} = hd(normalize(s).wheres).expr
+      assert [{{:., _, [_, :post_id]}, _, []}] = subquery.query.select.fields
+    end
 
-  test "normalize: where in subquery with aggregate" do
-    c = from(c in Comment, where: c.text == ^"foo", select: max(c.post_id))
-    s = from(p in Post, where: p.id in subquery(c), select: count())
+    test "with aggregate" do
+      c = from(c in Comment, where: c.text == ^"foo", select: max(c.post_id))
+      s = from(p in Post, where: p.id in subquery(c), select: count())
 
-    assert {:in, _, [_, {:subquery, 0}]} = hd(s.wheres).expr
-    assert {:in, _, [_, %Ecto.SubQuery{} = subquery]} = hd(normalize(s).wheres).expr
-    assert [{:max, _, _}] = subquery.query.select.fields
-  end
+      assert {:in, _, [_, {:subquery, 0}]} = hd(s.wheres).expr
+      assert {:in, _, [_, %Ecto.SubQuery{} = subquery]} = hd(normalize(s).wheres).expr
+      assert [{:max, _, _}] = subquery.query.select.fields
+    end
 
-  test "normalize: where in subquery with too many selected expressions" do
-    assert_raise Ecto.QueryError, ~r/^subquery must return a single field in order to be used on the right-side of `in`/, fn ->
-      p = from(p in Post, select: {p.id, p.title})
-      from(c in Comment, where: c.post_id in subquery(p)) |> normalize()
+    test "with too many selected expressions" do
+      assert_raise Ecto.QueryError, ~r/^subquery must return a single field in order to be used on the right-side of `in`/, fn ->
+        p = from(p in Post, select: {p.id, p.title})
+        from(c in Comment, where: c.post_id in subquery(p)) |> normalize()
+      end
     end
   end
 end
