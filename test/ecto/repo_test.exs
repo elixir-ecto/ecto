@@ -221,15 +221,15 @@ defmodule Ecto.RepoTest do
   end
 
   describe "reload" do
-    test "raises when input have a `nil` pk" do
-      message = "Ecto.Repo.reload/2 expects existent structs, found a `nil` id"
+    test "raises when input structs do not have valid primary keys" do
+      message = "Ecto.Repo.reload/2 expects existent structs, found a `nil` primary key"
       assert_raise ArgumentError, message, fn ->
         TestRepo.reload(%MySchema{})
       end
     end
 
     test "raises when input is not a struct or a list of structs" do
-      message = ~r"Expected a struct or a list of structs,"
+      message = ~r"expected a struct or a list of structs,"
       assert_raise ArgumentError, message, fn ->
         TestRepo.reload(%{my_key: 1})
       end
@@ -243,6 +243,13 @@ defmodule Ecto.RepoTest do
       message = ~r"to have exactly one primary key"
       assert_raise ArgumentError, message, fn ->
         TestRepo.reload(%MySchemaNoPK{})
+      end
+    end
+
+    test "raises when receives multiple struct types" do
+      message = ~r"expected an homogenous list"
+      assert_raise ArgumentError, message, fn ->
+        TestRepo.reload([%MySchemaWithAssoc{id: 1}, %MySchema{id: 2}])
       end
     end
   end

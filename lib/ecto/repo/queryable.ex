@@ -74,29 +74,35 @@ defmodule Ecto.Repo.Queryable do
     one!(name, query_for_get_by(queryable, clauses), opts)
   end
 
-  def reload(name, structs, opts) when is_list(structs) do
-    all(name, query_for_reload(structs, opts), opts)
+  def reload(name, [head | _] = structs, opts) when is_list(structs) do
+    results = all(name, query_for_reload(structs), opts)
+
+    [pk] = head.__struct__.__schema__(:primary_key) 
+
+    for struct <- structs do
+      struct_pk = Map.fetch!(struct, pk)
+      Enum.find(results, &Map.fetch!(&1, pk) == struct_pk)
+    end
   end
 
   def reload(name, struct, opts) do
-    one(name, query_for_reload(struct, opts), opts)
+    one(name, query_for_reload(struct), opts)
   end
 
-  def reload!(name, structs, opts) when is_list(structs) do
-    query = query_for_reload(structs, opts)
-    result = all(name, query, opts)
-    result_count = Enum.count(result)
-    expected_count = Enum.count(structs)
+  def reload!(name, [head | _] = structs, opts) when is_list(structs) do
+    query = query_for_reload(structs)
+    results = all(name, query, opts)
 
-    if result_count < expected_count do
-      raise Ecto.TooFewResultsError, queryable: query, min: expected_count, count: result_count
+    [pk] = head.__struct__.__schema__(:primary_key) 
+
+    for struct <- structs do
+      struct_pk = Map.fetch!(struct, pk)
+      Enum.find(results, &Map.fetch!(&1, pk) == struct_pk) || raise "could not reload #{inspect(struct)}, maybe it doesn't exist or was deleted"
     end
-
-    result
   end
 
   def reload!(name, struct, opts) do
-    query = query_for_reload(struct, opts)
+    query = query_for_reload(struct)
     case one!(name, query, opts) do
       nil ->
         raise Ecto.NoResultsError, queryable: query
@@ -459,7 +465,7 @@ defmodule Ecto.Repo.Queryable do
     Query.where(queryable, [], ^Enum.to_list(clauses))
   end
 
-  defp query_for_reload([head| _] = structs, opts) do
+  defp query_for_reload([head| _] = structs) do
     assert_structs!(structs)
 
     schema = head.__struct__
@@ -467,8 +473,7 @@ defmodule Ecto.Repo.Queryable do
     case schema.__schema__(:primary_key) do
       [pk] ->
         keys = Enum.map(structs, &get_pk!(&1, pk))
-        preloads = Keyword.get(opts, :preload, [])
-        Query.from(x in schema, where: field(x, ^pk) in ^keys, preload: ^preloads)
+        Query.from(x in schema, where: field(x, ^pk) in ^keys)
 
       pks ->
         raise ArgumentError,
@@ -477,7 +482,7 @@ defmodule Ecto.Repo.Queryable do
     end
   end
 
-  defp query_for_reload(struct, opts), do: query_for_reload([struct], opts)
+  defp query_for_reload(struct), do: query_for_reload([struct])
 
   defp query_for_aggregate(queryable, aggregate) do
     query =
@@ -537,25 +542,28 @@ defmodule Ecto.Repo.Queryable do
       message: "expected a from expression with a schema"
   end
 
-  defp assert_structs!(structs) when is_list(structs) do
-    case Enum.reject(structs, &is_struct?/1) do
-      [] ->
-        :ok
+  defp assert_structs!([head | _] = structs) when is_list(structs) do
+    with  [] <- Enum.reject(structs, &schema?/1),
+         true <- Enum.all?(structs, &(&1.__struct__ == head.__struct__)) do
+      :ok
+    else
+      rejected when is_list(rejected) ->
+        raise ArgumentError, "expected a struct or a list of structs, received #{inspect(rejected)}"
 
-      rejected ->
-        raise ArgumentError, "Expected a struct or a list of structs, received #{inspect(rejected)}"
+      false ->
+        raise ArgumentError, "expected an homogenous list, received different struct types"
     end
   end
 
-  defp is_struct?(%{__struct__: _, __meta__: _}), do: true
-  defp is_struct?(_), do: false
+  defp schema?(%{__meta__: _}), do: true
+  defp schema?(_), do: false
 
   defp get_pk!(struct, pk) do
     struct
     |> Map.fetch!(pk)
     |> case do
       nil ->
-        raise ArgumentError, "Ecto.Repo.reload/2 expects existent structs, found a `nil` id"
+        raise ArgumentError, "Ecto.Repo.reload/2 expects existent structs, found a `nil` primary key"
       key ->
         key
     end

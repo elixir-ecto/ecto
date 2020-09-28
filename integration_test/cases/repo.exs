@@ -712,22 +712,21 @@ defmodule Ecto.Integration.RepoTest do
 
     assert post1 == TestRepo.reload(post1)
     assert [post1, post2] == TestRepo.reload([post1, post2])
-    assert [post1, post2] == TestRepo.reload([post1, post2, %Post{id: 55}])
+    assert [post1, post2, nil] == TestRepo.reload([post1, post2, %Post{id: 55}])
     assert nil == TestRepo.reload(%Post{id: 55})
+
+    # keeps order as received in the params
+    assert [post2, post1] == TestRepo.reload([post2, post1])
 
     TestRepo.update_all(Post, inc: [visits: 1])
 
     assert [%{visits: 2}, %{visits: 3}] = TestRepo.reload([post1, post2])
   end
 
-  test "reload with assoc" do
-    post = TestRepo.insert!(%Post{title: "1", visits: 1})
+  test "reload ignores preloads" do
+    post = TestRepo.insert!(%Post{title: "1", visits: 1}) |> TestRepo.preload(:comments)
 
-    # allows preloading on reload
-    assert %{comments: []} = post_with_preload = TestRepo.reload(post, preload: [:comments])
-    
-    # by default ignores preloads when reloading
-    assert %{comments: %Ecto.Association.NotLoaded{}} = TestRepo.reload(post_with_preload)
+    assert %{comments: %Ecto.Association.NotLoaded{}} = TestRepo.reload(post)
   end
 
   test "reload!" do
@@ -737,13 +736,15 @@ defmodule Ecto.Integration.RepoTest do
     assert post1 == TestRepo.reload!(post1)
     assert [post1, post2] == TestRepo.reload!([post1, post2])
 
-    assert_raise Ecto.TooFewResultsError, fn ->
+    assert_raise RuntimeError, ~r"could not reload", fn ->
       TestRepo.reload!([post1, post2, %Post{id: 55}])
     end
 
     assert_raise Ecto.NoResultsError, fn ->
       TestRepo.reload!(%Post{id: 55})
     end
+
+    assert [post2, post1] == TestRepo.reload([post2, post1])
 
     TestRepo.update_all(Post, inc: [visits: 1])
 
