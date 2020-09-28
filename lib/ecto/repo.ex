@@ -551,8 +551,9 @@ defmodule Ecto.Repo do
 
   ## Ecto.Adapter.Queryable
 
-  @optional_callbacks get: 3, get!: 3, get_by: 3, get_by!: 3, aggregate: 3, aggregate: 4, exists?: 2,
-                      one: 2, one!: 2, preload: 3, all: 2, stream: 2, update_all: 3, delete_all: 2
+  @optional_callbacks get: 3, get!: 3, get_by: 3, get_by!: 3, reload: 2, reload!: 2, aggregate: 3, 
+                      aggregate: 4, exists?: 2, one: 2, one!: 2, preload: 3, all: 2, stream: 2, 
+                      update_all: 3, delete_all: 2
 
   @doc """
   Fetches a single struct from the data store where the primary key matches the
@@ -664,6 +665,64 @@ defmodule Ecto.Repo do
               clauses :: Keyword.t() | map,
               opts :: Keyword.t()
             ) :: Ecto.Schema.t()
+
+  @doc """
+  Reloads a given schema or schema list from the database.
+
+  When using with lists, ordering is guaranteed to be kept. Results not found in
+  the database will be returned as `nil`.
+  
+  ## Options
+
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the "Query Prefix" section of the
+      `Ecto.Query` documentation.
+
+  See the "Shared options" section at the module documentation for more options.
+
+  ## Example
+
+    MyRepo.reload(post)
+    %Post{}
+
+    MyRepo.reload([post1, post2])
+    [%Post{}, %Post{}]
+  """
+  @callback reload(
+              (schema :: Ecto.Schema.t()) | (schemas :: [Ecto.Schema.t()]),
+              opts :: Keyword.t()
+            ) :: Ecto.Schema.t() | [Ecto.Schema.t() | nil] | nil
+
+
+  @doc """
+  Similar to `c:reload/2`, but raises when something is not found
+
+  When using with lists, ordering is guaranteed to be kept. 
+
+  ## Options
+
+    * `:prefix` - The prefix to run the query on (such as the schema path
+      in Postgres or the database in MySQL). This will be applied to all `from`
+      and `join`s in the query that did not have a prefix previously given
+      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
+      in the schema. For more information see the "Query Prefix" section of the
+      `Ecto.Query` documentation.
+
+  ## Example
+
+    MyRepo.reload!(post)
+    %Post{}
+
+    MyRepo.reload!([post1, post2])
+    [%Post{}, %Post{}]
+  """
+  @callback reload!(
+              (schema :: Ecto.Schema.t()) | (schemas :: [Ecto.Schema.t()]),
+              opts :: Keyword.t()
+            ) :: Ecto.Schema.t() | [Ecto.Schema.t()]
 
   @doc """
   Calculate the given `aggregate`.
