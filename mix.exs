@@ -32,8 +32,8 @@ defmodule Ecto.MixProject do
   defp deps do
     [
       {:telemetry, "~> 0.4"},
-      {:decimal, "~> 1.6 or ~> 2.0"},
-      {:jason, "~> 1.0", optional: true},
+      {:decimal, "~> 2.0"},
+      {:jason, "~> 1.2", optional: true},
       {:ex_doc, "~> 0.20", only: :docs}
     ]
   end
