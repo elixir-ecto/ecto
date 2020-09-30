@@ -178,7 +178,7 @@ Our final solution would look like this:
 def filter(params) do
   Post
   # 1. Add named join binding
-  |> join([p], assoc(p, :authors), as: :authors)
+  |> join(:inner, [p], assoc(p, :authors), as: :authors)
   |> order_by(^filter_order_by(params["order_by"]))
   |> where(^filter_where(params))
 end
