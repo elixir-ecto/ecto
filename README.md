@@ -4,7 +4,7 @@
 
 [![Build Status](https://github.com/elixir-ecto/ecto/workflows/CI/badge.svg)](https://github.com/elixir-ecto/ecto/actions)
 
-Ecto is a toolkit for data mapping and language integrated query for Elixir. Here is an example:
+**Ecto** is an **official Elixir project** providing a **database wrapper** and **integrated query language**. With Ecto we're able to **create migrations, define schemas, insert and update records, and query them**.
 
 ```elixir
 # In your config/config.exs file
@@ -58,7 +58,7 @@ defmodule Sample.App do
 end
 ```
 
-Ecto is commonly used to interact with databases, such as Postgres and MySQL via [Ecto.Adapters.SQL](http://hexdocs.pm/ecto_sql) ([source code](https://github.com/elixir-ecto/ecto_sql)). Ecto is also commonly used to map data from any source into Elixir structs, regardless if they are backed by a database or not.
+Ecto is commonly used to **interact with databases, such as Postgres and MySQL via [Ecto.Adapters.SQL](http://hexdocs.pm/ecto_sql) ([source code](https://github.com/elixir-ecto/ecto_sql))**. Ecto is also commonly used to **map data from any source into Elixir structs, regardless if they are backed by a database or not**.
 
 See the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and the [online documentation](http://hexdocs.pm/ecto) for more information. Other resources available are:
 
@@ -68,7 +68,7 @@ See the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and
 
 ## Usage
 
-You need to add both Ecto and the database adapter as a dependency to your `mix.exs` file. The supported databases and their adapters are:
+**You need to add both Ecto and the database adapter as a dependency to your `mix.exs` file**. The supported databases and their adapters are:
 
 Database   | Ecto Adapter           | Dependencies
 :----------| :--------------------- | :-----------------------------------------------
@@ -95,9 +95,9 @@ defp deps do
 end
 ```
 
-Then run `mix deps.get` in your shell to fetch the dependencies. If you want to use another database, just choose the proper dependency from the table above.
+**Then run `mix deps.get` in your shell to fetch the dependencies. If you want to use another database, just choose the proper dependency from the table above.**
 
-Finally, in the repository definition, you will need to specify the `adapter:` respective to the chosen dependency. For PostgreSQL it is:
+**Finally, in the repository definition, you will need to specify the `adapter:` respective to the chosen dependency.** For PostgreSQL it is:
 
 ```elixir
 defmodule MyApp.Repo do
@@ -121,7 +121,7 @@ defmodule MyApp.Repo do
 | v1.1   | Unsupported from 03/2018 |
 | v1.0   | Unsupported from 05/2017 |
 
-With the version 3.0, Ecto has become API stable. This means our main focus is on providing bug fixes and updates.
+With the **version 3.0, Ecto has become API stable**. This means our main focus is on **providing bug fixes and updates**.
 
 ## Important links
 
