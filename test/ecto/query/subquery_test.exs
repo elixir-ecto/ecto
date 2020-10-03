@@ -177,9 +177,7 @@ defmodule Ecto.Query.SubqueryTest do
   describe "plan: subqueries select" do
     test "supports implicit select" do
       query = plan(from(subquery(Post), [])) |> elem(0)
-      assert "%Ecto.Query.SubqueryTest.Post{id: &0.id(), title: &0.title(), " <>
-             "text: &0.text()}" =
-             Macro.to_string(query.from.source.query.select.expr)
+      assert "&0" = Macro.to_string(query.from.source.query.select.expr)
     end
 
     test "supports field selector" do

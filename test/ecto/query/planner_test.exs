@@ -975,6 +975,29 @@ defmodule Ecto.Query.PlannerTest do
     assert query.group_bys == []
   end
 
+  test "normalize: CTEs" do
+    %{with_ctes: with_expr} =
+      Comment
+      |> with_cte("cte", as: ^from(c in "comments", select: %{id: c.id, text: c.text}))
+      |> normalize()
+    %{queries: [{"cte", query}]} = with_expr
+    assert query.sources == {{"comments", nil, nil}}
+    assert {:%{}, [], [id: _, text: _]} = query.select.expr
+    assert  [id: {{:., _, [{:&, _, [0]}, :id]}, _, []},
+             text: {{:., _, [{:&, _, [0]}, :text]}, _, []}] = query.select.fields
+
+    %{with_ctes: with_expr} =
+      Comment
+      |> with_cte("cte", as: ^(from(c in Comment, where: c in ^[1, 2, 3])))
+      |> normalize()
+    %{queries: [{"cte", query}]} = with_expr
+    assert query.sources == {{"comments", Comment, nil}}
+    assert {:&, [], [0]} = query.select.expr
+    assert  [{:id, {{:., _, [{:&, _, [0]}, :id]}, _, []}},
+             {:text, {{:., _, [{:&, _, [0]}, :text]}, _, []}},
+             _ | _] = query.select.fields
+  end
+
   test "normalize: select" do
     query = from(Post, []) |> normalize()
     assert query.select.expr ==

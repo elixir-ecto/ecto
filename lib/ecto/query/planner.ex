@@ -258,7 +258,7 @@ defmodule Ecto.Query.Planner do
     {inner_query, params, key} = plan(inner_query, :all, adapter)
     assert_no_subquery_assocs!(inner_query)
 
-    {inner_query, select} =
+    {inner_query, select, _fields} =
       inner_query
       |> ensure_select(true)
       |> normalize_subquery_select(adapter, source?)
@@ -284,11 +284,19 @@ defmodule Ecto.Query.Planner do
     query
   end
 
+  # If we are selecting a source, we keep it as is.
+  # Otherwise we normalize the select, which converts them into structs.
+  # This means that `select: p` in subqueries will be nullable in a join.
+  defp normalize_subquery_select(%{select: %{expr: {:&, _, [ix]}, take: take}} = query, _adapter, _source?) do
+    {source, fields} = source_take!(:select, query, take, ix, ix)
+    {query, source, fields}
+  end
+
   defp normalize_subquery_select(query, adapter, source?) do
     {expr, %{select: select} = query} = rewrite_subquery_select_expr(query, source?)
     {expr, _} = prewalk(expr, :select, query, select, 0, adapter)
-    {meta, _fields, _from} = collect_fields(expr, [], :error, query, select.take, true)
-    {query, meta}
+    {meta, fields, _from} = collect_fields(expr, [], :none, query, select.take, true)
+    {query, meta, Enum.reverse(fields)}
   end
 
   defp rewrite_subquery_select_expr(%{select: select} = query, source?) do
@@ -378,6 +386,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  defp subquery_types({:source, _, _, types}), do: types
   defp subquery_types({:map, types}), do: types
   defp subquery_types({:struct, _name, types}), do: types
 
@@ -549,6 +558,9 @@ defmodule Ecto.Query.Planner do
                               "because it does not have a schema"
 
       {_, schema, _} ->
+        schema
+
+      %Ecto.SubQuery{select: {:source, {_, schema}, _, _}} ->
         schema
 
       %Ecto.SubQuery{select: {:struct, schema, _}} ->
@@ -952,10 +964,9 @@ defmodule Ecto.Query.Planner do
       Enum.reduce with_expr.queries, {[], counter}, fn
         {name, %Ecto.Query{} = query}, {queries, counter} ->
           {query, counter} = traverse_exprs(query, :all, counter, fun)
-          {_expr, query} = rewrite_subquery_select_expr(query, true)
-          {query, select} = normalize_select(query, true)
-          keys = select.postprocess |> subquery_types() |> Keyword.keys()
-          query = update_in(query.select.fields, &Enum.zip(keys, &1))
+          {query, source, fields} = normalize_subquery_select(query, adapter, true)
+          keys = source |> subquery_types() |> Keyword.keys()
+          query = put_in(query.select.fields, Enum.zip(keys, fields))
           {[{name, query} | queries], counter}
 
         {name, %QueryExpr{expr: {:fragment, _, _} = fragment} = query_expr}, {queries, counter} ->
@@ -1216,7 +1227,7 @@ defmodule Ecto.Query.Planner do
       end
 
     {postprocess, fields, from} =
-      collect_fields(expr, [], :error, query, take, keep_literals?)
+      collect_fields(expr, [], :none, query, take, keep_literals?)
 
     {fields, preprocess, from} =
       case from do
@@ -1226,10 +1237,10 @@ defmodule Ecto.Query.Planner do
           preprocess = [from_pre | Enum.reverse(assoc_exprs)]
           {fields, preprocess, {from_tag, from_expr}}
 
-        :error when preloads != [] or assocs != [] ->
+        :none when preloads != [] or assocs != [] ->
           error! query, "the binding used in `from` must be selected in `select` when using `preload`"
 
-        :error ->
+        :none ->
           {Enum.reverse(fields), [], :none}
       end
 
@@ -1246,7 +1257,7 @@ defmodule Ecto.Query.Planner do
 
   # Handling of source
 
-  defp collect_fields({:merge, _, [{:&, _, [0]}, right]}, fields, :error, query, take, keep_literals?) do
+  defp collect_fields({:merge, _, [{:&, _, [0]}, right]}, fields, :none, query, take, keep_literals?) do
     {expr, taken} = source_take!(:select, query, take, 0, 0)
     from = {:ok, {:source, :from}, expr, taken}
 
@@ -1256,7 +1267,7 @@ defmodule Ecto.Query.Planner do
     {{:source, :from}, fields, from}
   end
 
-  defp collect_fields({:&, _, [0]}, fields, :error, query, take, _keep_literals?) do
+  defp collect_fields({:&, _, [0]}, fields, :none, query, take, _keep_literals?) do
     {expr, taken} = source_take!(:select, query, take, 0, 0)
     {{:source, :from}, fields, {:ok, {:source, :from}, expr, taken}}
   end
