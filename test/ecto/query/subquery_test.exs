@@ -376,20 +376,26 @@ defmodule Ecto.Query.SubqueryTest do
     test "in query" do
       c = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
       s = from(p in Post, where: p.id in subquery(c), select: count())
-
       assert {:in, _, [_, {:subquery, 0}]} = hd(s.wheres).expr
-      assert {:in, _, [_, %Ecto.SubQuery{} = subquery]} = hd(normalize(s).wheres).expr
+      assert [{:subquery, 0}] = hd(s.wheres).params
+
+      {n, params} = normalize_with_params(s)
+      assert {:in, _, [_, %Ecto.SubQuery{} = subquery]} = hd(n.wheres).expr
       assert [{{:., _, [_, :post_id]}, _, []}] = subquery.query.select.fields
+      assert params == ["foo"]
     end
 
     test "in dynamic" do
       c = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
       d = dynamic([p], p.id in subquery(c))
       s = from(p in Post, where: ^d, select: count())
-
       assert {:in, _, [_, {:subquery, 0}]} = hd(s.wheres).expr
-      assert {:in, _, [_, %Ecto.SubQuery{} = subquery]} = hd(normalize(s).wheres).expr
+      assert [{:subquery, 0}] = hd(s.wheres).params
+
+      {n, params} = normalize_with_params(s)
+      assert {:in, _, [_, %Ecto.SubQuery{} = subquery]} = hd(n.wheres).expr
       assert [{{:., _, [_, :post_id]}, _, []}] = subquery.query.select.fields
+      assert params == ["foo"]
     end
 
     test "in multiple dynamic" do
@@ -397,17 +403,27 @@ defmodule Ecto.Query.SubqueryTest do
       cfoo = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
       d1 = dynamic([p], p.id not in subquery(cbar))
       d2 = dynamic([p], p.id in subquery(cfoo) and ^d1)
-      p = from(p in Post, where: ^d2, select: count())
+      s = from(p in Post, where: ^d2, select: count())
+
+      assert {:and, _, [
+                {:in, _, [_, {:subquery, 0}]},
+                {:not, _, [{:in, _, [_, {:subquery, 1}]}]},
+              ]} = hd(s.wheres).expr
+
+      assert [{:subquery, 0}, {:subquery, 1}] = hd(s.wheres).params
+
+      {n, params} = normalize_with_params(s)
 
       assert {:and, _, [
                 {:in, _, [_, %Ecto.SubQuery{} = subqueryfoo]},
                 {:not, _, [{:in, _, [_, %Ecto.SubQuery{} = subquerybar]}]},
-              ]} = hd(normalize(p).wheres).expr
+              ]} = hd(n.wheres).expr
 
       assert Macro.to_string(hd(subqueryfoo.query.wheres).expr) == "&0.text() == ^0"
       assert Macro.to_string(hd(subquerybar.query.wheres).expr) == "&0.text() == ^1"
       assert subqueryfoo.params == ["foo"]
       assert subquerybar.params == ["bar"]
+      assert params == ["foo", "bar"]
     end
 
     test "with aggregate" do

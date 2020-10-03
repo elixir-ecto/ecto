@@ -65,7 +65,8 @@ defmodule Ecto.Query.Builder.Dynamic do
 
       {:subquery, i}, {binding, params, subqueries, count} ->
         subquery = Enum.fetch!(dynamic_subqueries, i)
-        {{:subquery, length(subqueries)}, {binding, params, [subquery | subqueries], count}}
+        ix = length(subqueries)
+        {{:subquery, ix}, {binding, [{:subquery, ix} | params], [subquery | subqueries], count}}
 
       expr, acc ->
         {expr, acc}
