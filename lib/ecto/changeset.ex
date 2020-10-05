@@ -629,11 +629,14 @@ defmodule Ecto.Changeset do
   Casts the given association with the changeset parameters.
 
   This function should be used when working with the entire association at
-  once (and not a single element of a many-style association) and using data
-  external to the application.
+  once (and not a single element of a many-style association) and receiving
+  data external to the application.
 
-  `cast_assoc/3` works matching the records extracted from the database (preload)
-  and compares it with the parameters provided from an external source.
+  `cast_assoc/3` works matching the records extracted from the database
+  and compares it with the parameters received from an external source.
+  Therefore, it is expected that the data in the changeset has explicitly
+  preloaded the association being cast and that all of the IDs exist and
+  are unique.
 
   For example, imagine a user has many addresses relationship where
   post data is sent as follows
