@@ -32,3 +32,13 @@ defmodule WrappedInteger do
   def load(integer), do: {:ok, {:int, integer}}
   def dump({:int, integer}), do: {:ok, integer}
 end
+
+defmodule ParameterizedPrefixedString do
+  use Ecto.ParameterizedType
+  def init(opts), do: Enum.into(opts, %{})
+  def type(_), do: :string
+  def cast(string, %{prefix: _}), do: {:ok, string |> String.split("-") |> List.last()}
+  def dump(string, _, %{prefix: _prefix} = opts), do: cast(string, opts)
+  def load(string, _, %{prefix: prefix}), do: {:ok, prefix <> "-" <> string}
+  def embed_as(_, _), do: :dump
+end
