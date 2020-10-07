@@ -76,14 +76,21 @@ defmodule Ecto.Repo.AutogenerateTest do
 
     @separator "_"
 
-    def init(params), do: Enum.into(params, %{})
+    def init(opts), do: Enum.into(opts, %{})
     def type(_), do: :uuid
+
+    def cast(data, %{prefix: prefix}) do
+      if String.starts_with?(data, [prefix <> @separator]) do
+        {:ok, data}
+      else
+        {:ok, prefix <> @separator <> data}
+      end
+    end
+
     def load(uuid, _, %{prefix: prefix}), do: {:ok, prefix <> @separator <> uuid}
 
-    def dump(code, _, %{prefix: _prefix}),
-      do: {:ok, code |> String.split(@separator) |> List.last()}
-
-    def cast(code, %{prefix: _}), do: {:ok, code |> String.split(@separator) |> List.last()}
+    def dump(data, _, %{prefix: _prefix}),
+      do: {:ok, data |> String.split(@separator) |> List.last()}
 
     def autogenerate(%{autogenerate: true, prefix: prefix, field: :code, schema: _}),
       do: prefix <> @separator <> Ecto.UUID.generate()
@@ -94,14 +101,21 @@ defmodule Ecto.Repo.AutogenerateTest do
 
     @separator "_"
 
-    def init(params), do: Enum.into(params, %{})
+    def init(opts), do: Enum.into(opts, %{})
     def type(_), do: :id
+
+    def cast(data, %{prefix: prefix}) do
+      if String.starts_with?(data, [prefix <> @separator]) do
+        {:ok, data}
+      else
+        {:ok, prefix <> @separator <> data}
+      end
+    end
+
     def load(id, _, %{prefix: prefix}), do: {:ok, prefix <> @separator <> to_string(id)}
 
-    def dump(code, _, %{prefix: _prefix}),
-      do: {:ok, code |> String.split(@separator) |> List.last() |> Integer.parse()}
-
-    def cast(code, %{prefix: _}), do: {:ok, code |> String.split(@separator) |> List.last()}
+    def dump(data, _, %{prefix: _prefix}),
+      do: {:ok, data |> String.split(@separator) |> List.last() |> Integer.parse()}
   end
 
   defmodule ParameterizedTypeSchema do
