@@ -8,7 +8,7 @@ defmodule Ecto.Query.Planner do
     raise "Ecto.Query match out of date in builder"
   end
 
-  @parent_as 0
+  @parent_as __MODULE__
 
   @doc """
   Converts a query to a list of joins.

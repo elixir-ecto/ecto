@@ -74,17 +74,18 @@ defmodule Ecto.ParameterizedType do
   @typedoc """
   The parameters for the ParameterizedType
 
-  This is the value passed back from `c:init/1` and subsequently passed as the last argument to all callbacks.
-  Idiomatically it is a map.
+  This is the value passed back from `c:init/1` and subsequently passed
+  as the last argument to all callbacks. Idiomatically it is a map.
   """
   @type params :: term()
 
   @doc """
-  Callback to convert the options specified in  the field macro into parameters to be used in other callbacks.
+  Callback to convert the options specified in  the field macro into parameters
+  to be used in other callbacks.
 
-  This function is called at compile time, and should raise if invalid values are specified. It is idiomatic
-  that the parameters returned from this are a map. `field` and `schema` will be injected into the options
-  automatically
+  This function is called at compile time, and should raise if invalid values are
+  specified. It is idiomatic that the parameters returned from this are a map.
+  `field` and `schema` will be injected into the options automatically.
 
   For example, this schema specification
 
@@ -110,18 +111,20 @@ defmodule Ecto.ParameterizedType do
   @doc """
   Loads the given term into a ParameterizedType.
 
-  For more information on loading, see `c:Ecto.Type.load/1`
+  For more information on loading, see `c:Ecto.Type.load/1`.
 
-  Note that this callback *will* be called when loading a `nil` value, unlike `c:Ecto.Type.load/1`.
+  Note that this callback *will* be called when loading a `nil` value,
+  unlike `c:Ecto.Type.load/1`.
   """
   @callback load(value :: any(), loader :: function(), params()) :: {:ok, value :: any()} | :error
 
   @doc """
   Dumps the given term into an Ecto native type.
 
-  For more information on dumping, see `c:Ecto.Type.dump/1`
+  For more information on dumping, see `c:Ecto.Type.dump/1`.
 
-  Note that this callback *will* be called when dumping a `nil` value, unlike `c:Ecto.Type.dump/1`.
+  Note that this callback *will* be called when dumping a `nil` value,
+  unlike `c:Ecto.Type.dump/1`.
   """
   @callback dump(value :: any(), dumper :: function(), params()) :: {:ok, value :: any()} | :error
 
