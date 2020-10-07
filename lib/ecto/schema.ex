@@ -2055,9 +2055,15 @@ defmodule Ecto.Schema do
   end
 
   defp check_options!(opts, valid, fun_arity) do
-    case Enum.find(opts, fn {k, _} -> not(k in valid) end) do
-      {k, _} -> raise ArgumentError, "invalid option #{inspect k} for #{fun_arity}"
-      nil -> :ok
+    type = Keyword.get(opts, :type)
+
+    if is_atom(type) and Code.ensure_compiled(type) == {:module, type} and function_exported?(type, :type, 1) do
+      :ok
+    else
+      case Enum.find(opts, fn {k, _} -> not(k in valid) end) do
+        {k, _} -> raise ArgumentError, "invalid option #{inspect k} for #{fun_arity}"
+        nil -> :ok
+      end
     end
   end
 

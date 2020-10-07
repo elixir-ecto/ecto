@@ -464,6 +464,14 @@ defmodule Ecto.SchemaTest do
 
   ## Associations
 
+  defmodule SchemaWithParameterizedPrimaryKey do
+    use Ecto.Schema
+
+    @primary_key {:id, ParameterizedPrefixedString, prefix: "ref", autogenerate: false}
+    schema "references" do
+    end
+  end
+
   defmodule AssocSchema do
     use Ecto.Schema
 
@@ -476,12 +484,13 @@ defmodule Ecto.SchemaTest do
       has_many :emails, {"users_emails", Email}, on_replace: :delete
       has_one :profile, {"users_profiles", Profile}
       belongs_to :summary, {"post_summary", Summary}
+      belongs_to :reference, SchemaWithParameterizedPrimaryKey, type: ParameterizedPrefixedString, prefix: "ref"
     end
   end
 
   test "associations" do
     assert AssocSchema.__schema__(:association, :not_a_field) == nil
-    assert AssocSchema.__schema__(:fields) == [:id, :comment_id, :summary_id]
+    assert AssocSchema.__schema__(:fields) == [:id, :comment_id, :summary_id, :reference_id]
   end
 
   test "has_many association" do
@@ -590,6 +599,20 @@ defmodule Ecto.SchemaTest do
     comment = (%AssocSchema{}).comment
     assert %Ecto.Association.NotLoaded{} = comment
     assert inspect(comment) == "#Ecto.Association.NotLoaded<association :comment is not loaded>"
+  end
+
+  test "belongs_to association via Ecto.ParameterizedType" do
+    struct =
+      %Ecto.Association.BelongsTo{field: :reference, owner: AssocSchema, cardinality: :one,
+       related: SchemaWithParameterizedPrimaryKey, owner_key: :reference_id, related_key: :id, queryable: SchemaWithParameterizedPrimaryKey,
+       on_replace: :raise, defaults: []}
+
+    assert AssocSchema.__schema__(:association, :reference) == struct
+    assert AssocSchema.__changeset__().reference == {:assoc, struct}
+
+    reference = (%AssocSchema{}).reference
+    assert %Ecto.Association.NotLoaded{} = reference
+    assert inspect(reference) == "#Ecto.Association.NotLoaded<association :reference is not loaded>"
   end
 
   defmodule CustomAssocSchema do
