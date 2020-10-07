@@ -543,16 +543,15 @@ defmodule Ecto.Repo.Queryable do
   end
 
   defp assert_structs!([head | _] = structs) when is_list(structs) do
-    with  [] <- Enum.reject(structs, &schema?/1),
-         true <- Enum.all?(structs, &(&1.__struct__ == head.__struct__)) do
-      :ok
-    else
-      rejected when is_list(rejected) ->
-        raise ArgumentError, "expected a struct or a list of structs, received #{inspect(rejected)}"
-
-      false ->
-        raise ArgumentError, "expected an homogenous list, received different struct types"
+    unless Enum.all?(structs, &schema?/1) do
+      raise ArgumentError, "expected a struct or a list of structs, received #{inspect(structs)}"
     end
+
+    unless Enum.all?(structs, &(&1.__struct__ == head.__struct__)) do
+      raise ArgumentError, "expected an homogenous list, received different struct types"
+    end
+
+    :ok
   end
 
   defp schema?(%{__meta__: _}), do: true
