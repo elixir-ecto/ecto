@@ -86,7 +86,7 @@ defmodule Ecto.Repo.Queryable do
   end
 
   def reload(name, struct, opts) do
-    one(name, query_for_reload(struct), opts)
+    one(name, query_for_reload([struct]), opts)
   end
 
   def reload!(name, [head | _] = structs, opts) when is_list(structs) do
@@ -102,7 +102,7 @@ defmodule Ecto.Repo.Queryable do
   end
 
   def reload!(name, struct, opts) do
-    query = query_for_reload(struct)
+    query = query_for_reload([struct])
     case one!(name, query, opts) do
       nil ->
         raise Ecto.NoResultsError, queryable: query
@@ -469,11 +469,13 @@ defmodule Ecto.Repo.Queryable do
     assert_structs!(structs)
 
     schema = head.__struct__
+    prefix = head.__meta__.prefix
 
     case schema.__schema__(:primary_key) do
       [pk] ->
         keys = Enum.map(structs, &get_pk!(&1, pk))
-        Query.from(x in schema, where: field(x, ^pk) in ^keys)
+        query = Query.from(x in schema, where: field(x, ^pk) in ^keys)
+        %{query | prefix: prefix}
 
       pks ->
         raise ArgumentError,
@@ -481,8 +483,6 @@ defmodule Ecto.Repo.Queryable do
                 "to have exactly one primary key, got: #{inspect(pks)}"
     end
   end
-
-  defp query_for_reload(struct), do: query_for_reload([struct])
 
   defp query_for_aggregate(queryable, aggregate) do
     query =

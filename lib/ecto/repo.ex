@@ -669,19 +669,9 @@ defmodule Ecto.Repo do
   @doc """
   Reloads a given schema or schema list from the database.
 
-  When using with lists, ordering is guaranteed to be kept. Results not found in
+  When using with lists, it is expected that all of the structs in the list belong
+  to the same schema. Ordering is guaranteed to be kept. Results not found in
   the database will be returned as `nil`.
-  
-  ## Options
-
-    * `:prefix` - The prefix to run the query on (such as the schema path
-      in Postgres or the database in MySQL). This will be applied to all `from`
-      and `join`s in the query that did not have a prefix previously given
-      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
-      in the schema. For more information see the "Query Prefix" section of the
-      `Ecto.Query` documentation.
-
-  See the "Shared options" section at the module documentation for more options.
 
   ## Example
 
@@ -690,6 +680,9 @@ defmodule Ecto.Repo do
 
     MyRepo.reload([post1, post2])
     [%Post{}, %Post{}]
+
+    MyRepo.reload([deleted_post, post1])
+    [nil, %Post{}]
   """
   @callback reload(
               (schema :: Ecto.Schema.t()) | (schemas :: [Ecto.Schema.t()]),
@@ -698,18 +691,9 @@ defmodule Ecto.Repo do
 
 
   @doc """
-  Similar to `c:reload/2`, but raises when something is not found
+  Similar to `c:reload/2`, but raises when something is not found.
 
   When using with lists, ordering is guaranteed to be kept. 
-
-  ## Options
-
-    * `:prefix` - The prefix to run the query on (such as the schema path
-      in Postgres or the database in MySQL). This will be applied to all `from`
-      and `join`s in the query that did not have a prefix previously given
-      either via the `:prefix` option on `join`/`from` or via `@schema_prefix`
-      in the schema. For more information see the "Query Prefix" section of the
-      `Ecto.Query` documentation.
 
   ## Example
 

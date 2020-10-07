@@ -252,6 +252,12 @@ defmodule Ecto.RepoTest do
         TestRepo.reload([%MySchemaWithAssoc{id: 1}, %MySchema{id: 2}])
       end
     end
+
+    test "supports prefix" do
+      struct_with_prefix = put_meta(%MySchema{id: 2}, prefix: "another")
+      TestRepo.reload(struct_with_prefix)
+      assert_received {:all, %{prefix: "another"}}
+    end
   end
 
   defmodule DefaultOptionRepo do
