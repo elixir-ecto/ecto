@@ -9,9 +9,9 @@ defmodule Ecto.Enum do
 
       field :status, Ecto.Enum, values: [:foo, :bar, :baz]
 
-  More complex types, e.g. `:array`, are also supported:
+  Composite types, such as `:array`, are also supported:
 
-    field :roles, {:array, Ecto.Enum}, values: [:Author, :Editor, :Admin]
+      field :roles, {:array, Ecto.Enum}, values: [:Author, :Editor, :Admin]
 
   `:values` must be a list of atoms. String values will be cast to atoms safely
   and only if the atom exists in the list (otherwise an error will be raised).
