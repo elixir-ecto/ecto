@@ -220,6 +220,46 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  describe "reload" do
+    test "raises when input structs do not have valid primary keys" do
+      message = "Ecto.Repo.reload/2 expects existent structs, found a `nil` primary key"
+      assert_raise ArgumentError, message, fn ->
+        TestRepo.reload(%MySchema{})
+      end
+    end
+
+    test "raises when input is not a struct or a list of structs" do
+      message = ~r"expected a struct or a list of structs,"
+      assert_raise ArgumentError, message, fn ->
+        TestRepo.reload(%{my_key: 1})
+      end
+
+      assert_raise ArgumentError, message, fn ->
+        TestRepo.reload([%{my_key: 1}, %{my_key: 2}])
+      end
+    end
+
+    test "raises when schema doesn't have a primary key" do
+      message = ~r"to have exactly one primary key"
+      assert_raise ArgumentError, message, fn ->
+        TestRepo.reload(%MySchemaNoPK{})
+      end
+    end
+
+    test "raises when receives multiple struct types" do
+      message = ~r"expected an homogenous list"
+      assert_raise ArgumentError, message, fn ->
+        TestRepo.reload([%MySchemaWithAssoc{id: 1}, %MySchema{id: 2}])
+      end
+    end
+
+    test "supports prefix" do
+      struct_with_prefix = put_meta(%MySchema{id: 2}, prefix: "another")
+      TestRepo.reload(struct_with_prefix)
+      assert_received {:all, %{prefix: "another"}}
+    end
+  end
+
   defmodule DefaultOptionRepo do
     use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
 

@@ -338,6 +338,14 @@ defmodule Ecto.Repo do
           Ecto.Repo.Queryable.get_by!(get_dynamic_repo(), queryable, clauses, opts)
         end
 
+        def reload(queryable, opts \\ []) do
+          Ecto.Repo.Queryable.reload(get_dynamic_repo(), queryable, opts)
+        end
+
+        def reload!(queryable, opts \\ []) do
+          Ecto.Repo.Queryable.reload!(get_dynamic_repo(), queryable, opts)
+        end
+
         def one(queryable, opts \\ []) do
           Ecto.Repo.Queryable.one(get_dynamic_repo(), queryable, opts)
         end
@@ -543,8 +551,9 @@ defmodule Ecto.Repo do
 
   ## Ecto.Adapter.Queryable
 
-  @optional_callbacks get: 3, get!: 3, get_by: 3, get_by!: 3, aggregate: 3, aggregate: 4, exists?: 2,
-                      one: 2, one!: 2, preload: 3, all: 2, stream: 2, update_all: 3, delete_all: 2
+  @optional_callbacks get: 3, get!: 3, get_by: 3, get_by!: 3, reload: 2, reload!: 2, aggregate: 3, 
+                      aggregate: 4, exists?: 2, one: 2, one!: 2, preload: 3, all: 2, stream: 2, 
+                      update_all: 3, delete_all: 2
 
   @doc """
   Fetches a single struct from the data store where the primary key matches the
@@ -656,6 +665,48 @@ defmodule Ecto.Repo do
               clauses :: Keyword.t() | map,
               opts :: Keyword.t()
             ) :: Ecto.Schema.t()
+
+  @doc """
+  Reloads a given schema or schema list from the database.
+
+  When using with lists, it is expected that all of the structs in the list belong
+  to the same schema. Ordering is guaranteed to be kept. Results not found in
+  the database will be returned as `nil`.
+
+  ## Example
+
+    MyRepo.reload(post)
+    %Post{}
+
+    MyRepo.reload([post1, post2])
+    [%Post{}, %Post{}]
+
+    MyRepo.reload([deleted_post, post1])
+    [nil, %Post{}]
+  """
+  @callback reload(
+              (schema :: Ecto.Schema.t()) | (schemas :: [Ecto.Schema.t()]),
+              opts :: Keyword.t()
+            ) :: Ecto.Schema.t() | [Ecto.Schema.t() | nil] | nil
+
+
+  @doc """
+  Similar to `c:reload/2`, but raises when something is not found.
+
+  When using with lists, ordering is guaranteed to be kept. 
+
+  ## Example
+
+    MyRepo.reload!(post)
+    %Post{}
+
+    MyRepo.reload!([post1, post2])
+    [%Post{}, %Post{}]
+  """
+  @callback reload!(
+              (schema :: Ecto.Schema.t()) | (schemas :: [Ecto.Schema.t()]),
+              opts :: Keyword.t()
+            ) :: Ecto.Schema.t() | [Ecto.Schema.t()]
 
   @doc """
   Calculate the given `aggregate`.

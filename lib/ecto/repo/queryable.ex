@@ -74,6 +74,43 @@ defmodule Ecto.Repo.Queryable do
     one!(name, query_for_get_by(queryable, clauses), opts)
   end
 
+  def reload(name, [head | _] = structs, opts) when is_list(structs) do
+    results = all(name, query_for_reload(structs), opts)
+
+    [pk] = head.__struct__.__schema__(:primary_key) 
+
+    for struct <- structs do
+      struct_pk = Map.fetch!(struct, pk)
+      Enum.find(results, &Map.fetch!(&1, pk) == struct_pk)
+    end
+  end
+
+  def reload(name, struct, opts) do
+    one(name, query_for_reload([struct]), opts)
+  end
+
+  def reload!(name, [head | _] = structs, opts) when is_list(structs) do
+    query = query_for_reload(structs)
+    results = all(name, query, opts)
+
+    [pk] = head.__struct__.__schema__(:primary_key) 
+
+    for struct <- structs do
+      struct_pk = Map.fetch!(struct, pk)
+      Enum.find(results, &Map.fetch!(&1, pk) == struct_pk) || raise "could not reload #{inspect(struct)}, maybe it doesn't exist or was deleted"
+    end
+  end
+
+  def reload!(name, struct, opts) do
+    query = query_for_reload([struct])
+    case one!(name, query, opts) do
+      nil ->
+        raise Ecto.NoResultsError, queryable: query
+      res ->
+        res
+    end
+  end
+
   def aggregate(name, queryable, aggregate, opts) do
     one!(name, query_for_aggregate(queryable, aggregate), opts)
   end
@@ -428,6 +465,25 @@ defmodule Ecto.Repo.Queryable do
     Query.where(queryable, [], ^Enum.to_list(clauses))
   end
 
+  defp query_for_reload([head| _] = structs) do
+    assert_structs!(structs)
+
+    schema = head.__struct__
+    prefix = head.__meta__.prefix
+
+    case schema.__schema__(:primary_key) do
+      [pk] ->
+        keys = Enum.map(structs, &get_pk!(&1, pk))
+        query = Query.from(x in schema, where: field(x, ^pk) in ^keys)
+        %{query | prefix: prefix}
+
+      pks ->
+        raise ArgumentError,
+              "Ecto.Repo.reload/2 requires the schema #{inspect(schema)} " <>
+                "to have exactly one primary key, got: #{inspect(pks)}"
+    end
+  end
+
   defp query_for_aggregate(queryable, aggregate) do
     query =
       case prepare_for_aggregate(queryable) do
@@ -484,5 +540,31 @@ defmodule Ecto.Repo.Queryable do
     raise Ecto.QueryError,
       query: query,
       message: "expected a from expression with a schema"
+  end
+
+  defp assert_structs!([head | _] = structs) when is_list(structs) do
+    unless Enum.all?(structs, &schema?/1) do
+      raise ArgumentError, "expected a struct or a list of structs, received #{inspect(structs)}"
+    end
+
+    unless Enum.all?(structs, &(&1.__struct__ == head.__struct__)) do
+      raise ArgumentError, "expected an homogenous list, received different struct types"
+    end
+
+    :ok
+  end
+
+  defp schema?(%{__meta__: _}), do: true
+  defp schema?(_), do: false
+
+  defp get_pk!(struct, pk) do
+    struct
+    |> Map.fetch!(pk)
+    |> case do
+      nil ->
+        raise ArgumentError, "Ecto.Repo.reload/2 expects existent structs, found a `nil` primary key"
+      key ->
+        key
+    end
   end
 end
