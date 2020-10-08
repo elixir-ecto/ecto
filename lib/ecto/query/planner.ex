@@ -386,9 +386,17 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp subquery_types({:source, _, _, types}), do: types
-  defp subquery_types({:map, types}), do: types
-  defp subquery_types({:struct, _name, types}), do: types
+  defp subquery_type_for({:source, _, _, fields}, field), do: Keyword.fetch(fields, field)
+  defp subquery_type_for({:struct, _name, types}, field), do: subquery_type_for_value(types, field)
+  defp subquery_type_for({:map, types}, field), do: subquery_type_for_value(types, field)
+
+  defp subquery_type_for_value(types, field) do
+    case Keyword.fetch(types, field) do
+      {:ok, {:value, type}} -> {:ok, type}
+      {:ok, _} -> {:ok, :any}
+      :error -> :error
+    end
+  end
 
   defp assert_subquery_fields!(query, expr, pairs) do
     Enum.each(pairs, fn
@@ -965,7 +973,7 @@ defmodule Ecto.Query.Planner do
         {name, %Ecto.Query{} = query}, {queries, counter} ->
           {query, counter} = traverse_exprs(query, :all, counter, fun)
           {query, source, fields} = normalize_subquery_select(query, adapter, true)
-          keys = source |> subquery_types() |> Keyword.keys()
+          {_, keys} = subquery_struct_and_fields(source)
           query = put_in(query.select.fields, Enum.zip(keys, fields))
           {[{name, query} | queries], counter}
 
@@ -1052,7 +1060,7 @@ defmodule Ecto.Query.Planner do
           inner_query
         else
           update_in(inner_query.select.fields, fn fields ->
-            subquery.select |> subquery_types() |> Keyword.keys() |> Enum.zip(fields)
+            subquery.select |> subquery_struct_and_fields() |> elem(1) |> Enum.zip(fields)
           end)
         end
 
@@ -1525,8 +1533,8 @@ defmodule Ecto.Query.Planner do
         {{:source, {source, schema}, prefix || query.prefix, types}, fields}
 
       {:error, %Ecto.SubQuery{select: select}} ->
-        fields = for {field, _} <- subquery_types(select), do: select_field(field, ix)
-        {select, fields}
+        {_, fields} = subquery_struct_and_fields(select)
+        {select, Enum.map(fields, &select_field(&1, ix))}
     end
   end
 
@@ -1632,13 +1640,9 @@ defmodule Ecto.Query.Planner do
         type!(kind, query, expr, schema, field)
 
       %Ecto.SubQuery{select: select} ->
-        case Keyword.fetch(subquery_types(select), field) do
-          {:ok, {:value, type}} ->
-            type
-          {:ok, _} ->
-            :any
-          :error ->
-            error!(query, expr, "field `#{field}` does not exist in subquery")
+        case subquery_type_for(select, field) do
+          {:ok, type} -> type
+          :error -> error!(query, expr, "field `#{field}` does not exist in subquery")
         end
     end
   end

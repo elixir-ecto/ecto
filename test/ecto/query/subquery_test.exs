@@ -302,6 +302,23 @@ defmodule Ecto.Query.SubqueryTest do
   end
 
   describe "normalize: source subqueries" do
+    test "keeps field types" do
+      query = from p in subquery(Post), select: p.title
+
+      assert normalize(query).select.fields ==
+               [{{:., [type: :string], [{:&, [], [0]}, :title]}, [], []}]
+
+      query = from p in subquery(from p in Post, select: p.title), select: p.title
+
+      assert normalize(query).select.fields ==
+               [{{:., [type: :string], [{:&, [], [0]}, :title]}, [], []}]
+
+      query = from p in subquery(from p in Post, select: %{title: p.title}), select: p.title
+
+      assert normalize(query).select.fields ==
+               [{{:., [type: :string], [{:&, [], [0]}, :title]}, [], []}]
+    end
+
     test "with params in from" do
       query = from p in Post,
                 where: [title: ^"hello"],
