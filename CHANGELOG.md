@@ -1,5 +1,16 @@
 # Changelog for v3.x
 
+## v3.5.1 (2020-10-08)
+
+### Enhancements
+
+  * [Ecto.Changeset] Warn if there are duplicate IDs in the parent schema for `cast_assoc/3`/`cast_embed/3`
+  * [Ecto.Schema] Allow `belongs_to` to accept options for parameterized types
+
+### Bug fixes
+
+  * [Ecto.Query] Keep field types when using a subquery with source
+
 ## v3.5.0 (2020-10-03)
 
 v3.5 requires Elixir v1.8+.
