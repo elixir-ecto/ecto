@@ -2941,7 +2941,7 @@ defimpl Inspect, for: Ecto.Changeset do
     end
 
     redacted_fields = case data do
-      %type{} -> type.__schema__(:redact_fields)
+      %type{__meta__: _} -> type.__schema__(:redact_fields)
       _ -> []
     end
 

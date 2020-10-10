@@ -55,6 +55,10 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  defmodule NoSchemaPost do
+    defstruct [:title, :upvotes]
+  end
+
   defp changeset(schema \\ %Post{}, params) do
     cast(schema, params, ~w(id token title body upvotes decimal color topics virtual)a)
   end
@@ -160,6 +164,19 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == []
     assert changeset.valid?
     assert apply_changes(changeset) == %{title: "world", upvotes: 0}
+  end
+
+  test "cast/4: with data struct and types" do
+    data   = {%NoSchemaPost{title: "hello"}, %{title: :string, upvotes: :integer}}
+    params = %{"title" => "world", "upvotes" => "0"}
+
+    changeset = cast(data, params, ~w(title upvotes)a)
+    assert changeset.params == params
+    assert changeset.data  == %NoSchemaPost{title: "hello"}
+    assert changeset.changes == %{title: "world", upvotes: 0}
+    assert changeset.errors == []
+    assert changeset.valid?
+    assert apply_changes(changeset) == %NoSchemaPost{title: "world", upvotes: 0}
   end
 
   test "cast/4: with dynamic embed" do
@@ -1776,6 +1793,13 @@ defmodule Ecto.ChangesetTest do
       assert inspect(changeset(%{"title" => "title", "body" => "hi"})) ==
             "#Ecto.Changeset<action: nil, changes: %{body: \"hi\", title: \"title\"}, " <>
             "errors: [], data: #Ecto.ChangesetTest.Post<>, valid?: true>"
+
+      data   = {%NoSchemaPost{title: "hello"}, %{title: :string, upvotes: :integer}}
+      params = %{"title" => "world", "upvotes" => "0"}
+
+      assert inspect(cast(data, params, ~w(title upvotes)a)) ==
+               "#Ecto.Changeset<action: nil, changes: %{title: \"world\", upvotes: 0}, " <>
+               "errors: [], data: #Ecto.ChangesetTest.NoSchemaPost<>, valid?: true>"
     end
 
     test "redacts fields marked redact: true" do
