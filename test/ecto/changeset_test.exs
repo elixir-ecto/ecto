@@ -1793,6 +1793,13 @@ defmodule Ecto.ChangesetTest do
       assert inspect(changeset(%{"title" => "title", "body" => "hi"})) ==
             "#Ecto.Changeset<action: nil, changes: %{body: \"hi\", title: \"title\"}, " <>
             "errors: [], data: #Ecto.ChangesetTest.Post<>, valid?: true>"
+
+      data   = {%NoSchemaPost{title: "hello"}, %{title: :string, upvotes: :integer}}
+      params = %{"title" => "world", "upvotes" => "0"}
+
+      assert inspect(cast(data, params, ~w(title upvotes)a)) ==
+               "#Ecto.Changeset<action: nil, changes: %{title: \"world\", upvotes: 0}, " <>
+               "errors: [], data: #Ecto.ChangesetTest.NoSchemaPost<>, valid?: true>"
     end
 
     test "redacts fields marked redact: true" do
