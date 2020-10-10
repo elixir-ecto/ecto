@@ -2941,7 +2941,7 @@ defimpl Inspect, for: Ecto.Changeset do
     end
 
     redacted_fields = case data do
-      %type{} -> if function_exported?(type, :__schema__, 2), do: type.__schema__(:redact_fields), else: []
+      %type{__meta__: _} -> type.__schema__(:redact_fields)
       _ -> []
     end
 
