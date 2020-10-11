@@ -24,7 +24,7 @@ defmodule Ecto.Repo.Queryable do
       |> Ecto.Query.Planner.ensure_select(true)
 
     {adapter, %{cache: cache, repo: repo} = adapter_meta} = Ecto.Repo.Registry.lookup(name)
-    {query, opts} = prepare_query(:stream, repo, query, opts)
+    {query, opts} = repo.prepare_query(:stream, query, opts)
     query = attach_prefix(query, opts)
     {query_meta, prepared, params} = Planner.query(query, :all, cache, adapter, 0)
 
@@ -208,7 +208,7 @@ defmodule Ecto.Repo.Queryable do
 
   defp execute(operation, name, query, opts) when is_list(opts) do
     {adapter, %{cache: cache, repo: repo} = adapter_meta} = Ecto.Repo.Registry.lookup(name)
-    {query, opts} = prepare_query(operation, repo, query, opts)
+    {query, opts} = repo.prepare_query(operation, query, opts)
     query = attach_prefix(query, opts)
     {query_meta, prepared, params} = Planner.query(query, operation, cache, adapter, 0)
 
@@ -234,10 +234,6 @@ defmodule Ecto.Repo.Queryable do
          |> Ecto.Repo.Assoc.query(assocs, sources, preprocessor)
          |> Ecto.Repo.Preloader.query(name, preloads, take, postprocessor, opts)}
     end
-  end
-
-  defp prepare_query(operation, repo, query, opts) do
-    repo.prepare_query(operation, query, Keyword.merge(repo.default_options(operation), opts))
   end
 
   defp preprocessor({_, {:source, {source, schema}, prefix, types}}, preprocess, adapter) do

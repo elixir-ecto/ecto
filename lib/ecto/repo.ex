@@ -306,36 +306,36 @@ defmodule Ecto.Repo do
       if Ecto.Adapter.Queryable in behaviours do
         if not @read_only do
           def update_all(queryable, updates, opts \\ []) do
-            Ecto.Repo.Queryable.update_all(get_dynamic_repo(), queryable, updates, opts)
+            Ecto.Repo.Queryable.update_all(get_dynamic_repo(), queryable, updates, with_default_options(:update_all, opts))
           end
 
           def delete_all(queryable, opts \\ []) do
-            Ecto.Repo.Queryable.delete_all(get_dynamic_repo(), queryable, opts)
+            Ecto.Repo.Queryable.delete_all(get_dynamic_repo(), queryable, with_default_options(:delete_all, opts))
           end
         end
 
         def all(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.all(get_dynamic_repo(), queryable, opts)
+          Ecto.Repo.Queryable.all(get_dynamic_repo(), queryable, with_default_options(:all, opts))
         end
 
         def stream(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.stream(get_dynamic_repo(), queryable, opts)
+          Ecto.Repo.Queryable.stream(get_dynamic_repo(), queryable, with_default_options(:stream, opts))
         end
 
         def get(queryable, id, opts \\ []) do
-          Ecto.Repo.Queryable.get(get_dynamic_repo(), queryable, id, opts)
+          Ecto.Repo.Queryable.get(get_dynamic_repo(), queryable, id, with_default_options(:all, opts))
         end
 
         def get!(queryable, id, opts \\ []) do
-          Ecto.Repo.Queryable.get!(get_dynamic_repo(), queryable, id, opts)
+          Ecto.Repo.Queryable.get!(get_dynamic_repo(), queryable, id, with_default_options(:all, opts))
         end
 
         def get_by(queryable, clauses, opts \\ []) do
-          Ecto.Repo.Queryable.get_by(get_dynamic_repo(), queryable, clauses, opts)
+          Ecto.Repo.Queryable.get_by(get_dynamic_repo(), queryable, clauses, with_default_options(:all, opts))
         end
 
         def get_by!(queryable, clauses, opts \\ []) do
-          Ecto.Repo.Queryable.get_by!(get_dynamic_repo(), queryable, clauses, opts)
+          Ecto.Repo.Queryable.get_by!(get_dynamic_repo(), queryable, clauses, with_default_options(:all, opts))
         end
 
         def reload(queryable, opts \\ []) do
@@ -347,36 +347,36 @@ defmodule Ecto.Repo do
         end
 
         def one(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.one(get_dynamic_repo(), queryable, opts)
+          Ecto.Repo.Queryable.one(get_dynamic_repo(), queryable, with_default_options(:all, opts))
         end
 
         def one!(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.one!(get_dynamic_repo(), queryable, opts)
+          Ecto.Repo.Queryable.one!(get_dynamic_repo(), queryable, with_default_options(:all, opts))
         end
 
         def aggregate(queryable, aggregate, opts \\ [])
 
         def aggregate(queryable, aggregate, opts)
             when aggregate in [:count] and is_list(opts) do
-          Ecto.Repo.Queryable.aggregate(get_dynamic_repo(), queryable, aggregate, opts)
+          Ecto.Repo.Queryable.aggregate(get_dynamic_repo(), queryable, aggregate, with_default_options(:all, opts))
         end
 
         def aggregate(queryable, aggregate, field)
             when aggregate in @aggregates and is_atom(field) do
-          Ecto.Repo.Queryable.aggregate(get_dynamic_repo(), queryable, aggregate, field, [])
+          Ecto.Repo.Queryable.aggregate(get_dynamic_repo(), queryable, aggregate, field, with_default_options(:all, []))
         end
 
         def aggregate(queryable, aggregate, field, opts)
             when aggregate in @aggregates and is_atom(field) and is_list(opts) do
-          Ecto.Repo.Queryable.aggregate(get_dynamic_repo(), queryable, aggregate, field, opts)
+          Ecto.Repo.Queryable.aggregate(get_dynamic_repo(), queryable, aggregate, field, with_default_options(:all, opts))
         end
 
         def exists?(queryable, opts \\ []) do
-          Ecto.Repo.Queryable.exists?(get_dynamic_repo(), queryable, opts)
+          Ecto.Repo.Queryable.exists?(get_dynamic_repo(), queryable, with_default_options(:all, opts))
         end
 
         def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
-          Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, get_dynamic_repo(), preloads, opts)
+          Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, get_dynamic_repo(), preloads, with_default_options(:all, opts))
         end
 
         def prepare_query(operation, query, opts), do: {query, opts}
