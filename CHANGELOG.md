@@ -1,5 +1,16 @@
 # Changelog for v3.x
 
+## v3.5.2 (2020-10-12)
+
+### Enhancements
+
+  * [Ecto.Repo] Add Repo.reload/2 and Repo.reload!/2
+
+### Bug fixes
+
+  * [Ecto.Changeset] Fix "__schema__/1 is undefined or private" error while inspecting a schemaless changeset
+  * [Ecto.Repo] Invoke `c:Ecto.Repo.default_options/1` per entry-point operation
+
 ## v3.5.1 (2020-10-08)
 
 ### Enhancements
