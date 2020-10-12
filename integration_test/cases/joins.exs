@@ -341,7 +341,7 @@ defmodule Ecto.Integration.JoinsTest do
     # Without on
     query = from(p in Post, left_join: u in assoc(p, :users), preload: [users: u], order_by: p.id)
     [p1, p2, p3] = TestRepo.all(query)
-    assert p1.users == [u1, u2]
+    assert Enum.sort_by(p1.users, & &1.name) == [u1, u2]
     assert p2.users == [u2]
     assert p3.users == []
 
