@@ -35,7 +35,7 @@ def update_title(post, new_title) do
       where: [id: ^post.id],
       update: [set: [title: ^new_title]]
 
-  MyApp.Repo.update_all(query)
+  MyApp.Repo.update_all(query, [])
 end
 ```
 
@@ -55,7 +55,7 @@ def increment_page_views(post) do
       where: [id: ^post.id],
       update: [inc: [page_views: 1]]
 
-  MyApp.Repo.update_all(query)
+  MyApp.Repo.update_all(query, [])
 end
 ```
 
