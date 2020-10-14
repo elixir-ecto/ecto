@@ -258,7 +258,7 @@ defmodule Ecto.Query.Planner do
     {inner_query, params, key} = plan(inner_query, :all, adapter)
     assert_no_subquery_assocs!(inner_query)
 
-    {inner_query, select, _fields} =
+    {inner_query, select} =
       inner_query
       |> ensure_select(true)
       |> normalize_subquery_select(adapter, source?)
@@ -284,19 +284,18 @@ defmodule Ecto.Query.Planner do
     query
   end
 
-  # If we are selecting a source, we keep it as is.
-  # Otherwise we normalize the select, which converts them into structs.
-  # This means that `select: p` in subqueries will be nullable in a join.
-  defp normalize_subquery_select(%{select: %{expr: {:&, _, [ix]}, take: take}} = query, _adapter, _source?) do
-    {source, fields} = source_take!(:select, query, take, ix, ix)
-    {query, source, fields}
-  end
-
   defp normalize_subquery_select(query, adapter, source?) do
     {expr, %{select: select} = query} = rewrite_subquery_select_expr(query, source?)
     {expr, _} = prewalk(expr, :select, query, select, 0, adapter)
-    {meta, fields, _from} = collect_fields(expr, [], :none, query, select.take, true)
-    {query, meta, Enum.reverse(fields)}
+    {meta, _fields, _from} = collect_fields(expr, [], :never, query, select.take, true)
+    {query, meta}
+  end
+
+  # If we are selecting a source, we keep it as is.
+  # Otherwise we normalize the select, which converts them into structs.
+  # This means that `select: p` in subqueries will be nullable in a join.
+  defp rewrite_subquery_select_expr(%{select: %{expr: {:&, _, [_]} = expr}} = query, _source?) do
+    {expr, query}
   end
 
   defp rewrite_subquery_select_expr(%{select: select} = query, source?) do
@@ -972,9 +971,15 @@ defmodule Ecto.Query.Planner do
       Enum.reduce with_expr.queries, {[], counter}, fn
         {name, %Ecto.Query{} = query}, {queries, counter} ->
           {query, counter} = traverse_exprs(query, :all, counter, fun)
-          {query, source, fields} = normalize_subquery_select(query, adapter, true)
+
+          # We don't want to use normalize_subquery_select because it
+          # prepares the select and as such it will reset its parameters,
+          # so we call rewrite_subquery_select_expr directly instead
+          {expr, %{select: select} = query} = rewrite_subquery_select_expr(query, true)
+          {source, fields, _from} = collect_fields(expr, [], :never, query, select.take, true)
           {_, keys} = subquery_struct_and_fields(source)
-          query = put_in(query.select.fields, Enum.zip(keys, fields))
+          query = put_in(query.select.fields, Enum.zip(keys, Enum.reverse(fields)))
+
           {[{name, query} | queries], counter}
 
         {name, %QueryExpr{expr: {:fragment, _, _} = fragment} = query_expr}, {queries, counter} ->
@@ -1280,7 +1285,8 @@ defmodule Ecto.Query.Planner do
     {{:source, :from}, fields, {:ok, {:source, :from}, expr, taken}}
   end
 
-  defp collect_fields({:&, _, [0]}, fields, from, _query, _take, _keep_literals?) do
+  defp collect_fields({:&, _, [0]}, fields, from, _query, _take, _keep_literals?)
+       when from != :never do
     {{:source, :from}, fields, from}
   end
 

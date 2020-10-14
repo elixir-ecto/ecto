@@ -975,27 +975,53 @@ defmodule Ecto.Query.PlannerTest do
     assert query.group_bys == []
   end
 
-  test "normalize: CTEs" do
-    %{with_ctes: with_expr} =
-      Comment
-      |> with_cte("cte", as: ^from(c in "comments", select: %{id: c.id, text: c.text}))
-      |> normalize()
-    %{queries: [{"cte", query}]} = with_expr
-    assert query.sources == {{"comments", nil, nil}}
-    assert {:%{}, [], [id: _, text: _]} = query.select.expr
-    assert  [id: {{:., _, [{:&, _, [0]}, :id]}, _, []},
-             text: {{:., _, [{:&, _, [0]}, :text]}, _, []}] = query.select.fields
+  describe "normalize: CTEs" do
+    test "single-level" do
+      %{with_ctes: with_expr} =
+        Comment
+        |> with_cte("cte", as: ^from(c in "comments", select: %{id: c.id, text: c.text}))
+        |> normalize()
+      %{queries: [{"cte", query}]} = with_expr
+      assert query.sources == {{"comments", nil, nil}}
+      assert {:%{}, [], [id: _, text: _]} = query.select.expr
+      assert  [id: {{:., _, [{:&, _, [0]}, :id]}, _, []},
+               text: {{:., _, [{:&, _, [0]}, :text]}, _, []}] = query.select.fields
 
-    %{with_ctes: with_expr} =
-      Comment
-      |> with_cte("cte", as: ^(from(c in Comment, where: c in ^[1, 2, 3])))
-      |> normalize()
-    %{queries: [{"cte", query}]} = with_expr
-    assert query.sources == {{"comments", Comment, nil}}
-    assert {:&, [], [0]} = query.select.expr
-    assert  [{:id, {{:., _, [{:&, _, [0]}, :id]}, _, []}},
-             {:text, {{:., _, [{:&, _, [0]}, :text]}, _, []}},
-             _ | _] = query.select.fields
+      %{with_ctes: with_expr} =
+        Comment
+        |> with_cte("cte", as: ^(from(c in Comment, where: c in ^[1, 2, 3])))
+        |> normalize()
+      %{queries: [{"cte", query}]} = with_expr
+      assert query.sources == {{"comments", Comment, nil}}
+      assert {:&, [], [0]} = query.select.expr
+      assert  [{:id, {{:., _, [{:&, _, [0]}, :id]}, _, []}},
+               {:text, {{:., _, [{:&, _, [0]}, :text]}, _, []}},
+               _ | _] = query.select.fields
+    end
+
+    test "multi-level with select" do
+      sensors =
+        "sensors"
+        |> where(id: ^"id")
+        |> select([s], map(s, [:number]))
+
+      # There was a bug where the parameter in select would be reverted
+      # to ^0, this test aims to guarantee it remains ^1
+      agg_values =
+        "values"
+        |> with_cte("sensors_cte", as: ^sensors)
+        |> join(:inner, [v], s in "sensors_cte")
+        |> select([v, s], %{bucket: ^123 + v.number})
+
+      query =
+        "agg_values"
+        |> with_cte("agg_values", as: ^agg_values)
+        |> select([agg_v], agg_v.bucket)
+
+      query = normalize(query)
+      [{"agg_values", query}] = query.with_ctes.queries
+      assert Macro.to_string(query.select.fields) == "[bucket: ^1 + &0.number()]"
+    end
   end
 
   test "normalize: select" do
