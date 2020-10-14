@@ -530,7 +530,7 @@ defmodule Ecto.Changeset do
           custom_errors
           |> Keyword.put_new(:validation, :cast)
           |> Keyword.put(:type, type)
-          |> Keyword.pop(:message, "is invalid")
+          |> Keyword.pop(:message, "is of an invalid type")
         {changes, [{key, {message, new_errors}} | errors], false}
     end
   end
