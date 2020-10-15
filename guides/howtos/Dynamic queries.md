@@ -118,10 +118,10 @@ def filter(params) do
 end
 
 def filter_order_by("published_at_desc"),
-  do: dynamic([p], desc: p.published_at)
+  do: [desc: dynamic([p], p.published_at)]
 
 def filter_order_by("published_at"),
-  do: dynamic([p], p.published_at)
+  do: [asc: dynamic([p], p.published_at)]
 
 def filter_order_by(_),
   do: []
