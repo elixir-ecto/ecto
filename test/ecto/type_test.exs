@@ -97,13 +97,22 @@ defmodule Ecto.TypeTest do
     assert cast({:map, :integer}, 1) == :error
   end
 
+  # be explicit about what happens with nil
+  test "simple casts" do
+    assert cast(:integer, nil ) == { :ok, nil }
+    assert cast(:integer, 3 ) == { :ok, 3 }
+    assert cast(:integer, "3" ) == { :ok, 3 }
+    assert cast(:string, "foo" ) == { :ok, "foo" }
+    assert cast(:String, nil ) == { :ok, nil }
+  end
+
   test "array" do
     assert load({:array, :integer}, [1]) == {:ok, [1]}
     assert dump({:array, :integer}, [2]) == {:ok, [2]}
     assert cast({:array, :integer}, [3]) == {:ok, [3]}
     assert cast({:array, :integer}, ["3"]) == {:ok, [3]}
-    assert cast({:array, :integer}, [3, nil]) == :error
-    assert cast({:array, :integer}, ["3", nil]) == :error
+    assert cast({:array, :integer}, [3, nil]) == { :ok, [ 3, nil ] }
+    assert cast({:array, :integer}, ["3", nil]) == { :ok, [ 3, nil ] }
   end
 
   test "custom types with array" do

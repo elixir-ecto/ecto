@@ -1171,6 +1171,9 @@ defmodule Ecto.Type do
   defp of_base_type?(:date, value), do: Kernel.match?(%Date{}, value)
   defp of_base_type?(_, _), do: false
 
+  defp array([nil | t], fun, acc ),
+    do: array( t, fun, [nil | acc ] )
+
   defp array([h | t], fun, acc) do
     case fun.(h) do
       {:ok, h} -> array(t, fun, [h | acc])

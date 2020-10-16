@@ -100,7 +100,7 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.embed_as({:array, @p_error_type}, :foo) == :self
 
     assert Ecto.Type.embedded_load({:array, @p_self_type}, [:foo], :json) == {:ok, [:cast]}
-    assert Ecto.Type.embedded_load({:array, @p_self_type}, [nil], :json) == {:ok, [:cast]}
+    assert Ecto.Type.embedded_load({:array, @p_self_type}, [nil], :json) == {:ok, [nil]}
     assert Ecto.Type.embedded_load({:array, @p_self_type}, nil, :json) == {:ok, nil}
     assert Ecto.Type.embedded_load({:array, @p_dump_type}, [:foo], :json) == {:ok, [:load]}
     assert Ecto.Type.embedded_load({:array, @p_dump_type}, [nil], :json) == {:ok, [:load]}
@@ -122,7 +122,7 @@ defmodule Ecto.ParameterizedTypeTest do
     assert Ecto.Type.dump({:array, @p_self_type}, nil) == {:ok, nil}
 
     assert Ecto.Type.cast({:array, @p_self_type}, [:foo]) == {:ok, [:cast]}
-    assert Ecto.Type.cast({:array, @p_self_type}, [nil]) == {:ok, [:cast]}
+    assert Ecto.Type.cast({:array, @p_self_type}, [nil]) == {:ok, [nil]}
     assert Ecto.Type.cast({:array, @p_self_type}, nil) == {:ok, nil}
   end
 
