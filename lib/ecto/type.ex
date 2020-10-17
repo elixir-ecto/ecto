@@ -491,7 +491,8 @@ defmodule Ecto.Type do
     end
   end
 
-  def dump({:array, type}, value, dumper), do: array(value, type, dumper, [])
+  def dump({:array, {_, _, _} = type}, value, dumper), do: array(value, type, dumper, false, [])
+  def dump({:array, type}, value, dumper), do: array(value, type, dumper, true, [])
   def dump({:map, type}, value, dumper), do: map(value, type, dumper, %{})
   def dump({:parameterized, mod, params}, value, dumper), do: mod.dump(value, dumper, params)
 
@@ -585,7 +586,8 @@ defmodule Ecto.Type do
     end
   end
 
-  def load({:array, type}, value, loader), do: array(value, type, loader, [])
+  def load({:array, {_, _, _} = type}, value, loader), do: array(value, type, loader, false, [])
+  def load({:array, type}, value, loader), do: array(value, type, loader, true, [])
   def load({:map, type}, value, loader), do: map(value, type, loader, %{})
   def load({:parameterized, mod, params}, value, loader), do: mod.load(value, loader, params)
 
@@ -765,10 +767,24 @@ defmodule Ecto.Type do
   defp cast_fun(:utc_datetime), do: &maybe_truncate_usec(cast_utc_datetime(&1))
   defp cast_fun(:utc_datetime_usec), do: &maybe_pad_usec(cast_utc_datetime(&1))
   defp cast_fun({:param, :any_datetime}), do: &cast_any_datetime(&1)
-  defp cast_fun({:in, type}), do: &array(&1, cast_fun(type), [])
-  defp cast_fun({:array, type}), do: &array(&1, cast_fun(type), [])
-  defp cast_fun({:map, type}), do: &map(&1, cast_fun(type), %{})
   defp cast_fun({:parameterized, mod, params}), do: &mod.cast(&1, params)
+  defp cast_fun({:in, type}), do: cast_fun({:array, type})
+
+  defp cast_fun({:array, {:parameterized, _, _} = type}) do
+    fun = cast_fun(type)
+    &array(&1, fun, false, [])
+  end
+
+  defp cast_fun({:array, type}) do
+    fun = cast_fun(type)
+    &array(&1, fun, true, [])
+  end
+
+  defp cast_fun({:map, type}) do
+    fun = cast_fun(type)
+    &map(&1, fun, %{})
+  end
+
   defp cast_fun(mod) when is_atom(mod) do
     fn
       nil -> {:ok, nil}
@@ -1171,19 +1187,23 @@ defmodule Ecto.Type do
   defp of_base_type?(:date, value), do: Kernel.match?(%Date{}, value)
   defp of_base_type?(_, _), do: false
 
-  defp array([h | t], fun, acc) do
+  defp array([nil | t], fun, true, acc) do
+    array(t, fun, true, [nil | acc])
+  end
+
+  defp array([h | t], fun, skip_nil?, acc) do
     case fun.(h) do
-      {:ok, h} -> array(t, fun, [h | acc])
+      {:ok, h} -> array(t, fun, skip_nil?, [h | acc])
       :error -> :error
       {:error, _custom_errors} -> :error
     end
   end
 
-  defp array([], _fun, acc) do
+  defp array([], _fun, _skip_nil?,acc) do
     {:ok, Enum.reverse(acc)}
   end
 
-  defp array(_, _, _) do
+  defp array(_, _, _, _) do
     :error
   end
 
@@ -1207,18 +1227,22 @@ defmodule Ecto.Type do
     {:ok, acc}
   end
 
-  defp array([h | t], type, fun, acc) do
+  defp array([nil | t], type, fun, true, acc) do
+    array(t, type, fun, true, [nil | acc])
+  end
+
+  defp array([h | t], type, fun, skip_nil?, acc) do
     case fun.(type, h) do
-      {:ok, h} -> array(t, type, fun, [h | acc])
+      {:ok, h} -> array(t, type, fun, skip_nil?, [h | acc])
       :error -> :error
     end
   end
 
-  defp array([], _type, _fun, acc) do
+  defp array([], _type, _fun, _skip_nil?, acc) do
     {:ok, Enum.reverse(acc)}
   end
 
-  defp array(_, _, _, _) do
+  defp array(_, _, _, _, _) do
     :error
   end
 
