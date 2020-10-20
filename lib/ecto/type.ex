@@ -722,6 +722,8 @@ defmodule Ecto.Type do
 
       iex> cast(:decimal, Decimal.new("1.0"))
       {:ok, Decimal.new("1.0")}
+      iex> cast(:decimal, "1.0bad")
+      :error
 
       iex> cast({:array, :integer}, [1, 2, 3])
       {:ok, [1, 2, 3]}
@@ -817,6 +819,7 @@ defmodule Ecto.Type do
     case Decimal.parse(term) do
       {:ok, decimal} -> check_decimal(decimal, false)
       {decimal, ""} -> check_decimal(decimal, false)
+      {_, remainder} when is_binary(remainder) and byte_size(remainder) > 0 -> :error
       :error -> :error
     end
   end

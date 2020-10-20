@@ -190,6 +190,7 @@ defmodule Ecto.TypeTest do
     assert cast(:decimal, 1) == {:ok, Decimal.new("1")}
     assert cast(:decimal, Decimal.new("1")) == {:ok, Decimal.new("1")}
     assert cast(:decimal, "nan") == :error
+    assert cast(:decimal, "1.0bad") == :error
 
     assert_raise ArgumentError, ~r"#Decimal<NaN> is not allowed for type :decimal", fn ->
       cast(:decimal, Decimal.new("NaN"))
