@@ -1,5 +1,13 @@
 # Changelog for v3.x
 
+## v3.5.3 (2020-10-21)
+
+### Bug fixes
+
+  * [Ecto.Query] Do not reset parameter counter for nested CTEs
+  * [Ecto.Type] Fix regression where array type with nils could no longer be cast/load/dump
+  * [Ecto.Type] Fix CaseClauseError when casting a decimal with a binary remainder
+
 ## v3.5.2 (2020-10-12)
 
 ### Enhancements
