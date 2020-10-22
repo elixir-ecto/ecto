@@ -96,13 +96,13 @@ defmodule Ecto.Enum do
 
   def values(schema, field) do
     try do
-      schema.__schema__(:type, field)
+      schema.__changeset__
     rescue
       _ in UndefinedFunctionError -> raise ArgumentError, "#{inspect schema} is not an Ecto schema"
     else
-      {:parameterized, Ecto.Enum, %{values: values}} -> values
-      {_, {:parameterized, Ecto.Enum, %{values: values}}} -> values
-      nil -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
+      %{^field => {:parameterized, Ecto.Enum, %{values: values}}} -> values
+      %{^field => {_, {:parameterized, Ecto.Enum, %{values: values}}}} -> values
+      %{} -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
     end
   end
 end

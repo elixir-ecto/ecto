@@ -10,6 +10,7 @@ defmodule Ecto.EnumTest do
     schema "my_schema" do
       field :my_enum, Ecto.Enum, values: [:foo, :bar, :baz]
       field :my_enums, {:array, Ecto.Enum}, values: [:foo, :bar, :baz]
+      field :virtual_enum, Ecto.Enum, values: [:foo, :bar, :baz], virtual: true
     end
   end
 
@@ -168,6 +169,7 @@ defmodule Ecto.EnumTest do
     test "returns correct values" do
       assert Ecto.Enum.values(EnumSchema, :my_enum) == [:foo, :bar, :baz]
       assert Ecto.Enum.values(EnumSchema, :my_enums) == [:foo, :bar, :baz]
+      assert Ecto.Enum.values(EnumSchema, :virtual_enum) == [:foo, :bar, :baz]
     end
 
     test "raises on bad schema" do
