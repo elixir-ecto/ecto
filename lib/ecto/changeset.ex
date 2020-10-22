@@ -101,7 +101,7 @@ defmodule Ecto.Changeset do
   transaction.
 
   ## Empty values
-  
+
   Many times, the data given on cast needs to be further pruned, specially
   regarding empty values. For example, if you are gathering data to be
   cast from the command line or through an HTML form or any other text-based
@@ -280,13 +280,13 @@ defmodule Ecto.Changeset do
                         repo_opts: Keyword.t,
                         data: data_type,
                         params: %{String.t => term} | nil,
-                        changes: %{atom => term},
+                        changes: %{optional(atom) => term},
                         required: [atom],
                         prepare: [(t -> t)],
                         errors: [{atom, error}],
                         constraints: [constraint],
                         validations: [{atom, term}],
-                        filters: %{atom => term},
+                        filters: %{optional(atom) => term},
                         action: action,
                         types: nil | %{atom => Ecto.Type.t}}
 
