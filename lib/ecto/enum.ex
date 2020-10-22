@@ -96,7 +96,7 @@ defmodule Ecto.Enum do
 
   def values(schema, field) do
     try do
-      schema.__changeset__
+      schema.__changeset__()
     rescue
       _ in UndefinedFunctionError -> raise ArgumentError, "#{inspect schema} is not an Ecto schema"
     else
