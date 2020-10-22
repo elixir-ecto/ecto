@@ -279,14 +279,14 @@ defmodule Ecto.Changeset do
                         repo: atom | nil,
                         repo_opts: Keyword.t,
                         data: data_type,
-                        params: %{String.t => term} | nil,
-                        changes: %{atom => term},
+                        params: %{optional(String.t) => term} | nil,
+                        changes: %{optional(atom) => term},
                         required: [atom],
                         prepare: [(t -> t)],
                         errors: [{atom, error}],
                         constraints: [constraint],
                         validations: [{atom, term}],
-                        filters: %{atom => term},
+                        filters: %{optional(atom) => term},
                         action: action,
                         types: nil | %{atom => Ecto.Type.t}}
 
