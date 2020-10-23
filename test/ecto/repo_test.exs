@@ -286,6 +286,11 @@ defmodule Ecto.RepoTest do
       DefaultOptionRepo.delete_all(MySchema)
       assert_received {:delete_all, query}
       assert query.prefix == "fallback_schema"
+
+      DefaultOptionRepo.preload(%MySchemaWithAssoc{parent_id: 1}, :parent)
+      assert_received {:all, query}
+      assert query.from.source == {"my_parent", Ecto.RepoTest.MyParent}
+      assert query.prefix == "fallback_schema"
     end
   end
 
@@ -1408,6 +1413,12 @@ defmodule Ecto.RepoTest do
       PrepareRepo.stream(query, [hello: :world]) |> Enum.to_list()
       assert_received {:stream, ^query, [hello: :world]}
       assert_received {:stream, %{prefix: "rewritten"}}
+    end
+
+    test "preload" do
+      PrepareRepo.preload(%MySchemaWithAssoc{parent_id: 1}, :parent, [hello: :world])
+      assert_received {:all, query, [hello: :world]}
+      assert query.from.source == {"my_parent", Ecto.RepoTest.MyParent}
     end
   end
 

@@ -376,7 +376,7 @@ defmodule Ecto.Repo do
         end
 
         def preload(struct_or_structs_or_nil, preloads, opts \\ []) do
-          Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, get_dynamic_repo(), preloads, with_default_options(:all, opts))
+          Ecto.Repo.Preloader.preload(struct_or_structs_or_nil, get_dynamic_repo(), preloads, with_default_options(:preload, opts))
         end
 
         def prepare_query(operation, query, opts), do: {query, opts}
@@ -908,9 +908,9 @@ defmodule Ecto.Repo do
 
   ## Examples
 
-  Let's say you want to filter out records that were "soft-deleted" (have `deleted_at`
-  column set) from all operations unless an admin is running the query; you can define
-  the callback like this:
+  Let's say you want to filter out records that were "soft-deleted"
+  (have `deleted_at` column set) from all operations unless an admin
+  is running the query; you can define the callback like this:
 
       @impl true
       def prepare_query(_operation, query, opts) do
@@ -927,6 +927,9 @@ defmodule Ecto.Repo do
       Repo.all(query)              # only non-deleted records are returned
       Repo.all(query, admin: true) # all records are returned
 
+  The callback will be invoked for all queries, including queries
+  made from associations and preloads. It is not invoked for each
+  individual join inside a query.
   """
   @callback prepare_query(operation, query :: Ecto.Query.t(), opts :: Keyword.t()) ::
               {Ecto.Query.t(), Keyword.t()}
@@ -942,7 +945,9 @@ defmodule Ecto.Repo do
   query specific options, such as `:prefix`.
 
   This callback is invoked as the entry point for all repository
-  operations.
+  operations. For example, if you are executing a query with preloads,
+  this callback will be invoked once at the beginning, but the
+  options returned here will be passed to all following operations.
   """
   @callback default_options(operation) :: Keyword.t()
             when operation: :all | :insert_all | :update_all | :delete_all | :stream |

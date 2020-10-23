@@ -2,11 +2,13 @@
 
 With Ecto we can run queries in different prefixes using a single pool of database connections. For databases engines such as Postgres, Ecto's prefix [maps to Postgres' DDL schemas](https://www.postgresql.org/docs/current/static/ddl-schemas.html). For MySQL, each prefix is a different database on its own.
 
-Query prefixes may be useful in different scenarios. For example, multi tenant apps running on Postgres would define multiple prefixes, usually one per client, under a single database. The idea is that prefixes will provide data isolation between the different users of the application, guaranteeing either globally or at the data level that queries and commands act on a specific prefix.
+Query prefixes may be useful in different scenarios. For example, multi tenant apps running on PostgreSQL would define multiple prefixes, usually one per client, under a single database. The idea is that prefixes will provide data isolation between the different users of the application, guaranteeing either globally or at the data level that queries and commands act on a specific tenants.
 
 Prefixes may also be useful on high-traffic applications where data is partitioned upfront. For example, a gaming platform may break game data into isolated partitions, each named after a different prefix. A partition for a given player is either chosen at random or calculated based on the player information.
 
-While query prefixes were designed with the two scenarios above in mind, they may also be used in other circumstances, which we will explore throughout this guide. All the examples below assume you are using Postgres. Other databases engines may require slightly different solutions.
+Given each tenant has its own database structure, multi tenancy with query prefixes is expensive to setup. For example, migrations have to run individually for each prefix. Therefore this approach is useful when there is a limited or a slowly growing number of tenants.
+
+Let's get started. Note all the examples below assume you are using PostgreSQL. Other databases engines may require slightly different solutions.
 
 ## Connection prefixes
 
@@ -264,4 +266,4 @@ Ecto provides many conveniences for working with querying prefixes. Those conven
   3. schema prefixes
   4. connection prefixes
 
-This way developers can tackle different scenarios, from production requirements to multi-tenant applications.
+This way developers can tackle different scenarios from production requirements to multi-tenant applications.
