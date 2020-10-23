@@ -61,7 +61,7 @@ end
 
 We added two new functions. The first, `put_org_id`, stores the organization id in the process dictionary. `get_org_id` reads the value in the process dictionary.
 
-You will want to call `put_org_id` on every process before you use the repository. For example, in a web application, as soon as you read the current organization from the request parameter or the session, you will call `MyApp.Repo.put_org_id(params_org_id)`. In tests, you want to explicitly set the `put_org_id` or pass the `:org_id` option as in the previous section.
+You will want to call `put_org_id` on every process before you use the repository. For example, on every request in a web application, as soon as you read the current organization from the request parameter or the session, you should call `MyApp.Repo.put_org_id(params_org_id)`. In tests, you want to explicitly set the `put_org_id` or pass the `:org_id` option as in the previous section.
 
 The second change we need to do is to set the `org_id` as a default option on all repository operations. The value of `org_id` will be precisely the value in the process dictionary. We can do so trivially by implementing the `default_options` callback:
 
@@ -176,3 +176,19 @@ which will help enforce none of the columns in the foreign key can be nil.
 ## Summary
 
 With these changes, we are enforcing our data is valid at the database level, while we have changed our repository interface to guarantee our queries are always scoped to an `org_id`, unless we explicitly opt out.
+
+When it comes to associations, you will want to apply composite foreign keys whenever possible. For example, imagine comments belongs to posts (which belong to an organization) and also to user (which belong to an organization). The comments schema migration should be defined like this:
+
+```elixir
+create table(:comments) do
+  add :org_id, :integer, null: false
+  add :post_id, references(:posts, with: [org_id: org_id]), null: false
+  add :user_id, references(:users, with: [org_id: org_id]), null: false
+  add :title, :string
+  timestamps()
+end
+```
+
+As long as all schemas have an `org_id`, all operations will be safely contained by the current tenant.
+
+If by any chance you have schemas that are not tied to an `org_id`, you can even consider keeping them in a separate query prefix or in a separate database altogether, so you keep non-tenant data completely separated from tenant-specific data.
