@@ -152,9 +152,11 @@ end
 
 So far the only noteworthy change compared to a regular migration is the `primary_key: false` option to the `:orgs` table, as we want to mirror the primary key of `org_id` given to the schema. While the schema above works and guarantees that posts references an existing organization and that comments references existing posts and organizations, it does not guarantee that all posts and their related comments belong to the same organization.
 
-We can tighten up this requirement with the following change to the `comments` table:
+We can tighten up this requirement by using composite foreign keys with the following changes:
 
 ```elixir
+create unique_index(:posts, [:id, :org_id])
+
 create table(:comments) do
   add :org_id, :integer, null: false
   add :post_id, references(:posts, with: [org_id: org_id]), null: false
@@ -164,6 +166,8 @@ end
 ```
 
 Instead of defining both `post_id` and `org_id` as individual foreign keys, we define `org_id` as a regular integer and then we define `post_id+org_id` as a composite foreign key by passing the `:with` otion to `references`. This makes sure comments point to posts which point to orgs, where all `org_id`s match.
+
+Given composite foreign keys require the references keys to be unique, we also defined a unique index on the posts table **before** we defined the composite foreign key.
 
 If you are using PostgreSQL and you want to tighten these guarantees even further, you can pass the `match: :full` option:
 
