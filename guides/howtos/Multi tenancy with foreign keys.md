@@ -1,6 +1,6 @@
 # Multi tenancy with foreign keys
 
-In [Multi tenancy with query prefixes](multi-tenancy-with-query-prefixes.md), we have learned how to set up multi tenant applications by using separate query prefixes, known as DDL Schemas in PostgreSQL and MSSQL and simply a separate database in MySQL.
+In [Multi tenancy with query prefixes](Multi tenancy with query prefixes.md), we have learned how to set up multi tenant applications by using separate query prefixes, known as DDL Schemas in PostgreSQL and MSSQL and simply a separate database in MySQL.
 
 Each query prefix is isolated, having their own tables and data, which provides the security guarantees we need. On the other hand, such approach for multi tenancy may be to expensive, as each schema needs to be created, migrated, and versioned separately.
 

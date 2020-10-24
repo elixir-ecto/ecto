@@ -402,7 +402,9 @@ defmodule Ecto.Association do
     struct
   end
 
-  @doc false
+  @doc """
+  Updates the prefix of a changeset based on the metadata.
+  """
   def update_parent_prefix(
         %{data: %{__meta__: %{prefix: prefix}}} = changeset,
         %{__meta__: %{prefix: prefix}}
@@ -563,7 +565,7 @@ defmodule Ecto.Association.Has do
              :queryable, :on_delete, :on_replace, where: [], unique: true, defaults: [],
              relationship: :child, ordered: false]
 
-  @doc false
+  @impl true
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
     compiled = Ecto.Association.ensure_compiled(queryable, env)
 
@@ -581,7 +583,7 @@ defmodule Ecto.Association.Has do
     end
   end
 
-  @doc false
+  @impl true
   def struct(module, name, opts) do
     queryable = Keyword.fetch!(opts, :queryable)
     cardinality = Keyword.fetch!(opts, :cardinality)
@@ -647,36 +649,36 @@ defmodule Ecto.Association.Has do
   defp get_ref(primary_key, nil, _name), do: elem(primary_key, 0)
   defp get_ref(_primary_key, references, _name), do: references
 
-  @doc false
+  @impl true
   def build(%{owner_key: owner_key, related_key: related_key} = refl, owner, attributes) do
     data = refl |> build(owner) |> struct(attributes)
     %{data | related_key => Map.get(owner, owner_key)}
   end
 
-  @doc false
+  @impl true
   def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} = assoc) do
     from(o in owner, join: q in ^queryable, on: field(q, ^related_key) == field(o, ^owner_key))
     |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
 
-  @doc false
+  @impl true
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, [value]) do
     from(x in (query || queryable), where: field(x, ^related_key) == ^value)
     |> Ecto.Association.combine_assoc_query(assoc.where)
   end
 
-  @doc false
+  @impl true
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, values) do
     from(x in (query || queryable), where: field(x, ^related_key) in ^values)
     |> Ecto.Association.combine_assoc_query(assoc.where)
   end
 
-  @doc false
+  @impl true
   def preload_info(%{related_key: related_key} = refl) do
     {:assoc, refl, {0, related_key}}
   end
 
-  @doc false
+  @impl true
   def on_repo_change(%{on_replace: on_replace} = refl, %{data: parent} = parent_changeset,
                      %{action: :replace} = changeset, adapter, opts) do
     changeset = case on_replace do
@@ -725,7 +727,7 @@ defmodule Ecto.Association.Has do
   ## Relation callbacks
   @behaviour Ecto.Changeset.Relation
 
-  @doc false
+  @impl true
   def build(%{related: related, queryable: queryable, defaults: defaults}, owner) do
     related
     |> Ecto.Association.apply_defaults(defaults, owner)
@@ -774,12 +776,12 @@ defmodule Ecto.Association.HasThrough do
   defstruct [:cardinality, :field, :owner, :owner_key, :through, :on_cast,
              relationship: :child, unique: true, ordered: false]
 
-  @doc false
+  @impl true
   def after_compile_validation(_, _) do
     :ok
   end
 
-  @doc false
+  @impl true
   def struct(module, name, opts) do
     through = Keyword.fetch!(opts, :through)
 
@@ -807,30 +809,31 @@ defmodule Ecto.Association.HasThrough do
     }
   end
 
-  @doc false
+  @impl true
   def build(%{field: name}, %{__struct__: owner}, _attributes) do
     raise ArgumentError,
       "cannot build through association `#{inspect name}` for #{inspect owner}. " <>
       "Instead build the intermediate steps explicitly."
   end
 
-  @doc false
+  @impl true
   def preload_info(%{through: through} = refl) do
     {:through, refl, through}
   end
 
+  @impl true
   def on_repo_change(%{field: name}, _, _, _, _) do
     raise ArgumentError,
       "cannot insert/update/delete through associations `#{inspect name}` via the repository. " <>
       "Instead build the intermediate steps explicitly."
   end
 
-  @doc false
+  @impl true
   def joins_query(%{owner: owner, through: through}) do
     Ecto.Association.joins_query(owner, through, 0)
   end
 
-  @doc false
+  @impl true
   def assoc_query(refl, query, values) do
     Ecto.Association.assoc_query(refl, [], query, values)
   end
@@ -860,7 +863,7 @@ defmodule Ecto.Association.BelongsTo do
              :on_replace, where: [], defaults: [], cardinality: :one, relationship: :parent,
              unique: true, ordered: false]
 
-  @doc false
+  @impl true
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
     compiled = Ecto.Association.ensure_compiled(queryable, env)
 
@@ -878,7 +881,7 @@ defmodule Ecto.Association.BelongsTo do
     end
   end
 
-  @doc false
+  @impl true
   def struct(module, name, opts) do
     ref = if ref = opts[:references], do: ref, else: :id
     queryable = Keyword.fetch!(opts, :queryable)
@@ -911,37 +914,37 @@ defmodule Ecto.Association.BelongsTo do
     }
   end
 
-  @doc false
+  @impl true
   def build(refl, owner, attributes) do
     refl
     |> build(owner)
     |> struct(attributes)
   end
 
-  @doc false
+  @impl true
   def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} = assoc) do
     from(o in owner, join: q in ^queryable, on: field(q, ^related_key) == field(o, ^owner_key))
     |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
 
-  @doc false
+  @impl true
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, [value]) do
     from(x in (query || queryable), where: field(x, ^related_key) == ^value)
     |> Ecto.Association.combine_assoc_query(assoc.where)
   end
 
-  @doc false
+  @impl true
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, values) do
     from(x in (query || queryable), where: field(x, ^related_key) in ^values)
     |> Ecto.Association.combine_assoc_query(assoc.where)
   end
 
-  @doc false
+  @impl true
   def preload_info(%{related_key: related_key} = refl) do
     {:assoc, refl, {0, related_key}}
   end
 
-  @doc false
+  @impl true
   def on_repo_change(%{on_replace: :nilify}, _parent_changeset, %{action: :replace}, _adapter, _opts) do
     {:ok, nil}
   end
@@ -971,7 +974,7 @@ defmodule Ecto.Association.BelongsTo do
   ## Relation callbacks
   @behaviour Ecto.Changeset.Relation
 
-  @doc false
+  @impl true
   def build(%{related: related, queryable: queryable, defaults: defaults}, owner) do
     related
     |> Ecto.Association.apply_defaults(defaults, owner)
@@ -1009,7 +1012,7 @@ defmodule Ecto.Association.ManyToMany do
              join_where: [], defaults: [], join_defaults: [], relationship: :child,
              cardinality: :many, unique: false, ordered: false]
 
-  @doc false
+  @impl true
   def after_compile_validation(%{queryable: queryable, join_through: join_through}, env) do
     compiled = Ecto.Association.ensure_compiled(queryable, env)
     join_compiled = Ecto.Association.ensure_compiled(join_through, env)
@@ -1032,7 +1035,7 @@ defmodule Ecto.Association.ManyToMany do
     end
   end
 
-  @doc false
+  @impl true
   def struct(module, name, opts) do
     queryable = Keyword.fetch!(opts, :queryable)
     related = Ecto.Association.related_from_query(queryable, name)
@@ -1118,7 +1121,7 @@ defmodule Ecto.Association.ManyToMany do
      {Ecto.Association.association_key(related, :id), :id}]
   end
 
-  @doc false
+  @impl true
   def joins_query(%{owner: owner, queryable: queryable,
                     join_through: join_through, join_keys: join_keys} = assoc) do
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
@@ -1130,12 +1133,11 @@ defmodule Ecto.Association.ManyToMany do
     |> Ecto.Association.combine_joins_query(assoc.join_where, 1)
   end
 
-  @doc false
   def assoc_query(%{queryable: queryable} = refl, values) do
     assoc_query(refl, queryable, values)
   end
 
-  @doc false
+  @impl true
   def assoc_query(assoc, query, values) do
     %{queryable: queryable, join_through: join_through, join_keys: join_keys, owner: owner} = assoc
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
@@ -1151,19 +1153,19 @@ defmodule Ecto.Association.ManyToMany do
     |> Ecto.Association.combine_joins_query(assoc.join_where, 2)
   end
 
-  @doc false
+  @impl true
   def build(refl, owner, attributes) do
     refl
     |> build(owner)
     |> struct(attributes)
   end
 
-  @doc false
+  @impl true
   def preload_info(%{join_keys: [{_, owner_key}, {_, _}]} = refl) do
     {:assoc, refl, {-2, owner_key}}
   end
 
-  @doc false
+  @impl true
   def on_repo_change(%{on_replace: :delete} = refl, parent_changeset,
                      %{action: :replace}  = changeset, adapter, opts) do
     on_repo_change(refl, parent_changeset, %{changeset | action: :delete}, adapter, opts)
@@ -1278,7 +1280,7 @@ defmodule Ecto.Association.ManyToMany do
   ## Relation callbacks
   @behaviour Ecto.Changeset.Relation
 
-  @doc false
+  @impl true
   def build(%{related: related, queryable: queryable, defaults: defaults}, owner) do
     related
     |> Ecto.Association.apply_defaults(defaults, owner)
