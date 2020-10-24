@@ -54,8 +54,14 @@ defmodule MyApp.Repo do
   ...
 
   @tenant_key {__MODULE__, :org_id}
-  def put_org_id(org_id), do: Process.put(@tenant_key, org_id)
-  def get_org_id(), do: Process.get(@tenant_key)
+
+  def put_org_id(org_id) do
+    Process.put(@tenant_key, org_id)
+  end
+
+  def get_org_id() do
+    Process.get(@tenant_key)
+  end
 end
 ```
 
@@ -68,7 +74,10 @@ The second change we need to do is to set the `org_id` as a default option on al
 ```elixir
 defmodule MyApp.Repo do
   ...
-  def default_options(_operation), do: [org_id: get_org_id()]
+
+  def default_options(_operation) do
+    [org_id: get_org_id()]
+  end
 end
 ```
 
@@ -137,15 +146,15 @@ create table(:orgs, primary_key: false) do
 end
 
 create table(:posts) do
-  add :org_id, references(:orgs), null: false
   add :title, :string
+  add :org_id, references(:orgs), null: false
   timestamps()
 end
 
 create table(:comments) do
+  add :body, :string
   add :org_id, references(:orgs), null: false
   add :post_id, references(:posts), null: false
-  add :title, :string
   timestamps()
 end
 ```
@@ -158,21 +167,28 @@ We can tighten up this requirement by using composite foreign keys with the foll
 create unique_index(:posts, [:id, :org_id])
 
 create table(:comments) do
+  add :body, :string
+
+  # There is no need to define a reference for org_id
   add :org_id, :integer, null: false
-  add :post_id, references(:posts, with: [org_id: org_id]), null: false
-  add :title, :string
+
+  # Instead define a composite foreign key
+  add :post_id,
+      references(:posts, with: [org_id: org_id]),
+      null: false
+
   timestamps()
 end
 ```
 
-Instead of defining both `post_id` and `org_id` as individual foreign keys, we define `org_id` as a regular integer and then we define `post_id+org_id` as a composite foreign key by passing the `:with` otion to `references`. This makes sure comments point to posts which point to orgs, where all `org_id`s match.
+Instead of defining both `post_id` and `org_id` as individual foreign keys, we define `org_id` as a regular integer and then we define `post_id+org_id` as a composite foreign key by passing the `:with` option to `Ecto.Migration.references/2`. This makes sure comments point to posts which point to orgs, where all `org_id`s match.
 
 Given composite foreign keys require the references keys to be unique, we also defined a unique index on the posts table **before** we defined the composite foreign key.
 
-If you are using PostgreSQL and you want to tighten these guarantees even further, you can pass the `match: :full` option:
+If you are using PostgreSQL and you want to tighten these guarantees even further, you can pass the `match: :full` option to `references`:
 
 ```elixir
-  add :post_id, references(:posts, with: [org_id: org_id], match: :full), null: false
+references(:posts, with: [org_id: org_id], match: :full)
 ```
 
 which will help enforce none of the columns in the foreign key can be nil.
@@ -185,10 +201,17 @@ When it comes to associations, you will want to apply composite foreign keys whe
 
 ```elixir
 create table(:comments) do
+  add :body, :string
   add :org_id, :integer, null: false
-  add :post_id, references(:posts, with: [org_id: org_id]), null: false
-  add :user_id, references(:users, with: [org_id: org_id]), null: false
-  add :title, :string
+
+  add :post_id,
+      references(:posts, with: [org_id: org_id]),
+      null: false
+
+  add :user_id,
+      references(:users, with: [org_id: org_id]),
+      null: false
+
   timestamps()
 end
 ```
