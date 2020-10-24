@@ -131,7 +131,10 @@ One thing to have in mind is that, our `prepare_query` callback will apply to al
 
 ```elixir
 MyApp.Repo.put_org_id(some_org_id)
-MyApp.Repo.all(from p in Post, join: c in assoc(p, :comments))
+
+MyApp.Repo.all(
+  from p in Post, join: c in assoc(p, :comments)
+)
 ```
 
 `prepare_query` will apply the `org_id` only to posts but not to the `join`. While this may seem problematic, in practice it is not an issue, because when you insert posts and comments in the database, **they will always have the same `org_id`**. If posts and comments do not have the same `org_id`, then this is actually a bug in our data: the data either got corrupted or there is a bug in our software when inserting data.
