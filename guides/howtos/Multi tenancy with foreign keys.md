@@ -2,7 +2,7 @@
 
 In [Multi tenancy with query prefixes](Multi tenancy with query prefixes.md), we have learned how to set up multi tenant applications by using separate query prefixes, known as DDL Schemas in PostgreSQL and MSSQL and simply a separate database in MySQL.
 
-Each query prefix is isolated, having their own tables and data, which provides the security guarantees we need. On the other hand, such approach for multi tenancy may be to expensive, as each schema needs to be created, migrated, and versioned separately.
+Each query prefix is isolated, having their own tables and data, which provides the security guarantees we need. On the other hand, such approach for multi tenancy may be too expensive, as each schema needs to be created, migrated, and versioned separately.
 
 Therefore, some applications may prefer a cheaper mechanism for multi tenancy, by relying on foreign keys. The idea here is that most - if not all - resources in the system belong to a tenant. The tenant is typically an organization or a user and all resources have an `org_id` (or `user_id`) foreign key pointing directly to it.
 
@@ -45,7 +45,7 @@ Still, setting the `org_id` for every operation is cumbersome and error prone. W
 
 ## Setting `org_id` by default
 
-To make sure our read operations use the `org_id` by default, we will do two additional changes to the repository.
+To make sure our read operations use the `org_id` by default, we will make two additional changes to the repository.
 
 First, we will store the `org_id` in the process dictionary. The process dictionary is a storage that is exclusive to each process. For example, each test in your project runs in a separate process. Each request in a web application runs in a separate process too. Each of these processes have their own dictionary which we will store and read from. Let's add these functions:
 
@@ -139,7 +139,7 @@ MyApp.Repo.all(
 
 `prepare_query` will apply the `org_id` only to posts but not to the `join`. While this may seem problematic, in practice it is not an issue, because when you insert posts and comments in the database, **they will always have the same `org_id`**. If posts and comments do not have the same `org_id`, then this is actually a bug in our data: the data either got corrupted or there is a bug in our software when inserting data.
 
-Luckily, we can leverage database's foreign keys to guarantee that the `org_id`s always match between posts and comments always match. Our first stab at defining these schema migrations would look like this:
+Luckily, we can leverage database's foreign keys to guarantee that the `org_id`s always match between posts and comments. Our first stab at defining these schema migrations would look like this:
 
 ```elixir
 create table(:orgs, primary_key: false) do
