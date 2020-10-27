@@ -143,7 +143,7 @@ Luckily, we can leverage database's foreign keys to guarantee that the `org_id`s
 
 ```elixir
 create table(:orgs, primary_key: false) do
-  add :org_id, :id, primary_key: true
+  add :org_id, :bigserial, primary_key: true
   add :name, :string
   timestamps()
 end
