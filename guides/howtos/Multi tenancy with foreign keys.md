@@ -150,7 +150,7 @@ end
 
 create table(:posts) do
   add :title, :string
-  add :org_id, references(:orgs), null: false
+  add :org_id, references(:orgs, column: :org_id), null: false
   timestamps()
 end
 
