@@ -125,7 +125,7 @@ defmodule MyApp.Comment do
   schema "comments" do
     field :body
     field :org_id, :integer
-    belongs :post, MyApp.Post
+    belongs_to :post, MyApp.Post
     timestamps()
   end
 end
@@ -185,7 +185,7 @@ create table(:comments) do
 
   # Instead define a composite foreign key
   add :post_id,
-      references(:posts, with: [org_id: org_id]),
+      references(:posts, with: [org_id: :org_id]),
       null: false
 
   timestamps()
@@ -199,7 +199,7 @@ Given composite foreign keys require the references keys to be unique, we also d
 If you are using PostgreSQL and you want to tighten these guarantees even further, you can pass the `match: :full` option to `references`:
 
 ```elixir
-references(:posts, with: [org_id: org_id], match: :full)
+references(:posts, with: [org_id: :org_id], match: :full)
 ```
 
 which will help enforce none of the columns in the foreign key can be nil.
@@ -216,11 +216,11 @@ create table(:comments) do
   add :org_id, :integer, null: false
 
   add :post_id,
-      references(:posts, with: [org_id: org_id]),
+      references(:posts, with: [org_id: :org_id]),
       null: false
 
   add :user_id,
-      references(:users, with: [org_id: org_id]),
+      references(:users, with: [org_id: :org_id]),
       null: false
 
   timestamps()
