@@ -26,7 +26,7 @@ defmodule MyApp.Repo do
 
   def prepare_query(operation, query, opts) do
     cond do
-      opts[:skip_org_id] ->
+      opts[:skip_org_id] || opts[:schema_migration] ->
         {query, opts}
 
       org_id = opts[:org_id] ->
@@ -39,7 +39,11 @@ defmodule MyApp.Repo do
 end
 ```
 
-Now we can pass `:org_id` to `all`, `update_all`, `get`, `preload`, etc. Generally speaking, to all READ/SELECT operations. Note we have intentionally made the `:org_id` required: you either have to pass it or you have to explicitly set `:skip_org_id` to true. This reduces the odds of a developer forgetting to scope their queries, which can accidentally expose private data to other users.
+Now we can pass `:org_id` to `all`, `update_all`, `get`, `preload`, etc. Generally speaking, to all READ/SELECT operations. Note we have intentionally made the `:org_id` required, with the exception of two scenarios:
+
+  * if you explicitly set `:skip_org_id` to true, it won't require and `:org_id`. This reduces the odds of a developer forgetting to scope their queries, which can accidentally expose private data to other users
+
+  * if the `:schema_migration` option is set. This means the repository operation was issued by Ecto itself when migrating our database and we don't want to apply an `org_id` to them
 
 Still, setting the `org_id` for every operation is cumbersome and error prone. We will be better served if all operations attempt to set an `org_id`.
 
