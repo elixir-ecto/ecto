@@ -125,7 +125,7 @@ defmodule MyApp.Comment do
   schema "comments" do
     field :body
     field :org_id, :integer
-    belongs :post, MyApp.Post
+    belongs_to :post, MyApp.Post
     timestamps()
   end
 end
@@ -185,7 +185,7 @@ create table(:comments) do
 
   # Instead define a composite foreign key
   add :post_id,
-      references(:posts, with: [org_id: org_id]),
+      references(:posts, with: [org_id: :org_id]),
       null: false
 
   timestamps()
