@@ -1,5 +1,18 @@
 # Changelog for v3.x
 
+## v3.5.4 (2020-10-28)
+
+### Enhancements
+
+  * [mix ecto.drop] Provide `--force-drop` for databases that may support it
+  * [guides] Add new "Multi tenancy with foreign keys" guide
+
+### Bug fixes
+
+  * [Ecto.Changeset] Make keys optionals in specs
+  * [Ecto.Enum] Make sure `values/2` works for virtual fields
+  * [Ecto.Query] Fix missing type on CTE queries that select a single field
+
 ## v3.5.3 (2020-10-21)
 
 ### Bug fixes
