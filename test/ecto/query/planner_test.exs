@@ -985,7 +985,7 @@ defmodule Ecto.Query.PlannerTest do
       assert query.sources == {{"comments", nil, nil}}
       assert {:%{}, [], [id: _, text: _]} = query.select.expr
       assert  [id: {{:., _, [{:&, _, [0]}, :id]}, _, []},
-               text: {{:., _, [{:&, _, [0]}, :text]}, _, []}] = query.select.fields
+               text: {{:., [{:type, _} | _], [{:&, _, [0]}, :text]}, _, []}] = query.select.fields
 
       %{with_ctes: with_expr} =
         Comment
@@ -1021,6 +1021,17 @@ defmodule Ecto.Query.PlannerTest do
       query = normalize(query)
       [{"agg_values", query}] = query.with_ctes.queries
       assert Macro.to_string(query.select.fields) == "[bucket: ^1 + &0.number()]"
+    end
+
+    test "with field select" do
+      query =
+        "parent"
+        |> with_cte("cte", as: ^from(r in "cte", select: r.child))
+        |> select([e], [:parent])
+        |> normalize()
+
+      [{"cte", query}] = query.with_ctes.queries
+      assert Macro.to_string(query.select.fields) == "[child: &0.child()]"
     end
   end
 

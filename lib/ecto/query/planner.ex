@@ -970,13 +970,14 @@ defmodule Ecto.Query.Planner do
     {queries, counter} =
       Enum.reduce with_expr.queries, {[], counter}, fn
         {name, %Ecto.Query{} = query}, {queries, counter} ->
+          # We don't want to use normalize_subquery_select because we are
+          # going to prepare the whole query ourselves next.
+          {_, query} = rewrite_subquery_select_expr(query, true)
           {query, counter} = traverse_exprs(query, :all, counter, fun)
 
-          # We don't want to use normalize_subquery_select because it
-          # prepares the select and as such it will reset its parameters,
-          # so we call rewrite_subquery_select_expr directly instead
-          {expr, %{select: select} = query} = rewrite_subquery_select_expr(query, true)
-          {source, fields, _from} = collect_fields(expr, [], :never, query, select.take, true)
+          # Now compute the fields as keyword lists so we emit AS in Ecto query.
+          %{select: %{expr: expr, take: take}} = query
+          {source, fields, _from} = collect_fields(expr, [], :never, query, take, true)
           {_, keys} = subquery_struct_and_fields(source)
           query = put_in(query.select.fields, Enum.zip(keys, Enum.reverse(fields)))
 
