@@ -1117,6 +1117,27 @@ defmodule Ecto.Query.Planner do
     {{:in, in_meta, [left, right]}, acc}
   end
 
+  defp prewalk({quantifier, meta, [{:subquery, i}]}, kind, query, expr, acc, adapter) when quantifier in [:exists, :any, :all] do
+    subquery = Enum.fetch!(expr.subqueries, i)
+    {subquery, acc} = prewalk_source(subquery, kind, query, expr, acc, adapter)
+
+    case {quantifier, subquery.query.select.fields} do
+      {:exists, _} ->
+        :ok
+
+      {_, [_]} ->
+        :ok
+
+      _ ->
+        error!(
+          query,
+          "subquery must return a single field in order to be used with #{quantifier}"
+        )
+    end
+
+    {{quantifier, meta, [subquery]}, acc}
+  end
+
   defp prewalk({{:., dot_meta, [left, field]}, meta, []},
                kind, query, expr, acc, _adapter) do
     {ix, ix_expr, ix_query} = get_ix!(left, query)
