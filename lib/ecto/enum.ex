@@ -60,6 +60,8 @@ defmodule Ecto.Enum do
   end
 
   @impl true
+  def cast(nil, _params), do: {:ok, nil}
+
   def cast(data, params) do
     case params do
       %{on_load: %{^data => as_atom}} -> {:ok, as_atom}
