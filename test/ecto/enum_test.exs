@@ -62,6 +62,11 @@ defmodule Ecto.EnumTest do
   end
 
   describe "cast" do
+    test "casts null" do
+      assert %Changeset{valid?: true} =
+               Changeset.cast(%EnumSchema{}, %{my_enum: nil}, [:my_enum])
+    end
+
     test "casts strings" do
       assert %Changeset{valid?: true, changes: %{my_enum: :foo}} =
                Changeset.cast(%EnumSchema{}, %{my_enum: "foo"}, [:my_enum])
