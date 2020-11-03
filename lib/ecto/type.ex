@@ -494,7 +494,6 @@ defmodule Ecto.Type do
   def dump({:array, {_, _, _} = type}, value, dumper), do: array(value, type, dumper, false, [])
   def dump({:array, type}, value, dumper), do: array(value, type, dumper, true, [])
   def dump({:map, type}, value, dumper), do: map(value, type, dumper, %{})
-  def dump({:parameterized, mod, params}, value, dumper), do: mod.dump(value, dumper, params)
 
   def dump(:any, value, _dumper), do: {:ok, value}
   def dump(:integer, value, _dumper), do: same_integer(value)
@@ -589,7 +588,6 @@ defmodule Ecto.Type do
   def load({:array, {_, _, _} = type}, value, loader), do: array(value, type, loader, false, [])
   def load({:array, type}, value, loader), do: array(value, type, loader, true, [])
   def load({:map, type}, value, loader), do: map(value, type, loader, %{})
-  def load({:parameterized, mod, params}, value, loader), do: mod.load(value, loader, params)
 
   def load(:any, value, _loader), do: {:ok, value}
   def load(:integer, value, _loader), do: same_integer(value)
