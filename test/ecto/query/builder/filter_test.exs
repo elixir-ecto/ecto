@@ -75,6 +75,35 @@ defmodule Ecto.Query.Builder.FilterTest do
         [{:subquery, 0}]
     end
 
+    test "supports exists subquery expressions" do
+      s = from(p in "posts", select: 1)
+
+      %{wheres: [where]} = from(p in "posts", where: exists(s))
+
+      assert Macro.to_string(where.expr) ==
+             "exists({:subquery, 0})"
+      assert where.params ==
+             [{:subquery, 0}]
+    end
+
+    test "supports comparison with subqueries with all and any quantifiers" do
+      s = from(p in "posts", select: p.rating, order_by: [desc: p.created_at], limit: 10)
+
+      assert_quantified_subquery = fn %{wheres: [where]}, expected_quantifier ->
+        assert Macro.to_string(where.expr) ==
+               "&0.rating() >= #{expected_quantifier}({:subquery, 0})"
+
+        assert where.params ==
+                [{:subquery, 0}]
+      end
+
+      all_query = from(p in "posts", where: p.rating >= all(s))
+      any_query = from(p in "posts", where: p.rating >= any(s))
+
+      assert_quantified_subquery.(all_query, :all)
+      assert_quantified_subquery.(any_query, :any)
+    end
+
     test "raises on invalid keywords" do
       assert_raise ArgumentError, fn ->
         where(from(p in "posts"), [p], ^[{1, 2}])
@@ -86,6 +115,5 @@ defmodule Ecto.Query.Builder.FilterTest do
         where(from(p in "posts"), [p], ^[foo: nil])
       end
     end
-
   end
 end

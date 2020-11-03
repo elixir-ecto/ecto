@@ -6,6 +6,7 @@ defmodule Ecto.Query.API do
     * Arithmetic operators: `+`, `-`, `*`, `/`
     * Boolean operators: `and`, `or`, `not`
     * Inclusion operator: `in/2`
+    * Subquery operators: `any`, `all` and `exists`
     * Search functions: `like/2` and `ilike/2`
     * Null check functions: `is_nil/1`
     * Aggregates: `count/0`, `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
@@ -118,8 +119,60 @@ defmodule Ecto.Query.API do
   or even a column in the database with array type:
 
       from p in Post, where: "elixir" in p.tags
+
+  Additionally, the right side may also be a subquery:
+
+      from c in Comment, where: c.post_id in subquery(
+        from(p in Post, where: p.created_at > ^since)
+      )
   """
   def left in right, do: doc! [left, right]
+
+  @doc """
+  Evaluates to true if the provided subquery returns 1 or more rows.
+
+      from p in Post, as: :post, where: exists(from(c in Comment, where: parent_as(:post).id == c.post_id and c.replies_count > 5, select: 1))
+
+  This is best used in conjunction with `parent_as` to correlate the subquery with the parent query to test
+  some condition on related rows in a different table. In the above example the query returns posts which
+  have at least one comment that has more than 5 replies.
+  """
+  def exists(subquery), do: doc! [subquery]
+
+  @doc """
+  Tests whether one or more values returned from the provided subquery match in a comparison operation.
+
+      from p in Product, where: p.id = any(
+        from(li in LineItem, select: [li.product_id], where: li.created_at > ^since and li.qty >= 10)
+      )
+
+  A product matches in the above example if a line item was created since the provided date where the customer purchased
+  at least 10 units.
+
+  Both `any` and `all` must be given a subquery as an argument, and theyu must be used on the right hand side of a comparison.
+  Both can be used with every comparison operator: `==`, `!=`, `>`, `>=`, `<`, `<=`.
+  """
+  def any(subquery), do: doc! [subquery]
+
+  @doc """
+  Evaluates whether all values returned from the provided subquery match in a comparison operation.
+
+      from p in Post, where: p.visits >= all(
+        from(p in Post, select: avg(p.visits), group_by: [p.category_id])
+      )
+
+  For a post to match in the above example it must be visited at least as much as the average post in all categories.
+
+      from p in Post, where: p.visits = all(
+        from(p in Post, select: max(p.visits))
+      )
+
+  The above example matches all the posts which are tied for being the most visited.
+
+  Both `any` and `all` must be given a subquery as an argument, and theyu must be used on the right hand side of a comparison.
+  Both can be used with every comparison operator: `==`, `!=`, `>`, `>=`, `<`, `<=`.
+  """
+  def all(subquery), do: doc! [subquery]
 
   @doc """
   Searches for `search` in `string`.
@@ -485,7 +538,7 @@ defmodule Ecto.Query.API do
       from(post in Post, select: post.meta["author"][^field])
 
   ## Warning
-  
+
   The underlying data in the JSON column is returned without any
   additional decoding. This means "null" JSON values are not the
   same as SQL's "null". For example, the `Repo.all` operation below

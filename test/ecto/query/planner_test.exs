@@ -1275,4 +1275,47 @@ defmodule Ecto.Query.PlannerTest do
       from(p in Post, order_by: p.title) |> normalize(:delete_all)
     end
   end
+
+  describe "normalize: subqueries in boolean expressions" do
+    test "replaces {:subquery, index} with an Ecto.SubQuery struct" do
+      subquery = from(p in Post, select: p.visits)
+
+      %{wheres: [where]} =
+        from(p in Post, where: p.visits in subquery(subquery))
+        |> normalize()
+
+      assert {:in, _, [_, %Ecto.SubQuery{}] } = where.expr
+
+      %{wheres: [where]} =
+        from(p in Post, where: p.visits >= all(subquery))
+        |> normalize()
+
+      assert {:>=, _, [_, {:all, _, [%Ecto.SubQuery{}] }]} = where.expr
+
+      %{wheres: [where]} =
+        from(p in Post, where: exists(subquery))
+        |> normalize()
+
+      assert {:exists, _, [%Ecto.SubQuery{}]} = where.expr
+    end
+
+    test "raises a runtime error if more than 1 field is selected" do
+      s = from(p in Post, select: [p.visits, p.id])
+
+      assert_raise Ecto.QueryError, fn ->
+        from(p in Post, where: p.id in subquery(s))
+        |> normalize()
+      end
+
+      assert_raise Ecto.QueryError, fn ->
+        from(p in Post, where: p.id > any(s))
+        |> normalize()
+      end
+
+      assert_raise Ecto.QueryError, fn ->
+        from(p in Post, where: p.id > all(s))
+        |> normalize()
+      end
+    end
+  end
 end
