@@ -185,9 +185,9 @@ defmodule Ecto.Changeset.Relation do
     {:ok, struct |> Ecto.Changeset.change |> put_new_action(:update) |> check_action!(allowed_actions)}
   end
 
-  defp do_change(%{related: mod} = relation, changes, current, allowed_actions)
+  defp do_change(relation, changes, current, allowed_actions)
       when is_list(changes) or is_map(changes) do
-    changeset = Ecto.Changeset.change(current || mod.__struct__, changes)
+    changeset = Ecto.Changeset.change(current || relation.__struct__.build(relation, nil), changes)
     changeset = put_new_action(changeset, action_from_changeset(changeset))
     do_change(relation, changeset, current, allowed_actions)
   end

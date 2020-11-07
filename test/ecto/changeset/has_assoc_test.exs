@@ -907,14 +907,17 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = Changeset.put_assoc(base_changeset, :profile, %{name: "michal"})
     assert %Ecto.Changeset{} = changeset.changes.profile
     assert changeset.changes.profile.action == :insert
+    assert changeset.changes.profile.data.__meta__.source == "users_profiles"
 
     changeset = Changeset.put_assoc(base_changeset, :profile, [name: "michal"])
     assert %Ecto.Changeset{} = changeset.changes.profile
     assert changeset.changes.profile.action == :insert
+    assert changeset.changes.profile.data.__meta__.source == "users_profiles"
 
     changeset = Changeset.put_assoc(base_changeset, :profile, %Profile{name: "michal"})
     assert %Ecto.Changeset{} = changeset.changes.profile
     assert changeset.changes.profile.action == :insert
+    assert changeset.changes.profile.data.__meta__.source == "profiles"
 
     base_changeset = Changeset.change(%Author{profile: %Profile{name: "michal"}})
     empty_update_changeset = Changeset.change(%Profile{name: "michal"})

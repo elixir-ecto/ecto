@@ -463,8 +463,13 @@ defmodule Ecto.Changeset.BelongsToTest do
   test "put_assoc/4" do
     base_changeset = Changeset.change(%Author{})
 
+    changeset = Changeset.put_assoc(base_changeset, :profile, %{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.data.__meta__.source == "authors_profiles"
+
     changeset = Changeset.put_assoc(base_changeset, :profile, %Profile{name: "michal"})
     assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.data.__meta__.source == "profiles"
 
     base_changeset = Changeset.change(%Author{profile: %Profile{name: "michal"}})
     empty_update_changeset = Changeset.change(%Profile{name: "michal"})
