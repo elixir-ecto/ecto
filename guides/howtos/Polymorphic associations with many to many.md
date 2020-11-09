@@ -128,7 +128,7 @@ end
 
 By adding one table per association pair, we keep database references and can efficiently perform queries that relies on indexes.
 
-First let's see how implement this functionality in Ecto using a `has_many :through` and then use `many_to_many` to remove a lot of the boilerplate we were forced to introduce.
+First let's see how to implement this functionality in Ecto using a `has_many :through` and then use `many_to_many` to remove a lot of the boilerplate we were forced to introduce.
 
 ## Polymorphism with has_many :through
 
