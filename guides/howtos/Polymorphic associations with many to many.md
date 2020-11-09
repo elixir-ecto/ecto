@@ -51,7 +51,7 @@ When such a form is submitted in Phoenix, it will send parameters with the follo
 ```elixir
 %{
   "todo_list" => %{
-    "title" => "shipping list",
+    "title" => "shopping list",
     "todo_items" => %{
       0 => %{"description" => "bread"},
       1 => %{"description" => "eggs"}
