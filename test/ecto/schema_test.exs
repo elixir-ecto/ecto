@@ -774,40 +774,41 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  test "type :any is only for virtual" do
-    assert_raise ArgumentError, ~r"only virtual fields can have type :any", fn ->
-      defmodule FieldAny do
-        use Ecto.Schema
+  describe "type :any" do
+    test "raises on non-virtual" do
+      assert_raise ArgumentError, ~r"only virtual fields can have type :any", fn ->
+        defmodule FieldAny do
+          use Ecto.Schema
 
-        schema "anything" do
-          field :json, :any
+          schema "anything" do
+            field :json, :any
+          end
         end
       end
     end
-  end
 
-  defmodule FieldAnyVirtual do
-    use Ecto.Schema
+    defmodule FieldAnyVirtual do
+      use Ecto.Schema
 
-    schema "anything" do
-      field :json, :any, virtual: true
+      schema "anything" do
+        field :json, :any, virtual: true
+      end
     end
-  end
 
-  test "type :any is allowed if virtual" do
-    # FIXME: check that type is :any when field is virtual
-    assert FieldAnyVirtual.__schema__(:type, :json) == nil
-  end
-
-  defmodule FieldAnyNested do
-    use Ecto.Schema
-
-    schema "anything" do
-      field :json, {:array, :any}
+    test "is allowed if virtual" do
+      assert %{json: :any} = FieldAnyVirtual.__changeset__()
     end
-  end
 
-  test "type :any is allowed if nested" do
-    assert FieldAnyNested.__schema__(:type, :json) == {:array, :any}
+    defmodule FieldAnyNested do
+      use Ecto.Schema
+
+      schema "anything" do
+        field :json, {:array, :any}
+      end
+    end
+
+    test "is allowed if nested" do
+      assert %{json: {:array, :any}} = FieldAnyNested.__changeset__()
+    end
   end
 end
