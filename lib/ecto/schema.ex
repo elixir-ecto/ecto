@@ -1793,6 +1793,11 @@ defmodule Ecto.Schema do
 
   @doc false
   def __field__(mod, name, type, opts) do
+    if type == :any and !opts[:virtual] do
+      raise ArgumentError, "only virtual fields can have type :any, " <>
+                           "invalid type for field #{inspect name}"
+    end
+
     type = check_field_type!(mod, name, type, opts)
     Module.put_attribute(mod, :changeset_fields, {name, type})
     define_field(mod, name, type, opts)
@@ -2075,10 +2080,6 @@ defmodule Ecto.Schema do
 
   defp check_field_type!(mod, name, type, opts) do
     cond do
-      type == :any and !opts[:virtual] ->
-        raise ArgumentError, "only virtual fields can have type :any, " <>
-                             "invalid type for field #{inspect name}"
-
       composite?(type, name) ->
         {outer_type, inner_type} = type
         {outer_type, check_field_type!(mod, name, inner_type, opts)}

@@ -753,7 +753,7 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-  test "defining schema twice will result with meaningfull error" do
+  test "defining schema twice will result with meaningful error" do
     quoted = """
     defmodule DoubleSchema do
       use Ecto.Schema
@@ -772,5 +772,42 @@ defmodule Ecto.SchemaTest do
     assert_raise RuntimeError, message, fn ->
       Code.compile_string(quoted, "example.ex")
     end
+  end
+
+  test "type :any is only for virtual" do
+    assert_raise ArgumentError, ~r"only virtual fields can have type :any", fn ->
+      defmodule FieldAny do
+        use Ecto.Schema
+
+        schema "anything" do
+          field :json, :any
+        end
+      end
+    end
+  end
+
+  defmodule FieldAnyVirtual do
+    use Ecto.Schema
+
+    schema "anything" do
+      field :json, :any, virtual: true
+    end
+  end
+
+  test "type :any is allowed if virtual" do
+    # FIXME: check that type is :any when field is virtual
+    assert FieldAnyVirtual.__schema__(:type, :json) == nil
+  end
+
+  defmodule FieldAnyNested do
+    use Ecto.Schema
+
+    schema "anything" do
+      field :json, {:array, :any}
+    end
+  end
+
+  test "type :any is allowed if nested" do
+    assert FieldAnyNested.__schema__(:type, :json) == {:array, :any}
   end
 end
