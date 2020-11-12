@@ -850,6 +850,7 @@ defmodule Ecto.Type do
   defp same_map(_), do: :error
 
   defp same_decimal(term) when is_integer(term), do: {:ok, Decimal.new(term)}
+  defp same_decimal(term) when is_bitstring(term), do: {:ok, Decimal.new(term)}
   defp same_decimal(term) when is_float(term), do: {:ok, Decimal.from_float(term)}
   defp same_decimal(%Decimal{} = term), do: check_decimal(term, true)
   defp same_decimal(_), do: :error
