@@ -1,5 +1,17 @@
 # Changelog for v3.x
 
+## v3.5.5 (2020-11-12)
+
+### Enhancements
+
+  * [Ecto.Query] Add support for subqueries operators: `all`, `any`, and `exists`
+
+### Bug fixes
+
+  * [Ecto.Changeset] Use association source on `put_assoc` with maps/keywords
+  * [Ecto.Enum] Add `cast` clause for nil values on `Ecto.Enum`
+  * [Ecto.Schema] Allow nested type `:any` for non-virtual fields
+
 ## v3.5.4 (2020-10-28)
 
 ### Enhancements
