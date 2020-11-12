@@ -131,16 +131,6 @@ defmodule Ecto.Integration.JoinsTest do
   end
 
   @tag :left_join
-  test "left joins with missing entries and update" do
-    p1 = TestRepo.insert!(%Post{title: "1"})
-    p2 = TestRepo.insert!(%Post{title: "2"})
-    c1 = TestRepo.insert!(%Permalink{url: "1", post_id: p2.id})
-
-    query = from(p in Post, left_join: c in assoc(p, :permalink), order_by: p.id, select: {p, %{c | url: "1"}})
-    assert [{^p1, nil}, {^p2, ^c1}] = TestRepo.all(query)
-  end
-
-  @tag :left_join
   test "left join with missing entries from subquery" do
     p1 = TestRepo.insert!(%Post{title: "1"})
     p2 = TestRepo.insert!(%Post{title: "2"})

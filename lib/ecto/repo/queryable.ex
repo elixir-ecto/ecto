@@ -388,12 +388,7 @@ defmodule Ecto.Repo.Queryable do
 
   defp process_update(data, args, row, from, adapter) do
     {args, row} = process_kv(args, row, from, adapter)
-
-    data =
-      if is_nil(data),
-        do: data,
-        else: Enum.reduce(args, data, fn {key, value}, acc -> %{acc | key => value} end)
-
+    data = Enum.reduce(args, data, fn {key, value}, acc -> %{acc | key => value} end)
     {data, row}
   end
 
