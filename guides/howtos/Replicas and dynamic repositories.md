@@ -2,7 +2,7 @@
 
 When applications reach a certain scale, a single database may not be enough to sustain the required throughput. In such scenarios, it is very common to introduce read replicas: all write operations are sent to primary database and most of the read operations are performed against the replicas. The credentials of the primary and replica databases are typically known upfront by the time the code is compiled.
 
-In other cases, you may need a single Ecto repository to interact with different database instances which are not known upfront. For instance, you may need to communicate with hundreds of database very sporadically, so instead of opening up a connection to each of those hundreds of database when your application starts, you want to quickly start connection, perform some queries, and then shut down, while still leveraging Ecto's APIs as a whole.
+In other cases, you may need a single Ecto repository to interact with different database instances which are not known upfront. For instance, you may need to communicate with hundreds of databases very sporadically, so instead of opening up a connection to each of those hundreds of databases when your application starts, you want to quickly start a connection, perform some queries, and then shut down, while still leveraging Ecto's APIs as a whole.
 
 This guide will cover how to tackle both approaches.
 
@@ -96,7 +96,7 @@ children = [
 ]
 ```
 
-Now that all repositories are configured, we can safely use them in your application code. Every time you are performing a read operation, you can the `replica/0` function that we have added to return a random replica we will send the query to:
+Now that all repositories are configured, we can safely use them in your application code. Every time you are performing a read operation, you can call the `replica/0` function that we have added to return a random replica we will send the query to:
 
 ```elixir
 MyApp.Repo.replica().all(query)
@@ -133,7 +133,7 @@ else
 end
 ```
 
-Now during tests, the replica will always return the repository primary repository itself. While this approach works fine, it has the downside that, if you accidentally invoke a write function in in a replica, the test will pass, since the `replica` function is returning the primary repo, while the code will fail in production.
+Now during tests, the replica will always return the repository primary repository itself. While this approach works fine, it has the downside that, if you accidentally invoke a write function in a replica, the test will pass, since the `replica` function is returning the primary repo, while the code will fail in production.
 
 ### Using `:default_dynamic_repo`
 
