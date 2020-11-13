@@ -675,14 +675,14 @@ defmodule Ecto.Repo do
 
   ## Example
 
-    MyRepo.reload(post)
-    %Post{}
+      MyRepo.reload(post)
+      %Post{}
 
-    MyRepo.reload([post1, post2])
-    [%Post{}, %Post{}]
+      MyRepo.reload([post1, post2])
+      [%Post{}, %Post{}]
 
-    MyRepo.reload([deleted_post, post1])
-    [nil, %Post{}]
+      MyRepo.reload([deleted_post, post1])
+      [nil, %Post{}]
   """
   @callback reload(
               (schema :: Ecto.Schema.t()) | (schemas :: [Ecto.Schema.t()]),
@@ -697,11 +697,11 @@ defmodule Ecto.Repo do
 
   ## Example
 
-    MyRepo.reload!(post)
-    %Post{}
+      MyRepo.reload!(post)
+      %Post{}
 
-    MyRepo.reload!([post1, post2])
-    [%Post{}, %Post{}]
+      MyRepo.reload!([post1, post2])
+      [%Post{}, %Post{}]
   """
   @callback reload!(
               (schema :: Ecto.Schema.t()) | (schemas :: [Ecto.Schema.t()]),
