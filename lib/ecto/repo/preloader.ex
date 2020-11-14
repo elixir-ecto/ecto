@@ -272,6 +272,12 @@ defmodule Ecto.Repo.Preloader do
     We expected a tuple but we got: #{inspect(entry)}
     """
 
+  defp related_key_to_field(query, {pos, key, field_type}) do
+    field_ast = related_key_to_field(query, {pos, key})
+
+    {:type, [], [field_ast, field_type]}
+  end
+
   defp related_key_to_field(query, {pos, key}) do
     {{:., [], [{:&, [], [related_key_pos(query, pos)]}, key]}, [], []}
   end
