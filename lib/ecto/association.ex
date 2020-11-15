@@ -134,7 +134,7 @@ defmodule Ecto.Association do
   Returns information used by the preloader.
   """
   @callback preload_info(t) ::
-              {:assoc, t, {integer, atom}} | {:through, t, [atom]}
+              {:assoc, t, {integer, atom} | {integer, atom, Ecto.Type.t()}} | {:through, t, [atom]}
 
   @doc """
   Performs the repository change on the association.
@@ -1142,15 +1142,16 @@ defmodule Ecto.Association.ManyToMany do
     %{queryable: queryable, join_through: join_through, join_keys: join_keys, owner: owner} = assoc
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
 
-    # We need to go all the way using owner and query so
-    # Ecto has all the information necessary to cast fields.
-    # This also helps validate the associated schema exists all the way.
+    owner_key_type = owner.__schema__(:type, owner_key)
+
+    # We only need to join in the "join table". Preload and Ecto.assoc expressions can then filter
+    # by &1.join_owner_key in ^... to filter down to the associated entries in the related table.
     from(q in (query || queryable),
-      join: o in ^owner, on: field(o, ^owner_key) in ^values,
-      join: j in ^join_through, on: field(j, ^join_owner_key) == field(o, ^owner_key),
-      where: field(j, ^join_related_key) == field(q, ^related_key))
+      join: j in ^join_through, on: field(q, ^related_key) == field(j, ^join_related_key),
+      where: field(j, ^join_owner_key) in type(^values, {:in, ^owner_key_type})
+    )
     |> Ecto.Association.combine_assoc_query(assoc.where)
-    |> Ecto.Association.combine_joins_query(assoc.join_where, 2)
+    |> Ecto.Association.combine_joins_query(assoc.join_where, 1)
   end
 
   @impl true
@@ -1161,8 +1162,12 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   @impl true
-  def preload_info(%{join_keys: [{_, owner_key}, {_, _}]} = refl) do
-    {:assoc, refl, {-2, owner_key}}
+  def preload_info(%{join_keys: [{join_owner_key, owner_key}, {_, _}], owner: owner} = refl) do
+    owner_key_type = owner.__schema__(:type, owner_key)
+
+    # When preloading use the last bound table (which is the join table) and the join_owner_key
+    # to filter out related entities to the owner structs we're preloading with.
+    {:assoc, refl, {-1, join_owner_key, owner_key_type}}
   end
 
   @impl true

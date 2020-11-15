@@ -828,9 +828,9 @@ defmodule Ecto.Query.PlannerTest do
       Ecto.assoc(%Post{id: 1}, :crazy_comments_with_list)
       |> normalize_with_params()
 
-    assert inspect(query) =~ "join: c2 in Ecto.Query.PlannerTest.CommentPost, on: c2.post_id == p1.id and c2.deleted == ^..."
-    assert inspect(query) =~ "where: c2.comment_id == c0.id and c0.text in ^..."
-    assert params ==  [1, true, "crazycomment1", "crazycomment2"]
+    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.CommentPost, on: c0.id == c1.comment_id and c1.deleted == ^..."
+    assert inspect(query) =~ "where: c1.post_id in ^... and c0.text in ^..."
+    assert params ==  [true, 1, "crazycomment1", "crazycomment2"]
   end
 
   test "normalize: many_to_many assoc join without schema and wheres" do
@@ -844,9 +844,9 @@ defmodule Ecto.Query.PlannerTest do
       Ecto.assoc(%Post{id: 1}, :crazy_comments_without_schema)
       |> normalize_with_params()
 
-    assert inspect(query) =~ "join: c2 in \"comment_posts\", on: c2.post_id == p1.id and c2.deleted == ^..."
-    assert inspect(query) =~ "where: c2.comment_id == c0.id"
-    assert params ==  [1, true]
+    assert inspect(query) =~ "join: c1 in \"comment_posts\", on: c0.id == c1.comment_id and c1.deleted == ^..."
+    assert inspect(query) =~ "where: c1.post_id in ^..."
+    assert params ==  [true, 1]
   end
 
   test "normalize: dumps in query expressions" do
