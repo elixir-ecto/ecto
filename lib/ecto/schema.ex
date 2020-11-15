@@ -249,6 +249,8 @@ defmodule Ecto.Schema do
     * For the `{:array, inner_type}` and `{:map, inner_type}` type,
       replace `inner_type` with one of the valid types, such as `:string`.
 
+    * When using the `:numeric` database type, you must use the `:decimal` schema type.
+
     * For the `:decimal` type, `+Infinity`, `-Infinity`, and `NaN` values
       are not supported, even though the `Decimal` library handles them.
       To support them, you can create a custom type.
