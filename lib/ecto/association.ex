@@ -134,7 +134,7 @@ defmodule Ecto.Association do
   Returns information used by the preloader.
   """
   @callback preload_info(t) ::
-              {:assoc, t, {integer, atom}} | {:through, t, [atom]} | {:assoc, t, {integer, atom, Ecto.Type.t()}}
+              {:assoc, t, {integer, atom} | {integer, atom, Ecto.Type.t()}} | {:through, t, [atom]}
 
   @doc """
   Performs the repository change on the association.
