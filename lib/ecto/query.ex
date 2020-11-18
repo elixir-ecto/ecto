@@ -18,15 +18,15 @@ defmodule Ecto.Query do
 
   Let's see a sample query:
 
-      # Imports only from/2 of Ecto.Query.
+      # Imports only from/2 of Ecto.Query
       import Ecto.Query, only: [from: 2]
 
-      # Create a query.
+      # Create a query
       query = from u in "users",
                 where: u.age > 18,
                 select: u.name
 
-      # Send the query to the repository.
+      # Send the query to the repository
       Repo.all(query)
 
   In the example above, we are directly querying the "users" table
@@ -103,7 +103,7 @@ defmodule Ecto.Query do
   `nil` comparison in filters, such as where and having, is forbidden
   and it will raise an error:
 
-      # Raises if age is nil.
+      # Raises if age is nil
       from u in User, where: u.age == ^age
 
   This is done as a security measure to avoid attacks that attempt
@@ -117,10 +117,10 @@ defmodule Ecto.Query do
   Ecto queries are composable. For example, the query above can
   actually be defined in two parts:
 
-      # Create a query.
+      # Create a query
       query = from u in User, where: u.age > 18
 
-      # Extend the query.
+      # Extend the query
       query = from u in query, select: u.name
 
   Composing queries uses the same syntax as creating a query.
@@ -162,11 +162,11 @@ defmodule Ecto.Query do
   When using joins, the bindings should be matched in the order they
   are specified:
 
-      # Create a query.
+      # Create a query
       query = from p in Post,
                 join: c in Comment, on: c.post_id == p.id
 
-      # Extend the query.
+      # Extend the query
       query = from [p, c] in query,
                 select: {p.title, c.body}
 
@@ -242,7 +242,7 @@ defmodule Ecto.Query do
   on the query. Previous examples showed means of hardcoding that selection,
   but there are also ways of doing it dynamically.
       
-      # Knowing the name of the binding.
+      # Knowing the name of the binding
       def sort(query, name, field) do
         from [{^name, x}] in query, order_by: field(x, ^field)
       end
@@ -548,7 +548,7 @@ defmodule Ecto.Query do
 
   ## Examples
 
-      # Compare each employee's salary with the average salary in his or her department.
+      # Compare each employee's salary with the average salary in his or her department
       from e in Employee,
         select: {e.depname, e.empno, e.salary, over(avg(e.salary), :department)},
         windows: [department: [partition_by: e.depname]]
@@ -587,7 +587,7 @@ defmodule Ecto.Query do
 
   ## Examples
 
-      # Compare each employee's salary for each month with his average salary for previous 3 months.
+      # Compare each employee's salary for each month with his average salary for previous 3 months
       from p in Payroll,
         select: {p.empno, p.date, p.salary, over(avg(p.salary), :prev_months)},
         windows: [prev_months: [partition_by: p.empno, order_by: p.date, frame: fragment("ROWS 3 PRECEDING EXCLUDE CURRENT ROW")]]
@@ -609,7 +609,7 @@ defmodule Ecto.Query do
 
   ## Examples
 
-      # Get the average salary of the top 10 highest salaries.
+      # Get the average salary of the top 10 highest salaries
       query = from Employee, order_by: [desc: :salary], limit: 10
       from e in subquery(query), select: avg(e.salary)
 
@@ -1307,11 +1307,11 @@ defmodule Ecto.Query do
 
   ## Keywords examples
 
-      # Returns the list of different categories in the Post schema.
+      # Returns the list of different categories in the Post schema
       from(p in Post, distinct: true, select: p.category)
 
       # If your database supports DISTINCT ON(),
-      # you can pass expressions to distinct too.
+      # you can pass expressions to distinct too
       from(p in Post,
          distinct: p.category,
          order_by: [p.date])
@@ -1321,7 +1321,7 @@ defmodule Ecto.Query do
          distinct: [desc: p.category],
          order_by: [p.date])
 
-      # Using atoms.
+      # Using atoms
       from(p in Post, distinct: :category, order_by: :date)
 
   ## Expressions example
@@ -1458,7 +1458,7 @@ defmodule Ecto.Query do
   A fragment can also be used:
 
       from c in City, order_by: [
-        # A deterministic shuffled order.
+        # A deterministic shuffled order
         fragment("? % ? DESC", c.id, ^modulus),
         desc: c.id,
       ]
@@ -1481,7 +1481,7 @@ defmodule Ecto.Query do
 
   Union expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
-  to just combine multiple result sets without removing duplicate rows
+  to combine multiple result sets without removing duplicate rows
   consider using `union_all/2`.
 
   Note that the operations `order_by`, `limit` and `offset` of the
@@ -1534,7 +1534,7 @@ defmodule Ecto.Query do
 
   Except expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
-  to just take the difference of multiple result sets without
+  to take the difference of multiple result sets without
   removing duplicate rows consider using `except_all/2`.
 
   Note that the operations `order_by`, `limit` and `offset` of the
@@ -1587,7 +1587,7 @@ defmodule Ecto.Query do
 
   Intersect expression returns only unique rows as if each query returned
   distinct results. This may cause a performance penalty. If you need
-  to just take the intersection of multiple result sets without
+  to take the intersection of multiple result sets without
   removing duplicate rows consider using `intersect_all/2`.
 
   Note that the operations `order_by`, `limit` and `offset` of the
@@ -1662,7 +1662,7 @@ defmodule Ecto.Query do
 
   ## Keywords example
 
-      # Get all posts on page 4.
+      # Get all posts on page 4
       from(p in Post, limit: 10, offset: 30)
 
   ## Expressions example
@@ -1765,15 +1765,15 @@ defmodule Ecto.Query do
 
   ## Keywords examples
 
-      # Returns the number of posts in each category.
+      # Returns the number of posts in each category
       from(p in Post,
         group_by: p.category,
         select: {p.category, count(p.id)})
 
-      # Using atoms.
+      # Using atoms
       from(p in Post, group_by: :category, select: {p.category, count(p.id)})
 
-      # Using direct fields access.
+      # Using direct fields access
       from(p in Post,
         join: c in assoc(p, :category),
         group_by: [p.id, c.name])
@@ -1798,7 +1798,7 @@ defmodule Ecto.Query do
   ## Keywords example
 
       # Returns the number of posts in each category where the
-      # average number of comments is above ten.
+      # average number of comments is above ten
       from(p in Post,
         group_by: p.category,
         having: avg(p.num_comments) > 10,
