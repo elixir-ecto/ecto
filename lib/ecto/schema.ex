@@ -627,7 +627,8 @@ defmodule Ecto.Schema do
     * `:default` - Sets the default value on the schema and the struct.
       The default value is calculated at compilation time, so don't use
       expressions like `DateTime.utc_now` or `Ecto.UUID.generate` as
-      they would then be the same for all records.
+      they would then be the same for all records: in this scenario you can use
+      the `:autogenerate` option to generate at insertion time.
 
     * `:source` - Defines the name that is to be used in database for this field.
       This is useful when attaching to an existing database. The value should be
