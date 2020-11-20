@@ -24,7 +24,7 @@ defmodule MyApp.Repo do
 
   require Ecto.Query
 
-  def prepare_query(operation, query, opts) do
+  def prepare_query(_operation, query, opts) do
     cond do
       opts[:skip_org_id] || opts[:schema_migration] ->
         {query, opts}
@@ -41,7 +41,7 @@ end
 
 Now we can pass `:org_id` to `all`, `update_all`, `get`, `preload`, etc. Generally speaking, to all READ/SELECT operations. Note we have intentionally made the `:org_id` required, with the exception of two scenarios:
 
-  * if you explicitly set `:skip_org_id` to true, it won't require and `:org_id`. This reduces the odds of a developer forgetting to scope their queries, which can accidentally expose private data to other users
+  * if you explicitly set `:skip_org_id` to true, it won't require an `:org_id`. This reduces the odds of a developer forgetting to scope their queries, which can accidentally expose private data to other users
 
   * if the `:schema_migration` option is set. This means the repository operation was issued by Ecto itself when migrating our database and we don't want to apply an `org_id` to them
 
@@ -194,7 +194,7 @@ end
 
 Instead of defining both `post_id` and `org_id` as individual foreign keys, we define `org_id` as a regular integer and then we define `post_id+org_id` as a composite foreign key by passing the `:with` option to `Ecto.Migration.references/2`. This makes sure comments point to posts which point to orgs, where all `org_id`s match.
 
-Given composite foreign keys require the references keys to be unique, we also defined a unique index on the posts table **before** we defined the composite foreign key.
+Given composite foreign keys require the referenced keys to be unique, we also defined a unique index on the posts table **before** we defined the composite foreign key.
 
 If you are using PostgreSQL and you want to tighten these guarantees even further, you can pass the `match: :full` option to `references`:
 
@@ -202,7 +202,7 @@ If you are using PostgreSQL and you want to tighten these guarantees even furthe
 references(:posts, with: [org_id: :org_id], match: :full)
 ```
 
-which will help enforce none of the columns in the foreign key can be nil.
+which will help enforce none of the columns in the foreign key can be `nil`.
 
 ## Summary
 
