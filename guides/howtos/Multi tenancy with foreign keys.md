@@ -216,11 +216,11 @@ create table(:comments) do
   add :org_id, :integer, null: false
 
   add :post_id,
-      references(:posts, with: [org_id: :org_id]),
+      references(:posts, with: [org_id: :org_id], match: :full),
       null: false
 
   add :user_id,
-      references(:users, with: [org_id: :org_id]),
+      references(:users, with: [org_id: :org_id], match: :full),
       null: false
 
   timestamps()
