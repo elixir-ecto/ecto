@@ -1822,7 +1822,8 @@ defmodule Ecto.Changeset do
 
   """
   @spec unsafe_validate_unique(t, atom | [atom, ...], Ecto.Repo.t, Keyword.t) :: t
-  def unsafe_validate_unique(changeset, fields, repo, opts \\ []) when is_list(opts) do
+  def unsafe_validate_unique(changeset, fields, repo, opts \\ [], repo_opts \\ [])
+      when is_list(opts) and is_list(repo_opts) do
     fields = List.wrap(fields)
     {validations, schema} =
       case changeset do
@@ -1863,7 +1864,7 @@ defmodule Ecto.Changeset do
           query
         end
 
-      if repo.one(query) do
+      if repo.one(query, repo_opts) do
         error_key = Keyword.get(opts, :error_key, hd(fields))
 
         add_error(changeset, error_key, message(opts, "has already been taken"),
