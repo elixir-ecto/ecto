@@ -1809,9 +1809,11 @@ defmodule Ecto.Changeset do
       check fails, defaults to the first field name of the given list of
       fields.
 
-    * `:prefix` - The prefix to run the query on (such as the schema path
+    * `:prefix` - the prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). See `Ecto.Repo` documentation
       for more information.
+
+    * `:repo_opts` - the options to pass to the `Ecto.Repo` call.
 
   ## Examples
 
