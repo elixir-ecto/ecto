@@ -91,7 +91,7 @@ With these changes, we will always set the `org_id` fields in our queries, unles
 
 Let's expand our data domain little a bit.
 
-So far we have assumed there is an organization schema. However, instead of naming its primary key `id`, we will name it `org_id`, so `Repo.get(Org, org_id: 13)` just works:
+So far we have assumed there is an organization schema. However, instead of naming its primary key `id`, we will name it `org_id`, so `Repo.one(Org, org_id: 13)` just works:
 
 ```elixir
 defmodule MyApp.Organization do
