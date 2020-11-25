@@ -246,10 +246,15 @@ defmodule Ecto.Schema do
 
   **Notes:**
 
+    * When using database migrations provided by "Ecto SQL", you can pass
+      your Ecto type as the column type. However, note the same Ecto type
+      may support multiple database types. For example, all of `:varchar`,
+      `:text`, `:bytea`, etc. translate to Ecto's `:string`. Similarly,
+      Ecto's `:decimal` can be used for `:numeric` and other database
+      types. For more information, see [all migration types](https://hexdocs.pm/ecto_sql/Ecto.Migration.html#module-field-types).
+
     * For the `{:array, inner_type}` and `{:map, inner_type}` type,
       replace `inner_type` with one of the valid types, such as `:string`.
-
-    * When using the `:numeric` database type, you must use the `:decimal` schema type.
 
     * For the `:decimal` type, `+Infinity`, `-Infinity`, and `NaN` values
       are not supported, even though the `Decimal` library handles them.
