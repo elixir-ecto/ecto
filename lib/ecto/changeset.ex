@@ -101,7 +101,7 @@ defmodule Ecto.Changeset do
   transaction.
 
   ## Empty values
-  
+
   Many times, the data given on cast needs to be further pruned, specially
   regarding empty values. For example, if you are gathering data to be
   cast from the command line or through an HTML form or any other text-based
@@ -1822,9 +1822,9 @@ defmodule Ecto.Changeset do
 
   """
   @spec unsafe_validate_unique(t, atom | [atom, ...], Ecto.Repo.t, Keyword.t) :: t
-  def unsafe_validate_unique(changeset, fields, repo, opts \\ [], repo_opts \\ [])
-      when is_list(opts) and is_list(repo_opts) do
+  def unsafe_validate_unique(changeset, fields, repo, opts \\ []) when is_list(opts) do
     fields = List.wrap(fields)
+    {repo_opts, opts} = Keyword.pop(opts, :repo_opts, [])
     {validations, schema} =
       case changeset do
         %Ecto.Changeset{validations: validations, data: %schema{}} ->

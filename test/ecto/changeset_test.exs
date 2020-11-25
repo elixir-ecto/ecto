@@ -1363,7 +1363,7 @@ defmodule Ecto.ChangesetTest do
 
   alias Ecto.TestRepo
 
-  describe "unsafe_validate_unique/5" do
+  describe "unsafe_validate_unique/4" do
     setup do
       dup_result = {1, [true]}
       no_dup_result = {0, []}
@@ -1467,14 +1467,10 @@ defmodule Ecto.ChangesetTest do
       assert changeset.valid?
     end
 
-    test "accepts repo options", context do
-      Process.put(:test_repo_all_results, context.dup_result)
-
-      changeset =
-        unsafe_validate_unique(context.base_changeset, :title, TestRepo, [], [])
-
-      assert changeset.errors ==
-               [title: {"has already been taken", validation: :unsafe_unique, fields: [:title]}]
+    test "accepts repo options" do
+      body_change = changeset(%Post{title: "Hello World", body: "hi"}, %{body: "ho"})
+      unsafe_validate_unique(body_change, :body, MockRepo, repo_opts: [tenant_id: 1])
+      assert_receive [MockRepo, function: :one, query: %Ecto.Query{}, opts: [tenant_id: 1]]
     end
 
     test "only queries the db when necessary" do
