@@ -1450,21 +1450,10 @@ defmodule Ecto.ChangesetTest do
                [foo: {"is taken", validation: :unsafe_unique, fields: [:title]}]
     end
 
-    test "accepts a prefix option", context do
-      Process.put(:test_repo_all_results, context.dup_result)
-
-      changeset =
-        unsafe_validate_unique(context.base_changeset, :title, TestRepo, prefix: "public")
-
-      assert changeset.errors ==
-               [title: {"has already been taken", validation: :unsafe_unique, fields: [:title]}]
-
-      Process.put(:test_repo_all_results, context.no_dup_result)
-
-      changeset =
-        unsafe_validate_unique(context.base_changeset, :title, TestRepo, prefix: "public")
-
-      assert changeset.valid?
+    test "accepts a prefix option" do
+      body_change = changeset(%Post{title: "Hello World", body: "hi"}, %{body: "ho"})
+      unsafe_validate_unique(body_change, :body, MockRepo, prefix: "my_prefix")
+      assert_receive [MockRepo, function: :one, query: %Ecto.Query{prefix: "my_prefix"}, opts: []]
     end
 
     test "accepts repo options" do
