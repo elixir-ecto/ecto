@@ -89,6 +89,8 @@ defmodule Ecto.Repo.AutogenerateTest do
 
     def load(uuid, _, %{prefix: prefix}), do: {:ok, prefix <> @separator <> uuid}
 
+    def dump(nil, _, _), do: {:ok, nil}
+
     def dump(data, _, %{prefix: _prefix}),
       do: {:ok, data |> String.split(@separator) |> List.last()}
 
@@ -114,6 +116,7 @@ defmodule Ecto.Repo.AutogenerateTest do
 
     def load(id, _, %{prefix: prefix}), do: {:ok, prefix <> @separator <> to_string(id)}
 
+    def dump(nil, _, _), do: {:ok, nil}
     def dump(data, _, %{prefix: _prefix}),
       do: {:ok, data |> String.split(@separator) |> List.last() |> Integer.parse()}
   end

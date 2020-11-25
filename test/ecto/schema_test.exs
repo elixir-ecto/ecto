@@ -381,18 +381,6 @@ defmodule Ecto.SchemaTest do
         end
       end
     end
-
-    # this won't work, as the ParameterizedPrefixedString raises upon receiving
-    # a non-string input
-    assert_raise ArgumentError, ~s/value 1 is invalid for type ..., can't set default/, fn ->
-      defmodule SchemaInvalidDefault do
-        use Ecto.Schema
-
-        schema "invalid_default" do
-          field :count, ParameterizedPrefixedString, prefix: "ref", default: 1
-        end
-      end
-    end
   end
 
   test "invalid field type" do
