@@ -47,6 +47,7 @@ defmodule ParameterizedPrefixedString do
   end
 
   def load(string, _, %{prefix: prefix}), do: {:ok, prefix <> "-" <> string}
+  def dump(nil, _, _), do: {:ok, nil}
   def dump(data, _, %{prefix: _prefix}), do: {:ok, data |> String.split("-") |> List.last()}
   def embed_as(_, _), do: :dump
 end

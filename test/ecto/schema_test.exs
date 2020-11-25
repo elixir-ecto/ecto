@@ -361,6 +361,28 @@ defmodule Ecto.SchemaTest do
     end
   end
 
+  test "default of invalid type" do
+    assert_raise ArgumentError, ~s/value "1" is invalid for type :integer, can't set default/, fn ->
+      defmodule SchemaInvalidDefault do
+        use Ecto.Schema
+
+        schema "invalid_default" do
+          field :count, :integer, default: "1"
+        end
+      end
+    end
+
+    assert_raise ArgumentError, ~s/value 1 is invalid for type :string, can't set default/, fn ->
+      defmodule SchemaInvalidDefault do
+        use Ecto.Schema
+
+        schema "invalid_default" do
+          field :count, :string, default: 1
+        end
+      end
+    end
+  end
+
   test "invalid field type" do
     assert_raise ArgumentError, "invalid or unknown type {:apa} for field :name", fn ->
       defmodule SchemaInvalidFieldType do

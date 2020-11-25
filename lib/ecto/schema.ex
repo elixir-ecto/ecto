@@ -1803,6 +1803,7 @@ defmodule Ecto.Schema do
 
     type = check_field_type!(mod, name, type, opts)
     Module.put_attribute(mod, :changeset_fields, {name, type})
+    validate_default!(type, opts[:default])
     define_field(mod, name, type, opts)
   end
 
@@ -2060,6 +2061,15 @@ defmodule Ecto.Schema do
     end
 
     Module.put_attribute(mod, :struct_fields, {name, assoc})
+  end
+
+  defp validate_default!(type, value) do 
+    case Ecto.Type.dump(type, value) do 
+      {:ok, _} ->
+        :ok
+      _ ->
+        raise ArgumentError, "value #{inspect(value)} is invalid for type #{inspect(type)}, can't set default"
+    end
   end
 
   defp check_options!(opts, valid, fun_arity) do
