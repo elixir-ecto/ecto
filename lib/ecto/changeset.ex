@@ -101,7 +101,7 @@ defmodule Ecto.Changeset do
   transaction.
 
   ## Empty values
-  
+
   Many times, the data given on cast needs to be further pruned, specially
   regarding empty values. For example, if you are gathering data to be
   cast from the command line or through an HTML form or any other text-based
@@ -1809,9 +1809,11 @@ defmodule Ecto.Changeset do
       check fails, defaults to the first field name of the given list of
       fields.
 
-    * `:prefix` - The prefix to run the query on (such as the schema path
+    * `:prefix` - the prefix to run the query on (such as the schema path
       in Postgres or the database in MySQL). See `Ecto.Repo` documentation
       for more information.
+
+    * `:repo_opts` - the options to pass to the `Ecto.Repo` call.
 
   ## Examples
 
@@ -1824,6 +1826,7 @@ defmodule Ecto.Changeset do
   @spec unsafe_validate_unique(t, atom | [atom, ...], Ecto.Repo.t, Keyword.t) :: t
   def unsafe_validate_unique(changeset, fields, repo, opts \\ []) when is_list(opts) do
     fields = List.wrap(fields)
+    {repo_opts, opts} = Keyword.pop(opts, :repo_opts, [])
     {validations, schema} =
       case changeset do
         %Ecto.Changeset{validations: validations, data: %schema{}} ->
@@ -1863,7 +1866,7 @@ defmodule Ecto.Changeset do
           query
         end
 
-      if repo.one(query) do
+      if repo.one(query, repo_opts) do
         error_key = Keyword.get(opts, :error_key, hd(fields))
 
         add_error(changeset, error_key, message(opts, "has already been taken"),

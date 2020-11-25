@@ -1363,7 +1363,7 @@ defmodule Ecto.ChangesetTest do
 
   alias Ecto.TestRepo
 
-  describe "unsafe_validate_unique/3" do
+  describe "unsafe_validate_unique/4" do
     setup do
       dup_result = {1, [true]}
       no_dup_result = {0, []}
@@ -1450,21 +1450,16 @@ defmodule Ecto.ChangesetTest do
                [foo: {"is taken", validation: :unsafe_unique, fields: [:title]}]
     end
 
-    test "accepts a prefix option", context do
-      Process.put(:test_repo_all_results, context.dup_result)
+    test "accepts a prefix option" do
+      body_change = changeset(%Post{title: "Hello World", body: "hi"}, %{body: "ho"})
+      unsafe_validate_unique(body_change, :body, MockRepo, prefix: "my_prefix")
+      assert_receive [MockRepo, function: :one, query: %Ecto.Query{prefix: "my_prefix"}, opts: []]
+    end
 
-      changeset =
-        unsafe_validate_unique(context.base_changeset, :title, TestRepo, prefix: "public")
-
-      assert changeset.errors ==
-               [title: {"has already been taken", validation: :unsafe_unique, fields: [:title]}]
-
-      Process.put(:test_repo_all_results, context.no_dup_result)
-
-      changeset =
-        unsafe_validate_unique(context.base_changeset, :title, TestRepo, prefix: "public")
-
-      assert changeset.valid?
+    test "accepts repo options" do
+      body_change = changeset(%Post{title: "Hello World", body: "hi"}, %{body: "ho"})
+      unsafe_validate_unique(body_change, :body, MockRepo, repo_opts: [tenant_id: 1])
+      assert_receive [MockRepo, function: :one, query: %Ecto.Query{}, opts: [tenant_id: 1]]
     end
 
     test "only queries the db when necessary" do
