@@ -2109,7 +2109,7 @@ defmodule Ecto.Schema do
         type
 
       is_atom(type) and Code.ensure_compiled(type) == {:module, type} and function_exported?(type, :type, 1) ->
-        {:parameterized, type, type.init(Keyword.merge(opts, field: name, schema: mod))}
+        Ecto.ParameterizedType.init(type, Keyword.merge(opts, field: name, schema: mod))
 
       is_atom(type) and function_exported?(type, :__schema__, 1) ->
         raise ArgumentError,

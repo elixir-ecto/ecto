@@ -169,6 +169,15 @@ defmodule Ecto.ParameterizedType do
 
   @optional_callbacks autogenerate: 1
 
+  @doc """
+  Inits a parameterized type given by `type` with `opts`.
+
+  Useful when manually initializing a type for schemaless changesets.
+  """
+  def init(type, opts) do
+    {:parameterized, type, type.init(opts)}
+  end
+
   @doc false
   defmacro __using__(_) do
     quote location: :keep do
