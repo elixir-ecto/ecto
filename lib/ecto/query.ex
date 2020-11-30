@@ -237,11 +237,11 @@ defmodule Ecto.Query do
 
       child_query = from c in Comment, where: parent_as(:posts).id == c.post_id
       from p in Post, as: :posts, inner_lateral_join: c in subquery(child_query)
-  
-  When composing functions a common requirement is selecting a binding 
+
+  When composing functions a common requirement is selecting a binding
   on the query. Previous examples showed means of hardcoding that selection,
   but there are also ways of doing it dynamically.
-      
+
       # Knowing the name of the binding
       def sort(query, name, field) do
         from [{^name, x}] in query, order_by: field(x, ^field)
@@ -1921,7 +1921,7 @@ defmodule Ecto.Query do
 
       ranking_query =
         from c in Comment,
-        select: %{id: c.id, row_number: row_number() |> over(:posts_partition)},
+        select: %{id: c.id, row_number: over(row_number(), :posts_partition)},
         windows: [posts_partition: [partition_by: :post_id, order_by: :popularity]]
 
       comments_query =
