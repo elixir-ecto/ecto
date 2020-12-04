@@ -240,8 +240,8 @@ defmodule Ecto.Changeset.Relation do
       * If you are attempting to update an existing entry, you
         are including the entry primary key (ID) in the data.
 
-      * If you have a relationship with many children, at least
-        the same N children must be given on update.
+      * If you have a relationship with many children, all children
+        must be given on update.
 
     """
   end
