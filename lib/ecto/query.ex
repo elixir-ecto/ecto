@@ -237,11 +237,11 @@ defmodule Ecto.Query do
 
       child_query = from c in Comment, where: parent_as(:posts).id == c.post_id
       from p in Post, as: :posts, inner_lateral_join: c in subquery(child_query)
-  
-  When composing functions a common requirement is selecting a binding 
+
+  When composing functions a common requirement is selecting a binding
   on the query. Previous examples showed means of hardcoding that selection,
   but there are also ways of doing it dynamically.
-      
+
       # Knowing the name of the binding
       def sort(query, name, field) do
         from [{^name, x}] in query, order_by: field(x, ^field)
@@ -649,6 +649,9 @@ defmodule Ecto.Query do
         from(p in Post, where: p.id in subquery(subset)),
         set: [sync_started_at: NaiveDateTime.utc_now()]
       )
+
+  If you need to refer to a parent binding which is not known when writing the subquery,
+  you can use `parent_as` as shown in the examples under "Named bindings" in this module doc.
   """
   def subquery(query, opts \\ []) do
     subquery = wrap_in_subquery(query)
