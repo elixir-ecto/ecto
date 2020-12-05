@@ -649,6 +649,9 @@ defmodule Ecto.Query do
         from(p in Post, where: p.id in subquery(subset)),
         set: [sync_started_at: NaiveDateTime.utc_now()]
       )
+
+  If you need to refer to a parent binding which is not known when writing the subquery,
+  you can use `parent_as` as shown in the examples under "Named bindings" in this module doc.
   """
   def subquery(query, opts \\ []) do
     subquery = wrap_in_subquery(query)
