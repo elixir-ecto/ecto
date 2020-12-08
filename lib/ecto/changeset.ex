@@ -2155,7 +2155,7 @@ defmodule Ecto.Changeset do
   end
 
   defp validate_number(field, %Decimal{} = value, message, spec_key, _spec_function, target_value) do
-    result = Decimal.cmp(value, decimal_new(target_value))
+    result = Decimal.compare(value, decimal_new(target_value)) |> normalize_compare()
     case decimal_compare(result, spec_key) do
       true  -> nil
       false -> [{field, {message, validation: :number, kind: spec_key, number: target_value}}]
@@ -2166,6 +2166,16 @@ defmodule Ecto.Changeset do
     case apply(spec_function, [value, target_value]) do
       true  -> nil
       false -> [{field, {message, validation: :number, kind: spec_key, number: target_value}}]
+    end
+  end
+
+  # Support mismatch between API for Decimal.compare/2 for versions 1.6 and 2.0
+  defp normalize_compare(result) do
+    case result do
+      %Decimal{coef: 1, sign: -1} -> :lt
+      %Decimal{coef: 0} -> :eq
+      %Decimal{coef: 1, sign: 1} -> :gt
+      _ -> result
     end
   end
 
