@@ -2169,6 +2169,7 @@ defmodule Ecto.Changeset do
     end
   end
 
+  # TODO: Remove me once we support Decimal 2.0 only
   # Support mismatch between API for Decimal.compare/2 for versions 1.6 and 2.0
   defp normalize_compare(result) do
     case result do
