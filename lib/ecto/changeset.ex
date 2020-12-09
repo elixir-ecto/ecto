@@ -288,7 +288,7 @@ defmodule Ecto.Changeset do
                         validations: [{atom, term}],
                         filters: %{optional(atom) => term},
                         action: action,
-                        types: nil | %{atom => Ecto.Type.t}}
+                        types: nil | %{atom => Ecto.Type.t | Relation.t}}
 
   @type t :: t(Ecto.Schema.t | map | nil)
   @type error :: {String.t, Keyword.t}
