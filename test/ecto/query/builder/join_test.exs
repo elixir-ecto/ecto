@@ -92,6 +92,20 @@ defmodule Ecto.Query.Builder.JoinTest do
     end
   end
 
+  test "raises on invalid expressions on :on" do 
+    assert_raise ArgumentError, ~r/invalid expression for join `:on`/, fn ->
+      escape(quote do
+        join("posts", :inner, [p], c in "comments", on: p.id in subquery("posts"))
+      end, [], __ENV__)
+    end
+
+    assert_raise ArgumentError, ~r/invalid expression for join `:on`/, fn ->
+      escape(quote do
+        join("posts", :inner, [p], c in "comments", on: exists(p.id))
+      end, [], __ENV__)
+    end
+  end
+
   test "raises on invalid assoc/2" do
     assert_raise Ecto.Query.CompileError,
                  ~r/you passed the variable \`field_var\` to \`assoc\/2\`/, fn ->

@@ -203,23 +203,28 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   def build_on(on, join, as, query, binding, count_bind, env) do
-    {on_expr, {on_params, []}} = Ecto.Query.Builder.Filter.escape(:on, on, count_bind, binding, env)
-    on_params = Builder.escape_params(on_params)
+    case Ecto.Query.Builder.Filter.escape(:on, on, count_bind, binding, env) do
+      {on_expr, {on_params, []}}  ->
+        on_params = Builder.escape_params(on_params)
 
-    join =
-      quote do
-        %JoinExpr{
-          unquote_splicing(join),
-          on: %QueryExpr{
-            expr: unquote(on_expr),
-            params: unquote(on_params),
-            line: unquote(env.line),
-            file: unquote(env.file)
-          }
-        }
-      end
+        join =
+          quote do
+            %JoinExpr{
+              unquote_splicing(join),
+              on: %QueryExpr{
+                expr: unquote(on_expr),
+                params: unquote(on_params),
+                line: unquote(env.line),
+                file: unquote(env.file)
+              }
+            }
+          end
 
-    Builder.apply_query(query, __MODULE__, [join, as, count_bind], env)
+        Builder.apply_query(query, __MODULE__, [join, as, count_bind], env)
+
+      _pattern ->
+        raise ArgumentError, "invalid expression for join `:on`, subqueries aren't supported"
+    end
   end
 
   @doc """
