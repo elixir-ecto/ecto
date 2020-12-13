@@ -10,6 +10,8 @@ defmodule Ecto.EnumTest do
     schema "my_schema" do
       field :my_enum, Ecto.Enum, values: [:foo, :bar, :baz]
       field :my_enums, {:array, Ecto.Enum}, values: [:foo, :bar, :baz]
+      field :my_integer_enum, Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]
+      field :my_integer_enums, {:array, Ecto.Enum}, values: [foo: 1, bar: 2, baz: 5]
       field :virtual_enum, Ecto.Enum, values: [:foo, :bar, :baz], virtual: true
     end
   end
@@ -32,6 +34,25 @@ defmodule Ecto.EnumTest do
                     on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
                     on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                     values: [:foo, :bar, :baz]
+                  }}
+               }
+
+      assert EnumSchema.__schema__(:type, :my_integer_enum) ==
+               {:parameterized, Ecto.Enum,
+                %{
+                  on_dump: %{bar: 2, baz: 5, foo: 1},
+                  on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
+                  values: [foo: 1, bar: 2, baz: 5]
+                }}
+
+      assert EnumSchema.__schema__(:type, :my_integer_enums) ==
+               {
+                 :array,
+                 {:parameterized, Ecto.Enum,
+                  %{
+                    on_dump: %{bar: 2, baz: 5, foo: 1},
+                    on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
+                    values: [foo: 1, bar: 2, baz: 5]
                   }}
                }
     end
@@ -63,8 +84,7 @@ defmodule Ecto.EnumTest do
 
   describe "cast" do
     test "casts null" do
-      assert %Changeset{valid?: true} =
-               Changeset.cast(%EnumSchema{}, %{my_enum: nil}, [:my_enum])
+      assert %Changeset{valid?: true} = Changeset.cast(%EnumSchema{}, %{my_enum: nil}, [:my_enum])
     end
 
     test "casts strings" do
@@ -73,6 +93,14 @@ defmodule Ecto.EnumTest do
 
       assert %Changeset{valid?: true, changes: %{my_enums: [:foo]}} =
                Changeset.cast(%EnumSchema{}, %{my_enums: ["foo"]}, [:my_enums])
+    end
+
+    test "casts integers" do
+      assert %Changeset{valid?: true, changes: %{my_integer_enum: :foo}} =
+               Changeset.cast(%EnumSchema{}, %{my_integer_enum: 1}, [:my_integer_enum])
+
+      assert %Changeset{valid?: true, changes: %{my_integer_enums: [:foo]}} =
+               Changeset.cast(%EnumSchema{}, %{my_integer_enums: [1]}, [:my_integer_enums])
     end
 
     test "casts atoms" do
@@ -101,6 +129,24 @@ defmodule Ecto.EnumTest do
              } = Changeset.cast(%EnumSchema{}, %{my_enums: ["bar2"]}, [:my_enums])
     end
 
+    test "rejects bad integers" do
+      type = EnumSchema.__schema__(:type, :my_integer_enum)
+
+      assert %Changeset{
+               valid?: false,
+               changes: %{},
+               errors: [my_integer_enum: {"is invalid", [type: ^type, validation: :cast]}]
+             } = Changeset.cast(%EnumSchema{}, %{my_integer_enum: 7}, [:my_integer_enum])
+
+      type = EnumSchema.__schema__(:type, :my_integer_enums)
+
+      assert %Changeset{
+               valid?: false,
+               changes: %{},
+               errors: [my_integer_enums: {"is invalid", [type: ^type, validation: :cast]}]
+             } = Changeset.cast(%EnumSchema{}, %{my_integer_enums: [7]}, [:my_integer_enums])
+    end
+
     test "rejects bad atoms" do
       type = EnumSchema.__schema__(:type, :my_enum)
 
@@ -127,6 +173,16 @@ defmodule Ecto.EnumTest do
 
       assert %EnumSchema{my_enums: [:foo]} = TestRepo.insert!(%EnumSchema{my_enums: [:foo]})
       assert_receive {:insert, %{fields: [my_enums: ["foo"]]}}
+
+      assert %EnumSchema{my_integer_enum: :foo} =
+               TestRepo.insert!(%EnumSchema{my_integer_enum: :foo})
+
+      assert_receive {:insert, %{fields: [my_integer_enum: 1]}}
+
+      assert %EnumSchema{my_integer_enums: [:foo]} =
+               TestRepo.insert!(%EnumSchema{my_integer_enums: [:foo]})
+
+      assert_receive {:insert, %{fields: [my_integer_enums: [1]]}}
     end
 
     test "rejects invalid atom" do
@@ -150,15 +206,32 @@ defmodule Ecto.EnumTest do
 
       refute_received _
     end
+
+    test "rejects invalid integer value" do
+      msg =
+        ~r"value `\[1, 2, 3\]` for `Ecto.EnumTest.EnumSchema.my_integer_enum` in `insert` does not match type"
+
+      assert_raise Ecto.ChangeError, msg, fn ->
+        TestRepo.insert!(%EnumSchema{my_integer_enum: [1, 2, 3]})
+      end
+
+      refute_received _
+    end
   end
 
   describe "load" do
     test "loads valid values" do
-      Process.put(:test_repo_all_results, {1, [[1, "foo", nil, nil]]})
+      Process.put(:test_repo_all_results, {1, [[1, "foo", nil, nil, nil, nil]]})
       assert [%Ecto.EnumTest.EnumSchema{my_enum: :foo}] = TestRepo.all(EnumSchema)
 
-      Process.put(:test_repo_all_results, {1, [[1, nil, ["foo"], nil]]})
+      Process.put(:test_repo_all_results, {1, [[1, nil, ["foo"], nil, nil, nil]]})
       assert [%Ecto.EnumTest.EnumSchema{my_enums: [:foo]}] = TestRepo.all(EnumSchema)
+
+      Process.put(:test_repo_all_results, {1, [[1, nil, nil, 1, nil, nil]]})
+      assert [%Ecto.EnumTest.EnumSchema{my_integer_enum: :foo}] = TestRepo.all(EnumSchema)
+
+      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, [1], nil]]})
+      assert [%Ecto.EnumTest.EnumSchema{my_integer_enums: [:foo]}] = TestRepo.all(EnumSchema)
     end
 
     test "reject invalid values" do
@@ -174,6 +247,8 @@ defmodule Ecto.EnumTest do
     test "returns correct values" do
       assert Ecto.Enum.values(EnumSchema, :my_enum) == [:foo, :bar, :baz]
       assert Ecto.Enum.values(EnumSchema, :my_enums) == [:foo, :bar, :baz]
+      assert Ecto.Enum.values(EnumSchema, :my_integer_enum) == [:foo, :bar, :baz]
+      assert Ecto.Enum.values(EnumSchema, :my_integer_enums) == [:foo, :bar, :baz]
       assert Ecto.Enum.values(EnumSchema, :virtual_enum) == [:foo, :bar, :baz]
     end
 
