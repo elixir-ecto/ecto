@@ -67,7 +67,7 @@ defmodule Ecto.Enum do
     else
       on_load = Map.new(values, fn {key, val} -> {val, key} end)
       on_dump = Enum.into(values, %{})
-      %{on_load: on_load, on_dump: on_dump, values: values}
+      %{on_load: on_load, on_dump: on_dump, values: Keyword.keys(values)}
     end
   end
 
@@ -114,14 +114,9 @@ defmodule Ecto.Enum do
     rescue
       _ in UndefinedFunctionError -> raise ArgumentError, "#{inspect schema} is not an Ecto schema"
     else
-      %{^field => {:parameterized, Ecto.Enum, %{values: values}}} ->
-        (Keyword.keyword?(values) && Keyword.keys(values)) || values
-
-      %{^field => {_, {:parameterized, Ecto.Enum, %{values: values}}}} ->
-        (Keyword.keyword?(values) && Keyword.keys(values)) || values
-
-      %{} ->
-        raise ArgumentError, "#{field} is not an Ecto.Enum field"
+      %{^field => {:parameterized, Ecto.Enum, %{values: values}}} -> values
+      %{^field => {_, {:parameterized, Ecto.Enum, %{values: values}}}} -> values
+      %{} -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
     end
   end
 end

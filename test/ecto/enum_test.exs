@@ -42,7 +42,7 @@ defmodule Ecto.EnumTest do
                 %{
                   on_dump: %{bar: 2, baz: 5, foo: 1},
                   on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
-                  values: [foo: 1, bar: 2, baz: 5]
+                  values: [:foo, :bar, :baz]
                 }}
 
       assert EnumSchema.__schema__(:type, :my_integer_enums) ==
@@ -52,7 +52,7 @@ defmodule Ecto.EnumTest do
                   %{
                     on_dump: %{bar: 2, baz: 5, foo: 1},
                     on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
-                    values: [foo: 1, bar: 2, baz: 5]
+                    values: [:foo, :bar, :baz]
                   }}
                }
     end
