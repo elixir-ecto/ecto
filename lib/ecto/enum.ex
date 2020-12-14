@@ -54,9 +54,15 @@ defmodule Ecto.Enum do
               Enum.all?(values, &is_atom/1)) or
              (Keyword.keyword?(values) and Enum.all?(Keyword.values(values), &is_integer/1)) do
       raise ArgumentError, """
-      Ecto.Enum types must have a values option specified as a list of atoms. For example:
+      Ecto.Enum types must have a values option specified as a list of atoms or a keyword list with a mapping from atoms to values.
+
+      For example:
 
           field :my_field, Ecto.Enum, values: [:foo, :bar]
+
+      or
+
+          field :my_field, Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]
       """
     end
 
