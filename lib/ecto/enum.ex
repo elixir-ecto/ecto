@@ -4,19 +4,23 @@ defmodule Ecto.Enum do
 
   `Ecto.Enum` must be used whenever you want to keep atom values in a field.
   Since atoms cannot be persisted to the database, `Ecto.Enum` converts them
-  to string when writing to the database and converts them back to atoms when
-  loading data. It can be used in your schemas as follows:
+  to a string or an integer when writing to the database and converts them back
+  to atoms when loading data. It can be used in your schemas as follows:
 
       field :status, Ecto.Enum, values: [:foo, :bar, :baz]
+
+  or
+
+      field :status, Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]
 
   Composite types, such as `:array`, are also supported:
 
       field :roles, {:array, Ecto.Enum}, values: [:Author, :Editor, :Admin]
 
-  `:values` must be a list of atoms. String values will be cast to atoms safely
-  and only if the atom exists in the list (otherwise an error will be raised).
-  Attempting to load any string not represented by an atom in the list will be
-  invalid.
+  `:values` must be a list of atoms or a keyword list. Values will be cast to
+  atoms safely and only if the atom exists in the list (otherwise an error will
+  be raised). Attempting to load any string/integer not represented by an atom
+  in the list will be invalid.
 
   The helper function `values/2` returns the values for a given schema and
   field, which can be used in places like form drop-downs. For example,
@@ -46,17 +50,36 @@ defmodule Ecto.Enum do
   def init(opts) do
     values = Keyword.get(opts, :values, nil)
 
-    unless is_list(values) and Enum.all?(values, &is_atom/1) do
-      raise ArgumentError, """
-      Ecto.Enum types must have a values option specified as a list of atoms. For example:
+    values =
+      cond do
+        is_list(values) and
+            Enum.all?(values, &is_atom/1) ->
+          Enum.map(values, fn atom -> {atom, to_string(atom)} end)
 
-          field :my_field, Ecto.Enum, values: [:foo, :bar]
-      """
-    end
+        Keyword.keyword?(values) and Enum.all?(Keyword.values(values), &is_integer/1) ->
+          values
 
-    on_load = Map.new(values, &{Atom.to_string(&1), &1})
-    on_dump = Map.new(values, &{&1, Atom.to_string(&1)})
-    %{on_load: on_load, on_dump: on_dump, values: values}
+        Keyword.keyword?(values) and Enum.all?(Keyword.values(values), &is_binary/1) ->
+          values
+
+        true ->
+          raise ArgumentError, """
+          Ecto.Enum types must have a values option specified as a list of atoms or a
+          keyword list with a mapping from atoms to either integer or string values.
+
+          For example:
+
+              field :my_field, Ecto.Enum, values: [:foo, :bar]
+
+          or
+
+              field :my_field, Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]
+          """
+      end
+
+    on_load = Map.new(values, fn {key, val} -> {val, key} end)
+    on_dump = Enum.into(values, %{})
+    %{on_load: on_load, on_dump: on_dump, values: Keyword.keys(values)}
   end
 
   @impl true
