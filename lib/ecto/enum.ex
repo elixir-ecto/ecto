@@ -50,31 +50,36 @@ defmodule Ecto.Enum do
   def init(opts) do
     values = Keyword.get(opts, :values, nil)
 
-    unless (is_list(values) and
-              Enum.all?(values, &is_atom/1)) or
-             (Keyword.keyword?(values) and Enum.all?(Keyword.values(values), &is_integer/1)) do
-      raise ArgumentError, """
-      Ecto.Enum types must have a values option specified as a list of atoms or a keyword list with a mapping from atoms to values.
+    values =
+      cond do
+        is_list(values) and
+            Enum.all?(values, &is_atom/1) ->
+          Enum.map(values, fn atom -> {atom, to_string(atom)} end)
 
-      For example:
+        Keyword.keyword?(values) and Enum.all?(Keyword.values(values), &is_integer/1) ->
+          values
 
-          field :my_field, Ecto.Enum, values: [:foo, :bar]
+        Keyword.keyword?(values) and Enum.all?(Keyword.values(values), &is_binary/1) ->
+          values
 
-      or
+        true ->
+          raise ArgumentError, """
+          Ecto.Enum types must have a values option specified as a list of atoms or a
+          keyword list with a mapping from atoms to either integer or string values.
 
-          field :my_field, Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]
-      """
-    end
+          For example:
 
-    if Enum.all?(values, &is_atom/1) do
-      on_load = Map.new(values, &{Atom.to_string(&1), &1})
-      on_dump = Map.new(values, &{&1, Atom.to_string(&1)})
-      %{on_load: on_load, on_dump: on_dump, values: values}
-    else
-      on_load = Map.new(values, fn {key, val} -> {val, key} end)
-      on_dump = Enum.into(values, %{})
-      %{on_load: on_load, on_dump: on_dump, values: Keyword.keys(values)}
-    end
+              field :my_field, Ecto.Enum, values: [:foo, :bar]
+
+          or
+
+              field :my_field, Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]
+          """
+      end
+
+    on_load = Map.new(values, fn {key, val} -> {val, key} end)
+    on_dump = Enum.into(values, %{})
+    %{on_load: on_load, on_dump: on_dump, values: Keyword.keys(values)}
   end
 
   @impl true
