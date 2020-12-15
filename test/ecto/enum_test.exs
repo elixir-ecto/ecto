@@ -25,7 +25,8 @@ defmodule Ecto.EnumTest do
                 %{
                   on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                   on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
-                  values: [:foo, :bar, :baz]
+                  values: [:foo, :bar, :baz],
+                  type: :string
                 }}
 
       assert EnumSchema.__schema__(:type, :my_enums) ==
@@ -35,7 +36,8 @@ defmodule Ecto.EnumTest do
                   %{
                     on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
                     on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
-                    values: [:foo, :bar, :baz]
+                    values: [:foo, :bar, :baz],
+                    type: :string
                   }}
                }
 
@@ -44,7 +46,8 @@ defmodule Ecto.EnumTest do
                 %{
                   on_dump: %{bar: 2, baz: 5, foo: 1},
                   on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
-                  values: [:foo, :bar, :baz]
+                  values: [:foo, :bar, :baz],
+                  type: :integer
                 }}
 
       assert EnumSchema.__schema__(:type, :my_integer_enums) ==
@@ -54,7 +57,8 @@ defmodule Ecto.EnumTest do
                   %{
                     on_dump: %{bar: 2, baz: 5, foo: 1},
                     on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
-                    values: [:foo, :bar, :baz]
+                    values: [:foo, :bar, :baz],
+                    type: :integer
                   }}
                }
 
@@ -63,7 +67,8 @@ defmodule Ecto.EnumTest do
                 %{
                   on_dump: %{bar: "baar", baz: "baaz", foo: "fooo"},
                   on_load: %{"baar" => :bar, "baaz" => :baz, "fooo" => :foo},
-                  values: [:foo, :bar, :baz]
+                  values: [:foo, :bar, :baz],
+                  type: :string
                 }}
 
       assert EnumSchema.__schema__(:type, :my_string_enums) ==
@@ -73,9 +78,19 @@ defmodule Ecto.EnumTest do
                   %{
                     on_dump: %{bar: "baar", baz: "baaz", foo: "fooo"},
                     on_load: %{"baar" => :bar, "baaz" => :baz, "fooo" => :foo},
-                    values: [:foo, :bar, :baz]
+                    values: [:foo, :bar, :baz],
+                    type: :string
                   }}
                }
+    end
+
+    test "type" do
+      assert Ecto.Type.type(EnumSchema.__schema__(:type, :my_enum)) == :string
+      assert Ecto.Type.type(EnumSchema.__schema__(:type, :my_enums)) == {:array, :string}
+      assert Ecto.Type.type(EnumSchema.__schema__(:type, :my_integer_enum)) == :integer
+      assert Ecto.Type.type(EnumSchema.__schema__(:type, :my_integer_enums)) == {:array, :integer}
+      assert Ecto.Type.type(EnumSchema.__schema__(:type, :my_string_enum)) == :string
+      assert Ecto.Type.type(EnumSchema.__schema__(:type, :my_string_enums)) == {:array, :string}
     end
 
     test "bad values" do

@@ -36,31 +36,27 @@ defmodule Ecto.Enum do
 
   you can call `values/2` like this:
 
-      > Ecto.Enum.values(EnumSchema, :my_enum)
-      [:foo, :bar, :baz]
+      Ecto.Enum.values(EnumSchema, :my_enum)
+      #=> [:foo, :bar, :baz]
 
   """
 
   use Ecto.ParameterizedType
 
   @impl true
-  def type(_params), do: :string
+  def type(params), do: params.type
 
   @impl true
   def init(opts) do
     values = Keyword.get(opts, :values, nil)
 
-    values =
+    {type, values} =
       cond do
-        is_list(values) and
-            Enum.all?(values, &is_atom/1) ->
-          Enum.map(values, fn atom -> {atom, to_string(atom)} end)
+        is_list(values) and Enum.all?(values, &is_atom/1) ->
+          {:string, Enum.map(values, fn atom -> {atom, to_string(atom)} end)}
 
-        Keyword.keyword?(values) and Enum.all?(Keyword.values(values), &is_integer/1) ->
-          values
-
-        Keyword.keyword?(values) and Enum.all?(Keyword.values(values), &is_binary/1) ->
-          values
+        type = Keyword.keyword?(values) and infer_type(Keyword.values(values)) ->
+          {type, values}
 
         true ->
           raise ArgumentError, """
@@ -79,7 +75,15 @@ defmodule Ecto.Enum do
 
     on_load = Map.new(values, fn {key, val} -> {val, key} end)
     on_dump = Enum.into(values, %{})
-    %{on_load: on_load, on_dump: on_dump, values: Keyword.keys(values)}
+    %{on_load: on_load, on_dump: on_dump, values: Keyword.keys(values), type: type}
+  end
+
+  defp infer_type(values) do
+    cond do
+      Enum.all?(values, &is_integer/1) -> :integer
+      Enum.all?(values, &is_binary/1) -> :string
+      true -> nil
+    end
   end
 
   @impl true
