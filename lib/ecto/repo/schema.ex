@@ -41,7 +41,9 @@ defmodule Ecto.Repo.Schema do
       |> returning(opts)
       |> fields_to_sources(dumper)
 
-    {rows, header} = extract_header_and_fields(rows, schema, dumper, autogen_id, adapter)
+    placeholder_map = Keyword.get(opts, :placeholders, %{})
+
+    {rows, header} = extract_header_and_fields(rows, schema, dumper, autogen_id, adapter, placeholder_map)
     counter = fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
     schema_meta = metadata(schema, prefix, source, autogen_id, nil, opts)
 
@@ -73,8 +75,8 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp extract_header_and_fields(rows, schema, dumper, autogen_id, adapter) do
-    mapper = init_mapper(schema, dumper, adapter)
+  defp extract_header_and_fields(rows, schema, dumper, autogen_id, adapter, placeholder_map) do
+    mapper = init_mapper(schema, dumper, adapter, placeholder_map)
 
     {rows, {header, has_query?}} =
       Enum.map_reduce(rows, {%{}, false}, fn fields, acc ->
@@ -91,28 +93,33 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp init_mapper(nil, _dumper, _adapter) do
+  defp init_mapper(nil, _dumper, _adapter, _placeholder_map) do
     fn {field, _} = tuple, {header, has_query?} ->
       {tuple, {Map.put(header, field, true), has_query?}}
     end
   end
 
-  defp init_mapper(schema, dumper, adapter) do
+  defp init_mapper(schema, dumper, adapter, placeholder_map) do
     fn {field, value}, {header, has_query?} ->
-        case dumper do
-          %{^field => {source, type}} ->
-            case value do
-              %Ecto.Query{} = query ->
-                {{source, query}, {Map.put(header, source, true), true}}
+      case dumper do
+        %{^field => {source, type}} ->
+          case value do
+            %Ecto.Query{} = query ->
+              {{source, query}, {Map.put(header, source, true), true}}
 
-              value ->
-                value = dump_field!(:insert_all, schema, field, type, value, adapter)
-                {{source, value}, {Map.put(header, source, true), has_query?}}
-            end
-          %{} ->
-            raise ArgumentError, "unknown field `#{inspect(field)}` in schema #{inspect(schema)} given to " <>
-                                 "insert_all. Note virtual fields and associations are not supported"
-        end
+            {:placeholder, placeholder_key} ->
+              replaced_value = Map.fetch!(placeholder_map, placeholder_key)
+              value = dump_field!(:insert_all, schema, field, type, replaced_value, adapter)
+              {{source, value}, {Map.put(header, source, true), has_query?}}
+
+            value ->
+              value = dump_field!(:insert_all, schema, field, type, value, adapter)
+              {{source, value}, {Map.put(header, source, true), has_query?}}
+          end
+        %{} ->
+          raise ArgumentError, "unknown field `#{inspect(field)}` in schema #{inspect(schema)} given to " <>
+                               "insert_all. Note virtual fields and associations are not supported"
+      end
     end
   end
 
