@@ -117,7 +117,8 @@ defmodule Ecto.Repo.Schema do
                   map
 
                 %{^placeholder_key => {_, _}} ->
-                  raise ArgumentError, "A placeholder key can only be used with columns of the same type. The key #{inspect(placeholder_key)} has already been dumped as a #{inspect(type)}."
+                  raise ArgumentError, "A placeholder key can only be used with columns of the same type. " <>
+                                       "The key #{inspect(placeholder_key)} has already been dumped as a #{inspect(type)}"
 
                 %{^placeholder_key => placeholder_val} = map ->
                   value = dump_field!(:insert_all, schema, field, type, placeholder_val, adapter)
@@ -909,10 +910,8 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp dump_field!(action, schema, field, type, value, adapter) do
-
     case Ecto.Type.adapter_dump(adapter, type, value) do
       {:ok, value} ->
-        # Can the same input value diff types result in different output values from Ecto.Type.adapter_dump
         value
       :error ->
         raise Ecto.ChangeError,
