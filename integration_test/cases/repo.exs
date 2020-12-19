@@ -975,6 +975,16 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :ph
+  test "Repo.insert_all accepts non atom placeholder keys" do
+    placeholders = %{10 => "integer key", {:foo, :bar} => "tuple key"}
+    entries = [%{title: {:placeholder, 10}}, %{title: {:placeholder, {:foo, :bar}}}]
+    TestRepo.insert_all(Post, entries, placeholders: placeholders)
+
+    query = from(p in Post, select: p.title)
+    assert ["integer key", "tuple key"] == TestRepo.all(query)
+  end
+
+  @tag :ph
   test "Repo.insert_all fills in placeholders with keyword list entries" do
     TestRepo.insert_all(Post, [[title: {:placeholder, :foo}]], placeholders: %{foo: "Title"})
 
@@ -983,9 +993,30 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :ph
-  test "Repo.insert_all errors when placeholder key is not found" do
+  test "Repo.insert_all throws when placeholder key is not found" do
     assert_raise KeyError, fn ->
       TestRepo.insert_all(Post, [%{title: {:placeholder, :bad_key}}], placeholders: %{foo: "Title"})
+    end
+  end
+
+  @tag :ph
+  test "Repo.insert_all throws when placeholder key is used for different types" do
+    placeholders = %{uuid_key: Ecto.UUID.generate}
+    ph_key = {:placeholder, :uuid_key}
+    entries = [%{bid: ph_key, title: ph_key}]
+
+    assert_raise ArgumentError, fn ->
+      TestRepo.insert_all(Post, entries, placeholders: placeholders)
+    end
+  end
+
+  @tag :ph
+  test "Repo.insert_all throws when placeholder key is used with invalid types" do
+    placeholders = %{string_key: "foo"}
+    entries = [%{visits: {:placeholder, :string_key}}]
+
+    assert_raise Ecto.ChangeError, fn ->
+      TestRepo.insert_all(Post, entries, placeholders: placeholders)
     end
   end
 

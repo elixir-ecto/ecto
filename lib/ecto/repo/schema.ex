@@ -113,7 +113,8 @@ defmodule Ecto.Repo.Schema do
 
             {:placeholder, placeholder_key} ->
               placeholder_map = case placeholder_map do
-                %{^placeholder_key => {^type, _}} = map -> map
+                %{^placeholder_key => {^type, _}} = map ->
+                  map
 
                 %{^placeholder_key => {_, _}} ->
                   raise ArgumentError, "A placeholder key can only be used with columns of the same type. The key #{inspect(placeholder_key)} has already been dumped as a #{inspect(type)}."
@@ -121,7 +122,7 @@ defmodule Ecto.Repo.Schema do
                 %{^placeholder_key => placeholder_val} = map ->
                   value = dump_field!(:insert_all, schema, field, type, placeholder_val, adapter)
                   Map.put(map, placeholder_key, {type, value})
-                  
+
                 map ->
                   raise KeyError, "Placeholder key #{inspect(placeholder_key)} not found in #{inspect(map)}"
               end
