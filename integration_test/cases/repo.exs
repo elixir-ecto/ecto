@@ -953,6 +953,42 @@ defmodule Ecto.Integration.RepoTest do
     assert custom.bid == bid2
   end
 
+  @tag :ph
+  test "Repo.insert_all PH main" do
+    now = Date.utc_today
+    posts = [
+      %{title: {:placeholder, :foo}, visits: 111, posted: {:placeholder, :today}},
+      %{title: {:placeholder, :foo}, visits: 222, posted: {:placeholder, :today}},
+    ]
+    TestRepo.insert_all(Post, posts, placeholders: %{foo: "Title", today: now})
+
+    query = from(p in Post, select: {p.title, p.visits, p.posted})
+    assert [{"Title", 111, now}, {"Title", 222, now}] == TestRepo.all(query)
+  end
+
+  @tag :ph
+  test "Repo.insert_all fills in placeholders" do
+    TestRepo.insert_all(Post, [%{title: {:placeholder, :foo}}], placeholders: %{foo: "Title"})
+
+    query = from(p in Post, select: p.title)
+    assert ["Title"] == TestRepo.all(query)
+  end
+
+  @tag :ph
+  test "Repo.insert_all fills in placeholders with keyword list entries" do
+    TestRepo.insert_all(Post, [[title: {:placeholder, :foo}]], placeholders: %{foo: "Title"})
+
+    query = from(p in Post, select: p.title)
+    assert ["Title"] == TestRepo.all(query)
+  end
+
+  @tag :ph
+  test "Repo.insert_all errors when placeholder key is not found" do
+    assert_raise KeyError, fn ->
+      TestRepo.insert_all(Post, [%{title: {:placeholder, :bad_key}}], placeholders: %{foo: "Title"})
+    end
+  end
+
   test "update all" do
     assert post1 = TestRepo.insert!(%Post{title: "1"})
     assert post2 = TestRepo.insert!(%Post{title: "2"})

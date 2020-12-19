@@ -43,7 +43,7 @@ defmodule Ecto.Repo.Schema do
 
     placeholder_map = Keyword.get(opts, :placeholders, %{})
 
-    {rows, header} = extract_header_and_fields(rows, schema, dumper, autogen_id, adapter, placeholder_map)
+    {rows, header, placeholder_map} = extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter)
     counter = fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
     schema_meta = metadata(schema, prefix, source, autogen_id, nil, opts)
 
@@ -53,7 +53,7 @@ defmodule Ecto.Repo.Schema do
     on_conflict = on_conflict(on_conflict, conflict_target, schema_meta, counter, adapter)
 
     {count, rows} =
-      adapter.insert_all(adapter_meta, schema_meta, Map.keys(header), rows, on_conflict, return_sources, opts)
+      adapter.insert_all(adapter_meta, schema_meta, Map.keys(header), rows, on_conflict, return_sources, Keyword.put(opts, :placeholders, placeholder_map))
 
     {count, postprocess(rows, return_fields_or_types, adapter, schema, schema_meta)}
   end
@@ -75,46 +75,65 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp extract_header_and_fields(rows, schema, dumper, autogen_id, adapter, placeholder_map) do
-    mapper = init_mapper(schema, dumper, adapter, placeholder_map)
+  defp extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter) do
+    mapper = init_mapper(schema, dumper, adapter)
 
-    {rows, {header, has_query?}} =
-      Enum.map_reduce(rows, {%{}, false}, fn fields, acc ->
-        {fields, {header, has_query?}} = Enum.map_reduce(fields, acc, mapper)
+    {rows, {header, has_query?, placeholder_map}} =
+      Enum.map_reduce(rows, {%{}, false, placeholder_map}, fn fields, acc ->
+        {fields, {header, has_query?, placeholder_map}} = Enum.map_reduce(fields, acc, mapper)
         {fields, header} = autogenerate_id(autogen_id, fields, header, adapter)
-        {fields, {header, has_query?}}
+        {fields, {header, has_query?, placeholder_map}}
       end)
+
+    placeholder_map = placeholder_map
+    |> Enum.map(fn {k, {_, v}} -> {k, v} end)
+    |> Map.new
 
     if has_query? do
       rows = plan_query_in_rows(rows, header, adapter)
-      {rows, header}
+      {rows, header, placeholder_map}
     else
-      {rows, header}
+      {rows, header, placeholder_map}
     end
   end
 
-  defp init_mapper(nil, _dumper, _adapter, _placeholder_map) do
-    fn {field, _} = tuple, {header, has_query?} ->
-      {tuple, {Map.put(header, field, true), has_query?}}
+  defp init_mapper(nil, _dumper, _adapter) do
+    fn {field, _} = tuple, {header, has_query?, placeholder_map} ->
+      {tuple, {Map.put(header, field, true), has_query?, placeholder_map}}
     end
   end
 
-  defp init_mapper(schema, dumper, adapter, placeholder_map) do
-    fn {field, value}, {header, has_query?} ->
+  defp init_mapper(schema, dumper, adapter) do
+    fn {field, value}, {header, has_query?, placeholder_map} ->
       case dumper do
         %{^field => {source, type}} ->
           case value do
             %Ecto.Query{} = query ->
-              {{source, query}, {Map.put(header, source, true), true}}
+              {{source, query}, {Map.put(header, source, true), true, placeholder_map}}
 
             {:placeholder, placeholder_key} ->
-              replaced_value = Map.fetch!(placeholder_map, placeholder_key)
-              value = dump_field!(:insert_all, schema, field, type, replaced_value, adapter)
-              {{source, value}, {Map.put(header, source, true), has_query?}}
+              placeholder_map = case placeholder_map do
+                %{^placeholder_key => {^type, _}} = map -> map
+
+                %{^placeholder_key => {_, _}} ->
+                  raise ArgumentError, "A placeholder key can only be used with columns of the same type. The key #{inspect(placeholder_key)} has already been dumped as a #{inspect(type)}."
+
+                %{^placeholder_key => placeholder_val} = map ->
+                  value = dump_field!(:insert_all, schema, field, type, placeholder_val, adapter)
+                  Map.put(map, placeholder_key, {type, value})
+                  
+                map ->
+                  raise KeyError, "Placeholder key #{inspect(placeholder_key)} not found in #{inspect(map)}"
+              end
+
+              {
+                {source, {:placeholder, placeholder_key}},
+                {Map.put(header, source, true), has_query?, placeholder_map}
+              }
 
             value ->
               value = dump_field!(:insert_all, schema, field, type, value, adapter)
-              {{source, value}, {Map.put(header, source, true), has_query?}}
+              {{source, value}, {Map.put(header, source, true), has_query?, placeholder_map}}
           end
         %{} ->
           raise ArgumentError, "unknown field `#{inspect(field)}` in schema #{inspect(schema)} given to " <>
@@ -889,8 +908,10 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp dump_field!(action, schema, field, type, value, adapter) do
+
     case Ecto.Type.adapter_dump(adapter, type, value) do
       {:ok, value} ->
+        # Can the same input value diff types result in different output values from Ecto.Type.adapter_dump
         value
       :error ->
         raise Ecto.ChangeError,
