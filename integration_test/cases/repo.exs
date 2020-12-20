@@ -955,42 +955,43 @@ defmodule Ecto.Integration.RepoTest do
 
   @tag :placeholders
   test "Repo.insert_all fills in placeholders" do
-    TestRepo.insert_all(Post, [%{title: {:placeholder, :foo}}], placeholders: %{foo: "Title"})
+    TestRepo.insert_all(Barebone, [%{num: {:placeholder, :foo}}], placeholders: %{foo: 100})
 
-    query = from(p in Post, select: p.title)
-    assert ["Title"] == TestRepo.all(query)
+    query = from(b in Barebone, select: b.num)
+    assert [100] == TestRepo.all(query)
   end
 
   @tag :placeholders
   test "Repo.insert_all accepts non atom placeholder keys" do
     placeholders = %{10 => "integer key", {:foo, :bar} => "tuple key"}
-    entries = [%{title: {:placeholder, 10}}, %{title: {:placeholder, {:foo, :bar}}}]
-    TestRepo.insert_all(Post, entries, placeholders: placeholders)
+    entries = [%{text: {:placeholder, 10}}, %{text: {:placeholder, {:foo, :bar}}}]
+    TestRepo.insert_all(Comment, entries, placeholders: placeholders)
 
-    query = from(p in Post, select: p.title)
+    query = from(c in Comment, select: c.text)
     assert ["integer key", "tuple key"] == TestRepo.all(query)
   end
 
   @tag :placeholders
   test "Repo.insert_all fills in placeholders with keyword list entries" do
-    TestRepo.insert_all(Post, [[title: {:placeholder, :foo}]], placeholders: %{foo: "Title"})
+    TestRepo.insert_all(Barebone, [[num: {:placeholder, :foo}]], placeholders: %{foo: 100})
 
-    query = from(p in Post, select: p.title)
-    assert ["Title"] == TestRepo.all(query)
+    query = from(b in Barebone, select: b.num)
+    assert [100] == TestRepo.all(query)
   end
 
   @tag :placeholders
   test "Repo.insert_all throws when placeholder key is not found" do
     assert_raise KeyError, fn ->
-      TestRepo.insert_all(Post, [%{title: {:placeholder, :bad_key}}], placeholders: %{foo: "Title"})
+      TestRepo.insert_all(Barebone, [%{num: {:placeholder, :bad_key}}], placeholders: %{foo: 100})
     end
   end
 
   @tag :placeholders
   test "Repo.insert_all throws when placeholder key is used for different types" do
+    uuid = Ecto.UUID.generate()
     placeholders = %{uuid_key: Ecto.UUID.generate}
     ph_key = {:placeholder, :uuid_key}
-    entries = [%{bid: ph_key, title: ph_key}]
+    entries = [%{bid: ph_key, title: ph_key, uuid: uuid}]
 
     assert_raise ArgumentError, fn ->
       TestRepo.insert_all(Post, entries, placeholders: placeholders)
@@ -999,8 +1000,9 @@ defmodule Ecto.Integration.RepoTest do
 
   @tag :placeholders
   test "Repo.insert_all throws when placeholder key is used with invalid types" do
+    uuid = Ecto.UUID.generate()
     placeholders = %{string_key: "foo"}
-    entries = [%{visits: {:placeholder, :string_key}}]
+    entries = [%{visits: {:placeholder, :string_key}, uuid: uuid}]
 
     assert_raise Ecto.ChangeError, fn ->
       TestRepo.insert_all(Post, entries, placeholders: placeholders)
