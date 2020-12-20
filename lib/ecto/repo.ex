@@ -1205,8 +1205,9 @@ defmodule Ecto.Repo do
   Passing in a map for the `:placeholders` allows you to send less data over 
   the wire when you have many entries with the same value for a field. To use 
   a placeholder, replace its value in each of your entries with `{:placeholder, :key}`, 
-  where `:key` is the key you are using in the `:placeholders` option map. Placeholders
-  require a database that supports index parameters, so it is not compatible with MySQL.
+  where `:key` is the key you are using in the `:placeholders` option map.
+  Placeholders require a database that supports index parameters, so they are
+  not currently compatible with MySQL.
   """
   @callback insert_all(
               schema_or_source :: binary | {binary, module} | module,
