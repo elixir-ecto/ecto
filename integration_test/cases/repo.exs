@@ -978,34 +978,6 @@ defmodule Ecto.Integration.RepoTest do
       query = from(b in Barebone, select: b.num)
       assert [100] == TestRepo.all(query)
     end
-
-    test "Repo.insert_all throws when placeholder key is not found" do
-      assert_raise KeyError, fn ->
-        TestRepo.insert_all(Barebone, [%{num: {:placeholder, :bad_key}}], placeholders: %{foo: 100})
-      end
-    end
-
-    test "Repo.insert_all throws when placeholder key is used for different types" do
-      uuid = Ecto.UUID.generate()
-      placeholders = %{uuid_key: Ecto.UUID.generate}
-      ph_key = {:placeholder, :uuid_key}
-      entries = [%{bid: ph_key, title: ph_key, uuid: uuid}]
-
-      assert_raise ArgumentError, fn ->
-        TestRepo.insert_all(Post, entries, placeholders: placeholders)
-      end
-    end
-
-    test "Repo.insert_all throws when placeholder key is used with invalid types" do
-      uuid = Ecto.UUID.generate()
-      placeholders = %{string_key: "foo"}
-      entries = [%{visits: {:placeholder, :string_key}, uuid: uuid}]
-
-      assert_raise Ecto.ChangeError, fn ->
-        TestRepo.insert_all(Post, entries, placeholders: placeholders)
-      end
-    end
-    
   end
 
   test "update all" do

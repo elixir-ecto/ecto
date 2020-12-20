@@ -487,6 +487,44 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  defmodule MySchemaWithBinaryId do
+    use Ecto.Schema
+
+    schema "my_schema_with_binary_id" do
+      field :bid, :binary_id
+      field :str, :string
+    end
+  end
+
+  describe "placeholders" do
+    @describetag :placeholders
+
+    test "Repo.insert_all throws when placeholder key is not found" do
+      assert_raise KeyError, fn ->
+        TestRepo.insert_all(MySchema, [%{x: {:placeholder, :bad_key}}], placeholders: %{foo: 100})
+      end
+    end
+
+    test "Repo.insert_all throws when placeholder key is used for different types" do
+      placeholders = %{uuid_key: Ecto.UUID.generate}
+      ph_key = {:placeholder, :uuid_key}
+      entries = [%{bid: ph_key, string: ph_key}]
+
+      assert_raise ArgumentError, fn ->
+        TestRepo.insert_all(MySchemaWithBinaryId, entries, placeholders: placeholders)
+      end
+    end
+
+    test "Repo.insert_all throws when placeholder key is used with invalid types" do
+      placeholders = %{string_key: "foo"}
+      entries = [%{n: {:placeholder, :string_key}}]
+
+      assert_raise Ecto.ChangeError, fn ->
+        TestRepo.insert_all(MyParent, entries, placeholders: placeholders)
+      end
+    end
+  end
+
   describe "update_all" do
     test "raises on bad input" do
       # Success
