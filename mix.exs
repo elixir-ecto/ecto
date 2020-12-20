@@ -1,6 +1,7 @@
 defmodule Ecto.MixProject do
   use Mix.Project
 
+  @source_url "https://github.com/elixir-ecto/ecto"
   @version "3.5.5"
 
   def project do
@@ -42,7 +43,7 @@ defmodule Ecto.MixProject do
     [
       maintainers: ["Eric Meadows-Jönsson", "José Valim", "James Fish", "Michał Muskała"],
       licenses: ["Apache-2.0"],
-      links: %{"GitHub" => "https://github.com/elixir-ecto/ecto"},
+      links: %{"GitHub" => @source_url},
       files:
         ~w(.formatter.exs mix.exs README.md CHANGELOG.md lib) ++
           ~w(integration_test/cases integration_test/support)
@@ -56,7 +57,7 @@ defmodule Ecto.MixProject do
       canonical: "http://hexdocs.pm/ecto",
       logo: "guides/images/e.png",
       extra_section: "GUIDES",
-      source_url: "https://github.com/elixir-ecto/ecto",
+      source_url: @source_url,
       extras: extras(),
       groups_for_extras: groups_for_extras(),
       groups_for_modules: [

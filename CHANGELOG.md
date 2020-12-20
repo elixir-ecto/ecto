@@ -21,7 +21,7 @@
 
 ### Bug fixes
 
-  * [Ecto.Changeset] Make keys optionals in specs
+  * [Ecto.Changeset] Make keys optional in specs
   * [Ecto.Enum] Make sure `values/2` works for virtual fields
   * [Ecto.Query] Fix missing type on CTE queries that select a single field
 
@@ -315,7 +315,7 @@ v3.2 requires Elixir v1.6+.
 ### Bug fixes
 
   * [Ecto.Changeset] Do not mark `put_assoc` from `[]` to `[]` or from `nil` to `nil` as change
-  * [Ecto.Query] Remove named binding when exluding joins
+  * [Ecto.Query] Remove named binding when excluding joins
   * [mix ecto.gen.repo] Use `:config_path` instead of hardcoding to `config/config.exs`
 
 ## v3.1.5 (2019-06-06)
@@ -334,7 +334,7 @@ v3.2 requires Elixir v1.6+.
 ### Bug fixes
 
   * [Ecto.Changeset] Convert validation enums to lists before adding them as validation metadata
-  * [Ecto.Schema] Properly propragate prefix to join_through source in many_to_many associations
+  * [Ecto.Schema] Properly propagate prefix to join_through source in many_to_many associations
 
 ## v3.1.3 (2019-04-30)
 
