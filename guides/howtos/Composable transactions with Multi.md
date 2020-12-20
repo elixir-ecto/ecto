@@ -74,7 +74,7 @@ A more declarative approach when working with transactions would be to define al
 
 ## Composing with data structures
 
-Let's rewrite the snippets above using `Ecto.Multi`. The first snippet that transfers money between mary and john can rewritten to:
+Let's rewrite the snippets above using `Ecto.Multi`. The first snippet that transfers money between Mary and John can rewritten to:
 
 ```elixir
 mary_update =

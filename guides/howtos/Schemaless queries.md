@@ -16,7 +16,7 @@ query =
 MyApp.Repo.all(query)
 ```
 
-Although you might use schemas for most of your queries, Ecto also adds the ability to write regular schemaless queries when prefered.
+Although you might use schemas for most of your queries, Ecto also adds the ability to write regular schemaless queries when preferred.
 
 One example is this ability to select all desired fields without duplication:
 

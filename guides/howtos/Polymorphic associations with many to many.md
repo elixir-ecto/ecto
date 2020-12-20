@@ -253,7 +253,7 @@ end
 
 Notice `MyApp.TodoList` no longer needs to define a `has_many` association pointing to the `MyApp.TodoListItem` schema and instead we can just associate to `:todo_items` using `many_to_many`.
 
-Differently from `has_many :through`, `many_to_many` associations are also writeable. This means we can send data through our forms exactly as we did at the beginning of this guide:
+Differently from `has_many :through`, `many_to_many` associations are also writable. This means we can send data through our forms exactly as we did at the beginning of this guide:
 
 ```elixir
 %{"todo_list" => %{
