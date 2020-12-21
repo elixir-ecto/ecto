@@ -91,7 +91,7 @@ defmodule Ecto.Repo.Schema do
     |> Enum.map(fn {_, {idx, _, value}} ->
       {idx, value}
     end)
-    |> List.keysort(0)
+    |> Enum.sort
     |> Enum.map(&elem(&1, 1))
 
     if has_query? do
