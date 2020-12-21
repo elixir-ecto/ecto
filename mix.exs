@@ -58,6 +58,7 @@ defmodule Ecto.MixProject do
       logo: "guides/images/e.png",
       extra_section: "GUIDES",
       source_url: @source_url,
+      skip_undefined_reference_warnings_on: ["CHANGELOG.md"],
       extras: extras(),
       groups_for_extras: groups_for_extras(),
       groups_for_modules: [
@@ -114,7 +115,8 @@ defmodule Ecto.MixProject do
       "guides/howtos/Polymorphic associations with many to many.md",
       "guides/howtos/Replicas and dynamic repositories.md",
       "guides/howtos/Schemaless queries.md",
-      "guides/howtos/Test factories.md"
+      "guides/howtos/Test factories.md",
+      "CHANGELOG.md"
     ]
   end
 
