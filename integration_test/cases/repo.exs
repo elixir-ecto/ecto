@@ -957,10 +957,18 @@ defmodule Ecto.Integration.RepoTest do
     @describetag :placeholders
 
     test "Repo.insert_all fills in placeholders" do
-      TestRepo.insert_all(Barebone, [%{num: {:placeholder, :foo}}], placeholders: %{foo: 100})
+      placeholders = %{foo: 100, bar: "test"}
+      bar_ph = {:placeholder, :bar}
+      foo_ph = {:placeholder, :foo}
+      entries = [
+        %{intensity: 1.0, title: bar_ph, posted: ~D[2020-12-21], visits: foo_ph},
+        %{intensity: 2.0, title: bar_ph, posted: ~D[2000-12-21], visits: foo_ph}
+      ] |> Enum.map(&Map.put(&1, :uuid, Ecto.UUID.generate))
 
-      query = from(b in Barebone, select: b.num)
-      assert [100] == TestRepo.all(query)
+      TestRepo.insert_all(Post, entries, placeholders: placeholders)
+
+      query = from(p in Post, select: {p.intensity, p.title, p.visits})
+      assert [{1.0, "test", 100}, {2.0, "test", 100}] == TestRepo.all(query)
     end
 
     test "Repo.insert_all accepts non atom placeholder keys" do

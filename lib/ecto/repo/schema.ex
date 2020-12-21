@@ -43,7 +43,9 @@ defmodule Ecto.Repo.Schema do
 
     placeholder_map = Keyword.get(opts, :placeholders, %{})
 
-    {rows, header, placeholder_map} = extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter)
+    {rows, header, placeholder_values} = extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter)
+
+
     counter = fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
     schema_meta = metadata(schema, prefix, source, autogen_id, nil, opts)
 
@@ -53,7 +55,7 @@ defmodule Ecto.Repo.Schema do
     on_conflict = on_conflict(on_conflict, conflict_target, schema_meta, counter, adapter)
 
     {count, rows} =
-      adapter.insert_all(adapter_meta, schema_meta, Map.keys(header), rows, on_conflict, return_sources, Keyword.put(opts, :placeholders, placeholder_map))
+      adapter.insert_all(adapter_meta, schema_meta, Map.keys(header), rows, on_conflict, return_sources, placeholder_values, opts)
 
     {count, postprocess(rows, return_fields_or_types, adapter, schema, schema_meta)}
   end
@@ -76,66 +78,69 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter) do
-    mapper = init_mapper(schema, dumper, adapter)
+    mapper = init_mapper(schema, dumper, adapter, placeholder_map)
 
-    {rows, {header, has_query?, placeholder_map}} =
-      Enum.map_reduce(rows, {%{}, false, placeholder_map}, fn fields, acc ->
-        {fields, {header, has_query?, placeholder_map}} = Enum.map_reduce(fields, acc, mapper)
+    {rows, {header, has_query?, placeholder_dump, _}} =
+      Enum.map_reduce(rows, {%{}, false, %{}, 1}, fn fields, acc ->
+        {fields, {header, has_query?, placeholder_dump, counter}} = Enum.map_reduce(fields, acc, mapper)
         {fields, header} = autogenerate_id(autogen_id, fields, header, adapter)
-        {fields, {header, has_query?, placeholder_map}}
+        {fields, {header, has_query?, placeholder_dump, counter}}
       end)
 
-    placeholder_map = placeholder_map
-    |> Enum.map(fn {k, {_, v}} -> {k, v} end)
-    |> Map.new
+    placeholder_vals_list = placeholder_dump
+    |> Enum.map(fn {_, {idx, _, value}} ->
+      {idx, value}
+    end)
+    |> List.keysort(0)
+    |> Enum.map(&elem(&1, 1))
 
     if has_query? do
       rows = plan_query_in_rows(rows, header, adapter)
-      {rows, header, placeholder_map}
+      {rows, header, placeholder_vals_list}
     else
-      {rows, header, placeholder_map}
+      {rows, header, placeholder_vals_list}
     end
   end
 
-  defp init_mapper(nil, _dumper, _adapter) do
-    fn {field, _} = tuple, {header, has_query?, placeholder_map} ->
-      {tuple, {Map.put(header, field, true), has_query?, placeholder_map}}
+  defp init_mapper(nil, _dumper, _adapter, _placeholder_map) do
+    fn {field, _} = tuple, {header, has_query?, placeholder_dump, counter} ->
+      {tuple, {Map.put(header, field, true), has_query?, placeholder_dump, counter}}
     end
   end
 
-  defp init_mapper(schema, dumper, adapter) do
-    fn {field, value}, {header, has_query?, placeholder_map} ->
+  defp init_mapper(schema, dumper, adapter, placeholder_map) do
+    fn {field, value}, {header, has_query?, placeholder_dump, counter} ->
       case dumper do
         %{^field => {source, type}} ->
           case value do
             %Ecto.Query{} = query ->
-              {{source, query}, {Map.put(header, source, true), true, placeholder_map}}
+              {{source, query}, {Map.put(header, source, true), true, placeholder_dump, counter}}
 
-            {:placeholder, placeholder_key} ->
-              placeholder_map = case placeholder_map do
-                %{^placeholder_key => {^type, _}} = map ->
-                  map
+            {:placeholder, key} ->
+              {placeholder_dump, idx, counter} = case placeholder_dump do
+                %{^key => {idx, ^type, _}} = map -> {map, idx, counter}
 
-                %{^placeholder_key => {_, _}} ->
-                  raise ArgumentError, "A placeholder key can only be used with columns of the same type. " <>
-                                       "The key #{inspect(placeholder_key)} has already been dumped as a #{inspect(type)}"
-
-                %{^placeholder_key => placeholder_val} = map ->
-                  value = dump_field!(:insert_all, schema, field, type, placeholder_val, adapter)
-                  Map.put(map, placeholder_key, {type, value})
+                %{^key => {_, type, _}} = map ->
+                  raise ArgumentError, "a placeholder key can only be used with columns of the same type. " <>
+                                       "The key #{inspect(key)} has already been dumped as a #{inspect(type)}"
 
                 map ->
-                  raise KeyError, "Placeholder key #{inspect(placeholder_key)} not found in #{inspect(map)}"
+                  dumpped_value = case placeholder_map do
+                    %{^key => val} ->
+                      dump_field!(:insert_all, schema, field, type, val, adapter)
+                    _ ->
+                      raise KeyError, "placeholder key #{inspect(key)} not found in #{inspect(placeholder_map)}"
+                  end     
+
+                  {Map.put(map, key, {counter, type, dumpped_value}), counter, counter + 1}
               end
 
-              {
-                {source, {:placeholder, placeholder_key}},
-                {Map.put(header, source, true), has_query?, placeholder_map}
-              }
+              {{source, {:placeholder, idx}},
+                {Map.put(header, source, true), has_query?, placeholder_dump, counter}}
 
             value ->
               value = dump_field!(:insert_all, schema, field, type, value, adapter)
-              {{source, value}, {Map.put(header, source, true), has_query?, placeholder_map}}
+              {{source, value}, {Map.put(header, source, true), has_query?, placeholder_dump, counter}}
           end
         %{} ->
           raise ArgumentError, "unknown field `#{inspect(field)}` in schema #{inspect(schema)} given to " <>
