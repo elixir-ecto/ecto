@@ -47,7 +47,7 @@ defmodule Ecto.Embedded do
     unless opts[:on_replace] in on_replace_opts do
       raise ArgumentError, "invalid `:on_replace` option for #{inspect Keyword.fetch!(opts, :field)}. " <>
         "The only valid options are: " <>
-        Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
+        Enum.map_join(on_replace_opts, ", ", &"`#{inspect &1}`")
     end
 
     struct(%Embedded{}, opts)
