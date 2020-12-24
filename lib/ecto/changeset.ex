@@ -147,9 +147,9 @@ defmodule Ecto.Changeset do
       associations). Use this on a `belongs_to` column to allow the association
       to be cleared out so that it can be set to a new value. Will set `action`
       on associated changesets to `:replace`
-    * `:update` - updates the association, available only for `has_one` and `belongs_to`.
-      This option will update all the fields given to the changeset including the id
-      for the association
+    * `:update` - updates the association, available only for `has_one`, `belongs_to`
+      and `embeds_one`. This option will update all the fields given to the changeset
+      including the id for the association
     * `:delete` - removes the association or related data from the database.
       This option has to be used carefully (see below). Will set `action` on associated
       changesets to `:replace`
