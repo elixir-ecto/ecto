@@ -552,6 +552,30 @@ defmodule Ecto.Integration.PreloadTest do
     assert p2.id == c4.post.id
   end
 
+  test "custom preload_order" do
+    p1 = TestRepo.insert!(%Post{title: "1"})
+
+    %Comment{id: cid1} = TestRepo.insert!(%Comment{text: "2", post_id: p1.id})
+    %Comment{id: cid2} = TestRepo.insert!(%Comment{text: "1", post_id: p1.id})
+
+    %User{id: uid1} = TestRepo.insert!(%User{name: "bar"})
+    %User{id: uid2} = TestRepo.insert!(%User{name: "foo"})
+
+    TestRepo.insert_all("posts_users", [[post_id: p1.id, user_id: uid1], [post_id: p1.id, user_id: uid2]])
+
+    p1 = TestRepo.preload(p1, [:ordered_comments, :ordered_users])
+
+    # asc
+    assert [c1, c2] = p1.ordered_comments
+    assert c1.id == cid2
+    assert c2.id == cid1
+
+    # desc
+    assert [u1, u2] = p1.ordered_users
+    assert u1.id == uid2
+    assert u2.id == uid1
+  end
+
   ## Others
 
   @tag :invalid_prefix

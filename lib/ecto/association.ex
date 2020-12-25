@@ -563,7 +563,7 @@ defmodule Ecto.Association.Has do
   @has_one_on_replace_opts @on_replace_opts ++ [:update]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
              :queryable, :on_delete, :on_replace, where: [], unique: true, defaults: [],
-             relationship: :child, ordered: false]
+             relationship: :child, ordered: false, preload_order: []]
 
   @impl true
   def after_compile_validation(%{queryable: queryable, related_key: related_key}, env) do
@@ -627,6 +627,12 @@ defmodule Ecto.Association.Has do
       raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
     end
 
+    preload_order = opts[:preload_order] || []
+
+    unless is_list(preload_order) do
+      raise ArgumentError, "expected `:preload_order` for #{inspect name} to be a keyword list, got: `#{inspect preload_order}`"
+    end
+
     %__MODULE__{
       field: name,
       cardinality: cardinality,
@@ -638,7 +644,8 @@ defmodule Ecto.Association.Has do
       on_delete: on_delete,
       on_replace: on_replace,
       defaults: defaults,
-      where: where
+      where: where,
+      preload_order: preload_order
     }
   end
 
@@ -1010,7 +1017,7 @@ defmodule Ecto.Association.ManyToMany do
   defstruct [:field, :owner, :related, :owner_key, :queryable, :on_delete,
              :on_replace, :join_keys, :join_through, :on_cast, where: [],
              join_where: [], defaults: [], join_defaults: [], relationship: :child,
-             cardinality: :many, unique: false, ordered: false]
+             cardinality: :many, unique: false, ordered: false, preload_order: []]
 
   @impl true
   def after_compile_validation(%{queryable: queryable, join_through: join_through}, env) do
@@ -1082,6 +1089,7 @@ defmodule Ecto.Association.ManyToMany do
 
     where = opts[:where] || []
     join_where = opts[:join_where] || []
+    preload_order = opts[:preload_order] || []
     defaults = Ecto.Association.validate_defaults!(name, opts[:defaults] || [])
     join_defaults = Ecto.Association.validate_defaults!(name, opts[:join_defaults] || [])
 
@@ -1091,6 +1099,10 @@ defmodule Ecto.Association.ManyToMany do
 
     unless is_list(join_where) do
       raise ArgumentError, "expected `:join_where` for #{inspect name} to be a keyword list, got: `#{inspect join_where}`"
+    end
+
+    unless is_list(preload_order) do
+      raise ArgumentError, "expected `:preload_order` for #{inspect name} to be a keyword list, got: `#{inspect preload_order}`"
     end
 
     if opts[:join_defaults] && is_binary(join_through) do
@@ -1112,7 +1124,8 @@ defmodule Ecto.Association.ManyToMany do
       on_replace: on_replace,
       unique: Keyword.get(opts, :unique, false),
       defaults: defaults,
-      where: where
+      where: where,
+      preload_order: preload_order
     }
   end
 

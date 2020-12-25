@@ -1859,7 +1859,7 @@ defmodule Ecto.Schema do
     end
   end
 
-  @valid_has_options [:foreign_key, :references, :through, :on_delete, :defaults, :on_replace, :where]
+  @valid_has_options [:foreign_key, :references, :through, :on_delete, :defaults, :on_replace, :where, :preload_order]
 
   @doc false
   def __has_many__(mod, name, queryable, opts) do
@@ -1910,7 +1910,7 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_many_to_many_options [:join_through, :join_defaults, :join_keys, :on_delete, :defaults, :on_replace, :unique, :where, :join_where]
+  @valid_many_to_many_options [:join_through, :join_defaults, :join_keys, :on_delete, :defaults, :on_replace, :unique, :where, :join_where, :preload_order]
 
   @doc false
   def __many_to_many__(mod, name, queryable, opts) do
@@ -2068,8 +2068,8 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :struct_fields, {name, assoc})
   end
 
-  defp validate_default!(type, value) do 
-    case Ecto.Type.dump(type, value) do 
+  defp validate_default!(type, value) do
+    case Ecto.Type.dump(type, value) do
       {:ok, _} ->
         :ok
       _ ->
