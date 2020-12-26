@@ -63,6 +63,9 @@ defmodule Ecto.EmbeddedTest do
     assert %UUIDSchema{uuid: ^uuid, authors: [%Author{}]} =
              Ecto.embedded_load(UUIDSchema, %{"uuid" => uuid, "authors" => [%{}]}, :json)
 
+    assert %UUIDSchema{uuid: ^uuid, authors: []} =
+             Ecto.embedded_load(UUIDSchema, %{"uuid" => uuid, "authors" => nil}, :json)
+
     assert_raise ArgumentError,
                  ~s[cannot load `"ABC"` as type Ecto.UUID for field `uuid` in schema Ecto.EmbeddedTest.UUIDSchema],
                  fn ->
