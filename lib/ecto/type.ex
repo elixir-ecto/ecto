@@ -870,6 +870,9 @@ defmodule Ecto.Type do
   def adapter_load(adapter, {:parameterized, module, params} = type, value) do
     process_loaders(adapter.loaders(module.type(params), type), {:ok, value}, adapter)
   end
+  def adapter_load(adapter, {:array, {:parameterized, _, _}}, nil) do
+    {:ok, []}
+  end
   def adapter_load(_adapter, _type, nil) do
     {:ok, nil}
   end
