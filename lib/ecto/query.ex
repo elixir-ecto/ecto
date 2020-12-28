@@ -1221,6 +1221,7 @@ defmodule Ecto.Query do
       from(city in City, select: map(city, [:name]))
 
   If you want a map with only the selected fields to be returned.
+
   For more information, read the docs for `Ecto.Query.API.struct/2`
   and `Ecto.Query.API.map/2`.
 
@@ -1274,9 +1275,10 @@ defmodule Ecto.Query do
   being merged on must be a struct or a map. If it is a struct, the fields
   merged later on must be part of the struct, otherwise an error is raised.
 
-  If the argument to `:select_merge` is a constructed struct (`struct/2`) or
-  map (`map/2`) where the source to `struct/2` or `map/2` may be a `nil` value
-  (as in an outer join), the source will be returned unmodified.
+  If the argument to `:select_merge` is a constructed struct
+  (`Ecto.Query.API.struct/2`) or map (`Ecto.Query.API.map/2`) where the source
+  to struct or map may be a `nil` value (as in an outer join), the source will
+  be returned unmodified.
 
       query =
         Post
