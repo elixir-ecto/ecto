@@ -2,7 +2,7 @@
 
 ---
 
-[![Build Status](https://github.com/elixir-ecto/ecto/workflows/CI/badge.svg)](https://github.com/elixir-ecto/ecto/actions)
+[![Build Status](https://github.com/elixir-ecto/ecto/workflows/CI/badge.svg)](https://github.com/elixir-ecto/ecto/actions) [![Hex.pm](https://img.shields.io/hexpm/v/ecto.svg)](https://hex.pm/packages/ecto)
 
 Ecto is a toolkit for data mapping and language integrated query for Elixir. Here is an example:
 
