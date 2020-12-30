@@ -228,3 +228,12 @@ defmodule Ecto.UUID do
   defp e(14), do: ?e
   defp e(15), do: ?f
 end
+
+defimpl Inspect, for: BitString do
+  def inspect(bit_string, _opts) do
+    case Ecto.UUID.load(bit_string) do
+      {:ok, uuid} -> uuid
+      :error -> bit_string
+    end
+  end
+end
