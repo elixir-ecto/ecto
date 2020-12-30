@@ -766,6 +766,13 @@ defmodule Ecto.Schema do
     * `:where` - A filter for the association. See "Filtering associations" below.
       It does not apply to `:through` associations.
 
+    * `:preload_order` - Sets the default `order_by` of the association.
+      It is used when the association is preloaded.
+      For example, if you set `Post.has_many :comments, preload_order: [asc: :content]`,
+      whenever the `:comments` associations is preloaded,
+      the comments will be order by the `:content` field.
+      See `Ecto.Query.order_by/3` for more examples.
+
   ## Examples
 
       defmodule Post do
@@ -1281,6 +1288,12 @@ defmodule Ecto.Schema do
 
     * `:join_where` - A filter for the join table. See "Filtering associations"
       in `has_many/3`
+
+    * `:preload_order` - Sets the default `order_by` of the association.
+      It is used when the association is preloaded.
+      For example, if you set `Post.many_to_many :tags, Tag, join_through: "posts_tags", preload_order: [asc: :foo]`,
+      whenever the `:tags` associations is preloaded, the comments will be order by the `:foo` field.
+      See `Ecto.Query.order_by/3` for more examples.
 
   ## Removing data
 
