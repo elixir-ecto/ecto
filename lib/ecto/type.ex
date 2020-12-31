@@ -493,7 +493,7 @@ defmodule Ecto.Type do
 
   def dump({:array, {_, _, _} = type}, value, dumper), do: array(value, type, dumper, false, [])
   def dump({:array, type}, value, dumper), do: array(value, type, dumper, true, [])
-  def dump({:map, type}, value, dumper), do: map(value, type, dumper, %{})
+  def dump({:map, type}, value, dumper), do: map(value, type, dumper, false, %{})
 
   def dump(:any, value, _dumper), do: {:ok, value}
   def dump(:integer, value, _dumper), do: same_integer(value)
@@ -587,7 +587,7 @@ defmodule Ecto.Type do
 
   def load({:array, {_, _, _} = type}, value, loader), do: array(value, type, loader, false, [])
   def load({:array, type}, value, loader), do: array(value, type, loader, true, [])
-  def load({:map, type}, value, loader), do: map(value, type, loader, %{})
+  def load({:map, type}, value, loader), do: map(value, type, loader, false, %{})
 
   def load(:any, value, _loader), do: {:ok, value}
   def load(:integer, value, _loader), do: same_integer(value)
@@ -780,9 +780,14 @@ defmodule Ecto.Type do
     &array(&1, fun, true, [])
   end
 
+  defp cast_fun({:map, {:parameterized, _, _} = type}) do
+    fun = cast_fun(type)
+    &map(&1, fun, false, %{})
+  end
+
   defp cast_fun({:map, type}) do
     fun = cast_fun(type)
-    &map(&1, fun, %{})
+    &map(&1, fun, true, %{})
   end
 
   defp cast_fun(mod) when is_atom(mod) do
@@ -1208,23 +1213,27 @@ defmodule Ecto.Type do
     :error
   end
 
-  defp map(map, fun, acc) when is_map(map) do
-    map_each(Map.to_list(map), fun, acc)
+  defp map(map, fun, skip_nil?, acc) when is_map(map) do
+    map_each(Map.to_list(map), fun, skip_nil?, acc)
   end
 
-  defp map(_, _, _) do
+  defp map(_, _, _, _) do
     :error
   end
 
-  defp map_each([{key, value} | t], fun, acc) do
+  defp map_each([{key, nil} | t], fun, true, acc) do
+    map_each(t, fun, true, Map.put(acc, key, nil))
+  end
+
+  defp map_each([{key, value} | t], fun, skip_nil?, acc) do
     case fun.(value) do
-      {:ok, value} -> map_each(t, fun, Map.put(acc, key, value))
+      {:ok, value} -> map_each(t, fun, skip_nil?, Map.put(acc, key, value))
       :error -> :error
       {:error, _custom_errors} -> :error
     end
   end
 
-  defp map_each([], _fun, acc) do
+  defp map_each([], _fun, _skip_nil?, acc) do
     {:ok, acc}
   end
 
@@ -1247,22 +1256,22 @@ defmodule Ecto.Type do
     :error
   end
 
-  defp map(map, type, fun, acc) when is_map(map) do
-    map_each(Map.to_list(map), type, fun, acc)
+  defp map(map, type, fun, skip_nil?, acc) when is_map(map) do
+    map_each(Map.to_list(map), type, fun, skip_nil?, acc)
   end
 
-  defp map(_, _, _, _) do
+  defp map(_, _, _, _, _) do
     :error
   end
 
-  defp map_each([{key, value} | t], type, fun, acc) do
+  defp map_each([{key, value} | t], type, fun, skip_nil?, acc) do
     case fun.(type, value) do
-      {:ok, value} -> map_each(t, type, fun, Map.put(acc, key, value))
+      {:ok, value} -> map_each(t, type, fun, skip_nil?, Map.put(acc, key, value))
       :error -> :error
     end
   end
 
-  defp map_each([], _type, _fun, acc) do
+  defp map_each([], _type, _fun, _skip_nil?, acc) do
     {:ok, acc}
   end
 
