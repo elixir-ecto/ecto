@@ -1216,6 +1216,10 @@ defmodule Ecto.Type do
     :error
   end
 
+  defp map_each([{key, nil} | t], fun, acc) do
+    map_each(t, fun, Map.put(acc, key, nil))
+  end
+
   defp map_each([{key, value} | t], fun, acc) do
     case fun.(value) do
       {:ok, value} -> map_each(t, fun, Map.put(acc, key, value))

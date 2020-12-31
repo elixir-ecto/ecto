@@ -84,6 +84,11 @@ defmodule Ecto.TypeTest do
     assert dump({:map, :integer}, %{"a" => 1, "b" => 2}) == {:ok, %{"a" => 1, "b" => 2}}
     assert cast({:map, :integer}, %{"a" => "1", "b" => "2"}) == {:ok, %{"a" => 1, "b" => 2}}
 
+    assert load({:map, :integer}, %{"a" => 1, "b" => nil}) == {:ok, %{"a" => 1, "b" => nil}}
+    assert load({:map, :string}, %{"a" => "1", "b" => nil}) == {:ok, %{"a" => "1", "b" => nil}}
+    assert dump({:map, :integer}, %{"a" => 1, "b" => nil}) == {:ok, %{"a" => 1, "b" => nil}}
+    assert cast({:map, :integer}, %{"a" => "1", "b" => nil}) == {:ok, %{"a" => 1, "b" => nil}}
+
     assert load({:map, {:array, :integer}}, %{"a" => [0, 0], "b" => [1, 1]}) == {:ok, %{"a" => [0, 0], "b" => [1, 1]}}
     assert dump({:map, {:array, :integer}}, %{"a" => [0, 0], "b" => [1, 1]}) == {:ok, %{"a" => [0, 0], "b" => [1, 1]}}
     assert cast({:map, {:array, :integer}}, %{"a" => [0, 0], "b" => [1, 1]}) == {:ok, %{"a" => [0, 0], "b" => [1, 1]}}
