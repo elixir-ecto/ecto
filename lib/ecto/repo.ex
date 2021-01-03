@@ -1144,6 +1144,9 @@ defmodule Ecto.Repo do
       expression to the database without any sanitization, this is useful
       for partial index or index with expressions, such as
       `ON CONFLICT (coalesce(firstname, ""), coalesce(lastname, ""))`.
+    * `:placeholders` - A map with atom keys that contains placeholders. This
+      section is not supported by all databases. See the "Placeholders" section
+      for more information. 
 
   See the "Shared options" section at the module documentation for
   remaining options.
@@ -1196,6 +1199,16 @@ defmodule Ecto.Repo do
   Also note that if `:on_conflict` is a query, MySQL will return
   the number of attempted entries plus the number of entries modified
   by the UPDATE query.
+
+  ## Placeholders
+
+  Passing in a map for the `:placeholders` allows you to send less data over 
+  the wire when you have many entries with the same value for a field. To use 
+  a placeholder, replace its value in each of your entries with `{:placeholder, :key}`, 
+  where `:key` is the key you are using in the `:placeholders` option map. To prevent
+  ambiguous behavior, a placeholder key can only be used with columns of the same type.
+  Placeholders require a database that supports index parameters, so they are
+  not currently compatible with MySQL.
   """
   @callback insert_all(
               schema_or_source :: binary | {binary, module} | module,

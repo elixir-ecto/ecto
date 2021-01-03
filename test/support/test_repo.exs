@@ -69,7 +69,7 @@ defmodule Ecto.TestAdapter do
 
   ## Schema
 
-  def insert_all(_, meta, header, rows, on_conflict, returning, _opts) do
+  def insert_all(_, meta, header, rows, on_conflict, returning, placeholders, _opts) do
     meta = Map.merge(meta, %{header: header, on_conflict: on_conflict, returning: returning})
     send(self(), {:insert_all, meta, rows})
     {1, nil}

@@ -19,6 +19,7 @@ defmodule Ecto.Adapter.Schema do
   @type filters :: Keyword.t()
   @type constraints :: Keyword.t()
   @type returning :: [atom]
+  @type placeholders :: [term]
   @type options :: Keyword.t()
 
   @type on_conflict ::
@@ -49,6 +50,7 @@ defmodule Ecto.Adapter.Schema do
               [[{atom, term | {Ecto.Query.t(), list()}}]],
               on_conflict,
               returning,
+              placeholders,
               options
             ) :: {integer, [[term]] | nil}
 

@@ -41,7 +41,11 @@ defmodule Ecto.Repo.Schema do
       |> returning(opts)
       |> fields_to_sources(dumper)
 
-    {rows, header} = extract_header_and_fields(rows, schema, dumper, autogen_id, adapter)
+    placeholder_map = Keyword.get(opts, :placeholders, %{})
+
+    {rows, header, placeholder_values} = extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter)
+
+
     counter = fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
     schema_meta = metadata(schema, prefix, source, autogen_id, nil, opts)
 
@@ -51,7 +55,7 @@ defmodule Ecto.Repo.Schema do
     on_conflict = on_conflict(on_conflict, conflict_target, schema_meta, counter, adapter)
 
     {count, rows} =
-      adapter.insert_all(adapter_meta, schema_meta, Map.keys(header), rows, on_conflict, return_sources, opts)
+      adapter.insert_all(adapter_meta, schema_meta, Map.keys(header), rows, on_conflict, return_sources, placeholder_values, opts)
 
     {count, postprocess(rows, return_fields_or_types, adapter, schema, schema_meta)}
   end
@@ -73,46 +77,75 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp extract_header_and_fields(rows, schema, dumper, autogen_id, adapter) do
-    mapper = init_mapper(schema, dumper, adapter)
+  defp extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter) do
+    mapper = init_mapper(schema, dumper, adapter, placeholder_map)
 
-    {rows, {header, has_query?}} =
-      Enum.map_reduce(rows, {%{}, false}, fn fields, acc ->
-        {fields, {header, has_query?}} = Enum.map_reduce(fields, acc, mapper)
+    {rows, {header, has_query?, placeholder_dump, _}} =
+      Enum.map_reduce(rows, {%{}, false, %{}, 1}, fn fields, acc ->
+        {fields, {header, has_query?, placeholder_dump, counter}} = Enum.map_reduce(fields, acc, mapper)
         {fields, header} = autogenerate_id(autogen_id, fields, header, adapter)
-        {fields, {header, has_query?}}
+        {fields, {header, has_query?, placeholder_dump, counter}}
       end)
+
+    placeholder_vals_list = placeholder_dump
+    |> Enum.map(fn {_, {idx, _, value}} ->
+      {idx, value}
+    end)
+    |> Enum.sort
+    |> Enum.map(&elem(&1, 1))
 
     if has_query? do
       rows = plan_query_in_rows(rows, header, adapter)
-      {rows, header}
+      {rows, header, placeholder_vals_list}
     else
-      {rows, header}
+      {rows, header, placeholder_vals_list}
     end
   end
 
-  defp init_mapper(nil, _dumper, _adapter) do
-    fn {field, _} = tuple, {header, has_query?} ->
-      {tuple, {Map.put(header, field, true), has_query?}}
+  defp init_mapper(nil, _dumper, _adapter, _placeholder_map) do
+    fn {field, _} = tuple, {header, has_query?, placeholder_dump, counter} ->
+      {tuple, {Map.put(header, field, true), has_query?, placeholder_dump, counter}}
     end
   end
 
-  defp init_mapper(schema, dumper, adapter) do
-    fn {field, value}, {header, has_query?} ->
-        case dumper do
-          %{^field => {source, type}} ->
-            case value do
-              %Ecto.Query{} = query ->
-                {{source, query}, {Map.put(header, source, true), true}}
+  defp init_mapper(schema, dumper, adapter, placeholder_map) do
+    fn {field, value}, {header, has_query?, placeholder_dump, counter} ->
+      case dumper do
+        %{^field => {source, type}} ->
+          case value do
+            %Ecto.Query{} = query ->
+              {{source, query}, {Map.put(header, source, true), true, placeholder_dump, counter}}
 
-              value ->
-                value = dump_field!(:insert_all, schema, field, type, value, adapter)
-                {{source, value}, {Map.put(header, source, true), has_query?}}
-            end
-          %{} ->
-            raise ArgumentError, "unknown field `#{inspect(field)}` in schema #{inspect(schema)} given to " <>
-                                 "insert_all. Note virtual fields and associations are not supported"
-        end
+            {:placeholder, key} ->
+              {placeholder_dump, idx, counter} = case placeholder_dump do
+                %{^key => {idx, ^type, _}} = map -> {map, idx, counter}
+
+                %{^key => {_, type, _}} = map ->
+                  raise ArgumentError, "a placeholder key can only be used with columns of the same type. " <>
+                                       "The key #{inspect(key)} has already been dumped as a #{inspect(type)}"
+
+                map ->
+                  dumpped_value = case placeholder_map do
+                    %{^key => val} ->
+                      dump_field!(:insert_all, schema, field, type, val, adapter)
+                    _ ->
+                      raise KeyError, "placeholder key #{inspect(key)} not found in #{inspect(placeholder_map)}"
+                  end     
+
+                  {Map.put(map, key, {counter, type, dumpped_value}), counter, counter + 1}
+              end
+
+              {{source, {:placeholder, idx}},
+                {Map.put(header, source, true), has_query?, placeholder_dump, counter}}
+
+            value ->
+              value = dump_field!(:insert_all, schema, field, type, value, adapter)
+              {{source, value}, {Map.put(header, source, true), has_query?, placeholder_dump, counter}}
+          end
+        %{} ->
+          raise ArgumentError, "unknown field `#{inspect(field)}` in schema #{inspect(schema)} given to " <>
+                               "insert_all. Note virtual fields and associations are not supported"
+      end
     end
   end
 
