@@ -503,7 +503,7 @@ defmodule Ecto.Changeset.BelongsToTest do
 
     assert Map.has_key?(changeset.changes, :profile)
 
-    # On emptuy with change
+    # On empty with change
     changeset =
       %Author{profile: nil}
       |> Changeset.change(profile: %Profile{})

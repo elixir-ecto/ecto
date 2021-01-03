@@ -200,7 +200,7 @@ defmodule Ecto.Schema do
   your schema definition. They are not mutually exclusive and can be used
   together.
 
-  Using `@primary_key` should be prefered for single field primary keys and
+  Using `@primary_key` should be preferred for single field primary keys and
   sharing primary key definitions between multiple schemas using macros.
   Setting `@primary_key` also automatically configures the reference types
   for `has_one` and `has_many` associations.

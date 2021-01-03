@@ -1493,7 +1493,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{upvotes: 1}
     assert prepared_changes(changeset) == %{upvotes: 2}
 
-    # Assert default increment will rollover to 1 when the current one is equal or graeter than 2_147_483_647
+    # Assert default increment will rollover to 1 when the current one is equal or greater than 2_147_483_647
     changeset = changeset(%Post{upvotes: 2_147_483_647}, %{}) |> optimistic_lock(:upvotes)
     assert changeset.filters == %{upvotes: 2_147_483_647}
     assert changeset.changes == %{}

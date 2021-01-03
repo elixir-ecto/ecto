@@ -2,7 +2,7 @@
 
 This guide is an introduction to [Ecto](https://github.com/elixir-lang/ecto),
 the database wrapper and query generator for Elixir. Ecto provides a
-standardised API and a set of abstractions for talking to all the different
+standardized API and a set of abstractions for talking to all the different
 kinds of databases, so that Elixir developers can query whatever database
 they're using by employing similar constructs.
 
@@ -637,7 +637,7 @@ last_name = "Smith"
 Ecto.Query.from(p in Friends.Person, where: p.last_name == ^last_name) |> Friends.Repo.all
 ```
 
-The pin operator instructs the query builder to use parameterised SQL queries protecting against SQL injection.
+The pin operator instructs the query builder to use parameterized SQL queries protecting against SQL injection.
 
 ### Composing Ecto queries
 

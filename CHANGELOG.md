@@ -292,7 +292,7 @@ v3.2 requires Elixir v1.6+.
 
   * [Ecto.Association] Ensure we delete an association before inserting when replacing on `has_one`
   * [Ecto.Query] Do not allow interpolated `nil` in literal keyword list when building query
-  * [Ecto.Query] Do not remove literals from combinations, otherwise UNION/INTERSECTION queries may not match the nummber of values in `select`
+  * [Ecto.Query] Do not remove literals from combinations, otherwise UNION/INTERSECTION queries may not match the number of values in `select`
   * [Ecto.Query] Do not attempt to merge at compile-time non-keyword lists given to `select_merge`
   * [Ecto.Repo] Do not override `:through` associations on preload unless forcing
   * [Ecto.Repo] Make sure prefix option cascades to combinations and recursive queries

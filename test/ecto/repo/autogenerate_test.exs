@@ -125,7 +125,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     use Ecto.Schema
 
     @primary_key {:id, ParameterizedTypePrefixedID, autogenerate: true, prefix: "pk"}
-    schema "paramaeterized_type_schema" do
+    schema "parameterized_type_schema" do
       field :code, ParameterizedTypePrefixedUUID, autogenerate: true, prefix: "code"
     end
   end
