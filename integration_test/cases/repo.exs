@@ -960,6 +960,7 @@ defmodule Ecto.Integration.RepoTest do
       placeholders = %{foo: 100, bar: "test"}
       bar_ph = {:placeholder, :bar}
       foo_ph = {:placeholder, :foo}
+
       entries = [
         %{intensity: 1.0, title: bar_ph, posted: ~D[2020-12-21], visits: foo_ph},
         %{intensity: 2.0, title: bar_ph, posted: ~D[2000-12-21], visits: foo_ph}
@@ -971,7 +972,7 @@ defmodule Ecto.Integration.RepoTest do
       assert [{1.0, "test", 100}, {2.0, "test", 100}] == TestRepo.all(query)
     end
 
-    test "Repo.insert_all accepts non atom placeholder keys" do
+    test "Repo.insert_all accepts non-atom placeholder keys" do
       placeholders = %{10 => "integer key", {:foo, :bar} => "tuple key"}
       entries = [%{text: {:placeholder, 10}}, %{text: {:placeholder, {:foo, :bar}}}]
       TestRepo.insert_all(Comment, entries, placeholders: placeholders)

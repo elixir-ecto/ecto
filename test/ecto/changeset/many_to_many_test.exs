@@ -222,7 +222,6 @@ defmodule Ecto.Changeset.ManyToManyTest do
     end
   end
 
-  @tag :thisone
   test "cast many_to_many with on_replace: :mark_as_invalid" do
     schema = %Author{invalid_posts: [%Post{id: 1}]}
 

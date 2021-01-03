@@ -35,16 +35,15 @@ defmodule Ecto.Repo.Schema do
     {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     autogen_id = schema && schema.__schema__(:autogenerate_id)
     dumper = schema && schema.__schema__(:dump)
+    placeholder_map = Keyword.get(opts, :placeholders, %{})
 
     {return_fields_or_types, return_sources} =
       schema
       |> returning(opts)
       |> fields_to_sources(dumper)
 
-    placeholder_map = Keyword.get(opts, :placeholders, %{})
-
-    {rows, header, placeholder_values} = extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter)
-
+    {rows, header, placeholder_values} =
+      extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter)
 
     counter = fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
     schema_meta = metadata(schema, prefix, source, autogen_id, nil, opts)
@@ -87,12 +86,13 @@ defmodule Ecto.Repo.Schema do
         {fields, {header, has_query?, placeholder_dump, counter}}
       end)
 
-    placeholder_vals_list = placeholder_dump
-    |> Enum.map(fn {_, {idx, _, value}} ->
-      {idx, value}
-    end)
-    |> Enum.sort
-    |> Enum.map(&elem(&1, 1))
+    placeholder_vals_list =
+      placeholder_dump
+      |> Enum.map(fn {_, {idx, _, value}} ->
+        {idx, value}
+      end)
+      |> Enum.sort
+      |> Enum.map(&elem(&1, 1))
 
     if has_query? do
       rows = plan_query_in_rows(rows, header, adapter)
@@ -118,19 +118,23 @@ defmodule Ecto.Repo.Schema do
 
             {:placeholder, key} ->
               {placeholder_dump, idx, counter} = case placeholder_dump do
-                %{^key => {idx, ^type, _}} = map -> {map, idx, counter}
+                %{^key => {idx, ^type, _}} = map ->
+                  {map, idx, counter}
 
-                %{^key => {_, type, _}} = map ->
-                  raise ArgumentError, "a placeholder key can only be used with columns of the same type. " <>
-                                       "The key #{inspect(key)} has already been dumped as a #{inspect(type)}"
+                %{^key => {_, type, _}} ->
+                  raise ArgumentError,
+                        "a placeholder key can only be used with columns of the same type. " <>
+                          "The key #{inspect(key)} has already been dumped as a #{inspect(type)}"
 
                 map ->
-                  dumpped_value = case placeholder_map do
-                    %{^key => val} ->
-                      dump_field!(:insert_all, schema, field, type, val, adapter)
-                    _ ->
-                      raise KeyError, "placeholder key #{inspect(key)} not found in #{inspect(placeholder_map)}"
-                  end     
+                  dumpped_value =
+                    case placeholder_map do
+                      %{^key => val} ->
+                        dump_field!(:insert_all, schema, field, type, val, adapter)
+                      _ ->
+                        raise KeyError,
+                              "placeholder key #{inspect(key)} not found in #{inspect(placeholder_map)}"
+                      end
 
                   {Map.put(map, key, {counter, type, dumpped_value}), counter, counter + 1}
               end
@@ -143,8 +147,9 @@ defmodule Ecto.Repo.Schema do
               {{source, value}, {Map.put(header, source, true), has_query?, placeholder_dump, counter}}
           end
         %{} ->
-          raise ArgumentError, "unknown field `#{inspect(field)}` in schema #{inspect(schema)} given to " <>
-                               "insert_all. Note virtual fields and associations are not supported"
+          raise ArgumentError,
+                "unknown field `#{inspect(field)}` in schema #{inspect(schema)} given to " <>
+                  "insert_all. Note virtual fields and associations are not supported"
       end
     end
   end
