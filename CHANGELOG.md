@@ -79,6 +79,7 @@ v3.5 requires Elixir v1.8+.
   * [Ecto.Schema] Do not validate uniqueness if there is a prior error on the field
   * [Ecto.Schema] Allow `redact: true` in `field`
   * [Ecto.Schema] Support parameterized types via `Ecto.ParameterizedType`
+  * [Ecto.Schema] Rewrite embeds and assocs as parameterized types. This means `__schema__(:type, assoc_or_embed)` now returns a parameterized type. To check if something is an association, use `__schema__(:assocs)` or `__schema__(:embeds)` instead
 
 ## v3.4.6 (2020-08-07)
 
