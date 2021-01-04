@@ -41,6 +41,7 @@ defmodule Ecto.Association do
                optional(atom) => any}
 
   alias Ecto.Query.{BooleanExpr, QueryExpr, FromExpr}
+  alias Ecto.Query.Builder.OrderBy
 
   @doc """
   Helper to check if a queryable is compiled.
@@ -383,6 +384,38 @@ defmodule Ecto.Association do
                 "or a {module, fun, args} tuple, got: `#{inspect defaults}`"
 
   @doc """
+  Validates `preload_order` for association named `name`.
+  """
+  def validate_preload_order!(name, preload_order) when is_list(preload_order) do
+    Enum.map(preload_order, fn
+      field when is_atom(field) ->
+        field
+
+      {direction, field} when is_atom(direction) and is_atom(field) ->
+        unless OrderBy.valid_direction?(direction) do
+          raise ArgumentError,
+          "expected `:preload_order` for #{inspect name} to be a keyword list, " <>
+            "got: `#{inspect preload_order}` " <>
+            "#{inspect direction} is invalid"
+        end
+
+        {direction, field}
+
+      item ->
+        raise ArgumentError,
+          "expected `:preload_order` for #{inspect name} to be a keyword list, " <>
+            "got: `#{inspect preload_order}` " <>
+            "#{inspect item} is not valid"
+    end)
+  end
+
+  def validate_preload_order!(name, preload_order) do
+    raise ArgumentError,
+      "expected `:preload_order` for #{inspect name} to be a keyword list, " <>
+        "got: `#{inspect preload_order}`"
+  end
+
+  @doc """
   Merges source from query into to the given schema.
 
   In case the query does not have a source, returns
@@ -622,16 +655,11 @@ defmodule Ecto.Association.Has do
     end
 
     defaults = Ecto.Association.validate_defaults!(name, opts[:defaults] || [])
+    preload_order = Ecto.Association.validate_preload_order!(name, opts[:preload_order] || [])
     where = opts[:where] || []
 
     unless is_list(where) do
       raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
-    end
-
-    preload_order = opts[:preload_order] || []
-
-    unless is_list(preload_order) do
-      raise ArgumentError, "expected `:preload_order` for #{inspect name} to be a keyword list, got: `#{inspect preload_order}`"
     end
 
     %__MODULE__{
@@ -1091,9 +1119,9 @@ defmodule Ecto.Association.ManyToMany do
 
     where = opts[:where] || []
     join_where = opts[:join_where] || []
-    preload_order = opts[:preload_order] || []
     defaults = Ecto.Association.validate_defaults!(name, opts[:defaults] || [])
     join_defaults = Ecto.Association.validate_defaults!(name, opts[:join_defaults] || [])
+    preload_order = Ecto.Association.validate_preload_order!(name, opts[:preload_order] || [])
 
     unless is_list(where) do
       raise ArgumentError, "expected `:where` for #{inspect name} to be a keyword list, got: `#{inspect where}`"
@@ -1101,10 +1129,6 @@ defmodule Ecto.Association.ManyToMany do
 
     unless is_list(join_where) do
       raise ArgumentError, "expected `:join_where` for #{inspect name} to be a keyword list, got: `#{inspect join_where}`"
-    end
-
-    unless is_list(preload_order) do
-      raise ArgumentError, "expected `:preload_order` for #{inspect name} to be a keyword list, got: `#{inspect preload_order}`"
     end
 
     if opts[:join_defaults] && is_binary(join_through) do
