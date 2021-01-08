@@ -83,7 +83,7 @@ By calling `Ecto.Changeset.cast_assoc/3`, Ecto will look for a "todo_items" key 
   * if a todo item sent as parameter does not have an ID (nor a matching ID), we consider that todo item should be inserted
   * if a todo item is currently associated but its ID was not sent as parameter, we consider the todo item is being replaced and we act according to the `:on_replace` callback. By default `:on_replace` will raise so you choose a behaviour between replacing, deleting, ignoring or nilifying the association
 
-The advantage of using `cast_assoc/3` is that Ecto is able to do all of the hard work of keeping the entries associated, **as long as we pass the data exactly in the format that Ecto expects**. However, such approach is not always preferrable and in many situations it is better to design our associations differently or decouple our UIs from our database representation.
+The advantage of using `cast_assoc/3` is that Ecto is able to do all of the hard work of keeping the entries associated, **as long as we pass the data exactly in the format that Ecto expects**. However, such approach is not always preferable and in many situations it is better to design our associations differently or decouple our UIs from our database representation.
 
 ## Polymorphic todo items
 

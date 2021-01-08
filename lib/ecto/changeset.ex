@@ -1732,7 +1732,7 @@ defmodule Ecto.Changeset do
   partial updates. For example, on `insert` all fields would be required,
   because their default values on the data are all `nil`, but on `update`,
   if you don't want to change a field that has been previously set,
-  you are not required to pass it as a paramater, since `validate_required/3`
+  you are not required to pass it as a parameter, since `validate_required/3`
   won't add an error for missing changes as long as the value in the
   data given to the `changeset` is not empty.
 
