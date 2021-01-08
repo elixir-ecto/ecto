@@ -394,24 +394,24 @@ defmodule Ecto.Association do
       {direction, field} when is_atom(direction) and is_atom(field) ->
         unless OrderBy.valid_direction?(direction) do
           raise ArgumentError,
-          "expected `:preload_order` for #{inspect name} to be a keyword list, " <>
-            "got: `#{inspect preload_order}` " <>
-            "#{inspect direction} is invalid"
+          "expected `:preload_order` for #{inspect name} to be a keyword list or a list of atoms/fields, " <>
+            "got: `#{inspect preload_order}`, " <>
+            "`#{inspect direction}` is not a valid direction"
         end
 
         {direction, field}
 
       item ->
         raise ArgumentError,
-          "expected `:preload_order` for #{inspect name} to be a keyword list, " <>
-            "got: `#{inspect preload_order}` " <>
-            "#{inspect item} is not valid"
+          "expected `:preload_order` for #{inspect name} to be a keyword list or a list of atoms/fields, " <>
+            "got: `#{inspect preload_order}`, " <>
+            "`#{inspect item}` is not valid"
     end)
   end
 
   def validate_preload_order!(name, preload_order) do
     raise ArgumentError,
-      "expected `:preload_order` for #{inspect name} to be a keyword list, " <>
+      "expected `:preload_order` for #{inspect name} to be a keyword list or a list of atoms/fields, " <>
         "got: `#{inspect preload_order}`"
   end
 

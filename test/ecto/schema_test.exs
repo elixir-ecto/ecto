@@ -836,7 +836,7 @@ defmodule Ecto.SchemaTest do
 
   describe "preload_order option" do
     test "invalid option" do
-      message = "expected `:preload_order` for :posts to be a keyword list, got: `:title`"
+      message = "expected `:preload_order` for :posts to be a keyword list or a list of atoms/fields, got: `:title`"
       assert_raise ArgumentError, message, fn ->
         defmodule ThroughMatch do
           use Ecto.Schema
@@ -849,7 +849,8 @@ defmodule Ecto.SchemaTest do
     end
 
     test "invalid direction" do
-      message = "expected `:preload_order` for :posts to be a keyword list, got: `[invalid_direction: :title]` :invalid_direction is invalid"
+      message = "expected `:preload_order` for :posts to be a keyword list or a list of atoms/fields, " <>
+                  "got: `[invalid_direction: :title]`, `:invalid_direction` is not a valid direction"
       assert_raise ArgumentError, message, fn ->
         defmodule ThroughMatch do
           use Ecto.Schema
@@ -862,7 +863,8 @@ defmodule Ecto.SchemaTest do
     end
 
     test "invalid item" do
-      message = "expected `:preload_order` for :posts to be a keyword list, got: `[\"text\"]` \"text\" is not valid"
+      message = "expected `:preload_order` for :posts to be a keyword list or a list of atoms/fields, " <>
+                  "got: `[\"text\"]`, `\"text\"` is not valid"
       assert_raise ArgumentError, message, fn ->
         defmodule ThroughMatch do
           use Ecto.Schema
