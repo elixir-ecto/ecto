@@ -1,6 +1,6 @@
 # Composable transactions with Multi
 
-Ecto relies on database transactions when multiple operations must be performed atomically. The most common example used for transaction are bank transfers between two people:
+Ecto relies on database transactions when multiple operations must be performed atomically. The most common example used for transactions are bank transfers between two people:
 
 ```elixir
 Repo.transaction(fn ->
@@ -66,7 +66,7 @@ Repo.transaction(fn ->
 end)
 ```
 
-The snippet above starts a transaction and then calls `transfer_money/3` that also runs in a transaction. In case of multiple transactions, they are all flattened, which means a failure in an inner transaction causes the outer transaction to also fail. That's why matching and rolling back on `{:error, error}` is important.
+The snippet above starts a transaction and then calls `transfer_money/3` that also runs in a transaction. In the case of multiple transactions, they are all flattened, which means a failure in an inner transaction causes the outer transaction to also fail. That's why matching and rolling back on `{:error, error}` is important.
 
 While nesting transactions can improve the code readability by breaking large transactions into multiple smaller transactions, there is still a lot of boilerplate involved in handling the success and failure scenarios. Furthermore, composition is quite limited, as all operations must still be performed inside transaction blocks.
 
@@ -92,7 +92,7 @@ Ecto.Multi.new()
 |> Ecto.Multi.update_all(:john, john_update)
 ```
 
-`Ecto.Multi` is a data structure that defines multiple operations that must be performed together, without worrying about when they will be executed. `Ecto.Multi` mirrors most of the `Ecto.Repo` API, with the difference each operation must be explicitly named. In the example above, we have defined two update operations, named `:mary` and `:john`. As we will see later, the names are important when handling the transaction results.
+`Ecto.Multi` is a data structure that defines multiple operations that must be performed together, without worrying about when they will be executed. `Ecto.Multi` mirrors most of the `Ecto.Repo` API, with the difference that each operation must be explicitly named. In the example above, we have defined two update operations, named `:mary` and `:john`. As we will see later, the names are important when handling the transaction results.
 
 Since `Ecto.Multi` is just a data structure, we can pass it as argument to other functions, as well as return it. Assuming the multi above is moved into its own function, defined as `transfer_money(mary, john, value)`,  we can add a new operation to the multi that logs the transfer as follows:
 
@@ -135,7 +135,7 @@ In other words, `Ecto.Multi` takes care of all the flow control boilerplate whil
 
 Besides operations such as `insert`, `update` and `delete`, `Ecto.Multi` also provides functions for handling more complex scenarios. For example, `prepend` and `append` can be used to merge multis together. And more generally, the `Ecto.Multi.run/3` and `Ecto.Multi.run/5` can be used to define any operation that depends on the results of a previous multi operation.
 
-Let's study a more practical example. In [Constraints and Upserts](Constraints and Upserts.md), we want to modify a post while possibly giving it a list of tags as a string separated by commas. At the end of the guide, we present a solution that insert any missing tag and then fetch all of them using only two queries:
+Let's study a more practical example. In [Constraints and Upserts](Constraints and Upserts.md), we want to modify a post while possibly giving it a list of tags as a string separated by commas. At the end of the guide, we present a solution that inserts any missing tag and then fetches all of them using only two queries:
 
 ```elixir
 defmodule MyApp.Post do
