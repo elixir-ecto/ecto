@@ -1617,7 +1617,7 @@ defmodule Ecto.Changeset do
 
   An additional keyword list `keys` can be passed to provide additional
   contextual information for the error. This is useful when using
-  `traverse_errors/2`
+  `traverse_errors/2` and when translating errors with `Gettext`
 
   ## Examples
 
@@ -1632,6 +1632,13 @@ defmodule Ecto.Changeset do
       iex> changeset = add_error(changeset, :title, "empty", additional: "info")
       iex> changeset.errors
       [title: {"empty", [additional: "info"]}]
+      iex> changeset.valid?
+      false
+
+      iex> changeset = change(%Post{}, %{tags: ["ecto", "elixir", "x"]})
+      iex> changeset = add_error(changeset, :tags, "tag '%{val}' is too short", val: "x")
+      iex> changeset.errors
+      [tags: {"tag '%{val}' is too short", [val: "x"]}]
       iex> changeset.valid?
       false
   """
