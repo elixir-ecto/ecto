@@ -267,6 +267,13 @@ defmodule Ecto.Query.Builder do
   def escape(atom, type, params_acc, vars, _env) when is_atom(atom),
     do: {literal(atom, type, vars), params_acc}
 
+  # negate any expression
+  def escape({:-, meta, arg}, type, params_acc, vars, env) do
+    {escaped_arg, params_acc} = escape(arg, type, params_acc, vars, env)
+    expr = {:{}, [], [:-, meta, escaped_arg]}
+    {expr, params_acc}
+  end
+
   # comparison operators
   def escape({comp_op, _, [left, right]} = expr, type, params_acc, vars, env)
       when comp_op in ~w(== != < > <= >=)a do
