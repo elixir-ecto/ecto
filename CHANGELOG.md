@@ -1,5 +1,21 @@
 # Changelog for v3.x
 
+## v3.6.0-dev
+
+### Enhancements
+
+  * [Ecto.Enum] Allow enums to map to custom values
+  * [Ecto.Query] Allow unary minus
+  * [Ecto.Repo] Add `placeholders` support to `insert_all`
+  * [Ecto.Schema] Support `:repo_opts` in `unsafe_validate_unique`
+  * [Ecto.UUID] Add bang UUID conversion methods
+
+### Bug fixes
+
+  * [Ecto.Changeset] Change `apply_changes/1` to add the relation to the `struct.relation_id` if relation struct is persisted
+  * [Ecto.Query] Remove unnecessary INNER JOIN in mant to many association query
+  * [Ecto.Schema] Raise `ArgumentError` when default has invalid type
+
 ## v3.5.5 (2020-11-12)
 
 ### Enhancements
