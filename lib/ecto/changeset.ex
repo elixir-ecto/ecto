@@ -1491,7 +1491,8 @@ defmodule Ecto.Changeset do
     Enum.reduce(changes, data, fn {key, value}, acc ->
       case Map.fetch(types, key) do
         {:ok, {tag, relation}} when tag in @relations ->
-          Map.put(acc, key, Relation.apply_changes(relation, value))
+          apply_relation_changes(acc, key, relation, value)
+
         {:ok, _} ->
           Map.put(acc, key, value)
         :error ->
@@ -2951,6 +2952,17 @@ defmodule Ecto.Changeset do
         end
       {_, _}, acc ->
         acc
+    end
+  end
+
+  defp apply_relation_changes(acc, key, relation, value) do
+    relation_changed = Relation.apply_changes(relation, value)
+
+    acc = Map.put(acc, key, relation_changed)
+
+    case relation do
+      %Ecto.Association.BelongsTo{} -> Map.put(acc, relation.owner_key, relation_changed.id)
+      _ -> acc
     end
   end
 end
