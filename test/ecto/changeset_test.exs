@@ -745,13 +745,19 @@ defmodule Ecto.ChangesetTest do
 
   test "apply_changes/1" do
     post = %Post{}
+    category = %Category{name: "bar"}
+
     assert post.title == ""
 
-    changeset = changeset(post, %{"title" => "foo"})
+    changeset = post
+    |> changeset(%{"title" => "foo"})
+    |> put_assoc(:category, category)
+
     changed_post = apply_changes(changeset)
 
     assert changed_post.__struct__ == post.__struct__
     assert changed_post.title == "foo"
+    assert changed_post.category_id == category.id
   end
 
   describe "apply_action/2" do
