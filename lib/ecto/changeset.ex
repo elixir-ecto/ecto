@@ -1972,8 +1972,9 @@ defmodule Ecto.Changeset do
   @doc ~S"""
   Validates a change, of type enum, is a subset of the given enumerable. 
 
-  If you need to validate if a value is inside a given enumerable, you
-  should use `validate_inclusion/4` instead.
+  This validates if a list of values belongs to the given enumerable.
+  If you need to validate if a single value is inside the given enumerable,
+  you should use `validate_inclusion/4` instead.
 
   ## Options
 
