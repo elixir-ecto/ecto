@@ -219,7 +219,7 @@ defmodule Ecto.Repo.Preloader do
       case card do
         :many ->
           update_in query.order_bys, fn order_bys ->
-            [%Ecto.Query.QueryExpr{expr: [asc: field], params: [],
+            [%Ecto.Query.QueryExpr{expr: preload_order(assoc, query, field), params: [],
                                    file: __ENV__.file, line: __ENV__.line}|order_bys]
           end
         :one ->
@@ -271,6 +271,17 @@ defmodule Ecto.Repo.Preloader do
 
     We expected a tuple but we got: #{inspect(entry)}
     """
+
+  defp preload_order(assoc, query, related_field) do
+    custom_order_by = Enum.map(assoc.preload_order, fn
+      {direction, field} ->
+        {direction, related_key_to_field(query, {0, field})}
+      field ->
+        {:asc, related_key_to_field(query, {0, field})}
+    end)
+
+    [{:asc, related_field} | custom_order_by]
+  end
 
   defp related_key_to_field(query, {pos, key, field_type}) do
     field_ast = related_key_to_field(query, {pos, key})

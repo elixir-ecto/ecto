@@ -833,4 +833,47 @@ defmodule Ecto.SchemaTest do
       assert %{json: {:array, :any}} = FieldAnyNested.__changeset__()
     end
   end
+
+  describe "preload_order option" do
+    test "invalid option" do
+      message = "expected `:preload_order` for :posts to be a keyword list or a list of atoms/fields, got: `:title`"
+      assert_raise ArgumentError, message, fn ->
+        defmodule ThroughMatch do
+          use Ecto.Schema
+
+          schema "assoc" do
+            has_many :posts, Post, preload_order: :title
+          end
+        end
+      end
+    end
+
+    test "invalid direction" do
+      message = "expected `:preload_order` for :posts to be a keyword list or a list of atoms/fields, " <>
+                  "got: `[invalid_direction: :title]`, `:invalid_direction` is not a valid direction"
+      assert_raise ArgumentError, message, fn ->
+        defmodule ThroughMatch do
+          use Ecto.Schema
+
+          schema "assoc" do
+            has_many :posts, Post, preload_order: [invalid_direction: :title]
+          end
+        end
+      end
+    end
+
+    test "invalid item" do
+      message = "expected `:preload_order` for :posts to be a keyword list or a list of atoms/fields, " <>
+                  "got: `[\"text\"]`, `\"text\"` is not valid"
+      assert_raise ArgumentError, message, fn ->
+        defmodule ThroughMatch do
+          use Ecto.Schema
+
+          schema "assoc" do
+            has_many :posts, Post, preload_order: ["text"]
+          end
+        end
+      end
+    end
+  end
 end
