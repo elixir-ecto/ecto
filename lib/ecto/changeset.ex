@@ -1263,6 +1263,8 @@ defmodule Ecto.Changeset do
       If no comment with such id exists, one is created on the fly.
       Since only a single comment was given, any other associated comment
       will be replaced. On all cases, it is expected the keys to be atoms.
+      Opposite to `cast_assoc` and `embed_assoc`, the given map (or struct)
+      is not validated in any way and will be inserted as is.
       This API is mostly used in scripts and tests, to make it straight-
       forward to create schemas with associations at once, such as:
 
