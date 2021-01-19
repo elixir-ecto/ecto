@@ -214,8 +214,14 @@ defmodule Ecto.Query.Planner do
   Prepare all sources, by traversing and expanding from, joins, subqueries.
   """
   def plan_sources(query, adapter) do
-    {from, sources} = plan_from(query, adapter)
-    {joins, sources, tail_sources} = plan_joins(query, sources, length(query.joins), adapter)
+    {from, source} = plan_from(query, adapter)
+
+    # Set up the initial source so we can refer
+    # to the parent in subqueries in joins
+    query = %{query | sources: {source}}
+
+    {joins, sources, tail_sources} = plan_joins(query, [source], length(query.joins), adapter)
+
     %{query | from: from,
               joins: joins |> Enum.reverse,
               sources: (tail_sources ++ sources) |> Enum.reverse |> List.to_tuple()}
@@ -226,8 +232,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp plan_from(%{from: from} = query, adapter) do
-    {from, source} = plan_source(query, from, adapter)
-    {from, [source]}
+    plan_source(query, from, adapter)
   end
 
   defp plan_source(query, %{source: %Ecto.SubQuery{} = subquery, prefix: prefix} = expr, adapter) do
@@ -254,7 +259,13 @@ defmodule Ecto.Query.Planner do
 
   defp plan_subquery(subquery, query, prefix, adapter, source?) do
     %{query: inner_query} = subquery
-    inner_query = %{inner_query | prefix: prefix || subquery.query.prefix || query.prefix}
+
+    inner_query = %{
+      inner_query
+      | prefix: prefix || subquery.query.prefix || query.prefix,
+        aliases: Map.put(inner_query.aliases, @parent_as, query)
+    }
+
     {inner_query, params, key} = plan(inner_query, :all, adapter)
     assert_no_subquery_assocs!(inner_query)
 
@@ -263,6 +274,7 @@ defmodule Ecto.Query.Planner do
       |> ensure_select(true)
       |> normalize_subquery_select(adapter, source?)
 
+    {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
     %{subquery | query: inner_query, params: params, cache: key, select: select}
   rescue
     e -> raise Ecto.SubQueryError, query: query, exception: e
@@ -734,6 +746,7 @@ defmodule Ecto.Query.Planner do
 
   defp finalize_cache(query, operation, cache) do
     %{assocs: assocs, prefix: prefix, lock: lock, select: select, aliases: aliases} = query
+    aliases = Map.delete(aliases, @parent_as)
 
     cache =
       case select do
@@ -1594,14 +1607,19 @@ defmodule Ecto.Query.Planner do
   end
 
   defp get_ix!({:parent_as, meta, [as]}, kind, query) do
-    if kind == :select do
-      error!(query, "parent_as is not currently supported on select, found `parent_as(#{inspect(as)})`")
-    end
-
     case query.aliases[@parent_as] do
-      %{aliases: %{^as => ix}} = query -> {ix, {:parent_as, [], [{:&, meta, [ix]}]}, query}
-      %{} -> error!(query, "could not find named binding `parent_as(#{inspect(as)})`")
-      nil -> error!(query, "`parent_as(#{inspect(as)})` can only be used in subqueries")
+      %{aliases: %{^as => ix}, sources: sources} = query ->
+        if kind == :select and not (ix < tuple_size(sources)) do
+          error!(query, "the parent_as in a subquery select used as a join can only access the `from` binding")
+        else
+          {ix, {:parent_as, [], [{:&, meta, [ix]}]}, query}
+        end
+
+      %{} ->
+        error!(query, "could not find named binding `parent_as(#{inspect(as)})`")
+
+      nil ->
+        error!(query, "`parent_as(#{inspect(as)})` can only be used in subqueries")
     end
   end
 
