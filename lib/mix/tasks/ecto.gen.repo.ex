@@ -69,7 +69,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
         create_file config_path, config_first_line <> "\n\n" <> config_template(opts)
     end
 
-    open?(config_path)
+    open?(config_path, 3)
 
     Mix.shell().info """
     Don't forget to add your new repo to your supervision tree
