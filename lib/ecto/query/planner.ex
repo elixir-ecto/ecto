@@ -1140,7 +1140,7 @@ defmodule Ecto.Query.Planner do
 
   defp prewalk({{:., dot_meta, [left, field]}, meta, []},
                kind, query, expr, acc, _adapter) do
-    {ix, ix_expr, ix_query} = get_ix!(left, query)
+    {ix, ix_expr, ix_query} = get_ix!(left, kind, query)
     extra = if kind == :select, do: [type: type!(kind, ix_query, expr, ix, field)], else: []
     field = field_source(get_source!(kind, ix_query, ix), field)
     {{{:., extra ++ dot_meta, [ix_expr, field]}, meta, []}, acc}
@@ -1582,18 +1582,22 @@ defmodule Ecto.Query.Planner do
     {{:., [], [{:&, [], [ix]}, field]}, [], []}
   end
 
-  defp get_ix!({:&, _, [ix]} = expr, query) do
+  defp get_ix!({:&, _, [ix]} = expr, _kind, query) do
     {ix, expr, query}
   end
 
-  defp get_ix!({:as, meta, [as]}, query) do
+  defp get_ix!({:as, meta, [as]}, _kind, query) do
     case query.aliases do
       %{^as => ix} -> {ix, {:&, meta, [ix]}, query}
       %{} -> error!(query, "could not find named binding `as(#{inspect(as)})`")
     end
   end
 
-  defp get_ix!({:parent_as, meta, [as]}, query) do
+  defp get_ix!({:parent_as, meta, [as]}, kind, query) do
+    if kind == :select do
+      error!(query, "parent_as is not currently supported on select, found `parent_as(#{inspect(as)})`")
+    end
+
     case query.aliases[@parent_as] do
       %{aliases: %{^as => ix}} = query -> {ix, {:parent_as, [], [{:&, meta, [ix]}]}, query}
       %{} -> error!(query, "could not find named binding `parent_as(#{inspect(as)})`")

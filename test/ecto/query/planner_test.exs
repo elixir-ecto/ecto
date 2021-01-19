@@ -783,6 +783,11 @@ defmodule Ecto.Query.PlannerTest do
     query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
     assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(&0).posted() == &0.posted()"
 
+    assert_raise Ecto.SubQueryError, ~r/parent_as is not currently supported on select/, fn ->
+      child = from(c in Comment, select: %{map: parent_as(:posts).posted})
+      from(Post, as: :posts, join: c in subquery(child)) |> normalize()
+    end
+
     assert_raise Ecto.SubQueryError, ~r/could not find named binding `parent_as\(:posts\)`/, fn ->
       from(Post, join: c in subquery(child)) |> normalize()
     end
