@@ -559,7 +559,7 @@ defmodule Ecto.Association.Has do
 
   @behaviour Ecto.Association
   @on_delete_opts [:nothing, :nilify_all, :delete_all]
-  @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify]
+  @on_replace_opts [:raise, :mark_as_invalid, :delete, :delete_if_exists, :nilify]
   @has_one_on_replace_opts @on_replace_opts ++ [:update]
   defstruct [:cardinality, :field, :owner, :related, :owner_key, :related_key, :on_cast,
              :queryable, :on_delete, :on_replace, where: [], unique: true, defaults: [],
@@ -679,6 +679,15 @@ defmodule Ecto.Association.Has do
   end
 
   @impl true
+  def on_repo_change(%{on_replace: :delete_if_exists} = refl, parent_changeset,
+                     %{action: :replace} = changeset, adapter, opts) do
+    try do
+      on_repo_change(%{refl | on_replace: :delete}, parent_changeset, changeset, adapter, opts)
+    rescue
+      Ecto.StaleEntryError -> {:ok, nil}
+    end
+  end
+
   def on_repo_change(%{on_replace: on_replace} = refl, %{data: parent} = parent_changeset,
                      %{action: :replace} = changeset, adapter, opts) do
     changeset = case on_replace do
@@ -858,7 +867,7 @@ defmodule Ecto.Association.BelongsTo do
   """
 
   @behaviour Ecto.Association
-  @on_replace_opts [:raise, :mark_as_invalid, :delete, :nilify, :update]
+  @on_replace_opts [:raise, :mark_as_invalid, :delete, :delete_if_exists, :nilify, :update]
   defstruct [:field, :owner, :related, :owner_key, :related_key, :queryable, :on_cast,
              :on_replace, where: [], defaults: [], cardinality: :one, relationship: :parent,
              unique: true, ordered: false]
@@ -945,8 +954,17 @@ defmodule Ecto.Association.BelongsTo do
   end
 
   @impl true
-  def on_repo_change(%{on_replace: :nilify}, _parent_changeset, %{action: :replace}, _adapter, _opts) do
+  def on_repo_change(%{on_replace: :nilify}, _, %{action: :replace}, _adapter, _opts) do
     {:ok, nil}
+  end
+
+  def on_repo_change(%{on_replace: :delete_if_exists} = refl, parent_changeset,
+                     %{action: :replace} = changeset, adapter, opts) do
+    try do
+      on_repo_change(%{refl | on_replace: :delete}, parent_changeset, changeset, adapter, opts)
+    rescue
+      Ecto.StaleEntryError -> {:ok, nil}
+    end
   end
 
   def on_repo_change(%{on_replace: on_replace} = refl, parent_changeset,

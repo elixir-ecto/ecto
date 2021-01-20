@@ -153,10 +153,15 @@ defmodule Ecto.Changeset do
     * `:delete` - removes the association or related data from the database.
       This option has to be used carefully (see below). Will set `action` on associated
       changesets to `:replace`
+    * `:delete_if_exists` - like `:delete` except that it ignores any stale entry
+      error. For instance, if you set `on_replace: :delete` but the replaced
+      resource was already deleted by a separate request, it will raise a
+      `Ecto.StaleEntryError`. `:delete_if_exists` makes it so it will only delete
+      if the entry still exists
 
-  The `:delete` option in particular must be used carefully as it would allow
-  users to delete any associated data by simply not sending any data for a given
-  field. If you need deletion, it is often preferred to manually mark the changeset
+  The `:delete` and `:delete_if_exists` options must be used carefully as they allow
+  users to delete any associated data by simply not sending the associated data.
+  If you need deletion, it is often preferred to manually mark the changeset
   for deletion if a `delete` field is set in the params, as in the example below:
 
       defmodule Comment do
