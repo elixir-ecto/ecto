@@ -1,5 +1,16 @@
 # Changelog for v3.x
 
+## v3.5.6 (2021-01-20)
+
+### Enhancements
+
+  * [Ecto.Schema] Support `on_replace: :delete_if_exists` on many associations
+
+### Bug fixes
+
+  * [Ecto.Query] Allow unary minus operator in query expressions
+  * [Ecto.Schema] Allow nil values on typed maps
+
 ## v3.5.5 (2020-11-12)
 
 ### Enhancements
