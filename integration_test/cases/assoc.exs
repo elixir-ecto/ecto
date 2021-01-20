@@ -192,6 +192,27 @@ defmodule Ecto.Integration.AssocTest do
     assert [0] == TestRepo.all(from(p in Permalink, select: count(p.id)))
   end
 
+  test "has_one changeset assoc (on_replace: :delete_if_exists)" do
+    permalink = TestRepo.insert!(%Permalink{url: "1"})
+    post = TestRepo.insert!(%Post{title: "1", permalink: permalink, force_permalink: permalink})
+    TestRepo.delete!(permalink)
+
+    assert_raise Ecto.StaleEntryError, fn ->
+      post
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:permalink, nil)
+      |> TestRepo.update!()
+    end
+
+    post =
+      post
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:force_permalink, nil)
+      |> TestRepo.update!()
+
+    assert post.force_permalink == nil
+  end
+
   @tag :on_replace_nilify
   test "has_one changeset assoc (on_replace: :nilify)" do
     # Insert new
@@ -341,6 +362,28 @@ defmodule Ecto.Integration.AssocTest do
     assert post.comments == []
 
     assert [0] == TestRepo.all(from(c in Comment, select: count(c.id)))
+  end
+
+  test "has_many changeset assoc (on_replace: :delete_if_exists)" do
+    comment = TestRepo.insert!(%Comment{text: "1"})
+    post = TestRepo.insert!(%Post{title: "1", comments: [comment], force_comments: [comment]})
+
+    TestRepo.delete!(comment)
+
+    assert_raise Ecto.StaleEntryError, fn ->
+      post
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:comments, [])
+      |> TestRepo.update!()
+    end
+
+    post =
+      post
+      |> Ecto.Changeset.change()
+      |> Ecto.Changeset.put_assoc(:force_comments, [])
+      |> TestRepo.update!()
+
+    assert post.force_comments == []
   end
 
   test "has_many changeset assoc (on_replace: :nilify)" do
