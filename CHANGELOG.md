@@ -7,6 +7,7 @@
   * [Ecto.Changeset] Support `:repo_opts` in `unsafe_validate_unique`
   * [Ecto.Enum] Allow enums to map to custom values
   * [Ecto.Repo] Add `placeholders` support to `insert_all`
+  * [Ecto.Schema] Support `:preload_order` on `has_many` and `many_to_many` associations
   * [Ecto.UUID] Add bang UUID conversion methods
 
 ### Bug fixes
@@ -14,6 +15,17 @@
   * [Ecto.Changeset] Change `apply_changes/1` to add the relation to the `struct.relation_id` if relation struct is persisted
   * [Ecto.Query] Remove unnecessary INNER JOIN in many to many association query
   * [Ecto.Schema] Raise `ArgumentError` when default has invalid type
+
+## v3.5.6 (2021-01-20)
+
+### Enhancements
+
+  * [Ecto.Schema] Support `on_replace: :delete_if_exists` on associations
+
+### Bug fixes
+
+  * [Ecto.Query] Allow unary minus operator in query expressions
+  * [Ecto.Schema] Allow nil values on typed maps
 
 ## v3.5.5 (2020-11-12)
 
