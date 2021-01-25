@@ -433,28 +433,23 @@ end
 
 In our example, we implement an intermediate schema, `MyApp.Relationships.Relationship`, on our `:join_through` option and pass in a pair of ids that we will be creating a unique index on in our database migration. By implementing an intermediate schema, we make it easy to add additional attributes and functionality to relationships in the future.
 
-We had to create an additional `many_to_many` `:reverse_relationships` call in order to finish the other half of the database reference. This ensures that both sides of the relationship will get added in the database when either side completes a successul relationship request. Note that it implements an inverse of the `:join_keys`.
+We had to create an additional `many_to_many` `:reverse_relationships` call with an inverse of the `:join_keys` in order to finish the other half of the database association. This ensures that both sides of the relationship will get added in the database when either side completes a successul relationship request.
 
-Also, note that we are implementing separate parent modules for both our `Person` and `Relationship` modules. This separation of concerns helps improve code organization and maintainability by allowing us to isolate core functions for relationships in the `MyApp.Relationships` context and vice-versa.
+Also, we are implementing separate parent modules for both our `Person` and `Relationship` modules. This separation of concerns helps improve code organization and maintainability by allowing us to isolate core functions for relationships in the `MyApp.Relationships` context and vice-versa.
 
-Let's take a look at our Ecto migration.
+Let's take a look at our "relationships" Ecto migration.
 
 ```elixir
-defmodule MyApp.Repo.Migrations.CreatePeopleRelationshipTables do
-  use Ecto.Migration
-
-  def change do
-
-    create table(:relationships) do
-      add :person_id, references(:people)
-      add :relation_id, references(:people)
-      timestamps()
-    end
-
-    create index(:relationships, [:person_id])
-    create index(:relationships, [:relation_id])
-    create unique_index(:relationships, [:person_id, :relation_id], name: :relationships_person_relation_id_index)
+def change do
+  create table(:relationships) do
+    add :person_id, references(:people)
+    add :relation_id, references(:people)
+    timestamps()
   end
+
+  create index(:relationships, [:person_id])
+  create index(:relationships, [:relation_id])
+  create unique_index(:relationships, [:person_id, :relation_id], name: :relationships_person_relation_id_index)
 end
 ```
 
@@ -513,33 +508,25 @@ defmodule MyApp.Relationships.Relationship do
 end
 ```
 
-And the database migration:
+And the database migrations:
 
 ```elixir
-defmodule MyApp.Repo.Migrations.CreatePeopleTables do
-  use Ecto.Migration
-
-  def change do
-    create table(:people) do
-      add :name, :string
-      timestamps()
-  end
+def change do
+  create table(:people) do
+    add :name, :string
+    timestamps()
 end
 
-defmodule MyApp.Repo.Migrations.CreatePeopleRelationshipTables do
-  use Ecto.Migration
-
-  def change do
-    create table(:relationships) do
-      add :person_id, references(:people)
-      add :relation_id, references(:people)
-      timestamps()
-    end
-
-    create index(:relationships, [:person_id])
-    create index(:relationships, [:relation_id])
-    create unique_index(:relationships, [:person_id, :relation_id], name: :relationships_person_relation_id_index)
+def change do
+  create table(:relationships) do
+    add :person_id, references(:people)
+    add :relation_id, references(:people)
+    timestamps()
   end
+
+  create index(:relationships, [:person_id])
+  create index(:relationships, [:relation_id])
+  create unique_index(:relationships, [:person_id, :relation_id], name: :relationships_person_relation_id_index)
 end
 ```
 
