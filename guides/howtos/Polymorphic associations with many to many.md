@@ -433,9 +433,37 @@ end
 
 In our example, we implement an intermediate schema, `MyApp.Relationships.Relationship`, on our `:join_through` option and pass in a pair of ids that we will be creating a unique index on in our database migration. By implementing an intermediate schema, we make it easy to add additional attributes and functionality to relationships in the future.
 
-We had to create an additional `many_to_many` `:reverse_relationships` call with an inverse of the `:join_keys` in order to finish the other half of the association. This ensures that both sides of the relationship will get added in the database when either side completes a successul relationship request.
+We had to create an additional `many_to_many` `:reverse_relationships` call with an inverse of the `:join_keys` in order to finish the other half of the association. This ensures that both sides of the relationship will get added in the database when either side completes a successul relationship request. 
 
-Also, we are implementing separate parent modules for both our `Person` and `Relationship` modules. This separation of concerns helps improve code organization and maintainability by allowing us to isolate core functions for relationships in the `MyApp.Relationships` context and vice-versa.
+The person's account who is the inverse of the relationship will have the relationship stored in a "reverse_relationships" key, and we will be able to construct queries for `:reverse_relationships` with the proper `:preload`.
+
+```elixir
+iex> people = Repo.all from p in Person, preload: [:relationships, :reverse_relationships]
+iex>  [
+        #MyApp.Accounts.Person<
+          ...
+          relationships: [
+            MyApp.Accounts.Person<
+              __meta__: #Ecto.Schema.Metadata<:loaded, "people">,
+              ...
+            >
+          ]
+        >,
+        #MyApp.Accounts.Person<
+          ...
+          reverse_relationships: [
+            #MyApp.Accounts.Person<
+              __meta__: #Ecto.Schema.Metadata<:loaded, "people">,
+              ...
+            >
+          ]
+        >
+      ]
+```
+
+In the example query above, we are assuming that we have two "people" that have entered into a relationship. Our query illustrates how one person is added on the `:relationships` side and the other on the `:reverse_relationships` side.
+
+It is also worth noticing that we are implementing separate parent modules for both our `Person` and `Relationship` modules. This separation of concerns helps improve code organization and maintainability by allowing us to isolate core functions for relationships in the `MyApp.Relationships` context and vice-versa.
 
 Let's take a look at our "relationships" Ecto migration.
 
@@ -449,28 +477,30 @@ def change do
 
   create index(:relationships, [:person_id])
   create index(:relationships, [:relation_id])
-  create unique_index(:relationships, [:person_id, :relation_id], name: :relationships_person_relation_id_index)
+  create unique_index(:relationships, [:person_id, :relation_id], name: :relationships_person_index)
+  create unique_index(:relationships, [:relation_id, :person_id], name: :relationships_relation_index)
 end
 ```
 
-We create indexes on both the `:person_id` and `:relation_id` for quicker access in the future. Then, we create a unique index on the two ids to ensure that people cannot have duplicate relationships. Lastly, we pass a name to the `:name` option to help clarify the unique constraint when working with our changeset.
+We create indexes on both the `:person_id` and `:relation_id` for quicker access in the future. Then, we create one unique index on the `:relationships` and another unique index on the inverse of `:relationships` to ensure that people cannot have duplicate relationships. Lastly, we pass a name to the `:name` option to help clarify the unique constraint when working with our changeset.
 
 ```elixir
 # In MyApp.Relationships.Relationship
 def changeset(struct, params \\ %{}) do
   struct
   |> Ecto.Changeset.cast(params, [:person_id, :relation_id])
-  |> Ecto.Changeset.unique_constraint([:person_id, :relation_id], name: :relationships_person_relation_id_index)
+  |> Ecto.Changeset.unique_constraint([:person_id, :relation_id], name: :relationships_person_index)
+  |> Ecto.Changeset.unique_constraint([:relation_id, :person_id], name: :relationships_relation_index)
 end
 ```
 
-Due to the self-referential nature, you only need to correctly cast the `:join_keys` in order for Ecto to correctly associate the two records in the database. When considering production applications, you will most likely want to add additional attributes and validations, as well as a confirmation system. This is where your isolation of modules will help you maintain and organize the increasing complexity.
+Due to the self-referential nature, we will only need to cast the `:join_keys` in order for Ecto to correctly associate the two records in the database. When considering production applications, we will most likely want to add additional attributes and validations, as well as a confirmation system. This is where our isolation of modules will help us maintain and organize the increasing complexity.
 
 ## Summary
 
 In this guide we used `many_to_many` associations to implement a self-referencing symmetric relationship. 
 
-Our goal was to allow "people" to associate to different "people". Further, we wanted to lay a strong foundation for code organization and maintainability into the future. We have done this by creating intermediate tables, two separate functional core modules, a clear naming strategy, and by using `many_to_many` associations with `:join_keys` to automatically manage those join tables.
+Our goal was to allow "people" to associate to different "people". Further, we wanted to lay a strong foundation for code organization and maintainability into the future. We have done this by creating intermediate tables, two separate functional core modules, a clear naming strategy, an inverse association, and by using `many_to_many` `:join_keys` to automatically manage those join tables.
 
 At the end, our schemas may look like:
 
@@ -503,7 +533,8 @@ defmodule MyApp.Relationships.Relationship do
   def changeset(struct, params \\ %{}) do
     struct
     |> Ecto.Changeset.cast(params, [:person_id, :relation_id])
-    |> Ecto.Changeset.unique_constraint([:person_id, :relation_id], name: :relationships_person_relation_id_index)
+    |> Ecto.Changeset.unique_constraint([:person_id, :relation_id], name: :relationships_person_index)
+    |> Ecto.Changeset.unique_constraint([:relation_id, :person_id], name: :relationships_relation_index)
   end
 end
 ```
@@ -526,7 +557,8 @@ def change do
 
   create index(:relationships, [:person_id])
   create index(:relationships, [:relation_id])
-  create unique_index(:relationships, [:person_id, :relation_id], name: :relationships_person_relation_id_index)
+  create unique_index(:relationships, [:person_id, :relation_id], name: :relationships_person_index)
+  create unique_index(:relationships, [:relation_id, :person_id], name: :relationships_relation_index)
 end
 ```
 
