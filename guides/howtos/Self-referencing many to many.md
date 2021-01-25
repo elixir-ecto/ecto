@@ -1,6 +1,6 @@
 # Self-referencing many to many
 
-The aformentioned examples illustrate how we could implement polymorphism between different tables in the database. But, what if we want to reference the same table in the database? This is commonly used for symmetric relationships and is often referred to as self-referencing `many_to_many` association.
+The aformentioned examples illustrate how we could implement polymorphism between different tables in the database. But, what if we want to reference the same table in the database? This is commonly used for symmetric relationships and is often referred to as a self-referencing `many_to_many` association.
 
 ## People relationships
 
