@@ -401,3 +401,146 @@ end
 Overall our code looks structurally the same as `has_many` would, although at the database level our relationships are expressed with join tables.
 
 While in this guide we changed our code to cope with the parameter format required by `cast_assoc`, in [Constraints and Upserts](Constraints and Upserts.md) we drop `cast_assoc` altogether and use `put_assoc` which brings more flexibilities when working with associations.
+
+## Polymorphism with a self-referencing many_to_many
+
+The aformentioned examples illustrate how we could implement polymorphism between different tables in the database. But, what if we want to reference the same table in the database? This is commonly used for symmetric relationships and is often referred to as self-referencing `many_to_many` association.
+
+Let's imagine we are building a system that supports a model for relationships between people.
+
+```elixir
+defmodule MyApp.Accounts.Person do
+  use Ecto.Schema
+  
+  schema "people" do
+    field :name, :string
+    many_to_many :relationships, MyApp.Accounts.Person, join_through: MyApp.Relationships.Relationship, join_keys: [person_id: :id, relation_id: :id]
+    many_to_many :reverse_relationships, MyApp.Accounts.Person, join_through: MyApp.Relationships.Relationship, join_keys: [relation_id: :id, person_id: :id]
+    timestamps()
+  end
+end
+
+defmodule MyApp.Relationships.Relationship do
+  use Ecto.Schema
+
+  schema "relationships" do
+    field :person_id, :id
+    field :relation_id, :id
+    timestamps()
+  end
+end
+```
+
+In our example, we implement an intermediate schema, `MyApp.Relationships.Relationship`, on our `:join_through` option and pass in a pair of ids that we will be creating a unique index on in our database migration. By implementing an intermediate schema, we make it easy to add additional attributes and functionality to relationships in the future.
+
+We had to create an additional `many_to_many` `:reverse_relationships` call in order to finish the other half of the database reference. This ensures that both sides of the relationship will get added in the database when either side completes a successul relationship request. Note that it implements an inverse of the `:join_keys`.
+
+Also, note that we are implementing separate parent modules for both our `Person` and `Relationship` modules. This separation of concerns helps improve code organization and maintainability by allowing us to isolate core functions for relationships in the `MyApp.Relationships` context and vice-versa.
+
+Let's take a look at our Ecto migration.
+
+```elixir
+defmodule MyApp.Repo.Migrations.CreatePeopleRelationshipTables do
+  use Ecto.Migration
+
+  def change do
+
+    create table(:relationships) do
+      add :person_id, references(:people)
+      add :relation_id, references(:people)
+      timestamps()
+    end
+
+    create index(:relationships, [:person_id])
+    create index(:relationships, [:relation_id])
+    create unique_index(:relationships, [:person_id, :relation_id], name: :relationships_person_relation_id_index)
+  end
+end
+```
+
+We create indexes on both the `:person_id` and `:relation_id` for quicker access in the future. Then, we create a unique index on the two ids to ensure that people cannot have duplicate relationships. Lastly, we pass a name to the `:name` option to help clarify the unique constraint when working with our changeset.
+
+```elixir
+# In MyApp.Relationships.Relationship
+def changeset(struct, params \\ %{}) do
+  struct
+  |> Ecto.Changeset.cast(params, [:person_id, :relation_id])
+  |> Ecto.Changeset.unique_constraint([:person_id, :relation_id], name: :relationships_person_relation_id_index)
+end
+```
+
+Due to the self-referential nature, you only need to correctly cast the `:join_keys` in order for Ecto to correctly associate the two records in the database. When considering production applications, you will most likely want to add additional attributes and validations, as well as a confirmation system. This is where your isolation of modules will help you maintain and organize the increasing complexity.
+
+## Summary
+
+In this guide we used `many_to_many` associations to implement a self-referencing symmetric relationship. 
+
+Our goal was to allow "people" to associate to different "people". Further, we wanted to lay a strong foundation for code organization and maintainability into the future. We have done this by creating intermediate tables, two separate functional core modules, a clear naming strategy, and by using `many_to_many` associations with `:join_keys` to automatically manage those join tables.
+
+At the end, our schemas may look like:
+
+```elixir
+defmodule MyApp.Accounts.Person do
+  use Ecto.Schema
+  
+  schema "people" do
+    field :name, :string
+    many_to_many :relationships, MyApp.Accounts.Person, join_through: MyApp.Relationships.Relationship, join_keys: [person_id: :id, relation_id: :id]
+    many_to_many :reverse_relationships, MyApp.Accounts.Person, join_through: MyApp.Relationships.Relationship, join_keys: [relation_id: :id, person_id: :id]
+    timestamps()
+  end
+
+  def changeset(struct, params \\ %{}) do
+    struct
+    |> Ecto.Changeset.cast(params, [:name])
+  end
+end
+
+defmodule MyApp.Relationships.Relationship do
+  use Ecto.Schema
+
+  schema "relationships" do
+    field :person_id, :id
+    field :relation_id, :id
+    timestamps()
+  end
+
+  def changeset(struct, params \\ %{}) do
+    struct
+    |> Ecto.Changeset.cast(params, [:person_id, :relation_id])
+    |> Ecto.Changeset.unique_constraint([:person_id, :relation_id], name: :relationships_person_relation_id_index)
+  end
+end
+```
+
+And the database migration:
+
+```elixir
+defmodule MyApp.Repo.Migrations.CreatePeopleTables do
+  use Ecto.Migration
+
+  def change do
+    create table(:people) do
+      add :name, :string
+      timestamps()
+  end
+end
+
+defmodule MyApp.Repo.Migrations.CreatePeopleRelationshipTables do
+  use Ecto.Migration
+
+  def change do
+    create table(:relationships) do
+      add :person_id, references(:people)
+      add :relation_id, references(:people)
+      timestamps()
+    end
+
+    create index(:relationships, [:person_id])
+    create index(:relationships, [:relation_id])
+    create unique_index(:relationships, [:person_id, :relation_id], name: :relationships_person_relation_id_index)
+  end
+end
+```
+
+The self-referencing `many_to_many` contains a slight structural modification to wrap the association back around on itself. But, overall, the code complexity is greatly reduced thanks to our use of an intermediate schema and Ecto's `:join_keys`.
