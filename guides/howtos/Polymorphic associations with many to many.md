@@ -433,7 +433,7 @@ end
 
 In our example, we implement an intermediate schema, `MyApp.Relationships.Relationship`, on our `:join_through` option and pass in a pair of ids that we will be creating a unique index on in our database migration. By implementing an intermediate schema, we make it easy to add additional attributes and functionality to relationships in the future.
 
-We had to create an additional `many_to_many` `:reverse_relationships` call with an inverse of the `:join_keys` in order to finish the other half of the database association. This ensures that both sides of the relationship will get added in the database when either side completes a successul relationship request.
+We had to create an additional `many_to_many` `:reverse_relationships` call with an inverse of the `:join_keys` in order to finish the other half of the association. This ensures that both sides of the relationship will get added in the database when either side completes a successul relationship request.
 
 Also, we are implementing separate parent modules for both our `Person` and `Relationship` modules. This separation of concerns helps improve code organization and maintainability by allowing us to isolate core functions for relationships in the `MyApp.Relationships` context and vice-versa.
 
@@ -530,4 +530,6 @@ def change do
 end
 ```
 
-The self-referencing `many_to_many` contains a slight structural modification to wrap the association back around on itself. But, overall, the code complexity is greatly reduced thanks to our use of an intermediate schema and Ecto's `:join_keys`.
+Overall, our code contains a small structural modification when compared with a typical `many_to_many`, in order to implement an inverse join between our self-referenced table and schema.
+
+Where we go from here will depend greatly on the specific needs of our application. As long as we remember to adhere to our clear naming strategy with a strong separation of concerns, we will go a long way in making our self-referencing `many_to_many` association organized and easy to maintain.
