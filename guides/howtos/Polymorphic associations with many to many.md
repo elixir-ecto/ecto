@@ -440,7 +440,7 @@ The person's account who is the inverse of the relationship will have the relati
 ```elixir
 iex> people = Repo.all from p in Person, preload: [:relationships, :reverse_relationships]
 iex>  [
-        #MyApp.Accounts.Person<
+        MyApp.Accounts.Person<
           ...
           relationships: [
             MyApp.Accounts.Person<
@@ -449,10 +449,10 @@ iex>  [
             >
           ]
         >,
-        #MyApp.Accounts.Person<
+        MyApp.Accounts.Person<
           ...
           reverse_relationships: [
-            #MyApp.Accounts.Person<
+            MyApp.Accounts.Person<
               __meta__: #Ecto.Schema.Metadata<:loaded, "people">,
               ...
             >
@@ -477,8 +477,8 @@ def change do
 
   create index(:relationships, [:person_id])
   create index(:relationships, [:relation_id])
-  create unique_index(:relationships, [:person_id, :relation_id], name: :relationships_person_index)
-  create unique_index(:relationships, [:relation_id, :person_id], name: :relationships_relation_index)
+  create unique_index(:relationships, [:person_id, :relation_id], name: :relationships_person_id_relation_id_index)
+  create unique_index(:relationships, [:relation_id, :person_id], name: :relationships_relation_id_person_id_index)
 end
 ```
 
@@ -489,8 +489,8 @@ We create indexes on both the `:person_id` and `:relation_id` for quicker access
 def changeset(struct, params \\ %{}) do
   struct
   |> Ecto.Changeset.cast(params, [:person_id, :relation_id])
-  |> Ecto.Changeset.unique_constraint([:person_id, :relation_id], name: :relationships_person_index)
-  |> Ecto.Changeset.unique_constraint([:relation_id, :person_id], name: :relationships_relation_index)
+  |> Ecto.Changeset.unique_constraint([:person_id, :relation_id], name: :relationships_person_id_relation_id_index)
+  |> Ecto.Changeset.unique_constraint([:relation_id, :person_id], name: :relationships_relation_id_person_id_index)
 end
 ```
 
@@ -533,8 +533,8 @@ defmodule MyApp.Relationships.Relationship do
   def changeset(struct, params \\ %{}) do
     struct
     |> Ecto.Changeset.cast(params, [:person_id, :relation_id])
-    |> Ecto.Changeset.unique_constraint([:person_id, :relation_id], name: :relationships_person_index)
-    |> Ecto.Changeset.unique_constraint([:relation_id, :person_id], name: :relationships_relation_index)
+    |> Ecto.Changeset.unique_constraint([:person_id, :relation_id], name: :relationships_person_id_relation_id_index)
+    |> Ecto.Changeset.unique_constraint([:relation_id, :person_id], name: :relationships_relation_id_person_id_index)
   end
 end
 ```
@@ -557,8 +557,8 @@ def change do
 
   create index(:relationships, [:person_id])
   create index(:relationships, [:relation_id])
-  create unique_index(:relationships, [:person_id, :relation_id], name: :relationships_person_index)
-  create unique_index(:relationships, [:relation_id, :person_id], name: :relationships_relation_index)
+  create unique_index(:relationships, [:person_id, :relation_id], name: :relationships_person_id_relation_id_index)
+  create unique_index(:relationships, [:relation_id, :person_id], name: :relationships_relation_id_person_id_index)
 end
 ```
 
