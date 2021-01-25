@@ -564,4 +564,4 @@ end
 
 Overall, our code contains a small structural modification, when compared with a typical `many_to_many`, in order to implement an inverse join between our self-referenced table and schema.
 
-Where we go from here will depend greatly on the specific needs of our application. As long as we remember to adhere to our clear naming strategy with a strong separation of concerns, we will go a long way in making our self-referencing `many_to_many` association organized and easy to maintain.
+Where we go from here will depend greatly on the specific needs of our application. If we remember to adhere to our clear naming strategy with a strong separation of concerns, we will go a long way in keeping our self-referencing `many_to_many` association organized and easier to maintain.
