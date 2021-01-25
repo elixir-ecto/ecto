@@ -10,7 +10,8 @@ Let's imagine we are building a system that supports a model for relationships b
 defmodule MyApp.Accounts.Person do
   use Ecto.Schema
   
-  alias MyApp.Relationships.{Person, Relationship}
+  alias MyApp.Accounts.Person
+  alias MyApp.Relationships.Relationship
 
   schema "people" do
     field :name, :string
