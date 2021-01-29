@@ -2,7 +2,8 @@
 
 After you have successfully set up your database connection with Ecto for your application,
 its usage for your tests requires further changes, especially if you want to leverage the
-Ecto SQL Sandbox that allows you to run tests that talk to the database concurrently.
+[Ecto SQL Sandbox](https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.Sandbox.html) that allows
+you to run tests that talk to the database concurrently.
 
 Create the `config/test.exs` file or append the following content:
 
@@ -64,7 +65,8 @@ defmodule MyApp.RepoCase do
 end
 ```
 
-The case template above brings `Ecto` and `Ecto.Query` functions into your tests and checkouts a database connection. It also enables a shared sandbox connection mode in case the test is not running asynchronously. See `Ecto.Adapters.SQL.Sandbox` for more information.
+The case template above brings `Ecto` and `Ecto.Query` functions into your tests and checkouts a database connection. It also enables a shared sandbox connection mode in case the test is not running asynchronously.
+See [`Ecto.Adapters.SQL.Sandbox`](https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.Sandbox.html) for more information.
 
 To add `test/support/` folder for compilation in test environment we need to update `mix.exs` configuration
 
