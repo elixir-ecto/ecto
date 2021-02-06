@@ -289,7 +289,7 @@ defimpl Inspect, for: Ecto.Query do
     json_expr_path_to_expr(expr, path) |> expr(names, part)
   end
 
-  defp expr_to_string({:{}, [], [:subquery, i]}, _string, _names, %BooleanExpr{subqueries: subqueries}) do
+  defp expr_to_string({:{}, [], [:subquery, i]}, _string, _names, %{subqueries: subqueries}) do
     # We were supposed to match on {:subquery, i} but Elixir incorrectly
     # translates those to `:{}` when converting to string.
     # See https://github.com/elixir-lang/elixir/blob/27bd9ffcc607b74ce56b547cb6ba92c9012c317c/lib/elixir/lib/macro.ex#L932
