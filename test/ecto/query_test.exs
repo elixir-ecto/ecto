@@ -867,7 +867,7 @@ defmodule Ecto.QueryTest do
         inspect(where(query, [post: post], post.id in subquery(subquery) or post.is_public == ^true))
       
       assert inspect(where(query, ^dynamic(^dynamic_with_subquery and ^dynamic and ^dynamic_not_in))) ==
-        inspect(where(query, [post: post], post.id in subquery(subquery) and post.is_public == ^true and post.foo not in [1, 2, 3]))
+        inspect(where(query, [post: post], post.id in subquery(subquery) and post.is_public == ^true and post.foo not in ^[1, 2, 3]))
     end
     
     test "merges with precedence" do
