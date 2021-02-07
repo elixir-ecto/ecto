@@ -363,9 +363,7 @@ defmodule Ecto.Changeset.HasAssocTest do
   end
 
   test "raises when :update is used on has_many" do
-    error_message = "invalid `:on_replace` option for :tags. The only valid " <>
-      "options are: `:raise`, `:mark_as_invalid`, `:delete`, `:nilify`"
-    assert_raise ArgumentError, error_message, fn ->
+    assert_raise ArgumentError, ~r"invalid `:on_replace` option for :tags", fn ->
       defmodule Topic do
         use Ecto.Schema
 
