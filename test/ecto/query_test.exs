@@ -810,6 +810,78 @@ defmodule Ecto.QueryTest do
     end
   end
 
+  describe "dynamic/2" do
+    test "can be used to merge two dynamics" do
+      left = dynamic([posts], posts.is_public == true)
+      right = dynamic([posts], posts.is_draft == false)
+      
+      assert inspect(dynamic(^left and ^right)) == 
+        inspect(dynamic([posts], posts.is_public == true and posts.is_draft == false))
+      
+      assert inspect(dynamic(^left or ^right)) == 
+        inspect(dynamic([posts], posts.is_public == true or posts.is_draft == false))
+    end
+      
+    test "can be used to merge dynamics with subquery" do
+      subquery = 
+        from c in "comments", 
+          where: c.commented_by == ^Ecto.UUID.generate(), 
+          select: c.post_id
+      
+      dynamic = dynamic([posts], posts.is_public == true)
+      dynamic_with_subquery = dynamic([posts], posts.id in subquery(subquery))
+      
+      assert inspect(dynamic(^dynamic and ^dynamic_with_subquery)) == 
+        inspect(dynamic([posts], posts.is_public == true and posts.id in subquery(subquery)))
+      
+      assert inspect(dynamic(^dynamic_with_subquery or ^dynamic)) == 
+        inspect(dynamic([posts], posts.id in subquery(subquery) or posts.is_public == true))
+    end
+    
+    test "can be used to merge two dynamics with named bindings" do
+      left = dynamic([post: post], post.is_public == true)
+      right = dynamic([post: post], post.is_draft == false)
+      
+      query = from p in "post", as: :post
+      
+      assert inspect(where(query, ^dynamic(^left and ^right))) ==
+        inspect(where(query, [post: post], post.is_public == true and post.is_draft == false))
+    end
+    
+    test "can be used to merge two dynamics with subquery that reuse named binding" do
+      subquery = 
+        from c in "comments", 
+          where: c.commented_by == ^Ecto.UUID.generate(), 
+          select: c.post_id
+
+      dynamic = dynamic([post: post], post.is_public == ^true)
+      dynamic_with_subquery = dynamic([post: post], post.id in subquery(subquery))
+      dynamic_not_in = dynamic([post: post], post.foo not in ^[1, 2, 3])
+      
+      query = from p in "post", as: :post
+      
+      assert inspect(where(query, ^dynamic(^dynamic and ^dynamic_with_subquery))) ==
+        inspect(where(query, [post: post], post.is_public == ^true and post.id in subquery(subquery)))
+      
+      assert inspect(where(query, ^dynamic(^dynamic_with_subquery or ^dynamic))) ==
+        inspect(where(query, [post: post], post.id in subquery(subquery) or post.is_public == ^true))
+      
+      assert inspect(where(query, ^dynamic(^dynamic_with_subquery and ^dynamic and ^dynamic_not_in))) ==
+        inspect(where(query, [post: post], post.id in subquery(subquery) and post.is_public == ^true and post.foo not in ^[1, 2, 3]))
+    end
+    
+    test "merges with precedence" do
+      left = dynamic([posts], posts.is_public == true)
+      right = dynamic([posts], posts.is_draft == false)
+      
+      assert inspect(dynamic(^left or ^left and ^right)) == 
+        inspect(dynamic([posts], posts.is_public == true or (posts.is_public == true and posts.is_draft == false)))
+      
+      assert inspect(dynamic(^left and ^left or ^right)) == 
+        inspect(dynamic([posts], (posts.is_public == true and posts.is_public == true) or posts.is_draft == false))
+    end
+  end
+  
   describe "fragment/1" do
     test "raises at runtime when interpolation is not a keyword list" do
       assert_raise ArgumentError, ~r/fragment\(...\) does not allow strings to be interpolated/s, fn ->

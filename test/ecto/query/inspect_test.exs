@@ -48,6 +48,11 @@ defmodule Ecto.Query.InspectTest do
     dynamic = dynamic([o, b], b.user_id == ^1 or ^false)
     assert inspect(dynamic([o], o.type == ^2 and ^dynamic)) ==
            "dynamic([o, b], o.type == ^2 and (b.user_id == ^1 or ^false))"
+
+    sq = from(Post, [])
+    dynamic = dynamic([o, b], b.user_id == ^1 or b.user_id in subquery(sq))
+    assert inspect(dynamic([o], o.type == ^2 and ^dynamic)) ==
+           "dynamic([o, b], o.type == ^2 and (b.user_id == ^1 or b.user_id in subquery(from p0 in Inspect.Post)))"
   end
 
   test "invalid query" do

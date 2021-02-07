@@ -59,6 +59,7 @@ defmodule Ecto.Query.Builder.Dynamic do
           {%Ecto.Query.DynamicExpr{binding: new_binding} = dynamic, _} ->
             binding = if length(new_binding) > length(binding), do: new_binding, else: binding
             expand(query, dynamic, {binding, params, subqueries, count})
+          
           param ->
             {{:^, meta, [count]}, {binding, [param | params], subqueries, count + 1}}
         end
@@ -66,7 +67,7 @@ defmodule Ecto.Query.Builder.Dynamic do
       {:subquery, i}, {binding, params, subqueries, count} ->
         subquery = Enum.fetch!(dynamic_subqueries, i)
         ix = length(subqueries)
-        {{:subquery, ix}, {binding, [{:subquery, ix} | params], [subquery | subqueries], count}}
+        {{:subquery, ix}, {binding, [{:subquery, ix} | params], [subquery | subqueries], count + 1}}
 
       expr, acc ->
         {expr, acc}
