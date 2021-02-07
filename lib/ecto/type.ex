@@ -7,9 +7,9 @@ defmodule Ecto.Type do
   parameterized types. Basic types are simple, requiring only four
   callbacks to be implemented, and are enough for most occasions.
   Parameterized types can be customized on the field definition and
-  provide a wilder variety of callbacks.
+  provide a wide variety of callbacks.
 
-  The definition of basic custom types and all of its callbacks is
+  The definition of basic custom types and all of their callbacks are
   available in this module. You can learn more about parameterized
   types in `Ecto.ParameterizedType`. If in doubt, prefer to use
   basic custom types and rely on parameterized types if you need
@@ -17,9 +17,9 @@ defmodule Ecto.Type do
 
   ## Example
 
-  Imagine you want to store an URI struct as part of a schema in an
+  Imagine you want to store a URI struct as part of a schema in a
   url-shortening service. There isn't an Ecto field type to support
-  that value at runtime, therefore a custom one is needed.
+  that value at runtime therefore a custom one is needed.
 
   You also want to query not only by the full url, but for example
   by specific ports used. This is possible by putting the URI data
@@ -51,7 +51,7 @@ defmodule Ecto.Type do
         def cast(_), do: :error
 
         # When loading data from the database, as long as it's a map,
-        # we just put the data back into an URI struct to be stored in
+        # we just put the data back into a URI struct to be stored in
         # the loaded schema struct.
         def load(data) when is_map(data) do
           data =
@@ -61,7 +61,7 @@ defmodule Ecto.Type do
           {:ok, struct!(URI, data)}
         end
 
-        # When dumping data to the database, we *expect* an URI struct
+        # When dumping data to the database, we *expect* a URI struct
         # but any value could be inserted into the schema struct at runtime,
         # so we need to guard against them.
         def dump(%URI{} = uri), do: {:ok, Map.from_struct(uri)}
@@ -90,7 +90,7 @@ defmodule Ecto.Type do
   Imagine you want to encode the ID so they cannot enumerate the
   content in your application. An Ecto type could handle the conversion
   between the encoded version of the id and its representation in the
-  database. For the sake of simplicity we'll use base64 encoding in
+  database. For the sake of simplicity, we'll use base64 encoding in
   this example:
 
       defmodule EncodedId do
