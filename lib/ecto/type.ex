@@ -7,7 +7,7 @@ defmodule Ecto.Type do
   parameterized types. Basic types are simple, requiring only four
   callbacks to be implemented, and are enough for most occasions.
   Parameterized types can be customized on the field definition and
-  provide a wild variety of callbacks.
+  provide a wide variety of callbacks.
 
   The definition of basic custom types and all of their callbacks are
   available in this module. You can learn more about parameterized
