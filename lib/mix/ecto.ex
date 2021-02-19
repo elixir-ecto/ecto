@@ -121,7 +121,7 @@ defmodule Mix.Ecto do
           "#{editor} #{inspect(file)}:#{line}"
         end
 
-      :os.cmd(String.to_charlist(command))
+      Mix.shell().cmd(command)
       true
     else
       false

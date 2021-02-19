@@ -38,30 +38,12 @@ defmodule Mix.EctoTest do
   describe "open?/2" do
     @editor System.get_env("ECTO_EDITOR")
 
-    test "opens __FILE__ and __LINE__", ctx do
-      System.put_env("ECTO_EDITOR", "echo -n __LINE__:__FILE__ > output.txt")
-
-      in_tmp(ctx.test, fn ->
-        open?("lib/some/file.ex", 4)
-
-        assert File.read!("output.txt") == "4:lib/some/file.ex"
-      end)
+    test "opens __FILE__ and __LINE__" do
+      System.put_env("ECTO_EDITOR", "echo -n __FILE__:__LINE__")
+      open?("lib/some/file.ex", 4)
+      assert_received {:mix_shell, :run, ["-n lib/some/file.ex:4\n"]}
     after
       System.put_env("ECTO_EDITOR", @editor)
-    end
-  end
-
-  @tmp_path Path.expand("../../tmp", __DIR__)
-
-  defp in_tmp(path, fun) do
-    path = Path.join(@tmp_path, to_string(path))
-
-    try do
-      File.rm_rf!(path)
-      File.mkdir_p!(path)
-      File.cd!(path, fun)
-    after
-      File.rm_rf!(path)
     end
   end
 end
