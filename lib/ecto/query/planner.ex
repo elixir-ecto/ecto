@@ -1543,9 +1543,11 @@ defmodule Ecto.Query.Planner do
 
   defp take!(source, query, fetched, field, ix) do
     case {fetched, source} do
-      {{:ok, {_, _}}, {:fragment, _, _}} ->
-        error! query, "it is not possible to return a map/struct subset of a fragment, " <>
-                      "you must explicitly return the desired individual fields"
+      {{:ok, {:struct, _}}, {:fragment, _, _}} ->
+        error! query, "it is not possible to return a struct subset of a fragment"
+
+      {{:ok, {:struct, _}}, %Ecto.SubQuery{}} ->
+        error! query, "it is not possible to return a struct subset of a subquery"
 
       {{:ok, {_, []}}, {_, _, _}} ->
         error! query, "at least one field must be selected for binding `#{field}`, got an empty list"
@@ -1553,15 +1555,14 @@ defmodule Ecto.Query.Planner do
       {{:ok, {:struct, _}}, {_, nil, _}} ->
         error! query, "struct/2 in select expects a source with a schema"
 
-      {{:ok, {kind, fields}}, {source, schema, prefix}} ->
+      {{:ok, {kind, fields}}, {source, schema, prefix}} when is_binary(source) ->
         dumper = if schema, do: schema.__schema__(:dump), else: %{}
         schema = if kind == :map, do: nil, else: schema
         {types, fields} = select_dump(List.wrap(fields), dumper, ix)
         {{:source, {source, schema}, prefix || query.prefix, types}, fields}
 
-      {{:ok, {_, _}}, %Ecto.SubQuery{}} ->
-        error! query, "it is not possible to return a map/struct subset of a subquery, " <>
-                      "you must explicitly select the whole subquery or individual fields only"
+      {{:ok, {_, fields}}, _} ->
+        {{:map, Enum.map(fields, &{&1, {:value, :any}})}, Enum.map(fields, &select_field(&1, ix))}
 
       {:error, {:fragment, _, _}} ->
         {{:value, :map}, [{:&, [], [ix]}]}

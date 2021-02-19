@@ -1147,6 +1147,15 @@ defmodule Ecto.Query.PlannerTest do
            select_fields([:id], 1)
   end
 
+  test "normalize: select with struct/2 on fragment" do
+    assert_raise Ecto.QueryError, ~r"it is not possible to return a struct subset of a fragment", fn ->
+      Post
+      |> join(:inner, [_], c in fragment("comments"))
+      |> select([_, c], struct(c, [:id]))
+      |> normalize()
+    end
+  end
+
   test "normalize: select with map/2" do
     query = Post |> select([p], map(p, [:id, :title])) |> normalize()
     assert query.select.expr == {:&, [], [0]}
@@ -1191,6 +1200,20 @@ defmodule Ecto.Query.PlannerTest do
            select_fields([:id, :text], 1) ++
             select_fields([:id], 0) ++
            select_fields([:id], 1)
+  end
+
+  test "normalize: select with map/2 on fragment" do
+    query =
+      Post
+      |> join(:inner, [_], f in fragment("select 1 as a, 2 as b"))
+      |> select([_, f], map(f, [:a, :b]))
+      |> normalize()
+
+    assert query.select.expr == {:&, [], [1]}
+
+    assert query.select.fields ==
+             select_fields([:a], 1) ++
+               select_fields([:b], 1)
   end
 
   test "normalize: windows" do
