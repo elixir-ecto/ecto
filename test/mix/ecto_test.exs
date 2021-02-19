@@ -37,17 +37,14 @@ defmodule Mix.EctoTest do
 
   describe "open?/2" do
     @editor System.get_env("ECTO_EDITOR")
-    @shell Mix.shell()
 
     test "opens __FILE__ and __LINE__" do
       System.put_env("ECTO_EDITOR", "echo -n __FILE__:__LINE__")
-      Mix.shell(Mix.Shell.Process)
 
       open?("lib/some/file.ex", 4)
-      assert_received {:mix_shell, :run, ["-n lib/some/file.ex:4\n"]}
+      assert_received {:mix_shell, :run, ["-n lib/some/file.ex:4"]}
     after
       System.put_env("ECTO_EDITOR", @editor)
-      Mix.shell(@shell)
     end
   end
 end
