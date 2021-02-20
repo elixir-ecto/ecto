@@ -86,12 +86,42 @@ defmodule Mix.Ecto do
 
   @doc """
   Asks if the user wants to open a file based on ECTO_EDITOR.
+
+  By default, it attempts to open the file and line using the
+  `file:line` notation. For example, if your editor is called
+  `subl`, it will open the file as:
+
+      subl path/to/file:line
+
+  It is important that you choose an editor command that does
+  not block nor that attempts to run an editor directly in the
+  terminal. Command-line based editors likely need extra
+  configuration so they open up the given file and line in a
+  separate window.
+
+  Custom editors are supported by using the `__FILE__` and
+  `__LINE__` notations, for example:
+
+      ECTO_EDITOR="my_editor +__LINE__ __FILE__"
+
+  and Elixir will properly interpolate values.
+
   """
-  @spec open?(binary) :: boolean
-  def open?(file) do
+  @spec open?(binary, non_neg_integer) :: boolean
+  def open?(file, line \\ 1) do
     editor = System.get_env("ECTO_EDITOR") || ""
+
     if editor != "" do
-      :os.cmd(to_charlist(editor <> " " <> inspect(file)))
+      command =
+        if editor =~ "__FILE__" or editor =~ "__LINE__" do
+          editor
+          |> String.replace("__FILE__", inspect(file))
+          |> String.replace("__LINE__", Integer.to_string(line))
+        else
+          "#{editor} #{inspect(file)}:#{line}"
+        end
+
+      Mix.shell().cmd(command)
       true
     else
       false
