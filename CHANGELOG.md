@@ -1,5 +1,11 @@
 # Changelog for v3.x
 
+## v3.5.8 (2021-02-21)
+
+### Enhancements
+
+  * [Ecto.Query] Support map/2 on fragments and subqueries
+
 ## v3.5.7 (2021-02-07)
 
 ### Bug fixes

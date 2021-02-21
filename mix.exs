@@ -1,7 +1,7 @@
 defmodule Ecto.MixProject do
   use Mix.Project
 
-  @version "3.5.7"
+  @version "3.5.8"
 
   def project do
     [
@@ -69,7 +69,7 @@ defmodule Ecto.MixProject do
         # Ecto.Schema.Metadata,
         # Mix.Ecto,
 
-        "Types": [
+        Types: [
           Ecto.Enum,
           Ecto.ParameterizedType,
           Ecto.Type,
@@ -119,7 +119,7 @@ defmodule Ecto.MixProject do
 
   defp groups_for_extras do
     [
-      "Introduction": ~r/guides\/introduction\/.?/,
+      Introduction: ~r/guides\/introduction\/.?/,
       "How-To's": ~r/guides\/howtos\/.?/
     ]
   end
