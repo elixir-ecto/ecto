@@ -752,6 +752,12 @@ defmodule Ecto.Query.PlannerTest do
            %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: :integer}
     assert params == [1]
 
+    {query, params, _select} = from(Post, []) |> select([p], type(^"1", ^:integer))
+                                              |> normalize_with_params
+    assert query.select.expr ==
+           %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: :integer}
+    assert params == [1]
+
     {query, params, _select} = from(Post, []) |> select([p], type(^"1", CustomPermalink))
                                               |> normalize_with_params
     assert query.select.expr ==
@@ -767,6 +773,18 @@ defmodule Ecto.Query.PlannerTest do
     assert_raise Ecto.Query.CastError, ~r/value `"1"` in `select` cannot be cast to type Ecto.UUID/, fn ->
       from(Post, []) |> select([p], type(^"1", Ecto.UUID)) |> normalize
     end
+  end
+
+  test "normalize: select types" do
+    param_type = Ecto.ParameterizedType.init(Ecto.Enum, values: [:foo, :bar])
+    _ = from(p in "posts", select: type(fragment("cost"), :decimal)) |> normalize()
+    _ = from(p in "posts", select: type(fragment("cost"), ^:decimal)) |> normalize()
+    _ = from(p in "posts", select: type(fragment("cost"), ^param_type)) |> normalize()
+
+    frag = ["$eq": 42]
+    _ = from(p in "posts", select: type(fragment(^frag), :decimal)) |> normalize()
+    _ = from(p in "posts", select: type(fragment(^frag), ^:decimal)) |> normalize()
+    _ = from(p in "posts", select: type(fragment(^frag), ^param_type)) |> normalize()
   end
 
   test "normalize: late bindings with as" do

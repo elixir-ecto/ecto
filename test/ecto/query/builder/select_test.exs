@@ -251,22 +251,4 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert Macro.to_string(query.select.expr) =~ "merge"
     end
   end
-
-  describe "select with type fragments" do
-    test "supports typed fragment" do
-      from p in "posts", select: type(fragment("cost"), :decimal)
-    end
-
-    test "supports typed fragment with interpolated keyword" do
-      foo = ["$eq": 42]
-      from p in "posts", select: type(fragment(^foo), :decimal)
-    end
-
-    test "raises at runtime on invalid interpolation" do
-      foo = "cost"
-      assert_raise ArgumentError, ~r/fragment\(...\) does not allow strings to be interpolated/, fn ->
-        from p in "posts", select: type(fragment(^foo), :decimal)
-      end
-    end
-  end
 end

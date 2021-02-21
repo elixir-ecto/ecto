@@ -457,6 +457,11 @@ defmodule Ecto.Query.Builder do
     error! "`#{Macro.to_string(other)}` is not a valid query expression"
   end
 
+  defp escape_with_type(expr, {:^, _, [type]}, params_acc, vars, env) do
+    {expr, params_acc} = escape(expr, :any, params_acc, vars, env)
+    {{:{}, [], [:type, [], [expr, type]]}, params_acc}
+  end
+
   defp escape_with_type(expr, type, params_acc, vars, env) do
     type = validate_type!(type, vars, env)
     {expr, params_acc} = escape(expr, type, params_acc, vars, env)
@@ -656,9 +661,8 @@ defmodule Ecto.Query.Builder do
   @doc """
   Validates the type with the given vars.
   """
-  def validate_type!({composite, type}, vars, env) do
-    {composite, validate_type!(type, vars, env)}
-  end
+  def validate_type!({composite, type}, vars, env),
+    do: {composite, validate_type!(type, vars, env)}
   def validate_type!({:^, _, [type]}, _vars, _env),
     do: type
   def validate_type!({:__aliases__, _, _} = type, _vars, env),
