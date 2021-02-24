@@ -32,12 +32,12 @@ jobs:
           elixir-version: ${{matrix.pair.elixir}}
 
       - name: Install Dependencies
-        run: |
-          mix deps.get --only test
-          mix deps.compile
+        run: mix deps.get --only test
 
       - run: mix deps.get && mix deps.unlock --check-unused
         if: ${{ matrix.lint }}
+
+      - run: mix deps.compile
 
       - run: mix compile --warnings-as-errors
         if: ${{ matrix.lint }}
