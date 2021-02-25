@@ -505,8 +505,7 @@ defmodule Ecto do
     end
 
     schema = hd(structs).__struct__
-    assoc = %{owner_key: owner_key} =
-      Ecto.Association.association_from_schema!(schema, assoc)
+    refl = %{owner_key: owner_key} = Ecto.Association.association_from_schema!(schema, assoc)
 
     values =
       Enum.uniq for(struct <- structs,
@@ -514,7 +513,14 @@ defmodule Ecto do
         key = Map.fetch!(struct, owner_key),
         do: key)
 
-    Ecto.Association.assoc_query(assoc, assocs, nil, values)
+    case assocs do
+      [] ->
+        %module{} = refl
+        module.assoc_query(refl, nil, values)
+
+      assocs ->
+        Ecto.Association.filter_through_chain(schema, [assoc | assocs], values)
+    end
   end
 
   @doc """
