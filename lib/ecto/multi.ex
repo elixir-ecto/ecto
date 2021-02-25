@@ -125,6 +125,7 @@ defmodule Ecto.Multi do
   @typep schema_or_source :: binary | {binary | nil, binary} | atom
   @typep operation :: {:changeset, Changeset.t, Keyword.t} |
                       {:run, run} |
+                      {:put, any} |
                       {:merge, merge} |
                       {:update_all, Ecto.Query.t, Keyword.t} |
                       {:delete_all, Ecto.Query.t, Keyword.t} |
@@ -602,6 +603,23 @@ defmodule Ecto.Multi do
   defp format_operation(other),
     do: other
 
+  @doc """
+  Adds a value to the changes so far under the given name.
+
+  ## Example
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.put(:params, params)
+      |> Ecto.Multi.run()
+      |> Ecto.Multi.insert(:user, fn changes -> &User.changeset(changes.params) end)
+      |> Ecto.Multi.insert(:person, fn changes -> &Person.changeset(changes.user, changes.params) end)
+      |> MyApp.Repo.transaction()
+  """
+  @spec put(t, name, any) :: t
+  def put(multi, name, value) do
+    add_operation(multi, name, {:put, value})
+  end
+
   @doc false
   @spec __apply__(t, Ecto.Repo.t, fun, (term -> no_return)) :: {:ok, term} | {:error, term}
   def __apply__(%Multi{} = multi, repo, wrap, return) do
@@ -665,6 +683,8 @@ defmodule Ecto.Multi do
     do: {:ok, repo.update_all(query, updates, opts)}
   defp apply_operation({:delete_all, query, opts}, _acc, _apply_args, repo),
     do: {:ok, repo.delete_all(query, opts)}
+  defp apply_operation({:put, value}, _acc, _apply_args, _repo),
+    do: {:ok, value}
 
   defp apply_merge_fun({mod, fun, args}, acc), do: apply(mod, fun, [acc | args])
   defp apply_merge_fun(fun, acc), do: apply(fun, [acc])

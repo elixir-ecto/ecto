@@ -327,6 +327,18 @@ defmodule Ecto.MultiTest do
     ] = Ecto.Multi.to_list(multi)
   end
 
+  test "put" do
+    name = :halo
+    value = "statue"
+
+    multi =
+      Multi.new()
+      |> Multi.put(name, value)
+
+    assert multi.names == MapSet.new([name])
+    assert multi.operations == [{name, {:put, value}}]
+  end
+
   test "add changeset with invalid action" do
     changeset = %{Changeset.change(%Comment{}) | action: :invalid}
 
@@ -436,8 +448,9 @@ defmodule Ecto.MultiTest do
       changeset = Changeset.change(%Comment{id: 1}, x: 1)
       multi =
         Multi.new()
+        |> Multi.put(:put, 1)
         |> Multi.insert(:insert, changeset)
-        |> Multi.run(:run, fn _repo, changes -> {:ok, changes} end)
+        |> Multi.run(:run, fn _repo, %{put: 1} = changes -> {:ok, changes} end)
         |> Multi.update(:update, changeset)
         |> Multi.update(:update_fun, fn _changes -> changeset end)
         |> Multi.delete(:delete, changeset)
