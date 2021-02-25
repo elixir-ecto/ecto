@@ -1,4 +1,4 @@
-import Ecto.Query, only: [from: 2, join: 4, distinct: 3]
+import Ecto.Query, only: [from: 1, from: 2, join: 4, join: 5, distinct: 3, where: 3]
 
 defmodule Ecto.Association.NotLoaded do
   @moduledoc """
@@ -40,7 +40,6 @@ defmodule Ecto.Association do
                required(:unique) => boolean,
                optional(atom) => any}
 
-  alias Ecto.Query.{BooleanExpr, QueryExpr, FromExpr}
   alias Ecto.Query.Builder.OrderBy
 
   @doc """
@@ -176,97 +175,150 @@ defmodule Ecto.Association do
   end
 
   @doc """
-  Build an association query through with starting the given reflection
-  and through the given associations.
+  Build an association query through the given associations from the specified owner table
+  and through the given associations. Finally filter by the provided values of the owner_key of
+  the first relationship in the chain. Used in Ecto.assoc/2.
   """
-  def assoc_query(refl, through, query, values)
-
-  def assoc_query(%{owner: owner, through: [h|t], field: field}, extra, query, values) do
-    refl = owner.__schema__(:association, h) ||
-            raise "unknown association `#{h}` for `#{inspect owner}` (used by through association `#{field}`)"
-    assoc_query refl, t ++ extra, query, values
+  def filter_through_chain(owner, through, values) do
+    chain_through(owner, through, nil, values)
+    |> distinct([x], true)
   end
 
-  def assoc_query(%module{} = refl, [], query, values) do
-    module.assoc_query(refl, query, values)
+  @doc """
+  Join the target table given a list of associations to go through starting from the owner table.
+  """
+  def join_through_chain(owner, through, query) do
+    chain_through(owner, through, query, nil)
   end
 
-  def assoc_query(refl, t, query, values) do
-    query =
-      query ||
-      %Ecto.Query{
-        from: %FromExpr{
-          source: {"join expression", nil},
-          prefix: refl.queryable.__schema__(:prefix)
-        }
-      }
+  # This function is used by both join_through_chain/3 and filter_through_chain/3 since the algorithm for both
+  # is nearly identical barring a few differences.
+  defp chain_through(owner, through, join_to, values) do
+    # Flatten the chain of throughs. If any of the associations is a HasThrough this allows us to expand it so we have
+    # a list of atomic associations to join through.
+    {_, through} = flatten_through_chain(owner, through, [])
 
-    # Find the position for upcoming joins
-    position = length(query.joins) + 1
+    # If we're joining then we're going forward from the owner table to the destination table.
+    # Otherwise we're going backward from the destination table then filtering by values.
+    chain_direction = if(join_to != nil, do: :forward, else: :backward)
 
-    # The first association must become a join,
-    # so we convert its where (that comes from assoc_query)
-    # to a join expression.
-    #
-    # Note we are being restrictive on the format
-    # expected from assoc_query.
-    assoc_query = refl.__struct__.assoc_query(refl, nil, values)
-    %{from: %{source: assoc_source}} = assoc_query
-    joins = Ecto.Query.Planner.query_to_joins(:inner, assoc_source, assoc_query, position)
+    # This stage produces a list of joins represented as a keyword list with the following structure:
+    # [
+    #   [schema: (The Schema), in_key: (The key used to join into the table), out_key: (The key used to join with the next), where: (The condition KW list)]
+    # ]
+    relation_list = resolve_through_tables(owner, through, chain_direction)
 
-    # Add the new join to the query and traverse the remaining
-    # joins that will start counting from the added join position.
-    query =
-      %{query | joins: query.joins ++ joins}
-      |> joins_query(t, position + length(joins) - 1)
-      |> Ecto.Query.Planner.plan_sources(:adapter_wont_be_needed)
+    # Filter out the joins which are redundant
+    filtered_list = Enum.with_index(relation_list)
+    |> Enum.filter(fn
+      # We always keep the first table in the chain since it's our source table for the query
+      {_, 0} -> true
 
-    # Our source is going to be the last join after
-    # traversing them all.
-    {joins, [assoc]} = Enum.split(query.joins, -1)
+      {rel, _} ->
+        # If the condition is not empty we need to join to the table. Otherwise if the in_key and out_key is the same
+        # then this join is redundant since we can just join to the next table in the chain.
+        rel.in_key != rel.out_key or rel.where != []
+    end)
+    |> Enum.map(&elem(&1, 0))
 
-    # Update the mapping and start rewriting expressions
-    # to make the last join point to the new from source.
-    rewrite_ix = assoc.ix
-    [assoc | joins] = Enum.map([assoc | joins], &rewrite_join(&1, rewrite_ix))
+    # If we're preloading we don't need the last table since it is the owner table.
+    filtered_list = if(join_to == nil, do: Enum.slice(filtered_list, 0..-2), else: filtered_list)
 
-    query = %{
-      query
-      | wheres: [assoc_to_where(assoc) | query.wheres],
-        joins: joins,
-        from: merge_from(query.from, assoc.source),
-        sources: nil
-    }
+    [source | joins] = filtered_list
 
-    distinct(query, [x], true)
+    source_schema = source.schema
+    query = join_to || from(s in source_schema)
+
+    counter = Ecto.Query.Builder.count_binds(query) - 1
+
+    # We need to create the query by joining all the tables, and also we need the out_key of the final table to use
+    # for the final WHERE clause with values.
+    {_, query, _, dest_out_key} = Enum.reduce(joins, {source, query, counter, source.out_key}, fn curr_rel, {prev_rel, query, counter, _} ->
+      related_queryable = curr_rel.schema
+
+      next = join(query, :inner, [{src, counter}], dest in ^related_queryable, on: field(src, ^prev_rel.out_key) == field(dest, ^curr_rel.in_key))
+        |> combine_joins_query(curr_rel.where, counter + 1)
+
+      {curr_rel, next, counter + 1, curr_rel.out_key}
+    end)
+
+    final_bind = Ecto.Query.Builder.count_binds(query) - 1
+
+    values = List.wrap(values)
+    query = case {join_to, values} do
+      {nil, [single_value]} ->
+        query
+        |> where([{dest, final_bind}], field(dest, ^dest_out_key) == ^single_value)
+
+      {nil, values} ->
+        query
+        |> where([{dest, final_bind}], field(dest, ^dest_out_key) in ^values)
+
+      {_, _} ->
+        query
+    end
+
+    combine_assoc_query(query, source.where || [])
   end
 
-  defp assoc_to_where(%{on: %QueryExpr{} = on}) do
-    on
-    |> Map.put(:__struct__, BooleanExpr)
-    |> Map.put(:op, :and)
-    |> Map.put(:subqueries, [])
+  defp flatten_through_chain(owner, [], acc), do: {owner, acc}
+  defp flatten_through_chain(owner, [assoc | tl], acc) do
+    refl = association_from_schema!(owner, assoc)
+    case refl do
+      %{through: nested_throughs} ->
+        {owner, acc} = flatten_through_chain(owner, nested_throughs, acc)
+        flatten_through_chain(owner, tl, acc)
+
+      _ ->
+        flatten_through_chain(refl.related, tl, acc ++ [assoc])
+    end
   end
 
-  defp merge_from(%FromExpr{source: {"join expression", _}} = from, assoc_source),
-    do: %{from | source: assoc_source}
-  defp merge_from(from, _assoc_source),
-    do: from
+  defp resolve_through_tables(owner, through, :backward) do
+    # This step generates a list of maps with the following keys:
+    # [
+    #   %{schema: ..., out_key: ..., in_key: ..., where: ...}
+    # ]
+    # This is a list of all tables that we will need to join to follow the chain of throughs and which key is used
+    # to join in and out of the table, along with the where condition for that table. The final table of the chain will
+    # be "owner", and the first table of the chain will be the final destination table of all the throughs.
+    initial_owner_map = %{schema: owner, out_key: nil, in_key: nil, where: nil}
 
-  # Rewrite all later joins
-  defp rewrite_join(%{on: on, ix: ix} = join, mapping) when ix >= mapping do
-    on = Ecto.Query.Planner.rewrite_sources(on, &rewrite_ix(mapping, &1))
-    %{join | on: on, ix: rewrite_ix(mapping, ix)}
+    Enum.reduce(through, {owner, [initial_owner_map]}, fn assoc, {owner, table_list} ->
+      refl = association_from_schema!(owner, assoc)
+      [owner_map | table_list] = table_list
+
+      table_list = case refl do
+        %{join_through: join_through, join_keys: join_keys, join_where: join_where, where: where} ->
+          [{owner_join_key, owner_key}, {related_join_key, related_key}] = join_keys
+
+          owner_map = %{owner_map | in_key: owner_key}
+          join_map = %{schema: join_through, out_key: owner_join_key, in_key: related_join_key, where: join_where}
+          related_map = %{schema: refl.related, out_key: related_key, in_key: nil, where: where}
+
+          [related_map, join_map, owner_map | table_list]
+
+        _ ->
+          owner_map = %{owner_map | in_key: refl.owner_key}
+          related_map = %{schema: refl.related, out_key: refl.related_key, in_key: nil, where: refl.where}
+
+          [related_map, owner_map | table_list]
+      end
+
+      {refl.related, table_list}
+    end)
+    |> elem(1)
   end
 
-  # Previous joins are kept intact
-  defp rewrite_join(join, _mapping) do
-    join
+  defp resolve_through_tables(owner, through, :forward) do
+    # In the forward case (joining) we need to reverse the list and swap the in_key for the out_key
+    # since we've changed directions.
+    resolve_through_tables(owner, through, :backward)
+    |> Enum.reverse()
+    |> Enum.map(fn %{out_key: out_key, in_key: in_key} = join ->
+      %{join | out_key: in_key, in_key: out_key}
+    end)
   end
-
-  defp rewrite_ix(mapping, ix) when ix > mapping, do: ix - 1
-  defp rewrite_ix(ix, ix), do: 0
-  defp rewrite_ix(_mapping, ix), do: ix
 
   @doc """
   Add the default assoc query where clauses to a join.
@@ -287,7 +339,10 @@ defmodule Ecto.Association do
   Add the default assoc query where clauses a provided query.
   """
   def combine_assoc_query(query, []), do: query
-
+  def combine_assoc_query(%{wheres: []} = query, conditions) do
+    {expr, params} = expand_where(conditions, true, [], 0, 0)
+    %{query | wheres: [%Ecto.Query.BooleanExpr{op: :and, expr: expr, params: params, line: __ENV__.line, file: __ENV__.file}]}
+  end
   def combine_assoc_query(%{wheres: wheres} = query, conditions) do
     {wheres, [where_expr]} = Enum.split(wheres, -1)
     %{params: params, expr: expr} = where_expr
@@ -296,27 +351,32 @@ defmodule Ecto.Association do
   end
 
   defp expand_where(conditions, expr, params, counter, binding) do
+    conjoin_exprs = fn
+      true, r -> r
+      l, r-> {:and, [], [l, r]}
+    end
+
     {expr, params, _counter} =
       Enum.reduce(conditions, {expr, params, counter}, fn
         {key, nil}, {expr, params, counter} ->
-          expr = {:and, [], [expr, {:is_nil, [], [to_field(binding, key)]}]}
+          expr = conjoin_exprs.(expr, {:is_nil, [], [to_field(binding, key)]})
           {expr, params, counter}
 
         {key, {:not, nil}}, {expr, params, counter} ->
-          expr = {:and, [], [expr, {:not, [], [{:is_nil, [], [to_field(binding, key)]}]}]}
+          expr = conjoin_exprs.(expr, {:not, [], [{:is_nil, [], [to_field(binding, key)]}]})
           {expr, params, counter}
 
         {key, {:fragment, frag}}, {expr, params, counter} when is_binary(frag) ->
           pieces = Ecto.Query.Builder.fragment_pieces(frag, [to_field(binding, key)])
-          expr = {:and, [], [expr, {:fragment, [], pieces}]}
+          expr = conjoin_exprs.(expr, {:fragment, [], pieces})
           {expr, params, counter}
 
         {key, {:in, value}}, {expr, params, counter} when is_list(value) ->
-          expr = {:and, [], [expr, {:in, [], [to_field(binding, key), {:^, [], [counter]}]}]}
+          expr = conjoin_exprs.(expr, {:in, [], [to_field(binding, key), {:^, [], [counter]}]})
           {expr, [{value, {:in, {binding, key}}} | params], counter + 1}
 
         {key, value}, {expr, params, counter} ->
-          expr = {:and, [], [expr, {:==, [], [to_field(binding, key), {:^, [], [counter]}]}]}
+          expr = conjoin_exprs.(expr, {:==, [], [to_field(binding, key), {:^, [], [counter]}]})
           {expr, [{value, {binding, key}} | params], counter + 1}
       end)
 
@@ -875,12 +935,12 @@ defmodule Ecto.Association.HasThrough do
 
   @impl true
   def joins_query(%{owner: owner, through: through}) do
-    Ecto.Association.joins_query(owner, through, 0)
+    Ecto.Association.join_through_chain(owner, through, from(x in owner))
   end
 
   @impl true
-  def assoc_query(refl, query, values) do
-    Ecto.Association.assoc_query(refl, [], query, values)
+  def assoc_query(%{owner: owner, through: through}, _, values) do
+    Ecto.Association.filter_through_chain(owner, through, values)
   end
 end
 

@@ -282,29 +282,29 @@ defmodule Ecto.Query.PlannerTest do
 
   test "plan: nested joins associations" do
     query = from(c in Comment, left_join: assoc(c, :post_comments)) |> plan |> elem(0)
-    assert {{"comments", _, _}, {"comments", _, _}, {"posts", _, _}} = query.sources
-    assert [join1, join2] = query.joins
-    assert Enum.map(query.joins, & &1.ix) == [2, 1]
-    assert Macro.to_string(join1.on.expr) == "&2.id() == &0.post_id()"
-    assert Macro.to_string(join2.on.expr) == "&1.post_id() == &2.id()"
+    # The association query builder will optimize has_many through [:posts, :comments] by skipping :posts and joining
+    # comments to comments on post_id
+    assert {{"comments", _, _}, {"comments", _, _}} = query.sources
+    assert [join1] = query.joins
+    assert Enum.map(query.joins, & &1.ix) == [1]
+    assert Macro.to_string(join1.on.expr) == "&0.post_id() == &1.post_id()"
 
     query = from(p in Comment, left_join: assoc(p, :post),
                                left_join: assoc(p, :post_comments)) |> plan |> elem(0)
-    assert {{"comments", _, _}, {"posts", _, _}, {"comments", _, _}, {"posts", _, _}} = query.sources
-    assert [join1, join2, join3] = query.joins
-    assert Enum.map(query.joins, & &1.ix) == [1, 3, 2]
+
+    assert {{"comments", _, _}, {"posts", _, _}, {"comments", _, _}} = query.sources
+    assert [join1, join2] = query.joins
+    assert Enum.map(query.joins, & &1.ix) == [1, 2]
     assert Macro.to_string(join1.on.expr) == "&1.id() == &0.post_id()"
-    assert Macro.to_string(join2.on.expr) == "&3.id() == &0.post_id()"
-    assert Macro.to_string(join3.on.expr) == "&2.post_id() == &3.id()"
+    assert Macro.to_string(join2.on.expr) == "&0.post_id() == &2.post_id()"
 
     query = from(p in Comment, left_join: assoc(p, :post_comments),
                                left_join: assoc(p, :post)) |> plan |> elem(0)
-    assert {{"comments", _, _}, {"comments", _, _}, {"posts", _, _}, {"posts", _, _}} = query.sources
-    assert [join1, join2, join3] = query.joins
-    assert Enum.map(query.joins, & &1.ix) == [3, 1, 2]
-    assert Macro.to_string(join1.on.expr) == "&3.id() == &0.post_id()"
-    assert Macro.to_string(join2.on.expr) == "&1.post_id() == &3.id()"
-    assert Macro.to_string(join3.on.expr) == "&2.id() == &0.post_id()"
+    assert {{"comments", _, _}, {"comments", _, _}, {"posts", _, _}} = query.sources
+    assert [join1, join2] = query.joins
+    assert Enum.map(query.joins, & &1.ix) == [1, 2]
+    assert Macro.to_string(join1.on.expr) == "&0.post_id() == &1.post_id()"
+    assert Macro.to_string(join2.on.expr) == "&2.id() == &0.post_id()"
   end
 
   test "plan: joins associations with custom queries" do
@@ -504,10 +504,10 @@ defmodule Ecto.Query.PlannerTest do
 
     # Schema prefix for assoc has through
     {query, _, _} = from(c in Comment, join: assoc(c, :post_comments)) |> Map.put(:prefix, "global") |> plan()
-    assert query.sources == {{"comments", Comment, "global"}, {"comments", Comment, "global"}, {"posts", Ecto.Query.PlannerTest.Post, "my_prefix"}}
+    assert query.sources == {{"comments", Comment, "global"}, {"comments", Comment, "global"}}
 
     {query, _, _} = from(c in Comment, join: assoc(c, :post_comments), prefix: "local") |> Map.put(:prefix, "global") |> plan()
-    assert query.sources == {{"comments", Comment, "global"}, {"comments", Comment, "local"}, {"posts", Ecto.Query.PlannerTest.Post, "local"}}
+    assert query.sources == {{"comments", Comment, "global"}, {"comments", Comment, "local"}}
   end
 
   test "plan: combination queries" do
