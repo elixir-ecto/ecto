@@ -158,6 +158,14 @@ defmodule Ecto.Integration.User do
     belongs_to :custom, Ecto.Integration.Custom, references: :bid, type: :binary_id
     many_to_many :schema_posts, Ecto.Integration.Post, join_through: Ecto.Integration.PostUser
     many_to_many :unique_posts, Ecto.Integration.Post, join_through: Ecto.Integration.PostUserCompositePk
+
+    has_many :related_2nd_order_posts, through: [:posts, :users, :posts]
+    has_many :users_through_schema_posts, through: [:schema_posts, :users]
+
+    has_many :v2_comments, Ecto.Integration.Comment, foreign_key: :author_id, where: [lock_version: 2]
+    has_many :v2_comments_posts, through: [:v2_comments, :post]
+    has_many :co_commenters, through: [:comments, :post, :comments_authors]
+
     timestamps(type: :utc_datetime)
   end
 end

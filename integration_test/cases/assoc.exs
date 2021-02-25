@@ -114,6 +114,93 @@ defmodule Ecto.Integration.AssocTest do
     assert [^u1] = TestRepo.all(query)
   end
 
+  test "has_many through has_many, many_to_many and has_many" do
+    user1 = %User{id: uid1} = TestRepo.insert!(%User{name: "Gabriel"})
+    %User{id: uid2} = TestRepo.insert!(%User{name: "Isadora"})
+    %User{id: uid3} = TestRepo.insert!(%User{name: "Joey Mush"})
+
+    p1 = TestRepo.insert!(%Post{title: "p1", author_id: uid1})
+    p2 = TestRepo.insert!(%Post{title: "p2", author_id: uid2})
+    p3 = TestRepo.insert!(%Post{title: "p3", author_id: uid2})
+    TestRepo.insert!(%Post{title: "p4", author_id: uid3})
+
+    TestRepo.insert_all "posts_users", [[post_id: p1.id, user_id: uid1],
+                                        [post_id: p1.id, user_id: uid2],
+                                        [post_id: p2.id, user_id: uid3]]
+
+    [pid1, pid2, pid3] =
+      Ecto.assoc(user1, :related_2nd_order_posts)
+      |> TestRepo.all()
+      |> Enum.map(fn %Post{id: id} -> id end)
+      |> Enum.sort()
+
+    assert p1.id == pid1
+    assert p2.id == pid2
+    assert p3.id == pid3
+  end
+
+  test "has_many through has_many, belongs_to and a nested has through" do
+    user1 = TestRepo.insert!(%User{name: "Gabriel"})
+    user2 = TestRepo.insert!(%User{name: "Isadora"})
+    user3 = TestRepo.insert!(%User{name: "Joey"})
+
+    post1 = TestRepo.insert!(%Post{title: "p1"})
+    post2 = TestRepo.insert!(%Post{title: "p2"})
+
+    TestRepo.insert!(%Comment{author_id: user1.id, text: "c1", post_id: post1.id})
+    TestRepo.insert!(%Comment{author_id: user2.id, text: "c2", post_id: post1.id})
+    TestRepo.insert!(%Comment{author_id: user3.id, text: "c3", post_id: post2.id})
+
+    [u1, u2] = Ecto.assoc(user1, :co_commenters) |> TestRepo.all()
+    assert u1.id == user1.id
+    assert u2.id == user2.id
+  end
+
+  test "has_many through two many_to_many associations" do
+    user1 = %User{id: uid1} = TestRepo.insert!(%User{name: "Gabriel"})
+    %User{id: uid2} = TestRepo.insert!(%User{name: "Isadora"})
+    %User{id: uid3} = TestRepo.insert!(%User{name: "Joey Mush"})
+
+    p1 = TestRepo.insert!(%Post{title: "p1", author_id: uid1})
+    TestRepo.insert!(%Post{title: "p2", author_id: uid2})
+    p3 = TestRepo.insert!(%Post{title: "p3", author_id: uid2})
+    p4 = TestRepo.insert!(%Post{title: "p4", author_id: uid3})
+
+    TestRepo.insert_all "posts_users", [[post_id: p3.id, user_id: uid1],
+                                        [post_id: p3.id, user_id: uid2],
+                                        [post_id: p1.id, user_id: uid3]]
+
+    TestRepo.insert!(%PostUser{post_id: p1.id, user_id: uid2})
+    TestRepo.insert!(%PostUser{post_id: p3.id, user_id: uid1})
+    TestRepo.insert!(%PostUser{post_id: p3.id, user_id: uid2})
+    TestRepo.insert!(%PostUser{post_id: p4.id, user_id: uid3})
+
+    [u1, u2] =
+      Ecto.assoc(user1, :users_through_schema_posts)
+      |> TestRepo.all()
+      |> Enum.map(fn %User{id: id} -> id end)
+      |> Enum.sort()
+
+    assert uid1 == u1
+    assert uid2 == u2
+  end
+
+  test "has_many through with where" do
+    post1 = TestRepo.insert!(%Post{title: "p1"})
+    post2 = TestRepo.insert!(%Post{title: "p2"})
+    post3 = TestRepo.insert!(%Post{title: "p3"})
+
+    author = TestRepo.insert!(%User{name: "Gabriel"})
+
+    TestRepo.insert!(%Comment{text: "1", lock_version: 1, post_id: post1.id, author_id: author.id})
+    TestRepo.insert!(%Comment{text: "2", lock_version: 2, post_id: post2.id, author_id: author.id})
+    TestRepo.insert!(%Comment{text: "3", lock_version: 2, post_id: post3.id, author_id: author.id})
+
+    [p2, p3] = Ecto.assoc(author, :v2_comments_posts) |> TestRepo.all()
+    assert p2.id == post2.id
+    assert p3.id == post3.id
+  end
+
   test "many_to_many assoc" do
     p1 = TestRepo.insert!(%Post{title: "1"})
     p2 = TestRepo.insert!(%Post{title: "2"})
