@@ -87,6 +87,15 @@ defmodule Ecto.MultiTest do
     assert multi.operations == [{:comment, {:changeset, %{changeset | action: :insert}, []}}]
   end
 
+  test "inspect prints the multi state and return the base multi" do
+    multi =
+      Multi.new()
+      |> Multi.peek(:peek)
+
+    assert multi.names == MapSet.new([:peek])
+    assert multi.operations == [{:peek, {:peek, []}}]
+  end
+
   test "insert_or_update changeset will update the changeset if it was loaded" do
     changeset = Changeset.change(%Comment{id: 1}, x: 2)
     changeset = put_in(changeset.data.__meta__.state, :loaded)
@@ -479,6 +488,22 @@ defmodule Ecto.MultiTest do
       assert {1, nil}   = changes.delete_all
       assert Map.has_key?(changes.run, :insert)
       refute Map.has_key?(changes.run, :update)
+    end
+
+    test "with peek" do
+      import ExUnit.CaptureIO
+
+      multi =
+        Multi.new()
+        |> Multi.peek(:before_put)
+        |> Multi.put(:put, 1)
+        |> Multi.peek(:after_put)
+
+      assert capture_io(fn ->
+        assert {:ok, result} = TestRepo.transaction(multi)
+        refute Map.has_key?(result, :before_put)
+        refute Map.has_key?(result, :after_put)
+      end) == "before_put: %{}\nafter_put: %{put: 1}\n"
     end
 
     test "with empty multi" do

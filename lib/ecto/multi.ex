@@ -619,6 +619,25 @@ defmodule Ecto.Multi do
     add_operation(multi, name, {:put, value})
   end
 
+  @doc """
+  Peeks results from a Multi
+
+  The name is shown as a label to the inspect, options are passed directly
+  to `IO.inspect/2`. Custom labels are supported through the `label` option.
+
+  ## Example
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert(:person, changeset)
+      |> Ecto.Multi.peek()
+      |> MyApp.Repo.transaction()
+
+  """
+  @spec peek(t, name, keyword()) :: t
+  def peek(multi, name, opts \\ []) do
+    add_operation(multi, name, {:peek, opts})
+  end
+
   @doc false
   @spec __apply__(t, Ecto.Repo.t, fun, (term -> no_return)) :: {:ok, term} | {:error, term}
   def __apply__(%Multi{} = multi, repo, wrap, return) do
@@ -657,6 +676,12 @@ defmodule Ecto.Multi do
         {acc, _names} = merge_results(acc, nested_acc, names)
         return.({name, value, acc})
     end
+  end
+
+  defp apply_operation({name, {:peek, opts}}, _repo, _wrap_, _return, {acc, names}) do
+    opts = Keyword.merge([label: Atom.to_string(name)], opts)
+    IO.inspect(acc, opts)
+    {acc, names}
   end
 
   defp apply_operation({name, operation}, repo, wrap, return, {acc, names}) do
