@@ -1656,6 +1656,51 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
+  Removes error(s) from the changeset that match the given key.
+
+  This removes all errors that match given key. If no errors are
+  left the changeset is marked as valid again.
+
+  You can pass a `fun` as third argument which will receive the additional keyword
+  list and only removes those errors for which `fun` returns a truthy value.
+
+  ## Examples
+
+      iex> changeset = change(%Post{}, %{title: ""})
+      iex> changeset = add_error(changeset, :title, "empty")
+      iex> changeset = remove_errors(changeset, :title)
+      iex> changeset.errors
+      []
+      iex> changeset.valid?
+      true
+
+      iex> changeset = change(%Post{}, %{title: "", author: ""})
+      iex> changeset = add_error(changeset, :title, "empty")
+      iex> changeset = add_error(changeset, :author, "empty")
+      iex> changeset = remove_errors(changeset, :title)
+      iex> changeset.errors
+      [author: {"empty", []}]
+      iex> changeset.valid?
+      false
+
+      iex> changeset = change(%Post{}, %{title: ""})
+      iex> changeset = add_error(changeset, :title, "empty", [val: "x"])
+      iex> changeset = add_error(changeset, :title, "empty", [val: "y"])
+      iex> changeset = remove_errors(changeset, :title, &(&1 == [val: "y"]))
+      iex> changeset.errors
+      [title: {"empty", [val: "x"]}]
+      iex> changeset.valid?
+      false
+
+  """
+  @spec remove_errors(t, atom, fun) :: t
+  def remove_errors(%Changeset{errors: errors} = changeset, key, fun \\ fn _ -> true end)
+      when is_atom(key) and is_function(fun, 1) do
+    errors = Enum.reject(errors, fn {field, {_msg, opts}} -> field == key and fun.(opts) end)
+    %{changeset | errors: errors, valid?: errors == []}
+  end
+
+  @doc """
   Validates the given `field` change.
 
   It invokes the `validator` function to perform the validation

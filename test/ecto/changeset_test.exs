@@ -826,6 +826,53 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [foo: {"bar", [additional: "information"]}]
   end
 
+  test "remove_errors/2" do
+    # Removes error
+    changeset =
+      changeset(%{})
+      |> validate_required(:title, message: "not blank")
+    assert changeset.errors == [title: {"not blank", [validation: :required]}]
+
+    changeset = remove_errors(changeset, :title)
+    assert changeset.errors == []
+
+    # All errors for key
+    changeset =
+      changeset(%{title: "a"})
+      |> validate_length(:title, min: 4, message: "%{count} chars")
+      |> validate_format(:title, ~r/[A-Z][a-z]+/, message: "invalid")
+    assert changeset.errors == [
+        {:title, {"invalid", [validation: :format]}},
+        {:title, {"%{count} chars", [count: 4, validation: :length, kind: :min, type: :string]}}
+      ]
+
+    changeset = remove_errors(changeset, :title)
+    assert changeset.errors == []
+
+    # Does not touch other errors
+    changeset =
+      changeset(%{})
+      |> validate_required([:title, :body], message: "not blank")
+    assert changeset.errors == [title: {"not blank", [validation: :required]}, body: {"not blank", [validation: :required]}]
+
+    changeset = remove_errors(changeset, :title)
+    assert changeset.errors == [body: {"not blank", [validation: :required]}]
+  end
+
+  test "remove_errors/3" do
+    changeset =
+      changeset(%{title: "sql"})
+      |> validate_length(:title, min: 4, message: "%{count} chars")
+      |> validate_format(:title, ~r/[A-Z][a-z]+/, message: "invalid")
+    assert changeset.errors == [
+        {:title, {"invalid", [validation: :format]}},
+        {:title, {"%{count} chars", [count: 4, validation: :length, kind: :min, type: :string]}}
+      ]
+
+    changeset = remove_errors(changeset, :title, &(&1 == [validation: :format]))
+    assert changeset.errors == [{:title, {"%{count} chars", [count: 4, validation: :length, kind: :min, type: :string]}}]
+  end
+
   test "validate_change/3" do
     # When valid
     changeset =
