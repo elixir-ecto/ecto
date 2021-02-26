@@ -90,10 +90,10 @@ defmodule Ecto.MultiTest do
   test "inspect prints the multi state and return the base multi" do
     multi =
       Multi.new()
-      |> Multi.peek(:peek)
+      |> Multi.inspect(:inspect)
 
-    assert multi.names == MapSet.new([:peek])
-    assert multi.operations == [{:peek, {:peek, []}}]
+    assert multi.names == MapSet.new([:inspect])
+    assert multi.operations == [{:inspect, {:inspect, []}}]
   end
 
   test "insert_or_update changeset will update the changeset if it was loaded" do
@@ -490,15 +490,15 @@ defmodule Ecto.MultiTest do
       refute Map.has_key?(changes.run, :update)
     end
 
-    test "with peek" do
+    test "with inspect" do
       import ExUnit.CaptureIO
 
       multi =
         Multi.new()
-        |> Multi.peek(:before_put)
+        |> Multi.inspect(:before_put)
         |> Multi.put(:put, 1)
         |> Multi.put(:put2, 1)
-        |> Multi.peek(:after_put, only: [:put])
+        |> Multi.inspect(:after_put, only: [:put])
 
       assert capture_io(fn ->
         assert {:ok, result} = TestRepo.transaction(multi)

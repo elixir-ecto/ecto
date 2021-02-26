@@ -620,7 +620,7 @@ defmodule Ecto.Multi do
   end
 
   @doc """
-  Peeks results from a Multi
+  Inspects results from a Multi
 
   By default, the name is shown as a label to the inspect, custom labels are
   supported through the `IO.inspect/2` `label` option.
@@ -635,13 +635,13 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.insert(:person, changeset)
-      |> Ecto.Multi.peek()
+      |> Ecto.Multi.inspect()
       |> MyApp.Repo.transaction()
 
   """
-  @spec peek(t, name, keyword()) :: t
-  def peek(multi, name, opts \\ []) do
-    add_operation(multi, name, {:peek, opts})
+  @spec inspect(t, name, keyword()) :: t
+  def inspect(multi, name, opts \\ []) do
+    add_operation(multi, name, {:inspect, opts})
   end
 
   @doc false
@@ -684,7 +684,7 @@ defmodule Ecto.Multi do
     end
   end
 
-  defp apply_operation({name, {:peek, opts}}, _repo, _wrap_, _return, {acc, names}) do
+  defp apply_operation({name, {:inspect, opts}}, _repo, _wrap_, _return, {acc, names}) do
     opts = Keyword.merge([label: Atom.to_string(name)], opts)
 
     if opts[:only] do
@@ -703,7 +703,7 @@ defmodule Ecto.Multi do
       {:error, value} ->
         return.({name, value, acc})
       other ->
-        raise "expected Ecto.Multi callback named `#{inspect(name)}` to return either {:ok, value} or {:error, value}, got: #{inspect(other)}"
+        raise "expected Ecto.Multi callback named `#{inspect name}` to return either {:ok, value} or {:error, value}, got: #{inspect other}"
     end
   end
 
