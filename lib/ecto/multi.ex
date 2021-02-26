@@ -622,8 +622,14 @@ defmodule Ecto.Multi do
   @doc """
   Peeks results from a Multi
 
-  The name is shown as a label to the inspect, options are passed directly
-  to `IO.inspect/2`. Custom labels are supported through the `label` option.
+  By default, the name is shown as a label to the inspect, custom labels are
+  supported through the `IO.inspect/2` `label` option.
+
+  ## Options
+    All options for IO.inspect/2 are supported.
+
+    * `:only` - A list of fields to inspect, will print the entire map by
+      default.
 
   ## Example
 
@@ -680,7 +686,13 @@ defmodule Ecto.Multi do
 
   defp apply_operation({name, {:peek, opts}}, _repo, _wrap_, _return, {acc, names}) do
     opts = Keyword.merge([label: Atom.to_string(name)], opts)
-    IO.inspect(acc, opts)
+
+    if opts[:only] do
+      acc |> Map.take(opts[:only]) |> IO.inspect(opts)
+    else
+      IO.inspect(acc, opts)
+    end
+
     {acc, names}
   end
 

@@ -497,7 +497,8 @@ defmodule Ecto.MultiTest do
         Multi.new()
         |> Multi.peek(:before_put)
         |> Multi.put(:put, 1)
-        |> Multi.peek(:after_put)
+        |> Multi.put(:put2, 1)
+        |> Multi.peek(:after_put, only: [:put])
 
       assert capture_io(fn ->
         assert {:ok, result} = TestRepo.transaction(multi)
