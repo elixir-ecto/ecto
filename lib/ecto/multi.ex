@@ -626,7 +626,8 @@ defmodule Ecto.Multi do
   supported through the `IO.inspect/2` `label` option.
 
   ## Options
-    All options for IO.inspect/2 are supported.
+
+  All options for IO.inspect/2 are supported, it also support the following ones:
 
     * `:only` - A list of fields to inspect, will print the entire map by
       default.
