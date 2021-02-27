@@ -498,13 +498,14 @@ defmodule Ecto.MultiTest do
         |> Multi.inspect(:before_put)
         |> Multi.put(:put, 1)
         |> Multi.put(:put2, 1)
-        |> Multi.inspect(:after_put, only: [:put])
+        |> Multi.inspect(:inspect_put, only: [:put])
+        |> Multi.inspect(:inspect_put2, only: :put2)
 
       assert capture_io(fn ->
         assert {:ok, result} = TestRepo.transaction(multi)
         refute Map.has_key?(result, :before_put)
         refute Map.has_key?(result, :after_put)
-      end) == "before_put: %{}\nafter_put: %{put: 1}\n"
+      end) == "before_put: %{}\ninspect_put: %{put: 1}\ninspect_put2: %{put2: 1}\n"
     end
 
     test "with empty multi" do

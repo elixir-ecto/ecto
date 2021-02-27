@@ -630,15 +630,30 @@ defmodule Ecto.Multi do
 
   All options for IO.inspect/2 are supported, it also support the following ones:
 
-    * `:only` - A list of fields to inspect, will print the entire map by
-      default.
+    * `:only` - A field or a list of fields to inspect, will print the entire
+      map by default.
 
-  ## Example
+  ## Examples
 
       Ecto.Multi.new()
-      |> Ecto.Multi.insert(:person, changeset)
+      |> Ecto.Multi.insert(:person_a, changeset)
+      |> Ecto.Multi.insert(:person_b, changeset)
       |> Ecto.Multi.inspect()
       |> MyApp.Repo.transaction()
+
+  Prints:
+      %{person_a: %Person{...}, person_b: %Person{...}}
+
+  We can use the `:only` option to limit which fields will be printed:
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.insert(:person_a, changeset)
+      |> Ecto.Multi.insert(:person_b, changeset)
+      |> Ecto.Multi.inspect(only: :person_a)
+      |> MyApp.Repo.transaction()
+
+  Prints:
+      %{person_a: %Person{...}}
 
   """
   @spec inspect(t, name, keyword()) :: t
@@ -690,7 +705,7 @@ defmodule Ecto.Multi do
     opts = Keyword.merge([label: Atom.to_string(name)], opts)
 
     if opts[:only] do
-      acc |> Map.take(opts[:only]) |> IO.inspect(opts)
+      acc |> Map.take(List.wrap(opts[:only])) |> IO.inspect(opts)
     else
       IO.inspect(acc, opts)
     end
