@@ -90,9 +90,9 @@ defmodule Ecto.MultiTest do
   test "inspect prints the multi state and return the base multi" do
     multi =
       Multi.new()
-      |> Multi.inspect(:inspect)
+      |> Multi.inspect()
 
-    assert multi.names == MapSet.new([:inspect])
+    assert multi.names == MapSet.new([])
     assert multi.operations == [{:inspect, {:inspect, []}}]
   end
 
@@ -495,17 +495,17 @@ defmodule Ecto.MultiTest do
 
       multi =
         Multi.new()
-        |> Multi.inspect(:before_put)
+        |> Multi.inspect()
         |> Multi.put(:put, 1)
         |> Multi.put(:put2, 1)
-        |> Multi.inspect(:inspect_put, only: [:put])
-        |> Multi.inspect(:inspect_put2, only: :put2)
+        |> Multi.inspect(only: [:put])
+        |> Multi.inspect(only: :put2)
 
       assert capture_io(fn ->
         assert {:ok, result} = TestRepo.transaction(multi)
         refute Map.has_key?(result, :before_put)
         refute Map.has_key?(result, :after_put)
-      end) == "before_put: %{}\ninspect_put: %{put: 1}\ninspect_put2: %{put2: 1}\n"
+      end) == "%{}\n%{put: 1}\n%{put2: 1}\n"
     end
 
     test "with empty multi" do

@@ -197,11 +197,11 @@ defmodule Ecto.Multi do
         raise ArgumentError, """
         error when merging the following Ecto.Multi structs:
 
-        #{inspect lhs}
+        #{Kernel.inspect lhs}
 
-        #{inspect rhs}
+        #{Kernel.inspect rhs}
 
-        both declared operations: #{inspect common}
+        both declared operations: #{Kernel.inspect common}
         """
     end
   end
@@ -410,7 +410,7 @@ defmodule Ecto.Multi do
 
   defp put_action(%{action: original}, action) do
     raise ArgumentError, "you provided a changeset with an action already set " <>
-      "to #{inspect original} when trying to #{action} it"
+      "to #{Kernel.inspect original} when trying to #{action} it"
   end
 
   @doc """
@@ -578,7 +578,7 @@ defmodule Ecto.Multi do
   defp add_operation(%Multi{} = multi, name, operation) do
     %{operations: operations, names: names} = multi
     if MapSet.member?(names, name) do
-      raise "#{inspect name} is already a member of the Ecto.Multi: \n#{inspect multi}"
+      raise "#{Kernel.inspect name} is already a member of the Ecto.Multi: \n#{Kernel.inspect multi}"
     else
       %{multi | operations: [{name, operation} | operations],
                 names: MapSet.put(names, name)}
@@ -656,9 +656,9 @@ defmodule Ecto.Multi do
       %{person_a: %Person{...}}
 
   """
-  @spec inspect(t, name, Keyword.t) :: t
-  def inspect(multi, name, opts \\ []) do
-    add_operation(multi, name, {:inspect, opts})
+  @spec inspect(t, Keyword.t) :: t
+  def inspect(multi, opts \\ []) do
+    Map.update!(multi, :operations, &[{:inspect, {:inspect, opts}} | &1])
   end
 
   @doc false
@@ -701,9 +701,7 @@ defmodule Ecto.Multi do
     end
   end
 
-  defp apply_operation({name, {:inspect, opts}}, _repo, _wrap_, _return, {acc, names}) do
-    opts = Keyword.merge([label: Atom.to_string(name)], opts)
-
+  defp apply_operation({_name, {:inspect, opts}}, _repo, _wrap_, _return, {acc, names}) do
     if opts[:only] do
       acc |> Map.take(List.wrap(opts[:only])) |> IO.inspect(opts)
     else
@@ -720,7 +718,7 @@ defmodule Ecto.Multi do
       {:error, value} ->
         return.({name, value, acc})
       other ->
-        raise "expected Ecto.Multi callback named `#{inspect name}` to return either {:ok, value} or {:error, value}, got: #{inspect other}"
+        raise "expected Ecto.Multi callback named `#{Kernel.inspect name}` to return either {:ok, value} or {:error, value}, got: #{Kernel.inspect other}"
     end
   end
 
@@ -752,7 +750,7 @@ defmodule Ecto.Multi do
         {Map.merge(changes, new_changes), MapSet.union(names, new_names)}
       common ->
         raise "cannot merge multi, the following operations were found in " <>
-          "both Ecto.Multi: #{inspect common}"
+          "both Ecto.Multi: #{Kernel.inspect common}"
     end
   end
 
