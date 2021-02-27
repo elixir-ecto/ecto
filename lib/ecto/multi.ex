@@ -126,6 +126,7 @@ defmodule Ecto.Multi do
   @typep operation :: {:changeset, Changeset.t, Keyword.t} |
                       {:run, run} |
                       {:put, any} |
+                      {:inspect, Keyword.t} |
                       {:merge, merge} |
                       {:update_all, Ecto.Query.t, Keyword.t} |
                       {:delete_all, Ecto.Query.t, Keyword.t} |
