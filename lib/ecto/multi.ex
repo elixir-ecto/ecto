@@ -656,7 +656,7 @@ defmodule Ecto.Multi do
       %{person_a: %Person{...}}
 
   """
-  @spec inspect(t, name, keyword()) :: t
+  @spec inspect(t, name, Keyword.t) :: t
   def inspect(multi, name, opts \\ []) do
     add_operation(multi, name, {:inspect, opts})
   end
