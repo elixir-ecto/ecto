@@ -121,9 +121,15 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute changeset.changes.profile.valid?
     refute changeset.valid?
 
+    # string
     changeset = cast(%Author{}, %{"profile" => "value"}, :profile, required: true)
     assert changeset.errors == [profile: {"is invalid", [validation: :embed, type: :map]}]
     refute changeset.valid?
+
+    # list
+    changeset = cast(%Author{}, %{"profile" => [%{"name" => "michal"}]}, :profile)
+    assert changeset.changes == %{}
+    assert changeset.errors  == [profile: {"is invalid", [validation: :embed, type: :map]}]
   end
 
   test "cast embeds_one with existing struct updating" do
