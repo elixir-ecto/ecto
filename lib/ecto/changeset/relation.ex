@@ -95,6 +95,14 @@ defmodule Ecto.Changeset.Relation do
     end
   end
 
+  def cast(%{cardinality: :one} = relation, owner, params, current, on_cast) when is_list(params) do
+    if Keyword.keyword?(params) do
+      cast(relation, owner, Map.new(params), current, on_cast)
+    else
+      {:error, {"is invalid", [type: expected_type(relation)]}}
+    end
+  end
+
   def cast(%{cardinality: :many} = relation, owner, params, current, on_cast) when is_map(params) do
     params =
       params
