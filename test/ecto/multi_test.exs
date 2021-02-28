@@ -327,6 +327,29 @@ defmodule Ecto.MultiTest do
     ] = Ecto.Multi.to_list(multi)
   end
 
+  test "inspect/1" do
+    name = :halo
+    value = "statue"
+
+    defmodule TestIO do
+      def inspect(%{halo: "statue"} = state, opts) do
+        assert %{:halo => "statue"} = state
+        assert opts == [label: "after", io: Ecto.MultiTest.TestIO]
+      end
+
+      def inspect(%{} = state, opts) do
+        assert state == %{}
+        assert opts == [label: "before", io: Ecto.MultiTest.TestIO]
+      end
+    end
+
+    Multi.new()
+    |> Multi.inspect(label: "before", io: TestIO)
+    |> Multi.put(name, value)
+    |> Multi.inspect(label: "after", io: TestIO)
+    |> TestRepo.transaction()
+  end
+
   test "put" do
     name = :halo
     value = "statue"
