@@ -611,8 +611,8 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.put(:params, params)
-      |> Ecto.Multi.insert(:user, fn changes -> &User.changeset(changes.params) end)
-      |> Ecto.Multi.insert(:person, fn changes -> &Person.changeset(changes.user, changes.params) end)
+      |> Ecto.Multi.insert(:user, fn changes -> User.changeset(changes.params) end)
+      |> Ecto.Multi.insert(:person, fn changes -> Person.changeset(changes.user, changes.params) end)
       |> MyApp.Repo.transaction()
   """
   @spec put(t, name, any) :: t
