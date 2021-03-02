@@ -60,7 +60,7 @@ This command will generate the configuration required to connect to a database. 
 
 ```elixir
 config :friends, Friends.Repo,
-  database: "friends_repo",
+  database: "friends",
   username: "user",
   password: "pass",
   hostname: "localhost"
