@@ -31,7 +31,7 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp do_insert_all(name, schema, prefix, source, rows, opts) when is_list(rows) do
+  defp do_insert_all(name, schema, prefix, source, rows, opts) when is_list(rows) or is_struct(rows, Ecto.Query) do
     {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     autogen_id = schema && schema.__schema__(:autogenerate_id)
     dumper = schema && schema.__schema__(:dump)
@@ -45,7 +45,15 @@ defmodule Ecto.Repo.Schema do
     {rows, header, placeholder_values} =
       extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter)
 
-    counter = fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
+    counter =
+      case rows do
+        list when is_list(list) -> fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
+        query = %Ecto.Query{} -> fn ->
+          {_, params} = Ecto.Adapter.Queryable.plan_query(:all, adapter, query)
+          length(params)
+        end
+      end
+
     schema_meta = metadata(schema, prefix, source, autogen_id, nil, opts)
 
     on_conflict = Keyword.get(opts, :on_conflict, :raise)
@@ -76,6 +84,21 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
+  defp extract_header_and_fields(query = %Ecto.Query{}, schema, dumper, _autogen_id, placeholder_map, adapter) do
+    mapper = init_mapper(schema, dumper, adapter, placeholder_map)
+    header = case query.select do
+      %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
+        Keyword.keys(args)
+        |> Enum.reduce(%{}, &Map.put(&2, &1, true))
+    end
+    query = Map.update!(query, :select, fn select ->
+      Map.update!(select, :expr, fn {:%{}, ctx, args} ->
+        args = Enum.sort_by(args, &elem(&1, 0))
+        {:%{}, ctx, args}
+      end)
+    end)
+    {query, header, []}
+  end
   defp extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter) do
     mapper = init_mapper(schema, dumper, adapter, placeholder_map)
 
