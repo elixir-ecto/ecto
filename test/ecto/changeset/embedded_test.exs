@@ -818,7 +818,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute Map.has_key?(changeset.changes, :profile)
   end
 
-  test "put_change/4 with embeds one" do
+  test "put_change/3 with embeds one" do
     changeset = Changeset.change(%Author{}, profile: %Profile{name: "michal"})
     assert %Ecto.Changeset{} = changeset.changes.profile
 
@@ -829,7 +829,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute Map.has_key?(changeset.changes, :profile)
   end
 
-  test "put_change/4 with nested embed" do
+  test "put_change/3 with nested embed" do
     changeset =
       Changeset.change(%Author{}, %{})
       |> Changeset.put_change(:nested, %Nested{profile: %Profile{name: "tom"}})
@@ -837,6 +837,19 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert {:ok, author} = TestRepo.insert(changeset)
     assert author.nested.id
     assert author.nested.profile.id
+  end
+
+  test "put_new_change/3 with embeds one" do
+    changeset = Changeset.change(%Author{}, profile: %Profile{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+
+    base_changeset = Changeset.change(%Author{}, profile: %Profile{name: "michal"})
+    assert base_changeset.changes.profile.data.name == "michal"
+
+    changeset =
+      Changeset.put_new_change(base_changeset, :profile, Changeset.change(%Profile{name: "bar"}))
+
+    assert changeset.changes.profile.data.name == "michal"
   end
 
   test "put_embed/4 with embeds_many" do
@@ -889,6 +902,31 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = Changeset.put_change(base_changeset, :posts, [empty_update_changeset])
     refute Map.has_key?(changeset.changes, :posts)
+  end
+
+  test "put_new_change/3 with embeds_many" do
+    changeset = Changeset.change(%Author{}, posts: [%{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    base_changeset = Changeset.change(%Author{}, posts: [%Post{title: "hello"}])
+    changeset = Changeset.put_new_change(base_changeset, :posts, [[title: "foo"]])
+    assert [%Ecto.Changeset{} = post_changeset] = changeset.changes.posts
+    assert post_changeset.changes == %{}
+
+    base_changeset = Changeset.change(%Author{}, posts: [%Post{title: "hello"}])
+    changeset = Changeset.put_new_change(base_changeset, :posts, [%Post{title: "foo"}])
+    assert [%Ecto.Changeset{} = post_changeset] = changeset.changes.posts
+    assert post_changeset.changes == %{}
+
+    base_changeset =
+      Changeset.change(%Author{}, posts: [Changeset.change(%Post{}, title: "hello")])
+
+    changeset =
+      Changeset.put_new_change(base_changeset, :posts, [Changeset.change(%Post{}, title: "foo")])
+
+    assert [%Ecto.Changeset{} = post_changeset] = changeset.changes.posts
+    assert post_changeset.changes.title == "hello"
   end
 
   test "get_field/3, fetch_field/2 with embeds" do

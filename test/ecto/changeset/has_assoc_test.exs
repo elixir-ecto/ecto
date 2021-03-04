@@ -965,6 +965,19 @@ defmodule Ecto.Changeset.HasAssocTest do
     refute Map.has_key?(changeset.changes, :profile)
   end
 
+  test "put_new_change/3 with has_one" do
+    changeset = Changeset.change(%Author{}, profile: %Profile{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+
+    base_changeset = Changeset.change(%Author{}, profile: %Profile{name: "michal"})
+    assert base_changeset.changes.profile.data.name == "michal"
+
+    changeset =
+      Changeset.put_new_change(base_changeset, :profile, Changeset.change(%Profile{name: "bar"}))
+
+    assert changeset.changes.profile.data.name == "michal"
+  end
+
   test "put_assoc/4 with has_many" do
     base_changeset = Changeset.change(%Author{})
 
@@ -1024,6 +1037,32 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     changeset = Changeset.put_change(base_changeset, :posts, [empty_update_changeset])
     refute Map.has_key?(changeset.changes, :posts)
+  end
+
+
+  test "put_new_change/3 with has_many" do
+    changeset = Changeset.change(%Author{}, posts: [%{title: "hello"}])
+    assert [%Ecto.Changeset{}] = changeset.changes.posts
+    assert hd(changeset.changes.posts).action == :insert
+
+    base_changeset = Changeset.change(%Author{}, posts: [%Post{title: "hello"}])
+    changeset = Changeset.put_new_change(base_changeset, :posts, [[title: "foo"]])
+    assert [%Ecto.Changeset{} = post_changeset] = changeset.changes.posts
+    assert post_changeset.changes == %{}
+
+    base_changeset = Changeset.change(%Author{}, posts: [%Post{title: "hello"}])
+    changeset = Changeset.put_new_change(base_changeset, :posts, [%Post{title: "foo"}])
+    assert [%Ecto.Changeset{} = post_changeset] = changeset.changes.posts
+    assert post_changeset.changes == %{}
+
+    base_changeset =
+      Changeset.change(%Author{}, posts: [Changeset.change(%Post{}, title: "hello")])
+
+    changeset =
+      Changeset.put_new_change(base_changeset, :posts, [Changeset.change(%Post{}, title: "foo")])
+
+    assert [%Ecto.Changeset{} = post_changeset] = changeset.changes.posts
+    assert post_changeset.changes.title == "hello"
   end
 
   test "put_assoc/4 raises on invalid changeset" do

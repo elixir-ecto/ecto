@@ -730,6 +730,19 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes.upvotes == nil
   end
 
+  test "put_new_change/3" do
+    base_changeset = change(%Post{upvotes: 5}, title: "foo")
+
+    changeset = put_new_change(base_changeset, :title, "bar")
+    assert changeset.changes.title == "foo"
+
+    changeset = delete_change(changeset, :title)
+    assert changeset.changes == %{}
+
+    changeset = put_new_change(base_changeset, :title, "foo")
+    assert changeset.changes.title == "foo"
+  end
+
   test "force_change/3" do
     changeset = change(%Post{upvotes: 5})
 

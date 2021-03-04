@@ -1238,6 +1238,73 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
+  Puts a change on the given `key` with `value` unless the entry `key` already exists in changes.
+
+  ## Examples
+
+      iex> changeset = change(%Post{author: "bar"}, %{title: "foo"})
+      iex> changeset = put_new_change(changeset, :title, "bar")
+      iex> changeset.changes
+      %{title: "foo"}
+
+      iex> changeset = change(%Post{author: "bar"})
+      iex> changeset = put_new_change(changeset, :title, "bar")
+      iex> changeset.changes
+      %{title: "bar"}
+  """
+
+  @spec put_new_change(t, atom, term) :: t
+  def put_new_change(%Changeset{types: nil}, _key, _value) do
+    raise ArgumentError, "changeset does not have types information"
+  end
+
+  def put_new_change(%Changeset{data: data, types: types} = changeset, key, value) do
+    type = Map.get(types, key)
+
+    {changes, errors, valid?} =
+      put_new_change(
+        data,
+        changeset.changes,
+        changeset.errors,
+        changeset.valid?,
+        key,
+        value,
+        type
+      )
+
+    %{changeset | changes: changes, errors: errors, valid?: valid?}
+  end
+
+  defp put_new_change(data, changes, errors, valid?, key, value, {tag, relation})
+       when tag in @relations do
+    if Map.has_key?(changes, key) do
+      {changes, errors, valid?}
+    else
+      put_change(data, changes, errors, valid?, key, value, {tag, relation})
+    end
+  end
+
+  defp put_new_change(data, _changes, _errors, _valid?, key, _value, nil) when is_atom(key) do
+    raise ArgumentError, "unknown field `#{inspect(key)}` in #{inspect(data)}"
+  end
+
+  defp put_new_change(_data, _changes, _errors, _valid?, key, _value, nil)
+       when not is_atom(key) do
+    raise ArgumentError,
+          "field names given to change/put_change/put_new_change must be atoms, got: `#{
+            inspect(key)
+          }`"
+  end
+
+  defp put_new_change(data, changes, errors, valid?, key, value, type) do
+    unless Map.has_key?(changes, key) do
+      put_change(data, changes, errors, valid?, key, value, type)
+    else
+      {changes, errors, valid?}
+    end
+  end
+
+  @doc """
   Puts the given association entry or entries as a change in the changeset.
 
   This function is used to work with associations as a whole. For example,

@@ -523,6 +523,19 @@ defmodule Ecto.Changeset.BelongsToTest do
     refute Map.has_key?(changeset.changes, :profile)
   end
 
+  test "put_new_change/3" do
+    changeset = Changeset.change(%Author{}, profile: %Profile{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+
+    base_changeset = Changeset.change(%Author{}, profile: %Profile{name: "michal"})
+    assert base_changeset.changes.profile.data.name == "michal"
+
+    changeset =
+      Changeset.put_new_change(base_changeset, :profile, Changeset.change(%Profile{name: "bar"}))
+
+    assert changeset.changes.profile.data.name == "michal"
+  end
+
   test "get_field/3, fetch_field/2 with assocs" do
     profile_changeset = Changeset.change(%Profile{}, name: "michal")
     profile = Changeset.apply_changes(profile_changeset)
