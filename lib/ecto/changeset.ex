@@ -1262,38 +1262,9 @@ defmodule Ecto.Changeset do
     type = Map.get(types, key)
 
     {changes, errors, valid?} =
-      put_new_change(
-        data,
-        changeset.changes,
-        changeset.errors,
-        changeset.valid?,
-        key,
-        value,
-        type
-      )
+      put_new_change(data, changeset.changes, changeset.errors, changeset.valid?, key, value, type)
 
     %{changeset | changes: changes, errors: errors, valid?: valid?}
-  end
-
-  defp put_new_change(data, changes, errors, valid?, key, value, {tag, relation})
-       when tag in @relations do
-    if Map.has_key?(changes, key) do
-      {changes, errors, valid?}
-    else
-      put_change(data, changes, errors, valid?, key, value, {tag, relation})
-    end
-  end
-
-  defp put_new_change(data, _changes, _errors, _valid?, key, _value, nil) when is_atom(key) do
-    raise ArgumentError, "unknown field `#{inspect(key)}` in #{inspect(data)}"
-  end
-
-  defp put_new_change(_data, _changes, _errors, _valid?, key, _value, nil)
-       when not is_atom(key) do
-    raise ArgumentError,
-          "field names given to change/put_change/put_new_change must be atoms, got: `#{
-            inspect(key)
-          }`"
   end
 
   defp put_new_change(data, changes, errors, valid?, key, value, type) do
