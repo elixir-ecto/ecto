@@ -31,7 +31,12 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp do_insert_all(name, schema, prefix, source, rows, opts) when is_list(rows) or is_struct(rows, Ecto.Query) do
+  defp do_insert_all(name, schema, prefix, source, rows, opts) do
+    case rows do
+      list when is_list(list) -> :ok
+      %Ecto.Query{} -> :ok
+      _ -> raise ArgumentError, message: "insert_all called with invalid rows_or_query: #{inspect rows}"
+    end
     {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     autogen_id = schema && schema.__schema__(:autogenerate_id)
     dumper = schema && schema.__schema__(:dump)
