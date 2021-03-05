@@ -24,6 +24,7 @@ defmodule MyApp.Repo do
 
   require Ecto.Query
 
+  @impl true
   def prepare_query(_operation, query, opts) do
     cond do
       opts[:skip_org_id] || opts[:schema_migration] ->
@@ -79,6 +80,7 @@ The second change we need to do is to set the `org_id` as a default option on al
 defmodule MyApp.Repo do
   ...
 
+  @impl true
   def default_options(_operation) do
     [org_id: get_org_id()]
   end
