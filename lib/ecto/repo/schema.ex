@@ -83,22 +83,7 @@ defmodule Ecto.Repo.Schema do
 
   defp extract_header_and_fields(query = %Ecto.Query{}, _schema, _dumper, _autogen_id, _placeholder_map, adapter) do
     case query.select do
-      nil ->
-        raise ArgumentError, message: """
-Cannot generate a fields list for INSERT INTO from the given source query:
-#{inspect query}
-
-Please add a select clause that selects into a map, like this:
-
-from x in Source,
-  ...,
-  select: %{
-    field_a: x.bar,
-    field_b: x.foo
-  }
-        """
-
-      %Ecto.Query.SelectExpr{expr: {op, _ctx, args}} when op in [:%{}, :"[]"] ->
+      %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
         header =
           Keyword.keys(args)
           |> Enum.reduce(%{}, &Map.put(&2, &1, true))
@@ -113,6 +98,24 @@ from x in Source,
         query_and_params = Ecto.Adapter.Queryable.plan_query(:all, adapter, query)
 
         {query_and_params, header, []}
+
+      _ ->
+        raise ArgumentError, message: """
+        Cannot generate a fields list for insert_all from the given source query,
+        because it does not have a select clause that uses a map:
+        #{inspect query}
+
+        Please add a select clause that selects into a map, like this:
+
+        from x in Source,
+          ...,
+          select: %{
+            field_a: x.bar,
+            field_b: x.foo
+          }
+
+        The keys must exist in the schema that is being inserted into.
+        """
     end
   end
   defp extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter) do

@@ -483,16 +483,31 @@ defmodule Ecto.RepoTest do
     test "takes query as datasource" do
       import Ecto.Query
 
-      threshold = 10
+      threshold = "ten"
 
       query = from s in MySchema,
-        where: s.x > ^threshold
+        where: s.x > ^threshold,
+        select: %{
+          foo: s.x,
+          bar: fragment("concat(?, ?, ?)", ^"one", ^"two", s.z)
+        }
 
       TestRepo.insert_all(MySchema, query)
 
-      assert_received {:insert_all, %{source: "my_schema"}, %Ecto.Query{} = query}
+      assert_received {:insert_all, %{source: "my_schema"}, {%Ecto.Query{}, params}}
 
-      IO.inspect query
+      assert ["one", "two", "ten"] = params
+    end
+
+    test "raises when a bad query is given as source" do
+      assert_raise ArgumentError, fn ->
+        TestRepo.insert_all(MySchema, from(s in MySchema))
+      end
+      assert_raise ArgumentError, fn ->
+        source = from s in MySchema,
+          select: s.foo
+        TestRepo.insert_all(MySchema, source)
+      end
     end
 
     test "raises when on associations" do
