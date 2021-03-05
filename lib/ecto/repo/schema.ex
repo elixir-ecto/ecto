@@ -89,9 +89,7 @@ defmodule Ecto.Repo.Schema do
   defp extract_header_and_fields(query = %Ecto.Query{}, _schema, _dumper, _autogen_id, _placeholder_map, adapter) do
     case query.select do
       %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
-        header =
-          Keyword.keys(args)
-          |> Enum.reduce(%{}, &Map.put(&2, &1, true))
+        header = Map.new(args, fn {k, _} -> {k, true} end)
 
         query = Map.update!(query, :select, fn select ->
           Map.update!(select, :expr, fn {op, ctx, args} ->
