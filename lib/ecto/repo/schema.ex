@@ -59,7 +59,7 @@ defmodule Ecto.Repo.Schema do
     on_conflict = on_conflict(on_conflict, conflict_target, schema_meta, counter, adapter)
 
     {count, rows_or_query} =
-      adapter.insert_all(adapter_meta, schema_meta, Map.keys(header), rows_or_query, on_conflict, return_sources, placeholder_values, opts)
+      adapter.insert_all(adapter_meta, schema_meta, header, rows_or_query, on_conflict, return_sources, placeholder_values, opts)
 
     {count, postprocess(rows_or_query, return_fields_or_types, adapter, schema, schema_meta)}
   end
@@ -82,7 +82,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp extract_header_and_fields(%{select: %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}}} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter) do
-    header = Map.new(args, fn {k, _} -> {k, true} end)
+    header = Enum.map(args, &elem(&1, 0))
 
     query = Map.update!(query, :select, fn select ->
       Map.update!(select, :expr, fn {op, ctx, args} ->
@@ -123,6 +123,8 @@ defmodule Ecto.Repo.Schema do
         {fields, header} = autogenerate_id(autogen_id, fields, header, adapter)
         {fields, {header, has_query?, placeholder_dump, counter}}
       end)
+
+    header = Map.keys(header)
 
     placeholder_vals_list =
       placeholder_dump
@@ -198,7 +200,7 @@ defmodule Ecto.Repo.Schema do
   defp plan_query_in_rows(rows, header, adapter) do
     {rows, _counter} =
       Enum.map_reduce(rows, 0, fn fields, counter ->
-        Enum.flat_map_reduce(header, counter, fn {key, _}, counter ->
+        Enum.flat_map_reduce(header, counter, fn key, counter ->
           case :lists.keyfind(key, 1, fields) do
             {^key, %Ecto.Query{} = query} ->
               {query, params, _} = Ecto.Query.Planner.plan(query, :all, adapter)
