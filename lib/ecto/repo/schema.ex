@@ -103,21 +103,22 @@ defmodule Ecto.Repo.Schema do
         {query_and_params, header, []}
 
       _ ->
-        raise ArgumentError, message: """
-        Cannot generate a fields list for insert_all from the given source query,
+        raise ArgumentError, """
+        Cannot generate a fields list for insert_all from the given source query
         because it does not have a select clause that uses a map:
+
         #{inspect query}
 
         Please add a select clause that selects into a map, like this:
 
-        from x in Source,
-          ...,
-          select: %{
-            field_a: x.bar,
-            field_b: x.foo
-          }
+            from x in Source,
+              ...,
+              select: %{
+                field_a: x.bar,
+                field_b: x.foo
+              }
 
-        The keys must exist in the schema that is being inserted into.
+        The keys must exist in the schema that is being inserted into
         """
     end
   end
