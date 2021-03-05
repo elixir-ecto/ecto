@@ -31,7 +31,7 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp do_insert_all(name, schema, prefix, source, rows, opts) do
+  defp do_insert_all(name, schema, prefix, source, rows_or_query, opts) do
     {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     autogen_id = schema && schema.__schema__(:autogenerate_id)
     dumper = schema && schema.__schema__(:dump)
@@ -42,12 +42,12 @@ defmodule Ecto.Repo.Schema do
       |> returning(opts)
       |> fields_to_sources(dumper)
 
-    {rows, header, placeholder_values} =
-      extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter)
+    {rows_or_query, header, placeholder_values} =
+      extract_header_and_fields(rows_or_query, schema, dumper, autogen_id, placeholder_map, adapter)
 
     counter =
-      case rows do
-        list when is_list(list) -> fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
+      case rows_or_query do
+        rows when is_list(rows) -> fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
         {%Ecto.Query{}, params} -> fn -> length(params) end
       end
 
@@ -58,10 +58,10 @@ defmodule Ecto.Repo.Schema do
     conflict_target = conflict_target(conflict_target, dumper)
     on_conflict = on_conflict(on_conflict, conflict_target, schema_meta, counter, adapter)
 
-    {count, rows} =
-      adapter.insert_all(adapter_meta, schema_meta, Map.keys(header), rows, on_conflict, return_sources, placeholder_values, opts)
+    {count, rows_or_query} =
+      adapter.insert_all(adapter_meta, schema_meta, Map.keys(header), rows_or_query, on_conflict, return_sources, placeholder_values, opts)
 
-    {count, postprocess(rows, return_fields_or_types, adapter, schema, schema_meta)}
+    {count, postprocess(rows_or_query, return_fields_or_types, adapter, schema, schema_meta)}
   end
 
   defp postprocess(nil, [], _adapter, _schema, _schema_meta) do
@@ -100,7 +100,7 @@ defmodule Ecto.Repo.Schema do
     Cannot generate a fields list for insert_all from the given source query
     because it does not have a select clause that uses a map:
 
-    #{inspect query}
+      #{inspect query}
 
     Please add a select clause that selects into a map, like this:
 
@@ -140,7 +140,7 @@ defmodule Ecto.Repo.Schema do
     end
   end
   defp extract_header_and_fields(rows_or_query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter) do
-    raise ArgumentError, message: "insert_all called with invalid rows_or_query: #{inspect rows_or_query}"
+    raise ArgumentError, message: "expected a list of rows or a query, but got #{inspect rows_or_query} as rows_or_query argument in insert_all"
   end
 
   defp init_mapper(nil, _dumper, _adapter, _placeholder_map) do
