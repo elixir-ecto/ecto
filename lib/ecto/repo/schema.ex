@@ -82,9 +82,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp extract_header_and_fields(%{select: %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}}} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter) do
-    header =
-      Keyword.keys(args)
-      |> Enum.reduce(%{}, &Map.put(&2, &1, true))
+    header = Map.new(args, fn {k, _} -> {k, true} end)
 
     query = Map.update!(query, :select, fn select ->
       Map.update!(select, :expr, fn {op, ctx, args} ->
@@ -99,20 +97,21 @@ defmodule Ecto.Repo.Schema do
   end
   defp extract_header_and_fields(%Ecto.Query{} = query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter) do
     raise ArgumentError, message: """
-    Cannot generate a fields list for insert_all from the given source query,
+    Cannot generate a fields list for insert_all from the given source query
     because it does not have a select clause that uses a map:
+
     #{inspect query}
 
     Please add a select clause that selects into a map, like this:
 
-    from x in Source,
-      ...,
-      select: %{
-        field_a: x.bar,
-        field_b: x.foo
-      }
+      from x in Source,
+        ...,
+        select: %{
+          field_a: x.bar,
+          field_b: x.foo
+        }
 
-    The keys must exist in the schema that is being inserted into.
+    The keys must exist in the schema that is being inserted into
     """
   end
   defp extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter) when is_list(rows) do
