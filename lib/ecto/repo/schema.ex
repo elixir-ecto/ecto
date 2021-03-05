@@ -48,10 +48,7 @@ defmodule Ecto.Repo.Schema do
     counter =
       case rows do
         list when is_list(list) -> fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
-        query = %Ecto.Query{} -> fn ->
-          {_, params} = Ecto.Adapter.Queryable.plan_query(:all, adapter, query)
-          length(params)
-        end
+        {%Ecto.Query{}, params} -> fn -> length(params) end
       end
 
     schema_meta = metadata(schema, prefix, source, autogen_id, nil, opts)
@@ -84,20 +81,39 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp extract_header_and_fields(query = %Ecto.Query{}, schema, dumper, _autogen_id, placeholder_map, adapter) do
-    mapper = init_mapper(schema, dumper, adapter, placeholder_map)
-    header = case query.select do
-      %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
-        Keyword.keys(args)
-        |> Enum.reduce(%{}, &Map.put(&2, &1, true))
+  defp extract_header_and_fields(query = %Ecto.Query{}, _schema, _dumper, _autogen_id, _placeholder_map, adapter) do
+    case query.select do
+      nil ->
+        raise ArgumentError, message: """
+Cannot generate a fields list for INSERT INTO from the given source query:
+#{inspect query}
+
+Please add a select clause that selects into a map, like this:
+
+from x in Source,
+  ...,
+  select: %{
+    field_a: x.bar,
+    field_b: x.foo
+  }
+        """
+
+      %Ecto.Query.SelectExpr{expr: {op, _ctx, args}} when op in [:%{}, :"[]"] ->
+        header =
+          Keyword.keys(args)
+          |> Enum.reduce(%{}, &Map.put(&2, &1, true))
+
+        query = Map.update!(query, :select, fn select ->
+          Map.update!(select, :expr, fn {op, ctx, args} ->
+            args = Enum.sort_by(args, &elem(&1, 0))
+            {op, ctx, args}
+          end)
+        end)
+
+        query_and_params = Ecto.Adapter.Queryable.plan_query(:all, adapter, query)
+
+        {query_and_params, header, []}
     end
-    query = Map.update!(query, :select, fn select ->
-      Map.update!(select, :expr, fn {:%{}, ctx, args} ->
-        args = Enum.sort_by(args, &elem(&1, 0))
-        {:%{}, ctx, args}
-      end)
-    end)
-    {query, header, []}
   end
   defp extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter) do
     mapper = init_mapper(schema, dumper, adapter, placeholder_map)
