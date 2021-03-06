@@ -38,6 +38,18 @@ defmodule Ecto.Query.Builder.Join do
       iex> escape(quote(do: c in assoc(p, :comments)), [p: 0], __ENV__)
       {:c, nil, {0, :comments}, []}
 
+      iex> escape(quote(do: p.comments), [p: 0], __ENV__)
+      {:_, nil, {0, :comments}, []}
+
+      iex> escape(quote(do: c in p.comments), [p: 0], __ENV__)
+      {:c, nil, {0, :comments}, []}
+
+      iex> escape(quote(do: :comments), [], __ENV__)
+      {:_, nil, {0, :comments}, []}
+
+      iex> escape(quote(do: c in :comments), [], __ENV__)
+      {:c, nil, {0, :comments}, []}
+
       iex> escape(quote(do: x in fragment("foo")), [], __ENV__)
       {:x, {:{}, [], [:fragment, [], [raw: "foo"]]}, nil, []}
 
@@ -72,6 +84,12 @@ defmodule Ecto.Query.Builder.Join do
     end
   end
 
+  def escape({{:., _, [{var, _, context}, field]}, _, []}, vars, _env)
+      when is_atom(var) and is_atom(context) and is_atom(field) do
+    var = Builder.find_var!(var, vars)
+    {:_, nil, {var, field}, []}
+  end
+
   def escape({:assoc, _, [{var, _, context}, field]}, vars, _env)
       when is_atom(var) and is_atom(context) do
     ensure_field!(field)
@@ -89,13 +107,18 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   def escape(schema, _vars, _env) when is_atom(schema) do
-    {:_, {nil, schema}, nil, []}
+    if match?(":" <> _, inspect(schema)) do
+      {:_, nil, {0, schema}, []}
+    else
+      {:_, {nil, schema}, nil, []}
+    end
   end
 
   def escape(join, vars, env) do
     case Macro.expand(join, env) do
       ^join ->
         Builder.error! "malformed join `#{Macro.to_string(join)}` in query expression"
+
       join ->
         escape(join, vars, env)
     end
