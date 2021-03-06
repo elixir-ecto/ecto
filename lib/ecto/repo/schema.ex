@@ -108,7 +108,7 @@ defmodule Ecto.Repo.Schema do
       {rows, header, placeholder_vals_list}
     end
   end
-  defp extract_header_and_fields(%{select: %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}}} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter) do
+  defp extract_header_and_fields(%Ecto.Query{select: %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}}} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter) do
     header = Enum.map(args, &elem(&1, 0))
 
     query_and_params = Ecto.Adapter.Queryable.plan_query(:all, adapter, query)
