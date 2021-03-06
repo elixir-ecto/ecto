@@ -84,13 +84,6 @@ defmodule Ecto.Repo.Schema do
   defp extract_header_and_fields(%{select: %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}}} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter) do
     header = Enum.map(args, &elem(&1, 0))
 
-    query = Map.update!(query, :select, fn select ->
-      Map.update!(select, :expr, fn {op, ctx, args} ->
-        args = Enum.sort_by(args, &elem(&1, 0))
-        {op, ctx, args}
-      end)
-    end)
-
     query_and_params = Ecto.Adapter.Queryable.plan_query(:all, adapter, query)
 
     {query_and_params, header, []}
