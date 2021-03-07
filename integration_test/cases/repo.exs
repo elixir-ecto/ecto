@@ -892,7 +892,6 @@ defmodule Ecto.Integration.RepoTest do
         title: fragment("concat(?, ?, ?)", p.title, type(^" suffix ", :string), p.id)
       }
 
-
     opts = case System.get_env("ECTO_ADAPTER") do
       "pg" -> [conflict_target: [:id], on_conflict: :replace_all, returning: [:id, :title]]
       "myxql" -> [on_conflict: :replace_all]
@@ -904,8 +903,11 @@ defmodule Ecto.Integration.RepoTest do
     expected_title = "A generic title suffix 1"
 
     case System.get_env("ECTO_ADAPTER") do
-      returning when returning in ~w[pg tds] -> assert [%Post{id: 2, title: ^expected_title}] = returns
-      "myxql" -> assert %Post{title: ^expected_title} = TestRepo.get(Post, 2)
+      returning when returning in ~w[pg tds] ->
+        assert [%Post{id: 2, title: ^expected_title}] = returns
+
+      "myxql" ->
+        assert %Post{title: ^expected_title} = TestRepo.get(Post, 2)
     end
   end
 
