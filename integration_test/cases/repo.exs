@@ -883,7 +883,9 @@ defmodule Ecto.Integration.RepoTest do
 
   @tag :insert_select
   test "insert_all with source query" do
-    TestRepo.insert(%Post{
+    adapter = System.get_env("ECTO_ADAPTER")
+
+    {:ok, %Post{id: id}} = TestRepo.insert(%Post{
       title: "A generic title"
     })
 
@@ -892,7 +894,7 @@ defmodule Ecto.Integration.RepoTest do
         title: fragment("concat(?, ?, ?)", p.title, type(^" suffix ", :string), p.id)
       }
 
-    opts = case System.get_env("ECTO_ADAPTER") do
+    opts = case adapter do
       "pg" -> [conflict_target: [:id], on_conflict: :replace_all, returning: [:id, :title]]
       "myxql" -> [on_conflict: :replace_all]
       "tds" -> [returning: [:id, :title]]
@@ -900,14 +902,15 @@ defmodule Ecto.Integration.RepoTest do
 
     assert {1, returns} = TestRepo.insert_all(Post, source, opts)
 
-    expected_title = "A generic title suffix 1"
+    expected_id = id + 1
+    expected_title = "A generic title suffix #{id}"
 
-    case System.get_env("ECTO_ADAPTER") do
+    case adapter do
       returning when returning in ~w[pg tds] ->
-        assert [%Post{id: 2, title: ^expected_title}] = returns
+        assert [%Post{id: ^expected_id, title: ^expected_title}] = returns
 
       "myxql" ->
-        assert %Post{title: ^expected_title} = TestRepo.get(Post, 2)
+        assert %Post{title: ^expected_title} = TestRepo.get(Post, expected_id)
     end
   end
 
