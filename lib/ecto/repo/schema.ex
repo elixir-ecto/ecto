@@ -42,14 +42,8 @@ defmodule Ecto.Repo.Schema do
       |> returning(opts)
       |> fields_to_sources(dumper)
 
-    {rows_or_query, header, placeholder_values} =
+    {rows_or_query, header, placeholder_values, counter} =
       extract_header_and_fields(rows_or_query, schema, dumper, autogen_id, placeholder_map, adapter)
-
-    counter =
-      case rows_or_query do
-        rows when is_list(rows) -> fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
-        {%Ecto.Query{}, params} -> fn -> length(params) end
-      end
 
     schema_meta = metadata(schema, prefix, source, autogen_id, nil, opts)
 
@@ -93,6 +87,8 @@ defmodule Ecto.Repo.Schema do
 
     header = Map.keys(header)
 
+    counter = fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
+
     placeholder_vals_list =
       placeholder_dump
       |> Enum.map(fn {_, {idx, _, value}} ->
@@ -103,17 +99,19 @@ defmodule Ecto.Repo.Schema do
 
     if has_query? do
       rows = plan_query_in_rows(rows, header, adapter)
-      {rows, header, placeholder_vals_list}
+      {rows, header, placeholder_vals_list, counter}
     else
-      {rows, header, placeholder_vals_list}
+      {rows, header, placeholder_vals_list, counter}
     end
   end
   defp extract_header_and_fields(%Ecto.Query{select: %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}}} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter) do
     header = Enum.map(args, &elem(&1, 0))
 
-    query_and_params = Ecto.Adapter.Queryable.plan_query(:all, adapter, query)
+    {query, params} = Ecto.Adapter.Queryable.plan_query(:all, adapter, query)
 
-    {query_and_params, header, []}
+    counter = fn -> length(params) end
+
+    {{query, params}, header, [], counter}
   end
   defp extract_header_and_fields(%Ecto.Query{} = query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter) do
     raise ArgumentError, """
