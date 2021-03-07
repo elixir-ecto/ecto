@@ -900,8 +900,8 @@ defmodule Ecto.Repo do
   before it is transformed and sent to the database.
 
   This callback is invoked for all query APIs, including the `stream`
-  function, but it is not invoked for `insert_all` nor any of the
-  schema functions.
+  functions and insert_all (if a source query was given instead of a list of
+  rows), but it is not invoked for any of the other schema functions.
 
   ## Examples
 
@@ -1154,11 +1154,27 @@ defmodule Ecto.Repo do
   See the "Shared options" section at the module documentation for
   remaining options.
 
+  ## Source query
+
+  A query can be given instead of a list with entries. This query needs to select
+  into a map containing only keys that are available as writeable columns in the
+  schema.
+
   ## Examples
 
       MyRepo.insert_all(Post, [[title: "My first post"], [title: "My second post"]])
 
       MyRepo.insert_all(Post, [%{title: "My first post"}, %{title: "My second post"}])
+
+      query = from p in Post,
+        join: c in assoc(p, :comments),
+        select: %{
+          author_id: p.author_id,
+          posts: count(p.id, :distinct),
+          interactions: sum(p.likes) + count(c.id)
+        },
+        group_by: p.author_id
+      MyRepo.insert_all(AuthorStats, query)
 
   ## Upserts
 
@@ -1240,7 +1256,7 @@ defmodule Ecto.Repo do
   """
   @callback insert_all(
               schema_or_source :: binary | {binary, module} | module,
-              entries :: [map | [{atom, term | Ecto.Query.t}]],
+              entries_or_query :: [map | [{atom, term | Ecto.Query.t}]] | Ecto.Query.t,
               opts :: Keyword.t()
             ) :: {integer, nil | [term]}
 
