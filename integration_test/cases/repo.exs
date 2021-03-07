@@ -854,7 +854,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :insert_select
-  test "insert all with query" do
+  test "insert all with query for single fields" do
     comment = TestRepo.insert!(%Comment{text: "1", lock_version: 1})
 
     text_query = from(c in Comment, select: c.text, where: [id: ^comment.id, lock_version: 1])
@@ -879,6 +879,34 @@ defmodule Ecto.Integration.RepoTest do
             %Comment{text: "1"},
             %Comment{text: "1", lock_version: 1},
             %Comment{text: "6", lock_version: 6}] = inserted_rows
+  end
+
+  @tag :insert_select
+  test "insert_all with source query" do
+    TestRepo.insert(%Post{
+      title: "A generic title"
+    })
+
+    source = from p in Post,
+      select: %{
+        title: fragment("concat(?, ?, ?)", p.title, type(^" suffix ", :string), p.id)
+      }
+
+
+    opts = case System.get_env("ECTO_ADAPTER") do
+      "pg" -> [conflict_target: [:id], on_conflict: :replace_all, returning: [:id, :title]]
+      "myxql" -> [on_conflict: :replace_all]
+      "tds" -> [returning: [:id, :title]]
+    end
+
+    assert {1, returns} = TestRepo.insert_all(Post, source, opts)
+
+    expected_title = "A generic title suffix 1"
+
+    case System.get_env("ECTO_ADAPTER") do
+      returning when returning in ~w[pg tds] -> assert [%Post{id: 2, title: ^expected_title}] = returns
+      "myxql" -> assert %Post{title: ^expected_title} = TestRepo.get(Post, 2)
+    end
   end
 
   @tag :invalid_prefix
