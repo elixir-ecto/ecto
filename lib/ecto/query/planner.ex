@@ -930,6 +930,8 @@ defmodule Ecto.Query.Planner do
     case operation do
       :all ->
         assert_no_update!(query, operation)
+      :insert_all ->
+        assert_no_update!(query, operation)
       :update_all ->
         assert_update!(query, operation)
         assert_only_filter_expressions!(query, operation)
@@ -1660,6 +1662,7 @@ defmodule Ecto.Query.Planner do
     exprs =
       case operation do
         :all -> @all_exprs
+        :insert_all -> @all_exprs
         :update_all -> @update_all_exprs
         :delete_all -> @delete_all_exprs
       end

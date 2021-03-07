@@ -7,23 +7,25 @@ defmodule Ecto.Repo.Schema do
   alias Ecto.Changeset.Relation
   require Ecto.Query
 
+  import Ecto.Repo.Common, only: [attach_prefix: 2]
+
   @doc """
   Implementation for `Ecto.Repo.insert_all/3`.
   """
-  def insert_all(_repo, name, schema, rows, opts) when is_atom(schema) do
-    do_insert_all(name, schema, schema.__schema__(:prefix),
+  def insert_all(repo, name, schema, rows, opts) when is_atom(schema) do
+    do_insert_all(repo, name, schema, schema.__schema__(:prefix),
                   schema.__schema__(:source), rows, opts)
   end
 
-  def insert_all(_repo, name, table, rows, opts) when is_binary(table) do
-    do_insert_all(name, nil, nil, table, rows, opts)
+  def insert_all(repo, name, table, rows, opts) when is_binary(table) do
+    do_insert_all(repo, name, nil, nil, table, rows, opts)
   end
 
-  def insert_all(_repo, name, {source, schema}, rows, opts) when is_atom(schema) do
-    do_insert_all(name, schema, schema.__schema__(:prefix), source, rows, opts)
+  def insert_all(repo, name, {source, schema}, rows, opts) when is_atom(schema) do
+    do_insert_all(repo, name, schema, schema.__schema__(:prefix), source, rows, opts)
   end
 
-  defp do_insert_all(_name, _schema, _prefix, _source, [], opts) do
+  defp do_insert_all(_repo, _name, _schema, _prefix, _source, [], opts) do
     if opts[:returning] do
       {0, []}
     else
@@ -31,7 +33,7 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp do_insert_all(name, schema, prefix, source, rows_or_query, opts) do
+  defp do_insert_all(repo, name, schema, prefix, source, rows_or_query, opts) do
     {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     autogen_id = schema && schema.__schema__(:autogenerate_id)
     dumper = schema && schema.__schema__(:dump)
@@ -43,7 +45,7 @@ defmodule Ecto.Repo.Schema do
       |> fields_to_sources(dumper)
 
     {rows_or_query, header, placeholder_values, counter} =
-      extract_header_and_fields(rows_or_query, schema, dumper, autogen_id, placeholder_map, adapter)
+      extract_header_and_fields(repo, rows_or_query, schema, dumper, autogen_id, placeholder_map, adapter, opts)
 
     schema_meta = metadata(schema, prefix, source, autogen_id, nil, opts)
 
@@ -75,7 +77,7 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter) when is_list(rows) do
+  defp extract_header_and_fields(_rpeo, rows, schema, dumper, autogen_id, placeholder_map, adapter, _opts) when is_list(rows) do
     mapper = init_mapper(schema, dumper, adapter, placeholder_map)
 
     {rows, {header, has_query?, placeholder_dump, _}} =
@@ -104,16 +106,19 @@ defmodule Ecto.Repo.Schema do
       {rows, header, placeholder_vals_list, counter}
     end
   end
-  defp extract_header_and_fields(%Ecto.Query{select: %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}}} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter) do
+  defp extract_header_and_fields(repo, %Ecto.Query{select: %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}}} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter, opts) do
     header = Enum.map(args, &elem(&1, 0))
 
-    {query, params} = Ecto.Adapter.Queryable.plan_query(:all, adapter, query)
+    {query, opts} = repo.prepare_query(:insert_all, query, opts)
+    query = attach_prefix(query, opts)
+
+    {query, params} = Ecto.Adapter.Queryable.plan_query(:insert_all, adapter, query)
 
     counter = fn -> length(params) end
 
     {{query, params}, header, [], counter}
   end
-  defp extract_header_and_fields(%Ecto.Query{} = query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter) do
+  defp extract_header_and_fields(_repo, %Ecto.Query{} = query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter, _opts) do
     raise ArgumentError, """
     cannot generate a fields list for insert_all from the given source query
     because it does not have a select clause that uses a map:
@@ -132,7 +137,7 @@ defmodule Ecto.Repo.Schema do
     The keys must exist in the schema that is being inserted into
     """
   end
-  defp extract_header_and_fields(rows_or_query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter) do
+  defp extract_header_and_fields(_repo, rows_or_query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter, _opts) do
     raise ArgumentError, "expected a list of rows or a query, but got #{inspect rows_or_query} as rows_or_query argument in insert_all"
   end
 
