@@ -930,7 +930,7 @@ defmodule Ecto.Repo do
   """
   @callback prepare_query(operation, query :: Ecto.Query.t(), opts :: Keyword.t()) ::
               {Ecto.Query.t(), Keyword.t()}
-            when operation: :all | :update_all | :delete_all | :stream
+            when operation: :all | :update_all | :delete_all | :stream | :insert_all
 
   @doc """
   A user customizable callback invoked to retrieve default options

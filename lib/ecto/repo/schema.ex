@@ -106,36 +106,39 @@ defmodule Ecto.Repo.Schema do
       {rows, header, placeholder_vals_list, counter}
     end
   end
-  defp extract_header_and_fields(repo, %Ecto.Query{select: %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}}} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter, opts) do
-    header = Enum.map(args, &elem(&1, 0))
-
+  defp extract_header_and_fields(repo, %Ecto.Query{} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter, opts) do
     {query, opts} = repo.prepare_query(:insert_all, query, opts)
     query = attach_prefix(query, opts)
 
     {query, params} = Ecto.Adapter.Queryable.plan_query(:insert_all, adapter, query)
 
+    header = case query.select do
+      %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
+        Enum.map(args, &elem(&1, 0))
+
+      _ ->
+        raise ArgumentError, """
+        cannot generate a fields list for insert_all from the given source query
+        because it does not have a select clause that uses a map:
+
+          #{inspect query}
+
+        Please add a select clause that selects into a map, like this:
+
+          from x in Source,
+            ...,
+            select: %{
+              field_a: x.bar,
+              field_b: x.foo
+            }
+
+        The keys must exist in the schema that is being inserted into
+        """
+    end
+
     counter = fn -> length(params) end
 
     {{query, params}, header, [], counter}
-  end
-  defp extract_header_and_fields(_repo, %Ecto.Query{} = query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter, _opts) do
-    raise ArgumentError, """
-    cannot generate a fields list for insert_all from the given source query
-    because it does not have a select clause that uses a map:
-
-      #{inspect query}
-
-    Please add a select clause that selects into a map, like this:
-
-      from x in Source,
-        ...,
-        select: %{
-          field_a: x.bar,
-          field_b: x.foo
-        }
-
-    The keys must exist in the schema that is being inserted into
-    """
   end
   defp extract_header_and_fields(_repo, rows_or_query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter, _opts) do
     raise ArgumentError, "expected a list of rows or a query, but got #{inspect rows_or_query} as rows_or_query argument in insert_all"

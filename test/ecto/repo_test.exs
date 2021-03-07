@@ -505,7 +505,7 @@ defmodule Ecto.RepoTest do
       end
       assert_raise ArgumentError, fn ->
         source = from s in MySchema,
-          select: s.foo
+          select: s.x
         TestRepo.insert_all(MySchema, source)
       end
     end
