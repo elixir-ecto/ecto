@@ -135,7 +135,7 @@ defmodule Ecto.Repo.Schema do
     """
   end
   defp extract_header_and_fields(rows_or_query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter) do
-    raise ArgumentError, message: "expected a list of rows or a query, but got #{inspect rows_or_query} as rows_or_query argument in insert_all"
+    raise ArgumentError, "expected a list of rows or a query, but got #{inspect rows_or_query} as rows_or_query argument in insert_all"
   end
 
   defp init_mapper(nil, _dumper, _adapter, _placeholder_map) do
