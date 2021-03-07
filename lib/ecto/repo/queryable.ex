@@ -6,7 +6,7 @@ defmodule Ecto.Repo.Queryable do
   alias Ecto.Query.Planner
   alias Ecto.Query.SelectExpr
 
-  import Ecto.Repo.Common, only: [attach_prefix: 2]
+  import Ecto.Query.Planner, only: [attach_prefix: 2]
 
   require Ecto.Query
 

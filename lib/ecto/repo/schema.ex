@@ -7,7 +7,7 @@ defmodule Ecto.Repo.Schema do
   alias Ecto.Changeset.Relation
   require Ecto.Query
 
-  import Ecto.Repo.Common, only: [attach_prefix: 2]
+  import Ecto.Query.Planner, only: [attach_prefix: 2]
 
   @doc """
   Implementation for `Ecto.Repo.insert_all/3`.

@@ -872,9 +872,6 @@ defmodule Ecto.Query.Planner do
     put_in(query.with_ctes.queries, queries)
   end
 
-  defp attach_prefix(%{prefix: nil} = query, %{prefix: prefix}), do: %{query | prefix: prefix}
-  defp attach_prefix(query, _), do: query
-
   defp find_source_expr(query, 0) do
     query.from
   end
@@ -1643,6 +1640,15 @@ defmodule Ecto.Query.Planner do
                       "(fragments, binary and subqueries are not supported)"
     end
   end
+
+  @doc """
+  Puts the prefix given via `opts` into the given query, if available.
+  """
+  def attach_prefix(query, opts) when is_list(opts) do
+    attach_prefix(query, Map.new(opts))
+  end
+  def attach_prefix(%{prefix: nil} = query, %{prefix: prefix}), do: %{query | prefix: prefix}
+  def attach_prefix(query, _), do: query
 
   ## Helpers
 
