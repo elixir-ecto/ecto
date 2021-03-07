@@ -116,8 +116,8 @@ defmodule Ecto.Repo.Schema do
     {query_and_params, header, []}
   end
   defp extract_header_and_fields(%Ecto.Query{} = query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter) do
-    raise ArgumentError, message: """
-    Cannot generate a fields list for insert_all from the given source query
+    raise ArgumentError, """
+    cannot generate a fields list for insert_all from the given source query
     because it does not have a select clause that uses a map:
 
       #{inspect query}
