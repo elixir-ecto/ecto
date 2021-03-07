@@ -1103,7 +1103,7 @@ defmodule Ecto.Query.Builder do
   given `module`, otherwise, it delegates the call to runtime.
 
   It is important to keep in mind the complexities introduced
-  by this function. In particular, a %Query{} is mixture of escaped
+  by this function. In particular, a %Query{} is a mixture of escaped
   and unescaped expressions which makes it impossible for this
   function to properly escape or unescape it at compile/runtime.
   For this reason, the apply function should be ready to handle
@@ -1133,21 +1133,24 @@ defmodule Ecto.Query.Builder do
   the query properly, but they will be in their runtime form
   when invoked at runtime.
   """
+  @spec apply_query(Macro.t, Macro.t, Macro.t, Macro.Env.t) :: Macro.t
   def apply_query(query, module, args, env) do
-    query = Macro.expand(query, env)
+    case Macro.expand(query, env) |> unescape_query() do
+      %Query{} = compiletime_query ->
+        apply(module, :apply, [compiletime_query | args])
+        |> escape_query()
 
-    case unescape_query(query) do
-      %Query{} = unescaped ->
-        apply(module, :apply, [unescaped|args]) |> escape_query
-      _ ->
+      runtime_query ->
         quote do
-          query = unquote(query) # Unquote the query for any binding variable
+          # Unquote the query before `module.apply()` for any binding variable.
+          query = unquote(runtime_query)
           unquote(module).apply(query, unquote_splicing(args))
         end
     end
   end
 
   # Unescapes an `Ecto.Query` struct.
+  @spec unescape_query(Macro.t) :: Query.t | Macro.t
   defp unescape_query({:%, _, [Query, {:%{}, _, list}]}) do
     struct(Query, list)
   end
@@ -1163,10 +1166,8 @@ defmodule Ecto.Query.Builder do
   end
 
   # Escapes an `Ecto.Query` and associated structs.
-  defp escape_query(%Query{} = query),
-    do: {:%{}, [], Map.to_list(query)}
-  defp escape_query(other),
-    do: other
+  @spec escape_query(Query.t) :: Macro.t
+  defp escape_query(%Query{} = query), do: {:%{}, [], Map.to_list(query)}
 
   defp parse_access_get({{:., _, [Access, :get]}, _, [left, right]}, acc) do
     parse_access_get(left, [right | acc])

@@ -33,7 +33,7 @@ defmodule Ecto.Query.Builder.CTE do
     Builder.apply_query(query, __MODULE__, [escape(name), build_cte(name, cte, env)], env)
   end
 
-  @spec build_cte(Macro.t, Macro.t, Macro.t) :: Macro.t
+  @spec build_cte(Macro.t, Macro.t, Macro.Env.t) :: Macro.t
   def build_cte(_name, {:^, _, [expr]}, _env) do
     quote do: Ecto.Queryable.to_query(unquote(expr))
   end
