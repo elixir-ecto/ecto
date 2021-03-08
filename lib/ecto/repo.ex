@@ -900,8 +900,8 @@ defmodule Ecto.Repo do
   before it is transformed and sent to the database.
 
   This callback is invoked for all query APIs, including the `stream`
-  functions and insert_all (if a source query was given instead of a list of
-  rows), but it is not invoked for any of the other schema functions.
+  functions. It is also invoked for `insert_all` if a source query is
+  given. It is not invoked for any of the other schema functions.
 
   ## Examples
 
