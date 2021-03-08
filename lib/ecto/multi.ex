@@ -8,9 +8,8 @@ defmodule Ecto.Multi do
   is given a name that is unique and will identify its result in case of
   success or failure.
 
-  All operations will be executed in the order they were added, with the
-  possible exception of a multi which contains operations that accept
-  [changesets](#module-changesets).
+  If a multi is valid (i.e. all the changesets in it are valid),
+  all operations will be executed in the order they were added.
 
   The `Ecto.Multi` structure should be considered opaque. You can use
   `%Ecto.Multi{}` to pattern match the type, but accessing fields or
