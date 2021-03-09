@@ -87,7 +87,7 @@ defmodule Ecto.Repo do
   Almost all of the repository functions outlined in this module accept the following
   options:
 
-    * `:timeout` - The time in milliseconds to wait for the query call to
+    * `:timeout` - The time in milliseconds (as an integer) to wait for the query call to
       finish. `:infinity` will wait indefinitely (default: 15000)
     * `:log` - When false, does not log the query
     * `:telemetry_event` - The telemetry event name to dispatch the event under.
