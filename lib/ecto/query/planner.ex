@@ -872,9 +872,6 @@ defmodule Ecto.Query.Planner do
     put_in(query.with_ctes.queries, queries)
   end
 
-  defp attach_prefix(%{prefix: nil} = query, %{prefix: prefix}), do: %{query | prefix: prefix}
-  defp attach_prefix(query, _), do: query
-
   defp find_source_expr(query, 0) do
     query.from
   end
@@ -929,6 +926,8 @@ defmodule Ecto.Query.Planner do
   defp normalize_query(query, operation, adapter, counter) do
     case operation do
       :all ->
+        assert_no_update!(query, operation)
+      :insert_all ->
         assert_no_update!(query, operation)
       :update_all ->
         assert_update!(query, operation)
@@ -1642,6 +1641,15 @@ defmodule Ecto.Query.Planner do
     end
   end
 
+  @doc """
+  Puts the prefix given via `opts` into the given query, if available.
+  """
+  def attach_prefix(query, opts) when is_list(opts) do
+    attach_prefix(query, Map.new(opts))
+  end
+  def attach_prefix(%{prefix: nil} = query, %{prefix: prefix}), do: %{query | prefix: prefix}
+  def attach_prefix(query, _), do: query
+
   ## Helpers
 
   @all_exprs [with_cte: :with_ctes, distinct: :distinct, select: :select, from: :from, join: :joins,
@@ -1660,6 +1668,7 @@ defmodule Ecto.Query.Planner do
     exprs =
       case operation do
         :all -> @all_exprs
+        :insert_all -> @all_exprs
         :update_all -> @update_all_exprs
         :delete_all -> @delete_all_exprs
       end

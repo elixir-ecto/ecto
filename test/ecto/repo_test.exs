@@ -455,7 +455,7 @@ defmodule Ecto.RepoTest do
   end
 
   describe "insert_all" do
-    test "takes query" do
+    test "takes queries as values in rows" do
       import Ecto.Query
 
       value = "foo"
@@ -478,6 +478,36 @@ defmodule Ecto.RepoTest do
       assert [%{expr: {:==, _, [_, {:^, [], [4]}]}}] = query3.wheres
       assert [%{expr: {:==, _, [_, {:^, [], [6]}]}}] = query4y.wheres
       assert [%{expr: {:==, _, [_, {:^, [], [7]}]}}] = query4x.wheres
+    end
+
+    test "takes query as datasource" do
+      import Ecto.Query
+
+      threshold = "ten"
+
+      query = from s in MySchema,
+        where: s.x > ^threshold,
+        select: %{
+          foo: s.x,
+          bar: fragment("concat(?, ?, ?)", ^"one", ^"two", s.z)
+        }
+
+      TestRepo.insert_all(MySchema, query)
+
+      assert_received {:insert_all, %{source: "my_schema"}, {%Ecto.Query{}, params}}
+
+      assert ["one", "two", "ten"] = params
+    end
+
+    test "raises when a bad query is given as source" do
+      assert_raise ArgumentError, fn ->
+        TestRepo.insert_all(MySchema, from(s in MySchema))
+      end
+      assert_raise ArgumentError, fn ->
+        source = from s in MySchema,
+          select: s.x
+        TestRepo.insert_all(MySchema, source)
+      end
     end
 
     test "raises when on associations" do

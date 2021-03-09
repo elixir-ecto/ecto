@@ -6,6 +6,8 @@ defmodule Ecto.Repo.Queryable do
   alias Ecto.Query.Planner
   alias Ecto.Query.SelectExpr
 
+  import Ecto.Query.Planner, only: [attach_prefix: 2]
+
   require Ecto.Query
 
   def all(name, queryable, opts) when is_list(opts) do
@@ -77,7 +79,7 @@ defmodule Ecto.Repo.Queryable do
   def reload(name, [head | _] = structs, opts) when is_list(structs) do
     results = all(name, query_for_reload(structs), opts)
 
-    [pk] = head.__struct__.__schema__(:primary_key) 
+    [pk] = head.__struct__.__schema__(:primary_key)
 
     for struct <- structs do
       struct_pk = Map.fetch!(struct, pk)
@@ -93,7 +95,7 @@ defmodule Ecto.Repo.Queryable do
     query = query_for_reload(structs)
     results = all(name, query, opts)
 
-    [pk] = head.__struct__.__schema__(:primary_key) 
+    [pk] = head.__struct__.__schema__(:primary_key)
 
     for struct <- structs do
       struct_pk = Map.fetch!(struct, pk)
@@ -198,13 +200,6 @@ defmodule Ecto.Repo.Queryable do
   end
 
   ## Helpers
-
-  defp attach_prefix(query, opts) do
-    case Keyword.fetch(opts, :prefix) do
-      {:ok, prefix} -> %{query | prefix: prefix}
-      :error -> query
-    end
-  end
 
   defp execute(operation, name, query, opts) when is_list(opts) do
     {adapter, %{cache: cache, repo: repo} = adapter_meta} = Ecto.Repo.Registry.lookup(name)

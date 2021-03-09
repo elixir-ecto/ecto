@@ -7,23 +7,25 @@ defmodule Ecto.Repo.Schema do
   alias Ecto.Changeset.Relation
   require Ecto.Query
 
+  import Ecto.Query.Planner, only: [attach_prefix: 2]
+
   @doc """
   Implementation for `Ecto.Repo.insert_all/3`.
   """
-  def insert_all(_repo, name, schema, rows, opts) when is_atom(schema) do
-    do_insert_all(name, schema, schema.__schema__(:prefix),
+  def insert_all(repo, name, schema, rows, opts) when is_atom(schema) do
+    do_insert_all(repo, name, schema, schema.__schema__(:prefix),
                   schema.__schema__(:source), rows, opts)
   end
 
-  def insert_all(_repo, name, table, rows, opts) when is_binary(table) do
-    do_insert_all(name, nil, nil, table, rows, opts)
+  def insert_all(repo, name, table, rows, opts) when is_binary(table) do
+    do_insert_all(repo, name, nil, nil, table, rows, opts)
   end
 
-  def insert_all(_repo, name, {source, schema}, rows, opts) when is_atom(schema) do
-    do_insert_all(name, schema, schema.__schema__(:prefix), source, rows, opts)
+  def insert_all(repo, name, {source, schema}, rows, opts) when is_atom(schema) do
+    do_insert_all(repo, name, schema, schema.__schema__(:prefix), source, rows, opts)
   end
 
-  defp do_insert_all(_name, _schema, _prefix, _source, [], opts) do
+  defp do_insert_all(_repo, _name, _schema, _prefix, _source, [], opts) do
     if opts[:returning] do
       {0, []}
     else
@@ -31,7 +33,7 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp do_insert_all(name, schema, prefix, source, rows, opts) when is_list(rows) do
+  defp do_insert_all(repo, name, schema, prefix, source, rows_or_query, opts) do
     {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
     autogen_id = schema && schema.__schema__(:autogenerate_id)
     dumper = schema && schema.__schema__(:dump)
@@ -42,10 +44,9 @@ defmodule Ecto.Repo.Schema do
       |> returning(opts)
       |> fields_to_sources(dumper)
 
-    {rows, header, placeholder_values} =
-      extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter)
+    {rows_or_query, header, placeholder_values, counter} =
+      extract_header_and_fields(repo, rows_or_query, schema, dumper, autogen_id, placeholder_map, adapter, opts)
 
-    counter = fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
     schema_meta = metadata(schema, prefix, source, autogen_id, nil, opts)
 
     on_conflict = Keyword.get(opts, :on_conflict, :raise)
@@ -53,10 +54,10 @@ defmodule Ecto.Repo.Schema do
     conflict_target = conflict_target(conflict_target, dumper)
     on_conflict = on_conflict(on_conflict, conflict_target, schema_meta, counter, adapter)
 
-    {count, rows} =
-      adapter.insert_all(adapter_meta, schema_meta, Map.keys(header), rows, on_conflict, return_sources, placeholder_values, opts)
+    {count, rows_or_query} =
+      adapter.insert_all(adapter_meta, schema_meta, header, rows_or_query, on_conflict, return_sources, placeholder_values, opts)
 
-    {count, postprocess(rows, return_fields_or_types, adapter, schema, schema_meta)}
+    {count, postprocess(rows_or_query, return_fields_or_types, adapter, schema, schema_meta)}
   end
 
   defp postprocess(nil, [], _adapter, _schema, _schema_meta) do
@@ -76,7 +77,7 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp extract_header_and_fields(rows, schema, dumper, autogen_id, placeholder_map, adapter) do
+  defp extract_header_and_fields(_rpeo, rows, schema, dumper, autogen_id, placeholder_map, adapter, _opts) when is_list(rows) do
     mapper = init_mapper(schema, dumper, adapter, placeholder_map)
 
     {rows, {header, has_query?, placeholder_dump, _}} =
@@ -85,6 +86,10 @@ defmodule Ecto.Repo.Schema do
         {fields, header} = autogenerate_id(autogen_id, fields, header, adapter)
         {fields, {header, has_query?, placeholder_dump, counter}}
       end)
+
+    header = Map.keys(header)
+
+    counter = fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
 
     placeholder_vals_list =
       placeholder_dump
@@ -96,10 +101,47 @@ defmodule Ecto.Repo.Schema do
 
     if has_query? do
       rows = plan_query_in_rows(rows, header, adapter)
-      {rows, header, placeholder_vals_list}
+      {rows, header, placeholder_vals_list, counter}
     else
-      {rows, header, placeholder_vals_list}
+      {rows, header, placeholder_vals_list, counter}
     end
+  end
+  defp extract_header_and_fields(repo, %Ecto.Query{} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter, opts) do
+    {query, opts} = repo.prepare_query(:insert_all, query, opts)
+    query = attach_prefix(query, opts)
+
+    {query, params} = Ecto.Adapter.Queryable.plan_query(:insert_all, adapter, query)
+
+    header = case query.select do
+      %Ecto.Query.SelectExpr{expr: {:%{}, _ctx, args}} ->
+        Enum.map(args, &elem(&1, 0))
+
+      _ ->
+        raise ArgumentError, """
+        cannot generate a fields list for insert_all from the given source query
+        because it does not have a select clause that uses a map:
+
+          #{inspect query}
+
+        Please add a select clause that selects into a map, like this:
+
+          from x in Source,
+            ...,
+            select: %{
+              field_a: x.bar,
+              field_b: x.foo
+            }
+
+        The keys must exist in the schema that is being inserted into
+        """
+    end
+
+    counter = fn -> length(params) end
+
+    {{query, params}, header, [], counter}
+  end
+  defp extract_header_and_fields(_repo, rows_or_query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter, _opts) do
+    raise ArgumentError, "expected a list of rows or a query, but got #{inspect rows_or_query} as rows_or_query argument in insert_all"
   end
 
   defp init_mapper(nil, _dumper, _adapter, _placeholder_map) do
@@ -157,7 +199,7 @@ defmodule Ecto.Repo.Schema do
   defp plan_query_in_rows(rows, header, adapter) do
     {rows, _counter} =
       Enum.map_reduce(rows, 0, fn fields, counter ->
-        Enum.flat_map_reduce(header, counter, fn {key, _}, counter ->
+        Enum.flat_map_reduce(header, counter, fn key, counter ->
           case :lists.keyfind(key, 1, fields) do
             {^key, %Ecto.Query{} = query} ->
               {query, params, _} = Ecto.Query.Planner.plan(query, :all, adapter)

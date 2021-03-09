@@ -854,7 +854,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   @tag :insert_select
-  test "insert all with query" do
+  test "insert all with query for single fields" do
     comment = TestRepo.insert!(%Comment{text: "1", lock_version: 1})
 
     text_query = from(c in Comment, select: c.text, where: [id: ^comment.id, lock_version: 1])
@@ -879,6 +879,84 @@ defmodule Ecto.Integration.RepoTest do
             %Comment{text: "1"},
             %Comment{text: "1", lock_version: 1},
             %Comment{text: "6", lock_version: 6}] = inserted_rows
+  end
+
+  describe "insert_all with source query" do
+    @tag :upsert
+    @tag :with_conflict_target
+    test "insert_all with query and conflict target" do
+      {:ok, %Post{id: id}} = TestRepo.insert(%Post{
+        title: "A generic title"
+      })
+
+      source = from p in Post,
+        select: %{
+          title: fragment("concat(?, ?, ?)", p.title, type(^" suffix ", :string), p.id)
+        }
+
+      assert {1, _} = TestRepo.insert_all(Post, source, conflict_target: [:id], on_conflict: :replace_all)
+
+      expected_id = id + 1
+      expected_title = "A generic title suffix #{id}"
+
+      assert %Post{title: ^expected_title} = TestRepo.get(Post, expected_id)
+    end
+
+    @tag :returning
+    test "insert_all with query and returning" do
+      {:ok, %Post{id: id}} = TestRepo.insert(%Post{
+        title: "A generic title"
+      })
+
+      source = from p in Post,
+        select: %{
+          title: fragment("concat(?, ?, ?)", p.title, type(^" suffix ", :string), p.id)
+        }
+
+      assert {1, returns} = TestRepo.insert_all(Post, source, returning: [:id, :title])
+
+      expected_id = id + 1
+      expected_title = "A generic title suffix #{id}"
+      assert [%Post{id: ^expected_id, title: ^expected_title}] = returns
+    end
+
+    @tag :upsert
+    @tag :without_conflict_target
+    test "insert_all with query and on_conflict" do
+      {:ok, %Post{id: id}} = TestRepo.insert(%Post{
+        title: "A generic title"
+      })
+
+      source = from p in Post,
+        select: %{
+          title: fragment("concat(?, ?, ?)", p.title, type(^" suffix ", :string), p.id)
+        }
+
+      assert {1, _} = TestRepo.insert_all(Post, source, on_conflict: :replace_all)
+
+      expected_id = id + 1
+      expected_title = "A generic title suffix #{id}"
+
+      assert %Post{title: ^expected_title} = TestRepo.get(Post, expected_id)
+    end
+
+    test "insert_all with query" do
+      {:ok, %Post{id: id}} = TestRepo.insert(%Post{
+        title: "A generic title"
+      })
+
+      source = from p in Post,
+        select: %{
+          title: fragment("concat(?, ?, ?)", p.title, type(^" suffix ", :string), p.id)
+        }
+
+      assert {1, _} = TestRepo.insert_all(Post, source)
+
+      expected_id = id + 1
+      expected_title = "A generic title suffix #{id}"
+
+      assert %Post{title: ^expected_title} = TestRepo.get(Post, expected_id)
+    end
   end
 
   @tag :invalid_prefix
