@@ -1,6 +1,6 @@
 defmodule Ecto.Repo.Transaction do
   @moduledoc false
-  @dialyzer {:no_opaque, transaction: 4}
+  @dialyzer :no_opaque
 
   def transaction(_repo, name, fun, opts) when is_function(fun, 0) do
     {adapter, meta} = Ecto.Repo.Registry.lookup(name)
