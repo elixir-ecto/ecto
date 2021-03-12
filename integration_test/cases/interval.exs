@@ -391,7 +391,6 @@ defmodule Ecto.Integration.IntervalTest do
            TestRepo.all(from u in Usec, select: datetime_add(u.utc_datetime_usec, ^dec, "millisecond"))
   end
 
-  @tag :decimal_precision
   test "datetime_add with naive_datetime_usec in milliseconds" do
     TestRepo.insert!(%Usec{naive_datetime_usec: ~N[2014-01-01 02:00:00.001000]})
     datetime = ~N[2014-01-01 02:00:00.151000]
