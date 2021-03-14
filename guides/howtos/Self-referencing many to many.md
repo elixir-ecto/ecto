@@ -43,7 +43,7 @@ end
 
 In our example, we implement an intermediate schema, `MyApp.Relationships.Relationship`, on our `:join_through` option and pass in a pair of ids that we will be creating a unique index on in our database migration. By implementing an intermediate schema, we make it easy to add additional attributes and functionality to relationships in the future.
 
-We had to create an additional `many_to_many` `:reverse_relationships` call with an inverse of the `:join_keys` in order to finish the other half of the association. This ensures that both sides of the relationship will get added in the database when either side completes a successul relationship request. 
+We had to create an additional `many_to_many` `:reverse_relationships` call with an inverse of the `:join_keys` in order to finish the other half of the association. This ensures that both sides of the relationship will get added in the database when either side completes a successful relationship request. 
 
 The person who is the inverse of the relationship will have the relationship struct stored in a list under the "reverse_relationships" key. We can then construct queries for both `:relationships` and `:reverse_relationships` with the proper `:preload`:
 
