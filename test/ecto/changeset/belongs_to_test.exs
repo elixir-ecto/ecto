@@ -16,11 +16,11 @@ defmodule Ecto.Changeset.BelongsToTest do
       belongs_to :profile, {"authors_profiles", Profile},
         on_replace: :delete, defaults: [name: "default"]
       belongs_to :raise_profile, Profile, on_replace: :raise
-      belongs_to :invalid_profile, Profile, on_replace: :mark_as_invalid
+      belongs_to :invalid_profile, Profile, on_replace: :mark_as_invalid, defaults: :send_to_self
       belongs_to :update_profile, Profile, on_replace: :update, defaults: {__MODULE__, :send_to_self, [:extra]}
     end
 
-    def send_to_self(struct, owner, extra) do
+    def send_to_self(struct, owner, extra \\ :default) do
       send(self(), {:defaults, struct, owner, extra})
       %{struct | id: 13}
     end
@@ -273,6 +273,15 @@ defmodule Ecto.Changeset.BelongsToTest do
     changeset = cast(schema, %{"profile" => %{id: 1}}, :profile)
     assert changeset.changes.profile.data.name == "default"
     assert changeset.changes.profile.changes == %{id: 1}
+  end
+
+  test "cast belongs_to with atom defaults" do
+    {:ok, schema} = TestRepo.insert(%Author{title: "Title", invalid_profile: nil})
+
+    changeset = cast(schema, %{"invalid_profile" => %{name: "Jose"}}, :invalid_profile)
+    assert_received {:defaults, %Profile{id: nil}, %Author{title: "Title"}, :default}
+    assert changeset.changes.invalid_profile.data.id == 13
+    assert changeset.changes.invalid_profile.changes == %{name: "Jose"}
   end
 
   test "cast belongs_to with MFA defaults" do

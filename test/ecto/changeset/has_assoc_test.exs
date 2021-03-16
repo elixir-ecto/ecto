@@ -43,12 +43,13 @@ defmodule Ecto.Changeset.HasAssocTest do
         defaults: [name: "default"], on_replace: :delete
       has_one :raise_profile, Profile, on_replace: :raise
       has_one :nilify_profile, Profile, on_replace: :nilify
-      has_one :invalid_profile, Profile, on_replace: :mark_as_invalid
+      has_one :invalid_profile, Profile, on_replace: :mark_as_invalid,
+        defaults: :send_to_self
       has_one :update_profile, Profile, on_replace: :update,
         defaults: {__MODULE__, :send_to_self, [:extra]}
     end
 
-    def send_to_self(struct, owner, extra) do
+    def send_to_self(struct, owner, extra \\ :default) do
       send(self(), {:defaults, struct, owner, extra})
       %{struct | id: 13}
     end
@@ -340,6 +341,15 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = cast(schema, %{"profile" => %{id: 2}}, :profile)
     assert changeset.changes.profile.data.name == "default"
     assert changeset.changes.profile.changes == %{id: 2}
+  end
+
+  test "cast has_one with atom defaults" do
+    {:ok, schema} = TestRepo.insert(%Author{title: "Title", invalid_profile: nil})
+
+    changeset = cast(schema, %{"invalid_profile" => %{name: "Jose"}}, :invalid_profile)
+    assert_received {:defaults, %Profile{id: nil}, %Author{title: "Title"}, :default}
+    assert changeset.changes.invalid_profile.data.id == 13
+    assert changeset.changes.invalid_profile.changes == %{name: "Jose"}
   end
 
   test "cast has_one with MFA defaults" do

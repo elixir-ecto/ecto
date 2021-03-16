@@ -431,14 +431,17 @@ defmodule Ecto.Association do
   @doc """
   Validates `defaults` for association named `name`.
   """
-  def validate_defaults!(_name, {mod, fun, args} = defaults)
+  def validate_defaults!(_module, _name, {mod, fun, args} = defaults)
       when is_atom(mod) and is_atom(fun) and is_list(args),
       do: defaults
 
-  def validate_defaults!(_name, defaults) when is_list(defaults),
+  def validate_defaults!(module, _name, fun) when is_atom(fun),
+    do: {module, fun, []}
+
+  def validate_defaults!(_module, _name, defaults) when is_list(defaults),
     do: defaults
 
-  def validate_defaults!(name, defaults),
+  def validate_defaults!(_module, name, defaults),
     do: raise ArgumentError,
               "expected defaults for #{inspect name} to be a keyword list " <>
                 "or a {module, fun, args} tuple, got: `#{inspect defaults}`"
@@ -714,7 +717,7 @@ defmodule Ecto.Association.Has do
         Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
     end
 
-    defaults = Ecto.Association.validate_defaults!(name, opts[:defaults] || [])
+    defaults = Ecto.Association.validate_defaults!(module, name, opts[:defaults] || [])
     preload_order = Ecto.Association.validate_preload_order!(name, opts[:preload_order] || [])
     where = opts[:where] || []
 
@@ -999,7 +1002,7 @@ defmodule Ecto.Association.BelongsTo do
         Enum.map_join(@on_replace_opts, ", ", &"`#{inspect &1}`")
     end
 
-    defaults = Ecto.Association.validate_defaults!(name, opts[:defaults] || [])
+    defaults = Ecto.Association.validate_defaults!(module, name, opts[:defaults] || [])
     where = opts[:where] || []
 
     unless is_list(where) do
@@ -1197,8 +1200,8 @@ defmodule Ecto.Association.ManyToMany do
 
     where = opts[:where] || []
     join_where = opts[:join_where] || []
-    defaults = Ecto.Association.validate_defaults!(name, opts[:defaults] || [])
-    join_defaults = Ecto.Association.validate_defaults!(name, opts[:join_defaults] || [])
+    defaults = Ecto.Association.validate_defaults!(module, name, opts[:defaults] || [])
+    join_defaults = Ecto.Association.validate_defaults!(module, name, opts[:join_defaults] || [])
     preload_order = Ecto.Association.validate_preload_order!(name, opts[:preload_order] || [])
 
     unless is_list(where) do
