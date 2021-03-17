@@ -94,6 +94,16 @@ defmodule Ecto.Repo.SupervisorTest do
     assert {:port, 12345} in url
   end
 
+  test "parse_url with # encoded" do
+    encoded_url = "ecto://eric:pass*%23word@host:12345/mydb"
+    url = parse_url(encoded_url)
+    assert {:password, "pass*#word"} in url
+    assert {:username, "eric"} in url
+    assert {:hostname, "host"} in url
+    assert {:database, "mydb"} in url
+    assert {:port, 12345} in url
+  end
+
   test "parse_url query string" do
     encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb?ssl=true&timeout=1000&pool_size=42&currentSchema=my_schema")
     url = parse_url(encoded_url)
