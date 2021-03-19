@@ -75,6 +75,7 @@ Database   | Ecto Adapter           | Dependencies
 PostgreSQL | Ecto.Adapters.Postgres | [ecto_sql][ecto_sql] (requires Ecto v3.0+) + [postgrex][postgrex]
 MySQL      | Ecto.Adapters.MyXQL    | [ecto_sql][ecto_sql] (requires Ecto v3.3+) + [myxql][myxql]
 MSSQL      | Ecto.Adapters.Tds      | [ecto_sql][ecto_sql] (requires Ecto v3.4+) + [tds][tds]
+SQLite3    | Ecto.Adapters.SQLite3  | [ecto_sql][ecto_sql] (requires Ecto v3.5+) + [ecto_sqlite3][ecto_sqlite3]
 ETS        | Etso                   | [ecto][ecto] + [etso][etso]
 
 [ecto]: http://github.com/elixir-ecto/ecto
@@ -82,6 +83,7 @@ ETS        | Etso                   | [ecto][ecto] + [etso][etso]
 [postgrex]: http://github.com/elixir-ecto/postgrex
 [myxql]: http://github.com/elixir-ecto/myxql
 [tds]: https://github.com/livehelpnow/tds
+[ecto_sqlite3]: https://github.com/elixir-sqlite/ecto_sqlite3
 [etso]: https://github.com/evadne/etso
 
 For example, if you want to use PostgreSQL, add to your `mix.exs` file:
