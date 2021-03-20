@@ -1963,7 +1963,7 @@ defmodule Ecto.Changeset do
 
   ## Examples
 
-      validate_inclusion(changeset, :gender, ["man", "woman", "other", "prefer not to say"])
+      validate_inclusion(changeset, :cardinal_direction, ["north", "east", "south", "west"])
       validate_inclusion(changeset, :age, 0..99)
 
   """
