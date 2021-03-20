@@ -151,9 +151,14 @@ defmodule Ecto.Integration.AssocTest do
     TestRepo.insert!(%Comment{author_id: user2.id, text: "c2", post_id: post1.id})
     TestRepo.insert!(%Comment{author_id: user3.id, text: "c3", post_id: post2.id})
 
-    [u1, u2] = Ecto.assoc(user1, :co_commenters) |> TestRepo.all()
-    assert u1.id == user1.id
-    assert u2.id == user2.id
+    [u1_id, u2_id] =
+      Ecto.assoc(user1, :co_commenters)
+      |> TestRepo.all()
+      |> Enum.map(fn %User{id: id} -> id end)
+      |> Enum.sort()
+
+    assert u1_id == user1.id
+    assert u2_id == user2.id
   end
 
   test "has_many through two many_to_many associations" do
