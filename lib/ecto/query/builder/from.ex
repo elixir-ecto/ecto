@@ -54,9 +54,9 @@ defmodule Ecto.Query.Builder.From do
   def build(query, env, as, prefix, maybe_hints) do
     hints = List.wrap(maybe_hints)
 
-    unless Enum.all?(hints, &is_binary/1) do
+    unless Enum.all?(hints, &is_valid_hint/1) do
       Builder.error!(
-        "`hints` must be a compile time string or list of strings, " <>
+        "`hints` must be a compile time string, list of strings, or a tuple " <>
           "got: `#{Macro.to_string(maybe_hints)}`"
       )
     end
@@ -167,6 +167,10 @@ defmodule Ecto.Query.Builder.From do
 
   defp maybe_apply_hints(query, []), do: query
   defp maybe_apply_hints(query, hints), do: update_in(query.from.hints, &(&1 ++ hints))
+
+  defp is_valid_hint(hint) when is_binary(hint), do: true
+  defp is_valid_hint({_key, _val}), do: true
+  defp is_valid_hint(_), do: false
 
   defp check_binds(query, count) do
     if count > 1 and count > Builder.count_binds(query) do

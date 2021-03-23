@@ -9,6 +9,8 @@
   * [Ecto.Repo] Add `placeholders` support to `insert_all`
   * [Ecto.Schema] Support `:preload_order` on `has_many` and `many_to_many` associations
   * [Ecto.UUID] Add bang UUID conversion methods
+  * [Ecto.Query] The `:hints` option now accepts dynamic values when supplied as tuples
+
 
 ### Bug fixes
 
