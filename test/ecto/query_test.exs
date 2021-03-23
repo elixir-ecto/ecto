@@ -530,7 +530,7 @@ defmodule Ecto.QueryTest do
       assert query.from.hints == ["hello", "world"]
     end
 
-    test "are expected to be compile-time strings or list of strings" do
+    test "binary values are expected to be compile-time strings or list of strings" do
       assert_raise Ecto.Query.CompileError, ~r"`hints` must be a compile time string", fn ->
         quote_and_eval(from "posts", hints: 123)
       end
@@ -538,6 +538,12 @@ defmodule Ecto.QueryTest do
       assert_raise Ecto.Query.CompileError, ~r"`hints` must be a compile time string", fn ->
         quote_and_eval(from "posts", join: "comments", hints: 123)
       end
+    end
+
+    test "tuple values are not checked for contents" do
+      hint = "hint_from_config"
+      query = from "posts", hints: [dynamic: hint, number: 123]
+      assert query.from.hints == [dynamic: hint, number: 123]
     end
   end
 

@@ -1028,6 +1028,7 @@ defmodule Ecto.Query do
   `from` and `join` also support index hints, as found in databases such as
   [MySQL](https://dev.mysql.com/doc/refman/8.0/en/index-hints.html) and
   [MSSQL](https://docs.microsoft.com/en-us/sql/t-sql/queries/hints-transact-sql-table?view=sql-server-2017).
+  [Clickhouse](https://clickhouse.tech/docs/en/sql-reference/statements/select/sample/).
 
   For example, a developer using MySQL may write:
 
@@ -1039,6 +1040,14 @@ defmodule Ecto.Query do
 
   Keep in mind you want to use hints rarely, so don't forget to read the database
   disclaimers about such functionality.
+
+  Hints must be static compile-time strings when they are specified as (list of) strings.
+  Certain Ecto adapters may also accept dynamic hints using the tuple form:
+
+      from e in Event,
+        hints: [sample: sample_threshold()],
+        select: e
+
   """
   @join_opts [:on | @from_join_opts]
 
