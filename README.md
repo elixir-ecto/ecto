@@ -148,6 +148,22 @@ Note that `mix test` does not run the tests in the `integration_test` folder. To
     $ mix deps.get
     $ ECTO_PATH=../ecto mix test.all
 
+#### Running containerized tests
+
+It is also possible to run the integration tests under a containerized environment using [earthly](https://earthly.dev/get-earthly):
+
+    $ earthly -P +all
+
+You can also use this to interactively debug any failing integration tests using:
+
+    $ earthly -P -i --build-arg ELIXIR_BASE=1.8.2-erlang-20.3.8.26-alpine-3.11.6 +integration-test
+
+Then once you enter the containerized shell, you can inspect the underlying databases with the respective commands:
+
+    PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres ecto_test
+    MYSQL_PASSWORD=root mysql -h 127.0.0.1 -uroot -proot ecto_test
+    sqlcmd -U sa -P 'some!Password'
+
 ## Logo
 
 "Ecto" and the Ecto logo are Copyright (c) 2020 Dashbit.
