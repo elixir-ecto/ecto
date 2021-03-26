@@ -103,7 +103,7 @@ defmodule Ecto.Integration.RepoTest do
     assert %Post{__meta__: ^loaded_meta} = TestRepo.insert!(post)
 
     post = TestRepo.one(Post)
-    assert post.__meta__.state == :loaded
+    assert Ecto.Changeset.state(post) == :loaded
     assert post.inserted_at
   end
 
@@ -360,7 +360,7 @@ defmodule Ecto.Integration.RepoTest do
       |> Ecto.Changeset.unique_constraint(:uuid)
       |> TestRepo.insert()
     assert changeset.errors == [uuid: {"has already been taken", [constraint: :unique, constraint_name: "posts_uuid_index"]}]
-    assert changeset.data.__meta__.state == :built
+    assert Ecto.Changeset.state(changeset) == :built
   end
 
   @tag :unique_constraint
@@ -390,7 +390,7 @@ defmodule Ecto.Integration.RepoTest do
       |> Ecto.Changeset.unique_constraint(:uuid)
       |> TestRepo.insert()
     assert changeset.errors == [uuid: {"has already been taken", [constraint: :unique, constraint_name: "customs_uuid_index"]}]
-    assert changeset.data.__meta__.state == :built
+    assert Ecto.Changeset.state(changeset) == :built
   end
 
   test "unique pseudo-constraint violation error message with join table at the repository" do
@@ -1532,11 +1532,11 @@ defmodule Ecto.Integration.RepoTest do
       post = %Post{title: "first", uuid: Ecto.UUID.generate()}
       {:ok, inserted} = TestRepo.insert(post, on_conflict: :nothing)
       assert inserted.id
-      assert inserted.__meta__.state == :loaded
+      assert Ecto.Changeset.state(inserted) == :loaded
 
       {:ok, not_inserted} = TestRepo.insert(post, on_conflict: :nothing)
       assert not_inserted.id == nil
-      assert not_inserted.__meta__.state == :loaded
+      assert Ecto.Changeset.state(not_inserted) == :loaded
     end
 
     @tag :with_conflict_target

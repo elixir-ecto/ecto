@@ -2882,6 +2882,13 @@ defmodule Ecto.Changeset do
     do: field
 
   @doc ~S"""
+  Returns the state of the changeset as it relates to the data store; for
+  example, whether it has been persisted or deleted.
+  """
+  @spec state(changeset :: t()) :: Ecto.Schema.Metadata.state()
+  def state(%{data: %{__meta__: %{state: state}}}), do: state
+
+  @doc ~S"""
   Traverses changeset errors and applies the given function to error messages.
 
   This function is particularly useful when associations and embeds
