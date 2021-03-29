@@ -1921,7 +1921,7 @@ defmodule Ecto.Query do
   the comments on those posts:
 
       posts_query = from p in Post, where: p.state == :published
-      Repo.all from a in Author, preload: [posts: {^posts_query, [:comments]}]
+      Repo.all from a in Author, preload: [posts: ^{posts_query, [:comments]}]
 
   Note: keep in mind operations like limit and offset in the preload
   query will affect the whole result set and not each association. For
