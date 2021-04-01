@@ -434,60 +434,69 @@ defmodule Ecto.Query.Planner do
 
   defp plan_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual, on: on, prefix: prefix} = join|t],
                      query, joins, sources, tail_sources, counter, offset, adapter) do
-    schema = schema_for_association_join!(query, join, Enum.fetch!(Enum.reverse(sources), ix))
-    refl = schema.__schema__(:association, assoc)
 
-    unless refl do
-      error! query, join, "could not find association `#{assoc}` on schema #{inspect schema}"
+    with r_sources = Enum.reverse(sources),
+         true <- is_integer(ix),
+         {:ok, source} <- Enum.fetch(r_sources, ix) do
+
+      schema = schema_for_association_join!(query, join, source)
+      refl = schema.__schema__(:association, assoc)
+
+      unless refl do
+        error! query, join, "could not find association `#{assoc}` on schema #{inspect schema}"
+      end
+
+      # If we have the following join:
+      #
+      #     from p in Post,
+      #       join: p in assoc(p, :comments)
+      #
+      # The callback below will return a query that contains only
+      # joins in a way it starts with the Post and ends in the
+      # Comment.
+      #
+      # This means we need to rewrite the joins below to properly
+      # shift the &... identifier in a way that:
+      #
+      #    &0         -> becomes assoc ix
+      #    &LAST_JOIN -> becomes counter
+      #
+      # All values in the middle should be shifted by offset,
+      # all values after join are already correct.
+      child = refl.__struct__.joins_query(refl)
+
+      # Rewrite prefixes:
+      # 1. the child query has the parent query prefix
+      #    (note the child query should NEVER have a prefix)
+      # 2. from and joins can have their prefixes explicitly
+      #    overwritten by the join prefix
+      child = rewrite_prefix(child, query.prefix)
+      child = update_in child.from, &rewrite_prefix(&1, prefix)
+      child = update_in child.joins, &Enum.map(&1, fn join -> rewrite_prefix(join, prefix) end)
+
+      last_ix = length(child.joins)
+      source_ix = counter
+
+      {_, child_from_source} = plan_source(child, child.from, adapter)
+
+      {child_joins, child_sources, child_tail} =
+        plan_joins(child, [child_from_source], offset + last_ix - 1, adapter)
+
+      # Rewrite joins indexes as mentioned above
+      child_joins = Enum.map(child_joins, &rewrite_join(&1, qual, ix, last_ix, source_ix, offset))
+
+      # Drop the last resource which is the association owner (it is reversed)
+      child_sources = Enum.drop(child_sources, -1)
+
+      [current_source|child_sources] = child_sources
+      child_sources = child_tail ++ child_sources
+
+      plan_joins(t, query, attach_on(child_joins, on) ++ joins, [current_source|sources],
+                    child_sources ++ tail_sources, counter + 1, offset + length(child_sources), adapter)
+
+    else _ ->
+      raise ArgumentError, message: "could not find an association binding with index `#{ix}`"
     end
-
-    # If we have the following join:
-    #
-    #     from p in Post,
-    #       join: p in assoc(p, :comments)
-    #
-    # The callback below will return a query that contains only
-    # joins in a way it starts with the Post and ends in the
-    # Comment.
-    #
-    # This means we need to rewrite the joins below to properly
-    # shift the &... identifier in a way that:
-    #
-    #    &0         -> becomes assoc ix
-    #    &LAST_JOIN -> becomes counter
-    #
-    # All values in the middle should be shifted by offset,
-    # all values after join are already correct.
-    child = refl.__struct__.joins_query(refl)
-
-    # Rewrite prefixes:
-    # 1. the child query has the parent query prefix
-    #    (note the child query should NEVER have a prefix)
-    # 2. from and joins can have their prefixes explicitly
-    #    overwritten by the join prefix
-    child = rewrite_prefix(child, query.prefix)
-    child = update_in child.from, &rewrite_prefix(&1, prefix)
-    child = update_in child.joins, &Enum.map(&1, fn join -> rewrite_prefix(join, prefix) end)
-
-    last_ix = length(child.joins)
-    source_ix = counter
-
-    {_, child_from_source} = plan_source(child, child.from, adapter)
-
-    {child_joins, child_sources, child_tail} =
-      plan_joins(child, [child_from_source], offset + last_ix - 1, adapter)
-
-    # Rewrite joins indexes as mentioned above
-    child_joins = Enum.map(child_joins, &rewrite_join(&1, qual, ix, last_ix, source_ix, offset))
-
-    # Drop the last resource which is the association owner (it is reversed)
-    child_sources = Enum.drop(child_sources, -1)
-
-    [current_source|child_sources] = child_sources
-    child_sources = child_tail ++ child_sources
-
-    plan_joins(t, query, attach_on(child_joins, on) ++ joins, [current_source|sources],
-                  child_sources ++ tail_sources, counter + 1, offset + length(child_sources), adapter)
   end
 
   defp plan_joins([%JoinExpr{source: %Ecto.Query{} = join_query, qual: qual, on: on, prefix: prefix} = join|t],
