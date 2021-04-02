@@ -1071,7 +1071,7 @@ defmodule Ecto.Query do
                            "list of variables, got: #{Macro.to_string(binding)}"
   end
 
-  defmacro join(_query, _qual, binding, _expr, opts) when is_list(binding) do
+  defmacro join(_query, _qual, binding, _expr, opts) do
     raise ArgumentError, "invalid opts passed to Ecto.Query.join/5, should be " <>
                            "list, got: #{Macro.to_string(opts)}"
   end
