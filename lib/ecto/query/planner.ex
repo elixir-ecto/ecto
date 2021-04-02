@@ -572,12 +572,12 @@ defmodule Ecto.Query.Planner do
     with {:ok, source} <- Enum.reverse(sources) |> Enum.fetch(ix) do
       source
     else _ ->
-      raise ArgumentError, message: "could not find a source with index `#{ix}` in `#{inspect sources}"
+      raise ArgumentError, "could not find a source with index `#{ix}` in `#{inspect sources}"
     end
   end
 
   defp fetch_source!(_, ix) do
-    raise ArgumentError, message: "invalid binding index: `#{inspect ix}` (check if you're binding using a valid :as atom)"
+    raise ArgumentError, "invalid binding index: `#{inspect ix}` (check if you're binding using a valid :as atom)"
   end
 
   defp schema_for_association_join!(query, join, source) do

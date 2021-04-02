@@ -341,8 +341,9 @@ defmodule Ecto.Query.PlannerTest do
   end
 
   test "plan: raises on invalid binding index in join" do
-    query   = from(p in Post, as: :posts)
-    |> join(:left, [{p, :foo}], assoc(p, :comments))
+    query =
+      from(p in Post, as: :posts)
+      |> join(:left, [{p, :foo}], assoc(p, :comments))
 
     assert_raise ArgumentError, ~r/invalid binding index/, fn ->
       plan(query)
