@@ -569,10 +569,9 @@ defmodule Ecto.Query.Planner do
   defp rewrite_param_ix(param, _, _, _, _), do: param
 
   defp fetch_source!(sources, ix) when is_integer(ix) do
-    with {:ok, source} <- Enum.reverse(sources) |> Enum.fetch(ix) do
-      source
-    else _ ->
-      raise ArgumentError, "could not find a source with index `#{ix}` in `#{inspect sources}"
+    case Enum.reverse(sources) |> Enum.fetch(ix) do
+      {:ok, source} -> source
+      :error -> raise ArgumentError, "could not find a source with index `#{ix}` in `#{inspect sources}"
     end
   end
 
