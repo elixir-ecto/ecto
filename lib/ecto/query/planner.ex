@@ -434,7 +434,8 @@ defmodule Ecto.Query.Planner do
 
   defp plan_joins([%JoinExpr{assoc: {ix, assoc}, qual: qual, on: on, prefix: prefix} = join|t],
                      query, joins, sources, tail_sources, counter, offset, adapter) do
-    schema = schema_for_association_join!(query, join, Enum.fetch!(Enum.reverse(sources), ix))
+    source = fetch_source!(sources, ix)
+    schema = schema_for_association_join!(query, join, source)
     refl = schema.__schema__(:association, assoc)
 
     unless refl do
@@ -566,6 +567,17 @@ defmodule Ecto.Query.Planner do
   end
 
   defp rewrite_param_ix(param, _, _, _, _), do: param
+
+  defp fetch_source!(sources, ix) when is_integer(ix) do
+    case Enum.reverse(sources) |> Enum.fetch(ix) do
+      {:ok, source} -> source
+      :error -> raise ArgumentError, "could not find a source with index `#{ix}` in `#{inspect sources}"
+    end
+  end
+
+  defp fetch_source!(_, ix) do
+    raise ArgumentError, "invalid binding index: `#{inspect ix}` (check if you're binding using a valid :as atom)"
+  end
 
   defp schema_for_association_join!(query, join, source) do
     case source do

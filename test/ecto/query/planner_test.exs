@@ -340,6 +340,16 @@ defmodule Ecto.Query.PlannerTest do
            "&5.id() == &3.special_long_comment_id() and fragment({:raw, \"LEN(\"}, {:expr, &5.text()}, {:raw, \") > 100\"})"
   end
 
+  test "plan: raises on invalid binding index in join" do
+    query =
+      from(p in Post, as: :posts)
+      |> join(:left, [{p, :foo}], assoc(p, :comments))
+
+    assert_raise ArgumentError, ~r/invalid binding index/, fn ->
+      plan(query)
+    end
+  end
+
   test "plan: cannot associate without schema" do
     query   = from(p in "posts", join: assoc(p, :comments))
     message = ~r"cannot perform association join on \"posts\" because it does not have a schema"
