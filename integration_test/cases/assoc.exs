@@ -195,13 +195,13 @@ defmodule Ecto.Integration.AssocTest do
     post2 = TestRepo.insert!(%Post{title: "p2"})
     post3 = TestRepo.insert!(%Post{title: "p3"})
 
-    author = TestRepo.insert!(%User{name: "Gabriel"})
+    author = TestRepo.insert!(%User{name: "john"})
 
     TestRepo.insert!(%Comment{text: "1", lock_version: 1, post_id: post1.id, author_id: author.id})
     TestRepo.insert!(%Comment{text: "2", lock_version: 2, post_id: post2.id, author_id: author.id})
     TestRepo.insert!(%Comment{text: "3", lock_version: 2, post_id: post3.id, author_id: author.id})
 
-    [p2, p3] = Ecto.assoc(author, :v2_comments_posts) |> TestRepo.all()
+    [p2, p3] = Ecto.assoc(author, :v2_comments_posts) |> TestRepo.all() |> Enum.sort_by(&(&1.id))
     assert p2.id == post2.id
     assert p3.id == post3.id
   end
