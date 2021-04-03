@@ -1,21 +1,26 @@
 # Changelog for v3.x
 
-## v3.6.0-dev
+## v3.6.0 (2021-04-03)
 
 ### Enhancements
 
   * [Ecto.Changeset] Support `:repo_opts` in `unsafe_validate_unique`
   * [Ecto.Enum] Allow enums to map to custom values
-  * [Ecto.Repo] Add `placeholders` support to `insert_all`
+  * [Ecto.Repo] Allow `insert_all` to be called with a query instead of rows
+  * [Ecto.Multi] Add `Ecto.Multi.put/3` for directly storing values
+  * [Ecto.Repo] Add `:placeholders` support to `insert_all` to avoid sending the same value multiple times
   * [Ecto.Schema] Support `:preload_order` on `has_many` and `many_to_many` associations
   * [Ecto.UUID] Add bang UUID conversion methods
   * [Ecto.Query] The `:hints` option now accepts dynamic values when supplied as tuples
-
+  * [Ecto.Query] Support `select: map(source, fields)` where `source` is a fragment
+  * [Ecto.Query] Allow referring to the parent query in a join's subquery select via `parent_as`
+  * [mix ecto] Support file and line interpolation on `ECTO_EDITOR`
 
 ### Bug fixes
 
   * [Ecto.Changeset] Change `apply_changes/1` to add the relation to the `struct.relation_id` if relation struct is persisted
   * [Ecto.Query] Remove unnecessary INNER JOIN in many to many association query
+  * [Ecto.Query] Allow parametric types to be interpolated in queries
   * [Ecto.Schema] Raise `ArgumentError` when default has invalid type
 
 ## v3.5.6 (2021-01-20)

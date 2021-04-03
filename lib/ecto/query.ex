@@ -225,9 +225,9 @@ defmodule Ecto.Query do
   Only atoms are accepted for binding names. Named binding references
   are expected to be placed in the tail position of the bindings list.
 
-  Named bindings can also be used for late binding when used with the
-  `as/1` construct, allowing you to refer to a binding that has not
-  been defined yet:
+  Named bindings can also be used for late binding with the `as/1`
+  construct, allowing you to refer to a binding that has not been
+  defined yet:
 
       from c in Comment, where: as(:posts).id == c.post_id
 
@@ -238,13 +238,13 @@ defmodule Ecto.Query do
       child_query = from c in Comment, where: parent_as(:posts).id == c.post_id
       from p in Post, as: :posts, inner_lateral_join: c in subquery(child_query)
 
-  When composing functions a common requirement is selecting a binding
-  on the query. Previous examples showed means of hardcoding that selection,
-  but there are also ways of doing it dynamically.
+  You can also match on a specific binding when building queries. For
+  example, let's suppose you want to create a generic sort function
+  that will order by a given `field` with a given `as` in `query`:
 
       # Knowing the name of the binding
-      def sort(query, name, field) do
-        from [{^name, x}] in query, order_by: field(x, ^field)
+      def sort(query, as, field) do
+        from [{^as, x}] in query, order_by: field(x, ^field)
       end
 
   ### Bindingless operations
