@@ -747,7 +747,7 @@ defmodule Ecto.Repo do
   @doc """
   Calculate the given `aggregate` over the given `field`.
 
-  See `aggregate/2` for general considerations and options.
+  See `c:aggregate/3` for general considerations and options.
 
   ## Examples
 
