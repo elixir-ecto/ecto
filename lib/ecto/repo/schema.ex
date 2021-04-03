@@ -625,12 +625,6 @@ defmodule Ecto.Repo.Schema do
     raise ArgumentError, "#{inspect(schema)} needs to be a schema with source"
   end
 
-  defp conflict_target({:constraint, constraint}, _dumper) when is_atom(constraint) do
-    # TODO: Remove this branch in future versions
-    IO.warn "{:constraint, constraint} option for :conflict_target is deprecated, " <>
-              "use {:unsafe_fragment, \"ON CONSTRAINT #{constraint}\" instead"
-    {:constraint, constraint}
-  end
   defp conflict_target({:unsafe_fragment, fragment}, _dumper) when is_binary(fragment) do
     {:unsafe_fragment, fragment}
   end
@@ -669,12 +663,6 @@ defmodule Ecto.Repo.Schema do
 
       {:replace_all_except, fields} ->
         {replace_all_fields!(:replace_all_except, schema, fields), [], conflict_target}
-
-      :replace_all_except_primary_key ->
-        # TODO: Remove this branch in future versions
-        IO.warn ":replace_all_except_primary_key is deprecated, please use {:replace_all_except, [...]} instead"
-        fields = replace_all_fields!(:replace_all_except_primary_key, schema, schema && schema.__schema__(:primary_key))
-        {fields, [], conflict_target}
 
       [_ | _] = on_conflict ->
         from = if schema, do: {source, schema}, else: source
