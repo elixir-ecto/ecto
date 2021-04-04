@@ -884,6 +884,7 @@ defmodule Ecto.Integration.RepoTest do
   describe "insert_all with source query" do
     @tag :upsert
     @tag :with_conflict_target
+    @tag :concat
     test "insert_all with query and conflict target" do
       {:ok, %Post{id: id}} = TestRepo.insert(%Post{
         title: "A generic title"
@@ -903,6 +904,7 @@ defmodule Ecto.Integration.RepoTest do
     end
 
     @tag :returning
+    @tag :concat
     test "insert_all with query and returning" do
       {:ok, %Post{id: id}} = TestRepo.insert(%Post{
         title: "A generic title"
@@ -922,6 +924,7 @@ defmodule Ecto.Integration.RepoTest do
 
     @tag :upsert
     @tag :without_conflict_target
+    @tag :concat
     test "insert_all with query and on_conflict" do
       {:ok, %Post{id: id}} = TestRepo.insert(%Post{
         title: "A generic title"
@@ -940,6 +943,7 @@ defmodule Ecto.Integration.RepoTest do
       assert %Post{title: ^expected_title} = TestRepo.get(Post, expected_id)
     end
 
+    @tag :concat
     test "insert_all with query" do
       {:ok, %Post{id: id}} = TestRepo.insert(%Post{
         title: "A generic title"
