@@ -758,6 +758,17 @@ defmodule Ecto.ChangesetTest do
     assert changed_post.__struct__ == post.__struct__
     assert changed_post.title == "foo"
     assert changed_post.category_id == category.id
+
+    changeset = post
+    |> changeset(%{"title" => "foo"})
+    |> put_assoc(:category, nil)
+
+    changed_post = apply_changes(changeset)
+
+    assert changed_post.__struct__ == post.__struct__
+    assert changed_post.title == "foo"
+    assert changed_post.category_id == nil
+    assert changed_post.category == nil
   end
 
   describe "apply_action/2" do
