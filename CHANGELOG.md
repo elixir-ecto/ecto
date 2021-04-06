@@ -23,6 +23,18 @@
   * [Ecto.Query] Allow parametric types to be interpolated in queries
   * [Ecto.Schema] Raise `ArgumentError` when default has invalid type
 
+## v3.5.8 (2021-02-21)
+
+### Enhancements
+
+  * [Ecto.Query] Support map/2 on fragments and subqueries
+
+## v3.5.7 (2021-02-07)
+
+### Bug fixes
+
+  * [Ecto.Query] Fixes param ordering issue on dynamic queries with subqueries
+
 ## v3.5.6 (2021-01-20)
 
 ### Enhancements
