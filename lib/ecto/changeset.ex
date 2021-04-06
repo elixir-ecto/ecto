@@ -2970,8 +2970,10 @@ defmodule Ecto.Changeset do
 
     acc = Map.put(acc, key, relation_changed)
 
-    case relation do
-      %Ecto.Association.BelongsTo{} -> Map.put(acc, relation.owner_key, relation_changed.id)
+    with %Ecto.Association.BelongsTo{related_key: related_key} <- relation,
+         %{^related_key => id} <- relation_changed do
+      Map.put(acc, relation.owner_key, id)
+    else
       _ -> acc
     end
   end

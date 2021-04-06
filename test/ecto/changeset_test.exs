@@ -19,6 +19,8 @@ defmodule Ecto.ChangesetTest do
   defmodule Category do
     use Ecto.Schema
 
+    @primary_key {:category_id, :id, autogenerate: true}
+
     schema "categories" do
       field :name, :string
       has_many :posts, Ecto.ChangesetTest.Post
@@ -49,7 +51,7 @@ defmodule Ecto.ChangesetTest do
       field :published_at, :naive_datetime
       field :source, :map
       field :permalink, :string, source: :url
-      belongs_to :category, Ecto.ChangesetTest.Category, source: :cat_id
+      belongs_to :category, Ecto.ChangesetTest.Category, references: :category_id, source: :cat_id
       has_many :comments, Ecto.ChangesetTest.Comment, on_replace: :delete
       has_one :comment, Ecto.ChangesetTest.Comment
     end
@@ -757,7 +759,18 @@ defmodule Ecto.ChangesetTest do
 
     assert changed_post.__struct__ == post.__struct__
     assert changed_post.title == "foo"
-    assert changed_post.category_id == category.id
+    assert changed_post.category_id == category.category_id
+
+    changeset = post
+    |> changeset(%{"title" => "foo"})
+    |> put_assoc(:category, nil)
+
+    changed_post = apply_changes(changeset)
+
+    assert changed_post.__struct__ == post.__struct__
+    assert changed_post.title == "foo"
+    assert changed_post.category_id == nil
+    assert changed_post.category == nil
   end
 
   describe "apply_action/2" do
