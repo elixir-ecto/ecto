@@ -154,13 +154,13 @@ Now running `MyApp.Repo.all MyApp.Mapping` will by default run on the "main" pre
 Now, suppose that while still configured to connect to the "connection_prefix" on `:after_connect`, we run the following queries:
 
 ```iex
-iex(1) alias MyApp.Sample
+iex(1)> alias MyApp.Sample
 MyApp.Sample
-iex(2) MyApp.Repo.all Sample
+iex(2)> MyApp.Repo.all Sample
 []
-iex(3) MyApp.Repo.insert %Sample{name: "mary"}
+iex(3)> MyApp.Repo.insert %Sample{name: "mary"}
 {:ok, %MyApp.Sample{...}}
-iex(4) MyApp.Repo.all Sample
+iex(4)> MyApp.Repo.all Sample
 [%MyApp.Sample{...}]
 ```
 
@@ -178,7 +178,7 @@ Notice how we were able to change the prefix the query runs on. Back in the defa
 One interesting aspect of prefixes in Ecto is that the prefix information is carried along each struct returned by a query:
 
 ```iex
-iex(9) [sample] = MyApp.Repo.all Sample
+iex(9)> [sample] = MyApp.Repo.all Sample
 [%MyApp.Sample{}]
 iex(10)> Ecto.get_meta(sample, :prefix)
 nil
