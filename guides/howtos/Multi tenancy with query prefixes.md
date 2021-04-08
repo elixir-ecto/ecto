@@ -154,22 +154,22 @@ Now running `MyApp.Repo.all MyApp.Mapping` will by default run on the "main" pre
 Now, suppose that while still configured to connect to the "connection_prefix" on `:after_connect`, we run the following queries:
 
 ```iex
-iex(1) alias MyApp.Sample
+iex(1)> alias MyApp.Sample
 MyApp.Sample
-iex(2) MyApp.Repo.all Sample
+iex(2)> MyApp.Repo.all(Sample)
 []
-iex(3) MyApp.Repo.insert %Sample{name: "mary"}
+iex(3)> MyApp.Repo.insert(%Sample{name: "mary"})
 {:ok, %MyApp.Sample{...}}
-iex(4) MyApp.Repo.all Sample
+iex(4)> MyApp.Repo.all(Sample)
 [%MyApp.Sample{...}]
 ```
 
 The operations above ran on the "connection_prefix". So what happens if we try to run the sample query on the "public" prefix? All Ecto repository operations support the `:prefix` option. So let's set it to public.
 
 ```iex
-iex(7)> MyApp.Repo.all Sample
+iex(7)> MyApp.Repo.all(Sample)
 [%MyApp.Sample{...}]
-iex(8)> MyApp.Repo.all Sample, prefix: "public"
+iex(8)> MyApp.Repo.all(Sample, prefix: "public")
 []
 ```
 
@@ -178,7 +178,7 @@ Notice how we were able to change the prefix the query runs on. Back in the defa
 One interesting aspect of prefixes in Ecto is that the prefix information is carried along each struct returned by a query:
 
 ```iex
-iex(9) [sample] = MyApp.Repo.all Sample
+iex(9)> [sample] = MyApp.Repo.all(Sample)
 [%MyApp.Sample{}]
 iex(10)> Ecto.get_meta(sample, :prefix)
 nil
@@ -191,9 +191,9 @@ Since the prefix data is carried in the struct, we can use such to copy data fro
 ```iex
 iex(11)> new_sample = Ecto.put_meta(sample, prefix: "public")
 %MyApp.Sample{}
-iex(12)> MyApp.Repo.insert new_sample
+iex(12)> MyApp.Repo.insert(new_sample)
 {:ok, %MyApp.Sample{}}
-iex(13)> [sample] = MyApp.Repo.all Sample, prefix: "public"
+iex(13)> [sample] = MyApp.Repo.all(Sample, prefix: "public")
 [%MyApp.Sample{}]
 iex(14)> Ecto.get_meta(sample, :prefix)
 "public"
