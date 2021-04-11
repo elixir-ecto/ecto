@@ -1,45 +1,60 @@
 name: CI
-
 on:
-  pull_request:
   push:
-    branches:
-      - master
-      - v3.*
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 jobs:
-  test:
-    runs-on: ubuntu-16.04
+  integration-test:
+    name: integration test
+    runs-on: ubuntu-latest
     env:
-      MIX_ENV: test
+      FORCE_COLOR: 1
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - pair:
-              elixir: 1.8.2
-              otp: 20.3.8.26
-          - pair:
-              elixir: 1.11.3
-              otp: 23.2.5
-            lint: lint
+        elixirbase:
+          - "1.11.0-erlang-23.1.1-alpine-3.13.1"
+          - "1.11.0-erlang-21.3.8.21-alpine-3.13.1"
+          - "1.8.2-erlang-20.3.8.26-alpine-3.11.6"
     steps:
       - uses: actions/checkout@v2
-
-      - uses: erlef/setup-elixir@v1
-        with:
-          otp-version: ${{matrix.pair.otp}}
-          elixir-version: ${{matrix.pair.elixir}}
-
-      - name: Install Dependencies
-        run: mix deps.get --only test
-
-      - run: mix deps.get && mix deps.unlock --check-unused
-        if: ${{ matrix.lint }}
-
-      - run: mix deps.compile
-
-      - run: mix compile --warnings-as-errors
-        if: ${{ matrix.lint }}
-
-      - run: mix test
+      - name: Download released earthly
+        run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.8/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
+      - name: ecto integration-test under ${{matrix.elixirbase}}
+        run: earthly -P --ci --build-arg ELIXIR_BASE=${{matrix.elixirbase}} +integration-test
+  unit-test:
+    name: unit test
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 1
+    strategy:
+      fail-fast: false
+      matrix:
+        elixirbase:
+          - "1.11.0-erlang-23.1.1-alpine-3.13.1"
+          - "1.11.0-erlang-21.3.8.21-alpine-3.13.1"
+          - "1.8.2-erlang-20.3.8.26-alpine-3.11.6"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download released earthly
+        run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.8/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
+      - name: ecto test under ${{matrix.elixirbase}}
+        run: earthly -P --ci --build-arg ELIXIR_BASE=${{matrix.elixirbase}} +test
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    env:
+      FORCE_COLOR: 1
+    strategy:
+      fail-fast: false
+      matrix:
+        elixirbase:
+          - "1.11.0-erlang-23.1.1-alpine-3.13.1"
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download released earthly
+        run: "sudo /bin/sh -c 'wget https://github.com/earthly/earthly/releases/download/v0.5.8/earthly-linux-amd64 -O /usr/local/bin/earthly && chmod +x /usr/local/bin/earthly'"
+      - name: ecto lint under ${{matrix.elixirbase}}
+        run: earthly -P --ci --build-arg ELIXIR_BASE=${{matrix.elixirbase}} +lint
