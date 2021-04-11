@@ -131,7 +131,7 @@ With the version 3.0, Ecto has become API stable. This means our main focus is o
   * [Mailing list](https://groups.google.com/forum/#!forum/elixir-ecto)
   * [Examples](https://github.com/elixir-ecto/ecto/tree/master/examples)
 
-### Running tests
+## Running tests
 
 Clone the repo and fetch its dependencies:
 
@@ -148,7 +148,7 @@ Note that `mix test` does not run the tests in the `integration_test` folder. To
     $ mix deps.get
     $ ECTO_PATH=../ecto mix test.all
 
-#### Running containerized tests
+### Running containerized tests
 
 It is also possible to run the integration tests under a containerized environment using [earthly](https://earthly.dev/get-earthly):
 
