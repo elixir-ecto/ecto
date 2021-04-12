@@ -1832,12 +1832,17 @@ defmodule Ecto.Changeset do
 
     * `:repo_opts` - the options to pass to the `Ecto.Repo` call.
 
+    * `:query` - the base query to use for the check. Defaults to the schema of
+      the changeset. If the primary key is set, a clause will be added to exclude
+      the changeset row itself from the check.
+
   ## Examples
 
       unsafe_validate_unique(changeset, :city_name, repo)
       unsafe_validate_unique(changeset, [:city_name, :state_name], repo)
       unsafe_validate_unique(changeset, [:city_name, :state_name], repo, message: "city must be unique within state")
       unsafe_validate_unique(changeset, [:city_name, :state_name], repo, prefix: "public")
+      unsafe_validate_unique(changeset, [:city_name, :state_name], repo, query: from(c in City, where: is_nil(c.deleted_at)))
 
   """
   @spec unsafe_validate_unique(t, atom | [atom, ...], Ecto.Repo.t, Keyword.t) :: t
@@ -1870,8 +1875,8 @@ defmodule Ecto.Changeset do
       changeset
     else
       query =
-        schema
-        |> maybe_exclude_itself(changeset)
+        Keyword.get(opts, :query, schema)
+        |> maybe_exclude_itself(schema, changeset)
         |> Ecto.Query.where(^where_clause)
         |> Ecto.Query.select(true)
         |> Ecto.Query.limit(1)
@@ -1894,18 +1899,36 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp maybe_exclude_itself(schema, changeset) do
+  defp maybe_exclude_itself(base_query, schema, changeset) do
     :primary_key
     |> schema.__schema__()
-    |> Enum.reduce_while(schema, fn field, query ->
-      case get_field(changeset, field) do
-        nil ->
-          {:halt, schema}
+    |> Enum.map(&{&1, get_field(changeset, &1)})
+    |> case do
+      [{_pk_field, nil} | _remaining_pks] ->
+        base_query
 
-        value ->
-          {:cont, Ecto.Query.or_where(query, [q], field(q, ^field) != ^value)}
-      end
-    end)
+      [{pk_field, value} | remaining_pks] ->
+        # generate a clean query (one that does not start with 'TRUE OR ...')
+        first_expr = Ecto.Query.dynamic([q], field(q, ^pk_field) == ^value)
+
+        Enum.reduce_while(remaining_pks, first_expr, fn
+          {_pk_field, nil}, _expr ->
+            {:halt, nil}
+
+          {pk_field, value}, expr ->
+            {:cont, Ecto.Query.dynamic([q], ^expr and field(q, ^pk_field) == ^value)}
+        end)
+        |> case do
+          nil ->
+            base_query
+
+          matches_pk ->
+            Ecto.Query.where(base_query, ^Ecto.Query.dynamic(not (^matches_pk)))
+        end
+
+      [] ->
+        base_query
+    end
   end
 
   defp ensure_field_exists!(%Changeset{types: types, data: data}, field) do
@@ -1977,7 +2000,7 @@ defmodule Ecto.Changeset do
   end
 
   @doc ~S"""
-  Validates a change, of type enum, is a subset of the given enumerable. 
+  Validates a change, of type enum, is a subset of the given enumerable.
 
   This validates if a list of values belongs to the given enumerable.
   If you need to validate if a single value is inside the given enumerable,
