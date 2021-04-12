@@ -1301,6 +1301,40 @@ defmodule Ecto.Schema do
       whenever the `:tags` associations is preloaded, the comments will be order by the `:foo` field.
       See `Ecto.Query.order_by/3` for more examples.
 
+  ## Using Ecto.assoc/2
+
+  One of the benefits of using `many_to_many` is that Ecto will avoid
+  loading the intermediate whenever possible, making your queries more
+  efficient. For this reason, developers should not refer to the join
+  table of `many_to_many` in queries. The join table is accessible in
+  few occasions, such as in `Ecto.assoc/2`. For example, if you do this:
+
+      post
+      |> Ecto.assoc(:tags)
+      |> where([t, _pt, p], p.public == t.public)
+
+  It may not work as expected because the `posts_tags` table may not be
+  included in the query. You can address this problem in multiple ways.
+  One option is to use `...`:
+
+      post
+      |> Ecto.assoc(:tags)
+      |> where([t, ..., p], p.public == t.public)
+
+  Another and preferred option is to rewrite to an explicit `join`, which
+  ellide the intermediate bindings as they are resolved only later on:
+
+      # keyword syntax
+      from t in Tag,
+        join: p in assoc(t, :post), on: p.id == ^post.id
+
+      # pipe syntax
+      Tag
+      |> join([t], :inner, p in assoc(t, :post), on: p.id == ^post.id)
+
+  If you need to access the join table, then you likely want to use
+  `has_many/3` with the `:through` option instead.
+
   ## Removing data
 
   If you attempt to remove associated `many_to_many` data, **Ecto will
