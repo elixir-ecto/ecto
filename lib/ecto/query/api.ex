@@ -159,7 +159,7 @@ defmodule Ecto.Query.API do
   A product matches in the above example if a line item was created since the provided date where the customer purchased
   at least 10 units.
 
-  Both `any` and `all` must be given a subquery as an argument, and theyu must be used on the right hand side of a comparison.
+  Both `any` and `all` must be given a subquery as an argument, and they must be used on the right hand side of a comparison.
   Both can be used with every comparison operator: `==`, `!=`, `>`, `>=`, `<`, `<=`.
   """
   def any(subquery), do: doc! [subquery]
@@ -179,7 +179,7 @@ defmodule Ecto.Query.API do
 
   The above example matches all the posts which are tied for being the most visited.
 
-  Both `any` and `all` must be given a subquery as an argument, and theyu must be used on the right hand side of a comparison.
+  Both `any` and `all` must be given a subquery as an argument, and they must be used on the right hand side of a comparison.
   Both can be used with every comparison operator: `==`, `!=`, `>`, `>=`, `<`, `<=`.
   """
   def all(subquery), do: doc! [subquery]
