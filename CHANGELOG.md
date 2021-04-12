@@ -1,5 +1,15 @@
 # Changelog for v3.x
 
+## v3.6.1 (2021-04-12)
+
+### Enhancements
+
+  * [Ecto.Changeset] Allow the `:query` option in `unsafe_validate_unique`
+
+### Bug fixes
+
+  * [Ecto.Changeset] Add the relation id in `apply_changes` if the relation key exists (instead of hardcoding it to `id`)
+
 ## v3.6.0 (2021-04-03)
 
 ### Enhancements
