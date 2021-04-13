@@ -1298,7 +1298,7 @@ defmodule Ecto.Schema do
     * `:preload_order` - Sets the default `order_by` of the association.
       It is used when the association is preloaded.
       For example, if you set `Post.many_to_many :tags, Tag, join_through: "posts_tags", preload_order: [asc: :foo]`,
-      whenever the `:tags` associations is preloaded, the comments will be order by the `:foo` field.
+      whenever the `:tags` associations is preloaded, the tags will be order by the `:foo` field.
       See `Ecto.Query.order_by/3` for more examples.
 
   ## Using Ecto.assoc/2
