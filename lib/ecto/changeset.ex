@@ -427,7 +427,7 @@ defmodule Ecto.Changeset do
   ## Options
 
     * `:empty_values` - a list of values to be considered as empty when casting.
-      All empty values are replaced with default values on cast if default values are specified. Defaults to `[""]`
+      Empty values are always replaced by the default value of the respective key. Defaults to `[""]`
 
   ## Examples
 
