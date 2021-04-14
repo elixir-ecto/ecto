@@ -15,9 +15,10 @@
 ### Enhancements
 
   * [Ecto.Changeset] Support `:repo_opts` in `unsafe_validate_unique`
+  * [Ecto.Changeset] Add a validation error if trying to cast a cardinality one embed/assoc with anything other than a map or keyword list
   * [Ecto.Enum] Allow enums to map to custom values
   * [Ecto.Multi] Add `Ecto.Multi.put/3` for directly storing values
-  * [Ecto.Query] **Potentially breaking change**: optimize `many_to_many` queries so it no longer load intermediary tables in more occasions. This may cause issues if you are using `Ecto.assoc/2` to load `many_to_many` associations and then trying to access intermediate bindings
+  * [Ecto.Query] **Potentially breaking change**: optimize `many_to_many` queries so it no longer load intermediary tables in more occasions. This may cause issues if you are using `Ecto.assoc/2` to load `many_to_many` associations and then trying to access intermediate bindings (which is discouraged but it was possible)
   * [Ecto.Repo] Allow `insert_all` to be called with a query instead of rows
   * [Ecto.Repo] Add `:placeholders` support to `insert_all` to avoid sending the same value multiple times
   * [Ecto.Schema] Support `:preload_order` on `has_many` and `many_to_many` associations
