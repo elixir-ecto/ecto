@@ -152,7 +152,7 @@ defmodule Ecto.Query.API do
   @doc """
   Tests whether one or more values returned from the provided subquery match in a comparison operation.
 
-      from p in Product, where: p.id = any(
+      from p in Product, where: p.id == any(
         from(li in LineItem, select: [li.product_id], where: li.created_at > ^since and li.qty >= 10)
       )
 
@@ -173,7 +173,7 @@ defmodule Ecto.Query.API do
 
   For a post to match in the above example it must be visited at least as much as the average post in all categories.
 
-      from p in Post, where: p.visits = all(
+      from p in Post, where: p.visits == all(
         from(p in Post, select: max(p.visits))
       )
 
