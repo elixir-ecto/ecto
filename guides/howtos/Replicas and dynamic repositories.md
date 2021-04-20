@@ -190,7 +190,7 @@ setup do
 end
 ```
 
-Note `put_dynamic_repo` is per process. So every time you spawn a new process, the `dynamic_repo` value will reset to its default until you cal `put_dynamic_repo` again.
+Note `put_dynamic_repo` is per process. So every time you spawn a new process, the `dynamic_repo` value will reset to its default until you call `put_dynamic_repo` again.
 
 Luckily, there is even a better way! We can pass a `:default_dynamic_repo` option when we define the repository. In this case, we want to set the `:default_dynamic_repo` to `MyApp.Repo` only during the test environment. In your `lib/my_app/repo.ex`, do this:
 
