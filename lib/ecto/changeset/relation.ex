@@ -32,9 +32,9 @@ defmodule Ecto.Changeset.Relation do
   Checks if the container can be considered empty.
   """
   def empty?(%{cardinality: _}, %NotLoaded{}), do: true
+  def empty?(%{cardinality: _}, nil), do: true
   def empty?(%{cardinality: :many}, []), do: true
   def empty?(%{cardinality: :many}, changes), do: filter_empty(changes) == []
-  def empty?(%{cardinality: :one}, nil), do: true
   def empty?(%{}, _), do: false
 
   @doc """
