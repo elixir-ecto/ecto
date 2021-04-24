@@ -319,6 +319,12 @@ defmodule Ecto.Query.SubqueryTest do
                [{{:., [type: :string], [{:&, [], [0]}, :title]}, [], []}]
     end
 
+    test "keeps field with nil values" do
+      query = from p in subquery(from p in Post, select: %{title: nil})
+      assert normalize(query).from.source.query.select.fields == [title: nil]
+      assert normalize(query).select.fields == [{{:., [], [{:&, [], [0]}, :title]}, [], []}]
+    end
+
     test "with params in from" do
       query = from p in Post,
                 where: [title: ^"hello"],

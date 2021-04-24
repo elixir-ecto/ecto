@@ -1466,6 +1466,10 @@ defmodule Ecto.Query.Planner do
     {{:value, :boolean}, [expr | fields], from}
   end
 
+  defp collect_fields(nil, fields, from, _query, _take, true) do
+    {{:value, :any}, [nil | fields], from}
+  end
+
   defp collect_fields(expr, fields, from, _query, _take, _keep_literals?) when is_atom(expr) do
     {expr, fields, from}
   end
