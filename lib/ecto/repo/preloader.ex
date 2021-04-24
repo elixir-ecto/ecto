@@ -121,7 +121,7 @@ defmodule Ecto.Repo.Preloader do
 
   # Then we execute queries in parallel
   defp maybe_pmap(preloaders, repo_name, opts) do
-    if match?([_,_|_], preloaders) and not Ecto.Repo.Transaction.in_transaction?(repo_name) and
+    if match?([_,_|_], preloaders) and not checked_out?(repo_name) and
          Keyword.get(opts, :in_parallel, true) do
       # We pass caller: self() so the ownership pool knows where
       # to fetch the connection from and set the proper timeouts.
@@ -136,6 +136,11 @@ defmodule Ecto.Repo.Preloader do
     else
       Enum.map(preloaders, &(&1.(opts)))
     end
+  end
+
+  defp checked_out?(repo_name) do
+    {adapter, meta} = Ecto.Repo.Registry.lookup(repo_name)
+    adapter.checked_out?(meta)
   end
 
   # Then we unpack the query results, merge them, and preload recursively

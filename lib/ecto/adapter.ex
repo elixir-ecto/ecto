@@ -61,6 +61,11 @@ defmodule Ecto.Adapter do
   @callback checkout(adapter_meta, config :: Keyword.t(), (() -> result)) :: result when result: var
 
   @doc """
+  Returns true if a connection has been checked out.
+  """
+  @callback checked_out?(adapter_meta) :: boolean
+
+  @doc """
   Returns the loaders for a given type.
 
   It receives the primitive type and the Ecto type (which may be

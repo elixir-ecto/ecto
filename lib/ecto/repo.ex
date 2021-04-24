@@ -227,6 +227,11 @@ defmodule Ecto.Repo do
         adapter.checkout(meta, opts, fun)
       end
 
+      def checked_out? do
+        {adapter, meta} = Ecto.Repo.Registry.lookup(get_dynamic_repo())
+        adapter.checked_out?(meta)
+      end
+
       @compile {:inline, get_dynamic_repo: 0, with_default_options: 2}
 
       def get_dynamic_repo() do
@@ -459,6 +464,28 @@ defmodule Ecto.Repo do
   See the "Shared options" section at the module documentation for more options.
   """
   @callback checkout((() -> result), opts :: Keyword.t()) :: result when result: var
+
+  @doc """
+  Returns true if a connection has been checked out.
+
+  This is true if inside a `c:Ecto.Repo.checkout/2` or
+  `c:Ecto.Repo.transaction/2`.
+
+  ## Examples
+
+      MyRepo.checked_out?
+      #=> false
+
+      MyRepo.transaction(fn ->
+        MyRepo.checked_out? #=> true
+      end)
+
+      MyRepo.checkout(fn ->
+        MyRepo.checked_out? #=> true
+      end)
+
+  """
+  @callback checked_out?() :: boolean
 
   @doc """
   Loads `data` into a struct or a map.

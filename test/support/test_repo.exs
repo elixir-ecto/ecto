@@ -20,9 +20,19 @@ defmodule Ecto.TestAdapter do
     {:ok, Supervisor.child_spec({Task, fn -> :timer.sleep(:infinity) end}, []), %{meta: :meta}}
   end
 
-  def checkout(_mod, _opts, fun) do
+  def checkout(mod, _opts, fun) do
     send self(), {:checkout, fun}
-    fun.()
+    Process.put({mod, :checked_out?}, true)
+
+    try do
+      fun.()
+    after
+      Process.delete({mod, :checked_out?})
+    end
+  end
+
+  def checked_out?(mod) do
+    Process.get({mod, :checked_out?}) || false
   end
 
   ## Types
