@@ -40,6 +40,7 @@ Repo.transaction(fn ->
         {1, _} -> {mary, john}
         {_, _} -> Repo.rollback({:failed_transfer, john})
       end
+
     {_, _} ->
       Repo.rollback({:failed_transfer, mary})
   end
@@ -133,7 +134,7 @@ In other words, `Ecto.Multi` takes care of all the flow control boilerplate whil
 
 ## Dependent values
 
-Besides operations such as `insert`, `update` and `delete`, `Ecto.Multi` also provides functions for handling more complex scenarios. For example, `prepend` and `append` can be used to merge multis together. And more generally, the `Ecto.Multi.run/3` and `Ecto.Multi.run/5` can be used to define any operation that depends on the results of a previous multi operation.
+Besides operations such as `insert`, `update` and `delete`, `Ecto.Multi` also provides functions for handling more complex scenarios. For example, `prepend` and `append` can be used to merge multis together. And more generally, the functions `Ecto.Multi.run/3` and `Ecto.Multi.run/5` can be used to define any operation that depends on the results of a previous multi operation. In addition, `Ecto.Multi` also gives us `put` and `inspect`, which allow us to dynamically update and inspect changes.
 
 Let's study a more practical example. In [Constraints and Upserts](Constraints and Upserts.md), we want to modify a post while possibly giving it a list of tags as a string separated by commas. At the end of the guide, we present a solution that inserts any missing tag and then fetches all of them using only two queries:
 
@@ -170,6 +171,7 @@ defmodule MyApp.Post do
   defp insert_and_get_all([]) do
     []
   end
+
   defp insert_and_get_all(names) do
     timestamp =
       NaiveDateTime.utc_now()
@@ -182,8 +184,9 @@ defmodule MyApp.Post do
         updated_at: timestamp
       })
 
-    Repo.insert_all MyApp.Tag, maps, on_conflict: :nothing
-    Repo.all from t in MyApp.Tag, where: t.name in ^names
+    Repo.insert_all(MyApp.Tag, maps, on_conflict: :nothing)
+
+    Repo.all(from t in MyApp.Tag, where: t.name in ^names)
   end
 end
 ```
@@ -236,10 +239,10 @@ alias MyApp.Tag
 
 def insert_or_update_post_with_tags(post, params) do
   Ecto.Multi.new()
-  |> Ecto.Multi.run(:tags, fn _, changes ->
+  |> Ecto.Multi.run(:tags, fn _repo, changes ->
     insert_and_get_all_tags(changes, params)
   end)
-  |> Ecto.Multi.run(:post, fn _, changes ->
+  |> Ecto.Multi.run(:post, fn _repo, changes ->
     insert_or_update_post(changes, post, params)
   end)
   |> Repo.transaction()
@@ -263,14 +266,17 @@ defp insert_and_get_all_tags(_changes, params) do
         })
 
       Repo.insert_all(Tag, maps, on_conflict: :nothing)
+
       query = from t in Tag, where: t.name in ^names
+
       {:ok, Repo.all(query)}
   end
 end
 
 defp insert_or_update_post(%{tags: tags}, post, params) do
-  post = MyApp.Post.changeset(post, tags, params)
-  Repo.insert_or_update post
+  post
+  |> MyApp.Post.changeset(tags, params)
+  |> Repo.insert_or_update()
 end
 ```
 
