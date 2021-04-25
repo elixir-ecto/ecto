@@ -274,8 +274,9 @@ defp insert_and_get_all_tags(_changes, params) do
 end
 
 defp insert_or_update_post(%{tags: tags}, post, params) do
-  post = MyApp.Post.changeset(post, tags, params)
-  Repo.insert_or_update(post)
+  post
+  |> MyApp.Post.changeset(tags, params)
+  |> Repo.insert_or_update()
 end
 ```
 
