@@ -236,10 +236,10 @@ alias MyApp.Tag
 
 def insert_or_update_post_with_tags(post, params) do
   Ecto.Multi.new()
-  |> Ecto.Multi.run(:tags, fn _, changes ->
+  |> Ecto.Multi.run(:tags, fn _repo, changes ->
     insert_and_get_all_tags(changes, params)
   end)
-  |> Ecto.Multi.run(:post, fn _, changes ->
+  |> Ecto.Multi.run(:post, fn _repo, changes ->
     insert_or_update_post(changes, post, params)
   end)
   |> Repo.transaction()
