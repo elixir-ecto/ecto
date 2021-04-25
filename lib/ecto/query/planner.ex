@@ -1631,11 +1631,11 @@ defmodule Ecto.Query.Planner do
           {ix, {:parent_as, [], [{:&, meta, [ix]}]}, query}
         end
 
-      %{} ->
-        error!(query, "could not find named binding `parent_as(#{inspect(as)})`")
+      %{} = parent ->
+        get_ix!({:parent_as, meta, [as]}, kind, parent)
 
       nil ->
-        error!(query, "`parent_as(#{inspect(as)})` can only be used in subqueries")
+        error!(query, "could not find named binding `parent_as(#{inspect(as)})`")
     end
   end
 
