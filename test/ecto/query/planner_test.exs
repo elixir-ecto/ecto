@@ -824,10 +824,21 @@ defmodule Ecto.Query.PlannerTest do
       from(Post, join: c in subquery(child)) |> normalize()
     end
 
-    assert_raise Ecto.QueryError, ~r/`parent_as\(:posts\)` can only be used in subqueries/, fn ->
+    assert_raise Ecto.QueryError, ~r/could not find named binding `parent_as\(:posts\)`/, fn ->
       from(Post, where: parent_as(:posts).code == ^123) |> normalize()
     end
   end
+
+  test "normalize: nested parent_as" do
+    child3 = from(c in Comment, where: parent_as(:posts).deleted == false, select: c.id)
+    child2 = from(c in Comment, where: c.id in subquery(child3), select: c.id)
+    child = from(c in Comment, where: parent_as(:posts).posted == c.posted and c.id in subquery(child2))
+
+    query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "parent_as(&0).posted() == &0.posted()"
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "in %Ecto.SubQuery{"
+  end
+
 
   test "normalize: assoc join with wheres that have regular filters" do
     # Mixing both has_many and many_to_many
