@@ -203,16 +203,15 @@ defmodule Ecto.Query do
 
   ### Named bindings
 
-  Another option for flexibly building queries with joins are
-  named bindings. Coming back to the previous example, provided
-  we bind a join to a concrete name:
+  Another option for flexibly building queries with joins are named
+  bindings. Coming back to the previous example, we can use the
+  `as: :comment` option to bind the comments join to a concrete name:
 
       posts_with_comments =
-        from p in query,
+        from p in Post,
           join: c in Comment, as: :comment, on: c.post_id == p.id
 
-  We can refer to it by that name using the following form of a
-  bindings list:
+  Now we can refer to it using the following form of a bindings list:
 
       from [p, comment: c] in posts_with_comments, select: {p.title, c.body}
 
@@ -223,7 +222,9 @@ defmodule Ecto.Query do
       from p in Post, as: :post
 
   Only atoms are accepted for binding names. Named binding references
-  are expected to be placed in the tail position of the bindings list.
+  must always be placed at the end of the bindings list:
+  
+      [positional_binding_1, positional_binding_2, named_1: binding, named_2: binding]
 
   Named bindings can also be used for late binding with the `as/1`
   construct, allowing you to refer to a binding that has not been
