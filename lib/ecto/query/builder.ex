@@ -478,7 +478,7 @@ defmodule Ecto.Query.Builder do
     escape(expr, type, params, vars, env)
   end
 
-  defp wrap_nil(params, {:{}, _, [:^, _, [ix]]}), do: wrap_nil(params, ix, [])
+  defp wrap_nil(params, {:{}, _, [:^, _, [ix]]}), do: wrap_nil(params, length(params) - ix - 1, [])
   defp wrap_nil(params, _other), do: params
 
   defp wrap_nil([{val, type} | params], 0, acc) do

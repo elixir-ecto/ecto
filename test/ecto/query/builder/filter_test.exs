@@ -115,5 +115,14 @@ defmodule Ecto.Query.Builder.FilterTest do
         where(from(p in "posts"), [p], ^[foo: nil])
       end
     end
+
+    test "raises on nil when a map-value is accessed" do
+      f = fn arg ->
+        from(p in "posts", where: p.foo == ^arg.x and p.bar == ^arg.y)
+      end
+
+      assert_raise ArgumentError, fn -> f.(%{x: nil, y: "y"}) end
+      assert_raise ArgumentError, fn -> f.(%{x: "x", y: nil}) end
+    end
   end
 end
