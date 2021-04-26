@@ -839,6 +839,16 @@ defmodule Ecto.Query.PlannerTest do
     assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "in %Ecto.SubQuery{"
   end
 
+  test "normalize: parent_as used at right side term of union expression" do
+    left = from(c0 in Comment, select: true)
+    right = from(c1 in Comment, where: parent_as(:posts).id == c1.post_id, select: true)
+
+    query = from(Post, as: :posts, where: exists(union_all(left, ^right))) |> normalize()
+    assert Macro.to_string(hd(query.wheres).expr) =~ "parent_as(c0).id == c0.post_id"
+
+    query = from(Post, as: :posts, where: exists(union_all(left, ^union_all(left, ^right)))) |> normalize()
+    assert Macro.to_string(hd(query.wheres).expr) =~ "parent_as(c0).id == c0.post_id"
+  end
 
   test "normalize: assoc join with wheres that have regular filters" do
     # Mixing both has_many and many_to_many

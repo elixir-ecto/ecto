@@ -258,13 +258,12 @@ defmodule Ecto.Query.Planner do
        do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment joins")
 
   defp plan_subquery(subquery, query, prefix, adapter, source?) do
-    %{query: inner_query} = subquery
-
-    inner_query = %{
-      inner_query
-      | prefix: prefix || subquery.query.prefix || query.prefix,
-        aliases: Map.put(inner_query.aliases, @parent_as, query)
-    }
+    inner_query =
+      modify_subquery_for_plan(subquery.query, fn subquery ->
+        subquery
+        |> subquery_put_prefix(prefix, query)
+        |> subquery_put_parent_as_alias(query)
+      end)
 
     {inner_query, params, key} = plan(inner_query, :all, adapter)
     assert_no_subquery_assocs!(inner_query)
@@ -274,7 +273,8 @@ defmodule Ecto.Query.Planner do
       |> ensure_select(true)
       |> normalize_subquery_select(adapter, source?)
 
-    {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
+    inner_query = modify_subquery_for_plan(inner_query, &subquery_drop_parent_as_alias/1)
+
     %{subquery | query: inner_query, params: params, cache: key, select: select}
   rescue
     e -> raise Ecto.SubQueryError, query: query, exception: e
@@ -1079,10 +1079,10 @@ defmodule Ecto.Query.Planner do
   end
   defp prewalk_source(%Ecto.SubQuery{query: inner_query} = subquery, kind, query, _expr, counter, adapter) do
     try do
-      inner_query = put_in inner_query.aliases[@parent_as], query
+      inner_query = modify_subquery_for_plan(inner_query, &subquery_put_parent_as_alias(&1, query))
       {inner_query, counter} = normalize_query(inner_query, :all, adapter, counter)
       {inner_query, _} = normalize_select(inner_query, true)
-      {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
+      inner_query = modify_subquery_for_plan(inner_query, &subquery_drop_parent_as_alias/1)
 
       inner_query =
         # If the subquery comes from a select, we are not really interested on the fields
@@ -1829,5 +1829,31 @@ defmodule Ecto.Query.Planner do
 
   defp error!(query, expr, message, hint) do
     raise Ecto.QueryError, message: message, query: query, file: expr.file, line: expr.line, hint: hint
+  end
+
+  defp modify_subquery_for_plan(subquery, modify_fun) do
+    new_subquery = modify_fun.(subquery)
+
+    combinations =
+      Enum.map(new_subquery.combinations, fn {type, combination_query} ->
+        {type, modify_subquery_for_plan(combination_query, modify_fun)}
+      end)
+
+    %{new_subquery | combinations: combinations}
+  end
+
+  defp subquery_put_prefix(subquery, prefix, query) do
+    prefix = prefix || subquery.prefix || query.prefix
+    %{subquery | prefix: prefix}
+  end
+
+  defp subquery_put_parent_as_alias(subquery, query) do
+    aliases = Map.put(subquery.aliases, @parent_as, query)
+    %{subquery | aliases: aliases}
+  end
+
+  defp subquery_drop_parent_as_alias(subquery) do
+    aliases = Map.delete(subquery.aliases, @parent_as)
+    %{subquery | aliases: aliases}
   end
 end
