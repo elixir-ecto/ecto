@@ -182,8 +182,13 @@ defmodule Ecto.ParameterizedType do
   defmacro __using__(_) do
     quote location: :keep do
       @behaviour Ecto.ParameterizedType
+
+      @doc false
       def embed_as(_, _), do: :self
+
+      @doc false
       def equal?(term1, term2, _params), do: term1 == term2
+
       defoverridable embed_as: 2, equal?: 3
     end
   end
