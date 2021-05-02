@@ -635,6 +635,10 @@ defmodule Ecto.Schema do
       they would then be the same for all records: in this scenario you can use
       the `:autogenerate` option to generate at insertion time.
 
+      Once a default value is set, if you send changes to the changeset that
+      contains the same value defined as default, validations will not be performed
+      since there are no changes after all.
+
     * `:source` - Defines the name that is to be used in database for this field.
       This is useful when attaching to an existing database. The value should be
       an atom.
