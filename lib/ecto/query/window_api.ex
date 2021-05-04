@@ -70,6 +70,13 @@ defmodule Ecto.Query.WindowAPI do
   def max(value), do: doc! [value]
 
   @doc """
+  Defines a value based on the function and the window. See moduledoc for more information.
+
+      from e in Employee, select: over(avg(e.salary, partition_by: e.depname))
+  """
+  def over(window_function, window_name), do: doc! [window_function, window_name]
+
+  @doc """
   Returns number of the current row within its partition, counting from 1.
 
       from p in Post,
