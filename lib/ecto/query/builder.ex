@@ -851,9 +851,9 @@ defmodule Ecto.Query.Builder do
         * If you intended to call a database function, please check the documentation
           for Ecto.Query.API to see the supported database expressions
 
-        * If you intended to extended Ecto's query DSL, make sure that you have required
+        * If you intended to extend Ecto's query DSL, make sure that you have required
           the module or imported the relevant function. Note that you need macros to
-          extended Ecto's querying capabilities
+          extend Ecto's querying capabilities
         """
 
       expanded ->
