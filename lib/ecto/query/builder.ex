@@ -845,12 +845,17 @@ defmodule Ecto.Query.Builder do
         error! """
         `#{Macro.to_string(expr)}` is not a valid query expression.
 
-        * If you intended to call a database function, please check the documentation
-          for Ecto.Query to see the supported database expressions
-
         * If you intended to call an Elixir function or introduce a value,
           you need to explicitly interpolate it with ^
+
+        * If you intended to call a database function, please check the documentation
+          for Ecto.Query.API to see the supported database expressions
+
+        * If you intended to extended Ecto's query DSL, make sure that you have required
+          the module or imported the relevant function. Note that you need macros to
+          extended Ecto's querying capabilities
         """
+
       expanded ->
         fun.(expanded, type, params, vars, env)
     end
