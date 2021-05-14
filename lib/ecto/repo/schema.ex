@@ -89,7 +89,15 @@ defmodule Ecto.Repo.Schema do
 
     header = Map.keys(header)
 
-    counter = fn -> Enum.reduce(rows, 0, &length(&1) + &2) end
+    placeholder_size = map_size(placeholder_dump)
+
+    counter = fn ->
+      Enum.reduce(
+        rows,
+        placeholder_size,
+        &(Enum.count(&1, fn {_, val} -> !match?({:placeholder, _}, val) end) + &2)
+      )
+    end
 
     placeholder_vals_list =
       placeholder_dump
