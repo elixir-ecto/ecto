@@ -95,7 +95,7 @@ defmodule Ecto.Repo.Schema do
       Enum.reduce(
         rows,
         placeholder_size,
-        &(Enum.count(&1, fn {_, val} -> !match?({:placeholder, _}, val) end) + &2)
+        &(Enum.count(&1, fn {_, val} -> not match?({:placeholder, _}, val) end) + &2)
       )
     end
 

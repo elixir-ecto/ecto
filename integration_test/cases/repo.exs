@@ -1070,6 +1070,7 @@ defmodule Ecto.Integration.RepoTest do
       assert [100] == TestRepo.all(query)
     end
 
+    @tag :upsert_all
     @tag :with_conflict_target
     test "Repo.insert_all upserts and fills in placeholders with conditioned on_conflict query" do
       do_not_update_title = "don't touch me"
