@@ -882,7 +882,7 @@ defmodule Ecto.Integration.RepoTest do
   end
 
   describe "insert_all with source query" do
-    @tag :upsert
+    @tag :upsert_all
     @tag :with_conflict_target
     @tag :concat
     test "insert_all with query and conflict target" do
@@ -922,7 +922,7 @@ defmodule Ecto.Integration.RepoTest do
       assert [%Post{id: ^expected_id, title: ^expected_title}] = returns
     end
 
-    @tag :upsert
+    @tag :upsert_all
     @tag :without_conflict_target
     @tag :concat
     test "insert_all with query and on_conflict" do
