@@ -62,11 +62,14 @@ defmodule Mix.Ecto do
   """
   @spec ensure_repo(module, list) :: Ecto.Repo.t
   def ensure_repo(repo, args) do
+    # Do not pass the --force switch used by some tasks downstream
+    args = List.delete(args, "--force")
+
     # TODO: Use only app.config when we depend on Elixir v1.11+.
     if Code.ensure_loaded?(Mix.Tasks.App.Config) do
       Mix.Task.run("app.config", args)
     else
-      Mix.Task.run "loadpaths", args
+      Mix.Task.run("loadpaths", args)
       "--no-compile" not in args && Mix.Task.run("compile", args)
     end
 
@@ -78,6 +81,7 @@ defmodule Mix.Ecto do
           Mix.raise "Module #{inspect repo} is not an Ecto.Repo. " <>
                     "Please configure your app accordingly or pass a repo with the -r option."
         end
+
       {:error, error} ->
         Mix.raise "Could not load #{inspect repo}, error: #{inspect error}. " <>
                   "Please configure your app accordingly or pass a repo with the -r option."
