@@ -54,6 +54,8 @@ defmodule Ecto.Integration.Post do
     has_one :update_permalink, Ecto.Integration.Permalink, foreign_key: :post_id, on_delete: :delete_all, on_replace: :update
     has_many :comments_authors, through: [:comments, :author]
     belongs_to :author, Ecto.Integration.User
+    belongs_to :composite, Ecto.Integration.CompositePk,
+      foreign_key: [:composite_a, :composite_b], references: [:a, :b], type: [:integer, :integer], on_replace: :nilify
     many_to_many :users, Ecto.Integration.User,
       join_through: "posts_users", on_delete: :delete_all, on_replace: :delete
     many_to_many :ordered_users, Ecto.Integration.User, join_through: "posts_users", preload_order: [desc: :name]
@@ -63,7 +65,7 @@ defmodule Ecto.Integration.Post do
       join_through: Ecto.Integration.PostUserCompositePk
     has_many :users_comments, through: [:users, :comments]
     has_many :comments_authors_permalinks, through: [:comments_authors, :permalink]
-    has_one :post_user_composite_pk, Ecto.Integration.PostUserCompositePk
+    has_many :post_user_composite_pk, Ecto.Integration.PostUserCompositePk
     timestamps()
   end
 
@@ -294,6 +296,12 @@ defmodule Ecto.Integration.CompositePk do
     field :a, :integer, primary_key: true
     field :b, :integer, primary_key: true
     field :name, :string
+    has_many :posts, Ecto.Integration.Post, foreign_key: [:composite_a, :composite_b], references: [:a, :b]
+    many_to_many :composites, Ecto.Integration.CompositePk,
+      join_through: "composite_pk_composite_pk", join_keys: [[a_1: :a, b_1: :b], [a_2: :a, b_2: :b]],
+      on_delete: :delete_all, on_replace: :delete
+    has_one :one_to_one_composite_pk, Ecto.Integration.OneToOneCompositePk,
+      foreign_key: [:composite_a, :composite_b], references: [:a, :b]
   end
   def changeset(schema, params) do
     cast(schema, params, ~w(a b name)a)
@@ -331,6 +339,23 @@ defmodule Ecto.Integration.PostUserCompositePk do
     timestamps()
   end
 end
+
+defmodule Ecto.Integration.OneToOneCompositePk do
+  @moduledoc """
+  This module is used to test:
+
+    * Composite primary keys for 2 has_one fields
+
+  """
+  use Ecto.Integration.Schema
+
+  schema "one_to_one_composite_pk" do
+    belongs_to :composite, Ecto.Integration.CompositePk,
+      foreign_key: [:composite_a, :composite_b], references: [:a, :b], type: [:integer, :integer], on_replace: :nilify
+    timestamps()
+  end
+end
+
 
 defmodule Ecto.Integration.Usec do
   @moduledoc """

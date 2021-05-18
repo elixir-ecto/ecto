@@ -3506,7 +3506,7 @@ defmodule Ecto.Changeset do
     name = opts[:name] ||
       case get_assoc_type(changeset, assoc) do
         %Ecto.Association.BelongsTo{owner_key: owner_key} ->
-          "#{get_source(changeset)}_#{owner_key}_fkey"
+          "#{get_source(changeset)}_#{atom_concat owner_key}_fkey"
         other ->
           raise ArgumentError,
             "assoc_constraint can only be added to belongs to associations, got: #{inspect other}"
@@ -3564,7 +3564,7 @@ defmodule Ecto.Changeset do
       case get_assoc_type(changeset, assoc) do
         %Ecto.Association.Has{cardinality: cardinality,
                               related_key: related_key, related: related} ->
-          {opts[:name] || "#{related.__schema__(:source)}_#{related_key}_fkey",
+          {opts[:name] || "#{related.__schema__(:source)}_#{atom_concat related_key}_fkey",
            message(opts, no_assoc_message(cardinality))}
         other ->
           raise ArgumentError,
@@ -3798,6 +3798,12 @@ defmodule Ecto.Changeset do
     |> Enum.reverse()
     |> merge_keyword_keys(msg_func, changeset)
     |> merge_related_keys(changes, types, msg_func, &traverse_validations/2)
+  end
+
+  defp atom_concat(atoms) do
+    atoms
+    |> Enum.map(&Atom.to_string/1)
+    |> Enum.join("_")
   end
 end
 

@@ -622,7 +622,7 @@ defmodule Ecto.SchemaTest do
   test "has_many association" do
     struct =
       %Ecto.Association.Has{field: :posts, owner: AssocSchema, cardinality: :many, on_delete: :nothing,
-                            related: Post, owner_key: :id, related_key: :assoc_schema_id, queryable: Post,
+                            related: Post, owner_key: [:id], related_key: [:assoc_schema_id], queryable: Post,
                             on_replace: :raise}
 
     assert AssocSchema.__schema__(:association, :posts) == struct
@@ -636,7 +636,7 @@ defmodule Ecto.SchemaTest do
   test "has_many association via {source schema}" do
     struct =
       %Ecto.Association.Has{field: :emails, owner: AssocSchema, cardinality: :many, on_delete: :nothing,
-                            related: Email, owner_key: :id, related_key: :assoc_schema_id,
+                            related: Email, owner_key: [:id], related_key: [:assoc_schema_id],
                             queryable: {"users_emails", Email}, on_replace: :delete}
 
     assert AssocSchema.__schema__(:association, :emails) == struct
@@ -650,7 +650,7 @@ defmodule Ecto.SchemaTest do
   test "has_many through association" do
     assert AssocSchema.__schema__(:association, :comment_authors) ==
            %Ecto.Association.HasThrough{field: :comment_authors, owner: AssocSchema, cardinality: :many,
-                                         through: [:comment, :authors], owner_key: :comment_id}
+                                         through: [:comment, :authors], owner_key: [:comment_id]}
 
     refute Map.has_key?(AssocSchema.__changeset__(), :comment_authors)
 
@@ -662,7 +662,7 @@ defmodule Ecto.SchemaTest do
   test "has_one association" do
     struct =
       %Ecto.Association.Has{field: :author, owner: AssocSchema, cardinality: :one, on_delete: :nothing,
-                            related: User, owner_key: :id, related_key: :assoc_schema_id, queryable: User,
+                            related: User, owner_key: [:id], related_key: [:assoc_schema_id], queryable: User,
                             on_replace: :raise}
 
     assert AssocSchema.__schema__(:association, :author) == struct
@@ -676,7 +676,7 @@ defmodule Ecto.SchemaTest do
   test "has_one association via {source, schema}" do
     struct =
       %Ecto.Association.Has{field: :profile, owner: AssocSchema, cardinality: :one, on_delete: :nothing,
-                            related: Profile, owner_key: :id, related_key: :assoc_schema_id,
+                            related: Profile, owner_key: [:id], related_key: [:assoc_schema_id],
                             queryable: {"users_profiles", Profile}, on_replace: :raise}
 
     assert AssocSchema.__schema__(:association, :profile) == struct
@@ -690,7 +690,7 @@ defmodule Ecto.SchemaTest do
   test "has_one through association" do
     assert AssocSchema.__schema__(:association, :comment_main_author) ==
            %Ecto.Association.HasThrough{field: :comment_main_author, owner: AssocSchema, cardinality: :one,
-                                         through: [:comment, :main_author], owner_key: :comment_id}
+                                         through: [:comment, :main_author], owner_key: [:comment_id]}
 
     refute Map.has_key?(AssocSchema.__changeset__(), :comment_main_author)
 
@@ -702,7 +702,7 @@ defmodule Ecto.SchemaTest do
   test "belongs_to association" do
     struct =
       %Ecto.Association.BelongsTo{field: :comment, owner: AssocSchema, cardinality: :one,
-       related: Comment, owner_key: :comment_id, related_key: :id, queryable: Comment,
+       related: Comment, owner_key: [:comment_id], related_key: [:id], queryable: Comment,
        on_replace: :raise, defaults: []}
 
     assert AssocSchema.__schema__(:association, :comment) == struct
@@ -716,7 +716,7 @@ defmodule Ecto.SchemaTest do
   test "belongs_to association via {source, schema}" do
     struct =
       %Ecto.Association.BelongsTo{field: :summary, owner: AssocSchema, cardinality: :one,
-       related: Summary, owner_key: :summary_id, related_key: :id,
+       related: Summary, owner_key: [:summary_id], related_key: [:id],
        queryable: {"post_summary", Summary}, on_replace: :raise, defaults: []}
 
     assert AssocSchema.__schema__(:association, :summary) == struct
@@ -730,7 +730,7 @@ defmodule Ecto.SchemaTest do
   test "belongs_to association via Ecto.ParameterizedType" do
     struct =
       %Ecto.Association.BelongsTo{field: :reference, owner: AssocSchema, cardinality: :one,
-       related: SchemaWithParameterizedPrimaryKey, owner_key: :reference_id, related_key: :id, queryable: SchemaWithParameterizedPrimaryKey,
+       related: SchemaWithParameterizedPrimaryKey, owner_key: [:reference_id], related_key: [:id], queryable: SchemaWithParameterizedPrimaryKey,
        on_replace: :raise, defaults: []}
 
     assert AssocSchema.__schema__(:association, :reference) == struct
@@ -751,32 +751,63 @@ defmodule Ecto.SchemaTest do
       has_one :author, User, references: :pk, foreign_key: :fk
       belongs_to :permalink1, Permalink, references: :pk, foreign_key: :fk
       belongs_to :permalink2, Permalink, references: :pk, type: :string
+      belongs_to :publication, Publication, references: [:id_1, :id_2],
+        foreign_key: [:publication_id_1, :publication_id_2], type: [:integer, :string]
+    end
+  end
+
+  defmodule Publication do
+    use Ecto.Schema
+
+    @primary_key false
+    schema "publication" do
+      field :id_1, :integer, primary_key: true
+      field :id_2, :string, primary_key: true
+      has_many :custom_assoc_schemas, CustomAssocSchema, references: [:id_1, :id_2],
+        foreign_key: [:publication_id_1, :publication_id_2]
+      has_one :custom_assoc_schema, CustomAssocSchema, references: [:id_1, :id_2],
+        foreign_key: [:pub_id_1, :pub_id_2]
     end
   end
 
   test "has_many options" do
     refl = CustomAssocSchema.__schema__(:association, :posts)
-    assert :pk == refl.owner_key
-    assert :fk == refl.related_key
+    assert [:pk] == refl.owner_key
+    assert [:fk] == refl.related_key
+
+    refl = Publication.__schema__(:association, :custom_assoc_schemas)
+    assert [:id_1, :id_2] == refl.owner_key
+    assert [:publication_id_1, :publication_id_2] == refl.related_key
   end
 
   test "has_one options" do
     refl = CustomAssocSchema.__schema__(:association, :author)
-    assert :pk == refl.owner_key
-    assert :fk == refl.related_key
+    assert [:pk] == refl.owner_key
+    assert [:fk] == refl.related_key
+
+    refl = Publication.__schema__(:association, :custom_assoc_schema)
+    assert [:id_1, :id_2] == refl.owner_key
+    assert [:pub_id_1, :pub_id_2] == refl.related_key
   end
 
   test "belongs_to options" do
     refl = CustomAssocSchema.__schema__(:association, :permalink1)
-    assert :fk == refl.owner_key
-    assert :pk == refl.related_key
+    assert [:fk] == refl.owner_key
+    assert [:pk] == refl.related_key
 
     refl = CustomAssocSchema.__schema__(:association, :permalink2)
-    assert :permalink2_id == refl.owner_key
-    assert :pk == refl.related_key
+    assert [:permalink2_id] == refl.owner_key
+    assert [:pk] == refl.related_key
 
     assert CustomAssocSchema.__schema__(:type, :fk) == :string
     assert CustomAssocSchema.__schema__(:type, :permalink2_id) == :string
+
+    refl = CustomAssocSchema.__schema__(:association, :publication)
+    assert [:publication_id_1, :publication_id_2] == refl.owner_key
+    assert [:id_1, :id_2] == refl.related_key
+
+    assert CustomAssocSchema.__schema__(:type, :publication_id_1) == :integer
+    assert CustomAssocSchema.__schema__(:type, :publication_id_2) == :string
   end
 
   test "has_* validates option" do
