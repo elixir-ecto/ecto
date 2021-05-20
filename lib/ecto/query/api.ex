@@ -459,12 +459,12 @@ defmodule Ecto.Query.API do
   from the database. In other words, the expression below:
 
       from(city in City, preload: :country,
-           select: {struct(city, [:country_id]), struct(city, [:name])}
+           select: {struct(city, [:country_id]), struct(city, [:name])})
 
   is expanded to:
 
       from(city in City, preload: :country,
-           select: {struct(city, [:country_id, :name]), struct(city, [:country_id, :name])}
+           select: {struct(city, [:country_id, :name]), struct(city, [:country_id, :name])})
 
   **IMPORTANT**: When filtering fields for associations, you
   MUST include the foreign keys used in the relationship,
@@ -491,12 +491,12 @@ defmodule Ecto.Query.API do
   from the database. In other words, the expression below:
 
       from(city in City, preload: :country,
-           select: {map(city, [:country_id]), map(city, [:name])}
+           select: {map(city, [:country_id]), map(city, [:name])})
 
   is expanded to:
 
       from(city in City, preload: :country,
-           select: {map(city, [:country_id, :name]), map(city, [:country_id, :name])}
+           select: {map(city, [:country_id, :name]), map(city, [:country_id, :name])})
 
   For preloads, the selected fields may be specified from the parent:
 
@@ -507,7 +507,7 @@ defmodule Ecto.Query.API do
    fields from one of its associations:
 
       from(city in City, preload: :country,
-           select: %{city | country: map(country: [:id, :population]))
+           select: %{city | country: map(country: [:id, :population])})
 
   **IMPORTANT**: When filtering fields for associations, you
   MUST include the foreign keys used in the relationship,
