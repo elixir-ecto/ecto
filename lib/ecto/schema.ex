@@ -670,6 +670,9 @@ defmodule Ecto.Schema do
       when inspected in changes inside a `Ecto.Changeset` and be excluded
       from inspect on the schema. Defaults to `false`.
 
+    * :skip_type_check - By default, types are checked at compile time to ensure
+    that they are defined. If using parameterized types, this will result in your 
+    parameterized types *not* using the `init` callback.
   """
   defmacro field(name, type \\ :string, opts \\ []) do
     quote do
@@ -2155,6 +2158,9 @@ defmodule Ecto.Schema do
 
   defp check_field_type!(mod, name, type, opts) do
     cond do
+      opts[:skip_type_check] ->
+        type
+
       composite?(type, name) ->
         {outer_type, inner_type} = type
         {outer_type, check_field_type!(mod, name, inner_type, opts)}
