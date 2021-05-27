@@ -178,6 +178,16 @@ defmodule Ecto.Repo do
 
   @type t :: module
 
+  @doc """
+  Returns all running Ecto repositories.
+
+  The list is returned in no particular order. The list
+  contains either atoms, for named Ecto repositories, or
+  PIDs.
+  """
+  @spec all() :: [atom() | pid()]
+  defdelegate all(), to: Ecto.Repo.Registry
+
   @doc false
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do

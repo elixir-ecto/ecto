@@ -9,7 +9,8 @@ defmodule Ecto.Repo.Supervisor do
   Starts the repo supervisor.
   """
   def start_link(repo, otp_app, adapter, opts) do
-    sup_opts = if name = Keyword.get(opts, :name, repo), do: [name: name], else: []
+    name = Keyword.get(opts, :name, repo)
+    sup_opts = if name, do: [name: name], else: []
     Supervisor.start_link(__MODULE__, {name, repo, otp_app, adapter, opts}, sup_opts)
   end
 
@@ -157,6 +158,9 @@ defmodule Ecto.Repo.Supervisor do
 
   @doc false
   def init({name, repo, otp_app, adapter, opts}) do
+    # Normalize name to atom, ignore via/global names
+    name = if is_atom(name), do: name, else: nil
+
     case runtime_config(:supervisor, repo, otp_app, opts) do
       {:ok, opts} ->
         :telemetry.execute(
@@ -168,7 +172,7 @@ defmodule Ecto.Repo.Supervisor do
         {:ok, child, meta} = adapter.init([repo: repo] ++ opts)
         cache = Ecto.Query.Planner.new_query_cache(name)
         meta = Map.merge(meta, %{repo: repo, cache: cache})
-        child_spec = wrap_child_spec(child, [adapter, meta])
+        child_spec = wrap_child_spec(child, [name, adapter, meta])
         Supervisor.init([child_spec], strategy: :one_for_one, max_restarts: 0)
 
       :ignore ->
@@ -176,11 +180,11 @@ defmodule Ecto.Repo.Supervisor do
     end
   end
 
-  def start_child({mod, fun, args}, adapter, meta) do
+  def start_child({mod, fun, args}, name, adapter, meta) do
     case apply(mod, fun, args) do
       {:ok, pid} ->
         meta = Map.put(meta, :pid, pid)
-        Ecto.Repo.Registry.associate(self(), {adapter, meta})
+        Ecto.Repo.Registry.associate(self(), name, {adapter, meta})
         {:ok, pid}
 
       other ->

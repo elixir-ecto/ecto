@@ -1505,4 +1505,12 @@ defmodule Ecto.RepoTest do
       assert_received {:transaction, _}
     end
   end
+
+  describe "all" do
+    test "lists all repositories" do
+      assert Ecto.Repo.all() == [Ecto.TestRepo]
+      pid = start_supervised! {Ecto.TestRepo, name: nil}
+      assert Enum.sort(Ecto.Repo.all()) == [Ecto.TestRepo, pid]
+    end
+  end
 end

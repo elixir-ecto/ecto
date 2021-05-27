@@ -1,17 +1,20 @@
 defmodule Ecto.Repo.Registry do
   @moduledoc false
 
-  # TODO: Use persistent_term when depending on Erlang/OTP 22+
   use GenServer
-
-  ## Public interface
 
   def start_link(_opts) do
     GenServer.start_link(__MODULE__, :ok, name: __MODULE__)
   end
 
-  def associate(pid, value) when is_pid(pid) do
-    GenServer.call(__MODULE__, {:associate, pid, value})
+  def associate(pid, name, value) when is_pid(pid) do
+    GenServer.call(__MODULE__, {:associate, pid, name, value})
+  end
+
+  def all() do
+    for [pid, name] <- :ets.match(__MODULE__, {:"$1", :_, :"$2", :_}) do
+      name || pid
+    end
   end
 
   def lookup(repo) when is_atom(repo) do
@@ -21,7 +24,7 @@ defmodule Ecto.Repo.Registry do
   end
 
   def lookup(pid) when is_pid(pid) do
-    :ets.lookup_element(__MODULE__, pid, 3)
+    :ets.lookup_element(__MODULE__, pid, 4)
   end
 
   ## Callbacks
@@ -33,15 +36,15 @@ defmodule Ecto.Repo.Registry do
   end
 
   @impl true
-  def handle_call({:associate, pid, value}, _from, table) do
+  def handle_call({:associate, pid, name, value}, _from, table) do
     ref = Process.monitor(pid)
-    true = :ets.insert(table, {pid, ref, value})
+    true = :ets.insert(table, {pid, ref, name, value})
     {:reply, :ok, table}
   end
 
   @impl true
   def handle_info({:DOWN, ref, _type, pid, _reason}, table) do
-    [{^pid, ^ref, _}] = :ets.lookup(table, pid)
+    [{^pid, ^ref, _, _}] = :ets.lookup(table, pid)
     :ets.delete(table, pid)
     {:noreply, table}
   end
