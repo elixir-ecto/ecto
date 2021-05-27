@@ -1506,11 +1506,11 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  describe "all" do
-    test "lists all repositories" do
-      assert Ecto.Repo.all() == [Ecto.TestRepo]
+  describe "all_running" do
+    test "lists all running repositories" do
+      assert Ecto.Repo.all_running() == [Ecto.TestRepo]
       pid = start_supervised! {Ecto.TestRepo, name: nil}
-      assert Enum.sort(Ecto.Repo.all()) == [Ecto.TestRepo, pid]
+      assert Enum.sort(Ecto.Repo.all_running()) == [Ecto.TestRepo, pid]
     end
   end
 end

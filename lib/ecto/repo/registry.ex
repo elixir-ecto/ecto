@@ -11,7 +11,7 @@ defmodule Ecto.Repo.Registry do
     GenServer.call(__MODULE__, {:associate, pid, name, value})
   end
 
-  def all() do
+  def all_running() do
     for [pid, name] <- :ets.match(__MODULE__, {:"$1", :_, :"$2", :_}) do
       name || pid
     end

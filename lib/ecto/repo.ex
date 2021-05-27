@@ -185,8 +185,8 @@ defmodule Ecto.Repo do
   contains either atoms, for named Ecto repositories, or
   PIDs.
   """
-  @spec all() :: [atom() | pid()]
-  defdelegate all(), to: Ecto.Repo.Registry
+  @spec all_running() :: [atom() | pid()]
+  defdelegate all_running(), to: Ecto.Repo.Registry
 
   @doc false
   defmacro __using__(opts) do
