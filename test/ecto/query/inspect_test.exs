@@ -52,7 +52,7 @@ defmodule Ecto.Query.InspectTest do
     sq = from(Post, [])
     dynamic = dynamic([o, b], b.user_id == ^1 or b.user_id in subquery(sq))
     assert inspect(dynamic([o], o.type == ^2 and ^dynamic)) ==
-           "dynamic([o, b], o.type == ^2 and (b.user_id == ^1 or b.user_id in subquery(from p0 in Inspect.Post)))"
+           "dynamic([o, b], o.type == ^2 and (b.user_id == ^1 or b.user_id in subquery(#Ecto.Query<from p0 in Inspect.Post>)))"
   end
 
   test "invalid query" do
@@ -184,7 +184,7 @@ defmodule Ecto.Query.InspectTest do
   test "where in subquery" do
     s = from(x in Post, where: x.bar == ^"1", select: x.foo)
     assert i(from(x in Post, where: x.foo in subquery(s))) ==
-          ~s{from p0 in Inspect.Post, where: p0.foo in subquery(from p0 in Inspect.Post,\n  where: p0.bar == ^"1",\n  select: p0.foo)}
+          ~s{from p0 in Inspect.Post, where: p0.foo in subquery(#Ecto.Query<from p0 in Inspect.Post, where: p0.bar == ^"1", select: p0.foo>)}
   end
 
   test "group by" do
@@ -350,11 +350,11 @@ defmodule Ecto.Query.InspectTest do
 
   test "container values" do
     assert i(from(Post, select: <<1, 2, 3>>)) ==
-           "from p0 in Inspect.Post, select: <<1, 2, 3>>"
+           "from p0 in Inspect.Post, select: \"\\x01\\x02\\x03\""
 
     foo = <<1, 2, 3>>
     assert i(from(p in Post, select: {p, ^foo})) ==
-           "from p0 in Inspect.Post, select: {p0, ^<<1, 2, 3>>}"
+           "from p0 in Inspect.Post, select: {p0, ^\"\\x01\\x02\\x03\"}"
   end
 
   test "select" do
@@ -413,7 +413,7 @@ defmodule Ecto.Query.InspectTest do
   end
 
   def i(query) do
-    assert "#Ecto.Query<" <> rest = inspect query
+    assert "#Ecto.Query<" <> rest = inspect(query, safe: false)
     size = byte_size(rest)
     assert ">" = :binary.part(rest, size - 1, 1)
     :binary.part(rest, 0, size - 1)

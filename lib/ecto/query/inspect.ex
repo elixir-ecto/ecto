@@ -21,10 +21,11 @@ defimpl Inspect, for: Ecto.Query.DynamicExpr do
     {expr, binding, params, subqueries, _, _} =
       Ecto.Query.Builder.Dynamic.fully_expand(query, dynamic)
 
-    names = Enum.map(binding, fn
-      {_, {name, _, _}} -> Atom.to_string(name)
-      {name, _, _} -> Atom.to_string(name)
-    end)
+    names =
+      Enum.map(binding, fn
+        {_, {name, _, _}} -> name
+        {name, _, _} -> name
+      end)
 
     query_expr = %{expr: expr, params: params, subqueries: subqueries}
     inspected = Inspect.Ecto.Query.expr(expr, List.to_tuple(names), query_expr)
@@ -83,12 +84,12 @@ defimpl Inspect, for: Ecto.Query do
   defp to_list(query) do
     names =
       query
-      |> collect_sources
-      |> generate_letters
-      |> generate_names
+      |> collect_sources()
+      |> generate_letters()
+      |> generate_names()
       |> List.to_tuple()
 
-    from = bound_from(query.from, binding(names, 0))
+    from = bound_from(query.from, elem(names, 0))
     joins = joins(query.joins, names)
     preloads = preloads(query.preloads)
     assocs = assocs(query.assocs, names)
@@ -145,11 +146,11 @@ defimpl Inspect, for: Ecto.Query do
   defp joins(joins, names) do
     joins
     |> Enum.with_index()
-    |> Enum.flat_map(fn {expr, ix} -> join(expr, binding(names, expr.ix || ix + 1), names) end)
+    |> Enum.flat_map(fn {expr, ix} -> join(expr, elem(names, expr.ix || ix + 1), names) end)
   end
 
   defp join(%JoinExpr{qual: qual, assoc: {ix, right}, on: on} = join, name, names) do
-    string = "#{name} in assoc(#{binding(names, ix)}, #{inspect(right)})"
+    string = "#{name} in assoc(#{elem(names, ix)}, #{inspect(right)})"
     [{join_qual(qual), string}] ++ kw_as_and_prefix(join) ++ maybe_on(on, names)
   end
 
@@ -224,106 +225,111 @@ defimpl Inspect, for: Ecto.Query do
 
   @doc false
   def expr(expr, names, part) do
-    Macro.to_string(expr, &expr_to_string(&1, &2, names, part))
+    # TODO: Actually use quoted_to_algebra on Elixir v1.12+
+    expr
+    |> Macro.traverse(:ok, &{prewalk(&1), &2}, &{postwalk(&1, names, part), &2})
+    |> elem(0)
+    |> Macro.to_string()
   end
 
-  # For keyword and interpolated fragments use normal escaping
-  defp expr_to_string({:fragment, _, [{_, _} | _] = parts}, _, names, part) do
-    "fragment(" <> unmerge_fragments(parts, "", [], names, part) <> ")"
+  # Tagged values
+  defp prewalk(%Ecto.Query.Tagged{value: value, tag: nil}) do
+    value
+  end
+
+  defp prewalk(%Ecto.Query.Tagged{value: value, tag: tag}) do
+    {:type, [], [value, tag]}
+  end
+
+  defp prewalk(node) do
+    node
   end
 
   # Convert variables to proper names
-  defp expr_to_string({:&, _, [ix]}, _, names, %{take: take}) do
-    case take do
-      %{^ix => {:any, fields}} when ix == 0 ->
-        Kernel.inspect(fields)
+  defp postwalk({:&, _, [ix]}, names, part) do
+    binding_to_expr(ix, names, part)
+  end
 
-      %{^ix => {tag, fields}} ->
-        "#{tag}(" <> binding(names, ix) <> ", " <> Kernel.inspect(fields) <> ")"
+  # Remove parens from field calls
+  defp postwalk({{:., _, [_, _]} = dot, meta, []}, _names, _part) do
+    {dot, [no_parens: true] ++ meta, []}
+  end
+
+  # Interpolated unknown value
+  defp postwalk({:^, _, [_ix, _len]}, _names, _part) do
+    {:^, [], [{:..., [], nil}]}
+  end
+
+  # Interpolated known value
+  defp postwalk({:^, _, [ix]}, _, %{params: params}) do
+    value =
+      case Enum.at(params || [], ix) do
+        # Wrap the head in a block so it is not treated as a charlist
+        {[head | tail], _type} -> [{:__block__, [], [head]} | tail]
+        {value, _type} -> value
+        _ -> {:..., [], nil}
+      end
+
+    {:^, [], [value]}
+  end
+
+  # Types need to be converted back to AST for fields
+  defp postwalk({:type, meta, [expr, type]}, names, part) do
+    {:type, meta, [expr, type_to_expr(type, names, part)]}
+  end
+
+  # For keyword and interpolated fragments use normal escaping
+  defp postwalk({:fragment, _, [{_, _} | _] = parts}, _names, _part) do
+    {:fragment, [], unmerge_fragments(parts, "", [])}
+  end
+
+  # Subqueries
+  defp postwalk({:subquery, i}, _names, %{subqueries: subqueries}) do
+    {:subquery, [], [Enum.fetch!(subqueries, i).query]}
+  end
+
+  # Jason
+  defp postwalk({:json_extract_path, _, [expr, path]}, _names, _part) do
+    Enum.reduce(path, expr, fn element, acc ->
+      {{:., [], [Access, :get]}, [], [acc, element]}
+    end)
+  end
+
+  defp postwalk(node, _names, _part) do
+    node
+  end
+
+  defp binding_to_expr(ix, names, part) do
+    case part do
+      %{take: %{^ix => {:any, fields}}} when ix == 0 ->
+        fields
+
+      %{take: %{^ix => {tag, fields}}} ->
+        {tag, [], [binding(names, ix), fields]}
 
       _ ->
         binding(names, ix)
     end
   end
 
-  defp expr_to_string({:&, _, [ix]}, _, names, _) do
-    binding(names, ix)
+  defp type_to_expr({ix, type}, names, part) when is_integer(ix) do
+    {{:., [], [binding_to_expr(ix, names, part), type]}, [no_parens: true], []}
   end
 
-  # Inject the interpolated value
-  #
-  # In case the query had its parameters removed,
-  # we use ... to express the interpolated code.
-  defp expr_to_string({:^, _, [_ix, _len]}, _, _, _part) do
-    Macro.to_string({:^, [], [{:..., [], nil}]})
+  defp type_to_expr({composite, type}, names, part) when is_atom(composite) do
+    {composite, type_to_expr(type, names, part)}
   end
 
-  defp expr_to_string({:^, _, [ix]}, _, _, %{params: params}) do
-    case Enum.at(params || [], ix) do
-      {value, _type} -> "^" <> Kernel.inspect(value, charlists: :as_lists)
-      _ -> "^..."
-    end
-  end
-
-  # Strip trailing ()
-  defp expr_to_string({{:., _, [_, _]}, _, []}, string, _, _) do
-    size = byte_size(string)
-    :binary.part(string, 0, size - 2)
-  end
-
-  # Types need to be converted back to AST for fields
-  defp expr_to_string({:type, [], [expr, type]}, _string, names, part) do
-    "type(#{expr(expr, names, part)}, #{type |> type_to_expr() |> expr(names, part)})"
-  end
-
-  # Tagged values
-  defp expr_to_string(%Ecto.Query.Tagged{value: value, tag: nil}, _, _names, _) do
-    inspect(value)
-  end
-
-  defp expr_to_string(%Ecto.Query.Tagged{value: value, tag: tag}, _, names, part) do
-    {:type, [], [value, tag]} |> expr(names, part)
-  end
-
-  defp expr_to_string({:json_extract_path, _, [expr, path]}, _, names, part) do
-    json_expr_path_to_expr(expr, path) |> expr(names, part)
-  end
-
-  defp expr_to_string({:{}, [], [:subquery, i]}, _string, _names, %{subqueries: subqueries}) do
-    # We were supposed to match on {:subquery, i} but Elixir incorrectly
-    # translates those to `:{}` when converting to string.
-    # See https://github.com/elixir-lang/elixir/blob/27bd9ffcc607b74ce56b547cb6ba92c9012c317c/lib/elixir/lib/macro.ex#L932
-    inspect_source(Enum.fetch!(subqueries, i))
-  end
-
-  defp expr_to_string(_expr, string, _, _) do
-    string
-  end
-
-  defp type_to_expr({composite, type}) when is_atom(composite) do
-    {composite, type_to_expr(type)}
-  end
-
-  defp type_to_expr({part, type}) when is_integer(part) do
-    {{:., [], [{:&, [], [part]}, type]}, [], []}
-  end
-
-  defp type_to_expr(type) do
+  defp type_to_expr(type, _names, _part) do
     type
   end
 
-  defp json_expr_path_to_expr(expr, path) do
-    Enum.reduce(path, expr, fn element, acc ->
-      {{:., [], [Access, :get]}, [], [acc, element]}
-    end)
+  defp unmerge_fragments([{:raw, s}, {:expr, v} | t], frag, args) do
+    unmerge_fragments(t, frag <> s <> "?", [v | args])
   end
 
-  defp unmerge_fragments([{:raw, s}, {:expr, v} | t], frag, args, names, part) do
-    unmerge_fragments(t, frag <> s <> "?", [expr(v, names, part) | args], names, part)
-  end
-
-  defp unmerge_fragments([{:raw, s}], frag, args, _names, _part) do
-    Enum.join([inspect(frag <> s) | Enum.reverse(args)], ", ")
+  defp unmerge_fragments([{:raw, s}], frag, args) do
+    [frag <> s | Enum.reverse(args)]
   end
 
   defp join_qual(:inner), do: :join
@@ -375,15 +381,15 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp generate_names(letters) do
-    {names, _} = Enum.map_reduce(letters, 0, &{"#{&1}#{&2}", &2 + 1})
+    {names, _} = Enum.map_reduce(letters, 0, &{:"#{&1}#{&2}", &2 + 1})
     names
   end
 
   defp binding(names, pos) do
     try do
-      elem(names, pos)
+      {elem(names, pos), [], nil}
     rescue
-      ArgumentError -> "unknown_binding_#{pos}!"
+      ArgumentError -> {:"unknown_binding_#{pos}!", [], nil}
     end
   end
 
