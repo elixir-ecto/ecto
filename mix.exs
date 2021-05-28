@@ -12,6 +12,7 @@ defmodule Ecto.MixProject do
       deps: deps(),
       consolidate_protocols: Mix.env() != :test,
       elixirc_paths: elixirc_paths(Mix.env()),
+      dialyzer: [ignore_warnings: ".dialyzerignore.exs"],
 
       # Hex
       description: "A toolkit for data mapping and language integrated query for Elixir",
@@ -32,6 +33,7 @@ defmodule Ecto.MixProject do
 
   defp deps do
     [
+      {:dialyxir, ">= 0.0.0", only: :test, runtime: false},
       {:telemetry, "~> 0.4"},
       {:decimal, "~> 1.6 or ~> 2.0"},
       {:jason, "~> 1.0", optional: true},
