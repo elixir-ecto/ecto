@@ -46,7 +46,7 @@ defmodule Ecto.UUID do
   @doc """
   Same as `cast/1` but raises `Ecto.CastError` on invalid arguments.
   """
-  @spec cast!(t | raw | any) :: t
+  @spec cast!(t | raw | any) :: t | no_return
   def cast!(value) do
     case cast(value) do
       {:ok, uuid} -> uuid
@@ -136,7 +136,7 @@ defmodule Ecto.UUID do
   @doc """
   Same as `dump/1` but raises `Ecto.ArgumentError` on invalid arguments.
   """
-  @spec dump!(t | raw | any) :: t
+  @spec dump!(t | raw | any) :: t | raw | no_return
   def dump!(value) do
     case dump(value) do
       {:ok, uuid} -> uuid
@@ -147,7 +147,7 @@ defmodule Ecto.UUID do
   @doc """
   Converts a binary UUID into a string.
   """
-  @spec load(raw | any) :: {:ok, t} | :error
+  @spec load(raw | any) :: {:ok, t} | :error | no_return
   def load(<<_::128>> = uuid) do
     encode(uuid)
   end
@@ -160,7 +160,7 @@ defmodule Ecto.UUID do
   @doc """
   Same as `load/1` but raises `Ecto.ArgumentError` on invalid arguments.
   """
-  @spec load!(t | raw | any) :: t
+  @spec load!(t | raw | any) :: t | no_return
   def load!(value) do
     case load(value) do
       {:ok, uuid} -> uuid
@@ -190,6 +190,7 @@ defmodule Ecto.UUID do
   @doc false
   def autogenerate, do: generate()
 
+  @spec encode(raw) :: {:ok, t} | :error
   defp encode(<< a1::4, a2::4, a3::4, a4::4,
                  a5::4, a6::4, a7::4, a8::4,
                  b1::4, b2::4, b3::4, b4::4,
@@ -227,4 +228,5 @@ defmodule Ecto.UUID do
   defp e(13), do: ?d
   defp e(14), do: ?e
   defp e(15), do: ?f
+  defp e(_),  do: throw(:error)
 end

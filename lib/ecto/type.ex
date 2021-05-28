@@ -821,8 +821,6 @@ defmodule Ecto.Type do
   defp cast_decimal(term) when is_binary(term) do
     case Decimal.parse(term) do
       {:ok, decimal} -> check_decimal(decimal, false)
-      {decimal, ""} -> check_decimal(decimal, false)
-      {_, remainder} when is_binary(remainder) and byte_size(remainder) > 0 -> :error
       :error -> :error
     end
   end
