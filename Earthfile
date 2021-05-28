@@ -76,18 +76,19 @@ integration-test:
 
     WORKDIR /src/ecto_sql
 
+    ARG PG_IMG="postgres:11.11"
+    ARG MCR_IMG="mcr.microsoft.com/mssql/server:2017-latest"
+    ARG MYSQL_IMG="mysql:5.7"
+
     # then run the tests
-    WITH DOCKER \
-        --pull "postgres:11.11" \
-        --pull "mcr.microsoft.com/mssql/server:2017-latest" \
-        --pull "mysql:5.7"
+    WITH DOCKER --pull "$PG_IMG" --pull "$MCR_IMG" --pull "$MYSQL_IMG"
         RUN set -e; \
             timeout=$(expr $(date +%s) + 60); \
 
             # start databases
-            docker run --name mssql --network=host -d -e 'ACCEPT_EULA=Y' -e 'MSSQL_SA_PASSWORD=some!Password' mcr.microsoft.com/mssql/server:2017-latest; \
-            docker run --name pg --network=host -d -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres "postgres:11.11"; \
-            docker run --name mysql --network=host -d -e MYSQL_ROOT_PASSWORD=root "mysql:5.7"; \
+            docker run --name mssql --network=host -d -e 'ACCEPT_EULA=Y' -e 'MSSQL_SA_PASSWORD=some!Password' "$MCR_IMG"; \
+            docker run --name pg --network=host -d -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=postgres "$PG_IMG"; \
+            docker run --name mysql --network=host -d -e MYSQL_ROOT_PASSWORD=root "$MYSQL_IMG"; \
 
             # wait for mssql to start
             while ! sqlcmd -S tcp:127.0.0.1,1433 -U sa -P 'some!Password' -Q "SELECT 1" >/dev/null 2>&1; do \
