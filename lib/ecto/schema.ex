@@ -452,6 +452,8 @@ defmodule Ecto.Schema do
   @type has_one(t) :: t | Ecto.Association.NotLoaded.t()
   @type has_many(t) :: [t] | Ecto.Association.NotLoaded.t()
   @type many_to_many(t) :: [t] | Ecto.Association.NotLoaded.t()
+  @type embeds_one(t) :: t
+  @type embeds_many(t) :: [t]
 
   @doc false
   defmacro __using__(_) do
