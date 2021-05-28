@@ -195,7 +195,7 @@ defmodule Ecto.Query.Planner do
   This function is called by the backend before invoking
   any cache mechanism.
   """
-  @spec plan(Query.t, atom, module) :: {planned_query :: Query.t, parameters :: list, cache_key :: any}
+  @spec plan(Ecto.Query.t, atom, module) :: {planned_query :: Ecto.Query.t, parameters :: list, cache_key :: any}
   def plan(query, operation, adapter) do
     query
     |> plan_sources(adapter)
@@ -732,7 +732,7 @@ defmodule Ecto.Query.Planner do
     {op, expr, Enum.map(subqueries, fn %{cache: cache} -> {:subquery, cache} end)}
   end
 
-  @spec cast_and_merge_params(atom, Query.t, any, list, module) :: {params :: list, cacheable? :: boolean}
+  @spec cast_and_merge_params(atom, Ecto.Query.t, any, list, module) :: {params :: list, cacheable? :: boolean}
   defp cast_and_merge_params(kind, query, expr, params, adapter) do
     Enum.reduce expr.params, {params, true}, fn
       {:subquery, i}, {acc, cacheable?} ->
@@ -1782,9 +1782,11 @@ defmodule Ecto.Query.Planner do
       Enum.reduce(updates, %{}, fn update, acc ->
         Enum.reduce(update.expr, acc, fn {_op, kw}, acc ->
           Enum.reduce(kw, acc, fn {k, v}, acc ->
-            Map.update(acc, k, v, fn _ ->
+            if Map.has_key?(acc, k) do
               error! query, "duplicate field `#{k}` for `#{operation}`"
-            end)
+            else
+              Map.put(acc, k, v)
+            end
           end)
         end)
       end)
