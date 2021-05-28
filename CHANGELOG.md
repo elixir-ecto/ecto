@@ -1,5 +1,20 @@
 # Changelog for v3.x
 
+## v3.6.2 (2021-05-28)
+
+### Enhancements
+
+  * [Ecto.Query] Support macros in `with_cte`
+  * [Ecto.Repo] Add `Ecto.Repo.all_running/0` to list all running repos
+
+### Bug fixes
+
+  * [Ecto.Query] Do not omit nil fields in a subquery select
+  * [Ecto.Query] Allow `parent_as` to look for an alias all the way up across subqueries
+  * [Ecto.Query] Raise if a nil value is given to a query from a nested map parameter
+  * [Ecto.Query] Fix `insert_all` when using both `:on_conflict` and `:placeholders`
+  * [mix ecto.load] Do not pass `--force` to underlying compile task
+
 ## v3.6.1 (2021-04-12)
 
 ### Enhancements

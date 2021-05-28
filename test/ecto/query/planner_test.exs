@@ -839,7 +839,6 @@ defmodule Ecto.Query.PlannerTest do
     assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "in %Ecto.SubQuery{"
   end
 
-
   test "normalize: assoc join with wheres that have regular filters" do
     # Mixing both has_many and many_to_many
     {_query, params, _select} =
