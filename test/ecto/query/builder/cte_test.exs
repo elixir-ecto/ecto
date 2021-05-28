@@ -62,4 +62,13 @@ defmodule Ecto.Query.Builder.CTETest do
     assert [{^cte1_name, ^cte1}, {^cte2_name, %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
     assert {:fragment, [], [raw: "SELECT * FROM tbl2"]} = expr
   end
+
+  defmacro name, do: "cte"
+  defmacro query, do: quote(do: fragment("query"))
+
+  test "allows macros on name and query" do
+    query = %Ecto.Query{} |> with_cte(name(), as: query())
+    assert [{"cte", %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
+    assert {:fragment, [], [raw: "query"]} = expr
+  end
 end

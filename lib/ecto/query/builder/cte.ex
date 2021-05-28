@@ -8,17 +8,24 @@ defmodule Ecto.Query.Builder.CTE do
   @doc """
   Escapes the CTE name.
 
-      iex> escape(quote do: "FOO")
+      iex> escape(quote(do: "FOO"), __ENV__)
       "FOO"
+
   """
-  @spec escape(Macro.t) :: Macro.t
-  def escape(name) when is_bitstring(name), do: name
+  @spec escape(Macro.t, Macro.Env.t) :: Macro.t
+  def escape(name, _env) when is_bitstring(name), do: name
 
-  def escape({:^, _, [expr]}), do: expr
+  def escape({:^, _, [expr]}, _env), do: expr
 
-  def escape(other) do
-    Builder.error! "`#{Macro.to_string(other)}` is not a valid CTE name. " <>
-                   "It must be a literal string or an interpolated variable."
+  def escape(expr, env) do
+    case Macro.expand_once(expr, env) do
+      ^expr ->
+        Builder.error! "`#{Macro.to_string(expr)}` is not a valid CTE name. " <>
+                       "It must be a literal string or an interpolated variable."
+
+      expr ->
+        escape(expr, env)
+    end
   end
 
   @doc """
@@ -30,7 +37,7 @@ defmodule Ecto.Query.Builder.CTE do
   """
   @spec build(Macro.t, Macro.t, Macro.t, Macro.Env.t) :: Macro.t
   def build(query, name, cte, env) do
-    Builder.apply_query(query, __MODULE__, [escape(name), build_cte(name, cte, env)], env)
+    Builder.apply_query(query, __MODULE__, [escape(name, env), build_cte(name, cte, env)], env)
   end
 
   @spec build_cte(Macro.t, Macro.t, Macro.Env.t) :: Macro.t
@@ -52,9 +59,15 @@ defmodule Ecto.Query.Builder.CTE do
     end
   end
 
-  def build_cte(name, cte, _env) do
-    Builder.error! "`#{Macro.to_string(cte)}` is not a valid CTE (named: #{Macro.to_string(name)}). " <>
-                   "The CTE must be an interpolated query, such as ^existing_query or a fragment."
+  def build_cte(name, cte, env) do
+    case Macro.expand_once(cte, env) do
+      ^cte ->
+        Builder.error! "`#{Macro.to_string(cte)}` is not a valid CTE (named: #{Macro.to_string(name)}). " <>
+                       "The CTE must be an interpolated query, such as ^existing_query or a fragment."
+
+      cte ->
+        build_cte(name, cte, env)
+    end
   end
 
   @doc """
