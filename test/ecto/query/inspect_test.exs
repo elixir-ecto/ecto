@@ -350,11 +350,11 @@ defmodule Ecto.Query.InspectTest do
 
   test "container values" do
     assert i(from(Post, select: <<1, 2, 3>>)) ==
-           "from p0 in Inspect.Post, select: \"\\x01\\x02\\x03\""
+           "from p0 in Inspect.Post, select: <<1, 2, 3>>"
 
     foo = <<1, 2, 3>>
     assert i(from(p in Post, select: {p, ^foo})) ==
-           "from p0 in Inspect.Post, select: {p0, ^\"\\x01\\x02\\x03\"}"
+           "from p0 in Inspect.Post, select: {p0, ^<<1, 2, 3>>}"
   end
 
   test "select" do
