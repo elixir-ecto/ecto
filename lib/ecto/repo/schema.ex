@@ -376,7 +376,7 @@ defmodule Ecto.Repo.Schema do
             error
         end
       else
-        {:error, changeset}
+        {:error, %{user_changeset | valid?: false}}
       end
     end)
   end
