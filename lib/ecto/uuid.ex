@@ -1,6 +1,6 @@
 defmodule Ecto.UUID do
   @moduledoc """
-  An Ecto type for UUIDs strings.
+  An Ecto type for UUID strings.
   """
 
   use Ecto.Type
@@ -19,7 +19,7 @@ defmodule Ecto.UUID do
   def type, do: :uuid
 
   @doc """
-  Casts to UUID.
+  Casts to a UUID.
   """
   @spec cast(t | raw | any) :: {:ok, t} | :error
   def cast(<< a1, a2, a3, a4, a5, a6, a7, a8, ?-,
@@ -38,18 +38,19 @@ defmodule Ecto.UUID do
   catch
     :error -> :error
   else
-    casted -> {:ok, casted}
+    hex_uuid -> {:ok, hex_uuid}
   end
-  def cast(<< _::128 >> = binary), do: encode(binary)
+
+  def cast(<< _::128 >> = raw_uuid), do: {:ok, encode(raw_uuid)}
   def cast(_), do: :error
 
   @doc """
   Same as `cast/1` but raises `Ecto.CastError` on invalid arguments.
   """
-  @spec cast!(t | raw | any) :: t
+  @spec cast!(t | raw | any) :: t | no_return
   def cast!(value) do
     case cast(value) do
-      {:ok, uuid} -> uuid
+      {:ok, hex_uuid} -> hex_uuid
       :error -> raise Ecto.CastError, type: __MODULE__, value: value
     end
   end
@@ -81,7 +82,7 @@ defmodule Ecto.UUID do
   defp c(_),  do: throw(:error)
 
   @doc """
-  Converts a string representing a UUID into a binary.
+  Converts a string representing a UUID into a raw binary.
   """
   @spec dump(t | any) :: {:ok, raw} | :error
   def dump(<< a1, a2, a3, a4, a5, a6, a7, a8, ?-,
@@ -89,22 +90,20 @@ defmodule Ecto.UUID do
               c1, c2, c3, c4, ?-,
               d1, d2, d3, d4, ?-,
               e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12 >>) do
-    try do
-      << d(a1)::4, d(a2)::4, d(a3)::4, d(a4)::4,
-         d(a5)::4, d(a6)::4, d(a7)::4, d(a8)::4,
-         d(b1)::4, d(b2)::4, d(b3)::4, d(b4)::4,
-         d(c1)::4, d(c2)::4, d(c3)::4, d(c4)::4,
-         d(d1)::4, d(d2)::4, d(d3)::4, d(d4)::4,
-         d(e1)::4, d(e2)::4, d(e3)::4, d(e4)::4,
-         d(e5)::4, d(e6)::4, d(e7)::4, d(e8)::4,
-         d(e9)::4, d(e10)::4, d(e11)::4, d(e12)::4 >>
-    catch
-      :error -> :error
-    else
-      binary ->
-        {:ok, binary}
-    end
+    << d(a1)::4, d(a2)::4, d(a3)::4, d(a4)::4,
+       d(a5)::4, d(a6)::4, d(a7)::4, d(a8)::4,
+       d(b1)::4, d(b2)::4, d(b3)::4, d(b4)::4,
+       d(c1)::4, d(c2)::4, d(c3)::4, d(c4)::4,
+       d(d1)::4, d(d2)::4, d(d3)::4, d(d4)::4,
+       d(e1)::4, d(e2)::4, d(e3)::4, d(e4)::4,
+       d(e5)::4, d(e6)::4, d(e7)::4, d(e8)::4,
+       d(e9)::4, d(e10)::4, d(e11)::4, d(e12)::4 >>
+  catch
+    :error -> :error
+  else
+    raw_uuid -> {:ok, raw_uuid}
   end
+
   def dump(_), do: :error
 
   @compile {:inline, d: 1}
@@ -136,10 +135,10 @@ defmodule Ecto.UUID do
   @doc """
   Same as `dump/1` but raises `Ecto.ArgumentError` on invalid arguments.
   """
-  @spec dump!(t | raw | any) :: t
+  @spec dump!(t | any) :: raw | no_return
   def dump!(value) do
     case dump(value) do
-      {:ok, uuid} -> uuid
+      {:ok, raw_uuid} -> raw_uuid
       :error -> raise ArgumentError, "cannot dump given UUID to binary: #{inspect(value)}"
     end
   end
@@ -147,38 +146,35 @@ defmodule Ecto.UUID do
   @doc """
   Converts a binary UUID into a string.
   """
-  @spec load(raw | any) :: {:ok, t} | :error
-  def load(<<_::128>> = uuid) do
-    encode(uuid)
-  end
+  @spec load(raw | any) :: {:ok, t} | :error | no_return
+  def load(<<_::128>> = raw_uuid), do: {:ok, encode(raw_uuid)}
+
   def load(<<_::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96>> = string) do
     raise ArgumentError, "trying to load string UUID as Ecto.UUID: #{inspect string}. " <>
                          "Maybe you wanted to declare :uuid as your database field?"
   end
+
   def load(_), do: :error
 
   @doc """
   Same as `load/1` but raises `Ecto.ArgumentError` on invalid arguments.
   """
-  @spec load!(t | raw | any) :: t
+  @spec load!(raw | any) :: t | no_return
   def load!(value) do
     case load(value) do
-      {:ok, uuid} -> uuid
+      {:ok, hex_uuid} -> hex_uuid
       :error -> raise ArgumentError, "cannot load given binary as UUID: #{inspect(value)}"
     end
   end
 
   @doc """
-  Generates a version 4 (random) UUID.
+  Generates a random, version 4 UUID.
   """
   @spec generate() :: t
-  def generate() do
-    {:ok, uuid} = encode(bingenerate())
-    uuid
-  end
+  def generate(), do: encode(bingenerate())
 
   @doc """
-  Generates a version 4 (random) UUID in the binary format.
+  Generates a random, version 4 UUID in the binary format.
   """
   @spec bingenerate() :: raw
   def bingenerate() do
@@ -190,6 +186,7 @@ defmodule Ecto.UUID do
   @doc false
   def autogenerate, do: generate()
 
+  @spec encode(raw) :: t
   defp encode(<< a1::4, a2::4, a3::4, a4::4,
                  a5::4, a6::4, a7::4, a8::4,
                  b1::4, b2::4, b3::4, b4::4,
@@ -203,10 +200,6 @@ defmodule Ecto.UUID do
        e(c1), e(c2), e(c3), e(c4), ?-,
        e(d1), e(d2), e(d3), e(d4), ?-,
        e(e1), e(e2), e(e3), e(e4), e(e5), e(e6), e(e7), e(e8), e(e9), e(e10), e(e11), e(e12) >>
-  catch
-    :error -> :error
-  else
-    encoded -> {:ok, encoded}
   end
 
   @compile {:inline, e: 1}
