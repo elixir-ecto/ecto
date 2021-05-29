@@ -225,11 +225,22 @@ defimpl Inspect, for: Ecto.Query do
 
   @doc false
   def expr(expr, names, part) do
-    # TODO: Actually use quoted_to_algebra on Elixir v1.12+
     expr
     |> Macro.traverse(:ok, &{prewalk(&1), &2}, &{postwalk(&1, names, part), &2})
     |> elem(0)
-    |> Macro.to_string()
+    |> macro_to_string()
+  end
+
+  # TODO: Actually use quoted_to_algebra on Elixir v1.12+
+  if Version.match?(System.version(), ">= 1.11.0") do
+    defp macro_to_string(expr), do: Macro.to_string(expr)
+  else
+    defp macro_to_string(expr) do
+      Macro.to_string(expr, fn
+        {{:., _, [_, _]}, _, []}, string -> String.replace_suffix(string, "()", "")
+        _other, string -> string
+      end)
+    end
   end
 
   # Tagged values

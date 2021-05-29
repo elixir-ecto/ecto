@@ -19,8 +19,6 @@ defmodule Ecto.Query.InspectTest do
   use ExUnit.Case, async: true
   import Ecto.Query
 
-  @moduletag :macro_to_string
-
   alias Inspect.Post
   alias Inspect.Comment
 

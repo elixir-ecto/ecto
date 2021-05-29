@@ -2157,19 +2157,19 @@ defmodule Ecto.Schema do
 
   defp check_field_type!(mod, name, type, opts) do
     kind =
-      if is_atom(type) do
-        cond do
-          Ecto.Type.base?(type) -> :base
-          Code.ensure_compiled(type) == {:module, type} -> :module
-          true -> nil
-        end
+      cond do
+        composite?(type, name) -> :composite
+        not is_atom(type) -> nil
+        Ecto.Type.base?(type) -> :base
+        Code.ensure_compiled(type) == {:module, type} -> :module
+        true -> nil
       end
 
     cond do
       kind == :base ->
         type
 
-      composite?(type, name) ->
+      kind == :composite ->
         {outer_type, inner_type} = type
         {outer_type, check_field_type!(mod, name, inner_type, opts)}
 
