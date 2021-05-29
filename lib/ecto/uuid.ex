@@ -41,7 +41,7 @@ defmodule Ecto.UUID do
     hex_uuid -> {:ok, hex_uuid}
   end
 
-  def cast(<< _::128 >> = raw_uuid), do: encode(raw_uuid)
+  def cast(<< _::128 >> = raw_uuid), do: {:ok, encode(raw_uuid)}
   def cast(_), do: :error
 
   @doc """
@@ -147,7 +147,7 @@ defmodule Ecto.UUID do
   Converts a binary UUID into a string.
   """
   @spec load(raw | any) :: {:ok, t} | :error | no_return
-  def load(<<_::128>> = raw_uuid), do: encode(raw_uuid)
+  def load(<<_::128>> = raw_uuid), do: {:ok, encode(raw_uuid)}
 
   def load(<<_::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96>> = string) do
     raise ArgumentError, "trying to load string UUID as Ecto.UUID: #{inspect string}. " <>
@@ -168,16 +168,13 @@ defmodule Ecto.UUID do
   end
 
   @doc """
-  Generates a random version 4 UUID.
+  Generates a random, version 4 UUID.
   """
   @spec generate() :: t
-  def generate() do
-    {:ok, hex_uuid} = encode(bingenerate())
-    hex_uuid
-  end
+  def generate(), do: encode(bingenerate())
 
   @doc """
-  Generates a random version 4 UUID in the binary format.
+  Generates a random, version 4 UUID in the binary format.
   """
   @spec bingenerate() :: raw
   def bingenerate() do
@@ -189,7 +186,7 @@ defmodule Ecto.UUID do
   @doc false
   def autogenerate, do: generate()
 
-  @spec encode(raw) :: {:ok, t}
+  @spec encode(raw) :: t
   defp encode(<< a1::4, a2::4, a3::4, a4::4,
                  a5::4, a6::4, a7::4, a8::4,
                  b1::4, b2::4, b3::4, b4::4,
@@ -198,14 +195,11 @@ defmodule Ecto.UUID do
                  e1::4, e2::4, e3::4, e4::4,
                  e5::4, e6::4, e7::4, e8::4,
                  e9::4, e10::4, e11::4, e12::4 >>) do
-    hex_uuid =
-      << e(a1), e(a2), e(a3), e(a4), e(a5), e(a6), e(a7), e(a8), ?-,
-         e(b1), e(b2), e(b3), e(b4), ?-,
-         e(c1), e(c2), e(c3), e(c4), ?-,
-         e(d1), e(d2), e(d3), e(d4), ?-,
-         e(e1), e(e2), e(e3), e(e4), e(e5), e(e6), e(e7), e(e8), e(e9), e(e10), e(e11), e(e12) >>
-
-    {:ok, hex_uuid}
+    << e(a1), e(a2), e(a3), e(a4), e(a5), e(a6), e(a7), e(a8), ?-,
+       e(b1), e(b2), e(b3), e(b4), ?-,
+       e(c1), e(c2), e(c3), e(c4), ?-,
+       e(d1), e(d2), e(d3), e(d4), ?-,
+       e(e1), e(e2), e(e3), e(e4), e(e5), e(e6), e(e7), e(e8), e(e9), e(e10), e(e11), e(e12) >>
   end
 
   @compile {:inline, e: 1}
