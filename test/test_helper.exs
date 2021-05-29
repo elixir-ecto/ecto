@@ -6,7 +6,7 @@ Logger.configure(level: :info)
 Code.require_file("support/test_repo.exs", __DIR__)
 
 opts =
-  if System.match?(System.version(), "< 1.11.0") do
+  if Version.match?(System.version(), "< 1.11.0") do
     [exclude: [macro_to_string: true]]
   else
     []
