@@ -1277,7 +1277,7 @@ defmodule Ecto.Repo do
         %{title: "v2", body: {:placeholder, :blob}}
       ]
 
-      Repo.insert_all(entries, placeholders: placeholders)
+      Repo.insert_all(Post, entries, placeholders: placeholders)
 
   Keep in mind that:
 
