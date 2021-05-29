@@ -529,13 +529,27 @@ defmodule Ecto.RepoTest do
   describe "placeholders" do
     @describetag :placeholders
 
-    test "Repo.insert_all throws when placeholder key is not found" do
+    test "Repo.insert_all supports placeholder keys with schema" do
+      TestRepo.insert_all(MySchema, [%{x: {:placeholder, :foo}}], placeholders: %{foo: "bar"})
+      assert_receive {:insert_all, meta, query}
+      assert meta.placeholders == ["bar"]
+      assert query == [[x: {:placeholder, 1}]]
+    end
+
+    test "Repo.insert_all supports placeholder keys without schema" do
+      TestRepo.insert_all("my_schema", [%{x: {:placeholder, :foo}}], placeholders: %{foo: "bar"})
+      assert_receive {:insert_all, meta, query}
+      assert meta.placeholders == ["bar"]
+      assert query == [[x: {:placeholder, 1}]]
+    end
+
+    test "Repo.insert_all raises when placeholder key is not found" do
       assert_raise KeyError, fn ->
         TestRepo.insert_all(MySchema, [%{x: {:placeholder, :bad_key}}], placeholders: %{foo: 100})
       end
     end
 
-    test "Repo.insert_all throws when placeholder key is used for different types" do
+    test "Repo.insert_all raises when placeholder key is used for different types" do
       placeholders = %{uuid_key: Ecto.UUID.generate}
       ph_key = {:placeholder, :uuid_key}
       entries = [%{bid: ph_key, string: ph_key}]
@@ -545,7 +559,7 @@ defmodule Ecto.RepoTest do
       end
     end
 
-    test "Repo.insert_all throws when placeholder key is used with invalid types" do
+    test "Repo.insert_all raises when placeholder key is used with invalid types" do
       placeholders = %{string_key: "foo"}
       entries = [%{n: {:placeholder, :string_key}}]
 

@@ -77,7 +77,8 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp extract_header_and_fields(_rpeo, rows, schema, dumper, autogen_id, placeholder_map, adapter, _opts) when is_list(rows) do
+  defp extract_header_and_fields(_repo, rows, schema, dumper, autogen_id, placeholder_map, adapter, _opts)
+       when is_list(rows) do
     mapper = init_mapper(schema, dumper, adapter, placeholder_map)
 
     {rows, {header, has_query?, placeholder_dump, _}} =
@@ -101,9 +102,7 @@ defmodule Ecto.Repo.Schema do
 
     placeholder_vals_list =
       placeholder_dump
-      |> Enum.map(fn {_, {idx, _, value}} ->
-        {idx, value}
-      end)
+      |> Enum.map(fn {_, {idx, _, value}} -> {idx, value} end)
       |> Enum.sort
       |> Enum.map(&elem(&1, 1))
 
@@ -114,6 +113,7 @@ defmodule Ecto.Repo.Schema do
       {rows, header, placeholder_vals_list, counter}
     end
   end
+
   defp extract_header_and_fields(repo, %Ecto.Query{} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter, opts) do
     {query, opts} = repo.prepare_query(:insert_all, query, opts)
     query = attach_prefix(query, opts)
@@ -148,59 +148,76 @@ defmodule Ecto.Repo.Schema do
 
     {{query, params}, header, [], counter}
   end
+
   defp extract_header_and_fields(_repo, rows_or_query, _schema, _dumper, _autogen_id, _placeholder_map, _adapter, _opts) do
     raise ArgumentError, "expected a list of rows or a query, but got #{inspect rows_or_query} as rows_or_query argument in insert_all"
   end
 
-  defp init_mapper(nil, _dumper, _adapter, _placeholder_map) do
-    fn {field, _} = tuple, {header, has_query?, placeholder_dump, counter} ->
-      {tuple, {Map.put(header, field, true), has_query?, placeholder_dump, counter}}
+  defp init_mapper(nil, _dumper, _adapter, placeholder_map) do
+    fn {field, value}, acc ->
+      extract_value(field, value, :any, placeholder_map, acc, & &1)
     end
   end
 
   defp init_mapper(schema, dumper, adapter, placeholder_map) do
-    fn {field, value}, {header, has_query?, placeholder_dump, counter} ->
+    fn {field, value}, acc ->
       case dumper do
         %{^field => {source, type}} ->
-          case value do
-            %Ecto.Query{} = query ->
-              {{source, query}, {Map.put(header, source, true), true, placeholder_dump, counter}}
+          extract_value(source, value, type, placeholder_map, acc, fn val ->
+            dump_field!(:insert_all, schema, field, type, val, adapter)
+          end)
 
-            {:placeholder, key} ->
-              {placeholder_dump, idx, counter} = case placeholder_dump do
-                %{^key => {idx, ^type, _}} = map ->
-                  {map, idx, counter}
-
-                %{^key => {_, type, _}} ->
-                  raise ArgumentError,
-                        "a placeholder key can only be used with columns of the same type. " <>
-                          "The key #{inspect(key)} has already been dumped as a #{inspect(type)}"
-
-                map ->
-                  dumpped_value =
-                    case placeholder_map do
-                      %{^key => val} ->
-                        dump_field!(:insert_all, schema, field, type, val, adapter)
-                      _ ->
-                        raise KeyError,
-                              "placeholder key #{inspect(key)} not found in #{inspect(placeholder_map)}"
-                      end
-
-                  {Map.put(map, key, {counter, type, dumpped_value}), counter, counter + 1}
-              end
-
-              {{source, {:placeholder, idx}},
-                {Map.put(header, source, true), has_query?, placeholder_dump, counter}}
-
-            value ->
-              value = dump_field!(:insert_all, schema, field, type, value, adapter)
-              {{source, value}, {Map.put(header, source, true), has_query?, placeholder_dump, counter}}
-          end
         %{} ->
           raise ArgumentError,
                 "unknown field `#{inspect(field)}` in schema #{inspect(schema)} given to " <>
                   "insert_all. Note virtual fields and associations are not supported"
       end
+    end
+  end
+
+  defp extract_value(source, value, type, placeholder_map, acc, dumper) do
+    {header, has_query?, placeholder_dump, counter} = acc
+
+    case value do
+      %Ecto.Query{} = query ->
+        {{source, query}, {Map.put(header, source, true), true, placeholder_dump, counter}}
+
+      {:placeholder, key} ->
+        {value, placeholder_dump, counter} =
+          extract_placeholder(key, type, placeholder_map, placeholder_dump, counter, dumper)
+
+        {{source, value},
+          {Map.put(header, source, true), has_query?, placeholder_dump, counter}}
+
+      value ->
+        {{source, dumper.(value)},
+         {Map.put(header, source, true), has_query?, placeholder_dump, counter}}
+    end
+  end
+
+  defp extract_placeholder(key, type, placeholder_map, placeholder_dump, counter, dumper) do
+    case placeholder_dump do
+      %{^key => {idx, ^type, _}} ->
+        {{:placeholder, idx}, placeholder_dump, counter}
+
+      %{^key => {_, type, _}} ->
+        raise ArgumentError,
+              "a placeholder key can only be used with columns of the same type. " <>
+                "The key #{inspect(key)} has already been dumped as a #{inspect(type)}"
+
+      %{} ->
+        dumped_value =
+          case placeholder_map do
+            %{^key => val} ->
+              dumper.(val)
+
+            _ ->
+              raise KeyError,
+                    "placeholder key #{inspect(key)} not found in #{inspect(placeholder_map)}"
+          end
+
+        placeholder_dump = Map.put(placeholder_dump, key, {counter, type, dumped_value})
+        {{:placeholder, counter}, placeholder_dump, counter + 1}
     end
   end
 
