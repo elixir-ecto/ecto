@@ -61,7 +61,7 @@ defmodule Ecto.RepoTest do
       field :w, :string, virtual: true
       field :array, {:array, :string}
       field :map, {:map, :string}
-      has_many(:children, MySchemaChild)
+      has_many :children, MySchemaChild
     end
   end
 
