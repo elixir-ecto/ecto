@@ -39,6 +39,18 @@ defmodule Ecto.RepoTest do
     end
   end
 
+  defmodule MySchemaChild do
+    use Ecto.Schema
+
+    schema "my_schema_child" do
+      field :a, :string
+    end
+
+    def changeset(struct, params) do
+      Ecto.Changeset.cast(struct, params, [:a])
+    end
+  end
+
   defmodule MySchema do
     use Ecto.Schema
 
@@ -49,6 +61,7 @@ defmodule Ecto.RepoTest do
       field :w, :string, virtual: true
       field :array, {:array, :string}
       field :map, {:map, :string}
+      has_many :children, MySchemaChild
     end
   end
 
@@ -1127,6 +1140,26 @@ defmodule Ecto.RepoTest do
       assert {:x, {"stop", []}} in changeset.errors
     end
 
+    test "insert has_many with prepare_changes that returns invalid changeset" do
+      changeset =
+        prepare_changeset()
+        |> Ecto.Changeset.prepare_changes(fn changeset ->
+          children_changeset =
+            changeset
+            |> Ecto.Changeset.cast(%{children: [%{a: "one"}]}, [])
+            |> Ecto.Changeset.cast_assoc(:children)
+            |> Ecto.Changeset.get_change(:children, [])
+            |> Enum.map(fn changeset ->
+              Ecto.Changeset.add_error(changeset, :a, "stop")
+            end)
+
+          Ecto.Changeset.put_assoc(changeset, :children, children_changeset)
+        end)
+
+      assert {:error, %Ecto.Changeset{} = changeset} = TestRepo.insert(changeset)
+      assert {:a, {"stop", []}} in hd(changeset.changes.children).errors
+    end
+
     test "update runs prepare callbacks in transaction" do
       changeset = prepare_changeset()
       TestRepo.update!(changeset)
@@ -1146,6 +1179,26 @@ defmodule Ecto.RepoTest do
       assert {:x, {"stop", []}} in changeset.errors
     end
 
+    test "update has_many with prepare_changes that returns invalid changeset" do
+      changeset =
+        prepare_changeset()
+        |> Ecto.Changeset.prepare_changes(fn changeset ->
+          children_changeset =
+            changeset
+            |> Ecto.Changeset.cast(%{children: [%{a: "one"}]}, [])
+            |> Ecto.Changeset.cast_assoc(:children)
+            |> Ecto.Changeset.get_change(:children, [])
+            |> Enum.map(fn changeset ->
+              Ecto.Changeset.add_error(changeset, :a, "stop")
+            end)
+
+          Ecto.Changeset.put_assoc(changeset, :children, children_changeset)
+        end)
+
+      assert {:error, %Ecto.Changeset{} = changeset} = TestRepo.update(changeset)
+      assert {:a, {"stop", []}} in hd(changeset.changes.children).errors
+    end
+
     test "delete runs prepare callbacks in transaction" do
       changeset = prepare_changeset()
       TestRepo.delete!(changeset)
@@ -1163,6 +1216,26 @@ defmodule Ecto.RepoTest do
 
       assert {:error, %Ecto.Changeset{} = changeset} = TestRepo.delete(changeset)
       assert {:x, {"stop", []}} in changeset.errors
+    end
+
+    test "delete schema with a has_many assoc with prepare_changes that returns invalid changeset" do
+      changeset =
+        prepare_changeset()
+        |> Ecto.Changeset.prepare_changes(fn changeset ->
+          children_changeset =
+            changeset
+            |> Ecto.Changeset.cast(%{children: [%{a: "one"}]}, [])
+            |> Ecto.Changeset.cast_assoc(:children)
+            |> Ecto.Changeset.get_change(:children, [])
+            |> Enum.map(fn changeset ->
+              Ecto.Changeset.add_error(changeset, :a, "stop")
+            end)
+
+          Ecto.Changeset.put_assoc(changeset, :children, children_changeset)
+        end)
+
+      assert {:error, %Ecto.Changeset{} = changeset} = TestRepo.delete(changeset)
+      assert {:a, {"stop", []}} in hd(changeset.changes.children).errors
     end
 
     test "on embeds" do
