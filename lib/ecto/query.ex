@@ -676,7 +676,7 @@ defmodule Ecto.Query do
     %{query | prefix: prefix}
   end
 
-  def put_query_prefix(other, prefix) do
+  def put_query_prefix(other, prefix) when is_binary(prefix) do
     other |> Ecto.Queryable.to_query() |> put_query_prefix(prefix)
   end
 
