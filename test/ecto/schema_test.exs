@@ -88,6 +88,12 @@ defmodule Ecto.SchemaTest do
     assert Ecto.get_meta(schema, :context) == "foobar"
   end
 
+  test "raises on invalid state in metadata" do
+    assert_raise ArgumentError, "invalid state nil", fn ->
+      Ecto.put_meta(%Schema{}, state: nil)
+    end
+  end
+
   test "preserves schema on up to date metadata" do
     old_schema = %Schema{}
     new_schema = Ecto.put_meta(old_schema, source: "my schema", state: :built, prefix: nil)
