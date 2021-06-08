@@ -133,6 +133,10 @@ defmodule Ecto.Repo.SupervisorTest do
   end
 
   test "fail on invalid urls" do
+    assert_raise Ecto.InvalidURLError, ~r"The parsed URL is: %URI\{", fn ->
+      parse_url("eric:hunter2@host:123/mydb")
+    end
+
     assert_raise Ecto.InvalidURLError, ~r"host is not present", fn ->
       parse_url("eric:hunter2@host:123/mydb")
     end
