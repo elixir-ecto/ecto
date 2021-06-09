@@ -2931,54 +2931,55 @@ defmodule Ecto.Changeset do
   validations rules from `changeset.validations` to build detailed error
   description.
   """
-  @spec traverse_errors(t, (error -> String.t) | (Changeset.t, atom, error -> String.t)) :: %{atom => [String.t | map]}
+  @spec traverse_errors(t, (error -> String.t) | (Changeset.t, atom, error -> String.t)) :: %{atom => [term]}
   def traverse_errors(%Changeset{errors: errors, changes: changes, types: types} = changeset, msg_func)
       when is_function(msg_func, 1) or is_function(msg_func, 3) do
     errors
     |> Enum.reverse()
-    |> merge_error_keys(msg_func, changeset)
-    |> merge_related_keys(changes, types, msg_func)
+    |> merge_keyword_keys(msg_func, changeset)
+    |> merge_related_keys(changes, types, msg_func, &traverse_errors/2)
   end
 
-  defp merge_error_keys(errors, msg_func, _) when is_function(msg_func, 1)  do
-    Enum.reduce(errors, %{}, fn({key, val}, acc) ->
+  defp merge_keyword_keys(keyword_list, msg_func, _) when is_function(msg_func, 1)  do
+    Enum.reduce(keyword_list, %{}, fn({key, val}, acc) ->
       val = msg_func.(val)
       Map.update(acc, key, [val], &[val|&1])
     end)
   end
 
-  defp merge_error_keys(errors, msg_func, changeset) when is_function(msg_func, 3)  do
-    Enum.reduce(errors, %{}, fn({key, val}, acc) ->
+  defp merge_keyword_keys(keyword_list, msg_func, changeset) when is_function(msg_func, 3)  do
+    Enum.reduce(keyword_list, %{}, fn({key, val}, acc) ->
       val = msg_func.(changeset, key, val)
       Map.update(acc, key, [val], &[val|&1])
     end)
   end
 
-  defp merge_related_keys(_, _, nil, _) do
+  defp merge_related_keys(_, _, nil, _, _) do
     raise ArgumentError, "changeset does not have types information"
   end
-  defp merge_related_keys(map, changes, types, msg_func) do
+
+  defp merge_related_keys(map, changes, types, msg_func, traverse_function) do
     Enum.reduce types, map, fn
       {field, {tag, %{cardinality: :many}}}, acc when tag in @relations ->
         if changesets = Map.get(changes, field) do
-          {errors, all_empty?} =
+          {child, all_empty?} =
             Enum.map_reduce(changesets, true, fn changeset, all_empty? ->
-              errors = traverse_errors(changeset, msg_func)
-              {errors, all_empty? and errors == %{}}
+              child = traverse_function.(changeset, msg_func)
+              {child, all_empty? and child == %{}}
             end)
 
           case all_empty? do
             true  -> acc
-            false -> Map.put(acc, field, errors)
+            false -> Map.put(acc, field, child)
           end
         else
           acc
         end
       {field, {tag, %{cardinality: :one}}}, acc when tag in @relations ->
         if changeset = Map.get(changes, field) do
-          case traverse_errors(changeset, msg_func) do
-            errors when errors == %{} -> acc
-            errors -> Map.put(acc, field, errors)
+          case traverse_function.(changeset, msg_func) do
+            child when child == %{} -> acc
+            child -> Map.put(acc, field, child)
           end
         else
           acc
@@ -2999,6 +3000,33 @@ defmodule Ecto.Changeset do
     else
       _ -> acc
     end
+  end
+
+  @doc ~S"""
+  Traverses changeset validations and applies the given function to validations.
+
+  This behaves the same as `traverse_errors/2`, but operates on changeset
+  validations instead of errors.
+
+  ## Examples
+
+      iex> traverse_validations(changeset, &(&1))
+      %{title: [format: ~r/pattern/, length: [min: 1, max: 20]]}
+
+      iex> traverse_validations(changeset, fn
+      ...>   {:length, opts} -> {:length, "#{Keyword.get(opts, :min, 0)}-#{Keyword.get(opts, :max, 32)}"}
+      ...>   {:format, %Regex{source: source}} -> {:format, "/#{source}/"}
+      ...>   {other, opts} -> {other, inspect(opts)}
+      ...> end)
+      %{title: [format: "/pattern/", length: "1-20"]}
+  """
+  @spec traverse_validations(t, (error -> String.t) | (Changeset.t, atom, error -> String.t)) :: %{atom => [term]}
+  def traverse_validations(%Changeset{validations: validations, changes: changes, types: types} = changeset, msg_func)
+      when is_function(msg_func, 1) or is_function(msg_func, 3) do
+    validations
+    |> Enum.reverse()
+    |> merge_keyword_keys(msg_func, changeset)
+    |> merge_related_keys(changes, types, msg_func, &traverse_validations/2)
   end
 end
 
