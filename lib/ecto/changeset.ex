@@ -2937,25 +2937,21 @@ defmodule Ecto.Changeset do
     errors
     |> Enum.reverse()
     |> merge_keyword_keys(msg_func, changeset)
-    |> merge_related_error_keys(changes, types, msg_func)
+    |> merge_related_keys(changes, types, msg_func, &traverse_errors/2)
   end
 
-  defp merge_keyword_keys(errors, msg_func, _) when is_function(msg_func, 1)  do
-    Enum.reduce(errors, %{}, fn({key, val}, acc) ->
+  defp merge_keyword_keys(keyword_list, msg_func, _) when is_function(msg_func, 1)  do
+    Enum.reduce(keyword_list, %{}, fn({key, val}, acc) ->
       val = msg_func.(val)
       Map.update(acc, key, [val], &[val|&1])
     end)
   end
 
-  defp merge_keyword_keys(errors, msg_func, changeset) when is_function(msg_func, 3)  do
-    Enum.reduce(errors, %{}, fn({key, val}, acc) ->
+  defp merge_keyword_keys(keyword_list, msg_func, changeset) when is_function(msg_func, 3)  do
+    Enum.reduce(keyword_list, %{}, fn({key, val}, acc) ->
       val = msg_func.(changeset, key, val)
       Map.update(acc, key, [val], &[val|&1])
     end)
-  end
-
-  defp merge_related_error_keys(map, changes, types, msg_function) do
-    merge_related_keys(map, changes, types, msg_function, &traverse_errors/2)
   end
 
   defp merge_related_keys(_, _, nil, _, _) do
@@ -2966,15 +2962,15 @@ defmodule Ecto.Changeset do
     Enum.reduce types, map, fn
       {field, {tag, %{cardinality: :many}}}, acc when tag in @relations ->
         if changesets = Map.get(changes, field) do
-          {errors, all_empty?} =
+          {child, all_empty?} =
             Enum.map_reduce(changesets, true, fn changeset, all_empty? ->
-              errors = traverse_function.(changeset, msg_func)
-              {errors, all_empty? and errors == %{}}
+              child = traverse_function.(changeset, msg_func)
+              {child, all_empty? and child == %{}}
             end)
 
           case all_empty? do
             true  -> acc
-            false -> Map.put(acc, field, errors)
+            false -> Map.put(acc, field, child)
           end
         else
           acc
@@ -2982,8 +2978,8 @@ defmodule Ecto.Changeset do
       {field, {tag, %{cardinality: :one}}}, acc when tag in @relations ->
         if changeset = Map.get(changes, field) do
           case traverse_function.(changeset, msg_func) do
-            errors when errors == %{} -> acc
-            errors -> Map.put(acc, field, errors)
+            child when child == %{} -> acc
+            child -> Map.put(acc, field, child)
           end
         else
           acc
@@ -3030,11 +3026,7 @@ defmodule Ecto.Changeset do
     validations
     |> Enum.reverse()
     |> merge_keyword_keys(msg_func, changeset)
-    |> merge_related_validation_keys(changes, types, msg_func)
-  end
-
-  defp merge_related_validation_keys(map, changes, types, msg_function) do
-    merge_related_keys(map, changes, types, msg_function, &traverse_validations/2)
+    |> merge_related_keys(changes, types, msg_func, &traverse_validations/2)
   end
 end
 
