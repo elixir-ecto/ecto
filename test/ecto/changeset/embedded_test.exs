@@ -997,4 +997,16 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert changeset.errors == []
     assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [%{title: [{"can't be blank", [validation: :required]}]}]}
   end
+
+  ## traverse_validations
+
+  test "traverses changeset validations with embeds_one" do
+    changeset = cast(%Author{}, %{profile: %{}}, :profile)
+    assert Changeset.traverse_validations(changeset, &(&1)) == %{profile: %{name: [length: [min: 3]]}}
+  end
+
+  test "traverses changeset validations with embeds_many" do
+    changeset = cast(%Author{}, %{posts: [%{}]}, :posts)
+    assert Changeset.traverse_validations(changeset, &(&1)) == %{posts: [%{title: [length: [min: 3]]}]}
+  end
 end

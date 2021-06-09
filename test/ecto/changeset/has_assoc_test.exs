@@ -20,6 +20,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     def changeset(schema, params) do
       Changeset.cast(schema, params, ~w(title author_id)a)
       |> Changeset.validate_required(:title)
+      |> Changeset.validate_length(:title, min: 3)
     end
 
     def set_action(schema, params) do
@@ -66,6 +67,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     def changeset(schema, params) do
       Changeset.cast(schema, params, ~w(name id)a)
       |> Changeset.validate_required(:name)
+      |> Changeset.validate_length(:name, min: 3)
     end
 
     def optional_changeset(schema, params) do
@@ -1199,5 +1201,17 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = cast(%Author{}, %{posts: []}, :posts, required: true)
     assert changeset.errors == [posts: {"can't be blank", [validation: :required]}]
     assert Changeset.traverse_errors(changeset, &(&1)) == %{posts: [{"can't be blank", [validation: :required]}]}
+  end
+
+  ## traverse_validations
+
+  test "traverses changeset validations with has_one" do
+    changeset = cast(%Author{}, %{profile: %{}}, :profile)
+    assert Changeset.traverse_validations(changeset, &(&1)) == %{profile: %{name: [length: [min: 3]]}}
+  end
+
+  test "traverses changeset validations with has_many" do
+    changeset = cast(%Author{}, %{posts: [%{}]}, :posts)
+    assert Changeset.traverse_validations(changeset, &(&1)) == %{posts: [%{title: [length: [min: 3]]}]}
   end
 end
