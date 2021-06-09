@@ -94,6 +94,12 @@ defmodule Ecto.SchemaTest do
     end
   end
 
+  test "raises on unknown meta key in metadata" do
+    assert_raise ArgumentError, "unknown meta key :foo", fn ->
+      Ecto.put_meta(%Schema{}, foo: :bar)
+    end
+  end
+
   test "preserves schema on up to date metadata" do
     old_schema = %Schema{}
     new_schema = Ecto.put_meta(old_schema, source: "my schema", state: :built, prefix: nil)
