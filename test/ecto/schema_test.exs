@@ -699,6 +699,36 @@ defmodule Ecto.SchemaTest do
     end
   end
 
+  test "has_* validates :on_delete option value" do
+    msg =
+      "invalid :on_delete option for :posts. The only valid options are: " <>
+        "`:nothing`, `:nilify_all`, `:delete_all`"
+
+    assert_raise ArgumentError, msg, fn ->
+      defmodule InvalidHasOption do
+        use Ecto.Schema
+
+        schema "assoc" do
+          has_many :posts, Post, on_delete: nil
+        end
+      end
+    end
+
+    msg =
+      "invalid :on_delete option for :post. The only valid options are: " <>
+        "`:nothing`, `:nilify_all`, `:delete_all`"
+
+    assert_raise ArgumentError, msg, fn ->
+      defmodule InvalidHasOption do
+        use Ecto.Schema
+
+        schema "assoc" do
+          has_one :post, Post, on_delete: nil
+        end
+      end
+    end
+  end
+
   test "has_* references option has to match a field on schema" do
     message = ~r"schema does not have the field :pk used by association :posts"
     assert_raise ArgumentError, message, fn ->
