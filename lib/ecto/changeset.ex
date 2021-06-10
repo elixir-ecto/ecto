@@ -1615,8 +1615,8 @@ defmodule Ecto.Changeset do
     * `{:subset, Enum.t}`
 
   Note that calling `validate_required/3` does not store the validation under the
-  changeset.validations key (and so won't be included in the result of this
-  function). The required fields are stored under the changeset.required key.
+  `changeset.validations` key (and so won't be included in the result of this
+  function). The required fields are stored under the `changeset.required` key.
   """
   @spec validations(t) :: [{atom, term}]
   def validations(%Changeset{validations: validations}) do
