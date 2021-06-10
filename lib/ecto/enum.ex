@@ -7,20 +7,34 @@ defmodule Ecto.Enum do
   to a string or an integer when writing to the database and converts them back
   to atoms when loading data. It can be used in your schemas as follows:
 
+      # Stored as strings
       field :status, Ecto.Enum, values: [:foo, :bar, :baz]
 
   or
 
+      # Stored as integers
       field :status, Ecto.Enum, values: [foo: 1, bar: 2, baz: 5]
+
+  Therefore, the type to be used in your migrations for enum fields depend
+  on the choice above. For the cases above, one would do, respectively:
+
+      add :status, :string
+
+  and
+
+      add :status, :integer
+
+  Some databases also support enum types, which you could use in combination
+  with the above.
 
   Composite types, such as `:array`, are also supported:
 
       field :roles, {:array, Ecto.Enum}, values: [:Author, :Editor, :Admin]
 
-  `:values` must be a list of atoms or a keyword list. Values will be cast to
-  atoms safely and only if the atom exists in the list (otherwise an error will
-  be raised). Attempting to load any string/integer not represented by an atom
-  in the list will be invalid.
+  Overall, `:values` must be a list of atoms or a keyword list. Values will be
+  cast to atoms safely and only if the atom exists in the list (otherwise an
+  error will be raised). Attempting to load any string/integer not represented
+  by an atom in the list will be invalid.
 
   The helper function `values/2` returns the values for a given schema and
   field, which can be used in places like form drop-downs. For example,
