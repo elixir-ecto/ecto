@@ -547,7 +547,15 @@ defmodule Ecto.Query.API do
       field = "name"
       from(post in Post, select: post.meta["author"][^field])
 
-  ## Warning
+  ## Warning: indexes on PostgreSQL
+
+  PostgreSQL supports indexing on jsonb columns via GIN indexes.
+  However, `json_extract_path` uses the `#>` operator to access
+  json fields, which cannot be optimized by GIN indexes. Therefore,
+  for indexed jsonb columns, you want to consult PostgreSQL's
+  documentation and use the most appropriate operation.
+
+  ## Warning: return types
 
   The underlying data in the JSON column is returned without any
   additional decoding. This means "null" JSON values are not the
