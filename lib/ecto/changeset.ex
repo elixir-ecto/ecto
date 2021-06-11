@@ -1593,9 +1593,8 @@ defmodule Ecto.Changeset do
   not necessarily exhaustive. For example, custom validations written
   by the developer will also appear in our return value.
 
-  This first group contains validations that take a keyword list of validators,
-  where the validators are shown immediately following the validation type.
-  This list may also include a `message:` key.
+  This first group contains validations that hold a keyword list of validators.
+  This list may also include a `:message` key.
 
     * `{:length, [option]}`
 
@@ -1622,6 +1621,8 @@ defmodule Ecto.Changeset do
   Note that calling `validate_required/3` does not store the validation under the
   `changeset.validations` key (and so won't be included in the result of this
   function). The required fields are stored under the `changeset.required` key.
+
+  The primary motive for `validations` is to generate HTML5 validations.
   """
   @spec validations(t) :: [{atom, term}]
   def validations(%Changeset{validations: validations}) do
