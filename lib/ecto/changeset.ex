@@ -412,7 +412,8 @@ defmodule Ecto.Changeset do
   The given `data` may be either a changeset, a schema struct or a `{data, types}`
   tuple. The second argument is a map of `params` that are cast according
   to the type information from `data`. `params` is a map with string keys
-  or a map with atom keys containing potentially invalid data.
+  or a map with atom keys, containing potentially invalid data. Mixed keys
+  are not allowed.
 
   During casting, all `permitted` parameters whose values match the specified
   type information will have their key name converted to an atom and stored
@@ -588,6 +589,10 @@ defmodule Ecto.Changeset do
 
   # TODO: Remove branch when we require Elixir v1.10+.
   if Code.ensure_loaded?(:maps) and function_exported?(:maps, :iterator, 1) do
+    # We only look at the first element because traversing the whole map
+    # can be expensive and it was showing up during profiling. This means
+    # we won't always raise, but the check only exists for user convenience
+    # anyway, and it is not a guarantee.
     defp convert_params(params) do
       case :maps.next(:maps.iterator(params)) do
         {key, _, _} when is_atom(key) ->
