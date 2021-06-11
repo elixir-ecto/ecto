@@ -356,6 +356,13 @@ defmodule Ecto.MultiTest do
     end
   end
 
+  test "add changeset with duplicate action" do
+    changeset = %{Changeset.change(%Comment{}) | action: :insert}
+    multi = Multi.new() |> Multi.insert(:changeset, changeset)
+
+    assert multi.operations == [{:changeset, {:changeset, changeset, []}}]
+  end
+
   test "add run with invalid arity" do
     assert_raise FunctionClauseError, fn ->
       Multi.new() |> Multi.run(:run, fn -> nil end)
