@@ -1593,9 +1593,8 @@ defmodule Ecto.Changeset do
   not necessarily exhaustive. For example, custom validations written
   by the developer will also appear in our return value.
 
-  This first group contains validations that take a keyword list of validators,
-  where the validators are shown immediately following the validation type.
-  This list may also include a `message:` key.
+  This first group contains validations that hold a keyword list of validators.
+  This list may also include a `:message` key.
 
     * `{:length, [option]}`
 
