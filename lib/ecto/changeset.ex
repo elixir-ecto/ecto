@@ -1621,8 +1621,6 @@ defmodule Ecto.Changeset do
   Note that calling `validate_required/3` does not store the validation under the
   `changeset.validations` key (and so won't be included in the result of this
   function). The required fields are stored under the `changeset.required` key.
-
-  The primary motive for `validations` is to generate HTML5 validations.
   """
   @spec validations(t) :: [{atom, term}]
   def validations(%Changeset{validations: validations}) do
