@@ -360,7 +360,7 @@ defmodule Ecto.MultiTest do
     changeset = %{Changeset.change(%Comment{}) | action: :insert}
     multi = Multi.new() |> Multi.insert(:changeset, changeset)
 
-    assert multi.operations == [{:changeset, {:changeset, %{changeset | action: :insert}, []}}]
+    assert multi.operations == [{:changeset, {:changeset, changeset, []}}]
   end
 
   test "add run with invalid arity" do
