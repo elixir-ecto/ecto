@@ -3,6 +3,11 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
 
   import Mix.Tasks.Ecto.Gen.Repo, only: [run: 1]
 
+  test "raises when no repo given" do
+    msg = "ecto.gen.repo expects the repository to be given as -r MyApp.Repo"
+    assert_raise Mix.Error, msg, fn -> run [] end
+  end
+
   test "generates a new repo" do
     in_tmp "new_repo", fn ->
       run ["-r", "Repo"]
