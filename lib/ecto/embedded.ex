@@ -57,24 +57,24 @@ defmodule Ecto.Embedded do
   def load(nil, _fun, %{cardinality: :one}), do: {:ok, nil}
 
   def load(value, fun, %{cardinality: :one, related: schema, field: field}) when is_map(value) do
-    {:ok, load(field, schema, value, fun)}
+    {:ok, load_field(field, schema, value, fun)}
   end
 
   def load(nil, _fun, %{cardinality: :many}), do: {:ok, []}
 
   def load(value, fun, %{cardinality: :many, related: schema, field: field}) when is_list(value) do
-    {:ok, Enum.map(value, &load(field, schema, &1, fun))}
+    {:ok, Enum.map(value, &load_field(field, schema, &1, fun))}
   end
 
   def load(_value, _fun, _embed) do
     :error
   end
 
-  def load(_field, schema, value, loader) when is_map(value) do
+  def load_field(_field, schema, value, loader) when is_map(value) do
     Ecto.Schema.Loader.unsafe_load(schema, value, loader)
   end
 
-  def load(field, _schema, value, _fun) do
+  def load_field(field, _schema, value, _fun) do
     raise ArgumentError, "cannot load embed `#{field}`, expected a map but got: #{inspect value}"
   end
 
@@ -82,23 +82,23 @@ defmodule Ecto.Embedded do
   def dump(nil, _, _), do: {:ok, nil}
 
   def dump(value, fun, %{cardinality: :one, related: schema, field: field}) when is_map(value) do
-    {:ok, dump(field, schema, value, schema.__schema__(:dump), fun)}
+    {:ok, dump_field(field, schema, value, schema.__schema__(:dump), fun)}
   end
 
   def dump(value, fun, %{cardinality: :many, related: schema, field: field}) when is_list(value) do
     types = schema.__schema__(:dump)
-    {:ok, Enum.map(value, &dump(field, schema, &1, types, fun))}
+    {:ok, Enum.map(value, &dump_field(field, schema, &1, types, fun))}
   end
 
   def dump(_value, _fun, _embed) do
     :error
   end
 
-  def dump(_field, schema, %{__struct__: schema} = struct, types, dumper) do
+  def dump_field(_field, schema, %{__struct__: schema} = struct, types, dumper) do
     Ecto.Schema.Loader.safe_dump(struct, types, dumper)
   end
 
-  def dump(field, schema, value, _types, _dumper) do
+  def dump_field(field, schema, value, _types, _dumper) do
     raise ArgumentError,
           "cannot dump embed `#{field}`, " <>
             "expected a struct #{inspect schema} value but got: #{inspect value}"
