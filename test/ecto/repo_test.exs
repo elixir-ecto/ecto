@@ -528,6 +528,18 @@ defmodule Ecto.RepoTest do
         TestRepo.insert_all MySchema, [%{another: nil}]
       end
     end
+
+    test "with an embedded struct" do
+      TestRepo.insert_all(MySchemaWithEmbed, [%{embeds: [%MyEmbed{x: "x"}]}])
+      assert_received {:insert_all, %{source: "my_schema"}, [row]}
+      assert [embeds: [%{id: nil, x: "x"}]] = row
+    end
+
+    test "raises when an embedded struct is needed" do
+      assert_raise ArgumentError, ~r"expected a struct #{inspect(MyEmbed)} value", fn ->
+        TestRepo.insert_all(MySchemaWithEmbed, [%{embeds: [%{x: "x"}]}])
+      end
+    end
   end
 
   defmodule MySchemaWithBinaryId do

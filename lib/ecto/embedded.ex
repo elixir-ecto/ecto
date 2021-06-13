@@ -75,7 +75,7 @@ defmodule Ecto.Embedded do
   end
 
   def load(field, _schema, value, _fun) do
-    raise ArgumentError, "cannot load embed `#{field}`, invalid value: #{inspect value}"
+    raise ArgumentError, "cannot load embed `#{field}`, expected a map but got: #{inspect value}"
   end
 
   @impl Ecto.ParameterizedType
@@ -98,8 +98,10 @@ defmodule Ecto.Embedded do
     Ecto.Schema.Loader.safe_dump(struct, types, dumper)
   end
 
-  def dump(field, _schema, value, _types, _fun) do
-    raise ArgumentError, "cannot dump embed `#{field}`, invalid value: #{inspect value}"
+  def dump(field, schema, value, _types, _dumper) do
+    raise ArgumentError,
+          "cannot dump embed `#{field}`, " <>
+            "expected a struct #{inspect schema} value but got: #{inspect value}"
   end
 
   @impl Ecto.ParameterizedType
