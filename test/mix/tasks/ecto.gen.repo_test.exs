@@ -8,6 +8,11 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
     assert_raise Mix.Error, msg, fn -> run [] end
   end
 
+  test "raises when multiple repos given" do
+    msg = "ecto.gen.repo expects a single repository to be given"
+    assert_raise Mix.Error, msg, fn -> run ["-r", "Foo.Repo", "--repo", "Bar.Repo"] end
+  end
+
   test "generates a new repo" do
     in_tmp "new_repo", fn ->
       run ["-r", "Repo"]
