@@ -555,7 +555,7 @@ defmodule Ecto.RepoTest do
         TestRepo.insert_all(MySchemaEmbedsOne, [%{embed: %{x: "x"}}])
       end
 
-      assert_raise ArgumentError, ~r"expected a struct #{inspect(MyEmbed)} value", fn ->
+      assert_raise ArgumentError, ~r"expected a list of #{inspect(MyEmbed)} struct values", fn ->
         TestRepo.insert_all(MySchemaEmbedsMany, [%{embeds: [%{x: "x"}]}])
       end
     end

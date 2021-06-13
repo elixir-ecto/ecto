@@ -82,26 +82,30 @@ defmodule Ecto.Embedded do
   def dump(nil, _, _), do: {:ok, nil}
 
   def dump(value, fun, %{cardinality: :one, related: schema, field: field}) when is_map(value) do
-    {:ok, dump_field(field, schema, value, schema.__schema__(:dump), fun)}
+    {:ok, dump_field(field, schema, value, schema.__schema__(:dump), fun, _one_embed? = true)}
   end
 
   def dump(value, fun, %{cardinality: :many, related: schema, field: field}) when is_list(value) do
     types = schema.__schema__(:dump)
-    {:ok, Enum.map(value, &dump_field(field, schema, &1, types, fun))}
+    {:ok, Enum.map(value, &dump_field(field, schema, &1, types, fun, _one_embed? = false))}
   end
 
   def dump(_value, _fun, _embed) do
     :error
   end
 
-  def dump_field(_field, schema, %{__struct__: schema} = struct, types, dumper) do
+  def dump_field(_field, schema, %{__struct__: schema} = struct, types, dumper, _one_embed?) do
     Ecto.Schema.Loader.safe_dump(struct, types, dumper)
   end
 
-  def dump_field(field, schema, value, _types, _dumper) do
+  def dump_field(field, schema, value, _types, _dumper, one_embed?) do
+    one_or_many =
+      if one_embed?,
+        do: "a struct #{inspect schema} value",
+        else: "a list of #{inspect schema} struct values"
+
     raise ArgumentError,
-          "cannot dump embed `#{field}`, " <>
-            "expected a struct #{inspect schema} value but got: #{inspect value}"
+          "cannot dump embed `#{field}`, expected #{one_or_many} but got: #{inspect value}"
   end
 
   @impl Ecto.ParameterizedType
