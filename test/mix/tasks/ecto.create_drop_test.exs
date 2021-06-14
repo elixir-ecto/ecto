@@ -102,8 +102,13 @@ defmodule Mix.Tasks.Ecto.CreateDropTest do
   end
 
   test "raises an error when storage_down gives an unknown feedback" do
-    Process.put(:storage_down, {:error, :confused})
-    assert_raise Mix.Error, fn ->
+    Process.put(:storage_down, {:error, {:error, :confused}})
+    assert_raise Mix.Error, ~r/couldn't be dropped: {:error, :confused}/, fn ->
+      Drop.run ["-r", to_string(Repo)]
+    end
+
+    Process.put(:storage_down, {:error, "unknown"})
+    assert_raise Mix.Error, ~r/couldn't be dropped: unknown/, fn ->
       Drop.run ["-r", to_string(Repo)]
     end
   end
