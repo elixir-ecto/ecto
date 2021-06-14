@@ -115,12 +115,21 @@ defmodule Ecto.RepoTest do
     end
   end
 
-  defmodule MySchemaWithEmbed do
+  defmodule MySchemaEmbedsMany do
     use Ecto.Schema
 
     schema "my_schema" do
       field :x, :string
       embeds_many :embeds, MyEmbed
+    end
+  end
+
+  defmodule MySchemaEmbedsOne do
+    use Ecto.Schema
+
+    schema "my_schema" do
+      field :x, :string
+      embeds_one :embed, MyEmbed
     end
   end
 
@@ -526,6 +535,28 @@ defmodule Ecto.RepoTest do
     test "raises when on associations" do
       assert_raise ArgumentError, fn ->
         TestRepo.insert_all MySchema, [%{another: nil}]
+      end
+    end
+
+    test "with an embeds_one field" do
+      TestRepo.insert_all(MySchemaEmbedsOne, [%{embed: %MyEmbed{x: "x"}}])
+      assert_received {:insert_all, %{source: "my_schema"}, [row]}
+      assert [embed: %{id: nil, x: "x"}] = row
+    end
+
+    test "with an embeds_many field" do
+      TestRepo.insert_all(MySchemaEmbedsMany, [%{embeds: [%MyEmbed{x: "x"}]}])
+      assert_received {:insert_all, %{source: "my_schema"}, [row]}
+      assert [embeds: [%{id: nil, x: "x"}]] = row
+    end
+
+    test "raises when an embedded struct is needed" do
+      assert_raise ArgumentError, ~r"expected a struct #{inspect(MyEmbed)} value", fn ->
+        TestRepo.insert_all(MySchemaEmbedsOne, [%{embed: %{x: "x"}}])
+      end
+
+      assert_raise ArgumentError, ~r"expected a list of #{inspect(MyEmbed)} struct values", fn ->
+        TestRepo.insert_all(MySchemaEmbedsMany, [%{embeds: [%{x: "x"}]}])
       end
     end
   end
@@ -1254,11 +1285,11 @@ defmodule Ecto.RepoTest do
         end)
 
       changeset =
-        %MySchemaWithEmbed{id: 1}
+        %MySchemaEmbedsMany{id: 1}
         |> Ecto.Changeset.cast(%{x: "one"}, [:x])
         |> Ecto.Changeset.put_embed(:embeds, [embed_changeset])
 
-      %MySchemaWithEmbed{embeds: [embed]} = TestRepo.insert!(changeset)
+      %MySchemaEmbedsMany{embeds: [embed]} = TestRepo.insert!(changeset)
       assert embed.x == "ONE"
       assert_received {:transaction, _}
       assert Process.get(:ecto_repo) == TestRepo
@@ -1329,7 +1360,7 @@ defmodule Ecto.RepoTest do
 
     test "passes all fields+embeds on replace_all" do
       fields = [:id, :x, :embeds]
-      TestRepo.insert(%MySchemaWithEmbed{id: 1}, on_conflict: :replace_all)
+      TestRepo.insert(%MySchemaEmbedsMany{id: 1}, on_conflict: :replace_all)
       assert_received {:insert, %{source: "my_schema", on_conflict: {^fields, [], []}}}
     end
 
