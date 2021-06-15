@@ -46,5 +46,14 @@ defmodule Mix.EctoTest do
     after
       System.put_env("ECTO_EDITOR", @editor)
     end
+
+    test "opens without __FILE__ and __LINE__" do
+      System.put_env("ECTO_EDITOR", "echo foo")
+
+      open?("lib/some/file.ex", 4)
+      assert_received {:mix_shell, :run, ["foo lib/some/file.ex:4\n"]}
+    after
+      System.put_env("ECTO_EDITOR", @editor)
+    end
   end
 end
