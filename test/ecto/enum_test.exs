@@ -25,7 +25,7 @@ defmodule Ecto.EnumTest do
                 %{
                   on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                   on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
-                  values: [:foo, :bar, :baz],
+                  mappings: [foo: "foo", bar: "bar", baz: "baz"],
                   type: :string
                 }}
 
@@ -36,7 +36,7 @@ defmodule Ecto.EnumTest do
                   %{
                     on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
                     on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
-                    values: [:foo, :bar, :baz],
+                    mappings: [foo: "foo", bar: "bar", baz: "baz"],
                     type: :string
                   }}
                }
@@ -46,7 +46,7 @@ defmodule Ecto.EnumTest do
                 %{
                   on_dump: %{bar: 2, baz: 5, foo: 1},
                   on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
-                  values: [:foo, :bar, :baz],
+                  mappings: [foo: 1, bar: 2, baz: 5],
                   type: :integer
                 }}
 
@@ -57,7 +57,7 @@ defmodule Ecto.EnumTest do
                   %{
                     on_dump: %{bar: 2, baz: 5, foo: 1},
                     on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
-                    values: [:foo, :bar, :baz],
+                    mappings: [foo: 1, bar: 2, baz: 5],
                     type: :integer
                   }}
                }
@@ -67,7 +67,7 @@ defmodule Ecto.EnumTest do
                 %{
                   on_dump: %{bar: "baar", baz: "baaz", foo: "fooo"},
                   on_load: %{"baar" => :bar, "baaz" => :baz, "fooo" => :foo},
-                  values: [:foo, :bar, :baz],
+                  mappings: [foo: "fooo", bar: "baar", baz: "baaz"],
                   type: :string
                 }}
 
@@ -78,7 +78,7 @@ defmodule Ecto.EnumTest do
                   %{
                     on_dump: %{bar: "baar", baz: "baaz", foo: "fooo"},
                     on_load: %{"baar" => :bar, "baaz" => :baz, "fooo" => :foo},
-                    values: [:foo, :bar, :baz],
+                    mappings: [foo: "fooo", bar: "baar", baz: "baaz"],
                     type: :string
                   }}
                }
@@ -112,6 +112,16 @@ defmodule Ecto.EnumTest do
 
           schema "invalidvalues" do
             field :name, Ecto.Enum, values: ["foo", "bar"]
+          end
+        end
+      end
+
+      assert_raise ArgumentError, message, fn ->
+        defmodule SchemaInvalidEnumValues do
+          use Ecto.Schema
+
+          schema "invalidvalues" do
+            field :name, Ecto.Enum, values: [a: 1, b: "2"]
           end
         end
       end
@@ -382,6 +392,30 @@ defmodule Ecto.EnumTest do
     test "raises on bad field" do
       assert_raise ArgumentError, "foo is not an Ecto.Enum field", fn ->
         Ecto.Enum.values(EnumSchema, :foo)
+      end
+    end
+  end
+
+  describe "mappings/2" do
+    test "returns correct values" do
+      assert Ecto.Enum.mappings(EnumSchema, :my_enum) == [foo: "foo", bar: "bar", baz: "baz"]
+      assert Ecto.Enum.mappings(EnumSchema, :my_enums) == [foo: "foo", bar: "bar", baz: "baz"]
+      assert Ecto.Enum.mappings(EnumSchema, :my_string_enum) == [foo: "fooo", bar: "baar", baz: "baaz"]
+      assert Ecto.Enum.mappings(EnumSchema, :my_string_enums) == [foo: "fooo", bar: "baar", baz: "baaz"]
+      assert Ecto.Enum.mappings(EnumSchema, :my_integer_enum) == [foo: 1, bar: 2, baz: 5]
+      assert Ecto.Enum.mappings(EnumSchema, :my_integer_enums) == [foo: 1, bar: 2, baz: 5]
+      assert Ecto.Enum.mappings(EnumSchema, :virtual_enum) == [foo: "foo", bar: "bar", baz: "baz"]
+    end
+
+    test "raises on bad schema" do
+      assert_raise ArgumentError, "NotASchema is not an Ecto schema", fn ->
+        Ecto.Enum.mappings(NotASchema, :foo)
+      end
+    end
+
+    test "raises on bad field" do
+      assert_raise ArgumentError, "foo is not an Ecto.Enum field", fn ->
+        Ecto.Enum.mappings(EnumSchema, :foo)
       end
     end
   end

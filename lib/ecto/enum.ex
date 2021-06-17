@@ -20,7 +20,7 @@ defmodule Ecto.Enum do
 
       add :status, :string
 
-  and
+  or
 
       add :status, :integer
 
@@ -62,9 +62,9 @@ defmodule Ecto.Enum do
 
   @impl true
   def init(opts) do
-    values = Keyword.get(opts, :values, nil)
+    values = opts[:values]
 
-    {type, values} =
+    {type, mappings} =
       cond do
         is_list(values) and Enum.all?(values, &is_atom/1) ->
           validate_unique!(values)
@@ -90,9 +90,9 @@ defmodule Ecto.Enum do
           """
       end
 
-    on_load = Map.new(values, fn {key, val} -> {val, key} end)
-    on_dump = Enum.into(values, %{})
-    %{on_load: on_load, on_dump: on_dump, values: Keyword.keys(values), type: type}
+    on_load = Map.new(mappings, fn {key, val} -> {val, key} end)
+    on_dump = Enum.into(mappings, %{})
+    %{on_load: on_load, on_dump: on_dump, mappings: mappings, type: type}
   end
 
   defp validate_unique!(values) do
@@ -159,13 +159,19 @@ defmodule Ecto.Enum do
   def embed_as(_, _), do: :self
 
   def values(schema, field) do
+    schema
+    |> mappings(field)
+    |> Keyword.keys()
+  end
+
+  def mappings(schema, field) do
     try do
       schema.__changeset__()
     rescue
       _ in UndefinedFunctionError -> raise ArgumentError, "#{inspect schema} is not an Ecto schema"
     else
-      %{^field => {:parameterized, Ecto.Enum, %{values: values}}} -> values
-      %{^field => {_, {:parameterized, Ecto.Enum, %{values: values}}}} -> values
+      %{^field => {:parameterized, Ecto.Enum, %{mappings: mappings}}} -> mappings
+      %{^field => {_, {:parameterized, Ecto.Enum, %{mappings: mappings}}}} -> mappings
       %{} -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
     end
   end
