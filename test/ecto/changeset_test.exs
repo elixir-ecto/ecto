@@ -1905,6 +1905,17 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  defmodule RedactedEmbeddedSchema do
+    use Ecto.Schema
+
+    embedded_schema do
+      field :password, :string, redact: true
+      field :username, :string
+      field :display_name, :string, redact: false
+      field :virtual_pass, :string, redact: true, virtual: true
+    end
+  end
+
   describe "inspect" do
     test "reveals relevant data" do
       assert inspect(%Ecto.Changeset{}) ==
@@ -1924,6 +1935,10 @@ defmodule Ecto.ChangesetTest do
 
     test "redacts fields marked redact: true" do
       changeset = Ecto.Changeset.cast(%RedactedSchema{}, %{password: "hunter2"}, [:password])
+      refute inspect(changeset) =~ "hunter2"
+      assert inspect(changeset) =~ "**redacted**"
+
+      changeset = Ecto.Changeset.cast(%RedactedEmbeddedSchema{}, %{password: "hunter2"}, [:password])
       refute inspect(changeset) =~ "hunter2"
       assert inspect(changeset) =~ "**redacted**"
     end
