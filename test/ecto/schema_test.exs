@@ -182,19 +182,28 @@ defmodule Ecto.SchemaTest do
 
     embedded_schema do
       field :name,  :string, default: "eric"
+      field :password, :string, redact: true
     end
   end
 
   test "embedded schema" do
     assert EmbeddedSchema.__schema__(:source)          == nil
     assert EmbeddedSchema.__schema__(:prefix)          == nil
-    assert EmbeddedSchema.__schema__(:fields)          == [:id, :name]
+    assert EmbeddedSchema.__schema__(:fields)          == [:id, :name, :password]
     assert EmbeddedSchema.__schema__(:primary_key)     == [:id]
     assert EmbeddedSchema.__schema__(:autogenerate_id) == {:id, :id, :binary_id}
   end
 
   test "embedded schema does not have metadata" do
     refute match?(%{__meta__: _}, %EmbeddedSchema{})
+  end
+
+  test "embedded redacted_fields" do
+    assert EmbeddedSchema.__schema__(:redact_fields) == [:password]
+  end
+
+  test "embedded derives inspect" do
+    refute inspect(%EmbeddedSchema{password: "hunter2"}) =~ "hunter2"
   end
 
   defmodule CustomEmbeddedSchema do
