@@ -172,7 +172,8 @@ defmodule Ecto.Enum do
     else
       %{^field => {:parameterized, Ecto.Enum, %{mappings: mappings}}} -> mappings
       %{^field => {_, {:parameterized, Ecto.Enum, %{mappings: mappings}}}} -> mappings
-      %{} -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
+      %{^field => _} -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
+      %{} -> raise ArgumentError, "#{field} does not exist"
     end
   end
 end
