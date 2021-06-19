@@ -67,9 +67,12 @@ defmodule Ecto.Enum do
     {type, values} =
       cond do
         is_list(values) and Enum.all?(values, &is_atom/1) ->
+          validate_unique!(values)
           {:string, Enum.map(values, fn atom -> {atom, to_string(atom)} end)}
 
         type = Keyword.keyword?(values) and infer_type(Keyword.values(values)) ->
+          validate_unique!(Keyword.keys(values))
+          validate_unique!(Keyword.values(values))
           {type, values}
 
         true ->
@@ -90,6 +93,24 @@ defmodule Ecto.Enum do
     on_load = Map.new(values, fn {key, val} -> {val, key} end)
     on_dump = Enum.into(values, %{})
     %{on_load: on_load, on_dump: on_dump, values: Keyword.keys(values), type: type}
+  end
+
+  defp validate_unique!(values) do
+    if length(Enum.uniq(values)) != length(values) do
+      raise ArgumentError, """
+      Ecto.Enum type values must be unique.
+
+      For example:
+
+          field :my_field, Ecto.Enum, values: [:foo, :bar, :foo]
+
+      is invalid, while
+
+          field :my_field, Ecto.Enum, values: [:foo, :bar, :baz]
+
+      is valid
+      """
+    end
   end
 
   defp infer_type(values) do

@@ -116,6 +116,40 @@ defmodule Ecto.EnumTest do
         end
       end
     end
+
+    test "repeated values" do
+      message = ~r"Ecto.Enum type values must be unique"
+
+      assert_raise ArgumentError, message, fn ->
+        defmodule SchemaDuplicateEnumValues do
+          use Ecto.Schema
+
+          schema "duplicate_values" do
+            field :name, Ecto.Enum, values: [:foo, :foo]
+          end
+        end
+      end
+
+      assert_raise ArgumentError, message, fn ->
+        defmodule SchemaDuplicateEnumKeys do
+          use Ecto.Schema
+
+          schema "duplicate_values" do
+            field :name, Ecto.Enum, values: [foo: 1, foo: 2]
+          end
+        end
+      end
+
+      assert_raise ArgumentError, message, fn ->
+        defmodule SchemaDuplicateEnumMappings do
+          use Ecto.Schema
+
+          schema "duplicate_values" do
+            field :name, Ecto.Enum, values: [foo: 1, bar: 1]
+          end
+        end
+      end
+    end
   end
 
   describe "cast" do
