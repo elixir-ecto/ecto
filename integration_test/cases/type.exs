@@ -346,6 +346,23 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   @tag :map_type
+  test "error when a map for an embedded struct is needed" do
+    item = %Item{price: 123, valid_at: ~D[2014-01-16]}
+
+    assert_raise ArgumentError, ~r"expected a map value", fn ->
+      order = TestRepo.insert!(%Order{item: item})
+      "orders" |> where(id: ^order.id) |> TestRepo.update_all(set: [item: 123])
+      TestRepo.get!(Order, order.id)
+    end
+
+    assert_raise ArgumentError, ~r"expected a list of map values", fn ->
+      order = TestRepo.insert!(%Order{items: [item]})
+      "orders" |> where(id: ^order.id) |> TestRepo.update_all(set: [items: 123])
+      TestRepo.get!(Order, order.id)
+    end
+  end
+
+  @tag :map_type
   @tag :array_type
   test "embeds many" do
     item = %Item{price: 123, valid_at: ~D[2014-01-16]}

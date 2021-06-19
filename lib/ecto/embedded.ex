@@ -57,25 +57,31 @@ defmodule Ecto.Embedded do
   def load(nil, _fun, %{cardinality: :one}), do: {:ok, nil}
 
   def load(value, fun, %{cardinality: :one, related: schema, field: field}) when is_map(value) do
-    {:ok, load_field(field, schema, value, fun)}
+    {:ok, load_field(field, schema, value, fun, _one_embed? = true)}
   end
 
   def load(nil, _fun, %{cardinality: :many}), do: {:ok, []}
 
   def load(value, fun, %{cardinality: :many, related: schema, field: field}) when is_list(value) do
-    {:ok, Enum.map(value, &load_field(field, schema, &1, fun))}
+    {:ok, Enum.map(value, &load_field(field, schema, &1, fun, _one_embed? = false))}
   end
 
   def load(_value, _fun, _embed) do
     :error
   end
 
-  def load_field(_field, schema, value, loader) when is_map(value) do
+  def load_field(_field, schema, value, loader, _one_embed?) when is_map(value) do
     Ecto.Schema.Loader.unsafe_load(schema, value, loader)
   end
 
-  def load_field(field, _schema, value, _fun) do
-    raise ArgumentError, "cannot load embed `#{field}`, expected a map but got: #{inspect value}"
+  def load_field(field, _schema, value, _loader, one_embed?) do
+    one_or_many =
+      if one_embed?,
+        do: "a map value",
+        else: "a list of map values"
+
+    raise ArgumentError,
+          "cannot load embed `#{field}`, expected #{one_or_many} but got: #{inspect value}"
   end
 
   @impl Ecto.ParameterizedType
