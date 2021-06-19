@@ -6,13 +6,16 @@ defmodule Ecto.Embedded do
 
   use Ecto.ParameterizedType
 
-  @type t :: %Embedded{cardinality: :one | :many,
-                       on_replace: :raise | :mark_as_invalid | :delete,
-                       field: atom,
-                       owner: atom,
-                       on_cast: nil | fun,
-                       related: atom,
-                       unique: boolean}
+  @type t :: %__MODULE__{
+          cardinality: :one | :many,
+          field: atom,
+          owner: atom,
+          related: atom,
+          on_cast: fun | nil,
+          on_replace: :raise | :mark_as_invalid | :delete,
+          unique: boolean,
+          ordered: boolean
+        }
 
   @behaviour Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
