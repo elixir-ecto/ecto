@@ -20,7 +20,7 @@ defmodule Ecto.Enum do
 
       add :status, :string
 
-  and
+  or
 
       add :status, :integer
 
@@ -36,9 +36,9 @@ defmodule Ecto.Enum do
   error will be raised). Attempting to load any string/integer not represented
   by an atom in the list will be invalid.
 
-  The helper function `values/2` returns the values for a given schema and
-  field, which can be used in places like form drop-downs. For example,
-  given the following schema:
+  The helper function `mappings/2` returns the mappings for a given schema and
+  field, which can be used in places like form drop-downs. For example, given 
+  the following schema:
 
       defmodule EnumSchema do
         use Ecto.Schema
@@ -48,11 +48,13 @@ defmodule Ecto.Enum do
         end
       end
 
-  you can call `values/2` like this:
+  you can call `mappings/2` like this:
 
       Ecto.Enum.values(EnumSchema, :my_enum)
-      #=> [:foo, :bar, :baz]
+      #=> [foo: "foo", bar: "bar", baz: "baz"]
 
+  If you want the values only, you can use `Ecto.Enum.values/2`, and if you want
+  the dump values only, you can use `Ecto.Enum.dump_values/2`.
   """
 
   use Ecto.ParameterizedType
@@ -62,9 +64,9 @@ defmodule Ecto.Enum do
 
   @impl true
   def init(opts) do
-    values = Keyword.get(opts, :values, nil)
+    values = opts[:values]
 
-    {type, values} =
+    {type, mappings} =
       cond do
         is_list(values) and Enum.all?(values, &is_atom/1) ->
           validate_unique!(values)
@@ -90,9 +92,9 @@ defmodule Ecto.Enum do
           """
       end
 
-    on_load = Map.new(values, fn {key, val} -> {val, key} end)
-    on_dump = Enum.into(values, %{})
-    %{on_load: on_load, on_dump: on_dump, values: Keyword.keys(values), type: type}
+    on_load = Map.new(mappings, fn {key, val} -> {val, key} end)
+    on_dump = Enum.into(mappings, %{})
+    %{on_load: on_load, on_dump: on_dump, mappings: mappings, type: type}
   end
 
   defp validate_unique!(values) do
@@ -158,15 +160,34 @@ defmodule Ecto.Enum do
   @impl true
   def embed_as(_, _), do: :self
 
+  @doc "Returns the possible values for a given schema and field"
+  @spec mappings(Ecto.Schema.t, atom) :: [atom()]
   def values(schema, field) do
+    schema
+    |> mappings(field)
+    |> Keyword.keys()
+  end
+
+  @doc "Returns the possible dump values for a given schema and field"
+  @spec mappings(Ecto.Schema.t, atom) :: [String.t()] | [integer()]
+  def dump_values(schema, field) do
+    schema
+    |> mappings(field)
+    |> Keyword.values()
+  end
+
+  @doc "Returns the mappings for a given schema and field"
+  @spec mappings(Ecto.Schema.t, atom) :: Keyword.t
+  def mappings(schema, field) do
     try do
       schema.__changeset__()
     rescue
       _ in UndefinedFunctionError -> raise ArgumentError, "#{inspect schema} is not an Ecto schema"
     else
-      %{^field => {:parameterized, Ecto.Enum, %{values: values}}} -> values
-      %{^field => {_, {:parameterized, Ecto.Enum, %{values: values}}}} -> values
-      %{} -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
+      %{^field => {:parameterized, Ecto.Enum, %{mappings: mappings}}} -> mappings
+      %{^field => {_, {:parameterized, Ecto.Enum, %{mappings: mappings}}}} -> mappings
+      %{^field => _} -> raise ArgumentError, "#{field} is not an Ecto.Enum field"
+      %{} -> raise ArgumentError, "#{field} does not exist"
     end
   end
 end

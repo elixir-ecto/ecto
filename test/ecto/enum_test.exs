@@ -15,6 +15,7 @@ defmodule Ecto.EnumTest do
       field :my_string_enum, Ecto.Enum, values: [foo: "fooo", bar: "baar", baz: "baaz"]
       field :my_string_enums, {:array, Ecto.Enum}, values: [foo: "fooo", bar: "baar", baz: "baaz"]
       field :virtual_enum, Ecto.Enum, values: [:foo, :bar, :baz], virtual: true
+      field :not_enum, :string
     end
   end
 
@@ -25,7 +26,7 @@ defmodule Ecto.EnumTest do
                 %{
                   on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                   on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
-                  values: [:foo, :bar, :baz],
+                  mappings: [foo: "foo", bar: "bar", baz: "baz"],
                   type: :string
                 }}
 
@@ -36,7 +37,7 @@ defmodule Ecto.EnumTest do
                   %{
                     on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
                     on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
-                    values: [:foo, :bar, :baz],
+                    mappings: [foo: "foo", bar: "bar", baz: "baz"],
                     type: :string
                   }}
                }
@@ -46,7 +47,7 @@ defmodule Ecto.EnumTest do
                 %{
                   on_dump: %{bar: 2, baz: 5, foo: 1},
                   on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
-                  values: [:foo, :bar, :baz],
+                  mappings: [foo: 1, bar: 2, baz: 5],
                   type: :integer
                 }}
 
@@ -57,7 +58,7 @@ defmodule Ecto.EnumTest do
                   %{
                     on_dump: %{bar: 2, baz: 5, foo: 1},
                     on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
-                    values: [:foo, :bar, :baz],
+                    mappings: [foo: 1, bar: 2, baz: 5],
                     type: :integer
                   }}
                }
@@ -67,7 +68,7 @@ defmodule Ecto.EnumTest do
                 %{
                   on_dump: %{bar: "baar", baz: "baaz", foo: "fooo"},
                   on_load: %{"baar" => :bar, "baaz" => :baz, "fooo" => :foo},
-                  values: [:foo, :bar, :baz],
+                  mappings: [foo: "fooo", bar: "baar", baz: "baaz"],
                   type: :string
                 }}
 
@@ -78,7 +79,7 @@ defmodule Ecto.EnumTest do
                   %{
                     on_dump: %{bar: "baar", baz: "baaz", foo: "fooo"},
                     on_load: %{"baar" => :bar, "baaz" => :baz, "fooo" => :foo},
-                    values: [:foo, :bar, :baz],
+                    mappings: [foo: "fooo", bar: "baar", baz: "baaz"],
                     type: :string
                   }}
                }
@@ -112,6 +113,16 @@ defmodule Ecto.EnumTest do
 
           schema "invalidvalues" do
             field :name, Ecto.Enum, values: ["foo", "bar"]
+          end
+        end
+      end
+
+      assert_raise ArgumentError, message, fn ->
+        defmodule SchemaInvalidEnumValues do
+          use Ecto.Schema
+
+          schema "invalidvalues" do
+            field :name, Ecto.Enum, values: [a: 1, b: "2"]
           end
         end
       end
@@ -334,22 +345,22 @@ defmodule Ecto.EnumTest do
 
   describe "load" do
     test "loads valid values" do
-      Process.put(:test_repo_all_results, {1, [[1, "foo", nil, nil, nil, nil, nil]]})
+      Process.put(:test_repo_all_results, {1, [[1, "foo", nil, nil, nil, nil, nil, nil]]})
       assert [%Ecto.EnumTest.EnumSchema{my_enum: :foo}] = TestRepo.all(EnumSchema)
 
-      Process.put(:test_repo_all_results, {1, [[1, nil, ["foo"], nil, nil, nil, nil]]})
+      Process.put(:test_repo_all_results, {1, [[1, nil, ["foo"], nil, nil, nil, nil, nil]]})
       assert [%Ecto.EnumTest.EnumSchema{my_enums: [:foo]}] = TestRepo.all(EnumSchema)
 
-      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, "fooo", nil]]})
+      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, "fooo", nil, nil]]})
       assert [%Ecto.EnumTest.EnumSchema{my_string_enum: :foo}] = TestRepo.all(EnumSchema)
 
-      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, nil, ["fooo"], nil]]})
+      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, nil, ["fooo"], nil, nil]]})
       assert [%Ecto.EnumTest.EnumSchema{my_string_enums: [:foo]}] = TestRepo.all(EnumSchema)
 
-      Process.put(:test_repo_all_results, {1, [[1, nil, nil, 1, nil, nil, nil]]})
+      Process.put(:test_repo_all_results, {1, [[1, nil, nil, 1, nil, nil, nil, nil]]})
       assert [%Ecto.EnumTest.EnumSchema{my_integer_enum: :foo}] = TestRepo.all(EnumSchema)
 
-      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, [1], nil, nil]]})
+      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, [1], nil, nil, nil]]})
       assert [%Ecto.EnumTest.EnumSchema{my_integer_enums: [:foo]}] = TestRepo.all(EnumSchema)
     end
 
@@ -372,16 +383,44 @@ defmodule Ecto.EnumTest do
       assert Ecto.Enum.values(EnumSchema, :my_integer_enums) == [:foo, :bar, :baz]
       assert Ecto.Enum.values(EnumSchema, :virtual_enum) == [:foo, :bar, :baz]
     end
+  end
+
+  describe "dump_values/2" do
+    test "returns correct values" do
+      assert Ecto.Enum.dump_values(EnumSchema, :my_enum) == ["foo","bar", "baz"]
+      assert Ecto.Enum.dump_values(EnumSchema, :my_enums) == ["foo", "bar", "baz"]
+      assert Ecto.Enum.dump_values(EnumSchema, :my_string_enum) == ["fooo", "baar", "baaz"]
+      assert Ecto.Enum.dump_values(EnumSchema, :my_string_enums) == ["fooo", "baar", "baaz"]
+      assert Ecto.Enum.dump_values(EnumSchema, :my_integer_enum) == [1, 2, 5]
+      assert Ecto.Enum.dump_values(EnumSchema, :my_integer_enums) == [1, 2, 5]
+      assert Ecto.Enum.dump_values(EnumSchema, :virtual_enum) == ["foo", "bar", "baz"]
+    end
+  end
+
+  describe "mappings/2" do
+    test "returns correct values" do
+      assert Ecto.Enum.mappings(EnumSchema, :my_enum) == [foo: "foo", bar: "bar", baz: "baz"]
+      assert Ecto.Enum.mappings(EnumSchema, :my_enums) == [foo: "foo", bar: "bar", baz: "baz"]
+      assert Ecto.Enum.mappings(EnumSchema, :my_string_enum) == [foo: "fooo", bar: "baar", baz: "baaz"]
+      assert Ecto.Enum.mappings(EnumSchema, :my_string_enums) == [foo: "fooo", bar: "baar", baz: "baaz"]
+      assert Ecto.Enum.mappings(EnumSchema, :my_integer_enum) == [foo: 1, bar: 2, baz: 5]
+      assert Ecto.Enum.mappings(EnumSchema, :my_integer_enums) == [foo: 1, bar: 2, baz: 5]
+      assert Ecto.Enum.mappings(EnumSchema, :virtual_enum) == [foo: "foo", bar: "bar", baz: "baz"]
+    end
 
     test "raises on bad schema" do
       assert_raise ArgumentError, "NotASchema is not an Ecto schema", fn ->
-        Ecto.Enum.values(NotASchema, :foo)
+        Ecto.Enum.mappings(NotASchema, :foo)
       end
     end
 
-    test "raises on bad field" do
-      assert_raise ArgumentError, "foo is not an Ecto.Enum field", fn ->
-        Ecto.Enum.values(EnumSchema, :foo)
+    test "raises on bad fields" do
+      assert_raise ArgumentError, "not_enum is not an Ecto.Enum field", fn ->
+        Ecto.Enum.mappings(EnumSchema, :not_enum)
+      end
+
+      assert_raise ArgumentError, "foo does not exist", fn ->
+        Ecto.Enum.mappings(EnumSchema, :foo)
       end
     end
   end

@@ -384,7 +384,7 @@ defmodule Ecto.Query.PlannerTest do
 
   test "plan: generates a cache key" do
     {_query, _params, key} = plan(from(Post, []))
-    assert key == [:all, {"posts", Post, 74490763, "my_prefix"}]
+    assert key == [:all, {"posts", Post, 30078239, "my_prefix"}]
 
     query =
       from(
@@ -405,7 +405,7 @@ defmodule Ecto.Query.PlannerTest do
                    {:prefix, "foo"},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
                    {:join, [{:inner, {"comments", Comment, 38292156, "world"}, true}]},
-                   {"posts", Post, 74490763, "hello"},
+                   {"posts", Post, 30078239, "hello"},
                    {:select, 1}]
   end
 
