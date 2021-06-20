@@ -36,9 +36,9 @@ defmodule Ecto.Enum do
   error will be raised). Attempting to load any string/integer not represented
   by an atom in the list will be invalid.
 
-  The helper function `values/2` returns the values for a given schema and
-  field, which can be used in places like form drop-downs. For example,
-  given the following schema:
+  The helper function `mappings/2` returns the mappings for a given schema and
+  field, which can be used in places like form drop-downs. For example, given 
+  the following schema:
 
       defmodule EnumSchema do
         use Ecto.Schema
@@ -48,11 +48,13 @@ defmodule Ecto.Enum do
         end
       end
 
-  you can call `values/2` like this:
+  you can call `mappings/2` like this:
 
       Ecto.Enum.values(EnumSchema, :my_enum)
-      #=> [:foo, :bar, :baz]
+      #=> [foo: "foo", bar: "bar", baz: "baz"]
 
+  If you want the values only, you can use `Ecto.Enum.values/2`, and if you want
+  the dump values only, you can use `Ecto.Enum.dump_values/2`.
   """
 
   use Ecto.ParameterizedType
@@ -158,12 +160,24 @@ defmodule Ecto.Enum do
   @impl true
   def embed_as(_, _), do: :self
 
+  @doc "Returns the possible values for a given schema and field"
+  @spec mappings(Ecto.Schema.t, atom) :: [atom()]
   def values(schema, field) do
     schema
     |> mappings(field)
     |> Keyword.keys()
   end
 
+  @doc "Returns the possible dump values for a given schema and field"
+  @spec mappings(Ecto.Schema.t, atom) :: [String.t()] | [integer()]
+  def dump_values(schema, field) do
+    schema
+    |> mappings(field)
+    |> Keyword.values()
+  end
+
+  @doc "Returns the mappings for a given schema and field"
+  @spec mappings(Ecto.Schema.t, atom) :: Keyword.t
   def mappings(schema, field) do
     try do
       schema.__changeset__()
