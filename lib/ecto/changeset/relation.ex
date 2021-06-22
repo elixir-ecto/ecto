@@ -190,7 +190,11 @@ defmodule Ecto.Changeset.Relation do
   end
 
   defp do_change(_relation, %{__struct__: _} = struct, _current, allowed_actions) do
-    {:ok, struct |> Ecto.Changeset.change |> put_new_action(:update) |> check_action!(allowed_actions)}
+    {:ok,
+     struct
+     |> Ecto.Changeset.change
+     |> put_new_action(:update)
+     |> check_action!(allowed_actions)}
   end
 
   defp do_change(relation, changes, current, allowed_actions)
@@ -418,17 +422,27 @@ defmodule Ecto.Changeset.Relation do
     cond do
       action in allowed_actions ->
         changeset
+
       action == :ignore ->
         changeset
+
       action == :insert ->
-        raise "cannot #{action} related #{inspect changeset.data} " <>
-              "because it is already associated with the given struct"
+        raise "cannot insert related #{inspect changeset.data} " <>
+                "because it is already associated with the given struct"
+
+      action == :replace ->
+        raise "cannot replace related #{inspect changeset.data}. " <>
+                "This typically happens when you are calling put_assoc/put_embed " <>
+                "with the results of a previous put_assoc/put_embed/cast_assoc/cast_embed " <>
+                "operation, which is not supported. You must call such operations only once " <>
+                "per embed/assoc, in order for Ecto to track changes effeciently"
+
       true ->
         raise "cannot #{action} related #{inspect changeset.data} because " <>
-              "it already exists and it is not currently associated with the " <>
-              "given struct. Ecto forbids casting existing records through " <>
-              "the association field for security reasons. Instead, set " <>
-              "the foreign key value accordingly"
+                "it already exists and it is not currently associated with the " <>
+                "given struct. Ecto forbids casting existing records through " <>
+                "the association field for security reasons. Instead, set " <>
+                "the foreign key value accordingly"
     end
   end
 
