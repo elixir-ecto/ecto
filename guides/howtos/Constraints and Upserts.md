@@ -207,14 +207,16 @@ defmodule MyApp.Post do
       NaiveDateTime.utc_now()
       |> NaiveDateTime.truncate(:second)
 
+    placeholders = %{timestamp: timestamp}
+
     maps =
       Enum.map(names, &%{
         name: &1,
-        inserted_at: timestamp,
-        updated_at: timestamp
+        inserted_at: {:placeholder, :timestamp},
+        updated_at: {:placeholder, :timestamp}
       })
 
-    Repo.insert_all MyApp.Tag, maps, on_conflict: :nothing
+    Repo.insert_all MyApp.Tag, maps, placeholders: placeholders, on_conflict: :nothing
     Repo.all from t in MyApp.Tag, where: t.name in ^names
   end
 end
