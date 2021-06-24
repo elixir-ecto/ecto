@@ -97,7 +97,7 @@ defp get_or_insert_tag(name) do
   %Tag{}
   |> Ecto.Changeset.change(name: name)
   |> Ecto.Changeset.unique_constraint(:name)
-  |> Repo.insert
+  |> Repo.insert()
   |> case do
     {:ok, tag} -> tag
     {:error, _} -> Repo.get_by!(MyApp.Tag, name: name)
@@ -207,19 +207,21 @@ defmodule MyApp.Post do
       NaiveDateTime.utc_now()
       |> NaiveDateTime.truncate(:second)
 
+    placeholders = %{timestamp: timestamp}
+
     maps =
       Enum.map(names, &%{
         name: &1,
-        inserted_at: timestamp,
-        updated_at: timestamp
+        inserted_at: {:placeholder, :timestamp},
+        updated_at: {:placeholder, :timestamp}
       })
 
-    Repo.insert_all MyApp.Tag, maps, on_conflict: :nothing
-    Repo.all from t in MyApp.Tag, where: t.name in ^names
+    Repo.insert_all(MyApp.Tag, maps, placeholders: placeholders, on_conflict: :nothing)
+    Repo.all(from t in MyApp.Tag, where: t.name in ^names)
   end
 end
 ```
 
-Instead of attempting to get and insert each tag individually, the code above works on all tags at once, first by building a list of maps which is given to `insert_all` and then by looking up all tags with the existing names. Therefore, regardless of how many tags are sent, we will perform only 2 queries (unless no tag is sent, in which we return an empty list back promptly). This solution is only possible thanks to the `:on_conflict` option, which guarantees `insert_all` won't fail in case a unique index is violated, such as from duplicate tag names. Remember, `insert_all` won't autogenerate values like timestamps. That's why we must include `inserted_at` and `updated_at` manually.
+Instead of getting and inserting each tag individually, the code above works on all tags at once, first by building a list of maps which is given to `insert_all`. Then we look up all tags with the given names. Regardless of how many tags are sent, we will perform only 2 queries - unless no tag is sent, in which we return an empty list back promptly. This solution is only possible thanks to the `:on_conflict` option, which guarantees `insert_all` won't fail in case a unique index is violated, such as from duplicate tag names. Remember, `insert_all` won't autogenerate values like timestamps. That's why we define a timestamp placeholder and reuse it across `inserted_at` and `updated_at` fields.
 
 Finally, keep in mind that we haven't used transactions in any of the examples so far. That decision was deliberate as we relied on the fact that getting or inserting tags is an idempotent operation, i.e. we can repeat it many times for a given input and it will always give us the same result back. Therefore, even if we fail to introduce the post to the database due to a validation error, the user will be free to resubmit the form and we will just attempt to get or insert the same tags once again. The downside of this approach is that tags will be created even if creating the post fails, which means some tags may not have posts associated to them. In case that's not desired, the whole operation could be wrapped in a transaction or modeled with `Ecto.Multi`.
