@@ -339,7 +339,7 @@ v3.4 requires Elixir v1.7+.
 
 ### Enhancements
 
-  * [Ecto.Changeset] Add rollover logic for default incremeter in `optimistic_lock`
+  * [Ecto.Changeset] Add rollover logic for default incrementer in `optimistic_lock`
   * [Ecto.Query] Also expand macros when used inside `type/2`
 
 ### Bug fixes

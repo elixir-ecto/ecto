@@ -1563,7 +1563,7 @@ defmodule Ecto.ChangesetTest do
     Enum.reduce(changeset.prepare, changeset, & &1.(&2)).changes
   end
 
-  test "optimistic_lock/3 with changeset with default incremeter" do
+  test "optimistic_lock/3 with changeset with default incrementer" do
     changeset = changeset(%{}) |> optimistic_lock(:upvotes)
     assert changeset.filters == %{upvotes: 0}
     assert changeset.changes == %{}
