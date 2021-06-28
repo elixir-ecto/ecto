@@ -2927,8 +2927,8 @@ defmodule Ecto.Changeset do
   ## Examples
 
       iex> traverse_errors(changeset, fn {msg, opts} ->
-      ...>   Enum.reduce(opts, msg, fn {key, value}, acc ->
-      ...>     String.replace(acc, "%{#{key}}", to_string(value))
+      ...>   Regex.replace(~r"%{(\w+)}", msg, fn _, key ->
+      ...>     opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
       ...>   end)
       ...> end)
       %{title: ["should be at least 3 characters"]}
