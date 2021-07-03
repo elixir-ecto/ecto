@@ -806,6 +806,25 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "normalize: late dynamic bindings with as" do
+    as = :posts
+
+    query = from(Post, as: :posts, where: as(^as).code == ^123) |> normalize()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.code() == ^0"
+
+    query = from(Post, as: :posts, where: field(as(^as), :code) == ^123) |> normalize()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.code() == ^0"
+
+    assert_raise Ecto.QueryError, ~r/could not find named binding `as\(:posts\)`/, fn ->
+      from(Post, where: as(^as).code == ^123) |> normalize()
+    end
+
+    assert_raise Ecto.Query.CompileError, ~r/expected atom in as\/1/, fn ->
+      as = "posts"
+      from(Post, where: as(^as).code == ^123) |> normalize()
+    end
+  end
+
   test "normalize: late parent bindings with as" do
     child = from(c in Comment, where: parent_as(:posts).posted == c.posted)
     query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
@@ -829,10 +848,33 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "normalize: late dynamic parent bindings with as" do
+    as = :posts
+
+    child = from(c in Comment, where: parent_as(^as).posted == c.posted)
+    query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(&0).posted() == &0.posted()"
+
+    child = from(c in Comment, select: %{map: field(parent_as(^as), :posted)})
+    query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
+    assert Macro.to_string(hd(query.joins).source.query.select.expr) == "%{map: parent_as(&0).posted()}"
+  end
+
   test "normalize: nested parent_as" do
     child3 = from(c in Comment, where: parent_as(:posts).deleted == false, select: c.id)
     child2 = from(c in Comment, where: c.id in subquery(child3), select: c.id)
     child = from(c in Comment, where: parent_as(:posts).posted == c.posted and c.id in subquery(child2))
+
+    query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "parent_as(&0).posted() == &0.posted()"
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "in %Ecto.SubQuery{"
+  end
+
+  test "normalize: nested dynamic parent_as" do
+    as = :posts
+    child3 = from(c in Comment, where: parent_as(^as).deleted == false, select: c.id)
+    child2 = from(c in Comment, where: c.id in subquery(child3), select: c.id)
+    child = from(c in Comment, where: field(parent_as(^as), :posted) == c.posted and c.id in subquery(child2))
 
     query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
     assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "parent_as(&0).posted() == &0.posted()"

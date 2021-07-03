@@ -76,7 +76,7 @@ defmodule Ecto.Query.Builder.Join do
       when is_atom(var) and is_atom(context) do
     ensure_field!(field)
     var   = Builder.find_var!(var, vars)
-    field = Builder.quoted_field!(field)
+    field = Builder.get_quoted!(field)
     {:_, nil, {var, field}, []}
   end
 
