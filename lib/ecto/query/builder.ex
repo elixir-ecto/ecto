@@ -570,16 +570,16 @@ defmodule Ecto.Query.Builder do
   defp escape_field!({var, _, context}, field, vars)
        when is_atom(var) and is_atom(context) do
     var   = escape_var!(var, vars)
-    field = quoted_atom!(field)
+    field = quoted_atom!(field, "field/2")
     dot   = {:{}, [], [:., [], [var, field]]}
     {:{}, [], [dot, [], []]}
   end
 
   defp escape_field!({kind, _, [atom]}, field, _vars)
        when kind in [:as, :parent_as] do
-    atom  = quoted_atom!(atom, kind, 1)
+    atom  = quoted_atom!(atom, "#{kind}/1")
     as    = {:{}, [], [kind, [], [atom]]}
-    field = quoted_atom!(field)
+    field = quoted_atom!(field, "field/2")
     dot   = {:{}, [], [:., [], [as, field]]}
     {:{}, [], [dot, [], []]}
   end
@@ -873,29 +873,27 @@ defmodule Ecto.Query.Builder do
   Checks if the field is an atom at compilation time or
   delegate the check to runtime for interpolation.
   """
-  def quoted_atom!(_ast, used_fun \\ "field", used_arity \\ 2)
+  def quoted_atom!({:^, _, [expr]}, used_ref),
+    do: quote(do: Ecto.Query.Builder.atom!(unquote(expr), unquote(used_ref)))
 
-  def quoted_atom!({:^, _, [expr]}, used_fun, used_arity),
-    do: quote(do: Ecto.Query.Builder.atom!(unquote(expr), unquote(used_fun), unquote(used_arity)))
-
-  def quoted_atom!(atom, _, _) when is_atom(atom),
+  def quoted_atom!(atom, _used_ref) when is_atom(atom),
     do: atom
 
-  def quoted_atom!(other, used_fun, used_arity),
+  def quoted_atom!(other, used_ref),
     do:
       error!(
-        "expected literal atom or interpolated value in #{used_fun}/#{used_arity}, got: " <>
+        "expected literal atom or interpolated value in #{used_ref}, got: " <>
         "`#{Macro.to_string(other)}`"
       )
 
   @doc """
   Called by escaper at runtime to verify that value is an atom.
   """
-  def atom!(atom, _used_expr, _used_arity) when is_atom(atom),
+  def atom!(atom, _used_ref) when is_atom(atom),
     do: atom
 
-  def atom!(other, used_fun, used_arity),
-    do: error!("expected atom in #{used_fun}/#{used_arity}, got: `#{inspect other}`")
+  def atom!(other, used_ref),
+    do: error!("expected atom in #{used_ref}, got: `#{inspect other}`")
 
   defp escape_json_path(path) when is_list(path) do
     Enum.map(path, &quoted_json_path_element!/1)
