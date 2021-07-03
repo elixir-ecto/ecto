@@ -570,16 +570,16 @@ defmodule Ecto.Query.Builder do
   defp escape_field!({var, _, context}, field, vars)
        when is_atom(var) and is_atom(context) do
     var   = escape_var!(var, vars)
-    field = get_quoted!(field)
+    field = quoted_atom!(field)
     dot   = {:{}, [], [:., [], [var, field]]}
     {:{}, [], [dot, [], []]}
   end
 
   defp escape_field!({kind, _, [atom]}, field, _vars)
        when kind in [:as, :parent_as] do
-    atom  = get_quoted!(atom, kind, 1)
+    atom  = quoted_atom!(atom, kind, 1)
     as    = {:{}, [], [kind, [], [atom]]}
-    field = get_quoted!(field)
+    field = quoted_atom!(field)
     dot   = {:{}, [], [:., [], [as, field]]}
     {:{}, [], [dot, [], []]}
   end
@@ -873,15 +873,15 @@ defmodule Ecto.Query.Builder do
   Checks if the field is an atom at compilation time or
   delegate the check to runtime for interpolation.
   """
-  def get_quoted!(_ast, used_fun \\ "field", used_arity \\ 2)
+  def quoted_atom!(_ast, used_fun \\ "field", used_arity \\ 2)
 
-  def get_quoted!({:^, _, [expr]}, used_fun, used_arity),
-    do: quote(do: Ecto.Query.Builder.get!(unquote(expr), unquote(used_fun), unquote(used_arity)))
+  def quoted_atom!({:^, _, [expr]}, used_fun, used_arity),
+    do: quote(do: Ecto.Query.Builder.atom!(unquote(expr), unquote(used_fun), unquote(used_arity)))
 
-  def get_quoted!(atom, _, _) when is_atom(atom),
+  def quoted_atom!(atom, _, _) when is_atom(atom),
     do: atom
 
-  def get_quoted!(other, used_fun, used_arity),
+  def quoted_atom!(other, used_fun, used_arity),
     do:
       error!(
         "expected literal atom or interpolated value in #{used_fun}/#{used_arity}, got: " <>
@@ -891,10 +891,10 @@ defmodule Ecto.Query.Builder do
   @doc """
   Called by escaper at runtime to verify that value is an atom.
   """
-  def get!(atom, _used_expr, _used_arity) when is_atom(atom),
+  def atom!(atom, _used_expr, _used_arity) when is_atom(atom),
     do: atom
 
-  def get!(other, used_fun, used_arity),
+  def atom!(other, used_fun, used_arity),
     do: error!("expected atom in #{used_fun}/#{used_arity}, got: `#{inspect other}`")
 
   defp escape_json_path(path) when is_list(path) do
