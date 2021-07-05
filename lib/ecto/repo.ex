@@ -785,7 +785,7 @@ defmodule Ecto.Repo do
               queryable :: Ecto.Queryable.t(),
               aggregate :: :count,
               opts :: Keyword.t()
-            ) :: term | nil
+            ) :: term
 
   @doc """
   Calculate the given `aggregate` over the given `field`.
@@ -810,7 +810,7 @@ defmodule Ecto.Repo do
               aggregate :: :avg | :count | :max | :min | :sum,
               field :: atom,
               opts :: Keyword.t()
-            ) :: term | nil
+            ) :: term
 
   @doc """
   Checks if there exists an entry that matches the given query.
