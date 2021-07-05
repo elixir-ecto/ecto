@@ -105,12 +105,7 @@ defmodule Ecto.Repo.Queryable do
 
   def reload!(name, struct, opts) do
     query = query_for_reload([struct])
-    case one!(name, query, opts) do
-      nil ->
-        raise Ecto.NoResultsError, queryable: query
-      res ->
-        res
-    end
+    one!(name, query, opts)
   end
 
   def aggregate(name, queryable, aggregate, opts) do
