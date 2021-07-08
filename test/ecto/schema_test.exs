@@ -331,6 +331,20 @@ defmodule Ecto.SchemaTest do
     assert query.from.prefix == "tenant"
   end
 
+  ## Schema context
+  defmodule SchemaWithContext do
+    use Ecto.Schema
+
+    @schema_context %{some: :data}
+    schema "company" do
+      field(:name)
+    end
+  end
+
+  test "schema context metadata" do
+    assert %SchemaWithContext{}.__meta__.context == %{some: :data}
+  end
+
   ## Composite primary keys
 
   defmodule SchemaCompositeKeys do

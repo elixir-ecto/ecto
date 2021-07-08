@@ -127,6 +127,10 @@ defmodule Ecto.Schema do
       is called "SCHEMA" (typically set via Postgres' `search_path`).
       In MySQL the prefix points to databases.
 
+    * `@schema_context` - configures the schema context. Defaults to `nil`,
+      which generates structs and queries without context. Context are not used
+      by the built-in SQL adapters.
+
     * `@foreign_key_type` - configures the default foreign key type
       used by `belongs_to` associations. It must be set in the same
       module that defines the `belongs_to`. Defaults to `:id`;
@@ -464,6 +468,7 @@ defmodule Ecto.Schema do
       @timestamps_opts []
       @foreign_key_type :id
       @schema_prefix nil
+      @schema_context nil
       @field_source_mapper fn x -> x end
 
       Module.register_attribute(__MODULE__, :ecto_primary_keys, accumulate: true)
@@ -524,6 +529,7 @@ defmodule Ecto.Schema do
         meta?  = unquote(meta?)
         source = unquote(source)
         prefix = @schema_prefix
+        context = @schema_context
 
         # Those module attributes are accessed only dynamically
         # so we explicitly reference them here to avoid warnings.
@@ -535,7 +541,14 @@ defmodule Ecto.Schema do
             raise ArgumentError, "schema source must be a string, got: #{inspect source}"
           end
 
-          meta = %Metadata{state: :built, source: source, prefix: prefix, schema: __MODULE__}
+          meta = %Metadata{
+            state: :built,
+            source: source,
+            prefix: prefix,
+            context: context,
+            schema: __MODULE__
+          }
+
           Module.put_attribute(__MODULE__, :struct_fields, {:__meta__, meta})
         end
 
