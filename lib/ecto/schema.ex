@@ -129,7 +129,7 @@ defmodule Ecto.Schema do
 
     * `@schema_context` - configures the schema context. Defaults to `nil`,
       which generates structs and queries without context. Context are not used
-      by the built-in adapters of `Ecto.Adapters.Postgres` and `Ecto.Adapters.MySQL`.
+      by the built-in SQL adapters.
 
     * `@foreign_key_type` - configures the default foreign key type
       used by `belongs_to` associations. It must be set in the same
