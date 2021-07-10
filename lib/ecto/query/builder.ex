@@ -109,6 +109,14 @@ defmodule Ecto.Query.Builder do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
+  def escape({:type, _, [{:json_extract_path, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env) do
+    escape_with_type(expr, type, params_acc, vars, env)
+  end
+
+  def escape({:type, _, [{{:., _, [Access, :get]}, _, _} = access_expr, type]}, _type, params_acc, vars, env) do
+    escape_with_type(access_expr, type, params_acc, vars, env)
+  end
+
   def escape({:type, meta, [expr, type]}, given_type, params_acc, vars, env) do
     case Macro.expand_once(expr, get_env(env)) do
       ^expr ->
@@ -120,6 +128,7 @@ defmodule Ecto.Query.Builder do
           * fragments, such fragment("foo(?)", value)
           * an arithmetic expression (+, -, *, /)
           * an aggregation or window expression (avg, count, min, max, sum, over, filter)
+          * access/json paths (p.column[0].field)
 
         Got: #{Macro.to_string(expr)}
         """

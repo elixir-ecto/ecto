@@ -278,6 +278,16 @@ defmodule Ecto.Query.PlannerTest do
     assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
     assert source == {"comments", Comment}
     assert Macro.to_string(on.expr) == "&1.post_id() == &0.id() and &0.title() == &1.text()"
+
+    query = from(p in Post, left_join: c in assoc(p, :comments), on: p.meta["slug"] |> type(:string) == c.text) |> plan |> elem(0)
+    assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
+    assert source == {"comments", Comment}
+    assert Macro.to_string(on.expr) == "&1.post_id() == &0.id() and type(json_extract_path(&0.meta(), [\"slug\"]), :string) == &1.text()"
+
+    query = from(p in Post, left_join: c in assoc(p, :comments), on: json_extract_path(p.meta, ["slug"]) |> type(:string) == c.text) |> plan |> elem(0)
+    assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
+    assert source == {"comments", Comment}
+    assert Macro.to_string(on.expr) == "&1.post_id() == &0.id() and type(json_extract_path(&0.meta(), [\"slug\"]), :string) == &1.text()"
   end
 
   test "plan: nested joins associations" do
@@ -757,28 +767,46 @@ defmodule Ecto.Query.PlannerTest do
 
   test "normalize: tagged types" do
     {query, params, _select} = from(Post, []) |> select([p], type(^"1", :integer))
-                                              |> normalize_with_params
+                                              |> normalize_with_params()
     assert query.select.expr ==
            %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: :integer}
     assert params == [1]
 
     {query, params, _select} = from(Post, []) |> select([p], type(^"1", ^:integer))
-                                              |> normalize_with_params
+                                              |> normalize_with_params()
     assert query.select.expr ==
            %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: :integer}
     assert params == [1]
 
     {query, params, _select} = from(Post, []) |> select([p], type(^"1", CustomPermalink))
-                                              |> normalize_with_params
+                                              |> normalize_with_params()
     assert query.select.expr ==
            %Ecto.Query.Tagged{type: :id, value: {:^, [], [0]}, tag: CustomPermalink}
     assert params == [1]
 
     {query, params, _select} = from(Post, []) |> select([p], type(^"1", p.visits))
-                                              |> normalize_with_params
+                                              |> normalize_with_params()
     assert query.select.expr ==
            %Ecto.Query.Tagged{type: :integer, value: {:^, [], [0]}, tag: :integer}
     assert params == [1]
+
+    expected_tagged_query =
+      %Ecto.Query.Tagged{
+        tag: :binary,
+        type: :binary,
+        value:
+          {:json_extract_path, [], [{{:., [], [{:&, [], [0]}, :meta]}, [], []}, ["slug"]]}
+      }
+
+    {query, params, _select} = from(Post, []) |> select([p], type(p.meta["slug"], :binary))
+                                              |> normalize_with_params()
+    assert query.select.expr == expected_tagged_query
+    assert params == []
+
+    {query, params, _select} = from(Post, []) |> select([p], type(json_extract_path(p.meta, ["slug"]), :binary))
+                                              |> normalize_with_params()
+    assert query.select.expr == expected_tagged_query
+    assert params == []
 
     assert_raise Ecto.Query.CastError, ~r/value `"1"` in `select` cannot be cast to type Ecto.UUID/, fn ->
       from(Post, []) |> select([p], type(^"1", Ecto.UUID)) |> normalize
