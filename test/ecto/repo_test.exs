@@ -1626,9 +1626,9 @@ defmodule Ecto.RepoTest do
 
   describe "all_running" do
     test "lists all running repositories" do
-      assert Ecto.Repo.all_running() == [Ecto.TestRepo]
+      assert Ecto.TestRepo in Ecto.Repo.all_running()
       pid = start_supervised! {Ecto.TestRepo, name: nil}
-      assert Enum.sort(Ecto.Repo.all_running()) == [Ecto.TestRepo, pid]
+      assert pid in Ecto.Repo.all_running()
     end
   end
 end
