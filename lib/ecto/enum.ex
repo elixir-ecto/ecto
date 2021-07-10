@@ -93,8 +93,10 @@ defmodule Ecto.Enum do
       end
 
     on_load = Map.new(mappings, fn {key, val} -> {val, key} end)
-    on_dump = Enum.into(mappings, %{})
-    %{on_load: on_load, on_dump: on_dump, mappings: mappings, type: type}
+    on_dump = Map.new(mappings)
+    on_cast = Map.new(mappings, fn {key, _} -> {Atom.to_string(key), key} end)
+
+    %{on_load: on_load, on_dump: on_dump, on_cast: on_cast, mappings: mappings, type: type}
   end
 
   defp validate_unique!(values) do
@@ -130,6 +132,7 @@ defmodule Ecto.Enum do
     case params do
       %{on_load: %{^data => as_atom}} -> {:ok, as_atom}
       %{on_dump: %{^data => _}} -> {:ok, data}
+      %{on_cast: %{^data => as_atom}} -> {:ok, as_atom}
       _ -> :error
     end
   end

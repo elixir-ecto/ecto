@@ -24,8 +24,9 @@ defmodule Ecto.EnumTest do
       assert EnumSchema.__schema__(:type, :my_enum) ==
                {:parameterized, Ecto.Enum,
                 %{
-                  on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                   on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
+                  on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
+                  on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                   mappings: [foo: "foo", bar: "bar", baz: "baz"],
                   type: :string
                 }}
@@ -37,6 +38,7 @@ defmodule Ecto.EnumTest do
                   %{
                     on_dump: %{bar: "bar", baz: "baz", foo: "foo"},
                     on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
+                    on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                     mappings: [foo: "foo", bar: "bar", baz: "baz"],
                     type: :string
                   }}
@@ -47,6 +49,7 @@ defmodule Ecto.EnumTest do
                 %{
                   on_dump: %{bar: 2, baz: 5, foo: 1},
                   on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
+                  on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                   mappings: [foo: 1, bar: 2, baz: 5],
                   type: :integer
                 }}
@@ -58,6 +61,7 @@ defmodule Ecto.EnumTest do
                   %{
                     on_dump: %{bar: 2, baz: 5, foo: 1},
                     on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
+                    on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                     mappings: [foo: 1, bar: 2, baz: 5],
                     type: :integer
                   }}
@@ -68,6 +72,7 @@ defmodule Ecto.EnumTest do
                 %{
                   on_dump: %{bar: "baar", baz: "baaz", foo: "fooo"},
                   on_load: %{"baar" => :bar, "baaz" => :baz, "fooo" => :foo},
+                  on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                   mappings: [foo: "fooo", bar: "baar", baz: "baaz"],
                   type: :string
                 }}
@@ -79,6 +84,7 @@ defmodule Ecto.EnumTest do
                   %{
                     on_dump: %{bar: "baar", baz: "baaz", foo: "fooo"},
                     on_load: %{"baar" => :bar, "baaz" => :baz, "fooo" => :foo},
+                    on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                     mappings: [foo: "fooo", bar: "baar", baz: "baaz"],
                     type: :string
                   }}
@@ -196,6 +202,20 @@ defmodule Ecto.EnumTest do
 
       assert %Changeset{valid?: true, changes: %{my_enums: [:bar]}} =
                Changeset.cast(%EnumSchema{}, %{my_enums: [:bar]}, [:my_enums])
+    end
+
+    test "cast string representation of atoms" do
+      assert %Changeset{valid?: true, changes: %{my_string_enum: :foo}} =
+               Changeset.cast(%EnumSchema{}, %{my_string_enum: "foo"}, [:my_string_enum])
+
+      assert %Changeset{valid?: true, changes: %{my_string_enums: [:foo]}} =
+               Changeset.cast(%EnumSchema{}, %{my_string_enums: ["foo"]}, [:my_string_enums])
+
+      assert %Changeset{valid?: true, changes: %{my_integer_enum: :foo}} =
+               Changeset.cast(%EnumSchema{}, %{my_integer_enum: "foo"}, [:my_integer_enum])
+
+      assert %Changeset{valid?: true, changes: %{my_integer_enums: [:foo]}} =
+               Changeset.cast(%EnumSchema{}, %{my_integer_enums: ["foo"]}, [:my_integer_enums])
     end
 
     test "rejects bad strings" do
