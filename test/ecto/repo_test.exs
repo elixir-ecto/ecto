@@ -1537,6 +1537,33 @@ defmodule Ecto.RepoTest do
 
       assert CustomDynamicRepo.get_dynamic_repo() == :other
     end
+
+    test "allows overriding get_dynamic_repo/0" do
+      defmodule CustomDynamicRepo2 do
+        use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter
+
+        def get_dynamic_repo do
+          [self() | Process.get(:"$callers", [])]
+          |> Enum.find_value(fn pid ->
+            {:dictionary, dictionary} = Process.info(pid, :dictionary)
+            Enum.find_value(dictionary, fn
+              {{__MODULE__, :dynamic_repo}, repo} -> repo
+              _ -> nil
+            end)
+          end)
+          |> case do
+            nil -> super()
+            repo -> repo
+          end
+        end
+      end
+
+      assert CustomDynamicRepo2.get_dynamic_repo() == CustomDynamicRepo2
+      CustomDynamicRepo2.put_dynamic_repo(:db02)
+      assert CustomDynamicRepo2.get_dynamic_repo() == :db02
+      repo = Task.async(fn -> CustomDynamicRepo2.get_dynamic_repo() end) |> Task.await()
+      assert repo == :db02
+    end
   end
 
   describe "read-only repo" do

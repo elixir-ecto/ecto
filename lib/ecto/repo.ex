@@ -247,6 +247,7 @@ defmodule Ecto.Repo do
       def get_dynamic_repo() do
         Process.get({__MODULE__, :dynamic_repo}, @default_dynamic_repo)
       end
+      defoverridable get_dynamic_repo: 0
 
       def put_dynamic_repo(dynamic) when is_atom(dynamic) or is_pid(dynamic) do
         Process.put({__MODULE__, :dynamic_repo}, dynamic) || @default_dynamic_repo
@@ -549,6 +550,15 @@ defmodule Ecto.Repo do
   Returns the atom name or pid of the current repository.
 
   See `c:put_dynamic_repo/1` for more information.
+
+  This is overridable in case you want to hand off dynamic repo
+  management to another library. For example:
+
+      def get_dynamic_repo do
+        MyMultiTenancyLibrary.get_current_tenant()
+        |> tenant_to_dynamic_repo()
+      end
+
   """
   @callback get_dynamic_repo() :: atom() | pid()
 
