@@ -1632,7 +1632,7 @@ defmodule Ecto.Query.Planner do
         if kind == :select and not (ix < tuple_size(sources)) do
           error!(query, "the parent_as in a subquery select used as a join can only access the `from` binding")
         else
-          {ix, {:parent_as, [], [{:&, meta, [ix]}]}, query}
+          {ix, {:parent_as, [], [as]}, query}
         end
 
       %{} = parent ->
