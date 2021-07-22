@@ -1259,6 +1259,7 @@ defmodule Ecto.ChangesetTest do
     changeset = changeset(%{"decimal" => Decimal.new("4.9")})
                 |> validate_number(:decimal, greater_than_or_equal_to: 4.9)
     assert changeset.valid?
+
     changeset = changeset(%{"decimal" => Decimal.new(5)})
                 |> validate_number(:decimal, less_than: 4)
     refute changeset.valid?
@@ -1267,6 +1268,12 @@ defmodule Ecto.ChangesetTest do
   test "validate_number/3 with bad options" do
     assert_raise ArgumentError, ~r"unknown option :min given to validate_number/3", fn  ->
       validate_number(changeset(%{"upvotes" => 1}), :upvotes, min: Decimal.new("1.5"))
+    end
+  end
+
+  test "validate_number/3 with bad value" do 
+    assert_raise ArgumentError, "expected value to be of type Decimal, Integer or Float, got: \"Oops\"", fn -> 
+      validate_number(changeset(%{"virtual" => "Oops"}), :virtual, greater_than: 0)
     end
   end
 

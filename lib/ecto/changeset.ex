@@ -2212,11 +2212,15 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp validate_number(field, value, message, spec_key, spec_function, target_value) do
+  defp validate_number(field, value, message, spec_key, spec_function, target_value) when is_number(value) do
     case apply(spec_function, [value, target_value]) do
       true  -> nil
       false -> [{field, {message, validation: :number, kind: spec_key, number: target_value}}]
     end
+  end
+
+  defp validate_number(_field, value, _message, _spec_key, _spec_function, _target_value) do
+    raise ArgumentError, "expected value to be of type Decimal, Integer or Float, got: #{inspect value}"
   end
 
   # TODO: Remove me once we support Decimal 2.0 only
