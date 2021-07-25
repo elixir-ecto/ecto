@@ -571,6 +571,16 @@ defmodule Ecto.Query.API do
   may return incorrect results or fail as the underlying database
   tries to compare incompatible types. You can, however, use `type/2`
   to force the types on the database level.
+
+  ## Warning: index usage
+
+  Some DBs offer indices types that allow faster querying of the JSON
+  fields, however this way of extracting **may not** create query that
+  will be able to utilise such index. Notable example of such behaviour
+  is PostgreSQL with GIN indices on JSON fields. This function will use
+  access operator (`#>`) that is not covered by the GIN index. In such cases,
+  consider using `fragment/1` alongside PostgreSQL built-in operators for
+  better performance.
   """
   def json_extract_path(json_field, path), do: doc! [json_field, path]
 
