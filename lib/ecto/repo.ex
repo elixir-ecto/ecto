@@ -1398,8 +1398,9 @@ defmodule Ecto.Repo do
       `c:update_all/3`, for example: `[set: [title: "new title"]]`
 
     * an `Ecto.Query` that will act as an `UPDATE` statement, such as the
-      one given to `c:update_all/3`. If the struct cannot be found, `Ecto.StaleEntryError`
-      will be raised.
+      one given to `c:update_all/3`. Similarly to `c:update_all/3`, auto
+      generated values, such as timestamps are not automatically updated.
+      If the struct cannot be found, `Ecto.StaleEntryError` will be raised.
 
   Upserts map to "ON CONFLICT" on databases like Postgres and "ON DUPLICATE KEY"
   on databases such as MySQL.
