@@ -993,19 +993,23 @@ defmodule Ecto.Query.Planner do
 
     {queries, counter} =
       Enum.reduce with_expr.queries, {[], counter}, fn
-        {name, %Ecto.Query{} = query}, {queries, counter} ->
+        {name, %Ecto.Query{} = inner_query}, {queries, counter} ->
+          inner_query = put_in(inner_query.aliases[@parent_as], query)
+
           # We don't want to use normalize_subquery_select because we are
           # going to prepare the whole query ourselves next.
-          {_, query} = rewrite_subquery_select_expr(query, true)
-          {query, counter} = traverse_exprs(query, :all, counter, fun)
+          {_, inner_query} = rewrite_subquery_select_expr(inner_query, true)
+          {inner_query, counter} = traverse_exprs(inner_query, :all, counter, fun)
 
           # Now compute the fields as keyword lists so we emit AS in Ecto query.
-          %{select: %{expr: expr, take: take}} = query
-          {source, fields, _from} = collect_fields(expr, [], :never, query, take, true)
+          %{select: %{expr: expr, take: take}} = inner_query
+          {source, fields, _from} = collect_fields(expr, [], :never, inner_query, take, true)
           {_, keys} = subquery_struct_and_fields(source)
-          query = put_in(query.select.fields, Enum.zip(keys, Enum.reverse(fields)))
+          inner_query = put_in(inner_query.select.fields, Enum.zip(keys, Enum.reverse(fields)))
 
-          {[{name, query} | queries], counter}
+          {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
+
+          {[{name, inner_query} | queries], counter}
 
         {name, %QueryExpr{expr: {:fragment, _, _} = fragment} = query_expr}, {queries, counter} ->
           {fragment, counter} = prewalk_source(fragment, :with_cte, query, with_expr, counter, adapter)
@@ -1628,7 +1632,7 @@ defmodule Ecto.Query.Planner do
         if kind == :select and not (ix < tuple_size(sources)) do
           error!(query, "the parent_as in a subquery select used as a join can only access the `from` binding")
         else
-          {ix, {:parent_as, [], [{:&, meta, [ix]}]}, query}
+          {ix, {:parent_as, [], [as]}, query}
         end
 
       %{} = parent ->

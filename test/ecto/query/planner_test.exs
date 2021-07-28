@@ -856,11 +856,11 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: late parent bindings with as" do
     child = from(c in Comment, where: parent_as(:posts).posted == c.posted)
     query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
-    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(&0).posted() == &0.posted()"
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(:posts).posted() == &0.posted()"
 
     child = from(c in Comment, select: %{map: parent_as(:posts).posted})
     query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
-    assert Macro.to_string(hd(query.joins).source.query.select.expr) == "%{map: parent_as(&0).posted()}"
+    assert Macro.to_string(hd(query.joins).source.query.select.expr) == "%{map: parent_as(:posts).posted()}"
 
     assert_raise Ecto.SubQueryError, ~r/the parent_as in a subquery select used as a join can only access the `from` binding in query/, fn ->
       child = from(c in Comment, select: %{map: parent_as(:itself).posted})
@@ -881,11 +881,11 @@ defmodule Ecto.Query.PlannerTest do
 
     child = from(c in Comment, where: parent_as(^as).posted == c.posted)
     query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
-    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(&0).posted() == &0.posted()"
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) == "parent_as(:posts).posted() == &0.posted()"
 
     child = from(c in Comment, select: %{map: field(parent_as(^as), :posted)})
     query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
-    assert Macro.to_string(hd(query.joins).source.query.select.expr) == "%{map: parent_as(&0).posted()}"
+    assert Macro.to_string(hd(query.joins).source.query.select.expr) == "%{map: parent_as(:posts).posted()}"
   end
 
   test "normalize: nested parent_as" do
@@ -894,7 +894,7 @@ defmodule Ecto.Query.PlannerTest do
     child = from(c in Comment, where: parent_as(:posts).posted == c.posted and c.id in subquery(child2))
 
     query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
-    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "parent_as(&0).posted() == &0.posted()"
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "parent_as(:posts).posted() == &0.posted()"
     assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "in %Ecto.SubQuery{"
   end
 
@@ -905,7 +905,7 @@ defmodule Ecto.Query.PlannerTest do
     child = from(c in Comment, where: field(parent_as(^as), :posted) == c.posted and c.id in subquery(child2))
 
     query = from(Post, as: :posts, join: c in subquery(child)) |> normalize()
-    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "parent_as(&0).posted() == &0.posted()"
+    assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "parent_as(:posts).posted() == &0.posted()"
     assert Macro.to_string(hd(hd(query.joins).source.query.wheres).expr) =~ "in %Ecto.SubQuery{"
   end
 
