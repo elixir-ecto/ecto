@@ -254,11 +254,12 @@ defmodule Ecto.MigrationError do
 end
 
 defmodule Ecto.StaleEntryError do
-  defexception [:message, :struct]
+  defexception [:message, :changeset]
 
   def exception(opts) do
     action = Keyword.fetch!(opts, :action)
     struct = Keyword.fetch!(opts, :struct)
+    changeset = Keyword.fetch!(opts, :changeset)
 
     msg = """
     attempted to #{action} a stale struct:
@@ -266,7 +267,7 @@ defmodule Ecto.StaleEntryError do
     #{inspect struct}
     """
 
-    %__MODULE__{message: msg, struct: struct}
+    %__MODULE__{message: msg, changeset: changeset}
   end
 end
 
