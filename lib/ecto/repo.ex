@@ -1695,6 +1695,9 @@ defmodule Ecto.Repo do
   `{:error, failed_operation, failed_value, changes_so_far}` will be
   returned.
 
+  If an update or delete operation has been added to a struct that has been
+  removed from db prior to call, `Ecto.StaleEntryError` will be raised.
+
   You can read more about using transactions with `Ecto.Multi` as well as
   see some examples in the `Ecto.Multi` documentation.
 
