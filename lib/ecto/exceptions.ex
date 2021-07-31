@@ -254,7 +254,7 @@ defmodule Ecto.MigrationError do
 end
 
 defmodule Ecto.StaleEntryError do
-  defexception [:message]
+  defexception [:message, :struct]
 
   def exception(opts) do
     action = Keyword.fetch!(opts, :action)
@@ -266,7 +266,7 @@ defmodule Ecto.StaleEntryError do
     #{inspect struct}
     """
 
-    %__MODULE__{message: msg}
+    %__MODULE__{message: msg, struct: struct}
   end
 end
 
