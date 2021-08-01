@@ -751,6 +751,13 @@ defmodule Ecto.RepoTest do
       assert_raise Ecto.StaleEntryError, fn -> TestRepo.insert(stale) end
       assert_raise Ecto.StaleEntryError, fn -> TestRepo.update(stale) end
       assert_raise Ecto.StaleEntryError, fn -> TestRepo.delete(stale) end
+
+      try do
+        TestRepo.update(stale)
+      rescue
+        e in Ecto.StaleEntryError ->
+          assert %Ecto.Changeset{} = e.changeset
+      end
     end
 
     test "insert, update, and delete adds error to stale error field" do
