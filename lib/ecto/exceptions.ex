@@ -258,13 +258,12 @@ defmodule Ecto.StaleEntryError do
 
   def exception(opts) do
     action = Keyword.fetch!(opts, :action)
-    struct = Keyword.fetch!(opts, :struct)
     changeset = Keyword.fetch!(opts, :changeset)
 
     msg = """
     attempted to #{action} a stale struct:
 
-    #{inspect struct}
+    #{inspect changeset.data}
     """
 
     %__MODULE__{message: msg, changeset: changeset}

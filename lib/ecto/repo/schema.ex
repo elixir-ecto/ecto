@@ -756,7 +756,7 @@ defmodule Ecto.Repo.Schema do
             {:error, user_changeset}
 
           _other ->
-            raise Ecto.StaleEntryError, struct: user_changeset.data, changeset: user_changeset, action: action
+            raise Ecto.StaleEntryError, changeset: user_changeset, action: action
         end
     end
   end
