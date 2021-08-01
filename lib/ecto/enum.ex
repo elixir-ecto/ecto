@@ -164,7 +164,7 @@ defmodule Ecto.Enum do
   def embed_as(_, _), do: :self
 
   @doc "Returns the possible values for a given schema and field"
-  @spec mappings(Ecto.Schema.t, atom) :: [atom()]
+  @spec values(Ecto.Schema.t, atom) :: [atom()]
   def values(schema, field) do
     schema
     |> mappings(field)
@@ -172,7 +172,7 @@ defmodule Ecto.Enum do
   end
 
   @doc "Returns the possible dump values for a given schema and field"
-  @spec mappings(Ecto.Schema.t, atom) :: [String.t()] | [integer()]
+  @spec dump_values(Ecto.Schema.t, atom) :: [String.t()] | [integer()]
   def dump_values(schema, field) do
     schema
     |> mappings(field)

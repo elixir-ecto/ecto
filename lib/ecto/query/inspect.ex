@@ -231,7 +231,6 @@ defimpl Inspect, for: Ecto.Query do
     |> macro_to_string()
   end
 
-  # TODO: Actually use quoted_to_algebra on Elixir v1.12+
   if Version.match?(System.version(), ">= 1.11.0") do
     defp macro_to_string(expr), do: Macro.to_string(expr)
   else

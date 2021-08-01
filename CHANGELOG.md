@@ -1,5 +1,21 @@
 # Changelog for v3.x
 
+### Enhancements
+
+  * [Ecto.Changeset] Add `Ecto.Changeset.traverse_validations/2`
+  * [Ecto.Enum] Add `Ecto.Enum.mappings/2` and `Ecto.Enum.dump_values/2`
+  * [Ecto.Query] Add support for dynamic `as(^as)` and `parent_as(^as)`
+  * [Ecto.Repo] Add stale changeset to Ecto.StaleEntryError fields
+  * [Ecto.Schema] Add support for @schema_context to set context metadata on schema definition
+
+### Bug fixes
+
+  * [Ecto.Changeset] Fix changeset inspection not redacting when embedded
+  * [Ecto.Enum] Raise on duplicate values in Ecto.Enum
+  * [Ecto.Repo] Support placeholders in insert_all without schemas
+  * [Ecto.Repo] Fix CTE subqueries not finding parent bindings
+  * [Ecto.Repo] Return changeset with assocs if any of the assocs are invalid
+
 ## v3.6.2 (2021-05-28)
 
 ### Enhancements
