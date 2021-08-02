@@ -29,8 +29,8 @@ defmodule Mix.Tasks.Ecto.Create do
 
   ## Examples
 
-      mix ecto.create
-      mix ecto.create -r Custom.Repo
+      $ mix ecto.create
+      $ mix ecto.create -r Custom.Repo
 
   ## Command line options
 
@@ -41,7 +41,7 @@ defmodule Mix.Tasks.Ecto.Create do
 
   """
 
-  @doc false
+  @impl true
   def run(args) do
     repos = parse_repo(args)
     {opts, _} = OptionParser.parse! args, strict: @switches, aliases: @aliases

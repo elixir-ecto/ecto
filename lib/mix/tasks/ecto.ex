@@ -6,11 +6,11 @@ defmodule Mix.Tasks.Ecto do
   @moduledoc """
   Prints Ecto tasks and their information.
 
-      mix ecto
+      $ mix ecto
 
   """
 
-  @doc false
+  @impl true
   def run(args) do
     {_opts, args} = OptionParser.parse!(args, strict: [])
 

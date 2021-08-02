@@ -33,8 +33,8 @@ defmodule Mix.Tasks.Ecto.Drop do
 
   ## Examples
 
-      mix ecto.drop
-      mix ecto.drop -r Custom.Repo
+      $ mix ecto.drop
+      $ mix ecto.drop -r Custom.Repo
 
   ## Command line options
 
@@ -50,7 +50,7 @@ defmodule Mix.Tasks.Ecto.Drop do
 
   """
 
-  @doc false
+  @impl true
   def run(args) do
     repos = parse_repo(args)
     {opts, _} = OptionParser.parse! args, strict: @switches, aliases: @aliases

@@ -21,7 +21,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
   ## Examples
 
-      mix ecto.gen.repo -r Custom.Repo
+      $ mix ecto.gen.repo -r Custom.Repo
 
   This generator will automatically open the config/config.exs
   after generation if you have `ECTO_EDITOR` set in your environment
@@ -33,7 +33,7 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
 
   """
 
-  @doc false
+  @impl true
   def run(args) do
     no_umbrella!("ecto.gen.repo")
     {opts, _} = OptionParser.parse!(args, strict: @switches, aliases: @aliases)
