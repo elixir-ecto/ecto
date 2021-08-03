@@ -137,18 +137,11 @@ defmodule Ecto.Query.Builder.JoinTest do
     end
   end
 
-  test "raises on non-atom as" do
-    assert_raise Ecto.Query.CompileError, ~r/`as` must be a compile time atom/, fn ->
-      escape(quote do
-        join("posts", :left, [p], c in "comments", on: true, as: "string")
-      end, [], __ENV__)
-    end
-
-    assert_raise Ecto.Query.CompileError, ~r/`as` must be a compile time atom/, fn ->
-      escape(quote do
-        join("posts", :left, [p], c in "comments", on: true, as: atom)
-      end, [], __ENV__)
-    end
+  test "allows non-atom as" do
+    escape(quote do
+      as = "comments"
+      join("posts", :left, [p], c in "comments", on: true, as: ^as)
+    end, [], __ENV__)
   end
 
   test "raises on non-string prefix" do

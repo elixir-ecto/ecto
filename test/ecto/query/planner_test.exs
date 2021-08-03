@@ -848,11 +848,6 @@ defmodule Ecto.Query.PlannerTest do
     assert_raise Ecto.QueryError, ~r/could not find named binding `as\(:posts\)`/, fn ->
       from(Post, where: as(^as).code == ^123) |> normalize()
     end
-
-    assert_raise Ecto.Query.CompileError, ~r/expected atom in as\/1/, fn ->
-      as = "posts"
-      from(Post, where: as(^as).code == ^123) |> normalize()
-    end
   end
 
   test "normalize: creating dynamic bindings with as" do
@@ -867,6 +862,9 @@ defmodule Ecto.Query.PlannerTest do
     assert_raise Ecto.QueryError, ~r/could not find named binding `as\(\[:posts\]\)`/, fn ->
       from(Post, where: as(^as).code == ^123) |> normalize()
     end
+
+    query = from(Post, as: as, where: as(^as).code == ^123) |> normalize()
+    assert Macro.to_string(hd(query.wheres).expr) == "&0.code() == ^0"
   end
 
   test "normalize: late parent bindings with as" do
