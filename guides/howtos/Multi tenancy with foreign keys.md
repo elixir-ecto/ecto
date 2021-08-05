@@ -6,7 +6,7 @@ Each query prefix is isolated, having their own tables and data, which provides 
 
 Therefore, some applications may prefer a cheaper mechanism for multi tenancy, by relying on foreign keys. The idea here is that most - if not all - resources in the system belong to a tenant. The tenant is typically an organization or a user and all resources have an `org_id` (or `user_id`) foreign key pointing directly to it.
 
-In this guide, we will show how to leverage Ecto constructs to guarantee that all queries in your application are properly scoped to a chosen `org_id`.
+In this guide, we will show how to leverage Ecto constructs to guarantee that all Ecto queries in your application are properly scoped to a chosen `org_id`.
 
 ## Adding org_id to read operations
 
@@ -40,7 +40,7 @@ defmodule MyApp.Repo do
 end
 ```
 
-Now we can pass `:org_id` to `all`, `update_all`, `get`, `preload`, etc. Generally speaking, to all READ/SELECT operations. Note we have intentionally made the `:org_id` required, with the exception of two scenarios:
+Now we can pass `:org_id` to all READ operations, such as `get`, `get_by`, `preload`, etc and all query operations, such `all`, `update_all`, and `delete_all`. Note we have intentionally made the `:org_id` required, with the exception of two scenarios:
 
   * if you explicitly set `:skip_org_id` to true, it won't require an `:org_id`. This reduces the odds of a developer forgetting to scope their queries, which can accidentally expose private data to other users
 
@@ -87,7 +87,9 @@ defmodule MyApp.Repo do
 end
 ```
 
-With these changes, we will always set the `org_id` fields in our queries, unless we explicitly set `skip_org_id: true` when calling the repository. However, we are not done! There are some techniques that we can use to tighten up our multi tenant support, especially in regards to associations.
+With these changes, we will always set the `org_id` field in our Ecto queries, unless we explicitly set `skip_org_id: true` when calling the repository. The only remaining step is to make sure the `org_id` field is not null in your database tables and make sure the `org_id` is set whenever inserting into the database.
+
+To better understand how our database schema should look like, let's discuss some other techniques that we can use to tighten up multi tenant support, especially in regards to associations.
 
 ## Working with multi tenant associations
 
@@ -143,7 +145,7 @@ MyApp.Repo.all(
 )
 ```
 
-`prepare_query` will apply the `org_id` only to posts but not to the `join`. While this may seem problematic, in practice it is not an issue, because when you insert posts and comments in the database, **they will always have the same `org_id`**. If posts and comments do not have the same `org_id`, then this is actually a bug in our data: the data either got corrupted or there is a bug in our software when inserting data.
+`prepare_query` will apply the `org_id` only to posts but not to the `join`. While this may seem problematic, in practice it is not an issue, because when you insert posts and comments in the database, **they will always have the same `org_id`**. If posts and comments do not have the same `org_id`, then there is a bug: the data either got corrupted or there is a bug in our software when inserting data.
 
 Luckily, we can leverage database's foreign keys to guarantee that the `org_id`s always match between posts and comments. Our first stab at defining these schema migrations would look like this:
 
@@ -208,7 +210,7 @@ which will help enforce none of the columns in the foreign key can be `nil`.
 
 ## Summary
 
-With these changes, we are enforcing our data is valid at the database level, while we have changed our repository interface to guarantee our queries are always scoped to an `org_id`, unless we explicitly opt out.
+In this guide, we have changed our repository interface to guarantee our queries are always scoped to an `org_id`, unless we explicitly opt out. We also learned how to leverage database features to enforce the data is always valid.
 
 When it comes to associations, you will want to apply composite foreign keys whenever possible. For example, imagine comments belongs to posts (which belong to an organization) and also to user (which belong to an organization). The comments schema migration should be defined like this:
 
