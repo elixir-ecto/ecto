@@ -750,7 +750,7 @@ defmodule Ecto.Repo do
   @doc """
   Calculate the given `aggregate`.
 
-  If the query has a limit, offset or distinct set, it will be
+  If the query has a limit, offset, distinct or combination set, it will be
   automatically wrapped in a subquery in order to return the
   proper result.
 

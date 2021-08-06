@@ -355,7 +355,7 @@ defmodule Ecto.RepoTest do
       assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchemaWithAssoc, select: count(m0.id)>"
     end
 
-    test "removes order by from query without distinct/limit/offset" do
+    test "removes order by from query without distinct/limit/offset/combinations" do
       from(MySchema, order_by: :id) |> TestRepo.aggregate(:count, :id)
       assert_received {:all, query}
       assert inspect(query) == "#Ecto.Query<from m0 in Ecto.RepoTest.MySchema, select: count(m0.id)>"
@@ -374,6 +374,17 @@ defmodule Ecto.RepoTest do
                "#Ecto.Query<from m0 in subquery(from m0 in Ecto.RepoTest.MySchema,\n" <>
                 "  limit: 5,\n" <>
                 "  select: %{id: m0.id}), select: count(m0.id)>"
+    end
+
+    test "uses subqueries with combinations" do
+      from(MySchema, union: ^from(MySchema)) |> TestRepo.aggregate(:count, :id)
+      assert_received {:all, query}
+
+      assert inspect(query) ==
+               "#Ecto.Query<from m0 in subquery(from m0 in Ecto.RepoTest.MySchema,\n" <>
+                 "  union: (from m0 in Ecto.RepoTest.MySchema,\n" <>
+                 "  select: m0),\n" <>
+                 "  select: %{id: m0.id}), select: count(m0.id)>"
     end
 
     test "raises when aggregating with group_by" do
