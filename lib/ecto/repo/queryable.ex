@@ -473,7 +473,7 @@ defmodule Ecto.Repo.Queryable do
   defp query_for_aggregate(queryable, aggregate) do
     query =
       case prepare_for_aggregate(queryable) do
-        %{distinct: nil, limit: nil, offset: nil} = query ->
+        %{distinct: nil, limit: nil, offset: nil, combinations: []} = query ->
           %{query | order_bys: []}
 
         query ->
@@ -491,7 +491,7 @@ defmodule Ecto.Repo.Queryable do
 
     query =
       case prepare_for_aggregate(queryable) do
-        %{distinct: nil, limit: nil, offset: nil} = query ->
+        %{distinct: nil, limit: nil, offset: nil, combinations: []} = query ->
           %{query | order_bys: []}
 
         query ->
