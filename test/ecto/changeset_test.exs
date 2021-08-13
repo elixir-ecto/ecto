@@ -1014,6 +1014,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(world), message: "yada")
     assert changeset.errors == [title: {"yada", [validation: :inclusion, enum: ~w(world)]}]
+
+    changeset =
+      {%{}, %{value: :decimal}}
+      |> Ecto.Changeset.cast(%{value: 0}, [:value])
+      |> validate_inclusion(:value, Enum.map([0.0, 0.2], &Decimal.from_float/1))
+
+    assert changeset.valid?
   end
 
   test "validate_subset/3" do
