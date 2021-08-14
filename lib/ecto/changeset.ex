@@ -2000,7 +2000,7 @@ defmodule Ecto.Changeset do
   @spec validate_inclusion(t, atom, Enum.t, Keyword.t) :: t
   def validate_inclusion(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:inclusion, data}, fn _, value ->
-      type = Map.get(changeset.types, field)
+      type = Map.fetch!(changeset.types, field)
 
       if Ecto.Type.include?(type, value, data),
         do: [],
