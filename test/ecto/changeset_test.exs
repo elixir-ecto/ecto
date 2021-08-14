@@ -1014,6 +1014,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(world), message: "yada")
     assert changeset.errors == [title: {"yada", [validation: :inclusion, enum: ~w(world)]}]
+
+    changeset =
+      {%{}, %{value: :decimal}}
+      |> Ecto.Changeset.cast(%{value: 0}, [:value])
+      |> validate_inclusion(:value, Enum.map([0.0, 0.2], &Decimal.from_float/1))
+
+    assert changeset.valid?
   end
 
   test "validate_subset/3" do
@@ -1035,6 +1042,12 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"topics" => ["laptop"]})
       |> validate_subset(:topics, ~w(cat dog), message: "yada")
     assert changeset.errors == [topics: {"yada", [validation: :subset, enum: ~w(cat dog)]}]
+
+    changeset =
+      {%{}, %{value: {:array, :decimal}}}
+      |> Ecto.Changeset.cast(%{value: [0, 0.2]}, [:value])
+      |> validate_subset(:value, Enum.map([0.0, 0.2], &Decimal.from_float/1))
+    assert changeset.valid?
   end
 
   test "validate_exclusion/3" do
@@ -1056,6 +1069,13 @@ defmodule Ecto.ChangesetTest do
       changeset(%{"title" => "world"})
       |> validate_exclusion(:title, ~w(world), message: "yada")
     assert changeset.errors == [title: {"yada", [validation: :exclusion, enum: ~w(world)]}]
+
+    decimals = Enum.map([0.0, 0.2], &Decimal.from_float/1)
+    changeset =
+      {%{}, %{value: :decimal}}
+      |> Ecto.Changeset.cast(%{value: 0}, [:value])
+      |> validate_exclusion(:value, decimals)
+    assert changeset.errors ==  [value: {"is reserved", [validation: :exclusion, enum: decimals]}]
   end
 
   test "validate_length/3 with string" do

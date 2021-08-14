@@ -1106,6 +1106,28 @@ defmodule Ecto.Type do
     end
   end
 
+  @doc """
+  Checks if `collection` includes a `term`.
+
+  Depending on the given `type` performs a structural or semantical comparison.
+
+  ## Examples
+
+      iex> include?(:integer, 1, 1..3)
+      true
+      iex> include?(:decimal, Decimal.new("1"), [Decimal.new("1.00"), Decimal.new("2.00")])
+      true
+
+  """
+  @spec include?(t, term, Enum.t()) :: boolean
+  def include?(type, term, collection) do
+    if fun = equal_fun(type) do
+      Enum.any?(collection, &fun.(term, &1))
+    else
+      term in collection
+    end
+  end
+
   defp equal_fun(:decimal), do: &equal_decimal?/2
   defp equal_fun(t) when t in [:time, :time_usec], do: &equal_time?/2
   defp equal_fun(t) when t in [:utc_datetime, :utc_datetime_usec], do: &equal_utc_datetime?/2
