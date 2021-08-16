@@ -177,7 +177,7 @@ defmodule Ecto.Changeset do
         end
 
         def changeset(comment, %{"delete" => "true"}) do
-          %{Ecto.Changeset.change(comment, %{delete: true}) | action: :delete}
+          %{Ecto.Changeset.change(comment, delete: true) | action: :delete}
         end
 
         def changeset(comment, params) do
