@@ -161,8 +161,11 @@ defmodule Ecto.Changeset do
 
   The `:delete` and `:delete_if_exists` options must be used carefully as they allow
   users to delete any associated data by simply not sending the associated data.
-  If you need deletion, it is often preferred to manually mark the changeset
-  for deletion if a `delete` field is set in the params, as in the example below:
+  If you need deletion, it is often preferred to add a separate boolean virtual field
+  in the schema and manually mark the changeset for deletion if the `:delete` field is
+  set in the params, as in the example below. Note that we don't call `cast/4` in this
+  case because we don't want to prevent deletion if a change is invalid (changes are
+  irrelevant if the entity needs to be deleted).
 
       defmodule Comment do
         use Ecto.Schema
@@ -170,10 +173,11 @@ defmodule Ecto.Changeset do
 
         schema "comments" do
           field :body, :string
+          field :delete, :boolean, virtual: true
         end
 
         def changeset(comment, %{"delete" => "true"}) do
-          %{Ecto.Changeset.change(comment) | action: :delete}
+          %{Ecto.Changeset.change(comment, delete: true) | action: :delete}
         end
 
         def changeset(comment, params) do
