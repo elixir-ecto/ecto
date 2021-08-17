@@ -96,7 +96,7 @@ defmodule Ecto.Changeset do
   checked at the end of the transaction rather than at the end of each statement.
 
   Changesets do not support this type of constraints. When working with deferred
-  constraints, a violation while invoking `Repo.insert/2` or `Repo.update/2` won't
+  constraints, a violation while invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2` won't
   return `{:error, changeset}`, but rather raise an error at the end of the
   transaction.
 
@@ -238,7 +238,7 @@ defmodule Ecto.Changeset do
   Phoenix use the action value to define how HTML forms should act.
 
   Instead of setting the action manually, you may use `apply_action/2` that
-  emulates operations such as `Repo.insert`. `apply_action/2` will return
+  emulates operations such as `c:Ecto.Repo.insert`. `apply_action/2` will return
   `{:ok, changes}` if the changeset is valid or `{:error, changeset}`, with
   the given `action` set in the changeset in case of errors.
 
@@ -2545,7 +2545,7 @@ defmodule Ecto.Changeset do
       cast(user, params, [:price])
       |> check_constraint(:price, name: :price_must_be_positive)
 
-  Now, when invoking `Repo.insert/2` or `Repo.update/2`, if the
+  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`, if the
   price is not positive, it will be converted into an error and
   `{:error, changeset}` returned by the repository. Note that the error
   will occur only after hitting the database so it will not be visible
@@ -2590,7 +2590,7 @@ defmodule Ecto.Changeset do
       cast(user, params, [:email])
       |> unique_constraint(:email)
 
-  Now, when invoking `Repo.insert/2` or `Repo.update/2`, if the
+  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`, if the
   email already exists, it will be converted into an error and
   `{:error, changeset}` returned by the repository. Note that the error
   will occur only after hitting the database so it will not be visible
@@ -2726,7 +2726,7 @@ defmodule Ecto.Changeset do
       cast(comment, params, [:post_id])
       |> foreign_key_constraint(:post_id)
 
-  Now, when invoking `Repo.insert/2` or `Repo.update/2`, if the
+  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`, if the
   associated post does not exist, it will be converted into an
   error and `{:error, changeset}` returned by the repository.
 
