@@ -498,11 +498,13 @@ defmodule Ecto do
   """
   def assoc(struct_or_structs, assocs) do
     [assoc | assocs] = List.wrap(assocs)
-    structs = List.wrap(struct_or_structs)
 
-    if structs == [] do
-      raise ArgumentError, "cannot retrieve association #{inspect assoc} for empty list"
-    end
+    structs =
+      case struct_or_structs do
+        nil -> raise ArgumentError, "cannot retrieve association #{inspect(assoc)} for nil"
+        [] -> raise ArgumentError, "cannot retrieve association #{inspect(assoc)} for empty list"
+        struct_or_structs -> List.wrap(struct_or_structs)
+      end
 
     schema = hd(structs).__struct__
     refl = %{owner_key: owner_key} = Ecto.Association.association_from_schema!(schema, assoc)
