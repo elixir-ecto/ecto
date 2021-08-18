@@ -293,7 +293,7 @@ Just like the last time we did an insertion, this returns a tuple. This time how
 Then we can get to the errors by doing `changeset.errors`:
 
 ```elixir
-[first_name: "can't be blank", last_name: "can't be blank"]
+[first_name: {"can't be blank", [validation: :required]}, last_name: {"can't be blank", [validation: :required]}]
 ```
 
 And we can ask the changeset itself if it is valid, even before doing an insertion:
@@ -354,17 +354,17 @@ If the insertion of the changeset succeeds, then you can do whatever you wish wi
 
 
 ```elixir
-[first_name: {"can't be blank", []},
- last_name: {"can't be blank", []}]
+[first_name: {"can't be blank", [validation: :required]},
+ last_name: {"can't be blank", [validation: :required]}]
 ```
 
-The first element of the tuple is the validation message, and the second element is a keyword list of options for the validation message. The `validate_required/3` validations don't return any options, but other methods such as `validate_length/3` do. Imagine that we had a field called `bio` that we were validating, and that field has to be longer than 15 characters. This is what would be returned:
+The first element of the tuple is the validation message, and the second element is a keyword list of options for the validation message. Imagine that we had a field called `bio` that we were validating, and that field has to be longer than 15 characters. This is what would be returned:
 
 
 ```elixir
-[first_name: {"can't be blank", []},
- last_name: {"can't be blank", []},
- bio: {"should be at least %{count} characters", [count: 15]}]
+[first_name: {"can't be blank", [validation: :required]},
+ last_name: {"can't be blank", [validation: :required]},
+ bio: {"should be at least %{count} character(s)", [count: 15, validation: :length, kind: :min, type: :string]}]
 ```
 
 To display these error messages in a human friendly way, we can use `Ecto.Changeset.traverse_errors/2`:
@@ -383,7 +383,7 @@ This will return the following for the errors shown above:
 %{
   first_name: ["can't be blank"],
   last_name: ["can't be blank"],
-  bio: ["should be at least 15 characters"],
+  bio: ["should be at least 15 character(s)"],
 }
 ```
 
