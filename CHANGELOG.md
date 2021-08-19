@@ -5,14 +5,17 @@
   * [Ecto.Changeset] Add `Ecto.Changeset.traverse_validations/2`
   * [Ecto.Enum] Add `Ecto.Enum.mappings/2` and `Ecto.Enum.dump_values/2`
   * [Ecto.Query] Add support for dynamic `as(^as)` and `parent_as(^as)`
-  * [Ecto.Repo] Add stale changeset to Ecto.StaleEntryError fields
-  * [Ecto.Schema] Add support for @schema_context to set context metadata on schema definition
+  * [Ecto.Repo] Add stale changeset to `Ecto.StaleEntryError` fields
+  * [Ecto.Schema] Add support for `@schema_context` to set context metadata on schema definition
 
 ### Bug fixes
 
   * [Ecto.Changeset] Fix changeset inspection not redacting when embedded
-  * [Ecto.Enum] Raise on duplicate values in Ecto.Enum
-  * [Ecto.Repo] Support placeholders in insert_all without schemas
+  * [Ecto.Changeset] Use semantic comparison on `validate_inclusion`, `validate_exclusion`, and `validate_subset`
+  * [Ecto.Enum] Raise on duplicate values in ``Ecto.Enum`
+  * [Ecto.Query] Make sure `hints` are included in the query cache
+  * [Ecto.Repo] Support placeholders in `insert_all` without schemas
+  * [Ecto.Repo] Wrap in a subquery when query given to `Repo.aggregate` has combination
   * [Ecto.Repo] Fix CTE subqueries not finding parent bindings
   * [Ecto.Repo] Return changeset with assocs if any of the assocs are invalid
 
