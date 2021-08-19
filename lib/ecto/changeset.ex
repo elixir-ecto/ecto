@@ -1762,7 +1762,7 @@ defmodule Ecto.Changeset do
   won't add an error for missing changes as long as the value in the
   data given to the `changeset` is not empty.
 
-  Do not use this function to validate associations are required,
+  Do not use this function to validate associations that are required,
   instead pass the `:required` option to `cast_assoc/3`.
 
   Opposite to other validations, calling this function does not store
