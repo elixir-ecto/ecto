@@ -12,7 +12,7 @@
 
   * [Ecto.Changeset] Fix changeset inspection not redacting when embedded
   * [Ecto.Changeset] Use semantic comparison on `validate_inclusion`, `validate_exclusion`, and `validate_subset`
-  * [Ecto.Enum] Raise on duplicate values in ``Ecto.Enum`
+  * [Ecto.Enum] Raise on duplicate values in `Ecto.Enum`
   * [Ecto.Query] Make sure `hints` are included in the query cache
   * [Ecto.Repo] Support placeholders in `insert_all` without schemas
   * [Ecto.Repo] Wrap in a subquery when query given to `Repo.aggregate` has combination
