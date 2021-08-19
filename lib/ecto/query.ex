@@ -1027,8 +1027,8 @@ defmodule Ecto.Query do
   ## Hints
 
   `from` and `join` also support index hints, as found in databases such as
-  [MySQL](https://dev.mysql.com/doc/refman/8.0/en/index-hints.html) and
-  [MSSQL](https://docs.microsoft.com/en-us/sql/t-sql/queries/hints-transact-sql-table?view=sql-server-2017).
+  [MySQL](https://dev.mysql.com/doc/refman/8.0/en/index-hints.html),
+  [MSSQL](https://docs.microsoft.com/en-us/sql/t-sql/queries/hints-transact-sql-table?view=sql-server-2017) and
   [Clickhouse](https://clickhouse.tech/docs/en/sql-reference/statements/select/sample/).
 
   For example, a developer using MySQL may write:
