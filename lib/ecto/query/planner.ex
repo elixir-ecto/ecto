@@ -636,7 +636,7 @@ defmodule Ecto.Query.Planner do
 
   defp merge_cache(:from, _query, from, {cache, params}, _operation, _adapter) do
     {key, params} = source_cache(from, params)
-    {merge_cache(key, cache, key != :nocache), params}
+    {merge_cache({:from, key, from.hints}, cache, key != :nocache), params}
   end
 
   defp merge_cache(kind, query, expr, {cache, params}, _operation, adapter)
@@ -666,11 +666,11 @@ defmodule Ecto.Query.Planner do
   defp merge_cache(:join, query, exprs, {cache, params}, _operation, adapter) do
     {expr_cache, {params, cacheable?}} =
       Enum.map_reduce exprs, {params, true}, fn
-        %JoinExpr{on: on, qual: qual} = join, {params, cacheable?} ->
+        %JoinExpr{on: on, qual: qual, hints: hints} = join, {params, cacheable?} ->
           {key, params} = source_cache(join, params)
           {params, join_cacheable?} = cast_and_merge_params(:join, query, join, params, adapter)
           {params, on_cacheable?} = cast_and_merge_params(:join, query, on, params, adapter)
-          {{qual, key, on.expr},
+          {{qual, key, on.expr, hints},
            {params, cacheable? and join_cacheable? and on_cacheable? and key != :nocache}}
       end
 

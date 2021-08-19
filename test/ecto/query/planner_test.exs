@@ -394,17 +394,19 @@ defmodule Ecto.Query.PlannerTest do
 
   test "plan: generates a cache key" do
     {_query, _params, key} = plan(from(Post, []))
-    assert key == [:all, {"posts", Post, 69355382, "my_prefix"}]
+    assert key == [:all, {:from, {"posts", Post, 69355382, "my_prefix"}, []}]
 
     query =
       from(
         p in Post,
         prefix: "hello",
+        hints: ["hint"],
         select: 1,
         lock: "foo",
         where: is_nil(nil),
         or_where: is_nil(nil),
         join: c in Comment,
+        hints: ["join hint"],
         prefix: "world",
         preload: :comments
       )
@@ -414,8 +416,8 @@ defmodule Ecto.Query.PlannerTest do
                    {:lock, "foo"},
                    {:prefix, "foo"},
                    {:where, [{:and, {:is_nil, [], [nil]}}, {:or, {:is_nil, [], [nil]}}]},
-                   {:join, [{:inner, {"comments", Comment, 38292156, "world"}, true}]},
-                   {"posts", Post, 69355382, "hello"},
+                   {:join, [{:inner, {"comments", Comment, 38292156, "world"}, true, ["join hint"]}]},
+                   {:from, {"posts", Post, 69355382, "hello"}, ["hint"]},
                    {:select, 1}]
   end
 
@@ -627,9 +629,9 @@ defmodule Ecto.Query.PlannerTest do
       assert %Ecto.Query.SelectExpr{expr: {:&, [], [0]}} = query.select
       assert [
         :all,
-        {"comments", Comment, _, nil},
+        {:from, {"comments", Comment, _, nil}, []},
         {:non_recursive_cte, "cte",
-         [:all, {:prefix, "another"}, {"comments", Comment, _, nil}, {:select, {:&, _, [0]}}]}
+         [:all, {:prefix, "another"}, {:from, {"comments", Comment, _, nil}, []}, {:select, {:&, _, [0]}}]}
       ] = cache
 
       {%{with_ctes: with_expr}, _, cache} =
@@ -649,7 +651,7 @@ defmodule Ecto.Query.PlannerTest do
       %{queries: [{"cte", query_expr}]} = with_expr
       expr = {:fragment, [], [raw: "SELECT * FROM comments WHERE id = ", expr: {:^, [], [0]}, raw: ""]}
       assert expr == query_expr.expr
-      assert [:all, {"comments", Comment, _, nil}, {:recursive_cte, "cte", ^expr}] = cache
+      assert [:all, {:from, {"comments", Comment, _, nil}, []}, {:recursive_cte, "cte", ^expr}] = cache
     end
 
     test "on update_all" do
@@ -680,7 +682,7 @@ defmodule Ecto.Query.PlannerTest do
                {:take, %{0 => {:any, [:id]}}},
                {:limit, {:^, [], [0]}},
                {:order_by, [[desc: _]]},
-               {"comments", Comment, _, nil},
+               {:from, {"comments", Comment, _, nil}, []},
                {:select, {:&, [], [0]}}
              ] = cte_cache
     end
@@ -712,7 +714,7 @@ defmodule Ecto.Query.PlannerTest do
                {:take, %{0 => {:any, [:id]}}},
                {:limit, {:^, [], [0]}},
                {:order_by, [[desc: _]]},
-               {"comments", Comment, _, nil},
+               {:from, {"comments", Comment, _, nil}, []},
                {:select, {:&, [], [0]}}
              ] = cte_cache
     end

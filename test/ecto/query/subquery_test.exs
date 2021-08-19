@@ -61,7 +61,7 @@ defmodule Ecto.Query.SubqueryTest do
       {query, params, key} = plan(from(subquery(Post), []))
       assert %{query: %Ecto.Query{}, params: []} = query.from.source
       assert params == []
-      assert key == [:all, [:all, {"posts", Post, 52805476, "my_prefix"}]]
+      assert key == [:all, {:from, [:all, {:from, {"posts", Ecto.Query.SubqueryTest.Post, 52805476, "my_prefix"}, []}], []}]
     end
 
     test "in join" do
@@ -71,7 +71,7 @@ defmodule Ecto.Query.SubqueryTest do
       assert {"comments", Comment} = query.from.source
       assert [%{source: %{query: %Ecto.Query{}, params: ["hello"]}}] = query.joins
       assert params == ["hello"]
-      assert [:all, {:join, [{:inner, [:all | _], _}]}, {"comments", _, _, _}] = key
+      assert [:all, {:join, [{:inner, [:all | _], _, []}]}, {:from, {"comments", _, _, _}, []}] = key
     end
 
     test "with association joins" do
