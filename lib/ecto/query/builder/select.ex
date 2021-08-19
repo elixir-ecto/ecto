@@ -32,10 +32,19 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   def escape(other, vars, env) do
-    if take?(other) do
-      {{:{}, [], [:&, [], [0]]}, {[], %{0 => {:any, other}}}}
-    else
-      escape(other, {[], %{}}, vars, env)
+    cond do
+      take?(other) ->
+        {{:{}, [], [:&, [], [0]]}, {[], %{0 => {:any, other}}}}
+
+      maybe_take?(other) ->
+        Builder.error! """
+        Cannot mix fields with interpolations, such as: `select: [:foo, ^:bar, :baz]`. \
+        Instead interpolate all fields at once, such as: `select: ^[:foo, :bar, :baz]`. \
+        Got: #{Macro.to_string(other)}.
+        """
+    
+      true ->
+        escape(other, {[], %{}}, vars, env)
     end
   end
 
@@ -150,6 +159,14 @@ defmodule Ecto.Query.Builder.Select do
   defp take?(fields) do
     is_list(fields) and Enum.all?(fields, fn
       {k, v} when is_atom(k) -> take?(List.wrap(v))
+      k when is_atom(k) -> true
+      _ -> false
+    end)
+  end
+
+  defp maybe_take?(fields) do
+    is_list(fields) and Enum.any?(fields, fn
+      {k, v} when is_atom(k) -> maybe_take?(List.wrap(v))
       k when is_atom(k) -> true
       _ -> false
     end)

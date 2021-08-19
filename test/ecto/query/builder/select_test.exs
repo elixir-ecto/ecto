@@ -68,6 +68,12 @@ defmodule Ecto.Query.Builder.SelectTest do
         escape(quote do :foo end, [x: 0], __ENV__)
       end
     end
+
+    test "raises on mixed fields and interpolation" do
+      assert_raise Ecto.Query.CompileError, ~r"Cannot mix fields with interpolations", fn ->
+        escape(quote do [:foo, ^:bar] end, [], __ENV__)
+      end
+    end
   end
 
   describe "at runtime" do
