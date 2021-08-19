@@ -460,7 +460,7 @@ Friends.Person |> Ecto.Query.first
 That code will generate an `Ecto.Query`, which will be this:
 
 ```
-#Ecto.Query<from p in Friends.Person, order_by: [asc: p.id], limit: 1>
+#Ecto.Query<from p0 in Friends.Person, order_by: [asc: p0.id], limit: 1>
 ```
 
 The code between the angle brackets `<...>` here shows the Ecto query which has been constructed. We could construct this query ourselves with almost exactly the same syntax:
