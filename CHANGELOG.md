@@ -1,5 +1,7 @@
 # Changelog for v3.x
 
+## v3.7.0 (2021-08-19)
+
 ### Enhancements
 
   * [Ecto.Changeset] Add `Ecto.Changeset.traverse_validations/2`
