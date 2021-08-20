@@ -156,7 +156,7 @@ It is also possible to run the integration tests under a containerized environme
 
 You can also use this to interactively debug any failing integration tests using:
 
-    $ earthly -P -i --build-arg ELIXIR_BASE=1.8.2-erlang-20.3.8.26-alpine-3.11.6 +integration-test
+    $ earthly -P -i --build-arg ELIXIR_BASE=1.8.2-erlang-21.3.8.21-alpine-3.11.6 +integration-test
 
 Then once you enter the containerized shell, you can inspect the underlying databases with the respective commands:
 
