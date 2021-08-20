@@ -737,11 +737,11 @@ defmodule Ecto.Integration.RepoTest do
     assert [post1, post2] == TestRepo.reload!([post1, post2])
 
     assert_raise RuntimeError, ~r"could not reload", fn ->
-      TestRepo.reload!([post1, post2, %Post{id: 55}])
+      TestRepo.reload!([post1, post2, %Post{id: -1}])
     end
 
     assert_raise Ecto.NoResultsError, fn ->
-      TestRepo.reload!(%Post{id: 55})
+      TestRepo.reload!(%Post{id: -1})
     end
 
     assert [post2, post1] == TestRepo.reload([post2, post1])
