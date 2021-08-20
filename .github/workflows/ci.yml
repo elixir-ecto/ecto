@@ -17,7 +17,7 @@ jobs:
         elixirbase:
           - "1.11.0-erlang-23.1.1-alpine-3.13.1"
           - "1.11.0-erlang-21.3.8.21-alpine-3.13.1"
-          - "1.8.2-erlang-21.3.8.21-alpine-3.11.6"
+          - "1.8.2-erlang-21.3.8.21-alpine-3.13.1"
     steps:
       - uses: actions/checkout@v2
       - name: Download released earthly
@@ -35,7 +35,7 @@ jobs:
         elixirbase:
           - "1.11.0-erlang-23.1.1-alpine-3.13.1"
           - "1.11.0-erlang-21.3.8.21-alpine-3.13.1"
-          - "1.8.2-erlang-21.3.8.21-alpine-3.11.6"
+          - "1.8.2-erlang-21.3.8.21-alpine-3.13.1"
     steps:
       - uses: actions/checkout@v2
       - name: Download released earthly
