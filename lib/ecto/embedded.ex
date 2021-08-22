@@ -3,6 +3,7 @@ defmodule Ecto.Embedded do
   The embedding struct for `embeds_one` and `embeds_many`.
 
   Its fields are:
+
     * `cardinality` - The association cardinality
     * `field` - The name of the association field on the schema
     * `owner` - The schema where the association was defined
