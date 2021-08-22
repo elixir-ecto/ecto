@@ -1,18 +1,22 @@
 defmodule Ecto.Embedded do
-  @moduledoc false
+  @moduledoc """
+  The embedding struct for `embeds_one` and `embeds_many`.
+
+  Its fields are:
+
+    * `cardinality` - The association cardinality
+    * `field` - The name of the association field on the schema
+    * `owner` - The schema where the association was defined
+    * `related` - The schema that is embedded
+    * `on_cast` - Function name to call by default when casting embeds
+    * `on_replace` - The action taken on associations when schema is replaced
+
+  """
   alias __MODULE__
   alias Ecto.Changeset
   alias Ecto.Changeset.Relation
 
   use Ecto.ParameterizedType
-
-  @type t :: %Embedded{cardinality: :one | :many,
-                       on_replace: :raise | :mark_as_invalid | :delete,
-                       field: atom,
-                       owner: atom,
-                       on_cast: nil | fun,
-                       related: atom,
-                       unique: boolean}
 
   @behaviour Relation
   @on_replace_opts [:raise, :mark_as_invalid, :delete]
@@ -70,11 +74,11 @@ defmodule Ecto.Embedded do
     :error
   end
 
-  def load_field(_field, schema, value, loader) when is_map(value) do
+  defp load_field(_field, schema, value, loader) when is_map(value) do
     Ecto.Schema.Loader.unsafe_load(schema, value, loader)
   end
 
-  def load_field(field, _schema, value, _fun) do
+  defp load_field(field, _schema, value, _fun) do
     raise ArgumentError, "cannot load embed `#{field}`, expected a map but got: #{inspect value}"
   end
 
@@ -94,11 +98,11 @@ defmodule Ecto.Embedded do
     :error
   end
 
-  def dump_field(_field, schema, %{__struct__: schema} = struct, types, dumper, _one_embed?) do
+  defp dump_field(_field, schema, %{__struct__: schema} = struct, types, dumper, _one_embed?) do
     Ecto.Schema.Loader.safe_dump(struct, types, dumper)
   end
 
-  def dump_field(field, schema, value, _types, _dumper, one_embed?) do
+  defp dump_field(field, schema, value, _types, _dumper, one_embed?) do
     one_or_many =
       if one_embed?,
         do: "a struct #{inspect schema} value",
@@ -132,13 +136,12 @@ defmodule Ecto.Embedded do
 
   ## End of parameterized API
 
-  @doc """
-  Callback invoked by repository to prepare embeds.
-
-  It replaces the changesets for embeds inside changes
-  by actual structs so it can be dumped by adapters and
-  loaded into the schema struct afterwards.
-  """
+  # Callback invoked by repository to prepare embeds.
+  #
+  # It replaces the changesets for embeds inside changes
+  # by actual structs so it can be dumped by adapters and
+  # loaded into the schema struct afterwards.
+  @doc false
   def prepare(changeset, embeds, adapter, repo_action) do
     %{changes: changes, types: types, repo: repo} = changeset
     prepare(Map.take(changes, embeds), types, adapter, repo, repo_action)
