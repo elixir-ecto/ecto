@@ -696,9 +696,13 @@ If the changeset fails for any reason, the result of `Friends.Repo.update` will 
 changeset = Friends.Person.changeset(person, %{first_name: ""})
 Friends.Repo.update(changeset)
 #=> {:error,
-     #Ecto.Changeset<action: :update, changes: %{first_name: ""},
-      errors: [first_name: "can't be blank"], data: #Friends.Person<>,
-      valid?: false>}
+     #Ecto.Changeset<
+       action: :update, 
+       changes: %{},
+       errors: [first_name: {"can't be blank", [validation: :required]}], 
+       data: #Friends.Person<>,
+       valid?: false
+     >}
 ```
 
 This means that you can also use a `case` statement to do different things depending on the outcome of the `update` function:
