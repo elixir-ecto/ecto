@@ -90,12 +90,13 @@ defmodule Ecto.MixProject do
           Ecto.Adapter.Storage,
           Ecto.Adapter.Transaction
         ],
-        "Association structs": [
+        "Relation structs": [
           Ecto.Association.BelongsTo,
           Ecto.Association.Has,
           Ecto.Association.HasThrough,
           Ecto.Association.ManyToMany,
-          Ecto.Association.NotLoaded
+          Ecto.Association.NotLoaded,
+          Ecto.Embedded
         ]
       ]
     ]
