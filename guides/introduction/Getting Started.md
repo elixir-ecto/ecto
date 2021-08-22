@@ -598,12 +598,11 @@ Friends.Person |> Ecto.Query.where(last_name: last_name) |> Friends.Repo.all
 ```
 
 ```
-** (Ecto.Query.CompileError) variable `last_name` is not a valid query expression.
-  Variables need to be explicitly interpolated in queries with ^
-             expanding macro: Ecto.Query.where/2
-             iex:1: (file)
+** (Ecto.Query.CompileError) unbound variable `last_name` in query. If you are attempting to interpolate a value, use ^var
+    (ecto)   expanding macro: Ecto.Query.where/2
+             iex:15: (file)
     (elixir) expanding macro: Kernel.|>/2
-             iex:1: (file)
+             iex:15: (file)
 ```
 
 The same will happen in the longer query syntax too:
@@ -613,14 +612,13 @@ Ecto.Query.from(p in Friends.Person, where: p.last_name == last_name) |> Friends
 ```
 
 ```
-** (Ecto.Query.CompileError) variable `last_name` is not a valid query expression.
-  Variables need to be explicitly interpolated in queries with ^
-             expanding macro: Ecto.Query.where/3
-             iex:1: (file)
-             expanding macro: Ecto.Query.from/2
-             iex:1: (file)
+** (Ecto.Query.CompileError) unbound variable `last_name` in query. If you are attempting to interpolate a value, use ^var
+    (ecto)   expanding macro: Ecto.Query.where/3
+             iex:15: (file)
+    (ecto)   expanding macro: Ecto.Query.from/2
+             iex:15: (file)
     (elixir) expanding macro: Kernel.|>/2
-             iex:1: (file)
+             iex:15: (file)
 ```
 
 To get around this, we use the pin operator (`^`):
