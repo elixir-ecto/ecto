@@ -416,7 +416,7 @@ Changeset
       valid?: false
     >
 
-   lib/ecto/repo/schema.ex:169: Ecto.Repo.Schema.insert!/4
+   (ecto) lib/ecto/repo/schema.ex:257: Ecto.Repo.Schema.insert!/4
 ```
 
 This exception shows us the changes from the changeset, and how the changeset is invalid. This can be useful if you want to insert a bunch of data and then have an exception raised if that data is not inserted correctly at all.
@@ -722,19 +722,29 @@ Friends.Repo.update! changeset
 
 ** (Ecto.InvalidChangesetError) could not perform update because changeset is invalid.
 
-* Changeset changes
+Errors
 
-%{first_name: ""}
+  %{first_name: [{"can't be blank", [validation: :required]}]}
 
-* Changeset params
+Applied changes
 
-%{"first_name" => ""}
+  %{}
 
-* Changeset errors
+Params
 
-[first_name: {"can't be blank", []}]
+  %{"first_name" => ""}
 
-    lib/ecto/repo/schema.ex:132: Ecto.Repo.Schema.update!/4
+Changeset
+
+    #Ecto.Changeset<
+      action: :update,
+      changes: %{},
+      errors: [first_name: {"can't be blank", [validation: :required]}],
+      data: #Friends.Person<>,
+      valid?: false
+    >
+
+    (ecto) lib/ecto/repo/schema.ex:270: Ecto.Repo.Schema.update!/4
 ```
 
 ## Deleting records
