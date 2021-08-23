@@ -1,4 +1,4 @@
-Code.require_file "../../../support/eval_helpers.exs", __DIR__
+Code.require_file("../../../support/eval_helpers.exs", __DIR__)
 
 defmodule Ecto.Query.Builder.CTETest do
   use ExUnit.Case, async: true
@@ -17,7 +17,9 @@ defmodule Ecto.Query.Builder.CTETest do
       |> with_cte("cte1", as: ^cte1)
       |> with_cte("cte2", as: fragment("SELECT * FROM tbl2"))
 
-    assert [{"cte1", ^cte1}, {"cte2", %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
+    assert [{"cte1", ^cte1}, {"cte2", %Ecto.Query.QueryExpr{expr: expr}}] =
+             query.with_ctes.queries
+
     assert {:fragment, [], [raw: "SELECT * FROM tbl2"]} = expr
   end
 
@@ -59,7 +61,9 @@ defmodule Ecto.Query.Builder.CTETest do
       |> with_cte(^cte1_name, as: ^cte1)
       |> with_cte(^cte2_name, as: fragment("SELECT * FROM tbl2"))
 
-    assert [{^cte1_name, ^cte1}, {^cte2_name, %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
+    assert [{^cte1_name, ^cte1}, {^cte2_name, %Ecto.Query.QueryExpr{expr: expr}}] =
+             query.with_ctes.queries
+
     assert {:fragment, [], [raw: "SELECT * FROM tbl2"]} = expr
   end
 

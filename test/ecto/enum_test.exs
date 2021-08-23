@@ -407,7 +407,7 @@ defmodule Ecto.EnumTest do
 
   describe "dump_values/2" do
     test "returns correct values" do
-      assert Ecto.Enum.dump_values(EnumSchema, :my_enum) == ["foo","bar", "baz"]
+      assert Ecto.Enum.dump_values(EnumSchema, :my_enum) == ["foo", "bar", "baz"]
       assert Ecto.Enum.dump_values(EnumSchema, :my_enums) == ["foo", "bar", "baz"]
       assert Ecto.Enum.dump_values(EnumSchema, :my_string_enum) == ["fooo", "baar", "baaz"]
       assert Ecto.Enum.dump_values(EnumSchema, :my_string_enums) == ["fooo", "baar", "baaz"]
@@ -421,8 +421,19 @@ defmodule Ecto.EnumTest do
     test "returns correct values" do
       assert Ecto.Enum.mappings(EnumSchema, :my_enum) == [foo: "foo", bar: "bar", baz: "baz"]
       assert Ecto.Enum.mappings(EnumSchema, :my_enums) == [foo: "foo", bar: "bar", baz: "baz"]
-      assert Ecto.Enum.mappings(EnumSchema, :my_string_enum) == [foo: "fooo", bar: "baar", baz: "baaz"]
-      assert Ecto.Enum.mappings(EnumSchema, :my_string_enums) == [foo: "fooo", bar: "baar", baz: "baaz"]
+
+      assert Ecto.Enum.mappings(EnumSchema, :my_string_enum) == [
+               foo: "fooo",
+               bar: "baar",
+               baz: "baaz"
+             ]
+
+      assert Ecto.Enum.mappings(EnumSchema, :my_string_enums) == [
+               foo: "fooo",
+               bar: "baar",
+               baz: "baaz"
+             ]
+
       assert Ecto.Enum.mappings(EnumSchema, :my_integer_enum) == [foo: 1, bar: 2, baz: 5]
       assert Ecto.Enum.mappings(EnumSchema, :my_integer_enums) == [foo: 1, bar: 2, baz: 5]
       assert Ecto.Enum.mappings(EnumSchema, :virtual_enum) == [foo: "foo", bar: "bar", baz: "baz"]

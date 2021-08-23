@@ -13,8 +13,8 @@ defmodule Ecto.Query.CastError do
 
   def exception(opts) do
     value = Keyword.fetch!(opts, :value)
-    type  = Keyword.fetch!(opts, :type)
-    msg   = Keyword.fetch!(opts, :message)
+    type = Keyword.fetch!(opts, :type)
+    msg = Keyword.fetch!(opts, :message)
     %__MODULE__{value: value, type: type, message: msg}
   end
 end
@@ -27,8 +27,8 @@ defmodule Ecto.QueryError do
 
   def exception(opts) do
     message = Keyword.fetch!(opts, :message)
-    query   = Keyword.fetch!(opts, :query)
-    hint    = Keyword.fetch(opts, :hint)
+    query = Keyword.fetch!(opts, :query)
+    hint = Keyword.fetch(opts, :hint)
 
     message = """
     #{message} in query:
@@ -65,7 +65,7 @@ defmodule Ecto.SubQueryError do
 
   def exception(opts) do
     exception = Keyword.fetch!(opts, :exception)
-    query     = Keyword.fetch!(opts, :query)
+    query = Keyword.fetch!(opts, :query)
 
     message = """
     the following exception happened when compiling a subquery.
@@ -97,40 +97,43 @@ defmodule Ecto.InvalidChangesetError do
 
     Errors
 
-    #{pretty errors}
+    #{pretty(errors)}
 
     Applied changes
 
-    #{pretty changes}
+    #{pretty(changes)}
 
     Params
 
-    #{pretty changeset.params}
+    #{pretty(changeset.params)}
 
     Changeset
 
-    #{pretty changeset}
+    #{pretty(changeset)}
     """
   end
 
   defp pretty(term) do
     inspect(term, pretty: true)
     |> String.split("\n")
-    |> Enum.map_join("\n", &"    " <> &1)
+    |> Enum.map_join("\n", &("    " <> &1))
   end
 
   defp extract_changes(%Ecto.Changeset{changes: changes}) do
-    Enum.reduce(changes, %{}, fn({key, value}, acc) ->
+    Enum.reduce(changes, %{}, fn {key, value}, acc ->
       case value do
         %Ecto.Changeset{action: :delete} -> acc
         _ -> Map.put(acc, key, extract_changes(value))
       end
     end)
   end
+
   defp extract_changes([%Ecto.Changeset{action: :delete} | tail]),
     do: extract_changes(tail)
+
   defp extract_changes([%Ecto.Changeset{} = changeset | tail]),
     do: [extract_changes(changeset) | extract_changes(tail)]
+
   defp extract_changes(other),
     do: other
 end
@@ -142,9 +145,9 @@ defmodule Ecto.CastError do
   defexception [:message, :type, :value]
 
   def exception(opts) do
-    type  = Keyword.fetch!(opts, :type)
+    type = Keyword.fetch!(opts, :type)
     value = Keyword.fetch!(opts, :value)
-    msg   = opts[:message] || "cannot cast #{inspect value} to #{inspect type}"
+    msg = opts[:message] || "cannot cast #{inspect(value)} to #{inspect(type)}"
     %__MODULE__{message: msg, type: type, value: value}
   end
 end
@@ -168,8 +171,8 @@ defmodule Ecto.NoPrimaryKeyFieldError do
   defexception [:message, :schema]
 
   def exception(opts) do
-    schema  = Keyword.fetch!(opts, :schema)
-    message = "schema `#{inspect schema}` has no primary key"
+    schema = Keyword.fetch!(opts, :schema)
+    message = "schema `#{inspect(schema)}` has no primary key"
     %__MODULE__{message: message, schema: schema}
   end
 end
@@ -182,8 +185,8 @@ defmodule Ecto.NoPrimaryKeyValueError do
   defexception [:message, :struct]
 
   def exception(opts) do
-    struct  = Keyword.fetch!(opts, :struct)
-    message = "struct `#{inspect struct}` is missing primary key value"
+    struct = Keyword.fetch!(opts, :struct)
+    message = "struct `#{inspect(struct)}` is missing primary key value"
     %__MODULE__{message: message, struct: struct}
   end
 end
@@ -196,7 +199,7 @@ defmodule Ecto.NoResultsError do
   defexception [:message]
 
   def exception(opts) do
-    query = Keyword.fetch!(opts, :queryable) |> Ecto.Queryable.to_query
+    query = Keyword.fetch!(opts, :queryable) |> Ecto.Queryable.to_query()
 
     msg = """
     expected at least one result but got none in query:
@@ -212,7 +215,7 @@ defmodule Ecto.MultipleResultsError do
   defexception [:message]
 
   def exception(opts) do
-    query = Keyword.fetch!(opts, :queryable) |> Ecto.Queryable.to_query
+    query = Keyword.fetch!(opts, :queryable) |> Ecto.Queryable.to_query()
     count = Keyword.fetch!(opts, :count)
 
     msg = """
@@ -242,7 +245,7 @@ defmodule Ecto.MultiplePrimaryKeyError do
 
     Those are the parameters sent to the repository:
 
-    #{inspect params}
+    #{inspect(params)}
     """
 
     %__MODULE__{message: msg}
@@ -263,7 +266,7 @@ defmodule Ecto.StaleEntryError do
     msg = """
     attempted to #{action} a stale struct:
 
-    #{inspect changeset.data}
+    #{inspect(changeset.data)}
     """
 
     %__MODULE__{message: msg, changeset: changeset}
@@ -283,6 +286,7 @@ defmodule Ecto.ConstraintError do
       case changeset.constraints do
         [] ->
           "The changeset has not defined any constraint."
+
         constraints ->
           "The changeset defined the following constraints:\n\n" <>
             Enum.map_join(constraints, "\n", &"    * #{&1.constraint} (#{&1.type}_constraint)")

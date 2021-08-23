@@ -8,29 +8,103 @@ defmodule Ecto.Query.Builder.WindowsTest do
 
   describe "escape" do
     test "handles expressions and params" do
-      assert {Macro.escape(quote do [partition_by: [&0.y()]] end), [], {[], :acc}} ==
-             escape(quote do [partition_by: x.y()] end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(
+                quote do
+                  [partition_by: [&0.y()]]
+                end
+              ), [],
+              {[], :acc}} ==
+               escape(
+                 quote do
+                   [partition_by: x.y()]
+                 end,
+                 {[], :acc},
+                 [x: 0],
+                 __ENV__
+               )
 
-      assert {Macro.escape(quote do [partition_by: [&0.y()]] end), [], {[], :acc}} ==
-             escape(quote do [partition_by: :y] end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(
+                quote do
+                  [partition_by: [&0.y()]]
+                end
+              ), [],
+              {[], :acc}} ==
+               escape(
+                 quote do
+                   [partition_by: :y]
+                 end,
+                 {[], :acc},
+                 [x: 0],
+                 __ENV__
+               )
 
-      assert {Macro.escape(quote do [order_by: [asc: &0.y()]] end), [], {[], :acc}} ==
-             escape(quote do [order_by: x.y()] end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(
+                quote do
+                  [order_by: [asc: &0.y()]]
+                end
+              ), [],
+              {[], :acc}} ==
+               escape(
+                 quote do
+                   [order_by: x.y()]
+                 end,
+                 {[], :acc},
+                 [x: 0],
+                 __ENV__
+               )
 
-      assert {Macro.escape(quote do [order_by: [asc: &0.y()]] end), [], {[], :acc}} ==
-             escape(quote do [order_by: :y] end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(
+                quote do
+                  [order_by: [asc: &0.y()]]
+                end
+              ), [],
+              {[], :acc}} ==
+               escape(
+                 quote do
+                   [order_by: :y]
+                 end,
+                 {[], :acc},
+                 [x: 0],
+                 __ENV__
+               )
     end
 
     test "supports frames" do
-      assert {Macro.escape(quote(do: [frame: fragment({:raw, "ROWS 3 PRECEDING EXCLUDE CURRENT ROW"})])), [], {[], :acc}} ==
-               escape(quote do [frame: fragment("ROWS 3 PRECEDING EXCLUDE CURRENT ROW")] end, {[], :acc}, [], __ENV__)
+      assert {Macro.escape(
+                quote(do: [frame: fragment({:raw, "ROWS 3 PRECEDING EXCLUDE CURRENT ROW"})])
+              ), [],
+              {[], :acc}} ==
+               escape(
+                 quote do
+                   [frame: fragment("ROWS 3 PRECEDING EXCLUDE CURRENT ROW")]
+                 end,
+                 {[], :acc},
+                 [],
+                 __ENV__
+               )
 
-      assert {Macro.escape(quote(do: [frame: fragment({:raw, "ROWS "}, {:expr, ^0}, {:raw, " PRECEDING"})])),
-               [], {[{quote(do: start_frame), :any}], :acc}} ==
-               escape(quote do [frame: fragment("ROWS ? PRECEDING", ^start_frame)] end, {[], :acc}, [], __ENV__)
+      assert {Macro.escape(
+                quote(do: [frame: fragment({:raw, "ROWS "}, {:expr, ^0}, {:raw, " PRECEDING"})])
+              ), [],
+              {[{quote(do: start_frame), :any}], :acc}} ==
+               escape(
+                 quote do
+                   [frame: fragment("ROWS ? PRECEDING", ^start_frame)]
+                 end,
+                 {[], :acc},
+                 [],
+                 __ENV__
+               )
 
       assert_raise Ecto.Query.CompileError, ~r"expected a dynamic or fragment in `:frame`", fn ->
-        escape(quote do [frame: [rows: -3, exclude: :current]] end, {[], :acc}, [], __ENV__)
+        escape(
+          quote do
+            [frame: [rows: -3, exclude: :current]]
+          end,
+          {[], :acc},
+          [],
+          __ENV__
+        )
       end
     end
   end
@@ -78,9 +152,11 @@ defmodule Ecto.Query.Builder.WindowsTest do
     end
 
     test "raises on invalid partition by" do
-      assert_raise ArgumentError, ~r"expected a list of fields and dynamics in `partition_by`", fn ->
-        windows("q", w: [partition_by: ^[1]])
-      end
+      assert_raise ArgumentError,
+                   ~r"expected a list of fields and dynamics in `partition_by`",
+                   fn ->
+                     windows("q", w: [partition_by: ^[1]])
+                   end
     end
 
     test "allows interpolation on order by" do
@@ -105,14 +181,19 @@ defmodule Ecto.Query.Builder.WindowsTest do
     end
 
     test "raises on invalid order by" do
-      assert_raise ArgumentError, ~r"`order_by` interpolated on root expects a field or a keyword list", fn ->
-        windows("q", w: [order_by: ^[1]])
-      end
+      assert_raise ArgumentError,
+                   ~r"`order_by` interpolated on root expects a field or a keyword list",
+                   fn ->
+                     windows("q", w: [order_by: ^[1]])
+                   end
     end
 
     test "allows dynamic on frame" do
       frame = dynamic(fragment("ROWS ? PRECEDING EXCLUDE CURRENT ROW", ^"foo"))
-      query = "q" |> windows([p], w: [partition_by: [p.bar == ^"bar"], order_by: [p.baz], frame: ^frame])
+
+      query =
+        "q"
+        |> windows([p], w: [partition_by: [p.bar == ^"bar"], order_by: [p.baz], frame: ^frame])
 
       assert Keyword.keys(query.windows[:w].expr) == [:partition_by, :order_by, :frame]
 
@@ -123,7 +204,8 @@ defmodule Ecto.Query.Builder.WindowsTest do
                [{:asc, {{:., [], [{:&, [], [0]}, :baz]}, [], []}}]
 
       assert query.windows[:w].expr[:frame] ==
-               {:fragment, [], [raw: "ROWS ", expr: {:^, [], [1]}, raw: " PRECEDING EXCLUDE CURRENT ROW"]}
+               {:fragment, [],
+                [raw: "ROWS ", expr: {:^, [], [1]}, raw: " PRECEDING EXCLUDE CURRENT ROW"]}
 
       assert query.windows[:w].params == [{"bar", {0, :bar}}, {"foo", :any}]
     end
@@ -174,7 +256,8 @@ defmodule Ecto.Query.Builder.WindowsTest do
                  [{:asc, {:==, [], [{{:., [], [{:&, [], [0]}, :bar]}, [], []}, {:^, [], [1]}]}}]
 
         assert query.windows[:w].expr[:frame] ==
-                 {:fragment, [], [raw: "ROWS ", expr: {:^, [], [2]}, raw: " PRECEDING EXCLUDE CURRENT ROW"]}
+                 {:fragment, [],
+                  [raw: "ROWS ", expr: {:^, [], [2]}, raw: " PRECEDING EXCLUDE CURRENT ROW"]}
 
         assert query.windows[:w].params == [{"foo", {0, :foo}}, {"bar", {0, :bar}}, {"baz", :any}]
       end

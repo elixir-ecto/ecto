@@ -7,7 +7,7 @@ defmodule Ecto.Repo.Assoc do
   Transforms a result set based on query assocs, loading
   the associations onto their parent schema.
   """
-  @spec query([list], list, tuple, (list -> list)) :: [Ecto.Schema.t]
+  @spec query([list], list, tuple, (list -> list)) :: [Ecto.Schema.t()]
   def query(rows, assocs, sources, fun)
 
   def query([], _assocs, _sources, _fun), do: []
@@ -19,20 +19,21 @@ defmodule Ecto.Repo.Assoc do
     accs = create_accs(0, assocs, sources, [])
 
     # Populate tree of dicts of associated entities from the result set
-    {_keys, _cache, rows, sub_dicts} = Enum.reduce(rows, accs, fn row, acc ->
-      merge(fun.(row), acc, 0) |> elem(0)
-    end)
+    {_keys, _cache, rows, sub_dicts} =
+      Enum.reduce(rows, accs, fn row, acc ->
+        merge(fun.(row), acc, 0) |> elem(0)
+      end)
 
     # Create the reflections that will be loaded into memory.
     refls = create_refls(0, assocs, sub_dicts, sources)
 
     # Retrieve and load the assocs from cached dictionaries recursively
     for {item, sub_structs} <- Enum.reverse(rows) do
-      [load_assocs(item, refls)|sub_structs]
+      [load_assocs(item, refls) | sub_structs]
     end
   end
 
-  defp merge([struct|sub_structs], {primary_keys, cache, dict, sub_dicts}, parent_key) do
+  defp merge([struct | sub_structs], {primary_keys, cache, dict, sub_dicts}, parent_key) do
     child_key =
       if struct do
         for primary_key <- primary_keys do
@@ -80,16 +81,18 @@ defmodule Ecto.Repo.Assoc do
   end
 
   defp load_assocs({child_key, struct}, refls) do
-    Enum.reduce refls, struct, fn {dict, refl, sub_refls}, acc ->
+    Enum.reduce(refls, struct, fn {dict, refl, sub_refls}, acc ->
       %{field: field, cardinality: cardinality} = refl
+
       loaded =
         dict
         |> Map.get(child_key, [])
         |> Enum.reverse()
         |> Enum.map(&load_assocs(&1, sub_refls))
         |> maybe_first(cardinality)
+
       Map.put(acc, field, loaded)
-    end
+    end)
   end
 
   defp maybe_first(list, :one), do: List.first(list)
@@ -106,9 +109,10 @@ defmodule Ecto.Repo.Assoc do
   end
 
   defp create_accs(idx, fields, sources, initial_dict) do
-    acc = Enum.map(fields, fn {_field, {child_idx, child_fields}} ->
-      create_accs(child_idx, child_fields, sources, %{})
-    end)
+    acc =
+      Enum.map(fields, fn {_field, {child_idx, child_fields}} ->
+        create_accs(child_idx, child_fields, sources, %{})
+      end)
 
     {_source, schema, _prefix} = elem(sources, idx)
     {schema.__schema__(:primary_key), %{}, initial_dict, acc}

@@ -14,7 +14,7 @@ defimpl Inspect, for: Ecto.Query.DynamicExpr do
     aliases =
       for({as, _} when is_atom(as) <- binding, do: as)
       |> Enum.with_index()
-      |> Map.new
+      |> Map.new()
 
     query = %Ecto.Query{joins: joins, aliases: aliases}
 
@@ -54,10 +54,11 @@ defimpl Inspect, for: Ecto.Query do
       %WithExpr{recursive: recursive, queries: [_ | _] = queries} ->
         with_ctes =
           Enum.map(queries, fn {name, query} ->
-            cte = case query do
-              %Ecto.Query{} -> __MODULE__.inspect(query, opts)
-              %Ecto.Query.QueryExpr{} -> expr(query, {})
-            end
+            cte =
+              case query do
+                %Ecto.Query{} -> __MODULE__.inspect(query, opts)
+                %Ecto.Query.QueryExpr{} -> expr(query, {})
+              end
 
             concat(["|> with_cte(\"" <> name <> "\", as: ", cte, ")"])
           end)

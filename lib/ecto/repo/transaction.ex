@@ -6,7 +6,7 @@ defmodule Ecto.Repo.Transaction do
     {adapter, meta} = Ecto.Repo.Registry.lookup(name)
     adapter.transaction(meta, opts, fun)
   end
-  
+
   def transaction(repo, name, fun, opts) when is_function(fun, 1) do
     {adapter, meta} = Ecto.Repo.Registry.lookup(name)
     adapter.transaction(meta, opts, fn -> fun.(repo) end)
@@ -18,9 +18,14 @@ defmodule Ecto.Repo.Transaction do
     return = &adapter.rollback(meta, &1)
 
     case Ecto.Multi.__apply__(multi, repo, wrap, return) do
-      {:ok, values} -> {:ok, values}
-      {:error, {key, error_value, values}} -> {:error, key, error_value, values}
-      {:error, operation} -> raise "operation #{inspect operation} is manually rolling back, which is not supported by Ecto.Multi"
+      {:ok, values} ->
+        {:ok, values}
+
+      {:error, {key, error_value, values}} ->
+        {:error, key, error_value, values}
+
+      {:error, operation} ->
+        raise "operation #{inspect(operation)} is manually rolling back, which is not supported by Ecto.Multi"
     end
   end
 

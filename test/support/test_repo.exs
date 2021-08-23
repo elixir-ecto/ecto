@@ -11,9 +11,9 @@ defmodule Ecto.TestAdapter do
   end
 
   def init(opts) do
-    :ecto   = opts[:otp_app]
-    "user"  = opts[:username]
-    "pass"  = opts[:password]
+    :ecto = opts[:otp_app]
+    "user" = opts[:username]
+    "pass" = opts[:password]
     "hello" = opts[:database]
     "local" = opts[:hostname]
 
@@ -21,7 +21,7 @@ defmodule Ecto.TestAdapter do
   end
 
   def checkout(mod, _opts, fun) do
-    send self(), {:checkout, fun}
+    send(self(), {:checkout, fun})
     Process.put({mod, :checked_out?}, true)
 
     try do
@@ -52,18 +52,18 @@ defmodule Ecto.TestAdapter do
   def prepare(operation, query), do: {:nocache, {operation, query}}
 
   def execute(_, _, {:nocache, {:all, query}}, _, _) do
-    send self(), {:all, query}
+    send(self(), {:all, query})
     Process.get(:test_repo_all_results) || results_for_all_query(query)
   end
 
   def execute(_, _meta, {:nocache, {op, query}}, _params, _opts) do
-    send self(), {op, query}
+    send(self(), {op, query})
     {1, nil}
   end
 
   def stream(_, _meta, {:nocache, {:all, query}}, _params, _opts) do
     Stream.map([:execute], fn :execute ->
-      send self(), {:stream, query}
+      send(self(), {:stream, query})
       results_for_all_query(query)
     end)
   end
@@ -128,7 +128,8 @@ defmodule Ecto.TestAdapter do
   def transaction(mod, _opts, fun) do
     # Makes transactions "trackable" in tests
     Process.put({mod, :in_transaction?}, true)
-    send self(), {:transaction, fun}
+    send(self(), {:transaction, fun})
+
     try do
       {:ok, fun.()}
     catch
@@ -144,12 +145,12 @@ defmodule Ecto.TestAdapter do
   end
 
   def rollback(_, value) do
-    send self(), {:rollback, value}
-    throw {:ecto_rollback, value}
+    send(self(), {:rollback, value})
+    throw({:ecto_rollback, value})
   end
 end
 
-Application.put_env(:ecto, Ecto.TestRepo, [user: "invalid"])
+Application.put_env(:ecto, Ecto.TestRepo, user: "invalid")
 
 defmodule Ecto.TestRepo do
   use Ecto.Repo, otp_app: :ecto, adapter: Ecto.TestAdapter

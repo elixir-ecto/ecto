@@ -12,7 +12,7 @@ defmodule Ecto.Query.Builder.CTE do
       "FOO"
 
   """
-  @spec escape(Macro.t, Macro.Env.t) :: Macro.t
+  @spec escape(Macro.t(), Macro.Env.t()) :: Macro.t()
   def escape(name, _env) when is_bitstring(name), do: name
 
   def escape({:^, _, [expr]}, _env), do: expr
@@ -20,8 +20,10 @@ defmodule Ecto.Query.Builder.CTE do
   def escape(expr, env) do
     case Macro.expand_once(expr, env) do
       ^expr ->
-        Builder.error! "`#{Macro.to_string(expr)}` is not a valid CTE name. " <>
-                       "It must be a literal string or an interpolated variable."
+        Builder.error!(
+          "`#{Macro.to_string(expr)}` is not a valid CTE name. " <>
+            "It must be a literal string or an interpolated variable."
+        )
 
       expr ->
         escape(expr, env)
@@ -35,12 +37,12 @@ defmodule Ecto.Query.Builder.CTE do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t, Macro.t, Macro.t, Macro.Env.t) :: Macro.t
+  @spec build(Macro.t(), Macro.t(), Macro.t(), Macro.Env.t()) :: Macro.t()
   def build(query, name, cte, env) do
     Builder.apply_query(query, __MODULE__, [escape(name, env), build_cte(name, cte, env)], env)
   end
 
-  @spec build_cte(Macro.t, Macro.t, Macro.Env.t) :: Macro.t
+  @spec build_cte(Macro.t(), Macro.t(), Macro.Env.t()) :: Macro.t()
   def build_cte(_name, {:^, _, [expr]}, _env) do
     quote do: Ecto.Queryable.to_query(unquote(expr))
   end
@@ -62,8 +64,10 @@ defmodule Ecto.Query.Builder.CTE do
   def build_cte(name, cte, env) do
     case Macro.expand_once(cte, env) do
       ^cte ->
-        Builder.error! "`#{Macro.to_string(cte)}` is not a valid CTE (named: #{Macro.to_string(name)}). " <>
-                       "The CTE must be an interpolated query, such as ^existing_query or a fragment."
+        Builder.error!(
+          "`#{Macro.to_string(cte)}` is not a valid CTE (named: #{Macro.to_string(name)}). " <>
+            "The CTE must be an interpolated query, such as ^existing_query or a fragment."
+        )
 
       cte ->
         build_cte(name, cte, env)
@@ -73,7 +77,7 @@ defmodule Ecto.Query.Builder.CTE do
   @doc """
   The callback applied by `build/4` to build the query.
   """
-  @spec apply(Ecto.Queryable.t, bitstring, Ecto.Queryable.t) :: Ecto.Query.t
+  @spec apply(Ecto.Queryable.t(), bitstring, Ecto.Queryable.t()) :: Ecto.Query.t()
   def apply(%Ecto.Query{with_ctes: with_expr} = query, name, with_query) do
     with_expr = with_expr || %Ecto.Query.WithExpr{}
     queries = List.keystore(with_expr.queries, name, 0, {name, with_query})

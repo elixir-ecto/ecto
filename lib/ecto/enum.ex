@@ -185,7 +185,8 @@ defmodule Ecto.Enum do
     try do
       schema.__changeset__()
     rescue
-      _ in UndefinedFunctionError -> raise ArgumentError, "#{inspect schema} is not an Ecto schema"
+      _ in UndefinedFunctionError ->
+        raise ArgumentError, "#{inspect(schema)} is not an Ecto schema"
     else
       %{^field => {:parameterized, Ecto.Enum, %{mappings: mappings}}} -> mappings
       %{^field => {_, {:parameterized, Ecto.Enum, %{mappings: mappings}}}} -> mappings
