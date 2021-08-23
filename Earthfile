@@ -30,6 +30,7 @@ lint:
     RUN mix deps.get
     RUN mix deps.unlock --check-unused
     RUN mix compile --warnings-as-errors
+    RUN mix format mix.exs "lib/**/*.{ex,exs}" "test/**/*.{ex,exs}" --check-formatted
 
 
 all-integration-test:
