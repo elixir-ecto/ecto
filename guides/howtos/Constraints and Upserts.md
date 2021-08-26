@@ -216,7 +216,13 @@ defmodule MyApp.Post do
         updated_at: {:placeholder, :timestamp}
       })
 
-    Repo.insert_all(MyApp.Tag, maps, placeholders: placeholders, on_conflict: :nothing)
+    Repo.insert_all(
+      MyApp.Tag,
+      maps,
+      placeholders: placeholders,
+      on_conflict: :nothing
+    )
+
     Repo.all(from t in MyApp.Tag, where: t.name in ^names)
   end
 end
