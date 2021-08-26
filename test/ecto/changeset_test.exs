@@ -755,6 +755,96 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes.upvotes == 5
   end
 
+  describe "append_at/3" do
+    test "appends item at a root level field without data" do
+      changeset =
+        %Category{posts: []}
+        |> change()
+        |> append_at(:posts, %Post{title: "first"})
+        |> append_at(:posts, %Post{title: "second"})
+
+      assert %{
+               posts: [
+                 %Ecto.Changeset{action: :insert, data: %Post{title: "first"}},
+                 %Ecto.Changeset{action: :insert, data: %Post{title: "second"}}
+               ]
+             } = changeset.changes
+    end
+
+    test "appends item at a root level field with existing data" do
+      changeset =
+        %Category{category_id: 1, posts: [%Post{title: "existing"}]}
+        |> change()
+        |> append_at(:posts, %Post{title: "first"})
+        |> append_at(:posts, %Post{title: "second"})
+
+      assert %{
+               posts: [
+                 %Ecto.Changeset{action: :update, data: %Post{title: "existing"}},
+                 %Ecto.Changeset{action: :insert, data: %Post{title: "first"}},
+                 %Ecto.Changeset{action: :insert, data: %Post{title: "second"}}
+               ]
+             } = changeset.changes
+    end
+
+    test "appends item at a nested field" do
+      changeset =
+        %Category{
+          category_id: 1,
+          posts: [
+            %Post{
+              id: 1,
+              title: "first",
+              comments: [%Comment{id: 1}]
+            },
+            %Post{
+              id: 2,
+              title: "second",
+              comments: []
+            }
+          ]
+        }
+        |> change()
+        |> append_at([:posts, 1, :comments], %Comment{})
+        |> append_at([:posts, 0, :comments], %Comment{})
+
+      assert %{
+               posts: [
+                 %Ecto.Changeset{
+                   action: :update,
+                   changes: %{
+                     comments: [
+                       %Ecto.Changeset{
+                         action: :update,
+                         data: %Comment{},
+                         valid?: true
+                       },
+                       %Ecto.Changeset{
+                         action: :insert,
+                         data: %Comment{},
+                         valid?: true
+                       }
+                     ]
+                   },
+                   data: %Post{}
+                 },
+                 %Ecto.Changeset{
+                   action: :update,
+                   changes: %{
+                     comments: [
+                       %Ecto.Changeset{
+                         action: :insert,
+                         data: %Comment{}
+                       }
+                     ]
+                   },
+                   data: %Post{}
+                 }
+               ]
+             } = changeset.changes
+    end
+  end
+
   test "apply_changes/1" do
     post = %Post{}
     category = %Category{name: "bar"}

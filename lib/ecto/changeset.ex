@@ -1468,6 +1468,53 @@ defmodule Ecto.Changeset do
     end
   end
 
+  @spec append_at(t, [atom | non_neg_integer], any) :: t
+  def append_at(changeset, field, value) when is_atom(field),
+    do: append_at(changeset, [field], value)
+
+  def append_at(%Changeset{} = changeset, [field], value) when is_atom(field) do
+    Changeset.put_change(
+      changeset,
+      field,
+      get_change_or_field(changeset, field) ++ [value]
+    )
+  end
+
+  def append_at(%{} = data, [field], value) when is_atom(field) do
+    data
+    |> Changeset.change()
+    |> Changeset.put_change(field, Map.fetch!(data, field) ++ [value])
+  end
+
+  def append_at(%Changeset{} = changeset, [field | rest], value)
+      when is_atom(field) do
+    nested_value = get_change_or_field(changeset, field)
+
+    Changeset.put_change(
+      changeset,
+      field,
+      append_at(nested_value, rest, value)
+    )
+  end
+
+  def append_at(items, [index | rest], value)
+      when is_list(items) and is_integer(index) do
+    List.update_at(items, index, fn changeset_or_value ->
+      append_at(changeset_or_value, rest, value)
+    end)
+  end
+
+  defp get_change_or_field(%Changeset{} = changeset, field) do
+    case Map.fetch(changeset.changes, field) do
+      {:ok, value} -> value
+      :error -> Map.get(changeset.data, field)
+    end
+  end
+
+  defp get_change_or_field(%{} = data, field) do
+    Map.get(data, field)
+  end
+
   @doc """
   Deletes a change with the given key.
 
