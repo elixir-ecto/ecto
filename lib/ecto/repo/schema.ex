@@ -344,7 +344,7 @@ defmodule Ecto.Repo.Schema do
       user_changeset = run_prepare(changeset, prepare)
 
       {changeset, parents, children} = pop_assocs(user_changeset, assocs)
-      changeset = process_parents(changeset, parents, adapter, assoc_opts)
+      changeset = process_parents(changeset, user_changeset, parents, adapter, assoc_opts)
 
       if changeset.valid? do
         embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :insert)
@@ -370,13 +370,13 @@ defmodule Ecto.Repo.Schema do
 
             changeset
             |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, schema_meta)
-            |> process_children(children, user_changeset, adapter, assoc_opts)
+            |> process_children(user_changeset, children, adapter, assoc_opts)
 
           {:error, _} = error ->
             error
         end
       else
-        {:error, %{user_changeset | valid?: false}}
+        {:error, changeset}
       end
     end)
   end
@@ -430,7 +430,7 @@ defmodule Ecto.Repo.Schema do
         user_changeset = run_prepare(changeset, prepare)
 
         {changeset, parents, children} = pop_assocs(user_changeset, assocs)
-        changeset = process_parents(changeset, parents, adapter, assoc_opts)
+        changeset = process_parents(changeset, user_changeset, parents, adapter, assoc_opts)
 
         if changeset.valid? do
           embeds = Ecto.Embedded.prepare(changeset, embeds, adapter, :update)
@@ -452,13 +452,13 @@ defmodule Ecto.Repo.Schema do
             {:ok, values} ->
               changeset
               |> load_changes(:loaded, return_types, values, embeds, autogen, adapter, schema_meta)
-              |> process_children(children, user_changeset, adapter, assoc_opts)
+              |> process_children(user_changeset, children, adapter, assoc_opts)
 
             {:error, _} = error ->
               error
           end
         else
-          {:error, %{user_changeset | valid?: false}}
+          {:error, changeset}
         end
       end)
     else
@@ -625,7 +625,9 @@ defmodule Ecto.Repo.Schema do
   defp run_prepare(changeset, prepare) do
     Enum.reduce(Enum.reverse(prepare), changeset, fn fun, acc ->
       case fun.(acc) do
-        %Ecto.Changeset{} = acc -> acc
+        %Ecto.Changeset{} = acc ->
+          acc
+
         other ->
           raise "expected function #{inspect fun} given to Ecto.Changeset.prepare_changes/2 " <>
                 "to return an Ecto.Changeset, got: `#{inspect other}`"
@@ -833,23 +835,26 @@ defmodule Ecto.Repo.Schema do
   defp pop_assocs(changeset, []) do
     {changeset, [], []}
   end
+
   defp pop_assocs(%{changes: changes, types: types} = changeset, assocs) do
     {changes, parent, child} =
       Enum.reduce assocs, {changes, [], []}, fn assoc, {changes, parent, child} ->
-        case Map.fetch(changes, assoc) do
-          {:ok, value} ->
+        case changes do
+          %{^assoc => value} ->
             changes = Map.delete(changes, assoc)
 
-            case Map.fetch!(types, assoc) do
-              {:assoc, %{relationship: :parent} = refl} ->
-                {changes, [{refl, value}|parent], child}
-              {:assoc, %{relationship: :child} = refl} ->
-                {changes, parent, [{refl, value}|child]}
+            case types do
+              %{^assoc => {:assoc, %{relationship: :parent} = refl}} ->
+                {changes, [{refl, value} | parent], child}
+              %{^assoc => {:assoc, %{relationship: :child} = refl}} ->
+                {changes, parent, [{refl, value} | child]}
             end
-          :error ->
+
+          %{} ->
             {changes, parent, child}
         end
       end
+
     {%{changeset | changes: changes}, parent, child}
   end
 
@@ -860,13 +865,21 @@ defmodule Ecto.Repo.Schema do
     Keyword.take(opts, [:timeout, :log, :telemetry_event, :prefix])
   end
 
-  defp process_parents(%{changes: changes} = changeset, assocs, adapter, opts) do
+  defp process_parents(changeset, user_changeset, assocs, adapter, opts) do
+    %{changes: changes, valid?: valid?} = changeset
+
+    # Even if the changeset is invalid, we want to run parent callbacks
+    # to collect feedback. But if all is ok, still return the user changeset.
     case Ecto.Association.on_repo_change(changeset, assocs, adapter, opts) do
-      {:ok, struct} ->
+      {:ok, struct} when valid? ->
         changes = change_parents(changes, struct, assocs)
         %{changeset | changes: changes, data: struct}
+
+      {:ok, _} ->
+        user_changeset
+
       {:error, changes} ->
-        %{changeset | changes: changes, valid?: false}
+        %{user_changeset | changes: Map.merge(user_changeset.changes, changes), valid?: false}
     end
   end
 
@@ -875,22 +888,27 @@ defmodule Ecto.Repo.Schema do
       %{field: field, owner_key: owner_key, related_key: related_key} = refl
       related = Map.get(struct, field)
       value = related && Map.fetch!(related, related_key)
+
       case Map.fetch(changes, owner_key) do
         {:ok, current} when current != value ->
           raise ArgumentError,
             "cannot change belongs_to association `#{field}` because there is " <>
             "already a change setting its foreign key `#{owner_key}` to `#{inspect current}`"
+
         _ ->
           Map.put(acc, owner_key, value)
       end
     end
   end
 
-  defp process_children(changeset, assocs, user_changeset, adapter, opts) do
+  defp process_children(changeset, user_changeset, assocs, adapter, opts) do
     case Ecto.Association.on_repo_change(changeset, assocs, adapter, opts) do
-      {:ok, struct} -> {:ok, struct}
+      {:ok, struct} ->
+        {:ok, struct}
+
       {:error, changes} ->
-        {:error, %{user_changeset | valid?: false, changes: changes}}
+        changes = Map.merge(user_changeset.changes, changes)
+        {:error, %{user_changeset | changes: changes, valid?: false}}
     end
   end
 
