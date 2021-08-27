@@ -1468,11 +1468,14 @@ defmodule Ecto.Changeset do
     end
   end
 
-  @spec append_at(t, [atom | non_neg_integer], any) :: t
-  def append_at(changeset, field, value) when is_atom(field),
-    do: append_at(changeset, [field], value)
+  @spec append_at(t, [atom | non_neg_integer] | atom, any) :: t
+  def append_at(changeset, path, value),
+    do: nested_update(changeset, path, value, :append)
 
-  def append_at(%Changeset{} = changeset, [field], value) when is_atom(field) do
+  defp nested_update(changeset, field, value, operation) when is_atom(field),
+    do: nested_update(changeset, [field], value, operation)
+
+  defp nested_update(%Changeset{} = changeset, [field], value, :append) when is_atom(field) do
     Changeset.put_change(
       changeset,
       field,
@@ -1480,27 +1483,27 @@ defmodule Ecto.Changeset do
     )
   end
 
-  def append_at(%{} = data, [field], value) when is_atom(field) do
+  defp nested_update(%{} = data, [field], value, :append) when is_atom(field) do
     data
     |> Changeset.change()
     |> Changeset.put_change(field, Map.fetch!(data, field) ++ [value])
   end
 
-  def append_at(%Changeset{} = changeset, [field | rest], value)
-      when is_atom(field) do
+  defp nested_update(%Changeset{} = changeset, [field | rest], value, operation)
+       when is_atom(field) do
     nested_value = get_change_or_field(changeset, field)
 
     Changeset.put_change(
       changeset,
       field,
-      append_at(nested_value, rest, value)
+      nested_update(nested_value, rest, value, operation)
     )
   end
 
-  def append_at(items, [index | rest], value)
-      when is_list(items) and is_integer(index) do
+  defp nested_update(items, [index | rest], value, operation)
+       when is_list(items) and is_integer(index) do
     List.update_at(items, index, fn changeset_or_value ->
-      append_at(changeset_or_value, rest, value)
+      nested_update(changeset_or_value, rest, value, operation)
     end)
   end
 
