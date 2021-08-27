@@ -1,5 +1,15 @@
 # Changelog for v3.x
 
+## v3.7.1 (2021-08-27)
+
+### Enhancements
+
+  * [Ecto.Embedded] Make `Ecto.Embedded` public and describe struct fields
+
+### Bug fixes
+
+  * [Ecto.Repo] Make sure parent changeset is included in changes for `insert`/`update`/`delete` when there are errors processing the parent itself
+
 ## v3.7.0 (2021-08-19)
 
 ### Enhancements
