@@ -1192,14 +1192,15 @@ defmodule Ecto.Changeset do
 
   ## Examples
 
-      iex> changeset = change(%Post{author: "bar"}, %{title: "foo"})
+      iex> changeset = change(%Post{}, %{title: "foo"})
       iex> changeset = put_change(changeset, :title, "bar")
       iex> changeset.changes
       %{title: "bar"}
 
-      iex> changeset = put_change(changeset, :author, "bar")
+      iex> changeset = change(%Post{title: "foo"})
+      iex> changeset = put_change(changeset, :title, "foo")
       iex> changeset.changes
-      %{title: "bar"}
+      %{}
 
   """
   @spec put_change(t, atom, term) :: t
