@@ -600,7 +600,9 @@ defmodule Ecto.Query.Builder do
       case value do
         {:^, _, [value]} ->
           value
-        other -> other
+
+        other ->
+          quoted_atom!(other, "#{kind}/1")
       end
     as    = {:{}, [], [kind, [], [value]]}
     field = quoted_atom!(field, "field/2")
