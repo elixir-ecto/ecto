@@ -223,7 +223,7 @@ defmodule Ecto.Query do
 
   Only atoms are accepted for binding names. Named binding references
   must always be placed at the end of the bindings list:
-  
+
       [positional_binding_1, positional_binding_2, named_1: binding, named_2: binding]
 
   Named bindings can also be used for late binding with the `as/1`
@@ -1715,7 +1715,7 @@ defmodule Ecto.Query do
 
   ## Expressions example
 
-      User |> where(u.id == ^current_user) |> lock("FOR SHARE NOWAIT")
+      User |> where([u], u.id == ^current_user) |> lock("FOR SHARE NOWAIT")
 
   """
   defmacro lock(query, binding \\ [], expr) do
