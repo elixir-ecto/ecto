@@ -2917,7 +2917,7 @@ defmodule Ecto.Changeset do
 
   defp raise_invalid_assoc(types, assoc) do
     associations = for {_key, {:assoc, %{field: field}}} <- types, do: field
-    one_of = if Enum.count(associations) == 1, do: "", else: "one of "
+    one_of = if match?([_], associations), do: "", else: "one of "
 
     raise ArgumentError,
           "cannot add constraint to changeset because association `#{assoc}` does not exist. " <>
