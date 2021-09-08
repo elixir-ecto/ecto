@@ -95,7 +95,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defp changeset(schema \\ %Post{}, params) do
-    cast(schema, params, ~w(id token title body upvotes decimal color topics virtual)a)
+    cast(schema, params, ~w(id token title slug body upvotes decimal color topics tags virtual)a)
   end
 
   defmodule CustomError do
@@ -1129,7 +1129,7 @@ defmodule Ecto.ChangesetTest do
 
   test "validate_exclusion/3 with custom type" do
     changeset =
-      changeset(%{"slug" => "moon"})
+      changeset(%{"slug" => "sun"})
       |> validate_exclusion(:slug, ~w(moon))
     assert changeset.valid?
     assert changeset.errors == []
