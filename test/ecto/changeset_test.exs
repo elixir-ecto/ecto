@@ -36,18 +36,41 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
+  defmodule CustomSlug do
+    use Ecto.Type
+
+    def type, do: :string
+    def cast(val), do: {:ok, val}
+    def load(val), do: {:ok, val}
+    def dump(val), do: {:ok, val}
+  end
+
+  defmodule CustomTag do
+    use Ecto.Type
+
+    def type, do: {:array, :string}
+    def cast(val) when is_list(val), do: {:ok, val}
+    def cast(_), do: :error
+    def load(val) when is_list(val), do: {:ok, val}
+    def load(_), do: :error
+    def dump(val) when is_list(val), do: {:ok, val}
+    def dump(_), do: :error
+  end
+
   defmodule Post do
     use Ecto.Schema
 
     schema "posts" do
       field :token, :integer, primary_key: true
       field :title, :string, default: ""
+      field :slug, CustomSlug
       field :body
       field :uuid, :binary_id
       field :color, :binary
       field :decimal, :decimal
       field :upvotes, :integer, default: 0
       field :topics, {:array, :string}
+      field :tags, CustomTag
       field :virtual, :string, virtual: true
       field :published_at, :naive_datetime
       field :source, :map
@@ -997,6 +1020,13 @@ defmodule Ecto.ChangesetTest do
 
   test "validate_inclusion/3" do
     changeset =
+      changeset(%{"slug" => "foo"})
+      |> validate_inclusion(:slug, ~w(foo))
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert validations(changeset) == [slug: {:inclusion, ~w(foo)}]
+
+    changeset =
       changeset(%{"title" => "hello"})
       |> validate_inclusion(:title, ~w(hello))
     assert changeset.valid?
@@ -1025,6 +1055,13 @@ defmodule Ecto.ChangesetTest do
 
   test "validate_subset/3" do
     changeset =
+      changeset(%{"tags" => ["cute", "animals"]})
+      |> validate_subset(:tags, ~w(cute animals))
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert validations(changeset) == [tags: {:subset, ~w(cute animals)}]
+
+    changeset =
       changeset(%{"topics" => ["cat", "dog"]})
       |> validate_subset(:topics, ~w(cat dog))
     assert changeset.valid?
@@ -1051,6 +1088,13 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "validate_exclusion/3" do
+    changeset =
+      changeset(%{"slug" => "moon"})
+      |> validate_exclusion(:slug, ~w(moon))
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert validations(changeset) == [slug: {:exclusion, ~w(moon)}]
+
     changeset =
       changeset(%{"title" => "world"})
       |> validate_exclusion(:title, ~w(hello))
