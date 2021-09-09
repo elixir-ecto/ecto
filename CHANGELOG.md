@@ -166,7 +166,7 @@ v3.5 requires Elixir v1.8+.
 ### Bug fixes
 
   * [Ecto.Changeset] Ensure `:empty_values` in `cast/4` does not automatically propagate to following cast calls. If you want a given set of `:empty_values` to apply to all `cast/4` calls, change the value stored in `changeset.empty_values` instead
-  * [Ecto.Changeset] Do not force repository updates to happen when using `optimistic_lock`
+  * [Ecto.Changeset] **Potentially breaking change**: Do not force repository updates to happen when using `optimistic_lock`. The lock field will only be incremented if the record has other changes. If no changes, nothing happens.
   * [Ecto.Changeset] Do not automatically share empty values across `cast/3` calls
   * [Ecto.Query] Consider query prefix in cte/combination query cache
   * [Ecto.Query] Allow the entry to be marked as nil when using left join with subqueries
