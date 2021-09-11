@@ -1317,7 +1317,8 @@ defmodule Ecto.Repo do
 
   In case a changeset is given, the changes in the changeset are
   merged with the struct fields, and all of them are sent to the
-  database.
+  database. If more than one database operation is required, they're
+  automatically wrapped in a transaction.
 
   It returns `{:ok, struct}` if the struct has been successfully
   inserted or `{:error, changeset}` if there was a validation
@@ -1484,7 +1485,8 @@ defmodule Ecto.Repo do
   A changeset is required as it is the only mechanism for
   tracking dirty changes. Only the fields present in the `changes` part
   of the changeset are sent to the database. Any other, in-memory
-  changes done to the schema are ignored.
+  changes done to the schema are ignored. If more than one database
+  operation is required, they're automatically wrapped in a transaction.
 
   If the struct has no primary key, `Ecto.NoPrimaryKeyFieldError`
   will be raised.
@@ -1591,7 +1593,9 @@ defmodule Ecto.Repo do
 
   If the struct has no primary key, `Ecto.NoPrimaryKeyFieldError`
   will be raised. If the struct has been removed from db prior to
-  call, `Ecto.StaleEntryError` will be raised.
+  call, `Ecto.StaleEntryError` will be raised. If more than one 
+  database operation is required, they're automatically wrapped 
+  in a transaction.
 
   It returns `{:ok, struct}` if the struct has been successfully
   deleted or `{:error, changeset}` if there was a validation
