@@ -106,13 +106,11 @@ defmodule Ecto.Query.API do
   def left or right, do: doc! [left, right]
 
   @doc """
-  Equivalent to the `NOT` in SQL.
+  Unary `not` operation.
 
-  It can be used alongside with the `:where` option,
-  to query over false values.
-
-  Good for matching the opposite side of `in/2`, `is_nil/1`, `exists/1`
-  for example:
+  It is used to negate values in `:where`. It is also used to match
+  the assert the opposite of `in/2`, `is_nil/1`, and `exists/1`.
+  For example:
 
       from p in Post, where: p.id not in [1, 2, 3]
 
