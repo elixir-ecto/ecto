@@ -106,7 +106,29 @@ defmodule Ecto.Query.API do
   def left or right, do: doc! [left, right]
 
   @doc """
-  Unary `not` operation.
+  Equivalent to the `NOT` in SQL.
+
+  It can be used alongside with the `:where` option,
+  to query over false values.
+
+  Good for matching the opposite side of `in/2`, `is_nil/1`, `exists/1`
+  for example:
+
+      from p in Post, where: p.id not in [1, 2, 3]
+
+      from p in Post, where: not is_nil(p.title)
+
+      # Retrieve all the posts that doesn't have comments.
+      from p in Post,
+        as: :post,
+        where:
+          not exists(
+            from(
+              c in Comment,
+              where: parent_as(:post).id == c.post_id
+            )
+          )
+
   """
   def not(value), do: doc! [value]
 
