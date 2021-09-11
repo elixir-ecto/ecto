@@ -107,6 +107,26 @@ defmodule Ecto.Query.API do
 
   @doc """
   Unary `not` operation.
+
+  It is used to negate values in `:where`. It is also used to match
+  the assert the opposite of `in/2`, `is_nil/1`, and `exists/1`.
+  For example:
+
+      from p in Post, where: p.id not in [1, 2, 3]
+
+      from p in Post, where: not is_nil(p.title)
+
+      # Retrieve all the posts that doesn't have comments.
+      from p in Post,
+        as: :post,
+        where:
+          not exists(
+            from(
+              c in Comment,
+              where: parent_as(:post).id == c.post_id
+            )
+          )
+
   """
   def not(value), do: doc! [value]
 
