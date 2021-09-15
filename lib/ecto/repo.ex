@@ -416,6 +416,7 @@ defmodule Ecto.Repo do
   application environment. It must return `{:ok, keyword}` with the updated
   list of configuration or `:ignore` (only in the `:supervisor` case).
   """
+  @doc group: "User callbacks"
   @callback init(context :: :supervisor | :runtime, config :: Keyword.t()) ::
               {:ok, Keyword.t()} | :ignore
 
@@ -424,6 +425,7 @@ defmodule Ecto.Repo do
   @doc """
   Returns the adapter tied to the repository.
   """
+  @doc group: "Runtime API"
   @callback __adapter__ :: Ecto.Adapter.t()
 
   @doc """
@@ -432,6 +434,7 @@ defmodule Ecto.Repo do
   If the `c:init/2` callback is implemented in the repository,
   it will be invoked with the first argument set to `:runtime`.
   """
+  @doc group: "Runtime API"
   @callback config() :: Keyword.t()
 
   @doc """
@@ -446,6 +449,7 @@ defmodule Ecto.Repo do
   See the configuration in the moduledoc for options shared between adapters,
   for adapter-specific configuration see the adapter's documentation.
   """
+  @doc group: "Runtime API"
   @callback start_link(opts :: Keyword.t()) ::
               {:ok, pid}
               | {:error, {:already_started, pid}}
@@ -454,6 +458,7 @@ defmodule Ecto.Repo do
   @doc """
   Shuts down the repository.
   """
+  @doc group: "Runtime API"
   @callback stop(timeout) :: :ok
 
   @doc """
@@ -474,6 +479,7 @@ defmodule Ecto.Repo do
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
   """
+  @doc group: "Transaction API"
   @callback checkout((() -> result), opts :: Keyword.t()) :: result when result: var
 
   @doc """
@@ -496,14 +502,15 @@ defmodule Ecto.Repo do
       end)
 
   """
+  @doc group: "Transaction API"
   @callback checked_out?() :: boolean
 
   @doc """
-  Loads `data` into a struct or a map.
+  Loads `data` into a schema or a map.
 
-  The first argument can be a a schema module, or a
-  map (of types) and determines the return value:
-  a struct or a map, respectively.
+  The first argument can be a a schema module or a map (of types).
+  The first argument determines the return value: a struct or a map,
+  respectively.
 
   The second argument `data` specifies fields and values that are to be loaded.
   It can be a map, a keyword list, or a `{fields, values}` tuple.
@@ -540,8 +547,9 @@ defmodule Ecto.Repo do
       [%User{...}, ...]
 
   """
+  @doc group: "Schema API"
   @callback load(
-              module_or_map :: module | map(),
+              schema_or_map :: module | map(),
               data :: map() | Keyword.t() | {list, list}
             ) :: Ecto.Schema.t() | map()
 
@@ -550,6 +558,7 @@ defmodule Ecto.Repo do
 
   See `c:put_dynamic_repo/1` for more information.
   """
+  @doc group: "Runtime API"
   @callback get_dynamic_repo() :: atom() | pid()
 
   @doc """
@@ -585,6 +594,7 @@ defmodule Ecto.Repo do
   **Note this feature is experimental and may be changed or removed in future
   releases.**
   """
+  @doc group: "Runtime API"
   @callback put_dynamic_repo(name_or_pid :: atom() | pid()) :: atom() | pid()
 
   ## Ecto.Adapter.Queryable
@@ -619,6 +629,7 @@ defmodule Ecto.Repo do
       MyRepo.get(Post, 42, prefix: "public")
 
   """
+  @doc group: "Query API"
   @callback get(queryable :: Ecto.Queryable.t(), id :: term, opts :: Keyword.t()) ::
               Ecto.Schema.t() | nil
 
@@ -644,6 +655,7 @@ defmodule Ecto.Repo do
       MyRepo.get!(Post, 42, prefix: "public")
 
   """
+  @doc group: "Query API"
   @callback get!(queryable :: Ecto.Queryable.t(), id :: term, opts :: Keyword.t()) ::
               Ecto.Schema.t()
 
@@ -671,6 +683,7 @@ defmodule Ecto.Repo do
       MyRepo.get_by(Post, [title: "My post"], prefix: "public")
 
   """
+  @doc group: "Query API"
   @callback get_by(
               queryable :: Ecto.Queryable.t(),
               clauses :: Keyword.t() | map,
@@ -702,6 +715,7 @@ defmodule Ecto.Repo do
       MyRepo.get_by!(Post, [title: "My post"], prefix: "public")
 
   """
+  @doc group: "Query API"
   @callback get_by!(
               queryable :: Ecto.Queryable.t(),
               clauses :: Keyword.t() | map,
@@ -726,6 +740,7 @@ defmodule Ecto.Repo do
       MyRepo.reload([deleted_post, post1])
       [nil, %Post{}]
   """
+  @doc group: "Schema API"
   @callback reload(
               struct_or_structs :: Ecto.Schema.t() | [Ecto.Schema.t()],
               opts :: Keyword.t()
@@ -744,6 +759,7 @@ defmodule Ecto.Repo do
       MyRepo.reload!([post1, post2])
       [%Post{}, %Post{}]
   """
+  @doc group: "Schema API"
   @callback reload!(struct_or_structs, opts :: Keyword.t()) :: struct_or_structs
             when struct_or_structs: Ecto.Schema.t() | [Ecto.Schema.t()]
 
@@ -781,6 +797,7 @@ defmodule Ecto.Repo do
       Repo.aggregate(Post, :count, prefix: "private")
 
   """
+  @doc group: "Query API"
   @callback aggregate(
               queryable :: Ecto.Queryable.t(),
               aggregate :: :count,
@@ -805,6 +822,7 @@ defmodule Ecto.Repo do
       query = from Post, limit: 10
       Repo.aggregate(query, :avg, :visits)
   """
+  @doc group: "Query API"
   @callback aggregate(
               queryable :: Ecto.Queryable.t(),
               aggregate :: :avg | :count | :max | :min | :sum,
@@ -842,6 +860,7 @@ defmodule Ecto.Repo do
       query = from p in Post, where: p.like_count > 10
       Repo.exists?(query)
   """
+  @doc group: "Query API"
   @callback exists?(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: boolean()
 
   @doc """
@@ -868,6 +887,7 @@ defmodule Ecto.Repo do
       query = from p in Post, join: c in assoc(p, :comments), where: p.id == ^post_id
       Repo.one(query, prefix: "private")
   """
+  @doc group: "Query API"
   @callback one(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
               Ecto.Schema.t() | nil
 
@@ -888,6 +908,7 @@ defmodule Ecto.Repo do
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
   """
+  @doc group: "Query API"
   @callback one!(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
               Ecto.Schema.t()
 
@@ -936,6 +957,7 @@ defmodule Ecto.Repo do
 
   The query given to preload may also preload its own associations.
   """
+  @doc group: "Schema API"
   @callback preload(structs_or_struct_or_nil, preloads :: term, opts :: Keyword.t()) ::
               structs_or_struct_or_nil
             when structs_or_struct_or_nil: [Ecto.Schema.t()] | Ecto.Schema.t() | nil
@@ -975,6 +997,7 @@ defmodule Ecto.Repo do
   made from associations and preloads. It is not invoked for each
   individual join inside a query.
   """
+  @doc group: "User callbacks"
   @callback prepare_query(operation, query :: Ecto.Query.t(), opts :: Keyword.t()) ::
               {Ecto.Query.t(), Keyword.t()}
             when operation: :all | :update_all | :delete_all | :stream | :insert_all
@@ -993,6 +1016,7 @@ defmodule Ecto.Repo do
   this callback will be invoked once at the beginning, but the
   options returned here will be passed to all following operations.
   """
+  @doc group: "User callbacks"
   @callback default_options(operation) :: Keyword.t()
             when operation: :all | :insert_all | :update_all | :delete_all | :stream |
                               :transaction | :insert | :update | :delete | :insert_or_update
@@ -1021,6 +1045,7 @@ defmodule Ecto.Repo do
            select: p.title
       MyRepo.all(query)
   """
+  @doc group: "Query API"
   @callback all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: [Ecto.Schema.t()]
 
   @doc """
@@ -1057,6 +1082,7 @@ defmodule Ecto.Repo do
         Enum.to_list(stream)
       end)
   """
+  @doc group: "Query API"
   @callback stream(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: Enum.t()
 
   @doc """
@@ -1101,6 +1127,7 @@ defmodule Ecto.Repo do
       |> MyRepo.update_all([])
 
   """
+  @doc group: "Query API"
   @callback update_all(
               queryable :: Ecto.Queryable.t(),
               updates :: Keyword.t(),
@@ -1130,6 +1157,7 @@ defmodule Ecto.Repo do
 
       from(p in Post, where: p.id < 10) |> MyRepo.delete_all
   """
+  @doc group: "Query API"
   @callback delete_all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
               {integer, nil | [term]}
 
@@ -1303,6 +1331,7 @@ defmodule Ecto.Repo do
       so they are not currently compatible with MySQL
 
   """
+  @doc group: "Schema API"
   @callback insert_all(
               schema_or_source :: binary | {binary, module} | module,
               entries_or_query :: [map | [{atom, term | Ecto.Query.t}]] | Ecto.Query.t,
@@ -1474,6 +1503,7 @@ defmodule Ecto.Repo do
   at the same time is not recommended, as Ecto will be unable to actually
   track the proper status of the association.
   """
+  @doc group: "Schema API"
   @callback insert(
               struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(),
               opts :: Keyword.t()
@@ -1535,6 +1565,7 @@ defmodule Ecto.Repo do
         {:error, changeset} -> # Something went wrong
       end
   """
+  @doc group: "Schema API"
   @callback update(changeset :: Ecto.Changeset.t(), opts :: Keyword.t()) ::
               {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
 
@@ -1585,6 +1616,7 @@ defmodule Ecto.Repo do
         {:error, changeset} -> # Something went wrong
       end
   """
+  @doc group: "Schema API"
   @callback insert_or_update(changeset :: Ecto.Changeset.t(), opts :: Keyword.t()) ::
               {:ok, Ecto.Schema.t()} | {:error, Ecto.Changeset.t()}
 
@@ -1626,6 +1658,7 @@ defmodule Ecto.Repo do
       end
 
   """
+  @doc group: "Schema API"
   @callback delete(
               struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(),
               opts :: Keyword.t()
@@ -1634,6 +1667,7 @@ defmodule Ecto.Repo do
   @doc """
   Same as `c:insert/2` but returns the struct or raises if the changeset is invalid.
   """
+  @doc group: "Schema API"
   @callback insert!(
               struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(),
               opts :: Keyword.t()
@@ -1642,6 +1676,7 @@ defmodule Ecto.Repo do
   @doc """
   Same as `c:update/2` but returns the struct or raises if the changeset is invalid.
   """
+  @doc group: "Schema API"
   @callback update!(changeset :: Ecto.Changeset.t(), opts :: Keyword.t()) ::
               Ecto.Schema.t()
 
@@ -1649,12 +1684,14 @@ defmodule Ecto.Repo do
   Same as `c:insert_or_update/2` but returns the struct or raises if the changeset
   is invalid.
   """
+  @doc group: "Schema API"
   @callback insert_or_update!(changeset :: Ecto.Changeset.t(), opts :: Keyword.t()) ::
               Ecto.Schema.t()
 
   @doc """
   Same as `c:delete/2` but returns the struct or raises if the changeset is invalid.
   """
+  @doc group: "Schema API"
   @callback delete!(
               struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(),
               opts :: Keyword.t()
@@ -1735,6 +1772,7 @@ defmodule Ecto.Repo do
       |> MyRepo.transaction
 
   """
+  @doc group: "Transaction API"
   @callback transaction(fun_or_multi :: fun | Ecto.Multi.t(), opts :: Keyword.t()) ::
               {:ok, any}
               | {:error, any}
@@ -1762,6 +1800,7 @@ defmodule Ecto.Repo do
       end)
 
   """
+  @doc group: "Transaction API"
   @callback in_transaction?() :: boolean
 
   @doc """
@@ -1771,5 +1810,6 @@ defmodule Ecto.Repo do
 
   Note that calling `rollback` causes the code in the transaction to stop executing.
   """
+  @doc group: "Transaction API"
   @callback rollback(value :: any) :: no_return
 end
