@@ -590,9 +590,6 @@ defmodule Ecto.Repo do
 
   From this moment on, all future queries done by the current process will
   run on `:tenant_foo`.
-
-  **Note this feature is experimental and may be changed or removed in future
-  releases.**
   """
   @doc group: "Runtime API"
   @callback put_dynamic_repo(name_or_pid :: atom() | pid()) :: atom() | pid()
