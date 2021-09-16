@@ -1881,7 +1881,7 @@ defmodule Ecto.Schema do
 
     type = check_field_type!(mod, name, type, opts)
     Module.put_attribute(mod, :changeset_fields, {name, type})
-    validate_default!(type, opts[:default])
+    validate_default!(type, opts[:default], opts[:skip_default_validation])
     define_field(mod, name, type, opts)
   end
 
@@ -2141,7 +2141,8 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :struct_fields, {name, assoc})
   end
 
-  defp validate_default!(type, value) do
+  defp validate_default!(_type, _value, true), do: :ok
+  defp validate_default!(type, value, _skip) do
     case Ecto.Type.dump(type, value) do
       {:ok, _} ->
         :ok

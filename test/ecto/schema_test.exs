@@ -418,6 +418,17 @@ defmodule Ecto.SchemaTest do
     end
   end
 
+  test "skipping validations on invalid types" do 
+    assert(
+      defmodule SchemaSkipValidationsDefault do
+        use Ecto.Schema
+
+        schema "invalid_default" do
+          field :count, :integer, default: "1", skip_default_validation: true
+        end
+      end, ~s/value "1" can be set for integer due to overridden validation/)
+  end
+
   test "invalid field type" do
     assert_raise ArgumentError, "invalid or unknown type {:apa} for field :name", fn ->
       defmodule SchemaInvalidFieldType do
