@@ -486,6 +486,23 @@ defmodule Ecto.Schema do
     end
   end
 
+  @field_opts [
+    :default,
+    :source,
+    :autogenerate,
+    :read_after_writes, 
+    :virtual, 
+    :primary_key,
+    :load_in_query,
+    :redact,
+    :foreign_key,
+    :on_replace, 
+    :defaults,
+    :type,
+    :where,
+    :references
+  ]
+
   @doc """
   Defines an embedded schema with the given field definitions.
 
@@ -1883,15 +1900,38 @@ defmodule Ecto.Schema do
 
   @doc false
   def __field__(mod, name, type, opts) do
-    if type == :any and !opts[:virtual] do
-      raise ArgumentError, "only virtual fields can have type :any, " <>
-                           "invalid type for field #{inspect name}"
-    end
-
     type = check_field_type!(mod, name, type, opts)
+
+    validate_field_opts!(name, type, opts)
     Module.put_attribute(mod, :changeset_fields, {name, type})
     validate_default!(type, opts[:default], opts[:skip_default_validation])
     define_field(mod, name, type, opts)
+  end
+
+  defp validate_field_opts!(name, type, opts) do
+    validate_opts = fn opts ->
+      Enum.each(opts, fn {k, _v} -> 
+          unless k in @field_opts, do:
+            raise ArgumentError, "invalid option #{inspect(k)} given for field #{inspect(name)}"
+        end)
+     end
+
+    case type do
+      {:parameterized, _, _} ->
+        :ok
+
+      {_, {:parameterized, _, _}} ->
+        :ok
+
+      :any ->
+        if !opts[:virtual], do:
+          raise ArgumentError, "only virtual fields can have type :any, " <>
+                               "invalid type for field #{inspect name}"
+        validate_opts.(opts)
+
+      _ ->
+        validate_opts.(opts)
+    end
   end
 
   defp define_field(mod, name, type, opts) do
