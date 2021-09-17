@@ -645,10 +645,16 @@ defmodule Ecto.Schema do
   ## Options
 
     * `:default` - Sets the default value on the schema and the struct.
+
       The default value is calculated at compilation time, so don't use
       expressions like `DateTime.utc_now` or `Ecto.UUID.generate` as
       they would then be the same for all records: in this scenario you can use
-      the `:autogenerate` option to generate at insertion time.
+      the `:autogenerate` option to generate at insertion time. 
+
+      The default value is validated against the field's type at compilation time
+      and it will raise an ArgumentError if there is a type mismatch. If you cannot 
+      infer  the field's type at compilation time, you can use the 
+      `:skip_default_validation` option on the field to skip validations.
 
       Once a default value is set, if you send changes to the changeset that
       contains the same value defined as default, validations will not be performed
@@ -684,6 +690,9 @@ defmodule Ecto.Schema do
     * `:redact` - When true, it will display a value of `**redacted**`
       when inspected in changes inside a `Ecto.Changeset` and be excluded
       from inspect on the schema. Defaults to `false`.
+
+    * `:skip_default_validation` - When true, it will skip the type validation
+      step at compile time.
 
   """
   defmacro field(name, type \\ :string, opts \\ []) do
@@ -1881,7 +1890,7 @@ defmodule Ecto.Schema do
 
     type = check_field_type!(mod, name, type, opts)
     Module.put_attribute(mod, :changeset_fields, {name, type})
-    validate_default!(type, opts[:default])
+    validate_default!(type, opts[:default], opts[:skip_default_validation])
     define_field(mod, name, type, opts)
   end
 
@@ -2141,7 +2150,8 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :struct_fields, {name, assoc})
   end
 
-  defp validate_default!(type, value) do
+  defp validate_default!(_type, _value, true), do: :ok
+  defp validate_default!(type, value, _skip) do
     case Ecto.Type.dump(type, value) do
       {:ok, _} ->
         :ok
