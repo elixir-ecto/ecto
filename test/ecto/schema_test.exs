@@ -430,7 +430,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "invalid option for field" do
-    assert_raise ArgumentError, ~s/invalid option :starts_on given for field :count/, fn ->
+    assert_raise ArgumentError, ~s/invalid option :starts_on for field\/3/, fn ->
       defmodule SchemaInvalidFieldOption do
         use Ecto.Schema
 
