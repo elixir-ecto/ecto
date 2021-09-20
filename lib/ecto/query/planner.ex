@@ -926,14 +926,15 @@ defmodule Ecto.Query.Planner do
     query
     |> normalize_query(operation, adapter, counter)
     |> elem(0)
-    |> normalize_select(keep_literals?(query))
+    |> normalize_select(keep_literals?(operation, query))
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
       filter_and_reraise e, __STACKTRACE__
   end
 
-  defp keep_literals?(%{combinations: combinations}), do: combinations != []
+  defp keep_literals?(:insert_all, _), do: true
+  defp keep_literals?(_, %{combinations: combinations}), do: combinations != []
 
   defp normalize_query(query, operation, adapter, counter) do
     case operation do

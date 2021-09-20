@@ -532,6 +532,26 @@ defmodule Ecto.RepoTest do
       assert ["one", "two", "ten"] = params
     end
 
+    test "takes query as datasource with literals" do
+      import Ecto.Query
+
+      threshold = "ten"
+
+      query = from s in MySchema,
+        where: s.x > ^threshold,
+        select: %{
+          foo: s.x,
+          bar: "bar",
+          baz: nil
+        }
+
+      TestRepo.insert_all(MySchema, query)
+
+      assert_received {:insert_all, %{source: "my_schema"}, {%Ecto.Query{} = query, params}}
+      assert [{{:., _, [{:&, [], [0]}, :x]}, _, []}, "bar", nil] = query.select.fields
+      assert ["ten"] = params
+    end
+
     test "raises when a bad query is given as source" do
       assert_raise ArgumentError, fn ->
         TestRepo.insert_all(MySchema, from(s in MySchema))
