@@ -1349,8 +1349,8 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-  test "validate_number/3 with bad value" do 
-    assert_raise ArgumentError, "expected value to be of type Decimal, Integer or Float, got: \"Oops\"", fn -> 
+  test "validate_number/3 with bad value" do
+    assert_raise ArgumentError, "expected value to be of type Decimal, Integer or Float, got: \"Oops\"", fn ->
       validate_number(changeset(%{"virtual" => "Oops"}), :virtual, greater_than: 0)
     end
   end
@@ -1502,6 +1502,8 @@ defmodule Ecto.ChangesetTest do
       assert changeset.errors ==
                [title: {"has already been taken", validation: :unsafe_unique, fields: [:title]}]
 
+      assert changeset.validations == [title: {:unsafe_unique, fields: [:title]}]
+
       Process.put(:test_repo_all_results, context.no_dup_result)
       changeset = unsafe_validate_unique(context.base_changeset, :title, TestRepo)
       assert changeset.valid?
@@ -1516,6 +1518,8 @@ defmodule Ecto.ChangesetTest do
                  title:
                    {"has already been taken", validation: :unsafe_unique, fields: [:title, :body]}
                ]
+
+      assert changeset.validations == [title: {:unsafe_unique, fields: [:title, :body]}]
 
       Process.put(:test_repo_all_results, context.no_dup_result)
       changeset = unsafe_validate_unique(context.base_changeset, [:title, :body], TestRepo)

@@ -1868,7 +1868,7 @@ defmodule Ecto.Changeset do
         %Ecto.Changeset{} ->
           raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets"
       end
-    changeset = %{changeset | validations: [{:unsafe_unique, fields} | validations]}
+    changeset = %{changeset | validations: [{hd(fields), {:unsafe_unique, fields: fields}} | validations]}
 
     where_clause = for field <- fields do
       {field, get_field(changeset, field)}
@@ -3073,7 +3073,7 @@ defimpl Inspect, for: Ecto.Changeset do
     end
 
     redacted_fields = case data do
-      %type{} -> 
+      %type{} ->
         if function_exported?(type, :__schema__, 1) do
           type.__schema__(:redact_fields)
         else
