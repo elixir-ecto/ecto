@@ -1737,7 +1737,31 @@ defmodule Ecto.Query.Planner do
         error! query, expr, "field `#{field}` in `#{kind}` is a virtual field in schema #{inspect schema}"
 
       true ->
-        error! query, expr, "field `#{field}` in `#{kind}` does not exist in schema #{inspect schema}"
+        suggestion_str =
+          case closest_suggestion(field, schema) do
+            nil ->
+              ""
+            suggestion ->
+             ", did you mean `#{suggestion}`?"
+          end
+
+        error! query, expr, "field `#{field}` in `#{kind}` does not exist in schema #{inspect schema}" <> suggestion_str
+    end
+  end
+
+  defp closest_suggestion(input, schema) do
+    input_string = Atom.to_string(input)
+
+    schema.__schema__(:fields)
+    |> Enum.map(fn field ->
+      {field, String.jaro_distance(input_string, Atom.to_string(field))}
+    end)
+    |> Enum.max(fn {_f1, s1}, {_f2, s2} -> s1 >= s2 end)
+    |> case do
+      {field, score} when score >= 0.8 ->
+        field
+      _ ->
+        nil
     end
   end
 
