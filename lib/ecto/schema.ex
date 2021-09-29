@@ -500,7 +500,8 @@ defmodule Ecto.Schema do
     :defaults,
     :type,
     :where,
-    :references
+    :references,
+    :skip_default_validation
   ]
 
   @doc """
