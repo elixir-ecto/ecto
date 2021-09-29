@@ -8,7 +8,7 @@ defmodule Ecto.SchemaTest do
 
     schema "my schema" do
       field :name,  :string, default: "eric", autogenerate: {String, :upcase, ["eric"]}
-      field :email, :string, uniq: true, read_after_writes: true
+      field :email, :string, read_after_writes: true
       field :password, :string, redact: true
       field :temp,  :any, default: "temp", virtual: true, redact: true
       field :count, :decimal, read_after_writes: true, source: :cnt
@@ -425,6 +425,28 @@ defmodule Ecto.SchemaTest do
       schema "invalid_default" do
         # Without skip_default_validation this would fail to compile
         field :count, :integer, default: "1", skip_default_validation: true
+      end
+    end
+  end
+
+  test "invalid option for field" do
+    assert_raise ArgumentError, ~s/invalid option :starts_on for field\/3/, fn ->
+      defmodule SchemaInvalidFieldOption do
+        use Ecto.Schema
+
+        schema "invalid_option" do
+          field :count, :integer, starts_on: 3
+        end
+      end
+    end
+
+    # doesn't validate for parameterized types
+    defmodule SchemaInvalidOptionParameterized do
+      use Ecto.Schema
+
+      schema "invalid_option_parameterized" do
+        field :my_enum, Ecto.Enum, values: [:a, :b], random_option: 3
+        field :my_enums, Ecto.Enum, values: [:a, :b], random_option: 3
       end
     end
   end
