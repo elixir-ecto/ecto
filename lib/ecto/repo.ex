@@ -1075,7 +1075,7 @@ defmodule Ecto.Repo do
       query = from p in Post,
            select: p.title
       stream = MyRepo.stream(query)
-      MyRepo.transaction(fn() ->
+      MyRepo.transaction(fn ->
         Enum.to_list(stream)
       end)
   """
