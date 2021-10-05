@@ -1629,7 +1629,9 @@ defmodule Ecto.Repo do
 
   It returns `{:ok, struct}` if the struct has been successfully
   deleted or `{:error, changeset}` if there was a validation
-  or a known constraint error.
+  or a known constraint error. To make Ecto aware of contraints be sure
+  to pass a changeset as the first arg with the relevant constraint 
+  applied (see Ecto.Changeset).
 
   ## Options
 
