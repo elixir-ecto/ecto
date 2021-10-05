@@ -1623,9 +1623,9 @@ defmodule Ecto.Repo do
   If the struct has no primary key, `Ecto.NoPrimaryKeyFieldError`
   will be raised. If the struct has been removed from db prior to
   call, `Ecto.StaleEntryError` will be raised. If removing the struct 
-  from the db will violate an existing constraint, `Ecto.ConstraintError` 
-  will be raised. If more than one database operation is required, 
-  they're automatically wrapped in a transaction.
+  will violate an existing constraint, `Ecto.ConstraintError` will be
+  raised. If more than one database operation is required, they're
+  automatically wrapped in a transaction.
 
   It returns `{:ok, struct}` if the struct has been successfully
   deleted or `{:error, changeset}` if there was a validation
