@@ -1590,7 +1590,7 @@ defmodule Ecto.ChangesetTest do
       assert Macro.to_string(check_expr) == "&0.body() == ^0"
     end
 
-    # AST is represented as string differently on versions pre 1.13
+    # TODO: AST is represented as string differently on versions pre 1.13
     if Version.match?(System.version(), ">= 1.13.0-dev") do
       test "generates correct where clause for single primary key without query option" do
         body_change = cast(%SinglePkSchema{id: 0, body: "hi"}, %{body: "ho"}, [:body])
