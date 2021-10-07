@@ -27,13 +27,25 @@ defmodule Ecto.Query.Builder.DynamicTest do
       assert params == [{1, {0, :foo}}]
     end
 
-    test "with dynamic interpolation" do
-      dynamic = dynamic([p], p.bar == ^2)
-      dynamic = dynamic([p], p.foo == ^1 and ^dynamic or p.baz == ^3)
-      assert {expr, _, params, [], _, _} = fully_expand(query(), dynamic)
-      assert Macro.to_string(expr) ==
-             "&0.foo() == ^0 and &0.bar() == ^1 or &0.baz() == ^2"
-      assert params == [{1, {0, :foo}}, {2, {0, :bar}}, {3, {0, :baz}}]
+    # TODO: AST is represented as string differently on versions pre 1.13
+    if Version.match?(System.version(), ">= 1.13.0-dev") do
+      test "with dynamic interpolation" do
+        dynamic = dynamic([p], p.bar == ^2)
+        dynamic = dynamic([p], p.foo == ^1 and ^dynamic or p.baz == ^3)
+        assert {expr, _, params, [], _, _} = fully_expand(query(), dynamic)
+        assert Macro.to_string(expr) ==
+               "(&0.foo() == ^0 and &0.bar() == ^1) or &0.baz() == ^2"
+        assert params == [{1, {0, :foo}}, {2, {0, :bar}}, {3, {0, :baz}}]
+      end
+    else
+      test "with dynamic interpolation" do
+        dynamic = dynamic([p], p.bar == ^2)
+        dynamic = dynamic([p], p.foo == ^1 and ^dynamic or p.baz == ^3)
+        assert {expr, _, params, [], _, _} = fully_expand(query(), dynamic)
+        assert Macro.to_string(expr) ==
+               "&0.foo() == ^0 and &0.bar() == ^1 or &0.baz() == ^2"
+        assert params == [{1, {0, :foo}}, {2, {0, :bar}}, {3, {0, :baz}}]
+      end
     end
 
     test "with subquery and dynamic interpolation" do

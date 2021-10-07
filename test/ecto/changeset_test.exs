@@ -1590,46 +1590,91 @@ defmodule Ecto.ChangesetTest do
       assert Macro.to_string(check_expr) == "&0.body() == ^0"
     end
 
-    test "generates correct where clause for single primary key without query option" do
-      body_change = cast(%SinglePkSchema{id: 0, body: "hi"}, %{body: "ho"}, [:body])
-      unsafe_validate_unique(body_change, :body, MockRepo)
-      assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
-      assert [%{expr: pk_expr}, %{expr: check_expr}] = wheres
+    # TODO: AST is represented as string differently on versions pre 1.13
+    if Version.match?(System.version(), ">= 1.13.0-dev") do
+      test "generates correct where clause for single primary key without query option" do
+        body_change = cast(%SinglePkSchema{id: 0, body: "hi"}, %{body: "ho"}, [:body])
+        unsafe_validate_unique(body_change, :body, MockRepo)
+        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert [%{expr: pk_expr}, %{expr: check_expr}] = wheres
 
-      assert Macro.to_string(pk_expr) == "not(&0.id() == ^0)"
-      assert Macro.to_string(check_expr) == "&0.body() == ^0"
-    end
+        assert Macro.to_string(pk_expr) == "not (&0.id() == ^0)"
+        assert Macro.to_string(check_expr) == "&0.body() == ^0"
+      end
 
-    test "generates correct where clause for composite primary keys without query option" do
-      body_change = changeset(%Post{id: 0, token: 1, body: "hi"}, %{body: "ho"})
-      unsafe_validate_unique(body_change, :body, MockRepo)
-      assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
-      assert [%{expr: pk_expr}, %{expr: check_expr}] = wheres
+      test "generates correct where clause for composite primary keys without query option" do
+        body_change = changeset(%Post{id: 0, token: 1, body: "hi"}, %{body: "ho"})
+        unsafe_validate_unique(body_change, :body, MockRepo)
+        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert [%{expr: pk_expr}, %{expr: check_expr}] = wheres
 
-      assert Macro.to_string(pk_expr) == "not(&0.id() == ^0 and &0.token() == ^1)"
-      assert Macro.to_string(check_expr) == "&0.body() == ^0"
-    end
+        assert Macro.to_string(pk_expr) == "not (&0.id() == ^0 and &0.token() == ^1)"
+        assert Macro.to_string(check_expr) == "&0.body() == ^0"
+      end
 
-    test "generates correct where clause for single primary key with query option" do
-      body_change = cast(%SinglePkSchema{id: 0, body: "hi"}, %{body: "ho"}, [:body])
-      unsafe_validate_unique(body_change, :body, MockRepo, query: Ecto.Query.from(p in SinglePkSchema, where: is_nil(p.published_at)))
-      assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
-      assert [%{expr: query_expr}, %{expr: pk_expr}, %{expr: check_expr}] = wheres
+      test "generates correct where clause for single primary key with query option" do
+        body_change = cast(%SinglePkSchema{id: 0, body: "hi"}, %{body: "ho"}, [:body])
+        unsafe_validate_unique(body_change, :body, MockRepo, query: Ecto.Query.from(p in SinglePkSchema, where: is_nil(p.published_at)))
+        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert [%{expr: query_expr}, %{expr: pk_expr}, %{expr: check_expr}] = wheres
 
-      assert Macro.to_string(query_expr) == "is_nil(&0.published_at())"
-      assert Macro.to_string(pk_expr) == "not(&0.id() == ^0)"
-      assert Macro.to_string(check_expr) == "&0.body() == ^0"
-    end
+        assert Macro.to_string(query_expr) == "is_nil(&0.published_at())"
+        assert Macro.to_string(pk_expr) == "not (&0.id() == ^0)"
+        assert Macro.to_string(check_expr) == "&0.body() == ^0"
+      end
 
-    test "generates correct where clause for composite primary keys with query option" do
-      body_change = changeset(%Post{id: 0, token: 1, body: "hi"}, %{body: "ho"})
-      unsafe_validate_unique(body_change, :body, MockRepo, query: Ecto.Query.from(p in Post, where: is_nil(p.published_at)))
-      assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
-      assert [%{expr: query_expr}, %{expr: pk_expr}, %{expr: check_expr}] = wheres
+      test "generates correct where clause for composite primary keys with query option" do
+        body_change = changeset(%Post{id: 0, token: 1, body: "hi"}, %{body: "ho"})
+        unsafe_validate_unique(body_change, :body, MockRepo, query: Ecto.Query.from(p in Post, where: is_nil(p.published_at)))
+        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert [%{expr: query_expr}, %{expr: pk_expr}, %{expr: check_expr}] = wheres
 
-      assert Macro.to_string(query_expr) == "is_nil(&0.published_at())"
-      assert Macro.to_string(pk_expr) == "not(&0.id() == ^0 and &0.token() == ^1)"
-      assert Macro.to_string(check_expr) == "&0.body() == ^0"
+        assert Macro.to_string(query_expr) == "is_nil(&0.published_at())"
+        assert Macro.to_string(pk_expr) == "not (&0.id() == ^0 and &0.token() == ^1)"
+        assert Macro.to_string(check_expr) == "&0.body() == ^0"
+      end
+    else
+      test "generates correct where clause for single primary key without query option" do
+        body_change = cast(%SinglePkSchema{id: 0, body: "hi"}, %{body: "ho"}, [:body])
+        unsafe_validate_unique(body_change, :body, MockRepo)
+        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert [%{expr: pk_expr}, %{expr: check_expr}] = wheres
+
+        assert Macro.to_string(pk_expr) == "not(&0.id() == ^0)"
+        assert Macro.to_string(check_expr) == "&0.body() == ^0"
+      end
+
+      test "generates correct where clause for composite primary keys without query option" do
+        body_change = changeset(%Post{id: 0, token: 1, body: "hi"}, %{body: "ho"})
+        unsafe_validate_unique(body_change, :body, MockRepo)
+        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert [%{expr: pk_expr}, %{expr: check_expr}] = wheres
+
+        assert Macro.to_string(pk_expr) == "not(&0.id() == ^0 and &0.token() == ^1)"
+        assert Macro.to_string(check_expr) == "&0.body() == ^0"
+      end
+
+      test "generates correct where clause for single primary key with query option" do
+        body_change = cast(%SinglePkSchema{id: 0, body: "hi"}, %{body: "ho"}, [:body])
+        unsafe_validate_unique(body_change, :body, MockRepo, query: Ecto.Query.from(p in SinglePkSchema, where: is_nil(p.published_at)))
+        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert [%{expr: query_expr}, %{expr: pk_expr}, %{expr: check_expr}] = wheres
+
+        assert Macro.to_string(query_expr) == "is_nil(&0.published_at())"
+        assert Macro.to_string(pk_expr) == "not(&0.id() == ^0)"
+        assert Macro.to_string(check_expr) == "&0.body() == ^0"
+      end
+
+      test "generates correct where clause for composite primary keys with query option" do
+        body_change = changeset(%Post{id: 0, token: 1, body: "hi"}, %{body: "ho"})
+        unsafe_validate_unique(body_change, :body, MockRepo, query: Ecto.Query.from(p in Post, where: is_nil(p.published_at)))
+        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert [%{expr: query_expr}, %{expr: pk_expr}, %{expr: check_expr}] = wheres
+
+        assert Macro.to_string(query_expr) == "is_nil(&0.published_at())"
+        assert Macro.to_string(pk_expr) == "not(&0.id() == ^0 and &0.token() == ^1)"
+        assert Macro.to_string(check_expr) == "&0.body() == ^0"
+      end
     end
 
     test "only queries the db when necessary" do

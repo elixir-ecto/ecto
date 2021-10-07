@@ -348,13 +348,25 @@ defmodule Ecto.Query.InspectTest do
     ) == string
   end
 
-  test "container values" do
-    assert i(from(Post, select: <<1, 2, 3>>)) ==
-           "from p0 in Inspect.Post, select: <<1, 2, 3>>"
+  # TODO: AST is represented as string differently on versions pre 1.13
+  if Version.match?(System.version(), ">= 1.13.0-dev") do
+    test "container values" do
+      assert i(from(Post, select: <<1, 2, 3>>)) ==
+             "from p0 in Inspect.Post, select: \"\\x01\\x02\\x03\""
 
-    foo = <<1, 2, 3>>
-    assert i(from(p in Post, select: {p, ^foo})) ==
-           "from p0 in Inspect.Post, select: {p0, ^<<1, 2, 3>>}"
+      foo = <<1, 2, 3>>
+      assert i(from(p in Post, select: {p, ^foo})) ==
+             "from p0 in Inspect.Post, select: {p0, ^\"\\x01\\x02\\x03\"}"
+    end
+  else
+    test "container values" do
+      assert i(from(Post, select: <<1, 2, 3>>)) ==
+             "from p0 in Inspect.Post, select: <<1, 2, 3>>"
+
+      foo = <<1, 2, 3>>
+      assert i(from(p in Post, select: {p, ^foo})) ==
+             "from p0 in Inspect.Post, select: {p0, ^<<1, 2, 3>>}"
+    end
   end
 
   test "select" do
