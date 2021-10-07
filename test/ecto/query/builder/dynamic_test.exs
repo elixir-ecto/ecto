@@ -27,7 +27,7 @@ defmodule Ecto.Query.Builder.DynamicTest do
       assert params == [{1, {0, :foo}}]
     end
 
-    # AST is represented as string differently on versions pre 1.13
+    # TODO: AST is represented as string differently on versions pre 1.13
     if Version.match?(System.version(), ">= 1.13.0-dev") do
       test "with dynamic interpolation" do
         dynamic = dynamic([p], p.bar == ^2)
