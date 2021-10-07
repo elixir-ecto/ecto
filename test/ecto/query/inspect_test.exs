@@ -348,7 +348,7 @@ defmodule Ecto.Query.InspectTest do
     ) == string
   end
 
-  # AST is represented as string differently on versions pre 1.13
+  # TODO: AST is represented as string differently on versions pre 1.13
   if Version.match?(System.version(), ">= 1.13.0-dev") do
     test "container values" do
       assert i(from(Post, select: <<1, 2, 3>>)) ==
