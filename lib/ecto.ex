@@ -21,13 +21,13 @@ defmodule Ecto do
 
   Besides the four components above, most developers use Ecto to interact
   with SQL databases, such as Postgres and MySQL via the
-  [`ecto_sql`](http://hexdocs.pm/ecto_sql) project. `ecto_sql` provides many
+  [`ecto_sql`](https://hexdocs.pm/ecto_sql) project. `ecto_sql` provides many
   conveniences for working with SQL databases as well as the ability to version
   how your database changes through time via
   [database migrations](https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.html#module-migrations).
 
   If you want to quickly check a sample application using Ecto, please check
-  the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and
+  the [getting started guide](https://hexdocs.pm/ecto/getting-started.html) and
   the accompanying sample application. [Ecto's README](https://github.com/elixir-ecto/ecto)
   also links to other resources.
 

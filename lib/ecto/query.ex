@@ -1705,7 +1705,7 @@ defmodule Ecto.Query do
   If `lock` is used more than once, the last one used takes precedence.
 
   Ecto also supports [optimistic
-  locking](http://en.wikipedia.org/wiki/Optimistic_concurrency_control) but not
+  locking](https://en.wikipedia.org/wiki/Optimistic_concurrency_control) but not
   through queries. For more information on optimistic locking, have a look at
   the `Ecto.Changeset.optimistic_lock/3` function.
 

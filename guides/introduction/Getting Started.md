@@ -20,7 +20,7 @@ To start off with, we'll generate a new Elixir application by running this comma
 mix new friends --sup
 ```
 
-The `--sup` option ensures that this application has [a supervision tree](http://elixir-lang.org/getting-started/mix-otp/supervisor-and-application.html), which we'll need for Ecto a little later on.
+The `--sup` option ensures that this application has [a supervision tree](https://elixir-lang.org/getting-started/mix-otp/supervisor-and-application.html), which we'll need for Ecto a little later on.
 
 To add Ecto to this application, there are a few steps that we need to take. The first step will be adding Ecto and a driver called Postgrex to our `mix.exs` file, which we'll do by changing the `deps` definition in that file to this:
 

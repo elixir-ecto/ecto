@@ -58,9 +58,9 @@ defmodule Sample.App do
 end
 ```
 
-Ecto is commonly used to interact with databases, such as Postgres and MySQL via [Ecto.Adapters.SQL](http://hexdocs.pm/ecto_sql) ([source code](https://github.com/elixir-ecto/ecto_sql)). Ecto is also commonly used to map data from any source into Elixir structs, whether they are backed by a database or not.
+Ecto is commonly used to interact with databases, such as Postgres and MySQL via [Ecto.Adapters.SQL](https://hexdocs.pm/ecto_sql) ([source code](https://github.com/elixir-ecto/ecto_sql)). Ecto is also commonly used to map data from any source into Elixir structs, whether they are backed by a database or not.
 
-See the [getting started guide](http://hexdocs.pm/ecto/getting-started.html) and the [online documentation](http://hexdocs.pm/ecto) for more information. Other resources available are:
+See the [getting started guide](https://hexdocs.pm/ecto/getting-started.html) and the [online documentation](https://hexdocs.pm/ecto) for more information. Other resources available are:
 
   * [Programming Ecto](https://pragprog.com/book/wmecto/programming-ecto), by Darin Wilson and Eric Meadows-Jönsson, which guides you from fundamentals up to advanced concepts
 
@@ -78,10 +78,10 @@ MSSQL      | Ecto.Adapters.Tds      | [ecto_sql][ecto_sql] (requires Ecto v3.4+)
 SQLite3    | Ecto.Adapters.SQLite3  | [ecto_sql][ecto_sql] (requires Ecto v3.5+) + [ecto_sqlite3][ecto_sqlite3]
 ETS        | Etso                   | [ecto][ecto] + [etso][etso]
 
-[ecto]: http://github.com/elixir-ecto/ecto
-[ecto_sql]: http://github.com/elixir-ecto/ecto_sql
-[postgrex]: http://github.com/elixir-ecto/postgrex
-[myxql]: http://github.com/elixir-ecto/myxql
+[ecto]: https://github.com/elixir-ecto/ecto
+[ecto_sql]: https://github.com/elixir-ecto/ecto_sql
+[postgrex]: https://github.com/elixir-ecto/postgrex
+[myxql]: https://github.com/elixir-ecto/myxql
 [tds]: https://github.com/livehelpnow/tds
 [ecto_sqlite3]: https://github.com/elixir-sqlite/ecto_sqlite3
 [etso]: https://github.com/evadne/etso
@@ -127,7 +127,7 @@ With the version 3.0, Ecto has become API stable. This means our main focus is o
 
 ## Important links
 
-  * [Documentation](http://hexdocs.pm/ecto)
+  * [Documentation](https://hexdocs.pm/ecto)
   * [Mailing list](https://groups.google.com/forum/#!forum/elixir-ecto)
   * [Examples](https://github.com/elixir-ecto/ecto/tree/master/examples)
 
@@ -168,7 +168,7 @@ Then once you enter the containerized shell, you can inspect the underlying data
 
 "Ecto" and the Ecto logo are Copyright (c) 2020 Dashbit.
 
-The Ecto logo was designed by [Dane Wesolko](http://www.danewesolko.com).
+The Ecto logo was designed by [Dane Wesolko](https://www.danewesolko.com).
 
 ## License
 
@@ -177,7 +177,7 @@ Copyright (c) 2020 Dashbit
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
-You may obtain a copy of the License at [http://www.apache.org/licenses/LICENSE-2.0](http://www.apache.org/licenses/LICENSE-2.0)
+You may obtain a copy of the License at [https://www.apache.org/licenses/LICENSE-2.0](https://www.apache.org/licenses/LICENSE-2.0)
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
