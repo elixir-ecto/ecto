@@ -349,7 +349,7 @@ defmodule Ecto.Schema do
   stored in a text field.
 
   For maps to work in such databases, Ecto will need a JSON library.
-  By default Ecto will use [Jason](http://github.com/michalmuskala/jason)
+  By default Ecto will use [Jason](https://github.com/michalmuskala/jason)
   which needs to be added to your deps in `mix.exs`:
 
       {:jason, "~> 1.0"}

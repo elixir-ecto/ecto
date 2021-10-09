@@ -2371,7 +2371,7 @@ defmodule Ecto.Changeset do
   Applies optimistic locking to the changeset.
 
   [Optimistic
-  locking](http://en.wikipedia.org/wiki/Optimistic_concurrency_control) (or
+  locking](https://en.wikipedia.org/wiki/Optimistic_concurrency_control) (or
   *optimistic concurrency control*) is a technique that allows concurrent edits
   on a single record. While pessimistic locking works by locking a resource for
   an entire transaction, optimistic locking only checks if the resource changed
