@@ -54,7 +54,6 @@ defmodule Ecto.MixProject do
     [
       main: "Ecto",
       source_ref: "v#{@version}",
-      canonical: "https://hexdocs.pm/ecto",
       logo: "guides/images/e.png",
       extra_section: "GUIDES",
       source_url: @source_url,
