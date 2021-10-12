@@ -2160,7 +2160,7 @@ defmodule Ecto.Schema do
     fields = Module.get_attribute(mod, :struct_fields)
 
     if List.keyfind(fields, name, 0) do
-      raise ArgumentError, "field/association #{inspect name} is already set on schema"
+      raise ArgumentError, "field/association #{inspect name} already exists on schema, you must either remove the duplication or choose a different name"
     end
 
     Module.put_attribute(mod, :struct_fields, {name, assoc})
