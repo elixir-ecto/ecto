@@ -410,10 +410,10 @@ defmodule Ecto.Changeset do
   end
 
   @doc """
-  Applies the given `params` as changes for the given `data` according to
-  the given set of `permitted` keys. Returns a changeset.
+  Applies the given `params` as changes on the `data` according to
+  the set of `permitted` keys. Returns a changeset.
 
-  The given `data` may be either a changeset, a schema struct or a `{data, types}`
+  `data` may be either a changeset, a schema struct or a `{data, types}`
   tuple. The second argument is a map of `params` that are cast according
   to the type information from `data`. `params` is a map with string keys
   or a map with atom keys, containing potentially invalid data. Mixed keys
@@ -1153,7 +1153,7 @@ defmodule Ecto.Changeset do
   Updates a change.
 
   The given `function` is invoked with the change value only if there
-  is a change for the given `key`. Note that the value of the change
+  is a change for `key`. Note that the value of the change
   can still be `nil` (unless the field was marked as required on `validate_required/3`).
 
   ## Examples
