@@ -83,11 +83,9 @@ Finally, you need to make some adjustments to your `User` changesets.
 
 ```elixir
 def profile_changeset(user, attrs \\ %{}) do
-user
-    |> cast(attrs, [:full_name])
-    |> cast_attachments(attrs, [:avatar])
-    # If your embedded schema's changeset is in another file, use the `with` argument.
-    # e.g. cast_embed(:paddle_auth, with: &UserProfile.changeset/2)
-    |> cast_embed(:paddle_auth, required: true)
+  user
+  |> cast(attrs, [:full_name])
+  # By default it calls UserProfile.changeset/2, pass the :with option to change it
+  |> cast_embed(:user_profile, required: true)
 end
 ```
