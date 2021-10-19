@@ -34,7 +34,10 @@ defmodule Ecto.Changeset do
   The difference between them is that most validations can be
   executed without a need to interact with the database and, therefore,
   are always executed before attempting to insert or update the entry
-  in the database. Some validations may happen against the database but
+  in the database. Validations run immediately when a validation function
+  is called on the data that is contained in the changeset at that time.
+
+  Some validations may happen against the database but
   they are inherently unsafe. Those validations start with a `unsafe_`
   prefix, such as `unsafe_validate_unique/3`.
 
