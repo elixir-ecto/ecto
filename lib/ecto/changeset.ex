@@ -2008,10 +2008,7 @@ defmodule Ecto.Changeset do
   @spec validate_inclusion(t, atom, Enum.t, Keyword.t) :: t
   def validate_inclusion(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:inclusion, data}, fn _, value ->
-      type =
-        changeset.types
-        |> Map.fetch!(field)
-        |> Ecto.Type.type()
+      type = Map.fetch!(changeset.types, field)
 
       if Ecto.Type.include?(type, value, data),
         do: [],
@@ -2039,10 +2036,7 @@ defmodule Ecto.Changeset do
   @spec validate_subset(t, atom, Enum.t, Keyword.t) :: t
   def validate_subset(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:subset, data}, fn _, value ->
-      {:array, element_type} =
-        changeset.types
-        |> Map.fetch!(field)
-        |> Ecto.Type.type()
+      {:array, element_type} = Map.fetch!(changeset.types, field)
 
       case Enum.any?(value, fn element -> not Ecto.Type.include?(element_type, element, data) end) do
         true -> [{field, {message(opts, "has an invalid entry"), [validation: :subset, enum: data]}}]
@@ -2066,10 +2060,7 @@ defmodule Ecto.Changeset do
   @spec validate_exclusion(t, atom, Enum.t, Keyword.t) :: t
   def validate_exclusion(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:exclusion, data}, fn _, value ->
-      type =
-        changeset.types
-        |> Map.fetch!(field)
-        |> Ecto.Type.type()
+      type = Map.fetch!(changeset.types, field)
 
       if Ecto.Type.include?(type, value, data), do:
         [{field, {message(opts, "is reserved"), [validation: :exclusion, enum: data]}}], else: []

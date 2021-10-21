@@ -36,27 +36,6 @@ defmodule Ecto.ChangesetTest do
     end
   end
 
-  defmodule CustomSlug do
-    use Ecto.Type
-
-    def type, do: :string
-    def cast(val), do: {:ok, val}
-    def load(val), do: {:ok, val}
-    def dump(val), do: {:ok, val}
-  end
-
-  defmodule CustomTag do
-    use Ecto.Type
-
-    def type, do: {:array, :string}
-    def cast(val) when is_list(val), do: {:ok, val}
-    def cast(_), do: :error
-    def load(val) when is_list(val), do: {:ok, val}
-    def load(_), do: :error
-    def dump(val) when is_list(val), do: {:ok, val}
-    def dump(_), do: :error
-  end
-
   defmodule Email do
     use Ecto.Type
 
@@ -88,14 +67,12 @@ defmodule Ecto.ChangesetTest do
       field :token, :integer, primary_key: true
       field :title, :string, default: ""
       field :author_email, Email
-      field :slug, CustomSlug
       field :body
       field :uuid, :binary_id
       field :color, :binary
       field :decimal, :decimal
       field :upvotes, :integer, default: 0
       field :topics, {:array, :string}
-      field :tags, CustomTag
       field :virtual, :string, virtual: true
       field :published_at, :naive_datetime
       field :source, :map
@@ -120,7 +97,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defp changeset(schema \\ %Post{}, params) do
-    cast(schema, params, ~w(id token title author_email slug body upvotes decimal color topics tags virtual)a)
+    cast(schema, params, ~w(id token title author_email body upvotes decimal color topics virtual)a)
   end
 
   defmodule CustomError do
@@ -1073,15 +1050,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
-  test "validate_inclusion/3 with custom type" do
-    changeset =
-      changeset(%{"slug" => "foo"})
-      |> validate_inclusion(:slug, ~w(foo))
-    assert changeset.valid?
-    assert changeset.errors == []
-    assert validations(changeset) == [slug: {:inclusion, ~w(foo)}]
-
-    # type with custom equal function
+  test "validate_inclusion/3 with custom type and custom equal function" do
     changeset =
       changeset(%{"author_email" => "carl+1@example.com"})
       |> validate_inclusion(:author_email, ["carl@example.com"])
@@ -1121,16 +1090,6 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
-  test "validate_subset/3 with custom type" do
-    changeset =
-      changeset(%{"tags" => ["cute", "animals"]})
-      |> validate_subset(:tags, ~w(cute animals))
-
-    assert changeset.valid?
-    assert changeset.errors == []
-    assert validations(changeset) == [tags: {:subset, ~w(cute animals)}]
-  end
-
   test "validate_exclusion/3" do
     changeset =
       changeset(%{"title" => "world"})
@@ -1159,15 +1118,6 @@ defmodule Ecto.ChangesetTest do
       |> Ecto.Changeset.cast(%{value: 0}, [:value])
       |> validate_exclusion(:value, decimals)
     assert changeset.errors ==  [value: {"is reserved", [validation: :exclusion, enum: decimals]}]
-  end
-
-  test "validate_exclusion/3 with custom type" do
-    changeset =
-      changeset(%{"slug" => "sun"})
-      |> validate_exclusion(:slug, ~w(moon))
-    assert changeset.valid?
-    assert changeset.errors == []
-    assert validations(changeset) == [slug: {:exclusion, ~w(moon)}]
   end
 
   test "validate_length/3 with string" do
