@@ -2023,6 +2023,8 @@ defmodule Ecto.Changeset do
   If you need to validate if a single value is inside the given enumerable,
   you should use `validate_inclusion/4` instead.
 
+  Type of the field must be array.
+
   ## Options
 
     * `:message` - the message on failure, defaults to "has an invalid entry"
@@ -2036,7 +2038,15 @@ defmodule Ecto.Changeset do
   @spec validate_subset(t, atom, Enum.t, Keyword.t) :: t
   def validate_subset(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:subset, data}, fn _, value ->
-      {:array, element_type} = Map.fetch!(changeset.types, field)
+      element_type =
+        case Map.fetch!(changeset.types, field) do
+          {:array, element_type} ->
+            element_type
+
+          type ->
+            raise ArgumentError,
+              "validate_subset/4 expects field type to be array, field `#{inspect(field)}` has type `#{inspect(type)}`"
+        end
 
       case Enum.any?(value, fn element -> not Ecto.Type.include?(element_type, element, data) end) do
         true -> [{field, {message(opts, "has an invalid entry"), [validation: :subset, enum: data]}}]

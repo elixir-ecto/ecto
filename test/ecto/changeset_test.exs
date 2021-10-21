@@ -1090,6 +1090,13 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
+  test "validate_subset/3 raises if field type is not array" do
+    assert_raise ArgumentError, "validate_subset/4 expects field type to be array, field `:title` has type `:string`", fn ->
+      changeset(%{"title" => "hello"})
+      |> validate_subset(:title, ["hello"])
+    end
+  end
+
   test "validate_exclusion/3" do
     changeset =
       changeset(%{"title" => "world"})
