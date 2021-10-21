@@ -57,12 +57,37 @@ defmodule Ecto.ChangesetTest do
     def dump(_), do: :error
   end
 
+  defmodule Email do
+    use Ecto.Type
+
+    def type, do: :string
+    def cast(val) when is_binary(val), do: {:ok, val}
+    def cast(_), do: :error
+    def load(val) when is_binary(val), do: {:ok, val}
+    def load(_), do: :error
+    def dump(val) when is_binary(val), do: {:ok, val}
+    def dump(_), do: :error
+
+    def equal?(email_a, email_b) when is_binary(email_a) and is_binary(email_b) do
+      [username_a, domain_a] = String.split(email_a, "@")
+      [username_b, domain_b] = String.split(email_b, "@")
+
+      [significant_a | _] = String.split(username_a, "+")
+      [significant_b | _] = String.split(username_b, "+")
+
+      significant_a == significant_b && domain_a == domain_b
+    end
+
+    def equal?(a, b), do: a == b
+  end
+
   defmodule Post do
     use Ecto.Schema
 
     schema "posts" do
       field :token, :integer, primary_key: true
       field :title, :string, default: ""
+      field :author_email, Email
       field :slug, CustomSlug
       field :body
       field :uuid, :binary_id
@@ -95,7 +120,7 @@ defmodule Ecto.ChangesetTest do
   end
 
   defp changeset(schema \\ %Post{}, params) do
-    cast(schema, params, ~w(id token title slug body upvotes decimal color topics tags virtual)a)
+    cast(schema, params, ~w(id token title author_email slug body upvotes decimal color topics tags virtual)a)
   end
 
   defmodule CustomError do
@@ -1055,6 +1080,15 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
     assert changeset.errors == []
     assert validations(changeset) == [slug: {:inclusion, ~w(foo)}]
+
+    # type with custom equal function
+    changeset =
+      changeset(%{"author_email" => "carl+1@example.com"})
+      |> validate_inclusion(:author_email, ["carl@example.com"])
+
+    assert changeset.valid?
+    assert changeset.errors == []
+    assert validations(changeset) == [author_email: {:inclusion, ["carl@example.com"]}]
   end
 
   test "validate_subset/3" do
