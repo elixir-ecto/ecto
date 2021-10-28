@@ -632,22 +632,22 @@ defmodule Ecto.Query do
 
   We can write it as a join expression:
 
-      set = from(p in Post,
+      subset = from(p in Post,
         where: p.synced == false and
                  (is_nil(p.sync_started_at) or p.sync_started_at < ^min_sync_started_at),
         limit: ^batch_size
       )
 
       Repo.update_all(
-        from(p in Post, join: s in subquery(set), on: s.id == p.id),
+        from(p in Post, join: s in subquery(subset), on: s.id == p.id),
         set: [sync_started_at: NaiveDateTime.utc_now()]
       )
 
   Or as a `where` condition:
 
-      subset = from(p in subset, select: p.id)
+      subset_ids = from(p in subset, select: p.id)
       Repo.update_all(
-        from(p in Post, where: p.id in subquery(subset)),
+        from(p in Post, where: p.id in subquery(subset_ids)),
         set: [sync_started_at: NaiveDateTime.utc_now()]
       )
 
