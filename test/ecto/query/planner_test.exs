@@ -998,6 +998,11 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "normalize: allow virtual fields in type/2" do
+    query = from(Comment, []) |> select([c], type(fragment("1"), c.temp))
+    normalize(query)
+  end
+
   test "normalize: validate fields in left side of in expressions" do
     query = from(Post, []) |> where([p], p.id in [1, 2, 3])
     normalize(query)
