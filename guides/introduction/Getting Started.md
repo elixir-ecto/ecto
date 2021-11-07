@@ -237,7 +237,7 @@ A successful insertion will return a tuple, like so:
 
 ```elixir
 {:ok,
- %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: nil,
+ %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded, "people">, age: nil,
   first_name: nil, id: 1, last_name: nil}}
 ```
 
@@ -332,7 +332,7 @@ The changeset does not have errors, and is valid. Therefore if we try to insert 
 ```elixir
 Friends.Repo.insert(changeset)
 #=> {:ok,
-     %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: nil,
+     %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded, "people">, age: nil,
       first_name: "Ryan", id: 3, last_name: "Bigg"}}
 ```
 
@@ -481,7 +481,7 @@ Friends.Person |> Ecto.Query.first |> Friends.Repo.one
 The `one` function retrieves just one record from our database and returns a new struct from the `Friends.Person` module:
 
 ```elixir
-%Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 28,
+%Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded, "people">, age: 28,
  first_name: "Ryan", id: 1, last_name: "Bigg"}
 ```
 
@@ -489,7 +489,7 @@ Similar to `first`, there is also `last`:
 
 ```elixir
 Friends.Person |> Ecto.Query.last |> Friends.Repo.one
-#=> %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 26,
+#=> %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded, "people">, age: 26,
      first_name: "Jane", id: 3, last_name: "Smith"}
  ```
 
@@ -535,11 +535,11 @@ Friends.Person |> Friends.Repo.all
 This will return a `Friends.Person` struct representation of all the records that currently exist within our `people` table:
 
 ```elixir
-[%Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 28,
+[%Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded, "people">, age: 28,
   first_name: "Ryan", id: 1, last_name: "Bigg"},
- %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 27,
+ %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded, "people">, age: 27,
   first_name: "John", id: 2, last_name: "Smith"},
- %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 26,
+ %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded, "people">, age: 26,
   first_name: "Jane", id: 3, last_name: "Smith"}]
 ```
 
@@ -549,7 +549,7 @@ To fetch a record based on its ID, you use the `get` function:
 
 ```elixir
 Friends.Person |> Friends.Repo.get(1)
-#=> %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 28,
+#=> %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded, "people">, age: 28,
      first_name: "Ryan", id: 1, last_name: "Bigg"}
 ```
 
@@ -559,7 +559,7 @@ If we want to get a record based on something other than the `id` attribute, we 
 
 ```elixir
  Friends.Person |> Friends.Repo.get_by(first_name: "Ryan")
- #=> %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 28,
+ #=> %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded, "people">, age: 28,
       first_name: "Ryan", id: 1, last_name: "Bigg"}
 ```
 
@@ -572,9 +572,9 @@ Friends.Person |> Ecto.Query.where(last_name: "Smith") |> Friends.Repo.all
 ```
 
 ```elixir
-[%Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 27,
+[%Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded, "people">, age: 27,
   first_name: "John", id: 2, last_name: "Smith"},
- %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 26,
+ %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded, "people">, age: 26,
   first_name: "Jane", id: 3, last_name: "Smith"}]
 ```
 
@@ -686,7 +686,7 @@ Just like `Friends.Repo.insert`, `Friends.Repo.update` will return a tuple:
 
 ```elixir
 {:ok,
- %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded>, age: 29,
+ %Friends.Person{__meta__: #Ecto.Schema.Metadata<:loaded, "people">, age: 29,
   first_name: "Ryan", id: 1, last_name: "Bigg"}}
 ```
 
@@ -759,7 +759,7 @@ Similar to updating, we must first fetch a record from the database and then cal
 person = Friends.Repo.get(Friends.Person, 1)
 Friends.Repo.delete(person)
 #=> {:ok,
- %Friends.Person{__meta__: #Ecto.Schema.Metadata<:deleted>, age: 29,
+ %Friends.Person{__meta__: #Ecto.Schema.Metadata<:deleted, "people">, age: 29,
   first_name: "Ryan", id: 2, last_name: "Bigg"}}
 ```
 
