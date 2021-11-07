@@ -1181,7 +1181,7 @@ defmodule Ecto.Query.Planner do
 
   defp prewalk({:type, _, [arg, type]}, kind, query, expr, acc, adapter) do
     {arg, acc} = prewalk(arg, kind, query, expr, acc, adapter)
-    type = field_type!(kind, query, expr, type)
+    type = field_type!(kind, query, expr, type, true)
     {%Ecto.Query.Tagged{value: arg, tag: type, type: Ecto.Type.type(type)}, acc}
   end
 
@@ -1700,25 +1700,31 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp field_type!(kind, query, expr, {composite, {ix, field}}) when is_integer(ix) do
-    {composite, type!(kind, query, expr, ix, field)}
+  defp field_type!(kind, query, expr, type, allow_virtuals? \\ false)
+
+  defp field_type!(kind, query, expr, {composite, {ix, field}}, allow_virtuals?) when is_integer(ix) do
+    {composite, type!(kind, query, expr, ix, field, allow_virtuals?)}
   end
-  defp field_type!(kind, query, expr, {ix, field}) when is_integer(ix) do
-    type!(kind, query, expr, ix, field)
+
+  defp field_type!(kind, query, expr, {ix, field}, allow_virtuals?) when is_integer(ix) do
+    type!(kind, query, expr, ix, field, allow_virtuals?)
   end
-  defp field_type!(_kind, _query, _expr, type) do
+
+  defp field_type!(_kind, _query, _expr, type, _) do
     type
   end
 
-  defp type!(_kind, _query, _expr, nil, _field), do: :any
+  defp type!(kind, query, expr, schema, field, allow_virtuals? \\ false)
 
-  defp type!(kind, query, expr, ix, field) when is_integer(ix) do
+  defp type!(_kind, _query, _expr, nil, _field, _allow_virtuals?), do: :any
+
+  defp type!(kind, query, expr, ix, field, allow_virtuals?) when is_integer(ix) do
     case get_source!(kind, query, ix) do
       {:fragment, _, _} ->
         :any
 
       {_, schema, _} ->
-        type!(kind, query, expr, schema, field)
+        type!(kind, query, expr, schema, field, allow_virtuals?)
 
       %Ecto.SubQuery{select: select} ->
         case subquery_type_for(select, field) do
@@ -1728,9 +1734,12 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp type!(kind, query, expr, schema, field) when is_atom(schema) do
+  defp type!(kind, query, expr, schema, field, allow_virtuals?) when is_atom(schema) do
     cond do
       type = schema.__schema__(:type, field) ->
+        type
+
+      type = allow_virtuals? && schema.__schema__(:virtual_type, field) ->
         type
 
       Map.has_key?(schema.__struct__(), field) ->

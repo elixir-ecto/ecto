@@ -473,6 +473,7 @@ defmodule Ecto.Schema do
 
       Module.register_attribute(__MODULE__, :ecto_primary_keys, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_fields, accumulate: true)
+      Module.register_attribute(__MODULE__, :ecto_virtual_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_query_fields, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_field_sources, accumulate: true)
       Module.register_attribute(__MODULE__, :ecto_assocs, accumulate: true)
@@ -600,6 +601,7 @@ defmodule Ecto.Schema do
         autoupdate = @ecto_autoupdate |> Enum.reverse
         fields = @ecto_fields |> Enum.reverse
         query_fields = @ecto_query_fields |> Enum.reverse
+        virtual_fields = @ecto_virtual_fields |> Enum.reverse
         field_sources = @ecto_field_sources |> Enum.reverse
         assocs = @ecto_assocs |> Enum.reverse
         embeds = @ecto_embeds |> Enum.reverse
@@ -629,6 +631,7 @@ defmodule Ecto.Schema do
         def __schema__(:autoupdate), do: unquote(Macro.escape(autoupdate))
         def __schema__(:loaded), do: unquote(Macro.escape(loaded))
         def __schema__(:redact_fields), do: unquote(redacted_fields)
+        def __schema__(:virtual_fields), do: unquote(Enum.map(virtual_fields, &elem(&1, 0)))
 
         def __schema__(:query) do
           %Ecto.Query{
@@ -639,7 +642,7 @@ defmodule Ecto.Schema do
           }
         end
 
-        for clauses <- Ecto.Schema.__schema__(fields, field_sources, assocs, embeds),
+        for clauses <- Ecto.Schema.__schema__(fields, field_sources, assocs, embeds, virtual_fields),
             {args, body} <- clauses do
           def __schema__(unquote_splicing(args)), do: unquote(body)
         end
@@ -1919,7 +1922,9 @@ defmodule Ecto.Schema do
       Module.put_attribute(mod, :ecto_redact_fields, name)
     end
 
-    unless virtual? do
+    if virtual? do
+      Module.put_attribute(mod, :ecto_virtual_fields, {name, type})
+    else
       source = opts[:source] || Module.get_attribute(mod, :field_source_mapper).(name)
 
       if name != source do
@@ -2082,7 +2087,7 @@ defmodule Ecto.Schema do
   end
 
   @doc false
-  def __schema__(fields, field_sources, assocs, embeds) do
+  def __schema__(fields, field_sources, assocs, embeds, virtual_fields) do
     load =
       for {name, type} <- fields do
         if alias = field_sources[name] do
@@ -2105,6 +2110,11 @@ defmodule Ecto.Schema do
     types_quoted =
       for {name, type} <- fields do
         {[:type, name], Macro.escape(type)}
+      end
+
+    virtual_types_quoted =
+      for {name, type} <- virtual_fields do
+        {[:virtual_type, name], Macro.escape(type)}
       end
 
     assoc_quoted =
@@ -2131,6 +2141,7 @@ defmodule Ecto.Schema do
     catch_all = [
       {[:field_source, quote(do: _)], nil},
       {[:type, quote(do: _)], nil},
+      {[:virtual_type, quote(do: _)], nil},
       {[:association, quote(do: _)], nil},
       {[:embed, quote(do: _)], nil}
     ]
@@ -2139,6 +2150,7 @@ defmodule Ecto.Schema do
       single_arg,
       field_sources_quoted,
       types_quoted,
+      virtual_types_quoted,
       assoc_quoted,
       embed_quoted,
       catch_all
