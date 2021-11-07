@@ -981,6 +981,16 @@ defmodule Ecto.Query.PlannerTest do
       normalize(query)
     end
 
+    exception = assert_raise Ecto.QueryError, fn ->
+      query = from(Comment, []) |> select([c], c.postd)
+      normalize(query)
+    end
+
+    assert exception.message =~ "field `postd` in `select` does not exist in schema"
+    assert exception.message =~ "Did you mean one of:"
+    assert exception.message =~ "* `posted`"
+    assert exception.message =~ "* `post_id`"
+
     message = ~r"field `temp` in `select` is a virtual field in schema Ecto.Query.PlannerTest.Comment"
     assert_raise Ecto.QueryError, message, fn ->
       query = from(Comment, []) |> select([c], c.temp)
