@@ -541,8 +541,8 @@ defmodule Ecto.Schema do
         @ecto_schema_defined unquote(caller.line)
 
         @after_compile Ecto.Schema
-        Module.register_attribute(__MODULE__, :changeset_fields, accumulate: true)
-        Module.register_attribute(__MODULE__, :struct_fields, accumulate: true)
+        Module.register_attribute(__MODULE__, :ecto_changeset_fields, accumulate: true)
+        Module.register_attribute(__MODULE__, :ecto_struct_fields, accumulate: true)
 
         meta?  = unquote(meta?)
         source = unquote(source)
@@ -567,7 +567,7 @@ defmodule Ecto.Schema do
             schema: __MODULE__
           }
 
-          Module.put_attribute(__MODULE__, :struct_fields, {:__meta__, meta})
+          Module.put_attribute(__MODULE__, :ecto_struct_fields, {:__meta__, meta})
         end
 
         if @primary_key == nil do
@@ -604,17 +604,17 @@ defmodule Ecto.Schema do
         assocs = @ecto_assocs |> Enum.reverse
         embeds = @ecto_embeds |> Enum.reverse
         redacted_fields = @ecto_redact_fields
-        loaded = Ecto.Schema.__loaded__(__MODULE__, @struct_fields)
+        loaded = Ecto.Schema.__loaded__(__MODULE__, @ecto_struct_fields)
 
         if redacted_fields != [] and not List.keymember?(@derive, Inspect, 0) and
              @ecto_derive_inspect_for_redacted_fields do
           @derive {Inspect, except: @ecto_redact_fields}
         end
 
-        defstruct @struct_fields
+        defstruct @ecto_struct_fields
 
         def __changeset__ do
-          %{unquote_splicing(Macro.escape(@changeset_fields))}
+          %{unquote_splicing(Macro.escape(@ecto_changeset_fields))}
         end
 
         def __schema__(:prefix), do: unquote(prefix)
@@ -1905,7 +1905,7 @@ defmodule Ecto.Schema do
 
     opts = Keyword.put(opts, :type, type)
     check_options!(opts, @field_opts, "field/3")
-    Module.put_attribute(mod, :changeset_fields, {name, type})
+    Module.put_attribute(mod, :ecto_changeset_fields, {name, type})
     validate_default!(type, opts[:default], opts[:skip_default_validation])
     define_field(mod, name, type, opts)
   end
@@ -1967,7 +1967,7 @@ defmodule Ecto.Schema do
     else
       check_options!(opts, @valid_has_options, "has_many/3")
       struct = association(mod, :many, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
-      Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
+      Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
     end
   end
 
@@ -1979,7 +1979,7 @@ defmodule Ecto.Schema do
     else
       check_options!(opts, @valid_has_options, "has_one/3")
       struct = association(mod, :one, name, Ecto.Association.Has, [queryable: queryable] ++ opts)
-      Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
+      Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
     end
   end
 
@@ -2005,7 +2005,7 @@ defmodule Ecto.Schema do
 
     struct =
       association(mod, :one, name, Ecto.Association.BelongsTo, [queryable: queryable] ++ opts)
-    Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
+    Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
   end
 
   @valid_many_to_many_options [:join_through, :join_defaults, :join_keys, :on_delete, :defaults, :on_replace, :unique, :where, :join_where, :preload_order]
@@ -2016,7 +2016,7 @@ defmodule Ecto.Schema do
 
     struct =
       association(mod, :many, name, Ecto.Association.ManyToMany, [queryable: queryable] ++ opts)
-    Module.put_attribute(mod, :changeset_fields, {name, {:assoc, struct}})
+    Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
   end
 
   @valid_embeds_one_options [:strategy, :on_replace, :source]
@@ -2151,19 +2151,19 @@ defmodule Ecto.Schema do
     opts   = [cardinality: cardinality, related: schema, owner: mod, field: name] ++ opts
     struct = Ecto.Embedded.init(opts)
 
-    Module.put_attribute(mod, :changeset_fields, {name, {:embed, struct}})
+    Module.put_attribute(mod, :ecto_changeset_fields, {name, {:embed, struct}})
     Module.put_attribute(mod, :ecto_embeds, {name, struct})
     define_field(mod, name, {:parameterized, Ecto.Embedded, struct}, opts)
   end
 
   defp put_struct_field(mod, name, assoc) do
-    fields = Module.get_attribute(mod, :struct_fields)
+    fields = Module.get_attribute(mod, :ecto_struct_fields)
 
     if List.keyfind(fields, name, 0) do
       raise ArgumentError, "field/association #{inspect name} already exists on schema, you must either remove the duplication or choose a different name"
     end
 
-    Module.put_attribute(mod, :struct_fields, {name, assoc})
+    Module.put_attribute(mod, :ecto_struct_fields, {name, assoc})
   end
 
   defp validate_default!(_type, _value, true), do: :ok
