@@ -405,9 +405,11 @@ defmodule Ecto.Schema do
   * `__schema__(:primary_key)` - Returns a list of primary key fields (empty if there is none);
 
   * `__schema__(:fields)` - Returns a list of all non-virtual field names;
+  * `__schema__(:virtual_fields)` - Returns a list of all virtual field names;
   * `__schema__(:field_source, field)` - Returns the alias of the given field;
 
   * `__schema__(:type, field)` - Returns the type of the given non-virtual field;
+  * `__schema__(:virtual_type, field)` - Returns the type of the given virtual field;
 
   * `__schema__(:associations)` - Returns a list of all association field names;
   * `__schema__(:association, assoc)` - Returns the association reflection of the given assoc;
