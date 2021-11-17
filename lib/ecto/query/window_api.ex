@@ -72,7 +72,7 @@ defmodule Ecto.Query.WindowAPI do
   @doc """
   Defines a value based on the function and the window. See moduledoc for more information.
 
-      from e in Employee, select: over(avg(e.salary, partition_by: e.depname))
+      from e in Employee, select: over(avg(e.salary), partition_by: e.depname)
   """
   def over(window_function, window_name), do: doc! [window_function, window_name]
 
