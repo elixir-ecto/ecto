@@ -490,15 +490,22 @@ defmodule Ecto.Multi do
       |> MyApp.Repo.transaction()
 
   """
-  @spec insert_all(t, name, schema_or_source, [map | Keyword.t] | fun([map | Keyword.t]), Keyword.t) :: t
-  def insert_all(multi, name, schema_or_source, entries_or_fun, opts \\ [])
+  @spec insert_all(
+          t,
+          name,
+          schema_or_source,
+          entries_or_query_or_fun :: [map | Keyword.t()] | fun([map | Keyword.t()]) | Ecto.Query.t(),
+          Keyword.t()
+        ) :: t
+  def insert_all(multi, name, schema_or_source, entries_or_query_or_fun, opts \\ [])
 
-  def insert_all(multi, name, schema_or_source, entries_fun, opts) when is_function(entries_fun, 1) and is_list(opts) do
+  def insert_all(multi, name, schema_or_source, entries_fun, opts)
+      when is_function(entries_fun, 1) and is_list(opts) do
     run(multi, name, operation_fun({:insert_all, schema_or_source, entries_fun}, opts))
   end
 
-  def insert_all(multi, name, schema_or_source, entries, opts) when is_list(opts) do
-    add_operation(multi, name, {:insert_all, schema_or_source, entries, opts})
+  def insert_all(multi, name, schema_or_source, entries_or_query, opts) when is_list(opts) do
+    add_operation(multi, name, {:insert_all, schema_or_source, entries_or_query, opts})
   end
 
   @doc """
