@@ -95,6 +95,10 @@ defmodule Ecto.Query.Builder do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
+  def escape({:type, _, [{:coalesce, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env) do
+    escape_with_type(expr, type, params_acc, vars, env)
+  end
+
   def escape({:type, _, [{:field, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env) do
     escape_with_type(expr, type, params_acc, vars, env)
   end
@@ -124,10 +128,11 @@ defmodule Ecto.Query.Builder do
         the first argument of type/2 must be one of:
 
           * interpolations, such as ^value
-          * fields, such as p.foo or field(p)
+          * fields, such as p.foo or field(p, :foo)
           * fragments, such fragment("foo(?)", value)
           * an arithmetic expression (+, -, *, /)
           * an aggregation or window expression (avg, count, min, max, sum, over, filter)
+          * an conditional expression (coalesce)
           * access/json paths (p.column[0].field)
 
         Got: #{Macro.to_string(expr)}
