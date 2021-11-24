@@ -641,6 +641,10 @@ defmodule Ecto.Query.API do
       from p in Post, select: type(avg(p.cost), :integer)
       from p in Post, select: type(filter(avg(p.cost), p.cost > 0), :integer)
 
+  Or to type comparison expression results:
+
+      from p in Post, select: type(coalesce(p.cost, 0), :integer)
+
   """
   def type(interpolated_value, type), do: doc! [interpolated_value, type]
 
