@@ -132,7 +132,7 @@ defmodule Ecto.Query.Builder do
           * fragments, such fragment("foo(?)", value)
           * an arithmetic expression (+, -, *, /)
           * an aggregation or window expression (avg, count, min, max, sum, over, filter)
-          * an conditional expression (coalesce)
+          * a conditional expression (coalesce)
           * access/json paths (p.column[0].field)
 
         Got: #{Macro.to_string(expr)}
