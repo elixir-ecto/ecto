@@ -409,6 +409,10 @@ defmodule Ecto.Changeset do
     Enum.reduce(new_changes, {old_changes, errors, valid?}, fn
       {key, value}, {changes, errors, valid?} ->
         put_change(data, changes, errors, valid?, key, value, Map.get(types, key))
+      _, _ ->
+        raise ArgumentError,
+              "invalid changes being applied to changeset. " <>
+                "Expected a keyword list or a map, got: #{inspect(new_changes)}"
     end)
   end
 
