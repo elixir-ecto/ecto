@@ -88,6 +88,11 @@ defmodule Ecto.Query.Builder.OrderByTest do
         temp = "temp"
         order_by("posts", [p], [asc: ^temp])
       end
+
+      assert_raise ArgumentError, ~r"To use dynamic expressions", fn ->
+        dynamic_expr = dynamic([p], p.foo == ^1)
+        order_by("posts", [p], [asc: ^dynamic_expr])
+      end
     end
 
     test "raises on invalid interpolation" do
