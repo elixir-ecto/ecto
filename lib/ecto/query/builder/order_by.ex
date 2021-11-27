@@ -119,7 +119,7 @@ defmodule Ecto.Query.Builder.OrderBy do
     raise ArgumentError,
       "expected a field as an atom in `#{kind}`, got: `#{inspect dynamic_expression}`. " <>
       "To use dynamic expressions, you need to interpolate at root level, as in: " <>
-      "`^[asc: #{inspect dynamic_expression}, desc: :id]`"
+      "`^[asc: dynamic, desc: :id]`"
   end
 
   def field!(kind, other) do
