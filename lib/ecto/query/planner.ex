@@ -237,6 +237,8 @@ defmodule Ecto.Query.Planner do
 
   defp plan_source(query, %{source: %Ecto.SubQuery{} = subquery, prefix: prefix} = expr, adapter) do
     subquery = plan_subquery(subquery, query, prefix, adapter, true)
+
+    IO.inspect(expr, label: "plan source from")
     {%{expr | source: subquery}, subquery}
   end
 

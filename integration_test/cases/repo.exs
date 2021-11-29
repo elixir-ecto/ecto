@@ -1533,6 +1533,22 @@ defmodule Ecto.Integration.RepoTest do
 
       assert [%Post{title: "1", counter: 2}] = TestRepo.all(subquery)
     end
+
+    test "merge within subquery with prefix" do
+      %Post{} = TestRepo.insert!(%Post{title: "1", counter: 1})
+
+      subquery =
+        Post
+        |> select_merge([p], %{p | counter: 2})
+        |> subquery()
+
+      # subquery =
+      #   Post
+      #   |> subquery()
+      #   |> select_merge([p], %{p | counter: 2})
+
+      assert "public" = subquery |> TestRepo.all(prefix: "public") |> List.first() |> IO.inspect(label: "result") |> Ecto.get_meta(:prefix)
+    end
   end
 
   test "query count distinct" do

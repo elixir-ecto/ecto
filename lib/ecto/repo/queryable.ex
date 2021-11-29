@@ -215,7 +215,7 @@ defmodule Ecto.Repo.Queryable do
           from: from
         } = select
 
-        preprocessor = preprocessor(from, preprocess, adapter)
+        preprocessor = preprocessor(IO.inspect(from, label: "meta from"), IO.inspect(preprocess, label: "meta preprocess"), adapter)
         {count, rows} = adapter.execute(adapter_meta, query_meta, prepared, params, opts)
         postprocessor = postprocessor(from, postprocess, take, adapter)
 
@@ -237,7 +237,10 @@ defmodule Ecto.Repo.Queryable do
 
   defp preprocessor({_, from}, preprocess, adapter) do
     fn row ->
+      IO.inspect(row, label: "preprocess row")
+      IO.inspect(from, label: "preprocess from")
       {entry, rest} = process(row, from, nil, adapter)
+      |> IO.inspect(label: "preprocess process result")
       preprocess(rest, preprocess, entry, adapter)
     end
   end
