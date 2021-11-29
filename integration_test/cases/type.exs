@@ -127,6 +127,9 @@ defmodule Ecto.Integration.TypeTest do
     uuid = Ecto.UUID.generate()
     assert [^uuid] = TestRepo.all(from Post, select: type(^uuid, Ecto.UUID))
 
+    # Parameterized types
+    assert [:a] = TestRepo.all(from Post, select: type(^"a", Ecto.Enum, values: [:a, :b]))
+
     # Math operations
     assert [4]   = TestRepo.all(from Post, select: type(2 + ^"2", :integer))
     assert [4.0] = TestRepo.all(from Post, select: type(2.0 + ^"2", :float))

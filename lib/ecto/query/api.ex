@@ -645,8 +645,17 @@ defmodule Ecto.Query.API do
 
       from p in Post, select: type(coalesce(p.cost, 0), :integer)
 
+  For parameterized types, use `type/3`
   """
   def type(interpolated_value, type), do: doc! [interpolated_value, type]
+
+  @doc """
+  Same as type/2, but for parameterized types.
+
+  from p in Post,
+    type(fragment("array_agg(?)", p.tag), {:array, Ecto.Enum}, values: [:a, :b])
+  """
+  def type(interpolated_value, parameterized_type, type_params), do: doc! [interpolated_value, parameterized_type, type_params]
 
   @doc """
   Refer to a named atom binding.

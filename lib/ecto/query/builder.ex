@@ -83,6 +83,13 @@ defmodule Ecto.Query.Builder do
   end
 
   # tagged types
+  def escape({:type, x, [expr, parameterized_type, type_params]}, type, params_acc, vars, env) do
+    parameterized_type = Macro.expand(parameterized_type, get_env(env))
+    expanded_type = {:parameterized, parameterized_type, parameterized_type.init(type_params)}
+
+    escape({:type, x, [expr, expanded_type]}, type, params_acc, vars, env)
+  end
+
   def escape({:type, _, [{:^, _, [arg]}, type]}, _type, {params, acc}, vars, env) do
     type = validate_type!(type, vars, env)
     expr = {:{}, [], [:type, [], [{:{}, [], [:^, [], [length(params)]]}, type]]}
@@ -682,6 +689,8 @@ defmodule Ecto.Query.Builder do
     do: type
   def validate_type!({:__aliases__, _, _} = type, _vars, env),
     do: Macro.expand(type, get_env(env))
+  def validate_type!({:parameterized, _, _} = type, _vars, _env),
+    do: Macro.escape(type)
   def validate_type!(type, _vars, _env) when is_atom(type),
     do: type
   def validate_type!({{:., _, [{var, _, context}, field]}, _, []}, vars, _env)

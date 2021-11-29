@@ -179,6 +179,11 @@ defmodule Ecto.Query.BuilderTest do
       escape(quote do type(over(fragment("array_agg(?)", x.id()), :y), {:array, Ecto.UUID}) end, [x: 0], {__ENV__, %{}})
   end
 
+  test "escape parameterized types" do
+    assert {Macro.escape(quote do type(&0.y(), {:parameterized, :"Elixir.ParameterizedPrefixedString", %{prefix: "p"}}) end), []} ==
+          escape(quote do type(field(x, :y), ParameterizedPrefixedString, prefix: "p") end, [x: 0], __ENV__)
+  end
+
   defmacro wrapped_sum(a) do
     quote do: sum(unquote(a))
   end
