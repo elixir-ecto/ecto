@@ -83,11 +83,11 @@ defmodule Ecto.Query.Builder do
   end
 
   # tagged types
-  def escape({:type, x, [expr, parameterized_type, type_params]}, type, params_acc, vars, env) do
+  def escape({:type, meta, [expr, parameterized_type, type_params]}, type, params_acc, vars, env) do
     parameterized_type = Macro.expand(parameterized_type, get_env(env))
     expanded_type = {:parameterized, parameterized_type, parameterized_type.init(type_params)}
 
-    escape({:type, x, [expr, expanded_type]}, type, params_acc, vars, env)
+    escape({:type, meta, [expr, expanded_type]}, type, params_acc, vars, env)
   end
 
   def escape({:type, _, [{:^, _, [arg]}, type]}, _type, {params, acc}, vars, env) do
