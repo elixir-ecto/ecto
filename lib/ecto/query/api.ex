@@ -652,8 +652,8 @@ defmodule Ecto.Query.API do
   @doc """
   Same as type/2, but for parameterized types.
 
-  from p in Post,
-    type(fragment("array_agg(?)", p.tag), {:array, Ecto.Enum}, values: [:a, :b])
+      from p in Post,
+        type(fragment("array_agg(?)", p.tag), {:array, Ecto.Enum}, values: [:a, :b])
   """
   def type(interpolated_value, parameterized_type, type_params), do: doc! [interpolated_value, parameterized_type, type_params]
 
