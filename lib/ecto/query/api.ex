@@ -618,6 +618,10 @@ defmodule Ecto.Query.API do
 
       type(^title, p.title)
 
+  Or a parameterized type, which must be already initialized:
+
+      type(^title, ^@parameterized_type)
+
   Ecto will ensure `^title` is cast to the given type and enforce such
   type at the database level. If the value is returned in a `select`,
   Ecto will also enforce the proper type throughout.
