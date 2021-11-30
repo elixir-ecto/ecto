@@ -1179,6 +1179,21 @@ defmodule Ecto.Query.Planner do
     {{:^, meta, [acc]}, acc + 1}
   end
 
+  defp prewalk({:%, meta, [name, rest]}, kind, query, expr, acc, adapter) when is_atom(name) do
+    {rest, acc} = prewalk(rest, kind, query, expr, acc, adapter)
+    {{:%, meta, [name, rest]}, acc}
+  end
+
+  defp prewalk({:over, meta, [over, name]}, kind, query, expr, acc, adapter) when is_atom(name) do
+    {over, acc} = prewalk(over, kind, query, expr, acc, adapter)
+    {{:over, meta, [over, name]}, acc}
+  end
+
+  defp prewalk({:count, meta, [count, name]}, kind, query, expr, acc, adapter) when is_atom(name) do
+    {count, acc} = prewalk(count, kind, query, expr, acc, adapter)
+    {{:count, meta, [count, name]}, acc}
+  end
+
   defp prewalk({:type, _, [arg, type]}, kind, query, expr, acc, adapter) do
     {arg, acc} = prewalk(arg, kind, query, expr, acc, adapter)
     type = field_type!(kind, query, expr, type, true)
@@ -1226,13 +1241,28 @@ defmodule Ecto.Query.Planner do
   end
 
   defp prewalk({left, meta, args}, kind, query, expr, acc, adapter) do
-    {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
     {args, acc} = prewalk(args, kind, query, expr, acc, adapter)
     {{left, meta, args}, acc}
   end
 
   defp prewalk(list, kind, query, expr, acc, adapter) when is_list(list) do
-    Enum.map_reduce(list, acc, &prewalk(&1, kind, query, expr, &2, adapter))
+    Enum.map_reduce(list, acc, fn
+      {k, v}, acc when is_atom(k) ->
+        {v, acc} = prewalk(v, kind, query, expr, acc, adapter)
+        {{k, v}, acc}
+
+      other, acc ->
+        prewalk(other, kind, query, expr, acc, adapter)
+    end)
+  end
+
+  defp prewalk(other, _kind, _query, _expr, acc, _adapter) when is_boolean(other) or other == nil do
+    {other, acc}
+  end
+
+  defp prewalk(other, _kind, query, expr, _acc, _adapter)
+       when is_atom(other) or is_pid(other) or is_reference(other) do
+    error! query, expr, "invalid value in expression: #{inspect(other)}"
   end
 
   defp prewalk(other, _kind, _query, _expr, acc, _adapter) do
