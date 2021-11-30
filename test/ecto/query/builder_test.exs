@@ -1,3 +1,5 @@
+Code.require_file "../../../integration_test/support/types.exs", __DIR__
+
 defmodule Ecto.Query.BuilderTest do
   use ExUnit.Case, async: true
 
