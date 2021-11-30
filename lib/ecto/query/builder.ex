@@ -694,7 +694,8 @@ defmodule Ecto.Query.Builder do
     do: {find_var!(var, vars), field}
 
   def validate_type!(type, _vars, _env) do
-    error! "type/2 expects an alias, atom or source.field as second argument, got: `#{Macro.to_string(type)}`"
+    error! "type/2 expects an alias, atom, initialized parameterized type or " <> 
+           "source.field as second argument, got: `#{Macro.to_string(type)}`"
   end
 
   @always_tagged [:binary]
