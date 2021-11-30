@@ -5,6 +5,8 @@ defmodule Ecto.Integration.TypeTest do
   alias Ecto.Integration.TestRepo
   import Ecto.Query
 
+  @parameterized_type Ecto.ParameterizedType.init(Ecto.Enum, values: [:a, :b])
+
   test "primitive types" do
     integer  = 1
     float    = 0.1
@@ -128,7 +130,7 @@ defmodule Ecto.Integration.TypeTest do
     assert [^uuid] = TestRepo.all(from Post, select: type(^uuid, Ecto.UUID))
 
     # Parameterized types
-    assert [:a] = TestRepo.all(from Post, select: type(^"a", Ecto.Enum, values: [:a, :b]))
+    assert [:a] = TestRepo.all(from Post, select: type(^"a", ^@parameterized_type))
 
     # Math operations
     assert [4]   = TestRepo.all(from Post, select: type(2 + ^"2", :integer))
