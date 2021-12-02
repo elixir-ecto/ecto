@@ -618,9 +618,11 @@ defmodule Ecto.Query.API do
 
       type(^title, p.title)
 
-  Or a parameterized type, which must be already initialized:
+  Or a parameterized type, which must be previously initialized
+  with `Ecto.ParameterizedType.init/2`:
 
-      type(^title, ^@parameterized_type)
+      @my_enum Ecto.ParameterizedType.init(Ecto.Enum, values: [:foo, :bar, :baz])
+      type(^title, ^@my_enum)
 
   Ecto will ensure `^title` is cast to the given type and enforce such
   type at the database level. If the value is returned in a `select`,
