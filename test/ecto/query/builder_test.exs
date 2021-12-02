@@ -1,3 +1,5 @@
+Code.require_file "../../../integration_test/support/types.exs", __DIR__
+
 defmodule Ecto.Query.BuilderTest do
   use ExUnit.Case, async: true
 
@@ -179,6 +181,12 @@ defmodule Ecto.Query.BuilderTest do
       escape(quote do type(over(fragment("array_agg(?)", x.id()), :y), {:array, Ecto.UUID}) end, [x: 0], {__ENV__, %{}})
   end
 
+  test "escape parameterized types" do
+    parameterized_type = Ecto.ParameterizedType.init(ParameterizedPrefixedString, prefix: "p")
+    assert {Macro.escape(quote do type(&0.y(), unquote(parameterized_type)) end), []} ==
+          escape(quote do type(field(x, :y), unquote(parameterized_type)) end, [x: 0], __ENV__)
+  end
+
   defmacro wrapped_sum(a) do
     quote do: sum(unquote(a))
   end
@@ -317,7 +325,7 @@ defmodule Ecto.Query.BuilderTest do
     assert validate_type!(quote do x.title end, [x: 0], env) == {0, :title}
     assert validate_type!(quote do field(x, :title) end, [x: 0], env) == {0, :title}
 
-    assert_raise Ecto.Query.CompileError, ~r"^type/2 expects an alias, atom or source.field as second argument, got: ", fn ->
+    assert_raise Ecto.Query.CompileError, ~r"^type/2 expects an alias, atom", fn ->
       validate_type!(quote do "string" end, [x: 0], env)
     end
   end
