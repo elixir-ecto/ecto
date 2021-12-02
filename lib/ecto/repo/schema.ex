@@ -270,7 +270,7 @@ defmodule Ecto.Repo.Schema do
       {:ok, struct} ->
         struct
 
-      {:error, changeset} ->
+      {:error, %Ecto.Changeset{} = changeset} ->
         raise Ecto.InvalidChangesetError, action: :insert, changeset: changeset
     end
   end
@@ -283,7 +283,7 @@ defmodule Ecto.Repo.Schema do
       {:ok, struct} ->
         struct
 
-      {:error, changeset} ->
+      {:error, %Ecto.Changeset{} = changeset} ->
         raise Ecto.InvalidChangesetError, action: :update, changeset: changeset
     end
   end
@@ -296,7 +296,7 @@ defmodule Ecto.Repo.Schema do
       {:ok, struct} ->
         struct
 
-      {:error, changeset} ->
+      {:error, %Ecto.Changeset{} = changeset} ->
         raise Ecto.InvalidChangesetError, action: :delete, changeset: changeset
     end
   end
