@@ -465,7 +465,7 @@ defmodule Ecto.Query do
   A dynamic expression can always be interpolated inside another dynamic
   expression and into the constructs described below.
 
-  ## `where`, `having` and a `join`'s `on'
+  ## `where`, `having` and a `join`'s `on`
 
   The `dynamic` macro can be interpolated at the root of a `where`,
   `having` or a `join`'s `on`.
