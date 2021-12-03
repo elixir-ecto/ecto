@@ -59,6 +59,10 @@ defmodule Ecto.QueryTest do
         from p in "posts", where: [id: ^id]
       end
     end
+
+    test "allows arbitrary parentheses in where" do
+      _ = from(p in "posts", where: (not is_nil(p.title)))
+    end
   end
 
   describe "from" do
