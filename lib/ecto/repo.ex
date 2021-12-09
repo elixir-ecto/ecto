@@ -1331,9 +1331,9 @@ defmodule Ecto.Repo do
   @doc group: "Schema API"
   @callback insert_all(
               schema_or_source :: binary | {binary, module} | module,
-              entries_or_query :: [map | [{atom, term | Ecto.Query.t}]] | Ecto.Query.t,
+              entries_or_query :: [%{atom => value} | Keyword.t(value)] | Ecto.Query.t,
               opts :: Keyword.t()
-            ) :: {integer, nil | [term]}
+            ) :: {integer, nil | [term]} when value: term | Ecto.Query.t()
 
   @doc """
   Inserts a struct defined via `Ecto.Schema` or a changeset.
