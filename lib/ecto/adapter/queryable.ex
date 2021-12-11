@@ -83,7 +83,7 @@ defmodule Ecto.Adapter.Queryable do
   result set may also be `nil`, if no value is being selected.
   """
   @callback execute(adapter_meta, query_meta, query_cache, params :: list(), options) ::
-              {integer, [[selected]] | nil}
+              {non_neg_integer, [[selected]] | nil}
 
   @doc """
   Streams a previously prepared query.

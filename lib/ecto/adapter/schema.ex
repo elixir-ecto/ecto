@@ -52,7 +52,7 @@ defmodule Ecto.Adapter.Schema do
               returning,
               placeholders,
               options
-            ) :: {integer, [[term]] | nil}
+            ) :: {non_neg_integer, [[term]] | nil}
 
   @doc """
   Inserts a single new struct in the data store.
