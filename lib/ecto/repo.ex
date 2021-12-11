@@ -1129,7 +1129,7 @@ defmodule Ecto.Repo do
               queryable :: Ecto.Queryable.t(),
               updates :: Keyword.t(),
               opts :: Keyword.t()
-            ) :: {integer, nil | [term]}
+            ) :: {non_neg_integer, nil | [term]}
 
   @doc """
   Deletes all entries matching the given query.
@@ -1156,7 +1156,7 @@ defmodule Ecto.Repo do
   """
   @doc group: "Query API"
   @callback delete_all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
-              {integer, nil | [term]}
+              {non_neg_integer, nil | [term]}
 
   ## Ecto.Adapter.Schema
 
@@ -1333,7 +1333,7 @@ defmodule Ecto.Repo do
               schema_or_source :: binary | {binary, module} | module,
               entries_or_query :: [%{atom => value} | Keyword.t(value)] | Ecto.Query.t,
               opts :: Keyword.t()
-            ) :: {integer, nil | [term]} when value: term | Ecto.Query.t()
+            ) :: {non_neg_integer, nil | [term]} when value: term | Ecto.Query.t()
 
   @doc """
   Inserts a struct defined via `Ecto.Schema` or a changeset.
