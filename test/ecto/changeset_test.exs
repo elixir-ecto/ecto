@@ -60,6 +60,15 @@ defmodule Ecto.ChangesetTest do
     def equal?(a, b), do: a == b
   end
 
+  defmodule StringArray do
+    use Ecto.Type
+
+    def type, do: {:array, :string}
+    def cast(val), do: {:ok, val}
+    def load(val), do: {:ok, val}
+    def dump(val), do: {:ok, val}
+  end
+
   defmodule Post do
     use Ecto.Schema
 
@@ -1041,7 +1050,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [title: {"yada", [validation: :inclusion, enum: ~w(world)]}]
   end
 
-  test "validate_inclusion/3 with decimal" do
+  test "validate_inclusion/3 with decimal does semantic comparison" do
     changeset =
       {%{}, %{value: :decimal}}
       |> Ecto.Changeset.cast(%{value: 0}, [:value])
@@ -1081,7 +1090,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [topics: {"yada", [validation: :subset, enum: ~w(cat dog)]}]
   end
 
-  test "validate_subset/3 with decimal" do
+  test "validate_subset/3 with decimal does semantic comparison" do
     changeset =
       {%{}, %{value: {:array, :decimal}}}
       |> Ecto.Changeset.cast(%{value: [0, 0.2]}, [:value])
@@ -1090,11 +1099,14 @@ defmodule Ecto.ChangesetTest do
     assert changeset.valid?
   end
 
-  test "validate_subset/3 raises if field type is not array" do
-    assert_raise ArgumentError, "validate_subset/4 expects field type to be array, field `:title` has type `:string`", fn ->
-      changeset(%{"title" => "hello"})
-      |> validate_subset(:title, ["hello"])
-    end
+  test "validate_subset/3 with custom type uses underlying type" do
+    # backwards compatibility test
+    changeset =
+      {%{}, %{value: StringArray}}
+      |> Ecto.Changeset.cast(%{value: ["a", "b"]}, [:value])
+      |> validate_subset(:value, ["a", "b"])
+
+    assert changeset.valid?
   end
 
   test "validate_exclusion/3" do
@@ -1118,7 +1130,7 @@ defmodule Ecto.ChangesetTest do
     assert changeset.errors == [title: {"yada", [validation: :exclusion, enum: ~w(world)]}]
   end
 
-  test "validate_exclusion/3 with decimal" do
+  test "validate_exclusion/3 with decimal does semantic comparison" do
     decimals = Enum.map([0.0, 0.2], &Decimal.from_float/1)
     changeset =
       {%{}, %{value: :decimal}}
