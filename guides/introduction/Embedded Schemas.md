@@ -60,7 +60,6 @@ defmodule User do
     field :email, :string
     field :confirmed_at, :naive_datetime
 
-
     embeds_one :profile do
       field :age, :integer
       field :favorite_color, Ecto.Enum, values: [:red, :green, :blue, :pink, :black, :orange]
@@ -84,15 +83,15 @@ defmodule User do
     field :email, :string
     field :confirmed_at, :naive_datetime
 
-
     embeds_one :profile, UserProfile
-
     timestamps()
   end
 end
 
 # user/user_profile.ex
 defmodule UserProfile do
+  use Ecto.Schema
+
   embedded_schema "profile" do
     field :age, :integer
     field :favorite_color, Ecto.Enum, values: [:red, :green, :blue, :pink, :black, :orange]
@@ -105,16 +104,45 @@ Ta-da! Neat. Note we replaced the `embeds_one` macro by `embedded_schema`: `embe
 
 ### Writing the migration
 
-TODO
+To save this embedded schema to a database, we need to write a corresponding migration. Depending on whether you chose `embeds_one` or `embeds_many`, you must choose the corresponding `map` or `array` data type.
+
+We used `embeds_one`, so the migration should have a type of `map`.
+
+```elixir
+alter table("users") do
+  add :profile, :map
+end
+```
 
 ### Using changesets
 
-TODO
+When it comes to validation, you can define a changeset function for each module. For example, the module may say that both `age` and `favorite_color` fields are required:
 
-### Querying
+```elixir
+defmodule UserProfile do
+  # ...
 
-TODO
+  def changeset(profile, attrs \\ %{}) do
+    profile
+    |> cast(attrs, [:age, :favorite_color, :avatar_url])
+    |> validate_required([:age, :favorite_color])
+  end
+end
+```
 
-### Recipes & Patterns
+On the user side, you also define a `changeset/2` function, and then you use `cast_embed/3` to invoke the `UserProfile` changeset:
 
-TODO
+```elixir
+defmodule User do
+  use Ecto.Schema
+
+  # ...
+
+  def changeset(user, attrs \\ %{}) do
+    user
+    |> cast(attrs, [:full_name, :email])
+    # By default it calls UserProfile.changeset/2, pass the :with option to change it
+    |> cast_embed(:user_profile, required: true)
+  end
+end
+```
