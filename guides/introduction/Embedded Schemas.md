@@ -19,7 +19,7 @@ This feature is great for situations where you'd like to store data associated t
 
 ## Example
 
-A common use of embedded schemas is to store additional information about the current user. The finished example for this guide's embedded schema would look like this:
+An example of embedded schemas is to store additional information about the current user. The finished example for this guide's embedded schema will look like this:
 
 ```elixir
 defmodule User do
@@ -30,10 +30,9 @@ defmodule User do
     field :email, :string
     field :confirmed_at, :naive_datetime
 
-
     embeds_one "profile" do
       field :age, :integer
-      field :gender, :integer
+      field :favorite_color, Ecto.Enum, values: [:red, :green, :blue, :pink, :black, :orange]
       field :avatar_url, :string
     end
 
@@ -46,7 +45,7 @@ Let's kick things off with a tutorial to explain how to recreate this use case: 
 
 ### Writing the schema
 
-The first step is to write the structure of the data we're storing. In the case of our profile, we'd like to store the user's age, gender and a profile picture.
+The first step is to write the structure of the data we're storing. In the case of our profile, we'd like to store the user's age, favorite color, and a profile picture.
 
 To begin writing this embedded schema, we must first think about what structure we want. Do we want to store an array of structures (using `embeds_many`) or just one (using `embeds_one`)?
 
@@ -64,7 +63,7 @@ defmodule User do
 
     embeds_one :profile do
       field :age, :integer
-      field :gender, :integer
+      field :favorite_color, Ecto.Enum, values: [:red, :green, :blue, :pink, :black, :orange]
       field :avatar_url, :string
     end
 
@@ -96,7 +95,7 @@ end
 defmodule UserProfile do
   embedded_schema "profile" do
     field :age, :integer
-    field :gender, :integer
+    field :favorite_color, Ecto.Enum, values: [:red, :green, :blue, :pink, :black, :orange]
     field :avatar_url, :string
   end
 end
