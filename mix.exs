@@ -111,6 +111,7 @@ defmodule Ecto.MixProject do
   def extras() do
     [
       "guides/introduction/Getting Started.md",
+      "guides/introduction/Embedded Schemas.md",
       "guides/introduction/Testing with Ecto.md",
       "guides/howtos/Aggregates and subqueries.md",
       "guides/howtos/Composable transactions with Multi.md",
