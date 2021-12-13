@@ -2048,8 +2048,9 @@ defmodule Ecto.Changeset do
             element_type
 
           type ->
-            raise ArgumentError,
-              "validate_subset/4 expects field type to be array, field `#{inspect(field)}` has type `#{inspect(type)}`"
+            # backwards compatibility: custom types use underlying type
+            {:array, element_type} = Ecto.Type.type(type)
+            element_type
         end
 
       case Enum.any?(value, fn element -> not Ecto.Type.include?(element_type, element, data) end) do
