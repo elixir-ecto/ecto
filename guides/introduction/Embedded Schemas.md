@@ -5,17 +5,17 @@ Embedded schemas are a feature in Ecto that allows you to define and validate st
 They're great for:
 
 - Storing additional data about an entity without modifying your schema.
-- Storing additional data about an entity without tedious foreign key/many-to-many relationships
+- Storing additional data about an entity without tracking foreign key/many-to-many relationships
 - Validating arbitrary data structures
 
 Example use cases:
 
-- User profiles: storing information like profile pictures, settings
+- User profiles: storing additional information like profile pictures, settings
 - Shop products: storing additional product images
 
 While embedded schemas require an initial migration to create the field, any subsequent modifications to the data structure don't.
 
-This feature is great for situations where you'd like to store data associated to a specific entity, but a relation or new table would be overkill. You can even write changesets to perform validations on this data!
+This feature is great for situations where you'd like to store data associated to a specific entity, but a relation or new table would be overkill. You can even write changesets to perform validations on this data! The downside, however, is as you change the embedded schema overtime, early data won't have fields that you added later on.
 
 ## Example
 
