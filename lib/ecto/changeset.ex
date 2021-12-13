@@ -2043,7 +2043,7 @@ defmodule Ecto.Changeset do
   def validate_subset(changeset, field, data, opts \\ []) do
     validate_change changeset, field, {:subset, data}, fn _, value ->
       element_type =
-        case Map.fetch!(changeset.types, field)do
+        case Map.fetch!(changeset.types, field) do
           {:array, element_type} ->
             element_type
 
