@@ -1690,7 +1690,7 @@ defmodule Ecto.Schema do
   It is recommended to declare your `embeds_many/3` field with type `:map`
   in your migrations, instead of using `{:array, :map}`. Ecto can work with
   both maps and arrays as the container for embeds (and in most databases
-  map are represented as JSON which allows Ecto to choose what works best).
+  maps are represented as JSON which allows Ecto to choose what works best).
 
   The embedded may or may not have a primary key. Ecto uses the primary keys
   to detect if an embed is being updated or not. If a primary is not present
