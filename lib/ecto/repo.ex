@@ -242,7 +242,7 @@ defmodule Ecto.Repo do
         adapter.checked_out?(meta)
       end
 
-      @compile {:inline, get_dynamic_repo: 0, with_default_options: 2}
+      @compile {:inline, get_dynamic_repo: 0, with_default_options: 2, maybe_put_stacktrace: 1}
 
       def get_dynamic_repo() do
         Process.get({__MODULE__, :dynamic_repo}, @default_dynamic_repo)
@@ -252,11 +252,32 @@ defmodule Ecto.Repo do
         Process.put({__MODULE__, :dynamic_repo}, dynamic) || @default_dynamic_repo
       end
 
-      def default_options(_operation), do: []
+      # temporary: need to set this in repo options and get it here somehow (?)
+      def default_options(_operation), do: [get_stacktrace?: true]
       defoverridable default_options: 1
 
       defp with_default_options(operation_name, opts) do
-        Keyword.merge(default_options(operation_name), opts)
+        opts = 
+          operation_name
+          |> default_options()
+          |> Keyword.merge(opts)
+          |> maybe_put_stacktrace()
+
+        opts
+      end
+
+      defp maybe_put_stacktrace(opts) do
+        if opts[:get_stacktrace?] do
+          stacktrace = 
+            self() 
+            |> Process.info(:current_stacktrace)
+            |> elem(1)
+            |> List.delete_at(0)
+
+          Keyword.put(opts, :stacktrace, stacktrace)
+        else
+          opts
+        end
       end
 
       ## Transactions
