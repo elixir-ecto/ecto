@@ -4,6 +4,20 @@
 
 [![Build Status](https://github.com/elixir-ecto/ecto/workflows/CI/badge.svg)](https://github.com/elixir-ecto/ecto/actions) [![Hex.pm](https://img.shields.io/hexpm/v/ecto.svg)](https://hex.pm/packages/ecto)
 
+## Installation
+
+Add `:ecto` to the list of dependencies in `mix.exs`:
+
+```elixir
+def deps do
+  [
+    {:ecto, "~> 3.7"}
+  ]
+end
+```
+
+## About
+
 Ecto is a toolkit for data mapping and language integrated query for Elixir. Here is an example:
 
 ```elixir
