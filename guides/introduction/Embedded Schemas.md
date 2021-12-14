@@ -1,6 +1,6 @@
 # Embedded Schemas
 
-Embedded schemas allow you to define and validate structured data that is nested within another struct. This data can live exclusively in memory, or can be stored in the database with an initial migration.
+Embedded schemas allow you to define and validate structured data that is nested within another struct. This data can live exclusively in memory, or can be stored in the database.
 
 Some use cases for embedded schemas include:
 
@@ -8,15 +8,15 @@ Some use cases for embedded schemas include:
 
 - Embedding simple data that you want to track and validate, but where maintaining a separate table and tracking foreign keys and many-to-many relationships is unnecessary, like a list of product images.
 
-- When you want nuanced control over the tracking and validation of a complex struct without breaking apart the struct in the data layer, like if you wanted a changeset for address validation, but didn't want a separate address table.
+- When you want nuanced control over the tracking and validation of a complex struct, like if you wanted a changeset for address validation, but didn't want a separate address table.
 
 - When using document storage databases, and you want to interact with and manipulate embedded documents.
 
-These above use cases have a few themes in common. They all have nested data, and it makes sense for that nested data to be (1) bundled together into a sub-entity, and (2) changeset validations on that sub-entity are likely desireable.
+These above use cases have a few themes in common. They all have nested data, and it makes sense for that nested data to be (1) bundled together into a sub-entity, and (2) changeset validations on that sub-entity are desireable.
 
 ## Example
 
-Let's look at an example where we have a User and want to store additional information about them. This information is not necessarily important enough to warrant a new User `field` in the schema and database, and also is liable to change often alongside changes in UI and design. An embedded schema is a good solution for this kind of data.
+Let's explore an example where we have a User and want to store "profile" information about them. The data we want to store here is a loose grouping of UI-dependent information, which is likely to change over time alongside changes in the UI. Also, this data is not necessarily important enough to warrant a new User `field` in the schema, as it is not data that is fundamental to the User. An embedded schema is a good solution for this kind of data.
 
 ```elixir
 defmodule User do
@@ -41,7 +41,7 @@ end
 
 ### `embeds_one` and `embed_many`
 
-One of the first choices to make is how to represent the embedded within the struct. Do we want to store an array of structures (using `embeds_many`) or just one (using `embeds_one`)? In our example we are going to use `embeds_one` since users will only ever have one profile associated with them.
+One of the first choices to make is how to represent the embedded data within the struct. Do we want to store an array of structs using `embeds_many`, or just one using `embeds_one`? In our example we are going to use `embeds_one` since users will only ever have one profile associated with them.
 
 ```elixir
 defmodule User do
@@ -107,12 +107,11 @@ alter table("users") do
 end
 ```
 
-Whether you use `embeds_one` or `embeds_many` it is recommended to use the `:map` data type (although `{:array, :map}` will work with `embeds_many`). The reason is that the database is likely to represent a `:map` as JSON or JSONB, allowing Ecto adapters more flexibility over how to represent the data, while using `{:array, :map}` requires Ecto adapter libraries to conform more strictly to the databases representation of arrays which could lead to unpredicatable, database-dependent behaviors.
-
+Whether you use `embeds_one` or `embeds_many`, it is recommended to use the `:map` data type (although `{:array, :map}` will work with `embeds_many` as well). The reason is that typical relational databases (like Postgres) are likely to represent a `:map` as JSON or JSONB, allowing Ecto adapter libraries more flexibility over how to represent the data, while using `{:array, :map}` requires Ecto adapter libraries to conform more strictly to the databases representation of arrays which could lead to unpredicatable, database-dependent behaviors.
 
 ### Changesets
 
-When it comes to validation, you can define a changeset function for each module. For example, the UserProfile module could require the `online` and `visibility` fields to be present when generating a changeset.
+Changeset functionality for embeds will allow you to enforce arbitrary validations on the data. You can define a changeset function for each module. For example, the UserProfile module could require the `online` and `visibility` fields to be present when generating a changeset.
 
 ```elixir
 defmodule UserProfile do
@@ -129,7 +128,7 @@ profile = %UserProfile{}
 UserProfile.changeset(profile, %{online: true, visibility: :public})
 ```
 
-Now, when you want to update the UserProfile within a User struct, you will pass the changeset operation down to the UserProfile via the `cast_embed/3` function.
+Meanwhile, the User changeset function can require it's own validations without worrying about the details of the UserProfile changes because it can pass that responsibility to UserProfile via `cast_embed/3`. A validation failure in an embed will cause the parent changeset to be invalid, even if the parent changeset itself had no errors.
 
 ```elixir
 defmodule User do
@@ -175,7 +174,7 @@ defmodule User do
     |> cast_embed(:profile, required: true, with: &profile_changeset/2)
   end
 
-  def profile_changeset(%User.Profile{} = profile, attrs \\ %{}) do
+  def profile_changeset(profile, attrs \\ %{}) do
     profile
     |> cast(attrs, [:online, :dark_mode, :visibility])
     |> validate_required([:online, :visibility])
@@ -190,7 +189,7 @@ changeset.valid? # => true
 
 Once you have written embedded data to the database, you can use it in queries on the parent struct.
 
-<!-- TODO: Actually proves this works with local test data -->
+<!-- TODO: Actually proves this works with local test data. Otherwise, user JSON query fragments -->
 ```elixir
 from u in User, where: u.profile.dark_mode == true
 ```
