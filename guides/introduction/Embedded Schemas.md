@@ -107,7 +107,7 @@ alter table("users") do
 end
 ```
 
-Whether you use `embeds_one` or `embeds_many`, it is recommended to use the `:map` data type (although `{:array, :map}` will work with `embeds_many` as well). The reason is that typical relational databases (like Postgres) are likely to represent a `:map` as JSON or JSONB, allowing Ecto adapter libraries more flexibility over how to represent the data, while using `{:array, :map}` requires Ecto adapter libraries to conform more strictly to the databases representation of arrays which could lead to unpredicatable, database-dependent behaviors.
+Whether you use `embeds_one` or `embeds_many`, it is recommended to use the `:map` data type (although `{:array, :map}` will work with `embeds_many` as well). The reason is that typical relational databases (like Postgres) are likely to represent a `:map` as JSON or JSONB, allowing Ecto adapter libraries more flexibility over how to represent the data efficiently.
 
 ### Changesets
 
