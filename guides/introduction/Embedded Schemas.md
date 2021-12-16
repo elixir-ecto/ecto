@@ -1,9 +1,5 @@
 # Embedded Schemas
 
-**opening paragraph option 2**
-Embedded schemas are schemas without persistence. In fact, you can think of `embedded_schema` as `persistence_agnostic_schema`. (Using an embedded schema does not _prevent_ you from persisting the data, it just doesn't concern itself with that task.) This makes embedded schemas ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, when you want an intermediate data structure between your UI layer and your data layer, or when you want to independently manipulate embedded structs as sub-schemas inside a parent schema. Some use cases for embedded schemas include:
-
-**opening paragraph option 1; a 'spiritual reversion' to the original**
 Embedded schemas allow you to define and validate structured data. This data can live in memory, or can be stored in the database. Some use cases for embedded schemas include:
 
 - You are maintaining intermediate-state data, like when UI form fields map onto multiple tables in a database.
@@ -99,11 +95,11 @@ defmodule UserProfile do
 end
 ```
 
-It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. There is a clear relationship between them, but keep in mind that `embedded_schema` has broader applications, like in the intermediate-state use case from the introduction.
+It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. **Embedded schemas are schemas without persistence.** You can think of `embedded_schema` as something like `persistence_agnostic_schema`. You are not _prevented_ from persisting the schema, it just doesn't concern itself that. This makes embedded schemas ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, when you want an intermediate data structure between your UI layer and your data layer, or when you want to independently manipulate embedded structs inside a parent schema.
 
 ### Migrations
 
-In order to save embedded schemas to the database you need to write a migration for the embedded data.
+If you wish to save your embedded schema to the database, you need to write a migration to include the embedded data.
 
 ```elixir
 alter table("users") do
