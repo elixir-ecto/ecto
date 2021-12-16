@@ -4,7 +4,7 @@ Embedded schemas allow you to define and validate structured data. This data can
 
 - You are maintaining intermediate-state data, like when UI form fields map onto multiple tables in a database.
 
-- You are working within a persisted schema and you want to embed data that is...
+- You are working within a persisted parent schema and you want to embed data that is...
 
   - simple, like a map of user preferences inside a User schema.
   - changes often, like a list of product images with associated structured data inside a Product schema.
@@ -37,9 +37,9 @@ defmodule User do
 end
 ```
 
-### `embeds_one` and `embeds_many`
+### Embeds
 
-There are two ways to represent embedded data within a schema, `embeds_many`, which creates a List of embeds, and `embeds_one`, which creates only a single instance of the embed. Your choice here affects the behavior of embed-specific functions like `Ecto.Repo.put_embed/4` and `Ecto.Repo.cast_embed/4`, so choose whichever is most appropriate to your use case. In our example we are going to use `embeds_one` since users will only ever have one profile associated with them.
+There are two ways to represent embedded data within a schema, `embeds_many`, which creates a list of embeds, and `embeds_one`, which creates only a single instance of the embed. Your choice here affects the behavior of embed-specific functions like `Ecto.Repo.put_embed/4` and `Ecto.Repo.cast_embed/4`, so choose whichever is most appropriate to your use case. In our example we are going to use `embeds_one` since users will only ever have one profile associated with them.
 
 ```elixir
 defmodule User do
@@ -95,7 +95,7 @@ defmodule UserProfile do
 end
 ```
 
-It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. **Embedded schemas are schemas without persistence.** You can think of `embedded_schema` as something like `persistence_agnostic_schema`. You are not _prevented_ from persisting the schema, it just doesn't concern itself that. This makes embedded schemas ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, when you want an intermediate data structure between your UI layer and your data layer, or when you want to independently manipulate embedded structs inside a parent schema.
+It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. **Embedded schemas are schemas without persistence.** You can think of `embedded_schema` as something like a persistence agnostic schema. This makes embedded schemas ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, when you want an intermediate data structure between your UI layer and your data layer, or when you want to independently manipulate embedded structs inside a parent schema.
 
 ### Migrations
 
