@@ -187,10 +187,24 @@ changeset.valid? # => true
 
 ### Querying embedded data
 
-Once you have written embedded data to the database, you can use it in queries on the parent struct.
-
-<!-- TODO: Actually proves this works with local test data. Otherwise, user JSON query fragments -->
+Once you have written embedded data to the database, you can use it in queries on the parent schema.
 
 ```elixir
-from u in User, where: u.profile.dark_mode == true
+user_changeset = User.changeset(%User{}, %{profile: %{online: true, visibility: :public}})
+{:ok, _user} = Repo.insert(user_changeset)
+
+(Ecto.Query.from u in User, select: {u.profile["online"], u.profile["visibility"]}) |> Repo.one
+# => {true, "public"}
+
+(Ecto.Query.from u in User, select: u.profile, where: u.profile["visibility"] == :public) |> Repo.all
+# => [
+#  %UserProfile{
+#    id: "...",
+#    online: true,
+#    dark_mode: nil,
+#    visibility: :public
+#  }
+#]
 ```
+
+In typical databases where `:map`s are mapped to JSONB (like Postgres), Ecto is constructing the appropriate jsonpath queries for you. To see more examples of valid syntax for embedded schemas, see [`json_extract_path/2`](https://hexdocs.pm/ecto/Ecto.Query.API.html#json_extract_path/2).
