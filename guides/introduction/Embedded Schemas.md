@@ -1,47 +1,24 @@
 # Embedded Schemas
 
-Embedded schemas allow you to define and validate structured data that is nested within another struct. This data can live exclusively in memory, or can be stored in the database.
+**opening paragraph option 2**
+Embedded schemas are schemas without persistence. In fact, you can think of `embedded_schema` as `persistence_agnostic_schema`. (Using an embedded schema does not _prevent_ you from persisting the data, it just doesn't concern itself with that task.) This makes embedded schemas ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, when you want an intermediate data structure between your UI layer and your data layer, or when you want to independently manipulate embedded structs as sub-schemas inside a parent schema. Some use cases for embedded schemas include:
 
-Some use cases for embedded schemas include:
+**opening paragraph option 1; a 'spiritual reversion' to the original**
+Embedded schemas allow you to define and validate structured data. This data can live in memory, or can be stored in the database. Some use cases for embedded schemas include:
 
-- Embedding flexible data that changes often, like a map of user preferences inside a User schema.
+- You are maintaining intermediate-state data, like when UI form fields map onto multiple tables in a database.
 
-- Embedding simple data that you want to track and validate, but where maintaining a separate table and tracking foreign keys and many-to-many relationships is unnecessary, like a list of product images.
+- You are working within a persisted schema and you want to embed data that is...
 
-- When you want nuanced control over the tracking and validation of a complex struct, like if you wanted a changeset for address validation, but didn't want a separate address table.
+  - simple, like a map of user preferences inside a User schema.
+  - changes often, like a list of product images with associated structured data inside a Product schema.
+  - requires complex tracking and validation, like an Address schema inside a User schema.
 
-- When using document storage databases, and you want to interact with and manipulate embedded documents.
+- You are using a document storage database and you want to interact with and manipulate embedded documents.
 
-These above use cases have a few themes in common. They all have nested data, and it makes sense for that nested data to be (1) bundled together into a sub-entity, and (2) changeset validations on that sub-entity are desireable.
+## User Profile Example
 
-## Example
-
-Let's explore an example where we have a User and want to store "profile" information about them. The data we want to store here is a loose grouping of UI-dependent information, which is likely to change over time alongside changes in the UI. Also, this data is not necessarily important enough to warrant a new User `field` in the schema, as it is not data that is fundamental to the User. An embedded schema is a good solution for this kind of data.
-
-```elixir
-defmodule User do
-  use Ecto.Schema
-
-  schema "users" do
-    field :full_name, :string
-    field :email, :string
-    field :avatar_url, :string
-    field :confirmed_at, :naive_datetime
-
-    embeds_one :profile do
-      field :online, :boolean
-      field :dark_mode, :boolean
-      field :visibility, Ecto.Enum, values: [:public, :private, :friends_only]
-    end
-
-    timestamps()
-  end
-end
-```
-
-### `embeds_one` and `embed_many`
-
-One of the first choices to make is how to represent the embedded data within the struct. Do we want to store an array of structs using `embeds_many`, or just one using `embeds_one`? In our example we are going to use `embeds_one` since users will only ever have one profile associated with them.
+Let's explore an example where we have a User and want to store "profile" information about them. The data we want to store is UI-dependent information which is likely to change over time alongside changes in the UI. Also, this data is not necessarily important enough to warrant a new User `field`s in the User schema, as it is not data that is fundamental to the User. An embedded schema is a good solution for this kind of data.
 
 ```elixir
 defmodule User do
@@ -64,9 +41,34 @@ defmodule User do
 end
 ```
 
-### Extracting embeds
+### `embeds_one` and `embeds_many`
 
-While the above User schema is simple and sufficient, you might find yourself in a situation where you want to work independently with the embedded profile struct. In such scenarios, it is recommended to extract the embedded struct into it's own schema using the `embedded_schema` function.
+There are two ways to represent embedded data within a schema, `embeds_many`, which creates a List of embeds, and `embeds_one`, which creates only a single instance of the embed. Your choice here affects the behavior of embed-specific functions like `Ecto.Repo.put_embed/4` and `Ecto.Repo.cast_embed/4`, so choose whichever is most appropriate to your use case. In our example we are going to use `embeds_one` since users will only ever have one profile associated with them.
+
+```elixir
+defmodule User do
+  use Ecto.Schema
+
+  schema "users" do
+    field :full_name, :string
+    field :email, :string
+    field :avatar_url, :string
+    field :confirmed_at, :naive_datetime
+
+    embeds_one :profile do
+      field :online, :boolean
+      field :dark_mode, :boolean
+      field :visibility, Ecto.Enum, values: [:public, :private, :friends_only]
+    end
+
+    timestamps()
+  end
+end
+```
+
+### Extracting the embeds
+
+While the above User schema is simple and sufficient, we might want to work independently with the embedded profile struct. For example, if there were a lot of functions devoted solely to manipulating the profile data. In such scenarios, it is recommended to extract the embedded struct into its own schema using the `embedded_schema` function.
 
 ```elixir
 # user/user.ex
@@ -90,12 +92,14 @@ defmodule UserProfile do
   use Ecto.Schema
 
   embedded_schema do
-      field :online, :boolean
-      field :dark_mode, :boolean
-      field :visibility, Ecto.Enum, values: [:public, :private, :friends_only]
+    field :online, :boolean
+    field :dark_mode, :boolean
+    field :visibility, Ecto.Enum, values: [:public, :private, :friends_only]
   end
 end
 ```
+
+It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. There is a clear relationship between them, but keep in mind that `embedded_schema` has broader applications, like in the intermediate-state use case from the introduction.
 
 ### Migrations
 
@@ -190,6 +194,7 @@ changeset.valid? # => true
 Once you have written embedded data to the database, you can use it in queries on the parent struct.
 
 <!-- TODO: Actually proves this works with local test data. Otherwise, user JSON query fragments -->
+
 ```elixir
 from u in User, where: u.profile.dark_mode == true
 ```
