@@ -1,69 +1,35 @@
 # Embedded Schemas
 
-Embedded schemas are a feature in Ecto that allows you to define and validate structured data. This data can reside in-memory through structs or, with a migration, be stored in a database field. Embedded schemas work with maps and arrays.
+Embedded schemas allow you to define and validate structured data. This data can live in memory, or can be stored in the database. Some use cases for embedded schemas include:
 
-They're great for:
+- You are maintaining intermediate-state data, like when UI form fields map onto multiple tables in a database.
 
-- Storing additional data about an entity without modifying your schema.
-- Storing additional data about an entity without tracking foreign key/many-to-many relationships
-- Validating arbitrary data structures
+- You are working within a persisted parent schema and you want to embed data that is...
 
-Example use cases:
+  - simple, like a map of user preferences inside a User schema.
+  - changes often, like a list of product images with associated structured data inside a Product schema.
+  - requires complex tracking and validation, like an Address schema inside a User schema.
 
-- User profiles: storing additional information like profile pictures, settings
-- Shop products: storing additional product images
+- You are using a document storage database and you want to interact with and manipulate embedded documents.
 
-While embedded schemas require an initial migration to create the field, any subsequent modifications to the data structure don't.
+## User Profile Example
 
-This feature is great for situations where you'd like to store data associated to a specific entity, but a relation or new table would be overkill. You can even write changesets to perform validations on this data! The downside, however, is as you change the embedded schema overtime, early data won't have fields that you added later on.
-
-## Example
-
-An example of embedded schemas is to store additional information about the current user. The finished example for this guide's embedded schema will look like this:
+Let's explore an example where we have a User and want to store "profile" information about them. The data we want to store is UI-dependent information which is likely to change over time alongside changes in the UI. Also, this data is not necessarily important enough to warrant new User `field`s in the User schema, as it is not data that is fundamental to the User. An embedded schema is a good solution for this kind of data.
 
 ```elixir
 defmodule User do
   use Ecto.Schema
 
   schema "users" do
-    field :is_active, :boolean
+    field :full_name, :string
     field :email, :string
-    field :confirmed_at, :naive_datetime
-
-    embeds_one "profile" do
-      field :age, :integer
-      field :favorite_color, Ecto.Enum, values: [:red, :green, :blue, :pink, :black, :orange]
-      field :avatar_url, :string
-    end
-
-    timestamps()
-  end
-end
-```
-
-Let's kick things off with a tutorial to explain how to recreate this use case: building a solution for user profiles in an example app.
-
-### Writing the schema
-
-The first step is to write the structure of the data we're storing. In the case of our profile, we'd like to store the user's age, favorite color, and a profile picture.
-
-To begin writing this embedded schema, we must first think about what structure we want. Do we want to store an array of structures (using `embeds_many`) or just one (using `embeds_one`)?
-
-In this case, every user should have only one profile associated to them, so we'll begin by writing like any other Ecto schema:
-
-```elixir
-defmodule User do
-  use Ecto.Schema
-
-  schema "users" do
-    field :is_active, :boolean
-    field :email, :string
+    field :avatar_url, :string
     field :confirmed_at, :naive_datetime
 
     embeds_one :profile do
-      field :age, :integer
-      field :favorite_color, Ecto.Enum, values: [:red, :green, :blue, :pink, :black, :orange]
-      field :avatar_url, :string
+      field :online, :boolean
+      field :dark_mode, :boolean
+      field :visibility, Ecto.Enum, values: [:public, :private, :friends_only]
     end
 
     timestamps()
@@ -71,7 +37,34 @@ defmodule User do
 end
 ```
 
-We can, however, clean this up a little. You can separate the profile to a distinct module and keep the `User` module tidy:
+### Embeds
+
+There are two ways to represent embedded data within a schema, `embeds_many`, which creates a list of embeds, and `embeds_one`, which creates only a single instance of the embed. Your choice here affects the behavior of embed-specific functions like `Ecto.Repo.put_embed/4` and `Ecto.Repo.cast_embed/4`, so choose whichever is most appropriate to your use case. In our example we are going to use `embeds_one` since users will only ever have one profile associated with them.
+
+```elixir
+defmodule User do
+  use Ecto.Schema
+
+  schema "users" do
+    field :full_name, :string
+    field :email, :string
+    field :avatar_url, :string
+    field :confirmed_at, :naive_datetime
+
+    embeds_one :profile do
+      field :online, :boolean
+      field :dark_mode, :boolean
+      field :visibility, Ecto.Enum, values: [:public, :private, :friends_only]
+    end
+
+    timestamps()
+  end
+end
+```
+
+### Extracting the embeds
+
+While the above User schema is simple and sufficient, we might want to work independently with the embedded profile struct. For example, if there was a lot of functionality devoted solely to manipulating the profile data, we'd want to consider extracting the embedded schema into its own module.
 
 ```elixir
 # user/user.ex
@@ -79,11 +72,13 @@ defmodule User do
   use Ecto.Schema
 
   schema "users" do
-    field :is_active, :boolean
+    field :full_name, :string
     field :email, :string
+    field :avatar_url, :string
     field :confirmed_at, :naive_datetime
 
     embeds_one :profile, UserProfile
+
     timestamps()
   end
 end
@@ -92,21 +87,19 @@ end
 defmodule UserProfile do
   use Ecto.Schema
 
-  embedded_schema "profile" do
-    field :age, :integer
-    field :favorite_color, Ecto.Enum, values: [:red, :green, :blue, :pink, :black, :orange]
-    field :avatar_url, :string
+  embedded_schema do
+    field :online, :boolean
+    field :dark_mode, :boolean
+    field :visibility, Ecto.Enum, values: [:public, :private, :friends_only]
   end
 end
 ```
 
-Ta-da! Neat. Note we replaced the `embeds_one` macro by `embedded_schema`: `embeds_one` and `embeds_many` function like fields, similar to relations like `has_many`.
+It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. You can think of them as a persistence agnostic `schema`. This makes embedded schemas ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, if you want to build a contact form, you still want to parse and validate the data, but the data is likely not persisted anywhere. Instead, it is used to send an email. Embedded schemas would be a good fit for such use case.
 
-### Writing the migration
+### Migrations
 
-To save this embedded schema to a database, we need to write a corresponding migration. Depending on whether you chose `embeds_one` or `embeds_many`, you must choose the corresponding `map` or `array` data type.
-
-We used `embeds_one`, so the migration should have a type of `map`.
+If you wish to save your embedded schema to the database, you need to write a migration to include the embedded data.
 
 ```elixir
 alter table("users") do
@@ -114,35 +107,104 @@ alter table("users") do
 end
 ```
 
-### Using changesets
+Whether you use `embeds_one` or `embeds_many`, it is recommended to use the `:map` data type (although `{:array, :map}` will work with `embeds_many` as well). The reason is that typical relational databases are likely to represent a `:map` as JSON (or JSONB in Postgres), allowing Ecto adapter libraries more flexibility over how to efficiently store the data.
 
-When it comes to validation, you can define a changeset function for each module. For example, the module may say that both `age` and `favorite_color` fields are required:
+### Changesets
+
+Changeset functionality for embeds will allow you to enforce arbitrary validations on the data. You can define a changeset function for each module. For example, the UserProfile module could require the `online` and `visibility` fields to be present when generating a changeset.
 
 ```elixir
 defmodule UserProfile do
   # ...
 
-  def changeset(profile, attrs \\ %{}) do
+  def changeset(%UserProfile{} = profile, attrs \\ %{}) do
     profile
-    |> cast(attrs, [:age, :favorite_color, :avatar_url])
-    |> validate_required([:age, :favorite_color])
+    |> cast(attrs, [:online, :dark_mode, :visibility])
+    |> validate_required([:online, :visibility])
   end
 end
+
+profile = %UserProfile{}
+UserProfile.changeset(profile, %{online: true, visibility: :public})
 ```
 
-On the user side, you also define a `changeset/2` function, and then you use `cast_embed/3` to invoke the `UserProfile` changeset:
+Meanwhile, the User changeset function can require its own validations without worrying about the details of the UserProfile changes because it can pass that responsibility to UserProfile via `cast_embed/3`. A validation failure in an embed will cause the parent changeset to be invalid, even if the parent changeset itself had no errors.
+
+```elixir
+defmodule User do
+  # ...
+
+  def changeset(user, attrs \\ %{}) do
+    user
+    |> cast(attrs, [:full_name, :email, :avatar_url])
+    |> cast_embed(:profile, required: true)
+  end
+end
+
+changeset = User.changeset(%User{}, %{profile: %{online: true}})
+changeset.valid? # => false; "visibility can't be blank"
+changeset = User.changeset(%User{}, %{profile: %{online: true, visibility: :public}})
+changeset.valid? # => true
+```
+
+In situations where you have kept the embedded schema within the parent module, e.g., you have not extracted a UserProfile, you can still have custom changeset functions for the embedded data within the parent schema.
 
 ```elixir
 defmodule User do
   use Ecto.Schema
 
-  # ...
+  schema "users" do
+    field :full_name, :string
+    field :email, :string
+    field :avatar_url, :string
+    field :confirmed_at, :naive_datetime
 
-  def changeset(user, attrs \\ %{}) do
+    embeds_one :profile, Profile do
+      field :online, :boolean
+      field :dark_mode, :boolean
+      field :visibility, Ecto.Enum, values: [:public, :private, :friends_only]
+    end
+
+    timestamps()
+  end
+
+  def changeset(%User{} = user, attrs \\ %{}) do
     user
     |> cast(attrs, [:full_name, :email])
-    # By default it calls UserProfile.changeset/2, pass the :with option to change it
-    |> cast_embed(:user_profile, required: true)
+    |> cast_embed(:profile, required: true, with: &profile_changeset/2)
+  end
+
+  def profile_changeset(profile, attrs \\ %{}) do
+    profile
+    |> cast(attrs, [:online, :dark_mode, :visibility])
+    |> validate_required([:online, :visibility])
   end
 end
+
+changeset = User.changeset(%User{}, %{profile: %{online: true, visibility: :public}})
+changeset.valid? # => true
 ```
+
+### Querying embedded data
+
+Once you have written embedded data to the database, you can use it in queries on the parent schema.
+
+```elixir
+user_changeset = User.changeset(%User{}, %{profile: %{online: true, visibility: :public}})
+{:ok, _user} = Repo.insert(user_changeset)
+
+(Ecto.Query.from u in User, select: {u.profile["online"], u.profile["visibility"]}) |> Repo.one
+# => {true, "public"}
+
+(Ecto.Query.from u in User, select: u.profile, where: u.profile["visibility"] == :public) |> Repo.all
+# => [
+#  %UserProfile{
+#    id: "...",
+#    online: true,
+#    dark_mode: nil,
+#    visibility: :public
+#  }
+#]
+```
+
+In databases where `:map`s are stored as JSONB (like Postgres), Ecto constructs the appropriate jsonpath queries for you. More examples of embedded schema queries are documented in [`json_extract_path/2`](https://hexdocs.pm/ecto/Ecto.Query.API.html#json_extract_path/2).
