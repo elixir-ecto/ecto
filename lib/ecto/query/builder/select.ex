@@ -34,7 +34,7 @@ defmodule Ecto.Query.Builder.Select do
   def escape(other, vars, env) do
     cond do
       take?(other) ->
-        {{:{}, [], [:&, [], [0]]}, {[], %{0 => {:any, other}}}}
+        {{:{}, [], [:&, [], [0]]}, {[], %{0 => {:any, Macro.expand(other, env)}}}}
 
       maybe_take?(other) ->
         Builder.error! """
@@ -154,6 +154,11 @@ defmodule Ecto.Query.Builder.Select do
       raise ArgumentError,
         "expected a list of fields in `#{tag}/2` inside `select`, got: `#{inspect fields}`"
     end
+  end
+
+  # atom list sigils
+  defp take?({name, _, [_, modifiers]}) when name in ~w(sigil_w sigil_W)a do
+    ?a in modifiers
   end
 
   defp take?(fields) do
