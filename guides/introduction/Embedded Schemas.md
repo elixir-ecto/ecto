@@ -95,7 +95,7 @@ defmodule UserProfile do
 end
 ```
 
-It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. **Embedded schemas are schemas without persistence.** You can think of them as a persistence agnostic `schema`. This makes embedded schemas ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, when you want an intermediate data structure, or when you want to independently work with structured data inside a parent schema.
+It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. You can think of them as a persistence agnostic `schema`. This makes embedded schemas ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, if you want to build a contact form, you still want to parse and validate the data, but the data is likely not persisted anywhere. Instead, it is used to send an email. Embedded schemas would be a good fit for such use case.
 
 ### Migrations
 
@@ -107,7 +107,7 @@ alter table("users") do
 end
 ```
 
-Whether you use `embeds_one` or `embeds_many`, it is recommended to use the `:map` data type (although `{:array, :map}` will work with `embeds_many` as well). The reason is that typical relational databases (like Postgres) are likely to represent a `:map` as JSON or JSONB, allowing Ecto adapter libraries more flexibility over how to efficiently store the data.
+Whether you use `embeds_one` or `embeds_many`, it is recommended to use the `:map` data type (although `{:array, :map}` will work with `embeds_many` as well). The reason is that typical relational databases are likely to represent a `:map` as JSON (or JSONB in Postgres), allowing Ecto adapter libraries more flexibility over how to efficiently store the data.
 
 ### Changesets
 
