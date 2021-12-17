@@ -59,6 +59,7 @@ defmodule Ecto.Query.Builder.SelectTest do
       fields = ~w[field]a
       assert select("q", [q], map(q, ~w[field]a)).select.take == %{0 => {:map, fields}}
       assert select("q", [q], struct(q, @fields)).select.take == %{0 => {:struct, fields}}
+      assert select("q", [q], ~w[field]a).select.take == %{0 => {:any, fields}}
     end
 
     test "raises on single atom" do
