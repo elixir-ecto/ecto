@@ -14,7 +14,7 @@ Embedded schemas allow you to define and validate structured data. This data can
 
 ## User Profile Example
 
-Let's explore an example where we have a User and want to store "profile" information about them. The data we want to store is UI-dependent information which is likely to change over time alongside changes in the UI. Also, this data is not necessarily important enough to warrant a new User `field`s in the User schema, as it is not data that is fundamental to the User. An embedded schema is a good solution for this kind of data.
+Let's explore an example where we have a User and want to store "profile" information about them. The data we want to store is UI-dependent information which is likely to change over time alongside changes in the UI. Also, this data is not necessarily important enough to warrant new User `field`s in the User schema, as it is not data that is fundamental to the User. An embedded schema is a good solution for this kind of data.
 
 ```elixir
 defmodule User do
@@ -64,7 +64,7 @@ end
 
 ### Extracting the embeds
 
-While the above User schema is simple and sufficient, we might want to work independently with the embedded profile struct. For example, if there were a lot of functions devoted solely to manipulating the profile data. In such scenarios, it is recommended to extract the embedded struct into its own schema using the `embedded_schema` function.
+While the above User schema is simple and sufficient, we might want to work independently with the embedded profile struct. For example, if there was a lot of functionality devoted solely to manipulating the profile data, we'd want to consider extracting the embedded schema into its own module.
 
 ```elixir
 # user/user.ex
@@ -95,7 +95,7 @@ defmodule UserProfile do
 end
 ```
 
-It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. **Embedded schemas are schemas without persistence.** You can think of `embedded_schema` as something like a persistence agnostic schema. This makes embedded schemas ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, when you want an intermediate data structure between your UI layer and your data layer, or when you want to independently manipulate embedded structs inside a parent schema.
+It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. **Embedded schemas are schemas without persistence.** You can think of them as a persistence agnostic `schema`. This makes embedded schemas ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, when you want an intermediate data structure, or when you want to independently work with structured data inside a parent schema.
 
 ### Migrations
 
@@ -107,7 +107,7 @@ alter table("users") do
 end
 ```
 
-Whether you use `embeds_one` or `embeds_many`, it is recommended to use the `:map` data type (although `{:array, :map}` will work with `embeds_many` as well). The reason is that typical relational databases (like Postgres) are likely to represent a `:map` as JSON or JSONB, allowing Ecto adapter libraries more flexibility over how to represent the data efficiently.
+Whether you use `embeds_one` or `embeds_many`, it is recommended to use the `:map` data type (although `{:array, :map}` will work with `embeds_many` as well). The reason is that typical relational databases (like Postgres) are likely to represent a `:map` as JSON or JSONB, allowing Ecto adapter libraries more flexibility over how to efficiently store the data.
 
 ### Changesets
 
@@ -128,7 +128,7 @@ profile = %UserProfile{}
 UserProfile.changeset(profile, %{online: true, visibility: :public})
 ```
 
-Meanwhile, the User changeset function can require it's own validations without worrying about the details of the UserProfile changes because it can pass that responsibility to UserProfile via `cast_embed/3`. A validation failure in an embed will cause the parent changeset to be invalid, even if the parent changeset itself had no errors.
+Meanwhile, the User changeset function can require its own validations without worrying about the details of the UserProfile changes because it can pass that responsibility to UserProfile via `cast_embed/3`. A validation failure in an embed will cause the parent changeset to be invalid, even if the parent changeset itself had no errors.
 
 ```elixir
 defmodule User do
@@ -207,4 +207,4 @@ user_changeset = User.changeset(%User{}, %{profile: %{online: true, visibility: 
 #]
 ```
 
-In typical databases where `:map`s are mapped to JSONB (like Postgres), Ecto is constructing the appropriate jsonpath queries for you. To see more examples of valid syntax for embedded schemas, see [`json_extract_path/2`](https://hexdocs.pm/ecto/Ecto.Query.API.html#json_extract_path/2).
+In databases where `:map`s are stored as JSONB (like Postgres), Ecto constructs the appropriate jsonpath queries for you. More examples of embedded schema queries are documented in [`json_extract_path/2`](https://hexdocs.pm/ecto/Ecto.Query.API.html#json_extract_path/2).
