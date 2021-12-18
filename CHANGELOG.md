@@ -1,5 +1,23 @@
 # Changelog for v3.x
 
+## v3.8.0-dev
+
+### Enhancements
+
+  * [Ecto] Add new Embedded chapter to Introductory guides
+  * [Ecto.Query] Support parameterized types in `type/2`
+  * [Ecto.Query] Allow using `type/2` with virtual fields
+  * [Ecto.Query] Suggest alternatives to inexistent fields in queries
+  * [Ecto.Schema] Validate options given to schema fields
+  * [Ecto.Schema] Add option to skip validations for default values
+
+### Bug fixes
+
+  * [Ecto.Changeset] Address regression on `validate_subset` no longer working with custom array types
+  * [Ecto.Query] Handle atom list sigils in `select`
+  * [Ecto.Query] Handle scenarios where `(left not in right)` would not be allowed in queries
+  * [Ecto.Repo] Properly handle literals in queries given to `insert_all`
+
 ## v3.7.1 (2021-08-27)
 
 ### Enhancements
