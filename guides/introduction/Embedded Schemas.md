@@ -196,7 +196,7 @@ user_changeset = User.changeset(%User{}, %{profile: %{online: true, visibility: 
 (Ecto.Query.from u in User, select: {u.profile["online"], u.profile["visibility"]}) |> Repo.one
 # => {true, "public"}
 
-(Ecto.Query.from u in User, select: u.profile, where: u.profile["visibility"] == :public) |> Repo.all
+(Ecto.Query.from u in User, select: u.profile, where: u.profile["visibility"] == ^:public) |> Repo.all
 # => [
 #  %UserProfile{
 #    id: "...",
