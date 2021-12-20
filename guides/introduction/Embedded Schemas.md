@@ -95,7 +95,7 @@ defmodule UserProfile do
 end
 ```
 
-It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. You can think of them as a persistence agnostic `schema`. This makes embedded schemas ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, if you want to build a contact form, you still want to parse and validate the data, but the data is likely not persisted anywhere. Instead, it is used to send an email. Embedded schemas would be a good fit for such use case.
+It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. You can think of embedded schemas as persistence agnostic `schema`s. This makes embedded schemas ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, if you want to build a contact form, you still want to parse and validate the data, but the data is likely not persisted anywhere. Instead, it is used to send an email. Embedded schemas would be a good fit for such a use case.
 
 ### Migrations
 
@@ -196,7 +196,7 @@ user_changeset = User.changeset(%User{}, %{profile: %{online: true, visibility: 
 (Ecto.Query.from u in User, select: {u.profile["online"], u.profile["visibility"]}) |> Repo.one
 # => {true, "public"}
 
-(Ecto.Query.from u in User, select: u.profile, where: u.profile["visibility"] == :public) |> Repo.all
+(Ecto.Query.from u in User, select: u.profile, where: u.profile["visibility"] == ^:public) |> Repo.all
 # => [
 #  %UserProfile{
 #    id: "...",
