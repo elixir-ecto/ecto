@@ -9,6 +9,7 @@ defmodule Ecto.Query.Planner do
   end
 
   @parent_as __MODULE__
+  @aggs ~w(count avg min max sum row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value)a
 
   @doc """
   Converts a query to a list of joins.
@@ -299,107 +300,110 @@ defmodule Ecto.Query.Planner do
   defp normalize_subquery_select(query, adapter, source?) do
     {expr, %{select: select} = query} = rewrite_subquery_select_expr(query, source?)
     {expr, _} = prewalk(expr, :select, query, select, 0, adapter)
-    {meta, _fields, _from} = collect_fields(expr, [], :never, query, select.take, true)
-    {query, meta}
+    {source, fields, _from} = collect_fields(expr, [], :never, query, select.take, true)
+    {source, fields, []} = normalize_subquery_source(source, Enum.reverse(fields), query)
+    {put_in(query.select.fields, fields), source}
   end
 
-  # If we are selecting a source, we keep it as is.
-  # Otherwise we normalize the select, which converts them into structs.
-  # This means that `select: p` in subqueries will be nullable in a join.
-  defp rewrite_subquery_select_expr(%{select: %{expr: {:&, _, [_]} = expr}} = query, _source?) do
-    {expr, query}
-  end
-
-  defp rewrite_subquery_select_expr(%{select: select} = query, source?) do
-    %{expr: expr, take: take} = select
-
-    expr =
-      case subquery_select(expr, take, query) do
-        {nil, fields} ->
-          {:%{}, [], fields}
-
-        {struct, fields} ->
-          {:%, [], [struct, {:%{}, [], fields}]}
-
-        :error when source? ->
-          error!(query, "subquery/cte must select a source (t), a field (t.field) or a map, got: `#{Macro.to_string(expr)}`")
-
-        :error ->
-          expr
-      end
-
+  # Convert single field lookups into a map
+  defp rewrite_subquery_select_expr(
+         %{select: %{expr: {{:., _, [{:&, _, [_]}, field]}, _, []} = expr}} = query,
+         _source?
+       ) do
+    expr = {:%{}, [], [{field, expr}]}
     {expr, put_in(query.select.expr, expr)}
   end
 
-  defp subquery_select({:merge, _, [left, right]}, take, query) do
-    {left_struct, left_fields} = subquery_select(left, take, query)
-    {right_struct, right_fields} = subquery_select(right, take, query)
+  defp rewrite_subquery_select_expr(
+         %{select: %{expr: {agg, _, [{{:., _, [{:&, _, [_]}, field]}, _, []} | _]} = expr}} = query,
+         _source?
+       ) when agg in @aggs do
+    expr = {:%{}, [], [{field, expr}]}
+    {expr, put_in(query.select.expr, expr)}
+  end
 
-    unless is_nil(left_struct) or is_nil(right_struct) or left_struct == right_struct do
-      error!(query, "cannot merge #{inspect(left_struct)} and #{inspect(right_struct)} because they are different structs")
+  defp rewrite_subquery_select_expr(query, false) do
+    error!(query, "subquery must return a single field in order to be used on the right-side of `in`")
+  end
+
+  defp rewrite_subquery_select_expr(query, _source?) do
+    {query.select.expr, query}
+  end
+
+  defp normalize_subquery_source({:map, left, extra}, rest, query) do
+    normalize_subquery_source({:merge, left, {:map, extra}}, rest, query)
+  end
+
+  defp normalize_subquery_source({:merge, left, right}, rest, query) do
+    {left, left_fields, rest} = normalize_subquery_source(left, rest, query)
+    {right, right_fields, rest} = normalize_subquery_source(right, rest, query)
+    {merge_subquery_source(left, right, query), Keyword.merge(left_fields, right_fields), rest}
+  end
+
+  defp normalize_subquery_source({:source, _, _, types} = source, rest, _query) do
+    {fields, rest} = zip_fields(types, rest, [])
+    {source, fields, rest}
+  end
+
+  defp normalize_subquery_source({:struct, _name, types} = struct, rest, _query) do
+    {fields, rest} = zip_fields(types, rest, [])
+    {struct, fields, rest}
+  end
+
+  defp normalize_subquery_source({:map, types} = map, rest, _query) do
+    {fields, rest} = zip_fields(types, rest, [])
+    {map, fields, rest}
+  end
+
+  defp normalize_subquery_source(_source, _fields, query) do
+    error!(query, "subquery/cte must select a source (t), a field (t.field) or a map, got: `#{Macro.to_string(query.select.expr)}`")
+  end
+
+  defp merge_subquery_source({:source, schema, prefix, types1}, {:source, schema, prefix, types2}, _query),
+    do: {:source, schema, prefix, Keyword.merge(types1, types2)}
+
+  defp merge_subquery_source({:source, schema, prefix, types}, {:map, fields}, _query),
+    do: {:source, schema, prefix, merge_types_and_fields(types, fields, [])}
+
+  defp merge_subquery_source({:struct, name, fields1}, {:struct, name, fields2}, _query),
+    do: {:struct, name, Keyword.merge(fields1, fields2)}
+
+  defp merge_subquery_source({:struct, name, fields1}, {:map, fields2}, _query),
+    do: {:struct, name, Keyword.merge(fields1, fields2)}
+
+  defp merge_subquery_source({:map, fields1}, {:map, fields2}, _query),
+    do: {:map, Keyword.merge(fields1, fields2)}
+
+  defp merge_subquery_source(left, right, query),
+    do: error!(query, "cannot merge #{inspect(left)} and #{inspect(right)} in subquery")
+
+  # If the field exists in the schema, then its type is the same as in the schema.
+  # If the field does not exist, then its type is any.
+  defp merge_types_and_fields(types, [{field, _} | extra], acc) do
+    case List.keytake(types, field, 0) do
+      {{field, type}, types} -> merge_types_and_fields(types, extra, [{field, type} | acc])
+      nil -> merge_types_and_fields(types, extra, [{field, :any} | acc])
     end
-
-    {left_struct || right_struct, Keyword.merge(left_fields, right_fields)}
-  end
-  defp subquery_select({:%, _, [name, map]}, take, query) do
-    {_, fields} = subquery_select(map, take, query)
-    {name, fields}
-  end
-  defp subquery_select({:%{}, _, [{:|, _, [{:&, [], [ix]}, pairs]}]} = expr, take, query) do
-    assert_subquery_fields!(query, expr, pairs)
-    {source, _} = source_take!(:select, query, take, ix, ix)
-    {struct, fields} = subquery_struct_and_fields(source)
-
-    # Map updates may contain virtual fields, so we need to consider those
-    valid_keys = if struct, do: Map.keys(struct.__struct__), else: fields
-    update_keys = Keyword.keys(pairs)
-
-    case update_keys -- valid_keys do
-      [] -> :ok
-      [key | _] -> error!(query, "invalid key `#{inspect key}` for `#{inspect struct}` on map update in subquery/cte")
-    end
-
-    # In case of map updates, we need to remove duplicated fields
-    # at query time because we use the field names as aliases and
-    # duplicate aliases will lead to invalid queries.
-    kept_keys = fields -- update_keys
-    {struct, subquery_fields(kept_keys, ix) ++ pairs}
-  end
-  defp subquery_select({:%{}, _, pairs} = expr, _take, query) do
-    assert_subquery_fields!(query, expr, pairs)
-    {nil, pairs}
-  end
-  defp subquery_select({:&, _, [ix]}, take, query) do
-    {source, _} = source_take!(:select, query, take, ix, ix)
-    {struct, fields} = subquery_struct_and_fields(source)
-    {struct, subquery_fields(fields, ix)}
-  end
-  defp subquery_select({{:., _, [{:&, _, [ix]}, field]}, _, []}, _take, _query) do
-    {nil, subquery_fields([field], ix)}
-  end
-  defp subquery_select(_expr, _take, _query) do
-    :error
   end
 
-  defp subquery_struct_and_fields({:source, {_, schema}, _, types}) do
-    {schema, Keyword.keys(types)}
-  end
-  defp subquery_struct_and_fields({:struct, name, types}) do
-    {name, Keyword.keys(types)}
-  end
-  defp subquery_struct_and_fields({:map, types}) do
-    {nil, Keyword.keys(types)}
+  defp merge_types_and_fields(types, [], acc) do
+    types ++ Enum.reverse(acc)
   end
 
-  defp subquery_fields(fields, ix) do
-    for field <- fields do
-      {field, {{:., [], [{:&, [], [ix]}, field]}, [], []}}
-    end
-  end
+  defp zip_fields([{field, _type} | types], [value | values], acc),
+    do: zip_fields(types, values, [{field, value} | acc])
 
-  defp subquery_type_for({:source, _, _, fields}, field), do: Keyword.fetch(fields, field)
-  defp subquery_type_for({:struct, _name, types}, field), do: subquery_type_for_value(types, field)
-  defp subquery_type_for({:map, types}, field), do: subquery_type_for_value(types, field)
+  defp zip_fields([], values, acc),
+    do: {Enum.reverse(acc), values}
+
+  defp subquery_type_for({:source, _, _, fields}, field),
+    do: Keyword.fetch(fields, field)
+
+  defp subquery_type_for({:struct, _name, types}, field),
+    do: subquery_type_for_value(types, field)
+
+  defp subquery_type_for({:map, types}, field),
+    do: subquery_type_for_value(types, field)
 
   defp subquery_type_for_value(types, field) do
     case Keyword.fetch(types, field) do
@@ -408,25 +412,6 @@ defmodule Ecto.Query.Planner do
       :error -> :error
     end
   end
-
-  defp assert_subquery_fields!(query, expr, pairs) do
-    Enum.each(pairs, fn
-      {key, _} when not is_atom(key) ->
-        error!(query, "only atom keys are allowed when selecting a map in subquery, got: `#{Macro.to_string(expr)}`")
-      {key, value} ->
-        if valid_subquery_value?(value) do
-          {key, value}
-        else
-          error!(query, "maps, lists, tuples and sources are not allowed as map values in subquery, got: `#{Macro.to_string(expr)}`")
-        end
-    end)
-  end
-
-  defp valid_subquery_value?({_, _}), do: false
-  defp valid_subquery_value?(args) when is_list(args), do: false
-  defp valid_subquery_value?({container, _, args})
-       when container in [:{}, :%{}, :&] and is_list(args), do: false
-  defp valid_subquery_value?(_), do: true
 
   defp plan_joins(query, sources, offset, adapter) do
     plan_joins(query.joins, query, [], sources, [], 1, offset, adapter)
@@ -999,17 +984,16 @@ defmodule Ecto.Query.Planner do
 
           # We don't want to use normalize_subquery_select because we are
           # going to prepare the whole query ourselves next.
-          {_, inner_query} = rewrite_subquery_select_expr(inner_query, true)
+          {_expr, inner_query} = rewrite_subquery_select_expr(inner_query, true)
           {inner_query, counter} = traverse_exprs(inner_query, :all, counter, fun)
 
           # Now compute the fields as keyword lists so we emit AS in Ecto query.
           %{select: %{expr: expr, take: take}} = inner_query
           {source, fields, _from} = collect_fields(expr, [], :never, inner_query, take, true)
-          {_, keys} = subquery_struct_and_fields(source)
-          inner_query = put_in(inner_query.select.fields, Enum.zip(keys, Enum.reverse(fields)))
+          {_source, fields, []} = normalize_subquery_source(source, Enum.reverse(fields), query)
 
+          inner_query = put_in(inner_query.select.fields, fields)
           {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
-
           {[{name, inner_query} | queries], counter}
 
         {name, %QueryExpr{expr: {:fragment, _, _} = fragment} = query_expr}, {queries, counter} ->
@@ -1082,23 +1066,12 @@ defmodule Ecto.Query.Planner do
     {fragments, acc} = prewalk(fragments, kind, query, expr, acc, adapter)
     {{:fragment, meta, fragments}, acc}
   end
-  defp prewalk_source(%Ecto.SubQuery{query: inner_query} = subquery, kind, query, _expr, counter, adapter) do
+  defp prewalk_source(%Ecto.SubQuery{query: inner_query} = subquery, _kind, query, _expr, counter, adapter) do
     try do
       inner_query = put_in inner_query.aliases[@parent_as], query
       {inner_query, counter} = normalize_query(inner_query, :all, adapter, counter)
       {inner_query, _} = normalize_select(inner_query, true)
       {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
-
-      inner_query =
-        # If the subquery comes from a select, we are not really interested on the fields
-        if kind == :where do
-          inner_query
-        else
-          update_in(inner_query.select.fields, fn fields ->
-            subquery.select |> subquery_struct_and_fields() |> elem(1) |> Enum.zip(fields)
-          end)
-        end
-
       {%{subquery | query: inner_query}, counter}
     rescue
       e -> raise Ecto.SubQueryError, query: query, exception: e
@@ -1267,11 +1240,7 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp normalize_select(%{select: nil} = query, _keep_literals?) do
-    {query, nil}
-  end
-
-  defp normalize_select(query, keep_literals?) do
+  defp normalize_select(%{select: %{fields: nil}} = query, keep_literals?) do
     %{assocs: assocs, preloads: preloads, select: select} = query
     %{take: take, expr: expr} = select
     {tag, from_take} = Map.get(take, 0, {:any, []})
@@ -1319,6 +1288,10 @@ defmodule Ecto.Query.Planner do
     {put_in(query.select.fields, fields), select}
   end
 
+  defp normalize_select(query, _keep_literals?) do
+    {query, nil}
+  end
+
   # Handling of source
 
   defp collect_fields({:merge, _, [{:&, _, [0]}, right]}, fields, :none, query, take, keep_literals?) do
@@ -1347,8 +1320,6 @@ defmodule Ecto.Query.Planner do
   end
 
   # Expression handling
-
-  @aggs ~w(count avg min max sum row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value)a
 
   defp collect_fields({agg, _, [{{:., dot_meta, [{:&, _, [_]}, _]}, _, []} | _]} = expr,
                       fields, from, _query, _take, _keep_literals?)
@@ -1594,9 +1565,8 @@ defmodule Ecto.Query.Planner do
         {types, fields} = select_dump(schema.__schema__(:query_fields), schema.__schema__(:dump), ix)
         {{:source, {source, schema}, prefix || query.prefix, types}, fields}
 
-      {:error, %Ecto.SubQuery{select: select}} ->
-        {_, fields} = subquery_struct_and_fields(select)
-        {select, Enum.map(fields, &select_field(&1, ix))}
+      {:error, %Ecto.SubQuery{select: select, query: inner_query}} ->
+        {select, Enum.map(inner_query.select.fields, &select_field(elem(&1, 0), ix))}
     end
   end
 
