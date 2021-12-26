@@ -1127,7 +1127,7 @@ defmodule Ecto.Query.PlannerTest do
         |> normalize()
       %{queries: [{"cte", query}]} = with_expr
       assert query.sources == {{"comments", Comment, nil}}
-      assert {:&, [], [0]} = query.select.expr
+      assert {:%{}, [], [id: _, text: _] ++ _} = query.select.expr
       assert  [{:id, {{:., _, [{:&, _, [0]}, :id]}, _, []}},
                {:text, {{:., _, [{:&, _, [0]}, :text]}, _, []}},
                _ | _] = query.select.fields
