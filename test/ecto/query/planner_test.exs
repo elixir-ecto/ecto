@@ -1459,17 +1459,17 @@ defmodule Ecto.Query.PlannerTest do
     test "raises a runtime error if more than 1 field is selected" do
       s = from(p in Post, select: [p.visits, p.id])
 
-      assert_raise Ecto.SubQueryError, fn ->
+      assert_raise Ecto.QueryError, fn ->
         from(p in Post, where: p.id in subquery(s))
         |> normalize()
       end
 
-      assert_raise Ecto.SubQueryError, fn ->
+      assert_raise Ecto.QueryError, fn ->
         from(p in Post, where: p.id > any(s))
         |> normalize()
       end
 
-      assert_raise Ecto.SubQueryError, fn ->
+      assert_raise Ecto.QueryError, fn ->
         from(p in Post, where: p.id > all(s))
         |> normalize()
       end

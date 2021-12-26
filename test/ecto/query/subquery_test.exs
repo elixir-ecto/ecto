@@ -209,19 +209,33 @@ defmodule Ecto.Query.SubqueryTest do
     test "supports update in maps" do
       query = from p in Post, select: %{p | text: p.title}
       query = plan(from(subquery(query), [])) |> elem(0)
-      assert "%{&0 | text: &0.title()}" =
+      assert "%Ecto.Query.SubqueryTest.Post{id: &0.id(), title: &0.title(), " <>
+             "text: &0.title()}" =
              Macro.to_string(query.from.source.query.select.expr)
+
+      query = from p in Post, select: %{p | unknown: p.title}
+      assert_raise Ecto.SubQueryError, ~r/invalid key `:unknown`/, fn ->
+        plan(from(subquery(query), []))
+      end
     end
 
     test "supports merge" do
       query = from p in Post, select: merge(p, %{text: p.title})
       query = plan(from(subquery(query), [])) |> elem(0)
-      assert "merge(&0, %{text: &0.title()})" =
+      assert "%Ecto.Query.SubqueryTest.Post{id: &0.id(), title: &0.title(), " <>
+             "text: &0.title()}" =
              Macro.to_string(query.from.source.query.select.expr)
 
       query = from p in Post, select: merge(%{}, %{})
       query = plan(from(subquery(query), [])) |> elem(0)
-      assert "merge(%{}, %{})" = Macro.to_string(query.from.source.query.select.expr)
+      assert "%{}" = Macro.to_string(query.from.source.query.select.expr)
+    end
+
+    test "requires atom keys for maps" do
+      query = from p in Post, select: %{p.id => p.title}
+      assert_raise Ecto.SubQueryError, ~r/only atom keys are allowed/, fn ->
+        plan(from(subquery(query), []))
+      end
     end
 
     test "raises on custom expressions" do
@@ -288,6 +302,23 @@ defmodule Ecto.Query.SubqueryTest do
   end
 
   describe "normalize: source subqueries" do
+    test "keeps field types" do
+      query = from p in subquery(Post), select: p.title
+
+      assert normalize(query).select.fields ==
+               [{{:., [type: :string], [{:&, [], [0]}, :title]}, [], []}]
+
+      query = from p in subquery(from p in Post, select: p.title), select: p.title
+
+      assert normalize(query).select.fields ==
+               [{{:., [type: :string], [{:&, [], [0]}, :title]}, [], []}]
+
+      query = from p in subquery(from p in Post, select: %{title: p.title}), select: p.title
+
+      assert normalize(query).select.fields ==
+               [{{:., [type: :string], [{:&, [], [0]}, :title]}, [], []}]
+    end
+
     test "keeps field with nil values" do
       query = from p in subquery(from p in Post, select: %{title: nil})
       assert normalize(query).from.source.query.select.fields == [title: nil]
@@ -329,24 +360,7 @@ defmodule Ecto.Query.SubqueryTest do
       assert params == ["first", "hello", "world", "last"]
     end
 
-    test "merges subquery fields when requested" do
-      subquery = from p in Post, select: %{p | title: coalesce(p.title, "foo")}
-      query = normalize(from p in subquery(subquery), select: p)
-
-      assert [
-               {{:., _, [{:&, _, [0]}, :id]}, _, []},
-               {{:., _, [{:&, _, [0]}, :text]}, _, []},
-               {{:., _, [{:&, _, [0]}, :title]}, _, []}
-             ] = query.select.fields
-
-      assert [
-               id: {{:., _, [{:&, _, [0]}, :id]}, _, []},
-               text: {{:., _, [{:&, _, [0]}, :text]}, _, []},
-               title: {:coalesce, _, [{{:., _, [{:&, _, [0]}, :post_title]}, _, []}, "foo"]}
-             ] = query.from.source.query.select.fields
-    end
-
-    test "merges query fields when requested" do
+    test "merges fields when requested" do
       subquery = from p in Post, select: %{id: p.id, title: p.title}
       query = normalize(from(subquery(subquery), []))
       assert query.select.fields == select_fields([:id, :title], 0)
@@ -396,7 +410,7 @@ defmodule Ecto.Query.SubqueryTest do
 
       {n, params} = normalize_with_params(s)
       assert {:in, _, [_, %Ecto.SubQuery{} = subquery]} = hd(n.wheres).expr
-      assert [post_id: {{:., _, [_, :post_id]}, _, []}] = subquery.query.select.fields
+      assert [{{:., _, [_, :post_id]}, _, []}] = subquery.query.select.fields
       assert params == ["foo"]
     end
 
@@ -409,7 +423,7 @@ defmodule Ecto.Query.SubqueryTest do
 
       {n, params} = normalize_with_params(s)
       assert {:in, _, [_, %Ecto.SubQuery{} = subquery]} = hd(n.wheres).expr
-      assert [post_id: {{:., _, [_, :post_id]}, _, []}] = subquery.query.select.fields
+      assert [{{:., _, [_, :post_id]}, _, []}] = subquery.query.select.fields
       assert params == ["foo"]
     end
 
@@ -447,11 +461,11 @@ defmodule Ecto.Query.SubqueryTest do
 
       assert {:in, _, [_, {:subquery, 0}]} = hd(s.wheres).expr
       assert {:in, _, [_, %Ecto.SubQuery{} = subquery]} = hd(normalize(s).wheres).expr
-      assert [post_id: {:max, _, _}] = subquery.query.select.fields
+      assert [{:max, _, _}] = subquery.query.select.fields
     end
 
     test "with too many selected expressions" do
-      assert_raise Ecto.SubQueryError, ~r/subquery must return a single field in order to be used on the right-side of `in`/, fn ->
+      assert_raise Ecto.QueryError, ~r/^subquery must return a single field in order to be used on the right-side of `in`/, fn ->
         p = from(p in Post, select: {p.id, p.title})
         from(c in Comment, where: c.post_id in subquery(p)) |> normalize()
       end
