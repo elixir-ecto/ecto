@@ -1655,8 +1655,8 @@ defmodule Ecto.Query.Planner do
               where: :wheres, group_by: :group_bys, having: :havings, windows: :windows,
               combination: :combinations, order_by: :order_bys, limit: :limit, offset: :offset]
 
-  @update_all_exprs [with_cte: :with_ctes, update: :updates, from: :from,
-                     join: :joins, where: :wheres, select: :select]
+  @update_all_exprs [with_cte: :with_ctes, from: :from, join: :joins,
+                     update: :updates, where: :wheres, select: :select]
 
   @delete_all_exprs [with_cte: :with_ctes, from: :from, join: :joins,
                      where: :wheres, select: :select]
