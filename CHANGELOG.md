@@ -2,7 +2,7 @@
 
 ## v3.8.0-dev
 
-Ecto v3.8 requires Elixir v1.9+.
+Ecto v3.8 requires Elixir v1.10+.
 
 ### Enhancements
 
