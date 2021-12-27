@@ -257,7 +257,7 @@ defmodule Ecto.Query.Builder do
   # literals
   def escape({:<<>>, _, args} = expr, type, params_acc, vars, _env) do
     valid? = Enum.all?(args, fn
-      {:::, _, [left, _]} -> is_integer(left) or is_binary(left)
+      {:"::", _, [left, _]} -> is_integer(left) or is_binary(left)
       left -> is_integer(left) or is_binary(left)
     end)
 

@@ -1,5 +1,5 @@
 defmodule Ecto.Integration.TypeTest do
-  use Ecto.Integration.Case, async: Application.get_env(:ecto, :async_integration_tests, true)
+  use Ecto.Integration.Case, async: Application.compile_env(:ecto, :async_integration_tests, true)
 
   alias Ecto.Integration.{Custom, Item, ItemColor, Order, Post, User, Tag, Usec}
   alias Ecto.Integration.TestRepo

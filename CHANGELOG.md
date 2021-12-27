@@ -2,6 +2,8 @@
 
 ## v3.8.0-dev
 
+Ecto v3.8 requires Elixir v1.9+.
+
 ### Enhancements
 
   * [Ecto] Add new Embedded chapter to Introductory guides

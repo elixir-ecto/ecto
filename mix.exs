@@ -8,7 +8,7 @@ defmodule Ecto.MixProject do
     [
       app: :ecto,
       version: @version,
-      elixir: "~> 1.8",
+      elixir: "~> 1.9",
       deps: deps(),
       consolidate_protocols: Mix.env() != :test,
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -41,7 +41,7 @@ defmodule Ecto.MixProject do
 
   defp package do
     [
-      maintainers: ["Eric Meadows-Jönsson", "José Valim", "James Fish", "Michał Muskała"],
+      maintainers: ["Eric Meadows-Jönsson", "José Valim", "James Fish", "Michał Muskała", "Felipe Stival"],
       licenses: ["Apache-2.0"],
       links: %{"GitHub" => @source_url},
       files:
