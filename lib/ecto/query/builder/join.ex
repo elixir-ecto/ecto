@@ -247,7 +247,7 @@ defmodule Ecto.Query.Builder.Join do
   """
   def runtime_aliases(aliases, nil, _), do: aliases
 
-  def runtime_aliases(aliases, name, join_count) when is_atom(name) and is_integer(join_count) do
+  def runtime_aliases(aliases, name, join_count) when is_integer(join_count) do
     if Map.has_key?(aliases, name) do
       Builder.error! "alias `#{inspect name}` already exists"
     else
