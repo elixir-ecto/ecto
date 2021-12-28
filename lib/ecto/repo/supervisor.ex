@@ -154,6 +154,29 @@ defmodule Ecto.Repo.Supervisor do
     end
   end
 
+  @compile {:inline, triplet: 2, maybe_put_stacktrace: 2}
+
+  @doc false
+  def triplet(name, opts) do
+    {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
+      
+    {adapter, adapter_meta, maybe_put_stacktrace(opts, adapter_meta)}
+  end
+
+  defp maybe_put_stacktrace(opts, adapter_meta) do
+    if opts[:get_stacktrace?] || adapter_meta[:get_stacktrace?] do
+      stacktrace = 
+        self() 
+        |> Process.info(:current_stacktrace)
+        |> elem(1)
+        |> List.delete_at(0)
+
+      Keyword.put(opts, :stacktrace, stacktrace)
+    else
+      opts
+    end
+  end
+
   ## Callbacks
 
   @doc false
