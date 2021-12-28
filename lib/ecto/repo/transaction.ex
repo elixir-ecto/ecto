@@ -2,20 +2,17 @@ defmodule Ecto.Repo.Transaction do
   @moduledoc false
   @dialyzer :no_opaque
 
-  def transaction(_repo, name, fun, opts) when is_function(fun, 0) do
-    {adapter, meta} = Ecto.Repo.Registry.lookup(name)
-    adapter.transaction(meta, opts, fun)
+  def transaction(_repo, _name, fun, {adapter, adapter_meta, opts}) when is_function(fun, 0) do
+    adapter.transaction(adapter_meta, opts, fun)
   end
   
-  def transaction(repo, name, fun, opts) when is_function(fun, 1) do
-    {adapter, meta} = Ecto.Repo.Registry.lookup(name)
-    adapter.transaction(meta, opts, fn -> fun.(repo) end)
+  def transaction(repo, _name, fun, {adapter, adapter_meta, opts}) when is_function(fun, 1) do
+    adapter.transaction(adapter_meta, opts, fn -> fun.(repo) end)
   end
 
-  def transaction(repo, name, %Ecto.Multi{} = multi, opts) do
-    {adapter, meta} = Ecto.Repo.Registry.lookup(name)
-    wrap = &adapter.transaction(meta, opts, &1)
-    return = &adapter.rollback(meta, &1)
+  def transaction(repo, _name, %Ecto.Multi{} = multi, {adapter, adapter_meta, opts}) do
+    wrap = &adapter.transaction(adapter_meta, opts, &1)
+    return = &adapter.rollback(adapter_meta, &1)
 
     case Ecto.Multi.__apply__(multi, repo, wrap, return) do
       {:ok, values} -> {:ok, values}

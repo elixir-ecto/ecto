@@ -11,13 +11,13 @@ defmodule Ecto.Repo.Preloader do
   the associations onto their parent schema.
   """
   @spec query([list], Ecto.Repo.t, list, Access.t, fun, Keyword.t) :: [list]
-  def query([], _repo_name, _preloads, _take, _fun, _opts), do: []
-  def query(rows, _repo_name, [], _take, fun, _opts), do: Enum.map(rows, fun)
+  def query([], _repo_name, _preloads, _take, _fun, _triplet), do: []
+  def query(rows, _repo_name, [], _take, fun, _triplet), do: Enum.map(rows, fun)
 
-  def query(rows, repo_name, preloads, take, fun, opts) do
+  def query(rows, repo_name, preloads, take, fun, triplet) do
     rows
     |> extract()
-    |> normalize_and_preload_each(repo_name, preloads, take, opts)
+    |> normalize_and_preload_each(repo_name, preloads, take, triplet)
     |> unextract(rows, fun)
   end
 
@@ -34,21 +34,21 @@ defmodule Ecto.Repo.Preloader do
   """
   @spec preload(structs, atom, atom | list, Keyword.t) ::
                 structs when structs: [Ecto.Schema.t] | Ecto.Schema.t | nil
-  def preload(nil, _repo_name, _preloads, _opts) do
+  def preload(nil, _repo_name, _preloads, _triplet) do
     nil
   end
 
-  def preload(structs, repo_name, preloads, opts) when is_list(structs) do
-    normalize_and_preload_each(structs, repo_name, preloads, opts[:take], opts)
+  def preload(structs, repo_name, preloads, {_adapter, _adapter_meta, opts} = triplet) when is_list(structs) do
+    normalize_and_preload_each(structs, repo_name, preloads, opts[:take], triplet)
   end
 
-  def preload(struct, repo_name, preloads, opts) when is_map(struct) do
-    normalize_and_preload_each([struct], repo_name, preloads, opts[:take], opts) |> hd()
+  def preload(struct, repo_name, preloads, {_adapter, _adapter_meta, opts} = triplet) when is_map(struct) do
+    normalize_and_preload_each([struct], repo_name, preloads, opts[:take], triplet) |> hd()
   end
 
-  defp normalize_and_preload_each(structs, repo_name, preloads, take, opts) do
+  defp normalize_and_preload_each(structs, repo_name, preloads, take, triplet) do
     preloads = normalize(preloads, take, preloads)
-    preload_each(structs, repo_name, preloads, opts)
+    preload_each(structs, repo_name, preloads, triplet)
   rescue
     e ->
       # Reraise errors so we ignore the preload inner stacktrace
@@ -57,19 +57,19 @@ defmodule Ecto.Repo.Preloader do
 
   ## Preloading
 
-  defp preload_each(structs, _repo_name, [], _opts),   do: structs
-  defp preload_each([], _repo_name, _preloads, _opts), do: []
-  defp preload_each(structs, repo_name, preloads, opts) do
+  defp preload_each(structs, _repo_name, [], _triplet),   do: structs
+  defp preload_each([], _repo_name, _preloads, _triplet), do: []
+  defp preload_each(structs, repo_name, preloads, triplet) do
     if sample = Enum.find(structs, & &1) do
       module = sample.__struct__
-      prefix = preload_prefix(opts, sample)
+      prefix = preload_prefix(triplet, sample)
       {assocs, throughs} = expand(module, preloads, {%{}, %{}})
 
       {fetched_assocs, to_fetch_queries} =
-        prepare_queries(structs, module, assocs, prefix, repo_name, opts)
+        prepare_queries(structs, module, assocs, prefix, repo_name, triplet)
 
-      fetched_queries = maybe_pmap(to_fetch_queries, repo_name, opts)
-      assocs = preload_assocs(fetched_assocs, fetched_queries, repo_name, opts)
+      fetched_queries = maybe_pmap(to_fetch_queries, repo_name, triplet)
+      assocs = preload_assocs(fetched_assocs, fetched_queries, repo_name, triplet)
       throughs = Map.values(throughs)
 
       for struct <- structs do
@@ -82,7 +82,7 @@ defmodule Ecto.Repo.Preloader do
     end
   end
 
-  defp preload_prefix(opts, sample) do
+  defp preload_prefix({_adapter, _adapter_meta, opts}, sample) do
     case Keyword.fetch(opts, :prefix) do
       {:ok, prefix} ->
         prefix
@@ -98,16 +98,16 @@ defmodule Ecto.Repo.Preloader do
   ## Association preloading
 
   # First we traverse all assocs and find which queries we need to run.
-  defp prepare_queries(structs, module, assocs, prefix, repo_name, opts) do
+  defp prepare_queries(structs, module, assocs, prefix, repo_name, triplet) do
     Enum.reduce(assocs, {[], []}, fn
       {_key, {{:assoc, assoc, related_key}, take, query, preloads}}, {assocs, queries} ->
-        {fetch_ids, loaded_ids, loaded_structs} = fetch_ids(structs, module, assoc, opts)
+        {fetch_ids, loaded_ids, loaded_structs} = fetch_ids(structs, module, assoc, triplet)
 
         queries =
           if fetch_ids != [] do
             [
-              fn opts ->
-                fetch_query(fetch_ids, assoc, repo_name, query, prefix, related_key, take, opts)
+              fn triplet ->
+                fetch_query(fetch_ids, assoc, repo_name, query, prefix, related_key, take, triplet)
               end
               | queries
             ]
@@ -120,8 +120,8 @@ defmodule Ecto.Repo.Preloader do
   end
 
   # Then we execute queries in parallel
-  defp maybe_pmap(preloaders, repo_name, opts) do
-    if match?([_,_|_], preloaders) and not checked_out?(repo_name) and
+  defp maybe_pmap(preloaders, _repo_name, {adapter, adapter_meta, opts}) do
+    if match?([_,_|_], preloaders) and not adapter.checked_out?(adapter_meta) and
          Keyword.get(opts, :in_parallel, true) do
       # We pass caller: self() so the ownership pool knows where
       # to fetch the connection from and set the proper timeouts.
@@ -131,16 +131,11 @@ defmodule Ecto.Repo.Preloader do
       opts = Keyword.put_new(opts, :caller, self())
 
       preloaders
-      |> Task.async_stream(&(&1.(opts)), timeout: :infinity)
+      |> Task.async_stream(&(&1.({adapter, adapter_meta, opts})), timeout: :infinity)
       |> Enum.map(fn {:ok, assoc} -> assoc end)
     else
-      Enum.map(preloaders, &(&1.(opts)))
+      Enum.map(preloaders, &(&1.({adapter, adapter_meta, opts})))
     end
-  end
-
-  defp checked_out?(repo_name) do
-    {adapter, meta} = Ecto.Repo.Registry.lookup(repo_name)
-    adapter.checked_out?(meta)
   end
 
   # Then we unpack the query results, merge them, and preload recursively
@@ -148,20 +143,20 @@ defmodule Ecto.Repo.Preloader do
          [{assoc, query?, loaded_ids, loaded_structs, preloads} | assocs],
          queries,
          repo_name,
-         opts
+         triplet
        ) do
     {fetch_ids, fetch_structs, queries} = maybe_unpack_query(query?, queries)
-    all = preload_each(Enum.reverse(loaded_structs, fetch_structs), repo_name, preloads, opts)
+    all = preload_each(Enum.reverse(loaded_structs, fetch_structs), repo_name, preloads, triplet)
     entry = {:assoc, assoc, assoc_map(assoc.cardinality, Enum.reverse(loaded_ids, fetch_ids), all)}
-    [entry | preload_assocs(assocs, queries, repo_name, opts)]
+    [entry | preload_assocs(assocs, queries, repo_name, triplet)]
   end
 
-  defp preload_assocs([], [], _repo_name, _opts), do: []
+  defp preload_assocs([], [], _repo_name, _triplet), do: []
 
   defp maybe_unpack_query(false, queries), do: {[], [], queries}
   defp maybe_unpack_query(true, [{ids, structs} | queries]), do: {ids, structs, queries}
 
-  defp fetch_ids(structs, module, assoc, opts) do
+  defp fetch_ids(structs, module, assoc, {_adapter, _adapter_meta, opts}) do
     %{field: field, owner_key: owner_key, cardinality: card} = assoc
     force? = Keyword.get(opts, :force, false)
 
@@ -198,7 +193,7 @@ defmodule Ecto.Repo.Preloader do
     end
   end
 
-  defp fetch_query(ids, assoc, _repo_name, query, _prefix, related_key, _take, _opts) when is_function(query, 1) do
+  defp fetch_query(ids, assoc, _repo_name, query, _prefix, related_key, _take, _triplet) when is_function(query, 1) do
     # Note we use an explicit sort because we don't want
     # to reorder based on the struct. Only the ID.
     ids
@@ -209,7 +204,7 @@ defmodule Ecto.Repo.Preloader do
     |> unzip_ids([], [])
   end
 
-  defp fetch_query(ids, %{cardinality: card} = assoc, repo_name, query, prefix, related_key, take, opts) do
+  defp fetch_query(ids, %{cardinality: card} = assoc, repo_name, query, prefix, related_key, take, triplet) do
     query = assoc.__struct__.assoc_query(assoc, query, Enum.uniq(ids))
     field = related_key_to_field(query, related_key)
 
@@ -231,7 +226,7 @@ defmodule Ecto.Repo.Preloader do
           query
       end
 
-    unzip_ids Ecto.Repo.Queryable.all(repo_name, query, opts), [], []
+    unzip_ids Ecto.Repo.Queryable.all(repo_name, query, triplet), [], []
   end
 
   defp fetched_records_to_tuple_ids([], _assoc, _related_key),
