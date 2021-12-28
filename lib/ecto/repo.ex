@@ -200,7 +200,6 @@ defmodule Ecto.Repo do
       @adapter adapter
       @default_dynamic_repo opts[:default_dynamic_repo] || __MODULE__
       @read_only opts[:read_only] || false
-      @get_stacktrace? opts[:get_stacktrace?] || false
       @before_compile adapter
       @aggregates [:count, :avg, :max, :min, :sum]
 
@@ -257,6 +256,7 @@ defmodule Ecto.Repo do
       def default_options(_operation), do: []
       defoverridable default_options: 1
 
+      # TODO: Make this function public?
       defp triplet(name, operation_name, opts) do
         {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
 
@@ -270,7 +270,7 @@ defmodule Ecto.Repo do
       end
 
       defp maybe_put_stacktrace(opts, adapter_meta) do
-        if @get_stacktrace? do
+        if opts[:get_stacktrace?] || adapter_meta[:get_stacktrace?] do
           stacktrace = 
             self() 
             |> Process.info(:current_stacktrace)
