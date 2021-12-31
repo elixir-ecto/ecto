@@ -2233,23 +2233,59 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp validate_number(field, %Decimal{} = value, message, spec_key, _spec_function, target_value) do
-    result = Decimal.compare(value, decimal_new(target_value)) |> normalize_compare()
-    case decimal_compare(result, spec_key) do
-      true  -> nil
-      false -> [{field, {message, validation: :number, kind: spec_key, number: target_value}}]
-    end
+  defp validate_number(field, value, message, spec_key, spec_function, target_value)
+      when is_number(value) and is_number(target_value) do
+    compare_numbers(field, value, message, spec_key, spec_function, target_value)
   end
 
-  defp validate_number(field, value, message, spec_key, spec_function, target_value) when is_number(value) do
-    case apply(spec_function, [value, target_value]) do
-      true  -> nil
-      false -> [{field, {message, validation: :number, kind: spec_key, number: target_value}}]
-    end
+  defp validate_number(field, %Decimal{} = value, message, spec_key, spec_function, target_value)
+      when is_number(target_value) do
+    compare_numbers(field, value, message, spec_key, spec_function, target_value)
+  end
+
+  defp validate_number(field, value, message, spec_key, spec_function, %Decimal{} = target_value)
+      when is_number(value) do
+    compare_numbers(field, value, message, spec_key, spec_function, target_value)
+  end
+
+  defp validate_number(field, %Decimal{} = value, message, spec_key, spec_function, %Decimal{} = target_value) do
+    compare_numbers(field, value, message, spec_key, spec_function, target_value)
+  end
+
+  defp validate_number(_field, value, _message, _spec_key, _spec_function, target_value)
+      when is_number(value) do
+    raise ArgumentError, "expected target value to be of type Decimal, Integer or Float, got: #{inspect target_value}"
+  end
+
+  defp validate_number(_field, %Decimal{} = _value, _message, _spec_key, _spec_function, target_value) do
+    raise ArgumentError, "expected target value to be of type Decimal, Integer or Float, got: #{inspect target_value}"
   end
 
   defp validate_number(_field, value, _message, _spec_key, _spec_function, _target_value) do
     raise ArgumentError, "expected value to be of type Decimal, Integer or Float, got: #{inspect value}"
+  end
+
+  defp compare_numbers(field, %Decimal{} = value, message, spec_key, _spec_function, %Decimal{} = target_value) do
+    result = Decimal.compare(value, target_value) |> normalize_compare()
+    case decimal_compare(result, spec_key) do
+      true -> nil
+      false -> [{field, {message, validation: :number, kind: spec_key, number: target_value}}]
+    end
+  end
+
+  defp compare_numbers(field, value, message, spec_key, spec_function, %Decimal{} = target_value) do
+    compare_numbers(field, decimal_new(value), message, spec_key, spec_function, target_value)
+  end
+
+  defp compare_numbers(field, %Decimal{} = value, message, spec_key, spec_function, target_value) do
+    compare_numbers(field, value, message, spec_key, spec_function, decimal_new(target_value))
+  end
+
+  defp compare_numbers(field, value, message, spec_key, spec_function, target_value) do
+    case apply(spec_function, [value, target_value]) do
+      true  -> nil
+      false -> [{field, {message, validation: :number, kind: spec_key, number: target_value}}]
+    end
   end
 
   # TODO: Remove me once we support Decimal 2.0 only
