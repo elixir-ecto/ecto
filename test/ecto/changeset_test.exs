@@ -1353,19 +1353,19 @@ defmodule Ecto.ChangesetTest do
   end
 
   test "validate_number/3 with bad value" do
-    assert_raise ArgumentError, "expected value to be of type Decimal, Integer or Float, got: \"Oops\"", fn ->
+    assert_raise ArgumentError, "expected field `virtual` to be a decimal, integer, or float, got: \"Oops\"", fn ->
       validate_number(changeset(%{"virtual" => "Oops"}), :virtual, greater_than: 0)
     end
   end
 
   test "validate_number/3 with bad target" do
     # Number value
-    assert_raise ArgumentError, "expected target value to be of type Decimal, Integer or Float, got: 0..10", fn ->
+    assert_raise ArgumentError, "expected option `greater_than` to be a decimal, integer, or float, got: 0..10", fn ->
       validate_number(changeset(%{"upvotes" => 11}), :upvotes, greater_than: 0..10)
     end
 
     # Decimal value
-    assert_raise ArgumentError, "expected target value to be of type Decimal, Integer or Float, got: 0..10", fn ->
+    assert_raise ArgumentError, "expected option `greater_than` to be a decimal, integer, or float, got: 0..10", fn ->
       validate_number(changeset(%{"decimal" => Decimal.new(11)}), :decimal, greater_than: 0..10)
     end
   end

@@ -2213,11 +2213,21 @@ defmodule Ecto.Changeset do
     validate_change changeset, field, {:number, opts}, fn
       field, value ->
         {message, opts} = Keyword.pop(opts, :message)
+
+        unless valid_number?(value) do
+          raise ArgumentError, "expected field `#{field}` to be a decimal, integer, or float, got: #{inspect(value)}"
+        end
+
         Enum.find_value opts, [], fn {spec_key, target_value} ->
           case Map.fetch(@number_validators, spec_key) do
             {:ok, {spec_function, default_message}} ->
-              validate_number(field, value, message || default_message,
+              unless valid_number?(target_value) do
+                raise ArgumentError, "expected option `#{spec_key}` to be a decimal, integer, or float, got: #{inspect(target_value)}"
+              end
+
+              compare_numbers(field, value, message || default_message,
                               spec_key, spec_function, target_value)
+
             :error ->
               supported_options = @number_validators |> Map.keys() |> Enum.map_join("\n", &"  * #{inspect(&1)}")
 
@@ -2233,37 +2243,8 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp validate_number(field, value, message, spec_key, spec_function, target_value)
-      when is_number(value) and is_number(target_value) do
-    compare_numbers(field, value, message, spec_key, spec_function, target_value)
-  end
-
-  defp validate_number(field, %Decimal{} = value, message, spec_key, spec_function, target_value)
-      when is_number(target_value) do
-    compare_numbers(field, value, message, spec_key, spec_function, target_value)
-  end
-
-  defp validate_number(field, value, message, spec_key, spec_function, %Decimal{} = target_value)
-      when is_number(value) do
-    compare_numbers(field, value, message, spec_key, spec_function, target_value)
-  end
-
-  defp validate_number(field, %Decimal{} = value, message, spec_key, spec_function, %Decimal{} = target_value) do
-    compare_numbers(field, value, message, spec_key, spec_function, target_value)
-  end
-
-  defp validate_number(_field, value, _message, _spec_key, _spec_function, target_value)
-      when is_number(value) do
-    raise ArgumentError, "expected target value to be of type Decimal, Integer or Float, got: #{inspect target_value}"
-  end
-
-  defp validate_number(_field, %Decimal{} = _value, _message, _spec_key, _spec_function, target_value) do
-    raise ArgumentError, "expected target value to be of type Decimal, Integer or Float, got: #{inspect target_value}"
-  end
-
-  defp validate_number(_field, value, _message, _spec_key, _spec_function, _target_value) do
-    raise ArgumentError, "expected value to be of type Decimal, Integer or Float, got: #{inspect value}"
-  end
+  defp valid_number?(%Decimal{}), do: true
+  defp valid_number?(other), do: is_number(other)
 
   defp compare_numbers(field, %Decimal{} = value, message, spec_key, _spec_function, %Decimal{} = target_value) do
     result = Decimal.compare(value, target_value) |> normalize_compare()
