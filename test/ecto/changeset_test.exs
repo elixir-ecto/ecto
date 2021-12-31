@@ -1360,8 +1360,8 @@ defmodule Ecto.ChangesetTest do
 
   test "validate_number/3 with bad target" do
     # Number value
-    assert_raise ArgumentError, "expected target value to be of type Integer or Float, got: #Decimal<10>", fn ->
-      validate_number(changeset(%{"upvotes" => 11}), :upvotes, greater_than: Decimal.new(10))
+    assert_raise ArgumentError, "expected target value to be of type Decimal, Integer or Float, got: 0..10", fn ->
+      validate_number(changeset(%{"upvotes" => 11}), :upvotes, greater_than: 0..10)
     end
 
     # Decimal value
