@@ -252,7 +252,6 @@ defmodule Ecto.Repo do
         Process.put({__MODULE__, :dynamic_repo}, dynamic) || @default_dynamic_repo
       end
 
-      # temporary: need to set this in repo options and get it here somehow (?)
       def default_options(_operation), do: []
       defoverridable default_options: 1
 
