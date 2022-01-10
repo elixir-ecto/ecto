@@ -164,7 +164,7 @@ defmodule Ecto.Repo.Supervisor do
   end
 
   defp maybe_put_stacktrace(opts, adapter_meta) do
-    if opts[:get_stacktrace?] || adapter_meta[:get_stacktrace?] do
+    if opts[:stacktrace] || adapter_meta[:stacktrace] do
       stacktrace = 
         self() 
         |> Process.info(:current_stacktrace)
