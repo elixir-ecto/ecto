@@ -169,7 +169,7 @@ defmodule Ecto.Repo.Supervisor do
         self() 
         |> Process.info(:current_stacktrace)
         |> elem(1)
-        |> List.delete_at(0)
+        |> tl()
 
       Keyword.put(opts, :stacktrace, stacktrace)
     else
