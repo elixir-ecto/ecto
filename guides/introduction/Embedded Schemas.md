@@ -39,7 +39,7 @@ end
 
 ### Embeds
 
-There are two ways to represent embedded data within a schema, `embeds_many`, which creates a list of embeds, and `embeds_one`, which creates only a single instance of the embed. Your choice here affects the behavior of embed-specific functions like `Ecto.Changeset.put_embed/4` and `Ecto.Changeset.cast_embed/4`, so choose whichever is most appropriate to your use case. In our example we are going to use `embeds_one` since users will only ever have one profile associated with them.
+There are two ways to represent embedded data within a schema, `embeds_many`, which creates a list of embeds, and `embeds_one`, which creates only a single instance of the embed. Your choice here affects the behavior of embed-specific functions like `Ecto.Changeset.put_embed/4` and `Ecto.Changeset.cast_embed/3`, so choose whichever is most appropriate to your use case. In our example we are going to use `embeds_one` since users will only ever have one profile associated with them.
 
 ```elixir
 defmodule User do
