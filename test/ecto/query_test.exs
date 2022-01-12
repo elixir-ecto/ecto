@@ -335,9 +335,10 @@ defmodule Ecto.QueryTest do
     end
 
     test "assign to source fails when non-atom name passed" do
-      query = from(p in "posts", as: "post")
-
-      assert %{aliases: %{"post" => 0}} = query
+      message = ~r/`as` must be a compile time atom or an interpolated value using \^, got: "post"/
+      assert_raise Ecto.Query.CompileError, message, fn -> 
+        quote_and_eval(from(p in "posts", as: "post"))
+      end
     end
 
     test "is not type checked but emits typed params" do

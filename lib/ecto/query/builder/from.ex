@@ -70,7 +70,7 @@ defmodule Ecto.Query.Builder.From do
     as = case as do
       {:^, _, [as]} -> as
       as when is_atom(as) -> as
-      as -> Builder.error!("`as` must be an atom or a variable using ^, got: #{Macro.to_string(as)}")
+      as -> Builder.error!("`as` must be a compile time atom or an interpolated value using ^, got: #{Macro.to_string(as)}")
     end
 
     {query, binds} = escape(query, env)
