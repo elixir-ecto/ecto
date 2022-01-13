@@ -935,7 +935,7 @@ defmodule Ecto.Query.Planner do
                    &validate_and_increment(&1, &2, &3, &4, operation, adapter))
   end
 
-  defp validate_and_increment(:from, query, %{source: %Ecto.SubQuery{}}, _counter, kind, _adapter) when kind != :all do
+  defp validate_and_increment(:from, query, %{source: %Ecto.SubQuery{}}, _counter, kind, _adapter) when kind not in ~w(all insert_all)a do
     error! query, "`#{kind}` does not allow subqueries in `from`"
   end
   defp validate_and_increment(:from, query, %{source: source} = expr, counter, _kind, adapter) do
