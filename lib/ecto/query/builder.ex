@@ -594,10 +594,17 @@ defmodule Ecto.Query.Builder do
     {:{}, [], [dot, [], []]}
   end
 
-  defp escape_field!({kind, _, [atom]}, field, _vars)
+  defp escape_field!({kind, _, [value]}, field, _vars)
        when kind in [:as, :parent_as] do
-    atom  = quoted_atom!(atom, "#{kind}/1")
-    as    = {:{}, [], [kind, [], [atom]]}
+    value =
+      case value do
+        {:^, _, [value]} ->
+          value
+
+        other ->
+          quoted_atom!(other, "#{kind}/1")
+      end
+    as    = {:{}, [], [kind, [], [value]]}
     field = quoted_atom!(field, "field/2")
     dot   = {:{}, [], [:., [], [as, field]]}
     {:{}, [], [dot, [], []]}

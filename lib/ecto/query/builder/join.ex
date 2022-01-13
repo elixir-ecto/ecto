@@ -133,10 +133,6 @@ defmodule Ecto.Query.Builder.Join do
       )
     end
 
-    unless is_atom(as) do
-      Builder.error! "`as` must be a compile time atom, got: `#{Macro.to_string(as)}`"
-    end
-
     unless is_binary(prefix) or is_nil(prefix) do
       Builder.error! "`prefix` must be a compile time string, got: `#{Macro.to_string(prefix)}`"
     end
@@ -251,7 +247,7 @@ defmodule Ecto.Query.Builder.Join do
   """
   def runtime_aliases(aliases, nil, _), do: aliases
 
-  def runtime_aliases(aliases, name, join_count) when is_atom(name) and is_integer(join_count) do
+  def runtime_aliases(aliases, name, join_count) when is_integer(join_count) do
     if Map.has_key?(aliases, name) do
       Builder.error! "alias `#{inspect name}` already exists"
     else

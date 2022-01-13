@@ -61,14 +61,16 @@ defmodule Ecto.Query.Builder.From do
       )
     end
 
-    unless is_atom(as) do
-      Builder.error!("`as` must be a compile time atom, got: `#{Macro.to_string(as)}`")
-    end
-
     case prefix do
       nil -> :ok
       {:ok, prefix} when is_binary(prefix) or is_nil(prefix) -> :ok
       _ -> Builder.error!("`prefix` must be a compile time string, got: `#{Macro.to_string(prefix)}`")
+    end
+    
+    as = case as do
+      {:^, _, [as]} -> as
+      as when is_atom(as) -> as
+      as -> Builder.error!("`as` must be a compile time atom or an interpolated value using ^, got: #{Macro.to_string(as)}")
     end
 
     {query, binds} = escape(query, env)
