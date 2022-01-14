@@ -129,7 +129,7 @@ defmodule Ecto.Query.Builder do
 
           * interpolations, such as ^value
           * fields, such as p.foo or field(p, :foo)
-          * fragments, such fragment("foo(?)", value)
+          * fragments, such as fragment("foo(?)", value)
           * an arithmetic expression (+, -, *, /)
           * an aggregation or window expression (avg, count, min, max, sum, over, filter)
           * a conditional expression (coalesce)
