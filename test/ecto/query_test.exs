@@ -24,6 +24,7 @@ defmodule Ecto.QueryTest do
   import Support.EvalHelpers
   import Ecto.Query
   import Ecto.QueryTest.Macros
+  require Ecto.QueryTest.Macros, as: Macros
   alias Ecto.Query
 
   defmodule Schema do
@@ -35,6 +36,8 @@ defmodule Ecto.QueryTest do
   describe "query building" do
     test "allows macros" do
       test_data = "test"
+      query = from(p in "posts") |> where([q], Macros.macro_equal(q.title, ^test_data))
+      assert "&0.title() == ^0" == Macro.to_string(hd(query.wheres).expr)
       query = from(p in "posts") |> where([q], macro_equal(q.title, ^test_data))
       assert "&0.title() == ^0" == Macro.to_string(hd(query.wheres).expr)
     end
@@ -45,7 +48,9 @@ defmodule Ecto.QueryTest do
     end
 
     test "allows macro in where" do
+      _ = from(p in "posts", where: p.title == "C" or Macros.macrotest(p.title))
       _ = from(p in "posts", where: p.title == "C" or macrotest(p.title))
+      _ = from(p in "posts", where: p.title == "C" or Macros.deeper_macrotest(p.title))
       _ = from(p in "posts", where: p.title == "C" or deeper_macrotest(p.title))
     end
 
