@@ -1,19 +1,7 @@
 Code.require_file "../support/eval_helpers.exs", __DIR__
 
-defmodule Ecto.QueryTest do
-  use ExUnit.Case, async: true
-
-  import Support.EvalHelpers
-  import Ecto.Query
-  alias Ecto.Query
-
-  defmodule Schema do
-    use Ecto.Schema
-    schema "schema" do
-    end
-  end
-
-  defmacrop macro_equal(column, value) do
+defmodule Ecto.QueryTest.Macros do
+  defmacro macro_equal(column, value) do
     quote do
       unquote(column) == unquote(value)
     end
@@ -23,6 +11,24 @@ defmodule Ecto.QueryTest do
     quote do
       %{"1" => unquote(key),
         "2" => unquote(key)}
+    end
+  end
+
+  defmacro macrotest(x), do: quote(do: is_nil(unquote(x)) or unquote(x) == "A")
+  defmacro deeper_macrotest(x), do: quote(do: macrotest(unquote(x)) or unquote(x) == "B")
+end
+
+defmodule Ecto.QueryTest do
+  use ExUnit.Case, async: true
+
+  import Support.EvalHelpers
+  import Ecto.Query
+  import Ecto.QueryTest.Macros
+  alias Ecto.Query
+
+  defmodule Schema do
+    use Ecto.Schema
+    schema "schema" do
     end
   end
 
@@ -38,8 +44,6 @@ defmodule Ecto.QueryTest do
       from(p in "posts", select: [macro_map(^key)])
     end
 
-    defmacrop macrotest(x), do: quote(do: is_nil(unquote(x)) or unquote(x) == "A")
-    defmacrop deeper_macrotest(x), do: quote(do: macrotest(unquote(x)) or unquote(x) == "B")
     test "allows macro in where" do
       _ = from(p in "posts", where: p.title == "C" or macrotest(p.title))
       _ = from(p in "posts", where: p.title == "C" or deeper_macrotest(p.title))
