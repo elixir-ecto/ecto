@@ -47,7 +47,7 @@ defmodule Ecto.UUID do
   @doc """
   Same as `cast/1` but raises `Ecto.CastError` on invalid arguments.
   """
-  @spec cast!(t | raw | any) :: t | no_return
+  @spec cast!(t | raw | any) :: t
   def cast!(value) do
     case cast(value) do
       {:ok, hex_uuid} -> hex_uuid
@@ -135,7 +135,7 @@ defmodule Ecto.UUID do
   @doc """
   Same as `dump/1` but raises `Ecto.ArgumentError` on invalid arguments.
   """
-  @spec dump!(t | any) :: raw | no_return
+  @spec dump!(t | any) :: raw
   def dump!(value) do
     case dump(value) do
       {:ok, raw_uuid} -> raw_uuid
@@ -146,7 +146,7 @@ defmodule Ecto.UUID do
   @doc """
   Converts a binary UUID into a string.
   """
-  @spec load(raw | any) :: {:ok, t} | :error | no_return
+  @spec load(raw | any) :: {:ok, t} | :error
   def load(<<_::128>> = raw_uuid), do: {:ok, encode(raw_uuid)}
 
   def load(<<_::64, ?-, _::32, ?-, _::32, ?-, _::32, ?-, _::96>> = string) do
@@ -159,7 +159,7 @@ defmodule Ecto.UUID do
   @doc """
   Same as `load/1` but raises `Ecto.ArgumentError` on invalid arguments.
   """
-  @spec load!(raw | any) :: t | no_return
+  @spec load!(raw | any) :: t
   def load!(value) do
     case load(value) do
       {:ok, hex_uuid} -> hex_uuid
