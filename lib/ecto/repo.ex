@@ -654,7 +654,7 @@ defmodule Ecto.Repo do
   """
   @doc group: "Query API"
   @callback get!(queryable :: Ecto.Queryable.t(), id :: term, opts :: Keyword.t()) ::
-              Ecto.Schema.t()
+              Ecto.Schema.t() | no_return
 
   @doc """
   Fetches a single result from the query.
@@ -717,7 +717,7 @@ defmodule Ecto.Repo do
               queryable :: Ecto.Queryable.t(),
               clauses :: Keyword.t() | map,
               opts :: Keyword.t()
-            ) :: Ecto.Schema.t()
+            ) :: Ecto.Schema.t() | no_return
 
   @doc """
   Reloads a given schema or schema list from the database.
@@ -757,7 +757,7 @@ defmodule Ecto.Repo do
       [%Post{}, %Post{}]
   """
   @doc group: "Schema API"
-  @callback reload!(struct_or_structs, opts :: Keyword.t()) :: struct_or_structs
+  @callback reload!(struct_or_structs, opts :: Keyword.t()) :: struct_or_structs | no_return
             when struct_or_structs: Ecto.Schema.t() | [Ecto.Schema.t()]
 
   @doc """
@@ -907,7 +907,7 @@ defmodule Ecto.Repo do
   """
   @doc group: "Query API"
   @callback one!(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
-              Ecto.Schema.t()
+              Ecto.Schema.t() | no_return
 
   @doc """
   Preloads all associations on the given struct or structs.
@@ -1672,14 +1672,14 @@ defmodule Ecto.Repo do
   @callback insert!(
               struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(),
               opts :: Keyword.t()
-            ) :: Ecto.Schema.t()
+            ) :: Ecto.Schema.t() | no_return
 
   @doc """
   Same as `c:update/2` but returns the struct or raises if the changeset is invalid.
   """
   @doc group: "Schema API"
   @callback update!(changeset :: Ecto.Changeset.t(), opts :: Keyword.t()) ::
-              Ecto.Schema.t()
+              Ecto.Schema.t() | no_return
 
   @doc """
   Same as `c:insert_or_update/2` but returns the struct or raises if the changeset
@@ -1687,7 +1687,7 @@ defmodule Ecto.Repo do
   """
   @doc group: "Schema API"
   @callback insert_or_update!(changeset :: Ecto.Changeset.t(), opts :: Keyword.t()) ::
-              Ecto.Schema.t()
+              Ecto.Schema.t() | no_return
 
   @doc """
   Same as `c:delete/2` but returns the struct or raises if the changeset is invalid.
@@ -1696,7 +1696,7 @@ defmodule Ecto.Repo do
   @callback delete!(
               struct_or_changeset :: Ecto.Schema.t() | Ecto.Changeset.t(),
               opts :: Keyword.t()
-            ) :: Ecto.Schema.t()
+            ) :: Ecto.Schema.t() | no_return
 
   ## Ecto.Adapter.Transaction
 
