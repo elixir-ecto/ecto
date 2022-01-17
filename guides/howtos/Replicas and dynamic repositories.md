@@ -117,7 +117,7 @@ user = Repo.insert!(%User{name: "jane doe"})
 assert Repo.replica().get!(User, user.id)
 ```
 
-That's because `Repo.insert!` will write to one database connection and the repository returned by `Repo.replica()` will perform the read in another connection. Since the write is done in transaction, its contents won't be available to other connections until the transaction commits, which will never happen for test connections.
+That's because `Repo.insert!` will write to one database connection and the repository returned by `Repo.replica()` will perform the read in another connection. Since the write is done in a transaction, its contents won't be available to other connections until the transaction commits, which will never happen for test connections.
 
 There are two options to tackle this problem: one is to change replicas and the other is to use dynamic repos.
 
