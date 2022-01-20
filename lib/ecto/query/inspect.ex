@@ -251,6 +251,10 @@ defimpl Inspect, for: Ecto.Query do
     {:type, [], [value, tag]}
   end
 
+  defp prewalk({:type, _, [value, {:parameterized, type, opts}]}) do
+    {:type, [], [value, {:{}, [], [:parameterized, type, opts]}]}
+  end
+
   defp prewalk(node) do
     node
   end
