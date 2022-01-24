@@ -136,6 +136,12 @@ defmodule Ecto.Query.Builder.Join do
     unless is_binary(prefix) or is_nil(prefix) do
       Builder.error! "`prefix` must be a compile time string, got: `#{Macro.to_string(prefix)}`"
     end
+    
+    as = case as do
+      {:^, _, [as]} -> as
+      as when is_atom(as) -> as
+      as -> Builder.error!("`as` must be a compile time atom or an interpolated value using ^, got: #{Macro.to_string(as)}")
+    end
 
     {query, binding} = Builder.escape_binding(query, binding, env)
     {join_bind, join_source, join_assoc, join_params} = escape(expr, binding, env)
