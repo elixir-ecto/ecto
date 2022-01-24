@@ -247,8 +247,16 @@ defimpl Inspect, for: Ecto.Query do
     value
   end
 
+  defp prewalk(%Ecto.Query.Tagged{value: value, tag: {:parameterized, type, opts}}) do
+    {:type, [], [value, {:{}, [], [:parameterized, type, opts]}]}
+  end
+
   defp prewalk(%Ecto.Query.Tagged{value: value, tag: tag}) do
     {:type, [], [value, tag]}
+  end
+
+  defp prewalk({:type, _, [value, {:parameterized, type, opts}]}) do
+    {:type, [], [value, {:{}, [], [:parameterized, type, opts]}]}
   end
 
   defp prewalk(node) do
@@ -320,6 +328,10 @@ defimpl Inspect, for: Ecto.Query do
       _ ->
         binding(names, ix)
     end
+  end
+
+  defp type_to_expr({:parameterized, type, opts}, _names, _part) do
+    {:{}, [], [:parameterized, type, opts]}
   end
 
   defp type_to_expr({ix, type}, names, part) when is_integer(ix) do

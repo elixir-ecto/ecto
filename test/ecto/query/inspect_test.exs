@@ -419,6 +419,29 @@ defmodule Ecto.Query.InspectTest do
     assert i(query) == ~s{from p0 in Inspect.Post, select: type(^..., :integer)}
   end
 
+  defmodule MyParameterizedType do
+    use Ecto.ParameterizedType
+
+    def init(opts), do: Keyword.fetch!(opts, :param)
+    def type(_), do: :custom
+    def load(_, _, _), do: {:ok, :load}
+    def dump( _, _, _),  do: {:ok, :dump}
+    def cast( _, _),  do: {:ok, :cast}
+    def equal?(true, _, _), do: true
+    def equal?(_, _, _), do: false
+    def embed_as(_, _), do: :self
+  end
+   
+  test "parameterized types" do
+    query = from(x in Post, select: type(^"foo", ^Ecto.ParameterizedType.init(MyParameterizedType, param: :foo)))
+    assert i(query) == ~s<from p0 in Inspect.Post, select: type(^"foo", {:parameterized, Ecto.Query.InspectTest.MyParameterizedType, :foo})>
+  end
+
+  test "parameterized types after planner" do
+    query = from(x in Post, select: type(^"foo", ^Ecto.ParameterizedType.init(MyParameterizedType, param: :foo))) |> plan()
+    assert i(query) == ~s<from p0 in Inspect.Post, select: type(^..., {:parameterized, Ecto.Query.InspectTest.MyParameterizedType, :foo})>
+  end
+
   def plan(query) do
     {query, _} = Ecto.Adapter.Queryable.plan_query(:all, Ecto.TestAdapter, query)
     query
