@@ -422,7 +422,7 @@ defmodule Ecto.Query.InspectTest do
   defmodule MyParameterizedType do
     use Ecto.ParameterizedType
 
-    def init(opts), do: Keyword.get!(opts, :param)
+    def init(opts), do: Keyword.fetch!(opts, :param)
     def type(_), do: :custom
     def load(_, _, _), do: {:ok, :load}
     def dump( _, _, _),  do: {:ok, :dump}
