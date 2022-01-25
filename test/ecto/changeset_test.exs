@@ -1825,6 +1825,12 @@ defmodule Ecto.ChangesetTest do
     assert constraints(changeset) ==
            [%{type: :unique, field: :permalink, constraint: "posts_url_color_index", match: :exact,
               error_message: "has already been taken", error_type: :unique}]
+
+    changeset = change(%Post{}) |> unique_constraint([:permalink, :color], error_key: :color)
+
+    assert constraints(changeset) ==
+           [%{type: :unique, field: :color, constraint: "posts_url_color_index", match: :exact,
+              error_message: "has already been taken", error_type: :unique}]
   end
 
   test "foreign_key_constraint/3" do

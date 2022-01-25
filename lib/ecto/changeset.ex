@@ -2646,6 +2646,10 @@ defmodule Ecto.Changeset do
       `:suffix` matches any repo constraint which `ends_with?` `:name`
        to this changeset constraint.
 
+    * `:error_key` - the key to which changeset error will be added when
+      check fails, defaults to the first field name of the given list of
+      fields.
+
   ## Complex constraints
 
   Because the constraint logic is in the database, we can leverage
@@ -2727,7 +2731,8 @@ defmodule Ecto.Changeset do
     constraint = opts[:name] || unique_index_name(changeset, fields)
     message    = message(opts, "has already been taken")
     match_type = Keyword.get(opts, :match, :exact)
-    add_constraint(changeset, :unique, to_string(constraint), match_type, first_field, message)
+    error_key  = Keyword.get(opts, :error_key, first_field)
+    add_constraint(changeset, :unique, to_string(constraint), match_type, error_key, message)
   end
 
   defp unique_index_name(changeset, fields) do
