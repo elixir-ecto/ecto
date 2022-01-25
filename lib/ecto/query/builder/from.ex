@@ -124,7 +124,7 @@ defmodule Ecto.Query.Builder.From do
   @doc """
   The callback applied by `build/2` to build the query.
   """
-  @spec apply(Ecto.Queryable.t(), non_neg_integer, atom, {:ok, String.t} | nil, [String.t]) :: Ecto.Query.t()
+  @spec apply(Ecto.Queryable.t(), non_neg_integer, Macro.t(), {:ok, String.t} | nil, [String.t]) :: Ecto.Query.t()
   def apply(query, binds, as, prefix, hints) do
     query =
       query
