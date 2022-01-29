@@ -75,7 +75,10 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
     Don't forget to add your new repo to your supervision tree
     (typically in lib/#{app}/application.ex):
 
-        {#{inspect repo}, []}
+        def start(_type, _args) do
+          children = [
+            #{inspect repo},
+          ]
 
     And to add it to the list of Ecto repositories in your
     configuration files (so Ecto tasks work as expected):
