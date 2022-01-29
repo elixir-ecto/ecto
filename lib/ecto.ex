@@ -68,7 +68,7 @@ defmodule Ecto do
 
       def start(_type, _args) do
         children = [
-          {MyApp.Repo, []}
+          MyApp.Repo,
         ]
 
         opts = [strategy: :one_for_one, name: MyApp.Supervisor]
