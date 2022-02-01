@@ -1647,10 +1647,17 @@ defmodule Ecto.Query.Planner do
   @doc """
   Puts the prefix given via `opts` into the given query, if available.
   """
-  def attach_prefix(query, opts) when is_list(opts) do
-    attach_prefix(query, Map.new(opts))
+  def attach_prefix(%{prefix: nil} = query, opts) when is_list(opts) do
+    case Keyword.fetch(opts, :prefix) do
+      {:ok, prefix} -> %{query | prefix: prefix}
+      :error -> query
+    end
   end
-  def attach_prefix(%{prefix: nil} = query, %{prefix: prefix}), do: %{query | prefix: prefix}
+
+  def attach_prefix(%{prefix: nil} = query, %{prefix: prefix}) do
+    %{query | prefix: prefix}
+  end
+
   def attach_prefix(query, _), do: query
 
   ## Helpers
