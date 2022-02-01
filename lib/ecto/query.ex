@@ -1483,6 +1483,24 @@ defmodule Ecto.Query do
         desc: c.id,
       ]
 
+  It's also possible to order by an aliased or calculated column:
+
+    from(c in City,
+      select: %{
+        name: c.name,
+        total_population:
+          fragment(
+            "COALESCE(?, ?) + ? AS total_population",
+            c.animal_population,
+            0,
+            c.human_population
+          )
+      },
+      order_by: [
+        {:desc, fragment("total_population")}
+      ]
+    )
+
   ## Expressions examples
 
       City |> order_by([c], asc: c.name, desc: c.population)
