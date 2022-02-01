@@ -701,7 +701,6 @@ defmodule Ecto.Repo do
       in the schema. For more information see the "Query Prefix" section of the
       `Ecto.Query` documentation.
 
-
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
 

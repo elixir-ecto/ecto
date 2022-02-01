@@ -147,7 +147,7 @@ defmodule MyApp.Mapping do
 end
 ```
 
-Now running `MyApp.Repo.all MyApp.Mapping` will by default run on the "main" prefix, regardless of the value configured for the connection on the `:after_connect` callback. Similar will happen to `insert`, `update`, and similar operations, the `@schema_prefix` is used unless the `:prefix` is explicitly changed via `Ecto.put_meta/2` or by passing the `:prefix` option to the repository operation.
+Now running `MyApp.Repo.all MyApp.Mapping` will by default run on the "main" prefix, regardless of the value configured for the connection on the `:after_connect` callback. However, we may want to override the schema prefix too and Ecto gives us the opportunity to do so, let's see how.
 
 ## Per-query and per-struct prefixes
 
@@ -199,9 +199,13 @@ iex(14)> Ecto.get_meta(sample, :prefix)
 "public"
 ```
 
-Now we have data inserted in both prefixes.
+Now we have data inserted in both prefixes. Note how we passed the `:prefix` option to `MyApp.Repo.all`. Almost all Repo operations accept `:prefix` as an option, with one important distinction:
 
-Prefixes in queries and structs always cascade. For example, if you run `MyApp.Repo.preload(post, [:comments])`, the association will be queried for and loaded in the same prefix as the `post` struct. If `post` has associations and you call `MyApp.Repo.insert(post)` or `MyApp.Repo.update(post)`, the associated data will also be inserted/updated in the same prefix as `post`. That's by design to facilitate working with groups of data in the same prefix, and especially because **data in different prefixes must be kept isolated**.
+  * the `:prefix` option in query operations (`all/2`, `update_all/2`, and `delete_all/2`) is a fallback. It will only be used when a `@schema_prefix` or a query prefix was not previously specified
+
+  * the `:prefix` option in schema operations (`insert_all/3`, `insert/2`, `update/2`, etc) will override the `@schema_prefix` as well as any prefix in the struct/changeset
+
+This difference in behaviour is by design: we want to allow flexibility when writing queries but we want to enforce struct/changeset operations to always work isolated within a given prefix. In fact, if call `MyApp.Repo.insert(post)` or `MyApp.Repo.update(post)`, and the post includes associations, the associated data will also be inserted/updated in the same prefix as `post`.
 
 ## Per from/join prefixes
 
@@ -216,7 +220,7 @@ Those will take precedence over all other prefixes we have defined so far. For e
 
   1. If the prefix option is given exclusively to join/from
   2. If the `@schema_prefix` is set in the related schema
-  3. If the `:prefix` field given to the repo operation (i.e. `Repo.all query, prefix: prefix`)
+  3. If the `:prefix` field given to the repo operation (i.e. `Repo.all(query, prefix: prefix)`)
   4. The connection prefix
 
 ## Migration prefixes
@@ -259,10 +263,17 @@ end
 
 ## Summing up
 
-Ecto provides many conveniences for working with querying prefixes. Those conveniences allow developers to configure prefixes with different precedence, starting with the highest one:
+Ecto provides many conveniences for working with querying prefixes. Those conveniences allow developers to configure prefixes with different precedence, starting with the highest one. When executing queries with `all`, `update_all` or `delete_all`, the prefix is computed as follows:
 
   1. from/join prefixes
-  2. query/struct prefixes
+  2. schema prefixes
+  3. the `:prefix` option
+  4. connection prefixes
+
+When working with schemas and changesets in `insert_all`, `insert`, `update`, and so forth, the precedence is:
+
+  1. the `:prefix` option
+  2. changeset prefixes
   3. schema prefixes
   4. connection prefixes
 
