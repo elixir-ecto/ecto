@@ -30,7 +30,7 @@ defmodule Ecto.Enum do
   Composite types, such as `:array`, are also supported which allow selecting
   multiple values per record:
 
-      field :roles, {:array, Ecto.Enum}, values: [:Author, :Editor, :Admin]
+      field :roles, {:array, Ecto.Enum}, values: [:author, :editor, :admin]
 
   Overall, `:values` must be a list of atoms or a keyword list. Values will be
   cast to atoms safely and only if the atom exists in the list (otherwise an
