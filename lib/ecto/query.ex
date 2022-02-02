@@ -1497,6 +1497,7 @@ defmodule Ecto.Query do
           )
       },
       order_by: [
+        # based on `AS total_population` in the previous fragment
         {:desc, fragment("total_population")}
       ]
     )
