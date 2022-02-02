@@ -27,7 +27,8 @@ defmodule Ecto.Enum do
   Some databases also support enum types, which you could use in combination
   with the above.
 
-  Composite types, such as `:array`, are also supported:
+  Composite types, such as `:array`, are also supported which allow selecting
+  multiple values per record:
 
       field :roles, {:array, Ecto.Enum}, values: [:Author, :Editor, :Admin]
 
