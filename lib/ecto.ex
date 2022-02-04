@@ -3,21 +3,26 @@ defmodule Ecto do
   Ecto is split into 4 main components:
 
     * `Ecto.Repo` - repositories are wrappers around the data store.
-      Via the repository, we can create, update, destroy and query existing entries.
-      A repository needs an adapter and credentials to communicate to the database
+      Via the repository, we can create, update, destroy and query
+      existing entries. A repository needs an adapter and credentials
+      to communicate to the database
 
-    * `Ecto.Schema` - schemas are used to map any data source into an Elixir
-      struct. We will often use them to map tables into Elixir data but that's
-      one of their use cases and not a requirement for using Ecto
-
-    * `Ecto.Changeset` - changesets provide a way for developers to filter
-      and cast external parameters, as well as a mechanism to track and
-      validate changes before they are applied to your data
+    * `Ecto.Schema` - schemas are used to map external data into Elixir
+      structs. We often use them to map database tables to Elixir data but
+      they have many other use cases
 
     * `Ecto.Query` - written in Elixir syntax, queries are used to retrieve
-      information from a given repository. Queries in Ecto are secure, avoiding
-      common problems like SQL Injection, while still being composable, allowing
-      developers to build queries piece by piece instead of all at once
+      information from a given repository. Ecto queries are secure and composable
+
+    * `Ecto.Changeset` - changesets provide a way for track and validate changes
+      before they are applied to the data
+
+  In summary:
+
+    * `Ecto.Repo` - **where** the data is
+    * `Ecto.Schema` - **what** the data is
+    * `Ecto.Query` - **how to read** the data
+    * `Ecto.Changeset` - **how to change** the data
 
   Besides the four components above, most developers use Ecto to interact
   with SQL databases, such as Postgres and MySQL via the

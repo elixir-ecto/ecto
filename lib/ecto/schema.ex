@@ -1,8 +1,7 @@
 defmodule Ecto.Schema do
   @moduledoc ~S"""
-  Defines a schema.
+  An Ecto schema maps external data into Elixir structs.
 
-  An Ecto schema is used to map any data source into an Elixir struct.
   The definition of the schema is possible through two main APIs:
   `schema/2` and `embedded_schema/1`.
 
