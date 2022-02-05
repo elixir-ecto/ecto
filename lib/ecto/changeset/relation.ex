@@ -435,7 +435,7 @@ defmodule Ecto.Changeset.Relation do
                 "This typically happens when you are calling put_assoc/put_embed " <>
                 "with the results of a previous put_assoc/put_embed/cast_assoc/cast_embed " <>
                 "operation, which is not supported. You must call such operations only once " <>
-                "per embed/assoc, in order for Ecto to track changes effeciently"
+                "per embed/assoc, in order for Ecto to track changes efficiently"
 
       true ->
         raise "cannot #{action} related #{inspect changeset.data} because " <>
