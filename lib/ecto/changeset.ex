@@ -1307,7 +1307,7 @@ defmodule Ecto.Changeset do
       currently associated, even if a matching ID is found. If the comment
       is already persisted to the database, then `put_assoc/4` only takes
       care of guaranteeing that the comments and the parent data are associated.
-      This extremely useful when associating existing data, as we will see
+      This is extremely useful when associating existing data, as we will see
       in the "Example: Adding tags to a post" section.
 
   Once the parent changeset is given to an `Ecto.Repo` function, all entries
