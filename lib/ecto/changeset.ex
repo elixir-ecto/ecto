@@ -1497,7 +1497,8 @@ defmodule Ecto.Changeset do
   Applies the changeset changes to the changeset data.
 
   This operation will return the underlying data with changes
-  regardless if the changeset is valid or not.
+  regardless if the changeset is valid or not. See `apply_action/2`
+  for a similar function that ensures the changeset is valid.
 
   ## Examples
 
@@ -1550,6 +1551,7 @@ defmodule Ecto.Changeset do
       {:error, %Changeset{changeset | action: action}}
     end
   end
+
   def apply_action(%Changeset{}, action) do
     raise ArgumentError, "expected action to be an atom, got: #{inspect action}"
   end
