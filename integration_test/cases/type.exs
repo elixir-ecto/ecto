@@ -294,8 +294,8 @@ defmodule Ecto.Integration.TypeTest do
   @tag :map_type
   @tag :json_extract_path
   test "json_extract_path with primitive values" do
-    order = %Order{meta: %{:id => 123, :time => ~T[09:00:00], "'single quoted'" => "bar", "\"double quoted\"" => "baz"}}
-    TestRepo.insert!(order)
+    order = %Order{meta: %{:id => 123, :time => ~T[09:00:00], "code" => "good", "'single quoted'" => "bar", "\"double quoted\"" => "baz"}}
+    order = TestRepo.insert!(order)
 
     assert TestRepo.one(from o in Order, select: o.meta["id"]) == 123
     assert TestRepo.one(from o in Order, select: o.meta["bad"]) == nil
@@ -307,19 +307,30 @@ defmodule Ecto.Integration.TypeTest do
     assert TestRepo.one(from o in Order, select: o.meta["'single quoted'"]) == "bar"
     assert TestRepo.one(from o in Order, select: o.meta["';"]) == nil
     assert TestRepo.one(from o in Order, select: o.meta["\"double quoted\""]) == "baz"
+
+    # where
+    assert TestRepo.one(from o in Order, where: o.meta["id"] == 123, select: o.id) == order.id
+    assert TestRepo.one(from o in Order, where: o.meta["id"] == 456, select: o.id) == nil
+    assert TestRepo.one(from o in Order, where: o.meta["code"] == "good", select: o.id) == order.id
+    assert TestRepo.one(from o in Order, where: o.meta["code"] == "bad", select: o.id) == nil
   end
 
   @tag :map_type
   @tag :json_extract_path
   test "json_extract_path with arrays and objects" do
     order = %Order{meta: %{tags: [%{name: "red"}, %{name: "green"}]}}
-    TestRepo.insert!(order)
+    order = TestRepo.insert!(order)
 
     assert TestRepo.one(from o in Order, select: o.meta["tags"][0]["name"]) == "red"
     assert TestRepo.one(from o in Order, select: o.meta["tags"][99]["name"]) == nil
 
     index = 1
     assert TestRepo.one(from o in Order, select: o.meta["tags"][^index]["name"]) == "green"
+
+    # where
+    assert TestRepo.one(from o in Order, where: o.meta["tags"][0]["name"] == "red", select: o.id) == order.id
+    assert TestRepo.one(from o in Order, where: o.meta["tags"][0]["name"] == "blue", select: o.id) == nil
+    assert TestRepo.one(from o in Order, where: o.meta["tags"][99]["name"] == "red", select: o.id) == nil
   end
 
   @tag :map_type

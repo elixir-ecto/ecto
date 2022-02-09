@@ -570,10 +570,11 @@ defmodule Ecto.Query.API do
   ## Warning: indexes on PostgreSQL
 
   PostgreSQL supports indexing on jsonb columns via GIN indexes.
-  However, `json_extract_path` uses the `#>` operator to access
-  json fields, which cannot be optimized by GIN indexes. Therefore,
-  for indexed jsonb columns, you want to consult PostgreSQL's
-  documentation and use the most appropriate operation.
+  Whenever comparing the value of a jsonb field against a string
+  or integer, Ecto will use the containement operator @> which
+  is optimized. You can even use the more efficient `jsonb_path_ops`
+  GIN index variant. For more information, consult PostgreSQL's docs
+  on [JSON indexing](https://www.postgresql.org/docs/current/datatype-json.html#JSON-INDEXING).
 
   ## Warning: return types
 
