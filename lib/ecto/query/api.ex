@@ -574,7 +574,7 @@ defmodule Ecto.Query.API do
   or integer, Ecto will use the containement operator @> which
   is optimized. You can even use the more efficient `jsonb_path_ops`
   GIN index variant. For more informatino, consult PostgreSQL's docs
-  on [JSON indexeding](https://www.postgresql.org/docs/current/datatype-json.html#JSON-INDEXING).
+  on [JSON indexing](https://www.postgresql.org/docs/current/datatype-json.html#JSON-INDEXING).
 
   ## Warning: return types
 
