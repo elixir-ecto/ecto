@@ -712,8 +712,8 @@ defmodule Ecto.Integration.RepoTest do
 
     assert post1 == TestRepo.reload(post1)
     assert [post1, post2] == TestRepo.reload([post1, post2])
-    assert [post1, post2, nil] == TestRepo.reload([post1, post2, %Post{id: 55}])
-    assert nil == TestRepo.reload(%Post{id: 55})
+    assert [post1, post2, nil] == TestRepo.reload([post1, post2, %Post{id: 0}])
+    assert nil == TestRepo.reload(%Post{id: 0})
 
     # keeps order as received in the params
     assert [post2, post1] == TestRepo.reload([post2, post1])
