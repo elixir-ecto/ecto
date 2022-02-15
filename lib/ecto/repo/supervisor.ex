@@ -154,7 +154,7 @@ defmodule Ecto.Repo.Supervisor do
     end
   end
 
-  @compile {:inline, triplet: 2, maybe_put_stacktrace: 2}
+  @compile {:inline, maybe_put_stacktrace: 2}
 
   @doc false
   def triplet(name, opts) do
