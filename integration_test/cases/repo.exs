@@ -20,7 +20,7 @@ defmodule Ecto.Integration.RepoTest do
 
   test "supports unnamed repos" do
     assert {:ok, pid} = TestRepo.start_link(name: nil)
-    assert Ecto.Repo.Queryable.all(pid, Post, Ecto.Repo.Supervisor.triplet(pid, [])) == []
+    assert Ecto.Repo.Queryable.all(pid, Post, Ecto.Repo.Supervisor.tuplet(pid, [])) == []
   end
 
   test "all empty" do

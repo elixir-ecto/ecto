@@ -154,26 +154,15 @@ defmodule Ecto.Repo.Supervisor do
     end
   end
 
-  @compile {:inline, maybe_put_stacktrace: 2}
-
   @doc false
-  def triplet(name, opts) do
-    {adapter, adapter_meta} = Ecto.Repo.Registry.lookup(name)
-      
-    {adapter, adapter_meta, maybe_put_stacktrace(opts, adapter_meta)}
-  end
+  def tuplet(name, opts) do
+    adapter_meta = Ecto.Repo.Registry.lookup(name)
 
-  defp maybe_put_stacktrace(opts, adapter_meta) do
     if opts[:stacktrace] || adapter_meta[:stacktrace] do
-      stacktrace = 
-        self() 
-        |> Process.info(:current_stacktrace)
-        |> elem(1)
-        |> tl()
-
-      Keyword.put(opts, :stacktrace, stacktrace)
+      {:current_stacktrace, stacktrace} = :erlang.process_info(self(), :current_stacktrace)
+      {adapter_meta, Keyword.put(opts, :stacktrace, stacktrace)}
     else
-      opts
+      {adapter_meta, opts}
     end
   end
 
@@ -206,8 +195,8 @@ defmodule Ecto.Repo.Supervisor do
   def start_child({mod, fun, args}, name, adapter, meta) do
     case apply(mod, fun, args) do
       {:ok, pid} ->
-        meta = Map.put(meta, :pid, pid)
-        Ecto.Repo.Registry.associate(self(), name, {adapter, meta})
+        meta = Map.merge(meta, %{pid: pid, adapter: adapter})
+        Ecto.Repo.Registry.associate(self(), name, meta)
         {:ok, pid}
 
       other ->

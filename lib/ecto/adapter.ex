@@ -129,7 +129,6 @@ defmodule Ecto.Adapter do
   It expects a name or a PID representing a repo.
   """
   def lookup_meta(repo_name_or_pid) do
-    {_, meta} = Ecto.Repo.Registry.lookup(repo_name_or_pid)
-    meta
+    Ecto.Repo.Registry.lookup(repo_name_or_pid)
   end
 end
