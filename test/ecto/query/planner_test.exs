@@ -1008,6 +1008,13 @@ defmodule Ecto.Query.PlannerTest do
       query = from(Comment, []) |> select([c], c.temp)
       normalize(query)
     end
+
+    message =
+      ~r"field `crazy_post_with_list` in `select` is a virtual field in schema Ecto.Query.PlannerTest.Comment. Did you mean to use :crazy_post_id?"
+    assert_raise Ecto.QueryError, message, fn ->
+      query = from(Comment, []) |> select([c], c.crazy_post_with_list)
+      normalize(query)
+    end
   end
 
   test "normalize: allow virtual fields in type/2" do
