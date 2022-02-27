@@ -124,9 +124,14 @@ defmodule Ecto.Adapter do
               [(term -> {:ok, term} | :error) | Ecto.Type.t()]
 
   @doc """
-  Returns the adapter metadata from the `c:init/1` callback.
+  Returns the adapter metadata from its `c:init/1` callback.
 
-  It expects a name or a PID representing a repo.
+  It expects a process name of a repository. The name is either
+  an atom or a PID. For a given repository, you often want to
+  call this function based on the repository dynamic repo:
+
+      Ecto.Adapter.lookup_meta(repo.get_dynamic_repo())
+
   """
   def lookup_meta(repo_name_or_pid) do
     Ecto.Repo.Registry.lookup(repo_name_or_pid)
