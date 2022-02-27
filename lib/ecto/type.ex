@@ -863,6 +863,26 @@ defmodule Ecto.Type do
   defp same_date(%Date{} = term), do: {:ok, term}
   defp same_date(_), do: :error
 
+  @doc false
+  @spec filter_empty_values(t, any, [any]) :: {:ok, any} | :empty
+  def filter_empty_values({:array, type}, value, empty_values) when is_list(value) do
+    value = for elem <- value,
+      result = filter_empty_values(type, elem, empty_values),
+      :empty != result,
+      {:ok, elem} = result,
+      do: elem
+
+    {:ok, value}
+  end
+
+  def filter_empty_values(_type, value, empty_values) do
+    if value in empty_values do
+      :empty
+    else
+      {:ok, value}
+    end
+  end
+
   ## Adapter related
 
   @doc false
