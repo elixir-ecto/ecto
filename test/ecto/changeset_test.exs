@@ -182,6 +182,14 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{title: "", body: nil}
   end
 
+  test "cast/4: with nested empty values" do
+    params = %{"topics" => ["", "bar", ""]}
+    struct = %Post{topics: ["foo"]}
+
+    changeset = cast(struct, params, ~w(topics)a)
+    assert changeset.changes == %{topics: ["bar"]}
+  end
+
   test "cast/4: with custom empty values" do
     params = %{"title" => "empty", "body" => nil}
     struct = %Post{title: "foo", body: "bar"}
