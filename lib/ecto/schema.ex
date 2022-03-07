@@ -1373,7 +1373,7 @@ defmodule Ecto.Schema do
       |> where([t, ..., p], p.public == t.public)
 
   Another and preferred option is to rewrite to an explicit `join`, which
-  ellide the intermediate bindings as they are resolved only later on:
+  leaves out the intermediate bindings as they are resolved only later on:
 
       # keyword syntax
       from t in Tag,
