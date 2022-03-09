@@ -267,8 +267,8 @@ defmodule Ecto.Multi do
       Ecto.Multi.new()
       |> Ecto.Multi.insert(:post, %Post{title: "first"})
       |> Ecto.Multi.insert(:comment, fn %{post: post} ->
-           Ecto.build_assoc(post, :comments)
-         end)
+        Ecto.build_assoc(post, :comments)
+      end)
       |> MyApp.Repo.transaction()
 
   """
@@ -303,8 +303,8 @@ defmodule Ecto.Multi do
       Ecto.Multi.new()
       |> Ecto.Multi.insert(:post, %Post{title: "first"})
       |> Ecto.Multi.update(:fun, fn %{post: post} ->
-           Ecto.Changeset.change(post, title: "New title")
-         end)
+        Ecto.Changeset.change(post, title: "New title")
+      end)
       |> MyApp.Repo.transaction()
 
   """
@@ -333,11 +333,11 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.run(:post, fn repo, _changes ->
-           {:ok, repo.get(Post, 1) || %Post{}}
-         end)
+        {:ok, repo.get(Post, 1) || %Post{}}
+      end)
       |> Ecto.Multi.insert_or_update(:update, fn %{post: post} ->
-           Ecto.Changeset.change(post, title: "New title")
-         end)
+        Ecto.Changeset.change(post, title: "New title")
+      end)
       |> MyApp.Repo.transaction()
 
   """
@@ -370,15 +370,15 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.run(:post, fn repo, _changes ->
-           case repo.get(Post, 1) do
-             nil -> {:error, :not_found}
-             post -> {:ok, post}
-           end
-         end)
+        case repo.get(Post, 1) do
+          nil -> {:error, :not_found}
+          post -> {:ok, post}
+        end
+      end)
       |> Ecto.Multi.delete(:delete, fn %{post: post} ->
-           # Others validations
-           post
-         end)
+        # Others validations
+        post
+      end)
       |> MyApp.Repo.transaction()
 
   """
