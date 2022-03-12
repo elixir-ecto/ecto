@@ -10,7 +10,7 @@ defmodule Ecto.Repo.Preloader do
   Transforms a result set based on query preloads, loading
   the associations onto their parent schema.
   """
-  @spec query([list], Ecto.Repo.t, list, Access.t, fun, map) :: [list]
+  @spec query([list], Ecto.Repo.t, list, Access.t, fun, {adapter_meta :: map, opts :: Keyword.t}) :: [list]
   def query([], _repo_name, _preloads, _take, _fun, _tuplet), do: []
   def query(rows, _repo_name, [], _take, fun, _tuplet), do: Enum.map(rows, fun)
 
@@ -32,7 +32,7 @@ defmodule Ecto.Repo.Preloader do
   @doc """
   Implementation for `Ecto.Repo.preload/2`.
   """
-  @spec preload(structs, atom, atom | list, Keyword.t) ::
+  @spec preload(structs, atom, atom | list, {adapter_meta :: map, opts :: Keyword.t}) ::
                 structs when structs: [Ecto.Schema.t] | Ecto.Schema.t | nil
   def preload(nil, _repo_name, _preloads, _tuplet) do
     nil
