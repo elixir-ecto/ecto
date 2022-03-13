@@ -7,18 +7,30 @@ Ecto v3.8 requires Elixir v1.10+.
 ### Enhancements
 
   * [Ecto] Add new Embedded chapter to Introductory guides
-  * [Ecto.Query] Support parameterized types in `type/2`
+  * [Ecto.Changeset] Detect `empty_values` inside lists when casting
+  * [Ecto.Changeset] Allow custom `:error_key` in unique_constraint
+  * [Ecto.Query] Support dynamic aliases
   * [Ecto.Query] Allow using `type/2` with virtual fields
   * [Ecto.Query] Suggest alternatives to inexistent fields in queries
+  * [Ecto.Query] Support passing queries using subqueries to `insert_all`
+  * [Ecto.Repo] Allow `stacktrace: true` so stacktraces are included in telemetry events and logs
   * [Ecto.Schema] Validate options given to schema fields
-  * [Ecto.Schema] Add option to skip validations for default values
 
 ### Bug fixes
 
   * [Ecto.Changeset] Address regression on `validate_subset` no longer working with custom array types
   * [Ecto.Query] Handle atom list sigils in `select`
-  * [Ecto.Query] Handle scenarios where `(left not in right)` would not be allowed in queries
+  * [Ecto.Query] Improve tracking of `select_merge` inside subqueries
   * [Ecto.Repo] Properly handle literals in queries given to `insert_all`
+
+## v3.7.2 (2022-03-13)
+
+### Enhancements
+
+  * [Ecto.Schema] Add option to skip validations for default values
+  * [Ecto.Query] Allow coalesce in `type/2`
+  * [Ecto.Query] Support parameterized types in type/2
+  * [Ecto.Query] Allow arbitrary parentheses in query expressions
 
 ## v3.7.1 (2021-08-27)
 
