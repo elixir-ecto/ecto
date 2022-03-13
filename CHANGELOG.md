@@ -1,5 +1,14 @@
 # Changelog for v3.x
 
+## v3.7.2 (2022-03-13)
+
+### Enhancements
+
+  * [Ecto.Schema] Add option to skip validations for default values
+  * [Ecto.Query] Allow coalesce in `type/2`
+  * [Ecto.Query] Support parameterized types in type/2
+  * [Ecto.Query] Allow arbitrary parentheses in query expressions
+
 ## v3.7.1 (2021-08-27)
 
 ### Enhancements
