@@ -64,6 +64,8 @@ defmodule Ecto.ParameterizedType do
         field :bar, MyApp.MyType, opt1: :baz, opt2: :boo
       end
 
+  To use this type in places where you need it to be initialized (for example,
+  schemaless changesets), you can use `init/2`.
   """
 
   @typedoc """
