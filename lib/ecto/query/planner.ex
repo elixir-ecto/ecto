@@ -1734,7 +1734,7 @@ defmodule Ecto.Query.Planner do
       Map.has_key?(schema.__struct__(), field) ->
         case schema.__schema__(:association, field) do
           %Ecto.Association.BelongsTo{owner_key: owner_key} ->
-            error! query, expr, "field `#{field}` in `#{kind}` is a virtual field in schema #{inspect schema}. " <>
+            error! query, expr, "field `#{field}` in `#{kind}` is an association in schema #{inspect schema}. " <>
                                 "Did you mean to use :#{owner_key}?"
           _ ->
             error! query, expr, "field `#{field}` in `#{kind}` is a virtual field in schema #{inspect schema}"
