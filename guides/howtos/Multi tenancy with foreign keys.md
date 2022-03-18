@@ -93,7 +93,7 @@ To better understand how our database schema should look like, let's discuss som
 
 ## Working with multi tenant associations
 
-Let's expand our data domain little a bit.
+Let's expand our data domain a little bit.
 
 So far we have assumed there is an organization schema. However, instead of naming its primary key `id`, we will name it `org_id`, so `Repo.one(Org, org_id: 13)` just works:
 
