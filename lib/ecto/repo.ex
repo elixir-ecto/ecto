@@ -975,7 +975,7 @@ defmodule Ecto.Repo do
 
       # Use a keyword list to preload nested associations as well
       posts = Repo.preload posts, [comments: [:replies, :likes], authors: []]
-      posts = Repo.preload posts, [comments: [:replies, :likes], :authors]
+      posts = Repo.preload posts, [comments: [replies: [:reactions], :likes], :authors]
 
       # Use a keyword list to customize how associations are queried
       posts = Repo.preload posts, [comments: from(c in Comment, order_by: c.published_at)]
