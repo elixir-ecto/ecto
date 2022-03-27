@@ -254,6 +254,22 @@ defmodule Ecto.Repo.EmbeddedTest do
     refute embed.inserted_at
     assert embed.updated_at
 
+    kw_changeset = Ecto.Changeset.put_embed(changeset, :embed, id: @uuid, x: "def")
+    schema = TestRepo.update!(kw_changeset)
+    embed = schema.embed
+    assert embed.id == @uuid
+    assert embed.x == "def"
+    refute embed.inserted_at
+    assert embed.updated_at
+
+    map_changeset = Ecto.Changeset.put_embed(changeset, :embed, %{id: @uuid, x: "def"})
+    schema = TestRepo.update!(map_changeset)
+    embed = schema.embed
+    assert embed.id == @uuid
+    assert embed.x == "def"
+    refute embed.inserted_at
+    assert embed.updated_at
+
     changeset =
       %MySchema{id: 1, embeds: [sample]}
       |> Ecto.Changeset.change

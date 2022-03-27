@@ -174,7 +174,7 @@ defmodule Ecto.Changeset.Relation do
     {:ok,
      changeset
      |> assert_changeset_struct!(relation)
-     |> put_new_action(action_from_changeset(changeset))}
+     |> put_new_action(action_from_changeset(changeset, nil))}
   end
 
   defp do_change(relation, nil, current, _allowed_actions) do
@@ -200,19 +200,24 @@ defmodule Ecto.Changeset.Relation do
   defp do_change(relation, changes, current, allowed_actions)
       when is_list(changes) or is_map(changes) do
     changeset = Ecto.Changeset.change(current || relation.__struct__.build(relation, nil), changes)
-    changeset = put_new_action(changeset, action_from_changeset(changeset))
+    changeset = put_new_action(changeset, action_from_changeset(changeset, current))
     do_change(relation, changeset, current, allowed_actions)
   end
 
-  defp action_from_changeset(%{data: %{__meta__: %{state: state}}}) do
+  defp action_from_changeset(%{data: %{__meta__: %{state: state}}}, _current) do
     case state do
       :built   -> :insert
       :loaded  -> :update
       :deleted -> :delete
     end
   end
-  defp action_from_changeset(_) do
-    :insert # We don't care if it is insert/update for embeds (no meta)
+
+  defp action_from_changeset(_, nil) do
+    :insert
+  end
+
+  defp action_from_changeset(_, _current) do
+    :update
   end
 
   defp assert_changeset_struct!(%{data: %{__struct__: mod}} = changeset, %{related: mod}) do

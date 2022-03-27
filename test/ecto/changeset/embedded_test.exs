@@ -577,12 +577,12 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     assert {:ok, changeset, true} =
       Relation.change(embed, %{name: "michal"}, profile)
-    assert changeset.action == :insert
+    assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
 
     assert {:ok, changeset, true} =
       Relation.change(embed, [name: "michal"], profile)
-    assert changeset.action == :insert
+    assert changeset.action == :update
     assert changeset.changes == %{name: "michal"}
   end
 
@@ -774,16 +774,46 @@ defmodule Ecto.Changeset.EmbeddedTest do
     refute changeset.valid?
   end
 
-  test "put_embed/4 with embeds_one" do
+  test "put_embed/4 insert with embeds_one" do
     base_changeset = Changeset.change(%Author{})
 
     changeset = Changeset.put_embed(base_changeset, :profile, %Profile{name: "michal"})
     assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
 
-    base_changeset = Changeset.change(%Author{profile: %Profile{name: "michal"}})
-    empty_update_changeset = Changeset.change(%Profile{name: "michal"})
+    changeset = Changeset.put_embed(base_changeset, :profile, Changeset.change(%Profile{name: "michal"}))
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
 
-    changeset = Changeset.put_embed(base_changeset, :profile, empty_update_changeset)
+    changeset = Changeset.put_embed(base_changeset, :profile, %{name: "michal"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
+
+    changeset = Changeset.put_embed(base_changeset, :profile, name: "michal")
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :insert
+  end
+
+  test "put_embed/4 update with embeds_one" do
+    base_changeset = Changeset.change(%Author{profile: %Profile{id: 1, name: "michal"}})
+
+    update_changeset = Changeset.change(%Profile{id: 1, name: "michal"}, %{name: "tom"})
+    changeset = Changeset.put_embed(base_changeset, :profile, update_changeset)
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :update
+
+    changeset = Changeset.put_embed(base_changeset, :profile, %{id: 1, name: "tom"})
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :update
+
+    changeset = Changeset.put_embed(base_changeset, :profile, id: 1, name: "tom")
+    assert %Ecto.Changeset{} = changeset.changes.profile
+    assert changeset.changes.profile.action == :update
+
+    changeset = Changeset.put_embed(base_changeset, :profile, %Profile{id: 1, name: "tom"})
+    refute Map.has_key?(changeset.changes, :profile)
+
+    changeset = Changeset.put_embed(base_changeset, :profile, %Profile{id: 1, name: "michal"})
     refute Map.has_key?(changeset.changes, :profile)
   end
 
