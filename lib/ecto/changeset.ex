@@ -1306,16 +1306,34 @@ defmodule Ecto.Changeset do
             ]
           )
 
-    * changesets or structs - when a changeset or struct is given, they
-      are treated as the canonical data and the associated data currently
-      stored in the association is ignored. For instance, the operation
-      `put_assoc(changeset, :comments, [%Comment{id: 1, title: "changed"}])`
-      will send the `Comment` as is to the database, ignoring any comment
-      currently associated, even if a matching ID is found. If the comment
-      is already persisted to the database, then `put_assoc/4` only takes
-      care of guaranteeing that the comments and the parent data are associated.
-      This is extremely useful when associating existing data, as we will see
-      in the "Example: Adding tags to a post" section.
+    * changesets - when changesets are given, they are treated as the canonical
+      data and the associated data currently stored in the association is either
+      updated or replaced. For example, if you call
+      `put_assoc(post_changeset, :comments, [list_of_comments_changesets])`,
+      all comments with matching IDs will be updated according to the changesets.
+      New comments or comments not associated to any post will be correctly
+      associated. Currently associated comments that do not have a matching ID
+      in the list of changesets will act according to the `:on_replace` association
+      configuration (you can chose to raise, ignore the operation, update or delete
+      them). If there are changes in any of the changesets, they will be
+      persisted too.
+
+    * structs - when structs are given, they are treated as the canonical data
+      and the associated data currently stored in the association is replaced.
+      For example, if you call
+      `put_assoc(post_changeset, :comments, [list_of_comments_structs])`,
+      all comments with matching IDs will be replaced by the new structs.
+      New comments or comments not associated to any post will be correctly
+      associated. Currently associated comments that do not have a matching ID
+      in the list of changesets will act according to the `:on_replace`
+      association configuration (you can chose to raise, ignore the operation,
+      update or delete them). Different to passing changesets, structs are not
+      change tracked in any fashion. In other words, if you change a comment
+      struct and give it to `put_assoc/4`, the updates in the struct won't be
+      persisted. You must use changesets instead. `put_assoc/4` with structs
+      only takes care of guaranteeing that the comments and the parent data
+      are associated. This is extremely useful when associating existing data,
+      as we will see in the "Example: Adding tags to a post" section.
 
   Once the parent changeset is given to an `Ecto.Repo` function, all entries
   will be inserted/updated/deleted within the same transaction.
