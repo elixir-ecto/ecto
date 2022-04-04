@@ -489,7 +489,7 @@ defmodule Ecto.QueryTest do
       assert hd(query.joins).prefix == "world"
     end
 
-    test "are supported and overriden from schemas" do
+    test "are supported and overridden from schemas" do
       query = from(Post)
       assert query.from.prefix == "another"
 
@@ -562,7 +562,7 @@ defmodule Ecto.QueryTest do
 
   describe "keyword queries" do
     test "are supported through from/2" do
-      # queries need to be on the same line or == wont work
+      # queries need to be on the same line or == won't work
       assert from(p in "posts", select: 1 < 2) == from(p in "posts", []) |> select([p], 1 < 2)
       assert from(p in "posts", where: 1 < 2)  == from(p in "posts", []) |> where([p], 1 < 2)
 

@@ -422,7 +422,7 @@ defmodule Ecto.Query.Builder do
     error! "Tuples can only be used in comparisons with literal tuples of the same size"
   end
 
-  # Unecessary parentheses around an expression
+  # Unnecessary parentheses around an expression
   def escape({:__block__, _, [expr]}, type, params_acc, vars, env) do
     escape(expr, type, params_acc, vars, env)
   end
