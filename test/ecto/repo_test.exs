@@ -938,7 +938,7 @@ defmodule Ecto.RepoTest do
       assert schema.parent.__meta__.prefix == "private"
     end
 
-    test "insert, update and insert_or_update `nil` parent schema_prefix is overriden by children schema_prefix" do
+    test "insert, update and insert_or_update `nil` parent schema_prefix is overridden by children schema_prefix" do
       assert {:ok, schema} = TestRepo.insert(%MyParent{id: 1})
       assert schema.__meta__.prefix == nil
 
