@@ -1111,7 +1111,7 @@ defmodule Ecto.Schema do
 
     * `:primary_key` - If the underlying belongs_to field is a primary key
 
-    * `:source` - Defines the name that is to be used in database for this field.
+    * `:source` - Defines the name that is to be used in database for this field
 
     * `:where` - A filter for the association. See "Filtering associations"
       in `has_many/3`.

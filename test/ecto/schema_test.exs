@@ -94,7 +94,6 @@ defmodule Ecto.SchemaTest do
     end
   end
 
-
   test "raises on unknown meta key in metadata" do
     assert_raise ArgumentError, "unknown meta key :foo", fn ->
       Ecto.put_meta(%Schema{}, foo: :bar)
