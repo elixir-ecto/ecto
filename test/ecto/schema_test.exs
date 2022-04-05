@@ -974,4 +974,16 @@ defmodule Ecto.SchemaTest do
       end
     end
   end
+
+  test "raises on :source field not using atom key" do
+    assert_raise ArgumentError, ~s(the :source for field `name` must be an atom, got: "string"), fn ->
+      defmodule InvalidCustomSchema do
+        use Ecto.Schema
+
+        schema "users" do
+          field :name, :string, source: "string"
+        end
+      end
+    end
+  end
 end
