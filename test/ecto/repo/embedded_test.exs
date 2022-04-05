@@ -240,7 +240,11 @@ defmodule Ecto.Repo.EmbeddedTest do
   end
 
   test "changing embeds on update" do
-    sample = %MyEmbed{x: "xyz", id: @uuid}
+    an_hour_ago =
+      DateTime.utc_now()
+      |> DateTime.add(-3600)
+      |> DateTime.to_naive()
+    sample = %MyEmbed{x: "xyz", id: @uuid, updated_at: an_hour_ago}
     sample_changeset = Ecto.Changeset.change(sample, x: "abc")
 
     changeset =
@@ -253,6 +257,7 @@ defmodule Ecto.Repo.EmbeddedTest do
     assert embed.x == "abc"
     refute embed.inserted_at
     assert embed.updated_at
+    assert NaiveDateTime.compare(embed.updated_at, an_hour_ago) == :gt
 
     kw_changeset = Ecto.Changeset.put_embed(changeset, :embed, id: @uuid, x: "def")
     schema = TestRepo.update!(kw_changeset)
