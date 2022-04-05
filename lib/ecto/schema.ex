@@ -1111,7 +1111,7 @@ defmodule Ecto.Schema do
 
     * `:primary_key` - If the underlying belongs_to field is a primary key
 
-    * `:source` - Defines the name that is to be used in database for this field
+    * `:source` - Defines the name that is to be used in database for this field.
 
     * `:where` - A filter for the association. See "Filtering associations"
       in `has_many/3`.
@@ -1927,6 +1927,10 @@ defmodule Ecto.Schema do
       Module.put_attribute(mod, :ecto_virtual_fields, {name, type})
     else
       source = opts[:source] || Module.get_attribute(mod, :field_source_mapper).(name)
+
+      if !is_atom(source) do
+        raise ArgumentError, "source for field #{name} must be an atom"
+      end
 
       if name != source do
         Module.put_attribute(mod, :ecto_field_sources, {name, source})

@@ -94,6 +94,7 @@ defmodule Ecto.SchemaTest do
     end
   end
 
+
   test "raises on unknown meta key in metadata" do
     assert_raise ArgumentError, "unknown meta key :foo", fn ->
       Ecto.put_meta(%Schema{}, foo: :bar)
@@ -156,6 +157,7 @@ defmodule Ecto.SchemaTest do
       timestamps()
     end
   end
+
 
   test "custom schema attributes" do
     assert %CustomSchema{perm: "abc"}.perm == "abc"
@@ -974,4 +976,17 @@ defmodule Ecto.SchemaTest do
       end
     end
   end
+
+  test "raises on :source field not using atom key" do
+    assert_raise ArgumentError, "source for field name must be an atom", fn ->
+      defmodule InvalidCustomSchema do
+        use Ecto.Schema
+
+        schema "users" do
+          field :name, :string, source: "string"
+        end
+      end
+    end
+  end
+
 end
