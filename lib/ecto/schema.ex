@@ -1928,8 +1928,8 @@ defmodule Ecto.Schema do
     else
       source = opts[:source] || Module.get_attribute(mod, :field_source_mapper).(name)
 
-      if !is_atom(source) do
-        raise ArgumentError, "source for field #{name} must be an atom"
+      if not is_atom(source) do
+        raise ArgumentError, "the :source for field `#{name}` must be an atom, got: #{inspect(source)}"
       end
 
       if name != source do
