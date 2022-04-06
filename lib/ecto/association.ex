@@ -238,7 +238,7 @@ defmodule Ecto.Association do
       related_queryable = curr_rel.schema
       next = query
         # join on the foreign key
-        |> join(:inner, [{src, counter}], dest in ^related_queryable, on: ^on_fields(prev_rel.out_key, curr_rel.in_key))
+        |> join(:inner, [{src, counter}], dest in ^related_queryable, on: ^on_fields(prev_rel.out_key, curr_rel.in_key, counter, counter + 1))
         # consider where clauses on assocs
         |> combine_joins_query(curr_rel.where, counter + 1)
 
@@ -281,17 +281,18 @@ defmodule Ecto.Association do
   def strict_zip(_, _), do: raise ArgumentError, "lists should be of equal length"
 
   @doc false
-  def on_fields(dst_keys, src_keys) do
-    on_fields(strict_zip(dst_keys, src_keys))
+  def on_fields(dst_keys, src_keys, dst_binding, src_binding) do
+    on_fields(strict_zip(dst_keys, src_keys), dst_binding, src_binding)
   end
 
   @doc false
-  def on_fields([{dst_key, src_key}] = _fields) do
-    dynamic([..., dst, src], field(src, ^src_key) == field(dst, ^dst_key))
+  def on_fields([{dst_key, src_key}] = _fields, dst_binding, src_binding) do
+    dynamic([{dst, dst_binding}, {src, src_binding}], field(src, ^src_key) == field(dst, ^dst_key))
   end
 
-  def on_fields([{dst_key, src_key} | fields]) do
-    dynamic([..., dst, src], field(src, ^src_key) == field(dst, ^dst_key) and ^on_fields(fields))
+  def on_fields([{dst_key, src_key} | fields], dst_binding, src_binding) do
+    dynamic([{dst, dst_binding}, {src, src_binding}], field(src, ^src_key) == field(dst, ^dst_key)
+            and ^on_fields(fields, dst_binding, src_binding))
   end
 
   @doc false
@@ -864,7 +865,7 @@ defmodule Ecto.Association.Has do
 
   @impl true
   def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} = assoc) do
-    from(o in owner, join: q in ^queryable, on: ^Ecto.Association.on_fields(owner_key, related_key))
+    from(o in owner, join: q in ^queryable, on: ^Ecto.Association.on_fields(owner_key, related_key, 0, 1))
     |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
 
@@ -1167,7 +1168,7 @@ defmodule Ecto.Association.BelongsTo do
 
   @impl true
   def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} = assoc) do
-    from(o in owner, join: q in ^queryable, on: ^Ecto.Association.on_fields(owner_key, related_key))
+    from(o in owner, join: q in ^queryable, on: ^Ecto.Association.on_fields(owner_key, related_key, 0, 1))
     |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
 
@@ -1387,8 +1388,8 @@ defmodule Ecto.Association.ManyToMany do
     join_through_keys = Enum.map(join_through_keys, fn {from, to} -> {to, from} end)
 
     from(o in owner,
-      join: j in ^join_through, on: ^Ecto.Association.on_fields(join_through_keys),
-      join: q in ^queryable, on: ^Ecto.Association.on_fields(join_related_keys))
+      join: j in ^join_through, on: ^Ecto.Association.on_fields(join_through_keys, 0, 1),
+      join: q in ^queryable, on: ^Ecto.Association.on_fields(join_related_keys, 1, 2))
     |> Ecto.Association.combine_joins_query(assoc.where, 2)
     |> Ecto.Association.combine_joins_query(assoc.join_where, 1)
   end
@@ -1408,7 +1409,7 @@ defmodule Ecto.Association.ManyToMany do
     query =
       from q in (query || queryable),
         join: j in ^join_through,
-        on: ^Ecto.Association.on_fields(join_related_keys),
+        on: ^Ecto.Association.on_fields(join_related_keys, 0, 1),
         where: ^where_fields(owner, join_through_keys, values)
 
     query
