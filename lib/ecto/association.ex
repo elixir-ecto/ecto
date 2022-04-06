@@ -275,22 +275,17 @@ defmodule Ecto.Association do
     combine_assoc_query(query, source.where || [])
   end
 
-  # TODO this is bogus and should be removed
-  # def transpose_values([[_]] = values), do: values
-  # def transpose_values([[_ | _]] = values) when is_list(values) do
-  #   values
-  #   |> Enum.zip()
-  #   |> Enum.map(&Tuple.to_list/1)
-  # end
-
+  @doc false
   def strict_zip([l | ls], [r | rs]), do: [{l, r} | strict_zip(ls, rs)]
   def strict_zip([], []), do: []
   def strict_zip(_, _), do: raise ArgumentError, "lists should be of equal length"
 
+  @doc false
   def on_fields(dst_keys, src_keys) do
     on_fields(strict_zip(dst_keys, src_keys))
   end
 
+  @doc false
   def on_fields([{dst_key, src_key}] = _fields) do
     dynamic([..., dst, src], field(src, ^src_key) == field(dst, ^dst_key))
   end
@@ -299,6 +294,7 @@ defmodule Ecto.Association do
     dynamic([..., dst, src], field(src, ^src_key) == field(dst, ^dst_key) and ^on_fields(fields))
   end
 
+  @doc false
   def where_fields([key], [nil]) do
     dynamic([..., q], is_nil(field(q, ^key)))
   end

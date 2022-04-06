@@ -751,8 +751,10 @@ defmodule Ecto.SchemaTest do
       has_one :author, User, references: :pk, foreign_key: :fk
       belongs_to :permalink1, Permalink, references: :pk, foreign_key: :fk
       belongs_to :permalink2, Permalink, references: :pk, type: :string
-      belongs_to :publication, Publication, references: [:id_1, :id_2],
-        foreign_key: [:publication_id_1, :publication_id_2], type: [:integer, :string]
+      belongs_to :publication1, Publication, references: [:id_1, :id_2],
+        foreign_key: [:publication1_id_1, :publication1_id_2], type: [:integer, :string]
+      belongs_to :publication2, Publication, references: [:id_1, :id_2],
+        foreign_key: [:publication2_id_1, :publication2_id_2], type: :string
     end
   end
 
@@ -802,12 +804,16 @@ defmodule Ecto.SchemaTest do
     assert CustomAssocSchema.__schema__(:type, :fk) == :string
     assert CustomAssocSchema.__schema__(:type, :permalink2_id) == :string
 
-    refl = CustomAssocSchema.__schema__(:association, :publication)
-    assert [:publication_id_1, :publication_id_2] == refl.owner_key
+    refl = CustomAssocSchema.__schema__(:association, :publication1)
+    assert [:publication1_id_1, :publication1_id_2] == refl.owner_key
     assert [:id_1, :id_2] == refl.related_key
 
-    assert CustomAssocSchema.__schema__(:type, :publication_id_1) == :integer
-    assert CustomAssocSchema.__schema__(:type, :publication_id_2) == :string
+    assert CustomAssocSchema.__schema__(:type, :publication1_id_1) == :integer
+    assert CustomAssocSchema.__schema__(:type, :publication1_id_2) == :string
+
+    # if foreign key type is an atom, use that same type for all foreign key fields
+    assert CustomAssocSchema.__schema__(:type, :publication2_id_1) == :string
+    assert CustomAssocSchema.__schema__(:type, :publication2_id_2) == :string
   end
 
   test "has_* validates option" do
