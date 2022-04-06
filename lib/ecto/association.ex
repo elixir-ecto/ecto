@@ -283,10 +283,9 @@ defmodule Ecto.Association do
   #   |> Enum.map(&Tuple.to_list/1)
   # end
 
-  def strict_zip([], []), do: []
-  def strict_zip([_ | _], []), do: raise ArgumentError, "lists should be of equal length"
-  def strict_zip([], [_ | _]), do: raise ArgumentError, "lists should be of equal length"
   def strict_zip([l | ls], [r | rs]), do: [{l, r} | strict_zip(ls, rs)]
+  def strict_zip([], []), do: []
+  def strict_zip(_, _), do: raise ArgumentError, "lists should be of equal length"
 
   def on_fields(dst_keys, src_keys) do
     on_fields(strict_zip(dst_keys, src_keys))
