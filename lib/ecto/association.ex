@@ -1400,8 +1400,7 @@ defmodule Ecto.Association.ManyToMany do
   @impl true
   def assoc_query(assoc, query, values) do
     %{queryable: queryable, join_through: join_through, join_keys: join_keys, owner: owner} = assoc
-    # TODO does this support composite keys?
-    [[{_join_owner_key, _owner_key}] = join_through_keys, join_related_keys] = join_keys
+    [join_through_keys, join_related_keys] = join_keys
     join_related_keys = Enum.map(join_related_keys, fn {from, to} -> {to, from} end)
 
     # We only need to join in the "join table". Preload and Ecto.assoc expressions can then filter
@@ -1412,13 +1411,6 @@ defmodule Ecto.Association.ManyToMany do
         on: ^Ecto.Association.on_fields(join_related_keys),
         where: ^where_fields(owner, join_through_keys, values)
 
-    # values
-    # |> Ecto.Association.transpose_values()
-    # |> Enum.zip(join_through_keys)
-    # |> Enum.reduce(query, fn {col_values, {join_owner_key_col, owner_key_col}}, query ->
-    #   owner_key_type = owner.__schema__(:type, owner_key_col)
-    #   where(query, [_, j], field(j, ^join_owner_key_col) in type(^col_values, {:in, ^owner_key_type}))
-    # end)
     query
     |> Ecto.Association.combine_assoc_query(assoc.where)
     |> Ecto.Association.combine_joins_query(assoc.join_where, length(query.joins))
@@ -1655,13 +1647,4 @@ defmodule Ecto.Association.ManyToMany do
       field(join_through, ^join_owner_key) == type(^value, ^owner_type) and ^do_where_fields(owner, keys, values)
     )
   end
-
-  # defp do_where_fields(owner, [{join_owner_key, owner_key} | fields], [[value | values]]) do
-  #   owner_type = owner.__schema__(:type, owner_key)
-  #   binding() |> Debug.inspect
-  #   dynamic(
-  #     [..., join_through],
-  #     field(join_through, ^join_owner_key) == type(^value, ^owner_type) and ^where_fields(owner, fields, [values])
-  #   )
-  # end
 end

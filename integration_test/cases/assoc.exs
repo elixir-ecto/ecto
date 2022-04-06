@@ -265,6 +265,22 @@ defmodule Ecto.Integration.AssocTest do
     assert u2.id == uid2
   end
 
+  test "many_to_many composite PK" do
+    c11 = TestRepo.insert!(%CompositePk{a: 1, b: 1, name: "11"})
+    c12 = TestRepo.insert!(%CompositePk{a: 1, b: 2, name: "12"})
+    c22 = TestRepo.insert!(%CompositePk{a: 2, b: 2, name: "22"})
+
+    TestRepo.insert_all "composite_pk_composite_pk", [[a_1: 1, b_1: 1, a_2: 1, b_2: 2],
+                                                      [a_1: 1, b_1: 1, a_2: 2, b_2: 2],
+                                                      [a_1: 1, b_1: 2, a_2: 2, b_2: 2]]
+
+    assert [^c12, ^c22] = TestRepo.all Ecto.assoc([c11], :composites)
+    assert [^c22] = TestRepo.all Ecto.assoc([c12], :composites)
+    assert [] = TestRepo.all Ecto.assoc([c22], :composites)
+
+    assert [^c12, ^c22, ^c22] = TestRepo.all Ecto.assoc([c11, c12, c22], :composites)
+  end
+
   ## Changesets
 
   test "has_one changeset assoc (on_replace: :delete)" do
