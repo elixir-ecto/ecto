@@ -1,4 +1,4 @@
-import Ecto.Query, only: [from: 1, from: 2, join: 4, join: 5, distinct: 3, where: 3, dynamic: 2]
+import Ecto.Query, only: [from: 1, from: 2, join: 4, join: 5, distinct: 3, where: 2, where: 3, dynamic: 2]
 require Debug # TODO delete
 defmodule Ecto.Association.NotLoaded do
   @moduledoc """
@@ -238,7 +238,7 @@ defmodule Ecto.Association do
       related_queryable = curr_rel.schema
       next = query
         # join on the foreign key
-        |> join(:inner, [{src, counter}], dest in ^related_queryable, on: ^on_fields(prev_rel.out_key, curr_rel.in_key, counter, counter + 1))
+        |> join_on_fields(related_queryable, prev_rel.out_key, curr_rel.in_key, counter)
         # consider where clauses on assocs
         |> combine_joins_query(curr_rel.where, counter + 1)
 
@@ -248,7 +248,7 @@ defmodule Ecto.Association do
     final_bind = Ecto.Query.Builder.count_binds(query) - 1
 
     values = List.wrap(values)
-    # Debug.inspect(dest_out_key: dest_out_key, values: values, query: query, join_to: join_to)
+
     query = case {join_to, dest_out_key, values} do
       {nil, [single_key], [single_value]} ->
         query
@@ -276,21 +276,38 @@ defmodule Ecto.Association do
   end
 
   @doc false
+  def join_on_fields(query, related_queryable, [src_key],  [dst_key], counter) do
+    join(query, :inner, [{src, counter}], dst in ^related_queryable, on: field(src, ^src_key) == field(dst, ^dst_key))
+  end
+
+  def join_on_fields(query, related_queryable, [src_key_1, src_key_2],  [dst_key_1, dst_key_2], counter) do
+    join(
+      query,
+      :inner,
+      [{src, counter}],
+      dst in ^related_queryable,
+      on: field(src, ^src_key_1) == field(dst, ^dst_key_1) and field(src, ^src_key_2) == field(dst, ^dst_key_2)
+    )
+  end
+
+  def join_on_fields(query, related_queryable, src_keys, dst_keys, counter) do
+    join(query, :inner, [{src, counter}], dst in ^related_queryable, on: ^on_fields(dst_keys, src_keys, counter, counter + 1))
+  end
+
+  @doc false
   def strict_zip([l | ls], [r | rs]), do: [{l, r} | strict_zip(ls, rs)]
   def strict_zip([], []), do: []
   def strict_zip(_, _), do: raise ArgumentError, "lists should be of equal length"
 
-  @doc false
-  def on_fields(dst_keys, src_keys, dst_binding, src_binding) do
+  defp on_fields(dst_keys, src_keys, dst_binding, src_binding) do
     on_fields(strict_zip(dst_keys, src_keys), dst_binding, src_binding)
   end
 
-  @doc false
-  def on_fields([{dst_key, src_key}] = _fields, dst_binding, src_binding) do
+  defp on_fields([{dst_key, src_key}] = _fields, dst_binding, src_binding) do
     dynamic([{dst, dst_binding}, {src, src_binding}], field(src, ^src_key) == field(dst, ^dst_key))
   end
 
-  def on_fields([{dst_key, src_key} | fields], dst_binding, src_binding) do
+  defp on_fields([{dst_key, src_key} | fields], dst_binding, src_binding) do
     dynamic([{dst, dst_binding}, {src, src_binding}], field(src, ^src_key) == field(dst, ^dst_key)
             and ^on_fields(fields, dst_binding, src_binding))
   end
@@ -865,7 +882,8 @@ defmodule Ecto.Association.Has do
 
   @impl true
   def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} = assoc) do
-    from(o in owner, join: q in ^queryable, on: ^Ecto.Association.on_fields(owner_key, related_key, 0, 1))
+    from(o in owner)
+    |> Ecto.Association.join_on_fields(queryable, owner_key, related_key, 0)
     |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
 
@@ -1168,7 +1186,8 @@ defmodule Ecto.Association.BelongsTo do
 
   @impl true
   def joins_query(%{related_key: related_key, owner: owner, owner_key: owner_key, queryable: queryable} = assoc) do
-    from(o in owner, join: q in ^queryable, on: ^Ecto.Association.on_fields(owner_key, related_key, 0, 1))
+    from(o in owner)
+    |> Ecto.Association.join_on_fields(queryable, owner_key, related_key, 0)
     |> Ecto.Association.combine_joins_query(assoc.where, 1)
   end
 
@@ -1385,11 +1404,10 @@ defmodule Ecto.Association.ManyToMany do
   def joins_query(%{owner: owner, queryable: queryable,
                     join_through: join_through, join_keys: join_keys} = assoc) do
     [join_through_keys, join_related_keys] = join_keys
-    join_through_keys = Enum.map(join_through_keys, fn {from, to} -> {to, from} end)
 
-    from(o in owner,
-      join: j in ^join_through, on: ^Ecto.Association.on_fields(join_through_keys, 0, 1),
-      join: q in ^queryable, on: ^Ecto.Association.on_fields(join_related_keys, 1, 2))
+    from(o in owner)
+    |> Ecto.Association.join_on_fields(join_through, Keyword.values(join_through_keys), Keyword.keys(join_through_keys), 0)
+    |> Ecto.Association.join_on_fields(queryable, Keyword.keys(join_related_keys), Keyword.values(join_related_keys), 1)
     |> Ecto.Association.combine_joins_query(assoc.where, 2)
     |> Ecto.Association.combine_joins_query(assoc.join_where, 1)
   end
@@ -1402,17 +1420,13 @@ defmodule Ecto.Association.ManyToMany do
   def assoc_query(assoc, query, values) do
     %{queryable: queryable, join_through: join_through, join_keys: join_keys, owner: owner} = assoc
     [join_through_keys, join_related_keys] = join_keys
-    join_related_keys = Enum.map(join_related_keys, fn {from, to} -> {to, from} end)
 
     # We only need to join in the "join table". Preload and Ecto.assoc expressions can then filter
     # by &1.join_owner_key in ^... to filter down to the associated entries in the related table.
-    query =
-      from q in (query || queryable),
-        join: j in ^join_through,
-        on: ^Ecto.Association.on_fields(join_related_keys, 0, 1),
-        where: ^where_fields(owner, join_through_keys, values)
 
-    query
+    from(q in (query || queryable))
+    |> Ecto.Association.join_on_fields(join_through, Keyword.values(join_related_keys), Keyword.keys(join_related_keys), 0)
+    |> where(^where_fields(owner, join_through_keys, values))
     |> Ecto.Association.combine_assoc_query(assoc.where)
     |> Ecto.Association.combine_joins_query(assoc.join_where, length(query.joins))
   end

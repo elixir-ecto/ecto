@@ -357,27 +357,27 @@ defmodule Ecto.Query.PlannerTest do
     query = from(p in Post, join: assoc(p, :comments)) |> plan |> elem(0)
     assert %JoinExpr{on: on, source: source, assoc: nil, qual: :inner} = hd(query.joins)
     assert source == {"comments", Comment}
-    assert Macro.to_string(on.expr) == "&1.post_id() == &0.id()"
+    assert Macro.to_string(on.expr) == "&0.id() == &1.post_id()"
 
     query = from(p in Post, left_join: assoc(p, :comments)) |> plan |> elem(0)
     assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
     assert source == {"comments", Comment}
-    assert Macro.to_string(on.expr) == "&1.post_id() == &0.id()"
+    assert Macro.to_string(on.expr) == "&0.id() == &1.post_id()"
 
     query = from(p in Post, left_join: c in assoc(p, :comments), on: p.title == c.text) |> plan |> elem(0)
     assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
     assert source == {"comments", Comment}
-    assert Macro.to_string(on.expr) == "&1.post_id() == &0.id() and &0.title() == &1.text()"
+    assert Macro.to_string(on.expr) == "&0.id() == &1.post_id() and &0.title() == &1.text()"
 
     query = from(p in Post, left_join: c in assoc(p, :comments), on: p.meta["slug"] |> type(:string) == c.text) |> plan |> elem(0)
     assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
     assert source == {"comments", Comment}
-    assert Macro.to_string(on.expr) == "&1.post_id() == &0.id() and type(json_extract_path(&0.meta(), [\"slug\"]), :string) == &1.text()"
+    assert Macro.to_string(on.expr) == "&0.id() == &1.post_id() and type(json_extract_path(&0.meta(), [\"slug\"]), :string) == &1.text()"
 
     query = from(p in Post, left_join: c in assoc(p, :comments), on: json_extract_path(p.meta, ["slug"]) |> type(:string) == c.text) |> plan |> elem(0)
     assert %JoinExpr{on: on, source: source, assoc: nil, qual: :left} = hd(query.joins)
     assert source == {"comments", Comment}
-    assert Macro.to_string(on.expr) == "&1.post_id() == &0.id() and type(json_extract_path(&0.meta(), [\"slug\"]), :string) == &1.text()"
+    assert Macro.to_string(on.expr) == "&0.id() == &1.post_id() and type(json_extract_path(&0.meta(), [\"slug\"]), :string) == &1.text()"
   end
 
   test "plan: nested joins associations" do
@@ -387,7 +387,7 @@ defmodule Ecto.Query.PlannerTest do
     assert {{"comments", _, _}, {"comments", _, _}} = query.sources
     assert [join1] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [1]
-    assert Macro.to_string(join1.on.expr) == "&1.post_id() == &0.post_id()"
+    assert Macro.to_string(join1.on.expr) == "&0.post_id() == &1.post_id()"
 
     query = from(p in Comment, left_join: assoc(p, :post),
                                left_join: assoc(p, :post_comments)) |> plan |> elem(0)
@@ -395,16 +395,16 @@ defmodule Ecto.Query.PlannerTest do
     assert {{"comments", _, _}, {"posts", _, _}, {"comments", _, _}} = query.sources
     assert [join1, join2] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [1, 2]
-    assert Macro.to_string(join1.on.expr) == "&1.id() == &0.post_id()"
-    assert Macro.to_string(join2.on.expr) == "&2.post_id() == &0.post_id()"
+    assert Macro.to_string(join1.on.expr) == "&0.post_id() == &1.id()"
+    assert Macro.to_string(join2.on.expr) == "&0.post_id() == &2.post_id()"
 
     query = from(p in Comment, left_join: assoc(p, :post_comments),
                                left_join: assoc(p, :post)) |> plan |> elem(0)
     assert {{"comments", _, _}, {"comments", _, _}, {"posts", _, _}} = query.sources
     assert [join1, join2] = query.joins
     assert Enum.map(query.joins, & &1.ix) == [1, 2]
-    assert Macro.to_string(join1.on.expr) == "&1.post_id() == &0.post_id()"
-    assert Macro.to_string(join2.on.expr) == "&2.id() == &0.post_id()"
+    assert Macro.to_string(join1.on.expr) == "&0.post_id() == &1.post_id()"
+    assert Macro.to_string(join2.on.expr) == "&0.post_id() == &2.id()"
   end
 
   test "plan: joins associations with custom queries" do
@@ -414,7 +414,7 @@ defmodule Ecto.Query.PlannerTest do
     assert [join] = query.joins
     assert join.ix == 1
     assert Macro.to_string(join.on.expr) =~
-             ~r"&1.post_id\(\) == &0.id\(\) and not[\s\(]is_nil\(&1.text\(\)\)\)?"
+             ~r"&0.id\(\) == &1.post_id\(\) and not[\s\(]is_nil\(&1.text\(\)\)\)?"
   end
 
   # TODO: AST is represented as string differently on versions pre 1.13
@@ -1070,7 +1070,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, cast_params, dump_params, _select} =
       from(comment in Comment, join: post in assoc(comment, :crazy_post_with_list)) |> normalize_with_params()
 
-    assert inspect(query) =~ "join: p1 in Ecto.Query.PlannerTest.Post, on: p1.id == c0.crazy_post_id and p1.post_title in ^..."
+    assert inspect(query) =~ "join: p1 in Ecto.Query.PlannerTest.Post, on: c0.crazy_post_id == p1.id and p1.post_title in ^..."
     assert cast_params == ["crazypost1", "crazypost2"]
     assert dump_params == ["crazypost1", "crazypost2"]
 
@@ -1087,7 +1087,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, cast_params, dump_params, _select} =
       from(post in Post, join: comment in assoc(post, :crazy_comments_with_list)) |> normalize_with_params()
 
-    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.Comment, on: c2.comment_id == c1.id and c1.text in ^... and c2.deleted == ^..."
+    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.Comment, on: c1.id == c2.comment_id and c1.text in ^... and c2.deleted == ^..."
     assert cast_params == ["crazycomment1", "crazycomment2", true]
     assert dump_params == ["crazycomment1", "crazycomment2", true]
 
@@ -1095,7 +1095,7 @@ defmodule Ecto.Query.PlannerTest do
       Ecto.assoc(%Post{id: 1}, :crazy_comments_with_list)
       |> normalize_with_params()
 
-    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.CommentPost, on: c1.comment_id == c0.id and c1.deleted == ^..."
+    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.CommentPost, on: c0.id == c1.comment_id and c1.deleted == ^..."
     assert inspect(query) =~ "where: c1.post_id in ^... and c0.text in ^..."
     assert cast_params ==  [true, 1, "crazycomment1", "crazycomment2"]
     assert dump_params ==  [true, 1, "crazycomment1", "crazycomment2"]
@@ -1105,7 +1105,7 @@ defmodule Ecto.Query.PlannerTest do
     {query, cast_params, dump_params, _select} =
       from(post in Post, join: comment in assoc(post, :crazy_comments_without_schema)) |> normalize_with_params()
 
-    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.Comment, on: c2.comment_id == c1.id and c2.deleted == ^..."
+    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.Comment, on: c1.id == c2.comment_id and c2.deleted == ^..."
     assert cast_params == [true]
     assert dump_params == [true]
 
@@ -1113,7 +1113,7 @@ defmodule Ecto.Query.PlannerTest do
       Ecto.assoc(%Post{id: 1}, :crazy_comments_without_schema)
       |> normalize_with_params()
 
-    assert inspect(query) =~ "join: c1 in \"comment_posts\", on: c1.comment_id == c0.id and c1.deleted == ^..."
+    assert inspect(query) =~ "join: c1 in \"comment_posts\", on: c0.id == c1.comment_id and c1.deleted == ^..."
     assert inspect(query) =~ "where: c1.post_id in ^..."
     assert cast_params ==  [true, 1]
     assert dump_params ==  [true, 1]
@@ -1122,13 +1122,13 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: many_to_many assoc join with composite keys on association" do
     {query, cast_params, dump_params, _select} = from(post in Post, join: comment in assoc(post, :composites)) |> normalize_with_params()
 
-    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.CompositePk, on: c1.id_1 == c2.composite_id_1 and c1.id_2 == c2.composite_id_2 and c2.deleted == ^..."
+    assert inspect(query) =~ "join: c1 in Ecto.Query.PlannerTest.CompositePk, on: c2.composite_id_1 == c1.id_1 and c2.composite_id_2 == c1.id_2 and c2.deleted == ^..."
     assert cast_params == [true]
     assert dump_params == [true]
 
     {query, cast_params, dump_params, _} = Ecto.assoc(%Post{id: 1}, :composites) |> normalize_with_params()
 
-    assert inspect(query) =~ "join: c1 in \"composites_posts\", on: c1.composite_id_1 == c0.id_1 and c1.composite_id_2 == c0.id_2 and c1.deleted == ^..."
+    assert inspect(query) =~ "join: c1 in \"composites_posts\", on: c0.id_1 == c1.composite_id_1 and c0.id_2 == c1.composite_id_2 and c1.deleted == ^..."
     assert inspect(query) =~ "where: c1.post_id in ^..."
     assert cast_params ==  [true, 1]
     assert dump_params ==  [true, 1]
@@ -1137,13 +1137,13 @@ defmodule Ecto.Query.PlannerTest do
   test "normalize: many_to_many assoc join with composite keys on owner" do
     {query, cast_params, dump_params, _} = from(compo in CompositePk, join: post in assoc(compo, :posts)) |> normalize_with_params()
 
-    assert inspect(query) =~ "join: p1 in Ecto.Query.PlannerTest.Post, on: p1.id == c2.post_id and c2.deleted == ^..."
+    assert inspect(query) =~ "join: p1 in Ecto.Query.PlannerTest.Post, on: c2.post_id == p1.id and c2.deleted == ^..."
     assert cast_params == [true]
     assert dump_params == [true]
 
     {query, cast_params, dump_params, _} = Ecto.assoc(%Post{id: 1}, :composites) |> normalize_with_params()
 
-    assert inspect(query) =~ "join: c1 in \"composites_posts\", on: c1.composite_id_1 == c0.id_1 and c1.composite_id_2 == c0.id_2 and c1.deleted == ^..."
+    assert inspect(query) =~ "join: c1 in \"composites_posts\", on: c0.id_1 == c1.composite_id_1 and c0.id_2 == c1.composite_id_2 and c1.deleted == ^..."
     assert inspect(query) =~ "where: c1.post_id in ^..."
     assert cast_params ==  [true, 1]
     assert dump_params ==  [true, 1]
