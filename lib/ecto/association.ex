@@ -276,22 +276,17 @@ defmodule Ecto.Association do
   end
 
   @doc false
-  def join_on_fields(query, related_queryable, [src_key],  [dst_key], counter) do
-    join(query, :inner, [{src, counter}], dst in ^related_queryable, on: field(src, ^src_key) == field(dst, ^dst_key))
-  end
+  def join_on_fields(query, related_queryable, src_keys, dst_keys, binding) do
 
-  def join_on_fields(query, related_queryable, [src_key_1, src_key_2],  [dst_key_1, dst_key_2], counter) do
-    join(
-      query,
-      :inner,
-      [{src, counter}],
-      dst in ^related_queryable,
-      on: field(src, ^src_key_1) == field(dst, ^dst_key_1) and field(src, ^src_key_2) == field(dst, ^dst_key_2)
-    )
-  end
+    %{joins: joins} = query = join(query, :inner, [{src, binding}], dst in ^related_queryable)
+    {%{on: %{expr: expr} = on} = last_join, joins} = joins |> List.pop_at(-1)
 
-  def join_on_fields(query, related_queryable, src_keys, dst_keys, counter) do
-    join(query, :inner, [{src, counter}], dst in ^related_queryable, on: ^on_fields(dst_keys, src_keys, counter, counter + 1))
+    expr = strict_zip(src_keys, dst_keys)
+    |> Enum.reduce(expr, fn {src_key, dst_key}, expr ->
+       conjoin_exprs(expr, {:==, [], [to_field(binding, src_key), to_field(binding + 1, dst_key)]})
+    end)
+
+    %{query | joins: joins ++ [%{last_join | on: %{on | expr: expr}}]}
   end
 
   @doc false
@@ -299,18 +294,8 @@ defmodule Ecto.Association do
   def strict_zip([], []), do: []
   def strict_zip(_, _), do: raise ArgumentError, "lists should be of equal length"
 
-  defp on_fields(dst_keys, src_keys, dst_binding, src_binding) do
-    on_fields(strict_zip(dst_keys, src_keys), dst_binding, src_binding)
-  end
-
-  defp on_fields([{dst_key, src_key}] = _fields, dst_binding, src_binding) do
-    dynamic([{dst, dst_binding}, {src, src_binding}], field(src, ^src_key) == field(dst, ^dst_key))
-  end
-
-  defp on_fields([{dst_key, src_key} | fields], dst_binding, src_binding) do
-    dynamic([{dst, dst_binding}, {src, src_binding}], field(src, ^src_key) == field(dst, ^dst_key)
-            and ^on_fields(fields, dst_binding, src_binding))
-  end
+  defp conjoin_exprs(true, r), do: r
+  defp conjoin_exprs(l, r), do: {:and, [], [l, r]}
 
   @doc false
   def where_fields([key], [nil]) do
@@ -458,32 +443,27 @@ defmodule Ecto.Association do
   end
 
   defp expand_where(conditions, expr, params, counter, binding) do
-    conjoin_exprs = fn
-      true, r -> r
-      l, r-> {:and, [], [l, r]}
-    end
-
     {expr, params, _counter} =
       Enum.reduce(conditions, {expr, params, counter}, fn
         {key, nil}, {expr, params, counter} ->
-          expr = conjoin_exprs.(expr, {:is_nil, [], [to_field(binding, key)]})
+          expr = conjoin_exprs(expr, {:is_nil, [], [to_field(binding, key)]})
           {expr, params, counter}
 
         {key, {:not, nil}}, {expr, params, counter} ->
-          expr = conjoin_exprs.(expr, {:not, [], [{:is_nil, [], [to_field(binding, key)]}]})
+          expr = conjoin_exprs(expr, {:not, [], [{:is_nil, [], [to_field(binding, key)]}]})
           {expr, params, counter}
 
         {key, {:fragment, frag}}, {expr, params, counter} when is_binary(frag) ->
           pieces = Ecto.Query.Builder.fragment_pieces(frag, [to_field(binding, key)])
-          expr = conjoin_exprs.(expr, {:fragment, [], pieces})
+          expr = conjoin_exprs(expr, {:fragment, [], pieces})
           {expr, params, counter}
 
         {key, {:in, value}}, {expr, params, counter} when is_list(value) ->
-          expr = conjoin_exprs.(expr, {:in, [], [to_field(binding, key), {:^, [], [counter]}]})
+          expr = conjoin_exprs(expr, {:in, [], [to_field(binding, key), {:^, [], [counter]}]})
           {expr, [{value, {:in, {binding, key}}} | params], counter + 1}
 
         {key, value}, {expr, params, counter} ->
-          expr = conjoin_exprs.(expr, {:==, [], [to_field(binding, key), {:^, [], [counter]}]})
+          expr = conjoin_exprs(expr, {:==, [], [to_field(binding, key), {:^, [], [counter]}]})
           {expr, [{value, {binding, key}} | params], counter + 1}
       end)
 
@@ -1426,6 +1406,7 @@ defmodule Ecto.Association.ManyToMany do
 
     from(q in (query || queryable))
     |> Ecto.Association.join_on_fields(join_through, Keyword.values(join_related_keys), Keyword.keys(join_related_keys), 0)
+    # TODO this needs a cleanup
     |> where(^where_fields(owner, join_through_keys, values))
     |> Ecto.Association.combine_assoc_query(assoc.where)
     |> Ecto.Association.combine_joins_query(assoc.join_where, length(query.joins))
@@ -1620,10 +1601,6 @@ defmodule Ecto.Association.ManyToMany do
     end
   end
 
-  defp where_fields(_owner, [{join_owner_key, _owner_key}] = _fields, [[nil]]) do
-    dynamic([..., join_through], is_nil(field(join_through, ^join_owner_key)))
-  end
-
   defp where_fields(owner, [{join_owner_key, owner_key}] = _fields, [[value]]) do
     owner_type = owner.__schema__(:type, owner_key)
     dynamic([..., join_through], field(join_through, ^join_owner_key) == type(^value, ^owner_type))
@@ -1642,17 +1619,9 @@ defmodule Ecto.Association.ManyToMany do
     dynamic([..., q], ^do_where_fields(owner, keys, values) or ^where_fields(owner, keys, values_tail))
   end
 
-  defp do_where_fields(_owner, [{join_owner_key, _owner_key}], [nil]) do
-    dynamic([..., join_through], is_nil(field(join_through, ^join_owner_key)))
-  end
-
   defp do_where_fields(owner, [{join_owner_key, owner_key}], [value]) do
     owner_type = owner.__schema__(:type, owner_key)
     dynamic([..., join_through], field(join_through, ^join_owner_key) == type(^value, ^owner_type))
-  end
-
-  defp do_where_fields(owner, [{join_owner_key, _owner_key} | keys], [nil | values]) do
-    dynamic([..., join_through], is_nil(field(join_through, ^join_owner_key)) and ^do_where_fields(owner, keys, values))
   end
 
   defp do_where_fields(owner, [{join_owner_key, owner_key} | keys], [value | values]) do
