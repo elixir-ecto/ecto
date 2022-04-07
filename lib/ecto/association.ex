@@ -266,7 +266,7 @@ defmodule Ecto.Association do
         end)
       {nil, dest_out_keys, values} ->
         query
-        |> where([{dest, final_bind}], ^where_fields(dest_out_keys, values))
+        |> where_fields(final_bind, dest_out_keys, values)
 
       {_, _, _} ->
         query
@@ -277,7 +277,6 @@ defmodule Ecto.Association do
 
   @doc false
   def join_on_fields(query, related_queryable, src_keys, dst_keys, binding) do
-
     %{joins: joins} = query = join(query, :inner, [{src, binding}], dst in ^related_queryable)
     {%{on: %{expr: expr} = on} = last_join, joins} = joins |> List.pop_at(-1)
 
@@ -297,41 +296,46 @@ defmodule Ecto.Association do
   defp conjoin_exprs(true, r), do: r
   defp conjoin_exprs(l, r), do: {:and, [], [l, r]}
 
-  @doc false
-  def where_fields([key], [nil]) do
-    dynamic([..., q], is_nil(field(q, ^key)))
+  def where_fields(%{wheres: wheres} = query, binding, keys, values) do
+    {expr, params, op} = where_expr(keys, values, binding)
+    %{query | wheres: wheres ++ [%Ecto.Query.BooleanExpr{op: op, expr: expr, params: params, line: __ENV__.line, file: __ENV__.file}]}
   end
 
-  def where_fields([key], [value]) do
-    dynamic([..., q], field(q, ^key) == ^value)
+  defp where_expr([key], [nil], binding) do
+    expr = {:is_nil, [], [to_field(binding, key)]}
+    {expr, [], :and}
   end
 
-  def where_fields([key], values) do
-    dynamic([..., q], field(q, ^key) in ^List.flatten(values))
+  defp where_expr([key], [value], binding) do
+    expr = {:==, [], [to_field(binding, key), {:^, [], [0]}]}
+    params = [{value, {binding, key}}]
+    {expr, params, :and}
   end
 
-  def where_fields(keys, [values]) do
-    dynamic([..., q], ^do_where_fields(keys, values))
+  defp where_expr([key], values, binding) do
+    expr = {:in, [], [to_field(binding, key), {:^, [], [0]}]}
+    params = [{values, {:in, {binding, key}}}]
+    {expr, params, :and}
   end
 
-  def where_fields(keys, [values | values_tail]) do
-    dynamic([..., q], ^do_where_fields(keys, values) or ^where_fields(keys, values_tail))
-  end
+  defp where_expr(keys, values, binding) do
+    # TODO make sure this has a test case
+    or_exprs = fn
+      false, r -> r
+      l, r -> {:or, [], [l, r]}
+    end
 
-  defp do_where_fields([key], [nil]) do
-    dynamic([..., q], is_nil(field(q, ^key)))
-  end
+    {expr, params, _counter} =
+      Enum.reduce(values, {false, [], 0}, fn values, {expr, params, counter} ->
+        {new_expr, params, counter} = strict_zip(keys, values)
+          |> Enum.reduce({true, params, counter}, fn {key, value}, {expr, params, counter} ->
+            expr = conjoin_exprs(expr, {:==, [], [to_field(binding, key), {:^, [], [counter]}]})
+            {expr, [{value, {binding, key}} | params], counter + 1}
+          end)
+        {or_exprs.(expr, new_expr), params, counter}
+      end)
 
-  defp do_where_fields([key], [value]) do
-    dynamic([..., q], field(q, ^key) == ^value)
-  end
-
-  defp do_where_fields([key | keys], [nil | values]) do
-    dynamic([..., q], is_nil(field(q, ^key)) and ^do_where_fields(keys, values))
-  end
-
-  defp do_where_fields([key | keys], [value | values]) do
-    dynamic([..., q], field(q, ^key) == ^value and ^do_where_fields(keys, values))
+    {expr, Enum.reverse(params), :or}
   end
 
   defp flatten_through_chain(owner, [], acc), do: {owner, acc}
@@ -870,7 +874,8 @@ defmodule Ecto.Association.Has do
   # TODO add a test case for composite keys here
   @impl true
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, values) do
-    from(x in (query || queryable), where: ^Ecto.Association.where_fields(related_key, values))
+    from(x in (query || queryable))
+    |> Ecto.Association.where_fields(0, related_key, values)
     |> Ecto.Association.combine_assoc_query(assoc.where)
   end
 
@@ -1173,7 +1178,8 @@ defmodule Ecto.Association.BelongsTo do
 
   @impl true
   def assoc_query(%{related_key: related_key, queryable: queryable} = assoc, query, values) do
-    from(x in (query || queryable), where: ^Ecto.Association.where_fields(related_key, values))
+    from(x in (query || queryable))
+    |> Ecto.Association.where_fields(0, related_key, values)
     |> Ecto.Association.combine_assoc_query(assoc.where)
   end
 
