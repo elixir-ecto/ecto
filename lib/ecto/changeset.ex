@@ -1798,7 +1798,7 @@ defmodule Ecto.Changeset do
   data given to the `changeset` is not empty.
 
   Do not use this function to validate associations that are required,
-  instead pass the `:required` option to `cast_assoc/3`.
+  instead pass the `:required` option to `cast_assoc/3` or `cast_embed/3`.
 
   Opposite to other validations, calling this function does not store
   the validation under the `changeset.validations` key. Instead, it
