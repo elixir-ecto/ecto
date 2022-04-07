@@ -1824,6 +1824,7 @@ defmodule Ecto.Changeset do
 
     fields_with_errors =
       for field <- fields,
+          ensure_field_not_many!(changeset, field),
           missing?(changeset, field, trim),
           ensure_field_exists!(changeset, field),
           is_nil(errors[field]),
@@ -1982,6 +1983,23 @@ defmodule Ecto.Changeset do
       raise ArgumentError, "unknown field #{inspect(field)} in #{inspect(data)}"
     end
     true
+  end
+
+  defp ensure_field_not_many!(%Changeset{types: types}, field) do
+    case types do
+      %{^field => {:assoc, %Ecto.Association.Has{cardinality: :many}}} ->
+        IO.warn("attempting to validate has_many association #{inspect(field)} " <>
+                "with validate_required/3 which has no effect. You can pass the " <>
+                ":required option to Ecto.Changeset.cast_assoc/3 to achieve this.")
+
+      %{^field => {:embed, %Ecto.Embedded{cardinality: :many}}} ->
+        IO.warn("attempting to validate embed_many field #{inspect(field)} " <>
+                "with validate_required/3 which has no effect. You can pass the " <>
+                ":required option to Ecto.Changeset.cast_embed/3 to achieve this.")
+
+      _ ->
+        true
+    end
   end
 
   defp missing?(changeset, field, trim) when is_atom(field) do

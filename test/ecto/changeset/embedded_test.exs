@@ -536,6 +536,17 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
   ## Others
 
+  test "validate_required/3 with has_many raises" do
+    import ExUnit.CaptureIO
+
+    base_changeset = Changeset.change(%Author{})
+
+    assert capture_io(:stderr, fn ->
+      changeset = Changeset.validate_required(base_changeset, :posts)
+      assert changeset.valid?
+    end) =~ ~r/attempting to validate embed_many field/
+  end
+
   test "change embeds_one" do
     embed = Author.__schema__(:embed, :profile)
 
