@@ -1730,8 +1730,8 @@ defmodule Ecto.Changeset do
   """
   @spec validate_change(t, atom, (atom, term -> [{atom, String.t} | {atom, {String.t, Keyword.t}}])) :: t
   def validate_change(%Changeset{} = changeset, field, validator) when is_atom(field) do
-    %{changes: changes, errors: errors} = changeset
-    ensure_field_exists!(changeset, field)
+    %{changes: changes, types: types, errors: errors} = changeset
+    ensure_field_exists!(changeset, types, field)
 
     value = Map.get(changes, field)
     new   = if is_nil(value), do: [], else: validator.(field, value)
@@ -1818,15 +1818,15 @@ defmodule Ecto.Changeset do
   """
   @spec validate_required(t, list | atom, Keyword.t) :: t
   def validate_required(%Changeset{} = changeset, fields, opts \\ []) when not is_nil(fields) do
-    %{required: required, errors: errors, changes: changes} = changeset
+    %{required: required, errors: errors, changes: changes, types: types} = changeset
     trim = Keyword.get(opts, :trim, true)
     fields = List.wrap(fields)
 
     fields_with_errors =
       for field <- fields,
-          ensure_field_not_many!(changeset, field),
+          ensure_field_not_many!(types, field),
           missing?(changeset, field, trim),
-          ensure_field_exists!(changeset, field),
+          ensure_field_exists!(changeset, types, field),
           is_nil(errors[field]),
           do: field
 
@@ -1978,14 +1978,14 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp ensure_field_exists!(%Changeset{types: types, data: data}, field) do
+  defp ensure_field_exists!(changeset = %Changeset{}, types, field) do
     unless Map.has_key?(types, field) do
-      raise ArgumentError, "unknown field #{inspect(field)} in #{inspect(data)}"
+      raise ArgumentError, "unknown field #{inspect(field)} in #{inspect(changeset.data)}"
     end
     true
   end
 
-  defp ensure_field_not_many!(%Changeset{types: types}, field) do
+  defp ensure_field_not_many!(types, field) do
     case types do
       %{^field => {:assoc, %Ecto.Association.Has{cardinality: :many}}} ->
         IO.warn("attempting to validate has_many association #{inspect(field)} " <>
