@@ -1730,8 +1730,8 @@ defmodule Ecto.Changeset do
   """
   @spec validate_change(t, atom, (atom, term -> [{atom, String.t} | {atom, {String.t, Keyword.t}}])) :: t
   def validate_change(%Changeset{} = changeset, field, validator) when is_atom(field) do
-    %{changes: changes, errors: errors} = changeset
-    ensure_field_exists!(changeset, field)
+    %{changes: changes, types: types, errors: errors} = changeset
+    ensure_field_exists!(changeset, types, field)
 
     value = Map.get(changes, field)
     new   = if is_nil(value), do: [], else: validator.(field, value)
@@ -1798,7 +1798,7 @@ defmodule Ecto.Changeset do
   data given to the `changeset` is not empty.
 
   Do not use this function to validate associations that are required,
-  instead pass the `:required` option to `cast_assoc/3`.
+  instead pass the `:required` option to `cast_assoc/3` or `cast_embed/3`.
 
   Opposite to other validations, calling this function does not store
   the validation under the `changeset.validations` key. Instead, it
@@ -1818,14 +1818,15 @@ defmodule Ecto.Changeset do
   """
   @spec validate_required(t, list | atom, Keyword.t) :: t
   def validate_required(%Changeset{} = changeset, fields, opts \\ []) when not is_nil(fields) do
-    %{required: required, errors: errors, changes: changes} = changeset
+    %{required: required, errors: errors, changes: changes, types: types} = changeset
     trim = Keyword.get(opts, :trim, true)
     fields = List.wrap(fields)
 
     fields_with_errors =
       for field <- fields,
+          ensure_field_not_many!(types, field),
           missing?(changeset, field, trim),
-          ensure_field_exists!(changeset, field),
+          ensure_field_exists!(changeset, types, field),
           is_nil(errors[field]),
           do: field
 
@@ -1977,11 +1978,28 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp ensure_field_exists!(%Changeset{types: types, data: data}, field) do
+  defp ensure_field_exists!(changeset = %Changeset{}, types, field) do
     unless Map.has_key?(types, field) do
-      raise ArgumentError, "unknown field #{inspect(field)} in #{inspect(data)}"
+      raise ArgumentError, "unknown field #{inspect(field)} in #{inspect(changeset.data)}"
     end
     true
+  end
+
+  defp ensure_field_not_many!(types, field) do
+    case types do
+      %{^field => {:assoc, %Ecto.Association.Has{cardinality: :many}}} ->
+        IO.warn("attempting to validate has_many association #{inspect(field)} " <>
+                "with validate_required/3 which has no effect. You can pass the " <>
+                ":required option to Ecto.Changeset.cast_assoc/3 to achieve this.")
+
+      %{^field => {:embed, %Ecto.Embedded{cardinality: :many}}} ->
+        IO.warn("attempting to validate embed_many field #{inspect(field)} " <>
+                "with validate_required/3 which has no effect. You can pass the " <>
+                ":required option to Ecto.Changeset.cast_embed/3 to achieve this.")
+
+      _ ->
+        true
+    end
   end
 
   defp missing?(changeset, field, trim) when is_atom(field) do
