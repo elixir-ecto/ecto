@@ -1,4 +1,4 @@
-import Ecto.Query, only: [from: 1, from: 2, join: 4, join: 5, distinct: 3, where: 2, where: 3, dynamic: 2]
+import Ecto.Query, only: [from: 1, from: 2, join: 4, distinct: 3, where: 3]
 require Debug # TODO delete
 defmodule Ecto.Association.NotLoaded do
   @moduledoc """
@@ -293,8 +293,9 @@ defmodule Ecto.Association do
   def strict_zip([], []), do: []
   def strict_zip(_, _), do: raise ArgumentError, "lists should be of equal length"
 
-  defp conjoin_exprs(true, r), do: r
-  defp conjoin_exprs(l, r), do: {:and, [], [l, r]}
+  @doc false
+  def conjoin_exprs(true, r), do: r
+  def conjoin_exprs(l, r), do: {:and, [], [l, r]}
 
   def where_fields(%{wheres: wheres} = query, binding, keys, values) do
     {expr, params, op} = where_expr(keys, values, binding)
@@ -474,7 +475,8 @@ defmodule Ecto.Association do
     {expr, Enum.reverse(params)}
   end
 
-  defp to_field(binding, field),
+  @doc false
+  def to_field(binding, field),
     do: {{:., [], [{:&, [], [binding]}, field]}, [], []}
 
   @doc """
@@ -1412,8 +1414,7 @@ defmodule Ecto.Association.ManyToMany do
 
     from(q in (query || queryable))
     |> Ecto.Association.join_on_fields(join_through, Keyword.values(join_related_keys), Keyword.keys(join_related_keys), 0)
-    # TODO this needs a cleanup
-    |> where(^where_fields(owner, join_through_keys, values))
+    |> where_fields(owner, 1, join_through_keys, values)
     |> Ecto.Association.combine_assoc_query(assoc.where)
     |> Ecto.Association.combine_joins_query(assoc.join_where, length(query.joins))
   end
@@ -1602,39 +1603,48 @@ defmodule Ecto.Association.ManyToMany do
 
 
     unless Enum.all?(values, &is_nil/1) do
-      query = from j in join_through, where: ^where_fields(owner, join_through_keys, [values])
+      query = from(j in join_through) |> where_fields(owner, 0, join_through_keys, [values])
       Ecto.Repo.Queryable.delete_all repo_name, query, opts
     end
   end
 
-  defp where_fields(owner, [{join_owner_key, owner_key}] = _fields, [[value]]) do
+  defp where_fields(%{wheres: wheres} = query, owner, binding, keys, values) do
+    {expr, params, op} = where_expr(owner, keys, values, binding)
+    %{query | wheres: wheres ++ [%Ecto.Query.BooleanExpr{op: op, expr: expr, params: params, line: __ENV__.line, file: __ENV__.file}]}
+  end
+
+  defp where_expr(owner, [{join_owner_key, owner_key}], [[value]], binding) do
     owner_type = owner.__schema__(:type, owner_key)
-    dynamic([..., join_through], field(join_through, ^join_owner_key) == type(^value, ^owner_type))
+    expr = {:==, [], [Ecto.Association.to_field(binding, join_owner_key), {:type, [], [{:^, [], [0]}, owner_type]}]}
+    params = [{value, owner_type}]
+    {expr, params, :and}
   end
 
-  defp where_fields(owner, [{join_owner_key, owner_key}] = _fields, values) do
+  defp where_expr(owner, [{join_owner_key, owner_key}], values, binding) do
     owner_type = owner.__schema__(:type, owner_key)
-    dynamic([..., join_through], field(join_through, ^join_owner_key) in type(^List.flatten(values), {:in, ^owner_type}))
+    # expr = {:in, [], [Ecto.Association.to_field(binding, join_owner_key), {:type, [], [{:^, [], [0]}, owner_type]}]}
+    expr = {:in, [], [Ecto.Association.to_field(binding, join_owner_key), {:^, [], [0]}]}
+    params = [{List.flatten(values), {:in, owner_type}}]
+    {expr, params, :and}
   end
 
-  defp where_fields(owner, keys, [values]) do
-    dynamic([..., q], ^do_where_fields(owner, keys, values))
-  end
+  defp where_expr(owner, keys, values, binding) do
+    or_exprs = fn
+      false, r -> r
+      l, r -> {:or, [], [l, r]}
+    end
 
-  defp where_fields(owner, keys, [values | values_tail]) do
-    dynamic([..., q], ^do_where_fields(owner, keys, values) or ^where_fields(owner, keys, values_tail))
-  end
+    {expr, params, _counter} =
+      Enum.reduce(values, {false, [], 0}, fn values, {expr, params, counter} ->
+        {new_expr, params, counter} = Ecto.Association.strict_zip(keys, values)
+          |> Enum.reduce({true, params, counter}, fn {{join_owner_key, owner_key}, value}, {expr, params, counter} ->
+            owner_type = owner.__schema__(:type, owner_key)
+            expr = Ecto.Association.conjoin_exprs(expr, {:==, [], [Ecto.Association.to_field(binding, join_owner_key), {:type, [], [{:^, [], [counter]}, owner_type]}]})
+            {expr, [{value, owner_type} | params], counter + 1}
+          end)
+        {or_exprs.(expr, new_expr), params, counter}
+      end)
 
-  defp do_where_fields(owner, [{join_owner_key, owner_key}], [value]) do
-    owner_type = owner.__schema__(:type, owner_key)
-    dynamic([..., join_through], field(join_through, ^join_owner_key) == type(^value, ^owner_type))
-  end
-
-  defp do_where_fields(owner, [{join_owner_key, owner_key} | keys], [value | values]) do
-    owner_type = owner.__schema__(:type, owner_key)
-    dynamic(
-      [..., join_through],
-      field(join_through, ^join_owner_key) == type(^value, ^owner_type) and ^do_where_fields(owner, keys, values)
-    )
+    {expr, Enum.reverse(params), :and}
   end
 end
