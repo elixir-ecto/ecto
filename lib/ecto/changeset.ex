@@ -2823,13 +2823,19 @@ defmodule Ecto.Changeset do
     * `:name` - the constraint name. By default, the constraint
       name is inferred from the table + field. May be required
       explicitly for complex cases
+    * `:match` - how the changeset constraint name is matched against the
+      repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
+      `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
+      to this changeset constraint. `:prefix` matches any repo constraint which
+      `starts_with?` `:name` to this changeset constraint.
 
   """
   @spec foreign_key_constraint(t, atom, Keyword.t) :: t
   def foreign_key_constraint(changeset, field, opts \\ []) do
     constraint = opts[:name] || "#{get_source(changeset)}_#{get_field_source(changeset, field)}_fkey"
+    match_type = Keyword.get(opts, :match, :exact)
     message    = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, field, message, :foreign)
+    add_constraint(changeset, :foreign_key, to_string(constraint), match_type, field, message, :foreign)
   end
 
   @doc """
@@ -2864,6 +2870,11 @@ defmodule Ecto.Changeset do
     * `:name` - the constraint name. By default, the constraint
       name is inferred from the table + association field.
       May be required explicitly for complex cases
+    * `:match` - how the changeset constraint name is matched against the
+      repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
+      `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
+      to this changeset constraint. `:prefix` matches any repo constraint which
+      `starts_with?` `:name` to this changeset constraint.
   """
   @spec assoc_constraint(t, atom, Keyword.t) :: t
   def assoc_constraint(changeset, assoc, opts \\ []) do
@@ -2876,8 +2887,9 @@ defmodule Ecto.Changeset do
             "assoc_constraint can only be added to belongs to associations, got: #{inspect other}"
       end
 
+    match_type = Keyword.get(opts, :match, :exact)
     message = message(opts, "does not exist")
-    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, message, :assoc)
+    add_constraint(changeset, :foreign_key, to_string(constraint), match_type, assoc, message, :assoc)
   end
 
   @doc """
@@ -2913,6 +2925,11 @@ defmodule Ecto.Changeset do
     * `:name` - the constraint name. By default, the constraint
       name is inferred from the association table + association
       field. May be required explicitly for complex cases
+    * `:match` - how the changeset constraint name is matched against the
+      repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
+      `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
+      to this changeset constraint. `:prefix` matches any repo constraint which
+      `starts_with?` `:name` to this changeset constraint.
 
   """
   @spec no_assoc_constraint(t, atom, Keyword.t) :: t
@@ -2928,7 +2945,8 @@ defmodule Ecto.Changeset do
             "no_assoc_constraint can only be added to has one/many associations, got: #{inspect other}"
       end
 
-    add_constraint(changeset, :foreign_key, to_string(constraint), :exact, assoc, message, :no_assoc)
+    match_type = Keyword.get(opts, :match, :exact)
+    add_constraint(changeset, :foreign_key, to_string(constraint), match_type, assoc, message, :no_assoc)
   end
 
   @doc """
