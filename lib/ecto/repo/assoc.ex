@@ -111,7 +111,6 @@ defmodule Ecto.Repo.Assoc do
     end)
 
     {_source, schema, _prefix} = elem(sources, idx)
-    {schema.__schema__(:primary_key), %{}, initial_dict, acc}
 
     case schema.__schema__(:primary_key) do
       [] -> raise Ecto.NoPrimaryKeyFieldError, schema: schema
