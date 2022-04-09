@@ -44,6 +44,7 @@ defmodule Ecto.RepoTest do
 
     schema "my_schema_child" do
       field :a, :string
+      belongs_to :my_schema, MySchemaNoPK, references: :n, foreign_key: :n
     end
 
     def changeset(struct, params) do
@@ -139,6 +140,8 @@ defmodule Ecto.RepoTest do
     @primary_key false
     schema "my_schema" do
       field :x, :string
+      field :n, :integer
+      has_one :child, MySchemaChild, references: :n, foreign_key: :n
     end
   end
 
@@ -1491,6 +1494,19 @@ defmodule Ecto.RepoTest do
   describe "preload" do
     test "returns nil if first argument of preload is nil" do
       assert TestRepo.preload(nil, []) == nil
+    end
+
+    test "raises if primary key is not defined" do
+      query =
+        from(p in MySchemaNoPK,
+          left_join: c in MySchemaChild,
+          on: p.n == p.n,
+          preload: [child: c]
+        )
+
+      assert_raise Ecto.NoPrimaryKeyFieldError, fn ->
+        TestRepo.all(query)
+      end
     end
   end
 
