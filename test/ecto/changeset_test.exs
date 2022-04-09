@@ -1802,20 +1802,20 @@ defmodule Ecto.ChangesetTest do
            [%{type: :unique, field: :title, constraint: "posts_title_index", match: :exact,
               error_message: "has already been taken", error_type: :unique}]
 
-    changeset = change(%Post{}) |> unique_constraint(:title, name: :posts_title_index, match: :exact, message: "is taken")
+    changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :exact, message: "is taken")
     assert constraints(changeset) ==
-           [%{type: :unique, field: :title, constraint: "posts_title_index", match: :exact, error_message: "is taken", error_type: :unique}]
+           [%{type: :unique, field: :title, constraint: "whatever", match: :exact, error_message: "is taken", error_type: :unique}]
 
-    changeset = change(%Post{}) |> unique_constraint(:title, name: :posts_title_index, match: :suffix, message: "is taken")
+    changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :suffix, message: "is taken")
     assert constraints(changeset) ==
-           [%{type: :unique, field: :title, constraint: "posts_title_index", match: :suffix, error_message: "is taken", error_type: :unique}]
+           [%{type: :unique, field: :title, constraint: "whatever", match: :suffix, error_message: "is taken", error_type: :unique}]
 
-    changeset = change(%Post{}) |> unique_constraint(:title, name: :posts_title_index, match: :prefix, message: "is taken")
+    changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :prefix, message: "is taken")
     assert constraints(changeset) ==
-           [%{type: :unique, field: :title, constraint: "posts_title_index", match: :prefix, error_message: "is taken", error_type: :unique}]
+           [%{type: :unique, field: :title, constraint: "whatever", match: :prefix, error_message: "is taken", error_type: :unique}]
 
     assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
-      change(%Post{}) |> unique_constraint(:title, name: :posts_title_index, match: :invalid, message: "is taken")
+      change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :invalid, message: "match is invalid")
     end
   end
 
