@@ -1774,8 +1774,20 @@ defmodule Ecto.ChangesetTest do
            [%{type: :check, field: :title, constraint: "title_must_be_short", match: :exact,
               error_message: "cannot be more than 15 characters", error_type: :check}]
 
+    changeset = change(%Post{}) |> check_constraint(:title, name: :title_must_be_short, match: :exact, message: "cannot be more than 15 characters")
+    assert constraints(changeset) ==
+            [%{type: :check, field: :title, constraint: "title_must_be_short", match: :exact, error_message: "cannot be more than 15 characters", error_type: :check}]
+
+    changeset = change(%Post{}) |> check_constraint(:title, name: :title_must_be_short, match: :suffix, message: "cannot be more than 15 characters")
+    assert constraints(changeset) ==
+          [%{type: :check, field: :title, constraint: "title_must_be_short", match: :suffix, error_message: "cannot be more than 15 characters", error_type: :check}]
+
+    changeset = change(%Post{}) |> check_constraint(:title, name: :title_must_be_short, match: :prefix, message: "cannot be more than 15 characters")
+    assert constraints(changeset) ==
+          [%{type: :check, field: :title, constraint: "title_must_be_short", match: :prefix, error_message: "cannot be more than 15 characters", error_type: :check}]
+
     assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
-      change(%Post{}) |> check_constraint(:title, name: :whatever, match: :invalid, message: "match is invalid")
+      change(%Post{}) |> check_constraint(:title, name: :title_must_be_short, match: :invalid, message: "match is invalid")
     end
 
     assert_raise ArgumentError, ~r/supply the name/, fn ->
@@ -1790,20 +1802,20 @@ defmodule Ecto.ChangesetTest do
            [%{type: :unique, field: :title, constraint: "posts_title_index", match: :exact,
               error_message: "has already been taken", error_type: :unique}]
 
-    changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, message: "is taken")
+    changeset = change(%Post{}) |> unique_constraint(:title, name: :posts_title_index, match: :exact, message: "is taken")
     assert constraints(changeset) ==
-           [%{type: :unique, field: :title, constraint: "whatever", match: :exact, error_message: "is taken", error_type: :unique}]
+           [%{type: :unique, field: :title, constraint: "posts_title_index", match: :exact, error_message: "is taken", error_type: :unique}]
 
-    changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :suffix, message: "is taken")
+    changeset = change(%Post{}) |> unique_constraint(:title, name: :posts_title_index, match: :suffix, message: "is taken")
     assert constraints(changeset) ==
-           [%{type: :unique, field: :title, constraint: "whatever", match: :suffix, error_message: "is taken", error_type: :unique}]
+           [%{type: :unique, field: :title, constraint: "posts_title_index", match: :suffix, error_message: "is taken", error_type: :unique}]
 
-    changeset = change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :prefix, message: "is taken")
+    changeset = change(%Post{}) |> unique_constraint(:title, name: :posts_title_index, match: :prefix, message: "is taken")
     assert constraints(changeset) ==
-           [%{type: :unique, field: :title, constraint: "whatever", match: :prefix, error_message: "is taken", error_type: :unique}]
+           [%{type: :unique, field: :title, constraint: "posts_title_index", match: :prefix, error_message: "is taken", error_type: :unique}]
 
     assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
-      change(%Post{}) |> unique_constraint(:title, name: :whatever, match: :invalid, message: "is taken")
+      change(%Post{}) |> unique_constraint(:title, name: :posts_title_index, match: :invalid, message: "is taken")
     end
   end
 
@@ -1850,6 +1862,22 @@ defmodule Ecto.ChangesetTest do
     changeset = change(%Comment{}) |> foreign_key_constraint(:post_id, name: :whatever, message: "is not available")
     assert constraints(changeset) ==
            [%{type: :foreign_key, field: :post_id, constraint: "whatever", match: :exact, error_message: "is not available", error_type: :foreign}]
+
+    changeset = change(%Comment{}) |> foreign_key_constraint(:post, name: :whatever, match: :exact, message: "is not available")
+    assert constraints(changeset) ==
+          [%{type: :foreign_key, field: :post, constraint: "whatever", match: :exact, error_message: "is not available", error_type: :foreign}]
+
+    changeset = change(%Comment{}) |> foreign_key_constraint(:post, name: :whatever, match: :suffix, message: "is not available")
+    assert constraints(changeset) ==
+          [%{type: :foreign_key, field: :post, constraint: "whatever", match: :suffix, error_message: "is not available", error_type: :foreign}]
+
+    changeset = change(%Comment{}) |> foreign_key_constraint(:post, name: :whatever, match: :prefix, message: "is not available")
+    assert constraints(changeset) ==
+          [%{type: :foreign_key, field: :post, constraint: "whatever", match: :prefix, error_message: "is not available", error_type: :foreign}]
+
+    assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
+      change(%Comment{}) |> foreign_key_constraint(:post, name: :whatever, match: :invalid, message: "match is invalid")
+    end
   end
 
   test "foreign_key_constraint/3 on field with :source" do
@@ -1869,9 +1897,21 @@ defmodule Ecto.ChangesetTest do
            [%{type: :foreign_key, field: :post, constraint: "comments_post_id_fkey", match: :exact,
               error_message: "does not exist", error_type: :assoc}]
 
-    changeset = change(%Comment{}) |> assoc_constraint(:post, name: :whatever, message: "is not available")
+    changeset = change(%Comment{}) |> assoc_constraint(:post, name: :whatever, match: :exact, message: "is not available")
     assert constraints(changeset) ==
            [%{type: :foreign_key, field: :post, constraint: "whatever", match: :exact, error_message: "is not available", error_type: :assoc}]
+
+    changeset = change(%Comment{}) |> assoc_constraint(:post, name: :whatever, match: :suffix, message: "is not available")
+    assert constraints(changeset) ==
+          [%{type: :foreign_key, field: :post, constraint: "whatever", match: :suffix, error_message: "is not available", error_type: :assoc}]
+
+    changeset = change(%Comment{}) |> assoc_constraint(:post, name: :whatever, match: :prefix, message: "is not available")
+    assert constraints(changeset) ==
+          [%{type: :foreign_key, field: :post, constraint: "whatever", match: :prefix, error_message: "is not available", error_type: :assoc}]
+
+    assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
+      change(%Comment{}) |> assoc_constraint(:post, name: :whatever, match: :invalid, message: "match is invalid")
+    end
   end
 
   test "assoc_constraint/3 on field with :source" do
@@ -1894,6 +1934,24 @@ defmodule Ecto.ChangesetTest do
     message = ~r"assoc_constraint can only be added to belongs to associations"
     assert_raise ArgumentError, message, fn ->
       change(%Post{}) |> assoc_constraint(:comments)
+    end
+  end
+
+  test "no_assoc_constraint/3" do
+    changeset = change(%Post{}) |> no_assoc_constraint(:comments, name: :comments_post_id_fkey, match: :exact, message: "exists")
+    assert constraints(changeset) ==
+          [%{type: :foreign_key, field: :comments, constraint: "comments_post_id_fkey", match: :exact, error_message: "exists", error_type: :no_assoc}]
+
+    changeset = change(%Post{}) |> no_assoc_constraint(:comments, name: :comments_post_id_fkey, match: :suffix, message: "exists")
+    assert constraints(changeset) ==
+          [%{type: :foreign_key, field: :comments, constraint: "comments_post_id_fkey", match: :suffix, error_message: "exists", error_type: :no_assoc}]
+
+    changeset = change(%Post{}) |> no_assoc_constraint(:comments, name: :comments_post_id_fkey, match: :prefix, message: "exists")
+    assert constraints(changeset) ==
+          [%{type: :foreign_key, field: :comments, constraint: "comments_post_id_fkey", match: :prefix, error_message: "exists", error_type: :no_assoc}]
+
+    assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
+      change(%Post{}) |> no_assoc_constraint(:comments, name: :comments_post_id_fkey, match: :invalid, message: "is taken")
     end
   end
 
@@ -1943,6 +2001,18 @@ defmodule Ecto.ChangesetTest do
     assert constraints(changeset) ==
            [%{type: :exclusion, field: :title, constraint: "whatever", match: :exact,
               error_message: "is invalid", error_type: :exclusion}]
+
+    changeset = change(%Post{}) |> exclusion_constraint(:title, name: :whatever, match: :exact, message: "is invalid")
+    assert constraints(changeset) ==
+            [%{type: :exclusion, field: :title, constraint: "whatever", match: :exact, error_message: "is invalid", error_type: :exclusion}]
+
+    changeset = change(%Post{}) |> exclusion_constraint(:title, name: :whatever, match: :suffix, message: "is invalid")
+    assert constraints(changeset) ==
+          [%{type: :exclusion, field: :title, constraint: "whatever", match: :suffix, error_message: "is invalid", error_type: :exclusion}]
+
+    changeset = change(%Post{}) |> exclusion_constraint(:title, name: :whatever, match: :prefix, message: "is invalid")
+    assert constraints(changeset) ==
+          [%{type: :exclusion, field: :title, constraint: "whatever", match: :prefix, error_message: "is invalid", error_type: :exclusion}]
 
     assert_raise ArgumentError, ~r/invalid match type: :invalid/, fn ->
       change(%Post{}) |> exclusion_constraint(:title, name: :whatever, match: :invalid, message: "match is invalid")
