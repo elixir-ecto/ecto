@@ -2638,11 +2638,10 @@ defmodule Ecto.Changeset do
       Defaults to "is invalid"
     * `:name` - the name of the constraint. Required.
     * `:match` - how the changeset constraint name is matched against the
-      repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to `:exact`.
-      `:suffix` matches any repo constraint which `ends_with?` `:name`
-       to this changeset constraint.
-      `:prefix` matches any repo constraint which `starts_with?` `:name`
-       to this changeset constraint.
+      repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
+      `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
+      to this changeset constraint. `:prefix` matches any repo constraint which
+      `starts_with?` `:name` to this changeset constraint.
 
   """
   def check_constraint(changeset, field, opts \\ []) do
@@ -2687,9 +2686,10 @@ defmodule Ecto.Changeset do
       explicitly for complex cases
 
     * `:match` - how the changeset constraint name is matched against the
-      repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
-      `:suffix` matches any repo constraint which `ends_with?` `:name`
-       to this changeset constraint.
+      repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
+      `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
+      to this changeset constraint. `:prefix` matches any repo constraint which
+      `starts_with?` `:name` to this changeset constraint.
 
     * `:error_key` - the key to which changeset error will be added when
       check fails, defaults to the first field name of the given list of
@@ -2946,9 +2946,10 @@ defmodule Ecto.Changeset do
       name is inferred from the table + field. May be required
       explicitly for complex cases
     * `:match` - how the changeset constraint name is matched against the
-      repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
-      `:suffix` matches any repo constraint which `ends_with?` `:name`
-       to this changeset constraint.
+      repo constraint, may be `:exact`, `:suffix` or `:prefix`. Defaults to
+      `:exact`. `:suffix` matches any repo constraint which `ends_with?` `:name`
+      to this changeset constraint. `:prefix` matches any repo constraint which
+      `starts_with?` `:name` to this changeset constraint.
 
   """
   def exclusion_constraint(changeset, field, opts \\ []) do
