@@ -199,7 +199,7 @@ defmodule Ecto.Embedded do
 
   defp to_struct(%Changeset{data: data} = changeset, action, %{related: schema}, adapter) do
     %{data: struct, changes: changes} = changeset =
-      Relation.surface_changes(changeset, data, schema.__schema__(:fields))
+      maybe_surface_changes(changeset, data, schema, action)
 
     embeds = prepare(changeset, schema.__schema__(:embeds), adapter, action)
 
@@ -208,6 +208,14 @@ defmodule Ecto.Embedded do
     |> autogenerate_id(struct, action, schema, adapter)
     |> autogenerate(action, schema)
     |> apply_embeds(struct)
+  end
+
+  defp maybe_surface_changes(changeset, data, schema, :insert) do
+    Relation.surface_changes(changeset, data, schema.__schema__(:fields))
+  end
+
+  defp maybe_surface_changes(changeset, _data, _schema, _action) do
+    changeset
   end
 
   defp run_prepare(changeset, repo) do
