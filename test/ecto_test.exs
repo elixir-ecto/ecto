@@ -41,44 +41,45 @@ defmodule EctoTest do
 
   test "Ecto.assoc/3: struct prefix is assigned to assoc with no prefix" do
     # One struct
-    {query, _, _} =
+    query =
       %PrefixSchema{id: 1}
       |> Ecto.assoc(:no_prefix_assoc)
-      |> normalize_with_params()
+      |> normalize()
 
     assert query.sources == {{"no_prefix_assoc", EctoTest.NoPrefixAssoc, "owner_prefix"}}
 
     # Multiple structs
-    [%PrefixSchema{id: 1}, %PrefixSchema{id: 2}]
-    |> Ecto.assoc(:no_prefix_assoc)
-    |> normalize_with_params()
+    query =
+      [%PrefixSchema{id: 1}, %PrefixSchema{id: 2}]
+      |> Ecto.assoc(:no_prefix_assoc)
+      |> normalize()
 
     assert query.sources == {{"no_prefix_assoc", EctoTest.NoPrefixAssoc, "owner_prefix"}}
   end
 
   test "Ecto.assoc/3: struct prefix is not assigned to assoc that already has a prefix" do
     # One struct
-    {query, _, _} =
+    query =
       %PrefixSchema{id: 1}
       |> Ecto.assoc(:prefix_assoc)
-      |> normalize_with_params()
+      |> normalize()
 
     assert query.sources == {{"prefix_assoc", EctoTest.PrefixAssoc, "assoc_prefix"}}
 
     # Multiple structs
-    {query, _, _} =
+    query =
       [%PrefixSchema{id: 1}, %PrefixSchema{id: 2}]
       |> Ecto.assoc(:prefix_assoc)
-      |> normalize_with_params()
+      |> normalize()
 
     assert query.sources == {{"prefix_assoc", EctoTest.PrefixAssoc, "assoc_prefix"}}
   end
 
   test "Ecto.assoc/3: struct prefix is assigned to chain of assocs with no prefixes" do
-    {query, _, _} =
+    query =
       %PrefixSchema{id: 1}
       |> Ecto.assoc([:no_prefix_assoc, :no_prefix_nested_assoc])
-      |> normalize_with_params()
+      |> normalize()
 
     assert query.sources ==
              {{"no_prefix_nested_assoc", EctoTest.NoPrefixNestedAssoc, "owner_prefix"},
@@ -86,10 +87,10 @@ defmodule EctoTest do
   end
 
   test "Ecto.assoc/3: prefix option is assigned to assoc instead of struct's prefix" do
-    {query, _, _} =
+    query =
       %PrefixSchema{id: 1}
       |> Ecto.assoc(:no_prefix_assoc, prefix: "prefix_opt")
-      |> normalize_with_params()
+      |> normalize()
 
     assert query.sources == {{"no_prefix_assoc", EctoTest.NoPrefixAssoc, "prefix_opt"}}
   end
@@ -98,14 +99,14 @@ defmodule EctoTest do
     Planner.plan(query, operation, Ecto.TestAdapter)
   end
 
-  defp normalize_with_params(query, operation \\ :all) do
-    {query, params, _key} = plan(query, operation)
+  defp normalize(query, operation \\ :all) do
+    {query, _params, _key} = plan(query, operation)
 
-    {query, select} =
+    {query, _select} =
       query
       |> Planner.ensure_select(operation == :all)
       |> Planner.normalize(operation, Ecto.TestAdapter, 0)
 
-    {query, params, select}
+    query
   end
 end
