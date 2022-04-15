@@ -502,7 +502,7 @@ defmodule Ecto do
 
   ## Options
 
-    * `:prefix` - the prefix to fetch preloads from. By default, queries
+    * `:prefix` - the prefix to fetch assocs from. By default, queries
       will use the same prefix as the first struct in the given collection.
       This option allows the prefix to be changed.
 
