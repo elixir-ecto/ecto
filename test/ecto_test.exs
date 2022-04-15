@@ -46,6 +46,8 @@ defmodule EctoTest do
       |> Ecto.assoc(:no_prefix_assoc)
       |> normalize_with_params()
 
+    assert query.sources == {{"no_prefix_assoc", EctoTest.NoPrefixAssoc, "owner_prefix"}}
+
     # Multiple structs
     [%PrefixSchema{id: 1}, %PrefixSchema{id: 2}]
     |> Ecto.assoc(:no_prefix_assoc)
