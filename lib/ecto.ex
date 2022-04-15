@@ -500,8 +500,14 @@ defmodule Ecto do
       posts = Repo.all from p in Post, where: is_nil(p.published_at)
       Repo.all Ecto.assoc(posts, [:comments, :author])
 
+  ## Options
+
+    * `:prefix` - the prefix to fetch preloads from. By default, queries
+      will use the same prefix as the first struct in the given collection.
+      This option allows the prefix to be changed.
+
   """
-  def assoc(struct_or_structs, assocs) do
+  def assoc(struct_or_structs, assocs, opts \\ []) do
     [assoc | assocs] = List.wrap(assocs)
 
     structs =
@@ -511,7 +517,9 @@ defmodule Ecto do
         struct_or_structs -> List.wrap(struct_or_structs)
       end
 
-    schema = hd(structs).__struct__
+    sample = hd(structs)
+    prefix = assoc_prefix(sample, opts)
+    schema = sample.__struct__
     refl = %{owner_key: owner_key} = Ecto.Association.association_from_schema!(schema, assoc)
 
     values =
@@ -523,10 +531,24 @@ defmodule Ecto do
     case assocs do
       [] ->
         %module{} = refl
-        module.assoc_query(refl, nil, values)
+        %{module.assoc_query(refl, nil, values) | prefix: prefix}
 
       assocs ->
-        Ecto.Association.filter_through_chain(schema, [assoc | assocs], values)
+        %{Ecto.Association.filter_through_chain(schema, [assoc | assocs], values) | prefix: prefix}
+    end
+  end
+
+  defp assoc_prefix(sample, opts) do
+    case Keyword.fetch(opts, :prefix) do
+      {:ok, prefix} ->
+        prefix
+
+      :error ->
+        case sample do
+          %{__meta__: %{prefix: prefix}} -> prefix
+          # Must be an embedded schema
+          _ -> nil
+        end
     end
   end
 

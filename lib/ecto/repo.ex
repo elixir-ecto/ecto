@@ -959,8 +959,8 @@ defmodule Ecto.Repo do
       only be performed when we have more than one preload and the
       repository is not in a transaction. Defaults to `true`.
     * `:prefix` - the prefix to fetch preloads from. By default, queries
-      will use the same prefix as the one in the given collection. This
-      option allows the prefix to be changed.
+      will use the same prefix as the first struct in the given collection.
+      This option allows the prefix to be changed.
 
   See the ["Shared options"](#module-shared-options) section at the module
   documentation for more options.
