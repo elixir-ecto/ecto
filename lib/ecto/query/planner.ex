@@ -398,7 +398,7 @@ defmodule Ecto.Query.Planner do
         if valid_subquery_value?(value) do
           {key, value}
         else
-          error!(query, "maps, lists, tuples and sources are not allowed as map values in subquery, got: `#{Macro.to_string(expr)}`")
+          error!(query, "atoms, maps, lists, tuples and sources are not allowed as map values in subquery, got: `#{Macro.to_string(expr)}`")
         end
     end)
   end
@@ -407,6 +407,8 @@ defmodule Ecto.Query.Planner do
   defp valid_subquery_value?(args) when is_list(args), do: false
   defp valid_subquery_value?({container, _, args})
        when container in [:{}, :%{}, :&] and is_list(args), do: false
+  defp valid_subquery_value?(nil), do: true
+  defp valid_subquery_value?(arg) when is_atom(arg), do: false
   defp valid_subquery_value?(_), do: true
 
   defp plan_joins(query, sources, offset, adapter) do

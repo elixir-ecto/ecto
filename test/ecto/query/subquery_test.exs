@@ -96,6 +96,35 @@ defmodule Ecto.Query.SubqueryTest do
       assert [{:t, _}, {:l, "literal"}] = query.from.source.query.select.fields
     end
 
+    test "invalid values" do
+      message = "atoms, maps, lists, tuples and sources are not allowed as map values in subquery"
+
+      assert_raise Ecto.SubQueryError, ~r/#{message}/, fn ->
+        query = select(Post, [p], %{t: p.title, l: :literal})
+        plan(from(subquery(query), []))
+      end
+
+      assert_raise Ecto.SubQueryError, ~r/#{message}/, fn ->
+        query = select(Post, [p], %{t: p.title, l: []})
+        plan(from(subquery(query), []))
+      end
+
+      assert_raise Ecto.SubQueryError, ~r/#{message}/, fn ->
+        query = select(Post, [p], %{t: p.title, l: %{}})
+        plan(from(subquery(query), []))
+      end
+
+      assert_raise Ecto.SubQueryError, ~r/#{message}/, fn ->
+        query = select(Post, [p], %{t: p.title, l: {1, 2, 3}})
+        plan(from(subquery(query), []))
+      end
+
+      assert_raise Ecto.SubQueryError, ~r/#{message}/, fn ->
+        query = select(Post, [p], %{t: p.title, l: p})
+        plan(from(subquery(query), []))
+      end
+    end
+
     test "with map updates in select can be used with assoc" do
       query =
         Post
