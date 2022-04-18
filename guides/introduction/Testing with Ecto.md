@@ -65,7 +65,7 @@ defmodule MyApp.RepoCase do
 end
 ```
 
-The case template above brings `Ecto` and `Ecto.Query` functions into your tests and checkouts a database connection. It also enables a shared sandbox connection mode in case the test is not running asynchronously.
+The case template above brings `Ecto` and `Ecto.Query` functions into your tests and checks-out a database connection. It also enables a shared sandbox connection mode in case the test is not running asynchronously.
 See [`Ecto.Adapters.SQL.Sandbox`](https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.Sandbox.html) for more information.
 
 To add `test/support/` folder for compilation in test environment we need to update `mix.exs` configuration
