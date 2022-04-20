@@ -95,7 +95,7 @@ The issue with the design above is that it breaks database references. The datab
 
 The design above is also extremely inefficient, especially if you're working with large tables. Bear in mind that if that's your case, you might be forced to remove such polymorphic references in the future when frequent polymorphic queries start grinding the database to a halt even after adding indexes and optimizing the database.
 
-Luckily, the documentation for the `Ecto.Schema.belongs_to/3` macro includes a section named "Polymorphic associations" with some examples on how to design sane and performant associations. One of those approaches consists in using many join tables. Besides the "todo_lists" and "projects" tables and the "todo_items" table, we would create "todo_list_items" and "project_items" to associate todo items to todo lists and todo items to projects respectively. In terms of migrations, we are looking at the following:
+Luckily, the documentation for the `Ecto.Schema.belongs_to/3` macro includes a section named "Polymorphic associations" with some examples on how to design sane and performant associations. One of those approaches consists in using several join tables. Besides the "todo_lists" and "projects" tables and the "todo_items" table, we would create "todo_list_items" and "project_items" to associate todo items to todo lists and todo items to projects respectively. In terms of migrations, we are looking at the following:
 
 ```elixir
 create table(:todo_lists)  do
