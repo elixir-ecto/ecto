@@ -1363,7 +1363,8 @@ defmodule Ecto.Association.ManyToMany do
     end
   end
 
-  defp insert_join(join_through, _refl, %{repo: repo}, data, opts) when is_binary(join_through) do
+  defp insert_join(join_through, _refl, %{repo: repo, data: owner}, data, opts) when is_binary(join_through) do
+    opts = Keyword.put_new(opts, :prefix, owner.__meta__.prefix)
     repo.insert_all(join_through, [data], opts)
   end
 
@@ -1376,9 +1377,19 @@ defmodule Ecto.Association.ManyToMany do
       |> Map.merge(data)
       |> Ecto.Changeset.change()
       |> Map.put(:constraints, constraints)
+      |> put_new_prefix(owner.__meta__.prefix)
 
     repo.insert(changeset, opts)
   end
+
+  defp put_new_prefix(%{data: %{__meta__: %{prefix: prefix}}} = changeset, prefix),
+    do: changeset
+
+  defp put_new_prefix(%{data: %{__meta__: %{prefix: nil}}} = changeset, prefix),
+    do: update_in(changeset.data, &Ecto.put_meta(&1, prefix: prefix))
+
+  defp put_new_prefix(changeset, _),
+    do: changeset
 
   defp field!(op, struct, field) do
     Map.get(struct, field) || raise "could not #{op} join entry because `#{field}` is nil in #{inspect struct}"
