@@ -1383,7 +1383,7 @@ defmodule Ecto.Association.ManyToMany do
   end
 
   defp put_new_prefix(%{data: %{__meta__: %{prefix: prefix}}} = changeset, prefix),
-    do: update_in(changeset.data, &Ecto.put_meta(&1, prefix: prefix))
+    do: changeset
 
   defp put_new_prefix(%{data: %{__meta__: %{prefix: nil}}} = changeset, prefix),
     do: update_in(changeset.data, &Ecto.put_meta(&1, prefix: prefix))
