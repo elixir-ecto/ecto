@@ -34,6 +34,18 @@ defmodule Ecto.Repo.ManyToManyTest do
     end
   end
 
+  defmodule MySchemaPrefixAssoc do
+    use Ecto.Schema
+
+    @schema_prefix "schema_assoc_prefix"
+    schema "schemas_prefix_assocs" do
+      field :public, :boolean, default: false
+      belongs_to :my_schema, MySchema
+      belongs_to :my_assoc, MyAssoc
+      timestamps()
+    end
+  end
+
   defmodule MySchema do
     use Ecto.Schema
 
@@ -42,6 +54,7 @@ defmodule Ecto.Repo.ManyToManyTest do
       field :y, :binary
       many_to_many :assocs, MyAssoc, join_through: "schemas_assocs", on_replace: :delete
       many_to_many :schema_assocs, MyAssoc, join_through: MySchemaAssoc, join_defaults: [public: true]
+      many_to_many :schema_prefix_assocs, MyAssoc, join_through: MySchemaPrefixAssoc, join_defaults: [public: true]
       many_to_many :mfa_schema_assocs, MyAssoc, join_through: MySchemaAssoc, join_defaults: {__MODULE__, :send_to_self, [:extra]}
     end
 
@@ -75,9 +88,11 @@ defmodule Ecto.Repo.ManyToManyTest do
       |> Ecto.put_meta(prefix: "prefix")
       |> Ecto.Changeset.change
       |> Ecto.Changeset.put_assoc(:assocs, [sample])
+
     schema = TestRepo.insert!(changeset)
     [assoc] = schema.assocs
     assert assoc.__meta__.prefix == "prefix"
+    assert_received {:insert_all, %{source: "schemas_assocs", prefix: "prefix"}, [[my_assoc_id: 1, my_schema_id: 1]]}
   end
 
   test "handles assocs on insert with schema and keyword defaults" do
@@ -128,6 +143,36 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert_received {:defaults, %MySchemaAssoc{}, %MySchema{x: "abc"}, :extra}
   end
 
+  test "handles assocs on insert with schema preserving parent schema prefix" do
+    sample = %MyAssoc{x: "xyz"}
+
+    changeset =
+      %MySchema{}
+      |> Ecto.put_meta(prefix: "prefix")
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:schema_assocs, [sample])
+
+    schema = TestRepo.insert!(changeset)
+    [assoc] = schema.schema_assocs
+    assert assoc.__meta__.prefix == "prefix"
+    assert_received {:insert, %{source: "schemas_assocs", prefix: "prefix"}}
+  end
+
+  test "handles assocs on insert with schema preserving join table schema prefix" do
+    sample = %MyAssoc{x: "xyz"}
+
+    changeset =
+      %MySchema{}
+      |> Ecto.put_meta(prefix: "prefix")
+      |> Ecto.Changeset.change
+      |> Ecto.Changeset.put_assoc(:schema_prefix_assocs, [sample])
+
+    schema = TestRepo.insert!(changeset)
+    [assoc] = schema.schema_prefix_assocs
+    assert assoc.__meta__.prefix == "prefix"
+    assert_received {:insert, %{source: "schemas_prefix_assocs", prefix: "schema_assoc_prefix"}}
+  end
+
   test "handles assocs from struct on insert" do
     schema = TestRepo.insert!(%MySchema{assocs: [%MyAssoc{x: "xyz"}]})
     [assoc] = schema.assocs
@@ -136,6 +181,16 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert assoc.inserted_at
     assert_received {:insert, _}
     assert_received {:insert_all, %{source: "schemas_assocs"}, [[my_assoc_id: 1, my_schema_id: 1]]}
+  end
+
+  test "handles assocs from struct on insert preserving parent schema prefix" do
+    sample = %MyAssoc{x: "xyz"}
+
+    schema = %MySchema{assocs: [sample]} |> Ecto.put_meta(prefix: "prefix")
+    schema = TestRepo.insert!(schema)
+    [assoc] = schema.assocs
+    assert assoc.__meta__.prefix == "prefix"
+    assert_received {:insert_all, %{source: "schemas_assocs", prefix: "prefix"}, [[my_assoc_id: 1, my_schema_id: 1]]}
   end
 
   test "handles invalid assocs from struct on insert" do
@@ -305,6 +360,7 @@ defmodule Ecto.Repo.ManyToManyTest do
     schema = TestRepo.update!(changeset)
     [assoc] = schema.assocs
     assert assoc.__meta__.prefix == "prefix"
+    assert_received {:insert_all, %{source: "schemas_assocs", prefix: "prefix"}, [[my_assoc_id: 1, my_schema_id: 3]]}
   end
 
   test "inserting assocs on update with schema" do
@@ -321,6 +377,20 @@ defmodule Ecto.Repo.ManyToManyTest do
     assert assoc.updated_at
     assert_received {:update, _}
     assert_received {:insert, _}
+  end
+
+  test "inserting assocs on update with schema preserving parent schema prefix" do
+    sample = %MyAssoc{x: "xyz"}
+
+    changeset =
+      %MySchema{id: 3}
+      |> Ecto.put_meta(prefix: "prefix")
+      |> Ecto.Changeset.change(x: "1")
+      |> Ecto.Changeset.put_assoc(:schema_assocs, [sample])
+    schema = TestRepo.update!(changeset)
+    [assoc] = schema.schema_assocs
+    assert assoc.__meta__.prefix == "prefix"
+    assert_received {:insert, %{source: "schemas_assocs", prefix: "prefix"}}
   end
 
   test "replacing assocs on update on_replace" do
