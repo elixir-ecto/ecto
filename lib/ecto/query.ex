@@ -353,7 +353,7 @@ defmodule Ecto.Query do
 
       results =
         query # May be User or an Ecto.Query itself
-        |> Ecto.Query.put_query_prefix(:prefix, "accounts")
+        |> Ecto.Query.put_query_prefix("accounts")
         |> Repo.all()
 
   Setting the prefix in the query changes the default prefix of all `from`
