@@ -649,7 +649,11 @@ defmodule Ecto.Query.API do
 
   Or to type comparison expression results:
 
-      from p in Post, select: type(coalesce(p.cost, 0), :integer)
+       from p in Post, select: type(coalesce(p.cost, 0), :integer)
+
+  Or to type parent_as/1
+
+      from p in Post, select: type(parent_as(:parent).column, :integer)
 
   """
   def type(interpolated_value, type), do: doc! [interpolated_value, type]

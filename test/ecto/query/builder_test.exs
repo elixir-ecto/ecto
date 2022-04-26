@@ -204,6 +204,11 @@ defmodule Ecto.Query.BuilderTest do
     assert_raise Ecto.Query.CompileError, ~r"It returns a value of type :boolean but a value of type :integer is expected", fn ->
       escape(quote(do: 1 > 2), :integer, %{}, [], __ENV__)
     end
+
+    assert_raise Ecto.Query.CompileError, "cannot fetch field `id` from `parent_as(:parent) . :id`. Can only fetch fields from:\n\n  * sources, such as `p` in `from p in Post`\n  * named bindings, such as `as(:post)` in `from Post, as: :post`\n  * parent named bindings, such as `parent_as(:post)` in a subquery\n", fn ->
+      escape(quote do type(parent_as(:parent).id, :integer) end, [x: 0], {__ENV__, %{}})
+    end
+
   end
 
   test "escape raise" do

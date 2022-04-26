@@ -95,6 +95,10 @@ defmodule Ecto.Query.Builder do
     escape_with_type(expr, type, params_acc, vars, env)
   end
 
+  def escape({:type, [],[{{:., [], [{:parent_as, [], _value}, column]} = expr, _, []}, type]}, _type, params_acc, vars, env) do
+    escape_with_type(escape_field!(expr, column, vars), type, params_acc, vars, env)
+  end
+
   def escape({:type, _, [{:coalesce, _, [_ | _]} = expr, type]}, _type, params_acc, vars, env) do
     escape_with_type(expr, type, params_acc, vars, env)
   end
@@ -134,6 +138,7 @@ defmodule Ecto.Query.Builder do
           * an aggregation or window expression (avg, count, min, max, sum, over, filter)
           * a conditional expression (coalesce)
           * access/json paths (p.column[0].field)
+          * parent_as(:table).column
 
         Got: #{Macro.to_string(expr)}
         """
@@ -699,7 +704,7 @@ defmodule Ecto.Query.Builder do
     do: {find_var!(var, vars), field}
 
   def validate_type!(type, _vars, _env) do
-    error! "type/2 expects an alias, atom, initialized parameterized type or " <> 
+    error! "type/2 expects an alias, atom, initialized parameterized type or " <>
            "source.field as second argument, got: `#{Macro.to_string(type)}`"
   end
 
