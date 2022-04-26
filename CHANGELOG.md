@@ -1,6 +1,6 @@
 # Changelog for v3.x
 
-## v3.8.0-dev
+## v3.8.0 (2022-04-26)
 
 Ecto v3.8 requires Elixir v1.10+.
 
@@ -9,6 +9,7 @@ Ecto v3.8 requires Elixir v1.10+.
   * [Ecto] Add new Embedded chapter to Introductory guides
   * [Ecto.Changeset] Detect `empty_values` inside lists when casting
   * [Ecto.Changeset] Allow custom `:error_key` in unique_constraint
+  * [Ecto.Changeset] Add `:match` option to all constraint functions
   * [Ecto.Query] Support dynamic aliases
   * [Ecto.Query] Allow using `type/2` with virtual fields
   * [Ecto.Query] Suggest alternatives to inexistent fields in queries
@@ -22,6 +23,8 @@ Ecto v3.8 requires Elixir v1.10+.
   * [Ecto.Query] Handle atom list sigils in `select`
   * [Ecto.Query] Improve tracking of `select_merge` inside subqueries
   * [Ecto.Repo] Properly handle literals in queries given to `insert_all`
+  * [Ecto.Repo] Don't surface persisted data as changes on embed updates
+  * [Ecto.Schema] Preserve parent prefix on join tables
 
 ## v3.7.2 (2022-03-13)
 
