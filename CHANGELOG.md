@@ -1,5 +1,13 @@
 # Changelog for v3.x
 
+## v3.8.1 (2022-04-27)
+
+Ecto v3.8 requires Elixir v1.10+.
+
+### Bug fix
+
+  * [Ecto.Query] Fix regression where a join's on parameter on `update_all` was out of order
+
 ## v3.8.0 (2022-04-26)
 
 Ecto v3.8 requires Elixir v1.10+.
