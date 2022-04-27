@@ -1668,8 +1668,14 @@ defmodule Ecto.Query.Planner do
               where: :wheres, group_by: :group_bys, having: :havings, windows: :windows,
               combination: :combinations, order_by: :order_bys, limit: :limit, offset: :offset]
 
-  @update_all_exprs [with_cte: :with_ctes, from: :from, join: :joins,
-                     update: :updates, where: :wheres, select: :select]
+  # Although joins come before updates in the actual query,
+  # the on fields are moved to where, so they effectively
+  # need to come later for MySQL. This means subqueries
+  # with parameters are not supported as a join on MySQL.
+  # The only way to address it is by splitting how join
+  # and their on expressions are processed.
+  @update_all_exprs [with_cte: :with_ctes, from: :from, update: :updates,
+                     join: :joins, where: :wheres, select: :select]
 
   @delete_all_exprs [with_cte: :with_ctes, from: :from, join: :joins,
                      where: :wheres, select: :select]
