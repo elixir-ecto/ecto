@@ -1296,16 +1296,17 @@ defmodule Ecto.Association.ManyToMany do
     on_repo_change(refl, parent_changeset, %{changeset | action: :delete}, adapter, opts)
   end
 
-  def on_repo_change(%{join_keys: join_keys, join_through: join_through},
+  def on_repo_change(%{join_keys: join_keys, join_through: join_through, join_where: join_where},
                      %{repo: repo, data: owner}, %{action: :delete, data: related}, adapter, opts) do
     [{join_owner_key, owner_key}, {join_related_key, related_key}] = join_keys
     owner_value = dump! :delete, join_through, owner, owner_key, adapter
     related_value = dump! :delete, join_through, related, related_key, adapter
 
     query =
-      from j in join_through,
-        where: field(j, ^join_owner_key) == ^owner_value and
-               field(j, ^join_related_key) == ^related_value
+      join_through
+      |> where([j], field(j, ^join_owner_key) == ^owner_value)
+      |> where([j], field(j, ^join_related_key) == ^related_value)
+      |> Ecto.Association.combine_assoc_query(join_where)
 
     query = %{query | prefix: owner.__meta__.prefix}
     repo.delete_all(query, opts)
