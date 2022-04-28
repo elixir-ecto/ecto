@@ -53,6 +53,7 @@ defmodule Ecto.Repo.ManyToManyTest do
       field :x, :string
       field :y, :binary
       many_to_many :assocs, MyAssoc, join_through: "schemas_assocs", on_replace: :delete
+      many_to_many :where_assocs, MyAssoc, join_through: "schemas_assocs", join_where: [public: true], on_replace: :delete
       many_to_many :schema_assocs, MyAssoc, join_through: MySchemaAssoc, join_defaults: [public: true]
       many_to_many :schema_prefix_assocs, MyAssoc, join_through: MySchemaPrefixAssoc, join_defaults: [public: true]
       many_to_many :mfa_schema_assocs, MyAssoc, join_through: MySchemaAssoc, join_defaults: {__MODULE__, :send_to_self, [:extra]}
@@ -424,6 +425,26 @@ defmodule Ecto.Repo.ManyToManyTest do
     refute_received {:delete, _} # Old assoc
     refute_received {:insert_all, _, _}
     assert_received {:delete_all, _}
+  end
+
+  test "deleting assocs with join_where on update on_replace" do
+    sample = %MyAssoc{id: 10, x: "xyz"} |> Ecto.put_meta(state: :loaded)
+
+    changeset =
+      %MySchema{id: 3, assocs: [sample], where_assocs: [sample]} |> Ecto.Changeset.change()
+
+    # removing assoc with == join_where
+    changeset |> Ecto.Changeset.put_assoc(:where_assocs, []) |> TestRepo.update!()
+
+    assert_received {:delete_all, query}
+    assert inspect(query) =~ "where: s0.my_schema_id == ^..., where: s0.my_assoc_id == ^... and s0.public == ^..."
+
+    # removing assoc without join_where
+    changeset |> Ecto.Changeset.put_assoc(:assocs, []) |> TestRepo.update!()
+
+    assert_received {:delete_all, query}
+    assert inspect(query) =~ "where: s0.my_schema_id == ^..., where: s0.my_assoc_id == ^..."
+    refute inspect(query) =~ "s0.public == ^..."
   end
 
   test "changing assocs on update raises if there is no id" do
