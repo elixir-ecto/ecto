@@ -212,7 +212,7 @@ defmodule Ecto.Query.WindowAPI do
   to the current row. If omitted, offset defaults to 1 and default to `nil`.
 
       from e in Events,
-           windows: [w: [partition_by: e.name, order_by: e.tick],
+           windows: [w: [partition_by: e.name, order_by: e.tick]],
            select: {
              e.tick,
              e.action,
