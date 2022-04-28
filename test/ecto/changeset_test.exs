@@ -1513,8 +1513,8 @@ defmodule Ecto.ChangesetTest do
       Allows tests to verify or refute that a query was run.
       """
 
-      def one(query, opts \\ []) do
-        send(self(), [__MODULE__, function: :one, query: query, opts: opts])
+      def exists?(query, opts \\ []) do
+        send(self(), [__MODULE__, function: :exists?, query: query, opts: opts])
       end
     end
 
@@ -1594,19 +1594,19 @@ defmodule Ecto.ChangesetTest do
     test "accepts a prefix option" do
       body_change = changeset(%Post{title: "Hello World", body: "hi"}, %{body: "ho"})
       unsafe_validate_unique(body_change, :body, MockRepo, prefix: "my_prefix")
-      assert_receive [MockRepo, function: :one, query: %Ecto.Query{prefix: "my_prefix"}, opts: []]
+      assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{prefix: "my_prefix"}, opts: []]
     end
 
     test "accepts repo options" do
       body_change = changeset(%Post{title: "Hello World", body: "hi"}, %{body: "ho"})
       unsafe_validate_unique(body_change, :body, MockRepo, repo_opts: [tenant_id: 1])
-      assert_receive [MockRepo, function: :one, query: %Ecto.Query{}, opts: [tenant_id: 1]]
+      assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{}, opts: [tenant_id: 1]]
     end
 
     test "accepts query options" do
       body_change = changeset(%Post{title: "Hello World", body: "hi"}, %{body: "ho"})
       unsafe_validate_unique(body_change, :body, MockRepo, query: Ecto.Query.from(p in Post, where: is_nil(p.published_at)))
-      assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+      assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
       assert [%{expr: query_expr}, %{expr: check_expr}] = wheres
 
       assert Macro.to_string(query_expr) == "is_nil(&0.published_at())"
@@ -1618,7 +1618,7 @@ defmodule Ecto.ChangesetTest do
       test "generates correct where clause for single primary key without query option" do
         body_change = cast(%SinglePkSchema{id: 0, body: "hi"}, %{body: "ho"}, [:body])
         unsafe_validate_unique(body_change, :body, MockRepo)
-        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
         assert [%{expr: pk_expr}, %{expr: check_expr}] = wheres
 
         assert Macro.to_string(pk_expr) == "not (&0.id() == ^0)"
@@ -1628,7 +1628,7 @@ defmodule Ecto.ChangesetTest do
       test "generates correct where clause for composite primary keys without query option" do
         body_change = changeset(%Post{id: 0, token: 1, body: "hi"}, %{body: "ho"})
         unsafe_validate_unique(body_change, :body, MockRepo)
-        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
         assert [%{expr: pk_expr}, %{expr: check_expr}] = wheres
 
         assert Macro.to_string(pk_expr) == "not (&0.id() == ^0 and &0.token() == ^1)"
@@ -1638,7 +1638,7 @@ defmodule Ecto.ChangesetTest do
       test "generates correct where clause for single primary key with query option" do
         body_change = cast(%SinglePkSchema{id: 0, body: "hi"}, %{body: "ho"}, [:body])
         unsafe_validate_unique(body_change, :body, MockRepo, query: Ecto.Query.from(p in SinglePkSchema, where: is_nil(p.published_at)))
-        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
         assert [%{expr: query_expr}, %{expr: pk_expr}, %{expr: check_expr}] = wheres
 
         assert Macro.to_string(query_expr) == "is_nil(&0.published_at())"
@@ -1649,7 +1649,7 @@ defmodule Ecto.ChangesetTest do
       test "generates correct where clause for composite primary keys with query option" do
         body_change = changeset(%Post{id: 0, token: 1, body: "hi"}, %{body: "ho"})
         unsafe_validate_unique(body_change, :body, MockRepo, query: Ecto.Query.from(p in Post, where: is_nil(p.published_at)))
-        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
         assert [%{expr: query_expr}, %{expr: pk_expr}, %{expr: check_expr}] = wheres
 
         assert Macro.to_string(query_expr) == "is_nil(&0.published_at())"
@@ -1660,7 +1660,7 @@ defmodule Ecto.ChangesetTest do
       test "generates correct where clause for single primary key without query option" do
         body_change = cast(%SinglePkSchema{id: 0, body: "hi"}, %{body: "ho"}, [:body])
         unsafe_validate_unique(body_change, :body, MockRepo)
-        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
         assert [%{expr: pk_expr}, %{expr: check_expr}] = wheres
 
         assert Macro.to_string(pk_expr) == "not(&0.id() == ^0)"
@@ -1670,7 +1670,7 @@ defmodule Ecto.ChangesetTest do
       test "generates correct where clause for composite primary keys without query option" do
         body_change = changeset(%Post{id: 0, token: 1, body: "hi"}, %{body: "ho"})
         unsafe_validate_unique(body_change, :body, MockRepo)
-        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
         assert [%{expr: pk_expr}, %{expr: check_expr}] = wheres
 
         assert Macro.to_string(pk_expr) == "not(&0.id() == ^0 and &0.token() == ^1)"
@@ -1680,7 +1680,7 @@ defmodule Ecto.ChangesetTest do
       test "generates correct where clause for single primary key with query option" do
         body_change = cast(%SinglePkSchema{id: 0, body: "hi"}, %{body: "ho"}, [:body])
         unsafe_validate_unique(body_change, :body, MockRepo, query: Ecto.Query.from(p in SinglePkSchema, where: is_nil(p.published_at)))
-        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
         assert [%{expr: query_expr}, %{expr: pk_expr}, %{expr: check_expr}] = wheres
 
         assert Macro.to_string(query_expr) == "is_nil(&0.published_at())"
@@ -1691,7 +1691,7 @@ defmodule Ecto.ChangesetTest do
       test "generates correct where clause for composite primary keys with query option" do
         body_change = changeset(%Post{id: 0, token: 1, body: "hi"}, %{body: "ho"})
         unsafe_validate_unique(body_change, :body, MockRepo, query: Ecto.Query.from(p in Post, where: is_nil(p.published_at)))
-        assert_receive [MockRepo, function: :one, query: %Ecto.Query{wheres: wheres}, opts: []]
+        assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
         assert [%{expr: query_expr}, %{expr: pk_expr}, %{expr: check_expr}] = wheres
 
         assert Macro.to_string(query_expr) == "is_nil(&0.published_at())"
@@ -1703,14 +1703,14 @@ defmodule Ecto.ChangesetTest do
     test "only queries the db when necessary" do
       body_change = changeset(%Post{title: "Hello World", body: "hi"}, %{body: "ho"})
       unsafe_validate_unique(body_change, :body, MockRepo)
-      assert_receive [MockRepo, function: :one, query: %Ecto.Query{}, opts: []]
+      assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{}, opts: []]
 
       unsafe_validate_unique(body_change, [:body, :title], MockRepo)
-      assert_receive [MockRepo, function: :one, query: %Ecto.Query{}, opts: []]
+      assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{}, opts: []]
 
       unsafe_validate_unique(body_change, :title, MockRepo)
       # no overlap between changed fields and those required to be unique
-      refute_receive [MockRepo, function: :one, query: %Ecto.Query{}, opts: []]
+      refute_receive [MockRepo, function: :exists?, query: %Ecto.Query{}, opts: []]
     end
   end
 
