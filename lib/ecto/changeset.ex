@@ -1925,8 +1925,6 @@ defmodule Ecto.Changeset do
         Keyword.get(opts, :query, schema)
         |> maybe_exclude_itself(schema, changeset)
         |> Ecto.Query.where(^where_clause)
-        |> Ecto.Query.select(true)
-        |> Ecto.Query.limit(1)
 
       query =
         if prefix = opts[:prefix] do
@@ -1935,7 +1933,7 @@ defmodule Ecto.Changeset do
           query
         end
 
-      if repo.one(query, repo_opts) do
+      if repo.exists?(query, repo_opts) do
         error_key = Keyword.get(opts, :error_key, hd(fields))
 
         add_error(changeset, error_key, message(opts, "has already been taken"),
