@@ -15,7 +15,6 @@ Ecto v3.8 requires Elixir v1.10+.
 ### Enhancements
 
   * [Ecto] Add new Embedded chapter to Introductory guides
-  * [Ecto.Changeset] Detect `empty_values` inside lists when casting
   * [Ecto.Changeset] Allow custom `:error_key` in unique_constraint
   * [Ecto.Changeset] Add `:match` option to all constraint functions
   * [Ecto.Query] Support dynamic aliases
@@ -28,6 +27,7 @@ Ecto v3.8 requires Elixir v1.10+.
 ### Bug fixes
 
   * [Ecto.Changeset] Address regression on `validate_subset` no longer working with custom array types
+  * [Ecto.Changeset] **Potentially breaking change**: Detect `empty_values` inside lists when casting. This may cause issues if you were relying on the casting of empty values (by default, only `""`).
   * [Ecto.Query] Handle atom list sigils in `select`
   * [Ecto.Query] Improve tracking of `select_merge` inside subqueries
   * [Ecto.Repo] Properly handle literals in queries given to `insert_all`
