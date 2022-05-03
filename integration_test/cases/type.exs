@@ -253,18 +253,6 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   @tag :map_type
-  test "typed boolean map" do
-    TestRepo.insert!(%Post{meta: %{"enabled" => true}})
-    TestRepo.insert!(%Post{meta: %{"extra" => [%{"enabled" => false}]}})
-
-    assert TestRepo.all(from p in Post, where: p.meta["enabled"] == true, select: p.meta) ===
-      [%{"enabled" => true}]
-
-    assert TestRepo.all(from p in Post, where: p.meta["extra"][0]["enabled"] == false, select: p.meta) ===
-      [%{"extra" => [%{"enabled" => false}]}]
-  end
-
-  @tag :map_type
   test "map type on update" do
     post = TestRepo.insert!(%Post{meta: %{"world" => "hello"}})
     assert TestRepo.get!(Post, post.id).meta == %{"world" => "hello"}
@@ -306,7 +294,18 @@ defmodule Ecto.Integration.TypeTest do
   @tag :map_type
   @tag :json_extract_path
   test "json_extract_path with primitive values" do
-    order = %Order{meta: %{:id => 123, :time => ~T[09:00:00], "code" => "good", "'single quoted'" => "bar", "\"double quoted\"" => "baz"}}
+    order = %Order{meta:
+      %{
+        :id => 123,
+        :time => ~T[09:00:00],
+        "code" => "good",
+        "'single quoted'" => "bar",
+        "\"double quoted\"" => "baz",
+        "enabled" => true,
+        "extra" => [%{"enabled" => false}]
+      }
+    }
+
     order = TestRepo.insert!(order)
 
     assert TestRepo.one(from o in Order, select: o.meta["id"]) == 123
@@ -319,12 +318,16 @@ defmodule Ecto.Integration.TypeTest do
     assert TestRepo.one(from o in Order, select: o.meta["'single quoted'"]) == "bar"
     assert TestRepo.one(from o in Order, select: o.meta["';"]) == nil
     assert TestRepo.one(from o in Order, select: o.meta["\"double quoted\""]) == "baz"
+    assert TestRepo.one(from o in Order, select: o.meta["enabled"]) == true
+    assert TestRepo.one(from o in Order, select: o.meta["extra"][0]["enabled"]) == false
 
     # where
     assert TestRepo.one(from o in Order, where: o.meta["id"] == 123, select: o.id) == order.id
     assert TestRepo.one(from o in Order, where: o.meta["id"] == 456, select: o.id) == nil
     assert TestRepo.one(from o in Order, where: o.meta["code"] == "good", select: o.id) == order.id
     assert TestRepo.one(from o in Order, where: o.meta["code"] == "bad", select: o.id) == nil
+    assert TestRepo.one(from o in Order, where: o.meta["enabled"] == true, select: o.id) == order.id
+    assert TestRepo.one(from o in Order, where: o.meta["extra"][0]["enabled"] == false, select: o.id) == order.id
   end
 
   @tag :map_type
