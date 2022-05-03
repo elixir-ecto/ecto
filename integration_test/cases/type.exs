@@ -253,6 +253,18 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   @tag :map_type
+  test "typed boolean map" do
+    TestRepo.insert!(%Post{meta: %{"enabled" => true}})
+    TestRepo.insert!(%Post{meta: %{"extra" => [%{"enabled" => false}]}})
+
+    assert TestRepo.all(from p in Post, where: p.meta["enabled"] == true, select: p.meta) ===
+      [%{"enabled" => true}]
+
+    assert TestRepo.all(from p in Post, where: p.meta["extra"][0]["enabled"] == false, select: p.meta) ===
+      [%{"extra" => [%{"enabled" => false}]}]
+  end
+
+  @tag :map_type
   test "map type on update" do
     post = TestRepo.insert!(%Post{meta: %{"world" => "hello"}})
     assert TestRepo.get!(Post, post.id).meta == %{"world" => "hello"}
