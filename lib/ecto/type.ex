@@ -869,9 +869,10 @@ defmodule Ecto.Type do
     if value in empty_values do
       :empty
     else
-      for elem <- value,
-        {:ok, elem} <- [filter_empty_values(type, elem, empty_values)],
-        do: elem
+      value =
+        for elem <- value,
+          {:ok, elem} <- [filter_empty_values(type, elem, empty_values)],
+          do: elem
 
       {:ok, value}
     end
