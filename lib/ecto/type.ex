@@ -866,11 +866,15 @@ defmodule Ecto.Type do
   @doc false
   @spec filter_empty_values(t, any, [any]) :: {:ok, any} | :empty
   def filter_empty_values({:array, type}, value, empty_values) when is_list(value) do
-    value = for elem <- value,
-      {:ok, elem} <- [filter_empty_values(type, elem, empty_values)],
-      do: elem
+    if value in empty_values do
+      :empty
+    else
+      for elem <- value,
+        {:ok, elem} <- [filter_empty_values(type, elem, empty_values)],
+        do: elem
 
-    {:ok, value}
+      {:ok, value}
+    end
   end
 
   def filter_empty_values(_type, value, empty_values) do
