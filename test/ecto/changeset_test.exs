@@ -1015,10 +1015,18 @@ defmodule Ecto.ChangesetTest do
       |> validate_required(nil)
     end
 
-    # When field is list and has an empty value
+    # When field is list and is an empty value
     changeset =
       %Post{topics: ["foo"]}
       |> cast(%{"topics" => []}, [:topics], empty_values: ["", []])
+      |> validate_required([:topics])
+
+    assert changeset.errors == [topics: {"can't be blank", [validation: :required]}]
+
+    # When field is list and is an empty value after filtering
+    changeset =
+      %Post{topics: ["foo"]}
+      |> cast(%{"topics" => ["", ""]}, [:topics], empty_values: ["", []])
       |> validate_required([:topics])
 
     assert changeset.errors == [topics: {"can't be blank", [validation: :required]}]
