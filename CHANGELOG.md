@@ -1,8 +1,14 @@
 # Changelog for v3.x
 
-## v3.8.1 (2022-04-27)
+## v3.8.2-dev (2022-05-04)
 
-Ecto v3.8 requires Elixir v1.10+.
+### Bug fix
+
+  * [Ecto.Adapter] Do not require adapter metadata to be raw maps
+  * [Ecto.Association] Respect `join_where` in many to many `on_replace` deletes
+  * [Ecto.Changeset] Check if list is in `empty_values` before nested validations
+
+## v3.8.1 (2022-04-27)
 
 ### Bug fix
 
