@@ -15,7 +15,7 @@ defmodule Ecto.Adapter do
     * the `:pid` key, which is the PID returned by the child spec returned in `c:init/1`
 
   """
-  @type adapter_meta :: map
+  @type adapter_meta :: %{optional(:stacktrace) => boolean(), optional(any()) => any()}
 
   @doc """
   The callback invoked in case the adapter needs to inject code.
