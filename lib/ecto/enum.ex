@@ -1,6 +1,6 @@
 defmodule Ecto.Enum do
   @moduledoc """
-  A custom type that maps atoms to strings.
+  A custom type that maps atoms to strings or integers.
 
   `Ecto.Enum` must be used whenever you want to keep atom values in a field.
   Since atoms cannot be persisted to the database, `Ecto.Enum` converts them
