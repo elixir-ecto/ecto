@@ -1707,6 +1707,11 @@ defmodule Ecto.Query.Planner do
     type!(kind, query, expr, ix, field, allow_virtuals?)
   end
 
+  defp field_type!(kind, query, expr, {{{:., _, [_, :count_alias!]}, _, [_, name]}, field}, allow_virtuals?) do
+    ix = Ecto.Query.Builder.count_alias!(query, name)
+    type!(kind, query, expr, ix, field, allow_virtuals?)
+  end
+
   defp field_type!(_kind, _query, _expr, type, _) do
     type
   end
