@@ -826,7 +826,7 @@ defmodule Ecto.Query.Builder do
       for {:named, key, name} <- vars do
         {key,
          quote do
-           Ecto.Query.Builder.count_alias!(query, unquote(name))
+           unquote(__MODULE__).count_alias!(query, unquote(name))
          end}
       end
 
