@@ -391,6 +391,15 @@ defmodule Ecto.Query.InspectTest do
            ~s{from p0 in Inspect.Post, select: [:foo]}
   end
 
+  test "select bound name type after planner" do
+    query =
+     from(x in Post, as: :p)
+      |> select([p: p], type(p.visits, p.visits))
+      |> plan()
+
+    assert i(query) == ~s{from p0 in Inspect.Post, as: :p, select: type(p0.visits, :integer)}
+  end
+
   test "params" do
     assert i(from(x in Post, where: ^123 > ^(1 * 3))) ==
            ~s{from p0 in Inspect.Post, where: ^123 > ^3}
