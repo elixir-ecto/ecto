@@ -1022,6 +1022,17 @@ defmodule Ecto.Query.PlannerTest do
     normalize(query)
   end
 
+
+  test "normalize: alias in type/2" do
+    query =
+      from(x in Post, as: :post)
+      |> select([post: p], type(p.visits, p.visits))
+      |> normalize()
+
+    assert inspect(query) =~
+             "from p0 in Ecto.Query.PlannerTest.Post, as: :post, prefix: \"my_prefix\", select: type(p0.visits, :integer)"
+  end
+
   test "normalize: validate fields in left side of in expressions" do
     query = from(Post, []) |> where([p], p.id in [1, 2, 3])
     normalize(query)

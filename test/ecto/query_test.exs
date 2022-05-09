@@ -417,11 +417,11 @@ defmodule Ecto.QueryTest do
       query =
         "posts"
         |> from(as: :post)
-        |> join(:inner, [post: p], "comments", as: :comment)
+        |> join(:inner, [post: p], c in "comments", as: :comment, on: p.id == c.post_id)
         |> update([comment: c], set: [id: c.id + 1])
 
       assert inspect(query) ==
-        ~s{#Ecto.Query<from p0 in "posts", as: :post, join: c1 in "comments", as: :comment, on: true, update: [set: [id: c1.id + 1]]>}
+        ~s{#Ecto.Query<from p0 in "posts", as: :post, join: c1 in "comments", as: :comment, on: p0.id == c1.post_id, update: [set: [id: c1.id + 1]]>}
     end
 
     test "match on binding by name with ... in the middle" do

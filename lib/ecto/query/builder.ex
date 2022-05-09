@@ -477,8 +477,11 @@ defmodule Ecto.Query.Builder do
   defp escape_with_type(expr, type, params_acc, vars, env) do
     type = validate_type!(type, vars, env)
     {expr, params_acc} = escape(expr, type, params_acc, vars, env)
-    {{:{}, [], [:type, [], [expr, Macro.escape(type)]]}, params_acc}
+    {{:{}, [], [:type, [], [expr, escape_type(type)]]}, params_acc}
   end
+
+  defp escape_type({:parameterized, _, _} = param), do: Macro.escape(param)
+  defp escape_type(type), do: type
 
   defp escape_subquery({:subquery, _, [expr]}, _, {params, subqueries}, _vars, _env) do
     subquery = quote(do: Ecto.Query.subquery(unquote(expr)))
@@ -815,22 +818,28 @@ defmodule Ecto.Query.Builder do
     end
   end
 
-  def calculate_named_binds(query, []), do: {query, []}
-  def calculate_named_binds(query, vars) do
+  defp calculate_named_binds(query, []), do: {query, []}
+  defp calculate_named_binds(query, vars) do
+    assignments =
+      for {:named, var_context, name} <- vars do
+        quote do
+          unquote(var_context) = unquote(__MODULE__).count_alias!(query, unquote(name))
+        end
+      end
+
     query =
       quote do
         query = Ecto.Queryable.to_query(unquote(query))
+        unquote_splicing(assignments)
+        query
       end
 
-    vars =
-      for {:named, key, name} <- vars do
-        {key,
-         quote do
-           unquote(__MODULE__).count_alias!(query, unquote(name))
-         end}
+    pairs =
+      for {:named, {key, _, _} = var_context, _name} <- vars do
+        {key, var_context}
       end
 
-    {query, vars}
+    {query, pairs}
   end
 
   @doc """
@@ -850,12 +859,10 @@ defmodule Ecto.Query.Builder do
     do: {:pos, var, ix}
   defp escape_bind({{var, _, context}, ix}) when is_atom(var) and is_atom(context),
     do: {:pos, var, ix}
-  defp escape_bind({{name, {var, _, context}}, _ix}) when is_atom(name) and is_atom(var) and is_atom(context),
-    do: {:named, var, name}
-  defp escape_bind({{name, {{:^, _, _} = var, _, context}}, _ix}) when is_atom(name) and is_atom(context),
-    do: {:named, var, name}
-  defp escape_bind({{{:^, _, [expr]}, {var, _, context}}, _ix}) when is_atom(var) and is_atom(context),
-    do: {:named, var, expr}
+  defp escape_bind({{name, {var, _, context} = vc}, _ix}) when is_atom(name) and is_atom(var) and is_atom(context),
+    do: {:named, vc, name}
+  defp escape_bind({{{:^, _, [expr]}, {var, _, context} = vc}, _ix}) when is_atom(var) and is_atom(context),
+    do: {:named, vc, expr}
   defp escape_bind({bind, _ix}),
     do: error!("binding list should contain only variables or " <>
           "`{as, var}` tuples, got: #{Macro.to_string(bind)}")
