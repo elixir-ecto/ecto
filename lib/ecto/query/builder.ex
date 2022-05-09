@@ -821,9 +821,9 @@ defmodule Ecto.Query.Builder do
   defp calculate_named_binds(query, []), do: {query, []}
   defp calculate_named_binds(query, vars) do
     assignments =
-      for {:named, var_context, name} <- vars do
+      for {:named, key, name} <- vars do
         quote do
-          unquote(var_context) = unquote(__MODULE__).count_alias!(query, unquote(name))
+          unquote({key, [], __MODULE__}) = unquote(__MODULE__).count_alias!(query, unquote(name))
         end
       end
 
@@ -835,8 +835,8 @@ defmodule Ecto.Query.Builder do
       end
 
     pairs =
-      for {:named, {key, _, _} = var_context, _name} <- vars do
-        {key, var_context}
+      for {:named, key, _name} <- vars do
+        {key, {key, [], __MODULE__}}
       end
 
     {query, pairs}
@@ -859,10 +859,10 @@ defmodule Ecto.Query.Builder do
     do: {:pos, var, ix}
   defp escape_bind({{var, _, context}, ix}) when is_atom(var) and is_atom(context),
     do: {:pos, var, ix}
-  defp escape_bind({{name, {var, _, context} = vc}, _ix}) when is_atom(name) and is_atom(var) and is_atom(context),
-    do: {:named, vc, name}
-  defp escape_bind({{{:^, _, [expr]}, {var, _, context} = vc}, _ix}) when is_atom(var) and is_atom(context),
-    do: {:named, vc, expr}
+  defp escape_bind({{name, {var, _, context}}, _ix}) when is_atom(name) and is_atom(var) and is_atom(context),
+    do: {:named, var, name}
+  defp escape_bind({{{:^, _, [expr]}, {var, _, context}}, _ix}) when is_atom(var) and is_atom(context),
+    do: {:named, var, expr}
   defp escape_bind({bind, _ix}),
     do: error!("binding list should contain only variables or " <>
           "`{as, var}` tuples, got: #{Macro.to_string(bind)}")
