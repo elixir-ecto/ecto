@@ -1905,10 +1905,14 @@ defmodule Ecto.Schema do
 
   @doc false
   def __field__(mod, name, type, opts) do
+    check_options!(type, opts, @field_opts, "field/3")
     type = check_field_type!(mod, name, type, opts)
 
-    opts = Keyword.put(opts, :type, type)
-    check_options!(opts, @field_opts, "field/3")
+    if type == :any && !opts[:virtual] do
+      raise ArgumentError, "only virtual fields can have type :any, " <>
+                             "invalid type for field #{inspect name}"
+    end
+
     Module.put_attribute(mod, :ecto_changeset_fields, {name, type})
     validate_default!(type, opts[:default], opts[:skip_default_validation])
     define_field(mod, name, type, opts)
@@ -2000,10 +2004,9 @@ defmodule Ecto.Schema do
 
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
-    check_options!(opts, @valid_belongs_to_options, "belongs_to/3")
-
     opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
     foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)
+    check_options!(foreign_key_type, opts, @valid_belongs_to_options, "belongs_to/3")
 
     if name == Keyword.get(opts, :foreign_key) do
       raise ArgumentError, "foreign_key #{inspect name} must be distinct from corresponding association name"
@@ -2194,27 +2197,22 @@ defmodule Ecto.Schema do
   end
 
   defp check_options!(opts, valid, fun_arity) do
-    case opts[:type] do
-      {:parameterized, _, _} ->
-        :ok
+    case Enum.find(opts, fn {k, _} -> not(k in valid) end) do
+      {k, _} -> raise ArgumentError, "invalid option #{inspect k} for #{fun_arity}"
+      nil -> :ok
+    end
+  end
 
-      {_, {:parameterized, _, _}} ->
-        :ok
+  defp check_options!({_, type}, opts, valid, fun_arity) do
+    check_options!(type, opts, valid, fun_arity)
+  end
 
-      :any ->
-        if !opts[:virtual], do:
-          raise ArgumentError, "only virtual fields can have type :any, " <>
-                               "invalid type for field #{inspect opts[:name]}"
-
-      type ->
-        if is_atom(type) and Code.ensure_compiled(type) == {:module, type} and function_exported?(type, :type, 1) do
-          :ok
-        else
-          case Enum.find(opts, fn {k, _} -> not(k in valid) end) do
-            {k, _} -> raise ArgumentError, "invalid option #{inspect k} for #{fun_arity}"
-            nil -> :ok
-          end
-        end
+  defp check_options!(type, opts, valid, fun_arity) do
+    if is_atom(type) and not Ecto.Type.base?(type) and
+         Code.ensure_compiled(type) == {:module, type} and function_exported?(type, :type, 1) do
+      :ok
+    else
+      check_options!(opts, valid, fun_arity)
     end
   end
 
