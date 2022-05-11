@@ -64,9 +64,9 @@ defmodule Mix.Tasks.Ecto.Gen.Repo do
         new_contents = config_first_line <> "\n" <> config_template(opts)
         Mix.shell().info [:green, "* updating ", :reset, config_path]
         File.write! config_path, String.replace(contents, config_first_line, new_contents)
+
       {:error, _} ->
-        config_first_line = Config |> Code.ensure_loaded?() |> get_first_config_line()
-        create_file config_path, config_first_line <> "\n\n" <> config_template(opts)
+        create_file config_path, "import Config\n\n" <> config_template(opts)
     end
 
     open?(config_path, 3)

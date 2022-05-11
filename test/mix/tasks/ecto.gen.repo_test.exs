@@ -25,10 +25,8 @@ defmodule Mix.Tasks.Ecto.Gen.RepoTest do
       end
       """
 
-      first_line = if Code.ensure_loaded?(Config), do: "import Config", else: "use Mix.Config"
-
       assert_file "config/config.exs", """
-      #{first_line}
+      import Config
 
       config :ecto, Repo,
         database: "ecto_repo",
