@@ -1,5 +1,12 @@
 # Changelog for v3.x
 
+## v3.8.3 (2022-05-11)
+
+### Bug fix
+
+  * [Ecto.Query] Allow source aliases to be used in `type/2`
+  * [Ecto.Schema] Avoid "undefined behaviour/struct" warnings and errors during compilation
+
 ## v3.8.2 (2022-05-05)
 
 ### Bug fix
