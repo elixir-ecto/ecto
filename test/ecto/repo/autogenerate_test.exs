@@ -220,6 +220,27 @@ defmodule Ecto.Repo.AutogenerateTest do
     assert default.updated_at == naive_datetime
   end
 
+  test "does not update updated_at when associated record changes where removed in prepare_changes" do
+    company =
+      TestRepo.insert!(%Company{
+        updated_at: ~N[2000-01-01 00:00:00],
+        offices: [%Office{id: 1, name: "1"}]
+      })
+
+    changes = %{offices: [%{id: 1, name: "updated"}]}
+
+    updated_company =
+      company
+      |> Ecto.Changeset.cast(changes, [])
+      |> Ecto.Changeset.cast_assoc(:offices)
+      |> Ecto.Changeset.prepare_changes(fn changeset ->
+        Ecto.Changeset.delete_change(changeset, :offices)
+      end)
+      |> TestRepo.update!()
+
+    assert company.updated_at == updated_company.updated_at
+  end
+
   test "sets custom inserted_at and updated_at values" do
     default = TestRepo.insert!(%Manager{})
     assert %DateTime{time_zone: "Etc/UTC", microsecond: {0, 0}} = default.created_on
