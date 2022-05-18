@@ -1505,4 +1505,26 @@ defmodule Ecto.Query.PlannerTest do
       end
     end
   end
+
+  describe "filter tests" do
+    test "filter basic filter compiles" do
+      from(c in Comment,
+        group_by: c.post_id,
+        select: %{
+          not_aaaa_comments_count: count(c.text) |> filter(c.text != "aaaa")
+        }
+      )
+      |> normalize()
+    end
+
+    test "filter from fragment compiles" do
+      from(c in Comment,
+        group_by: c.post_id,
+        select: %{
+          not_aaaa_comments_count: fragment("count(?)", c.text) |> filter(c.text != "aaaa")
+        }
+      )
+      |> normalize()
+    end
+  end
 end
