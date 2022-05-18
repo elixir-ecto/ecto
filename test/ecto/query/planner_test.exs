@@ -1506,8 +1506,8 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
-  describe "filter tests" do
-    test "filter basic filter compiles" do
+  describe "filter" do
+    test "with aggregate" do
       from(c in Comment,
         group_by: c.post_id,
         select: %{
@@ -1517,7 +1517,7 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
     end
 
-    test "filter from fragment compiles" do
+    test "with fragment" do
       from(c in Comment,
         group_by: c.post_id,
         select: %{
