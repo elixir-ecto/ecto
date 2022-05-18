@@ -1505,4 +1505,26 @@ defmodule Ecto.Query.PlannerTest do
       end
     end
   end
+
+  describe "filter" do
+    test "with aggregate" do
+      from(c in Comment,
+        group_by: c.post_id,
+        select: %{
+          not_aaaa_comments_count: count(c.text) |> filter(c.text != "aaaa")
+        }
+      )
+      |> normalize()
+    end
+
+    test "with fragment" do
+      from(c in Comment,
+        group_by: c.post_id,
+        select: %{
+          not_aaaa_comments_count: fragment("count(?)", c.text) |> filter(c.text != "aaaa")
+        }
+      )
+      |> normalize()
+    end
+  end
 end
