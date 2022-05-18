@@ -9,7 +9,7 @@ defmodule Ecto.Query.Planner do
   end
 
   @parent_as __MODULE__
-  @aggs ~w(count avg min max sum row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value)a
+  @aggs ~w(count avg min max sum row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value fragment)a
 
   @doc """
   Converts a query to a list of joins.
