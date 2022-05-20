@@ -1484,6 +1484,14 @@ defmodule Ecto.Query.PlannerTest do
         |> normalize()
 
       assert {:exists, _, [%Ecto.SubQuery{}]} = where.expr
+
+      avg_visits = from(p in Post, select: avg(p.visits))
+
+      %{wheres: [where]} =
+        from(p in Post, where: p.visits > subquery(avg_visits))
+        |> normalize()
+
+      assert {:>, _, [_, %Ecto.SubQuery{}]} = where.expr
     end
 
     test "raises a runtime error if more than 1 field is selected" do
