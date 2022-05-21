@@ -476,7 +476,7 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp force_update_on_children_change(forced_relations, children) do
-    !!Enum.find(children, fn {assoc, _} -> assoc.field in forced_relations end)
+    Enum.any?(children, fn {assoc, _} -> assoc.field in forced_relations end)
   end
 
   @doc """
