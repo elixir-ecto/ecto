@@ -235,7 +235,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
   test "cast embeds_one with `:force_update_on_change` option" do
     changeset = cast(%Author{profile: %Profile{id: "id"}}, %{profile: nil}, :profile,
                      force_update_on_change: true)
-    assert changeset.repo_opts[:force]
+    assert changeset.repo_opts[:force_update_on_children_change] == [:profile]
 
     changeset = cast(%Author{profile: %Profile{id: "id"}}, %{profile: nil}, :profile,
                      force_update_on_change: false)
@@ -480,7 +480,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
   test "cast embeds_many with `:force_update_on_change` option" do
     params = [%{title: "hello"}]
     changeset = cast(%Author{}, %{posts: params}, :posts, force_update_on_change: true)
-    assert changeset.repo_opts[:force]
+    assert changeset.repo_opts[:force_update_on_children_change] == [:posts]
 
     changeset = cast(%Author{}, %{posts: params}, :posts, force_update_on_change: false)
     assert changeset.repo_opts == []

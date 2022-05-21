@@ -811,7 +811,7 @@ defmodule Ecto.Changeset do
             {:ok, change, relation_valid?} when change != original ->
               valid? = changeset.valid? and relation_valid?
               changes = Map.put(changes, key, change)
-              changeset = %{force_update(changeset, opts) | changes: changes, valid?: valid?}
+              changeset = %{force_update(changeset, key, opts) | changes: changes, valid?: valid?}
               missing_relation(changeset, key, current, required?, relation, opts)
 
             {:error, {message, meta}} ->
@@ -881,9 +881,10 @@ defmodule Ecto.Changeset do
   defp relation!(op, type, name, schema_type),
     do: raise(ArgumentError, "expected `#{name}` to be an #{type} in `#{op}_#{type}`, got: `#{inspect schema_type}`")
 
-  defp force_update(changeset, opts) do
+  defp force_update(changeset, key, opts) do
     if Keyword.get(opts, :force_update_on_change, true) do
-      put_in(changeset.repo_opts[:force], true)
+      new_opts = Keyword.update(changeset.repo_opts, :force_update_on_children_change, [key], &[key | &1])
+      %{changeset | repo_opts: new_opts}
     else
       changeset
     end

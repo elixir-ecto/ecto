@@ -13,18 +13,35 @@ defmodule Ecto.Repo.AutogenerateTest do
     end
   end
 
-  defmodule Office do
+  defmodule MeetingRoom do
     use Ecto.Schema
 
-    schema "offices" do
+    schema "meeting_room" do
       field :name, :string
-      belongs_to :company, Company
+      belongs_to :office, Office
       timestamps type: :utc_datetime_usec
     end
 
     def changeset(module, changes) do
       module
       |> Ecto.Changeset.cast(changes, [:id, :name])
+    end
+  end
+
+  defmodule Office do
+    use Ecto.Schema
+
+    schema "offices" do
+      field :name, :string
+      belongs_to :company, Company
+      has_many :meeting_rooms, MeetingRoom
+      timestamps type: :utc_datetime_usec
+    end
+
+    def changeset(module, changes) do
+      module
+      |> Ecto.Changeset.cast(changes, [:id, :name])
+      |> Ecto.Changeset.cast_assoc(:meeting_rooms)
     end
   end
 
@@ -220,7 +237,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     assert default.updated_at == naive_datetime
   end
 
-  test "does not update updated_at when associated record changes where removed in prepare_changes" do
+  test "updates updated_at when there are associated records changes" do
     company =
       TestRepo.insert!(%Company{
         updated_at: ~N[2000-01-01 00:00:00],
@@ -233,12 +250,65 @@ defmodule Ecto.Repo.AutogenerateTest do
       company
       |> Ecto.Changeset.cast(changes, [])
       |> Ecto.Changeset.cast_assoc(:offices)
-      |> Ecto.Changeset.prepare_changes(fn changeset ->
-        Ecto.Changeset.delete_change(changeset, :offices)
-      end)
+      |> TestRepo.update!()
+
+    assert company.updated_at != updated_company.updated_at
+  end
+
+  test "does not update updated_at when associated record has no changes" do
+    company =
+      TestRepo.insert!(%Company{
+        updated_at: ~N[2000-01-01 00:00:00],
+        offices: [%Office{id: 1, name: "1"}]
+      })
+
+    changes = %{offices: [%{id: 1, name: "1"}]}
+
+    updated_company =
+      company
+      |> Ecto.Changeset.cast(changes, [])
+      |> Ecto.Changeset.cast_assoc(:offices)
+      |> Ecto.Changeset.delete_change(:offices)
       |> TestRepo.update!()
 
     assert company.updated_at == updated_company.updated_at
+  end
+
+  test "does not update updated_at when associated record changes are removed from the changeset" do
+    company =
+      TestRepo.insert!(%Company{
+        updated_at: ~N[2000-01-01 00:00:00],
+        offices: [%Office{id: 1, name: "1"}]
+      })
+
+    changes = %{offices: [%{id: 1, name: "updated"}]}
+
+    updated_company =
+      company
+      |> Ecto.Changeset.cast(changes, [])
+      |> Ecto.Changeset.cast_assoc(:offices)
+      |> Ecto.Changeset.delete_change(:offices)
+      |> TestRepo.update!()
+
+    assert company.updated_at == updated_company.updated_at
+  end
+
+  test "updates updated_at when there are nested associated records changes" do
+    company =
+      TestRepo.insert!(%Company{
+        updated_at: ~N[2000-01-01 00:00:00],
+        offices: [%Office{id: 1, name: "1", meeting_rooms: [%MeetingRoom{id: 2, name: "2"}]}]
+      })
+
+    changes = %{offices: [%{id: 1, meeting_rooms: [%{id: 2, name: "updated"}]}]}
+
+    updated_company =
+      company
+      |> Ecto.Changeset.cast(changes, [])
+      |> Ecto.Changeset.cast_assoc(:offices)
+      |> TestRepo.update!()
+
+    assert company.updated_at != updated_company.updated_at
   end
 
   test "sets custom inserted_at and updated_at values" do

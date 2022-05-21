@@ -73,7 +73,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     def optional_changeset(schema, params) do
       Changeset.cast(schema, params, ~w(name)a)
     end
-    
+
     def failing_changeset(schema, params, error_string) do
       Changeset.cast(schema, params, ~w(name)a)
       |> Changeset.add_error(:name, error_string)
@@ -233,7 +233,7 @@ defmodule Ecto.Changeset.HasAssocTest do
   test "cast has_one with `:force_update_on_change` option" do
     changeset = cast(%Author{}, %{profile: %{name: "michal"}}, :profile,
                      force_update_on_change: true)
-    assert changeset.repo_opts[:force]
+    assert changeset.repo_opts[:force_update_on_children_change] == [:profile]
 
     changeset = cast(%Author{}, %{profile: %{name: "michal"}}, :profile,
                      force_update_on_change: false)
@@ -261,7 +261,7 @@ defmodule Ecto.Changeset.HasAssocTest do
     assert profile.valid?
     assert changeset.valid?
   end
-  
+
   test "cast has_one with custom changeset specified with mfa" do
     changeset = cast(%Author{}, %{"profile" => %{}}, :profile, with: {Profile, :failing_changeset, ["test"]})
 
@@ -551,7 +551,7 @@ defmodule Ecto.Changeset.HasAssocTest do
 
   test "cast has_many with `:force_update_on_change` option" do
     changeset = cast(%Author{}, %{posts: [%{title: "hello"}]}, :posts, force_update_on_change: true)
-    assert changeset.repo_opts[:force]
+    assert changeset.repo_opts[:force_update_on_children_change] == [:posts]
 
     changeset = cast(%Author{}, %{posts: [%{title: "hello"}]}, :posts, force_update_on_change: false)
     assert changeset.repo_opts == []
