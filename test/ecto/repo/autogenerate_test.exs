@@ -33,7 +33,7 @@ defmodule Ecto.Repo.AutogenerateTest do
 
     schema "offices" do
       field :name, :string
-      belongs_to :company, Company
+      belongs_to :company, Ecto.Repo.AutogenerateTest.Company
       has_many :meeting_rooms, MeetingRoom
       timestamps type: :utc_datetime_usec
     end
@@ -53,6 +53,11 @@ defmodule Ecto.Repo.AutogenerateTest do
       has_one :manager, Manager
       has_many :offices, Office
       timestamps()
+    end
+
+    def changeset(module, changes) do
+      module
+      |> Ecto.Changeset.cast(changes, [:code])
     end
   end
 
@@ -237,7 +242,7 @@ defmodule Ecto.Repo.AutogenerateTest do
     assert default.updated_at == naive_datetime
   end
 
-  test "updates updated_at when there are associated records changes" do
+  test "updates updated_at when there are children records with changes" do
     company =
       TestRepo.insert!(%Company{
         updated_at: ~N[2000-01-01 00:00:00],
@@ -253,6 +258,19 @@ defmodule Ecto.Repo.AutogenerateTest do
       |> TestRepo.update!()
 
     assert company.updated_at != updated_company.updated_at
+  end
+
+  test "updates updated_at when there are parent records with changes" do
+    office = TestRepo.insert!(%Office{company: %Company{}})
+    changes = %{company: %{id: office.company.id, code: Ecto.UUID.generate()}}
+
+    updated_office =
+      office
+      |> Ecto.Changeset.cast(changes, [])
+      |> Ecto.Changeset.cast_assoc(:company)
+      |> TestRepo.update!()
+
+    assert office.updated_at != updated_office.updated_at
   end
 
   test "does not update updated_at when associated record has no changes" do

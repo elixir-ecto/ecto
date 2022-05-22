@@ -233,7 +233,7 @@ defmodule Ecto.Changeset.HasAssocTest do
   test "cast has_one with `:force_update_on_change` option" do
     changeset = cast(%Author{}, %{profile: %{name: "michal"}}, :profile,
                      force_update_on_change: true)
-    assert changeset.repo_opts[:force_update_on_children_change] == [:profile]
+    assert changeset.repo_opts[:force_update_on_relation_change] == [:profile]
 
     changeset = cast(%Author{}, %{profile: %{name: "michal"}}, :profile,
                      force_update_on_change: false)
@@ -551,7 +551,7 @@ defmodule Ecto.Changeset.HasAssocTest do
 
   test "cast has_many with `:force_update_on_change` option" do
     changeset = cast(%Author{}, %{posts: [%{title: "hello"}]}, :posts, force_update_on_change: true)
-    assert changeset.repo_opts[:force_update_on_children_change] == [:posts]
+    assert changeset.repo_opts[:force_update_on_relation_change] == [:posts]
 
     changeset = cast(%Author{}, %{posts: [%{title: "hello"}]}, :posts, force_update_on_change: false)
     assert changeset.repo_opts == []

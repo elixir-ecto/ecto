@@ -883,7 +883,7 @@ defmodule Ecto.Changeset do
 
   defp force_update(changeset, key, opts) do
     if Keyword.get(opts, :force_update_on_change, true) do
-      new_opts = Keyword.update(changeset.repo_opts, :force_update_on_children_change, [key], &[key | &1])
+      new_opts = Keyword.update(changeset.repo_opts, :force_update_on_relation_change, [key], &[key | &1])
       %{changeset | repo_opts: new_opts}
     else
       changeset

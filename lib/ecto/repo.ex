@@ -1573,10 +1573,10 @@ defmodule Ecto.Repo do
       callbacks will always be executed, even if there are no changes
       (including timestamps).
 
-    * `:force_update_on_children_change` - Forces an update if any of
-      the children assocs passed has changes. It accepts a list of
-      children relations. By setting this option, update callbacks will
-      be executed as long as one of the passed relations has changes,
+    * `:force_update_on_relation_change` - Forces an update if any of
+      the related assocs passed has changes. It accepts a list of
+      relations. By setting this option, update callbacks will be
+      executed as long as one of the passed relations has changes,
       even if there are no changes in the current model (including
       timestamps).
 
