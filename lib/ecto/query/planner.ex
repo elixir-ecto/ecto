@@ -11,6 +11,13 @@ defmodule Ecto.Query.Planner do
   @parent_as __MODULE__
   @aggs ~w(count avg min max sum row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value)a
 
+  # Meta type to indicate and unsafe value that
+  # can be interpolated into a query. Can only be use
+  # in a `type(value, @unsafe_type)` context inside a
+  # fragement.
+
+  @unsafe_type :unsafe!
+
   @doc """
   Converts a query to a list of joins.
 
@@ -204,6 +211,7 @@ defmodule Ecto.Query.Planner do
     |> plan_combinations(adapter)
     |> plan_ctes(adapter)
     |> plan_wheres(adapter)
+    |> merge_and_interpolate_unsafe(operation)
     |> plan_cache(operation, adapter)
   rescue
     e ->
@@ -726,6 +734,7 @@ defmodule Ecto.Query.Planner do
       {v, type}, {acc, cacheable?} ->
         case cast_param(kind, query, expr, v, type, adapter) do
           {:in, v} -> {Enum.reverse(v, acc), false}
+          {@unsafe_type, _v} -> {acc, cacheable?}
           v -> {[v | acc], cacheable?}
         end
     end
@@ -797,6 +806,10 @@ defmodule Ecto.Query.Planner do
       :error, %Ecto.QueryError{} = e ->
         raise Ecto.Query.CastError, value: v, type: type, message: Exception.message(e)
     end
+  end
+
+  defp cast_param(_kind, @unsafe_type = type, v, _adapter) do
+    {:ok, {type, v}}
   end
 
   defp cast_param(kind, type, v, adapter) do
@@ -956,7 +969,6 @@ defmodule Ecto.Query.Planner do
 
   defp validate_and_increment(kind, query, exprs, counter, _operation, adapter)
        when kind in ~w(where group_by having order_by update)a do
-
     {exprs, counter} =
       Enum.reduce(exprs, {[], counter}, fn
         %{expr: []}, {list, acc} ->
@@ -1159,6 +1171,10 @@ defmodule Ecto.Query.Planner do
 
   defp prewalk({:^, meta, [ix]}, _kind, _query, _expr, acc, _adapter) when is_integer(ix) do
     {{:^, meta, [acc]}, acc + 1}
+  end
+
+  defp prewalk({:type, _meta, [arg, @unsafe_type]}, kind, query, expr, acc, adapter) do
+    prewalk(arg, kind, query, expr, acc, adapter)
   end
 
   defp prewalk({:type, _, [arg, type]}, kind, query, expr, acc, adapter) do
@@ -1685,13 +1701,7 @@ defmodule Ecto.Query.Planner do
   # Traverse all query components with expressions.
   # Therefore from, preload, assocs and lock are not traversed.
   defp traverse_exprs(query, operation, acc, fun) do
-    exprs =
-      case operation do
-        :all -> @all_exprs
-        :insert_all -> @all_exprs
-        :update_all -> @update_all_exprs
-        :delete_all -> @delete_all_exprs
-      end
+    exprs = exprs_for_operation(operation)
 
     Enum.reduce exprs, {query, acc}, fn {kind, key}, {query, acc} ->
       {traversed, acc} = fun.(kind, query, Map.fetch!(query, key), acc)
@@ -1862,6 +1872,74 @@ defmodule Ecto.Query.Planner do
                       "Ecto.Query.exclude/2. Error found"
     end
   end
+
+  defp merge_and_interpolate_unsafe(query, operation) do
+    exprs = exprs_for_operation(operation)
+
+    Enum.reduce(exprs, query, fn {_, type}, acc ->
+      case Map.get(acc, type)do
+        nil ->
+          acc
+
+        expr ->
+          %{acc | type => interpolate_unsafe(expr)}
+      end
+    end)
+  end
+
+  defp interpolate_unsafe(expressions) when is_list(expressions) do
+    Enum.map(expressions, &interpolate_unsafe/1)
+  end
+
+  defp interpolate_unsafe(%Ecto.Query.QueryExpr{params: nil} = expr) do
+    expr
+  end
+
+  defp interpolate_unsafe(%Ecto.Query.QueryExpr{expr: exprs, params: params} = query) when is_list(exprs) do
+    exprs = Enum.map(exprs, &interpolate_expression(&1, params))
+    params = Enum.reject(params, &remove_unsafe_param/1)
+    %{query | expr: exprs, params: params}
+  end
+
+  defp interpolate_unsafe(expr) do
+    expr
+  end
+
+  defp interpolate_expression({k, {:fragment, meta, segments}}, params) when is_list(segments) do
+    segments =
+      Enum.map(segments, fn
+        {:expr, {:type, [], [{:^, [], [index]}, @unsafe_type]}} ->
+          make_raw_value(params, index)
+        {:expr, {:^, [], [index]}} ->
+          make_raw_value(params, index)
+        other ->
+          other
+      end)
+    {k, {:fragment, meta, segments}}
+  end
+
+  defp interpolate_expression(other, _params), do: other
+
+  defp make_raw_value(params, index) do
+    case Enum.at(params, index) do
+      {value, @unsafe_type} ->
+        {:raw, value}
+      other ->
+        other
+    end
+  end
+
+  defp exprs_for_operation(operation) do
+    case operation do
+      :all -> @all_exprs
+      :insert_all -> @all_exprs
+      :update_all -> @update_all_exprs
+      :delete_all -> @delete_all_exprs
+    end
+  end
+
+  defp remove_unsafe_param({_value, @unsafe_type}), do: true
+  defp remove_unsafe_param(_other), do: false
 
   defp filter_and_reraise(exception, stacktrace) do
     reraise exception, Enum.reject(stacktrace, &match?({__MODULE__, _, _, _}, &1))
