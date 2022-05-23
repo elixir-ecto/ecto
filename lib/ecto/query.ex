@@ -5,6 +5,8 @@ defmodule Ecto.SubQuery do
   See `Ecto.Query.subquery/2` for more information.
   """
   defstruct [:query, :params, :select, :cache]
+
+  @type t :: %__MODULE__{}
 end
 
 defmodule Ecto.Query do
