@@ -1891,34 +1891,48 @@ defmodule Ecto.Query.Planner do
     Enum.map(expressions, &interpolate_unsafe/1)
   end
 
-  defp interpolate_unsafe(%Ecto.Query.QueryExpr{params: nil} = expr) do
+  defp interpolate_unsafe(%_module{params: nil} = expr) do
     expr
   end
 
-  defp interpolate_unsafe(%Ecto.Query.QueryExpr{expr: exprs, params: params} = query) when is_list(exprs) do
+  defp interpolate_unsafe(%_module{expr: exprs, params: params} = query) when is_list(exprs) do
     exprs = Enum.map(exprs, &interpolate_expression(&1, params))
     params = Enum.reject(params, &remove_unsafe_param/1)
     %{query | expr: exprs, params: params}
+  end
+
+  defp interpolate_unsafe(%_module{expr: expr, params: params} = query)  do
+    expr = interpolate_expression(expr, params)
+    params = Enum.reject(params, &remove_unsafe_param/1)
+    %{query | expr: expr, params: params}
   end
 
   defp interpolate_unsafe(expr) do
     expr
   end
 
+  defp interpolate_expression({:fragment, meta, segments}, params) when is_list(segments) do
+    segments = merge_segments_and_params(segments, params)
+    {:fragment, meta, segments}
+  end
+
   defp interpolate_expression({k, {:fragment, meta, segments}}, params) when is_list(segments) do
-    segments =
-      Enum.map(segments, fn
-        {:expr, {:type, [], [{:^, [], [index]}, @unsafe_type]}} ->
-          make_raw_value(params, index)
-        {:expr, {:^, [], [index]}} ->
-          make_raw_value(params, index)
-        other ->
-          other
-      end)
+    segments = merge_segments_and_params(segments, params)
     {k, {:fragment, meta, segments}}
   end
 
   defp interpolate_expression(other, _params), do: other
+
+  def merge_segments_and_params(segments, params) do
+    Enum.map(segments, fn
+      {:expr, {:type, [], [{:^, [], [index]}, @unsafe_type]}} ->
+        make_raw_value(params, index)
+      {:expr, {:^, [], [index]}} ->
+        make_raw_value(params, index)
+      other ->
+        other
+    end)
+  end
 
   defp make_raw_value(params, index) do
     case Enum.at(params, index) do
