@@ -169,6 +169,14 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:fragment, [], merge_fragments(pieces, frags)]}, params_acc}
   end
 
+  # subqueries
+  def escape({:subquery, _, [expr]}, _, {params, subqueries}, _vars, _env) do
+    subquery = quote(do: Ecto.Query.subquery(unquote(expr)))
+    index = length(subqueries)
+    expr = {:subquery, index} # used both in ast and in parameters, as a placeholder.
+    {expr, {[expr | params], [subquery | subqueries]}}
+  end
+
   # interval
 
   def escape({:from_now, meta, [count, interval]}, type, params_acc, vars, env) do
@@ -339,7 +347,7 @@ defmodule Ecto.Query.Builder do
     rtype = {:in, quoted_type(left, vars)}
 
     {left, params_acc} = escape(left, ltype, params_acc, vars, env)
-    {right, params_acc} = escape_subquery(right, rtype, params_acc, vars, env)
+    {right, params_acc} = escape(right, rtype, params_acc, vars, env)
 
     # Remove any type wrapper from the right side
     right =
@@ -381,7 +389,7 @@ defmodule Ecto.Query.Builder do
   end
 
   def escape({quantifier, meta, [subquery]}, type, params_acc, vars, env) when quantifier in [:all, :any, :exists] do
-    {subquery, params_acc} = escape_subquery({:subquery, meta, [subquery]}, type, params_acc, vars, env)
+    {subquery, params_acc} = escape({:subquery, meta, [subquery]}, type, params_acc, vars, env)
     {{:{}, [], [quantifier, [], [subquery]]}, params_acc}
   end
 
@@ -482,16 +490,6 @@ defmodule Ecto.Query.Builder do
 
   defp escape_type({:parameterized, _, _} = param), do: Macro.escape(param)
   defp escape_type(type), do: type
-
-  defp escape_subquery({:subquery, _, [expr]}, _, {params, subqueries}, _vars, _env) do
-    subquery = quote(do: Ecto.Query.subquery(unquote(expr)))
-    index = length(subqueries)
-    expr = {:subquery, index} # used both in ast and in parameters, as a placeholder.
-    {expr, {[expr | params], [subquery | subqueries]}}
-  end
-  defp escape_subquery(expr, type, params, vars, env) do
-    escape(expr, type, params, vars, env)
-  end
 
   defp wrap_nil(params, {:{}, _, [:^, _, [ix]]}), do: wrap_nil(params, length(params) - ix - 1, [])
   defp wrap_nil(params, _other), do: params
