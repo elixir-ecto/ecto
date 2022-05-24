@@ -351,6 +351,12 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:in, [], [left, right]]}, params_acc}
   end
 
+  def escape({:escape!, _, [arg]}, type, params_acc, vars, env) do
+    {arg, params_acc} = escape(arg, type, params_acc, vars, env)
+    expr = {:{}, [], [:escape!, [], [arg]]}
+    {expr, params_acc}
+  end
+
   def escape({:count, _, [arg, :distinct]}, type, params_acc, vars, env) do
     {arg, params_acc} = escape(arg, type, params_acc, vars, env)
     expr = {:{}, [], [:count, [], [arg, :distinct]]}
@@ -702,7 +708,7 @@ defmodule Ecto.Query.Builder do
     do: {find_var!(var, vars), field}
 
   def validate_type!(type, _vars, _env) do
-    error! "type/2 expects an alias, atom, initialized parameterized type or " <> 
+    error! "type/2 expects an alias, atom, initialized parameterized type or " <>
            "source.field as second argument, got: `#{Macro.to_string(type)}`"
   end
 

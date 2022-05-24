@@ -11,13 +11,6 @@ defmodule Ecto.Query.Planner do
   @parent_as __MODULE__
   @aggs ~w(count avg min max sum row_number rank dense_rank percent_rank cume_dist ntile lag lead first_value last_value nth_value)a
 
-  # Meta type to indicate and unsafe value that
-  # can be interpolated into a query. Can only be use
-  # in a `type(value, @unsafe_type)` context inside a
-  # fragement.
-
-  @unsafe_type :unsafe!
-
   @doc """
   Converts a query to a list of joins.
 
@@ -211,7 +204,7 @@ defmodule Ecto.Query.Planner do
     |> plan_combinations(adapter)
     |> plan_ctes(adapter)
     |> plan_wheres(adapter)
-    |> merge_and_interpolate_unsafe(operation)
+    |> merge_and_interpolate_escape(operation, adapter)
     |> plan_cache(operation, adapter)
   rescue
     e ->
@@ -734,7 +727,6 @@ defmodule Ecto.Query.Planner do
       {v, type}, {acc, cacheable?} ->
         case cast_param(kind, query, expr, v, type, adapter) do
           {:in, v} -> {Enum.reverse(v, acc), false}
-          {@unsafe_type, _v} -> {acc, cacheable?}
           v -> {[v | acc], cacheable?}
         end
     end
@@ -806,10 +798,6 @@ defmodule Ecto.Query.Planner do
       :error, %Ecto.QueryError{} = e ->
         raise Ecto.Query.CastError, value: v, type: type, message: Exception.message(e)
     end
-  end
-
-  defp cast_param(_kind, @unsafe_type = type, v, _adapter) do
-    {:ok, {type, v}}
   end
 
   defp cast_param(kind, type, v, adapter) do
@@ -1171,10 +1159,6 @@ defmodule Ecto.Query.Planner do
 
   defp prewalk({:^, meta, [ix]}, _kind, _query, _expr, acc, _adapter) when is_integer(ix) do
     {{:^, meta, [acc]}, acc + 1}
-  end
-
-  defp prewalk({:type, _meta, [arg, @unsafe_type]}, kind, query, expr, acc, adapter) do
-    prewalk(arg, kind, query, expr, acc, adapter)
   end
 
   defp prewalk({:type, _, [arg, type]}, kind, query, expr, acc, adapter) do
@@ -1873,71 +1857,105 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp merge_and_interpolate_unsafe(query, operation) do
+  defp merge_and_interpolate_escape(query, operation, adapter) do
     exprs = exprs_for_operation(operation)
 
     Enum.reduce(exprs, query, fn {_, type}, acc ->
-      case Map.get(acc, type)do
+      case Map.get(acc, type) do
         nil ->
           acc
 
         expr ->
-          %{acc | type => interpolate_unsafe(expr)}
+          %{acc | type => interpolate_escape(expr, adapter)}
       end
     end)
   end
 
-  defp interpolate_unsafe(expressions) when is_list(expressions) do
-    Enum.map(expressions, &interpolate_unsafe/1)
+  defp interpolate_escape(expressions, adapter) when is_list(expressions) do
+    Enum.map(expressions, &interpolate_escape(&1, adapter))
   end
 
-  defp interpolate_unsafe(%_module{params: nil} = expr) do
+  defp interpolate_escape(%_module{params: nil} = expr, _adapter) do
     expr
   end
 
-  defp interpolate_unsafe(%_module{expr: exprs, params: params} = query) when is_list(exprs) do
-    exprs = Enum.map(exprs, &interpolate_expression(&1, params))
-    params = Enum.reject(params, &remove_unsafe_param/1)
-    %{query | expr: exprs, params: params}
-  end
-
-  defp interpolate_unsafe(%_module{expr: expr, params: params} = query)  do
-    expr = interpolate_expression(expr, params)
-    params = Enum.reject(params, &remove_unsafe_param/1)
-    %{query | expr: expr, params: params}
-  end
-
-  defp interpolate_unsafe(expr) do
-    expr
-  end
-
-  defp interpolate_expression({:fragment, meta, segments}, params) when is_list(segments) do
-    segments = merge_segments_and_params(segments, params)
-    {:fragment, meta, segments}
-  end
-
-  defp interpolate_expression({k, {:fragment, meta, segments}}, params) when is_list(segments) do
-    segments = merge_segments_and_params(segments, params)
-    {k, {:fragment, meta, segments}}
-  end
-
-  defp interpolate_expression(other, _params), do: other
-
-  def merge_segments_and_params(segments, params) do
-    Enum.map(segments, fn
-      {:expr, {:type, [], [{:^, [], [index]}, @unsafe_type]}} ->
-        make_raw_value(params, index)
-      {:expr, {:^, [], [index]}} ->
-        make_raw_value(params, index)
-      other ->
-        other
+  defp interpolate_escape(%_module{expr: exprs, params: params} = query, adapter)
+      when is_list(exprs) do
+    {param_indexes, exprs} = Enum.reduce(exprs, {[], []}, fn expr, {param_indexes, exprs} ->
+      {indexes, expr} = interpolate_expression(expr, params, adapter)
+      {param_indexes ++ indexes, [expr | exprs]}
     end)
+
+    %{query | expr: Enum.reverse(exprs), params: remove_params(params, param_indexes)}
   end
 
-  defp make_raw_value(params, index) do
+  defp interpolate_escape(%_module{expr: expr, params: params} = query, adapter)  do
+    {param_indexes, expr} = interpolate_expression(expr, params, adapter)
+    %{query | expr: expr, params: remove_params(params, param_indexes)}
+  end
+
+  defp interpolate_escape(expr, _adapter) do
+    expr
+  end
+
+  defp interpolate_expression({:fragment, meta, segments}, params, adapter)
+      when is_list(segments) do
+    {indexes, segments} = merge_segments_and_params(segments, params, adapter)
+    {indexes, {:fragment, meta, segments}}
+  end
+
+  defp interpolate_expression({k, {:fragment, meta, segments}}, params, adapter)
+      when is_list(segments) do
+    {indexes, segments} = merge_segments_and_params(segments, params, adapter)
+    {indexes, {k, {:fragment, meta, segments}}}
+  end
+
+  defp interpolate_expression(other, _params, _adapter) do
+    {[], other}
+  end
+
+  # Merge the :escape! parameters into the query expression
+  # and keep track of which params we used so we can delete
+  # them later
+  def merge_segments_and_params(segments, params, adapter) do
+    {indexes, segments} =
+      Enum.reduce(segments, {[], []}, fn
+        {:expr, {:escape!, [], [string]}}, {indexes, segments} when is_binary(string) ->
+          {indexes, [make_raw_segment(params, string, adapter) | segments]}
+        {:expr, {:escape!, [], [{:^, [], [index]}]}}, {indexes, segments} ->
+          {[index | indexes], [make_raw_segment(params, index, adapter) | segments]}
+        {:raw, _string} = raw, {indexes, segments} ->
+          {indexes, [raw | segments]}
+        {:expr, _} = expr, {indexes, segments}  ->
+          {indexes, [expr | segments]}
+      end)
+
+    {indexes, Enum.reverse(segments)}
+  end
+
+  # Remove params that were interpolated. We kept a track of
+  # those indexes in merge_segments_and_params/3
+  defp remove_params(params, indexes) do
+    Enum.reduce(params, {0, []}, fn param, {current, params} ->
+      if current in indexes, do: {current + 1, params}, else: {current + 1, [param | params]}
+    end)
+    |> elem(1)
+    |> Enum.reverse()
+  end
+
+  # TODO implement adapter.escape_string in the behaviour
+  # and the implementations
+  defp make_raw_segment(_params, string, adapter) when is_binary(string) do
+    {:raw, "\"" <> string <> "\""}
+    # {:raw, adapter.escape_string(value)}
+  end
+
+  # Convert the result of the expression into a :raw
+  # string that is then inserted into the query string
+  defp make_raw_segment(params, index, adapter) when is_integer(index) do
     case Enum.at(params, index) do
-      {value, @unsafe_type} ->
-        {:raw, value}
+      {value, _type} ->
+        make_raw_segment(params, value, adapter)
       other ->
         other
     end
@@ -1951,9 +1969,6 @@ defmodule Ecto.Query.Planner do
       :delete_all -> @delete_all_exprs
     end
   end
-
-  defp remove_unsafe_param({_value, @unsafe_type}), do: true
-  defp remove_unsafe_param(_other), do: false
 
   defp filter_and_reraise(exception, stacktrace) do
     reraise exception, Enum.reject(stacktrace, &match?({__MODULE__, _, _, _}, &1))
