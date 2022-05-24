@@ -345,7 +345,7 @@ defmodule Ecto.QueryTest do
 
     test "assign to source fails when non-atom name passed" do
       message = ~r/`as` must be a compile time atom or an interpolated value using \^, got: "post"/
-      assert_raise Ecto.Query.CompileError, message, fn -> 
+      assert_raise Ecto.Query.CompileError, message, fn ->
         quote_and_eval(from(p in "posts", as: "post"))
       end
     end
@@ -919,6 +919,23 @@ defmodule Ecto.QueryTest do
     test "keeps UTF-8 encoding" do
       assert inspect(from p in "posts", where: fragment("héllò")) ==
              ~s[#Ecto.Query<from p0 in \"posts\", where: fragment("héllò")>]
+    end
+
+    test "escape!/1 string in a fragment" do
+      assert inspect(from p in "posts",
+        select: p.title,
+        order_by: [
+          asc: fragment("? COLLATE ?", p.title, escape!("se-x-icu"))]) ==
+        ~s{#Ecto.Query<from p0 in \"posts\", order_by: [asc: fragment(\"? COLLATE ?\", p0.title, escape!(\"se-x-icu\"))], select: p0.title>}
+    end
+
+    test "escape!/1 expression in a fragment" do
+      assert inspect(from p in "posts",
+        select: p.title,
+        order_by: [
+          asc: fragment("? COLLATE ?", p.title, escape!(coalesce(nil, "en-x-icu")))]) ==
+        ~s{#Ecto.Query<from p0 in \"posts\", order_by: [asc: fragment(\"? COLLATE ?\", p0.title, escape!(coalesce(nil, \"en-x-icu\")))], } <>
+        ~s{select: p0.title>}
     end
   end
 

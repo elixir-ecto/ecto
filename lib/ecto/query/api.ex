@@ -12,7 +12,7 @@ defmodule Ecto.Query.API do
     * Aggregates: `count/0`, `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
     * Date/time intervals: `datetime_add/3`, `date_add/3`, `from_now/2`, `ago/2`
     * Inside select: `struct/2`, `map/2`, `merge/2` and literals (map, tuples, lists, etc)
-    * General: `fragment/1`, `field/2`, `type/2`, `as/1`, `parent_as/1`
+    * General: `fragment/1`, `field/2`, `type/2`, escape!/1, `as/1`, `parent_as/1`
 
   Note the functions in this module exist for documentation
   purposes and one should never need to invoke them directly.
@@ -428,6 +428,32 @@ defmodule Ecto.Query.API do
   The only downside is that it will show up as a fragment when
   inspecting the Elixir query.  Other than that, it should be
   equivalent to a built-in Ecto query function.
+
+  ## Mutatinng the query string with escape!/1
+
+  Ecto produces prepared queries and in most database adapter
+  if passes parameters separately to the database. This has the
+  strong benefit of guaranteeing that SQL injection attacks
+  can't happen. But it also means that some interpolations
+  do not woek because the database itself does not accept
+  parameters for some types. Examples include table names,
+  coliumn names and collation names in Postgres.
+
+  The escape!/1 expression in a fragment supports interpolating
+  a name into a query string. The arugment to escape!/1 is
+  quoted to suit the underlying database and inserted
+  directly into the generated query string.  For example:
+
+      from p in Post,
+        select: p.title,
+        order_by: [
+          asc: fragment("? COLLATE ?", p.title, escape!(^collation("de-x-icu")))
+        ]
+
+  Ths expression should be considered a last resort. The
+  quoting of the string being inserted prevents SQL injection
+  attacks. However it should be used only in the cases
+  where no interpolation via a parameter is possible.
   """
   def fragment(fragments), do: doc! [fragments]
 
