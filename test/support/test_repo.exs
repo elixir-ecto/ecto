@@ -124,6 +124,10 @@ defmodule Ecto.TestAdapter do
     context
   end
 
+  def quote_name(name) do
+    [?<, name, ?>]
+  end
+
   ## Transactions
 
   def transaction(mod, _opts, fun) do

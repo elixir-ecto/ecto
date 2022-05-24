@@ -96,6 +96,13 @@ defmodule Ecto.Adapter.Queryable do
               Enumerable.t
 
   @doc """
+  Returns a quoted identifier name suitable for
+  a specific database.
+
+  """
+  @callback quote_name(name :: String.t | atom()) :: String.t
+
+  @doc """
   Plans and prepares a query for the given repo, leveraging its query cache.
 
   This operation uses the query cache if one is available.

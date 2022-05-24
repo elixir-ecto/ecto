@@ -1929,8 +1929,8 @@ defmodule Ecto.Query.Planner do
           {[index | indexes], [make_raw_segment(params, index, adapter) | segments]}
         {:raw, _string} = raw, {indexes, segments} ->
           {indexes, [raw | segments]}
-        {:expr, _} = expr, {indexes, segments}  ->
-          {indexes, [expr | segments]}
+        other, {indexes, segments} ->
+          {indexes, [other | segments]}
       end)
 
     {indexes, Enum.reverse(segments)}
@@ -1946,11 +1946,8 @@ defmodule Ecto.Query.Planner do
     |> Enum.reverse()
   end
 
-  # TODO implement adapter.escape_string in the behaviour
-  # and the implementations
   defp make_raw_segment(_params, string, adapter) when is_binary(string) do
-    {:raw, "\"" <> string <> "\""}
-    # {:raw, adapter.escape_string(value)}
+    {:raw, adapter.quote_name(string)}
   end
 
   # Convert the result of the expression into a :raw
