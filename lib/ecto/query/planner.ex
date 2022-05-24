@@ -1110,15 +1110,19 @@ defmodule Ecto.Query.Planner do
     {%{expr | expr: inner, params: nil}, acc}
   end
 
+  defp prewalk({:subquery, i}, kind, query, expr, acc, adapter) do
+    prewalk_source(Enum.fetch!(expr.subqueries, i), kind, query, expr, acc, adapter)
+  end
+
   defp prewalk({:in, in_meta, [left, {:^, meta, [param]}]}, kind, query, expr, acc, adapter) do
     {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
     {right, acc} = validate_in(meta, expr, param, acc, adapter)
     {{:in, in_meta, [left, right]}, acc}
   end
 
-  defp prewalk({:in, in_meta, [left, {:subquery, i}]}, kind, query, expr, acc, adapter) do
+  defp prewalk({:in, in_meta, [left, {:subquery, _} = right]}, kind, query, expr, acc, adapter) do
     {left, acc} = prewalk(left, kind, query, expr, acc, adapter)
-    {right, acc} = prewalk_source(Enum.fetch!(expr.subqueries, i), kind, query, expr, acc, adapter)
+    {right, acc} = prewalk(right, kind, query, expr, acc, adapter)
 
     case right.query.select.fields do
       [_] -> :ok
@@ -1128,9 +1132,8 @@ defmodule Ecto.Query.Planner do
     {{:in, in_meta, [left, right]}, acc}
   end
 
-  defp prewalk({quantifier, meta, [{:subquery, i}]}, kind, query, expr, acc, adapter) when quantifier in [:exists, :any, :all] do
-    subquery = Enum.fetch!(expr.subqueries, i)
-    {subquery, acc} = prewalk_source(subquery, kind, query, expr, acc, adapter)
+  defp prewalk({quantifier, meta, [{:subquery, _} = subquery]}, kind, query, expr, acc, adapter) when quantifier in [:exists, :any, :all] do
+    {subquery, acc} = prewalk(subquery, kind, query, expr, acc, adapter)
 
     case {quantifier, subquery.query.select.fields} do
       {:exists, _} ->

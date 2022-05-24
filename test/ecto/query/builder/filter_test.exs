@@ -104,6 +104,17 @@ defmodule Ecto.Query.Builder.FilterTest do
       assert_quantified_subquery.(any_query, :any)
     end
 
+    test "supports scalar subqueries anywhere in the expression" do
+      s = from(p in "posts", select: avg(p.rating))
+
+      %{wheres: [where]} = from(p in "posts", where: p.rating > subquery(s), select: p.id)
+
+      assert Macro.to_string(where.expr) ==
+             "&0.rating() > {:subquery, 0}"
+      assert where.params ==
+             [{:subquery, 0}]
+    end
+
     test "raises on invalid keywords" do
       assert_raise ArgumentError, fn ->
         where(from(p in "posts"), [p], ^[{1, 2}])
