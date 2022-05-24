@@ -429,15 +429,15 @@ defmodule Ecto.Query.API do
   inspecting the Elixir query.  Other than that, it should be
   equivalent to a built-in Ecto query function.
 
-  ## Mutatinng the query string with escape!/1
+  ## Mutating the query string with escape!/1
 
   Ecto produces prepared queries and in most database adapter
   if passes parameters separately to the database. This has the
   strong benefit of guaranteeing that SQL injection attacks
   can't happen. But it also means that some interpolations
-  do not woek because the database itself does not accept
+  do not work because the database itself does not accept
   parameters for some types. Examples include table names,
-  coliumn names and collation names in Postgres.
+  column names and collation names in Postgres.
 
   The escape!/1 expression in a fragment supports interpolating
   a name into a query string. The arugment to escape!/1 is
