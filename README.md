@@ -2,7 +2,7 @@
 
 ---
 
-[![Package](https://img.shields.io/hexpm/v/ecto)](https://hex.pm/packages/ecto) [![Documentation](https://img.shields.io/badge/documentation-hex.pm-green)](https://hexdocs.pm/ecto/) [![CI](https://img.shields.io/github/workflow/status/elixir-ecto/ecto/CI)](https://github.com/elixir-ecto/ecto/actions) [![License](https://img.shields.io/github/license/elixir-ecto/ecto)](https://github.com/elixir-ecto/ecto/raw/master/LICENSE.md)
+[![Build Status](https://github.com/elixir-ecto/ecto/workflows/CI/badge.svg)](https://github.com/elixir-ecto/ecto/actions) [![Hex.pm](https://img.shields.io/hexpm/v/ecto.svg)](https://hex.pm/packages/ecto) [![Documentation](https://img.shields.io/badge/documentation-gray)](https://hexdocs.pm/ecto/)
 
 ## Installation
 
@@ -76,9 +76,9 @@ Ecto is commonly used to interact with databases, such as Postgres and MySQL via
 
 See the [getting started guide](https://hexdocs.pm/ecto/getting-started.html) and the [online documentation](https://hexdocs.pm/ecto) for more information. Other resources available are:
 
--   [Programming Ecto](https://pragprog.com/book/wmecto/programming-ecto), by Darin Wilson and Eric Meadows-Jönsson, which guides you from fundamentals up to advanced concepts
+  * [Programming Ecto](https://pragprog.com/book/wmecto/programming-ecto), by Darin Wilson and Eric Meadows-Jönsson, which guides you from fundamentals up to advanced concepts
 
--   [The Little Ecto Cookbook](https://dashbit.co/ebooks/the-little-ecto-cookbook), a free ebook by Dashbit, which is a curation of the existing Ecto guides with some extra contents
+  * [The Little Ecto Cookbook](https://dashbit.co/ebooks/the-little-ecto-cookbook), a free ebook by Dashbit, which is a curation of the existing Ecto guides with some extra contents
 
 ## Usage
 
@@ -146,9 +146,9 @@ bug fixes and incremental changes.
 
 ## Important links
 
--   [Documentation](https://hexdocs.pm/ecto)
--   [Mailing list](https://groups.google.com/forum/#!forum/elixir-ecto)
--   [Examples](https://github.com/elixir-ecto/ecto/tree/master/examples)
+  * [Documentation](https://hexdocs.pm/ecto)
+  * [Mailing list](https://groups.google.com/forum/#!forum/elixir-ecto)
+  * [Examples](https://github.com/elixir-ecto/ecto/tree/master/examples)
 
 ## Running tests
 
