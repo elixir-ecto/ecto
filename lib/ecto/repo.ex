@@ -1762,6 +1762,31 @@ defmodule Ecto.Repo do
   rescued, or the inner transaction is rolled back, the whole outer
   transaction is marked as tainted, guaranteeing nothing will be committed.
 
+  Below is an example of how rollbacks work with nested transactions:
+
+      {:error, :rollback} =
+        MyRepo.transaction(fn ->
+          {:error, :posting_not_allowed} =
+            MyRepo.transaction(fn ->
+              # This function call causes the following to happen:
+              #
+              #   * the transaction is rolled back in the database,
+              #   * code execution is stopped within the current function,
+              #   * and the value, passed to `rollback/1` is returned from
+              #     `MyRepo.transaction/1` as the second element in the error
+              #     tuple.
+              #
+              MyRepo.rollback(:posting_not_allowed)
+
+              # `rollback/1` stops execution, so code here won't be run
+            end)
+
+          # When the inner transaction was rolled back, execution in this outer
+          # transaction is also stopped immediately. When this occurs, the
+          # outer transaction(s) return `{:error, :rollback}`.
+        end)
+
+
   ## Use with Ecto.Multi
 
   Besides functions, transactions can be used with an `Ecto.Multi` struct.
