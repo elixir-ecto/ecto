@@ -1381,7 +1381,7 @@ defmodule Ecto.Schema do
 
       # pipe syntax
       Tag
-      |> join([t], :inner, p in assoc(t, :post), on: p.id == ^post.id)
+      |> join(:inner, [t], p in assoc(t, :post), on: p.id == ^post.id)
 
   If you need to access the join table, then you likely want to use
   `has_many/3` with the `:through` option instead.
