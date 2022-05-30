@@ -1905,7 +1905,8 @@ defmodule Ecto.Schema do
 
   @doc false
   def __field__(mod, name, type, opts) do
-    check_options!(type, opts, @field_opts, "field/3")
+    # Check the field type before we check options because it is
+    # better to raise unknown type first than unsupported option.
     type = check_field_type!(mod, name, type, opts)
 
     if type == :any && !opts[:virtual] do
@@ -1913,6 +1914,7 @@ defmodule Ecto.Schema do
                              "invalid type for field #{inspect name}"
     end
 
+    check_options!(type, opts, @field_opts, "field/3")
     Module.put_attribute(mod, :ecto_changeset_fields, {name, type})
     validate_default!(type, opts[:default], opts[:skip_default_validation])
     define_field(mod, name, type, opts)
@@ -2005,19 +2007,24 @@ defmodule Ecto.Schema do
   @doc false
   def __belongs_to__(mod, name, queryable, opts) do
     opts = Keyword.put_new(opts, :foreign_key, :"#{name}_id")
+
+    foreign_key_name = opts[:foreign_key]
     foreign_key_type = opts[:type] || Module.get_attribute(mod, :foreign_key_type)
+    foreign_key_type = check_field_type!(mod, name, foreign_key_type, opts)
     check_options!(foreign_key_type, opts, @valid_belongs_to_options, "belongs_to/3")
 
-    if name == Keyword.get(opts, :foreign_key) do
+    if foreign_key_name == name do
       raise ArgumentError, "foreign_key #{inspect name} must be distinct from corresponding association name"
     end
 
     if Keyword.get(opts, :define_field, true) do
-      __field__(mod, opts[:foreign_key], foreign_key_type, opts)
+      Module.put_attribute(mod, :ecto_changeset_fields, {foreign_key_name, foreign_key_type})
+      define_field(mod, foreign_key_name, foreign_key_type, opts)
     end
 
     struct =
       association(mod, :one, name, Ecto.Association.BelongsTo, [queryable: queryable] ++ opts)
+
     Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
   end
 
@@ -2203,17 +2210,16 @@ defmodule Ecto.Schema do
     end
   end
 
+  defp check_options!({:parameterized, _, _}, _opts, _valid, _fun_arity) do
+    :ok
+  end
+
   defp check_options!({_, type}, opts, valid, fun_arity) do
     check_options!(type, opts, valid, fun_arity)
   end
 
-  defp check_options!(type, opts, valid, fun_arity) do
-    if is_atom(type) and not Ecto.Type.base?(type) and
-         Code.ensure_compiled(type) == {:module, type} and function_exported?(type, :type, 1) do
-      :ok
-    else
-      check_options!(opts, valid, fun_arity)
-    end
+  defp check_options!(_type, opts, valid, fun_arity) do
+    check_options!(opts, valid, fun_arity)
   end
 
   defp check_field_type!(_mod, name, :datetime, _opts) do
@@ -2223,36 +2229,37 @@ defmodule Ecto.Schema do
   end
 
   defp check_field_type!(mod, name, type, opts) do
-    kind =
-      cond do
-        composite?(type, name) -> :composite
-        not is_atom(type) -> nil
-        Ecto.Type.base?(type) -> :base
-        Code.ensure_compiled(type) == {:module, type} -> :module
-        true -> nil
-      end
-
     cond do
-      kind == :base ->
-        type
-
-      kind == :composite ->
+      composite?(type, name) ->
         {outer_type, inner_type} = type
         {outer_type, check_field_type!(mod, name, inner_type, opts)}
 
-      kind == :module and function_exported?(type, :type, 0) ->
+      not is_atom(type) ->
+        raise ArgumentError, "invalid type #{inspect type} for field #{inspect name}"
+
+      Ecto.Type.base?(type) ->
         type
 
-      kind == :module and function_exported?(type, :type, 1) ->
-        Ecto.ParameterizedType.init(type, Keyword.merge(opts, field: name, schema: mod))
+      Code.ensure_compiled(type) == {:module, type} ->
+        cond do
+          function_exported?(type, :type, 0) ->
+            type
 
-      kind == :module and function_exported?(type, :__schema__, 1) ->
-        raise ArgumentError,
-          "schema #{inspect type} is not a valid type for field #{inspect name}." <>
-          " Did you mean to use belongs_to, has_one, has_many, embeds_one, or embeds_many instead?"
+          function_exported?(type, :type, 1) ->
+            Ecto.ParameterizedType.init(type, Keyword.merge(opts, field: name, schema: mod))
+
+          function_exported?(type, :__schema__, 1) ->
+            raise ArgumentError,
+                  "schema #{inspect type} is not a valid type for field #{inspect name}." <>
+                    " Did you mean to use belongs_to, has_one, has_many, embeds_one, or embeds_many instead?"
+
+          true ->
+            raise ArgumentError,
+                  "module #{inspect(type)} given as type for field #{inspect name} is not an Ecto.Type/Ecto.ParameterizedType"
+        end
 
       true ->
-        raise ArgumentError, "invalid or unknown type #{inspect type} for field #{inspect name}"
+        raise ArgumentError, "unknown type #{inspect type} for field #{inspect name}"
     end
   end
 
@@ -2261,8 +2268,8 @@ defmodule Ecto.Schema do
       true
     else
       raise ArgumentError,
-        "invalid or unknown composite #{inspect type} for field #{inspect name}. " <>
-        "Did you mean to use array or map as first element of tuple instead?"
+            "invalid or unknown composite #{inspect type} for field #{inspect name}. " <>
+              "Did you mean to use :array or :map as first element of the tuple instead?"
     end
   end
 

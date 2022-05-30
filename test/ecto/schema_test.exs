@@ -452,7 +452,7 @@ defmodule Ecto.SchemaTest do
   end
 
   test "invalid field type" do
-    assert_raise ArgumentError, "invalid or unknown type {:apa} for field :name", fn ->
+    assert_raise ArgumentError, "invalid type {:apa} for field :name", fn ->
       defmodule SchemaInvalidFieldType do
         use Ecto.Schema
 
@@ -462,7 +462,7 @@ defmodule Ecto.SchemaTest do
       end
     end
 
-    assert_raise ArgumentError, "invalid or unknown type OMG for field :name", fn ->
+    assert_raise ArgumentError, "unknown type OMG for field :name", fn ->
       defmodule SchemaInvalidFieldType do
         use Ecto.Schema
 
@@ -482,7 +482,7 @@ defmodule Ecto.SchemaTest do
       end
     end
 
-    assert_raise ArgumentError, "invalid or unknown type :jsonb for field :name", fn ->
+    assert_raise ArgumentError, "unknown type :jsonb for field :name", fn ->
       defmodule SchemaInvalidFieldType do
         use Ecto.Schema
 
@@ -492,7 +492,7 @@ defmodule Ecto.SchemaTest do
       end
     end
 
-    assert_raise ArgumentError, "invalid or unknown type :jsonb for field :name", fn ->
+    assert_raise ArgumentError, "unknown type :jsonb for field :name", fn ->
       defmodule SchemaInvalidFieldType do
         use Ecto.Schema
 
