@@ -1,0 +1,55 @@
+name: 🐞 Bug Report
+description: Tell us about something that's not working the way we (probably) intend.
+labels: ["Kind:Bug", "State:Triage"]
+body:
+  - type: input
+    id: elixir-version
+    attributes:
+      label: Elixir version
+      description: Use `elixir -v` to find the Elixir version.
+    validations:
+      required: true
+
+  - type: input
+    id: db-version
+    attributes:
+      label: Database and Version
+      description: >
+        The database and its version (PostgreSQL 9.4, MongoDB 3.2, etc.)
+    validations:
+      required: true
+
+  - type: input
+    id: ecto-version
+    attributes:
+      label: Ecto Versions
+      description: Use `mix deps` to find the dependency versions.
+    validations:
+      required: true
+
+  - type: input
+    id: db-adapter-version
+    attributes:
+      label: Database Adapter and Versions (postgrex, myxql, etc)
+      description: Use `mix deps` to find the dependency versions.
+    validations:
+      required: true
+
+  - type: textarea
+    id: current-behavior
+    attributes:
+      label: Current behavior
+      description: How can we reproduce what you're seeing? Include code samples, errors and stacktraces if appropriate.
+      placeholder: |-
+        1. foo
+        2. bar
+        3. baz
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected-behavior
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
