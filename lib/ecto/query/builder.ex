@@ -146,14 +146,12 @@ defmodule Ecto.Query.Builder do
   # fragments
   def escape({:fragment, _, [query]}, _type, params_acc, vars, env) when is_list(query) do
     {escaped, params_acc} =
-      Enum.map_reduce(query, params_acc, &escape_fragment(&1, :any, &2, vars, env))
+      Enum.map_reduce(query, params_acc, &escape_kw_fragment(&1, &2, vars, env))
     {{:{}, [], [:fragment, [], [escaped]]}, params_acc}
   end
 
   def escape({:fragment, _, [{:^, _, [var]} = _expr]}, _type, params_acc, _vars, _env) do
-    expr = quote do
-      Ecto.Query.Builder.fragment!(unquote(var))
-    end
+    expr = quote do: Ecto.Query.Builder.fragment!(unquote(var))
     {{:{}, [], [:fragment, [], [expr]]}, params_acc}
   end
 
@@ -165,7 +163,7 @@ defmodule Ecto.Query.Builder do
                "It received #{length(frags)} extra argument(s) but expected #{length(pieces) - 1}"
     end
 
-    {frags, params_acc} = Enum.map_reduce(frags, params_acc, &escape(&1, :any, &2, vars, env))
+    {frags, params_acc} = Enum.map_reduce(frags, params_acc, &escape_fragment(&1, &2, vars, env))
     {{:{}, [], [:fragment, [], merge_fragments(pieces, frags)]}, params_acc}
   end
 
@@ -507,6 +505,7 @@ defmodule Ecto.Query.Builder do
     case Macro.expand(query, get_env(env)) do
       binary when is_binary(binary) ->
         split_fragment(binary, "")
+
       _ ->
         error! bad_fragment_message(Macro.to_string(query))
     end
@@ -626,22 +625,39 @@ defmodule Ecto.Query.Builder do
     {count, quoted_interval!(interval), params_acc}
   end
 
-  defp escape_fragment({key, [{_, _}|_] = exprs}, type, params_acc, vars, env) when is_atom(key) do
-    {escaped, params_acc} = Enum.map_reduce(exprs, params_acc, &escape_fragment(&1, type, &2, vars, env))
+  defp escape_kw_fragment({key, [{_, _}|_] = exprs}, params_acc, vars, env) when is_atom(key) do
+    {escaped, params_acc} = Enum.map_reduce(exprs, params_acc, &escape_kw_fragment(&1, &2, vars, env))
     {{key, escaped}, params_acc}
   end
 
-  defp escape_fragment({key, expr}, type, params_acc, vars, env) when is_atom(key) do
-    {escaped, params_acc} = escape(expr, type, params_acc, vars, env)
+  defp escape_kw_fragment({key, expr}, params_acc, vars, env) when is_atom(key) do
+    {escaped, params_acc} = escape(expr, :any, params_acc, vars, env)
     {{key, escaped}, params_acc}
   end
 
-  defp escape_fragment({key, _expr}, _type, _params_acc, _vars, _env) do
+  defp escape_kw_fragment({key, _expr}, _params_acc, _vars, _env) do
     error! "fragment(...) with keywords accepts only atoms as keys, got `#{Macro.to_string(key)}`"
   end
 
+  defp escape_fragment({:literal, _meta, [expr]}, params_acc, _vars, _env) do
+    case expr do
+      {:^, _, [expr]} ->
+        checked = quote do: Ecto.Query.Builder.literal!(unquote(expr))
+        escaped = {:{}, [], [:literal, [], [checked]]}
+        {escaped, params_acc}
+
+      _ ->
+        error! "literal/1 in fragment expects an interpolated value, such as literal(^value), got `#{Macro.to_string(expr)}`"
+    end
+  end
+
+  defp escape_fragment(expr, params_acc, vars, env) do
+    escape(expr, :any, params_acc, vars, env)
+  end
+
   defp merge_fragments([h1|t1], [h2|t2]),
-    do: [{:raw, h1}, {:expr, h2}|merge_fragments(t1, t2)]
+    do: [{:raw, h1}, {:expr, h2} | merge_fragments(t1, t2)]
+
   defp merge_fragments([h1], []),
     do: [{:raw, h1}]
 
@@ -979,13 +995,25 @@ defmodule Ecto.Query.Builder do
     do: interval!(other)
 
   @doc """
-  Called by escaper at runtime to verify keywords.
+  Called by escaper at runtime to verify fragment keywords.
   """
   def fragment!(kw) do
     if Keyword.keyword?(kw) do
       kw
     else
       raise ArgumentError, bad_fragment_message(inspect(kw))
+    end
+  end
+
+  @doc """
+  Called by escaper at runtime to verify literal in fragments.
+  """
+  def literal!(literal) do
+    if is_binary(literal) do
+      literal
+    else
+      raise ArgumentError,
+            "literal(^value) expects `value` to be a string, got `#{inspect(literal)}`"
     end
   end
 

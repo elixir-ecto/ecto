@@ -121,26 +121,6 @@ defmodule Ecto.QueryTest do
     end
   end
 
-  describe "common table expressions" do
-    test "recursive CTE" do
-      initial = "categories" |> where([c], is_nil(c.parent_id))
-      recursion = "categories" |> join(:inner, [c], ct in "tree", on: c.parent_id == ct.id)
-      tree = initial |> union_all(^recursion)
-      query = "products" |> recursive_ctes(true) |> with_cte("tree", as: ^tree)
-
-      assert [{"tree", ^tree}] = query.with_ctes.queries
-      assert query.with_ctes.recursive
-    end
-
-    test "fragment CTE" do
-      query = "products" |> with_cte("categories", as: fragment("SELECT * FROM categories"))
-
-      assert [{"categories", %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
-      assert {:fragment, [], [raw: "SELECT * FROM categories"]} = expr
-      refute query.with_ctes.recursive
-    end
-  end
-
   describe "combinations" do
     test "adds union expressions" do
       union_query1 = from(p in "posts1")
@@ -913,6 +893,23 @@ defmodule Ecto.QueryTest do
       assert_raise ArgumentError, ~r/fragment\(...\) does not allow strings to be interpolated/, fn ->
         clause = "1 = ?"
         from p in "posts", where: fragment(^clause)
+      end
+    end
+
+    test "supports literals" do
+      query = from p in "posts", select: fragment("? COLLATE ?", p.name, literal(^"es_ES"))
+      assert {:fragment, _, parts} = query.select.expr
+
+      assert [
+               raw: "",
+               expr: {{:., _, [{:&, _, [0]}, :name]}, _, _},
+               raw: " COLLATE ",
+               expr: {:literal, _, ["es_ES"]},
+               raw: ""
+             ] = parts
+
+      assert_raise ArgumentError, "literal(^value) expects `value` to be a string, got `123`", fn ->
+        from p in "posts", select: fragment("? COLLATE ?", p.name, literal(^123))
       end
     end
 

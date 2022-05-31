@@ -383,30 +383,42 @@ defmodule Ecto.Query.API do
       end
 
   Every occurrence of the `?` character will be interpreted as a place
-  for additional argument. If the literal character `?` is required,
-  it can be escaped with `\\\\?` (one escape for strings, another for
-  fragment).
+  for parameters, which must be given as additional arguments to
+  `fragment`. If the literal character `?` is required as part of the
+  fragment, it can be escaped with `\\\\?` (one escape for strings,
+  another for fragment).
 
   In the example above, we are using the lower procedure in the
   database to downcase the title column.
 
   It is very important to keep in mind that Ecto is unable to do any
-  type casting described above when fragments are used. You can
-  however use the `type/2` function to give Ecto some hints:
+  type casting when fragments are used. Therefore it may be necessary
+  to explicitly cast parameters via `type/2`:
 
       fragment("lower(?)", p.title) == type(^title, :string)
 
-  Or even say the right side is of the same type as `p.title`:
+  ## Literals
 
-      fragment("lower(?)", p.title) == type(^title, p.title)
+  Sometimes you need to interpolate a literal value into a fragment,
+  instead of a parameter. For example, you may need to pass a table
+  name or a collation, such as:
 
-  ## Keyword fragments
+      collation = "es_ES"
+      fragment("? COLLATE ?", ^name, ^collation)
 
-  In order to support databases that do not have string-based
-  queries, like MongoDB, fragments also allow keywords to be given:
+  The example above won't work because `collation` will be passed
+  as a parameter, while it has to be a literal part of the query.
 
-      from p in Post,
-          where: fragment(title: ["$eq": ^some_value])
+  You can address this by telling Ecto that variable is a literal:
+
+      fragment("? COLLATE ?", ^name, literal(^collation))
+
+  Ecto will then escape it and make it part of the query.
+
+  > #### Literals and query caching {: .warning}
+  >
+  > Because literals are made part of the query, each interpolated
+  > literal will generate a separate query, with its own cache.
 
   ## Defining custom functions using macros and fragment
 
@@ -428,6 +440,15 @@ defmodule Ecto.Query.API do
   The only downside is that it will show up as a fragment when
   inspecting the Elixir query.  Other than that, it should be
   equivalent to a built-in Ecto query function.
+
+  ## Keyword fragments
+
+  In order to support databases that do not have string-based
+  queries, like MongoDB, fragments also allow keywords to be given:
+
+      from p in Post,
+          where: fragment(title: ["$eq": ^some_value])
+
   """
   def fragment(fragments), do: doc! [fragments]
 

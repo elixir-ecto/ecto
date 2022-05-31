@@ -9,7 +9,33 @@ defmodule Ecto.Query.Builder.CTETest do
   import Ecto.Query
   import Support.EvalHelpers
 
-  test "appends multiple CTEs as interpolated query or fragment" do
+  test "fragment CTE" do
+    query = "products" |> with_cte("categories", as: fragment("SELECT * FROM categories"))
+
+    assert [{"categories", %Ecto.Query.QueryExpr{expr: expr}}] = query.with_ctes.queries
+    assert {:fragment, [], [raw: "SELECT * FROM categories"]} = expr
+    refute query.with_ctes.recursive
+  end
+
+  test "recursive CTE" do
+    initial = "categories" |> where([c], is_nil(c.parent_id))
+    recursion = "categories" |> join(:inner, [c], ct in "tree", on: c.parent_id == ct.id)
+    tree = initial |> union_all(^recursion)
+    query = "products" |> recursive_ctes(true) |> with_cte("tree", as: ^tree)
+
+    assert [{"tree", ^tree}] = query.with_ctes.queries
+    assert query.with_ctes.recursive
+  end
+
+  test "overrides recursion flag" do
+    query = %Ecto.Query{} |> recursive_ctes(true)
+    assert query.with_ctes.recursive
+
+    query = query |> recursive_ctes(false)
+    refute query.with_ctes.recursive
+  end
+
+  test "multiple CTEs" do
     cte1 = from(p in "tbl1")
 
     query =
@@ -39,14 +65,6 @@ defmodule Ecto.Query.Builder.CTETest do
     query = %Ecto.Query{} |> with_cte("cte", as: ^cte1) |> with_cte("cte", as: ^cte2)
 
     assert [{"cte", ^cte2}] = query.with_ctes.queries
-  end
-
-  test "sets and overrides recursion flag" do
-    query = %Ecto.Query{} |> recursive_ctes(true)
-    assert query.with_ctes.recursive
-
-    query = query |> recursive_ctes(false)
-    refute query.with_ctes.recursive
   end
 
   test "uses an interpolated CTE name" do
