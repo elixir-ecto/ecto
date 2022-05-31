@@ -615,6 +615,8 @@ defmodule Ecto.Multi do
   @doc """
   Adds a value to the changes so far under the given name.
 
+  The value put is out of the transaction.
+
   ## Example
 
       Ecto.Multi.new()
