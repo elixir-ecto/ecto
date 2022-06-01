@@ -1823,6 +1823,14 @@ defmodule Ecto.Repo do
   transaction won't be part of the same transaction and will use a separate
   connection altogether.
 
+  When using the the `Ecto.Adapters.SQL.Sandbox` in tests, while it may be
+  possible to share the connection between processes, the parent process
+  will typically hold the connection until the transaction completes. This
+  may lead to a deadlock if the child process attempts to use the same connection.
+  See the docs for
+  [`Ecto.Adapters.SQL.Sandbox`](https://hexdocs.pm/ecto_sql/Ecto.Adapters.SQL.Sandbox.html)
+  for more information.
+
   ## Options
 
   See the ["Shared options"](#module-shared-options) section at the module
@@ -1841,10 +1849,6 @@ defmodule Ecto.Repo do
   though each test is inside a transaction, `in_transaction?/0` will only
   return true inside transactions explicitly created with `transaction/2`. This
   is done so the test environment mimics dev and prod.
-
-  If you are trying to debug transaction-related code while using
-  `Ecto.Adapters.SQL.Sandbox`, it may be more helpful to configure the database
-  to log all statements and consult those logs.
 
   ## Examples
 
