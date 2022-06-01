@@ -148,7 +148,7 @@ defmodule Ecto.Repo do
     * `:queue_time` - the time spent waiting to check out a database connection
     * `:query_time` - the time spent executing the query
     * `:decode_time` - the time spent decoding the data received from the database
-    * `:total_time` - the sum of the other measurements
+    * `:total_time` - the sum of (`queue_time`, `query_time`, and `decode_time`) subtracted by `idle_time`
 
   All measurements are given in the `:native` time unit. You can read more
   about it in the docs for `System.convert_time_unit/3`.
