@@ -150,6 +150,66 @@ defmodule Ecto.MultiTest do
     assert [{:fun, {:run, _fun}}] = multi.operations
   end
 
+  test "one queryable" do
+    multi =
+      Multi.new()
+      |> Multi.one(:comment, Comment)
+
+    assert multi.names == MapSet.new([:comment])
+    assert [{:comment, {:run, _fun}}] = multi.operations
+  end
+
+  test "one fun" do
+    fun = fn _changes -> Comment end
+
+    multi =
+      Multi.new()
+      |> Multi.one(:comment, fun)
+
+    assert multi.names == MapSet.new([:comment])
+    assert [{:comment, {:run, _fun}}] = multi.operations
+  end
+
+  test "one! queryable" do
+    multi =
+      Multi.new()
+      |> Multi.one!(:comment, Comment)
+
+    assert multi.names == MapSet.new([:comment])
+    assert [{:comment, {:run, _fun}}] = multi.operations
+  end
+
+  test "one! fun" do
+    fun = fn _changes -> Comment end
+
+    multi =
+      Multi.new()
+      |> Multi.one!(:comment, fun)
+
+    assert multi.names == MapSet.new([:comment])
+    assert [{:comment, {:run, _fun}}] = multi.operations
+  end
+
+  test "all queryable" do
+    multi =
+      Multi.new()
+      |> Multi.all(:comments, Comment)
+
+    assert multi.names == MapSet.new([:comments])
+    assert [{:comments, {:run, _fun}}] = multi.operations
+  end
+
+  test "all fun" do
+    fun = fn _changes -> Comment end
+
+    multi =
+      Multi.new()
+      |> Multi.all(:comments, fun)
+
+    assert multi.names == MapSet.new([:comments])
+    assert [{:comments, {:run, _fun}}] = multi.operations
+  end
+
   test "error" do
     multi =
       Multi.new()

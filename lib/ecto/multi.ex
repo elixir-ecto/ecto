@@ -397,6 +397,79 @@ defmodule Ecto.Multi do
     run(multi, name, operation_fun({:delete, fun}, opts))
   end
 
+  @doc """
+  Adds a one operation to the multi.
+  It is usefull to lock an entity inside the transaction.
+  Accepts the same arguments and options as `c:Ecto.Repo.one/2` does.
+  ## Example
+      Ecto.Multi.new()
+      |> Ecto.Multi.one(:post, Post)
+      |> MyApp.Repo.transaction()
+  """
+  @spec one(
+          t,
+          name,
+          queryable :: Ecto.Queryable.t | (any -> Ecto.Queryable.t),
+          opts :: Keyword.t
+        ) :: t
+  def one(multi, name, queryable_or_fun, opts \\ [])
+
+  def one(multi, name, fun, opts) when is_function(fun, 1) do
+    run(multi, name, operation_fun({:one, fun}, opts))
+  end
+
+  def one(multi, name, queryable, opts) do
+    run(multi, name, operation_fun({:one, fn _ -> queryable end}, opts))
+  end
+
+  @doc """
+  Similar to  `c:Multi.one/2` but crash the transaction with `Ecto.NoResultsError` if no record was found.
+  ## Example
+      Ecto.Multi.new()
+      |> Ecto.Multi.one!(:post, Post)
+      |> MyApp.Repo.transaction()
+  """
+  @spec one!(
+          t,
+          name,
+          queryable :: Ecto.Queryable.t | (any -> Ecto.Queryable.t),
+          opts :: Keyword.t
+        ) :: t
+  def one!(multi, name, queryable_or_fun, opts \\ [])
+
+  def one!(multi, name, fun, opts) when is_function(fun, 1) do
+    run(multi, name, operation_fun({:one!, fun}, opts))
+  end
+
+  def one!(multi, name, queryable, opts) do
+    run(multi, name, operation_fun({:one!, fn _ -> queryable end}, opts))
+  end
+
+  @doc """
+  Adds an all operation to the multi.
+  It is usefull to lock entities inside the transaction.
+  Accepts the same arguments and options as `c:Ecto.Repo.all/2` does.
+  ## Example
+      Ecto.Multi.new()
+      |> Ecto.Multi.all(:all, Post)
+      |> MyApp.Repo.transaction()
+  """
+  @spec all(
+          t,
+          name,
+          queryable :: Ecto.Queryable.t | (any -> Ecto.Queryable.t),
+          opts :: Keyword.t
+        ) :: t
+  def all(multi, name, queryable_or_fun, opts \\ [])
+
+  def all(multi, name, fun, opts) when is_function(fun, 1) do
+    run(multi, name, operation_fun({:all, fun}, opts))
+  end
+
+  def all(multi, name, queryable, opts) do
+    run(multi, name, operation_fun({:all, fn _ -> queryable end}, opts))
+  end
+
   defp add_changeset(multi, action, name, changeset, opts) when is_list(opts) do
     add_operation(multi, name, {:changeset, put_action(changeset, action), opts})
   end
@@ -777,6 +850,24 @@ defmodule Ecto.Multi do
   defp operation_fun({:delete_all, fun}, opts) do
     fn repo, changes ->
       {:ok, repo.delete_all(fun.(changes), opts)}
+    end
+  end
+
+  defp operation_fun({:one, fun}, opts) do
+    fn repo, changes ->
+      {:ok, repo.one(fun.(changes), opts)}
+    end
+  end
+
+  defp operation_fun({:one!, fun}, opts) do
+    fn repo, changes ->
+      {:ok, repo.one!(fun.(changes), opts)}
+    end
+  end
+
+  defp operation_fun({:all, fun}, opts) do
+    fn repo, changes ->
+      {:ok, repo.all(fun.(changes), opts)}
     end
   end
 
