@@ -2141,6 +2141,39 @@ defmodule Ecto.ChangesetTest do
     }
   end
 
+  describe "on_valid_changeset" do
+    defmodule Schema do
+      use Ecto.Schema
+
+      embedded_schema do
+        field(:field_1, :string)
+      end
+    end
+
+    test "when changeset is valid" do
+      changeset = %Schema{} |> Ecto.Changeset.change()
+
+      assert changeset.valid?
+
+      changeset =
+        changeset |> on_valid_changeset(&Ecto.Changeset.put_change(&1, :field_1, "field_1"))
+
+      assert changeset.changes.field_1 == "field_1"
+    end
+
+    test "when changeset is not valid" do
+      changeset =
+        %Schema{}
+        |> Ecto.Changeset.change()
+        |> Ecto.Changeset.add_error(:field_1, "error")
+
+      changeset =
+        changeset |> on_valid_changeset(&Ecto.Changeset.put_change(&1, :field_1, "field_1"))
+
+      assert changeset.changes == %{}
+    end
+  end
+
   ## inspect
 
   defmodule RedactedSchema do

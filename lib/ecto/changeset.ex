@@ -3129,6 +3129,20 @@ defmodule Ecto.Changeset do
     |> merge_keyword_keys(msg_func, changeset)
     |> merge_related_keys(changes, types, msg_func, &traverse_validations/2)
   end
+
+  @doc """
+  A helper that allows to apply function on a changeset only if it is valid.
+  Always returns the changeset
+  """
+  @spec on_valid_changeset(Ecto.Changeset.t, (Ecto.Changeset.t -> Ecto.Changeset.t)) ::  Ecto.Changeset.t
+  def on_valid_changeset(%Ecto.Changeset{} = changeset, fun)
+      when is_function(fun) do
+    if changeset.valid? do
+      %Ecto.Changeset{} = fun.(changeset)
+    else
+      changeset
+    end
+  end
 end
 
 defimpl Inspect, for: Ecto.Changeset do
