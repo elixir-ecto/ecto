@@ -615,14 +615,26 @@ defmodule Ecto.Multi do
   @doc """
   Adds a value to the changes so far under the given name.
 
-  The value put is out of the transaction.
+  If you would like to run arbitrary functions as part of your transaction, see `run/3` or `run/5`.
 
   ## Example
 
+  Adding a pre-received company as value to the changes
+
+      company = Repo.insert(Company)
+
       Ecto.Multi.new()
-      |> Ecto.Multi.put(:params, params)
-      |> Ecto.Multi.insert(:user, fn changes -> User.changeset(changes.params) end)
-      |> Ecto.Multi.insert(:person, fn changes -> Person.changeset(changes.user, changes.params) end)
+      |> Ecto.Multi.put(:company, company)
+      |> Ecto.Multi.insert(:user, fn changes -> User.changeset(changes.company) end)
+      |> Ecto.Multi.insert(:person, fn changes -> Person.changeset(changes.user, changes.company) end)
+      |> MyApp.Repo.transaction()
+
+  the same but in more shorter form
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.put(:company, Repo.insert(Company))
+      |> Ecto.Multi.insert(:user, fn changes -> User.changeset(changes.company) end)
+      |> Ecto.Multi.insert(:person, fn changes -> Person.changeset(changes.user, changes.company) end)
       |> MyApp.Repo.transaction()
   """
   @spec put(t, name, any) :: t
