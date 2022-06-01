@@ -615,13 +615,30 @@ defmodule Ecto.Multi do
   @doc """
   Adds a value to the changes so far under the given name.
 
+  The given `value` is added to the multi before the transaction starts.
+  If you would like to run arbitrary functions as part of your transaction,
+  see `run/3` or `run/5`.
+
   ## Example
 
+  Imagine there is an existing company schema that you retrieved from
+  the database. You can insert it as a change in the multi using `put/3`:
+
       Ecto.Multi.new()
-      |> Ecto.Multi.put(:params, params)
-      |> Ecto.Multi.insert(:user, fn changes -> User.changeset(changes.params) end)
-      |> Ecto.Multi.insert(:person, fn changes -> Person.changeset(changes.user, changes.params) end)
+      |> Ecto.Multi.put(:company, company)
+      |> Ecto.Multi.insert(:user, fn changes -> User.changeset(changes.company) end)
+      |> Ecto.Multi.insert(:person, fn changes -> Person.changeset(changes.user, changes.company) end)
       |> MyApp.Repo.transaction()
+
+  In the example above there isn't a large benefit in putting the
+  `company` in the multi, because you could also access the
+  `company` variable directly inside the anonymous function.
+  
+  However, the benefit of `put/3` is when composing `Ecto.Multi`s.
+  If the insert operations above were defined in another module,
+  you could use `put(:company, company)` to inject changes that
+  will be accessed by other functions down the chain, removing
+  the need to pass both `multi` and `company` values around.
   """
   @spec put(t, name, any) :: t
   def put(multi, name, value) do
