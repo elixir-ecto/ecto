@@ -629,6 +629,16 @@ defmodule Ecto.Multi do
       |> Ecto.Multi.insert(:user, fn changes -> User.changeset(changes.company) end)
       |> Ecto.Multi.insert(:person, fn changes -> Person.changeset(changes.user, changes.company) end)
       |> MyApp.Repo.transaction()
+
+  In the example above there isn't a large benefit in putting the
+  `company` in the multi, because you could also access the
+  `company` variable directly inside the anonymous function.
+  
+  However, the benefit of `put/3` is when composing `Ecto.Multi`s.
+  If the insert operations above were defined in another module,
+  you could use `put(:company, company)` to inject changes that
+  will be accessed by other functions down the chain, removing
+  the need to pass both `multi` and `company` values around.
   """
   @spec put(t, name, any) :: t
   def put(multi, name, value) do
