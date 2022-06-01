@@ -1743,9 +1743,21 @@ defmodule Ecto.Repo do
   ## Use with function
 
   `c:transaction/2` can be called with both a function of arity
-  zero or one. The arity zero function will just be executed as is,
-  while the arity one function will receive the repo of the transaction
-  as its first argument, similar to `Ecto.Multi.run/3`.
+  zero or one. The arity zero function will just be executed as is:
+
+      import Ecto.Changeset, only: [change: 2]
+
+      MyRepo.transaction(fn ->
+        MyRepo.update!(change(alice, balance: alice.balance - 10))
+        MyRepo.update!(change(bob, balance: bob.balance + 10))
+      end)
+
+  While the arity one function will receive the repo of the transaction
+  as its first argument:
+
+      MyRepo.transaction(fn repo ->
+        repo.insert!(%Post{})
+      end)
 
   If an unhandled error occurs the transaction will be rolled back
   and the error will bubble up from the transaction function.
@@ -1787,51 +1799,34 @@ defmodule Ecto.Repo do
           # outer transaction(s) return `{:error, :rollback}`.
         end)
 
-
   ## Use with Ecto.Multi
 
   Besides functions, transactions can be used with an `Ecto.Multi` struct.
   A transaction will be started, all operations applied and in case of
-  success committed returning `{:ok, changes}`. In case of any errors
-  the transaction will be rolled back and
-  `{:error, failed_operation, failed_value, changes_so_far}` will be
-  returned.
-
-  You can read more about using transactions with `Ecto.Multi` as well as
-  see some examples in the `Ecto.Multi` documentation.
-
-  ## Options
-
-  See the ["Shared options"](#module-shared-options) section at the module
-  documentation for more options.
-
-  ## Examples
-
-      import Ecto.Changeset, only: [change: 2]
-
-      MyRepo.transaction(fn ->
-        MyRepo.update!(change(alice, balance: alice.balance - 10))
-        MyRepo.update!(change(bob, balance: bob.balance + 10))
-      end)
-
-      # When passing a function of arity 1, it receives the repository itself
-      MyRepo.transaction(fn repo ->
-        repo.insert!(%Post{})
-      end)
-
-      # Roll back a transaction explicitly
-      MyRepo.transaction(fn ->
-        p = MyRepo.insert!(%Post{})
-        if not Editor.post_allowed?(p) do
-          MyRepo.rollback(:posting_not_allowed)
-        end
-      end)
+  success committed returning `{:ok, changes}`:
 
       # With Ecto.Multi
       Ecto.Multi.new()
       |> Ecto.Multi.insert(:post, %Post{})
       |> MyRepo.transaction
 
+  In case of any errors the transaction will be rolled back and
+  `{:error, failed_operation, failed_value, changes_so_far}` will be
+  returned.
+
+  You can read more about using transactions with `Ecto.Multi` as well as
+  see some examples in the `Ecto.Multi` documentation.
+
+  ## Working with processes
+
+  The transaction is per process. A separate process started inside a
+  transaction won't be part of the same transaction and will use a separate
+  connection altogether.
+
+  ## Options
+
+  See the ["Shared options"](#module-shared-options) section at the module
+  documentation for more options.
   """
   @doc group: "Transaction API"
   @callback transaction(fun_or_multi :: fun | Ecto.Multi.t(), opts :: Keyword.t()) ::
