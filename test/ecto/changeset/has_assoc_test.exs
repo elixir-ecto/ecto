@@ -242,16 +242,6 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = cast(%Author{profile: %{name: "michal"}}, %{name: "michal"}, :profile,
                      force_update_on_change: true)
     assert changeset.repo_opts == []
-
-    changeset =
-      cast(
-        %Author{posts: [%Post{title: "hello"}]},
-        %{profile: %{name: "michal"}},
-        :profile,
-        force_update_on_change: true
-      )
-      |> Changeset.cast_assoc(:profile, force_update_on_change: false)
-    assert changeset.repo_opts == []
   end
 
   test "cast has_one with optional" do
@@ -568,16 +558,6 @@ defmodule Ecto.Changeset.HasAssocTest do
 
     changeset = cast(%Author{posts: [%Post{title: "hello"}]}, %{posts: [%{title: "hello"}]}, :posts,
                      force_update_on_change: true)
-    assert changeset.repo_opts == []
-
-    changeset =
-      cast(
-        %Author{posts: [%Post{title: "hello"}]},
-        %{posts: [%{title: "hello"}]},
-        :posts,
-        force_update_on_change: true
-      )
-      |> Changeset.cast_assoc(:posts, force_update_on_change: false)
     assert changeset.repo_opts == []
   end
 

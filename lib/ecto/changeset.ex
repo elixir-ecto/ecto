@@ -882,23 +882,12 @@ defmodule Ecto.Changeset do
     do: raise(ArgumentError, "expected `#{name}` to be an #{type} in `#{op}_#{type}`, got: `#{inspect schema_type}`")
 
   defp force_update(changeset, key, opts) do
-    forced_relations = Keyword.get(changeset.repo_opts, :force_update_on_relation_change, [])
-
-    new_forced_relations =
-      if Keyword.get(opts, :force_update_on_change, true) do
-        Enum.uniq([key | forced_relations])
-      else
-        List.delete(forced_relations, key)
-      end
-
-    new_repo_opts =
-      if new_forced_relations == [] do
-        Keyword.delete(changeset.repo_opts, :force_update_on_relation_change)
-      else
-        Keyword.put(changeset.repo_opts, :force_update_on_relation_change, new_forced_relations)
-      end
-
-    %{changeset | repo_opts: new_repo_opts}
+    if Keyword.get(opts, :force_update_on_change, true) do
+      new_opts = Keyword.update(changeset.repo_opts, :force_update_on_relation_change, [key], &[key | &1])
+      %{changeset | repo_opts: new_opts}
+    else
+      changeset
+    end
   end
 
   ## Working with changesets
