@@ -398,10 +398,12 @@ defmodule Ecto.Multi do
   end
 
   @doc """
-  Adds a one operation to the multi.
-  It is usefull to lock an entity inside the transaction.
-  Accepts the same arguments and options as `c:Ecto.Repo.one/2` does.
+  Runs a query expecting one result and stores it in the multi.
+
+  Accepts the same arguments and options as `c:Ecto.Repo.one/2`.
+
   ## Example
+
       Ecto.Multi.new()
       |> Ecto.Multi.one(:post, Post)
       |> MyApp.Repo.transaction()
@@ -423,8 +425,10 @@ defmodule Ecto.Multi do
   end
 
   @doc """
-  Similar to  `c:Multi.one/2` but crash the transaction with `Ecto.NoResultsError` if no record was found.
+  Similar to  `one/2` but crashes the transaction with `Ecto.NoResultsError` if no record was found.
+
   ## Example
+
       Ecto.Multi.new()
       |> Ecto.Multi.one!(:post, Post)
       |> MyApp.Repo.transaction()
@@ -446,10 +450,12 @@ defmodule Ecto.Multi do
   end
 
   @doc """
-  Adds an all operation to the multi.
-  It is usefull to lock entities inside the transaction.
+  Runs a query and stores all entries in the multi.
+
   Accepts the same arguments and options as `c:Ecto.Repo.all/2` does.
+
   ## Example
+
       Ecto.Multi.new()
       |> Ecto.Multi.all(:all, Post)
       |> MyApp.Repo.transaction()
