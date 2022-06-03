@@ -614,7 +614,7 @@ defmodule Ecto.Schema do
           @derive {Inspect, except: @ecto_redact_fields}
         end
 
-        defstruct @ecto_struct_fields
+        defstruct Enum.reverse(@ecto_struct_fields)
 
         def __changeset__ do
           %{unquote_splicing(Macro.escape(@ecto_changeset_fields))}
