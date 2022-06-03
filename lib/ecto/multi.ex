@@ -425,31 +425,6 @@ defmodule Ecto.Multi do
   end
 
   @doc """
-  Similar to  `one/2` but crashes the transaction with `Ecto.NoResultsError` if no record was found.
-
-  ## Example
-
-      Ecto.Multi.new()
-      |> Ecto.Multi.one!(:post, Post)
-      |> MyApp.Repo.transaction()
-  """
-  @spec one!(
-          t,
-          name,
-          queryable :: Ecto.Queryable.t | (any -> Ecto.Queryable.t),
-          opts :: Keyword.t
-        ) :: t
-  def one!(multi, name, queryable_or_fun, opts \\ [])
-
-  def one!(multi, name, fun, opts) when is_function(fun, 1) do
-    run(multi, name, operation_fun({:one!, fun}, opts))
-  end
-
-  def one!(multi, name, queryable, opts) do
-    run(multi, name, operation_fun({:one!, fn _ -> queryable end}, opts))
-  end
-
-  @doc """
   Runs a query and stores all entries in the multi.
 
   Accepts the same arguments and options as `c:Ecto.Repo.all/2` does.

@@ -170,26 +170,6 @@ defmodule Ecto.MultiTest do
     assert [{:comment, {:run, _fun}}] = multi.operations
   end
 
-  test "one! queryable" do
-    multi =
-      Multi.new()
-      |> Multi.one!(:comment, Comment)
-
-    assert multi.names == MapSet.new([:comment])
-    assert [{:comment, {:run, _fun}}] = multi.operations
-  end
-
-  test "one! fun" do
-    fun = fn _changes -> Comment end
-
-    multi =
-      Multi.new()
-      |> Multi.one!(:comment, fun)
-
-    assert multi.names == MapSet.new([:comment])
-    assert [{:comment, {:run, _fun}}] = multi.operations
-  end
-
   test "all queryable" do
     multi =
       Multi.new()
