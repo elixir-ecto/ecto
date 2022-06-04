@@ -13,6 +13,7 @@ defmodule Ecto.Query.SubqueryTest do
 
     schema "comments" do
       field :text, :string
+      field :updated_at, :utc_datetime_usec
       field :temp, :string, virtual: true
       belongs_to :post, Ecto.Query.SubqueryTest.Post, type: CustomPermalink
       has_many :post_comments, through: [:post, :comments]
@@ -27,6 +28,7 @@ defmodule Ecto.Query.SubqueryTest do
     schema "posts" do
       field :title, :string, source: :post_title
       field :text, :string
+      field :comment_updated_at, :utc_datetime_usec, virtual: true
       has_many :comments, Ecto.Query.SubqueryTest.Comment
     end
   end
@@ -251,6 +253,13 @@ defmodule Ecto.Query.SubqueryTest do
       query = from p in Post, select: merge(%{}, %{})
       query = plan(from(subquery(query), [])) |> elem(0)
       assert "%{}" = Macro.to_string(query.from.source.query.select.expr)
+    end
+
+    test "merging fields from other sources or schemas retains the field type" do
+      query = from p in Post, join: c in assoc(p, :comments), select: merge(p, %{comment_updated_at: c.updated_at})
+      subquery = normalize(from(subquery(query), []))
+      %{select: {:source, _source, _prefix, types}} = subquery.sources |> elem(0)
+      assert types[:comment_updated_at] == :utc_datetime_usec
     end
 
     test "requires atom keys for maps" do
