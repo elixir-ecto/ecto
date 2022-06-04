@@ -1,5 +1,16 @@
 # Changelog for v3.x
 
+## v3.8.4 (2022-06-04)
+
+### Enhancements
+
+  * [Ecto.Multi] Add `one/2` and `all/2` functions
+  * [Ecto.Query] Support `literal(...)` in `fragment`
+
+### Bug fix
+
+  * [Ecto.Schema] Make sure fields are inspected in the correct order in Elixir v1.14+
+
 ## v3.8.3 (2022-05-11)
 
 ### Bug fix
