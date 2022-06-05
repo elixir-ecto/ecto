@@ -307,12 +307,7 @@ defmodule Ecto.Query.Planner do
   defp subquery_source(nil, types), do: {:map, types}
   defp subquery_source(name, types) when is_atom(name), do: {:struct, name, types}
   defp subquery_source({:source, schema, prefix, types}, only) do
-    types =
-      Enum.map(only, fn
-        {field, {:value, type}} -> {field, Keyword.get(types, field, type)}
-        {field, _} -> {field, Keyword.get(types, field, :any)}
-      end)
-
+    types = Enum.map(only, fn {field, {:value, type}} -> {field, Keyword.get(types, field, type)} end)
     {:source, schema, prefix, types}
   end
 
