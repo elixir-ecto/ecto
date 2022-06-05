@@ -99,7 +99,7 @@ defmodule Ecto.Query.SubqueryTest do
     end
 
     test "invalid values" do
-      message = "atoms, maps, lists, tuples and sources are not allowed as map values in subquery"
+      message = "atoms, structs, maps, lists, tuples and sources are not allowed as map values in subquery"
 
       assert_raise Ecto.SubQueryError, ~r/#{message}/, fn ->
         query = select(Post, [p], %{t: p.title, l: :literal})
@@ -123,6 +123,11 @@ defmodule Ecto.Query.SubqueryTest do
 
       assert_raise Ecto.SubQueryError, ~r/#{message}/, fn ->
         query = select(Post, [p], %{t: p.title, l: p})
+        plan(from(subquery(query), []))
+      end
+
+      assert_raise Ecto.SubQueryError, ~r/#{message}/, fn ->
+        query = select(Post, [p], %{t: p.title, l: %Post{}})
         plan(from(subquery(query), []))
       end
     end
