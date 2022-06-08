@@ -857,12 +857,6 @@ defmodule Ecto.Multi do
     end
   end
 
-  defp operation_fun({:one!, fun}, opts) do
-    fn repo, changes ->
-      {:ok, repo.one!(fun.(changes), opts)}
-    end
-  end
-
   defp operation_fun({:all, fun}, opts) do
     fn repo, changes ->
       {:ok, repo.all(fun.(changes), opts)}
