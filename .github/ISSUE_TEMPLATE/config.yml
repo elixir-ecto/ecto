@@ -4,7 +4,8 @@ contact_links:
   - name: Discuss proposals
     url: https://groups.google.com/g/elixir-ecto
     about: Send proposals for new ideas in the mailing list.
+
   - name: Ask Questions
-    url: https://elixirforum.com/
+    url: https://elixirforum.com/tag/ecto
     about: Ask and answer questions on ElixirForum.
 
