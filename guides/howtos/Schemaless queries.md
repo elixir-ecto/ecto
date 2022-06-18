@@ -89,11 +89,11 @@ By allowing regular data structures to be given to most query operations, Ecto m
 
 ## insert_all, update_all and delete_all
 
-Ecto allows all database operations to be expressed without a schema. One of the functions provided is `c:Ecto.Repo.insert_all/3`. With `insert_all`, developers can insert multiple entries at once into a repository:
+Ecto allows all database operations to be expressed without a schema. One of the functions provided is `c:Ecto.Repo.insert_all/3`. With `insert_all`, developers can insert multiple entries at once into a repository using the source and a list of fields and values to be passed directly to the adapter:
 
 ```elixir
 MyApp.Repo.insert_all(
-  Post,
+  "posts",
   [
     [title: "hello", body: "world"],
     [title: "another", body: "post"]
