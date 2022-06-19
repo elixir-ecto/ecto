@@ -93,6 +93,26 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert select("q", [q], struct(q, ^fields)).select.take == %{0 => {:struct, fields}}
     end
 
+    test "supports dynamic select" do
+      as = :blog
+      field = :title
+
+      ref = dynamic(field(as(^as), ^field))
+      query = from(b in "blogs", select: ^%{title: ref})
+
+      assert Macro.to_string(query.select.expr) == "%{title: as(:blog).title()}"
+    end
+
+    test "supports partly dynamic select" do
+      as = :blog
+      field = :title
+
+      ref = dynamic(field(as(^as), ^field))
+      query = from(b in "blogs", select: %{t: b.title, title: ^ref})
+
+      assert Macro.to_string(query.select.expr) == "%{t: &0.title(), title: as(:blog).title()}"
+    end
+
     test "supports subqueries" do
       subquery = from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
 
@@ -109,8 +129,9 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert length(query.select.params) == 1
     end
 
-    test "supports multiple subqueries" do
+    test "supports multiple nested partly dynamic subqueries" do
       created_by_id = 8
+      ignore_template_id = 9
 
       subquery0 =
         from(t in "tasks",
@@ -119,7 +140,21 @@ defmodule Ecto.Query.Builder.SelectTest do
         )
 
       subquery1 =
+        from(t in "templates", where: parent_as(^:list).from_template_id == t.id, select: t.title)
+
+      subquery2 =
         from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
+
+      ref =
+        dynamic(
+          [l],
+          fragment(
+            "CASE WHEN ? THEN ? ELSE ? END",
+            l.from_template_id == ^ignore_template_id,
+            "",
+            subquery(subquery1)
+          )
+        )
 
       query =
         from(l in "lists",
@@ -127,7 +162,8 @@ defmodule Ecto.Query.Builder.SelectTest do
           select: %{
             title: l.archived_at,
             maxdue: subquery(subquery0),
-            user_email: subquery(subquery1)
+            template_name: ^ref,
+            user_email: subquery(subquery2)
           }
         )
 
@@ -135,12 +171,20 @@ defmodule Ecto.Query.Builder.SelectTest do
              %{\
              title: &0.archived_at(), \
              maxdue: {:subquery, 0}, \
-             user_email: {:subquery, 1}\
-             }\
+             template_name: fragment(\
+             {:raw, "CASE WHEN "}, \
+             {:expr, &0.from_template_id() == ^2}, \
+             {:raw, " THEN "}, \
+             {:expr, ""}, \
+             {:raw, " ELSE "}, \
+             {:expr, {:subquery, 2}}, \
+             {:raw, " END"}\
+             ), \
+             user_email: {:subquery, 1}}\
              """
 
-      assert length(query.select.subqueries) == 2
-      assert length(query.select.params) == 2
+      assert length(query.select.subqueries) == 3
+      assert length(query.select.params) == 4
     end
 
     test "raises on multiple selects" do
@@ -237,7 +281,7 @@ defmodule Ecto.Query.Builder.SelectTest do
         end)
 
       assert Macro.to_string(query.select.expr) ==
-               "merge(merge(%{comments: count(&2.id())}, %{^0 => &0.name()}), %{^1 => &1.author()})"
+               "%{comments: count(&2.id()), name: &0.name(), author: &1.author()}"
     end
 
     test "supports '...' in binding list with no prior select" do

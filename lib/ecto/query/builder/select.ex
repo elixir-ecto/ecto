@@ -79,6 +79,11 @@ defmodule Ecto.Query.Builder.Select do
     {{:{}, [], [:%{}, [], [{:{}, [], [:|, [], [data, pairs]]}]]}, params_acc}
   end
 
+  # Variable reference
+  defp escape({:^, _, [{_varname, _, nil} = var]}, params_take, _vars, _env) do
+    {var, params_take}
+  end
+
   # Merge
   defp escape({:merge, _, [left, {kind, _, _} = right]}, params_acc, vars, env)
        when kind in [:%{}, :map] do
@@ -187,13 +192,71 @@ defmodule Ecto.Query.Builder.Select do
   Called at runtime for interpolated/dynamic selects.
   """
   def select!(kind, query, fields, file, line) do
-    take = %{0 => {:any, fields!(:select, fields)}}
-    expr = %Ecto.Query.SelectExpr{expr: {:&, [], [0]}, take: take, file: file, line: line}
+    expr =
+      if take?(fields) do
+        take = %{0 => {:any, fields!(:select, fields)}}
+        %Ecto.Query.SelectExpr{expr: {:&, [], [0]}, take: take, file: file, line: line}
+      else
+        %Ecto.Query.SelectExpr{expr: fields, take: %{}, file: file, line: line}
+        |> expand_nested_dynamic(query)
+      end
+
     if kind == :select do
       apply(query, expr)
     else
       merge(query, expr)
     end
+  end
+
+  def expand_nested_dynamic(select, query) do
+    case select do
+      %{expr: expr, params: params, subqueries: subqueries} ->
+        acc = {Enum.reverse(params), Enum.reverse(subqueries), length(params)}
+        {expr, {params, subqueries, _count}} = expand_dynamic(expr, acc, query)
+        %{select | expr: expr, params: Enum.reverse(params), subqueries: Enum.reverse(subqueries)}
+
+      other ->
+        other
+    end
+  end
+
+  defp expand_dynamic({:%{}, [], fields}, acc, query) do
+    {fields, acc} = expand_dynamic(fields, acc, query)
+    {{:%{}, [], fields}, acc}
+  end
+
+  defp expand_dynamic(fields, acc, query) when is_map(fields) and not is_struct(fields) do
+    {fields, acc} = expand_dynamic(Enum.to_list(fields), acc, query)
+    {{:%{}, [], fields}, acc}
+  end
+
+  defp expand_dynamic(fields, acc, query) when is_list(fields) do
+    Enum.map_reduce(fields, acc, fn
+      {key, %Ecto.Query.DynamicExpr{} = dynamic}, acc ->
+        {expr, acc} = expand_dynamic(dynamic, acc, query)
+        {{key, expr}, acc}
+
+      other, acc ->
+        {other, acc}
+    end)
+  end
+
+  defp expand_dynamic(%Ecto.Query.DynamicExpr{} = dynamic, {params, subqueries, count}, query) do
+    {expr, params, subqueries, count} =
+      Ecto.Query.Builder.Dynamic.partially_expand(
+        :select,
+        query,
+        dynamic,
+        params,
+        subqueries,
+        count
+      )
+
+    {expr, {params, subqueries, count}}
+  end
+
+  defp expand_dynamic(other, acc, _query) do
+    {other, acc}
   end
 
   @doc """
@@ -218,13 +281,18 @@ defmodule Ecto.Query.Builder.Select do
     params = Builder.escape_params(params)
     take = {:%{}, [], Map.to_list(acc.take)}
 
-    select = quote do: %Ecto.Query.SelectExpr{
-                         expr: unquote(expr),
-                         params: unquote(params),
-                         file: unquote(env.file),
-                         line: unquote(env.line),
-                         take: unquote(take),
-                         subqueries: unquote(acc.subqueries)}
+    select =
+      quote do
+        %Ecto.Query.SelectExpr{
+          expr: unquote(expr),
+          params: unquote(params),
+          file: unquote(env.file),
+          line: unquote(env.line),
+          take: unquote(take),
+          subqueries: unquote(acc.subqueries)
+        }
+        |> Builder.Select.expand_nested_dynamic(unquote(query))
+      end
 
     if kind == :select do
       Builder.apply_query(query, __MODULE__, [select], env)

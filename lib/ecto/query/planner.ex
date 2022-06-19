@@ -791,9 +791,9 @@ defmodule Ecto.Query.Planner do
   defp source_cache(%{source: %Ecto.SubQuery{params: inner, cache: key}}, params),
     do: {key, Enum.reverse(inner, params)}
 
-  defp cast_param(_kind, query, expr, %DynamicExpr{}, _type, _value) do
+  defp cast_param(kind, query, expr, %DynamicExpr{}, _type, _value) when kind != :select do
     error! query, expr, "invalid dynamic expression",
-                        "dynamic expressions can only be interpolated at the top level of where, having, group_by, order_by, update or a join's on"
+                        "dynamic expressions can only be interpolated at the top level of select, where, having, group_by, order_by, update or a join's on"
   end
   defp cast_param(_kind, query, expr, [{key, _} | _], _type, _value) when is_atom(key) do
     error! query, expr, "invalid keyword list",

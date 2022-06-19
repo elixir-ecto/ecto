@@ -365,7 +365,7 @@ defmodule Ecto.Query.InspectTest do
 
       foo = <<1, 2, 3>>
       assert i(from(p in Post, select: {p, ^foo})) ==
-             "from p0 in Inspect.Post, select: {p0, ^<<1, 2, 3>>}"
+             "from p0 in Inspect.Post, select: {p0, <<1, 2, 3>>}"
     end
   end
 

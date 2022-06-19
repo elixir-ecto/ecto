@@ -1444,9 +1444,46 @@ defmodule Ecto.Query.PlannerTest do
       |> join(:inner, [_], c in Comment)
       |> select([p, c], {p, %{c | text: "bar"}})
       |> normalize()
+
     assert query.select.fields ==
            select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
            select_fields([:id, :posted, :uuid, :crazy_comment, :post_id, :crazy_post_id], 1)
+  end
+
+  test "normalize: select with dynamic map" do
+    ref = dynamic([p], p.title)
+
+    query =
+      Post
+      |> select([_, f], ^%{title: ref})
+      |> normalize()
+
+    assert query.select.expr ==
+             {:%{}, [], [title: {{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]}
+
+    assert query.select.fields ==
+             [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
+  end
+
+  test "normalize: select with partly dynamic map" do
+    ref = dynamic([p], p.title)
+
+    query =
+      Post
+      |> select([p], %{title: ^ref, text: p.text})
+      |> normalize()
+
+    assert query.select.expr ==
+             {:%{}, [],
+              [
+                title: {{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []},
+                text: {{:., [type: :string], [{:&, [], [0]}, :text]}, [], []}
+              ]}
+
+    assert query.select.fields == [
+             {{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []},
+             {{:., [type: :string], [{:&, [], [0]}, :text]}, [], []}
+           ]
   end
 
   test "normalize: select with subquery" do
