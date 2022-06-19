@@ -243,14 +243,7 @@ defmodule Ecto.Query.Builder.Select do
 
   defp expand_dynamic(%Ecto.Query.DynamicExpr{} = dynamic, {params, subqueries, count}, query) do
     {expr, params, subqueries, count} =
-      Ecto.Query.Builder.Dynamic.partially_expand(
-        :select,
-        query,
-        dynamic,
-        params,
-        subqueries,
-        count
-      )
+      Ecto.Query.Builder.Dynamic.partially_expand(query, dynamic, params, subqueries, count)
 
     {expr, {params, subqueries, count}}
   end
