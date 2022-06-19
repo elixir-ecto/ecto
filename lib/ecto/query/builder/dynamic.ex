@@ -40,14 +40,14 @@ defmodule Ecto.Query.Builder.Dynamic do
   list is not reversed. This is useful when the dynamic expression
   is given in the middle of an expression.
   """
-  def partially_expand(kind, query, %{binding: binding} = dynamic, params, count) do
-    {expr, {_binding, params, subqueries, count}} = expand(query, dynamic, {binding, params, [], count})
+  def partially_expand(kind, query, %{binding: binding} = dynamic, params, subqueries, count) do
+    {expr, {_binding, params, subqueries, count}} = expand(query, dynamic, {binding, params, subqueries, count})
 
-    if subqueries != [] do
+    if subqueries != [] and kind != :select do
       raise ArgumentError, "subqueries are not allowed in `#{kind}` expressions"
     end
 
-    {expr, params, count}
+    {expr, params, subqueries, count}
   end
 
   defp expand(query, %{fun: fun}, {binding, params, subqueries, count}) do

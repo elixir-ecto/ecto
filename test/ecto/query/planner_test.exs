@@ -1371,6 +1371,29 @@ defmodule Ecto.Query.PlannerTest do
                select_fields([:b], 1)
   end
 
+  test "normalize: select with subquery" do
+    subquery =
+      Comment
+      |> where([c], c.post_id == parent_as(:post).id)
+      |> select(count())
+
+    query =
+      from(Post, as: :post)
+      |> select([p], %{title: p.title, comment_count: subquery(subquery)})
+      |> normalize()
+
+    assert {:%{}, [],
+            [
+              title: {{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []},
+              comment_count: %Ecto.SubQuery{}
+            ]} = query.select.expr
+
+    assert [
+             {{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []},
+             %Ecto.SubQuery{}
+           ] = query.select.fields
+  end
+
   test "normalize: windows" do
     assert_raise Ecto.QueryError, ~r"unknown window :v given to over/2", fn ->
       Comment

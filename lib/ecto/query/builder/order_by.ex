@@ -155,7 +155,9 @@ defmodule Ecto.Query.Builder.OrderBy do
   end
 
   defp dynamic_or_field!(kind, %Ecto.Query.DynamicExpr{} = dynamic, query, {params, count}) do
-    {expr, params, count} = Builder.Dynamic.partially_expand(kind, query, dynamic, params, count)
+    {expr, params, _subqueries, count} =
+      Builder.Dynamic.partially_expand(kind, query, dynamic, params, [], count)
+
     {expr, {params, count}}
   end
 

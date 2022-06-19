@@ -204,6 +204,7 @@ defmodule Ecto.Query.Planner do
     |> plan_combinations(adapter)
     |> plan_ctes(adapter)
     |> plan_wheres(adapter)
+    |> plan_select(adapter)
     |> plan_cache(operation, adapter)
   rescue
     e ->
@@ -601,6 +602,17 @@ defmodule Ecto.Query.Planner do
       end)
 
     %{query | wheres: wheres}
+  end
+
+  @spec plan_select(Ecto.Query.t, module) :: Ecto.Query.t
+  defp plan_select(query, adapter) do
+    case query do
+      %{select: %{subqueries: [_ | _] = subqueries}} ->
+        subqueries = Enum.map(subqueries, &plan_subquery(&1, query, nil, adapter, false))
+        put_in(query.select.subqueries, subqueries)
+
+      query -> query
+    end
   end
 
   @doc """
