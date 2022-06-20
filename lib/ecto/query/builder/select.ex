@@ -14,13 +14,13 @@ defmodule Ecto.Query.Builder.Select do
   ## Examples
 
       iex> escape({1, 2}, [], __ENV__)
-      {{:{}, [], [:{}, [], [1, 2]]}, {[], %{}, []}}
+      {{:{}, [], [:{}, [], [1, 2]]}, {[], {%{}, []}}}
 
       iex> escape([1, 2], [], __ENV__)
-      {[1, 2], {[], %{}, []}}
+      {[1, 2], {[], {%{}, []}}}
 
       iex> escape(quote(do: x), [x: 0], __ENV__)
-      {{:{}, [], [:&, [], [0]]}, {[], %{}, []}}
+      {{:{}, [], [:&, [], [0]]}, {[], {%{}, []}}}
 
   """
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {list, %{}}}
@@ -34,7 +34,7 @@ defmodule Ecto.Query.Builder.Select do
   def escape(other, vars, env) do
     cond do
       take?(other) ->
-        {{:{}, [], [:&, [], [0]]}, {[], %{0 => {:any, Macro.expand(other, env)}}, []}}
+        {{:{}, [], [:&, [], [0]]}, {[], {%{0 => {:any, Macro.expand(other, env)}}, []}}}
 
       maybe_take?(other) ->
         Builder.error! """
@@ -44,8 +44,8 @@ defmodule Ecto.Query.Builder.Select do
         """
     
       true ->
-        {expr, {params, take, subqueries}} = escape(other, {[], %{}, []}, vars, env)
-        {expr, {params, take, Enum.reverse(subqueries)}}
+        {expr, {params, {take, subqueries}}} = escape(other, {[], {%{}, []}}, vars, env)
+        {expr, {params, {take, Enum.reverse(subqueries)}}}
     end
   end
 
@@ -99,24 +99,23 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   # map/struct(var, [:foo, :bar])
-  defp escape({tag, _, [{var, _, context}, fields]}, {params, take, subqueries}, vars, env)
+  defp escape({tag, _, [{var, _, context}, fields]}, {params, {take, subqueries}}, vars, env)
        when tag in [:map, :struct] and is_atom(var) and is_atom(context) do
     taken = escape_fields(fields, tag, env)
     expr = Builder.escape_var!(var, vars)
     take = add_take(take, Builder.find_var!(var, vars), {tag, taken})
-    {expr, {params, take, subqueries}}
+    {expr, {params, {take, subqueries}}}
   end
 
-  defp escape(expr, {params, take, subqueries}, vars, env) do
-    {expr, {params, subqueries}} =
-      Builder.escape(expr, :any, {params, subqueries}, vars, {env, &escape_expansion/5})
-
-    {expr, {params, take, subqueries}}
+  defp escape(expr, {_params, {take, _subqueries}} = params_take, vars, env) do
+    case Builder.escape(expr, :any, params_take, vars, {env, &escape_expansion/5}) do
+      {expr, {params, {take, subqueries}}} -> {expr, {params, {take, subqueries}}}
+      {expr, {params, subqueries}} -> {expr, {params, {take, subqueries}}}
+    end
   end
 
-  defp escape_expansion(expr, _type, {params, subqueries}, vars, env) do
-    {expr, {params, _take, subqueries}} = escape(expr, {params, %{}, subqueries}, vars, env)
-    {expr, {params, subqueries}}
+  defp escape_expansion(expr, _type, params_take, vars, env) do
+    escape(expr, params_take, vars, env)
   end
 
   defp escape_pairs(pairs, params_take, vars, env) do
@@ -213,7 +212,7 @@ defmodule Ecto.Query.Builder.Select do
 
   def build(kind, query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    {expr, {params, take, subqueries}} = escape(expr, binding, env)
+    {expr, {params, {take, subqueries}}} = escape(expr, binding, env)
     params = Builder.escape_params(params)
     take   = {:%{}, [], Map.to_list(take)}
 
