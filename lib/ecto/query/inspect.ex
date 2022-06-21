@@ -136,6 +136,7 @@ defimpl Inspect, for: Ecto.Query do
 
   defp inspect_source(%Ecto.Query{} = query), do: "^" <> inspect(query)
   defp inspect_source(%Ecto.SubQuery{query: query}), do: "subquery(#{to_string(query)})"
+  defp inspect_source(%Ecto.ValuesList{values: values}), do: "values(#{inspect values})"
   defp inspect_source({source, nil}), do: inspect(source)
   defp inspect_source({nil, schema}), do: inspect(schema)
 
@@ -371,6 +372,7 @@ defimpl Inspect, for: Ecto.Query do
   end
 
   defp from_sources(%Ecto.SubQuery{query: query}), do: from_sources(query.from.source)
+  defp from_sources(%Ecto.ValuesList{}), do: "values"
   defp from_sources({source, schema}), do: schema || source
   defp from_sources(nil), do: "query"
 

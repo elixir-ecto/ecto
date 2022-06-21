@@ -682,6 +682,11 @@ defmodule Ecto.Query.API do
   """
   def parent_as(binding), do: doc! [binding]
 
+  @doc """
+  Pass a list of maps to the query.
+  """
+  def values(values), do: doc! [values]
+
   defp doc!(_) do
     raise "the functions in Ecto.Query.API should not be invoked directly, " <>
           "they serve for documentation purposes only"

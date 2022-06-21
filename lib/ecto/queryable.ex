@@ -19,6 +19,12 @@ defimpl Ecto.Queryable, for: Ecto.SubQuery do
   end
 end
 
+defimpl Ecto.Queryable, for: Ecto.ValuesList do
+  def to_query(values) do
+    %Ecto.Query{from: %Ecto.Query.FromExpr{source: values}}
+  end
+end
+
 defimpl Ecto.Queryable, for: BitString do
   def to_query(source) when is_binary(source) do
     %Ecto.Query{from: %Ecto.Query.FromExpr{source: {source, nil}}}

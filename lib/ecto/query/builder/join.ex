@@ -62,6 +62,10 @@ defmodule Ecto.Query.Builder.Join do
     {:_, expr, nil, params}
   end
 
+  def escape({:values, _, [values]} = expr, vars, env) do
+    {:_, expr, nil, [values]}
+  end
+
   def escape({string, schema} = join, _vars, env) when is_binary(string) do
     case Macro.expand(schema, env) do
       schema when is_atom(schema) ->
@@ -136,7 +140,7 @@ defmodule Ecto.Query.Builder.Join do
     unless is_binary(prefix) or is_nil(prefix) do
       Builder.error! "`prefix` must be a compile time string, got: `#{Macro.to_string(prefix)}`"
     end
-    
+
     as = case as do
       {:^, _, [as]} -> as
       as when is_atom(as) -> as

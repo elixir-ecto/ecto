@@ -258,6 +258,12 @@ defmodule Ecto.Query.Planner do
   defp plan_source(query, %{source: {:fragment, _, _}, prefix: prefix} = expr, _adapter),
        do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment joins")
 
+  defp plan_source(_query, %{source: %Ecto.ValuesList{} = source, prefix: nil} = expr, _adapter),
+       do: {expr, source}
+
+  defp plan_source(query, %{source: %Ecto.ValuesList{}, prefix: prefix} = expr, _adapter),
+       do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for values list")
+
   defp plan_subquery(subquery, query, prefix, adapter, source?) do
     %{query: inner_query} = subquery
 
@@ -772,6 +778,8 @@ defmodule Ecto.Query.Planner do
     do: {{source, prefix}, params}
   defp source_cache(%{source: %Ecto.SubQuery{params: inner, cache: key}}, params),
     do: {key, Enum.reverse(inner, params)}
+  defp source_cache(%{source: %Ecto.ValuesList{} = expr}, params),
+    do: {expr, params}
 
   defp cast_param(_kind, query, expr, %DynamicExpr{}, _type, _value) do
     error! query, expr, "invalid dynamic expression",
@@ -913,7 +921,7 @@ defmodule Ecto.Query.Planner do
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
-      filter_and_reraise e, __STACKTRACE__
+      reraise e, __STACKTRACE__
   end
 
   defp keep_literals?(:insert_all, _), do: true
@@ -1726,6 +1734,9 @@ defmodule Ecto.Query.Planner do
         :any
 
       {_, schema, _} ->
+        type!(kind, query, expr, schema, field, allow_virtuals?)
+
+      %Ecto.ValuesList{schema: schema} ->
         type!(kind, query, expr, schema, field, allow_virtuals?)
 
       %Ecto.SubQuery{select: select} ->

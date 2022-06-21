@@ -9,6 +9,12 @@ defmodule Ecto.SubQuery do
   @type t :: %__MODULE__{}
 end
 
+
+defmodule Ecto.ValuesList do
+  @moduledoc false
+  defstruct [:values, :schema]
+end
+
 defmodule Ecto.Query do
   @moduledoc ~S"""
   Provides the Query DSL.
@@ -662,6 +668,10 @@ defmodule Ecto.Query do
       {:ok, prefix} when is_binary(prefix) or is_nil(prefix) -> put_in(subquery.query.prefix, prefix)
       :error -> subquery
     end
+  end
+
+  def values(list_of_maps, schema) do
+    %Ecto.ValuesList{values: list_of_maps, schema: schema}
   end
 
   defp wrap_in_subquery(%Ecto.SubQuery{} = subquery), do: subquery

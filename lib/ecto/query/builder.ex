@@ -233,6 +233,11 @@ defmodule Ecto.Query.Builder do
     end
   end
 
+  # values list
+  def escape({:values, _, [list]}, _type, _params_acc, _vars, _env) when is_list(list) do
+    error!("values lists are only supported in from or join clauses")
+  end
+
   # sigils
   def escape({name, _, [_, []]} = sigil, type, params_acc, vars, _env)
       when name in ~w(sigil_s sigil_S sigil_w sigil_W)a do
@@ -716,7 +721,7 @@ defmodule Ecto.Query.Builder do
     do: {find_var!(var, vars), field}
 
   def validate_type!(type, _vars, _env) do
-    error! "type/2 expects an alias, atom, initialized parameterized type or " <> 
+    error! "type/2 expects an alias, atom, initialized parameterized type or " <>
            "source.field as second argument, got: `#{Macro.to_string(type)}`"
   end
 
