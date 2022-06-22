@@ -778,8 +778,8 @@ defmodule Ecto.Query.Planner do
     do: {{source, prefix}, params}
   defp source_cache(%{source: %Ecto.SubQuery{params: inner, cache: key}}, params),
     do: {key, Enum.reverse(inner, params)}
-  defp source_cache(%{source: %Ecto.ValuesList{} = expr}, params),
-    do: {expr, params}
+  defp source_cache(%{source: %Ecto.ValuesList{schema: schema, values: values}}, params),
+    do: {{length(values), schema.__schema__(:fields)}, params}
 
   defp cast_param(_kind, query, expr, %DynamicExpr{}, _type, _value) do
     error! query, expr, "invalid dynamic expression",
