@@ -925,7 +925,7 @@ defmodule Ecto.Query.Planner do
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
-      reraise e, __STACKTRACE__
+      filter_and_reraise e, __STACKTRACE__
   end
 
   defp keep_literals?(:insert_all, _), do: true
