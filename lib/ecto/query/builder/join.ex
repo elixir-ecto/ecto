@@ -62,8 +62,11 @@ defmodule Ecto.Query.Builder.Join do
     {:_, expr, nil, params}
   end
 
-  def escape({:values, _, [values]} = expr, vars, env) do
-    {:_, expr, nil, [values]}
+  def escape({:values, _, [values, schema]} = expr, _vars, _env) do
+    values = quote do
+      Ecto.Query.values(unquote(values), unquote(schema))
+    end
+    {:_, values, nil, []}
   end
 
   def escape({string, schema} = join, _vars, env) when is_binary(string) do

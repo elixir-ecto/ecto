@@ -12,7 +12,7 @@ end
 
 defmodule Ecto.ValuesList do
   @moduledoc false
-  defstruct [:values, :schema]
+  defstruct [:values, :schema, :params]
 end
 
 defmodule Ecto.Query do
@@ -671,7 +671,20 @@ defmodule Ecto.Query do
   end
 
   def values(list_of_maps, schema) do
-    %Ecto.ValuesList{values: list_of_maps, schema: schema}
+    fields =
+      Map.new(schema.__schema__(:fields), fn field ->
+        {field, schema.__schema__(:type, field)}
+      end)
+
+    params = Enum.flat_map(list_of_maps, fn values_map ->
+      Enum.map(fields, fn {field, type} ->
+        value = Map.fetch!(values_map, field)
+        {:ok, value} = Ecto.Type.dump(type, value)
+        value
+      end)
+    end)
+
+    %Ecto.ValuesList{values: list_of_maps, schema: schema, params: params}
   end
 
   defp wrap_in_subquery(%Ecto.SubQuery{} = subquery), do: subquery
