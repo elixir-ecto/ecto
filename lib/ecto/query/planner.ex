@@ -259,7 +259,6 @@ defmodule Ecto.Query.Planner do
        do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment joins")
 
   defp plan_source(_query, %{source: %Ecto.ValuesList{} = source, prefix: nil} = expr, _adapter) do
-    IO.inspect expr, label: "plan_source"
     {expr, source}
   end
 
@@ -780,10 +779,8 @@ defmodule Ecto.Query.Planner do
     do: {{source, prefix}, params}
   defp source_cache(%{source: %Ecto.SubQuery{params: inner, cache: key}}, params),
     do: {key, Enum.reverse(inner, params)}
-  defp source_cache(%{source: %Ecto.ValuesList{schema: schema, values: values, params: inner}}, params) do
-    IO.inspect params, label: "source_cache"
-    {{length(values), schema.__schema__(:fields)}, Enum.reverse(inner, params)}
-  end
+  defp source_cache(%{source: %Ecto.ValuesList{schema: schema, values: values, params: inner}}, params),
+    do: {{length(values), schema}, Enum.reverse(inner, params)}
 
   defp cast_param(_kind, query, expr, %DynamicExpr{}, _type, _value) do
     error! query, expr, "invalid dynamic expression",
@@ -1741,7 +1738,10 @@ defmodule Ecto.Query.Planner do
         type!(kind, query, expr, schema, field, allow_virtuals?)
 
       %Ecto.ValuesList{schema: schema} ->
-        type!(kind, query, expr, schema, field, allow_virtuals?)
+        case Keyword.fetch(schema, field) do
+          {:ok, type} -> type
+          :error -> error!(query, expr, "field `#{field}` does not exist in values list")
+        end
 
       %Ecto.SubQuery{select: select} ->
         case subquery_type_for(select, field) do
@@ -1882,7 +1882,11 @@ defmodule Ecto.Query.Planner do
   end
 
   defp filter_and_reraise(exception, stacktrace) do
-    reraise exception, Enum.reject(stacktrace, &match?({__MODULE__, _, _, _}, &1))
+    stacktrace = case System.get_env("ECTO_PLANNER_FILTER_STACKTRACE", "true") do
+      "true" -> Enum.reject(stacktrace, &match?({__MODULE__, _, _, _}, &1))
+      "false" -> stacktrace
+    end
+    reraise exception, stacktrace
   end
 
   defp error!(query, message) do

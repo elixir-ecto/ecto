@@ -62,9 +62,9 @@ defmodule Ecto.Query.Builder.Join do
     {:_, expr, nil, params}
   end
 
-  def escape({:values, _, [values, schema]} = expr, _vars, _env) do
+  def escape({:values, _, [values]} = _expr, _vars, _env) do
     values = quote do
-      Ecto.Query.values(unquote(values), unquote(schema))
+      Ecto.Query.values(unquote(values))
     end
     {:_, values, nil, []}
   end

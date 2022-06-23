@@ -670,21 +670,34 @@ defmodule Ecto.Query do
     end
   end
 
-  def values(list_of_maps, schema) do
-    fields =
-      Map.new(schema.__schema__(:fields), fn field ->
-        {field, schema.__schema__(:type, field)}
+  defmacro values({:type, _, [values, fields]}) do
+    quote do
+      # store the fields as keyword list so the order of the fields is stable
+      fields = unquote(fields) |> Enum.into([])
+
+      params = Enum.flat_map(unquote(values), fn values_map ->
+        Enum.map(fields, fn {field, type} ->
+          value = Map.fetch!(values_map, field)
+          {:ok, value} = Ecto.Type.dump(type, value)
+          value
+        end)
       end)
 
-    params = Enum.flat_map(list_of_maps, fn values_map ->
-      Enum.map(fields, fn {field, type} ->
-        value = Map.fetch!(values_map, field)
-        {:ok, value} = Ecto.Type.dump(type, value)
-        value
-      end)
-    end)
+      %Ecto.ValuesList{values: unquote(values), schema: fields, params: params}
+    end
+  end
 
-    %Ecto.ValuesList{values: list_of_maps, schema: schema, params: params}
+  defmacro values(values) do
+    quote do
+      values = unquote(values)
+      typespec =
+        values
+        |> Enum.flat_map(&Map.keys/1)
+        |> Enum.uniq()
+        |> Enum.map(&{&1, :any})
+
+      values(type(values, typespec))
+    end
   end
 
   defp wrap_in_subquery(%Ecto.SubQuery{} = subquery), do: subquery

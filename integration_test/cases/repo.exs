@@ -2036,17 +2036,6 @@ defmodule Ecto.Integration.RepoTest do
     end
   end
 
-  defmodule ValuesSchema do
-    use Ecto.Schema
-
-    @primary_key false
-    embedded_schema do
-      field :id, :integer
-      field :name, :string
-      field :uuid, Ecto.UUID
-    end
-  end
-
   describe "values list" do
     test "works in all/2" do
       values = [
@@ -2055,7 +2044,9 @@ defmodule Ecto.Integration.RepoTest do
       ]
       |> Enum.map(&Map.put(&1, :uuid, Ecto.UUID.autogenerate()))
 
-      query = from v in values(values, __MODULE__.ValuesSchema), select: v.name, order_by: [desc: v.id]
+      schema = %{id: :integer, name: :string, uuid: Ecto.UUID}
+
+      query = from v in values(type(values, schema)), select: v.name, order_by: [desc: v.id]
 
       assert ["Bob", "Alice"] = TestRepo.all(query)
     end
@@ -2065,16 +2056,14 @@ defmodule Ecto.Integration.RepoTest do
         %{id: 1, name: "Peter"},
         %{id: 2, name: "Tony"}
       ]
-      |> Enum.map(&Map.put(&1, :uuid, Ecto.UUID.autogenerate()))
 
       values_2 = [
         %{id: 1, name: "Parker"},
         %{id: 2, name: "Stark"}
       ]
-      |> Enum.map(&Map.put(&1, :uuid, Ecto.UUID.autogenerate()))
 
-      query = from prename in values(values_1, __MODULE__.ValuesSchema),
-        join: surname in values(values_2, __MODULE__.ValuesSchema),
+      query = from prename in values(values_1),
+        join: surname in values(values_2),
         on: prename.id == surname.id,
         select: [prename.name, surname.name]
 
