@@ -12,7 +12,7 @@ end
 
 defmodule Ecto.ValuesList do
   @moduledoc false
-  defstruct [:values, :schema, :params]
+  defstruct [:values, :schema, :params, :param_offset]
 end
 
 defmodule Ecto.Query do

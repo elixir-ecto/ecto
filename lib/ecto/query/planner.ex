@@ -619,24 +619,28 @@ defmodule Ecto.Query.Planner do
   end
 
   defp traverse_cache(query, operation, cache_params, adapter) do
-    fun = &{&3, merge_cache(&1, &2, &3, &4, operation, adapter)}
+    fun = &merge_cache(&1, &2, &3, &4, operation, adapter)
     {query, {cache, params}} = traverse_exprs(query, operation, cache_params, fun)
     {query, params, finalize_cache(query, operation, cache)}
   end
 
+  @spec merge_cache(atom(), Ecto.Query.t(), struct(), {any, any}, any, module) :: {struct(), {key :: any(), params :: list()}}
   defp merge_cache(:from, _query, from, {cache, params}, _operation, _adapter) do
-    {key, params} = source_cache(from, params)
-    {merge_cache({:from, key, from.hints}, cache, key != :nocache), params}
+    {from, key, params} = source_cache(from, params)
+    {from, {merge_cache({:from, key, from.hints}, cache, key != :nocache), params}}
   end
 
   defp merge_cache(kind, query, expr, {cache, params}, _operation, adapter)
       when kind in ~w(select distinct limit offset)a do
-    if expr do
-      {params, cacheable?} = cast_and_merge_params(kind, query, expr, params, adapter)
-      {merge_cache({kind, expr_to_cache(expr)}, cache, cacheable?), params}
-    else
-      {cache, params}
-    end
+    cache_and_params =
+      if expr do
+        {params, cacheable?} = cast_and_merge_params(kind, query, expr, params, adapter)
+        {merge_cache({kind, expr_to_cache(expr)}, cache, cacheable?), params}
+      else
+        {cache, params}
+      end
+
+    {expr, cache_and_params}
   end
 
   defp merge_cache(kind, query, exprs, {cache, params}, _operation, adapter)
@@ -647,27 +651,33 @@ defmodule Ecto.Query.Planner do
         {expr_to_cache(expr), {params, cacheable? and current_cacheable?}}
       end
 
-    case expr_cache do
-      [] -> {cache, params}
-      _  -> {merge_cache({kind, expr_cache}, cache, cacheable?), params}
-    end
+    cache_and_params =
+      case expr_cache do
+        [] -> {cache, params}
+        _  -> {merge_cache({kind, expr_cache}, cache, cacheable?), params}
+      end
+
+    {exprs, cache_and_params}
   end
 
   defp merge_cache(:join, query, exprs, {cache, params}, _operation, adapter) do
-    {expr_cache, {params, cacheable?}} =
-      Enum.map_reduce exprs, {params, true}, fn
-        %JoinExpr{on: on, qual: qual, hints: hints} = join, {params, cacheable?} ->
-          {key, params} = source_cache(join, params)
+    {expr_cache, {exprs, params, cacheable?}} =
+      Enum.map_reduce exprs, {[], params, true}, fn
+        %JoinExpr{on: on, qual: qual, hints: hints} = join, {joins, params, cacheable?} ->
+          {join, key, params} = source_cache(join, params)
           {params, join_cacheable?} = cast_and_merge_params(:join, query, join, params, adapter)
           {params, on_cacheable?} = cast_and_merge_params(:join, query, on, params, adapter)
           {{qual, key, on.expr, hints},
-           {params, cacheable? and join_cacheable? and on_cacheable? and key != :nocache}}
+           {[join | joins], params, cacheable? and join_cacheable? and on_cacheable? and key != :nocache}}
       end
 
-    case expr_cache do
-      [] -> {cache, params}
-      _  -> {merge_cache({:join, expr_cache}, cache, cacheable?), params}
-    end
+    cache_and_params =
+      case expr_cache do
+        [] -> {cache, params}
+        _  -> {merge_cache({:join, expr_cache}, cache, cacheable?), params}
+      end
+
+    {Enum.reverse(exprs), cache_and_params}
   end
 
   defp merge_cache(:windows, query, exprs, {cache, params}, _operation, adapter) do
@@ -677,23 +687,29 @@ defmodule Ecto.Query.Planner do
         {{key, expr_to_cache(expr)}, {params, cacheable? and current_cacheable?}}
       end
 
-    case expr_cache do
-      [] -> {cache, params}
-      _  -> {merge_cache({:windows, expr_cache}, cache, cacheable?), params}
-    end
+    cache_and_params =
+      case expr_cache do
+        [] -> {cache, params}
+        _  -> {merge_cache({:windows, expr_cache}, cache, cacheable?), params}
+      end
+
+    {exprs, cache_and_params}
   end
 
   defp merge_cache(:combination, _query, combinations, cache_and_params, operation, adapter) do
     # In here we add each combination as its own entry in the cache key.
     # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
-    Enum.reduce combinations, cache_and_params, fn {modifier, query}, {cache, params} ->
-      {_, params, inner_cache} = traverse_cache(query, operation, {[], params}, adapter)
-      {merge_cache({modifier, inner_cache}, cache, inner_cache != :nocache), params}
-    end
+    cache_and_params =
+      Enum.reduce combinations, cache_and_params, fn {modifier, query}, {cache, params} ->
+        {_, params, inner_cache} = traverse_cache(query, operation, {[], params}, adapter)
+        {merge_cache({modifier, inner_cache}, cache, inner_cache != :nocache), params}
+      end
+
+    {combinations, cache_and_params}
   end
 
   defp merge_cache(:with_cte, _query, nil, cache_and_params, _operation, _adapter) do
-    cache_and_params
+    {nil, cache_and_params}
   end
 
   defp merge_cache(:with_cte, query, with_expr, cache_and_params, _operation, adapter) do
@@ -702,15 +718,18 @@ defmodule Ecto.Query.Planner do
 
     # In here we add each cte as its own entry in the cache key.
     # We could group them to avoid multiple keys, but since they are uncommon, we keep it simple.
-    Enum.reduce queries, cache_and_params, fn
-      {name, %Ecto.Query{} = query}, {cache, params} ->
-        {_, params, inner_cache} = traverse_cache(query, :all, {[], params}, adapter)
-        {merge_cache({key, name, inner_cache}, cache, inner_cache != :nocache), params}
+    cache_and_params =
+      Enum.reduce queries, cache_and_params, fn
+        {name, %Ecto.Query{} = query}, {cache, params} ->
+          {_, params, inner_cache} = traverse_cache(query, :all, {[], params}, adapter)
+          {merge_cache({key, name, inner_cache}, cache, inner_cache != :nocache), params}
 
-      {name, %Ecto.Query.QueryExpr{} = query_expr}, {cache, params} ->
-        {params, cacheable?} = cast_and_merge_params(:with_cte, query, query_expr, params, adapter)
-        {merge_cache({key, name, expr_to_cache(query_expr)}, cache, cacheable?), params}
-    end
+        {name, %Ecto.Query.QueryExpr{} = query_expr}, {cache, params} ->
+          {params, cacheable?} = cast_and_merge_params(:with_cte, query, query_expr, params, adapter)
+          {merge_cache({key, name, expr_to_cache(query_expr)}, cache, cacheable?), params}
+      end
+
+    {with_expr, cache_and_params}
   end
 
   defp expr_to_cache(%QueryExpr{expr: expr}), do: expr
@@ -771,16 +790,16 @@ defmodule Ecto.Query.Planner do
   defp prepend_if(cache, true, prepend), do: prepend ++ cache
   defp prepend_if(cache, false, _prepend), do: cache
 
-  defp source_cache(%{source: {_, nil} = source, prefix: prefix}, params),
-    do: {{source, prefix}, params}
-  defp source_cache(%{source: {bin, schema}, prefix: prefix}, params),
-    do: {{bin, schema, schema.__schema__(:hash), prefix}, params}
-  defp source_cache(%{source: {:fragment, _, _} = source, prefix: prefix}, params),
-    do: {{source, prefix}, params}
-  defp source_cache(%{source: %Ecto.SubQuery{params: inner, cache: key}}, params),
-    do: {key, Enum.reverse(inner, params)}
-  defp source_cache(%{source: %Ecto.ValuesList{schema: schema, values: values, params: inner}}, params),
-    do: {{length(values), schema}, Enum.reverse(inner, params)}
+  defp source_cache(%{source: {_, nil} = source, prefix: prefix} = expr, params),
+    do: {expr, {source, prefix}, params}
+  defp source_cache(%{source: {bin, schema}, prefix: prefix} = expr, params),
+    do: {expr, {bin, schema, schema.__schema__(:hash), prefix}, params}
+  defp source_cache(%{source: {:fragment, _, _} = source, prefix: prefix} = expr, params),
+    do: {expr, {source, prefix}, params}
+  defp source_cache(%{source: %Ecto.SubQuery{params: inner, cache: key}} = expr, params),
+    do: {expr, key, Enum.reverse(inner, params)}
+  defp source_cache(%{source: %Ecto.ValuesList{schema: schema, values: values, params: inner} = values_list} = expr, params),
+    do: {%{expr | source: %{values_list | param_offset: length(params)}}, {length(values), schema}, Enum.reverse(inner, params)}
 
   defp cast_param(_kind, query, expr, %DynamicExpr{}, _type, _value) do
     error! query, expr, "invalid dynamic expression",

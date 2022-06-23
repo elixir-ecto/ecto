@@ -2062,8 +2062,10 @@ defmodule Ecto.Integration.RepoTest do
         %{id: 2, name: "Stark"}
       ]
 
-      query = from prename in values(values_1),
-        join: surname in values(values_2),
+      schema = [id: :integer, name: :string]
+
+      query = from prename in values(type(values_1, schema)),
+        join: surname in values(type(values_2, schema)),
         on: prename.id == surname.id,
         select: [prename.name, surname.name]
 
