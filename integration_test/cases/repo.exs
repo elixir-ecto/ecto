@@ -2071,5 +2071,27 @@ defmodule Ecto.Integration.RepoTest do
 
       assert ["Peter Parker", "Tony Stark"] = TestRepo.all(query) |> Enum.map(&Enum.join(&1, " "))
     end
+
+    test "works with update_all as source" do
+      post_1 = TestRepo.insert!(%Post{title: "Hello World", public: false, blob: "AABBD"})
+      post_2 = TestRepo.insert!(%Post{title: "Second post", public: false, blob: "DUHAH"})
+
+      update_from = [
+        %{id: post_1.id, title: "A"},
+        %{id: post_2.id, title: "B"}
+      ]
+
+      schema = [id: :integer, title: :string]
+
+      query = from p in Post,
+        join: v in values(type(update_from, schema)), on: v.id == p.id,
+        update: [set: [title: v.title]],
+        select: p
+
+      assert {2, [a, b]} = TestRepo.update_all(query, [])
+
+      assert a.title == "A"
+      assert b.title == "B"
+    end
   end
 end
