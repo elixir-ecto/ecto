@@ -1151,6 +1151,46 @@ defmodule Ecto.Type do
     end
   end
 
+  @doc """
+  Tries to guess the ecto type from the given value.
+
+  ## Examples
+
+      iex> infer_type_from_value(DateTime.utc_now())
+      :utc_datetime_usec
+      iex> infer_type_from_value(3)
+      :integer
+      iex> infer_type_from_value("Hello")
+      :string
+
+      # note how the UUID type collides with the string type. If your values
+      # might contain UUIDs or other types that are actually strings, you
+      # should not use infer_type_from_value/1.
+      iex> infer_type_from_value(Ecto.UUID.generate())
+      :string
+  """
+  @spec infer_type_from_value(any()) :: t()
+  def infer_type_from_value(value) do
+    case value do
+      int when is_integer(int) -> :integer
+      string when is_binary(string) -> :string
+      bool when is_boolean(bool) -> :boolean
+      float when is_float(float) -> :float
+      %Decimal{} -> :decimal
+      %Date{} -> :date
+      %Time{microsecond: {0, 0}} -> :time
+      %Time{} -> :time_usec
+      %DateTime{microsecond: {0, 0}} -> :utc_datetime
+      %DateTime{} -> :utc_datetime_usec
+      %NaiveDateTime{microsecond: {0, 0}} -> :naive_datetime
+      %NaiveDateTime{} -> :naive_datetime_usec
+      # catchall for other maps
+      %{} -> :map
+      # catchall for other types
+      _ -> :any
+    end
+  end
+
   defp equal_fun(:decimal), do: &equal_decimal?/2
   defp equal_fun(t) when t in [:time, :time_usec], do: &equal_time?/2
   defp equal_fun(t) when t in [:utc_datetime, :utc_datetime_usec], do: &equal_utc_datetime?/2

@@ -325,7 +325,7 @@ defmodule Ecto.QueryTest do
 
     test "assign to source fails when non-atom name passed" do
       message = ~r/`as` must be a compile time atom or an interpolated value using \^, got: "post"/
-      assert_raise Ecto.Query.CompileError, message, fn -> 
+      assert_raise Ecto.Query.CompileError, message, fn ->
         quote_and_eval(from(p in "posts", as: "post"))
       end
     end
@@ -962,6 +962,57 @@ defmodule Ecto.QueryTest do
     test "reverses by primary key with no order" do
       q = from(p in Schema)
       assert inspect(reverse_order(q)) == inspect(order_by(q, desc: :id))
+    end
+  end
+
+  defmodule ValuesSchema do
+    use Ecto.Schema
+
+    @primary_key false
+    embedded_schema do
+      field :id, :integer
+      field :blob, :binary
+    end
+  end
+
+
+  describe "values/1" do
+    test "infers type of schema when given a list of structs" do
+      assert %Ecto.ValuesList{} = list = values([
+        %__MODULE__.ValuesSchema{id: 1, blob: "ABC"},
+        %__MODULE__.ValuesSchema{id: 2, blob: "DEF"}
+      ])
+
+      assert [id: :integer, blob: :binary] = list.schema
+      assert [1, "ABC", 2, "DEF"] = list.params
+    end
+
+    test "infers type of schema when given a list of maps" do
+      assert %Ecto.ValuesList{} = list = values([
+        %{id: 1, blob: "ABC", inserted_at: DateTime.utc_now()},
+        %{id: 2, blob: "DEF", inserted_at: DateTime.utc_now()}
+      ])
+
+      # order is messed up because a map was used
+      assert [blob: :string, id: :integer, inserted_at: :utc_datetime_usec] = list.schema
+      assert ["ABC", 1, %DateTime{}, "DEF", 2, %DateTime{}] = list.params
+    end
+
+    test "uses given schema when passed with type/2" do
+      id_1 = Ecto.UUID.generate()
+      id_2 = Ecto.UUID.generate()
+      list = [
+        %{id: id_1, name: "Hallo"},
+        %{id: id_2, name: "Welt"}
+      ]
+      schema = [id: Ecto.UUID, name: :string]
+      assert %Ecto.ValuesList{} = list = values(type(list, schema))
+
+      id_1 = Ecto.UUID.dump!(id_1)
+      id_2 = Ecto.UUID.dump!(id_2)
+
+      assert [id: Ecto.UUID, name: :string] = list.schema
+      assert [^id_1, "Hallo", ^id_2, "Welt"] = list.params
     end
   end
 end

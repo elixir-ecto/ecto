@@ -2073,6 +2073,8 @@ defmodule Ecto.Integration.RepoTest do
     end
 
     test "works with update_all as source" do
+      # this also tests if the values macro automatically infers the type of the maps
+      # in the values list, it should be [id: :integer, title: :string]
       post_1 = TestRepo.insert!(%Post{title: "Hello World", public: false, blob: "AABBD"})
       post_2 = TestRepo.insert!(%Post{title: "Second post", public: false, blob: "DUHAH"})
 
@@ -2081,10 +2083,8 @@ defmodule Ecto.Integration.RepoTest do
         %{id: post_2.id, title: "B"}
       ]
 
-      schema = [id: :integer, title: :string]
-
       query = from p in Post,
-        join: v in values(type(update_from, schema)), on: v.id == p.id,
+        join: v in values(update_from), on: v.id == p.id,
         update: [set: [title: v.title]],
         select: p
 

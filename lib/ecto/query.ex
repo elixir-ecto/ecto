@@ -690,11 +690,23 @@ defmodule Ecto.Query do
   defmacro values(values) do
     quote do
       values = unquote(values)
-      typespec =
-        values
-        |> Enum.flat_map(&Map.keys/1)
-        |> Enum.uniq()
-        |> Enum.map(&{&1, :any})
+      # we will try to guess a typespec here
+      probe_value = List.first(values, %{})
+
+      typespec = cond do
+        is_struct(probe_value) and function_exported?(probe_value.__struct__, :__schema__, 2) ->
+          schema = probe_value.__struct__
+          Enum.map(schema.__schema__(:fields), fn field ->
+            type = schema.__schema__(:type, field)
+            {field, type}
+          end)
+
+        true ->
+          Enum.map(probe_value, fn {field, value} ->
+            type = Ecto.Type.infer_type_from_value(value)
+            {field, type}
+          end)
+      end
 
       values(type(values, typespec))
     end
