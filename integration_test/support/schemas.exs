@@ -343,3 +343,35 @@ defmodule Ecto.Integration.Usec do
     field :utc_datetime_usec, :utc_datetime_usec
   end
 end
+
+defmodule Ecto.Integration.Logging do
+  @moduledoc """
+  This module is used to test:
+
+    * Logging the casted version of parameters without array types
+
+  """
+  use Ecto.Integration.Schema
+
+  @primary_key {:bid, :binary_id, autogenerate: true}
+  schema "loggings" do
+    field :int, :integer
+    field :uuid, Ecto.Integration.TestRepo.uuid()
+    timestamps()
+  end
+end
+
+defmodule Ecto.Integration.ArrayLogging do
+  @moduledoc """
+  This module is used to test:
+
+    * Logging the casted version of parameters with array types
+
+  """
+  use Ecto.Integration.Schema
+
+  schema "array_loggings" do
+    field :uuids, {:array, Ecto.Integration.TestRepo.uuid()}
+    timestamps()
+  end
+end

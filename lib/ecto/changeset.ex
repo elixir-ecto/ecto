@@ -275,6 +275,7 @@ defmodule Ecto.Changeset do
   value `**redacted**`.
   """
 
+  require Logger
   require Ecto.Query
   alias __MODULE__
   alias Ecto.Changeset.Relation
@@ -2503,8 +2504,15 @@ defmodule Ecto.Changeset do
       put_in(changeset.changes[field], incrementer.(current))
     end)
 
-    changeset = put_in(changeset.filters[field], current)
-    changeset
+    if is_nil(current) do
+      Logger.warn """
+      the current value of `#{field}` is `nil` and will not be used as a filter for optimistic
+      locking. To ensure `#{field}` is never `nil`, consider setting a default value.
+      """
+      changeset
+    else
+      put_in(changeset.filters[field], current)
+    end
   end
 
   # increment_with_rollover expect to be used with lock_version set as :integer in db schema
