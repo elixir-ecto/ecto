@@ -670,6 +670,83 @@ defmodule Ecto.Query do
     end
   end
 
+  @doc """
+  Passes a constant table/values list to the query as a source in from or joins.
+
+  ## Usage
+
+  ### `values(list_of_maps)`
+
+  Pass a list of maps and let ecto infer the type automatically:
+
+      list = [
+        %{id: 1, name: "Peter"},
+        %{id: 2, name: "Lisa"}
+      ]
+      %Ecto.ValuesList{schema: [id: :integer, name: :string]} = values(list)
+
+  ### `values(list_of_structs)`
+
+  When passing a list of Ecto.Schema structs, `values/1` will copy the types for
+  the fields from the schema definition.
+
+      defmodule Schema do
+        use Ecto.Schema
+        @primary_key false
+        embedded_schema do
+          field :id, :integer
+          field :stat, :map
+          field :count, :integer
+        end
+      end
+      list = [
+        %Schema{id: 1, stat: %{foo: 3.6, bar: 7.3}, count: 14},
+        # ...
+      ]
+      %Ecto.ValuesList{schema: [id: :integer, stat: :map, count: :integer]} = values(list)
+
+  ### `values(type(list_of_maps, types))`
+
+  To be specific about the types without defining a schema module, `type/2` can
+  be called with a map or keyword list of fields and their ecto types:
+
+      types = %{id: :integer, name: :string, updated_at: :utc_datetime}
+      %Ecto.ValuesList{schema: [id: :integer, name: :string, updated_at: :utc_datetime]} =
+        values(type(list_of_maps, types))
+
+  ### Usage in a query
+
+  So far, we have seen what arguments can be passed to the values macro and how
+  it will use any given information to extract a schema for the values list.
+
+  To actually use it in a query, pass it as the right argument of `x in source`
+  in the from clause or in a join:
+
+      from v in values([%{x: 1}, %{x: 10}])
+
+      from u in User,
+        join: v in values([%{id: 1, os: "macOS"}, %{id: 2, os: "Windows"}]),
+        on: v.id == u.id,
+        select: {u.name, v.os}
+
+  ### Use with `update_all`
+
+  Using a values list in a join is very useful to update multiple rows with
+  different values:
+
+      list = [
+        %{id: 1, name: "Alice"},
+        %{id: 2, name: "Bob"}
+      ]
+      query = from u in User,
+        join: v in values(list), on: v.id == u.id,
+        update: [set: [name: v.name]]
+
+      Repo.update_all(query, [])
+
+  After executing the above block, the user with id 1 will have the name "Alice",
+  while the user with id 2 is now called "Bob".
+  """
   defmacro values({:type, _, [values, fields]}) do
     quote do
       # store the fields as keyword list so the order of the fields is stable
