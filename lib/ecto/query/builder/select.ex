@@ -48,7 +48,7 @@ defmodule Ecto.Query.Builder.Select do
     
       true ->
         {expr, {params, acc}} = escape(other, {[], %{subqueries: []}}, vars, env)
-        acc = Map.update!(acc, :subqueries, &Enum.reverse/1)
+        acc = %{acc | subqueries: Enum.reverse(acc.subqueries)}
         {expr, {params, acc}}
     end
   end
@@ -217,7 +217,6 @@ defmodule Ecto.Query.Builder.Select do
     {expr, {params, acc}} = escape(expr, binding, env)
     params = Builder.escape_params(params)
     take = {:%{}, [], Map.to_list(Map.get(acc, :take, %{}))}
-    subqueries = Map.get(acc, :subqueries, [])
 
     select = quote do: %Ecto.Query.SelectExpr{
                          expr: unquote(expr),
@@ -225,7 +224,7 @@ defmodule Ecto.Query.Builder.Select do
                          file: unquote(env.file),
                          line: unquote(env.line),
                          take: unquote(take),
-                         subqueries: unquote(subqueries)}
+                         subqueries: unquote(acc.subqueries)}
 
     if kind == :select do
       Builder.apply_query(query, __MODULE__, [select], env)

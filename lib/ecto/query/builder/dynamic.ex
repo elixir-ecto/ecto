@@ -13,12 +13,11 @@ defmodule Ecto.Query.Builder.Dynamic do
     {query, vars} = Builder.escape_binding(quote(do: query), binding, env)
     {expr, {params, acc}} = Builder.escape(expr, :any, {[], %{subqueries: []}}, vars, env)
     params = Builder.escape_params(params)
-    subqueries = Map.fetch!(acc, :subqueries)
 
     quote do
       %Ecto.Query.DynamicExpr{fun: fn query ->
                                 _ = unquote(query)
-                                {unquote(expr), unquote(params), unquote(subqueries)}
+                                {unquote(expr), unquote(params), unquote(acc.subqueries)}
                               end,
                               binding: unquote(Macro.escape(binding)),
                               file: unquote(env.file),
