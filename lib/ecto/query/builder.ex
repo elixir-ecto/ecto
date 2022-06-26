@@ -175,13 +175,13 @@ defmodule Ecto.Query.Builder do
   end
 
   # subqueries
-  def escape({:subquery, _, _} = expr, _, {params, acc}, _vars, _env) do
+  def escape({:subquery, _, _} = expr, _, {params, %{subqueries: subqueries} = acc}, _vars, _env) do
     subquery = quote(do: Ecto.Query.subquery(unquote(expr)))
-    subqueries = Map.get(acc, :subqueries, [])
     index = length(subqueries)
     # used both in ast and in parameters, as a placeholder.
     expr = {:subquery, index}
-    {expr, {[expr | params], Map.put(acc, :subqueries, [subquery | subqueries])}}
+    acc = %{acc | subqueries: [subquery | subqueries]}
+    {expr, {[expr | params], acc}}
   end
 
   # interval
@@ -725,7 +725,7 @@ defmodule Ecto.Query.Builder do
     do: {find_var!(var, vars), field}
 
   def validate_type!(type, _vars, _env) do
-    error! "type/2 expects an alias, atom, initialized parameterized type or " <> 
+    error! "type/2 expects an alias, atom, initialized parameterized type or " <>
            "source.field as second argument, got: `#{Macro.to_string(type)}`"
   end
 

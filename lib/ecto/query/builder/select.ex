@@ -14,13 +14,13 @@ defmodule Ecto.Query.Builder.Select do
   ## Examples
 
       iex> escape({1, 2}, [], __ENV__)
-      {{:{}, [], [:{}, [], [1, 2]]}, {[], %{}}}
+      {{:{}, [], [:{}, [], [1, 2]]}, {[], %{subqueries: []}}}
 
       iex> escape([1, 2], [], __ENV__)
-      {[1, 2], {[], %{}}}
+      {[1, 2], {[], %{subqueries: []}}}
 
       iex> escape(quote(do: x), [x: 0], __ENV__)
-      {{:{}, [], [:&, [], [0]]}, {[], %{}}}
+      {{:{}, [], [:&, [], [0]]}, {[], %{subqueries: []}}}
 
   """
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {list, %{}}}
@@ -34,7 +34,10 @@ defmodule Ecto.Query.Builder.Select do
   def escape(other, vars, env) do
     cond do
       take?(other) ->
-        {{:{}, [], [:&, [], [0]]}, {[], %{take: %{0 => {:any, Macro.expand(other, env)}}}}}
+        {
+          {:{}, [], [:&, [], [0]]},
+          {[], %{take: %{0 => {:any, Macro.expand(other, env)}}, subqueries: []}}
+        }
 
       maybe_take?(other) ->
         Builder.error! """
@@ -44,14 +47,8 @@ defmodule Ecto.Query.Builder.Select do
         """
     
       true ->
-        {expr, {params, acc}} = escape(other, {[], %{}}, vars, env)
-
-        acc =
-          case acc do
-            %{subqueries: subqueries} -> Map.put(acc, :subqueries, Enum.reverse(subqueries))
-            other -> other
-          end
-
+        {expr, {params, acc}} = escape(other, {[], %{subqueries: []}}, vars, env)
+        acc = Map.update!(acc, :subqueries, &Enum.reverse/1)
         {expr, {params, acc}}
     end
   end

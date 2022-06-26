@@ -11,11 +11,11 @@ defmodule Ecto.Query.Builder.FilterTest do
       import Kernel, except: [==: 2, and: 2]
 
       assert escape(:where, quote do [] end, 0, [x: 0], __ENV__) ===
-             {true, {[], []}}
+             {true, {[], %{subqueries: []}}}
 
       assert escape(:where, quote do {x.x()} == {^"foo"} end, 0, [x: 0], __ENV__) ===
              {Macro.escape(quote do {&0.x()} == {^0} end),
-             {[{"foo", {0, :x}}], %{}}}
+             {[{"foo", {0, :x}}], %{subqueries: []}}}
 
       escaped = Macro.escape(quote do &0.x() == ^0 and &0.y() == ^1 end)
       assert {^escaped, {params, %{}}} =
