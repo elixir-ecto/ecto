@@ -107,11 +107,8 @@ defmodule Ecto.Query.Builder.Select do
     {expr, {params, {take, subqueries}}}
   end
 
-  defp escape(expr, {_params, {take, _subqueries}} = params_take, vars, env) do
-    case Builder.escape(expr, :any, params_take, vars, {env, &escape_expansion/5}) do
-      {expr, {params, {take, subqueries}}} -> {expr, {params, {take, subqueries}}}
-      {expr, {params, subqueries}} -> {expr, {params, {take, subqueries}}}
-    end
+  defp escape(expr, params_take, vars, env) do
+    Builder.escape(expr, :any, params_take, vars, {env, &escape_expansion/5})
   end
 
   defp escape_expansion(expr, _type, params_take, vars, env) do
