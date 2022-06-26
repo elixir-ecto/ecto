@@ -103,13 +103,13 @@ defmodule Ecto.Adapter.Queryable do
   def prepare_query(operation, repo_name_or_pid, queryable) do
     %{adapter: adapter, cache: cache} = Ecto.Repo.Registry.lookup(repo_name_or_pid)
 
-    {_meta, prepared, params} =
+    {_meta, prepared, _cast_params, dump_params} =
       queryable
       |> Ecto.Queryable.to_query()
       |> Ecto.Query.Planner.ensure_select(operation == :all)
       |> Ecto.Query.Planner.query(operation, cache, adapter, 0)
 
-    {prepared, params}
+    {prepared, dump_params}
   end
 
   @doc """
@@ -120,7 +120,8 @@ defmodule Ecto.Adapter.Queryable do
   def plan_query(operation, adapter, queryable) do
     query = Ecto.Queryable.to_query(queryable)
     {query, params, _key} = Ecto.Query.Planner.plan(query, operation, adapter)
+    {_cast_params, dump_params} = Enum.unzip(params)
     {query, _} = Ecto.Query.Planner.normalize(query, operation, adapter, 0)
-    {query, params}
+    {query, dump_params}
   end
 end

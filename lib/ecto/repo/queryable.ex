@@ -29,12 +29,16 @@ defmodule Ecto.Repo.Queryable do
 
     {query, opts} = repo.prepare_query(:stream, query, opts)
     query = attach_prefix(query, opts)
-    {query_meta, prepared, params} = Planner.query(query, :all, cache, adapter, 0)
+
+    {query_meta, prepared, cast_params, dump_params} =
+      Planner.query(query, :all, cache, adapter, 0)
+
+    opts = Keyword.put(opts, :cast_params, cast_params)
 
     case query_meta do
       %{select: nil} ->
         adapter_meta
-        |> adapter.stream(query_meta, prepared, params, opts)
+        |> adapter.stream(query_meta, prepared, dump_params, opts)
         |> Stream.flat_map(fn {_, nil} -> [] end)
 
       %{select: select, preloads: preloads} ->
@@ -51,7 +55,7 @@ defmodule Ecto.Repo.Queryable do
         end
 
         preprocessor = preprocessor(from, preprocess, adapter)
-        stream = adapter.stream(adapter_meta, query_meta, prepared, params, opts)
+        stream = adapter.stream(adapter_meta, query_meta, prepared, dump_params, opts)
         postprocessor = postprocessor(from, postprocess, take, adapter)
 
         stream
@@ -202,11 +206,15 @@ defmodule Ecto.Repo.Queryable do
 
     {query, opts} = repo.prepare_query(operation, query, opts)
     query = attach_prefix(query, opts)
-    {query_meta, prepared, params} = Planner.query(query, operation, cache, adapter, 0)
+
+    {query_meta, prepared, cast_params, dump_params} =
+      Planner.query(query, operation, cache, adapter, 0)
+
+    opts = Keyword.put(opts, :cast_params, cast_params)
 
     case query_meta do
       %{select: nil} ->
-        adapter.execute(adapter_meta, query_meta, prepared, params, opts)
+        adapter.execute(adapter_meta, query_meta, prepared, dump_params, opts)
 
       %{select: select, sources: sources, preloads: preloads} ->
         %{
@@ -218,7 +226,7 @@ defmodule Ecto.Repo.Queryable do
         } = select
 
         preprocessor = preprocessor(from, preprocess, adapter)
-        {count, rows} = adapter.execute(adapter_meta, query_meta, prepared, params, opts)
+        {count, rows} = adapter.execute(adapter_meta, query_meta, prepared, dump_params, opts)
         postprocessor = postprocessor(from, postprocess, take, adapter)
 
         {count,
