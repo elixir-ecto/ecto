@@ -168,13 +168,13 @@ defmodule Ecto.Query.Builder do
   end
 
   # subqueries
-  def escape({:subquery, _, _} = expr, _, {params, {take, subqueries}}, _vars, _env) do
-    {expr, {params, subqueries}} = escape_subquery(expr, {params, subqueries})
-    {expr, {params, {take, subqueries}}}
-  end
-
-  def escape({:subquery, _, _} = expr, _, params_acc, _vars, _env) do
-    escape_subquery(expr, params_acc)
+  def escape({:subquery, _, _} = expr, _, {params, acc}, _vars, _env) do
+    subquery = quote(do: Ecto.Query.subquery(unquote(expr)))
+    subqueries = Map.get(acc, :subqueries, [])
+    index = length(subqueries)
+    # used both in ast and in parameters, as a placeholder.
+    expr = {:subquery, index}
+    {expr, {[expr | params], Map.put(acc, :subqueries, [subquery | subqueries])}}
   end
 
   # interval
@@ -532,14 +532,6 @@ defmodule Ecto.Query.Builder do
     frag
     |> split_fragment("")
     |> merge_fragments(args)
-  end
-
-  defp escape_subquery(expr, {params, subqueries}) do
-    subquery = quote(do: Ecto.Query.subquery(unquote(expr)))
-    index = length(subqueries)
-    # used both in ast and in parameters, as a placeholder.
-    expr = {:subquery, index}
-    {expr, {[expr | params], [subquery | subqueries]}}
   end
 
   defp escape_window_description([], params_acc, _vars, _env),

@@ -28,10 +28,12 @@ defmodule Ecto.Query.Builder.Filter do
           Builder.error! "nil given for `#{field}`. Comparison with nil is forbidden as it is unsafe. " <>
                          "Instead write a query with is_nil/1, for example: is_nil(s.#{field})"
 
-        {field, value}, params_subqueries when is_atom(field) ->
+        {field, value}, {params, subqueries} when is_atom(field) ->
           value = check_for_nils(value, field)
-          {value, params_subqueries} = Builder.escape(value, {binding, field}, params_subqueries, vars, env)
-          {{:{}, [], [:==, [], [to_escaped_field(binding, field), value]]}, params_subqueries}
+          params_acc = {params, %{subqueries: subqueries}}
+          {value, {params, acc}} = Builder.escape(value, {binding, field}, params_acc, vars, env)
+          subqueries = Map.get(acc, :subqueries, [])
+          {{:{}, [], [:==, [], [to_escaped_field(binding, field), value]]}, {params, subqueries}}
 
         _, _params_subqueries ->
           Builder.error! "expected a keyword list at compile time in #{kind}, " <>
@@ -44,7 +46,9 @@ defmodule Ecto.Query.Builder.Filter do
   end
 
   def escape(_kind, expr, _binding, vars, env) do
-    Builder.escape(expr, :boolean, {[], []}, vars, env)
+    {expr, {params, acc}} = Builder.escape(expr, :boolean, {[], %{}}, vars, env)
+    subqueries = Map.get(acc, :subqueries, [])
+    {expr, {params, subqueries}}
   end
 
   @doc """
