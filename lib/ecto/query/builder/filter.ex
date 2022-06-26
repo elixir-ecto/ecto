@@ -22,18 +22,16 @@ defmodule Ecto.Query.Builder.Filter do
   end
 
   def escape(kind, expr, binding, vars, env) when is_list(expr) do
-    {parts, params_subqueries} =
-      Enum.map_reduce(expr, {[], []}, fn
-        {field, nil}, _params_subqueries ->
+    {parts, params_acc} =
+      Enum.map_reduce(expr, {[], %{}}, fn
+        {field, nil}, _params_acc ->
           Builder.error! "nil given for `#{field}`. Comparison with nil is forbidden as it is unsafe. " <>
                          "Instead write a query with is_nil/1, for example: is_nil(s.#{field})"
 
-        {field, value}, {params, subqueries} when is_atom(field) ->
+        {field, value}, params_acc when is_atom(field) ->
           value = check_for_nils(value, field)
-          params_acc = {params, %{subqueries: subqueries}}
-          {value, {params, acc}} = Builder.escape(value, {binding, field}, params_acc, vars, env)
-          subqueries = Map.get(acc, :subqueries, [])
-          {{:{}, [], [:==, [], [to_escaped_field(binding, field), value]]}, {params, subqueries}}
+          {value, params_acc} = Builder.escape(value, {binding, field}, params_acc, vars, env)
+          {{:{}, [], [:==, [], [to_escaped_field(binding, field), value]]}, params_acc}
 
         _, _params_subqueries ->
           Builder.error! "expected a keyword list at compile time in #{kind}, " <>
@@ -42,13 +40,11 @@ defmodule Ecto.Query.Builder.Filter do
       end)
 
     expr = Enum.reduce parts, &{:{}, [], [:and, [], [&2, &1]]}
-    {expr, params_subqueries}
+    {expr, params_acc}
   end
 
   def escape(_kind, expr, _binding, vars, env) do
-    {expr, {params, acc}} = Builder.escape(expr, :boolean, {[], %{}}, vars, env)
-    subqueries = Map.get(acc, :subqueries, [])
-    {expr, {params, subqueries}}
+    Builder.escape(expr, :boolean, {[], %{}}, vars, env)
   end
 
   @doc """
@@ -68,10 +64,10 @@ defmodule Ecto.Query.Builder.Filter do
 
   def build(kind, op, query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    {expr, {params, subqueries}} = escape(kind, expr, 0, binding, env)
+    {expr, {params, acc}} = escape(kind, expr, 0, binding, env)
 
     params = Builder.escape_params(params)
-    subqueries = Enum.reverse(subqueries)
+    subqueries = Enum.reverse(Map.get(acc, :subqueries, []))
 
     expr = quote do: %Ecto.Query.BooleanExpr{
                         expr: unquote(expr),
