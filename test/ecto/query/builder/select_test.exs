@@ -7,43 +7,43 @@ defmodule Ecto.Query.Builder.SelectTest do
 
   describe "escape" do
     test "handles expressions and params" do
-      assert {Macro.escape(quote do &0 end), {[], %{}}} ==
+      assert {Macro.escape(quote do &0 end), {[], {%{}, []}}} ==
              escape(quote do x end, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do &0.y() end), {[], %{}}} ==
+      assert {Macro.escape(quote do &0.y() end), {[], {%{}, []}}} ==
              escape(quote do x.y() end, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do &0 end), {[], %{0 => {:any, [:foo, :bar, baz: :bat]}}}} ==
+      assert {Macro.escape(quote do &0 end), {[], {%{0 => {:any, [:foo, :bar, baz: :bat]}}, []}}} ==
              escape(quote do [:foo, :bar, baz: :bat] end, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do &0 end), {[], %{0 => {:struct, [:foo, :bar, baz: :bat]}}}} ==
+      assert {Macro.escape(quote do &0 end), {[], {%{0 => {:struct, [:foo, :bar, baz: :bat]}}, []}}} ==
              escape(quote do struct(x, [:foo, :bar, baz: :bat]) end, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do &0 end), {[], %{0 => {:map, [:foo, :bar, baz: :bat]}}}} ==
+      assert {Macro.escape(quote do &0 end), {[], {%{0 => {:map, [:foo, :bar, baz: :bat]}}, []}}} ==
              escape(quote do map(x, [:foo, :bar, baz: :bat]) end, [x: 0], __ENV__)
 
-      assert {{:{}, [], [:{}, [], [0, 1, 2]]}, {[], %{}}} ==
+      assert {{:{}, [], [:{}, [], [0, 1, 2]]}, {[], {%{}, []}}} ==
              escape(quote do {0, 1, 2} end, [], __ENV__)
 
-      assert {{:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}, {[], %{}}} ==
+      assert {{:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}, {[], {%{}, []}}} ==
              escape(quote do %{a: a} end, [a: 0], __ENV__)
 
-      assert {{:{}, [], [:%{}, [], [{{:{}, [], [:&, [], [0]]}, {:{}, [], [:&, [], [1]]}}]]}, {[], %{}}} ==
+      assert {{:{}, [], [:%{}, [], [{{:{}, [], [:&, [], [0]]}, {:{}, [], [:&, [], [1]]}}]]}, {[], {%{}, []}}} ==
              escape(quote do %{a => b} end, [a: 0, b: 1], __ENV__)
 
-      assert {[Macro.escape(quote do &0.y() end), Macro.escape(quote do &0.z() end)], {[], %{}}} ==
+      assert {[Macro.escape(quote do &0.y() end), Macro.escape(quote do &0.z() end)], {[], {%{}, []}}} ==
              escape(quote do [x.y(), x.z()] end, [x: 0], __ENV__)
 
       assert {[{:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :y]]}, [], []]},
-               {:{}, [], [:^, [], [0]]}], {[{1, :any}], %{}}} ==
+               {:{}, [], [:^, [], [0]]}], {[{1, :any}], {%{}, []}}} ==
               escape(quote do [x.y(), ^1] end, [x: 0], __ENV__)
 
-      assert {{:{}, [], [:%, [], [Foo, {:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}]]}, {[], %{}}} ==
+      assert {{:{}, [], [:%, [], [Foo, {:{}, [], [:%{}, [], [a: {:{}, [], [:&, [], [0]]}]]}]]}, {[], {%{}, []}}} ==
              escape(quote do %Foo{a: a} end, [a: 0], __ENV__)
     end
 
     test "on conflicting take" do
-      assert {_, {[], %{0 => {:map, [:foo, :bar, baz: :bat]}}}} =
+      assert {_, {[], {%{0 => {:map, [:foo, :bar, baz: :bat]}}, []}}} =
              escape(quote do {map(x, [:foo, :bar]), map(x, [baz: :bat])} end, [x: 0], __ENV__)
 
       assert_raise Ecto.Query.CompileError,
@@ -81,8 +81,59 @@ defmodule Ecto.Query.Builder.SelectTest do
     test "supports interpolation" do
       fields = [:foo, :bar, :baz]
       assert select("q", ^fields).select.take == %{0 => {:any, fields}}
+      assert select("q", [:foo, :bar, :baz]).select == select("q", ^fields).select
       assert select("q", [q], map(q, ^fields)).select.take == %{0 => {:map, fields}}
       assert select("q", [q], struct(q, ^fields)).select.take == %{0 => {:struct, fields}}
+    end
+
+    test "supports subqueries" do
+      subquery = from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
+
+      query =
+        from(l in "lists",
+          as: :list,
+          select: %{title: l.archived_at, user_email: subquery(subquery)}
+        )
+
+      assert Macro.to_string(query.select.expr) ==
+              "%{title: &0.archived_at(), user_email: {:subquery, 0}}"
+
+      assert length(query.select.subqueries) == 1
+      assert length(query.select.params) == 1
+    end
+
+    test "supports multiple subqueries" do
+      created_by_id = 8
+
+      subquery0 =
+        from(t in "tasks",
+          where: t.list_id == parent_as(:list).id and t.created_by_id == ^created_by_id,
+          select: max(t.due_on)
+        )
+
+      subquery1 =
+        from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
+
+      query =
+        from(l in "lists",
+          as: :list,
+          select: %{
+            title: l.archived_at,
+            maxdue: subquery(subquery0),
+            user_email: subquery(subquery1)
+          }
+        )
+
+      assert Macro.to_string(query.select.expr) == """
+             %{\
+             title: &0.archived_at(), \
+             maxdue: {:subquery, 0}, \
+             user_email: {:subquery, 1}\
+             }\
+             """
+
+      assert length(query.select.subqueries) == 2
+      assert length(query.select.params) == 2
     end
 
     test "raises on multiple selects" do

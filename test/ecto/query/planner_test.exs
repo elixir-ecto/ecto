@@ -1272,6 +1272,19 @@ defmodule Ecto.Query.PlannerTest do
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
   end
 
+  defmacro mymacro(p) do
+    quote do
+      map(unquote(p), [:id, :title])
+    end
+  end
+
+  test "normalize: select from macro" do
+    query = from(Post, []) |> select([p], map(p, [:id, :title])) |> normalize()
+    macro_query = from(Post, []) |> select([p], mymacro(p)) |> normalize()
+
+    assert macro_query.select.fields == query.select.fields
+  end
+
   test "normalize: select with unions" do
     union_query = from(Post, []) |> select([p], %{title: p.title, category: "Post"})
     query = from(Post, []) |> select([p], %{title: p.title, category: "Post"}) |> union(^union_query) |> normalize()
@@ -1413,6 +1426,29 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.fields ==
              select_fields([:a], 1) ++
                select_fields([:b], 1)
+  end
+
+  test "normalize: select with subquery" do
+    subquery =
+      Comment
+      |> where([c], c.post_id == parent_as(:post).id)
+      |> select(count())
+
+    query =
+      from(Post, as: :post)
+      |> select([p], %{title: p.title, comment_count: subquery(subquery)})
+      |> normalize()
+
+    assert {:%{}, [],
+            [
+              title: {{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []},
+              comment_count: %Ecto.SubQuery{}
+            ]} = query.select.expr
+
+    assert [
+             {{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []},
+             %Ecto.SubQuery{}
+           ] = query.select.fields
   end
 
   test "normalize: windows" do
