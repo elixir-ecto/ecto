@@ -50,52 +50,52 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   # Tuple
-  defp escape({left, right}, params_take, vars, env) do
-    escape({:{}, [], [left, right]}, params_take, vars, env)
+  defp escape({left, right}, params_acc, vars, env) do
+    escape({:{}, [], [left, right]}, params_acc, vars, env)
   end
 
   # Tuple
-  defp escape({:{}, _, list}, params_take, vars, env) do
-    {list, params_take} = Enum.map_reduce(list, params_take, &escape(&1, &2, vars, env))
+  defp escape({:{}, _, list}, params_acc, vars, env) do
+    {list, params_acc} = Enum.map_reduce(list, params_acc, &escape(&1, &2, vars, env))
     expr = {:{}, [], [:{}, [], list]}
-    {expr, params_take}
+    {expr, params_acc}
   end
 
   # Struct
-  defp escape({:%, _, [name, map]}, params_take, vars, env) do
+  defp escape({:%, _, [name, map]}, params_acc, vars, env) do
     name = Macro.expand(name, env)
-    {escaped_map, params_take} = escape(map, params_take, vars, env)
-    {{:{}, [], [:%, [], [name, escaped_map]]}, params_take}
+    {escaped_map, params_acc} = escape(map, params_acc, vars, env)
+    {{:{}, [], [:%, [], [name, escaped_map]]}, params_acc}
   end
 
   # Map
-  defp escape({:%{}, _, [{:|, _, [data, pairs]}]}, params_take, vars, env) do
-    {data, params_take} = escape(data, params_take, vars, env)
-    {pairs, params_take} = escape_pairs(pairs, params_take, vars, env)
-    {{:{}, [], [:%{}, [], [{:{}, [], [:|, [], [data, pairs]]}]]}, params_take}
+  defp escape({:%{}, _, [{:|, _, [data, pairs]}]}, params_acc, vars, env) do
+    {data, params_acc} = escape(data, params_acc, vars, env)
+    {pairs, params_acc} = escape_pairs(pairs, params_acc, vars, env)
+    {{:{}, [], [:%{}, [], [{:{}, [], [:|, [], [data, pairs]]}]]}, params_acc}
   end
 
   # Merge
-  defp escape({:merge, _, [left, {kind, _, _} = right]}, params_take, vars, env)
+  defp escape({:merge, _, [left, {kind, _, _} = right]}, params_acc, vars, env)
        when kind in [:%{}, :map] do
-    {left, params_take} = escape(left, params_take, vars, env)
-    {right, params_take} = escape(right, params_take, vars, env)
-    {{:{}, [], [:merge, [], [left, right]]}, params_take}
+    {left, params_acc} = escape(left, params_acc, vars, env)
+    {right, params_acc} = escape(right, params_acc, vars, env)
+    {{:{}, [], [:merge, [], [left, right]]}, params_acc}
   end
 
-  defp escape({:merge, _, [_left, right]}, _params_take, _vars, _env) do
+  defp escape({:merge, _, [_left, right]}, _params_acc, _vars, _env) do
     Builder.error! "expected the second argument of merge/2 in select to be a map, got: `#{Macro.to_string(right)}`"
   end
 
   # Map
-  defp escape({:%{}, _, pairs}, params_take, vars, env) do
-    {pairs, params_take} = escape_pairs(pairs, params_take, vars, env)
-    {{:{}, [], [:%{}, [], pairs]}, params_take}
+  defp escape({:%{}, _, pairs}, params_acc, vars, env) do
+    {pairs, params_acc} = escape_pairs(pairs, params_acc, vars, env)
+    {{:{}, [], [:%{}, [], pairs]}, params_acc}
   end
 
   # List
-  defp escape(list, params_take, vars, env) when is_list(list) do
-    Enum.map_reduce(list, params_take, &escape(&1, &2, vars, env))
+  defp escape(list, params_acc, vars, env) when is_list(list) do
+    Enum.map_reduce(list, params_acc, &escape(&1, &2, vars, env))
   end
 
   # map/struct(var, [:foo, :bar])
@@ -107,27 +107,28 @@ defmodule Ecto.Query.Builder.Select do
     {expr, {params, {take, subqueries}}}
   end
 
-  defp escape(expr, params_take, vars, env) do
-    Builder.escape(expr, :any, params_take, vars, {env, &escape_expansion/5})
+  defp escape(expr, params_acc, vars, env) do
+    Builder.escape(expr, :any, params_acc, vars, {env, &escape_expansion/5})
   end
 
-  defp escape_expansion(expr, _type, params_take, vars, env) do
-    escape(expr, params_take, vars, env)
+  defp escape_expansion(expr, _type, params_acc, vars, env) do
+    escape(expr, params_acc, vars, env)
   end
 
-  defp escape_pairs(pairs, params_take, vars, env) do
-    Enum.map_reduce pairs, params_take, fn({k, v}, acc) ->
+  defp escape_pairs(pairs, params_acc, vars, env) do
+    Enum.map_reduce(pairs, params_acc, fn {k, v}, acc ->
       {k, acc} = escape_key(k, acc, vars, env)
       {v, acc} = escape(v, acc, vars, env)
       {{k, v}, acc}
-    end
+    end)
   end
 
-  defp escape_key(k, params_take, _vars, _env) when is_atom(k) do
-    {k, params_take}
+  defp escape_key(k, params_acc, _vars, _env) when is_atom(k) do
+    {k, params_acc}
   end
-  defp escape_key(k, params_take, vars, env) do
-    escape(k, params_take, vars, env)
+
+  defp escape_key(k, params_acc, vars, env) do
+    escape(k, params_acc, vars, env)
   end
 
   defp escape_fields({:^, _, [interpolated]}, tag, _env) do
