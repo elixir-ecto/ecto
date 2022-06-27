@@ -163,7 +163,8 @@ defmodule Ecto.Repo do
     * `:result` - the query result
     * `:params` - the query parameters
     * `:query` - the query sent to the database as a string
-    * `:source` - the source the query was made on (may be nil)
+    * `:source` - the source the query was made on (may be `nil`)
+    * `:stacktrace` - the stacktrace information, if enabled, or `nil`
     * `:options` - extra options given to the repo operation under
       `:telemetry_options`
 
