@@ -92,26 +92,31 @@ defmodule Ecto.Repo.Schema do
 
     placeholder_size = map_size(placeholder_dump)
 
-    counter = fn ->
-      Enum.reduce(
-        rows,
-        placeholder_size,
-        &(Enum.count(&1, fn {_, val} -> not match?({:placeholder, _}, val) end) + &2)
-      )
-    end
-
     placeholder_vals_list =
       placeholder_dump
       |> Enum.map(fn {_, {idx, _, value}} -> {idx, value} end)
       |> Enum.sort
       |> Enum.map(&elem(&1, 1))
 
-    if has_query? do
-      rows = plan_query_in_rows(rows, header, adapter)
-      {rows, header, placeholder_vals_list, counter}
-    else
-      {rows, header, placeholder_vals_list, counter}
+    {rows, row_query_param_count} =
+      if has_query? do
+        plan_query_in_rows(rows, header, adapter)
+      else
+        {rows, 0}
+      end
+
+    counter = fn ->
+      Enum.reduce(rows, placeholder_size + row_query_param_count, fn row, count ->
+        row_count =
+          Enum.count(row, fn {_, val} ->
+            not match?({:placeholder, _}, val) and not match?({%Ecto.Query{}, _}, val)
+          end)
+
+        count + row_count
+      end)
     end
+
+    {rows, header, placeholder_vals_list, counter}
   end
 
   defp extract_header_and_fields(repo, %Ecto.Query{} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter, opts) do
@@ -222,27 +227,29 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp plan_query_in_rows(rows, header, adapter) do
-    {rows, _counter} =
-      Enum.map_reduce(rows, 0, fn fields, counter ->
-        Enum.flat_map_reduce(header, counter, fn key, counter ->
+    {rows, {_counter, query_param_counter}} =
+      Enum.map_reduce(rows, {0, 0}, fn fields, {counter, query_param_counter} ->
+        Enum.flat_map_reduce(header, {counter, query_param_counter}, fn key, {counter, query_param_counter} ->
           case :lists.keyfind(key, 1, fields) do
             {^key, %Ecto.Query{} = query} ->
               {query, params, _} = Ecto.Query.Planner.plan(query, :all, adapter)
               {_cast_params, dump_params} = Enum.unzip(params)
               {query, _} = Ecto.Query.Planner.normalize(query, :all, adapter, counter)
+              num_query_params = length(dump_params)
 
-              {[{key, {query, dump_params}}], counter + length(dump_params)}
+              {[{key, {query, dump_params}}],
+               {counter + num_query_params, query_param_counter + num_query_params}}
 
             {^key, value} ->
-              {[{key, value}], counter + 1}
+              {[{key, value}], {counter + 1, query_param_counter}}
 
             false ->
-              {[], counter}
+              {[], {counter, query_param_counter}}
           end
         end)
       end)
 
-    rows
+    {rows, query_param_counter}
   end
 
   defp autogenerate_id(nil, fields, header, _adapter) do
