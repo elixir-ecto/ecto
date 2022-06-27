@@ -1075,12 +1075,16 @@ defmodule Ecto.Integration.RepoTest do
     test "Repo.insert_all upserts and fills in placeholders with conditioned on_conflict query" do
       do_not_update_title = "don't touch me"
 
+      visits_value =
+        from p in Post, where: p.public == ^true and p.id > ^0, select: p.visits, limit: 1
+
       on_conflict =
         from p in Post, update: [set: [title: "updated"]], where: p.title != ^do_not_update_title
 
       placeholders = %{posted: Date.utc_today(), title: "title"}
 
       post1 = [
+        visits: visits_value,
         title: {:placeholder, :title},
         uuid: Ecto.UUID.generate(),
         posted: {:placeholder, :posted}
@@ -1836,8 +1840,9 @@ defmodule Ecto.Integration.RepoTest do
 
     @tag :with_conflict_target
     test "on conflict query and conflict target" do
-      on_conflict = from Post, update: [set: [title: "second"]]
-      post = [title: "first", uuid: Ecto.UUID.generate()]
+      on_conflict = from p in Post, where: p.id > ^0, update: [set: [title: "second"]]
+      visits_value = from p in Post, where: p.public == ^true and p.id > ^0, select: p.visits, limit: 1
+      post = [title: "first", uuid: Ecto.UUID.generate(), visits: visits_value]
       assert TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
              {1, nil}
 

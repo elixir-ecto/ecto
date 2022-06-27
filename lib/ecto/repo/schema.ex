@@ -92,14 +92,6 @@ defmodule Ecto.Repo.Schema do
 
     placeholder_size = map_size(placeholder_dump)
 
-    counter = fn ->
-      Enum.reduce(
-        rows,
-        placeholder_size,
-        &(Enum.count(&1, fn {_, val} -> not match?({:placeholder, _}, val) end) + &2)
-      )
-    end
-
     placeholder_vals_list =
       placeholder_dump
       |> Enum.map(fn {_, {idx, _, value}} -> {idx, value} end)
@@ -107,9 +99,17 @@ defmodule Ecto.Repo.Schema do
       |> Enum.map(&elem(&1, 1))
 
     if has_query? do
-      rows = plan_query_in_rows(rows, header, adapter)
-      {rows, header, placeholder_vals_list, counter}
+      {rows, value_param_count} = plan_query_in_rows(rows, header, adapter)
+      {rows, header, placeholder_vals_list, fn -> placeholder_size + value_param_count end}
     else
+      counter = fn ->
+        Enum.reduce(
+          rows,
+          placeholder_size,
+          &(Enum.count(&1, fn {_, val} -> not match?({:placeholder, _}, val) end) + &2)
+        )
+      end
+
       {rows, header, placeholder_vals_list, counter}
     end
   end
@@ -222,27 +222,31 @@ defmodule Ecto.Repo.Schema do
   end
 
   defp plan_query_in_rows(rows, header, adapter) do
-    {rows, _counter} =
-      Enum.map_reduce(rows, 0, fn fields, counter ->
-        Enum.flat_map_reduce(header, counter, fn key, counter ->
+    {rows, {_counter, value_param_counter}} =
+      Enum.map_reduce(rows, {0, 0}, fn fields, {counter, value_param_counter} ->
+        Enum.flat_map_reduce(header, {counter, value_param_counter}, fn key, {counter, value_param_counter}  ->
           case :lists.keyfind(key, 1, fields) do
             {^key, %Ecto.Query{} = query} ->
               {query, params, _} = Ecto.Query.Planner.plan(query, :all, adapter)
               {_cast_params, dump_params} = Enum.unzip(params)
               {query, _} = Ecto.Query.Planner.normalize(query, :all, adapter, counter)
+              num_params = length(dump_params)
 
-              {[{key, {query, dump_params}}], counter + length(dump_params)}
+              {[{key, {query, dump_params}}], {counter + num_params, value_param_counter + num_params}}
+
+            {^key, {:placeholder, _} = value} ->
+              {[{key, value}], {counter + 1, value_param_counter}}
 
             {^key, value} ->
-              {[{key, value}], counter + 1}
+              {[{key, value}], {counter + 1, value_param_counter + 1}}
 
             false ->
-              {[], counter}
+              {[], {counter, value_param_counter}}
           end
         end)
       end)
 
-    rows
+    {rows, value_param_counter}
   end
 
   defp autogenerate_id(nil, fields, header, _adapter) do
