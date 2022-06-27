@@ -1075,12 +1075,16 @@ defmodule Ecto.Integration.RepoTest do
     test "Repo.insert_all upserts and fills in placeholders with conditioned on_conflict query" do
       do_not_update_title = "don't touch me"
 
+      visits_value =
+        from p in Post, where: p.public == ^true and p.id > ^0, select: p.visits, limit: 1
+
       on_conflict =
         from p in Post, update: [set: [title: "updated"]], where: p.title != ^do_not_update_title
 
       placeholders = %{posted: Date.utc_today(), title: "title"}
 
       post1 = [
+        visits: visits_value,
         title: {:placeholder, :title},
         uuid: Ecto.UUID.generate(),
         posted: {:placeholder, :posted}
