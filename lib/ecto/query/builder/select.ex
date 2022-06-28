@@ -80,8 +80,8 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   # Variable reference
-  defp escape({:^, _, [{_varname, _, nil} = var]}, params_take, _vars, _env) do
-    {var, params_take}
+  defp escape({:^, _, [{_varname, _, nil} = var]}, params_acc, _vars, _env) do
+    {var, params_acc}
   end
 
   # Merge
