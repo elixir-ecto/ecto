@@ -18,33 +18,33 @@ defmodule Ecto.Query.Builder.Filter do
   """
   @spec escape(:where | :having | :on, Macro.t, non_neg_integer, Keyword.t, Macro.Env.t) :: {Macro.t, {list, list}}
   def escape(_kind, [], _binding, _vars, _env) do
-    {true, {[], []}}
+    {true, {[], %{subqueries: []}}}
   end
 
   def escape(kind, expr, binding, vars, env) when is_list(expr) do
-    {parts, params_subqueries} =
-      Enum.map_reduce(expr, {[], []}, fn
-        {field, nil}, _params_subqueries ->
+    {parts, params_acc} =
+      Enum.map_reduce(expr, {[], %{subqueries: []}}, fn
+        {field, nil}, _params_acc ->
           Builder.error! "nil given for `#{field}`. Comparison with nil is forbidden as it is unsafe. " <>
                          "Instead write a query with is_nil/1, for example: is_nil(s.#{field})"
 
-        {field, value}, params_subqueries when is_atom(field) ->
+        {field, value}, params_acc when is_atom(field) ->
           value = check_for_nils(value, field)
-          {value, params_subqueries} = Builder.escape(value, {binding, field}, params_subqueries, vars, env)
-          {{:{}, [], [:==, [], [to_escaped_field(binding, field), value]]}, params_subqueries}
+          {value, params_acc} = Builder.escape(value, {binding, field}, params_acc, vars, env)
+          {{:{}, [], [:==, [], [to_escaped_field(binding, field), value]]}, params_acc}
 
-        _, _params_subqueries ->
+        _, _params_acc ->
           Builder.error! "expected a keyword list at compile time in #{kind}, " <>
                          "got: `#{Macro.to_string expr}`. If you would like to " <>
                          "pass a list dynamically, please interpolate the whole list with ^"
       end)
 
     expr = Enum.reduce parts, &{:{}, [], [:and, [], [&2, &1]]}
-    {expr, params_subqueries}
+    {expr, params_acc}
   end
 
   def escape(_kind, expr, _binding, vars, env) do
-    Builder.escape(expr, :boolean, {[], []}, vars, env)
+    Builder.escape(expr, :boolean, {[], %{subqueries: []}}, vars, env)
   end
 
   @doc """
@@ -64,10 +64,10 @@ defmodule Ecto.Query.Builder.Filter do
 
   def build(kind, op, query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    {expr, {params, subqueries}} = escape(kind, expr, 0, binding, env)
+    {expr, {params, acc}} = escape(kind, expr, 0, binding, env)
 
     params = Builder.escape_params(params)
-    subqueries = Enum.reverse(subqueries)
+    subqueries = Enum.reverse(acc.subqueries)
 
     expr = quote do: %Ecto.Query.BooleanExpr{
                         expr: unquote(expr),

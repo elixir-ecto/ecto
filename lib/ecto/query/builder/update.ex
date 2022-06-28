@@ -67,7 +67,7 @@ defmodule Ecto.Query.Builder.Update do
         {compile, [{k, v} | runtime], params}
       {k, v}, {compile, runtime, params} ->
         k = escape_field!(k)
-        {v, {params, :acc}} = Builder.escape(v, type_for_key(op, {0, k}), {params, :acc}, vars, env)
+        {v, {params, _acc}} = Builder.escape(v, type_for_key(op, {0, k}), {params, %{}}, vars, env)
         {[{k, v} | compile], runtime, params}
       _, _acc ->
         Builder.error! "malformed #{inspect op} in update `#{Macro.to_string(kw)}`, " <>

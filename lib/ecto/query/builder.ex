@@ -52,6 +52,17 @@ defmodule Ecto.Query.Builder do
   """
   @type quoted_type :: Ecto.Type.primitive | {non_neg_integer, atom | Macro.t}
 
+  @typedoc """
+  The accumulator during escape.
+
+  If the subqueries field is available, subquery escaping must take place.
+  """
+  @type acc :: %{
+          optional(:subqueries) => list(Macro.t()),
+          optional(:take) => %{non_neg_integer => Macro.t()},
+          optional(any) => any
+        }
+
   @doc """
   Smart escapes a query expression and extracts interpolated values in
   a map.
@@ -61,8 +72,8 @@ defmodule Ecto.Query.Builder do
   with `^index` in the query where index is a number indexing into the
   map.
   """
-  @spec escape(Macro.t, quoted_type | {:in, quoted_type} | {:out, quoted_type}, {list, term},
-               Keyword.t, Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, term}}
+  @spec escape(Macro.t, quoted_type | {:in, quoted_type} | {:out, quoted_type}, {list, acc},
+               Keyword.t, Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, acc}}
   def escape(expr, type, params_acc, vars, env)
 
   # var.x - where var is bound
@@ -168,13 +179,13 @@ defmodule Ecto.Query.Builder do
   end
 
   # subqueries
-  def escape({:subquery, _, _} = expr, _, {params, {take, subqueries}}, _vars, _env) do
-    {expr, {params, subqueries}} = escape_subquery(expr, {params, subqueries})
-    {expr, {params, {take, subqueries}}}
-  end
-
-  def escape({:subquery, _, _} = expr, _, params_acc, _vars, _env) do
-    escape_subquery(expr, params_acc)
+  def escape({:subquery, _, _} = expr, _, {params, %{subqueries: subqueries} = acc}, _vars, _env) do
+    subquery = quote(do: Ecto.Query.subquery(unquote(expr)))
+    index = length(subqueries)
+    # used both in ast and in parameters, as a placeholder.
+    expr = {:subquery, index}
+    acc = %{acc | subqueries: [subquery | subqueries]}
+    {expr, {[expr | params], acc}}
   end
 
   # interval
@@ -534,14 +545,6 @@ defmodule Ecto.Query.Builder do
     |> merge_fragments(args)
   end
 
-  defp escape_subquery(expr, {params, subqueries}) do
-    subquery = quote(do: Ecto.Query.subquery(unquote(expr)))
-    index = length(subqueries)
-    # used both in ast and in parameters, as a placeholder.
-    expr = {:subquery, index}
-    {expr, {[expr | params], [subquery | subqueries]}}
-  end
-
   defp escape_window_description([], params_acc, _vars, _env),
     do: {[], params_acc}
   defp escape_window_description([window_name], params_acc, _vars, _env) when is_atom(window_name),
@@ -726,7 +729,7 @@ defmodule Ecto.Query.Builder do
     do: {find_var!(var, vars), field}
 
   def validate_type!(type, _vars, _env) do
-    error! "type/2 expects an alias, atom, initialized parameterized type or " <> 
+    error! "type/2 expects an alias, atom, initialized parameterized type or " <>
            "source.field as second argument, got: `#{Macro.to_string(type)}`"
   end
 

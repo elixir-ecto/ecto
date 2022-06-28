@@ -8,45 +8,45 @@ defmodule Ecto.Query.Builder.OrderByTest do
 
   describe "escape" do
     test "handles expressions and params" do
-      assert {Macro.escape(quote do [asc: &0.y()] end), {[], :acc}} ==
-             escape(:order_by, quote do x.y() end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.y()] end), {[], %{}}} ==
+             escape(:order_by, quote do x.y() end, {[], %{}}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.x(), asc: &1.y()] end), {[], :acc}} ==
-             escape(:order_by, quote do [x.x(), y.y()] end, {[], :acc}, [x: 0, y: 1], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.x(), asc: &1.y()] end), {[], %{}}} ==
+             escape(:order_by, quote do [x.x(), y.y()] end, {[], %{}}, [x: 0, y: 1], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.x(), desc: &1.y()] end), {[], :acc}} ==
-             escape(:order_by, quote do [asc: x.x(), desc: y.y()] end, {[], :acc}, [x: 0, y: 1], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.x(), desc: &1.y()] end), {[], %{}}} ==
+             escape(:order_by, quote do [asc: x.x(), desc: y.y()] end, {[], %{}}, [x: 0, y: 1], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.x(), desc: &1.y()] end), {[], :acc}} ==
-             escape(:order_by, quote do [x.x(), desc: y.y()] end, {[], :acc}, [x: 0, y: 1], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.x(), desc: &1.y()] end), {[], %{}}} ==
+             escape(:order_by, quote do [x.x(), desc: y.y()] end, {[], %{}}, [x: 0, y: 1], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.x()] end), {[], :acc}} ==
-             escape(:order_by, quote do :x end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.x()] end), {[], %{}}} ==
+             escape(:order_by, quote do :x end, {[], %{}}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [asc: &0.x(), desc: &0.y()] end), {[], :acc}} ==
-             escape(:order_by, quote do [:x, desc: :y] end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [asc: &0.x(), desc: &0.y()] end), {[], %{}}} ==
+             escape(:order_by, quote do [:x, desc: :y] end, {[], %{}}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [asc_nulls_first: &0.x(), desc_nulls_first: &0.y()] end), {[], :acc}} ==
-             escape(:order_by, quote do [asc_nulls_first: :x, desc_nulls_first: :y] end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [asc_nulls_first: &0.x(), desc_nulls_first: &0.y()] end), {[], %{}}} ==
+             escape(:order_by, quote do [asc_nulls_first: :x, desc_nulls_first: :y] end, {[], %{}}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [asc_nulls_last: &0.x(), desc_nulls_last: &0.y()] end), {[], :acc}} ==
-             escape(:order_by, quote do [asc_nulls_last: :x, desc_nulls_last: :y] end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [asc_nulls_last: &0.x(), desc_nulls_last: &0.y()] end), {[], %{}}} ==
+             escape(:order_by, quote do [asc_nulls_last: :x, desc_nulls_last: :y] end, {[], %{}}, [x: 0], __ENV__)
 
       import Kernel, except: [>: 2]
-      assert {Macro.escape(quote do [asc: 1 > 2] end), {[], :acc}} ==
-             escape(:order_by, quote do 1 > 2 end, {[], :acc}, [], __ENV__)
+      assert {Macro.escape(quote do [asc: 1 > 2] end), {[], %{}}} ==
+             escape(:order_by, quote do 1 > 2 end, {[], %{}}, [], __ENV__)
     end
 
     test "raises on unbound variables" do
       assert_raise Ecto.Query.CompileError, ~r"unbound variable `x` in query", fn ->
-        escape(:order_by, quote do x.y end, {[], :acc}, [], __ENV__)
+        escape(:order_by, quote do x.y end, {[], %{}}, [], __ENV__)
       end
     end
 
     test "raises on unknown expression" do
       message = ~r":desc_nulls_first or interpolated value in `order_by`, got: `:test`"
       assert_raise Ecto.Query.CompileError, message, fn ->
-        escape(:order_by, quote do [test: x.y] end, {[], :acc}, [x: 0], __ENV__)
+        escape(:order_by, quote do [test: x.y] end, {[], %{}}, [x: 0], __ENV__)
       end
     end
   end

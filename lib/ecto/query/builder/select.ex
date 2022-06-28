@@ -14,13 +14,13 @@ defmodule Ecto.Query.Builder.Select do
   ## Examples
 
       iex> escape({1, 2}, [], __ENV__)
-      {{:{}, [], [:{}, [], [1, 2]]}, {[], {%{}, []}}}
+      {{:{}, [], [:{}, [], [1, 2]]}, {[], %{take: %{}, subqueries: []}}}
 
       iex> escape([1, 2], [], __ENV__)
-      {[1, 2], {[], {%{}, []}}}
+      {[1, 2], {[], %{take: %{}, subqueries: []}}}
 
       iex> escape(quote(do: x), [x: 0], __ENV__)
-      {{:{}, [], [:&, [], [0]]}, {[], {%{}, []}}}
+      {{:{}, [], [:&, [], [0]]}, {[], %{take: %{}, subqueries: []}}}
 
   """
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {list, %{}}}
@@ -34,7 +34,10 @@ defmodule Ecto.Query.Builder.Select do
   def escape(other, vars, env) do
     cond do
       take?(other) ->
-        {{:{}, [], [:&, [], [0]]}, {[], {%{0 => {:any, Macro.expand(other, env)}}, []}}}
+        {
+          {:{}, [], [:&, [], [0]]},
+          {[], %{take: %{0 => {:any, Macro.expand(other, env)}}, subqueries: []}}
+        }
 
       maybe_take?(other) ->
         Builder.error! """
@@ -42,10 +45,11 @@ defmodule Ecto.Query.Builder.Select do
         Instead interpolate all fields at once, such as: `select: ^[:foo, :bar, :baz]`. \
         Got: #{Macro.to_string(other)}.
         """
-    
+
       true ->
-        {expr, {params, {take, subqueries}}} = escape(other, {[], {%{}, []}}, vars, env)
-        {expr, {params, {take, Enum.reverse(subqueries)}}}
+        {expr, {params, acc}} = escape(other, {[], %{take: %{}, subqueries: []}}, vars, env)
+        acc = %{acc | subqueries: Enum.reverse(acc.subqueries)}
+        {expr, {params, acc}}
     end
   end
 
@@ -99,12 +103,12 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   # map/struct(var, [:foo, :bar])
-  defp escape({tag, _, [{var, _, context}, fields]}, {params, {take, subqueries}}, vars, env)
+  defp escape({tag, _, [{var, _, context}, fields]}, {params, acc}, vars, env)
        when tag in [:map, :struct] and is_atom(var) and is_atom(context) do
     taken = escape_fields(fields, tag, env)
     expr = Builder.escape_var!(var, vars)
-    take = add_take(take, Builder.find_var!(var, vars), {tag, taken})
-    {expr, {params, {take, subqueries}}}
+    acc = add_take(acc, Builder.find_var!(var, vars), {tag, taken})
+    {expr, {params, acc}}
   end
 
   defp escape(expr, params_acc, vars, env) do
@@ -210,9 +214,9 @@ defmodule Ecto.Query.Builder.Select do
 
   def build(kind, query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    {expr, {params, {take, subqueries}}} = escape(expr, binding, env)
+    {expr, {params, acc}} = escape(expr, binding, env)
     params = Builder.escape_params(params)
-    take   = {:%{}, [], Map.to_list(take)}
+    take = {:%{}, [], Map.to_list(acc.take)}
 
     select = quote do: %Ecto.Query.SelectExpr{
                          expr: unquote(expr),
@@ -220,7 +224,7 @@ defmodule Ecto.Query.Builder.Select do
                          file: unquote(env.file),
                          line: unquote(env.line),
                          take: unquote(take),
-                         subqueries: unquote(subqueries)}
+                         subqueries: unquote(acc.subqueries)}
 
     if kind == :select do
       Builder.apply_query(query, __MODULE__, [select], env)
@@ -365,8 +369,9 @@ defmodule Ecto.Query.Builder.Select do
     Macro.to_string(other)
   end
 
-  defp add_take(take, key, value) do
-    Map.update(take, key, value, &merge_take_kind_and_fields(key, &1, value))
+  defp add_take(acc, key, value) do
+    take = Map.update(acc.take, key, value, &merge_take_kind_and_fields(key, &1, value))
+    %{acc | take: take}
   end
 
   defp merge_take(old_expr, %{} = old_take, %{} = new_take) do

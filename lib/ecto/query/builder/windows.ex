@@ -12,8 +12,8 @@ defmodule Ecto.Query.Builder.Windows do
 
   ## Examples
 
-      iex> escape(quote do [order_by: [desc: 13]] end, {[], :acc}, [x: 0], __ENV__)
-      {[order_by: [desc: 13]], [], {[], :acc}}
+      iex> escape(quote do [order_by: [desc: 13]] end, {[], %{}}, [x: 0], __ENV__)
+      {[order_by: [desc: 13]], [], {[], %{}}}
 
   """
   @spec escape([Macro.t], {list, term}, Keyword.t, Macro.Env.t | {Macro.Env.t, fun})
@@ -125,7 +125,7 @@ defmodule Ecto.Query.Builder.Windows do
   end
 
   defp escape_window(vars, {name, expr}, env) do
-    {compile_acc, runtime_acc, {params, _}} = escape(expr, {[], :acc}, vars, env)
+    {compile_acc, runtime_acc, {params, _acc}} = escape(expr, {[], %{}}, vars, env)
     {name, compile_acc, runtime_acc, Builder.escape_params(params)}
   end
 

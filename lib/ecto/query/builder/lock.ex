@@ -16,7 +16,7 @@ defmodule Ecto.Query.Builder.Lock do
   def escape(lock, _vars, _env) when is_binary(lock), do: lock
 
   def escape({:fragment, _, [_ | _]} = expr, vars, env) do
-    {expr, {params, :acc}} = Builder.escape(expr, :any, {[], :acc}, vars, env)
+    {expr, {params, _acc}} = Builder.escape(expr, :any, {[], %{}}, vars, env)
 
     if params != [] do
       Builder.error!("value interpolation is not allowed in :lock")

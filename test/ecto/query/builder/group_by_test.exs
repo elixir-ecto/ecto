@@ -8,21 +8,21 @@ defmodule Ecto.Query.Builder.GroupByTest do
 
   describe "escape" do
     test "handles expressions and params" do
-      assert {Macro.escape(quote do [&0.y()] end), {[], :acc}} ==
-             escape(:group_by, quote do x.y() end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [&0.y()] end), {[], %{}}} ==
+             escape(:group_by, quote do x.y() end, {[], %{}}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [&0.x(), &1.y()] end), {[], :acc}} ==
-             escape(:group_by, quote do [x.x(), y.y()] end, {[], :acc}, [x: 0, y: 1], __ENV__)
+      assert {Macro.escape(quote do [&0.x(), &1.y()] end), {[], %{}}} ==
+             escape(:group_by, quote do [x.x(), y.y()] end, {[], %{}}, [x: 0, y: 1], __ENV__)
 
       import Kernel, except: [>: 2]
-      assert {Macro.escape(quote do [1 > 2] end), {[], :acc}} ==
-             escape(:group_by, quote do 1 > 2 end, {[], :acc}, [], __ENV__)
+      assert {Macro.escape(quote do [1 > 2] end), {[], %{}}} ==
+             escape(:group_by, quote do 1 > 2 end, {[], %{}}, [], __ENV__)
     end
 
     test "raises on unbound variables" do
       message = ~r"unbound variable `x` in query"
       assert_raise Ecto.Query.CompileError, message, fn ->
-        escape(:group_by, quote do x.y end, {[], :acc}, [], __ENV__)
+        escape(:group_by, quote do x.y end, {[], %{}}, [], __ENV__)
       end
     end
   end

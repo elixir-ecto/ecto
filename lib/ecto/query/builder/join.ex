@@ -58,7 +58,7 @@ defmodule Ecto.Query.Builder.Join do
   end
 
   def escape({:fragment, _, [_ | _]} = expr, vars, env) do
-    {expr, {params, :acc}} = Builder.escape(expr, :any, {[], :acc}, vars, env)
+    {expr, {params, _acc}} = Builder.escape(expr, :any, {[], %{}}, vars, env)
     {:_, expr, nil, params}
   end
 
@@ -206,7 +206,10 @@ defmodule Ecto.Query.Builder.Join do
 
   def build_on(on, join, as, query, binding, count_bind, env) do
     case Ecto.Query.Builder.Filter.escape(:on, on, count_bind, binding, env) do
-      {on_expr, {on_params, []}}  ->
+      {_on_expr, {_on_params, %{subqueries: [_ | _]}}} ->
+        raise ArgumentError, "invalid expression for join `:on`, subqueries aren't supported"
+
+      {on_expr, {on_params, _acc}} ->
         on_params = Builder.escape_params(on_params)
 
         join =
@@ -223,9 +226,6 @@ defmodule Ecto.Query.Builder.Join do
           end
 
         Builder.apply_query(query, __MODULE__, [join, as, count_bind], env)
-
-      _pattern ->
-        raise ArgumentError, "invalid expression for join `:on`, subqueries aren't supported"
     end
   end
 

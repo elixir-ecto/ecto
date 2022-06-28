@@ -46,7 +46,7 @@ defmodule Ecto.Query.Builder.CTE do
   end
 
   def build_cte(_name, {:fragment, _, _} = fragment, env) do
-    {expr, {params, :acc}} = Builder.escape(fragment, :any, {[], :acc}, [], env)
+    {expr, {params, _acc}} = Builder.escape(fragment, :any, {[], %{}}, [], env)
     params = Builder.escape_params(params)
 
     quote do
