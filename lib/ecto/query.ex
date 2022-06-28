@@ -490,7 +490,7 @@ defmodule Ecto.Query do
 
       order_by = [
         asc: :some_field,
-        desc: dynamic([p], fragment("?>>?", p.another_field, "json_key"))
+        desc: dynamic([p], fragment("?->>?", p.another_field, "json_key"))
       ]
 
       from query, order_by: ^order_by
@@ -513,7 +513,7 @@ defmodule Ecto.Query do
 
       group_by = [
         :some_field,
-        dynamic([p], fragment("?>>?", p.another_field, "json_key"))
+        dynamic([p], fragment("?->>?", p.another_field, "json_key"))
       ]
 
       from query, group_by: ^group_by
