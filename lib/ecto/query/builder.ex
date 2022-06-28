@@ -54,10 +54,10 @@ defmodule Ecto.Query.Builder do
 
   @typedoc """
   The accumulator during escape.
-  
-  If the subqueries field is available, it means subquery esscaping must take place.
+
+  If the subqueries field is available, subquery escaping must take place.
   """
-  @type acc :: %{optional(:subqueries) => list(Macro.t()), optional(any) => any} 
+  @type acc :: %{optional(:subqueries) => list(Macro.t()), optional(any) => any}
 
   @doc """
   Smart escapes a query expression and extracts interpolated values in
@@ -69,7 +69,7 @@ defmodule Ecto.Query.Builder do
   map.
   """
   @spec escape(Macro.t, quoted_type | {:in, quoted_type} | {:out, quoted_type}, {list, acc},
-               Keyword.t, Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, term}}
+               Keyword.t, Macro.Env.t | {Macro.Env.t, fun}) :: {Macro.t, {list, acc}}
   def escape(expr, type, params_acc, vars, env)
 
   # var.x - where var is bound
