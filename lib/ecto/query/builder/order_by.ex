@@ -41,10 +41,10 @@ defmodule Ecto.Query.Builder.OrderBy do
 
   ## Examples
 
-      iex> escape(:order_by, quote do [x.x, desc: 13] end, {[], :acc}, [x: 0], __ENV__)
+      iex> escape(:order_by, quote do [x.x, desc: 13] end, {[], %{}}, [x: 0], __ENV__)
       {[asc: {:{}, [], [{:{}, [], [:., [], [{:{}, [], [:&, [], [0]]}, :x]]}, [], []]},
         desc: 13],
-       {[], :acc}}
+       {[], %{}}}
 
   """
   @spec escape(:order_by | :distinct, Macro.t, {list, term}, Keyword.t, Macro.Env.t) ::
@@ -185,7 +185,7 @@ defmodule Ecto.Query.Builder.OrderBy do
 
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    {expr, {params, _}} = escape(:order_by, expr, {[], :acc}, binding, env)
+    {expr, {params, _acc}} = escape(:order_by, expr, {[], %{}}, binding, env)
     params = Builder.escape_params(params)
 
     order_by = quote do: %Ecto.Query.QueryExpr{

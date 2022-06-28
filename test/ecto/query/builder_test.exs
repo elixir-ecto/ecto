@@ -7,7 +7,7 @@ defmodule Ecto.Query.BuilderTest do
   doctest Ecto.Query.Builder
 
   defp escape(quoted, vars, env) do
-    {escaped, {params, :acc}} = escape(quoted, :any, {[], :acc}, vars, env)
+    {escaped, {params, _acc}} = escape(quoted, :any, {[], %{}}, vars, env)
     {escaped, params}
   end
 
@@ -256,7 +256,7 @@ defmodule Ecto.Query.BuilderTest do
   end
 
   defp params(quoted, type, vars \\ []) do
-    {_, {params, :acc}} = escape(quoted, type, {[], :acc}, vars, __ENV__)
+    {_, {params, _acc}} = escape(quoted, type, {[], %{}}, vars, __ENV__)
     params
   end
 

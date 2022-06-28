@@ -8,29 +8,29 @@ defmodule Ecto.Query.Builder.WindowsTest do
 
   describe "escape" do
     test "handles expressions and params" do
-      assert {Macro.escape(quote do [partition_by: [&0.y()]] end), [], {[], :acc}} ==
-             escape(quote do [partition_by: x.y()] end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [partition_by: [&0.y()]] end), [], {[], %{}}} ==
+             escape(quote do [partition_by: x.y()] end, {[], %{}}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [partition_by: [&0.y()]] end), [], {[], :acc}} ==
-             escape(quote do [partition_by: :y] end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [partition_by: [&0.y()]] end), [], {[], %{}}} ==
+             escape(quote do [partition_by: :y] end, {[], %{}}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [order_by: [asc: &0.y()]] end), [], {[], :acc}} ==
-             escape(quote do [order_by: x.y()] end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [order_by: [asc: &0.y()]] end), [], {[], %{}}} ==
+             escape(quote do [order_by: x.y()] end, {[], %{}}, [x: 0], __ENV__)
 
-      assert {Macro.escape(quote do [order_by: [asc: &0.y()]] end), [], {[], :acc}} ==
-             escape(quote do [order_by: :y] end, {[], :acc}, [x: 0], __ENV__)
+      assert {Macro.escape(quote do [order_by: [asc: &0.y()]] end), [], {[], %{}}} ==
+             escape(quote do [order_by: :y] end, {[], %{}}, [x: 0], __ENV__)
     end
 
     test "supports frames" do
-      assert {Macro.escape(quote(do: [frame: fragment({:raw, "ROWS 3 PRECEDING EXCLUDE CURRENT ROW"})])), [], {[], :acc}} ==
-               escape(quote do [frame: fragment("ROWS 3 PRECEDING EXCLUDE CURRENT ROW")] end, {[], :acc}, [], __ENV__)
+      assert {Macro.escape(quote(do: [frame: fragment({:raw, "ROWS 3 PRECEDING EXCLUDE CURRENT ROW"})])), [], {[], %{}}} ==
+               escape(quote do [frame: fragment("ROWS 3 PRECEDING EXCLUDE CURRENT ROW")] end, {[], %{}}, [], __ENV__)
 
       assert {Macro.escape(quote(do: [frame: fragment({:raw, "ROWS "}, {:expr, ^0}, {:raw, " PRECEDING"})])),
-               [], {[{quote(do: start_frame), :any}], :acc}} ==
-               escape(quote do [frame: fragment("ROWS ? PRECEDING", ^start_frame)] end, {[], :acc}, [], __ENV__)
+               [], {[{quote(do: start_frame), :any}], %{}}} ==
+               escape(quote do [frame: fragment("ROWS ? PRECEDING", ^start_frame)] end, {[], %{}}, [], __ENV__)
 
       assert_raise Ecto.Query.CompileError, ~r"expected a dynamic or fragment in `:frame`", fn ->
-        escape(quote do [frame: [rows: -3, exclude: :current]] end, {[], :acc}, [], __ENV__)
+        escape(quote do [frame: [rows: -3, exclude: :current]] end, {[], %{}}, [], __ENV__)
       end
     end
   end
