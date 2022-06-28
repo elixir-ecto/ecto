@@ -9,7 +9,7 @@ defmodule Ecto.Query.Builder.SelectTest do
     params = opts[:params] || []
     take = opts[:take] || %{}
     subqueries = opts[:subqueries] || []
-    {params, %{take: take, subqueries: subqueries}}
+    {params, %{take: take, subqueries: subqueries, interpolations?: false}}
   end
 
   describe "escape" do

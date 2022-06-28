@@ -14,13 +14,13 @@ defmodule Ecto.Query.Builder.Select do
   ## Examples
 
       iex> escape({1, 2}, [], __ENV__)
-      {{:{}, [], [:{}, [], [1, 2]]}, {[], %{take: %{}, subqueries: []}}}
+      {{:{}, [], [:{}, [], [1, 2]]}, {[], %{take: %{}, subqueries: [], interpolations?: false}}}
 
       iex> escape([1, 2], [], __ENV__)
-      {[1, 2], {[], %{take: %{}, subqueries: []}}}
+      {[1, 2], {[], %{take: %{}, subqueries: [], interpolations?: false}}}
 
       iex> escape(quote(do: x), [x: 0], __ENV__)
-      {{:{}, [], [:&, [], [0]]}, {[], %{take: %{}, subqueries: []}}}
+      {{:{}, [], [:&, [], [0]]}, {[], %{take: %{}, subqueries: [], interpolations?: false}}}
 
   """
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {list, %{}}}
@@ -36,7 +36,12 @@ defmodule Ecto.Query.Builder.Select do
       take?(other) ->
         {
           {:{}, [], [:&, [], [0]]},
-          {[], %{take: %{0 => {:any, Macro.expand(other, env)}}, subqueries: []}}
+          {[],
+           %{
+             take: %{0 => {:any, Macro.expand(other, env)}},
+             subqueries: [],
+             interpolations?: false
+           }}
         }
 
       maybe_take?(other) ->
@@ -47,7 +52,9 @@ defmodule Ecto.Query.Builder.Select do
         """
 
       true ->
-        {expr, {params, acc}} = escape(other, {[], %{take: %{}, subqueries: []}}, vars, env)
+        {expr, {params, acc}} =
+          escape(other, {[], %{take: %{}, subqueries: [], interpolations?: false}}, vars, env)
+
         acc = %{acc | subqueries: Enum.reverse(acc.subqueries)}
         {expr, {params, acc}}
     end
@@ -80,8 +87,9 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   # Variable reference
-  defp escape({:^, _, [{_varname, _, nil} = var]}, params_acc, _vars, _env) do
-    {var, params_acc}
+  defp escape({:^, _, [{_varname, _, nil} = var]}, {params, acc}, _vars, _env) do
+    acc = %{acc | interpolations?: true}
+    {var, {params, acc}}
   end
 
   # Merge
@@ -275,16 +283,29 @@ defmodule Ecto.Query.Builder.Select do
     take = {:%{}, [], Map.to_list(acc.take)}
 
     select =
-      quote do
-        %Ecto.Query.SelectExpr{
-          expr: unquote(expr),
-          params: unquote(params),
-          file: unquote(env.file),
-          line: unquote(env.line),
-          take: unquote(take),
-          subqueries: unquote(acc.subqueries)
-        }
-        |> Builder.Select.expand_nested_dynamic(unquote(query))
+      if acc.interpolations? do
+        quote do
+          %Ecto.Query.SelectExpr{
+            expr: unquote(expr),
+            params: unquote(params),
+            file: unquote(env.file),
+            line: unquote(env.line),
+            take: unquote(take),
+            subqueries: unquote(acc.subqueries)
+          }
+          |> Builder.Select.expand_nested_dynamic(unquote(query))
+        end
+      else
+        quote do
+          %Ecto.Query.SelectExpr{
+            expr: unquote(expr),
+            params: unquote(params),
+            file: unquote(env.file),
+            line: unquote(env.line),
+            take: unquote(take),
+            subqueries: unquote(acc.subqueries)
+          }
+        end
       end
 
     if kind == :select do
