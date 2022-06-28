@@ -57,7 +57,11 @@ defmodule Ecto.Query.Builder do
 
   If the subqueries field is available, subquery escaping must take place.
   """
-  @type acc :: %{optional(:subqueries) => list(Macro.t()), optional(any) => any}
+  @type acc :: %{
+          optional(:subqueries) => list(Macro.t()),
+          optional(:take) => %{non_neg_integer => Macro.t()},
+          optional(any) => any
+        }
 
   @doc """
   Smart escapes a query expression and extracts interpolated values in
