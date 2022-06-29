@@ -1043,17 +1043,15 @@ defmodule Ecto.Integration.RepoTest do
       bar_ph = {:placeholder, :bar}
       foo_ph = {:placeholder, :foo}
 
-      intensity_query = from p in Post, where: p.id == ^0, select: p.intensity
-
       entries = [
-        %{intensity: intensity_query, title: bar_ph, posted: ~D[2020-12-21], visits: foo_ph},
+        %{intensity: 1.0, title: bar_ph, posted: ~D[2020-12-21], visits: foo_ph},
         %{intensity: 2.0, title: bar_ph, posted: ~D[2000-12-21], visits: foo_ph}
       ] |> Enum.map(&Map.put(&1, :uuid, Ecto.UUID.generate))
 
       TestRepo.insert_all(Post, entries, placeholders: placeholders)
 
       query = from(p in Post, select: {p.intensity, p.title, p.visits})
-      assert [{nil, "test", 100}, {2.0, "test", 100}] == TestRepo.all(query)
+      assert [{1.0, "test", 100}, {2.0, "test", 100}] == TestRepo.all(query)
     end
 
     test "Repo.insert_all accepts non-atom placeholder keys" do
@@ -1077,25 +1075,25 @@ defmodule Ecto.Integration.RepoTest do
     test "Repo.insert_all upserts and fills in placeholders with conditioned on_conflict query" do
       do_not_update_title = "don't touch me"
 
-      visits_value =
-        from p in Post, where: p.public == ^true and p.id > ^0, select: p.visits, limit: 1
+      posted_value =
+        from p in Post, where: p.public == ^true and p.id > ^0, select: p.posted, limit: 1
 
       on_conflict =
         from p in Post, update: [set: [title: "updated"]], where: p.title != ^do_not_update_title
 
-      placeholders = %{posted: Date.utc_today(), title: "title"}
+      placeholders = %{visits: 1, title: "title"}
 
       post1 = [
-        visits: visits_value,
+        visits: {:placeholder, :visits},
         title: {:placeholder, :title},
         uuid: Ecto.UUID.generate(),
-        posted: {:placeholder, :posted}
+        posted: posted_value
       ]
 
       post2 = [
         title: do_not_update_title,
         uuid: Ecto.UUID.generate(),
-        posted: {:placeholder, :posted}
+        posted: posted_value
       ]
 
       assert TestRepo.insert_all(Post, [post1, post2],
