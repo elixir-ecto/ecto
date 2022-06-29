@@ -661,7 +661,7 @@ defmodule Ecto.Repo do
   """
   @doc group: "Query API"
   @callback get(queryable :: Ecto.Queryable.t(), id :: term, opts :: Keyword.t()) ::
-              Ecto.Schema.t() | nil
+              Ecto.Schema.t() | term | nil
 
   @doc """
   Similar to `c:get/3` but raises `Ecto.NoResultsError` if no record was found.
@@ -687,7 +687,7 @@ defmodule Ecto.Repo do
   """
   @doc group: "Query API"
   @callback get!(queryable :: Ecto.Queryable.t(), id :: term, opts :: Keyword.t()) ::
-              Ecto.Schema.t()
+              Ecto.Schema.t() | term
 
   @doc """
   Fetches a single result from the query.
@@ -718,7 +718,7 @@ defmodule Ecto.Repo do
               queryable :: Ecto.Queryable.t(),
               clauses :: Keyword.t() | map,
               opts :: Keyword.t()
-            ) :: Ecto.Schema.t() | nil
+            ) :: Ecto.Schema.t()  | term | nil
 
   @doc """
   Similar to `c:get_by/3` but raises `Ecto.NoResultsError` if no record was found.
@@ -749,7 +749,7 @@ defmodule Ecto.Repo do
               queryable :: Ecto.Queryable.t(),
               clauses :: Keyword.t() | map,
               opts :: Keyword.t()
-            ) :: Ecto.Schema.t()
+            ) :: Ecto.Schema.t() | term
 
   @doc """
   Reloads a given schema or schema list from the database.
@@ -918,7 +918,7 @@ defmodule Ecto.Repo do
   """
   @doc group: "Query API"
   @callback one(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
-              Ecto.Schema.t() | nil
+              Ecto.Schema.t() | term | nil
 
   @doc """
   Similar to `c:one/2` but raises `Ecto.NoResultsError` if no record was found.
@@ -939,7 +939,7 @@ defmodule Ecto.Repo do
   """
   @doc group: "Query API"
   @callback one!(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) ::
-              Ecto.Schema.t()
+              Ecto.Schema.t() | term
 
   @doc """
   Preloads all associations on the given struct or structs.
@@ -1078,7 +1078,7 @@ defmodule Ecto.Repo do
       MyRepo.all(query)
   """
   @doc group: "Query API"
-  @callback all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: [Ecto.Schema.t()]
+  @callback all(queryable :: Ecto.Queryable.t(), opts :: Keyword.t()) :: [Ecto.Schema.t() | term]
 
   @doc """
   Returns a lazy enumerable that emits all entries from the data store
