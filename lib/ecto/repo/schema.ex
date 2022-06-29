@@ -99,7 +99,7 @@ defmodule Ecto.Repo.Schema do
       |> Enum.map(&elem(&1, 1))
 
     if has_query? do
-      {rows, value_param_count} = plan_query_in_rows(rows, header, adapter)
+      {rows, value_param_count} = plan_query_in_rows(rows, header, adapter, placeholder_size)
       {rows, header, placeholder_vals_list, fn -> placeholder_size + value_param_count end}
     else
       counter = fn ->
@@ -221,9 +221,9 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp plan_query_in_rows(rows, header, adapter) do
+  defp plan_query_in_rows(rows, header, adapter, counter) do
     {rows, {_counter, value_param_counter}} =
-      Enum.map_reduce(rows, {0, 0}, fn fields, {counter, value_param_counter} ->
+      Enum.map_reduce(rows, {counter, 0}, fn fields, {counter, value_param_counter} ->
         Enum.flat_map_reduce(header, {counter, value_param_counter}, fn key, {counter, value_param_counter}  ->
           case :lists.keyfind(key, 1, fields) do
             {^key, %Ecto.Query{} = query} ->
@@ -235,7 +235,7 @@ defmodule Ecto.Repo.Schema do
               {[{key, {query, dump_params}}], {counter + num_params, value_param_counter + num_params}}
 
             {^key, {:placeholder, _} = value} ->
-              {[{key, value}], {counter + 1, value_param_counter}}
+              {[{key, value}], {counter, value_param_counter}}
 
             {^key, value} ->
               {[{key, value}], {counter + 1, value_param_counter + 1}}

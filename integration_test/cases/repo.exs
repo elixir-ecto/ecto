@@ -1043,15 +1043,17 @@ defmodule Ecto.Integration.RepoTest do
       bar_ph = {:placeholder, :bar}
       foo_ph = {:placeholder, :foo}
 
+      intensity_query = from p in Post, where: p.id == ^0, select: p.intensity
+
       entries = [
-        %{intensity: 1.0, title: bar_ph, posted: ~D[2020-12-21], visits: foo_ph},
+        %{intensity: intensity_query, title: bar_ph, posted: ~D[2020-12-21], visits: foo_ph},
         %{intensity: 2.0, title: bar_ph, posted: ~D[2000-12-21], visits: foo_ph}
       ] |> Enum.map(&Map.put(&1, :uuid, Ecto.UUID.generate))
 
       TestRepo.insert_all(Post, entries, placeholders: placeholders)
 
       query = from(p in Post, select: {p.intensity, p.title, p.visits})
-      assert [{1.0, "test", 100}, {2.0, "test", 100}] == TestRepo.all(query)
+      assert [{nil, "test", 100}, {2.0, "test", 100}] == TestRepo.all(query)
     end
 
     test "Repo.insert_all accepts non-atom placeholder keys" do
