@@ -687,7 +687,7 @@ defmodule Ecto.Repo do
   """
   @doc group: "Query API"
   @callback get!(queryable :: Ecto.Queryable.t(), id :: term, opts :: Keyword.t()) ::
-              Ecto.Schema.t() | any
+              Ecto.Schema.t() | term
 
   @doc """
   Fetches a single result from the query.
