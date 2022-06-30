@@ -60,7 +60,7 @@ integration-test-base:
         apk del .build-dependencies && rm -f msodbcsql*.sig mssql-tools*.apk
     ENV PATH="/opt/mssql-tools/bin:${PATH}"
 
-    GIT CLONE -b insert_all_cast_param https://github.com/greg-rychlewski/ecto_sql.git /src/ecto_sql
+    GIT CLONE -branch insert_all_cast_param https://github.com/greg-rychlewski/ecto_sql.git /src/ecto_sql
     WORKDIR /src/ecto_sql
     RUN mix deps.get
 
