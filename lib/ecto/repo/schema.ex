@@ -100,8 +100,8 @@ defmodule Ecto.Repo.Schema do
       |> Enum.map(&{elem(&1, 1), elem(&1, 2)})
       |> Enum.unzip
 
-    {rows, cast_params, counter} = plan_query_in_rows(rows, header, adapter, placeholder_size)
-    {rows, header, cast_params, placeholder_cast_params, placeholder_dump_params, fn -> counter end}
+    {rows, row_cast_params, counter} = plan_query_in_rows(rows, header, adapter, placeholder_size)
+    {rows, header, row_cast_params, placeholder_cast_params, placeholder_dump_params, fn -> counter end}
   end
 
   defp extract_header_and_fields(repo, %Ecto.Query{} = query, _schema, _dumper, _autogen_id, _placeholder_map, adapter, opts) do
