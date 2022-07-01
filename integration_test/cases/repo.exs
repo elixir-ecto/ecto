@@ -1841,6 +1841,23 @@ defmodule Ecto.Integration.RepoTest do
     @tag :with_conflict_target
     test "on conflict query and conflict target" do
       on_conflict = from p in Post, where: p.id > ^0, update: [set: [title: "second"]]
+      post = [title: "first", uuid: Ecto.UUID.generate()]
+      assert TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
+             {1, nil}
+
+      # Error on non-conflict target
+      assert catch_error(TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:id]))
+
+      # Error on conflict target
+      assert TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
+             {1, nil}
+      assert TestRepo.all(from p in Post, select: p.title) == ["second"]
+    end
+
+    @tag :insert_select
+    @tag :with_conflict_target
+    test "on conflict query and insert select and conflict target" do
+      on_conflict = from p in Post, where: p.id > ^0, update: [set: [title: "second"]]
       visits_value = from p in Post, where: p.public == ^true and p.id > ^0, select: p.visits, limit: 1
       post = [title: "first", uuid: Ecto.UUID.generate(), visits: visits_value]
       assert TestRepo.insert_all(Post, [post], on_conflict: on_conflict, conflict_target: [:uuid]) ==
