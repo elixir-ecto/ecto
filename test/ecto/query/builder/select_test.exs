@@ -9,7 +9,7 @@ defmodule Ecto.Query.Builder.SelectTest do
     params = opts[:params] || []
     take = opts[:take] || %{}
     subqueries = opts[:subqueries] || []
-    {params, %{take: take, subqueries: subqueries, interpolations?: false}}
+    {params, %{take: take, subqueries: subqueries, expand_dynamic?: false}}
   end
 
   describe "escape" do
@@ -98,7 +98,17 @@ defmodule Ecto.Query.Builder.SelectTest do
       field = :title
 
       ref = dynamic(field(as(^as), ^field))
-      query = from(b in "blogs", select: ^%{title: ref})
+      query = from(b in "blogs", select: %{title: dynamic(ref)})
+
+      assert Macro.to_string(query.select.expr) == "%{title: as(:blog).title()}"
+    end
+
+    test "supports dynamic select at root level" do
+      as = :blog
+      field = :title
+
+      ref = dynamic(field(as(^as), ^field))
+      query = from(b in "blogs", select: dynamic(%{title: ref}))
 
       assert Macro.to_string(query.select.expr) == "%{title: as(:blog).title()}"
     end
@@ -108,7 +118,7 @@ defmodule Ecto.Query.Builder.SelectTest do
       field = :title
 
       ref = dynamic(field(as(^as), ^field))
-      query = from(b in "blogs", select: %{t: b.title, title: ^ref})
+      query = from(b in "blogs", select: %{t: b.title, title: dynamic(ref)})
 
       assert Macro.to_string(query.select.expr) == "%{t: &0.title(), title: as(:blog).title()}"
     end
@@ -162,7 +172,7 @@ defmodule Ecto.Query.Builder.SelectTest do
           select: %{
             title: l.archived_at,
             maxdue: subquery(subquery0),
-            template_name: ^ref,
+            template_name: dynamic(ref),
             user_email: subquery(subquery2)
           }
         )
@@ -281,7 +291,7 @@ defmodule Ecto.Query.Builder.SelectTest do
         end)
 
       assert Macro.to_string(query.select.expr) ==
-               "%{comments: count(&2.id()), name: &0.name(), author: &1.author()}"
+               "merge(merge(%{comments: count(&2.id())}, %{^0 => &0.name()}), %{^1 => &1.author()})"
     end
 
     test "supports '...' in binding list with no prior select" do

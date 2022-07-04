@@ -1470,7 +1470,7 @@ defmodule Ecto.Query.PlannerTest do
 
     query =
       Post
-      |> select([p], %{title: ^ref, text: p.text})
+      |> select([p], %{title: dynamic(ref), text: p.text})
       |> normalize()
 
     assert query.select.expr ==

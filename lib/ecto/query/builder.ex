@@ -188,6 +188,12 @@ defmodule Ecto.Query.Builder do
     {expr, {[expr | params], acc}}
   end
 
+  # dynamic
+  def escape({:dynamic, _, [expr]}, _, {params, acc}, _vars, _env) do
+    acc = %{acc | expand_dynamic?: true}
+    {expr, {params, acc}}
+  end
+
   # interval
 
   def escape({:from_now, meta, [count, interval]}, type, params_acc, vars, env) do
