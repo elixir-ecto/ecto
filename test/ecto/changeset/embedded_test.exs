@@ -10,6 +10,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
   alias __MODULE__.Profile
   alias __MODULE__.Post
   alias __MODULE__.Nested
+  alias __MODULE__.NestedPost
 
   defmodule Author do
     use Ecto.Schema
@@ -24,12 +25,28 @@ defmodule Ecto.Changeset.EmbeddedTest do
         field :name, :string
       end
       embeds_one :nested, Nested
+      embeds_many :nested_many, NestedPost, on_replace: :delete
       embeds_many :posts, Post, on_replace: :delete
       embeds_many :raise_posts, Post, on_replace: :raise
       embeds_many :invalid_posts, Post, on_replace: :mark_as_invalid
       embeds_many :inline_posts, Post do
         field :title, :string
       end
+    end
+  end
+
+  defmodule NestedPost do
+    use Ecto.Schema
+    import Ecto.Changeset
+
+    @primary_key false
+    embedded_schema do
+      embeds_many :posts, Post, on_replace: :delete
+    end
+
+    def changeset(schema, params) do
+      cast(schema, params, [])
+      |> cast_embed(:posts, with: &Post.changeset/2, required: true)
     end
   end
 
@@ -362,6 +379,16 @@ defmodule Ecto.Changeset.EmbeddedTest do
     assert post_change.action  == :insert
     assert post_change.valid?
     assert changeset.valid?
+  end
+
+  test "cast embeds_many with nested embed" do
+    params = %{"nested_many" => [%{"posts" => [%{"title" => "hello"}]}]}
+    changeset = cast(%Author{}, params, :nested_many)
+    assert changeset.valid?
+
+    changeset = Changeset.apply_changes(changeset) |> cast(params, :nested_many)
+    assert changeset.valid?
+    refute changeset.changes.nested_many
   end
 
   test "cast embeds_many with map" do
