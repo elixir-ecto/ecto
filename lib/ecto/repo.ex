@@ -1760,9 +1760,9 @@ defmodule Ecto.Repo do
         repo.insert!(%Post{})
       end)
 
-  If an unhandled error occurs the transaction will be rolled back
-  and the error will bubble up from the transaction function.
-  If no error occurred the transaction will be committed when the
+  If an Elixir exception  occurs the transaction will be rolled back
+  and the exception will bubble up from the transaction function.
+  If no exception occurred the transaction will be committed when the
   function returns. A transaction can be explicitly rolled back
   by calling `c:rollback/1`, this will immediately leave the function
   and return the value given to `rollback` as `{:error, value}`.
@@ -1774,7 +1774,7 @@ defmodule Ecto.Repo do
   is simply executed, without wrapping the new transaction call in any
   way. If there is an error in the inner transaction and the error is
   rescued, or the inner transaction is rolled back, the whole outer
-  transaction is marked as tainted, guaranteeing nothing will be committed.
+  transaction is aborted, guaranteeing nothing will be committed.
 
   Below is an example of how rollbacks work with nested transactions:
 
@@ -1795,10 +1795,12 @@ defmodule Ecto.Repo do
               # `rollback/1` stops execution, so code here won't be run
             end)
 
-          # When the inner transaction was rolled back, execution in this outer
-          # transaction is also stopped immediately. When this occurs, the
-          # outer transaction(s) return `{:error, :rollback}`.
+          # The transaction here is now aborted and any further
+          # operation will raise an exception.
         end)
+
+  See the "Aborted transactions" section for more examples of aborted
+  transactions and how to handle them.
 
   ## Use with Ecto.Multi
 
@@ -1817,6 +1819,38 @@ defmodule Ecto.Repo do
 
   You can read more about using transactions with `Ecto.Multi` as well as
   see some examples in the `Ecto.Multi` documentation.
+
+  ## Aborted transactions
+
+  When an operation inside a transaction fails, the database will actually
+  abort the transaction. For example, if you attempt an insert that violates
+  a unique constraint, the insert fails and the transaction is aborted.
+  In such cases, any further operation inside the transaction will error out.
+
+  Take the following transaction:
+
+      Repo.transaction(fn repo ->
+        case repo.insert(changeset) do
+          {:ok, post} ->
+            post
+
+          {:error, changeset} ->
+            repo.insert(%Failure{})
+        end
+      end)
+
+  If the changeset is invalid before it reaches the database,
+  for example due to a validation error, an `:error` tuple is
+  returned and the `repo.insert(%Failure{})` operation will
+  execute as usual. However, if the changeset is valid but then
+  the insert operation fails due to a database constraint, the
+  subsequent `insert` operation will error because the database
+  has aborted the transaction. In Postgres, this error would look
+  like this:
+
+      ** (Postgrex.Error) ERROR 25P02 (in_failed_sql_transaction) current transaction is aborted, commands ignored until end of transaction block
+
+  Such scenarios therefore must be handled outside of the transaction.
 
   ## Working with processes
 
