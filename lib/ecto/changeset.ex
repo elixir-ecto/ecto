@@ -663,7 +663,7 @@ defmodule Ecto.Changeset do
   from `changeset.params`. Those parameters are expected to be
   a map with attributes, similar to the ones passed to `cast/4`.
   Once parameters are retrieved, `cast_assoc/3` will match those
-  parameters with the associations already in the changeset record.
+  parameters with the associations already in the changeset data.
 
   Once `cast_assoc/3` is called, Ecto will compare each parameter
   with the user's already preloaded addresses and act as follows:
@@ -684,9 +684,12 @@ defmodule Ecto.Changeset do
       be invoked (see the "On replace" section on the module documentation)
 
   Every time the `MyApp.Address.changeset/2` function is invoked, it must
-  return a changeset. Once the parent changeset is given to an `Ecto.Repo`
-  function, all entries will be inserted/updated/deleted within the same
-  transaction.
+  return a changeset. This changeset will always be included under `changes`
+  of the parent changeset, even if there are no changes. This is done for
+  reflection purposes, allowing developers to introspect validations and
+  other metadata from the association. Once the parent changeset is given
+  to an `Ecto.Repo` function, all entries will be inserted/updated/deleted
+  within the same transaction.
 
   Note developers are allowed to explicitly set the `:action` field of a
   changeset to instruct Ecto how to act in certain situations. Let's suppose
