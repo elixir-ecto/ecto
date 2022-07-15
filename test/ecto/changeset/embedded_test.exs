@@ -388,7 +388,7 @@ defmodule Ecto.Changeset.EmbeddedTest do
 
     changeset = Changeset.apply_changes(changeset) |> cast(params, :nested_many)
     assert changeset.valid?
-    refute changeset.changes.nested_many
+    assert changeset.changes == %{}
   end
 
   test "cast embeds_many with map" do

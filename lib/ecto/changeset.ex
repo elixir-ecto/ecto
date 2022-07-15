@@ -780,6 +780,15 @@ defmodule Ecto.Changeset do
   """
   def cast_embed(changeset, name, opts \\ []) when is_atom(name) do
     cast_relation(:embed, changeset, name, opts)
+    |> maybe_unchanged(changeset, name)
+  end
+
+  defp maybe_unchanged(changeset, %{data: data} = original_changeset, name) do
+    original = Map.get(data, name)
+    case fetch_field(changeset, name) do
+      {:changes, ^original} -> changeset
+      _ -> original_changeset
+    end
   end
 
   defp cast_relation(type, %Changeset{data: data, types: types}, _name, _opts)
