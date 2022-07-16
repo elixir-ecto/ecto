@@ -11,11 +11,11 @@ defmodule Ecto.Query.Builder.FilterTest do
       import Kernel, except: [==: 2, and: 2]
 
       assert escape(:where, quote do [] end, 0, [x: 0], __ENV__) ===
-             {true, {[], %{subqueries: []}}}
+             {true, {[], %{subqueries: [], expand_dynamic?: false}}}
 
       assert escape(:where, quote do {x.x()} == {^"foo"} end, 0, [x: 0], __ENV__) ===
              {Macro.escape(quote do {&0.x()} == {^0} end),
-             {[{"foo", {0, :x}}], %{subqueries: []}}}
+             {[{"foo", {0, :x}}], %{subqueries: [], expand_dynamic?: false}}}
 
       escaped = Macro.escape(quote do &0.x() == ^0 and &0.y() == ^1 end)
       assert {^escaped, {params, %{}}} =
@@ -64,6 +64,27 @@ defmodule Ecto.Query.Builder.FilterTest do
              "&0.foo() == ^0 and &0.bar() == ^1"
       assert where.params ==
              [{1, {0, :foo}}, {"baz", {0, :bar}}]
+    end
+
+    test "supports nested dynamic expressions" do
+      dynamic = dynamic([p], p.bar == ^"baz")
+      %{wheres: [where]} = where("posts", [p], p.foo == ^1 and dynamic(dynamic))
+      assert Macro.to_string(where.expr) ==
+             "&0.foo() == ^0 and &0.bar() == ^1"
+      assert where.params ==
+             [{1, {0, :foo}}, {"baz", {0, :bar}}]
+    end
+
+    test "supports deeply nested dynamic expressions" do
+      dynamic = dynamic([p], p.title)
+
+      %{wheres: [where1]} =
+        where("posts", [p], p.foo == ^1 and fragment("lower(?)", dynamic(dynamic)) == ^"bar")
+
+      %{wheres: [where2]} =
+        where("posts", [p], p.foo == ^1 and fragment("lower(?)", p.title) == ^"bar")
+
+      assert Macro.to_string(where1.expr) == Macro.to_string(where2.expr)
     end
 
     test "in subquery" do
