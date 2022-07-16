@@ -1760,7 +1760,7 @@ defmodule Ecto.Repo do
         repo.insert!(%Post{})
       end)
 
-  If an Elixir exception occurs the transaction will be rolled back
+  If an exception occurs the transaction will be rolled back
   and the exception will bubble up from the transaction function.
   If no exception occurs, the transaction is committed when the
   function returns. A transaction can be explicitly rolled back
@@ -1828,43 +1828,51 @@ defmodule Ecto.Repo do
 
   ## Aborted transactions
 
-  When an operation inside a transaction fails, the database will actually
-  abort the transaction. For example, if you attempt an insert that violates
-  a unique constraint, the insert fails and the transaction is aborted.
-  In such cases, any further operation inside the transaction will raise
-  exceptions.
+  When an operation inside a transaction fails, the transaction is aborted in the database. 
+  For instance, if you attempt an insert that violates a unique constraint, the insert fails 
+  and the transaction is aborted. In such cases, any further operation inside the transaction 
+  will raise exceptions.
 
-  Take the following transaction:
+  Take the following transaction as an example:
 
       Repo.transaction(fn repo ->
         case repo.insert(changeset) do
           {:ok, post} ->
-            post
+            repo.insert(%Success{})
 
           {:error, changeset} ->
             repo.insert(%Failure{})
         end
       end)
 
-  If the changeset is invalid before it reaches the database,
-  for example due to a validation error, no statement is sent
-  to the database, an `:error` tuple is returned, and the
-  `repo.insert(%Failure{})` operation will execute as usual.
-  However, if the changeset is valid but the insert operation
-  fails due to a database constraint, the subsequent
-  `repo.insert(%Failure{})` operation will raise an exception
-  because the database has aborted the transaction and made any
-  subsequent operation invalid. In Postgres, it would look like
-  this:
-
+  If the changeset is valid, but the insert operation fails due to a database constraint,
+  the subsequent `repo.insert(%Failure{})` operation will raise an exception because the
+  database has already aborted the transaction and thus making the operation invalid.
+  In Postgres, the exception would look like this:
+  
       ** (Postgrex.Error) ERROR 25P02 (in_failed_sql_transaction) current transaction is aborted, commands ignored until end of transaction block
+      
+  If the changeset is invalid before it reaches the database due to a validation error, 
+  no statement is sent to the database, an `:error` tuple is returned, and `repo.insert(%Failure{})` 
+  operation will execute as usual. 
 
-  Such scenarios must be handled outside of the transaction.
-  For example, you can choose to perform an explicit `repo.rollback`
-  call in the `{:error, changeset}` clause and then perform the
-  `repo.insert(%Failure{})` outside of the transaction. Alternatively,
-  consider using `Ecto.Multi`, as they automatically rollback whenever
-  an operation fails.
+  We have a few options to deal with such scenarios:
+  
+  The most obvious one would be to prevent the the database from raising using 
+  something like `repo.insert(post, on_conflict: :nothing)`. In this case, the 
+  operation will still fail at the database level, but since we are supressing the error, 
+  we will receive back a `:ok` tuple with an unsaved post: `%Post{id: nil}`.
+  
+  If you are using Postgres and don't want to change the semantics of your code, 
+  you can also use the savepoints feature by passing the `:mode` option like this: 
+  `repo.insert(changeset, mode: :savepoint)`. In case of an exception, this will make 
+  the transaction rollback to the savepoint and prevent the transaction from failing.
+
+  Another alternative is to handle this operation outside of the transaction. 
+  For example, you can choose to perform an explicit `repo.rollback` call in the 
+  `{:error, changeset}` clause and then perform the `repo.insert(%Failure{})` outside 
+  of the transaction. You might also consider using `Ecto.Multi`, as they automatically 
+  rollback whenever an operation fails.
 
   ## Working with processes
 
