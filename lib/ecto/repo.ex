@@ -1838,10 +1838,10 @@ defmodule Ecto.Repo do
       Repo.transaction(fn repo ->
         case repo.insert(changeset) do
           {:ok, post} ->
-            repo.insert(%Success{})
+            repo.insert(%Status{value: "success"})
 
           {:error, changeset} ->
-            repo.insert(%Failure{})
+            repo.insert(%Status{value: "failure"})
         end
       end)
 
