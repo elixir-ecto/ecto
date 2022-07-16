@@ -1760,7 +1760,7 @@ defmodule Ecto.Repo do
         repo.insert!(%Post{})
       end)
 
-  If an exception occurs the transaction will be rolled back
+  If an Elixir exception occurs the transaction will be rolled back
   and the exception will bubble up from the transaction function.
   If no exception occurs, the transaction is committed when the
   function returns. A transaction can be explicitly rolled back
@@ -1856,12 +1856,7 @@ defmodule Ecto.Repo do
   no statement is sent to the database, an `:error` tuple is returned, and `repo.insert(%Failure{})` 
   operation will execute as usual. 
 
-  We have a few options to deal with such scenarios:
-  
-  The most obvious one would be to prevent the the database from raising using 
-  something like `repo.insert(post, on_conflict: :nothing)`. In this case, the 
-  operation will still fail at the database level, but since we are supressing the error, 
-  we will receive back a `:ok` tuple with an unsaved post: `%Post{id: nil}`.
+  We have two options to deal with such scenarios:
   
   If you are using Postgres and don't want to change the semantics of your code, 
   you can also use the savepoints feature by passing the `:mode` option like this: 
