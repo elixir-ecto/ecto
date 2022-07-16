@@ -1858,10 +1858,10 @@ defmodule Ecto.Repo do
 
   We have two options to deal with such scenarios:
   
-  If you are using Postgres and don't want to change the semantics of your code, 
-  you can also use the savepoints feature by passing the `:mode` option like this: 
-  `repo.insert(changeset, mode: :savepoint)`. In case of an exception, this will make 
-  the transaction rollback to the savepoint and prevent the transaction from failing.
+  If don't want to change the semantics of your code,  you can also use the savepoints 
+  feature by passing the `:mode` option like this: `repo.insert(changeset, mode: :savepoint)`. 
+  In case of an exception, the transaction will rollback to the savepoint and prevent 
+  the transaction from failing.
 
   Another alternative is to handle this operation outside of the transaction. 
   For example, you can choose to perform an explicit `repo.rollback` call in the 
