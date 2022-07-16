@@ -200,7 +200,7 @@ defmodule Ecto.Query.Builder.Select do
         %Ecto.Query.SelectExpr{expr: {:&, [], [0]}, take: take, file: file, line: line}
       else
         %Ecto.Query.SelectExpr{expr: fields, take: %{}, file: file, line: line}
-        |> expand_nested_dynamic(query)
+        |> Builder.Dynamic.expand_nested(query)
       end
 
     if kind == :select do
@@ -208,50 +208,6 @@ defmodule Ecto.Query.Builder.Select do
     else
       merge(query, expr)
     end
-  end
-
-  def expand_nested_dynamic(select, query) do
-    case select do
-      %{expr: expr, params: params, subqueries: subqueries} ->
-        acc = {Enum.reverse(params), Enum.reverse(subqueries), length(params)}
-        {expr, {params, subqueries, _count}} = expand_dynamic(expr, acc, query)
-        %{select | expr: expr, params: Enum.reverse(params), subqueries: Enum.reverse(subqueries)}
-
-      other ->
-        other
-    end
-  end
-
-  defp expand_dynamic({:%{}, [], fields}, acc, query) do
-    {fields, acc} = expand_dynamic(fields, acc, query)
-    {{:%{}, [], fields}, acc}
-  end
-
-  defp expand_dynamic(fields, acc, query) when is_map(fields) and not is_struct(fields) do
-    {fields, acc} = expand_dynamic(Enum.to_list(fields), acc, query)
-    {{:%{}, [], fields}, acc}
-  end
-
-  defp expand_dynamic(fields, acc, query) when is_list(fields) do
-    Enum.map_reduce(fields, acc, fn
-      {key, %Ecto.Query.DynamicExpr{} = dynamic}, acc ->
-        {expr, acc} = expand_dynamic(dynamic, acc, query)
-        {{key, expr}, acc}
-
-      other, acc ->
-        {other, acc}
-    end)
-  end
-
-  defp expand_dynamic(%Ecto.Query.DynamicExpr{} = dynamic, {params, subqueries, count}, query) do
-    {expr, params, subqueries, count} =
-      Ecto.Query.Builder.Dynamic.partially_expand(query, dynamic, params, subqueries, count)
-
-    {expr, {params, subqueries, count}}
-  end
-
-  defp expand_dynamic(other, acc, _query) do
-    {other, acc}
   end
 
   @doc """
@@ -287,7 +243,7 @@ defmodule Ecto.Query.Builder.Select do
             take: unquote(take),
             subqueries: unquote(acc.subqueries)
           }
-          |> Builder.Select.expand_nested_dynamic(unquote(query))
+          |> Builder.Dynamic.expand_nested(unquote(query))
         end
       else
         quote do
