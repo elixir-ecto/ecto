@@ -1450,7 +1450,22 @@ defmodule Ecto.Query.PlannerTest do
            select_fields([:id, :posted, :uuid, :crazy_comment, :post_id, :crazy_post_id], 1)
   end
 
-  test "normalize: select with dynamic map" do
+  test "normalize: select single dynamic value interpolated at root level" do
+    ref = dynamic([p], p.title)
+
+    query =
+      Post
+      |> select([_, f], ^ref)
+      |> normalize()
+
+    assert query.select.expr ==
+             {{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}
+
+    assert query.select.fields ==
+             [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
+  end
+
+  test "normalize: select map with dynamic values interpolated at root level" do
     ref = dynamic([p], p.title)
 
     query =
@@ -1463,27 +1478,6 @@ defmodule Ecto.Query.PlannerTest do
 
     assert query.select.fields ==
              [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
-  end
-
-  test "normalize: select with partly dynamic map" do
-    ref = dynamic([p], p.title)
-
-    query =
-      Post
-      |> select([p], %{title: dynamic(ref), text: p.text})
-      |> normalize()
-
-    assert query.select.expr ==
-             {:%{}, [],
-              [
-                title: {{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []},
-                text: {{:., [type: :string], [{:&, [], [0]}, :text]}, [], []}
-              ]}
-
-    assert query.select.fields == [
-             {{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []},
-             {{:., [type: :string], [{:&, [], [0]}, :text]}, [], []}
-           ]
   end
 
   test "normalize: select with subquery" do

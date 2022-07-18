@@ -93,32 +93,32 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert select("q", [q], struct(q, ^fields)).select.take == %{0 => {:struct, fields}}
     end
 
-    test "supports dynamic select" do
+    test "supports single dynamic value interpolated at root level" do
       as = :blog
       field = :title
 
       ref = dynamic(field(as(^as), ^field))
-      query = from(b in "blogs", select: %{title: dynamic(ref)})
+      query = from(b in "blogs", select: ^ref)
+
+      assert Macro.to_string(query.select.expr) == "as(:blog).title()"
+    end
+
+    test "supports map with dynamic values interpolated at root level" do
+      as = :blog
+      field = :title
+
+      ref = dynamic(field(as(^as), ^field))
+      query = from(b in "blogs", select: ^%{title: ref})
 
       assert Macro.to_string(query.select.expr) == "%{title: as(:blog).title()}"
     end
 
-    test "supports dynamic select at root level" do
+    test "supports dynamic select_merge" do
       as = :blog
       field = :title
 
       ref = dynamic(field(as(^as), ^field))
-      query = from(b in "blogs", select: dynamic(%{title: ref}))
-
-      assert Macro.to_string(query.select.expr) == "%{title: as(:blog).title()}"
-    end
-
-    test "supports partly dynamic select" do
-      as = :blog
-      field = :title
-
-      ref = dynamic(field(as(^as), ^field))
-      query = from(b in "blogs", select: %{t: b.title, title: dynamic(ref)})
+      query = from(b in "blogs", select: %{t: b.title}, select_merge: ^%{title: ref})
 
       assert Macro.to_string(query.select.expr) == "%{t: &0.title(), title: as(:blog).title()}"
     end
@@ -172,28 +172,27 @@ defmodule Ecto.Query.Builder.SelectTest do
           select: %{
             title: l.archived_at,
             maxdue: subquery(subquery0),
-            template_name: dynamic(ref),
             user_email: subquery(subquery2)
-          }
+          },
+          select_merge: ^%{template_name: ref}
         )
 
       assert Macro.to_string(query.select.expr) == """
-             %{\
+             merge(%{\
              title: &0.archived_at(), \
              maxdue: {:subquery, 0}, \
-             template_name: fragment(\
-             {:raw, "CASE WHEN "}, \
-             {:expr, &0.from_template_id() == ^2}, \
-             {:raw, " THEN "}, \
-             {:expr, ""}, \
-             {:raw, " ELSE "}, \
-             {:expr, {:subquery, 2}}, \
-             {:raw, " END"}\
-             ), \
-             user_email: {:subquery, 1}}\
+             user_email: {:subquery, 1}\
+             }, %{\
+             template_name:\
+              fragment({:raw, "CASE WHEN "},\
+              {:expr, &0.from_template_id() == ^2},\
+              {:raw, " THEN "}, {:expr, ""},\
+              {:raw, " ELSE "}, {:expr, {:subquery, 0}},\
+              {:raw, " END"})\
+             })\
              """
 
-      assert length(query.select.subqueries) == 3
+      assert length(query.select.subqueries) == 2
       assert length(query.select.params) == 4
     end
 
