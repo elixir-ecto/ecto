@@ -1748,7 +1748,7 @@ defmodule Ecto.Query do
     - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the intersection fields.
     - Wrap the intersection in a subquery and refer to the binding of the subquery.
 
-  ## Keywords example
+  ## Keywords examples
       
       # Unordered result
       supplier_query = from s in Supplier, select: s.city
@@ -1759,7 +1759,7 @@ defmodule Ecto.Query do
       intersect_all_query = from c in Customer, select: c.city, intersect_all: ^supplier_query
       from s in subquery(intersect_all_query), order_by: s.city
 
-  ## Expressions example
+  ## Expressions examples
       
       # Unordered result
       supplier_query = Supplier |> select([s], s.city)
