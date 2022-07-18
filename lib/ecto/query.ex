@@ -1528,7 +1528,7 @@ defmodule Ecto.Query do
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the union. `order_by` must
   be specified in one of the following ways, since the union of two
-  or more queries does not have a binding:
+  or more queries is not automatically aliased:
 
     - Use `Ecto.Query.API.fragment/1` to pass an unbound `order_by` statement in a query expression.
     - Wrap the union in a subquery and refer to the binding of the subquery.
@@ -1569,7 +1569,7 @@ defmodule Ecto.Query do
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the union. `order_by` must
   be specified in one of the following ways, since the union of two
-  or more queries does not have a binding:
+  or more queries is not automatically aliased:
 
     - Use `Ecto.Query.API.fragment/1` to pass an unbound `order_by` statement in a query expression.
     - Wrap the union in a subquery and refer to the binding of the subquery.
@@ -1615,7 +1615,7 @@ defmodule Ecto.Query do
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the set difference. `order_by`
   must be specified in one of the following ways, since the set difference
-  of two or more queries does not have a binding:
+  of two or more queries is not automatically aliased:
 
     - Use `Ecto.Query.API.fragment/1` to pass an unbound `order_by` statement in a query expression.
     - Wrap the set difference in a subquery and refer to the binding of the subquery.
@@ -1656,7 +1656,7 @@ defmodule Ecto.Query do
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the set difference. `order_by`
   must be specified in one of the following ways, since the set difference
-  of two or more queries does not have a binding:
+  of two or more queries is not automatically aliased:
 
     - Use `Ecto.Query.API.fragment/1` to pass an unbound `order_by` statement in a query expression.
     - Wrap the set difference in a subquery and refer to the binding of the subquery.
@@ -1702,7 +1702,7 @@ defmodule Ecto.Query do
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the set difference. `order_by`
   must be specified in one of the following ways, since the intersection
-  of two or more queries does not have a binding:
+  of two or more queries is not automatically aliased:
 
     - Use `Ecto.Query.API.fragment/1` to pass an unbound `order_by` statement in a query expression.
     - Wrap the intersection in a subquery and refer to the binding of the subquery.
@@ -1743,7 +1743,7 @@ defmodule Ecto.Query do
   Note that the operations `order_by`, `limit` and `offset` of the
   current `query` apply to the result of the set difference. `order_by`
   must be specified in one of the following ways, since the intersection
-  of two or more queries does not have a binding:
+  of two or more queries is not automatically aliased:
 
     - Use `Ecto.Query.API.fragment/1` to pass an unbound `order_by` statement in a query expression.
     - Wrap the intersection in a subquery and refer to the binding of the subquery.
