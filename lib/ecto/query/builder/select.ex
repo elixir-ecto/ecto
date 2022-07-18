@@ -14,13 +14,13 @@ defmodule Ecto.Query.Builder.Select do
   ## Examples
 
       iex> escape({1, 2}, [], __ENV__)
-      {{:{}, [], [:{}, [], [1, 2]]}, {[], %{take: %{}, subqueries: [], expand_dynamic?: false}}}
+      {{:{}, [], [:{}, [], [1, 2]]}, {[], %{take: %{}, subqueries: []}}}
 
       iex> escape([1, 2], [], __ENV__)
-      {[1, 2], {[], %{take: %{}, subqueries: [], expand_dynamic?: false}}}
+      {[1, 2], {[], %{take: %{}, subqueries: []}}}
 
       iex> escape(quote(do: x), [x: 0], __ENV__)
-      {{:{}, [], [:&, [], [0]]}, {[], %{take: %{}, subqueries: [], expand_dynamic?: false}}}
+      {{:{}, [], [:&, [], [0]]}, {[], %{take: %{}, subqueries: []}}}
 
   """
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {list, %{}}}
@@ -36,12 +36,7 @@ defmodule Ecto.Query.Builder.Select do
       take?(other) ->
         {
           {:{}, [], [:&, [], [0]]},
-          {[],
-           %{
-             take: %{0 => {:any, Macro.expand(other, env)}},
-             subqueries: [],
-             expand_dynamic?: false
-           }}
+          {[], %{take: %{0 => {:any, Macro.expand(other, env)}}, subqueries: []}}
         }
 
       maybe_take?(other) ->
@@ -52,9 +47,7 @@ defmodule Ecto.Query.Builder.Select do
         """
 
       true ->
-        {expr, {params, acc}} =
-          escape(other, {[], %{take: %{}, subqueries: [], expand_dynamic?: false}}, vars, env)
-
+        {expr, {params, acc}} = escape(other, {[], %{take: %{}, subqueries: []}}, vars, env)
         acc = %{acc | subqueries: Enum.reverse(acc.subqueries)}
         {expr, {params, acc}}
     end
@@ -193,16 +186,21 @@ defmodule Ecto.Query.Builder.Select do
   @doc """
   Called at runtime for interpolated/dynamic selects.
   """
-  def select!(kind, query, fields, file, line) do
+  def select!(kind, query, fields, file, line) when is_map(fields) do
     expr =
-      if take?(fields) do
-        take = %{0 => {:any, fields!(:select, fields)}}
-        %Ecto.Query.SelectExpr{expr: {:&, [], [0]}, take: take, file: file, line: line}
-      else
-        %Ecto.Query.SelectExpr{expr: fields, take: %{}, file: file, line: line}
-        |> expand_nested_dynamic(query)
-      end
+      %Ecto.Query.SelectExpr{expr: fields, take: %{}, file: file, line: line}
+      |> expand_nested_dynamic(query)
 
+    if kind == :select do
+      apply(query, expr)
+    else
+      merge(query, expr)
+    end
+  end
+
+  def select!(kind, query, fields, file, line) do
+    take = %{0 => {:any, fields!(:select, fields)}}
+    expr = %Ecto.Query.SelectExpr{expr: {:&, [], [0]}, take: take, file: file, line: line}
     if kind == :select do
       apply(query, expr)
     else
@@ -276,31 +274,13 @@ defmodule Ecto.Query.Builder.Select do
     params = Builder.escape_params(params)
     take = {:%{}, [], Map.to_list(acc.take)}
 
-    select =
-      if acc.expand_dynamic? do
-        quote do
-          %Ecto.Query.SelectExpr{
-            expr: unquote(expr),
-            params: unquote(params),
-            file: unquote(env.file),
-            line: unquote(env.line),
-            take: unquote(take),
-            subqueries: unquote(acc.subqueries)
-          }
-          |> Builder.Select.expand_nested_dynamic(unquote(query))
-        end
-      else
-        quote do
-          %Ecto.Query.SelectExpr{
-            expr: unquote(expr),
-            params: unquote(params),
-            file: unquote(env.file),
-            line: unquote(env.line),
-            take: unquote(take),
-            subqueries: unquote(acc.subqueries)
-          }
-        end
-      end
+    select = quote do: %Ecto.Query.SelectExpr{
+                         expr: unquote(expr),
+                         params: unquote(params),
+                         file: unquote(env.file),
+                         line: unquote(env.line),
+                         take: unquote(take),
+                         subqueries: unquote(acc.subqueries)}
 
     if kind == :select do
       Builder.apply_query(query, __MODULE__, [select], env)
