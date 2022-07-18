@@ -1617,7 +1617,7 @@ defmodule Ecto.Query do
   must be specified in one of the following ways, since the set difference
   of two or more queries is not automatically aliased:
 
-    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the union fields.
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the set difference fields.
     - Wrap the set difference in a subquery and refer to the binding of the subquery.
 
   ## Keywords examples
@@ -1658,7 +1658,7 @@ defmodule Ecto.Query do
   must be specified in one of the following ways, since the set difference
   of two or more queries is not automatically aliased:
 
-    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the union fields.
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the set difference fields.
     - Wrap the set difference in a subquery and refer to the binding of the subquery.
 
   ## Keywords examples
@@ -1704,7 +1704,7 @@ defmodule Ecto.Query do
   must be specified in one of the following ways, since the intersection
   of two or more queries is not automatically aliased:
 
-    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the union fields.
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the intersection fields.
     - Wrap the intersection in a subquery and refer to the binding of the subquery.
 
   ## Keywords examples
@@ -1745,7 +1745,7 @@ defmodule Ecto.Query do
   must be specified in one of the following ways, since the intersection
   of two or more queries is not automatically aliased:
 
-    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the union fields.
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the intersection fields.
     - Wrap the intersection in a subquery and refer to the binding of the subquery.
 
   ## Keywords example
