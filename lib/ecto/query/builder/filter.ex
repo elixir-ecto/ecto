@@ -18,12 +18,12 @@ defmodule Ecto.Query.Builder.Filter do
   """
   @spec escape(:where | :having | :on, Macro.t, non_neg_integer, Keyword.t, Macro.Env.t) :: {Macro.t, {list, list}}
   def escape(_kind, [], _binding, _vars, _env) do
-    {true, {[], %{subqueries: [], expand_dynamic?: false}}}
+    {true, {[], %{subqueries: []}}}
   end
 
   def escape(kind, expr, binding, vars, env) when is_list(expr) do
     {parts, params_acc} =
-      Enum.map_reduce(expr, {[], %{subqueries: [], expand_dynamic?: false}}, fn
+      Enum.map_reduce(expr, {[], %{subqueries: []}}, fn
         {field, nil}, _params_acc ->
           Builder.error! "nil given for `#{field}`. Comparison with nil is forbidden as it is unsafe. " <>
                          "Instead write a query with is_nil/1, for example: is_nil(s.#{field})"
@@ -44,7 +44,7 @@ defmodule Ecto.Query.Builder.Filter do
   end
 
   def escape(_kind, expr, _binding, vars, env) do
-    Builder.escape(expr, :boolean, {[], %{subqueries: [], expand_dynamic?: false}}, vars, env)
+    Builder.escape(expr, :boolean, {[], %{subqueries: []}}, vars, env)
   end
 
   @doc """
@@ -69,32 +69,13 @@ defmodule Ecto.Query.Builder.Filter do
     params = Builder.escape_params(params)
     subqueries = Enum.reverse(acc.subqueries)
 
-    expr =
-      if acc.expand_dynamic? do
-        quote do
-          %Ecto.Query.BooleanExpr{
-            expr: unquote(expr),
-            op: unquote(op),
-            params: unquote(params),
-            subqueries: unquote(subqueries),
-            file: unquote(env.file),
-            line: unquote(env.line)
-          }
-          |> Builder.Dynamic.expand_nested(unquote(query))
-        end
-      else
-        quote do
-          %Ecto.Query.BooleanExpr{
-            expr: unquote(expr),
-            op: unquote(op),
-            params: unquote(params),
-            subqueries: unquote(subqueries),
-            file: unquote(env.file),
-            line: unquote(env.line)
-          }
-        end
-      end
-
+    expr = quote do: %Ecto.Query.BooleanExpr{
+                        expr: unquote(expr),
+                        op: unquote(op),
+                        params: unquote(params),
+                        subqueries: unquote(subqueries),
+                        file: unquote(env.file),
+                        line: unquote(env.line)}
     Builder.apply_query(query, __MODULE__, [kind, expr], env)
   end
 

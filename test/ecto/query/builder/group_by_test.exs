@@ -38,7 +38,6 @@ defmodule Ecto.Query.Builder.GroupByTest do
       key = dynamic([p], p.title)
       assert group_by("q", [q], ^key).group_bys == group_by("q", [q], [q.title]).group_bys
       assert group_by("q", [q], ^[key]).group_bys == group_by("q", [q], [q.title]).group_bys
-      assert group_by("q", [q], [dynamic(key)]).group_bys == group_by("q", [q], [q.title]).group_bys
     end
 
     test "raises when no a field or a list of fields" do

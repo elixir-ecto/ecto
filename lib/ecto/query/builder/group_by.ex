@@ -93,26 +93,14 @@ defmodule Ecto.Query.Builder.GroupBy do
 
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
-    {expr, {params, acc}} = escape(:group_by, expr, {[], %{expand_dynamic?: false}}, binding, env)
+    {expr, {params, _acc}} = escape(:group_by, expr, {[], %{}}, binding, env)
     params = Builder.escape_params(params)
 
-    group_by =
-      if acc.expand_dynamic? do
-      quote do %Ecto.Query.QueryExpr{
+    group_by = quote do: %Ecto.Query.QueryExpr{
                            expr: unquote(expr),
                            params: unquote(params),
                            file: unquote(env.file),
                            line: unquote(env.line)}
-                                   |> Builder.Dynamic.expand_nested(unquote(query))
-    end
-  else
-      quote do %Ecto.Query.QueryExpr{
-                           expr: unquote(expr),
-                           params: unquote(params),
-                           file: unquote(env.file),
-                           line: unquote(env.line)}
-    end
-  end
     Builder.apply_query(query, __MODULE__, [group_by], env)
   end
 
