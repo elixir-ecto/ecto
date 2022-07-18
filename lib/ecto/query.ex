@@ -1526,17 +1526,34 @@ defmodule Ecto.Query do
   consider using `union_all/2`.
 
   Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the union.
+  current `query` apply to the result of the union. `order_by` must
+  be specified in one of the following ways, since the union of two
+  or more queries is not automatically aliased:
 
-  ## Keywords example
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the union fields.
+    - Wrap the union in a subquery and refer to the binding of the subquery.
 
+  ## Keywords examples
+
+      # Unordered result
       supplier_query = from s in Supplier, select: s.city
       from c in Customer, select: c.city, union: ^supplier_query
 
-  ## Expressions example
+      # Ordered result
+      supplier_query = from s in Supplier, select: s.city
+      union_query = from c in Customer, select: c.city, union: ^supplier_query
+      from s in subquery(union_query), order_by: s.city
 
+  ## Expressions examples
+
+      # Unordered result
       supplier_query = Supplier |> select([s], s.city)
       Customer |> select([c], c.city) |> union(^supplier_query)
+
+      # Ordered result
+      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      supplier_query = Supplier |> select([s], s.city)
+      union(customer_query, ^supplier_query)
 
   """
   defmacro union(query, other_query) do
@@ -1550,17 +1567,34 @@ defmodule Ecto.Query do
   must be exactly the same, with the same types in the same order.
 
   Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the union.
+  current `query` apply to the result of the union. `order_by` must
+  be specified in one of the following ways, since the union of two
+  or more queries is not automatically aliased:
 
-  ## Keywords example
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the union fields.
+    - Wrap the union in a subquery and refer to the binding of the subquery.
 
+  ## Keywords examples
+
+      # Unordered result
       supplier_query = from s in Supplier, select: s.city
       from c in Customer, select: c.city, union_all: ^supplier_query
 
-  ## Expressions example
+      # Ordered result
+      supplier_query = from s in Supplier, select: s.city
+      union_all_query = from c in Customer, select: c.city, union_all: ^supplier_query
+      from s in subquery(union_all_query), order_by: s.city
 
+  ## Expressions examples
+
+      # Unordered result
       supplier_query = Supplier |> select([s], s.city)
       Customer |> select([c], c.city) |> union_all(^supplier_query)
+
+      # Ordered result
+      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      supplier_query = Supplier |> select([s], s.city)
+      union_all(customer_query, ^supplier_query)
   """
   defmacro union_all(query, other_query) do
     Builder.Combination.build(:union_all, query, other_query, __CALLER__)
@@ -1579,17 +1613,34 @@ defmodule Ecto.Query do
   removing duplicate rows consider using `except_all/2`.
 
   Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the set difference.
+  current `query` apply to the result of the set difference. `order_by`
+  must be specified in one of the following ways, since the set difference
+  of two or more queries is not automatically aliased:
 
-  ## Keywords example
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the set difference fields.
+    - Wrap the set difference in a subquery and refer to the binding of the subquery.
 
+  ## Keywords examples
+
+      # Unordered result
       supplier_query = from s in Supplier, select: s.city
       from c in Customer, select: c.city, except: ^supplier_query
 
-  ## Expressions example
+      # Ordered result
+      supplier_query = from s in Supplier, select: s.city
+      except_query = from c in Customer, select: c.city, except: ^supplier_query
+      from s in subquery(except_query), order_by: s.city
 
+  ## Expressions examples
+
+      # Unordered result
       supplier_query = Supplier |> select([s], s.city)
       Customer |> select([c], c.city) |> except(^supplier_query)
+
+      # Ordered result
+      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      supplier_query = Supplier |> select([s], s.city)
+      except(customer_query, ^supplier_query)
   """
   defmacro except(query, other_query) do
     Builder.Combination.build(:except, query, other_query, __CALLER__)
@@ -1603,17 +1654,34 @@ defmodule Ecto.Query do
   types in the same order.
 
   Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the set difference.
+  current `query` apply to the result of the set difference. `order_by`
+  must be specified in one of the following ways, since the set difference
+  of two or more queries is not automatically aliased:
 
-  ## Keywords example
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the set difference fields.
+    - Wrap the set difference in a subquery and refer to the binding of the subquery.
 
+  ## Keywords examples
+
+      # Unordered result
       supplier_query = from s in Supplier, select: s.city
       from c in Customer, select: c.city, except_all: ^supplier_query
 
-  ## Expressions example
+      # Ordered result
+      supplier_query = from s in Supplier, select: s.city
+      except_all_query = from c in Customer, select: c.city, except_all: ^supplier_query
+      from s in subquery(except_all_query), order_by: s.city
 
+  ## Expressions examples
+
+      # Unordered result
       supplier_query = Supplier |> select([s], s.city)
       Customer |> select([c], c.city) |> except_all(^supplier_query)
+
+      # Ordered result
+      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      supplier_query = Supplier |> select([s], s.city)
+      except_all(customer_query, ^supplier_query)
   """
   defmacro except_all(query, other_query) do
     Builder.Combination.build(:except_all, query, other_query, __CALLER__)
@@ -1632,17 +1700,34 @@ defmodule Ecto.Query do
   removing duplicate rows consider using `intersect_all/2`.
 
   Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the set difference.
+  current `query` apply to the result of the set difference. `order_by`
+  must be specified in one of the following ways, since the intersection
+  of two or more queries is not automatically aliased:
 
-  ## Keywords example
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the intersection fields.
+    - Wrap the intersection in a subquery and refer to the binding of the subquery.
 
+  ## Keywords examples
+
+      # Unordered result
       supplier_query = from s in Supplier, select: s.city
       from c in Customer, select: c.city, intersect: ^supplier_query
 
-  ## Expressions example
+      # Ordered result
+      supplier_query = from s in Supplier, select: s.city
+      intersect_query = from c in Customer, select: c.city, intersect: ^supplier_query
+      from s in subquery(intersect_query), order_by: s.city
 
+  ## Expressions examples
+
+      # Unordered result
       supplier_query = Supplier |> select([s], s.city)
       Customer |> select([c], c.city) |> intersect(^supplier_query)
+
+      # Ordered result
+      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      supplier_query = Supplier |> select([s], s.city)
+      intersect(customer_query, ^supplier_query)
   """
   defmacro intersect(query, other_query) do
     Builder.Combination.build(:intersect, query, other_query, __CALLER__)
@@ -1656,17 +1741,34 @@ defmodule Ecto.Query do
   types in the same order.
 
   Note that the operations `order_by`, `limit` and `offset` of the
-  current `query` apply to the result of the set difference.
+  current `query` apply to the result of the set difference. `order_by`
+  must be specified in one of the following ways, since the intersection
+  of two or more queries is not automatically aliased:
 
-  ## Keywords example
+    - Use `Ecto.Query.API.fragment/1` to pass an `order_by` statement that directly access the intersection fields.
+    - Wrap the intersection in a subquery and refer to the binding of the subquery.
 
+  ## Keywords examples
+      
+      # Unordered result
       supplier_query = from s in Supplier, select: s.city
       from c in Customer, select: c.city, intersect_all: ^supplier_query
 
-  ## Expressions example
+      # Ordered result
+      supplier_query = from s in Supplier, select: s.city
+      intersect_all_query = from c in Customer, select: c.city, intersect_all: ^supplier_query
+      from s in subquery(intersect_all_query), order_by: s.city
 
+  ## Expressions examples
+      
+      # Unordered result
       supplier_query = Supplier |> select([s], s.city)
       Customer |> select([c], c.city) |> intersect_all(^supplier_query)
+
+      # Ordered result
+      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      supplier_query = Supplier |> select([s], s.city)
+      intersect_all(customer_query, ^supplier_query)
   """
   defmacro intersect_all(query, other_query) do
     Builder.Combination.build(:intersect_all, query, other_query, __CALLER__)
