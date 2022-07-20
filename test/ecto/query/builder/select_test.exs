@@ -108,9 +108,19 @@ defmodule Ecto.Query.Builder.SelectTest do
       field = :title
 
       ref = dynamic(field(as(^as), ^field))
-      query = from(b in "blogs", select: ^%{title: ref})
+      query = from(b in "blogs", select: ^%{title: ref, other: 8})
 
-      assert Macro.to_string(query.select.expr) == "%{title: as(:blog).title()}"
+      assert Macro.to_string(query.select.expr) == "%{other: 8, title: as(:blog).title()}"
+    end
+
+    test "supports nested map with dynamic values interpolated at root level" do
+      as = :blog
+      field = :title
+
+      ref = dynamic(field(as(^as), ^field))
+      query = from(b in "blogs", select: ^%{fields: %{title: ref}})
+
+      assert Macro.to_string(query.select.expr) == "%{fields: %{title: as(:blog).title()}}"
     end
 
     test "supports dynamic select_merge" do
