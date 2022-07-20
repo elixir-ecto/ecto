@@ -5,6 +5,10 @@ defmodule Ecto.Query.Builder.SelectTest do
   import Ecto.Query.Builder.Select
   doctest Ecto.Query.Builder.Select
 
+  defmodule Post do
+    defstruct [:title]
+  end
+
   defp params_acc(opts \\ []) do
     params = opts[:params] || []
     take = opts[:take] || %{}
@@ -111,6 +115,16 @@ defmodule Ecto.Query.Builder.SelectTest do
       query = from(b in "blogs", select: ^%{title: ref, other: 8})
 
       assert Macro.to_string(query.select.expr) == "%{other: 8, title: as(:blog).title()}"
+    end
+
+    test "supports arbitrary struct with dynamic values interpolated at root level" do
+      as = :blog
+      field = :title
+
+      ref = dynamic(field(as(^as), ^field))
+      query = from(b in "blogs", select: ^%Post{title: ref})
+
+      assert Macro.to_string(query.select.expr) == "%Ecto.Query.Builder.SelectTest.Post{title: as(:blog).title()}"
     end
 
     test "supports nested map with dynamic values interpolated at root level" do
@@ -370,7 +384,7 @@ defmodule Ecto.Query.Builder.SelectTest do
         from p in "posts",
           select: %Post{title: p.title},
           select_merge: %{title: nil}
-      assert Macro.to_string(query.select.expr) == "%Post{title: nil}"
+      assert Macro.to_string(query.select.expr) == "%Ecto.Query.Builder.SelectTest.Post{title: nil}"
 
       query =
         from p in "posts",

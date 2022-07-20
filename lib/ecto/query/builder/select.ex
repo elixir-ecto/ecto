@@ -213,8 +213,20 @@ defmodule Ecto.Query.Builder.Select do
     %{select | expr: expr, params: Enum.reverse(params), subqueries: Enum.reverse(subqueries)}
   end
 
-  defp expand_dynamic(fields, acc, query) when is_map(fields) and not is_struct(fields) do
-    {fields, acc} = expand_dynamic(Enum.to_list(fields), acc, query)
+  defp expand_dynamic(%Ecto.Query.DynamicExpr{} = dynamic, {params, subqueries, count}, query) do
+    {expr, params, subqueries, count} =
+      Ecto.Query.Builder.Dynamic.partially_expand(query, dynamic, params, subqueries, count)
+
+    {expr, {params, subqueries, count}}
+  end
+
+  defp expand_dynamic(%type{} = fields, acc, query) do
+    {fields, acc} = fields |> Map.from_struct() |> expand_dynamic(acc, query)
+    {{:%, [], [type, fields]}, acc}
+  end
+
+  defp expand_dynamic(fields, acc, query) when is_map(fields) do
+    {fields, acc} = fields |> Enum.to_list() |> expand_dynamic(acc, query)
     {{:%{}, [], fields}, acc}
   end
 
@@ -225,13 +237,6 @@ defmodule Ecto.Query.Builder.Select do
   defp expand_dynamic({key, val}, acc, query) do
     {val, acc} = expand_dynamic(val, acc, query)
     {{key, val}, acc}
-  end
-
-  defp expand_dynamic(%Ecto.Query.DynamicExpr{} = dynamic, {params, subqueries, count}, query) do
-    {expr, params, subqueries, count} =
-      Ecto.Query.Builder.Dynamic.partially_expand(query, dynamic, params, subqueries, count)
-
-    {expr, {params, subqueries, count}}
   end
 
   defp expand_dynamic(other, acc, _query) do
