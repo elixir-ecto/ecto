@@ -529,6 +529,34 @@ defmodule Ecto.Query do
 
       from query, group_by: ^[:some_field, dynamic(...)]
 
+  ## `select` and `select_merge`
+
+  Dynamics can be interpolated inside values in maps at the root of a
+  `select` or `select_merge`. For example, you can write:
+
+      select = %{
+        period: dynamic([p], p.month),
+        metric: dynamic([p], p.distance)
+      }
+
+      from query, select: ^select
+
+  As with `where` and friends, it is not possible to pass dynamics
+  outside of a root. For example, this won't work:
+
+      from query, select: %{field: ^dynamic(...)}
+
+  But this will:
+
+      from query, select: ^%{field: dynamic(...)}
+
+  Maps with dynamics can also be merged into existing `select` structures,
+  enabling a variety of possibilities for partially dynamic selects:
+
+      metric = dynamic([p] p.distance)
+
+      from query, select: {:map, [:id, :period]}, select_merge: ^metric
+
   ## Updates
 
   A `dynamic` is also supported inside updates, for example:
@@ -1251,6 +1279,15 @@ defmodule Ecto.Query do
       City |> select([c], struct(c, [:name]))
       City |> select([c], map(c, [:name]))
 
+  ## Dynamic parts
+
+  Dynamics can be part of a `select` as values in a map that must be interpolated
+  at the root level:
+
+      period = if monthly?, do: dynamic([p], p.month), else: dynamic([p], p.date)
+      metric = if distance?, do: dynamic([p], p.distance), else: dynamic([p], p.time)
+
+      from(c in City, select: ^%{period: period, metric: metric})
   """
   defmacro select(query, binding \\ [], expr) do
     Builder.Select.build(:select, query, binding, expr, __CALLER__)
@@ -1310,6 +1347,10 @@ defmodule Ecto.Query do
 
   `select_merge` cannot be used to set fields in associations, as
   associations are always loaded later, overriding any previous value.
+
+  Dynamics can be part of a `select_merge` as values in a map that must be
+  interpolated at the root level. The rules for merging detailed above apply.
+  This allows merging dynamic values into previsouly selected maps and structs.
   """
   defmacro select_merge(query, binding \\ [], expr) do
     Builder.Select.build(:merge, query, binding, expr, __CALLER__)
