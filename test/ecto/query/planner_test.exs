@@ -196,6 +196,14 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "plan: raises error on dynamic expression in select without root level interpolation" do
+    dynamic = dynamic([p], p.id)
+
+    assert_raise Ecto.QueryError, ~r/dynamic expressions can only be interpolated/, fn ->
+      plan(Post |> select([p], %{field: ^dynamic}))
+    end
+  end
+
   test "plan: casts and dumps custom types" do
     permalink = "1-hello-world"
     {_query, cast_params, dump_params, _key} = plan(Post |> where([p], p.id == ^permalink))
