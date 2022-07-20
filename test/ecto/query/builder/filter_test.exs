@@ -41,6 +41,16 @@ defmodule Ecto.Query.Builder.FilterTest do
         escape(:where, quote do [x: nil] end, 0, [], __ENV__)
       end
     end
+
+    test "works without Ecto.Query.subquery/1" do
+      import Ecto.Query, except: [subquery: 1]
+
+      s = from(p in "posts", select: 1)
+      %{wheres: [where]} = from(p in "posts", where: exists(s))
+
+      assert Macro.to_string(where.expr) ==
+             "exists({:subquery, 0})"
+    end
   end
 
   describe "at runtime" do
