@@ -1,5 +1,12 @@
 # Changelog for v3.x
 
+## v3.9.0-dev (unreleased)
+
+### Enhancements
+
+  * [Ecto.Query] Support `^%{field: dynamic(...)}` in `select` and `select_merge`
+  * [Ecto.Query] Support `%{field: subquery(...)}` in `select` and `select_merge`
+
 ## v3.8.4 (2022-06-04)
 
 ### Enhancements
