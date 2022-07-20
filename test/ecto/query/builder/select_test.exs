@@ -217,7 +217,7 @@ defmodule Ecto.Query.Builder.SelectTest do
              """
 
       assert length(query.select.subqueries) == 3
-      assert length(query.select.params) == 5
+      assert query.select.params == [{:subquery, 0}, {:subquery, 1}, {ignore_template_id, {0, :from_template_id}}, {:subquery, 2}]
     end
 
     test "raises on multiple selects" do

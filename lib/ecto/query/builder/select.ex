@@ -298,19 +298,23 @@ defmodule Ecto.Query.Builder.Select do
   The callback applied by `build/5` when merging.
   """
   def merge(%Ecto.Query{select: nil} = query, new_select) do
-    merge(query, new_select, {:&, [], [0]}, [], %{}, new_select)
+    merge(query, new_select, {:&, [], [0]}, [], [], %{}, new_select)
   end
   def merge(%Ecto.Query{select: old_select} = query, new_select) do
-    %{expr: old_expr, params: old_params, take: old_take} = old_select
-    merge(query, old_select, old_expr, old_params, old_take, new_select)
+    %{expr: old_expr, params: old_params, subqueries: old_subqueries, take: old_take} = old_select
+    merge(query, old_select, old_expr, old_params, old_subqueries, old_take, new_select)
   end
   def merge(query, expr) do
     merge(Ecto.Queryable.to_query(query), expr)
   end
 
-  defp merge(query, select, old_expr, old_params, old_take, new_select) do
-    %{expr: new_expr, params: new_params, take: new_take} = new_select
-    new_expr = Ecto.Query.Builder.bump_interpolations(new_expr, old_params)
+  defp merge(query, select, old_expr, old_params, old_subqueries, old_take, new_select) do
+    %{expr: new_expr, params: new_params, subqueries: new_subqueries, take: new_take} = new_select
+
+    new_expr =
+      new_expr
+      |> Ecto.Query.Builder.bump_interpolations(old_params)
+      |> Ecto.Query.Builder.bump_subqueries(old_subqueries)
 
     expr =
       case {classify_merge(old_expr, old_take), classify_merge(new_expr, new_take)} do
@@ -369,7 +373,8 @@ defmodule Ecto.Query.Builder.Select do
 
     select = %{
       select | expr: expr,
-               params: old_params ++ new_params,
+               params: old_params ++ bump_subquery_params(new_params, old_subqueries),
+               subqueries: old_subqueries ++ new_subqueries,
                take: merge_take(old_expr, old_take, new_take)
     }
 
@@ -416,6 +421,15 @@ defmodule Ecto.Query.Builder.Select do
   defp add_take(acc, key, value) do
     take = Map.update(acc.take, key, value, &merge_take_kind_and_fields(key, &1, value))
     %{acc | take: take}
+  end
+
+  defp bump_subquery_params(new_params, old_subqueries) do
+    len = length(old_subqueries)
+
+    Enum.map(new_params, fn
+      {:subquery, counter} -> {:subquery, len + counter}
+      other -> other
+    end)
   end
 
   defp merge_take(old_expr, %{} = old_take, %{} = new_take) do
