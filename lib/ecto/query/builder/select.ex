@@ -187,8 +187,15 @@ defmodule Ecto.Query.Builder.Select do
   Called at runtime for interpolated/dynamic selects.
   """
   def select!(kind, query, fields, file, line) when is_map(fields) do
-    %Ecto.Query.SelectExpr{expr: fields, take: %{}, file: file, line: line}
-    |> expand_nested_dynamic(query)
+    {expr, {params, subqueries, _count}} = expand_dynamic(fields, {[], [], 0}, query)
+
+    %Ecto.Query.SelectExpr{
+      expr: expr,
+      params: Enum.reverse(params),
+      subqueries: Enum.reverse(subqueries),
+      file: file,
+      line: line
+    }
     |> apply_or_merge(kind, query)
   end
 
@@ -207,12 +214,6 @@ defmodule Ecto.Query.Builder.Select do
     end
   end
 
-  defp expand_nested_dynamic(select, query) do
-    acc = {Enum.reverse(select.params), Enum.reverse(select.subqueries), length(select.params)}
-    {expr, {params, subqueries, _count}} = expand_dynamic(select.expr, acc, query)
-    %{select | expr: expr, params: Enum.reverse(params), subqueries: Enum.reverse(subqueries)}
-  end
-
   defp expand_dynamic(%Ecto.Query.DynamicExpr{} = dynamic, {params, subqueries, count}, query) do
     {expr, params, subqueries, count} =
       Ecto.Query.Builder.Dynamic.partially_expand(query, dynamic, params, subqueries, count)
@@ -226,21 +227,17 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   defp expand_dynamic(fields, acc, query) when is_map(fields) do
-    {fields, acc} = fields |> Enum.to_list() |> expand_dynamic(acc, query)
+    {fields, acc} = fields |> Enum.map_reduce(acc, &expand_dynamic_pair(&1, &2, query))
     {{:%{}, [], fields}, acc}
-  end
-
-  defp expand_dynamic(fields, acc, query) when is_list(fields) do
-    Enum.map_reduce(fields, acc, &expand_dynamic(&1, &2, query))
-  end
-
-  defp expand_dynamic({key, val}, acc, query) do
-    {val, acc} = expand_dynamic(val, acc, query)
-    {{key, val}, acc}
   end
 
   defp expand_dynamic(other, acc, _query) do
     {other, acc}
+  end
+
+  defp expand_dynamic_pair({key, val}, acc, query) do
+    {val, acc} = expand_dynamic(val, acc, query)
+    {{key, val}, acc}
   end
 
   @doc """
