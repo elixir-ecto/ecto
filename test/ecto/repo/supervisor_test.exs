@@ -84,78 +84,103 @@ defmodule Ecto.Repo.SupervisorTest do
     assert normalize(config) == [otp_app: :ecto]
   end
 
-  test "parse_url options" do
-    encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb")
-    url = parse_url(encoded_url)
-    assert {:password, "it+й"} in url
-    assert {:username, "eric"} in url
-    assert {:hostname, "host"} in url
-    assert {:database, "mydb"} in url
-    assert {:port, 12345} in url
-  end
-
-  test "parse_url with # encoded" do
-    encoded_url = "ecto://eric:pass*%23word@host:12345/mydb"
-    url = parse_url(encoded_url)
-    assert {:password, "pass*#word"} in url
-    assert {:username, "eric"} in url
-    assert {:hostname, "host"} in url
-    assert {:database, "mydb"} in url
-    assert {:port, 12345} in url
-  end
-
-  test "parse_url query string" do
-    encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb?ssl=true&timeout=1000&pool_size=42&currentSchema=my_schema")
-    url = parse_url(encoded_url)
-    assert {:password, "it+й"} in url
-    assert {:username, "eric"} in url
-    assert {:hostname, "host"} in url
-    assert {:database, "mydb"} in url
-    assert {:port, 12345} in url
-    assert {:ssl, true} in url
-    assert {:timeout, 1000} in url
-    assert {:pool_size, 42} in url
-    assert {:currentSchema, "my_schema"} in url
-  end
-
-  test "parse_url returns no config when blank" do
-    assert parse_url("") == []
-  end
-
-  test "parse_url keeps false values" do
-    assert {:ssl, false} in parse_url("ecto://eric:it+й@host:12345/mydb?ssl=false")
-  end
-
-  test "parse_urls empty username/password" do
-    url = parse_url("ecto://host:12345/mydb")
-    assert !Keyword.has_key?(url, :username)
-    assert !Keyword.has_key?(url, :password)
-  end
-
-  test "fail on invalid urls" do
-    assert_raise Ecto.InvalidURLError, ~r"The parsed URL is: %URI\{", fn ->
-      parse_url("eric:hunter2@host:123/mydb")
+  describe "parse_url/1" do
+    test "returns empty list when URL is blank" do
+      assert parse_url("") == []
     end
 
-    assert_raise Ecto.InvalidURLError, ~r"host is not present", fn ->
-      parse_url("eric:hunter2@host:123/mydb")
+    test "parses URL options" do
+      encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb")
+
+      url = parse_url(encoded_url)
+
+      assert {:password, "it+й"} in url
+      assert {:username, "eric"} in url
+      assert {:hostname, "host"} in url
+      assert {:database, "mydb"} in url
+      assert {:port, 12345} in url
     end
 
-    assert_raise Ecto.InvalidURLError, ~r"path should be a database name", fn ->
-      parse_url("ecto://eric:hunter2@host:123/a/b/c")
+    test "URL parsing handles encoded symbol #" do
+      encoded_url = "ecto://eric:pass*%23word@host:12345/mydb"
+
+      url = parse_url(encoded_url)
+
+      assert {:password, "pass*#word"} in url
+      assert {:username, "eric"} in url
+      assert {:hostname, "host"} in url
+      assert {:database, "mydb"} in url
+      assert {:port, 12345} in url
     end
 
-    assert_raise Ecto.InvalidURLError, ~r"path should be a database name", fn ->
-      parse_url("ecto://eric:hunter2@host:123/")
+    test "parses empty username/password" do
+      url = parse_url("ecto://host:12345/mydb")
+      refute Keyword.has_key?(url, :username)
+      refute Keyword.has_key?(url, :password)
     end
 
-    assert_raise Ecto.InvalidURLError, ~r"path should be a database name", fn ->
-      parse_url("ecto://eric:hunter2@host:123")
+    test "parses multiple query string options" do
+      encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb?ssl=true&timeout=1515")
+      url = parse_url(encoded_url)
+      assert {:ssl, true} in url
+      assert {:timeout, 1515} in url
     end
 
-    for key <- ["timeout", "pool_size"] do
-      assert_raise Ecto.InvalidURLError, ~r"can not parse value `not_an_int` for parameter `#{key}` as an integer", fn ->
-        parse_url("ecto://eric:it+й@host:12345/mydb?#{key}=not_an_int")
+    test "supports integer query string options" do
+      url = "ecto://eric:it+й@host:12345/mydb"
+
+      encoded_url = URI.encode("#{url}?timeout=1000")
+      assert {:timeout, 1000} in parse_url(encoded_url)
+
+      encoded_url = URI.encode("#{url}?pool_size=42")
+      assert {:pool_size, 42} in parse_url(encoded_url)
+
+      encoded_url = URI.encode("#{url}?idle_interval=10000")
+      assert {:idle_interval, 10000} in parse_url(encoded_url)
+    end
+
+    test "supports ssl query string option" do
+      url = "ecto://eric:it+й@host:12345/mydb"
+
+      encoded_url = URI.encode("#{url}?ssl=true")
+      assert {:ssl, true} in parse_url(encoded_url)
+
+      encoded_url = URI.encode("#{url}?ssl=false")
+      assert {:ssl, false} in parse_url(encoded_url)
+    end
+
+    test "supports camelCase query string options" do
+      encoded_url = URI.encode("ecto://eric:it+й@host:12345/mydb?currentSchema=my_schema")
+      assert {:currentSchema, "my_schema"} in parse_url(encoded_url)
+    end
+
+    test "raises on invalid urls" do
+      assert_raise Ecto.InvalidURLError, ~r"The parsed URL is: %URI\{", fn ->
+        parse_url("eric:hunter2@host:123/mydb")
+      end
+
+      assert_raise Ecto.InvalidURLError, ~r"host is not present", fn ->
+        parse_url("eric:hunter2@host:123/mydb")
+      end
+
+      assert_raise Ecto.InvalidURLError, ~r"path should be a database name", fn ->
+        parse_url("ecto://eric:hunter2@host:123/a/b/c")
+      end
+
+      assert_raise Ecto.InvalidURLError, ~r"path should be a database name", fn ->
+        parse_url("ecto://eric:hunter2@host:123/")
+      end
+
+      assert_raise Ecto.InvalidURLError, ~r"path should be a database name", fn ->
+        parse_url("ecto://eric:hunter2@host:123")
+      end
+
+      for key <- ["timeout", "pool_size", "idle_interval"] do
+        assert_raise Ecto.InvalidURLError,
+                     ~r"can not parse value `not_an_int` for parameter `#{key}` as an integer",
+                     fn ->
+                       parse_url("ecto://eric:it+й@host:12345/mydb?#{key}=not_an_int")
+                     end
       end
     end
   end

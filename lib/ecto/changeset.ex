@@ -663,7 +663,7 @@ defmodule Ecto.Changeset do
   from `changeset.params`. Those parameters are expected to be
   a map with attributes, similar to the ones passed to `cast/4`.
   Once parameters are retrieved, `cast_assoc/3` will match those
-  parameters with the associations already in the changeset record.
+  parameters with the associations already in the changeset data.
 
   Once `cast_assoc/3` is called, Ecto will compare each parameter
   with the user's already preloaded addresses and act as follows:
@@ -684,9 +684,12 @@ defmodule Ecto.Changeset do
       be invoked (see the "On replace" section on the module documentation)
 
   Every time the `MyApp.Address.changeset/2` function is invoked, it must
-  return a changeset. Once the parent changeset is given to an `Ecto.Repo`
-  function, all entries will be inserted/updated/deleted within the same
-  transaction.
+  return a changeset. This changeset will always be included under `changes`
+  of the parent changeset, even if there are no changes. This is done for
+  reflection purposes, allowing developers to introspect validations and
+  other metadata from the association. Once the parent changeset is given
+  to an `Ecto.Repo` function, all entries will be inserted/updated/deleted
+  within the same transaction.
 
   Note developers are allowed to explicitly set the `:action` field of a
   changeset to instruct Ecto how to act in certain situations. Let's suppose
@@ -2606,11 +2609,13 @@ defmodule Ecto.Changeset do
       cast(user, params, [:age])
       |> check_constraint(:age, name: :age_must_be_positive)
 
-  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`, if the
-  age is not positive, it will be converted into an error and
-  `{:error, changeset}` returned by the repository. Note that the error
-  will occur only after hitting the database so it will not be visible
-  until all other validations pass.
+  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`,
+  if the age is not positive, the underlying operation will fail
+  but Ecto will convert the database exception into a changeset error
+  and return an `{:error, changeset}` tuple. Note that the error will
+  occur only after hitting the database, so it will not be visible
+  until all other validations pass. If the constraint fails inside a
+  transaction, the transaction will be marked as aborted.
 
   ## Options
 
@@ -2650,11 +2655,13 @@ defmodule Ecto.Changeset do
       cast(user, params, [:email])
       |> unique_constraint(:email)
 
-  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`, if the
-  email already exists, it will be converted into an error and
-  `{:error, changeset}` returned by the repository. Note that the error
-  will occur only after hitting the database so it will not be visible
-  until all other validations pass.
+  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`,
+  if the email already exists, the underlying operation will fail but
+  Ecto will convert the database exception into a changeset error and
+  return an `{:error, changeset}` tuple. Note that the error will occur
+  only after hitting the database, so it will not be visible until all
+  other validations pass. If the constraint fails inside a transaction,
+  the transaction will be marked as aborted.
 
   ## Options
 
@@ -2792,9 +2799,13 @@ defmodule Ecto.Changeset do
       cast(comment, params, [:post_id])
       |> foreign_key_constraint(:post_id)
 
-  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`, if the
-  associated post does not exist, it will be converted into an
-  error and `{:error, changeset}` returned by the repository.
+  Now, when invoking `c:Ecto.Repo.insert/2` or `c:Ecto.Repo.update/2`,
+  if the associated post does not exist, the underlying operation will
+  fail but Ecto will convert the database exception into a changeset
+  error and return an `{:error, changeset}` tuple. Note that the error
+  will occur only after hitting the database, so it will not be visible
+  until all other validations pass. If the constraint fails inside a
+  transaction, the transaction will be marked as aborted.
 
   ## Options
 
