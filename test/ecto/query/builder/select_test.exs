@@ -163,6 +163,22 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert length(query.select.params) == 1
     end
 
+    test "supports subqueries in interpolated map at root level" do
+      subquery = from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
+
+      query =
+        from(l in "lists",
+          as: :list,
+          select: ^%{user_email: subquery(subquery)}
+        )
+
+      assert Macro.to_string(query.select.expr) ==
+              "%{user_email: {:subquery, 0}}"
+
+      assert length(query.select.subqueries) == 1
+      assert length(query.select.params) == 1
+    end
+
     test "supports multiple nested partly dynamic subqueries" do
       created_by_id = 8
       ignore_template_id = 9
