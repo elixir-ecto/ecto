@@ -1452,7 +1452,6 @@ defmodule Ecto.Query.PlannerTest do
       |> join(:inner, [_], c in Comment)
       |> select([p, c], {p, %{c | text: "bar"}})
       |> normalize()
-
     assert query.select.fields ==
            select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
            select_fields([:id, :posted, :uuid, :crazy_comment, :post_id, :crazy_post_id], 1)
