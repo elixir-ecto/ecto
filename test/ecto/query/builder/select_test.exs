@@ -211,13 +211,13 @@ defmodule Ecto.Query.Builder.SelectTest do
               fragment({:raw, "CASE WHEN "},\
               {:expr, &0.from_template_id() == ^2},\
               {:raw, " THEN "}, {:expr, ""},\
-              {:raw, " ELSE "}, {:expr, {:subquery, 0}},\
+              {:raw, " ELSE "}, {:expr, {:subquery, 2}},\
               {:raw, " END"})\
              })\
              """
 
-      assert length(query.select.subqueries) == 2
-      assert length(query.select.params) == 4
+      assert length(query.select.subqueries) == 3
+      assert length(query.select.params) == 5
     end
 
     test "raises on multiple selects" do
