@@ -1303,7 +1303,7 @@ defmodule Ecto.Schema do
       The keys are inflected from the schema names.
 
     * `:on_delete` - The action taken on associations when the parent record
-      is deleted. May be `:nothing` (default) or `:delete_all`.
+      is deleted. May be `:nothing` (default) or `:delete`.
       Using this option is DISCOURAGED for most relational databases. Instead,
       in your migration, set `references(:parent_id, on_delete: :delete_all)`.
       Opposite to the migration option, this option cannot guarantee integrity
