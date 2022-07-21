@@ -173,7 +173,7 @@ defmodule Ecto.Query.Builder.SelectTest do
         )
 
       assert length(query.select.subqueries) == 1
-      assert query.select.params == [{"baz", {0, :bar}}, {1, {0, :foo}}, {:subquery, 0}]
+      assert query.select.params == [{"baz", :any}, {1, :any}, {:subquery, 0}]
 
       assert Macro.to_string(query.select.expr) ==
               "%{bar: ^0, foo: ^1, user_email: {:subquery, 0}}"
