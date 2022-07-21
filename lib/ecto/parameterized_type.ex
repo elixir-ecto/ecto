@@ -40,7 +40,7 @@ defmodule Ecto.ParameterizedType do
 
         def cast(data, params) do
           ...
-          cast_data
+          {:ok, cast_data}
         end
 
         def load(data, _loader, params) do
