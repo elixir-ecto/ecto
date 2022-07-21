@@ -187,7 +187,7 @@ defmodule Ecto.Query.Builder.Select do
   Called at runtime for interpolated/dynamic selects.
   """
   def select!(kind, query, fields, file, line) when is_map(fields) do
-    {expr, {params, subqueries, _count}} = expand_nested(fields, {[], [], 0}, query)
+    {expr, {params, subqueries, _count}} = expand_nested(fields, nil, {[], [], 0}, query)
 
     %Ecto.Query.SelectExpr{
       expr: expr,
@@ -214,14 +214,14 @@ defmodule Ecto.Query.Builder.Select do
     end
   end
 
-  defp expand_nested(%Ecto.Query.DynamicExpr{} = dynamic, {params, subqueries, count}, query) do
+  defp expand_nested(%Ecto.Query.DynamicExpr{} = dynamic, _, {params, subqueries, count}, query) do
     {expr, params, subqueries, count} =
       Ecto.Query.Builder.Dynamic.partially_expand(query, dynamic, params, subqueries, count)
 
     {expr, {params, subqueries, count}}
   end
 
-  defp expand_nested(%Ecto.SubQuery{} = subquery, {params, subqueries, count}, _query) do
+  defp expand_nested(%Ecto.SubQuery{} = subquery, _field, {params, subqueries, count}, _query) do
     index = length(subqueries)
     # used both in ast and in parameters, as a placeholder.
     expr = {:subquery, index}
@@ -232,22 +232,24 @@ defmodule Ecto.Query.Builder.Select do
     {expr, {params, subqueries, count}}
   end
 
-  defp expand_nested(%type{} = fields, acc, query) do
-    {fields, acc} = fields |> Map.from_struct() |> expand_nested(acc, query)
+  defp expand_nested(%type{} = fields, field, acc, query) do
+    {fields, acc} = fields |> Map.from_struct() |> expand_nested(field, acc, query)
     {{:%, [], [type, fields]}, acc}
   end
 
-  defp expand_nested(fields, acc, query) when is_map(fields) do
+  defp expand_nested(fields, _field, acc, query) when is_map(fields) do
     {fields, acc} = fields |> Enum.map_reduce(acc, &expand_nested_pair(&1, &2, query))
     {{:%{}, [], fields}, acc}
   end
 
-  defp expand_nested(other, acc, _query) do
-    {other, acc}
+  defp expand_nested(other, field, {params, subqueries, count}, _query) do
+    params = [{other, {0, field}} | params]
+
+    {{:^, [], [count]}, {params, subqueries, count + 1}}
   end
 
   defp expand_nested_pair({key, val}, acc, query) do
-    {val, acc} = expand_nested(val, acc, query)
+    {val, acc} = expand_nested(val, key, acc, query)
     {{key, val}, acc}
   end
 

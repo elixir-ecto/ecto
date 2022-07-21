@@ -112,9 +112,9 @@ defmodule Ecto.Query.Builder.SelectTest do
       field = :title
 
       ref = dynamic(field(as(^as), ^field))
-      query = from(b in "blogs", select: ^%{title: ref, other: 8})
+      query = from(b in "blogs", select: ^%{other: 8, title: ref})
 
-      assert Macro.to_string(query.select.expr) == "%{other: 8, title: as(:blog).title()}"
+      assert Macro.to_string(query.select.expr) == "%{other: ^0, title: as(:blog).title()}"
     end
 
     test "supports arbitrary struct with dynamic values interpolated at root level" do
@@ -163,20 +163,20 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert length(query.select.params) == 1
     end
 
-    test "supports subqueries in interpolated map at root level" do
+    test "supports subqueries and fixed values in maps interpolated at root level" do
       subquery = from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
 
       query =
         from(l in "lists",
           as: :list,
-          select: ^%{user_email: subquery(subquery)}
+          select: ^%{bar: "baz", foo: 1, user_email: subquery(subquery)}
         )
 
-      assert Macro.to_string(query.select.expr) ==
-              "%{user_email: {:subquery, 0}}"
-
       assert length(query.select.subqueries) == 1
-      assert length(query.select.params) == 1
+      assert query.select.params == [{"baz", {0, :bar}}, {1, {0, :foo}}, {:subquery, 0}]
+
+      assert Macro.to_string(query.select.expr) ==
+              "%{bar: ^0, foo: ^1, user_email: {:subquery, 0}}"
     end
 
     test "supports multiple nested partly dynamic subqueries" do
