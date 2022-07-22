@@ -236,6 +236,18 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert query.select.params == [{:subquery, 0}, {:subquery, 1}, {ignore_template_id, {0, :from_template_id}}, {:subquery, 2}]
     end
 
+    test "raises on list or tuple values in interpolated map" do
+      message = ~r/Interpolated map values in :select can only be/
+
+      assert_raise Ecto.QueryError, message, fn ->
+        %Ecto.Query{} |> select(^%{foo: [:bar]})
+      end
+
+      assert_raise Ecto.QueryError, message, fn ->
+        %Ecto.Query{} |> select(^%{foo: {:ok, :bar}})
+      end
+    end
+
     test "raises on multiple selects" do
       message = "only one select expression is allowed in query"
       assert_raise Ecto.Query.CompileError, message, fn ->

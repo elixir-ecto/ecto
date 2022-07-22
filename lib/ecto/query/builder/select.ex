@@ -242,6 +242,14 @@ defmodule Ecto.Query.Builder.Select do
     {{:%{}, [], fields}, acc}
   end
 
+  defp expand_nested(invalid, _acc, query) when is_list(invalid) or is_tuple(invalid) do
+    raise Ecto.QueryError,
+      query: query,
+      message:
+        "Interpolated map values in :select can only be " <>
+          "maps, structs, dynamics, subqueries and literals. Got #{inspect(invalid)}"
+  end
+
   defp expand_nested(other, acc, _query) do
     {other, acc}
   end
