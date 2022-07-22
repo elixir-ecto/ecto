@@ -196,6 +196,14 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "plan: raises error on dynamic expression in select without root level interpolation" do
+    dynamic = dynamic([p], p.id)
+
+    assert_raise Ecto.QueryError, ~r/dynamic expressions can only be interpolated/, fn ->
+      plan(Post |> select([p], %{field: ^dynamic}))
+    end
+  end
+
   test "plan: casts and dumps custom types" do
     permalink = "1-hello-world"
     {_query, cast_params, dump_params, _key} = plan(Post |> where([p], p.id == ^permalink))
@@ -1447,6 +1455,36 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.fields ==
            select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
            select_fields([:id, :posted, :uuid, :crazy_comment, :post_id, :crazy_post_id], 1)
+  end
+
+  test "normalize: select single dynamic value interpolated at root level" do
+    ref = dynamic([p], p.title)
+
+    query =
+      Post
+      |> select([_, f], ^ref)
+      |> normalize()
+
+    assert query.select.expr ==
+             {{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}
+
+    assert query.select.fields ==
+             [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
+  end
+
+  test "normalize: select map with dynamic values interpolated at root level" do
+    ref = dynamic([p], p.title)
+
+    query =
+      Post
+      |> select([_, f], ^%{title: ref})
+      |> normalize()
+
+    assert query.select.expr ==
+             {:%{}, [], [title: {{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]}
+
+    assert query.select.fields ==
+             [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
   end
 
   test "normalize: select with subquery" do

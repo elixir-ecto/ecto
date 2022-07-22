@@ -5,6 +5,10 @@ defmodule Ecto.Query.Builder.SelectTest do
   import Ecto.Query.Builder.Select
   doctest Ecto.Query.Builder.Select
 
+  defmodule Post do
+    defstruct [:title]
+  end
+
   defp params_acc(opts \\ []) do
     params = opts[:params] || []
     take = opts[:take] || %{}
@@ -93,6 +97,56 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert select("q", [q], struct(q, ^fields)).select.take == %{0 => {:struct, fields}}
     end
 
+    test "supports single dynamic value interpolated at root level" do
+      as = :blog
+      field = :title
+
+      ref = dynamic(field(as(^as), ^field))
+      query = from(b in "blogs", select: ^ref)
+
+      assert Macro.to_string(query.select.expr) == "as(:blog).title()"
+    end
+
+    test "supports map with dynamic values interpolated at root level" do
+      as = :blog
+      field = :title
+
+      ref = dynamic(field(as(^as), ^field))
+      query = from(b in "blogs", select: ^%{title: ref, other: 8})
+
+      assert Macro.to_string(query.select.expr) == "%{other: 8, title: as(:blog).title()}"
+    end
+
+    test "supports arbitrary struct with dynamic values interpolated at root level" do
+      as = :blog
+      field = :title
+
+      ref = dynamic(field(as(^as), ^field))
+      query = from(b in "blogs", select: ^%Post{title: ref})
+
+      assert Macro.to_string(query.select.expr) == "%Ecto.Query.Builder.SelectTest.Post{title: as(:blog).title()}"
+    end
+
+    test "supports nested map with dynamic values interpolated at root level" do
+      as = :blog
+      field = :title
+
+      ref = dynamic(field(as(^as), ^field))
+      query = from(b in "blogs", select: ^%{fields: %{title: ref}})
+
+      assert Macro.to_string(query.select.expr) == "%{fields: %{title: as(:blog).title()}}"
+    end
+
+    test "supports dynamic select_merge" do
+      as = :blog
+      field = :title
+
+      ref = dynamic(field(as(^as), ^field))
+      query = from(b in "blogs", select: %{t: b.title}, select_merge: ^%{title: ref})
+
+      assert Macro.to_string(query.select.expr) == "%{t: &0.title(), title: as(:blog).title()}"
+    end
+
     test "supports subqueries" do
       subquery = from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
 
@@ -109,8 +163,25 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert length(query.select.params) == 1
     end
 
-    test "supports multiple subqueries" do
+    test "supports subqueries in interpolated map at root level" do
+      subquery = from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
+
+      query =
+        from(l in "lists",
+          as: :list,
+          select: ^%{user_email: subquery(subquery)}
+        )
+
+      assert Macro.to_string(query.select.expr) ==
+              "%{user_email: {:subquery, 0}}"
+
+      assert length(query.select.subqueries) == 1
+      assert length(query.select.params) == 1
+    end
+
+    test "supports multiple nested partly dynamic subqueries" do
       created_by_id = 8
+      ignore_template_id = 9
 
       subquery0 =
         from(t in "tasks",
@@ -119,7 +190,21 @@ defmodule Ecto.Query.Builder.SelectTest do
         )
 
       subquery1 =
+        from(t in "templates", where: parent_as(^:list).from_template_id == t.id, select: t.title)
+
+      subquery2 =
         from(u in "users", where: parent_as(^:list).created_by_id == u.id, select: u.email)
+
+      ref =
+        dynamic(
+          [l],
+          fragment(
+            "CASE WHEN ? THEN ? ELSE ? END",
+            l.from_template_id == ^ignore_template_id,
+            "",
+            subquery(subquery1)
+          )
+        )
 
       query =
         from(l in "lists",
@@ -127,20 +212,40 @@ defmodule Ecto.Query.Builder.SelectTest do
           select: %{
             title: l.archived_at,
             maxdue: subquery(subquery0),
-            user_email: subquery(subquery1)
-          }
+            user_email: subquery(subquery2)
+          },
+          select_merge: ^%{template_name: ref}
         )
 
       assert Macro.to_string(query.select.expr) == """
-             %{\
+             merge(%{\
              title: &0.archived_at(), \
              maxdue: {:subquery, 0}, \
              user_email: {:subquery, 1}\
-             }\
+             }, %{\
+             template_name:\
+              fragment({:raw, "CASE WHEN "},\
+              {:expr, &0.from_template_id() == ^2},\
+              {:raw, " THEN "}, {:expr, ""},\
+              {:raw, " ELSE "}, {:expr, {:subquery, 2}},\
+              {:raw, " END"})\
+             })\
              """
 
-      assert length(query.select.subqueries) == 2
-      assert length(query.select.params) == 2
+      assert length(query.select.subqueries) == 3
+      assert query.select.params == [{:subquery, 0}, {:subquery, 1}, {ignore_template_id, {0, :from_template_id}}, {:subquery, 2}]
+    end
+
+    test "raises on list or tuple values in interpolated map" do
+      message = ~r/Interpolated map values in :select can only be/
+
+      assert_raise Ecto.QueryError, message, fn ->
+        %Ecto.Query{} |> select(^%{foo: [:bar]})
+      end
+
+      assert_raise Ecto.QueryError, message, fn ->
+        %Ecto.Query{} |> select(^%{foo: {:ok, :bar}})
+      end
     end
 
     test "raises on multiple selects" do
@@ -307,7 +412,7 @@ defmodule Ecto.Query.Builder.SelectTest do
         from p in "posts",
           select: %Post{title: p.title},
           select_merge: %{title: nil}
-      assert Macro.to_string(query.select.expr) == "%Post{title: nil}"
+      assert Macro.to_string(query.select.expr) == "%Ecto.Query.Builder.SelectTest.Post{title: nil}"
 
       query =
         from p in "posts",

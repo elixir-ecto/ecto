@@ -145,8 +145,11 @@ defmodule Ecto.Query.Builder.Select do
       fields when is_list(fields) ->
         fields
       _ ->
-        Builder.error! "`#{tag}/2` in `select` expects either a literal or " <>
-          "an interpolated list of atom fields"
+        Builder.error!(
+          "`#{tag}/2` in `select` expects either a literal or " <>
+            "an interpolated (1) list of atom fields, (2) dynamic, or " <>
+            "(3) map with dynamic values"
+        )
     end
   end
 
@@ -186,14 +189,77 @@ defmodule Ecto.Query.Builder.Select do
   @doc """
   Called at runtime for interpolated/dynamic selects.
   """
+  def select!(kind, query, fields, file, line) when is_map(fields) do
+    {expr, {params, subqueries, _count}} = expand_nested(fields, {[], [], 0}, query)
+
+    %Ecto.Query.SelectExpr{
+      expr: expr,
+      params: Enum.reverse(params),
+      subqueries: Enum.reverse(subqueries),
+      file: file,
+      line: line
+    }
+    |> apply_or_merge(kind, query)
+  end
+
   def select!(kind, query, fields, file, line) do
     take = %{0 => {:any, fields!(:select, fields)}}
-    expr = %Ecto.Query.SelectExpr{expr: {:&, [], [0]}, take: take, file: file, line: line}
+
+    %Ecto.Query.SelectExpr{expr: {:&, [], [0]}, take: take, file: file, line: line}
+    |> apply_or_merge(kind, query)
+  end
+
+  defp apply_or_merge(select, kind, query) do
     if kind == :select do
-      apply(query, expr)
+      apply(query, select)
     else
-      merge(query, expr)
+      merge(query, select)
     end
+  end
+
+  defp expand_nested(%Ecto.Query.DynamicExpr{} = dynamic, {params, subqueries, count}, query) do
+    {expr, params, subqueries, count} =
+      Ecto.Query.Builder.Dynamic.partially_expand(query, dynamic, params, subqueries, count)
+
+    {expr, {params, subqueries, count}}
+  end
+
+  defp expand_nested(%Ecto.SubQuery{} = subquery, {params, subqueries, count}, _query) do
+    index = length(subqueries)
+    # used both in ast and in parameters, as a placeholder.
+    expr = {:subquery, index}
+    params = [expr | params]
+    subqueries = [subquery | subqueries]
+    count = count + 1
+
+    {expr, {params, subqueries, count}}
+  end
+
+  defp expand_nested(%type{} = fields, acc, query) do
+    {fields, acc} = fields |> Map.from_struct() |> expand_nested(acc, query)
+    {{:%, [], [type, fields]}, acc}
+  end
+
+  defp expand_nested(fields, acc, query) when is_map(fields) do
+    {fields, acc} = fields |> Enum.map_reduce(acc, &expand_nested_pair(&1, &2, query))
+    {{:%{}, [], fields}, acc}
+  end
+
+  defp expand_nested(invalid, _acc, query) when is_list(invalid) or is_tuple(invalid) do
+    raise Ecto.QueryError,
+      query: query,
+      message:
+        "Interpolated map values in :select can only be " <>
+          "maps, structs, dynamics, subqueries and literals. Got #{inspect(invalid)}"
+  end
+
+  defp expand_nested(other, acc, _query) do
+    {other, acc}
+  end
+
+  defp expand_nested_pair({key, val}, acc, query) do
+    {val, acc} = expand_nested(val, acc, query)
+    {{key, val}, acc}
   end
 
   @doc """
@@ -254,19 +320,23 @@ defmodule Ecto.Query.Builder.Select do
   The callback applied by `build/5` when merging.
   """
   def merge(%Ecto.Query{select: nil} = query, new_select) do
-    merge(query, new_select, {:&, [], [0]}, [], %{}, new_select)
+    merge(query, new_select, {:&, [], [0]}, [], [], %{}, new_select)
   end
   def merge(%Ecto.Query{select: old_select} = query, new_select) do
-    %{expr: old_expr, params: old_params, take: old_take} = old_select
-    merge(query, old_select, old_expr, old_params, old_take, new_select)
+    %{expr: old_expr, params: old_params, subqueries: old_subqueries, take: old_take} = old_select
+    merge(query, old_select, old_expr, old_params, old_subqueries, old_take, new_select)
   end
   def merge(query, expr) do
     merge(Ecto.Queryable.to_query(query), expr)
   end
 
-  defp merge(query, select, old_expr, old_params, old_take, new_select) do
-    %{expr: new_expr, params: new_params, take: new_take} = new_select
-    new_expr = Ecto.Query.Builder.bump_interpolations(new_expr, old_params)
+  defp merge(query, select, old_expr, old_params, old_subqueries, old_take, new_select) do
+    %{expr: new_expr, params: new_params, subqueries: new_subqueries, take: new_take} = new_select
+
+    new_expr =
+      new_expr
+      |> Ecto.Query.Builder.bump_interpolations(old_params)
+      |> Ecto.Query.Builder.bump_subqueries(old_subqueries)
 
     expr =
       case {classify_merge(old_expr, old_take), classify_merge(new_expr, new_take)} do
@@ -325,7 +395,8 @@ defmodule Ecto.Query.Builder.Select do
 
     select = %{
       select | expr: expr,
-               params: old_params ++ new_params,
+               params: old_params ++ bump_subquery_params(new_params, old_subqueries),
+               subqueries: old_subqueries ++ new_subqueries,
                take: merge_take(old_expr, old_take, new_take)
     }
 
@@ -372,6 +443,15 @@ defmodule Ecto.Query.Builder.Select do
   defp add_take(acc, key, value) do
     take = Map.update(acc.take, key, value, &merge_take_kind_and_fields(key, &1, value))
     %{acc | take: take}
+  end
+
+  defp bump_subquery_params(new_params, old_subqueries) do
+    len = length(old_subqueries)
+
+    Enum.map(new_params, fn
+      {:subquery, counter} -> {:subquery, len + counter}
+      other -> other
+    end)
   end
 
   defp merge_take(old_expr, %{} = old_take, %{} = new_take) do

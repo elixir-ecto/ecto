@@ -793,7 +793,7 @@ defmodule Ecto.Query.Planner do
 
   defp cast_param(_kind, query, expr, %DynamicExpr{}, _type, _value) do
     error! query, expr, "invalid dynamic expression",
-                        "dynamic expressions can only be interpolated at the top level of where, having, group_by, order_by, update or a join's on"
+                        "dynamic expressions can only be interpolated at the top level of where, having, group_by, order_by, select, update or a join's on"
   end
   defp cast_param(_kind, query, expr, [{key, _} | _], _type, _value) when is_atom(key) do
     error! query, expr, "invalid keyword list",

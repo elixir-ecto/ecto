@@ -1176,6 +1176,20 @@ defmodule Ecto.Query.Builder do
   end
 
   @doc """
+  Bump subqueries by the count of pre-existing subqueries.
+  """
+  def bump_subqueries(expr, []), do: expr
+
+  def bump_subqueries(expr, subqueries) do
+    len = length(subqueries)
+
+    Macro.prewalk(expr, fn
+      {:subquery, counter} -> {:subquery, len + counter}
+      other -> other
+    end)
+  end
+
+  @doc """
   Applies a query at compilation time or at runtime.
 
   This function is responsible for checking if a given query is an
