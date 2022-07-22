@@ -531,15 +531,15 @@ defmodule Ecto.Query do
 
   ## `select` and `select_merge`
 
-  Dynamics can be interpolated inside values in maps at the root of a
+  Dynamics can be inside maps interpolated at the root of a
   `select` or `select_merge`. For example, you can write:
 
-      select = %{
+      fields = %{
         period: dynamic([p], p.month),
         metric: dynamic([p], p.distance)
       }
 
-      from query, select: ^select
+      from query, select: ^fields
 
   As with `where` and friends, it is not possible to pass dynamics
   outside of a root. For example, this won't work:
@@ -553,9 +553,9 @@ defmodule Ecto.Query do
   Maps with dynamics can also be merged into existing `select` structures,
   enabling a variety of possibilities for partially dynamic selects:
 
-      metric = dynamic([p] p.distance)
+      metric = dynamic([p], p.distance)
 
-      from query, select: {:map, [:id, :period]}, select_merge: ^metric
+      from query, select: [:id, :period], select_merge: ^%{metric: metric}
 
   ## Updates
 
