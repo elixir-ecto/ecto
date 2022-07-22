@@ -242,10 +242,8 @@ defmodule Ecto.Query.Builder.Select do
     {{:%{}, [], fields}, acc}
   end
 
-  defp expand_nested(other, {params, subqueries, count}, _query) do
-    params = [{other, :any} | params]
-
-    {{:^, [], [count]}, {params, subqueries, count + 1}}
+  defp expand_nested(other, acc, _query) do
+    {other, acc}
   end
 
   defp expand_nested_pair({key, val}, acc, query) do
