@@ -145,11 +145,8 @@ defmodule Ecto.Query.Builder.Select do
       fields when is_list(fields) ->
         fields
       _ ->
-        Builder.error!(
-          "`#{tag}/2` in `select` expects either a literal or " <>
-            "an interpolated (1) list of atom fields, (2) dynamic, or " <>
-            "(3) map with dynamic values"
-        )
+        Builder.error! "`#{tag}/2` in `select` expects either a literal or " <>
+          "an interpolated list of atom fields"
     end
   end
 
