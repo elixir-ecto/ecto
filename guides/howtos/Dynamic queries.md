@@ -22,9 +22,29 @@ Post
 |> order_by([p], desc: p.published_at)
 ```
 
-While many developers prefer the pipe-based syntax, having to repeat the binding `p` made it quite verbose compared to the keyword one.
+Both APIs are also composable. For example, imagine you want to abstract the `published_at` filtering and sorting into a function, with the keyword syntax you could write:
 
-Another problem with the pre-compiled query syntax is that it has limited options to compose the queries dynamically. Imagine for example a web application that provides search functionality on top of existing posts. The user should be able to specify multiple criteria, such as the author name, the post category, publishing interval, etc.
+```elixir
+def most_recent_from(query) do
+  from p in query,
+    where: p.published_at > ^minimum_date,
+    order_by: [desc: p.published_at]
+end
+```
+
+and with the pipe syntax:
+
+```elixir
+def most_recent_from(query) do
+  query
+  |> where([p], p.published_at > ^minimum_date)
+  |> order_by([p], desc: p.published_at)
+end
+```
+
+The examples above show you can build and compose queries at a high-level: by composing each call to `where`, `order_by`, and so on. However, sometimes you want the contents of the `where` or the `order_by` themselves to be defined dynamically. For example, a web application that provides search functionality on top of existing posts. The user should be able to specify multiple criteria, such as the author name, the post category, publishing interval, etc.
+
+Futhermore, while many developers prefer the pipe-based syntax, having to repeat the binding `p` made it quite verbose compared to the keyword one.
 
 To solve those problems, Ecto also provides a data-structure centric API to build queries as well as a very powerful mechanism for dynamic queries. Let's take a look.
 
@@ -48,7 +68,7 @@ Post
 |> order_by(desc: :published_at)
 ```
 
-Notice how we were able to ditch the `p` selector in most expressions. In Ecto, all constructs, from `select` and `order_by` to `where` and `group_by`, accept data structures as input. The data structure can be specified at compile-time, as above, and also dynamically at runtime, shown below:
+Notice how we were able to ditch the `p` selector in most expressions. All Ecto constructs accept data structures as input. Such data structures can also be specified dynamically, shown below:
 
 ```elixir
 where = [author: "José", category: "Elixir"]
