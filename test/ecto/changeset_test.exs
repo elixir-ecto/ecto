@@ -1521,7 +1521,15 @@ defmodule Ecto.ChangesetTest do
       dup_result = {1, [true]}
       no_dup_result = {0, []}
       base_changeset = changeset(%Post{}, %{"title" => "Hello World", "body" => "hi"})
-      [dup_result: dup_result, no_dup_result: no_dup_result, base_changeset: base_changeset]
+      schemaless_data = {%{}, %{title: :string, body: :string}}
+      schemaless_changeset = cast(schemaless_data, %{"title" => "Hello World", "body" => "hi"}, [:title, :body])
+
+      [
+        dup_result: dup_result,
+        no_dup_result: no_dup_result,
+        base_changeset: base_changeset,
+        schemaless_changeset: schemaless_changeset
+      ]
     end
 
     defmodule MockRepo do
@@ -1563,6 +1571,28 @@ defmodule Ecto.ChangesetTest do
       Process.put(:test_repo_all_results, context.no_dup_result)
       changeset = unsafe_validate_unique(context.base_changeset, [:title, :body], TestRepo)
       assert changeset.valid?
+    end
+
+    test "validates the uniqueness of a field in a schemaless changeset with the query option", context do
+      Process.put(:test_repo_all_results, context.dup_result)
+      changeset = unsafe_validate_unique(context.schemaless_changeset, :title, TestRepo, query: Post)
+
+      assert changeset.errors ==
+               [title: {"has already been taken", validation: :unsafe_unique, fields: [:title]}]
+
+      assert changeset.validations == [title: {:unsafe_unique, fields: [:title]}]
+
+      Process.put(:test_repo_all_results, context.no_dup_result)
+      changeset = unsafe_validate_unique(context.schemaless_changeset, :title, TestRepo, query: Post)
+      assert changeset.valid?
+    end
+
+    test "does not validate uniqueness of a field in a schemaless changeset with no query", context do
+      Process.put(:test_repo_all_results, context.dup_result)
+
+      assert_raise RuntimeError, "unsafe_validate_unique/4 requires specifying the `query` option with schemaless changesets", fn ->
+        unsafe_validate_unique(context.schemaless_changeset, :title, TestRepo)
+      end
     end
 
     test "does not validate uniqueness if there is any prior error on a field", context do

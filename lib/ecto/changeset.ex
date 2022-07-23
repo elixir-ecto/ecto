@@ -1878,8 +1878,8 @@ defmodule Ecto.Changeset do
       case changeset do
         %Ecto.Changeset{validations: validations, data: %schema{}} ->
           {validations, schema}
-        %Ecto.Changeset{} ->
-          raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets"
+        %Ecto.Changeset{validations: validations} ->
+          {validations, nil}
       end
     changeset = %{changeset | validations: [{hd(fields), {:unsafe_unique, fields: fields}} | validations]}
 
@@ -1899,8 +1899,12 @@ defmodule Ecto.Changeset do
     if unrelated_changes? || any_nil_values_for_fields? || any_prior_errors_for_fields? do
       changeset
     else
+      base_query =
+        Keyword.get(opts, :query, schema) ||
+          raise "unsafe_validate_unique/4 requires specifying the `query` option with schemaless changesets"
+
       query =
-        Keyword.get(opts, :query, schema)
+        base_query
         |> maybe_exclude_itself(schema, changeset)
         |> Ecto.Query.where(^where_clause)
 
@@ -1921,6 +1925,8 @@ defmodule Ecto.Changeset do
       end
     end
   end
+
+  defp maybe_exclude_itself(base_query, nil, _changeset), do: base_query
 
   defp maybe_exclude_itself(base_query, schema, changeset) do
     :primary_key
