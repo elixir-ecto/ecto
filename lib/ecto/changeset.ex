@@ -39,7 +39,7 @@ defmodule Ecto.Changeset do
 
   Some validations may happen against the database but
   they are inherently unsafe. Those validations start with a `unsafe_`
-  prefix, such as `unsafe_validate_unique/3`.
+  prefix, such as `unsafe_validate_unique/4`.
 
   On the other hand, constraints rely on the database and are always safe.
   As a consequence, validations are always checked before constraints.
@@ -1877,6 +1877,10 @@ defmodule Ecto.Changeset do
     {validations, schema} =
       case changeset do
         %Ecto.Changeset{validations: validations, data: %schema{}} ->
+          unless function_exported?(schema, :__schema__, 1) do
+            raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets"
+          end
+
           {validations, schema}
         %Ecto.Changeset{} ->
           raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets"

@@ -1728,6 +1728,28 @@ defmodule Ecto.ChangesetTest do
       # no overlap between changed fields and those required to be unique
       refute_receive [MockRepo, function: :exists?, query: %Ecto.Query{}, opts: []]
     end
+
+    test "does not allow schemaless queries" do
+      types = %{title: :string, upvotes: :integer}
+
+      # struct
+      changeset = Ecto.Changeset.cast({%NoSchemaPost{}, types}, %{title: "hi"}, Map.keys(types))
+
+      assert_raise ArgumentError,
+                   ~s/unsafe_validate_unique\/4 does not work with schemaless changesets/,
+                   fn ->
+                     unsafe_validate_unique(changeset, [:title], TestRepo)
+                   end
+
+      # map
+      changeset = Ecto.Changeset.cast({%{}, types}, %{title: "hi"}, Map.keys(types))
+
+      assert_raise ArgumentError,
+                   ~s/unsafe_validate_unique\/4 does not work with schemaless changesets/,
+                   fn ->
+                     unsafe_validate_unique(changeset, [:title], TestRepo)
+                   end
+    end
   end
 
   ## Locks
