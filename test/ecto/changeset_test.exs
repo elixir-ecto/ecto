@@ -1729,7 +1729,7 @@ defmodule Ecto.ChangesetTest do
       refute_receive [MockRepo, function: :exists?, query: %Ecto.Query{}, opts: []]
     end
 
-    test "does not allow schemaless queries" do
+    test "does not allow schemaless changesets" do
       types = %{title: :string, upvotes: :integer}
 
       # struct
