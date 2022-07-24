@@ -1750,6 +1750,16 @@ defmodule Ecto.ChangesetTest do
                      unsafe_validate_unique(changeset, [:title], TestRepo)
                    end
     end
+
+    test "does not allow embedded schemas" do
+      changeset = Ecto.Changeset.change(%SocialSource{})
+
+      assert_raise ArgumentError,
+                   ~s/unsafe_validate_unique\/4 does not work with embedded schemas/,
+                   fn ->
+                     unsafe_validate_unique(changeset, [:origin], TestRepo)
+                   end
+    end
   end
 
   ## Locks

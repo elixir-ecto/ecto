@@ -1874,17 +1874,21 @@ defmodule Ecto.Changeset do
   def unsafe_validate_unique(changeset, fields, repo, opts \\ []) when is_list(opts) do
     fields = List.wrap(fields)
     {repo_opts, opts} = Keyword.pop(opts, :repo_opts, [])
+    %Ecto.Changeset{data: data} = changeset
+
+    unless is_struct(data) and function_exported?(data.__struct__, :__schema__, 1) do
+      raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets"
+    end
+
     {validations, schema} =
       case changeset do
-        %Ecto.Changeset{validations: validations, data: %schema{}} ->
-          unless function_exported?(schema, :__schema__, 1) do
-            raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets"
-          end
-
+        %{validations: validations, data: %schema{__meta__: _}} ->
           {validations, schema}
-        %Ecto.Changeset{} ->
-          raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets"
+
+        _ ->
+          raise ArgumentError, "unsafe_validate_unique/4 does not work with embedded schemas"
       end
+
     changeset = %{changeset | validations: [{hd(fields), {:unsafe_unique, fields: fields}} | validations]}
 
     where_clause = for field <- fields do
