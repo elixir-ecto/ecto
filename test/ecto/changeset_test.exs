@@ -1736,7 +1736,7 @@ defmodule Ecto.ChangesetTest do
       changeset = Ecto.Changeset.cast({%NoSchemaPost{}, types}, %{title: "hi"}, Map.keys(types))
 
       msg =
-        ~s/unsafe_validate_unique\/4 does not work with schemaless changesets, data received: %Ecto.ChangesetTest.NoSchemaPost{title: nil, upvotes: nil}/
+        ~s/unsafe_validate_unique\/4 does not work with schemaless changesets or embedded schemas, data received: %Ecto.ChangesetTest.NoSchemaPost{title: nil, upvotes: nil}/
 
       assert_raise ArgumentError, msg, fn ->
         unsafe_validate_unique(changeset, [:title], TestRepo)
@@ -1746,7 +1746,7 @@ defmodule Ecto.ChangesetTest do
       changeset = Ecto.Changeset.cast({%{}, types}, %{title: "hi"}, Map.keys(types))
 
       msg =
-        ~s/unsafe_validate_unique\/4 does not work with schemaless changesets, data received: %{}/
+        ~s/unsafe_validate_unique\/4 does not work with schemaless changesets or embedded schemas, data received: %{}/
 
       assert_raise ArgumentError, msg, fn ->
         unsafe_validate_unique(changeset, [:title], TestRepo)
@@ -1757,7 +1757,7 @@ defmodule Ecto.ChangesetTest do
       changeset = Ecto.Changeset.change(%SocialSource{})
 
       msg =
-        ~s/unsafe_validate_unique\/4 does not work with embedded schemas, schema received: Ecto.ChangesetTest.SocialSource/
+        ~s/unsafe_validate_unique\/4 does not work with schemaless changesets or embedded schemas, data received: %Ecto.ChangesetTest.SocialSource{origin: nil, url: nil}/
 
       assert_raise ArgumentError, msg, fn ->
         unsafe_validate_unique(changeset, [:origin], TestRepo)

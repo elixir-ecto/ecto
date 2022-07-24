@@ -279,6 +279,7 @@ defmodule Ecto.Changeset do
   require Ecto.Query
   alias __MODULE__
   alias Ecto.Changeset.Relation
+  alias Ecto.Schema.Metadata
 
   @empty_values [""]
 
@@ -1874,17 +1875,13 @@ defmodule Ecto.Changeset do
   def unsafe_validate_unique(%Changeset{} = changeset, fields, repo, opts \\ []) when is_list(opts) do
     %{validations: validations, data: data} = changeset
 
-    unless is_struct(data) and function_exported?(data.__struct__, :__schema__, 1) do
-      raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets, data received: #{inspect(data)}"
-    end
-
     schema =
       case data do
-        %schema{__meta__: _} ->
+        %schema{__meta__: %Metadata{}} ->
           schema
 
-        %embedded_schema{} ->
-          raise ArgumentError, "unsafe_validate_unique/4 does not work with embedded schemas, schema received: #{inspect(embedded_schema)}"
+        _ ->
+          raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets or embedded schemas, data received: #{inspect(data)}"
       end
 
     fields = List.wrap(fields)
