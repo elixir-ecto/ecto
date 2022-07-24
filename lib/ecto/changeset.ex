@@ -1872,16 +1872,16 @@ defmodule Ecto.Changeset do
   """
   @spec unsafe_validate_unique(t, atom | [atom, ...], Ecto.Repo.t, Keyword.t) :: t
   def unsafe_validate_unique(%Changeset{} = changeset, fields, repo, opts \\ []) when is_list(opts) do
-    %{data: data} = changeset
+    %{validations: validations, data: data} = changeset
 
     unless is_struct(data) and function_exported?(data.__struct__, :__schema__, 1) do
       raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets"
     end
 
-    {validations, schema} =
-      case changeset do
-        %{validations: validations, data: %schema{__meta__: _}} ->
-          {validations, schema}
+    schema =
+      case data do
+        %schema{__meta__: _} ->
+          schema
 
         _ ->
           raise ArgumentError, "unsafe_validate_unique/4 does not work with embedded schemas"
