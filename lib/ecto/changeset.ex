@@ -39,7 +39,7 @@ defmodule Ecto.Changeset do
 
   Some validations may happen against the database but
   they are inherently unsafe. Those validations start with a `unsafe_`
-  prefix, such as `unsafe_validate_unique/3`.
+  prefix, such as `unsafe_validate_unique/4`.
 
   On the other hand, constraints rely on the database and are always safe.
   As a consequence, validations are always checked before constraints.
@@ -279,6 +279,7 @@ defmodule Ecto.Changeset do
   require Ecto.Query
   alias __MODULE__
   alias Ecto.Changeset.Relation
+  alias Ecto.Schema.Metadata
 
   @empty_values [""]
 
@@ -1871,16 +1872,17 @@ defmodule Ecto.Changeset do
 
   """
   @spec unsafe_validate_unique(t, atom | [atom, ...], Ecto.Repo.t, Keyword.t) :: t
-  def unsafe_validate_unique(changeset, fields, repo, opts \\ []) when is_list(opts) do
-    fields = List.wrap(fields)
-    {repo_opts, opts} = Keyword.pop(opts, :repo_opts, [])
+  def unsafe_validate_unique(%Changeset{} = changeset, fields, repo, opts \\ []) when is_list(opts) do
     {validations, schema} =
       case changeset do
-        %Ecto.Changeset{validations: validations, data: %schema{}} ->
+        %{validations: validations, data: %schema{__meta__: %Metadata{}}} ->
           {validations, schema}
-        %Ecto.Changeset{} ->
-          raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets"
+
+        %{data: data} ->
+          raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets or embedded schemas, data received: #{inspect(data)}"
       end
+
+    fields = List.wrap(fields)
     changeset = %{changeset | validations: [{hd(fields), {:unsafe_unique, fields: fields}} | validations]}
 
     where_clause = for field <- fields do
@@ -1899,6 +1901,8 @@ defmodule Ecto.Changeset do
     if unrelated_changes? || any_nil_values_for_fields? || any_prior_errors_for_fields? do
       changeset
     else
+      {repo_opts, opts} = Keyword.pop(opts, :repo_opts, [])
+
       query =
         Keyword.get(opts, :query, schema)
         |> maybe_exclude_itself(schema, changeset)

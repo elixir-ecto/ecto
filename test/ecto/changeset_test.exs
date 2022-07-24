@@ -1728,6 +1728,41 @@ defmodule Ecto.ChangesetTest do
       # no overlap between changed fields and those required to be unique
       refute_receive [MockRepo, function: :exists?, query: %Ecto.Query{}, opts: []]
     end
+
+    test "does not allow schemaless changesets" do
+      types = %{title: :string, upvotes: :integer}
+
+      # struct
+      changeset = Ecto.Changeset.cast({%NoSchemaPost{}, types}, %{title: "hi"}, Map.keys(types))
+
+      msg =
+        ~s/unsafe_validate_unique\/4 does not work with schemaless changesets or embedded schemas, data received: %Ecto.ChangesetTest.NoSchemaPost{title: nil, upvotes: nil}/
+
+      assert_raise ArgumentError, msg, fn ->
+        unsafe_validate_unique(changeset, [:title], TestRepo)
+      end
+
+      # map
+      changeset = Ecto.Changeset.cast({%{}, types}, %{title: "hi"}, Map.keys(types))
+
+      msg =
+        ~s/unsafe_validate_unique\/4 does not work with schemaless changesets or embedded schemas, data received: %{}/
+
+      assert_raise ArgumentError, msg, fn ->
+        unsafe_validate_unique(changeset, [:title], TestRepo)
+      end
+    end
+
+    test "does not allow embedded schemas" do
+      changeset = Ecto.Changeset.change(%SocialSource{})
+
+      msg =
+        ~s/unsafe_validate_unique\/4 does not work with schemaless changesets or embedded schemas, data received: %Ecto.ChangesetTest.SocialSource{origin: nil, url: nil}/
+
+      assert_raise ArgumentError, msg, fn ->
+        unsafe_validate_unique(changeset, [:origin], TestRepo)
+      end
+    end
   end
 
   ## Locks
