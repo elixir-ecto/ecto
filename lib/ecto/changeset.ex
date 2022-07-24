@@ -1872,8 +1872,6 @@ defmodule Ecto.Changeset do
   """
   @spec unsafe_validate_unique(t, atom | [atom, ...], Ecto.Repo.t, Keyword.t) :: t
   def unsafe_validate_unique(changeset, fields, repo, opts \\ []) when is_list(opts) do
-    fields = List.wrap(fields)
-    {repo_opts, opts} = Keyword.pop(opts, :repo_opts, [])
     %Ecto.Changeset{data: data} = changeset
 
     unless is_struct(data) and function_exported?(data.__struct__, :__schema__, 1) do
@@ -1889,6 +1887,7 @@ defmodule Ecto.Changeset do
           raise ArgumentError, "unsafe_validate_unique/4 does not work with embedded schemas"
       end
 
+    fields = List.wrap(fields)
     changeset = %{changeset | validations: [{hd(fields), {:unsafe_unique, fields: fields}} | validations]}
 
     where_clause = for field <- fields do
@@ -1907,6 +1906,8 @@ defmodule Ecto.Changeset do
     if unrelated_changes? || any_nil_values_for_fields? || any_prior_errors_for_fields? do
       changeset
     else
+      {repo_opts, opts} = Keyword.pop(opts, :repo_opts, [])
+
       query =
         Keyword.get(opts, :query, schema)
         |> maybe_exclude_itself(schema, changeset)
