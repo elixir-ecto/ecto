@@ -1875,7 +1875,7 @@ defmodule Ecto.Changeset do
     %{validations: validations, data: data} = changeset
 
     unless is_struct(data) and function_exported?(data.__struct__, :__schema__, 1) do
-      raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets"
+      raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets, data received: #{inspect(data)}"
     end
 
     schema =
@@ -1883,8 +1883,8 @@ defmodule Ecto.Changeset do
         %schema{__meta__: _} ->
           schema
 
-        _ ->
-          raise ArgumentError, "unsafe_validate_unique/4 does not work with embedded schemas"
+        %embedded_schema{} ->
+          raise ArgumentError, "unsafe_validate_unique/4 does not work with embedded schemas, schema received: #{inspect(embedded_schema)}"
       end
 
     fields = List.wrap(fields)

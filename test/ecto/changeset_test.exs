@@ -1735,30 +1735,33 @@ defmodule Ecto.ChangesetTest do
       # struct
       changeset = Ecto.Changeset.cast({%NoSchemaPost{}, types}, %{title: "hi"}, Map.keys(types))
 
-      assert_raise ArgumentError,
-                   ~s/unsafe_validate_unique\/4 does not work with schemaless changesets/,
-                   fn ->
-                     unsafe_validate_unique(changeset, [:title], TestRepo)
-                   end
+      msg =
+        ~s/unsafe_validate_unique\/4 does not work with schemaless changesets, data received: %Ecto.ChangesetTest.NoSchemaPost{title: nil, upvotes: nil}/
+
+      assert_raise ArgumentError, msg, fn ->
+        unsafe_validate_unique(changeset, [:title], TestRepo)
+      end
 
       # map
       changeset = Ecto.Changeset.cast({%{}, types}, %{title: "hi"}, Map.keys(types))
 
-      assert_raise ArgumentError,
-                   ~s/unsafe_validate_unique\/4 does not work with schemaless changesets/,
-                   fn ->
-                     unsafe_validate_unique(changeset, [:title], TestRepo)
-                   end
+      msg =
+        ~s/unsafe_validate_unique\/4 does not work with schemaless changesets, data received: %{}/
+
+      assert_raise ArgumentError, msg, fn ->
+        unsafe_validate_unique(changeset, [:title], TestRepo)
+      end
     end
 
     test "does not allow embedded schemas" do
       changeset = Ecto.Changeset.change(%SocialSource{})
 
-      assert_raise ArgumentError,
-                   ~s/unsafe_validate_unique\/4 does not work with embedded schemas/,
-                   fn ->
-                     unsafe_validate_unique(changeset, [:origin], TestRepo)
-                   end
+      msg =
+        ~s/unsafe_validate_unique\/4 does not work with embedded schemas, schema received: Ecto.ChangesetTest.SocialSource/
+
+      assert_raise ArgumentError, msg, fn ->
+        unsafe_validate_unique(changeset, [:origin], TestRepo)
+      end
     end
   end
 
