@@ -224,13 +224,17 @@ defmodule Ecto.Query.Builder.SelectTest do
               title: &0.archived_at(), \
               maxdue: {:subquery, 0}, \
               user_email: {:subquery, 1}\
-              }, %{\n  \
-              template_name:\n  \
-                fragment(\n      {:raw, "CASE WHEN "},\n    \
-                {:expr, &0.from_template_id() == ^2},\n    \
-                {:raw, " THEN "},\n      {:expr, ""},\n    \
-                {:raw, " ELSE "},\n      {:expr, {:subquery, 2}},\n    \
-                {:raw, " END"}\n    )\n\
+              }, %{\n\
+                template_name:\n\
+                  fragment(\n\
+                    {:raw, "CASE WHEN "},\n\
+                    {:expr, &0.from_template_id() == ^2},\n\
+                    {:raw, " THEN "},\n\
+                    {:expr, ""},\n\
+                    {:raw, " ELSE "},\n\
+                    {:expr, {:subquery, 2}},\n\
+                    {:raw, " END"}\n\
+                  )\n\
               })\
               """
 
