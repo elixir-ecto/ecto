@@ -21,12 +21,23 @@ defmodule Ecto.Query.Builder.JoinTest do
     assert %{joins: [_]} = join("posts", :inner, [p], c in join_macro(^left, ^right), on: true)
   end
 
-  test "accepts keywords on :on" do
-    assert %{joins: [join]} =
-            join("posts", :inner, [p], c in "comments", on: [post_id: p.id, public: true])
-    assert Macro.to_string(join.on.expr) ==
-           "&1.post_id() == &0.id() and &1.public() == %Ecto.Query.Tagged{tag: nil, type: {1, :public}, value: true}"
-    assert join.on.params == []
+  # TODO: AST is represented as string differently on versions pre 1.13
+  if Version.match?(System.version(), ">= 1.13.0-dev") do
+    test "accepts keywords on :on" do
+      assert %{joins: [join]} =
+              join("posts", :inner, [p], c in "comments", on: [post_id: p.id, public: true])
+      assert Macro.to_string(join.on.expr) ==
+            "&1.post_id() == &0.id() and\n  &1.public() == %Ecto.Query.Tagged{tag: nil, type: {1, :public}, value: true}"
+      assert join.on.params == []
+    end
+  else
+    test "accepts keywords on :on" do
+      assert %{joins: [join]} =
+              join("posts", :inner, [p], c in "comments", on: [post_id: p.id, public: true])
+      assert Macro.to_string(join.on.expr) ==
+            "&1.post_id() == &0.id() and &1.public() == %Ecto.Query.Tagged{tag: nil, type: {1, :public}, value: true}"
+      assert join.on.params == []
+    end
   end
 
   test "accepts queries on interpolation" do
