@@ -283,11 +283,11 @@ defmodule Ecto.Query.Builder.SelectTest do
               user_email: {:subquery, 1}\
               }, %{\
               template_name:\
-                fragment({:raw, "CASE WHEN "},\
-                {:expr, &0.from_template_id() == ^2},\
-                {:raw, " THEN "}, {:expr, ""},\
-                {:raw, " ELSE "}, {:expr, {:subquery, 2}},\
-                {:raw, " END"})\
+               fragment({:raw, "CASE WHEN "},\
+               {:expr, &0.from_template_id() == ^2},\
+               {:raw, " THEN "}, {:expr, ""},\
+               {:raw, " ELSE "}, {:expr, {:subquery, 2}},\
+               {:raw, " END"})\
               })\
               """
 
