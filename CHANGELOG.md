@@ -13,7 +13,7 @@
 
   * [Ecto.Changeset] Raise when schemaless changeset or embedded schema is used in `unsafe_validate_unique/4`
   * [Ecto.Query] Respect virtual field type in subqueries
-  * [Ecto.Query] Don't select struct fields overriden with `nil`
+  * [Ecto.Query] Don't select struct fields overridden with `nil`
   * [Ecto.Repo] Fix `insert_all` query parameter count when using value queries alongside `placeholder`
 
 ## v3.8.4 (2022-06-04)
