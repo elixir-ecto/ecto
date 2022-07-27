@@ -6,8 +6,8 @@ all:
 
 all-test:
     BUILD \
-        --build-arg ELIXIR_BASE=1.11.0-erlang-23.1.1-alpine-3.13.1 \
-        --build-arg ELIXIR_BASE=1.11.0-erlang-21.3.8.21-alpine-3.13.1 \
+        --build-arg ELIXIR_BASE=1.13.4-erlang-24.3.4.2-alpine-3.16.0 \
+        --build-arg ELIXIR_BASE=1.13.4-erlang-22.3.4.20-alpine-3.14.0 \
         --build-arg ELIXIR_BASE=1.10.4-erlang-21.3.8.24-alpine-3.13.3 \
         +test
 
@@ -34,13 +34,13 @@ lint:
 
 all-integration-test:
     BUILD \
-        --build-arg ELIXIR_BASE=1.11.0-erlang-23.1.1-alpine-3.13.1 \
-        --build-arg ELIXIR_BASE=1.11.0-erlang-21.3.8.21-alpine-3.13.1 \
+        --build-arg ELIXIR_BASE=1.13.4-erlang-24.3.4.2-alpine-3.16.0 \
+        --build-arg ELIXIR_BASE=1.13.4-erlang-22.3.4.20-alpine-3.14.0 \
         +integration-test
 
 
 setup-base:
-    ARG ELIXIR_BASE=1.11.0-erlang-23.1.1-alpine-3.13.1
+    ARG ELIXIR_BASE=1.13.4-erlang-24.3.4.2-alpine-3.16.0
     FROM hexpm/elixir:$ELIXIR_BASE
     RUN apk add --no-progress --update git build-base
     RUN mix local.rebar --force
