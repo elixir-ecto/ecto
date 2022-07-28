@@ -23,7 +23,7 @@ defmodule Ecto.Query.Builder.Select do
       {{:{}, [], [:&, [], [0]]}, {[], %{take: %{}, subqueries: []}}}
 
   """
-  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {list, %{}}}
+  @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {list, %{take: map, subqueries: list}}}
   def escape(atom, _vars, _env)
       when is_atom(atom) and not is_boolean(atom) and atom != nil do
     Builder.error! """
