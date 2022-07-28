@@ -1270,7 +1270,7 @@ defmodule Ecto.Query do
   To select a struct but omit only given fields, you can
   override them with `nil` or another default value:
 
-      from(city in City, select: %{city | geojson: nil})
+      from(city in City, select: %{city | geojson: nil, text: "<redacted>"})
 
   For more information, read the docs for `Ecto.Query.API.struct/2`
   and `Ecto.Query.API.map/2`.
@@ -1283,7 +1283,7 @@ defmodule Ecto.Query do
       City |> select([:name])
       City |> select([c], struct(c, [:name]))
       City |> select([c], map(c, [:name]))
-      City |> select([c], %{c | geojson: nil})
+      City |> select([c], %{c | geojson: nil, text: "<redacted>"})
 
   ## Dynamic parts
 
