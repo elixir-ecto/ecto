@@ -1598,7 +1598,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> union(^supplier_query)
 
       # Ordered result
-      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
       supplier_query = Supplier |> select([s], s.city)
       union(customer_query, ^supplier_query)
 
@@ -1639,7 +1639,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> union_all(^supplier_query)
 
       # Ordered result
-      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
       supplier_query = Supplier |> select([s], s.city)
       union_all(customer_query, ^supplier_query)
   """
@@ -1685,7 +1685,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> except(^supplier_query)
 
       # Ordered result
-      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
       supplier_query = Supplier |> select([s], s.city)
       except(customer_query, ^supplier_query)
   """
@@ -1726,7 +1726,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> except_all(^supplier_query)
 
       # Ordered result
-      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
       supplier_query = Supplier |> select([s], s.city)
       except_all(customer_query, ^supplier_query)
   """
@@ -1772,7 +1772,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> intersect(^supplier_query)
 
       # Ordered result
-      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
       supplier_query = Supplier |> select([s], s.city)
       intersect(customer_query, ^supplier_query)
   """
@@ -1813,7 +1813,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> intersect_all(^supplier_query)
 
       # Ordered result
-      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
       supplier_query = Supplier |> select([s], s.city)
       intersect_all(customer_query, ^supplier_query)
   """
