@@ -174,10 +174,6 @@ defmodule Ecto.Repo.Preloader do
     [entry | preload_assocs(assocs, queries, repo_name, tuplet)]
   end
 
-  # defp preload_embeds(structs, [], _repo_name, _tuplet) do
-  #   structs
-  # end
-
   defp preload_embeds(structs, embeds, repo_name, tuplet) do
     structs =
       Enum.reduce(structs, [], fn struct, acc ->
