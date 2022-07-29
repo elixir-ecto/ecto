@@ -63,7 +63,8 @@ defmodule Ecto.Repo.Preloader do
     if sample = Enum.find(structs, & &1) do
       module = sample.__struct__
       prefix = preload_prefix(tuplet, sample)
-      {assocs, throughs} = expand(module, preloads, {%{}, %{}})
+      {assocs, throughs, embeds} = expand(module, preloads, {%{}, %{}, []})
+      structs = preload_embeds(structs, embeds, repo_name, tuplet)
 
       {fetched_assocs, to_fetch_queries} =
         prepare_queries(structs, module, assocs, prefix, repo_name, tuplet)
@@ -153,6 +154,21 @@ defmodule Ecto.Repo.Preloader do
   end
 
   defp preload_assocs([], [], _repo_name, _tuplet), do: []
+
+  defp preload_embeds(structs, embeds, repo_name, tuplet) do
+    structs =
+      Enum.reduce(structs, [], fn struct, acc ->
+        struct =
+          Enum.reduce(embeds, struct, fn {embed, sub_preloads}, struct_acc ->
+            %{field: field} = embed
+            embedded_schema = Map.get(struct, field)
+            loaded_schema = preload_each(embedded_schema, repo_name, sub_preloads, tuplet)
+            Map.put(struct_acc, field, loaded_schema)
+          end)
+        [struct | acc]
+      end)
+    Enum.reverse(structs)
+  end
 
   defp maybe_unpack_query(false, queries), do: {[], [], queries}
   defp maybe_unpack_query(true, [{ids, structs} | queries]), do: {ids, structs, queries}
@@ -493,22 +509,30 @@ defmodule Ecto.Repo.Preloader do
   ## Expand
 
   def expand(schema, preloads, acc) do
-    Enum.reduce(preloads, acc, fn {preload, {fields, query, sub_preloads}}, {assocs, throughs} ->
-      assoc = association_from_schema!(schema, preload)
-      info  = assoc.__struct__.preload_info(assoc)
+    Enum.reduce(preloads, acc, fn {preload, {fields, query, sub_preloads}},
+                                  {assocs, throughs, embeds} ->
+      assoc_or_embed = association_or_embed!(schema, preload)
+
+      info = assoc_or_embed.__struct__.preload_info(assoc_or_embed)
 
       case info do
         {:assoc, _, _} ->
-          value  = {info, fields, query, sub_preloads}
+          value = {info, fields, query, sub_preloads}
           assocs = Map.update(assocs, preload, value, &merge_preloads(preload, value, &1))
-          {assocs, throughs}
+          {assocs, throughs, embeds}
+
         {:through, _, through} ->
           through =
             through
             |> Enum.reverse()
             |> Enum.reduce({fields, query, sub_preloads}, &{nil, nil, [{&1, &2}]})
             |> elem(2)
-          expand(schema, through, {assocs, Map.put(throughs, preload, info)})
+
+          expand(schema, through, {assocs, Map.put(throughs, preload, info), embeds})
+
+        {:embed} ->
+          embeds = [{assoc_or_embed, sub_preloads} | embeds]
+          {assocs, throughs, embeds}
       end
     end)
   end
@@ -522,12 +546,25 @@ defmodule Ecto.Repo.Preloader do
                          "with different queries: #{inspect left} and #{inspect right}"
   end
 
-  # Since there is some ambiguity between assoc and queries.
-  # We reimplement this function here for nice error messages.
-  defp association_from_schema!(schema, assoc) do
-    schema.__schema__(:association, assoc) ||
-      raise ArgumentError,
-            "schema #{inspect schema} does not have association #{inspect assoc}#{maybe_module(assoc)}"
+  defp association_or_embed!(schema, preload) do
+    assoc_result = schema.__schema__(:association, preload)
+
+    case !!assoc_result do
+      true ->
+        assoc_result
+
+      false ->
+        embed_result = schema.__schema__(:embed, preload)
+
+        case !!embed_result do
+          true ->
+            embed_result
+
+          false ->
+            raise ArgumentError,
+                  "schema #{inspect(schema)} does not have association #{inspect(assoc_result)}#{maybe_module(assoc_result)}"
+        end
+    end
   end
 
   defp maybe_module(assoc) do
