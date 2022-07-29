@@ -63,7 +63,6 @@ end
 ```
 
 Defining embedded schema in such a way is called inline-defined embedded schemas which are:
-- the simpliest way to define embedded schema
 - generating module in parent scope with the appropriate struct (for example above, module will be `User.Profile`)
 - persited within parent schema
 - requiring to provide `with` option to `Ecto.Changeset.cast_embed/3`
