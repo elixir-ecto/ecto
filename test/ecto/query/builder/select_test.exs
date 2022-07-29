@@ -86,6 +86,14 @@ defmodule Ecto.Query.Builder.SelectTest do
         escape(quote do [:foo, ^:bar] end, [], __ENV__)
       end
     end
+
+    test "supports column aliases" do
+      query_kw = from p in "posts", select: alias(p.id, "ident")
+      assert {:alias, _, [{{:., _, [{:&, [], [0]}, :id]}, [], []}, "ident"]} = query_kw.select.expr
+
+      query_expr = select("posts", [p], alias(p.id, "ident"))
+      assert {:alias, _, [{{:., _, [{:&, [], [0]}, :id]}, [], []}, "ident"]} = query_expr.select.expr
+    end
   end
 
   describe "at runtime" do

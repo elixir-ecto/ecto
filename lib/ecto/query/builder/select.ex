@@ -111,6 +111,17 @@ defmodule Ecto.Query.Builder.Select do
     {expr, {params, acc}}
   end
 
+  # aliased values
+  defp escape({:alias, _, [expr, name]}, {params, acc}, vars, env) when is_binary(name) do
+    {escaped, {params, acc}} = Builder.escape(expr, :any, {params, acc}, vars, env)
+    expr = {:{}, [], [:alias, [], [escaped, name]]}
+    {expr, {params, acc}}
+  end
+
+  defp escape({:alias, _, [_expr, name]}, {_params, _acc}, _vars, _env) do
+    Builder.error! "alias/2 expects `name` to be a string, got `#{inspect(name)}`"
+  end
+
   defp escape(expr, params_acc, vars, env) do
     Builder.escape(expr, :any, params_acc, vars, {env, &escape_expansion/5})
   end

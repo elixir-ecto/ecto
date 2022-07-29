@@ -11,7 +11,7 @@ defmodule Ecto.Query.API do
     * Null check functions: `is_nil/1`
     * Aggregates: `count/0`, `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
     * Date/time intervals: `datetime_add/3`, `date_add/3`, `from_now/2`, `ago/2`
-    * Inside select: `struct/2`, `map/2`, `merge/2` and literals (map, tuples, lists, etc)
+    * Inside select: `struct/2`, `map/2`, `merge/2`, `alias/2` and literals (map, tuples, lists, etc)
     * General: `fragment/1`, `field/2`, `type/2`, `as/1`, `parent_as/1`
 
   Note the functions in this module exist for documentation
@@ -681,6 +681,30 @@ defmodule Ecto.Query.API do
   See the "Named binding" section in `Ecto.Query` for more information.
   """
   def parent_as(binding), do: doc! [binding]
+
+  @doc """
+  Creates an alias for the given selected value.
+
+  This is available only inside `Ecto.Query.select/3`.
+
+  When working with calculated values, an alias can be used to simplify
+  the query. Otherwise, the entire expression would need to be copied when
+  referencing it outside of select statements.
+
+  This comes in handy when, for instance, you would like to use the calculated
+  value in `Ecto.Query.group_by/3` or `Ecto.Query.order_by/3`:
+
+      from p in Post,
+        select: %{
+          posted: p.posted,
+          sum_visits: p.visits |> coalesce(0) |> sum() |> alias("sum_visits")
+        },
+        group_by: p.posted,
+        order_by: fragment("sum_visits")
+
+  The name of the alias must be a string, otherwise a compilation error is raised.
+  """
+  def alias(selected_value, name), do: doc! [selected_value, name]
 
   defp doc!(_) do
     raise "the functions in Ecto.Query.API should not be invoked directly, " <>

@@ -1537,6 +1537,27 @@ defmodule Ecto.Integration.RepoTest do
 
       assert [%Post{title: "1", counter: 2}] = TestRepo.all(subquery)
     end
+
+    @tag select_alias
+    test "aliased select value" do
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 3})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 2})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-20], visits: nil})
+
+      query =
+        from p in Post,
+          select: %{
+            posted: alias(p.posted, "posted"),
+            sum_visits: p.visits |> coalesce(0) |> sum() |> alias("sum_visits")
+          },
+          group_by: fragment("posted"),
+          order_by: fragment("sum_visits")
+
+      results = TestRepo.all(query)
+
+      assert [%{posted: ~D[2020-12-20], sum_visits: 0}, %{posted: ~D[2020-12-21], sum_visits: 5}] =
+               results
+    end
   end
 
   test "query count distinct" do
