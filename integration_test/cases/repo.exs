@@ -1548,14 +1548,14 @@ defmodule Ecto.Integration.RepoTest do
         from p in Post,
           select: %{
             posted: alias(p.posted, "posted"),
-            sum_visits: p.visits |> coalesce(0) |> sum() |> alias("sum_visits")
+            min_visits: p.visits |> coalesce(0) |> min() |> alias("min_visits")
           },
           group_by: fragment("posted"),
-          order_by: fragment("sum_visits")
+          order_by: fragment("min_visits")
 
       results = TestRepo.all(query)
 
-      assert [%{posted: ~D[2020-12-20], sum_visits: 0}, %{posted: ~D[2020-12-21], sum_visits: 5}] =
+      assert [%{posted: ~D[2020-12-20], min_visits: 0}, %{posted: ~D[2020-12-21], min_visits: 2}] =
                results
     end
   end
