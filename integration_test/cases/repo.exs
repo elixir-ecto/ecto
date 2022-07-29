@@ -1538,7 +1538,7 @@ defmodule Ecto.Integration.RepoTest do
       assert [%Post{title: "1", counter: 2}] = TestRepo.all(subquery)
     end
 
-    @tag select_alias
+    @tag :select_alias
     test "aliased select value" do
       TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 3})
       TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 2})
