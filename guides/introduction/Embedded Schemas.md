@@ -62,7 +62,8 @@ defmodule User do
 end
 ```
 
-Defining embedded schema in such a way is called inline-defined embedded schemas which are:
+Embedded schemas defined in such way are said to be defined inline, which:
+
 - generating module in parent scope with the appropriate struct (for example above, module will be `User.Profile`)
 - persited within parent schema
 - requiring to provide `with` option to `Ecto.Changeset.cast_embed/3`
@@ -100,12 +101,13 @@ defmodule UserProfile do
 end
 ```
 
-Defining embedded schema in such a way is called explicit-defined embedded schemas, which:
+Embedded schemas defined in such way are said to be explicit-defined, which:
+
 - are dedicated modules having own scope, changeset functions, props, documentation, etc...
 - could be embedded by multiple parent schemas
 - are persistence agnostic, which means that `embedded_schema` doesn't require to be persisted
 
-It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. Like was said before, they are persistence agnostic. This makes embedded schemas ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, if you want to build a contact form, you still want to parse and validate the data, but the data is likely not persisted anywhere. Instead, it is used to send an email. Embedded schemas would be a good fit for such a use case.
+It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. As they are persistent agnostic, they are ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, if you want to build a contact form, you still want to parse and validate the data, but the data is likely not persisted anywhere. Instead, it is used to send an email. Embedded schemas would be a good fit for such a use case.
 
 ### Migrations
 
