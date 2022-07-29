@@ -48,18 +48,33 @@ defmodule Ecto.Query.Builder.DynamicTest do
       end
     end
 
-    test "with subquery and dynamic interpolation" do
-      dynamic = dynamic([p], p.sq in subquery(query()))
-      dynamic = dynamic([p], p.bar1 == ^"bar1" or ^dynamic or p.bar3 == ^"bar3")
-      dynamic = dynamic([p], p.foo == ^"foo" and ^dynamic and p.baz == ^"baz")
-      assert {expr, binding, params, [_subquery], _, _} = fully_expand(query(), dynamic)
-      assert Macro.to_string(binding) == "[p]"
-      assert Macro.to_string(expr) ==
-             "&0.foo() == ^0 and (&0.bar1() == ^1 or &0.sq() in {:subquery, 0} or &0.bar3() == ^3) and &0.baz() == ^4"
-      assert params == [{"foo", {0, :foo}}, {"bar1", {0, :bar1}}, {:subquery, 0},
-                        {"bar3", {0, :bar3}}, {"baz", {0, :baz}}]
+    # TODO: AST is represented as string differently on versions pre 1.13
+    if Version.match?(System.version(), ">= 1.13.0-dev") do
+      test "with subquery and dynamic interpolation" do
+        dynamic = dynamic([p], p.sq in subquery(query()))
+        dynamic = dynamic([p], p.bar1 == ^"bar1" or ^dynamic or p.bar3 == ^"bar3")
+        dynamic = dynamic([p], p.foo == ^"foo" and ^dynamic and p.baz == ^"baz")
+        assert {expr, binding, params, [_subquery], _, _} = fully_expand(query(), dynamic)
+        assert Macro.to_string(binding) == "[p]"
+        assert Macro.to_string(expr) ==
+              "&0.foo() == ^0 and (&0.bar1() == ^1 or &0.sq() in {:subquery, 0} or &0.bar3() == ^3) and\n  &0.baz() == ^4"
+        assert params == [{"foo", {0, :foo}}, {"bar1", {0, :bar1}}, {:subquery, 0},
+                          {"bar3", {0, :bar3}}, {"baz", {0, :baz}}]
+      end
+    else
+      test "with subquery and dynamic interpolation" do
+        dynamic = dynamic([p], p.sq in subquery(query()))
+        dynamic = dynamic([p], p.bar1 == ^"bar1" or ^dynamic or p.bar3 == ^"bar3")
+        dynamic = dynamic([p], p.foo == ^"foo" and ^dynamic and p.baz == ^"baz")
+        assert {expr, binding, params, [_subquery], _, _} = fully_expand(query(), dynamic)
+        assert Macro.to_string(binding) == "[p]"
+        assert Macro.to_string(expr) ==
+              "&0.foo() == ^0 and (&0.bar1() == ^1 or &0.sq() in {:subquery, 0} or &0.bar3() == ^3) and &0.baz() == ^4"
+        assert params == [{"foo", {0, :foo}}, {"bar1", {0, :bar1}}, {:subquery, 0},
+                          {"bar3", {0, :bar3}}, {"baz", {0, :baz}}]
+      end
     end
-    
+
     test "with nested dynamic interpolation" do
       dynamic = dynamic([p], p.bar2 == ^"bar2")
       dynamic = dynamic([p], p.bar1 == ^"bar1" or ^dynamic or p.bar3 == ^"bar3")

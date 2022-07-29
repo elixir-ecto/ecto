@@ -6,6 +6,15 @@
 
   * [Ecto.Query] Support `^%{field: dynamic(...)}` in `select` and `select_merge`
   * [Ecto.Query] Support `%{field: subquery(...)}` in `select` and `select_merge`
+  * [Ecto.Repo] Support `idle_interval` query parameter in connection URL
+  * [Ecto.Repo] Log human-readable UUIDs by using pre-dumped query parameters
+
+### Bug fix
+
+  * [Ecto.Changeset] Raise when schemaless changeset or embedded schema is used in `unsafe_validate_unique/4`
+  * [Ecto.Query] Respect virtual field type in subqueries
+  * [Ecto.Query] Don't select struct fields overridden with `nil`
+  * [Ecto.Repo] Fix `insert_all` query parameter count when using value queries alongside `placeholder`
 
 ## v3.8.4 (2022-06-04)
 

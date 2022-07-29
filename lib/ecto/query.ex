@@ -1267,6 +1267,11 @@ defmodule Ecto.Query do
 
   If you want a map with only the selected fields to be returned.
 
+  To select a struct but omit only given fields, you can
+  override them with `nil` or another default value:
+
+      from(city in City, select: %{city | geojson: nil, text: "<redacted>"})
+
   For more information, read the docs for `Ecto.Query.API.struct/2`
   and `Ecto.Query.API.map/2`.
 
@@ -1278,6 +1283,7 @@ defmodule Ecto.Query do
       City |> select([:name])
       City |> select([c], struct(c, [:name]))
       City |> select([c], map(c, [:name]))
+      City |> select([c], %{c | geojson: nil, text: "<redacted>"})
 
   ## Dynamic parts
 
@@ -1592,7 +1598,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> union(^supplier_query)
 
       # Ordered result
-      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
       supplier_query = Supplier |> select([s], s.city)
       union(customer_query, ^supplier_query)
 
@@ -1633,7 +1639,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> union_all(^supplier_query)
 
       # Ordered result
-      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
       supplier_query = Supplier |> select([s], s.city)
       union_all(customer_query, ^supplier_query)
   """
@@ -1679,7 +1685,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> except(^supplier_query)
 
       # Ordered result
-      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
       supplier_query = Supplier |> select([s], s.city)
       except(customer_query, ^supplier_query)
   """
@@ -1720,7 +1726,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> except_all(^supplier_query)
 
       # Ordered result
-      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
       supplier_query = Supplier |> select([s], s.city)
       except_all(customer_query, ^supplier_query)
   """
@@ -1766,7 +1772,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> intersect(^supplier_query)
 
       # Ordered result
-      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
       supplier_query = Supplier |> select([s], s.city)
       intersect(customer_query, ^supplier_query)
   """
@@ -1807,7 +1813,7 @@ defmodule Ecto.Query do
       Customer |> select([c], c.city) |> intersect_all(^supplier_query)
 
       # Ordered result
-      customer_query = Customer |> |> select([c], c.city) |> order_by(fragment("city"))
+      customer_query = Customer |> select([c], c.city) |> order_by(fragment("city"))
       supplier_query = Supplier |> select([s], s.city)
       intersect_all(customer_query, ^supplier_query)
   """
