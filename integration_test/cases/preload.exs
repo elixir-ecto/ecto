@@ -10,6 +10,7 @@ defmodule Ecto.Integration.PreloadTest do
   alias Ecto.Integration.Permalink
   alias Ecto.Integration.User
   alias Ecto.Integration.Custom
+  alias Ecto.Integration.Order
 
   test "preload with parameter from select_merge" do
     p1 = TestRepo.insert!(%Post{title: "p1"})
@@ -706,6 +707,37 @@ defmodule Ecto.Integration.PreloadTest do
     # Now we preload it
     item = TestRepo.preload(item, :user)
     assert %User{id: ^uid1} = item.user
+  end
+
+  test "preload belongs_to in embedded_schema from container schema" do
+    # Order embeds_many items
+    # Items belong to Users
+    # Preload Users from an Order schema
+
+    %User{id: uid1} = TestRepo.insert!(%User{name: "1"})
+    %User{id: uid2} = TestRepo.insert!(%User{name: "2"})
+    %User{id: uid3} = TestRepo.insert!(%User{name: "3"})
+    item1 = %Item{id: 1, user_id: uid1}
+    item2 = %Item{id: 2, user_id: uid2}
+    item3 = %Item{id: 3, user_id: uid3}
+    order = %Order{items: [item1, item3, item2]}
+    %Order{id: oid1} = TestRepo.insert!(order)
+
+    Enum.map(order.items, fn item ->
+      assert %Ecto.Association.NotLoaded{} = item.user
+    end)
+
+    # Now we preload it
+    order = TestRepo.preload(order, items: :user)
+
+    names =
+      Enum.map(order.items, fn item ->
+        item.user.name
+      end)
+
+    # Different asserts for variety
+    assert %User{id: ^uid1} = hd(order.items).user
+    assert ["1", "3", "2"] = names
   end
 
   defp sort_by_id(values) do
