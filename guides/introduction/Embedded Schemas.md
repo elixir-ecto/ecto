@@ -26,7 +26,7 @@ defmodule User do
     field :avatar_url, :string
     field :confirmed_at, :naive_datetime
 
-    embeds_one :profile do
+    embeds_one :profile, Profile do
       field :online, :boolean
       field :dark_mode, :boolean
       field :visibility, Ecto.Enum, values: [:public, :private, :friends_only]
@@ -39,7 +39,7 @@ end
 
 ### Embeds
 
-There are two ways to represent embedded data within a schema, `embeds_many`, which creates a list of embeds, and `embeds_one`, which creates only a single instance of the embed. Your choice here affects the behavior of embed-specific functions like `Ecto.Changeset.put_embed/4` and `Ecto.Changeset.cast_embed/3`, so choose whichever is most appropriate to your use case. In our example we are going to use `embeds_one` since users will only ever have one profile associated with them.
+There are two ways to represent embedded data within a schema, `Ecto.Schema.embeds_many/3`, which creates a list of embeds, and `Ecto.Schema.embeds_one/3`, which creates only a single instance of the embed. Your choice here affects the behavior of embed-specific functions like `Ecto.Changeset.put_embed/4` and `Ecto.Changeset.cast_embed/3`, so choose whichever is most appropriate to your use case. In our example we are going to use `Ecto.Schema.embeds_one/3` since users will only ever have one profile associated with them.
 
 ```elixir
 defmodule User do
@@ -51,7 +51,7 @@ defmodule User do
     field :avatar_url, :string
     field :confirmed_at, :naive_datetime
 
-    embeds_one :profile do
+    embeds_one :profile, Profile do
       field :online, :boolean
       field :dark_mode, :boolean
       field :visibility, Ecto.Enum, values: [:public, :private, :friends_only]
@@ -62,9 +62,15 @@ defmodule User do
 end
 ```
 
+Embedded schemas defined in such way are said to be defined inline, which:
+
+- generating module in parent scope with the appropriate struct (for example above, module will be `User.Profile`)
+- persited within parent schema
+- requiring to provide `with` option to `Ecto.Changeset.cast_embed/3`
+
 ### Extracting the embeds
 
-While the above User schema is simple and sufficient, we might want to work independently with the embedded profile struct. For example, if there was a lot of functionality devoted solely to manipulating the profile data, we'd want to consider extracting the embedded schema into its own module.
+While the above `User` schema is simple and sufficient, we might want to work independently with the embedded profile struct. For example, if there was a lot of functionality devoted solely to manipulating the profile data, we'd want to consider extracting the embedded schema into its own module. This can be achieved with `Ecto.Schema.embedded_schema/1`.
 
 ```elixir
 # user/user.ex
@@ -95,7 +101,13 @@ defmodule UserProfile do
 end
 ```
 
-It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. You can think of embedded schemas as persistence agnostic `schema`s. This makes embedded schemas ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, if you want to build a contact form, you still want to parse and validate the data, but the data is likely not persisted anywhere. Instead, it is used to send an email. Embedded schemas would be a good fit for such a use case.
+Embedded schemas defined in such way are said to be explicit-defined, which:
+
+- are dedicated modules having own scope, changeset functions, props, documentation, etc...
+- could be embedded by multiple parent schemas
+- are persistence agnostic, which means that `embedded_schema` doesn't require to be persisted
+
+It is important to remember that `embedded_schema` has many use cases independent of `embeds_one` and `embeds_many`. As they are persistent agnostic, they are ideal for scenarios where you want to manage structured data without necessarily persisting it. For example, if you want to build a contact form, you still want to parse and validate the data, but the data is likely not persisted anywhere. Instead, it is used to send an email. Embedded schemas would be a good fit for such a use case.
 
 ### Migrations
 
