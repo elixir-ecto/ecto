@@ -552,6 +552,38 @@ defmodule Ecto.SchemaTest do
     end
   end
 
+  test "inline embed defined without schema" do
+    # embeds_one
+    message = ~r"`embeds_one/3` expects `schema` to be a module name, but received \[do:"
+
+    assert_raise ArgumentError, message, fn ->
+      defmodule InlineEmbedsOne do
+        use Ecto.Schema
+
+        schema "embeds_one" do
+          embeds_one :one do
+            field :test, :integer
+          end
+        end
+      end
+    end
+
+    # embeds_many
+    message = ~r"`embeds_many/3` expects `schema` to be a module name, but received \[do:"
+
+    assert_raise ArgumentError, message, fn ->
+      defmodule InlineEmbedsMany do
+        use Ecto.Schema
+
+        schema "embeds_many" do
+          embeds_many :many do
+            field :test, :integer
+          end
+        end
+      end
+    end
+  end
+
   ## Associations
 
   defmodule SchemaWithParameterizedPrimaryKey do
