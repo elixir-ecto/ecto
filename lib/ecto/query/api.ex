@@ -685,7 +685,7 @@ defmodule Ecto.Query.API do
   @doc """
   Refer to an alias of a selected value.
 
-  This is available only inside `group_by` and `order_by`.
+  This is available only inside `Ecto.Query.group_by/3` and `Ecto.Query.order_by/3`.
 
   See `alias/2` for more information.
   """
