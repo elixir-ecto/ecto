@@ -739,6 +739,11 @@ defmodule Ecto.Integration.PreloadTest do
       end)
     end)
 
+    # There is no need to preload an embedded schema alone
+    assert_raise ArgumentError,
+      ~r/Cannot preload embedded field/,
+      fn -> TestRepo.preload(order1, :item) end
+
     # Now we preload it
     [order1, order2, order3] = TestRepo.preload(
       # Can preload multiple schemas

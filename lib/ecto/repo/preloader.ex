@@ -538,6 +538,11 @@ embedded_schema, repo_name, sub_preloads, tuplet)
           expand(schema, through, {assocs, Map.put(throughs, preload, info), embeds})
 
         :embed ->
+          if sub_preloads == [] do
+            raise ArgumentError,
+                  "Cannot preload embedded field #{inspect(assoc_or_embed.field)} " <>
+                    "without also preloading one of its associations as it has no effect."
+          end
           embeds = [{assoc_or_embed, sub_preloads} | embeds]
           {assocs, throughs, embeds}
       end
