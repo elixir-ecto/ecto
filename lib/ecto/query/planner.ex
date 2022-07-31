@@ -1216,7 +1216,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp prewalk({:selected_as, [], [name]}, _kind, query, _expr, acc, _adapter) do
-    name = select_alias!(query.select.aliases, name)
+    name = selected_as!(query.select.aliases, name)
     {{:selected_as, [], [name]}, acc}
   end
 
@@ -1248,7 +1248,7 @@ defmodule Ecto.Query.Planner do
     {other, acc}
   end
 
-  defp select_alias!(select_aliases, name) do
+  defp selected_as!(select_aliases, name) do
     case select_aliases do
       %{^name => _} ->
         name
