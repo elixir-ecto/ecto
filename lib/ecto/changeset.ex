@@ -1799,12 +1799,13 @@ defmodule Ecto.Changeset do
   def validate_required(%Changeset{} = changeset, fields, opts \\ []) when not is_nil(fields) do
     %{required: required, errors: errors, changes: changes, types: types} = changeset
     trim = Keyword.get(opts, :trim, true)
+    ignoreBlank = Keyword.get(opts, :ignore_blank, false)
     fields = List.wrap(fields)
 
     fields_with_errors =
       for field <- fields,
           ensure_field_not_many!(types, field),
-          missing?(changeset, field, trim),
+          missing?(changeset, field, trim, ignoreBlank),
           ensure_field_exists!(changeset, types, field),
           is_nil(errors[field]),
           do: field
@@ -1982,21 +1983,21 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp missing?(changeset, field, trim) when is_atom(field) do
+  defp missing?(changeset, field, trim, ignoreBlank) when is_atom(field) do
     case get_field(changeset, field) do
       %{__struct__: Ecto.Association.NotLoaded} ->
         raise ArgumentError, "attempting to validate association `#{field}` " <>
                              "that was not loaded. Please preload your associations " <>
                              "before calling validate_required/3 or pass the :required " <>
                              "option to Ecto.Changeset.cast_assoc/3"
-      value when is_binary(value) and trim -> String.trim_leading(value) == ""
-      value when is_binary(value) -> value == ""
+      value when is_binary(value) and trim and not ignoreBlank -> String.trim_leading(value) == ""
+      value when is_binary(value) and not ignoreBlank -> value == ""
       nil -> true
       _ -> false
     end
   end
 
-  defp missing?(_changeset, field, _trim) do
+  defp missing?(_changeset, field, _trim, _ignoreBlank) do
     raise ArgumentError, "validate_required/3 expects field names to be atoms, got: `#{inspect field}`"
   end
 
