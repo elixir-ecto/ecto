@@ -155,19 +155,26 @@ defmodule Ecto.Repo.Preloader do
 
   defp preload_assocs([], [], _repo_name, _tuplet), do: []
 
+  defp preload_embeds(structs, [], _repo_name, _tuplet), do: structs
+
   defp preload_embeds(structs, embeds, repo_name, tuplet) do
-    structs =
-      Enum.reduce(structs, [], fn struct, acc ->
-        struct =
+      Enum.map(structs, fn struct ->
           Enum.reduce(embeds, struct, fn {embed, sub_preloads}, struct_acc ->
-            %{field: field} = embed
+            %{field: field, cardinality: card} = embed
             embedded_schema = Map.get(struct, field)
-            loaded_schema = preload_each(embedded_schema, repo_name, sub_preloads, tuplet)
+            loaded_schema =
+              case card do
+                :many ->
+                  preload_each(
+embedded_schema, repo_name, sub_preloads, tuplet)
+                :one ->
+                  [loaded] = preload_each(
+[embedded_schema], repo_name, sub_preloads, tuplet)
+                  loaded
+              end
             Map.put(struct_acc, field, loaded_schema)
           end)
-        [struct | acc]
       end)
-    Enum.reverse(structs)
   end
 
   defp maybe_unpack_query(false, queries), do: {[], [], queries}

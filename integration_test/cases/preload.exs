@@ -720,24 +720,52 @@ defmodule Ecto.Integration.PreloadTest do
     item1 = %Item{id: 1, user_id: uid1}
     item2 = %Item{id: 2, user_id: uid2}
     item3 = %Item{id: 3, user_id: uid3}
-    order = %Order{items: [item1, item3, item2]}
-    %Order{id: oid1} = TestRepo.insert!(order)
+    order1 = %Order{items: [item1, item3, item2],
+                    item: item1}
+    order2 = %Order{items: [item1, item2, item3],
+                    item: item2}
+    order3 = %Order{items: [item3, item2, item1],
+                    item: item3}
+    TestRepo.insert!(order1)
+    TestRepo.insert!(order2)
+    TestRepo.insert!(order3)
 
-    Enum.map(order.items, fn item ->
-      assert %Ecto.Association.NotLoaded{} = item.user
+    Enum.map([order1, order2, order3], fn order ->
+      assert %Ecto.Association.NotLoaded{}
+        = order.item.user
+      Enum.map(order1.items, fn item ->
+        assert %Ecto.Association.NotLoaded{}
+          = item.user
+      end)
     end)
 
     # Now we preload it
-    order = TestRepo.preload(order, items: :user)
-
-    names =
-      Enum.map(order.items, fn item ->
-        item.user.name
-      end)
+    [order1, order2, order3] = TestRepo.preload(
+      # Can preload multiple schemas
+      [order1, order2, order3],
+      # Works with multiple preloads
+      # Works with embeds_many and embeds_one
+      [[items: :user],
+      [item: :user]])
 
     # Different asserts for variety
-    assert %User{id: ^uid1} = hd(order.items).user
-    assert ["1", "3", "2"] = names
+    assert %User{id: ^uid1} = hd(order1.items).user
+
+    [names1, names2, names3] =
+      Enum.map([order1, order2, order3], fn order ->
+        Enum.map(order.items, fn item ->
+          item.user.name
+        end)
+    end)
+    assert ["1", "3", "2"] = names1
+    assert ["1", "2", "3"] = names2
+    assert ["3", "2", "1"] = names3
+
+    embeds_one_names =
+      Enum.map([order1, order2, order3], fn order ->
+        order.item.user.name
+    end)
+    assert ["1", "2", "3"] = embeds_one_names
   end
 
   defp sort_by_id(values) do

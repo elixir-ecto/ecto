@@ -264,6 +264,8 @@ defmodule Ecto.Integration.Order do
 
     * Text columns
     * Embedding one schema
+    * Preloading items inside embeds_many
+    * Preloading items inside embeds_one
 
   """
   use Ecto.Integration.Schema
