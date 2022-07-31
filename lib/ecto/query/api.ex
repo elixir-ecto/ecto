@@ -11,8 +11,8 @@ defmodule Ecto.Query.API do
     * Null check functions: `is_nil/1`
     * Aggregates: `count/0`, `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
     * Date/time intervals: `datetime_add/3`, `date_add/3`, `from_now/2`, `ago/2`
-    * Inside select: `struct/2`, `map/2`, `merge/2`, `alias/2` and literals (map, tuples, lists, etc)
-    * General: `fragment/1`, `field/2`, `type/2`, `as/1`, `parent_as/1`, `alias/1`
+    * Inside select: `struct/2`, `map/2`, `merge/2`, `selected_as/2` and literals (map, tuples, lists, etc)
+    * General: `fragment/1`, `field/2`, `type/2`, `as/1`, `parent_as/1`, `selected_as/1`
 
   Note the functions in this module exist for documentation
   purposes and one should never need to invoke them directly.
