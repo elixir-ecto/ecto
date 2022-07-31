@@ -685,11 +685,15 @@ defmodule Ecto.Query.API do
   @doc """
   Refer to an alias of a selected value.
 
-  This is available only inside `Ecto.Query.group_by/3` and `Ecto.Query.order_by/3`.
+  This is available only inside `Ecto.Query.group_by/3` and `Ecto.Query.order_by/3`. If the alias
+  was not previously defined using `selected_as/2`, an error will be raised.
 
-  See `alias/2` for more information.
+  Please note every database has its own rules for referencing these alias. For instance,
+  SQL Server does not allow them inside `GROUP BY` statements while PostgreSQL and MySQL do.
+
+  See `selected_as/2` for more information.
   """
-  def alias(name), do: doc! [name]
+  def selected_as(name), do: doc! [name]
 
   @doc """
   Creates an alias for the given selected value.
@@ -703,19 +707,20 @@ defmodule Ecto.Query.API do
 
       from p in Post,
         select: %{
-          posted: alias(p.posted, :date),
-          sum_visits: p.visits |> coalesce(0) |> sum() |> alias(:sum_visits)
+          posted: selected_as(p.posted, :date),
+          sum_visits: p.visits |> coalesce(0) |> sum() |> selected_as(:sum_visits)
         },
-        group_by: alias(:date),
-        order_by: alias(:sum_visits)
+        group_by: selected_as(:date),
+        order_by: selected_as(:sum_visits)
 
   The name of the alias must be an atom and it can only be used in the outer most
-  select expression, otherwise an error is raised.
+  select expression, otherwise an error is raised. Please note that the alias name
+  does not have to match the key when `select` returns a map, struct or keyword list.
 
-  Using this in conjunction with `alias/1` is recommended to ensure only defined aliases
+  Using this in conjunction with `selected_as/1` is recommended to ensure only defined aliases
   are referenced.
   """
-  def alias(selected_value, name), do: doc! [selected_value, name]
+  def selected_as(selected_value, name), do: doc! [selected_value, name]
 
   defp doc!(_) do
     raise "the functions in Ecto.Query.API should not be invoked directly, " <>

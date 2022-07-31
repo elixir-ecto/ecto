@@ -71,22 +71,22 @@ defmodule Ecto.Query.Builder.OrderBy do
     {{:asc, Macro.escape(to_field(field))}, params_acc}
   end
 
-  defp do_escape({dir, {:alias, _, [name]}}, params_acc, kind, _vars, _env) when is_atom(name) do
-    expr = {:{}, [], [:alias, [], [name]]}
+  defp do_escape({dir, {:selected_as, _, [name]}}, params_acc, kind, _vars, _env) when is_atom(name) do
+    expr = {:{}, [], [:selected_as, [], [name]]}
     {{quoted_dir!(kind, dir), expr}, params_acc}
   end
 
-  defp do_escape({_dir, {:alias, _, [name]}}, _params_acc, _kind, _vars, _env) do
-    Builder.error! "alias/1 expects `name` to be an atom, got `#{inspect(name)}`"
+  defp do_escape({_dir, {:selected_as, _, [name]}}, _params_acc, _kind, _vars, _env) do
+    Builder.error! "selected_as/1 expects `name` to be an atom, got `#{inspect(name)}`"
   end
 
-  defp do_escape({:alias, _, [name]}, params_acc, _kind, _vars, _env) when is_atom(name) do
-    expr = {:{}, [], [:alias, [], [name]]}
+  defp do_escape({:selected_as, _, [name]}, params_acc, _kind, _vars, _env) when is_atom(name) do
+    expr = {:{}, [], [:selected_as, [], [name]]}
     {{:asc, expr}, params_acc}
   end
 
-  defp do_escape({:alias, _, [name]}, _params_acc, _kind, _vars, _env) do
-    Builder.error! "alias/1 expects `name` to be an atom, got `#{inspect(name)}`"
+  defp do_escape({:selected_as, _, [name]}, _params_acc, _kind, _vars, _env) do
+    Builder.error! "selected_as/1 expects `name` to be an atom, got `#{inspect(name)}`"
   end
 
   defp do_escape({dir, expr}, params_acc, kind, vars, env) do

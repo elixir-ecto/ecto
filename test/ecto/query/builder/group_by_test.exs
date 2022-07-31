@@ -26,16 +26,16 @@ defmodule Ecto.Query.Builder.GroupByTest do
       end
     end
 
-    test "can reference the alias of a selected value with alias/1" do
-      query = from p in "posts", select: alias(p.id, :ident), group_by: alias(:ident)
-      assert [{:alias, [], [:ident]}]  = hd(query.group_bys).expr
+    test "can reference the alias of a selected value with selected_as/1" do
+      query = from p in "posts", select: selected_as(p.id, :ident), group_by: selected_as(:ident)
+      assert [{:selected_as, [], [:ident]}]  = hd(query.group_bys).expr
     end
 
-    test "raises if name given to alias/1 is not an atom" do
-      message = "alias/1 expects `name` to be an atom, got `\"ident\"`"
+    test "raises if name given to selected_as/1 is not an atom" do
+      message = "selected_as/1 expects `name` to be an atom, got `\"ident\"`"
 
       assert_raise Ecto.Query.CompileError, message, fn ->
-        escape(:group_by, quote do alias("ident") end, {[], %{}}, [], __ENV__)
+        escape(:group_by, quote do selected_as("ident") end, {[], %{}}, [], __ENV__)
       end
     end
   end

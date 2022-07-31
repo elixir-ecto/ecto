@@ -114,15 +114,15 @@ defmodule Ecto.Query.Builder.Select do
   end
 
   # aliased values
-  defp escape({:alias, _, [expr, name]}, {params, acc}, vars, env) when is_atom(name) do
+  defp escape({:selected_as, _, [expr, name]}, {params, acc}, vars, env) when is_atom(name) do
     {escaped, {params, acc}} = Builder.escape(expr, :any, {params, acc}, vars, env)
-    expr = {:{}, [], [:alias, [], [escaped, name]]}
+    expr = {:{}, [], [:selected_as, [], [escaped, name]]}
     acc = add_alias(acc, name)
     {expr, {params, acc}}
   end
 
-  defp escape({:alias, _, [_expr, name]}, {_params, _acc}, _vars, _env) do
-    Builder.error! "alias/2 expects `name` to be an atom, got `#{inspect(name)}`"
+  defp escape({:selected_as, _, [_expr, name]}, {_params, _acc}, _vars, _env) do
+    Builder.error! "selected_as/2 expects `name` to be an atom, got `#{inspect(name)}`"
   end
 
   defp escape(expr, params_acc, vars, env) do
@@ -464,7 +464,7 @@ defmodule Ecto.Query.Builder.Select do
   defp add_alias(acc, name) do
     case acc.aliases do
       %{^name => _} ->
-        Builder.error! "the alias `#{inspect(name)}` has been specified more than once using `alias/2`"
+        Builder.error! "the alias `#{inspect(name)}` has been specified more than once using `selected_as/2`"
 
       aliases ->
         %{acc | aliases: Map.put(aliases, name, @dummy_value)}

@@ -1215,9 +1215,9 @@ defmodule Ecto.Query.Planner do
     {{:json_extract_path, meta, [json_field, path]}, acc}
   end
 
-  defp prewalk({:alias, [], [name]}, _kind, query, _expr, acc, _adapter) do
+  defp prewalk({:selected_as, [], [name]}, _kind, query, _expr, acc, _adapter) do
     name = select_alias!(query.select.aliases, name)
-    {{:alias, [], [name]}, acc}
+    {{:selected_as, [], [name]}, acc}
   end
 
   defp prewalk(%Ecto.Query.Tagged{value: v, type: type} = tagged, kind, query, expr, acc, adapter) do
@@ -1255,7 +1255,7 @@ defmodule Ecto.Query.Planner do
 
       _ ->
         raise ArgumentError,
-              "invalid alias: `#{inspect(name)}`. Use `alias/2` to define aliases in the outer most `select` expression."
+              "invalid alias: `#{inspect(name)}`. Use `selected_as/2` to define aliases in the outer most `select` expression."
     end
   end
 
