@@ -1539,23 +1539,29 @@ defmodule Ecto.Integration.RepoTest do
     end
 
     @tag :select_alias
-    test "aliased select value" do
+    test "aliased selected values with order_by and group_by" do
       TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 3})
       TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 2})
       TestRepo.insert!(%Post{posted: ~D[2020-12-20], visits: nil})
 
-      query =
+      base_query =
         from p in Post,
           select: %{
-            posted: alias(p.posted, "posted"),
-            min_visits: p.visits |> coalesce(0) |> min() |> alias("min_visits")
+            posted: alias(p.posted, :date),
+            min_visits: p.visits |> coalesce(0) |> min() |> alias(:min_visits)
           },
-          group_by: fragment("posted"),
-          order_by: fragment("min_visits")
+          group_by: alias(:date)
 
-      results = TestRepo.all(query)
+      # ascending order
+      results = base_query |> order_by(alias(:min_visits)) |> TestRepo.all()
 
       assert [%{posted: ~D[2020-12-20], min_visits: 0}, %{posted: ~D[2020-12-21], min_visits: 2}] =
+               results
+
+      # descending order
+      results = base_query |> order_by([desc: alias(:min_visits)]) |> TestRepo.all()
+
+      assert [%{posted: ~D[2020-12-21], min_visits: 2}, %{posted: ~D[2020-12-20], min_visits: 0}] =
                results
     end
   end

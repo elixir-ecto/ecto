@@ -12,7 +12,7 @@ defmodule Ecto.Query.API do
     * Aggregates: `count/0`, `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
     * Date/time intervals: `datetime_add/3`, `date_add/3`, `from_now/2`, `ago/2`
     * Inside select: `struct/2`, `map/2`, `merge/2`, `alias/2` and literals (map, tuples, lists, etc)
-    * General: `fragment/1`, `field/2`, `type/2`, `as/1`, `parent_as/1`
+    * General: `fragment/1`, `field/2`, `type/2`, `as/1`, `parent_as/1`, `alias/1`
 
   Note the functions in this module exist for documentation
   purposes and one should never need to invoke them directly.
@@ -683,9 +683,16 @@ defmodule Ecto.Query.API do
   def parent_as(binding), do: doc! [binding]
 
   @doc """
-  Creates an alias for the given selected value.
+  Refer to an alias of a selected value.
 
-  This is available only inside `Ecto.Query.select/3`.
+  This is available only inside `group_by` and `order_by`.
+
+  See `alias/2` for more information.
+  """
+  def alias(name), do: doc! [name]
+
+  @doc """
+  Creates an alias for the given selected value.
 
   When working with calculated values, an alias can be used to simplify
   the query. Otherwise, the entire expression would need to be copied when
@@ -696,13 +703,17 @@ defmodule Ecto.Query.API do
 
       from p in Post,
         select: %{
-          posted: p.posted,
-          sum_visits: p.visits |> coalesce(0) |> sum() |> alias("sum_visits")
+          posted: alias(p.posted, :date),
+          sum_visits: p.visits |> coalesce(0) |> sum() |> alias(:sum_visits)
         },
-        group_by: p.posted,
-        order_by: fragment("sum_visits")
+        group_by: alias(:date),
+        order_by: alias(:sum_visits)
 
-  The name of the alias must be a string, otherwise a compilation error is raised.
+  The name of the alias must be an atom and it can only be used in the outer most
+  select expression, otherwise an error is raised.
+
+  Using this in conjunction with `alias/1` is recommended to ensure only defined aliases
+  are referenced.
   """
   def alias(selected_value, name), do: doc! [selected_value, name]
 

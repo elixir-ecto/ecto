@@ -25,6 +25,19 @@ defmodule Ecto.Query.Builder.GroupByTest do
         escape(:group_by, quote do x.y end, {[], %{}}, [], __ENV__)
       end
     end
+
+    test "can reference the alias of a selected value with alias/1" do
+      query = from p in "posts", select: alias(p.id, :ident), group_by: alias(:ident)
+      assert [{:alias, [], [:ident]}]  = hd(query.group_bys).expr
+    end
+
+    test "raises if name given to alias/1 is not an atom" do
+      message = "alias/1 expects `name` to be an atom, got `\"ident\"`"
+
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        escape(:group_by, quote do alias("ident") end, {[], %{}}, [], __ENV__)
+      end
+    end
   end
 
   describe "at runtime" do

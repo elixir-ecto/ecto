@@ -13,7 +13,8 @@ defmodule Ecto.Query.Builder.SelectTest do
     params = opts[:params] || []
     take = opts[:take] || %{}
     subqueries = opts[:subqueries] || []
-    {params, %{take: take, subqueries: subqueries}}
+    aliases = opts[:aliases] || %{}
+    {params, %{take: take, subqueries: subqueries, aliases: aliases}}
   end
 
   describe "escape" do
@@ -87,12 +88,44 @@ defmodule Ecto.Query.Builder.SelectTest do
       end
     end
 
-    test "supports column aliases" do
-      query_kw = from p in "posts", select: alias(p.id, "ident")
-      assert {:alias, _, [{{:., _, [{:&, [], [0]}, :id]}, [], []}, "ident"]} = query_kw.select.expr
+    test "supports aliasing a selected value with alias/2" do
+      escaped_alias = {:alias, [], [{{:., [], [{:&, [], [0]}, :id]}, [], []}, :ident]}
 
-      query_expr = select("posts", [p], alias(p.id, "ident"))
-      assert {:alias, _, [{{:., _, [{:&, [], [0]}, :id]}, [], []}, "ident"]} = query_expr.select.expr
+      # single field
+      query = from p in "posts", select: alias(p.id, :ident)
+      assert escaped_alias == query.select.expr
+
+      query = select("posts", [p], alias(p.id, :ident))
+      assert escaped_alias == query.select.expr
+
+      # maps
+      query = from p in "posts", select: %{id: alias(p.id, :ident)}
+      assert {:%{}, [], [id: escaped_alias]} == query.select.expr
+
+      query = select("posts", [p], %{id: alias(p.id, :ident)})
+      assert {:%{}, [], [id: escaped_alias]} == query.select.expr
+
+      # structs
+      query = from p in "posts", select: %{p | id: alias(p.id, :ident)}
+      assert {:%{}, [], [{:|, [], [{:&, [], [0]}, [id: escaped_alias]]}]} == query.select.expr
+
+      query = select("posts", [p], %{p | id: alias(p.id, :ident)})
+      assert {:%{}, [], [{:|, [], [{:&, [], [0]}, [id: escaped_alias]]}]} == query.select.expr
+
+      # keyword lists
+      query = from p in "posts", select: [id: alias(p.id, :ident)]
+      assert [{:{}, [], [:id, escaped_alias]}] == query.select.expr
+
+      query = select("posts", [p], [id: alias(p.id, :ident)])
+      assert [{:{}, [], [:id, escaped_alias]}] == query.select.expr
+    end
+
+    test "raises if name given to alias/2 is not an atom" do
+      message = "alias/2 expects `name` to be an atom, got `\"ident\"`"
+
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        escape(quote do alias(p.id, "ident") end, [], __ENV__)
+      end
     end
   end
 

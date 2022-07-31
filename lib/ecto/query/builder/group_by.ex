@@ -31,6 +31,15 @@ defmodule Ecto.Query.Builder.GroupBy do
     {Macro.escape(to_field(field)), params_acc}
   end
 
+  defp do_escape({:alias, _, [name]}, params_acc, _kind, _vars, _env) when is_atom(name) do
+    expr = {:{}, [], [:alias, [], [name]]}
+    {expr, params_acc}
+  end
+
+  defp do_escape({:alias, _, [name]}, _params_acc, _kind, _vars, _env) do
+    Builder.error! "alias/1 expects `name` to be an atom, got `#{inspect(name)}`"
+  end
+
   defp do_escape(expr, params_acc, _kind, vars, env) do
     Builder.escape(expr, :any, params_acc, vars, env)
   end
