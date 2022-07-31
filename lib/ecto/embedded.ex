@@ -285,6 +285,6 @@ defmodule Ecto.Embedded do
   end
 
   def preload_info(_embed) do
-    {:embed}
+    :embed
   end
 end

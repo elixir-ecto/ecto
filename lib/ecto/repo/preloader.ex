@@ -530,7 +530,7 @@ defmodule Ecto.Repo.Preloader do
 
           expand(schema, through, {assocs, Map.put(throughs, preload, info), embeds})
 
-        {:embed} ->
+        :embed ->
           embeds = [{assoc_or_embed, sub_preloads} | embeds]
           {assocs, throughs, embeds}
       end
@@ -547,24 +547,8 @@ defmodule Ecto.Repo.Preloader do
   end
 
   defp association_or_embed!(schema, preload) do
-    assoc_result = schema.__schema__(:association, preload)
-
-    case !!assoc_result do
-      true ->
-        assoc_result
-
-      false ->
-        embed_result = schema.__schema__(:embed, preload)
-
-        case !!embed_result do
-          true ->
-            embed_result
-
-          false ->
-            raise ArgumentError,
-                  "schema #{inspect(schema)} does not have association #{inspect(assoc_result)}#{maybe_module(assoc_result)}"
-        end
-    end
+    schema.__schema__(:association, preload) || schema.__schema__(:embed, preload) ||
+      raise ArgumentError, "schema #{inspect schema} does not have association #{inspect preload}#{maybe_module(preload)}"
   end
 
   defp maybe_module(assoc) do
