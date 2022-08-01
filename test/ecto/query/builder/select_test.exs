@@ -127,6 +127,15 @@ defmodule Ecto.Query.Builder.SelectTest do
         escape(quote do selected_as(p.id, "ident") end, [], __ENV__)
       end
     end
+
+    test "raises if the name given to selected_as/2 already exists" do
+      message = "the alias `:ident` has been specified more than once using `selected_as/2`"
+
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        select_expr = quote do %{id: selected_as(^"id", :ident), id2: selected_as(^"id", :ident)} end
+        escape(select_expr, [], __ENV__)
+      end
+    end
   end
 
   describe "at runtime" do
