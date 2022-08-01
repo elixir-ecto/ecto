@@ -132,8 +132,8 @@ defmodule Ecto.Query.Builder.SelectTest do
       message = "the alias `:ident` has been specified more than once using `selected_as/2`"
 
       assert_raise Ecto.Query.CompileError, message, fn ->
-        select_expr = quote do %{id: selected_as(^"id", :ident), id2: selected_as(^"id", :ident)} end
-        escape(select_expr, [], __ENV__)
+        select_expr = quote do %{id: selected_as(p.id, :ident), id2: selected_as(p.id, :ident)} end
+        escape(select_expr, [p: 0], __ENV__)
       end
     end
   end
