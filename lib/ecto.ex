@@ -25,7 +25,7 @@ defmodule Ecto do
     * `Ecto.Changeset` - **how to change** the data
 
   Besides the four components above, most developers use Ecto to interact
-  with SQL databases, such as Postgres and MySQL via the
+  with SQL databases, such as PostgreSQL and MySQL via the
   [`ecto_sql`](https://hexdocs.pm/ecto_sql) project. `ecto_sql` provides many
   conveniences for working with SQL databases as well as the ability to version
   how your database changes through time via
