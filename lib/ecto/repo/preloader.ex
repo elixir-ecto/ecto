@@ -158,23 +158,32 @@ defmodule Ecto.Repo.Preloader do
   defp preload_embeds(structs, [], _repo_name, _tuplet), do: structs
 
   defp preload_embeds(structs, embeds, repo_name, tuplet) do
-      Enum.map(structs, fn struct ->
-          Enum.reduce(embeds, struct, fn {embed, sub_preloads}, struct_acc ->
-            %{field: field, cardinality: card} = embed
-            embedded_schema = Map.get(struct, field)
-            loaded_schema =
-              case card do
-                :many ->
-                  preload_each(
-embedded_schema, repo_name, sub_preloads, tuplet)
-                :one ->
-                  [loaded] = preload_each(
-[embedded_schema], repo_name, sub_preloads, tuplet)
-                  loaded
-              end
-            Map.put(struct_acc, field, loaded_schema)
-          end)
+    structs
+    |> Task.async_stream(fn struct ->
+      { adapter_meta, opts } = tuplet
+      opts = Keyword.put_new(opts, :caller, self())
+      tuplet = {adapter_meta, opts}
+      embeds
+      |> Task.async_stream(fn {embed, sub_preloads} ->
+        %{field: field, cardinality: card} = embed
+        embedded_schema = Map.get(struct, field)
+        loaded_schema =
+          case card do
+            :many ->
+              preload_each(embedded_schema, repo_name, sub_preloads, tuplet)
+              :one ->
+              [loaded] = preload_each([embedded_schema], repo_name, sub_preloads, tuplet)
+              loaded
+          end
+        { field, loaded_schema }
+        end, timeout: :infinity)
+      |> Enum.reduce(struct,
+        fn {:ok, loaded}, struct_acc ->
+        { field, schema } = loaded
+        Map.put(struct_acc, field, schema)
       end)
+    end, timeout: :infinity)
+    |> Enum.map(fn {:ok, embed} -> embed end)
   end
 
   defp maybe_unpack_query(false, queries), do: {[], [], queries}
