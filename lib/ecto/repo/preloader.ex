@@ -160,9 +160,6 @@ defmodule Ecto.Repo.Preloader do
   defp preload_embeds(structs, embeds, repo_name, tuplet) do
     structs
     |> Task.async_stream(fn struct ->
-      { adapter_meta, opts } = tuplet
-      opts = Keyword.put_new(opts, :caller, self())
-      tuplet = {adapter_meta, opts}
       embeds
       |> Task.async_stream(fn {embed, sub_preloads} ->
         %{field: field, cardinality: card} = embed
