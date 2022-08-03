@@ -405,7 +405,7 @@ defmodule Ecto.Query do
 
   defmodule SelectExpr do
     @moduledoc false
-    defstruct [:expr, :file, :line, :fields, params: [], take: %{}, subqueries: []]
+    defstruct [:expr, :file, :line, :fields, params: [], take: %{}, subqueries: [], aliases: %{}]
   end
 
   defmodule JoinExpr do

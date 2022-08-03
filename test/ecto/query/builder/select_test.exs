@@ -13,7 +13,8 @@ defmodule Ecto.Query.Builder.SelectTest do
     params = opts[:params] || []
     take = opts[:take] || %{}
     subqueries = opts[:subqueries] || []
-    {params, %{take: take, subqueries: subqueries}}
+    aliases = opts[:aliases] || %{}
+    {params, %{take: take, subqueries: subqueries, aliases: aliases}}
   end
 
   describe "escape" do
@@ -84,6 +85,55 @@ defmodule Ecto.Query.Builder.SelectTest do
     test "raises on mixed fields and interpolation" do
       assert_raise Ecto.Query.CompileError, ~r"Cannot mix fields with interpolations", fn ->
         escape(quote do [:foo, ^:bar] end, [], __ENV__)
+      end
+    end
+
+    test "supports aliasing a selected value with selected_as/2" do
+      escaped_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :id]}, [], []}, :ident]}
+
+      # single field
+      query = from p in "posts", select: selected_as(p.id, :ident)
+      assert escaped_alias == query.select.expr
+
+      query = select("posts", [p], selected_as(p.id, :ident))
+      assert escaped_alias == query.select.expr
+
+      # maps
+      query = from p in "posts", select: %{id: selected_as(p.id, :ident)}
+      assert {:%{}, [], [id: escaped_alias]} == query.select.expr
+
+      query = select("posts", [p], %{id: selected_as(p.id, :ident)})
+      assert {:%{}, [], [id: escaped_alias]} == query.select.expr
+
+      # structs
+      query = from p in "posts", select: %{p | id: selected_as(p.id, :ident)}
+      assert {:%{}, [], [{:|, [], [{:&, [], [0]}, [id: escaped_alias]]}]} == query.select.expr
+
+      query = select("posts", [p], %{p | id: selected_as(p.id, :ident)})
+      assert {:%{}, [], [{:|, [], [{:&, [], [0]}, [id: escaped_alias]]}]} == query.select.expr
+
+      # keyword lists
+      query = from p in "posts", select: [id: selected_as(p.id, :ident)]
+      assert [{:{}, [], [:id, escaped_alias]}] == query.select.expr
+
+      query = select("posts", [p], [id: selected_as(p.id, :ident)])
+      assert [{:{}, [], [:id, escaped_alias]}] == query.select.expr
+    end
+
+    test "raises if name given to selected_as/2 is not an atom" do
+      message = "selected_as/2 expects `name` to be an atom, got `\"ident\"`"
+
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        escape(quote do selected_as(p.id, "ident") end, [], __ENV__)
+      end
+    end
+
+    test "raises if the name given to selected_as/2 already exists" do
+      message = "the alias `:ident` has been specified more than once using `selected_as/2`"
+
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        select_expr = quote do %{id: selected_as(p.id, :ident), id2: selected_as(p.id, :ident)} end
+        escape(select_expr, [p: 0], __ENV__)
       end
     end
   end

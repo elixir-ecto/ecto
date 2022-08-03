@@ -1700,4 +1700,32 @@ defmodule Ecto.Query.PlannerTest do
       |> normalize()
     end
   end
+
+  describe "selected aliases" do
+    test "with group_by" do
+      # defined alias
+      from(c in Comment, group_by: selected_as(:post), select: selected_as(c.post_id, :post)) |> normalize()
+
+      # undefined alias
+      message =
+        "invalid alias: `:post`. Use `selected_as/2` to define aliases in the outer most `select` expression."
+
+      assert_raise ArgumentError, message, fn ->
+        from(c in Comment, group_by: selected_as(:post)) |> normalize()
+      end
+    end
+
+    test "with order_by" do
+      # defined alias
+      from(c in Comment, order_by: selected_as(:post), select: selected_as(c.post_id, :post)) |> normalize()
+
+      # undefined alias
+      message =
+        "invalid alias: `:post`. Use `selected_as/2` to define aliases in the outer most `select` expression."
+
+      assert_raise ArgumentError, message, fn ->
+        from(c in Comment, order_by: selected_as(:post)) |> normalize()
+      end
+    end
+  end
 end

@@ -5,6 +5,8 @@ defmodule Ecto.Query.Builder.Select do
 
   alias Ecto.Query.Builder
 
+  @dummy_value []
+
   @doc """
   Escapes a select.
 
@@ -14,13 +16,13 @@ defmodule Ecto.Query.Builder.Select do
   ## Examples
 
       iex> escape({1, 2}, [], __ENV__)
-      {{:{}, [], [:{}, [], [1, 2]]}, {[], %{take: %{}, subqueries: []}}}
+      {{:{}, [], [:{}, [], [1, 2]]}, {[], %{take: %{}, subqueries: [], aliases: %{}}}}
 
       iex> escape([1, 2], [], __ENV__)
-      {[1, 2], {[], %{take: %{}, subqueries: []}}}
+      {[1, 2], {[], %{take: %{}, subqueries: [], aliases: %{}}}}
 
       iex> escape(quote(do: x), [x: 0], __ENV__)
-      {{:{}, [], [:&, [], [0]]}, {[], %{take: %{}, subqueries: []}}}
+      {{:{}, [], [:&, [], [0]]}, {[], %{take: %{}, subqueries: [], aliases: %{}}}}
 
   """
   @spec escape(Macro.t, Keyword.t, Macro.Env.t) :: {Macro.t, {list, %{take: map, subqueries: list}}}
@@ -36,7 +38,7 @@ defmodule Ecto.Query.Builder.Select do
       take?(other) ->
         {
           {:{}, [], [:&, [], [0]]},
-          {[], %{take: %{0 => {:any, Macro.expand(other, env)}}, subqueries: []}}
+          {[], %{take: %{0 => {:any, Macro.expand(other, env)}}, subqueries: [], aliases: %{}}}
         }
 
       maybe_take?(other) ->
@@ -47,7 +49,7 @@ defmodule Ecto.Query.Builder.Select do
         """
 
       true ->
-        {expr, {params, acc}} = escape(other, {[], %{take: %{}, subqueries: []}}, vars, env)
+        {expr, {params, acc}} = escape(other, {[], %{take: %{}, subqueries: [], aliases: %{}}}, vars, env)
         acc = %{acc | subqueries: Enum.reverse(acc.subqueries)}
         {expr, {params, acc}}
     end
@@ -109,6 +111,18 @@ defmodule Ecto.Query.Builder.Select do
     expr = Builder.escape_var!(var, vars)
     acc = add_take(acc, Builder.find_var!(var, vars), {tag, taken})
     {expr, {params, acc}}
+  end
+
+  # aliased values
+  defp escape({:selected_as, _, [expr, name]}, {params, acc}, vars, env) when is_atom(name) do
+    {escaped, {params, acc}} = Builder.escape(expr, :any, {params, acc}, vars, env)
+    expr = {:{}, [], [:selected_as, [], [escaped, name]]}
+    acc = add_alias(acc, name)
+    {expr, {params, acc}}
+  end
+
+  defp escape({:selected_as, _, [_expr, name]}, {_params, _acc}, _vars, _env) do
+    Builder.error! "selected_as/2 expects `name` to be an atom, got `#{inspect(name)}`"
   end
 
   defp escape(expr, params_acc, vars, env) do
@@ -283,6 +297,7 @@ defmodule Ecto.Query.Builder.Select do
     {expr, {params, acc}} = escape(expr, binding, env)
     params = Builder.escape_params(params)
     take = {:%{}, [], Map.to_list(acc.take)}
+    aliases = {:%{}, [], Map.to_list(acc.aliases)}
 
     select = quote do: %Ecto.Query.SelectExpr{
                          expr: unquote(expr),
@@ -290,7 +305,8 @@ defmodule Ecto.Query.Builder.Select do
                          file: unquote(env.file),
                          line: unquote(env.line),
                          take: unquote(take),
-                         subqueries: unquote(acc.subqueries)}
+                         subqueries: unquote(acc.subqueries),
+                         aliases: unquote(aliases)}
 
     if kind == :select do
       Builder.apply_query(query, __MODULE__, [select], env)
@@ -443,6 +459,16 @@ defmodule Ecto.Query.Builder.Select do
   defp add_take(acc, key, value) do
     take = Map.update(acc.take, key, value, &merge_take_kind_and_fields(key, &1, value))
     %{acc | take: take}
+  end
+
+  defp add_alias(acc, name) do
+    case acc.aliases do
+      %{^name => _} ->
+        Builder.error! "the alias `#{inspect(name)}` has been specified more than once using `selected_as/2`"
+
+      aliases ->
+        %{acc | aliases: Map.put(aliases, name, @dummy_value)}
+    end
   end
 
   defp bump_subquery_params(new_params, old_subqueries) do
