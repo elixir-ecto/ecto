@@ -685,13 +685,13 @@ defmodule Ecto.Query.API do
   @doc """
   Refer to an alias of a selected value.
 
-  This is available only inside `Ecto.Query.group_by/3` and `Ecto.Query.order_by/3`. If the alias
-  was not previously defined using `selected_as/2`, an error will be raised.
+  This can be used to refer to aliases created using `selected_as/2`. If
+  the alias hasn't been created using `selected_as/2`, an error will be raised.
 
-  Please note every database has its own rules for referencing these alias. For instance,
-  SQL Server does not allow them inside `GROUP BY` statements while PostgreSQL and MySQL do.
-
-  See `selected_as/2` for more information.
+  Each database has its own rules governing which clauses can reference these aliases.
+  If an error is raised mentioning an unknown column, most likely the alias is being
+  referenced somewhere that is not allowed. Consult the documentation for the database
+  to ensure the alias is being referenced correctly.
   """
   def selected_as(name), do: doc! [name]
 

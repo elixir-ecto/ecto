@@ -399,6 +399,15 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:over, [], [aggregate, window]]}, params_acc}
   end
 
+  def escape({:selected_as, _, [name]}, _type, params_acc, _vars, _env) when is_atom(name) do
+    expr = {:{}, [], [:selected_as, [], [name]]}
+    {expr, params_acc}
+  end
+
+  def escape({:selected_as, _, [name]}, _type, _params_acc, _vars, _env) do
+    error! "selected_as/1 expects `name` to be an atom, got `#{inspect(name)}`"
+  end
+
   def escape({quantifier, meta, [subquery]}, type, params_acc, vars, env) when quantifier in [:all, :any, :exists] do
     {subquery, params_acc} = escape({:subquery, meta, [subquery]}, type, params_acc, vars, env)
     {{:{}, [], [quantifier, [], [subquery]]}, params_acc}
