@@ -2290,7 +2290,8 @@ defmodule Ecto.Query do
   def with_named_binding(queryable, key, fun) do
     queryable
     |> Ecto.Queryable.to_query()
-    |> with_named_binding(key, fun)
+    |> fun.()
+    |> raise_on_invalid_callback_return(key)
   end
 
   defp raise_on_invalid_callback_return(%Ecto.Query{} = query, key) do
