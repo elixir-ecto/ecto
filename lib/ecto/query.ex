@@ -2263,6 +2263,49 @@ defmodule Ecto.Query do
   end
 
   @doc """
+  Applies the callback function to the query if it does not have a named binding,
+  otherwise returns the query without changes.
+
+  The function accepts an `Ecto.Query` struct and must return the query with an added 
+  named binding.
+
+  ## Examples
+
+      with_named_binding(query, :comments, fn query ->
+        join(query, :left, c in assoc(p, :comments), as: :comments)
+      end)
+
+  For more information on named bindings see "Named bindings" in this module doc.
+  """
+  def with_named_binding(%Ecto.Query{} = query, key, fun) when is_function(fun, 1) do
+    if has_named_binding?(query, key) do
+      query
+    else
+      query
+      |> fun.()
+      |> raise_on_invalid_callback_return(key)
+    end
+  end
+
+  def with_named_binding(queryable, key, fun) do
+    queryable
+    |> Ecto.Queryable.to_query()
+    |> with_named_binding(key, fun)
+  end
+
+  defp raise_on_invalid_callback_return(%Ecto.Query{} = query, key) do
+    if has_named_binding?(query, key) do
+      query
+    else
+      raise RuntimeError, "callback function for with_named_binding/3 should create a named binding for key #{inspect(key)}"
+    end
+  end
+
+  defp raise_on_invalid_callback_return(other, _key) do
+    raise RuntimeError, "callback function for with_named_binding/3 should return an Ecto.Query struct, got: #{inspect(other)}"
+  end
+
+  @doc """
   Reverses the ordering of the query.
 
   ASC columns become DESC columns (and vice-versa). If the query
