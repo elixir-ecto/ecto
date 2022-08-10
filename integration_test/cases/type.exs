@@ -115,7 +115,7 @@ defmodule Ecto.Integration.TypeTest do
 
   test "tagged types" do
     %{id: post_id} = TestRepo.insert!(%Post{visits: 12})
-    TestRepo.insert!(%Comment{text: "#{post_id}"})
+    TestRepo.insert!(%Comment{text: "#{post_id}", post_id: post_id})
 
     # Numbers
     assert [1]   = TestRepo.all(from Post, select: type(^"1", :integer))
@@ -144,9 +144,9 @@ defmodule Ecto.Integration.TypeTest do
     assert [1.0] = TestRepo.all(from p in Post, select: type(coalesce(p.intensity, 1.0), :float))
 
     # parent_as/1
-    child = from c in Comment, where: type(parent_as(:posts).id, :string) == c.text
-    query = from Post, as: :posts, inner_lateral_join: c in subquery(child), select: c.text
-    assert ["1"] == TestRepo.all(query)
+    child = from c in Comment, where: type(parent_as(:posts).id, :string) == c.text, select: c.post_id
+    query = from p in Post, as: :posts, where: p.id in subquery(child), select: p.id
+    assert [post_id] == TestRepo.all(query)
   end
 
   test "binary id type" do
