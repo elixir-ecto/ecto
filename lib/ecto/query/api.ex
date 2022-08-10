@@ -663,6 +663,11 @@ defmodule Ecto.Query.API do
 
       from p in Post, select: type(coalesce(p.cost, 0), :integer)
 
+  Or to type fields from a parent query using `parent_as/1`:
+
+      child = from c in Comment, where: type(parent_as(:posts).id, :string) == c.text
+      from Post, as: :posts, inner_lateral_join: c in subquery(child), select: c.text
+
   """
   def type(interpolated_value, type), do: doc! [interpolated_value, type]
 

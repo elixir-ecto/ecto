@@ -1,7 +1,7 @@
 defmodule Ecto.Integration.TypeTest do
   use Ecto.Integration.Case, async: Application.compile_env(:ecto, :async_integration_tests, true)
 
-  alias Ecto.Integration.{Custom, Item, ItemColor, Order, Post, User, Tag, Usec}
+  alias Ecto.Integration.{Comment, Custom, Item, ItemColor, Order, Post, User, Tag, Usec}
   alias Ecto.Integration.TestRepo
   import Ecto.Query
 
@@ -114,7 +114,8 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   test "tagged types" do
-    TestRepo.insert!(%Post{visits: 12})
+    %{id: post_id} = TestRepo.insert!(%Post{visits: 12})
+    TestRepo.insert!(%Comment{text: "#{post_id}", post_id: post_id})
 
     # Numbers
     assert [1]   = TestRepo.all(from Post, select: type(^"1", :integer))
@@ -141,6 +142,11 @@ defmodule Ecto.Integration.TypeTest do
     # Comparison expression
     assert [12] = TestRepo.all(from p in Post, select: type(coalesce(p.visits, 0), :integer))
     assert [1.0] = TestRepo.all(from p in Post, select: type(coalesce(p.intensity, 1.0), :float))
+
+    # parent_as/1
+    child = from c in Comment, where: type(parent_as(:posts).id, :string) == c.text, select: c.post_id
+    query = from p in Post, as: :posts, where: p.id in subquery(child), select: p.id
+    assert [post_id] == TestRepo.all(query)
   end
 
   test "binary id type" do

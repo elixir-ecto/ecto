@@ -1095,7 +1095,6 @@ defmodule Ecto.Query.PlannerTest do
     normalize(query)
   end
 
-
   test "normalize: alias in type/2" do
     query =
       from(x in Post, as: :post)
@@ -1104,6 +1103,13 @@ defmodule Ecto.Query.PlannerTest do
 
     assert inspect(query) =~
              "from p0 in Ecto.Query.PlannerTest.Post, as: :post, prefix: \"my_prefix\", select: type(p0.visits, :integer)"
+  end
+
+  test "normalize: parent_as/1 in type/2" do
+    child = from c in Comment, where: type(parent_as(:posts).id, :string) == c.text
+    query = from(Post, as: :posts, inner_lateral_join: c in subquery(child)) |> normalize()
+
+    assert inspect(query) =~ "where: type(parent_as(:posts).id, :string) == c0.text"
   end
 
   test "normalize: validate fields in left side of in expressions" do
