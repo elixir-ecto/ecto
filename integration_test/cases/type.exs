@@ -114,8 +114,8 @@ defmodule Ecto.Integration.TypeTest do
   end
 
   test "tagged types" do
-    TestRepo.insert!(%Post{id: 1, visits: 12})
-    TestRepo.insert!(%Comment{text: "1"})
+    %{id: post_id} = TestRepo.insert!(%Post{visits: 12})
+    TestRepo.insert!(%Comment{text: "#{post_id}"})
 
     # Numbers
     assert [1]   = TestRepo.all(from Post, select: type(^"1", :integer))
