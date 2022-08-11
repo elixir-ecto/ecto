@@ -404,7 +404,7 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:over, [], [aggregate, window]]}, params_acc}
   end
 
-  def escape({:selected_as, _, [_expr, name]}, _type, _params_acc, _vars, _env) do
+  def escape({:selected_as, _, [_expr, _name]}, _type, _params_acc, _vars, _env) do
     error! """
     selected_as/2 cannot be used unless it is at the root of a select statement. \
     If you are trying to use it inside of an expression, consider putting the \
