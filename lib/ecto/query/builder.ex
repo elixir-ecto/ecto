@@ -404,6 +404,20 @@ defmodule Ecto.Query.Builder do
     {{:{}, [], [:over, [], [aggregate, window]]}, params_acc}
   end
 
+  def escape({:selected_as, _, [_expr, _name]}, _type, _params_acc, _vars, _env) do
+    error! """
+    selected_as/2 can only be used at the root of a select statement. \
+    If you are trying to use it inside of an expression, consider putting the \
+    expression inside of `selected_as/2` instead. For instance, instead of:
+
+        from p in Post, select: coalesce(selected_as(p.visits, :v), 0)
+
+    use:
+
+        from p in Post, select: selected_as(coalesce(p.visits, 0), :v)
+    """
+  end
+
   def escape({:selected_as, _, [name]}, _type, params_acc, _vars, _env) when is_atom(name) do
     expr = {:{}, [], [:selected_as, [], [name]]}
     {expr, params_acc}

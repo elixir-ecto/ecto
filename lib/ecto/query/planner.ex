@@ -928,7 +928,7 @@ defmodule Ecto.Query.Planner do
     query
     |> normalize_query(operation, adapter, counter)
     |> elem(0)
-    |> normalize_select(keep_literals?(operation, query))
+    |> normalize_select(keep_literals?(operation, query), true)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -1007,7 +1007,7 @@ defmodule Ecto.Query.Planner do
           # Now compute the fields as keyword lists so we emit AS in Ecto query.
           %{select: %{expr: expr, take: take}} = inner_query
           {{:map, types}, fields, _from} = collect_fields(expr, [], :never, inner_query, take, true, %{})
-          fields = Enum.zip(Keyword.keys(types), Enum.reverse(fields))
+          fields = cte_fields(Keyword.keys(types), Enum.reverse(fields), [])
           inner_query = put_in(inner_query.select.fields, fields)
           {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
 
@@ -1046,7 +1046,7 @@ defmodule Ecto.Query.Planner do
     {combinations, counter} =
       Enum.reduce combinations, {[], counter}, fn {type, combination_query}, {combinations, counter} ->
         {combination_query, counter} = traverse_exprs(combination_query, operation, counter, fun)
-        {combination_query, _} = combination_query |> normalize_select(true)
+        {combination_query, _} = combination_query |> normalize_select(true, true)
         {[{type, combination_query} | combinations], counter}
       end
 
@@ -1087,7 +1087,7 @@ defmodule Ecto.Query.Planner do
     try do
       inner_query = put_in inner_query.aliases[@parent_as], query
       {inner_query, counter} = normalize_query(inner_query, :all, adapter, counter)
-      {inner_query, _} = normalize_select(inner_query, true)
+      {inner_query, _} = normalize_select(inner_query, true, false)
       {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
 
       inner_query =
@@ -1287,11 +1287,11 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp normalize_select(%{select: nil} = query, _keep_literals?) do
+  defp normalize_select(%{select: nil} = query, _keep_literals?, _allow_alias?) do
     {query, nil}
   end
 
-  defp normalize_select(query, keep_literals?) do
+  defp normalize_select(query, keep_literals?, allow_alias?) do
     %{assocs: assocs, preloads: preloads, select: select} = query
     %{take: take, expr: expr} = select
     {tag, from_take} = Map.get(take, 0, {:any, []})
@@ -1312,6 +1312,11 @@ defmodule Ecto.Query.Planner do
 
     {postprocess, fields, from} =
       collect_fields(expr, [], :none, query, take, keep_literals?, %{})
+
+    # Convert selected_as/2 to a tuple so it can be aliased by the adapters.
+    # Don't convert if the select expression belongs to a CTE or subquery
+    # because those fields are already automatically aliased.
+    fields = normalize_selected_as(fields, allow_alias?)
 
     {fields, preprocess, from} =
       case from do
@@ -1337,6 +1342,26 @@ defmodule Ecto.Query.Planner do
     }
 
     {put_in(query.select.fields, fields), select}
+  end
+
+  defp normalize_selected_as(fields, false) do
+    Enum.map(fields, fn
+      {:selected_as, _, [_, _]} ->
+        raise ArgumentError,
+              "`selected_as/2` can only be used in the outer most `select` expression. " <>
+                "If you are attempting to alias a field from a subquery or cte, it is not allowed " <>
+                "because the fields are automatically aliased by the corresponding map/struct key."
+
+      field ->
+        field
+    end)
+  end
+
+  defp normalize_selected_as(fields, true) do
+    Enum.map(fields, fn
+      {:selected_as, _, [select_expr, name]} -> {name, select_expr}
+      field -> field
+    end)
   end
 
   # Handling of source
@@ -1864,6 +1889,20 @@ defmodule Ecto.Query.Planner do
   defp field_source(_, field) do
     field
   end
+
+  defp cte_fields([_key | _rest_keys], [{:selected_as, _, [_, _]} | _rest_fields], _acc) do
+    raise ArgumentError,
+          "`selected_as/2` can only be used in the outer most `select` expression. " <>
+            "If you are attempting to alias a field from a subquery or cte, it is not allowed " <>
+            "because the fields are automatically aliased by the corresponding map/struct key."
+  end
+
+  defp cte_fields([key | rest_keys], [field | rest_fields], acc) do
+    cte_fields(rest_keys, rest_fields, [{key, field} | acc])
+  end
+
+  defp cte_fields(_keys, [], acc), do: :lists.reverse(acc)
+  defp cte_fields([], _fields, acc), do: :lists.reverse(acc)
 
   defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do
     changes =

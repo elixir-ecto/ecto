@@ -120,6 +120,13 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert [{:{}, [], [:id, escaped_alias]}] == query.select.expr
     end
 
+    test "supports aliasing a selected value in select_merge with selected_as/2" do
+      escaped_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :id]}, [], []}, :ident]}
+
+      query = from p in "posts", select: p.visits, select_merge: %{id: selected_as(p.id, :ident)}
+      assert {:merge, [], [{{:., [], [{:&, [], [0]}, :visits]}, [], []}, {:%{}, [], [id: escaped_alias]}]} == query.select.expr
+    end
+
     test "raises if name given to selected_as/2 is not an atom" do
       message = "selected_as/2 expects `name` to be an atom, got `\"ident\"`"
 
@@ -133,6 +140,15 @@ defmodule Ecto.Query.Builder.SelectTest do
 
       assert_raise Ecto.Query.CompileError, message, fn ->
         select_expr = quote do %{id: selected_as(p.id, :ident), id2: selected_as(p.id, :ident)} end
+        escape(select_expr, [p: 0], __ENV__)
+      end
+    end
+
+    test "raises if selected_as/2 is not at the root of the select statement" do
+      message = ~r/selected_as\/2 can only be used at the root of a select statement/
+
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        select_expr = quote do coalesce(selected_as(p.visits, :v), 0) end
         escape(select_expr, [p: 0], __ENV__)
       end
     end
