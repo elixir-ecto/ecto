@@ -1344,7 +1344,18 @@ defmodule Ecto.Query.Planner do
     {put_in(query.select.fields, fields), select}
   end
 
-  defp normalize_selected_as(fields, false), do: fields
+  defp normalize_selected_as(fields, false) do
+    Enum.map(fields, fn
+      {:selected_as, _, [_select_expr, _name]} ->
+        raise ArgumentError,
+              "`selected_as/2` can only be used in the outer most `select` expression. " <>
+                "If you are attempting to alias a field from a subquery, it is not allowed " <>
+                "because subquery fields are automatically aliased by the corresponding map/struct key."
+
+      field ->
+        field
+    end)
+  end
 
   defp normalize_selected_as(fields, true) do
     Enum.map(fields, fn
