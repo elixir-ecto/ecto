@@ -1007,7 +1007,7 @@ defmodule Ecto.Query.Planner do
           # Now compute the fields as keyword lists so we emit AS in Ecto query.
           %{select: %{expr: expr, take: take}} = inner_query
           {{:map, types}, fields, _from} = collect_fields(expr, [], :never, inner_query, take, true, %{})
-          fields = Enum.zip(Keyword.keys(types), Enum.reverse(fields))
+          fields = cte_fields(Keyword.keys(types), Enum.reverse(fields), [])
           inner_query = put_in(inner_query.select.fields, fields)
           {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
 
@@ -1346,11 +1346,11 @@ defmodule Ecto.Query.Planner do
 
   defp normalize_selected_as(fields, false) do
     Enum.map(fields, fn
-      {:selected_as, _, [_select_expr, _name]} ->
+      {:selected_as, _, [_, _]} ->
         raise ArgumentError,
               "`selected_as/2` can only be used in the outer most `select` expression. " <>
-                "If you are attempting to alias a field from a subquery, it is not allowed " <>
-                "because subquery fields are automatically aliased by the corresponding map/struct key."
+                "If you are attempting to alias a field from a subquery or cte, it is not allowed " <>
+                "because the fields are automatically aliased by the corresponding map/struct key."
 
       field ->
         field
@@ -1889,6 +1889,20 @@ defmodule Ecto.Query.Planner do
   defp field_source(_, field) do
     field
   end
+
+  defp cte_fields([_key | _rest_keys], [{:selected_as, _, [_, _]} | _rest_fields], _acc) do
+    raise ArgumentError,
+          "`selected_as/2` can only be used in the outer most `select` expression. " <>
+            "If you are attempting to alias a field from a subquery or cte, it is not allowed " <>
+            "because the fields are automatically aliased by the corresponding map/struct key."
+  end
+
+  defp cte_fields([key | rest_keys], [field | rest_fields], acc) do
+    cte_fields(rest_keys, rest_fields, [{key, field} | acc])
+  end
+
+  defp cte_fields(_keys, [], acc), do: :lists.reverse(acc)
+  defp cte_fields([], _fields, acc), do: :lists.reverse(acc)
 
   defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do
     changes =

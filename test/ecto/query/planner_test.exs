@@ -1742,5 +1742,14 @@ defmodule Ecto.Query.PlannerTest do
         from(q in subquery(query)) |> normalize()
       end
     end
+
+    test "raises if selected_as/2 is used in a cte" do
+      message = ~r"`selected_as/2` can only be used in the outer most `select` expression."
+
+      assert_raise ArgumentError, message, fn ->
+        query = "schema" |> select([s], %{x: selected_as(s.x, :integer)})
+        Post |> with_cte("cte", as: ^query) |> normalize()
+      end
+    end
   end
 end
