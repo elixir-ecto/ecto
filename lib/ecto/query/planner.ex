@@ -928,7 +928,7 @@ defmodule Ecto.Query.Planner do
     query
     |> normalize_query(operation, adapter, counter)
     |> elem(0)
-    |> normalize_select(keep_literals?(operation, query))
+    |> normalize_select(keep_literals?(operation, query), true)
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -1046,7 +1046,7 @@ defmodule Ecto.Query.Planner do
     {combinations, counter} =
       Enum.reduce combinations, {[], counter}, fn {type, combination_query}, {combinations, counter} ->
         {combination_query, counter} = traverse_exprs(combination_query, operation, counter, fun)
-        {combination_query, _} = combination_query |> normalize_select(true)
+        {combination_query, _} = combination_query |> normalize_select(true, true)
         {[{type, combination_query} | combinations], counter}
       end
 
@@ -1087,7 +1087,7 @@ defmodule Ecto.Query.Planner do
     try do
       inner_query = put_in inner_query.aliases[@parent_as], query
       {inner_query, counter} = normalize_query(inner_query, :all, adapter, counter)
-      {inner_query, _} = normalize_select(inner_query, true)
+      {inner_query, _} = normalize_select(inner_query, true, false)
       {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
 
       inner_query =
@@ -1287,11 +1287,11 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp normalize_select(%{select: nil} = query, _keep_literals?) do
+  defp normalize_select(%{select: nil} = query, _keep_literals?, _allow_alias?) do
     {query, nil}
   end
 
-  defp normalize_select(query, keep_literals?) do
+  defp normalize_select(query, keep_literals?, allow_alias?) do
     %{assocs: assocs, preloads: preloads, select: select} = query
     %{take: take, expr: expr} = select
     {tag, from_take} = Map.get(take, 0, {:any, []})
@@ -1312,6 +1312,11 @@ defmodule Ecto.Query.Planner do
 
     {postprocess, fields, from} =
       collect_fields(expr, [], :none, query, take, keep_literals?, %{})
+
+    # Convert selected_as/2 to a tuple so it can be aliased by the adapters.
+    # Don't convert if the select expression belongs to a CTE or subquery
+    # because those fields are already automatically aliased.
+    fields = normalize_selected_as(fields, allow_alias?)
 
     {fields, preprocess, from} =
       case from do
@@ -1337,6 +1342,15 @@ defmodule Ecto.Query.Planner do
     }
 
     {put_in(query.select.fields, fields), select}
+  end
+
+  defp normalize_selected_as(fields, false), do: fields
+
+  defp normalize_selected_as(fields, true) do
+    Enum.map(fields, fn
+      {:selected_as, _, [select_expr, name]} -> {name, select_expr}
+      field -> field
+    end)
   end
 
   # Handling of source
@@ -1522,10 +1536,6 @@ defmodule Ecto.Query.Planner do
   defp collect_fields({op, _, [_, _]} = expr, fields, from, _query, _take, _keep_literals?, _drop)
        when op in ~w(< > <= >= == != and or like ilike)a do
     {{:value, :boolean}, [expr | fields], from}
-  end
-
-  defp collect_fields({:selected_as, _, [select_expr, as]}, fields, from, _query, _take, _keep_literals?, _drop) do
-    {{:value, :any}, [{as, select_expr} | fields], from}
   end
 
   defp collect_fields(expr, fields, from, _query, _take, _keep_literals?, _drop) do
