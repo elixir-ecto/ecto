@@ -145,7 +145,7 @@ defmodule Ecto.Query.Builder.SelectTest do
     end
 
     test "raises if selected_as/2 is not at the root of the select statement" do
-      message = ~r/selected_as\/2 cannot be used unless it is at the root of a select statement/
+      message = ~r/selected_as\/2 can only be used at the root of a select statement/
 
       assert_raise Ecto.Query.CompileError, message, fn ->
         select_expr = quote do coalesce(selected_as(p.visits, :v), 0) end
