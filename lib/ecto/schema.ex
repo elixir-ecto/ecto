@@ -1876,19 +1876,19 @@ defmodule Ecto.Schema do
 
   @doc false
   def __timestamps__(:naive_datetime) do
-    %{NaiveDateTime.utc_now() | microsecond: {0, 0}}
+    %{NaiveDateTime.local_now() | microsecond: {0, 0}}
   end
 
   def __timestamps__(:naive_datetime_usec) do
-    NaiveDateTime.utc_now()
+    NaiveDateTime.local_now()
   end
 
   def __timestamps__(:utc_datetime) do
-    %{DateTime.utc_now() | microsecond: {0, 0}}
+    %{DateTime.local_now() | microsecond: {0, 0}}
   end
 
   def __timestamps__(:utc_datetime_usec) do
-    DateTime.utc_now()
+    DateTime.local_now()
   end
 
   def __timestamps__(type) do
