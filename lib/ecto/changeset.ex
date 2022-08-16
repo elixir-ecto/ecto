@@ -238,7 +238,8 @@ defmodule Ecto.Changeset do
   This means that when working with changesets that are not meant to be
   persisted to the database, such as schemaless changesets, you may need
   to explicitly set the action to one specific value. Frameworks such as
-  Phoenix use the action value to define how HTML forms should act.
+  Phoenix [use the action value to define how HTML forms should
+  act](https://hexdocs.pm/phoenix_html/Phoenix.HTML.Form.html#module-a-note-on-errors).
 
   Instead of setting the action manually, you may use `apply_action/2` that
   emulates operations such as `c:Ecto.Repo.insert`. `apply_action/2` will return
@@ -1543,6 +1544,8 @@ defmodule Ecto.Changeset do
   ## Examples
 
       iex> {:ok, data} = apply_action(changeset, :update)
+
+      iex> {:ok, data} = apply_action(changeset, :my_action)
 
       iex> {:error, changeset} = apply_action(changeset, :update)
       %Ecto.Changeset{action: :update}
