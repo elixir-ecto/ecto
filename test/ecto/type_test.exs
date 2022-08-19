@@ -230,7 +230,6 @@ defmodule Ecto.TypeTest do
 
   describe "embeds" do
     @uuid_string "bfe0888c-5c59-4bb3-adfd-71f0b85d3db7"
-    @uuid_binary <<191, 224, 136, 140, 92, 89, 75, 179, 173, 253, 113, 240, 184, 93, 61, 183>>
 
     test "one" do
       embed = %Ecto.Embedded{field: :embed, cardinality: :one,
@@ -238,11 +237,11 @@ defmodule Ecto.TypeTest do
       type  = {:parameterized, Ecto.Embedded, embed}
 
       assert {:ok, %Schema{id: @uuid_string, a: 1, c: 0}} =
-             adapter_load(Ecto.TestAdapter, type, %{"id" => @uuid_binary, "abc" => 1})
+             adapter_load(Ecto.TestAdapter, type, %{"id" => @uuid_string, "abc" => 1})
       assert {:ok, nil} == adapter_load(Ecto.TestAdapter, type, nil)
       assert :error == adapter_load(Ecto.TestAdapter, type, 1)
 
-      assert {:ok, %{abc: 1, c: 0, id: @uuid_binary}} ==
+      assert {:ok, %{abc: 1, c: 0, id: @uuid_string}} ==
              adapter_dump(Ecto.TestAdapter, type, %Schema{id: @uuid_string, a: 1})
       assert {:ok, nil} = adapter_dump(Ecto.TestAdapter, type, nil)
       assert :error = adapter_dump(Ecto.TestAdapter, type, 1)
@@ -258,11 +257,11 @@ defmodule Ecto.TypeTest do
       type  = {:parameterized, Ecto.Embedded, embed}
 
       assert {:ok, [%Schema{id: @uuid_string, a: 1, c: 0}]} =
-             adapter_load(Ecto.TestAdapter, type, [%{"id" => @uuid_binary, "abc" => 1}])
+             adapter_load(Ecto.TestAdapter, type, [%{"id" => @uuid_string, "abc" => 1}])
       assert {:ok, []} == adapter_load(Ecto.TestAdapter, type, nil)
       assert :error == adapter_load(Ecto.TestAdapter, type, 1)
 
-      assert {:ok, [%{id: @uuid_binary, abc: 1, c: 0}]} ==
+      assert {:ok, [%{id: @uuid_string, abc: 1, c: 0}]} ==
              adapter_dump(Ecto.TestAdapter, type, [%Schema{id: @uuid_string, a: 1}])
       assert {:ok, nil} = adapter_dump(Ecto.TestAdapter, type, nil)
       assert :error = adapter_dump(Ecto.TestAdapter, type, 1)

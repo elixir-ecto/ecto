@@ -49,13 +49,16 @@ defmodule Ecto.Enum do
         end
       end
 
-  you can call `mappings/2` like this:
+  You can call `mappings/2` like this:
 
       Ecto.Enum.mappings(EnumSchema, :my_enum)
       #=> [foo: "foo", bar: "bar", baz: "baz"]
 
   If you want the values only, you can use `Ecto.Enum.values/2`, and if you want
   the dump values only, you can use `Ecto.Enum.dump_values/2`.
+
+  When using Ecto.Enum within embeds, it is possible to chose whether to dump them
+  or not with the `:dump_embed?` option, which defaults to `false`.
   """
 
   use Ecto.ParameterizedType
@@ -96,8 +99,16 @@ defmodule Ecto.Enum do
     on_load = Map.new(mappings, fn {key, val} -> {val, key} end)
     on_dump = Map.new(mappings)
     on_cast = Map.new(mappings, fn {key, _} -> {Atom.to_string(key), key} end)
+    embed_as = if opts[:dump_embed?], do: :dump, else: :self
 
-    %{on_load: on_load, on_dump: on_dump, on_cast: on_cast, mappings: mappings, type: type}
+    %{
+      on_load: on_load,
+      on_dump: on_dump,
+      on_cast: on_cast,
+      mappings: mappings,
+      embed_as: embed_as,
+      type: type
+    }
   end
 
   defp validate_unique!(values) do
@@ -162,7 +173,7 @@ defmodule Ecto.Enum do
   def equal?(a, b, _params), do: a == b
 
   @impl true
-  def embed_as(_, _), do: :self
+  def embed_as(_, %{embed_as: embed_as}), do: embed_as
 
   @doc "Returns the possible values for a given schema and field"
   @spec values(module, atom) :: [atom()]

@@ -37,9 +37,11 @@ defmodule Ecto.TestAdapter do
 
   ## Types
 
+  def loaders({:map, _}, type),  do: [&Ecto.Type.embedded_load(type, &1, :json)]
   def loaders(:binary_id, type), do: [Ecto.UUID, type]
   def loaders(_primitive, type), do: [type]
 
+  def dumpers({:map, _}, type),  do: [&Ecto.Type.embedded_dump(type, &1, :json)]
   def dumpers(:binary_id, type), do: [type, Ecto.UUID]
   def dumpers(_primitive, type), do: [type]
 
