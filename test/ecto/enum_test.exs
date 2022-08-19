@@ -17,8 +17,8 @@ defmodule Ecto.EnumTest do
       field :virtual_enum, Ecto.Enum, values: [:foo, :bar, :baz], virtual: true
       field :not_enum, :string
       embeds_one :embed, Embed do
-        field :dumped_enum, Ecto.Enum, values: [foo: 1, bar: 2], dump_embed?: true
-        field :self_dump_enum, Ecto.Enum, values: [foo: 1, bar: 2], dump_embed?: false
+        field :dumped_enum, Ecto.Enum, values: [foo: 1, bar: 2], embed_as: :dumped
+        field :non_dumped_enum, Ecto.Enum, values: [foo: 1, bar: 2], embed_as: :values
       end
     end
   end
@@ -100,7 +100,7 @@ defmodule Ecto.EnumTest do
                   }}
                }
 
-      assert EnumSchema.Embed.__schema__(:type, :self_dump_enum) ==
+      assert EnumSchema.Embed.__schema__(:type, :non_dumped_enum) ==
                {:parameterized, Ecto.Enum,
                   %{
                     on_dump: %{foo: 1, bar: 2},
@@ -195,6 +195,24 @@ defmodule Ecto.EnumTest do
 
           schema "duplicate_values" do
             field :name, Ecto.Enum, values: [foo: 1, bar: 1]
+          end
+        end
+      end
+    end
+
+    test "invalid `:embed_as` option" do
+      message = """
+      the `:embed_as` option for `Ecto.Enum` accepts either `:values` or `:dumped`,
+      received: `:invalid`
+      """
+
+      assert_raise ArgumentError, message, fn ->
+        defmodule SchemaDuplicateEnumMappings do
+          use Ecto.Schema
+          schema "duplicate_values" do
+            embeds_one :embed, Embed do
+              field :name, Ecto.Enum, values: [:foo, :bar], embed_as: :invalid
+            end
           end
         end
       end
@@ -354,10 +372,10 @@ defmodule Ecto.EnumTest do
 
       assert_receive {:insert, %{fields:  [embed: %{dumped_enum: 1}]}}
 
-      assert %EnumSchema{embed: %{self_dump_enum: :foo}} =
-               TestRepo.insert!(%EnumSchema{embed: %EnumSchema.Embed{self_dump_enum: :foo}})
+      assert %EnumSchema{embed: %{non_dumped_enum: :foo}} =
+               TestRepo.insert!(%EnumSchema{embed: %EnumSchema.Embed{non_dumped_enum: :foo}})
 
-      assert_receive {:insert, %{fields:  [embed: %{self_dump_enum: :foo}]}}
+      assert_receive {:insert, %{fields:  [embed: %{non_dumped_enum: :foo}]}}
     end
 
     test "rejects invalid atom" do
@@ -428,8 +446,8 @@ defmodule Ecto.EnumTest do
       Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, nil, nil, nil, %{"dumped_enum" => 1}]]})
       assert [%Ecto.EnumTest.EnumSchema{embed: %{dumped_enum: :foo}}] = TestRepo.all(EnumSchema)
 
-      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, nil, nil, nil, %{"self_dump_enum" => "foo"}]]})
-      assert [%Ecto.EnumTest.EnumSchema{embed: %{self_dump_enum: :foo}}] = TestRepo.all(EnumSchema)
+      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, nil, nil, nil, %{"non_dumped_enum" => "foo"}]]})
+      assert [%Ecto.EnumTest.EnumSchema{embed: %{non_dumped_enum: :foo}}] = TestRepo.all(EnumSchema)
     end
 
     test "reject invalid values" do

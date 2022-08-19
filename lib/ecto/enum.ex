@@ -57,8 +57,10 @@ defmodule Ecto.Enum do
   If you want the values only, you can use `Ecto.Enum.values/2`, and if you want
   the dump values only, you can use `Ecto.Enum.dump_values/2`.
 
-  When using Ecto.Enum within embeds, it is possible to chose whether to dump them
-  or not with the `:dump_embed?` option, which defaults to `false`.
+  `Ecto.Enum` allows to customize fields are dumped within embeds through the
+  `embed_as` option. Two alternatives are supported: `:values`, which will save
+  the enum keys (and not their respective mapping), and `:dumped`, which will save
+  the mapped value. The default is `:values`.
   """
 
   use Ecto.ParameterizedType
@@ -99,7 +101,14 @@ defmodule Ecto.Enum do
     on_load = Map.new(mappings, fn {key, val} -> {val, key} end)
     on_dump = Map.new(mappings)
     on_cast = Map.new(mappings, fn {key, _} -> {Atom.to_string(key), key} end)
-    embed_as = if opts[:dump_embed?], do: :dump, else: :self
+    embed_as = case Keyword.get(opts, :embed_as, :values) do
+      :values -> :self
+      :dumped -> :dump
+      other -> raise ArgumentError, """
+      the `:embed_as` option for `Ecto.Enum` accepts either `:values` or `:dumped`,
+      received: `#{inspect(other)}`
+      """
+    end
 
     %{
       on_load: on_load,
