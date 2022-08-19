@@ -477,7 +477,6 @@ defmodule Ecto.Changeset do
       iex> apply_changes(changeset)
       %{title: "world"}
 
-
   ## Composing casts
 
   `cast/4` also accepts a changeset as its first argument. In such cases, all
