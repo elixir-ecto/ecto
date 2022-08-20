@@ -9,14 +9,14 @@ Repo.transaction(fn ->
       where: [id: ^mary.id],
       update: [inc: [balance: +10]]
 
-  {1, _} = Repo.update_all(mary_update)
+  {1, _} = Repo.update_all(mary_update, [])
 
   john_update =
     from Account,
       where: [id: ^john.id],
       update: [inc: [balance: -10]]
 
-  {1, _} = Repo.update_all(john_update)
+  {1, _} = Repo.update_all(john_update, [])
 end)
 ```
 
@@ -29,14 +29,14 @@ Repo.transaction(fn ->
       where: [id: ^mary.id],
       update: [inc: [balance: +10]]
 
-  case Repo.update_all mary_update do
+  case Repo.update_all(mary_update, []) do
     {1, _} ->
       john_update =
         from Account,
           where: [id: ^john.id],
           update: [inc: [balance: -10]]
 
-      case Repo.update_all john_update do
+      case Repo.update_all(john_update, []) do
         {1, _} -> {mary, john}
         {_, _} -> Repo.rollback({:failed_transfer, john})
       end
@@ -89,13 +89,21 @@ john_update =
     update: [inc: [balance: -10]]
 
 Ecto.Multi.new()
-|> Ecto.Multi.update_all(:mary, mary_update)
-|> Ecto.Multi.update_all(:john, john_update)
+|> Ecto.Multi.update_all(:mary, mary_update, [])
+|> Ecto.Multi.run(:check_mary, fn
+  _repo, %{mary: {1, _}} -> {:ok, nil}
+  _repo, %{mary: {_, _}} -> {:error, {:failed_transfer, mary}}
+)
+|> Ecto.Multi.update_all(:john, john_update, [])
+|> Ecto.Multi.run(:check_john, fn
+  _repo, %{john: {1, _}} -> {:ok, nil}
+  _repo, %{john: {_, _}} -> {:error, {:failed_transfer, john}}
+)
 ```
 
-`Ecto.Multi` is a data structure that defines multiple operations that must be performed together, without worrying about when they will be executed. `Ecto.Multi` mirrors most of the `Ecto.Repo` API, with the difference that each operation must be explicitly named. In the example above, we have defined two update operations, named `:mary` and `:john`. As we will see later, the names are important when handling the transaction results.
+`Ecto.Multi` is a data structure that defines multiple operations that must be performed together, without worrying about when they will be executed. `Ecto.Multi` mirrors most of the `Ecto.Repo` API, with the difference that each operation must be explicitly named. In the example above, we have defined two update operations, named `:mary` and `:john`, and two validation operations, named `:check_mary` and `:check_john`. As we will see later, the names are important when handling the transaction results.
 
-Since `Ecto.Multi` is just a data structure, we can pass it as argument to other functions, as well as return it. Assuming the multi above is moved into its own function, defined as `transfer_money(mary, john, value)`,  we can add a new operation to the multi that logs the transfer as follows:
+Since `Ecto.Multi` is just a data structure, we can pass it as argument to other functions, as well as return it. Assuming the multi above is moved into its own function, defined as `transfer_money(mary, john, value)`, we can add a new operation to the multi that logs the transfer as follows:
 
 ```elixir
 transfer = %Transfer{
