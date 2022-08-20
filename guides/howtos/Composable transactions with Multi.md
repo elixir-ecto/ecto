@@ -9,14 +9,14 @@ Repo.transaction(fn ->
       where: [id: ^mary.id],
       update: [inc: [balance: +10]]
 
-  {1, _} = Repo.update_all(mary_update)
+  {1, _} = Repo.update_all(mary_update, [])
 
   john_update =
     from Account,
       where: [id: ^john.id],
       update: [inc: [balance: -10]]
 
-  {1, _} = Repo.update_all(john_update)
+  {1, _} = Repo.update_all(john_update. [])
 end)
 ```
 
