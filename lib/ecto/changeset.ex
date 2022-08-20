@@ -109,10 +109,14 @@ defmodule Ecto.Changeset do
   regarding empty values. For example, if you are gathering data to be
   cast from the command line or through an HTML form or any other text-based
   format, it is likely those means cannot express nil values. For
-  those reasons, changesets include the concept of empty values, which are
-  values that will be automatically converted to the field's default value
-  on `cast/4`. Those values are stored in the changeset `empty_values` field
-  and default to `[""]`. You can also pass the `:empty_values` option to
+  those reasons, changesets include the concept of empty values.
+
+  When applying changes using `cast/4`, an empty value will be automatically
+  converted to the field's default value. If the field is an array type, any
+  empty value inside the array will be removed.
+
+  Empty values are stored in the changeset's `:empty_values` field and
+  default to `[""]`. You can also pass the `:empty_values` option to
   `cast/4` in case you want to change how a particular `cast/4` work.
 
   ## Associations, embeds and on replace
@@ -442,7 +446,9 @@ defmodule Ecto.Changeset do
   ## Options
 
     * `:empty_values` - a list of values to be considered as empty when casting.
-      Empty values are always replaced by the default value of the respective key. Defaults to `[""]`
+      Empty values are always replaced by the default value of the respective field.
+      If the field is an array type, any empty value inside of the array will be removed.
+      Defaults to `[""]`
 
   ## Examples
 
@@ -450,6 +456,11 @@ defmodule Ecto.Changeset do
       iex> if changeset.valid? do
       ...>   Repo.update!(changeset)
       ...> end
+
+      iex> params = %{title: "", topics: [""]}
+      iex> changeset = cast(post, params, [:topics, :title], empty_values: ["", []])
+      iex> changeset.changes
+      %{title: nil, topics: nil}
 
   Passing a changeset as the first argument:
 
