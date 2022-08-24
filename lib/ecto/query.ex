@@ -2263,6 +2263,65 @@ defmodule Ecto.Query do
   end
 
   @doc """
+  Applies a callback function to a query if it doesn't contain the given named binding. 
+  Otherwise, returns the original query.
+
+  The callback function must accept a queryable and return an `Ecto.Query` struct 
+  that contains the provided named binding, otherwise an error is raised. It can also 
+  accept second argument which is the atom representing the name of a binding.
+  
+  For example, one might use this function as a convenience to conditionally add a new 
+  named join to a query:
+
+      if has_named_binding?(query, :comments) do
+        query
+      else
+        join(query, :left, c in assoc(p, :comments), as: :comments)
+      end
+
+  With this function it can be simplified to:
+
+      with_named_binding(query, :comments, fn  query, binding ->
+        join(query, :left, a in assoc(p, ^binding), as: ^binding)
+      end) 
+
+  For more information on named bindings see "Named bindings" in this module doc or `has_named_binding/2`. 
+  """
+  def with_named_binding(%Ecto.Query{} = query, key, fun) do
+    if has_named_binding?(query, key) do
+      query
+    else
+      query
+      |> apply_binding_callback(fun, key)
+      |> raise_on_invalid_callback_return(key)
+    end
+  end
+
+  def with_named_binding(queryable, key, fun) do
+    queryable
+    |> Ecto.Queryable.to_query()
+    |> with_named_binding(key, fun)
+  end
+  
+  defp apply_binding_callback(query, fun, _key) when is_function(fun, 1), do: query |> fun.() 
+  defp apply_binding_callback(query, fun, key) when is_function(fun, 2), do: query |> fun.(key)
+  defp apply_binding_callback(_query, fun, _key) do
+    raise ArgumentError, "callback function for with_named_binding/3 should accept one or two arguments, got: #{inspect(fun)}"
+  end
+  
+  defp raise_on_invalid_callback_return(%Ecto.Query{} = query, key) do
+    if has_named_binding?(query, key) do
+      query
+    else
+      raise RuntimeError, "callback function for with_named_binding/3 should create a named binding for key #{inspect(key)}"
+    end
+  end
+
+  defp raise_on_invalid_callback_return(other, _key) do
+    raise RuntimeError, "callback function for with_named_binding/3 should return an Ecto.Query struct, got: #{inspect(other)}"
+  end
+
+  @doc """
   Reverses the ordering of the query.
 
   ASC columns become DESC columns (and vice-versa). If the query
