@@ -2300,10 +2300,15 @@ defmodule Ecto.Query do
   def with_named_binding(queryable, key, fun) do
     queryable
     |> Ecto.Queryable.to_query()
-    |> apply_binding_callback(fun, key)
-    |> raise_on_invalid_callback_return(key)
+    |> with_named_binding(key, fun)
   end
-
+  
+  defp apply_binding_callback(query, fun, _key) when is_function(fun, 1), do: query |> fun.() 
+  defp apply_binding_callback(query, fun, key) when is_function(fun, 2), do: query |> fun.(key)
+  defp apply_binding_callback(_query, fun, _key) do
+    raise ArgumentError, "callback function for with_named_binding/3 should accept one or two arguments, got: #{inspect(fun)}"
+  end
+  
   defp raise_on_invalid_callback_return(%Ecto.Query{} = query, key) do
     if has_named_binding?(query, key) do
       query
@@ -2314,12 +2319,6 @@ defmodule Ecto.Query do
 
   defp raise_on_invalid_callback_return(other, _key) do
     raise RuntimeError, "callback function for with_named_binding/3 should return an Ecto.Query struct, got: #{inspect(other)}"
-  end
-  
-  defp apply_binding_callback(query, fun, _key) when is_function(fun, 1), do: fun.(query)
-  defp apply_binding_callback(query, fun, key) when is_function(fun, 2), do: fun.(query, key)
-  defp apply_binding_callback(_query, fun, _key) do
-    raise ArgumentError, "callback function for with_named_binding/3 should accept one or two arguments, got: #{inspect(fun)}"
   end
 
   @doc """
