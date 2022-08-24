@@ -314,6 +314,12 @@ defmodule Ecto.QueryTest do
       assert %{post: 0} == query.aliases
       assert %{as: :post} = query.from
     end
+    
+    test "assigns a name using a variable" do
+      binding = :post
+      query = from p in "posts", as: ^binding
+      assert %{as: :post} = query.from
+    end
 
     test "assigns a name to a subquery source" do
       posts_query = from p in "posts"
@@ -951,7 +957,7 @@ defmodule Ecto.QueryTest do
   end
 
   describe "with_named_binding/3" do
-    test "executes a function when query does not have a named binding" do
+    test "executes a function with arity 1 when query does not have a named binding" do
       query = from(p in "posts", as: :posts)
 
       fun =
@@ -963,6 +969,20 @@ defmodule Ecto.QueryTest do
 
       assert has_named_binding?(query, :comments)
       assert %{joins: [%{as: :comments, source: {"comments", nil}}]} = query
+    end
+    
+    test "executes a function with arity 2 when query does not have a named binding" do
+      query = from(p in "posts", as: :posts)
+
+      fun =
+        fn query, binding ->
+          join(query, :left, [posts: posts], c in ^binding, as: ^binding)
+        end
+
+      query = with_named_binding(query, :comments, fun)
+
+      assert has_named_binding?(query, :comments)
+      assert %{joins: [%{as: :comments, source: {nil, :comments}}]} = query
     end
 
     test "does not execute a function when query has a named binding" do
@@ -988,6 +1008,12 @@ defmodule Ecto.QueryTest do
       assert_raise RuntimeError,
                    ~r"callback function for with_named_binding/3 should create a named binding for key :comments",
                    fn -> with_named_binding(Schema, :comments, & &1) end
+    end
+    
+    test "raises when callback is not a function of arity 1 or 2" do
+      assert_raise ArgumentError,
+                   ~r"callback function for with_named_binding/3 should accept one or two arguments, got:",
+                   fn -> with_named_binding(Schema, :comments, &{&1, &2, &3}) end
     end
 
     test "casts queryable to query" do
