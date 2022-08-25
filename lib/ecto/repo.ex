@@ -1158,7 +1158,7 @@ defmodule Ecto.Repo do
       from(p in Post, where: p.id < 10, update: [set: [title: fragment("upper(?)", ^new_title)]])
       |> MyRepo.update_all([])
 
-      from(p in Post, where: p.id < 10, update: [set: [view_count: p.view_count * 1000]])
+      from(p in Post, where: p.id < 10, update: [set: [visits: p.visits * 1000]])
       |> MyRepo.update_all([])
 
   """
