@@ -264,12 +264,13 @@ defmodule Ecto.Integration.Order do
 
     * Text columns
     * Embedding one schema
+    * Field source with json_extract_path
 
   """
   use Ecto.Integration.Schema
 
   schema "orders" do
-    field :meta, :map
+    field :metadata, :map, source: :meta
     embeds_one :item, Ecto.Integration.Item
     embeds_many :items, Ecto.Integration.Item
     belongs_to :permalink, Ecto.Integration.Permalink
