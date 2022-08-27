@@ -9,6 +9,17 @@ defmodule Ecto.Query.Builder.SelectTest do
     defstruct [:title]
   end
 
+  defmodule Comment do
+    use Ecto.Schema
+
+    @primary_key false
+    schema "comments" do
+      field :title, :string
+      field :likes, :integer
+      field :dislikes, :integer, load_in_query: false
+    end
+  end
+
   defp params_acc(opts \\ []) do
     params = opts[:params] || []
     take = opts[:take] || %{}
@@ -501,19 +512,33 @@ defmodule Ecto.Query.Builder.SelectTest do
     end
 
     test "with take" do
-      # On select
-      query = from p in "posts", select: p, select_merge: [:title]
+      # On select with schemaless source
+      query = from c in "comments", select: c, select_merge: [:title]
 
       assert Macro.to_string(query.select.expr) == "&0"
       assert query.select.params == []
       assert query.select.take == %{}
 
-      # On take
-      query = from p in "posts", select: [:body], select_merge: [:title]
+      # On select with schema
+      query = from c in Comment, select: c, select_merge: [:dislikes]
 
       assert Macro.to_string(query.select.expr) == "&0"
       assert query.select.params == []
-      assert query.select.take == %{0 => {:any, [:body, :title]}}
+      assert query.select.take == %{0 => {:any, [:dislikes, :title, :likes]}}
+
+      # On take with schemaless source
+      query = from c in "comments", select: [:title], select_merge: [:likes]
+
+      assert Macro.to_string(query.select.expr) == "&0"
+      assert query.select.params == []
+      assert query.select.take == %{0 => {:any, [:title, :likes]}}
+
+      # On take with schema
+      query = from c in Comment, select: [:title], select_merge: [:dislikes]
+
+      assert Macro.to_string(query.select.expr) == "&0"
+      assert query.select.params == []
+      assert query.select.take == %{0 => {:any, [:title, :dislikes]}}
     end
 
     test "on conflicting take" do

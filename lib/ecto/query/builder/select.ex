@@ -413,7 +413,7 @@ defmodule Ecto.Query.Builder.Select do
       select | expr: expr,
                params: old_params ++ bump_subquery_params(new_params, old_subqueries),
                subqueries: old_subqueries ++ new_subqueries,
-               take: merge_take(old_expr, old_take, new_take)
+               take: merge_take(query.from.source, old_expr, old_take, new_take)
     }
 
     %{query | select: select}
@@ -480,17 +480,25 @@ defmodule Ecto.Query.Builder.Select do
     end)
   end
 
-  defp merge_take(old_expr, %{} = old_take, %{} = new_take) do
-    Enum.reduce(new_take, old_take, fn {binding, new_value}, acc ->
+  defp merge_take(source, old_expr, %{} = old_take, %{} = new_take) do
+    Enum.reduce(new_take, old_take, fn {binding, {new_kind, new_fields} = new_value}, acc ->
       case acc do
         %{^binding => old_value} ->
           Map.put(acc, binding, merge_take_kind_and_fields(binding, old_value, new_value))
 
         %{} ->
-          # If the binding is a not filtered source, merge shouldn't restrict it
-          case old_expr do
-            {:&, _, [^binding]} -> acc
-            _ -> Map.put(acc, binding, new_value)
+          # If merging with a schema, add the schema's query fields. This comes in handy if the user
+          # is merging fields with load_in_query = false.
+          # If merging with a schemaless source, do nothing so the planner can take all the fields.
+          case {old_expr, source} do
+            {{:&, _, [^binding]}, {_source, schema}} when not is_nil(schema) ->
+              Map.put(acc, binding, {new_kind, Enum.uniq(new_fields ++ schema.__schema__(:query_fields))})
+
+            {{:&, _, [^binding]}, _} ->
+                acc
+
+            _ ->
+              Map.put(acc, binding, new_value)
           end
       end
     end)
