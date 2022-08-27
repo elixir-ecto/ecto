@@ -491,11 +491,11 @@ defmodule Ecto.Query.Builder.Select do
           # is merging fields with load_in_query = false.
           # If merging with a schemaless source, do nothing so the planner can take all the fields.
           case {old_expr, source} do
-            {{:&, _, [^binding]}, {_source, nil}} ->
-              acc
-
-            {{:&, _, [^binding]}, {_source, schema}} ->
+            {{:&, _, [^binding]}, {_source, schema}} when not is_nil(schema) ->
               Map.put(acc, binding, {new_kind, Enum.uniq(new_fields ++ schema.__schema__(:query_fields))})
+
+            {{:&, _, [^binding]}, _} ->
+                acc
 
             _ ->
               Map.put(acc, binding, new_value)
