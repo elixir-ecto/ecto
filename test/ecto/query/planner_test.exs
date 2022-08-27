@@ -79,7 +79,7 @@ defmodule Ecto.Query.PlannerTest do
       field :posted, :naive_datetime
       field :visits, :integer
       field :links, {:array, CustomPermalink}
-      field :prefs, {:map, :string}
+      field :prefs, {:map, :string}, source: :preferences
       field :payload, :map, load_in_query: false
       field :status, Ecto.Enum, values: [:draft, :published, :deleted]
 
@@ -1145,16 +1145,16 @@ defmodule Ecto.Query.PlannerTest do
     query = from(p in "posts") |> select([p], p.meta["slug"])
     normalize(query)
 
-    query = from(p  in "posts") |> select([p], p.meta["unknown_field"])
+    query = from(p in "posts") |> select([p], p.meta["unknown_field"])
     normalize(query)
 
-    query = from(p  in "posts") |> select([p], p.meta["author"]["unknown_field"])
+    query = from(p in "posts") |> select([p], p.meta["author"]["unknown_field"])
     normalize(query)
 
-    query = from(p  in "posts") |> select([p], p.metas["not_index"])
+    query = from(p in "posts") |> select([p], p.metas["not_index"])
     normalize(query)
 
-    query = from(p  in "posts") |> select([p], p.metas["not_index"]["unknown_field"])
+    query = from(p in "posts") |> select([p], p.metas["not_index"]["unknown_field"])
     normalize(query)
 
     assert_raise RuntimeError, "expected field `title` to be an embed or a map, got: `:string`", fn ->
@@ -1181,6 +1181,16 @@ defmodule Ecto.Query.PlannerTest do
       query = from(Post, []) |> select([p], p.metas["not_index"])
       normalize(query)
     end
+  end
+
+  test "normalize: json_extract_path with field having custom source" do
+    normalized_query =
+      Post
+      |> where([p], p.prefs["field"] == "value")
+      |> select([p], p.prefs["field"])
+      |> normalize()
+
+    assert inspect(normalized_query) =~ "where: p0.preferences[\"field\"] == \"value\", select: p0.preferences[\"field\"]>"
   end
 
   test "normalize: flattens and expands right side of in expressions" do
@@ -1288,16 +1298,16 @@ defmodule Ecto.Query.PlannerTest do
     assert query.select.expr ==
              {:&, [], [0]}
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0)
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :preferences, :status, :meta, :metas], 0)
 
     query = from(Post, []) |> select([p], {p, p.title, "Post"}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :preferences, :status, :meta, :metas], 0) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query = from(Post, []) |> select([p], {p.title, p, "Post"}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :preferences, :status, :meta, :metas], 0) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query =
@@ -1307,7 +1317,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, _], {p.title, p})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :preferences, :status, :meta, :metas], 0) ++
            select_fields([:id, :text, :posted, :uuid, :crazy_comment, :post_id, :crazy_post_id], 1) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
   end
@@ -1369,7 +1379,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, struct(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :preferences, :status, :meta, :metas], 0) ++
            select_fields([:id, :text], 1)
   end
 
@@ -1424,7 +1434,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, map(c, [:id, :text])})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :preferences, :status, :meta, :metas], 0) ++
            select_fields([:id, :text], 1)
   end
 
@@ -1472,11 +1482,11 @@ defmodule Ecto.Query.PlannerTest do
     query = Post |> select([p], %{p | title: "foo"}) |> normalize()
     assert query.select.expr == {:%{}, [], [{:|, [], [{:&, [], [0]}, [title: "foo"]]}]}
     assert query.select.fields ==
-      select_fields([:id, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0)
+      select_fields([:id, :text, :code, :posted, :visits, :links, :preferences, :status, :meta, :metas], 0)
 
     query = Post |> select([p], {%{p | title: "foo"}, p.title}) |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
+           select_fields([:id, :text, :code, :posted, :visits, :links, :preferences, :status, :meta, :metas], 0) ++
            [{{:., [type: :string], [{:&, [], [0]}, :post_title]}, [], []}]
 
     query =
@@ -1485,7 +1495,7 @@ defmodule Ecto.Query.PlannerTest do
       |> select([p, c], {p, %{c | text: "bar"}})
       |> normalize()
     assert query.select.fields ==
-           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :prefs, :status, :meta, :metas], 0) ++
+           select_fields([:id, :post_title, :text, :code, :posted, :visits, :links, :preferences, :status, :meta, :metas], 0) ++
            select_fields([:id, :posted, :uuid, :crazy_comment, :post_id, :crazy_post_id], 1)
   end
 

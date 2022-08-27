@@ -1190,7 +1190,7 @@ defmodule Ecto.Query.Planner do
   end
 
   defp prewalk({:json_extract_path, meta, [json_field, path]}, kind, query, expr, acc, _adapter) do
-    {{:., _, [{:&, _, [ix]}, field]}, _, []} = json_field
+    {{:., dot_meta, [{:&, amp_meta, [ix]}, field]}, expr_meta, []} = json_field
 
     case type!(kind, query, expr, ix, field) do
       {:parameterized, Ecto.Embedded, embed} ->
@@ -1212,6 +1212,9 @@ defmodule Ecto.Query.Planner do
         end
     end
 
+    field_source = kind |> get_source!(query, ix) |> field_source(field)
+
+    json_field = {{:., dot_meta, [{:&, amp_meta, [ix]}, field_source]}, expr_meta, []}
     {{:json_extract_path, meta, [json_field, path]}, acc}
   end
 
