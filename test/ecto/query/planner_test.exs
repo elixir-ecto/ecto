@@ -1183,6 +1183,16 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "normalize: json_extract_path with field having custom source" do
+    normalized_query =
+      Post
+      |> where([p], p.prefs["field"] == "value")
+      |> select([p], p.prefs["field"])
+      |> normalize()
+
+    assert inspect(normalized_query) =~ "where: p0.preferences[\"field\"] == \"value\", select: p0.preferences[\"field\"]>"
+  end
+
   test "normalize: flattens and expands right side of in expressions" do
     {query, cast_params, dump_params, _select} = where(Post, [p], p.id in [1, 2, 3]) |> normalize_with_params()
     assert Macro.to_string(hd(query.wheres).expr) == "&0.id() in [1, 2, 3]"
