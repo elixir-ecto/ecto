@@ -534,11 +534,11 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert query.select.take == %{0 => {:any, [:title, :likes]}}
 
       # On take with schema
-      query = from c in Comment, select: [:title, :likes], select_merge: [:dislikes]
+      query = from c in Comment, select: [:title], select_merge: [:dislikes]
 
       assert Macro.to_string(query.select.expr) == "&0"
       assert query.select.params == []
-      assert query.select.take == %{0 => {:any, [:title, :likes, :dislikes]}}
+      assert query.select.take == %{0 => {:any, [:title, :dislikes]}}
     end
 
     test "on conflicting take" do
