@@ -167,7 +167,7 @@ defmodule Ecto.Changeset do
       if the entry still exists
 
   The `:delete` and `:delete_if_exists` options must be used carefully as they allow
-  users to delete any associated data by simply not sending the associated data.
+  users to delete any associated data by simply setting it to `nil` or an empty list.
   If you need deletion, it is often preferred to add a separate boolean virtual field
   in the schema and manually mark the changeset for deletion if the `:delete` field is
   set in the params, as in the example below. Note that we don't call `cast/4` in this
