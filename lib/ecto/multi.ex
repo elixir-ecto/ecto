@@ -406,7 +406,7 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.one(:post, Post)
-      |> Ecto.Multi.one(:author, fn %{ post: post } -> 
+      |> Ecto.Multi.one(:author, fn %{post: post} -> 
         from(a in Author, where: a.id == ^post.author_id)
       end)
       |> MyApp.Repo.transaction()
