@@ -20,14 +20,17 @@ defmodule Ecto.Query.Builder.From do
       iex> escape(quote(do: p in {"posts", MySchema}), __ENV__)
       {quote(do: {"posts", MySchema}), [p: 0], []}
 
-      iex> escape(quote(do: f in fragment("SELECT ?", ^"abc")), __ENV__)
-      {quote(do: {:fragment, [], [{:raw, "SELECT "}, {:expr, {:^, [], [0]}}, {:raw, ""}]}), [f: 0], [{"abc", :any}]}
-
       iex> escape(quote(do: [p, q] in posts), __ENV__)
       {quote(do: posts), [p: 0, q: 1], []}
 
       iex> escape(quote(do: [_, _] in abc), __ENV__)
       {quote(do: abc), [_: 0, _: 1], []}
+
+      iex> escape(quote(do: f in fragment("SELECT ?", ^"abc")), __ENV__)
+      {quote(do: {:fragment, [], [{:raw, "SELECT "}, {:expr, {:^, [], [0]}}, {:raw, ""}]}), [f: 0], [{"abc", :any}]}
+
+      iex> escape(quote(do: fragment("SELECT ?", ^"abc")), __ENV__)
+      ** (Ecto.Query.CompileError) fragment sources without bindings are not supported, got: `fragment("SELECT ?", ^"abc")`
 
       iex> escape(quote(do: other), __ENV__)
       {quote(do: other), [], []}
@@ -42,6 +45,10 @@ defmodule Ecto.Query.Builder.From do
     {query, params} = escape_source(query, binds, env)
     params = Builder.escape_params(params)
     {query, binds, params}
+  end
+
+  def escape({:fragment, _, _} = fragment, _env) do
+    Builder.error!("fragment sources without bindings are not supported, got: `#{Macro.to_string(fragment)}`")
   end
 
   def escape(query, _env) do
