@@ -12,22 +12,25 @@ defmodule Ecto.Query.Builder.From do
   ## Examples
 
       iex> escape(quote(do: MySchema), __ENV__)
-      {quote(do: MySchema), []}
+      {quote(do: MySchema), [], []}
 
       iex> escape(quote(do: p in posts), __ENV__)
-      {quote(do: posts), [p: 0]}
+      {quote(do: posts), [p: 0], []}
 
       iex> escape(quote(do: p in {"posts", MySchema}), __ENV__)
-      {quote(do: {"posts", MySchema}), [p: 0]}
+      {quote(do: {"posts", MySchema}), [p: 0], []}
+
+      iex> escape(quote(do: f in fragment("SELECT ?", ^"abc")), __ENV__)
+      {quote(do: {:fragment, [], [{:raw, "SELECT "}, {:expr, {:^, [], [0]}}, {:raw, ""}]}), [f: 0], [{"abc", :any}]}
 
       iex> escape(quote(do: [p, q] in posts), __ENV__)
-      {quote(do: posts), [p: 0, q: 1]}
+      {quote(do: posts), [p: 0, q: 1], []}
 
       iex> escape(quote(do: [_, _] in abc), __ENV__)
-      {quote(do: abc), [_: 0, _: 1]}
+      {quote(do: abc), [_: 0, _: 1], []}
 
       iex> escape(quote(do: other), __ENV__)
-      {quote(do: other), []}
+      {quote(do: other), [], []}
 
       iex> escape(quote(do: x() in other), __ENV__)
       ** (Ecto.Query.CompileError) binding list should contain only variables or `{as, var}` tuples, got: x()
@@ -35,11 +38,23 @@ defmodule Ecto.Query.Builder.From do
   """
   @spec escape(Macro.t(), Macro.Env.t()) :: {Macro.t(), Keyword.t()}
   def escape({:in, _, [var, query]}, env) do
-    Builder.escape_binding(query, List.wrap(var), env)
+    {query, binds} = Builder.escape_binding(query, List.wrap(var), env)
+    {query, params} = escape_source(query, binds, env)
+    params = Builder.escape_params(params)
+    {query, binds, params}
   end
 
   def escape(query, _env) do
-    {query, []}
+    {query, [], []}
+  end
+
+  defp escape_source({:fragment, _, _} = source, binds, env) do
+    {source, {params, _acc}} = Builder.escape(source, :any, {[], %{}}, binds, env)
+    {source, params}
+  end
+
+  defp escape_source(source, _binds, _env) do
+    {source, []}
   end
 
   @doc """
@@ -73,7 +88,7 @@ defmodule Ecto.Query.Builder.From do
       as -> Builder.error!("`as` must be a compile time atom or an interpolated value using ^, got: #{Macro.to_string(as)}")
     end
 
-    {query, binds} = escape(query, env)
+    {query, binds, params} = escape(query, env)
 
     case expand_from(query, env) do
       schema when is_atom(schema) ->
@@ -81,16 +96,20 @@ defmodule Ecto.Query.Builder.From do
         # dependencies between modules are added
         source = quote(do: unquote(schema).__schema__(:source))
         {:ok, prefix} = prefix || {:ok, quote(do: unquote(schema).__schema__(:prefix))}
-        {query(prefix, source, schema, as, hints), binds, 1}
+        {query(prefix, {source, schema}, as, params, hints), binds, 1}
 
       source when is_binary(source) ->
         {:ok, prefix} = prefix || {:ok, nil}
         # When a binary is used, there is no schema
-        {query(prefix, source, nil, as, hints), binds, 1}
+        {query(prefix, {source, nil}, as, params, hints), binds, 1}
 
       {source, schema} when is_binary(source) and is_atom(schema) ->
         {:ok, prefix} = prefix || {:ok, quote(do: unquote(schema).__schema__(:prefix))}
-        {query(prefix, source, schema, as, hints), binds, 1}
+        {query(prefix, {source, schema}, as, params, hints), binds, 1}
+
+      {:{}, _, [:fragment, _, _]} = fragment ->
+        {:ok, prefix} = prefix || {:ok, nil}
+        {query(prefix, fragment, as, params, hints), binds, 1}
 
       _other ->
         quoted = quote do
@@ -101,9 +120,9 @@ defmodule Ecto.Query.Builder.From do
     end
   end
 
-  defp query(prefix, source, schema, as, hints) do
+  defp query(prefix, source, as, params, hints) do
     aliases = if as, do: [{as, 0}], else: []
-    from_fields = [source: {source, schema}, as: as, prefix: prefix, hints: hints]
+    from_fields = [source: source, as: as, prefix: prefix, params: params, hints: hints]
 
     query_fields = [
       from: {:%, [], [Ecto.Query.FromExpr, {:%{}, [], from_fields}]},

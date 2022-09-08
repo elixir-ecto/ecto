@@ -89,7 +89,7 @@ defimpl Inspect, for: Ecto.Query do
       |> generate_names()
       |> List.to_tuple()
 
-    from = bound_from(query.from, elem(names, 0))
+    from = bound_from(query.from, elem(names, 0), names)
     joins = joins(query.joins, names)
     preloads = preloads(query.preloads)
     assocs = assocs(query.assocs, names)
@@ -128,19 +128,20 @@ defimpl Inspect, for: Ecto.Query do
     ])
   end
 
-  defp bound_from(nil, name), do: ["from #{name} in query"]
+  defp bound_from(nil, name, _names), do: ["from #{name} in query"]
 
-  defp bound_from(%{source: source} = from, name) do
-    ["from #{name} in #{inspect_source(source)}"] ++ kw_as_and_prefix(from)
+  defp bound_from(from, name, names) do
+    ["from #{name} in #{inspect_source(from, names)}"] ++ kw_as_and_prefix(from)
   end
 
-  defp inspect_source(%Ecto.Query{} = query), do: "^" <> inspect(query)
-  defp inspect_source(%Ecto.SubQuery{query: query}), do: "subquery(#{to_string(query)})"
-  defp inspect_source({source, nil}), do: inspect(source)
-  defp inspect_source({nil, schema}), do: inspect(schema)
+  defp inspect_source(%{source: %Ecto.Query{} = query}, _names), do: "^" <> inspect(query)
+  defp inspect_source(%{source: %Ecto.SubQuery{query: query}}, _names), do: "subquery(#{to_string(query)})"
+  defp inspect_source(%{source: {source, nil}}, _names), do: inspect(source)
+  defp inspect_source(%{source: {nil, schema}}, _names), do: inspect(schema)
+  defp inspect_source(%{source: {:fragment, _, _} = source} = part, names), do: "#{expr(source, names, part)}"
 
-  defp inspect_source({source, schema} = from) do
-    inspect(if source == schema.__schema__(:source), do: schema, else: from)
+  defp inspect_source(%{source: {source, schema}}, _names) do
+    inspect(if source == schema.__schema__(:source), do: schema, else: {source, schema})
   end
 
   defp joins(joins, names) do
@@ -154,17 +155,8 @@ defimpl Inspect, for: Ecto.Query do
     [{join_qual(qual), string}] ++ kw_as_and_prefix(join) ++ maybe_on(on, names)
   end
 
-  defp join(
-         %JoinExpr{qual: qual, source: {:fragment, _, _} = source, on: on} = join = part,
-         name,
-         names
-       ) do
-    string = "#{name} in #{expr(source, names, part)}"
-    [{join_qual(qual), string}] ++ kw_as_and_prefix(join) ++ [on: expr(on, names)]
-  end
-
-  defp join(%JoinExpr{qual: qual, source: source, on: on} = join, name, names) do
-    string = "#{name} in #{inspect_source(source)}"
+  defp join(%JoinExpr{qual: qual, on: on} = join, name, names) do
+    string = "#{name} in #{inspect_source(join, names)}"
     [{join_qual(qual), string}] ++ kw_as_and_prefix(join) ++ [on: expr(on, names)]
   end
 
@@ -373,6 +365,7 @@ defimpl Inspect, for: Ecto.Query do
   defp from_sources(%Ecto.SubQuery{query: query}), do: from_sources(query.from.source)
   defp from_sources({source, schema}), do: schema || source
   defp from_sources(nil), do: "query"
+  defp from_sources({:fragment, _, _}), do: "fragment"
 
   defp join_sources(joins) do
     joins

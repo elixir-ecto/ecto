@@ -258,7 +258,7 @@ defmodule Ecto.Query.Planner do
        do: {expr, source}
 
   defp plan_source(query, %{source: {:fragment, _, _}, prefix: prefix} = expr, _adapter),
-       do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment joins")
+       do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment sources")
 
   defp plan_subquery(subquery, query, prefix, adapter, source?) do
     %{query: inner_query} = subquery
@@ -631,9 +631,10 @@ defmodule Ecto.Query.Planner do
     {query, params, finalize_cache(query, operation, cache)}
   end
 
-  defp merge_cache(:from, _query, from, {cache, params}, _operation, _adapter) do
+  defp merge_cache(:from, query, from, {cache, params}, _operation, adapter) do
     {key, params} = source_cache(from, params)
-    {merge_cache({:from, key, from.hints}, cache, key != :nocache), params}
+    {params, source_cacheable?} = cast_and_merge_params(:from, query, from, params, adapter)
+    {merge_cache({:from, key, from.hints}, cache, source_cacheable? and key != :nocache), params}
   end
 
   defp merge_cache(kind, query, expr, {cache, params}, _operation, adapter)
@@ -1956,10 +1957,10 @@ defmodule Ecto.Query.Planner do
   end
 
   defp error!(query, expr, message) do
-    raise Ecto.QueryError, message: message, query: query, file: expr.file, line: expr.line
+    raise Ecto.QueryError, message: message, query: query, file: Map.get(expr, :file), line: Map.get(expr, :line)
   end
 
   defp error!(query, expr, message, hint) do
-    raise Ecto.QueryError, message: message, query: query, file: expr.file, line: expr.line, hint: hint
+    raise Ecto.QueryError, message: message, query: query, file: Map.get(expr, :file), line: Map.get(expr, :line), hint: hint
   end
 end

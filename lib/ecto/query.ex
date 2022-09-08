@@ -385,7 +385,7 @@ defmodule Ecto.Query do
 
   defmodule FromExpr do
     @moduledoc false
-    defstruct [:source, :as, :prefix, hints: []]
+    defstruct [:source, :as, :prefix, params: [], hints: []]
   end
 
   defmodule DynamicExpr do
