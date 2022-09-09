@@ -106,7 +106,7 @@ defmodule Ecto.Query.Builder.From do
         {:ok, prefix} = prefix || {:ok, nil}
         {query(prefix, source, params, as, hints, env.file, env.line), binds, 1}
 
-      other ->
+      _other ->
         quoted =
           quote do
             Ecto.Query.Builder.From.apply(
