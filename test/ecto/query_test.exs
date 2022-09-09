@@ -551,9 +551,7 @@ defmodule Ecto.QueryTest do
       # queries need to be on the same line or == won't work
       assert from(p in "posts", select: 1 < 2) == from(p in "posts", []) |> select([p], 1 < 2)
       assert from(p in "posts", where: 1 < 2)  == from(p in "posts", []) |> where([p], 1 < 2)
-
-      query = "posts"
-      assert (query |> select([p], p.title)) == from(p in query, select: p.title)
+      assert (from(p in "posts") |> select([p], p.title)) == from(p in "posts", select: p.title)
     end
 
     test "are built at compile time with binaries" do
@@ -1035,6 +1033,114 @@ defmodule Ecto.QueryTest do
     test "reverses by primary key with no order" do
       q = from(p in Schema)
       assert inspect(reverse_order(q)) == inspect(order_by(q, desc: :id))
+    end
+  end
+
+  describe "fragment sources" do
+    setup do
+      expected_source = {:fragment, [], [{:raw, "select "}, {:expr, {:^, [], [0]}}, {:raw, " as x"}]}
+      expected_params = [{"abc", :any}]
+      [source: expected_source, params: expected_params]
+    end
+
+    test "distinct", context do
+      # compile time
+      from = distinct(fragment("select ? as x", ^"abc"), [f], f.x).from
+      assert from.source == context.source
+      assert from.params == context.params
+
+      # runtime
+      field = :field
+      from = distinct(fragment("select ? as x", ^"abc"), [f], ^field).from
+      assert from.source == context.source
+      assert from.params == context.params
+    end
+
+    test "filter", context do
+      # compile time
+      from = where(fragment("select ? as x", ^"abc"), [f], f.x == "abc").from
+      assert from.source == context.source
+      assert from.params == context.params
+
+      # runtime
+      filter = [x: "abc"]
+      from = where(fragment("select ? as x", ^"abc"), [f], ^filter).from
+      assert from.source == context.source
+      assert from.params == context.params
+    end
+
+    test "group_by", context do
+      # compile time
+      from = group_by(fragment("select ? as x", ^"abc"), [f], [:x]).from
+      assert from.source == context.source
+      assert from.params == context.params
+
+      # runtime
+      grouping = [:x]
+      from = group_by(fragment("select ? as x", ^"abc"), [f], ^grouping).from
+      assert from.source == context.source
+      assert from.params == context.params
+    end
+
+    test "join", context do
+      from = join(fragment("select ? as x", ^"abc"), :inner, [f], p in "posts", on: p.title == f.x).from
+      assert from.source == context.source
+      assert from.params == context.params
+    end
+
+    test "limit / offset", context do
+      from = limit(fragment("select ? as x", ^"abc"), 1).from
+      assert from.source == context.source
+      assert from.params == context.params
+
+      from = offset(fragment("select ? as x", ^"abc"), 1).from
+      assert from.source == context.source
+      assert from.params == context.params
+    end
+
+    test "lock", context do
+      from = lock(fragment("select ? as x", ^"abc"), "FOR SHARE NOWAIT").from
+      assert from.source == context.source
+      assert from.params == context.params
+    end
+
+    test "order_by", context do
+      # compile time
+      from = order_by(fragment("select ? as x", ^"abc"), [f], [:x]).from
+      assert from.source == context.source
+      assert from.params == context.params
+
+      # runtime
+      ordering = [:x]
+      from = order_by(fragment("select ? as x", ^"abc"), [f], ^ordering).from
+      assert from.source == context.source
+      assert from.params == context.params
+    end
+
+    test "select", context do
+      # compile time
+      from = select(fragment("select ? as x", ^"abc"), [f], [:x]).from
+      assert from.source == context.source
+      assert from.params == context.params
+
+      # runtime
+      fields = [:x]
+      from = select(fragment("select ? as x", ^"abc"), [f], ^fields).from
+      assert from.source == context.source
+      assert from.params == context.params
+    end
+
+    test "windows", context do
+      # compile time
+      from = windows(fragment("select ? as x", ^"abc"), window: [partition_by: [:x]]).from
+      assert from.source == context.source
+      assert from.params == context.params
+
+      # runtime
+      partition = [:x]
+      from = windows(fragment("select ? as x", ^"abc"), window: [partition_by: ^partition]).from
+      assert from.source == context.source
+      assert from.params == context.params
     end
   end
 end

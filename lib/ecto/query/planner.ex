@@ -1957,10 +1957,10 @@ defmodule Ecto.Query.Planner do
   end
 
   defp error!(query, expr, message) do
-    raise Ecto.QueryError, message: message, query: query, file: Map.get(expr, :file), line: Map.get(expr, :line)
+    raise Ecto.QueryError, message: message, query: query, file: expr.file, line: expr.line
   end
 
   defp error!(query, expr, message, hint) do
-    raise Ecto.QueryError, message: message, query: query, file: Map.get(expr, :file), line: Map.get(expr, :line), hint: hint
+    raise Ecto.QueryError, message: message, query: query, file: expr.file, line: expr.line, hint: hint
   end
 end

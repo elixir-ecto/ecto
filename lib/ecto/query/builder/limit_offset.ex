@@ -15,6 +15,7 @@ defmodule Ecto.Query.Builder.LimitOffset do
   @spec build(:limit | :offset, Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(type, query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
+    query = Builder.escape_queryable(query, binding, env)
     {expr, {params, _acc}} = Builder.escape(expr, :integer, {[], %{}}, binding, env)
     params = Builder.escape_params(params)
 

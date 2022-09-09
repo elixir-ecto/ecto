@@ -285,7 +285,8 @@ defmodule Ecto.Query.Builder.Select do
   """
   @spec build(:select | :merge, Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
 
-  def build(kind, query, _binding, {:^, _, [var]}, env) do
+  def build(kind, query, binding, {:^, _, [var]}, env) do
+    query = Builder.escape_queryable(query, binding, env)
     quote do
       Ecto.Query.Builder.Select.select!(unquote(kind), unquote(query), unquote(var),
                                         unquote(env.file), unquote(env.line))
@@ -294,6 +295,7 @@ defmodule Ecto.Query.Builder.Select do
 
   def build(kind, query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
+    query = Builder.escape_queryable(query, binding, env)
     {expr, {params, acc}} = escape(expr, binding, env)
     params = Builder.escape_params(params)
     take = {:%{}, [], Map.to_list(acc.take)}

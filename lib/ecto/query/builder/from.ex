@@ -12,28 +12,28 @@ defmodule Ecto.Query.Builder.From do
   ## Examples
 
       iex> escape(quote(do: MySchema), __ENV__)
-      {quote(do: MySchema), [], []}
+      {quote(do: MySchema), []}
 
       iex> escape(quote(do: p in posts), __ENV__)
-      {quote(do: posts), [p: 0], []}
+      {quote(do: posts), [p: 0]}
 
       iex> escape(quote(do: p in {"posts", MySchema}), __ENV__)
-      {quote(do: {"posts", MySchema}), [p: 0], []}
+      {quote(do: {"posts", MySchema}), [p: 0]}
 
       iex> escape(quote(do: [p, q] in posts), __ENV__)
-      {quote(do: posts), [p: 0, q: 1], []}
+      {quote(do: posts), [p: 0, q: 1]}
 
       iex> escape(quote(do: [_, _] in abc), __ENV__)
-      {quote(do: abc), [_: 0, _: 1], []}
+      {quote(do: abc), [_: 0, _: 1]}
 
       iex> escape(quote(do: f in fragment("SELECT ?", ^"abc")), __ENV__)
-      {quote(do: {:fragment, [], [{:raw, "SELECT "}, {:expr, {:^, [], [0]}}, {:raw, ""}]}), [f: 0], [{"abc", :any}]}
+      {quote(do: {{:fragment, [], [{:raw, "SELECT "}, {:expr, {:^, [], [0]}}, {:raw, ""}]}, [{"abc", :any}]}), [f: 0]}
 
       iex> escape(quote(do: fragment("SELECT ?", ^"abc")), __ENV__)
-      {quote(do: {:fragment, [], [{:raw, "SELECT "}, {:expr, {:^, [], [0]}}, {:raw, ""}]}), [], [{"abc", :any}]}
+      {quote(do: {{:fragment, [], [{:raw, "SELECT "}, {:expr, {:^, [], [0]}}, {:raw, ""}]}, [{"abc", :any}]}), []}
 
       iex> escape(quote(do: other), __ENV__)
-      {quote(do: other), [], []}
+      {quote(do: other), []}
 
       iex> escape(quote(do: x() in other), __ENV__)
       ** (Ecto.Query.CompileError) binding list should contain only variables or `{as, var}` tuples, got: x()
@@ -42,25 +42,14 @@ defmodule Ecto.Query.Builder.From do
   @spec escape(Macro.t(), Macro.Env.t()) :: {Macro.t(), Keyword.t()}
   def escape({:in, _, [var, query]}, env) do
     {query, binds} = Builder.escape_binding(query, List.wrap(var), env)
-    {query, params} = escape_source(query, binds, env)
-    params = Builder.escape_params(params)
-    {query, binds, params}
+    query = Builder.escape_queryable(query, binds, env)
+    {query, binds}
   end
 
   def escape(query, env) do
     binds = []
-    {query, params} = escape_source(query, binds, env)
-    params = Builder.escape_params(params)
-    {query, binds, params}
-  end
-
-  defp escape_source({:fragment, _, _} = source, binds, env) do
-    {source, {params, _acc}} = Builder.escape(source, :any, {[], %{}}, binds, env)
-    {source, params}
-  end
-
-  defp escape_source(source, _binds, _env) do
-    {source, []}
+    query = Builder.escape_queryable(query, binds, env)
+    {query, binds}
   end
 
   @doc """
@@ -94,7 +83,7 @@ defmodule Ecto.Query.Builder.From do
       as -> Builder.error!("`as` must be a compile time atom or an interpolated value using ^, got: #{Macro.to_string(as)}")
     end
 
-    {query, binds, params} = escape(query, env)
+    {query, binds} = escape(query, env)
 
     case expand_from(query, env) do
       schema when is_atom(schema) ->
@@ -102,33 +91,42 @@ defmodule Ecto.Query.Builder.From do
         # dependencies between modules are added
         source = quote(do: unquote(schema).__schema__(:source))
         {:ok, prefix} = prefix || {:ok, quote(do: unquote(schema).__schema__(:prefix))}
-        {query(prefix, {source, schema}, as, params, hints), binds, 1}
+        {query(prefix, {source, schema}, [], as, hints, env.file, env.line), binds, 1}
 
       source when is_binary(source) ->
         {:ok, prefix} = prefix || {:ok, nil}
         # When a binary is used, there is no schema
-        {query(prefix, {source, nil}, as, params, hints), binds, 1}
+        {query(prefix, {source, nil}, [], as, hints, env.file, env.line), binds, 1}
 
       {source, schema} when is_binary(source) and is_atom(schema) ->
         {:ok, prefix} = prefix || {:ok, quote(do: unquote(schema).__schema__(:prefix))}
-        {query(prefix, {source, schema}, as, params, hints), binds, 1}
+        {query(prefix, {source, schema}, [], as, hints, env.file, env.line), binds, 1}
 
-      {:{}, _, [:fragment, _, _]} = fragment ->
+      {{:{}, _, [:fragment, _, _]} = source, params} ->
         {:ok, prefix} = prefix || {:ok, nil}
-        {query(prefix, fragment, as, params, hints), binds, 1}
+        {query(prefix, source, params, as, hints, env.file, env.line), binds, 1}
 
-      _other ->
-        quoted = quote do
-          Ecto.Query.Builder.From.apply(unquote(query), unquote(length(binds)), unquote(as), unquote(prefix), unquote(hints))
-        end
+      other ->
+        quoted =
+          quote do
+            Ecto.Query.Builder.From.apply(
+              unquote(query),
+              unquote(length(binds)),
+              unquote(as),
+              unquote(prefix),
+              unquote(hints),
+              unquote(env.file),
+              unquote(env.line)
+            )
+          end
 
         {quoted, binds, nil}
     end
   end
 
-  defp query(prefix, source, as, params, hints) do
+  defp query(prefix, source, params, as, hints, file, line) do
     aliases = if as, do: [{as, 0}], else: []
-    from_fields = [source: source, as: as, prefix: prefix, params: params, hints: hints]
+    from_fields = [source: source, as: as, prefix: prefix, params: params, hints: hints, file: file, line: line]
 
     query_fields = [
       from: {:%, [], [Ecto.Query.FromExpr, {:%{}, [], from_fields}]},
@@ -149,11 +147,12 @@ defmodule Ecto.Query.Builder.From do
   @doc """
   The callback applied by `build/2` to build the query.
   """
-  @spec apply(Ecto.Queryable.t(), non_neg_integer, Macro.t(), {:ok, String.t} | nil, [String.t]) :: Ecto.Query.t()
-  def apply(query, binds, as, prefix, hints) do
+  @spec apply(Ecto.Queryable.t(), non_neg_integer, Macro.t(), {:ok, String.t} | nil, [String.t], String.t, String.t) :: Ecto.Query.t()
+  def apply(query, binds, as, prefix, hints, file, line) do
     query =
       query
       |> Ecto.Queryable.to_query()
+      |> apply_env(file, line)
       |> maybe_apply_as(as)
       |> maybe_apply_prefix(prefix)
       |> maybe_apply_hints(hints)
@@ -161,6 +160,14 @@ defmodule Ecto.Query.Builder.From do
     check_binds(query, binds)
     query
   end
+
+  def apply_env(%{from: %{}} = query, file, line) do
+    query = put_in(query.from.file, file)
+    query = put_in(query.from.line, line)
+    query
+  end
+
+  def apply_env(query, _file, _line), do: query
 
   defp maybe_apply_as(query, nil), do: query
 

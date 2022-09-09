@@ -793,6 +793,17 @@ defmodule Ecto.Query.Builder do
   end
 
   @doc """
+  Escapes a queryable.
+  """
+  @spec escape_queryable(Macro.t, list(), Macro.Env.t) :: Macro.t
+  def escape_queryable({:fragment, _, _} = query, binds, env) do
+    {query, {params, _acc}} = escape(query, :any, {[], %{}}, binds, env)
+    {query, escape_params(params)}
+  end
+
+  def escape_queryable(query, _binds, _env), do: query
+
+  @doc """
   Escapes a list of bindings as a list of atoms.
 
   Only variables or `{:atom, value}` tuples are allowed in the `bindings` list,

@@ -144,6 +144,7 @@ defmodule Ecto.Query.Builder.Join do
     end
 
     {query, binding} = Builder.escape_binding(query, binding, env)
+    query = Builder.escape_queryable(query, binding, env)
     {join_bind, join_source, join_assoc, join_params} = escape(expr, binding, env)
     join_params = Builder.escape_params(join_params)
 
