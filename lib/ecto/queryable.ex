@@ -49,7 +49,7 @@ defimpl Ecto.Queryable, for: Tuple do
     %Ecto.Query{from: %Ecto.Query.FromExpr{source: from, prefix: schema.__schema__(:prefix)}}
   end
 
-  def to_query({:fragment, _, _} = from) do
-    %Ecto.Query{from: %Ecto.Query.FromExpr{source: from}}
+  def to_query({{:fragment, _, _} = from, params}) when is_list(params) do
+    %Ecto.Query{from: %Ecto.Query.FromExpr{source: from, params: params}}
   end
 end
