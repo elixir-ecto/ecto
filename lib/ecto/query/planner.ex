@@ -234,6 +234,11 @@ defmodule Ecto.Query.Planner do
     error!(query, "query must have a from expression")
   end
 
+  defp plan_from(%{from: %{source: {:fragment, _, _}}, preloads: preloads, assocs: assocs} = query, _adapter)
+       when assocs != [] or preloads != [] do
+    error!(query, "cannot preload associations with a fragment source")
+  end
+
   defp plan_from(%{from: from} = query, adapter) do
     plan_source(query, from, adapter)
   end

@@ -160,6 +160,12 @@ defmodule Ecto.Query.PlannerTest do
     end
   end
 
+  test "plan: fragment from cannot have preloads" do
+    assert_raise Ecto.QueryError, ~r"cannot preload associations with a fragment source", fn ->
+      plan(from f in fragment("select 1"), preload: :field)
+    end
+  end
+
   test "plan: casts values" do
     {_query, cast_params, dump_params, _key} = plan(Post |> where([p], p.id == ^"1"))
     assert cast_params == [1]

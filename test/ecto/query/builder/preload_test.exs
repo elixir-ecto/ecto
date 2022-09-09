@@ -21,6 +21,14 @@ defmodule Ecto.Query.Builder.PreloadTest do
     end
   end
 
+  test "raises with fragment source" do
+    message = ~s/cannot preload associations with a fragment source, got: fragment("select 1")/
+
+    assert_raise Ecto.Query.CompileError, message, fn ->
+      quote_and_eval(fragment("select 1") |> preload(:field))
+    end
+  end
+
   test "accumulates on multiple calls" do
     query = %Ecto.Query{} |> preload(:foo) |> preload(:bar)
     assert query.preloads == [:foo, :bar]
