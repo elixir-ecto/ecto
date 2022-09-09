@@ -55,8 +55,8 @@ defmodule Ecto.Query.Builder.Filter do
   runtime work.
   """
   @spec build(:where | :having, :and | :or, Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
-  def build(kind, op, query, binding, {:^, _, [var]}, env) do
-    query = Builder.escape_queryable(query, binding, env)
+  def build(kind, op, query, _binding, {:^, _, [var]}, env) do
+    query = Builder.escape_queryable(query, env)
 
     quote do
       Ecto.Query.Builder.Filter.filter!(unquote(kind), unquote(op), unquote(query),
@@ -65,8 +65,8 @@ defmodule Ecto.Query.Builder.Filter do
   end
 
   def build(kind, op, query, binding, expr, env) do
+    query = Builder.escape_queryable(query, env)
     {query, binding} = Builder.escape_binding(query, binding, env)
-    query = Builder.escape_queryable(query, binding, env)
     {expr, {params, acc}} = escape(kind, expr, 0, binding, env)
 
     params = Builder.escape_params(params)

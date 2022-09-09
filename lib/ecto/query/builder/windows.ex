@@ -92,8 +92,8 @@ defmodule Ecto.Query.Builder.Windows do
   """
   @spec build(Macro.t, [Macro.t], Keyword.t, Macro.Env.t) :: Macro.t
   def build(query, binding, windows, env) when is_list(windows) do
+    query = Builder.escape_queryable(query, env)
     {query, binding} = Builder.escape_binding(query, binding, env)
-    query = Builder.escape_queryable(query, binding, env)
 
     {compile, runtime} =
       windows

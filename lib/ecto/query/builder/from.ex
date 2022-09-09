@@ -41,15 +41,14 @@ defmodule Ecto.Query.Builder.From do
   """
   @spec escape(Macro.t(), Macro.Env.t()) :: {Macro.t(), Keyword.t()}
   def escape({:in, _, [var, query]}, env) do
+    query = Builder.escape_queryable(query, env)
     {query, binds} = Builder.escape_binding(query, List.wrap(var), env)
-    query = Builder.escape_queryable(query, binds, env)
     {query, binds}
   end
 
   def escape(query, env) do
-    binds = []
-    query = Builder.escape_queryable(query, binds, env)
-    {query, binds}
+    query = Builder.escape_queryable(query, env)
+    {query, []}
   end
 
   @doc """

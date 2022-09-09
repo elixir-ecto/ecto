@@ -37,6 +37,7 @@ defmodule Ecto.Query.Builder.CTE do
   """
   @spec build(Macro.t, Macro.t, Macro.t, Macro.Env.t) :: Macro.t
   def build(query, name, cte, env) do
+    query = Builder.escape_queryable(query, env)
     Builder.apply_query(query, __MODULE__, [escape(name, env), build_cte(name, cte, env)], env)
   end
 

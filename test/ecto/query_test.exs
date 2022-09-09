@@ -1043,6 +1043,18 @@ defmodule Ecto.QueryTest do
       [source: expected_source, params: expected_params]
     end
 
+    test "combinations", context do
+      from = union(fragment("select ? as x", ^"abc"), ^from(p in "posts")).from
+      assert from.source == context.source
+      assert from.params == context.params
+    end
+
+    test "cte", context do
+      from = with_cte(fragment("select ? as x", ^"abc"), "fragment_cte", as: ^from(p in "posts")).from
+      assert from.source == context.source
+      assert from.params == context.params
+    end
+
     test "distinct", context do
       # compile time
       from = distinct(fragment("select ? as x", ^"abc"), [f], f.x).from
