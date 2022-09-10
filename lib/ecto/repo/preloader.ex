@@ -158,29 +158,62 @@ defmodule Ecto.Repo.Preloader do
   defp preload_embeds(structs, [], _repo_name, _tuplet), do: structs
 
   defp preload_embeds(structs, embeds, repo_name, tuplet) do
-    structs
-    |> Task.async_stream(fn struct ->
-      embeds
-      |> Task.async_stream(fn {embed, sub_preloads} ->
+    # prepare all embeds of the same owner field into a list
+    embed_tuples = Enum.reduce(
+      embeds, [],
+      fn {embed, sub_preloads}, embeds_acc ->
         %{field: field, cardinality: card} = embed
-        embedded_schema = Map.get(struct, field)
-        loaded_schema =
-          case card do
-            :many ->
-              preload_each(embedded_schema, repo_name, sub_preloads, tuplet)
-              :one ->
-              [loaded] = preload_each([embedded_schema], repo_name, sub_preloads, tuplet)
-              loaded
-          end
-        { field, loaded_schema }
-        end, timeout: :infinity)
-      |> Enum.reduce(struct,
-        fn {:ok, loaded}, struct_acc ->
-        { field, schema } = loaded
-        Map.put(struct_acc, field, schema)
+
+        all_schemas = Enum.map(structs, &Map.get(&1, field))
+        case card do
+          :many ->
+            list_of_lists = all_schemas
+            # list with quantity of items in embeds :many per owner field
+            track_positions = Enum.map(list_of_lists, &Enum.count(&1))
+            # unwrap the lists
+            flat_schemas = List.flatten(list_of_lists)
+            [{flat_schemas, embed, sub_preloads, track_positions } | embeds_acc ]
+          :one ->
+            list_of_schemas = all_schemas
+            [{list_of_schemas, embed, sub_preloads, :one } | embeds_acc ]
+        end
+    end)
+
+    # preload and put back in structs
+    structs_loaded =
+    embed_tuples
+    |> Task.async_stream(fn
+      {embeds_list, embed, sub_preloads, track_positions } ->
+        # calls `preload_each` once per Ecto.Embedded in struct(s)
+        loaded = preload_each(embeds_list, repo_name, sub_preloads, tuplet)
+        { loaded, embed, track_positions }
+      end, timeout: :infinity)
+    |> Enum.reduce([],
+        fn {:ok, tuple}, acc ->
+        { loaded_embeds, embed, track_positions } = tuple
+        case track_positions do
+          :one ->
+            list_of_embeds_one = loaded_embeds
+            [{ list_of_embeds_one, embed } | acc ]
+          _ ->
+            {list_of_embeds_many, []} = Enum.map_reduce(track_positions, loaded_embeds,
+              fn quantity, loaded_without_group ->
+                { _belonging_together, _remaining } = Enum.split(loaded_without_group, quantity)
+              end)
+            [{ list_of_embeds_many, embed } | acc ]
+        end
       end)
-    end, timeout: :infinity)
-    |> Enum.map(fn {:ok, embed} -> embed end)
+    |> Enum.reduce(structs,
+      fn { embeds_n, embed }, structs_acc ->
+        %{field: field} = embed
+        Enum.zip([structs_acc, embeds_n])
+        |> Enum.map(
+          fn zipped ->
+            {struct, embeded} = zipped
+            Map.put(struct, field, embeded)
+        end)
+      end)
+    structs_loaded
   end
 
   defp maybe_unpack_query(false, queries), do: {[], [], queries}
