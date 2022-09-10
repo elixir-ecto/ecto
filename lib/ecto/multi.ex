@@ -406,6 +406,9 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.one(:post, Post)
+      |> Ecto.Multi.one(:author, fn %{post: post} -> 
+        from(a in Author, where: a.id == ^post.author_id)
+      end)
       |> MyApp.Repo.transaction()
   """
   @spec one(
@@ -433,6 +436,10 @@ defmodule Ecto.Multi do
 
       Ecto.Multi.new()
       |> Ecto.Multi.all(:all, Post)
+      |> MyApp.Repo.transaction()
+
+      Ecto.Multi.new()
+      |> Ecto.Multi.all(:all, fn _changes -> Post end)
       |> MyApp.Repo.transaction()
   """
   @spec all(

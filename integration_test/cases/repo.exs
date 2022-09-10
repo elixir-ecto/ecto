@@ -1537,6 +1537,94 @@ defmodule Ecto.Integration.RepoTest do
 
       assert [%Post{title: "1", counter: 2}] = TestRepo.all(subquery)
     end
+
+    @tag :selected_as_with_group_by
+    test "selected_as/2 with group_by" do
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 3})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 2})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-20], visits: nil})
+
+      query =
+        from p in Post,
+          select: %{
+            posted: selected_as(p.posted, :date),
+            min_visits: p.visits |> coalesce(0) |> min()
+          },
+          group_by: selected_as(:date),
+          order_by: p.posted
+
+      assert [%{posted: ~D[2020-12-20], min_visits: 0}, %{posted: ~D[2020-12-21], min_visits: 2}] =
+               TestRepo.all(query)
+    end
+
+    @tag :selected_as_with_order_by
+    test "selected_as/2 with order_by" do
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 3})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 2})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-20], visits: nil})
+
+      base_query =
+        from p in Post,
+          select: %{
+            posted: p.posted,
+            min_visits: p.visits |> coalesce(0) |> min() |> selected_as(:min_visits)
+          },
+          group_by: p.posted
+
+      # ascending order
+      results = base_query |> order_by(selected_as(:min_visits)) |> TestRepo.all()
+
+      assert [%{posted: ~D[2020-12-20], min_visits: 0}, %{posted: ~D[2020-12-21], min_visits: 2}] =
+               results
+
+      # descending order
+      results = base_query |> order_by([desc: selected_as(:min_visits)]) |> TestRepo.all()
+
+      assert [%{posted: ~D[2020-12-21], min_visits: 2}, %{posted: ~D[2020-12-20], min_visits: 0}] =
+               results
+    end
+
+    @tag :selected_as_with_order_by_expression
+    test "selected_as/2 with order_by expression" do
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 3, intensity: 2.0})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-20], visits: nil, intensity: 10.0})
+
+      results =
+        from(p in Post,
+          select: %{
+            posted: p.posted,
+            visits: p.visits |> coalesce(0) |> selected_as(:num_visits),
+            intensity: selected_as(p.intensity, :strength)
+          },
+          order_by: [desc: (selected_as(:num_visits) + selected_as(:strength))]
+        )
+        |> TestRepo.all()
+
+      assert [%{posted: ~D[2020-12-20], visits: 0}, %{posted: ~D[2020-12-21], visits: 3}] =
+               results
+    end
+
+    @tag :selected_as_with_having
+    test "selected_as/2 with having" do
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 3})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 2})
+      TestRepo.insert!(%Post{posted: ~D[2020-12-20], visits: nil})
+
+      results =
+        from(p in Post,
+          select: %{
+            posted: p.posted,
+            min_visits: p.visits |> coalesce(0) |> min() |> selected_as(:min_visits)
+          },
+          group_by: p.posted,
+          having: selected_as(:min_visits) > 0,
+          or_having: not(selected_as(:min_visits) > 0),
+          order_by: p.posted
+        )
+        |> TestRepo.all()
+
+      assert [%{posted: ~D[2020-12-20], min_visits: 0}, %{posted: ~D[2020-12-21], min_visits: 2}] = results
+    end
   end
 
   test "query count distinct" do

@@ -132,6 +132,10 @@ defmodule Ecto.Query.Builder do
     escape_with_type(access_expr, type, params_acc, vars, env)
   end
 
+  def escape({:type, _, [{{:., _, [{:parent_as, _, [_parent]}, _field]}, _, []} = expr, type]}, _type, params_acc, vars, env) do
+    escape_with_type(expr, type, params_acc, vars, env)
+  end
+
   def escape({:type, meta, [expr, type]}, given_type, params_acc, vars, env) do
     case Macro.expand_once(expr, get_env(env)) do
       ^expr ->
@@ -145,6 +149,7 @@ defmodule Ecto.Query.Builder do
           * an aggregation or window expression (avg, count, min, max, sum, over, filter)
           * a conditional expression (coalesce)
           * access/json paths (p.column[0].field)
+          * parent_as/1 (parent_as(:parent).field)
 
         Got: #{Macro.to_string(expr)}
         """
@@ -397,6 +402,29 @@ defmodule Ecto.Query.Builder do
     {aggregate, params_acc} = escape_window_function(aggregate, type, params_acc, vars, env)
     {window, params_acc} = escape_window_description(over_args, params_acc, vars, env)
     {{:{}, [], [:over, [], [aggregate, window]]}, params_acc}
+  end
+
+  def escape({:selected_as, _, [_expr, _name]}, _type, _params_acc, _vars, _env) do
+    error! """
+    selected_as/2 can only be used at the root of a select statement. \
+    If you are trying to use it inside of an expression, consider putting the \
+    expression inside of `selected_as/2` instead. For instance, instead of:
+
+        from p in Post, select: coalesce(selected_as(p.visits, :v), 0)
+
+    use:
+
+        from p in Post, select: selected_as(coalesce(p.visits, 0), :v)
+    """
+  end
+
+  def escape({:selected_as, _, [name]}, _type, params_acc, _vars, _env) when is_atom(name) do
+    expr = {:{}, [], [:selected_as, [], [name]]}
+    {expr, params_acc}
+  end
+
+  def escape({:selected_as, _, [name]}, _type, _params_acc, _vars, _env) do
+    error! "selected_as/1 expects `name` to be an atom, got `#{inspect(name)}`"
   end
 
   def escape({quantifier, meta, [subquery]}, type, params_acc, vars, env) when quantifier in [:all, :any, :exists] do

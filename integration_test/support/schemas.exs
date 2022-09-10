@@ -266,12 +266,13 @@ defmodule Ecto.Integration.Order do
     * Embedding one schema
     * Preloading items inside embeds_many
     * Preloading items inside embeds_one
+    * Field source with json_extract_path
 
   """
   use Ecto.Integration.Schema
 
   schema "orders" do
-    field :meta, :map
+    field :metadata, :map, source: :meta
     embeds_one :item, Ecto.Integration.Item
     embeds_many :items, Ecto.Integration.Item
     belongs_to :permalink, Ecto.Integration.Permalink

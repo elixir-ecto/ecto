@@ -6,6 +6,8 @@
 
   * [Ecto.Query] Support `^%{field: dynamic(...)}` in `select` and `select_merge`
   * [Ecto.Query] Support `%{field: subquery(...)}` in `select` and `select_merge`
+  * [Ecto.Query] Support select aliases through `selected_as/1` and `selected_as/2`
+  * [Ecto.Query] Allow `parent_as/1` in `type/2`
   * [Ecto.Repo] Support `idle_interval` query parameter in connection URL
   * [Ecto.Repo] Log human-readable UUIDs by using pre-dumped query parameters
 

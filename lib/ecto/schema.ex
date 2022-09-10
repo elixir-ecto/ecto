@@ -2042,18 +2042,28 @@ defmodule Ecto.Schema do
   @valid_embeds_one_options [:strategy, :on_replace, :source]
 
   @doc false
-  def __embeds_one__(mod, name, schema, opts) do
+  def __embeds_one__(mod, name, schema, opts) when is_atom(schema) do
     check_options!(opts, @valid_embeds_one_options, "embeds_one/3")
     embed(mod, :one, name, schema, opts)
+  end
+
+  def __embeds_one__(_mod, _name, schema, _opts) do
+    raise ArgumentError,
+          "`embeds_one/3` expects `schema` to be a module name, but received #{inspect(schema)}"
   end
 
   @valid_embeds_many_options [:strategy, :on_replace, :source]
 
   @doc false
-  def __embeds_many__(mod, name, schema, opts) do
+  def __embeds_many__(mod, name, schema, opts) when is_atom(schema) do
     check_options!(opts, @valid_embeds_many_options, "embeds_many/3")
     opts = Keyword.put(opts, :default, [])
     embed(mod, :many, name, schema, opts)
+  end
+
+  def __embeds_many__(_mod, _name, schema, _opts) do
+    raise ArgumentError,
+          "`embeds_many/3` expects `schema` to be a module name, but received #{inspect(schema)}"
   end
 
   @doc false

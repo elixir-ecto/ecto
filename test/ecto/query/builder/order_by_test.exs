@@ -49,6 +49,45 @@ defmodule Ecto.Query.Builder.OrderByTest do
         escape(:order_by, quote do [test: x.y] end, {[], %{}}, [x: 0], __ENV__)
       end
     end
+
+    test "can reference the alias of a selected value with selected_as/1" do
+      # direction defaults to ascending
+      query = from p in "posts", select: selected_as(p.id, :ident), order_by: selected_as(:ident)
+      assert [asc: {:selected_as, [], [:ident]}] = hd(query.order_bys).expr
+
+      # direction specified
+      query =
+        from p in "posts",
+          select: selected_as(p.id, :ident),
+          order_by: [desc: selected_as(:ident)]
+
+      assert [desc: {:selected_as, [], [:ident]}] = hd(query.order_bys).expr
+
+      query =
+        from p in "posts", select: selected_as(p.id, :ident), order_by: [asc: selected_as(:ident)]
+
+      assert [asc: {:selected_as, [], [:ident]}] = hd(query.order_bys).expr
+
+      # expression containing selected_as/1
+      query =
+        from p in "posts",
+          select: %{id: selected_as(p.id, :ident), id2: selected_as(p.id, :ident2)},
+          order_by: selected_as(:ident) + selected_as(:ident2)
+
+      assert [asc: {:+, [], [{:selected_as, [], [:ident]}, {:selected_as, [], [:ident2]}]}] = hd(query.order_bys).expr
+    end
+
+    test "raises if name given to selected_as/1 is not an atom" do
+      message = "selected_as/1 expects `name` to be an atom, got `\"ident\"`"
+
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        escape(:order_by, quote do selected_as("ident") end, {[], %{}}, [], __ENV__)
+      end
+
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        escape(:order_by, quote do [desc: selected_as("ident")] end, {[], %{}}, [], __ENV__)
+      end
+    end
   end
 
   describe "at runtime" do

@@ -11,8 +11,8 @@ defmodule Ecto.Query.API do
     * Null check functions: `is_nil/1`
     * Aggregates: `count/0`, `count/1`, `avg/1`, `sum/1`, `min/1`, `max/1`
     * Date/time intervals: `datetime_add/3`, `date_add/3`, `from_now/2`, `ago/2`
-    * Inside select: `struct/2`, `map/2`, `merge/2` and literals (map, tuples, lists, etc)
-    * General: `fragment/1`, `field/2`, `type/2`, `as/1`, `parent_as/1`
+    * Inside select: `struct/2`, `map/2`, `merge/2`, `selected_as/2` and literals (map, tuples, lists, etc)
+    * General: `fragment/1`, `field/2`, `type/2`, `as/1`, `parent_as/1`, `selected_as/1`
 
   Note the functions in this module exist for documentation
   purposes and one should never need to invoke them directly.
@@ -663,6 +663,11 @@ defmodule Ecto.Query.API do
 
       from p in Post, select: type(coalesce(p.cost, 0), :integer)
 
+  Or to type fields from a parent query using `parent_as/1`:
+
+      child = from c in Comment, where: type(parent_as(:posts).id, :string) == c.text
+      from Post, as: :posts, inner_lateral_join: c in subquery(child), select: c.text
+
   """
   def type(interpolated_value, type), do: doc! [interpolated_value, type]
 
@@ -681,6 +686,46 @@ defmodule Ecto.Query.API do
   See the "Named binding" section in `Ecto.Query` for more information.
   """
   def parent_as(binding), do: doc! [binding]
+
+  @doc """
+  Refer to an alias of a selected value.
+
+  This can be used to refer to aliases created using `selected_as/2`. If
+  the alias hasn't been created using `selected_as/2`, an error will be raised.
+
+  Each database has its own rules governing which clauses can reference these aliases.
+  If an error is raised mentioning an unknown column, most likely the alias is being
+  referenced somewhere that is not allowed. Consult the documentation for the database
+  to ensure the alias is being referenced correctly.
+  """
+  def selected_as(name), do: doc! [name]
+
+  @doc """
+  Creates an alias for the given selected value.
+
+  When working with calculated values, an alias can be used to simplify
+  the query. Otherwise, the entire expression would need to be copied when
+  referencing it outside of select statements.
+
+  This comes in handy when, for instance, you would like to use the calculated
+  value in `Ecto.Query.group_by/3` or `Ecto.Query.order_by/3`:
+
+      from p in Post,
+        select: %{
+          posted: selected_as(p.posted, :date),
+          sum_visits: p.visits |> coalesce(0) |> sum() |> selected_as(:sum_visits)
+        },
+        group_by: selected_as(:date),
+        order_by: selected_as(:sum_visits)
+
+  The name of the alias must be an atom and it can only be used in the outer most
+  select expression, otherwise an error is raised. Please note that the alias name
+  does not have to match the key when `select` returns a map, struct or keyword list.
+
+  Using this in conjunction with `selected_as/1` is recommended to ensure only defined aliases
+  are referenced.
+  """
+  def selected_as(selected_value, name), do: doc! [selected_value, name]
 
   defp doc!(_) do
     raise "the functions in Ecto.Query.API should not be invoked directly, " <>

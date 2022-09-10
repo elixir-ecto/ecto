@@ -109,10 +109,14 @@ defmodule Ecto.Changeset do
   regarding empty values. For example, if you are gathering data to be
   cast from the command line or through an HTML form or any other text-based
   format, it is likely those means cannot express nil values. For
-  those reasons, changesets include the concept of empty values, which are
-  values that will be automatically converted to the field's default value
-  on `cast/4`. Those values are stored in the changeset `empty_values` field
-  and default to `[""]`. You can also pass the `:empty_values` option to
+  those reasons, changesets include the concept of empty values.
+
+  When applying changes using `cast/4`, an empty value will be automatically
+  converted to the field's default value. If the field is an array type, any
+  empty value inside the array will be removed.
+
+  Empty values are stored in the changeset's `:empty_values` field and
+  default to `[""]`. You can also pass the `:empty_values` option to
   `cast/4` in case you want to change how a particular `cast/4` work.
 
   ## Associations, embeds and on replace
@@ -163,7 +167,7 @@ defmodule Ecto.Changeset do
       if the entry still exists
 
   The `:delete` and `:delete_if_exists` options must be used carefully as they allow
-  users to delete any associated data by simply not sending the associated data.
+  users to delete any associated data by simply setting it to `nil` or an empty list.
   If you need deletion, it is often preferred to add a separate boolean virtual field
   in the schema and manually mark the changeset for deletion if the `:delete` field is
   set in the params, as in the example below. Note that we don't call `cast/4` in this
@@ -238,7 +242,8 @@ defmodule Ecto.Changeset do
   This means that when working with changesets that are not meant to be
   persisted to the database, such as schemaless changesets, you may need
   to explicitly set the action to one specific value. Frameworks such as
-  Phoenix use the action value to define how HTML forms should act.
+  Phoenix [use the action value to define how HTML forms should
+  act](https://hexdocs.pm/phoenix_html/Phoenix.HTML.Form.html#module-a-note-on-errors).
 
   Instead of setting the action manually, you may use `apply_action/2` that
   emulates operations such as `c:Ecto.Repo.insert`. `apply_action/2` will return
@@ -441,7 +446,9 @@ defmodule Ecto.Changeset do
   ## Options
 
     * `:empty_values` - a list of values to be considered as empty when casting.
-      Empty values are always replaced by the default value of the respective key. Defaults to `[""]`
+      Empty values are always replaced by the default value of the respective field.
+      If the field is an array type, any empty value inside of the array will be removed.
+      Defaults to `[""]`
 
   ## Examples
 
@@ -449,6 +456,11 @@ defmodule Ecto.Changeset do
       iex> if changeset.valid? do
       ...>   Repo.update!(changeset)
       ...> end
+
+      iex> params = %{title: "", topics: [""]}
+      iex> changeset = cast(post, params, [:topics, :title], empty_values: ["", []])
+      iex> changeset.changes
+      %{title: nil, topics: nil}
 
   Passing a changeset as the first argument:
 
@@ -1543,6 +1555,8 @@ defmodule Ecto.Changeset do
   ## Examples
 
       iex> {:ok, data} = apply_action(changeset, :update)
+
+      iex> {:ok, data} = apply_action(changeset, :my_action)
 
       iex> {:error, changeset} = apply_action(changeset, :update)
       %Ecto.Changeset{action: :update}
