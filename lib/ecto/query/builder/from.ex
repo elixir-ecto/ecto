@@ -151,7 +151,7 @@ defmodule Ecto.Query.Builder.From do
     query =
       query
       |> Ecto.Queryable.to_query()
-      |> apply_env(file, line)
+      |> maybe_apply_context(file, line)
       |> maybe_apply_as(as)
       |> maybe_apply_prefix(prefix)
       |> maybe_apply_hints(hints)
@@ -160,13 +160,13 @@ defmodule Ecto.Query.Builder.From do
     query
   end
 
-  def apply_env(%{from: %{}} = query, file, line) do
+  def maybe_apply_context(%{from: %{file: nil, line: nil}} = query, file, line) do
     query = put_in(query.from.file, file)
     query = put_in(query.from.line, line)
     query
   end
 
-  def apply_env(query, _file, _line), do: query
+  def maybe_apply_context(query, _file, _line), do: query
 
   defp maybe_apply_as(query, nil), do: query
 
