@@ -745,7 +745,7 @@ defmodule Ecto.Integration.PreloadTest do
 
     test "There is no need to preload an embedded schema alone", %{order1: order1} do
       assert_raise ArgumentError,
-      ~r/Cannot preload embedded field/,
+      ~r/cannot preload embedded field/,
       fn -> TestRepo.preload(order1, :item) end
     end
 
