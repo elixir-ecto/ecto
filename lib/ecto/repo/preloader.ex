@@ -153,7 +153,6 @@ defmodule Ecto.Repo.Preloader do
     [entry | preload_assocs(assocs, queries, repo_name, tuplet)]
   end
 
-
   defp preload_assocs([], [], _repo_name, _tuplet), do: []
 
   defp preload_embeds(structs, [], _repo_name, _tuplet), do: structs

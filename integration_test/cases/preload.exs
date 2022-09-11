@@ -726,10 +726,12 @@ defmodule Ecto.Integration.PreloadTest do
                       item: item2}
       order3 = %Order{items: [],
                       item: nil}
-      order4 = %Order{items: [item3, item2, item1],
+      order4 = %Order{items: nil,
+                      item: nil}
+      order5 = %Order{items: [item3, item2, item1],
                       item: item3}
 
-      Enum.map([order1, order2, order4], fn order ->
+      Enum.map([order1, order2, order5], fn order ->
         assert %Ecto.Association.NotLoaded{}
         = order.item.user
         Enum.map(order1.items, fn item ->
@@ -737,7 +739,7 @@ defmodule Ecto.Integration.PreloadTest do
           = item.user
         end)
       end)
-      %{order1: order1, order2: order2, order3: order3, order4: order4,
+      %{order1: order1, order2: order2, order3: order3, order4: order4, order5: order5,
         uid1: uid1}
     end
 
@@ -748,12 +750,12 @@ defmodule Ecto.Integration.PreloadTest do
     end
 
     test "Preloads multiple schemas, with multiple preloads, with embeds_one and embeds_many", context do
-      %{order1: order1, order2: order2, order3: order3, order4: order4,
+      %{order1: order1, order2: order2, order3: order3, order4: order4, order5: order5,
         uid1: uid1}
       = context
-      [order1, order2, order3, order4] = TestRepo.preload(
+      [order1, order2, order3, order4, order5] = TestRepo.preload(
       # Can preload multiple schemas
-      [order1, order2, order3, order4],
+      [order1, order2, order3, order4, order5],
       # Works with multiple preloads
       # Works with embeds_many and embeds_one
       [[items: :user],
@@ -762,25 +764,28 @@ defmodule Ecto.Integration.PreloadTest do
       # Different asserts for variety
       assert %User{id: ^uid1} = hd(order1.items).user
 
-      [names1, names2, names3, names4] =
-        Enum.map([order1, order2, order3, order4], fn order ->
-          Enum.map(order.items, fn item ->
-            item.user.name
-          end)
+      [names1, names2, names3, names4, names5] =
+        Enum.map([order1, order2, order3, order4, order5], fn order ->
+          case order.items do
+            nil -> nil
+            _   ->
+              Enum.map(order.items, fn item -> item.user.name end)
+          end
         end)
       assert ["1", "3", "2"] = names1
       assert ["1", "2"] = names2
       assert [] = names3
-      assert ["3", "2", "1"] = names4
+      assert is_nil(names4)
+      assert ["3", "2", "1"] = names5
 
       embeds_one_names =
-        Enum.map([order1, order2, order3, order4], fn order ->
+        Enum.map([order1, order2, order3, order4, order5], fn order ->
           case order.item do
             nil -> nil
             i -> i.user.name
           end
         end)
-      assert ["1", "2", nil, "3"] = embeds_one_names
+      assert ["1", "2", nil, nil, "3"] = embeds_one_names
     end
 
   end
