@@ -158,15 +158,18 @@ defmodule Ecto.Repo.Preloader do
   defp preload_embeds(structs, [], _repo_name, _tuplet), do: structs
 
   defp preload_embeds(structs, [embed | embeds], repo_name, tuplet) do
+
     {%{field: field, cardinality: card}, sub_preloads} = embed
+
     {embed_structs, counts} =
-      Enum.flat_map_reduce(structs, [], fn struct, counts ->
-        case {Map.get(struct, field), card} do
-          {nil, _card} ->{[], [0 | counts]}
-          {embed_struct, :one} -> {[embed_struct], [1 | counts]}
-          {embed_structs, :many} -> {embed_structs, [length(embed_structs) | counts]}
-        end
+      Enum.flat_map_reduce(structs, [], fn
+        %{^field => embeds}, counts when is_list(embeds) -> {embeds, [length(embeds) | counts]}
+        %{^field => nil}, counts -> {[], [0 | counts]}
+        %{^field => embed}, counts -> {[embed], [1 | counts]}
+        nil, counts -> {[], [0 | counts]}
+        struct, _counts -> raise ArgumentError, "expected #{inspect(struct)} to contain embed `#{field}`"
       end)
+
     embed_structs = preload_each(embed_structs, repo_name, sub_preloads, tuplet)
     structs = load_embeds(card, field, structs, embed_structs, Enum.reverse(counts), [])
     preload_embeds(structs, embeds, repo_name, tuplet)
