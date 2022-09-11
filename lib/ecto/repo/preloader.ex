@@ -552,7 +552,7 @@ defmodule Ecto.Repo.Preloader do
         :embed ->
           if sub_preloads == [] do
             raise ArgumentError,
-                  "Cannot preload embedded field #{inspect(assoc_or_embed.field)} " <>
+                  "cannot preload embedded field #{inspect(assoc_or_embed.field)} " <>
                     "without also preloading one of its associations as it has no effect."
           end
           embeds = [{assoc_or_embed, sub_preloads} | embeds]
@@ -572,7 +572,7 @@ defmodule Ecto.Repo.Preloader do
 
   defp association_or_embed!(schema, preload) do
     schema.__schema__(:association, preload) || schema.__schema__(:embed, preload) ||
-      raise ArgumentError, "schema #{inspect schema} does not have association #{inspect preload}#{maybe_module(preload)}"
+      raise ArgumentError, "schema #{inspect schema} does not have association or embed #{inspect preload}#{maybe_module(preload)}"
   end
 
   defp maybe_module(assoc) do
