@@ -283,4 +283,8 @@ defmodule Ecto.Embedded do
   def build(%Embedded{related: related}, _owner) do
     related.__struct__
   end
+
+  def preload_info(_embed) do
+    :embed
+  end
 end
