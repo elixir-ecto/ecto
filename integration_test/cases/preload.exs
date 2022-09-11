@@ -724,15 +724,12 @@ defmodule Ecto.Integration.PreloadTest do
                       item: item1}
       order2 = %Order{items: [item1, item2],
                       item: item2}
-      order3 = %Order{items: [item3, item2, item1],
+      order3 = %Order{items: [],
+                      item: nil}
+      order4 = %Order{items: [item3, item2, item1],
                       item: item3}
-      order4 = %Order{items: [],
-                      item: item3}
-      TestRepo.insert!(order1)
-      TestRepo.insert!(order2)
-      TestRepo.insert!(order3)
 
-      Enum.map([order1, order2, order3], fn order ->
+      Enum.map([order1, order2, order4], fn order ->
         assert %Ecto.Association.NotLoaded{}
         = order.item.user
         Enum.map(order1.items, fn item ->
@@ -773,14 +770,17 @@ defmodule Ecto.Integration.PreloadTest do
         end)
       assert ["1", "3", "2"] = names1
       assert ["1", "2"] = names2
-      assert ["3", "2", "1"] = names3
-      assert [] = names4
+      assert [] = names3
+      assert ["3", "2", "1"] = names4
 
       embeds_one_names =
         Enum.map([order1, order2, order3, order4], fn order ->
-          order.item.user.name
+          case order.item do
+            nil -> nil
+            i -> i.user.name
+          end
         end)
-      assert ["1", "2", "3", "3"] = embeds_one_names
+      assert ["1", "2", nil, "3"] = embeds_one_names
     end
 
   end
