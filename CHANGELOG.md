@@ -4,10 +4,12 @@
 
 ### Enhancements
 
+  * [Ecto.Schema] Support preloading associations in embedded schemas
   * [Ecto.Query] Support `^%{field: dynamic(...)}` in `select` and `select_merge`
   * [Ecto.Query] Support `%{field: subquery(...)}` in `select` and `select_merge`
   * [Ecto.Query] Support select aliases through `selected_as/1` and `selected_as/2`
   * [Ecto.Query] Allow `parent_as/1` in `type/2`
+  * [Ecto.Query] Add `with_named_binding/3`
   * [Ecto.Repo] Support `idle_interval` query parameter in connection URL
   * [Ecto.Repo] Log human-readable UUIDs by using pre-dumped query parameters
 
@@ -16,6 +18,8 @@
   * [Ecto.Changeset] Raise when schemaless changeset or embedded schema is used in `unsafe_validate_unique/4`
   * [Ecto.Query] Respect virtual field type in subqueries
   * [Ecto.Query] Don't select struct fields overridden with `nil`
+  * [Ecto.Query] Fix `select_merge` not tracking `load_in_query: false` field
+  * [Ecto.Query] Fix field source when used in `json_extract_path`
   * [Ecto.Repo] Fix `insert_all` query parameter count when using value queries alongside `placeholder`
 
 ## v3.8.4 (2022-06-04)
