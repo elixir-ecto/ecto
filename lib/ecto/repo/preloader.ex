@@ -553,8 +553,9 @@ defmodule Ecto.Repo.Preloader do
           if sub_preloads == [] do
             raise ArgumentError,
                   "cannot preload embedded field #{inspect(assoc_or_embed.field)} " <>
-                    "without also preloading one of its associations as it has no effect."
+                    "without also preloading one of its associations as it has no effect"
           end
+
           embeds = [{assoc_or_embed, sub_preloads} | embeds]
           {assocs, throughs, embeds}
       end
