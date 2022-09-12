@@ -709,88 +709,63 @@ defmodule Ecto.Integration.PreloadTest do
     assert %User{id: ^uid1} = item.user
   end
 
-  describe "Preload associations in embedded_schema from container schema" do
+  describe "preload associations from nested embeds" do
     setup do
-      # Order embeds_many items
-      # Items belong to Users
-      # Preload Users from an Order schema
       %User{id: uid1} = TestRepo.insert!(%User{name: "1"})
       %User{id: uid2} = TestRepo.insert!(%User{name: "2"})
       %User{id: uid3} = TestRepo.insert!(%User{name: "3"})
       item1 = %Item{id: 1, user_id: uid1}
       item2 = %Item{id: 2, user_id: uid2}
       item3 = %Item{id: 3, user_id: uid3}
-      order1 = %Order{items: [item1, item3, item2],
-                      item: item1}
-      order2 = %Order{items: [item1, item2],
-                      item: item2}
-      order3 = %Order{items: [],
-                      item: nil}
-      order4 = %Order{items: nil,
-                      item: nil}
-      order5 = %Order{items: [item3, item2, item1],
-                      item: item3}
+      order1 = %Order{items: [item1, item3, item2], item: item1}
+      order2 = %Order{items: [], item: nil}
+      order3 = %Order{items: nil, item: nil}
+      order4 = %Order{items: [item1, item2], item: item2}
 
-      Enum.map([order1, order2, order5], fn order ->
-        assert %Ecto.Association.NotLoaded{}
-        = order.item.user
-        Enum.map(order1.items, fn item ->
-          assert %Ecto.Association.NotLoaded{}
-          = item.user
+      [orders: [order1, order2, order3, order4]]
+    end
+
+    test "cannot preload embed without its associations", context do
+      assert_raise ArgumentError, ~r/cannot preload embedded field/, fn ->
+        TestRepo.preload(context.orders, :item)
+      end
+    end
+
+    test "embeds_one", context do
+      [nil | preloaded_orders] = [nil | context.orders] |> TestRepo.preload(item: :user)
+
+      expected_item_user =
+        Enum.map(context.orders, fn
+          %{item: nil} -> {nil, nil}
+          %{item: item} -> {item.id, item.user_id}
         end)
-      end)
-      %{order1: order1, order2: order2, order3: order3, order4: order4, order5: order5,
-        uid1: uid1}
-    end
 
-    test "There is no need to preload an embedded schema alone", %{order1: order1} do
-      assert_raise ArgumentError,
-      ~r/cannot preload embedded field/,
-      fn -> TestRepo.preload(order1, :item) end
-    end
-
-    test "Preloads multiple schemas, with multiple preloads, with embeds_one and embeds_many", context do
-      %{order1: order1, order2: order2, order3: order3, order4: order4, order5: order5,
-        uid1: uid1}
-      = context
-      [order1, nil, order2, order3, order4, order5] = TestRepo.preload(
-      # Can preload multiple schemas
-      [order1, nil, order2, order3, order4, order5],
-      # Works with multiple preloads
-      # Works with embeds_many and embeds_one
-      [[items: :user],
-       [item: :user]])
-
-      # Different asserts for variety
-      assert %User{id: ^uid1} = hd(order1.items).user
-
-      [names1, names2, names3, names4, names5] =
-        Enum.map([order1, order2, order3, order4, order5],
-          fn
-            %{ :items => nil } -> nil
-            %{ :items => items } ->
-              Enum.map(items,
-                fn
-                  nil -> nil
-                  item -> item.user.name
-                end)
-          end)
-      assert ["1", "3", "2"] = names1
-      assert ["1", "2"] = names2
-      assert [] = names3
-      assert is_nil(names4)
-      assert ["3", "2", "1"] = names5
-
-      embeds_one_names =
-        Enum.map([order1, order2, order3, order4, order5], fn order ->
-          case order.item do
-            nil -> nil
-            i -> i.user.name
-          end
+      actual_item_user =
+        Enum.map(preloaded_orders, fn
+          %{item: nil} -> {nil, nil}
+          %{item: item} -> {item.id, item.user.id}
         end)
-      assert ["1", "2", nil, nil, "3"] = embeds_one_names
+
+      assert expected_item_user == actual_item_user
     end
 
+    test "embeds_many", context do
+      [nil | preloaded_orders] = [nil | context.orders] |> TestRepo.preload(items: :user)
+
+      expected_items_user =
+        Enum.map(context.orders, fn
+          %{items: nil} -> {nil, nil}
+          %{items: items} -> Enum.map(items, & {&1.id, &1.user_id})
+        end)
+
+      actual_items_user =
+        Enum.map(preloaded_orders, fn
+          %{items: nil} -> {nil, nil}
+          %{items: items} -> Enum.map(items, & {&1.id, &1.user.id})
+        end)
+
+      assert expected_items_user == actual_items_user
+    end
   end
 
   defp sort_by_id(values) do
