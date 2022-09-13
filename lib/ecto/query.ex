@@ -779,8 +779,8 @@ defmodule Ecto.Query do
   It can either be a keyword query or a query expression.
 
   If it is a keyword query the first argument must be
-  either an `in` expression, or a value that implements
-  the `Ecto.Queryable` protocol. If the query needs a
+  either an `in` expression, a value that implements
+  the `Ecto.Queryable` protocol, or an `Ecto.Query.API.fragment/1`. If the query needs a
   reference to the data source in any other part of the
   expression, then an `in` must be used to create a reference
   variable. The second argument should be a keyword query
@@ -791,13 +791,30 @@ defmodule Ecto.Query do
   a value that implements the `Ecto.Queryable` protocol
   and the second argument the expression.
 
-  ## Keywords example
+  ## Keywords examples
 
+      # `in` expression
       from(c in City, select: c)
 
-  ## Expressions example
+      # Ecto.Queryable
+      from(City, limit: 1)
 
+      # Fragment
+      from(f in fragment("generate_series(?, ?)", ^0, ^100000))
+
+  ## Expressions examples
+
+      # Schema
       City |> select([c], c)
+
+      # Source
+      "cities" |> select([c], c)
+
+      # Source with schema
+      {"cities", Source} |> select([c], c)
+
+      # Ecto.Query
+      from(c in Cities) |> select([c], c)
 
   ## Examples
 
