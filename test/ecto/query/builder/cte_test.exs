@@ -17,6 +17,14 @@ defmodule Ecto.Query.Builder.CTETest do
     refute query.with_ctes.recursive
   end
 
+  test "compile time CTE" do
+    cte = from c in "categories", where: not is_nil(c.parent_id)
+    query = from(p in "products") |> with_cte("categories", as: ^cte)
+
+    assert [{"categories", %Ecto.Query{from: from}}] = query.with_ctes.queries
+    assert %Ecto.Query.FromExpr{source: {"categories", nil}} = from
+  end
+
   test "recursive CTE" do
     initial = "categories" |> where([c], is_nil(c.parent_id))
     recursion = "categories" |> join(:inner, [c], ct in "tree", on: c.parent_id == ct.id)

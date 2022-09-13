@@ -74,14 +74,31 @@ defmodule Ecto.Query.Builder.CTE do
   The callback applied by `build/4` to build the query.
   """
   @spec apply(Ecto.Queryable.t, bitstring, Ecto.Queryable.t) :: Ecto.Query.t
-  def apply(%Ecto.Query{with_ctes: with_expr} = query, name, with_query) do
-    with_expr = with_expr || %Ecto.Query.WithExpr{}
-    queries = List.keystore(with_expr.queries, name, 0, {name, with_query})
-    with_expr = %{with_expr | queries: queries}
-    %{query | with_ctes: with_expr}
+  # Runtime
+  def apply(%Ecto.Query{with_ctes: with_expr} = query, name, %_{} = with_query) do
+    %{query | with_ctes: apply_cte(with_expr, name, with_query)}
   end
 
+  # Compile
+  def apply(%Ecto.Query{with_ctes: with_expr} = query, name, with_query) do
+    update = quote do
+      Ecto.Query.Builder.CTE.apply_cte(unquote(with_expr), unquote(name), unquote(with_query))
+    end
+
+    %{query | with_ctes: update}
+  end
+
+  # Runtime catch-all
   def apply(query, name, with_query) do
     apply(Ecto.Queryable.to_query(query), name, with_query)
+  end
+
+  @doc false
+  def apply_cte(nil, name, with_query) do
+    %Ecto.Query.WithExpr{queries: [{name, with_query}]}
+  end
+
+  def apply_cte(%Ecto.Query.WithExpr{queries: queries} = with_expr, name, with_query) do
+    %{with_expr | queries: List.keystore(queries, name, 0, {name, with_query})}
   end
 end
