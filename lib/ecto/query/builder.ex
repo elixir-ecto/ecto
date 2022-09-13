@@ -1292,7 +1292,15 @@ defmodule Ecto.Query.Builder do
 
   # Escapes an `Ecto.Query` and associated structs.
   @spec escape_query(Query.t) :: Macro.t
-  defp escape_query(%Query{} = query), do: {:%{}, [], Map.to_list(query)}
+  defp escape_query(%Query{} = query) do
+    escaped_entries =
+      query |> Map.to_list() |> Enum.map(fn {k, v} -> {k, escape_struct(v)} end)
+
+    {:%{}, [], escaped_entries}
+  end
+
+  defp escape_struct(%_{} = struct), do: {:%{}, [], Map.to_list(struct)}
+  defp escape_struct(other), do: other
 
   defp parse_access_get({{:., _, [Access, :get]}, _, [left, right]}, acc) do
     parse_access_get(left, [right | acc])
