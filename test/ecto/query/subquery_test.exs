@@ -285,6 +285,13 @@ defmodule Ecto.Query.SubqueryTest do
         plan(from(subquery(query), []))
       end
     end
+
+    test "raises on fragment source without :select" do
+      query = from f in fragment("select 1 as x")
+      assert_raise Ecto.SubQueryError, ~r/queries from a fragment need to explicitly pass a :select clause in query/, fn ->
+        plan(from(subquery(query), []))
+      end
+    end
   end
 
   describe "plan: where in subquery" do

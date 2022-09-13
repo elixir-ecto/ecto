@@ -127,33 +127,42 @@ defmodule Ecto.Query.PlannerTest do
     subquery = from Comment, where: [text: ^"subquery"]
 
     query =
-      from p in Post,
-        select: {p.title, ^"select"},
+      from f in fragment("SELECT ? <>  ? as title", ^"fragment_source1", ^"fragment_source2"),
+        select: {f.title, ^"select"},
         join: c in subquery(subquery),
         on: c.text == ^"join",
+        join: p in Post,
+        on: f.title == p.title,
         left_join: d in assoc(p, :comments),
         union_all: ^union,
         windows: [foo: [partition_by: fragment("?", ^"windows")]],
-        where: p.title == ^"where",
-        group_by: p.title == ^"group_by",
-        having: p.title == ^"having",
+        where: f.title == ^"where",
+        group_by: f.title == ^"group_by",
+        having: f.title == ^"having",
         order_by: [asc: fragment("?", ^"order_by")],
         limit: ^0,
         offset: ^1
 
     {_query, cast_params, dump_params, _key} = plan(query)
+
     assert cast_params ==
-             ["select", "subquery", "join", "where", "group_by", "having", "windows"] ++
+             ["select", "fragment_source1", "fragment_source2", "subquery", "join", "where", "group_by", "having", "windows"] ++
                ["union", "order_by", 0, 1]
 
     assert dump_params ==
-             ["select", "subquery", "join", "where", "group_by", "having", "windows"] ++
+             ["select", "fragment_source1", "fragment_source2", "subquery", "join", "where", "group_by", "having", "windows"] ++
                ["union", "order_by", 0, 1]
   end
 
   test "plan: checks from" do
     assert_raise Ecto.QueryError, ~r"query must have a from expression", fn ->
       plan(%Ecto.Query{})
+    end
+  end
+
+  test "plan: fragment from cannot have preloads" do
+    assert_raise Ecto.QueryError, ~r"cannot preload associations with a fragment source", fn ->
+      plan(from f in fragment("select 1"), preload: :field)
     end
   end
 

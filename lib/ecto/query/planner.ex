@@ -234,6 +234,11 @@ defmodule Ecto.Query.Planner do
     error!(query, "query must have a from expression")
   end
 
+  defp plan_from(%{from: %{source: {:fragment, _, _}}, preloads: preloads, assocs: assocs} = query, _adapter)
+       when assocs != [] or preloads != [] do
+    error!(query, "cannot preload associations with a fragment source")
+  end
+
   defp plan_from(%{from: from} = query, adapter) do
     plan_source(query, from, adapter)
   end
@@ -258,7 +263,7 @@ defmodule Ecto.Query.Planner do
        do: {expr, source}
 
   defp plan_source(query, %{source: {:fragment, _, _}, prefix: prefix} = expr, _adapter),
-       do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment joins")
+       do: error!(query, expr, "cannot set prefix: #{inspect(prefix)} option for fragment sources")
 
   defp plan_subquery(subquery, query, prefix, adapter, source?) do
     %{query: inner_query} = subquery
@@ -631,9 +636,10 @@ defmodule Ecto.Query.Planner do
     {query, params, finalize_cache(query, operation, cache)}
   end
 
-  defp merge_cache(:from, _query, from, {cache, params}, _operation, _adapter) do
+  defp merge_cache(:from, query, from, {cache, params}, _operation, adapter) do
     {key, params} = source_cache(from, params)
-    {merge_cache({:from, key, from.hints}, cache, key != :nocache), params}
+    {params, source_cacheable?} = cast_and_merge_params(:from, query, from, params, adapter)
+    {merge_cache({:from, key, from.hints}, cache, source_cacheable? and key != :nocache), params}
   end
 
   defp merge_cache(kind, query, expr, {cache, params}, _operation, adapter)
@@ -909,6 +915,9 @@ defmodule Ecto.Query.Planner do
   end
   def ensure_select(%{select: nil, from: %{source: {_, nil}}} = query, true) do
     error! query, "queries that do not have a schema need to explicitly pass a :select clause"
+  end
+  def ensure_select(%{select: nil, from: %{source: {:fragment, _, _}}} = query, true) do
+    error! query, "queries from a fragment need to explicitly pass a :select clause"
   end
   def ensure_select(%{select: nil} = query, true) do
     %{query | select: %SelectExpr{expr: {:&, [], [0]}, line: __ENV__.line, file: __ENV__.file}}

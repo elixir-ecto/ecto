@@ -10,6 +10,7 @@
   * [Ecto.Query] Support select aliases through `selected_as/1` and `selected_as/2`
   * [Ecto.Query] Allow `parent_as/1` in `type/2`
   * [Ecto.Query] Add `with_named_binding/3`
+  * [Ecto.Query] Allow fragment sources in keyword queries
   * [Ecto.Repo] Support `idle_interval` query parameter in connection URL
   * [Ecto.Repo] Log human-readable UUIDs by using pre-dumped query parameters
 

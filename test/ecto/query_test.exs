@@ -551,9 +551,7 @@ defmodule Ecto.QueryTest do
       # queries need to be on the same line or == won't work
       assert from(p in "posts", select: 1 < 2) == from(p in "posts", []) |> select([p], 1 < 2)
       assert from(p in "posts", where: 1 < 2)  == from(p in "posts", []) |> where([p], 1 < 2)
-
-      query = "posts"
-      assert (query |> select([p], p.title)) == from(p in query, select: p.title)
+      assert (from(p in "posts") |> select([p], p.title)) == from(p in "posts", select: p.title)
     end
 
     test "are built at compile time with binaries" do
