@@ -105,7 +105,6 @@ defmodule Ecto.Query.Builder.Update do
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, binding, expr, env) do
-    query = Builder.escape_queryable(query, env)
     {query, binding} = Builder.escape_binding(query, binding, env)
     {compile, runtime, params} = escape(expr, binding, env)
 

@@ -35,14 +35,29 @@ defmodule Ecto.Query.Builder.From do
   """
   @spec escape(Macro.t(), Macro.Env.t()) :: {Macro.t(), Keyword.t()}
   def escape({:in, _, [var, query]}, env) do
-    query = Builder.escape_queryable(query, env)
+    query = escape_source(query, env)
     Builder.escape_binding(query, List.wrap(var), env)
   end
 
   def escape(query, env) do
-    query = Builder.escape_queryable(query, env)
+    query = escape_source(query, env)
     {query, []}
   end
+
+  defp escape_source({:fragment, _, _} = fragment, env) do
+    {fragment, {params, _acc}} = Builder.escape(fragment, :any, {[], %{}}, [], env)
+    params = Builder.escape_params(params)
+    from_fields = [source: fragment, params: params, file: env.file, line: env.line]
+
+    query_fields = [
+      from: {:%, [], [Ecto.Query.FromExpr, {:%{}, [], from_fields}]},
+      aliases: {:%{}, [], []}
+    ]
+
+    {:%, [], [Ecto.Query, {:%{}, [], query_fields}]}
+  end
+
+  defp escape_source(query, _env), do: query
 
   @doc """
   Builds a quoted expression.

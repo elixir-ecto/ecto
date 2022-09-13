@@ -178,15 +178,12 @@ defmodule Ecto.Query.Builder.OrderBy do
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(query, _binding, {:^, _, [var]}, env) do
-    query = Builder.escape_queryable(query, env)
-
     quote do
       Ecto.Query.Builder.OrderBy.order_by!(unquote(query), unquote(var), unquote(env.file), unquote(env.line))
     end
   end
 
   def build(query, binding, expr, env) do
-    query = Builder.escape_queryable(query, env)
     {query, binding} = Builder.escape_binding(query, binding, env)
     {expr, {params, _acc}} = escape(:order_by, expr, {[], %{}}, binding, env)
     params = Builder.escape_params(params)

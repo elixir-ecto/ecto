@@ -14,7 +14,6 @@ defmodule Ecto.Query.Builder.Combination do
   """
   @spec build(atom, Macro.t, Macro.t, Macro.Env.t) :: Macro.t
   def build(kind, query, {:^, _, [expr]}, env) do
-    query = Builder.escape_queryable(query, env)
     expr = quote do: Ecto.Queryable.to_query(unquote(expr))
     Builder.apply_query(query, __MODULE__, [[{kind, expr}]], env)
   end

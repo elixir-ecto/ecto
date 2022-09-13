@@ -143,7 +143,6 @@ defmodule Ecto.Query.Builder.Join do
       as -> Builder.error!("`as` must be a compile time atom or an interpolated value using ^, got: #{Macro.to_string(as)}")
     end
 
-    query = Builder.escape_queryable(query, env)
     {query, binding} = Builder.escape_binding(query, binding, env)
     {join_bind, join_source, join_assoc, join_params} = escape(expr, binding, env)
     join_params = Builder.escape_params(join_params)
