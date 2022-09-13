@@ -84,16 +84,16 @@ defmodule Ecto.Query.Builder.From do
         # dependencies between modules are added
         source = quote(do: unquote(schema).__schema__(:source))
         {:ok, prefix} = prefix || {:ok, quote(do: unquote(schema).__schema__(:prefix))}
-        {query(prefix, {source, schema}, as, hints), binds, 1}
+        {query(prefix, source, schema, as, hints), binds, 1}
 
       source when is_binary(source) ->
         {:ok, prefix} = prefix || {:ok, nil}
         # When a binary is used, there is no schema
-        {query(prefix, {source, nil}, as, hints), binds, 1}
+        {query(prefix, source, nil, as, hints), binds, 1}
 
       {source, schema} when is_binary(source) and is_atom(schema) ->
         {:ok, prefix} = prefix || {:ok, quote(do: unquote(schema).__schema__(:prefix))}
-        {query(prefix, {source, schema}, as, hints), binds, 1}
+        {query(prefix, source, schema, as, hints), binds, 1}
 
       _other ->
         quoted =
@@ -105,9 +105,9 @@ defmodule Ecto.Query.Builder.From do
     end
   end
 
-  defp query(prefix, source, as, hints) do
+  defp query(prefix, source, schema, as, hints) do
     aliases = if as, do: [{as, 0}], else: []
-    from_fields = [source: source, as: as, prefix: prefix, hints: hints]
+    from_fields = [source: {source, schema}, as: as, prefix: prefix, hints: hints]
 
     query_fields = [
       from: {:%, [], [Ecto.Query.FromExpr, {:%{}, [], from_fields}]},
