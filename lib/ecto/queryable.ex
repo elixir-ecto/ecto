@@ -48,8 +48,4 @@ defimpl Ecto.Queryable, for: Tuple do
       when is_binary(source) and is_atom(schema) and not is_nil(schema) do
     %Ecto.Query{from: %Ecto.Query.FromExpr{source: from, prefix: schema.__schema__(:prefix)}}
   end
-
-  def to_query({{:fragment, _, _} = from, params}) when is_list(params) do
-    %Ecto.Query{from: %Ecto.Query.FromExpr{source: from, params: params}}
-  end
 end

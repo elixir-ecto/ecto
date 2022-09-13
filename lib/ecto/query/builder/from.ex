@@ -26,12 +26,6 @@ defmodule Ecto.Query.Builder.From do
       iex> escape(quote(do: [_, _] in abc), __ENV__)
       {quote(do: abc), [_: 0, _: 1]}
 
-      iex> escape(quote(do: f in fragment("SELECT ?", ^"abc")), __ENV__)
-      {quote(do: {{:fragment, [], [{:raw, "SELECT "}, {:expr, {:^, [], [0]}}, {:raw, ""}]}, [{"abc", :any}]}), [f: 0]}
-
-      iex> escape(quote(do: fragment("SELECT ?", ^"abc")), __ENV__)
-      {quote(do: {{:fragment, [], [{:raw, "SELECT "}, {:expr, {:^, [], [0]}}, {:raw, ""}]}, [{"abc", :any}]}), []}
-
       iex> escape(quote(do: other), __ENV__)
       {quote(do: other), []}
 
@@ -90,42 +84,30 @@ defmodule Ecto.Query.Builder.From do
         # dependencies between modules are added
         source = quote(do: unquote(schema).__schema__(:source))
         {:ok, prefix} = prefix || {:ok, quote(do: unquote(schema).__schema__(:prefix))}
-        {query(prefix, {source, schema}, [], as, hints, env.file, env.line), binds, 1}
+        {query(prefix, {source, schema}, as, hints), binds, 1}
 
       source when is_binary(source) ->
         {:ok, prefix} = prefix || {:ok, nil}
         # When a binary is used, there is no schema
-        {query(prefix, {source, nil}, [], as, hints, env.file, env.line), binds, 1}
+        {query(prefix, {source, nil}, as, hints), binds, 1}
 
       {source, schema} when is_binary(source) and is_atom(schema) ->
         {:ok, prefix} = prefix || {:ok, quote(do: unquote(schema).__schema__(:prefix))}
-        {query(prefix, {source, schema}, [], as, hints, env.file, env.line), binds, 1}
-
-      {{:{}, _, [:fragment, _, _]} = source, params} ->
-        {:ok, prefix} = prefix || {:ok, nil}
-        {query(prefix, source, params, as, hints, env.file, env.line), binds, 1}
+        {query(prefix, {source, schema}, as, hints), binds, 1}
 
       _other ->
         quoted =
           quote do
-            Ecto.Query.Builder.From.apply(
-              unquote(query),
-              unquote(length(binds)),
-              unquote(as),
-              unquote(prefix),
-              unquote(hints),
-              unquote(env.file),
-              unquote(env.line)
-            )
+            Ecto.Query.Builder.From.apply(unquote(query), unquote(length(binds)), unquote(as), unquote(prefix), unquote(hints))
           end
 
         {quoted, binds, nil}
     end
   end
 
-  defp query(prefix, source, params, as, hints, file, line) do
+  defp query(prefix, source, as, hints) do
     aliases = if as, do: [{as, 0}], else: []
-    from_fields = [source: source, as: as, prefix: prefix, params: params, hints: hints, file: file, line: line]
+    from_fields = [source: source, as: as, prefix: prefix, hints: hints]
 
     query_fields = [
       from: {:%, [], [Ecto.Query.FromExpr, {:%{}, [], from_fields}]},
@@ -146,12 +128,11 @@ defmodule Ecto.Query.Builder.From do
   @doc """
   The callback applied by `build/2` to build the query.
   """
-  @spec apply(Ecto.Queryable.t(), non_neg_integer, Macro.t(), {:ok, String.t} | nil, [String.t], String.t, String.t) :: Ecto.Query.t()
-  def apply(query, binds, as, prefix, hints, file, line) do
+  @spec apply(Ecto.Queryable.t(), non_neg_integer, Macro.t(), {:ok, String.t} | nil, [String.t]) :: Ecto.Query.t()
+  def apply(query, binds, as, prefix, hints) do
     query =
       query
       |> Ecto.Queryable.to_query()
-      |> maybe_apply_context(file, line)
       |> maybe_apply_as(as)
       |> maybe_apply_prefix(prefix)
       |> maybe_apply_hints(hints)
@@ -159,14 +140,6 @@ defmodule Ecto.Query.Builder.From do
     check_binds(query, binds)
     query
   end
-
-  def maybe_apply_context(%{from: %{file: nil, line: nil}} = query, file, line) do
-    query = put_in(query.from.file, file)
-    query = put_in(query.from.line, line)
-    query
-  end
-
-  def maybe_apply_context(query, _file, _line), do: query
 
   defp maybe_apply_as(query, nil), do: query
 
