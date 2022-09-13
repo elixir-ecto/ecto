@@ -46,15 +46,7 @@ defmodule Ecto.Query.Builder.From do
 
   defp escape_source({:fragment, _, _} = fragment, env) do
     {fragment, {params, _acc}} = Builder.escape(fragment, :any, {[], %{}}, [], env)
-    params = Builder.escape_params(params)
-    from_fields = [source: fragment, params: params, file: env.file, line: env.line]
-
-    query_fields = [
-      from: {:%, [], [Ecto.Query.FromExpr, {:%{}, [], from_fields}]},
-      aliases: {:%{}, [], []}
-    ]
-
-    {:%, [], [Ecto.Query, {:%{}, [], query_fields}]}
+    {fragment, Builder.escape_params(params)}
   end
 
   defp escape_source(query, _env), do: query
@@ -98,16 +90,20 @@ defmodule Ecto.Query.Builder.From do
         # dependencies between modules are added
         source = quote(do: unquote(schema).__schema__(:source))
         {:ok, prefix} = prefix || {:ok, quote(do: unquote(schema).__schema__(:prefix))}
-        {query(prefix, source, schema, as, hints), binds, 1}
+        {query(prefix, {source, schema}, [], as, hints, env.file, env.line), binds, 1}
 
       source when is_binary(source) ->
         {:ok, prefix} = prefix || {:ok, nil}
         # When a binary is used, there is no schema
-        {query(prefix, source, nil, as, hints), binds, 1}
+        {query(prefix, {source, nil}, [], as, hints, env.file, env.line), binds, 1}
 
       {source, schema} when is_binary(source) and is_atom(schema) ->
         {:ok, prefix} = prefix || {:ok, quote(do: unquote(schema).__schema__(:prefix))}
-        {query(prefix, source, schema, as, hints), binds, 1}
+        {query(prefix, {source, schema}, [], as, hints, env.file, env.line), binds, 1}
+
+      {{:{}, _, [:fragment, _, _]} = fragment, params} ->
+        {:ok, prefix} = prefix || {:ok, nil}
+        {query(prefix, fragment, params, as, hints, env.file, env.line), binds, 1}
 
       _other ->
         quoted =
@@ -119,9 +115,9 @@ defmodule Ecto.Query.Builder.From do
     end
   end
 
-  defp query(prefix, source, schema, as, hints) do
+  defp query(prefix, source, params, as, hints, file, line) do
     aliases = if as, do: [{as, 0}], else: []
-    from_fields = [source: {source, schema}, as: as, prefix: prefix, hints: hints]
+    from_fields = [source: source, params: params, as: as, prefix: prefix, hints: hints, file: file, line: line]
 
     query_fields = [
       from: {:%, [], [Ecto.Query.FromExpr, {:%{}, [], from_fields}]},
