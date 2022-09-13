@@ -140,10 +140,6 @@ defmodule Ecto.Query.Builder.Preload do
   runtime work.
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
-  def build({:fragment, _, _} = fragment, _binding, _expr, _env) do
-    Builder.error! "cannot preload associations with a fragment source, got: #{Macro.to_string(fragment)}"
-  end
-
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
     {preloads, assocs} = escape(expr, binding)
