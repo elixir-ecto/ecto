@@ -1225,4 +1225,17 @@ defmodule Ecto.Changeset.HasAssocTest do
     changeset = cast(%Author{}, %{posts: [%{}]}, :posts)
     assert Changeset.traverse_validations(changeset, &(&1)) == %{posts: [%{title: [length: [min: 3]]}]}
   end
+
+  @tag :not_loaded
+  test "insert not loaded assocs" do
+    loaded = put_in %Author{id: 1}.__meta__.state, :loaded
+    TestRepo.insert!(loaded)
+  end
+
+  @tag :not_loaded
+  test "update not loaded assocs" do
+    loaded = put_in %Author{id: 1}.__meta__.state, :loaded
+    cs = Changeset.change(loaded, %{})
+    TestRepo.update!(cs)
+  end
 end
