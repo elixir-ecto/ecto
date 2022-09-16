@@ -474,4 +474,11 @@ defmodule Ecto.Repo.BelongsToTest do
     refute_received {:transaction, _}
     refute_received {:rollback, _}
   end
+
+  test "ignore not loaded assoc on insert" do
+    schema = %MySchema{}
+    %{assoc: %Ecto.Association.NotLoaded{}} = schema
+    loaded = put_in schema.__meta__.state, :loaded
+    TestRepo.insert!(loaded)
+  end
 end

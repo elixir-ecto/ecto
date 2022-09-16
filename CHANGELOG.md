@@ -21,7 +21,9 @@
   * [Ecto.Query] Don't select struct fields overridden with `nil`
   * [Ecto.Query] Fix `select_merge` not tracking `load_in_query: false` field
   * [Ecto.Query] Fix field source when used in `json_extract_path`
+  * [Ecto.Query] Properly build CTEs at compile time
   * [Ecto.Repo] Fix `insert_all` query parameter count when using value queries alongside `placeholder`
+  * [Ecto.Schema] Ignore associations that aren't loaded on insert
 
 ## v3.8.4 (2022-06-04)
 

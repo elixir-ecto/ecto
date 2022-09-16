@@ -537,7 +537,7 @@ defmodule Ecto.Changeset.Relation do
             # This is partly reimplementing the logic behind put_relation
             # in Ecto.Changeset but we need to do it in a way where we have
             # control over the current value.
-            value = load!(struct, Map.get(struct, field))
+            value = not_loaded_to_empty(Map.get(struct, field))
             empty = empty(embed_or_assoc)
             case change(embed_or_assoc, value, empty) do
               {:ok, change, _} when change != empty ->
@@ -562,4 +562,9 @@ defmodule Ecto.Changeset.Relation do
       _  -> %{changeset | errors: errors ++ changeset.errors, valid?: false, changes: changes}
     end
   end
+
+  defp not_loaded_to_empty(%NotLoaded{__cardinality__: cardinality}),
+    do: cardinality_to_empty(cardinality)
+
+  defp not_loaded_to_empty(loaded), do: loaded
 end

@@ -644,4 +644,11 @@ defmodule Ecto.Repo.ManyToManyTest do
     refute_received {:rollback, _}
     refute_received {:insert_all, _, _}
   end
+
+  test "ignore not loaded assoc on insert" do
+    schema = %MySchema{}
+    %{assocs: %Ecto.Association.NotLoaded{}} = schema
+    loaded = put_in schema.__meta__.state, :loaded
+    TestRepo.insert!(loaded)
+  end
 end
