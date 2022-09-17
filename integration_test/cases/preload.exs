@@ -774,7 +774,8 @@ defmodule Ecto.Integration.PreloadTest do
       TestRepo.insert!(%Comment{text: "c1", post: p1})
 
       q1 = from c in Comment, where: c.text == "a"
-      q2 = from c in Comment, where: c.text == "b"
+      fields = Comment.__schema__(:fields) ++ [:post_id]
+      q2 = from c in Comment, select: map(c, ^fields), where: c.text == "b"
       query = union(q1, ^q2)
 
       p1 = TestRepo.preload([p1], [{:comments, query}], [])
