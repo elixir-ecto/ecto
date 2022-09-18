@@ -1509,7 +1509,7 @@ defmodule Ecto.RepoTest do
       end
     end
 
-    test "raise if combination query is used for many association" do
+    test "raise if a combination query is used to preload a many association" do
       query = from(c in MySchemaChild)
 
       msg = ~r"union queries must be wrapped inside of a subquery"
