@@ -207,6 +207,14 @@ defmodule Ecto.ChangesetTest do
     assert changeset.changes == %{}
   end
 
+  test "cast/4: with force_changes" do
+    params = %{"title" => "", "body" => nil}
+    struct = %Post{title: "", body: nil}
+
+    changeset = cast(struct, params, ~w(title body)a, force_changes: true)
+    assert changeset.changes == %{title: "", body: nil}
+  end
+
   test "cast/4: with data and types" do
     data   = {%{title: "hello"}, %{title: :string, upvotes: :integer}}
     params = %{"title" => "world", "upvotes" => "0"}
