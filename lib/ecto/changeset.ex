@@ -387,35 +387,38 @@ defmodule Ecto.Changeset do
 
   """
   @spec change(Ecto.Schema.t | t | {data, types}, %{atom => term} | Keyword.t) :: t
-  def change(data, changes \\ %{})
+  def change(data, changes \\ %{}, opts \\ [])
 
-  def change({data, types}, changes) when is_map(data) do
-    change(%Changeset{data: data, types: Enum.into(types, %{}), valid?: true}, changes)
+  def change({data, types}, changes, opts) when is_map(data) do
+    change(%Changeset{data: data, types: Enum.into(types, %{}), valid?: true}, changes, opts)
   end
 
-  def change(%Changeset{types: nil}, _changes) do
+  def change(%Changeset{types: nil}, _changes, _opts) do
     raise ArgumentError, "changeset does not have types information"
   end
 
-  def change(%Changeset{changes: changes, types: types} = changeset, new_changes)
+  def change(%Changeset{changes: changes, types: types} = changeset, new_changes, opts)
       when is_map(new_changes) or is_list(new_changes) do
-    {changes, errors, valid?} =
+    {changes, errors, valid?, _force?} =
       get_changed(changeset.data, types, changes, new_changes,
-                  changeset.errors, changeset.valid?)
+                  changeset.errors, changeset.valid?, Keyword.get(opts, :force_changes, false))
     %{changeset | changes: changes, errors: errors, valid?: valid?}
   end
 
-  def change(%{__struct__: struct} = data, changes) when is_map(changes) or is_list(changes) do
+  def change(%{__struct__: struct} = data, changes, opts) when is_map(changes) or is_list(changes) do
     types = struct.__changeset__()
-    {changes, errors, valid?} = get_changed(data, types, %{}, changes, [], true)
+    {changes, errors, valid?, _force?} = get_changed(data, types, %{}, changes, [], true, Keyword.get(opts, :force_changes, false))
     %Changeset{valid?: valid?, data: data, changes: changes,
                errors: errors, types: types}
   end
 
-  defp get_changed(data, types, old_changes, new_changes, errors, valid?) do
-    Enum.reduce(new_changes, {old_changes, errors, valid?}, fn
-      {key, value}, {changes, errors, valid?} ->
-        put_change(data, changes, errors, valid?, key, value, Map.get(types, key))
+  defp get_changed(data, types, old_changes, new_changes, errors, valid?, force?) do
+    Enum.reduce(new_changes, {old_changes, errors, valid?, force?}, fn
+      {key, value}, {changes, errors, valid?, false = _force?} ->
+        {changes, errors, valid?} = put_change(data, changes, errors, valid?, key, value, Map.get(types, key))
+        {changes, errors, valid?, force?}
+      {key, value}, {changes, errors, valid?, true = _force?} ->
+        {Map.put(changes, key, value), errors, valid?, force?}
       _, _ ->
         raise ArgumentError,
               "invalid changes being applied to changeset. " <>
