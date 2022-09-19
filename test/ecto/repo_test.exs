@@ -1512,32 +1512,32 @@ defmodule Ecto.RepoTest do
     test "raise if a combination query is used to preload a many association" do
       query = from(c in MySchemaChild)
 
-      msg = ~r"union queries must be wrapped inside of a subquery"
+      msg = ~r"`union` queries must be wrapped inside of a subquery"
       assert_raise ArgumentError, msg, fn ->
         TestRepo.preload(%MySchema{id: 1}, children: union(query, ^query))
       end
 
-      msg = ~r"union_all queries must be wrapped inside of a subquery"
+      msg = ~r"`union_all` queries must be wrapped inside of a subquery"
       assert_raise ArgumentError, msg, fn ->
         TestRepo.preload(%MySchema{id: 1}, children: union_all(query, ^query))
       end
 
-      msg = ~r"except queries must be wrapped inside of a subquery"
+      msg = ~r"`except` queries must be wrapped inside of a subquery"
       assert_raise ArgumentError, msg, fn ->
         TestRepo.preload(%MySchema{id: 1}, children: except(query, ^query))
       end
 
-      msg = ~r"except_all queries must be wrapped inside of a subquery"
+      msg = ~r"`except_all` queries must be wrapped inside of a subquery"
       assert_raise ArgumentError, msg, fn ->
         TestRepo.preload(%MySchema{id: 1}, children: except_all(query, ^query))
       end
 
-      msg = ~r"intersect queries must be wrapped inside of a subquery"
+      msg = ~r"`intersect` queries must be wrapped inside of a subquery"
       assert_raise ArgumentError, msg, fn ->
         TestRepo.preload(%MySchema{id: 1}, children: intersect(query, ^query))
       end
 
-      msg = ~r"intersect_all queries must be wrapped inside of a subquery"
+      msg = ~r"`intersect_all` queries must be wrapped inside of a subquery"
       assert_raise ArgumentError, msg, fn ->
         TestRepo.preload(%MySchema{id: 1}, children: intersect_all(query, ^query))
       end
