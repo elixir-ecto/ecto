@@ -252,13 +252,20 @@ defmodule Ecto.Repo.Preloader do
 
     # If we are returning many results, we must sort by the key too
     query =
-      case card do
-        :many ->
+      case {card, query.combinations} do
+        {:many, [{kind, _} | []]} ->
+          raise ArgumentError,
+                "`#{kind}` queries must be wrapped inside of a subquery " <>
+                  "when preloading a `has_many` or `many_to_many` association. " <>
+                  "You must also ensure that all members of the `#{kind}` query " <>
+                  "select the parent's foreign key"
+
+        {:many, _} ->
           update_in query.order_bys, fn order_bys ->
             [%Ecto.Query.QueryExpr{expr: preload_order(assoc, query, field), params: [],
                                    file: __ENV__.file, line: __ENV__.line}|order_bys]
           end
-        :one ->
+        {:one, _} ->
           query
       end
 
