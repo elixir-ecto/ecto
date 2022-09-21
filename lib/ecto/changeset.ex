@@ -362,6 +362,12 @@ defmodule Ecto.Changeset do
 
   See `cast/4` if you'd prefer to cast and validate external parameters.
 
+  ## Options
+
+    * `:force_changes` - a boolean indicating whether to include values
+      in `:changes` even if they match the current value or the field's default
+      value. Defaults to `false`
+
   ## Examples
 
       iex> changeset = change(%Post{})
@@ -378,6 +384,10 @@ defmodule Ecto.Changeset do
       iex> changeset = change(%Post{title: "title"}, title: "title")
       iex> changeset.changes
       %{}
+
+      iex> changeset = change(%Post{title: "title"}, %{title: "title"}, force_changes: true)
+      iex> changeset.changes
+      %{title: "title"}
 
       iex> changeset = change(changeset, %{title: "new title", body: "body"})
       iex> changeset.changes.title
