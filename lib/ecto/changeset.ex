@@ -399,7 +399,7 @@ defmodule Ecto.Changeset do
 
   def change(%Changeset{changes: changes, types: types} = changeset, new_changes, opts)
       when is_map(new_changes) or is_list(new_changes) do
-    {changes, errors, valid?, _force?} =
+    {changes, errors, valid?} =
       get_changed(changeset.data, types, changes, new_changes,
                   changeset.errors, changeset.valid?, Keyword.get(opts, :force_changes, false))
     %{changeset | changes: changes, errors: errors, valid?: valid?}
@@ -407,18 +407,19 @@ defmodule Ecto.Changeset do
 
   def change(%{__struct__: struct} = data, changes, opts) when is_map(changes) or is_list(changes) do
     types = struct.__changeset__()
-    {changes, errors, valid?, _force?} = get_changed(data, types, %{}, changes, [], true, Keyword.get(opts, :force_changes, false))
+    {changes, errors, valid?} = get_changed(data, types, %{}, changes, [], true, Keyword.get(opts, :force_changes, false))
     %Changeset{valid?: valid?, data: data, changes: changes,
                errors: errors, types: types}
   end
 
   defp get_changed(data, types, old_changes, new_changes, errors, valid?, force?) do
-    Enum.reduce(new_changes, {old_changes, errors, valid?, force?}, fn
-      {key, value}, {changes, errors, valid?, false = _force?} ->
-        {changes, errors, valid?} = put_change(data, changes, errors, valid?, key, value, Map.get(types, key))
-        {changes, errors, valid?, force?}
-      {key, value}, {changes, errors, valid?, true = _force?} ->
-        {Map.put(changes, key, value), errors, valid?, force?}
+    Enum.reduce(new_changes, {old_changes, errors, valid?}, fn
+      {key, value}, {changes, errors, valid?} ->
+        if force? do
+          {Map.put(changes, key, value), errors, valid?}
+        else
+          put_change(data, changes, errors, valid?, key, value, Map.get(types, key))
+        end
       _, _ ->
         raise ArgumentError,
               "invalid changes being applied to changeset. " <>
@@ -602,7 +603,7 @@ defmodule Ecto.Changeset do
         value = filter_empty_values(type, value, empty_values, defaults, key)
         case Ecto.Type.cast(type, value) do
           {:ok, value} ->
-            if !force? && Ecto.Type.equal?(type, current, value) do
+            if not force? and Ecto.Type.equal?(type, current, value) do
               :missing
             else
               {:ok, value, valid?}
