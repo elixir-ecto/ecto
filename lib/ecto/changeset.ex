@@ -389,6 +389,10 @@ defmodule Ecto.Changeset do
       iex> changeset.changes
       %{title: "title"}
 
+      iex> changeset = change(%Post{}, %{title: nil}, force_changes: true)
+      iex> changeset.changes
+      %{title: nil}
+
       iex> changeset = change(changeset, %{title: "new title", body: "body"})
       iex> changeset.changes.title
       "new title"
