@@ -591,11 +591,6 @@ defmodule Ecto.ChangesetTest do
     assert changeset.data == %Post{body: "bar"}
     assert changeset.changes == %{}
 
-    changeset = change(%Post{body: "bar"}, [body: "bar"], force_changes: true)
-    assert changeset.valid?
-    assert changeset.data == %Post{body: "bar"}
-    assert changeset.changes == %{body: "bar"}
-
     changeset = change(%Post{body: "bar"}, %{body: "bar", title: "foo"})
     assert changeset.valid?
     assert changeset.data == %Post{body: "bar"}
@@ -630,12 +625,6 @@ defmodule Ecto.ChangesetTest do
     assert changeset.data == %{title: "hello"}
     assert changeset.changes == %{}
     assert apply_changes(changeset) == %{title: "hello"}
-
-    changeset = change(datatypes, [title: "hello"], force_changes: true)
-    assert changeset.valid?
-    assert changeset.data == %{title: "hello"}
-    assert changeset.changes == %{title: "hello"}
-    assert apply_changes(changeset) == %{title: "hello"}
   end
 
   test "change/2 with a changeset" do
@@ -655,9 +644,6 @@ defmodule Ecto.ChangesetTest do
     changeset = change(base_changeset, body: nil)
     assert changeset.changes == %{title: "title"}
 
-    changeset = change(base_changeset, [body: nil], force_changes: true)
-    assert changeset.changes == %{title: "title", body: nil}
-
     changeset = change(base_changeset, %{upvotes: nil})
     assert changeset.changes == %{title: "title", upvotes: nil}
 
@@ -675,9 +661,6 @@ defmodule Ecto.ChangesetTest do
     post = %Post{decimal: Decimal.new("1.0")}
     changeset = change(post, decimal: Decimal.new(1))
     assert changeset.changes == %{}
-
-    changeset = change(post, [decimal: Decimal.new(1)], force_changes: true)
-    assert changeset.changes == %{decimal: Decimal.new(1)}
   end
 
   test "change/2 with unknown field" do

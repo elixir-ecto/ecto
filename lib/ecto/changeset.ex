@@ -362,12 +362,6 @@ defmodule Ecto.Changeset do
 
   See `cast/4` if you'd prefer to cast and validate external parameters.
 
-  ## Options
-
-    * `:force_changes` - a boolean indicating whether to include values
-      in `:changes` even if they match the current value or the field's default
-      value. Defaults to `false`
-
   ## Examples
 
       iex> changeset = change(%Post{})
@@ -385,14 +379,6 @@ defmodule Ecto.Changeset do
       iex> changeset.changes
       %{}
 
-      iex> changeset = change(%Post{title: "title"}, %{title: "title"}, force_changes: true)
-      iex> changeset.changes
-      %{title: "title"}
-
-      iex> changeset = change(%Post{}, %{title: nil}, force_changes: true)
-      iex> changeset.changes
-      %{title: nil}
-
       iex> changeset = change(changeset, %{title: "new title", body: "body"})
       iex> changeset.changes.title
       "new title"
@@ -401,39 +387,35 @@ defmodule Ecto.Changeset do
 
   """
   @spec change(Ecto.Schema.t | t | {data, types}, %{atom => term} | Keyword.t) :: t
-  def change(data, changes \\ %{}, opts \\ [])
+  def change(data, changes \\ %{})
 
-  def change({data, types}, changes, opts) when is_map(data) do
-    change(%Changeset{data: data, types: Enum.into(types, %{}), valid?: true}, changes, opts)
+  def change({data, types}, changes) when is_map(data) do
+    change(%Changeset{data: data, types: Enum.into(types, %{}), valid?: true}, changes)
   end
 
-  def change(%Changeset{types: nil}, _changes, _opts) do
+  def change(%Changeset{types: nil}, _changes) do
     raise ArgumentError, "changeset does not have types information"
   end
 
-  def change(%Changeset{changes: changes, types: types} = changeset, new_changes, opts)
+  def change(%Changeset{changes: changes, types: types} = changeset, new_changes)
       when is_map(new_changes) or is_list(new_changes) do
     {changes, errors, valid?} =
       get_changed(changeset.data, types, changes, new_changes,
-                  changeset.errors, changeset.valid?, Keyword.get(opts, :force_changes, false))
+                  changeset.errors, changeset.valid?)
     %{changeset | changes: changes, errors: errors, valid?: valid?}
   end
 
-  def change(%{__struct__: struct} = data, changes, opts) when is_map(changes) or is_list(changes) do
+  def change(%{__struct__: struct} = data, changes) when is_map(changes) or is_list(changes) do
     types = struct.__changeset__()
-    {changes, errors, valid?} = get_changed(data, types, %{}, changes, [], true, Keyword.get(opts, :force_changes, false))
+    {changes, errors, valid?} = get_changed(data, types, %{}, changes, [], true)
     %Changeset{valid?: valid?, data: data, changes: changes,
                errors: errors, types: types}
   end
 
-  defp get_changed(data, types, old_changes, new_changes, errors, valid?, force?) do
+  defp get_changed(data, types, old_changes, new_changes, errors, valid?) do
     Enum.reduce(new_changes, {old_changes, errors, valid?}, fn
       {key, value}, {changes, errors, valid?} ->
-        if force? do
-          {Map.put(changes, key, value), errors, valid?}
-        else
-          put_change(data, changes, errors, valid?, key, value, Map.get(types, key))
-        end
+        put_change(data, changes, errors, valid?, key, value, Map.get(types, key))
       _, _ ->
         raise ArgumentError,
               "invalid changes being applied to changeset. " <>
