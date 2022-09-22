@@ -213,6 +213,9 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(title body)a, force_changes: true)
     assert changeset.changes == %{title: "", body: nil}
+
+    changeset = cast(struct, %{"title" => "not empty", "body" => "empty"}, ~w(title body)a, force_changes: true, empty_values: ["empty"])
+    assert changeset.changes == %{title: "not empty", body: nil}
   end
 
   test "cast/4: with data and types" do
