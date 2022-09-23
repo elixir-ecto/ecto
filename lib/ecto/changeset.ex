@@ -451,8 +451,7 @@ defmodule Ecto.Changeset do
       Empty values are always replaced by the default value of the respective field.
       If the field is an array type, any empty value inside of the array will be removed.
       Defaults to `[""]`
-    * `:force_changes` - a boolean indicating whether to include default values
-      in `:changes`. Defaults to `false`
+    * `:force_changes` - a boolean indicating whether to include values that don't alter the current data in `:changes`. Defaults to `false`
 
   ## Examples
 
