@@ -436,8 +436,8 @@ defmodule Ecto.Changeset do
   During casting, all `permitted` parameters whose values match the specified
   type information will have their key name converted to an atom and stored
   together with the value as a change in the `:changes` field of the changeset.
-  If the cast value matches the default value for the schema, it will not be
-  included in the `:changes` unless the `:force_changes: true` option is
+  If the cast value matches the current value for the field, it will not be
+  included in `:changes` unless the `:force_changes: true` option is
   provided. All parameters that are not explicitly permitted are ignored.
 
   If casting of all fields is successful, the changeset is returned as valid.
