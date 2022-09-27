@@ -17,7 +17,7 @@ defmodule Ecto.Query.Builder.Dynamic do
     quote do
       %Ecto.Query.DynamicExpr{fun: fn query ->
                                 _ = unquote(query)
-                                {unquote(expr), unquote(params), unquote(acc.subqueries)}
+                                {unquote(expr), unquote(params), unquote(Enum.reverse(acc.subqueries))}
                               end,
                               binding: unquote(Macro.escape(binding)),
                               file: unquote(env.file),
