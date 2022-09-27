@@ -16,6 +16,10 @@ defmodule Ecto.EnumTest do
       field :my_string_enums, {:array, Ecto.Enum}, values: [foo: "fooo", bar: "baar", baz: "baaz"]
       field :virtual_enum, Ecto.Enum, values: [:foo, :bar, :baz], virtual: true
       field :not_enum, :string
+      embeds_one :embed, Embed do
+        field :dumped_enum, Ecto.Enum, values: [foo: 1, bar: 2], embed_as: :dumped
+        field :non_dumped_enum, Ecto.Enum, values: [foo: 1, bar: 2], embed_as: :values
+      end
     end
   end
 
@@ -28,7 +32,8 @@ defmodule Ecto.EnumTest do
                   on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                   on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                   mappings: [foo: "foo", bar: "bar", baz: "baz"],
-                  type: :string
+                  type: :string,
+                  embed_as: :self
                 }}
 
       assert EnumSchema.__schema__(:type, :my_enums) ==
@@ -40,7 +45,8 @@ defmodule Ecto.EnumTest do
                     on_load: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                     on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                     mappings: [foo: "foo", bar: "bar", baz: "baz"],
-                    type: :string
+                    type: :string,
+                    embed_as: :self
                   }}
                }
 
@@ -51,7 +57,8 @@ defmodule Ecto.EnumTest do
                   on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
                   on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                   mappings: [foo: 1, bar: 2, baz: 5],
-                  type: :integer
+                  type: :integer,
+                  embed_as: :self
                 }}
 
       assert EnumSchema.__schema__(:type, :my_integer_enums) ==
@@ -63,7 +70,8 @@ defmodule Ecto.EnumTest do
                     on_load: %{2 => :bar, 5 => :baz, 1 => :foo},
                     on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                     mappings: [foo: 1, bar: 2, baz: 5],
-                    type: :integer
+                    type: :integer,
+                    embed_as: :self
                   }}
                }
 
@@ -74,7 +82,8 @@ defmodule Ecto.EnumTest do
                   on_load: %{"baar" => :bar, "baaz" => :baz, "fooo" => :foo},
                   on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                   mappings: [foo: "fooo", bar: "baar", baz: "baaz"],
-                  type: :string
+                  type: :string,
+                  embed_as: :self
                 }}
 
       assert EnumSchema.__schema__(:type, :my_string_enums) ==
@@ -86,9 +95,32 @@ defmodule Ecto.EnumTest do
                     on_load: %{"baar" => :bar, "baaz" => :baz, "fooo" => :foo},
                     on_cast: %{"bar" => :bar, "baz" => :baz, "foo" => :foo},
                     mappings: [foo: "fooo", bar: "baar", baz: "baaz"],
-                    type: :string
+                    type: :string,
+                    embed_as: :self
                   }}
                }
+
+      assert EnumSchema.Embed.__schema__(:type, :non_dumped_enum) ==
+               {:parameterized, Ecto.Enum,
+                  %{
+                    on_dump: %{foo: 1, bar: 2},
+                    on_load: %{1 => :foo, 2 => :bar},
+                    on_cast: %{"foo" => :foo, "bar" => :bar},
+                    mappings: [foo: 1, bar: 2],
+                    type: :integer,
+                    embed_as: :self
+                  }}
+
+      assert EnumSchema.Embed.__schema__(:type, :dumped_enum) ==
+               {:parameterized, Ecto.Enum,
+                %{
+                  on_dump: %{foo: 1, bar: 2},
+                  on_load: %{1 => :foo, 2 => :bar},
+                  on_cast: %{"foo" => :foo, "bar" => :bar},
+                  mappings: [foo: 1, bar: 2],
+                  type: :integer,
+                  embed_as: :dump
+                }}
     end
 
     test "type" do
@@ -163,6 +195,24 @@ defmodule Ecto.EnumTest do
 
           schema "duplicate_values" do
             field :name, Ecto.Enum, values: [foo: 1, bar: 1]
+          end
+        end
+      end
+    end
+
+    test "invalid `:embed_as` option" do
+      message = """
+      the `:embed_as` option for `Ecto.Enum` accepts either `:values` or `:dumped`,
+      received: `:invalid`
+      """
+
+      assert_raise ArgumentError, message, fn ->
+        defmodule SchemaDuplicateEnumMappings do
+          use Ecto.Schema
+          schema "duplicate_values" do
+            embeds_one :embed, Embed do
+              field :name, Ecto.Enum, values: [:foo, :bar], embed_as: :invalid
+            end
           end
         end
       end
@@ -316,6 +366,16 @@ defmodule Ecto.EnumTest do
                TestRepo.insert!(%EnumSchema{my_integer_enums: [:foo]})
 
       assert_receive {:insert, %{fields: [my_integer_enums: [1]]}}
+
+      assert %EnumSchema{embed: %{dumped_enum: :foo}} =
+               TestRepo.insert!(%EnumSchema{embed: %EnumSchema.Embed{dumped_enum: :foo}})
+
+      assert_receive {:insert, %{fields:  [embed: %{dumped_enum: 1}]}}
+
+      assert %EnumSchema{embed: %{non_dumped_enum: :foo}} =
+               TestRepo.insert!(%EnumSchema{embed: %EnumSchema.Embed{non_dumped_enum: :foo}})
+
+      assert_receive {:insert, %{fields:  [embed: %{non_dumped_enum: :foo}]}}
     end
 
     test "rejects invalid atom" do
@@ -365,23 +425,29 @@ defmodule Ecto.EnumTest do
 
   describe "load" do
     test "loads valid values" do
-      Process.put(:test_repo_all_results, {1, [[1, "foo", nil, nil, nil, nil, nil, nil]]})
+      Process.put(:test_repo_all_results, {1, [[1, "foo", nil, nil, nil, nil, nil, nil, %{}]]})
       assert [%Ecto.EnumTest.EnumSchema{my_enum: :foo}] = TestRepo.all(EnumSchema)
 
-      Process.put(:test_repo_all_results, {1, [[1, nil, ["foo"], nil, nil, nil, nil, nil]]})
+      Process.put(:test_repo_all_results, {1, [[1, nil, ["foo"], nil, nil, nil, nil, nil, %{}]]})
       assert [%Ecto.EnumTest.EnumSchema{my_enums: [:foo]}] = TestRepo.all(EnumSchema)
 
-      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, "fooo", nil, nil]]})
-      assert [%Ecto.EnumTest.EnumSchema{my_string_enum: :foo}] = TestRepo.all(EnumSchema)
-
-      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, nil, ["fooo"], nil, nil]]})
-      assert [%Ecto.EnumTest.EnumSchema{my_string_enums: [:foo]}] = TestRepo.all(EnumSchema)
-
-      Process.put(:test_repo_all_results, {1, [[1, nil, nil, 1, nil, nil, nil, nil]]})
+      Process.put(:test_repo_all_results, {1, [[1, nil, nil, 1, nil, nil, nil, nil, %{}]]})
       assert [%Ecto.EnumTest.EnumSchema{my_integer_enum: :foo}] = TestRepo.all(EnumSchema)
 
-      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, [1], nil, nil, nil]]})
+      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, [1], nil, nil, nil, %{}]]})
       assert [%Ecto.EnumTest.EnumSchema{my_integer_enums: [:foo]}] = TestRepo.all(EnumSchema)
+
+      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, "fooo", nil, nil, %{}]]})
+      assert [%Ecto.EnumTest.EnumSchema{my_string_enum: :foo}] = TestRepo.all(EnumSchema)
+
+      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, nil, ["fooo"], nil, nil, %{}]]})
+      assert [%Ecto.EnumTest.EnumSchema{my_string_enums: [:foo]}] = TestRepo.all(EnumSchema)
+
+      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, nil, nil, nil, %{"dumped_enum" => 1}]]})
+      assert [%Ecto.EnumTest.EnumSchema{embed: %{dumped_enum: :foo}}] = TestRepo.all(EnumSchema)
+
+      Process.put(:test_repo_all_results, {1, [[1, nil, nil, nil, nil, nil, nil, nil, %{"non_dumped_enum" => "foo"}]]})
+      assert [%Ecto.EnumTest.EnumSchema{embed: %{non_dumped_enum: :foo}}] = TestRepo.all(EnumSchema)
     end
 
     test "reject invalid values" do
