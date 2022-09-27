@@ -22,6 +22,7 @@
   * [Ecto.Query] Fix `select_merge` not tracking `load_in_query: false` field
   * [Ecto.Query] Fix field source when used in `json_extract_path`
   * [Ecto.Query] Properly build CTEs at compile time
+  * [Ecto.Query] Properly order subqueries in `dynamic`
   * [Ecto.Repo] Fix `insert_all` query parameter count when using value queries alongside `placeholder`
   * [Ecto.Repo] Raise if combination query is used in a `many` preload
   * [Ecto.Schema] Ignore associations that aren't loaded on insert
