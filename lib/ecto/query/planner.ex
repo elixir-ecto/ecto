@@ -1359,13 +1359,11 @@ defmodule Ecto.Query.Planner do
   defp normalize_selected_as(fields, _allow_alias?, aliases) when aliases == %{}, do: fields
 
   defp normalize_selected_as(_fields, false, aliases) do
-    alias_names = aliases |> Map.keys() |> Enum.join(", ")
-
     raise ArgumentError,
           "`selected_as/2` can only be used in the outer most `select` expression. " <>
             "If you are attempting to alias a field from a subquery or cte, it is not allowed " <>
             "because the fields are automatically aliased by the corresponding map/struct key. " <>
-            "The following field aliases were specified: #{alias_names}."
+            "The following field aliases were specified: #{inspect(Map.keys(aliases))}."
   end
 
   defp normalize_selected_as(fields, true, _aliases) do
