@@ -485,30 +485,38 @@ defmodule Ecto.Query.SubqueryTest do
     test "in multiple dynamic" do
       cbar = from(c in Comment, where: c.text == ^"bar", select: c.post_id)
       cfoo = from(c in Comment, where: c.text == ^"foo", select: c.post_id)
-      d1 = dynamic([p], p.id not in subquery(cbar))
+      cbaz = from(c in Comment, where: c.text == ^"baz", select: c.post_id)
+      d1 = dynamic([p], p.id not in subquery(cbar) and p.id not in subquery(cbaz))
       d2 = dynamic([p], p.id in subquery(cfoo) and ^d1)
       s = from(p in Post, where: ^d2, select: count())
 
       assert {:and, _, [
                 {:in, _, [_, {:subquery, 0}]},
-                {:not, _, [{:in, _, [_, {:subquery, 1}]}]},
+                {:and, _, [
+                  {:not, _, [{:in, _, [_, {:subquery, 1}]}]},
+                  {:not, _, [{:in, _, [_, {:subquery, 2}]}]}
+                ]}
               ]} = hd(s.wheres).expr
 
-      assert [{:subquery, 0}, {:subquery, 1}] = hd(s.wheres).params
+      assert [{:subquery, 0}, {:subquery, 1}, {:subquery, 2}] = hd(s.wheres).params
 
       {n, cast_params, dump_params} = normalize_with_params(s)
 
       assert {:and, _, [
                 {:in, _, [_, %Ecto.SubQuery{} = subqueryfoo]},
-                {:not, _, [{:in, _, [_, %Ecto.SubQuery{} = subquerybar]}]},
+                {:and, _, [
+                  {:not, _, [{:in, _, [_, %Ecto.SubQuery{} = subquerybar]}]},
+                  {:not, _, [{:in, _, [_, %Ecto.SubQuery{} = subquerybaz]}]}
+                ]}
               ]} = hd(n.wheres).expr
 
       assert Macro.to_string(hd(subqueryfoo.query.wheres).expr) == "&0.text() == ^0"
       assert Macro.to_string(hd(subquerybar.query.wheres).expr) == "&0.text() == ^1"
       assert subqueryfoo.params == [{"foo", "foo"}]
       assert subquerybar.params == [{"bar", "bar"}]
-      assert cast_params == ["foo", "bar"]
-      assert dump_params == ["foo", "bar"]
+      assert subquerybaz.params == [{"baz", "baz"}]
+      assert cast_params == ["foo", "bar", "baz"]
+      assert dump_params == ["foo", "bar", "baz"]
     end
 
     test "with aggregate" do
