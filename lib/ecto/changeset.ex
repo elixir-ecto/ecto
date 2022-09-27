@@ -589,8 +589,9 @@ defmodule Ecto.Changeset do
   defp cast_key(key) when is_atom(key),
     do: {key, Atom.to_string(key)}
 
-  defp cast_key(key),
-    do: raise ArgumentError, "cast/3 expects a list of atom keys, got key: `#{inspect key}`"
+  defp cast_key(key) do
+    raise ArgumentError, "cast/3 expects a list of atom keys, got key: `#{inspect key}`"
+  end
 
   defp cast_field(key, param_key, type, params, current, empty_values, defaults, force?, valid?) do
     case params do
@@ -3018,10 +3019,14 @@ defmodule Ecto.Changeset do
 
   defp get_source(%{data: %{__meta__: %{source: source}}}) when is_binary(source),
     do: source
-  defp get_source(%{data: data}), do:
+
+  defp get_source(%{data: data}) do
     raise ArgumentError, "cannot add constraint to changeset because it does not have a source, got: #{inspect data}"
-  defp get_source(item), do:
+  end
+
+  defp get_source(item) do
     raise ArgumentError, "cannot add constraint because a changeset was not supplied, got: #{inspect item}"
+  end
 
   defp get_assoc(%{types: types}, assoc) do
     case Map.fetch(types, assoc) do

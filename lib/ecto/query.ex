@@ -423,7 +423,7 @@ defmodule Ecto.Query do
     # * value is the tagged value
     # * tag is the directly tagged value, like Ecto.UUID
     # * type is the underlying tag type, like :string
-    defstruct [:value, :tag, :type]
+    defstruct [:tag, :type, :value]
   end
 
   @type t :: %__MODULE__{}

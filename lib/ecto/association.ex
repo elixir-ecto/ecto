@@ -441,10 +441,11 @@ defmodule Ecto.Association do
   def validate_defaults!(_module, _name, defaults) when is_list(defaults),
     do: defaults
 
-  def validate_defaults!(_module, name, defaults),
-    do: raise ArgumentError,
-              "expected defaults for #{inspect name} to be a keyword list " <>
-                "or a {module, fun, args} tuple, got: `#{inspect defaults}`"
+  def validate_defaults!(_module, name, defaults) do
+    raise ArgumentError,
+          "expected defaults for #{inspect name} to be a keyword list " <>
+            "or a {module, fun, args} tuple, got: `#{inspect defaults}`"
+  end
 
   @doc """
   Validates `preload_order` for association named `name`.

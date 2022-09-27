@@ -37,26 +37,6 @@ defmodule Ecto.Enum do
   error will be raised). Attempting to load any string/integer not represented
   by an atom in the list will be invalid.
 
-  `Ecto.Enum` allows to customize how fields are dumped within embeds through the
-  `:embed_as` option. Two alternatives are supported: `:values`, which will save
-  the enum keys (and not their respective mapping), and `:dumped`, which will save
-  the mapped value. The default is `:values`. For example, assuming the following
-  schema:
-
-      defmodule EnumSchema do
-        use Ecto.Schema
-
-        schema "my_schema" do
-          embeds_one :embed, Embed do
-            field :embed_as_values, Ecto.Enum, values: [foo: 1, bar: 2], embed_as: :values
-            field :embed_as_dump, Ecto.Enum, values: [foo: 1, bar: 2], embed_as: :dump
-          end
-        end
-      end
-
-  The `:embed_as_values` field value will be saved as `:foo | :bar`, while the
-  `:embed_as_dump` field value will be saved as `1 | 2`.
-
   The helper function `mappings/2` returns the mappings for a given schema and
   field, which can be used in places like form drop-downs. For example, given
   the following schema:
@@ -76,6 +56,28 @@ defmodule Ecto.Enum do
 
   If you want the values only, you can use `Ecto.Enum.values/2`, and if you want
   the dump values only, you can use `Ecto.Enum.dump_values/2`.
+
+  ## Embeds
+
+  `Ecto.Enum` allows to customize how fields are dumped within embeds through the
+  `:embed_as` option. Two alternatives are supported: `:values`, which will save
+  the enum keys (and not their respective mapping), and `:dumped`, which will save
+  the dumped value. The default is `:values`. For example, assuming the following
+  schema:
+
+      defmodule EnumSchema do
+        use Ecto.Schema
+
+        schema "my_schema" do
+          embeds_one :embed, Embed do
+            field :embed_as_values, Ecto.Enum, values: [foo: 1, bar: 2], embed_as: :values
+            field :embed_as_dump, Ecto.Enum, values: [foo: 1, bar: 2], embed_as: :dump
+          end
+        end
+      end
+
+  The `:embed_as_values` field value will save `:foo | :bar`, while the
+  `:embed_as_dump` field value will save as `1 | 2`.
   """
 
   use Ecto.ParameterizedType
@@ -116,14 +118,21 @@ defmodule Ecto.Enum do
     on_load = Map.new(mappings, fn {key, val} -> {val, key} end)
     on_dump = Map.new(mappings)
     on_cast = Map.new(mappings, fn {key, _} -> {Atom.to_string(key), key} end)
-    embed_as = case Keyword.get(opts, :embed_as, :values) do
-      :values -> :self
-      :dumped -> :dump
-      other -> raise ArgumentError, """
-      the `:embed_as` option for `Ecto.Enum` accepts either `:values` or `:dumped`,
-      received: `#{inspect(other)}`
-      """
-    end
+
+    embed_as =
+      case Keyword.get(opts, :embed_as, :values) do
+        :values ->
+          :self
+
+        :dumped ->
+          :dump
+
+        other ->
+          raise ArgumentError, """
+          the `:embed_as` option for `Ecto.Enum` accepts either `:values` or `:dumped`,
+          received: `#{inspect(other)}`
+          """
+      end
 
     %{
       on_load: on_load,

@@ -628,7 +628,7 @@ defmodule Ecto.Repo.Schema do
     end
   end
   defp put_repo_and_action(%{action: given}, action, repo, _tuplet) when given != nil and given != action,
-    do: raise ArgumentError, "a changeset with action #{inspect given} was given to #{inspect repo}.#{action}/2"
+    do: raise(ArgumentError, "a changeset with action #{inspect given} was given to #{inspect repo}.#{action}/2")
   defp put_repo_and_action(changeset, action, repo, {_adapter_meta, opts}),
     do: %{changeset | action: action, repo: repo, repo_opts: opts}
 

@@ -1,10 +1,11 @@
 # Changelog for v3.x
 
-## v3.9.0-dev (unreleased)
+## v3.9.0 (2022-09-27)
 
 ### Enhancements
 
-  * [Ecto.Schema] Support preloading associations in embedded schemas
+  * [Ecto.Changeset] Add `:force_changes` option to `cast/4`
+  * [Ecto.Enum] Allow enum fields to be embed either as their values or their dumped versions
   * [Ecto.Query] Support `^%{field: dynamic(...)}` in `select` and `select_merge`
   * [Ecto.Query] Support `%{field: subquery(...)}` in `select` and `select_merge`
   * [Ecto.Query] Support select aliases through `selected_as/1` and `selected_as/2`
@@ -13,6 +14,7 @@
   * [Ecto.Query] Allow fragment sources in keyword queries
   * [Ecto.Repo] Support `idle_interval` query parameter in connection URL
   * [Ecto.Repo] Log human-readable UUIDs by using pre-dumped query parameters
+  * [Ecto.Schema] Support preloading associations in embedded schemas
 
 ### Bug fix
 
