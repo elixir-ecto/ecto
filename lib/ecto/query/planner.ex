@@ -1328,7 +1328,7 @@ defmodule Ecto.Query.Planner do
     # Convert selected_as/2 to a tuple so it can be aliased by the adapters.
     # Don't convert if the select expression belongs to a CTE or subquery
     # because those fields are already automatically aliased.
-    fields = normalize_selected_as(fields, allow_alias?)
+    fields = normalize_selected_as(fields, allow_alias?, select.aliases)
 
     {fields, preprocess, from} =
       case from do
@@ -1356,20 +1356,17 @@ defmodule Ecto.Query.Planner do
     {put_in(query.select.fields, fields), select}
   end
 
-  defp normalize_selected_as(fields, false) do
-    Enum.map(fields, fn
-      {:selected_as, _, [_, _]} ->
-        raise ArgumentError,
-              "`selected_as/2` can only be used in the outer most `select` expression. " <>
-                "If you are attempting to alias a field from a subquery or cte, it is not allowed " <>
-                "because the fields are automatically aliased by the corresponding map/struct key."
+  defp normalize_selected_as(fields, _allow_alias?, aliases) when aliases == %{}, do: fields
 
-      field ->
-        field
-    end)
+  defp normalize_selected_as(_fields, false, aliases) do
+    raise ArgumentError,
+          "`selected_as/2` can only be used in the outer most `select` expression. " <>
+            "If you are attempting to alias a field from a subquery or cte, it is not allowed " <>
+            "because the fields are automatically aliased by the corresponding map/struct key. " <>
+            "The following field aliases were specified: #{inspect(Map.keys(aliases))}."
   end
 
-  defp normalize_selected_as(fields, true) do
+  defp normalize_selected_as(fields, true, _aliases) do
     Enum.map(fields, fn
       {:selected_as, _, [select_expr, name]} -> {name, select_expr}
       field -> field
