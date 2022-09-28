@@ -1914,7 +1914,7 @@ defmodule Ecto.Changeset do
         {data, _} ->
           raise ArgumentError,
                 "unsafe_validate_unique/4 does not work with embedded schemas unless " <>
-                  "the `:query` option is specified, data received: #{inspect(data)}"
+                  "the `:query` option is specified, got: #{inspect(data)}"
       end
 
     fields = List.wrap(fields)
