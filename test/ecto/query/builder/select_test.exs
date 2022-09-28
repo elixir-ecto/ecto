@@ -132,10 +132,12 @@ defmodule Ecto.Query.Builder.SelectTest do
     end
 
     test "supports aliasing a selected value in select_merge with selected_as/2" do
-      escaped_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :id]}, [], []}, :ident]}
+      escaped_select_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :visits]}, [], []}, :select]}
+      escaped_merge_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :id]}, [], []}, :merge]}
 
-      query = from p in "posts", select: p.visits, select_merge: %{id: selected_as(p.id, :ident)}
-      assert {:merge, [], [{{:., [], [{:&, [], [0]}, :visits]}, [], []}, {:%{}, [], [id: escaped_alias]}]} == query.select.expr
+      query = from p in "posts", select: selected_as(p.visits, :select), select_merge: %{id: selected_as(p.id, :merge)}
+      assert {:merge, [], [escaped_select_alias, {:%{}, [], [id: escaped_merge_alias]}]} == query.select.expr
+      assert %{select: _, merge: _} = query.select.aliases
     end
 
     test "raises if name given to selected_as/2 is not an atom" do
@@ -147,11 +149,15 @@ defmodule Ecto.Query.Builder.SelectTest do
     end
 
     test "raises if the name given to selected_as/2 already exists" do
-      message = "the alias `:ident` has been specified more than once using `selected_as/2`"
+      message = "the alias `:visits` has been specified more than once using `selected_as/2`"
 
       assert_raise Ecto.Query.CompileError, message, fn ->
-        select_expr = quote do %{id: selected_as(p.id, :ident), id2: selected_as(p.id, :ident)} end
+        select_expr = quote do %{visits: selected_as(p.visits, :visits), visits2: selected_as(p.visits, :visits)} end
         escape(select_expr, [p: 0], __ENV__)
+      end
+
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        from p in "posts", select: selected_as(p.visits, :visits), select_merge: %{visits: selected_as(p.visits, :visits)}
       end
     end
 

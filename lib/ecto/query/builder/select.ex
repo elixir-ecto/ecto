@@ -117,8 +117,8 @@ defmodule Ecto.Query.Builder.Select do
   defp escape({:selected_as, _, [expr, name]}, {params, acc}, vars, env) when is_atom(name) do
     {escaped, {params, acc}} = Builder.escape(expr, :any, {params, acc}, vars, env)
     expr = {:{}, [], [:selected_as, [], [escaped, name]]}
-    acc = add_alias(acc, name)
-    {expr, {params, acc}}
+    aliases = add_alias(acc.aliases, name)
+    {expr, {params, %{acc | aliases: aliases}}}
   end
 
   defp escape({:selected_as, _, [_expr, name]}, {_params, _acc}, _vars, _env) do
@@ -336,18 +336,18 @@ defmodule Ecto.Query.Builder.Select do
   The callback applied by `build/5` when merging.
   """
   def merge(%Ecto.Query{select: nil} = query, new_select) do
-    merge(query, new_select, {:&, [], [0]}, [], [], %{}, new_select)
+    merge(query, new_select, {:&, [], [0]}, [], [], %{}, %{}, new_select)
   end
   def merge(%Ecto.Query{select: old_select} = query, new_select) do
-    %{expr: old_expr, params: old_params, subqueries: old_subqueries, take: old_take} = old_select
-    merge(query, old_select, old_expr, old_params, old_subqueries, old_take, new_select)
+    %{expr: old_expr, params: old_params, subqueries: old_subqueries, take: old_take, aliases: old_aliases} = old_select
+    merge(query, old_select, old_expr, old_params, old_subqueries, old_take, old_aliases, new_select)
   end
   def merge(query, expr) do
     merge(Ecto.Queryable.to_query(query), expr)
   end
 
-  defp merge(query, select, old_expr, old_params, old_subqueries, old_take, new_select) do
-    %{expr: new_expr, params: new_params, subqueries: new_subqueries, take: new_take} = new_select
+  defp merge(query, select, old_expr, old_params, old_subqueries, old_take, old_aliases, new_select) do
+    %{expr: new_expr, params: new_params, subqueries: new_subqueries, take: new_take, aliases: new_aliases} = new_select
 
     new_expr =
       new_expr
@@ -413,7 +413,8 @@ defmodule Ecto.Query.Builder.Select do
       select | expr: expr,
                params: old_params ++ bump_subquery_params(new_params, old_subqueries),
                subqueries: old_subqueries ++ new_subqueries,
-               take: merge_take(query.from.source, old_expr, old_take, new_take)
+               take: merge_take(query.from.source, old_expr, old_take, new_take),
+               aliases: merge_aliases(old_aliases, new_aliases)
     }
 
     %{query | select: select}
@@ -461,13 +462,13 @@ defmodule Ecto.Query.Builder.Select do
     %{acc | take: take}
   end
 
-  defp add_alias(acc, name) do
-    case acc.aliases do
+  defp add_alias(aliases, name) do
+    case aliases do
       %{^name => _} ->
         Builder.error! "the alias `#{inspect(name)}` has been specified more than once using `selected_as/2`"
 
       aliases ->
-        %{acc | aliases: Map.put(aliases, name, @dummy_value)}
+        Map.put(aliases, name, @dummy_value)
     end
   end
 
@@ -514,5 +515,11 @@ defmodule Ecto.Query.Builder.Select do
   defp merge_take_kind(binding, old, new) do
     Builder.error! "cannot select_merge because the binding at position #{binding} " <>
                    "was previously specified as a `#{old}` and later as `#{new}`"
+  end
+
+  defp merge_aliases(old_aliases, new_aliases) do
+    Enum.reduce(new_aliases, old_aliases, fn {alias, _}, aliases ->
+      add_alias(aliases, alias)
+    end)
   end
 end
