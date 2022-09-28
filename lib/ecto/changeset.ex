@@ -1900,15 +1900,15 @@ defmodule Ecto.Changeset do
             "unsafe_validate_unique/4 does not work with schemaless changesets, got #{inspect(data)}"
     end
 
-    {validations, schema} =
+    schema =
       case {changeset.data, opts[:query]} do
-        # schema
+        # regular schema
         {%schema{__meta__: %Metadata{}}, _} ->
-          {validations, schema}
+          schema
 
         # embedded schema with base query
         {%schema{}, base_query} when base_query != nil ->
-          {validations, schema}
+          schema
 
         # embedded schema without base query
         {data, _} ->
