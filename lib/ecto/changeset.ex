@@ -39,7 +39,7 @@ defmodule Ecto.Changeset do
 
   Some validations may happen against the database but
   they are inherently unsafe. Those validations start with a `unsafe_`
-  prefix, such as `unsafe_validate_unique/3`.
+  prefix, such as `unsafe_validate_unique/4`.
 
   On the other hand, constraints rely on the database and are always safe.
   As a consequence, validations are always checked before constraints.
@@ -284,6 +284,7 @@ defmodule Ecto.Changeset do
   require Ecto.Query
   alias __MODULE__
   alias Ecto.Changeset.Relation
+  alias Ecto.Schema.Metadata
 
   @empty_values [""]
 
@@ -1890,16 +1891,33 @@ defmodule Ecto.Changeset do
 
   """
   @spec unsafe_validate_unique(t, atom | [atom, ...], Ecto.Repo.t, Keyword.t) :: t
-  def unsafe_validate_unique(changeset, fields, repo, opts \\ []) when is_list(opts) do
-    fields = List.wrap(fields)
+  def unsafe_validate_unique(%Changeset{} = changeset, fields, repo, opts \\ []) when is_list(opts) do
     {repo_opts, opts} = Keyword.pop(opts, :repo_opts, [])
+    %{data: data, validations: validations} = changeset
+
+    unless is_struct(data) and function_exported?(data.__struct__, :__schema__, 1) do
+      raise ArgumentError,
+            "unsafe_validate_unique/4 does not work with schemaless changesets, got #{inspect(data)}"
+    end
+
     {validations, schema} =
-      case changeset do
-        %Ecto.Changeset{validations: validations, data: %schema{}} ->
+      case {changeset.data, opts[:query]} do
+        # schema
+        {%schema{__meta__: %Metadata{}}, _} ->
           {validations, schema}
-        %Ecto.Changeset{} ->
-          raise ArgumentError, "unsafe_validate_unique/4 does not work with schemaless changesets"
+
+        # embedded schema with base query
+        {%schema{}, base_query} when base_query != nil ->
+          {validations, schema}
+
+        # embedded schema without base query
+        {data, _} ->
+          raise ArgumentError,
+                "unsafe_validate_unique/4 does not work with embedded schemas unless " <>
+                  "the `:query` option is specified, data received: #{inspect(data)}"
       end
+
+    fields = List.wrap(fields)
     changeset = %{changeset | validations: [{hd(fields), {:unsafe_unique, fields: fields}} | validations]}
 
     where_clause = for field <- fields do
