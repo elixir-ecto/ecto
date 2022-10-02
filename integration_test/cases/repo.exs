@@ -1584,6 +1584,23 @@ defmodule Ecto.Integration.RepoTest do
                results
     end
 
+    @tag :selected_as_with_order_by
+    test "selected_as/2 respects custom types" do
+      TestRepo.insert!(%Post{title: "title1", visits: 1})
+      TestRepo.insert!(%Post{title: "title2"})
+      uuid = Ecto.UUID.generate()
+
+      query =
+        from p in Post,
+          select: %{
+            uuid: type(^uuid, Ecto.UUID) |> selected_as(:uuid),
+            visits: p.visits |> coalesce(0) |> selected_as(:visits)
+          },
+          order_by: [selected_as(:uuid), selected_as(:visits)]
+
+      assert [%{uuid: ^uuid, visits: 0}, %{uuid: ^uuid, visits: 1}] = TestRepo.all(query)
+    end
+
     @tag :selected_as_with_order_by_expression
     test "selected_as/2 with order_by expression" do
       TestRepo.insert!(%Post{posted: ~D[2020-12-21], visits: 3, intensity: 2.0})

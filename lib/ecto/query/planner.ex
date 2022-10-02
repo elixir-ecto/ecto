@@ -1558,6 +1558,11 @@ defmodule Ecto.Query.Planner do
     {{:value, :boolean}, [expr | fields], from}
   end
 
+  defp collect_fields({:selected_as, _, [select_expr, _name]} = expr, fields, from, query, take, keep_literals?, _drop) do
+    {type, _, _} = collect_fields(select_expr, fields, from, query, take, keep_literals?, %{})
+    {type, [expr | fields], from}
+  end
+
   defp collect_fields(expr, fields, from, _query, _take, _keep_literals?, _drop) do
     {{:value, :any}, [expr | fields], from}
   end
