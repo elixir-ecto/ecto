@@ -557,6 +557,18 @@ defmodule Ecto.Query do
 
       from query, select: [:period, :metric], select_merge: ^%{metric: metric}
 
+  Aliasing fields with `selected_as/2` and referencing them with `selected_as/1`
+  is also allowed:
+
+      fields = %{
+        period: dynamic([p], selected_as(p.month, :month)),
+        metric: dynamic([p], p.distance)
+      }
+
+      order = dynamic(selected_as(:month))
+
+      from query, select: ^fields, order_by: ^order
+
   ## Updates
 
   A `dynamic` is also supported inside updates, for example:

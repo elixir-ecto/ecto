@@ -145,12 +145,10 @@ defmodule Ecto.Query.Builder.SelectTest do
       escaped_alias2 = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :title]}, [], []}, :alias2]}
 
       # map
-      fields = %{
-        title: dynamic([p], selected_as(p.title, :alias)),
-        title2: dynamic([p], selected_as(p.title, :alias2))
-      }
+      select_fields = %{title: dynamic([p], selected_as(p.title, :alias))}
+      merge_fields = %{title2: dynamic([p], selected_as(p.title, :alias2))}
 
-      query = from p in "posts", select: ^fields
+      query = from p in "posts", select: ^select_fields, select_merge: ^merge_fields
       assert {:%{}, [], [title: escaped_alias, title2: escaped_alias2]} == query.select.expr
       assert %{alias: _, alias2: _} = query.select.aliases
 
