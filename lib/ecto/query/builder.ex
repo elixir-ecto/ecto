@@ -41,6 +41,8 @@ defmodule Ecto.Query.Builder do
     ntile: {1, :integer}
   ]
 
+  @select_alias_dummy_value []
+
   @typedoc """
   Quoted types store primitive types and types in the format
   {source, quoted}. The latter are handled directly in the planner,
@@ -782,6 +784,12 @@ defmodule Ecto.Query.Builder do
   def escape_params(list), do: Enum.reverse(list)
 
   @doc """
+  Escape the select alias map
+  """
+  @spec escape_select_aliases(map()) :: Macro.t
+  def escape_select_aliases(%{} = aliases), do: {:%{}, [], Map.to_list(aliases)}
+
+  @doc """
   Escapes a variable according to the given binds.
 
   A escaped variable is represented internally as
@@ -1215,6 +1223,19 @@ defmodule Ecto.Query.Builder do
       {:subquery, counter} -> {:subquery, len + counter}
       other -> other
     end)
+  end
+
+  @doc """
+  Called by the select escaper at compile time and dynamic builder at runtime to track select aliases
+  """
+  def add_select_alias(aliases, name) do
+    case aliases do
+      %{^name => _} ->
+        error! "the alias `#{inspect(name)}` has been specified more than once using `selected_as/2`"
+
+      aliases ->
+        Map.put(aliases, name, @select_alias_dummy_value)
+    end
   end
 
   @doc """
