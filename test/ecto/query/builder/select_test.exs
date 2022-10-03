@@ -140,6 +140,34 @@ defmodule Ecto.Query.Builder.SelectTest do
       assert %{select: _, merge: _} = query.select.aliases
     end
 
+    test "supports dynamic selected values with selected_as/2" do
+      escaped_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :title]}, [], []}, :alias]}
+      escaped_alias2 = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :title]}, [], []}, :alias2]}
+
+      # map
+      select_fields = %{title: dynamic([p], selected_as(p.title, :alias))}
+      merge_fields = %{title2: dynamic([p], selected_as(p.title, :alias2))}
+
+      query = from p in "posts", select: ^select_fields, select_merge: ^merge_fields
+      assert {:%{}, [], [title: escaped_alias, title2: escaped_alias2]} == query.select.expr
+      assert %{alias: _, alias2: _} = query.select.aliases
+
+      # struct
+      fields = %Post{
+        title: dynamic([p], selected_as(p.title, :alias)),
+      }
+
+      query = from p in "posts", select: ^fields
+      assert {:%, [], [_, {:%{}, [], [title: escaped_alias]}]} = query.select.expr
+      assert %{alias: _} = query.select.aliases
+
+      # single field
+      field = dynamic([p], selected_as(p.title, :alias))
+      query = from p in "posts", select: ^field
+      assert escaped_alias == query.select.expr
+      assert %{alias: _} = query.select.aliases
+    end
+
     test "raises if name given to selected_as/2 is not an atom" do
       message = "selected_as/2 expects `name` to be an atom, got `\"ident\"`"
 

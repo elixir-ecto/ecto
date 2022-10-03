@@ -5,8 +5,6 @@ defmodule Ecto.Query.Builder.Select do
 
   alias Ecto.Query.Builder
 
-  @dummy_value []
-
   @doc """
   Escapes a select.
 
@@ -117,7 +115,7 @@ defmodule Ecto.Query.Builder.Select do
   defp escape({:selected_as, _, [expr, name]}, {params, acc}, vars, env) when is_atom(name) do
     {escaped, {params, acc}} = Builder.escape(expr, :any, {params, acc}, vars, env)
     expr = {:{}, [], [:selected_as, [], [escaped, name]]}
-    aliases = add_alias(acc.aliases, name)
+    aliases = Builder.add_select_alias(acc.aliases, name)
     {expr, {params, %{acc | aliases: aliases}}}
   end
 
@@ -204,12 +202,13 @@ defmodule Ecto.Query.Builder.Select do
   Called at runtime for interpolated/dynamic selects.
   """
   def select!(kind, query, fields, file, line) when is_map(fields) do
-    {expr, {params, subqueries, _count}} = expand_nested(fields, {[], [], 0}, query)
+    {expr, {params, subqueries, aliases, _count}} = expand_nested(fields, {[], [], %{}, 0}, query)
 
     %Ecto.Query.SelectExpr{
       expr: expr,
       params: Enum.reverse(params),
       subqueries: Enum.reverse(subqueries),
+      aliases: aliases,
       file: file,
       line: line
     }
@@ -231,14 +230,14 @@ defmodule Ecto.Query.Builder.Select do
     end
   end
 
-  defp expand_nested(%Ecto.Query.DynamicExpr{} = dynamic, {params, subqueries, count}, query) do
-    {expr, params, subqueries, count} =
-      Ecto.Query.Builder.Dynamic.partially_expand(query, dynamic, params, subqueries, count)
+  defp expand_nested(%Ecto.Query.DynamicExpr{} = dynamic, {params, subqueries, aliases, count}, query) do
+    {expr, params, subqueries, aliases, count} =
+      Ecto.Query.Builder.Dynamic.partially_expand(query, dynamic, params, subqueries, aliases, count)
 
-    {expr, {params, subqueries, count}}
+    {expr, {params, subqueries, aliases, count}}
   end
 
-  defp expand_nested(%Ecto.SubQuery{} = subquery, {params, subqueries, count}, _query) do
+  defp expand_nested(%Ecto.SubQuery{} = subquery, {params, subqueries, aliases, count}, _query) do
     index = length(subqueries)
     # used both in ast and in parameters, as a placeholder.
     expr = {:subquery, index}
@@ -246,7 +245,7 @@ defmodule Ecto.Query.Builder.Select do
     subqueries = [subquery | subqueries]
     count = count + 1
 
-    {expr, {params, subqueries, count}}
+    {expr, {params, subqueries, aliases, count}}
   end
 
   defp expand_nested(%type{} = fields, acc, query) do
@@ -462,16 +461,6 @@ defmodule Ecto.Query.Builder.Select do
     %{acc | take: take}
   end
 
-  defp add_alias(aliases, name) do
-    case aliases do
-      %{^name => _} ->
-        Builder.error! "the alias `#{inspect(name)}` has been specified more than once using `selected_as/2`"
-
-      aliases ->
-        Map.put(aliases, name, @dummy_value)
-    end
-  end
-
   defp bump_subquery_params(new_params, old_subqueries) do
     len = length(old_subqueries)
 
@@ -519,7 +508,7 @@ defmodule Ecto.Query.Builder.Select do
 
   defp merge_aliases(old_aliases, new_aliases) do
     Enum.reduce(new_aliases, old_aliases, fn {alias, _}, aliases ->
-      add_alias(aliases, alias)
+      Builder.add_select_alias(aliases, alias)
     end)
   end
 end
