@@ -27,7 +27,7 @@ defmodule Ecto.Query.Builder.Dynamic do
     end
   end
 
-  defp escape({:selected_as, _, _} = expr, _type, _params_acc, vars, env) do
+  defp escape({:selected_as, _, [_, _]} = expr, _type, _params_acc, vars, env) do
     Select.escape(expr, vars, env)
   end
 
