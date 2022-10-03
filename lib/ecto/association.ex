@@ -1272,7 +1272,7 @@ defmodule Ecto.Association.ManyToMany do
       where: field(j, ^join_owner_key) in type(^values, {:in, ^owner_key_type})
     )
     |> Ecto.Association.combine_assoc_query(assoc.where)
-    |> Ecto.Association.combine_joins_query(assoc.join_where, 1)
+    |> then(&Ecto.Association.combine_joins_query(&1, assoc.join_where, length(&1.joins)))
   end
 
   @impl true

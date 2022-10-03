@@ -65,6 +65,20 @@ defmodule Ecto.Repo.ManyToManyTest do
     end
   end
 
+  test "handles join_where when preloading with joins" do
+    import Ecto.Query
+
+    schema = %MySchema{id: 1}
+
+    bad_assocs_query = from(a in MyAssoc, join: sa in assoc(a, :sub_assoc), on: sa.y == ^"foo")
+
+    TestRepo.preload(schema, where_assocs: {bad_assocs_query, [:sub_assoc]})
+
+    assert_received {:all, %Ecto.Query{joins: [_, %{on: %{expr: expr}}]}}
+
+    assert "&0.id() == &2.my_assoc_id() and &2.public() == ^1" == Macro.to_string(expr)
+  end
+
   test "handles assocs on insert" do
     sample = %MyAssoc{x: "xyz"}
 
