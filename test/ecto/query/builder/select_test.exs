@@ -141,17 +141,17 @@ defmodule Ecto.Query.Builder.SelectTest do
     end
 
     test "supports dynamic selected values with selected_as/2" do
-      escaped_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :id]}, [], []}, :alias]}
-      escaped_alias2 = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :id]}, [], []}, :alias2]}
+      escaped_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :title]}, [], []}, :alias]}
+      escaped_alias2 = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :title]}, [], []}, :alias2]}
 
       # map
       fields = %{
-        id: dynamic([p], selected_as(p.id, :alias)),
-        id2: dynamic([p], selected_as(p.id, :alias2))
+        title: dynamic([p], selected_as(p.title, :alias)),
+        title2: dynamic([p], selected_as(p.title, :alias2))
       }
 
       query = from p in "posts", select: ^fields
-      assert {:%{}, [], [id: escaped_alias, id2: escaped_alias2]} == query.select.expr
+      assert {:%{}, [], [title: escaped_alias, title2: escaped_alias2]} == query.select.expr
       assert %{alias: _, alias2: _} = query.select.aliases
 
       # struct
@@ -160,11 +160,11 @@ defmodule Ecto.Query.Builder.SelectTest do
       }
 
       query = from p in "posts", select: ^fields
-      assert {:%{}, [], [{:|, [], [{:&, [], [0]}, [id: escaped_alias]]}]}
+      assert {:%, [], [_, {:%{}, [], [title: escaped_alias]}]} = query.select.expr
       assert %{alias: _} = query.select.aliases
 
       # single field
-      field = dynamic([p], selected_as(p.id, :alias))
+      field = dynamic([p], selected_as(p.title, :alias))
       query = from p in "posts", select: ^field
       assert escaped_alias == query.select.expr
       assert %{alias: _} = query.select.aliases
