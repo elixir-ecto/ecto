@@ -1753,6 +1753,16 @@ defmodule Ecto.Query.PlannerTest do
       end
     end
 
+    test "with dynamic/2" do
+      fields = %{
+        id: dynamic([p], selected_as(p.id, :alias)),
+        id2: dynamic([p], selected_as(p.id, :alias2))
+      }
+
+      order = dynamic(selected_as(:alias))
+      from(p in "posts", select: ^fields, order_by: ^order) |> normalize()
+    end
+
     test "raises if selected_as/2 is used in a subquery" do
       message = ~r"`selected_as/2` can only be used in the outer most `select` expression."
 
