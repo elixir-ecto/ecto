@@ -12,7 +12,7 @@ defmodule Ecto.Query.Builder.Dynamic do
   @spec build([Macro.t], Macro.t, Macro.Env.t) :: Macro.t
   def build(binding, expr, env) do
     {query, vars} = Builder.escape_binding(quote(do: query), binding, env)
-    {expr, {params, acc}} = escape(expr, :any, {[], %{subqueries: [], aliases: %{}}}, vars, env)
+    {expr, {params, acc}} = escape(expr, {[], %{subqueries: [], aliases: %{}}}, vars, env)
     aliases = Builder.escape_select_aliases(acc.aliases)
     params = Builder.escape_params(params)
 
@@ -27,12 +27,16 @@ defmodule Ecto.Query.Builder.Dynamic do
     end
   end
 
-  defp escape({:selected_as, _, [_, _]} = expr, _type, _params_acc, vars, env) do
+  defp escape({:selected_as, _, [_, _]} = expr, _params_acc, vars, env) do
     Select.escape(expr, vars, env)
   end
 
-  defp escape(expr, type, params_acc, vars, env) do
-    Builder.escape(expr, type, params_acc, vars, env)
+  defp escape(expr, params_acc, vars, env) do
+    Builder.escape(expr, :any, params_acc, vars, {env, &escape_expansion/5})
+  end
+
+  defp escape_expansion(expr, _type, params_acc, vars, env) do
+    escape(expr, params_acc, vars, env)
   end
 
   @doc """
