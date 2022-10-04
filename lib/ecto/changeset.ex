@@ -1862,11 +1862,6 @@ defmodule Ecto.Changeset do
     * `:message` - the message in case the constraint check fails,
       defaults to "has already been taken".
 
-    * `:match` - how the changeset constraint name is matched against the
-      repo constraint, may be `:exact` or `:suffix`. Defaults to `:exact`.
-      `:suffix` matches any repo constraint which `ends_with?` `:name`
-       to this changeset constraint.
-
     * `:error_key` - the key to which changeset error will be added when
       check fails, defaults to the first field name of the given list of
       fields.
@@ -1933,7 +1928,7 @@ defmodule Ecto.Changeset do
     # If we don't have values for all fields, we can't query for uniqueness
     any_nil_values_for_fields? = Enum.any?(where_clause, &(&1 |> elem(1) |> is_nil()))
 
-    if unrelated_changes? || any_nil_values_for_fields? || any_prior_errors_for_fields? do
+    if unrelated_changes? or any_nil_values_for_fields? or any_prior_errors_for_fields? do
       changeset
     else
       query =
