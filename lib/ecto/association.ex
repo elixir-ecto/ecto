@@ -1267,12 +1267,14 @@ defmodule Ecto.Association.ManyToMany do
 
     # We only need to join in the "join table". Preload and Ecto.assoc expressions can then filter
     # by &1.join_owner_key in ^... to filter down to the associated entries in the related table.
-    from(q in (query || queryable),
-      join: j in ^join_through, on: field(q, ^related_key) == field(j, ^join_related_key),
-      where: field(j, ^join_owner_key) in type(^values, {:in, ^owner_key_type})
-    )
-    |> Ecto.Association.combine_assoc_query(assoc.where)
-    |> Ecto.Association.combine_joins_query(assoc.join_where, 1)
+    query =
+      from(q in (query || queryable),
+        join: j in ^join_through, on: field(q, ^related_key) == field(j, ^join_related_key),
+        where: field(j, ^join_owner_key) in type(^values, {:in, ^owner_key_type})
+      )
+      |> Ecto.Association.combine_assoc_query(assoc.where)
+
+    Ecto.Association.combine_joins_query(query, assoc.join_where, length(query.joins))
   end
 
   @impl true
