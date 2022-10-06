@@ -1,5 +1,18 @@
 # Changelog for v3.x
 
+## v3.9.1 (2022-10-06)
+
+### Enhancements
+
+  * [Ecto.Query] Allow `selected_as` at the root of `dynamic/2`
+  * [Ecto.Query] Allow `selected_as` to be used with `type/2`
+  * [Ecto.Query] Allow `selected_as` to be used with `select_merge`
+
+### Bug fixes
+
+  * [Ecto.Changeset] Reenable support for embedded schemas in `unsafe_validate_unique/4`
+  * [Ecto.Query] Ensure `join_where` conditions preload correctly in `many_to_many` or with queries with one or many joins
+
 ## v3.9.0 (2022-09-27)
 
 ### Enhancements
