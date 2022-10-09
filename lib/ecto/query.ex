@@ -812,7 +812,7 @@ defmodule Ecto.Query do
       from(City, limit: 1)
 
       # Fragment
-      from(f in fragment("generate_series(?, ?) as x", ^0, ^100000), select f.x)
+      from(f in fragment("select generate_series(?::integer, ?::integer) as x", ^0, ^100000), select: f.x)
 
   ## Expressions examples
 
