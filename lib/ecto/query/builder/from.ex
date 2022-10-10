@@ -50,6 +50,8 @@ defmodule Ecto.Query.Builder.From do
   end
 
   defp escape_source(query, _env), do: query
+  
+  @typep hints :: [String.t() | {atom, term}]
 
   @doc """
   Builds a quoted expression.
@@ -58,15 +60,13 @@ defmodule Ecto.Query.Builder.From do
   If possible, it does all calculations at compile time to avoid
   runtime work.
   """
-  @spec build(Macro.t(), Macro.Env.t(), atom, String.t | nil, nil | {:ok, String.t | nil} | [String.t]) ::
+  @spec build(Macro.t(), Macro.Env.t(), atom, {:ok, String.t | nil} | nil, hints) ::
           {Macro.t(), Keyword.t(), non_neg_integer | nil}
-  def build(query, env, as, prefix, maybe_hints) do
-    hints = List.wrap(maybe_hints)
-
+  def build(query, env, as, prefix, hints) do
     unless Enum.all?(hints, &is_valid_hint/1) do
       Builder.error!(
-        "`hints` must be a compile time string, list of strings, or a tuple " <>
-          "got: `#{Macro.to_string(maybe_hints)}`"
+        "`hints` must be a compile time string, list of strings, a tuple, or a list of tuples " <>
+          "got: `#{Macro.to_string(hints)}`"
       )
     end
 
@@ -138,7 +138,7 @@ defmodule Ecto.Query.Builder.From do
   @doc """
   The callback applied by `build/2` to build the query.
   """
-  @spec apply(Ecto.Queryable.t(), non_neg_integer, Macro.t(), {:ok, String.t} | nil, [String.t]) :: Ecto.Query.t()
+  @spec apply(Ecto.Queryable.t(), non_neg_integer, Macro.t(), {:ok, String.t} | nil, hints) :: Ecto.Query.t()
   def apply(query, binds, as, prefix, hints) do
     query =
       query

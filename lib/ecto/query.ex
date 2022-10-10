@@ -863,7 +863,7 @@ defmodule Ecto.Query do
     end
 
     {kw, as, prefix, hints} = collect_as_and_prefix_and_hints(kw, nil, nil, nil)
-    {quoted, binds, count_bind} = Builder.From.build(expr, __CALLER__, as, prefix, hints)
+    {quoted, binds, count_bind} = Builder.From.build(expr, __CALLER__, as, prefix, List.wrap(hints))
     from(kw, __CALLER__, count_bind, quoted, to_query_binds(binds))
   end
 
