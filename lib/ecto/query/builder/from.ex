@@ -51,8 +51,7 @@ defmodule Ecto.Query.Builder.From do
 
   defp escape_source(query, _env), do: query
   
-  @typep dynamic_hint :: {atom, term}
-  @typep hints :: String.t() | dynamic_hint | [String.t() | dynamic_hint]
+  @typep hints :: [String.t() | dynamic_hint]
 
   @doc """
   Builds a quoted expression.
