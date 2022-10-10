@@ -63,13 +63,11 @@ defmodule Ecto.Query.Builder.From do
   """
   @spec build(Macro.t(), Macro.Env.t(), atom, {:ok, String.t | nil} | nil, hints | nil) ::
           {Macro.t(), Keyword.t(), non_neg_integer | nil}
-  def build(query, env, as, prefix, maybe_hints) do
-    hints = List.wrap(maybe_hints)
-
+  def build(query, env, as, prefix, hints) do
     unless Enum.all?(hints, &is_valid_hint/1) do
       Builder.error!(
-        "`hints` must be a compile time string, list of strings, a tuple, or a list of tuples " <>
-          "got: `#{Macro.to_string(maybe_hints)}`"
+        "`hints` must be a list of compile time strings or tuples " <>
+          "got: `#{Macro.to_string(hints)}`"
       )
     end
 
