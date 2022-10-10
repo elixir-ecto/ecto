@@ -65,7 +65,7 @@ defmodule Ecto.Query.Builder.From do
   def build(query, env, as, prefix, hints) do
     unless Enum.all?(hints, &is_valid_hint/1) do
       Builder.error!(
-        "`hints` must be a list of compile time strings or tuples " <>
+        "`hints` must be a compile time string, list of strings, a tuple, or a list of tuples " <>
           "got: `#{Macro.to_string(hints)}`"
       )
     end
