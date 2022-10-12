@@ -248,6 +248,9 @@ defmodule Ecto.Type do
 
   @doc """
   Checks if two terms are semantically equal.
+
+  This callback is used for determining equality of types in
+  `Ecto.Changeset`.
   """
   @callback equal?(term, term) :: boolean
 
