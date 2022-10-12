@@ -811,8 +811,11 @@ defmodule Ecto.Query do
       # Ecto.Queryable
       from(City, limit: 1)
 
-      # Fragment
-      from(f in fragment("select generate_series(?::integer, ?::integer) as x", ^0, ^100000), select: f.x)
+      # Fragment with user-defined function and predefined columns
+      from(f in fragment("my_table_valued_function(arg)"), select: f.x))
+
+      # Fragment with built-in function and undefined columns
+      from(f in fragment("select generate_series(?::integer, ?::integer) as x", ^0, ^10), select: f.x)
 
   ## Expressions examples
 
