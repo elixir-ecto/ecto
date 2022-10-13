@@ -402,6 +402,10 @@ defmodule Ecto.Repo.Preloader do
     Map.put(struct, field, loaded)
   end
 
+  defp load_through({:through, _assoc, _throughs}, nil) do
+    nil
+  end
+
   defp load_through({:through, assoc, throughs}, struct) do
     %{cardinality: cardinality, field: field, owner: owner} = assoc
     {loaded, _} = Enum.reduce(throughs, {[struct], owner}, &recur_through/2)
