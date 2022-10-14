@@ -2308,13 +2308,13 @@ defmodule Ecto.Query do
       if has_named_binding?(query, :comments) do
         query
       else
-        join(query, :left, c in assoc(p, :comments), as: :comments)
+        join(query, :left, [p], c in assoc(p, :comments), as: :comments)
       end
 
   With this function it can be simplified to:
 
       with_named_binding(query, :comments, fn  query, binding ->
-        join(query, :left, a in assoc(p, ^binding), as: ^binding)
+        join(query, :left, [p], a in assoc(p, ^binding), as: ^binding)
       end) 
 
   For more information on named bindings see "Named bindings" in this module doc or `has_named_binding/2`. 
