@@ -71,7 +71,7 @@ defmodule Ecto.Enum do
         schema "my_schema" do
           embeds_one :embed, Embed do
             field :embed_as_values, Ecto.Enum, values: [foo: 1, bar: 2], embed_as: :values
-            field :embed_as_dump, Ecto.Enum, values: [foo: 1, bar: 2], embed_as: :dump
+            field :embed_as_dump, Ecto.Enum, values: [foo: 1, bar: 2], embed_as: :dumped
           end
         end
       end
