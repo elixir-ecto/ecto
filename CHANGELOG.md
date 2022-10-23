@@ -98,6 +98,7 @@ Ecto v3.8 requires Elixir v1.10+.
   * [Ecto.Query] Improve tracking of `select_merge` inside subqueries
   * [Ecto.Repo] Properly handle literals in queries given to `insert_all`
   * [Ecto.Repo] Don't surface persisted data as changes on embed updates
+  * [Ecto.Repo] **Potentially breaking change**: Raise if an association doesn't have a primary key and is preloaded in a join query. Previously, this would silently produce the wrong the result in certain circumstances.
   * [Ecto.Schema] Preserve parent prefix on join tables
 
 ## v3.7.2 (2022-03-13)
