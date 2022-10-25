@@ -1933,7 +1933,7 @@ defmodule Ecto.Changeset do
     else
       query =
         Keyword.get(opts, :query, schema)
-        |> maybe_exclude_itself(changeset.data)
+        |> maybe_exclude_itself(changeset)
         |> Ecto.Query.where(^where_clause)
 
       query =
@@ -1954,12 +1954,12 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp maybe_exclude_itself(base_query, %schema{__meta__: %Metadata{}} = data) do
-    primary_keys_to_exclude = case Ecto.get_meta(data, :state) do
+  defp maybe_exclude_itself(base_query, %{data: %schema{__meta__: %Metadata{}}} = changeset) do
+    primary_keys_to_exclude = case Ecto.get_meta(changeset.data, :state) do
       :loaded ->
         :primary_key
         |> schema.__schema__()
-        |> Enum.map(&{&1, Map.get(data, &1)})
+        |> Enum.map(&{&1, get_field(changeset, &1)})
 
       _ ->
         []
@@ -1993,7 +1993,7 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp maybe_exclude_itself(base_query, _data), do: base_query
+  defp maybe_exclude_itself(base_query, _changeset), do: base_query
 
   defp ensure_field_exists!(changeset = %Changeset{}, types, field) do
     unless Map.has_key?(types, field) do
