@@ -1955,10 +1955,17 @@ defmodule Ecto.Changeset do
   end
 
   defp maybe_exclude_itself(base_query, schema, changeset) do
-    :primary_key
-    |> schema.__schema__()
-    |> Enum.map(&{&1, get_field(changeset, &1)})
-    |> case do
+    primary_keys_to_exclude = case Ecto.get_meta(changeset.data, :state) do
+      :loaded ->
+        :primary_key
+        |> schema.__schema__()
+        |> Enum.map(&{&1, Map.get(changeset.data, &1)})
+
+      _ ->
+        []
+    end
+
+    case primary_keys_to_exclude do
       [{_pk_field, nil} | _remaining_pks] ->
         base_query
 
