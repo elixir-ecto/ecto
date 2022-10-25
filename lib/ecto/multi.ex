@@ -120,7 +120,7 @@ defmodule Ecto.Multi do
   defstruct operations: [], names: MapSet.new()
 
   @type changes :: map
-  @type run :: ((Ecto.Repo.t, changes) -> {:ok | :error, any}) | {module, atom, [any]}
+  @type run :: ((Ecto.Repo.t, changes) -> {:ok | :error, any})
   @type fun(result) :: (changes -> result)
   @type merge :: (changes -> t) | {module, atom, [any]}
   @typep schema_or_source :: binary | {binary, module} | module
