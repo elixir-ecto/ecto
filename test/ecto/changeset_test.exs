@@ -1791,10 +1791,14 @@ defmodule Ecto.ChangesetTest do
     end
 
     test "allow embedded schema with base query" do
-      changeset = Ecto.Changeset.change(%SocialSource{})
-      base_query = Ecto.Query.from(c in Comment)
-      changeset = unsafe_validate_unique(changeset, [:origin], TestRepo, query: base_query)
-      assert changeset.errors == []
+      changeset = Ecto.Changeset.change(%SocialSource{}, %{origin: "facebook"})
+      base_query = Ecto.Query.from(s in "sources", select: map(s, [:origin]))
+
+      unsafe_validate_unique(changeset, [:origin], MockRepo, query: base_query)
+      assert_receive [MockRepo, function: :exists?, query: %Ecto.Query{wheres: wheres}, opts: []]
+      assert [%{expr: check_expr}] = wheres
+
+      assert_eq_macro_to_string(check_expr,  "&0.origin() == ^0", "&0.origin() == ^0")
     end
   end
 
