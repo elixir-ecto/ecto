@@ -1857,6 +1857,10 @@ defmodule Ecto.Changeset do
   early feedback to users, since most conflicting data will have been
   inserted prior to the current validation phase.
 
+  When applying this validation to a schemas loaded from the database
+  this check will exclude rows having the same primary key as set on
+  the changeset, as those are supposed to be overwritten anyways.
+
   ## Options
 
     * `:message` - the message in case the constraint check fails,
