@@ -1857,6 +1857,10 @@ defmodule Ecto.Changeset do
   early feedback to users, since most conflicting data will have been
   inserted prior to the current validation phase.
 
+  When applying this validation to a schemas loaded from the database
+  this check will exclude rows having the same primary key as set on
+  the changeset, as those are supposed to be overwritten anyways.
+
   ## Options
 
     * `:message` - the message in case the constraint check fails,
@@ -1933,7 +1937,7 @@ defmodule Ecto.Changeset do
     else
       query =
         Keyword.get(opts, :query, schema)
-        |> maybe_exclude_itself(schema, changeset)
+        |> maybe_exclude_itself(changeset)
         |> Ecto.Query.where(^where_clause)
 
       query =
@@ -1954,11 +1958,18 @@ defmodule Ecto.Changeset do
     end
   end
 
-  defp maybe_exclude_itself(base_query, schema, changeset) do
-    :primary_key
-    |> schema.__schema__()
-    |> Enum.map(&{&1, get_field(changeset, &1)})
-    |> case do
+  defp maybe_exclude_itself(base_query, %{data: %schema{__meta__: %Metadata{}}} = changeset) do
+    primary_keys_to_exclude = case Ecto.get_meta(changeset.data, :state) do
+      :loaded ->
+        :primary_key
+        |> schema.__schema__()
+        |> Enum.map(&{&1, get_field(changeset, &1)})
+
+      _ ->
+        []
+    end
+
+    case primary_keys_to_exclude do
       [{_pk_field, nil} | _remaining_pks] ->
         base_query
 
@@ -1985,6 +1996,8 @@ defmodule Ecto.Changeset do
         base_query
     end
   end
+
+  defp maybe_exclude_itself(base_query, _changeset), do: base_query
 
   defp ensure_field_exists!(changeset = %Changeset{}, types, field) do
     unless Map.has_key?(types, field) do
