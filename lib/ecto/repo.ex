@@ -40,8 +40,8 @@ defmodule Ecto.Repo do
       for more information
 
     * `:log` - the log level used when logging the query with Elixir's
-      Logger. If false, disables logging for that repository.
-      Defaults to `:debug`
+      Logger. Can be any of Logger.level/0 values or `false`. If false,
+      disables logging for that repository. Defaults to `:debug`
 
     * `:pool_size` - the size of the pool used by the connection module.
       Defaults to `10`
@@ -92,7 +92,8 @@ defmodule Ecto.Repo do
 
     * `:timeout` - The time in milliseconds (as an integer) to wait for the query call to
       finish. `:infinity` will wait indefinitely (default: `15_000`)
-    * `:log` - When false, does not log the query
+    * `:log` - Can be any of the `Logger.level/0` values or `false`. If `false`,
+      logging is disabled. Defaults to the configured Repo logger level
     * `:telemetry_event` - The telemetry event name to dispatch the event under.
       See the next section for more information
     * `:telemetry_options` - Extra options to attach to telemetry event name.
