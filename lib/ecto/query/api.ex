@@ -697,8 +697,6 @@ defmodule Ecto.Query.API do
   If an error is raised mentioning an unknown column, most likely the alias is being
   referenced somewhere that is not allowed. Consult the documentation for the database
   to ensure the alias is being referenced correctly.
-
-
   """
   def selected_as(name), do: doc! [name]
 
