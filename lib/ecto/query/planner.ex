@@ -329,8 +329,8 @@ defmodule Ecto.Query.Planner do
   defp normalize_subquery_types([{source_alias, type_value} | types], [field | fields], select_aliases, acc) do
     if Map.has_key?(select_aliases, source_alias) do
       raise ArgumentError, """
-      the alias, #{inspect(source_alias)}, provided to `selected_as/2`
-      conflicts with the subquery's automatically aliasing.
+      the alias, #{inspect(source_alias)}, provided to `selected_as/2` conflicts 
+      with the subquery's automatically aliasing.
 
       For example, the following query is not allowed because the alias `:y`
       given to `selected_as/2` is also used by the subquery to automatically
