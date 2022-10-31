@@ -330,12 +330,11 @@ defmodule Ecto.Query.Planner do
     if Map.has_key?(select_aliases, source_alias) do
       raise ArgumentError, """
       the alias, #{inspect(source_alias)}, provided to `selected_as/2`
-      conflicts with the subquery's automatically aliasing. Please ensure
-      the aliases provided to `selected_as/2` do not overlap with the identifiers
-      of different fields.
+      conflicts with the subquery's automatically aliasing.
 
-      For instance, the following query is not allowed because the alias `:y`
-      used in `selected_as/2` is the same as another field's key:
+      For example, the following query is not allowed because the alias `:y`
+      given to `selected_as/2` is also used by the subquery to automatically
+      alias `s.y`:
 
         s = from(s in Schema, select: %{x: selected_as(s.x, :y), y: s.y})
         from s in subquery(s)
