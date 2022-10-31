@@ -455,7 +455,6 @@ defmodule Ecto.Query.InspectTest do
       |> subquery()
       |> plan
 
-
     assert i(query) =~ ~s"select: %{visits: selected_as(p0.visits, :visits2)})"
   end
 
