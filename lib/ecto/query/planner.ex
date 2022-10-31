@@ -307,8 +307,47 @@ defmodule Ecto.Query.Planner do
   defp normalize_subquery_select(query, adapter, source?) do
     {schema_or_source, expr, %{select: select} = query} = rewrite_subquery_select_expr(query, source?)
     {expr, _} = prewalk(expr, :select, query, select, 0, adapter)
-    {{:map, types}, _fields, _from} = collect_fields(expr, [], :never, query, select.take, true, %{})
+    {{:map, types}, fields, _from} = collect_fields(expr, [], :never, query, select.take, true, %{})
+    # types must take into account selected_as/2 aliases so that the correct fields are
+    # referenced when the outer query selects the entire subquery
+    types = normalize_subquery_types(types, Enum.reverse(fields), query.select.aliases, [])
     {query, subquery_source(schema_or_source, types)}
+  end
+
+  defp normalize_subquery_types(types, _fields, select_aliases, _acc) when select_aliases == %{} do
+    types
+  end
+
+  defp normalize_subquery_types([], [], _aliases, acc) do
+    Enum.reverse(acc)
+  end
+
+  defp normalize_subquery_types([{alias, _} = type | types], [{:selected_as, _, [_, alias]} | fields], select_aliases, acc) do
+    normalize_subquery_types(types, fields, select_aliases, [type | acc])
+  end
+
+  defp normalize_subquery_types([{source_alias, type_value} | types], [field | fields], select_aliases, acc) do
+    if Map.has_key?(select_aliases, source_alias) do
+      raise ArgumentError, """
+      the alias, #{inspect(source_alias)}, provided to `selected_as/2` conflicts 
+      with the subquery's automatically aliasing.
+
+      For example, the following query is not allowed because the alias `:y`
+      given to `selected_as/2` is also used by the subquery to automatically
+      alias `s.y`:
+
+        s = from(s in Schema, select: %{x: selected_as(s.x, :y), y: s.y})
+        from s in subquery(s)
+      """
+    end
+
+    type =
+      case field do
+        {:selected_as, _, [_, select_alias]} -> {select_alias, type_value}
+        _ -> {source_alias, type_value}
+      end
+
+    normalize_subquery_types(types, fields, select_aliases, [type | acc])
   end
 
   defp subquery_source(nil, types), do: {:map, types}
@@ -937,7 +976,7 @@ defmodule Ecto.Query.Planner do
     query
     |> normalize_query(operation, adapter, counter)
     |> elem(0)
-    |> normalize_select(keep_literals?(operation, query), true)
+    |> normalize_select(keep_literals?(operation, query))
   rescue
     e ->
       # Reraise errors so we ignore the planner inner stacktrace
@@ -1055,7 +1094,7 @@ defmodule Ecto.Query.Planner do
     {combinations, counter} =
       Enum.reduce combinations, {[], counter}, fn {type, combination_query}, {combinations, counter} ->
         {combination_query, counter} = traverse_exprs(combination_query, operation, counter, fun)
-        {combination_query, _} = combination_query |> normalize_select(true, true)
+        {combination_query, _} = combination_query |> normalize_select(true)
         {[{type, combination_query} | combinations], counter}
       end
 
@@ -1096,7 +1135,7 @@ defmodule Ecto.Query.Planner do
     try do
       inner_query = put_in inner_query.aliases[@parent_as], query
       {inner_query, counter} = normalize_query(inner_query, :all, adapter, counter)
-      {inner_query, _} = normalize_select(inner_query, true, false)
+      {inner_query, _} = normalize_select(inner_query, true)
       {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
 
       inner_query =
@@ -1105,7 +1144,15 @@ defmodule Ecto.Query.Planner do
           inner_query
         else
           update_in(inner_query.select.fields, fn fields ->
-            subquery.select |> subquery_source_fields() |> Enum.zip(fields)
+            # fields are aliased by the subquery source, unless
+            # already aliased by selected_as/2
+            subquery.select
+            |> subquery_source_fields()
+            |> Enum.zip(fields)
+            |> Enum.map(fn
+              {_source_alias, {select_alias, field}} -> {select_alias, field}
+              {source_alias, field} -> {source_alias, field}
+            end)
           end)
         end
 
@@ -1299,11 +1346,11 @@ defmodule Ecto.Query.Planner do
     end
   end
 
-  defp normalize_select(%{select: nil} = query, _keep_literals?, _allow_alias?) do
+  defp normalize_select(%{select: nil} = query, _keep_literals?) do
     {query, nil}
   end
 
-  defp normalize_select(query, keep_literals?, allow_alias?) do
+  defp normalize_select(query, keep_literals?) do
     %{assocs: assocs, preloads: preloads, select: select} = query
     %{take: take, expr: expr} = select
     {tag, from_take} = Map.get(take, 0, {:any, []})
@@ -1326,9 +1373,7 @@ defmodule Ecto.Query.Planner do
       collect_fields(expr, [], :none, query, take, keep_literals?, %{})
 
     # Convert selected_as/2 to a tuple so it can be aliased by the adapters.
-    # Don't convert if the select expression belongs to a CTE or subquery
-    # because those fields are already automatically aliased.
-    fields = normalize_selected_as(fields, allow_alias?, select.aliases)
+    fields = normalize_selected_as(fields, select.aliases)
 
     {fields, preprocess, from} =
       case from do
@@ -1356,17 +1401,9 @@ defmodule Ecto.Query.Planner do
     {put_in(query.select.fields, fields), select}
   end
 
-  defp normalize_selected_as(fields, _allow_alias?, aliases) when aliases == %{}, do: fields
+  defp normalize_selected_as(fields, aliases) when aliases == %{}, do: fields
 
-  defp normalize_selected_as(_fields, false, aliases) do
-    raise ArgumentError,
-          "`selected_as/2` can only be used in the outer most `select` expression. " <>
-            "If you are attempting to alias a field from a subquery or cte, it is not allowed " <>
-            "because the fields are automatically aliased by the corresponding map/struct key. " <>
-            "The following field aliases were specified: #{inspect(Map.keys(aliases))}."
-  end
-
-  defp normalize_selected_as(fields, true, _aliases) do
+  defp normalize_selected_as(fields, _aliases) do
     Enum.map(fields, fn
       {:selected_as, _, [select_expr, name]} -> {name, select_expr}
       field -> field

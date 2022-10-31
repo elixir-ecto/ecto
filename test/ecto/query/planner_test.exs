@@ -1763,12 +1763,31 @@ defmodule Ecto.Query.PlannerTest do
       from(p in "posts", select: ^fields, order_by: ^order) |> normalize()
     end
 
-    test "raises if selected_as/2 is used in a subquery" do
-      message = ~r"`selected_as/2` can only be used in the outer most `select` expression."
+    test "with subqueries" do
+      query = "schema" |> select([s], %{x1: selected_as(s.x, :integer), x2: s.x})
+      %{select: select} = from(q in subquery(query)) |> normalize()
+
+      field1 = {{:., [], [{:&, [], [0]}, :integer]}, [], []}
+      field2 = {{:., [], [{:&, [], [0]}, :x2]}, [], []}
+      assert [^field1, ^field2] = select.fields
+    end
+
+    test "with nested subqueries" do
+      s1 = "schema" |> select([s], %{x1: selected_as(s.x, :integer), x2: s.x})
+      s2 = from s in subquery(s1), select: %{y1: selected_as(s.integer, :integer2), y2: s.x2}
+      %{select: select} = from(q in subquery(s2)) |> normalize()
+
+      field1 = {{:., [], [{:&, [], [0]}, :integer2]}, [], []}
+      field2 = {{:., [], [{:&, [], [0]}, :y2]}, [], []}
+      assert [^field1, ^field2] = select.fields
+    end
+
+    test "raises when subquery key conflicts with selected_as/2 alias" do
+      message = ~r"the alias, :integer, provided to `selected_as/2` conflicts"
 
       assert_raise Ecto.SubQueryError, message, fn ->
-        query = "schema" |> select([s], %{x: selected_as(s.x, :integer)})
-        from(q in subquery(query)) |> normalize()
+        query = "schema" |> select([s], %{x: selected_as(s.x, :integer), integer: s.y})
+        from(s in subquery(query)) |> normalize()
       end
     end
 

@@ -449,6 +449,15 @@ defmodule Ecto.Query.InspectTest do
     assert i(query) == ~s{from p0 in Inspect.Post, select: type(^..., :integer)}
   end
 
+  test "subquery with selected_as/2 after planner" do
+    query =
+      from(x in Post, select: %{visits: selected_as(x.visits, :visits2)})
+      |> subquery()
+      |> plan
+
+    assert i(query) =~ ~s"select: %{visits: selected_as(p0.visits, :visits2)})"
+  end
+
   defmodule MyParameterizedType do
     use Ecto.ParameterizedType
 
