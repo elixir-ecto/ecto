@@ -727,17 +727,18 @@ defmodule Ecto.Query.API do
 
   ## Subqueries
 
-  When used inside of a subquery, the alias given to `selected_as/2` must be referenced
-  by the outer query. For example, the outer query below selects `s.num_visits` instead of
-  `s.visits`:
+  Subqueries automatically alias the selected fields, for example, one can write:
 
-      s = from p in Post, select: %{visits: p.visits |> coalesce(0) |> selected_as(:num_visits)}
+      s = from p in Post, select: %{visits: coalesce(p.visits, 0)}
+      from(s in subquery(s), select: s.visits)
+
+  However, one can also use `selected_as` to override the default naming:
+
+      s = from p in Post, select: %{visits: coalesce(p.visits, 0) |> selected_as(:num_visits)}
       from(s in subquery(s), select: s.num_visits)
 
-  This is because queries must reference the fields of the query source and not the
-  Elixir data structure. In some circumstances, such as a subquery without `selected_as/2`,
-  these two are the same. This does not hold true when the user modifies the names of the fields
-  using `selected_as/2`.
+  The name given to `selected_as/2` can also be referenced in `selected_as/1`,
+  as in regular queries.
   """
   def selected_as(selected_value, name), do: doc! [selected_value, name]
 

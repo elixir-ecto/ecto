@@ -329,18 +329,16 @@ defmodule Ecto.Query.Planner do
   defp normalize_subquery_types([{source_alias, type_value} | types], [field | fields], select_aliases, acc) do
     if Map.has_key?(select_aliases, source_alias) do
       raise ArgumentError, """
-      the alias, #{inspect(source_alias)}, provided to `selected_as/2` conflicts with the subquery's
-      `select` statement. Please ensure there is no overlap between the aliases provided to
-      `selected_as/2` and the identifiers used in the `select` statement.
+      the alias, #{inspect(source_alias)}, provided to `selected_as/2`
+      conflicts with the subquery's automatically aliasing. Please ensure
+      the aliases provided to `selected_as/2` do not overlap with the identifiers
+      of different fields.
 
-      For instance, the following query is not allowed because the alias `:x2` used in `selected_as/2`
-      is the same as another key in the map being selected:
+      For instance, the following query is not allowed because the alias `:y`
+      used in `selected_as/2` is the same as another field's key:
 
-        s = from(s in Schema, select: %{x: selected_as(s.x, :x2), x2: s.x})
+        s = from(s in Schema, select: %{x: selected_as(s.x, :y), y: s.y})
         from s in subquery(s)
-
-      If the alias provided to `selected_as/2` is changed to any atom other than `:x2`, the above query will work.
-      The alias `:x` would also be allowed because it is the key corresponding to the `selected_as/2` value.
       """
     end
 
