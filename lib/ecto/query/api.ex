@@ -697,6 +697,8 @@ defmodule Ecto.Query.API do
   If an error is raised mentioning an unknown column, most likely the alias is being
   referenced somewhere that is not allowed. Consult the documentation for the database
   to ensure the alias is being referenced correctly.
+
+
   """
   def selected_as(name), do: doc! [name]
 
@@ -724,6 +726,20 @@ defmodule Ecto.Query.API do
 
   Using this in conjunction with `selected_as/1` is recommended to ensure only defined aliases
   are referenced.
+
+  ## Subqueries
+
+  When used inside of a subquery, the alias given to `selected_as/2` must be referenced
+  by the outer query. For example, the outer query below selects `s.num_visits` instead of
+  `s.visits`:
+
+      s = from p in Post, select: %{visits: p.visits |> coalesce(0) |> selected_as(:num_visits)}
+      from(s in subquery(s), select: s.num_visits)
+
+  This is because queries must reference the fields of the query source and not the
+  Elixir data structure. In some circumstances, such as a subquery without `selected_as/2`,
+  these two are the same. This does not hold true when the user modifies the names of the fields
+  using `selected_as/2`.
   """
   def selected_as(selected_value, name), do: doc! [selected_value, name]
 
