@@ -1376,8 +1376,6 @@ defmodule Ecto.Query.Planner do
       collect_fields(expr, [], :none, query, take, keep_literals?, %{})
 
     # Convert selected_as/2 to a tuple so it can be aliased by the adapters.
-    # Don't convert if the select expression belongs to a CTE or subquery
-    # because those fields are already automatically aliased.
     fields = normalize_selected_as(fields, select.aliases)
 
     {fields, preprocess, from} =
