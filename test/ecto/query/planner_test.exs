@@ -1782,6 +1782,23 @@ defmodule Ecto.Query.PlannerTest do
       assert [^field1, ^field2] = select.fields
     end
 
+    test "with select_merge" do
+      # merging into a map
+      query =
+        from(p in Post,
+          select: %{id: p.id},
+          select_merge: %{title: selected_as(p.title, :alias)}
+        )
+        |> normalize()
+
+      assert [{:alias, _} | _] = Enum.reverse(query.select.fields)
+
+      # merging into a source
+      query = from(p in Post, select_merge: %{title: selected_as(p.title, :alias)}) |> normalize()
+      assert [{:alias, _} | _] = Enum.reverse(query.select.fields)
+    end
+
+
     test "raises when subquery key conflicts with selected_as/2 alias" do
       message = ~r"the alias, :integer, provided to `selected_as/2` conflicts"
 

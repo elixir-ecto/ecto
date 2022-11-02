@@ -133,11 +133,17 @@ defmodule Ecto.Query.Builder.SelectTest do
 
     test "supports aliasing a selected value in select_merge with selected_as/2" do
       escaped_select_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :visits]}, [], []}, :select]}
-      escaped_merge_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :id]}, [], []}, :merge]}
+      escaped_merge_alias = {:selected_as, [], [{{:., [], [{:&, [], [0]}, :title]}, [], []}, :merge]}
 
-      query = from p in "posts", select: selected_as(p.visits, :select), select_merge: %{id: selected_as(p.id, :merge)}
-      assert {:merge, [], [escaped_select_alias, {:%{}, [], [id: escaped_merge_alias]}]} == query.select.expr
+      # merging into a map
+      query = from p in "posts", select: %{v: selected_as(p.visits, :select)}, select_merge: %{title: selected_as(p.title, :merge)}
+      assert {:%{}, [], [v: escaped_select_alias, title: escaped_merge_alias]} == query.select.expr
       assert %{select: _, merge: _} = query.select.aliases
+
+      # merging into a source
+      query = from c in Comment, select_merge: %{title: selected_as(c.title, :merge)}
+      assert {:merge, [], [{:&, [], [0]}, {:%{}, [], [title: escaped_merge_alias]}]} == query.select.expr
+      assert %{merge: _} = query.select.aliases
     end
 
     test "supports dynamic selected values with selected_as/2" do

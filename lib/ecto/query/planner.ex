@@ -1372,14 +1372,15 @@ defmodule Ecto.Query.Planner do
     {postprocess, fields, from} =
       collect_fields(expr, [], :none, query, take, keep_literals?, %{})
 
-    # Convert selected_as/2 to a tuple so it can be aliased by the adapters.
-    fields = normalize_selected_as(fields, select.aliases)
-
     {fields, preprocess, from} =
       case from do
         {:ok, from_pre, from_expr, from_taken} ->
           {assoc_exprs, assoc_fields} = collect_assocs([], [], query, tag, from_take, assocs)
-          fields = from_taken ++ Enum.reverse(assoc_fields, Enum.reverse(fields))
+
+          fields =
+            (from_taken ++ Enum.reverse(assoc_fields, Enum.reverse(fields)))
+            |> normalize_selected_as(select.aliases)
+
           preprocess = [from_pre | Enum.reverse(assoc_exprs)]
           {fields, preprocess, {from_tag, from_expr}}
 
@@ -1387,7 +1388,8 @@ defmodule Ecto.Query.Planner do
           error! query, "the binding used in `from` must be selected in `select` when using `preload`"
 
         :none ->
-          {Enum.reverse(fields), [], :none}
+          fields = fields |> normalize_selected_as(select.aliases) |> Enum.reverse()
+          {fields, [], :none}
       end
 
     select = %{
