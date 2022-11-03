@@ -142,7 +142,7 @@ defmodule Ecto.Repo do
   This event should be invoked on every query sent to the adapter, including
   queries that are related to the transaction management.
 
-  The `:measurements` map will include the following, all given in the
+  The `:measurements` map may include the following, all given in the
   `:native` time unit:
 
     * `:idle_time` - the time the connection spent waiting before being checked out for the query
