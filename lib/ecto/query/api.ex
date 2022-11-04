@@ -739,7 +739,7 @@ defmodule Ecto.Query.API do
 
   However, one can also use `selected_as` to override the default naming:
 
-      $ Subquery
+      # Subquery
       s = from p in Post, select: %{visits: coalesce(p.visits, 0) |> selected_as(:num_visits)}
       from(s in subquery(s), select: s.num_visits)
 
