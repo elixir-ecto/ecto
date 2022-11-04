@@ -1808,12 +1808,23 @@ defmodule Ecto.Query.PlannerTest do
       end
     end
 
-    test "raises if selected_as/2 is used in a cte" do
-      message = ~r"`selected_as/2` can only be used in the outer most `select` expression."
+    test "with CTEs" do
+      cte_query = from(s in "schema", select: %{x1: selected_as(s.x, :integer), x2: s.x})
+
+      %{with_ctes: %{queries: [{"schema_cte", inner_query}]}} =
+        Comment
+        |> with_cte("schema_cte", as: ^cte_query)
+        |> normalize()
+
+      assert [{:integer, _}, {:x2, _}] = inner_query.select.fields
+    end
+
+    test "raises when CTE field conflicts with selected_as/2 alias" do
+      message = ~r"the alias, :integer, provided to `selected_as/2` conflicts"
 
       assert_raise ArgumentError, message, fn ->
-        query = "schema" |> select([s], %{x: selected_as(s.x, :integer)})
-        Post |> with_cte("cte", as: ^query) |> normalize()
+        cte_query = from(s in "schema", select: %{x1: selected_as(s.x, :integer), integer: s.x})
+        Comment |> with_cte("schema_cte", as: ^cte_query) |> normalize()
       end
     end
   end

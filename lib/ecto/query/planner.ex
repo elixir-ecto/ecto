@@ -330,7 +330,7 @@ defmodule Ecto.Query.Planner do
     if Map.has_key?(select_aliases, source_alias) do
       raise ArgumentError, """
       the alias, #{inspect(source_alias)}, provided to `selected_as/2` conflicts 
-      with the subquery's automatically aliasing.
+      with the subquery's automatic aliasing.
 
       For example, the following query is not allowed because the alias `:y`
       given to `selected_as/2` is also used by the subquery to automatically
@@ -1055,7 +1055,7 @@ defmodule Ecto.Query.Planner do
           # Now compute the fields as keyword lists so we emit AS in Ecto query.
           %{select: %{expr: expr, take: take}} = inner_query
           {{:map, types}, fields, _from} = collect_fields(expr, [], :never, inner_query, take, true, %{})
-          fields = cte_fields(Keyword.keys(types), Enum.reverse(fields), [])
+          fields = cte_fields(Keyword.keys(types), Enum.reverse(fields), inner_query.select.aliases, [])
           inner_query = put_in(inner_query.select.fields, fields)
           {_, inner_query} = pop_in(inner_query.aliases[@parent_as])
 
@@ -1943,19 +1943,31 @@ defmodule Ecto.Query.Planner do
     field
   end
 
-  defp cte_fields([_key | _rest_keys], [{:selected_as, _, [_, _]} | _rest_fields], _acc) do
-    raise ArgumentError,
-          "`selected_as/2` can only be used in the outer most `select` expression. " <>
-            "If you are attempting to alias a field from a subquery or cte, it is not allowed " <>
-            "because the fields are automatically aliased by the corresponding map/struct key."
+
+  defp cte_fields([key | rest_keys], [{:selected_as, _, [select_expr, key]} | rest_fields], aliases, acc) do
+    cte_fields(rest_keys, rest_fields, aliases, [{key, select_expr} | acc])
   end
 
-  defp cte_fields([key | rest_keys], [field | rest_fields], acc) do
-    cte_fields(rest_keys, rest_fields, [{key, field} | acc])
+  defp cte_fields([key | rest_keys], [field | rest_fields], aliases, acc) do
+    if Map.has_key?(aliases, key) do
+      raise ArgumentError,
+            "the alias, #{inspect(key)}, provided to `selected_as/2` conflicts" <>
+              "with the CTE's automatic aliasing. When using `selected_as/2`" <>
+              "inside of a CTE, you must ensure it does not conflict with any of the other" <>
+              "field names"
+    end
+
+    {key, field} =
+      case field do
+        {:selected_as, _, [select_expr, alias]} -> {alias, select_expr}
+        field -> {key, field}
+      end
+
+    cte_fields(rest_keys, rest_fields, aliases, [{key, field} | acc])
   end
 
-  defp cte_fields(_keys, [], acc), do: :lists.reverse(acc)
-  defp cte_fields([], _fields, acc), do: :lists.reverse(acc)
+  defp cte_fields(_keys, [], _aliases, acc), do: :lists.reverse(acc)
+  defp cte_fields([], _fields, _aliases, acc), do: :lists.reverse(acc)
 
   defp assert_update!(%Ecto.Query{updates: updates} = query, operation) do
     changes =
