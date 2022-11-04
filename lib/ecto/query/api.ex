@@ -725,17 +725,27 @@ defmodule Ecto.Query.API do
   Using this in conjunction with `selected_as/1` is recommended to ensure only defined aliases
   are referenced.
 
-  ## Subqueries
+  ## Subqueries and CTEs
 
-  Subqueries automatically alias the selected fields, for example, one can write:
+  Subqueries and CTEs automatically alias the selected fields, for example, one can write:
 
+      # Subquery
       s = from p in Post, select: %{visits: coalesce(p.visits, 0)}
       from(s in subquery(s), select: s.visits)
 
+      # CTE
+      cte_query = from p in Post, select: %{visits: coalesce(p.visits, 0)}
+      Post |> with_cte("cte", as: ^cte_query) |> join(:inner, [p], c in "cte") |> select([p, c], c.visits)
+
   However, one can also use `selected_as` to override the default naming:
 
+      $ Subquery
       s = from p in Post, select: %{visits: coalesce(p.visits, 0) |> selected_as(:num_visits)}
       from(s in subquery(s), select: s.num_visits)
+
+      # CTE
+      cte_query = from p in Post, select: %{visits: coalesce(p.visits, 0) |> selected_as(:num_visits)}
+      Post |> with_cte("cte", as: ^cte_query) |> join(:inner, [p], c in "cte") |> select([p, c], c.num_visits)
 
   The name given to `selected_as/2` can also be referenced in `selected_as/1`,
   as in regular queries.
