@@ -330,7 +330,7 @@ defmodule Ecto.Query.Planner do
     if Map.has_key?(select_aliases, source_alias) do
       raise ArgumentError, """
       the alias, #{inspect(source_alias)}, provided to `selected_as/2` conflicts 
-      with the subquery's automatically aliasing.
+      with the subquery's automatic aliasing.
 
       For example, the following query is not allowed because the alias `:y`
       given to `selected_as/2` is also used by the subquery to automatically
@@ -1952,7 +1952,7 @@ defmodule Ecto.Query.Planner do
     if Map.has_key?(aliases, key) do
       raise ArgumentError,
             "the alias, #{inspect(key)}, provided to `selected_as/2` conflicts" <>
-              "with the CTE's automatically aliasing. When using `selected_as/2`" <>
+              "with the CTE's automatic aliasing. When using `selected_as/2`" <>
               "inside of a CTE, you must ensure it does not conflict with any of the other" <>
               "field names"
     end
