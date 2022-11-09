@@ -325,7 +325,7 @@ defmodule Ecto do
       posts = Repo.all(Post) |> Repo.preload(:comments)
 
   The `Ecto` module also provides conveniences for working
-  with associations. For example, `Ecto.assoc/2` returns a query
+  with associations. For example, `Ecto.assoc/3` returns a query
   with all associated data to a given struct:
 
       import Ecto
@@ -487,7 +487,7 @@ defmodule Ecto do
       post = Repo.get Post, 1
       Repo.all Ecto.assoc(post, :comments)
 
-  `assoc/2` can also receive a list of posts, as long as the posts are
+  `assoc/3` can also receive a list of posts, as long as the posts are
   not empty:
 
       posts = Repo.all from p in Post, where: is_nil(p.published_at)
