@@ -1525,7 +1525,9 @@ defmodule Ecto.Repo do
 
     * Specify `read_after_writes: true` in your schema for choosing
       fields that are read from the database after every operation.
-      Or pass `returning: true` to `insert` to read all fields back:
+      Or pass `returning: true` to `insert` to read all fields back.
+      (Note that it will only read from the database if at least one
+      field is updated).
 
           MyRepo.insert(%Post{title: "this is unique"}, returning: true,
                         on_conflict: on_conflict, conflict_target: :title)
