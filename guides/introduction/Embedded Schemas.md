@@ -65,7 +65,7 @@ end
 Embedded schemas defined in such way are said to be defined inline, which:
 
 - generating module in parent scope with the appropriate struct (for example above, module will be `User.Profile`)
-- persited within parent schema
+- persisted within parent schema
 - requiring to provide `with` option to `Ecto.Changeset.cast_embed/3`
 
 ### Extracting the embeds
