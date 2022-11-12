@@ -8,7 +8,7 @@ you to run tests that talk to the database concurrently.
 Create the `config/test.exs` file or append the following content:
 
 ```elixir
-use Mix.Config
+import Config
 
 config :my_app, MyApp.Repo,
   username: "postgres",
@@ -25,7 +25,7 @@ In this case, we use a Postgres database and set it up to use the sandbox pool t
 Make sure we import the configuration for the test environment at the very bottom of `config/config.exs`:
 
 ```elixir
-import_config "#{Mix.env()}.exs"
+import_config "#{config_env()}.exs"
 ```
 
 We also need to add an explicit statement to the end of `test/test_helper.exs` about the `sandbox` mode:
