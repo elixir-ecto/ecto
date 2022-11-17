@@ -1,5 +1,11 @@
 # Changelog for v3.x
 
+## v3.10.0-dev
+
+### Bug fixes
+
+  * [Ecto.Changeset] Make unsafe validate unique exclude primary key only for loaded schemas
+
 ## v3.9.2 (2022-11-18)
 
 ### Enhancements
