@@ -1,5 +1,17 @@
 # Changelog for v3.x
 
+## v3.9.2 (2022-11-18)
+
+### Enhancements
+
+ * [Ecto.Query] Allow `selected_as` inside CTE
+ * [Ecto.Query] Allow `selected_as` to be used in subquery
+
+### Bug fixes
+
+  * [Ecto.Repo] Fix preloading through associations on `nil`
+  * [Ecto.Query] Fix select merging a `selected_as` field into a source
+
 ## v3.9.1 (2022-10-06)
 
 ### Enhancements
