@@ -32,7 +32,8 @@ defmodule Ecto.Query do
       Repo.all(query)
 
   In the example above, we are directly querying the "users" table
-  from the database.
+  from the database. Queries do not reach out to the data store until
+  they are passed as arguments to a function from `Ecto.Repo`.
 
   ## Query expressions
 
