@@ -59,6 +59,14 @@ defmodule Ecto.Schema do
         end
       end
 
+  Source-based schemas are queryable by default, which means we can pass them
+  to `Ecto.Repo` modules and also build queries:
+
+      MyRepo.all(User)
+      MyRepo.all(from u in User, where: u.id == 13)
+
+  The repository will then run the query against the source/table.
+
   Embedded schemas are defined similarly to source-based schemas. For example,
   you can use an embedded schema to represent your UI, mapping and validating
   its inputs, and then you convert such embedded schema to other schemas that
@@ -96,7 +104,8 @@ defmodule Ecto.Schema do
   The `SignUp` schema can be cast and validated with the help of the
   `Ecto.Changeset` module, and afterwards, you can copy its data to
   the `Profile` and `Account` structs that will be persisted to the
-  database with the help of `Ecto.Repo`.
+  database with the help of `Ecto.Repo`. On the other hand, embedded
+  schemas cannot be queried directly (they are not queryable).
 
   ## Redacting fields
 
