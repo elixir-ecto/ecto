@@ -209,7 +209,7 @@ defmodule Ecto.ChangesetTest do
 
     changeset = cast(struct, params, ~w(title body)a, empty_values: ["empty"])
     assert changeset.changes == %{title: "", body: nil}
-    assert changeset.empty_values == [""]
+    assert changeset.empty_values == Ecto.Changeset.empty_values()
   end
 
   test "cast/4: with matching empty values" do
@@ -1011,15 +1011,6 @@ defmodule Ecto.ChangesetTest do
     assert changeset.required == [:title, :body]
     assert changeset.changes == %{}
     assert changeset.errors == [title: {"is blank", [validation: :required]}, body: {"is blank", [validation: :required]}]
-
-    # When :trim option is false
-    changeset = changeset(%{title: " "}) |> validate_required(:title, trim: false)
-    assert changeset.valid?
-    assert changeset.errors == []
-
-    changeset = changeset(%{color: <<12, 12, 12>>}) |> validate_required(:color, trim: false)
-    assert changeset.valid?
-    assert changeset.errors == []
 
     # When unknown field
     assert_raise ArgumentError, ~r/unknown field :bad in/, fn  ->
