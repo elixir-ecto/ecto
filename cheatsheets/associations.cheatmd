@@ -46,6 +46,7 @@ defmodule Movie do
     has_one :screenplay, Screenplay
   end
 end
+```
 
 ### The belongs association
 
@@ -58,10 +59,10 @@ defmodule Screenplay do
     belongs_to :movie, Movie
   end
 end
+```
 
 ## Many to many
 {: .col-2}
-
 
 ### Through a join table
 
