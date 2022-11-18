@@ -43,23 +43,21 @@ defmodule Movie do
   schema "movies" do
     field :title, :string
     field :release_date, :date
-    has_one :distributor, Distributor
+    has_one :screenplay, Screenplay
   end
 end
-```
 
 ### The belongs association
 
 ```elixir
-defmodule Distributor do
+defmodule Screenplay do
   use Ecto.Schema
 
-  schema "distributors" do
-    field :name, :string
+  schema "screenplays" do
+    field :lead_writer, :string
     belongs_to :movie, Movie
   end
 end
-```
 
 ## Many to many
 {: .col-2}
