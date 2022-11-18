@@ -2,6 +2,18 @@
 
 ## v3.10.0-dev
 
+### Enhancements
+
+  * [Ecto.Changeset] Allow `:empty_values` option in `cast/4` to include a function which must return true if the value is empty
+  * [Ecto.Changeset] `cast/4` will by default consider strings made only of whitespace characters to be empty. This unifies the handling of empty values between `cast/4` and `validate_required/3`. **If you use `:empty_values` and you want to preserve the new behaviour throughout, you may update your code from this**
+
+        Ecto.Changeset.cast(changeset, params, [:field1, :field2], empty_values: ["", []])
+
+  to
+
+        empty_values = Ecto.Changeset.empty_values([[]])
+        Ecto.Changeset.cast(changeset, params, [:field1, :field2], empty_values: empty_values)
+
 ### Bug fixes
 
   * [Ecto.Changeset] Make unsafe validate unique exclude primary key only for loaded schemas

@@ -867,26 +867,8 @@ defmodule Ecto.Type do
   defp same_date(_), do: :error
 
   @doc false
-  @spec filter_empty_values(t, any, [any]) :: {:ok, any} | :empty
-  def filter_empty_values({:array, type}, value, empty_values) when is_list(value) do
-    value =
-      for elem <- value,
-        {:ok, elem} <- [filter_empty_values(type, elem, empty_values)],
-        do: elem
-
-    if value in empty_values do
-      :empty
-    else
-      {:ok, value}
-    end
-  end
-
-  def filter_empty_values(_type, value, empty_values) do
-    if value in empty_values do
-      :empty
-    else
-      {:ok, value}
-    end
+  def empty_trimmed_string?(value) do
+    is_binary(value) and String.trim_leading(value) == ""
   end
 
   ## Adapter related
