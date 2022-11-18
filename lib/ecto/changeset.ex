@@ -493,6 +493,28 @@ defmodule Ecto.Changeset do
       iex> apply_changes(changeset)
       %{title: "world"}
 
+  You can use empty values (and even cast multiple times) to change
+  what is considered an empty value:
+
+      # Using default
+      iex> params = %{title: "", topics: []}
+      iex> changeset = cast(post, params, [:title, :topics])
+      iex> changeset.params
+      %{topics: []}
+
+      # Changing default
+      iex> params = %{title: "", topics: []}
+      iex> changeset = cast(post, params, [:topics], empty_values: [[], nil])
+      iex> changeset.params
+      %{title: ""}
+
+      # Augmenting default
+      iex> params = %{title: "", topics: []}
+      iex> changeset =
+      ...>   cast(post, params, [:topics], empty_values: Ecto.Changeset.empty_values([[], nil]))
+      iex> changeset.params
+      %{}
+
   ## Composing casts
 
   `cast/4` also accepts a changeset as its first argument. In such cases, all
