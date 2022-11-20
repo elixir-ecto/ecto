@@ -19,7 +19,7 @@ defmodule Ecto.Repo.SupervisorTest do
   test "invokes the init/2 callback on config" do
     assert Ecto.TestRepo.config() |> normalize() ==
            [database: "hello", hostname: "local", otp_app: :ecto, password: "pass",
-            user: "invalid", username: "user"]
+            scheme: "ecto", user: "invalid", username: "user"]
   end
 
   def handle_event(event, measurements, metadata, %{pid: pid}) do
@@ -55,13 +55,13 @@ defmodule Ecto.Repo.SupervisorTest do
     {:ok, config} = runtime_config(:runtime, __MODULE__, :ecto, [extra: "extra"])
     assert normalize(config) ==
            [database: "mydb", extra: "extra", hostname: "host",
-            otp_app: :ecto, password: "hunter2", port: 12345, username: "eric"]
+            otp_app: :ecto, password: "hunter2", port: 12345, scheme: "ecto", username: "eric"]
   end
 
   test "ignores empty hostname" do
     put_env(database: "hello", url: "ecto:///mydb")
     {:ok, config} = runtime_config(:runtime, __MODULE__, :ecto, extra: "extra")
-    assert normalize(config) == [database: "mydb", extra: "extra", otp_app: :ecto]
+    assert normalize(config) == [database: "mydb", extra: "extra", otp_app: :ecto, scheme: "ecto"]
   end
 
   test "is no-op for nil or empty URL" do
