@@ -100,6 +100,7 @@ defmodule Ecto.Repo.Supervisor do
     "/" <> database = info.path
 
     url_opts = [
+      scheme: info.scheme,
       username: username,
       password: password,
       database: database,
