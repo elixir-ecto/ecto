@@ -952,6 +952,8 @@ defmodule Ecto.Repo do
   In case the association was already loaded, preload won't attempt
   to reload it.
 
+  If you want to reset the loaded fields, see `Ecto.reset_fields/2`.
+
   ## Options
 
     * `:force` - By default, Ecto won't preload associations that

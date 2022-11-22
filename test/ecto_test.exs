@@ -109,4 +109,51 @@ defmodule EctoTest do
 
     query
   end
+
+  defmodule Post do
+    use Ecto.Schema
+
+    schema "posts" do
+      field :title, :string, default: "default title"
+      field :body, :string
+      belongs_to :author, Author
+    end
+  end
+
+  defmodule Author do
+    use Ecto.Schema
+
+    schema "authors" do
+      field :name, :string
+      has_many :posts, Post
+    end
+  end
+
+  test "Ecto.reset_fields/2 resets fields" do
+    post = %Post{
+      title: "hello world",
+      body: "This is a beautiful world.",
+      author: %Author{},
+    }
+
+    assert %Post{
+             title: "default title",
+             body: "This is a beautiful world.",
+             author: build_not_loaded(Post, :author),
+           } == Ecto.reset_fields(post, [:title, :author])
+  end
+
+  defp build_not_loaded(schema, association) do
+    %{
+      cardinality: cardinality,
+      field: field,
+      owner: owner
+    } = schema.__schema__(:association, association)
+
+    %Ecto.Association.NotLoaded{
+      __cardinality__: cardinality,
+      __field__: field,
+      __owner__: owner
+    }
+  end
 end

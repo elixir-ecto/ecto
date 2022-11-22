@@ -571,6 +571,27 @@ defmodule Ecto do
   def assoc_loaded?(nil), do: true
 
   @doc """
+  Resets fields in a struct to their default values.
+
+  ## Examples
+
+      iex> post = post |> Repo.preload(:author)
+      %Post{title: "hello world", author: %Author{}}
+      iex> Ecto.reset_fields(post, [:title, :author])
+      %Post{
+        title: "default title",
+        author: #Ecto.Association.NotLoaded<association :author is not loaded>
+      }
+
+  """
+  @spec reset_fields(Ecto.Schema.t(), list()) :: Ecto.Schema.t()
+  def reset_fields(%{__struct__: schema} = struct, fields) do
+    default_struct = schema.__struct__()
+    default_fields = Map.take(default_struct, fields)
+    Map.merge(struct, default_fields)
+  end
+
+  @doc """
   Gets the metadata from the given struct.
   """
   def get_meta(struct, :context),
