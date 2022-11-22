@@ -2191,6 +2191,8 @@ defmodule Ecto.Query do
       function, the function will receive a list of "post_ids" as the argument
       and it must return a tuple in the format of `{post_id, tag}`
 
+  If you want to reset the loaded fields, see `Ecto.reset_fields/2`.
+
   ## Keywords example
 
       # Returns all posts, their associated comments, and the associated
