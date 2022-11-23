@@ -708,6 +708,7 @@ defmodule Ecto.QueryTest do
 
       inner_query         = from p in "posts", inner_join: b in "blogs"
       cross_query         = from p in "posts", cross_join: b in "blogs"
+      cross_lateral_query = from p in "posts", cross_lateral_join: b in "blogs"
       left_query          = from p in "posts", left_join: b in "blogs"
       right_query         = from p in "posts", right_join: b in "blogs"
       full_query          = from p in "posts", full_join: b in "blogs"
@@ -716,6 +717,7 @@ defmodule Ecto.QueryTest do
 
       refute inner_query.joins == base.joins
       refute cross_query.joins == base.joins
+      refute cross_lateral_query.joins == base.joins
       refute left_query.joins == base.joins
       refute right_query.joins == base.joins
       refute full_query.joins == base.joins
@@ -727,6 +729,9 @@ defmodule Ecto.QueryTest do
 
       excluded_cross_query = exclude(cross_query, :cross_join)
       assert excluded_cross_query.joins == base.joins
+
+      excluded_cross_lateral_query = exclude(cross_lateral_query, :cross_lateral_join)
+      assert excluded_cross_lateral_query.joins == base.joins
 
       excluded_left_query = exclude(left_query, :left_join)
       assert excluded_left_query.joins == base.joins
@@ -751,6 +756,8 @@ defmodule Ecto.QueryTest do
           as: :blogs_i,
           cross_join: bc in "blogs",
           as: :blogs_c,
+          cross_lateral_join: bcl in "blogs",
+          as: :blogs_bcl,
           left_join: bl in "blogs",
           as: :blogs_l,
           right_join: br in "blogs",
@@ -776,6 +783,12 @@ defmodule Ecto.QueryTest do
       assert map_size(excluded_cross_join_query.aliases) == original_aliases_number - 1
       refute Map.has_key?(excluded_cross_join_query.aliases, :blogs_c)
       assert Map.has_key?(excluded_cross_join_query.aliases, :base)
+
+      excluded_cross_lateral_join_query = exclude(query, :cross_lateral_join)
+      assert length(excluded_cross_lateral_join_query.joins) == original_joins_number - 1
+      assert map_size(excluded_cross_lateral_join_query.aliases) == original_aliases_number - 1
+      refute Map.has_key?(excluded_cross_lateral_join_query.aliases, :blogs_bcl)
+      assert Map.has_key?(excluded_cross_lateral_join_query.aliases, :base)
 
       excluded_left_join_query = exclude(query, :left_join)
       assert length(excluded_left_join_query.joins) == original_joins_number - 1

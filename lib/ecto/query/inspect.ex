@@ -353,6 +353,7 @@ defimpl Inspect, for: Ecto.Query do
   defp join_qual(:right), do: :right_join
   defp join_qual(:full), do: :full_join
   defp join_qual(:cross), do: :cross_join
+  defp join_qual(:cross_lateral), do: :cross_join_lateral
 
   defp collect_sources(%{from: nil, joins: joins}) do
     ["query" | join_sources(joins)]

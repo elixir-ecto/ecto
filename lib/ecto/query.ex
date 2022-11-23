@@ -709,7 +709,7 @@ defmodule Ecto.Query do
   defp wrap_in_subquery(%Ecto.Query{} = query), do: %Ecto.SubQuery{query: query}
   defp wrap_in_subquery(queryable), do: %Ecto.SubQuery{query: Ecto.Queryable.to_query(queryable)}
 
-  @joins [:join, :inner_join, :cross_join, :left_join, :right_join, :full_join,
+  @joins [:join, :inner_join, :cross_join, :cross_lateral_join, :left_join, :right_join, :full_join,
           :inner_lateral_join, :left_lateral_join]
 
   @doc """
@@ -751,6 +751,7 @@ defmodule Ecto.Query do
 
       Ecto.Query.exclude(query, :inner_join)
       Ecto.Query.exclude(query, :cross_join)
+      Ecto.Query.exclude(query, :cross_lateral_join)
       Ecto.Query.exclude(query, :left_join)
       Ecto.Query.exclude(query, :right_join)
       Ecto.Query.exclude(query, :full_join)
@@ -939,6 +940,7 @@ defmodule Ecto.Query do
   defp join_qual(:right_join), do: :right
   defp join_qual(:inner_join), do: :inner
   defp join_qual(:cross_join), do: :cross
+  defp join_qual(:cross_lateral_join), do: :cross_lateral
   defp join_qual(:left_lateral_join), do: :left_lateral
   defp join_qual(:inner_lateral_join), do: :inner_lateral
 
@@ -975,10 +977,10 @@ defmodule Ecto.Query do
   Receives a source that is to be joined to the query and a condition for
   the join. The join condition can be any expression that evaluates
   to a boolean value. The qualifier must be one of `:inner`, `:left`,
-  `:right`, `:cross`, `:full`, `:inner_lateral` or `:left_lateral`.
+  `:right`, `:cross`, `:cross_lateral`, `:full`, `:inner_lateral` or `:left_lateral`.
 
   For a keyword query the `:join` keyword can be changed to `:inner_join`,
-  `:left_join`, `:right_join`, `:cross_join`, `:full_join`, `:inner_lateral_join`
+  `:left_join`, `:right_join`, `:cross_join`, `:cross_lateral_join`, `:full_join`, `:inner_lateral_join`
   or `:left_lateral_join`. `:join` is equivalent to `:inner_join`.
 
   Currently it is possible to join on:
