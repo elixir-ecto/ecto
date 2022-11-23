@@ -891,11 +891,11 @@ defmodule Ecto.Query.Planner do
       end
 
       case find_source_expr(query, child_ix) do
-        %JoinExpr{qual: qual} when qual in [:inner, :left, :inner_lateral, :left_lateral] ->
+        %JoinExpr{qual: qual} when qual in [:inner, :left, :inner_lateral, :left_lateral, :cross_lateral] ->
           :ok
         %JoinExpr{qual: qual} ->
           error! query, "association `#{inspect parent_schema}.#{assoc}` " <>
-                        "in preload requires an inner, left or lateral join, got #{qual} join"
+                        "in preload requires an inner, left, cross or lateral join, got #{qual} join"
         _ ->
           :ok
       end
