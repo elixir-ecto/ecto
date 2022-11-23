@@ -136,7 +136,7 @@ defmodule Ecto.Query.Builder.Join do
     unless is_binary(prefix) or is_nil(prefix) do
       Builder.error! "`prefix` must be a compile time string, got: `#{Macro.to_string(prefix)}`"
     end
-    
+
     as = case as do
       {:^, _, [as]} -> as
       as when is_atom(as) -> as
@@ -299,7 +299,7 @@ defmodule Ecto.Query.Builder.Join do
     end
   end
 
-  @qualifiers [:inner, :inner_lateral, :left, :left_lateral, :right, :full, :cross]
+  @qualifiers [:inner, :inner_lateral, :left, :left_lateral, :right, :full, :cross, :cross_lateral]
 
   @doc """
   Called at runtime to check dynamic qualifier.
