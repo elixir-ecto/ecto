@@ -329,7 +329,7 @@ defmodule Ecto.Query.Planner do
   defp normalize_subquery_types([{source_alias, type_value} | types], [field | fields], select_aliases, acc) do
     if Map.has_key?(select_aliases, source_alias) do
       raise ArgumentError, """
-      the alias, #{inspect(source_alias)}, provided to `selected_as/2` conflicts 
+      the alias, #{inspect(source_alias)}, provided to `selected_as/2` conflicts
       with the subquery's automatic aliasing.
 
       For example, the following query is not allowed because the alias `:y`
@@ -891,11 +891,11 @@ defmodule Ecto.Query.Planner do
       end
 
       case find_source_expr(query, child_ix) do
-        %JoinExpr{qual: qual} when qual in [:inner, :left, :inner_lateral, :left_lateral, :cross_lateral] ->
+        %JoinExpr{qual: qual} when qual in [:inner, :left, :inner_lateral, :left_lateral] ->
           :ok
         %JoinExpr{qual: qual} ->
           error! query, "association `#{inspect parent_schema}.#{assoc}` " <>
-                        "in preload requires an inner, left, cross or lateral join, got #{qual} join"
+                        "in preload requires an inner, left or lateral join, got #{qual} join"
         _ ->
           :ok
       end
