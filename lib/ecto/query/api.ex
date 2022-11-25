@@ -575,6 +575,11 @@ defmodule Ecto.Query.API do
 
       from(post in Post, select: json_extract_path(post.meta, ["author", "name"]))
 
+  The path can be dynamic:
+
+      path = ["author", "name"]
+      from(post in Post, select: json_extract_path(post.meta, ^path))
+
   The query can be also rewritten as:
 
       from(post in Post, select: post.meta["author"]["name"])

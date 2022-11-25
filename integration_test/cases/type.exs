@@ -314,7 +314,7 @@ defmodule Ecto.Integration.TypeTest do
 
     order = TestRepo.insert!(order)
 
-    assert TestRepo.one(from o in Order, select: o.metadata["id"]) == 123
+    assert TestRepo.one(from o in Order, select: json_extract_path(o.metadata, ^["id"])) == 123
     assert TestRepo.one(from o in Order, select: o.metadata["bad"]) == nil
     assert TestRepo.one(from o in Order, select: o.metadata["bad"]["bad"]) == nil
 
