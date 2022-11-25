@@ -76,7 +76,7 @@ defmodule Ecto.Query.BuilderTest do
       escape(quote do x.y[a] end, [x: 0], __ENV__)
     end
 
-    assert_raise Ecto.Query.CompileError, "expected JSON path to be compile-time list, got: `bad`", fn ->
+    assert_raise Ecto.Query.CompileError, "expected JSON path to be a literal list or interpolated value, got: `bad`", fn ->
       escape(quote do json_extract_path(x.y, bad) end, [x: 0], __ENV__)
     end
   end
