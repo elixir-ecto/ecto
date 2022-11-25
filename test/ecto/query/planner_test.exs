@@ -1166,6 +1166,9 @@ defmodule Ecto.Query.PlannerTest do
     query = from(p in "posts") |> select([p], p.metas["not_index"]["unknown_field"])
     normalize(query)
 
+    query = from(p in "posts", select: json_extract_path(p.metas, ^["not_index", "unknown_field"]))
+    normalize(query)
+
     assert_raise RuntimeError, "expected field `title` to be an embed or a map, got: `:string`", fn ->
       query = from(Post, []) |> select([p], p.title["foo"])
       normalize(query)
@@ -1188,6 +1191,11 @@ defmodule Ecto.Query.PlannerTest do
 
     assert_raise RuntimeError, "cannot use `not_index` to refer to an item in `embeds_many`", fn ->
       query = from(Post, []) |> select([p], p.metas["not_index"])
+      normalize(query)
+    end
+
+    assert_raise Ecto.Query.CompileError, ~s(expected `path` to be a list in json_extract_path/2, got: `"id"`), fn ->
+      query = from(p in Post, select: json_extract_path(p.metas, ^"id"))
       normalize(query)
     end
   end

@@ -993,8 +993,15 @@ defmodule Ecto.Query.Builder do
     Enum.map(path, &quoted_json_path_element!/1)
   end
 
+  defp escape_json_path({:^, _, [path]})  do
+    quote do
+      path = Ecto.Query.Builder.json_path!(unquote(path))
+      Enum.map(path, &Ecto.Query.Builder.json_path_element!/1)
+    end
+  end
+
   defp escape_json_path(other) do
-    error!("expected JSON path to be compile-time list, got: `#{Macro.to_string(other)}`")
+    error!("expected JSON path to be a literal list or interpolated value, got: `#{Macro.to_string(other)}`")
   end
 
   defp quoted_json_path_element!({:^, _, [expr]}),
@@ -1022,6 +1029,14 @@ defmodule Ecto.Query.Builder do
     do: integer
   def json_path_element!(other),
     do: error!("expected string or integer in json_extract_path/2, got: `#{inspect other}`")
+
+  @doc """
+  Called by escaper at runtime to verify that path is a list
+  """
+  def json_path!(path) when is_list(path),
+    do: path
+  def json_path!(path),
+    do: error!("expected `path` to be a list in json_extract_path/2, got: `#{inspect path}`")
 
   @doc """
   Called by escaper at runtime to verify that a value is not nil.
