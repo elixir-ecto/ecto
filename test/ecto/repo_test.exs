@@ -1357,7 +1357,7 @@ defmodule Ecto.RepoTest do
 
       %MySchemaEmbedsMany{embeds: [embed]} = TestRepo.insert!(changeset)
       assert embed.x == "ONE"
-      assert_received {:transaction, _}
+      assert_received {:insert, _}
       assert Process.get(:ecto_repo) == TestRepo
       assert Process.get(:ecto_counter) == 2
     end

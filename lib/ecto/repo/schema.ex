@@ -980,10 +980,10 @@ defmodule Ecto.Repo.Schema do
     end
   end
 
-  defp wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, embeds, prepare, fun) do
+  defp wrap_in_transaction(adapter, adapter_meta, opts, changeset, assocs, _embeds, prepare, fun) do
     %{changes: changes} = changeset
     changed = &Map.has_key?(changes, &1)
-    relations_changed? = Enum.any?(assocs, changed) or Enum.any?(embeds, changed)
+    relations_changed? = Enum.any?(assocs, changed)
     wrap_in_transaction(adapter, adapter_meta, opts, relations_changed?, prepare, fun)
   end
 
