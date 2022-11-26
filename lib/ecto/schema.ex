@@ -1551,6 +1551,11 @@ defmodule Ecto.Schema do
 
   ## Options
 
+    * `:primary_key` - The `:primary_key` option can be used with the same arguments
+      as `@primary_key` (see the [Schema attributes](https://hexdocs.pm/ecto/Ecto.Schema.html#module-schema-attributes)
+      section for more info). Primary keys are automatically set up for  embedded  schemas as well,
+      defaulting  to  `{:id,  :binary_id, autogenerate:   true}`.
+
     * `:on_replace` - The action taken on associations when the embed is
       replaced when casting or manipulating parent changeset. May be
       `:raise` (default), `:mark_as_invalid`, `:update`, or `:delete`.
@@ -1621,16 +1626,11 @@ defmodule Ecto.Schema do
 
   Options should be passed before the `do` block like this:
 
-      embeds_one :child, Child, on_replace: :delete do
+      embeds_one :child, Child, on_replace: :delete, primary_key: false do
         field :name, :string
         field :age,  :integer
       end
 
-  Primary keys are automatically set up for  embedded  schemas as well,
-  defaulting  to  `{:id,  :binary_id, autogenerate:   true}`. You can
-  customize it by passing a `:primary_key` option with the same arguments
-  as `@primary_key` (see the [Schema attributes](https://hexdocs.pm/ecto/Ecto.Schema.html#module-schema-attributes)
-  section for more info).
 
   Defining embedded schema in such a way will define a `Parent.Child` module
   with the appropriate struct. In order to properly cast the embedded schema.
@@ -2048,7 +2048,7 @@ defmodule Ecto.Schema do
     Module.put_attribute(mod, :ecto_changeset_fields, {name, {:assoc, struct}})
   end
 
-  @valid_embeds_one_options [:strategy, :on_replace, :source]
+  @valid_embeds_one_options [:on_replace, :source]
 
   @doc false
   def __embeds_one__(mod, name, schema, opts) when is_atom(schema) do
@@ -2061,7 +2061,7 @@ defmodule Ecto.Schema do
           "`embeds_one/3` expects `schema` to be a module name, but received #{inspect(schema)}"
   end
 
-  @valid_embeds_many_options [:strategy, :on_replace, :source]
+  @valid_embeds_many_options [:on_replace, :source]
 
   @doc false
   def __embeds_many__(mod, name, schema, opts) when is_atom(schema) do
