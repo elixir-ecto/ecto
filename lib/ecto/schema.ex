@@ -1632,7 +1632,6 @@ defmodule Ecto.Schema do
       end
 
 
-
   Defining embedded schema in such a way will define a `Parent.Child` module
   with the appropriate struct. In order to properly cast the embedded schema.
   When casting the inline-defined embedded schemas you need to use the `:with`
