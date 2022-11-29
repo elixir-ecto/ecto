@@ -1883,7 +1883,7 @@ defmodule Ecto.Repo do
   transaction won't be part of the same transaction and will use a separate
   connection altogether.
 
-  When using the the `Ecto.Adapters.SQL.Sandbox` in tests, while it may be
+  When using the `Ecto.Adapters.SQL.Sandbox` in tests, while it may be
   possible to share the connection between processes, the parent process
   will typically hold the connection until the transaction completes. This
   may lead to a deadlock if the child process attempts to use the same connection.
