@@ -240,6 +240,7 @@ defmodule Ecto.Schema do
   `:id`                   | `integer`               | 1, 2, 3
   `:binary_id`            | `binary`                | `<<int, int, int, ...>>`
   `:integer`              | `integer`               | 1, 2, 3
+  `:serial`               | `integer`               | 1, 2, 3
   `:float`                | `float`                 | 1.0, 2.0, 3.0
   `:boolean`              | `boolean`               | true, false
   `:string`               | UTF-8 encoded `string`  | "hello"
@@ -264,6 +265,8 @@ defmodule Ecto.Schema do
       `:text`, `:bytea`, etc. translate to Ecto's `:string`. Similarly,
       Ecto's `:decimal` can be used for `:numeric` and other database
       types. For more information, see [all migration types](https://hexdocs.pm/ecto_sql/Ecto.Migration.html#module-field-types).
+
+    * The `:serial` type is an autoincrementing integer similar to `:id`.
 
     * For the `{:array, inner_type}` and `{:map, inner_type}` type,
       replace `inner_type` with one of the valid types, such as `:string`.
