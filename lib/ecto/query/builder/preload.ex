@@ -202,7 +202,7 @@ defmodule Ecto.Query.Builder.Preload do
     assert_assoc!(mode, key)
 
     idx = expand_dynamic(dynamic, query)
-    {preloads, [{key!(key), {idx, []}}|assocs]}
+    {preloads, [{key, {idx, []}}|assocs]}
   end
 
   defp expand_each({key, {%Ecto.Query.DynamicExpr{} = dynamic, inner}}, query, mode, {preloads, assocs}) do
@@ -211,11 +211,11 @@ defmodule Ecto.Query.Builder.Preload do
 
     idx = expand_dynamic(dynamic, query)
     {inner_preloads, inner_assocs} = expand(inner, query, :assoc, [], [])
-    assocs = [{key!(key), {idx, Enum.reverse(inner_assocs)}}|assocs]
+    assocs = [{key, {idx, Enum.reverse(inner_assocs)}}|assocs]
 
     case inner_preloads do
       [] -> {preloads, assocs}
-      _ -> {[{key!(key), Enum.reverse(inner_preloads)}|preloads], assocs}
+      _ -> {[{key, Enum.reverse(inner_preloads)}|preloads], assocs}
     end
   end
 
