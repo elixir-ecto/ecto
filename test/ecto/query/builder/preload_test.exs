@@ -57,11 +57,16 @@ defmodule Ecto.Query.Builder.PreloadTest do
                preload(query, [{:foo, f}, {^comments, c}], [foo: {f, [{^comments, c}]}])
     end
 
-    test "supports dynamics for join association bindings" do
+    test "supports dynamics for join association bindings using named bindings" do
       comments = :comments
 
-      query = from p in "posts", join: c in assoc(p, :comments), as: ^comments
-      preloads = [comments: dynamic([{^comments, c}], c)]
+      query = 
+        from p in "posts", 
+        join: c in assoc(p, :comments), 
+        as: ^comments
+      preloads = [
+        comments: dynamic([{^comments, c}], c)
+      ]
       assert %{preloads: [], assocs: [comments: {1, []}]} = preload(query, ^preloads)
 
       query =
@@ -74,12 +79,29 @@ defmodule Ecto.Query.Builder.PreloadTest do
       ]
       assert %{preloads: [], assocs: [likes: {2, []}, comments: {1, []}]} =
                preload(query, ^preloads)
+    end
+
+    test "supports dynamics for join association bindings using positional bindings" do
+      query = from p in "posts", join: assoc(p, :comments)
+      preloads = [comments: dynamic([_p, c], c)]
+      assert %{preloads: [], assocs: [comments: {1, []}]} = preload(query, ^preloads)
+
+      query =
+        from p in "posts",
+        join: assoc(p, :comments),
+        join: assoc(p, :likes)
+      preloads = [
+        likes: dynamic([_p, _c, l], l),
+        comments: dynamic([_p, c], c)
+      ]
+      assert %{preloads: [], assocs: [likes: {2, []}, comments: {1, []}]} =
+               preload(query, ^preloads)
 
       query =
         from p in "posts",
         join: c in assoc(p, :comments),
-        join: l in assoc(c, :likes)
-      preloads = [comments: {dynamic([_, c], c), likes: dynamic([_, _, l], l)}]
+        join: assoc(c, :likes)
+      preloads = [comments: {dynamic([_p, c], c), likes: dynamic([_p, _c, l], l)}]
       assert %{preloads: [], assocs: [comments: {1, [likes: {2, []}]}]} =
                preload(query, ^preloads)
     end
