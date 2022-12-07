@@ -83,6 +83,15 @@ defmodule Ecto.Query.Builder.PreloadTest do
       assert %{preloads: [], assocs: [comments: {1, [likes: {2, []}]}]} =
                preload(query, ^preloads)
     end
+
+    test "supports nested dynamics for join association bindings" do
+      query = from p in "posts", join: c in assoc(p, :comments), as: :comments
+
+      inner_dynamic = dynamic([comments: c], c)
+      outer_dynamic = dynamic(^inner_dynamic)
+      preloads = [comments: outer_dynamic]
+      assert %{preloads: [], assocs: [comments: {1, []}]} = preload(query, ^preloads)
+    end
   end
 
   describe "invalid preload" do
