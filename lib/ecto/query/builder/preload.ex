@@ -88,6 +88,7 @@ defmodule Ecto.Query.Builder.Preload do
     idx = Builder.find_var!(var, vars)
     {inner_preloads, inner_assocs} = escape(list, :assoc, [], [], vars)
     assocs = [{key, {idx, Enum.reverse(inner_assocs)}}|assocs]
+
     case inner_preloads do
       [] -> {preloads, assocs}
       _  -> {[{key, Enum.reverse(inner_preloads)}|preloads], assocs}
@@ -116,12 +117,6 @@ defmodule Ecto.Query.Builder.Preload do
     Builder.error! "malformed key in preload `#{Macro.to_string(other)}` in query expression"
   end
 
-  defp assert_assoc!(mode, _atom, _var) when mode in [:both, :assoc], do: :ok
-  defp assert_assoc!(_mode, atom, var) do
-    Builder.error! "cannot preload join association `#{Macro.to_string atom}` with binding `#{var}` " <>
-                   "because parent preload is not a join association"
-  end
-
   @doc """
   Called at runtime to check dynamic preload keys.
   """
@@ -140,6 +135,12 @@ defmodule Ecto.Query.Builder.Preload do
   runtime work.
   """
   @spec build(Macro.t, [Macro.t], Macro.t, Macro.Env.t) :: Macro.t
+  def build(query, _binding, {:^, _, [expr]}, _env) do
+    quote do
+      Ecto.Query.Builder.Preload.preload!(unquote(query), unquote(expr))
+    end
+  end
+
   def build(query, binding, expr, env) do
     {query, binding} = Builder.escape_binding(query, binding, env)
     {preloads, assocs} = escape(expr, binding)
@@ -155,5 +156,133 @@ defmodule Ecto.Query.Builder.Preload do
   end
   def apply(query, preloads, assocs) do
     apply(Ecto.Queryable.to_query(query), preloads, assocs)
+  end
+
+  @doc """
+  Called at runtime to assemble preload.
+  """
+  def preload!(query, preload) do
+    {preloads, assocs} = expand(preload, query)
+    apply(query, Enum.reverse(preloads), Enum.reverse(assocs))
+  end
+
+  @doc """
+  Expands preloads at runtime.
+  """
+  def expand(preloads, query) do
+    expand(preloads, query, :both, [], [])
+  end
+
+  defp expand(atom, _query, _mode, preloads, assocs) when is_atom(atom) do
+    {[atom|preloads], assocs}
+  end
+
+  defp expand(list, query, mode, preloads, assocs) when is_list(list) do
+    Enum.reduce(list, {preloads, assocs}, fn item, acc ->
+      expand_each(item, query, mode, acc)
+    end)
+  end
+
+  defp expand(other, _query, _mode, _preloads, _assocs) do
+    raise ArgumentError,
+      "`#{inspect(other)}` is not a valid preload expression, " <>
+      "expected an atom or a list."
+  end
+
+  defp expand_each(atom, _query, _mode, {preloads, assocs}) when is_atom(atom) do
+    {[atom|preloads], assocs}
+  end
+
+  defp expand_each({key, atom}, _query, _mode, {preloads, assocs}) when is_atom(atom) do
+    assert_key!(key)
+
+    {[{key, atom}|preloads], assocs}
+  end
+
+  defp expand_each({key, %Ecto.Query.DynamicExpr{} = dynamic}, query, mode, {preloads, assocs}) do
+    assert_key!(key)
+    assert_assoc!(mode, key)
+
+    idx = expand_dynamic(dynamic, query)
+    {preloads, [{key, {idx, []}}|assocs]}
+  end
+
+  defp expand_each({key, {%Ecto.Query.DynamicExpr{} = dynamic, inner}}, query, mode, {preloads, assocs}) do
+    assert_key!(key)
+    assert_assoc!(mode, key)
+
+    idx = expand_dynamic(dynamic, query)
+    {inner_preloads, inner_assocs} = expand(inner, query, :assoc, [], [])
+    assocs = [{key, {idx, Enum.reverse(inner_assocs)}}|assocs]
+
+    case inner_preloads do
+      [] -> {preloads, assocs}
+      _ -> {[{key, Enum.reverse(inner_preloads)}|preloads], assocs}
+    end
+  end
+
+  defp expand_each({key, {query_or_fun, inner}}, query, _mode, {preloads, assocs}) do
+    assert_key!(key)
+    assert_query_or_fun!(query_or_fun, key)
+
+    {inner_preloads, []} = expand(inner, query, :preload, [], [])
+    {[{key, {query_or_fun, Enum.reverse(inner_preloads)}}|preloads], assocs}
+  end
+
+  defp expand_each({key, list}, query, _mode, {preloads, assocs}) when is_list(list) do
+    assert_key!(key)
+
+    {inner_preloads, []} = expand(list, query, :preload, preloads, assocs)
+    {[{key, Enum.reverse(inner_preloads)}|preloads], assocs}
+  end
+
+  defp expand_each({key, query_or_fun}, _query, _mode, {preloads, assocs}) do
+    assert_key!(key)
+    assert_query_or_fun!(query_or_fun, key)
+
+    {[{key, query_or_fun}|preloads], assocs}
+  end
+
+  defp expand_each(other, query, mode, {preloads, assocs}) do
+    expand(other, query, mode, preloads, assocs)
+  end
+
+  defp expand_dynamic(%Ecto.Query.DynamicExpr{} = dynamic, query) do
+    case Builder.Dynamic.fully_expand(query, dynamic) do
+      {{:&, [], [idx]}, _, _, _, _, _} when is_integer(idx) ->
+        idx
+
+      _ ->
+        raise ArgumentError,
+          "invalid dynamic in preload: `#{inspect(dynamic)}`. " <>
+          "Dynamic expressions in preload must evaluate to a single binding, as in: " <>
+          "`dynamic([comments: c], c)`"
+    end
+  end
+
+  defp assert_key!(key), do: key!(key) && :ok
+
+  defp assert_query_or_fun!(%Ecto.Query{}, _key), do: :ok
+  defp assert_query_or_fun!(fun, _key) when is_function(fun, 1), do: :ok
+  defp assert_query_or_fun!(other, key) do
+    raise ArgumentError,
+      "invalid preload for key `#{inspect(key)}`: #{inspect(other)}. " <>
+      "Preloads can be a query, a function (arity 1), or a dynamic that " <>
+      "evalutes to a single binding."
+  end
+
+  defp assert_assoc!(mode, _atom) when mode in [:both, :assoc], do: :ok
+  defp assert_assoc!(_mode, atom) do
+    raise ArgumentError,
+      "cannot preload join association `#{inspect(atom)}` " <>
+      "because parent preload is not a join association"
+  end
+
+  defp assert_assoc!(mode, _atom, _var) when mode in [:both, :assoc], do: :ok
+  defp assert_assoc!(_mode, atom, var) do
+    Builder.error!(
+      "cannot preload join association `#{Macro.to_string atom}` with binding `#{var}` " <>
+      "because parent preload is not a join association"
+    )
   end
 end

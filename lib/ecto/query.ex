@@ -570,7 +570,7 @@ defmodule Ecto.Query do
 
       from query, select: ^fields, order_by: ^order
 
-  ## Updates
+  ## `update`
 
   A `dynamic` is also supported inside updates, for example:
 
@@ -579,6 +579,57 @@ defmodule Ecto.Query do
       ]
 
       from query, update: ^updates
+
+  ## `preload`
+
+  Dynamics can be used with `preload` in order to dynamically
+  specify the binding for a joined association. For example, you can
+  write:
+
+      preloads = [
+        :non_joined_assoc,
+        joined_assoc: dynamic([joined: j], j)
+      ]
+
+      from x in query,
+        join: assoc(x, :joined_assoc),
+        as: :joined,
+        preload: ^preloads
+
+  While the example above uses a named binding (`:joined`),
+  positional bindings may also be used:
+
+      preloads = [
+        :non_joined_assoc,
+        joined_assoc: dynamic([_, j], j)
+      ]
+
+      from x in query,
+        join: assoc(x, :joined_assoc)
+        preload: ^preloads
+
+  As with `where` and friends, it is not possible to pass dynamics
+  outside of an interpolated root. For example, this won't work:
+
+      from query, preload: [comments: ^dynamic(...)]
+
+  But this will:
+
+      from query, preload: ^[comments: dynamic(...)]
+
+  Dynamic expressions used in `preload` must evaluate to a single
+  binding. For instance, this won't work:
+
+      preloads = dynamic([comments: c, likes: l], [comments: {c, likes: l}])
+
+  But this will:
+
+      dynamic_comments = dynamic([comments: c], c)
+      dynamic_likes = dynamic([likes: l], l)
+
+      preloads = [
+        comments: {dynamic_comments, likes: dynamic_likes}
+      ]
   """
   defmacro dynamic(binding \\ [], expr) do
     Builder.Dynamic.build(binding, expr, __CALLER__)
@@ -2114,6 +2165,19 @@ defmodule Ecto.Query do
                    select: [:id]
                  ), on: top_five.id == c.id,
                  preload: [comments: c]
+
+  Preloaded joins can also be specified dynamically using `dynamic`:
+
+      preloads = [comments: dynamic([comments: c], c)]
+
+      Repo.all from p in Post,
+                 join: c in assoc(p, :comments),
+                 as: :comments,
+                 where: c.published_at > p.updated_at,
+                 preload: ^preloads
+
+  See "`preload`" in the documentation for `dynamic/2` for more
+  details.
 
   ## Preload queries
 
