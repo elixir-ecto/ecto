@@ -243,6 +243,10 @@ defmodule Ecto.Query.Builder.Preload do
     {[{key, query_or_fun}|preloads], assocs}
   end
 
+  defp expand_each(other, query, mode, {preloads, assocs}) do
+    expand(other, query, mode, preloads, assocs)
+  end
+
   defp expand_dynamic(%Ecto.Query.DynamicExpr{} = dynamic, query) do
     case Builder.Dynamic.fully_expand(query, dynamic) do
       {{:&, [], [idx]}, _, _, _, _, _} when is_integer(idx) ->

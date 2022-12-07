@@ -24,6 +24,10 @@ defmodule Ecto.Query.Builder.PreloadTest do
       assert preload("posts", [users: ^[comments]]).preloads == [users: [:comments]]
       assert preload("posts", ^[users: [comments]]).preloads == [users: [:comments]]
       assert preload("posts", [{^:users, ^comments}]).preloads == [users: :comments]
+      assert preload("posts", [[[users: ^comments]]]).preloads == [users: :comments]
+      assert preload("posts", ^[[[users: comments]]]).preloads == [users: :comments]
+      assert preload("posts", [[users: [[^comments]]]]).preloads == [users: [:comments]]
+      assert preload("posts", ^[[users: [[comments]]]]).preloads == [users: [:comments]]
 
       query = from u in "users", limit: 10
       assert preload("posts", [users: ^query]).preloads == [users: query]
@@ -119,11 +123,19 @@ defmodule Ecto.Query.Builder.PreloadTest do
   describe "invalid preload" do
     test "raises on invalid expression" do
       message = ~r"`1` is not a valid preload expression"
+
       assert_raise Ecto.Query.CompileError, message, fn ->
         quote_and_eval(%Ecto.Query{} |> preload(1))
       end
+      assert_raise Ecto.Query.CompileError, message, fn ->
+        quote_and_eval(%Ecto.Query{} |> preload([1]))
+      end
+
       assert_raise ArgumentError, message, fn ->
          preload(%Ecto.Query{}, ^1)
+      end
+      assert_raise ArgumentError, message, fn ->
+         preload(%Ecto.Query{}, ^[1])
       end
     end
 
